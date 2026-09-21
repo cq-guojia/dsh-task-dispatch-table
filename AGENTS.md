@@ -21,7 +21,9 @@
 | docs/PROGRESS.md | **唯一进度真源**：状态 / 未决项 / 下一步 / 进展日志 | **每次推进后** |
 | docs/design/decisions.md | 已定型决策 + 理由（ADR 日志，勿重复讨论） | 决策拍板时 |
 | docs/design/architecture.md | 架构参考（稳定） | 定型内容变更 |
+| docs/design/data-model.md | 任务定义字段与状态库 DDL（定型） | 定型内容变更 |
 | docs/design/state-machine.md | 状态机与依赖语义规格（活跃） | 设计推进时 |
+| docs/examples/ | 任务样例（仅文档示例，与代码零耦合） | 新样例或字段变化 |
 
 **维护规则**：
 
@@ -52,5 +54,8 @@ docs/
   design/
     architecture.md    # 三层架构、职责边界
     decisions.md       # 已定型决策 + 理由
+    data-model.md      # 任务定义字段、状态库 DDL
     state-machine.md   # 状态机与依赖语义
+  examples/
+    image-upgrade-daily.md  # 首个任务样例
 ```

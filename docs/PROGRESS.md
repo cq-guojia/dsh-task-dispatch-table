@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-21 · 拍板决策 14（状态库路径：宿主 storages 约定 + `statePath` 覆盖）
+> **最后更新**：2026-09-21 · 任务样例定型（examples/image-upgrade-daily.md）
 
 ---
 
@@ -30,8 +30,8 @@
 | 总体架构 | ✅ 定型 |
 | 关键技术决策（14 条） | ✅ 定型 |
 | 状态机 / 依赖语义 | ✅ 设计完成，待出完整定义（含补跑入口） |
-| 数据模型（JSON Schema + SQLite 表） | ⬜ 未开始 |
-| 任务定义样例 | ⬜ 未开始 |
+| 数据模型（JSON Schema + SQLite 表） | ✅ 定型 |
+| 任务定义样例 | ✅ 定型（首个：镜像升级日报） |
 | 调度器插件骨架 | ⬜ 未开始（等源码核实 storages/ 与会话 API） |
 
 ---
@@ -43,6 +43,8 @@
 | [`../AGENTS.md`](../AGENTS.md) | agent 操作守则、文档体系与维护规则 |
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
 | [`design/decisions.md`](design/decisions.md) | 14 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
+| [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL（两表）、关键设计与取舍 |
+| [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 产物契约 + 任务手册 |
 | [`design/state-machine.md`](design/state-machine.md) | 对账判定树、7 种状态、两种依赖语义、5 个必补机制 |
 
 ---
@@ -78,12 +80,10 @@
 
 ## 六、下一步（接手后从这里开始）
 
-1. **出数据模型**：任务定义 JSON Schema + SQLite 表结构（任务状态表 / 执行日志表）
-2. **出完整状态机定义**：含 `unknown` / 租约 / 窗口过期 / 补跑入口
-3. **写一份任务定义样例**：拿「镜像升级日报」当第一个样例
-4. **核实未决项 1–3**（`storages/` 语义、`archiveSession`、`sessions.create` 形状）后，开始实现调度器插件骨架
+1. **出完整状态机定义**：含 `unknown` / 租约 / 窗口过期 / 补跑入口
+2. **核实未决项 1–3**（`storages/` 语义、`archiveSession`、`sessions.create` 形状）后，开始实现调度器插件骨架
 
-> 以上第 1–3 步的产出**先在对话里给草案**，确认后才落盘。
+> 以上产出**先在对话里给草案**，确认后才落盘。
 
 ---
 
@@ -116,3 +116,5 @@
 | 2026-09-21 | **npm 占位发布 `dsh-task-dispatch-table@0.0.0`**（抢注包名；正式版按决策改用 scoped 包名） |
 | 2026-09-21 | **文档体系重组**：新建根目录 `AGENTS.md`（agent 守则与文档维护规则，原「维护规矩」迁入）；`task-manual-vs-skill.md` 并入 decisions.md（决策 12 展开）；进展日志移至文末 |
 | 2026-09-21 | **拍板决策 14**：状态库默认落宿主 `storages/` 约定目录（`storages/dsh-task-dispatch-table/state.db`）+ `statePath` 配置覆盖；视角从「本机部署」改为「任何用户可安装」；「不被同步撕碎」降级为 README 文档化的已知风险 |
+| 2026-09-21 | **数据模型定型**（[`design/data-model.md`](design/data-model.md)）：任务定义 13 字段 + 状态库两表（`task_instances` / `task_events`）；实例身份 = `task_id + logical_date`，重试行内递增，派发 CAS 领取；通知机制本期不做（用户拍板） |
+| 2026-09-21 | **首个任务样例定型**（[`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md)）：镜像升级日报——任务定义 + 产物契约 + 手册骨架；仅文档示例，与插件代码零耦合 |
