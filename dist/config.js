@@ -14,4 +14,5 @@ export const Config = z.object({
     leaseMs: z.number().default(ConfigDefaults.leaseMs),
     unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs),
     tasksDir: z.string().default('tasks'),
+    tasksInline: z.string().role('textarea').default(''),
 });

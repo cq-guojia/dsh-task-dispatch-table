@@ -1,4 +1,4 @@
-import { durationMs, loadTasks, logicalDateOf, scheduledAtFor } from './tasks.js';
+import { durationMs, loadTasks, logicalDateOf, parseInlineTasks, scheduledAtFor } from './tasks.js';
 import { dispatchTask, resolveWorkspacePath } from './dispatch.js';
 /** 在跑态：同任务串行判定（§8）的互斥集合——pending 只是排队，不阻塞后继派发。 */
 const IN_FLIGHT_STATUSES = ['dispatched', 'running', 'unknown'];
@@ -130,7 +130,11 @@ export function createScheduler({ ctx, store, reconciler, config }) {
         },
         tick() {
             const cfg = config();
-            tasks = new Map(loadTasks(ctx, cfg.tasksDir).map(task => [task.id, task]));
+            // 任务来源：tasksInline（配置页 textarea，临时 UI）非空则优先，否则读 tasksDir 目录。
+            const source = cfg.tasksInline.trim().length > 0
+                ? parseInlineTasks(ctx, cfg.tasksInline)
+                : loadTasks(ctx, cfg.tasksDir);
+            tasks = new Map(source.map(task => [task.id, task]));
             reconciler.sweep();
             ensureInstances([...tasks.values()]);
             dispatchPass([...tasks.values()]);

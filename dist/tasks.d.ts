@@ -45,5 +45,7 @@ export declare function isValidTimeZone(tz: string): boolean;
 export declare function logicalDateOf(date: Date, timeZone: string | undefined): string;
 /** 算任务在指定日历日的计划时刻；找不到（cron 与日历不产生该日）返回 undefined。 */
 export declare function scheduledAtFor(task: TaskDefinition, day: string, searchFrom: Date): Date | undefined;
+/** 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。 */
+export declare function parseInlineTasks(ctx: HostContext, raw: string): TaskDefinition[];
 /** 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。 */
 export declare function loadTasks(ctx: HostContext, tasksDir: string): TaskDefinition[];

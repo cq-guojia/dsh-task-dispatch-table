@@ -12,8 +12,10 @@ export interface PluginConfig {
     unknownGraceMs: number;
     /** 任务定义目录（*.json）。相对路径相对宿主进程 cwd 解析。 */
     tasksDir: string;
+    /** 内嵌任务表 JSON 数组（临时 UI，决策 16 v1 补充）：非空时优先于 tasksDir。 */
+    tasksInline: string;
 }
-export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir'>;
+export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline'>;
 export declare const Config: z<Schemastery.ObjectS<{
     statePath: z<string, string>;
     tickMs: z<number, number>;
@@ -21,6 +23,7 @@ export declare const Config: z<Schemastery.ObjectS<{
     leaseMs: z<number, number>;
     unknownGraceMs: z<number, number>;
     tasksDir: z<string, string>;
+    tasksInline: z<string, string>;
 }>, Schemastery.ObjectT<{
     statePath: z<string, string>;
     tickMs: z<number, number>;
@@ -28,4 +31,5 @@ export declare const Config: z<Schemastery.ObjectS<{
     leaseMs: z<number, number>;
     unknownGraceMs: z<number, number>;
     tasksDir: z<string, string>;
+    tasksInline: z<string, string>;
 }>>;

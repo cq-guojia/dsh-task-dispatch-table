@@ -80,6 +80,52 @@ export function scheduledAtFor(task, day, searchFrom) {
     }
     return undefined;
 }
+/** 单个任务定义的公共校验（schema + 时区 + cron），文件目录与内嵌两路共用。 */
+function checkedTask(ctx, label, data) {
+    const parsed = taskDefinitionSchema.safeParse(data);
+    if (!parsed.success) {
+        ctx.logger.warn(`任务定义校验失败 ${label}: ${parsed.error.message}`);
+        return undefined;
+    }
+    const def = parsed.data;
+    if (def.schedule.timezone !== undefined && !isValidTimeZone(def.schedule.timezone)) {
+        ctx.logger.warn(`任务定义时区非法 ${label}: ${def.schedule.timezone}`);
+        return undefined;
+    }
+    try {
+        CronExpressionParser.parse(def.schedule.cron, { tz: def.schedule.timezone });
+    }
+    catch (error) {
+        ctx.logger.warn(`任务定义 cron 非法 ${label}: ${String(error)}`);
+        return undefined;
+    }
+    return def;
+}
+/** 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。 */
+export function parseInlineTasks(ctx, raw) {
+    const text = raw.trim();
+    if (text.length === 0)
+        return [];
+    let data;
+    try {
+        data = JSON.parse(text);
+    }
+    catch (error) {
+        ctx.logger.warn(`内嵌任务表 JSON 非法: ${String(error)}`);
+        return [];
+    }
+    if (!Array.isArray(data)) {
+        ctx.logger.warn('内嵌任务表必须是 JSON 数组');
+        return [];
+    }
+    const tasks = [];
+    for (const [index, item] of data.entries()) {
+        const def = checkedTask(ctx, `内嵌任务表[${index}]`, item);
+        if (def?.enabled)
+            tasks.push(def);
+    }
+    return tasks;
+}
 /** 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。 */
 export function loadTasks(ctx, tasksDir) {
     const dir = resolve(tasksDir);
@@ -97,24 +143,8 @@ export function loadTasks(ctx, tasksDir) {
         try {
             if (!statSync(file).isFile())
                 continue;
-            const parsed = taskDefinitionSchema.safeParse(JSON.parse(readFileSync(file, 'utf8')));
-            if (!parsed.success) {
-                ctx.logger.warn(`任务定义校验失败 ${file}: ${parsed.error.message}`);
-                continue;
-            }
-            const def = parsed.data;
-            if (def.schedule.timezone !== undefined && !isValidTimeZone(def.schedule.timezone)) {
-                ctx.logger.warn(`任务定义时区非法 ${file}: ${def.schedule.timezone}`);
-                continue;
-            }
-            try {
-                CronExpressionParser.parse(def.schedule.cron, { tz: def.schedule.timezone });
-            }
-            catch (error) {
-                ctx.logger.warn(`任务定义 cron 非法 ${file}: ${String(error)}`);
-                continue;
-            }
-            if (def.enabled)
+            const def = checkedTask(ctx, file, JSON.parse(readFileSync(file, 'utf8')));
+            if (def?.enabled)
                 tasks.push(def);
         }
         catch (error) {

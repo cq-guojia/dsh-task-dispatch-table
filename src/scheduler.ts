@@ -2,7 +2,7 @@
 // 所有判定纯程序逻辑，零 token（§1）。
 import type { HostContext } from './host.js'
 import type { PluginConfig } from './config.js'
-import { durationMs, loadTasks, logicalDateOf, scheduledAtFor } from './tasks.js'
+import { durationMs, loadTasks, logicalDateOf, parseInlineTasks, scheduledAtFor } from './tasks.js'
 import type { TaskDefinition } from './tasks.js'
 import type { TaskStore, TaskInstance } from './store.js'
 import type { Reconciler } from './reconcile.js'
@@ -156,7 +156,11 @@ export function createScheduler({ ctx, store, reconciler, config }: SchedulerDep
 
     tick(): void {
       const cfg = config()
-      tasks = new Map(loadTasks(ctx, cfg.tasksDir).map(task => [task.id, task]))
+      // 任务来源：tasksInline（配置页 textarea，临时 UI）非空则优先，否则读 tasksDir 目录。
+      const source = cfg.tasksInline.trim().length > 0
+        ? parseInlineTasks(ctx, cfg.tasksInline)
+        : loadTasks(ctx, cfg.tasksDir)
+      tasks = new Map(source.map(task => [task.id, task]))
       reconciler.sweep()
       ensureInstances([...tasks.values()])
       dispatchPass([...tasks.values()])
