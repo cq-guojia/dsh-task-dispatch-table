@@ -60,4 +60,5 @@ docs/
     state-machine.md   # 状态机与依赖语义
   examples/
     image-upgrade-daily.md  # 首个任务样例
+    task-template.jsonc     # 全字段注释版任务定义模板
 ```

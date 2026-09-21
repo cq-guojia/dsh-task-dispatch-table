@@ -47,6 +47,7 @@
 | [`design/decisions.md`](design/decisions.md) | 17 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL（两表）、关键设计与取舍 |
 | [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 产物契约 + 任务手册 |
+| [`examples/task-template.jsonc`](examples/task-template.jsonc) | 全字段注释版任务定义模板（粘进 tasksInline 前须去掉注释） |
 | [`design/state-machine.md`](design/state-machine.md) | 对账判定树、7 种状态、两种依赖语义、5 个必补机制 |
 
 ---
@@ -134,3 +135,4 @@
 | 2026-09-21 | **v0.0.1 真机安装成功**（`dsh plugin --profile web add git+...`，装完即用无需 allowBuilds）；用户反馈：Web「插件配置」页未出现本插件卡片，暂无 UI 入口 → 排查 patch→组合→配置页渲染链路；用户拍板临时方案：Config 加 textarea 字段直接编辑任务表 JSON，先跑通再做完整功能 |
 | 2026-09-21 | **Web 配置页落码（client bundle）**：机制查明——配置页非 schema 自动渲染，须插件自带浏览器半侧（manifest `"dsh": { "client": { "platform": "web" } }` + `exports['./client']` = lazy-CJS factory 产物 `dist/client.js`），页面注册进 `plugins.bundle.config`（键 = 包名；`plugins.item` 为宿主平面页保留，与先前判断不同）→ **拍板决策 17**。新增 `src/client/{index,locales}.ts` + `scripts/build-client.mjs`（esbuild 复刻宿主 clientBundle 预设），dist 入库；页面 = tasksInline 大 textarea（草稿暂存 / 保存写入带 revision 设栅 / 非法 JSON 拦截）+ 其余 6 个运行参数只读折叠展示，文案 zh/en 走 locale 服务；mock 宿主冒烟 15 项全过（factory→apply→注册→渲染→保存→卸载），待真机验证 |
 | 2026-09-21 | **配置页入口按真机作业改造（slot 结论修正）**：真机无入口，用户指路 dsh-session-title-pattern（已跑通同款入口）——注册面应为 **`settings.plugin.item` keyed slot**（key = settings 命名空间），前稿的 `plugins.bundle.config` 是 ui-plugin-manager 对组合包的契约，误用 → **决策 17 修订**。同步落实作业规矩：顶层禁止导出 `inject`（entry pending 会卡死整个 dsh 启动）、locale 词典经 `ctx.inject(['locale'])` 延迟注册、`t` 由渲染器按注册项 `locale:` 声明合成、组件 `useSyncExternalStore` 消费 scope 快照、保存走 `scope.set/unset`（空值 unset 回默认）、设置页自动配对无需自建 gating。构建从 esbuild 手搓切换 **tsdown**（`tsdown.client.config.ts`：产物三件套 + PLATFORM_MODULES externals + outDir dist/clean false），删 `scripts/build-client.mjs` 与 esbuild，devDeps 增 tsdown 0.23 / @types/react ~18.3.1，新增 `tsconfig.client.json`（client 侧 noEmit 类型检查）。tsc 双工程零报错 + 产物冒烟（banner 三件套齐全、externals 仅 react、locales 内联）通过，待重装验证 |
+| 2026-09-21 | **配置页真机验证通过**；新增全字段注释版任务定义模板 `examples/task-template.jsonc`（14 字段逐一注释：实例身份/窗口语义/契约三查/依赖两种 semantics 的适用场景与时间线），文档索引同步 |
