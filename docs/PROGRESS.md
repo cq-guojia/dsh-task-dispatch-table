@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-21 · 任务样例定型（examples/image-upgrade-daily.md）
+> **最后更新**：2026-09-21 · 状态机完整定义（design/state-machine.md）
 
 ---
 
@@ -29,7 +29,7 @@
 |---|---|
 | 总体架构 | ✅ 定型 |
 | 关键技术决策（14 条） | ✅ 定型 |
-| 状态机 / 依赖语义 | ✅ 设计完成，待出完整定义（含补跑入口） |
+| 状态机 / 依赖语义 | ✅ 完整定义（转移表 / 租约 / unknown / 窗口 / 补跑 / 串行） |
 | 数据模型（JSON Schema + SQLite 表） | ✅ 定型 |
 | 任务定义样例 | ✅ 定型（首个：镜像升级日报） |
 | 调度器插件骨架 | ⬜ 未开始（等源码核实 storages/ 与会话 API） |
@@ -80,10 +80,9 @@
 
 ## 六、下一步（接手后从这里开始）
 
-1. **出完整状态机定义**：含 `unknown` / 租约 / 窗口过期 / 补跑入口
-2. **核实未决项 1–3**（`storages/` 语义、`archiveSession`、`sessions.create` 形状）后，开始实现调度器插件骨架
+1. **核实未决项 1–3**（`storages/` 语义、`archiveSession`、`sessions.create` 形状）后，开始实现调度器插件骨架
 
-> 以上产出**先在对话里给草案**，确认后才落盘。
+> 实现期间的产出**先在对话里给方案**，确认后再写码。
 
 ---
 
@@ -118,3 +117,4 @@
 | 2026-09-21 | **拍板决策 14**：状态库默认落宿主 `storages/` 约定目录（`storages/dsh-task-dispatch-table/state.db`）+ `statePath` 配置覆盖；视角从「本机部署」改为「任何用户可安装」；「不被同步撕碎」降级为 README 文档化的已知风险 |
 | 2026-09-21 | **数据模型定型**（[`design/data-model.md`](design/data-model.md)）：任务定义 13 字段 + 状态库两表（`task_instances` / `task_events`）；实例身份 = `task_id + logical_date`，重试行内递增，派发 CAS 领取；通知机制本期不做（用户拍板） |
 | 2026-09-21 | **首个任务样例定型**（[`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md)）：镜像升级日报——任务定义 + 产物契约 + 手册骨架；仅文档示例，与插件代码零耦合 |
+| 2026-09-21 | **状态机完整定义**（[`design/state-machine.md`](design/state-machine.md)）：完整转移表、租约 30min 心跳续租、`unknown` 只观察不重派、窗口只管开始、重试当场回 `pending`、同任务严格串行、补跑三层入口（自动实例保障 / `backfill.days` / SQL 手动重置）；数据模型随之增补第 14 个字段 `backfill.days` |

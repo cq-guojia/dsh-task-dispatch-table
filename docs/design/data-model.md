@@ -19,6 +19,7 @@
 | `contract.path` | string | 产物契约文件路径（相对目标工作区），对账三查的对象 | 机制 #1 |
 | `contract.validStatuses` | string[]? | 契约 `status` 字段的合法值，默认 `["ok"]` | 机制 #1 |
 | `retry.maxAttempts` | int? | 默认 1；重试耗尽 → `failed`，下游跳过 | 决策 10 |
+| `backfill.days` | int? | 默认 0；> 0 时插件启动补建近 N 天缺失实例（`pending`），照常走依赖与窗口判定 | 状态机 §7 补跑入口 |
 | `depends_on` | object[]? | `{ task, semantics, freshness? }`，**由下游声明**；`freshness`（ISO 8601 时长）仅 `latest_success` 使用 | 决策 8/9 |
 
 **产物契约文件**：agent 在目标工作区写的 JSON，至少含 `status` 字段（取值受 `contract.validStatuses` 约束）；对账三查 = 存在 + `status` 合法 + mtime 晚于本次派发。
