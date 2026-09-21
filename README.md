@@ -2,7 +2,7 @@
 
 一个 **dsh（DeepSeek Harness）host 层插件**：用**一张任务定义表**驱动周期性任务，按时间窗与依赖关系把每个任务派发成一个**独立的 dsh 会话**去执行。
 
-> ⚠️ **项目状态：设计阶段。** 尚无可用版本，请勿安装。进度见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
+> ⚠️ **项目状态：骨架已实现（v0.0.1），未做真机联调，请勿安装。** 进度见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
 
 ## 它要解决什么
 

@@ -1,6 +1,6 @@
 {
   "name": "dsh-task-dispatch-table",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "一个 dsh host 层插件：用一张任务定义表驱动周期性任务，按时间窗与依赖把任务派发成独立会话执行（调度层零大模型介入）",
   "keywords": [
     "deepseek",
@@ -17,13 +17,31 @@
   "author": "cq-guojia",
   "license": "MIT",
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.js",
   "files": [
+    "dist",
+    "cordis.patch.yml",
     "README.md",
-    "LICENSE",
-    "index.js"
+    "LICENSE"
   ],
+  "scripts": {
+    "build": "tsc"
+  },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "cron-parser": "^4.9.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "typescript": "^5.8.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
   }
 }

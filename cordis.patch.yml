@@ -1,0 +1,9 @@
+# bundle 补丁：把本 npm 包作为插件插入宿主组合。
+# 格式依据 /tmp/dsh-source packages/boot/app-boot/src/index.ts:279-298（顶层 YAML 数组，
+# 条目 = loader patch 项：insert 列表，见 packages/experimental/agent-team-profile/cordis.patch.yml）。
+# 全部配置项有默认值（见 src/config.ts），也可经 ctx.settings 命名空间
+# dsh-task-dispatch-table 在运行期覆盖（live 生效）。
+- insert:
+    - id: dsh-task-dispatch-table
+      name: dsh-task-dispatch-table
+      config: {}
