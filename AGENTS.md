@@ -48,8 +48,9 @@
 README.md              # 门面（人看）
 AGENTS.md              # agent 守则（本文件）
 LICENSE                # MIT
-package.json           # npm 包元数据（占位 0.0.0）
-index.js               # 占位 stub
+package.json           # npm 包元数据（v0.0.1，含 dsh.bundle.patch 声明）
+index.js               # 占位 stub（已由 dist/ 取代，见 git 历史）
+dist/                  # 构建产物（入库：git 安装免构建）
 docs/
   PROGRESS.md          # 进度真源（换会话先读）
   design/
