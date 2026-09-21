@@ -17,7 +17,8 @@
 | 11 | **agent 不写任务状态** | 控制平面 / 数据平面分离：agent 只能写**产物文件**，状态**只由调度器写**。理由：大模型自报不可信 |
 | 12 | **任务手册用工作区 MD 文件**（调度器把路径写进派发 prompt），**不做成 skill** | 分层加载方案见下方「[决策 12 展开](#决策-12-展开任务手册的分层加载)」 |
 | 13 | **调度器的定时器用官方 `ctx.interval` / `inject: ['timer']`** | 模块作用域的裸 `setInterval` 永不被清理；官方机制在插件卸载时自动清理 |
-| 14 | **状态库默认落 `<工作区>/storages/dsh-task-dispatch-table/state.db`，暴露 `statePath` 配置覆盖** | ① 默认跟宿主自己的状态目录（`storages/workspace.json`）同源：任何用户装上即可用，容器重建不丢（工作区是挂载卷）② 「挂载卷内」与「不被多设备文件同步撕碎」在同步盘环境下天然冲突，属用户环境问题——用 `statePath` 把选择权交给安装者，风险与建议在 README 文档化 ③ 开源插件不写死任何本机路径。⚠️ `storages/` 的确切语义待源码核实，若不符按本文件规矩修订留痕 |
+| 14 | **状态库默认落宿主数据根 `storages/dsh-task-dispatch-table/state.db`（`dshHomePath('storages')` 下，与宿主自身 `workspace.json` 同级），暴露 `statePath` 配置覆盖** | ① 跟宿主自己的状态目录同源：任何用户装上即可用，宿主数据根本就是持久化位置 ② 「不被多设备文件同步撕碎」属用户环境问题——`statePath` 把选择权交给安装者，风险与建议在 README 文档化 ③ 开源插件不写死任何本机路径。✅ 已按源码核实修订（原稿误写为 `<工作区>/storages/`，见决策 15） |
+| 15 | **源码核实修正（基于 deepseek-ai/deepseek-harness，`@deepseek-ai/dsh-root` 0.1.6-alpha.2）**：① 派发不走 `ctx.sessions.create()` 直驱——它只建存储会话不驱动模型；真正派发 = `ctx.agents.create({ sessionId, meta: { cwd: 工作区绝对路径 }, agentOptions: { provider, model } })` + `agent.send(msg, 'next-turn', true)`；② 第三方 npm 包以 **bundle** 形态接入：`package.json` 声明 `"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`，patch 内 `- insert: { id, name: <npm 包名> }`；③ 归档程序化可用：`ctx.workspaceRegistry.archiveSession(id)`，只追加 `archivedSessionIds`、不动工作区槽位、会话仍可查；④ 定时用 `inject: ['timer']` + `ctx.interval(fn, ms)`（卸载自动清理）；⑤ 对账事件 = `ctx.on('session/event', (session, event))`，`turn/end` 是 `event.type` | 官方源码：core/agent/src/index.ts:62-119、core/session/src/index.ts:50-96、boot/plugin-manager/src/index.ts:377-378、bundle/base/cordis.patch.yml:155-158、vendor/timer/src/index.ts:12-16。**结论必须可溯源（工作规矩 #2），后续 API 疑问直接查 `/private/tmp/dsh-source`** |
 
 ---
 
