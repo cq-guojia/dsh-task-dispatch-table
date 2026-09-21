@@ -34,7 +34,7 @@
 | 当前态 | 触发 | 次态 | 说明 |
 |---|---|---|---|
 | （无实例） | tick 实例保障 | `pending` 或 `skipped` | 窗口内 → `pending`；已过窗 → `skipped` 留痕（幂等补建，见 §7） |
-| `pending` | 依赖满足 + 未超窗 + 同任务无非终态实例 | `dispatched` | CAS 领取（`WHERE status='pending'`） |
+| `pending` | 已到计划时刻 + 依赖满足 + 未超窗 + 同任务无互斥实例 | `dispatched` | CAS 领取（`WHERE status='pending'`）；互斥集合 = 该任务存在 `dispatched`/`running`/`unknown` 实例（`pending` 是排队语义，不互锁） |
 | `pending` | `now > scheduled_at + window` | `skipped` | 终态 |
 | `dispatched` | 收到 `session/created` | `running` | 记 `session_id`，起租约 |
 | `dispatched` | 宽限期（60s）内无 `session/created` | `failed` | 走重试判定（§6） |
@@ -45,7 +45,7 @@
 | `unknown` | 确认已死（无信号且超 2×租约） | `failed` | 走重试判定（§6） |
 | `succeeded` / `failed` / `skipped` | — | — | 终态，只能被手动补跑（§7）重置 |
 
-**启动扫描**（机制 #5）：插件启动时把所有非终态实例置 `unknown`——重启期间 `disposed` 事件可能全部丢失，旧状态不可信；随后按 `unknown` 流程自然收敛。
+**启动扫描**（机制 #5）：插件启动时把 `dispatched` / `running` 实例置 `unknown`——重启期间 `disposed` 事件可能全部丢失，旧状态不可信；随后按 `unknown` 流程自然收敛。`pending` 从未派发、无可丢事件，保持原状。
 
 **`unknown` 语义**（机制 #3）：进入后**绝不重派**（防双跑），只观察会话事件：有活动 → `running`；宽限期（5min）后仍无任何信号且超过 2× 租约时长 → `failed`。
 
@@ -92,14 +92,14 @@ WHERE id = '<task_id>:<logical_date>';
 
 ## 8. 同任务串行（拍板 D）
 
-同一 `task_id` 存在任一非终态实例时，该任务的其他实例（含补跑的历史实例）**一律不派发**。理由：日报类任务天然按日串行；该规则使「补跑昨天」与「今天在跑」天然不打架，且不引入按任务的并发配置。
+同一 `task_id` 存在任一 `dispatched` / `running` / `unknown` 实例时，该任务的其他实例（含补跑的历史实例）**一律不派发**；`pending` 是排队语义，不参与互斥（否则多个 pending 会互相等待永不派发）。理由：日报类任务天然按日串行；该规则使「补跑昨天」与「今天在跑」天然不打架，且不引入按任务的并发配置。
 
 ## 9. 依赖语义（两种，由下游声明）
 
 | 语义 | 判定 | 缺了怎么办 | 适用 |
 |---|---|---|---|
-| `same_period` | 找**同一 logical date** 的上游实例 | 跳过 | 日榜 → 日报 |
-| `latest_success` | 找**最近一次成功** + 新鲜度上限（`freshness`，如 ≤ 8 天） | 超上限才跳过 | 月榜 → 报告 |
+| `same_period` | 找**同一 logical date** 的上游实例 | 上游缺失/未成功 → 下游**保持 `pending`**（窗口内上游修复仍可衔接，决策 10），随自身窗口过期收敛 `skipped` | 日榜 → 日报 |
+| `latest_success` | 找**最近一次成功** + 新鲜度上限（`freshness`，如 ≤ 8 天） | 无成功记录 → `pending` 等待；**超上限才**随窗口过期收敛 `skipped` | 月榜 → 报告 |
 
 ⚠️ **归属用「计划时刻 `scheduled_at`」，不是「实际开始时间」**——任务 9:00 计划、因等前置 11:00 才跑，它仍属**今天**。这与「过窗切次日」（§5、§7 实例保障）天然咬合。
 

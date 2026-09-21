@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-21 · 状态机完整定义（design/state-machine.md）
+> **最后更新**：2026-09-21 · 插件骨架落码（v0.0.1 编译通过，待真机联调）
 
 ---
 
@@ -34,7 +34,7 @@
 | 数据模型（JSON Schema + SQLite 表） | ✅ 定型 |
 | 任务定义样例 | ✅ 定型（首个：镜像升级日报） |
 | UI 方案 | ✅ 定型（决策 16：v1 零 UI 配置走 ctx.settings，监控面板 v1.1 弹窗形态） |
-| 调度器插件骨架 | ⬜ 方案已定，待落码 |
+| 调度器插件骨架 | ✅ 落码（v0.0.1：tsc 零报错 + pack 产物正确 + mock 冒烟通过，**待真机联调**） |
 
 ---
 
@@ -74,19 +74,21 @@
 
 ## 五、未决项
 
-**1–4 号未决项已全部关闭**（源码核实，见决策 15 与能力表）。剩实现期查证小项（写码时对照 `/private/tmp/dsh-source` 即可，不阻塞方案）：
+**源码核实项与实现期查证项已全部关闭**：
 
-| # | 待查 | 影响 |
-|---|---|---|
-| 1 | 工作区按 name 查 path 的 registry API 细节 | `target.workspace` 名 → `meta.cwd` |
-| 2 | 宿主要求的 Node 版本 | 决定 SQLite 用 `node:sqlite`（≥22.5，零依赖）还是 `better-sqlite3`（需原生编译） |
-| 3 | `agentOptions.provider` 缺省值与 `target.model` 的映射方式 | 派发参数 |
+| 原待查 | 结论 |
+|---|---|
+| 工作区 name → path | registry **无按 name 查询 API**（仅 `get(id)` / `list()`，实体字段 = `id`/`path`/`title`，`workspace/src/index.ts:170,180`）→ 实现按 `title` 精确匹配、`id` 兜底 |
+| 宿主 Node 版本 | engines `^22.19.0 \|\| >=24.0.0` → **SQLite 用内置 `node:sqlite`**，零原生依赖 |
+| provider / model 缺省 | `AgentOptions.provider/model` 均可选，缺省走宿主默认路由（`core/agent/src/runtime-types.ts:26-35`）→ `target.model` 有值才透传，provider 不传 |
+| settings 注册 | `ctx.settings.register(ns, schema, { base })`，namespace 限 `^[a-z][a-z0-9-]*$`（`settings/src/index.ts:419-459`） |
 
 ---
 
 ## 六、下一步（接手后从这里开始）
 
-1. **按决策 15 写调度器插件骨架**（文件结构见进展日志 2026-09-21 方案条目），落码前在对话确认
+1. **真机联调**：用户把 v0.0.1 装进 NAS 容器的 DSH profile，对照 [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) 造一个真实任务跑通端到端；联调发现的 API 形状偏差按决策 15 规矩回写
+2. 联调通过后 → 发 v0.1.0（npm 占位包名不变或按发布策略调整）+ README 安装文档
 
 ---
 
@@ -124,3 +126,4 @@
 | 2026-09-21 | **状态机完整定义**（[`design/state-machine.md`](design/state-machine.md)）：完整转移表、租约 30min 心跳续租、`unknown` 只观察不重派、窗口只管开始、重试当场回 `pending`、同任务严格串行、补跑三层入口（自动实例保障 / `backfill.days` / SQL 手动重置）；数据模型随之增补第 14 个字段 `backfill.days` |
 | 2026-09-21 | **宿主源码核实完成，未决项 1–4 全关**（克隆 deepseek-ai/deepseek-harness 至 /tmp 读源码，结论 = 决策 15）：派发走 `ctx.agents.create`（sessions.create 不驱动模型）；storages/ = 宿主数据根非工作区（决策 14 修订）；归档程序化可用；bundle 接入形态。**骨架方案**：`src/{index,config,tasks,scheduler,reconcile,store,dispatch}.ts` + `cordis.patch.yml`，TypeScript 构建，`inject: ['timer','agents','sessions','workspaceRegistry']` |
 | 2026-09-21 | **拍板决策 16（UI 分期）**：v1 零自建 UI（配置走官方 `ctx.settings`，任务定义按决策 6 编辑 JSON）；实例监控面板放 v1.1，形态 = 大弹窗/drawer 不做全屏页（宿主惯例 popover + 信息密度低） |
+| 2026-09-21 | **插件骨架落码（v0.0.1）**：`src/{index,config,store,tasks,scheduler,reconcile,dispatch,host}.ts` + `cordis.patch.yml`；tsc 零报错、npm pack 产物正确、mock 宿主冒烟全过。五个实现取舍（已同步回 state-machine.md）：① 启动扫描只置 `dispatched`/`running` 为 unknown（pending 无可丢事件）② 串行互斥集合 = dispatched/running/unknown（pending 排队不互锁）③ 上游失败下游保持 pending 随窗收敛 skipped（保住决策 10 的窗口内修复）④ 补「已到计划时刻」派发守卫 ⑤ `tasksDir` 相对基准 = 宿主 `process.cwd()`。SQLite 用内置 `node:sqlite`（宿主 Node ≥22.19） |
