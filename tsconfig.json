@@ -15,5 +15,6 @@
     "verbatimModuleSyntax": true,
     "noEmitOnError": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/client"]
 }

@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-21 · v0.0.1 已装进宿主（git 源），联调排障中（配置页卡片未显示）
+> **最后更新**：2026-09-21 · v0.0.1 已装进宿主（git 源）；Web 配置页（client bundle）已落码，待真机验证
 
 ---
 
@@ -34,7 +34,7 @@
 | 数据模型（JSON Schema + SQLite 表） | ✅ 定型 |
 | 任务定义样例 | ✅ 定型（首个：镜像升级日报） |
 | UI 方案 | ✅ 定型（决策 16：v1 零 UI 配置走 ctx.settings，监控面板 v1.1 弹窗形态） |
-| 调度器插件骨架 | ✅ 落码（v0.0.1）且**已装进宿主**（git 源安装成功）；联调排障中：Web「插件配置」页未出现本插件卡片，临时方案 = Config 加 textarea 内嵌任务表 |
+| 调度器插件骨架 | ✅ 落码（v0.0.1）且**已装进宿主**（git 源安装成功）；Web 配置页已落码（client bundle + `plugins.bundle.config`，决策 17），**待真机更新插件验证卡片出现** |
 
 ---
 
@@ -64,6 +64,7 @@
 | `storages/` 语义 | 根 = **宿主数据根**（`dshHomePath('storages')` → 配置路径 → `$DSH_HOME` → `~/.dsh`），**非工作区**——决策 14 已据此修订 |
 | 第三方包接入 | **bundle 形态**：`package.json` 声明 `"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`，patch 内 `- insert: { id, name: <npm 包名> }`，用户 `pnpm add` 进 profile |
 | 插件写法 | 具名导出 `name` / `inject` / `Config`（schemastery z schema）/ `apply(ctx, config)`；配置在 patch 行 `config:` 键声明 |
+| Web 配置页 | **= 插件自带 client bundle**（manifest `"dsh": { "client": { "platform": "web" } }` + `exports['./client']` = lazy-CJS factory 产物），页面注册进 ui-plugin-manager 的 `plugins.bundle.config` slot（键 = 包名）；`plugins.item` 为宿主平面页保留（决策 17） |
 | 工作区 | `ctx.workspaceRegistry` 拿实体（`WorkspaceEntity.path` 为绝对路径）；`meta.cwd` 必须绝对路径 |
 
 **会话列表治理策略（已定）**：派发时用 `ctx.sessionTitle.rename` 起规范名（如 `[TASK] 镜像升级日报 · 2026-09-20`），跑完 `archiveSession` 归档。
@@ -87,8 +88,8 @@
 
 ## 六、下一步（接手后从这里开始）
 
-1. **联调排障**：Web「插件配置」页未出现本插件卡片 → 查 bundle patch → 组合装载 → 配置页渲染链路，修 patch 或 Config 导出；同时按用户拍板做临时 UI：Config 加 textarea 字段内嵌任务表 JSON（先跑通，完整功能后做）
-2. **端到端联调**：配置页出卡片后，在文本框里造一个真实任务，跑通 实例生成 → 派发 → 三查 → 状态落库；API 形状偏差按决策 15 回写
+1. **真机验证配置页**：把本仓库最新 commit 重新装进宿主（git 源更新），验证 Web「插件」页 → dsh-task-dispatch-table 详情页出现配置表单（tasksInline textarea + 只读参数折叠）；如不出现，查 dsh.client 扫描日志与 `/plugins/dsh-task-dispatch-table/client.js` 路由
+2. **端到端联调**：在配置页里造一个真实任务，跑通 实例生成 → 派发 → 三查 → 状态落库；API 形状偏差按决策 15 回写
 3. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
 
 ---
@@ -131,3 +132,4 @@
 | 2026-09-21 | **git 源安装摩擦与拍板**：pnpm 对 git 包的 `prepare` 脚本强制 allowBuilds（key 锁 commit hash，每次更新都要重加）→ 放弃 prepare，**`dist/` 入库**对齐生态惯例（AGENTS 规矩 2：推送前必须 build 并提交 dist） |
 | 2026-09-21 | **依赖全部升最新线**：cron-parser 4.9(deprecated)→5.10.1（ESM 命名导出，两处调用迁移）、zod 3.25→4.6.5、typescript→5.9.3（7.x 原生编译器新线不冒进）、@types/node→22.20.4；tsc 零报错 + 冒烟通过 |
 | 2026-09-21 | **v0.0.1 真机安装成功**（`dsh plugin --profile web add git+...`，装完即用无需 allowBuilds）；用户反馈：Web「插件配置」页未出现本插件卡片，暂无 UI 入口 → 排查 patch→组合→配置页渲染链路；用户拍板临时方案：Config 加 textarea 字段直接编辑任务表 JSON，先跑通再做完整功能 |
+| 2026-09-21 | **Web 配置页落码（client bundle）**：机制查明——配置页非 schema 自动渲染，须插件自带浏览器半侧（manifest `"dsh": { "client": { "platform": "web" } }` + `exports['./client']` = lazy-CJS factory 产物 `dist/client.js`），页面注册进 `plugins.bundle.config`（键 = 包名；`plugins.item` 为宿主平面页保留，与先前判断不同）→ **拍板决策 17**。新增 `src/client/{index,locales}.ts` + `scripts/build-client.mjs`（esbuild 复刻宿主 clientBundle 预设），dist 入库；页面 = tasksInline 大 textarea（草稿暂存 / 保存写入带 revision 设栅 / 非法 JSON 拦截）+ 其余 6 个运行参数只读折叠展示，文案 zh/en 走 locale 服务；mock 宿主冒烟 15 项全过（factory→apply→注册→渲染→保存→卸载），待真机验证 |

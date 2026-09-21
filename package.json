@@ -18,6 +18,10 @@
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js"
+  },
   "files": [
     "dist",
     "cordis.patch.yml",
@@ -25,7 +29,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsc && node scripts/build-client.mjs",
+    "build:client": "node scripts/build-client.mjs"
   },
   "engines": {
     "node": ">=22.5"
@@ -37,11 +42,19 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
+    "esbuild": "^0.25.10",
     "typescript": "^5.9.3"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
     }
   }
 }
