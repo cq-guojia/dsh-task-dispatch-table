@@ -29,10 +29,18 @@
       // 标准 5 段 cron：分 时 日 月 周（cron-parser 5.x 语法）。
       // 加载时校验，写错整个任务被跳过并告警。
       // 调度器用它算出每个日历日的计划时刻 —— 即实例的「应到时间」。
+      // ⚠ cron 与 once（见下）必须恰有其一：周期任务用 cron，一次性任务用 once。
       "cron": "0 9 * * *",
 
+      // 一次性任务：在该时刻派发一次，跑完自动停（无需改 enabled）。
+      // 格式 YYYY-MM-DDTHH:mm，按 timezone 的墙上时间解释（缺省 = 宿主时区）。
+      // 原理：实例身份 = id + 该日期，只有一个日期 ⇒ 只有一条实例；
+      // 跑到终态后行已存在、日期已过 ⇒ 不再生成实例，次年也不会再触发。
+      // 适用：迁移、一次性巡检、定时备份一次等。
+      // "once": "2026-10-01T14:30",
+
       // IANA 时区名（Asia/Shanghai / UTC / ...），加载时校验。省略 = 宿主时区。
-      // 两个作用：① cron 的钟点在哪个时区解释；② logical date 的日界归属
+      // 两个作用：① cron/once 的钟点在哪个时区解释；② logical date 的日界归属
       // （UTC 的 cron 在北京时间 08:00 起算新的一天）。
       // "timezone": "Asia/Shanghai",
 
@@ -130,5 +138,28 @@
         // , "freshness": "PT20H"
       }
     ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 一次性任务样例（决策 18）：schedule.once 指定唯一派发时刻，
+  // 跑到终态（done/failed/skipped）后自动停，无需改 enabled、次年也不触发。
+  // 与 cron 互斥（checkedTask 强校验）；其余字段语义与周期任务一致。
+  // ═══════════════════════════════════════════════════════════════════════
+  {
+    "id": "db-migrate-once",
+    "enabled": true,
+    "schedule": {
+      "once": "2026-10-01T14:30",   // 该日 14:30 派发一次
+      "timezone": "Asia/Shanghai",   // 墙上时间按此时区解释；省略 = 宿主时区
+      "window": "PT2H"               // 14:30–16:30 有效，过窗 skipped
+    },
+    "target": {
+      "workspace": "ops",
+      "prompt": "执行 DB 迁移 v2，按手册完成后写契约文件。"
+    },
+    "contract": {
+      "path": "artifacts/db-migrate-once/report.json",
+      "validStatuses": ["ok"]
+    }
   }
 ]

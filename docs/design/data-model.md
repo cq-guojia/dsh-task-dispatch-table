@@ -9,7 +9,8 @@
 |---|---|---|---|
 | `id` | string | 任务唯一标识，kebab-case，实例派生自它 | — |
 | `enabled` | bool | 停用任务不删定义 | — |
-| `schedule.cron` | string | 生成计划时刻；纯程序解析，零 token | 架构约束 |
+| `schedule.cron` | string? | 生成计划时刻；纯程序解析，零 token。**与 `once` 互斥**（周期任务用） | 架构约束 |
+| `schedule.once` | string? | `YYYY-MM-DDTHH:mm`；按 `timezone` 墙上时间解释，仅该日派发一次，跑完自动停。**与 `cron` 互斥**（一次性任务用，决策 18） | 决策 18 |
 | `schedule.timezone` | string? | 缺省用宿主时区；**logical date 的归属判定靠它** | 决策 9 |
 | `schedule.window` | string | ISO 8601 时长（如 `PT4H`）；计划时刻 + 窗口 = 当日截止线，过窗 → `skipped` 并切次日 | 决策 10 |
 | `target.workspace` | string | 派发到哪个工作区 | 决策 4 |

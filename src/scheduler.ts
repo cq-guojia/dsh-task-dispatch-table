@@ -2,7 +2,7 @@
 // 所有判定纯程序逻辑，零 token（§1）。
 import type { HostContext } from './host.js'
 import type { PluginConfig } from './config.js'
-import { durationMs, loadTasks, logicalDateOf, parseInlineTasks, scheduledAtFor } from './tasks.js'
+import { durationMs, loadTasks, logicalDateOf, onceScheduledAt, parseInlineTasks, scheduledAtFor } from './tasks.js'
 import type { TaskDefinition } from './tasks.js'
 import type { TaskStore, TaskInstance } from './store.js'
 import type { Reconciler } from './reconcile.js'
@@ -39,10 +39,12 @@ function shiftDay(day: string, days: number): string {
 }
 
 /**
- * 任务在某日历日的计划时刻。searchFrom 取该日前 26h 起，向前迭代 cron；
- * 上限 2000 次迭代覆盖分钟级 cron（高频 cron 的理论迭代上界）。
+ * 任务在某日历日的计划时刻。cron 任务向前迭代 cron（searchFrom 取该日前 26h 起，
+ * 上限 2000 次迭代覆盖分钟级 cron）；once 任务（决策 18）仅在 once 对应日历日
+ * 返回其指定时刻 —— 实例唯一 ⇒ 跑完自动停，无需改 enabled。
  */
 function planFor(task: TaskDefinition, day: string): Date | undefined {
+  if (task.schedule.once !== undefined) return onceScheduledAt(task, day)
   return scheduledAtFor(task, day, new Date(Date.parse(`${day}T00:00:00`) - 26 * 3600_000))
 }
 
