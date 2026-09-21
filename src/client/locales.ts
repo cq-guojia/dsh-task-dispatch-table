@@ -1,11 +1,11 @@
 // 配置页文案字典（zh / en）。命名空间 = 'dsh-task-dispatch-table'，
-// 经 ctx.locale.register 注册、slot 注册项的 locale: 声明把 t 席位注入组件 props
-// （范例：ui-settings-plugins/src/client/index.ts:64-65 + :105-107）。
+// 经 ctx.locale.register 注册；slot 注册项的 locale: 声明把 t 席位合成进组件 props
+// （注册面 settings.plugin.item，真机作业：dsh-session-title-pattern 的设置卡片）。
 // 文案主体全中文（任务要求）；en 供非中文界面语言回退。
 
 /** 本页渲染的全部字典键。 */
 export type LocaleKey =
-  | 'summary' | 'title' | 'description' | 'unavailable'
+  | 'title' | 'description' | 'unavailable'
   | 'tasksInlineLabel' | 'tasksInlineHint' | 'invalidJson'
   | 'save' | 'saving' | 'saveFailed' | 'discard'
   | 'paramsTitle' | 'paramDefault'
@@ -14,7 +14,6 @@ export type LocaleKey =
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
-  summary: '周期任务定义表与调度参数',
   title: '任务调度表（dsh-task-dispatch-table）',
   description: '在下方编辑内嵌任务表 JSON；保存后写入用户配置层并即时生效，离开页面丢弃未保存的草稿。',
   unavailable: '设置命名空间当前不可用（插件未运行或宿主未提供），暂时无法配置。',
@@ -37,7 +36,6 @@ export const zh: Record<LocaleKey, string> = {
 
 /** English copy. */
 export const en: Record<LocaleKey, string> = {
-  summary: 'Periodic task definitions and scheduler parameters',
   title: 'Task dispatch table (dsh-task-dispatch-table)',
   description: 'Edit the inline task-table JSON below; saving writes the user settings layer and takes effect immediately. Unsaved drafts are dropped when you leave the page.',
   unavailable: 'The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.',

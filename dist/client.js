@@ -1,300 +1,195 @@
-window.__ModuleLoader__.load({ id: "dsh-task-dispatch-table", factory: (require) => {
-var module = { exports: {} }; var exports = module.exports;
-"use strict";
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// src/client/index.ts
-var index_exports = {};
-__export(index_exports, {
-  apply: () => apply,
-  inject: () => inject
+window.__ModuleLoader__.load({
+	id: "dsh-task-dispatch-table",
+	factory: (require) => {
+		var module = { exports: {} };
+		var exports = module.exports;
+		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+		let react = require("react");
+		//#region src/client/locales.ts
+		/** 中文文案。 */
+		const zh = {
+			title: "任务调度表（dsh-task-dispatch-table）",
+			description: "在下方编辑内嵌任务表 JSON；保存后写入用户配置层并即时生效，离开页面丢弃未保存的草稿。",
+			unavailable: "设置命名空间当前不可用（插件未运行或宿主未提供），暂时无法配置。",
+			tasksInlineLabel: "任务表（tasksInline，JSON 数组）",
+			tasksInlineHint: "每项一个任务定义；非空时优先于任务目录 tasksDir。清空并保存 = 回到默认（空，改用 tasksDir）。",
+			invalidJson: "任务表不是合法 JSON，已阻止保存；请修正后重试。",
+			save: "保存",
+			saving: "保存中…",
+			saveFailed: "保存未生效：草稿已保留，请修改后重试（宿主可能拒绝了部分值或已有并发修改）。",
+			discard: "放弃更改",
+			paramsTitle: "运行参数（只读）",
+			paramDefault: "（默认）",
+			paramStatePath: "状态库路径 statePath",
+			paramTickMs: "调度周期 tickMs（毫秒）",
+			paramDispatchGraceMs: "派发宽限 dispatchGraceMs（毫秒）",
+			paramLeaseMs: "运行租约 leaseMs（毫秒）",
+			paramUnknownGraceMs: "观察宽限 unknownGraceMs（毫秒）",
+			paramTasksDir: "任务目录 tasksDir"
+		};
+		/** English copy. */
+		const en = {
+			title: "Task dispatch table (dsh-task-dispatch-table)",
+			description: "Edit the inline task-table JSON below; saving writes the user settings layer and takes effect immediately. Unsaved drafts are dropped when you leave the page.",
+			unavailable: "The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.",
+			tasksInlineLabel: "Task table (tasksInline, JSON array)",
+			tasksInlineHint: "One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).",
+			invalidJson: "The task table is not valid JSON; the save was blocked. Fix it and try again.",
+			save: "Save",
+			saving: "Saving…",
+			saveFailed: "The save did not land; your draft was kept for correction (the host may have rejected values or applied concurrent changes).",
+			discard: "Discard changes",
+			paramsTitle: "Runtime parameters (read-only)",
+			paramDefault: "(default)",
+			paramStatePath: "State database path statePath",
+			paramTickMs: "Tick interval tickMs (ms)",
+			paramDispatchGraceMs: "Dispatch grace dispatchGraceMs (ms)",
+			paramLeaseMs: "Run lease leaseMs (ms)",
+			paramUnknownGraceMs: "Observation grace unknownGraceMs (ms)",
+			paramTasksDir: "Task directory tasksDir"
+		};
+		//#endregion
+		//#region src/client/index.ts
+		/** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
+		const SETTINGS_NS = "dsh-task-dispatch-table";
+		/** 字典命名空间（locale 注册表独立于 settings 命名空间，取同名便于对应）。 */
+		const LOCALE_NS = SETTINGS_NS;
+		/** 只读参数展示值：undefined 显示占位符，statePath 空串 = 宿主数据根默认（决策 14）。 */
+		function displayParam(t, value) {
+			if (value === void 0) return "—";
+			if (typeof value === "string" && value.trim() === "") return t("paramDefault");
+			return String(value);
+		}
+		const textareaStyle = {
+			width: "100%",
+			boxSizing: "border-box",
+			minHeight: "16em",
+			resize: "vertical",
+			fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+			fontSize: "12px",
+			lineHeight: 1.5,
+			padding: "8px"
+		};
+		const hintStyle = {
+			opacity: .7,
+			fontSize: "12px",
+			margin: "4px 0 8px"
+		};
+		const errorStyle = {
+			color: "#c0392b",
+			fontSize: "12px",
+			margin: "4px 0 0"
+		};
+		const rowStyle = {
+			display: "flex",
+			gap: "8px",
+			margin: "8px 0"
+		};
+		const dlStyle = {
+			display: "grid",
+			gridTemplateColumns: "auto 1fr",
+			gap: "4px 16px",
+			margin: "8px 0 0"
+		};
+		/** 任务表草稿是否为宿主可解析的 JSON 数组（空白串视为清空，合法）。 */
+		function isValidTaskTable(text) {
+			if (text.trim() === "") return true;
+			try {
+				return Array.isArray(JSON.parse(text));
+			} catch {
+				return false;
+			}
+		}
+		/**
+		* 渲染设置卡片：tasksInline 文本框（暂存 + 保存）+ 只读运行参数。
+		*
+		* 用「暂存 + 保存」而不是改一下就提交：每次写入都是可持久化的、带修订号栅栏的
+		* 文档变更，边改边写会把一次输入变成用户没要求、也无法预览的写入。
+		* @param props - t 席位与绑定的设置作用域。
+		*/
+		function TasksConfigPage(props) {
+			const { t, scope } = props;
+			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
+			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
+			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
+			const [draft, setDraft] = (0, react.useState)(void 0);
+			const [saving, setSaving] = (0, react.useState)(false);
+			const [failed, setFailed] = (0, react.useState)(false);
+			const section = snapshot.value ?? {};
+			const effectiveInline = typeof section.tasksInline === "string" ? section.tasksInline : "";
+			const current = draft ?? effectiveInline;
+			const invalid = draft !== void 0 && !isValidTaskTable(draft);
+			const dirty = draft !== void 0 && draft !== effectiveInline;
+			const ready = snapshot.status === "ready";
+			const writable = ready && snapshot.writable && !saving;
+			const save = async () => {
+				if (draft === void 0 || invalid || !ready || !snapshot.writable) return;
+				setSaving(true);
+				setFailed(false);
+				try {
+					if (draft.trim() === "") await scope.unset("tasksInline");
+					else await scope.set("tasksInline", draft);
+					setDraft(void 0);
+				} catch {
+					setFailed(true);
+				} finally {
+					setSaving(false);
+				}
+			};
+			if (!ready) return (0, react.createElement)("p", null, t("unavailable"));
+			return (0, react.createElement)("div", null, (0, react.createElement)("h3", null, t("title")), (0, react.createElement)("p", { style: hintStyle }, t("description")), (0, react.createElement)("label", {
+				htmlFor: "dsh-tdt-tasks-inline",
+				style: { fontWeight: 600 }
+			}, t("tasksInlineLabel")), (0, react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")), (0, react.createElement)("textarea", {
+				id: "dsh-tdt-tasks-inline",
+				value: current,
+				disabled: !writable,
+				onChange: (event) => {
+					setDraft(event.target.value);
+				},
+				spellCheck: false,
+				style: textareaStyle
+			}), invalid ? (0, react.createElement)("p", { style: errorStyle }, t("invalidJson")) : null, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
+				type: "button",
+				onClick: () => {
+					save();
+				},
+				disabled: !writable || invalid || !dirty
+			}, saving ? t("saving") : t("save")), (0, react.createElement)("button", {
+				type: "button",
+				onClick: () => {
+					setDraft(void 0);
+					setFailed(false);
+				},
+				disabled: saving || !dirty
+			}, t("discard"))), failed ? (0, react.createElement)("p", { style: errorStyle }, t("saveFailed")) : null, (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)))));
+		}
+		/**
+		* 浏览器插件入口：注册文案字典；在 slots + settingsScope 就位后把配置页注册进
+		* settings.plugin.item（keyed 槽位，key = 设置命名空间）。
+		* @param ctx - 浏览器插件上下文。
+		*/
+		function apply(ctx) {
+			ctx.inject(["locale"], (localeCtx) => {
+				ctx.effect(() => localeCtx.locale.register(LOCALE_NS, {
+					zh,
+					en
+				}));
+			});
+			ctx.inject(["slots", "settingsScope"], (sub) => {
+				const scope = sub.settingsScope.bind({ namespace: SETTINGS_NS });
+				sub.slots.inject("settings.plugin.item", () => sub.slots.register({
+					name: "settings.plugin.item",
+					key: SETTINGS_NS,
+					locale: LOCALE_NS,
+					inject: () => ({ scope })
+				}, TasksConfigPage));
+			});
+		}
+		//#endregion
+		exports.apply = apply;
+		return module.exports;
+	}
 });
-module.exports = __toCommonJS(index_exports);
-var import_react = require("react");
 
-// src/client/locales.ts
-var zh = {
-  summary: "\u5468\u671F\u4EFB\u52A1\u5B9A\u4E49\u8868\u4E0E\u8C03\u5EA6\u53C2\u6570",
-  title: "\u4EFB\u52A1\u8C03\u5EA6\u8868\uFF08dsh-task-dispatch-table\uFF09",
-  description: "\u5728\u4E0B\u65B9\u7F16\u8F91\u5185\u5D4C\u4EFB\u52A1\u8868 JSON\uFF1B\u4FDD\u5B58\u540E\u5199\u5165\u7528\u6237\u914D\u7F6E\u5C42\u5E76\u5373\u65F6\u751F\u6548\uFF0C\u79BB\u5F00\u9875\u9762\u4E22\u5F03\u672A\u4FDD\u5B58\u7684\u8349\u7A3F\u3002",
-  unavailable: "\u8BBE\u7F6E\u547D\u540D\u7A7A\u95F4\u5F53\u524D\u4E0D\u53EF\u7528\uFF08\u63D2\u4EF6\u672A\u8FD0\u884C\u6216\u5BBF\u4E3B\u672A\u63D0\u4F9B\uFF09\uFF0C\u6682\u65F6\u65E0\u6CD5\u914D\u7F6E\u3002",
-  tasksInlineLabel: "\u4EFB\u52A1\u8868\uFF08tasksInline\uFF0CJSON \u6570\u7EC4\uFF09",
-  tasksInlineHint: "\u6BCF\u9879\u4E00\u4E2A\u4EFB\u52A1\u5B9A\u4E49\uFF1B\u975E\u7A7A\u65F6\u4F18\u5148\u4E8E\u4EFB\u52A1\u76EE\u5F55 tasksDir\u3002\u6E05\u7A7A\u5E76\u4FDD\u5B58 = \u56DE\u5230\u9ED8\u8BA4\uFF08\u7A7A\uFF0C\u6539\u7528 tasksDir\uFF09\u3002",
-  invalidJson: "\u4EFB\u52A1\u8868\u4E0D\u662F\u5408\u6CD5 JSON\uFF0C\u5DF2\u963B\u6B62\u4FDD\u5B58\uFF1B\u8BF7\u4FEE\u6B63\u540E\u91CD\u8BD5\u3002",
-  save: "\u4FDD\u5B58",
-  saving: "\u4FDD\u5B58\u4E2D\u2026",
-  saveFailed: "\u4FDD\u5B58\u672A\u751F\u6548\uFF1A\u8349\u7A3F\u5DF2\u4FDD\u7559\uFF0C\u8BF7\u4FEE\u6539\u540E\u91CD\u8BD5\uFF08\u5BBF\u4E3B\u53EF\u80FD\u62D2\u7EDD\u4E86\u90E8\u5206\u503C\u6216\u5DF2\u6709\u5E76\u53D1\u4FEE\u6539\uFF09\u3002",
-  discard: "\u653E\u5F03\u66F4\u6539",
-  paramsTitle: "\u8FD0\u884C\u53C2\u6570\uFF08\u53EA\u8BFB\uFF09",
-  paramDefault: "\uFF08\u9ED8\u8BA4\uFF09",
-  paramStatePath: "\u72B6\u6001\u5E93\u8DEF\u5F84 statePath",
-  paramTickMs: "\u8C03\u5EA6\u5468\u671F tickMs\uFF08\u6BEB\u79D2\uFF09",
-  paramDispatchGraceMs: "\u6D3E\u53D1\u5BBD\u9650 dispatchGraceMs\uFF08\u6BEB\u79D2\uFF09",
-  paramLeaseMs: "\u8FD0\u884C\u79DF\u7EA6 leaseMs\uFF08\u6BEB\u79D2\uFF09",
-  paramUnknownGraceMs: "\u89C2\u5BDF\u5BBD\u9650 unknownGraceMs\uFF08\u6BEB\u79D2\uFF09",
-  paramTasksDir: "\u4EFB\u52A1\u76EE\u5F55 tasksDir"
-};
-var en = {
-  summary: "Periodic task definitions and scheduler parameters",
-  title: "Task dispatch table (dsh-task-dispatch-table)",
-  description: "Edit the inline task-table JSON below; saving writes the user settings layer and takes effect immediately. Unsaved drafts are dropped when you leave the page.",
-  unavailable: "The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.",
-  tasksInlineLabel: "Task table (tasksInline, JSON array)",
-  tasksInlineHint: "One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).",
-  invalidJson: "The task table is not valid JSON; the save was blocked. Fix it and try again.",
-  save: "Save",
-  saving: "Saving\u2026",
-  saveFailed: "The save did not land; your draft was kept for correction (the host may have rejected values or applied concurrent changes).",
-  discard: "Discard changes",
-  paramsTitle: "Runtime parameters (read-only)",
-  paramDefault: "(default)",
-  paramStatePath: "State database path statePath",
-  paramTickMs: "Tick interval tickMs (ms)",
-  paramDispatchGraceMs: "Dispatch grace dispatchGraceMs (ms)",
-  paramLeaseMs: "Run lease leaseMs (ms)",
-  paramUnknownGraceMs: "Observation grace unknownGraceMs (ms)",
-  paramTasksDir: "Task directory tasksDir"
-};
-
-// src/client/index.ts
-var SETTINGS_NS = "dsh-task-dispatch-table";
-var LOCALE_NS = SETTINGS_NS;
-var BUNDLE_KEY = SETTINGS_NS;
-var inject = ["slots", "locale", "settingsScope"];
-function displayParam(t, value) {
-  if (value === void 0) return "\u2014";
-  if (typeof value === "string" && value.trim() === "") return t("paramDefault");
-  return String(value);
-}
-var textareaStyle = {
-  width: "100%",
-  boxSizing: "border-box",
-  minHeight: "16em",
-  resize: "vertical",
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-  fontSize: "12px",
-  lineHeight: 1.5,
-  padding: "8px"
-};
-var hintStyle = { opacity: 0.7, fontSize: "12px", margin: "4px 0 8px" };
-var errorStyle = { color: "#c0392b", fontSize: "12px", margin: "4px 0 0" };
-var rowStyle = { display: "flex", gap: "8px", margin: "8px 0" };
-var dlStyle = { display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", margin: "8px 0 0" };
-function TasksConfigPage(props) {
-  const { t } = props;
-  const state = props.useTasksConfig((s) => s);
-  if (props.view === "summary") return (0, import_react.createElement)("span", null, t("summary"));
-  if (!state.available) return (0, import_react.createElement)("p", null, t("unavailable"));
-  return (0, import_react.createElement)(
-    "div",
-    null,
-    (0, import_react.createElement)("h3", null, t("title")),
-    (0, import_react.createElement)("p", { style: hintStyle }, t("description")),
-    (0, import_react.createElement)("label", { htmlFor: "dsh-tdt-tasks-inline", style: { fontWeight: 600 } }, t("tasksInlineLabel")),
-    (0, import_react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")),
-    (0, import_react.createElement)("textarea", {
-      id: "dsh-tdt-tasks-inline",
-      value: state.draft,
-      disabled: !state.writable || state.saving,
-      onChange: (event) => {
-        props.edit(event.target.value);
-      },
-      spellCheck: false,
-      style: textareaStyle
-    }),
-    state.invalid ? (0, import_react.createElement)("p", { style: errorStyle }, t("invalidJson")) : null,
-    (0, import_react.createElement)(
-      "div",
-      { style: rowStyle },
-      (0, import_react.createElement)("button", {
-        type: "button",
-        onClick: () => {
-          props.save();
-        },
-        disabled: !state.writable || state.saving || state.invalid
-      }, state.saving ? t("saving") : t("save")),
-      (0, import_react.createElement)("button", {
-        type: "button",
-        onClick: () => {
-          props.discard();
-        },
-        disabled: state.saving || !state.dirty
-      }, t("discard"))
-    ),
-    state.failed ? (0, import_react.createElement)("p", { style: errorStyle }, t("saveFailed")) : null,
-    (0, import_react.createElement)(
-      "details",
-      { style: { marginTop: "16px" } },
-      (0, import_react.createElement)("summary", null, t("paramsTitle")),
-      (0, import_react.createElement)(
-        "dl",
-        { style: dlStyle },
-        (0, import_react.createElement)("dt", null, t("paramStatePath")),
-        (0, import_react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, state.values.statePath)),
-        (0, import_react.createElement)("dt", null, t("paramTickMs")),
-        (0, import_react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, state.values.tickMs)),
-        (0, import_react.createElement)("dt", null, t("paramDispatchGraceMs")),
-        (0, import_react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, state.values.dispatchGraceMs)),
-        (0, import_react.createElement)("dt", null, t("paramLeaseMs")),
-        (0, import_react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, state.values.leaseMs)),
-        (0, import_react.createElement)("dt", null, t("paramUnknownGraceMs")),
-        (0, import_react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, state.values.unknownGraceMs)),
-        (0, import_react.createElement)("dt", null, t("paramTasksDir")),
-        (0, import_react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, state.values.tasksDir))
-      )
-    )
-  );
-}
-function isValidTaskTable(text) {
-  if (text.trim() === "") return true;
-  try {
-    const parsed = JSON.parse(text);
-    return typeof parsed === "object" && parsed !== null;
-  } catch {
-    return false;
-  }
-}
-function apply(ctx) {
-  ctx.effect(() => ctx.locale.register(LOCALE_NS, { zh, en }), "dsh-task-dispatch-table: \u9875\u9762\u5B57\u5178");
-  const scope = ctx.settingsScope.bind({ namespace: SETTINGS_NS });
-  let staged;
-  let saving = false;
-  let failed = false;
-  const effectiveInline = () => {
-    const value = scope.getSnapshot().value?.["tasksInline"];
-    return typeof value === "string" ? value : "";
-  };
-  const publish = () => {
-    store.set(buildState());
-  };
-  const buildState = () => {
-    const snapshot = scope.getSnapshot();
-    const value = snapshot.value;
-    const invalid = staged !== void 0 && !isValidTaskTable(staged);
-    return {
-      available: snapshot.status === "ready",
-      writable: snapshot.writable,
-      dirty: staged !== void 0,
-      invalid,
-      saving,
-      failed,
-      draft: staged ?? effectiveInline(),
-      overridden: snapshot.user !== void 0 && Object.hasOwn(snapshot.user, "tasksInline"),
-      values: {
-        statePath: typeof value?.["statePath"] === "string" ? value["statePath"] : void 0,
-        tickMs: typeof value?.["tickMs"] === "number" ? value["tickMs"] : void 0,
-        dispatchGraceMs: typeof value?.["dispatchGraceMs"] === "number" ? value["dispatchGraceMs"] : void 0,
-        leaseMs: typeof value?.["leaseMs"] === "number" ? value["leaseMs"] : void 0,
-        unknownGraceMs: typeof value?.["unknownGraceMs"] === "number" ? value["unknownGraceMs"] : void 0,
-        tasksDir: typeof value?.["tasksDir"] === "string" ? value["tasksDir"] : void 0
-      }
-    };
-  };
-  const store = (() => {
-    let state = buildState();
-    const listeners = /* @__PURE__ */ new Set();
-    return {
-      getSnapshot: () => state,
-      subscribe(listener) {
-        listeners.add(listener);
-        return () => {
-          listeners.delete(listener);
-        };
-      },
-      set(next) {
-        state = next;
-        for (const listener of [...listeners]) listener();
-      }
-    };
-  })();
-  scope.subscribe(publish);
-  const actions = {
-    edit(text) {
-      staged = text;
-      failed = false;
-      publish();
-    },
-    save() {
-      void saveNow();
-    },
-    discard() {
-      if (staged === void 0 && !failed) return;
-      staged = void 0;
-      failed = false;
-      publish();
-    }
-  };
-  async function saveNow() {
-    const snapshot = scope.getSnapshot();
-    if (saving || snapshot.status !== "ready" || !snapshot.writable) return;
-    const text = staged;
-    if (text === void 0) return;
-    if (!isValidTaskTable(text)) {
-      publish();
-      return;
-    }
-    saving = true;
-    failed = false;
-    publish();
-    let landed;
-    if (text.trim() === "") {
-      await scope.unset("tasksInline");
-      const user = scope.getSnapshot().user;
-      landed = !(user !== void 0 && Object.hasOwn(user, "tasksInline"));
-    } else {
-      await scope.set("tasksInline", text);
-      const user = scope.getSnapshot().user;
-      landed = user !== void 0 && user["tasksInline"] === text;
-    }
-    if (landed) staged = void 0;
-    saving = false;
-    failed = !landed;
-    publish();
-  }
-  const describeFace = ctx.settingsScope.describe();
-  ctx.effect(() => {
-    let off;
-    const sync = () => {
-      const namespaces = describeFace.getSnapshot().view?.namespaces;
-      const served = namespaces?.some((view) => view.ns === SETTINGS_NS) ?? false;
-      if (served && off === void 0) {
-        off = ctx.slots.inject("plugins.bundle.config", () => ctx.slots.register({
-          name: "plugins.bundle.config",
-          key: BUNDLE_KEY,
-          locale: LOCALE_NS,
-          inject: () => ({ hooks: { tasksConfig: store }, ...actions })
-        }, TasksConfigPage));
-      } else if (!served && off !== void 0) {
-        off();
-        off = void 0;
-      }
-    };
-    const unsubscribe = describeFace.subscribe(sync);
-    void describeFace.ensure();
-    sync();
-    return () => {
-      unsubscribe();
-      if (off !== void 0) {
-        off();
-        off = void 0;
-      }
-    };
-  }, "dsh-task-dispatch-table: \u914D\u7F6E\u9875\u6CE8\u518C");
-}
-;return module.exports; } });
+//# sourceMappingURL=client.js.map

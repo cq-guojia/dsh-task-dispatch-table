@@ -29,8 +29,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && node scripts/build-client.mjs",
-    "build:client": "node scripts/build-client.mjs"
+    "build": "npm run build:host && npm run build:client",
+    "build:host": "tsc",
+    "build:client": "tsc --noEmit -p tsconfig.client.json && tsdown --config tsdown.client.config.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json"
   },
   "engines": {
     "node": ">=22.5"
@@ -42,7 +44,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.4",
-    "esbuild": "^0.25.10",
+    "@types/react": "~18.3.1",
+    "tsdown": "^0.23.0",
     "typescript": "^5.9.3"
   },
   "dsh": {
@@ -53,7 +56,9 @@
       "platform": "web",
       "inject": [
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-settings"
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
       ]
     }
   }

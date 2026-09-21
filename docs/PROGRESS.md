@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-21 · v0.0.1 已装进宿主（git 源）；Web 配置页（client bundle）已落码，待真机验证
+> **最后更新**：2026-09-21 · v0.0.1 已装进宿主（git 源）；配置页入口按真机作业（`settings.plugin.item`）改造完毕，待重装验证
 
 ---
 
@@ -28,13 +28,13 @@
 | 环节 | 状态 |
 |---|---|
 | 总体架构 | ✅ 定型 |
-| 关键技术决策（16 条） | ✅ 定型 |
+| 关键技术决策（17 条） | ✅ 定型 |
 | 宿主 API 源码核实 | ✅ 未决项 1–4 全部关闭（结论沉淀为决策 15） |
 | 状态机 / 依赖语义 | ✅ 完整定义（转移表 / 租约 / unknown / 窗口 / 补跑 / 串行） |
 | 数据模型（JSON Schema + SQLite 表） | ✅ 定型 |
 | 任务定义样例 | ✅ 定型（首个：镜像升级日报） |
 | UI 方案 | ✅ 定型（决策 16：v1 零 UI 配置走 ctx.settings，监控面板 v1.1 弹窗形态） |
-| 调度器插件骨架 | ✅ 落码（v0.0.1）且**已装进宿主**（git 源安装成功）；Web 配置页已落码（client bundle + `plugins.bundle.config`，决策 17），**待真机更新插件验证卡片出现** |
+| 调度器插件骨架 | ✅ 落码（v0.0.1）且**已装进宿主**（git 源安装成功）；Web 配置页已按真机作业改造（`settings.plugin.item` slot，决策 17 修订），**待重装验证卡片出现** |
 
 ---
 
@@ -44,7 +44,7 @@
 |---|---|
 | [`../AGENTS.md`](../AGENTS.md) | agent 操作守则、文档体系与维护规则 |
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
-| [`design/decisions.md`](design/decisions.md) | 16 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
+| [`design/decisions.md`](design/decisions.md) | 17 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL（两表）、关键设计与取舍 |
 | [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 产物契约 + 任务手册 |
 | [`design/state-machine.md`](design/state-machine.md) | 对账判定树、7 种状态、两种依赖语义、5 个必补机制 |
@@ -64,7 +64,7 @@
 | `storages/` 语义 | 根 = **宿主数据根**（`dshHomePath('storages')` → 配置路径 → `$DSH_HOME` → `~/.dsh`），**非工作区**——决策 14 已据此修订 |
 | 第三方包接入 | **bundle 形态**：`package.json` 声明 `"dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`，patch 内 `- insert: { id, name: <npm 包名> }`，用户 `pnpm add` 进 profile |
 | 插件写法 | 具名导出 `name` / `inject` / `Config`（schemastery z schema）/ `apply(ctx, config)`；配置在 patch 行 `config:` 键声明 |
-| Web 配置页 | **= 插件自带 client bundle**（manifest `"dsh": { "client": { "platform": "web" } }` + `exports['./client']` = lazy-CJS factory 产物），页面注册进 ui-plugin-manager 的 `plugins.bundle.config` slot（键 = 包名）；`plugins.item` 为宿主平面页保留（决策 17） |
+| Web 配置页 | **= 插件自带 client bundle**（manifest `"dsh": { "client": { "platform": "web" } }` + `exports['./client']` = lazy-CJS factory 产物），页面注册进 `settings.plugin.item` keyed slot（key = settings 命名空间），设置页「插件」标签页自动配对渲染（决策 17，已按真机作业修订；`plugins.bundle.config` 是组合包契约，勿再误用） |
 | 工作区 | `ctx.workspaceRegistry` 拿实体（`WorkspaceEntity.path` 为绝对路径）；`meta.cwd` 必须绝对路径 |
 
 **会话列表治理策略（已定）**：派发时用 `ctx.sessionTitle.rename` 起规范名（如 `[TASK] 镜像升级日报 · 2026-09-20`），跑完 `archiveSession` 归档。
@@ -88,7 +88,7 @@
 
 ## 六、下一步（接手后从这里开始）
 
-1. **真机验证配置页**：把本仓库最新 commit 重新装进宿主（git 源更新），验证 Web「插件」页 → dsh-task-dispatch-table 详情页出现配置表单（tasksInline textarea + 只读参数折叠）；如不出现，查 dsh.client 扫描日志与 `/plugins/dsh-task-dispatch-table/client.js` 路由
+1. **真机验证配置页**：把本仓库最新 commit 重新装进宿主（git 源更新），验证 Web **设置页「插件」标签页**出现本插件折叠卡片（tasksInline textarea + 保存/放弃 + 只读参数）；如不出现，查宿主日志 client bundle 扫描与 combo 路由 `/plugins/??dsh-task-dispatch-table/client.js`
 2. **端到端联调**：在配置页里造一个真实任务，跑通 实例生成 → 派发 → 三查 → 状态落库；API 形状偏差按决策 15 回写
 3. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
 
@@ -133,3 +133,4 @@
 | 2026-09-21 | **依赖全部升最新线**：cron-parser 4.9(deprecated)→5.10.1（ESM 命名导出，两处调用迁移）、zod 3.25→4.6.5、typescript→5.9.3（7.x 原生编译器新线不冒进）、@types/node→22.20.4；tsc 零报错 + 冒烟通过 |
 | 2026-09-21 | **v0.0.1 真机安装成功**（`dsh plugin --profile web add git+...`，装完即用无需 allowBuilds）；用户反馈：Web「插件配置」页未出现本插件卡片，暂无 UI 入口 → 排查 patch→组合→配置页渲染链路；用户拍板临时方案：Config 加 textarea 字段直接编辑任务表 JSON，先跑通再做完整功能 |
 | 2026-09-21 | **Web 配置页落码（client bundle）**：机制查明——配置页非 schema 自动渲染，须插件自带浏览器半侧（manifest `"dsh": { "client": { "platform": "web" } }` + `exports['./client']` = lazy-CJS factory 产物 `dist/client.js`），页面注册进 `plugins.bundle.config`（键 = 包名；`plugins.item` 为宿主平面页保留，与先前判断不同）→ **拍板决策 17**。新增 `src/client/{index,locales}.ts` + `scripts/build-client.mjs`（esbuild 复刻宿主 clientBundle 预设），dist 入库；页面 = tasksInline 大 textarea（草稿暂存 / 保存写入带 revision 设栅 / 非法 JSON 拦截）+ 其余 6 个运行参数只读折叠展示，文案 zh/en 走 locale 服务；mock 宿主冒烟 15 项全过（factory→apply→注册→渲染→保存→卸载），待真机验证 |
+| 2026-09-21 | **配置页入口按真机作业改造（slot 结论修正）**：真机无入口，用户指路 dsh-session-title-pattern（已跑通同款入口）——注册面应为 **`settings.plugin.item` keyed slot**（key = settings 命名空间），前稿的 `plugins.bundle.config` 是 ui-plugin-manager 对组合包的契约，误用 → **决策 17 修订**。同步落实作业规矩：顶层禁止导出 `inject`（entry pending 会卡死整个 dsh 启动）、locale 词典经 `ctx.inject(['locale'])` 延迟注册、`t` 由渲染器按注册项 `locale:` 声明合成、组件 `useSyncExternalStore` 消费 scope 快照、保存走 `scope.set/unset`（空值 unset 回默认）、设置页自动配对无需自建 gating。构建从 esbuild 手搓切换 **tsdown**（`tsdown.client.config.ts`：产物三件套 + PLATFORM_MODULES externals + outDir dist/clean false），删 `scripts/build-client.mjs` 与 esbuild，devDeps 增 tsdown 0.23 / @types/react ~18.3.1，新增 `tsconfig.client.json`（client 侧 noEmit 类型检查）。tsc 双工程零报错 + 产物冒烟（banner 三件套齐全、externals 仅 react、locales 内联）通过，待重装验证 |
