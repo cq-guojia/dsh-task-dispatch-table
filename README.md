@@ -27,7 +27,7 @@
 - **控制平面与数据平面分离**：agent 只写产物，**任务状态只由调度器写**。
 - **状态存 SQLite**（原子领取），任务定义存 JSON。
 
-完整的 13 条决策与理由见 [`docs/design/decisions.md`](docs/design/decisions.md)。
+完整的 14 条决策与理由见 [`docs/design/decisions.md`](docs/design/decisions.md)。
 
 ## 文档
 
@@ -35,9 +35,9 @@
 |---|---|
 | 项目进度、未决项、下一步 | [`docs/PROGRESS.md`](docs/PROGRESS.md) |
 | 三层架构与职责边界 | [`docs/design/architecture.md`](docs/design/architecture.md) |
-| 决策与理由 | [`docs/design/decisions.md`](docs/design/decisions.md) |
+| 决策与理由（14 条） | [`docs/design/decisions.md`](docs/design/decisions.md) |
 | 状态机、依赖语义、必补机制 | [`docs/design/state-machine.md`](docs/design/state-machine.md) |
-| 为什么任务手册是 MD 而不是 skill | [`docs/design/task-manual-vs-skill.md`](docs/design/task-manual-vs-skill.md) |
+| agent 接手守则（工具自动挂载） | [`AGENTS.md`](AGENTS.md) |
 
 ## 项目信息
 

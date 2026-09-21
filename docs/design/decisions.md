@@ -15,8 +15,30 @@
 | 9 | **依赖语义两种，任务自己声明** | `same_period`（找**同一 logical date** 的上游实例，缺则跳过）/ `latest_success`（找**最近一次成功** + 新鲜度上限）。只有前者的话，跨周期依赖（月榜→日报）会失效——详见 [state-machine.md](state-machine.md) |
 | 10 | **失败策略** | 重试 N 次 → 仍失败则 `failed` → **下游跳过（不分配）**；当日窗口内修复则继续，**过窗口则整条链作废、切次日新实例** |
 | 11 | **agent 不写任务状态** | 控制平面 / 数据平面分离：agent 只能写**产物文件**，状态**只由调度器写**。理由：大模型自报不可信 |
-| 12 | **任务手册用工作区 MD 文件**（调度器把路径写进派发 prompt），**不做成 skill** | 见 [task-manual-vs-skill.md](task-manual-vs-skill.md) |
+| 12 | **任务手册用工作区 MD 文件**（调度器把路径写进派发 prompt），**不做成 skill** | 分层加载方案见下方「[决策 12 展开](#决策-12-展开任务手册的分层加载)」 |
 | 13 | **调度器的定时器用官方 `ctx.interval` / `inject: ['timer']`** | 模块作用域的裸 `setInterval` 永不被清理；官方机制在插件卸载时自动清理 |
+
+---
+
+## 决策 12 展开：任务手册的分层加载
+
+官方 handbook（`sessions-vs-memory`）明确立场：
+
+> "A fifth mechanism—**Skills or workspace instructions**—stores stable operating guidance.
+> **Do not put policy into semantic memory** and hope retrieval happens.
+> **If an Agent must always follow a rule, mount that rule deterministically.**"
+
+分层方案（四层，非二选一）：
+
+| 内容 | 放哪 | 加载方式 |
+|---|---|---|
+| 短指令 | 任务定义 JSON 的 `prompt` 字段 | 调度器拼进派发消息 |
+| **任务专属长手册** | **工作区里的 MD 文件**，路径写进 prompt | agent 主动读 |
+| 跨任务铁律 | 工作区 `AGENTS.md` | **确定性挂载**（官方指定） |
+| 多任务 + 人机共享的流程 | skill | 元数据常驻 + 正文按需 |
+
+**skill 的唯一适用场景**：某流程**既要被自动任务用、又要被人手动问时用**。
+只服务一个任务的手册做成 skill 是绕远路——skill 的机制价值在「让模型自己发现」，而调度器**已经知道该用哪份**。
 
 ---
 
