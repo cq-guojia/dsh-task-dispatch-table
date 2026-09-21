@@ -32,12 +32,12 @@
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.2",
-    "cron-parser": "^4.9.0",
-    "zod": "^3.25.76"
+    "cron-parser": "^5.10.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^22.19.0",
-    "typescript": "^5.8.3"
+    "@types/node": "^22.20.4",
+    "typescript": "^5.9.3"
   },
   "dsh": {
     "bundle": {

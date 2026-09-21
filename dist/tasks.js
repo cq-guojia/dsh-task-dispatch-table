@@ -3,8 +3,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-// cron-parser 4.x 为 CJS，经 default 导出取 parseExpression。
-import cronParser from 'cron-parser';
+// cron-parser 5.x 为 ESM，命名导出 CronExpressionParser。
+import { CronExpressionParser } from 'cron-parser';
 /** ISO 8601 时长（如 PT4H），只支持 H/M/S 组合——窗口与新鲜度够用。 */
 const isoDuration = z.string().regex(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, 'ISO 8601 时长，如 PT4H');
 export const dependencySemantics = ['same_period', 'latest_success'];
@@ -66,7 +66,7 @@ export function logicalDateOf(date, timeZone) {
 }
 /** 算任务在指定日历日的计划时刻；找不到（cron 与日历不产生该日）返回 undefined。 */
 export function scheduledAtFor(task, day, searchFrom) {
-    const interval = cronParser.parseExpression(task.schedule.cron, {
+    const interval = CronExpressionParser.parse(task.schedule.cron, {
         currentDate: searchFrom,
         tz: task.schedule.timezone,
     });
@@ -108,7 +108,7 @@ export function loadTasks(ctx, tasksDir) {
                 continue;
             }
             try {
-                cronParser.parseExpression(def.schedule.cron, { tz: def.schedule.timezone });
+                CronExpressionParser.parse(def.schedule.cron, { tz: def.schedule.timezone });
             }
             catch (error) {
                 ctx.logger.warn(`任务定义 cron 非法 ${file}: ${String(error)}`);

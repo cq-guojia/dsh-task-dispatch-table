@@ -10,127 +10,32 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         cron: z.ZodString;
         timezone: z.ZodOptional<z.ZodString>;
         window: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        cron: string;
-        window: string;
-        timezone?: string | undefined;
-    }, {
-        cron: string;
-        window: string;
-        timezone?: string | undefined;
-    }>;
+    }, z.core.$strip>;
     target: z.ZodObject<{
         workspace: z.ZodString;
         model: z.ZodOptional<z.ZodString>;
         manual: z.ZodOptional<z.ZodString>;
         prompt: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        workspace: string;
-        prompt: string;
-        model?: string | undefined;
-        manual?: string | undefined;
-    }, {
-        workspace: string;
-        prompt: string;
-        model?: string | undefined;
-        manual?: string | undefined;
-    }>;
+    }, z.core.$strip>;
     contract: z.ZodObject<{
         path: z.ZodString;
-        validStatuses: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        path: string;
-        validStatuses: string[];
-    }, {
-        path: string;
-        validStatuses?: string[] | undefined;
-    }>;
+        validStatuses: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>;
     retry: z.ZodDefault<z.ZodObject<{
         maxAttempts: z.ZodDefault<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        maxAttempts: number;
-    }, {
-        maxAttempts?: number | undefined;
-    }>>;
+    }, z.core.$strip>>;
     backfill: z.ZodDefault<z.ZodObject<{
         days: z.ZodDefault<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        days: number;
-    }, {
-        days?: number | undefined;
-    }>>;
+    }, z.core.$strip>>;
     depends_on: z.ZodOptional<z.ZodArray<z.ZodObject<{
         task: z.ZodString;
-        semantics: z.ZodEnum<["same_period", "latest_success"]>;
+        semantics: z.ZodEnum<{
+            same_period: "same_period";
+            latest_success: "latest_success";
+        }>;
         freshness: z.ZodOptional<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        task: string;
-        semantics: "same_period" | "latest_success";
-        freshness?: string | undefined;
-    }, {
-        task: string;
-        semantics: "same_period" | "latest_success";
-        freshness?: string | undefined;
-    }>, "many">>;
-}, "strip", z.ZodTypeAny, {
-    id: string;
-    enabled: boolean;
-    schedule: {
-        cron: string;
-        window: string;
-        timezone?: string | undefined;
-    };
-    target: {
-        workspace: string;
-        prompt: string;
-        model?: string | undefined;
-        manual?: string | undefined;
-    };
-    contract: {
-        path: string;
-        validStatuses: string[];
-    };
-    retry: {
-        maxAttempts: number;
-    };
-    backfill: {
-        days: number;
-    };
-    depends_on?: {
-        task: string;
-        semantics: "same_period" | "latest_success";
-        freshness?: string | undefined;
-    }[] | undefined;
-}, {
-    id: string;
-    enabled: boolean;
-    schedule: {
-        cron: string;
-        window: string;
-        timezone?: string | undefined;
-    };
-    target: {
-        workspace: string;
-        prompt: string;
-        model?: string | undefined;
-        manual?: string | undefined;
-    };
-    contract: {
-        path: string;
-        validStatuses?: string[] | undefined;
-    };
-    retry?: {
-        maxAttempts?: number | undefined;
-    } | undefined;
-    backfill?: {
-        days?: number | undefined;
-    } | undefined;
-    depends_on?: {
-        task: string;
-        semantics: "same_period" | "latest_success";
-        freshness?: string | undefined;
-    }[] | undefined;
-}>;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
 export type TaskDefinition = z.infer<typeof taskDefinitionSchema>;
 /** 把 ISO 8601 时长解析成毫秒。 */
 export declare function durationMs(iso: string): number;
