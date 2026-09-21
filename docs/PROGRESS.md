@@ -28,11 +28,12 @@
 | 环节 | 状态 |
 |---|---|
 | 总体架构 | ✅ 定型 |
-| 关键技术决策（15 条） | ✅ 定型 |
+| 关键技术决策（16 条） | ✅ 定型 |
 | 宿主 API 源码核实 | ✅ 未决项 1–4 全部关闭（结论沉淀为决策 15） |
 | 状态机 / 依赖语义 | ✅ 完整定义（转移表 / 租约 / unknown / 窗口 / 补跑 / 串行） |
 | 数据模型（JSON Schema + SQLite 表） | ✅ 定型 |
 | 任务定义样例 | ✅ 定型（首个：镜像升级日报） |
+| UI 方案 | ✅ 定型（决策 16：v1 零 UI 配置走 ctx.settings，监控面板 v1.1 弹窗形态） |
 | 调度器插件骨架 | ⬜ 方案已定，待落码 |
 
 ---
@@ -43,7 +44,7 @@
 |---|---|
 | [`../AGENTS.md`](../AGENTS.md) | agent 操作守则、文档体系与维护规则 |
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
-| [`design/decisions.md`](design/decisions.md) | 15 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
+| [`design/decisions.md`](design/decisions.md) | 16 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL（两表）、关键设计与取舍 |
 | [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 产物契约 + 任务手册 |
 | [`design/state-machine.md`](design/state-machine.md) | 对账判定树、7 种状态、两种依赖语义、5 个必补机制 |
@@ -122,3 +123,4 @@
 | 2026-09-21 | **首个任务样例定型**（[`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md)）：镜像升级日报——任务定义 + 产物契约 + 手册骨架；仅文档示例，与插件代码零耦合 |
 | 2026-09-21 | **状态机完整定义**（[`design/state-machine.md`](design/state-machine.md)）：完整转移表、租约 30min 心跳续租、`unknown` 只观察不重派、窗口只管开始、重试当场回 `pending`、同任务严格串行、补跑三层入口（自动实例保障 / `backfill.days` / SQL 手动重置）；数据模型随之增补第 14 个字段 `backfill.days` |
 | 2026-09-21 | **宿主源码核实完成，未决项 1–4 全关**（克隆 deepseek-ai/deepseek-harness 至 /tmp 读源码，结论 = 决策 15）：派发走 `ctx.agents.create`（sessions.create 不驱动模型）；storages/ = 宿主数据根非工作区（决策 14 修订）；归档程序化可用；bundle 接入形态。**骨架方案**：`src/{index,config,tasks,scheduler,reconcile,store,dispatch}.ts` + `cordis.patch.yml`，TypeScript 构建，`inject: ['timer','agents','sessions','workspaceRegistry']` |
+| 2026-09-21 | **拍板决策 16（UI 分期）**：v1 零自建 UI（配置走官方 `ctx.settings`，任务定义按决策 6 编辑 JSON）；实例监控面板放 v1.1，形态 = 大弹窗/drawer 不做全屏页（宿主惯例 popover + 信息密度低） |
