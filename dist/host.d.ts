@@ -63,14 +63,45 @@ export interface AgentOptions {
  */
 export interface CreateAgentOptions {
     readonly sessionId: SessionId;
+    /**
+     * 会话创建元数据。agentPreset 是**持久化**的会话身份（决策 23）：写入后该会话即绑定此
+     * preset，后续 adopt/resume 会做一致性校验（不匹配抛 preset conflict）。
+     */
     readonly meta?: {
         readonly cwd?: string;
+        readonly agentPreset?: string;
     };
     readonly agentOptions?: AgentOptions;
+    /**
+     * 发布前的 agent 作用域组装（决策 23）。工厂在 mint agentCtx 之后、announce
+     * `session/created`/`agent/created` 之前 await 本回调；**工具、prompt sections、skill
+     * 目录只在这里挂得上**（presets.mount），晚于发布就没有模型可见的层了。
+     * 抛错 ⇒ 整个作用域回滚、会话与 agent 都不发布。
+     */
+    readonly setup?: AgentSetup;
 }
+/**
+ * 组装回调（CreateAgentOptions.setup / ResumeAgentOptions.setup 共用）。
+ * agentCtx 是 agent 的**作用域 ctx**，正是 agentPresets.mount 需要的参数。
+ */
+export type AgentSetup = (agentCtx: unknown, agent: HostAgent) => void | Promise<void>;
 /** AgentRegistry.create：core/agent/src/index.ts:388-398。 */
 export interface HostAgents {
     create(options: CreateAgentOptions): Promise<AgentHandle>;
+}
+/**
+ * agent preset 服务（@deepseek-ai/dsh-agent-presets 0.1.6-alpha.2，服务名 `agentPresets`）：
+ * preset 决定一个 agent 的**工具、prompt sections、skill 目录**（决策 23）。
+ * ⚠️ 未加入 preset 的 agent 落到「空的全局层」——实测只剩根作用域注册的东西
+ * （MCP 工具在、fs/bash 全无），宿主自己的会话都经 setup 里 mount 加入。
+ */
+export interface HostAgentPresets {
+    /** 解析 preset id；省略/undefined = 部署默认（settings 的 selectionPolicy().defaultId，热读）。 */
+    resolve(id?: string): Promise<{
+        readonly id: string;
+    }>;
+    /** 把 agent 作用域绑定到该 preset 的 standing composition。agentCtx 必须是作用域 ctx。 */
+    mount(agentCtx: unknown, id?: string): Promise<unknown>;
 }
 /** SessionStore.create(id?)：core/session/src/index.ts:969，id 可由调用者供给。 */
 export interface HostSessions {
@@ -176,12 +207,13 @@ export interface HostContext {
     settings: HostSettings;
     sessionTitle: HostSessionTitle;
     /**
-     * cordis 可选服务探测（决策 22 漏斗第③④层用）。**一律不写进 inject**：声明组合满足
-     * 不了的依赖会让 entry 一直 pending、卡死整个 dsh 启动（决策 17 真机教训）。
+     * cordis 可选服务探测（决策 22 漏斗 / 决策 23 preset 挂载用）。**一律不写进 inject**：
+     * 声明组合满足不了的依赖会让 entry 一直 pending、卡死整个 dsh 启动（决策 17 真机教训）。
      * 未挂载时返回 undefined。
      */
     get(name: 'llm'): HostLlm | undefined;
     get(name: 'agentDefaultModel'): HostAgentDefaultModel | undefined;
+    get(name: 'agentPresets'): HostAgentPresets | undefined;
     get(name: string): unknown;
 }
 /**

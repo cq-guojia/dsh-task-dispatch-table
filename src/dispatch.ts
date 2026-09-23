@@ -1,11 +1,11 @@
-// 派发（决策 22）：模型漏斗解析 → assign-session 落库 → ctx.agents.create 驱动模型
-// （内部自建会话：sessions.prepare + enter + announce）→ 工作区 attachSession 归组
-// → agent.send 拼装消息。不要预建 ctx.sessions.create——会撞 store 的
-// 'session "…" already exists'（真机教训 2026-09-23）。
+// 派发（决策 22 + 决策 23）：模型漏斗解析 + 部署默认 preset 解析 → assign-session 落库
+// → ctx.agents.create 驱动模型（内部自建会话：sessions.prepare + enter + announce；preset 在
+// setup 里 mount，工具/提示词/skill 由此挂上）→ 工作区 attachSession 归组 → agent.send 拼装消息。
+// 不要预建 ctx.sessions.create——会撞 store 的 'session "…" already exists'（真机教训 2026-09-23）。
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import type {
-  HostAgentDefaultModel, HostContext, HostLogger, HostLlm, HostWorkspace, UserMessage,
+  HostAgentDefaultModel, HostAgentPresets, HostContext, HostLogger, HostLlm, HostWorkspace, UserMessage,
 } from './host.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
@@ -15,8 +15,8 @@ import type { TaskStore } from './store.js'
 export const SUBMIT_JS = fileURLToPath(new URL('./submit.js', import.meta.url))
 
 /**
- * 派发前置条件失败（决策 22）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
- * reason 取值：no-model-route / workspace-attach-failed。
+ * 派发前置条件失败（决策 22 / 决策 23）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
+ * reason 取值：no-model-route / agent-create-failed / workspace-attach-failed。
  */
 export class DispatchPreconditionError extends Error {
   constructor(readonly reason: string, message: string) {
@@ -156,6 +156,40 @@ export async function resolveModelRoute(
   return undefined
 }
 
+/** 已解析的 preset 组装方式（决策 23）：presets 服务 + 要挂的 preset id。 */
+interface AgentComposition {
+  presets: HostAgentPresets
+  presetId: string
+}
+
+/**
+ * 解析「与用户新建会话相同」的 agent 组装方式（决策 23）：取**部署默认** preset
+ * （`resolve()` 省略 id = settings 的 selectionPolicy().defaultId，热读）。
+ *
+ * preset 决定 agent 的**工具、prompt sections、skill 目录**（含工作区 AGENTS.md 注入）。
+ * 不挂 preset 的 agent 落到「空的全局层」——真机实测只剩下根作用域的 MCP 工具，fs/bash 全无。
+ * 这里没有任何硬编码工具清单：部署往 preset 的 composition 里加什么，派发的会话就有什么。
+ *
+ * @returns 组装方式；presets 服务未挂载、或部署无可用 preset（rosterless）时返回 undefined
+ * ——那种部署下这些行住在宿主 composition 的全局层，不挂也看得见，故**跳过而非判失败**。
+ */
+async function resolveAgentComposition(
+  ctx: HostContext, logger: HostLogger, task: TaskDefinition,
+): Promise<AgentComposition | undefined> {
+  const presets: HostAgentPresets | undefined = ctx.get('agentPresets')
+  if (presets === undefined) {
+    logger.warn(`任务 ${task.id}: 宿主未挂载 agentPresets 服务，按 rosterless 处理（工具/提示词取全局层）`)
+    return undefined
+  }
+  try {
+    const { id } = await presets.resolve()
+    return { presets, presetId: id }
+  } catch (error) {
+    logger.warn(`任务 ${task.id}: 解析部署默认 preset 失败，按 rosterless 处理: ${String(error)}`)
+    return undefined
+  }
+}
+
 /**
  * 回执提交命令行（决策 19）：--db/--task/--date/--session 由调度器填好，
  * agent 只补 --status 与 --outputs。派发消息与追问消息共用同一拼装。
@@ -237,13 +271,15 @@ export interface DispatchInput {
 export type AgentHandle = Awaited<ReturnType<HostContext['agents']['create']>>
 
 /**
- * 派发一个已 CAS 领取的实例（决策 22 顺序）：
- * 解析模型漏斗 → 落 session_id → agents.create（自建会话并 announce session/created，
- * 晚于 assign-session，对账收到时实例必已带 session_id）→ **工作区 attachSession 归组**
- * → 落 dispatch 事件（含本次实测 route 与命中层级）→ send。
+ * 派发一个已 CAS 领取的实例（决策 22 顺序 + 决策 23 preset 组装）：
+ * 解析模型漏斗 → **解析部署默认 preset** → 落 session_id → agents.create（自建会话并
+ * announce session/created，晚于 assign-session，对账收到时实例必已带 session_id；preset 在
+ * create 的 setup 里 mount，工具/prompt sections/skill 由此挂上）→ **工作区 attachSession 归组**
+ * → 落 dispatch 事件（含本次实测 route、命中层级与 preset）→ send。
  * 会话改名在 reconciler.onCreated 做——此处拿不到 Session 对象（handle 只有 agent）。
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
- * @throws DispatchPreconditionError 模型解析不出、或会话建好后无法归组工作区。
+ * @throws DispatchPreconditionError 模型解析不出、会话建不起来（含 preset 挂载失败）、
+ *   或会话建好后无法归组工作区。
  */
 export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: string; handle: AgentHandle }> {
   const { ctx, logger, store, task, instanceId, logicalDate, workspace, statePath, config } = input
@@ -257,6 +293,9 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     )
   }
 
+  // 组装方式（决策 23）：部署默认 preset——与用户在 UI 新建会话同一套。
+  const composition = await resolveAgentComposition(ctx, logger, task)
+
   const sessionId = randomUUID()
   // 领取后先把会话身份落到实例行，再建 agent——session/created（factory announce）
   // 到达时实例必已带 session_id，对账可立即转 running。
@@ -264,11 +303,31 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
 
   // provider/model 必须成对显式传（决策 22）：宿主缺省不填 {{model}}，deployment persona
   // 里的 {{model}} 取不到值会直接抛错、本轮秒结束。会话由本调用自建，禁止预建（见文件头）。
-  const handle = await ctx.agents.create({
-    sessionId,
-    meta: { cwd: workspace.path },
-    agentOptions: { provider: route.provider, model: route.model },
-  })
+  // setup（决策 23）是**唯一**能挂上模型可见层（工具 / prompt sections / skill）的时机：
+  // 在 mint agentCtx 之后、发布之前。抛错则工厂回滚作用域、会话与 agent 都不发布，故这里
+  // 撤回占位 session_id——实例行不留一个从未发布过的会话身份。
+  let handle: AgentHandle
+  try {
+    handle = await ctx.agents.create({
+      sessionId,
+      meta: {
+        cwd: workspace.path,
+        ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
+      },
+      agentOptions: { provider: route.provider, model: route.model },
+      ...(composition === undefined ? {} : {
+        setup: async (agentCtx: unknown): Promise<void> => {
+          await composition.presets.mount(agentCtx, composition.presetId)
+        },
+      }),
+    })
+  } catch (error) {
+    store.transition(instanceId, { status: 'dispatched', session_id: null, detail: 'create-failed' })
+    throw new DispatchPreconditionError(
+      'agent-create-failed',
+      `任务 ${task.id} 会话 ${sessionId} 未能建立（preset=${composition?.presetId ?? '(rosterless)'}）: ${String(error)}`,
+    )
+  }
 
   // 归组（决策 22）：只设 meta.cwd 不会进工作区 sessionIds，必须显式 attach；
   // attach 内部要求 session header 的 cwd 归一后 === workspace.path，故 cwd 只能取自本实体。
@@ -282,13 +341,14 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     )
   }
 
-  // route/source 落事件：只记本次实测用了什么，不回写任务定义或配置。
+  // route/source/preset 落事件：只记本次实测用了什么，不回写任务定义或配置。
   store.appendEvent(instanceId, 'dispatch', {
     sessionId,
     workspacePath: workspace.path,
     provider: route.provider,
     model: route.model,
     modelSource: route.source,
+    ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
   })
   // 会话列表治理：规范名在 reconciler.onCreated 改，跑完归档在 succeeded 对账后。
   handle.agent.send(buildMessage(task, workspace.path, logicalDate, sessionId, statePath), 'next-turn', true)

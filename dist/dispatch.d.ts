@@ -5,8 +5,8 @@ import type { TaskStore } from './store.js';
 /** 回执提交程序（决策 19）：与本文件同在 dist/，运行期按自身位置定位（包 type=module，.js 即 ESM）。 */
 export declare const SUBMIT_JS: string;
 /**
- * 派发前置条件失败（决策 22）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
- * reason 取值：no-model-route / workspace-attach-failed。
+ * 派发前置条件失败（决策 22 / 决策 23）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
+ * reason 取值：no-model-route / agent-create-failed / workspace-attach-failed。
  */
 export declare class DispatchPreconditionError extends Error {
     readonly reason: string;
@@ -68,13 +68,15 @@ export interface DispatchInput {
 /** agent handle：ctx.agents.create 的返回（追问时用于再推一轮对话）。 */
 export type AgentHandle = Awaited<ReturnType<HostContext['agents']['create']>>;
 /**
- * 派发一个已 CAS 领取的实例（决策 22 顺序）：
- * 解析模型漏斗 → 落 session_id → agents.create（自建会话并 announce session/created，
- * 晚于 assign-session，对账收到时实例必已带 session_id）→ **工作区 attachSession 归组**
- * → 落 dispatch 事件（含本次实测 route 与命中层级）→ send。
+ * 派发一个已 CAS 领取的实例（决策 22 顺序 + 决策 23 preset 组装）：
+ * 解析模型漏斗 → **解析部署默认 preset** → 落 session_id → agents.create（自建会话并
+ * announce session/created，晚于 assign-session，对账收到时实例必已带 session_id；preset 在
+ * create 的 setup 里 mount，工具/prompt sections/skill 由此挂上）→ **工作区 attachSession 归组**
+ * → 落 dispatch 事件（含本次实测 route、命中层级与 preset）→ send。
  * 会话改名在 reconciler.onCreated 做——此处拿不到 Session 对象（handle 只有 agent）。
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
- * @throws DispatchPreconditionError 模型解析不出、或会话建好后无法归组工作区。
+ * @throws DispatchPreconditionError 模型解析不出、会话建不起来（含 preset 挂载失败）、
+ *   或会话建好后无法归组工作区。
  */
 export declare function dispatchTask(input: DispatchInput): Promise<{
     sessionId: string;

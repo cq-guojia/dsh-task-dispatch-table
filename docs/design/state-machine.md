@@ -164,3 +164,19 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 - ⚠️ **只在派发时现算，绝不回写任务定义或配置**：配置期固化会让用户日后换模型时失去兜底。本次实测 route 与命中层级只落 `dispatch` 事件（`provider` / `model` / `modelSource`），便于排查而固化语义。
 
 **归组（派发后）**：会话建成后必须调 `workspace.attachSession(sessionId)`——它读会话 header 的 cwd、realpath 归一、要求严格等于工作区 `path`，才把会话登记进该工作区的 `sessionIds`。**只设 `meta.cwd` 不会自动归组**（`bootstrap()` 只在 registry 首次初始化时按 cwd 归组历史会话）。attach 失败 ⇒ `workspace-attach-failed`，已建 agent 就地 dispose，不发送派发消息、不落 `dispatch` 事件。
+
+## 15. 会话组装（决策 23）
+
+**③ preset 解析**（与①②同为纯程序前置，但失败不判失败）：
+
+| 情形 | 处理 |
+|---|---|
+| `ctx.get('agentPresets')` 未挂载 | 按 **rosterless** 处理：跳过挂载 + 告警（工具/提示词住在宿主 composition 全局层，不挂也看得见） |
+| `resolve()` 抛错（无可用 preset / composition 坏） | 同上：跳过 + 告警 |
+| 解析到 id | `meta.agentPreset = id` + `setup: (agentCtx) => presets.mount(agentCtx, id)` |
+
+**为什么必须有**：preset 决定 agent 的**工具、prompt sections、skill 目录**（含工作区 `AGENTS.md` 注入）。不挂的 agent 落到「空的全局层」——真机实测只剩根作用域注册的 MCP 工具，fs/bash 全无，agent 只能瞎调 MCP、干不了活。挂默认 preset = 与用户 UI 新建会话同一套，插件里不写死任何工具名。
+
+**create 失败的收敛**：`agents.create`（含 `setup` 里 `mount`）抛错 ⇒ 工厂回滚作用域、**会话与 agent 都不发布**；此时撤回占位 `session_id`（置 null）并按 `agent-create-failed` 走重试判定，避免实例行留一个从未发布过的会话身份。
+
+`dispatch` 事件同时记录本次实测：`provider` / `model` / `modelSource` / `agentPreset`（只记录、不回写任务定义或配置）。
