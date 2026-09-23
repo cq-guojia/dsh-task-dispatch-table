@@ -29,6 +29,9 @@ window.__ModuleLoader__.load({
 			debugButton: "调试日志",
 			debugTitle: "调试快照（临时面板，随宿主状态自动刷新）",
 			debugClose: "关闭",
+			debugRefresh: "刷新",
+			debugRefreshedAt: "手动刷新于",
+			debugAutoHint: "快照随宿主调度自动刷新（每 tick / 会话事件 / 5 分钟心跳）；时间为本机时区。",
 			debugEmpty: "暂无快照：宿主完成一次调度（或派发 / 会话事件）后自动写入。若持续为空，说明宿主侧运行的还是旧版插件，请重装后重试。",
 			debugRaw: "快照解析失败，原文如下：",
 			debugTasks: "已加载任务",
@@ -62,6 +65,9 @@ window.__ModuleLoader__.load({
 			debugButton: "Debug logs",
 			debugTitle: "Debug snapshot (temporary panel; auto-refreshes with host state)",
 			debugClose: "Close",
+			debugRefresh: "Refresh",
+			debugRefreshedAt: "Manual refresh at",
+			debugAutoHint: "Snapshot auto-refreshes with host scheduling (every tick / session event / 5-min heartbeat); times are in your local timezone.",
 			debugEmpty: "No snapshot yet: the host writes one after each scheduling pass (or dispatch / session event). If it stays empty, the host is still running an old plugin build — reinstall and retry.",
 			debugRaw: "Failed to parse the snapshot; raw text below:",
 			debugTasks: "Loaded tasks",
@@ -189,6 +195,12 @@ window.__ModuleLoader__.load({
 				return false;
 			}
 		}
+		/** 宿主写入的 ISO 时间串 → 浏览器本机时区可读格式（解析失败原样返回）。 */
+		function formatTime(iso) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return iso;
+			return new Date(ms).toLocaleString(void 0, { hour12: false });
+		}
 		/** 解析快照 JSON；为空或形状不符返回 undefined（原文由调用方兜底展示）。 */
 		function parseDebugSnapshot(raw) {
 			if (typeof raw !== "string" || raw.trim() === "") return void 0;
@@ -209,6 +221,7 @@ window.__ModuleLoader__.load({
 		*/
 		function DebugModal(props) {
 			const { t, data, raw, onClose } = props;
+			const [manualAt, setManualAt] = (0, react.useState)(void 0);
 			const hasRaw = raw.trim() !== "";
 			return (0, react.createElement)("div", {
 				style: overlayStyle,
@@ -222,19 +235,25 @@ window.__ModuleLoader__.load({
 				display: "flex",
 				alignItems: "center",
 				gap: "12px"
-			} }, data !== void 0 ? (0, react.createElement)("span", { style: hintStyle }, data.at) : null, (0, react.createElement)("button", {
+			} }, data !== void 0 ? (0, react.createElement)("span", { style: hintStyle }, formatTime(data.at)) : null, manualAt !== void 0 ? (0, react.createElement)("span", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(new Date(manualAt).toISOString())}`) : null, (0, react.createElement)("button", {
+				type: "button",
+				onClick: () => {
+					setManualAt(Date.now());
+				}
+			}, t("debugRefresh")), (0, react.createElement)("button", {
 				type: "button",
 				onClick: onClose
-			}, t("debugClose")))), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugTasks")}：${data.tasks.length > 0 ? data.tasks.join(", ") : "—"}`), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugWarns")), data.warns.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugNoWarns")) : (0, react.createElement)("pre", { style: preStyle }, data.warns.join("\n")), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugInstances")), data.instances.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugInstancesEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+			}, t("debugClose")))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugTasks")}：${data.tasks.length > 0 ? data.tasks.join(", ") : "—"}`), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugWarns")), data.warns.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugNoWarns")) : (0, react.createElement)("pre", { style: preStyle }, data.warns.join("\n")), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugInstances")), data.instances.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugInstancesEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				"id",
 				"status",
 				"attempt",
 				"session",
+				"scheduled",
 				"updated_at"
 			].map((name) => (0, react.createElement)("th", {
 				key: name,
 				style: cellStyle
-			}, name)))), (0, react.createElement)("tbody", null, data.instances.map((row) => (0, react.createElement)("tr", { key: row.id }, (0, react.createElement)("td", { style: cellStyle }, row.id), (0, react.createElement)("td", { style: cellStyle }, row.status), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, row.updated_at))))), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugEvents")), data.events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugEventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+			}, name)))), (0, react.createElement)("tbody", null, data.instances.map((row) => (0, react.createElement)("tr", { key: row.id }, (0, react.createElement)("td", { style: cellStyle }, row.id), (0, react.createElement)("td", { style: cellStyle }, row.status), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at)))))), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugEvents")), data.events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugEventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				"seq",
 				"ts",
 				"kind",
@@ -242,7 +261,7 @@ window.__ModuleLoader__.load({
 			].map((name) => (0, react.createElement)("th", {
 				key: name,
 				style: cellStyle
-			}, name)))), (0, react.createElement)("tbody", null, data.events.map((row) => (0, react.createElement)("tr", { key: row.seq }, (0, react.createElement)("td", { style: cellStyle }, String(row.seq)), (0, react.createElement)("td", { style: cellStyle }, row.ts), (0, react.createElement)("td", { style: cellStyle }, row.kind), (0, react.createElement)("td", { style: detailCellStyle }, row.detail ?? ""))))))));
+			}, name)))), (0, react.createElement)("tbody", null, data.events.map((row) => (0, react.createElement)("tr", { key: row.seq }, (0, react.createElement)("td", { style: cellStyle }, String(row.seq)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.ts)), (0, react.createElement)("td", { style: cellStyle }, row.kind), (0, react.createElement)("td", { style: detailCellStyle }, row.detail ?? ""))))))));
 		}
 		/**
 		* 渲染设置卡片：tasksInline 文本框（暂存 + 保存）+ 只读运行参数。

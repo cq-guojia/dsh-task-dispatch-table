@@ -18,9 +18,9 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         manual: z.ZodOptional<z.ZodString>;
         prompt: z.ZodString;
     }, z.core.$strip>;
-    contract: z.ZodObject<{
+    contract: z.ZodDefault<z.ZodObject<{
         validStatuses: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    }, z.core.$strip>;
+    }, z.core.$strip>>;
     retry: z.ZodDefault<z.ZodObject<{
         maxAttempts: z.ZodDefault<z.ZodNumber>;
     }, z.core.$strip>>;

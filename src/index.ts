@@ -24,6 +24,8 @@ export type { PluginConfig }
 const DEBUG_WARN_LIMIT = 20
 /** 快照最小写入间隔（毫秒）：会话事件逐条续租改 updated_at，不节流会写放大。 */
 const DEBUG_WRITE_MIN_INTERVAL_MS = 2_000
+/** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
+const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000
 /** 快照携带的最近事件条数。 */
 const DEBUG_EVENT_LIMIT = 40
 
@@ -55,9 +57,10 @@ export function apply(ctx: HostContext, config: unknown): void {
 
   let taskMap = new Map<string, TaskDefinition>()
 
-  // 快照写入：内容去重（数据未变不写）+ 2s 节流（尾随写入保证最终态必落）。
+  // 快照写入：内容去重（数据未变不写）+ 2s 节流（尾随写入保证最终态必落）+ 5min 心跳。
   let lastContent = ''
   let lastWriteAt = 0
+  let lastPushAt = 0
   let writePending = false
   const writeSnapshot = (): void => {
     try {
@@ -70,8 +73,9 @@ export function apply(ctx: HostContext, config: unknown): void {
       }
       const content = JSON.stringify(body)
       lastWriteAt = Date.now()
-      if (content === lastContent) return
+      if (content === lastContent && Date.now() - lastPushAt < DEBUG_FORCE_INTERVAL_MS) return
       lastContent = content
+      lastPushAt = Date.now()
       scope.update({ debugSnapshot: JSON.stringify({ at: new Date().toISOString(), ...body }) })
         .catch((error: unknown) => ctx.logger.warn(`调试快照写入失败: ${String(error)}`))
     } catch (error) {

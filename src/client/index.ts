@@ -134,9 +134,16 @@ function isValidTaskTable(text: string): boolean {
 interface DebugSnapshotData {
   at: string
   tasks: string[]
-  instances: { id: string; status: string; attempt: number; session_id: string | null; updated_at: string }[]
+  instances: { id: string; status: string; attempt: number; session_id: string | null; scheduled_at: string; updated_at: string }[]
   events: { seq: number; ts: string; kind: string; detail: string | null }[]
   warns: string[]
+}
+
+/** 宿主写入的 ISO 时间串 → 浏览器本机时区可读格式（解析失败原样返回）。 */
+function formatTime(iso: string): string {
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return iso
+  return new Date(ms).toLocaleString(undefined, { hour12: false })
 }
 
 /** 解析快照 JSON；为空或形状不符返回 undefined（原文由调用方兜底展示）。 */
@@ -160,16 +167,24 @@ function parseDebugSnapshot(raw: unknown): DebugSnapshotData | undefined {
  */
 function DebugModal(props: { t: Translate; data: DebugSnapshotData | undefined; raw: string; onClose: () => void }) {
   const { t, data, raw, onClose } = props
+  // 手动刷新：settings 快照本身经订阅 live 更新，此按钮兜底重渲染并记录刷新时刻，
+  // 让「时间戳不动」可区分是数据没变还是页面没刷。
+  const [manualAt, setManualAt] = useState<number | undefined>(undefined)
   const hasRaw = raw.trim() !== ''
   return h('div', { style: overlayStyle, onClick: onClose },
     h('div', { style: panelStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
       h('div', { style: modalHeaderStyle },
         h('h3', { style: { margin: 0 } }, t('debugTitle')),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-          data !== undefined ? h('span', { style: hintStyle }, data.at) : null,
+          data !== undefined ? h('span', { style: hintStyle }, formatTime(data.at)) : null,
+          manualAt !== undefined
+            ? h('span', { style: hintStyle }, `${t('debugRefreshedAt')} ${formatTime(new Date(manualAt).toISOString())}`)
+            : null,
+          h('button', { type: 'button', onClick: () => { setManualAt(Date.now()) } }, t('debugRefresh')),
           h('button', { type: 'button', onClick: onClose }, t('debugClose')),
         ),
       ),
+      h('p', { style: hintStyle }, t('debugAutoHint')),
       data === undefined
         ? h('div', null,
             h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
@@ -186,14 +201,15 @@ function DebugModal(props: { t: Translate; data: DebugSnapshotData | undefined; 
               ? h('p', { style: hintStyle }, t('debugInstancesEmpty'))
               : h('table', { style: tableStyle },
                   h('thead', null, h('tr', null,
-                    ['id', 'status', 'attempt', 'session', 'updated_at']
+                    ['id', 'status', 'attempt', 'session', 'scheduled', 'updated_at']
                       .map(name => h('th', { key: name, style: cellStyle }, name)))),
                   h('tbody', null, data.instances.map(row => h('tr', { key: row.id },
                     h('td', { style: cellStyle }, row.id),
                     h('td', { style: cellStyle }, row.status),
                     h('td', { style: cellStyle }, String(row.attempt)),
                     h('td', { style: cellStyle }, row.session_id === null ? '—' : row.session_id.slice(0, 8)),
-                    h('td', { style: cellStyle }, row.updated_at),
+                    h('td', { style: cellStyle }, formatTime(row.scheduled_at)),
+                    h('td', { style: cellStyle }, formatTime(row.updated_at)),
                   ))),
                 ),
             h('h4', { style: sectionTitleStyle }, t('debugEvents')),
@@ -205,7 +221,7 @@ function DebugModal(props: { t: Translate; data: DebugSnapshotData | undefined; 
                       .map(name => h('th', { key: name, style: cellStyle }, name)))),
                   h('tbody', null, data.events.map(row => h('tr', { key: row.seq },
                     h('td', { style: cellStyle }, String(row.seq)),
-                    h('td', { style: cellStyle }, row.ts),
+                    h('td', { style: cellStyle }, formatTime(row.ts)),
                     h('td', { style: cellStyle }, row.kind),
                     h('td', { style: detailCellStyle }, row.detail ?? ''),
                   ))),

@@ -14,6 +14,7 @@ export type LocaleKey =
   | 'debugButton' | 'debugTitle' | 'debugClose' | 'debugEmpty' | 'debugRaw'
   | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
   | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents' | 'debugEventsEmpty'
+  | 'debugRefresh' | 'debugRefreshedAt' | 'debugAutoHint'
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
@@ -38,6 +39,9 @@ export const zh: Record<LocaleKey, string> = {
   debugButton: '调试日志',
   debugTitle: '调试快照（临时面板，随宿主状态自动刷新）',
   debugClose: '关闭',
+  debugRefresh: '刷新',
+  debugRefreshedAt: '手动刷新于',
+  debugAutoHint: '快照随宿主调度自动刷新（每 tick / 会话事件 / 5 分钟心跳）；时间为本机时区。',
   debugEmpty: '暂无快照：宿主完成一次调度（或派发 / 会话事件）后自动写入。若持续为空，说明宿主侧运行的还是旧版插件，请重装后重试。',
   debugRaw: '快照解析失败，原文如下：',
   debugTasks: '已加载任务',
@@ -72,6 +76,9 @@ export const en: Record<LocaleKey, string> = {
   debugButton: 'Debug logs',
   debugTitle: 'Debug snapshot (temporary panel; auto-refreshes with host state)',
   debugClose: 'Close',
+  debugRefresh: 'Refresh',
+  debugRefreshedAt: 'Manual refresh at',
+  debugAutoHint: 'Snapshot auto-refreshes with host scheduling (every tick / session event / 5-min heartbeat); times are in your local timezone.',
   debugEmpty: 'No snapshot yet: the host writes one after each scheduling pass (or dispatch / session event). If it stays empty, the host is still running an old plugin build — reinstall and retry.',
   debugRaw: 'Failed to parse the snapshot; raw text below:',
   debugTasks: 'Loaded tasks',
