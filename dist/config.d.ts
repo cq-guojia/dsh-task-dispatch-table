@@ -14,8 +14,10 @@ export interface PluginConfig {
     tasksDir: string;
     /** 内嵌任务表 JSON 数组（临时 UI，决策 16 v1 补充）：非空时优先于 tasksDir。 */
     tasksInline: string;
+    /** 调试快照 JSON（临时调试通道，决策 16 例外）：宿主写入、配置页只读展示，非用户设置。 */
+    debugSnapshot: string;
 }
-export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline'>;
+export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot'>;
 export declare const Config: z<Schemastery.ObjectS<{
     statePath: z<string, string>;
     tickMs: z<number, number>;
@@ -24,6 +26,7 @@ export declare const Config: z<Schemastery.ObjectS<{
     unknownGraceMs: z<number, number>;
     tasksDir: z<string, string>;
     tasksInline: z<string, string>;
+    debugSnapshot: z<string, string>;
 }>, Schemastery.ObjectT<{
     statePath: z<string, string>;
     tickMs: z<number, number>;
@@ -32,6 +35,7 @@ export declare const Config: z<Schemastery.ObjectS<{
     unknownGraceMs: z<number, number>;
     tasksDir: z<string, string>;
     tasksInline: z<string, string>;
+    debugSnapshot: z<string, string>;
 }>>;
 /**
  * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。

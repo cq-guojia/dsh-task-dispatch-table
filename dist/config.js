@@ -17,6 +17,7 @@ export const Config = z.object({
     unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs),
     tasksDir: z.string().default('tasks'),
     tasksInline: z.string().role('textarea').default(''),
+    debugSnapshot: z.string().default(''),
 });
 /**
  * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。

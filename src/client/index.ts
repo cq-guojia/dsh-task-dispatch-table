@@ -90,6 +90,35 @@ const errorStyle: Record<string, string | number> = { color: '#c0392b', fontSize
 const rowStyle: Record<string, string | number> = { display: 'flex', gap: '8px', margin: '8px 0' }
 const dlStyle: Record<string, string | number> = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 16px', margin: '8px 0 0' }
 
+// ── 调试弹窗样式（临时调试面板，决策 16 例外）──
+const monoFont = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+const preStyle: Record<string, string | number> = {
+  fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, margin: '4px 0',
+  whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '12em', overflow: 'auto',
+  background: 'rgba(128,128,128,0.12)', padding: '8px', borderRadius: '4px',
+}
+const overlayStyle: Record<string, string | number> = {
+  position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+}
+const panelStyle: Record<string, string | number> = {
+  background: '#ffffff', color: '#1f2328', borderRadius: '8px', width: '100%', maxWidth: '920px',
+  maxHeight: '82vh', overflow: 'auto', padding: '16px', boxSizing: 'border-box',
+}
+const modalHeaderStyle: Record<string, string | number> = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px',
+}
+const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px' }
+const tableStyle: Record<string, string | number> = {
+  borderCollapse: 'collapse', width: '100%', fontFamily: monoFont, fontSize: '12px', margin: '4px 0',
+}
+const cellStyle: Record<string, string | number> = {
+  border: '1px solid rgba(128,128,128,0.35)', padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
+}
+const detailCellStyle: Record<string, string | number> = {
+  ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
+}
+
 /** 任务表草稿是否为宿主可解析的 JSON 数组（空白串视为清空，合法）。 */
 function isValidTaskTable(text: string): boolean {
   if (text.trim() === '') return true
@@ -98,6 +127,92 @@ function isValidTaskTable(text: string): boolean {
   } catch {
     return false
   }
+}
+
+// ── 调试快照（host 侧 index.ts writeSnapshot 的序列化形状，本地结构化复述）──
+
+interface DebugSnapshotData {
+  at: string
+  tasks: string[]
+  instances: { id: string; status: string; attempt: number; session_id: string | null; updated_at: string }[]
+  events: { seq: number; ts: string; kind: string; detail: string | null }[]
+  warns: string[]
+}
+
+/** 解析快照 JSON；为空或形状不符返回 undefined（原文由调用方兜底展示）。 */
+function parseDebugSnapshot(raw: unknown): DebugSnapshotData | undefined {
+  if (typeof raw !== 'string' || raw.trim() === '') return undefined
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null) return undefined
+    const candidate = parsed as Partial<DebugSnapshotData>
+    if (!Array.isArray(candidate.instances) || !Array.isArray(candidate.events)) return undefined
+    return parsed as DebugSnapshotData
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * 渲染调试弹窗：任务表 ids / 告警环形缓冲 / 实例表 / 事件表。
+ * 数据来自 settings 快照的 debugSnapshot 字段（host 周期写入），经 useSyncExternalStore
+ * 订阅自动刷新，无需手动重开。
+ */
+function DebugModal(props: { t: Translate; data: DebugSnapshotData | undefined; raw: string; onClose: () => void }) {
+  const { t, data, raw, onClose } = props
+  const hasRaw = raw.trim() !== ''
+  return h('div', { style: overlayStyle, onClick: onClose },
+    h('div', { style: panelStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+      h('div', { style: modalHeaderStyle },
+        h('h3', { style: { margin: 0 } }, t('debugTitle')),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+          data !== undefined ? h('span', { style: hintStyle }, data.at) : null,
+          h('button', { type: 'button', onClick: onClose }, t('debugClose')),
+        ),
+      ),
+      data === undefined
+        ? h('div', null,
+            h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
+            hasRaw ? h('pre', { style: preStyle }, raw) : null,
+          )
+        : h('div', null,
+            h('p', { style: hintStyle }, `${t('debugTasks')}：${data.tasks.length > 0 ? data.tasks.join(', ') : '—'}`),
+            h('h4', { style: sectionTitleStyle }, t('debugWarns')),
+            data.warns.length === 0
+              ? h('p', { style: hintStyle }, t('debugNoWarns'))
+              : h('pre', { style: preStyle }, data.warns.join('\n')),
+            h('h4', { style: sectionTitleStyle }, t('debugInstances')),
+            data.instances.length === 0
+              ? h('p', { style: hintStyle }, t('debugInstancesEmpty'))
+              : h('table', { style: tableStyle },
+                  h('thead', null, h('tr', null,
+                    ['id', 'status', 'attempt', 'session', 'updated_at']
+                      .map(name => h('th', { key: name, style: cellStyle }, name)))),
+                  h('tbody', null, data.instances.map(row => h('tr', { key: row.id },
+                    h('td', { style: cellStyle }, row.id),
+                    h('td', { style: cellStyle }, row.status),
+                    h('td', { style: cellStyle }, String(row.attempt)),
+                    h('td', { style: cellStyle }, row.session_id === null ? '—' : row.session_id.slice(0, 8)),
+                    h('td', { style: cellStyle }, row.updated_at),
+                  ))),
+                ),
+            h('h4', { style: sectionTitleStyle }, t('debugEvents')),
+            data.events.length === 0
+              ? h('p', { style: hintStyle }, t('debugEventsEmpty'))
+              : h('table', { style: tableStyle },
+                  h('thead', null, h('tr', null,
+                    ['seq', 'ts', 'kind', 'detail']
+                      .map(name => h('th', { key: name, style: cellStyle }, name)))),
+                  h('tbody', null, data.events.map(row => h('tr', { key: row.seq },
+                    h('td', { style: cellStyle }, String(row.seq)),
+                    h('td', { style: cellStyle }, row.ts),
+                    h('td', { style: cellStyle }, row.kind),
+                    h('td', { style: detailCellStyle }, row.detail ?? ''),
+                  ))),
+                ),
+          ),
+    ),
+  )
 }
 
 /**
@@ -119,6 +234,7 @@ function TasksConfigPage(props: PageProps) {
   const [draft, setDraft] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [debugOpen, setDebugOpen] = useState(false)
 
   const section = (snapshot.value ?? {}) as Record<string, unknown>
   const effectiveInline = typeof section.tasksInline === 'string' ? section.tasksInline : ''
@@ -127,6 +243,10 @@ function TasksConfigPage(props: PageProps) {
   const dirty = draft !== undefined && draft !== effectiveInline
   const ready = snapshot.status === 'ready'
   const writable = ready && snapshot.writable && !saving
+
+  // 调试快照：host 周期写入 debugSnapshot 字段，订阅自动刷新（临时调试面板，决策 16 例外）。
+  const debugRaw = typeof section.debugSnapshot === 'string' ? section.debugSnapshot : ''
+  const debugData = parseDebugSnapshot(debugRaw)
 
   const save = async (): Promise<void> => {
     if (draft === undefined || invalid || !ready || !snapshot.writable) return
@@ -174,6 +294,9 @@ function TasksConfigPage(props: PageProps) {
       }, t('discard')),
     ),
     failed ? h('p', { style: errorStyle }, t('saveFailed')) : null,
+    h('div', { style: rowStyle },
+      h('button', { type: 'button', onClick: () => { setDebugOpen(true) } }, t('debugButton')),
+    ),
     h('details', { style: { marginTop: '16px' } },
       h('summary', null, t('paramsTitle')),
       h('dl', { style: dlStyle },
@@ -185,6 +308,7 @@ function TasksConfigPage(props: PageProps) {
         h('dt', null, t('paramTasksDir')), h('dd', { style: { margin: 0 } }, displayParam(t, section.tasksDir)),
       ),
     ),
+    debugOpen ? h(DebugModal, { t, data: debugData, raw: debugRaw, onClose: () => { setDebugOpen(false) } }) : null,
   )
 }
 

@@ -13,6 +13,13 @@ export interface TaskInstance {
     finished_at: string | null;
     updated_at: string;
 }
+/** 调试快照事件行（detail 截断，临时调试面板用）。 */
+export interface SnapshotEvent {
+    seq: number;
+    ts: string;
+    kind: string;
+    detail: string | null;
+}
 /** 单实例状态转移 + task_events 追加的参数包。 */
 export interface TransitionInput {
     status: InstanceStatus;
@@ -35,6 +42,14 @@ export declare class TaskStore {
     } | undefined;
     /** 实例某类事件计数（追问次数上限用）。 */
     countEvents(instanceId: string, kind: string): number;
+    /**
+     * 调试面板快照（临时调试通道）：全部实例 + 最近 N 条事件。
+     * 事件取 seq 倒序再反转 = 升序输出（旧→新，日志阅读顺序）；detail 截断 200 字符防快照膨胀。
+     */
+    snapshot(limitEvents?: number): {
+        instances: TaskInstance[];
+        events: SnapshotEvent[];
+    };
     /** 晚于某时刻的最新回执事件（决策 19：回执对账按次取新，防止上一轮 attempt 的旧回执冒充）。 */
     latestReceipt(instanceId: string, afterIso: string | undefined): {
         ts: string;

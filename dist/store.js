@@ -59,6 +59,25 @@ export class TaskStore {
             .get(instanceId, kind);
         return Number(row.n);
     }
+    /**
+     * 调试面板快照（临时调试通道）：全部实例 + 最近 N 条事件。
+     * 事件取 seq 倒序再反转 = 升序输出（旧→新，日志阅读顺序）；detail 截断 200 字符防快照膨胀。
+     */
+    snapshot(limitEvents = 40) {
+        const instances = this.db
+            .prepare('SELECT * FROM task_instances ORDER BY updated_at DESC')
+            .all();
+        const rows = this.db
+            .prepare('SELECT seq, ts, kind, detail FROM task_events ORDER BY seq DESC LIMIT ?')
+            .all(limitEvents);
+        const events = rows
+            .reverse()
+            .map(row => ({
+            ...row,
+            detail: row.detail !== null && row.detail.length > 200 ? `${row.detail.slice(0, 200)}…` : row.detail,
+        }));
+        return { instances, events };
+    }
     /** 晚于某时刻的最新回执事件（决策 19：回执对账按次取新，防止上一轮 attempt 的旧回执冒充）。 */
     latestReceipt(instanceId, afterIso) {
         return this.db

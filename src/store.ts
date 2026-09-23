@@ -24,6 +24,14 @@ export interface TaskInstance {
   updated_at: string
 }
 
+/** 调试快照事件行（detail 截断，临时调试面板用）。 */
+export interface SnapshotEvent {
+  seq: number
+  ts: string
+  kind: string
+  detail: string | null
+}
+
 /** 单实例状态转移 + task_events 追加的参数包。 */
 export interface TransitionInput {
   status: InstanceStatus
@@ -95,6 +103,26 @@ export class TaskStore {
       .prepare('SELECT COUNT(*) AS n FROM task_events WHERE instance_id = ? AND kind = ?')
       .get(instanceId, kind) as { n: number }
     return Number(row.n)
+  }
+
+  /**
+   * 调试面板快照（临时调试通道）：全部实例 + 最近 N 条事件。
+   * 事件取 seq 倒序再反转 = 升序输出（旧→新，日志阅读顺序）；detail 截断 200 字符防快照膨胀。
+   */
+  snapshot(limitEvents = 40): { instances: TaskInstance[]; events: SnapshotEvent[] } {
+    const instances = this.db
+      .prepare('SELECT * FROM task_instances ORDER BY updated_at DESC')
+      .all() as unknown as TaskInstance[]
+    const rows = this.db
+      .prepare('SELECT seq, ts, kind, detail FROM task_events ORDER BY seq DESC LIMIT ?')
+      .all(limitEvents) as unknown as SnapshotEvent[]
+    const events = rows
+      .reverse()
+      .map(row => ({
+        ...row,
+        detail: row.detail !== null && row.detail.length > 200 ? `${row.detail.slice(0, 200)}…` : row.detail,
+      }))
+    return { instances, events }
   }
 
   /** 晚于某时刻的最新回执事件（决策 19：回执对账按次取新，防止上一轮 attempt 的旧回执冒充）。 */

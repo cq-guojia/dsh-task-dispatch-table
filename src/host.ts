@@ -91,9 +91,11 @@ export interface HostWorkspaceRegistry {
   archiveSession(id: SessionId): Promise<void>
 }
 
-/** SettingsScope：packages/settings/settings/src/index.ts:115-141。 */
+/** SettingsScope：packages/settings/settings/src/index.ts:115-141（update 见 :133，owner scope 专用）。 */
 export interface SettingsScope<T> {
   get(): T
+  /** 运行期合并写入用户层并提交（:456 owner scope 暴露；read-only provider 抛错，:636）。 */
+  update(patch: Partial<T>): Promise<void>
   watch(callback: (next: T, prev: T) => void | Promise<void>): () => void
 }
 

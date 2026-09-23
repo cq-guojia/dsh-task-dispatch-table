@@ -19,9 +19,11 @@ export interface PluginConfig {
   tasksDir: string
   /** 内嵌任务表 JSON 数组（临时 UI，决策 16 v1 补充）：非空时优先于 tasksDir。 */
   tasksInline: string
+  /** 调试快照 JSON（临时调试通道，决策 16 例外）：宿主写入、配置页只读展示，非用户设置。 */
+  debugSnapshot: string
 }
 
-export const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline'> = {
+export const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot'> = {
   tickMs: 60_000,
   dispatchGraceMs: 60_000,
   leaseMs: 30 * 60_000,
@@ -36,6 +38,7 @@ export const Config = z.object({
   unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs),
   tasksDir: z.string().default('tasks'),
   tasksInline: z.string().role('textarea').default(''),
+  debugSnapshot: z.string().default(''),
 })
 
 /**
