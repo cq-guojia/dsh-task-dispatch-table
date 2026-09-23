@@ -1,4 +1,4 @@
-import type { HostContext, HostLogger, UserMessage } from './host.js';
+import type { HostContext, UserMessage } from './host.js';
 import type { TaskDefinition } from './tasks.js';
 import type { TaskStore } from './store.js';
 /** 回执提交程序（决策 19）：与本文件同在 dist/，运行期按自身位置定位（包 type=module，.js 即 ESM）。 */
@@ -23,8 +23,6 @@ export declare function userNotice(text: string, summary: string): UserMessage;
 export declare function buildMessage(task: TaskDefinition, workspacePath: string, logicalDate: string, sessionId: string, statePath: string): UserMessage;
 export interface DispatchInput {
     ctx: HostContext;
-    /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
-    logger: HostLogger;
     store: TaskStore;
     task: TaskDefinition;
     /** 已领取实例：形如 "<task_id>:<logical_date>"，状态应为 dispatched。 */
@@ -37,9 +35,10 @@ export interface DispatchInput {
 /** agent handle：ctx.agents.create 的返回（追问时用于再推一轮对话）。 */
 export type AgentHandle = Awaited<ReturnType<HostContext['agents']['create']>>;
 /**
- * 派发一个已 CAS 领取的实例。同步段（写 session_id → sessions.create）不 await，
- * 保证 session/created 同步 emit（core/session/src/index.ts:50）时实例已带 session_id，
- * 事件对账可立即转 running。
+ * 派发一个已 CAS 领取的实例。同步段先落 session_id 再 await agents.create：
+ * 会话由 factory 内部创建并 announce session/created（AgentFactory 契约），晚于
+ * assign-session，事件对账收到时实例必已带 session_id，可立即转 running。
+ * 会话改名在 reconciler.onCreated 做——此处拿不到 Session 对象（handle 只有 agent）。
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
  */
 export declare function dispatchTask(input: DispatchInput): Promise<{

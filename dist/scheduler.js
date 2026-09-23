@@ -125,7 +125,7 @@ export function createScheduler({ ctx, logger, store, reconciler, config }) {
                 if (!store.casClaim(instance.id))
                     continue;
                 dispatchTask({
-                    ctx, logger, store, task,
+                    ctx, store, task,
                     instanceId: instance.id,
                     logicalDate: instance.logical_date,
                     workspacePath,

@@ -175,6 +175,17 @@ export function createReconciler({ ctx, logger, store, options }) {
             if (instance === undefined || instance.status !== 'dispatched')
                 return;
             store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'session/created' });
+            // 会话改名（会话列表治理）：Session 对象只能在这里拿——agents.create 自建会话后
+            // announce（见 dispatch.ts 文件头），handle 上没有 session。改名失败只告警不影响对账。
+            const task = options.tasks().get(instance.task_id);
+            if (task !== undefined) {
+                try {
+                    ctx.sessionTitle.rename(session, `[TASK] ${task.id} · ${instance.logical_date}`);
+                }
+                catch (error) {
+                    logger.warn(`会话改名失败 ${session.id}: ${String(error)}`);
+                }
+            }
         },
         onEvent(session, event) {
             const instance = store.getBySession(session.id);

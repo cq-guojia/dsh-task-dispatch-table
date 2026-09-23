@@ -1,5 +1,7 @@
-// 派发：ctx.sessions.create（供 id）→ ctx.agents.create 驱动模型 → agent.send 拼装消息。
-// 派发不走 sessions.create 直驱——它只建存储会话不驱动模型（决策 15，core/agent/src/index.ts:62-119）。
+// 派发：assign-session 落库 → ctx.agents.create 驱动模型（内部自建会话：sessions.prepare +
+// enter + announce，core/agent-loop/src/index.ts:767、core/session/src/index.ts:969-979）
+// → agent.send 拼装消息。不要预建 ctx.sessions.create——会撞 store 的
+// 'session "…" already exists'（core/session/src/index.ts:1009，真机教训 2026-09-23）。
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 /** 回执提交程序（决策 19）：与本文件同在 dist/，运行期按自身位置定位（包 type=module，.js 即 ESM）。 */
@@ -61,32 +63,27 @@ export function buildMessage(task, workspacePath, logicalDate, sessionId, stateP
     return userNotice(lines.join('\n'), `[TASK] ${task.id} · ${logicalDate}`);
 }
 /**
- * 派发一个已 CAS 领取的实例。同步段（写 session_id → sessions.create）不 await，
- * 保证 session/created 同步 emit（core/session/src/index.ts:50）时实例已带 session_id，
- * 事件对账可立即转 running。
+ * 派发一个已 CAS 领取的实例。同步段先落 session_id 再 await agents.create：
+ * 会话由 factory 内部创建并 announce session/created（AgentFactory 契约），晚于
+ * assign-session，事件对账收到时实例必已带 session_id，可立即转 running。
+ * 会话改名在 reconciler.onCreated 做——此处拿不到 Session 对象（handle 只有 agent）。
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
  */
 export async function dispatchTask(input) {
-    const { ctx, logger, store, task, instanceId, logicalDate, workspacePath, statePath } = input;
+    const { ctx, store, task, instanceId, logicalDate, workspacePath, statePath } = input;
     const sessionId = randomUUID();
-    // 领取后先把会话身份落到实例行，再建会话——同 tick 同步顺序，无中间态外泄。
+    // 领取后先把会话身份落到实例行，再建 agent——session/created（factory announce）
+    // 到达时实例必已带 session_id，对账可立即转 running。
     store.transition(instanceId, { status: 'dispatched', session_id: sessionId, detail: 'assign-session' });
-    const session = ctx.sessions.create(sessionId);
     // agentOptions.model 仅在任务定义给出时传；provider/model 缺省语义 = 宿主默认路由
-    // （core/agent/src/runtime-types.ts:26-35）。
+    // （core/agent/src/runtime-types.ts:26-35）。会话由本调用自建，禁止预建（见文件头）。
     const handle = await ctx.agents.create({
         sessionId,
         meta: { cwd: workspacePath },
         agentOptions: task.target.model === undefined ? undefined : { model: task.target.model },
     });
-    // 会话列表治理（PROGRESS「会话列表治理策略」）：规范名 + 跑完归档（归档在 succeeded 对账后）。
-    try {
-        ctx.sessionTitle.rename(session, `[TASK] ${task.id} · ${logicalDate}`);
-    }
-    catch (error) {
-        logger.warn(`会话改名失败 ${sessionId}: ${String(error)}`);
-    }
     store.appendEvent(instanceId, 'dispatch', { sessionId, workspacePath });
+    // 会话列表治理：规范名在 reconciler.onCreated 改，跑完归档在 succeeded 对账后。
     handle.agent.send(buildMessage(task, workspacePath, logicalDate, sessionId, statePath), 'next-turn', true);
     return { sessionId, handle };
 }

@@ -152,7 +152,7 @@ export function createScheduler({ ctx, logger, store, reconciler, config }: Sche
         // CAS 领取（data-model 关键设计 3）→ dispatched → 派发。
         if (!store.casClaim(instance.id)) continue
         dispatchTask({
-          ctx, logger, store, task,
+          ctx, store, task,
           instanceId: instance.id,
           logicalDate: instance.logical_date,
           workspacePath,
