@@ -61,6 +61,11 @@ export declare class TaskStore {
     ensureInstance(taskId: string, logicalDate: string, scheduledAt: string, status: InstanceStatus): boolean;
     get(id: string): TaskInstance | undefined;
     getBySession(sessionId: string): TaskInstance | undefined;
+    /**
+     * 计划重排（决策 20）：计划时刻在「从未执行」前跟随配置 live 更新——仅 status=pending
+     * 且 attempt=0 可改，CAS 守卫防与派发竞态；执行一旦开始（attempt≥1）即冻结。
+     */
+    reschedule(id: string, scheduledAt: string): boolean;
     listByStatus(statuses: readonly InstanceStatus[]): TaskInstance[];
     /** 同任务非终态实例（排除某实例自身），用于同任务串行判定（state-machine §8）。 */
     listNonTerminalOfTask(taskId: string, excludeId?: string): TaskInstance[];

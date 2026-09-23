@@ -73,6 +73,33 @@ export function createScheduler({ ctx, logger, store, reconciler, config }: Sche
   }
 
   /**
+   * 计划重排（决策 20）：计划时刻不是建行时定死——「从未执行」的 pending（attempt=0）
+   * 每 tick 按当前配置重算；配置已无该日计划（如 once 改到别日）→ skipped 留痕
+   * （plan-removed），新日实例由 ensureInstances 自然补建。已派发 / 重试中（attempt≥1）
+   * / 终态一律冻结，执行记录可追溯。
+   */
+  function reschedulePass(currentTasks: TaskDefinition[]): void {
+    for (const task of currentTasks) {
+      const pendings = store.listByStatus(['pending'])
+        .filter(instance => instance.task_id === task.id && instance.attempt === 0)
+      for (const instance of pendings) {
+        const planned = planFor(task, instance.logical_date)
+        if (planned === undefined) {
+          store.transition(instance.id, {
+            status: 'skipped', finished_at: new Date().toISOString(), detail: 'plan-removed',
+          })
+          continue
+        }
+        const plannedIso = planned.toISOString()
+        if (plannedIso === instance.scheduled_at) continue
+        if (store.reschedule(instance.id, plannedIso)) {
+          store.appendEvent(instance.id, 'reschedule', { from: instance.scheduled_at, to: plannedIso })
+        }
+      }
+    }
+  }
+
+  /**
    * 依赖判定（§9）。ready = 可派发；blocked = 不满足不分配（pending 继续等）。
    * 上游终态失败也返回 blocked 而非立即置 skipped：决策 10「当日窗口内修复则继续」，
    * 下游须保持可修复性，窗口过期时随窗口判定收敛 skipped（整条链作废）。
@@ -169,9 +196,11 @@ export function createScheduler({ ctx, logger, store, reconciler, config }: Sche
         ? parseInlineTasks(logger, cfg.tasksInline)
         : loadTasks(logger, cfg.tasksDir)
       tasks = new Map(source.map(task => [task.id, task]))
+      const currentTasks = [...tasks.values()]
       reconciler.sweep()
-      ensureInstances([...tasks.values()])
-      dispatchPass([...tasks.values()])
+      ensureInstances(currentTasks)
+      reschedulePass(currentTasks)
+      dispatchPass(currentTasks)
     },
   }
 }

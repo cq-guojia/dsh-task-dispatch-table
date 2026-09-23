@@ -135,3 +135,9 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 |---|---|
 | 让调度器**发消息问会话**「完成了吗？回 Y/N」 | ① 又唤起一次 agent，白烧 token ② **agent 会撒谎** ③ 会话若已 disposed 未必收得到。（决策 19 的追问 ≠ 此方案：不问「完成了吗」，只重发回执提交命令，成败仍由程序查库裁决） |
 | **事件驱动**（前置完成时主动唤醒下游） | 「拉」比「推」可复用——加下游不改上游，见 [decisions.md](decisions.md) 决策 8 |
+
+## 13. 计划时刻的 live 重排（决策 20）
+
+- `scheduled_at` 落库，但**「从未执行」前跟随配置**：pending 且 attempt=0 的实例每 tick 按当前任务定义重算 `planFor`，与落库值不一致则 CAS 更新并追加 `reschedule` 事件（from / to）。
+- 配置已无该日计划（如 `once` 改到别日、cron 改掉该日）→ 该 pending 实例置 `skipped`（事件 `plan-removed`），新日实例由 `ensureInstances` 自然补建。
+- **执行一开始即冻结**：attempt≥1（重试中）、dispatched、终态一律不改 `scheduled_at`，执行记录可追溯；重试中的 pending 不重排，避免打乱重试节奏。

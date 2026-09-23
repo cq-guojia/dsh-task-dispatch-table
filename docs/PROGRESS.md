@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-23 · v0.0.1 已装进宿主；**回执机制（决策 19）+ 配置页临时调试面板已落码推送**，待重装验证
+> **最后更新**：2026-09-23 · v0.0.1 已装进宿主；**回执机制（决策 19）+ 配置页临时调试面板 + 计划时刻 live 重排（决策 20）已落码推送**，待重装验证
 
 ---
 
@@ -144,3 +144,4 @@
 | 2026-09-23 | **修复：`contract` 缺省化**——决策 19 废除契约文件后 schema 漏设对象默认值，`contract` 仍按必填校验，无 contract 字段的任务全部拒载（调试面板可见 warn "expected object, received undefined"）；补 `.default({ validStatuses: ['ok'] })`（与 retry/backfill 同款），模板注明整段可省略。冒烟：无 contract 任务解析出默认 ["ok"]（9745d69） |
 | 2026-09-23 | **真机观察：重装插件期间 manager 容器崩-自愈循环，与插件无关勿误判**——admin 变体（DSH 0.1.5-rc.2）的管理容器自带 http-proxy 反代（3080→3079），`dsh plugin add` 重启 DSH web 的窗口期里，在途代理请求拿 ECONNREFUSED / socket hang up，manager 未挂 proxy error handler，http-proxy 默认 throw 把管理容器带崩、随即自动重启（连续 3 个启动周期，DSH 均正常就绪）。判别要点：崩溃栈全在 `/app/manager/node_modules/http-proxy` + node 内部，**无任何插件帧**；插件崩是 `[manager] DSH 已退出 (code=…)` + `plugin tree failed to load`，manager 崩是 `ECONNREFUSED/RST` + `DSH 就绪` 照常打印 |
 | 2026-09-23 | **首次完整链路观测 + 面板易用性三改进（882b4f3）**——面板显示 `work-report-once:2026-09-23` pending 零事件，经 docker mcp 查容器日志 + inspect（TZ=Asia/Shanghai）判定：**正常排队**，once=22:30 北京时间未到（scheduler.ts:109 未到点不派发），pending 不产生事件；插件启动链路全部正常。改进：① 弹窗加「刷新」按钮（记录手动刷新时刻，区分数据没变 vs 页面没刷）；② 面板所有时间 `toLocaleString` 按浏览器本机时区显示（原样是 UTC ISO）；③ 实例表加 scheduled 计划时刻列 + 宿主 5 分钟心跳强制推快照（时间戳不动 = 宿主无动静，动了 = 活着） |
+| 2026-09-23 | **决策 20：计划时刻 live 重排落码**——真机确认改 `once` 后旧 pending 实例仍按旧时刻跑（建行时定死）→ `store.reschedule`（CAS `pending + attempt=0`）+ `reschedulePass`（tick 内 ensure 之后、dispatch 之前）：按当前配置重算 `planFor`，不一致则更新 + 落 `reschedule` 事件；`once` 改到别日 → 旧实例 `skipped(plan-removed)`、新日实例自然补建；执行开始（attempt≥1）即冻结。「计划时刻完全不落库」被否：窗口判定 / 回执对账 / 补跑幂等都需要落库时刻。决策 20 + state-machine §13 已同步 |

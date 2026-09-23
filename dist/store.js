@@ -116,6 +116,17 @@ export class TaskStore {
             .prepare('SELECT * FROM task_instances WHERE session_id = ? ORDER BY updated_at DESC')
             .get(sessionId);
     }
+    /**
+     * 计划重排（决策 20）：计划时刻在「从未执行」前跟随配置 live 更新——仅 status=pending
+     * 且 attempt=0 可改，CAS 守卫防与派发竞态；执行一旦开始（attempt≥1）即冻结。
+     */
+    reschedule(id, scheduledAt) {
+        const result = this.db
+            .prepare(`UPDATE task_instances SET scheduled_at = ?, updated_at = ?
+                WHERE id = ? AND status = 'pending' AND attempt = 0`)
+            .run(scheduledAt, nowIso(), id);
+        return Number(result.changes) > 0;
+    }
     listByStatus(statuses) {
         const placeholders = statuses.map(() => '?').join(',');
         return this.db
