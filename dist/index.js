@@ -83,8 +83,6 @@ export function apply(ctx, config) {
         get leaseMs() { return scope.get().leaseMs; },
         get dispatchGraceMs() { return scope.get().dispatchGraceMs; },
         get unknownGraceMs() { return scope.get().unknownGraceMs; },
-        // 决策 19：追问消息里重发回执命令需要状态库路径，getter 取 live 值。
-        statePath: () => resolveStatePath(scope.get().statePath),
         tasks: () => taskMap,
     };
     const reconciler = createReconciler({ ctx, logger: teeLogger, store, options: reconcileOptions });

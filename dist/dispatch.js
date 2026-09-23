@@ -1,14 +1,13 @@
-// 派发（决策 22 + 决策 23）：模型漏斗解析 + 部署默认 preset 解析 → assign-session 落库
-// → ctx.agents.create 驱动模型（内部自建会话：sessions.prepare + enter + announce；preset 在
-// setup 里 mount，工具/提示词/skill 由此挂上）→ 工作区 attachSession 归组 → agent.send 拼装消息。
+// 派发（决策 22 + 23 + 24）：模型漏斗解析 + 部署默认 preset 解析 → assign-session 落库
+// → ctx.agents.create 驱动模型（内部自建会话：sessions.prepare + enter + announce；setup 里
+//   mount preset（工具/提示词/skill 跟随系统）+ 注册本任务专属的回执工具（receipt.ts））
+// → 工作区 attachSession 归组 → agent.send 拼装消息。
 // 不要预建 ctx.sessions.create——会撞 store 的 'session "…" already exists'（真机教训 2026-09-23）。
 import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-/** 回执提交程序（决策 19）：与本文件同在 dist/，运行期按自身位置定位（包 type=module，.js 即 ESM）。 */
-export const SUBMIT_JS = fileURLToPath(new URL('./submit.js', import.meta.url));
+import { receiptInstruction, registerReceiptTool } from './receipt.js';
 /**
  * 派发前置条件失败（决策 22 / 决策 23）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
- * reason 取值：no-model-route / agent-create-failed / workspace-attach-failed。
+ * reason 取值：no-model-route / agent-create-failed / receipt-tool-unavailable / workspace-attach-failed。
  */
 export class DispatchPreconditionError extends Error {
     reason;
@@ -154,21 +153,6 @@ async function resolveAgentComposition(ctx, logger, task) {
         return undefined;
     }
 }
-/**
- * 回执提交命令行（决策 19）：--db/--task/--date/--session 由调度器填好，
- * agent 只补 --status 与 --outputs。派发消息与追问消息共用同一拼装。
- */
-export function submitCommand(task, logicalDate, sessionId, statePath) {
-    return [
-        `node "${SUBMIT_JS}"`,
-        `--db "${statePath}"`,
-        `--task "${task.id}"`,
-        `--date "${logicalDate}"`,
-        `--session "${sessionId}"`,
-        `--status ${task.contract.validStatuses[0] ?? 'ok'}`,
-        `--outputs "<实际产出的文件，相对工作区路径，多个用英文逗号分隔；无产出可省略整个参数>"`,
-    ].join(' ');
-}
 /** 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。 */
 export function userNotice(text, summary) {
     return {
@@ -184,16 +168,15 @@ export function userNotice(text, summary) {
     };
 }
 /**
- * 派发消息拼装（决策 12 模板 + 决策 19 回执命令）：短指令 prompt + 手册路径
- * + 现成的回执提交命令行（submitCommand 拼装，agent 只补 --status 与 --outputs）。
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具）：短指令 prompt + 手册路径 + 回执调用说明。
+ * 回执不再走命令行（决策 24）——说明文案见 receipt.ts，含「失败重试 ≤3 次、仍失败立即停止」的硬策略。
  */
-export function buildMessage(task, workspacePath, logicalDate, sessionId, statePath) {
+export function buildMessage(task, workspacePath, logicalDate) {
     const lines = [task.target.prompt, '', `任务实例：${task.id} · ${logicalDate}（目标工作区：${workspacePath}）`];
     if (task.target.manual !== undefined) {
         lines.push(`任务手册：先读工作区内 ${task.target.manual}，再按手册执行。`);
     }
-    lines.push(`回执（必须）：全部完成后执行下面这条命令提交回执，调度器以回执判定任务成败：`, submitCommand(task, logicalDate, sessionId, statePath), `--status 只能填：${task.contract.validStatuses.join(' | ')}（必须如实）。`
-        + `未提交回执的任务会被追问，追问后仍无回执按失败处理。`);
+    lines.push(receiptInstruction(task));
     return userNotice(lines.join('\n'), `[TASK] ${task.id} · ${logicalDate}`);
 }
 /**
@@ -208,7 +191,7 @@ export function buildMessage(task, workspacePath, logicalDate, sessionId, stateP
  *   或会话建好后无法归组工作区。
  */
 export async function dispatchTask(input) {
-    const { ctx, logger, store, task, instanceId, logicalDate, workspace, statePath, config } = input;
+    const { ctx, logger, store, task, instanceId, logicalDate, workspace, config } = input;
     const route = await resolveModelRoute(ctx, logger, task, config);
     if (route === undefined) {
         // 前置条件不足：不建会话、不派发（先于 session_id 落库，实例行不留假 session）。
@@ -234,15 +217,25 @@ export async function dispatchTask(input) {
                 ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
             },
             agentOptions: { provider: route.provider, model: route.model },
-            ...(composition === undefined ? {} : {
-                setup: async (agentCtx) => {
+            // setup 是发布前唯一能组装 agent 作用域的时机（决策 23 / 24）：
+            // ① 挂 preset（工具 / prompt sections / skill 跟随系统）；② 注册本任务专属的回执工具
+            // （per-agent，只对该会话可见；execute 在插件进程内写库，绕开 agent 沙箱——决策 24）。
+            setup: async (agentCtx) => {
+                if (composition !== undefined)
                     await composition.presets.mount(agentCtx, composition.presetId);
-                },
-            }),
+                // 回执工具注册不上 ⇒ 这个会话没有任何回执通道，跑完必然白跑（决策 24）：当作前置条件
+                // 失败直接抛，工厂会回滚作用域、不发布会话；scheduler 按 receipt-tool-unavailable 收敛。
+                if (!registerReceiptTool(agentCtx, { store, task, instanceId, sessionId, logger })) {
+                    throw new DispatchPreconditionError('receipt-tool-unavailable', `任务 ${task.id} 的回执工具未注册成功（同名冲突或宿主未暴露 tools 服务），不派发`);
+                }
+            },
         });
     }
     catch (error) {
         store.transition(instanceId, { status: 'dispatched', session_id: null, detail: 'create-failed' });
+        // setup 里抛的前置条件失败（如 receipt-tool-unavailable）原样上抛，保住具体 reason。
+        if (error instanceof DispatchPreconditionError)
+            throw error;
         throw new DispatchPreconditionError('agent-create-failed', `任务 ${task.id} 会话 ${sessionId} 未能建立（preset=${composition?.presetId ?? '(rosterless)'}）: ${String(error)}`);
     }
     // 归组（决策 22）：只设 meta.cwd 不会进工作区 sessionIds，必须显式 attach；
@@ -264,6 +257,6 @@ export async function dispatchTask(input) {
         ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
     });
     // 会话列表治理：规范名在 reconciler.onCreated 改，跑完归档在 succeeded 对账后。
-    handle.agent.send(buildMessage(task, workspace.path, logicalDate, sessionId, statePath), 'next-turn', true);
+    handle.agent.send(buildMessage(task, workspace.path, logicalDate), 'next-turn', true);
     return { sessionId, handle };
 }

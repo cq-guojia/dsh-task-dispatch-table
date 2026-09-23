@@ -1,7 +1,10 @@
-// 回执提交 CLI（决策 19）：agent 完成任务后执行本程序，把回执直写 state.db 事件表。
+// 回执提交 CLI（决策 19；**决策 24 起降级为手动 / 排查备用通道**）。
+// ⚠️ 任务回执现在走插件注册的工具 `task_dispatch_table_receipt`（per-agent、在插件进程内写库）：agent 的 bash
+// 跑在沙箱里、写不了宿主状态库（决策 24 的真机证据），命令行通道在自动任务里必然失败。
+// 本 CLI 只在插件未运行、人工补记、或需要绕过沙箱调试时使用。
 // 只记录不裁决——对账由调度器统一做（控制平面单一裁决点）；重复提交无害（调度器取最新）。
 //
-// 用法（命令行由调度器在派发消息里拼好，agent 只补 --status / --outputs / --note）：
+// 用法（手动执行，agent 不再调用）：
 //   node submit.js --db <statePath> --task <taskId> --date <YYYY-MM-DD> \
 //     --session <sessionId> --status <s> [--outputs a.md,b.png] [--note "..."]
 import { DatabaseSync } from 'node:sqlite';

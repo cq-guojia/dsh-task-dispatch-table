@@ -1,4 +1,3 @@
-import { resolveStatePath } from './config.js';
 import { durationMs, loadTasks, logicalDateOf, onceScheduledAt, parseInlineTasks, scheduledAtFor } from './tasks.js';
 import { DispatchPreconditionError, dispatchTask, resolveWorkspace } from './dispatch.js';
 /** 在跑态：同任务串行判定（§8）的互斥集合——pending 只是排队，不阻塞后继派发。 */
@@ -132,7 +131,6 @@ export function createScheduler({ ctx, logger, store, reconciler, config }) {
                     instanceId: instance.id,
                     logicalDate: instance.logical_date,
                     workspace,
-                    statePath: resolveStatePath(config().statePath),
                     // 漏斗第②层需要插件配置；派发时现算，不用建行时的值。
                     config: config(),
                 })

@@ -180,3 +180,24 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 **create 失败的收敛**：`agents.create`（含 `setup` 里 `mount`）抛错 ⇒ 工厂回滚作用域、**会话与 agent 都不发布**；此时撤回占位 `session_id`（置 null）并按 `agent-create-failed` 走重试判定，避免实例行留一个从未发布过的会话身份。
 
 `dispatch` 事件同时记录本次实测：`provider` / `model` / `modelSource` / `agentPreset`（只记录、不回写任务定义或配置）。
+
+## 16. 回执通道（决策 24）
+
+回执不再由 agent 跑命令写库，而是**插件注册一个只对该会话可见的工具**：
+
+| 环节 | 做法 |
+|---|---|
+| 注册 | `agents.create` 的 `setup(agentCtx)` 里 `agentCtx.tools.register(definition)`（与 preset mount 同一时机）⇒ per-agent、发布前生效、用户自己的会话看不到 |
+| 调用 | agent 做完任务调 `task_dispatch_table_receipt({ status, outputs?, note? })`；`status` 必须 ∈ `contract.validStatuses` |
+| 写库 | `execute` 在**插件进程内**用既有 TaskStore 连接 `appendEvent(instanceId, 'receipt', { status, outputs, note, session_id })`——形状与 `submit.js` 一致，**对账逻辑零改动** |
+| 防伪 | 实例 id / 会话 id / status 合法值由**闭包注入**，模型既拿不到也伪造不了 |
+| 失败策略（写进提示词） | 工具失败 → 等约 10 秒原样重试 ≤3 次 → 仍失败**立即停止**，禁止其他手段（不读写状态库、不改权限、不拷库、不绕沙箱） |
+| 入参归一 | `status` 大小写不敏感 + 去首尾空白与零宽字符（`U+200B..U+200D` / `U+FEFF`），命中后**存任务声明的值**（对账 `includes` 恒成立）；`outputs` 逐项去空白、反斜杠归一成 `/`、去 `./` 前缀 |
+
+**工具名**：包名去掉 `dsh-` 前缀 + `_receipt` ⇒ `task_dispatch_table_receipt`——宿主对重名的处理是「**同层抛错 / 跨层 scoped 遮蔽 global**」（`NamedEntries` throw + `Scoped registrations shadow globals`），带插件名空间把撞名压到可忽略（宿主对工具名无格式校验，纯防撞）。
+
+**注册失败即判失败**：同名冲突或宿主未暴露 `tools` 服务 ⇒ `registerReceiptTool` 返回 false ⇒ `setup` 抛 `receipt-tool-unavailable`，工厂回滚、不发布会话、不派发消息（该会话没有回执通道，跑完必然白跑）。
+
+**为什么必须这样**（真机 2026-09-23）：agent 的 bash 在 **Landlock 沙箱 `workspace-write`** 下**只能写工作区**；`submit.js` 要写宿主数据根下的 `state.db` ⇒ SQLite 报 `attempt to write a readonly database`，`chmod u+w` 无效（拦的是沙箱不是权限位），`cp` 回写被 `[sandbox: file access denied under workspace-write mode]` 拒绝，容器内又无 `sqlite3` / `file`，agent 转而拷库绕道。**在 agent 沙箱里写宿主状态库本身不成立**，与「路径怎么传」无关。
+
+对账判定树（§1）与追问机制（宽限 → 追问 ×2 → 失败）不变，只是追问消息改为重发工具用法（`receiptInstruction`）。

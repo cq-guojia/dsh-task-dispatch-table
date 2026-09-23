@@ -2,11 +2,9 @@ import type { HostContext, HostLogger, HostWorkspace, UserMessage } from './host
 import type { PluginConfig } from './config.js';
 import type { TaskDefinition } from './tasks.js';
 import type { TaskStore } from './store.js';
-/** 回执提交程序（决策 19）：与本文件同在 dist/，运行期按自身位置定位（包 type=module，.js 即 ESM）。 */
-export declare const SUBMIT_JS: string;
 /**
  * 派发前置条件失败（决策 22 / 决策 23）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
- * reason 取值：no-model-route / agent-create-failed / workspace-attach-failed。
+ * reason 取值：no-model-route / agent-create-failed / receipt-tool-unavailable / workspace-attach-failed。
  */
 export declare class DispatchPreconditionError extends Error {
     readonly reason: string;
@@ -37,18 +35,13 @@ export interface ModelResolution {
  * 在配置期固化等于自己废掉兜底。
  */
 export declare function resolveModelRoute(ctx: HostContext, logger: HostLogger, task: TaskDefinition, config: PluginConfig): Promise<ModelResolution | undefined>;
-/**
- * 回执提交命令行（决策 19）：--db/--task/--date/--session 由调度器填好，
- * agent 只补 --status 与 --outputs。派发消息与追问消息共用同一拼装。
- */
-export declare function submitCommand(task: TaskDefinition, logicalDate: string, sessionId: string, statePath: string): string;
 /** 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。 */
 export declare function userNotice(text: string, summary: string): UserMessage;
 /**
- * 派发消息拼装（决策 12 模板 + 决策 19 回执命令）：短指令 prompt + 手册路径
- * + 现成的回执提交命令行（submitCommand 拼装，agent 只补 --status 与 --outputs）。
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具）：短指令 prompt + 手册路径 + 回执调用说明。
+ * 回执不再走命令行（决策 24）——说明文案见 receipt.ts，含「失败重试 ≤3 次、仍失败立即停止」的硬策略。
  */
-export declare function buildMessage(task: TaskDefinition, workspacePath: string, logicalDate: string, sessionId: string, statePath: string): UserMessage;
+export declare function buildMessage(task: TaskDefinition, workspacePath: string, logicalDate: string): UserMessage;
 export interface DispatchInput {
     ctx: HostContext;
     /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
@@ -60,8 +53,6 @@ export interface DispatchInput {
     logicalDate: string;
     /** 已解析的工作区实体（决策 22）：cwd 由它的 path 派生，会话建成后 attach 到它归组。 */
     workspace: HostWorkspace;
-    /** 状态库绝对路径（决策 19）：拼进回执命令行，agent 侧零环境猜测。 */
-    statePath: string;
     /** 插件配置（决策 22 漏斗第②层取 defaultProvider/defaultModel，派发时现算）。 */
     config: PluginConfig;
 }

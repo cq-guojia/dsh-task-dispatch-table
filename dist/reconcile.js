@@ -1,12 +1,13 @@
 // 事件驱动对账（state-machine §1 判定树 + §3 转移表）：session/created → running+租约；
 // turn/end 与 session/disposed → 查回执收敛；tick 兜底扫描由 sweep() 提供。
-// 回执机制（决策 19）：agent 经 submit.mjs 直写 task_events 的 receipt 事件，
+// 回执机制（决策 19 + 24）：agent 经插件注册的工具（见 receipt.ts 的 RECEIPT_TOOL_NAME）写 task_events 的 receipt 事件，
 // 对账只查库不读文件；跑完信号后无回执 → 宽限 → 追问×2 → 按失败收敛。
 import { existsSync, statSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { durationMs } from './tasks.js';
-import { resolveWorkspace, submitCommand, userNotice } from './dispatch.js';
+import { resolveWorkspace, userNotice } from './dispatch.js';
+import { receiptInstruction } from './receipt.js';
 /** 跑完信号后允许补交回执的追问上限（写死不加配置，事件表可查次数）。 */
 const NUDGE_LIMIT = 2;
 /**
@@ -117,9 +118,8 @@ export function createReconciler({ ctx, logger, store, options }) {
             return;
         }
         try {
-            const command = submitCommand(task, instance.logical_date, instance.session_id ?? '', options.statePath());
-            handle.agent.send(userNotice(`任务实例 ${instance.id} 已结束但尚未收到回执。请立即执行下面这条命令提交回执`
-                + `（--status 必须如实，只能是：${task.contract.validStatuses.join(' | ')}）：\n${command}`, `[TASK] 回执追问 ${task.id} · ${instance.logical_date}`), 'next-turn', true);
+            handle.agent.send(userNotice(`任务实例 ${instance.id} 已结束但尚未收到回执。请立即按下面说明调用工具提交回执：\n`
+                + receiptInstruction(task), `[TASK] 回执追问 ${task.id} · ${instance.logical_date}`), 'next-turn', true);
         }
         catch (error) {
             logger.warn(`追问发送失败 ${instance.id}: ${String(error)}`);

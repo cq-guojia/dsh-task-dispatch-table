@@ -6,8 +6,6 @@ export interface ReconcileOptions {
     leaseMs: number;
     dispatchGraceMs: number;
     unknownGraceMs: number;
-    /** 状态库绝对路径（决策 19：追问消息里重发回执命令用）。 */
-    statePath(): string;
     /** 当前任务表（scheduler 每 tick 刷新）。 */
     tasks(): Map<string, TaskDefinition>;
 }

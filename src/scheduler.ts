@@ -1,7 +1,6 @@
 // tick 主循环（state-machine §1）：对账兜底 → 实例保障 → 逐任务判定（窗口 / 依赖 / 串行 / CAS 领取 / 派发）。
 // 所有判定纯程序逻辑，零 token（§1）。
 import type { HostContext, HostLogger, HostWorkspace } from './host.js'
-import { resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import { durationMs, loadTasks, logicalDateOf, onceScheduledAt, parseInlineTasks, scheduledAtFor } from './tasks.js'
 import type { TaskDefinition } from './tasks.js'
@@ -159,7 +158,6 @@ export function createScheduler({ ctx, logger, store, reconciler, config }: Sche
           instanceId: instance.id,
           logicalDate: instance.logical_date,
           workspace,
-          statePath: resolveStatePath(config().statePath),
           // 漏斗第②层需要插件配置；派发时现算，不用建行时的值。
           config: config(),
         })
