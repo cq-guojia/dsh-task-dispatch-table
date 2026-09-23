@@ -43,7 +43,17 @@ export interface AgentHandle {
   dispose(): Promise<void>
 }
 
-/** AgentOptions：core/agent/src/runtime-types.ts:26-35，provider/model 均可选，缺省走宿主默认路由。 */
+/**
+ * 模型 route：provider 与 model 成对（决策 22）。宿主 agent-loop 的 prepareRequest
+ * 对二者一并校验：`if (!proposedConfig.provider || !proposedConfig.model) throw`——
+ * 只给一个等于没给，故本插件一律成对传递。
+ */
+export interface ModelRoute {
+  provider: string
+  model: string
+}
+
+/** AgentOptions：core/agent/src/runtime-types.ts:26-35。⚠️ 缺省并非「走宿主默认路由」——必须显式给（决策 22）。 */
 export interface AgentOptions {
   provider?: string
   model?: string
@@ -71,24 +81,68 @@ export interface HostSessions {
 }
 
 /**
- * Workspace 最小面。形状依据 packages/workspace/workspace/src/entity.ts:69-103：
- * id / path（fs.realpath 归一的绝对路径）/ title。
+ * Workspace 实体最小面（@deepseek-ai/dsh-workspace 0.1.6-alpha.2 entity）：
+ * id / path（fs.realpath 归一的绝对路径）/ title，外加归组用的 attachSession。
  */
 export interface HostWorkspace {
   readonly id: string
   readonly path: string
   readonly title: string
+  /**
+   * 会话归组的唯一途径（决策 22）：把 sessionId 登记进本工作区记录的 sessionIds。
+   * 前置校验 = 读会话 header 的 cwd → realpath 归一 → 必须 === 本工作区 path，
+   * 否则抛错（所以 meta.cwd 必须直接用本实体的 path，不可自行拼写）。
+   * ⚠️ 只设 meta.cwd **不会**自动归组；必须显式调用本方法。
+   */
+  attachSession(sessionId: SessionId): Promise<void>
 }
 
 /**
- * WorkspaceRegistry：无按 name 查询 API（packages/workspace/workspace/src/index.ts:157-305），
+ * WorkspaceRegistry（@deepseek-ai/dsh-workspace 0.1.6-alpha.2）：无按 name 查询 API，
  * 只有 get(id)/list()/resolveByPath()/create()；按 name 匹配须遍历 list() 比对 title。
- * archiveSession(id)：index.ts:243-254，程序化归档，只追加 archivedSessionIds。
+ * archiveSession(id)：程序化归档，只追加 registry 级 archivedSessionIds（不动工作区槽位）。
  */
 export interface HostWorkspaceRegistry {
   list(): readonly HostWorkspace[]
   get(id: string): HostWorkspace | undefined
   archiveSession(id: SessionId): Promise<void>
+}
+
+/** 已注册 provider 的展示元数据（@deepseek-ai/dsh-llm types：LlmProviderInfo）。 */
+export interface HostLlmProviderInfo {
+  /** provider 路由键，即 AgentOptions.provider 的取值。 */
+  readonly id: string
+  readonly name: string
+}
+
+/** 适配器发现的模型条目（@deepseek-ai/dsh-llm types：LlmModelInfo；目录为 advisory）。 */
+export interface HostLlmModelInfo {
+  readonly provider: string
+  /** 模型 id，即 AgentOptions.model 的取值。 */
+  readonly id: string
+  readonly name: string
+}
+
+/**
+ * llm 服务最小面（@deepseek-ai/dsh-llm 0.1.6-alpha.2）：决策 22 漏斗第④层与
+ * 「只给 model 反查 provider」用。两个查询均为只读；模型目录是 advisory——
+ * 未列出不等于不可用（故反查失败时继续下漏而非直接判失败）。
+ */
+export interface HostLlm {
+  /** 已注册 provider，按注册序（同步）。 */
+  listProviders(): readonly HostLlmProviderInfo[]
+  /** 某 provider 可发现的模型，按适配器偏好序（异步）。 */
+  listModels(provider: string): Promise<readonly HostLlmModelInfo[]>
+}
+
+/**
+ * 宿主默认模型服务（@deepseek-ai/dsh-agent-default-model 0.1.6-alpha.2，服务名 agentDefaultModel）：
+ * 部署在 composition 里配 provider+model（二者 required），用户在 settings 命名空间
+ * `agent-default-model` 的改动 live 生效；UI 换模型会 saveSelection 写回。
+ * ⇒ currentSelection() 即「用户配的 / 最后一次用的」模型，是决策 22 漏斗第③层。
+ */
+export interface HostAgentDefaultModel {
+  currentSelection(): ModelRoute
 }
 
 /** SettingsScope：packages/settings/settings/src/index.ts:115-141（update 见 :133，owner scope 专用）。 */
@@ -133,6 +187,14 @@ export interface HostContext {
   workspaceRegistry: HostWorkspaceRegistry
   settings: HostSettings
   sessionTitle: HostSessionTitle
+  /**
+   * cordis 可选服务探测（决策 22 漏斗第③④层用）。**一律不写进 inject**：声明组合满足
+   * 不了的依赖会让 entry 一直 pending、卡死整个 dsh 启动（决策 17 真机教训）。
+   * 未挂载时返回 undefined。
+   */
+  get(name: 'llm'): HostLlm | undefined
+  get(name: 'agentDefaultModel'): HostAgentDefaultModel | undefined
+  get(name: string): unknown
 }
 
 /**

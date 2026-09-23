@@ -16,8 +16,12 @@ export interface PluginConfig {
     tasksInline: string;
     /** 调试快照 JSON（临时调试通道，决策 16 例外）：宿主写入、配置页只读展示，非用户设置。 */
     debugSnapshot: string;
+    /** 插件级默认 provider（决策 22 漏斗第②层）：与 defaultModel 成对；留空则漏到宿主默认。 */
+    defaultProvider: string;
+    /** 插件级默认 model（决策 22 漏斗第②层）：与 defaultProvider 成对；留空则漏到宿主默认。 */
+    defaultModel: string;
 }
-export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot'>;
+export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'>;
 export declare const Config: z<Schemastery.ObjectS<{
     statePath: z<string, string>;
     tickMs: z<number, number>;
@@ -27,6 +31,8 @@ export declare const Config: z<Schemastery.ObjectS<{
     tasksDir: z<string, string>;
     tasksInline: z<string, string>;
     debugSnapshot: z<string, string>;
+    defaultProvider: z<string, string>;
+    defaultModel: z<string, string>;
 }>, Schemastery.ObjectT<{
     statePath: z<string, string>;
     tickMs: z<number, number>;
@@ -36,6 +42,8 @@ export declare const Config: z<Schemastery.ObjectS<{
     tasksDir: z<string, string>;
     tasksInline: z<string, string>;
     debugSnapshot: z<string, string>;
+    defaultProvider: z<string, string>;
+    defaultModel: z<string, string>;
 }>>;
 /**
  * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。

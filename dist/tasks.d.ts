@@ -14,6 +14,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
     }, z.core.$strip>;
     target: z.ZodObject<{
         workspace: z.ZodString;
+        provider: z.ZodOptional<z.ZodString>;
         model: z.ZodOptional<z.ZodString>;
         manual: z.ZodOptional<z.ZodString>;
         prompt: z.ZodString;

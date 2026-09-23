@@ -8,7 +8,7 @@ import { resolve } from 'node:path'
 import type { HostContext, HostLogger, HostSession } from './host.js'
 import type { TaskDefinition } from './tasks.js'
 import { durationMs } from './tasks.js'
-import { resolveWorkspacePath, submitCommand, userNotice } from './dispatch.js'
+import { resolveWorkspace, submitCommand, userNotice } from './dispatch.js'
 import type { AgentHandle } from './dispatch.js'
 import type { TaskStore, TaskInstance } from './store.js'
 
@@ -197,7 +197,7 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
 
   function resolveWorkspacePathSafe(task: TaskDefinition): string | undefined {
     try {
-      return resolveWorkspacePath(ctx, task.target.workspace)
+      return resolveWorkspace(ctx, task.target.workspace).path
     } catch (error) {
       logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`)
       return undefined

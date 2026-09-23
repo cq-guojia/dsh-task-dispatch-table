@@ -11,6 +11,7 @@ export type LocaleKey =
   | 'paramsTitle' | 'paramDefault'
   | 'paramStatePath' | 'paramTickMs' | 'paramDispatchGraceMs'
   | 'paramLeaseMs' | 'paramUnknownGraceMs' | 'paramTasksDir'
+  | 'paramDefaultProvider' | 'paramDefaultModel'
   | 'debugButton' | 'debugTitle' | 'debugClose' | 'debugEmpty' | 'debugRaw'
   | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
   | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents' | 'debugEventsEmpty'
@@ -36,6 +37,8 @@ export const zh: Record<LocaleKey, string> = {
   paramLeaseMs: '运行租约 leaseMs（毫秒）',
   paramUnknownGraceMs: '观察宽限 unknownGraceMs（毫秒）',
   paramTasksDir: '任务目录 tasksDir',
+  paramDefaultProvider: '默认模型 provider defaultProvider',
+  paramDefaultModel: '默认模型 model defaultModel',
   debugButton: '调试日志',
   debugTitle: '调试快照（临时面板，随宿主状态自动刷新）',
   debugClose: '关闭',
@@ -73,6 +76,8 @@ export const en: Record<LocaleKey, string> = {
   paramLeaseMs: 'Run lease leaseMs (ms)',
   paramUnknownGraceMs: 'Observation grace unknownGraceMs (ms)',
   paramTasksDir: 'Task directory tasksDir',
+  paramDefaultProvider: 'Default model provider defaultProvider',
+  paramDefaultModel: 'Default model defaultModel',
   debugButton: 'Debug logs',
   debugTitle: 'Debug snapshot (temporary panel; auto-refreshes with host state)',
   debugClose: 'Close',

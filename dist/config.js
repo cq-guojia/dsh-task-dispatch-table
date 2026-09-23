@@ -18,6 +18,9 @@ export const Config = z.object({
     tasksDir: z.string().default('tasks'),
     tasksInline: z.string().role('textarea').default(''),
     debugSnapshot: z.string().default(''),
+    // 决策 22 漏斗第②层：留空 = 未配，派发时漏到下一层。解析结果只用于本次派发，不回写本字段。
+    defaultProvider: z.string().default(''),
+    defaultModel: z.string().default(''),
 });
 /**
  * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。

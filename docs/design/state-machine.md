@@ -141,3 +141,26 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 - `scheduled_at` 落库，但**「从未执行」前跟随配置**：pending 且 attempt=0 的实例每 tick 按当前任务定义重算 `planFor`，与落库值不一致则 CAS 更新并追加 `reschedule` 事件（from / to）。
 - 配置已无该日计划（如 `once` 改到别日、cron 改掉该日）→ 该 pending 实例置 `skipped`（事件 `plan-removed`），新日实例由 `ensureInstances` 自然补建。
 - **执行一开始即冻结**：attempt≥1（重试中）、dispatched、终态一律不改 `scheduled_at`，执行记录可追溯；重试中的 pending 不重排，避免打乱重试节奏。
+
+## 14. 派发前解析（决策 22）
+
+派发（CAS 领取）前必须先过两道**纯程序**前置，任一不过即不进派发：
+
+**① 工作区解析**：`target.workspace` 是**工作区**（按 registry 的 `title` 精确匹配、`id` 兜底），不是工作目录——cwd 由工作区实体的 `path` 派生。
+
+- 匹配不到 ⇒ 该 pending 实例走重试判定（`workspace-not-found`）。任务必须挂在一个已注册工作区下，**绝不落到「未分组」或随便找个目录跑**。
+
+**② 模型漏斗（四层，逐层下漏）**：
+
+| 层 | 来源 | 备注 |
+|---|---|---|
+| ① | `target.provider` + `target.model` | 任务级显式指定 |
+| ② | 插件配置 `defaultProvider` + `defaultModel` | 留空 = 未配（现在不要求用户配） |
+| ③ | 宿主 `ctx.get('agentDefaultModel').currentSelection()` | = 用户配的 / 上一次用的模型 |
+| ④ | `llm.listProviders()` 首个能列出模型的 provider + 其首个模型 | 兜底 |
+
+- 宿主 `AgentOptions` 要求 provider 与 model **成对**（agent-loop `prepareRequest`：`if (!provider || !model) throw`）⇒ 每层要么成对给、要么整层跳过；只给 model 没给 provider 时在已注册 provider 里反查一次，反查不到则告警并继续下漏（宿主明示模型目录是 advisory，未列出 ≠ 不可用）。
+- 四层全空 ⇒ 该实例走重试判定（`no-model-route`），**不建会话、不派发**。
+- ⚠️ **只在派发时现算，绝不回写任务定义或配置**：配置期固化会让用户日后换模型时失去兜底。本次实测 route 与命中层级只落 `dispatch` 事件（`provider` / `model` / `modelSource`），便于排查而固化语义。
+
+**归组（派发后）**：会话建成后必须调 `workspace.attachSession(sessionId)`——它读会话 header 的 cwd、realpath 归一、要求严格等于工作区 `path`，才把会话登记进该工作区的 `sessionIds`。**只设 `meta.cwd` 不会自动归组**（`bootstrap()` 只在 registry 首次初始化时按 cwd 归组历史会话）。attach 失败 ⇒ `workspace-attach-failed`，已建 agent 就地 dispose，不发送派发消息、不落 `dispatch` 事件。

@@ -16,6 +16,7 @@
   },
   "target": {
     "workspace": "ops",           // 派发到 ops 工作区（独立会话，非子 agent）
+    "provider": "deepseek",       // provider + model 成对；两者都省略 = 走宿主默认模型漏斗（决策 22）
     "model": "deepseek-chat",
     "manual": "manuals/image-upgrade-daily.md",
     "prompt": "执行镜像升级日报任务，按手册完成。"

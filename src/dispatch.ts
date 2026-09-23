@@ -1,10 +1,13 @@
-// 派发：assign-session 落库 → ctx.agents.create 驱动模型（内部自建会话：sessions.prepare +
-// enter + announce，core/agent-loop/src/index.ts:767、core/session/src/index.ts:969-979）
+// 派发（决策 22）：模型漏斗解析 → assign-session 落库 → ctx.agents.create 驱动模型
+// （内部自建会话：sessions.prepare + enter + announce）→ 工作区 attachSession 归组
 // → agent.send 拼装消息。不要预建 ctx.sessions.create——会撞 store 的
-// 'session "…" already exists'（core/session/src/index.ts:1009，真机教训 2026-09-23）。
+// 'session "…" already exists'（真机教训 2026-09-23）。
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import type { HostContext, UserMessage } from './host.js'
+import type {
+  HostAgentDefaultModel, HostContext, HostLogger, HostLlm, HostWorkspace, UserMessage,
+} from './host.js'
+import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
 import type { TaskStore } from './store.js'
 
@@ -12,18 +15,145 @@ import type { TaskStore } from './store.js'
 export const SUBMIT_JS = fileURLToPath(new URL('./submit.js', import.meta.url))
 
 /**
- * 工作区名 → 绝对路径。registry 无按 name 查询 API
- * （packages/workspace/workspace/src/index.ts:157-305），遍历 list() 比对：
- * title 精确匹配优先，id 兜底（WorkspaceEntity title/path 见 entity.ts:79-91）。
+ * 派发前置条件失败（决策 22）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
+ * reason 取值：no-model-route / workspace-attach-failed。
  */
-export function resolveWorkspacePath(ctx: HostContext, name: string): string {
+export class DispatchPreconditionError extends Error {
+  constructor(readonly reason: string, message: string) {
+    super(message)
+    this.name = 'DispatchPreconditionError'
+  }
+}
+
+/**
+ * 工作区名 → 工作区实体（决策 22：target.workspace 语义是**工作区**，不是工作目录；
+ * 目录由实体 path 派生）。registry 无按 name 查询 API，遍历 list() 比对：
+ * title 精确匹配优先，id 兜底。匹配不到即抛错 ⇒ 任务判失败，绝不落到「未分组」或随便找个目录跑。
+ */
+export function resolveWorkspace(ctx: HostContext, name: string): HostWorkspace {
   const workspaces = ctx.workspaceRegistry.list()
   const hit = workspaces.find(workspace => workspace.title === name)
     ?? workspaces.find(workspace => workspace.id === name)
   if (hit === undefined) {
-    throw new Error(`找不到工作区 "${name}"（已注册: ${workspaces.map(workspace => workspace.title).join(', ')}）`)
+    throw new Error(`找不到工作区 "${name}"（任务必须挂在一个已注册工作区下；已注册: ${
+      workspaces.map(workspace => workspace.title).join(', ') || '(无)'}）`)
   }
-  return hit.path
+  return hit
+}
+
+/** 命中漏斗的层级（写进 dispatch 事件，便于排查本次用了哪一层）。 */
+export type ModelSource = 'task' | 'plugin-config' | 'host-default' | 'llm-first'
+
+export interface ModelResolution {
+  provider: string
+  model: string
+  source: ModelSource
+}
+
+/** 一层候选：空串 = 该层未配。provider 与 model 须成对（宿主 prepareRequest 一并校验）。 */
+interface ModelCandidate {
+  provider: string
+  model: string
+}
+
+/**
+ * provider 反查：在已注册 provider 里找第一个能发现该 model 的。
+ * 宿主明示模型目录是 advisory（未列出不等于不可用），故本函数只用于「补全」，
+ * 查不到时由调用方继续下漏，而不是把这一层判成非法。
+ */
+async function lookupProvider(
+  llm: HostLlm, model: string, logger: HostLogger, label: string,
+): Promise<string | undefined> {
+  for (const provider of llm.listProviders()) {
+    try {
+      const models = await llm.listModels(provider.id)
+      if (models.some(item => item.id === model)) return provider.id
+    } catch (error) {
+      logger.warn(`${label} 反查 provider 时读取 ${provider.id} 模型目录失败: ${String(error)}`)
+    }
+  }
+  return undefined
+}
+
+/** 解析漏斗的一层：成对直接用；只给 model 则反查 provider；只给 provider 或反查失败 → 跳过该层。 */
+async function resolveLayer(
+  ctx: HostContext, logger: HostLogger, source: ModelSource, label: string, candidate: ModelCandidate,
+): Promise<ModelResolution | undefined> {
+  const provider = candidate.provider.trim()
+  const model = candidate.model.trim()
+  if (provider.length === 0 && model.length === 0) return undefined
+  if (model.length === 0) {
+    logger.warn(`${label} 配了 provider 但没有 model（须成对）→ 跳过该层`)
+    return undefined
+  }
+  if (provider.length > 0) return { provider, model, source }
+  const llm = ctx.get('llm')
+  if (llm === undefined) {
+    logger.warn(`${label} 只给了 model "${model}"，但宿主未挂载 llm 服务、无法反查 provider → 跳过该层`)
+    return undefined
+  }
+  const found = await lookupProvider(llm, model, logger, label)
+  if (found === undefined) {
+    logger.warn(`${label} 只给了 model "${model}"，已注册 provider 中未反查到（模型目录为 advisory）→ 跳过该层`)
+    return undefined
+  }
+  return { provider: found, model, source }
+}
+
+/**
+ * 模型解析漏斗（决策 22）：逐层下漏，四层全空返回 undefined（调用方判任务失败，不派发）。
+ *
+ * ① 任务定义 target.provider/target.model
+ * ② 插件配置 defaultProvider/defaultModel
+ * ③ 宿主默认 ctx.get('agentDefaultModel').currentSelection()（= 用户配的 / 上次用的模型）
+ * ④ llm 首个可用：listProviders() 首个能列出模型的 provider + 其首个模型
+ *
+ * ⚠️ 只在派发时现算，**绝不回写**任务定义或配置：用户日后换模型要能自动跟上，
+ * 在配置期固化等于自己废掉兜底。
+ */
+export async function resolveModelRoute(
+  ctx: HostContext, logger: HostLogger, task: TaskDefinition, config: PluginConfig,
+): Promise<ModelResolution | undefined> {
+  const fromTask = await resolveLayer(ctx, logger, 'task', `任务 ${task.id} 的 target`, {
+    provider: task.target.provider ?? '',
+    model: task.target.model ?? '',
+  })
+  if (fromTask !== undefined) return fromTask
+
+  const fromConfig = await resolveLayer(ctx, logger, 'plugin-config', '插件配置 defaultProvider/defaultModel', {
+    provider: config.defaultProvider,
+    model: config.defaultModel,
+  })
+  if (fromConfig !== undefined) return fromConfig
+
+  const hostDefault: HostAgentDefaultModel | undefined = ctx.get('agentDefaultModel')
+  if (hostDefault !== undefined) {
+    try {
+      const route = hostDefault.currentSelection()
+      if (typeof route?.provider === 'string' && route.provider.length > 0
+        && typeof route.model === 'string' && route.model.length > 0) {
+        return { provider: route.provider, model: route.model, source: 'host-default' }
+      }
+      logger.warn('宿主 agentDefaultModel 未给出可用的 provider/model → 继续下漏')
+    } catch (error) {
+      logger.warn(`读取宿主默认模型失败: ${String(error)}`)
+    }
+  }
+
+  const llm = ctx.get('llm')
+  if (llm !== undefined) {
+    for (const provider of llm.listProviders()) {
+      try {
+        const first = (await llm.listModels(provider.id))[0]
+        if (first !== undefined) return { provider: provider.id, model: first.id, source: 'llm-first' }
+      } catch (error) {
+        logger.warn(`llm 首个可用模型探测失败 ${provider.id}: ${String(error)}`)
+      }
+    }
+  }
+
+  logger.warn(`任务 ${task.id} 四层模型漏斗全部落空（决策 22）：请在 target 或插件配置里指定 provider+model`)
+  return undefined
 }
 
 /**
@@ -88,43 +218,79 @@ export function buildMessage(
 
 export interface DispatchInput {
   ctx: HostContext
+  /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
+  logger: HostLogger
   store: TaskStore
   task: TaskDefinition
   /** 已领取实例：形如 "<task_id>:<logical_date>"，状态应为 dispatched。 */
   instanceId: string
   logicalDate: string
-  workspacePath: string
+  /** 已解析的工作区实体（决策 22）：cwd 由它的 path 派生，会话建成后 attach 到它归组。 */
+  workspace: HostWorkspace
   /** 状态库绝对路径（决策 19）：拼进回执命令行，agent 侧零环境猜测。 */
   statePath: string
+  /** 插件配置（决策 22 漏斗第②层取 defaultProvider/defaultModel，派发时现算）。 */
+  config: PluginConfig
 }
 
 /** agent handle：ctx.agents.create 的返回（追问时用于再推一轮对话）。 */
 export type AgentHandle = Awaited<ReturnType<HostContext['agents']['create']>>
 
 /**
- * 派发一个已 CAS 领取的实例。同步段先落 session_id 再 await agents.create：
- * 会话由 factory 内部创建并 announce session/created（AgentFactory 契约），晚于
- * assign-session，事件对账收到时实例必已带 session_id，可立即转 running。
+ * 派发一个已 CAS 领取的实例（决策 22 顺序）：
+ * 解析模型漏斗 → 落 session_id → agents.create（自建会话并 announce session/created，
+ * 晚于 assign-session，对账收到时实例必已带 session_id）→ **工作区 attachSession 归组**
+ * → 落 dispatch 事件（含本次实测 route 与命中层级）→ send。
  * 会话改名在 reconciler.onCreated 做——此处拿不到 Session 对象（handle 只有 agent）。
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
+ * @throws DispatchPreconditionError 模型解析不出、或会话建好后无法归组工作区。
  */
 export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: string; handle: AgentHandle }> {
-  const { ctx, store, task, instanceId, logicalDate, workspacePath, statePath } = input
+  const { ctx, logger, store, task, instanceId, logicalDate, workspace, statePath, config } = input
+
+  const route = await resolveModelRoute(ctx, logger, task, config)
+  if (route === undefined) {
+    // 前置条件不足：不建会话、不派发（先于 session_id 落库，实例行不留假 session）。
+    throw new DispatchPreconditionError(
+      'no-model-route',
+      `任务 ${task.id} 无法解析出 provider+model，不派发（决策 22 漏斗四层全空）`,
+    )
+  }
+
   const sessionId = randomUUID()
   // 领取后先把会话身份落到实例行，再建 agent——session/created（factory announce）
   // 到达时实例必已带 session_id，对账可立即转 running。
   store.transition(instanceId, { status: 'dispatched', session_id: sessionId, detail: 'assign-session' })
 
-  // agentOptions.model 仅在任务定义给出时传；provider/model 缺省语义 = 宿主默认路由
-  // （core/agent/src/runtime-types.ts:26-35）。会话由本调用自建，禁止预建（见文件头）。
+  // provider/model 必须成对显式传（决策 22）：宿主缺省不填 {{model}}，deployment persona
+  // 里的 {{model}} 取不到值会直接抛错、本轮秒结束。会话由本调用自建，禁止预建（见文件头）。
   const handle = await ctx.agents.create({
     sessionId,
-    meta: { cwd: workspacePath },
-    agentOptions: task.target.model === undefined ? undefined : { model: task.target.model },
+    meta: { cwd: workspace.path },
+    agentOptions: { provider: route.provider, model: route.model },
   })
 
-  store.appendEvent(instanceId, 'dispatch', { sessionId, workspacePath })
+  // 归组（决策 22）：只设 meta.cwd 不会进工作区 sessionIds，必须显式 attach；
+  // attach 内部要求 session header 的 cwd 归一后 === workspace.path，故 cwd 只能取自本实体。
+  try {
+    await workspace.attachSession(sessionId)
+  } catch (error) {
+    void handle.dispose().catch(() => {})
+    throw new DispatchPreconditionError(
+      'workspace-attach-failed',
+      `会话 ${sessionId} 已建立但无法归入工作区 "${workspace.title}"（${workspace.path}）: ${String(error)}`,
+    )
+  }
+
+  // route/source 落事件：只记本次实测用了什么，不回写任务定义或配置。
+  store.appendEvent(instanceId, 'dispatch', {
+    sessionId,
+    workspacePath: workspace.path,
+    provider: route.provider,
+    model: route.model,
+    modelSource: route.source,
+  })
   // 会话列表治理：规范名在 reconciler.onCreated 改，跑完归档在 succeeded 对账后。
-  handle.agent.send(buildMessage(task, workspacePath, logicalDate, sessionId, statePath), 'next-turn', true)
+  handle.agent.send(buildMessage(task, workspace.path, logicalDate, sessionId, statePath), 'next-turn', true)
   return { sessionId, handle }
 }

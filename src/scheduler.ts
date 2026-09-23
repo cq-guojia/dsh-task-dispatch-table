@@ -1,13 +1,13 @@
 // tick 主循环（state-machine §1）：对账兜底 → 实例保障 → 逐任务判定（窗口 / 依赖 / 串行 / CAS 领取 / 派发）。
 // 所有判定纯程序逻辑，零 token（§1）。
-import type { HostContext, HostLogger } from './host.js'
+import type { HostContext, HostLogger, HostWorkspace } from './host.js'
 import { resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import { durationMs, loadTasks, logicalDateOf, onceScheduledAt, parseInlineTasks, scheduledAtFor } from './tasks.js'
 import type { TaskDefinition } from './tasks.js'
 import type { TaskStore, TaskInstance } from './store.js'
 import type { Reconciler } from './reconcile.js'
-import { dispatchTask, resolveWorkspacePath } from './dispatch.js'
+import { DispatchPreconditionError, dispatchTask, resolveWorkspace } from './dispatch.js'
 
 /** 在跑态：同任务串行判定（§8）的互斥集合——pending 只是排队，不阻塞后继派发。 */
 const IN_FLIGHT_STATUSES = ['dispatched', 'running', 'unknown'] as const
@@ -142,28 +142,35 @@ export function createScheduler({ ctx, logger, store, reconciler, config }: Sche
         // 依赖不满足：pending 等（§2「前置未满足」），不转移不留终态。
         if (judgeDependencies(task, instance) !== 'ready') continue
 
-        let workspacePath: string
+        // 工作区解析（决策 22）：target.workspace 必须是已注册工作区，匹配不到即判失败——
+        // 任务必须挂在工作区下，绝不落到「未分组」或随便找个目录跑。
+        let workspace: HostWorkspace
         try {
-          workspacePath = resolveWorkspacePath(ctx, task.target.workspace)
+          workspace = resolveWorkspace(ctx, task.target.workspace)
         } catch (error) {
-          logger.warn(`任务 ${task.id} 派发中止: ${String(error)}`)
+          logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`)
+          reconciler.retryOrFail(instance, 'workspace-not-found')
           continue
         }
         // CAS 领取（data-model 关键设计 3）→ dispatched → 派发。
         if (!store.casClaim(instance.id)) continue
         dispatchTask({
-          ctx, store, task,
+          ctx, logger, store, task,
           instanceId: instance.id,
           logicalDate: instance.logical_date,
-          workspacePath,
+          workspace,
           statePath: resolveStatePath(config().statePath),
+          // 漏斗第②层需要插件配置；派发时现算，不用建行时的值。
+          config: config(),
         })
           .then(({ sessionId, handle }) => reconciler.registerHandle(sessionId, handle))
           .catch((error: unknown) => {
-            // 派发异常走重试判定（§6），等价于宽限期超时路径。
-            logger.error(`派发失败 ${instance.id}: ${String(error)}`)
+            // 派发异常走重试判定（§6），等价于宽限期超时路径；
+            // 前置条件失败带具体 reason（决策 22：no-model-route / workspace-attach-failed）。
+            const reason = error instanceof DispatchPreconditionError ? error.reason : 'dispatch-error'
+            logger.error(`派发失败 ${instance.id}（${reason}）: ${String(error)}`)
             const latest = store.get(instance.id)
-            if (latest !== undefined && latest.status === 'dispatched') reconciler.retryOrFail(latest, 'dispatch-error')
+            if (latest !== undefined && latest.status === 'dispatched') reconciler.retryOrFail(latest, reason)
           })
       }
     }

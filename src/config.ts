@@ -21,9 +21,16 @@ export interface PluginConfig {
   tasksInline: string
   /** 调试快照 JSON（临时调试通道，决策 16 例外）：宿主写入、配置页只读展示，非用户设置。 */
   debugSnapshot: string
+  /** 插件级默认 provider（决策 22 漏斗第②层）：与 defaultModel 成对；留空则漏到宿主默认。 */
+  defaultProvider: string
+  /** 插件级默认 model（决策 22 漏斗第②层）：与 defaultProvider 成对；留空则漏到宿主默认。 */
+  defaultModel: string
 }
 
-export const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot'> = {
+export const ConfigDefaults: Omit<
+  PluginConfig,
+  'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'
+> = {
   tickMs: 60_000,
   dispatchGraceMs: 60_000,
   leaseMs: 30 * 60_000,
@@ -39,6 +46,9 @@ export const Config = z.object({
   tasksDir: z.string().default('tasks'),
   tasksInline: z.string().role('textarea').default(''),
   debugSnapshot: z.string().default(''),
+  // 决策 22 漏斗第②层：留空 = 未配，派发时漏到下一层。解析结果只用于本次派发，不回写本字段。
+  defaultProvider: z.string().default(''),
+  defaultModel: z.string().default(''),
 })
 
 /**

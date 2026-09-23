@@ -24,7 +24,10 @@ export const taskDefinitionSchema = z.object({
     once: z.string().optional(),
   }),
   target: z.object({
+    // 工作区（非工作目录，决策 22）：按 registry 的 title 精确匹配、id 兜底；目录由工作区 path 派生。
     workspace: z.string().min(1),
+    /** 派发模型（决策 22 漏斗第①层）：provider 与 model 成对；都留空则漏到插件配置 / 宿主默认。 */
+    provider: z.string().optional(),
     model: z.string().optional(),
     manual: z.string().optional(),
     prompt: z.string().min(1),

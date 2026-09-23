@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-23 · 插件已重装、调试面板恢复显示；崩溃窗口半截派发实例 unknown 待 sweep 判 failed；once 改期语义已拍板（同日改时刻无效 / 改到明日免换 id）；下一步换新 id 造新实例验证回执全链路
+> **最后更新**：2026-09-23 · 定案「agent 收到消息即秒结束」根因 = 派发没给模型（deployment persona 的 `{{model}}` 取不到值直接抛错）；拍板**决策 22**（模型四层漏斗 + 会话必须 attach 到工作区）并落码，冒烟 21 项全过；待重装真机验证
 
 ---
 
@@ -23,12 +23,14 @@
 
 ## 二、当前状态
 
-**联调阶段。** v0.0.1 已装进宿主（git 源），配置页真机验证通过；崩溃排查后插件已重装，调试面板恢复显示；**回执机制（决策 19）已落码重装**——agent 经插件自带 `dist/submit.js` 直写状态库 receipt 事件，契约文件方案废除；**配置页临时调试面板已落码**（决策 16 例外）：host 把实例 / 事件 / 告警快照写进 settings 命名空间，配置页「调试日志」弹窗实时查看，替代容器里缺 sqlite3 的手工查库。
+**联调阶段。** v0.0.1 已装进宿主（git 源），配置页真机验证通过；**回执机制（决策 19）**——agent 经插件自带 `dist/submit.js` 直写状态库 receipt 事件，契约文件方案废除——与**配置页临时调试面板（决策 16 例外）**均已落码、真机可见（host 把实例 / 事件 / 告警快照写进 settings 命名空间，配置页「调试日志」弹窗实时查看，替代容器里缺 sqlite3 的手工查库）。
+
+**本轮定案（决策 22）**：真机「agent 收到消息即秒结束」的根因 = **派发没给模型**——deployment persona 里的 `{{model}}` 取不到值直接抛错（事件序 `dispatch` → 立刻 `turn/end`），与回执机制无关；另一路缺陷是会话**没归到工作区**（只设 `meta.cwd` 不会进工作区 `sessionIds`）。两个缺陷均已按决策 22 落码修复（冒烟 21 项全过），待重装真机验证。
 
 | 环节 | 状态 |
 |---|---|
 | 总体架构 | ✅ 定型 |
-| 关键技术决策（19 条） | ✅ 定型 |
+| 关键技术决策（22 条） | ✅ 定型 |
 | 宿主 API 源码核实 | ✅ 未决项 1–4 全部关闭（结论沉淀为决策 15） |
 | 状态机 / 依赖语义 | ✅ 完整定义（转移表 / 租约 / unknown / 窗口 / 补跑 / 串行 / 回执追问闭环） |
 | 数据模型（JSON Schema + SQLite 表） | ✅ 定型（决策 19 后 contract 只剩 `validStatuses`，事件表新增 `receipt` / `nudge` 两种 kind） |
@@ -36,8 +38,9 @@
 | UI 方案 | ✅ 定型（决策 16：v1 零 UI 配置走 ctx.settings，监控面板 v1.1 弹窗形态） |
 | 调度器插件骨架 | ✅ 落码（v0.0.1）且**已装进宿主**；**Web 配置页真机验证通过**（`settings.plugin.item` slot，决策 17 修订） |
 | 一次性任务（决策 18） | ✅ 落码 + 冒烟通过（时区换算/互斥校验/自动停），已重装；首跑实例因崩溃窗口半截派发被标 unknown（将收敛 failed），待换新实例重验 |
-| 回执机制（决策 19） | ✅ 落码 + 冒烟通过（submit 正反路径 12 项），已重装待验证——agent 能否跑 node 命令 + 访问 dist 路径需真机核实 |
-| 端到端联调 | ⬜ 未开始（造真实任务 → 实例生成 → 派发 → 回执 → 状态落库） |
+| 回执机制（决策 19） | ✅ 落码，真机已见 `nudge` 追问事件；派发侧 `dispatch` 事件已出现（agent 确实收到消息）——待验证的是 agent 干完活并提交回执 |
+| 派发前解析（决策 22） | ✅ 落码 + 冒烟通过（21 项）：模型四层漏斗 / 工作区实体 `attachSession` 归组 / 前后置失败的三种 reason；待重装真机验证 |
+| 端到端联调 | 🟡 已跑通到「派发 → agent 收到消息」，卡在 agent 一轮即失败（根因已定并于决策 22 修复）⇒ 待重装后重跑全链路 |
 
 ---
 
@@ -47,7 +50,7 @@
 |---|---|
 | [`../AGENTS.md`](../AGENTS.md) | agent 操作守则、文档体系与维护规则 |
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
-| [`design/decisions.md`](design/decisions.md) | 19 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
+| [`design/decisions.md`](design/decisions.md) | 22 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL（两表）、关键设计与取舍 |
 | [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 回执机制 + 任务手册（已按决策 19 改写） |
 | [`examples/task-template.jsonc`](examples/task-template.jsonc) | 全字段注释版任务定义模板（粘进 tasksInline 前须去掉注释） |
@@ -83,16 +86,17 @@
 
 | 原待查 | 结论 |
 |---|---|
-| 工作区 name → path | registry **无按 name 查询 API**（仅 `get(id)` / `list()`，实体字段 = `id`/`path`/`title`，`workspace/src/index.ts:170,180`）→ 实现按 `title` 精确匹配、`id` 兜底 |
+| 工作区 name → path | registry **无按 name 查询 API**（仅 `get(id)` / `list()`，实体字段 = `id`/`path`/`title`）→ 实现按 `title` 精确匹配、`id` 兜底 |
+| 会话如何归入工作区分组 | 只设 `meta.cwd` **不会**归组：必须在会话建成后调实体方法 `workspace.attachSession(sessionId)`（内部要求会话 header 的 cwd 归一后 === 工作区 `path`）；`bootstrap()` 只在 registry 首次初始化时按 cwd 归组历史会话 ⇒ 曾经「落到未分组」的原因即此。已按决策 22 落码 |
 | 宿主 Node 版本 | engines `^22.19.0 \|\| >=24.0.0` → **SQLite 用内置 `node:sqlite`**，零原生依赖 |
-| provider / model 缺省 | `AgentOptions.provider/model` 均可选，缺省走宿主默认路由（`core/agent/src/runtime-types.ts:26-35`）→ `target.model` 有值才透传，provider 不传 |
+| ~~provider / model 缺省走宿主默认路由~~ ❌ **原结论已推翻** | 二者**必须成对显式给**：agent-loop `prepareRequest` 对 provider+model 一并校验（`if (!provider \|\| !model) throw`），缺省**不会**填 deployment persona 里的 `{{model}}` ⇒ 报 `has no value ... (section "deployment:persona-prefix")`、本轮秒结束。默认值来源 = `ctx.get('agentDefaultModel').currentSelection()`（= 用户配的 / 上次用的），兜底 = `llm.listProviders()` / `listModels()`。**决策 15 相应更正，见决策 22** |
 | settings 注册 | `ctx.settings.register(ns, schema, { base })`，namespace 限 `^[a-z][a-z0-9-]*$`（`settings/src/index.ts:419-459`） |
 
 ---
 
 ## 六、下一步（接手后从这里开始）
 
-1. **真机验证回执全链路（插件已重装，调试面板即观测入口）**：旧实例 `work-report-once:2026-09-23` 因崩溃窗口半截派发被启动扫描标记 unknown → 观察期已过，sweep 将判 failed（once 当日作废）。**once 改期语义（已拍板）**：实例身份 = task_id + once 日期 ⇒ **同日改时刻无效**（建行幂等跳过 scheduler.ts:68 + 重排只重算 pending attempt=0，unknown/终态冻结）；改到明日则 id 不变即可、到点自动补建新实例；**今日验证须换新 id** 造新 once 时刻（几分钟后）。到点看面板走完：pending → dispatched → **`dispatch` 事件**（= agent 真收到消息，此前从未出现）→ agent 产文件 + 跑 `node dist/submit.js` → `receipt` → `succeeded`；再故意不交回执验证追问×2 → failed。另：崩溃排查隔离的文件（宿主数据根 quarantine/ 下）待确认后清理
+1. **真机重装后重跑全链路（根因已修，观测入口 = 配置页调试面板）**：先 `npm run build` 再重装插件，换新 id 造一条几分钟后到点的 `once` 任务。到点看面板走完：pending → dispatched → **`dispatch` 事件（现在应带 `provider` / `model` / `modelSource`）** → agent 产文件 + 跑 `node dist/submit.js` → `receipt` → `succeeded`；再故意不交回执验证追问×2 → failed。**同时确认两件事**：① 会话出现在目标工作区分组下（不再是「未分组」）；② `modelSource` 应命中 `host-default`——若落到 `llm-first`，说明宿主 `agentDefaultModel` 没取到值，需回看它的挂载与配置。**once 改期语义（已拍板）**：实例身份 = task_id + once 日期 ⇒ **同日改时刻无效**（建行幂等跳过 scheduler.ts:68 + 重排只重算 pending attempt=0，unknown/终态冻结）；改到明日则 id 不变即可、到点自动补建；**今日验证须换新 id**。另：崩溃排查隔离的文件（宿主数据根 quarantine/ 下）待确认后清理
 2. **端到端联调（周期任务全链路）**：cron 任务走一遍 实例生成 → 依赖判定 → 派发 → 回执三查 → 重试/窗口收敛 → 状态落库（`storages/dsh-task-dispatch-table/state.db` 两表）；API 形状偏差按决策 15 回写
 3. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
 4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（`--outputs-file receipt.json`，agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走上命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）
@@ -150,3 +154,4 @@
 | 2026-09-23 | **临时调试面板落码 + ctx 包装三连坑（183b85c→aebf6d2→72dcbb7）**——面板通道：host 把快照（任务 ids / 实例 / 事件 / 告警环形缓冲）经自有 settings 命名空间 `scope.update` 写入，client 订阅自动刷新，去重 + 2s 节流。三次真机崩溃的教训（cordis 源码实锤 reflect.ts:172-196,221）：① ctx 是 Proxy，赋值任何属性都抛 `cannot set property without provide`；② `{...ctx}` 展开拿不到 `on`/`interval` 等 mixin 方法（不在自有属性上）；③ **结论：ctx 复制/包装/遮-shadow 全部不可行**，tee logger 只能作显式参数传入各模块。教训：mock 宿主是普通对象测不出 Proxy 语义，宿主 API 行为必须先查 cordis 源码 |
 | 2026-09-23 | **真机排查「服务起不来」定案：凭据写锁残留，非插件运行期问题**——禁用插件后仍崩 → 排除插件代码；`docker logs` 抓到 DSH 自身退出错误 `atomic-write: timed out waiting for the writer lock at ~/.dsh/.credentials.yaml.lock`：此前崩溃窗口里 DSH 写凭据持锁被杀（容器重启 SIGKILL），锁文件残留于挂载卷，之后每次启动 client-connection 等锁超时 → DSH 退出 code=1 → manager 反复崩。挪走死锁文件即恢复。**定责**：插件两次启动崩溃（ctx 包装）是诱因链一环；manager 反代无 error handler 放大伤害属镜像侧（`/app/manager/index.js` 无 `proxy.on('error')`），插件侧不修。**流程教训**：① 排查必须先抓 DSH 自身错误日志再下结论，别被表象（manager 栈）带偏；② 任何删除/移动指令必须先 cat 验证路径存在（'#include' 猜路径事件）；③ 重启窗口期别跑插件安装 |
 | 2026-09-23 | **插件重装完成、面板恢复；半截派发实例待收敛 + once 改期语义拍板**——重装后面板正常显示：`work-report-once:2026-09-23` unknown（16:00 崩溃窗口半截派发被启动扫描标记，16:24:27），事件仅 reschedule/cas-claim/assign-session/session/created 四条、**缺 `dispatch` = agent 从未收到消息**（非回执机制问题）；观察期已过，下个 tick sweep 判 failed。**once 改期语义（本轮问答拍板，决策 20 的应用澄清）**：实例身份 = task_id + once 日期部分 ⇒ 同日改时刻无效——ensureInstances 对已存在行幂等跳过（scheduler.ts:68）、reschedulePass 只重算 pending+attempt=0（unknown/终态冻结）；改到明日有效、id 不变（新 logical_date 自动补建）；今日验证全链路须换新 id（或补跑三层入口的 SQL 手动重置，容器无 sqlite3 可 docker exec 用 node:sqlite 改）。崩溃排查隔离文件待用户确认后清理 |
+| 2026-09-23 | **拍板决策 22 + 落码：派发前解析（模型四层漏斗 + 会话必须挂到工作区）**——真机定位「agent 收到消息即秒结束」根因：派发没给 `agentOptions`、也没安装会话级 model selection ⇒ deployment persona 的 `{{model}}` 无值直接抛错（事件序 `dispatch` → 同一秒 `turn/end`），agent 从未干活；另一路缺陷 = 会话只设 `meta.cwd` 未 `attachSession` ⇒ 落「未分组」。宿主源码核实（npm 上 `@deepseek-ai/dsh-{workspace,agent-default-model,agent-loop,llm,api-session-controller}@0.1.6-alpha.2` 官方产物；本机 GitHub 不通但 npm registry 通）：① `agentDefaultModel` 服务 = 部署 composition 里配的 provider+model（二者 required），UI 换模型会 `saveSelection` 回写 ⇒ 即「用户配的 / 上次用的模型」；② agent-loop `prepareRequest` 要求 provider+model **成对**；③ 归组唯一途径 = 实体方法 `workspace.attachSession(sessionId)`；④ 宿主自己的 `session-controller.create` = 「workspaceId 与 cwd 互斥、cwd 取 `workspace.path`、工作区不存在抛 not-found、建完 attach 才归组」。落码：漏斗四层（target → 插件配置 `defaultProvider/defaultModel` → `agentDefaultModel` → `llm` 首个可用）+ 四层全空判失败；新增 `target.provider`；dispatch 后 attach 归组、attach 失败则 dispose 且不发送；`dispatch` 事件落 `provider`/`model`/`modelSource`；失败 reason 三种（workspace-not-found / no-model-route / workspace-attach-failed）。**只运行期现算、绝不回写任务定义或配置**（用户明确要求：配置期固化会让用户日后换模型时失去兜底）。冒烟 21 项全过；**决策 15 相应更正**；决策 21 补录（ctx 透传而非包装） |

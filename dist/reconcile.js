@@ -6,7 +6,7 @@ import { existsSync, statSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { durationMs } from './tasks.js';
-import { resolveWorkspacePath, submitCommand, userNotice } from './dispatch.js';
+import { resolveWorkspace, submitCommand, userNotice } from './dispatch.js';
 /** 跑完信号后允许补交回执的追问上限（写死不加配置，事件表可查次数）。 */
 const NUDGE_LIMIT = 2;
 /**
@@ -140,7 +140,7 @@ export function createReconciler({ ctx, logger, store, options }) {
     }
     function resolveWorkspacePathSafe(task) {
         try {
-            return resolveWorkspacePath(ctx, task.target.workspace);
+            return resolveWorkspace(ctx, task.target.workspace).path;
         }
         catch (error) {
             logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`);

@@ -26,6 +26,8 @@ window.__ModuleLoader__.load({
 			paramLeaseMs: "运行租约 leaseMs（毫秒）",
 			paramUnknownGraceMs: "观察宽限 unknownGraceMs（毫秒）",
 			paramTasksDir: "任务目录 tasksDir",
+			paramDefaultProvider: "默认模型 provider defaultProvider",
+			paramDefaultModel: "默认模型 model defaultModel",
 			debugButton: "调试日志",
 			debugTitle: "调试快照（临时面板，随宿主状态自动刷新）",
 			debugClose: "关闭",
@@ -62,6 +64,8 @@ window.__ModuleLoader__.load({
 			paramLeaseMs: "Run lease leaseMs (ms)",
 			paramUnknownGraceMs: "Observation grace unknownGraceMs (ms)",
 			paramTasksDir: "Task directory tasksDir",
+			paramDefaultProvider: "Default model provider defaultProvider",
+			paramDefaultModel: "Default model defaultModel",
 			debugButton: "Debug logs",
 			debugTitle: "Debug snapshot (temporary panel; auto-refreshes with host state)",
 			debugClose: "Close",
@@ -333,7 +337,7 @@ window.__ModuleLoader__.load({
 				onClick: () => {
 					setDebugOpen(true);
 				}
-			}, t("debugButton"))), (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)))), debugOpen ? (0, react.createElement)(DebugModal, {
+			}, t("debugButton"))), (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)), (0, react.createElement)("dt", null, t("paramDefaultProvider")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultProvider)), (0, react.createElement)("dt", null, t("paramDefaultModel")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultModel)))), debugOpen ? (0, react.createElement)(DebugModal, {
 				t,
 				data: debugData,
 				raw: debugRaw,
