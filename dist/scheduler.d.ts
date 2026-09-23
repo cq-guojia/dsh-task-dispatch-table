@@ -1,4 +1,4 @@
-import type { HostContext } from './host.js';
+import type { HostContext, HostLogger } from './host.js';
 import type { PluginConfig } from './config.js';
 import type { TaskDefinition } from './tasks.js';
 import type { TaskStore } from './store.js';
@@ -13,8 +13,10 @@ export interface Scheduler {
 }
 export interface SchedulerDeps {
     ctx: HostContext;
+    /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
+    logger: HostLogger;
     store: TaskStore;
     reconciler: Reconciler;
     config: () => PluginConfig;
 }
-export declare function createScheduler({ ctx, store, reconciler, config }: SchedulerDeps): Scheduler;
+export declare function createScheduler({ ctx, logger, store, reconciler, config }: SchedulerDeps): Scheduler;

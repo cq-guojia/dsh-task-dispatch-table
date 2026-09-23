@@ -25,7 +25,7 @@ function planFor(task, day) {
 function windowDeadline(task, instance) {
     return Date.parse(instance.scheduled_at) + durationMs(task.schedule.window);
 }
-export function createScheduler({ ctx, store, reconciler, config }) {
+export function createScheduler({ ctx, logger, store, reconciler, config }) {
     let tasks = new Map();
     /** 窗口内 pending / 已过窗 skipped 留痕（§3 实例保障 / §7）。 */
     function ensureInstances(currentTasks) {
@@ -91,14 +91,14 @@ export function createScheduler({ ctx, store, reconciler, config }) {
                     workspacePath = resolveWorkspacePath(ctx, task.target.workspace);
                 }
                 catch (error) {
-                    ctx.logger.warn(`任务 ${task.id} 派发中止: ${String(error)}`);
+                    logger.warn(`任务 ${task.id} 派发中止: ${String(error)}`);
                     continue;
                 }
                 // CAS 领取（data-model 关键设计 3）→ dispatched → 派发。
                 if (!store.casClaim(instance.id))
                     continue;
                 dispatchTask({
-                    ctx, store, task,
+                    ctx, logger, store, task,
                     instanceId: instance.id,
                     logicalDate: instance.logical_date,
                     workspacePath,
@@ -107,7 +107,7 @@ export function createScheduler({ ctx, store, reconciler, config }) {
                     .then(({ sessionId, handle }) => reconciler.registerHandle(sessionId, handle))
                     .catch((error) => {
                     // 派发异常走重试判定（§6），等价于宽限期超时路径。
-                    ctx.logger.error(`派发失败 ${instance.id}: ${String(error)}`);
+                    logger.error(`派发失败 ${instance.id}: ${String(error)}`);
                     const latest = store.get(instance.id);
                     if (latest !== undefined && latest.status === 'dispatched')
                         reconciler.retryOrFail(latest, 'dispatch-error');
@@ -139,8 +139,8 @@ export function createScheduler({ ctx, store, reconciler, config }) {
             const cfg = config();
             // 任务来源：tasksInline（配置页 textarea，临时 UI）非空则优先，否则读 tasksDir 目录。
             const source = cfg.tasksInline.trim().length > 0
-                ? parseInlineTasks(ctx, cfg.tasksInline)
-                : loadTasks(ctx, cfg.tasksDir);
+                ? parseInlineTasks(logger, cfg.tasksInline)
+                : loadTasks(logger, cfg.tasksDir);
             tasks = new Map(source.map(task => [task.id, task]));
             reconciler.sweep();
             ensureInstances([...tasks.values()]);

@@ -1,4 +1,4 @@
-import type { HostContext, HostSession } from './host.js';
+import type { HostContext, HostLogger, HostSession } from './host.js';
 import type { TaskDefinition } from './tasks.js';
 import type { AgentHandle } from './dispatch.js';
 import type { TaskStore, TaskInstance } from './store.js';
@@ -25,6 +25,8 @@ export interface Reconciler {
 }
 export interface ReconcilerDeps {
     ctx: HostContext;
+    /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
+    logger: HostLogger;
     store: TaskStore;
     options: ReconcileOptions;
 }
@@ -41,4 +43,4 @@ export declare function checkReceipt(task: TaskDefinition, workspacePath: string
     reason?: string;
     detail?: unknown;
 };
-export declare function createReconciler({ ctx, store, options }: ReconcilerDeps): Reconciler;
+export declare function createReconciler({ ctx, logger, store, options }: ReconcilerDeps): Reconciler;

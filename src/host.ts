@@ -134,3 +134,10 @@ export interface HostContext {
   settings: HostSettings
   sessionTitle: HostSessionTitle
 }
+
+/**
+ * 宿主 logger 最小面。⚠️ ctx 本体不可包装（cordis ctx 是 Proxy：set trap 拒绝赋值
+ * vendor/cordis/src/reflect.ts:172-196；on/interval 等 mixin 方法不在自有属性上，
+ * 展开拷贝拿不到 :221）——需要替换 logger 的模块一律经显式参数接收本类型。
+ */
+export type HostLogger = HostContext['logger']

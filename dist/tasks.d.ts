@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { HostContext } from './host.js';
+import type { HostLogger } from './host.js';
 export declare const dependencySemantics: readonly ["same_period", "latest_success"];
 export type DependencySemantics = (typeof dependencySemantics)[number];
 /** 任务定义 14 字段：data-model.md「任务定义」表，字段名严格照抄。 */
@@ -54,6 +54,6 @@ export declare function scheduledAtFor(task: TaskDefinition, day: string, search
  */
 export declare function onceScheduledAt(task: TaskDefinition, day: string): Date | undefined;
 /** 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。 */
-export declare function parseInlineTasks(ctx: HostContext, raw: string): TaskDefinition[];
+export declare function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinition[];
 /** 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。 */
-export declare function loadTasks(ctx: HostContext, tasksDir: string): TaskDefinition[];
+export declare function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[];

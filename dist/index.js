@@ -23,26 +23,20 @@ export function apply(ctx, config) {
     // 临时调试通道：宿主侧把「告警 + 状态库快照」写进本命名空间的 debugSnapshot 字段
     // （scope.update 合并进用户层并提交 'settings/updated'，packages/settings/settings/src/index.ts:133,456,562），
     // 配置页订阅同一 scope 实时渲染。仅诊断用，全部异常自兜，不触碰调度主流程。
-    const rawWarn = ctx.logger.warn.bind(ctx.logger);
-    const rawError = ctx.logger.error.bind(ctx.logger);
+    //
+    // ⚠️ ctx 不可包装（cordis ctx 是 Proxy：set trap 拒绝赋值 vendor/cordis/src/reflect.ts:172-196，
+    // on/interval 等 mixin 方法不在自有属性上，展开拷贝拿不到 :221）——tee logger 作为
+    // 显式参数传给各模块（见 host.ts HostLogger 注释），ctx 原样传递。
     const debugWarns = [];
     const pushWarn = (level, message) => {
         debugWarns.push(`${new Date().toISOString()} [${level}] ${message}`);
         if (debugWarns.length > DEBUG_WARN_LIMIT)
             debugWarns.shift();
     };
-    // 影子 ctx：展开拷贝 + 仅覆盖 logger，让 scheduler / reconciler / dispatch / tasks 的
-    // 告警全部经 tee 进缓冲。⚠️ 不能用「Object.create(ctx) + 赋值遮蔽」：cordis 服务是
-    // 原型链上的 accessor，赋值会抛 "cannot set property without provide"（真机踩坑）。
-    // 展开读属性走 ctx 自身 receiver，安全；模块只用 service 对象（agents/sessions 等，
-    // 引用不变，方法 this 绑定不受影响）与 logger，不触碰 on/interval 等 ctx 级方法。
-    const logCtx = {
-        ...ctx,
-        logger: {
-            info: (message) => ctx.logger.info(message),
-            warn: (message) => { pushWarn('warn', message); rawWarn(message); },
-            error: (message) => { pushWarn('error', message); rawError(message); },
-        },
+    const teeLogger = {
+        info: (message) => ctx.logger.info(message),
+        warn: (message) => { pushWarn('warn', message); ctx.logger.warn(message); },
+        error: (message) => { pushWarn('error', message); ctx.logger.error(message); },
     };
     let taskMap = new Map();
     // 快照写入：内容去重（数据未变不写）+ 2s 节流（尾随写入保证最终态必落）。
@@ -64,10 +58,10 @@ export function apply(ctx, config) {
                 return;
             lastContent = content;
             scope.update({ debugSnapshot: JSON.stringify({ at: new Date().toISOString(), ...body }) })
-                .catch(error => rawWarn(`调试快照写入失败: ${String(error)}`));
+                .catch((error) => ctx.logger.warn(`调试快照写入失败: ${String(error)}`));
         }
         catch (error) {
-            rawWarn(`调试快照组装失败: ${String(error)}`);
+            ctx.logger.warn(`调试快照组装失败: ${String(error)}`);
         }
     };
     const updateSnapshot = () => {
@@ -89,19 +83,19 @@ export function apply(ctx, config) {
         statePath: () => resolveStatePath(scope.get().statePath),
         tasks: () => taskMap,
     };
-    const reconciler = createReconciler({ ctx: logCtx, store, options: reconcileOptions });
+    const reconciler = createReconciler({ ctx, logger: teeLogger, store, options: reconcileOptions });
     const scheduler = createScheduler({
-        ctx: logCtx, store, reconciler,
+        ctx, logger: teeLogger, store, reconciler,
         config: () => scope.get(),
     });
     // 启动扫描（机制 #5）：重启期间 disposed 事件可能全部丢失，已派发未定态实例置 unknown，
     // 随后按 unknown 流程自然收敛（§3）。pending 从未派发、无可丢事件，保持原状。
     const scanned = store.startupScan();
     if (scanned > 0)
-        logCtx.logger.info(`启动扫描：${scanned} 个已派发实例置 unknown`);
-    logCtx.on('session/created', session => { reconciler.onCreated(session); updateSnapshot(); });
-    logCtx.on('session/event', (session, event) => { reconciler.onEvent(session, event); updateSnapshot(); });
-    logCtx.on('session/disposed', session => { reconciler.onDisposed(session); updateSnapshot(); });
+        teeLogger.info(`启动扫描：${scanned} 个已派发实例置 unknown`);
+    ctx.on('session/created', session => { reconciler.onCreated(session); updateSnapshot(); });
+    ctx.on('session/event', (session, event) => { reconciler.onEvent(session, event); updateSnapshot(); });
+    ctx.on('session/disposed', session => { reconciler.onDisposed(session); updateSnapshot(); });
     const safeTick = () => {
         try {
             scheduler.tick();
@@ -109,7 +103,7 @@ export function apply(ctx, config) {
         }
         catch (error) {
             pushWarn('error', `tick 异常: ${String(error)}`);
-            rawError(`tick 异常: ${String(error)}`);
+            ctx.logger.error(`tick 异常: ${String(error)}`);
         }
         updateSnapshot();
     };

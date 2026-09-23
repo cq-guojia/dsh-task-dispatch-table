@@ -42,7 +42,7 @@ export function checkReceipt(task, workspacePath, dispatchedAtMs, receipt) {
     }
     return { ok: true, detail: payload };
 }
-export function createReconciler({ ctx, store, options }) {
+export function createReconciler({ ctx, logger, store, options }) {
     const handles = new Map();
     const windowDeadline = (instance) => Date.parse(instance.scheduled_at) + durationMs(taskOf(instance)?.schedule.window ?? 'PT0S');
     function taskOf(instance) {
@@ -63,7 +63,7 @@ export function createReconciler({ ctx, store, options }) {
         // 会话已结束（turn/end / disposed 触发的收敛）→ 归档；租约误判的回收不归档。
         if (instance.session_id !== null)
             void ctx.workspaceRegistry.archiveSession(instance.session_id).catch((error) => {
-                ctx.logger.warn(`归档失败 ${instance.session_id}: ${String(error)}`);
+                logger.warn(`归档失败 ${instance.session_id}: ${String(error)}`);
             });
     }
     /** 重试判定（state-machine §6）：attempt+1 < maxAttempts 且未超窗 → 当场回 pending；否则终态 failed。 */
@@ -89,7 +89,7 @@ export function createReconciler({ ctx, store, options }) {
     function settleByReceipt(instance) {
         const task = taskOf(instance);
         if (task === undefined) {
-            ctx.logger.warn(`实例 ${instance.id} 的任务定义不在当前任务表，暂不收敛`);
+            logger.warn(`实例 ${instance.id} 的任务定义不在当前任务表，暂不收敛`);
             return;
         }
         const taskWorkspace = resolveWorkspacePathSafe(task);
@@ -122,7 +122,7 @@ export function createReconciler({ ctx, store, options }) {
                 + `（--status 必须如实，只能是：${task.contract.validStatuses.join(' | ')}）：\n${command}`, `[TASK] 回执追问 ${task.id} · ${instance.logical_date}`), 'next-turn', true);
         }
         catch (error) {
-            ctx.logger.warn(`追问发送失败 ${instance.id}: ${String(error)}`);
+            logger.warn(`追问发送失败 ${instance.id}: ${String(error)}`);
             retryOrFail(instance, 'nudge-send-failed');
         }
     }
@@ -143,7 +143,7 @@ export function createReconciler({ ctx, store, options }) {
             return resolveWorkspacePath(ctx, task.target.workspace);
         }
         catch (error) {
-            ctx.logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`);
+            logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`);
             return undefined;
         }
     }

@@ -1,4 +1,4 @@
-import type { HostContext, UserMessage } from './host.js';
+import type { HostContext, HostLogger, UserMessage } from './host.js';
 import type { TaskDefinition } from './tasks.js';
 import type { TaskStore } from './store.js';
 /** 回执提交程序（决策 19）：与本文件同在 dist/，运行期按自身位置定位（包 type=module，.js 即 ESM）。 */
@@ -23,6 +23,8 @@ export declare function userNotice(text: string, summary: string): UserMessage;
 export declare function buildMessage(task: TaskDefinition, workspacePath: string, logicalDate: string, sessionId: string, statePath: string): UserMessage;
 export interface DispatchInput {
     ctx: HostContext;
+    /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
+    logger: HostLogger;
     store: TaskStore;
     task: TaskDefinition;
     /** 已领取实例：形如 "<task_id>:<logical_date>"，状态应为 dispatched。 */

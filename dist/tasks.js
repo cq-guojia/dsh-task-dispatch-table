@@ -125,20 +125,20 @@ export function onceScheduledAt(task, day) {
     return t;
 }
 /** 单个任务定义的公共校验（schema + 互斥 + 时区 + cron/once），文件目录与内嵌两路共用。 */
-function checkedTask(ctx, label, data) {
+function checkedTask(logger, label, data) {
     const parsed = taskDefinitionSchema.safeParse(data);
     if (!parsed.success) {
-        ctx.logger.warn(`任务定义校验失败 ${label}: ${parsed.error.message}`);
+        logger.warn(`任务定义校验失败 ${label}: ${parsed.error.message}`);
         return undefined;
     }
     const def = parsed.data;
     // cron 与 once 恰有其一：周期任务用 cron，一次性任务用 once（决策 18）。
     if ((def.schedule.cron === undefined) === (def.schedule.once === undefined)) {
-        ctx.logger.warn(`任务定义校验失败 ${label}: schedule.cron 与 schedule.once 必须恰有其一`);
+        logger.warn(`任务定义校验失败 ${label}: schedule.cron 与 schedule.once 必须恰有其一`);
         return undefined;
     }
     if (def.schedule.timezone !== undefined && !isValidTimeZone(def.schedule.timezone)) {
-        ctx.logger.warn(`任务定义时区非法 ${label}: ${def.schedule.timezone}`);
+        logger.warn(`任务定义时区非法 ${label}: ${def.schedule.timezone}`);
         return undefined;
     }
     if (def.schedule.cron !== undefined) {
@@ -146,18 +146,18 @@ function checkedTask(ctx, label, data) {
             CronExpressionParser.parse(def.schedule.cron, { tz: def.schedule.timezone });
         }
         catch (error) {
-            ctx.logger.warn(`任务定义 cron 非法 ${label}: ${String(error)}`);
+            logger.warn(`任务定义 cron 非法 ${label}: ${String(error)}`);
             return undefined;
         }
     }
     else if (def.schedule.once !== undefined && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(def.schedule.once)) {
-        ctx.logger.warn(`任务定义 once 格式非法 ${label}: ${def.schedule.once}（应为 YYYY-MM-DDTHH:mm）`);
+        logger.warn(`任务定义 once 格式非法 ${label}: ${def.schedule.once}（应为 YYYY-MM-DDTHH:mm）`);
         return undefined;
     }
     return def;
 }
 /** 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。 */
-export function parseInlineTasks(ctx, raw) {
+export function parseInlineTasks(logger, raw) {
     const text = raw.trim();
     if (text.length === 0)
         return [];
@@ -166,30 +166,30 @@ export function parseInlineTasks(ctx, raw) {
         data = JSON.parse(text);
     }
     catch (error) {
-        ctx.logger.warn(`内嵌任务表 JSON 非法: ${String(error)}`);
+        logger.warn(`内嵌任务表 JSON 非法: ${String(error)}`);
         return [];
     }
     if (!Array.isArray(data)) {
-        ctx.logger.warn('内嵌任务表必须是 JSON 数组');
+        logger.warn('内嵌任务表必须是 JSON 数组');
         return [];
     }
     const tasks = [];
     for (const [index, item] of data.entries()) {
-        const def = checkedTask(ctx, `内嵌任务表[${index}]`, item);
+        const def = checkedTask(logger, `内嵌任务表[${index}]`, item);
         if (def?.enabled)
             tasks.push(def);
     }
     return tasks;
 }
 /** 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。 */
-export function loadTasks(ctx, tasksDir) {
+export function loadTasks(logger, tasksDir) {
     const dir = resolve(tasksDir);
     let names;
     try {
         names = readdirSync(dir).filter(name => name.endsWith('.json')).sort();
     }
     catch (error) {
-        ctx.logger.warn(`任务表目录不可读 ${dir}: ${String(error)}`);
+        logger.warn(`任务表目录不可读 ${dir}: ${String(error)}`);
         return [];
     }
     const tasks = [];
@@ -198,12 +198,12 @@ export function loadTasks(ctx, tasksDir) {
         try {
             if (!statSync(file).isFile())
                 continue;
-            const def = checkedTask(ctx, file, JSON.parse(readFileSync(file, 'utf8')));
+            const def = checkedTask(logger, file, JSON.parse(readFileSync(file, 'utf8')));
             if (def?.enabled)
                 tasks.push(def);
         }
         catch (error) {
-            ctx.logger.warn(`任务定义读取失败 ${file}: ${String(error)}`);
+            logger.warn(`任务定义读取失败 ${file}: ${String(error)}`);
         }
     }
     return tasks;

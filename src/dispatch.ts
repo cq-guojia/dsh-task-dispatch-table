@@ -2,7 +2,7 @@
 // 派发不走 sessions.create 直驱——它只建存储会话不驱动模型（决策 15，core/agent/src/index.ts:62-119）。
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
-import type { HostContext, UserMessage } from './host.js'
+import type { HostContext, HostLogger, UserMessage } from './host.js'
 import type { TaskDefinition } from './tasks.js'
 import type { TaskStore } from './store.js'
 
@@ -86,6 +86,8 @@ export function buildMessage(
 
 export interface DispatchInput {
   ctx: HostContext
+  /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
+  logger: HostLogger
   store: TaskStore
   task: TaskDefinition
   /** 已领取实例：形如 "<task_id>:<logical_date>"，状态应为 dispatched。 */
@@ -106,7 +108,7 @@ export type AgentHandle = Awaited<ReturnType<HostContext['agents']['create']>>
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
  */
 export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: string; handle: AgentHandle }> {
-  const { ctx, store, task, instanceId, logicalDate, workspacePath, statePath } = input
+  const { ctx, logger, store, task, instanceId, logicalDate, workspacePath, statePath } = input
   const sessionId = randomUUID()
   // 领取后先把会话身份落到实例行，再建会话——同 tick 同步顺序，无中间态外泄。
   store.transition(instanceId, { status: 'dispatched', session_id: sessionId, detail: 'assign-session' })
@@ -124,7 +126,7 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
   try {
     ctx.sessionTitle.rename(session, `[TASK] ${task.id} · ${logicalDate}`)
   } catch (error) {
-    ctx.logger.warn(`会话改名失败 ${sessionId}: ${String(error)}`)
+    logger.warn(`会话改名失败 ${sessionId}: ${String(error)}`)
   }
 
   store.appendEvent(instanceId, 'dispatch', { sessionId, workspacePath })

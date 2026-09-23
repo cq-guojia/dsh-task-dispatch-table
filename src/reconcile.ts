@@ -5,7 +5,7 @@
 import { existsSync, statSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
-import type { HostContext, HostSession } from './host.js'
+import type { HostContext, HostLogger, HostSession } from './host.js'
 import type { TaskDefinition } from './tasks.js'
 import { durationMs } from './tasks.js'
 import { resolveWorkspacePath, submitCommand, userNotice } from './dispatch.js'
@@ -38,6 +38,8 @@ export interface Reconciler {
 
 export interface ReconcilerDeps {
   ctx: HostContext
+  /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
+  logger: HostLogger
   store: TaskStore
   options: ReconcileOptions
 }
@@ -85,7 +87,7 @@ export function checkReceipt(
   return { ok: true, detail: payload }
 }
 
-export function createReconciler({ ctx, store, options }: ReconcilerDeps): Reconciler {
+export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps): Reconciler {
   const handles = new Map<string, AgentHandle>()
 
   const windowDeadline = (instance: TaskInstance): number =>
@@ -109,7 +111,7 @@ export function createReconciler({ ctx, store, options }: ReconcilerDeps): Recon
     forgetHandle(instance.session_id)
     // 会话已结束（turn/end / disposed 触发的收敛）→ 归档；租约误判的回收不归档。
     if (instance.session_id !== null) void ctx.workspaceRegistry.archiveSession(instance.session_id).catch((error: unknown) => {
-      ctx.logger.warn(`归档失败 ${instance.session_id}: ${String(error)}`)
+      logger.warn(`归档失败 ${instance.session_id}: ${String(error)}`)
     })
   }
 
@@ -137,7 +139,7 @@ export function createReconciler({ ctx, store, options }: ReconcilerDeps): Recon
   function settleByReceipt(instance: TaskInstance): void {
     const task = taskOf(instance)
     if (task === undefined) {
-      ctx.logger.warn(`实例 ${instance.id} 的任务定义不在当前任务表，暂不收敛`)
+      logger.warn(`实例 ${instance.id} 的任务定义不在当前任务表，暂不收敛`)
       return
     }
     const taskWorkspace = resolveWorkspacePathSafe(task)
@@ -175,7 +177,7 @@ export function createReconciler({ ctx, store, options }: ReconcilerDeps): Recon
         true,
       )
     } catch (error) {
-      ctx.logger.warn(`追问发送失败 ${instance.id}: ${String(error)}`)
+      logger.warn(`追问发送失败 ${instance.id}: ${String(error)}`)
       retryOrFail(instance, 'nudge-send-failed')
     }
   }
@@ -197,7 +199,7 @@ export function createReconciler({ ctx, store, options }: ReconcilerDeps): Recon
     try {
       return resolveWorkspacePath(ctx, task.target.workspace)
     } catch (error) {
-      ctx.logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`)
+      logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`)
       return undefined
     }
   }

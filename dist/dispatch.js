@@ -67,7 +67,7 @@ export function buildMessage(task, workspacePath, logicalDate, sessionId, stateP
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
  */
 export async function dispatchTask(input) {
-    const { ctx, store, task, instanceId, logicalDate, workspacePath, statePath } = input;
+    const { ctx, logger, store, task, instanceId, logicalDate, workspacePath, statePath } = input;
     const sessionId = randomUUID();
     // 领取后先把会话身份落到实例行，再建会话——同 tick 同步顺序，无中间态外泄。
     store.transition(instanceId, { status: 'dispatched', session_id: sessionId, detail: 'assign-session' });
@@ -84,7 +84,7 @@ export async function dispatchTask(input) {
         ctx.sessionTitle.rename(session, `[TASK] ${task.id} · ${logicalDate}`);
     }
     catch (error) {
-        ctx.logger.warn(`会话改名失败 ${sessionId}: ${String(error)}`);
+        logger.warn(`会话改名失败 ${sessionId}: ${String(error)}`);
     }
     store.appendEvent(instanceId, 'dispatch', { sessionId, workspacePath });
     handle.agent.send(buildMessage(task, workspacePath, logicalDate, sessionId, statePath), 'next-turn', true);

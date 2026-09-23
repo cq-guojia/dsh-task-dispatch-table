@@ -1,7 +1,7 @@
 // dsh-task-dispatch-table：定时任务调度器宿主插件（可编译骨架）。
 // 读任务定义 JSON → 按 cron/窗口/依赖判定 → 在指定工作区派发 agent 会话 → 监听会话事件对账 → SQLite 记状态。
 // 调度层零大模型介入（PROGRESS 背景）；插件零业务逻辑——任务定义见 docs/examples。
-import type { HostContext } from './host.js'
+import type { HostContext, HostLogger } from './host.js'
 import { Config, resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
@@ -38,26 +38,20 @@ export function apply(ctx: HostContext, config: unknown): void {
   // 临时调试通道：宿主侧把「告警 + 状态库快照」写进本命名空间的 debugSnapshot 字段
   // （scope.update 合并进用户层并提交 'settings/updated'，packages/settings/settings/src/index.ts:133,456,562），
   // 配置页订阅同一 scope 实时渲染。仅诊断用，全部异常自兜，不触碰调度主流程。
-  const rawWarn = ctx.logger.warn.bind(ctx.logger)
-  const rawError = ctx.logger.error.bind(ctx.logger)
+  //
+  // ⚠️ ctx 不可包装（cordis ctx 是 Proxy：set trap 拒绝赋值 vendor/cordis/src/reflect.ts:172-196，
+  // on/interval 等 mixin 方法不在自有属性上，展开拷贝拿不到 :221）——tee logger 作为
+  // 显式参数传给各模块（见 host.ts HostLogger 注释），ctx 原样传递。
   const debugWarns: string[] = []
   const pushWarn = (level: 'warn' | 'error', message: string): void => {
     debugWarns.push(`${new Date().toISOString()} [${level}] ${message}`)
     if (debugWarns.length > DEBUG_WARN_LIMIT) debugWarns.shift()
   }
-  // 影子 ctx：展开拷贝 + 仅覆盖 logger，让 scheduler / reconciler / dispatch / tasks 的
-  // 告警全部经 tee 进缓冲。⚠️ 不能用「Object.create(ctx) + 赋值遮蔽」：cordis 服务是
-  // 原型链上的 accessor，赋值会抛 "cannot set property without provide"（真机踩坑）。
-  // 展开读属性走 ctx 自身 receiver，安全；模块只用 service 对象（agents/sessions 等，
-  // 引用不变，方法 this 绑定不受影响）与 logger，不触碰 on/interval 等 ctx 级方法。
-  const logCtx = {
-    ...ctx,
-    logger: {
-      info: (message: string) => ctx.logger.info(message),
-      warn: (message: string) => { pushWarn('warn', message); rawWarn(message) },
-      error: (message: string) => { pushWarn('error', message); rawError(message) },
-    },
-  } as HostContext
+  const teeLogger: HostLogger = {
+    info: (message: string) => ctx.logger.info(message),
+    warn: (message: string) => { pushWarn('warn', message); ctx.logger.warn(message) },
+    error: (message: string) => { pushWarn('error', message); ctx.logger.error(message) },
+  }
 
   let taskMap = new Map<string, TaskDefinition>()
 
@@ -79,9 +73,9 @@ export function apply(ctx: HostContext, config: unknown): void {
       if (content === lastContent) return
       lastContent = content
       scope.update({ debugSnapshot: JSON.stringify({ at: new Date().toISOString(), ...body }) })
-        .catch(error => rawWarn(`调试快照写入失败: ${String(error)}`))
+        .catch((error: unknown) => ctx.logger.warn(`调试快照写入失败: ${String(error)}`))
     } catch (error) {
-      rawWarn(`调试快照组装失败: ${String(error)}`)
+      ctx.logger.warn(`调试快照组装失败: ${String(error)}`)
     }
   }
   const updateSnapshot = (): void => {
@@ -100,20 +94,20 @@ export function apply(ctx: HostContext, config: unknown): void {
     statePath: () => resolveStatePath(scope.get().statePath),
     tasks: () => taskMap,
   }
-  const reconciler = createReconciler({ ctx: logCtx, store, options: reconcileOptions })
+  const reconciler = createReconciler({ ctx, logger: teeLogger, store, options: reconcileOptions })
   const scheduler: Scheduler = createScheduler({
-    ctx: logCtx, store, reconciler,
+    ctx, logger: teeLogger, store, reconciler,
     config: () => scope.get(),
   })
 
   // 启动扫描（机制 #5）：重启期间 disposed 事件可能全部丢失，已派发未定态实例置 unknown，
   // 随后按 unknown 流程自然收敛（§3）。pending 从未派发、无可丢事件，保持原状。
   const scanned = store.startupScan()
-  if (scanned > 0) logCtx.logger.info(`启动扫描：${scanned} 个已派发实例置 unknown`)
+  if (scanned > 0) teeLogger.info(`启动扫描：${scanned} 个已派发实例置 unknown`)
 
-  logCtx.on('session/created', session => { reconciler.onCreated(session); updateSnapshot() })
-  logCtx.on('session/event', (session, event) => { reconciler.onEvent(session, event); updateSnapshot() })
-  logCtx.on('session/disposed', session => { reconciler.onDisposed(session); updateSnapshot() })
+  ctx.on('session/created', session => { reconciler.onCreated(session); updateSnapshot() })
+  ctx.on('session/event', (session, event) => { reconciler.onEvent(session, event); updateSnapshot() })
+  ctx.on('session/disposed', session => { reconciler.onDisposed(session); updateSnapshot() })
 
   const safeTick = (): void => {
     try {
@@ -121,7 +115,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       taskMap = scheduler.getTasks()
     } catch (error) {
       pushWarn('error', `tick 异常: ${String(error)}`)
-      rawError(`tick 异常: ${String(error)}`)
+      ctx.logger.error(`tick 异常: ${String(error)}`)
     }
     updateSnapshot()
   }
