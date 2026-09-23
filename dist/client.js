@@ -9,7 +9,7 @@ window.__ModuleLoader__.load({
 		/** 中文文案。 */
 		const zh = {
 			title: "任务调度表（dsh-task-dispatch-table）",
-			description: "在下方编辑内嵌任务表 JSON；保存后写入用户配置层并即时生效，离开页面丢弃未保存的草稿。",
+			description: "用任务表驱动定时派发：配置任务、查看每次执行的记录。点击打开面板。",
 			unavailable: "设置命名空间当前不可用（插件未运行或宿主未提供），暂时无法配置。",
 			tasksInlineLabel: "任务表（tasksInline，JSON 数组）",
 			tasksInlineHint: "每项一个任务定义；非空时优先于任务目录 tasksDir。清空并保存 = 回到默认（空，改用 tasksDir）。",
@@ -72,7 +72,7 @@ window.__ModuleLoader__.load({
 		/** English copy. */
 		const en = {
 			title: "Task dispatch table (dsh-task-dispatch-table)",
-			description: "Edit the inline task-table JSON below; saving writes the user settings layer and takes effect immediately. Unsaved drafts are dropped when you leave the page.",
+			description: "Schedule agent tasks from a task table: configure tasks and review every run. Click to open the panel.",
 			unavailable: "The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.",
 			tasksInlineLabel: "Task table (tasksInline, JSON array)",
 			tasksInlineHint: "One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).",
@@ -158,6 +158,34 @@ window.__ModuleLoader__.load({
 			opacity: .7,
 			fontSize: "12px",
 			margin: "4px 0 8px"
+		};
+		const cardStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: "12px",
+			padding: "12px 14px",
+			border: "1px solid rgba(128,128,128,0.35)",
+			borderRadius: "8px",
+			cursor: "pointer",
+			width: "100%",
+			boxSizing: "border-box",
+			background: "transparent",
+			textAlign: "left"
+		};
+		const cardTitleStyle = {
+			fontSize: "14px",
+			fontWeight: 600
+		};
+		const cardDescStyle = {
+			fontSize: "12px",
+			opacity: .7,
+			marginTop: "2px"
+		};
+		const chevronStyle = {
+			fontSize: "18px",
+			opacity: .6,
+			lineHeight: 1
 		};
 		const errorStyle = {
 			color: "#c0392b",
@@ -443,7 +471,7 @@ window.__ModuleLoader__.load({
 			].map((name) => (0, react.createElement)("th", {
 				key: name,
 				style: cellStyle
-			}, name)))), (0, react.createElement)("tbody", null, taskRows.map((row) => (0, react.createElement)("tr", { key: row.id }, (0, react.createElement)("td", { style: cellStyle }, row.id), (0, react.createElement)("td", { style: cellStyle }, row.title), (0, react.createElement)("td", { style: cellStyle }, scheduleSummary(row)), (0, react.createElement)("td", { style: cellStyle }, row.next === null ? "—" : formatTime(row.next)))))), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugWarns")), data.warns.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugNoWarns")) : (0, react.createElement)("pre", { style: preStyle }, data.warns.join("\n"))) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
+			}, name)))), (0, react.createElement)("tbody", null, taskRows.map((row) => (0, react.createElement)("tr", { key: row.id }, (0, react.createElement)("td", { style: cellStyle }, row.id), (0, react.createElement)("td", { style: cellStyle }, row.title), (0, react.createElement)("td", { style: cellStyle }, scheduleSummary(row)), (0, react.createElement)("td", { style: cellStyle }, row.next === null ? "—" : formatTime(row.next)))))), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugWarns")), data.warns.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugNoWarns")) : (0, react.createElement)("pre", { style: preStyle }, data.warns.join("\n")), (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)), (0, react.createElement)("dt", null, t("paramDefaultProvider")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultProvider)), (0, react.createElement)("dt", null, t("paramDefaultModel")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultModel))))) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,
 				onChange: (event) => {
 					setStatusFilter(event.target.value);
@@ -498,10 +526,8 @@ window.__ModuleLoader__.load({
 			}))))));
 		}
 		/**
-		* 渲染设置卡片：tasksInline 文本框（暂存 + 保存）+ 只读运行参数。
-		*
-		* 用「暂存 + 保存」而不是改一下就提交：每次写入都是可持久化的、带修订号栅栏的
-		* 文档变更，边改边写会把一次输入变成用户没要求、也无法预览的写入。
+		* 设置页卡片（决策 26 修订）：**只留一行「标题 + 描述 + 箭头」**，点一下打开调度面板。
+		* 原来的内嵌 JSON 输入框与只读运行参数都挪进了面板的「任务配置」页——设置页保持干净。
 		* @param props - t 席位与绑定的设置作用域。
 		*/
 		function TasksConfigPage(props) {
@@ -509,71 +535,28 @@ window.__ModuleLoader__.load({
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
-			const [draft, setDraft] = (0, react.useState)(void 0);
-			const [saving, setSaving] = (0, react.useState)(false);
-			const [failed, setFailed] = (0, react.useState)(false);
-			const [debugOpen, setDebugOpen] = (0, react.useState)(false);
+			const [panelOpen, setPanelOpen] = (0, react.useState)(false);
 			const section = snapshot.value ?? {};
-			const effectiveInline = typeof section.tasksInline === "string" ? section.tasksInline : "";
-			const current = draft ?? effectiveInline;
-			const invalid = draft !== void 0 && !isValidTaskTable(draft);
-			const dirty = draft !== void 0 && draft !== effectiveInline;
-			const ready = snapshot.status === "ready";
-			const writable = ready && snapshot.writable && !saving;
 			const debugRaw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
 			const debugData = parseDebugSnapshot(debugRaw);
-			const save = async () => {
-				if (draft === void 0 || invalid || !ready || !snapshot.writable) return;
-				setSaving(true);
-				setFailed(false);
-				try {
-					if (draft.trim() === "") await scope.unset("tasksInline");
-					else await scope.set("tasksInline", draft);
-					setDraft(void 0);
-				} catch {
-					setFailed(true);
-				} finally {
-					setSaving(false);
+			if (snapshot.status !== "ready") return (0, react.createElement)("p", null, t("unavailable"));
+			return (0, react.createElement)("div", null, (0, react.createElement)("div", {
+				style: cardStyle,
+				role: "button",
+				tabIndex: 0,
+				onClick: () => {
+					setPanelOpen(true);
+				},
+				onKeyDown: (event) => {
+					if (event.key === "Enter" || event.key === " ") setPanelOpen(true);
 				}
-			};
-			if (!ready) return (0, react.createElement)("p", null, t("unavailable"));
-			return (0, react.createElement)("div", null, (0, react.createElement)("h3", null, t("title")), (0, react.createElement)("p", { style: hintStyle }, t("description")), (0, react.createElement)("label", {
-				htmlFor: "dsh-tdt-tasks-inline",
-				style: { fontWeight: 600 }
-			}, t("tasksInlineLabel")), (0, react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")), (0, react.createElement)("textarea", {
-				id: "dsh-tdt-tasks-inline",
-				value: current,
-				disabled: !writable,
-				onChange: (event) => {
-					setDraft(event.target.value);
-				},
-				spellCheck: false,
-				style: textareaStyle
-			}), invalid ? (0, react.createElement)("p", { style: errorStyle }, t("invalidJson")) : null, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
-				type: "button",
-				onClick: () => {
-					save();
-				},
-				disabled: !writable || invalid || !dirty
-			}, saving ? t("saving") : t("save")), (0, react.createElement)("button", {
-				type: "button",
-				onClick: () => {
-					setDraft(void 0);
-					setFailed(false);
-				},
-				disabled: saving || !dirty
-			}, t("discard"))), failed ? (0, react.createElement)("p", { style: errorStyle }, t("saveFailed")) : null, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
-				type: "button",
-				onClick: () => {
-					setDebugOpen(true);
-				}
-			}, t("debugButton"))), (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)), (0, react.createElement)("dt", null, t("paramDefaultProvider")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultProvider)), (0, react.createElement)("dt", null, t("paramDefaultModel")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultModel)))), debugOpen ? (0, react.createElement)(DispatcherModal, {
+			}, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: cardTitleStyle }, t("title")), (0, react.createElement)("div", { style: cardDescStyle }, t("description"))), (0, react.createElement)("span", { style: chevronStyle }, "›")), panelOpen ? (0, react.createElement)(DispatcherModal, {
 				t,
 				scope,
 				data: debugData,
 				raw: debugRaw,
 				onClose: () => {
-					setDebugOpen(false);
+					setPanelOpen(false);
 				}
 			}) : null);
 		}

@@ -86,6 +86,16 @@ const textareaStyle: Record<string, string | number> = {
 }
 
 const hintStyle: Record<string, string | number> = { opacity: 0.7, fontSize: '12px', margin: '4px 0 8px' }
+
+// ── 设置页卡片：只留一行「标题 + 描述」，点一下开面板（与宿主其它插件卡片同形）──
+const cardStyle: Record<string, string | number> = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+  padding: '12px 14px', border: '1px solid rgba(128,128,128,0.35)', borderRadius: '8px',
+  cursor: 'pointer', width: '100%', boxSizing: 'border-box', background: 'transparent', textAlign: 'left',
+}
+const cardTitleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600 }
+const cardDescStyle: Record<string, string | number> = { fontSize: '12px', opacity: 0.7, marginTop: '2px' }
+const chevronStyle: Record<string, string | number> = { fontSize: '18px', opacity: 0.6, lineHeight: 1 }
 const errorStyle: Record<string, string | number> = { color: '#c0392b', fontSize: '12px', margin: '4px 0 0' }
 const rowStyle: Record<string, string | number> = { display: 'flex', gap: '8px', margin: '8px 0' }
 const dlStyle: Record<string, string | number> = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 16px', margin: '8px 0 0' }
@@ -369,6 +379,21 @@ function DispatcherModal(props: {
               data.warns.length === 0
                 ? h('p', { style: hintStyle }, t('debugNoWarns'))
                 : h('pre', { style: preStyle }, data.warns.join('\n')),
+
+              // 只读运行参数（原来在设置卡片上，卡片精简后挪进来，信息不丢）
+              h('details', { style: { marginTop: '16px' } },
+                h('summary', null, t('paramsTitle')),
+                h('dl', { style: dlStyle },
+                  h('dt', null, t('paramStatePath')), h('dd', { style: { margin: 0 } }, displayParam(t, section.statePath)),
+                  h('dt', null, t('paramTickMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.tickMs)),
+                  h('dt', null, t('paramDispatchGraceMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)),
+                  h('dt', null, t('paramLeaseMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.leaseMs)),
+                  h('dt', null, t('paramUnknownGraceMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)),
+                  h('dt', null, t('paramTasksDir')), h('dd', { style: { margin: 0 } }, displayParam(t, section.tasksDir)),
+                  h('dt', null, t('paramDefaultProvider')), h('dd', { style: { margin: 0 } }, displayParam(t, section.defaultProvider)),
+                  h('dt', null, t('paramDefaultModel')), h('dd', { style: { margin: 0 } }, displayParam(t, section.defaultModel)),
+                ),
+              ),
             )
           : h('div', null,
               h('p', { style: hintStyle }, t('recordsHint')),
@@ -449,10 +474,8 @@ function DispatcherModal(props: {
 }
 
 /**
- * 渲染设置卡片：tasksInline 文本框（暂存 + 保存）+ 只读运行参数。
- *
- * 用「暂存 + 保存」而不是改一下就提交：每次写入都是可持久化的、带修订号栅栏的
- * 文档变更，边改边写会把一次输入变成用户没要求、也无法预览的写入。
+ * 设置页卡片（决策 26 修订）：**只留一行「标题 + 描述 + 箭头」**，点一下打开调度面板。
+ * 原来的内嵌 JSON 输入框与只读运行参数都挪进了面板的「任务配置」页——设置页保持干净。
  * @param props - t 席位与绑定的设置作用域。
  */
 function TasksConfigPage(props: PageProps) {
@@ -461,90 +484,33 @@ function TasksConfigPage(props: PageProps) {
   // getSnapshot 必须返回稳定引用：作用域的实现在值不变时保证同一引用。
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
   const snapshot = useSyncExternalStore(subscribe, getSnapshot)
-
-  // 暂存草稿：undefined = 无草稿（textarea 显示生效值）。保存成功即清草稿；
-  // 离开页面组件销毁，未保存的草稿自然丢弃。
-  const [draft, setDraft] = useState<string | undefined>(undefined)
-  const [saving, setSaving] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const [debugOpen, setDebugOpen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const section = (snapshot.value ?? {}) as Record<string, unknown>
-  const effectiveInline = typeof section.tasksInline === 'string' ? section.tasksInline : ''
-  const current = draft ?? effectiveInline
-  const invalid = draft !== undefined && !isValidTaskTable(draft)
-  const dirty = draft !== undefined && draft !== effectiveInline
-  const ready = snapshot.status === 'ready'
-  const writable = ready && snapshot.writable && !saving
-
-  // 调试快照：host 周期写入 debugSnapshot 字段，订阅自动刷新（临时调试面板，决策 16 例外）。
+  // 快照由 host 周期写入 debugSnapshot 字段，面板经订阅自动刷新。
   const debugRaw = typeof section.debugSnapshot === 'string' ? section.debugSnapshot : ''
   const debugData = parseDebugSnapshot(debugRaw)
 
-  const save = async (): Promise<void> => {
-    if (draft === undefined || invalid || !ready || !snapshot.writable) return
-    setSaving(true)
-    setFailed(false)
-    try {
-      // 空白串 = 清空 = 回到默认（host 侧 tasksInline 默认空串），走 unset 不留覆盖。
-      if (draft.trim() === '') await scope.unset('tasksInline')
-      else await scope.set('tasksInline', draft)
-      setDraft(undefined)
-    } catch {
-      // 草稿保留，用户可以改完再存一次，而不是重打一遍。
-      setFailed(true)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (!ready) return h('p', null, t('unavailable'))
+  if (snapshot.status !== 'ready') return h('p', null, t('unavailable'))
 
   return h('div', null,
-    h('h3', null, t('title')),
-    h('p', { style: hintStyle }, t('description')),
-    h('label', { htmlFor: 'dsh-tdt-tasks-inline', style: { fontWeight: 600 } }, t('tasksInlineLabel')),
-    h('p', { style: hintStyle }, t('tasksInlineHint')),
-    h('textarea', {
-      id: 'dsh-tdt-tasks-inline',
-      value: current,
-      disabled: !writable,
-      onChange: (event: { target: { value: string } }) => { setDraft(event.target.value) },
-      spellCheck: false,
-      style: textareaStyle,
-    }),
-    invalid ? h('p', { style: errorStyle }, t('invalidJson')) : null,
-    h('div', { style: rowStyle },
-      h('button', {
-        type: 'button',
-        onClick: () => { void save() },
-        disabled: !writable || invalid || !dirty,
-      }, saving ? t('saving') : t('save')),
-      h('button', {
-        type: 'button',
-        onClick: () => { setDraft(undefined); setFailed(false) },
-        disabled: saving || !dirty,
-      }, t('discard')),
-    ),
-    failed ? h('p', { style: errorStyle }, t('saveFailed')) : null,
-    h('div', { style: rowStyle },
-      h('button', { type: 'button', onClick: () => { setDebugOpen(true) } }, t('debugButton')),
-    ),
-    h('details', { style: { marginTop: '16px' } },
-      h('summary', null, t('paramsTitle')),
-      h('dl', { style: dlStyle },
-        h('dt', null, t('paramStatePath')), h('dd', { style: { margin: 0 } }, displayParam(t, section.statePath)),
-        h('dt', null, t('paramTickMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.tickMs)),
-        h('dt', null, t('paramDispatchGraceMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)),
-        h('dt', null, t('paramLeaseMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.leaseMs)),
-        h('dt', null, t('paramUnknownGraceMs')), h('dd', { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)),
-        h('dt', null, t('paramTasksDir')), h('dd', { style: { margin: 0 } }, displayParam(t, section.tasksDir)),
-        h('dt', null, t('paramDefaultProvider')), h('dd', { style: { margin: 0 } }, displayParam(t, section.defaultProvider)),
-        h('dt', null, t('paramDefaultModel')), h('dd', { style: { margin: 0 } }, displayParam(t, section.defaultModel)),
+    h('div', {
+      style: cardStyle,
+      role: 'button',
+      tabIndex: 0,
+      onClick: () => { setPanelOpen(true) },
+      onKeyDown: (event: { key?: string }) => {
+        if (event.key === 'Enter' || event.key === ' ') setPanelOpen(true)
+      },
+    },
+      h('div', null,
+        h('div', { style: cardTitleStyle }, t('title')),
+        h('div', { style: cardDescStyle }, t('description')),
       ),
+      h('span', { style: chevronStyle }, '›'),
     ),
-    debugOpen
-      ? h(DispatcherModal, { t, scope, data: debugData, raw: debugRaw, onClose: () => { setDebugOpen(false) } })
+    panelOpen
+      ? h(DispatcherModal, { t, scope, data: debugData, raw: debugRaw, onClose: () => { setPanelOpen(false) } })
       : null,
   )
 }

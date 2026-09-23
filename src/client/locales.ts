@@ -27,7 +27,7 @@ export type LocaleKey =
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
   title: '任务调度表（dsh-task-dispatch-table）',
-  description: '在下方编辑内嵌任务表 JSON；保存后写入用户配置层并即时生效，离开页面丢弃未保存的草稿。',
+  description: '用任务表驱动定时派发：配置任务、查看每次执行的记录。点击打开面板。',
   unavailable: '设置命名空间当前不可用（插件未运行或宿主未提供），暂时无法配置。',
   tasksInlineLabel: '任务表（tasksInline，JSON 数组）',
   tasksInlineHint: '每项一个任务定义；非空时优先于任务目录 tasksDir。清空并保存 = 回到默认（空，改用 tasksDir）。',
@@ -91,7 +91,7 @@ export const zh: Record<LocaleKey, string> = {
 /** English copy. */
 export const en: Record<LocaleKey, string> = {
   title: 'Task dispatch table (dsh-task-dispatch-table)',
-  description: 'Edit the inline task-table JSON below; saving writes the user settings layer and takes effect immediately. Unsaved drafts are dropped when you leave the page.',
+  description: 'Schedule agent tasks from a task table: configure tasks and review every run. Click to open the panel.',
   unavailable: 'The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.',
   tasksInlineLabel: 'Task table (tasksInline, JSON array)',
   tasksInlineHint: 'One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).',
