@@ -18,11 +18,10 @@
     "workspace": "ops",           // 派发到 ops 工作区（独立会话，非子 agent）
     "model": "deepseek-chat",
     "manual": "manuals/image-upgrade-daily.md",
-    "prompt": "执行镜像升级日报任务，按手册完成并写契约文件。"
+    "prompt": "执行镜像升级日报任务，按手册完成。"
   },
   "contract": {
-    "path": "artifacts/image-upgrade-daily/report.json",
-    "validStatuses": ["ok"]
+    "validStatuses": ["ok"]       // 回执 status 合法值（决策 19：无契约文件，回执直写状态库）
   },
   "retry": { "maxAttempts": 2 }   // 重试 1 次仍失败 → failed
   // depends_on 省略：本样例是独立任务；链式依赖（same_period / latest_success）
@@ -30,18 +29,18 @@
 }
 ```
 
-## 二、产物契约 `artifacts/image-upgrade-daily/report.json`
+## 二、回执（决策 19：直写插件状态库，无契约文件）
 
-由 agent 在目标工作区写出，调度器对账时三查：**存在 + `status` 合法 + mtime 晚于本次派发**。
+agent 干完活后执行**调度器拼好、随派发消息下发**的命令，把回执直写插件状态库（`state.db` 的 `task_events` 表）：
 
-```jsonc
-{
-  "status": "ok",                 // 合法值来自 contract.validStatuses
-  "checked": 12,                  // 巡检容器数
-  "upgradable": 2,                // 有新版本的容器数
-  "report": "artifacts/image-upgrade-daily/2026-09-21.md"   // 人类可读日报的位置
-}
+```bash
+node <插件dist>/submit.js --db <state.db> \
+  --task image-upgrade-daily --date 2026-09-23 --session <sessionId> \
+  --status ok --outputs "artifacts/image-upgrade-daily/2026-09-23.md"
 ```
+
+调度器对账**只查库不读文件**，三查：**派发之后有 receipt 事件 + `status` ∈ validStatuses + outputs 逐一存在且 mtime 晚于本次派发**（防旧产物冒充）。
+跑完没交回执 → 宽限期后插件对原会话追问（重发命令，≤2 次）→ 仍无按失败处理。
 
 ## 三、任务手册 `manuals/image-upgrade-daily.md`
 
@@ -53,7 +52,7 @@
 1. 用 node fetch 调 Docker 引擎只读 HTTP API，列出全部容器及其当前镜像
 2. 逐个查 registry 是否有更新版本；读 release notes 评估升级风险
 3. 产出日报 MD：今天查了什么、哪些可升、建议（升 / 观望）及理由
-4. 写契约文件 report.json——status 必须如实，失败的检查不得伪装成 ok
+4. 执行派发消息里的回执命令提交回执（--status 必须如实，失败的检查不得伪装成 ok）
 ```
 
 > 手册逐字版在实现阶段对着真实 DSH 环境再敲定，这里只给形状。

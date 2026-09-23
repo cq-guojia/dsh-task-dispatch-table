@@ -13,7 +13,7 @@ const isoDuration = z.string().regex(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, 'I
 export const dependencySemantics = ['same_period', 'latest_success'] as const
 export type DependencySemantics = (typeof dependencySemantics)[number]
 
-/** 任务定义 15 字段：data-model.md「任务定义」表，字段名严格照抄。 */
+/** 任务定义 14 字段：data-model.md「任务定义」表，字段名严格照抄。 */
 export const taskDefinitionSchema = z.object({
   id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'kebab-case'),
   enabled: z.boolean(),
@@ -29,8 +29,9 @@ export const taskDefinitionSchema = z.object({
     manual: z.string().optional(),
     prompt: z.string().min(1),
   }),
+  // 回执机制（决策 19）：不再有契约文件与 path——agent 经 submit.mjs 直写状态库，
+  // 这里只保留 status 合法值清单。
   contract: z.object({
-    path: z.string().min(1),
     validStatuses: z.array(z.string()).default(['ok']),
   }),
   retry: z.object({ maxAttempts: z.number().int().min(1).default(1) }).default({ maxAttempts: 1 }),

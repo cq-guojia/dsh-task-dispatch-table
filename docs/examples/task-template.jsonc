@@ -8,8 +8,8 @@
 //   3. 校验失败（字段缺失/格式错）的任务会在宿主日志告警并跳过，其余照常。
 //   4. 实例状态全部落宿主 storages/dsh-task-dispatch-table/state.db
 //      （task_instances / task_events 两表），任务定义本身不进数据库。
-//   5. 启用任务的最简形态 = id + enabled + schedule(cron, window) +
-//      target(workspace, prompt) + contract(path)，其余字段都有省略值。
+//   5. 启用任务的最简形态 = id + enabled + schedule(cron 或 once, window) +
+//      target(workspace, prompt)；contract.validStatuses 有默认值，整段可省略。
 // ═══════════════════════════════════════════════════════════════════════════
 [
   {
@@ -58,7 +58,7 @@
       // 在哪个工作区执行：按工作区【标题】精确匹配（id 兜底），
       // 必须是宿主里真实存在的工作区，写错 = 永远派不出去。
       // agent 是独立完整会话（非子 agent），工作目录 = 该工作区根目录；
-      // 下面的 manual 与 contract.path 都以这个根目录为基准。
+      // 下面的 manual 路径以这个根目录为基准。
       "workspace": "ops",
 
       // 指定执行模型（如 deepseek-chat）。省略 = 宿主默认路由，不填最稳。
@@ -68,33 +68,31 @@
       // 分层原则：长指令/详细步骤都写手册，prompt 只留一句话导读。
       // "manual": "manuals/image-upgrade-daily.md",
 
-      // 派发消息主体。调度器实际发的消息 ≈ prompt + 手册路径指引。
-      // ⚠ agent 看不到本任务定义 JSON —— 它不知道 contract.path 是什么，
-      //   除非你在 prompt（或手册）里明确指示「把结果写到 <契约路径>」。
-      "prompt": "执行镜像升级日报任务，按手册完成并写契约文件。"
+      // 派发消息主体。调度器实际发的消息 ≈ prompt + 手册路径指引 + 现成的回执提交命令。
+      // ⚠ agent 看不到本任务定义 JSON —— 但回执命令（决策 19）由调度器拼好整条下发，
+      //   agent 照着执行即可，无需你在 prompt 里交代回执格式。
+      "prompt": "执行镜像升级日报任务，按手册完成。"
     },
 
-    // ─────────────────────── 完成判定：调度器只认文件，不信 agent 自报 ───────────────────────
+    // ─────────────────────── 完成判定：调度器只认回执，不信 agent 自报 ───────────────────────
     "contract": {
-      // 契约文件路径（相对工作区根）—— agent 干完活必须写出的「验收单」，
-      // 是调度器判定任务成败的唯一依据。
-      //   · agent 写：prompt/手册里要明确指示写到这；目录不存在由 agent 创建
-      //   · 调度器只读不写；你随时可 cat 排障
-      //   · artifacts/ 与按 id 分子目录没有魔法，纯目录约定（防任务间互相覆盖），
-      //     可自定义，但不同任务不要共用同一个文件
+      // 回执机制（决策 19）：没有契约文件。agent 干完活后执行调度器在派发消息里
+      // 【拼好的现成命令】，把回执直写插件状态库（state.db 的 task_events 表）：
+      //   node <插件dist>/submit.js --db <state.db> --task <id> --date <logical_date>
+      //        --session <sessionId> --status ok [--outputs 产出文件,逗号分隔] [--note 备注]
+      // 命令行参数（--db/--task/--date/--session）调度器已填好，agent 只补
+      // --status 与 --outputs（实际产出文件，相对工作区路径；无产出可省略整个参数）。
       //
-      // 对账三查，全部通过才算 done：
-      //   1. 文件存在
-      //   2. 文件里的 status 字段 ∈ validStatuses
-      //   3. 文件 mtime 晚于【本次】派发时刻 —— 防重试/补跑时旧文件冒充
-      // 任何一查不过 = 失败 → 进 retry → 用尽 failed → 窗口耗尽 skipped。
-      "path": "artifacts/image-upgrade-daily/report.json",
-
-      // 契约文件 status 字段的合法值清单。省略 = ["ok"]。
-      // 契约文件内容示例（status 必须如实，失败的检查不得伪装成 ok）：
-      //   { "status": "ok", "upgradable": 2,
-      //     "report": "artifacts/image-upgrade-daily/2026-09-21.md" }
-      // 可定义多级状态如 ["ok", "partial"] —— 算不算成功由你定，调度器只认清单。
+      // 回执三查，全部通过才算成功：
+      //   1. 存在【本次派发之后】提交的回执事件（防上一轮重试的旧回执冒充）
+      //   2. 回执的 status ∈ validStatuses
+      //   3. outputs 逐一存在且文件 mtime 晚于本次派发时刻（防旧产物冒充）
+      // 跑完没交回执：宽限期后插件对原会话追问（重发回执命令，最多 2 次），
+      // 仍无回执 = 失败 → 进 retry → 用尽 failed → 窗口耗尽 skipped。
+      //
+      // 回执 status 的合法值清单。省略 = ["ok"]。status 必须如实，
+      // 失败的检查不得伪装成 ok；可定义多级状态如 ["ok", "partial"] ——
+      // 算不算成功由你定，调度器只认清单。
       "validStatuses": ["ok"]
     },
 
@@ -155,11 +153,9 @@
     },
     "target": {
       "workspace": "ops",
-      "prompt": "执行 DB 迁移 v2，按手册完成后写契约文件。"
-    },
-    "contract": {
-      "path": "artifacts/db-migrate-once/report.json",
-      "validStatuses": ["ok"]
+      "prompt": "执行 DB 迁移 v2，按手册完成。"
     }
+    // contract 整段省略 = validStatuses 取默认 ["ok"]；
+    // 回执提交命令由调度器拼进派发消息（决策 19），无需在此配置。
   }
 ]

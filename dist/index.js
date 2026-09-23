@@ -1,30 +1,11 @@
-// dsh-task-dispatch-table：定时任务调度器宿主插件（可编译骨架）。
-// 读任务定义 JSON → 按 cron/窗口/依赖判定 → 在指定工作区派发 agent 会话 → 监听会话事件对账 → SQLite 记状态。
-// 调度层零大模型介入（PROGRESS 背景）；插件零业务逻辑——任务定义见 docs/examples。
-import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { Config } from './config.js';
+import { Config, resolveStatePath } from './config.js';
 import { TaskStore } from './store.js';
 import { createReconciler } from './reconcile.js';
 import { createScheduler } from './scheduler.js';
 export const name = 'dsh-task-dispatch-table';
 /** 宿主服务依赖：以源码实际服务名为准（决策 15 / PROGRESS「已核实的 DSH 能力」）。 */
 export const inject = ['timer', 'agents', 'sessions', 'workspaceRegistry', 'settings', 'sessionTitle'];
-export { Config };
-/**
- * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。
- * 宿主数据根解析复刻 packages/util/home-paths/src/index.ts:87-100：配置路径 > $DSH_HOME > ~/.dsh。
- */
-export function resolveStatePath(statePath) {
-    if (statePath.trim().length > 0)
-        return resolve(statePath);
-    const raw = process.env['DSH_HOME'];
-    const selected = raw !== undefined && raw.trim().length > 0 ? raw : join(homedir(), '.dsh');
-    const home = selected === '~' || selected.startsWith('~/')
-        ? join(homedir(), selected.slice(selected.length === 1 ? 1 : 2))
-        : selected;
-    return join(resolve(home), 'storages', 'dsh-task-dispatch-table', 'state.db');
-}
+export { Config, resolveStatePath };
 export function apply(ctx, config) {
     const initial = Config(config);
     // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
@@ -37,6 +18,8 @@ export function apply(ctx, config) {
         get leaseMs() { return scope.get().leaseMs; },
         get dispatchGraceMs() { return scope.get().dispatchGraceMs; },
         get unknownGraceMs() { return scope.get().unknownGraceMs; },
+        // 决策 19：追问消息里重发回执命令需要状态库路径，getter 取 live 值。
+        statePath: () => resolveStatePath(scope.get().statePath),
         tasks: () => taskMap,
     };
     const reconciler = createReconciler({ ctx, store, options: reconcileOptions });

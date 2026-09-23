@@ -33,3 +33,9 @@ export declare const Config: z<Schemastery.ObjectS<{
     tasksDir: z<string, string>;
     tasksInline: z<string, string>;
 }>>;
+/**
+ * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。
+ * 宿主数据根解析复刻 packages/util/home-paths/src/index.ts:87-100：配置路径 > $DSH_HOME > ~/.dsh。
+ * 放 config.ts 而非 index.ts：scheduler/submit 也要用（避免 index 循环导入）。
+ */
+export declare function resolveStatePath(statePath: string): string;

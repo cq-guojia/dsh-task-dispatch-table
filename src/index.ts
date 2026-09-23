@@ -1,10 +1,8 @@
 // dsh-task-dispatch-table：定时任务调度器宿主插件（可编译骨架）。
 // 读任务定义 JSON → 按 cron/窗口/依赖判定 → 在指定工作区派发 agent 会话 → 监听会话事件对账 → SQLite 记状态。
 // 调度层零大模型介入（PROGRESS 背景）；插件零业务逻辑——任务定义见 docs/examples。
-import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
 import type { HostContext } from './host.js'
-import { Config } from './config.js'
+import { Config, resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
 import { TaskStore } from './store.js'
@@ -18,22 +16,8 @@ export const name = 'dsh-task-dispatch-table'
 /** 宿主服务依赖：以源码实际服务名为准（决策 15 / PROGRESS「已核实的 DSH 能力」）。 */
 export const inject = ['timer', 'agents', 'sessions', 'workspaceRegistry', 'settings', 'sessionTitle'] as const
 
-export { Config }
+export { Config, resolveStatePath }
 export type { PluginConfig }
-
-/**
- * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。
- * 宿主数据根解析复刻 packages/util/home-paths/src/index.ts:87-100：配置路径 > $DSH_HOME > ~/.dsh。
- */
-export function resolveStatePath(statePath: string): string {
-  if (statePath.trim().length > 0) return resolve(statePath)
-  const raw = process.env['DSH_HOME']
-  const selected = raw !== undefined && raw.trim().length > 0 ? raw : join(homedir(), '.dsh')
-  const home = selected === '~' || selected.startsWith('~/')
-    ? join(homedir(), selected.slice(selected.length === 1 ? 1 : 2))
-    : selected
-  return join(resolve(home), 'storages', 'dsh-task-dispatch-table', 'state.db')
-}
 
 export function apply(ctx: HostContext, config: unknown): void {
   const initial = (Config as (value: unknown) => PluginConfig)(config)
@@ -48,6 +32,8 @@ export function apply(ctx: HostContext, config: unknown): void {
     get leaseMs() { return scope.get().leaseMs },
     get dispatchGraceMs() { return scope.get().dispatchGraceMs },
     get unknownGraceMs() { return scope.get().unknownGraceMs },
+    // 决策 19：追问消息里重发回执命令需要状态库路径，getter 取 live 值。
+    statePath: () => resolveStatePath(scope.get().statePath),
     tasks: () => taskMap,
   }
   const reconciler = createReconciler({ ctx, store, options: reconcileOptions })

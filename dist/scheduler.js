@@ -1,3 +1,4 @@
+import { resolveStatePath } from './config.js';
 import { durationMs, loadTasks, logicalDateOf, onceScheduledAt, parseInlineTasks, scheduledAtFor } from './tasks.js';
 import { dispatchTask, resolveWorkspacePath } from './dispatch.js';
 /** 在跑态：同任务串行判定（§8）的互斥集合——pending 只是排队，不阻塞后继派发。 */
@@ -101,7 +102,10 @@ export function createScheduler({ ctx, store, reconciler, config }) {
                     instanceId: instance.id,
                     logicalDate: instance.logical_date,
                     workspacePath,
-                }).catch((error) => {
+                    statePath: resolveStatePath(config().statePath),
+                })
+                    .then(({ sessionId, handle }) => reconciler.registerHandle(sessionId, handle))
+                    .catch((error) => {
                     // 派发异常走重试判定（§6），等价于宽限期超时路径。
                     ctx.logger.error(`派发失败 ${instance.id}: ${String(error)}`);
                     const latest = store.get(instance.id);

@@ -1,5 +1,7 @@
 // 插件配置：schemastery z schema 一份两用——patch Config 导出 + ctx.settings 命名空间。
 // schemastery 与宿主 vendor 同版本（宿主 vendor/schemastery package.json = 3.18.2 = npm @deepseek-ai/schemastery）。
+import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 
 export interface PluginConfig {
@@ -35,3 +37,18 @@ export const Config = z.object({
   tasksDir: z.string().default('tasks'),
   tasksInline: z.string().role('textarea').default(''),
 })
+
+/**
+ * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。
+ * 宿主数据根解析复刻 packages/util/home-paths/src/index.ts:87-100：配置路径 > $DSH_HOME > ~/.dsh。
+ * 放 config.ts 而非 index.ts：scheduler/submit 也要用（避免 index 循环导入）。
+ */
+export function resolveStatePath(statePath: string): string {
+  if (statePath.trim().length > 0) return resolve(statePath)
+  const raw = process.env['DSH_HOME']
+  const selected = raw !== undefined && raw.trim().length > 0 ? raw : join(homedir(), '.dsh')
+  const home = selected === '~' || selected.startsWith('~/')
+    ? join(homedir(), selected.slice(selected.length === 1 ? 1 : 2))
+    : selected
+  return join(resolve(home), 'storages', 'dsh-task-dispatch-table', 'state.db')
+}

@@ -28,6 +28,18 @@ export declare class TaskStore {
     constructor(statePath: string);
     close(): void;
     appendEvent(instanceId: string, kind: string, detail?: unknown): void;
+    /** 实例某类事件的最新一条（回执对账 / 追问判定用）。 */
+    latestEvent(instanceId: string, kind: string): {
+        ts: string;
+        detail: string | null;
+    } | undefined;
+    /** 实例某类事件计数（追问次数上限用）。 */
+    countEvents(instanceId: string, kind: string): number;
+    /** 晚于某时刻的最新回执事件（决策 19：回执对账按次取新，防止上一轮 attempt 的旧回执冒充）。 */
+    latestReceipt(instanceId: string, afterIso: string | undefined): {
+        ts: string;
+        detail: string | null;
+    } | undefined;
     /** 启动扫描（state-machine §3 机制 #5）：已派发而未定态的实例置 unknown。 */
     startupScan(): number;
     /** 实例保障幂等补建（state-machine §7）：已存在则不动；建即为终态时留痕（data-model：skipped 证据落 task_events）。 */

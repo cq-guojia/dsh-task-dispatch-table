@@ -1,6 +1,7 @@
 // tick 主循环（state-machine §1）：对账兜底 → 实例保障 → 逐任务判定（窗口 / 依赖 / 串行 / CAS 领取 / 派发）。
 // 所有判定纯程序逻辑，零 token（§1）。
 import type { HostContext } from './host.js'
+import { resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import { durationMs, loadTasks, logicalDateOf, onceScheduledAt, parseInlineTasks, scheduledAtFor } from './tasks.js'
 import type { TaskDefinition } from './tasks.js'
@@ -126,12 +127,15 @@ export function createScheduler({ ctx, store, reconciler, config }: SchedulerDep
           instanceId: instance.id,
           logicalDate: instance.logical_date,
           workspacePath,
-        }).catch((error: unknown) => {
-          // 派发异常走重试判定（§6），等价于宽限期超时路径。
-          ctx.logger.error(`派发失败 ${instance.id}: ${String(error)}`)
-          const latest = store.get(instance.id)
-          if (latest !== undefined && latest.status === 'dispatched') reconciler.retryOrFail(latest, 'dispatch-error')
+          statePath: resolveStatePath(config().statePath),
         })
+          .then(({ sessionId, handle }) => reconciler.registerHandle(sessionId, handle))
+          .catch((error: unknown) => {
+            // 派发异常走重试判定（§6），等价于宽限期超时路径。
+            ctx.logger.error(`派发失败 ${instance.id}: ${String(error)}`)
+            const latest = store.get(instance.id)
+            if (latest !== undefined && latest.status === 'dispatched') reconciler.retryOrFail(latest, 'dispatch-error')
+          })
       }
     }
   }

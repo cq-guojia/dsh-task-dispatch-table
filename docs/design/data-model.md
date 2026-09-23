@@ -17,13 +17,12 @@
 | `target.model` | string? | 派发会话用的模型 | 架构总览 |
 | `target.manual` | string? | 任务手册 MD 路径（相对目标工作区），由调度器拼进派发消息 | 决策 12 |
 | `target.prompt` | string | 短指令，调度器拼进派发消息 | 决策 12 |
-| `contract.path` | string | 产物契约文件路径（相对目标工作区），对账三查的对象 | 机制 #1 |
-| `contract.validStatuses` | string[]? | 契约 `status` 字段的合法值，默认 `["ok"]` | 机制 #1 |
+| `contract.validStatuses` | string[]? | 回执 `status` 的合法值清单，默认 `["ok"]` | 决策 19 |
 | `retry.maxAttempts` | int? | 默认 1；重试耗尽 → `failed`，下游跳过 | 决策 10 |
 | `backfill.days` | int? | 默认 0；> 0 时插件启动补建近 N 天缺失实例（`pending`），照常走依赖与窗口判定 | 状态机 §7 补跑入口 |
 | `depends_on` | object[]? | `{ task, semantics, freshness? }`，**由下游声明**；`freshness`（ISO 8601 时长）仅 `latest_success` 使用 | 决策 8/9 |
 
-**产物契约文件**：agent 在目标工作区写的 JSON，至少含 `status` 字段（取值受 `contract.validStatuses` 约束）；对账三查 = 存在 + `status` 合法 + mtime 晚于本次派发。
+**回执机制（决策 19，替代旧「产物契约文件」）**：agent 跑完执行调度器在派发消息里拼好的命令——`node <插件dist>/submit.js --db <state.db> --task <id> --date <logical_date> --session <session_id> --status <s> [--outputs 产出文件,逗号分隔] [--note 备注]`——把回执直写状态库 `task_events`（`kind='receipt'`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + `outputs` 逐一在目标工作区存在且 mtime 晚于本次派发（防旧产物冒充）。submit 只记录不裁决，实例状态仍只由调度器写（决策 11）；重复提交无害（对账取最新）。
 
 ## 二、状态库（SQLite，路径见决策 14）
 
@@ -49,7 +48,7 @@ CREATE TABLE task_events (
   seq         INTEGER PRIMARY KEY AUTOINCREMENT,
   instance_id TEXT NOT NULL,
   ts          TEXT NOT NULL,
-  kind        TEXT NOT NULL,             -- state_change | dispatch | session_event | contract_check | error
+  kind        TEXT NOT NULL,             -- state_change | dispatch | session_event | receipt | nudge | receipt_check | error
   detail      TEXT                       -- JSON 原文
 );
 

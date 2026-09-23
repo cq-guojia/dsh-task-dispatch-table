@@ -46,6 +46,27 @@ export class TaskStore {
             .prepare('INSERT INTO task_events (instance_id, ts, kind, detail) VALUES (?, ?, ?, ?)')
             .run(instanceId, nowIso(), kind, detail === undefined ? null : JSON.stringify(detail));
     }
+    /** 实例某类事件的最新一条（回执对账 / 追问判定用）。 */
+    latestEvent(instanceId, kind) {
+        return this.db
+            .prepare('SELECT ts, detail FROM task_events WHERE instance_id = ? AND kind = ? ORDER BY seq DESC LIMIT 1')
+            .get(instanceId, kind);
+    }
+    /** 实例某类事件计数（追问次数上限用）。 */
+    countEvents(instanceId, kind) {
+        const row = this.db
+            .prepare('SELECT COUNT(*) AS n FROM task_events WHERE instance_id = ? AND kind = ?')
+            .get(instanceId, kind);
+        return Number(row.n);
+    }
+    /** 晚于某时刻的最新回执事件（决策 19：回执对账按次取新，防止上一轮 attempt 的旧回执冒充）。 */
+    latestReceipt(instanceId, afterIso) {
+        return this.db
+            .prepare(`SELECT ts, detail FROM task_events
+                WHERE instance_id = ? AND kind = 'receipt' AND (? IS NULL OR ts > ?)
+                ORDER BY seq DESC LIMIT 1`)
+            .get(instanceId, afterIso ?? null, afterIso ?? null);
+    }
     /** 启动扫描（state-machine §3 机制 #5）：已派发而未定态的实例置 unknown。 */
     startupScan() {
         const result = this.db

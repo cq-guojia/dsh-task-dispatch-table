@@ -10,9 +10,11 @@
         │
         ├─ 会话还在跑（有活动/租约未到）──→ 继续等；租约超时则回收为 failed 并重试
         │
-        └─ 会话已结束 ──→ 读「产物契约文件」
-                            ├─ 存在 + status 合法 + mtime 新鲜 ──→ succeeded
-                            └─ 缺失/不合法/过期 ────────────────→ failed（走重试判定）
+        └─ 会话已结束 ──→ 查「回执」（task_events kind=receipt，取派发后的最新一条，决策 19）
+                            ├─ 回执存在 + status 合法 + outputs 新鲜 ──→ succeeded
+                            ├─ 回执存在但不合法 / outputs 缺失或过期 ──→ failed（走重试判定）
+                            └─ 无回执 ──→ 宽限期后追问（对原会话重发回执命令，≤2 次）
+                                            └─ 仍无回执 ──→ failed（走重试判定）
 ```
 
 **所有对账判定都是纯程序逻辑，零 token。**
@@ -24,8 +26,8 @@
 | `pending` | 未到时间 / 前置未满足 | 等 |
 | `dispatched` | 已派发，等会话确认建立 | 宽限期内等 |
 | `running` | 会话在跑（带租约） | 等 |
-| `succeeded` | 产物校验通过 | 依赖满足 |
-| `failed` | 重试耗尽 / 产物校验失败 | 依赖不满足，**必须通知** |
+| `succeeded` | 回执校验通过 | 依赖满足 |
+| `failed` | 重试耗尽 / 回执校验失败 | 依赖不满足，**必须通知** |
 | `skipped` | 当日窗口过期 / 上游失败 | **必须通知**（跳过 ≠ 正常） |
 | `unknown` | 无法确认（防双跑） | 只观察不动作，直到收敛 |
 
@@ -38,8 +40,9 @@
 | `pending` | `now > scheduled_at + window` | `skipped` | 终态 |
 | `dispatched` | 收到 `session/created` | `running` | 记 `session_id`，起租约 |
 | `dispatched` | 宽限期（60s）内无 `session/created` | `failed` | 走重试判定（§6） |
-| `running` | 会话结束 + 产物三查通过 | `succeeded` | 终态 |
-| `running` | 会话结束 + 三查失败 | `failed` | 走重试判定（§6） |
+| `running` | 会话结束 + 回执校验通过 | `succeeded` | 终态 |
+| `running` | 会话结束 + 回执校验失败 / 追问×2 后仍无回执 | `failed` | 走重试判定（§6） |
+| `running` | 会话结束 + 宽限期无回执 | `running`（追问） | 对原会话重发回执命令（≤2 次，事件落 `nudge`）；追问通道不可用（handle 丢失/发送失败）直接进重试判定 |
 | `running` | 租约到期且无会话活动 | `failed` | 回收，走重试判定（§6） |
 | `unknown` | 确认有会话活动 | `running` | 续租 |
 | `unknown` | 确认已死（无信号且超 2×租约） | `failed` | 走重试判定（§6） |
@@ -62,7 +65,7 @@
 **窗口只管「能不能开始」，不管「必须结束」。**
 
 - `pending` 过窗（`now > scheduled_at + window`）→ `skipped`；
-- 已 `dispatched` / `running` 的**不受窗切断**——跑完按产物判定。理由：切掉已开工的任务会浪费已消耗的 token，且产物可能即将产出。
+- 已 `dispatched` / `running` 的**不受窗切断**——跑完按回执判定。理由：切掉已开工的任务会浪费已消耗的 token，且产物可能即将产出。
 
 ## 6. 重试（拍板 B）
 
@@ -120,7 +123,7 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 
 | # | 机制 | 落点 |
 |---|---|---|
-| 1 | 产物三查（存在 + `status` 合法 + mtime 晚于本次派发） | §1 判定树；字段见 data-model `contract` |
+| 1 | 回执三查（回执事件存在 + `status` 合法 + `outputs` 存在且 mtime 晚于本次派发）+ 追问闭环（宽限 → 追问×2 → 失败） | §1 判定树；机制见 data-model「回执机制」（决策 19） |
 | 2 | 租约（running 超时回收） | §4 运行时参数 + §3 转移表 |
 | 3 | `unknown` 态 | §3 启动扫描与 `unknown` 语义 |
 | 4 | 重发幂等（防双跑） | §3 CAS 领取 + `unknown` 期间不重派 |
@@ -130,5 +133,5 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 
 | 弃用 | 原因 |
 |---|---|
-| 让调度器**发消息问会话**「完成了吗？回 Y/N」 | ① 又唤起一次 agent，白烧 token ② **agent 会撒谎** ③ 会话若已 disposed 未必收得到 |
+| 让调度器**发消息问会话**「完成了吗？回 Y/N」 | ① 又唤起一次 agent，白烧 token ② **agent 会撒谎** ③ 会话若已 disposed 未必收得到。（决策 19 的追问 ≠ 此方案：不问「完成了吗」，只重发回执提交命令，成败仍由程序查库裁决） |
 | **事件驱动**（前置完成时主动唤醒下游） | 「拉」比「推」可复用——加下游不改上游，见 [decisions.md](decisions.md) 决策 8 |

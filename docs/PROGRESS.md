@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-21 · v0.0.1 已装进宿主；**配置页真机验证通过**；一次性任务 `schedule.once` 已落码推送，待重装验证
+> **最后更新**：2026-09-23 · v0.0.1 已装进宿主；**回执机制（决策 19）已落码推送**（submit 直写 SQLite + 追问×2），待重装验证
 
 ---
 
@@ -23,20 +23,21 @@
 
 ## 二、当前状态
 
-**联调阶段。** v0.0.1 已装进宿主（git 源），配置页真机验证通过；`schedule.once`（一次性任务）已落码推送待重装。
+**联调阶段。** v0.0.1 已装进宿主（git 源），配置页真机验证通过；`schedule.once` 已推送待重装；**回执机制（决策 19）已落码推送**——agent 经插件自带 `dist/submit.js` 直写状态库 receipt 事件，契约文件方案废除。
 
 | 环节 | 状态 |
 |---|---|
 | 总体架构 | ✅ 定型 |
-| 关键技术决策（18 条） | ✅ 定型 |
+| 关键技术决策（19 条） | ✅ 定型 |
 | 宿主 API 源码核实 | ✅ 未决项 1–4 全部关闭（结论沉淀为决策 15） |
-| 状态机 / 依赖语义 | ✅ 完整定义（转移表 / 租约 / unknown / 窗口 / 补跑 / 串行） |
-| 数据模型（JSON Schema + SQLite 表） | ✅ 定型（15 字段，含决策 18 的 `schedule.once`） |
-| 任务定义样例 | ✅ 定型（镜像升级日报 + 全字段注释模板 `task-template.jsonc` 含一次性样例） |
+| 状态机 / 依赖语义 | ✅ 完整定义（转移表 / 租约 / unknown / 窗口 / 补跑 / 串行 / 回执追问闭环） |
+| 数据模型（JSON Schema + SQLite 表） | ✅ 定型（决策 19 后 contract 只剩 `validStatuses`，事件表新增 `receipt` / `nudge` 两种 kind） |
+| 任务定义样例 | ✅ 定型（镜像升级日报 + 全字段注释模板 `task-template.jsonc`，已按决策 19 改写） |
 | UI 方案 | ✅ 定型（决策 16：v1 零 UI 配置走 ctx.settings，监控面板 v1.1 弹窗形态） |
 | 调度器插件骨架 | ✅ 落码（v0.0.1）且**已装进宿主**；**Web 配置页真机验证通过**（`settings.plugin.item` slot，决策 17 修订） |
 | 一次性任务（决策 18） | ✅ 落码 + 冒烟通过（时区换算/互斥校验/自动停），**待重装真机验证** |
-| 端到端联调 | ⬜ 未开始（造真实任务 → 实例生成 → 派发 → 三查 → 状态落库） |
+| 回执机制（决策 19） | ✅ 落码 + 冒烟通过（submit 正反路径 12 项），**待重装真机验证**——agent 能否跑 node 命令 + 访问 dist 路径需真机核实 |
+| 端到端联调 | ⬜ 未开始（造真实任务 → 实例生成 → 派发 → 回执 → 状态落库） |
 
 ---
 
@@ -46,9 +47,9 @@
 |---|---|
 | [`../AGENTS.md`](../AGENTS.md) | agent 操作守则、文档体系与维护规则 |
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
-| [`design/decisions.md`](design/decisions.md) | 18 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
+| [`design/decisions.md`](design/decisions.md) | 19 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL（两表）、关键设计与取舍 |
-| [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 产物契约 + 任务手册 |
+| [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 回执机制 + 任务手册（已按决策 19 改写） |
 | [`examples/task-template.jsonc`](examples/task-template.jsonc) | 全字段注释版任务定义模板（粘进 tasksInline 前须去掉注释） |
 | [`design/state-machine.md`](design/state-machine.md) | 对账判定树、7 种状态、两种依赖语义、5 个必补机制 |
 
@@ -91,8 +92,8 @@
 
 ## 六、下一步（接手后从这里开始）
 
-1. **重装 + 真机验证 `schedule.once`**：`dsh plugin --profile web add git+https://github.com/cq-guojia/dsh-task-dispatch-table.git` 更新；在配置页造一个一次性任务（参考 `examples/task-template.jsonc` 末尾样例，把 `once` 设成几分钟后），验证 到点派发 → 契约三查 → `done`，且**跑完后次日不再生成实例**（自动停）
-2. **端到端联调（周期任务全链路）**：cron 任务走一遍 实例生成 → 依赖判定 → 派发 → 三查 → 重试/窗口收敛 → 状态落库（`storages/dsh-task-dispatch-table/state.db` 两表）；API 形状偏差按决策 15 回写
+1. **重装 + 真机验证**：`dsh plugin --profile web add git+https://github.com/cq-guojia/dsh-task-dispatch-table.git` 更新；验证两条线——① 一次性任务：配置页造 `once` 任务（参考 `examples/task-template.jsonc` 末尾样例，设成几分钟后），到点派发 → 回执 → `succeeded`，次日不再生成实例（自动停）；② **回执机制（决策 19）**：agent 是否照派发消息执行 `node dist/submit.js` 提交回执、receipt 落库 → 对账收敛；故意不交回执验证追问×2 → failed
+2. **端到端联调（周期任务全链路）**：cron 任务走一遍 实例生成 → 依赖判定 → 派发 → 回执三查 → 重试/窗口收敛 → 状态落库（`storages/dsh-task-dispatch-table/state.db` 两表）；API 形状偏差按决策 15 回写
 3. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
 
 ---
@@ -139,3 +140,4 @@
 | 2026-09-21 | **配置页入口按真机作业改造（slot 结论修正）**：真机无入口，用户指路 dsh-session-title-pattern（已跑通同款入口）——注册面应为 **`settings.plugin.item` keyed slot**（key = settings 命名空间），前稿的 `plugins.bundle.config` 是 ui-plugin-manager 对组合包的契约，误用 → **决策 17 修订**。同步落实作业规矩：顶层禁止导出 `inject`（entry pending 会卡死整个 dsh 启动）、locale 词典经 `ctx.inject(['locale'])` 延迟注册、`t` 由渲染器按注册项 `locale:` 声明合成、组件 `useSyncExternalStore` 消费 scope 快照、保存走 `scope.set/unset`（空值 unset 回默认）、设置页自动配对无需自建 gating。构建从 esbuild 手搓切换 **tsdown**（`tsdown.client.config.ts`：产物三件套 + PLATFORM_MODULES externals + outDir dist/clean false），删 `scripts/build-client.mjs` 与 esbuild，devDeps 增 tsdown 0.23 / @types/react ~18.3.1，新增 `tsconfig.client.json`（client 侧 noEmit 类型检查）。tsc 双工程零报错 + 产物冒烟（banner 三件套齐全、externals 仅 react、locales 内联）通过，待重装验证 |
 | 2026-09-21 | **配置页真机验证通过**；新增全字段注释版任务定义模板 `examples/task-template.jsonc`（14 字段逐一注释：实例身份/窗口语义/契约三查/依赖两种 semantics 的适用场景与时间线），文档索引同步 |
 | 2026-09-21 | **拍板决策 18 + 落码：一次性任务 `schedule.once`**——cron 5 段无年份字段，日月写死模拟一次性会次年同日再触发；`once`（`YYYY-MM-DDTHH:mm`，按 `timezone` 墙上时间解释）与 `cron` 互斥（`checkedTask` 运行时强校验），仅对应日历日生成一条实例 ⇒ 跑到终态后自动停、次年不再触发。实现：`tasks.ts` 加 `onceScheduledAt`（`Intl.formatToParts` 迭代两次收敛 DST）+ 互斥/格式校验，`scheduler.ts` `planFor` 分流，ensureInstances/backfill 自动复用；任务定义 14 → 15 字段（data-model.md 同步）。冒烟：时区换算（上海墙上 14:30 = UTC 06:30）、互斥同填/都缺拦截、坏格式拦截、非对应日期 undefined 全过；template jsonc 补一次性样例 |
+| 2026-09-23 | **拍板决策 19 + 落码：回执机制（推翻契约文件方案）**——契约文件散落工作区难管理、agent 写文件不可靠（可漏/可错/可伪造），废除 `contract.path`；改为 agent 执行插件自带 `dist/submit.js`（命令行由调度器在派发消息里拼好）直写 `task_events`（`kind='receipt'`），对账只查库：派发后最新 receipt + status ∈ validStatuses + outputs 存在且 mtime 晚于派发。硬约束 = 验证闸门：跑完信号后宽限无回执 → 对原会话追问（`handle.agent.send` 重发命令，写死 ≤2 次）→ 仍无按重试判定失败；追问不问「完成了吗」只重发命令（agent 会撒谎）。实现：新增 `src/submit.ts`（CLI，busy_timeout 5000 与调度器并发写）、`store.ts` 加 `latestEvent`/`countEvents`/`latestReceipt`、`reconcile.ts` 改查回执 + nudge/sweep 追问分支、`dispatch.ts` 抽 `submitCommand`/`userNotice`、`resolveStatePath` 移至 `config.ts`（避循环导入）；事件 kind 新增 receipt/nudge/receipt_check。冒烟 12 项全过（正常回执落库/重复提交无害/会话不匹配/实例不存在/终态/缺参数拦截）。设计文档五处同步（decisions/data-model/state-machine/architecture/两样例）；待真机核实：agent 能否跑 node + 访问 dist 路径 |

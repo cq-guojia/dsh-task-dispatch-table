@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { HostContext } from './host.js';
 export declare const dependencySemantics: readonly ["same_period", "latest_success"];
 export type DependencySemantics = (typeof dependencySemantics)[number];
-/** 任务定义 15 字段：data-model.md「任务定义」表，字段名严格照抄。 */
+/** 任务定义 14 字段：data-model.md「任务定义」表，字段名严格照抄。 */
 export declare const taskDefinitionSchema: z.ZodObject<{
     id: z.ZodString;
     enabled: z.ZodBoolean;
@@ -19,7 +19,6 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         prompt: z.ZodString;
     }, z.core.$strip>;
     contract: z.ZodObject<{
-        path: z.ZodString;
         validStatuses: z.ZodDefault<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>;
     retry: z.ZodDefault<z.ZodObject<{
