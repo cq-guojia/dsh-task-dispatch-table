@@ -31,13 +31,18 @@ export function apply(ctx, config) {
         if (debugWarns.length > DEBUG_WARN_LIMIT)
             debugWarns.shift();
     };
-    // 影子 ctx：原型链保持宿主成员原样（避免展开拷贝破坏方法 this 绑定），仅替换 logger，
-    // 让 scheduler / reconciler / dispatch / tasks 的告警全部经 tee 进缓冲。
-    const logCtx = Object.create(ctx);
-    logCtx.logger = {
-        info: message => ctx.logger.info(message),
-        warn: message => { pushWarn('warn', message); rawWarn(message); },
-        error: message => { pushWarn('error', message); rawError(message); },
+    // 影子 ctx：展开拷贝 + 仅覆盖 logger，让 scheduler / reconciler / dispatch / tasks 的
+    // 告警全部经 tee 进缓冲。⚠️ 不能用「Object.create(ctx) + 赋值遮蔽」：cordis 服务是
+    // 原型链上的 accessor，赋值会抛 "cannot set property without provide"（真机踩坑）。
+    // 展开读属性走 ctx 自身 receiver，安全；模块只用 service 对象（agents/sessions 等，
+    // 引用不变，方法 this 绑定不受影响）与 logger，不触碰 on/interval 等 ctx 级方法。
+    const logCtx = {
+        ...ctx,
+        logger: {
+            info: (message) => ctx.logger.info(message),
+            warn: (message) => { pushWarn('warn', message); rawWarn(message); },
+            error: (message) => { pushWarn('error', message); rawError(message); },
+        },
     };
     let taskMap = new Map();
     // 快照写入：内容去重（数据未变不写）+ 2s 节流（尾随写入保证最终态必落）。
