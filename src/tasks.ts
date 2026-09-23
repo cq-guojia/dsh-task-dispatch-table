@@ -31,9 +31,11 @@ export const taskDefinitionSchema = z.object({
   }),
   // 回执机制（决策 19）：不再有契约文件与 path——agent 经 submit.mjs 直写状态库，
   // 这里只保留 status 合法值清单。
-  contract: z.object({
-    validStatuses: z.array(z.string()).default(['ok']),
-  }),
+  contract: z
+    .object({
+      validStatuses: z.array(z.string()).default(['ok']),
+    })
+    .default({ validStatuses: ['ok'] }),
   retry: z.object({ maxAttempts: z.number().int().min(1).default(1) }).default({ maxAttempts: 1 }),
   backfill: z.object({ days: z.number().int().min(0).default(0) }).default({ days: 0 }),
   depends_on: z
