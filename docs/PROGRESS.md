@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-23 · 回执机制（决策 19）+ 调试面板 + 计划重排（决策 20）已落码推送；真机排查「宿主崩溃循环」定案——直接根因 = 容器侧凭据写锁残留，插件已全部修复待重装
+> **最后更新**：2026-09-23 · 插件已重装、调试面板恢复显示；崩溃窗口半截派发实例 unknown 待 sweep 判 failed；once 改期语义已拍板（同日改时刻无效 / 改到明日免换 id）；下一步换新 id 造新实例验证回执全链路
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## 二、当前状态
 
-**联调阶段。** v0.0.1 已装进宿主（git 源），配置页真机验证通过；`schedule.once` 已推送待重装；**回执机制（决策 19）已落码推送**——agent 经插件自带 `dist/submit.js` 直写状态库 receipt 事件，契约文件方案废除；**配置页临时调试面板已落码**（决策 16 例外）：host 把实例 / 事件 / 告警快照写进 settings 命名空间，配置页「调试日志」弹窗实时查看，替代容器里缺 sqlite3 的手工查库。
+**联调阶段。** v0.0.1 已装进宿主（git 源），配置页真机验证通过；崩溃排查后插件已重装，调试面板恢复显示；**回执机制（决策 19）已落码重装**——agent 经插件自带 `dist/submit.js` 直写状态库 receipt 事件，契约文件方案废除；**配置页临时调试面板已落码**（决策 16 例外）：host 把实例 / 事件 / 告警快照写进 settings 命名空间，配置页「调试日志」弹窗实时查看，替代容器里缺 sqlite3 的手工查库。
 
 | 环节 | 状态 |
 |---|---|
@@ -35,8 +35,8 @@
 | 任务定义样例 | ✅ 定型（镜像升级日报 + 全字段注释模板 `task-template.jsonc`，已按决策 19 改写） |
 | UI 方案 | ✅ 定型（决策 16：v1 零 UI 配置走 ctx.settings，监控面板 v1.1 弹窗形态） |
 | 调度器插件骨架 | ✅ 落码（v0.0.1）且**已装进宿主**；**Web 配置页真机验证通过**（`settings.plugin.item` slot，决策 17 修订） |
-| 一次性任务（决策 18） | ✅ 落码 + 冒烟通过（时区换算/互斥校验/自动停），**待重装真机验证** |
-| 回执机制（决策 19） | ✅ 落码 + 冒烟通过（submit 正反路径 12 项），**待重装真机验证**——agent 能否跑 node 命令 + 访问 dist 路径需真机核实 |
+| 一次性任务（决策 18） | ✅ 落码 + 冒烟通过（时区换算/互斥校验/自动停），已重装；首跑实例因崩溃窗口半截派发被标 unknown（将收敛 failed），待换新实例重验 |
+| 回执机制（决策 19） | ✅ 落码 + 冒烟通过（submit 正反路径 12 项），已重装待验证——agent 能否跑 node 命令 + 访问 dist 路径需真机核实 |
 | 端到端联调 | ⬜ 未开始（造真实任务 → 实例生成 → 派发 → 回执 → 状态落库） |
 
 ---
@@ -92,7 +92,7 @@
 
 ## 六、下一步（接手后从这里开始）
 
-1. **重装 + 真机验证**：`dsh plugin --profile web add git+https://github.com/cq-guojia/dsh-task-dispatch-table.git` 更新；验证三条线——① 一次性任务：配置页造 `once` 任务（参考 `examples/task-template.jsonc` 末尾样例，设成几分钟后），到点派发 → 回执 → `succeeded`，次日不再生成实例（自动停）；② **回执机制（决策 19）**：agent 是否照派发消息执行 `node dist/submit.js` 提交回执、receipt 落库 → 对账收敛；故意不交回执验证追问×2 → failed；③ **临时调试面板**：配置页「调试日志」弹窗能看到任务 ids / 实例 / 事件 / 告警且自动刷新（容器内无 sqlite3，面板即观测入口）
+1. **真机验证回执全链路（插件已重装，调试面板即观测入口）**：旧实例 `work-report-once:2026-09-23` 因崩溃窗口半截派发被启动扫描标记 unknown → 观察期已过，sweep 将判 failed（once 当日作废）。**once 改期语义（已拍板）**：实例身份 = task_id + once 日期 ⇒ **同日改时刻无效**（建行幂等跳过 scheduler.ts:68 + 重排只重算 pending attempt=0，unknown/终态冻结）；改到明日则 id 不变即可、到点自动补建新实例；**今日验证须换新 id** 造新 once 时刻（几分钟后）。到点看面板走完：pending → dispatched → **`dispatch` 事件**（= agent 真收到消息，此前从未出现）→ agent 产文件 + 跑 `node dist/submit.js` → `receipt` → `succeeded`；再故意不交回执验证追问×2 → failed。另：崩溃排查隔离的文件（宿主数据根 quarantine/ 下）待确认后清理
 2. **端到端联调（周期任务全链路）**：cron 任务走一遍 实例生成 → 依赖判定 → 派发 → 回执三查 → 重试/窗口收敛 → 状态落库（`storages/dsh-task-dispatch-table/state.db` 两表）；API 形状偏差按决策 15 回写
 3. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
 4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（`--outputs-file receipt.json`，agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走上命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）
@@ -149,3 +149,4 @@
 | 2026-09-23 | **修复：派发预建会话撞 'already exists'（真机首跑即现）**——决策 20 重排生效、派发链路首跑，但 dispatch 在 `agents.create` 前预建了 `ctx.sessions.create(sessionId)`（为拿 Session 对象改名）→ factory 内部 `sessions.prepare` 查 `store.has(id)` 抛 'already exists'（core/session/src/index.ts:1009），agent.send 未执行，会话成空壳、实例卡 running。修复：删预建（`agents.create` 自建会话并 announce `session/created`，AgentFactory 契约 core/agent/src/index.ts:171-176、session.spec.ts:1293），改名移到 `reconcile.onCreated`（handle 无 session 对象，session/created 监听器才有）；`DispatchInput` 去掉 logger。卡住实例：租约 30min → unknown → 5min → failed；建议配置加 `"retry": {"maxAttempts": 2}` 让其自动重跑 |
 | 2026-09-23 | **临时调试面板落码 + ctx 包装三连坑（183b85c→aebf6d2→72dcbb7）**——面板通道：host 把快照（任务 ids / 实例 / 事件 / 告警环形缓冲）经自有 settings 命名空间 `scope.update` 写入，client 订阅自动刷新，去重 + 2s 节流。三次真机崩溃的教训（cordis 源码实锤 reflect.ts:172-196,221）：① ctx 是 Proxy，赋值任何属性都抛 `cannot set property without provide`；② `{...ctx}` 展开拿不到 `on`/`interval` 等 mixin 方法（不在自有属性上）；③ **结论：ctx 复制/包装/遮-shadow 全部不可行**，tee logger 只能作显式参数传入各模块。教训：mock 宿主是普通对象测不出 Proxy 语义，宿主 API 行为必须先查 cordis 源码 |
 | 2026-09-23 | **真机排查「服务起不来」定案：凭据写锁残留，非插件运行期问题**——禁用插件后仍崩 → 排除插件代码；`docker logs` 抓到 DSH 自身退出错误 `atomic-write: timed out waiting for the writer lock at ~/.dsh/.credentials.yaml.lock`：此前崩溃窗口里 DSH 写凭据持锁被杀（容器重启 SIGKILL），锁文件残留于挂载卷，之后每次启动 client-connection 等锁超时 → DSH 退出 code=1 → manager 反复崩。挪走死锁文件即恢复。**定责**：插件两次启动崩溃（ctx 包装）是诱因链一环；manager 反代无 error handler 放大伤害属镜像侧（`/app/manager/index.js` 无 `proxy.on('error')`），插件侧不修。**流程教训**：① 排查必须先抓 DSH 自身错误日志再下结论，别被表象（manager 栈）带偏；② 任何删除/移动指令必须先 cat 验证路径存在（'#include' 猜路径事件）；③ 重启窗口期别跑插件安装 |
+| 2026-09-23 | **插件重装完成、面板恢复；半截派发实例待收敛 + once 改期语义拍板**——重装后面板正常显示：`work-report-once:2026-09-23` unknown（16:00 崩溃窗口半截派发被启动扫描标记，16:24:27），事件仅 reschedule/cas-claim/assign-session/session/created 四条、**缺 `dispatch` = agent 从未收到消息**（非回执机制问题）；观察期已过，下个 tick sweep 判 failed。**once 改期语义（本轮问答拍板，决策 20 的应用澄清）**：实例身份 = task_id + once 日期部分 ⇒ 同日改时刻无效——ensureInstances 对已存在行幂等跳过（scheduler.ts:68）、reschedulePass 只重算 pending+attempt=0（unknown/终态冻结）；改到明日有效、id 不变（新 logical_date 自动补建）；今日验证全链路须换新 id（或补跑三层入口的 SQL 手动重置，容器无 sqlite3 可 docker exec 用 node:sqlite 改）。崩溃排查隔离文件待用户确认后清理 |
