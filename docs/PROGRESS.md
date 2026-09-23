@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-23 · v0.0.1 已装进宿主；**回执机制（决策 19）+ 配置页临时调试面板 + 计划时刻 live 重排（决策 20）已落码推送**，待重装验证
+> **最后更新**：2026-09-23 · 回执机制（决策 19）+ 调试面板 + 计划重排（决策 20）已落码推送；真机排查「宿主崩溃循环」定案——直接根因 = 容器侧凭据写锁残留，插件已全部修复待重装
 
 ---
 
@@ -95,6 +95,7 @@
 1. **重装 + 真机验证**：`dsh plugin --profile web add git+https://github.com/cq-guojia/dsh-task-dispatch-table.git` 更新；验证三条线——① 一次性任务：配置页造 `once` 任务（参考 `examples/task-template.jsonc` 末尾样例，设成几分钟后），到点派发 → 回执 → `succeeded`，次日不再生成实例（自动停）；② **回执机制（决策 19）**：agent 是否照派发消息执行 `node dist/submit.js` 提交回执、receipt 落库 → 对账收敛；故意不交回执验证追问×2 → failed；③ **临时调试面板**：配置页「调试日志」弹窗能看到任务 ids / 实例 / 事件 / 告警且自动刷新（容器内无 sqlite3，面板即观测入口）
 2. **端到端联调（周期任务全链路）**：cron 任务走一遍 实例生成 → 依赖判定 → 派发 → 回执三查 → 重试/窗口收敛 → 状态落库（`storages/dsh-task-dispatch-table/state.db` 两表）；API 形状偏差按决策 15 回写
 3. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
+4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（`--outputs-file receipt.json`，agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走上命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）
 
 ---
 
@@ -146,3 +147,5 @@
 | 2026-09-23 | **首次完整链路观测 + 面板易用性三改进（882b4f3）**——面板显示 `work-report-once:2026-09-23` pending 零事件，经 docker mcp 查容器日志 + inspect（TZ=Asia/Shanghai）判定：**正常排队**，once=22:30 北京时间未到（scheduler.ts:109 未到点不派发），pending 不产生事件；插件启动链路全部正常。改进：① 弹窗加「刷新」按钮（记录手动刷新时刻，区分数据没变 vs 页面没刷）；② 面板所有时间 `toLocaleString` 按浏览器本机时区显示（原样是 UTC ISO）；③ 实例表加 scheduled 计划时刻列 + 宿主 5 分钟心跳强制推快照（时间戳不动 = 宿主无动静，动了 = 活着） |
 | 2026-09-23 | **决策 20：计划时刻 live 重排落码**——真机确认改 `once` 后旧 pending 实例仍按旧时刻跑（建行时定死）→ `store.reschedule`（CAS `pending + attempt=0`）+ `reschedulePass`（tick 内 ensure 之后、dispatch 之前）：按当前配置重算 `planFor`，不一致则更新 + 落 `reschedule` 事件；`once` 改到别日 → 旧实例 `skipped(plan-removed)`、新日实例自然补建；执行开始（attempt≥1）即冻结。「计划时刻完全不落库」被否：窗口判定 / 回执对账 / 补跑幂等都需要落库时刻。决策 20 + state-machine §13 已同步 |
 | 2026-09-23 | **修复：派发预建会话撞 'already exists'（真机首跑即现）**——决策 20 重排生效、派发链路首跑，但 dispatch 在 `agents.create` 前预建了 `ctx.sessions.create(sessionId)`（为拿 Session 对象改名）→ factory 内部 `sessions.prepare` 查 `store.has(id)` 抛 'already exists'（core/session/src/index.ts:1009），agent.send 未执行，会话成空壳、实例卡 running。修复：删预建（`agents.create` 自建会话并 announce `session/created`，AgentFactory 契约 core/agent/src/index.ts:171-176、session.spec.ts:1293），改名移到 `reconcile.onCreated`（handle 无 session 对象，session/created 监听器才有）；`DispatchInput` 去掉 logger。卡住实例：租约 30min → unknown → 5min → failed；建议配置加 `"retry": {"maxAttempts": 2}` 让其自动重跑 |
+| 2026-09-23 | **临时调试面板落码 + ctx 包装三连坑（183b85c→aebf6d2→72dcbb7）**——面板通道：host 把快照（任务 ids / 实例 / 事件 / 告警环形缓冲）经自有 settings 命名空间 `scope.update` 写入，client 订阅自动刷新，去重 + 2s 节流。三次真机崩溃的教训（cordis 源码实锤 reflect.ts:172-196,221）：① ctx 是 Proxy，赋值任何属性都抛 `cannot set property without provide`；② `{...ctx}` 展开拿不到 `on`/`interval` 等 mixin 方法（不在自有属性上）；③ **结论：ctx 复制/包装/遮-shadow 全部不可行**，tee logger 只能作显式参数传入各模块。教训：mock 宿主是普通对象测不出 Proxy 语义，宿主 API 行为必须先查 cordis 源码 |
+| 2026-09-23 | **真机排查「服务起不来」定案：凭据写锁残留，非插件运行期问题**——禁用插件后仍崩 → 排除插件代码；`docker logs` 抓到 DSH 自身退出错误 `atomic-write: timed out waiting for the writer lock at ~/.dsh/.credentials.yaml.lock`：此前崩溃窗口里 DSH 写凭据持锁被杀（容器重启 SIGKILL），锁文件残留于挂载卷，之后每次启动 client-connection 等锁超时 → DSH 退出 code=1 → manager 反复崩。挪走死锁文件即恢复。**定责**：插件两次启动崩溃（ctx 包装）是诱因链一环；manager 反代无 error handler 放大伤害属镜像侧（`/app/manager/index.js` 无 `proxy.on('error')`），插件侧不修。**流程教训**：① 排查必须先抓 DSH 自身错误日志再下结论，别被表象（manager 栈）带偏；② 任何删除/移动指令必须先 cat 验证路径存在（'#include' 猜路径事件）；③ 重启窗口期别跑插件安装 |
