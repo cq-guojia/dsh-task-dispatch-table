@@ -45,6 +45,11 @@ CREATE INDEX IF NOT EXISTS idx_events_instance ON task_events(instance_id, seq);
 const nowIso = () => new Date().toISOString();
 export class TaskStore {
     db;
+    /**
+     * 迁移时因「同任务同刻度重复」被合并掉的行数。
+     * > 0 说明历史数据里存在重复（正常不该有），宿主会打告警——**绝不静默删数据**。
+     */
+    dupRowsRemoved = 0;
     constructor(statePath) {
         mkdirSync(dirname(statePath), { recursive: true });
         this.db = new DatabaseSync(statePath);
@@ -63,6 +68,12 @@ export class TaskStore {
             .get();
         if (exists !== undefined)
             return;
+        // 先数一数真有重复没有：正常库应该是 0，非 0 说明历史数据脏，交给宿主告警。
+        const dup = this.db
+            .prepare(`SELECT COUNT(*) AS n FROM (
+                  SELECT 1 FROM task_instances GROUP BY task_id, scheduled_at HAVING COUNT(*) > 1)`)
+            .get();
+        this.dupRowsRemoved = Number(dup.n);
         this.db.exec(`DELETE FROM task_instances WHERE rowid NOT IN
          (SELECT MIN(rowid) FROM task_instances GROUP BY task_id, scheduled_at)`);
         this.db.exec('CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at)');

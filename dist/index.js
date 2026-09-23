@@ -23,6 +23,11 @@ export function apply(ctx, config) {
     const scope = ctx.settings.register('dsh-task-dispatch-table', Config, { base: initial });
     // statePath 启动时定格，运行期改配置不迁移库。
     const store = new TaskStore(resolveStatePath(scope.get().statePath));
+    // 迁移若真的合并掉了重复行（正常应为 0），必须让用户看见——绝不静默删数据。
+    if (store.dupRowsRemoved > 0) {
+        ctx.logger.warn(`状态库迁移：发现并合并了 ${store.dupRowsRemoved} 组「同任务同刻度」的重复实例行`
+            + `（保留每组最早的一条）。这通常不该发生，请检查是否有手工改动过状态库。`);
+    }
     // 临时调试通道：宿主侧把「告警 + 状态库快照」写进本命名空间的 debugSnapshot 字段
     // （scope.update 合并进用户层并提交 'settings/updated'，packages/settings/settings/src/index.ts:133,456,562），
     // 配置页订阅同一 scope 实时渲染。仅诊断用，全部异常自兜，不触碰调度主流程。

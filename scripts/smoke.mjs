@@ -177,6 +177,104 @@ try {
   check('重复 tick 不产生重复实例（数量不增长）', after === before, `${before} → ${after}`)
   schedStore.close()
   rmSync(schedDir, { recursive: true, force: true })
+  // ── 6. 真机形态旧库兼容：老 id 形态 + 各状态历史行 + 新代码跑一遍 ──
+  console.log('\n[6] 真机形态旧库兼容（最怕的「新旧格式冲突」）')
+  const realPath = join(root, 'real-legacy.db')
+  const seed = new DatabaseSync(realPath)
+  // 完全按**旧版** schema 建表（没有 task_defs、没有唯一索引）
+  seed.exec(`CREATE TABLE task_instances (
+    id TEXT PRIMARY KEY, task_id TEXT NOT NULL, logical_date TEXT NOT NULL, scheduled_at TEXT NOT NULL,
+    status TEXT NOT NULL, attempt INTEGER NOT NULL DEFAULT 0, session_id TEXT, lease_until TEXT,
+    dispatched_at TEXT, finished_at TEXT, updated_at TEXT NOT NULL)`)
+  seed.exec(`CREATE TABLE task_events (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT, instance_id TEXT NOT NULL,
+    ts TEXT NOT NULL, kind TEXT NOT NULL, detail TEXT)`)
+  const insertRow = seed.prepare(`INSERT INTO task_instances
+    (id, task_id, logical_date, scheduled_at, status, attempt, session_id, updated_at)
+    VALUES (?,?,?,?,?,?,?,?)`)
+  // 与真机面板里一致的老 id 形态："<task_id>:<日期>"
+  const recent = new Date(Date.now() - 3600_000) // 落在 ensureInstances 窗口内 ⇒ 会被新代码重新算出同一刻度
+  const recentIso = recent.toISOString()
+  const recentDay = recentIso.slice(0, 10)
+  insertRow.run('work-report-once8:2026-09-23', 'work-report-once8', '2026-09-23', '2026-09-23T13:20:00.000Z', 'succeeded', 0, null, '2026-09-23T13:20:30.000Z')
+  insertRow.run('work-report-once7:2026-09-23', 'work-report-once7', '2026-09-23', '2026-09-23T13:20:00.000Z', 'succeeded', 0, null, '2026-09-23T13:20:30.000Z')
+  insertRow.run('work-report-once6:2026-09-23', 'work-report-once6', '2026-09-23', '2026-09-23T13:20:00.000Z', 'unknown', 0, '06e4633c-5ddb', '2026-09-23T13:25:00.000Z')
+  insertRow.run('work-report-once5:2026-09-23', 'work-report-once5', '2026-09-23', '2026-09-23T13:20:00.000Z', 'failed', 0, 'ad1c5743-692a', '2026-09-23T13:28:00.000Z')
+  insertRow.run('work-report-once2:2026-09-23', 'work-report-once2', '2026-09-23', '2026-09-23T07:30:00.000Z', 'skipped', 0, null, '2026-09-23T07:30:00.000Z')
+  // 关键一行：任务仍存在、刻度落在窗口内、状态 pending ⇒ 新代码必须复用它而不是再建一条
+  insertRow.run(`daily-report:${recentDay}`, 'daily-report', recentDay, recentIso, 'pending', 0, null, recentIso)
+  // 一个 dispatched 老行 ⇒ 启动扫描应置 unknown（不该炸）
+  insertRow.run('daily-report:2026-09-22', 'daily-report', '2026-09-22', '2026-09-22T21:00:00.000Z', 'dispatched', 0, 'legacy-session', '2026-09-22T21:00:05.000Z')
+  seed.close()
+
+  const realStore = new TaskStore(realPath)
+  check('旧库打开不抛错（自动迁移成功）', true)
+  check('旧库没有重复行被合并（正常应为 0）', realStore.dupRowsRemoved === 0, `实际 ${realStore.dupRowsRemoved}`)
+  check('历史行一条不少', realStore.listByStatus(['succeeded', 'failed', 'skipped', 'pending', 'unknown', 'dispatched']).length === 7)
+  const scanned = realStore.startupScan()
+  check('启动扫描把旧 dispatched 置 unknown', scanned === 1, `实际 ${scanned}`)
+
+  // 用**同一批任务**（显式写 id，与历史一致）跑一次 tick：不应炸、不应重复建行
+  const realCtx = { workspaceRegistry: { list: () => [], archiveSession: async () => {} }, get: () => undefined }
+  const realReconciler = createReconciler({
+    ctx: realCtx,
+    logger,
+    store: realStore,
+    options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, tasks: () => new Map() },
+  })
+  const realScheduler = createScheduler({
+    ctx: realCtx,
+    logger,
+    store: realStore,
+    reconciler: realReconciler,
+    config: () => ({
+      tasksInline: JSON.stringify([
+        { id: 'daily-report', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'x' } },
+      ]),
+      tasksDir: 'tasks', tickMs: 60_000, statePath: '', dispatchGraceMs: 60_000,
+      leaseMs: 60_000, unknownGraceMs: 300_000, debugSnapshot: '', defaultProvider: '', defaultModel: '',
+    }),
+  })
+  let tickError = null
+  try {
+    realScheduler.tick()
+  } catch (error) {
+    tickError = String(error)
+  }
+  check('旧库上跑 tick 不抛错', tickError === null, tickError ?? '')
+  const dailyRows = realStore.listByStatus(['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'])
+    .filter(row => row.task_id === 'daily-report')
+  const sameSlot = dailyRows.filter(row => row.scheduled_at === recentIso)
+  check('同一刻度没有被建出第二条（新旧格式不打架）', sameSlot.length === 1, `实际 ${sameSlot.length}`)
+  check('老 id 形态的历史行原样保留', realStore.get('work-report-once8:2026-09-23')?.status === 'succeeded')
+  realStore.close()
+
+  // ── 7. 最坏情况：旧库真有「同任务同刻度」重复行 —— 必须优雅降级而不是崩 ──
+  console.log('\n[7] 最坏情况：旧库存在重复刻度')
+  const dupPath = join(root, 'dup-legacy.db')
+  const dupSeed = new DatabaseSync(dupPath)
+  dupSeed.exec(`CREATE TABLE task_instances (
+    id TEXT PRIMARY KEY, task_id TEXT NOT NULL, logical_date TEXT NOT NULL, scheduled_at TEXT NOT NULL,
+    status TEXT NOT NULL, attempt INTEGER NOT NULL DEFAULT 0, session_id TEXT, lease_until TEXT,
+    dispatched_at TEXT, finished_at TEXT, updated_at TEXT NOT NULL)`)
+  const dupInsert = dupSeed.prepare(`INSERT INTO task_instances
+    (id, task_id, logical_date, scheduled_at, status, updated_at) VALUES (?,?,?,?,?,?)`)
+  dupInsert.run('dup-task:2026-09-23', 'dup-task', '2026-09-23', '2026-09-23T09:00:00.000Z', 'succeeded', '2026-09-23T09:05:00.000Z')
+  dupInsert.run('dup-task:2026-09-23-b', 'dup-task', '2026-09-23', '2026-09-23T09:00:00.000Z', 'failed', '2026-09-23T09:06:00.000Z')
+  dupSeed.close()
+  let dupError = null
+  let dupStore
+  try {
+    dupStore = new TaskStore(dupPath)
+  } catch (error) {
+    dupError = String(error)
+  }
+  check('重复刻度不会让插件起不来', dupError === null, dupError ?? '')
+  check('合并行数被如实报告（供宿主告警，不静默删）', dupStore?.dupRowsRemoved === 1, `实际 ${dupStore?.dupRowsRemoved}`)
+  const left = dupStore?.listByStatus(['succeeded', 'failed']) ?? []
+  check('重复组只留一条', left.length === 1, `实际 ${left.length}`)
+  check('去重后仍可按刻度定位', dupStore?.findBySlot('dup-task', '2026-09-23T09:00:00.000Z') !== undefined)
+  dupStore?.close()
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

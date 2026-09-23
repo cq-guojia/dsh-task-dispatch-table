@@ -33,6 +33,11 @@ export interface TransitionInput {
 }
 export declare class TaskStore {
     private readonly db;
+    /**
+     * 迁移时因「同任务同刻度重复」被合并掉的行数。
+     * > 0 说明历史数据里存在重复（正常不该有），宿主会打告警——**绝不静默删数据**。
+     */
+    dupRowsRemoved: number;
     constructor(statePath: string);
     /**
      * 旧库迁移（决策 25）：补建 `(task_id, scheduled_at)` 唯一索引作为防重闸门。

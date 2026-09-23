@@ -87,6 +87,12 @@ const nowIso = (): string => new Date().toISOString()
 export class TaskStore {
   private readonly db: DatabaseSync
 
+  /**
+   * 迁移时因「同任务同刻度重复」被合并掉的行数。
+   * > 0 说明历史数据里存在重复（正常不该有），宿主会打告警——**绝不静默删数据**。
+   */
+  dupRowsRemoved = 0
+
   constructor(statePath: string) {
     mkdirSync(dirname(statePath), { recursive: true })
     this.db = new DatabaseSync(statePath)
@@ -105,6 +111,12 @@ export class TaskStore {
       .prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_instances_slot'`)
       .get() as { name: string } | undefined
     if (exists !== undefined) return
+    // 先数一数真有重复没有：正常库应该是 0，非 0 说明历史数据脏，交给宿主告警。
+    const dup = this.db
+      .prepare(`SELECT COUNT(*) AS n FROM (
+                  SELECT 1 FROM task_instances GROUP BY task_id, scheduled_at HAVING COUNT(*) > 1)`)
+      .get() as { n: number }
+    this.dupRowsRemoved = Number(dup.n)
     this.db.exec(
       `DELETE FROM task_instances WHERE rowid NOT IN
          (SELECT MIN(rowid) FROM task_instances GROUP BY task_id, scheduled_at)`,
