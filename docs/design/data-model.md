@@ -29,10 +29,20 @@
 ## 二、状态库（SQLite，路径见决策 14）
 
 ```sql
+-- 任务定义身份登记表（决策 25）：用户不写 id ⇒ 系统生成一次并记在这里，跨重启稳定。
+-- source_key = 定义来源定位（inline 下标 / 目录文件路径）⇒ 改 title、改周期都不会丢 id。
+CREATE TABLE task_defs (
+  id         TEXT PRIMARY KEY,
+  source_key TEXT NOT NULL UNIQUE,
+  title      TEXT,
+  updated_at TEXT NOT NULL
+);
+
 -- 任务实例状态表：状态机 7 态的载体，一行 = **一次执行（一个计划刻度）**
 CREATE TABLE task_instances (
-  run_id        TEXT PRIMARY KEY,        -- ★ UUID，不透明主键（决策 25）。不用自增：客户端环境下不可靠
-  task_id       TEXT NOT NULL,           -- 引用任务定义的 id（系统生成、不可变）
+  id            TEXT PRIMARY KEY,        -- ★ UUID 不透明主键（决策 25）。
+                                         --   列名沿用 id（而非 run_id）：旧库无需重建表即可升级
+  task_id       TEXT NOT NULL,           -- 引用 task_defs.id（系统生成、不可变）
   scheduled_at  TEXT NOT NULL,           -- ★ 计划时刻（cron 算出的**刻度**，ISO 8601 含时分秒 + 时区偏移）
                                          --   = 身份锚点 + 防重键。**不是实际执行时刻**
   logical_date  TEXT NOT NULL,           -- = scheduled_at 所在日历日；仅供 same_period 依赖判定与界面分组
@@ -43,13 +53,12 @@ CREATE TABLE task_instances (
   lease_until   TEXT,                    -- running 租约到期时刻（机制 #2）
   dispatched_at TEXT,                    -- ★ 实际派发时刻（可能晚于 scheduled_at），**不进身份**
   finished_at   TEXT,
-  updated_at    TEXT NOT NULL,
-  UNIQUE (task_id, scheduled_at)         -- ★ 防重闸门：同一任务同一刻度只可能有一条 ⇒ tick 幂等
+  updated_at    TEXT NOT NULL
+);
+-- ★ 防重闸门（唯一索引而非表约束：旧库加索引即可升级，不必重建表）
+CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at);
   -- 待确认（未拍板，见 PROGRESS 未决项 U5）：def_revision（跑的是哪版定义）/
   --   def_snapshot（当时的配置快照 JSON）/ run_type（scheduled | manual | retry | backfill）
-);
-
-CREATE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at);
 
 -- 执行日志表：append-only，对账与排障的证据链
 CREATE TABLE task_events (
@@ -76,6 +85,8 @@ CREATE INDEX idx_events_instance ON task_events(instance_id, seq);
    | `once` | 就是它那个时刻 | 1 |
 
    刻度**由 cron 决定**，不是「上一次 + 间隔」⇒ 迟到 / 重启 / 多跑几轮都不漂移（8:01 才跑，记的仍是 `08:00` 这个槽）。**防重 = 唯一约束**：每 tick 列出窗口内的刻度逐个 INSERT，插过就插不进去 ⇒ 一天 288 轮 tick 也只有一条。下游依赖判定仍是「一条 SELECT」：`same_period` 查同 `logical_date`，`latest_success` 查 `succeeded` 的最近 `logical_date`（`freshness` 比对 `scheduled_at`）。展示用可读串拼 `task_id:scheduled_at`，**但不作主键**。
+
+   **ensureInstances 的窗口**（实现约定，不是决策）：`[now - max(窗口时长, 26h), now + 2×tick]`，刻度超限（`MAX_ENSURE_SLOTS = 200`）时**只保留最近的**——近期刻度才是要跑的，更远的历史交给 `backfill.days`。
 2. **重试不换行**：`attempt` 行内递增，状态流转 `pending → dispatched → running → (failed → pending)* → 终态`；下游只见最终态，半成品状态不外泄。
 3. **原子领取**：派发时 `UPDATE ... SET status='dispatched' WHERE id=? AND status='pending'`，以受影响行数判定领取成功。单进程插件的 tick 本就顺序执行，CAS 为重启恢复与未来多实例兜底，不改变决策 7 的任何理由。
 

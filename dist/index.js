@@ -1,4 +1,5 @@
 import { Config, resolveStatePath } from './config.js';
+import { nextSlotAfter, titleOf } from './tasks.js';
 import { TaskStore } from './store.js';
 import { createReconciler } from './reconcile.js';
 import { createScheduler } from './scheduler.js';
@@ -13,8 +14,8 @@ const DEBUG_WARN_LIMIT = 20;
 const DEBUG_WRITE_MIN_INTERVAL_MS = 2_000;
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
-/** 快照携带的最近事件条数。 */
-const DEBUG_EVENT_LIMIT = 40;
+/** 快照携带的最近事件条数（面板按实例过滤展开用，故比单页展示量多留一些）。 */
+const DEBUG_EVENT_LIMIT = 200;
 export function apply(ctx, config) {
     const initial = Config(config);
     // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
@@ -49,12 +50,29 @@ export function apply(ctx, config) {
     const writeSnapshot = () => {
         try {
             const snap = store.snapshot(DEBUG_EVENT_LIMIT);
-            const body = {
-                tasks: [...taskMap.keys()],
-                instances: snap.instances,
-                events: snap.events,
-                warns: [...debugWarns],
-            };
+            const now = new Date();
+            // 任务明细（决策 25：id 系统生成 + title 给人看；带下次执行刻度便于核对配置是否生效）。
+            const tasks = [...taskMap.values()].map(task => {
+                let next = null;
+                try {
+                    next = nextSlotAfter(task, now)?.toISOString() ?? null;
+                }
+                catch {
+                    next = null; // 单个任务的刻度计算异常不影响整份快照
+                }
+                return {
+                    id: task.id,
+                    title: titleOf(task),
+                    enabled: task.enabled,
+                    cron: task.schedule.cron ?? null,
+                    once: task.schedule.once ?? null,
+                    timezone: task.schedule.timezone ?? null,
+                    window: task.schedule.window,
+                    workspace: task.target.workspace,
+                    next,
+                };
+            });
+            const body = { tasks, instances: snap.instances, events: snap.events, warns: [...debugWarns] };
             const content = JSON.stringify(body);
             lastWriteAt = Date.now();
             if (content === lastContent && Date.now() - lastPushAt < DEBUG_FORCE_INTERVAL_MS)

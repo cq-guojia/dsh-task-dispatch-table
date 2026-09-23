@@ -13,9 +13,10 @@ export interface TaskInstance {
     finished_at: string | null;
     updated_at: string;
 }
-/** 调试快照事件行（detail 截断，临时调试面板用）。 */
+/** 调试快照事件行（detail 截断，临时调试面板用）。带 instance_id 供面板按实例过滤展开。 */
 export interface SnapshotEvent {
     seq: number;
+    instance_id: string;
     ts: string;
     kind: string;
     detail: string | null;
@@ -33,6 +34,19 @@ export interface TransitionInput {
 export declare class TaskStore {
     private readonly db;
     constructor(statePath: string);
+    /**
+     * 旧库迁移（决策 25）：补建 `(task_id, scheduled_at)` 唯一索引作为防重闸门。
+     * 建索引前先去重（同一 task + 同一刻度只留 rowid 最小那条），否则历史脏数据会让
+     * CREATE UNIQUE INDEX 直接失败、插件起不来。
+     */
+    private migrate;
+    /**
+     * 解析任务定义的**稳定 id**（决策 25）：
+     * - 用户显式写了 `id` ⇒ 以用户写的为准（兼容既有定义，也允许人工指定以便 `depends_on` 引用）；
+     * - 未写 ⇒ 按 `source_key` 在 `task_defs` 里查，查到就复用（跨重启稳定），查不到才生成 UUID 并登记。
+     * @param sourceKey 定义来源定位（inline 下标 / 文件路径）——改 title、改周期都不会变。
+     */
+    resolveTaskId(sourceKey: string, title: string, explicitId?: string): string;
     close(): void;
     appendEvent(instanceId: string, kind: string, detail?: unknown): void;
     /** 实例某类事件的最新一条（回执对账 / 追问判定用）。 */
@@ -57,8 +71,15 @@ export declare class TaskStore {
     } | undefined;
     /** 启动扫描（state-machine §3 机制 #5）：已派发而未定态的实例置 unknown。 */
     startupScan(): number;
-    /** 实例保障幂等补建（state-machine §7）：已存在则不动；建即为终态时留痕（data-model：skipped 证据落 task_events）。 */
+    /**
+     * 实例保障幂等补建（决策 25 + state-machine §7）：
+     * **身份 = 任务 + 计划刻度**——`id` 是不透明 UUID，去重走 `UNIQUE(task_id, scheduled_at)`，
+     * 所以同一刻度重复 INSERT 一律 DO NOTHING ⇒ tick 幂等（迟到 / 重启 / 多跑几轮都不会多出第二条）。
+     * 建即为终态（过窗）时留痕（data-model：skipped 证据落 task_events）。
+     */
     ensureInstance(taskId: string, logicalDate: string, scheduledAt: string, status: InstanceStatus): boolean;
+    /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
+    findBySlot(taskId: string, scheduledAt: string): TaskInstance | undefined;
     get(id: string): TaskInstance | undefined;
     getBySession(sessionId: string): TaskInstance | undefined;
     /**

@@ -16,6 +16,13 @@ export type LocaleKey =
   | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
   | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents' | 'debugEventsEmpty'
   | 'debugRefresh' | 'debugRefreshedAt' | 'debugAutoHint'
+  | 'panelTitle' | 'tabConfig' | 'tabRecords'
+  | 'tasksParsedTitle' | 'tasksParsedEmpty'
+  | 'colTask' | 'colTitle' | 'colSchedule' | 'colNext' | 'colSlot'
+  | 'colStatus' | 'colAttempt' | 'colSession' | 'colUpdated'
+  | 'colSeq' | 'colTs' | 'colKind' | 'colDetail'
+  | 'filterStatus' | 'filterTask' | 'filterAll'
+  | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint'
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
@@ -39,7 +46,7 @@ export const zh: Record<LocaleKey, string> = {
   paramTasksDir: '任务目录 tasksDir',
   paramDefaultProvider: '默认模型 provider defaultProvider',
   paramDefaultModel: '默认模型 model defaultModel',
-  debugButton: '调试日志',
+  debugButton: '打开面板（配置 / 执行记录）',
   debugTitle: '调试快照（临时面板，随宿主状态自动刷新）',
   debugClose: '关闭',
   debugRefresh: '刷新',
@@ -52,8 +59,33 @@ export const zh: Record<LocaleKey, string> = {
   debugNoWarns: '（无）',
   debugInstances: '实例 task_instances',
   debugInstancesEmpty: '（尚无实例）',
-  debugEvents: '事件 task_events（最近 40 条，旧 → 新）',
+  debugEvents: '事件 task_events（最近 200 条，旧 → 新）',
   debugEventsEmpty: '（尚无事件）',
+  panelTitle: '任务调度表',
+  tabConfig: '任务配置',
+  tabRecords: '执行记录',
+  tasksParsedTitle: '已解析的任务（id 由系统生成，改名字不影响历史）',
+  tasksParsedEmpty: '（无任务：内嵌任务表为空且任务目录无合法定义）',
+  colTask: '任务',
+  colTitle: '名称',
+  colSchedule: '周期',
+  colNext: '下次执行',
+  colSlot: '计划时刻',
+  colStatus: '状态',
+  colAttempt: '第几次',
+  colSession: '会话',
+  colUpdated: '更新于',
+  colSeq: 'seq',
+  colTs: '时间',
+  colKind: '类型',
+  colDetail: '详情',
+  filterStatus: '状态筛选',
+  filterTask: '任务筛选',
+  filterAll: '全部',
+  expandHint: '点击任意一行展开该次执行的事件时间线',
+  eventsOf: '本次执行的事件',
+  eventsEmpty: '（该次执行暂无事件，或已超出最近 200 条的快照窗口）',
+  recordsHint: '一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。',
 }
 
 /** English copy. */
@@ -78,7 +110,7 @@ export const en: Record<LocaleKey, string> = {
   paramTasksDir: 'Task directory tasksDir',
   paramDefaultProvider: 'Default model provider defaultProvider',
   paramDefaultModel: 'Default model defaultModel',
-  debugButton: 'Debug logs',
+  debugButton: 'Open panel (config / runs)',
   debugTitle: 'Debug snapshot (temporary panel; auto-refreshes with host state)',
   debugClose: 'Close',
   debugRefresh: 'Refresh',
@@ -91,6 +123,31 @@ export const en: Record<LocaleKey, string> = {
   debugNoWarns: '(none)',
   debugInstances: 'Instances task_instances',
   debugInstancesEmpty: '(no instances yet)',
-  debugEvents: 'Events task_events (latest 40, oldest → newest)',
+  debugEvents: 'Events task_events (latest 200, oldest → newest)',
   debugEventsEmpty: '(no events yet)',
+  panelTitle: 'Task dispatch table',
+  tabConfig: 'Configuration',
+  tabRecords: 'Run records',
+  tasksParsedTitle: 'Parsed tasks (ids are generated; renaming never breaks history)',
+  tasksParsedEmpty: '(no tasks: inline table empty and task dir has no valid definition)',
+  colTask: 'Task',
+  colTitle: 'Title',
+  colSchedule: 'Schedule',
+  colNext: 'Next run',
+  colSlot: 'Scheduled',
+  colStatus: 'Status',
+  colAttempt: 'Attempt',
+  colSession: 'Session',
+  colUpdated: 'Updated',
+  colSeq: 'seq',
+  colTs: 'Time',
+  colKind: 'Kind',
+  colDetail: 'Detail',
+  filterStatus: 'Status filter',
+  filterTask: 'Task filter',
+  filterAll: 'All',
+  expandHint: 'Click any row to expand the event timeline of that run',
+  eventsOf: 'Events of this run',
+  eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
+  recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',
 }

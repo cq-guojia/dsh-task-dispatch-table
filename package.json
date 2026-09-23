@@ -32,7 +32,8 @@
     "build": "npm run build:host && npm run build:client",
     "build:host": "tsc",
     "build:client": "tsc --noEmit -p tsconfig.client.json && tsdown --config tsdown.client.config.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
+    "smoke": "node scripts/smoke.mjs"
   },
   "engines": {
     "node": ">=22.5"

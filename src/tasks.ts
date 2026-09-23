@@ -13,9 +13,16 @@ const isoDuration = z.string().regex(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, 'I
 export const dependencySemantics = ['same_period', 'latest_success'] as const
 export type DependencySemantics = (typeof dependencySemantics)[number]
 
-/** 任务定义 14 字段：data-model.md「任务定义」表，字段名严格照抄。 */
+/**
+ * 任务定义输入 schema（决策 25）：`id` **可选**——用户不写，由系统在首次加载时生成并
+ * 记进状态库 `task_defs` 表（跨重启稳定）；`title` 是给人看的名字，任意文本（中文亦可），
+ * 随时可改、**不参与身份**。
+ */
 export const taskDefinitionSchema = z.object({
-  id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'kebab-case'),
+  /** 系统生成并持久化（`task_defs` 表）；用户显式写了则以用户写的为准（兼容既有定义）。 */
+  id: z.string().min(1).optional(),
+  /** 用户可读名称：任意文本，可改，不影响身份与历史记录。缺省回退到 id。 */
+  title: z.string().min(1).optional(),
   enabled: z.boolean(),
   schedule: z.object({
     cron: z.string().min(1).optional(),
@@ -52,7 +59,26 @@ export const taskDefinitionSchema = z.object({
     .optional(),
 })
 
-export type TaskDefinition = z.infer<typeof taskDefinitionSchema>
+/** 用户书写形态：`id` 可缺省。 */
+export type TaskDefinitionInput = z.infer<typeof taskDefinitionSchema>
+
+/**
+ * 解析后的任务定义：`id` **必有**（未写时由调度器经 `store.resolveTaskId` 生成并回填）。
+ * 全链路（scheduler / dispatch / reconcile）都按这个类型走，避免到处判空。
+ */
+export type TaskDefinition = Omit<TaskDefinitionInput, 'id'> & { id: string }
+
+/** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
+export function titleOf(task: TaskDefinition): string {
+  return task.title ?? task.id
+}
+
+/** 任务来源标识（系统生成 id 的稳定锚点：inline 用下标，目录模式用文件路径）。 */
+export interface TaskSource {
+  /** 同一定位在多次加载间保持稳定 ⇒ 生成的 id 不会漂。 */
+  sourceKey: string
+  def: TaskDefinitionInput
+}
 
 /** 把 ISO 8601 时长解析成毫秒。 */
 export function durationMs(iso: string): number {
@@ -82,21 +108,49 @@ export function logicalDateOf(date: Date, timeZone: string | undefined): string 
   }).format(date)
 }
 
-/** 算 cron 任务在指定日历日的计划时刻；找不到（cron 与日历不产生该日）返回 undefined。 */
-export function scheduledAtFor(task: TaskDefinition, day: string, searchFrom: Date): Date | undefined {
+/**
+ * cron 在 `[from, to)` 区间内的**全部刻度**（决策 25 的核心改动）。
+ *
+ * 旧实现 `scheduledAtFor` 按「天」只取第一个匹配 ⇒ **每小时 / 每几分钟的 cron 一天只能出
+ * 一条**，是功能缺陷。刻度**由 cron 表达式决定**，不是「上一次 + 间隔」⇒ 迟到 / 重启 /
+ * 多跑几轮都不会漂移（8:01 才跑，记的仍是 `08:00` 这个槽）。
+ *
+ * @param cap 迭代上限（防御 cron 表达成极小间隔导致死循环）；超出即截断。
+ */
+export function scheduledSlotsFor(task: TaskDefinition | TaskDefinitionInput, from: Date, to: Date, cap = 20_000): Date[] {
   const cron = task.schedule.cron
-  if (cron === undefined) return undefined // once 任务不走 cron（互斥校验保证恰有其一）
+  if (cron === undefined) return [] // once 任务不走 cron（互斥校验保证恰有其一）
   const interval = CronExpressionParser.parse(cron, {
-    currentDate: searchFrom,
+    // -1ms：保证恰好落在 from 上的刻度不会被漏掉（cron-parser 的 next() 是严格大于）。
+    currentDate: new Date(from.getTime() - 1),
     tz: task.schedule.timezone,
   })
-  for (let i = 0; i < 62; i++) {
+  const slots: Date[] = []
+  for (let i = 0; i < cap; i++) {
     const next = interval.next().toDate()
-    const dayOf = logicalDateOf(next, task.schedule.timezone)
-    if (dayOf === day) return next
-    if (dayOf > day) return undefined
+    if (next.getTime() >= to.getTime()) break
+    if (next.getTime() >= from.getTime()) slots.push(next)
   }
-  return undefined
+  return slots
+}
+
+/**
+ * 某日历日上的第一个刻度（重排与历史补跑用：决策 20 的 live 重排、§7 backfill
+ * 都以「天」为粒度，保留一个刻度/天 的语义即可）。
+ */
+export function firstSlotOnDay(task: TaskDefinition, day: string): Date | undefined {
+  if (task.schedule.once !== undefined) return onceScheduledAt(task, day)
+  const anchor = Date.parse(`${day}T00:00:00`)
+  // 前后各放宽：起点减 26h 覆盖最大时区偏移，终点加 48h 覆盖 DST 造成的日界漂移。
+  const slots = scheduledSlotsFor(task, new Date(anchor - 26 * 3600_000), new Date(anchor + 48 * 3600_000))
+  return slots.find(slot => logicalDateOf(slot, task.schedule.timezone) === day)
+}
+
+/** 给定时刻之后的下一个刻度（面板展示「下次执行」用）。 */
+export function nextSlotAfter(task: TaskDefinition, from: Date): Date | undefined {
+  if (task.schedule.once !== undefined) return onceScheduledAt(task, task.schedule.once.slice(0, 10))
+  const slots = scheduledSlotsFor(task, from, new Date(from.getTime() + 366 * 24 * 3600_000), 2_000)
+  return slots[0]
 }
 
 /** 某时区在给定绝对时刻的 UTC 偏移毫秒（DST 敏感）。 */
@@ -140,7 +194,7 @@ export function onceScheduledAt(task: TaskDefinition, day: string): Date | undef
 }
 
 /** 单个任务定义的公共校验（schema + 互斥 + 时区 + cron/once），文件目录与内嵌两路共用。 */
-function checkedTask(logger: HostLogger, label: string, data: unknown): TaskDefinition | undefined {
+function checkedTask(logger: HostLogger, label: string, data: unknown): TaskDefinitionInput | undefined {
   const parsed = taskDefinitionSchema.safeParse(data)
   if (!parsed.success) {
     logger.warn(`任务定义校验失败 ${label}: ${parsed.error.message}`)
@@ -170,8 +224,11 @@ function checkedTask(logger: HostLogger, label: string, data: unknown): TaskDefi
   return def
 }
 
-/** 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。 */
-export function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinition[] {
+/**
+ * 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。
+ * 返回 **来源对**：`sourceKey` 用下标定位，供系统生成 / 复用的稳定 id 锚定（决策 25）。
+ */
+export function parseInlineTasks(logger: HostLogger, raw: string): TaskSource[] {
   const text = raw.trim()
   if (text.length === 0) return []
   let data: unknown
@@ -185,16 +242,19 @@ export function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinitio
     logger.warn('内嵌任务表必须是 JSON 数组')
     return []
   }
-  const tasks: TaskDefinition[] = []
+  const sources: TaskSource[] = []
   for (const [index, item] of data.entries()) {
     const def = checkedTask(logger, `内嵌任务表[${index}]`, item)
-    if (def?.enabled) tasks.push(def)
+    if (def?.enabled) sources.push({ sourceKey: `inline:${index}`, def })
   }
-  return tasks
+  return sources
 }
 
-/** 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。 */
-export function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[] {
+/**
+ * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
+ * `sourceKey` 用**文件绝对路径**（一文件一任务）⇒ 改文件内容、改 title 都不会丢 id。
+ */
+export function loadTasks(logger: HostLogger, tasksDir: string): TaskSource[] {
   const dir = resolve(tasksDir)
   let names: string[]
   try {
@@ -203,16 +263,16 @@ export function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[
     logger.warn(`任务表目录不可读 ${dir}: ${String(error)}`)
     return []
   }
-  const tasks: TaskDefinition[] = []
+  const sources: TaskSource[] = []
   for (const name of names) {
     const file = `${dir}/${name}`
     try {
       if (!statSync(file).isFile()) continue
       const def = checkedTask(logger, file, JSON.parse(readFileSync(file, 'utf8')))
-      if (def?.enabled) tasks.push(def)
+      if (def?.enabled) sources.push({ sourceKey: `file:${file}`, def })
     } catch (error) {
       logger.warn(`任务定义读取失败 ${file}: ${String(error)}`)
     }
   }
-  return tasks
+  return sources
 }

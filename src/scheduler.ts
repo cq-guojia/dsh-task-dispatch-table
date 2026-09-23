@@ -2,8 +2,11 @@
 // 所有判定纯程序逻辑，零 token（§1）。
 import type { HostContext, HostLogger, HostWorkspace } from './host.js'
 import type { PluginConfig } from './config.js'
-import { durationMs, loadTasks, logicalDateOf, onceScheduledAt, parseInlineTasks, scheduledAtFor } from './tasks.js'
-import type { TaskDefinition } from './tasks.js'
+import {
+  durationMs, firstSlotOnDay, loadTasks, logicalDateOf,
+  onceScheduledAt, parseInlineTasks, scheduledSlotsFor,
+} from './tasks.js'
+import type { TaskDefinition, TaskSource } from './tasks.js'
 import type { TaskStore, TaskInstance } from './store.js'
 import type { Reconciler } from './reconcile.js'
 import { DispatchPreconditionError, dispatchTask, resolveWorkspace } from './dispatch.js'
@@ -40,14 +43,29 @@ function shiftDay(day: string, days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
+/** 单任务单次 ensureInstances 最多创建的实例数（防御分钟级 cron 在长窗口下爆量）。 */
+const MAX_ENSURE_SLOTS = 200
+
 /**
- * 任务在某日历日的计划时刻。cron 任务向前迭代 cron（searchFrom 取该日前 26h 起，
- * 上限 2000 次迭代覆盖分钟级 cron）；once 任务（决策 18）仅在 once 对应日历日
- * 返回其指定时刻 —— 实例唯一 ⇒ 跑完自动停，无需改 enabled。
+ * 任务在 `[from, to)` 内的**全部计划刻度**（决策 25）。
+ * cron 任务按表达式逐个产出（支持小时级 / 分钟级）；once 任务（决策 18）只有它那一个刻度。
+ */
+function slotsOf(task: TaskDefinition, from: Date, to: Date): Date[] {
+  if (task.schedule.once !== undefined) {
+    const at = onceScheduledAt(task, task.schedule.once.slice(0, 10))
+    if (at === undefined) return []
+    return at.getTime() >= from.getTime() && at.getTime() < to.getTime() ? [at] : []
+  }
+  return scheduledSlotsFor(task, from, to)
+}
+
+/**
+ * 任务在某日历日的计划时刻（历史补跑 / live 重排用，一天一个刻度即可）。
+ * cron 用 `firstSlotOnDay`；once 任务（决策 18）仅在 once 对应日历日返回其指定时刻
+ * —— 实例唯一 ⇒ 跑完自动停，无需改 enabled。
  */
 function planFor(task: TaskDefinition, day: string): Date | undefined {
-  if (task.schedule.once !== undefined) return onceScheduledAt(task, day)
-  return scheduledAtFor(task, day, new Date(Date.parse(`${day}T00:00:00`) - 26 * 3600_000))
+  return firstSlotOnDay(task, day)
 }
 
 function windowDeadline(task: TaskDefinition, instance: TaskInstance): number {
@@ -57,16 +75,27 @@ function windowDeadline(task: TaskDefinition, instance: TaskInstance): number {
 export function createScheduler({ ctx, logger, store, reconciler, config }: SchedulerDeps): Scheduler {
   let tasks = new Map<string, TaskDefinition>()
 
-  /** 窗口内 pending / 已过窗 skipped 留痕（§3 实例保障 / §7）。 */
-  function ensureInstances(currentTasks: TaskDefinition[]): void {
+  /**
+   * 实例保障（决策 25 重写）：不再是「一天一条」，而是把窗口内 cron 的**每个刻度**都建一条
+   * —— 这才是小时级 / 分钟级 cron 能真正跑起来的前提（旧实现一天只产一个时刻）。
+   *
+   * 窗口 = `[now - max(窗口时长, 26h), now + 2×tick]`：回看覆盖「刚过去、可能被漏掉」的刻度，
+   * 前看覆盖「即将到点」的刻度。刻度按时间升序产出，数量超 `MAX_ENSURE_SLOTS` 时**只保留最近的**
+   * ——近期刻度才是要跑的，更远的历史交给 `backfill.days`（§7）。
+   * 幂等由 `UNIQUE(task_id, scheduled_at)` 保证：同一刻度重复 INSERT 一律 DO NOTHING。
+   */
+  function ensureInstances(currentTasks: TaskDefinition[], tickMs: number): void {
+    const now = Date.now()
     for (const task of currentTasks) {
-      for (const day of [shiftDay(todayOf(task), -1), todayOf(task)]) {
-        const scheduledAt = planFor(task, day)
-        if (scheduledAt === undefined) continue
-        const instanceId = `${task.id}:${day}`
-        if (store.get(instanceId) !== undefined) continue
-        const overWindow = Date.now() > scheduledAt.getTime() + durationMs(task.schedule.window)
-        store.ensureInstance(task.id, day, scheduledAt.toISOString(), overWindow ? 'skipped' : 'pending')
+      const windowMs = durationMs(task.schedule.window)
+      const from = new Date(now - Math.max(windowMs, 26 * 3600_000))
+      const to = new Date(now + 2 * tickMs)
+      let slots = slotsOf(task, from, to)
+      if (slots.length > MAX_ENSURE_SLOTS) slots = slots.slice(-MAX_ENSURE_SLOTS)
+      for (const slot of slots) {
+        const day = logicalDateOf(slot, task.schedule.timezone)
+        const overWindow = now > slot.getTime() + windowMs
+        store.ensureInstance(task.id, day, slot.toISOString(), overWindow ? 'skipped' : 'pending')
       }
     }
   }
@@ -81,18 +110,33 @@ export function createScheduler({ ctx, logger, store, reconciler, config }: Sche
     for (const task of currentTasks) {
       const pendings = store.listByStatus(['pending'])
         .filter(instance => instance.task_id === task.id && instance.attempt === 0)
+      if (pendings.length === 0) continue
+      // 决策 25：一天可能有多个刻度 ⇒ 先按「日」汇总当前配置产出的刻度，
+      // 再逐条判断：自己的刻度还在 ⇒ 不动；被配置移除 ⇒ 迁移到当日还空着的刻度。
+      const slotsByDay = new Map<string, string[]>()
+      for (const day of new Set(pendings.map(instance => instance.logical_date))) {
+        const anchor = Date.parse(`${day}T00:00:00`)
+        const slots = slotsOf(task, new Date(anchor - 26 * 3600_000), new Date(anchor + 48 * 3600_000))
+          .filter(slot => logicalDateOf(slot, task.schedule.timezone) === day)
+          .map(slot => slot.toISOString())
+        slotsByDay.set(day, slots)
+      }
+      const occupied = new Set(pendings.map(instance => instance.scheduled_at))
       for (const instance of pendings) {
-        const planned = planFor(task, instance.logical_date)
-        if (planned === undefined) {
+        const slots = slotsByDay.get(instance.logical_date) ?? []
+        if (slots.includes(instance.scheduled_at)) continue // 仍是有效刻度：无需重排
+        // 该刻度被配置移除（改了 cron / 改了时刻）⇒ 迁到当日第一个还空着的刻度。
+        const target = slots.find(slot => !occupied.has(slot))
+        if (target === undefined) {
           store.transition(instance.id, {
             status: 'skipped', finished_at: new Date().toISOString(), detail: 'plan-removed',
           })
           continue
         }
-        const plannedIso = planned.toISOString()
-        if (plannedIso === instance.scheduled_at) continue
-        if (store.reschedule(instance.id, plannedIso)) {
-          store.appendEvent(instance.id, 'reschedule', { from: instance.scheduled_at, to: plannedIso })
+        if (store.reschedule(instance.id, target)) {
+          occupied.delete(instance.scheduled_at)
+          occupied.add(target)
+          store.appendEvent(instance.id, 'reschedule', { from: instance.scheduled_at, to: target })
         }
       }
     }
@@ -197,13 +241,20 @@ export function createScheduler({ ctx, logger, store, reconciler, config }: Sche
     tick(): void {
       const cfg = config()
       // 任务来源：tasksInline（配置页 textarea，临时 UI）非空则优先，否则读 tasksDir 目录。
-      const source = cfg.tasksInline.trim().length > 0
+      const sources: TaskSource[] = cfg.tasksInline.trim().length > 0
         ? parseInlineTasks(logger, cfg.tasksInline)
         : loadTasks(logger, cfg.tasksDir)
-      tasks = new Map(source.map(task => [task.id, task]))
+      // 身份解析（决策 25）：用户不写 id ⇒ 系统按来源生成并登记，同一条配置跨重启复用同一 id；
+      // 用户显式写了 id 则以用户写的为准（兼容既有定义，也让 depends_on 可以稳定引用）。
+      tasks = new Map<string, TaskDefinition>()
+      for (const { sourceKey, def } of sources) {
+        const id = store.resolveTaskId(sourceKey, def.title ?? def.id ?? '', def.id)
+        const resolved: TaskDefinition = { ...def, id, title: def.title ?? id }
+        if (!tasks.has(id)) tasks.set(id, resolved)
+      }
       const currentTasks = [...tasks.values()]
       reconciler.sweep()
-      ensureInstances(currentTasks)
+      ensureInstances(currentTasks, cfg.tickMs)
       reschedulePass(currentTasks)
       dispatchPass(currentTasks)
     },

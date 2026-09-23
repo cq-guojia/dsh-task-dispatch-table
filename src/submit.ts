@@ -36,7 +36,6 @@ const outputs = (get('outputs') ?? '')
   .filter(part => part.length > 0)
 const note = get('note')
 
-const instanceId = `${taskId}:${logicalDate}`
 let db: DatabaseSync
 try {
   db = new DatabaseSync(dbPath)
@@ -45,10 +44,15 @@ try {
 }
 db.exec('PRAGMA busy_timeout = 5000;') // 与调度器进程并发写（WAL），等锁 5s
 
+// 决策 25：实例 id 已改为不透明 UUID，身份 =（任务 + 计划刻度）。
+// 手动通道仍按「任务 + 日期」定位，同日多刻度取最近一条。
 const instance = db
-  .prepare('SELECT status, session_id FROM task_instances WHERE id = ?')
-  .get(instanceId) as { status: string; session_id: string | null } | undefined
-if (instance === undefined) fail(`实例不存在: ${instanceId}`)
+  .prepare(`SELECT id, status, session_id FROM task_instances
+            WHERE task_id = ? AND logical_date = ?
+            ORDER BY scheduled_at DESC LIMIT 1`)
+  .get(taskId, logicalDate) as { id: string; status: string; session_id: string | null } | undefined
+if (instance === undefined) fail(`实例不存在: ${taskId} @ ${logicalDate}`)
+const instanceId = instance.id
 if (instance.status !== 'dispatched' && instance.status !== 'running' && instance.status !== 'unknown') {
   fail(`实例已终态（${instance.status}），回执无效`)
 }
