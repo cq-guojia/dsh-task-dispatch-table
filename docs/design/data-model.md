@@ -7,7 +7,8 @@
 
 | 字段 | 类型 | 说明 | 依据 |
 |---|---|---|---|
-| `id` | string | 任务唯一标识，kebab-case，实例派生自它 | — |
+| `id` | string | **系统生成（UUID）**：用户不填、生成后**不可变**；执行记录引用它（决策 25） | 决策 25 |
+| `title` | string | 用户可读名称：**任意文本（中文亦可）、随时可改**，**不参与身份** ⇒ 改名不改 `id`，历史不断链 | 决策 25 |
 | `enabled` | bool | 停用任务不删定义 | — |
 | `schedule.cron` | string? | 生成计划时刻；纯程序解析，零 token。**与 `once` 互斥**（周期任务用） | 架构约束 |
 | `schedule.once` | string? | `YYYY-MM-DDTHH:mm`；按 `timezone` 墙上时间解释，仅该日派发一次，跑完自动停。**与 `cron` 互斥**（一次性任务用，决策 18） | 决策 18 |
@@ -28,21 +29,27 @@
 ## 二、状态库（SQLite，路径见决策 14）
 
 ```sql
--- 任务实例状态表：状态机 7 态的载体，一行 = 一个任务的一个 logical date
+-- 任务实例状态表：状态机 7 态的载体，一行 = **一次执行（一个计划刻度）**
 CREATE TABLE task_instances (
-  id            TEXT PRIMARY KEY,        -- "<task_id>:<logical_date>"，如 image-upgrade-daily:2026-09-21
-  task_id       TEXT NOT NULL,
-  logical_date  TEXT NOT NULL,           -- ISO 日期，按计划时刻归属（决策 9），非实际开始日
-  scheduled_at  TEXT NOT NULL,           -- 计划时刻 ISO 8601（含时区偏移）
+  run_id        TEXT PRIMARY KEY,        -- ★ UUID，不透明主键（决策 25）。不用自增：客户端环境下不可靠
+  task_id       TEXT NOT NULL,           -- 引用任务定义的 id（系统生成、不可变）
+  scheduled_at  TEXT NOT NULL,           -- ★ 计划时刻（cron 算出的**刻度**，ISO 8601 含时分秒 + 时区偏移）
+                                         --   = 身份锚点 + 防重键。**不是实际执行时刻**
+  logical_date  TEXT NOT NULL,           -- = scheduled_at 所在日历日；仅供 same_period 依赖判定与界面分组
   status        TEXT NOT NULL CHECK (status IN
                   ('pending','dispatched','running','succeeded','failed','skipped','unknown')),
   attempt       INTEGER NOT NULL DEFAULT 0,  -- 重试在行内递增，不换行（决策 10）
   session_id    TEXT,                    -- 派发会话 id（对账信源）
   lease_until   TEXT,                    -- running 租约到期时刻（机制 #2）
-  dispatched_at TEXT,
+  dispatched_at TEXT,                    -- ★ 实际派发时刻（可能晚于 scheduled_at），**不进身份**
   finished_at   TEXT,
-  updated_at    TEXT NOT NULL
+  updated_at    TEXT NOT NULL,
+  UNIQUE (task_id, scheduled_at)         -- ★ 防重闸门：同一任务同一刻度只可能有一条 ⇒ tick 幂等
+  -- 待确认（未拍板，见 PROGRESS 未决项 U5）：def_revision（跑的是哪版定义）/
+  --   def_snapshot（当时的配置快照 JSON）/ run_type（scheduled | manual | retry | backfill）
 );
+
+CREATE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at);
 
 -- 执行日志表：append-only，对账与排障的证据链
 CREATE TABLE task_events (
@@ -58,7 +65,17 @@ CREATE INDEX idx_events_instance ON task_events(instance_id, seq);
 
 ## 三、关键设计
 
-1. **实例身份**：`task_id + logical_date` 唯一定位一次任务日，主键直接可读；下游依赖判定 = 一条 SELECT——`same_period` 查同 `logical_date`，`latest_success` 查 `succeeded` 的最近 `logical_date`（`freshness` 在 SQL 里比对 `scheduled_at`）。
+1. **执行身份（决策 25）**：**不透明主键** `run_id`（UUID）+ **业务键** `(task_id, scheduled_at)` 唯一约束。锚点是 **cron 算出的刻度**（含时分秒、带时区偏移），**不是日期**：
+
+   | 周期 | 刻度（`scheduled_at`） | 一天几条 |
+   |---|---|---|
+   | 每天 09:00 | `2026-09-24T09:00:00+08:00` | 1 |
+   | 每 2 小时（`0 */2 * * *`） | `…T08:00` / `…T10:00` / `…T12:00` | 多条，天然不同 |
+   | 每 15 分钟 | `…T09:00` / `…T09:15` / `…T09:30` | 多条 |
+   | 每月 1 号 09:00 | `2026-09-01T09:00:00+08:00` | 1 |
+   | `once` | 就是它那个时刻 | 1 |
+
+   刻度**由 cron 决定**，不是「上一次 + 间隔」⇒ 迟到 / 重启 / 多跑几轮都不漂移（8:01 才跑，记的仍是 `08:00` 这个槽）。**防重 = 唯一约束**：每 tick 列出窗口内的刻度逐个 INSERT，插过就插不进去 ⇒ 一天 288 轮 tick 也只有一条。下游依赖判定仍是「一条 SELECT」：`same_period` 查同 `logical_date`，`latest_success` 查 `succeeded` 的最近 `logical_date`（`freshness` 比对 `scheduled_at`）。展示用可读串拼 `task_id:scheduled_at`，**但不作主键**。
 2. **重试不换行**：`attempt` 行内递增，状态流转 `pending → dispatched → running → (failed → pending)* → 终态`；下游只见最终态，半成品状态不外泄。
 3. **原子领取**：派发时 `UPDATE ... SET status='dispatched' WHERE id=? AND status='pending'`，以受影响行数判定领取成功。单进程插件的 tick 本就顺序执行，CAS 为重启恢复与未来多实例兜底，不改变决策 7 的任何理由。
 
@@ -67,4 +84,7 @@ CREATE INDEX idx_events_instance ON task_events(instance_id, seq);
 | 取舍 | 结论 | 理由 |
 |---|---|---|
 | `logical_date` 存储格式 | ISO 字符串，不用 epoch | 可读、diff 友好、SQL 直接比较 |
+| 执行主键形态 | **UUID（不透明）**，不用自增、也不用可读复合串当主键 | 自增在客户端 / 重装 / 多实例环境下不可靠；可读串作**唯一约束**即可（Airflow 同款：整数 `id` 主键 + `run_id` 可读串去重）。界面不必显示该串 |
+| 锚点粒度 | **`scheduled_at` 刻度（含时分秒）**，不用日历日 | 日历日粒度会让每小时 / 每几分钟的 cron 一天只能出一条；刻度由 cron 决定 ⇒ 迟到不漂移、改周期类型不撞车 |
+| 计划时刻 vs 实际时刻 | 分开存：`scheduled_at`（锚点）/ `dispatched_at`（实际派发）/ `finished_at` | 同 Airflow（`logical_date` vs `start_date`/`end_date`）与 k8s（`cronjob-scheduled-timestamp` annotation）。对账的「mtime 晚于派发」用 `dispatched_at` |
 | 通知机制 | 本期不做 | 只留 `task_events` 证据；渠道选型另立决策，不塞进状态库 |

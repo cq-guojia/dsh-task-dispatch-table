@@ -90,7 +90,7 @@
 UPDATE task_instances
 SET status = 'pending', attempt = 0, lease_until = NULL,
     dispatched_at = NULL, finished_at = NULL, updated_at = <now>
-WHERE id = '<task_id>:<logical_date>';
+WHERE task_id = '<task_id>' AND scheduled_at = '<计划时刻>';  -- 决策 25：身份 = 任务 + 计划刻度
 ```
 
 ## 8. 同任务串行（拍板 D）
