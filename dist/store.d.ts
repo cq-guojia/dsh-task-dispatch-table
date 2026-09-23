@@ -45,13 +45,6 @@ export declare class TaskStore {
      * CREATE UNIQUE INDEX 直接失败、插件起不来。
      */
     private migrate;
-    /**
-     * 解析任务定义的**稳定 id**（决策 25）：
-     * - 用户显式写了 `id` ⇒ 以用户写的为准（兼容既有定义，也允许人工指定以便 `depends_on` 引用）；
-     * - 未写 ⇒ 按 `source_key` 在 `task_defs` 里查，查到就复用（跨重启稳定），查不到才生成 UUID 并登记。
-     * @param sourceKey 定义来源定位（inline 下标 / 文件路径）——改 title、改周期都不会变。
-     */
-    resolveTaskId(sourceKey: string, title: string, explicitId?: string): string;
     close(): void;
     appendEvent(instanceId: string, kind: string, detail?: unknown): void;
     /** 实例某类事件的最新一条（回执对账 / 追问判定用）。 */

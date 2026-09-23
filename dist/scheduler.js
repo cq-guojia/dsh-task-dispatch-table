@@ -209,17 +209,15 @@ export function createScheduler({ ctx, logger, store, reconciler, config }) {
         tick() {
             const cfg = config();
             // 任务来源：tasksInline（配置页 textarea，临时 UI）非空则优先，否则读 tasksDir 目录。
-            const sources = cfg.tasksInline.trim().length > 0
+            // 决策 25 修订版：id 由定义自己携带（缺失时由 parse/load 生成并写回 JSON），
+            // 调度器直接采信，不做任何「位置 / 指纹」推断。
+            const current = cfg.tasksInline.trim().length > 0
                 ? parseInlineTasks(logger, cfg.tasksInline)
                 : loadTasks(logger, cfg.tasksDir);
-            // 身份解析（决策 25）：用户不写 id ⇒ 系统按来源生成并登记，同一条配置跨重启复用同一 id；
-            // 用户显式写了 id 则以用户写的为准（兼容既有定义，也让 depends_on 可以稳定引用）。
             tasks = new Map();
-            for (const { sourceKey, def } of sources) {
-                const id = store.resolveTaskId(sourceKey, def.title ?? def.id ?? '', def.id);
-                const resolved = { ...def, id, title: def.title ?? id };
-                if (!tasks.has(id))
-                    tasks.set(id, resolved);
+            for (const task of current) {
+                if (!tasks.has(task.id))
+                    tasks.set(task.id, task);
             }
             const currentTasks = [...tasks.values()];
             reconciler.sweep();

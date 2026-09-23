@@ -3,9 +3,9 @@ import type { HostLogger } from './host.js';
 export declare const dependencySemantics: readonly ["same_period", "latest_success"];
 export type DependencySemantics = (typeof dependencySemantics)[number];
 /**
- * 任务定义输入 schema（决策 25）：`id` **可选**——用户不写，由系统在首次加载时生成并
- * 记进状态库 `task_defs` 表（跨重启稳定）；`title` 是给人看的名字，任意文本（中文亦可），
- * 随时可改、**不参与身份**。
+ * 任务定义输入 schema（决策 25）：`id` **可选**——用户不写时，由系统在首次加载时生成并
+ * **写回这段 JSON**（inline 回写 settings、目录模式回写该文件）；`title` 是给人看的名字，
+ * 任意文本（中文亦可），随时可改、**不参与身份**。
  */
 export declare const taskDefinitionSchema: z.ZodObject<{
     id: z.ZodOptional<z.ZodString>;
@@ -45,7 +45,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
 /** 用户书写形态：`id` 可缺省。 */
 export type TaskDefinitionInput = z.infer<typeof taskDefinitionSchema>;
 /**
- * 解析后的任务定义：`id` **必有**（未写时由调度器经 `store.resolveTaskId` 生成并回填）。
+ * 解析后的任务定义：`id` **必有**（用户未写时由 `withIdentity` 生成并回写 JSON）。
  * 全链路（scheduler / dispatch / reconcile）都按这个类型走，避免到处判空。
  */
 export type TaskDefinition = Omit<TaskDefinitionInput, 'id'> & {
@@ -53,12 +53,27 @@ export type TaskDefinition = Omit<TaskDefinitionInput, 'id'> & {
 };
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
 export declare function titleOf(task: TaskDefinition): string;
-/** 任务来源标识（系统生成 id 的稳定锚点：inline 用下标，目录模式用文件路径）。 */
-export interface TaskSource {
-    /** 同一定位在多次加载间保持稳定 ⇒ 生成的 id 不会漂。 */
-    sourceKey: string;
-    def: TaskDefinitionInput;
-}
+/** 生成一个任务 id：`t-` 前缀 + 32 位十六进制（与 randomUUID 去横线等长）。 */
+export declare function newTaskId(): string;
+/**
+ * 解析后补齐身份（决策 25 修订版：**不要登记表**）。
+ * ① 有 id ⇒ 直接用（trim 后）；② 没 id 或格式不对 ⇒ 按**定义内容取指纹**生成一个兜底 id
+ * ——同一份配置每次解析都是同一个 id，既不会漂也不会需要额外的表。
+ * 正常路径下 id 已由 `ensureIdsInInlineJson` / `loadTasks` 写回 JSON，走不到这个兜底。
+ */
+export declare function withIdentity(def: TaskDefinitionInput): TaskDefinition;
+/**
+ * 给**内嵌任务表 JSON** 补 id（决策 25 修订版）：逐项检查，缺 id（或 id 格式不对）的生成并
+ * 就地写回；返回新的 JSON 文本供宿主写回 settings。用户以后改名字、调顺序、删条目都不受影响
+ * ——**id 就在配置里，跟着这条任务走**。
+ *
+ * @returns changed=true 表示有新增 id，调用方应把 json 写回配置；assigned 是补的条数。
+ */
+export declare function ensureIdsInInlineJson(raw: string): {
+    json: string;
+    changed: boolean;
+    assigned: number;
+};
 /** 把 ISO 8601 时长解析成毫秒。 */
 export declare function durationMs(iso: string): number;
 /** 用 Intl 验证 IANA 时区名（schedule.timezone 缺省 = 宿主时区）。 */
@@ -91,12 +106,12 @@ export declare function nextSlotAfter(task: TaskDefinition, from: Date): Date | 
  */
 export declare function onceScheduledAt(task: TaskDefinition, day: string): Date | undefined;
 /**
- * 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。
- * 返回 **来源对**：`sourceKey` 用下标定位，供系统生成 / 复用的稳定 id 锚定（决策 25）。
+ * 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过；
+ * 每条经 `withIdentity` 补齐 id（没写就按定义内容取指纹兜底——正常路径下 id 已写回 JSON）。
  */
-export declare function parseInlineTasks(logger: HostLogger, raw: string): TaskSource[];
+export declare function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinition[];
 /**
  * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
- * `sourceKey` 用**文件绝对路径**（一文件一任务）⇒ 改文件内容、改 title 都不会丢 id。
+ * 缺 id 的文件**直接写回**（决策 25 修订版：id 跟着定义走，不靠任何位置或指纹去推断）。
  */
-export declare function loadTasks(logger: HostLogger, tasksDir: string): TaskSource[];
+export declare function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[];

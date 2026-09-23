@@ -1,6 +1,7 @@
 // 任务定义：从任务表目录读 *.json，zod 校验 14 字段（data-model.md 一节），enabled 过滤。
 // 定义存 JSON 文件人改进 Git（决策 6），本模块只读不写。
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { createHash, randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 // cron-parser 5.x 为 ESM，命名导出 CronExpressionParser。
@@ -9,12 +10,12 @@ import { CronExpressionParser } from 'cron-parser';
 const isoDuration = z.string().regex(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, 'ISO 8601 时长，如 PT4H');
 export const dependencySemantics = ['same_period', 'latest_success'];
 /**
- * 任务定义输入 schema（决策 25）：`id` **可选**——用户不写，由系统在首次加载时生成并
- * 记进状态库 `task_defs` 表（跨重启稳定）；`title` 是给人看的名字，任意文本（中文亦可），
- * 随时可改、**不参与身份**。
+ * 任务定义输入 schema（决策 25）：`id` **可选**——用户不写时，由系统在首次加载时生成并
+ * **写回这段 JSON**（inline 回写 settings、目录模式回写该文件）；`title` 是给人看的名字，
+ * 任意文本（中文亦可），随时可改、**不参与身份**。
  */
 export const taskDefinitionSchema = z.object({
-    /** 系统生成并持久化（`task_defs` 表）；用户显式写了则以用户写的为准（兼容既有定义）。 */
+    /** 系统生成并**写回 JSON**；用户显式写了则以用户写的为准（兼容既有定义）。 */
     id: z.string().min(1).optional(),
     /** 用户可读名称：任意文本，可改，不影响身份与历史记录。缺省回退到 id。 */
     title: z.string().min(1).optional(),
@@ -54,6 +55,70 @@ export const taskDefinitionSchema = z.object({
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
 export function titleOf(task) {
     return task.title ?? task.id;
+}
+/**
+ * id 是否可用：**任意非空字符串**都算数（兼容既有定义里手写的 kebab-case id）。
+ * 只有「没写 / 空串 / 不是字符串」才算没有——按用户口径：格式不对就当没有，重新生成一个。
+ */
+function isUsableId(value) {
+    return typeof value === 'string' && value.trim() !== '';
+}
+/** 生成一个任务 id：`t-` 前缀 + 32 位十六进制（与 randomUUID 去横线等长）。 */
+export function newTaskId() {
+    return `t-${randomUUID().replace(/-/g, '')}`;
+}
+/**
+ * 解析后补齐身份（决策 25 修订版：**不要登记表**）。
+ * ① 有 id ⇒ 直接用（trim 后）；② 没 id 或格式不对 ⇒ 按**定义内容取指纹**生成一个兜底 id
+ * ——同一份配置每次解析都是同一个 id，既不会漂也不会需要额外的表。
+ * 正常路径下 id 已由 `ensureIdsInInlineJson` / `loadTasks` 写回 JSON，走不到这个兜底。
+ */
+export function withIdentity(def) {
+    if (isUsableId(def.id)) {
+        const id = def.id.trim();
+        return { ...def, id, title: def.title ?? id };
+    }
+    const { id: _dropped, ...rest } = def;
+    const id = `t-${createHash('sha256').update(JSON.stringify(rest)).digest('hex').slice(0, 32)}`;
+    return { ...def, id, title: def.title ?? id };
+}
+/**
+ * 给**内嵌任务表 JSON** 补 id（决策 25 修订版）：逐项检查，缺 id（或 id 格式不对）的生成并
+ * 就地写回；返回新的 JSON 文本供宿主写回 settings。用户以后改名字、调顺序、删条目都不受影响
+ * ——**id 就在配置里，跟着这条任务走**。
+ *
+ * @returns changed=true 表示有新增 id，调用方应把 json 写回配置；assigned 是补的条数。
+ */
+export function ensureIdsInInlineJson(raw) {
+    const text = raw.trim();
+    if (text === '')
+        return { json: raw, changed: false, assigned: 0 };
+    let data;
+    try {
+        data = JSON.parse(text);
+    }
+    catch {
+        return { json: raw, changed: false, assigned: 0 }; // 非法 JSON：交给既有校验去告警，这里不动
+    }
+    if (!Array.isArray(data))
+        return { json: raw, changed: false, assigned: 0 };
+    let assigned = 0;
+    for (const item of data) {
+        if (item === null || typeof item !== 'object' || Array.isArray(item))
+            continue;
+        const record = item;
+        if (isUsableId(record.id)) {
+            const trimmed = record.id.trim();
+            if (trimmed !== record.id)
+                record.id = trimmed;
+            continue;
+        }
+        record.id = newTaskId(); // 写进 JSON ⇒ 持久化，不再依赖任何位置或指纹
+        assigned++;
+    }
+    if (assigned === 0)
+        return { json: raw, changed: false, assigned: 0 };
+    return { json: JSON.stringify(data, null, 2), changed: true, assigned };
 }
 /** 把 ISO 8601 时长解析成毫秒。 */
 export function durationMs(iso) {
@@ -201,8 +266,8 @@ function checkedTask(logger, label, data) {
     return def;
 }
 /**
- * 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过。
- * 返回 **来源对**：`sourceKey` 用下标定位，供系统生成 / 复用的稳定 id 锚定（决策 25）。
+ * 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过；
+ * 每条经 `withIdentity` 补齐 id（没写就按定义内容取指纹兜底——正常路径下 id 已写回 JSON）。
  */
 export function parseInlineTasks(logger, raw) {
     const text = raw.trim();
@@ -220,17 +285,17 @@ export function parseInlineTasks(logger, raw) {
         logger.warn('内嵌任务表必须是 JSON 数组');
         return [];
     }
-    const sources = [];
+    const tasks = [];
     for (const [index, item] of data.entries()) {
         const def = checkedTask(logger, `内嵌任务表[${index}]`, item);
         if (def?.enabled)
-            sources.push({ sourceKey: `inline:${index}`, def });
+            tasks.push(withIdentity(def));
     }
-    return sources;
+    return tasks;
 }
 /**
  * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
- * `sourceKey` 用**文件绝对路径**（一文件一任务）⇒ 改文件内容、改 title 都不会丢 id。
+ * 缺 id 的文件**直接写回**（决策 25 修订版：id 跟着定义走，不靠任何位置或指纹去推断）。
  */
 export function loadTasks(logger, tasksDir) {
     const dir = resolve(tasksDir);
@@ -242,19 +307,29 @@ export function loadTasks(logger, tasksDir) {
         logger.warn(`任务表目录不可读 ${dir}: ${String(error)}`);
         return [];
     }
-    const sources = [];
+    const tasks = [];
     for (const name of names) {
         const file = `${dir}/${name}`;
         try {
             if (!statSync(file).isFile())
                 continue;
-            const def = checkedTask(logger, file, JSON.parse(readFileSync(file, 'utf8')));
+            const raw = JSON.parse(readFileSync(file, 'utf8'));
+            // 决策 25 修订版：id 就写在定义文件里。缺 id ⇒ 生成并**写回文件**（用户看得见、进 Git）。
+            if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+                const record = raw;
+                if (!isUsableId(record.id)) {
+                    record.id = newTaskId();
+                    writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
+                    logger.info(`任务定义 ${file} 缺少 id，已生成并写回: ${record.id}`);
+                }
+            }
+            const def = checkedTask(logger, file, raw);
             if (def?.enabled)
-                sources.push({ sourceKey: `file:${file}`, def });
+                tasks.push(withIdentity(def));
         }
         catch (error) {
             logger.warn(`任务定义读取失败 ${file}: ${String(error)}`);
         }
     }
-    return sources;
+    return tasks;
 }

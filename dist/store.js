@@ -7,16 +7,9 @@ import { dirname } from 'node:path';
 export const TERMINAL_STATUSES = ['succeeded', 'failed', 'skipped'];
 const NON_TERMINAL_STATUSES = ['pending', 'dispatched', 'running', 'unknown'];
 const DDL = `
--- 任务定义身份登记表（决策 25）：用户不写 id ⇒ 系统生成一次并记住，跨重启稳定。
--- source_key = 定义来源定位（inline 下标 / 目录文件路径），保证「同一条配置」始终同一 id。
-CREATE TABLE IF NOT EXISTS task_defs (
-  id         TEXT PRIMARY KEY,
-  source_key TEXT NOT NULL UNIQUE,
-  title      TEXT,
-  updated_at TEXT NOT NULL
-);
-
 -- 执行记录表：一行 = **一次执行（一个计划刻度）**。
+-- （决策 25 修订版：任务 id 直接写在用户的任务定义 JSON 里，**不再有 task_defs 登记表**——
+--   按位置或内容指纹去对应，都会在「删第一条 / 调顺序」时串号；id 跟着那条定义走才是对的。）
 -- id = UUID 不透明主键（决策 25：自增在客户端 / 重装环境下不可靠）；
 -- (task_id, scheduled_at) 唯一 = 防重闸门 ⇒ tick 幂等，同一刻度插不进第二条。
 CREATE TABLE IF NOT EXISTS task_instances (
@@ -77,40 +70,6 @@ export class TaskStore {
         this.db.exec(`DELETE FROM task_instances WHERE rowid NOT IN
          (SELECT MIN(rowid) FROM task_instances GROUP BY task_id, scheduled_at)`);
         this.db.exec('CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at)');
-    }
-    /**
-     * 解析任务定义的**稳定 id**（决策 25）：
-     * - 用户显式写了 `id` ⇒ 以用户写的为准（兼容既有定义，也允许人工指定以便 `depends_on` 引用）；
-     * - 未写 ⇒ 按 `source_key` 在 `task_defs` 里查，查到就复用（跨重启稳定），查不到才生成 UUID 并登记。
-     * @param sourceKey 定义来源定位（inline 下标 / 文件路径）——改 title、改周期都不会变。
-     */
-    resolveTaskId(sourceKey, title, explicitId) {
-        if (explicitId !== undefined && explicitId.trim() !== '') {
-            const id = explicitId.trim();
-            try {
-                this.db
-                    .prepare(`INSERT INTO task_defs (id, source_key, title, updated_at) VALUES (?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                      source_key = excluded.source_key, title = excluded.title, updated_at = excluded.updated_at`)
-                    .run(id, sourceKey, title, nowIso());
-            }
-            catch {
-                // source_key 已被另一个 id 占用（定义被替换）：保留既有归属，不抢。
-            }
-            return id;
-        }
-        const existing = this.db
-            .prepare('SELECT id FROM task_defs WHERE source_key = ?')
-            .get(sourceKey);
-        if (existing !== undefined) {
-            this.db.prepare('UPDATE task_defs SET title = ?, updated_at = ? WHERE id = ?')
-                .run(title, nowIso(), existing.id);
-            return existing.id;
-        }
-        const id = `t-${randomUUID()}`;
-        this.db.prepare('INSERT INTO task_defs (id, source_key, title, updated_at) VALUES (?, ?, ?, ?)')
-            .run(id, sourceKey, title, nowIso());
-        return id;
     }
     close() {
         this.db.close();

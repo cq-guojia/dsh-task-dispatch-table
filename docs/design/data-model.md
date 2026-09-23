@@ -7,7 +7,7 @@
 
 | 字段 | 类型 | 说明 | 依据 |
 |---|---|---|---|
-| `id` | string | **系统生成（UUID）**：用户不填、生成后**不可变**；执行记录引用它（决策 25） | 决策 25 |
+| `id` | string? | **用户不填**：首次加载时系统生成并**写回这段 JSON**（inline 回写 settings、目录模式回写该文件）；写了就以用户写的为准。**任意非空字符串都算合法**（兼容既有 kebab-case）。空串 / 非字符串 = 视为没有，重新生成并覆盖 | 决策 25 |
 | `title` | string | 用户可读名称：**任意文本（中文亦可）、随时可改**，**不参与身份** ⇒ 改名不改 `id`，历史不断链 | 决策 25 |
 | `enabled` | bool | 停用任务不删定义 | — |
 | `schedule.cron` | string? | 生成计划时刻；纯程序解析，零 token。**与 `once` 互斥**（周期任务用） | 架构约束 |
@@ -29,20 +29,14 @@
 ## 二、状态库（SQLite，路径见决策 14）
 
 ```sql
--- 任务定义身份登记表（决策 25）：用户不写 id ⇒ 系统生成一次并记在这里，跨重启稳定。
--- source_key = 定义来源定位（inline 下标 / 目录文件路径）⇒ 改 title、改周期都不会丢 id。
-CREATE TABLE task_defs (
-  id         TEXT PRIMARY KEY,
-  source_key TEXT NOT NULL UNIQUE,
-  title      TEXT,
-  updated_at TEXT NOT NULL
-);
+-- 状态库只有**两张表**：任务定义（含 id）存在用户的 JSON 里（决策 6），库里不存定义，
+-- 也不存任何「位置 → id」的对照表（决策 25 修订版：下标锚点会在「删第一条」时串号）。
 
 -- 任务实例状态表：状态机 7 态的载体，一行 = **一次执行（一个计划刻度）**
 CREATE TABLE task_instances (
   id            TEXT PRIMARY KEY,        -- ★ UUID 不透明主键（决策 25）。
                                          --   列名沿用 id（而非 run_id）：旧库无需重建表即可升级
-  task_id       TEXT NOT NULL,           -- 引用 task_defs.id（系统生成、不可变）
+  task_id       TEXT NOT NULL,           -- 任务定义 JSON 里的 id（用户写的，或系统生成并回写的）
   scheduled_at  TEXT NOT NULL,           -- ★ 计划时刻（cron 算出的**刻度**，ISO 8601 含时分秒 + 时区偏移）
                                          --   = 身份锚点 + 防重键。**不是实际执行时刻**
   logical_date  TEXT NOT NULL,           -- = scheduled_at 所在日历日；仅供 same_period 依赖判定与界面分组

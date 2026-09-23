@@ -5,7 +5,7 @@ import type { HostContext, HostLogger } from './host.js'
 import { Config, resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
-import { nextSlotAfter, titleOf } from './tasks.js'
+import { ensureIdsInInlineJson, nextSlotAfter, titleOf } from './tasks.js'
 import { TaskStore } from './store.js'
 import { createReconciler } from './reconcile.js'
 import type { ReconcileOptions } from './reconcile.js'
@@ -135,8 +135,27 @@ export function apply(ctx: HostContext, config: unknown): void {
   ctx.on('session/event', (session, event) => { reconciler.onEvent(session, event); updateSnapshot() })
   ctx.on('session/disposed', session => { reconciler.onDisposed(session); updateSnapshot() })
 
+  /**
+   * 内嵌任务表缺 id 时**把生成的 id 写回配置**（决策 25 修订版）。
+   * 只在真的补了 id 时才写 ⇒ 不会每 tick 都写；写回后配置里就有 id 了，下次直接采信。
+   * 写失败（并发栅栏 / 只读）不致命：解析侧还有「按内容指纹兜底」的 id，不会漂。
+   */
+  const ensureInlineIds = (): void => {
+    try {
+      const raw = scope.get().tasksInline
+      const { json, changed, assigned } = ensureIdsInInlineJson(raw)
+      if (!changed) return
+      scope.update({ tasksInline: json })
+        .then(() => teeLogger.info(`已为 ${assigned} 条任务定义生成 id 并写回配置`))
+        .catch((error: unknown) => teeLogger.warn(`任务 id 写回配置失败（将在下次 tick 重试）: ${String(error)}`))
+    } catch (error) {
+      teeLogger.warn(`任务 id 补写异常: ${String(error)}`)
+    }
+  }
+
   const safeTick = (): void => {
     try {
+      ensureInlineIds()
       scheduler.tick()
       taskMap = scheduler.getTasks()
     } catch (error) {

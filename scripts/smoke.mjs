@@ -6,7 +6,9 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
-import { firstSlotOnDay, nextSlotAfter, scheduledSlotsFor } from '../dist/tasks.js'
+import {
+  ensureIdsInInlineJson, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor,
+} from '../dist/tasks.js'
 import { TaskStore } from '../dist/store.js'
 import { createReconciler } from '../dist/reconcile.js'
 import { createScheduler } from '../dist/scheduler.js'
@@ -76,17 +78,59 @@ try {
   const next = nextSlotAfter(hourly, new Date('2026-09-24T10:30:00Z'))
   check('nextSlotAfter 给出下一个刻度', next !== undefined && next.getTime() > Date.parse('2026-09-24T10:30:00Z'))
 
-  // ── 2. 定义身份：用户不写 id，系统生成并记住 ──
-  console.log('\n[2] 定义身份 resolveTaskId')
+  // ── 2. 定义身份：id 写进 JSON（不依赖位置、不需要登记表）──
+  console.log('\n[2] 定义身份 ensureIdsInInlineJson')
+  const noopLogger = { info() {}, warn() {}, error() {} }
   const store = new TaskStore(join(root, 'state.db'))
-  const idA = store.resolveTaskId('inline:0', '日报')
-  const idA2 = store.resolveTaskId('inline:0', '日报（改名不影响）')
-  check('同一来源跨次加载复用同一 id', idA === idA2, `${idA} vs ${idA2}`)
-  check('无 id 时系统生成（前缀 t- + UUID）', /^t-[0-9a-f-]{36}$/.test(idA), idA)
-  const idB = store.resolveTaskId('inline:1', '周报', 'my-weekly')
-  check('显式写了 id 则以用户写的为准', idB === 'my-weekly')
-  const idC = store.resolveTaskId('file:/tmp/a.json', '文件任务')
-  check('不同来源得到不同 id', idA !== idC)
+  const twoTasks = JSON.stringify([
+    { title: 'A', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' } },
+    { title: 'B', enabled: true, schedule: { cron: '0 10 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'b' } },
+  ])
+  const r1 = ensureIdsInInlineJson(twoTasks)
+  check('缺 id 时生成并标记写回', r1.changed === true && r1.assigned === 2, `changed=${r1.changed} assigned=${r1.assigned}`)
+  const ids1 = JSON.parse(r1.json).map(item => item.id)
+  check('生成的 id 形态：t- + 32 位十六进制', ids1.every(id => /^t-[0-9a-f]{32}$/.test(id)), ids1.join(', '))
+  check('两条拿到不同 id', ids1[0] !== ids1[1])
+
+  const r2 = ensureIdsInInlineJson(r1.json)
+  check('二次调用不再变更（幂等，不会每 tick 重写）', r2.changed === false && r2.assigned === 0)
+
+  // 关键回归：删掉第一条后，剩下那条必须还是原来的 id（下标方案会串号，写进 JSON 不会）
+  const arr = JSON.parse(r1.json)
+  const bIdBefore = arr[1].id
+  arr.shift()
+  const afterDelete = ensureIdsInInlineJson(JSON.stringify(arr))
+  check('删掉第一条后，剩下任务的 id 不变', JSON.parse(afterDelete.json)[0].id === bIdBefore)
+  check('删掉第一条后不需要补 id', afterDelete.changed === false)
+
+  // 调顺序也不该动 id
+  const swapped = [JSON.parse(r1.json)[1], JSON.parse(r1.json)[0]]
+  const afterSwap = ensureIdsInInlineJson(JSON.stringify(swapped))
+  check('调换顺序后 id 各自跟着任务走', JSON.parse(afterSwap.json)[0].id === ids1[1] && afterSwap.changed === false)
+
+  // id 格式不对 ⇒ 视为没有，重新生成并覆盖
+  const badId = JSON.stringify([
+    { id: 123, title: 'C', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'c' } },
+  ])
+  const rBad = ensureIdsInInlineJson(badId)
+  check('id 格式不对（数字）当成没有，重新生成', rBad.changed === true && /^t-[0-9a-f]{32}$/.test(JSON.parse(rBad.json)[0].id))
+  const emptyId = JSON.stringify([
+    { id: '   ', title: 'D', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'd' } },
+  ])
+  check('id 是空串也当成没有', ensureIdsInInlineJson(emptyId).changed === true)
+
+  // 已有 id ⇒ 原样保留（兼容既有手写的 kebab-case）
+  const keepId = JSON.stringify([
+    { id: 'daily-report', title: 'E', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'e' } },
+  ])
+  const rKeep = ensureIdsInInlineJson(keepId)
+  check('已有 id 原样保留', rKeep.changed === false && JSON.parse(rKeep.json)[0].id === 'daily-report')
+
+  // 解析侧：每条都带 id，且有 title
+  const parsed = parseInlineTasks(noopLogger, r1.json)
+  check('解析后每条都有 id 与 title', parsed.length === 2 && parsed.every(task => task.id.length > 0 && task.title.length > 0))
+  check('解析出的 id 与写回 JSON 的一致', parsed[0].id === ids1[0] && parsed[1].id === ids1[1])
+  const idA = ids1[0]
 
   // ── 3. 执行身份与防重（UNIQUE(task_id, scheduled_at)）──
   console.log('\n[3] 执行身份与防重 ensureInstance')
