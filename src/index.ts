@@ -71,9 +71,20 @@ function fallbackScope(
 const DEBUG_EVENT_LIMIT = 200
 
 export function apply(ctx: HostContext, config: unknown): void {
-  // rc.1：Config 的 volatile 字段解析结果是带 get() 的 Volatile 引用（非纯值），须解包
-  // （readConfigField，与参考插件同款）；非 volatile 字段原样取。解包后才是真正的 PluginConfig。
-  const raw = (Config as unknown as (value: unknown) => Record<string, unknown>)(config)
+  // rc.1 兼容：本插件早前版本把 volatile 字段经 settings.update 提交，Loader 把 volatile 默认按
+  // `{}` 写进了 profile；重装后 z.number()/z.string() 校验 `{}` 会失败导致 entry 不激活。本插件
+  // 配置全是 number/string，不可能有合法的空对象，故把入参里残留的 `{}` 剥掉，让默认值生效。
+  const cleanConfig = ((): unknown => {
+    if (typeof config !== 'object' || config === null || Array.isArray(config)) return config
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(config as Record<string, unknown>)) {
+      if (typeof v === 'object' && v !== null && !Array.isArray(v) && Object.keys(v as object).length === 0) continue
+      out[k] = v
+    }
+    return out
+  })()
+  // Config 解析（非 volatile 字段是纯值；readConfigField 对纯值原样返回，对残留 Volatile 引用解包）。
+  const raw = (Config as unknown as (value: unknown) => Record<string, unknown>)(cleanConfig)
   const initial: PluginConfig = {
     statePath: typeof raw.statePath === 'string' ? raw.statePath : '',
     tickMs: readConfigField(raw.tickMs, ConfigDefaults.tickMs),

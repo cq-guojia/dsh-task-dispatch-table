@@ -48,9 +48,22 @@ function fallbackScope(sctx, settings, initial) {
 /** 快照携带的最近事件条数（面板按实例过滤展开用，故比单页展示量多留一些）。 */
 const DEBUG_EVENT_LIMIT = 200;
 export function apply(ctx, config) {
-    // rc.1：Config 的 volatile 字段解析结果是带 get() 的 Volatile 引用（非纯值），须解包
-    // （readConfigField，与参考插件同款）；非 volatile 字段原样取。解包后才是真正的 PluginConfig。
-    const raw = Config(config);
+    // rc.1 兼容：本插件早前版本把 volatile 字段经 settings.update 提交，Loader 把 volatile 默认按
+    // `{}` 写进了 profile；重装后 z.number()/z.string() 校验 `{}` 会失败导致 entry 不激活。本插件
+    // 配置全是 number/string，不可能有合法的空对象，故把入参里残留的 `{}` 剥掉，让默认值生效。
+    const cleanConfig = (() => {
+        if (typeof config !== 'object' || config === null || Array.isArray(config))
+            return config;
+        const out = {};
+        for (const [k, v] of Object.entries(config)) {
+            if (typeof v === 'object' && v !== null && !Array.isArray(v) && Object.keys(v).length === 0)
+                continue;
+            out[k] = v;
+        }
+        return out;
+    })();
+    // Config 解析（非 volatile 字段是纯值；readConfigField 对纯值原样返回，对残留 Volatile 引用解包）。
+    const raw = Config(cleanConfig);
     const initial = {
         statePath: typeof raw.statePath === 'string' ? raw.statePath : '',
         tickMs: readConfigField(raw.tickMs, ConfigDefaults.tickMs),
