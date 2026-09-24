@@ -23,6 +23,7 @@ export type LocaleKey =
   | 'colSeq' | 'colTs' | 'colKind' | 'colDetail'
   | 'filterStatus' | 'filterTask' | 'filterAll'
   | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint'
+  | 'viewSession' | 'viewSessionHint'
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
@@ -86,6 +87,8 @@ export const zh: Record<LocaleKey, string> = {
   eventsOf: '本次执行的事件',
   eventsEmpty: '（该次执行暂无事件，或已超出最近 200 条的快照窗口）',
   recordsHint: '一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。',
+  viewSession: '查看会话',
+  viewSessionHint: '在宿主原生会话视图中打开本次执行的会话（含归档会话），可读完整过程；是否能继续对话由宿主决定。',
 }
 
 /** English copy. */
@@ -150,4 +153,6 @@ export const en: Record<LocaleKey, string> = {
   eventsOf: 'Events of this run',
   eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
   recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',
+  viewSession: 'View session',
+  viewSessionHint: 'Open this run\'s session (including archived ones) in the host\'s native session view to read the full trace; whether you can continue the conversation is up to the host.',
 }

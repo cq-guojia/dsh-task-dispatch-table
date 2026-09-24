@@ -67,7 +67,9 @@ window.__ModuleLoader__.load({
 			expandHint: "点击任意一行展开该次执行的事件时间线",
 			eventsOf: "本次执行的事件",
 			eventsEmpty: "（该次执行暂无事件，或已超出最近 200 条的快照窗口）",
-			recordsHint: "一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。"
+			recordsHint: "一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。",
+			viewSession: "查看会话",
+			viewSessionHint: "在宿主原生会话视图中打开本次执行的会话（含归档会话），可读完整过程；是否能继续对话由宿主决定。"
 		};
 		/** English copy. */
 		const en = {
@@ -130,7 +132,9 @@ window.__ModuleLoader__.load({
 			expandHint: "Click any row to expand the event timeline of that run",
 			eventsOf: "Events of this run",
 			eventsEmpty: "(no events for this run, or it falls outside the latest-200 snapshot window)",
-			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs."
+			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.",
+			viewSession: "View session",
+			viewSessionHint: "Open this run's session (including archived ones) in the host's native session view to read the full trace; whether you can continue the conversation is up to the host."
 		};
 		//#endregion
 		//#region src/client/index.ts
@@ -351,6 +355,17 @@ window.__ModuleLoader__.load({
 			wordBreak: "break-all",
 			maxWidth: "480px"
 		};
+		/** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
+		const linkStyle = {
+			color: C.brand,
+			cursor: "pointer",
+			background: "none",
+			border: "none",
+			padding: 0,
+			font: "inherit",
+			fontSize: "12px",
+			transition
+		};
 		/** 刷新图标（内联 SVG：不引宿主包，颜色走 currentColor ⇒ 自动跟随主题）。 */
 		function RefreshIcon() {
 			return (0, react.createElement)("svg", {
@@ -458,7 +473,7 @@ window.__ModuleLoader__.load({
 		* 订阅自动刷新，无需手动重开。
 		*/
 		function DispatcherModal(props) {
-			const { t, scope, data, raw, onClose } = props;
+			const { t, scope, data, raw, onClose, openSession } = props;
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -604,13 +619,31 @@ window.__ModuleLoader__.load({
 					onClick: () => {
 						setExpanded(open ? null : row.id);
 					}
-				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, row.status), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
+				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, row.status), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : openSession !== null ? (0, react.createElement)("button", {
+					type: "button",
+					style: linkStyle,
+					title: row.session_id,
+					onClick: (event) => {
+						event.stopPropagation();
+						openSession(row.session_id);
+					}
+				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
 					colSpan: 6,
 					style: cellStyle
 				}, (0, react.createElement)("div", { style: {
 					fontSize: "12px",
-					marginBottom: "4px"
-				} }, t("eventsOf")), events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("eventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+					marginBottom: "4px",
+					display: "flex",
+					justifyContent: "space-between",
+					alignItems: "center",
+					gap: "8px"
+				} }, (0, react.createElement)("span", null, t("eventsOf")), openSession !== null && row.session_id !== null ? (0, react.createElement)("button", {
+					type: "button",
+					style: linkStyle,
+					onClick: () => {
+						openSession(row.session_id);
+					}
+				}, `↗ ${t("viewSession")}`) : null), events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("eventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 					t("colSeq"),
 					t("colTs"),
 					t("colKind"),
@@ -627,7 +660,7 @@ window.__ModuleLoader__.load({
 		* @param props - t 席位与绑定的设置作用域。
 		*/
 		function TasksConfigPage(props) {
-			const { t, scope } = props;
+			const { t, scope, openSession } = props;
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -651,6 +684,7 @@ window.__ModuleLoader__.load({
 				scope,
 				data: debugData,
 				raw: debugRaw,
+				openSession,
 				onClose: () => {
 					setPanelOpen(false);
 				}
@@ -668,13 +702,25 @@ window.__ModuleLoader__.load({
 					en
 				}));
 			});
+			let opener = null;
+			ctx.inject(["sessions"], (sub) => {
+				const svc = sub.sessions;
+				if (svc?.open !== void 0) opener = (id) => {
+					try {
+						svc.open(id);
+					} catch {}
+				};
+			});
 			ctx.inject(["slots", "settingsScope"], (sub) => {
 				const scope = sub.settingsScope.bind({ namespace: SETTINGS_NS });
 				sub.slots.inject("settings.plugin.item", () => sub.slots.register({
 					name: "settings.plugin.item",
 					key: SETTINGS_NS,
 					locale: LOCALE_NS,
-					inject: () => ({ scope })
+					inject: () => ({
+						scope,
+						openSession: opener
+					})
 				}, TasksConfigPage));
 			});
 		}

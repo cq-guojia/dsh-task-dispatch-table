@@ -68,6 +68,8 @@ interface ClientContext {
 interface PageProps {
   t: Translate
   scope: SettingsScope
+  /** 打开宿主原生会话视图（见 apply 内 sessions 服务注入）；服务不可用时为 null。 */
+  openSession: ((id: string) => void) | null
 }
 
 // ─────────────────────────── 页面组件 ───────────────────────────
@@ -177,6 +179,11 @@ const cellStyle: Record<string, string | number> = {
 }
 const detailCellStyle: Record<string, string | number> = {
   ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
+}
+/** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
+const linkStyle: Record<string, string | number> = {
+  color: C.brand, cursor: 'pointer', background: 'none', border: 'none', padding: 0,
+  font: 'inherit', fontSize: '12px', transition,
 }
 
 /** 刷新图标（内联 SVG：不引宿主包，颜色走 currentColor ⇒ 自动跟随主题）。 */
@@ -318,8 +325,10 @@ function DispatcherModal(props: {
   data: DebugSnapshotData | undefined
   raw: string
   onClose: () => void
+  /** 打开宿主原生会话视图（归档会话也仍在列表里，open(id) 即可定位）。服务不可用时为 null。 */
+  openSession: ((id: string) => void) | null
 }) {
-  const { t, scope, data, raw, onClose } = props
+  const { t, scope, data, raw, onClose, openSession } = props
   // 面板自己订阅 scope：保存后即时反映生效值，也拿到 writable 状态。
   const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
@@ -525,13 +534,37 @@ function DispatcherModal(props: {
                           h('td', { style: cellStyle }, formatTime(row.scheduled_at)),
                           h('td', { style: cellStyle }, row.status),
                           h('td', { style: cellStyle }, String(row.attempt)),
-                          h('td', { style: cellStyle }, row.session_id === null ? '—' : row.session_id.slice(0, 8)),
+                          h('td', { style: cellStyle },
+                            row.session_id === null ? '—'
+                              : openSession !== null
+                                ? h('button', {
+                                  type: 'button',
+                                  style: linkStyle,
+                                  title: row.session_id,
+                                  onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(row.session_id as string) },
+                                }, row.session_id.slice(0, 8))
+                                : row.session_id.slice(0, 8),
+                          ),
                           h('td', { style: cellStyle }, formatTime(row.updated_at)),
                         ),
                         open
                           ? h('tr', null,
                               h('td', { colSpan: 6, style: cellStyle },
-                                h('div', { style: { fontSize: '12px', marginBottom: '4px' } }, t('eventsOf')),
+                                h('div', {
+                                  style: {
+                                    fontSize: '12px', marginBottom: '4px',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px',
+                                  },
+                                },
+                                  h('span', null, t('eventsOf')),
+                                  (openSession !== null && row.session_id !== null)
+                                    ? h('button', {
+                                      type: 'button',
+                                      style: linkStyle,
+                                      onClick: () => { openSession(row.session_id as string) },
+                                    }, `↗ ${t('viewSession')}`)
+                                    : null,
+                                ),
                                 events.length === 0
                                   ? h('p', { style: hintStyle }, t('eventsEmpty'))
                                   : h('table', { style: tableStyle },
@@ -562,7 +595,7 @@ function DispatcherModal(props: {
  * @param props - t 席位与绑定的设置作用域。
  */
 function TasksConfigPage(props: PageProps) {
-  const { t, scope } = props
+  const { t, scope, openSession } = props
   const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
   // getSnapshot 必须返回稳定引用：作用域的实现在值不变时保证同一引用。
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
@@ -593,7 +626,7 @@ function TasksConfigPage(props: PageProps) {
       h('span', { style: chevronStyle }, '›'),
     ),
     panelOpen
-      ? h(DispatcherModal, { t, scope, data: debugData, raw: debugRaw, onClose: () => { setPanelOpen(false) } })
+      ? h(DispatcherModal, { t, scope, data: debugData, raw: debugRaw, openSession, onClose: () => { setPanelOpen(false) } })
       : null,
   )
 }
@@ -613,6 +646,16 @@ export function apply(ctx: ClientContext): void {
 
   // host 半侧用同一命名空间注册 settings section；设置页「插件」标签页遍历
   // 已服务命名空间并自动配对渲染，这里只需按命名空间贡献卡片。
+  // 会话打开服务（决策 27）：把执行记录里的会话 id 透传给宿主原生会话视图。
+  // 归档会话仍在宿主会话列表里，open(id) 即定位并打开；服务未就绪时 opener 为 null，
+  // 记录里的「查看会话」链接相应地不渲染（与兄弟插件 dsh-session-title-pattern 同款注入）。
+  let opener: ((id: string) => void) | null = null
+  ctx.inject(['sessions'], (sub: ClientContext & { sessions?: { open(id: string): void } }) => {
+    const svc = sub.sessions
+    if (svc?.open !== undefined) {
+      opener = (id: string): void => { try { svc.open(id) } catch { /* 会话不可见或已失效：静默 */ } }
+    }
+  })
   ctx.inject(['slots', 'settingsScope'], (sub) => {
     const scope = sub.settingsScope.bind({ namespace: SETTINGS_NS })
     sub.slots.inject('settings.plugin.item', () =>
@@ -622,7 +665,7 @@ export function apply(ctx: ClientContext): void {
           // keyed 槽位用 key 声明本条贡献给哪个命名空间。
           key: SETTINGS_NS,
           locale: LOCALE_NS,
-          inject: () => ({ scope }),
+          inject: () => ({ scope, openSession: opener }),
         },
         TasksConfigPage,
       ),
