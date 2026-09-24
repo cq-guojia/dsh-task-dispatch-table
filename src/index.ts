@@ -43,7 +43,14 @@ export function apply(ctx: HostContext, config: unknown): void {
   // 尚未挂上时误激活并崩，故 settings 不进顶层 inject 列表。
   ctx.inject(['settings'], (sctx: HostContext) => {
     const settings = sctx.settings
-    if (typeof settings.register !== 'function') return
+    if (typeof settings.register !== 'function') {
+      // 必须可见：静默 return 会让「插件未激活」与「注册成功」在日志上无法区分（真机排查教训）。
+      sctx.logger.warn(
+        'dsh-task-dispatch-table: 当前组合的 settings 服务未提供 register 面，插件保持未激活'
+        + '（配置页与侧栏入口都不会出现；需运行提供 ctx.settings.register 的 dsh 版本）。',
+      )
+      return
+    }
     const scope = settings.register<PluginConfig>('dsh-task-dispatch-table', Config, { base: initial })
     // statePath 启动时定格，运行期改配置不迁移库。
     const store = new TaskStore(resolveStatePath(scope.get().statePath))

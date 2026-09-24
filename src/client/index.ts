@@ -704,15 +704,21 @@ function TaskTrayButton(props: { t: Translate; scope: SettingsScope; viewSession
   const { t, scope, viewSession, wide } = props
   const panel = useTaskPanel(scope)
   const [hover, setHover] = useState(false)
-  if (!panel.ready) return null
-  // 悬停高亮走内联态（无 CSS 文件）：背景取主题变量，缺省兜底透明。
-  const btnStyle: Record<string, string | number> = { ...trayButtonStyle, background: hover ? C.hover : 'transparent' }
+  // ⚠️ 未 ready 也渲染（禁用态）：入口要求常驻可见；若未 ready 就 return null，
+  // 「槽缺失（按钮根本没注册上）」与「作用域未就绪」两种失效都表现为空白、真机无法区分。
+  const btnStyle: Record<string, string | number> = {
+    ...trayButtonStyle,
+    background: hover && panel.ready ? C.hover : 'transparent',
+    opacity: panel.ready ? 1 : 0.4,
+    cursor: panel.ready ? 'pointer' : 'not-allowed',
+  }
   return h(Fragment, null,
     h('button', {
       type: 'button',
       style: btnStyle,
-      title: t('panelTitle'),
+      title: panel.ready ? t('panelTitle') : t('unavailable'),
       'aria-label': t('panelTitle'),
+      disabled: !panel.ready,
       onClick: panel.open,
       onMouseEnter: () => { setHover(true) },
       onMouseLeave: () => { setHover(false) },

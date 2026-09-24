@@ -1143,16 +1143,18 @@ window.__ModuleLoader__.load({
 			const { t, scope, viewSession, wide } = props;
 			const panel = useTaskPanel(scope);
 			const [hover, setHover] = (0, react.useState)(false);
-			if (!panel.ready) return null;
 			const btnStyle = {
 				...trayButtonStyle,
-				background: hover ? C.hover : "transparent"
+				background: hover && panel.ready ? C.hover : "transparent",
+				opacity: panel.ready ? 1 : .4,
+				cursor: panel.ready ? "pointer" : "not-allowed"
 			};
 			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("button", {
 				type: "button",
 				style: btnStyle,
-				title: t("panelTitle"),
+				title: panel.ready ? t("panelTitle") : t("unavailable"),
 				"aria-label": t("panelTitle"),
+				disabled: !panel.ready,
 				onClick: panel.open,
 				onMouseEnter: () => {
 					setHover(true);
