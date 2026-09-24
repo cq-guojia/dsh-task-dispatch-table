@@ -49,6 +49,29 @@ interface SettingsScope {
   unset(field: string): Promise<void>
 }
 
+// ── rc.1 的共享配置表单服务（configForms）结构子集 ──
+/** 配置表单快照：与 ConfigFormSnapshot 同形（多了 revision / mode，本插件不用）。 */
+interface ConfigFormSnapshot {
+  status: string
+  value: Record<string, unknown> | undefined
+  base: unknown
+  user: unknown
+  writable: boolean
+}
+/** 一个 Host 注册项的配置表单（@deepseek-ai/dsh-client-ui-settings 的 ConfigForm 子集）。 */
+interface ConfigForm {
+  getSnapshot(): ConfigFormSnapshot
+  subscribe(listener: () => void): () => void
+  set(field: string, value: unknown): Promise<boolean>
+  unset(field: string): Promise<boolean>
+}
+/** 共享配置表单服务：按 **profile entry id** 取表单（rc.1 起按 entry id 寻址）。 */
+interface ConfigForms {
+  get(entryId: string): ConfigForm
+  /** 已服务的命名空间视图，用于探测本插件实际落在哪个 entry id 上。 */
+  describe(): { getSnapshot(): { view?: { namespaces?: readonly { ns: string }[] } } }
+}
+
 /** 浏览器插件上下文：只声明本文件实际用到的服务面。 */
 interface ClientContext {
   /** 延迟等待服务就位后执行回调（服务名 = cordis 声明名）。 */
@@ -81,6 +104,8 @@ interface ClientContext {
   settingsScope?: {
     bind(spec: { namespace: string }): SettingsScope
   }
+  /** rc.1 的共享配置表单服务（按 profile entry id 寻址）；与 settingsScope 二选一。 */
+  configForms?: ConfigForms
 }
 
 // ─────────────────────────── 页面组件 ───────────────────────────
@@ -666,18 +691,73 @@ function TaskPanelIcon(props: { size?: number }) {
   return h(TaskIcon, { size: props.size ?? 18 })
 }
 
+// ── 作用域的可用性：配置表单是异步就位的，整页需订阅它以便从占位自动切到真页面 ──
+/** 当前作用域（null = 尚未就位）。 */
+let currentScope: SettingsScope | null = null
+const scopeListeners = new Set<() => void>()
+const getScopeValue = (): SettingsScope | null => currentScope
+const subscribeScope = (listener: () => void): (() => void) => {
+  scopeListeners.add(listener)
+  return () => { scopeListeners.delete(listener) }
+}
+/** 采纳一个作用域（先到先用，不互相覆盖），并通知已挂载的整页重渲染。 */
+const adoptScope = (next: SettingsScope): void => {
+  if (currentScope !== null) return
+  currentScope = next
+  for (const listener of [...scopeListeners]) listener()
+}
+
 /**
- * 整页外壳（`main` 槽，无 hooks）：作用域未就位时给占位页，避免条件式 hooks 违反 React 规则。
- * @param props - t 席位、作用域与会话视图工厂、返回会话回调。
+ * rc.1 起设置表单按 **profile entry id** 寻址，而本插件在不同部署下的行 id 可能是聚合行 id
+ * 或裸命名空间——照参考插件的做法，从已服务命名空间里挑第一个命中的候选。
+ */
+const ENTRY_ID_CANDIDATES: readonly string[] = [
+  'dsh-task-dispatch-table',
+  'ui-task-dispatch-table',
+  'web-ui-task-dispatch-table',
+]
+/** @param forms - 共享配置表单服务。 @returns 本插件应绑定的 entry id。 */
+function servedEntryId(forms: ConfigForms): string {
+  let served: readonly string[] | undefined
+  try {
+    served = forms.describe().getSnapshot().view?.namespaces?.map(item => item.ns)
+  } catch {
+    served = undefined
+  }
+  if (served === undefined) return SETTINGS_NS
+  return ENTRY_ID_CANDIDATES.find(id => served.includes(id)) ?? SETTINGS_NS
+}
+
+/** 把 rc.1 的 ConfigForm 适配为本插件的 SettingsScope 形状。 */
+function configFormScope(form: ConfigForm): SettingsScope {
+  return {
+    getSnapshot: () => {
+      const snapshot = form.getSnapshot()
+      return {
+        status: snapshot.status,
+        value: snapshot.value,
+        base: snapshot.base as Record<string, unknown> | undefined,
+        user: snapshot.user as Record<string, unknown> | undefined,
+        writable: snapshot.writable,
+      }
+    },
+    subscribe: (listener) => form.subscribe(listener),
+    set: async (field, value) => { await form.set(field, value) },
+    unset: async (field) => { await form.unset(field) },
+  }
+}
+
+/**
+ * 整页外壳（`main` 槽）：订阅作用域可用性——配置表单异步就位后自动从占位切到真页面。
+ * @param props - t 席位、会话视图工厂、返回会话回调。
  */
 function TaskPageHost(props: {
   t: Translate
-  scopeRef: () => SettingsScope | null
   viewRef: () => ((id: string) => SessionViewTarget | null) | null
   onBack: () => void
 }) {
-  const { t, scopeRef, viewRef, onBack } = props
-  const scope = scopeRef()
+  const { t, viewRef, onBack } = props
+  const scope = useSyncExternalStore(subscribeScope, getScopeValue)
   if (scope === null) {
     return h('div', { style: pageStyle },
       h('div', { style: panelHeaderStyle },
@@ -734,14 +814,11 @@ export function apply(ctx: ClientContext): void {
     if (layout !== undefined) selectPanel = (id) => { layout.selectPanel(id) }
   })
 
-  // 设置命名空间作用域（供设置页卡片使用）。⚠️ dsh 0.1.7-rc.1 客户端已把该服务由
-  // `settingsScope` 改为 `configForms` / `settingsSchema`；此处按旧名探测，缺席则本块
-  // 不激活（设置卡片暂不出现），但**不影响侧栏入口与整页**。设置卡片待迁移到新契约。
-  let scope: SettingsScope | null = null
-  ctx.inject(['slots', 'settingsScope'], (sub) => {
-    const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS })
-    if (bound === undefined) return
-    scope = bound
+  // 设置页卡片：两套契约各尝试一次，谁先就位谁生效（registerCard 保证只注册一条）。
+  let cardRegistered = false
+  const registerCard = (sub: ClientContext): void => {
+    if (cardRegistered) return
+    cardRegistered = true
     sub.slots.inject('settings.plugin.item', () =>
       sub.slots.register(
         {
@@ -754,6 +831,20 @@ export function apply(ctx: ClientContext): void {
         TasksConfigPage,
       ),
     )
+  }
+  // rc.1：共享配置表单服务（按 profile entry id 寻址）。
+  ctx.inject(['slots', 'configForms'], (sub) => {
+    const forms = sub.configForms
+    if (forms === undefined) return
+    adoptScope(configFormScope(forms.get(servedEntryId(forms))))
+    registerCard(sub)
+  })
+  // 旧契约兜底（0.1.6 时代的 settingsScope）。
+  ctx.inject(['slots', 'settingsScope'], (sub) => {
+    const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS })
+    if (bound === undefined) return
+    adoptScope(bound)
+    registerCard(sub)
   })
 
   // 侧栏顶部条目 + 主区整页（dsh 0.1.7-rc.1 原生「主面板」机制）：
@@ -780,7 +871,6 @@ export function apply(ctx: ClientContext): void {
         { name: 'main', key: PANEL_ID, locale: LOCALE_NS },
         (props: { t: Translate }) => h(TaskPageHost, {
           t: props.t,
-          scopeRef: () => scope,
           viewRef: () => viewSession,
           onBack: () => { selectPanel(null) },
         }),

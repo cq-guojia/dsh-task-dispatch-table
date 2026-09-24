@@ -1080,13 +1080,71 @@ window.__ModuleLoader__.load({
 		function TaskPanelIcon(props) {
 			return (0, react.createElement)(TaskIcon, { size: props.size ?? 18 });
 		}
+		/** 当前作用域（null = 尚未就位）。 */
+		let currentScope = null;
+		const scopeListeners = /* @__PURE__ */ new Set();
+		const getScopeValue = () => currentScope;
+		const subscribeScope = (listener) => {
+			scopeListeners.add(listener);
+			return () => {
+				scopeListeners.delete(listener);
+			};
+		};
+		/** 采纳一个作用域（先到先用，不互相覆盖），并通知已挂载的整页重渲染。 */
+		const adoptScope = (next) => {
+			if (currentScope !== null) return;
+			currentScope = next;
+			for (const listener of [...scopeListeners]) listener();
+		};
 		/**
-		* 整页外壳（`main` 槽，无 hooks）：作用域未就位时给占位页，避免条件式 hooks 违反 React 规则。
-		* @param props - t 席位、作用域与会话视图工厂、返回会话回调。
+		* rc.1 起设置表单按 **profile entry id** 寻址，而本插件在不同部署下的行 id 可能是聚合行 id
+		* 或裸命名空间——照参考插件的做法，从已服务命名空间里挑第一个命中的候选。
+		*/
+		const ENTRY_ID_CANDIDATES = [
+			"dsh-task-dispatch-table",
+			"ui-task-dispatch-table",
+			"web-ui-task-dispatch-table"
+		];
+		/** @param forms - 共享配置表单服务。 @returns 本插件应绑定的 entry id。 */
+		function servedEntryId(forms) {
+			let served;
+			try {
+				served = forms.describe().getSnapshot().view?.namespaces?.map((item) => item.ns);
+			} catch {
+				served = void 0;
+			}
+			if (served === void 0) return SETTINGS_NS;
+			return ENTRY_ID_CANDIDATES.find((id) => served.includes(id)) ?? SETTINGS_NS;
+		}
+		/** 把 rc.1 的 ConfigForm 适配为本插件的 SettingsScope 形状。 */
+		function configFormScope(form) {
+			return {
+				getSnapshot: () => {
+					const snapshot = form.getSnapshot();
+					return {
+						status: snapshot.status,
+						value: snapshot.value,
+						base: snapshot.base,
+						user: snapshot.user,
+						writable: snapshot.writable
+					};
+				},
+				subscribe: (listener) => form.subscribe(listener),
+				set: async (field, value) => {
+					await form.set(field, value);
+				},
+				unset: async (field) => {
+					await form.unset(field);
+				}
+			};
+		}
+		/**
+		* 整页外壳（`main` 槽）：订阅作用域可用性——配置表单异步就位后自动从占位切到真页面。
+		* @param props - t 席位、会话视图工厂、返回会话回调。
 		*/
 		function TaskPageHost(props) {
-			const { t, scopeRef, viewRef, onBack } = props;
-			const scope = scopeRef();
+			const { t, viewRef, onBack } = props;
+			const scope = (0, react.useSyncExternalStore)(subscribeScope, getScopeValue);
 			if (scope === null) return (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("button", {
 				type: "button",
 				style: backButtonStyle,
@@ -1129,11 +1187,10 @@ window.__ModuleLoader__.load({
 					layout.selectPanel(id);
 				};
 			});
-			let scope = null;
-			ctx.inject(["slots", "settingsScope"], (sub) => {
-				const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS });
-				if (bound === void 0) return;
-				scope = bound;
+			let cardRegistered = false;
+			const registerCard = (sub) => {
+				if (cardRegistered) return;
+				cardRegistered = true;
 				sub.slots.inject("settings.plugin.item", () => sub.slots.register({
 					name: "settings.plugin.item",
 					key: SETTINGS_NS,
@@ -1142,6 +1199,18 @@ window.__ModuleLoader__.load({
 						selectPanel(PANEL_ID);
 					} })
 				}, TasksConfigPage));
+			};
+			ctx.inject(["slots", "configForms"], (sub) => {
+				const forms = sub.configForms;
+				if (forms === void 0) return;
+				adoptScope(configFormScope(forms.get(servedEntryId(forms))));
+				registerCard(sub);
+			});
+			ctx.inject(["slots", "settingsScope"], (sub) => {
+				const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS });
+				if (bound === void 0) return;
+				adoptScope(bound);
+				registerCard(sub);
 			});
 			ctx.inject(["slots"], (sub) => {
 				sub.slots.inject("sidebar.panellist", () => sub.slots.register({
@@ -1157,7 +1226,6 @@ window.__ModuleLoader__.load({
 					locale: LOCALE_NS
 				}, (props) => (0, react.createElement)(TaskPageHost, {
 					t: props.t,
-					scopeRef: () => scope,
 					viewRef: () => viewSession,
 					onBack: () => {
 						selectPanel(null);
