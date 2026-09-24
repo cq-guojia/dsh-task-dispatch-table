@@ -17,25 +17,51 @@ const DEBUG_WARN_LIMIT = 20;
 const DEBUG_WRITE_MIN_INTERVAL_MS = 2_000;
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
+/** settings 命名空间（与浏览器半侧的 SETTINGS_NS 同名，两侧按它配对）。 */
+const SETTINGS_NS = 'dsh-task-dispatch-table';
+/**
+ * 无 `register` 面时的等价作用域（dsh 0.1.7-rc.1 起把注册改成「注册项 Config 自动投影」）。
+ *
+ * ⚠️ 这里**不能让插件整体 inert**：那样调度器根本不启动，比「页面没数据」严重得多。
+ * 退化为「用启动配置运行」——调度 / 派发 / 对账照常；快照与任务 id 回写走 rc.1 的
+ * `settings.update(ns, patch)`（该组合若无 update 则放弃回写，仅告警一次）。
+ * @param sctx - 已就位 settings 服务的上下文（用于告警日志）。
+ * @param settings - settings 服务实例。
+ * @param initial - 启动期定格的插件配置。
+ * @returns 与 register 产物同形的作用域。
+ */
+function fallbackScope(sctx, settings, initial) {
+    const updater = settings.update;
+    sctx.logger.warn('dsh-task-dispatch-table: 当前 dsh 的 settings 服务未提供 register 面（0.1.7-rc.1 起改为注册项'
+        + ' Config 自动投影），已退化为「启动配置运行」：调度照常执行，但运行期改配置需重启才生效'
+        + (typeof updater === 'function' ? '。' : '；且该组合也没有 settings.update，页面快照无法回写。'));
+    return {
+        get: () => initial,
+        update: async (patch) => {
+            if (typeof updater !== 'function')
+                return;
+            await updater.call(settings, SETTINGS_NS, patch);
+        },
+        watch: () => () => { },
+    };
+}
 /** 快照携带的最近事件条数（面板按实例过滤展开用，故比单页展示量多留一些）。 */
 const DEBUG_EVENT_LIMIT = 200;
 export function apply(ctx, config) {
     const initial = Config(config);
     // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
     // 用户文档层 live 覆盖（packages/settings/settings/src/index.ts:49-59）。
-    // ⚠️ settings 服务以「带 register 面」或「惰性形态」两种组合入场（参照 dsh-context
-    // installSettings）：用 ctx.inject 订阅，仅当 register 就绪才激活；缺失则静默 inert 不崩
-    // （否则 TypeError: ctx.settings.register is not a function）。顶层 inject 写法会在 register
-    // 尚未挂上时误激活并崩，故 settings 不进顶层 inject 列表。
+    // ⚠️ settings 服务以「带 register 面」或「无 register 面」两种组合入场（参照 dsh-context
+    // installSettings）：用 ctx.inject 订阅；缺失 register 时**不再 inert**，而是降级为启动配置
+    // 作用域（fallbackScope）——否则调度器根本不启动。顶层 inject 写法会在 register 尚未挂上
+    // 时误激活并崩（TypeError: ctx.settings.register is not a function），故不进顶层 inject 列表。
     ctx.inject(['settings'], (sctx) => {
         const settings = sctx.settings;
-        if (typeof settings.register !== 'function') {
-            // 必须可见：静默 return 会让「插件未激活」与「注册成功」在日志上无法区分（真机排查教训）。
-            sctx.logger.warn('dsh-task-dispatch-table: 当前组合的 settings 服务未提供 register 面，插件保持未激活'
-                + '（配置页与侧栏入口都不会出现；需运行提供 ctx.settings.register 的 dsh 版本）。');
-            return;
-        }
-        const scope = settings.register('dsh-task-dispatch-table', Config, { base: initial });
+        // 有 register 面 → 官方命名空间作用域（配置 live 生效）；无（0.1.7-rc.1）→ 降级为
+        // 启动配置作用域，调度照跑（见 fallbackScope：不能因为缺 register 就整体不启动）。
+        const scope = typeof settings.register === 'function'
+            ? settings.register(SETTINGS_NS, Config, { base: initial })
+            : fallbackScope(sctx, settings, initial);
         // statePath 启动时定格，运行期改配置不迁移库。
         const store = new TaskStore(resolveStatePath(scope.get().statePath));
         // 迁移若真的合并掉了重复行（正常应为 0），必须让用户看见——绝不静默删数据。
