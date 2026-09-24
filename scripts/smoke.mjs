@@ -335,6 +335,10 @@ try {
     injectList.includes('@deepseek-ai/dsh-api-session-controller'), injectList.join(', '))
   check('inject 清单声明 uiConversation 提供方（dsh-client-ui-conversation）',
     injectList.includes('@deepseek-ai/dsh-client-ui-conversation'), injectList.join(', '))
+  check('inject 清单声明 layout 提供方（dsh-client-ui-layout，main/layout 服务）',
+    injectList.includes('@deepseek-ai/dsh-client-ui-layout'), injectList.join(', '))
+  check('inject 清单声明 sidebar 提供方（dsh-client-ui-sidebar，sidebar.panellist 槽）',
+    injectList.includes('@deepseek-ai/dsh-client-ui-sidebar'), injectList.join(', '))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

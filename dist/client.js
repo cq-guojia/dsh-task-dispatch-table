@@ -45,6 +45,7 @@ window.__ModuleLoader__.load({
 			debugEvents: "事件 task_events（最近 200 条，旧 → 新）",
 			debugEventsEmpty: "（尚无事件）",
 			panelTitle: "任务调度表",
+			backToConversation: "返回会话",
 			tabConfig: "任务配置",
 			tabRecords: "执行记录",
 			tasksParsedTitle: "已解析的任务（id 由系统生成，改名字不影响历史）",
@@ -122,6 +123,7 @@ window.__ModuleLoader__.load({
 			debugEvents: "Events task_events (latest 200, oldest → newest)",
 			debugEventsEmpty: "(no events yet)",
 			panelTitle: "Task dispatch table",
+			backToConversation: "Back to conversation",
 			tabConfig: "Configuration",
 			tabRecords: "Run records",
 			tasksParsedTitle: "Parsed tasks (ids are generated; renaming never breaks history)",
@@ -344,7 +346,7 @@ window.__ModuleLoader__.load({
 		};
 		C$1.brand;
 		/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
-		function CloseIcon$1() {
+		function CloseIcon() {
 			return (0, react.createElement)("svg", {
 				width: 15,
 				height: 15,
@@ -498,7 +500,7 @@ window.__ModuleLoader__.load({
 				},
 				"aria-label": t("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(CloseIcon$1, {})))), (0, react.createElement)("div", { style: sessionBodyStyle }, body)));
+			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("div", { style: sessionBodyStyle }, body)));
 		}
 		//#endregion
 		//#region src/client/index.ts
@@ -506,6 +508,10 @@ window.__ModuleLoader__.load({
 		const SETTINGS_NS = "dsh-task-dispatch-table";
 		/** 字典命名空间（locale 注册表独立于 settings 命名空间，取同名便于对应）。 */
 		const LOCALE_NS = SETTINGS_NS;
+		/** 主面板 id：`main` 槽的 key 与 `sidebar.panellist` 条目的 id 必须一致，选中才对得上。 */
+		const PANEL_ID = SETTINGS_NS;
+		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
+		let runtimeT = (key) => key;
 		/** 只读参数展示值：undefined 显示占位符，statePath 空串 = 宿主数据根默认（决策 14）。 */
 		function displayParam(t, value) {
 			if (value === void 0) return "—";
@@ -598,28 +604,32 @@ window.__ModuleLoader__.load({
 			display: "flex",
 			alignItems: "center"
 		};
-		const panelStyle = {
-			background: C.layer1,
-			color: C.text,
-			borderRadius: "14px",
+		/** 主区整页容器：占满中栏、自己滚动（会话区被 main 槽整页替换，无需遮罩）。 */
+		const pageStyle = {
+			height: "100%",
 			width: "100%",
-			maxWidth: "1100px",
-			maxHeight: "86vh",
-			overflow: "auto",
-			padding: "16px 18px",
 			boxSizing: "border-box",
-			border: `1px solid ${C.border}`,
-			boxShadow: C.shadow
+			overflow: "auto",
+			padding: "18px 22px",
+			color: C.text,
+			background: "transparent"
 		};
-		const overlayStyle = {
-			position: "fixed",
-			inset: 0,
-			zIndex: 1e3,
-			background: C.mask,
-			display: "flex",
+		/** 「返回会话」按钮：轻量文字按钮，退回会话区（selectPanel(null)）。 */
+		const backButtonStyle = {
+			display: "inline-flex",
 			alignItems: "center",
-			justifyContent: "center",
-			padding: "24px"
+			gap: "6px",
+			flex: "none",
+			padding: "5px 10px",
+			borderRadius: "8px",
+			border: `1px solid ${C.border}`,
+			background: "transparent",
+			color: C.textDim,
+			cursor: "pointer",
+			fontFamily: "inherit",
+			fontSize: "12px",
+			lineHeight: "18px",
+			transition
 		};
 		/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
 		const panelHeaderStyle = {
@@ -677,23 +687,6 @@ window.__ModuleLoader__.load({
 			border: "none",
 			borderRadius: "6px",
 			background: "transparent",
-			color: C.textDim,
-			cursor: "pointer",
-			transition
-		};
-		/** 侧栏底部动作按钮（sidebar.footer.action 入口）：整行、图标居中、悬停高亮，
-		* 与 dsh-context 的 Overview 按钮同列堆叠。 */
-		const trayButtonStyle = {
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center",
-			width: "100%",
-			boxSizing: "border-box",
-			minHeight: "34px",
-			padding: "7px 10px",
-			margin: 0,
-			border: "none",
-			borderRadius: "8px",
 			color: C.textDim,
 			cursor: "pointer",
 			transition
@@ -759,18 +752,6 @@ window.__ModuleLoader__.load({
 				strokeLinecap: "round",
 				strokeLinejoin: "round"
 			}, (0, react.createElement)("path", { d: "M21 12a9 9 0 1 1-2.64-6.36" }), (0, react.createElement)("path", { d: "M21 3v6h-6" }));
-		}
-		/** 关闭图标（内联 SVG）。 */
-		function CloseIcon() {
-			return (0, react.createElement)("svg", {
-				width: 15,
-				height: 15,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round"
-			}, (0, react.createElement)("path", { d: "M6 6l12 12M18 6L6 18" }));
 		}
 		/** 任务表图标（内联 SVG：清单勾选，颜色走 currentColor ⇒ 自动跟随主题）。 */
 		function TaskIcon(props) {
@@ -866,15 +847,15 @@ window.__ModuleLoader__.load({
 			"unknown"
 		];
 		/**
-		* 调度表面板（双标签弹窗）：
+		* 调度表整页（`main` 槽，双标签）：
 		* - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
 		* - **执行记录**：全部执行记录，支持按状态 / 按任务过滤，点一行展开该次执行的事件时间线。
 		*
 		* 数据来自 settings 快照的 debugSnapshot 字段（host 周期写入），经 useSyncExternalStore
-		* 订阅自动刷新，无需手动重开。
+		* 订阅自动刷新，无需手动重开。整页由布局服务的 `main` 槽承载：选中侧栏条目即替换会话区。
 		*/
-		function DispatcherModal(props) {
-			const { t, scope, data, raw, onClose, viewSession } = props;
+		function TaskPage(props) {
+			const { t, scope, onBack, viewSession } = props;
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -888,6 +869,8 @@ window.__ModuleLoader__.load({
 			const [expanded, setExpanded] = (0, react.useState)(null);
 			const [viewing, setViewing] = (0, react.useState)(null);
 			const section = snapshot.value ?? {};
+			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
+			const data = parseDebugSnapshot(raw);
 			const effectiveInline = typeof section.tasksInline === "string" ? section.tasksInline : "";
 			const current = draft ?? effectiveInline;
 			const invalid = draft !== void 0 && !isValidTaskTable(draft);
@@ -925,18 +908,20 @@ window.__ModuleLoader__.load({
 			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
 			const hasRaw = raw.trim() !== "";
-			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
-				style: overlayStyle,
-				onClick: onClose
-			}, (0, react.createElement)("div", {
-				style: panelStyle,
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle")), data !== void 0 ? (0, react.createElement)("div", { style: {
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "10px",
+				minWidth: 0
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				style: backButtonStyle,
+				title: t("backToConversation"),
+				onClick: onBack
+			}, `← ${t("backToConversation")}`), (0, react.createElement)("div", { style: { minWidth: 0 } }, (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle")), data !== void 0 ? (0, react.createElement)("div", { style: {
 				...hintStyle,
 				margin: "2px 0 0"
-			} }, formatTime(data.at)) : null), (0, react.createElement)("div", { style: headerRightStyle }, (0, react.createElement)("button", {
+			} }, formatTime(data.at)) : null)), (0, react.createElement)("div", { style: headerRightStyle }, (0, react.createElement)("button", {
 				type: "button",
 				style: iconButtonStyle,
 				title: t("debugRefresh"),
@@ -956,13 +941,7 @@ window.__ModuleLoader__.load({
 				onClick: () => {
 					setTab("records");
 				}
-			}, t("tabRecords"))), (0, react.createElement)("button", {
-				type: "button",
-				style: iconButtonStyle,
-				title: t("debugClose"),
-				"aria-label": t("debugClose"),
-				onClick: onClose
-			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
+			}, t("tabRecords"))))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
 				htmlFor: "dsh-tdt-modal-inline",
 				style: { fontWeight: 600 }
 			}, t("tasksInlineLabel")), (0, react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")), (0, react.createElement)("textarea", {
@@ -1065,7 +1044,7 @@ window.__ModuleLoader__.load({
 					key: name,
 					style: cellStyle
 				}, name)))), (0, react.createElement)("tbody", null, events.map((event) => (0, react.createElement)("tr", { key: event.seq }, (0, react.createElement)("td", { style: cellStyle }, String(event.seq)), (0, react.createElement)("td", { style: cellStyle }, formatTime(event.ts)), (0, react.createElement)("td", { style: cellStyle }, event.kind), (0, react.createElement)("td", { style: detailCellStyle }, event.detail ?? ""))))))) : null);
-			})))))), viewing !== null ? (0, react.createElement)(SessionViewModal, {
+			}))))), viewing !== null ? (0, react.createElement)(SessionViewModal, {
 				t,
 				heading: viewing.heading,
 				sessionId: viewing.sessionId,
@@ -1076,136 +1055,55 @@ window.__ModuleLoader__.load({
 			}) : null);
 		}
 		/**
-		* 面板开关 + 快照切片的共享钩子：设置卡片与侧栏底部入口共用，
-		* 点开同一个 DispatcherModal。快照由 host 周期写入 debugSnapshot 字段，自动刷新。
-		* @param scope - 本命名空间的设置作用域。
-		*/
-		function useTaskPanel(scope) {
-			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
-			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
-			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
-			const [panelOpen, setPanelOpen] = (0, react.useState)(false);
-			const section = snapshot.value ?? {};
-			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
-			const data = parseDebugSnapshot(raw);
-			return {
-				ready: snapshot.status === "ready",
-				raw,
-				data,
-				scope,
-				panelOpen,
-				open: () => setPanelOpen(true),
-				close: () => setPanelOpen(false)
-			};
-		}
-		/**
-		* 设置页卡片（决策 26 修订）：**只留一行「标题 + 描述 + 箭头」**，点一下打开调度面板。
-		* 原来的内嵌 JSON 输入框与只读运行参数都挪进了面板的「任务配置」页——设置页保持干净。
-		* @param props - t 席位与绑定的设置作用域。
+		* 设置页卡片：**只留一行「标题 + 描述 + 箭头」**，点一下切到整页（布局服务 selectPanel）。
+		* 内嵌 JSON 输入框与只读运行参数都在整页里——设置页保持干净。
+		* @param props - t 席位 + 打开整页的回调。
 		*/
 		function TasksConfigPage(props) {
-			const { t, scope, viewSession } = props;
-			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
-			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
-			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
-			const [panelOpen, setPanelOpen] = (0, react.useState)(false);
-			const section = snapshot.value ?? {};
-			const debugRaw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
-			const debugData = parseDebugSnapshot(debugRaw);
-			if (snapshot.status !== "ready") return (0, react.createElement)("p", null, t("unavailable"));
-			return (0, react.createElement)("div", null, (0, react.createElement)("div", {
+			const { t, open } = props;
+			return (0, react.createElement)("div", {
 				style: cardStyle,
 				role: "button",
 				tabIndex: 0,
-				onClick: () => {
-					setPanelOpen(true);
-				},
+				onClick: open,
 				onKeyDown: (event) => {
-					if (event.key === "Enter" || event.key === " ") setPanelOpen(true);
+					if (event.key === "Enter" || event.key === " ") open();
 				}
-			}, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: cardTitleStyle }, t("title")), (0, react.createElement)("div", { style: cardDescStyle }, t("description"))), (0, react.createElement)("span", { style: chevronStyle }, "›")), panelOpen ? (0, react.createElement)(DispatcherModal, {
-				t,
-				scope,
-				data: debugData,
-				raw: debugRaw,
-				viewSession,
-				onClose: () => {
-					setPanelOpen(false);
-				}
-			}) : null);
+			}, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: cardTitleStyle }, t("title")), (0, react.createElement)("div", { style: cardDescStyle }, t("description"))), (0, react.createElement)("span", { style: chevronStyle }, "›"));
 		}
 		/**
-		* 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；dsh-context 的
-		* Overview 按钮同处）。**无 hooks 外壳**：作用域可能尚未就位（null），此时渲染禁用态
-		* 图标占位——保证「槽有贡献、入口可见」，同时避免条件式 hooks 违反 React 规则。
-		* @param props - t 席位、作用域工厂、面板内只读会话视图工厂。
+		* 侧栏顶部面板图标（slot = sidebar.panellist，list 槽）：组件**只画图标**——
+		* 行按钮由侧栏渲染，点击由侧栏调 `ctx.layout.selectPanel(id)`，激活态由布局服务托管
+		* （与「插件」行同一套样式，无需自绘）。图标颜色走 currentColor，自动跟随行的选中态。
+		* @param props - size：宽栏 16 / 折叠栏 18（侧栏传入）。
 		*/
-		function TaskTrayButton(props) {
-			const { t, wide, scopeRef, viewRef } = props;
+		function TaskPanelIcon(props) {
+			return (0, react.createElement)(TaskIcon, { size: props.size ?? 18 });
+		}
+		/**
+		* 整页外壳（`main` 槽，无 hooks）：作用域未就位时给占位页，避免条件式 hooks 违反 React 规则。
+		* @param props - t 席位、作用域与会话视图工厂、返回会话回调。
+		*/
+		function TaskPageHost(props) {
+			const { t, scopeRef, viewRef, onBack } = props;
 			const scope = scopeRef();
-			if (scope === null) return (0, react.createElement)("button", {
+			if (scope === null) return (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("button", {
 				type: "button",
-				style: {
-					...trayButtonStyle,
-					opacity: .4,
-					cursor: "not-allowed"
-				},
-				title: t("unavailable"),
-				"aria-label": t("panelTitle"),
-				disabled: true
-			}, (0, react.createElement)(TaskIcon, { size: wide ? 16 : 18 }), wide ? (0, react.createElement)("span", { style: {
-				marginLeft: "8px",
-				fontSize: "13px",
-				color: C.text
-			} }, t("trayLabel")) : null);
-			return (0, react.createElement)(TaskTrayButtonLive, {
+				style: backButtonStyle,
+				title: t("backToConversation"),
+				onClick: onBack
+			}, `← ${t("backToConversation")}`), (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react.createElement)("p", { style: hintStyle }, t("unavailable")));
+			return (0, react.createElement)(TaskPage, {
 				t,
-				wide,
 				scope,
+				onBack,
 				viewSession: viewRef()
 			});
 		}
-		/** 入口的就绪态实现（持有 hooks）：作用域可用时才挂载。 */
-		function TaskTrayButtonLive(props) {
-			const { t, wide, scope, viewSession } = props;
-			const panel = useTaskPanel(scope);
-			const [hover, setHover] = (0, react.useState)(false);
-			const btnStyle = {
-				...trayButtonStyle,
-				background: hover && panel.ready ? C.hover : "transparent",
-				opacity: panel.ready ? 1 : .4,
-				cursor: panel.ready ? "pointer" : "not-allowed"
-			};
-			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("button", {
-				type: "button",
-				style: btnStyle,
-				title: panel.ready ? t("panelTitle") : t("unavailable"),
-				"aria-label": t("panelTitle"),
-				disabled: !panel.ready,
-				onClick: panel.open,
-				onMouseEnter: () => {
-					setHover(true);
-				},
-				onMouseLeave: () => {
-					setHover(false);
-				}
-			}, (0, react.createElement)(TaskIcon, { size: wide ? 16 : 18 }), wide ? (0, react.createElement)("span", { style: {
-				marginLeft: "8px",
-				fontSize: "13px",
-				color: C.text
-			} }, t("trayLabel")) : null), panel.panelOpen ? (0, react.createElement)(DispatcherModal, {
-				t,
-				scope,
-				data: panel.data,
-				raw: panel.raw,
-				viewSession,
-				onClose: panel.close
-			}) : null);
-		}
 		/**
-		* 浏览器插件入口：注册文案字典；把设置页卡片（settings.plugin.item）与侧栏常驻入口
-		* （sidebar.footer.action）分别注册进「服务就位才触发」的 slots 注入里。两块互相独立：
-		* 侧栏入口只依赖 slots，不因 settings 服务缺席/改名而消失。
+		* 浏览器插件入口：注册文案字典；三处注册各自挂进「服务就位才触发」的 slots 注入——
+		* 设置页卡片（settings.plugin.item）、侧栏顶部条目（sidebar.panellist）与主区整页（main）。
+		* 侧栏条目与整页只依赖 slots，不因 settings 服务缺席/改名而消失。
 		* @param ctx - 浏览器插件上下文。
 		*/
 		function apply(ctx) {
@@ -1214,12 +1112,22 @@ window.__ModuleLoader__.load({
 					zh,
 					en
 				}));
+				try {
+					runtimeT = localeCtx.locale.bind(LOCALE_NS);
+				} catch {}
 			});
 			let viewSession = null;
 			ctx.inject(["sessions", "uiConversation"], (sub) => {
 				const sessions = sub.sessions;
 				const uiConversation = sub.uiConversation;
 				if (sessions !== void 0 && uiConversation !== void 0) viewSession = (id) => openSessionView(sessions, uiConversation, id);
+			});
+			let selectPanel = () => {};
+			ctx.inject(["layout"], (sub) => {
+				const layout = sub.layout;
+				if (layout !== void 0) selectPanel = (id) => {
+					layout.selectPanel(id);
+				};
 			});
 			let scope = null;
 			ctx.inject(["slots", "settingsScope"], (sub) => {
@@ -1230,22 +1138,30 @@ window.__ModuleLoader__.load({
 					name: "settings.plugin.item",
 					key: SETTINGS_NS,
 					locale: LOCALE_NS,
-					inject: () => ({
-						scope: bound,
-						viewSession
-					})
+					inject: () => ({ open: () => {
+						selectPanel(PANEL_ID);
+					} })
 				}, TasksConfigPage));
 			});
 			ctx.inject(["slots"], (sub) => {
-				sub.slots.inject("sidebar.footer.action", () => sub.slots.register({
-					name: "sidebar.footer.action",
-					id: SETTINGS_NS,
-					order: 20,
+				sub.slots.inject("sidebar.panellist", () => sub.slots.register({
+					name: "sidebar.panellist",
+					id: PANEL_ID,
+					order: 30,
+					label: () => runtimeT("panelTitle"),
 					locale: LOCALE_NS
-				}, (props) => (0, react.createElement)(TaskTrayButton, {
-					...props,
+				}, TaskPanelIcon));
+				sub.slots.inject("main", () => sub.slots.register({
+					name: "main",
+					key: PANEL_ID,
+					locale: LOCALE_NS
+				}, (props) => (0, react.createElement)(TaskPageHost, {
+					t: props.t,
 					scopeRef: () => scope,
-					viewRef: () => viewSession
+					viewRef: () => viewSession,
+					onBack: () => {
+						selectPanel(null);
+					}
 				})));
 			});
 		}

@@ -214,3 +214,45 @@
 | 2026-09-24 | **修复真机崩溃：ctx.settings.register 非函数（改 ctx.inject 守卫订阅）**——真机启动报 `TypeError: ctx.settings.register is not a function`（`dist/index.js:23`）。根因：settings 服务以「带 register 面」或「惰性形态」两种组合入场，`apply` 内无条件 `ctx.settings.register(...)` 在惰性形态下崩；参照 `dsh-context@0.55.0` 的 `installSettings`（`lib/index.js:3336` 守卫 `typeof service.register !== "function"`）。修法：照搬——把 `settings` 从顶层 `inject` 移出，`apply` 内改 `ctx.inject(["settings"], sctx => { if (typeof sctx.settings.register !== "function") return; ... })` 守卫订阅，仅 register 就绪才激活整个调度体，缺失则静默 inert 不崩；`src/host.ts` 补 `HostContext.inject` 类型。`npm run build` 通过、dist 已随构建更新。**待真机验证**：测试机 settings 服务若确无 register 面则插件仍 inert（需在提供 register 的 dsh 版本运行），有 register 则全功能恢复 |
 
 | 2026-09-24 | **真机（dsh 0.1.7-rc.1）定位「侧栏入口不出现」根因 + 解耦修复**：① 槽名/类型经核实**没错**——`@deepseek-ai/dsh-client-ui-sidebar@0.1.7-rc.1` 确有 `sidebar.footer.action`（kind=list, scope=root），dsh-context 的「上下文洞察」就在同处；② 真因 = **rc.1 改了 settings 两处 API**：宿主 `settings` 服务换成 `SettingsForms`（`super(ctx,"settings")`，方法仅 configure/describe/schema，**无 register** → 最初 `ctx.settings.register is not a function` 即此）；客户端服务名由 `settingsScope` 换成 `configForms`/`settingsSchema`（`dsh-client-ui-settings@0.1.7-rc.1` 只 provide 这两个）⇒ 我们 `ctx.inject(["slots","settingsScope"], ...)` **永不触发**，而侧栏入口恰好嵌在该块内 ⇒ 按钮无声消失；③ 修复：把侧栏入口注册**移出 settingsScope 块**、改为只依赖 `slots`（照 dsh-context 顶层注册），并拆「无 hooks 外壳 + 就绪态实体」，作用域缺席时渲染禁用占位；`settingsScope` 标为可选+守卫。构建/冒烟 53 项通过、dist 已更新。**待办**：设置卡片与面板数据通道需迁移到 rc.1 新契约（configForms/settingsSchema + 入口 Config 自动投影），旧的 `ctx.settings.register` 写入通道已失效 |
+
+---
+
+## 方案：入口迁到 `sidebar.panellist` + 面板整页化 + rc.1 settings 迁移（2026-09-24 拟定）
+
+### 背景（真机实测结论，全部有 npm 包源码依据）
+
+dsh 0.1.7-rc.1 换了三处契约，本插件（按 0.1.6 时代写的）全部踩空：
+
+| 项 | 旧契约（本插件现状） | rc.1 新契约 | 证据 |
+|---|---|---|---|
+| 宿主 settings | `ctx.settings.register(ns, schema, {base})` | `settings` = `SettingsForms`，方法仅 `configure/describe/schema`，**无 register**；插件 Config schema 自动投影成表单 | `@deepseek-ai/dsh-settings@0.1.7-rc.1` `super(ctx,"settings")` |
+| 客户端 settings | 服务名 `settingsScope` | `configForms` / `settingsSchema`，namespace 按 **profile entry id** 寻址 | `@deepseek-ai/dsh-client-ui-settings@0.1.7-rc.1` 只 provide 这两个 |
+| 侧栏/主区 | `sidebar.footer.action`（底栏横排） | 原生「主面板」机制：`sidebar.panellist`(list) + `main`(keyed) + `ctx.layout.selectPanel(id)` | `@deepseek-ai/dsh-client-ui-sidebar@0.1.7-rc.1`、`@deepseek-ai/dsh-client-ui-layout@0.1.7-rc.1` |
+
+⚠️ 注意：`@deepseek-ai/*` 的 npm `latest` tag 指向旧版（如 sidebar 的 latest=`0.0.1-rc.1`），**必须按 dsh 版本线取**（`0.1.7-rc.1`）。
+
+### 原生整页机制（要抄的正路，优于参考插件的 DOM 注入）
+
+参考插件 `@linxin666/dsh-client-ui-task-board` 走的是 **DOM 注入**（`sidebar-entry-core.ts` 往侧栏插 `<button>`、`panel-mount-core.ts` 往中栏 `[class*="centerCol"]` 挂 React root + `<html data-*>` 切换），它自己的注释称「外部插件无槽可用」——但实测 rc.1 **有原生槽**，故本插件走原生，不抄 DOM 注入：
+
+- `main`（`kind:"keyed"`, root）：`renderSlot("main", {}, { entryKey: activePanelId ?? "conversation" })` ⇒ 注册 `{ name:"main", key:<PanelId>, locale }`，选中即整页替换会话区。
+- `sidebar.panellist`（`kind:"list"`, root）：条目 `{ name:"sidebar.panellist", id:<PanelId>, order, label:()=>..., locale }`，**组件只画图标**（收到 `{ size, active }`）；行按钮由侧栏渲染，点击由侧栏调 `ctx.layout.selectPanel(id)`，**激活态由布局服务 `activePanelId` 自动管理**（`panelActive` class + `aria-current`）。
+- 「返回会话」= `ctx.layout.selectPanel(null)`（`@deepseek-ai/dsh-client-ui-layout` 的 `layout` 服务）。
+
+⇒ 得到的样式与「插件」完全一致（原生行、原生 hover/激活态），无需自绘、无需 MutationObserver 自愈。
+
+### 实施步骤
+
+1. **入口迁移**：删掉 `sidebar.footer.action` 注册；新增 `sidebar.panellist` 注册（`id` = 面板 id，`order` 取 30 避开「插件」，`label` 用 locale）。
+2. **整页化**：新增 `main` keyed 注册承载页面；页面顶部放「返回会话」调用 `ctx.layout.selectPanel(null)`；把现有 `DispatcherModal` 的**内层布局原样**搬进页面（不弹窗、无遮罩）。界面细节待功能全通后再调（用户明确）。
+3. **rc.1 settings 迁移**（入口/页面之后做）：
+   - 宿主：去掉 `ctx.settings.register`，改由插件 Config schema 自动投影；`debugSnapshot` 写入通道改为 rc.1 等价面（待核 `configForms`/`describe` 写路径）。
+   - 客户端：`settingsScope.bind({namespace})` → `configForms.get(<profile entry id>)`（entry id 需按 profile 实际行 id 解析，参考插件 `servedEntryId()` 的兜底策略）。
+4. **依赖声明**：`package.json` 的 `dsh.client.inject` 需补 `@deepseek-ai/dsh-client-ui-layout`（`main`/`layout` 提供方）；并按 rc.1 版本线校正其余项。
+
+### 验收
+
+- 侧栏顶部出现「任务调度表」行（与「插件」同风格）；点击 → 激活态 + 中栏整页；点「返回会话」→ 激活态消失、回到会话。
+- 页面内数据（任务 / 实例 / 事件）在 settings 迁移完成后恢复正常。
+
+| 2026-09-24 | **入口迁到 `sidebar.panellist` + 面板整页化（不再弹窗）落码**：按用户拍板（照 `@linxin666/dsh-client-ui-task-board` 的交互逻辑）改走 **rc.1 原生「主面板」机制**（优于参考插件的 DOM 注入）：① `sidebar.panellist`(list/root) 注册条目 `{id:PANEL_ID, order:30, label:()=>runtimeT("panelTitle")}`，组件 `TaskPanelIcon` **只画图标**——行按钮/点击（侧栏调 `ctx.layout.selectPanel(id)`）/激活态全由侧栏+布局服务托管，与「插件」行同款；② `main`(keyed/root) 注册 `{key:PANEL_ID}` 承载整页 `TaskPageHost`（作用域未就位给占位页），`守selectPanel(null)` = 返回会话；③ 删掉 `sidebar.footer.action` 注册与 `TaskTrayButton*`/`useTaskPanel`/`trayButtonStyle`/`CloseIcon`/`PageProps` 等旧件，`DispatcherModal`→`TaskPage`（去遮罩/关闭叉，页头加「← 返回会话」）；④ 设置卡片改为 `open:()=>selectPanel(PANEL_ID)`；⑤ `package.json` 补 `dsh-client-ui-layout`/`dsh-client-ui-sidebar` 依赖，冒烟扩到 55 项。`npm run build` + 冒烟 55 项全过、dist 已更新。**未做**：rc.1 settings 迁移（`configForms`/`settingsSchema` + 宿主 Config 自动投影）——整页目前只显示占位（scope 取不到），故页面内数据仍空 |

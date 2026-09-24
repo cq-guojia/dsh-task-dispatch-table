@@ -23,6 +23,10 @@ import { openSessionView, SessionViewModal, type SessionViewTarget, type Session
 const SETTINGS_NS = 'dsh-task-dispatch-table'
 /** 字典命名空间（locale 注册表独立于 settings 命名空间，取同名便于对应）。 */
 const LOCALE_NS = SETTINGS_NS
+/** 主面板 id：`main` 槽的 key 与 `sidebar.panellist` 条目的 id 必须一致，选中才对得上。 */
+const PANEL_ID = SETTINGS_NS
+/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
+let runtimeT: Translate = (key) => key
 
 // ─────────────────────────── 本地结构类型（不 import 宿主包） ───────────────────────────
 
@@ -53,6 +57,15 @@ interface ClientContext {
   effect(setup: () => (() => void) | void): void
   locale: {
     register(ns: string, dictionaries: Record<string, Record<string, string>>): void
+    /** 绑定命名空间得到 t 席位（供渲染期求值的 slot label 用，与注册项 locale: 同源）。 */
+    bind(ns: string): Translate
+  }
+  /**
+   * 布局服务（@deepseek-ai/dsh-client-ui-layout 的 `layout`）。`main` 槽的激活态由它托管：
+   * `selectPanel(id)` 切到某主面板、`selectPanel(null)` 回到会话。
+   */
+  layout?: {
+    selectPanel(panelId: string | null): void
   }
   slots: {
     /** 延迟注册：slot 声明出现时才调用 factory，返回注销函数。 */
@@ -68,14 +81,6 @@ interface ClientContext {
   settingsScope?: {
     bind(spec: { namespace: string }): SettingsScope
   }
-}
-
-/** 组件 props：渲染器合成的 t 席位 + 注册项 inject 工厂注入的 scope。 */
-interface PageProps {
-  t: Translate
-  scope: SettingsScope
-  /** 面板内只读会话视图工厂（决策 28，见 apply 内 sessions/uiConversation 注入）；服务不可用时为 null。 */
-  viewSession: ((id: string) => SessionViewTarget | null) | null
 }
 
 // ─────────────────────────── 页面组件 ───────────────────────────
@@ -133,15 +138,18 @@ const cardTitleStyle: Record<string, string | number> = { fontSize: '14px', font
 const cardDescStyle: Record<string, string | number> = { fontSize: '12px', color: C.textDim, marginTop: '2px' }
 const chevronStyle: Record<string, string | number> = { color: C.textFaint, display: 'flex', alignItems: 'center' }
 
-// ── 面板（弹窗）样式 ──
-const panelStyle: Record<string, string | number> = {
-  background: C.layer1, color: C.text, borderRadius: '14px', width: '100%', maxWidth: '1100px',
-  maxHeight: '86vh', overflow: 'auto', padding: '16px 18px', boxSizing: 'border-box',
-  border: `1px solid ${C.border}`, boxShadow: C.shadow,
+// ── 面板（main 槽整页）样式 ──
+/** 主区整页容器：占满中栏、自己滚动（会话区被 main 槽整页替换，无需遮罩）。 */
+const pageStyle: Record<string, string | number> = {
+  height: '100%', width: '100%', boxSizing: 'border-box', overflow: 'auto',
+  padding: '18px 22px', color: C.text, background: 'transparent',
 }
-const overlayStyle: Record<string, string | number> = {
-  position: 'fixed', inset: 0, zIndex: 1000, background: C.mask,
-  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+/** 「返回会话」按钮：轻量文字按钮，退回会话区（selectPanel(null)）。 */
+const backButtonStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', gap: '6px', flex: 'none',
+  padding: '5px 10px', borderRadius: '8px', border: `1px solid ${C.border}`,
+  background: 'transparent', color: C.textDim, cursor: 'pointer',
+  fontFamily: 'inherit', fontSize: '12px', lineHeight: '18px', transition,
 }
 /** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
 const panelHeaderStyle: Record<string, string | number> = {
@@ -170,14 +178,6 @@ const iconButtonStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   width: '26px', height: '26px', padding: 0, border: 'none', borderRadius: '6px',
   background: 'transparent', color: C.textDim, cursor: 'pointer', transition,
-}
-/** 侧栏底部动作按钮（sidebar.footer.action 入口）：整行、图标居中、悬停高亮，
- * 与 dsh-context 的 Overview 按钮同列堆叠。 */
-const trayButtonStyle: Record<string, string | number> = {
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  width: '100%', boxSizing: 'border-box', minHeight: '34px', padding: '7px 10px',
-  margin: 0, border: 'none', borderRadius: '8px', color: C.textDim,
-  cursor: 'pointer', transition,
 }
 const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px', color: C.text }
 const preStyle: Record<string, string | number> = {
@@ -208,16 +208,6 @@ function RefreshIcon() {
   },
     h('path', { d: 'M21 12a9 9 0 1 1-2.64-6.36' }),
     h('path', { d: 'M21 3v6h-6' }),
-  )
-}
-
-/** 关闭图标（内联 SVG）。 */
-function CloseIcon() {
-  return h('svg', {
-    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    strokeWidth: 2, strokeLinecap: 'round',
-  },
-    h('path', { d: 'M6 6l12 12M18 6L6 18' }),
   )
 }
 
@@ -339,23 +329,22 @@ function scheduleSummary(row: DebugTaskRow): string {
 const STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'] as const
 
 /**
- * 调度表面板（双标签弹窗）：
+ * 调度表整页（`main` 槽，双标签）：
  * - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
  * - **执行记录**：全部执行记录，支持按状态 / 按任务过滤，点一行展开该次执行的事件时间线。
  *
  * 数据来自 settings 快照的 debugSnapshot 字段（host 周期写入），经 useSyncExternalStore
- * 订阅自动刷新，无需手动重开。
+ * 订阅自动刷新，无需手动重开。整页由布局服务的 `main` 槽承载：选中侧栏条目即替换会话区。
  */
-function DispatcherModal(props: {
+function TaskPage(props: {
   t: Translate
   scope: SettingsScope
-  data: DebugSnapshotData | undefined
-  raw: string
-  onClose: () => void
-  /** 面板内只读会话视图工厂（决策 28：sessions.binding + uiConversation 组装，归档会话可读）。服务不可用时为 null。 */
+  /** 返回会话：调布局服务 selectPanel(null) 切回会话区。 */
+  onBack: () => void
+  /** 页内只读会话视图工厂（决策 28：sessions.binding + uiConversation 组装，归档会话可读）。服务不可用时为 null。 */
   viewSession: ((id: string) => SessionViewTarget | null) | null
 }) {
-  const { t, scope, data, raw, onClose, viewSession } = props
+  const { t, scope, onBack, viewSession } = props
   // 面板自己订阅 scope：保存后即时反映生效值，也拿到 writable 状态。
   const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
@@ -375,6 +364,9 @@ function DispatcherModal(props: {
   const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget } | null>(null)
 
   const section = (snapshot.value ?? {}) as Record<string, unknown>
+  // 快照由 host 周期写入 debugSnapshot 字段；页订阅同一 scope 自动刷新。
+  const raw = typeof section.debugSnapshot === 'string' ? section.debugSnapshot : ''
+  const data = parseDebugSnapshot(raw)
   const effectiveInline = typeof section.tasksInline === 'string' ? section.tasksInline : ''
   const current = draft ?? effectiveInline
   const invalid = draft !== undefined && !isValidTaskTable(draft)
@@ -418,15 +410,22 @@ function DispatcherModal(props: {
   const hasRaw = raw.trim() !== ''
 
   return h(Fragment, null,
-    h('div', { style: overlayStyle, onClick: onClose },
-    h('div', { style: panelStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      // 抬头：标题在左；右上角从右往左依次是「关闭 · 分组标签 · 刷新」（与宿主其它面板同序）
+    h('div', { style: pageStyle },
+      // 抬头：左「← 返回会话」+ 标题；右「刷新 · 分组标签」
       h('div', { style: panelHeaderStyle },
-        h('div', null,
-          h('div', { style: panelTitleStyle }, t('panelTitle')),
-          data !== undefined
-            ? h('div', { style: { ...hintStyle, margin: '2px 0 0' } }, formatTime(data.at))
-            : null,
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
+          h('button', {
+            type: 'button',
+            style: backButtonStyle,
+            title: t('backToConversation'),
+            onClick: onBack,
+          }, `← ${t('backToConversation')}`),
+          h('div', { style: { minWidth: 0 } },
+            h('div', { style: panelTitleStyle }, t('panelTitle')),
+            data !== undefined
+              ? h('div', { style: { ...hintStyle, margin: '2px 0 0' } }, formatTime(data.at))
+              : null,
+          ),
         ),
         h('div', { style: headerRightStyle },
           h('button', {
@@ -446,13 +445,6 @@ function DispatcherModal(props: {
               onClick: () => { setTab('records') },
             }, t('tabRecords')),
           ),
-          h('button', {
-            type: 'button',
-            style: iconButtonStyle,
-            title: t('debugClose'),
-            'aria-label': t('debugClose'),
-            onClick: onClose,
-          }, h(CloseIcon, {})),
         ),
       ),
       h('p', { style: hintStyle }, t('debugAutoHint')),
@@ -626,9 +618,8 @@ function DispatcherModal(props: {
                   ),
             ),
     ),
-  ),
-    // 只读会话弹窗（决策 28）：叠在主面板遮罩之上（z-index 1010 > 1000）。挂在独立子树
-    // （Fragment 兄弟节点），会话弹窗的遮罩点击不会冒泡进主面板遮罩、误关整个面板。
+    // 只读会话弹窗（决策 28）：叠在整页之上（z-index 1010）。挂在独立子树
+    // （Fragment 兄弟节点），其遮罩点击不会冒泡出去、误关整页。
     viewing !== null
       ? h(SessionViewModal, {
         t,
@@ -642,137 +633,82 @@ function DispatcherModal(props: {
 }
 
 /**
- * 面板开关 + 快照切片的共享钩子：设置卡片与侧栏底部入口共用，
- * 点开同一个 DispatcherModal。快照由 host 周期写入 debugSnapshot 字段，自动刷新。
- * @param scope - 本命名空间的设置作用域。
+ * 设置页卡片：**只留一行「标题 + 描述 + 箭头」**，点一下切到整页（布局服务 selectPanel）。
+ * 内嵌 JSON 输入框与只读运行参数都在整页里——设置页保持干净。
+ * @param props - t 席位 + 打开整页的回调。
  */
-function useTaskPanel(scope: SettingsScope) {
-  const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
-  // getSnapshot 必须返回稳定引用：作用域的实现在值不变时保证同一引用。
-  const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot)
-  const [panelOpen, setPanelOpen] = useState(false)
-  const section = (snapshot.value ?? {}) as Record<string, unknown>
-  const raw = typeof section.debugSnapshot === 'string' ? section.debugSnapshot : ''
-  const data = parseDebugSnapshot(raw)
-  return { ready: snapshot.status === 'ready', raw, data, scope, panelOpen, open: () => setPanelOpen(true), close: () => setPanelOpen(false) }
-}
-
-/**
- * 设置页卡片（决策 26 修订）：**只留一行「标题 + 描述 + 箭头」**，点一下打开调度面板。
- * 原来的内嵌 JSON 输入框与只读运行参数都挪进了面板的「任务配置」页——设置页保持干净。
- * @param props - t 席位与绑定的设置作用域。
- */
-function TasksConfigPage(props: PageProps) {
-  const { t, scope, viewSession } = props
-  const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
-  // getSnapshot 必须返回稳定引用：作用域的实现在值不变时保证同一引用。
-  const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot)
-  const [panelOpen, setPanelOpen] = useState(false)
-
-  const section = (snapshot.value ?? {}) as Record<string, unknown>
-  // 快照由 host 周期写入 debugSnapshot 字段，面板经订阅自动刷新。
-  const debugRaw = typeof section.debugSnapshot === 'string' ? section.debugSnapshot : ''
-  const debugData = parseDebugSnapshot(debugRaw)
-
-  if (snapshot.status !== 'ready') return h('p', null, t('unavailable'))
-
-  return h('div', null,
-    h('div', {
-      style: cardStyle,
-      role: 'button',
-      tabIndex: 0,
-      onClick: () => { setPanelOpen(true) },
-      onKeyDown: (event: { key?: string }) => {
-        if (event.key === 'Enter' || event.key === ' ') { setPanelOpen(true) }
-      },
+function TasksConfigPage(props: { t: Translate; open: () => void }) {
+  const { t, open } = props
+  return h('div', {
+    style: cardStyle,
+    role: 'button',
+    tabIndex: 0,
+    onClick: open,
+    onKeyDown: (event: { key?: string }) => {
+      if (event.key === 'Enter' || event.key === ' ') { open() }
     },
-      h('div', null,
-        h('div', { style: cardTitleStyle }, t('title')),
-        h('div', { style: cardDescStyle }, t('description')),
-      ),
-      h('span', { style: chevronStyle }, '›'),
+  },
+    h('div', null,
+      h('div', { style: cardTitleStyle }, t('title')),
+      h('div', { style: cardDescStyle }, t('description')),
     ),
-    panelOpen
-      ? h(DispatcherModal, { t, scope, data: debugData, raw: debugRaw, viewSession, onClose: () => { setPanelOpen(false) } })
-      : null,
+    h('span', { style: chevronStyle }, '›'),
   )
 }
 
 /**
- * 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；dsh-context 的
- * Overview 按钮同处）。**无 hooks 外壳**：作用域可能尚未就位（null），此时渲染禁用态
- * 图标占位——保证「槽有贡献、入口可见」，同时避免条件式 hooks 违反 React 规则。
- * @param props - t 席位、作用域工厂、面板内只读会话视图工厂。
+ * 侧栏顶部面板图标（slot = sidebar.panellist，list 槽）：组件**只画图标**——
+ * 行按钮由侧栏渲染，点击由侧栏调 `ctx.layout.selectPanel(id)`，激活态由布局服务托管
+ * （与「插件」行同一套样式，无需自绘）。图标颜色走 currentColor，自动跟随行的选中态。
+ * @param props - size：宽栏 16 / 折叠栏 18（侧栏传入）。
  */
-function TaskTrayButton(props: {
+function TaskPanelIcon(props: { size?: number }) {
+  return h(TaskIcon, { size: props.size ?? 18 })
+}
+
+/**
+ * 整页外壳（`main` 槽，无 hooks）：作用域未就位时给占位页，避免条件式 hooks 违反 React 规则。
+ * @param props - t 席位、作用域与会话视图工厂、返回会话回调。
+ */
+function TaskPageHost(props: {
   t: Translate
-  wide?: boolean
   scopeRef: () => SettingsScope | null
   viewRef: () => ((id: string) => SessionViewTarget | null) | null
+  onBack: () => void
 }) {
-  const { t, wide, scopeRef, viewRef } = props
+  const { t, scopeRef, viewRef, onBack } = props
   const scope = scopeRef()
   if (scope === null) {
-    return h('button', {
-      type: 'button',
-      style: { ...trayButtonStyle, opacity: 0.4, cursor: 'not-allowed' },
-      title: t('unavailable'),
-      'aria-label': t('panelTitle'),
-      disabled: true,
-    },
-      h(TaskIcon, { size: wide ? 16 : 18 }),
-      wide ? h('span', { style: { marginLeft: '8px', fontSize: '13px', color: C.text } }, t('trayLabel')) : null,
+    return h('div', { style: pageStyle },
+      h('div', { style: panelHeaderStyle },
+        h('button', {
+          type: 'button',
+          style: backButtonStyle,
+          title: t('backToConversation'),
+          onClick: onBack,
+        }, `← ${t('backToConversation')}`),
+        h('div', { style: panelTitleStyle }, t('panelTitle')),
+      ),
+      h('p', { style: hintStyle }, t('unavailable')),
     )
   }
-  return h(TaskTrayButtonLive, { t, wide, scope, viewSession: viewRef() })
-}
-
-/** 入口的就绪态实现（持有 hooks）：作用域可用时才挂载。 */
-function TaskTrayButtonLive(props: { t: Translate; wide?: boolean; scope: SettingsScope; viewSession: ((id: string) => SessionViewTarget | null) | null }) {
-  const { t, wide, scope, viewSession } = props
-  const panel = useTaskPanel(scope)
-  const [hover, setHover] = useState(false)
-  // 未 ready 也渲染（禁用态）：入口要求常驻可见，便于分辨「槽缺失」与「作用域未就绪」。
-  const btnStyle: Record<string, string | number> = {
-    ...trayButtonStyle,
-    background: hover && panel.ready ? C.hover : 'transparent',
-    opacity: panel.ready ? 1 : 0.4,
-    cursor: panel.ready ? 'pointer' : 'not-allowed',
-  }
-  return h(Fragment, null,
-    h('button', {
-      type: 'button',
-      style: btnStyle,
-      title: panel.ready ? t('panelTitle') : t('unavailable'),
-      'aria-label': t('panelTitle'),
-      disabled: !panel.ready,
-      onClick: panel.open,
-      onMouseEnter: () => { setHover(true) },
-      onMouseLeave: () => { setHover(false) },
-    },
-      h(TaskIcon, { size: wide ? 16 : 18 }),
-      wide ? h('span', { style: { marginLeft: '8px', fontSize: '13px', color: C.text } }, t('trayLabel')) : null,
-    ),
-    panel.panelOpen
-      ? h(DispatcherModal, { t, scope, data: panel.data, raw: panel.raw, viewSession, onClose: panel.close })
-      : null,
-  )
+  return h(TaskPage, { t, scope, onBack, viewSession: viewRef() })
 }
 
 // ─────────────────────────── 插件主体 ───────────────────────────
 
 /**
- * 浏览器插件入口：注册文案字典；把设置页卡片（settings.plugin.item）与侧栏常驻入口
- * （sidebar.footer.action）分别注册进「服务就位才触发」的 slots 注入里。两块互相独立：
- * 侧栏入口只依赖 slots，不因 settings 服务缺席/改名而消失。
+ * 浏览器插件入口：注册文案字典；三处注册各自挂进「服务就位才触发」的 slots 注入——
+ * 设置页卡片（settings.plugin.item）、侧栏顶部条目（sidebar.panellist）与主区整页（main）。
+ * 侧栏条目与整页只依赖 slots，不因 settings 服务缺席/改名而消失。
  * @param ctx - 浏览器插件上下文。
  */
 export function apply(ctx: ClientContext): void {
   // 词典注册要等 locale 服务；绝不能写进模块级注入声明（组合缺服务会 pending 卡死）。
   ctx.inject(['locale'], (localeCtx) => {
     ctx.effect(() => localeCtx.locale.register(LOCALE_NS, { zh, en }))
+    // 模块级 t 席位（panellist 的 label 在渲染期求值）；bind 失败不影响 locale 注册。
+    try { runtimeT = localeCtx.locale.bind(LOCALE_NS) } catch { /* 保持 key 兜底 */ }
   })
 
   // host 半侧用同一命名空间注册 settings section；设置页「插件」标签页遍历
@@ -791,9 +727,16 @@ export function apply(ctx: ClientContext): void {
       viewSession = (id: string): SessionViewTarget | null => openSessionView(sessions, uiConversation, id)
     }
   })
+  // 布局服务（ctx.layout）：主面板切换——选中整页 / 返回会话。
+  let selectPanel: (id: string | null) => void = () => {}
+  ctx.inject(['layout'], (sub) => {
+    const layout = sub.layout
+    if (layout !== undefined) selectPanel = (id) => { layout.selectPanel(id) }
+  })
+
   // 设置命名空间作用域（供设置页卡片使用）。⚠️ dsh 0.1.7-rc.1 客户端已把该服务由
   // `settingsScope` 改为 `configForms` / `settingsSchema`；此处按旧名探测，缺席则本块
-  // 不激活（设置卡片暂不出现），但**不影响侧栏入口**。设置卡片待迁移到新契约。
+  // 不激活（设置卡片暂不出现），但**不影响侧栏入口与整页**。设置卡片待迁移到新契约。
   let scope: SettingsScope | null = null
   ctx.inject(['slots', 'settingsScope'], (sub) => {
     const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS })
@@ -806,27 +749,41 @@ export function apply(ctx: ClientContext): void {
           // keyed 槽位用 key 声明本条贡献给哪个命名空间。
           key: SETTINGS_NS,
           locale: LOCALE_NS,
-          inject: () => ({ scope: bound, viewSession }),
+          inject: () => ({ open: () => { selectPanel(PANEL_ID) } }),
         },
         TasksConfigPage,
       ),
     )
   })
 
-  // 侧栏底部常驻入口（list 槽 sidebar.footer.action，任何屏可见）。
-  // ⚠️ 必须**只依赖 slots**、自成一块（照 dsh-context 顶层注册）：一旦嵌进 settings 服务的
-  // 注入块，settings 服务改名/缺席就会让入口无声消失、且不报错（2026-09-24 真机教训）。
+  // 侧栏顶部条目 + 主区整页（dsh 0.1.7-rc.1 原生「主面板」机制）：
+  //  · `sidebar.panellist`（list）：条目 `id` = 主面板 key，组件只画图标；行按钮、点击
+  //    （侧栏调 `ctx.layout.selectPanel(id)`）与激活态全由侧栏 / 布局服务托管（同「插件」行）。
+  //  · `main`（keyed）：`key` = 同一 id，选中即整页替换会话区；返回会话 = `selectPanel(null)`。
+  // ⚠️ 必须只依赖 `slots`、自成一块：一旦嵌进 settings 注入块，settings 服务改名/缺席
+  // 就会让入口无声消失且不报错（2026-09-24 真机教训）。
   ctx.inject(['slots'], (sub) => {
-    sub.slots.inject('sidebar.footer.action', () =>
+    sub.slots.inject('sidebar.panellist', () =>
       sub.slots.register(
         {
-          name: 'sidebar.footer.action',
-          id: SETTINGS_NS,
-          order: 20,
+          name: 'sidebar.panellist',
+          id: PANEL_ID,
+          order: 30,
+          label: () => runtimeT('panelTitle'),
           locale: LOCALE_NS,
         },
-        (props: { t: Translate; wide?: boolean }) =>
-          h(TaskTrayButton, { ...props, scopeRef: () => scope, viewRef: () => viewSession }),
+        TaskPanelIcon,
+      ),
+    )
+    sub.slots.inject('main', () =>
+      sub.slots.register(
+        { name: 'main', key: PANEL_ID, locale: LOCALE_NS },
+        (props: { t: Translate }) => h(TaskPageHost, {
+          t: props.t,
+          scopeRef: () => scope,
+          viewRef: () => viewSession,
+          onBack: () => { selectPanel(null) },
+        }),
       ),
     )
   })

@@ -16,7 +16,7 @@ export type LocaleKey =
   | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
   | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents' | 'debugEventsEmpty'
   | 'debugRefresh' | 'debugRefreshedAt' | 'debugAutoHint'
-  | 'panelTitle' | 'tabConfig' | 'tabRecords'
+  | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'colTask' | 'colTitle' | 'colSchedule' | 'colNext' | 'colSlot'
   | 'colStatus' | 'colAttempt' | 'colSession' | 'colUpdated'
@@ -67,6 +67,7 @@ export const zh: Record<LocaleKey, string> = {
   debugEvents: '事件 task_events（最近 200 条，旧 → 新）',
   debugEventsEmpty: '（尚无事件）',
   panelTitle: '任务调度表',
+  backToConversation: '返回会话',
   tabConfig: '任务配置',
   tabRecords: '执行记录',
   tasksParsedTitle: '已解析的任务（id 由系统生成，改名字不影响历史）',
@@ -145,6 +146,7 @@ export const en: Record<LocaleKey, string> = {
   debugEvents: 'Events task_events (latest 200, oldest → newest)',
   debugEventsEmpty: '(no events yet)',
   panelTitle: 'Task dispatch table',
+  backToConversation: 'Back to conversation',
   tabConfig: 'Configuration',
   tabRecords: 'Run records',
   tasksParsedTitle: 'Parsed tasks (ids are generated; renaming never breaks history)',
