@@ -1188,14 +1188,42 @@ window.__ModuleLoader__.load({
 		* 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
 		* @param service - 宿主注册的快照 / 任务表服务。
 		*/
-		function remoteScope(service) {
+		/**
+		* rc.1 运行时数据通道：把宿主 `taskDispatchTable` 服务（经 `ctx.get('remote')` 调）适配成
+		* SettingsScope。宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms，改走此服务。
+		* 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
+		* 服务是**宿主**侧经 remote 暴露的，客户端本地不预先存在该服务名，故用 `getService` 惰性获取，
+		* 服务一就绪即接管（不能用硬依赖声明，否则 inject 回调永不触发）。
+		* @param getService - 惰性取宿主服务（直名 taskDispatchTable 或 remote.taskDispatchTable 都试）。
+		*/
+		function remoteScope(getService) {
 			let lastDebug = "";
 			let lastInline = "";
 			let lastMapped;
 			const listeners = /* @__PURE__ */ new Set();
 			const poll = () => {
-				const debug = service.getSnapshot();
-				const inline = service.getTasksInline();
+				const svc = getService();
+				if (svc === void 0) {
+					if (lastMapped === void 0) {
+						lastMapped = {
+							status: "loading",
+							value: void 0,
+							base: void 0,
+							user: void 0,
+							writable: false
+						};
+						for (const l of [...listeners]) l();
+					}
+					channelDiag = {
+						...channelDiag,
+						entry: SETTINGS_NS,
+						status: "loading",
+						note: "taskDispatchTable 服务未就绪（轮询中）"
+					};
+					return;
+				}
+				const debug = svc.getSnapshot();
+				const inline = svc.getTasksInline();
 				if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) return;
 				lastDebug = debug;
 				lastInline = inline;
@@ -1214,7 +1242,7 @@ window.__ModuleLoader__.load({
 					status: "ready",
 					keys: "debugSnapshot,tasksInline",
 					snapshotLen: debug.length,
-					note: "remote.taskDispatchTable"
+					note: "已绑定 taskDispatchTable"
 				};
 				for (const l of [...listeners]) l();
 			};
@@ -1235,8 +1263,9 @@ window.__ModuleLoader__.load({
 					};
 				},
 				set: async (field, value) => {
-					if (field === "tasksInline") {
-						await service.setTasksInline(String(value));
+					const svc = getService();
+					if (svc !== void 0 && field === "tasksInline") {
+						await svc.setTasksInline(String(value));
 						poll();
 					}
 				},
@@ -1328,28 +1357,13 @@ window.__ModuleLoader__.load({
 				adoptScope(bound);
 				registerCard(sub);
 			});
-			ctx.inject([
-				"slots",
-				"remote",
-				"taskDispatchTable"
-			], (sub) => {
-				const svc = sub.taskDispatchTable ?? sub.remote?.taskDispatchTable;
-				if (svc === void 0) {
-					channelDiag = {
-						...channelDiag,
-						entry: SETTINGS_NS,
-						status: "unavailable",
-						note: "taskDispatchTable 未就绪（宿主服务未注册？见宿主日志 [数据通道]）"
-					};
-					return;
-				}
-				channelDiag = {
-					...channelDiag,
-					entry: SETTINGS_NS,
-					status: "ready",
-					note: "已绑定 taskDispatchTable（直名+" + (sub.taskDispatchTable ? "直名" : "remote") + "）"
+			ctx.inject(["slots", "remote"], (sub) => {
+				const getService = () => {
+					const direct = sub.taskDispatchTable;
+					if (direct !== void 0) return direct;
+					return sub.remote?.taskDispatchTable;
 				};
-				adoptScope(remoteScope(svc));
+				adoptScope(remoteScope(getService));
 				registerCard(sub);
 			});
 			ctx.inject(["slots"], (sub) => {

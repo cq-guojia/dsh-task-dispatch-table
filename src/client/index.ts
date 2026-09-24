@@ -818,14 +818,31 @@ function configFormScope(form: ConfigForm): SettingsScope {
  * 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
  * @param service - 宿主注册的快照 / 任务表服务。
  */
-function remoteScope(service: TaskDispatchTableService): SettingsScope {
+/**
+ * rc.1 运行时数据通道：把宿主 `taskDispatchTable` 服务（经 `ctx.get('remote')` 调）适配成
+ * SettingsScope。宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms，改走此服务。
+ * 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
+ * 服务是**宿主**侧经 remote 暴露的，客户端本地不预先存在该服务名，故用 `getService` 惰性获取，
+ * 服务一就绪即接管（不能用硬依赖声明，否则 inject 回调永不触发）。
+ * @param getService - 惰性取宿主服务（直名 taskDispatchTable 或 remote.taskDispatchTable 都试）。
+ */
+function remoteScope(getService: () => TaskDispatchTableService | undefined): SettingsScope {
   let lastDebug = ''
   let lastInline = ''
   let lastMapped: ScopeSnapshot | undefined
   const listeners = new Set<() => void>()
   const poll = (): void => {
-    const debug = service.getSnapshot()
-    const inline = service.getTasksInline()
+    const svc = getService()
+    if (svc === undefined) {
+      if (lastMapped === undefined) {
+        lastMapped = { status: 'loading', value: undefined, base: undefined, user: undefined, writable: false }
+        for (const l of [...listeners]) l()
+      }
+      channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: 'taskDispatchTable 服务未就绪（轮询中）' }
+      return
+    }
+    const debug = svc.getSnapshot()
+    const inline = svc.getTasksInline()
     if (debug === lastDebug && inline === lastInline && lastMapped !== undefined) return
     lastDebug = debug
     lastInline = inline
@@ -841,7 +858,7 @@ function remoteScope(service: TaskDispatchTableService): SettingsScope {
       status: 'ready',
       keys: 'debugSnapshot,tasksInline',
       snapshotLen: debug.length,
-      note: 'remote.taskDispatchTable',
+      note: '已绑定 taskDispatchTable',
     }
     for (const l of [...listeners]) l()
   }
@@ -855,7 +872,8 @@ function remoteScope(service: TaskDispatchTableService): SettingsScope {
       return () => { listeners.delete(listener) }
     },
     set: async (field, value) => {
-      if (field === 'tasksInline') { await service.setTasksInline(String(value)); poll() }
+      const svc = getService()
+      if (svc !== undefined && field === 'tasksInline') { await svc.setTasksInline(String(value)); poll() }
     },
     unset: async () => {},
   }
@@ -965,20 +983,17 @@ export function apply(ctx: ClientContext): void {
   })
   // rc.1 运行时数据通道：宿主经 ctx.set('taskDispatchTable') 注册，客户端读取。
   // 宿主插件配置字段不能标 volatile（会让 entry 不激活），故快照 / 任务表改走此服务而非 configForms。
-  // 宿主服务在客户端可能以直名（taskDispatchTable）或 remote 代理（remote.taskDispatchTable）暴露，两种都试。
-  ctx.inject(['slots', 'remote', 'taskDispatchTable'], (sub) => {
-    const svc = sub.taskDispatchTable ?? sub.remote?.taskDispatchTable
-    if (svc === undefined) {
-      channelDiag = {
-        ...channelDiag,
-        entry: SETTINGS_NS,
-        status: 'unavailable',
-        note: 'taskDispatchTable 未就绪（宿主服务未注册？见宿主日志 [数据通道]）',
-      }
-      return
+  // 注意：不能把 taskDispatchTable 列进 inject 硬依赖——它是宿主经 remote 暴露的服务，客户端本地
+  // 不存在该服务名，硬依赖会让本回调永不触发（上一版正是因此只剩 configForms 的 unavailable）。
+  // 改为依赖 remote 后惰性获取，remoteScope 内部轮询直到服务就绪。
+  ctx.inject(['slots', 'remote'], (sub) => {
+    const getService = (): TaskDispatchTableService | undefined => {
+      const direct = (sub as unknown as { taskDispatchTable?: TaskDispatchTableService }).taskDispatchTable
+      if (direct !== undefined) return direct
+      return (sub as unknown as { remote?: { taskDispatchTable?: TaskDispatchTableService } }).remote
+        ?.taskDispatchTable
     }
-    channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'ready', note: '已绑定 taskDispatchTable（直名+' + (sub.taskDispatchTable ? '直名' : 'remote') + '）' }
-    adoptScope(remoteScope(svc))
+    adoptScope(remoteScope(getService))
     registerCard(sub)
   })
 
