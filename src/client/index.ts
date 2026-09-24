@@ -166,6 +166,14 @@ const iconButtonStyle: Record<string, string | number> = {
   width: '26px', height: '26px', padding: 0, border: 'none', borderRadius: '6px',
   background: 'transparent', color: C.textDim, cursor: 'pointer', transition,
 }
+/** 侧栏底部动作按钮（sidebar.footer.action 入口）：整行、图标居中、悬停高亮，
+ * 与 dsh-context 的 Overview 按钮同列堆叠。 */
+const trayButtonStyle: Record<string, string | number> = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: '100%', boxSizing: 'border-box', minHeight: '34px', padding: '7px 10px',
+  margin: 0, border: 'none', borderRadius: '8px', color: C.textDim,
+  cursor: 'pointer', transition,
+}
 const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px', color: C.text }
 const preStyle: Record<string, string | number> = {
   fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, margin: '4px 0',
@@ -205,6 +213,19 @@ function CloseIcon() {
     strokeWidth: 2, strokeLinecap: 'round',
   },
     h('path', { d: 'M6 6l12 12M18 6L6 18' }),
+  )
+}
+
+/** 任务表图标（内联 SVG：清单勾选，颜色走 currentColor ⇒ 自动跟随主题）。 */
+function TaskIcon(props: { size?: number }) {
+  const size = props.size ?? 18
+  return h('svg', {
+    width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+  },
+    h('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }),
+    h('path', { d: 'M8 9.5l2 2 3.5-3.5' }),
+    h('path', { d: 'M8 15.5h8' }),
   )
 }
 
@@ -616,6 +637,23 @@ function DispatcherModal(props: {
 }
 
 /**
+ * 面板开关 + 快照切片的共享钩子：设置卡片与侧栏底部入口共用，
+ * 点开同一个 DispatcherModal。快照由 host 周期写入 debugSnapshot 字段，自动刷新。
+ * @param scope - 本命名空间的设置作用域。
+ */
+function useTaskPanel(scope: SettingsScope) {
+  const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
+  // getSnapshot 必须返回稳定引用：作用域的实现在值不变时保证同一引用。
+  const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const section = (snapshot.value ?? {}) as Record<string, unknown>
+  const raw = typeof section.debugSnapshot === 'string' ? section.debugSnapshot : ''
+  const data = parseDebugSnapshot(raw)
+  return { ready: snapshot.status === 'ready', raw, data, scope, panelOpen, open: () => setPanelOpen(true), close: () => setPanelOpen(false) }
+}
+
+/**
  * 设置页卡片（决策 26 修订）：**只留一行「标题 + 描述 + 箭头」**，点一下打开调度面板。
  * 原来的内嵌 JSON 输入框与只读运行参数都挪进了面板的「任务配置」页——设置页保持干净。
  * @param props - t 席位与绑定的设置作用域。
@@ -642,7 +680,7 @@ function TasksConfigPage(props: PageProps) {
       tabIndex: 0,
       onClick: () => { setPanelOpen(true) },
       onKeyDown: (event: { key?: string }) => {
-        if (event.key === 'Enter' || event.key === ' ') setPanelOpen(true)
+        if (event.key === 'Enter' || event.key === ' ') { setPanelOpen(true) }
       },
     },
       h('div', null,
@@ -653,6 +691,37 @@ function TasksConfigPage(props: PageProps) {
     ),
     panelOpen
       ? h(DispatcherModal, { t, scope, data: debugData, raw: debugRaw, viewSession, onClose: () => { setPanelOpen(false) } })
+      : null,
+  )
+}
+
+/**
+ * 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；
+ * dsh-context 在同处放 Overview 按钮）：一个图标按钮，点开同一个调度面板。
+ * @param props - t 席位、绑定的设置作用域、面板内只读会话视图工厂。
+ */
+function TaskTrayButton(props: { t: Translate; scope: SettingsScope; viewSession: ((id: string) => SessionViewTarget | null) | null; wide?: boolean }) {
+  const { t, scope, viewSession, wide } = props
+  const panel = useTaskPanel(scope)
+  const [hover, setHover] = useState(false)
+  if (!panel.ready) return null
+  // 悬停高亮走内联态（无 CSS 文件）：背景取主题变量，缺省兜底透明。
+  const btnStyle: Record<string, string | number> = { ...trayButtonStyle, background: hover ? C.hover : 'transparent' }
+  return h(Fragment, null,
+    h('button', {
+      type: 'button',
+      style: btnStyle,
+      title: t('panelTitle'),
+      'aria-label': t('panelTitle'),
+      onClick: panel.open,
+      onMouseEnter: () => { setHover(true) },
+      onMouseLeave: () => { setHover(false) },
+    },
+      h(TaskIcon, { size: wide ? 16 : 18 }),
+      wide ? h('span', { style: { marginLeft: '8px', fontSize: '13px', color: C.text } }, t('trayLabel')) : null,
+    ),
+    panel.panelOpen
+      ? h(DispatcherModal, { t, scope, data: panel.data, raw: panel.raw, viewSession, onClose: panel.close })
       : null,
   )
 }
@@ -698,6 +767,20 @@ export function apply(ctx: ClientContext): void {
           inject: () => ({ scope, viewSession }),
         },
         TasksConfigPage,
+      ),
+    )
+    // 侧栏底部常驻入口（list 槽 sidebar.footer.action，任何屏可见；dsh-context 的
+    // Overview 按钮同处）。点开同一个调度面板，仅图标、tooltip 作无障碍标签。
+    sub.slots.inject('sidebar.footer.action', () =>
+      sub.slots.register(
+        {
+          name: 'sidebar.footer.action',
+          id: SETTINGS_NS,
+          order: 20,
+          locale: LOCALE_NS,
+          inject: () => ({ scope, viewSession }),
+        },
+        TaskTrayButton,
       ),
     )
   })

@@ -10,6 +10,7 @@ window.__ModuleLoader__.load({
 		const zh = {
 			title: "任务调度表（dsh-task-dispatch-table）",
 			description: "用任务表驱动定时派发：配置任务、查看每次执行的记录。点击打开面板。",
+			trayLabel: "任务调度",
 			unavailable: "设置命名空间当前不可用（插件未运行或宿主未提供），暂时无法配置。",
 			tasksInlineLabel: "任务表（tasksInline，JSON 数组）",
 			tasksInlineHint: "每项一个任务定义；非空时优先于任务目录 tasksDir。清空并保存 = 回到默认（空，改用 tasksDir）。",
@@ -86,6 +87,7 @@ window.__ModuleLoader__.load({
 		const en = {
 			title: "Task dispatch table (dsh-task-dispatch-table)",
 			description: "Schedule agent tasks from a task table: configure tasks and review every run. Click to open the panel.",
+			trayLabel: "Task dispatch",
 			unavailable: "The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.",
 			tasksInlineLabel: "Task table (tasksInline, JSON array)",
 			tasksInlineHint: "One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).",
@@ -679,6 +681,23 @@ window.__ModuleLoader__.load({
 			cursor: "pointer",
 			transition
 		};
+		/** 侧栏底部动作按钮（sidebar.footer.action 入口）：整行、图标居中、悬停高亮，
+		* 与 dsh-context 的 Overview 按钮同列堆叠。 */
+		const trayButtonStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+			width: "100%",
+			boxSizing: "border-box",
+			minHeight: "34px",
+			padding: "7px 10px",
+			margin: 0,
+			border: "none",
+			borderRadius: "8px",
+			color: C.textDim,
+			cursor: "pointer",
+			transition
+		};
 		const sectionTitleStyle = {
 			margin: "12px 0 4px",
 			fontSize: "13px",
@@ -752,6 +771,26 @@ window.__ModuleLoader__.load({
 				strokeWidth: 2,
 				strokeLinecap: "round"
 			}, (0, react.createElement)("path", { d: "M6 6l12 12M18 6L6 18" }));
+		}
+		/** 任务表图标（内联 SVG：清单勾选，颜色走 currentColor ⇒ 自动跟随主题）。 */
+		function TaskIcon(props) {
+			const size = props.size ?? 18;
+			return (0, react.createElement)("svg", {
+				width: size,
+				height: size,
+				viewBox: "0 0 24 24",
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 2,
+				strokeLinecap: "round",
+				strokeLinejoin: "round"
+			}, (0, react.createElement)("rect", {
+				x: 4,
+				y: 4,
+				width: 16,
+				height: 16,
+				rx: 3
+			}), (0, react.createElement)("path", { d: "M8 9.5l2 2 3.5-3.5" }), (0, react.createElement)("path", { d: "M8 15.5h8" }));
 		}
 		/** 任务表草稿是否为宿主可解析的 JSON 数组（空白串视为清空，合法）。 */
 		function isValidTaskTable(text) {
@@ -1037,6 +1076,29 @@ window.__ModuleLoader__.load({
 			}) : null);
 		}
 		/**
+		* 面板开关 + 快照切片的共享钩子：设置卡片与侧栏底部入口共用，
+		* 点开同一个 DispatcherModal。快照由 host 周期写入 debugSnapshot 字段，自动刷新。
+		* @param scope - 本命名空间的设置作用域。
+		*/
+		function useTaskPanel(scope) {
+			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
+			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
+			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
+			const [panelOpen, setPanelOpen] = (0, react.useState)(false);
+			const section = snapshot.value ?? {};
+			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
+			const data = parseDebugSnapshot(raw);
+			return {
+				ready: snapshot.status === "ready",
+				raw,
+				data,
+				scope,
+				panelOpen,
+				open: () => setPanelOpen(true),
+				close: () => setPanelOpen(false)
+			};
+		}
+		/**
 		* 设置页卡片（决策 26 修订）：**只留一行「标题 + 描述 + 箭头」**，点一下打开调度面板。
 		* 原来的内嵌 JSON 输入框与只读运行参数都挪进了面板的「任务配置」页——设置页保持干净。
 		* @param props - t 席位与绑定的设置作用域。
@@ -1073,6 +1135,45 @@ window.__ModuleLoader__.load({
 			}) : null);
 		}
 		/**
+		* 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；
+		* dsh-context 在同处放 Overview 按钮）：一个图标按钮，点开同一个调度面板。
+		* @param props - t 席位、绑定的设置作用域、面板内只读会话视图工厂。
+		*/
+		function TaskTrayButton(props) {
+			const { t, scope, viewSession, wide } = props;
+			const panel = useTaskPanel(scope);
+			const [hover, setHover] = (0, react.useState)(false);
+			if (!panel.ready) return null;
+			const btnStyle = {
+				...trayButtonStyle,
+				background: hover ? C.hover : "transparent"
+			};
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("button", {
+				type: "button",
+				style: btnStyle,
+				title: t("panelTitle"),
+				"aria-label": t("panelTitle"),
+				onClick: panel.open,
+				onMouseEnter: () => {
+					setHover(true);
+				},
+				onMouseLeave: () => {
+					setHover(false);
+				}
+			}, (0, react.createElement)(TaskIcon, { size: wide ? 16 : 18 }), wide ? (0, react.createElement)("span", { style: {
+				marginLeft: "8px",
+				fontSize: "13px",
+				color: C.text
+			} }, t("trayLabel")) : null), panel.panelOpen ? (0, react.createElement)(DispatcherModal, {
+				t,
+				scope,
+				data: panel.data,
+				raw: panel.raw,
+				viewSession,
+				onClose: panel.close
+			}) : null);
+		}
+		/**
 		* 浏览器插件入口：注册文案字典；在 slots + settingsScope 就位后把配置页注册进
 		* settings.plugin.item（keyed 槽位，key = 设置命名空间）。
 		* @param ctx - 浏览器插件上下文。
@@ -1101,6 +1202,16 @@ window.__ModuleLoader__.load({
 						viewSession
 					})
 				}, TasksConfigPage));
+				sub.slots.inject("sidebar.footer.action", () => sub.slots.register({
+					name: "sidebar.footer.action",
+					id: SETTINGS_NS,
+					order: 20,
+					locale: LOCALE_NS,
+					inject: () => ({
+						scope,
+						viewSession
+					})
+				}, TaskTrayButton));
 			});
 		}
 		//#endregion
