@@ -1095,8 +1095,19 @@ window.__ModuleLoader__.load({
 		};
 		/** 采纳一个作用域（先到先用，不互相覆盖），并通知已挂载的整页重渲染。 */
 		const adoptScope = (next) => {
-			if (currentScope !== null) return;
-			currentScope = next;
+			if (currentScope === null) {
+				currentScope = next;
+				afterAdopt();
+				return;
+			}
+			if (currentScope.getSnapshot().status === "unavailable") {
+				currentScope = next;
+				afterAdopt();
+				return;
+			}
+		};
+		/** 通知已挂载的整页重渲染（作用域切换后）。 */
+		const afterAdopt = () => {
 			for (const listener of [...scopeListeners]) listener();
 		};
 		let channelDiag = {
@@ -1169,6 +1180,67 @@ window.__ModuleLoader__.load({
 				unset: async (field) => {
 					await form.unset(field);
 				}
+			};
+		}
+		/**
+		* rc.1 运行时数据通道：把宿主 `taskDispatchTable` 服务（经 `ctx.get('remote')` 调）适配成
+		* SettingsScope。宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms，改走此服务。
+		* 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
+		* @param service - 宿主注册的快照 / 任务表服务。
+		*/
+		function remoteScope(service) {
+			let lastDebug = "";
+			let lastInline = "";
+			let lastMapped;
+			const listeners = /* @__PURE__ */ new Set();
+			const poll = () => {
+				const debug = service.getSnapshot();
+				const inline = service.getTasksInline();
+				if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) return;
+				lastDebug = debug;
+				lastInline = inline;
+				lastMapped = {
+					status: "ready",
+					value: {
+						debugSnapshot: debug,
+						tasksInline: inline
+					},
+					base: void 0,
+					user: void 0,
+					writable: true
+				};
+				channelDiag = {
+					entry: SETTINGS_NS,
+					status: "ready",
+					keys: "debugSnapshot,tasksInline",
+					snapshotLen: debug.length,
+					note: "remote.taskDispatchTable"
+				};
+				for (const l of [...listeners]) l();
+			};
+			poll();
+			setInterval(poll, 2e3);
+			return {
+				getSnapshot: () => lastMapped ?? {
+					status: "loading",
+					value: void 0,
+					base: void 0,
+					user: void 0,
+					writable: false
+				},
+				subscribe: (listener) => {
+					listeners.add(listener);
+					return () => {
+						listeners.delete(listener);
+					};
+				},
+				set: async (field, value) => {
+					if (field === "tasksInline") {
+						await service.setTasksInline(String(value));
+						poll();
+					}
+				},
+				unset: async () => {}
 			};
 		}
 		/**
@@ -1254,6 +1326,30 @@ window.__ModuleLoader__.load({
 					note: "已绑定 settingsScope（旧契约）"
 				};
 				adoptScope(bound);
+				registerCard(sub);
+			});
+			ctx.inject([
+				"slots",
+				"remote",
+				"taskDispatchTable"
+			], (sub) => {
+				const svc = sub.taskDispatchTable ?? sub.remote?.taskDispatchTable;
+				if (svc === void 0) {
+					channelDiag = {
+						...channelDiag,
+						entry: SETTINGS_NS,
+						status: "unavailable",
+						note: "taskDispatchTable 未就绪（宿主服务未注册？见宿主日志 [数据通道]）"
+					};
+					return;
+				}
+				channelDiag = {
+					...channelDiag,
+					entry: SETTINGS_NS,
+					status: "ready",
+					note: "已绑定 taskDispatchTable（直名+" + (sub.taskDispatchTable ? "直名" : "remote") + "）"
+				};
+				adoptScope(remoteScope(svc));
 				registerCard(sub);
 			});
 			ctx.inject(["slots"], (sub) => {

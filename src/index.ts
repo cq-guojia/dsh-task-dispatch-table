@@ -99,6 +99,40 @@ export function apply(ctx: HostContext, config: unknown): void {
     const scope = typeof settings.register === 'function'
       ? settings.register<PluginConfig>(SETTINGS_NS, Config as unknown as z_any<PluginConfig>, { base: initial })
       : fallbackScope(sctx, settings, initial)
+    // ── rc.1 运行时数据通道（宿主插件不能走 configForms：volatile 会让 entry 不激活，
+    // 详见 config.ts 头部说明）。宿主把「快照 / 任务表」放进内存 store，经 ctx.set 注册成宿主
+    // 服务，客户端经 ctx.get('remote').taskDispatchTable 读取（参考插件即靠 ctx.get('remote') 调宿主服务）。
+    const runtime: { tasksInline: string; debugSnapshot: string } = {
+      tasksInline: initial.tasksInline,
+      debugSnapshot: '',
+    }
+    const persistTasksInline = async (json: string): Promise<void> => {
+      const configEditor = (sctx as unknown as {
+        configEditor?: {
+          entries: () => Array<{ options?: { id?: string } }>
+          edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
+        }
+      }).configEditor
+      if (configEditor === undefined) return
+      const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
+      if (entry === undefined) return
+      await configEditor.edit(entry, (raw: Record<string, unknown>) => ({ ...raw, tasksInline: json }))
+    }
+    const snapshotService = {
+      getSnapshot: (): string => runtime.debugSnapshot,
+      getTasksInline: (): string => runtime.tasksInline,
+      setTasksInline: async (json: string): Promise<void> => {
+        runtime.tasksInline = json
+        await persistTasksInline(json)
+      },
+    }
+    const setSvc = (sctx as unknown as { set?: (key: string, value: unknown) => void }).set
+    if (typeof setSvc === 'function') {
+      setSvc.call(sctx, 'taskDispatchTable', snapshotService)
+      sctx.logger.info('[数据通道] 宿主快照服务 taskDispatchTable 已注册（客户端经 ctx.get(\'remote\').taskDispatchTable 读取）')
+    } else {
+      sctx.logger.warn('[数据通道] 宿主上下文无 set 面，taskDispatchTable 服务未注册；客户端将无法经 remote 读取快照')
+    }
     // statePath 启动时定格，运行期改配置不迁移库。
     const store = new TaskStore(resolveStatePath(scope.get().statePath))
     // 迁移若真的合并掉了重复行（正常应为 0），必须让用户看见——绝不静默删数据。
@@ -166,32 +200,16 @@ export function apply(ctx: HostContext, config: unknown): void {
         if (content === lastContent && Date.now() - lastPushAt < DEBUG_FORCE_INTERVAL_MS) return
         lastContent = content
         lastPushAt = Date.now()
-        scope.update({ debugSnapshot: JSON.stringify({ at: new Date().toISOString(), ...body }) })
-          .then(() => {
-            // 只记一次：证明写通道真的通了（否则日志会被每 tick 刷屏）。
-            if (snapshotWriteLogged) return
-            snapshotWriteLogged = true
-            sctx.logger.info(
-              `调试快照首次写入成功（${body.tasks.length} 个任务 / ${snap.instances.length} 条实例`
-              + ` / ${snap.events.length} 条事件，${JSON.stringify(body).length} 字节）`,
-            )
-            // 宿主侧真相诊断：describe() 才是客户端 configForms 读的唯一来源（remote.settings.describe
-            // 即宿主本机这一份）。若本插件不在列表里，说明 entry 被 set717/lib/index.js:417 的
-            // （schema===void0 / fiber.state!==2 / fiber.runtime===null）过滤掉了。
-            try {
-              const exposed = (sctx.settings as unknown as { describe: () => Array<{ ns?: string }> })
-                .describe()
-                .map((d) => d.ns)
-                .filter((ns): ns is string => typeof ns === 'string')
-              sctx.logger.info(
-                `[数据通道诊断-host] describe 暴露命名空间=${JSON.stringify(exposed)}`
-                + ` 含本插件=${exposed.includes(SETTINGS_NS)}`,
-              )
-            } catch (e) {
-              sctx.logger.warn(`[数据通道诊断-host] describe 调用失败: ${String(e)}`)
-            }
-          })
-          .catch((error: unknown) => sctx.logger.warn(`调试快照写入失败: ${String(error)}`))
+        // rc.1：宿主运行时数据不走 settings.update（要求 volatile，会让 entry 不激活）；
+        // 改为写进内存 store，经 taskDispatchTable 宿主服务暴露给客户端。
+        runtime.debugSnapshot = JSON.stringify({ at: new Date().toISOString(), ...body })
+        // 只记一次：证明写通道真的通了（否则日志会被每 tick 刷屏）。
+        if (snapshotWriteLogged) return
+        snapshotWriteLogged = true
+        sctx.logger.info(
+          `调试快照首次写入成功（${body.tasks.length} 个任务 / ${snap.instances.length} 条实例`
+          + ` / ${snap.events.length} 条事件，${JSON.stringify(body).length} 字节；客户端经 remote.taskDispatchTable 读取）`,
+        )
       } catch (error) {
         sctx.logger.warn(`调试快照组装失败: ${String(error)}`)
       }
@@ -213,7 +231,8 @@ export function apply(ctx: HostContext, config: unknown): void {
     const reconciler = createReconciler({ ctx: sctx, logger: teeLogger, store, options: reconcileOptions })
     const scheduler: Scheduler = createScheduler({
       ctx: sctx, logger: teeLogger, store, reconciler,
-      config: () => scope.get(),
+      // tasksInline 以 runtime 内存值为准（用户经 remote 服务改后即时生效，无需等 settings 落盘）。
+      config: () => ({ ...scope.get(), tasksInline: runtime.tasksInline }),
     })
 
     // 启动扫描（机制 #5）：重启期间 disposed 事件可能全部丢失，已派发未定态实例置 unknown，
@@ -232,10 +251,11 @@ export function apply(ctx: HostContext, config: unknown): void {
      */
     const ensureInlineIds = (): void => {
       try {
-        const raw = scope.get().tasksInline
+        const raw = runtime.tasksInline
         const { json, changed, assigned } = ensureIdsInInlineJson(raw)
         if (!changed) return
-        scope.update({ tasksInline: json })
+        runtime.tasksInline = json
+        void persistTasksInline(json)
           .then(() => teeLogger.info(`已为 ${assigned} 条任务定义生成 id 并写回配置`))
           .catch((error: unknown) => teeLogger.warn(`任务 id 写回配置失败（将在下次 tick 重试）: ${String(error)}`))
       } catch (error) {

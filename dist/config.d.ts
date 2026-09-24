@@ -24,24 +24,24 @@ export interface PluginConfig {
 export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'>;
 export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     statePath: z<string, string, "defined">;
-    tickMs: z<number, number, "volatile-defined">;
-    dispatchGraceMs: z<number, number, "volatile-defined">;
-    leaseMs: z<number, number, "volatile-defined">;
-    unknownGraceMs: z<number, number, "volatile-defined">;
+    tickMs: z<number, number, "defined">;
+    dispatchGraceMs: z<number, number, "defined">;
+    leaseMs: z<number, number, "defined">;
+    unknownGraceMs: z<number, number, "defined">;
     tasksDir: z<string, string, "defined">;
-    tasksInline: z<string, string, "volatile-defined">;
-    debugSnapshot: z<string, string, "volatile-defined">;
+    tasksInline: z<string, string, "defined">;
+    debugSnapshot: z<string, string, "defined">;
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     statePath: z<string, string, "defined">;
-    tickMs: z<number, number, "volatile-defined">;
-    dispatchGraceMs: z<number, number, "volatile-defined">;
-    leaseMs: z<number, number, "volatile-defined">;
-    unknownGraceMs: z<number, number, "volatile-defined">;
+    tickMs: z<number, number, "defined">;
+    dispatchGraceMs: z<number, number, "defined">;
+    leaseMs: z<number, number, "defined">;
+    unknownGraceMs: z<number, number, "defined">;
     tasksDir: z<string, string, "defined">;
-    tasksInline: z<string, string, "volatile-defined">;
-    debugSnapshot: z<string, string, "volatile-defined">;
+    tasksInline: z<string, string, "defined">;
+    debugSnapshot: z<string, string, "defined">;
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
 }>>, "plain">;

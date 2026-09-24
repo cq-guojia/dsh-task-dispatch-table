@@ -10,18 +10,24 @@ export const ConfigDefaults = {
     leaseMs: 30 * 60_000,
     unknownGraceMs: 5 * 60_000,
 };
+// ⚠️ rc.1（0.1.7-rc.1）约束：宿主插件配置字段**不能标 .volatile()**。
+// 实测根因（set717/lib/index.js:417 + types/index.js:368-380）：configForms 的读写都要求字段
+// volatile，且 describe() 只投影 volatileForm(schema)（即只有 volatile 字段才暴露给客户端）；
+// 但宿主 Loader 会把 volatile 字段的默认按 `{}` 提交进 profile，重装后 z.number()/z.string()
+// 校验失败 → entry 不激活（日志 `$.tickMs expected number but got [object Object]`）。
+// 故宿主插件配置一律为静态字段；运行时数据（快照 / 任务表回写）改走宿主服务
+// `ctx.set('taskDispatchTable', ...)`，客户端经 `ctx.get('remote').taskDispatchTable` 取
+// （参考插件即靠 `ctx.get('remote')` 调宿主服务，不走 configForms）。
 export const Config = z.object({
     statePath: z.string().default(''),
-    // ↓ rc.1（0.1.7-rc.1）要求运行时可写字段标 .volatile()：否则 SettingsForms.write 抛
-    // "has no volatile fields" 写不进（宿主每 tick 写 debugSnapshot / 写回 tasksInline 都会失败）。
-    // 标记为 volatile 的字段由 Loader 经 loader/volatile-update 提交，客户端 configForms 同步可见。
-    tickMs: z.number().default(ConfigDefaults.tickMs).volatile(),
-    dispatchGraceMs: z.number().default(ConfigDefaults.dispatchGraceMs).volatile(),
-    leaseMs: z.number().default(ConfigDefaults.leaseMs).volatile(),
-    unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs).volatile(),
+    tickMs: z.number().default(ConfigDefaults.tickMs),
+    dispatchGraceMs: z.number().default(ConfigDefaults.dispatchGraceMs),
+    leaseMs: z.number().default(ConfigDefaults.leaseMs),
+    unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs),
     tasksDir: z.string().default('tasks'),
-    tasksInline: z.string().role('textarea').default('').volatile(),
-    debugSnapshot: z.string().default('').volatile(),
+    tasksInline: z.string().role('textarea').default(''),
+    // 调试快照：运行时数据，不进 Config；宿主经 taskDispatchTable.getSnapshot() 暴露给客户端。
+    debugSnapshot: z.string().default(''),
     // 决策 22 漏斗第②层：留空 = 未配，派发时漏到下一层。解析结果只用于本次派发，不回写本字段。
     defaultProvider: z.string().default(''),
     defaultModel: z.string().default(''),
