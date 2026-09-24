@@ -144,51 +144,47 @@ window.__ModuleLoader__.load({
 			if (typeof value === "string" && value.trim() === "") return t("paramDefault");
 			return String(value);
 		}
+		const C = {
+			text: "var(--dsw-alias-label-primary, #1f2328)",
+			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
+			textFaint: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
+			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
+			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
+			layer3: "var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))",
+			mask: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))",
+			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
+			borderStrong: "var(--dsw-alias-border-l3, rgba(128,128,128,0.5))",
+			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
+			danger: "var(--dsw-alias-state-error-primary, #c0392b)",
+			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
+			activeRow: "var(--dsw-alias-interactive-bg-active, rgba(128,128,128,0.20))",
+			shadow: "var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))",
+			duration: "var(--ds-transition-duration, 0.15s)",
+			ease: "var(--ds-ease-in-out, ease)"
+		};
+		const monoFont = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`;
 		const textareaStyle = {
 			width: "100%",
 			boxSizing: "border-box",
 			minHeight: "16em",
 			resize: "vertical",
-			fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+			fontFamily: monoFont,
 			fontSize: "12px",
 			lineHeight: 1.5,
-			padding: "8px"
+			padding: "8px",
+			color: C.text,
+			background: C.layer1,
+			border: `1px solid ${C.border}`,
+			borderRadius: "8px"
 		};
 		const hintStyle = {
-			opacity: .7,
+			color: C.textDim,
 			fontSize: "12px",
 			margin: "4px 0 8px"
 		};
-		const cardStyle = {
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "space-between",
-			gap: "12px",
-			padding: "12px 14px",
-			border: "1px solid rgba(128,128,128,0.35)",
-			borderRadius: "8px",
-			cursor: "pointer",
-			width: "100%",
-			boxSizing: "border-box",
-			background: "transparent",
-			textAlign: "left"
-		};
-		const cardTitleStyle = {
-			fontSize: "14px",
-			fontWeight: 600
-		};
-		const cardDescStyle = {
-			fontSize: "12px",
-			opacity: .7,
-			marginTop: "2px"
-		};
-		const chevronStyle = {
-			fontSize: "18px",
-			opacity: .6,
-			lineHeight: 1
-		};
 		const errorStyle = {
-			color: "#c0392b",
+			color: C.danger,
 			fontSize: "12px",
 			margin: "4px 0 0"
 		};
@@ -203,7 +199,125 @@ window.__ModuleLoader__.load({
 			gap: "4px 16px",
 			margin: "8px 0 0"
 		};
-		const monoFont = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+		const cardStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: "12px",
+			padding: "12px 14px",
+			border: `1px solid ${C.border}`,
+			borderRadius: "10px",
+			cursor: "pointer",
+			width: "100%",
+			boxSizing: "border-box",
+			background: "transparent",
+			textAlign: "left",
+			color: C.text,
+			transition
+		};
+		const cardTitleStyle = {
+			fontSize: "14px",
+			fontWeight: 600,
+			color: C.text
+		};
+		const cardDescStyle = {
+			fontSize: "12px",
+			color: C.textDim,
+			marginTop: "2px"
+		};
+		const chevronStyle = {
+			color: C.textFaint,
+			display: "flex",
+			alignItems: "center"
+		};
+		const panelStyle = {
+			background: C.layer1,
+			color: C.text,
+			borderRadius: "14px",
+			width: "100%",
+			maxWidth: "1100px",
+			maxHeight: "86vh",
+			overflow: "auto",
+			padding: "16px 18px",
+			boxSizing: "border-box",
+			border: `1px solid ${C.border}`,
+			boxShadow: C.shadow
+		};
+		const overlayStyle = {
+			position: "fixed",
+			inset: 0,
+			zIndex: 1e3,
+			background: C.mask,
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+			padding: "24px"
+		};
+		/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
+		const panelHeaderStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: "12px",
+			marginBottom: "4px",
+			flexWrap: "wrap"
+		};
+		const headerRightStyle = {
+			display: "flex",
+			alignItems: "center",
+			gap: "8px"
+		};
+		const panelTitleStyle = {
+			fontSize: "15px",
+			fontWeight: 600,
+			color: C.text
+		};
+		/** 分组标签组（分段控件）：与宿主「近 24 小时 / 近 7 天 …」同形。 */
+		const segmentedStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "2px",
+			padding: "2px",
+			borderRadius: "8px",
+			background: C.layer2,
+			border: `1px solid ${C.border}`
+		};
+		function segmentStyle(active) {
+			return {
+				padding: "3px 12px",
+				borderRadius: "6px",
+				border: "none",
+				cursor: "pointer",
+				fontSize: "12px",
+				lineHeight: "18px",
+				fontFamily: "inherit",
+				transition,
+				background: active ? C.layer1 : "transparent",
+				color: active ? C.text : C.textDim,
+				fontWeight: active ? 600 : 400,
+				boxShadow: active ? C.shadow : "none"
+			};
+		}
+		/** 图标按钮（刷新 / 关闭）：方形、圆角、悬停高亮，尺寸与分段控件同高。 */
+		const iconButtonStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			justifyContent: "center",
+			width: "26px",
+			height: "26px",
+			padding: 0,
+			border: "none",
+			borderRadius: "6px",
+			background: "transparent",
+			color: C.textDim,
+			cursor: "pointer",
+			transition
+		};
+		const sectionTitleStyle = {
+			margin: "12px 0 4px",
+			fontSize: "13px",
+			color: C.text
+		};
 		const preStyle = {
 			fontFamily: monoFont,
 			fontSize: "12px",
@@ -213,41 +327,10 @@ window.__ModuleLoader__.load({
 			wordBreak: "break-all",
 			maxHeight: "12em",
 			overflow: "auto",
-			background: "rgba(128,128,128,0.12)",
+			background: C.layer2,
+			color: C.text,
 			padding: "8px",
-			borderRadius: "4px"
-		};
-		const overlayStyle = {
-			position: "fixed",
-			inset: 0,
-			zIndex: 1e3,
-			background: "rgba(0,0,0,0.45)",
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center",
-			padding: "24px"
-		};
-		const panelStyle = {
-			background: "#ffffff",
-			color: "#1f2328",
-			borderRadius: "8px",
-			width: "100%",
-			maxWidth: "1100px",
-			maxHeight: "86vh",
-			overflow: "auto",
-			padding: "16px",
-			boxSizing: "border-box"
-		};
-		const modalHeaderStyle = {
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "space-between",
-			gap: "8px",
-			marginBottom: "8px"
-		};
-		const sectionTitleStyle = {
-			margin: "12px 0 4px",
-			fontSize: "13px"
+			borderRadius: "6px"
 		};
 		const tableStyle = {
 			borderCollapse: "collapse",
@@ -257,7 +340,7 @@ window.__ModuleLoader__.load({
 			margin: "4px 0"
 		};
 		const cellStyle = {
-			border: "1px solid rgba(128,128,128,0.35)",
+			border: `1px solid ${C.border}`,
 			padding: "2px 6px",
 			textAlign: "left",
 			verticalAlign: "top"
@@ -268,6 +351,31 @@ window.__ModuleLoader__.load({
 			wordBreak: "break-all",
 			maxWidth: "480px"
 		};
+		/** 刷新图标（内联 SVG：不引宿主包，颜色走 currentColor ⇒ 自动跟随主题）。 */
+		function RefreshIcon() {
+			return (0, react.createElement)("svg", {
+				width: 15,
+				height: 15,
+				viewBox: "0 0 24 24",
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 2,
+				strokeLinecap: "round",
+				strokeLinejoin: "round"
+			}, (0, react.createElement)("path", { d: "M21 12a9 9 0 1 1-2.64-6.36" }), (0, react.createElement)("path", { d: "M21 3v6h-6" }));
+		}
+		/** 关闭图标（内联 SVG）。 */
+		function CloseIcon() {
+			return (0, react.createElement)("svg", {
+				width: 15,
+				height: 15,
+				viewBox: "0 0 24 24",
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 2,
+				strokeLinecap: "round"
+			}, (0, react.createElement)("path", { d: "M6 6l12 12M18 6L6 18" }));
+		}
 		/** 任务表草稿是否为宿主可解析的 JSON 数组（空白串视为清空，合法）。 */
 		function isValidTaskTable(text) {
 			if (text.trim() === "") return true;
@@ -325,19 +433,6 @@ window.__ModuleLoader__.load({
 			} catch {
 				return;
 			}
-		}
-		/** 标签页按钮样式：当前页加底部高亮条。 */
-		function tabStyle(active) {
-			return {
-				padding: "6px 14px",
-				cursor: "pointer",
-				fontSize: "13px",
-				border: "1px solid rgba(128,128,128,0.4)",
-				borderBottom: active ? "2px solid #2f6feb" : "none",
-				background: active ? "rgba(47,111,235,0.08)" : "transparent",
-				fontWeight: active ? 600 : 400,
-				borderRadius: "4px 4px 0 0"
-			};
 		}
 		/** 周期摘要：once 优先，其次 cron（带时区），都没有显示占位。 */
 		function scheduleSummary(row) {
@@ -410,35 +505,36 @@ window.__ModuleLoader__.load({
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, (0, react.createElement)("div", { style: modalHeaderStyle }, (0, react.createElement)("h3", { style: { margin: 0 } }, t("panelTitle")), (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "12px"
-			} }, data !== void 0 ? (0, react.createElement)("span", { style: hintStyle }, formatTime(data.at)) : null, manualAt !== void 0 ? (0, react.createElement)("span", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(new Date(manualAt).toISOString())}`) : null, (0, react.createElement)("button", {
+			}, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle")), data !== void 0 ? (0, react.createElement)("div", { style: {
+				...hintStyle,
+				margin: "2px 0 0"
+			} }, formatTime(data.at)) : null), (0, react.createElement)("div", { style: headerRightStyle }, (0, react.createElement)("button", {
 				type: "button",
+				style: iconButtonStyle,
+				title: t("debugRefresh"),
+				"aria-label": t("debugRefresh"),
 				onClick: () => {
 					setManualAt(Date.now());
 				}
-			}, t("debugRefresh")), (0, react.createElement)("button", {
+			}, (0, react.createElement)(RefreshIcon, {})), (0, react.createElement)("div", { style: segmentedStyle }, (0, react.createElement)("button", {
 				type: "button",
-				onClick: onClose
-			}, t("debugClose")))), (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "4px",
-				borderBottom: "1px solid rgba(128,128,128,0.3)"
-			} }, (0, react.createElement)("button", {
-				type: "button",
-				style: tabStyle(tab === "config"),
+				style: segmentStyle(tab === "config"),
 				onClick: () => {
 					setTab("config");
 				}
 			}, t("tabConfig")), (0, react.createElement)("button", {
 				type: "button",
-				style: tabStyle(tab === "records"),
+				style: segmentStyle(tab === "records"),
 				onClick: () => {
 					setTab("records");
 				}
-			}, t("tabRecords"))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
+			}, t("tabRecords"))), (0, react.createElement)("button", {
+				type: "button",
+				style: iconButtonStyle,
+				title: t("debugClose"),
+				"aria-label": t("debugClose"),
+				onClick: onClose
+			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
 				htmlFor: "dsh-tdt-modal-inline",
 				style: { fontWeight: 600 }
 			}, t("tasksInlineLabel")), (0, react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")), (0, react.createElement)("textarea", {
@@ -503,7 +599,7 @@ window.__ModuleLoader__.load({
 				return (0, react.createElement)(react.Fragment, { key: row.id }, (0, react.createElement)("tr", {
 					style: {
 						cursor: "pointer",
-						background: open ? "rgba(47,111,235,0.08)" : void 0
+						background: open ? C.activeRow : void 0
 					},
 					onClick: () => {
 						setExpanded(open ? null : row.id);

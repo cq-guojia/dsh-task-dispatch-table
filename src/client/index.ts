@@ -79,54 +79,125 @@ function displayParam(t: Translate, value: unknown): string {
   return String(value)
 }
 
+// ── 主题适配（决策 26 修订）────────────────────────────────────────────
+// 所有颜色一律取**宿主自己的主题变量**（`@deepseek-ai/dsh-client-ui-theme` 里的 `--dsw-alias-*`
+// 与 `--ds-*`）。宿主切「明色 / 暗色 / 跟随系统」时这些变量随之改变 ⇒ 插件自动跟着变，
+// 我们不需要自己判断当前是什么主题，也不写死任何颜色。括号里是变量缺失时的兜底值。
+const C = {
+  text: 'var(--dsw-alias-label-primary, #1f2328)',
+  textDim: 'var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))',
+  textFaint: 'var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))',
+  layer1: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))',
+  layer2: 'var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))',
+  layer3: 'var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))',
+  mask: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))',
+  border: 'var(--dsw-alias-border-l2, rgba(128,128,128,0.35))',
+  borderStrong: 'var(--dsw-alias-border-l3, rgba(128,128,128,0.5))',
+  brand: 'var(--dsw-alias-brand-primary, #2f6feb)',
+  danger: 'var(--dsw-alias-state-error-primary, #c0392b)',
+  hover: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))',
+  activeRow: 'var(--dsw-alias-interactive-bg-active, rgba(128,128,128,0.20))',
+  shadow: 'var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))',
+  duration: 'var(--ds-transition-duration, 0.15s)',
+  ease: 'var(--ds-ease-in-out, ease)',
+}
+const monoFont = 'var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
+const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`
+
 const textareaStyle: Record<string, string | number> = {
   width: '100%', boxSizing: 'border-box', minHeight: '16em', resize: 'vertical',
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-  fontSize: '12px', lineHeight: 1.5, padding: '8px',
+  fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, padding: '8px',
+  color: C.text, background: C.layer1, border: `1px solid ${C.border}`, borderRadius: '8px',
 }
-
-const hintStyle: Record<string, string | number> = { opacity: 0.7, fontSize: '12px', margin: '4px 0 8px' }
-
-// ── 设置页卡片：只留一行「标题 + 描述」，点一下开面板（与宿主其它插件卡片同形）──
-const cardStyle: Record<string, string | number> = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-  padding: '12px 14px', border: '1px solid rgba(128,128,128,0.35)', borderRadius: '8px',
-  cursor: 'pointer', width: '100%', boxSizing: 'border-box', background: 'transparent', textAlign: 'left',
-}
-const cardTitleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600 }
-const cardDescStyle: Record<string, string | number> = { fontSize: '12px', opacity: 0.7, marginTop: '2px' }
-const chevronStyle: Record<string, string | number> = { fontSize: '18px', opacity: 0.6, lineHeight: 1 }
-const errorStyle: Record<string, string | number> = { color: '#c0392b', fontSize: '12px', margin: '4px 0 0' }
+const hintStyle: Record<string, string | number> = { color: C.textDim, fontSize: '12px', margin: '4px 0 8px' }
+const errorStyle: Record<string, string | number> = { color: C.danger, fontSize: '12px', margin: '4px 0 0' }
 const rowStyle: Record<string, string | number> = { display: 'flex', gap: '8px', margin: '8px 0' }
 const dlStyle: Record<string, string | number> = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 16px', margin: '8px 0 0' }
 
-// ── 调试弹窗样式（临时调试面板，决策 16 例外）──
-const monoFont = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
+// ── 设置页卡片：只留一行「标题 + 描述 + 箭头」，点一下开面板（与宿主其它插件卡片同形）──
+const cardStyle: Record<string, string | number> = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+  padding: '12px 14px', border: `1px solid ${C.border}`, borderRadius: '10px',
+  cursor: 'pointer', width: '100%', boxSizing: 'border-box', background: 'transparent',
+  textAlign: 'left', color: C.text, transition,
+}
+const cardTitleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: C.text }
+const cardDescStyle: Record<string, string | number> = { fontSize: '12px', color: C.textDim, marginTop: '2px' }
+const chevronStyle: Record<string, string | number> = { color: C.textFaint, display: 'flex', alignItems: 'center' }
+
+// ── 面板（弹窗）样式 ──
+const panelStyle: Record<string, string | number> = {
+  background: C.layer1, color: C.text, borderRadius: '14px', width: '100%', maxWidth: '1100px',
+  maxHeight: '86vh', overflow: 'auto', padding: '16px 18px', boxSizing: 'border-box',
+  border: `1px solid ${C.border}`, boxShadow: C.shadow,
+}
+const overlayStyle: Record<string, string | number> = {
+  position: 'fixed', inset: 0, zIndex: 1000, background: C.mask,
+  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+}
+/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
+const panelHeaderStyle: Record<string, string | number> = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  gap: '12px', marginBottom: '4px', flexWrap: 'wrap',
+}
+const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
+const panelTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: C.text }
+/** 分组标签组（分段控件）：与宿主「近 24 小时 / 近 7 天 …」同形。 */
+const segmentedStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '2px',
+  borderRadius: '8px', background: C.layer2, border: `1px solid ${C.border}`,
+}
+function segmentStyle(active: boolean): Record<string, string | number> {
+  return {
+    padding: '3px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+    fontSize: '12px', lineHeight: '18px', fontFamily: 'inherit', transition,
+    background: active ? C.layer1 : 'transparent',
+    color: active ? C.text : C.textDim,
+    fontWeight: active ? 600 : 400,
+    boxShadow: active ? C.shadow : 'none',
+  }
+}
+/** 图标按钮（刷新 / 关闭）：方形、圆角、悬停高亮，尺寸与分段控件同高。 */
+const iconButtonStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: '26px', height: '26px', padding: 0, border: 'none', borderRadius: '6px',
+  background: 'transparent', color: C.textDim, cursor: 'pointer', transition,
+}
+const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px', color: C.text }
 const preStyle: Record<string, string | number> = {
   fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, margin: '4px 0',
   whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '12em', overflow: 'auto',
-  background: 'rgba(128,128,128,0.12)', padding: '8px', borderRadius: '4px',
+  background: C.layer2, color: C.text, padding: '8px', borderRadius: '6px',
 }
-const overlayStyle: Record<string, string | number> = {
-  position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)',
-  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
-}
-const panelStyle: Record<string, string | number> = {
-  background: '#ffffff', color: '#1f2328', borderRadius: '8px', width: '100%', maxWidth: '1100px',
-  maxHeight: '86vh', overflow: 'auto', padding: '16px', boxSizing: 'border-box',
-}
-const modalHeaderStyle: Record<string, string | number> = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px',
-}
-const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px' }
 const tableStyle: Record<string, string | number> = {
   borderCollapse: 'collapse', width: '100%', fontFamily: monoFont, fontSize: '12px', margin: '4px 0',
 }
 const cellStyle: Record<string, string | number> = {
-  border: '1px solid rgba(128,128,128,0.35)', padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
+  border: `1px solid ${C.border}`, padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
 }
 const detailCellStyle: Record<string, string | number> = {
   ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
+}
+
+/** 刷新图标（内联 SVG：不引宿主包，颜色走 currentColor ⇒ 自动跟随主题）。 */
+function RefreshIcon() {
+  return h('svg', {
+    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+  },
+    h('path', { d: 'M21 12a9 9 0 1 1-2.64-6.36' }),
+    h('path', { d: 'M21 3v6h-6' }),
+  )
+}
+
+/** 关闭图标（内联 SVG）。 */
+function CloseIcon() {
+  return h('svg', {
+    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round',
+  },
+    h('path', { d: 'M6 6l12 12M18 6L6 18' }),
+  )
 }
 
 /** 任务表草稿是否为宿主可解析的 JSON 数组（空白串视为清空，合法）。 */
@@ -222,15 +293,7 @@ function parseDebugSnapshot(raw: unknown): DebugSnapshotData | undefined {
   }
 }
 
-/** 标签页按钮样式：当前页加底部高亮条。 */
-function tabStyle(active: boolean): Record<string, string | number> {
-  return {
-    padding: '6px 14px', cursor: 'pointer', fontSize: '13px',
-    border: '1px solid rgba(128,128,128,0.4)', borderBottom: active ? '2px solid #2f6feb' : 'none',
-    background: active ? 'rgba(47,111,235,0.08)' : 'transparent',
-    fontWeight: active ? 600 : 400, borderRadius: '4px 4px 0 0',
-  }
-}
+
 
 /** 周期摘要：once 优先，其次 cron（带时区），都没有显示占位。 */
 function scheduleSummary(row: DebugTaskRow): string {
@@ -311,20 +374,40 @@ function DispatcherModal(props: {
 
   return h('div', { style: overlayStyle, onClick: onClose },
     h('div', { style: panelStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      h('div', { style: modalHeaderStyle },
-        h('h3', { style: { margin: 0 } }, t('panelTitle')),
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-          data !== undefined ? h('span', { style: hintStyle }, formatTime(data.at)) : null,
-          manualAt !== undefined
-            ? h('span', { style: hintStyle }, `${t('debugRefreshedAt')} ${formatTime(new Date(manualAt).toISOString())}`)
+      // 抬头：标题在左；右上角从右往左依次是「关闭 · 分组标签 · 刷新」（与宿主其它面板同序）
+      h('div', { style: panelHeaderStyle },
+        h('div', null,
+          h('div', { style: panelTitleStyle }, t('panelTitle')),
+          data !== undefined
+            ? h('div', { style: { ...hintStyle, margin: '2px 0 0' } }, formatTime(data.at))
             : null,
-          h('button', { type: 'button', onClick: () => { setManualAt(Date.now()) } }, t('debugRefresh')),
-          h('button', { type: 'button', onClick: onClose }, t('debugClose')),
         ),
-      ),
-      h('div', { style: { display: 'flex', gap: '4px', borderBottom: '1px solid rgba(128,128,128,0.3)' } },
-        h('button', { type: 'button', style: tabStyle(tab === 'config'), onClick: () => { setTab('config') } }, t('tabConfig')),
-        h('button', { type: 'button', style: tabStyle(tab === 'records'), onClick: () => { setTab('records') } }, t('tabRecords')),
+        h('div', { style: headerRightStyle },
+          h('button', {
+            type: 'button',
+            style: iconButtonStyle,
+            title: t('debugRefresh'),
+            'aria-label': t('debugRefresh'),
+            onClick: () => { setManualAt(Date.now()) },
+          }, h(RefreshIcon, {})),
+          h('div', { style: segmentedStyle },
+            h('button', {
+              type: 'button', style: segmentStyle(tab === 'config'),
+              onClick: () => { setTab('config') },
+            }, t('tabConfig')),
+            h('button', {
+              type: 'button', style: segmentStyle(tab === 'records'),
+              onClick: () => { setTab('records') },
+            }, t('tabRecords')),
+          ),
+          h('button', {
+            type: 'button',
+            style: iconButtonStyle,
+            title: t('debugClose'),
+            'aria-label': t('debugClose'),
+            onClick: onClose,
+          }, h(CloseIcon, {})),
+        ),
       ),
       h('p', { style: hintStyle }, t('debugAutoHint')),
 
@@ -435,7 +518,7 @@ function DispatcherModal(props: {
                         : []
                       return h(Fragment, { key: row.id },
                         h('tr', {
-                          style: { cursor: 'pointer', background: open ? 'rgba(47,111,235,0.08)' : undefined },
+                          style: { cursor: 'pointer', background: open ? C.activeRow : undefined },
                           onClick: () => { setExpanded(open ? null : row.id) },
                         },
                           h('td', { style: cellStyle }, titleOfTask(row.task_id)),
