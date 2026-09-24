@@ -60,7 +60,12 @@ interface ClientContext {
     /** 注册一个条目，返回注销函数。 */
     register(options: Record<string, unknown>, component: unknown): () => void
   }
-  settingsScope: {
+  /**
+   * 设置命名空间作用域服务。⚠️ dsh 0.1.7-rc.1 客户端已把 `settingsScope` 换成
+   * `configForms` / `settingsSchema`（见 @deepseek-ai/dsh-client-ui-settings@0.1.7-rc.1）；
+   * 此处按旧名探测，缺席时不激活（不 throw、不阻塞侧栏入口）。
+   */
+  settingsScope?: {
     bind(spec: { namespace: string }): SettingsScope
   }
 }
@@ -696,16 +701,40 @@ function TasksConfigPage(props: PageProps) {
 }
 
 /**
- * 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；
- * dsh-context 在同处放 Overview 按钮）：一个图标按钮，点开同一个调度面板。
- * @param props - t 席位、绑定的设置作用域、面板内只读会话视图工厂。
+ * 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；dsh-context 的
+ * Overview 按钮同处）。**无 hooks 外壳**：作用域可能尚未就位（null），此时渲染禁用态
+ * 图标占位——保证「槽有贡献、入口可见」，同时避免条件式 hooks 违反 React 规则。
+ * @param props - t 席位、作用域工厂、面板内只读会话视图工厂。
  */
-function TaskTrayButton(props: { t: Translate; scope: SettingsScope; viewSession: ((id: string) => SessionViewTarget | null) | null; wide?: boolean }) {
-  const { t, scope, viewSession, wide } = props
+function TaskTrayButton(props: {
+  t: Translate
+  wide?: boolean
+  scopeRef: () => SettingsScope | null
+  viewRef: () => ((id: string) => SessionViewTarget | null) | null
+}) {
+  const { t, wide, scopeRef, viewRef } = props
+  const scope = scopeRef()
+  if (scope === null) {
+    return h('button', {
+      type: 'button',
+      style: { ...trayButtonStyle, opacity: 0.4, cursor: 'not-allowed' },
+      title: t('unavailable'),
+      'aria-label': t('panelTitle'),
+      disabled: true,
+    },
+      h(TaskIcon, { size: wide ? 16 : 18 }),
+      wide ? h('span', { style: { marginLeft: '8px', fontSize: '13px', color: C.text } }, t('trayLabel')) : null,
+    )
+  }
+  return h(TaskTrayButtonLive, { t, wide, scope, viewSession: viewRef() })
+}
+
+/** 入口的就绪态实现（持有 hooks）：作用域可用时才挂载。 */
+function TaskTrayButtonLive(props: { t: Translate; wide?: boolean; scope: SettingsScope; viewSession: ((id: string) => SessionViewTarget | null) | null }) {
+  const { t, wide, scope, viewSession } = props
   const panel = useTaskPanel(scope)
   const [hover, setHover] = useState(false)
-  // ⚠️ 未 ready 也渲染（禁用态）：入口要求常驻可见；若未 ready 就 return null，
-  // 「槽缺失（按钮根本没注册上）」与「作用域未就绪」两种失效都表现为空白、真机无法区分。
+  // 未 ready 也渲染（禁用态）：入口要求常驻可见，便于分辨「槽缺失」与「作用域未就绪」。
   const btnStyle: Record<string, string | number> = {
     ...trayButtonStyle,
     background: hover && panel.ready ? C.hover : 'transparent',
@@ -735,8 +764,9 @@ function TaskTrayButton(props: { t: Translate; scope: SettingsScope; viewSession
 // ─────────────────────────── 插件主体 ───────────────────────────
 
 /**
- * 浏览器插件入口：注册文案字典；在 slots + settingsScope 就位后把配置页注册进
- * settings.plugin.item（keyed 槽位，key = 设置命名空间）。
+ * 浏览器插件入口：注册文案字典；把设置页卡片（settings.plugin.item）与侧栏常驻入口
+ * （sidebar.footer.action）分别注册进「服务就位才触发」的 slots 注入里。两块互相独立：
+ * 侧栏入口只依赖 slots，不因 settings 服务缺席/改名而消失。
  * @param ctx - 浏览器插件上下文。
  */
 export function apply(ctx: ClientContext): void {
@@ -761,8 +791,14 @@ export function apply(ctx: ClientContext): void {
       viewSession = (id: string): SessionViewTarget | null => openSessionView(sessions, uiConversation, id)
     }
   })
+  // 设置命名空间作用域（供设置页卡片使用）。⚠️ dsh 0.1.7-rc.1 客户端已把该服务由
+  // `settingsScope` 改为 `configForms` / `settingsSchema`；此处按旧名探测，缺席则本块
+  // 不激活（设置卡片暂不出现），但**不影响侧栏入口**。设置卡片待迁移到新契约。
+  let scope: SettingsScope | null = null
   ctx.inject(['slots', 'settingsScope'], (sub) => {
-    const scope = sub.settingsScope.bind({ namespace: SETTINGS_NS })
+    const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS })
+    if (bound === undefined) return
+    scope = bound
     sub.slots.inject('settings.plugin.item', () =>
       sub.slots.register(
         {
@@ -770,13 +806,17 @@ export function apply(ctx: ClientContext): void {
           // keyed 槽位用 key 声明本条贡献给哪个命名空间。
           key: SETTINGS_NS,
           locale: LOCALE_NS,
-          inject: () => ({ scope, viewSession }),
+          inject: () => ({ scope: bound, viewSession }),
         },
         TasksConfigPage,
       ),
     )
-    // 侧栏底部常驻入口（list 槽 sidebar.footer.action，任何屏可见；dsh-context 的
-    // Overview 按钮同处）。点开同一个调度面板，仅图标、tooltip 作无障碍标签。
+  })
+
+  // 侧栏底部常驻入口（list 槽 sidebar.footer.action，任何屏可见）。
+  // ⚠️ 必须**只依赖 slots**、自成一块（照 dsh-context 顶层注册）：一旦嵌进 settings 服务的
+  // 注入块，settings 服务改名/缺席就会让入口无声消失、且不报错（2026-09-24 真机教训）。
+  ctx.inject(['slots'], (sub) => {
     sub.slots.inject('sidebar.footer.action', () =>
       sub.slots.register(
         {
@@ -784,9 +824,9 @@ export function apply(ctx: ClientContext): void {
           id: SETTINGS_NS,
           order: 20,
           locale: LOCALE_NS,
-          inject: () => ({ scope, viewSession }),
         },
-        TaskTrayButton,
+        (props: { t: Translate; wide?: boolean }) =>
+          h(TaskTrayButton, { ...props, scopeRef: () => scope, viewRef: () => viewSession }),
       ),
     )
   })

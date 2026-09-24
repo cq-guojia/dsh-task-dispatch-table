@@ -1135,12 +1135,39 @@ window.__ModuleLoader__.load({
 			}) : null);
 		}
 		/**
-		* 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；
-		* dsh-context 在同处放 Overview 按钮）：一个图标按钮，点开同一个调度面板。
-		* @param props - t 席位、绑定的设置作用域、面板内只读会话视图工厂。
+		* 侧栏底部入口（slot = sidebar.footer.action，list 槽，任何屏常驻；dsh-context 的
+		* Overview 按钮同处）。**无 hooks 外壳**：作用域可能尚未就位（null），此时渲染禁用态
+		* 图标占位——保证「槽有贡献、入口可见」，同时避免条件式 hooks 违反 React 规则。
+		* @param props - t 席位、作用域工厂、面板内只读会话视图工厂。
 		*/
 		function TaskTrayButton(props) {
-			const { t, scope, viewSession, wide } = props;
+			const { t, wide, scopeRef, viewRef } = props;
+			const scope = scopeRef();
+			if (scope === null) return (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...trayButtonStyle,
+					opacity: .4,
+					cursor: "not-allowed"
+				},
+				title: t("unavailable"),
+				"aria-label": t("panelTitle"),
+				disabled: true
+			}, (0, react.createElement)(TaskIcon, { size: wide ? 16 : 18 }), wide ? (0, react.createElement)("span", { style: {
+				marginLeft: "8px",
+				fontSize: "13px",
+				color: C.text
+			} }, t("trayLabel")) : null);
+			return (0, react.createElement)(TaskTrayButtonLive, {
+				t,
+				wide,
+				scope,
+				viewSession: viewRef()
+			});
+		}
+		/** 入口的就绪态实现（持有 hooks）：作用域可用时才挂载。 */
+		function TaskTrayButtonLive(props) {
+			const { t, wide, scope, viewSession } = props;
 			const panel = useTaskPanel(scope);
 			const [hover, setHover] = (0, react.useState)(false);
 			const btnStyle = {
@@ -1176,8 +1203,9 @@ window.__ModuleLoader__.load({
 			}) : null);
 		}
 		/**
-		* 浏览器插件入口：注册文案字典；在 slots + settingsScope 就位后把配置页注册进
-		* settings.plugin.item（keyed 槽位，key = 设置命名空间）。
+		* 浏览器插件入口：注册文案字典；把设置页卡片（settings.plugin.item）与侧栏常驻入口
+		* （sidebar.footer.action）分别注册进「服务就位才触发」的 slots 注入里。两块互相独立：
+		* 侧栏入口只依赖 slots，不因 settings 服务缺席/改名而消失。
 		* @param ctx - 浏览器插件上下文。
 		*/
 		function apply(ctx) {
@@ -1193,27 +1221,32 @@ window.__ModuleLoader__.load({
 				const uiConversation = sub.uiConversation;
 				if (sessions !== void 0 && uiConversation !== void 0) viewSession = (id) => openSessionView(sessions, uiConversation, id);
 			});
+			let scope = null;
 			ctx.inject(["slots", "settingsScope"], (sub) => {
-				const scope = sub.settingsScope.bind({ namespace: SETTINGS_NS });
+				const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS });
+				if (bound === void 0) return;
+				scope = bound;
 				sub.slots.inject("settings.plugin.item", () => sub.slots.register({
 					name: "settings.plugin.item",
 					key: SETTINGS_NS,
 					locale: LOCALE_NS,
 					inject: () => ({
-						scope,
+						scope: bound,
 						viewSession
 					})
 				}, TasksConfigPage));
+			});
+			ctx.inject(["slots"], (sub) => {
 				sub.slots.inject("sidebar.footer.action", () => sub.slots.register({
 					name: "sidebar.footer.action",
 					id: SETTINGS_NS,
 					order: 20,
-					locale: LOCALE_NS,
-					inject: () => ({
-						scope,
-						viewSession
-					})
-				}, TaskTrayButton));
+					locale: LOCALE_NS
+				}, (props) => (0, react.createElement)(TaskTrayButton, {
+					...props,
+					scopeRef: () => scope,
+					viewRef: () => viewSession
+				})));
 			});
 		}
 		//#endregion
