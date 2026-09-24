@@ -1,5 +1,6 @@
 // 插件配置：schemastery z schema 一份两用——patch Config 导出 + ctx.settings 命名空间。
-// schemastery 与宿主 vendor 同版本（宿主 vendor/schemastery package.json = 3.18.2 = npm @deepseek-ai/schemastery）。
+// ⚠️ 升到 @deepseek-ai/schemastery ^3.18.4：rc.1 设置系统（SettingsForms）要求运行时可写字段
+// 标 .volatile()（3.18.2 无此方法）；该版本与 dsh 0.1.7-rc.1 线一致（参考插件即依赖 ^3.18.4）。
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import z from '@deepseek-ai/schemastery'
@@ -39,17 +40,34 @@ export const ConfigDefaults: Omit<
 
 export const Config = z.object({
   statePath: z.string().default(''),
-  tickMs: z.number().default(ConfigDefaults.tickMs),
-  dispatchGraceMs: z.number().default(ConfigDefaults.dispatchGraceMs),
-  leaseMs: z.number().default(ConfigDefaults.leaseMs),
-  unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs),
+  // ↓ rc.1（0.1.7-rc.1）要求运行时可写字段标 .volatile()：否则 SettingsForms.write 抛
+  // "has no volatile fields" 写不进（宿主每 tick 写 debugSnapshot / 写回 tasksInline 都会失败）。
+  // 标记为 volatile 的字段由 Loader 经 loader/volatile-update 提交，客户端 configForms 同步可见。
+  tickMs: z.number().default(ConfigDefaults.tickMs).volatile(),
+  dispatchGraceMs: z.number().default(ConfigDefaults.dispatchGraceMs).volatile(),
+  leaseMs: z.number().default(ConfigDefaults.leaseMs).volatile(),
+  unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs).volatile(),
   tasksDir: z.string().default('tasks'),
-  tasksInline: z.string().role('textarea').default(''),
-  debugSnapshot: z.string().default(''),
+  tasksInline: z.string().role('textarea').default('').volatile(),
+  debugSnapshot: z.string().default('').volatile(),
   // 决策 22 漏斗第②层：留空 = 未配，派发时漏到下一层。解析结果只用于本次派发，不回写本字段。
   defaultProvider: z.string().default(''),
   defaultModel: z.string().default(''),
 })
+
+/**
+ * rc.1 volatile 字段的解析结果是**带 get() 的引用**（非纯值）；读取时解包（与参考插件
+ * dsh-task-board 的 readConfigField 同款）。非 volatile 字段原样返回；undefined/null 回落 fallback。
+ * @param field - 配置字段（可能是 Volatile 引用或纯值）。
+ * @param fallback - 字段缺失时的回落值。
+ */
+export function readConfigField<T>(field: unknown, fallback: T): T {
+  if (field === undefined || field === null) return fallback
+  if (typeof field === 'object' && typeof (field as { get?: unknown }).get === 'function') {
+    return (field as { get(): T }).get()
+  }
+  return field as T
+}
 
 /**
  * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。

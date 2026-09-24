@@ -1,8 +1,8 @@
 // dsh-task-dispatch-table：定时任务调度器宿主插件（可编译骨架）。
 // 读任务定义 JSON → 按 cron/窗口/依赖判定 → 在指定工作区派发 agent 会话 → 监听会话事件对账 → SQLite 记状态。
 // 调度层零大模型介入（PROGRESS 背景）；插件零业务逻辑——任务定义见 docs/examples。
-import type { HostContext, HostLogger, HostSettings, SettingsScope } from './host.js'
-import { Config, resolveStatePath } from './config.js'
+import type { HostContext, HostLogger, HostSettings, SettingsScope, z_any } from './host.js'
+import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
 import { ensureIdsInInlineJson, nextSlotAfter, titleOf } from './tasks.js'
@@ -71,7 +71,21 @@ function fallbackScope(
 const DEBUG_EVENT_LIMIT = 200
 
 export function apply(ctx: HostContext, config: unknown): void {
-  const initial = (Config as (value: unknown) => PluginConfig)(config)
+  // rc.1：Config 的 volatile 字段解析结果是带 get() 的 Volatile 引用（非纯值），须解包
+  // （readConfigField，与参考插件同款）；非 volatile 字段原样取。解包后才是真正的 PluginConfig。
+  const raw = (Config as unknown as (value: unknown) => Record<string, unknown>)(config)
+  const initial: PluginConfig = {
+    statePath: typeof raw.statePath === 'string' ? raw.statePath : '',
+    tickMs: readConfigField(raw.tickMs, ConfigDefaults.tickMs),
+    dispatchGraceMs: readConfigField(raw.dispatchGraceMs, ConfigDefaults.dispatchGraceMs),
+    leaseMs: readConfigField(raw.leaseMs, ConfigDefaults.leaseMs),
+    unknownGraceMs: readConfigField(raw.unknownGraceMs, ConfigDefaults.unknownGraceMs),
+    tasksDir: typeof raw.tasksDir === 'string' ? raw.tasksDir : 'tasks',
+    tasksInline: readConfigField(raw.tasksInline, ''),
+    debugSnapshot: readConfigField(raw.debugSnapshot, ''),
+    defaultProvider: typeof raw.defaultProvider === 'string' ? raw.defaultProvider : '',
+    defaultModel: typeof raw.defaultModel === 'string' ? raw.defaultModel : '',
+  }
   // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
   // 用户文档层 live 覆盖（packages/settings/settings/src/index.ts:49-59）。
   // ⚠️ settings 服务以「带 register 面」或「无 register 面」两种组合入场（参照 dsh-context
@@ -83,7 +97,7 @@ export function apply(ctx: HostContext, config: unknown): void {
     // 有 register 面 → 官方命名空间作用域（配置 live 生效）；无（0.1.7-rc.1）→ 降级为
     // 启动配置作用域，调度照跑（见 fallbackScope：不能因为缺 register 就整体不启动）。
     const scope = typeof settings.register === 'function'
-      ? settings.register<PluginConfig>(SETTINGS_NS, Config, { base: initial })
+      ? settings.register<PluginConfig>(SETTINGS_NS, Config as unknown as z_any<PluginConfig>, { base: initial })
       : fallbackScope(sctx, settings, initial)
     // statePath 启动时定格，运行期改配置不迁移库。
     const store = new TaskStore(resolveStatePath(scope.get().statePath))

@@ -22,29 +22,36 @@ export interface PluginConfig {
     defaultModel: string;
 }
 export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'>;
-export declare const Config: z<Schemastery.ObjectS<{
-    statePath: z<string, string>;
-    tickMs: z<number, number>;
-    dispatchGraceMs: z<number, number>;
-    leaseMs: z<number, number>;
-    unknownGraceMs: z<number, number>;
-    tasksDir: z<string, string>;
-    tasksInline: z<string, string>;
-    debugSnapshot: z<string, string>;
-    defaultProvider: z<string, string>;
-    defaultModel: z<string, string>;
-}>, Schemastery.ObjectT<{
-    statePath: z<string, string>;
-    tickMs: z<number, number>;
-    dispatchGraceMs: z<number, number>;
-    leaseMs: z<number, number>;
-    unknownGraceMs: z<number, number>;
-    tasksDir: z<string, string>;
-    tasksInline: z<string, string>;
-    debugSnapshot: z<string, string>;
-    defaultProvider: z<string, string>;
-    defaultModel: z<string, string>;
-}>>;
+export declare const Config: z<Schemastery.ObjectS<NoInfer<{
+    statePath: z<string, string, "defined">;
+    tickMs: z<number, number, "volatile-defined">;
+    dispatchGraceMs: z<number, number, "volatile-defined">;
+    leaseMs: z<number, number, "volatile-defined">;
+    unknownGraceMs: z<number, number, "volatile-defined">;
+    tasksDir: z<string, string, "defined">;
+    tasksInline: z<string, string, "volatile-defined">;
+    debugSnapshot: z<string, string, "volatile-defined">;
+    defaultProvider: z<string, string, "defined">;
+    defaultModel: z<string, string, "defined">;
+}>>, Schemastery.ObjectT<NoInfer<{
+    statePath: z<string, string, "defined">;
+    tickMs: z<number, number, "volatile-defined">;
+    dispatchGraceMs: z<number, number, "volatile-defined">;
+    leaseMs: z<number, number, "volatile-defined">;
+    unknownGraceMs: z<number, number, "volatile-defined">;
+    tasksDir: z<string, string, "defined">;
+    tasksInline: z<string, string, "volatile-defined">;
+    debugSnapshot: z<string, string, "volatile-defined">;
+    defaultProvider: z<string, string, "defined">;
+    defaultModel: z<string, string, "defined">;
+}>>, "plain">;
+/**
+ * rc.1 volatile 字段的解析结果是**带 get() 的引用**（非纯值）；读取时解包（与参考插件
+ * dsh-task-board 的 readConfigField 同款）。非 volatile 字段原样返回；undefined/null 回落 fallback。
+ * @param field - 配置字段（可能是 Volatile 引用或纯值）。
+ * @param fallback - 字段缺失时的回落值。
+ */
+export declare function readConfigField<T>(field: unknown, fallback: T): T;
 /**
  * 状态库路径（决策 14）：配置覆盖 > 宿主数据根 storages/dsh-task-dispatch-table/state.db。
  * 宿主数据根解析复刻 packages/util/home-paths/src/index.ts:87-100：配置路径 > $DSH_HOME > ~/.dsh。

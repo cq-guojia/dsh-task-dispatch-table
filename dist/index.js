@@ -1,4 +1,4 @@
-import { Config, resolveStatePath } from './config.js';
+import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './config.js';
 import { ensureIdsInInlineJson, nextSlotAfter, titleOf } from './tasks.js';
 import { TaskStore } from './store.js';
 import { createReconciler } from './reconcile.js';
@@ -48,7 +48,21 @@ function fallbackScope(sctx, settings, initial) {
 /** 快照携带的最近事件条数（面板按实例过滤展开用，故比单页展示量多留一些）。 */
 const DEBUG_EVENT_LIMIT = 200;
 export function apply(ctx, config) {
-    const initial = Config(config);
+    // rc.1：Config 的 volatile 字段解析结果是带 get() 的 Volatile 引用（非纯值），须解包
+    // （readConfigField，与参考插件同款）；非 volatile 字段原样取。解包后才是真正的 PluginConfig。
+    const raw = Config(config);
+    const initial = {
+        statePath: typeof raw.statePath === 'string' ? raw.statePath : '',
+        tickMs: readConfigField(raw.tickMs, ConfigDefaults.tickMs),
+        dispatchGraceMs: readConfigField(raw.dispatchGraceMs, ConfigDefaults.dispatchGraceMs),
+        leaseMs: readConfigField(raw.leaseMs, ConfigDefaults.leaseMs),
+        unknownGraceMs: readConfigField(raw.unknownGraceMs, ConfigDefaults.unknownGraceMs),
+        tasksDir: typeof raw.tasksDir === 'string' ? raw.tasksDir : 'tasks',
+        tasksInline: readConfigField(raw.tasksInline, ''),
+        debugSnapshot: readConfigField(raw.debugSnapshot, ''),
+        defaultProvider: typeof raw.defaultProvider === 'string' ? raw.defaultProvider : '',
+        defaultModel: typeof raw.defaultModel === 'string' ? raw.defaultModel : '',
+    };
     // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
     // 用户文档层 live 覆盖（packages/settings/settings/src/index.ts:49-59）。
     // ⚠️ settings 服务以「带 register 面」或「无 register 面」两种组合入场（参照 dsh-context
