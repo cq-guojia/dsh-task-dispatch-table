@@ -215,6 +215,11 @@ export interface HostContext {
     get(name: 'agentDefaultModel'): HostAgentDefaultModel | undefined;
     get(name: 'agentPresets'): HostAgentPresets | undefined;
     get(name: string): unknown;
+    /**
+     * cordis 服务订阅（dsh-context installSettings 同款）：依赖就绪后才执行回调，惰性服务可守卫。
+     * 用于 settings——其 register 面可能延迟挂上或干脆缺失，顶层 inject 写法会卡死/崩。
+     */
+    inject(deps: readonly string[], callback: (ctx: HostContext) => void): unknown;
 }
 /**
  * 宿主 logger 最小面。⚠️ ctx 本体不可包装（cordis ctx 是 Proxy：set trap 拒绝赋值
