@@ -175,6 +175,21 @@ export function apply(ctx: HostContext, config: unknown): void {
               `调试快照首次写入成功（${body.tasks.length} 个任务 / ${snap.instances.length} 条实例`
               + ` / ${snap.events.length} 条事件，${JSON.stringify(body).length} 字节）`,
             )
+            // 宿主侧真相诊断：describe() 才是客户端 configForms 读的唯一来源（remote.settings.describe
+            // 即宿主本机这一份）。若本插件不在列表里，说明 entry 被 set717/lib/index.js:417 的
+            // （schema===void0 / fiber.state!==2 / fiber.runtime===null）过滤掉了。
+            try {
+              const exposed = (sctx.settings as unknown as { describe: () => Array<{ ns?: string }> })
+                .describe()
+                .map((d) => d.ns)
+                .filter((ns): ns is string => typeof ns === 'string')
+              sctx.logger.info(
+                `[数据通道诊断-host] describe 暴露命名空间=${JSON.stringify(exposed)}`
+                + ` 含本插件=${exposed.includes(SETTINGS_NS)}`,
+              )
+            } catch (e) {
+              sctx.logger.warn(`[数据通道诊断-host] describe 调用失败: ${String(e)}`)
+            }
           })
           .catch((error: unknown) => sctx.logger.warn(`调试快照写入失败: ${String(error)}`))
       } catch (error) {
