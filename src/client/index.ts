@@ -72,19 +72,6 @@ interface ConfigForms {
   describe(): { getSnapshot(): { view?: { namespaces?: readonly { ns: string }[] } } }
 }
 
-/**
- * 宿主经 `ctx.set('taskDispatchTable', ...)` 注册的运行时服务（参考插件即靠 `ctx.get('remote')` 调宿主服务）。
- * rc.1 下宿主插件配置字段不能标 volatile（会让 entry 不激活），故快照 / 任务表改走此通道。
- */
-interface TaskDispatchTableService {
-  /** 调试快照 JSON 字符串（空串 = 尚无）。 */
-  getSnapshot(): string
-  /** 任务表内联 JSON 字符串。 */
-  getTasksInline(): string
-  /** 写回任务表内联 JSON（用户编辑后落盘）。 */
-  setTasksInline(json: string): Promise<void>
-}
-
 /** 浏览器插件上下文：只声明本文件实际用到的服务面。 */
 interface ClientContext {
   /** 延迟等待服务就位后执行回调（服务名 = cordis 声明名）。 */
@@ -119,13 +106,6 @@ interface ClientContext {
   }
   /** rc.1 的共享配置表单服务（按 profile entry id 寻址）；与 settingsScope 二选一。 */
   configForms?: ConfigForms
-  /** 宿主服务代理：客户端经 `remote.<service>` 调宿主侧 `ctx.set` 注册的服务。 */
-  remote?: { taskDispatchTable?: TaskDispatchTableService }
-  /**
-   * 宿主经 `ctx.set('taskDispatchTable', ...)` 注册的服务，在客户端可能以直名暴露
-   * （参考插件即 `ctx.typertGateway` 直名访问宿主服务）。两种寻址都试。
-   */
-  taskDispatchTable?: TaskDispatchTableService
 }
 
 // ─────────────────────────── 页面组件 ───────────────────────────
@@ -813,57 +793,58 @@ function configFormScope(form: ConfigForm): SettingsScope {
 }
 
 /**
- * rc.1 运行时数据通道：把宿主 `taskDispatchTable` 服务（经 `ctx.get('remote')` 调）适配成
- * SettingsScope。宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms，改走此服务。
- * 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
- * @param service - 宿主注册的快照 / 任务表服务。
+ * rc.1 运行时数据通道：宿主经 `webServer.register` 暴露 HTTP 路由（照抄参考插件
+ * dsh-task-board 的已验证通道），客户端同源 fetch 轮询，适配成 SettingsScope。
+ * 宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms。
+ * 2s 轮询（宿主每 tick 写），保存任务表后即时刷新；诊断行实时反映 HTTP 状态。
  */
-/**
- * rc.1 运行时数据通道：把宿主 `taskDispatchTable` 服务（经 `ctx.get('remote')` 调）适配成
- * SettingsScope。宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms，改走此服务。
- * 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
- * 服务是**宿主**侧经 remote 暴露的，客户端本地不预先存在该服务名，故用 `getService` 惰性获取，
- * 服务一就绪即接管（不能用硬依赖声明，否则 inject 回调永不触发）。
- * @param getService - 惰性取宿主服务（直名 taskDispatchTable 或 remote.taskDispatchTable 都试）。
- */
-function remoteScope(getService: () => TaskDispatchTableService | undefined): SettingsScope {
+const DISPATCH_API_PREFIX = 'api/task-dispatch-table'
+
+function httpScope(): SettingsScope {
   let lastDebug = ''
   let lastInline = ''
   let lastMapped: ScopeSnapshot | undefined
   const listeners = new Set<() => void>()
-  const poll = (): void => {
-    const svc = getService()
-    if (svc === undefined) {
-      if (lastMapped === undefined) {
-        lastMapped = { status: 'loading', value: undefined, base: undefined, user: undefined, writable: false }
-        for (const l of [...listeners]) l()
+  let busy = false
+  const poll = async (): Promise<void> => {
+    if (busy) return
+    busy = true
+    try {
+      const res = await fetch(`${DISPATCH_API_PREFIX}/snapshot`, { cache: 'no-store' })
+      if (!res.ok) {
+        channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: `HTTP ${res.status}（轮询中）` }
+        return
       }
-      channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: 'taskDispatchTable 服务未就绪（轮询中）' }
-      return
+      const data = await res.json() as { snapshot?: string; tasksInline?: string }
+      const debug = data.snapshot ?? ''
+      const inline = data.tasksInline ?? ''
+      if (debug === lastDebug && inline === lastInline && lastMapped !== undefined) return
+      lastDebug = debug
+      lastInline = inline
+      lastMapped = {
+        status: 'ready',
+        value: { debugSnapshot: debug, tasksInline: inline },
+        base: undefined,
+        user: undefined,
+        writable: true,
+      }
+      channelDiag = {
+        entry: SETTINGS_NS,
+        status: 'ready',
+        keys: 'debugSnapshot,tasksInline',
+        snapshotLen: debug.length,
+        note: `HTTP ${DISPATCH_API_PREFIX}/snapshot`,
+      }
+      for (const l of [...listeners]) l()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: `fetch 失败：${message}` }
+    } finally {
+      busy = false
     }
-    const debug = svc.getSnapshot()
-    const inline = svc.getTasksInline()
-    if (debug === lastDebug && inline === lastInline && lastMapped !== undefined) return
-    lastDebug = debug
-    lastInline = inline
-    lastMapped = {
-      status: 'ready',
-      value: { debugSnapshot: debug, tasksInline: inline },
-      base: undefined,
-      user: undefined,
-      writable: true,
-    }
-    channelDiag = {
-      entry: SETTINGS_NS,
-      status: 'ready',
-      keys: 'debugSnapshot,tasksInline',
-      snapshotLen: debug.length,
-      note: '已绑定 taskDispatchTable',
-    }
-    for (const l of [...listeners]) l()
   }
-  poll()
-  const timer = setInterval(poll, 2000)
+  void poll()
+  const timer = setInterval(() => { void poll() }, 2000)
   return {
     getSnapshot: () =>
       lastMapped ?? { status: 'loading', value: undefined, base: undefined, user: undefined, writable: false },
@@ -872,8 +853,13 @@ function remoteScope(getService: () => TaskDispatchTableService | undefined): Se
       return () => { listeners.delete(listener) }
     },
     set: async (field, value) => {
-      const svc = getService()
-      if (svc !== undefined && field === 'tasksInline') { await svc.setTasksInline(String(value)); poll() }
+      if (field !== 'tasksInline') return
+      await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tasksInline: String(value) }),
+      })
+      void poll()
     },
     unset: async () => {},
   }
@@ -981,19 +967,12 @@ export function apply(ctx: ClientContext): void {
     adoptScope(bound)
     registerCard(sub)
   })
-  // rc.1 运行时数据通道：宿主经 ctx.set('taskDispatchTable') 注册，客户端读取。
-  // 宿主插件配置字段不能标 volatile（会让 entry 不激活），故快照 / 任务表改走此服务而非 configForms。
-  // 注意：不能把 taskDispatchTable 列进 inject 硬依赖——它是宿主经 remote 暴露的服务，客户端本地
-  // 不存在该服务名，硬依赖会让本回调永不触发（上一版正是因此只剩 configForms 的 unavailable）。
-  // 改为依赖 remote 后惰性获取，remoteScope 内部轮询直到服务就绪。
-  ctx.inject(['slots', 'remote'], (sub) => {
-    const getService = (): TaskDispatchTableService | undefined => {
-      const direct = (sub as unknown as { taskDispatchTable?: TaskDispatchTableService }).taskDispatchTable
-      if (direct !== undefined) return direct
-      return (sub as unknown as { remote?: { taskDispatchTable?: TaskDispatchTableService } }).remote
-        ?.taskDispatchTable
-    }
-    adoptScope(remoteScope(getService))
+  // rc.1 运行时数据通道：宿主经 webServer.register 暴露 HTTP 路由，客户端同源 fetch 轮询
+  // （照抄参考插件 dsh-task-board 的已验证通道——remote 代理不暴露宿主 ctx.set 的自定义服务，
+  // configForms 又要求 volatile 字段而宿主 volatile 会让 entry 不激活，故 HTTP 是唯一稳通道）。
+  // 只依赖 slots 自成一块，宿主路由就绪前 httpScope 轮询等待，就绪即出数据。
+  ctx.inject(['slots'], (sub) => {
+    adoptScope(httpScope())
     registerCard(sub)
   })
 

@@ -19,6 +19,82 @@ const DEBUG_WRITE_MIN_INTERVAL_MS = 2_000;
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
 /** settings 命名空间（与浏览器半侧的 SETTINGS_NS 同名，两侧按它配对）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table';
+const DISPATCH_API_PREFIX = '/api/task-dispatch-table';
+const DISPATCH_BODY_LIMIT = 1024 * 1024;
+const writeJson = (res, code, body) => {
+    res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(body));
+};
+/** 同源 / loopback 守卫：浏览器 fetch 必带与 Host 同源的 Origin；无 Origin 的只放行本机回环。 */
+const isTrustedDispatchRequest = (req) => {
+    const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
+    const host = typeof req.headers.host === 'string' ? req.headers.host : undefined;
+    if (origin === undefined) {
+        const addr = req.socket.remoteAddress;
+        return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+    }
+    if (host === undefined)
+        return false;
+    try {
+        return new URL(origin).host === host;
+    }
+    catch {
+        return false;
+    }
+};
+const readDispatchBody = async (req) => {
+    const chunks = [];
+    let size = 0;
+    for await (const chunk of req) {
+        const buffer = chunk;
+        size += buffer.length;
+        if (size > DISPATCH_BODY_LIMIT)
+            throw new Error('body-too-large');
+        chunks.push(buffer);
+    }
+    return Buffer.concat(chunks).toString('utf8');
+};
+/**
+ * 构造本插件的 webServer 路由（快照读 + 任务表写）。
+ * @param runtimeRef - 宿主运行时数据 store（apply 内共用同一份）。
+ * @param persistTasksInline - 任务表保存回调（写回 config profile）。
+ */
+const makeDispatchRoutes = (runtimeRef, persistTasksInline) => [
+    {
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/snapshot`,
+        handler: (req, res) => {
+            if (req.method !== 'GET')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            writeJson(res, 200, { ok: true, snapshot: runtimeRef.debugSnapshot, tasksInline: runtimeRef.tasksInline });
+        },
+    },
+    {
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/tasks`,
+        handler: async (req, res) => {
+            if (req.method !== 'POST')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            try {
+                const body = await readDispatchBody(req);
+                const parsed = JSON.parse(body);
+                if (typeof parsed.tasksInline !== 'string')
+                    return writeJson(res, 400, { ok: false, error: 'tasksInline-required' });
+                runtimeRef.tasksInline = parsed.tasksInline;
+                await persistTasksInline(parsed.tasksInline);
+                writeJson(res, 200, { ok: true });
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message });
+            }
+        },
+    },
+];
 /**
  * 无 `register` 面时的等价作用域（dsh 0.1.7-rc.1 起把注册改成「注册项 Config 自动投影」）。
  *
@@ -82,6 +158,37 @@ export function apply(ctx, config) {
     // installSettings）：用 ctx.inject 订阅；缺失 register 时**不再 inert**，而是降级为启动配置
     // 作用域（fallbackScope）——否则调度器根本不启动。顶层 inject 写法会在 register 尚未挂上
     // 时误激活并崩（TypeError: ctx.settings.register is not a function），故不进顶层 inject 列表。
+    // ── 运行时数据 store（提升到 apply 作用域，webServer 路由与 settings inject 共用）。
+    const runtime = {
+        tasksInline: initial.tasksInline,
+        debugSnapshot: '',
+    };
+    /** settings inject 就绪后的宿主上下文（persistTasksInline 经它找 configEditor）。 */
+    let settingsCtxRef = null;
+    const persistTasksInline = async (json) => {
+        const sctx = settingsCtxRef;
+        if (sctx === null)
+            return;
+        const configEditor = sctx.configEditor;
+        if (configEditor === undefined)
+            return;
+        const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS);
+        if (entry === undefined)
+            return;
+        await configEditor.edit(entry, (raw) => ({ ...raw, tasksInline: json }));
+    };
+    // ── rc.1 数据通道：webServer HTTP 路由（照抄参考插件 dsh-task-board 的已验证通道：
+    // 宿主 ctx.webServer.register(route)，客户端同源 fetch 轮询）。
+    ctx.inject(['webServer'], (wctx) => {
+        const webServer = wctx.webServer;
+        if (webServer === undefined || typeof webServer.register !== 'function') {
+            wctx.logger.warn('[数据通道] 宿主上下文无 webServer.register 面，HTTP 路由未注册；客户端画面将无数据');
+            return;
+        }
+        for (const route of makeDispatchRoutes(runtime, persistTasksInline))
+            webServer.register(route);
+        wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot');
+    });
     ctx.inject(['settings'], (sctx) => {
         const settings = sctx.settings;
         // 有 register 面 → 官方命名空间作用域（配置 live 生效）；无（0.1.7-rc.1）→ 降级为
@@ -89,38 +196,10 @@ export function apply(ctx, config) {
         const scope = typeof settings.register === 'function'
             ? settings.register(SETTINGS_NS, Config, { base: initial })
             : fallbackScope(sctx, settings, initial);
-        // ── rc.1 运行时数据通道（宿主插件不能走 configForms：volatile 会让 entry 不激活，
-        // 详见 config.ts 头部说明）。宿主把「快照 / 任务表」放进内存 store，经 ctx.set 注册成宿主
-        // 服务，客户端经 ctx.get('remote').taskDispatchTable 读取（参考插件即靠 ctx.get('remote') 调宿主服务）。
-        const runtime = {
-            tasksInline: initial.tasksInline,
-            debugSnapshot: '',
-        };
-        const persistTasksInline = async (json) => {
-            const configEditor = sctx.configEditor;
-            if (configEditor === undefined)
-                return;
-            const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS);
-            if (entry === undefined)
-                return;
-            await configEditor.edit(entry, (raw) => ({ ...raw, tasksInline: json }));
-        };
-        const snapshotService = {
-            getSnapshot: () => runtime.debugSnapshot,
-            getTasksInline: () => runtime.tasksInline,
-            setTasksInline: async (json) => {
-                runtime.tasksInline = json;
-                await persistTasksInline(json);
-            },
-        };
-        const setSvc = sctx.set;
-        if (typeof setSvc === 'function') {
-            setSvc.call(sctx, 'taskDispatchTable', snapshotService);
-            sctx.logger.info('[数据通道] 宿主快照服务 taskDispatchTable 已注册（客户端经 ctx.get(\'remote\').taskDispatchTable 读取）');
-        }
-        else {
-            sctx.logger.warn('[数据通道] 宿主上下文无 set 面，taskDispatchTable 服务未注册；客户端将无法经 remote 读取快照');
-        }
+        // ── rc.1 运行时数据通道：宿主插件不能走 configForms（volatile 会让 entry 不激活），
+        // 改走 webServer HTTP 路由（照抄参考插件 dsh-task-board 的已验证通道：宿主注册
+        // GET /api/<name>/snapshot，客户端同源 fetch 轮询）。runtime 提升到 apply 作用域供路由闭包读。
+        settingsCtxRef = sctx;
         // statePath 启动时定格，运行期改配置不迁移库。
         const store = new TaskStore(resolveStatePath(scope.get().statePath));
         // 迁移若真的合并掉了重复行（正常应为 0），必须让用户看见——绝不静默删数据。

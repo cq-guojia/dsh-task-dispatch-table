@@ -1183,71 +1183,72 @@ window.__ModuleLoader__.load({
 			};
 		}
 		/**
-		* rc.1 运行时数据通道：把宿主 `taskDispatchTable` 服务（经 `ctx.get('remote')` 调）适配成
-		* SettingsScope。宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms，改走此服务。
-		* 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
-		* @param service - 宿主注册的快照 / 任务表服务。
+		* rc.1 运行时数据通道：宿主经 `webServer.register` 暴露 HTTP 路由（照抄参考插件
+		* dsh-task-board 的已验证通道），客户端同源 fetch 轮询，适配成 SettingsScope。
+		* 宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms。
+		* 2s 轮询（宿主每 tick 写），保存任务表后即时刷新；诊断行实时反映 HTTP 状态。
 		*/
-		/**
-		* rc.1 运行时数据通道：把宿主 `taskDispatchTable` 服务（经 `ctx.get('remote')` 调）适配成
-		* SettingsScope。宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms，改走此服务。
-		* 客户端 2s 轮询（宿主每 tick 写），也支持用户保存任务表后即时刷新。
-		* 服务是**宿主**侧经 remote 暴露的，客户端本地不预先存在该服务名，故用 `getService` 惰性获取，
-		* 服务一就绪即接管（不能用硬依赖声明，否则 inject 回调永不触发）。
-		* @param getService - 惰性取宿主服务（直名 taskDispatchTable 或 remote.taskDispatchTable 都试）。
-		*/
-		function remoteScope(getService) {
+		const DISPATCH_API_PREFIX = "api/task-dispatch-table";
+		function httpScope() {
 			let lastDebug = "";
 			let lastInline = "";
 			let lastMapped;
 			const listeners = /* @__PURE__ */ new Set();
-			const poll = () => {
-				const svc = getService();
-				if (svc === void 0) {
-					if (lastMapped === void 0) {
-						lastMapped = {
+			let busy = false;
+			const poll = async () => {
+				if (busy) return;
+				busy = true;
+				try {
+					const res = await fetch(`${DISPATCH_API_PREFIX}/snapshot`, { cache: "no-store" });
+					if (!res.ok) {
+						channelDiag = {
+							...channelDiag,
+							entry: SETTINGS_NS,
 							status: "loading",
-							value: void 0,
-							base: void 0,
-							user: void 0,
-							writable: false
+							note: `HTTP ${res.status}（轮询中）`
 						};
-						for (const l of [...listeners]) l();
+						return;
 					}
+					const data = await res.json();
+					const debug = data.snapshot ?? "";
+					const inline = data.tasksInline ?? "";
+					if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) return;
+					lastDebug = debug;
+					lastInline = inline;
+					lastMapped = {
+						status: "ready",
+						value: {
+							debugSnapshot: debug,
+							tasksInline: inline
+						},
+						base: void 0,
+						user: void 0,
+						writable: true
+					};
+					channelDiag = {
+						entry: SETTINGS_NS,
+						status: "ready",
+						keys: "debugSnapshot,tasksInline",
+						snapshotLen: debug.length,
+						note: `HTTP ${DISPATCH_API_PREFIX}/snapshot`
+					};
+					for (const l of [...listeners]) l();
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
 					channelDiag = {
 						...channelDiag,
 						entry: SETTINGS_NS,
 						status: "loading",
-						note: "taskDispatchTable 服务未就绪（轮询中）"
+						note: `fetch 失败：${message}`
 					};
-					return;
+				} finally {
+					busy = false;
 				}
-				const debug = svc.getSnapshot();
-				const inline = svc.getTasksInline();
-				if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) return;
-				lastDebug = debug;
-				lastInline = inline;
-				lastMapped = {
-					status: "ready",
-					value: {
-						debugSnapshot: debug,
-						tasksInline: inline
-					},
-					base: void 0,
-					user: void 0,
-					writable: true
-				};
-				channelDiag = {
-					entry: SETTINGS_NS,
-					status: "ready",
-					keys: "debugSnapshot,tasksInline",
-					snapshotLen: debug.length,
-					note: "已绑定 taskDispatchTable"
-				};
-				for (const l of [...listeners]) l();
 			};
 			poll();
-			setInterval(poll, 2e3);
+			setInterval(() => {
+				poll();
+			}, 2e3);
 			return {
 				getSnapshot: () => lastMapped ?? {
 					status: "loading",
@@ -1263,11 +1264,13 @@ window.__ModuleLoader__.load({
 					};
 				},
 				set: async (field, value) => {
-					const svc = getService();
-					if (svc !== void 0 && field === "tasksInline") {
-						await svc.setTasksInline(String(value));
-						poll();
-					}
+					if (field !== "tasksInline") return;
+					await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ tasksInline: String(value) })
+					});
+					poll();
 				},
 				unset: async () => {}
 			};
@@ -1357,13 +1360,8 @@ window.__ModuleLoader__.load({
 				adoptScope(bound);
 				registerCard(sub);
 			});
-			ctx.inject(["slots", "remote"], (sub) => {
-				const getService = () => {
-					const direct = sub.taskDispatchTable;
-					if (direct !== void 0) return direct;
-					return sub.remote?.taskDispatchTable;
-				};
-				adoptScope(remoteScope(getService));
+			ctx.inject(["slots"], (sub) => {
+				adoptScope(httpScope());
 				registerCard(sub);
 			});
 			ctx.inject(["slots"], (sub) => {
