@@ -728,18 +728,29 @@ function servedEntryId(forms: ConfigForms): string {
   return ENTRY_ID_CANDIDATES.find(id => served.includes(id)) ?? SETTINGS_NS
 }
 
-/** 把 rc.1 的 ConfigForm 适配为本插件的 SettingsScope 形状。 */
+/**
+ * 把 rc.1 的 ConfigForm 适配为本插件的 SettingsScope 形状。
+ *
+ * ⚠️ `getSnapshot` **必须返回稳定引用**：useSyncExternalStore 每次渲染都会拿快照比对，
+ * 若每次都新建对象会被判定为「一直在变」⇒ 无限重渲染（React #185 Maximum update depth
+ * exceeded，真机实测）。故按底层快照的引用缓存映射结果，只在底层真变了才产出新对象。
+ */
 function configFormScope(form: ConfigForm): SettingsScope {
+  let lastRaw: ConfigFormSnapshot | undefined
+  let lastMapped: ScopeSnapshot | undefined
   return {
     getSnapshot: () => {
-      const snapshot = form.getSnapshot()
-      return {
-        status: snapshot.status,
-        value: snapshot.value,
-        base: snapshot.base as Record<string, unknown> | undefined,
-        user: snapshot.user as Record<string, unknown> | undefined,
-        writable: snapshot.writable,
+      const raw = form.getSnapshot()
+      if (raw === lastRaw && lastMapped !== undefined) return lastMapped
+      lastRaw = raw
+      lastMapped = {
+        status: raw.status,
+        value: raw.value,
+        base: raw.base as Record<string, unknown> | undefined,
+        user: raw.user as Record<string, unknown> | undefined,
+        writable: raw.writable,
       }
+      return lastMapped
     },
     subscribe: (listener) => form.subscribe(listener),
     set: async (field, value) => { await form.set(field, value) },
