@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-23 · 🎉 **首次全链路跑绿，端到端真机验收通过**——决策 24 落地后 `once7` / `once8` 两轮均以 `succeeded` 收官：pending → dispatched → agent 干活 → 调工具 `task_dispatch_table_receipt` → `receipt` → `receipt-pass`，回执在派发后 **4 秒 / 26 秒**到达，**全程无 `--db` 命令行、无沙箱报错、无权限申请**。决策 22（模型漏斗 + 会话归组）、23（部署默认 preset ⇒ 工具 / `AGENTS.md` 跟随系统）、24（per-agent 回执工具）**三项均已真机验证**。遗留待办（用户明确推迟）见「五、未决项」：U1 进程重启后的续跑 / 补跑、U2 失败即归档、U3 产出不验内容、U4 `logical_date` 是否显式注入
+> **最后更新**：2026-09-24 · **决策 27（`sessions.open` 查看会话）真机失效 → 改拍决策 28：面板内只读会话弹窗，仅落文档、待落码**（见「六、下一步」第 3 条与 [`design/decisions.md`](design/decisions.md) 决策 28）。此前里程碑：2026-09-23 🎉 **首次全链路跑绿，端到端真机验收通过**——决策 24 落地后 `once7` / `once8` 两轮均以 `succeeded` 收官：pending → dispatched → agent 干活 → 调工具 `task_dispatch_table_receipt` → `receipt` → `receipt-pass`，回执在派发后 **4 秒 / 26 秒**到达，**全程无 `--db` 命令行、无沙箱报错、无权限申请**。决策 22（模型漏斗 + 会话归组）、23（部署默认 preset ⇒ 工具 / `AGENTS.md` 跟随系统）、24（per-agent 回执工具）**三项均已真机验证**。遗留待办（用户明确推迟）见「五、未决项」：U1 进程重启后的续跑 / 补跑、U2 失败即归档、U3 产出不验内容、U4 `logical_date` 是否显式注入
 
 ---
 
@@ -36,7 +36,7 @@
 | 环节 | 状态 |
 |---|---|
 | 总体架构 | ✅ 定型 |
-| 关键技术决策（25 条） | ✅ 定型 |
+| 关键技术决策（28 条） | ✅ 定型（决策 27 已失效，见 28） |
 | 宿主 API 源码核实 | ✅ 未决项 1–4 全部关闭（结论沉淀为决策 15） |
 | 状态机 / 依赖语义 | ✅ 完整定义（转移表 / 租约 / unknown / 窗口 / 补跑 / 串行 / 回执追问闭环） |
 | 数据模型（JSON Schema + SQLite 表） | ✅ 定型（决策 19 后 contract 只剩 `validStatuses`，事件表新增 `receipt` / `nudge` 两种 kind） |
@@ -51,7 +51,8 @@
 | 端到端联调（once） | ✅ **跑通**：`once7` / `once8` 两轮走完 pending → dispatched → running → 调工具交回执 → `receipt` → `succeeded`，含产出三查（status 合法 / 文件存在 / `mtime > dispatched_at`）与 `receipt_check` 留痕。已确认产出校验真的在拦人：`once7` 声称的 md 文件此前已被历史轮次造过、但 mtime 早于本次 `dispatched_at` 会被 `output-stale` 拒，它必须真重新造一遍才过 ⇒ 「复用旧产物冒充」这条路走不通 |
 | 执行身份 + 刻度化调度（决策 25） | ✅ **落码 + 冒烟 47 项全过**：① 刻度化调度（小时级 / 分钟级 cron 一天可跑多条，旧实现一天只能一条）；② 执行主键 UUID + `UNIQUE(task_id, scheduled_at)` 防重（tick 幂等）；③ **id 写进任务定义 JSON**（不填则生成并回写：inline 回 settings、目录模式回写文件），**不再有 `task_defs` 表**；④ **旧库兼容已实测**：用真机形态旧库（老 `task:日期` id + 各状态历史行）跑通迁移与 tick，历史行不丢、同一刻度不会被建出第二条；重复刻度优雅降级并告警、**不静默删数据** |
 | 面板（决策 26） | ✅ 落码 + 构建通过：双标签弹窗（**任务配置** = JSON 输入框 + 已解析任务列表；**执行记录** = 过滤 + 点行展开事件时间线）；新增 `npm run smoke`（零新增依赖，直接测 dist 产物） |
-| 查看会话（决策 27） | ✅ 落码 + 构建通过：执行记录页加「查看会话」链接（会话列 + 展开事件标题右侧），点一下经 `sessions.open(id)` 打开宿主原生会话视图（**含归档会话**）；服务不可用时链接不渲染、不阻断 |
+| 查看会话（决策 27） | ⚠️ **已失效（2026-09-24 真机）**：落码 / 构建虽通过，但点「查看会话」无效——`sessions.open(id)` 对**归档会话**无显示面（宿主把归档会话从分组面隐藏），掉回「新建会话」空态；且 client 依赖漏声明致链接很可能根本没渲染。**由决策 28 取代** |
+| 会话只读弹窗（决策 28） | 📋 **已拍板、待落码**：面板内只读弹窗看某次执行的会话——**结构用官方**（`uiConversation` 组装，退路 = 冷读 `session/follow`+`session/page`）、**画面自绘**（官方节点 kind 约十来个映射）、默认过滤 `reasoning`（「技术规划」）等噪音；**只读、不可续聊**（用户已接受）。落码前先补 client 依赖 |
 
 ---
 
@@ -61,7 +62,7 @@
 |---|---|
 | [`../AGENTS.md`](../AGENTS.md) | agent 操作守则、文档体系与维护规则 |
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
-| [`design/decisions.md`](design/decisions.md) | 25 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
+| [`design/decisions.md`](design/decisions.md) | 28 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL（两表）、关键设计与取舍 |
 | [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 回执机制 + 任务手册（已按决策 19 改写） |
 | [`examples/task-template.jsonc`](examples/task-template.jsonc) | 全字段注释版任务定义模板（粘进 tasksInline 前须去掉注释） |
@@ -88,6 +89,9 @@
 | 工作区指令注入 | `@deepseek-ai/dsh-agent-instructions` 按会话 cwd 的 `root → cwd` 链发现 `AGENTS.md` / `CLAUDE.md`（含 `.local` 覆盖），外加用户全局 `~/.dsh/AGENTS.md`，作为 prompt section 注入（属 preset 行 ⇒ 挂了 preset 才有） |
 | **工具注册**（决策 24） | `@deepseek-ai/dsh-tools` 的 `ToolRuntime`（服务名 `tools`）：`ctx.tools.register(definition)` 按**调用它的 ctx** 分层——经 `agent.ctx` 注册即 **per-agent**（只对该会话可见、发布前生效）；`register` 只强校验 `output { schema, render }`，**裸 definition**（标准 JSON Schema 子集）即可，插件无需引宿主包 |
 | **agent 沙箱约束**（决策 24） | agent 的 bash 跑在 Landlock 沙箱 **`workspace-write`** 模式：**读任意路径、只可写工作区内**；写宿主数据根 ⇒ SQLite `attempt to write a readonly database` / `[sandbox: file access denied under workspace-write mode]`（`chmod u+w` 无效；容器内无 `sqlite3` / `file`）⇒ 任何「让 agent 直接写宿主状态库」的方案都不成立 |
+| **会话历史冷读**（决策 28 核实） | `session/follow`（opening snapshot：records + cursor + projections）与 `session/page`（`{ address, throughSeq, beforeSeq?, maxMessages? }`）**不激活 Agent 即可读历史**，按 durable address（`{ kind: 'session', sessionId }`）读；**归档会话日志仍在，照样可读**（`lib/types/history.d.ts:16-22`、`lib/typert.remote-client.d.ts:20,25`、`lib/types/types.d.ts:357-365,409-473`） |
+| **归档语义**（决策 28 核实） | `workspaceRegistry.archiveSession(id)` 把会话加入 `archivedSessionIds` = **「sessions hidden from every grouping surface」**（只藏显示面、保留 `sessionIds` 槽位）；**只有 archive、无 unarchive**；但 `session/list` **不过滤归档** ⇒ `open()` / `binding()` 仍能选中它，只是界面不显示。⇒ **归档会话「可读、不可从 UI 打开」** |
+| **对话渲染分层**（决策 28 核实） | `@deepseek-ai/dsh-client-ui-conversation` **导出组装/解析层**（`ctx.uiConversation`、`ConversationNode` 节点族）但**不导出画 UI 的组件**（Chat 目标私有）；对话外壳是根级 `main.conversation`、**只渲染「当前会话」**。⇒ 第三方插件只能「用官方解析 + 自绘画面」 |
 
 **会话列表治理策略（已定）**：派发时用 `ctx.sessionTitle.rename` 起规范名（如 `[TASK] 镜像升级日报 · 2026-09-20`），跑完 `archiveSession` 归档。
 ⚠️ **人在调度器派发的会话里插话会干扰任务** ⇒ 自动任务会话应视为机器专用。
@@ -124,8 +128,13 @@
 
 1. **（已完成）`once` 链路端到端真机验收**——`once7` / `once8` 两轮 `succeeded`：pending → dispatched（`provider` / `model` / `modelSource` / `agentPreset` 四项齐全）→ agent 干活 → 调工具 `task_dispatch_table_receipt` → `receipt` → `receipt-pass`，回执 4 秒 / 26 秒到达，全程无 `--db` 命令行、无沙箱报错、无权限申请。**尚未补验的三点**：① per-agent 隔离——**用户自己新建的会话里应该没有** `task_dispatch_table_receipt`；② 故意给非法 `status` 时是否按提示「重试 ≤3 次后立即停手」；③ `once8` 产出文件名是 `work-report-2026-09-24.md` 而实例日期是 `2026-09-23`，**待确认是任务提示词里写了明天日期、还是模型自己算的**（属未决项 U4）。**once 改期语义（已拍板）**：实例身份 = task_id + once 日期 ⇒ **同日改时刻无效**（建行幂等跳过 scheduler.ts:68 + 重排只重算 pending attempt=0，unknown/终态冻结）；改到明日则 id 不变即可、到点自动补建。另：崩溃排查隔离的文件（宿主数据根 quarantine/ 下）待确认后清理
 2. **端到端联调（周期任务全链路）**：cron 任务走一遍 实例生成 → 依赖判定 → 派发 → 回执三查 → 重试/窗口收敛 → 状态落库（`state.db` 两表）；API 形状偏差按决策 15 回写。**⚠️ 前置（决策 25）**：先把刻度计算改成「按窗口列出 cron 的**所有**刻度」——现在 `scheduledAtFor` 按天只返回第一个匹配时刻，**小时级 / 分钟级 cron 一天只能出一条、压根跑不出来**；并同步把实例主键换成 UUID + `UNIQUE(task_id, scheduled_at)` 唯一约束（防重闸门）。**✅ 前置已完成（2026-09-24）**：刻度改造已落码，冒烟 28 项覆盖（含小时级 cron 一天多跑、重复 tick 不涨实例）
-3. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
-4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（`--outputs-file receipt.json`，agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走上命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）
+3. **（下一步重点）「查看会话」改为面板内只读弹窗（决策 28）**——新会话直接照这条做：
+   - **先补依赖（修决策 27 的注入 bug）**：client `package.json` 的 `dsh.client.inject` 补 `@deepseek-ai/dsh-api-remotes`（及其链上的会话包）；确认 `ctx.inject(['sessions'], …)` 真能触发。
+   - **先真机验一个前提**：归档会话 `sessions.binding(id)` 是否可用（`session/list` 不过滤归档 ⇒ 理论可用，未验）。可用 → 走官方组装（`uiConversation.binding` / `.target('chat')`）；不可用 → 冷读 `session/follow` + `session/page` 自己解析。
+   - **自绘只读弹窗**：官方导出的节点 kind 逐个映射成简单样式；默认过滤 `reasoning`（「技术规划」）/ `context` / `unknown` / `compaction`，未知 kind fallback。
+   - **不要再**试图用 `sessions.open()` 打开归档会话（决策 27 已证伪）。
+4. 联调通过后 → 发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）
+5. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（`--outputs-file receipt.json`，agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走上命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）
 
 ---
 
@@ -191,3 +200,4 @@
 | 2026-09-24 | **决策 25 二次修订：废弃 `task_defs` 登记表，id 直接写进任务定义 JSON**（用户否决下标方案）——用户指出「用数组下标对应 id，删掉第一条后面全串位，逻辑不对」，拍板：**不要这张表，直接把 uuid 写进 json**：用户保存的 JSON 里没有 id 就生成一个放进去；有就直接用；格式不对（空串 / 非字符串）视为没有，生成并覆盖。用户同时确认：改错或改新 id 就当成一个新任务，**因为配置与执行状态本就解耦，不影响**。**实现**：`tasks.ts` 新增 `ensureIdsInInlineJson`（给内嵌数组逐项补 id，返回新 JSON 与变更标记）+ `withIdentity`（解析兜底：无 id 时按定义内容取 sha256 指纹，保证回写失败也不漂）；`loadTasks` 目录模式下缺 id 直接**写回该文件**；`index.ts` 每 tick 调 `ensureIdsInInlineJson`，仅在真补了 id 时 `scope.update({ tasksInline })`（**幂等，不会每 tick 重写**）；`store.ts` 删除 `task_defs` 表与 `resolveTaskId`，调度器改为直接采信定义里的 id。**冒烟新增回归**：删第一条后剩下任务 id 不变、调顺序后 id 各自跟着任务走、id 格式不对重新生成、已有 id 原样保留、二次调用幂等 —— 47 项全过。文档同步：data-model（删 task_defs、定义表 id 语义）、decisions 25 修订说明、本文件日志 |
 | 2026-09-24 | **针对「旧数据格式会不会跟新格式冲突」的加固 + 实测**（用户提问驱动）：把迁移从「悄悄做」改成**可观测**——`store.dupRowsRemoved` 记录合并掉的重复行数量，`index.ts` 在 > 0 时打宿主告警（**绝不静默删数据**）。冒烟新增两组：**[6] 真机形态旧库兼容**——按旧版 schema 建库、塞入与面板一致的老 id 行（`work-report-once8:2026-09-23` 等，含 succeeded / failed / unknown / skipped / pending / dispatched 各态）以及一条**落在 ensureInstances 窗口内**的 pending 行，验证：打开不抛错、重复合并数为 0、历史行 7 条一条不少、启动扫描把旧 dispatched 置 unknown、tick 不抛错、**同一刻度不会被建出第二条**、老 id 行原样可读；**[7] 最坏情况**——旧库真有「同任务同刻度」重复行时，插件仍能起来、合并数如实上报、重复组只留一条、去重后仍可按刻度定位。冒烟 28 → **39 项全过**。结论：**新旧格式不会打架**，旧库加索引即升级、不重建表；唯一需要留意的是「没写 id 的任务」会得到新 id（现有任务都显式写了 id，不受影响） |
 | 2026-09-24 | **决策 27：执行记录「查看会话」链接（打开归档会话）**——用户想从面板直接看某次执行的会话实况。经查 `@deepseek-ai/dsh-api-session-controller/client` 的 `ClientSessions.open(id)`（兄弟插件 dsh-session-title-pattern 同款注入：`ctx.inject(['sessions'], ...)` 拿服务）：`open(id)` 把该会话选为「当前」⇒ 宿主原生会话视图打开；**归档会话仍留在宿主会话列表**（`archiveSession` 只追加 `archivedSessionIds`、不动列表），一样能定位。**实现**：client 在 `apply` 里注入 `sessions` 服务、捕获 `open` 封成 `openSession` 透传给面板；执行记录页两处放链接——「会话」列（截断 id 做可点链接，点一下 `stopPropagation` 避免触发整行展开）+ 展开事件时间线标题右侧（「↗ 查看会话」），都调 `sessions.open(fullSessionId)`。服务不可用时链接不渲染、不报错、不阻断。构建通过、冒烟 47 项仍全过。两点边界（用户原问「能否继续对话 / 能否屏蔽技术规划」）：① **能否继续对话由宿主决定**——归档会话的 scope 在离开列表时冻结为只读视图，本插件只负责打开、不控制其内部读写；② **「技术规划」是 agent 自己生成的对话内容、由宿主会话视图渲染，插件无法从外部隐藏**——若要「只读 + 过滤技术规划」得另做嵌入式只读视图（会失去继续对话能力），留待用户拍板 |
+| 2026-09-24 | **决策 27 真机反馈 + 拍板决策 28（本次只更新文档、不动代码）**——用户真机点「查看会话」：**点不开**，主页面切到会话后**掉回「新建会话」页**（用户怀疑 sessionId 或归档所致）。据此查官方产物源码，查清两件事：① **归档会话被宿主从显示面隐藏**——`dsh-workspace` 的 `archivedSessionIds` 原文「sessions hidden from every grouping surface」，且只有 `archiveSession`、**无 unarchive**（`lib/types/spec.d.ts:27-29`、`lib/types/index.d.ts:116,124`）⇒ `sessions.open(id)` 选了也显示不出来，**不是 id 错、也不是插件问题**；② **官方对话渲染分两半**——`dsh-client-ui-conversation` 导出组装/解析层（`ctx.uiConversation`、`ConversationNode` 节点族）但**不导出画 UI 的组件**，对话外壳挂在根级 `main.conversation`、只渲染「当前会话」⇒ 第三方**只能「官方解析 + 自绘画面」**。另发现我方 client `dsh.client.inject` **漏声明会话相关包**（兄弟插件有 `dsh-api-remotes` / `dsh-client-ui-conversation` / `dsh-client-ui-session`）⇒ 决策 27 的链接很可能**根本没渲染**（与「点不了」吻合）。**用户拍板**：接受「面板内只读弹窗 + 自绘简化渲染 + 只读不可续聊 + 有漂移但可控、有 fallback」，记为**决策 28**；**本次只更文档**，新会话接手落码（先补 client 依赖 + 真机验 `sessions.binding` 对归档会话是否可用，再定走官方组装还是冷读日志）。文档同步：decisions（27 标失效 + 新增 28）、本文件抬头 / 状态表（27 标失效、新增 28 行）/ 能力表（新增「会话历史冷读 / 归档语义 / 对话渲染分层」三行）/ 下一步（新增第 3 条为下一步重点）/ 日志 |
