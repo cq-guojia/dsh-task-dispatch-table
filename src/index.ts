@@ -120,6 +120,8 @@ export function apply(ctx: HostContext, config: unknown): void {
     let lastWriteAt = 0
     let lastPushAt = 0
     let writePending = false
+    /** 快照首次写入成功只记一次日志，避免每 tick 刷屏。 */
+    let snapshotWriteLogged = false
     const writeSnapshot = (): void => {
       try {
         const snap = store.snapshot(DEBUG_EVENT_LIMIT)
@@ -151,6 +153,15 @@ export function apply(ctx: HostContext, config: unknown): void {
         lastContent = content
         lastPushAt = Date.now()
         scope.update({ debugSnapshot: JSON.stringify({ at: new Date().toISOString(), ...body }) })
+          .then(() => {
+            // 只记一次：证明写通道真的通了（否则日志会被每 tick 刷屏）。
+            if (snapshotWriteLogged) return
+            snapshotWriteLogged = true
+            sctx.logger.info(
+              `调试快照首次写入成功（${body.tasks.length} 个任务 / ${snap.instances.length} 条实例`
+              + ` / ${snap.events.length} 条事件，${JSON.stringify(body).length} 字节）`,
+            )
+          })
           .catch((error: unknown) => sctx.logger.warn(`调试快照写入失败: ${String(error)}`))
       } catch (error) {
         sctx.logger.warn(`调试快照组装失败: ${String(error)}`)

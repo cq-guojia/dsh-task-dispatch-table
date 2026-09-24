@@ -478,6 +478,8 @@ function TaskPage(props: {
         ? h('div', null,
             h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
             hasRaw ? h('pre', { style: preStyle }, raw) : null,
+            // 临时诊断行：数据通道断在哪一段，一眼可见（通道稳定后移除）。
+            h('pre', { style: { ...preStyle, color: C.textFaint } }, describeDiag()),
           )
         : tab === 'config'
           ? h('div', null,
@@ -708,6 +710,24 @@ const adoptScope = (next: SettingsScope): void => {
 }
 
 /**
+ * 数据通道诊断（临时，通道稳定后移除）：把「绑定到了哪个 entry id / 快照状态 /
+ * 拿到的字段 / 快照长度」直接显示在「暂无快照」处，真机一眼看出断在哪一段。
+ */
+interface ChannelDiag {
+  entry: string
+  status: string
+  keys: string
+  snapshotLen: number
+  note: string
+}
+let channelDiag: ChannelDiag = { entry: '(未绑定)', status: '(无)', keys: '(无)', snapshotLen: 0, note: '作用域尚未就位' }
+/** @returns 诊断信息的可读文本。 */
+function describeDiag(): string {
+  return `[数据通道诊断] entry=${channelDiag.entry} status=${channelDiag.status} `
+    + `snapshotLen=${channelDiag.snapshotLen} keys=${channelDiag.keys} note=${channelDiag.note}`
+}
+
+/**
  * rc.1 起设置表单按 **profile entry id** 寻址，而本插件在不同部署下的行 id 可能是聚合行 id
  * 或裸命名空间——照参考插件的做法，从已服务命名空间里挑第一个命中的候选。
  */
@@ -749,6 +769,15 @@ function configFormScope(form: ConfigForm): SettingsScope {
         base: raw.base as Record<string, unknown> | undefined,
         user: raw.user as Record<string, unknown> | undefined,
         writable: raw.writable,
+      }
+      // 诊断：只在快照真的变了时更新（否则会随每次渲染刷屏）。
+      const debugSnapshot = typeof raw.value?.debugSnapshot === 'string' ? raw.value.debugSnapshot : ''
+      channelDiag = {
+        entry: channelDiag.entry,
+        status: raw.status,
+        keys: raw.value === undefined ? '(value 未定义)' : Object.keys(raw.value).join(','),
+        snapshotLen: debugSnapshot.length,
+        note: `writable=${String(raw.writable)}`,
       }
       return lastMapped
     },
@@ -847,13 +876,16 @@ export function apply(ctx: ClientContext): void {
   ctx.inject(['slots', 'configForms'], (sub) => {
     const forms = sub.configForms
     if (forms === undefined) return
-    adoptScope(configFormScope(forms.get(servedEntryId(forms))))
+    const entryId = servedEntryId(forms)
+    channelDiag = { ...channelDiag, entry: entryId, note: '已绑定 configForms' }
+    adoptScope(configFormScope(forms.get(entryId)))
     registerCard(sub)
   })
   // 旧契约兜底（0.1.6 时代的 settingsScope）。
   ctx.inject(['slots', 'settingsScope'], (sub) => {
     const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS })
     if (bound === undefined) return
+    channelDiag = { ...channelDiag, entry: SETTINGS_NS, note: '已绑定 settingsScope（旧契约）' }
     adoptScope(bound)
     registerCard(sub)
   })

@@ -941,7 +941,10 @@ window.__ModuleLoader__.load({
 				onClick: () => {
 					setTab("records");
 				}
-			}, t("tabRecords"))))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
+			}, t("tabRecords"))))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
+				...preStyle,
+				color: C.textFaint
+			} }, describeDiag())) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
 				htmlFor: "dsh-tdt-modal-inline",
 				style: { fontWeight: 600 }
 			}, t("tasksInlineLabel")), (0, react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")), (0, react.createElement)("textarea", {
@@ -1096,6 +1099,17 @@ window.__ModuleLoader__.load({
 			currentScope = next;
 			for (const listener of [...scopeListeners]) listener();
 		};
+		let channelDiag = {
+			entry: "(未绑定)",
+			status: "(无)",
+			keys: "(无)",
+			snapshotLen: 0,
+			note: "作用域尚未就位"
+		};
+		/** @returns 诊断信息的可读文本。 */
+		function describeDiag() {
+			return `[数据通道诊断] entry=${channelDiag.entry} status=${channelDiag.status} snapshotLen=${channelDiag.snapshotLen} keys=${channelDiag.keys} note=${channelDiag.note}`;
+		}
 		/**
 		* rc.1 起设置表单按 **profile entry id** 寻址，而本插件在不同部署下的行 id 可能是聚合行 id
 		* 或裸命名空间——照参考插件的做法，从已服务命名空间里挑第一个命中的候选。
@@ -1137,6 +1151,14 @@ window.__ModuleLoader__.load({
 						base: raw.base,
 						user: raw.user,
 						writable: raw.writable
+					};
+					const debugSnapshot = typeof raw.value?.debugSnapshot === "string" ? raw.value.debugSnapshot : "";
+					channelDiag = {
+						entry: channelDiag.entry,
+						status: raw.status,
+						keys: raw.value === void 0 ? "(value 未定义)" : Object.keys(raw.value).join(","),
+						snapshotLen: debugSnapshot.length,
+						note: `writable=${String(raw.writable)}`
 					};
 					return lastMapped;
 				},
@@ -1214,12 +1236,23 @@ window.__ModuleLoader__.load({
 			ctx.inject(["slots", "configForms"], (sub) => {
 				const forms = sub.configForms;
 				if (forms === void 0) return;
-				adoptScope(configFormScope(forms.get(servedEntryId(forms))));
+				const entryId = servedEntryId(forms);
+				channelDiag = {
+					...channelDiag,
+					entry: entryId,
+					note: "已绑定 configForms"
+				};
+				adoptScope(configFormScope(forms.get(entryId)));
 				registerCard(sub);
 			});
 			ctx.inject(["slots", "settingsScope"], (sub) => {
 				const bound = sub.settingsScope?.bind({ namespace: SETTINGS_NS });
 				if (bound === void 0) return;
+				channelDiag = {
+					...channelDiag,
+					entry: SETTINGS_NS,
+					note: "已绑定 settingsScope（旧契约）"
+				};
 				adoptScope(bound);
 				registerCard(sub);
 			});
