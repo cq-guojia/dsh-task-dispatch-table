@@ -69,7 +69,18 @@ window.__ModuleLoader__.load({
 			eventsEmpty: "（该次执行暂无事件，或已超出最近 200 条的快照窗口）",
 			recordsHint: "一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。",
 			viewSession: "查看会话",
-			viewSessionHint: "在宿主原生会话视图中打开本次执行的会话（含归档会话），可读完整过程；是否能继续对话由宿主决定。"
+			viewSessionHint: "在面板内只读查看本次执行的会话记录（含归档会话）；简化渲染、不可续聊。",
+			sessionViewerTitle: "会话记录（只读）",
+			sessionArgs: "参数",
+			sessionOutput: "输出",
+			sessionTurnError: "轮次失败",
+			sessionMaxTokens: "该轮达到输出上限",
+			sessionRetry: "模型重试",
+			sessionUnknownKind: "未支持的节点类型：",
+			sessionLoading: "正在加载会话记录…",
+			sessionEmpty: "该会话暂无可显示的记录（可能刚建窗或已被清理）。",
+			sessionLoadFailed: "会话记录加载失败（会话可能已不可读）。",
+			sessionLoadOlder: "加载更早记录"
 		};
 		/** English copy. */
 		const en = {
@@ -134,8 +145,359 @@ window.__ModuleLoader__.load({
 			eventsEmpty: "(no events for this run, or it falls outside the latest-200 snapshot window)",
 			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.",
 			viewSession: "View session",
-			viewSessionHint: "Open this run's session (including archived ones) in the host's native session view to read the full trace; whether you can continue the conversation is up to the host."
+			viewSessionHint: "Read this run's session transcript in a read-only panel (archived sessions included); simplified rendering, no follow-up replies.",
+			sessionViewerTitle: "Session transcript (read-only)",
+			sessionArgs: "Arguments",
+			sessionOutput: "Output",
+			sessionTurnError: "Turn failed",
+			sessionMaxTokens: "This turn hit the output token cap",
+			sessionRetry: "Model retry",
+			sessionUnknownKind: "Unsupported node kind: ",
+			sessionLoading: "Loading session transcript…",
+			sessionEmpty: "Nothing to show for this session yet (window just opened, or the log was cleaned up).",
+			sessionLoadFailed: "Failed to load the session transcript (the session may no longer be readable).",
+			sessionLoadOlder: "Load earlier messages"
 		};
+		//#endregion
+		//#region src/client/session-view.ts
+		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
+		function openSessionView(sessions, uiConversation, id) {
+			let binding;
+			try {
+				const found = sessions.binding(id);
+				if (found === void 0 || found === null) return null;
+				binding = found;
+			} catch {
+				return null;
+			}
+			const session = binding.session;
+			try {
+				const opened = session.open?.();
+				if (opened !== void 0 && typeof opened.catch === "function") opened.catch(() => {});
+			} catch {}
+			let conversation;
+			try {
+				conversation = uiConversation.binding(binding);
+			} catch {
+				return null;
+			}
+			return {
+				target: conversation.target("chat"),
+				session,
+				loadOlder() {
+					try {
+						const page = session.loadOlder?.();
+						if (page !== void 0 && typeof page.catch === "function") page.catch(() => {});
+					} catch {}
+				}
+			};
+		}
+		const C$1 = {
+			text: "var(--dsw-alias-label-primary, #1f2328)",
+			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
+			textFaint: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
+			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
+			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
+			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
+			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
+			danger: "var(--dsw-alias-state-error-primary, #c0392b)",
+			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
+			shadow: "var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))"
+		};
+		const monoFont$1 = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		const sessionOverlayStyle = {
+			position: "fixed",
+			inset: 0,
+			zIndex: 1010,
+			background: C$1.layer2,
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center",
+			padding: "24px"
+		};
+		const sessionPanelStyle = {
+			background: C$1.layer1,
+			color: C$1.text,
+			borderRadius: "14px",
+			width: "100%",
+			maxWidth: "860px",
+			maxHeight: "86vh",
+			display: "flex",
+			flexDirection: "column",
+			boxSizing: "border-box",
+			border: `1px solid ${C$1.border}`,
+			boxShadow: C$1.shadow
+		};
+		const sessionHeaderStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: "12px",
+			padding: "14px 18px 10px",
+			borderBottom: `1px solid ${C$1.border}`,
+			flexWrap: "wrap"
+		};
+		const sessionTitleStyle = {
+			fontSize: "15px",
+			fontWeight: 600,
+			color: C$1.text
+		};
+		const sessionBodyStyle = {
+			overflow: "auto",
+			padding: "12px 18px 18px",
+			display: "flex",
+			flexDirection: "column",
+			gap: "10px"
+		};
+		const sessionIdStyle = {
+			fontFamily: monoFont$1,
+			fontSize: "11px",
+			color: C$1.textFaint,
+			wordBreak: "break-all"
+		};
+		const bubbleStyle = {
+			alignSelf: "flex-start",
+			maxWidth: "92%",
+			background: C$1.layer2,
+			borderRadius: "10px",
+			padding: "8px 12px",
+			whiteSpace: "pre-wrap",
+			wordBreak: "break-word",
+			fontSize: "13px",
+			lineHeight: 1.55
+		};
+		const assistantStyle = {
+			alignSelf: "flex-end",
+			maxWidth: "92%",
+			background: C$1.layer1,
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "10px",
+			padding: "8px 12px",
+			whiteSpace: "pre-wrap",
+			wordBreak: "break-word",
+			fontSize: "13px",
+			lineHeight: 1.55
+		};
+		const toolCardStyle = {
+			alignSelf: "stretch",
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "8px",
+			padding: "6px 10px",
+			fontSize: "12px",
+			background: C$1.layer1
+		};
+		const toolTitleStyle = {
+			fontFamily: monoFont$1,
+			fontSize: "12px",
+			fontWeight: 600,
+			color: C$1.brand
+		};
+		const toolErrorStyle = {
+			color: C$1.danger,
+			fontWeight: 600
+		};
+		const noticeRowStyle = {
+			alignSelf: "center",
+			fontSize: "12px",
+			color: C$1.textFaint,
+			padding: "2px 8px"
+		};
+		const noticeErrorStyle = {
+			alignSelf: "center",
+			fontSize: "12px",
+			color: C$1.danger,
+			padding: "2px 8px",
+			textAlign: "center"
+		};
+		const hintRowStyle = {
+			fontSize: "12px",
+			color: C$1.textDim,
+			textAlign: "center",
+			padding: "8px 0"
+		};
+		const preArgsStyle = {
+			fontFamily: monoFont$1,
+			fontSize: "11px",
+			lineHeight: 1.5,
+			margin: "6px 0 0",
+			whiteSpace: "pre-wrap",
+			wordBreak: "break-all",
+			maxHeight: "12em",
+			overflow: "auto",
+			background: C$1.layer2,
+			padding: "6px",
+			borderRadius: "6px",
+			color: C$1.text
+		};
+		const buttonStyle = {
+			appearance: "none",
+			font: "inherit",
+			fontSize: "12px",
+			cursor: "pointer",
+			color: C$1.text,
+			background: C$1.layer2,
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "8px",
+			padding: "4px 12px"
+		};
+		C$1.brand;
+		/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
+		function CloseIcon$1() {
+			return (0, react.createElement)("svg", {
+				width: 15,
+				height: 15,
+				viewBox: "0 0 24 24",
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 2,
+				strokeLinecap: "round"
+			}, (0, react.createElement)("path", { d: "M6 6l12 12M18 6L6 18" }));
+		}
+		/** 提取内容块的可读文本：text 拼接、图片占位（官方 ContentBlock 是 merge-extensible map）。 */
+		function contentText(blocks) {
+			if (blocks === void 0) return "";
+			return blocks.map((block) => {
+				if (block !== null && typeof block === "object" && block.type === "text" && typeof block.text === "string") return block.text;
+				if (block !== null && typeof block === "object" && block.type === "image") return "[图片]";
+				return "";
+			}).filter((part) => part !== "").join("\n");
+		}
+		/** assistant 块的可读文本：只保留 text / image 占位（reasoning / tool-call / other 不渲染）。 */
+		function assistantText(blocks) {
+			if (blocks === void 0) return "";
+			return blocks.map((block) => {
+				if (block.kind === "text") return block.text;
+				if (block.kind === "image") return "[图片]";
+				return "";
+			}).filter((part) => part !== "").join("\n");
+		}
+		/** 单个节点的自绘渲染；返回 null = 按决策 28 过滤的噪音 kind。 */
+		function renderNode(node, t) {
+			switch (node.kind) {
+				case "user":
+				case "steering": {
+					const text = contentText(node.content);
+					return text === "" ? null : (0, react.createElement)("div", {
+						key: node.seq,
+						style: bubbleStyle
+					}, text);
+				}
+				case "assistant": {
+					const text = assistantText(node.blocks);
+					return text === "" ? null : (0, react.createElement)("div", {
+						key: node.seq,
+						style: assistantStyle
+					}, text);
+				}
+				case "tool-result": {
+					const name = node.call?.name ?? "tool";
+					const argsRaw = node.call?.argsRaw ?? "";
+					const output = contentText(node.content);
+					return (0, react.createElement)("div", {
+						key: node.seq,
+						style: toolCardStyle
+					}, (0, react.createElement)("div", { style: {
+						display: "flex",
+						gap: "8px",
+						alignItems: "baseline",
+						flexWrap: "wrap"
+					} }, (0, react.createElement)("span", { style: toolTitleStyle }, `⚙ ${name}`), node.isError === true ? (0, react.createElement)("span", { style: toolErrorStyle }, `✕ ${node.error?.name ?? "error"}`) : null), argsRaw.trim() !== "" ? (0, react.createElement)("details", null, (0, react.createElement)("summary", { style: {
+						cursor: "pointer",
+						fontSize: "11px",
+						color: C$1.textFaint,
+						margin: "2px 0 0"
+					} }, t("sessionArgs")), (0, react.createElement)("pre", { style: preArgsStyle }, argsRaw)) : null, output.trim() !== "" ? (0, react.createElement)("details", { open: node.isError === true }, (0, react.createElement)("summary", { style: {
+						cursor: "pointer",
+						fontSize: "11px",
+						color: C$1.textFaint,
+						margin: "2px 0 0"
+					} }, t("sessionOutput")), (0, react.createElement)("pre", { style: preArgsStyle }, output)) : null);
+				}
+				case "command": {
+					const line = `/${node.name ?? "?"}${node.args === null || node.args === void 0 ? "" : ` ${node.args}`}`;
+					return (0, react.createElement)("div", {
+						key: node.seq,
+						style: toolCardStyle
+					}, (0, react.createElement)("span", { style: {
+						fontFamily: monoFont$1,
+						fontSize: "12px"
+					} }, line), node.outcome !== null && node.outcome !== void 0 ? (0, react.createElement)("span", { style: {
+						fontFamily: monoFont$1,
+						fontSize: "11px",
+						margin: "4px 0 0",
+						display: "block",
+						color: node.outcome.kind === "error" ? C$1.danger : C$1.textDim
+					} }, node.outcome.text ?? node.outcome.kind) : null);
+				}
+				case "turn-error": return (0, react.createElement)("div", {
+					key: node.seq,
+					style: noticeErrorStyle
+				}, `${t("sessionTurnError")}${node.message === void 0 || node.message === "" ? "" : `：${node.message}`}`);
+				case "turn-max-tokens": return (0, react.createElement)("div", {
+					key: node.seq,
+					style: noticeRowStyle
+				}, t("sessionMaxTokens"));
+				case "model-retry": return (0, react.createElement)("div", {
+					key: node.seq,
+					style: noticeRowStyle
+				}, `${t("sessionRetry")}（${node.retryState ?? "scheduled"}）`);
+				case "context":
+				case "compaction":
+				case "unknown": return null;
+				default: return (0, react.createElement)("details", {
+					key: node.seq,
+					style: toolCardStyle
+				}, (0, react.createElement)("summary", { style: {
+					cursor: "pointer",
+					fontSize: "11px",
+					color: C$1.textFaint
+				} }, `${t("sessionUnknownKind")} ${node.kind}`), (0, react.createElement)("pre", { style: preArgsStyle }, JSON.stringify(node, null, 2)));
+			}
+		}
+		/**
+		* 面板内只读会话弹窗（决策 28）：官方解析 + 自绘简化渲染，只读、不可续聊。
+		* @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
+		*/
+		function SessionViewModal(props) {
+			const { t, heading, sessionId, view, onClose } = props;
+			const subscribe = (0, react.useMemo)(() => (onChange) => {
+				return view.target.subscribe(onChange);
+			}, [view]);
+			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
+			const chat = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
+			const sessionSub = (0, react.useMemo)(() => (onChange) => view.session.subscribe(onChange), [view]);
+			const sessionGet = (0, react.useMemo)(() => () => view.session.getSnapshot(), [view]);
+			const sessionSnap = (0, react.useSyncExternalStore)(sessionSub, sessionGet);
+			const rendered = (chat?.legacy?.nodes ?? []).map((node) => renderNode(node, t)).filter((item) => item !== null);
+			const openState = sessionSnap?.openState;
+			const body = rendered.length === 0 ? (0, react.createElement)("div", { style: hintRowStyle }, openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty")) : rendered;
+			const showLoadOlder = sessionSnap?.hasMore !== false;
+			return (0, react.createElement)("div", {
+				style: sessionOverlayStyle,
+				onClick: onClose
+			}, (0, react.createElement)("div", {
+				style: sessionPanelStyle,
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("div", { style: sessionHeaderStyle }, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: sessionTitleStyle }, `${t("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { style: sessionIdStyle }, sessionId)), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px"
+			} }, showLoadOlder ? (0, react.createElement)("button", {
+				type: "button",
+				style: buttonStyle,
+				onClick: () => view.loadOlder()
+			}, t("sessionLoadOlder")) : null, (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...buttonStyle,
+					padding: "4px 6px"
+				},
+				"aria-label": t("debugClose"),
+				onClick: onClose
+			}, (0, react.createElement)(CloseIcon$1, {})))), (0, react.createElement)("div", { style: sessionBodyStyle }, body)));
+		}
 		//#endregion
 		//#region src/client/index.ts
 		/** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
@@ -473,7 +835,7 @@ window.__ModuleLoader__.load({
 		* 订阅自动刷新，无需手动重开。
 		*/
 		function DispatcherModal(props) {
-			const { t, scope, data, raw, onClose, openSession } = props;
+			const { t, scope, data, raw, onClose, viewSession } = props;
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -485,6 +847,7 @@ window.__ModuleLoader__.load({
 			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
 			const [expanded, setExpanded] = (0, react.useState)(null);
+			const [viewing, setViewing] = (0, react.useState)(null);
 			const section = snapshot.value ?? {};
 			const effectiveInline = typeof section.tasksInline === "string" ? section.tasksInline : "";
 			const current = draft ?? effectiveInline;
@@ -510,9 +873,20 @@ window.__ModuleLoader__.load({
 				const row = taskRows.find((item) => item.id === id);
 				return row === void 0 ? id : `${row.title}（${row.id}）`;
 			};
+			/** 打开只读会话弹窗：组装失败（服务缺失 / 会话不可解析）时静默不动。 */
+			const openView = (sessionId, heading) => {
+				if (viewSession === null) return;
+				const target = viewSession(sessionId);
+				if (target === null) return;
+				setViewing({
+					sessionId,
+					heading,
+					view: target
+				});
+			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
 			const hasRaw = raw.trim() !== "";
-			return (0, react.createElement)("div", {
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
 				style: overlayStyle,
 				onClick: onClose
 			}, (0, react.createElement)("div", {
@@ -619,13 +993,13 @@ window.__ModuleLoader__.load({
 					onClick: () => {
 						setExpanded(open ? null : row.id);
 					}
-				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, row.status), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : openSession !== null ? (0, react.createElement)("button", {
+				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, row.status), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : viewSession !== null ? (0, react.createElement)("button", {
 					type: "button",
 					style: linkStyle,
 					title: row.session_id,
 					onClick: (event) => {
 						event.stopPropagation();
-						openSession(row.session_id);
+						openView(row.session_id, titleOfTask(row.task_id));
 					}
 				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
 					colSpan: 6,
@@ -637,11 +1011,11 @@ window.__ModuleLoader__.load({
 					justifyContent: "space-between",
 					alignItems: "center",
 					gap: "8px"
-				} }, (0, react.createElement)("span", null, t("eventsOf")), openSession !== null && row.session_id !== null ? (0, react.createElement)("button", {
+				} }, (0, react.createElement)("span", null, t("eventsOf")), viewSession !== null && row.session_id !== null ? (0, react.createElement)("button", {
 					type: "button",
 					style: linkStyle,
 					onClick: () => {
-						openSession(row.session_id);
+						openView(row.session_id, titleOfTask(row.task_id));
 					}
 				}, `↗ ${t("viewSession")}`) : null), events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("eventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 					t("colSeq"),
@@ -652,7 +1026,15 @@ window.__ModuleLoader__.load({
 					key: name,
 					style: cellStyle
 				}, name)))), (0, react.createElement)("tbody", null, events.map((event) => (0, react.createElement)("tr", { key: event.seq }, (0, react.createElement)("td", { style: cellStyle }, String(event.seq)), (0, react.createElement)("td", { style: cellStyle }, formatTime(event.ts)), (0, react.createElement)("td", { style: cellStyle }, event.kind), (0, react.createElement)("td", { style: detailCellStyle }, event.detail ?? ""))))))) : null);
-			}))))));
+			})))))), viewing !== null ? (0, react.createElement)(SessionViewModal, {
+				t,
+				heading: viewing.heading,
+				sessionId: viewing.sessionId,
+				view: viewing.view,
+				onClose: () => {
+					setViewing(null);
+				}
+			}) : null);
 		}
 		/**
 		* 设置页卡片（决策 26 修订）：**只留一行「标题 + 描述 + 箭头」**，点一下打开调度面板。
@@ -660,7 +1042,7 @@ window.__ModuleLoader__.load({
 		* @param props - t 席位与绑定的设置作用域。
 		*/
 		function TasksConfigPage(props) {
-			const { t, scope, openSession } = props;
+			const { t, scope, viewSession } = props;
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -684,7 +1066,7 @@ window.__ModuleLoader__.load({
 				scope,
 				data: debugData,
 				raw: debugRaw,
-				openSession,
+				viewSession,
 				onClose: () => {
 					setPanelOpen(false);
 				}
@@ -702,14 +1084,11 @@ window.__ModuleLoader__.load({
 					en
 				}));
 			});
-			let opener = null;
-			ctx.inject(["sessions"], (sub) => {
-				const svc = sub.sessions;
-				if (svc?.open !== void 0) opener = (id) => {
-					try {
-						svc.open(id);
-					} catch {}
-				};
+			let viewSession = null;
+			ctx.inject(["sessions", "uiConversation"], (sub) => {
+				const sessions = sub.sessions;
+				const uiConversation = sub.uiConversation;
+				if (sessions !== void 0 && uiConversation !== void 0) viewSession = (id) => openSessionView(sessions, uiConversation, id);
 			});
 			ctx.inject(["slots", "settingsScope"], (sub) => {
 				const scope = sub.settingsScope.bind({ namespace: SETTINGS_NS });
@@ -719,7 +1098,7 @@ window.__ModuleLoader__.load({
 					locale: LOCALE_NS,
 					inject: () => ({
 						scope,
-						openSession: opener
+						viewSession
 					})
 				}, TasksConfigPage));
 			});

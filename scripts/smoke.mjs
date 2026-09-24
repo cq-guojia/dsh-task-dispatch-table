@@ -2,7 +2,7 @@
 //
 // 跑法：npm run smoke（先 npm run build，本脚本直接引 dist 产物，测的是真正要发布的代码）。
 // 刻意不引任何测试框架：零新增依赖，宿主环境装不了也照样能跑。
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -319,6 +319,22 @@ try {
   check('重复组只留一条', left.length === 1, `实际 ${left.length}`)
   check('去重后仍可按刻度定位', dupStore?.findBySlot('dup-task', '2026-09-23T09:00:00.000Z') !== undefined)
   dupStore?.close()
+
+  // ── 8. client 产物检查（决策 28：面板内只读会话弹窗必须真的进了 bundle）──
+  // tsdown 产物未混淆（标识符原样保留），可直接按符号名断言。
+  console.log('\n[8] client 产物检查（dist/client.js + package.json inject 清单）')
+  const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
+  const clientJs = readFileSync(clientPath, 'utf8')
+  check('SessionViewModal 组件已打进 bundle', clientJs.includes('SessionViewModal'))
+  check('openSessionView 数据闸门已打进 bundle', clientJs.includes('openSessionView'))
+  check('loadOlder 探测调用已打进 bundle', clientJs.includes('loadOlder'))
+  check('chat target 组装已打进 bundle（target("chat")）', clientJs.includes('target("chat")') || clientJs.includes("target('chat')") || /target\(["']chat["']\)/.test(clientJs))
+  const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
+  const injectList = pkg.dsh?.client?.inject ?? []
+  check('inject 清单声明 sessions 提供方（dsh-api-session-controller）',
+    injectList.includes('@deepseek-ai/dsh-api-session-controller'), injectList.join(', '))
+  check('inject 清单声明 uiConversation 提供方（dsh-client-ui-conversation）',
+    injectList.includes('@deepseek-ai/dsh-client-ui-conversation'), injectList.join(', '))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

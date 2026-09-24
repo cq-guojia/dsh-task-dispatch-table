@@ -24,6 +24,9 @@ export type LocaleKey =
   | 'filterStatus' | 'filterTask' | 'filterAll'
   | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint'
   | 'viewSession' | 'viewSessionHint'
+  | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
+  | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind'
+  | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
@@ -88,7 +91,18 @@ export const zh: Record<LocaleKey, string> = {
   eventsEmpty: '（该次执行暂无事件，或已超出最近 200 条的快照窗口）',
   recordsHint: '一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。',
   viewSession: '查看会话',
-  viewSessionHint: '在宿主原生会话视图中打开本次执行的会话（含归档会话），可读完整过程；是否能继续对话由宿主决定。',
+  viewSessionHint: '在面板内只读查看本次执行的会话记录（含归档会话）；简化渲染、不可续聊。',
+  sessionViewerTitle: '会话记录（只读）',
+  sessionArgs: '参数',
+  sessionOutput: '输出',
+  sessionTurnError: '轮次失败',
+  sessionMaxTokens: '该轮达到输出上限',
+  sessionRetry: '模型重试',
+  sessionUnknownKind: '未支持的节点类型：',
+  sessionLoading: '正在加载会话记录…',
+  sessionEmpty: '该会话暂无可显示的记录（可能刚建窗或已被清理）。',
+  sessionLoadFailed: '会话记录加载失败（会话可能已不可读）。',
+  sessionLoadOlder: '加载更早记录',
 }
 
 /** English copy. */
@@ -154,5 +168,16 @@ export const en: Record<LocaleKey, string> = {
   eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
   recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',
   viewSession: 'View session',
-  viewSessionHint: 'Open this run\'s session (including archived ones) in the host\'s native session view to read the full trace; whether you can continue the conversation is up to the host.',
+  viewSessionHint: 'Read this run\'s session transcript in a read-only panel (archived sessions included); simplified rendering, no follow-up replies.',
+  sessionViewerTitle: 'Session transcript (read-only)',
+  sessionArgs: 'Arguments',
+  sessionOutput: 'Output',
+  sessionTurnError: 'Turn failed',
+  sessionMaxTokens: 'This turn hit the output token cap',
+  sessionRetry: 'Model retry',
+  sessionUnknownKind: 'Unsupported node kind: ',
+  sessionLoading: 'Loading session transcript…',
+  sessionEmpty: 'Nothing to show for this session yet (window just opened, or the log was cleaned up).',
+  sessionLoadFailed: 'Failed to load the session transcript (the session may no longer be readable).',
+  sessionLoadOlder: 'Load earlier messages',
 }
