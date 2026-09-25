@@ -41,4 +41,10 @@ export declare function checkReceipt(task: TaskDefinition, workspacePath: string
     reason?: string;
     detail?: unknown;
 };
+/**
+ * 从会话事件里取 token 用量（决策 32）。
+ * 宿主各版本把用量挂的位置与字段名不一 ⇒ 多位置 × 多字段名探测；
+ * 取不到返回 undefined（tokens 列留 null，不阻塞链路）。
+ */
+export declare function extractTokenUsage(event: unknown): number | undefined;
 export declare function createReconciler({ ctx, logger, store, options }: ReconcilerDeps): Reconciler;

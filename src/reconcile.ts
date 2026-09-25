@@ -86,10 +86,45 @@ export function checkReceipt(
   return { ok: true, detail: payload }
 }
 
+function num(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+
+/**
+ * 从会话事件里取 token 用量（决策 32）。
+ * 宿主各版本把用量挂的位置与字段名不一 ⇒ 多位置 × 多字段名探测；
+ * 取不到返回 undefined（tokens 列留 null，不阻塞链路）。
+ */
+export function extractTokenUsage(event: unknown): number | undefined {
+  if (typeof event !== 'object' || event === null) return undefined
+  const root = event as Record<string, unknown>
+  const holders: unknown[] = [
+    root.usage,
+    root.tokenUsage,
+    root.tokens,
+    (root.data as Record<string, unknown> | undefined)?.usage,
+    (root.detail as Record<string, unknown> | undefined)?.usage,
+    (root.message as Record<string, unknown> | undefined)?.usage,
+  ]
+  for (const holder of holders) {
+    if (typeof holder !== 'object' || holder === null) continue
+    const u = holder as Record<string, unknown>
+    const inOut = num(u.promptTokens) ?? num(u.inputTokens) ?? num(u.prompt_tokens)
+    const outOut = num(u.completionTokens) ?? num(u.outputTokens) ?? num(u.completion_tokens)
+    const total =
+      num(u.totalTokens) ?? num(u.total_tokens) ?? num(u.total) ??
+      (inOut !== undefined || outOut !== undefined ? (inOut ?? 0) + (outOut ?? 0) : undefined)
+    if (total !== undefined) return total
+  }
+  return undefined
+}
+
 export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps): Reconciler {
   const handles = new Map<string, AgentHandle>()
   /** token 用量累计（决策 32）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
   const tokenTotals = new Map<string, number>()
+  /** 事件字段只打印一次（用于确认宿主把用量挂在哪，便于收紧取值逻辑）。 */
+  let eventShapeLogged = false
 
   const windowDeadline = (instance: TaskInstance): number =>
     Date.parse(instance.scheduled_at) + durationMs(taskOf(instance)?.schedule.window ?? 'PT0S')
@@ -252,11 +287,13 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
     onEvent(session: HostSession, event: { type: string }): void {
       const instance = store.getBySession(session.id)
       if (instance === undefined) return
-      // 累计 token 用量（决策 32：宿主事件若带 usage 则累加；不带则留 null，不阻塞）
-      const usage = (event as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage
-      if (usage) {
-        const t = (Number(usage.promptTokens) || 0) + (Number(usage.completionTokens ?? usage.totalTokens) || 0)
-        if (!Number.isNaN(t)) tokenTotals.set(instance.id, (tokenTotals.get(instance.id) ?? 0) + t)
+      // 累计 token 用量（决策 32）：宿主事件带用量则累加；不带则留 null，不阻塞链路
+      const used = extractTokenUsage(event)
+      if (used !== undefined) {
+        tokenTotals.set(instance.id, (tokenTotals.get(instance.id) ?? 0) + used)
+      } else if (!eventShapeLogged) {
+        eventShapeLogged = true
+        logger.info(`会话事件字段（确认 token 用量挂载位置用）：${Object.keys(event).join(', ')}`)
       }
       if (event.type === 'turn/end') {
         settleBySessionId(session.id, 'turn/end')
