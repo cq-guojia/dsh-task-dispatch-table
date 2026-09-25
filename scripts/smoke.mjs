@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import {
-  ensureIdsInInlineJson, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, withIdentity,
+  ensureIdsInInlineJson, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, applyIdentity, isUuid,
 } from '../dist/tasks.js'
 import { TaskStore } from '../dist/store.js'
 import { createReconciler } from '../dist/reconcile.js'
@@ -90,40 +90,34 @@ try {
   check('缺 id 时生成并标记写回', r1.changed === true && r1.assigned === 2, `changed=${r1.changed} assigned=${r1.assigned}`)
   const ids1 = JSON.parse(r1.json).map(item => item.id)
   check('生成的 id 形态：标准 UUID（决策 30：机器身份随机生成，不派生自内容/名称）',
-    ids1.every(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)), ids1.join(', '))
+    ids1.every(id => isUuid(id)), ids1.join(', '))
   check('两条拿到不同 id', ids1[0] !== ids1[1])
 
   const r2 = ensureIdsInInlineJson(r1.json)
   check('二次调用不再变更（幂等，不会每 tick 重写）', r2.changed === false && r2.assigned === 0)
 
   // ── 2.1 编号 code（决策 30）：可选、trim、空白视为未填、不参与身份 ──
-  console.log('\n[2.1] 任务编号 code（决策 30：只做记录，不参与唯一性）')
-  const codeTask = withIdentity({
-    code: '  RPT-001  ', title: '日报', enabled: true,
-    schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
-  })
-  check('code 存前 trim', codeTask.code === 'RPT-001')
-  const blankCode = withIdentity({
-    code: '   ', title: '日报', enabled: true,
-    schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
-  })
-  check('空白 code 归一为未填（undefined）', blankCode.code === undefined)
-  const noCode = withIdentity({
-    title: '日报', enabled: true,
-    schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
-  })
-  check('不填 code 也能正常解析（可选字段）', noCode.code === undefined && noCode.id.length > 0)
-  check('无 id 兜底 = 内容指纹，同内容两次解析同 id（回写失败期间身份不漂）', (() => {
-    const again = withIdentity({
-      title: '日报', enabled: true,
-      schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
-    })
-    return /^t-[0-9a-f]{32}$/.test(noCode.id) && noCode.id === again.id
+  console.log('\n[2.1] 身份只认 UUID（运行时不修）+ 编号 code 仅记录（决策 30）')
+  const UUID_A = '3f2b8c1a-9d4e-4f5a-8b7c-1a2b3c4d5e6f'
+  const UUID_B = '7c9e2f40-3a1b-4c8d-9e2f-5a6b7c8d9e0f'
+  const schedA = { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }
+  const targetA = { workspace: 'T', prompt: 'a' }
+  const codeTask = applyIdentity({ id: UUID_A, code: '  RPT-001  ', title: '日报', enabled: true, schedule: schedA, target: targetA })
+  check('code 存前 trim', codeTask?.code === 'RPT-001')
+  const blankCode = applyIdentity({ id: UUID_A, code: '   ', title: '日报', enabled: true, schedule: schedA, target: targetA })
+  check('空白 code 归一为未填（undefined）', blankCode?.code === undefined)
+  const noCode = applyIdentity({ id: UUID_A, title: '日报', enabled: true, schedule: schedA, target: targetA })
+  check('不填 code 也能正常解析（可选字段）', noCode?.code === undefined && noCode?.id === UUID_A)
+  check('无 id ⇒ 运行时不处理（返回 null；id 只在保存闸门生成固化）', (() => {
+    try { return applyIdentity({ title: '日报', enabled: true, schedule: schedA, target: targetA }) === null } catch { return false }
+  })())
+  check('旧格式 id（kebab-case / t- 指纹）⇒ 运行时同样不处理', (() => {
+    try { return applyIdentity({ id: 'work-report-once9', title: '日报', enabled: true, schedule: schedA, target: targetA }) === null } catch { return false }
   })())
   check('同 code 的两条任务身份互不相干（code 不进判断）', (() => {
-    const a = withIdentity({ code: 'X', title: '甲', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' } })
-    const b = withIdentity({ code: 'X', title: '乙', enabled: true, schedule: { cron: '0 10 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'b' } })
-    return a.id !== b.id
+    const a = applyIdentity({ id: UUID_A, code: 'X', title: '甲', enabled: true, schedule: schedA, target: targetA })
+    const b = applyIdentity({ id: UUID_B, code: 'X', title: '乙', enabled: true, schedule: { cron: '0 10 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'b' } })
+    return a?.id === UUID_A && b?.id === UUID_B
   })())
 
   // 关键回归：删掉第一条后，剩下那条必须还是原来的 id（下标方案会串号，写进 JSON 不会）
@@ -144,8 +138,16 @@ try {
     { id: 123, title: 'C', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'c' } },
   ])
   const rBad = ensureIdsInInlineJson(badId)
-  check('id 格式不对（数字）当成没有，重新生成（主路径：随机 UUID）',
-    rBad.changed === true && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(JSON.parse(rBad.json)[0].id)))
+  check('id 格式不对（数字）⇒ 整批拒绝保存（决策 30 修订：非 UUID 报错，不静默重生成）', (() => {
+    const out = ensureIdsInInlineJson(badId)
+    return out.error !== null && out.changed === false && /第 1 条/.test(out.error)
+  })())
+  check('手写 kebab-case id 同样被拒（只认 UUID）', (() => {
+    const out = ensureIdsInInlineJson(JSON.stringify([
+      { id: 'link-test-once', title: 'C', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'c' } },
+    ]))
+    return out.error !== null && out.changed === false
+  })())
   const emptyId = JSON.stringify([
     { id: '   ', title: 'D', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'd' } },
   ])
@@ -243,8 +245,8 @@ try {
     reconciler,
     config: () => ({
       tasksInline: JSON.stringify([
-        { title: '小时任务', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'x' } },
-        // 故意不写 title 也不写 id：两个都该由系统兜出来
+        { id: UUID_A, title: '小时任务', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'x' } },
+        // 故意不带 id：运行时只认不修（决策 30 修订）——这条应被 warn 跳过、不产生任何实例
         { enabled: true, schedule: { cron: '0 3 * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'y' } },
       ]),
       tasksDir: 'tasks',
@@ -262,10 +264,8 @@ try {
   const generated = [...schedStore.listByStatus(['pending']), ...schedStore.listByStatus(['failed']), ...schedStore.listByStatus(['skipped'])]
   check('小时级 cron 一次 ensure 建出多条（> 1）', generated.length > 1, `实际 ${generated.length}`)
   const loaded = [...scheduler.getTasks().values()]
-  check('未写 id 的任务也由系统生成', loaded.length === 2 && loaded.every(task => task.id.startsWith('t-')), loaded.map(t => t.id).join(', '))
+  check('运行时只认 UUID：无 id 条目被跳过，仅剩合法那条', loaded.length === 1 && loaded[0]?.id === UUID_A, loaded.map(t => t.id).join(', '))
   check('title 保留用户写的（不被 id 顶替）', loaded.some(task => task.title === '小时任务'))
-  check('未写 title 时回退成 id（面板不会空着）', loaded.some(task => task.title === task.id))
-  check('两条任务 id 互不相同', loaded[0].id !== loaded[1].id)
   // 第二次 tick：幂等，不该再多出实例
   const before = generated.length
   scheduler.tick()

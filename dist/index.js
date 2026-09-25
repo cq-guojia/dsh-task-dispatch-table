@@ -105,9 +105,13 @@ getStore) => [
                 const parsed = JSON.parse(body);
                 if (typeof parsed.tasksInline !== 'string')
                     return writeJson(res, 400, { ok: false, error: 'tasksInline-required' });
-                runtimeRef.tasksInline = parsed.tasksInline;
-                await persistTasksInline(parsed.tasksInline);
-                writeJson(res, 200, { ok: true });
+                // 保存闸门（决策 30 修订：保存时固化，运行时只认）——无 id 补 UUID；非 UUID 整批拒绝。
+                const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline);
+                if (error !== null)
+                    return writeJson(res, 422, { ok: false, error });
+                runtimeRef.tasksInline = json;
+                await persistTasksInline(json);
+                writeJson(res, 200, { ok: true, assigned: changed ? assigned : 0 });
             }
             catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
@@ -352,29 +356,11 @@ export function apply(ctx, config) {
         sctx.on('session/created', session => { reconciler.onCreated(session); updateSnapshot(); });
         sctx.on('session/event', (session, event) => { reconciler.onEvent(session, event); updateSnapshot(); });
         sctx.on('session/disposed', session => { reconciler.onDisposed(session); updateSnapshot(); });
-        /**
-         * 内嵌任务表缺 id 时**把生成的 id 写回配置**（决策 25 修订版）。
-         * 只在真的补了 id 时才写 ⇒ 不会每 tick 都写；写回后配置里就有 id 了，下次直接采信。
-         * 写失败（并发栅栏 / 只读）不致命：解析侧还有「按内容指纹兜底」的 id，不会漂。
-         */
-        const ensureInlineIds = () => {
-            try {
-                const raw = runtime.tasksInline;
-                const { json, changed, assigned } = ensureIdsInInlineJson(raw);
-                if (!changed)
-                    return;
-                runtime.tasksInline = json;
-                void persistTasksInline(json)
-                    .then(() => teeLogger.info(`已为 ${assigned} 条任务定义生成 id 并写回配置`))
-                    .catch((error) => teeLogger.warn(`任务 id 写回配置失败（将在下次 tick 重试）: ${String(error)}`));
-            }
-            catch (error) {
-                teeLogger.warn(`任务 id 补写异常: ${String(error)}`);
-            }
-        };
+        // 决策 30 修订（用户 2026-09-25 拍板「运行时只认不修」）：tick 不再补写任务 id——
+        // id 只在保存闸门（POST /tasks → ensureIdsInInlineJson）生成并固化；运行时遇到
+        // 无 id / 非 UUID 的条目由 parseInlineTasks warn 跳过，不做任何兜底或写回。
         const safeTick = () => {
             try {
-                ensureInlineIds();
                 scheduler.tick();
                 taskMap = scheduler.getTasks();
             }

@@ -56,30 +56,32 @@ export type TaskDefinition = Omit<TaskDefinitionInput, 'id'> & {
 };
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
 export declare function titleOf(task: TaskDefinition): string;
-/** 生成一个任务 id：标准 UUID（决策 30：机器身份与内容、名称彻底解耦，录入/解析瞬间随机生成）。 */
+/** 任务 id 是否合法：必须是标准 UUID。手写 kebab-case / 旧内容指纹等一律不算。 */
+export declare function isUuid(value: unknown): value is string;
+/** 生成一个任务 id：标准 UUID（决策 30：机器身份与内容、名称彻底解耦，保存时生成并固化写入）。 */
 export declare function newTaskId(): string;
-/**
- * 解析后补齐身份（决策 25/30）。
- * ① 有 id ⇒ 直接用（trim 后）——手写 JSON 的老手自带 id 也算数，写错了后果自负；
- * ② 没 id ⇒ **内容指纹兜底**（`t-` + 32 位十六进制）。主路径（`ensureIdsInInlineJson`，
- * 录入瞬间随机 UUID 并回写）正常生效时走不到这里；兜底保持「同内容同 id」是**故意的**：
- * 万一回写失败（settings 面故障 / 容器在 meta 落盘前重启），每 tick 重新解析同一份
- * 无 id 文本时身份不会漂移、历史执行记录不会断链——随机 id 在这条异常路径上会每 tick
- * 换一个身份、把 pending 实例全部重建（冒烟当场测出）。
- */
-export declare function withIdentity(def: TaskDefinitionInput): TaskDefinition;
-/**
- * 给**内嵌任务表 JSON** 补 id（决策 25 修订版）：逐项检查，缺 id（或 id 格式不对）的生成并
- * 就地写回；返回新的 JSON 文本供宿主写回 settings。用户以后改名字、调顺序、删条目都不受影响
- * ——**id 就在配置里，跟着这条任务走**。
- *
- * @returns changed=true 表示有新增 id，调用方应把 json 写回配置；assigned 是补的条数。
- */
-export declare function ensureIdsInInlineJson(raw: string): {
+/** 保存闸门的身份处理结果。 */
+export interface EnsureIdsResult {
     json: string;
     changed: boolean;
     assigned: number;
-};
+    /** 非 null = **整批拒绝保存**：某条目的 id 不是 UUID（用户拍板：不允许旧格式身份混进配置）。 */
+    error: string | null;
+}
+/**
+ * 保存闸门（决策 30 修订版，用户 2026-09-25 拍板：**保存时固化，运行时只认**）。
+ * ① 条目无 id ⇒ 生成随机 UUID 补上（= 新增任务，这一刻固化进 JSON）；
+ * ② 有 id 且是 UUID ⇒ 原样保留（= 修改既有任务，身份连着历史）；
+ * ③ 有 id 但不是 UUID ⇒ 报错，**整批拒绝保存**；
+ * 非法 JSON / 非数组原样返回（error=null）——那是既有校验的职责，不是身份闸门的。
+ */
+export declare function ensureIdsInInlineJson(raw: string): EnsureIdsResult;
+/**
+ * 运行时身份校验（保存闸门的另一半，用户拍板：**运行时只认不修**）。
+ * 有 id 且为 UUID ⇒ 归一返回（code trim、title 缺省回退 id）；
+ * 无 id（老数据）或 id 非 UUID ⇒ 返回 null，调用方记一条 warn 后跳过，不做任何兜底。
+ */
+export declare function applyIdentity(def: TaskDefinitionInput): TaskDefinition | null;
 /** 把 ISO 8601 时长解析成毫秒。 */
 export declare function durationMs(iso: string): number;
 /** 用 Intl 验证 IANA 时区名（schedule.timezone 缺省 = 宿主时区）。 */
@@ -112,13 +114,14 @@ export declare function nextSlotAfter(task: TaskDefinition, from: Date): Date | 
  */
 export declare function onceScheduledAt(task: TaskDefinition, day: string): Date | undefined;
 /**
- * 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过；
- * 每条经 `withIdentity` 补齐 id（没写就按定义内容取指纹兜底——正常路径下 id 已写回 JSON）。
+ * 解析内嵌任务表 JSON（tasksInline 配置）：须为数组，逐项校验，坏项告警跳过。
+ * 身份走 `applyIdentity`（决策 30 修订：**运行时只认不修**）——无 id / 非 UUID 的条目
+ * warn 跳过，绝不在这里生成或兜底 id；生成只发生在保存闸门 `ensureIdsInInlineJson`。
  */
 export declare function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinition[];
 /**
  * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
- * 缺 id 的文件**直接写回**（决策 25 修订版：id 跟着定义走，不靠任何位置或指纹去推断）。
+ * 身份同样「运行时只认」（决策 30 修订）：缺 id / id 非 UUID 的文件 warn 跳过，**不再写回**。
  * 目录不存在（ENOENT）= 合法空态（用户没在用目录模式），静默返回，不刷告警。
  */
 export declare function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[];

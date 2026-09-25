@@ -880,7 +880,7 @@ window.__ModuleLoader__.load({
 			const [tab, setTab] = (0, react.useState)("config");
 			const [draft, setDraft] = (0, react.useState)(void 0);
 			const [saving, setSaving] = (0, react.useState)(false);
-			const [failed, setFailed] = (0, react.useState)(false);
+			const [failed, setFailed] = (0, react.useState)(null);
 			const [manualAt, setManualAt] = (0, react.useState)(void 0);
 			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
@@ -919,13 +919,13 @@ window.__ModuleLoader__.load({
 			const save = async () => {
 				if (draft === void 0 || invalid || !writable) return;
 				setSaving(true);
-				setFailed(false);
+				setFailed(null);
 				try {
 					if (draft.trim() === "") await scope.unset("tasksInline");
 					else await scope.set("tasksInline", draft);
 					setDraft(void 0);
-				} catch {
-					setFailed(true);
+				} catch (error) {
+					setFailed(error instanceof Error ? error.message : String(error));
 				} finally {
 					setSaving(false);
 				}
@@ -1029,10 +1029,10 @@ window.__ModuleLoader__.load({
 				type: "button",
 				onClick: () => {
 					setDraft(void 0);
-					setFailed(false);
+					setFailed(null);
 				},
 				disabled: saving || !dirty
-			}, t("discard"))), failed ? (0, react.createElement)("p", { style: errorStyle }, t("saveFailed")) : null, (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+			}, t("discard"))), failed !== null ? (0, react.createElement)("p", { style: errorStyle }, failed) : null, (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				t("colId"),
 				t("colTitle"),
 				t("colCode"),
@@ -1329,11 +1329,19 @@ window.__ModuleLoader__.load({
 				},
 				set: async (field, value) => {
 					if (field !== "tasksInline") return;
-					await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+					const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
 						method: "POST",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({ tasksInline: String(value) })
 					});
+					if (!res.ok) {
+						let message = `HTTP ${res.status}`;
+						try {
+							const body = await res.json();
+							if (typeof body.error === "string" && body.error.trim() !== "") message = body.error;
+						} catch {}
+						throw new Error(message);
+					}
 					poll();
 				},
 				unset: async () => {}

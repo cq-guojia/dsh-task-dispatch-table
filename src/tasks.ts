@@ -1,7 +1,7 @@
 // 任务定义：从任务表目录读 *.json，zod 校验 14 字段（data-model.md 一节），enabled 过滤。
 // 定义存 JSON 文件人改进 Git（决策 6），本模块只读不写。
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { createHash, randomUUID } from 'node:crypto'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { resolve } from 'node:path'
 import { z } from 'zod'
 // cron-parser 5.x 为 ESM，命名导出 CronExpressionParser。
@@ -78,70 +78,76 @@ export function titleOf(task: TaskDefinition): string {
   return task.title ?? task.id
 }
 
-/**
- * id 是否可用：**任意非空字符串**都算数（兼容既有定义里手写的 kebab-case id）。
- * 只有「没写 / 空串 / 不是字符串」才算没有——按用户口径：格式不对就当没有，重新生成一个。
- */
-function isUsableId(value: unknown): value is string {
-  return typeof value === 'string' && value.trim() !== ''
+/** 标准 UUID（36 位带横线，大小写不敏感）——任务 id 的唯一合法形态（决策 30 修订）。 */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** 任务 id 是否合法：必须是标准 UUID。手写 kebab-case / 旧内容指纹等一律不算。 */
+export function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_RE.test(value)
 }
 
-/** 生成一个任务 id：标准 UUID（决策 30：机器身份与内容、名称彻底解耦，录入/解析瞬间随机生成）。 */
+/** 生成一个任务 id：标准 UUID（决策 30：机器身份与内容、名称彻底解耦，保存时生成并固化写入）。 */
 export function newTaskId(): string {
   return randomUUID()
 }
 
-/**
- * 解析后补齐身份（决策 25/30）。
- * ① 有 id ⇒ 直接用（trim 后）——手写 JSON 的老手自带 id 也算数，写错了后果自负；
- * ② 没 id ⇒ **内容指纹兜底**（`t-` + 32 位十六进制）。主路径（`ensureIdsInInlineJson`，
- * 录入瞬间随机 UUID 并回写）正常生效时走不到这里；兜底保持「同内容同 id」是**故意的**：
- * 万一回写失败（settings 面故障 / 容器在 meta 落盘前重启），每 tick 重新解析同一份
- * 无 id 文本时身份不会漂移、历史执行记录不会断链——随机 id 在这条异常路径上会每 tick
- * 换一个身份、把 pending 实例全部重建（冒烟当场测出）。
- */
-export function withIdentity(def: TaskDefinitionInput): TaskDefinition {
-  const code = def.code !== undefined && def.code.trim() !== '' ? def.code.trim() : undefined
-  if (isUsableId(def.id)) {
-    const id = def.id.trim()
-    return { ...def, id, title: def.title ?? id, code }
-  }
-  const { id: _dropped, ...rest } = def
-  const id = `t-${createHash('sha256').update(JSON.stringify(rest)).digest('hex').slice(0, 32)}`
-  return { ...def, id, title: def.title ?? code ?? id, code }
+/** 保存闸门的身份处理结果。 */
+export interface EnsureIdsResult {
+  json: string
+  changed: boolean
+  assigned: number
+  /** 非 null = **整批拒绝保存**：某条目的 id 不是 UUID（用户拍板：不允许旧格式身份混进配置）。 */
+  error: string | null
 }
 
 /**
- * 给**内嵌任务表 JSON** 补 id（决策 25 修订版）：逐项检查，缺 id（或 id 格式不对）的生成并
- * 就地写回；返回新的 JSON 文本供宿主写回 settings。用户以后改名字、调顺序、删条目都不受影响
- * ——**id 就在配置里，跟着这条任务走**。
- *
- * @returns changed=true 表示有新增 id，调用方应把 json 写回配置；assigned 是补的条数。
+ * 保存闸门（决策 30 修订版，用户 2026-09-25 拍板：**保存时固化，运行时只认**）。
+ * ① 条目无 id ⇒ 生成随机 UUID 补上（= 新增任务，这一刻固化进 JSON）；
+ * ② 有 id 且是 UUID ⇒ 原样保留（= 修改既有任务，身份连着历史）；
+ * ③ 有 id 但不是 UUID ⇒ 报错，**整批拒绝保存**；
+ * 非法 JSON / 非数组原样返回（error=null）——那是既有校验的职责，不是身份闸门的。
  */
-export function ensureIdsInInlineJson(raw: string): { json: string; changed: boolean; assigned: number } {
+export function ensureIdsInInlineJson(raw: string): EnsureIdsResult {
   const text = raw.trim()
-  if (text === '') return { json: raw, changed: false, assigned: 0 }
+  if (text === '') return { json: raw, changed: false, assigned: 0, error: null }
   let data: unknown
   try {
     data = JSON.parse(text)
   } catch {
-    return { json: raw, changed: false, assigned: 0 } // 非法 JSON：交给既有校验去告警，这里不动
+    return { json: raw, changed: false, assigned: 0, error: null }
   }
-  if (!Array.isArray(data)) return { json: raw, changed: false, assigned: 0 }
+  if (!Array.isArray(data)) return { json: raw, changed: false, assigned: 0, error: null }
   let assigned = 0
-  for (const item of data) {
+  for (const [index, item] of data.entries()) {
     if (item === null || typeof item !== 'object' || Array.isArray(item)) continue
     const record = item as Record<string, unknown>
-    if (isUsableId(record.id)) {
-      const trimmed = record.id.trim()
-      if (trimmed !== record.id) record.id = trimmed
+    const id = record.id
+    if (id === undefined || id === null || (typeof id === 'string' && id.trim() === '')) {
+      record.id = newTaskId() // 新增：保存这一刻生成并固化，之后运行时不再生成任何 id
+      assigned++
       continue
     }
-    record.id = newTaskId() // 写进 JSON ⇒ 持久化，不再依赖任何位置或指纹
-    assigned++
+    if (typeof id === 'string' && UUID_RE.test(id)) continue // 修改：身份原样保留
+    const title = (record as { title?: unknown }).title
+    return {
+      json: raw, changed: false, assigned: 0,
+      error: `第 ${index + 1} 条（${typeof title === 'string' && title.trim() !== '' ? title : '未命名'}）的 id "${String(id)}"`
+        + ' 不是合法 UUID，拒绝保存。删掉该条目的 id 字段让系统重新生成，或原样保留系统生成的 id',
+    }
   }
-  if (assigned === 0) return { json: raw, changed: false, assigned: 0 }
-  return { json: JSON.stringify(data, null, 2), changed: true, assigned }
+  if (assigned === 0) return { json: raw, changed: false, assigned: 0, error: null }
+  return { json: JSON.stringify(data, null, 2), changed: true, assigned, error: null }
+}
+
+/**
+ * 运行时身份校验（保存闸门的另一半，用户拍板：**运行时只认不修**）。
+ * 有 id 且为 UUID ⇒ 归一返回（code trim、title 缺省回退 id）；
+ * 无 id（老数据）或 id 非 UUID ⇒ 返回 null，调用方记一条 warn 后跳过，不做任何兜底。
+ */
+export function applyIdentity(def: TaskDefinitionInput): TaskDefinition | null {
+  if (!isUuid(def.id)) return null
+  const code = def.code !== undefined && def.code.trim() !== '' ? def.code.trim() : undefined
+  return { ...def, id: def.id, title: def.title ?? def.id, code }
 }
 
 /** 把 ISO 8601 时长解析成毫秒。 */
@@ -289,8 +295,9 @@ function checkedTask(logger: HostLogger, label: string, data: unknown): TaskDefi
 }
 
 /**
- * 解析内嵌任务表 JSON（tasksInline 配置，临时 UI）：须为数组，逐项校验，坏项告警跳过；
- * 每条经 `withIdentity` 补齐 id（没写就按定义内容取指纹兜底——正常路径下 id 已写回 JSON）。
+ * 解析内嵌任务表 JSON（tasksInline 配置）：须为数组，逐项校验，坏项告警跳过。
+ * 身份走 `applyIdentity`（决策 30 修订：**运行时只认不修**）——无 id / 非 UUID 的条目
+ * warn 跳过，绝不在这里生成或兜底 id；生成只发生在保存闸门 `ensureIdsInInlineJson`。
  */
 export function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinition[] {
   const text = raw.trim()
@@ -309,7 +316,13 @@ export function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinitio
   const tasks: TaskDefinition[] = []
   for (const [index, item] of data.entries()) {
     const def = checkedTask(logger, `内嵌任务表[${index}]`, item)
-    if (def?.enabled) tasks.push(withIdentity(def))
+    if (def === undefined || !def.enabled) continue
+    const task = applyIdentity(def)
+    if (task === null) {
+      logger.warn(`内嵌任务表[${index}] 缺少合法 UUID 的 id，不处理（保存时应由系统生成并固化写入）`)
+      continue
+    }
+    tasks.push(task)
   }
   return tasks
 }
@@ -319,7 +332,7 @@ const dirWarnMemo = new Map<string, string>()
 
 /**
  * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
- * 缺 id 的文件**直接写回**（决策 25 修订版：id 跟着定义走，不靠任何位置或指纹去推断）。
+ * 身份同样「运行时只认」（决策 30 修订）：缺 id / id 非 UUID 的文件 warn 跳过，**不再写回**。
  * 目录不存在（ENOENT）= 合法空态（用户没在用目录模式），静默返回，不刷告警。
  */
 export function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[] {
@@ -344,17 +357,14 @@ export function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[
     try {
       if (!statSync(file).isFile()) continue
       const raw: unknown = JSON.parse(readFileSync(file, 'utf8'))
-      // 决策 25 修订版：id 就写在定义文件里。缺 id ⇒ 生成并**写回文件**（用户看得见、进 Git）。
-      if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
-        const record = raw as Record<string, unknown>
-        if (!isUsableId(record.id)) {
-          record.id = newTaskId()
-          writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`)
-          logger.info(`任务定义 ${file} 缺少 id，已生成并写回: ${record.id}`)
-        }
-      }
       const def = checkedTask(logger, file, raw)
-      if (def?.enabled) tasks.push(withIdentity(def))
+      if (def === undefined || !def.enabled) continue
+      const task = applyIdentity(def)
+      if (task === null) {
+        logger.warn(`任务定义 ${file} 缺少合法 UUID 的 id，不处理（请补一个 UUID 或删掉 id 字段后经面板保存生成）`)
+        continue
+      }
+      tasks.push(task)
     } catch (error) {
       logger.warn(`任务定义读取失败 ${file}: ${String(error)}`)
     }

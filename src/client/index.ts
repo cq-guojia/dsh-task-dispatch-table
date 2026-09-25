@@ -389,7 +389,7 @@ function TaskPage(props: {
   const [tab, setTab] = useState<'config' | 'records' | 'debug'>('config')
   const [draft, setDraft] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failed, setFailed] = useState<string | null>(null)
   // 手动刷新：settings 快照本身经订阅 live 更新，此按钮兜底重渲染并记录刷新时刻，
   // 让「时间戳不动」可区分是数据没变还是页面没刷。
   const [manualAt, setManualAt] = useState<number | undefined>(undefined)
@@ -432,14 +432,15 @@ function TaskPage(props: {
   const save = async (): Promise<void> => {
     if (draft === undefined || invalid || !writable) return
     setSaving(true)
-    setFailed(false)
+    setFailed(null)
     try {
       // 空白串 = 清空 = 回到默认（host 侧 tasksInline 默认空串），走 unset 不留覆盖。
       if (draft.trim() === '') await scope.unset('tasksInline')
       else await scope.set('tasksInline', draft)
       setDraft(undefined)
-    } catch {
-      setFailed(true) // 草稿保留，用户可以改完再存一次
+    } catch (error) {
+      // 保存失败（含保存闸门 422 的 id 校验文案）：显示服务端原因，草稿保留可改完再存
+      setFailed(error instanceof Error ? error.message : String(error))
     } finally {
       setSaving(false)
     }
@@ -563,11 +564,11 @@ function TaskPage(props: {
                 }, saving ? t('saving') : t('save')),
                 h('button', {
                   type: 'button',
-                  onClick: () => { setDraft(undefined); setFailed(false) },
+                  onClick: () => { setDraft(undefined); setFailed(null) },
                   disabled: saving || !dirty,
                 }, t('discard')),
               ),
-              failed ? h('p', { style: errorStyle }, t('saveFailed')) : null,
+              failed !== null ? h('p', { style: errorStyle }, failed) : null,
 
               h('h4', { style: sectionTitleStyle }, t('tasksParsedTitle')),
               taskRows.length === 0
@@ -929,11 +930,20 @@ function httpScope(): SettingsScope {
     },
     set: async (field, value) => {
       if (field !== 'tasksInline') return
-      await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ tasksInline: String(value) }),
       })
+      // 保存闸门拒绝（422：id 非 UUID 等）⇒ 把服务端文案抛给表单层展示，不让保存静默失败。
+      if (!res.ok) {
+        let message = `HTTP ${res.status}`
+        try {
+          const body = (await res.json()) as { error?: unknown }
+          if (typeof body.error === 'string' && body.error.trim() !== '') message = body.error
+        } catch { /* 保底用状态码 */ }
+        throw new Error(message)
+      }
       void poll()
     },
     unset: async () => {},
