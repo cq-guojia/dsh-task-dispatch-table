@@ -23,11 +23,12 @@
 
 ## 二、当前状态
 
-**联调阶段。** v0.0.1 全功能落码并真机跑通，**9 个工作包全部完成封卷**（见下表）；决策 1–30 已定型（[`design/decisions.md`](design/decisions.md)）；冒烟 71 项全过。
+**联调阶段。** v0.0.1 全功能落码并真机跑通，**9 个工作包全部完成封卷**（见下表）；决策 1–32 已定型（[`design/decisions.md`](design/decisions.md)）；冒烟 71 项全过。
 
 - **真机现状**：面板（侧栏「任务调度表」整页）三标签可用（任务配置 / 执行记录 / 调试）；任务表持久化主通道 = state.db meta 表（重装 / 容器重建不丢，真机验证通过）；once 全链路 `succeeded`（2026-09-25 21:35 / 22:20 两轮，任务身份 = 系统生成 UUID）。
 - **任务身份闸门（决策 30）已生效**：保存时固化——无 id 补 UUID / 非 UUID 422 拒 / UUID 必须命中现有已保存表；运行时只认不修——无 id / 非 UUID 条目 warn 跳过。
 - **最近一笔**：文档体系三层化 + 跨项目公用规则外提 `RULES.md`（里程碑 9）；configEditor 次通道 try/catch 修复（`774af86` 已上远端）；remote 已切 SSH。
+- **里程碑 11 落码完成**：调度循环重设计（决策 31）+ 独立 `task_log` 表与执行记录冗余字段（决策 32）——懒建行 / 不回看 / 不补跑 / skipped 只进日志；构建 + typecheck + 冒烟 75 项全过，**待真机复测 cron 无 skipped 洪水**。周期任务（cron 每 5 分钟）先前真机已验证跑通且跨天成功（里程碑 10 完成）。
 
 ---
 
@@ -44,7 +45,8 @@
 | 7 | 持久化主通道与调试页 | ✅ | 09-25 | tasksInline 改 state.db meta 表（重装不丢）；面板「调试」标签直读三表；once 真机重新跑绿 | [worklog/persistence.md](worklog/persistence.md) |
 | 8 | 任务身份闸门（决策 30） | ✅ | 09-25 | 三字段模型（id/title/code）→「保存时固化，运行时只认」→ UUID 必须命中现有表；真机验证生效 | [worklog/identity-gate.md](worklog/identity-gate.md) |
 | 9 | 文档体系三层化 + 公用规则真源外提 | ✅ | 09-25 | PROGRESS 109KB→11.5KB 拆三层（现场/叙事/定型）；跨项目公用规则外提为根目录 `RULES.md`，AGENTS.md 瘦身为薄壳 | [worklog/docs-system.md](worklog/docs-system.md) |
-| 10 | 周期任务（cron）全链路验证 | ⚪ 未开始 | — | 下一步重点，见「五、下一步」 | — |
+| 10 | 周期任务（cron）全链路验证 | ✅ | 09-26 | 每 5 分钟 cron 真机跑通、跨天成功；暴露 `skipped` 洪水与提前 pending 两缺陷 → 触发里程碑 11 | — |
+| 11 | 调度循环重设计 + 日志表 + 冗余字段 | ✅ | 09-26 | 决策 31/32：懒建行/不回看/不补跑/skipped 只进日志 + 独立 `task_log` 表 + 执行记录加 outputs/tokens 列；冒烟 75 项全过 | [worklog/scheduler-redesign.md](worklog/scheduler-redesign.md) |
 
 ---
 
@@ -60,15 +62,18 @@
 | U4 | **`logical_date` 是否显式注入尚未定** | 真机 `once8` 实例日期 `2026-09-23`，agent 产出却是 `work-report-2026-09-24.md`。待确认是任务提示词里写了明天日期，还是模型自己算的；后者说明**日期不该让模型猜** | 若属模型自算 ⇒ 把 `logical_date`（及期望日期格式）显式写进派发消息，与「回执不许模型传 session」同理：**凡不由模型决定的，一律由调度器注入** |
 | U5 | **执行记录是否带「定义版本 + 配置快照 + 来源」**（`def_revision` / `def_snapshot` / `run_type`，**已设计、未拍板**） | 现在执行行只引用 `task_id`，**不记录当时那份配置** ⇒ 用户改完配置就回答不了「这次跑的是哪一版」；且分不清这次是**按点调度 / 用户手动重试 / 补跑**。直接影响「点开一条记录看当时的配置」与「失败点重试」按钮 | ① `def_snapshot` 存当时配置 JSON（Airflow 有 `rendered_task_instance_fields` 同款）；② `run_type` 区分 scheduled / manual / retry / backfill（Airflow 的 `run_id` 前缀就是 `scheduled__` / `manual__`）；③ **自动重试仍走行内 `attempt+1`（决策 10 不动），用户手动重试 = 新建一行 `run_type='manual'`** ⇒ 不吃自动重试预算、审计清楚；④ 唯一键若加 `def_revision`，连「月任务改成年任务后锚点撞车」也一并合法 |
 | U6 | **面板收尾**：回收「数据通道诊断」临时行与 configForms/settingsScope 兜底块（暂缓，等链路稳定后一并做） | rc.1 上 HTTP 是唯一能出数据的通道，兜底块死代码 | 仅留 HTTP 一条真通道，删除诊断行与兜底块 |
+| U7 | **依赖语义边界未拍板（②，与里程碑 11 解耦、等其落地后讨论）** | 已实现 `judgeDependencies`（same_period / latest_success），但边界未定：① `latest_success` 无 `freshness` 时 = 任意历史成功都满足（`store.ts:370` footgun）；② `same_period` 上游为分钟级 cron（一天多刻度）时 `get` 只取一行，语义未定义；③ 上游 `failed`/`skipped` 时下游是否立即 `skipped` 还是等满自身窗口；④ 多依赖是 AND，是否需要 OR；⑤ 依赖引用 `task_id`（UUID），UI 如何选上游；⑥ `freshness` 基准按 `scheduled_at` 还是 `finished_at`（现按 scheduled_at） | 等里程碑 11 落地后逐一拍板，再写真机用例验证 |
+| U8 | **token 用量来源待确认**：`HostSessionEvent` 现仅暴露 `type`，无 usage 字段；代码对 `event.usage` 做防御性读取，宿主不带则 `tokens` 留 `null` | 宿主会话事件的用量字段形态未验证；按用户「确认不了先留 null 不阻塞」先落地列与写回路径 | 真机抓一次会话事件确认 usage 字段（promptTokens/completionTokens/totalTokens），再收紧取值逻辑 |
 
 ---
 
 ## 五、下一步（接手后从这里开始）
 
-1. **【最优先】周期任务（cron）全链路验证**：用户在面板「任务配置」贴一条 cron 任务（如每日 9:00，window 覆盖，workspace 填宿主真实工作区标题）→ 保存 → 观察 实例按刻度生成 → 派发 → 回执 → 终态；次日核对「同一任务多刻度各自成行、不重复执行」。前置已全部就位（刻度化调度 / 身份闸门 / meta 持久化 / v4 格式均已真机验证）。
-2. **（📋 方案已拍板，暂不动工）会话弹窗渲染层复用官方 ChatView（决策 29）**：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配逻辑（~50 行胶水）挂载官方 ChatView 本体。机制与落码要点见 [worklog/session-view.md](worklog/session-view.md) 与决策 29。
-3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
-4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。
+1. **【待真机复测】调度循环重设计（里程碑 11，决策 31/32）已落码**：懒建行 / 不回看 / 不补跑 / skipped 只进日志 + 独立 `task_log` 表 + `outputs`/`tokens` 冗余列；构建 + typecheck + 冒烟 75 项全过。**下一步真机跑 cron 每 5 分钟，确认「无 skipped 洪水、每 5 分钟恰好一行」**。
+2. **【下一步讨论】依赖语义边界定型（②）**：`judgeDependencies` 已实现（same_period / latest_success），但边界未拍板，见未决项 U7；里程碑 11 落地后再逐条定，写真机用例验证。
+3. **（📋 方案已拍板，暂不动工）会话弹窗渲染层复用官方 ChatView（决策 29）**：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配逻辑（~50 行胶水）挂载官方 ChatView 本体。机制与落码要点见 [worklog/session-view.md](worklog/session-view.md) 与决策 29。
+4. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
+5. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。
 
 ---
 

@@ -177,6 +177,7 @@ export function apply(ctx, config) {
         debugSnapshot: readConfigField(raw.debugSnapshot, ''),
         defaultProvider: typeof raw.defaultProvider === 'string' ? raw.defaultProvider : '',
         defaultModel: typeof raw.defaultModel === 'string' ? raw.defaultModel : '',
+        logRetentionDays: readConfigField(raw.logRetentionDays, ConfigDefaults.logRetentionDays),
     };
     // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
     // 用户文档层 live 覆盖（packages/settings/settings/src/index.ts:49-59）。
@@ -389,8 +390,8 @@ export function apply(ctx, config) {
             stopInterval = sctx.interval(safeTick, next.tickMs);
         });
         safeTick();
-        scheduler.backfill();
-        updateSnapshot(); // backfill 可能补建实例，立即落一版快照
+        scheduler.startupDiagnostics();
+        updateSnapshot(); // 启动诊断可能写 task_log，立即落一版快照
         sctx.on('dispose', () => {
             stopInterval();
             store.close();

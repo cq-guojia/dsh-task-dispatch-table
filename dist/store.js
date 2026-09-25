@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS task_instances (
   lease_until   TEXT,
   dispatched_at TEXT,
   finished_at   TEXT,
+  outputs       TEXT,
+  tokens        INTEGER,
   updated_at    TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS task_events (
@@ -34,6 +36,18 @@ CREATE TABLE IF NOT EXISTS task_events (
   detail      TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_events_instance ON task_events(instance_id, seq);
+-- 诊断日志表（决策 31/32）：只收「未推进到执行那一步」的诊断——错过刻度 / 启动汇总 /
+-- 预条件失败 / 依赖卡顿 / 崩溃残留 pending。与 task_instances 分离，可定时清除。
+CREATE TABLE IF NOT EXISTS task_log (
+  seq          INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts           TEXT NOT NULL,
+  task_id      TEXT,
+  scheduled_at TEXT,
+  level        TEXT NOT NULL,
+  kind         TEXT NOT NULL,
+  message      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_task_log_ts ON task_log(ts);
 -- 元数据表：跨重启 / 重装必须存活的插件级键值（内嵌任务表 tasksInline 等）。
 -- state.db 在宿主数据根（挂载卷）⇒ 容器重建、插件重装都不丢；entry config 做不到这点。
 CREATE TABLE IF NOT EXISTS meta (
@@ -57,16 +71,19 @@ export class TaskStore {
         this.migrate();
     }
     /**
-     * 旧库迁移（决策 25）：补建 `(task_id, scheduled_at)` 唯一索引作为防重闸门。
-     * 建索引前先去重（同一 task + 同一刻度只留 rowid 最小那条），否则历史脏数据会让
-     * CREATE UNIQUE INDEX 直接失败、插件起不来。
+     * 旧库迁移（决策 25 + 决策 32）：
+     * - 首次：去重（同一 task + 同一刻度只留 rowid 最小那条）后补建 `(task_id, scheduled_at)`
+     *   唯一索引作为防重闸门；
+     * - 已迁移过的库：仅补决策 32 冗余字段（outputs / tokens 列），不重复去重。
      */
     migrate() {
         const exists = this.db
             .prepare(`SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_instances_slot'`)
             .get();
-        if (exists !== undefined)
+        if (exists !== undefined) {
+            this.ensureInstanceColumns();
             return;
+        }
         // 先数一数真有重复没有：正常库应该是 0，非 0 说明历史数据脏，交给宿主告警。
         const dup = this.db
             .prepare(`SELECT COUNT(*) AS n FROM (
@@ -76,6 +93,15 @@ export class TaskStore {
         this.db.exec(`DELETE FROM task_instances WHERE rowid NOT IN
          (SELECT MIN(rowid) FROM task_instances GROUP BY task_id, scheduled_at)`);
         this.db.exec('CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at)');
+        this.ensureInstanceColumns();
+    }
+    /** 决策 32：兼容旧库（无 outputs / tokens 列）。 */
+    ensureInstanceColumns() {
+        const cols = new Set(this.db.prepare('PRAGMA table_info(task_instances)').all().map(c => c.name));
+        if (!cols.has('outputs'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN outputs TEXT');
+        if (!cols.has('tokens'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN tokens INTEGER');
     }
     close() {
         this.db.close();
@@ -134,24 +160,39 @@ export class TaskStore {
         return Number(result.changes);
     }
     /**
-     * 实例保障幂等补建（决策 25 + state-machine §7）：
-     * **身份 = 任务 + 计划刻度**——`id` 是不透明 UUID，去重走 `UNIQUE(task_id, scheduled_at)`，
-     * 所以同一刻度重复 INSERT 一律 DO NOTHING ⇒ tick 幂等（迟到 / 重启 / 多跑几轮都不会多出第二条）。
-     * 建即为终态（过窗）时留痕（data-model：skipped 证据落 task_events）。
+     * 幂等建一条实例（决策 31：懒建行，调用方先生成 id 并判定预条件通过后才调用）。
+     * **身份 = 任务 + 计划刻度**——去重走 `UNIQUE(task_id, scheduled_at)`，
+     * 同一刻度重复 INSERT 一律 DO NOTHING ⇒ tick 幂等。状态由调用方给定（现仅 'dispatched'）。
      */
-    ensureInstance(taskId, logicalDate, scheduledAt, status) {
-        const id = randomUUID();
+    ensureInstance(id, taskId, logicalDate, scheduledAt, status) {
         const result = this.db
-            .prepare(`INSERT INTO task_instances
+            .prepare(`INSERT OR IGNORE INTO task_instances
                 (id, task_id, logical_date, scheduled_at, status, attempt, updated_at)
-                VALUES (?, ?, ?, ?, ?, 0, ?)
-                ON CONFLICT(task_id, scheduled_at) DO NOTHING`)
+                VALUES (?, ?, ?, ?, ?, 0, ?)`)
             .run(id, taskId, logicalDate, scheduledAt, status, nowIso());
-        const created = Number(result.changes) > 0;
-        if (created && status !== 'pending') {
-            this.appendEvent(id, 'state_change', { to: status, reason: 'ensure-over-window' });
-        }
-        return created;
+        return Number(result.changes) > 0;
+    }
+    /** 删除一条实例（决策 31.6：窗口外残留 pending 直接删，视为未执行）。 */
+    deleteInstance(id) {
+        this.db.prepare('DELETE FROM task_instances WHERE id = ?').run(id);
+    }
+    /** 写入一条诊断日志（决策 31/32：未推进到执行那一步的诊断进 task_log，不污染 task_instances）。 */
+    appendLog(entry) {
+        this.db
+            .prepare('INSERT INTO task_log (ts, task_id, scheduled_at, level, kind, message) VALUES (?, ?, ?, ?, ?, ?)')
+            .run(nowIso(), entry.taskId ?? null, entry.scheduledAt ?? null, entry.level, entry.kind, entry.message);
+    }
+    /** 按保留期清除 task_log（决策 32：独立表，可定时清）。返回删除条数。 */
+    purgeLog(retentionDays) {
+        const cutoff = new Date(Date.now() - retentionDays * 86_400_000).toISOString();
+        const result = this.db.prepare('DELETE FROM task_log WHERE ts < ?').run(cutoff);
+        return Number(result.changes);
+    }
+    /** 完成瞬间写回产出与 token（决策 32：总表冗余，task_events 仍为真源）。 */
+    recordCompletion(id, outputs, tokens) {
+        this.db
+            .prepare('UPDATE task_instances SET outputs = ?, tokens = ?, updated_at = ? WHERE id = ?')
+            .run(outputs, tokens, nowIso(), id);
     }
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
     findBySlot(taskId, scheduledAt) {
@@ -174,7 +215,7 @@ export class TaskStore {
             .run(key, value);
     }
     /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
-    static DUMP_TABLES = ['task_instances', 'task_events', 'meta'];
+    static DUMP_TABLES = ['task_instances', 'task_events', 'task_log', 'meta'];
     /**
      * 调试导出：整表原样读出（面板「调试」页用）。
      * @param name - 表名（必须命中白名单）。
@@ -185,9 +226,10 @@ export class TaskStore {
             throw new Error(`dumpTable: unknown table ${name}`);
         }
         const count = this.db.prepare(`SELECT COUNT(*) AS n FROM ${name}`).get().n;
-        const order = name === 'task_events'
-            ? 'seq DESC'
-            : name === 'task_instances' ? 'scheduled_at DESC, id DESC' : 'key';
+        const order = name === 'task_events' ? 'seq DESC'
+            : name === 'task_instances' ? 'scheduled_at DESC, id DESC'
+                : name === 'task_log' ? 'ts DESC, seq DESC'
+                    : 'key'; // meta：按 key 升序
         const rows = this.db.prepare(`SELECT * FROM ${name} ORDER BY ${order} LIMIT ?`).all(limit);
         const columns = this.db.prepare(`PRAGMA table_info(${name})`).all().map(col => col.name);
         return { name, count, columns, rows, truncated: count > rows.length };

@@ -3,6 +3,7 @@
 // 跑法：npm run smoke（先 npm run build，本脚本直接引 dist 产物，测的是真正要发布的代码）。
 // 刻意不引任何测试框架：零新增依赖，宿主环境装不了也照样能跑。
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -179,12 +180,13 @@ try {
 
   // ── 3. 执行身份与防重（UNIQUE(task_id, scheduled_at)）──
   console.log('\n[3] 执行身份与防重 ensureInstance')
-  const first1 = store.ensureInstance(idA, '2026-09-24', '2026-09-24T09:00:00.000Z', 'pending')
-  const again = store.ensureInstance(idA, '2026-09-24', '2026-09-24T09:00:00.000Z', 'pending')
-  check('同一任务同一刻度只建一条（tick 幂等）', first1 === true && again === false)
-  const otherSlot = store.ensureInstance(idA, '2026-09-24', '2026-09-24T10:00:00.000Z', 'pending')
+  // 新签名：ensureInstance(id, taskId, logicalDate, scheduledAt, status)；去重走唯一索引 UNIQUE(task_id, scheduled_at)
+  const first1 = store.ensureInstance(randomUUID(), idA, '2026-09-24', '2026-09-24T09:00:00.000Z', 'pending')
+  const again = store.ensureInstance(randomUUID(), idA, '2026-09-24', '2026-09-24T09:00:00.000Z', 'pending') // 同 (task,scheduled_at) 不同 id ⇒ 唯一索引拦截 ⇒ false
+  check('同一任务同一刻度只建一条（INSERT OR IGNORE 走唯一索引）', first1 === true && again === false)
+  const otherSlot = store.ensureInstance(randomUUID(), idA, '2026-09-24', '2026-09-24T10:00:00.000Z', 'pending')
   check('不同刻度各一条', otherSlot === true)
-  const otherDay = store.ensureInstance(idA, '2026-09-25', '2026-09-25T09:00:00.000Z', 'pending')
+  const otherDay = store.ensureInstance(randomUUID(), idA, '2026-09-25', '2026-09-25T09:00:00.000Z', 'pending')
   check('不同日期各一条', otherDay === true)
   const rows = store.listByStatus(['pending'])
   check('实例 id 是不透明 UUID（不再含 ":" 拼串）', rows.every(row => !row.id.includes(':')))
@@ -230,60 +232,55 @@ try {
   const legacyStore = new TaskStore(legacyPath)
   const legacyRow = legacyStore.get('legacy-task:2026-09-23')
   check('旧库可读、历史行不丢', legacyRow !== undefined && legacyRow.status === 'succeeded')
-  check('旧库同样按（任务 + 刻度）去重', legacyStore.ensureInstance('legacy-task', '2026-09-23', '2026-09-23T09:00:00.000Z', 'pending') === false)
+  check('旧库同样按（任务 + 刻度）去重', legacyStore.ensureInstance('legacy-task-x', 'legacy-task', '2026-09-23', '2026-09-23T09:00:00.000Z', 'pending') === false)
   legacyStore.close()
 
-  // ── 5. 调度器：小时级 cron 一天能出多条（旧实现只能 1 条）──
-  console.log('\n[5] 调度器刻度化 ensureInstances')
+  // ── 5. 调度器（决策 31 重设计：懒建行 + 不回看 + 不补跑 + skipped 只进日志）──
+  console.log('\n[5] 调度器：懒建行 / 不回看 / 不补跑 / skipped 只进日志')
   const schedDir = mkdtempSync(join(tmpdir(), 'dsh-tdt-sched-'))
   const schedStore = new TaskStore(join(schedDir, 'state.db'))
-  const logger = { info() {}, warn() {}, error() {} }
-  const fakeCtx = {
-    // 工作区注册为空 ⇒ 派发会以 workspace-not-found 收敛，本例只验证实例生成数量。
-    workspaceRegistry: { list: () => [], archiveSession: async () => {} },
+  const logger = { info() {}, warn() {}, error() {}, debug() {} }
+
+  // 5a. 预条件满足（工作区 / 模型齐全）⇒ 当前刻度恰好派发 1 条 dispatched，绝不预建 pending/skipped
+  const okCtx = {
+    workspaceRegistry: { list: () => [{ title: 'Temp', path: schedDir }], attachWorkspace: async () => {}, archiveSession: async () => {} },
+    agents: { listModels: async () => [{ provider: 'p', models: ['m'] }], create: async () => ({ id: 'sess-1', agent: { send: () => {} } }) },
+    sessionTitle: { rename: () => {} },
     get: () => undefined,
   }
-  const reconciler = createReconciler({
-    ctx: fakeCtx,
-    logger,
-    store: schedStore,
-    options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, tasks: () => new Map() },
+  const okCfg = () => ({
+    tasksInline: JSON.stringify([
+      { id: UUID_A, title: '小时任务', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'x' } },
+      // 故意不带 id：运行时只认不修（决策 30 修订）——这条应被 warn 跳过、不产生任何实例
+      { enabled: true, schedule: { cron: '0 3 * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'y' } },
+    ]),
+    tasksDir: '', tickMs: 60_000, statePath: '', dispatchGraceMs: 60_000, leaseMs: 60_000, unknownGraceMs: 300_000,
+    debugSnapshot: '', defaultProvider: '', defaultModel: '', logRetentionDays: 30,
   })
-  const scheduler = createScheduler({
-    ctx: fakeCtx,
-    logger,
-    store: schedStore,
-    reconciler,
-    config: () => ({
-      tasksInline: JSON.stringify([
-        { id: UUID_A, title: '小时任务', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'x' } },
-        // 故意不带 id：运行时只认不修（决策 30 修订）——这条应被 warn 跳过、不产生任何实例
-        { enabled: true, schedule: { cron: '0 3 * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'y' } },
-      ]),
-      tasksDir: 'tasks',
-      tickMs: 60_000,
-      statePath: '',
-      dispatchGraceMs: 60_000,
-      leaseMs: 60_000,
-      unknownGraceMs: 300_000,
-      debugSnapshot: '',
-      defaultProvider: '',
-      defaultModel: '',
-    }),
-  })
-  scheduler.tick()
-  const generated = [...schedStore.listByStatus(['pending']), ...schedStore.listByStatus(['failed']), ...schedStore.listByStatus(['skipped'])]
-  check('小时级 cron 一次 ensure 建出多条（> 1）', generated.length > 1, `实际 ${generated.length}`)
-  const loaded = [...scheduler.getTasks().values()]
+  const okReconciler = createReconciler({ ctx: okCtx, logger, store: schedStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, tasks: () => new Map() } })
+  const okScheduler = createScheduler({ ctx: okCtx, logger, store: schedStore, reconciler: okReconciler, config: okCfg })
+  okScheduler.tick() // taskMap 在 tick 内填充 ⇒ getTasks 需在 tick 后取
+  const loaded = [...okScheduler.getTasks().values()]
   check('运行时只认 UUID：无 id 条目被跳过，仅剩合法那条', loaded.length === 1 && loaded[0]?.id === UUID_A, loaded.map(t => t.id).join(', '))
   check('title 保留用户写的（不被 id 顶替）', loaded.some(task => task.title === '小时任务'))
-  // 第二次 tick：幂等，不该再多出实例
-  const before = generated.length
-  scheduler.tick()
-  const after = schedStore.listByStatus(['pending']).length
-    + schedStore.listByStatus(['failed']).length
-    + schedStore.listByStatus(['skipped']).length
-  check('重复 tick 不产生重复实例（数量不增长）', after === before, `${before} → ${after}`)
+  check('当前刻度恰好派发 1 条 dispatched（懒建行）', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
+  check('不预建 pending', schedStore.listByStatus(['pending']).length === 0)
+  check('不补建 skipped（无洪水）', schedStore.listByStatus(['skipped']).length === 0)
+  okScheduler.tick()
+  check('重复 tick 不重复派发同一刻度', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
+
+  // 5b. 预条件失败（工作区找不到）⇒ 不建 task_instances 行，只记 task_log
+  const noWsCtx = { workspaceRegistry: { list: () => [], attachWorkspace: async () => {}, archiveSession: async () => {} }, get: () => undefined }
+  // 注意：必须带 id（无 id 条目按决策 30 运行时跳过，就走不到预条件分支）
+  const noWsCfg = () => ({ ...okCfg(), tasksInline: JSON.stringify([{ id: UUID_A, title: '无工作区', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Nope', prompt: 'x' } }]) })
+  const noWsStore = new TaskStore(join(schedDir, 'state-nows.db'))
+  const noWsReconciler = createReconciler({ ctx: noWsCtx, logger, store: noWsStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, tasks: () => new Map() } })
+  const noWsScheduler = createScheduler({ ctx: noWsCtx, logger, store: noWsStore, reconciler: noWsReconciler, config: noWsCfg })
+  noWsScheduler.tick()
+  check('工作区找不到 ⇒ 不建 task_instances 行', noWsStore.listByStatus(['dispatched', 'pending', 'skipped', 'failed']).length === 0)
+  const logs = noWsStore.dumpTable('task_log', 500)
+  check('工作区找不到 ⇒ 记 task_log(precondition)', logs.rows.some(l => l.kind === 'precondition'), JSON.stringify(logs.rows.map(l => l.kind)))
+  noWsStore.close()
   schedStore.close()
   rmSync(schedDir, { recursive: true, force: true })
   // ── 6. 真机形态旧库兼容：老 id 形态 + 各状态历史行 + 新代码跑一遍 ──

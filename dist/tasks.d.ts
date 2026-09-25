@@ -33,9 +33,6 @@ export declare const taskDefinitionSchema: z.ZodObject<{
     retry: z.ZodDefault<z.ZodObject<{
         maxAttempts: z.ZodDefault<z.ZodNumber>;
     }, z.core.$strip>>;
-    backfill: z.ZodDefault<z.ZodObject<{
-        days: z.ZodDefault<z.ZodNumber>;
-    }, z.core.$strip>>;
     depends_on: z.ZodOptional<z.ZodArray<z.ZodObject<{
         task: z.ZodString;
         semantics: z.ZodEnum<{
@@ -106,8 +103,8 @@ export declare function logicalDateOf(date: Date, timeZone: string | undefined):
  */
 export declare function scheduledSlotsFor(task: TaskDefinition | TaskDefinitionInput, from: Date, to: Date, cap?: number): Date[];
 /**
- * 某日历日上的第一个刻度（重排与历史补跑用：决策 20 的 live 重排、§7 backfill
- * 都以「天」为粒度，保留一个刻度/天 的语义即可）。
+ * 某日历日上的第一个刻度（面板展示「下次执行」/ 目录模式历史锚点用；
+ * 决策 20 的 live 重排与 §7 backfill 已于决策 31 移除，不再依赖「天」粒度补跑）。
  */
 export declare function firstSlotOnDay(task: TaskDefinition, day: string): Date | undefined;
 /** 给定时刻之后的下一个刻度（面板展示「下次执行」用）。 */

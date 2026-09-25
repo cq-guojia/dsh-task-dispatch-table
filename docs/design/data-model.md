@@ -1,7 +1,9 @@
 # 数据模型：任务定义与状态库
 
 > **定型依据**：决策 6（定义存 JSON）/ 7（状态存 SQLite）/ 8（依赖下游声明）/ 9（两种依赖语义）/ 10（失败策略）/ 12（任务手册）/ 14（状态库路径）。
-> **边界**：通知机制本期不设计——`failed` / `skipped` 的证据先落在 `task_events`，通知渠道另立决策。
+> **边界**：通知机制本期不设计——`failed` 的证据落在 `task_events`，通知渠道另立决策。
+> ⚠️ **决策 31 修订**：调度**不再产生 `skipped` 行**（过期 / 被依赖卡 / 预条件失败一律不建 `task_instances` 记录），
+> 这类「未推进到执行那一步」的诊断改记独立的 `task_log` 表（可定时清除）。`skipped` 状态仅作历史兼容保留。
 
 ## 一、任务定义（JSON 文件，人改、进 Git，不入库）
 
@@ -22,7 +24,6 @@
 | `target.prompt` | string | 短指令，调度器拼进派发消息 | 决策 12 |
 | `contract.validStatuses` | string[]? | 回执 `status` 的合法值清单，默认 `["ok"]` | 决策 19 |
 | `retry.maxAttempts` | int? | 默认 1；重试耗尽 → `failed`，下游跳过 | 决策 10 |
-| `backfill.days` | int? | 默认 0；> 0 时插件启动补建近 N 天缺失实例（`pending`），照常走依赖与窗口判定 | 状态机 §7 补跑入口 |
 | `depends_on` | object[]? | `{ task, semantics, freshness? }`，**由下游声明**；`freshness`（ISO 8601 时长）仅 `latest_success` 使用 | 决策 8/9 |
 
 **回执机制（决策 19 + 决策 24 改通道）**：agent 跑完调用插件注册的工具 `task_dispatch_table_receipt({ status, outputs?, note? })` 提交回执——该工具由插件在派发时经 `agentCtx.tools.register` 注册，**只对该任务会话可见**，`execute` 在**插件进程内**直写状态库 `task_events`（`kind='receipt'`，detail 形状 `{ status, outputs, note, session_id }`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + `outputs` 逐一在目标工作区存在且 mtime 晚于本次派发（防旧产物冒充）。只记录不裁决，实例状态仍只由调度器写（决策 11）；重复提交无害（对账取最新）。⚠️ **为什么不再用命令行**：agent 的 bash 在 Landlock 沙箱 `workspace-write` 模式下**只能写工作区**，写不了宿主数据根下的 `state.db`（决策 24 真机证据）；`submit.js` 保留为手动 / 排查备用通道。
@@ -48,14 +49,16 @@ CREATE TABLE task_instances (
   lease_until   TEXT,                    -- running 租约到期时刻（机制 #2）
   dispatched_at TEXT,                    -- ★ 实际派发时刻（可能晚于 scheduled_at），**不进身份**
   finished_at   TEXT,
+  outputs       TEXT,                    -- 决策 32：完成瞬间写回的产出（回执 outputs 的 JSON 文本，冗余）
+  tokens        INTEGER,                 -- 决策 32：本次执行的 token 用量（宿主事件带 usage 才累计，否则 NULL）
   updated_at    TEXT NOT NULL
 );
 -- ★ 防重闸门（唯一索引而非表约束：旧库加索引即可升级，不必重建表）
 CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at);
   -- 待确认（未拍板，见 PROGRESS 未决项 U5）：def_revision（跑的是哪版定义）/
-  --   def_snapshot（当时的配置快照 JSON）/ run_type（scheduled | manual | retry | backfill）
+  --   def_snapshot（当时的配置快照 JSON）/ run_type（scheduled | manual | retry）
 
--- 执行日志表：append-only，对账与排障的证据链
+-- 执行日志表：append-only，对账与排障的证据链（**真实实例**的生命周期证据）
 CREATE TABLE task_events (
   seq         INTEGER PRIMARY KEY AUTOINCREMENT,
   instance_id TEXT NOT NULL,
@@ -65,6 +68,20 @@ CREATE TABLE task_events (
 );
 
 CREATE INDEX idx_events_instance ON task_events(instance_id, seq);
+
+-- 诊断日志表（决策 32）：只收「**未推进到执行那一步**」的诊断，与 task_instances / task_events 分离，
+-- 可定时清除（logRetentionDays，默认 30 天）。任务没到推进那一步，就不写任务记录表（用户拍板）。
+CREATE TABLE task_log (
+  seq          INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts           TEXT NOT NULL,
+  task_id      TEXT,                     -- 可能为空（如启动汇总）
+  scheduled_at TEXT,                     -- 错过的刻度，可能为空
+  level        TEXT NOT NULL,            -- info | warn | error
+  kind         TEXT NOT NULL,            -- missed_slot | startup_missed | precondition | dep_blocked | stray_pending
+  message      TEXT NOT NULL
+);
+
+CREATE INDEX idx_task_log_ts ON task_log(ts);
 
 -- 元数据表：跨重启 / 重装必须存活的插件级键值。内嵌任务表 tasksInline 的**持久化主通道**
 -- 在这里（entry config 会在插件重装时丢；state.db 在宿主数据根挂载卷上，不丢）。
@@ -87,11 +104,11 @@ CREATE TABLE meta (
    | 每月 1 号 09:00 | `2026-09-01T09:00:00+08:00` | 1 |
    | `once` | 就是它那个时刻 | 1 |
 
-   刻度**由 cron 决定**，不是「上一次 + 间隔」⇒ 迟到 / 重启 / 多跑几轮都不漂移（8:01 才跑，记的仍是 `08:00` 这个槽）。**防重 = 唯一约束**：每 tick 列出窗口内的刻度逐个 INSERT，插过就插不进去 ⇒ 一天 288 轮 tick 也只有一条。下游依赖判定仍是「一条 SELECT」：`same_period` 查同 `logical_date`，`latest_success` 查 `succeeded` 的最近 `logical_date`（`freshness` 比对 `scheduled_at`）。展示用可读串拼 `task_id:scheduled_at`，**但不作主键**。
+   刻度**由 cron 决定**，不是「上一次 + 间隔」⇒ 迟到 / 重启 / 多跑几轮都不漂移（8:01 才跑，记的仍是 `08:00` 这个槽）。**防重 = 唯一约束**：到点那一刻才 INSERT 一条（懒建行，决策 31），撞 `UNIQUE(task_id, scheduled_at)` 即视为「该刻度已处理」⇒ 幂等。下游依赖判定仍是「一条 SELECT」：`same_period` 查同 `logical_date`，`latest_success` 查 `succeeded` 的最近 `logical_date`（`freshness` 比对 `scheduled_at`）。展示用可读串拼 `task_id:scheduled_at`，**但不作主键**。
 
-   **ensureInstances 的窗口**（实现约定，不是决策）：`[now - max(窗口时长, 26h), now + 2×tick]`，刻度超限（`MAX_ENSURE_SLOTS = 200`）时**只保留最近的**——近期刻度才是要跑的，更远的历史交给 `backfill.days`。
-2. **重试不换行**：`attempt` 行内递增，状态流转 `pending → dispatched → running → (failed → pending)* → 终态`；下游只见最终态，半成品状态不外泄。
-3. **原子领取**：派发时 `UPDATE ... SET status='dispatched' WHERE id=? AND status='pending'`，以受影响行数判定领取成功。单进程插件的 tick 本就顺序执行，CAS 为重启恢复与未来多实例兜底，不改变决策 7 的任何理由。
+   **不再有 `ensureInstances` 窗口回看**（决策 31）：原来是 `[now - max(窗口时长, 26h), now + 2×tick]` 逐个刻度补建（窗口内 `pending` / 过窗 `skipped`），会塞满任务记录表 ⇒ **已删除**。现在只取「当前该跑的那一下」，不回看、不补跑、不预建。
+2. **重试不换行**：`attempt` 行内递增，状态流转 `dispatched → running → (failed → pending)* → 终态`（懒建行后 `pending` 只由重试回退产生）；下游只见最终态，半成品状态不外泄。
+3. **懒建行 + 幂等**（决策 31）：到点且预条件通过时直接以 `dispatched` 落库（`INSERT OR IGNORE`），随后异步拉起会话；预条件不过则**不落库**。单进程插件的 tick 顺序执行，`casClaim`（`UPDATE ... WHERE status='pending'`）保留为重启恢复与未来多实例兜底。
 
 ## 四、已记录的取舍
 

@@ -26,6 +26,8 @@ export interface PluginConfig {
   defaultProvider: string
   /** 插件级默认 model（决策 22 漏斗第②层）：与 defaultProvider 成对；留空则漏到宿主默认。 */
   defaultModel: string
+  /** task_log 保留期（天）：到期行由 tick 内 purgeLog 清除（决策 32）。 */
+  logRetentionDays: number
 }
 
 export const ConfigDefaults: Omit<
@@ -36,6 +38,7 @@ export const ConfigDefaults: Omit<
   dispatchGraceMs: 60_000,
   leaseMs: 30 * 60_000,
   unknownGraceMs: 5 * 60_000,
+  logRetentionDays: 30,
 }
 
 // ⚠️ rc.1（0.1.7-rc.1）约束：宿主插件配置字段**不能标 .volatile()**。
@@ -59,6 +62,7 @@ export const Config = z.object({
   // 决策 22 漏斗第②层：留空 = 未配，派发时漏到下一层。解析结果只用于本次派发，不回写本字段。
   defaultProvider: z.string().default(''),
   defaultModel: z.string().default(''),
+  logRetentionDays: z.number().min(1).default(30),
 })
 
 /**

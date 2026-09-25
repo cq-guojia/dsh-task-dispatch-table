@@ -88,6 +88,8 @@ export function checkReceipt(
 
 export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps): Reconciler {
   const handles = new Map<string, AgentHandle>()
+  /** token 用量累计（决策 32）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
+  const tokenTotals = new Map<string, number>()
 
   const windowDeadline = (instance: TaskInstance): number =>
     Date.parse(instance.scheduled_at) + durationMs(taskOf(instance)?.schedule.window ?? 'PT0S')
@@ -104,9 +106,13 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
     if (sessionId !== null) handles.delete(sessionId)
   }
 
-  function finishTerminal(instance: TaskInstance, status: 'succeeded' | 'failed', reason: string, detail?: unknown): void {
+  function finishTerminal(instance: TaskInstance, status: 'succeeded' | 'failed', reason: string, detail?: unknown, outputs?: string | null): void {
+    const tokens = tokenTotals.get(instance.id) ?? null
+    if (tokenTotals.has(instance.id)) tokenTotals.delete(instance.id)
     store.transition(instance.id, { status, finished_at: new Date().toISOString(), detail: reason })
     if (detail !== undefined) store.appendEvent(instance.id, 'receipt_check', { reason, detail })
+    // 决策 32：完成瞬间写回产出与 token 到总表（冗余，task_events 仍为真源）
+    store.recordCompletion(instance.id, outputs ?? null, tokens)
     forgetHandle(instance.session_id)
     // 会话已结束（turn/end / disposed 触发的收敛）→ 归档；租约误判的回收不归档。
     if (instance.session_id !== null) void ctx.workspaceRegistry.archiveSession(instance.session_id).catch((error: unknown) => {
@@ -147,7 +153,9 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
     const receipt = store.latestReceipt(instance.id, instance.dispatched_at ?? undefined)
     const verdict = checkReceipt(task, taskWorkspace, dispatchedAtMs, receipt)
     if (verdict.ok) {
-      finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail)
+      const payload = verdict.detail as { outputs?: unknown }
+      const outputsField = Array.isArray(payload?.outputs) ? JSON.stringify(payload.outputs) : null
+      finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail, outputsField)
     } else {
       store.appendEvent(instance.id, 'receipt_check', { reason: verdict.reason, detail: verdict.detail })
       retryOrFail(instance, verdict.reason ?? 'receipt-failed', verdict.detail)
@@ -244,6 +252,12 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
     onEvent(session: HostSession, event: { type: string }): void {
       const instance = store.getBySession(session.id)
       if (instance === undefined) return
+      // 累计 token 用量（决策 32：宿主事件若带 usage 则累加；不带则留 null，不阻塞）
+      const usage = (event as { usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number } }).usage
+      if (usage) {
+        const t = (Number(usage.promptTokens) || 0) + (Number(usage.completionTokens ?? usage.totalTokens) || 0)
+        if (!Number.isNaN(t)) tokenTotals.set(instance.id, (tokenTotals.get(instance.id) ?? 0) + t)
+      }
       if (event.type === 'turn/end') {
         settleBySessionId(session.id, 'turn/end')
         return

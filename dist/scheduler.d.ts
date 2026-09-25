@@ -1,22 +1,20 @@
 import type { HostContext, HostLogger } from './host.js';
-import type { PluginConfig } from './config.js';
-import type { TaskDefinition } from './tasks.js';
+import { type TaskDefinition } from './tasks.js';
 import type { TaskStore } from './store.js';
 import type { Reconciler } from './reconcile.js';
+import type { PluginConfig } from './config.js';
 export interface Scheduler {
-    /** 启动补建（§7 backfill.days 层）。 */
-    backfill(): void;
-    /** 每 tick 主循环。 */
-    tick(): void;
-    /** 供对账器查任务定义。 */
-    getTasks(): Map<string, TaskDefinition>;
+    tick: () => void;
+    getTasks: () => Map<string, TaskDefinition>;
+    /** 启动诊断（决策 31）：报告自上次起到现在的「错过刻度」计数（不补跑、只记日志）。 */
+    startupDiagnostics: () => void;
 }
-export interface SchedulerDeps {
+export type Judgement = 'ready' | 'blocked';
+export declare function judgeDependencies(store: TaskStore, task: TaskDefinition, logicalDate: string, scheduledAt: string): Judgement;
+export declare function createScheduler(opts: {
     ctx: HostContext;
-    /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
     logger: HostLogger;
     store: TaskStore;
     reconciler: Reconciler;
     config: () => PluginConfig;
-}
-export declare function createScheduler({ ctx, logger, store, reconciler, config }: SchedulerDeps): Scheduler;
+}): Scheduler;

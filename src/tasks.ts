@@ -52,7 +52,6 @@ export const taskDefinitionSchema = z.object({
     })
     .default({ validStatuses: ['ok'] }),
   retry: z.object({ maxAttempts: z.number().int().min(1).default(1) }).default({ maxAttempts: 1 }),
-  backfill: z.object({ days: z.number().int().min(0).default(0) }).default({ days: 0 }),
   depends_on: z
     .array(
       z.object({
@@ -239,8 +238,8 @@ export function scheduledSlotsFor(task: TaskDefinition | TaskDefinitionInput, fr
 }
 
 /**
- * 某日历日上的第一个刻度（重排与历史补跑用：决策 20 的 live 重排、§7 backfill
- * 都以「天」为粒度，保留一个刻度/天 的语义即可）。
+ * 某日历日上的第一个刻度（面板展示「下次执行」/ 目录模式历史锚点用；
+ * 决策 20 的 live 重排与 §7 backfill 已于决策 31 移除，不再依赖「天」粒度补跑）。
  */
 export function firstSlotOnDay(task: TaskDefinition, day: string): Date | undefined {
   if (task.schedule.once !== undefined) return onceScheduledAt(task, day)

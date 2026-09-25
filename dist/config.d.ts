@@ -20,6 +20,8 @@ export interface PluginConfig {
     defaultProvider: string;
     /** 插件级默认 model（决策 22 漏斗第②层）：与 defaultProvider 成对；留空则漏到宿主默认。 */
     defaultModel: string;
+    /** task_log 保留期（天）：到期行由 tick 内 purgeLog 清除（决策 32）。 */
+    logRetentionDays: number;
 }
 export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'>;
 export declare const Config: z<Schemastery.ObjectS<NoInfer<{
@@ -33,6 +35,7 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     debugSnapshot: z<string, string, "defined">;
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
+    logRetentionDays: z<number, number, "defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     statePath: z<string, string, "defined">;
     tickMs: z<number, number, "defined">;
@@ -44,6 +47,7 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     debugSnapshot: z<string, string, "defined">;
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
+    logRetentionDays: z<number, number, "defined">;
 }>>, "plain">;
 /**
  * rc.1 volatile 字段的解析结果是**带 get() 的引用**（非纯值）；读取时解包（与参考插件

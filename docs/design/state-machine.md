@@ -28,16 +28,16 @@
 | `running` | 会话在跑（带租约） | 等 |
 | `succeeded` | 回执校验通过 | 依赖满足 |
 | `failed` | 重试耗尽 / 回执校验失败 | 依赖不满足，**必须通知** |
-| `skipped` | 当日窗口过期 / 上游失败 | **必须通知**（跳过 ≠ 正常） |
+| `skipped` | （决策 31 起**调度不再产生**本态：过期/被依赖卡/预条件失败一律不建行，只进 `task_log`）仅作历史遗留枚举与手动标记保留 | 历史兼容 |
 | `unknown` | 无法确认（防双跑） | 只观察不动作，直到收敛 |
 
 ## 3. 完整状态转移表
 
 | 当前态 | 触发 | 次态 | 说明 |
 |---|---|---|---|
-| （无实例） | tick 实例保障 | `pending` 或 `skipped` | 窗口内 → `pending`；已过窗 → `skipped` 留痕（幂等补建，见 §7） |
-| `pending` | 已到计划时刻 + 依赖满足 + 未超窗 + 同任务无互斥实例 | `dispatched` | CAS 领取（`WHERE status='pending'`）；互斥集合 = 该任务存在 `dispatched`/`running`/`unknown` 实例（`pending` 是排队语义，不互锁） |
-| `pending` | `now > scheduled_at + window` | `skipped` | 终态 |
+| （无实例） | 该刻度「到点了」（`scheduled_at <= now <= scheduled_at + window`）**且**依赖/工作区满足 | **`dispatched`**（懒建行，决策 31） | **不预建 `pending`、不回看补建 `skipped`**：到点才以 `dispatched` 直接落库并派发；预条件不过 ⇒ 不建行，只记 `task_log`（见 §7） |
+| `pending` | 已到计划时刻 + 依赖满足 + 未超窗 + 同任务无互斥实例 | `dispatched` | 仅「重试回退」产生（§6）；互斥集合 = 该任务存在 `dispatched`/`running`/`unknown` 实例（`pending` 是排队语义，不互锁） |
+| `pending` | `now > scheduled_at + window` | `failed` / 删行 | 走重试判定（§6，超窗即终态 `failed`）；**无会话的崩溃残留 `pending`** 过窗 ⇒ 删行 + 记 `task_log`(stray_pending)（决策 31.6） |
 | `dispatched` | 收到 `session/created` | `running` | 记 `session_id`，起租约 |
 | `dispatched` | 宽限期（60s）内无 `session/created` | `failed` | 走重试判定（§6） |
 | `running` | 会话结束 + 回执校验通过 | `succeeded` | 终态 |
@@ -64,7 +64,8 @@
 
 **窗口只管「能不能开始」，不管「必须结束」。**
 
-- `pending` 过窗（`now > scheduled_at + window`）→ `skipped`；
+- 过窗刻度**不再建行**：`now > scheduled_at + window` 的刻度一律不生成 `task_instances` 记录，只在 `task_log` 记 `missed_slot`（决策 31）——「错过」是诊断信息，不该占用任务记录表；
+- 已存在的 `pending` 过窗 → 走重试判定（§6），超窗即 `failed`；
 - 已 `dispatched` / `running` 的**不受窗切断**——跑完按回执判定。理由：切掉已开工的任务会浪费已消耗的 token，且产物可能即将产出。
 
 ## 6. 重试（拍板 B）
@@ -76,12 +77,17 @@
 
 重试在行内递增（不换行），下游只见最终态。
 
-## 7. 补跑入口（拍板 C，三层）
+## 7. 实例从哪来（决策 31 重设计：懒建行，不补跑）
+
+> **推翻原「补跑入口三层」设计**：自动层的「按刻度幂等补建（窗口内 `pending` / 过窗 `skipped` 留痕）」
+> 与历史层的 `backfill.days` **一并删除**（决策 31.7），**不回看、不补跑**。只保留手动层。
+> 理由：过去的刻度过了就是过了，补建 `skipped` 只会塞满任务记录表（上游一卡，下游全刷屏）；
+> 该留的是**诊断**——记 `task_log`，不记 `task_instances`。
 
 | 层 | 机制 | 覆盖场景 |
 |---|---|---|
-| 自动 | **实例保障**（决策 25 改为**按刻度**）：每 tick 为每个 `enabled` 任务把窗口内 cron 的**每个刻度**幂等补建一条实例——窗口内建 `pending`，已过窗建 `skipped` 留痕；去重靠 `UNIQUE(task_id, scheduled_at)` ⇒ 同一刻度永远只有一条（小时级 / 分钟级 cron 一天可多条） | 重启自愈、漏跑自愈、次日实例生成 |
-| 历史 | 任务定义可选字段 `backfill.days`（默认 0）：启动扫描时补建近 N 天缺失实例（`pending`），照常走依赖与窗口判定 | 追补历史 |
+| 到点派发 | **懒建行**：每 tick 只判「现在这一刻该不该跑」——取最晚满足 `scheduled_at <= now <= scheduled_at + window` 且 `(task_id, scheduled_at)` 无实例行的刻度；依赖 / 工作区 / 模型任一不过 ⇒ **不建行**、只记 `task_log`；过了 ⇒ 直接以 `dispatched` 落库并派发 | 正常派发（含分钟级 cron） |
+| 诊断 | `task_log` 表（独立、可清：`logRetentionDays` 默认 30 天）：错过刻度（`missed_slot` / `startup_missed`）、依赖卡顿（`dep_blocked`）、预条件失败（`precondition`）、残留 pending（`stray_pending`） | 排障，不进任务记录表 |
 | 手动 | 标准 SQL 重置 | 单实例补跑 |
 
 手动重置标准语句：
@@ -101,8 +107,10 @@ WHERE task_id = '<task_id>' AND scheduled_at = '<计划时刻>';  -- 决策 25�
 
 | 语义 | 判定 | 缺了怎么办 | 适用 |
 |---|---|---|---|
-| `same_period` | 找**同一 logical date** 的上游实例 | 上游缺失/未成功 → 下游**保持 `pending`**（窗口内上游修复仍可衔接，决策 10），随自身窗口过期收敛 `skipped` | 日榜 → 日报 |
-| `latest_success` | 找**最近一次成功** + 新鲜度上限（`freshness`，如 ≤ 8 天） | 无成功记录 → `pending` 等待；**超上限才**随窗口过期收敛 `skipped` | 月榜 → 报告 |
+| `same_period` | 找**同一 logical date** 的上游实例 | 上游缺失/未成功 → 下游**不建行**，记 `task_log`(dep_blocked)，下轮同槽再判（决策 31）；窗口过期仍不满足 → 记 `missed_slot`，**仍不建行** | 日榜 → 日报 |
+| `latest_success` | 找**最近一次成功** + 新鲜度上限（`freshness`，如 ≤ 8 天） | 无成功记录 / 超上限 → 同上：不建行、记日志、下轮再判；窗口过期记 `missed_slot` | 月榜 → 报告 |
+
+⚠️ 边界细节（`freshness` 缺省语义、上游多刻度、是否立即断链等）**未拍板**，见 PROGRESS 未决项 **U7**。
 
 ⚠️ **归属用「计划时刻 `scheduled_at`」，不是「实际开始时间」**——任务 9:00 计划、因等前置 11:00 才跑，它仍属**今天**。这与「过窗切次日」（§5、§7 实例保障）天然咬合。
 
@@ -136,11 +144,14 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 | 让调度器**发消息问会话**「完成了吗？回 Y/N」 | ① 又唤起一次 agent，白烧 token ② **agent 会撒谎** ③ 会话若已 disposed 未必收得到。（决策 19 的追问 ≠ 此方案：不问「完成了吗」，只重发回执提交命令，成败仍由程序查库裁决） |
 | **事件驱动**（前置完成时主动唤醒下游） | 「拉」比「推」可复用——加下游不改上游，见 [decisions.md](decisions.md) 决策 8 |
 
-## 13. 计划时刻的 live 重排（决策 20）
+## 13. 计划时刻的 live 重排（决策 20）——**已废除**
 
-- `scheduled_at` 落库，但**「从未执行」前跟随配置**：pending 且 attempt=0 的实例每 tick 按当前任务定义重算 `planFor`，与落库值不一致则 CAS 更新并追加 `reschedule` 事件（from / to）。
-- 配置已无该日计划（如 `once` 改到别日、cron 改掉该日）→ 该 pending 实例置 `skipped`（事件 `plan-removed`），新日实例由 `ensureInstances` 自然补建。
-- **执行一开始即冻结**：attempt≥1（重试中）、dispatched、终态一律不改 `scheduled_at`，执行记录可追溯；重试中的 pending 不重排，避免打乱重试节奏。
+> **决策 31.7 废除本机制**：live 重排存在的前提是「未来刻度被预建成 `pending` 行」，改 cron 后这些行会漂移。
+> 改为**懒建行**后，未来刻度根本不建行，自然无从漂移；且用户在「到点前几分钟」改配置也能立即生效
+> （正是当日发现的缺陷）。故 `reschedulePass` / `planFor` 逻辑整体删除。
+
+（原设计留档）`scheduled_at` 落库，但「从未执行」前跟随配置：pending 且 attempt=0 的实例每 tick 重算
+`planFor` 并 CAS 更新；配置已无该日计划 → 置 `skipped`。执行一开始就冻结。
 
 ## 14. 派发前解析（决策 22）
 

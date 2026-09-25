@@ -9,6 +9,7 @@ export const ConfigDefaults = {
     dispatchGraceMs: 60_000,
     leaseMs: 30 * 60_000,
     unknownGraceMs: 5 * 60_000,
+    logRetentionDays: 30,
 };
 // ⚠️ rc.1（0.1.7-rc.1）约束：宿主插件配置字段**不能标 .volatile()**。
 // 实测根因（set717/lib/index.js:417 + types/index.js:368-380）：configForms 的读写都要求字段
@@ -31,6 +32,7 @@ export const Config = z.object({
     // 决策 22 漏斗第②层：留空 = 未配，派发时漏到下一层。解析结果只用于本次派发，不回写本字段。
     defaultProvider: z.string().default(''),
     defaultModel: z.string().default(''),
+    logRetentionDays: z.number().min(1).default(30),
 });
 /**
  * rc.1 volatile 字段的解析结果是**带 get() 的引用**（非纯值）；读取时解包（与参考插件
