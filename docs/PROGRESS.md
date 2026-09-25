@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-25 · 文档体系重构为「PROGRESS 现场 + worklog 封卷 + design 定型」三层；**跨项目公用规则外提为根目录 [`RULES.md`](../RULES.md)**（随仓库入 Git），AGENTS.md 只留本仓库独有内容，两者互不引用。
+> **最后更新**：2026-09-26 · 文档体系重构为「PROGRESS 现场 + worklog 封卷 + design 定型」三层；**跨项目公用规则外提为根目录 [`RULES.md`](../RULES.md)**（随仓库入 Git），AGENTS.md 只留本仓库独有内容，两者互不引用。
 
 ---
 
@@ -29,6 +29,7 @@
 - **任务身份闸门（决策 30）已生效**：保存时固化——无 id 补 UUID / 非 UUID 422 拒 / UUID 必须命中现有已保存表；运行时只认不修——无 id / 非 UUID 条目 warn 跳过。
 - **最近一笔**：文档体系三层化 + 跨项目公用规则外提 `RULES.md`（里程碑 9）；configEditor 次通道 try/catch 修复（`774af86` 已上远端）；remote 已切 SSH。
 - **里程碑 11 完成（含真机验证）**：调度循环重设计（决策 31）+ 独立 `task_log` 表与执行记录冗余字段（决策 32）——懒建行 / 不回看 / 不补跑 / skipped 只进日志；**真机 `cron-5min-探针2` 连续两轮 `succeeded`（01:35 / 01:40），无 skipped 洪水、每 5 分钟恰好一行**；构建 + typecheck + 冒烟 76 项全过。
+- **里程碑 13 完成（2026-09-26）**：token 字段由单个 `tokens` 总数**拆为三列** `token_in` / `token_out` / `token_in_cache`（决策 32 修订）——`extractTokenUsage` 改返回结构化分量（含 `cachedTokens` / OpenAI 风格 `prompt_tokens_details.cached_tokens` 探测），按实例跨重试累计后写回；只认结构化分量、事件仅给总数或不含 usage 则三列留 `null`、不阻塞链路。构建 + 冒烟 93 项全过，已 push（`adbd2e7`）。**U8 仍需真机确认宿主事件是否带结构化 `usage`**。
 
 ---
 
@@ -48,6 +49,8 @@
 | 10 | 周期任务（cron）全链路验证 | ✅ | 09-26 | 每 5 分钟 cron 真机跑通、跨天成功；暴露 `skipped` 洪水与提前 pending 两缺陷 → 触发里程碑 11 | — |
 | 11 | 调度循环重设计 + 日志表 + 冗余字段 | ✅ | 09-26 | 决策 31/32：懒建行/不回看/不补跑/skipped 只进日志 + 独立 `task_log` 表 + 执行记录加 outputs/tokens 列；真机复测发现并修掉 `dispatched_at` 回归（`output-stale`，a3b9899）；**真机 `cron-5min-探针2` 连续 succeeded（01:35/01:40），无 skipped 洪水**；冒烟 76 项全过 | [worklog/scheduler-redesign.md](worklog/scheduler-redesign.md) |
 | 12 | 依赖（前置任务）语义定型 | ✅ 落码完成 | 09-26 | 决策 33 已定型 + 落码（U7 八条逐条结论）：`latest_success` 改判「上游最近一条必须 succeeded」、删 `freshness`、不做水位线、复用旧产出只告警；**一度拍板的水位线方案已废弃**（与周报→日报快照复用冲突）；冒烟 84 项。**真机验证暂缓**，见 U9 | [worklog/dependency-semantics.md](worklog/dependency-semantics.md) |
+| 13 | token 字段三拆列（决策 32 修订） | ✅ | 09-26 | 单个 `tokens` 总数拆为 `token_in` / `token_out` / `token_in_cache`；`extractTokenUsage` 结构化分量探测 + 按实例累计写回；事件无结构化 usage 则三列留 null 不阻塞 | — |
+| 14 | 归档会话弹窗显示（ChatView 复用落码，决策 29 实施） | 🔵 进行中 | 09-26~ | 决策 29 落码：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配（~50 行胶水）挂官方 ChatView 原样渲染归档会话；替换决策 28 自绘实现 | [design/archive-session-view.md](design/archive-session-view.md) |
 
 ---
 
@@ -71,11 +74,10 @@
 
 ## 五、下一步（接手后从这里开始）
 
-1. **【最优先·进行中】依赖（前置任务）语义边界定型（②，未决项 U7）**：里程碑 11 已真机验证通过，**下一步就拍这条**。待定 6 项：`latest_success` 无 `freshness` 的默认语义 / `same_period` 上游为分钟级 cron（一天多刻度）时取哪条 / 上游失败时下游是否立即断链 / 多依赖是否要 OR / UI 怎么选上游 / `freshness` 基准按 `scheduled_at` 还是 `finished_at`。拍板后写真机用例验证。
-2. **【下一步讨论】依赖语义边界定型（②）**：`judgeDependencies` 已实现（same_period / latest_success），但边界未拍板，见未决项 U7；里程碑 11 落地后再逐条定，写真机用例验证。
-3. **（📋 方案已拍板，暂不动工）会话弹窗渲染层复用官方 ChatView（决策 29）**：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配逻辑（~50 行胶水）挂载官方 ChatView 本体。机制与落码要点见 [worklog/session-view.md](worklog/session-view.md) 与决策 29。
-4. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
-5. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。
+1. **【进行中·里程碑 14】归档会话弹窗显示（ChatView 复用落码，决策 29）**：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配（~50 行胶水）挂官方 ChatView 原样渲染归档会话，替换决策 28 自绘实现。设计定型与任务分解见 [`design/archive-session-view.md`](design/archive-session-view.md)；落码前先 T1 核实宿主当前产物的 `entriesOf('conversation.view')` / `storeOf` / `scope('session')` / `sessions.retain` 导出形态。
+2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
+3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
+4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。
 
 ---
 
@@ -103,6 +105,7 @@
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL、关键设计与取舍 |
 | [`design/state-machine.md`](design/state-machine.md) | 对账判定树、7 种状态、两种依赖语义、5 个必补机制 |
+| [`design/archive-session-view.md`](design/archive-session-view.md) | 归档会话弹窗显示（ChatView 复用落码，决策 29 实施）：方案、风险 R1–R4、真机验证清单、落码子任务 |
 | [`design/dsh-capabilities.md`](design/dsh-capabilities.md) | 已核实的 DSH 宿主能力事实清单（源码级，0.1.6 / 0.1.7-rc.1） |
 | [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 回执机制 + 任务手册 |
 | [`examples/task-template.jsonc`](examples/task-template.jsonc) | 全字段注释版任务定义模板（粘进 tasksInline 前须去掉注释） |
