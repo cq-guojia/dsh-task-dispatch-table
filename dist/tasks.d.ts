@@ -65,17 +65,24 @@ export interface EnsureIdsResult {
     json: string;
     changed: boolean;
     assigned: number;
-    /** 非 null = **整批拒绝保存**：某条目的 id 不是 UUID（用户拍板：不允许旧格式身份混进配置）。 */
+    /** 非 null = **整批拒绝保存**：id 非 UUID，或 UUID 不在现有任务表中（决策 30 第三次拍板）。 */
     error: string | null;
 }
 /**
- * 保存闸门（决策 30 修订版，用户 2026-09-25 拍板：**保存时固化，运行时只认**）。
+ * 从已保存的 tasksInline 文本里提取全部合法 UUID 集合（保存闸门「修改必须命中」的比对基准）。
+ * 非法 JSON / 非数组 / 非 UUID id（老数据）一律不算 ⇒ 拿 UUID 去改老记录同样会被拒（老记录无 UUID 身份，想用就删 id 重录）。
+ */
+export declare function existingUuidIds(raw: string): ReadonlySet<string>;
+/**
+ * 保存闸门（决策 30 修订版 + 第三次拍板，用户 2026-09-25：**保存时固化，运行时只认，UUID 不能凭空引入**）。
  * ① 条目无 id ⇒ 生成随机 UUID 补上（= 新增任务，这一刻固化进 JSON）；
- * ② 有 id 且是 UUID ⇒ 原样保留（= 修改既有任务，身份连着历史）；
+ * ② 有 id 且是 UUID ⇒ 必须在 `existingIds`（现有已保存任务表）中命中，命中即原样保留（= 修改既有任务）；
+ *    不命中 ⇒ 报错拒绝——带 UUID 就是修改，修改目标必须存在，UUID 身份只能由本闸门生成，不允许凭空写入；
  * ③ 有 id 但不是 UUID ⇒ 报错，**整批拒绝保存**；
  * 非法 JSON / 非数组原样返回（error=null）——那是既有校验的职责，不是身份闸门的。
+ * `existingIds` 缺省（undefined）时跳过 ② 的命中校验（仅单测直调用）。
  */
-export declare function ensureIdsInInlineJson(raw: string): EnsureIdsResult;
+export declare function ensureIdsInInlineJson(raw: string, existingIds?: ReadonlySet<string>): EnsureIdsResult;
 /**
  * 运行时身份校验（保存闸门的另一半，用户拍板：**运行时只认不修**）。
  * 有 id 且为 UUID ⇒ 归一返回（code trim、title 缺省回退 id）；

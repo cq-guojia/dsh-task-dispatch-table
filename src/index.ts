@@ -5,7 +5,7 @@ import type { HostContext, HostLogger, HostSettings, SettingsScope, z_any } from
 import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
-import { ensureIdsInInlineJson, nextSlotAfter, titleOf } from './tasks.js'
+import { ensureIdsInInlineJson, existingUuidIds, nextSlotAfter, titleOf } from './tasks.js'
 import { TaskStore } from './store.js'
 import { createReconciler } from './reconcile.js'
 import type { ReconcileOptions } from './reconcile.js'
@@ -133,8 +133,9 @@ const makeDispatchRoutes = (
         const body = await readDispatchBody(req)
         const parsed = JSON.parse(body) as { tasksInline?: unknown }
         if (typeof parsed.tasksInline !== 'string') return writeJson(res, 400, { ok: false, error: 'tasksInline-required' })
-        // 保存闸门（决策 30 修订：保存时固化，运行时只认）——无 id 补 UUID；非 UUID 整批拒绝。
-        const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline)
+        // 保存闸门（决策 30 修订 + 第三次拍板：保存时固化，运行时只认，UUID 不能凭空引入）
+        // ——无 id 补 UUID；UUID 必须命中现有已保存表（带 id 即修改）；非 UUID 整批拒绝。
+        const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline, existingUuidIds(runtimeRef.tasksInline))
         if (error !== null) return writeJson(res, 422, { ok: false, error })
         runtimeRef.tasksInline = json
         await persistTasksInline(json)

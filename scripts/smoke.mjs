@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import {
-  ensureIdsInInlineJson, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, applyIdentity, isUuid,
+  ensureIdsInInlineJson, existingUuidIds, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, applyIdentity, isUuid,
 } from '../dist/tasks.js'
 import { TaskStore } from '../dist/store.js'
 import { createReconciler } from '../dist/reconcile.js'
@@ -153,12 +153,23 @@ try {
   ])
   check('id 是空串也当成没有', ensureIdsInInlineJson(emptyId).changed === true)
 
-  // 已有 id ⇒ 原样保留（兼容既有手写的 kebab-case）
-  const keepId = JSON.stringify([
+  // ── 2.2 决策 30 第三次拍板：带 UUID = 修改，必须在现有已保存表中命中；UUID 不能凭空引入 ──
+  console.log('\n[2.2] 修改必须命中现有表（UUID 只能由保存闸门生成）')
+  const uuidEntry = (id) => JSON.stringify([
+    { id, title: 'E', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'e' } },
+  ])
+  const oldFormatEntry = JSON.stringify([
     { id: 'daily-report', title: 'E', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'e' } },
   ])
-  const rKeep = ensureIdsInInlineJson(keepId)
-  check('已有 id 原样保留', rKeep.changed === false && JSON.parse(rKeep.json)[0].id === 'daily-report')
+  const rKeep = ensureIdsInInlineJson(uuidEntry(UUID_A), existingUuidIds(uuidEntry(UUID_A)))
+  check('带 UUID 且命中现有表 ⇒ 原样保留（修改语义）', rKeep.error === null && rKeep.changed === false && JSON.parse(rKeep.json)[0].id === UUID_A)
+  const rMiss = ensureIdsInInlineJson(uuidEntry(UUID_B), existingUuidIds(uuidEntry(UUID_A)))
+  check('带 UUID 但不在现有表 ⇒ 拒绝保存（凭空引入即非法）', rMiss.error !== null && rMiss.changed === false && /不在现有任务表/.test(rMiss.error))
+  const rFresh = ensureIdsInInlineJson(uuidEntry(UUID_A), new Set())
+  check('现有表为空（首次录入）时带 UUID 同样被拒', rFresh.error !== null && rFresh.changed === false)
+  const rNew = ensureIdsInInlineJson(twoTasks, existingUuidIds(uuidEntry(UUID_A)))
+  check('无 id 的新增不受命中校验影响（照常生成固化）', rNew.error === null && rNew.changed === true && rNew.assigned === 2)
+  check('existingUuidIds：非 UUID id（老数据）不进集合', existingUuidIds(oldFormatEntry).size === 0)
 
   // 解析侧：每条都带 id，且有 title
   const parsed = parseInlineTasks(noopLogger, r1.json)
