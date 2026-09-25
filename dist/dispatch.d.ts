@@ -35,7 +35,10 @@ export interface ModelResolution {
  * 在配置期固化等于自己废掉兜底。
  */
 export declare function resolveModelRoute(ctx: HostContext, logger: HostLogger, task: TaskDefinition, config: PluginConfig): Promise<ModelResolution | undefined>;
-/** 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。 */
+/**
+ * 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。
+ * source.kind 用**生产者自有 kind**（0.1.7 v4 格式要求，`kind: 'plugin'` 已废弃被拒）。
+ */
 export declare function userNotice(text: string, summary: string): UserMessage;
 /**
  * 派发消息拼装（决策 12 模板 + 决策 24 回执工具）：短指令 prompt + 手册路径 + 回执调用说明。

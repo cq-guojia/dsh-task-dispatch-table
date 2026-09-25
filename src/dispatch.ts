@@ -188,15 +188,17 @@ async function resolveAgentComposition(
   }
 }
 
-/** 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。 */
+/**
+ * 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。
+ * source.kind 用**生产者自有 kind**（0.1.7 v4 格式要求，`kind: 'plugin'` 已废弃被拒）。
+ */
 export function userNotice(text: string, summary: string): UserMessage {
   return {
     id: randomUUID(),
     role: 'user',
     content: [{ type: 'text', text }],
     source: {
-      kind: 'plugin',
-      plugin: 'dsh-task-dispatch-table',
+      kind: 'task-dispatch-table',
       form: 'notice',
       summary,
     },

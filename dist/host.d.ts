@@ -10,9 +10,11 @@ export interface HostSession {
     readonly id: SessionId;
 }
 /**
- * 消息面。形状依据 packages/llm/llm/src/message.ts:80-93（ContextFormed.notice =
- * { form: 'notice', summary }）、:101-104（plugin source）、:131-145（Message/UserMessage）、
- * text block = { type: 'text', text }（core/agent/src/model-selection.ts:45-47 先例）。
+ * 消息面。形状依据 0.1.7 v4 会话格式（session-format-v3-to-v4/src/message-sources.ts）：
+ * source.kind 必须是**生产者自有 kind**（`kind: 'plugin'` 是 v3 retired 语法，v4 校验直接
+ * 抛 "format v4 message requires a producer-owned source kind"）。notice 形状参照宿主自带
+ * schedule 插件（runtime.ts:119-121 `{ kind: 'schedule' }`）与 subagent 结算通知
+ * （continuation-messages.ts:30-38 `{ kind, form: 'notice', summary }`）。
  */
 export interface UserMessage {
     readonly id: string;
@@ -22,8 +24,7 @@ export interface UserMessage {
         text: string;
     }[];
     readonly source: {
-        kind: 'plugin';
-        plugin: string;
+        kind: 'task-dispatch-table';
         form: 'notice';
         summary: string;
     };
