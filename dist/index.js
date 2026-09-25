@@ -165,7 +165,19 @@ export function apply(ctx, config) {
     };
     /** settings inject 就绪后的宿主上下文（persistTasksInline 经它找 configEditor）。 */
     let settingsCtxRef = null;
+    /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
+    let storeRef = null;
     const persistTasksInline = async (json) => {
+        // 主通道：写状态库 meta 表（state.db 在宿主数据根 = 挂载卷，容器重建 / 插件重装都不丢）。
+        // 未就绪只告警不静默——用户必须知道这次保存没落盘。
+        const store = storeRef;
+        if (store === null) {
+            settingsCtxRef?.logger.warn('任务表保存：状态库未就绪，本次只在内存生效、未持久化，请稍后重新保存');
+        }
+        else {
+            store.setMeta('tasksInline', json);
+        }
+        // 次通道：尽力写回插件 entry config（官方配置面可见）；rc.1 缺 configEditor / entry 属预期，静默跳过。
         const sctx = settingsCtxRef;
         if (sctx === null)
             return;
@@ -202,6 +214,14 @@ export function apply(ctx, config) {
         settingsCtxRef = sctx;
         // statePath 启动时定格，运行期改配置不迁移库。
         const store = new TaskStore(resolveStatePath(scope.get().statePath));
+        storeRef = store;
+        // 任务表恢复（主通道 = 状态库 meta）：state.db 在宿主数据根（挂载卷），容器重建 /
+        // 插件重装都不丢。meta 无行（从未保存过）⇒ 沿用 entry config 初始值（兼容旧部署）。
+        const savedInline = store.getMeta('tasksInline');
+        if (savedInline !== undefined) {
+            runtime.tasksInline = savedInline;
+            sctx.logger.info(`任务表已从状态库恢复（${savedInline.length} 字节）`);
+        }
         // 迁移若真的合并掉了重复行（正常应为 0），必须让用户看见——绝不静默删数据。
         if (store.dupRowsRemoved > 0) {
             sctx.logger.warn(`状态库迁移：发现并合并了 ${store.dupRowsRemoved} 组「同任务同刻度」的重复实例行`

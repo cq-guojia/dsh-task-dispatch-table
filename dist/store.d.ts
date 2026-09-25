@@ -79,6 +79,10 @@ export declare class TaskStore {
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
     findBySlot(taskId: string, scheduledAt: string): TaskInstance | undefined;
     get(id: string): TaskInstance | undefined;
+    /** 读 meta 键值（无行返回 undefined——「从未写过」与「写过空串」借此区分）。 */
+    getMeta(key: string): string | undefined;
+    /** 写 meta 键值（upsert）。任务表 tasksInline 的持久化主通道走这里。 */
+    setMeta(key: string, value: string): void;
     getBySession(sessionId: string): TaskInstance | undefined;
     /**
      * 计划重排（决策 20）：计划时刻在「从未执行」前跟随配置 live 更新——仅 status=pending

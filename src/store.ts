@@ -73,6 +73,12 @@ CREATE TABLE IF NOT EXISTS task_events (
   detail      TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_events_instance ON task_events(instance_id, seq);
+-- 元数据表：跨重启 / 重装必须存活的插件级键值（内嵌任务表 tasksInline 等）。
+-- state.db 在宿主数据根（挂载卷）⇒ 容器重建、插件重装都不丢；entry config 做不到这点。
+CREATE TABLE IF NOT EXISTS meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `
 
 const nowIso = (): string => new Date().toISOString()
@@ -210,6 +216,21 @@ export class TaskStore {
 
   get(id: string): TaskInstance | undefined {
     return this.db.prepare('SELECT * FROM task_instances WHERE id = ?').get(id) as unknown as TaskInstance | undefined
+  }
+
+  /** 读 meta 键值（无行返回 undefined——「从未写过」与「写过空串」借此区分）。 */
+  getMeta(key: string): string | undefined {
+    const row = this.db.prepare('SELECT value FROM meta WHERE key = ?').get(key) as
+      | { value: string }
+      | undefined
+    return row?.value
+  }
+
+  /** 写 meta 键值（upsert）。任务表 tasksInline 的持久化主通道走这里。 */
+  setMeta(key: string, value: string): void {
+    this.db
+      .prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .run(key, value)
   }
 
   getBySession(sessionId: string): TaskInstance | undefined {

@@ -146,7 +146,19 @@ try {
   check('实例保留 logical_date 供依赖判定', rows.every(row => /^\d{4}-\d{2}-\d{2}$/.test(row.logical_date)))
   const found = store.findBySlot(idA, '2026-09-24T10:00:00.000Z')
   check('可按（任务 + 刻度）定位实例', found !== undefined && found.logical_date === '2026-09-24')
+  // meta 表：任务表 tasksInline 的持久化主通道（面板保存 → state.db，重装/重建不丢）。
+  check('meta 未写过的键返回 undefined（区分「从未写」与「写过空串」）', store.getMeta('tasksInline') === undefined)
+  store.setMeta('tasksInline', '[{"id":"a"}]')
+  check('meta 键值可写可读', store.getMeta('tasksInline') === '[{"id":"a"}]')
+  store.setMeta('tasksInline', '[]')
+  check('meta 覆盖写生效（upsert，清空语义也是一次写入）', store.getMeta('tasksInline') === '[]')
   store.close()
+
+  // ── 3.5 meta 持久化：重开库（模拟插件重装 / 容器重建）后任务表仍在 ──
+  console.log('\n[3.5] meta 持久化（重开库 = 重装场景）')
+  const reopened = new TaskStore(join(root, 'state.db'))
+  check('重开库后 meta 值原样恢复', reopened.getMeta('tasksInline') === '[]')
+  reopened.close()
 
   // ── 4. 旧库迁移：老数据不丢、索引能建起来 ──
   console.log('\n[4] 旧库迁移')

@@ -29,7 +29,7 @@
 ## 二、状态库（SQLite，路径见决策 14）
 
 ```sql
--- 状态库只有**两张表**：任务定义（含 id）存在用户的 JSON 里（决策 6），库里不存定义，
+-- 状态库**两张执行表 + 一张元数据表**：任务定义（含 id）存在用户的 JSON 里（决策 6），库里不存定义，
 -- 也不存任何「位置 → id」的对照表（决策 25 修订版：下标锚点会在「删第一条」时串号）。
 
 -- 任务实例状态表：状态机 7 态的载体，一行 = **一次执行（一个计划刻度）**
@@ -64,6 +64,14 @@ CREATE TABLE task_events (
 );
 
 CREATE INDEX idx_events_instance ON task_events(instance_id, seq);
+
+-- 元数据表：跨重启 / 重装必须存活的插件级键值。内嵌任务表 tasksInline 的**持久化主通道**
+-- 在这里（entry config 会在插件重装时丢；state.db 在宿主数据根挂载卷上，不丢）。
+-- 「无行 = 从未写过（回退 entry config 初始值）」与「value='' = 用户清空过」语义不同，勿合并。
+CREATE TABLE meta (
+  key   TEXT PRIMARY KEY,                -- 如 'tasksInline'
+  value TEXT NOT NULL                    -- 原文（tasksInline 为 JSON 数组文本）
+);
 ```
 
 ## 三、关键设计
