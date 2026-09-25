@@ -38,6 +38,7 @@
 | 决策与理由（14 条） | [`docs/design/decisions.md`](docs/design/decisions.md) |
 | 状态机、依赖语义、必补机制 | [`docs/design/state-machine.md`](docs/design/state-machine.md) |
 | agent 接手守则（工具自动挂载） | [`AGENTS.md`](AGENTS.md) |
+| 公用规则真源（跨工作区） | [`RULES.md`](RULES.md) |
 
 ## 项目信息
 

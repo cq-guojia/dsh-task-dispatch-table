@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-25 · 文档体系重构为「PROGRESS 现场 + worklog 封卷 + design 定型」三层。
+> **最后更新**：2026-09-25 · 文档体系重构为「PROGRESS 现场 + worklog 封卷 + design 定型」三层；**跨项目公用规则外提为根目录 [`RULES.md`](../RULES.md)**（随仓库入 Git），AGENTS.md 只留本仓库独有内容，两者互不引用。
 
 ---
 
@@ -27,7 +27,7 @@
 
 - **真机现状**：面板（侧栏「任务调度表」整页）三标签可用（任务配置 / 执行记录 / 调试）；任务表持久化主通道 = state.db meta 表（重装 / 容器重建不丢，真机验证通过）；once 全链路 `succeeded`（2026-09-25 21:35 / 22:20 两轮，任务身份 = 系统生成 UUID）。
 - **任务身份闸门（决策 30）已生效**：保存时固化——无 id 补 UUID / 非 UUID 422 拒 / UUID 必须命中现有已保存表；运行时只认不修——无 id / 非 UUID 条目 warn 跳过。
-- **最近一笔**：configEditor 次通道 try/catch 修复（`774af86` 已上远端）；remote 已切 SSH。
+- **最近一笔**：文档体系三层化 + 跨项目公用规则外提 `RULES.md`（里程碑 9）；configEditor 次通道 try/catch 修复（`774af86` 已上远端）；remote 已切 SSH。
 
 ---
 
@@ -43,7 +43,8 @@
 | 6 | 0.1.7 兼容性排障 | ✅ | 09-25 | ENOENT 误报静默；v4 会话消息格式 source.kind 修复（自有 producer kind） | [worklog/runtime-compat.md](worklog/runtime-compat.md) |
 | 7 | 持久化主通道与调试页 | ✅ | 09-25 | tasksInline 改 state.db meta 表（重装不丢）；面板「调试」标签直读三表；once 真机重新跑绿 | [worklog/persistence.md](worklog/persistence.md) |
 | 8 | 任务身份闸门（决策 30） | ✅ | 09-25 | 三字段模型（id/title/code）→「保存时固化，运行时只认」→ UUID 必须命中现有表；真机验证生效 | [worklog/identity-gate.md](worklog/identity-gate.md) |
-| 9 | 周期任务（cron）全链路验证 | ⚪ 未开始 | — | 下一步重点，见「五、下一步」 | — |
+| 9 | 文档体系三层化 + 公用规则真源外提 | ✅ | 09-25 | PROGRESS 109KB→11.5KB 拆三层（现场/叙事/定型）；跨项目公用规则外提为根目录 `RULES.md`，AGENTS.md 瘦身为薄壳 | [worklog/docs-system.md](worklog/docs-system.md) |
+| 10 | 周期任务（cron）全链路验证 | ⚪ 未开始 | — | 下一步重点，见「五、下一步」 | — |
 
 ---
 
@@ -88,7 +89,8 @@
 
 | 文档 | 内容 |
 |---|---|
-| [`../AGENTS.md`](../AGENTS.md) | agent 操作守则、文档体系与维护规则 |
+| [`../RULES.md`](../RULES.md) | 公用规则真源（跨工作区，用户独占维护、随时会改，随仓库入 Git） |
+| [`../AGENTS.md`](../AGENTS.md) | agent 操作守则（只写本仓库独有内容） |
 | [`worklog/`](worklog/) | 工作包过程叙事（每个工作包一个文件，做完封卷）：踩坑、定位、修复与真机证据 |
 | [`design/decisions.md`](design/decisions.md) | 30 条已定型决策 + 理由（勿重复讨论）、决策 12 展开、命名查重记录 |
 | [`design/architecture.md`](design/architecture.md) | 三层架构、职责边界、关键约束 |
