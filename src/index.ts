@@ -235,19 +235,26 @@ export function apply(ctx: HostContext, config: unknown): void {
     } else {
       store.setMeta('tasksInline', json)
     }
-    // 次通道：尽力写回插件 entry config（官方配置面可见）；rc.1 缺 configEditor / entry 属预期，静默跳过。
+    // 次通道：尽力写回插件 entry config（官方配置面可见）；rc.1 缺 configEditor / entry 属预期。
+    // ⚠️ cordis ctx 是 Proxy：属性访问未提供的get trap 直接 throw（cannot get property ... without
+    // inject，真机 2026-09-25 实证；决策 21 同源教训），「访问后判 undefined」的探测形同虚设
+    // ⇒ 整块 try/catch：任何异常只告警，绝不连累主通道（meta 表已落盘、内存已生效）。
     const sctx = settingsCtxRef
     if (sctx === null) return
-    const configEditor = (sctx as unknown as {
-      configEditor?: {
-        entries: () => Array<{ options?: { id?: string } }>
-        edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
-      }
-    }).configEditor
-    if (configEditor === undefined) return
-    const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
-    if (entry === undefined) return
-    await configEditor.edit(entry, (raw: Record<string, unknown>) => ({ ...raw, tasksInline: json }))
+    try {
+      const configEditor = (sctx as unknown as {
+        configEditor?: {
+          entries: () => Array<{ options?: { id?: string } }>
+          edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
+        }
+      }).configEditor
+      if (configEditor === undefined) return
+      const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
+      if (entry === undefined) return
+      await configEditor.edit(entry, (raw: Record<string, unknown>) => ({ ...raw, tasksInline: json }))
+    } catch (error) {
+      sctx.logger.warn(`任务表次通道写回 entry config 失败（不影响保存：主通道 meta 表已落盘）: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
   // ── rc.1 数据通道：webServer HTTP 路由（照抄参考插件 dsh-task-board 的已验证通道：
   // 宿主 ctx.webServer.register(route)，客户端同源 fetch 轮询）。
