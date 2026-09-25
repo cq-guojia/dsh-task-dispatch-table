@@ -113,5 +113,6 @@ export declare function parseInlineTasks(logger: HostLogger, raw: string): TaskD
 /**
  * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
  * 缺 id 的文件**直接写回**（决策 25 修订版：id 跟着定义走，不靠任何位置或指纹去推断）。
+ * 目录不存在（ENOENT）= 合法空态（用户没在用目录模式），静默返回，不刷告警。
  */
 export declare function loadTasks(logger: HostLogger, tasksDir: string): TaskDefinition[];

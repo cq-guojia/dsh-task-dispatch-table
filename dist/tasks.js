@@ -293,9 +293,12 @@ export function parseInlineTasks(logger, raw) {
     }
     return tasks;
 }
+/** 目录读取告警去重：dir → 上次告警的错误文本（恢复可读时清空并提示一次）。 */
+const dirWarnMemo = new Map();
 /**
  * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
  * 缺 id 的文件**直接写回**（决策 25 修订版：id 跟着定义走，不靠任何位置或指纹去推断）。
+ * 目录不存在（ENOENT）= 合法空态（用户没在用目录模式），静默返回，不刷告警。
  */
 export function loadTasks(logger, tasksDir) {
     const dir = resolve(tasksDir);
@@ -304,9 +307,18 @@ export function loadTasks(logger, tasksDir) {
         names = readdirSync(dir).filter(name => name.endsWith('.json')).sort();
     }
     catch (error) {
-        logger.warn(`任务表目录不可读 ${dir}: ${String(error)}`);
+        if (error?.code === 'ENOENT')
+            return [];
+        // 其余不可读错误（权限等）：同一错误只告警一次，恢复可读或错误变化时再提示。
+        const message = String(error);
+        if (dirWarnMemo.get(dir) !== message) {
+            dirWarnMemo.set(dir, message);
+            logger.warn(`任务表目录不可读 ${dir}: ${message}`);
+        }
         return [];
     }
+    if (dirWarnMemo.delete(dir))
+        logger.info(`任务表目录 ${dir} 恢复可读`);
     const tasks = [];
     for (const name of names) {
         const file = `${dir}/${name}`;
