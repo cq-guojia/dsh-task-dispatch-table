@@ -706,7 +706,8 @@ const subscribeScope = (listener: () => void): (() => void) => {
 const adoptScope = (next: SettingsScope): void => {
   if (currentScope === null) { currentScope = next; afterAdopt(); return }
   // 已绑定的若不可用（如 configForms 因无 volatile 字段而不在 view 里 → status=unavailable），
-  // 让更优通道（remote.taskDispatchTable）覆盖。
+  // 让更优通道覆盖。注意：只认 'unavailable'，'loading' 不让位（这正是 2026-09-25 采纳竞态
+  // 根因——configForms 初始 loading 会挡住 httpScope，故 httpScope 块改为无条件接管）。
   if (currentScope.getSnapshot().status === 'unavailable') { currentScope = next; afterAdopt(); return }
 }
 /** 通知已挂载的整页重渲染（作用域切换后）。 */
@@ -971,8 +972,14 @@ export function apply(ctx: ClientContext): void {
   // （照抄参考插件 dsh-task-board 的已验证通道——remote 代理不暴露宿主 ctx.set 的自定义服务，
   // configForms 又要求 volatile 字段而宿主 volatile 会让 entry 不激活，故 HTTP 是唯一稳通道）。
   // 只依赖 slots 自成一块，宿主路由就绪前 httpScope 轮询等待，就绪即出数据。
+  // ⚠️ 必须无条件接管，不能走 adoptScope：configForms 若先到，ConfigForm（host 持久化）初始
+  // status 是 'loading'，而 adoptScope 只在 current==='unavailable' 时让位 → loading 挡住让位，
+  // httpScope 被永久拒绝，页面绑死空的 configForms（2026-09-25 真机根因：轮询 200/24kB 而页面
+  // 永远「暂无快照」）。rc.1 上 HTTP 是唯一能出数据的通道（宿主无 volatile ⇒ configForms 必然
+  // unavailable；settingsScope 仅 0.1.6 存在且宿主已不再写 settings 数据），接管无副作用。
   ctx.inject(['slots'], (sub) => {
-    adoptScope(httpScope())
+    currentScope = httpScope()
+    afterAdopt()
     registerCard(sub)
   })
 

@@ -1361,7 +1361,8 @@ window.__ModuleLoader__.load({
 				registerCard(sub);
 			});
 			ctx.inject(["slots"], (sub) => {
-				adoptScope(httpScope());
+				currentScope = httpScope();
+				afterAdopt();
 				registerCard(sub);
 			});
 			ctx.inject(["slots"], (sub) => {
