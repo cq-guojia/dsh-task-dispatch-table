@@ -28,7 +28,7 @@
 - **真机现状**：面板（侧栏「任务调度表」整页）三标签可用（任务配置 / 执行记录 / 调试）；任务表持久化主通道 = state.db meta 表（重装 / 容器重建不丢，真机验证通过）；once 全链路 `succeeded`（2026-09-25 21:35 / 22:20 两轮，任务身份 = 系统生成 UUID）。
 - **任务身份闸门（决策 30）已生效**：保存时固化——无 id 补 UUID / 非 UUID 422 拒 / UUID 必须命中现有已保存表；运行时只认不修——无 id / 非 UUID 条目 warn 跳过。
 - **最近一笔**：文档体系三层化 + 跨项目公用规则外提 `RULES.md`（里程碑 9）；configEditor 次通道 try/catch 修复（`774af86` 已上远端）；remote 已切 SSH。
-- **里程碑 11 落码完成**：调度循环重设计（决策 31）+ 独立 `task_log` 表与执行记录冗余字段（决策 32）——懒建行 / 不回看 / 不补跑 / skipped 只进日志；构建 + typecheck + 冒烟 75 项全过，**待真机复测 cron 无 skipped 洪水**。周期任务（cron 每 5 分钟）先前真机已验证跑通且跨天成功（里程碑 10 完成）。
+- **里程碑 11 完成（含真机验证）**：调度循环重设计（决策 31）+ 独立 `task_log` 表与执行记录冗余字段（决策 32）——懒建行 / 不回看 / 不补跑 / skipped 只进日志；**真机 `cron-5min-探针2` 连续两轮 `succeeded`（01:35 / 01:40），无 skipped 洪水、每 5 分钟恰好一行**；构建 + typecheck + 冒烟 76 项全过。
 
 ---
 
@@ -46,7 +46,7 @@
 | 8 | 任务身份闸门（决策 30） | ✅ | 09-25 | 三字段模型（id/title/code）→「保存时固化，运行时只认」→ UUID 必须命中现有表；真机验证生效 | [worklog/identity-gate.md](worklog/identity-gate.md) |
 | 9 | 文档体系三层化 + 公用规则真源外提 | ✅ | 09-25 | PROGRESS 109KB→11.5KB 拆三层（现场/叙事/定型）；跨项目公用规则外提为根目录 `RULES.md`，AGENTS.md 瘦身为薄壳 | [worklog/docs-system.md](worklog/docs-system.md) |
 | 10 | 周期任务（cron）全链路验证 | ✅ | 09-26 | 每 5 分钟 cron 真机跑通、跨天成功；暴露 `skipped` 洪水与提前 pending 两缺陷 → 触发里程碑 11 | — |
-| 11 | 调度循环重设计 + 日志表 + 冗余字段 | ✅ | 09-26 | 决策 31/32：懒建行/不回看/不补跑/skipped 只进日志 + 独立 `task_log` 表 + 执行记录加 outputs/tokens 列；真机复测发现并修掉 `dispatched_at` 回归（`output-stale`，a3b9899）；冒烟 76 项全过 | [worklog/scheduler-redesign.md](worklog/scheduler-redesign.md) |
+| 11 | 调度循环重设计 + 日志表 + 冗余字段 | ✅ | 09-26 | 决策 31/32：懒建行/不回看/不补跑/skipped 只进日志 + 独立 `task_log` 表 + 执行记录加 outputs/tokens 列；真机复测发现并修掉 `dispatched_at` 回归（`output-stale`，a3b9899）；**真机 `cron-5min-探针2` 连续 succeeded（01:35/01:40），无 skipped 洪水**；冒烟 76 项全过 | [worklog/scheduler-redesign.md](worklog/scheduler-redesign.md) |
 
 ---
 
@@ -69,7 +69,7 @@
 
 ## 五、下一步（接手后从这里开始）
 
-1. **【待真机复测】调度循环重设计（里程碑 11，决策 31/32）已落码**：懒建行 / 不回看 / 不补跑 / skipped 只进日志 + 独立 `task_log` 表 + `outputs`/`tokens` 冗余列；构建 + typecheck + 冒烟 75 项全过。**下一步真机跑 cron 每 5 分钟，确认「无 skipped 洪水、每 5 分钟恰好一行」**。
+1. **【最优先·进行中】依赖（前置任务）语义边界定型（②，未决项 U7）**：里程碑 11 已真机验证通过，**下一步就拍这条**。待定 6 项：`latest_success` 无 `freshness` 的默认语义 / `same_period` 上游为分钟级 cron（一天多刻度）时取哪条 / 上游失败时下游是否立即断链 / 多依赖是否要 OR / UI 怎么选上游 / `freshness` 基准按 `scheduled_at` 还是 `finished_at`。拍板后写真机用例验证。
 2. **【下一步讨论】依赖语义边界定型（②）**：`judgeDependencies` 已实现（same_period / latest_success），但边界未拍板，见未决项 U7；里程碑 11 落地后再逐条定，写真机用例验证。
 3. **（📋 方案已拍板，暂不动工）会话弹窗渲染层复用官方 ChatView（决策 29）**：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配逻辑（~50 行胶水）挂载官方 ChatView 本体。机制与落码要点见 [worklog/session-view.md](worklog/session-view.md) 与决策 29。
 4. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。

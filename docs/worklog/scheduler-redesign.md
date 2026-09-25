@@ -79,7 +79,9 @@
 
 - `npm run build` ✅（host + client）
 - `npm run typecheck` ✅（`tsc --noEmit` × 2，无错）
-- `npm run smoke` ✅ **75 项通过 / 0 失败**（原 71 项 + 新增 4 项：懒建行、不预建、不补建、预条件只记日志）
+- `npm run smoke` ✅ **76 项通过 / 0 失败**（原 71 项 + 新增 5 项：懒建行、不预建、不补建、预条件只记日志、派发行写了 `dispatched_at`）
+- **真机（用户 2026-09-26）** ✅：`cron-5min-探针2` 连续两轮 `succeeded`（01:35 / 01:40，会话 `27bfd3a9` / `50d9e546`）；
+  执行记录里**不再有 skipped 洪水**、每 5 分钟恰好一行 —— 决策 31 的两个目标（灭洪水 / 灭提前 pending）真机达成。
 
 ---
 
