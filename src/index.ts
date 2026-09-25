@@ -95,6 +95,8 @@ const readDispatchBody = async (req: DispatchWebRequest): Promise<string> => {
 const makeDispatchRoutes = (
   runtimeRef: { tasksInline: string; debugSnapshot: string },
   persistTasksInline: (json: string) => Promise<void>,
+  /** 取状态库（settings inject 就绪后非空）；未就绪时 /db 返回 503。 */
+  getStore: () => TaskStore | null,
 ): DispatchWebRoute[] => [
   {
     kind: 'exact',
@@ -103,6 +105,22 @@ const makeDispatchRoutes = (
       if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
       if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
       writeJson(res, 200, { ok: true, snapshot: runtimeRef.debugSnapshot, tasksInline: runtimeRef.tasksInline })
+    },
+  },
+  {
+    // 调试页数据通道：三张表原样导出（用户机器上没有 sqlite CLI，面板里直接看库）。
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/db`,
+    handler: (req, res) => {
+      if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      const store = getStore()
+      if (store === null) return writeJson(res, 503, { ok: false, error: 'store-not-ready' })
+      writeJson(res, 200, {
+        ok: true,
+        at: new Date().toISOString(),
+        tables: TaskStore.DUMP_TABLES.map(name => store.dumpTable(name, 500)),
+      })
     },
   },
   {
@@ -235,8 +253,8 @@ export function apply(ctx: HostContext, config: unknown): void {
       wctx.logger.warn('[数据通道] 宿主上下文无 webServer.register 面，HTTP 路由未注册；客户端画面将无数据')
       return
     }
-    for (const route of makeDispatchRoutes(runtime, persistTasksInline)) webServer.register(route)
-    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot')
+    for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef)) webServer.register(route)
+    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db')
   })
   ctx.inject(['settings'], (sctx: HostContext) => {
     const settings = sctx.settings

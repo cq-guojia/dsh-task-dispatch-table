@@ -45,6 +45,19 @@ export interface TransitionInput {
   detail?: unknown
 }
 
+/** 调试导出：一张表的原始行（面板「调试」页 / GET /db 的单元）。 */
+export interface TableDump {
+  name: string
+  /** 表内总行数（rows 可能只含最新一部分）。 */
+  count: number
+  /** 列名，按建表顺序。 */
+  columns: string[]
+  /** 行原样（列 → TEXT/INTEGER/NULL 值）。 */
+  rows: Record<string, unknown>[]
+  /** true = 总行数超出 limit，rows 只含最新 limit 条。 */
+  truncated: boolean
+}
+
 const DDL = `
 -- 执行记录表：一行 = **一次执行（一个计划刻度）**。
 -- （决策 25 修订版：任务 id 直接写在用户的任务定义 JSON 里，**不再有 task_defs 登记表**——
@@ -231,6 +244,28 @@ export class TaskStore {
     this.db
       .prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
       .run(key, value)
+  }
+
+  /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
+  static readonly DUMP_TABLES = ['task_instances', 'task_events', 'meta'] as const
+
+  /**
+   * 调试导出：整表原样读出（面板「调试」页用）。
+   * @param name - 表名（必须命中白名单）。
+   * @param limit - 最多返回行数；超出时保留「最新」的 limit 条（events 按 seq、instances 按 scheduled_at 倒序）。
+   */
+  dumpTable(name: (typeof TaskStore.DUMP_TABLES)[number], limit: number): TableDump {
+    if (!(TaskStore.DUMP_TABLES as readonly string[]).includes(name)) {
+      throw new Error(`dumpTable: unknown table ${name}`)
+    }
+    const count = (this.db.prepare(`SELECT COUNT(*) AS n FROM ${name}`).get() as { n: number }).n
+    const order = name === 'task_events'
+      ? 'seq DESC'
+      : name === 'task_instances' ? 'scheduled_at DESC, id DESC' : 'key'
+    const rows = this.db.prepare(`SELECT * FROM ${name} ORDER BY ${order} LIMIT ?`).all(limit) as
+      Record<string, unknown>[]
+    const columns = (this.db.prepare(`PRAGMA table_info(${name})`).all() as { name: string }[]).map(col => col.name)
+    return { name, count, columns, rows, truncated: count > rows.length }
   }
 
   getBySession(sessionId: string): TaskInstance | undefined {

@@ -48,6 +48,12 @@ window.__ModuleLoader__.load({
 			backToConversation: "返回会话",
 			tabConfig: "任务配置",
 			tabRecords: "执行记录",
+			tabDebug: "调试",
+			debugDbHint: "状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。",
+			debugDbLoading: "状态库读取中…",
+			debugDbFail: "状态库读取失败（未就绪或请求被拒），稍后点刷新重试。",
+			debugDbEmpty: "（空表：还没有任何记录）",
+			debugDbTruncated: "行数超出上限，仅显示最新一部分",
 			tasksParsedTitle: "已解析的任务（id 由系统生成，改名字不影响历史）",
 			tasksParsedEmpty: "（无任务：内嵌任务表为空且任务目录无合法定义）",
 			colTask: "任务",
@@ -126,6 +132,12 @@ window.__ModuleLoader__.load({
 			backToConversation: "Back to conversation",
 			tabConfig: "Configuration",
 			tabRecords: "Run records",
+			tabDebug: "Debug",
+			debugDbHint: "Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.",
+			debugDbLoading: "Loading state.db…",
+			debugDbFail: "Failed to read state.db (not ready or request rejected); retry with the refresh button.",
+			debugDbEmpty: "(empty table: no rows yet)",
+			debugDbTruncated: "row count exceeds the cap, showing only the newest rows",
 			tasksParsedTitle: "Parsed tasks (ids are generated; renaming never breaks history)",
 			tasksParsedEmpty: "(no tasks: inline table empty and task dir has no valid definition)",
 			colTask: "Task",
@@ -868,6 +880,28 @@ window.__ModuleLoader__.load({
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
 			const [expanded, setExpanded] = (0, react.useState)(null);
 			const [viewing, setViewing] = (0, react.useState)(null);
+			const [dbDump, setDbDump] = (0, react.useState)(null);
+			const [dbState, setDbState] = (0, react.useState)("idle");
+			(0, react.useEffect)(() => {
+				if (tab !== "debug") return;
+				let alive = true;
+				setDbState("loading");
+				fetch(`${DISPATCH_API_PREFIX}/db`).then((res) => res.json()).then((body) => {
+					if (!alive) return;
+					if (body.ok === true && Array.isArray(body.tables)) {
+						setDbDump({
+							at: typeof body.at === "string" ? body.at : "",
+							tables: body.tables
+						});
+						setDbState("ok");
+					} else setDbState("fail");
+				}).catch(() => {
+					if (alive) setDbState("fail");
+				});
+				return () => {
+					alive = false;
+				};
+			}, [tab, manualAt]);
 			const section = snapshot.value ?? {};
 			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
 			const data = parseDebugSnapshot(raw);
@@ -908,6 +942,23 @@ window.__ModuleLoader__.load({
 			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
 			const hasRaw = raw.trim() !== "";
+			/** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
+			const renderDbTable = (dump) => (0, react.createElement)("div", {
+				key: dump.name,
+				style: { marginBottom: "20px" }
+			}, (0, react.createElement)("h4", { style: sectionTitleStyle }, `${dump.name} · ${dump.count} 行${dump.truncated ? `（${t("debugDbTruncated")}）` : ""}`), dump.rows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbEmpty")) : (0, react.createElement)("div", { style: { overflowX: "auto" } }, (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, dump.columns.map((col) => (0, react.createElement)("th", {
+				key: col,
+				style: cellStyle
+			}, col)))), (0, react.createElement)("tbody", null, dump.rows.map((row, index) => (0, react.createElement)("tr", { key: index }, dump.columns.map((col) => {
+				const value = row[col];
+				const text = value === null || value === void 0 ? "—" : String(value);
+				const clipped = text.length > 160 ? `${text.slice(0, 160)}…` : text;
+				return (0, react.createElement)("td", {
+					key: col,
+					style: col === "detail" || col === "value" ? detailCellStyle : cellStyle,
+					title: text
+				}, clipped);
+			})))))));
 			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -941,7 +992,13 @@ window.__ModuleLoader__.load({
 				onClick: () => {
 					setTab("records");
 				}
-			}, t("tabRecords"))))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
+			}, t("tabRecords")), (0, react.createElement)("button", {
+				type: "button",
+				style: segmentStyle(tab === "debug"),
+				onClick: () => {
+					setTab("debug");
+				}
+			}, t("tabDebug"))))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
 				...preStyle,
 				color: C.textFaint
 			} }, describeDiag())) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
@@ -977,7 +1034,7 @@ window.__ModuleLoader__.load({
 			].map((name) => (0, react.createElement)("th", {
 				key: name,
 				style: cellStyle
-			}, name)))), (0, react.createElement)("tbody", null, taskRows.map((row) => (0, react.createElement)("tr", { key: row.id }, (0, react.createElement)("td", { style: cellStyle }, row.id), (0, react.createElement)("td", { style: cellStyle }, row.title), (0, react.createElement)("td", { style: cellStyle }, scheduleSummary(row)), (0, react.createElement)("td", { style: cellStyle }, row.next === null ? "—" : formatTime(row.next)))))), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugWarns")), data.warns.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugNoWarns")) : (0, react.createElement)("pre", { style: preStyle }, data.warns.join("\n")), (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)), (0, react.createElement)("dt", null, t("paramDefaultProvider")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultProvider)), (0, react.createElement)("dt", null, t("paramDefaultModel")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultModel))))) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
+			}, name)))), (0, react.createElement)("tbody", null, taskRows.map((row) => (0, react.createElement)("tr", { key: row.id }, (0, react.createElement)("td", { style: cellStyle }, row.id), (0, react.createElement)("td", { style: cellStyle }, row.title), (0, react.createElement)("td", { style: cellStyle }, scheduleSummary(row)), (0, react.createElement)("td", { style: cellStyle }, row.next === null ? "—" : formatTime(row.next)))))), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugWarns")), data.warns.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugNoWarns")) : (0, react.createElement)("pre", { style: preStyle }, data.warns.join("\n")), (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)), (0, react.createElement)("dt", null, t("paramDefaultProvider")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultProvider)), (0, react.createElement)("dt", null, t("paramDefaultModel")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultModel))))) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,
 				onChange: (event) => {
 					setStatusFilter(event.target.value);

@@ -15,7 +15,7 @@
 // 结构化声明。客户端 bundle 不打包 src/config.ts（Node 侧），Config 语义在此以
 // 字段名复述。
 
-import { createElement as h, Fragment, useCallback, useState, useSyncExternalStore } from 'react'
+import { createElement as h, Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 
@@ -342,6 +342,15 @@ function parseDebugSnapshot(raw: unknown): DebugSnapshotData | undefined {
   }
 }
 
+/** 调试页：GET /db 返回的一张表（与宿主 TableDump 同形，客户端结构化声明不引宿主类型）。 */
+interface DbTableDump {
+  name: string
+  count: number
+  columns: string[]
+  rows: Record<string, unknown>[]
+  truncated: boolean
+}
+
 
 
 /** 周期摘要：once 优先，其次 cron（带时区），都没有显示占位。 */
@@ -375,7 +384,7 @@ function TaskPage(props: {
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
   const snapshot = useSyncExternalStore(subscribe, getSnapshot)
 
-  const [tab, setTab] = useState<'config' | 'records'>('config')
+  const [tab, setTab] = useState<'config' | 'records' | 'debug'>('config')
   const [draft, setDraft] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -387,6 +396,26 @@ function TaskPage(props: {
   const [expanded, setExpanded] = useState<string | null>(null)
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
   const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget } | null>(null)
+  // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
+  const [dbDump, setDbDump] = useState<{ at: string; tables: DbTableDump[] } | null>(null)
+  const [dbState, setDbState] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
+
+  useEffect(() => {
+    if (tab !== 'debug') return
+    let alive = true
+    setDbState('loading')
+    fetch(`${DISPATCH_API_PREFIX}/db`)
+      .then(res => res.json() as Promise<{ ok?: boolean; at?: string; tables?: DbTableDump[] }>)
+      .then(body => {
+        if (!alive) return
+        if (body.ok === true && Array.isArray(body.tables)) {
+          setDbDump({ at: typeof body.at === 'string' ? body.at : '', tables: body.tables })
+          setDbState('ok')
+        } else setDbState('fail')
+      })
+      .catch(() => { if (alive) setDbState('fail') })
+    return () => { alive = false }
+  }, [tab, manualAt])
 
   const section = (snapshot.value ?? {}) as Record<string, unknown>
   // 快照由 host 周期写入 debugSnapshot 字段；页订阅同一 scope 自动刷新。
@@ -434,6 +463,32 @@ function TaskPage(props: {
 
   const hasRaw = raw.trim() !== ''
 
+  /** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
+  const renderDbTable = (dump: DbTableDump) => h('div', { key: dump.name, style: { marginBottom: '20px' } },
+    h('h4', { style: sectionTitleStyle },
+      `${dump.name} · ${dump.count} 行${dump.truncated ? `（${t('debugDbTruncated')}）` : ''}`),
+    dump.rows.length === 0
+      ? h('p', { style: hintStyle }, t('debugDbEmpty'))
+      : h('div', { style: { overflowX: 'auto' } },
+          h('table', { style: tableStyle },
+            h('thead', null, h('tr', null,
+              dump.columns.map(col => h('th', { key: col, style: cellStyle }, col)))),
+            h('tbody', null, dump.rows.map((row, index) => h('tr', { key: index },
+              dump.columns.map(col => {
+                const value = row[col]
+                const text = value === null || value === undefined ? '—' : String(value)
+                const clipped = text.length > 160 ? `${text.slice(0, 160)}…` : text
+                return h('td', {
+                  key: col,
+                  style: col === 'detail' || col === 'value' ? detailCellStyle : cellStyle,
+                  title: text,
+                }, clipped)
+              }),
+            ))),
+          ),
+        ),
+  )
+
   return h(Fragment, null,
     h('div', { style: pageStyle },
       // 抬头：左「← 返回会话」+ 标题；右「刷新 · 分组标签」
@@ -469,6 +524,10 @@ function TaskPage(props: {
               type: 'button', style: segmentStyle(tab === 'records'),
               onClick: () => { setTab('records') },
             }, t('tabRecords')),
+            h('button', {
+              type: 'button', style: segmentStyle(tab === 'debug'),
+              onClick: () => { setTab('debug') },
+            }, t('tabDebug')),
           ),
         ),
       ),
@@ -543,6 +602,18 @@ function TaskPage(props: {
                 ),
               ),
             )
+          : tab === 'debug'
+            ? h('div', null,
+                h('p', { style: hintStyle }, t('debugDbHint')),
+                dbState === 'loading' ? h('p', { style: hintStyle }, t('debugDbLoading')) : null,
+                dbState === 'fail' ? h('p', { style: errorStyle }, t('debugDbFail')) : null,
+                dbState === 'ok' && dbDump !== null
+                  ? h('div', null,
+                      h('p', { style: hintStyle }, `${t('debugRefreshedAt')} ${formatTime(dbDump.at)}`),
+                      dbDump.tables.map(dump => renderDbTable(dump)),
+                    )
+                  : null,
+              )
           : h('div', null,
               h('p', { style: hintStyle }, t('recordsHint')),
               h('div', { style: rowStyle },

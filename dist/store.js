@@ -173,6 +173,25 @@ export class TaskStore {
             .prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
             .run(key, value);
     }
+    /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
+    static DUMP_TABLES = ['task_instances', 'task_events', 'meta'];
+    /**
+     * 调试导出：整表原样读出（面板「调试」页用）。
+     * @param name - 表名（必须命中白名单）。
+     * @param limit - 最多返回行数；超出时保留「最新」的 limit 条（events 按 seq、instances 按 scheduled_at 倒序）。
+     */
+    dumpTable(name, limit) {
+        if (!TaskStore.DUMP_TABLES.includes(name)) {
+            throw new Error(`dumpTable: unknown table ${name}`);
+        }
+        const count = this.db.prepare(`SELECT COUNT(*) AS n FROM ${name}`).get().n;
+        const order = name === 'task_events'
+            ? 'seq DESC'
+            : name === 'task_instances' ? 'scheduled_at DESC, id DESC' : 'key';
+        const rows = this.db.prepare(`SELECT * FROM ${name} ORDER BY ${order} LIMIT ?`).all(limit);
+        const columns = this.db.prepare(`PRAGMA table_info(${name})`).all().map(col => col.name);
+        return { name, count, columns, rows, truncated: count > rows.length };
+    }
     getBySession(sessionId) {
         return this.db
             .prepare('SELECT * FROM task_instances WHERE session_id = ? ORDER BY updated_at DESC')

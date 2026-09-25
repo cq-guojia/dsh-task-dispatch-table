@@ -31,6 +31,18 @@ export interface TransitionInput {
     finished_at?: string | null;
     detail?: unknown;
 }
+/** 调试导出：一张表的原始行（面板「调试」页 / GET /db 的单元）。 */
+export interface TableDump {
+    name: string;
+    /** 表内总行数（rows 可能只含最新一部分）。 */
+    count: number;
+    /** 列名，按建表顺序。 */
+    columns: string[];
+    /** 行原样（列 → TEXT/INTEGER/NULL 值）。 */
+    rows: Record<string, unknown>[];
+    /** true = 总行数超出 limit，rows 只含最新 limit 条。 */
+    truncated: boolean;
+}
 export declare class TaskStore {
     private readonly db;
     /**
@@ -83,6 +95,14 @@ export declare class TaskStore {
     getMeta(key: string): string | undefined;
     /** 写 meta 键值（upsert）。任务表 tasksInline 的持久化主通道走这里。 */
     setMeta(key: string, value: string): void;
+    /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
+    static readonly DUMP_TABLES: readonly ["task_instances", "task_events", "meta"];
+    /**
+     * 调试导出：整表原样读出（面板「调试」页用）。
+     * @param name - 表名（必须命中白名单）。
+     * @param limit - 最多返回行数；超出时保留「最新」的 limit 条（events 按 seq、instances 按 scheduled_at 倒序）。
+     */
+    dumpTable(name: (typeof TaskStore.DUMP_TABLES)[number], limit: number): TableDump;
     getBySession(sessionId: string): TaskInstance | undefined;
     /**
      * 计划重排（决策 20）：计划时刻在「从未执行」前跟随配置 live 更新——仅 status=pending

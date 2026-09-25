@@ -16,8 +16,9 @@ export type LocaleKey =
   | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
   | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents' | 'debugEventsEmpty'
   | 'debugRefresh' | 'debugRefreshedAt' | 'debugAutoHint'
-  | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords'
+  | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabDebug'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
+  | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
   | 'colTask' | 'colTitle' | 'colSchedule' | 'colNext' | 'colSlot'
   | 'colStatus' | 'colAttempt' | 'colSession' | 'colUpdated'
   | 'colSeq' | 'colTs' | 'colKind' | 'colDetail'
@@ -70,6 +71,12 @@ export const zh: Record<LocaleKey, string> = {
   backToConversation: '返回会话',
   tabConfig: '任务配置',
   tabRecords: '执行记录',
+  tabDebug: '调试',
+  debugDbHint: '状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。',
+  debugDbLoading: '状态库读取中…',
+  debugDbFail: '状态库读取失败（未就绪或请求被拒），稍后点刷新重试。',
+  debugDbEmpty: '（空表：还没有任何记录）',
+  debugDbTruncated: '行数超出上限，仅显示最新一部分',
   tasksParsedTitle: '已解析的任务（id 由系统生成，改名字不影响历史）',
   tasksParsedEmpty: '（无任务：内嵌任务表为空且任务目录无合法定义）',
   colTask: '任务',
@@ -149,6 +156,12 @@ export const en: Record<LocaleKey, string> = {
   backToConversation: 'Back to conversation',
   tabConfig: 'Configuration',
   tabRecords: 'Run records',
+  tabDebug: 'Debug',
+  debugDbHint: 'Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.',
+  debugDbLoading: 'Loading state.db…',
+  debugDbFail: 'Failed to read state.db (not ready or request rejected); retry with the refresh button.',
+  debugDbEmpty: '(empty table: no rows yet)',
+  debugDbTruncated: 'row count exceeds the cap, showing only the newest rows',
   tasksParsedTitle: 'Parsed tasks (ids are generated; renaming never breaks history)',
   tasksParsedEmpty: '(no tasks: inline table empty and task dir has no valid definition)',
   colTask: 'Task',

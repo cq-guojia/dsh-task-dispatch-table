@@ -158,6 +158,16 @@ try {
   console.log('\n[3.5] meta 持久化（重开库 = 重装场景）')
   const reopened = new TaskStore(join(root, 'state.db'))
   check('重开库后 meta 值原样恢复', reopened.getMeta('tasksInline') === '[]')
+  const dump = reopened.dumpTable('meta', 500)
+  check('dumpTable：meta 导出含已写行且列齐全', dump.count === 1 && dump.columns.includes('key') && dump.rows[0]['value'] === '[]')
+  check('dumpTable：instances 导出形状合法（列齐全、count=rows、无截断）', (() => {
+    const d = reopened.dumpTable('task_instances', 500)
+    return d.columns.length > 0 && d.rows.length === d.count && d.truncated === false
+      && d.columns.includes('task_id') && d.columns.includes('scheduled_at')
+  })())
+  let dumpRejected = false
+  try { reopened.dumpTable('sqlite_master', 10) } catch { dumpRejected = true }
+  check('dumpTable：白名单外的表名被拒绝（防注入）', dumpRejected)
   reopened.close()
 
   // ── 4. 旧库迁移：老数据不丢、索引能建起来 ──
