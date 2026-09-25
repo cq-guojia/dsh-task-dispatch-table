@@ -83,7 +83,33 @@
 
 ---
 
-## 六、遗留（不阻塞）
+## 六、真机复测暴露的回归：`output-stale`（已修，a3b9899）
+
+真机跑 `cron-5min-探针2`（2026/9/26 01:10）→ `failed`，事件链止于
+`receipt_check {"reason":"output-stale","detail":{"output":"current_time.txt","dispatchedAtMs":1790356257986}}`。
+
+**是本工作包自己引入的回归**：决策 31 懒建行后不再走 `store.casClaim`，而 `dispatched_at`
+原本正是 `casClaim` 写入的（`store.ts:376`）⇒ 该列为 NULL。`reconcile.ts:152` 的
+`Date.parse(instance.dispatched_at ?? instance.updated_at)` 因此回退到 `updated_at`
+（最后一次状态变更，晚于产物写入）⇒ 凡声明 `outputs` 的任务，回执一律判 `output-stale`。
+
+**铁证**：`dispatchedAtMs = 01:10:57.986`，而真正的派发（`dispatch` 事件）是 `01:10:40`
+——基准取的是结算时刻，比 agent 写文件还晚。
+（反证：改动前的旧「探针」任务因仍走 `casClaim`，全部 `succeeded`。）
+
+**修法**：`dispatch.ts` 派发落库（`assign-session` 那次 transition）写入 `dispatched_at`，
+一处同时覆盖「新派发」与「重试重派」。
+
+**防回归**：冒烟新增断言「派发行必须写了 `dispatched_at`」（76 项全过）。
+
+**顺带修 smoke 假 ctx 两处不全**：工作区缺 `attachSession`（`host.ts` HostWorkspace）、
+模型路由实际走 `ctx.get('agentDefaultModel')` 而非 `agents.listModels`。
+这也暴露原 [5] 曾是**假通过**——行被预条件失败悄悄删掉后，第二次 tick 又重建，
+计数仍为 1，把删除掩盖了。
+
+> 教训：**删掉一个「顺带写字段」的旧路径（casClaim）时，必须先查清它还负责写哪些列。**
+
+## 七、遗留（不阻塞）
 
 - **U7 依赖语义边界**未拍板（`latest_success` 无 `freshness` 默认 / 同周期上游多刻度 / 上游失败是否立即断链 / OR 语义 / UI 选上游 / 新鲜度基准）。已进 PROGRESS 未决项。
 - **token 用量来源待确认**：`HostSessionEvent` 现仅暴露 `type`，代码对 `event.usage` 做**防御性读取**，

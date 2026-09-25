@@ -46,7 +46,7 @@
 | 8 | 任务身份闸门（决策 30） | ✅ | 09-25 | 三字段模型（id/title/code）→「保存时固化，运行时只认」→ UUID 必须命中现有表；真机验证生效 | [worklog/identity-gate.md](worklog/identity-gate.md) |
 | 9 | 文档体系三层化 + 公用规则真源外提 | ✅ | 09-25 | PROGRESS 109KB→11.5KB 拆三层（现场/叙事/定型）；跨项目公用规则外提为根目录 `RULES.md`，AGENTS.md 瘦身为薄壳 | [worklog/docs-system.md](worklog/docs-system.md) |
 | 10 | 周期任务（cron）全链路验证 | ✅ | 09-26 | 每 5 分钟 cron 真机跑通、跨天成功；暴露 `skipped` 洪水与提前 pending 两缺陷 → 触发里程碑 11 | — |
-| 11 | 调度循环重设计 + 日志表 + 冗余字段 | ✅ | 09-26 | 决策 31/32：懒建行/不回看/不补跑/skipped 只进日志 + 独立 `task_log` 表 + 执行记录加 outputs/tokens 列；冒烟 75 项全过 | [worklog/scheduler-redesign.md](worklog/scheduler-redesign.md) |
+| 11 | 调度循环重设计 + 日志表 + 冗余字段 | ✅ | 09-26 | 决策 31/32：懒建行/不回看/不补跑/skipped 只进日志 + 独立 `task_log` 表 + 执行记录加 outputs/tokens 列；真机复测发现并修掉 `dispatched_at` 回归（`output-stale`，a3b9899）；冒烟 76 项全过 | [worklog/scheduler-redesign.md](worklog/scheduler-redesign.md) |
 
 ---
 
