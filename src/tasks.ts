@@ -15,15 +15,19 @@ export const dependencySemantics = ['same_period', 'latest_success'] as const
 export type DependencySemantics = (typeof dependencySemantics)[number]
 
 /**
- * 任务定义输入 schema（决策 25）：`id` **可选**——用户不写时，由系统在首次加载时生成并
- * **写回这段 JSON**（inline 回写 settings、目录模式回写该文件）；`title` 是给人看的名字，
- * 任意文本（中文亦可），随时可改、**不参与身份**。
+ * 任务定义输入 schema（决策 25/30）：身份三字段分离——
+ * `id` = **机器身份**，录入瞬间由系统生成 UUID 并**写回这段 JSON**（inline 回写 settings、
+ * 目录模式回写该文件），人不手写、不参与展示；`title` = 任务名称（人读、随时可改）；
+ * `code` = 任务编号（**可选**、用户自编，仅便于查询与管理，**只做记录、不参与任何唯一性判断**
+ * ——空格、重名、格式差异都不影响身份判定，因为判断只走 id + 计划刻度）。
  */
 export const taskDefinitionSchema = z.object({
-  /** 系统生成并**写回 JSON**；用户显式写了则以用户写的为准（兼容既有定义）。 */
+  /** 系统生成并**写回 JSON**；用户显式写了则以用户写的为准（兼容既有定义 / 手写 JSON 的老手）。 */
   id: z.string().min(1).optional(),
   /** 用户可读名称：任意文本，可改，不影响身份与历史记录。缺省回退到 id。 */
   title: z.string().min(1).optional(),
+  /** 任务编号（决策 30）：可选、纯记录与查询用，不参与唯一性判断；存前 trim，空白视为未填。 */
+  code: z.string().optional(),
   enabled: z.boolean(),
   schedule: z.object({
     cron: z.string().min(1).optional(),
@@ -82,25 +86,29 @@ function isUsableId(value: unknown): value is string {
   return typeof value === 'string' && value.trim() !== ''
 }
 
-/** 生成一个任务 id：`t-` 前缀 + 32 位十六进制（与 randomUUID 去横线等长）。 */
+/** 生成一个任务 id：标准 UUID（决策 30：机器身份与内容、名称彻底解耦，录入/解析瞬间随机生成）。 */
 export function newTaskId(): string {
-  return `t-${randomUUID().replace(/-/g, '')}`
+  return randomUUID()
 }
 
 /**
- * 解析后补齐身份（决策 25 修订版：**不要登记表**）。
- * ① 有 id ⇒ 直接用（trim 后）；② 没 id 或格式不对 ⇒ 按**定义内容取指纹**生成一个兜底 id
- * ——同一份配置每次解析都是同一个 id，既不会漂也不会需要额外的表。
- * 正常路径下 id 已由 `ensureIdsInInlineJson` / `loadTasks` 写回 JSON，走不到这个兜底。
+ * 解析后补齐身份（决策 25/30）。
+ * ① 有 id ⇒ 直接用（trim 后）——手写 JSON 的老手自带 id 也算数，写错了后果自负；
+ * ② 没 id ⇒ **内容指纹兜底**（`t-` + 32 位十六进制）。主路径（`ensureIdsInInlineJson`，
+ * 录入瞬间随机 UUID 并回写）正常生效时走不到这里；兜底保持「同内容同 id」是**故意的**：
+ * 万一回写失败（settings 面故障 / 容器在 meta 落盘前重启），每 tick 重新解析同一份
+ * 无 id 文本时身份不会漂移、历史执行记录不会断链——随机 id 在这条异常路径上会每 tick
+ * 换一个身份、把 pending 实例全部重建（冒烟当场测出）。
  */
 export function withIdentity(def: TaskDefinitionInput): TaskDefinition {
+  const code = def.code !== undefined && def.code.trim() !== '' ? def.code.trim() : undefined
   if (isUsableId(def.id)) {
     const id = def.id.trim()
-    return { ...def, id, title: def.title ?? id }
+    return { ...def, id, title: def.title ?? id, code }
   }
   const { id: _dropped, ...rest } = def
   const id = `t-${createHash('sha256').update(JSON.stringify(rest)).digest('hex').slice(0, 32)}`
-  return { ...def, id, title: def.title ?? id }
+  return { ...def, id, title: def.title ?? code ?? id, code }
 }
 
 /**

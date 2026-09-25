@@ -261,10 +261,11 @@ function isValidTaskTable(text: string): boolean {
 
 // ── 调试快照（host 侧 index.ts writeSnapshot 的序列化形状，本地结构化复述）──
 
-/** 任务明细行：决策 25 后 id 由系统生成，title 只是给人看的。 */
+/** 任务明细行：决策 25/30 后 id 由系统生成（机器身份），title 名称、code 编号（可选，仅记录）。 */
 interface DebugTaskRow {
   id: string
   title: string
+  code: string | null
   enabled: boolean
   cron: string | null
   once: string | null
@@ -311,12 +312,13 @@ function formatTime(iso: string): string {
 /** 任务行归一：旧版快照的 tasks 是 string[]（只有 id），兼容成明细行。 */
 function normalizeTaskRow(item: unknown): DebugTaskRow {
   if (typeof item === 'string') {
-    return { id: item, title: item, enabled: true, cron: null, once: null, timezone: null, window: '', workspace: '', next: null }
+    return { id: item, title: item, code: null, enabled: true, cron: null, once: null, timezone: null, window: '', workspace: '', next: null }
   }
   const row = (item ?? {}) as Partial<DebugTaskRow>
   return {
     id: String(row.id ?? ''),
     title: String(row.title ?? row.id ?? ''),
+    code: row.code === null || row.code === undefined ? null : String(row.code),
     enabled: row.enabled !== false,
     cron: row.cron ?? null,
     once: row.once ?? null,
@@ -572,11 +574,12 @@ function TaskPage(props: {
                 ? h('p', { style: hintStyle }, t('tasksParsedEmpty'))
                 : h('table', { style: tableStyle },
                     h('thead', null, h('tr', null,
-                      [t('colTask'), t('colTitle'), t('colSchedule'), t('colNext')]
+                      [t('colId'), t('colTitle'), t('colCode'), t('colSchedule'), t('colNext')]
                         .map(name => h('th', { key: name, style: cellStyle }, name)))),
                     h('tbody', null, taskRows.map(row => h('tr', { key: row.id },
                       h('td', { style: cellStyle }, row.id),
                       h('td', { style: cellStyle }, row.title),
+                      h('td', { style: cellStyle }, row.code ?? '—'),
                       h('td', { style: cellStyle }, scheduleSummary(row)),
                       h('td', { style: cellStyle }, row.next === null ? '—' : formatTime(row.next)),
                     ))),

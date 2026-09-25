@@ -327,6 +327,7 @@ export function apply(ctx: HostContext, config: unknown): void {
           return {
             id: task.id,
             title: titleOf(task),
+            code: task.code ?? null,
             enabled: task.enabled,
             cron: task.schedule.cron ?? null,
             once: task.schedule.once ?? null,

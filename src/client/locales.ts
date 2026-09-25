@@ -19,7 +19,7 @@ export type LocaleKey =
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabDebug'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
-  | 'colTask' | 'colTitle' | 'colSchedule' | 'colNext' | 'colSlot'
+  | 'colTask' | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext' | 'colSlot'
   | 'colStatus' | 'colAttempt' | 'colSession' | 'colUpdated'
   | 'colSeq' | 'colTs' | 'colKind' | 'colDetail'
   | 'filterStatus' | 'filterTask' | 'filterAll'
@@ -81,6 +81,8 @@ export const zh: Record<LocaleKey, string> = {
   tasksParsedEmpty: '（无任务：内嵌任务表为空且任务目录无合法定义）',
   colTask: '任务',
   colTitle: '名称',
+  colCode: '编号',
+  colId: '任务ID',
   colSchedule: '周期',
   colNext: '下次执行',
   colSlot: '计划时刻',
@@ -166,6 +168,8 @@ export const en: Record<LocaleKey, string> = {
   tasksParsedEmpty: '(no tasks: inline table empty and task dir has no valid definition)',
   colTask: 'Task',
   colTitle: 'Title',
+  colCode: 'Code',
+  colId: 'Task ID',
   colSchedule: 'Schedule',
   colNext: 'Next run',
   colSlot: 'Scheduled',

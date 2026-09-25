@@ -290,6 +290,7 @@ export function apply(ctx, config) {
                     return {
                         id: task.id,
                         title: titleOf(task),
+                        code: task.code ?? null,
                         enabled: task.enabled,
                         cron: task.schedule.cron ?? null,
                         once: task.schedule.once ?? null,

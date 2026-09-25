@@ -3,13 +3,16 @@ import type { HostLogger } from './host.js';
 export declare const dependencySemantics: readonly ["same_period", "latest_success"];
 export type DependencySemantics = (typeof dependencySemantics)[number];
 /**
- * 任务定义输入 schema（决策 25）：`id` **可选**——用户不写时，由系统在首次加载时生成并
- * **写回这段 JSON**（inline 回写 settings、目录模式回写该文件）；`title` 是给人看的名字，
- * 任意文本（中文亦可），随时可改、**不参与身份**。
+ * 任务定义输入 schema（决策 25/30）：身份三字段分离——
+ * `id` = **机器身份**，录入瞬间由系统生成 UUID 并**写回这段 JSON**（inline 回写 settings、
+ * 目录模式回写该文件），人不手写、不参与展示；`title` = 任务名称（人读、随时可改）；
+ * `code` = 任务编号（**可选**、用户自编，仅便于查询与管理，**只做记录、不参与任何唯一性判断**
+ * ——空格、重名、格式差异都不影响身份判定，因为判断只走 id + 计划刻度）。
  */
 export declare const taskDefinitionSchema: z.ZodObject<{
     id: z.ZodOptional<z.ZodString>;
     title: z.ZodOptional<z.ZodString>;
+    code: z.ZodOptional<z.ZodString>;
     enabled: z.ZodBoolean;
     schedule: z.ZodObject<{
         cron: z.ZodOptional<z.ZodString>;
@@ -53,13 +56,16 @@ export type TaskDefinition = Omit<TaskDefinitionInput, 'id'> & {
 };
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
 export declare function titleOf(task: TaskDefinition): string;
-/** 生成一个任务 id：`t-` 前缀 + 32 位十六进制（与 randomUUID 去横线等长）。 */
+/** 生成一个任务 id：标准 UUID（决策 30：机器身份与内容、名称彻底解耦，录入/解析瞬间随机生成）。 */
 export declare function newTaskId(): string;
 /**
- * 解析后补齐身份（决策 25 修订版：**不要登记表**）。
- * ① 有 id ⇒ 直接用（trim 后）；② 没 id 或格式不对 ⇒ 按**定义内容取指纹**生成一个兜底 id
- * ——同一份配置每次解析都是同一个 id，既不会漂也不会需要额外的表。
- * 正常路径下 id 已由 `ensureIdsInInlineJson` / `loadTasks` 写回 JSON，走不到这个兜底。
+ * 解析后补齐身份（决策 25/30）。
+ * ① 有 id ⇒ 直接用（trim 后）——手写 JSON 的老手自带 id 也算数，写错了后果自负；
+ * ② 没 id ⇒ **内容指纹兜底**（`t-` + 32 位十六进制）。主路径（`ensureIdsInInlineJson`，
+ * 录入瞬间随机 UUID 并回写）正常生效时走不到这里；兜底保持「同内容同 id」是**故意的**：
+ * 万一回写失败（settings 面故障 / 容器在 meta 落盘前重启），每 tick 重新解析同一份
+ * 无 id 文本时身份不会漂移、历史执行记录不会断链——随机 id 在这条异常路径上会每 tick
+ * 换一个身份、把 pending 实例全部重建（冒烟当场测出）。
  */
 export declare function withIdentity(def: TaskDefinitionInput): TaskDefinition;
 /**

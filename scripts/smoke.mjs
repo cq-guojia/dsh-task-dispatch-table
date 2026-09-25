@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import {
-  ensureIdsInInlineJson, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor,
+  ensureIdsInInlineJson, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, withIdentity,
 } from '../dist/tasks.js'
 import { TaskStore } from '../dist/store.js'
 import { createReconciler } from '../dist/reconcile.js'
@@ -89,11 +89,42 @@ try {
   const r1 = ensureIdsInInlineJson(twoTasks)
   check('缺 id 时生成并标记写回', r1.changed === true && r1.assigned === 2, `changed=${r1.changed} assigned=${r1.assigned}`)
   const ids1 = JSON.parse(r1.json).map(item => item.id)
-  check('生成的 id 形态：t- + 32 位十六进制', ids1.every(id => /^t-[0-9a-f]{32}$/.test(id)), ids1.join(', '))
+  check('生成的 id 形态：标准 UUID（决策 30：机器身份随机生成，不派生自内容/名称）',
+    ids1.every(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)), ids1.join(', '))
   check('两条拿到不同 id', ids1[0] !== ids1[1])
 
   const r2 = ensureIdsInInlineJson(r1.json)
   check('二次调用不再变更（幂等，不会每 tick 重写）', r2.changed === false && r2.assigned === 0)
+
+  // ── 2.1 编号 code（决策 30）：可选、trim、空白视为未填、不参与身份 ──
+  console.log('\n[2.1] 任务编号 code（决策 30：只做记录，不参与唯一性）')
+  const codeTask = withIdentity({
+    code: '  RPT-001  ', title: '日报', enabled: true,
+    schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
+  })
+  check('code 存前 trim', codeTask.code === 'RPT-001')
+  const blankCode = withIdentity({
+    code: '   ', title: '日报', enabled: true,
+    schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
+  })
+  check('空白 code 归一为未填（undefined）', blankCode.code === undefined)
+  const noCode = withIdentity({
+    title: '日报', enabled: true,
+    schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
+  })
+  check('不填 code 也能正常解析（可选字段）', noCode.code === undefined && noCode.id.length > 0)
+  check('无 id 兜底 = 内容指纹，同内容两次解析同 id（回写失败期间身份不漂）', (() => {
+    const again = withIdentity({
+      title: '日报', enabled: true,
+      schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' },
+    })
+    return /^t-[0-9a-f]{32}$/.test(noCode.id) && noCode.id === again.id
+  })())
+  check('同 code 的两条任务身份互不相干（code 不进判断）', (() => {
+    const a = withIdentity({ code: 'X', title: '甲', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'a' } })
+    const b = withIdentity({ code: 'X', title: '乙', enabled: true, schedule: { cron: '0 10 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'b' } })
+    return a.id !== b.id
+  })())
 
   // 关键回归：删掉第一条后，剩下那条必须还是原来的 id（下标方案会串号，写进 JSON 不会）
   const arr = JSON.parse(r1.json)
@@ -113,7 +144,8 @@ try {
     { id: 123, title: 'C', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'c' } },
   ])
   const rBad = ensureIdsInInlineJson(badId)
-  check('id 格式不对（数字）当成没有，重新生成', rBad.changed === true && /^t-[0-9a-f]{32}$/.test(JSON.parse(rBad.json)[0].id))
+  check('id 格式不对（数字）当成没有，重新生成（主路径：随机 UUID）',
+    rBad.changed === true && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(JSON.parse(rBad.json)[0].id)))
   const emptyId = JSON.stringify([
     { id: '   ', title: 'D', enabled: true, schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'T', prompt: 'd' } },
   ])
