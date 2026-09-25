@@ -57,7 +57,6 @@ export const taskDefinitionSchema = z.object({
       z.object({
         task: z.string().min(1),
         semantics: z.enum(dependencySemantics),
-        freshness: isoDuration.optional(),
       }),
     )
     .optional(),

@@ -10,7 +10,12 @@ export interface Scheduler {
     startupDiagnostics: () => void;
 }
 export type Judgement = 'ready' | 'blocked';
-export declare function judgeDependencies(store: TaskStore, task: TaskDefinition, logicalDate: string, scheduledAt: string): Judgement;
+/** 依赖判定结果（决策 33）：`staleNotes` = 复用旧产出的告警，只提示不拦。 */
+export interface DependencyVerdict {
+    ready: boolean;
+    staleNotes: string[];
+}
+export declare function judgeDependencies(store: TaskStore, task: TaskDefinition, logicalDate: string, scheduledAt: string): DependencyVerdict;
 export declare function createScheduler(opts: {
     ctx: HostContext;
     logger: HostLogger;

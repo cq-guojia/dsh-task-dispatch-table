@@ -12,7 +12,7 @@ import {
 } from '../dist/tasks.js'
 import { TaskStore } from '../dist/store.js'
 import { createReconciler } from '../dist/reconcile.js'
-import { createScheduler } from '../dist/scheduler.js'
+import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
 
 let passed = 0
 const failures = []
@@ -414,6 +414,56 @@ try {
     injectList.includes('@deepseek-ai/dsh-client-ui-sidebar'), injectList.join(', '))
 } finally {
   rmSync(root, { recursive: true, force: true })
+}
+
+// ── 9. 依赖判定（决策 33：上游最近一条必须 succeeded）──
+console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
+{
+  const depDir = mkdtempSync(join(tmpdir(), 'dsh-tdt-dep-'))
+  const depStore = new TaskStore(join(depDir, 'state.db'))
+  // 上游 A：10:00 成功（旧），11:00 失败（最近一条）⇒ 必须阻塞，不能拿 10:00 放行
+  depStore.ensureInstance(randomUUID(), 'A', '2026-09-26', '2026-09-26T10:00:00.000Z', 'succeeded')
+  depStore.ensureInstance(randomUUID(), 'A', '2026-09-26', '2026-09-26T11:00:00.000Z', 'failed')
+  // 上游 B：10:00 成功，11:00 在跑 ⇒ 阻塞等
+  depStore.ensureInstance(randomUUID(), 'B', '2026-09-26', '2026-09-26T10:00:00.000Z', 'succeeded')
+  depStore.ensureInstance(randomUUID(), 'B', '2026-09-26', '2026-09-26T11:00:00.000Z', 'running')
+  // 上游 C：仅 09:00 成功
+  depStore.ensureInstance(randomUUID(), 'C', '2026-09-26', '2026-09-26T09:00:00.000Z', 'succeeded')
+
+  const mkTask = (dependsOn) => ({
+    id: 'DOWN', title: 'down', enabled: true,
+    schedule: { cron: '0 * * * *', window: 'PT2H' },
+    target: { workspace: 'Temp', prompt: 'x' },
+    depends_on: dependsOn,
+  })
+  const at = '2026-09-26T11:30:00.000Z'
+
+  check('上游最近一条 failed ⇒ 阻塞（不拿更早的旧成功放行）',
+    judgeDependencies(depStore, mkTask([{ task: 'A', semantics: 'latest_success' }]), '2026-09-26', at).ready === false)
+  check('上游最近一条 running ⇒ 阻塞等',
+    judgeDependencies(depStore, mkTask([{ task: 'B', semantics: 'latest_success' }]), '2026-09-26', at).ready === false)
+  check('上游无任何记录 ⇒ 阻塞',
+    judgeDependencies(depStore, mkTask([{ task: 'NOPE', semantics: 'latest_success' }]), '2026-09-26', at).ready === false)
+  check('上游最近一条 succeeded ⇒ 放行',
+    judgeDependencies(depStore, mkTask([{ task: 'C', semantics: 'latest_success' }]), '2026-09-26', at).ready === true)
+  check('same_period 同日 succeeded ⇒ 放行',
+    judgeDependencies(depStore, mkTask([{ task: 'C', semantics: 'same_period' }]), '2026-09-26', at).ready === true)
+  check('same_period 同日 failed ⇒ 阻塞',
+    judgeDependencies(depStore, mkTask([{ task: 'A', semantics: 'same_period' }]), '2026-09-26', at).ready === false)
+
+  // 复用旧产出告警：下游上次执行 11:00，上游成功仅到 09:00 ⇒ 复用
+  depStore.ensureInstance(randomUUID(), 'DOWN', '2026-09-26', '2026-09-26T11:00:00.000Z', 'succeeded')
+  const stale = judgeDependencies(depStore, mkTask([{ task: 'C', semantics: 'latest_success' }]), '2026-09-26', '2026-09-26T12:00:00.000Z')
+  check('复用旧产出 ⇒ 放行但带 stale 告警（只提示不拦）',
+    stale.ready === true && stale.staleNotes.length === 1, JSON.stringify(stale.staleNotes))
+
+  // 上游有更新的成功（11:30）⇒ 不告警
+  depStore.ensureInstance(randomUUID(), 'C', '2026-09-26', '2026-09-26T11:30:00.000Z', 'succeeded')
+  const fresh = judgeDependencies(depStore, mkTask([{ task: 'C', semantics: 'latest_success' }]), '2026-09-26', '2026-09-26T12:00:00.000Z')
+  check('上游有新成功 ⇒ 放行且无告警', fresh.ready === true && fresh.staleNotes.length === 0, JSON.stringify(fresh.staleNotes))
+
+  depStore.close()
+  rmSync(depDir, { recursive: true, force: true })
 }
 
 console.log(`\n冒烟结果：${passed} 项通过，${failures.length} 项失败`)

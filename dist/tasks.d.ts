@@ -39,7 +39,6 @@ export declare const taskDefinitionSchema: z.ZodObject<{
             same_period: "same_period";
             latest_success: "latest_success";
         }>;
-        freshness: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
 /** 用户书写形态：`id` 可缺省。 */

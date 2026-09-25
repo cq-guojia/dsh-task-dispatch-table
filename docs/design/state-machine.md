@@ -107,10 +107,11 @@ WHERE task_id = '<task_id>' AND scheduled_at = '<计划时刻>';  -- 决策 25�
 
 | 语义 | 判定 | 缺了怎么办 | 适用 |
 |---|---|---|---|
-| `same_period` | 找**同一 logical date** 的上游实例 | 上游缺失/未成功 → 下游**不建行**，记 `task_log`(dep_blocked)，下轮同槽再判（决策 31）；窗口过期仍不满足 → 记 `missed_slot`，**仍不建行** | 日榜 → 日报 |
-| `latest_success` | 找**最近一次成功** + 新鲜度上限（`freshness`，如 ≤ 8 天） | 无成功记录 / 超上限 → 同上：不建行、记日志、下轮再判；窗口过期记 `missed_slot` | 月榜 → 报告 |
+| `same_period` | 找**同一 logical date** 的上游实例（一天多刻度取**最新一条**，决策 33） | 上游缺失/未成功 → 下游**不建行**，记 `task_log`(dep_blocked)，下轮同槽再判（决策 31）；窗口过期仍不满足 → 记 `missed_slot`，**仍不建行** | 日榜 → 日报 |
+| `latest_success` | 取上游**最近一条**实例（**不分状态**），**必须正好是 `succeeded`**（决策 33） | 在跑 / 失败 / 无记录 → 下游**不建行**，记 `dep_blocked`，下轮再判；窗口过期记 `missed_slot`。⚠️ 上游「错过」（无记录）时会取到**上一次**成功 ⇒ 放行但记 **warn**「复用旧产出」（已知风险，**不拦**） | 月报 → 季报、周报 → 日报（快照复用） |
 
-⚠️ 边界细节（`freshness` 缺省语义、上游多刻度、是否立即断链等）**未拍板**，见 PROGRESS 未决项 **U7**。
+⚠️ **决策 33**：`freshness` 字段已删除；水位线方案已废弃（与「周报→日报」快照复用冲突）。
+完整结论见 [decisions.md](decisions.md) 决策 33 与 [worklog/dependency-semantics.md](../worklog/dependency-semantics.md)。
 
 ⚠️ **归属用「计划时刻 `scheduled_at`」，不是「实际开始时间」**——任务 9:00 计划、因等前置 11:00 才跑，它仍属**今天**。这与「过窗切次日」（§5、§7 实例保障）天然咬合。
 

@@ -306,21 +306,20 @@ export class TaskStore {
             .prepare(`UPDATE task_instances SET lease_until = ?, updated_at = ? WHERE id = ?`)
             .run(new Date(Date.now() + leaseMs).toISOString(), nowIso(), id);
     }
-    /** 依赖判定 same_period（state-machine §9）：同 logical_date 的上游实例。 */
+    /** 依赖判定 same_period（state-machine §9）：同 logical_date 的上游实例；一天多刻度取最新一条（决策 33）。 */
     getSamePeriod(upstreamTaskId, logicalDate) {
         return this.db
-            .prepare('SELECT * FROM task_instances WHERE task_id = ? AND logical_date = ?')
+            .prepare('SELECT * FROM task_instances WHERE task_id = ? AND logical_date = ? ORDER BY scheduled_at DESC LIMIT 1')
             .get(upstreamTaskId, logicalDate);
     }
-    /** 依赖判定 latest_success（state-machine §9）：最近一次 succeeded；freshnessCutoff 为 ISO 时刻下限。 */
-    getLatestSuccess(upstreamTaskId, freshnessCutoff) {
-        const rows = this.db
-            .prepare(`SELECT * FROM task_instances
-                WHERE task_id = ? AND status = 'succeeded'
-                ORDER BY logical_date DESC LIMIT 1`)
-            .get(upstreamTaskId);
-        if (rows === undefined || freshnessCutoff === undefined)
-            return rows;
-        return rows.scheduled_at >= freshnessCutoff ? rows : undefined;
+    /**
+     * 某任务的**最近一条**实例（不分状态，按 `scheduled_at` 倒序）——决策 33 判定用：
+     * 上游最近一条必须**正好是 `succeeded`** 才放行；在跑 / 失败 / 无记录 ⇒ 阻塞。
+     * ⚠️ 排序必须按 `scheduled_at`：原按 `logical_date` 只到「日」，同日多次取哪条不确定。
+     */
+    getLatestInstance(taskId) {
+        return this.db
+            .prepare('SELECT * FROM task_instances WHERE task_id = ? ORDER BY scheduled_at DESC LIMIT 1')
+            .get(taskId);
     }
 }

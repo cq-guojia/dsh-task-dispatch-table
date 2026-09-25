@@ -49,26 +49,31 @@ function stripJsoncComments(text) {
 export function judgeDependencies(store, task, logicalDate, scheduledAt) {
     const deps = task.depends_on;
     if (!deps || deps.length === 0)
-        return 'ready';
+        return { ready: true, staleNotes: [] };
+    const staleNotes = [];
+    // 「复用旧产出」告警判据：下游上次执行时刻（首次运行无 ⇒ 不告警）。只提示，不拦。
+    const lastRun = store.getLatestInstance(task.id);
+    const lastRunMs = lastRun === undefined ? undefined : Date.parse(lastRun.scheduled_at);
     for (const dep of deps) {
         if (dep.semantics === 'same_period') {
+            // 同周期：同 logical_date 取最新一条，必须 succeeded（决策 33 #2）
             const upstream = store.getSamePeriod(dep.task, logicalDate);
             if (upstream === undefined || upstream.status !== 'succeeded')
-                return 'blocked';
+                return { ready: false, staleNotes: [] };
+            continue;
         }
-        else {
-            const upstream = store.getLatestSuccess(dep.task, freshnessCutoff(dep.freshness, scheduledAt));
-            if (upstream === undefined)
-                return 'blocked';
+        // latest_success（决策 33）：上游**最近一条**（不分状态）必须正好是 succeeded；
+        // 在跑 / 失败 / 无记录 ⇒ 阻塞，绝不拿更早的旧成功放行。
+        const latest = store.getLatestInstance(dep.task);
+        if (latest === undefined || latest.status !== 'succeeded')
+            return { ready: false, staleNotes: [] };
+        const upstreamMs = Date.parse(latest.scheduled_at);
+        // 上游这份成功不晚于下游上次执行 ⇒ 下游上次跑时它已存在 ⇒ 复用旧产出，告警
+        if (lastRunMs !== undefined && upstreamMs <= lastRunMs) {
+            staleNotes.push(`上游 ${dep.task} 无新产出，本次复用 ${latest.scheduled_at} 的旧产出`);
         }
     }
-    return 'ready';
-}
-/** freshness 截止：相对本刻度窗口起点的便宜量（决策 9：latest_success 的新鲜度基准 = scheduled_at）。 */
-function freshnessCutoff(freshness, scheduledAt) {
-    if (freshness === undefined)
-        return undefined; // 未配 ⇒ 任意历史成功（决策 9 现状，待 U7 拍板）
-    return new Date(Date.parse(scheduledAt) - durationMs(freshness)).toISOString();
+    return { ready: true, staleNotes };
 }
 function isOnce(task) {
     return task.schedule.once !== undefined;
@@ -171,9 +176,14 @@ function dispatchNewSlots(ctx, logger, store, reconciler, tasks, config, depLog)
         if (slot === undefined)
             continue;
         // 同步预条件：依赖 + 工作区（不过 ⇒ 不建行、记日志）
-        if (judgeDependencies(store, task, slot.logicalDate, slot.scheduledAtIso) !== 'ready') {
+        const depVerdict = judgeDependencies(store, task, slot.logicalDate, slot.scheduledAtIso);
+        if (!depVerdict.ready) {
             logDepBlocked(depLog, store, task.id, slot.scheduledAtIso);
             continue;
+        }
+        // 复用旧产出：只告警，不拦（决策 33 已知风险）
+        for (const note of depVerdict.staleNotes) {
+            store.appendLog({ taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'warn', kind: 'stale-upstream', message: note });
         }
         let workspace;
         try {
@@ -208,9 +218,13 @@ function redispatchPending(ctx, logger, store, reconciler, tasks, config, depLog
                 store.appendLog({ taskId: task.id, scheduledAt: row.scheduled_at, level: 'warn', kind: 'stray_pending', message: '窗口外残留 pending，已删除（视为未执行）' });
                 continue;
             }
-            if (judgeDependencies(store, task, row.logical_date, row.scheduled_at) !== 'ready') {
+            const depVerdict = judgeDependencies(store, task, row.logical_date, row.scheduled_at);
+            if (!depVerdict.ready) {
                 logDepBlocked(depLog, store, task.id, row.scheduled_at);
                 continue;
+            }
+            for (const note of depVerdict.staleNotes) {
+                store.appendLog({ taskId: task.id, scheduledAt: row.scheduled_at, level: 'warn', kind: 'stale-upstream', message: note });
             }
             let workspace;
             try {
