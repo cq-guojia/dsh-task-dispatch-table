@@ -25,7 +25,9 @@ CREATE TABLE IF NOT EXISTS task_instances (
   dispatched_at TEXT,
   finished_at   TEXT,
   outputs       TEXT,
-  tokens        INTEGER,
+  token_in      INTEGER,
+  token_out     INTEGER,
+  token_in_cache INTEGER,
   updated_at    TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS task_events (
@@ -95,13 +97,24 @@ export class TaskStore {
         this.db.exec('CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at)');
         this.ensureInstanceColumns();
     }
-    /** 决策 32：兼容旧库（无 outputs / tokens 列）。 */
+    /** 决策 32（修订）：兼容旧库（无 outputs / token 三拆列）。 */
     ensureInstanceColumns() {
         const cols = new Set(this.db.prepare('PRAGMA table_info(task_instances)').all().map(c => c.name));
         if (!cols.has('outputs'))
             this.db.exec('ALTER TABLE task_instances ADD COLUMN outputs TEXT');
-        if (!cols.has('tokens'))
-            this.db.exec('ALTER TABLE task_instances ADD COLUMN tokens INTEGER');
+        // 旧版决策 32 曾用单个 tokens 列；拆成三列后卸下旧列（不支持 DROP COLUMN 的旧 SQLite 静默跳过）。
+        if (cols.has('tokens')) {
+            try {
+                this.db.exec('ALTER TABLE task_instances DROP COLUMN tokens');
+            }
+            catch { /* 旧引擎不支持 DROP COLUMN，留作死列无害 */ }
+        }
+        if (!cols.has('token_in'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN token_in INTEGER');
+        if (!cols.has('token_out'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN token_out INTEGER');
+        if (!cols.has('token_in_cache'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN token_in_cache INTEGER');
     }
     close() {
         this.db.close();
@@ -188,11 +201,11 @@ export class TaskStore {
         const result = this.db.prepare('DELETE FROM task_log WHERE ts < ?').run(cutoff);
         return Number(result.changes);
     }
-    /** 完成瞬间写回产出与 token（决策 32：总表冗余，task_events 仍为真源）。 */
-    recordCompletion(id, outputs, tokens) {
+    /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
+    recordCompletion(id, outputs, tokenIn, tokenOut, tokenInCache) {
         this.db
-            .prepare('UPDATE task_instances SET outputs = ?, tokens = ?, updated_at = ? WHERE id = ?')
-            .run(outputs, tokens, nowIso(), id);
+            .prepare('UPDATE task_instances SET outputs = ?, token_in = ?, token_out = ?, token_in_cache = ?, updated_at = ? WHERE id = ?')
+            .run(outputs, tokenIn, tokenOut, tokenInCache, nowIso(), id);
     }
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
     findBySlot(taskId, scheduledAt) {

@@ -50,7 +50,9 @@ CREATE TABLE task_instances (
   dispatched_at TEXT,                    -- ★ 实际派发时刻（可能晚于 scheduled_at），**不进身份**
   finished_at   TEXT,
   outputs       TEXT,                    -- 决策 32：完成瞬间写回的产出（回执 outputs 的 JSON 文本，冗余）
-  tokens        INTEGER,                 -- 决策 32：本次执行的 token 用量（宿主事件带 usage 才累计，否则 NULL）
+  token_in      INTEGER,                 -- 决策 32（修订）：输入（prompt）token，宿主事件带 usage 才累计，否则 NULL
+  token_out     INTEGER,                 -- 决策 32（修订）：输出（completion）token
+  token_in_cache INTEGER,                -- 决策 32（修订）：命中上下文缓存的输入 token
   updated_at    TEXT NOT NULL
 );
 -- ★ 防重闸门（唯一索引而非表约束：旧库加索引即可升级，不必重建表）

@@ -47,9 +47,9 @@ function num(v) {
     return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
 }
 /**
- * 从会话事件里取 token 用量（决策 32）。
+ * 从会话事件里取 token 用量分量（决策 32 修订）。
  * 宿主各版本把用量挂的位置与字段名不一 ⇒ 多位置 × 多字段名探测；
- * 取不到返回 undefined（tokens 列留 null，不阻塞链路）。
+ * 取不到（事件不带 usage，或只给总数无法归属）返回 undefined（三列留 null，不阻塞链路）。
  */
 export function extractTokenUsage(event) {
     if (typeof event !== 'object' || event === null)
@@ -69,16 +69,19 @@ export function extractTokenUsage(event) {
         const u = holder;
         const inOut = num(u.promptTokens) ?? num(u.inputTokens) ?? num(u.prompt_tokens);
         const outOut = num(u.completionTokens) ?? num(u.outputTokens) ?? num(u.completion_tokens);
-        const total = num(u.totalTokens) ?? num(u.total_tokens) ?? num(u.total) ??
-            (inOut !== undefined || outOut !== undefined ? (inOut ?? 0) + (outOut ?? 0) : undefined);
-        if (total !== undefined)
-            return total;
+        const cacheOut = num(u.cachedTokens) ?? num(u.cacheTokens) ?? num(u.cached_tokens)
+            ?? num(u.promptTokensDetails?.cachedTokens)
+            ?? num(u.prompt_tokens_details?.cached_tokens);
+        // 三者任一有值才算取到（避免对空 usage 对象误报；只给总数无法归属则不记）
+        if (inOut !== undefined || outOut !== undefined || cacheOut !== undefined) {
+            return { in: inOut, out: outOut, cache: cacheOut };
+        }
     }
     return undefined;
 }
 export function createReconciler({ ctx, logger, store, options }) {
     const handles = new Map();
-    /** token 用量累计（决策 32）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
+    /** token 用量分量累计（决策 32 修订）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
     const tokenTotals = new Map();
     /** 事件字段只打印一次（用于确认宿主把用量挂在哪，便于收紧取值逻辑）。 */
     let eventShapeLogged = false;
@@ -94,14 +97,14 @@ export function createReconciler({ ctx, logger, store, options }) {
             handles.delete(sessionId);
     }
     function finishTerminal(instance, status, reason, detail, outputs) {
-        const tokens = tokenTotals.get(instance.id) ?? null;
+        const tk = tokenTotals.get(instance.id);
         if (tokenTotals.has(instance.id))
             tokenTotals.delete(instance.id);
         store.transition(instance.id, { status, finished_at: new Date().toISOString(), detail: reason });
         if (detail !== undefined)
             store.appendEvent(instance.id, 'receipt_check', { reason, detail });
-        // 决策 32：完成瞬间写回产出与 token 到总表（冗余，task_events 仍为真源）
-        store.recordCompletion(instance.id, outputs ?? null, tokens);
+        // 决策 32 修订：完成瞬间写回产出与 token 三拆列到总表（冗余，task_events 仍为真源）
+        store.recordCompletion(instance.id, outputs ?? null, tk?.in ?? null, tk?.out ?? null, tk?.cache ?? null);
         forgetHandle(instance.session_id);
         // 会话已结束（turn/end / disposed 触发的收敛）→ 归档；租约误判的回收不归档。
         if (instance.session_id !== null)
@@ -235,10 +238,15 @@ export function createReconciler({ ctx, logger, store, options }) {
             const instance = store.getBySession(session.id);
             if (instance === undefined)
                 return;
-            // 累计 token 用量（决策 32）：宿主事件带用量则累加；不带则留 null，不阻塞链路
+            // 累计 token 用量分量（决策 32 修订）：宿主事件带用量则累加；不带则留 null，不阻塞链路
             const used = extractTokenUsage(event);
             if (used !== undefined) {
-                tokenTotals.set(instance.id, (tokenTotals.get(instance.id) ?? 0) + used);
+                const cur = tokenTotals.get(instance.id) ?? {};
+                tokenTotals.set(instance.id, {
+                    in: (cur.in ?? 0) + (used.in ?? 0),
+                    out: (cur.out ?? 0) + (used.out ?? 0),
+                    cache: (cur.cache ?? 0) + (used.cache ?? 0),
+                });
             }
             else if (!eventShapeLogged) {
                 eventShapeLogged = true;

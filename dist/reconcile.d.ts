@@ -41,10 +41,19 @@ export declare function checkReceipt(task: TaskDefinition, workspacePath: string
     reason?: string;
     detail?: unknown;
 };
+/** token 用量分量（决策 32 修订：不再记单一总数，按输入/输出/缓存拆分）。 */
+export interface TokenUsage {
+    /** 输入（prompt）token。 */
+    in?: number;
+    /** 输出（completion）token。 */
+    out?: number;
+    /** 命中上下文缓存的输入 token。 */
+    cache?: number;
+}
 /**
- * 从会话事件里取 token 用量（决策 32）。
+ * 从会话事件里取 token 用量分量（决策 32 修订）。
  * 宿主各版本把用量挂的位置与字段名不一 ⇒ 多位置 × 多字段名探测；
- * 取不到返回 undefined（tokens 列留 null，不阻塞链路）。
+ * 取不到（事件不带 usage，或只给总数无法归属）返回 undefined（三列留 null，不阻塞链路）。
  */
-export declare function extractTokenUsage(event: unknown): number | undefined;
+export declare function extractTokenUsage(event: unknown): TokenUsage | undefined;
 export declare function createReconciler({ ctx, logger, store, options }: ReconcilerDeps): Reconciler;

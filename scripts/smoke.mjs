@@ -466,15 +466,19 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
   rmSync(depDir, { recursive: true, force: true })
 }
 
-// ── 10. token 用量提取（决策 32：宿主挂载位置/字段名不一 ⇒ 多形状探测）──
+// ── 10. token 用量提取（决策 32 修订：结构化 TokenUsage，不再返回单一总数）──
 console.log('\n[10] token 用量提取')
 {
-  check('usage.totalTokens', extractTokenUsage({ usage: { totalTokens: 123 } }) === 123)
-  check('usage.promptTokens + completionTokens', extractTokenUsage({ usage: { promptTokens: 10, completionTokens: 5 } }) === 15)
-  check('data.usage.inputTokens + outputTokens', extractTokenUsage({ data: { usage: { inputTokens: 3, outputTokens: 4 } } }) === 7)
-  check('usage 下划线命名（prompt_tokens/completion_tokens）', extractTokenUsage({ usage: { prompt_tokens: 1, completion_tokens: 2 } }) === 3)
-  check('detail.usage.total', extractTokenUsage({ detail: { usage: { total: 9 } } }) === 9)
-  check('无用量字段 ⇒ undefined（tokens 留 null，不阻塞）', extractTokenUsage({ type: 'turn/end' }) === undefined)
+  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+  // 只给总数无法归属 ⇒ 三列全 null（不伪造）
+  check('仅 totalTokens ⇒ undefined（不记单一总数）', extractTokenUsage({ usage: { totalTokens: 123 } }) === undefined)
+  check('usage.promptTokens + completionTokens', eq(extractTokenUsage({ usage: { promptTokens: 10, completionTokens: 5 } }), { in: 10, out: 5 }))
+  check('data.usage.inputTokens + outputTokens', eq(extractTokenUsage({ data: { usage: { inputTokens: 3, outputTokens: 4 } } }), { in: 3, out: 4 }))
+  check('usage 下划线命名（prompt_tokens/completion_tokens）', eq(extractTokenUsage({ usage: { prompt_tokens: 1, completion_tokens: 2 } }), { in: 1, out: 2 }))
+  check('usage.cachedTokens', eq(extractTokenUsage({ usage: { promptTokens: 1, completionTokens: 2, cachedTokens: 3 } }), { in: 1, out: 2, cache: 3 }))
+  check('prompt_tokens_details.cached_tokens（OpenAI 风格）', eq(extractTokenUsage({ usage: { prompt_tokens: 1, completion_tokens: 2, prompt_tokens_details: { cached_tokens: 4 } } }), { in: 1, out: 2, cache: 4 }))
+  check('detail.usage 仅 total ⇒ undefined', extractTokenUsage({ detail: { usage: { total: 9 } } }) === undefined)
+  check('无用量字段 ⇒ undefined（三列留 null，不阻塞）', extractTokenUsage({ type: 'turn/end' }) === undefined)
   check('非对象 ⇒ undefined', extractTokenUsage(null) === undefined)
 }
 

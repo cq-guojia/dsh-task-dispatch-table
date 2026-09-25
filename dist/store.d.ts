@@ -12,7 +12,9 @@ export interface TaskInstance {
     dispatched_at: string | null;
     finished_at: string | null;
     outputs: string | null;
-    tokens: number | null;
+    token_in: number | null;
+    token_out: number | null;
+    token_in_cache: number | null;
     updated_at: string;
 }
 /** 调试快照事件行（detail 截断，临时调试面板用）。带 instance_id 供面板按实例过滤展开。 */
@@ -60,7 +62,7 @@ export declare class TaskStore {
      * - 已迁移过的库：仅补决策 32 冗余字段（outputs / tokens 列），不重复去重。
      */
     private migrate;
-    /** 决策 32：兼容旧库（无 outputs / tokens 列）。 */
+    /** 决策 32（修订）：兼容旧库（无 outputs / token 三拆列）。 */
     private ensureInstanceColumns;
     close(): void;
     appendEvent(instanceId: string, kind: string, detail?: unknown): void;
@@ -104,8 +106,8 @@ export declare class TaskStore {
     }): void;
     /** 按保留期清除 task_log（决策 32：独立表，可定时清）。返回删除条数。 */
     purgeLog(retentionDays: number): number;
-    /** 完成瞬间写回产出与 token（决策 32：总表冗余，task_events 仍为真源）。 */
-    recordCompletion(id: string, outputs: string | null, tokens: number | null): void;
+    /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
+    recordCompletion(id: string, outputs: string | null, tokenIn: number | null, tokenOut: number | null, tokenInCache: number | null): void;
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
     findBySlot(taskId: string, scheduledAt: string): TaskInstance | undefined;
     get(id: string): TaskInstance | undefined;
