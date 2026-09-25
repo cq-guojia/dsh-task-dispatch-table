@@ -243,10 +243,12 @@ try {
 
   // 5a. 预条件满足（工作区 / 模型齐全）⇒ 当前刻度恰好派发 1 条 dispatched，绝不预建 pending/skipped
   const okCtx = {
-    workspaceRegistry: { list: () => [{ title: 'Temp', path: schedDir }], attachWorkspace: async () => {}, archiveSession: async () => {} },
+    // 工作区实体须带 attachSession（host.ts HostWorkspace）：派发归组会调它，缺了会判 workspace-attach-failed
+    workspaceRegistry: { list: () => [{ title: 'Temp', path: schedDir, attachSession: async () => {} }], attachWorkspace: async () => {}, archiveSession: async () => {} },
     agents: { listModels: async () => [{ provider: 'p', models: ['m'] }], create: async () => ({ id: 'sess-1', agent: { send: () => {} } }) },
     sessionTitle: { rename: () => {} },
-    get: () => undefined,
+    // 模型路由走 ctx.get('agentDefaultModel')（真机日志里的 modelSource=host-default），不是 agents.listModels
+    get: (name) => (name === 'agentDefaultModel' ? { currentSelection: () => ({ provider: 'omniroute', model: 'custom.free' }) } : undefined),
   }
   const okCfg = () => ({
     tasksInline: JSON.stringify([
@@ -266,6 +268,15 @@ try {
   check('当前刻度恰好派发 1 条 dispatched（懒建行）', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
   check('不预建 pending', schedStore.listByStatus(['pending']).length === 0)
   check('不补建 skipped（无洪水）', schedStore.listByStatus(['skipped']).length === 0)
+  // 让异步拉起（launchAsync）跑完，验证派发确实写了 dispatched_at：
+  // 回执校验「产物 mtime > dispatched_at」与 sweep 派发宽限都依赖它；缺失会回退 updated_at ⇒ 每次误判 output-stale
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  const dispatchedRows = schedStore.listByStatus(['dispatched'])
+  check(
+    '派发行写了 dispatched_at（缺失会误判 output-stale）',
+    dispatchedRows.length === 1 && dispatchedRows[0].dispatched_at !== null && !Number.isNaN(Date.parse(dispatchedRows[0].dispatched_at)),
+    JSON.stringify(dispatchedRows.map(r => r.dispatched_at)),
+  )
   okScheduler.tick()
   check('重复 tick 不重复派发同一刻度', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
 

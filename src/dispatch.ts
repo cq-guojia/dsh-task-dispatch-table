@@ -265,7 +265,15 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
   const sessionId = randomUUID()
   // 领取后先把会话身份落到实例行，再建 agent——session/created（factory announce）
   // 到达时实例必已带 session_id，对账可立即转 running。
-  store.transition(instanceId, { status: 'dispatched', session_id: sessionId, detail: 'assign-session' })
+  // ⚠️ dispatched_at 必须在此写入（原由 store.casClaim 负责，决策 31 懒建行后已不走 CAS）：
+  // 回执校验（reconcile.ts）用「产物 mtime > dispatched_at」判新鲜，sweep 也用它算派发宽限；
+  // 缺失会回退到 updated_at（最后一次状态变更，晚于产物写入）⇒ 每次都误判 output-stale。
+  store.transition(instanceId, {
+    status: 'dispatched',
+    session_id: sessionId,
+    dispatched_at: new Date().toISOString(),
+    detail: 'assign-session',
+  })
 
   // provider/model 必须成对显式传（决策 22）：宿主缺省不填 {{model}}，deployment persona
   // 里的 {{model}} 取不到值会直接抛错、本轮秒结束。会话由本调用自建，禁止预建（见文件头）。
