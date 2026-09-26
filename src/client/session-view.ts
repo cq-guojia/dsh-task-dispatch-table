@@ -16,6 +16,11 @@
 //    按 anchorSeq 有序的 finalized ConversationNode 流，StatsPills 同款消费），
 //    不碰 keyed 的 ChatNodeStore —— 那层的 data 形状随注册模块漂移。
 //
+// 5. 归档/非活跃会话（host 将其标为 inactive）：uiConversation.binding 直接抛
+//    `inactive session`，sessions.binding(id) 也返回空，故步骤 1-4 全程走不通。
+//    改走冷读入口 sessions.manager.projectionStores[id].rows（按 id 直取的会话投影 =
+//    对话节点），静态喂给 renderNode —— 无需激活会话、不依赖 uiConversation 装配。
+//
 // 渲染（决策 34）：不挂官方 ChatView（其只渲染「当前会话」，喂不进归档 id），改为
 // **自渲染 DOM + 套官方 design token**。样式规则见 ./archive-session-css（运行时注入），
 // 颜色走全局 `--dsw-alias-*`、布局走 `--dsh-chat-*`，明/暗自动跟随；正文走 markdown。
@@ -152,65 +157,101 @@ export function openSessionView(
   try {
     const found: SessionBindingFace | undefined = sessions.binding(id)
     if (found === undefined || found === null) {
-      // 根因已确认：归档会话在宿主标记为 inactive，uiConversation.binding 拒绝 inactive 会话
-      // （抛 "inactive session"），sessions.binding(id) 同样返回空。故「经 uiConversation 的当前会话渲染」
-      // 对归档会话走不通。本探针一次性探尽「绕开 uiConversation.binding 的冷读入口」，供下一轮直接落修复：
-      //   - sessions.manager.remote 的 follow/page/history/read/snapshot（文档记录的冷读接口，在控制器级 remote 上）
-      //   - sessions.manager.projectionStores（按 id 直取会话投影 = 对话节点）
-      //   - sessions.manager.sessions 映射
+      // 归档/非活跃会话：uiConversation.binding 拒绝 inactive 会话（抛 "inactive session"），
+      // sessions.binding(id) 也返回空。改走冷读入口 sessions.manager.projectionStores[id].rows
+      // （按 id 直取的会话投影 = 对话节点），静态喂给现有 renderNode，绕开 uiConversation 链路。
       const keysOf = (o: unknown): string[] => (o == null || typeof o !== 'object') ? [] : Object.keys(o as object)
-      const fnKeys = (o: unknown): string[] => (o == null || typeof o !== 'object')
-        ? [] : keysOf(o).filter(k => typeof (o as Record<string, unknown>)[k] === 'function')
-      const shape = (o: unknown): string => {
+      const shape0 = (o: unknown): string => {
         if (o == null) return 'null'
         if (typeof o !== 'object') return typeof o
         if (Array.isArray(o)) return `array(${o.length})`
         return '{' + keysOf(o).slice(0, 12).join(',') + '}'
       }
-      const logAsync = (label: string, p: unknown): void => {
-        if (p && typeof p === 'object' && typeof (p as { then?: unknown }).then === 'function') {
-          (p as Promise<unknown>).then((res) => {
-            const ro = res as Record<string, unknown> | null
-            log('info', `${label} resolve=${shape(res)}`)
-            if (ro) for (const k of ['records', 'nodes', 'legacy', 'messages', 'projection', 'cursor', 'openState']) {
-              if (ro[k] != null) log('info', `${label}.${k}=${shape(ro[k])}`)
-            }
-          }).catch((e) => log('warn', `${label} reject:${(e as Error)?.message ?? e}`))
-        } else log('info', `${label} sync=${shape(p)}`)
+      const deepShape = (o: unknown, depth = 0): string => {
+        if (o == null || typeof o !== 'object') return o === null ? 'null' : typeof o
+        if (depth > 3) return shape0(o)
+        if (Array.isArray(o)) {
+          const head = o.slice(0, 2).map(x => deepShape(x, depth + 1))
+          return `array(${o.length})${head.length ? '<' + head.join('|') + '>' : ''}`
+        }
+        const entries = keysOf(o).slice(0, 14).map(k => `${k}:${deepShape((o as Record<string, unknown>)[k], depth + 1)}`)
+        return '{' + entries.join(',') + '}'
       }
       const S = sessions as unknown as Record<string, unknown>
       const mgr = S.manager as Record<string, unknown> | undefined
-      // 综合探针：绕开失效的 uiConversation.binding，一次探尽冷读入口。
-      const mgrRemote = mgr?.remote
-      const mgrSessions = mgr?.sessions
       const projStores = mgr?.projectionStores
-      log('warn', `binding(${id}) 空（inactive 会话）；manager.remote 函数键=[${fnKeys(mgrRemote).join(',')}]；manager.sessions 函数键=[${fnKeys(mgrSessions).join(',')}]；projectionStores 键=[${keysOf(projStores).slice(0, 8).join(',')}]`)
-      const addr = { kind: 'session', sessionId: id }
-      if (mgrRemote) {
-        for (const m of ['follow', 'page', 'getHistory', 'history', 'read', 'snapshot']) {
-          const fn = (mgrRemote as Record<string, unknown>)[m]
-          if (typeof fn === 'function') {
-            try {
-              const arg = m === 'page' ? { address: addr } : addr
-              logAsync(`manager.remote.${m}(${m === 'page' ? 'address' : 'addr'})`, (fn as (x: unknown) => unknown).call(mgrRemote, arg))
-            } catch (e) { log('warn', `manager.remote.${m} threw:${(e as Error)?.message ?? e}`) }
-          }
-        }
-      }
-      if (projStores) {
+      // projectionStores 按 id 取 store：兼容 .get(id) 与下标 [id]。
+      const store = (() => {
+        if (!projStores) return undefined
         const getFn = (projStores as Record<string, unknown>).get
-        const ps = typeof getFn === 'function'
+        return typeof getFn === 'function'
           ? (getFn as (x: string) => unknown).call(projStores, id)
           : (projStores as Record<string, unknown>)[id]
-        logAsync('manager.projectionStores[id]', ps)
+      })()
+      // rows 可能是数组，或被 Notifier/包装器包一层（.value / .get() / .array）。
+      const rawRows = (store as Record<string, unknown> | null | undefined)?.rows
+      const extractArray = (r: unknown): unknown[] => {
+        if (Array.isArray(r)) return r
+        if (r && typeof r === 'object') {
+          const rec = r as Record<string, unknown>
+          if (Array.isArray(rec.value)) return rec.value
+          if (typeof rec.get === 'function') { const v = (rec.get as () => unknown)(); if (Array.isArray(v)) return v }
+          if (Array.isArray(rec.array)) return rec.array
+        }
+        return []
       }
-      if (mgrSessions) {
-        const getFn = (mgrSessions as Record<string, unknown>).get
-        const ms = typeof getFn === 'function'
-          ? (getFn as (x: string) => unknown).call(mgrSessions, id)
-          : (mgrSessions as Record<string, unknown>)[id]
-        log('info', `manager.sessions[id]=${shape(ms)}；函数键=[${fnKeys(ms).join(',')}]`)
+      const rows = extractArray(rawRows)
+      // 行 → ConversationNodeLike：兼容行本身即节点，或被 record/node/value/data 包裹。
+      const toNode = (raw: unknown): ConversationNodeLike | null => {
+        if (!raw || typeof raw !== 'object') return null
+        const pick = (cand: unknown): ConversationNodeLike | null => {
+          if (!cand || typeof cand !== 'object') return null
+          const c = cand as Record<string, unknown>
+          if (typeof c.kind !== 'string') return null
+          const seq = typeof c.seq === 'number' ? c.seq
+            : typeof c.seq === 'string' ? Number(c.seq)
+            : rows.indexOf(raw)
+          const node: ConversationNodeLike = {
+            kind: c.kind,
+            seq: typeof seq === 'number' ? (Number.isFinite(seq) ? seq : rows.indexOf(raw)) : rows.indexOf(raw),
+            time: typeof c.time === 'number' ? c.time : 0,
+            content: c.content as ConversationNodeLike['content'],
+            blocks: c.blocks as ConversationNodeLike['blocks'],
+            call: c.call as ConversationNodeLike['call'],
+            isError: c.isError as boolean | undefined,
+            error: c.error as ConversationNodeLike['error'],
+            name: c.name as string | null | undefined,
+            args: c.args as string | null | undefined,
+            outcome: c.outcome as ConversationNodeLike['outcome'],
+            message: c.message as string | undefined,
+            code: c.code as string | undefined,
+            turn: c.turn as number | undefined,
+            retryState: c.retryState as ConversationNodeLike['retryState'],
+            summary: c.summary as string | null | undefined,
+            type: c.type as string | undefined,
+            data: c.data,
+          }
+          return node
+        }
+        const r = raw as Record<string, unknown>
+        return pick(r) ?? pick(r.record) ?? pick(r.node) ?? pick(r.value) ?? pick(r.data) ?? null
       }
+      const nodes = rows.map(toNode).filter((n): n is ConversationNodeLike => n !== null)
+      if (nodes.length > 0) {
+        log('info', `冷读 projectionStores[${id}] 成功：rows=${shape0(rawRows)}；nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map(n => n.kind).join(',')}]`)
+        log('info', `首节点深形状=${deepShape(nodes[0], 0)}`)
+        const staticTarget: SnapshotFace<ChatViewFace | undefined> = {
+          getSnapshot: () => ({ legacy: { nodes } }),
+          subscribe: () => () => {},
+        }
+        const staticSession: SnapshotFace<SessionSnapshotFace> & { open?: () => Promise<void>; loadOlder?: () => Promise<void> } = {
+          getSnapshot: () => ({ openState: 'open', hasMore: false }),
+          subscribe: () => () => {},
+        }
+        return { target: staticTarget, session: staticSession, loadOlder: () => {} }
+      }
+      // 真无数据：保留诊断，避免静默「点了没反应」。
+      log('warn', `binding(${id}) 空（inactive 会话）；projectionStores[${id}]=${shape0(store)}；rows=${shape0(rawRows)}；nodes=0；首行深形状=${rows.length ? deepShape(rows[0], 0) : '（无）'}；manager.sessions[id]=null（归档不在活动映射，符合预期）`)
       return null
     }
     binding = found

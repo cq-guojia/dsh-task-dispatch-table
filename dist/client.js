@@ -1986,65 +1986,93 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const found = sessions.binding(id);
 				if (found === void 0 || found === null) {
 					const keysOf = (o) => o == null || typeof o !== "object" ? [] : Object.keys(o);
-					const fnKeys = (o) => o == null || typeof o !== "object" ? [] : keysOf(o).filter((k) => typeof o[k] === "function");
-					const shape = (o) => {
+					const shape0 = (o) => {
 						if (o == null) return "null";
 						if (typeof o !== "object") return typeof o;
 						if (Array.isArray(o)) return `array(${o.length})`;
 						return "{" + keysOf(o).slice(0, 12).join(",") + "}";
 					};
-					const logAsync = (label, p) => {
-						if (p && typeof p === "object" && typeof p.then === "function") p.then((res) => {
-							const ro = res;
-							log("info", `${label} resolve=${shape(res)}`);
-							if (ro) {
-								for (const k of [
-									"records",
-									"nodes",
-									"legacy",
-									"messages",
-									"projection",
-									"cursor",
-									"openState"
-								]) if (ro[k] != null) log("info", `${label}.${k}=${shape(ro[k])}`);
-							}
-						}).catch((e) => log("warn", `${label} reject:${e?.message ?? e}`));
-						else log("info", `${label} sync=${shape(p)}`);
-					};
-					const mgr = sessions.manager;
-					const mgrRemote = mgr?.remote;
-					const mgrSessions = mgr?.sessions;
-					const projStores = mgr?.projectionStores;
-					log("warn", `binding(${id}) 空（inactive 会话）；manager.remote 函数键=[${fnKeys(mgrRemote).join(",")}]；manager.sessions 函数键=[${fnKeys(mgrSessions).join(",")}]；projectionStores 键=[${keysOf(projStores).slice(0, 8).join(",")}]`);
-					const addr = {
-						kind: "session",
-						sessionId: id
-					};
-					if (mgrRemote) for (const m of [
-						"follow",
-						"page",
-						"getHistory",
-						"history",
-						"read",
-						"snapshot"
-					]) {
-						const fn = mgrRemote[m];
-						if (typeof fn === "function") try {
-							const arg = m === "page" ? { address: addr } : addr;
-							logAsync(`manager.remote.${m}(${m === "page" ? "address" : "addr"})`, fn.call(mgrRemote, arg));
-						} catch (e) {
-							log("warn", `manager.remote.${m} threw:${e?.message ?? e}`);
+					const deepShape = (o, depth = 0) => {
+						if (o == null || typeof o !== "object") return o === null ? "null" : typeof o;
+						if (depth > 3) return shape0(o);
+						if (Array.isArray(o)) {
+							const head = o.slice(0, 2).map((x) => deepShape(x, depth + 1));
+							return `array(${o.length})${head.length ? "<" + head.join("|") + ">" : ""}`;
 						}
-					}
-					if (projStores) {
+						return "{" + keysOf(o).slice(0, 14).map((k) => `${k}:${deepShape(o[k], depth + 1)}`).join(",") + "}";
+					};
+					const projStores = sessions.manager?.projectionStores;
+					const store = (() => {
+						if (!projStores) return void 0;
 						const getFn = projStores.get;
-						logAsync("manager.projectionStores[id]", typeof getFn === "function" ? getFn.call(projStores, id) : projStores[id]);
+						return typeof getFn === "function" ? getFn.call(projStores, id) : projStores[id];
+					})();
+					const rawRows = store?.rows;
+					const extractArray = (r) => {
+						if (Array.isArray(r)) return r;
+						if (r && typeof r === "object") {
+							const rec = r;
+							if (Array.isArray(rec.value)) return rec.value;
+							if (typeof rec.get === "function") {
+								const v = rec.get();
+								if (Array.isArray(v)) return v;
+							}
+							if (Array.isArray(rec.array)) return rec.array;
+						}
+						return [];
+					};
+					const rows = extractArray(rawRows);
+					const toNode = (raw) => {
+						if (!raw || typeof raw !== "object") return null;
+						const pick = (cand) => {
+							if (!cand || typeof cand !== "object") return null;
+							const c = cand;
+							if (typeof c.kind !== "string") return null;
+							const seq = typeof c.seq === "number" ? c.seq : typeof c.seq === "string" ? Number(c.seq) : rows.indexOf(raw);
+							return {
+								kind: c.kind,
+								seq: typeof seq === "number" ? Number.isFinite(seq) ? seq : rows.indexOf(raw) : rows.indexOf(raw),
+								time: typeof c.time === "number" ? c.time : 0,
+								content: c.content,
+								blocks: c.blocks,
+								call: c.call,
+								isError: c.isError,
+								error: c.error,
+								name: c.name,
+								args: c.args,
+								outcome: c.outcome,
+								message: c.message,
+								code: c.code,
+								turn: c.turn,
+								retryState: c.retryState,
+								summary: c.summary,
+								type: c.type,
+								data: c.data
+							};
+						};
+						const r = raw;
+						return pick(r) ?? pick(r.record) ?? pick(r.node) ?? pick(r.value) ?? pick(r.data) ?? null;
+					};
+					const nodes = rows.map(toNode).filter((n) => n !== null);
+					if (nodes.length > 0) {
+						log("info", `冷读 projectionStores[${id}] 成功：rows=${shape0(rawRows)}；nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map((n) => n.kind).join(",")}]`);
+						log("info", `首节点深形状=${deepShape(nodes[0], 0)}`);
+						return {
+							target: {
+								getSnapshot: () => ({ legacy: { nodes } }),
+								subscribe: () => () => {}
+							},
+							session: {
+								getSnapshot: () => ({
+									openState: "open",
+									hasMore: false
+								}),
+								subscribe: () => () => {}
+							},
+							loadOlder: () => {}
+						};
 					}
-					if (mgrSessions) {
-						const getFn = mgrSessions.get;
-						const ms = typeof getFn === "function" ? getFn.call(mgrSessions, id) : mgrSessions[id];
-						log("info", `manager.sessions[id]=${shape(ms)}；函数键=[${fnKeys(ms).join(",")}]`);
-					}
+					log("warn", `binding(${id}) 空（inactive 会话）；projectionStores[${id}]=${shape0(store)}；rows=${shape0(rawRows)}；nodes=0；首行深形状=${rows.length ? deepShape(rows[0], 0) : "（无）"}；manager.sessions[id]=null（归档不在活动映射，符合预期）`);
 					return null;
 				}
 				binding = found;
