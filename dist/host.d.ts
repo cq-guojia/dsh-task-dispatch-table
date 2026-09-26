@@ -133,6 +133,13 @@ export interface HostWorkspaceRegistry {
     list(): readonly HostWorkspace[];
     get(id: string): HostWorkspace | undefined;
     archiveSession(id: SessionId): Promise<void>;
+    /**
+     * 反归档（恢复显示）：`api/workspace-controller/src/commands.ts:171` 有 `unarchiveSession`
+     * （host `workspaceRegistry.unarchiveSession` + remote 双通道），官方「已归档会话」设置页
+     * 就靠它恢复（dsh-capabilities 决策 29 修正）。
+     * 可选：宿主版本缺该面时，临时反归档查看通路不可用（对应路由返回 501）。
+     */
+    unarchiveSession?(id: SessionId): Promise<void>;
 }
 /** 已注册 provider 的展示元数据（@deepseek-ai/dsh-llm types：LlmProviderInfo）。 */
 export interface HostLlmProviderInfo {

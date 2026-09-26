@@ -1,7 +1,9 @@
 // dsh-task-dispatch-table：定时任务调度器宿主插件（可编译骨架）。
 // 读任务定义 JSON → 按 cron/窗口/依赖判定 → 在指定工作区派发 agent 会话 → 监听会话事件对账 → SQLite 记状态。
 // 调度层零大模型介入（PROGRESS 背景）；插件零业务逻辑——任务定义见 docs/examples。
-import type { HostContext, HostLogger, HostSettings, SettingsScope, z_any } from './host.js'
+import type {
+  HostContext, HostLogger, HostSettings, HostWorkspaceRegistry, SettingsScope, z_any,
+} from './host.js'
 import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
@@ -97,6 +99,8 @@ const makeDispatchRoutes = (
   persistTasksInline: (json: string) => Promise<void>,
   /** 取状态库（settings inject 就绪后非空）；未就绪时 /db 返回 503。 */
   getStore: () => TaskStore | null,
+  /** 取 workspaceRegistry（归档会话的临时反归档 / 回归档）。 */
+  getRegistry: () => HostWorkspaceRegistry | null,
 ): DispatchWebRoute[] => [
   {
     kind: 'exact',
@@ -140,6 +144,54 @@ const makeDispatchRoutes = (
         runtimeRef.tasksInline = json
         await persistTasksInline(json)
         writeJson(res, 200, { ok: true, assigned: changed ? assigned : 0 })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
+      }
+    },
+  },
+  {
+    // 归档会话查看：当前宿主把归档会话标为 inactive（sessions.binding 返回空、
+    // uiConversation.binding 抛 inactive session）⇒ 查看前先反归档让它恢复可读。
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/session/unarchive`,
+    handler: async (req, res) => {
+      if (req.method !== 'POST') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      try {
+        const parsed = JSON.parse(await readDispatchBody(req)) as { sessionId?: unknown }
+        if (typeof parsed.sessionId !== 'string' || parsed.sessionId === '') {
+          return writeJson(res, 400, { ok: false, error: 'sessionId-required' })
+        }
+        const registry = getRegistry()
+        if (registry === null) return writeJson(res, 503, { ok: false, error: 'registry-not-ready' })
+        if (typeof registry.unarchiveSession !== 'function') {
+          return writeJson(res, 501, { ok: false, error: 'unarchiveSession-unavailable：当前宿主版本无该面' })
+        }
+        await registry.unarchiveSession(parsed.sessionId)
+        writeJson(res, 200, { ok: true })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
+      }
+    },
+  },
+  {
+    // 关闭弹窗后把会话归档回去，平时列表依旧干净。
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/session/archive`,
+    handler: async (req, res) => {
+      if (req.method !== 'POST') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      try {
+        const parsed = JSON.parse(await readDispatchBody(req)) as { sessionId?: unknown }
+        if (typeof parsed.sessionId !== 'string' || parsed.sessionId === '') {
+          return writeJson(res, 400, { ok: false, error: 'sessionId-required' })
+        }
+        const registry = getRegistry()
+        if (registry === null) return writeJson(res, 503, { ok: false, error: 'registry-not-ready' })
+        await registry.archiveSession(parsed.sessionId)
+        writeJson(res, 200, { ok: true })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
@@ -265,8 +317,8 @@ export function apply(ctx: HostContext, config: unknown): void {
       wctx.logger.warn('[数据通道] 宿主上下文无 webServer.register 面，HTTP 路由未注册；客户端画面将无数据')
       return
     }
-    for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef)) webServer.register(route)
-    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db')
+    for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry)) webServer.register(route)
+    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive')
   })
   ctx.inject(['settings'], (sctx: HostContext) => {
     const settings = sctx.settings

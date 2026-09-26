@@ -2896,18 +2896,52 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const row = taskRows.find((item) => item.id === id);
 				return row === void 0 ? id : `${row.title}（${row.id}）`;
 			};
-			/** 打开只读会话弹窗：组装失败给出可见提示（服务缺失 / 会话不可解析），不再静默无反应。 */
-			const openView = (sessionId, heading) => {
+			/**
+			* 归档会话查看（当前宿主把归档会话标为 inactive：sessions.binding 返回空、
+			* uiConversation.binding 抛 inactive session）⇒ 查看前先反归档让它恢复可读，
+			* 弹窗关闭时再归档回去，平时列表依旧干净。
+			*/
+			const rearchive = (sessionId) => {
+				fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ sessionId })
+				}).catch(() => {});
+			};
+			/** 打开只读会话弹窗：反归档 → 组装 → 失败给出可见提示，不再静默无反应。 */
+			const openView = async (sessionId, heading) => {
 				if (viewSession === null) {
 					setViewErr("查看会话不可用：sessions / uiConversation 注入未就位（见控制台）");
 					return;
 				}
-				const target = viewSession(sessionId);
-				if (target === null) {
-					setViewErr("会话无法打开：sessions.binding 返回空或装配失败（原因见控制台 [task-dispatch:session-view] 日志）");
+				setViewErr(null);
+				try {
+					const res = await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ sessionId })
+					});
+					const body = await res.json();
+					if (!res.ok || body.ok !== true) {
+						setViewErr(`反归档失败（${body.error ?? `HTTP ${res.status}`}）：无法查看该会话`);
+						return;
+					}
+				} catch (error) {
+					setViewErr(`反归档请求失败：${error instanceof Error ? error.message : String(error)}`);
 					return;
 				}
-				setViewErr(null);
+				let target = null;
+				for (let attempt = 0; attempt < 8 && target === null; attempt++) {
+					target = viewSession(sessionId);
+					if (target === null) await new Promise((resolve) => {
+						setTimeout(resolve, 150);
+					});
+				}
+				if (target === null) {
+					setViewErr("会话已反归档但仍打不开：sessions.binding 返回空或装配失败（原因见控制台 [task-dispatch:session-view] 日志）；已尝试归档回去");
+					rearchive(sessionId);
+					return;
+				}
 				setViewing({
 					sessionId,
 					heading,
@@ -3085,8 +3119,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				sessionId: viewing.sessionId,
 				view: viewing.view,
 				onClose: () => {
+					const closed = viewing.sessionId;
 					setViewing(null);
 					setViewErr(null);
+					rearchive(closed);
 				}
 			}) : null, viewErr !== null ? (0, react.createElement)("div", {
 				style: {
