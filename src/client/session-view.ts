@@ -152,30 +152,34 @@ export function openSessionView(
   try {
     const found: SessionBindingFace | undefined = sessions.binding(id)
     if (found === undefined || found === null) {
-      // 诊断（决策 28 当年验证归档会话可 binding；现版本宿主对已归档会话返回空 ⇒ 断点在此）。
-      // 打印 sessions / uiConversation 方法面并试常见冷读入口，定位归档会话的正确取法。
-      const surface = (obj: unknown): Record<string, string> => {
-        const o = obj as Record<string, unknown>
-        const out: Record<string, string> = {}
-        for (const k of Object.keys(o)) out[k] = typeof o[k]
-        return out
+      // 诊断（决策 28 当年验证归档会话可 binding；现版本宿主对已归档会话 binding 返回空）。
+      // 深挖 sessions.manager / sessions.list / uiConversation.bindings，定位归档会话的正确取法。
+      const shape = (o: unknown): string => {
+        if (o == null) return 'null'
+        if (typeof o !== 'object') return typeof o
+        if (Array.isArray(o)) return `array(${o.length})`
+        return '{' + Object.keys(o as object).slice(0, 8).join(',') + '}'
       }
-      const sSurf = surface(sessions)
-      const uSurf = surface(uiConversation)
-      const candidates = ['follow', 'page', 'history', 'get', 'resolve', 'adopt', 'byId', 'open', 'binding']
-      const tried: string[] = []
-      for (const c of candidates) {
-        const fn = (sessions as unknown as Record<string, unknown>)[c]
-        if (typeof fn === 'function') {
-          try {
-            const r = (fn as (x: string, ...rest: unknown[]) => unknown).call(sessions, id)
-            tried.push(r == null
-              ? `${c} => null`
-              : `${c} => ${typeof r === 'object' ? '{' + Object.keys(r as object).slice(0, 5).join(',') + '}' : typeof r}`)
-          } catch (e) { tried.push(`${c} => threw:${((e as Error)?.message ?? String(e)).slice(0, 50)}`) }
-        }
+      const tryCall = (fn: unknown, ...args: unknown[]): string => {
+        if (typeof fn !== 'function') return 'n/a'
+        try {
+          const r = (fn as (...a: unknown[]) => unknown)(...args)
+          if (r && typeof r === 'object' && typeof (r as { then?: unknown }).then === 'function') return 'promise'
+          return shape(r)
+        } catch (e) { return 'threw:' + ((e as Error)?.message ?? String(e)).slice(0, 40) }
       }
-      log('warn', `binding(${id}) 返回空；sessions 方法面=${JSON.stringify(sSurf)}；uiConversation 方法面=${JSON.stringify(uSurf)}；候选尝试=${tried.join(' | ')}`)
+      const S = sessions as unknown as Record<string, unknown>
+      const U = uiConversation as unknown as Record<string, unknown>
+      const mgr = S.manager as Record<string, unknown> | undefined
+      const mgrProbe = mgr == null ? 'manager=null'
+        : `manager={${Object.keys(mgr).slice(0, 10).join(',')}}; get(id)=>${tryCall(mgr.get, id)}; resolve(id)=>${tryCall(mgr.resolve, id)}; binding(id)=>${tryCall(mgr.binding, id)}; find(id)=>${tryCall(mgr.find, id)}`
+      const g = mgr && typeof mgr.get === 'function' ? (() => { try { return mgr.get.call(mgr, id) } catch { return undefined } })() : undefined
+      const getRes = g && typeof g === 'object'
+        ? `; get(id).keys={${Object.keys(g as object).slice(0, 10).join(',')}}${('binding' in (g as object)) ? `; get(id).binding=${shape((g as Record<string, unknown>).binding)}` : ''}`
+        : ''
+      const listProbe = `list()=>${tryCall(S.list)}`
+      const uiBindProbe = `uiConversation.bindings=${shape(U.bindings)}; .get(id)=>${tryCall((U.bindings as Record<string, unknown> | undefined)?.get, id)}`
+      log('warn', `binding(${id}) 返回空；${mgrProbe}${getRes}；${listProbe}；${uiBindProbe}`)
       return null
     }
     binding = found

@@ -1985,36 +1985,34 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			try {
 				const found = sessions.binding(id);
 				if (found === void 0 || found === null) {
-					const surface = (obj) => {
-						const o = obj;
-						const out = {};
-						for (const k of Object.keys(o)) out[k] = typeof o[k];
-						return out;
+					const shape = (o) => {
+						if (o == null) return "null";
+						if (typeof o !== "object") return typeof o;
+						if (Array.isArray(o)) return `array(${o.length})`;
+						return "{" + Object.keys(o).slice(0, 8).join(",") + "}";
 					};
-					const sSurf = surface(sessions);
-					const uSurf = surface(uiConversation);
-					const candidates = [
-						"follow",
-						"page",
-						"history",
-						"get",
-						"resolve",
-						"adopt",
-						"byId",
-						"open",
-						"binding"
-					];
-					const tried = [];
-					for (const c of candidates) {
-						const fn = sessions[c];
-						if (typeof fn === "function") try {
-							const r = fn.call(sessions, id);
-							tried.push(r == null ? `${c} => null` : `${c} => ${typeof r === "object" ? "{" + Object.keys(r).slice(0, 5).join(",") + "}" : typeof r}`);
+					const tryCall = (fn, ...args) => {
+						if (typeof fn !== "function") return "n/a";
+						try {
+							const r = fn(...args);
+							if (r && typeof r === "object" && typeof r.then === "function") return "promise";
+							return shape(r);
 						} catch (e) {
-							tried.push(`${c} => threw:${(e?.message ?? String(e)).slice(0, 50)}`);
+							return "threw:" + (e?.message ?? String(e)).slice(0, 40);
 						}
-					}
-					log("warn", `binding(${id}) 返回空；sessions 方法面=${JSON.stringify(sSurf)}；uiConversation 方法面=${JSON.stringify(uSurf)}；候选尝试=${tried.join(" | ")}`);
+					};
+					const S = sessions;
+					const U = uiConversation;
+					const mgr = S.manager;
+					const mgrProbe = mgr == null ? "manager=null" : `manager={${Object.keys(mgr).slice(0, 10).join(",")}}; get(id)=>${tryCall(mgr.get, id)}; resolve(id)=>${tryCall(mgr.resolve, id)}; binding(id)=>${tryCall(mgr.binding, id)}; find(id)=>${tryCall(mgr.find, id)}`;
+					const g = mgr && typeof mgr.get === "function" ? (() => {
+						try {
+							return mgr.get.call(mgr, id);
+						} catch {
+							return;
+						}
+					})() : void 0;
+					log("warn", `binding(${id}) 返回空；${mgrProbe}${g && typeof g === "object" ? `; get(id).keys={${Object.keys(g).slice(0, 10).join(",")}}${"binding" in g ? `; get(id).binding=${shape(g.binding)}` : ""}` : ""}；${`list()=>${tryCall(S.list)}`}；${`uiConversation.bindings=${shape(U.bindings)}; .get(id)=>${tryCall(U.bindings?.get, id)}`}`);
 					return null;
 				}
 				binding = found;
