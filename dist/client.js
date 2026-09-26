@@ -199,6 +199,7 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-body{overflow:auto;padding:16px 18px 20px;}
 .dsh-tdt-sv-col{width:100%;max-width:var(--dsh-tdt-content-width);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-tdt-flow-gap);}
 .dsh-tdt-sv-flowitem{min-width:0;}
+.dsh-tdt-sv-official{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
 .dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.6;word-break:break-word;}
 .dsh-tdt-sv-assistant{align-self:stretch;font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-image{align-self:flex-start;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));border:1px dashed var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 10px;}
@@ -2064,6 +2065,24 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		//#region src/client/session-view.ts
 		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
 		let officialWarned = false;
+		let hostRenderSlot = null;
+		/** 由插件 apply 注入宿主的 slots.renderSlot。 */
+		function setHostRenderSlot(fn) {
+			hostRenderSlot = fn;
+		}
+		/**
+		* 渲染官方会话面板本体；宿主无该面 / 渲染抛错时返回 null（调用方回退自绘）。
+		*/
+		function renderOfficialConversation() {
+			if (hostRenderSlot === null) return null;
+			try {
+				const el = hostRenderSlot("main.conversation", {});
+				return el !== null && typeof el === "object" ? el : null;
+			} catch (err) {
+				console.warn("[task-dispatch:session-view] renderSlot(\"main.conversation\") 抛错，回退自绘", err);
+				return null;
+			}
+		}
 		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 		function openSessionView(sessions, uiConversation, id) {
 			const log = (level, msg, extra) => {
@@ -2071,6 +2090,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				else console.info(`[task-dispatch:session-view] ${msg}`);
 			};
 			let retainedRef = null;
+			let mainRetainedRef = null;
 			const releaseRef = () => {
 				try {
 					retainedRef?.release();
@@ -2078,6 +2098,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					log("warn", `sessions.retain 引用释放失败（${id}）`, err);
 				}
 				retainedRef = null;
+				try {
+					mainRetainedRef?.release();
+				} catch (err) {
+					log("warn", `sessions.retain(mainView) 引用释放失败（${id}）`, err);
+				}
+				mainRetainedRef = null;
 			};
 			let binding;
 			try {
@@ -2086,6 +2112,12 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				if (typeof retainFn === "function") try {
 					retainedRef = retainFn.call(S0, id, { source: "dsh-task-dispatch-table" });
 					log("info", `sessions.retain(${id}, { source }) 成功：scope 已物化`);
+					try {
+						mainRetainedRef = retainFn.call(S0, id, { source: "mainView" });
+						log("info", `sessions.retain(${id}, { source: 'mainView' }) 成功：官方主视图已指向本会话`);
+					} catch (err) {
+						log("warn", `sessions.retain(${id}, mainView) 抛错`, err);
+					}
 				} catch (err) {
 					log("warn", `sessions.retain(${id}) 抛错（未知会话？）`, err);
 				}
@@ -2322,6 +2354,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass("ChatView", "frame")} cardRoot=${officialClass("GenericCommandCard", "root")} bubble=${officialClass("MessageItem", "bubble")} reasoningRoot=${officialClass("ReasoningRow", "root")}`);
 				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
 			}
+			const official = renderOfficialConversation();
 			const openState = sessionSnap?.openState;
 			const body = rendered.length === 0 ? (0, react.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty")) : rendered;
 			const showLoadOlder = sessionSnap?.hasMore !== false;
@@ -2345,7 +2378,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				className: "dsh-tdt-sv-btn dsh-tdt-sv-btn-icon",
 				"aria-label": t("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: officialClass("ChatView", "root") ?? "" }, (0, react.createElement)("div", { className: officialClass("ChatView", "scroll") ?? "" }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, body))))));
+			}, (0, react.createElement)(CloseIcon, {})))), official !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-official" }, official) : (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: officialClass("ChatView", "root") ?? "" }, (0, react.createElement)("div", { className: officialClass("ChatView", "scroll") ?? "" }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, body))))));
 		}
 		//#endregion
 		//#region src/client/index.ts
@@ -3344,6 +3377,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				currentScope = httpScope();
 				afterAdopt();
 				registerCard(sub);
+				const rs = sub.slots.renderSlot;
+				if (typeof rs === "function") {
+					setHostRenderSlot((key, props) => rs.call(sub.slots, key, props ?? {}));
+					console.info("[task-dispatch] 已取得 slots.renderSlot ⇒ 弹窗渲染官方会话本体");
+				} else console.warn("[task-dispatch] slots 无 renderSlot 面 ⇒ 弹窗回退自绘");
 			});
 			ctx.inject(["slots"], (sub) => {
 				sub.slots.inject("sidebar.panellist", () => sub.slots.register({

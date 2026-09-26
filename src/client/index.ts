@@ -17,7 +17,7 @@
 
 import { createElement as h, Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { en, zh, type LocaleKey } from './locales'
-import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
+import { openSessionView, setHostRenderSlot, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -1132,6 +1132,15 @@ export function apply(ctx: ClientContext): void {
     currentScope = httpScope()
     afterAdopt()
     registerCard(sub)
+    // ③ 官方会话本体：捕获宿主 slots.renderSlot，弹窗内直接渲染官方 `main.conversation` 槽
+    // （官方 ConversationPanel 内部就是这么调的，uic/lib/client.js:16277）。
+    const rs = (sub.slots as unknown as { renderSlot?: (k: string, p?: Record<string, unknown>) => unknown }).renderSlot
+    if (typeof rs === 'function') {
+      setHostRenderSlot((key, props) => rs.call(sub.slots, key, props ?? {}))
+      console.info('[task-dispatch] 已取得 slots.renderSlot ⇒ 弹窗渲染官方会话本体')
+    } else {
+      console.warn('[task-dispatch] slots 无 renderSlot 面 ⇒ 弹窗回退自绘')
+    }
   })
 
   // 侧栏顶部条目 + 主区整页（dsh 0.1.7-rc.1 原生「主面板」机制）：
