@@ -88,7 +88,7 @@ for (let i=0;i<lines.length;i++){
 |---|---|---|---|
 | **代码块卡片**（左上 `bash`/`json` 语言名，右上「换行 + 复制」两钮） | `MarkdownText` 内部 = primitives **`CodeCard`**（`primitives/lib/CodeCard.module.css`） | `.card{margin:16px 0; background:var(--dsw-alias-markdown-code-block); border-radius:var(--dsw-radius-lg); font:var(--dsw-font-markdown-code-block)}`；`.header{padding:10px 18px 8px 22px; justify-content:space-between}`；`.language{color:label-tertiary; font-family:var(--ds-font-family-code)}`；`.actions{gap:4px}`（`.action` 24px 方钮：**换行切换 + 复制**） | ✅（用 MarkdownText 自动获得；需传 `labels.code`） |
 | **语法高亮**（json 彩色 token） | primitives `CODE_HIGHLIGHT_EXTENSIONS` / `languageForPath` / `useCodeHighlighter`（Lezer） | 由 MarkdownText 内部使用 | ✅ |
-| **表格**（表头行 / 单元格 / 行内 code chip） | `MarkdownText` + `AssistantMarkdown.body .md-table-wide` | 宽表越出内容列：`--dsh-table-spare/lead`（`box-sizing:border-box; width:calc(100%+lead+spare); margin-left:calc(-1*lead)`） | ✅ |
+| **表格**（表头行 / 单元格 / 行内 code chip，**横向分隔线、无竖线**） | `MarkdownText` + `AssistantMarkdown.body .md-table-wide` + `MarkdownText.module.css` | 滚动容器：`.tableScroll{max-width:100%; overflow-x:auto}`；**宽表（`.md-table-wide`）平时隐藏横滚条、hover/focus 才出**（`overflow-x:hidden→scroll; padding-bottom:var(--dsh-scrollbar-width,5px)→0`）；`table{border-collapse:collapse; width:max-content; max-width:max-content}`；宽表越出内容列：`--dsh-table-spare/lead` | ✅ |
 | **行内 code chip**（`web_search`、`AGENTS.md`） | `MarkdownText` 行内 code | 小圆角底色 chip | ✅ |
 | **emoji 标题**（🔑 / 💡） | 就是 mdast heading 里的**文本内容**，无特殊组件 | — | ✅ |
 | **列表圆点 / 加粗** | `MarkdownText` | — | ✅ |
@@ -204,8 +204,15 @@ for (let i=0;i<lines.length;i++){
 | 模块 | 语义类 | 状态 |
 |---|---|---|
 | `TurnNavigator`（14） | `frame, scroller, marks, mark, markActive, markBusy, markPreview, markUnloaded, preview, previewPrompt, previewResponse, slot, fadeTop, fadeBottom` | ❌ |
-| `ContextBody`（23） | `root, entries, entry, entryName, entryDescription, fields, field, fieldKey, fieldValue, files, file, filePath, fileAction, recalls, recall, recallLabel, recallCounts, relaySender, sections, sectionName, sectionText, section, text, catalogNotice` | ❌ |
-| `ContextInjectionRow`（7） | `root, body, chevron, sep, source, summary, toolChanges` | ❌ |
+
+### 十一-B、系统提示与上下文注入行（截图第二组，已核实）
+
+| 元素 | 官方实现 | 关键样式 / 行为 | 我们 |
+|---|---|---|---|
+| **「系统提示词 / 系统提示词更新」折叠行** | `SystemPromptRow`（chat client.js:6093）= 官方 `DisclosureRow` + `ContextInjectionRow.root/chevron/body` | icon=**`IconBrowseOutlineRegular size:14`**；`expandOnRowClick`；展开体挂 `data-system-prompt-body`，内容走 `OpaqueBody`（141px 代码滚动位，保留真实换行）；chat 节点 kind=`system-prompt`（**独立于 turn 过程**，见 `TURN_PROCESS_INDEPENDENT_KINDS`：system-prompt/user/steering/turn-trigger/turn-process/turn-error/turn-max-tokens/turn-tail） | ❌ |
+| **上下文注入行**「`› retitle · 0913 │ 指令 │ …`」 | `ContextInjectionRow` | `root{min-width:0}` `[data-open]{padding-bottom:4px}`；`source{13px tertiary, flex:none, nowrap, ellipsis}` + `sep{2×2px, margin:0 8px}` + `summary{13px tertiary, flex:auto, ellipsis}`（**flex:auto 把后续内容推右**）；`chevron{color:label-secondary}`；`body{width:calc(100% - 22px - …)}` | ❌ |
+| **注入展开体**（OpaqueBody / ContextBody） | `ContextBody` | `text{pre-wrap; overflow-wrap:anywhere; color:label-secondary}`；`fields{border-top:.5px; gap:2px; padding-top:8px}`；`fieldKey{min-width:96px; color:label-caption}` / `fieldValue{tertiary}`；`files{gap:4px 12px}` 列表（`filePath`/`fileAction`） | ❌ |
+| 工具增删行 | `ContextInjectionRow.toolChanges` / 文案键 `message.toolAdded/toolRemoved/toolsAdded/toolsAddedCount/toolsChanged` | 「已写入文件」这类组行文案同源 | ❌ |
 | `accessibility`（10） | `root, row, leading, title, summary, summaryText, chevron, separator, thinkBody, visuallyHidden` | ❌ |
 | `MessageIconActions` 另有 `visuallyHidden` | — | ❌ |
 | `PreferenceRow`（6）/ `stat-dialog` / `SearchBlock` | — | ❌ |
@@ -250,6 +257,8 @@ for (let i=0;i<lines.length;i++){
 | 六、操作行（复制/分支/👍👎/用时） | ❌ | 复制+分支可自绘（官方图标/Tooltip/1s copied 态）；👍👎 官方来自槽位 `conversation.chat.assistant-actions`，弹窗里只能自绘等价按钮；用时缺 turn 起止时间 |
 | 六-B、过程条目 | ❌/🟡 | 重试行展开详情 ❌、工具组行（已写入文件）❌、错误摘要红色 🟡、`+N -N` 差异统计 ❌（来源待核）、思考行 🟡 |
 | 文件 mention | ❌ | 正文行内文件下划线 = `MarkdownText` 的 `fileMentions`；用户气泡 chips = `projectUserText`——两者都只需传入解析器即可 |
+| 十一-B、系统提示词行 / 上下文注入行 | ❌ | 结构已核实（DisclosureRow + ContextInjectionRow + OpaqueBody）；数据在 chat 节点 kind=`system-prompt` / context 注入节点里 |
+| 表格（含宽表 hover 横滚） | ✅ | `MarkdownText` 自带（`.tableScroll` + `.md-table-wide` hover 才出滚动条） |
 | 十一、导航/上下文/其他 | ❌ | 未实现 |
 | 图标 | ✅ | 官方 `IconCodeOutlineRegular`（不再用 `⚙` 字符） |
 
