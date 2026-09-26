@@ -543,28 +543,33 @@ function ToolCard(props: {
   // root[data-variant][data-state] > DisclosureRow(row: leading + title + chevron)
   //   + 折叠时 span.separator + span.summary，展开时 pre.body
   const preCls = ocOr('GenericCommandCard', 'body', '')
+  const summaryCls = ocOr('GenericCommandCard', 'summary', '')
+  // 摘要取「输出优先、否则参数」的首行（官方 summary 是单行省略号样式）。
+  const preview = (text: string): string => {
+    const first = text.split('\n').find(line => line.trim() !== '') ?? ''
+    return first.length > 90 ? `${first.slice(0, 90)}…` : first
+  }
+  const summaryText = preview(output.trim() !== '' ? output : argsRaw)
+  const bodyText = [
+    argsRaw.trim() !== '' ? `${t('sessionArgs')}:\n${argsRaw}` : '',
+    output.trim() !== '' ? `${t('sessionOutput')}:\n${output}` : '',
+  ].filter(part => part !== '').join('\n\n')
+  // 默认折叠：工具调用只占一行（标题 + 摘要 + 展开箭头），点开才看参数/输出。
+  // 官方就是这种节奏——默认收起，页面才不会变成一列流水账。
   return h('div', {
     className: ocOr('GenericCommandCard', 'root', 'dsh-tdt-sv-tool'),
     'data-state': isError ? 'error' : 'success',
   },
-    h('div', { className: ocOr('GenericCommandCard', 'row', 'dsh-tdt-sv-tool-head') },
-      h('span', { className: ocOr('GenericCommandCard', 'leading', '') }, '⚙'),
-      h('span', { className: ocOr('GenericCommandCard', 'title', 'dsh-tdt-sv-tool-name') }, name),
-      isError ? h('span', { className: 'dsh-tdt-sv-tool-err' }, `✕ ${errorName ?? 'error'}`) : null,
-      h('span', { className: ocOr('GenericCommandCard', 'chevron', '') }, '▸'),
+    h('details', { open: isError },
+      h('summary', { className: ocOr('GenericCommandCard', 'row', 'dsh-tdt-sv-tool-head') },
+        h('span', { className: ocOr('GenericCommandCard', 'leading', '') }, '⚙'),
+        h('span', { className: ocOr('GenericCommandCard', 'title', 'dsh-tdt-sv-tool-name') }, name),
+        isError ? h('span', { className: 'dsh-tdt-sv-tool-err' }, `✕ ${errorName ?? 'error'}`) : null,
+        summaryText !== '' && summaryCls !== '' ? h('span', { className: summaryCls }, summaryText) : null,
+        h('span', { className: ocOr('GenericCommandCard', 'chevron', '') }, '▸'),
+      ),
+      bodyText !== '' ? h('pre', { className: preCls }, bodyText) : null,
     ),
-    argsRaw.trim() !== ''
-      ? h('details', null,
-          h('summary', { className: ocOr('ReasoningRow', 'summary', '') }, t('sessionArgs')),
-          h('pre', { className: preCls }, argsRaw),
-        )
-      : null,
-    output.trim() !== ''
-      ? h('details', { open: isError },
-          h('summary', { className: ocOr('ReasoningRow', 'summary', '') }, t('sessionOutput')),
-          h('pre', { className: preCls }, output),
-        )
-      : null,
   )
 }
 
