@@ -2309,9 +2309,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				key: `flow${index}`,
 				className: flowItemCls
 			}, item));
+			const officialCount = officialModuleCount();
 			if (!officialWarned) {
 				officialWarned = true;
-				if (officialModuleCount() === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
+				console.info(`[task-dispatch:session-view] 官方 ui-chat 样式模块发现数=${officialCount}（0 = 回退自绘）`);
+				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
 			}
 			const openState = sessionSnap?.openState;
 			const body = rendered.length === 0 ? (0, react.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty")) : rendered;
@@ -2324,7 +2326,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${t("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId)), (0, react.createElement)("div", { className: "dsh-tdt-sv-actions" }, showLoadOlder ? (0, react.createElement)("button", {
+			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${t("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialModuleCount() === 0 ? (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-sid",
+				style: { color: "var(--dsw-alias-state-warn-primary, #b7791f)" }
+			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-actions" }, showLoadOlder ? (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-sv-btn",
 				onClick: () => view.loadOlder()

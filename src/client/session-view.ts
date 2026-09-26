@@ -689,9 +689,11 @@ export function SessionViewModal(props: {
   const rendered = renderedCore.map((item, index) =>
     h('div', { key: `flow${index}`, className: flowItemCls }, item))
 
+  const officialCount = officialModuleCount()
   if (!officialWarned) {
     officialWarned = true
-    if (officialModuleCount() === 0) {
+    console.info(`[task-dispatch:session-view] 官方 ui-chat 样式模块发现数=${officialCount}（0 = 回退自绘）`)
+    if (officialCount === 0) {
       console.warn('[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）')
     }
   }
@@ -713,6 +715,13 @@ export function SessionViewModal(props: {
         h('div', { className: 'dsh-tdt-sv-heading' },
           h('div', { className: 'dsh-tdt-sv-title' }, `${t('sessionViewerTitle')} · ${heading}`),
           h('div', { className: 'dsh-tdt-sv-sid' }, sessionId),
+          // 可见探针：官方样式未命中时直接显示（省得翻控制台）。命中则不显示。
+          officialModuleCount() === 0
+            ? h('div', {
+                className: 'dsh-tdt-sv-sid',
+                style: { color: 'var(--dsw-alias-state-warn-primary, #b7791f)' },
+              }, '⚠ 官方样式未命中（当前为自绘回退）')
+            : null,
         ),
         h('div', { className: 'dsh-tdt-sv-actions' },
           showLoadOlder
