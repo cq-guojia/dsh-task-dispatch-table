@@ -50,7 +50,7 @@
 | 11 | 调度循环重设计 + 日志表 + 冗余字段 | ✅ | 09-26 | 决策 31/32：懒建行/不回看/不补跑/skipped 只进日志 + 独立 `task_log` 表 + 执行记录加 outputs/tokens 列；真机复测发现并修掉 `dispatched_at` 回归（`output-stale`，a3b9899）；**真机 `cron-5min-探针2` 连续 succeeded（01:35/01:40），无 skipped 洪水**；冒烟 76 项全过 | [worklog/scheduler-redesign.md](worklog/scheduler-redesign.md) |
 | 12 | 依赖（前置任务）语义定型 | ✅ 落码完成 | 09-26 | 决策 33 已定型 + 落码（U7 八条逐条结论）：`latest_success` 改判「上游最近一条必须 succeeded」、删 `freshness`、不做水位线、复用旧产出只告警；**一度拍板的水位线方案已废弃**（与周报→日报快照复用冲突）；冒烟 84 项。**真机验证暂缓**，见 U9 | [worklog/dependency-semantics.md](worklog/dependency-semantics.md) |
 | 13 | token 字段三拆列（决策 32 修订） | ✅ | 09-26 | 单个 `tokens` 总数拆为 `token_in` / `token_out` / `token_in_cache`；`extractTokenUsage` 结构化分量探测 + 按实例累计写回；事件无结构化 usage 则三列留 null 不阻塞 | — |
-| 14 | 归档会话弹窗显示（ChatView 复用落码，决策 29 实施） | 🔵 进行中 | 09-26~ | 决策 29 落码：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配（~50 行胶水）挂官方 ChatView 原样渲染归档会话；替换决策 28 自绘实现 | [design/archive-session-view.md](design/archive-session-view.md) |
+| 14 | 归档会话弹窗显示（借官方设计变量 + 自渲染，决策 34 实施） | 🔵 进行中 | 09-26~ | 决策 29（ChatView 挂载）经 T1 证实在 0.1.7-RC.2 不可行 → 改决策 34：弹窗壳与数据闸门保留（决策 28），内部自渲染消息/思考/工具卡 DOM，套用官方 `--dsw-alias-*` 设计变量 + 布局 token，外观对齐官方、深浅色自动跟随；新增 markdown 渲染 + 可折叠思考块 + 官方风工具卡 | [design/archive-session-view.md](design/archive-session-view.md) |
 
 ---
 
@@ -74,7 +74,7 @@
 
 ## 五、下一步（接手后从这里开始）
 
-1. **【进行中·里程碑 14】归档会话弹窗显示（ChatView 复用落码，决策 29）**：弹窗壳保留，内部复刻官方 slot 引擎 `SessionEntry` 装配（~50 行胶水）挂官方 ChatView 原样渲染归档会话，替换决策 28 自绘实现。设计定型与任务分解见 [`design/archive-session-view.md`](design/archive-session-view.md)；落码前先 T1 核实宿主当前产物的 `entriesOf('conversation.view')` / `storeOf` / `scope('session')` / `sessions.retain` 导出形态。
+1. **【进行中·里程碑 14】归档会话弹窗显示（借官方设计变量 + 自渲染，决策 34）**：弹窗壳与数据闸门保留（决策 28），内部自渲染消息/思考/工具卡 DOM，套用官方 `--dsw-alias-*` 设计变量 + 布局 token（`--dsh-chat-content-width` 748px / `--dsh-chat-flow-gap` 8px 等，已从 0.1.7-RC.2 核实），外观对齐官方、深浅色自动跟随；新增 markdown 渲染 + 可折叠思考块（reasoning）+ 官方风工具卡。**T1 已出结论**：决策 29 的 ChatView 挂载在 0.1.7-RC.2 不可行（`retain` / `bindingSource` 不存在），故改决策 34。设计定型见 [`design/archive-session-view.md`](design/archive-session-view.md)。
 2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
 3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
 4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。
