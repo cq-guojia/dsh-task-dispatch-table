@@ -415,11 +415,11 @@ try {
     ['frame', 'root', 'scroll', 'column', 'flowItem'].every(k => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`)))
   check('官方类缺失时回退自绘类（dsh-tdt-sv-body/col/flowitem 仍在）',
     clientJs.includes('dsh-tdt-sv-body') && clientJs.includes('dsh-tdt-sv-col') && clientJs.includes('dsh-tdt-sv-flowitem'))
-  // ③ 官方会话本体：宿主把官方会话面板注册在 main.conversation 槽，公开 API 渲染进弹窗；
-  // 再用 retain(source:'mainView') 让 uiSession.current 指向本会话。
-  check('弹窗渲染官方会话本体（slots.renderSlot + main.conversation 槽）',
-    clientJs.includes('main.conversation') && clientJs.includes('renderSlot'))
+  // ② 官方会话视图：retain(source:'mainView') 让官方主视图指向该会话 + 会话头挂返回入口。
+  // （在弹窗内渲染官方本体已被源码证伪：ctx.slots.renderSlot 只接受 'root'，见 session-view.ts 注释。）
   check('retain(source:"mainView") 已落（让官方主视图指向本会话）', clientJs.includes('mainView'))
+  check('官方视图返回入口已注册（conversation.session.header.actions）',
+    clientJs.includes('conversation.session.header.actions'))
   const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
   const injectList = pkg.dsh?.client?.inject ?? []
   check('inject 清单声明 sessions 提供方（dsh-api-session-controller）',

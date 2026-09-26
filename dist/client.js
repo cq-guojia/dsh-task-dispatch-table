@@ -2065,24 +2065,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		//#region src/client/session-view.ts
 		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
 		let officialWarned = false;
-		let hostRenderSlot = null;
-		/** 由插件 apply 注入宿主的 slots.renderSlot。 */
-		function setHostRenderSlot(fn) {
-			hostRenderSlot = fn;
-		}
-		/**
-		* 渲染官方会话面板本体；宿主无该面 / 渲染抛错时返回 null（调用方回退自绘）。
-		*/
-		function renderOfficialConversation() {
-			if (hostRenderSlot === null) return null;
-			try {
-				const el = hostRenderSlot("main.conversation", {});
-				return el !== null && typeof el === "object" ? el : null;
-			} catch (err) {
-				console.warn("[task-dispatch:session-view] renderSlot(\"main.conversation\") 抛错，回退自绘", err);
-				return null;
-			}
-		}
 		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 		function openSessionView(sessions, uiConversation, id) {
 			const log = (level, msg, extra) => {
@@ -2090,7 +2072,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				else console.info(`[task-dispatch:session-view] ${msg}`);
 			};
 			let retainedRef = null;
-			let mainRetainedRef = null;
 			const releaseRef = () => {
 				try {
 					retainedRef?.release();
@@ -2098,12 +2079,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					log("warn", `sessions.retain 引用释放失败（${id}）`, err);
 				}
 				retainedRef = null;
-				try {
-					mainRetainedRef?.release();
-				} catch (err) {
-					log("warn", `sessions.retain(mainView) 引用释放失败（${id}）`, err);
-				}
-				mainRetainedRef = null;
 			};
 			let binding;
 			try {
@@ -2112,12 +2087,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				if (typeof retainFn === "function") try {
 					retainedRef = retainFn.call(S0, id, { source: "dsh-task-dispatch-table" });
 					log("info", `sessions.retain(${id}, { source }) 成功：scope 已物化`);
-					try {
-						mainRetainedRef = retainFn.call(S0, id, { source: "mainView" });
-						log("info", `sessions.retain(${id}, { source: 'mainView' }) 成功：官方主视图已指向本会话`);
-					} catch (err) {
-						log("warn", `sessions.retain(${id}, mainView) 抛错`, err);
-					}
 				} catch (err) {
 					log("warn", `sessions.retain(${id}) 抛错（未知会话？）`, err);
 				}
@@ -2354,7 +2323,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass("ChatView", "frame")} cardRoot=${officialClass("GenericCommandCard", "root")} bubble=${officialClass("MessageItem", "bubble")} reasoningRoot=${officialClass("ReasoningRow", "root")}`);
 				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
 			}
-			const official = renderOfficialConversation();
 			const openState = sessionSnap?.openState;
 			const body = rendered.length === 0 ? (0, react.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty")) : rendered;
 			const showLoadOlder = sessionSnap?.hasMore !== false;
@@ -2378,7 +2346,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				className: "dsh-tdt-sv-btn dsh-tdt-sv-btn-icon",
 				"aria-label": t("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(CloseIcon, {})))), official !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-official" }, official) : (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: officialClass("ChatView", "root") ?? "" }, (0, react.createElement)("div", { className: officialClass("ChatView", "scroll") ?? "" }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, body))))));
+			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: officialClass("ChatView", "root") ?? "" }, (0, react.createElement)("div", { className: officialClass("ChatView", "scroll") ?? "" }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, body))))));
 		}
 		//#endregion
 		//#region src/client/index.ts
@@ -2390,6 +2358,38 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		const PANEL_ID = SETTINGS_NS;
 		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 		let runtimeT = (key) => key;
+		let officialViewRef = null;
+		let officialViewSessionId = null;
+		/** 由 sessions 注入块赋值为可用的实现；不可用时调用方回退弹窗。 */
+		let enterOfficialView = null;
+		/** 布局服务的 selectPanel（模块级引用，供 exitOfficialView 使用）。 */
+		let selectPanelRef = () => {};
+		/** 从官方会话视图返回任务面板（释放 mainView retain、归档回去、切回面板）。 */
+		function exitOfficialView() {
+			try {
+				officialViewRef?.release();
+			} catch {}
+			officialViewRef = null;
+			const id = officialViewSessionId;
+			officialViewSessionId = null;
+			if (id !== null) fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ sessionId: id })
+			}).catch(() => void 0);
+			selectPanelRef(PANEL_ID);
+		}
+		/** 官方会话头里的「← 返回任务管理」按钮；只在从本面板跳过去时显示。 */
+		function BackToTaskPanelAction({ t }) {
+			if (officialViewSessionId === null) return null;
+			return (0, react.createElement)("button", {
+				type: "button",
+				style: linkStyle,
+				onClick: () => {
+					exitOfficialView();
+				}
+			}, `← ${t("panelTitle")}`);
+		}
 		/** 只读参数展示值：undefined 显示占位符，statePath 空串 = 宿主数据根默认（决策 14）。 */
 		function displayParam(t, value) {
 			if (value === void 0) return "—";
@@ -2842,6 +2842,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					didUnarchive
 				});
 			};
+			/** 优先进官方会话视图（②，与官方一模一样）；宿主不支持时回退面板内弹窗。 */
+			const openOfficialOrModal = async (sessionId, heading) => {
+				if (enterOfficialView !== null) {
+					await enterOfficialView(sessionId);
+					return;
+				}
+				await openView(sessionId, heading);
+			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
 			const hasRaw = raw.trim() !== "";
 			/** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
@@ -2980,7 +2988,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					title: row.session_id,
 					onClick: (event) => {
 						event.stopPropagation();
-						openView(row.session_id, titleOfTask(row.task_id));
+						openOfficialOrModal(row.session_id, titleOfTask(row.task_id));
 					}
 				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
 					colSpan: 6,
@@ -2996,7 +3004,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					type: "button",
 					style: linkStyle,
 					onClick: () => {
-						openView(row.session_id, titleOfTask(row.task_id));
+						openOfficialOrModal(row.session_id, titleOfTask(row.task_id));
 					}
 				}, `↗ ${t("viewSession")}`) : null), events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("eventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 					t("colSeq"),
@@ -3329,13 +3337,37 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const sessions = sub.sessions;
 				const uiConversation = sub.uiConversation;
 				if (sessions !== void 0 && uiConversation !== void 0) viewSession = (id) => openSessionView(sessions, uiConversation, id);
+				const S = sessions;
+				const retainFn = S?.retain;
+				if (S !== void 0 && typeof retainFn === "function") enterOfficialView = async (id) => {
+					try {
+						await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
+							method: "POST",
+							headers: { "content-type": "application/json" },
+							body: JSON.stringify({ sessionId: id })
+						});
+					} catch {}
+					try {
+						officialViewRef?.release();
+						officialViewRef = retainFn.call(S, id, { source: "mainView" });
+						officialViewSessionId = id;
+					} catch (err) {
+						console.warn("[task-dispatch] 进入官方视图失败（retain mainView）", err);
+						officialViewRef = null;
+						return;
+					}
+					selectPanel(null);
+				};
 			});
 			let selectPanel = () => {};
 			ctx.inject(["layout"], (sub) => {
 				const layout = sub.layout;
-				if (layout !== void 0) selectPanel = (id) => {
-					layout.selectPanel(id);
-				};
+				if (layout !== void 0) {
+					selectPanel = (id) => {
+						layout.selectPanel(id);
+					};
+					selectPanelRef = selectPanel;
+				}
 			});
 			let cardRegistered = false;
 			const registerCard = (sub) => {
@@ -3350,6 +3382,14 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					} })
 				}, TasksConfigPage));
 			};
+			ctx.inject(["slots"], (sub) => {
+				sub.slots.inject("conversation.session.header.actions", () => sub.slots.register({
+					name: "conversation.session.header.actions",
+					id: "task-dispatch-back",
+					order: -1e3,
+					locale: LOCALE_NS
+				}, BackToTaskPanelAction));
+			});
 			ctx.inject(["slots", "configForms"], (sub) => {
 				const forms = sub.configForms;
 				if (forms === void 0) return;
@@ -3377,11 +3417,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				currentScope = httpScope();
 				afterAdopt();
 				registerCard(sub);
-				const rs = sub.slots.renderSlot;
-				if (typeof rs === "function") {
-					setHostRenderSlot((key, props) => rs.call(sub.slots, key, props ?? {}));
-					console.info("[task-dispatch] 已取得 slots.renderSlot ⇒ 弹窗渲染官方会话本体");
-				} else console.warn("[task-dispatch] slots 无 renderSlot 面 ⇒ 弹窗回退自绘");
 			});
 			ctx.inject(["slots"], (sub) => {
 				sub.slots.inject("sidebar.panellist", () => sub.slots.register({

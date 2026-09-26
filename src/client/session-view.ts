@@ -157,33 +157,17 @@ const COLD_READ_PROBE = false
 /** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
 let officialWarned = false
 
-// ─────────── ③ 官方会话本体渲染（slots.renderSlot）───────────
-// 宿主把官方会话面板注册在 `main.conversation` 槽（ConversationRoot），公开 API
-// `ctx.slots.renderSlot(key, props)` 即可渲染（官方 ConversationPanel 内部正是这么调的，
-// uic/lib/client.js:16277）。配合 retain(source:'mainView') 把「当前会话」指过去，
-// 就能在**我们的弹窗里**得到官方本体，不用抄源码、不用 iframe、不用离开面板。
-type HostRenderSlot = (key: string, props?: Record<string, unknown>) => unknown
-
-let hostRenderSlot: HostRenderSlot | null = null
-
-/** 由插件 apply 注入宿主的 slots.renderSlot。 */
-export function setHostRenderSlot(fn: HostRenderSlot | null): void {
-  hostRenderSlot = fn
-}
-
-/**
- * 渲染官方会话面板本体；宿主无该面 / 渲染抛错时返回 null（调用方回退自绘）。
- */
-export function renderOfficialConversation(): ReturnType<typeof h> | null {
-  if (hostRenderSlot === null) return null
-  try {
-    const el = hostRenderSlot('main.conversation', {})
-    return el !== null && typeof el === 'object' ? (el as ReturnType<typeof h>) : null
-  } catch (err) {
-    console.warn('[task-dispatch:session-view] renderSlot("main.conversation") 抛错，回退自绘', err)
-    return null
-  }
-}
+// ─── 为什么不能在弹窗里渲染官方会话本体（2026-09-27 源码核实，勿再尝试）───
+// 官方 `ctx.slots.renderSlot(key, owner)` 契约原文（ui-renderer/lib/types/client/registry.d.ts:150-158）：
+//   「The single ctx-level render entry: the shell renders 'root'; every other key renders
+//    inside components through the props renderSlot face … @param key - must be 'root'
+//    (runtime-enforced)」
+// ⇒ ctx 级**只能**渲染 'root'；其余槽位只能由「声明该子槽的父条目」经它的 props.renderSlot
+//   面渲染。`main.conversation` 由 `main` 槽里 key='conversation' 的那条条目（ConversationPanel）
+//   声明 ⇒ 只有它能渲染；我们占的是 main 槽另一个 key，**结构上不可能**。
+// ⇒ 弹窗内挂官方本体 = 死路（实测调用被 fail-loud 守卫拒绝、回退自绘）。
+//   保证与官方一致的唯一做法 = ②：把官方主视图指到该会话（retain source:'mainView'）
+//   + 切回会话区 + 在会话头挂「返回任务管理」按钮。
 
 /** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 export function openSessionView(
@@ -197,14 +181,9 @@ export function openSessionView(
   }
   // retain 引用：用完必须 release（否则会话 scope 不会被回收）。
   let retainedRef: { release(): void } | null = null
-  // mainView 引用：官方主视图显示谁，取决于谁的 retainedBy 里带 mainView
-  // （ui-session client.js:283）。我们面板占着 main 槽位 ⇒ 切换「当前会话」用户看不见。
-  let mainRetainedRef: { release(): void } | null = null
   const releaseRef = (): void => {
     try { retainedRef?.release() } catch (err) { log('warn', `sessions.retain 引用释放失败（${id}）`, err) }
     retainedRef = null
-    try { mainRetainedRef?.release() } catch (err) { log('warn', `sessions.retain(mainView) 引用释放失败（${id}）`, err) }
-    mainRetainedRef = null
   }
   let binding: SessionBindingFace
   try {
@@ -221,12 +200,6 @@ export function openSessionView(
         retainedRef = (retainFn as (t: string, o: { source: string }) => { release(): void })
           .call(S0, id, { source: 'dsh-task-dispatch-table' })
         log('info', `sessions.retain(${id}, { source }) 成功：scope 已物化`)
-        // 再挂一份 mainView：让 uiSession.current 指向本会话 ⇒ 官方槽位渲染的就是它。
-        try {
-          mainRetainedRef = (retainFn as (t: string, o: { source: string }) => { release(): void })
-            .call(S0, id, { source: 'mainView' })
-          log('info', `sessions.retain(${id}, { source: 'mainView' }) 成功：官方主视图已指向本会话`)
-        } catch (err) { log('warn', `sessions.retain(${id}, mainView) 抛错`, err) }
       } catch (err) { log('warn', `sessions.retain(${id}) 抛错（未知会话？）`, err) }
     } else {
       log('warn', `sessions 无 retain 方法；自身键=[${Object.keys(S0).join(',')}]`)
@@ -753,7 +726,6 @@ export function SessionViewModal(props: {
       console.warn('[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）')
     }
   }
-  const official = renderOfficialConversation()
   const openState = sessionSnap?.openState
   const body = rendered.length === 0
     ? h('div', { className: ocOr('ChatView', 'hint', 'dsh-tdt-sv-hint') },
@@ -792,20 +764,17 @@ export function SessionViewModal(props: {
           }, h(CloseIcon, {})),
         ),
       ),
-      // ③ 优先渲染官方会话本体（main.conversation 槽 + retain(mainView) 指向本会话）；
-      // 拿不到（宿主无 renderSlot 面 / 渲染抛错）才回退自绘：
-      // frame > root > scroll > column > flowItem*（源码 client.js:5148-5195）。
-      // 命中官方类时**替换**本插件同类职责的类（否则官方 scroll 的 padding 会与
-      // .dsh-tdt-sv-body 的 padding 叠加）；未命中则回退自绘类，见 ./official-classes。
-      official !== null
-        ? h('div', { className: 'dsh-tdt-sv-official' }, official)
-        : h('div', { className: ocOr('ChatView', 'frame', 'dsh-tdt-sv-body') },
-          h('div', { className: officialClass('ChatView', 'root') ?? '' },
-            h('div', { className: officialClass('ChatView', 'scroll') ?? '' },
-              h('div', { className: ocOr('ChatView', 'column', 'dsh-tdt-sv-col') }, body),
-            ),
+      // 会话区按官方 ChatView 真实结构组织（源码 client.js:5148-5195）：
+      // frame > root > scroll > column > flowItem*。命中官方类时**替换**本插件同类职责的类
+      // （否则官方 scroll 的 padding 会与 .dsh-tdt-sv-body 的 padding 叠加）；
+      // 未命中则回退自绘类，见 ./official-classes。
+      h('div', { className: ocOr('ChatView', 'frame', 'dsh-tdt-sv-body') },
+        h('div', { className: officialClass('ChatView', 'root') ?? '' },
+          h('div', { className: officialClass('ChatView', 'scroll') ?? '' },
+            h('div', { className: ocOr('ChatView', 'column', 'dsh-tdt-sv-col') }, body),
           ),
         ),
+      ),
     ),
   )
 }

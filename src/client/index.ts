@@ -17,7 +17,7 @@
 
 import { createElement as h, Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { en, zh, type LocaleKey } from './locales'
-import { openSessionView, setHostRenderSlot, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
+import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -27,6 +27,47 @@ const LOCALE_NS = SETTINGS_NS
 const PANEL_ID = SETTINGS_NS
 /** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 let runtimeT: Translate = (key) => key
+
+// ─────────── ② 在「官方会话视图」里查看归档会话 ───────────
+// 官方会话区显示哪个会话，由「谁的 retention 带 mainView」决定
+// （ui-session client.js:283 publishMain）。所以：
+//   retain(id, { source: 'mainView' }) → 官方主视图渲染该会话；
+//   ctx.layout.selectPanel(null)       → 从我们的面板切回会话区；
+//   会话头槽位 conversation.session.header.actions 挂「← 返回任务管理」；
+//   返回时释放 retain、归档回去、selectPanel(我们的面板)。
+// 这是唯一能保证「与官方一模一样」的做法（弹窗内挂官方本体已被源码证伪）。
+let officialViewRef: { release(): void } | null = null
+let officialViewSessionId: string | null = null
+/** 由 sessions 注入块赋值为可用的实现；不可用时调用方回退弹窗。 */
+let enterOfficialView: ((id: string) => Promise<void>) | null = null
+/** 布局服务的 selectPanel（模块级引用，供 exitOfficialView 使用）。 */
+let selectPanelRef: (id: string | null) => void = () => {}
+
+/** 从官方会话视图返回任务面板（释放 mainView retain、归档回去、切回面板）。 */
+function exitOfficialView(): void {
+  try { officialViewRef?.release() } catch { /* 释放失败不影响返回 */ }
+  officialViewRef = null
+  const id = officialViewSessionId
+  officialViewSessionId = null
+  if (id !== null) {
+    void fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ sessionId: id }),
+    }).catch(() => undefined)
+  }
+  selectPanelRef(PANEL_ID)
+}
+
+/** 官方会话头里的「← 返回任务管理」按钮；只在从本面板跳过去时显示。 */
+function BackToTaskPanelAction({ t }: { t: Translate }): ReturnType<typeof h> | null {
+  if (officialViewSessionId === null) return null
+  return h('button', {
+    type: 'button',
+    style: linkStyle,
+    onClick: () => { exitOfficialView() },
+  }, `← ${t('panelTitle')}`)
+}
 
 // ─────────────────────────── 本地结构类型（不 import 宿主包） ───────────────────────────
 
@@ -494,6 +535,11 @@ function TaskPage(props: {
     }
     setViewing({ sessionId, heading, view: target, didUnarchive })
   }
+  /** 优先进官方会话视图（②，与官方一模一样）；宿主不支持时回退面板内弹窗。 */
+  const openOfficialOrModal = async (sessionId: string, heading: string): Promise<void> => {
+    if (enterOfficialView !== null) { await enterOfficialView(sessionId); return }
+    await openView(sessionId, heading)
+  }
   const instances = (data?.instances ?? [])
     .filter(row => statusFilter === 'all' || row.status === statusFilter)
     .filter(row => taskFilter === 'all' || row.task_id === taskFilter)
@@ -710,7 +756,7 @@ function TaskPage(props: {
                                   title: row.session_id,
                                   onClick: (event: { stopPropagation(): void }) => {
                                     event.stopPropagation()
-                                    openView(row.session_id as string, titleOfTask(row.task_id))
+                                    void openOfficialOrModal(row.session_id as string, titleOfTask(row.task_id))
                                   },
                                 }, row.session_id.slice(0, 8))
                                 : row.session_id.slice(0, 8),
@@ -731,7 +777,7 @@ function TaskPage(props: {
                                     ? h('button', {
                                       type: 'button',
                                       style: linkStyle,
-                                      onClick: () => { openView(row.session_id as string, titleOfTask(row.task_id)) },
+                                      onClick: () => { void openOfficialOrModal(row.session_id as string, titleOfTask(row.task_id)) },
                                     }, `↗ ${t('viewSession')}`)
                                     : null,
                                 ),
@@ -1076,12 +1122,41 @@ export function apply(ctx: ClientContext): void {
     if (sessions !== undefined && uiConversation !== undefined) {
       viewSession = (id: string): SessionViewTarget | null => openSessionView(sessions, uiConversation, id)
     }
+    // ② 进入官方会话视图：retain(source:'mainView') → 切回会话区。
+    const S = sessions as unknown as Record<string, unknown> | undefined
+    const retainFn = S?.retain
+    if (S !== undefined && typeof retainFn === 'function') {
+      enterOfficialView = async (id: string): Promise<void> => {
+        // 归档会话会被官方主视图导航清掉（clearArchivedCurrent）⇒ 先反归档（best-effort）。
+        try {
+          await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sessionId: id }),
+          })
+        } catch { /* 反归档失败也继续试，官方若接受则照常显示 */ }
+        try {
+          officialViewRef?.release()
+          officialViewRef = (retainFn as (t: string, o: { source: string }) => { release(): void })
+            .call(S, id, { source: 'mainView' })
+          officialViewSessionId = id
+        } catch (err) {
+          console.warn('[task-dispatch] 进入官方视图失败（retain mainView）', err)
+          officialViewRef = null
+          return
+        }
+        selectPanel(null)
+      }
+    }
   })
   // 布局服务（ctx.layout）：主面板切换——选中整页 / 返回会话。
   let selectPanel: (id: string | null) => void = () => {}
   ctx.inject(['layout'], (sub) => {
     const layout = sub.layout
-    if (layout !== undefined) selectPanel = (id) => { layout.selectPanel(id) }
+    if (layout !== undefined) {
+      selectPanel = (id) => { layout.selectPanel(id) }
+      selectPanelRef = selectPanel
+    }
   })
 
   // 设置页卡片：两套契约各尝试一次，谁先就位谁生效（registerCard 保证只注册一条）。
@@ -1102,6 +1177,21 @@ export function apply(ctx: ClientContext): void {
       ),
     )
   }
+  // ② 官方会话视图：在会话头注入「← 返回任务管理」（只在从本面板跳过去时渲染）。
+  // 槽位契约与兄弟插件 dsh-session-title-pattern 同款（list 递增追加，不覆盖内置项）。
+  ctx.inject(['slots'], (sub) => {
+    sub.slots.inject('conversation.session.header.actions', () =>
+      sub.slots.register(
+        {
+          name: 'conversation.session.header.actions',
+          id: 'task-dispatch-back',
+          order: -1000,
+          locale: LOCALE_NS,
+        },
+        BackToTaskPanelAction,
+      ),
+    )
+  })
   // rc.1：共享配置表单服务（按 profile entry id 寻址）。
   ctx.inject(['slots', 'configForms'], (sub) => {
     const forms = sub.configForms
@@ -1132,15 +1222,6 @@ export function apply(ctx: ClientContext): void {
     currentScope = httpScope()
     afterAdopt()
     registerCard(sub)
-    // ③ 官方会话本体：捕获宿主 slots.renderSlot，弹窗内直接渲染官方 `main.conversation` 槽
-    // （官方 ConversationPanel 内部就是这么调的，uic/lib/client.js:16277）。
-    const rs = (sub.slots as unknown as { renderSlot?: (k: string, p?: Record<string, unknown>) => unknown }).renderSlot
-    if (typeof rs === 'function') {
-      setHostRenderSlot((key, props) => rs.call(sub.slots, key, props ?? {}))
-      console.info('[task-dispatch] 已取得 slots.renderSlot ⇒ 弹窗渲染官方会话本体')
-    } else {
-      console.warn('[task-dispatch] slots 无 renderSlot 面 ⇒ 弹窗回退自绘')
-    }
   })
 
   // 侧栏顶部条目 + 主区整页（dsh 0.1.7-rc.1 原生「主面板」机制）：
