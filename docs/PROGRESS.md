@@ -76,7 +76,7 @@
 
 ## 五、下一步（接手后从这里开始）
 
-1. **【进行中·里程碑 15】会话弹窗外观对齐官方**：里程碑 14 的数据链已真机打通（弹窗能显示对话），但自渲染外观与官方差距大 ⇒ 按 **AGENTS.md 第 4 条「先读源码」** 重评决策 29 路线：`npm pack @deepseek-ai/dsh-client-ui-renderer@<宿主版本>` 读 `scoped-slots.tsx`，复刻 `SessionEntry` 装配（`useHost` / `useRootBinding` / `observableHook` / `ScopeBindingProvider` + `entriesOf` / `storeOf` / `scope('session')` + `uiSession.adapter.bindingSource` + **`sessions.retain`**），在自家弹窗挂**官方 ChatView 本体**。**注意 T1 旧结论「retain / bindingSource 不存在」是在未 retain 的前提下得出的，已证伪**——`retain` 确实存在（`client.js:3194`）。若引擎装配仍不可行，备选 = 逐项对齐官方 DOM 结构与 class（读官方 ChatView 产物源码取真实结构，不凭观感调）。
+1. **【进行中·里程碑 15】会话弹窗外观对齐官方**：路线已定 = **「官方零件 + 自绘容器 + 照表逐项实施」**（弹窗内挂官方本体与跳转方案均已被源码/真机证伪，见决策 35 与 AGENTS.md）。官方每个元素的组件 / CSS module / 语义类 / 关键样式值已整理成对照表：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)（含维护流程：官方升级后提取 diff、逐项实施清单、数据缺口）。已落地：骨架/用户气泡/正文(官方 MarkdownText)/工具行(官方 DisclosureRow)/过程组折叠；**下一步照表从第 6 项起逐项做，做完一项勾一项**。
 2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
 3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
 4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。
@@ -108,6 +108,7 @@
 | [`design/data-model.md`](design/data-model.md) | 任务定义字段表、状态库 DDL、关键设计与取舍 |
 | [`design/state-machine.md`](design/state-machine.md) | 对账判定树、7 种状态、两种依赖语义、5 个必补机制 |
 | [`design/archive-session-view.md`](design/archive-session-view.md) | 归档会话弹窗显示（ChatView 复用落码，决策 29 实施）：方案、风险 R1–R4、真机验证清单、落码子任务 |
+| [`design/session-view-ui-map.md`](design/session-view-ui-map.md) | **会话弹窗「官方样式对照表」**：官方会话页每个元素（组件/CSS module/语义类/关键样式值/所需数据）逐项成表 + 维护流程（官方升级后如何 diff）+ 逐项实施清单。**弹窗样式一律照表做，不凭观感改** |
 | [`design/dsh-capabilities.md`](design/dsh-capabilities.md) | 已核实的 DSH 宿主能力事实清单（源码级，0.1.6 / 0.1.7-rc.1） |
 | [`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md) | 首个任务样例：任务定义 + 回执机制 + 任务手册 |
 | [`examples/task-template.jsonc`](examples/task-template.jsonc) | 全字段注释版任务定义模板（粘进 tasksInline 前须去掉注释） |
