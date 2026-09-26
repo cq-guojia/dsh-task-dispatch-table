@@ -38,11 +38,13 @@ export function parseOfficialCss(css: string): OfficialClassMap {
   const tokenRe = /\.([A-Za-z0-9_-]+)/g
   let m: RegExpExecArray | null = tokenRe.exec(css)
   while (m !== null) { tokens.push(m[1]); m = tokenRe.exec(css) }
-  // 类名形如 <hash>_<semantic>：按首个下划线切分，取出现次数最多的前缀作为本模块哈希
-  // （CSS 里还有 [data-*] 属性选择器与全局类，靠「最多数」把真正的模块哈希选出来）。
+  // 类名形如 <hash>_<semantic>，而 **hash 本身可能以 `_` 开头**（实测：GenericCommandCard 的
+  // `._5OnbHa_root`），所以必须按「最后一个下划线」切分，不能按第一个——按第一个会把
+  // `_5OnbHa_root` 的第一个下划线当分隔位置（下标 0）而整类跳过，导致该模块解析成空表。
+  // 官方语义名是 camelCase、不含下划线（源码 *_module_css_default 实测），故末位切分安全。
   const counts = new Map<string, number>()
   for (const token of tokens) {
-    const at = token.indexOf('_')
+    const at = token.lastIndexOf('_')
     if (at <= 0 || at === token.length - 1) continue
     const prefix = token.slice(0, at)
     counts.set(prefix, (counts.get(prefix) ?? 0) + 1)
@@ -75,7 +77,13 @@ export function discoverOfficialClasses(): Map<string, OfficialClassMap> {
       const id = tag.dataset.pluginCss ?? ''
       if (!id.startsWith(CSS_PREFIX)) continue
       const module = id.slice(CSS_PREFIX.length).replace(/\.module\.css$/, '')
-      result.set(module, parseOfficialCss(tag.textContent ?? ''))
+      const parsed = parseOfficialCss(tag.textContent ?? '')
+      // 解析成空表 = 解析器没认出该模块的类名格式（曾在 GenericCommandCard 上踩过：
+      // 哈希以 `_` 开头被首下划线切分跳过）⇒ 显式告警，别再静默退回自绘。
+      if (parsed.size === 0 && (tag.textContent ?? '').includes('.')) {
+        console.warn(`[task-dispatch:official-classes] 官方模块 ${module} 类名解析为空（格式可能变了）`)
+      }
+      result.set(module, parsed)
     }
   }
   // 只在真的发现到模块时才缓存：本插件 client 可能先于官方 chat 包加载，

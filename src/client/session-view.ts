@@ -709,7 +709,7 @@ export function SessionViewModal(props: {
   const officialCount = officialModuleCount()
   if (!officialWarned) {
     officialWarned = true
-    console.info(`[task-dispatch:session-view] 官方 ui-chat 样式模块发现数=${officialCount}（0 = 回退自绘）`)
+    console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass('ChatView', 'frame')} cardRoot=${officialClass('GenericCommandCard', 'root')} bubble=${officialClass('MessageItem', 'bubble')} reasoningRoot=${officialClass('ReasoningRow', 'root')}`)
     if (officialCount === 0) {
       console.warn('[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）')
     }

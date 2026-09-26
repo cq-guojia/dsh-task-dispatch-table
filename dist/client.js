@@ -278,7 +278,7 @@ window.__ModuleLoader__.load({
 			}
 			const counts = /* @__PURE__ */ new Map();
 			for (const token of tokens) {
-				const at = token.indexOf("_");
+				const at = token.lastIndexOf("_");
 				if (at <= 0 || at === token.length - 1) continue;
 				const prefix = token.slice(0, at);
 				counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
@@ -314,7 +314,9 @@ window.__ModuleLoader__.load({
 					const id = tag.dataset.pluginCss ?? "";
 					if (!id.startsWith(CSS_PREFIX)) continue;
 					const module = id.slice(32).replace(/\.module\.css$/, "");
-					result.set(module, parseOfficialCss(tag.textContent ?? ""));
+					const parsed = parseOfficialCss(tag.textContent ?? "");
+					if (parsed.size === 0 && (tag.textContent ?? "").includes(".")) console.warn(`[task-dispatch:official-classes] 官方模块 ${module} 类名解析为空（格式可能变了）`);
+					result.set(module, parsed);
 				}
 			}
 			if (result.size > 0) discovered = result;
@@ -2317,7 +2319,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const officialCount = officialModuleCount();
 			if (!officialWarned) {
 				officialWarned = true;
-				console.info(`[task-dispatch:session-view] 官方 ui-chat 样式模块发现数=${officialCount}（0 = 回退自绘）`);
+				console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass("ChatView", "frame")} cardRoot=${officialClass("GenericCommandCard", "root")} bubble=${officialClass("MessageItem", "bubble")} reasoningRoot=${officialClass("ReasoningRow", "root")}`);
 				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
 			}
 			const openState = sessionSnap?.openState;
