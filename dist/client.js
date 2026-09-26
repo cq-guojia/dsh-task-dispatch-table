@@ -2093,24 +2093,37 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					const makeAsyncTarget = (promise) => {
 						let nodes = [];
 						let openState = "loading";
+						let chatSnap = { legacy: { nodes: [] } };
+						let sessionSnap = {
+							openState: "loading",
+							hasMore: false
+						};
 						const listeners = /* @__PURE__ */ new Set();
-						const notify = () => {
+						const commit = () => {
+							chatSnap = { legacy: { nodes } };
+							sessionSnap = {
+								openState,
+								hasMore: false
+							};
 							listeners.forEach((l) => l());
 						};
 						if (promise) promise.then((res) => {
 							nodes = extractNodes(res);
 							openState = nodes.length > 0 ? "open" : "error";
 							log("info", `冷读回填完成（${id}）：nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map((n) => n.kind).join(",")}]；首节点=${nodes.length ? deepShape(nodes[0], 0) : "（无）"}`);
-							notify();
+							commit();
 						}).catch((err) => {
 							openState = "error";
 							log("warn", `冷读 RPC 失败（${id}）`, err);
-							notify();
+							commit();
 						});
-						else openState = "error";
+						else {
+							openState = "error";
+							commit();
+						}
 						return {
 							target: {
-								getSnapshot: () => ({ legacy: { nodes } }),
+								getSnapshot: () => chatSnap,
 								subscribe: (fn) => {
 									listeners.add(fn);
 									return () => {
@@ -2119,10 +2132,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 								}
 							},
 							session: {
-								getSnapshot: () => ({
-									openState,
-									hasMore: false
-								}),
+								getSnapshot: () => sessionSnap,
 								subscribe: (fn) => {
 									listeners.add(fn);
 									return () => {
@@ -2170,10 +2180,35 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						"fetch",
 						"load"
 					]);
+					const toPromise = (r) => {
+						if (r && typeof r === "object" && typeof r.then === "function") return r;
+						if (r && typeof r === "object" && typeof r.subscribe === "function") return new Promise((resolve) => {
+							let done = false;
+							const sub = r.subscribe((v) => {
+								if (done) return;
+								done = true;
+								resolve(v);
+								try {
+									sub?.unsubscribe?.();
+								} catch {}
+							});
+						});
+						if (r && typeof r === "object" && typeof r[Symbol.asyncIterator] === "function") return (async () => {
+							for await (const v of r) return v;
+						})();
+						return Promise.resolve(r);
+					};
+					const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => {
+						setTimeout(() => {
+							rej(/* @__PURE__ */ new Error(`超时 ${ms}ms 无响应`));
+						}, ms);
+					})]);
 					for (const [obj, label] of [[sessRemote, "sess.remote"], [mgrRemote, "mgr.remote"]]) {
 						if (!obj) continue;
 						const o = obj;
 						for (const rpc of [
+							"$stream",
+							"stream",
 							"call",
 							"send",
 							"invoke"
@@ -2187,11 +2222,10 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 							]) try {
 								const arg = method.endsWith("page") ? { address: addr } : addr;
 								const r = fn.call(o, method, arg);
-								if (r && typeof r === "object" && typeof r.then === "function") calls.push({
+								calls.push({
 									label: `${label}.${rpc}('${method}')`,
-									promise: r
+									promise: withTimeout(toPromise(r), 8e3)
 								});
-								else log("info", `${label}.${rpc}('${method}') sync=${deepShape(r, 0)}`);
 							} catch (e) {
 								log("warn", `${label}.${rpc}('${method}') threw:${e?.message ?? e}`);
 							}

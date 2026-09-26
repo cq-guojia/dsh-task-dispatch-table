@@ -260,31 +260,40 @@ export function openSessionView(
         return []
       }
       // 异步回填的 target：立即弹窗（loading 态），RPC 落定后通知 React 重渲染。
+      // ⚠ 快照必须缓存：useSyncExternalStore 要求 getSnapshot 在值未变时返回同一引用；
+      // 若每次返回新对象 ⇒ 无限更新（React #185「Maximum update depth exceeded」）⇒ 面板崩溃黑屏。
       const makeAsyncTarget = (promise: Promise<unknown> | null): SessionViewTarget => {
         let nodes: ConversationNodeLike[] = []
         let openState: SessionSnapshotFace['openState'] = 'loading'
+        let chatSnap: ChatViewFace = { legacy: { nodes: [] } }
+        let sessionSnap: SessionSnapshotFace = { openState: 'loading', hasMore: false }
         const listeners = new Set<() => void>()
-        const notify = (): void => { listeners.forEach(l => l()) }
+        const commit = (): void => {
+          chatSnap = { legacy: { nodes } }
+          sessionSnap = { openState, hasMore: false }
+          listeners.forEach(l => l())
+        }
         if (promise) {
           promise.then((res) => {
             nodes = extractNodes(res)
             openState = nodes.length > 0 ? 'open' : 'error'
             log('info', `冷读回填完成（${id}）：nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map(n => n.kind).join(',')}]；首节点=${nodes.length ? deepShape(nodes[0], 0) : '（无）'}`)
-            notify()
+            commit()
           }).catch((err) => {
             openState = 'error'
             log('warn', `冷读 RPC 失败（${id}）`, err)
-            notify()
+            commit()
           })
         } else {
           openState = 'error'
+          commit()
         }
         const target: SnapshotFace<ChatViewFace | undefined> = {
-          getSnapshot: () => ({ legacy: { nodes } }),
+          getSnapshot: () => chatSnap,
           subscribe: (fn) => { listeners.add(fn); return () => { listeners.delete(fn) } },
         }
         const session: SnapshotFace<SessionSnapshotFace> & { open?: () => Promise<void>; loadOlder?: () => Promise<void> } = {
-          getSnapshot: () => ({ openState, hasMore: false }),
+          getSnapshot: () => sessionSnap,
           subscribe: (fn) => { listeners.add(fn); return () => { listeners.delete(fn) } },
         }
         return { target, session, loadOlder: () => {} }
@@ -309,19 +318,46 @@ export function openSessionView(
       }
       pushDirect('sess.remote', sessRemote, ['follow', 'page', 'getHistory', 'history', 'read', 'fetch', 'load'])
       pushDirect('mgr.remote', mgrRemote, ['follow', 'page', 'getHistory', 'history', 'read', 'fetch', 'load'])
+      // 这两个 remote 的原型方法只有 `$stream` + Object 内置 ⇒ `$stream` 是唯一的真实 RPC 通道，
+      // 而 session/follow 语义即「订阅流」（opening snapshot + 后续事件），故走
+      // $stream('session/follow', addr)。返回值可能是 Promise / 可订阅对象 / 异步可迭代：
+      // 统一收敛成 Promise（取首个值），并加超时避免永久挂起。
+      const toPromise = (r: unknown): Promise<unknown> => {
+        if (r && typeof r === 'object' && typeof (r as { then?: unknown }).then === 'function') return r as Promise<unknown>
+        if (r && typeof r === 'object' && typeof (r as { subscribe?: unknown }).subscribe === 'function') {
+          return new Promise<unknown>((resolve) => {
+            let done = false
+            const sub = (r as { subscribe(fn: (v: unknown) => void): { unsubscribe?(): void } }).subscribe((v) => {
+              if (done) return
+              done = true
+              resolve(v)
+              try { sub?.unsubscribe?.() } catch { /* 订阅器可能不支持退订 */ }
+            })
+          })
+        }
+        if (r && typeof r === 'object' && typeof (r as Record<symbol, unknown>)[Symbol.asyncIterator] === 'function') {
+          return (async (): Promise<unknown> => {
+            for await (const v of r as AsyncIterable<unknown>) return v
+            return undefined
+          })()
+        }
+        return Promise.resolve(r)
+      }
+      const withTimeout = (p: Promise<unknown>, ms: number): Promise<unknown> => Promise.race([
+        p,
+        new Promise<unknown>((_, rej) => { setTimeout(() => { rej(new Error(`超时 ${ms}ms 无响应`)) }, ms) }),
+      ])
       for (const [obj, label] of [[sessRemote, 'sess.remote'], [mgrRemote, 'mgr.remote']] as const) {
         if (!obj) continue
         const o = obj as Record<string, unknown>
-        for (const rpc of ['call', 'send', 'invoke']) {
+        for (const rpc of ['$stream', 'stream', 'call', 'send', 'invoke']) {
           const fn = o[rpc]
           if (typeof fn === 'function') {
             for (const method of ['session/follow', 'session/page', 'follow', 'page']) {
               try {
                 const arg = method.endsWith('page') ? { address: addr } : addr
                 const r = (fn as (a: unknown, b: unknown) => unknown).call(o, method, arg)
-                if (r && typeof r === 'object' && typeof (r as { then?: unknown }).then === 'function') {
-                  calls.push({ label: `${label}.${rpc}('${method}')`, promise: r as Promise<unknown> })
-                } else log('info', `${label}.${rpc}('${method}') sync=${deepShape(r, 0)}`)
+                calls.push({ label: `${label}.${rpc}('${method}')`, promise: withTimeout(toPromise(r), 8000) })
               } catch (e) { log('warn', `${label}.${rpc}('${method}') threw:${(e as Error)?.message ?? e}`) }
             }
           }
