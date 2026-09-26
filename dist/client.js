@@ -198,6 +198,7 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-btn-icon{padding:4px 6px;display:inline-flex;align-items:center;justify-content:center;}
 .dsh-tdt-sv-body{overflow:auto;padding:16px 18px 20px;}
 .dsh-tdt-sv-col{width:100%;max-width:var(--dsh-tdt-content-width);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-tdt-flow-gap);}
+.dsh-tdt-sv-flowitem{min-width:0;}
 .dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.6;word-break:break-word;}
 .dsh-tdt-sv-assistant{align-self:stretch;font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-image{align-self:flex-start;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));border:1px dashed var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 10px;}
@@ -254,6 +255,90 @@ window.__ModuleLoader__.load({
 			el.id = SV_STYLE_ID;
 			el.textContent = ARCHIVE_SESSION_CSS;
 			document.head.appendChild(el);
+		}
+		//#endregion
+		//#region src/client/official-classes.ts
+		/** 官方 chat 包注入的 style 标签 data-plugin-css 前缀。 */
+		const CSS_PREFIX = "@deepseek-ai/dsh-client-ui-chat/";
+		let discovered = null;
+		/**
+		* 解析一段官方 CSS module 文本，抽出 {语义名 → 真实类名}。
+		* 纯函数、无 DOM 依赖（冒烟可直接对夹具断言）。
+		* @param css - style 标签的 textContent。
+		* @returns 语义名到真实类名的映射；解析不出哈希前缀时为空表。
+		*/
+		function parseOfficialCss(css) {
+			const out = /* @__PURE__ */ new Map();
+			const tokens = [];
+			const tokenRe = /\.([A-Za-z0-9_-]+)/g;
+			let m = tokenRe.exec(css);
+			while (m !== null) {
+				tokens.push(m[1]);
+				m = tokenRe.exec(css);
+			}
+			const counts = /* @__PURE__ */ new Map();
+			for (const token of tokens) {
+				const at = token.indexOf("_");
+				if (at <= 0 || at === token.length - 1) continue;
+				const prefix = token.slice(0, at);
+				counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
+			}
+			let prefix = "";
+			let best = 0;
+			counts.forEach((count, key) => {
+				if (count > best) {
+					best = count;
+					prefix = key;
+				}
+			});
+			if (prefix === "") return out;
+			for (const token of tokens) {
+				if (!token.startsWith(prefix + "_")) continue;
+				const semantic = token.slice(prefix.length + 1);
+				if (semantic === "" || semantic.includes("_")) continue;
+				if (!out.has(semantic)) out.set(semantic, token);
+			}
+			return out;
+		}
+		/**
+		* 扫描 document 里官方 chat 包注入的 style 标签，按模块缓存解析结果。
+		* 无 document（SSR / 冒烟）时返回空表。
+		*/
+		function discoverOfficialClasses() {
+			if (discovered !== null) return discovered;
+			const result = /* @__PURE__ */ new Map();
+			if (typeof document !== "undefined") {
+				const tags = document.querySelectorAll("style[data-plugin-css]");
+				for (let i = 0; i < tags.length; i++) {
+					const tag = tags[i];
+					const id = tag.dataset.pluginCss ?? "";
+					if (!id.startsWith(CSS_PREFIX)) continue;
+					const module = id.slice(32).replace(/\.module\.css$/, "");
+					result.set(module, parseOfficialCss(tag.textContent ?? ""));
+				}
+			}
+			if (result.size > 0) discovered = result;
+			return result;
+		}
+		/** 已发现的官方模块数（0 = 官方样式未注入，调用方应走自绘兜底）。 */
+		function officialModuleCount() {
+			return discoverOfficialClasses().size;
+		}
+		/**
+		* 取一个官方类名；取不到返回 null（调用方回退自绘样式）。
+		* @param module - 模块名（如 `ChatView`）。
+		* @param semantic - 语义名（如 `frame`）。
+		*/
+		function officialClass(module, semantic) {
+			return discoverOfficialClasses().get(module)?.get(semantic) ?? null;
+		}
+		/** className 拼接：官方类优先，缺失时回退自绘类（两者只取其一，避免样式打架）。 */
+		function ocOr(module, semantic, fallback) {
+			return officialClass(module, semantic) ?? fallback;
+		}
+		/** 拼接非空类名片段。 */
+		function cx(...parts) {
+			return parts.filter((part) => typeof part === "string" && part !== "").join(" ");
 		}
 		//#endregion
 		//#region node_modules/marked/lib/marked.esm.js
@@ -1975,6 +2060,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		}
 		//#endregion
 		//#region src/client/session-view.ts
+		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
+		let officialWarned = false;
 		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 		function openSessionView(sessions, uiConversation, id) {
 			const log = (level, msg, extra) => {
@@ -2064,7 +2151,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const html = renderMarkdown(props.text);
 			if (html === "") return (0, react.createElement)("span", null);
 			return (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-md",
+				className: cx(officialClass("AssistantMarkdown", "root") ?? "dsh-tdt-sv-md", officialClass("AssistantMarkdown", "body")),
 				dangerouslySetInnerHTML: { __html: html }
 			});
 		}
@@ -2216,9 +2303,18 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const sessionSub = (0, react.useMemo)(() => (onChange) => view.session.subscribe(onChange), [view]);
 			const sessionGet = (0, react.useMemo)(() => () => view.session.getSnapshot(), [view]);
 			const sessionSnap = (0, react.useSyncExternalStore)(sessionSub, sessionGet);
-			const rendered = (chat?.legacy?.nodes ?? []).map((node) => renderNode(node, t)).filter((item) => item !== null);
+			const nodes = chat?.legacy?.nodes ?? [];
+			const flowItemCls = ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem");
+			const rendered = nodes.map((node) => renderNode(node, t)).filter((item) => item !== null).map((item, index) => (0, react.createElement)("div", {
+				key: `flow${index}`,
+				className: flowItemCls
+			}, item));
+			if (!officialWarned) {
+				officialWarned = true;
+				if (officialModuleCount() === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
+			}
 			const openState = sessionSnap?.openState;
-			const body = rendered.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty")) : rendered;
+			const body = rendered.length === 0 ? (0, react.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty")) : rendered;
 			const showLoadOlder = sessionSnap?.hasMore !== false;
 			return (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-overlay",
@@ -2237,7 +2333,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				className: "dsh-tdt-sv-btn dsh-tdt-sv-btn-icon",
 				"aria-label": t("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("div", { className: "dsh-tdt-sv-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-col" }, body))));
+			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: officialClass("ChatView", "root") ?? "" }, (0, react.createElement)("div", { className: officialClass("ChatView", "scroll") ?? "" }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, body))))));
 		}
 		//#endregion
 		//#region src/client/index.ts

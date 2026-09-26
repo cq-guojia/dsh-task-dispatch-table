@@ -402,6 +402,15 @@ try {
   check('openSessionView 数据闸门已打进 bundle', clientJs.includes('openSessionView'))
   check('loadOlder 探测调用已打进 bundle', clientJs.includes('loadOlder'))
   check('chat target 组装已打进 bundle（target("chat")）', clientJs.includes('target("chat")') || clientJs.includes("target('chat')") || /target\(["']chat["']\)/.test(clientJs))
+  // 官方外观复用（方案 ①）：运行时从宿主注入的 style 标签解析官方真实 CSS-module 类名。
+  // 纯解析函数 parseOfficialCss 无 DOM 依赖（可对夹具断言）；冒烟这里只验产物里确实带上了。
+  check('官方类名解析器已打进 bundle（parseOfficialCss）', clientJs.includes('parseOfficialCss'))
+  check('官方类名发现已打进 bundle（discoverOfficialClasses）', clientJs.includes('discoverOfficialClasses'))
+  check('官方 chat 包 CSS 前缀已打进 bundle', clientJs.includes('@deepseek-ai/dsh-client-ui-chat/'))
+  check('弹窗套用官方 ChatView 结构语义名（frame/root/scroll/column/flowItem）',
+    ['frame', 'root', 'scroll', 'column', 'flowItem'].every(k => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`)))
+  check('官方类缺失时回退自绘类（dsh-tdt-sv-body/col/flowitem 仍在）',
+    clientJs.includes('dsh-tdt-sv-body') && clientJs.includes('dsh-tdt-sv-col') && clientJs.includes('dsh-tdt-sv-flowitem'))
   const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
   const injectList = pkg.dsh?.client?.inject ?? []
   check('inject 清单声明 sessions 提供方（dsh-api-session-controller）',

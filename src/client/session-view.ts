@@ -33,6 +33,7 @@
 
 import { createElement as h, useMemo, useSyncExternalStore } from 'react'
 import { ensureArchiveSessionStyle } from './archive-session-css'
+import { cx, ocOr, officialClass, officialModuleCount } from './official-classes'
 import { renderMarkdown } from './markdown'
 import type { LocaleKey } from './locales'
 
@@ -152,6 +153,9 @@ export interface SessionViewTarget {
  * projectionStores.rows 为空 ⇒ 默认关闭，避免每点一次刷十几条 reject。
  */
 const COLD_READ_PROBE = false
+
+/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
+let officialWarned = false
 
 /** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 export function openSessionView(
@@ -486,7 +490,10 @@ ensureArchiveSessionStyle()
 function Md(props: { text: string }): ReturnType<typeof h> {
   const html = renderMarkdown(props.text)
   if (html === '') return h('span', null)
-  return h('div', { className: 'dsh-tdt-sv-md', dangerouslySetInnerHTML: { __html: html } })
+  return h('div', {
+    className: cx(officialClass('AssistantMarkdown', 'root') ?? 'dsh-tdt-sv-md', officialClass('AssistantMarkdown', 'body')),
+    dangerouslySetInnerHTML: { __html: html },
+  })
 }
 
 /** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
@@ -673,13 +680,24 @@ export function SessionViewModal(props: {
   const sessionSnap = useSyncExternalStore(sessionSub, sessionGet)
 
   const nodes = chat?.legacy?.nodes ?? []
-  const rendered = nodes
+  // flowItem = 官方每条消息的流式容器（源码 client.js:1759）；消息间距由官方规则
+  // `.column > .flowItem ~ .flowItem { margin-top: var(--dsh-chat-flow-gap) }` 驱动。
+  const flowItemCls = ocOr('ChatView', 'flowItem', 'dsh-tdt-sv-flowitem')
+  const renderedCore = nodes
     .map(node => renderNode(node, t))
     .filter((item): item is NonNullable<ReturnType<typeof h>> => item !== null)
+  const rendered = renderedCore.map((item, index) =>
+    h('div', { key: `flow${index}`, className: flowItemCls }, item))
 
+  if (!officialWarned) {
+    officialWarned = true
+    if (officialModuleCount() === 0) {
+      console.warn('[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）')
+    }
+  }
   const openState = sessionSnap?.openState
   const body = rendered.length === 0
-    ? h('div', { className: 'dsh-tdt-sv-hint' },
+    ? h('div', { className: ocOr('ChatView', 'hint', 'dsh-tdt-sv-hint') },
         openState === 'error' ? t('sessionLoadFailed')
           : openState === 'loading' || openState === 'cold' ? t('sessionLoading')
           : t('sessionEmpty'),
@@ -708,8 +726,16 @@ export function SessionViewModal(props: {
           }, h(CloseIcon, {})),
         ),
       ),
-      h('div', { className: 'dsh-tdt-sv-body' },
-        h('div', { className: 'dsh-tdt-sv-col' }, body),
+      // 会话区按官方 ChatView 真实结构组织（源码 client.js:5148-5195）：
+      // frame > root > scroll > column > flowItem*。命中官方类时**替换**本插件同类职责的类
+      // （否则官方 scroll 的 padding 会与 .dsh-tdt-sv-body 的 padding 叠加）；
+      // 未命中则回退自绘类，见 ./official-classes。
+      h('div', { className: ocOr('ChatView', 'frame', 'dsh-tdt-sv-body') },
+        h('div', { className: officialClass('ChatView', 'root') ?? '' },
+          h('div', { className: officialClass('ChatView', 'scroll') ?? '' },
+            h('div', { className: ocOr('ChatView', 'column', 'dsh-tdt-sv-col') }, body),
+          ),
+        ),
       ),
     ),
   )
