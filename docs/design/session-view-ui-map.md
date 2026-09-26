@@ -82,6 +82,20 @@ for (let i=0;i<lines.length;i++){
 
 **渲染器**：官方 `MarkdownText`（primitives，mdast + KaTeX + 代码块工具条；`labels = { code:{copyLabel,copiedLabel}, footnotes }` 必填且需引用稳定）→ ✅ 已接入。
 
+### 三-B、markdown 内容元素（表格 / 代码块 / 行内 code / emoji 标题）——全部由 `MarkdownText` 带出
+
+| 元素 | 官方来源 | 关键样式 / 行为（源码原文） | 我们 |
+|---|---|---|---|
+| **代码块卡片**（左上 `bash`/`json` 语言名，右上「换行 + 复制」两钮） | `MarkdownText` 内部 = primitives **`CodeCard`**（`primitives/lib/CodeCard.module.css`） | `.card{margin:16px 0; background:var(--dsw-alias-markdown-code-block); border-radius:var(--dsw-radius-lg); font:var(--dsw-font-markdown-code-block)}`；`.header{padding:10px 18px 8px 22px; justify-content:space-between}`；`.language{color:label-tertiary; font-family:var(--ds-font-family-code)}`；`.actions{gap:4px}`（`.action` 24px 方钮：**换行切换 + 复制**） | ✅（用 MarkdownText 自动获得；需传 `labels.code`） |
+| **语法高亮**（json 彩色 token） | primitives `CODE_HIGHLIGHT_EXTENSIONS` / `languageForPath` / `useCodeHighlighter`（Lezer） | 由 MarkdownText 内部使用 | ✅ |
+| **表格**（表头行 / 单元格 / 行内 code chip） | `MarkdownText` + `AssistantMarkdown.body .md-table-wide` | 宽表越出内容列：`--dsh-table-spare/lead`（`box-sizing:border-box; width:calc(100%+lead+spare); margin-left:calc(-1*lead)`） | ✅ |
+| **行内 code chip**（`web_search`、`AGENTS.md`） | `MarkdownText` 行内 code | 小圆角底色 chip | ✅ |
+| **emoji 标题**（🔑 / 💡） | 就是 mdast heading 里的**文本内容**，无特殊组件 | — | ✅ |
+| **列表圆点 / 加粗** | `MarkdownText` | — | ✅ |
+| 文件 mention 下划线 | `MarkdownText` 的 `fileMentions` 参数 | 行内 code 解析为真实文件 → 下划线链接（`openFile`） | ❌（未传，见清单 20） |
+
+> **说明**：primitives 包自带 **32 个可读 `.module.css`**（CodeCard / TerminalBlock / ReadBlock / DiffBlock / SearchBlock / WebBlock / DisclosureRow / user-text（mention chips）/ Button / Pill / Tag / Tooltip / Modal / Menu / JsonTree / StateDot / …），由 primitives 包**自行注入 document**。⇒ 我们用官方组件时**无需**自己发现这些类名（样式随组件走）；`official-classes.ts` 目前只扫 `dsh-client-ui-chat/` 前缀即可覆盖自绘部分，若将来要复用 primitives 的类名再扩展前缀。
+
 ---
 
 ## 四、工具调用 / 命令卡（`GenericCommandCard.module.css`，8 类）
@@ -213,6 +227,8 @@ for (let i=0;i<lines.length;i++){
 | `DiffBlock` | `DiffBlockLabels`（copy/copied/collapse/expand…）+ `diffs` | write/edit 差异块 |
 | `SearchBlock` | SearchBlockLabels | 搜索块 |
 
+> **样式随组件走**：primitives 包自带 **32 个可读 `.module.css`**（`CodeCard` / `TerminalBlock` / `ReadBlock` / `DiffBlock` / `SearchBlock` / `WebBlock` / `DisclosureRow` / `user-text` / `Button` / `Pill` / `Tag` / `Tooltip` / `Modal` / `Menu` / `MenuSurface` / `JsonTree` / `StateDot` / `FoldToggle` / `TextShimmer` / `HoverCard` / `ImageLightbox` / `ImagePreview` / `Input` / `Checkbox` / `Switch` / `SegmentedControl` / `SegmentedTabs` / `ShortcutKeys` / `Toast` / `ConnectionIndicator` / `FileTypeIcon` / `PathLabel` / `RiskConfirmation`），由 primitives **自行注入 document** ⇒ 用官方组件时无需自己发现/挂这些类名。
+
 > ⛔ **用不了的**：官方会话容器 `ChatView`（组件不导出）；`ctx.slots.renderSlot` 只接受 `key='root'`（`ui-renderer registry.d.ts:150-158`，运行时强制）；`retain(source:'mainView')` 会锁死宿主会话导航（已实测回退，见 AGENTS.md/决策记录）。
 
 ---
@@ -224,6 +240,7 @@ for (let i=0;i<lines.length;i++){
 | 一、页面骨架 | ✅ | frame/root/scroll/column/flowItem/hint 全用官方类 |
 | 二、用户消息 | ✅ | userRow/userStack/bubble（右对齐气泡） |
 | 三、助手正文 | ✅ | 官方 `MarkdownText` + `AssistantMarkdown.root` |
+| 三-B、markdown 内容元素（代码块卡片/语法高亮/表格/行内 code/列表/emoji 标题） | ✅ | 随官方 `MarkdownText` 自带——primitives 自带 32 个 CSS module（CodeCard 等）由它自行注入，组件即样式 |
 | 四、工具卡 | ✅ | 官方 `DisclosureRow` + `GenericCommandCard` 类 + 人话摘要 + 默认折叠 |
 | 五、思考 | 🟡 | `ReasoningRow` 类已挂，但仍是 `<details>`（无固定行高 / data-expanded / running 扫光） |
 | 六、turn 元信息（用时） | ❌ | **缺数据**：turn 起止时间（需从事件流推导，legacy.nodes 没有） |
