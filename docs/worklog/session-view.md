@@ -22,3 +22,11 @@
 
 ——用户真机看决策 28 自绘弹窗：功能正常但界面与官方会话差距大（无 markdown、无深度思考收起、工具卡简陋），要求「完整套用官方样式、不手搓」，并追问「官方归档会话也没有展示界面吗？必须取消归档才能看？」。逐一查证：① **官方确实无归档会话查看界面**——归档设置页 `ArchivedSessionsSection.tsx` 每行只有「恢复」按钮；主视图导航器 `navigation.ts:287` `clearArchivedCurrent()` 在任何列表变化时主动清掉主视图里的归档会话引用（官方明确策略，非能力缺失）；② **修正决策 28 一处事实错误**：`@deepseek-ai/dsh-workspace` 并非「无 unarchive」——`api/workspace-controller/src/commands.ts:171` 有 `unarchiveSession`（host+remote 双通道，官方归档设置页就在用），但用户拍板**不走取消归档路线**；③ **深挖官方渲染引擎**（`ui-renderer/src/client/scoped-slots.tsx` 1325 行全文）找到正路：ChatView 等组件确实不导出，但引擎组装 entry 的积木全部公开（`useHost`/`useRootBinding`/`observableHook`/`ScopeBindingProvider` + host API `entriesOf`/`storeOf`/`scope('session')`/`locale` + `uiSession.adapter.bindingSource` + `sessions.retain` ISessions 契约方法）——**落码 = 复刻引擎 SessionEntry 装配逻辑 ~50 行胶水，在自家弹窗挂官方 ChatView 本体**，非拼内部 props 猜行为；已否决：手工拼 ChatViewSlotProps（内部契约碎）、unarchive+官方会话区（用户否）、继续自绘。**用户拍板「先记录方案、暂不动工」**，记为决策 29；文档同步：decisions（28 标注被修订 + 新增 29）、本文件状态表（28 行标注 + 新增 29 行）/ 能力表（归档语义、对话渲染分层两行修正）/ 下一步（新增 3.5）/ 日志
 
+## 2026-09-26 — 「查看会话」点了没反应：根因定位与修复（走完十几轮弯路后的教训）
+
+——**症状**：执行记录点「↗ 查看会话」毫无反应、无报错。**根因（读官方源码才定位）**：`@deepseek-ai/dsh-api-session-controller@0.1.7-rc.2` `lib/client.js:3406` —— `binding(id) { return this.scopes.get(id)?.binding }`，**只查已物化的 scope、从不创建**；归档 / 久未打开的会话没有 scope ⇒ 返回 `undefined` ⇒ `@deepseek-ai/dsh-client-ui-conversation` `lib/client.js:3083` 的 `if (this.sessions.binding(sessionId) !== owner) throw new Error('inactive session ...')` 直接抛出 ⇒ `openSessionView` 静默 `return null` ⇒ 界面无反应。**正解**：查看前 `sessions.retain(id, { source })` ⇒ `retainScope`（3409）→ `materializeScope`（3472）物化 scope，且内部触发 `manager.get(id).open()` 拉历史尾页；返回引用在使用结束（弹窗关闭）时 `release()`。**修复**：`session-view.ts` 在 `binding` 前 retain 并持有引用，`SessionViewTarget` 增 `dispose()`，`index.ts` 弹窗关闭时调用；原「反归档后查看」降级为兜底（且只有真反归档过才在关闭时归档回去）。真机验证：**弹窗弹出并显示对话内容**，冒烟 93 项全过，push `fcabf8b`。
+
+**教训（已写入 AGENTS.md 第 4 条）**：本次在「猜 API」上耗掉十几轮——先后误判为「归档屏蔽」「`$stream` 冷读」「`projectionStores`」「反归档可恢复」，还两次埋大规模探针刷日志（其中一次因 `getSnapshot` 每次返回新对象触发 React #185 无限更新、面板黑屏）。**正确姿势只有一条：先查 `dsh-capabilities.md`，再 `npm pack @deepseek-ai/<包>@<宿主版本>` 把源码下下来读到实现本体**（方法签名 / 判空 / 抛错分支），报错栈的 `client.js:行号` 就是精确坐标。
+
+**顺带证伪**：T1 曾判「决策 29 的 ChatView 挂载在 0.1.7-RC.2 不可行（`retain` / `bindingSource` 不存在）」——该结论是在**未 retain** 的前提下得出的；`retain` 经源码确认存在（`client.js:3194`），故决策 29 路线需按源码重评（→ 里程碑 15：外观对齐官方）。
+
