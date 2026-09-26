@@ -116,14 +116,31 @@ for (let i=0;i<lines.length;i++){
 
 ## 六、turn 元信息与操作行（`MessageIconActions.module.css`，6 类）——**「用时 N 秒」就在这**
 
-| 元素 | 类 | 关键样式 | 我们 |
+| 元素 | 类 | 关键样式 / 行为（源码核实） | 我们 |
 |---|---|---|---|
-| 操作行 | `actions` | `height:calc(28px + delta); align-items:center; gap:8px; display:flex`；**hover 才显示**（`[data-actions-reveal=hover]` + 相邻 user 消息规则） | ❌ |
-| 起始时间 | `timeStart` | `font-size:secondary(13px); line-height:24px+delta; color:label-tertiary; white-space:nowrap; padding-right:12px` | ❌ |
-| **结束时间（用时）** | `timeEnd` | `font-size:calc(secondary - 1px); line-height:24px+delta; color:inherit; white-space:nowrap` | ❌（**需要 turn 起止时间，legacy.nodes 没有**） |
-| 结尾信息 | `endInfo` | `color:label-tertiary; gap:8px; margin-left:8px; inline-flex`（内挂用量面板） | ❌ |
-| 复制按钮 | `action` | 官方图标 `IconCopyOutlineRegular` / `IconCheckOutlineRegular` + `Tooltip` | ❌ |
-| 分支按钮 | `action` | `IconBranchOutlineRegular`（分叉会话） | ❌ |
+| 操作行 | `actions` | `height:calc(28px + delta); align-items:center; gap:8px; display:flex`；**hover 才显示**（`[data-actions-reveal=hover]` + 「相邻两条 user 消息之间」的行也隐藏） | ❌ |
+| 起始时间 | `timeStart` | `font-size:secondary(13px); line-height:24px+delta; color:label-tertiary; padding-right:12px`（用户消息行用） | ❌ |
+| **结束时间（用时 N 秒 / 日期时间）** | `timeEnd` | `font-size:calc(secondary - 1px); line-height:24px+delta; color:inherit; white-space:nowrap`；文案由 `formatMessageClock(time, t, day)` 出 | ❌（**需要 turn 起止时间，legacy.nodes 没有**） |
+| 结尾信息 | `endInfo` | `color:label-tertiary; gap:8px; margin-left:8px; inline-flex`（内挂用量面板 + 时间） | ❌ |
+| 复制按钮 | `action` | `IconCopyOutlineRegular` → 复制成功后 `IconCheckOutlineRegular`（**1 秒后还原**）+ `Tooltip`「复制/已复制」 | ❌ |
+| 分支按钮 | `action` | `IconBranchOutlineRegular`；`onBranch = forkAt(seq)`；**有后续节点则不可用**（`branchUnavailable / hasLaterChatNode`） | ❌ |
+| 👍 👎 等扩展按钮 | — | **来自槽位 `conversation.chat.assistant-actions`**（`renderSlot(slot, { messageId })`，chat client.js:6523）——反馈类按钮是插件挂进来的，不在 chat 包内 | ❌（槽位在官方会话区里才能渲染；我们弹窗里可自绘等价按钮） |
+| 用量小标 | `usageAction` | `data.tokenUsage` 存在且 `detailed`（presentation 模式）才渲染 `TurnUsagePanel` | ❌（**缺 usage 数据**） |
+| 显隐时机 | `data-actions-reveal` | turn 尾：`endsWithResponse ? "always" : "hover"`（**有答复的 turn 恒显，否则悬停显**） | ❌ |
+
+### 六-B、turn 过程行与过程内条目（按你的截图逐项核实）
+
+| 元素 | 官方组件 / 类 | 行为与样式 | 我们 |
+|---|---|---|---|
+| **「用时 29 秒 ⌃」分隔条** | `TurnProcessNodeView.root` | 高 `33px+delta`、**border-bottom `.5px` `--dsw-alias-border-l2`**、`padding:0 0 8px`、`:not([data-open]){margin-bottom:8px}`；点击展开/收起本 turn 的过程条目；`chevron` 14px `[data-open]` 旋转 180° | 🟡（我们有「过程 · N」行但**没有这条分隔线样式**，label 也不是用时） |
+| **重试行**「已重试模型请求 (3/5) · 2s ⌄」 | `MessageItem.retryRow/retrySummary/retryText/retryDetails/retryDetailLabel` | 折叠=摘要；展开=`重试延迟: 1868 毫秒` / `失败原因: 503 {…}`（文案键在 chat 包内，已核实存在） | ❌（我们有 model-retry 提示行，无展开详情） |
+| **工具组行**「已写入文件 ⌃」 | `ChatGroupSeat`（title/leading/chevron/activityIcon） | 把同一工具的多次调用再收一层，hover 时图标↔箭头互换 | ❌ |
+| **工具行（错误）**「写入 · Error: invalid arguments…」 | `GenericCommandCard`，`data-state=error`、`summary[data-error]` | 摘要红色（`_summary[data-error]` 规则） | 🟡（有 ✕ 标记，摘要未变红） |
+| **工具行（成功）**「写入 · test.txt +1 -0」 | `GenericCommandCard`，`title` + `summary` | `title=工具名`、`summary=目标 + 差异统计`；`+N -N` 差异计数由写入类渲染扩展计算（chat 包内无 `diffTotals` 调用，来源待核） | 🟡（有路径摘要，无差异统计） |
+| **思考行**「思考 ⌃」 | `ReasoningRow`（`root:not([data-expanded])` 高 24px） | 折叠=固定一行；展开=`thinkBody` 预览（如 `Done. The file has been created.`） | 🟡 |
+| **正文行内文件下划线**（`test.txt`） | `MarkdownText` 的 `fileMentions` | 行内 code 若解析为真实文件 → 下划线链接，点击走 `openFile` | ❌（`fileMentions` 未传） |
+| **用户气泡里的文件 chips**（`▣ AGENTS.md`） | primitives `projectUserText` | 用户文本里的 `@文件` 渲染成带图标的 mention chip | ❌ |
+| **markdown 列表圆点 / 加粗标题** | `MarkdownText`（mdast 渲染） | `•` 列表、`**加粗**`、行内 code chips 都是官方渲染器出的 | ✅（已用 MarkdownText） |
 
 ---
 
@@ -213,7 +230,9 @@ for (let i=0;i<lines.length;i++){
 | 七、过程组 | ✅ | 连续工具调用 → 「过程 · N」折叠组（`ChatGroupSeat` 类） |
 | 八、过程行分隔线 | 🟡 | 无官方那条 `.5px` 下边框分隔线（TurnProcessNodeView 样式） |
 | 九、用量小标 | ❌ | **缺数据**：usage |
-| 十、turn 尾操作区 | ❌ | 复制/分支按钮 |
+| 六、操作行（复制/分支/👍👎/用时） | ❌ | 复制+分支可自绘（官方图标/Tooltip/1s copied 态）；👍👎 官方来自槽位 `conversation.chat.assistant-actions`，弹窗里只能自绘等价按钮；用时缺 turn 起止时间 |
+| 六-B、过程条目 | ❌/🟡 | 重试行展开详情 ❌、工具组行（已写入文件）❌、错误摘要红色 🟡、`+N -N` 差异统计 ❌（来源待核）、思考行 🟡 |
+| 文件 mention | ❌ | 正文行内文件下划线 = `MarkdownText` 的 `fileMentions`；用户气泡 chips = `projectUserText`——两者都只需传入解析器即可 |
 | 十一、导航/上下文/其他 | ❌ | 未实现 |
 | 图标 | ✅ | 官方 `IconCodeOutlineRegular`（不再用 `⚙` 字符） |
 
@@ -237,6 +256,15 @@ for (let i=0;i<lines.length;i++){
 14. ⬜ 用量小标（TurnUsagePanel/StatsPills）——**前置**：usage 数据
 15. ⬜ 「到底部」悬浮钮（toBottom/toBottomSlot）
 16. ⬜ 上下文注入行（ContextBody/ContextInjectionRow）——看归档会话里有没有这类节点再定
+17. ⬜ 工具卡补 `summary[data-error]` 红色变体（错误行摘要变红，对齐官方）
+18. ⬜ 思考块改 `ReasoningRow` 结构（`data-expanded` + 折叠固定行高 24px，去掉 `<details>`）
+19. ⬜ 重试行（已重试模型请求 (n/m) · 延迟/原因）——`MessageItem.retryRow` 组，数据在 model-retry 节点里
+20. ⬜ 正文 `fileMentions`（行内文件下划线）+ 用户气泡 `projectUserText`（mention chips）
+21. ⬜ `TerminalBlock` / `ReadBlock` / `DiffBlock`（按工具名映射，接一次 labels）——展开内容用官方块
+22. ⬜ `ChatGroupSeat` 图标↔箭头 hover 互换 + fade 渐隐
+23. ⬜ 操作行（复制按钮：IconCopy→IconCheck 1s + Tooltip；分支：forkAt 语义另有评估）——**前置：turn 起止时间**
+24. ⬜ 用时 N 秒 + TurnProcessNodeView 分隔条样式——**前置：turn 起止时间**（服务端读事件流推导）
+25. ⬜ 用量小标——**前置：usage 数据**
 
 ## 十五、数据缺口（决定哪些永远做不了 / 要换数据源）
 
