@@ -145,6 +145,12 @@ export interface SessionViewTarget {
   readonly session: SnapshotFace<SessionSnapshotFace>
 }
 
+/**
+ * 冷读探测开关：已证伪——当前宿主 remote 只有 $stream/invoke，invoke 报「无活动通道」，
+ * projectionStores.rows 为空 ⇒ 默认关闭，避免每点一次刷十几条 reject。
+ */
+const COLD_READ_PROBE = false
+
 /** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 export function openSessionView(
   sessions: SessionsFace,
@@ -157,8 +163,36 @@ export function openSessionView(
   }
   let binding: SessionBindingFace
   try {
+    // 会话可能已被宿主移出内存（state-machine.md：disposed = 从内存 store 移除、日志仍在盘上）
+    // ⇒ 先试 sessions.retain（决策 29 点名的 ISessions 契约方法，官方 entry 装配就用它保持会话就位）。
+    const S0 = sessions as unknown as Record<string, unknown>
+    const retainFn = S0.retain
+    if (typeof retainFn === 'function') {
+      try {
+        const r = (retainFn as (x: string) => unknown).call(S0, id)
+        log('info', `sessions.retain(${id}) 已调用；返回=${r === undefined ? 'undefined' : typeof r}`)
+      } catch (err) { log('warn', `sessions.retain(${id}) 抛错`, err) }
+    } else {
+      log('warn', `sessions 无 retain 方法；自身键=[${Object.keys(S0).join(',')}]`)
+    }
     const found: SessionBindingFace | undefined = sessions.binding(id)
     if (found === undefined || found === null) {
+      // —— 取证优先：把 sessions 服务真实方法面全打出来，下次不再猜 ——
+      const S0d = sessions as unknown as Record<string, unknown>
+      const allFn = ((): string[] => {
+        const out = new Set<string>()
+        let cur: unknown = S0d
+        while (cur && (typeof cur === 'object' || typeof cur === 'function')) {
+          for (const k of Object.getOwnPropertyNames(cur as object)) {
+            const v = (cur as Record<string, unknown>)[k]
+            if (typeof v === 'function' && k !== 'constructor') out.add(k)
+          }
+          cur = Object.getPrototypeOf(cur)
+        }
+        return [...out]
+      })()
+      log('warn', `sessions.binding(${id}) 为空（会话未就位）。sessions 方法全清单=[${allFn.join(',')}]；自身键=[${Object.keys(S0d).join(',')}]`)
+      if (!COLD_READ_PROBE) return null
       // 归档/非活跃会话：uiConversation.binding 拒绝 inactive 会话（抛 "inactive session"），
       // sessions.binding(id) 也返回空。按 dsh-capabilities 决策 28：冷读入口是 session/follow /
       // session/page（按 durable address {kind:'session',sessionId} 读，不激活 Agent，归档可读）。

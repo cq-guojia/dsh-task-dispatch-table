@@ -63,7 +63,9 @@ const makeDispatchRoutes = (runtimeRef, persistTasksInline,
 /** 取状态库（settings inject 就绪后非空）；未就绪时 /db 返回 503。 */
 getStore, 
 /** 取 workspaceRegistry（归档会话的临时反归档 / 回归档）。 */
-getRegistry) => [
+getRegistry, 
+/** 宿主日志（取证：反归档到底有没有跑、宿主有没有该面）。 */
+log) => [
     {
         kind: 'exact',
         path: `${DISPATCH_API_PREFIX}/snapshot`,
@@ -138,12 +140,16 @@ getRegistry) => [
                     return writeJson(res, 400, { ok: false, error: 'sessionId-required' });
                 }
                 const registry = getRegistry();
-                if (registry === null)
+                if (registry === null) {
+                    log(`[查看会话] 反归档 ${parsed.sessionId}：registry 未就绪`);
                     return writeJson(res, 503, { ok: false, error: 'registry-not-ready' });
+                }
                 if (typeof registry.unarchiveSession !== 'function') {
+                    log(`[查看会话] 反归档 ${parsed.sessionId}：宿主无 unarchiveSession 面（B 方案不可用）`);
                     return writeJson(res, 501, { ok: false, error: 'unarchiveSession-unavailable：当前宿主版本无该面' });
                 }
                 await registry.unarchiveSession(parsed.sessionId);
+                log(`[查看会话] 反归档 ${parsed.sessionId} 成功`);
                 writeJson(res, 200, { ok: true });
             }
             catch (error) {
@@ -167,9 +173,12 @@ getRegistry) => [
                     return writeJson(res, 400, { ok: false, error: 'sessionId-required' });
                 }
                 const registry = getRegistry();
-                if (registry === null)
+                if (registry === null) {
+                    log(`[查看会话] 回归档 ${parsed.sessionId}：registry 未就绪`);
                     return writeJson(res, 503, { ok: false, error: 'registry-not-ready' });
+                }
                 await registry.archiveSession(parsed.sessionId);
+                log(`[查看会话] 回归档 ${parsed.sessionId} 成功`);
                 writeJson(res, 200, { ok: true });
             }
             catch (error) {
@@ -290,7 +299,7 @@ export function apply(ctx, config) {
             wctx.logger.warn('[数据通道] 宿主上下文无 webServer.register 面，HTTP 路由未注册；客户端画面将无数据');
             return;
         }
-        for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry))
+        for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry, (msg) => { ctx.logger.info(msg); }))
             webServer.register(route);
         wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive');
     });
