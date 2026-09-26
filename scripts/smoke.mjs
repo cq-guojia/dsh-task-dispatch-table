@@ -409,7 +409,8 @@ try {
   check('官方 chat 包 CSS 前缀已打进 bundle', clientJs.includes('@deepseek-ai/dsh-client-ui-chat/'))
   // 回归：官方哈希可能以 `_` 开头（如 `._5OnbHa_root`），必须按**末位**下划线切分，
   // 按首位切分会把整类跳过、导致 GenericCommandCard 这类模块解析成空表（真机踩过）。
-  check('官方类名前缀按末位下划线切分（兼容 _5OnbHa 这类哈希）', clientJs.includes("lastIndexOf('_')"))
+  check('官方类名前缀按末位下划线切分（兼容 _5OnbHa 这类哈希）',
+    clientJs.includes('lastIndexOf("_")') || clientJs.includes("lastIndexOf('_')"))
   check('弹窗套用官方 ChatView 结构语义名（frame/root/scroll/column/flowItem）',
     ['frame', 'root', 'scroll', 'column', 'flowItem'].every(k => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`)))
   check('官方类缺失时回退自绘类（dsh-tdt-sv-body/col/flowitem 仍在）',
