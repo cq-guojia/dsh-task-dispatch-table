@@ -152,11 +152,30 @@ export function openSessionView(
   try {
     const found: SessionBindingFace | undefined = sessions.binding(id)
     if (found === undefined || found === null) {
-      // 诊断（决策 28 当年验证归档会话可 binding；若宿主升级后把归档会话移出可 binding 列表，这里就是断点）。
-      log('warn', `openSessionView 返回 null：sessions.binding(${id}) 返回空`, {
-        typeofSessionsBinding: typeof sessions.binding,
-        typeofUiConversationBinding: typeof uiConversation.binding,
-      })
+      // 诊断（决策 28 当年验证归档会话可 binding；现版本宿主对已归档会话返回空 ⇒ 断点在此）。
+      // 打印 sessions / uiConversation 方法面并试常见冷读入口，定位归档会话的正确取法。
+      const surface = (obj: unknown): Record<string, string> => {
+        const o = obj as Record<string, unknown>
+        const out: Record<string, string> = {}
+        for (const k of Object.keys(o)) out[k] = typeof o[k]
+        return out
+      }
+      const sSurf = surface(sessions)
+      const uSurf = surface(uiConversation)
+      const candidates = ['follow', 'page', 'history', 'get', 'resolve', 'adopt', 'byId', 'open', 'binding']
+      const tried: string[] = []
+      for (const c of candidates) {
+        const fn = (sessions as unknown as Record<string, unknown>)[c]
+        if (typeof fn === 'function') {
+          try {
+            const r = (fn as (x: string, ...rest: unknown[]) => unknown).call(sessions, id)
+            tried.push(r == null
+              ? `${c} => null`
+              : `${c} => ${typeof r === 'object' ? '{' + Object.keys(r as object).slice(0, 5).join(',') + '}' : typeof r}`)
+          } catch (e) { tried.push(`${c} => threw:${((e as Error)?.message ?? String(e)).slice(0, 50)}`) }
+        }
+      }
+      log('warn', `binding(${id}) 返回空；sessions 方法面=${JSON.stringify(sSurf)}；uiConversation 方法面=${JSON.stringify(uSurf)}；候选尝试=${tried.join(' | ')}`)
       return null
     }
     binding = found

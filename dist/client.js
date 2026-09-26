@@ -1985,10 +1985,36 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			try {
 				const found = sessions.binding(id);
 				if (found === void 0 || found === null) {
-					log("warn", `openSessionView 返回 null：sessions.binding(${id}) 返回空`, {
-						typeofSessionsBinding: typeof sessions.binding,
-						typeofUiConversationBinding: typeof uiConversation.binding
-					});
+					const surface = (obj) => {
+						const o = obj;
+						const out = {};
+						for (const k of Object.keys(o)) out[k] = typeof o[k];
+						return out;
+					};
+					const sSurf = surface(sessions);
+					const uSurf = surface(uiConversation);
+					const candidates = [
+						"follow",
+						"page",
+						"history",
+						"get",
+						"resolve",
+						"adopt",
+						"byId",
+						"open",
+						"binding"
+					];
+					const tried = [];
+					for (const c of candidates) {
+						const fn = sessions[c];
+						if (typeof fn === "function") try {
+							const r = fn.call(sessions, id);
+							tried.push(r == null ? `${c} => null` : `${c} => ${typeof r === "object" ? "{" + Object.keys(r).slice(0, 5).join(",") + "}" : typeof r}`);
+						} catch (e) {
+							tried.push(`${c} => threw:${(e?.message ?? String(e)).slice(0, 50)}`);
+						}
+					}
+					log("warn", `binding(${id}) 返回空；sessions 方法面=${JSON.stringify(sSurf)}；uiConversation 方法面=${JSON.stringify(uSurf)}；候选尝试=${tried.join(" | ")}`);
 					return null;
 				}
 				binding = found;
