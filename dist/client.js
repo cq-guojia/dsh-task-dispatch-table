@@ -1986,6 +1986,17 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const found = sessions.binding(id);
 				if (found === void 0 || found === null) {
 					const keysOf = (o) => o == null || typeof o !== "object" ? [] : Object.keys(o);
+					const protoFnKeys = (o) => {
+						const out = /* @__PURE__ */ new Set();
+						let cur = o;
+						while (cur && (typeof cur === "object" || typeof cur === "function")) {
+							try {
+								for (const k of Object.getOwnPropertyNames(cur)) if (typeof cur[k] === "function" && k !== "constructor") out.add(k);
+							} catch {}
+							cur = Object.getPrototypeOf(cur);
+						}
+						return [...out];
+					};
 					const shape0 = (o) => {
 						if (o == null) return "null";
 						if (typeof o !== "object") return typeof o;
@@ -1999,39 +2010,32 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 							const head = o.slice(0, 2).map((x) => deepShape(x, depth + 1));
 							return `array(${o.length})${head.length ? "<" + head.join("|") + ">" : ""}`;
 						}
-						return "{" + keysOf(o).slice(0, 14).map((k) => `${k}:${deepShape(o[k], depth + 1)}`).join(",") + "}";
+						return "{" + keysOf(o).slice(0, 16).map((k) => `${k}:${deepShape(o[k], depth + 1)}`).join(",") + "}";
 					};
-					const projStores = sessions.manager?.projectionStores;
-					const store = (() => {
-						if (!projStores) return void 0;
-						const getFn = projStores.get;
-						return typeof getFn === "function" ? getFn.call(projStores, id) : projStores[id];
-					})();
-					const rawRows = store?.rows;
-					const extractArray = (r) => {
-						if (Array.isArray(r)) return r;
-						if (r && typeof r === "object") {
-							const rec = r;
-							if (Array.isArray(rec.value)) return rec.value;
-							if (typeof rec.get === "function") {
-								const v = rec.get();
-								if (Array.isArray(v)) return v;
-							}
-							if (Array.isArray(rec.array)) return rec.array;
+					const mgr = sessions.manager;
+					const sessRemote = (mgr && typeof mgr.get === "function" ? (() => {
+						try {
+							return mgr.get.call(mgr, id);
+						} catch {
+							return;
 						}
-						return [];
+					})() : void 0)?.remote;
+					const mgrRemote = mgr?.remote;
+					const addr = {
+						kind: "session",
+						sessionId: id
 					};
-					const rows = extractArray(rawRows);
-					const toNode = (raw) => {
+					log("warn", `inactive 会话冷读探测：${id}；sess.remote 原型方法=[${protoFnKeys(sessRemote).join(",")}]；mgr.remote 原型方法=[${protoFnKeys(mgrRemote).join(",")}]`);
+					const toNode = (raw, fallbackSeq) => {
 						if (!raw || typeof raw !== "object") return null;
 						const pick = (cand) => {
 							if (!cand || typeof cand !== "object") return null;
 							const c = cand;
 							if (typeof c.kind !== "string") return null;
-							const seq = typeof c.seq === "number" ? c.seq : typeof c.seq === "string" ? Number(c.seq) : rows.indexOf(raw);
+							const seqNum = typeof c.seq === "number" ? c.seq : typeof c.seq === "string" ? Number(c.seq) : fallbackSeq;
 							return {
 								kind: c.kind,
-								seq: typeof seq === "number" ? Number.isFinite(seq) ? seq : rows.indexOf(raw) : rows.indexOf(raw),
+								seq: Number.isFinite(seqNum) ? seqNum : fallbackSeq,
 								time: typeof c.time === "number" ? c.time : 0,
 								content: c.content,
 								blocks: c.blocks,
@@ -2053,27 +2057,171 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						const r = raw;
 						return pick(r) ?? pick(r.record) ?? pick(r.node) ?? pick(r.value) ?? pick(r.data) ?? null;
 					};
-					const nodes = rows.map(toNode).filter((n) => n !== null);
-					if (nodes.length > 0) {
-						log("info", `冷读 projectionStores[${id}] 成功：rows=${shape0(rawRows)}；nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map((n) => n.kind).join(",")}]`);
-						log("info", `首节点深形状=${deepShape(nodes[0], 0)}`);
+					const extractNodes = (res) => {
+						if (!res || typeof res !== "object") return [];
+						const r = res;
+						const arrOf = (c) => {
+							if (Array.isArray(c)) return c;
+							if (c && typeof c === "object" && Array.isArray(c.value)) return c.value;
+							return null;
+						};
+						const buckets = [];
+						for (const k of [
+							"records",
+							"nodes",
+							"messages",
+							"data",
+							"values"
+						]) {
+							const a = arrOf(r[k]);
+							if (a) buckets.push(a);
+						}
+						if (r.legacy && typeof r.legacy === "object") {
+							const a = arrOf(r.legacy.nodes);
+							if (a) buckets.push(a);
+						}
+						if (r.projection && typeof r.projection === "object") {
+							const a = arrOf(r.projection.nodes);
+							if (a) buckets.push(a);
+						}
+						for (const bucket of buckets) {
+							const mapped = bucket.map((raw, i) => toNode(raw, i)).filter((n) => n !== null);
+							if (mapped.length > 0) return mapped;
+						}
+						return [];
+					};
+					const makeAsyncTarget = (promise) => {
+						let nodes = [];
+						let openState = "loading";
+						const listeners = /* @__PURE__ */ new Set();
+						const notify = () => {
+							listeners.forEach((l) => l());
+						};
+						if (promise) promise.then((res) => {
+							nodes = extractNodes(res);
+							openState = nodes.length > 0 ? "open" : "error";
+							log("info", `冷读回填完成（${id}）：nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map((n) => n.kind).join(",")}]；首节点=${nodes.length ? deepShape(nodes[0], 0) : "（无）"}`);
+							notify();
+						}).catch((err) => {
+							openState = "error";
+							log("warn", `冷读 RPC 失败（${id}）`, err);
+							notify();
+						});
+						else openState = "error";
 						return {
 							target: {
 								getSnapshot: () => ({ legacy: { nodes } }),
-								subscribe: () => () => {}
+								subscribe: (fn) => {
+									listeners.add(fn);
+									return () => {
+										listeners.delete(fn);
+									};
+								}
 							},
 							session: {
 								getSnapshot: () => ({
-									openState: "open",
+									openState,
 									hasMore: false
 								}),
-								subscribe: () => () => {}
+								subscribe: (fn) => {
+									listeners.add(fn);
+									return () => {
+										listeners.delete(fn);
+									};
+								}
 							},
 							loadOlder: () => {}
 						};
+					};
+					const calls = [];
+					const pushDirect = (label, obj, methods) => {
+						if (!obj) return;
+						const o = obj;
+						for (const m of methods) {
+							const fn = o[m];
+							if (typeof fn === "function") try {
+								const arg = m === "page" ? { address: addr } : addr;
+								const r = fn.call(o, arg);
+								if (r && typeof r === "object" && typeof r.then === "function") calls.push({
+									label: `${label}.${m}`,
+									promise: r
+								});
+								else log("info", `${label}.${m} sync=${deepShape(r, 0)}`);
+							} catch (e) {
+								log("warn", `${label}.${m} threw:${e?.message ?? e}`);
+							}
+						}
+					};
+					pushDirect("sess.remote", sessRemote, [
+						"follow",
+						"page",
+						"getHistory",
+						"history",
+						"read",
+						"fetch",
+						"load"
+					]);
+					pushDirect("mgr.remote", mgrRemote, [
+						"follow",
+						"page",
+						"getHistory",
+						"history",
+						"read",
+						"fetch",
+						"load"
+					]);
+					for (const [obj, label] of [[sessRemote, "sess.remote"], [mgrRemote, "mgr.remote"]]) {
+						if (!obj) continue;
+						const o = obj;
+						for (const rpc of [
+							"call",
+							"send",
+							"invoke"
+						]) {
+							const fn = o[rpc];
+							if (typeof fn === "function") for (const method of [
+								"session/follow",
+								"session/page",
+								"follow",
+								"page"
+							]) try {
+								const arg = method.endsWith("page") ? { address: addr } : addr;
+								const r = fn.call(o, method, arg);
+								if (r && typeof r === "object" && typeof r.then === "function") calls.push({
+									label: `${label}.${rpc}('${method}')`,
+									promise: r
+								});
+								else log("info", `${label}.${rpc}('${method}') sync=${deepShape(r, 0)}`);
+							} catch (e) {
+								log("warn", `${label}.${rpc}('${method}') threw:${e?.message ?? e}`);
+							}
+						}
 					}
-					log("warn", `binding(${id}) 空（inactive 会话）；projectionStores[${id}]=${shape0(store)}；rows=${shape0(rawRows)}；nodes=0；首行深形状=${rows.length ? deepShape(rows[0], 0) : "（无）"}；manager.sessions[id]=null（归档不在活动映射，符合预期）`);
-					return null;
+					if (calls.length === 0) {
+						log("warn", `inactive 会话 ${id}：未找到任何冷读 RPC（sess.remote/mgr.remote 均无 follow/page/call/send/invoke）。归档会话无法读取。`);
+						return null;
+					}
+					return makeAsyncTarget(Promise.allSettled(calls.map((c) => c.promise)).then((results) => {
+						let hit = -1;
+						for (let i = 0; i < results.length; i++) {
+							const res = results[i];
+							if (res.status === "fulfilled") {
+								if (extractNodes(res.value).length > 0) {
+									hit = i;
+									break;
+								}
+							} else log("warn", `冷读源 ${calls[i].label} reject:${res.reason?.message ?? res.reason}`);
+						}
+						if (hit >= 0) {
+							log("info", `冷读命中源=${calls[hit].label}（共试 ${calls.length} 路）`);
+							return calls[hit].promise;
+						}
+						calls.forEach((c, i) => {
+							const res = results[i];
+							if (res.status === "fulfilled") log("info", `冷读源 ${c.label} resolve 深形状=${deepShape(res.value, 0)}`);
+						});
+						return null;
+					}));
 				}
 				binding = found;
 			} catch (err) {

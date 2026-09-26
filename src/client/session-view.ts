@@ -18,8 +18,10 @@
 //
 // 5. 归档/非活跃会话（host 将其标为 inactive）：uiConversation.binding 直接抛
 //    `inactive session`，sessions.binding(id) 也返回空，故步骤 1-4 全程走不通。
-//    改走冷读入口 sessions.manager.projectionStores[id].rows（按 id 直取的会话投影 =
-//    对话节点），静态喂给 renderNode —— 无需激活会话、不依赖 uiConversation 装配。
+//    改走冷读入口 session/follow / session/page（决策 28 核实：按 durable address
+//    {kind:'session',sessionId} 读、不激活 Agent、归档会话日志仍可读）。projectionStores
+//    是惰性投影（归档会话未观察不填充、rows 为空对象），非冷读源。冷读在 openSessionView
+//    内异步回填给 renderNode —— 无需激活会话、不依赖 uiConversation 装配。
 //
 // 渲染（决策 34）：不挂官方 ChatView（其只渲染「当前会话」，喂不进归档 id），改为
 // **自渲染 DOM + 套官方 design token**。样式规则见 ./archive-session-css（运行时注入），
@@ -158,9 +160,26 @@ export function openSessionView(
     const found: SessionBindingFace | undefined = sessions.binding(id)
     if (found === undefined || found === null) {
       // 归档/非活跃会话：uiConversation.binding 拒绝 inactive 会话（抛 "inactive session"），
-      // sessions.binding(id) 也返回空。改走冷读入口 sessions.manager.projectionStores[id].rows
-      // （按 id 直取的会话投影 = 对话节点），静态喂给现有 renderNode，绕开 uiConversation 链路。
+      // sessions.binding(id) 也返回空。按 dsh-capabilities 决策 28：冷读入口是 session/follow /
+      // session/page（按 durable address {kind:'session',sessionId} 读，不激活 Agent，归档可读）。
+      // projectionStores[id].rows 是惰性投影（归档会话未观察不填充，为空对象），非冷读源。
+      // 本实现并发试三路（sess.remote.follow / mgr.remote.follow / 通用 RPC call('session/follow')），
+      // 命中即异步回填弹窗；全失败则打全方法名与返回形状，便于定位。
       const keysOf = (o: unknown): string[] => (o == null || typeof o !== 'object') ? [] : Object.keys(o as object)
+      const protoFnKeys = (o: unknown): string[] => {
+        const out = new Set<string>()
+        let cur: unknown = o
+        while (cur && (typeof cur === 'object' || typeof cur === 'function')) {
+          try {
+            for (const k of Object.getOwnPropertyNames(cur as object)) {
+              const v = (cur as Record<string, unknown>)[k]
+              if (typeof v === 'function' && k !== 'constructor') out.add(k)
+            }
+          } catch { /* 跨 realm 保护 */ }
+          cur = Object.getPrototypeOf(cur)
+        }
+        return [...out]
+      }
       const shape0 = (o: unknown): string => {
         if (o == null) return 'null'
         if (typeof o !== 'object') return typeof o
@@ -174,46 +193,30 @@ export function openSessionView(
           const head = o.slice(0, 2).map(x => deepShape(x, depth + 1))
           return `array(${o.length})${head.length ? '<' + head.join('|') + '>' : ''}`
         }
-        const entries = keysOf(o).slice(0, 14).map(k => `${k}:${deepShape((o as Record<string, unknown>)[k], depth + 1)}`)
+        const entries = keysOf(o).slice(0, 16).map(k => `${k}:${deepShape((o as Record<string, unknown>)[k], depth + 1)}`)
         return '{' + entries.join(',') + '}'
       }
       const S = sessions as unknown as Record<string, unknown>
       const mgr = S.manager as Record<string, unknown> | undefined
-      const projStores = mgr?.projectionStores
-      // projectionStores 按 id 取 store：兼容 .get(id) 与下标 [id]。
-      const store = (() => {
-        if (!projStores) return undefined
-        const getFn = (projStores as Record<string, unknown>).get
-        return typeof getFn === 'function'
-          ? (getFn as (x: string) => unknown).call(projStores, id)
-          : (projStores as Record<string, unknown>)[id]
-      })()
-      // rows 可能是数组，或被 Notifier/包装器包一层（.value / .get() / .array）。
-      const rawRows = (store as Record<string, unknown> | null | undefined)?.rows
-      const extractArray = (r: unknown): unknown[] => {
-        if (Array.isArray(r)) return r
-        if (r && typeof r === 'object') {
-          const rec = r as Record<string, unknown>
-          if (Array.isArray(rec.value)) return rec.value
-          if (typeof rec.get === 'function') { const v = (rec.get as () => unknown)(); if (Array.isArray(v)) return v }
-          if (Array.isArray(rec.array)) return rec.array
-        }
-        return []
-      }
-      const rows = extractArray(rawRows)
+      // 逐会话 remote（文档冷读入口所在处）。
+      const sess = (mgr && typeof mgr.get === 'function')
+        ? (() => { try { return (mgr.get as (x: string) => unknown).call(mgr, id) } catch { return undefined } })()
+        : undefined
+      const sessRemote = (sess as Record<string, unknown> | undefined)?.remote
+      const mgrRemote = mgr?.remote
+      const addr = { kind: 'session', sessionId: id }
+      log('warn', `inactive 会话冷读探测：${id}；sess.remote 原型方法=[${protoFnKeys(sessRemote).join(',')}]；mgr.remote 原型方法=[${protoFnKeys(mgrRemote).join(',')}]`)
       // 行 → ConversationNodeLike：兼容行本身即节点，或被 record/node/value/data 包裹。
-      const toNode = (raw: unknown): ConversationNodeLike | null => {
+      const toNode = (raw: unknown, fallbackSeq: number): ConversationNodeLike | null => {
         if (!raw || typeof raw !== 'object') return null
         const pick = (cand: unknown): ConversationNodeLike | null => {
           if (!cand || typeof cand !== 'object') return null
           const c = cand as Record<string, unknown>
           if (typeof c.kind !== 'string') return null
-          const seq = typeof c.seq === 'number' ? c.seq
-            : typeof c.seq === 'string' ? Number(c.seq)
-            : rows.indexOf(raw)
+          const seqNum = typeof c.seq === 'number' ? c.seq : typeof c.seq === 'string' ? Number(c.seq) : fallbackSeq
           const node: ConversationNodeLike = {
             kind: c.kind,
-            seq: typeof seq === 'number' ? (Number.isFinite(seq) ? seq : rows.indexOf(raw)) : rows.indexOf(raw),
+            seq: Number.isFinite(seqNum) ? seqNum : fallbackSeq,
             time: typeof c.time === 'number' ? c.time : 0,
             content: c.content as ConversationNodeLike['content'],
             blocks: c.blocks as ConversationNodeLike['blocks'],
@@ -236,23 +239,115 @@ export function openSessionView(
         const r = raw as Record<string, unknown>
         return pick(r) ?? pick(r.record) ?? pick(r.node) ?? pick(r.value) ?? pick(r.data) ?? null
       }
-      const nodes = rows.map(toNode).filter((n): n is ConversationNodeLike => n !== null)
-      if (nodes.length > 0) {
-        log('info', `冷读 projectionStores[${id}] 成功：rows=${shape0(rawRows)}；nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map(n => n.kind).join(',')}]`)
-        log('info', `首节点深形状=${deepShape(nodes[0], 0)}`)
-        const staticTarget: SnapshotFace<ChatViewFace | undefined> = {
-          getSnapshot: () => ({ legacy: { nodes } }),
-          subscribe: () => () => {},
+      const extractNodes = (res: unknown): ConversationNodeLike[] => {
+        if (!res || typeof res !== 'object') return []
+        const r = res as Record<string, unknown>
+        const arrOf = (c: unknown): unknown[] | null => {
+          if (Array.isArray(c)) return c
+          if (c && typeof c === 'object' && Array.isArray((c as Record<string, unknown>).value)) return (c as Record<string, unknown>).value as unknown[]
+          return null
         }
-        const staticSession: SnapshotFace<SessionSnapshotFace> & { open?: () => Promise<void>; loadOlder?: () => Promise<void> } = {
-          getSnapshot: () => ({ openState: 'open', hasMore: false }),
-          subscribe: () => () => {},
+        const buckets: unknown[][] = []
+        for (const k of ['records', 'nodes', 'messages', 'data', 'values']) {
+          const a = arrOf(r[k]); if (a) buckets.push(a)
         }
-        return { target: staticTarget, session: staticSession, loadOlder: () => {} }
+        if (r.legacy && typeof r.legacy === 'object') { const a = arrOf((r.legacy as Record<string, unknown>).nodes); if (a) buckets.push(a) }
+        if (r.projection && typeof r.projection === 'object') { const a = arrOf((r.projection as Record<string, unknown>).nodes); if (a) buckets.push(a) }
+        for (const bucket of buckets) {
+          const mapped = bucket.map((raw, i) => toNode(raw, i)).filter((n): n is ConversationNodeLike => n !== null)
+          if (mapped.length > 0) return mapped
+        }
+        return []
       }
-      // 真无数据：保留诊断，避免静默「点了没反应」。
-      log('warn', `binding(${id}) 空（inactive 会话）；projectionStores[${id}]=${shape0(store)}；rows=${shape0(rawRows)}；nodes=0；首行深形状=${rows.length ? deepShape(rows[0], 0) : '（无）'}；manager.sessions[id]=null（归档不在活动映射，符合预期）`)
-      return null
+      // 异步回填的 target：立即弹窗（loading 态），RPC 落定后通知 React 重渲染。
+      const makeAsyncTarget = (promise: Promise<unknown> | null): SessionViewTarget => {
+        let nodes: ConversationNodeLike[] = []
+        let openState: SessionSnapshotFace['openState'] = 'loading'
+        const listeners = new Set<() => void>()
+        const notify = (): void => { listeners.forEach(l => l()) }
+        if (promise) {
+          promise.then((res) => {
+            nodes = extractNodes(res)
+            openState = nodes.length > 0 ? 'open' : 'error'
+            log('info', `冷读回填完成（${id}）：nodes=${nodes.length}；kinds=[${nodes.slice(0, 24).map(n => n.kind).join(',')}]；首节点=${nodes.length ? deepShape(nodes[0], 0) : '（无）'}`)
+            notify()
+          }).catch((err) => {
+            openState = 'error'
+            log('warn', `冷读 RPC 失败（${id}）`, err)
+            notify()
+          })
+        } else {
+          openState = 'error'
+        }
+        const target: SnapshotFace<ChatViewFace | undefined> = {
+          getSnapshot: () => ({ legacy: { nodes } }),
+          subscribe: (fn) => { listeners.add(fn); return () => { listeners.delete(fn) } },
+        }
+        const session: SnapshotFace<SessionSnapshotFace> & { open?: () => Promise<void>; loadOlder?: () => Promise<void> } = {
+          getSnapshot: () => ({ openState, hasMore: false }),
+          subscribe: (fn) => { listeners.add(fn); return () => { listeners.delete(fn) } },
+        }
+        return { target, session, loadOlder: () => {} }
+      }
+      // 收集所有可用冷读调用（直接方法 + 通用 RPC）。
+      const calls: Array<{ label: string; promise: Promise<unknown> }> = []
+      const pushDirect = (label: string, obj: unknown, methods: string[]): void => {
+        if (!obj) return
+        const o = obj as Record<string, unknown>
+        for (const m of methods) {
+          const fn = o[m]
+          if (typeof fn === 'function') {
+            try {
+              const arg = m === 'page' ? { address: addr } : addr
+              const r = (fn as (x: unknown) => unknown).call(o, arg)
+              if (r && typeof r === 'object' && typeof (r as { then?: unknown }).then === 'function') {
+                calls.push({ label: `${label}.${m}`, promise: r as Promise<unknown> })
+              } else log('info', `${label}.${m} sync=${deepShape(r, 0)}`)
+            } catch (e) { log('warn', `${label}.${m} threw:${(e as Error)?.message ?? e}`) }
+          }
+        }
+      }
+      pushDirect('sess.remote', sessRemote, ['follow', 'page', 'getHistory', 'history', 'read', 'fetch', 'load'])
+      pushDirect('mgr.remote', mgrRemote, ['follow', 'page', 'getHistory', 'history', 'read', 'fetch', 'load'])
+      for (const [obj, label] of [[sessRemote, 'sess.remote'], [mgrRemote, 'mgr.remote']] as const) {
+        if (!obj) continue
+        const o = obj as Record<string, unknown>
+        for (const rpc of ['call', 'send', 'invoke']) {
+          const fn = o[rpc]
+          if (typeof fn === 'function') {
+            for (const method of ['session/follow', 'session/page', 'follow', 'page']) {
+              try {
+                const arg = method.endsWith('page') ? { address: addr } : addr
+                const r = (fn as (a: unknown, b: unknown) => unknown).call(o, method, arg)
+                if (r && typeof r === 'object' && typeof (r as { then?: unknown }).then === 'function') {
+                  calls.push({ label: `${label}.${rpc}('${method}')`, promise: r as Promise<unknown> })
+                } else log('info', `${label}.${rpc}('${method}') sync=${deepShape(r, 0)}`)
+              } catch (e) { log('warn', `${label}.${rpc}('${method}') threw:${(e as Error)?.message ?? e}`) }
+            }
+          }
+        }
+      }
+      if (calls.length === 0) {
+        log('warn', `inactive 会话 ${id}：未找到任何冷读 RPC（sess.remote/mgr.remote 均无 follow/page/call/send/invoke）。归档会话无法读取。`)
+        return null
+      }
+      // 全部发起，取首个能解出节点的结果；无可解则把每源形状打出。
+      const combined: Promise<unknown> = Promise.allSettled(calls.map(c => c.promise)).then((results) => {
+        let hit = -1
+        for (let i = 0; i < results.length; i++) {
+          const res = results[i]
+          if (res.status === 'fulfilled') {
+            if (extractNodes(res.value).length > 0) { hit = i; break }
+          } else log('warn', `冷读源 ${calls[i].label} reject:${(res.reason as Error)?.message ?? res.reason}`)
+        }
+        if (hit >= 0) { log('info', `冷读命中源=${calls[hit].label}（共试 ${calls.length} 路）`); return calls[hit].promise }
+        calls.forEach((c, i) => {
+          const res = results[i]
+          if (res.status === 'fulfilled') log('info', `冷读源 ${c.label} resolve 深形状=${deepShape(res.value, 0)}`)
+        })
+        return null
+      })
+      return makeAsyncTarget(combined)
     }
     binding = found
   } catch (err) {
