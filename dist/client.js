@@ -1981,15 +1981,24 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				if (level === "warn") console.warn(`[task-dispatch:session-view] ${msg}`, extra ?? "");
 				else console.info(`[task-dispatch:session-view] ${msg}`);
 			};
+			let retainedRef = null;
+			const releaseRef = () => {
+				try {
+					retainedRef?.release();
+				} catch (err) {
+					log("warn", `sessions.retain 引用释放失败（${id}）`, err);
+				}
+				retainedRef = null;
+			};
 			let binding;
 			try {
 				const S0 = sessions;
 				const retainFn = S0.retain;
 				if (typeof retainFn === "function") try {
-					const r = retainFn.call(S0, id);
-					log("info", `sessions.retain(${id}) 已调用；返回=${r === void 0 ? "undefined" : typeof r}`);
+					retainedRef = retainFn.call(S0, id, { source: "dsh-task-dispatch-table" });
+					log("info", `sessions.retain(${id}, { source }) 成功：scope 已物化`);
 				} catch (err) {
-					log("warn", `sessions.retain(${id}) 抛错`, err);
+					log("warn", `sessions.retain(${id}) 抛错（未知会话？）`, err);
 				}
 				else log("warn", `sessions 无 retain 方法；自身键=[${Object.keys(S0).join(",")}]`);
 				const found = sessions.binding(id);
@@ -2004,11 +2013,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						}
 						return [...out];
 					})().join(",")}]；自身键=[${Object.keys(S0d).join(",")}]`);
+					releaseRef();
 					return null;
 				}
 				binding = found;
 			} catch (err) {
 				log("warn", `openSessionView 返回 null：sessions.binding(${id}) 抛错`, err);
+				releaseRef();
 				return null;
 			}
 			const session = binding.session;
@@ -2036,6 +2047,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			return {
 				target,
 				session,
+				dispose: releaseRef,
 				loadOlder() {
 					try {
 						const page = session.loadOlder?.();
@@ -2646,9 +2658,9 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				return row === void 0 ? id : `${row.title}（${row.id}）`;
 			};
 			/**
-			* 归档会话查看（当前宿主把归档会话标为 inactive：sessions.binding 返回空、
-			* uiConversation.binding 抛 inactive session）⇒ 查看前先反归档让它恢复可读，
-			* 弹窗关闭时再归档回去，平时列表依旧干净。
+			* 归档会话查看：sessions.binding 只查已物化的 scope ⇒ openSessionView 内会先
+			* sessions.retain(id, { source }) 物化（官方源码 client.js:3410 / 3472），通常无需反归档。
+			* 仅当 retain 仍失败时才兜底反归档重试，并在关闭时归档回去。
 			*/
 			const rearchive = (sessionId) => {
 				fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
@@ -2657,44 +2669,36 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					body: JSON.stringify({ sessionId })
 				}).catch(() => {});
 			};
-			/** 打开只读会话弹窗：反归档 → 组装 → 失败给出可见提示，不再静默无反应。 */
+			/** 打开只读会话弹窗：retain 物化 scope 直开；失败才兜底反归档重试；不再静默无反应。 */
 			const openView = async (sessionId, heading) => {
 				if (viewSession === null) {
 					setViewErr("查看会话不可用：sessions / uiConversation 注入未就位（见控制台）");
 					return;
 				}
 				setViewErr(null);
-				try {
+				let target = viewSession(sessionId);
+				let didUnarchive = false;
+				if (target === null) try {
 					const res = await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
 						method: "POST",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({ sessionId })
 					});
 					const body = await res.json();
-					if (!res.ok || body.ok !== true) {
-						setViewErr(`反归档失败（${body.error ?? `HTTP ${res.status}`}）：无法查看该会话`);
-						return;
+					if (res.ok && body.ok === true) {
+						didUnarchive = true;
+						target = viewSession(sessionId);
 					}
-				} catch (error) {
-					setViewErr(`反归档请求失败：${error instanceof Error ? error.message : String(error)}`);
-					return;
-				}
-				let target = null;
-				for (let attempt = 0; attempt < 8 && target === null; attempt++) {
-					target = viewSession(sessionId);
-					if (target === null) await new Promise((resolve) => {
-						setTimeout(resolve, 150);
-					});
-				}
+				} catch {}
 				if (target === null) {
-					setViewErr("会话已反归档但仍打不开：sessions.binding 返回空或装配失败（原因见控制台 [task-dispatch:session-view] 日志）；已尝试归档回去");
-					rearchive(sessionId);
+					setViewErr("会话无法打开：retain / 物化 scope 失败（原因见控制台 [task-dispatch:session-view] 日志）");
 					return;
 				}
 				setViewing({
 					sessionId,
 					heading,
-					view: target
+					view: target,
+					didUnarchive
 				});
 			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
@@ -2869,9 +2873,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				view: viewing.view,
 				onClose: () => {
 					const closed = viewing.sessionId;
+					const needArchive = viewing.didUnarchive === true;
+					viewing.view.dispose();
 					setViewing(null);
 					setViewErr(null);
-					rearchive(closed);
+					if (needArchive) rearchive(closed);
 				}
 			}) : null, viewErr !== null ? (0, react.createElement)("div", {
 				style: {

@@ -143,6 +143,8 @@ export interface SessionViewTarget {
   /** 向前翻一页更早的历史（官方 loadOlder；未 open / 翻尽时官方自行空转）。 */
   loadOlder(): void
   readonly session: SnapshotFace<SessionSnapshotFace>
+  /** 释放 sessions.retain 引用（弹窗关闭时必调；否则会话 scope 永不回收）。 */
+  dispose(): void
 }
 
 /**
@@ -161,17 +163,28 @@ export function openSessionView(
     if (level === 'warn') console.warn(`[task-dispatch:session-view] ${msg}`, extra ?? '')
     else console.info(`[task-dispatch:session-view] ${msg}`)
   }
+  // retain 引用：用完必须 release（否则会话 scope 不会被回收）。
+  let retainedRef: { release(): void } | null = null
+  const releaseRef = (): void => {
+    try { retainedRef?.release() } catch (err) { log('warn', `sessions.retain 引用释放失败（${id}）`, err) }
+    retainedRef = null
+  }
   let binding: SessionBindingFace
   try {
-    // 会话可能已被宿主移出内存（state-machine.md：disposed = 从内存 store 移除、日志仍在盘上）
-    // ⇒ 先试 sessions.retain（决策 29 点名的 ISessions 契约方法，官方 entry 装配就用它保持会话就位）。
+    // ── 根因（读官方源码 @deepseek-ai/dsh-api-session-controller@0.1.7-rc.2 lib/client.js）──
+    // binding(id) = this.scopes.get(id)?.binding：**只查已物化的 scope，从不创建**（3406 行）。
+    // 归档/久未打开的会话没有 scope ⇒ 返回 undefined；uiConversation.binding 随即抛
+    // `inactive session`（ui-conversation lib/client.js:3083 判 sessions.binding(id) !== owner）。
+    // 正解：先 retain(id, { source }) → retainScope → materializeScope 物化 scope（3410 / 3472 行），
+    // 并在内部触发 manager.get(id).open() 拉历史尾页；返回引用需在使用结束后 release()。
     const S0 = sessions as unknown as Record<string, unknown>
     const retainFn = S0.retain
     if (typeof retainFn === 'function') {
       try {
-        const r = (retainFn as (x: string) => unknown).call(S0, id)
-        log('info', `sessions.retain(${id}) 已调用；返回=${r === undefined ? 'undefined' : typeof r}`)
-      } catch (err) { log('warn', `sessions.retain(${id}) 抛错`, err) }
+        retainedRef = (retainFn as (t: string, o: { source: string }) => { release(): void })
+          .call(S0, id, { source: 'dsh-task-dispatch-table' })
+        log('info', `sessions.retain(${id}, { source }) 成功：scope 已物化`)
+      } catch (err) { log('warn', `sessions.retain(${id}) 抛错（未知会话？）`, err) }
     } else {
       log('warn', `sessions 无 retain 方法；自身键=[${Object.keys(S0).join(',')}]`)
     }
@@ -192,7 +205,7 @@ export function openSessionView(
         return [...out]
       })()
       log('warn', `sessions.binding(${id}) 为空（会话未就位）。sessions 方法全清单=[${allFn.join(',')}]；自身键=[${Object.keys(S0d).join(',')}]`)
-      if (!COLD_READ_PROBE) return null
+      if (!COLD_READ_PROBE) { releaseRef(); return null }
       // 归档/非活跃会话：uiConversation.binding 拒绝 inactive 会话（抛 "inactive session"），
       // sessions.binding(id) 也返回空。按 dsh-capabilities 决策 28：冷读入口是 session/follow /
       // session/page（按 durable address {kind:'session',sessionId} 读，不激活 Agent，归档可读）。
@@ -330,7 +343,7 @@ export function openSessionView(
           getSnapshot: () => sessionSnap,
           subscribe: (fn) => { listeners.add(fn); return () => { listeners.delete(fn) } },
         }
-        return { target, session, loadOlder: () => {} }
+        return { target, session, dispose: () => {}, loadOlder: () => {} }
       }
       // 收集所有可用冷读调用（直接方法 + 通用 RPC）。
       const calls: Array<{ label: string; promise: Promise<unknown> }> = []
@@ -422,6 +435,7 @@ export function openSessionView(
     binding = found
   } catch (err) {
     log('warn', `openSessionView 返回 null：sessions.binding(${id}) 抛错`, err)
+    releaseRef()
     return null
   }
   const session = binding.session
@@ -451,6 +465,7 @@ export function openSessionView(
   return {
     target,
     session,
+    dispose: releaseRef,
     loadOlder(): void {
       try {
         const page = (session as { loadOlder?: () => Promise<void> }).loadOlder?.()

@@ -397,7 +397,7 @@ function TaskPage(props: {
   const [taskFilter, setTaskFilter] = useState<string>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
-  const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget } | null>(null)
+  const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget; didUnarchive?: boolean } | null>(null)
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
   const [viewErr, setViewErr] = useState<string | null>(null)
   // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
@@ -454,9 +454,9 @@ function TaskPage(props: {
     return row === undefined ? id : `${row.title}（${row.id}）`
   }
   /**
-   * 归档会话查看（当前宿主把归档会话标为 inactive：sessions.binding 返回空、
-   * uiConversation.binding 抛 inactive session）⇒ 查看前先反归档让它恢复可读，
-   * 弹窗关闭时再归档回去，平时列表依旧干净。
+   * 归档会话查看：sessions.binding 只查已物化的 scope ⇒ openSessionView 内会先
+   * sessions.retain(id, { source }) 物化（官方源码 client.js:3410 / 3472），通常无需反归档。
+   * 仅当 retain 仍失败时才兜底反归档重试，并在关闭时归档回去。
    */
   const rearchive = (sessionId: string): void => {
     void fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
@@ -465,40 +465,34 @@ function TaskPage(props: {
       body: JSON.stringify({ sessionId }),
     }).catch(() => { /* 回归档失败不阻断交互；该会话会留在列表里，用户可自行归档 */ })
   }
-  /** 打开只读会话弹窗：反归档 → 组装 → 失败给出可见提示，不再静默无反应。 */
+  /** 打开只读会话弹窗：retain 物化 scope 直开；失败才兜底反归档重试；不再静默无反应。 */
   const openView = async (sessionId: string, heading: string): Promise<void> => {
     if (viewSession === null) {
       setViewErr('查看会话不可用：sessions / uiConversation 注入未就位（见控制台）')
       return
     }
     setViewErr(null)
-    try {
-      const res = await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
-      })
-      const body = await res.json() as { ok?: boolean; error?: string }
-      if (!res.ok || body.ok !== true) {
-        setViewErr(`反归档失败（${body.error ?? `HTTP ${res.status}`}）：无法查看该会话`)
-        return
-      }
-    } catch (error) {
-      setViewErr(`反归档请求失败：${error instanceof Error ? error.message : String(error)}`)
-      return
-    }
-    // 反归档后宿主会话列表刷新需要一点时间 ⇒ 短暂重试再判定失败。
-    let target: SessionViewTarget | null = null
-    for (let attempt = 0; attempt < 8 && target === null; attempt++) {
-      target = viewSession(sessionId)
-      if (target === null) await new Promise(resolve => { setTimeout(resolve, 150) })
+    let target = viewSession(sessionId)
+    let didUnarchive = false
+    if (target === null) {
+      try {
+        const res = await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        })
+        const body = await res.json() as { ok?: boolean; error?: string }
+        if (res.ok && body.ok === true) {
+          didUnarchive = true
+          target = viewSession(sessionId)
+        }
+      } catch { /* 兜底失败走下面统一提示 */ }
     }
     if (target === null) {
-      setViewErr('会话已反归档但仍打不开：sessions.binding 返回空或装配失败（原因见控制台 [task-dispatch:session-view] 日志）；已尝试归档回去')
-      rearchive(sessionId)
+      setViewErr('会话无法打开：retain / 物化 scope 失败（原因见控制台 [task-dispatch:session-view] 日志）')
       return
     }
-    setViewing({ sessionId, heading, view: target })
+    setViewing({ sessionId, heading, view: target, didUnarchive })
   }
   const instances = (data?.instances ?? [])
     .filter(row => statusFilter === 'all' || row.status === statusFilter)
@@ -772,9 +766,11 @@ function TaskPage(props: {
         view: viewing.view,
         onClose: () => {
           const closed = viewing.sessionId
+          const needArchive = viewing.didUnarchive === true
+          viewing.view.dispose()
           setViewing(null)
           setViewErr(null)
-          rearchive(closed)
+          if (needArchive) rearchive(closed)
         },
       })
       : null,
