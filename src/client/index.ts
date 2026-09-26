@@ -398,6 +398,8 @@ function TaskPage(props: {
   const [expanded, setExpanded] = useState<string | null>(null)
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
   const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget } | null>(null)
+  // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
+  const [viewErr, setViewErr] = useState<string | null>(null)
   // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
   const [dbDump, setDbDump] = useState<{ at: string; tables: DbTableDump[] } | null>(null)
   const [dbState, setDbState] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
@@ -451,11 +453,18 @@ function TaskPage(props: {
     const row = taskRows.find(item => item.id === id)
     return row === undefined ? id : `${row.title}（${row.id}）`
   }
-  /** 打开只读会话弹窗：组装失败（服务缺失 / 会话不可解析）时静默不动。 */
+  /** 打开只读会话弹窗：组装失败给出可见提示（服务缺失 / 会话不可解析），不再静默无反应。 */
   const openView = (sessionId: string, heading: string): void => {
-    if (viewSession === null) return
+    if (viewSession === null) {
+      setViewErr('查看会话不可用：sessions / uiConversation 注入未就位（见控制台）')
+      return
+    }
     const target = viewSession(sessionId)
-    if (target === null) return
+    if (target === null) {
+      setViewErr('会话无法打开：sessions.binding 返回空或装配失败（原因见控制台 [task-dispatch:session-view] 日志）')
+      return
+    }
+    setViewErr(null)
     setViewing({ sessionId, heading, view: target })
   }
   const instances = (data?.instances ?? [])
@@ -728,8 +737,32 @@ function TaskPage(props: {
         heading: viewing.heading,
         sessionId: viewing.sessionId,
         view: viewing.view,
-        onClose: () => { setViewing(null) },
+        onClose: () => { setViewing(null); setViewErr(null) },
       })
+      : null,
+    // 查看会话失败提示条（固定底部中央，可读可关）。
+    viewErr !== null
+      ? h('div', {
+        style: {
+          position: 'fixed', left: '50%', bottom: '18px', transform: 'translateX(-50%)',
+          zIndex: 1020, maxWidth: '90%', boxSizing: 'border-box',
+          background: 'var(--dsw-alias-bg-layer-1, rgba(40,40,40,.92))',
+          color: 'var(--dsw-alias-label-primary, #fff)',
+          border: '1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.4))',
+          borderRadius: '10px', padding: '10px 14px', fontSize: '12px', lineHeight: '1.5',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          boxShadow: 'var(--dsw-shadow-lv3, 0 8px 28px rgba(0,0,0,.3))',
+        },
+        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
+      },
+        h('span', null, viewErr),
+        h('button', {
+          type: 'button',
+          style: { appearance: 'none', font: 'inherit', fontSize: '12px', cursor: 'pointer', color: 'inherit', background: 'none', border: 'none', padding: '0 2px' },
+          'aria-label': t('debugClose'),
+          onClick: () => { setViewErr(null) },
+        }, '✕'),
+      )
       : null,
   )
 }

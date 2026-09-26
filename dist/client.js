@@ -1977,33 +1977,57 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		//#region src/client/session-view.ts
 		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 		function openSessionView(sessions, uiConversation, id) {
+			const log = (level, msg, extra) => {
+				if (level === "warn") console.warn(`[task-dispatch:session-view] ${msg}`, extra ?? "");
+				else console.info(`[task-dispatch:session-view] ${msg}`);
+			};
 			let binding;
 			try {
 				const found = sessions.binding(id);
-				if (found === void 0 || found === null) return null;
+				if (found === void 0 || found === null) {
+					log("warn", `openSessionView 返回 null：sessions.binding(${id}) 返回空`, {
+						typeofSessionsBinding: typeof sessions.binding,
+						typeofUiConversationBinding: typeof uiConversation.binding
+					});
+					return null;
+				}
 				binding = found;
-			} catch {
+			} catch (err) {
+				log("warn", `openSessionView 返回 null：sessions.binding(${id}) 抛错`, err);
 				return null;
 			}
 			const session = binding.session;
 			try {
 				const opened = session.open?.();
-				if (opened !== void 0 && typeof opened.catch === "function") opened.catch(() => {});
-			} catch {}
+				if (opened !== void 0 && typeof opened.catch === "function") opened.catch((err) => log("warn", `session.open(${id}) 失败（仅影响历史加载，不阻断弹窗）`, err));
+			} catch (err) {
+				log("warn", `session.open(${id}) 抛错`, err);
+			}
 			let conversation;
 			try {
 				conversation = uiConversation.binding(binding);
-			} catch {
+			} catch (err) {
+				log("warn", "openSessionView 返回 null：uiConversation.binding 抛错（binding 已取得，断点在 uiConversation 装配）", err);
 				return null;
 			}
+			let target;
+			try {
+				target = conversation.target("chat");
+			} catch (err) {
+				log("warn", "openSessionView 返回 null：conversation.target('chat') 抛错", err);
+				return null;
+			}
+			log("info", `openSessionView 成功建立 target（${id}）；首屏 nodes 待订阅回填`);
 			return {
-				target: conversation.target("chat"),
+				target,
 				session,
 				loadOlder() {
 					try {
 						const page = session.loadOlder?.();
-						if (page !== void 0 && typeof page.catch === "function") page.catch(() => {});
-					} catch {}
+						if (page !== void 0 && typeof page.catch === "function") page.catch((err) => log("warn", `session.loadOlder(${id}) 失败`, err));
+					} catch (err) {
+						log("warn", `session.loadOlder(${id}) 抛错`, err);
+					}
 				}
 			};
 		}
@@ -2556,6 +2580,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
 			const [expanded, setExpanded] = (0, react.useState)(null);
 			const [viewing, setViewing] = (0, react.useState)(null);
+			const [viewErr, setViewErr] = (0, react.useState)(null);
 			const [dbDump, setDbDump] = (0, react.useState)(null);
 			const [dbState, setDbState] = (0, react.useState)("idle");
 			(0, react.useEffect)(() => {
@@ -2605,11 +2630,18 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const row = taskRows.find((item) => item.id === id);
 				return row === void 0 ? id : `${row.title}（${row.id}）`;
 			};
-			/** 打开只读会话弹窗：组装失败（服务缺失 / 会话不可解析）时静默不动。 */
+			/** 打开只读会话弹窗：组装失败给出可见提示（服务缺失 / 会话不可解析），不再静默无反应。 */
 			const openView = (sessionId, heading) => {
-				if (viewSession === null) return;
+				if (viewSession === null) {
+					setViewErr("查看会话不可用：sessions / uiConversation 注入未就位（见控制台）");
+					return;
+				}
 				const target = viewSession(sessionId);
-				if (target === null) return;
+				if (target === null) {
+					setViewErr("会话无法打开：sessions.binding 返回空或装配失败（原因见控制台 [task-dispatch:session-view] 日志）");
+					return;
+				}
+				setViewErr(null);
 				setViewing({
 					sessionId,
 					heading,
@@ -2788,8 +2820,49 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				view: viewing.view,
 				onClose: () => {
 					setViewing(null);
+					setViewErr(null);
 				}
-			}) : null);
+			}) : null, viewErr !== null ? (0, react.createElement)("div", {
+				style: {
+					position: "fixed",
+					left: "50%",
+					bottom: "18px",
+					transform: "translateX(-50%)",
+					zIndex: 1020,
+					maxWidth: "90%",
+					boxSizing: "border-box",
+					background: "var(--dsw-alias-bg-layer-1, rgba(40,40,40,.92))",
+					color: "var(--dsw-alias-label-primary, #fff)",
+					border: "1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.4))",
+					borderRadius: "10px",
+					padding: "10px 14px",
+					fontSize: "12px",
+					lineHeight: "1.5",
+					display: "flex",
+					alignItems: "center",
+					gap: "10px",
+					boxShadow: "var(--dsw-shadow-lv3, 0 8px 28px rgba(0,0,0,.3))"
+				},
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("span", null, viewErr), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					appearance: "none",
+					font: "inherit",
+					fontSize: "12px",
+					cursor: "pointer",
+					color: "inherit",
+					background: "none",
+					border: "none",
+					padding: "0 2px"
+				},
+				"aria-label": t("debugClose"),
+				onClick: () => {
+					setViewErr(null);
+				}
+			}, "✕")) : null);
 		}
 		/**
 		* 设置页卡片：**只留一行「标题 + 描述 + 箭头」**，点一下切到整页（布局服务 selectPanel）。

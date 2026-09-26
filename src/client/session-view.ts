@@ -144,12 +144,24 @@ export function openSessionView(
   uiConversation: UiConversationFace,
   id: string,
 ): SessionViewTarget | null {
+  const log = (level: 'warn' | 'info', msg: string, extra?: unknown): void => {
+    if (level === 'warn') console.warn(`[task-dispatch:session-view] ${msg}`, extra ?? '')
+    else console.info(`[task-dispatch:session-view] ${msg}`)
+  }
   let binding: SessionBindingFace
   try {
     const found: SessionBindingFace | undefined = sessions.binding(id)
-    if (found === undefined || found === null) return null
+    if (found === undefined || found === null) {
+      // 诊断（决策 28 当年验证归档会话可 binding；若宿主升级后把归档会话移出可 binding 列表，这里就是断点）。
+      log('warn', `openSessionView 返回 null：sessions.binding(${id}) 返回空`, {
+        typeofSessionsBinding: typeof sessions.binding,
+        typeofUiConversationBinding: typeof uiConversation.binding,
+      })
+      return null
+    }
     binding = found
-  } catch {
+  } catch (err) {
+    log('warn', `openSessionView 返回 null：sessions.binding(${id}) 抛错`, err)
     return null
   }
   const session = binding.session
@@ -157,23 +169,35 @@ export function openSessionView(
   // 探测调用；失败软着陆（界面显示空态与重试提示，不崩面板）。
   try {
     const opened = (session as { open?: () => Promise<void> }).open?.()
-    if (opened !== undefined && typeof opened.catch === 'function') opened.catch(() => {})
-  } catch { /* 加载失败不阻断渲染 */ }
+    if (opened !== undefined && typeof opened.catch === 'function') {
+      opened.catch((err) => log('warn', `session.open(${id}) 失败（仅影响历史加载，不阻断弹窗）`, err))
+    }
+  } catch (err) { log('warn', `session.open(${id}) 抛错`, err) }
   let conversation: ReturnType<UiConversationFace['binding']>
   try {
     conversation = uiConversation.binding(binding)
-  } catch {
+  } catch (err) {
+    log('warn', 'openSessionView 返回 null：uiConversation.binding 抛错（binding 已取得，断点在 uiConversation 装配）', err)
     return null
   }
-  const target = conversation.target('chat')
+  let target: SnapshotFace<ChatViewFace | undefined>
+  try {
+    target = conversation.target('chat')
+  } catch (err) {
+    log('warn', "openSessionView 返回 null：conversation.target('chat') 抛错", err)
+    return null
+  }
+  log('info', `openSessionView 成功建立 target（${id}）；首屏 nodes 待订阅回填`)
   return {
     target,
     session,
     loadOlder(): void {
       try {
         const page = (session as { loadOlder?: () => Promise<void> }).loadOlder?.()
-        if (page !== undefined && typeof page.catch === 'function') page.catch(() => {})
-      } catch { /* 同上 */ }
+        if (page !== undefined && typeof page.catch === 'function') {
+          page.catch((err) => log('warn', `session.loadOlder(${id}) 失败`, err))
+        }
+      } catch (err) { log('warn', `session.loadOlder(${id}) 抛错`, err) }
     },
   }
 }
