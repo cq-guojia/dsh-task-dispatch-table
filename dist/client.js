@@ -2358,38 +2358,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		const PANEL_ID = SETTINGS_NS;
 		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 		let runtimeT = (key) => key;
-		let officialViewRef = null;
-		let officialViewSessionId = null;
-		/** 由 sessions 注入块赋值为可用的实现；不可用时调用方回退弹窗。 */
-		let enterOfficialView = null;
-		/** 布局服务的 selectPanel（模块级引用，供 exitOfficialView 使用）。 */
-		let selectPanelRef = () => {};
-		/** 从官方会话视图返回任务面板（释放 mainView retain、归档回去、切回面板）。 */
-		function exitOfficialView() {
-			try {
-				officialViewRef?.release();
-			} catch {}
-			officialViewRef = null;
-			const id = officialViewSessionId;
-			officialViewSessionId = null;
-			if (id !== null) fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ sessionId: id })
-			}).catch(() => void 0);
-			selectPanelRef(PANEL_ID);
-		}
-		/** 官方会话头里的「← 返回任务管理」按钮；只在从本面板跳过去时显示。 */
-		function BackToTaskPanelAction({ t }) {
-			if (officialViewSessionId === null) return null;
-			return (0, react.createElement)("button", {
-				type: "button",
-				style: linkStyle,
-				onClick: () => {
-					exitOfficialView();
-				}
-			}, `← ${t("panelTitle")}`);
-		}
 		/** 只读参数展示值：undefined 显示占位符，statePath 空串 = 宿主数据根默认（决策 14）。 */
 		function displayParam(t, value) {
 			if (value === void 0) return "—";
@@ -2842,14 +2810,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					didUnarchive
 				});
 			};
-			/** 优先进官方会话视图（②，与官方一模一样）；宿主不支持时回退面板内弹窗。 */
-			const openOfficialOrModal = async (sessionId, heading) => {
-				if (enterOfficialView !== null) {
-					await enterOfficialView(sessionId);
-					return;
-				}
-				await openView(sessionId, heading);
-			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
 			const hasRaw = raw.trim() !== "";
 			/** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
@@ -2988,7 +2948,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					title: row.session_id,
 					onClick: (event) => {
 						event.stopPropagation();
-						openOfficialOrModal(row.session_id, titleOfTask(row.task_id));
+						openView(row.session_id, titleOfTask(row.task_id));
 					}
 				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
 					colSpan: 6,
@@ -3004,7 +2964,7 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					type: "button",
 					style: linkStyle,
 					onClick: () => {
-						openOfficialOrModal(row.session_id, titleOfTask(row.task_id));
+						openView(row.session_id, titleOfTask(row.task_id));
 					}
 				}, `↗ ${t("viewSession")}`) : null), events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("eventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 					t("colSeq"),
@@ -3337,37 +3297,13 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				const sessions = sub.sessions;
 				const uiConversation = sub.uiConversation;
 				if (sessions !== void 0 && uiConversation !== void 0) viewSession = (id) => openSessionView(sessions, uiConversation, id);
-				const S = sessions;
-				const retainFn = S?.retain;
-				if (S !== void 0 && typeof retainFn === "function") enterOfficialView = async (id) => {
-					try {
-						await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
-							method: "POST",
-							headers: { "content-type": "application/json" },
-							body: JSON.stringify({ sessionId: id })
-						});
-					} catch {}
-					try {
-						officialViewRef?.release();
-						officialViewRef = retainFn.call(S, id, { source: "mainView" });
-						officialViewSessionId = id;
-					} catch (err) {
-						console.warn("[task-dispatch] 进入官方视图失败（retain mainView）", err);
-						officialViewRef = null;
-						return;
-					}
-					selectPanel(null);
-				};
 			});
 			let selectPanel = () => {};
 			ctx.inject(["layout"], (sub) => {
 				const layout = sub.layout;
-				if (layout !== void 0) {
-					selectPanel = (id) => {
-						layout.selectPanel(id);
-					};
-					selectPanelRef = selectPanel;
-				}
+				if (layout !== void 0) selectPanel = (id) => {
+					layout.selectPanel(id);
+				};
 			});
 			let cardRegistered = false;
 			const registerCard = (sub) => {
@@ -3382,14 +3318,6 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					} })
 				}, TasksConfigPage));
 			};
-			ctx.inject(["slots"], (sub) => {
-				sub.slots.inject("conversation.session.header.actions", () => sub.slots.register({
-					name: "conversation.session.header.actions",
-					id: "task-dispatch-back",
-					order: -1e3,
-					locale: LOCALE_NS
-				}, BackToTaskPanelAction));
-			});
 			ctx.inject(["slots", "configForms"], (sub) => {
 				const forms = sub.configForms;
 				if (forms === void 0) return;

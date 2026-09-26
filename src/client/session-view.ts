@@ -157,18 +157,6 @@ const COLD_READ_PROBE = false
 /** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
 let officialWarned = false
 
-// ─── 为什么不能在弹窗里渲染官方会话本体（2026-09-27 源码核实，勿再尝试）───
-// 官方 `ctx.slots.renderSlot(key, owner)` 契约原文（ui-renderer/lib/types/client/registry.d.ts:150-158）：
-//   「The single ctx-level render entry: the shell renders 'root'; every other key renders
-//    inside components through the props renderSlot face … @param key - must be 'root'
-//    (runtime-enforced)」
-// ⇒ ctx 级**只能**渲染 'root'；其余槽位只能由「声明该子槽的父条目」经它的 props.renderSlot
-//   面渲染。`main.conversation` 由 `main` 槽里 key='conversation' 的那条条目（ConversationPanel）
-//   声明 ⇒ 只有它能渲染；我们占的是 main 槽另一个 key，**结构上不可能**。
-// ⇒ 弹窗内挂官方本体 = 死路（实测调用被 fail-loud 守卫拒绝、回退自绘）。
-//   保证与官方一致的唯一做法 = ②：把官方主视图指到该会话（retain source:'mainView'）
-//   + 切回会话区 + 在会话头挂「返回任务管理」按钮。
-
 /** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
 export function openSessionView(
   sessions: SessionsFace,
