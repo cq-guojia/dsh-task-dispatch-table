@@ -1985,50 +1985,66 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 			try {
 				const found = sessions.binding(id);
 				if (found === void 0 || found === null) {
+					const keysOf = (o) => o == null || typeof o !== "object" ? [] : Object.keys(o);
+					const fnKeys = (o) => o == null || typeof o !== "object" ? [] : keysOf(o).filter((k) => typeof o[k] === "function");
 					const shape = (o) => {
 						if (o == null) return "null";
 						if (typeof o !== "object") return typeof o;
 						if (Array.isArray(o)) return `array(${o.length})`;
-						return "{" + Object.keys(o).slice(0, 10).join(",") + "}";
+						return "{" + keysOf(o).slice(0, 12).join(",") + "}";
+					};
+					const logAsync = (label, p) => {
+						if (p && typeof p === "object" && typeof p.then === "function") p.then((res) => {
+							const ro = res;
+							log("info", `${label} resolve=${shape(res)}`);
+							if (ro) {
+								for (const k of [
+									"records",
+									"nodes",
+									"legacy",
+									"messages",
+									"projection",
+									"cursor",
+									"openState"
+								]) if (ro[k] != null) log("info", `${label}.${k}=${shape(ro[k])}`);
+							}
+						}).catch((e) => log("warn", `${label} reject:${e?.message ?? e}`));
+						else log("info", `${label} sync=${shape(p)}`);
 					};
 					const mgr = sessions.manager;
-					const sess = mgr && typeof mgr.get === "function" ? (() => {
-						try {
-							return mgr.get.call(mgr, id);
-						} catch {
-							return;
-						}
-					})() : void 0;
-					const sessFnKeys = sess && typeof sess === "object" ? Object.keys(sess).filter((k) => typeof sess[k] === "function") : [];
-					const remote = sess && typeof sess === "object" ? sess.remote : void 0;
-					const remoteFnKeys = remote && typeof remote === "object" ? Object.keys(remote).filter((k) => typeof remote[k] === "function") : [];
-					const probeRemote = (method, arg) => {
-						const fn = remote && remote[method];
-						if (typeof fn !== "function") return;
-						try {
-							const r = fn.call(remote, arg);
-							if (r && typeof r === "object" && typeof r.then === "function") r.then((res) => log("info", `remote.${method} resolve=${shape(res)}`)).catch((e) => log("warn", `remote.${method} reject:${e?.message ?? e}`));
-							else log("info", `remote.${method} sync=${shape(r)}`);
-						} catch (e) {
-							log("warn", `remote.${method} threw:${e?.message ?? e}`);
-						}
+					const mgrRemote = mgr?.remote;
+					const mgrSessions = mgr?.sessions;
+					const projStores = mgr?.projectionStores;
+					log("warn", `binding(${id}) 空（inactive 会话）；manager.remote 函数键=[${fnKeys(mgrRemote).join(",")}]；manager.sessions 函数键=[${fnKeys(mgrSessions).join(",")}]；projectionStores 键=[${keysOf(projStores).slice(0, 8).join(",")}]`);
+					const addr = {
+						kind: "session",
+						sessionId: id
 					};
-					probeRemote("follow", {
-						kind: "session",
-						sessionId: id
-					});
-					probeRemote("page", { address: {
-						kind: "session",
-						sessionId: id
-					} });
-					let bindProbe = "n/a";
-					try {
-						const t = uiConversation.binding(sess);
-						bindProbe = t == null ? "null" : `target=${shape(t.target?.getSnapshot?.())}`;
-					} catch (e) {
-						bindProbe = `threw:${e?.message ?? e}`;
+					if (mgrRemote) for (const m of [
+						"follow",
+						"page",
+						"getHistory",
+						"history",
+						"read",
+						"snapshot"
+					]) {
+						const fn = mgrRemote[m];
+						if (typeof fn === "function") try {
+							const arg = m === "page" ? { address: addr } : addr;
+							logAsync(`manager.remote.${m}(${m === "page" ? "address" : "addr"})`, fn.call(mgrRemote, arg));
+						} catch (e) {
+							log("warn", `manager.remote.${m} threw:${e?.message ?? e}`);
+						}
 					}
-					log("warn", `binding(${id}) 返回空；manager.get(id) 函数键=[${sessFnKeys.join(",")}]；remote 函数键=[${remoteFnKeys.join(",")}]；uiConversation.binding(sess)=>${bindProbe}；follow/page 异步结果见上方 info 日志`);
+					if (projStores) {
+						const getFn = projStores.get;
+						logAsync("manager.projectionStores[id]", typeof getFn === "function" ? getFn.call(projStores, id) : projStores[id]);
+					}
+					if (mgrSessions) {
+						const getFn = mgrSessions.get;
+						const ms = typeof getFn === "function" ? getFn.call(mgrSessions, id) : mgrSessions[id];
+						log("info", `manager.sessions[id]=${shape(ms)}；函数键=[${fnKeys(ms).join(",")}]`);
+					}
 					return null;
 				}
 				binding = found;
