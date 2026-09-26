@@ -26,7 +26,7 @@ export type LocaleKey =
   | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint'
   | 'viewSession' | 'viewSessionHint'
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
-  | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind'
+  | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind' | 'sessionReasoning'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
 
 /** 中文文案。 */
@@ -110,6 +110,7 @@ export const zh: Record<LocaleKey, string> = {
   sessionMaxTokens: '该轮达到输出上限',
   sessionRetry: '模型重试',
   sessionUnknownKind: '未支持的节点类型：',
+  sessionReasoning: '思考过程',
   sessionLoading: '正在加载会话记录…',
   sessionEmpty: '该会话暂无可显示的记录（可能刚建窗或已被清理）。',
   sessionLoadFailed: '会话记录加载失败（会话可能已不可读）。',
@@ -197,6 +198,7 @@ export const en: Record<LocaleKey, string> = {
   sessionMaxTokens: 'This turn hit the output token cap',
   sessionRetry: 'Model retry',
   sessionUnknownKind: 'Unsupported node kind: ',
+  sessionReasoning: 'Reasoning',
   sessionLoading: 'Loading session transcript…',
   sessionEmpty: 'Nothing to show for this session yet (window just opened, or the log was cleaned up).',
   sessionLoadFailed: 'Failed to load the session transcript (the session may no longer be readable).',

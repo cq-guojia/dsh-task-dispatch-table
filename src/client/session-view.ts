@@ -1,4 +1,4 @@
-// 面板内只读会话弹窗（决策 28）：官方解析 + 自绘简化渲染。
+// 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）。
 //
 // 数据链（全部经源码核实，0.1.5-rc.2 产物 + 0.1.6 dsh-source 对照）：
 // 1. `sessions.binding(id)`（api-session-controller/client，lib/client.js:3299）：
@@ -16,11 +16,17 @@
 //    按 anchorSeq 有序的 finalized ConversationNode 流，StatsPills 同款消费），
 //    不碰 keyed 的 ChatNodeStore —— 那层的 data 形状随注册模块漂移。
 //
+// 渲染（决策 34）：不挂官方 ChatView（其只渲染「当前会话」，喂不进归档 id），改为
+// **自渲染 DOM + 套官方 design token**。样式规则见 ./archive-session-css（运行时注入），
+// 颜色走全局 `--dsw-alias-*`、布局走 `--dsh-chat-*`，明/暗自动跟随；正文走 markdown。
+//
 // 类型全部本地结构化声明（本仓库 client 惯例）：官方包不在我们的产物依赖里，
 // ChatSnapshot 所在的 ui-chat 包 npm 版本线（0.1.2-alpha.2）与运行时（0.1.5-rc.2）
 // 不同步，跨版本引类型比本地复述更危险。官方升级时只需对齐本文件的类型复述。
 
 import { createElement as h, useMemo, useSyncExternalStore } from 'react'
+import { ensureArchiveSessionStyle } from './archive-session-css'
+import { renderMarkdown } from './markdown'
 import type { LocaleKey } from './locales'
 
 type Translate = (key: LocaleKey) => string
@@ -172,78 +178,16 @@ export function openSessionView(
   }
 }
 
-// ─────────────────────────── 渲染 ───────────────────────────
+// ─────────────────────────── 渲染（决策 34：类名 + 官方 design token） ───────────────────────────
 
-const C = {
-  text: 'var(--dsw-alias-label-primary, #1f2328)',
-  textDim: 'var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))',
-  textFaint: 'var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))',
-  layer1: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))',
-  layer2: 'var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))',
-  border: 'var(--dsw-alias-border-l2, rgba(128,128,128,0.35))',
-  brand: 'var(--dsw-alias-brand-primary, #2f6feb)',
-  danger: 'var(--dsw-alias-state-error-primary, #c0392b)',
-  hover: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))',
-  shadow: 'var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))',
-}
-const monoFont = 'var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
+// 样式表注入（幂等；无 document 环境静默跳过）。规则定义见 ./archive-session-css。
+ensureArchiveSessionStyle()
 
-const sessionOverlayStyle: Record<string, string | number> = {
-  position: 'fixed', inset: 0, zIndex: 1010, background: C.layer2,
-  display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
-}
-const sessionPanelStyle: Record<string, string | number> = {
-  background: C.layer1, color: C.text, borderRadius: '14px', width: '100%', maxWidth: '860px',
-  maxHeight: '86vh', display: 'flex', flexDirection: 'column', boxSizing: 'border-box',
-  border: `1px solid ${C.border}`, boxShadow: C.shadow,
-}
-const sessionHeaderStyle: Record<string, string | number> = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-  padding: '14px 18px 10px', borderBottom: `1px solid ${C.border}`, flexWrap: 'wrap',
-}
-const sessionTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: C.text }
-const sessionBodyStyle: Record<string, string | number> = {
-  overflow: 'auto', padding: '12px 18px 18px', display: 'flex', flexDirection: 'column', gap: '10px',
-}
-const sessionIdStyle: Record<string, string | number> = {
-  fontFamily: monoFont, fontSize: '11px', color: C.textFaint, wordBreak: 'break-all',
-}
-const bubbleStyle: Record<string, string | number> = {
-  alignSelf: 'flex-start', maxWidth: '92%', background: C.layer2, borderRadius: '10px',
-  padding: '8px 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '13px', lineHeight: 1.55,
-}
-const assistantStyle: Record<string, string | number> = {
-  alignSelf: 'flex-end', maxWidth: '92%', background: C.layer1, border: `1px solid ${C.border}`,
-  borderRadius: '10px', padding: '8px 12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-  fontSize: '13px', lineHeight: 1.55,
-}
-const toolCardStyle: Record<string, string | number> = {
-  alignSelf: 'stretch', border: `1px solid ${C.border}`, borderRadius: '8px', padding: '6px 10px',
-  fontSize: '12px', background: C.layer1,
-}
-const toolTitleStyle: Record<string, string | number> = {
-  fontFamily: monoFont, fontSize: '12px', fontWeight: 600, color: C.brand,
-}
-const toolErrorStyle: Record<string, string | number> = { color: C.danger, fontWeight: 600 }
-const noticeRowStyle: Record<string, string | number> = {
-  alignSelf: 'center', fontSize: '12px', color: C.textFaint, padding: '2px 8px',
-}
-const noticeErrorStyle: Record<string, string | number> = {
-  alignSelf: 'center', fontSize: '12px', color: C.danger, padding: '2px 8px', textAlign: 'center',
-}
-const hintRowStyle: Record<string, string | number> = { fontSize: '12px', color: C.textDim, textAlign: 'center', padding: '8px 0' }
-const preArgsStyle: Record<string, string | number> = {
-  fontFamily: monoFont, fontSize: '11px', lineHeight: 1.5, margin: '6px 0 0', whiteSpace: 'pre-wrap',
-  wordBreak: 'break-all', maxHeight: '12em', overflow: 'auto', background: C.layer2,
-  padding: '6px', borderRadius: '6px', color: C.text,
-}
-const buttonStyle: Record<string, string | number> = {
-  appearance: 'none', font: 'inherit', fontSize: '12px', cursor: 'pointer', color: C.text,
-  background: C.layer2, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '4px 12px',
-}
-const linkStyle: Record<string, string | number> = {
-  color: C.brand, cursor: 'pointer', background: 'none', border: 'none', padding: 0,
-  font: 'inherit', fontSize: '12px',
+/** markdown 富文本块：marked 渲染 HTML，套 `.dsh-tdt-sv-md`（样式见 archive-session-css）。 */
+function Md(props: { text: string }): ReturnType<typeof h> {
+  const html = renderMarkdown(props.text)
+  if (html === '') return h('span', null)
+  return h('div', { className: 'dsh-tdt-sv-md', dangerouslySetInnerHTML: { __html: html } })
 }
 
 /** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
@@ -254,6 +198,15 @@ function CloseIcon(): ReturnType<typeof h> {
   },
     h('path', { d: 'M6 6l12 12M18 6L6 18' }),
   )
+}
+
+/** JSON 安全序列化（循环引用 / 特殊值不抛）。 */
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2) ?? String(value)
+  } catch {
+    return String(value)
+  }
 }
 
 /** 提取内容块的可读文本：text 拼接、图片占位（官方 ContentBlock 是 merge-extensible map）。 */
@@ -267,15 +220,73 @@ function contentText(blocks: readonly ContentBlockLike[] | undefined): string {
   return parts.join('\n')
 }
 
-/** assistant 块的可读文本：只保留 text / image 占位（reasoning / tool-call / other 不渲染）。 */
-function assistantText(blocks: readonly AssistantBlockLike[] | undefined): string {
-  if (blocks === undefined) return ''
-  const parts = blocks.map((block) => {
-    if (block.kind === 'text') return block.text
-    if (block.kind === 'image') return '[图片]'
-    return ''
-  }).filter(part => part !== '')
-  return parts.join('\n')
+/**
+ * 工具卡（工具调用 / 工具结果共形）：名称 + 「参数」「输出」可展开。
+ * 调用方负责在外层数组里给 key。
+ */
+function ToolCard(props: {
+  name: string
+  argsRaw: string
+  output: string
+  isError: boolean
+  errorName?: string
+  t: Translate
+}): ReturnType<typeof h> {
+  const { name, argsRaw, output, isError, errorName, t } = props
+  return h('div', { className: 'dsh-tdt-sv-tool' },
+    h('div', { className: 'dsh-tdt-sv-tool-head' },
+      h('span', { className: 'dsh-tdt-sv-tool-name' }, `⚙ ${name}`),
+      isError ? h('span', { className: 'dsh-tdt-sv-tool-err' }, `✕ ${errorName ?? 'error'}`) : null,
+    ),
+    argsRaw.trim() !== ''
+      ? h('details', null,
+          h('summary', null, t('sessionArgs')),
+          h('pre', null, argsRaw),
+        )
+      : null,
+    output.trim() !== ''
+      ? h('details', { open: isError },
+          h('summary', null, t('sessionOutput')),
+          h('pre', null, output),
+        )
+      : null,
+  )
+}
+
+/** assistant 内容块 → 子元素数组（text 走 markdown、reasoning 折叠、tool-call 工具卡）。 */
+function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: Translate): ReturnType<typeof h>[] {
+  if (blocks === undefined) return []
+  const parts: ReturnType<typeof h>[] = []
+  blocks.forEach((block, index) => {
+    switch (block.kind) {
+      case 'text':
+        if (block.text.trim() !== '') parts.push(h(Md, { key: `t${index}`, text: block.text }))
+        break
+      case 'reasoning':
+        if (block.text.trim() !== '') {
+          parts.push(h('details', { key: `r${index}`, className: 'dsh-tdt-sv-reasoning' },
+            h('summary', null, t('sessionReasoning')),
+            h('div', { className: 'dsh-tdt-sv-reasoning-body' }, block.text),
+          ))
+        }
+        break
+      case 'image':
+        parts.push(h('div', { key: `i${index}`, className: 'dsh-tdt-sv-image' }, '[图片]'))
+        break
+      case 'tool-call':
+        parts.push(h(ToolCard, {
+          key: `c${index}`, name: block.name, argsRaw: block.argsRaw, output: '', isError: false, t,
+        }))
+        break
+      default:
+        // 未知 block：折叠原文，升级不白屏。
+        parts.push(h('details', { key: `o${index}`, className: 'dsh-tdt-sv-tool' },
+          h('summary', null, t('sessionUnknownKind')),
+          h('pre', null, safeJson(block.block)),
+        ))
+    }
+  })
+  return parts
 }
 
 /** 单个节点的自绘渲染；返回 null = 按决策 28 过滤的噪音 kind。 */
@@ -284,74 +295,61 @@ function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof
     case 'user':
     case 'steering': {
       const text = contentText(node.content)
-      return text === '' ? null : h('div', { key: node.seq, style: bubbleStyle }, text)
+      return text === '' ? null : h('div', { key: node.seq, className: 'dsh-tdt-sv-user' }, h(Md, { text }))
     }
     case 'assistant': {
-      const text = assistantText(node.blocks)
-      return text === '' ? null : h('div', { key: node.seq, style: assistantStyle }, text)
+      const parts = assistantBlocks(node.blocks, t)
+      return parts.length === 0 ? null : h('div', { key: node.seq, className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-result': {
-      const name = node.call?.name ?? 'tool'
-      const argsRaw = node.call?.argsRaw ?? ''
-      const output = contentText(node.content)
-      return h('div', { key: node.seq, style: toolCardStyle },
-        h('div', { style: { display: 'flex', gap: '8px', alignItems: 'baseline', flexWrap: 'wrap' } },
-          h('span', { style: toolTitleStyle }, `⚙ ${name}`),
-          node.isError === true ? h('span', { style: toolErrorStyle }, `✕ ${node.error?.name ?? 'error'}`) : null,
-        ),
-        argsRaw.trim() !== ''
-          ? h('details', null,
-              h('summary', { style: { cursor: 'pointer', fontSize: '11px', color: C.textFaint, margin: '2px 0 0' } }, t('sessionArgs')),
-              h('pre', { style: preArgsStyle }, argsRaw),
-            )
-          : null,
-        output.trim() !== ''
-          ? h('details', { open: node.isError === true },
-              h('summary', { style: { cursor: 'pointer', fontSize: '11px', color: C.textFaint, margin: '2px 0 0' } }, t('sessionOutput')),
-              h('pre', { style: preArgsStyle }, output),
-            )
-          : null,
-      )
+      return h(ToolCard, {
+        key: node.seq,
+        name: node.call?.name ?? 'tool',
+        argsRaw: node.call?.argsRaw ?? '',
+        output: contentText(node.content),
+        isError: node.isError === true,
+        errorName: node.error?.name,
+        t,
+      })
     }
     case 'command': {
       const line = `/${node.name ?? '?'}${node.args === null || node.args === undefined ? '' : ` ${node.args}`}`
-      return h('div', { key: node.seq, style: toolCardStyle },
-        h('span', { style: { fontFamily: monoFont, fontSize: '12px' } }, line),
+      return h('div', { key: node.seq, className: 'dsh-tdt-sv-tool' },
+        h('div', { className: 'dsh-tdt-sv-tool-head' },
+          h('span', { className: 'dsh-tdt-sv-tool-name' }, line),
+        ),
         node.outcome !== null && node.outcome !== undefined
           ? h('span', {
-              style: {
-                fontFamily: monoFont, fontSize: '11px', margin: '4px 0 0', display: 'block',
-                color: node.outcome.kind === 'error' ? C.danger : C.textDim,
-              },
+              className: `dsh-tdt-sv-outcome ${node.outcome.kind === 'error' ? 'dsh-tdt-sv-outcome-err' : 'dsh-tdt-sv-outcome-ok'}`,
             }, node.outcome.text ?? node.outcome.kind)
           : null,
       )
     }
     case 'turn-error':
-      return h('div', { key: node.seq, style: noticeErrorStyle },
+      return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice-err' },
         `${t('sessionTurnError')}${node.message === undefined || node.message === '' ? '' : `：${node.message}`}`,
       )
     case 'turn-max-tokens':
-      return h('div', { key: node.seq, style: noticeRowStyle }, t('sessionMaxTokens'))
+      return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice' }, t('sessionMaxTokens'))
     case 'model-retry':
-      return h('div', { key: node.seq, style: noticeRowStyle }, `${t('sessionRetry')}（${node.retryState ?? 'scheduled'}）`)
+      return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice' }, `${t('sessionRetry')}（${node.retryState ?? 'scheduled'}）`)
     // 决策 28：默认过滤的噪音 kind —— context（系统注入）、compaction（压缩标记）、
-    // unknown（未知事件面）。assistant 里的 reasoning（「技术规划」）在 assistantText 已滤。
+    // unknown（未知事件面）。assistant 里的 reasoning 现在由 assistantBlocks 折叠渲染。
     case 'context':
     case 'compaction':
     case 'unknown':
       return null
     default:
       // 决策 28：不认识的 kind 一律 fallback（折叠原文），升级不白屏。
-      return h('details', { key: node.seq, style: toolCardStyle },
-        h('summary', { style: { cursor: 'pointer', fontSize: '11px', color: C.textFaint } }, `${t('sessionUnknownKind')} ${node.kind}`),
-        h('pre', { style: preArgsStyle }, JSON.stringify(node, null, 2)),
+      return h('details', { key: node.seq, className: 'dsh-tdt-sv-tool' },
+        h('summary', { className: 'dsh-tdt-sv-notice' }, `${t('sessionUnknownKind')} ${node.kind}`),
+        h('pre', null, safeJson(node)),
       )
   }
 }
 
 /**
- * 面板内只读会话弹窗（决策 28）：官方解析 + 自绘简化渲染，只读、不可续聊。
+ * 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
  * @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
  */
 export function SessionViewModal(props: {
@@ -382,35 +380,49 @@ export function SessionViewModal(props: {
 
   const openState = sessionSnap?.openState
   const body = rendered.length === 0
-    ? h('div', { style: hintRowStyle },
+    ? h('div', { className: 'dsh-tdt-sv-hint' },
         openState === 'error' ? t('sessionLoadFailed')
           : openState === 'loading' || openState === 'cold' ? t('sessionLoading')
           : t('sessionEmpty'),
       )
     : rendered
 
-  // 关闭途径：右上角关闭按钮 / 点遮罩（主面板同款，不监听 document —— tsconfig.client 无 DOM lib）。
-
+  // 关闭途径：右上角关闭按钮 / 点遮罩（主面板同款，不监听 document）。
   const showLoadOlder = sessionSnap?.hasMore !== false
 
-  return h('div', { style: sessionOverlayStyle, onClick: onClose },
-    h('div', { style: sessionPanelStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      h('div', { style: sessionHeaderStyle },
-        h('div', null,
-          h('div', { style: sessionTitleStyle }, `${t('sessionViewerTitle')} · ${heading}`),
-          h('div', { style: sessionIdStyle }, sessionId),
+  return h('div', { className: 'dsh-tdt-sv-overlay', onClick: onClose },
+    h('div', { className: 'dsh-tdt-sv-panel', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+      h('div', { className: 'dsh-tdt-sv-header' },
+        h('div', { className: 'dsh-tdt-sv-heading' },
+          h('div', { className: 'dsh-tdt-sv-title' }, `${t('sessionViewerTitle')} · ${heading}`),
+          h('div', { className: 'dsh-tdt-sv-sid' }, sessionId),
         ),
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+        h('div', { className: 'dsh-tdt-sv-actions' },
           showLoadOlder
-            ? h('button', { type: 'button', style: buttonStyle, onClick: () => view.loadOlder() }, t('sessionLoadOlder'))
+            ? h('button', { type: 'button', className: 'dsh-tdt-sv-btn', onClick: () => view.loadOlder() }, t('sessionLoadOlder'))
             : null,
-          h('button', { type: 'button', style: { ...buttonStyle, padding: '4px 6px' }, 'aria-label': t('debugClose'), onClick: onClose }, h(CloseIcon, {})),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-btn dsh-tdt-sv-btn-icon',
+            'aria-label': t('debugClose'),
+            onClick: onClose,
+          }, h(CloseIcon, {})),
         ),
       ),
-      h('div', { style: sessionBodyStyle }, body),
+      h('div', { className: 'dsh-tdt-sv-body' },
+        h('div', { className: 'dsh-tdt-sv-col' }, body),
+      ),
     ),
   )
 }
 
-/** 供执行记录页复用的链接文案样式（与主面板 linkStyle 同形，避免跨文件样式耦合）。 */
-export const sessionLinkStyle = linkStyle
+/** 供执行记录页复用的链接文案样式（行内文字按钮，与主面板 linkStyle 同形）。 */
+export const sessionLinkStyle: Record<string, string | number> = {
+  color: 'var(--dsw-alias-brand-primary, #2f6feb)',
+  cursor: 'pointer',
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  font: 'inherit',
+  fontSize: '12px',
+}
