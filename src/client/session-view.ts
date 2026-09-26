@@ -153,33 +153,47 @@ export function openSessionView(
     const found: SessionBindingFace | undefined = sessions.binding(id)
     if (found === undefined || found === null) {
       // 诊断（决策 28 当年验证归档会话可 binding；现版本宿主对已归档会话 binding 返回空）。
-      // 深挖 sessions.manager / sessions.list / uiConversation.bindings，定位归档会话的正确取法。
+      // 深挖 manager.get(id).remote（文档记录的冷读 follow/page 入口）与 uiConversation.binding(session) 直连。
       const shape = (o: unknown): string => {
         if (o == null) return 'null'
         if (typeof o !== 'object') return typeof o
         if (Array.isArray(o)) return `array(${o.length})`
-        return '{' + Object.keys(o as object).slice(0, 8).join(',') + '}'
-      }
-      const tryCall = (fn: unknown, ...args: unknown[]): string => {
-        if (typeof fn !== 'function') return 'n/a'
-        try {
-          const r = (fn as (...a: unknown[]) => unknown)(...args)
-          if (r && typeof r === 'object' && typeof (r as { then?: unknown }).then === 'function') return 'promise'
-          return shape(r)
-        } catch (e) { return 'threw:' + ((e as Error)?.message ?? String(e)).slice(0, 40) }
+        return '{' + Object.keys(o as object).slice(0, 10).join(',') + '}'
       }
       const S = sessions as unknown as Record<string, unknown>
       const U = uiConversation as unknown as Record<string, unknown>
       const mgr = S.manager as Record<string, unknown> | undefined
-      const mgrProbe = mgr == null ? 'manager=null'
-        : `manager={${Object.keys(mgr).slice(0, 10).join(',')}}; get(id)=>${tryCall(mgr.get, id)}; resolve(id)=>${tryCall(mgr.resolve, id)}; binding(id)=>${tryCall(mgr.binding, id)}; find(id)=>${tryCall(mgr.find, id)}`
-      const g = mgr && typeof mgr.get === 'function' ? (() => { try { return mgr.get.call(mgr, id) } catch { return undefined } })() : undefined
-      const getRes = g && typeof g === 'object'
-        ? `; get(id).keys={${Object.keys(g as object).slice(0, 10).join(',')}}${('binding' in (g as object)) ? `; get(id).binding=${shape((g as Record<string, unknown>).binding)}` : ''}`
-        : ''
-      const listProbe = `list()=>${tryCall(S.list)}`
-      const uiBindProbe = `uiConversation.bindings=${shape(U.bindings)}; .get(id)=>${tryCall((U.bindings as Record<string, unknown> | undefined)?.get, id)}`
-      log('warn', `binding(${id}) 返回空；${mgrProbe}${getRes}；${listProbe}；${uiBindProbe}`)
+      const sess = mgr && typeof mgr.get === 'function'
+        ? (() => { try { return (mgr.get as (x: string) => unknown).call(mgr, id) } catch { return undefined } })()
+        : undefined
+      const sessFnKeys = sess && typeof sess === 'object'
+        ? Object.keys(sess as object).filter(k => typeof (sess as Record<string, unknown>)[k] === 'function')
+        : []
+      const remote = sess && typeof sess === 'object' ? (sess as Record<string, unknown>).remote : undefined
+      const remoteFnKeys = remote && typeof remote === 'object'
+        ? Object.keys(remote as object).filter(k => typeof (remote as Record<string, unknown>)[k] === 'function')
+        : []
+      // 试 remote.follow / remote.page（文档记录的冷读接口，按 durable address { kind:'session', sessionId }）。
+      const probeRemote = (method: string, arg: unknown): void => {
+        const fn = remote && (remote as Record<string, unknown>)[method]
+        if (typeof fn !== 'function') return
+        try {
+          const r = (fn as (x: unknown) => unknown).call(remote, arg)
+          if (r && typeof r === 'object' && typeof (r as { then?: unknown }).then === 'function') {
+            (r as Promise<unknown>).then((res) => log('info', `remote.${method} resolve=${shape(res)}`))
+              .catch((e) => log('warn', `remote.${method} reject:${(e as Error)?.message ?? e}`))
+          } else log('info', `remote.${method} sync=${shape(r)}`)
+        } catch (e) { log('warn', `remote.${method} threw:${(e as Error)?.message ?? e}`) }
+      }
+      probeRemote('follow', { kind: 'session', sessionId: id })
+      probeRemote('page', { address: { kind: 'session', sessionId: id } })
+      // 试 uiConversation.binding 直连 session 对象（绕开失效的 sessions.binding）。
+      let bindProbe = 'n/a'
+      try {
+        const t = (uiConversation as unknown as { binding(x: unknown): unknown }).binding(sess)
+        bindProbe = t == null ? 'null' : `target=${shape((t as { target?: { getSnapshot(): unknown } }).target?.getSnapshot?.())}`
+      } catch (e) { bindProbe = `threw:${(e as Error)?.message ?? e}` }
+      log('warn', `binding(${id}) 返回空；manager.get(id) 函数键=[${sessFnKeys.join(',')}]；remote 函数键=[${remoteFnKeys.join(',')}]；uiConversation.binding(sess)=>${bindProbe}；follow/page 异步结果见上方 info 日志`)
       return null
     }
     binding = found

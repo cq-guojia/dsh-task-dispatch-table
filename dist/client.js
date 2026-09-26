@@ -1989,30 +1989,46 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 						if (o == null) return "null";
 						if (typeof o !== "object") return typeof o;
 						if (Array.isArray(o)) return `array(${o.length})`;
-						return "{" + Object.keys(o).slice(0, 8).join(",") + "}";
+						return "{" + Object.keys(o).slice(0, 10).join(",") + "}";
 					};
-					const tryCall = (fn, ...args) => {
-						if (typeof fn !== "function") return "n/a";
-						try {
-							const r = fn(...args);
-							if (r && typeof r === "object" && typeof r.then === "function") return "promise";
-							return shape(r);
-						} catch (e) {
-							return "threw:" + (e?.message ?? String(e)).slice(0, 40);
-						}
-					};
-					const S = sessions;
-					const U = uiConversation;
-					const mgr = S.manager;
-					const mgrProbe = mgr == null ? "manager=null" : `manager={${Object.keys(mgr).slice(0, 10).join(",")}}; get(id)=>${tryCall(mgr.get, id)}; resolve(id)=>${tryCall(mgr.resolve, id)}; binding(id)=>${tryCall(mgr.binding, id)}; find(id)=>${tryCall(mgr.find, id)}`;
-					const g = mgr && typeof mgr.get === "function" ? (() => {
+					const mgr = sessions.manager;
+					const sess = mgr && typeof mgr.get === "function" ? (() => {
 						try {
 							return mgr.get.call(mgr, id);
 						} catch {
 							return;
 						}
 					})() : void 0;
-					log("warn", `binding(${id}) 返回空；${mgrProbe}${g && typeof g === "object" ? `; get(id).keys={${Object.keys(g).slice(0, 10).join(",")}}${"binding" in g ? `; get(id).binding=${shape(g.binding)}` : ""}` : ""}；${`list()=>${tryCall(S.list)}`}；${`uiConversation.bindings=${shape(U.bindings)}; .get(id)=>${tryCall(U.bindings?.get, id)}`}`);
+					const sessFnKeys = sess && typeof sess === "object" ? Object.keys(sess).filter((k) => typeof sess[k] === "function") : [];
+					const remote = sess && typeof sess === "object" ? sess.remote : void 0;
+					const remoteFnKeys = remote && typeof remote === "object" ? Object.keys(remote).filter((k) => typeof remote[k] === "function") : [];
+					const probeRemote = (method, arg) => {
+						const fn = remote && remote[method];
+						if (typeof fn !== "function") return;
+						try {
+							const r = fn.call(remote, arg);
+							if (r && typeof r === "object" && typeof r.then === "function") r.then((res) => log("info", `remote.${method} resolve=${shape(res)}`)).catch((e) => log("warn", `remote.${method} reject:${e?.message ?? e}`));
+							else log("info", `remote.${method} sync=${shape(r)}`);
+						} catch (e) {
+							log("warn", `remote.${method} threw:${e?.message ?? e}`);
+						}
+					};
+					probeRemote("follow", {
+						kind: "session",
+						sessionId: id
+					});
+					probeRemote("page", { address: {
+						kind: "session",
+						sessionId: id
+					} });
+					let bindProbe = "n/a";
+					try {
+						const t = uiConversation.binding(sess);
+						bindProbe = t == null ? "null" : `target=${shape(t.target?.getSnapshot?.())}`;
+					} catch (e) {
+						bindProbe = `threw:${e?.message ?? e}`;
+					}
+					log("warn", `binding(${id}) 返回空；manager.get(id) 函数键=[${sessFnKeys.join(",")}]；remote 函数键=[${remoteFnKeys.join(",")}]；uiConversation.binding(sess)=>${bindProbe}；follow/page 异步结果见上方 info 日志`);
 					return null;
 				}
 				binding = found;
