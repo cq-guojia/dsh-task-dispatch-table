@@ -539,21 +539,30 @@ function ToolCard(props: {
   t: Translate
 }): ReturnType<typeof h> {
   const { name, argsRaw, output, isError, errorName, t } = props
-  return h('div', { className: 'dsh-tdt-sv-tool' },
-    h('div', { className: 'dsh-tdt-sv-tool-head' },
-      h('span', { className: 'dsh-tdt-sv-tool-name' }, `⚙ ${name}`),
+  // 官方 GenericCommandCard 结构（源码 client.js:6002-6025）：
+  // root[data-variant][data-state] > DisclosureRow(row: leading + title + chevron)
+  //   + 折叠时 span.separator + span.summary，展开时 pre.body
+  const preCls = ocOr('GenericCommandCard', 'body', '')
+  return h('div', {
+    className: ocOr('GenericCommandCard', 'root', 'dsh-tdt-sv-tool'),
+    'data-state': isError ? 'error' : 'success',
+  },
+    h('div', { className: ocOr('GenericCommandCard', 'row', 'dsh-tdt-sv-tool-head') },
+      h('span', { className: ocOr('GenericCommandCard', 'leading', '') }, '⚙'),
+      h('span', { className: ocOr('GenericCommandCard', 'title', 'dsh-tdt-sv-tool-name') }, name),
       isError ? h('span', { className: 'dsh-tdt-sv-tool-err' }, `✕ ${errorName ?? 'error'}`) : null,
+      h('span', { className: ocOr('GenericCommandCard', 'chevron', '') }, '▸'),
     ),
     argsRaw.trim() !== ''
       ? h('details', null,
-          h('summary', null, t('sessionArgs')),
-          h('pre', null, argsRaw),
+          h('summary', { className: ocOr('ReasoningRow', 'summary', '') }, t('sessionArgs')),
+          h('pre', { className: preCls }, argsRaw),
         )
       : null,
     output.trim() !== ''
       ? h('details', { open: isError },
-          h('summary', null, t('sessionOutput')),
-          h('pre', null, output),
+          h('summary', { className: ocOr('ReasoningRow', 'summary', '') }, t('sessionOutput')),
+          h('pre', { className: preCls }, output),
         )
       : null,
   )
@@ -570,9 +579,11 @@ function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: T
         break
       case 'reasoning':
         if (block.text.trim() !== '') {
-          parts.push(h('details', { key: `r${index}`, className: 'dsh-tdt-sv-reasoning' },
-            h('summary', null, t('sessionReasoning')),
-            h('div', { className: 'dsh-tdt-sv-reasoning-body' }, block.text),
+          parts.push(h('details', { key: `r${index}`, className: ocOr('ReasoningRow', 'root', 'dsh-tdt-sv-reasoning') },
+            h('summary', { className: ocOr('ReasoningRow', 'row', '') },
+              h('span', { className: ocOr('ReasoningRow', 'title', '') }, t('sessionReasoning')),
+            ),
+            h('div', { className: ocOr('ReasoningRow', 'thinkBody', 'dsh-tdt-sv-reasoning-body') }, block.text),
           ))
         }
         break
@@ -601,7 +612,13 @@ function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof
     case 'user':
     case 'steering': {
       const text = contentText(node.content)
-      return text === '' ? null : h('div', { key: node.seq, className: 'dsh-tdt-sv-user' }, h(Md, { text }))
+      if (text === '') return null
+      // 官方用户消息结构（源码 client.js:1345-1384）：MessageItem userRow > userStack > bubble
+      return h('div', { key: node.seq, className: ocOr('MessageItem', 'userRow', '') },
+        h('div', { className: ocOr('MessageItem', 'userStack', '') },
+          h('div', { className: ocOr('MessageItem', 'bubble', 'dsh-tdt-sv-user') }, h(Md, { text })),
+        ),
+      )
     }
     case 'assistant': {
       const parts = assistantBlocks(node.blocks, t)

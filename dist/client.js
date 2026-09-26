@@ -2190,7 +2190,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 		*/
 		function ToolCard(props) {
 			const { name, argsRaw, output, isError, errorName, t } = props;
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tool" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tool-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tool-name" }, `⚙ ${name}`), isError ? (0, react.createElement)("span", { className: "dsh-tdt-sv-tool-err" }, `✕ ${errorName ?? "error"}`) : null), argsRaw.trim() !== "" ? (0, react.createElement)("details", null, (0, react.createElement)("summary", null, t("sessionArgs")), (0, react.createElement)("pre", null, argsRaw)) : null, output.trim() !== "" ? (0, react.createElement)("details", { open: isError }, (0, react.createElement)("summary", null, t("sessionOutput")), (0, react.createElement)("pre", null, output)) : null);
+			const preCls = ocOr("GenericCommandCard", "body", "");
+			return (0, react.createElement)("div", {
+				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
+				"data-state": isError ? "error" : "success"
+			}, (0, react.createElement)("div", { className: ocOr("GenericCommandCard", "row", "dsh-tdt-sv-tool-head") }, (0, react.createElement)("span", { className: ocOr("GenericCommandCard", "leading", "") }, "⚙"), (0, react.createElement)("span", { className: ocOr("GenericCommandCard", "title", "dsh-tdt-sv-tool-name") }, name), isError ? (0, react.createElement)("span", { className: "dsh-tdt-sv-tool-err" }, `✕ ${errorName ?? "error"}`) : null, (0, react.createElement)("span", { className: ocOr("GenericCommandCard", "chevron", "") }, "▸")), argsRaw.trim() !== "" ? (0, react.createElement)("details", null, (0, react.createElement)("summary", { className: ocOr("ReasoningRow", "summary", "") }, t("sessionArgs")), (0, react.createElement)("pre", { className: preCls }, argsRaw)) : null, output.trim() !== "" ? (0, react.createElement)("details", { open: isError }, (0, react.createElement)("summary", { className: ocOr("ReasoningRow", "summary", "") }, t("sessionOutput")), (0, react.createElement)("pre", { className: preCls }, output)) : null);
 		}
 		/** assistant 内容块 → 子元素数组（text 走 markdown、reasoning 折叠、tool-call 工具卡）。 */
 		function assistantBlocks(blocks, t) {
@@ -2207,8 +2211,8 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 					case "reasoning":
 						if (block.text.trim() !== "") parts.push((0, react.createElement)("details", {
 							key: `r${index}`,
-							className: "dsh-tdt-sv-reasoning"
-						}, (0, react.createElement)("summary", null, t("sessionReasoning")), (0, react.createElement)("div", { className: "dsh-tdt-sv-reasoning-body" }, block.text)));
+							className: ocOr("ReasoningRow", "root", "dsh-tdt-sv-reasoning")
+						}, (0, react.createElement)("summary", { className: ocOr("ReasoningRow", "row", "") }, (0, react.createElement)("span", { className: ocOr("ReasoningRow", "title", "") }, t("sessionReasoning"))), (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, block.text)));
 						break;
 					case "image":
 						parts.push((0, react.createElement)("div", {
@@ -2240,10 +2244,11 @@ Please report this to https://github.com/markedjs/marked.`, e) {
 				case "user":
 				case "steering": {
 					const text = contentText(node.content);
-					return text === "" ? null : (0, react.createElement)("div", {
+					if (text === "") return null;
+					return (0, react.createElement)("div", {
 						key: node.seq,
-						className: "dsh-tdt-sv-user"
-					}, (0, react.createElement)(Md, { text }));
+						className: ocOr("MessageItem", "userRow", "")
+					}, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(Md, { text }))));
 				}
 				case "assistant": {
 					const parts = assistantBlocks(node.blocks, t);
