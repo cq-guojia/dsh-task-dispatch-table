@@ -28,7 +28,7 @@ export type LocaleKey =
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
   | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind' | 'sessionReasoning'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
-  | 'sessionProcess'
+  | 'sessionProcess' | 'sessionComposerPlaceholder'
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
@@ -117,6 +117,7 @@ export const zh: Record<LocaleKey, string> = {
   sessionLoadFailed: '会话记录加载失败（会话可能已不可读）。',
   sessionLoadOlder: '加载更早记录',
   sessionProcess: '过程',
+  sessionComposerPlaceholder: '已归档会话为只读（续聊功能未开放）',
 }
 
 /** English copy. */
@@ -206,4 +207,5 @@ export const en: Record<LocaleKey, string> = {
   sessionLoadFailed: 'Failed to load the session transcript (the session may no longer be readable).',
   sessionLoadOlder: 'Load earlier messages',
   sessionProcess: 'Process',
+  sessionComposerPlaceholder: 'Archived sessions are read-only (follow-up chat not available yet)',
 }

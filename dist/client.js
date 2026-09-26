@@ -93,7 +93,8 @@ window.__ModuleLoader__.load({
 			sessionEmpty: "该会话暂无可显示的记录（可能刚建窗或已被清理）。",
 			sessionLoadFailed: "会话记录加载失败（会话可能已不可读）。",
 			sessionLoadOlder: "加载更早记录",
-			sessionProcess: "过程"
+			sessionProcess: "过程",
+			sessionComposerPlaceholder: "已归档会话为只读（续聊功能未开放）"
 		};
 		/** English copy. */
 		const en = {
@@ -181,7 +182,8 @@ window.__ModuleLoader__.load({
 			sessionEmpty: "Nothing to show for this session yet (window just opened, or the log was cleaned up).",
 			sessionLoadFailed: "Failed to load the session transcript (the session may no longer be readable).",
 			sessionLoadOlder: "Load earlier messages",
-			sessionProcess: "Process"
+			sessionProcess: "Process",
+			sessionComposerPlaceholder: "Archived sessions are read-only (follow-up chat not available yet)"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -190,7 +192,7 @@ window.__ModuleLoader__.load({
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1010;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
-.dsh-tdt-sv-panel{--dsh-tdt-content-width:var(--dsh-chat-content-width,748px);--dsh-tdt-flow-gap:var(--dsh-chat-flow-gap,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:14px;box-shadow:var(--dsw-shadow-lv3,0 12px 40px rgba(0,0,0,.32));width:100%;max-width:1180px;max-height:92vh;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
+.dsh-tdt-sv-panel{--dsh-tdt-content-width:var(--dsh-chat-content-width,748px);--dsh-tdt-flow-gap:var(--dsh-chat-flow-gap,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:14px;box-shadow:var(--dsw-shadow-lv3,0 12px 40px rgba(0,0,0,.32));width:min(1180px,94vw);height:92vh;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px 10px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:15px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
@@ -203,6 +205,26 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-col{width:100%;max-width:var(--dsh-tdt-content-width);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-tdt-flow-gap);}
 .dsh-tdt-sv-flowitem{min-width:0;}
 .dsh-tdt-sv-official{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+.dsh-tdt-sv-older{display:flex;justify-content:center;}
+.dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.9));background:var(--dsw-alias-interactive-bg-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--dsw-radius-sm,6px);padding:4px 12px;}
+.dsh-tdt-sv-older button:disabled{cursor:default;opacity:.6;}
+.dsh-tdt-sv-process{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex;}
+.dsh-tdt-sv-process:hover{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-process:not([data-open]){margin-bottom:8px;}
+.dsh-tdt-sv-process-label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
+.dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--dsw-alias-label-caption,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
+.dsh-tdt-sv-process[data-open] .dsh-tdt-sv-process-chevron{transform:rotate(180deg);}
+.dsh-tdt-sv-process-body{min-width:0;}
+.dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
+.dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
+.dsh-tdt-sv-action:hover{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-composer{flex:none;padding:12px 18px 16px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-sv-composer-box{display:flex;align-items:center;gap:8px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;padding:8px 12px;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));}
+.dsh-tdt-sv-composer-box input{flex:1;appearance:none;font:inherit;font-size:14px;color:var(--dsw-alias-label-primary,#1f2328);background:0 0;border:none;outline:none;}
+.dsh-tdt-sv-composer-box input::placeholder{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-reasoning-head{display:flex;align-items:center;gap:8px;width:100%;background:0 0;border:none;cursor:pointer;padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-align:left;}
+.dsh-tdt-sv-reasoning-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-reasoning-chevron{flex:none;}
 .dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.6;word-break:break-word;}
 .dsh-tdt-sv-assistant{align-self:stretch;font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-image{align-self:flex-start;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));border:1px dashed var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 10px;}
@@ -263,6 +285,17 @@ window.__ModuleLoader__.load({
 			el.id = SV_STYLE_ID;
 			el.textContent = ARCHIVE_SESSION_CSS;
 			document.head.appendChild(el);
+		}
+		//#endregion
+		//#region src/client/mirror/Composer.tsx
+		/** 对话框占位（禁用）。 */
+		function ComposerPlaceholder(props) {
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-composer" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-composer-box" }, (0, react.createElement)("input", {
+				type: "text",
+				disabled: true,
+				placeholder: props.placeholder,
+				"aria-readonly": true
+			})));
 		}
 		//#endregion
 		//#region src/client/official-classes.ts
@@ -345,6 +378,180 @@ window.__ModuleLoader__.load({
 		/** className 拼接：官方类优先，缺失时回退自绘类（两者只取其一，避免样式打架）。 */
 		function ocOr(module, semantic, fallback) {
 			return officialClass(module, semantic) ?? fallback;
+		}
+		//#endregion
+		//#region src/client/mirror/ChatView.tsx
+		/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。 */
+		function ChatViewFrame(props) {
+			return (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "scroll", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, props.children))));
+		}
+		/** 单条流式项：官方块间距规则（`.column > .flowItem ~ .flowItem { margin-top: var(--dsh-chat-flow-gap,16px) }`）的作用目标。 */
+		function ChatFlowItem(props) {
+			return (0, react.createElement)("div", { className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem") }, props.children);
+		}
+		/** 加载 / 空态提示行（13px tertiary）。 */
+		function ChatHint(props) {
+			return (0, react.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, props.text);
+		}
+		/** 「加载更早记录」按钮（官方 older：按钮 4px 12px / 12px 字号 / radius-sm / 底色 interactive-bg-hover-solid）。 */
+		function ChatOlderButton(props) {
+			return (0, react.createElement)("div", { className: ocOr("ChatView", "older", "dsh-tdt-sv-older") }, (0, react.createElement)("button", {
+				type: "button",
+				onClick: props.onClick
+			}, props.label));
+		}
+		//#endregion
+		//#region src/client/mirror/GenericCommandCard.tsx
+		/** 单行截断（官方 summary 是单行省略号样式）。 */
+		const preview = (text) => {
+			const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
+			return first.length > 90 ? `${first.slice(0, 90)}…` : first;
+		};
+		/** 人话摘要：优先取常见工具参数的关键字段，否则回退「输出优先、参数次之」的首行。 */
+		const summarize = (argsRaw, output) => {
+			const raw = argsRaw.trim();
+			if (raw.startsWith("{")) try {
+				const parsed = JSON.parse(raw);
+				for (const key of [
+					"command",
+					"file_path",
+					"path",
+					"pattern",
+					"query",
+					"url",
+					"title"
+				]) {
+					const value = parsed[key];
+					if (typeof value === "string" && value.trim() !== "") return value;
+				}
+			} catch {}
+			return preview(output.trim() !== "" ? output : argsRaw);
+		};
+		/** 工具调用 / 命令卡（默认折叠成一行；错误态摘要变红由 summary[data-error] 承担）。 */
+		function GenericCommandCard(props) {
+			const { name, argsRaw, output, isError, errorName, t } = props;
+			const [open, setOpen] = (0, react.useState)(isError);
+			const summaryCls = ocOr("GenericCommandCard", "summary", "");
+			const summaryText = summarize(argsRaw, output);
+			const bodyText = [argsRaw.trim() !== "" ? `${t("sessionArgs")}:\n${argsRaw}` : "", output.trim() !== "" ? `${t("sessionOutput")}:\n${output}` : ""].filter((part) => part !== "").join("\n\n");
+			return (0, react.createElement)("div", {
+				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
+				"data-variant": "others",
+				"data-state": isError ? "error" : "success"
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, {}),
+				title: isError ? `${name}  ✕ ${errorName ?? "error"}` : name,
+				open,
+				expandable: bodyText !== "",
+				onToggle: () => {
+					setOpen((value) => !value);
+				},
+				expandOnRowClick: true,
+				rowClassName: ocOr("GenericCommandCard", "row", "dsh-tdt-sv-tool-head"),
+				leadingClassName: ocOr("GenericCommandCard", "leading", ""),
+				titleClassName: ocOr("GenericCommandCard", "title", "dsh-tdt-sv-tool-name"),
+				chevronClassName: ocOr("GenericCommandCard", "chevron", ""),
+				collapsedContent: summaryText === "" ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
+					className: ocOr("GenericCommandCard", "separator", ""),
+					"aria-hidden": true
+				}), (0, react.createElement)("span", {
+					className: summaryCls,
+					"data-error": isError || void 0
+				}, summaryText)),
+				children: bodyText === "" ? null : (0, react.createElement)("pre", { className: ocOr("GenericCommandCard", "body", "") }, bodyText)
+			}));
+		}
+		//#endregion
+		//#region src/client/mirror/MessageIconActions.tsx
+		/** 操作行（复制按钮）：挂在助手答复流式项之后。 */
+		function MessageIconActionsMirror(props) {
+			const [copied, setCopied] = (0, react.useState)(false);
+			const timer = (0, react.useRef)(null);
+			if (props.text.trim() === "") return null;
+			const onCopy = () => {
+				if (copied) return;
+				const clipboard = navigator.clipboard;
+				if (clipboard === void 0) return;
+				clipboard.writeText(props.text).then(() => {
+					setCopied(true);
+					if (timer.current !== null) window.clearTimeout(timer.current);
+					timer.current = window.setTimeout(() => {
+						setCopied(false);
+						timer.current = null;
+					}, 1e3);
+				}).catch(() => void 0);
+			};
+			return (0, react.createElement)("div", {
+				className: ocOr("MessageIconActions", "actions", "dsh-tdt-sv-actions"),
+				"data-actions-reveal": "always"
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("MessageIconActions", "action", "dsh-tdt-sv-action"),
+				"aria-label": copied ? "已复制" : "复制",
+				onClick: onCopy
+			}, copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})));
+		}
+		//#endregion
+		//#region src/client/mirror/MessageItem.tsx
+		/** markdown 文档级外壳文案（引用稳定——新身份会打断 MarkdownText 的流式渲染缓存）。 */
+		const MD_LABELS = {
+			code: {
+				copyLabel: "复制",
+				copiedLabel: "已复制"
+			},
+			footnotes: "脚注"
+		};
+		/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。 */
+		function AssistantMarkdown(props) {
+			if (props.text.trim() === "") return (0, react.createElement)("span", null);
+			return (0, react.createElement)("div", { className: ocOr("AssistantMarkdown", "root", "dsh-tdt-sv-md") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text: props.text,
+				labels: MD_LABELS
+			}));
+		}
+		/** 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）。 */
+		function UserMessage(props) {
+			return (0, react.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text: props.text,
+				labels: MD_LABELS
+			}))));
+		}
+		//#endregion
+		//#region src/client/mirror/ReasoningRow.tsx
+		/** 思考行：折叠 = 一行「思考 + 首行预览 + 箭头」；展开 = thinkBody 全文。 */
+		function ReasoningRowMirror(props) {
+			const { text, t } = props;
+			if (text.trim() === "") return null;
+			const [open, setOpen] = (0, react.useState)(false);
+			const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
+			const previewLine = first.length > 90 ? `${first.slice(0, 90)}…` : first;
+			return (0, react.createElement)("div", {
+				className: ocOr("ReasoningRow", "root", "dsh-tdt-sv-reasoning"),
+				"data-expanded": open || void 0
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("ReasoningRow", "row", "dsh-tdt-sv-reasoning-head"),
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen((value) => !value);
+				}
+			}, (0, react.createElement)("span", { className: ocOr("ReasoningRow", "title", "dsh-tdt-sv-tool-name") }, t("sessionReasoning")), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, previewLine), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "chevron", "dsh-tdt-sv-reasoning-chevron") }, open ? "▾" : "▸")), open ? (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, text) : null);
+		}
+		//#endregion
+		//#region src/client/mirror/TurnProcessNodeView.tsx
+		/** 过程行：默认收起（label = 过程 · N），点开显示本组工具卡。 */
+		function TurnProcessNodeViewMirror(props) {
+			const { count, t } = props;
+			const [open, setOpen] = (0, react.useState)(false);
+			if (count === 0) return null;
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("TurnProcessNodeView", "root", "dsh-tdt-sv-process"),
+				"data-open": open || void 0,
+				onClick: () => {
+					setOpen((value) => !value);
+				}
+			}, (0, react.createElement)("span", { className: ocOr("TurnProcessNodeView", "label", "dsh-tdt-sv-process-label") }, `${t("sessionProcess")} · ${count}`), (0, react.createElement)("span", { className: ocOr("TurnProcessNodeView", "chevron", "dsh-tdt-sv-process-chevron") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {}))), open ? (0, react.createElement)("div", { className: ocOr("ChatGroupSeat", "body", "dsh-tdt-sv-process-body") }, props.children) : null);
 		}
 		//#endregion
 		//#region src/client/session-view.ts
@@ -434,37 +641,6 @@ window.__ModuleLoader__.load({
 			};
 		}
 		ensureArchiveSessionStyle();
-		/** markdown 文档级外壳文案（引用稳定，避免打断 MarkdownText 的流式渲染缓存）。 */
-		const MD_LABELS = {
-			code: {
-				copyLabel: "复制",
-				copiedLabel: "已复制"
-			},
-			footnotes: "脚注"
-		};
-		/**
-		* markdown 正文：直接用**官方** `MarkdownText` 渲染（mdast + KaTeX + 官方代码块工具条），
-		* 比自带 marked 管线更接近官方观感；外层仍套官方 AssistantMarkdown 类。
-		*/
-		function Md(props) {
-			if (props.text.trim() === "") return (0, react.createElement)("span", null);
-			return (0, react.createElement)("div", { className: officialClass("AssistantMarkdown", "root") ?? "dsh-tdt-sv-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text: props.text,
-				labels: MD_LABELS
-			}));
-		}
-		/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
-		function CloseIcon() {
-			return (0, react.createElement)("svg", {
-				width: 15,
-				height: 15,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round"
-			}, (0, react.createElement)("path", { d: "M6 6l12 12M18 6L6 18" }));
-		}
 		/** JSON 安全序列化（循环引用 / 特殊值不抛）。 */
 		function safeJson(value) {
 			try {
@@ -482,80 +658,28 @@ window.__ModuleLoader__.load({
 				return "";
 			}).filter((part) => part !== "").join("\n");
 		}
-		/**
-		* 工具卡（工具调用 / 工具结果共形）：名称 + 「参数」「输出」可展开。
-		* 调用方负责在外层数组里给 key。
-		*/
-		function ToolCard(props) {
-			const { name, argsRaw, output, isError, errorName, t } = props;
-			const [open, setOpen] = (0, react.useState)(isError);
-			const preCls = ocOr("GenericCommandCard", "body", "");
-			const summaryCls = ocOr("GenericCommandCard", "summary", "");
-			/** 单行截断（官方 summary 是单行省略号样式）。 */
-			const preview = (text) => {
-				const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
-				return first.length > 90 ? `${first.slice(0, 90)}…` : first;
-			};
-			/** 人话摘要：优先取常见工具参数的关键字段（command / file_path / path / …），否则回退首行。 */
-			const argSummary = (() => {
-				const raw = argsRaw.trim();
-				if (raw.startsWith("{")) try {
-					const parsed = JSON.parse(raw);
-					for (const key of [
-						"command",
-						"file_path",
-						"path",
-						"pattern",
-						"query",
-						"url",
-						"title"
-					]) {
-						const value = parsed[key];
-						if (typeof value === "string" && value.trim() !== "") return value;
-					}
-				} catch {}
-				return "";
-			})();
-			const summaryText = preview(argSummary !== "" ? argSummary : output.trim() !== "" ? output : argsRaw);
-			const bodyText = [argsRaw.trim() !== "" ? `${t("sessionArgs")}:\n${argsRaw}` : "", output.trim() !== "" ? `${t("sessionOutput")}:\n${output}` : ""].filter((part) => part !== "").join("\n\n");
-			const body = bodyText !== "" ? (0, react.createElement)("pre", { className: preCls }, bodyText) : null;
-			return (0, react.createElement)("div", {
-				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
-				"data-state": isError ? "error" : "success"
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, {}),
-				title: isError ? `${name}  ✕ ${errorName ?? "error"}` : name,
-				open,
-				expandable: body !== null,
-				onToggle: () => {
-					setOpen((value) => !value);
-				},
-				expandOnRowClick: true,
-				rowClassName: ocOr("GenericCommandCard", "row", "dsh-tdt-sv-tool-head"),
-				leadingClassName: ocOr("GenericCommandCard", "leading", ""),
-				titleClassName: ocOr("GenericCommandCard", "title", "dsh-tdt-sv-tool-name"),
-				chevronClassName: ocOr("GenericCommandCard", "chevron", ""),
-				collapsedContent: summaryText !== "" ? (0, react.createElement)("span", { className: summaryCls }, summaryText) : null,
-				children: body
-			}));
+		/** 助手节点的纯文本（复制按钮用）。 */
+		function assistantText(node) {
+			return (node.blocks ?? []).map((block) => block.kind === "text" ? block.text : "").join("");
 		}
-		/** assistant 内容块 → 子元素数组（text 走 markdown、reasoning 折叠、tool-call 工具卡）。 */
+		/** assistant 内容块 → 子元素数组（text 官方 Markdown、reasoning 官方折叠、tool-call 工具卡）。 */
 		function assistantBlocks(blocks, t) {
 			if (blocks === void 0) return [];
 			const parts = [];
 			blocks.forEach((block, index) => {
 				switch (block.kind) {
 					case "text":
-						if (block.text.trim() !== "") parts.push((0, react.createElement)(Md, {
+						if (block.text.trim() !== "") parts.push((0, react.createElement)(AssistantMarkdown, {
 							key: `t${index}`,
 							text: block.text
 						}));
 						break;
 					case "reasoning":
-						if (block.text.trim() !== "") parts.push((0, react.createElement)("details", {
+						if (block.text.trim() !== "") parts.push((0, react.createElement)(ReasoningRowMirror, {
 							key: `r${index}`,
-							className: ocOr("ReasoningRow", "root", "dsh-tdt-sv-reasoning")
-						}, (0, react.createElement)("summary", { className: ocOr("ReasoningRow", "row", "") }, (0, react.createElement)("span", { className: ocOr("ReasoningRow", "title", "") }, t("sessionReasoning"))), (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, block.text)));
+							text: block.text,
+							t
+						}));
 						break;
 					case "image":
 						parts.push((0, react.createElement)("div", {
@@ -564,7 +688,7 @@ window.__ModuleLoader__.load({
 						}, "[图片]"));
 						break;
 					case "tool-call":
-						parts.push((0, react.createElement)(ToolCard, {
+						parts.push((0, react.createElement)(GenericCommandCard, {
 							key: `c${index}`,
 							name: block.name,
 							argsRaw: block.argsRaw,
@@ -588,10 +712,10 @@ window.__ModuleLoader__.load({
 				case "steering": {
 					const text = contentText(node.content);
 					if (text === "") return null;
-					return (0, react.createElement)("div", {
+					return (0, react.createElement)(UserMessage, {
 						key: node.seq,
-						className: ocOr("MessageItem", "userRow", "")
-					}, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(Md, { text }))));
+						text
+					});
 				}
 				case "assistant": {
 					const parts = assistantBlocks(node.blocks, t);
@@ -600,7 +724,7 @@ window.__ModuleLoader__.load({
 						className: "dsh-tdt-sv-assistant"
 					}, parts);
 				}
-				case "tool-result": return (0, react.createElement)(ToolCard, {
+				case "tool-result": return (0, react.createElement)(GenericCommandCard, {
 					key: node.seq,
 					name: node.call?.name ?? "tool",
 					argsRaw: node.call?.argsRaw ?? "",
@@ -609,13 +733,14 @@ window.__ModuleLoader__.load({
 					errorName: node.error?.name,
 					t
 				});
-				case "command": {
-					const line = `/${node.name ?? "?"}${node.args === null || node.args === void 0 ? "" : ` ${node.args}`}`;
-					return (0, react.createElement)("div", {
-						key: node.seq,
-						className: "dsh-tdt-sv-tool"
-					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tool-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tool-name" }, line)), node.outcome !== null && node.outcome !== void 0 ? (0, react.createElement)("span", { className: `dsh-tdt-sv-outcome ${node.outcome.kind === "error" ? "dsh-tdt-sv-outcome-err" : "dsh-tdt-sv-outcome-ok"}` }, node.outcome.text ?? node.outcome.kind) : null);
-				}
+				case "command": return (0, react.createElement)(GenericCommandCard, {
+					key: node.seq,
+					name: `/${node.name ?? "?"}`,
+					argsRaw: node.args ?? "",
+					output: node.outcome?.text ?? "",
+					isError: node.outcome?.kind === "error",
+					t
+				});
 				case "turn-error": return (0, react.createElement)("div", {
 					key: node.seq,
 					className: "dsh-tdt-sv-notice-err"
@@ -670,31 +795,10 @@ window.__ModuleLoader__.load({
 			flush();
 			return out;
 		}
-		/** 过程组：一行标题（过程 · N）+ 可展开的工具卡列表；用官方 ChatGroupSeat 类名。 */
-		function ProcessGroup(props) {
-			const [open, setOpen] = (0, react.useState)(false);
-			const rendered = props.nodes.map((node) => renderNode(node, props.t)).filter((item) => item !== null);
-			if (rendered.length === 0) return null;
-			const items = rendered.map((item, index) => (0, react.createElement)("div", {
-				key: `p${index}`,
-				className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem")
-			}, item));
-			return (0, react.createElement)("div", { className: ocOr("ChatGroupSeat", "root", "dsh-tdt-sv-group") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, {}),
-				title: `${props.t("sessionProcess")} · ${props.nodes.length}`,
-				open,
-				expandable: true,
-				onToggle: () => {
-					setOpen((value) => !value);
-				},
-				expandOnRowClick: true,
-				rowClassName: ocOr("ChatGroupSeat", "row", ""),
-				leadingClassName: ocOr("ChatGroupSeat", "leading", ""),
-				titleClassName: ocOr("ChatGroupSeat", "title", ""),
-				chevronClassName: ocOr("ChatGroupSeat", "chevron", ""),
-				children: open ? (0, react.createElement)("div", { className: ocOr("ChatGroupSeat", "body", "") }, items) : null
-			}));
-		}
+		/**
+		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊（对话框为占位）。
+		* @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
+		*/
 		function SessionViewModal(props) {
 			const { t, heading, sessionId, view, onClose } = props;
 			const subscribe = (0, react.useMemo)(() => (onChange) => {
@@ -705,19 +809,29 @@ window.__ModuleLoader__.load({
 			const sessionSub = (0, react.useMemo)(() => (onChange) => view.session.subscribe(onChange), [view]);
 			const sessionGet = (0, react.useMemo)(() => () => view.session.getSnapshot(), [view]);
 			const sessionSnap = (0, react.useSyncExternalStore)(sessionSub, sessionGet);
-			const nodes = chat?.legacy?.nodes ?? [];
-			const flowItemCls = ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem");
-			const rendered = groupNodes(nodes).map((entry, index) => {
-				const inner = entry.kind === "process" ? (0, react.createElement)(ProcessGroup, {
+			const items = groupNodes(chat?.legacy?.nodes ?? []);
+			const rendered = items.map((entry, index) => {
+				let inner;
+				if (entry.kind === "process") inner = (0, react.createElement)(TurnProcessNodeViewMirror, {
 					key: `g${index}`,
-					nodes: entry.nodes,
-					t
-				}) : renderNode(entry.node, t);
+					count: entry.nodes.length,
+					t,
+					children: entry.nodes.map((node, i) => (0, react.createElement)(ChatFlowItem, { key: `p${i}` }, renderNode(node, t)))
+				});
+				else inner = renderNode(entry.node, t);
 				if (inner === null) return null;
-				return (0, react.createElement)("div", {
-					key: `flow${index}`,
-					className: flowItemCls
-				}, inner);
+				const parts = [inner];
+				if (entry.kind === "node" && entry.node.kind === "assistant") {
+					const next = items[index + 1];
+					if (next === void 0 || !(next.kind === "node" && next.node.kind === "assistant")) {
+						const actions = (0, react.createElement)(MessageIconActionsMirror, {
+							key: `act${index}`,
+							text: assistantText(entry.node)
+						});
+						if (actions !== null) parts.push(actions);
+					}
+				}
+				return (0, react.createElement)(ChatFlowItem, { key: `flow${index}` }, parts);
 			}).filter((item) => item !== null);
 			const officialCount = officialModuleCount();
 			if (!officialWarned) {
@@ -726,8 +840,14 @@ window.__ModuleLoader__.load({
 				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
 			}
 			const openState = sessionSnap?.openState;
-			const body = rendered.length === 0 ? (0, react.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty")) : rendered;
 			const showLoadOlder = sessionSnap?.hasMore !== false;
+			const body = rendered.length === 0 ? (0, react.createElement)(ChatHint, { text: openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty") }) : [showLoadOlder ? (0, react.createElement)(ChatOlderButton, {
+				key: "older",
+				label: t("sessionLoadOlder"),
+				onClick: () => {
+					view.loadOlder();
+				}
+			}) : null, ...rendered];
 			return (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-overlay",
 				onClick: onClose
@@ -739,16 +859,24 @@ window.__ModuleLoader__.load({
 			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${t("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialModuleCount() === 0 ? (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-sid",
 				style: { color: "var(--dsw-alias-state-warn-primary, #b7791f)" }
-			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-actions" }, showLoadOlder ? (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-btn",
-				onClick: () => view.loadOlder()
-			}, t("sessionLoadOlder")) : null, (0, react.createElement)("button", {
+			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-actions" }, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-sv-btn dsh-tdt-sv-btn-icon",
 				"aria-label": t("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(CloseIcon, {})))), (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: officialClass("ChatView", "root") ?? "" }, (0, react.createElement)("div", { className: officialClass("ChatView", "scroll") ?? "" }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, body))))));
+			}, CloseIcon()))), (0, react.createElement)(ChatViewFrame, { children: body }), (0, react.createElement)(ComposerPlaceholder, { placeholder: t("sessionComposerPlaceholder") })));
+		}
+		/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
+		function CloseIcon() {
+			return (0, react.createElement)("svg", {
+				width: 15,
+				height: 15,
+				viewBox: "0 0 24 24",
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 2,
+				strokeLinecap: "round"
+			}, (0, react.createElement)("path", { d: "M6 6l12 12M18 6L6 18" }));
 		}
 		//#endregion
 		//#region src/client/index.ts

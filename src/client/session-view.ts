@@ -1,43 +1,37 @@
-// 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）。
+// 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染 + 里程碑 15「官方零件 + 自绘容器」）。
 //
-// 数据链（全部经源码核实，0.1.5-rc.2 产物 + 0.1.6 dsh-source 对照）：
-// 1. `sessions.binding(id)`（api-session-controller/client，lib/client.js:3299）：
-//    resolve(id)?.binding —— eligible 只看 host list 是否包含该 id；client 侧 list
-//    不过滤归档（client.js 全文无 archive 字样），host `session/list` 也不过滤
-//    （决策 28 已核实）⇒ 归档会话照样可 binding。**注意 ≠ sessions.open(id)**：
-//    那个是把会话选成「当前」并切主视图（决策 27 已证伪，归档会话无处显示）。
-// 2. `binding.session.open()`（Session 实例方法，幂等拉历史尾页；实现内部方法、
-//    不在 SessionFace 类型上 ⇒ 运行时探测调用，缺失只影响加载、不致崩）。
-//    binding() 只物化句柄、不拉数据 —— manager.get() 物化时 eventSource 为空。
-// 3. `uiConversation.binding(binding)`（client-ui-conversation 的 assembly.ts:221）：
-//    BoundConversation 订阅 eventSource —— open() 后的 pageHistory replace 会推送。
-// 4. `.target('chat')`（ui-chat 的 apply.ts:63 同款）：订阅即激活 target，快照 =
-//    ChatSnapshot。渲染走 `legacy.nodes`（ChatSnapshot.ts:98，官方维护的兼容投影、
-//    按 anchorSeq 有序的 finalized ConversationNode 流，StatsPills 同款消费），
-//    不碰 keyed 的 ChatNodeStore —— 那层的 data 形状随注册模块漂移。
+// 数据链（全部经源码核实）：
+// 1. `sessions.binding(id)`（api-session-controller/client）：**只查已物化的 scope、从不创建**
+//    （0.1.7-rc.2 lib/client.js:3406）⇒ 归档/久未打开的会话返回 undefined。
+//    正解 = 先 `sessions.retain(id, { source })` → retainScope → materializeScope（3410/3472），
+//    并在内部触发 manager.get(id).open() 拉历史尾页；引用用完 release()。
+// 2. `uiConversation.binding(binding)`：校验 `sessions.binding(sessionId) !== owner` 即抛
+//    `inactive session`（ui-conversation lib/client.js:3083）——retain 之后即通过。
+// 3. `.target('chat')`：快照 = ChatSnapshot，渲染走 `legacy.nodes`（官方兼容投影，
+//    按 anchorSeq 有序的 finalized ConversationNode 流），不碰 keyed 的 ChatNodeStore。
 //
-// 5. 归档/非活跃会话（host 将其标为 inactive）：uiConversation.binding 直接抛
-//    `inactive session`，sessions.binding(id) 也返回空，故步骤 1-4 全程走不通。
-//    改走冷读入口 session/follow / session/page（决策 28 核实：按 durable address
-//    {kind:'session',sessionId} 读、不激活 Agent、归档会话日志仍可读）。projectionStores
-//    是惰性投影（归档会话未观察不填充、rows 为空对象），非冷读源。冷读在 openSessionView
-//    内异步回填给 renderNode —— 无需激活会话、不依赖 uiConversation 装配。
+// ⛔ 已证伪的两条路（勿再尝试，详见 docs/design/session-view-ui-map.md §十二）：
+//    - 弹窗内渲染官方 ChatView：`ctx.slots.renderSlot` 只接受 key='root'（运行时强制）；
+//    - `retain(source:'mainView')` 切官方视图：会锁死宿主会话导航（真机事故，已回退）。
 //
-// 渲染（决策 34）：不挂官方 ChatView（其只渲染「当前会话」，喂不进归档 id），改为
-// **自渲染 DOM + 套官方 design token**。样式规则见 ./archive-session-css（运行时注入），
-// 颜色走全局 `--dsw-alias-*`、布局走 `--dsh-chat-*`，明/暗自动跟随；正文走 markdown。
-//
-// 类型全部本地结构化声明（本仓库 client 惯例）：官方包不在我们的产物依赖里，
-// ChatSnapshot 所在的 ui-chat 包 npm 版本线（0.1.2-alpha.2）与运行时（0.1.5-rc.2）
-// 不同步，跨版本引类型比本地复述更危险。官方升级时只需对齐本文件的类型复述。
+// 渲染组织（里程碑 15）：**「官方零件 + 自绘容器」，组件按官方文件名一一对应放在 ./mirror/**
+// （ChatView / MessageItem / GenericCommandCard / ReasoningRow / TurnProcessNodeView /
+//  MessageIconActions / Composer）——官方改哪个，diff 哪个文件；样式值以
+// docs/design/session-view-ui-map.md 为准，逐项实施。
 
-import { createElement as h, useMemo, useState, useSyncExternalStore } from 'react'
-import { DisclosureRow, IconCodeOutlineRegular, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
+import { createElement as h, useMemo, useSyncExternalStore } from 'react'
 import { ensureArchiveSessionStyle } from './archive-session-css'
-import { cx, ocOr, officialClass, officialModuleCount } from './official-classes'
+import { ComposerPlaceholder } from './mirror/Composer'
+import { ChatFlowItem, ChatHint, ChatOlderButton, ChatViewFrame } from './mirror/ChatView'
+import { GenericCommandCard } from './mirror/GenericCommandCard'
+import { MessageIconActionsMirror } from './mirror/MessageIconActions'
+import { AssistantMarkdown, UserMessage } from './mirror/MessageItem'
+import { ReasoningRowMirror } from './mirror/ReasoningRow'
+import { TurnProcessNodeViewMirror } from './mirror/TurnProcessNodeView'
+import { officialClass, officialModuleCount } from './official-classes'
 import type { LocaleKey } from './locales'
 
-type Translate = (key: LocaleKey) => string
+export type Translate = (key: LocaleKey) => string
 
 // ─────────────────────────── 本地结构化类型 ───────────────────────────
 
@@ -481,34 +475,10 @@ export function openSessionView(
   }
 }
 
-// ─────────────────────────── 渲染（决策 34：类名 + 官方 design token） ───────────────────────────
+// ─────────────────────────── 渲染（mirror/ 目录：组件按官方文件名一一对应） ───────────────────────────
 
 // 样式表注入（幂等；无 document 环境静默跳过）。规则定义见 ./archive-session-css。
 ensureArchiveSessionStyle()
-
-/** markdown 文档级外壳文案（引用稳定，避免打断 MarkdownText 的流式渲染缓存）。 */
-const MD_LABELS = { code: { copyLabel: '复制', copiedLabel: '已复制' }, footnotes: '脚注' }
-
-/**
- * markdown 正文：直接用**官方** `MarkdownText` 渲染（mdast + KaTeX + 官方代码块工具条），
- * 比自带 marked 管线更接近官方观感；外层仍套官方 AssistantMarkdown 类。
- */
-function Md(props: { text: string }): ReturnType<typeof h> {
-  if (props.text.trim() === '') return h('span', null)
-  return h('div', { className: officialClass('AssistantMarkdown', 'root') ?? 'dsh-tdt-sv-md' },
-    h(MarkdownText, { text: props.text, labels: MD_LABELS }),
-  )
-}
-
-/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
-function CloseIcon(): ReturnType<typeof h> {
-  return h('svg', {
-    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    strokeWidth: 2, strokeLinecap: 'round',
-  },
-    h('path', { d: 'M6 6l12 12M18 6L6 18' }),
-  )
-}
 
 /** JSON 安全序列化（循环引用 / 特殊值不抛）。 */
 function safeJson(value: unknown): string {
@@ -530,96 +500,28 @@ function contentText(blocks: readonly ContentBlockLike[] | undefined): string {
   return parts.join('\n')
 }
 
-/**
- * 工具卡（工具调用 / 工具结果共形）：名称 + 「参数」「输出」可展开。
- * 调用方负责在外层数组里给 key。
- */
-function ToolCard(props: {
-  name: string
-  argsRaw: string
-  output: string
-  isError: boolean
-  errorName?: string
-  t: Translate
-}): ReturnType<typeof h> {
-  const { name, argsRaw, output, isError, errorName, t } = props
-  // 官方 GenericCommandCard 结构（源码 client.js:6002-6025）：
-  // root[data-state] > DisclosureRow(row: leading + title + chevron) + 展开时 pre.body。
-  // 行组件用**官方** DisclosureRow（自带箭头/悬停/展开行为），图标用官方图标集。
-  const [open, setOpen] = useState<boolean>(isError)
-  const preCls = ocOr('GenericCommandCard', 'body', '')
-  const summaryCls = ocOr('GenericCommandCard', 'summary', '')
-  /** 单行截断（官方 summary 是单行省略号样式）。 */
-  const preview = (text: string): string => {
-    const first = text.split('\n').find(line => line.trim() !== '') ?? ''
-    return first.length > 90 ? `${first.slice(0, 90)}…` : first
-  }
-  /** 人话摘要：优先取常见工具参数的关键字段（command / file_path / path / …），否则回退首行。 */
-  const argSummary = ((): string => {
-    const raw = argsRaw.trim()
-    if (raw.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(raw) as Record<string, unknown>
-        for (const key of ['command', 'file_path', 'path', 'pattern', 'query', 'url', 'title']) {
-          const value = parsed[key]
-          if (typeof value === 'string' && value.trim() !== '') return value
-        }
-      } catch { /* 非法 JSON 走兜底 */ }
-    }
-    return ''
-  })()
-  const summaryText = preview(argSummary !== '' ? argSummary : (output.trim() !== '' ? output : argsRaw))
-  const bodyText = [
-    argsRaw.trim() !== '' ? `${t('sessionArgs')}:\n${argsRaw}` : '',
-    output.trim() !== '' ? `${t('sessionOutput')}:\n${output}` : '',
-  ].filter(part => part !== '').join('\n\n')
-  const body = bodyText !== '' ? h('pre', { className: preCls }, bodyText) : null
-  // 默认折叠：工具调用只占一行（图标 + 名称 + 摘要 + 箭头），点开才看参数/输出。
-  return h('div', {
-    className: ocOr('GenericCommandCard', 'root', 'dsh-tdt-sv-tool'),
-    'data-state': isError ? 'error' : 'success',
-  },
-    h(DisclosureRow, {
-      icon: h(IconCodeOutlineRegular, {}),
-      title: isError ? `${name}  ✕ ${errorName ?? 'error'}` : name,
-      open,
-      expandable: body !== null,
-      onToggle: () => { setOpen(value => !value) },
-      expandOnRowClick: true,
-      rowClassName: ocOr('GenericCommandCard', 'row', 'dsh-tdt-sv-tool-head'),
-      leadingClassName: ocOr('GenericCommandCard', 'leading', ''),
-      titleClassName: ocOr('GenericCommandCard', 'title', 'dsh-tdt-sv-tool-name'),
-      chevronClassName: ocOr('GenericCommandCard', 'chevron', ''),
-      collapsedContent: summaryText !== '' ? h('span', { className: summaryCls }, summaryText) : null,
-      children: body,
-    }),
-  )
+/** 助手节点的纯文本（复制按钮用）。 */
+function assistantText(node: ConversationNodeLike): string {
+  return (node.blocks ?? []).map(block => block.kind === 'text' ? block.text : '').join('')
 }
 
-/** assistant 内容块 → 子元素数组（text 走 markdown、reasoning 折叠、tool-call 工具卡）。 */
+/** assistant 内容块 → 子元素数组（text 官方 Markdown、reasoning 官方折叠、tool-call 工具卡）。 */
 function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: Translate): ReturnType<typeof h>[] {
   if (blocks === undefined) return []
   const parts: ReturnType<typeof h>[] = []
   blocks.forEach((block, index) => {
     switch (block.kind) {
       case 'text':
-        if (block.text.trim() !== '') parts.push(h(Md, { key: `t${index}`, text: block.text }))
+        if (block.text.trim() !== '') parts.push(h(AssistantMarkdown, { key: `t${index}`, text: block.text }))
         break
       case 'reasoning':
-        if (block.text.trim() !== '') {
-          parts.push(h('details', { key: `r${index}`, className: ocOr('ReasoningRow', 'root', 'dsh-tdt-sv-reasoning') },
-            h('summary', { className: ocOr('ReasoningRow', 'row', '') },
-              h('span', { className: ocOr('ReasoningRow', 'title', '') }, t('sessionReasoning')),
-            ),
-            h('div', { className: ocOr('ReasoningRow', 'thinkBody', 'dsh-tdt-sv-reasoning-body') }, block.text),
-          ))
-        }
+        if (block.text.trim() !== '') parts.push(h(ReasoningRowMirror, { key: `r${index}`, text: block.text, t }))
         break
       case 'image':
         parts.push(h('div', { key: `i${index}`, className: 'dsh-tdt-sv-image' }, '[图片]'))
         break
       case 'tool-call':
-        parts.push(h(ToolCard, {
+        parts.push(h(GenericCommandCard, {
           key: `c${index}`, name: block.name, argsRaw: block.argsRaw, output: '', isError: false, t,
         }))
         break
@@ -641,19 +543,14 @@ function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof
     case 'steering': {
       const text = contentText(node.content)
       if (text === '') return null
-      // 官方用户消息结构（源码 client.js:1345-1384）：MessageItem userRow > userStack > bubble
-      return h('div', { key: node.seq, className: ocOr('MessageItem', 'userRow', '') },
-        h('div', { className: ocOr('MessageItem', 'userStack', '') },
-          h('div', { className: ocOr('MessageItem', 'bubble', 'dsh-tdt-sv-user') }, h(Md, { text })),
-        ),
-      )
+      return h(UserMessage, { key: node.seq, text })
     }
     case 'assistant': {
       const parts = assistantBlocks(node.blocks, t)
       return parts.length === 0 ? null : h('div', { key: node.seq, className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-result': {
-      return h(ToolCard, {
+      return h(GenericCommandCard, {
         key: node.seq,
         name: node.call?.name ?? 'tool',
         argsRaw: node.call?.argsRaw ?? '',
@@ -664,17 +561,14 @@ function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof
       })
     }
     case 'command': {
-      const line = `/${node.name ?? '?'}${node.args === null || node.args === undefined ? '' : ` ${node.args}`}`
-      return h('div', { key: node.seq, className: 'dsh-tdt-sv-tool' },
-        h('div', { className: 'dsh-tdt-sv-tool-head' },
-          h('span', { className: 'dsh-tdt-sv-tool-name' }, line),
-        ),
-        node.outcome !== null && node.outcome !== undefined
-          ? h('span', {
-              className: `dsh-tdt-sv-outcome ${node.outcome.kind === 'error' ? 'dsh-tdt-sv-outcome-err' : 'dsh-tdt-sv-outcome-ok'}`,
-            }, node.outcome.text ?? node.outcome.kind)
-          : null,
-      )
+      return h(GenericCommandCard, {
+        key: node.seq,
+        name: `/${node.name ?? '?'}`,
+        argsRaw: node.args ?? '',
+        output: node.outcome?.text ?? '',
+        isError: node.outcome?.kind === 'error',
+        t,
+      })
     }
     case 'turn-error':
       return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice-err' },
@@ -685,7 +579,8 @@ function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof
     case 'model-retry':
       return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice' }, `${t('sessionRetry')}（${node.retryState ?? 'scheduled'}）`)
     // 决策 28：默认过滤的噪音 kind —— context（系统注入）、compaction（压缩标记）、
-    // unknown（未知事件面）。assistant 里的 reasoning 现在由 assistantBlocks 折叠渲染。
+    // unknown（未知事件面）。assistant 里的 reasoning 由 mirror/ReasoningRow 折叠渲染。
+    // ⚠ ui-map §十一-B：系统提示/上下文注入行（官方 ContextInjectionRow）待实施——届时从这里放行。
     case 'context':
     case 'compaction':
     case 'unknown':
@@ -699,10 +594,6 @@ function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof
   }
 }
 
-/**
- * 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
- * @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
- */
 /** 渲染项：单节点，或一组被折叠的「过程」（连续工具调用）。 */
 type RenderItem = { kind: 'node'; node: ConversationNodeLike } | { kind: 'process'; nodes: ConversationNodeLike[] }
 
@@ -728,32 +619,10 @@ function groupNodes(list: readonly ConversationNodeLike[]): RenderItem[] {
   return out
 }
 
-/** 过程组：一行标题（过程 · N）+ 可展开的工具卡列表；用官方 ChatGroupSeat 类名。 */
-function ProcessGroup(props: { nodes: ConversationNodeLike[]; t: Translate }): ReturnType<typeof h> | null {
-  const [open, setOpen] = useState(false)
-  const rendered = props.nodes
-    .map(node => renderNode(node, props.t))
-    .filter((item): item is NonNullable<ReturnType<typeof h>> => item !== null)
-  if (rendered.length === 0) return null
-  const items = rendered.map((item, index) =>
-    h('div', { key: `p${index}`, className: ocOr('ChatView', 'flowItem', 'dsh-tdt-sv-flowitem') }, item))
-  return h('div', { className: ocOr('ChatGroupSeat', 'root', 'dsh-tdt-sv-group') },
-    h(DisclosureRow, {
-      icon: h(IconCodeOutlineRegular, {}),
-      title: `${props.t('sessionProcess')} · ${props.nodes.length}`,
-      open,
-      expandable: true,
-      onToggle: () => { setOpen(value => !value) },
-      expandOnRowClick: true,
-      rowClassName: ocOr('ChatGroupSeat', 'row', ''),
-      leadingClassName: ocOr('ChatGroupSeat', 'leading', ''),
-      titleClassName: ocOr('ChatGroupSeat', 'title', ''),
-      chevronClassName: ocOr('ChatGroupSeat', 'chevron', ''),
-      children: open ? h('div', { className: ocOr('ChatGroupSeat', 'body', '') }, items) : null,
-    }),
-  )
-}
-
+/**
+ * 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊（对话框为占位）。
+ * @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
+ */
 export function SessionViewModal(props: {
   t: Translate
   /** 弹窗标题（执行记录里该行的任务名 · 刻度）。 */
@@ -776,16 +645,32 @@ export function SessionViewModal(props: {
   const sessionSnap = useSyncExternalStore(sessionSub, sessionGet)
 
   const nodes = chat?.legacy?.nodes ?? []
-  // flowItem = 官方每条消息的流式容器（源码 client.js:1759）；消息间距由官方规则
-  // `.column > .flowItem ~ .flowItem { margin-top: var(--dsh-chat-flow-gap) }` 驱动。
-  const flowItemCls = ocOr('ChatView', 'flowItem', 'dsh-tdt-sv-flowitem')
   // 官方把每个 turn 的工具调用折进「过程」组（默认收起），页面才不会变成一列流水账。
-  const rendered = groupNodes(nodes).map((entry, index): ReturnType<typeof h> | null => {
-    const inner = entry.kind === 'process'
-      ? h(ProcessGroup, { key: `g${index}`, nodes: entry.nodes, t })
-      : renderNode(entry.node, t)
+  const items = groupNodes(nodes)
+  const rendered = items.map((entry, index): ReturnType<typeof h> | null => {
+    let inner: ReturnType<typeof h> | null
+    if (entry.kind === 'process') {
+      inner = h(TurnProcessNodeViewMirror, {
+        key: `g${index}`,
+        count: entry.nodes.length,
+        t,
+        children: entry.nodes.map((node, i) => h(ChatFlowItem, { key: `p${i}` }, renderNode(node, t))),
+      })
+    } else {
+      inner = renderNode(entry.node, t)
+    }
     if (inner === null) return null
-    return h('div', { key: `flow${index}`, className: flowItemCls }, inner)
+    const parts: ReturnType<typeof h>[] = [inner]
+    // 操作行（复制）：官方挂在 turn 尾；我们以「assistant 节点之后不再是 assistant」近似 turn 边界。
+    if (entry.kind === 'node' && entry.node.kind === 'assistant') {
+      const next = items[index + 1]
+      const isTurnEnd = next === undefined || !(next.kind === 'node' && next.node.kind === 'assistant')
+      if (isTurnEnd) {
+        const actions = h(MessageIconActionsMirror, { key: `act${index}`, text: assistantText(entry.node) })
+        if (actions !== null) parts.push(actions)
+      }
+    }
+    return h(ChatFlowItem, { key: `flow${index}` }, parts)
   }).filter((item): item is NonNullable<ReturnType<typeof h>> => item !== null)
 
   const officialCount = officialModuleCount()
@@ -797,17 +682,21 @@ export function SessionViewModal(props: {
     }
   }
   const openState = sessionSnap?.openState
+  const showLoadOlder = sessionSnap?.hasMore !== false
   const body = rendered.length === 0
-    ? h('div', { className: ocOr('ChatView', 'hint', 'dsh-tdt-sv-hint') },
-        openState === 'error' ? t('sessionLoadFailed')
+    ? h(ChatHint, {
+        text: openState === 'error' ? t('sessionLoadFailed')
           : openState === 'loading' || openState === 'cold' ? t('sessionLoading')
           : t('sessionEmpty'),
-      )
-    : rendered
+      })
+    : [
+        showLoadOlder
+          ? h(ChatOlderButton, { key: 'older', label: t('sessionLoadOlder'), onClick: () => { view.loadOlder() } })
+          : null,
+        ...rendered,
+      ]
 
   // 关闭途径：右上角关闭按钮 / 点遮罩（主面板同款，不监听 document）。
-  const showLoadOlder = sessionSnap?.hasMore !== false
-
   return h('div', { className: 'dsh-tdt-sv-overlay', onClick: onClose },
     h('div', { className: 'dsh-tdt-sv-panel', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
       h('div', { className: 'dsh-tdt-sv-header' },
@@ -823,29 +712,29 @@ export function SessionViewModal(props: {
             : null,
         ),
         h('div', { className: 'dsh-tdt-sv-actions' },
-          showLoadOlder
-            ? h('button', { type: 'button', className: 'dsh-tdt-sv-btn', onClick: () => view.loadOlder() }, t('sessionLoadOlder'))
-            : null,
           h('button', {
             type: 'button',
             className: 'dsh-tdt-sv-btn dsh-tdt-sv-btn-icon',
             'aria-label': t('debugClose'),
             onClick: onClose,
-          }, h(CloseIcon, {})),
+          }, CloseIcon()),
         ),
       ),
-      // 会话区按官方 ChatView 真实结构组织（源码 client.js:5148-5195）：
-      // frame > root > scroll > column > flowItem*。命中官方类时**替换**本插件同类职责的类
-      // （否则官方 scroll 的 padding 会与 .dsh-tdt-sv-body 的 padding 叠加）；
-      // 未命中则回退自绘类，见 ./official-classes。
-      h('div', { className: ocOr('ChatView', 'frame', 'dsh-tdt-sv-body') },
-        h('div', { className: officialClass('ChatView', 'root') ?? '' },
-          h('div', { className: officialClass('ChatView', 'scroll') ?? '' },
-            h('div', { className: ocOr('ChatView', 'column', 'dsh-tdt-sv-col') }, body),
-          ),
-        ),
-      ),
+      // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
+      h(ChatViewFrame, { children: body }),
+      // 对话框占位（续聊未开放）：布局与官方输入区同位，禁用输入。
+      h(ComposerPlaceholder, { placeholder: t('sessionComposerPlaceholder') }),
     ),
+  )
+}
+
+/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
+function CloseIcon(): ReturnType<typeof h> {
+  return h('svg', {
+    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round',
+  },
+    h('path', { d: 'M6 6l12 12M18 6L6 18' }),
   )
 }
 

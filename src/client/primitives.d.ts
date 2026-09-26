@@ -49,4 +49,7 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   /** 官方图标（1px 线宽）。 */
   export const IconCodeOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronRightOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconChevronDownOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconCopyOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconCheckOutlineRegular: ComponentType<{ size?: number; className?: string }>
 }
