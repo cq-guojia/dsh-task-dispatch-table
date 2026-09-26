@@ -31,10 +31,10 @@
 // ChatSnapshot 所在的 ui-chat 包 npm 版本线（0.1.2-alpha.2）与运行时（0.1.5-rc.2）
 // 不同步，跨版本引类型比本地复述更危险。官方升级时只需对齐本文件的类型复述。
 
-import { createElement as h, useMemo, useSyncExternalStore } from 'react'
+import { createElement as h, useMemo, useState, useSyncExternalStore } from 'react'
+import { DisclosureRow, IconCodeOutlineRegular, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ensureArchiveSessionStyle } from './archive-session-css'
 import { cx, ocOr, officialClass, officialModuleCount } from './official-classes'
-import { renderMarkdown } from './markdown'
 import type { LocaleKey } from './locales'
 
 type Translate = (key: LocaleKey) => string
@@ -486,14 +486,18 @@ export function openSessionView(
 // 样式表注入（幂等；无 document 环境静默跳过）。规则定义见 ./archive-session-css。
 ensureArchiveSessionStyle()
 
-/** markdown 富文本块：marked 渲染 HTML，套 `.dsh-tdt-sv-md`（样式见 archive-session-css）。 */
+/** markdown 文档级外壳文案（引用稳定，避免打断 MarkdownText 的流式渲染缓存）。 */
+const MD_LABELS = { code: { copyLabel: '复制', copiedLabel: '已复制' }, footnotes: '脚注' }
+
+/**
+ * markdown 正文：直接用**官方** `MarkdownText` 渲染（mdast + KaTeX + 官方代码块工具条），
+ * 比自带 marked 管线更接近官方观感；外层仍套官方 AssistantMarkdown 类。
+ */
 function Md(props: { text: string }): ReturnType<typeof h> {
-  const html = renderMarkdown(props.text)
-  if (html === '') return h('span', null)
-  return h('div', {
-    className: cx(officialClass('AssistantMarkdown', 'root') ?? 'dsh-tdt-sv-md', officialClass('AssistantMarkdown', 'body')),
-    dangerouslySetInnerHTML: { __html: html },
-  })
+  if (props.text.trim() === '') return h('span', null)
+  return h('div', { className: officialClass('AssistantMarkdown', 'root') ?? 'dsh-tdt-sv-md' },
+    h(MarkdownText, { text: props.text, labels: MD_LABELS }),
+  )
 }
 
 /** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */

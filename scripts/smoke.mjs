@@ -415,6 +415,10 @@ try {
     ['frame', 'root', 'scroll', 'column', 'flowItem'].every(k => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`)))
   check('官方类缺失时回退自绘类（dsh-tdt-sv-body/col/flowitem 仍在）',
     clientJs.includes('dsh-tdt-sv-body') && clientJs.includes('dsh-tdt-sv-col') && clientJs.includes('dsh-tdt-sv-flowitem'))
+  // 官方 primitives 是 dsh 浏览器内核的平台模块：产物里必须保留成 require（不能内联），
+  // 正文走官方 MarkdownText、工具行走官方 DisclosureRow。
+  check('正文/工具行用官方 primitives（MarkdownText / DisclosureRow，保留为 require）',
+    clientJs.includes('@deepseek-ai/dsh-client-ui-primitives'))
   const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
   const injectList = pkg.dsh?.client?.inject ?? []
   check('inject 清单声明 sessions 提供方（dsh-api-session-controller）',
