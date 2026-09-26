@@ -544,36 +544,55 @@ function ToolCard(props: {
 }): ReturnType<typeof h> {
   const { name, argsRaw, output, isError, errorName, t } = props
   // 官方 GenericCommandCard 结构（源码 client.js:6002-6025）：
-  // root[data-variant][data-state] > DisclosureRow(row: leading + title + chevron)
-  //   + 折叠时 span.separator + span.summary，展开时 pre.body
+  // root[data-state] > DisclosureRow(row: leading + title + chevron) + 展开时 pre.body。
+  // 行组件用**官方** DisclosureRow（自带箭头/悬停/展开行为），图标用官方图标集。
+  const [open, setOpen] = useState<boolean>(isError)
   const preCls = ocOr('GenericCommandCard', 'body', '')
   const summaryCls = ocOr('GenericCommandCard', 'summary', '')
-  // 摘要取「输出优先、否则参数」的首行（官方 summary 是单行省略号样式）。
+  /** 单行截断（官方 summary 是单行省略号样式）。 */
   const preview = (text: string): string => {
     const first = text.split('\n').find(line => line.trim() !== '') ?? ''
     return first.length > 90 ? `${first.slice(0, 90)}…` : first
   }
-  const summaryText = preview(output.trim() !== '' ? output : argsRaw)
+  /** 人话摘要：优先取常见工具参数的关键字段（command / file_path / path / …），否则回退首行。 */
+  const argSummary = ((): string => {
+    const raw = argsRaw.trim()
+    if (raw.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>
+        for (const key of ['command', 'file_path', 'path', 'pattern', 'query', 'url', 'title']) {
+          const value = parsed[key]
+          if (typeof value === 'string' && value.trim() !== '') return value
+        }
+      } catch { /* 非法 JSON 走兜底 */ }
+    }
+    return ''
+  })()
+  const summaryText = preview(argSummary !== '' ? argSummary : (output.trim() !== '' ? output : argsRaw))
   const bodyText = [
     argsRaw.trim() !== '' ? `${t('sessionArgs')}:\n${argsRaw}` : '',
     output.trim() !== '' ? `${t('sessionOutput')}:\n${output}` : '',
   ].filter(part => part !== '').join('\n\n')
-  // 默认折叠：工具调用只占一行（标题 + 摘要 + 展开箭头），点开才看参数/输出。
-  // 官方就是这种节奏——默认收起，页面才不会变成一列流水账。
+  const body = bodyText !== '' ? h('pre', { className: preCls }, bodyText) : null
+  // 默认折叠：工具调用只占一行（图标 + 名称 + 摘要 + 箭头），点开才看参数/输出。
   return h('div', {
     className: ocOr('GenericCommandCard', 'root', 'dsh-tdt-sv-tool'),
     'data-state': isError ? 'error' : 'success',
   },
-    h('details', { open: isError },
-      h('summary', { className: ocOr('GenericCommandCard', 'row', 'dsh-tdt-sv-tool-head') },
-        h('span', { className: ocOr('GenericCommandCard', 'leading', '') }, '⚙'),
-        h('span', { className: ocOr('GenericCommandCard', 'title', 'dsh-tdt-sv-tool-name') }, name),
-        isError ? h('span', { className: 'dsh-tdt-sv-tool-err' }, `✕ ${errorName ?? 'error'}`) : null,
-        summaryText !== '' && summaryCls !== '' ? h('span', { className: summaryCls }, summaryText) : null,
-        h('span', { className: ocOr('GenericCommandCard', 'chevron', '') }, '▸'),
-      ),
-      bodyText !== '' ? h('pre', { className: preCls }, bodyText) : null,
-    ),
+    h(DisclosureRow, {
+      icon: h(IconCodeOutlineRegular, {}),
+      title: isError ? `${name}  ✕ ${errorName ?? 'error'}` : name,
+      open,
+      expandable: body !== null,
+      onToggle: () => { setOpen(value => !value) },
+      expandOnRowClick: true,
+      rowClassName: ocOr('GenericCommandCard', 'row', 'dsh-tdt-sv-tool-head'),
+      leadingClassName: ocOr('GenericCommandCard', 'leading', ''),
+      titleClassName: ocOr('GenericCommandCard', 'title', 'dsh-tdt-sv-tool-name'),
+      chevronClassName: ocOr('GenericCommandCard', 'chevron', ''),
+      collapsedContent: summaryText !== '' ? h('span', { className: summaryCls }, summaryText) : null,
+      children: body,
+    }),
   )
 }
 
@@ -684,6 +703,57 @@ function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof
  * 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
  * @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
  */
+/** 渲染项：单节点，或一组被折叠的「过程」（连续工具调用）。 */
+type RenderItem = { kind: 'node'; node: ConversationNodeLike } | { kind: 'process'; nodes: ConversationNodeLike[] }
+
+/**
+ * 把连续的 tool-result / command 收成一个「过程」组——官方就是把工具调用折进
+ * turn 的过程块（默认收起），页面才不会变成一列流水账。单个工具不再包组，避免多一层。
+ */
+function groupNodes(list: readonly ConversationNodeLike[]): RenderItem[] {
+  const out: RenderItem[] = []
+  let run: ConversationNodeLike[] = []
+  const flush = (): void => {
+    if (run.length === 0) return
+    if (run.length >= 2) out.push({ kind: 'process', nodes: run })
+    else out.push({ kind: 'node', node: run[0] })
+    run = []
+  }
+  for (const node of list) {
+    if (node.kind === 'tool-result' || node.kind === 'command') { run.push(node); continue }
+    flush()
+    out.push({ kind: 'node', node })
+  }
+  flush()
+  return out
+}
+
+/** 过程组：一行标题（过程 · N）+ 可展开的工具卡列表；用官方 ChatGroupSeat 类名。 */
+function ProcessGroup(props: { nodes: ConversationNodeLike[]; t: Translate }): ReturnType<typeof h> | null {
+  const [open, setOpen] = useState(false)
+  const rendered = props.nodes
+    .map(node => renderNode(node, props.t))
+    .filter((item): item is NonNullable<ReturnType<typeof h>> => item !== null)
+  if (rendered.length === 0) return null
+  const items = rendered.map((item, index) =>
+    h('div', { key: `p${index}`, className: ocOr('ChatView', 'flowItem', 'dsh-tdt-sv-flowitem') }, item))
+  return h('div', { className: ocOr('ChatGroupSeat', 'root', 'dsh-tdt-sv-group') },
+    h(DisclosureRow, {
+      icon: h(IconCodeOutlineRegular, {}),
+      title: `${props.t('sessionProcess')} · ${props.nodes.length}`,
+      open,
+      expandable: true,
+      onToggle: () => { setOpen(value => !value) },
+      expandOnRowClick: true,
+      rowClassName: ocOr('ChatGroupSeat', 'row', ''),
+      leadingClassName: ocOr('ChatGroupSeat', 'leading', ''),
+      titleClassName: ocOr('ChatGroupSeat', 'title', ''),
+      chevronClassName: ocOr('ChatGroupSeat', 'chevron', ''),
+      children: open ? h('div', { className: ocOr('ChatGroupSeat', 'body', '') }, items) : null,
+    }),
+  )
+}
+
 export function SessionViewModal(props: {
   t: Translate
   /** 弹窗标题（执行记录里该行的任务名 · 刻度）。 */
@@ -709,11 +779,14 @@ export function SessionViewModal(props: {
   // flowItem = 官方每条消息的流式容器（源码 client.js:1759）；消息间距由官方规则
   // `.column > .flowItem ~ .flowItem { margin-top: var(--dsh-chat-flow-gap) }` 驱动。
   const flowItemCls = ocOr('ChatView', 'flowItem', 'dsh-tdt-sv-flowitem')
-  const renderedCore = nodes
-    .map(node => renderNode(node, t))
-    .filter((item): item is NonNullable<ReturnType<typeof h>> => item !== null)
-  const rendered = renderedCore.map((item, index) =>
-    h('div', { key: `flow${index}`, className: flowItemCls }, item))
+  // 官方把每个 turn 的工具调用折进「过程」组（默认收起），页面才不会变成一列流水账。
+  const rendered = groupNodes(nodes).map((entry, index): ReturnType<typeof h> | null => {
+    const inner = entry.kind === 'process'
+      ? h(ProcessGroup, { key: `g${index}`, nodes: entry.nodes, t })
+      : renderNode(entry.node, t)
+    if (inner === null) return null
+    return h('div', { key: `flow${index}`, className: flowItemCls }, inner)
+  }).filter((item): item is NonNullable<ReturnType<typeof h>> => item !== null)
 
   const officialCount = officialModuleCount()
   if (!officialWarned) {

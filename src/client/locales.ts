@@ -28,6 +28,7 @@ export type LocaleKey =
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
   | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind' | 'sessionReasoning'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
+  | 'sessionProcess'
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
@@ -115,6 +116,7 @@ export const zh: Record<LocaleKey, string> = {
   sessionEmpty: '该会话暂无可显示的记录（可能刚建窗或已被清理）。',
   sessionLoadFailed: '会话记录加载失败（会话可能已不可读）。',
   sessionLoadOlder: '加载更早记录',
+  sessionProcess: '过程',
 }
 
 /** English copy. */
@@ -203,4 +205,5 @@ export const en: Record<LocaleKey, string> = {
   sessionEmpty: 'Nothing to show for this session yet (window just opened, or the log was cleaned up).',
   sessionLoadFailed: 'Failed to load the session transcript (the session may no longer be readable).',
   sessionLoadOlder: 'Load earlier messages',
+  sessionProcess: 'Process',
 }

@@ -92,7 +92,8 @@ window.__ModuleLoader__.load({
 			sessionLoading: "正在加载会话记录…",
 			sessionEmpty: "该会话暂无可显示的记录（可能刚建窗或已被清理）。",
 			sessionLoadFailed: "会话记录加载失败（会话可能已不可读）。",
-			sessionLoadOlder: "加载更早记录"
+			sessionLoadOlder: "加载更早记录",
+			sessionProcess: "过程"
 		};
 		/** English copy. */
 		const en = {
@@ -179,7 +180,8 @@ window.__ModuleLoader__.load({
 			sessionLoading: "Loading session transcript…",
 			sessionEmpty: "Nothing to show for this session yet (window just opened, or the log was cleaned up).",
 			sessionLoadFailed: "Failed to load the session transcript (the session may no longer be readable).",
-			sessionLoadOlder: "Load earlier messages"
+			sessionLoadOlder: "Load earlier messages",
+			sessionProcess: "Process"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -486,18 +488,56 @@ window.__ModuleLoader__.load({
 		*/
 		function ToolCard(props) {
 			const { name, argsRaw, output, isError, errorName, t } = props;
+			const [open, setOpen] = (0, react.useState)(isError);
 			const preCls = ocOr("GenericCommandCard", "body", "");
 			const summaryCls = ocOr("GenericCommandCard", "summary", "");
+			/** 单行截断（官方 summary 是单行省略号样式）。 */
 			const preview = (text) => {
 				const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
 				return first.length > 90 ? `${first.slice(0, 90)}…` : first;
 			};
-			const summaryText = preview(output.trim() !== "" ? output : argsRaw);
+			/** 人话摘要：优先取常见工具参数的关键字段（command / file_path / path / …），否则回退首行。 */
+			const argSummary = (() => {
+				const raw = argsRaw.trim();
+				if (raw.startsWith("{")) try {
+					const parsed = JSON.parse(raw);
+					for (const key of [
+						"command",
+						"file_path",
+						"path",
+						"pattern",
+						"query",
+						"url",
+						"title"
+					]) {
+						const value = parsed[key];
+						if (typeof value === "string" && value.trim() !== "") return value;
+					}
+				} catch {}
+				return "";
+			})();
+			const summaryText = preview(argSummary !== "" ? argSummary : output.trim() !== "" ? output : argsRaw);
 			const bodyText = [argsRaw.trim() !== "" ? `${t("sessionArgs")}:\n${argsRaw}` : "", output.trim() !== "" ? `${t("sessionOutput")}:\n${output}` : ""].filter((part) => part !== "").join("\n\n");
+			const body = bodyText !== "" ? (0, react.createElement)("pre", { className: preCls }, bodyText) : null;
 			return (0, react.createElement)("div", {
 				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
 				"data-state": isError ? "error" : "success"
-			}, (0, react.createElement)("details", { open: isError }, (0, react.createElement)("summary", { className: ocOr("GenericCommandCard", "row", "dsh-tdt-sv-tool-head") }, (0, react.createElement)("span", { className: ocOr("GenericCommandCard", "leading", "") }, "⚙"), (0, react.createElement)("span", { className: ocOr("GenericCommandCard", "title", "dsh-tdt-sv-tool-name") }, name), isError ? (0, react.createElement)("span", { className: "dsh-tdt-sv-tool-err" }, `✕ ${errorName ?? "error"}`) : null, summaryText !== "" && summaryCls !== "" ? (0, react.createElement)("span", { className: summaryCls }, summaryText) : null, (0, react.createElement)("span", { className: ocOr("GenericCommandCard", "chevron", "") }, "▸")), bodyText !== "" ? (0, react.createElement)("pre", { className: preCls }, bodyText) : null));
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, {}),
+				title: isError ? `${name}  ✕ ${errorName ?? "error"}` : name,
+				open,
+				expandable: body !== null,
+				onToggle: () => {
+					setOpen((value) => !value);
+				},
+				expandOnRowClick: true,
+				rowClassName: ocOr("GenericCommandCard", "row", "dsh-tdt-sv-tool-head"),
+				leadingClassName: ocOr("GenericCommandCard", "leading", ""),
+				titleClassName: ocOr("GenericCommandCard", "title", "dsh-tdt-sv-tool-name"),
+				chevronClassName: ocOr("GenericCommandCard", "chevron", ""),
+				collapsedContent: summaryText !== "" ? (0, react.createElement)("span", { className: summaryCls }, summaryText) : null,
+				children: body
+			}));
 		}
 		/** assistant 内容块 → 子元素数组（text 走 markdown、reasoning 折叠、tool-call 工具卡）。 */
 		function assistantBlocks(blocks, t) {
@@ -598,9 +638,63 @@ window.__ModuleLoader__.load({
 			}
 		}
 		/**
-		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
-		* @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
+		* 把连续的 tool-result / command 收成一个「过程」组——官方就是把工具调用折进
+		* turn 的过程块（默认收起），页面才不会变成一列流水账。单个工具不再包组，避免多一层。
 		*/
+		function groupNodes(list) {
+			const out = [];
+			let run = [];
+			const flush = () => {
+				if (run.length === 0) return;
+				if (run.length >= 2) out.push({
+					kind: "process",
+					nodes: run
+				});
+				else out.push({
+					kind: "node",
+					node: run[0]
+				});
+				run = [];
+			};
+			for (const node of list) {
+				if (node.kind === "tool-result" || node.kind === "command") {
+					run.push(node);
+					continue;
+				}
+				flush();
+				out.push({
+					kind: "node",
+					node
+				});
+			}
+			flush();
+			return out;
+		}
+		/** 过程组：一行标题（过程 · N）+ 可展开的工具卡列表；用官方 ChatGroupSeat 类名。 */
+		function ProcessGroup(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const rendered = props.nodes.map((node) => renderNode(node, props.t)).filter((item) => item !== null);
+			if (rendered.length === 0) return null;
+			const items = rendered.map((item, index) => (0, react.createElement)("div", {
+				key: `p${index}`,
+				className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem")
+			}, item));
+			return (0, react.createElement)("div", { className: ocOr("ChatGroupSeat", "root", "dsh-tdt-sv-group") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, {}),
+				title: `${props.t("sessionProcess")} · ${props.nodes.length}`,
+				open,
+				expandable: true,
+				onToggle: () => {
+					setOpen((value) => !value);
+				},
+				expandOnRowClick: true,
+				rowClassName: ocOr("ChatGroupSeat", "row", ""),
+				leadingClassName: ocOr("ChatGroupSeat", "leading", ""),
+				titleClassName: ocOr("ChatGroupSeat", "title", ""),
+				chevronClassName: ocOr("ChatGroupSeat", "chevron", ""),
+				children: open ? (0, react.createElement)("div", { className: ocOr("ChatGroupSeat", "body", "") }, items) : null
+			}));
+		}
 		function SessionViewModal(props) {
 			const { t, heading, sessionId, view, onClose } = props;
 			const subscribe = (0, react.useMemo)(() => (onChange) => {
@@ -613,10 +707,18 @@ window.__ModuleLoader__.load({
 			const sessionSnap = (0, react.useSyncExternalStore)(sessionSub, sessionGet);
 			const nodes = chat?.legacy?.nodes ?? [];
 			const flowItemCls = ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem");
-			const rendered = nodes.map((node) => renderNode(node, t)).filter((item) => item !== null).map((item, index) => (0, react.createElement)("div", {
-				key: `flow${index}`,
-				className: flowItemCls
-			}, item));
+			const rendered = groupNodes(nodes).map((entry, index) => {
+				const inner = entry.kind === "process" ? (0, react.createElement)(ProcessGroup, {
+					key: `g${index}`,
+					nodes: entry.nodes,
+					t
+				}) : renderNode(entry.node, t);
+				if (inner === null) return null;
+				return (0, react.createElement)("div", {
+					key: `flow${index}`,
+					className: flowItemCls
+				}, inner);
+			}).filter((item) => item !== null);
 			const officialCount = officialModuleCount();
 			if (!officialWarned) {
 				officialWarned = true;
