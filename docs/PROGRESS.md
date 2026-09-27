@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-26 · 文档体系重构为「PROGRESS 现场 + worklog 封卷 + design 定型」三层；**跨项目公用规则外提为根目录 [`RULES.md`](../RULES.md)**（随仓库入 Git），AGENTS.md 只留本仓库独有内容，两者互不引用。
+> **最后更新**：2026-09-27 · U11「产出物打开」落码完成（决策 39）：统一 `openFile` 入口 + 弹窗内分栏推压预览面（md/代码/图片/PDF/文本，数据全官方 workspaceFiles，错误态照官方错误码）；冒烟 124 项全过。
 
 ---
 
@@ -40,6 +40,8 @@
 - **U10 确认框官方化（2026-09-27 第九轮，决策 38 修订）**：真机反馈——① 暗色主题下确认框主按钮白底白字（自绘写死 `--dsw-alias-brand-primary` + `color:#fff` 的锅）；② 确认框要用官方现成组件（「能用现成的不要自己写」）；③ 头部两钮 hover 背景/大小对齐官方设置窗口。源码核实官方 primitives **公开导出 `Modal` + `Button`**（`RiskConfirmation` 即两者组合的官方先例）：确认框整段换 `h(Modal,…)` + footer 双 `Button`（primary 走 `--dsw-alias-button-primary-fill`，明暗自适应；Escape/遮罩/头部叉关闭官方接管）；关闭钮照官方 `Modal.close` 重写（28×28 / radius-sm / hover interactive-bg-hover / icon 14）；分支钮照官方 outline `.sm`（28 高 / 0.5px border-l3 / padding 0 10px）；弹窗 overlay z-index 1010→1000（与官方 Modal 同层，确认框 portal 后挂载居上）；自绘 confirm 样式九条全删。build（dist 161.89 kB，较自绘版 −1.2 kB）+ 冒烟 **107 项全过**（+1：确认框挂官方 Modal 断言）。**待真机**：暗色主题主按钮可读、确认框形态与官方弹窗一致、头部两钮 hover 与设置窗口一致、fork 跳转四点（确认框交互 / 跳转 `(1)` / 源会话归档 / 失败提示）。**另（同日用户拍板）**：尾部操作行每轮模型回复**全部常显**（官方历史轮 hover 才显，弹窗偏差——轮数少不必悬停；`data-actions-reveal` 恒 always，lastTurn 链已删，dist 161.14 kB，冒烟 107 全过）。
 - **U10 消息行分支恢复（2026-09-27 第十轮，决策 38 ⑦）**：真机验证通过后用户拍板——每轮回复操作行的**官方分支 icon 放回来**（部分推翻决策 37 的移除），点它 = 同一确认框 → `fork({ atSeq: 该轮 tail seq })` 从**那条消息位置**截断开分支（官方契约）；头部按钮 = 省略 atSeq（最后一轮 = 全量）。`MessageIconActionsMirror` 本就完整实现官方分支按钮，接上 `onBranchAt` 透传链即可；`confirming` 升级为 `forkTarget: {atSeq?}`。冒烟 +1 **108 项全过**。**待真机**：消息行分支 icon + Tooltip、截断开分支（新会话只到该条消息）、头部按钮仍全量。
 - **重试/轮次失败/限长三件套官方化（2026-09-27 第十一轮，ui-map 清单 19）**：真机截图对比——我方旧自绘整行红「处理失败」vs 官方三段式。照官方 MessageItem 落码：① 重试行 = 官方 `ModelRetryItem`（`<details>` 折叠，摘要「已重试模型请求 (n/m) · Ns」，scheduled 在途时倒计时 + shimmer，展开见「重试延迟 / 失败原因」；keyed 数据取 `attempts.current`，**顺带修掉旧实现恒显 scheduled 的缺陷**）；② 轮次失败行 = 官方 `TurnErrorItem`（StateDot(error) 红点 + 红「本轮运行失败」标题 + 灰原因 + **右侧 `<code>` 机器码标签**如 SERVER）；③ 限长行 = 官方 `TurnMaxTokensItem`（StateDot(warning) 警示组）。文案 zh/en 16 键逐字抄官方词典，兜底 CSS 逐值照抄；旧 `sessionTurnError` 等键删除。冒烟 +6 = **114 项全过**（build 171.69 kB）。**待真机**：折叠摘要/展开两态、右侧机器码标签、暗色配色。
+- **U11 拍板（2026-09-27，决策 39）**：源码核实官方四层能力——数据层 `workspaceFiles` remote（read 分页/readBytes/stat/list/changes，归档会话可读不激活 agent）、预览层右栏（Markdown/Shiki/图片/PDF/HTML）、产出物层 `present`+`workspace/changes`、原生层 `openWorkspacePath`（Host 桌面专属不可用）；**官方右栏对本插件证伪**（seat 按会话挂载 + 预览组件绑 sidebar 槽位，整页化也救不了）。拍板 = **统一 `openFile(path)` 入口 + 分栏推压预览面**（弹窗内右侧分栏 / 整页右滑分栏），渲染数据全官方（MarkdownText / Shiki / 浏览器原生 / workspaceFiles 真实取数），链接处零写死。落码清单见 [design/artifact-opening.md](design/artifact-opening.md) §四。
+- **U11 落码（2026-09-27，同日）**：设计稿 §四五条全落——① inject 补 `@deepseek-ai/dsh-api-workspace-files`，client 侧 `ctx.inject(['remote'])` 探 `remote.workspaceFiles`（探不到 = 功能整体降级不报错）；② 预览引擎 `src/client/file-preview.tsx` 按扩展名分派：md = 官方 `MarkdownText`、其余文本 = 官方 primitives `CodeBlock`（Shiki 积木，lang = 扩展名）+ `read` 分页（「加载更多」nextOffset = 页 offset + lines）、图片/PDF = `readBytes`→Blob→objectURL（pdf=iframe / img=图片，卸载 revoke）；③ 错误态照官方 bareCode 分支：not-found / lookup-not-found → 「文件不存在」、too-large → 「超出预览上限（{limit}）」、not-text → 二进制空态、not-regular-file → 目录/symlink 文案、其余 → 「读取失败：{code}」，空态带「复制路径」（官方 `writeClipboard`）；④ 统一入口：工具卡 diff 摘要路径 + 无 diff 工具 argsRaw `file_path`/`path`「文件」行 + markdown 正文 `fileMentions`（自建会话级词表：collectFilePaths 遍历 keyed 工具流收集路径，makeFileMentions 归一化精确匹配优先、唯一 basename 兜底，resolve 不出保持惰性 code 永不猜）全走同一 `openFile(path)` → 弹窗内右侧分栏推压（对话左压，预览面 `width:min(520px,48%)`，换文件按 key 重挂载）；⑤ 整页只留接口不落 UI。冒烟 +10 = **124 项全过**，typecheck + build 过（dist 190.21 kB）。**待真机**：分栏推压形态 / 工具卡路径点击 / md 行内链接 / 四类预览 / 错误态 / 加载更多。
 
 ---
 
@@ -64,6 +66,7 @@
 | 15 | 会话弹窗外观对齐官方（决策 29 路线复评） | 🔵 进行中 | 09-26~ | 决策 34 自渲染外观用户反馈「与官方完全不一样」。T1 曾判 ChatView 挂载不可行，但**该结论是在未 retain 的前提下得出的**——`retain` 现已证实存在且可用 ⇒ 按源码重评 scoped-slots 引擎装配（`useHost` / `useRootBinding` / `observableHook` / `ScopeBindingProvider` + `entriesOf` / `storeOf` / `scope('session')` + `uiSession.adapter.bindingSource` + `sessions.retain`），在自家弹窗挂官方 ChatView 本体 | [worklog/session-view.md](worklog/session-view.md) |
 | 16 | 官方 keyed 流 + 三级收折照抄 + 弹窗外壳改宿主惯例（决策 36/37） | ✅ 落码 | 09-27 | 渲染主路换 `order + nodes`（keyed ChatNodeStore）；官方 ChatNodeSeat 折叠判定 / TurnProcessNodeView 用时行 / **ChatGroupSeat 过程分组（process-groups 算法移植，二级收折）** / TurnTriggerNodeView 触发行 / TurnTailNodeView+MessageIconActions 操作行 / TurnUsagePanel+StatDialog 用量弹层逐字照抄进 `mirror/`；工具行标题接 `tool.title.*` 字典；弹窗不做续聊（Composer 占位与分支 icon 移除 → U10「开分支继续对话」）；外壳 `min(1120px,100vw-32px)`×`calc(100% - 80px)` + 裸叉关闭钮 + 标题横线 + 内间距定尺 24px。**待真机逐级比对折叠形态** | [worklog/session-view.md](worklog/session-view.md) · [design/session-view-ui-map.md](design/session-view-ui-map.md) |
 | 17 | U10「继续对话（开分支）」（决策 38 含 ⑦） | ✅ 完成（真机验证通过） | 09-27 | 弹窗头部「继续对话」按钮 + 每轮回复操作行官方分支 icon：统一确认框（官方 Modal + Button，防误点）→ `sessions.fork`（increaseTitle 递增 `(1)`；头部 = 全量，消息行 = `atSeq` 截断到该条消息）→ 先关弹窗（release 源会话）→ `uiWorkspace.openSession` 官方导航跳转；尾部操作行恒常显（弹窗偏差，用户拍板）；inject 补 dsh-client-ui-workspace。冒烟 108 项全过 | [worklog/session-view.md](worklog/session-view.md) · [design/decisions.md](design/decisions.md) |
+| 18 | U11 产出物打开（决策 39） | ✅ 落码完成（待真机验证） | 09-27 | 官方四层能力核实；右栏对本插件证伪；统一 `openFile` 入口 + 弹窗内右侧分栏推压预览面（md=MarkdownText / 代码=CodeBlock Shiki / 图片·PDF=readBytes→blob / 文本=read 分页；错误态照官方错误码；fileMentions 会话级词表）；场景 2 暂缓；冒烟 124 项全过 | [design/artifact-opening.md](design/artifact-opening.md) · [worklog/artifact-opening.md](worklog/artifact-opening.md) |
 
 ---
 
@@ -83,7 +86,7 @@
 | U8 | **token 用量取值待真机确认**（列与写回路径已落地） | `extractTokenUsage` 已做**多位置 × 多字段名**探测：位置（`usage` / `tokenUsage` / `tokens` / `data.usage` / `detail.usage` / `message.usage`）× 字段名（`total` / `totalTokens` / `total_tokens` / `prompt+completion` / `input+output` / 下划线命名）。首个事件会打印一次「会话事件字段：…」 | 真机跑一轮看那行日志：含 `usage` ⇒ 已取到；不含 ⇒ 宿主没在事件里暴露用量，需改走「读会话消息」的路子再收紧 |
 | U9 | **依赖（前置任务）真机验证暂未做**（用户 2026-09-26 决定留口子） | 判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，构造成本高 | 待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验：放行 / 阻塞（依赖不存在 id）/ 复用告警三条 |
 | U10 | **「继续对话（开分支）」按钮**——✅ **完成收口（2026-09-27 真机验证通过，决策 38 含 ⑦）** | 头部「继续对话」按钮（从最后一轮 = 全量分支）+ 每轮回复操作行官方分支 icon（`fork({atSeq: 该轮 seq})` 从该条消息截断开分支）；统一确认框 = 官方 Modal + Button（明暗自适应）；先关弹窗（release 源会话）→ `uiWorkspace.openSession(childId)` 官方跳转；fork 失败留框内提示。冒烟 108 项全过 | 无遗留 |
-| U11 | **产出物打开与展示方式（新专题，2026-09-27 用户发起）** | ① 会话弹窗里工具卡/对话中出现的**文件引用是纯文本不可点**；② 设置页/任务页未来要展示**任务产出物**（每会话/每任务产出），展示与打开方式未定 | 设计讨论稿 [design/artifact-opening.md](design/artifact-opening.md)：第一步先读宿主源码核实官方「打开文件」能力（AGENTS.md 第 4 条），再与用户拍板 |
+| U11 | **产出物打开与展示方式**（2026-09-27 发起；同日拍板 = 决策 39 并落码完成） | ✅ 落码完成待真机验证：inject `remote.workspaceFiles` + `file-preview.tsx` 预览引擎 + 弹窗内右侧分栏推压 + 工具卡路径 / md 正文 fileMentions 全走统一 `openFile`；错误态照官方错误码；冒烟 124 项全过 | 真机验证点：分栏形态 / 工具卡路径点击 / md 行内链接 / 图片·PDF·md·代码预览 / 错误态 / 加载更多；场景 2（任务产出物）暂缓 |
 
 ---
 
@@ -91,7 +94,7 @@
 
 1. **【告一段落·里程碑 15/16】会话弹窗外观对齐官方**：用户 2026-09-27 拍板本大项收尾（内边距四边 34px 为最后一笔）。已落地：keyed 流主路 + 三级收折 + 触发行 + 尾部操作行 + 思考行 + 工具行图标/diff 面/输入输出 + 外壳（裸叉/bg-base/34px）。**清单遗留（新会话候选）**：`ReadBlock`/`TerminalBlock`、上下文注入行、工具卡错误红、fileMentions、用户消息操作行、👍👎——照表做：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)。
 1.5. **【U10】✅ 真机验证通过，已收口**（2026-09-27；决策 38 含 ⑦：头部按钮全量分支 + 消息行分支 icon 按 `atSeq` 截断）。
-1.6. **【U11】产出物打开与展示方式（新专题，设计讨论稿 [design/artifact-opening.md](design/artifact-opening.md)）**：① 会话弹窗里工具卡/对话中出现的**文件引用当前是纯文本不可点**——用什么方式打开待定；② 设置页/任务页未来要展示**任务产出物**（每会话/每任务产出），展示形态与打开方式待定。**先读宿主源码核实官方有没有现成的「打开文件」能力**（AGENTS.md 第 4 条），再与用户讨论拍板。用户将开新会话推进。
+1.6. **【U11】✅ 落码完成（2026-09-27），待真机验证**：弹窗内点工具卡路径 / md 正文文件链接 → 右侧分栏展开（对话左压）按类型渲染（md=MarkdownText、代码=Shiki CodeBlock、图片/PDF=readBytes→blob、文本=read 分页「加载更多」）；错误态（不存在 / 过大 / 二进制 / 目录）+「复制路径」；关闭分栏恢复。细节见 [design/artifact-opening.md](design/artifact-opening.md) §四（已标完成）与 [worklog/artifact-opening.md](worklog/artifact-opening.md) 第三轮。验证通过后说「提交」再 commit+push。
 2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
 3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
 4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。

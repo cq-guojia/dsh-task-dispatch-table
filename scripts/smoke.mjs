@@ -463,6 +463,26 @@ try {
     clientJs.includes('maxTokensTitle') && clientJs.includes('maxTokensHint'))
   check('旧自绘 notice-err / 旧文案键已删除（sessionTurnError 不再进 bundle）',
     !clientJs.includes('dsh-tdt-sv-notice-err') && !clientJs.includes('sessionTurnError'))
+  // U11 产出物预览（决策 39）：分栏推压 + 统一 openFile 单一入口 + 官方错误码 + workspaceFiles 注入。
+  check('预览分栏组件已打进 bundle（FilePreviewPanel）', clientJs.includes('FilePreviewPanel'))
+  check('分栏推压布局已打进 bundle（dsh-tdt-sv-split / chatpane / preview）',
+    clientJs.includes('dsh-tdt-sv-split') && clientJs.includes('dsh-tdt-sv-chatpane') && clientJs.includes('dsh-tdt-sv-preview'))
+  check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
+    clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
+  check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',
+    clientJs.includes('collectFilePaths') && clientJs.includes('makeFileMentions'))
+  check('预览走 remote.workspaceFiles 真实取数（read + readBytes 消费面）',
+    clientJs.includes('workspaceFiles') && clientJs.includes('readBytes'))
+  check('官方错误码分支齐全（not-found / too-large / not-text / not-regular-file）',
+    clientJs.includes('lookup-not-found') && clientJs.includes('too-large') && clientJs.includes('not-text') && clientJs.includes('not-regular-file'))
+  check('文本翻页按官方契约（previewLoadMore + eof 判定）',
+    clientJs.includes('previewLoadMore') && clientJs.includes('eof'))
+  check('图片/PDF 走 readBytes → objectURL（卸载 revoke）',
+    clientJs.includes('createObjectURL') && clientJs.includes('revokeObjectURL'))
+  check('md 预览用官方 MarkdownText、代码用官方 CodeBlock（非自研渲染器）',
+    clientJs.includes('dsh-tdt-sv-preview-md') && clientJs.includes('CodeBlock'))
+  check('inject 清单声明 workspace-files 提供方（dsh-api-workspace-files）',
+    injectList.includes('@deepseek-ai/dsh-api-workspace-files'), injectList.join(', '))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

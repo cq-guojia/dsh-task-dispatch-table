@@ -65,6 +65,10 @@ export type LocaleKey =
   // —— U10 继续对话（开分支）：弹窗头部按钮 + 确认框 ——
   | 'continueBranch' | 'forkConfirmTitle' | 'forkConfirmText'
   | 'forkConfirmAccept' | 'forkCancel' | 'forkWorking' | 'forkFailed'
+  // —— U11 产出物预览（分栏推压）：文件面 + 错误态 + 文本翻页 ——
+  | 'previewClose' | 'previewLoading' | 'previewLoadMore' | 'previewFileLabel'
+  | 'previewCopyPath' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
+  | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -265,6 +269,17 @@ export const zh: Record<LocaleKey, string> = {
   forkCancel: '取消',
   forkWorking: '正在开分支…',
   forkFailed: '开分支失败：{error}',
+  previewClose: '关闭预览',
+  previewLoading: '加载中…',
+  previewLoadMore: '加载更多',
+  previewFileLabel: '文件',
+  previewCopyPath: '复制路径',
+  previewNotFound: '文件不存在（可能已被移动或删除）。',
+  previewTooLarge: '文件过大，超出预览上限（{limit}）。',
+  previewDirectory: '这是一个目录，暂不支持目录浏览。',
+  previewNotRegular: '该路径不是常规文件（符号链接等），暂不支持预览。',
+  previewError: '读取失败：{code}',
+  previewUnknownBinary: '二进制文件，暂不支持预览。可复制路径后在工作区中打开。',
 }
 
 /** English copy. */
@@ -453,4 +468,15 @@ export const en: Record<LocaleKey, string> = {
   forkCancel: 'Cancel',
   forkWorking: 'Forking…',
   forkFailed: 'Fork failed: {error}',
+  previewClose: 'Close preview',
+  previewLoading: 'Loading…',
+  previewLoadMore: 'Load more',
+  previewFileLabel: 'File',
+  previewCopyPath: 'Copy path',
+  previewNotFound: 'File not found (it may have been moved or deleted).',
+  previewTooLarge: 'The file is too large to preview (limit: {limit}).',
+  previewDirectory: 'This is a directory; browsing directories is not supported yet.',
+  previewNotRegular: 'Not a regular file (symlink or similar); preview is not supported.',
+  previewError: 'Failed to read: {code}',
+  previewUnknownBinary: 'Binary file; preview is not supported. Copy the path to open it in the workspace.',
 }

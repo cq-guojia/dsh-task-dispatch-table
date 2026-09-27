@@ -197,6 +197,24 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-turnerr-msg{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-sv-turnerr-code{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
 .dsh-tdt-sv-turnerr-warn{color:var(--dsw-alias-state-warn-primary,#f5a623);margin-right:6px;font-weight:600;}
+
+/* ── U11 产出物预览：弹窗内右侧分栏（决策 39：分栏推压，弃「弹窗摞弹窗」） ── */
+.dsh-tdt-sv-split{flex:1;min-height:0;display:flex;overflow:hidden;}
+.dsh-tdt-sv-chatpane{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.dsh-tdt-sv-chatpane>.dsh-tdt-sv-frame{flex:1;min-height:0;}
+.dsh-tdt-sv-preview{flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));background:var(--dsw-alias-bg-base,#1a1a1a);}
+.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-sv-preview-label{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-preview-title{flex:1;min-width:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;}
+.dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
+.dsh-tdt-sv-preview-pdf{flex:1;border:none;}
+.dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
+.dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
+.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
+/* U11 工具卡「文件」行 / diff 摘要路径：mono 链接钮（点击走统一 openFile 入口开预览分栏）。 */
+.dsh-tdt-sv-io-file{appearance:none;background:0 0;border:none;padding:0;margin:0;font:inherit;cursor:pointer;color:var(--dsw-alias-brand-primary,#2f6feb);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;text-align:left;word-break:break-all;}
+.dsh-tdt-sv-io-file:hover{text-decoration:underline;text-underline-offset:2px;}
 `
 
 let injected = false

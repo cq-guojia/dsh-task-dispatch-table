@@ -199,7 +199,18 @@ window.__ModuleLoader__.load({
 			forkConfirmAccept: "开分支并跳转",
 			forkCancel: "取消",
 			forkWorking: "正在开分支…",
-			forkFailed: "开分支失败：{error}"
+			forkFailed: "开分支失败：{error}",
+			previewClose: "关闭预览",
+			previewLoading: "加载中…",
+			previewLoadMore: "加载更多",
+			previewFileLabel: "文件",
+			previewCopyPath: "复制路径",
+			previewNotFound: "文件不存在（可能已被移动或删除）。",
+			previewTooLarge: "文件过大，超出预览上限（{limit}）。",
+			previewDirectory: "这是一个目录，暂不支持目录浏览。",
+			previewNotRegular: "该路径不是常规文件（符号链接等），暂不支持预览。",
+			previewError: "读取失败：{code}",
+			previewUnknownBinary: "二进制文件，暂不支持预览。可复制路径后在工作区中打开。"
 		};
 		/** English copy. */
 		const en = {
@@ -384,7 +395,18 @@ window.__ModuleLoader__.load({
 			forkConfirmAccept: "Fork & open",
 			forkCancel: "Cancel",
 			forkWorking: "Forking…",
-			forkFailed: "Fork failed: {error}"
+			forkFailed: "Fork failed: {error}",
+			previewClose: "Close preview",
+			previewLoading: "Loading…",
+			previewLoadMore: "Load more",
+			previewFileLabel: "File",
+			previewCopyPath: "Copy path",
+			previewNotFound: "File not found (it may have been moved or deleted).",
+			previewTooLarge: "The file is too large to preview (limit: {limit}).",
+			previewDirectory: "This is a directory; browsing directories is not supported yet.",
+			previewNotRegular: "Not a regular file (symlink or similar); preview is not supported.",
+			previewError: "Failed to read: {code}",
+			previewUnknownBinary: "Binary file; preview is not supported. Copy the path to open it in the workspace."
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -577,6 +599,24 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-turnerr-msg{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-sv-turnerr-code{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
 .dsh-tdt-sv-turnerr-warn{color:var(--dsw-alias-state-warn-primary,#f5a623);margin-right:6px;font-weight:600;}
+
+/* ── U11 产出物预览：弹窗内右侧分栏（决策 39：分栏推压，弃「弹窗摞弹窗」） ── */
+.dsh-tdt-sv-split{flex:1;min-height:0;display:flex;overflow:hidden;}
+.dsh-tdt-sv-chatpane{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.dsh-tdt-sv-chatpane>.dsh-tdt-sv-frame{flex:1;min-height:0;}
+.dsh-tdt-sv-preview{flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));background:var(--dsw-alias-bg-base,#1a1a1a);}
+.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-sv-preview-label{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-preview-title{flex:1;min-width:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;}
+.dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
+.dsh-tdt-sv-preview-pdf{flex:1;border:none;}
+.dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
+.dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
+.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
+/* U11 工具卡「文件」行 / diff 摘要路径：mono 链接钮（点击走统一 openFile 入口开预览分栏）。 */
+.dsh-tdt-sv-io-file{appearance:none;background:0 0;border:none;padding:0;margin:0;font:inherit;cursor:pointer;color:var(--dsw-alias-brand-primary,#2f6feb);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;text-align:left;word-break:break-all;}
+.dsh-tdt-sv-io-file:hover{text-decoration:underline;text-underline-offset:2px;}
 `;
 		let injected = false;
 		/**
@@ -1297,16 +1337,40 @@ window.__ModuleLoader__.load({
 		});
 		/** 工具调用 / 命令卡（默认折叠成一行；错误态摘要变红由 summary[data-error] 承担）。 */
 		function GenericCommandCard(props) {
-			const { name, argsRaw, output, isError, errorName, meta, t } = props;
+			const { name, argsRaw, output, isError, errorName, meta, onOpenFile, t } = props;
 			const [open, setOpen] = (0, react.useState)(isError);
 			const diffs = diffsFromMeta(meta) ?? diffsFromArgs(name, argsRaw);
 			const localized = toolTitle(name, t);
 			const totals = diffs === void 0 ? void 0 : (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
-			const summaryText = (diffs === void 0 || totals === void 0 ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", { style: {
+			const diffPath = diffs?.[0]?.path ?? "";
+			const diffPathNode = diffPath === "" ? null : onOpenFile !== void 0 ? (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-io-file dsh-tdt-sv-io-file-inline",
+				style: {
+					textDecoration: "underline",
+					textUnderlineOffset: "2px"
+				},
+				title: diffPath,
+				onClick: () => {
+					onOpenFile(diffPath);
+				}
+			}, diffPath) : (0, react.createElement)("span", { style: {
 				textDecoration: "underline",
 				textUnderlineOffset: "2px"
-			} }, diffs[0]?.path ?? ""), ` +${totals.added} -${totals.removed}`)) ?? (localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output));
+			} }, diffPath);
+			const summaryText = (diffs === void 0 || totals === void 0 ? null : (0, react.createElement)(react.Fragment, null, diffPathNode, ` +${totals.added} -${totals.removed}`)) ?? (localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output));
 			const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? "error"}` : localized.title;
+			const filePathArg = onOpenFile === void 0 ? void 0 : (() => {
+				const raw = argsRaw.trim();
+				if (!raw.startsWith("{")) return void 0;
+				try {
+					const parsed = JSON.parse(raw);
+					const value = parsed.file_path ?? parsed.path;
+					return typeof value === "string" && value.trim() !== "" ? value : void 0;
+				} catch {
+					return;
+				}
+			})();
 			const prettyArgs = (() => {
 				const raw = argsRaw.trim();
 				if (raw === "") return "";
@@ -1324,7 +1388,7 @@ window.__ModuleLoader__.load({
 				icon: (0, react.createElement)(ActivityIcon, { size: 14 }),
 				title: rowTitle,
 				open,
-				expandable: diffs !== void 0 || prettyArgs !== "" || output !== "",
+				expandable: diffs !== void 0 || prettyArgs !== "" || output !== "" || filePathArg !== void 0,
 				onToggle: () => {
 					setOpen((value) => !value);
 				},
@@ -1341,7 +1405,14 @@ window.__ModuleLoader__.load({
 				children: diffs !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DiffBlock, {
 					diffs,
 					labels: diffLabels(t)
-				}) : (0, react.createElement)("div", { className: "dsh-tdt-sv-io" }, prettyArgs === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolInputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, prettyArgs)), output.trim() === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolOutputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, output)))
+				}) : (0, react.createElement)("div", { className: "dsh-tdt-sv-io" }, filePathArg === void 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("previewFileLabel")), (0, react.createElement)("button", {
+					type: "button",
+					className: "dsh-tdt-sv-io-file",
+					title: filePathArg,
+					onClick: () => {
+						onOpenFile?.(filePathArg);
+					}
+				}, filePathArg)), prettyArgs === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolInputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, prettyArgs)), output.trim() === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolOutputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, output)))
 			}));
 		}
 		//#endregion
@@ -1534,26 +1605,28 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/mirror/MessageItem.tsx
 		/** markdown 文档级外壳文案（引用稳定——新身份会打断 MarkdownText 的流式渲染缓存）。 */
-		const MD_LABELS$1 = {
+		const MD_LABELS$2 = {
 			code: {
 				copyLabel: "复制",
 				copiedLabel: "已复制"
 			},
 			footnotes: "脚注"
 		};
-		/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。 */
+		/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。
+		* U11：fileMentions 词表就位时行内 code 文件引用渲成可点链接（官方语义：resolve 不出保持惰性 code）。 */
 		function AssistantMarkdown(props) {
 			if (props.text.trim() === "") return (0, react.createElement)("span", null);
 			return (0, react.createElement)("div", { className: ocOr("AssistantMarkdown", "root", "dsh-tdt-sv-md") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: props.text,
-				labels: MD_LABELS$1
+				labels: MD_LABELS$2,
+				fileMentions: props.fileMentions
 			}));
 		}
 		/** 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）。 */
 		function UserMessage(props) {
 			return (0, react.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: props.text,
-				labels: MD_LABELS$1
+				labels: MD_LABELS$2
 			}))));
 		}
 		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
@@ -1644,7 +1717,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/mirror/ReasoningRow.tsx
-		const MD_LABELS = {
+		const MD_LABELS$1 = {
 			code: {
 				copyLabel: "复制",
 				copiedLabel: "已复制"
@@ -1687,7 +1760,7 @@ window.__ModuleLoader__.load({
 				}), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summaryText", "dsh-tdt-sv-reasoning-preview-text") }, summary))),
 				children: open ? (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 					text,
-					labels: MD_LABELS,
+					labels: MD_LABELS$1,
 					variant: "compact"
 				})) : void 0
 			}));
@@ -1944,6 +2017,245 @@ window.__ModuleLoader__.load({
 			}).filter((part) => part !== "").join("\n");
 		}
 		//#endregion
+		//#region src/client/file-preview.tsx
+		/** markdown 外壳文案（引用稳定——新身份会打断 MarkdownText 的渲染缓存；与 mirror/MessageItem 同款）。 */
+		const MD_LABELS = {
+			code: {
+				copyLabel: "复制",
+				copiedLabel: "已复制"
+			},
+			footnotes: "脚注"
+		};
+		/** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
+		const IMAGE_MIME = {
+			png: "image/png",
+			jpg: "image/jpeg",
+			jpeg: "image/jpeg",
+			gif: "image/gif",
+			webp: "image/webp",
+			bmp: "image/bmp",
+			svg: "image/svg+xml",
+			ico: "image/x-icon",
+			avif: "image/avif"
+		};
+		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
+		function previewKind(path) {
+			const base = path.slice(path.lastIndexOf("/") + 1);
+			const dot = base.lastIndexOf(".");
+			const ext = dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
+			if (ext !== "" && IMAGE_MIME[ext] !== void 0) return {
+				kind: "image",
+				ext,
+				mime: IMAGE_MIME[ext]
+			};
+			if (ext === "pdf") return {
+				kind: "pdf",
+				ext,
+				mime: "application/pdf"
+			};
+			if (ext === "md" || ext === "markdown") return {
+				kind: "md",
+				ext
+			};
+			return {
+				kind: "text",
+				ext
+			};
+		}
+		/** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
+		function bareCode(code) {
+			return code.includes("/") ? code.slice(code.lastIndexOf("/") + 1) : code;
+		}
+		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
+		function formatBytes(n) {
+			if (n >= 1048576) {
+				const mb = n / 1048576;
+				return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
+			}
+			if (n >= 1024) {
+				const kb = n / 1024;
+				return `${Number.isInteger(kb) ? kb : kb.toFixed(1)} KB`;
+			}
+			return `${n} B`;
+		}
+		/** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
+		function errView(error) {
+			const e = error ?? {};
+			const code = typeof e.code === "string" ? e.code : "";
+			const details = e.details ?? null;
+			switch (bareCode(code)) {
+				case "not-found":
+				case "lookup-not-found": return { key: "previewNotFound" };
+				case "too-large": {
+					const limit = details !== null && typeof details.limit === "number" ? details.limit : void 0;
+					return {
+						key: "previewTooLarge",
+						params: limit === void 0 ? void 0 : { limit: formatBytes(limit) }
+					};
+				}
+				case "not-text": return { key: "previewUnknownBinary" };
+				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
+				default: return {
+					key: "previewError",
+					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
+				};
+			}
+		}
+		/** 错误/空态体：原因文案 + 复制路径（拍板：不可内嵌 = 空态 + 复制路径）。 */
+		function ErrBox(props) {
+			const { err, path, t } = props;
+			const [copied, setCopied] = (0, react.useState)(false);
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(err.key, err.params)), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-btn",
+				onClick: () => {
+					(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(path).then((ok) => {
+						if (ok) setCopied(true);
+					});
+				}
+			}, copied ? t("copiedLabel") : t("previewCopyPath"))));
+		}
+		/** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
+		function BytesPreview(props) {
+			const { workspaceFiles, sessionId, path, kind, mime, t } = props;
+			const [url, setUrl] = (0, react.useState)(null);
+			const [err, setErr] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				let objectUrl = null;
+				setUrl(null);
+				setErr(null);
+				workspaceFiles.readBytes(sessionId, path).then((page) => {
+					if (!alive) return;
+					objectUrl = URL.createObjectURL(new Blob([page.data], { type: mime }));
+					setUrl(objectUrl);
+				}).catch((error) => {
+					if (alive) setErr(errView(error));
+				});
+				return () => {
+					alive = false;
+					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path,
+				mime
+			]);
+			if (err !== null) return (0, react.createElement)(ErrBox, {
+				err,
+				path,
+				t
+			});
+			if (url === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			if (kind === "pdf") return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react.createElement)("iframe", {
+				className: "dsh-tdt-sv-preview-pdf",
+				src: url,
+				title: path
+			}));
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("img", {
+				className: "dsh-tdt-sv-preview-img",
+				src: url,
+				alt: path
+			}));
+		}
+		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。 */
+		function TextPreview(props) {
+			const { workspaceFiles, sessionId, path, ext, markdown, t } = props;
+			const [text, setText] = (0, react.useState)(null);
+			const [nextOffset, setNextOffset] = (0, react.useState)(null);
+			const [loading, setLoading] = (0, react.useState)(true);
+			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
+			const [err, setErr] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				setText(null);
+				setNextOffset(null);
+				setLoading(true);
+				setErr(null);
+				workspaceFiles.read(sessionId, path, {}).then((page) => {
+					if (!alive) return;
+					setText(page.text);
+					setNextOffset(page.eof ? null : page.offset + page.lines);
+					setLoading(false);
+				}).catch((error) => {
+					if (!alive) return;
+					setErr(errView(error));
+					setLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path
+			]);
+			const loadMore = () => {
+				if (nextOffset === null || loadingMore) return;
+				setLoadingMore(true);
+				workspaceFiles.read(sessionId, path, { offset: nextOffset }).then((page) => {
+					setText((prev) => prev === null ? page.text : `${prev}\n${page.text}`);
+					setNextOffset(page.eof ? null : page.offset + page.lines);
+					setLoadingMore(false);
+				}).catch((error) => {
+					setErr(errView(error));
+					setLoadingMore(false);
+				});
+			};
+			if (err !== null) return (0, react.createElement)(ErrBox, {
+				err,
+				path,
+				t
+			});
+			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, markdown ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text,
+				labels: MD_LABELS
+			})) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				code: text,
+				lang: ext === "" ? void 0 : ext,
+				copyLabel: t("copyLabel"),
+				copiedLabel: t("copiedLabel"),
+				className: "dsh-tdt-sv-preview-code"
+			}), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
+				type: "button",
+				disabled: loadingMore,
+				onClick: loadMore
+			}, t("previewLoadMore"))) : null);
+		}
+		/**
+		* 文件预览分栏（`.dsh-tdt-sv-preview`）：头 = 「文件 · 路径 · 关闭」，体按扩展名分发。
+		* 调用方须以 `${sessionId}:${path}` 作 React key 重挂载，保证换文件时内部状态归零。
+		*/
+		function FilePreviewPanel(props) {
+			const { workspaceFiles, sessionId, path, t, onClose } = props;
+			const { kind, ext, mime } = previewKind(path);
+			return (0, react.createElement)("aside", { className: "dsh-tdt-sv-preview" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-preview-label" }, t("previewFileLabel")), (0, react.createElement)("span", {
+				className: "dsh-tdt-sv-preview-title",
+				title: path
+			}, path), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-close",
+				"aria-label": t("previewClose"),
+				onClick: onClose
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))), kind === "image" || kind === "pdf" ? (0, react.createElement)(BytesPreview, {
+				workspaceFiles,
+				sessionId,
+				path,
+				kind,
+				mime: mime ?? "application/octet-stream",
+				t
+			}) : (0, react.createElement)(TextPreview, {
+				workspaceFiles,
+				sessionId,
+				path,
+				ext,
+				markdown: kind === "md",
+				t
+			}));
+		}
+		//#endregion
 		//#region src/client/session-view.ts
 		/** 稳定的空序列（避免默认值每次新建数组）。 */
 		const EMPTY_ORDER = [];
@@ -2071,7 +2383,7 @@ window.__ModuleLoader__.load({
 		* 官方 ToolCallBlock（uic contract/records.d.ts:140）→ 工具卡 props。
 		* running 半截（phase: preparing/start）只有 name/argsRaw；settled（kind: tool-result）带输出与错误。
 		*/
-		function toolCallCard(node, t) {
+		function toolCallCard(node, t, onOpenFile) {
 			const root = dataOf(node).root;
 			if (root === void 0 || root === null) return null;
 			const settled = root.kind === "tool-result";
@@ -2084,6 +2396,7 @@ window.__ModuleLoader__.load({
 				isError: root.isError === true,
 				errorName: error?.name,
 				meta: root.meta,
+				onOpenFile,
 				t
 			};
 		}
@@ -2093,9 +2406,10 @@ window.__ModuleLoader__.load({
 		* @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
 		* @param t - 翻译席位（已包占位符替换）。
 		* @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
+		* @param fileOpen - U11 文件打开上下文（undefined = workspaceFiles 未就位，链接全部降级为纯文本）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, onBranchAt, groupPart) {
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -2119,11 +2433,11 @@ window.__ModuleLoader__.load({
 					const blocks = blocksOf(dataOf(node).blocks) ?? [];
 					const contentBlocks = blocks.filter((block) => block.kind !== "tool-call");
 					if (blocks.length > 0 && contentBlocks.length === 0) return null;
-					const parts = assistantBlocks(groupPart === "reasoning" ? contentBlocks.filter((block) => block.kind === "reasoning") : groupPart === "response" ? contentBlocks.filter((block) => block.kind !== "reasoning") : contentBlocks, t);
+					const parts = assistantBlocks(groupPart === "reasoning" ? contentBlocks.filter((block) => block.kind === "reasoning") : groupPart === "response" ? contentBlocks.filter((block) => block.kind !== "reasoning") : contentBlocks, t, fileOpen?.mentions);
 					return parts.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
 				}
 				case "tool-call": {
-					const card = toolCallCard(node, t);
+					const card = toolCallCard(node, t, fileOpen?.open);
 					return card === null ? null : (0, react.createElement)(GenericCommandCard, card);
 				}
 				case "user":
@@ -2161,7 +2475,7 @@ window.__ModuleLoader__.load({
 		* tool-call 块一律跳过（官方 case "tool-call": break——由独立工具节点渲染，重复画 = ×2）；
 		* 未知块折叠原文。
 		*/
-		function assistantBlocks(blocks, t) {
+		function assistantBlocks(blocks, t, fileMentions) {
 			if (blocks === void 0) return [];
 			const parts = [];
 			blocks.forEach((block, index) => {
@@ -2169,7 +2483,8 @@ window.__ModuleLoader__.load({
 					case "text":
 						if (block.text.trim() !== "") parts.push((0, react.createElement)(AssistantMarkdown, {
 							key: `t${index}`,
-							text: block.text
+							text: block.text,
+							fileMentions
 						}));
 						break;
 					case "reasoning":
@@ -2198,7 +2513,7 @@ window.__ModuleLoader__.load({
 		* legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
 		* 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
 		*/
-		function renderLegacyNode(node, t) {
+		function renderLegacyNode(node, t, fileOpen) {
 			switch (node.kind) {
 				case "user":
 				case "steering": {
@@ -2210,7 +2525,7 @@ window.__ModuleLoader__.load({
 					});
 				}
 				case "assistant": {
-					const parts = assistantBlocks(node.blocks, t);
+					const parts = assistantBlocks(node.blocks, t, fileOpen?.mentions);
 					return parts.length === 0 ? null : (0, react.createElement)("div", {
 						key: node.seq,
 						className: "dsh-tdt-sv-assistant"
@@ -2223,6 +2538,7 @@ window.__ModuleLoader__.load({
 					output: contentText(node.content),
 					isError: node.isError === true,
 					errorName: node.error?.name,
+					onOpenFile: fileOpen?.open,
 					t
 				});
 				case "command": return (0, react.createElement)(GenericCommandCard, {
@@ -2291,7 +2607,7 @@ window.__ModuleLoader__.load({
 			return out;
 		}
 		/** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
-		function renderLegacyRows(nodes, t) {
+		function renderLegacyRows(nodes, t, fileOpen) {
 			const items = groupNodes(nodes);
 			const rows = [];
 			items.forEach((entry, index) => {
@@ -2302,7 +2618,7 @@ window.__ModuleLoader__.load({
 						className: "dsh-tdt-sv-notice"
 					}, `${t("sessionProcess")} · ${entry.nodes.length}`));
 					entry.nodes.forEach((node, i) => {
-						const rendered = renderLegacyNode(node, t);
+						const rendered = renderLegacyNode(node, t, fileOpen);
 						if (rendered !== null) parts.push((0, react.createElement)("div", { key: `p${i}` }, rendered));
 					});
 				} else {
@@ -2326,6 +2642,78 @@ window.__ModuleLoader__.load({
 			});
 			return rows;
 		}
+		/** 路径归一：去 './' 前缀（词表键与 resolve 两侧同规则）。 */
+		function normalizeFilePath(p) {
+			let s = p.trim();
+			while (s.startsWith("./")) s = s.slice(2);
+			return s;
+		}
+		/**
+		* 从 keyed 节点流收集真实文件词表（禁模拟：全部来自工具调用参数 / meta.diffs）：
+		* tool-call 节点 argsRaw 的 file_path/path 字段（read/grep/glob/write/edit…）与
+		* tool-fs 写入 meta.diffs[].path。会话级词表 = 官方 per-turn chatFileMentions 的简化偏差
+		* （决策 39：resolve 命中才渲链接，解析不出保持惰性 code，永不猜）。
+		*/
+		function collectFilePaths(order, store) {
+			if (store === void 0) return [];
+			const out = /* @__PURE__ */ new Set();
+			for (const key of order) {
+				const node = store.get(key);
+				if (node === void 0 || node.kind !== "tool-call") continue;
+				const root = node.data?.root;
+				if (root === void 0 || root === null || typeof root !== "object") continue;
+				const call = root.kind === "tool-result" ? root.call : root;
+				if (call === null || typeof call !== "object") continue;
+				const raw = typeof call.argsRaw === "string" ? call.argsRaw.trim() : "";
+				if (raw.startsWith("{")) try {
+					const parsed = JSON.parse(raw);
+					for (const field of ["file_path", "path"]) {
+						const value = parsed[field];
+						if (typeof value === "string" && value.trim() !== "") out.add(normalizeFilePath(value));
+					}
+				} catch {}
+				const meta = root.meta;
+				if (typeof meta === "object" && meta !== null) {
+					const diffs = meta.diffs;
+					if (Array.isArray(diffs)) for (const diff of diffs) {
+						const p = diff?.path;
+						if (typeof p === "string" && p.trim() !== "") out.add(normalizeFilePath(p));
+					}
+				}
+			}
+			return [...out];
+		}
+		/**
+		* 构建 fileMentions：归一化精确匹配优先、唯一 basename 兜底（官方 fileMentions 语义：
+		* 词表外一律 undefined ⇒ MarkdownText 保持惰性 code，renderer never guesses）。
+		*/
+		function makeFileMentions(paths, open) {
+			const exact = /* @__PURE__ */ new Map();
+			const byBase = /* @__PURE__ */ new Map();
+			for (const p of paths) {
+				exact.set(p, p);
+				const base = p.includes("/") ? p.slice(p.lastIndexOf("/") + 1) : p;
+				const bucket = byBase.get(base);
+				if (bucket === void 0) byBase.set(base, [p]);
+				else bucket.push(p);
+			}
+			return { resolve(value) {
+				const norm = normalizeFilePath(value);
+				const hit = exact.get(norm) ?? (() => {
+					const base = norm.includes("/") ? norm.slice(norm.lastIndexOf("/") + 1) : norm;
+					const bucket = byBase.get(base);
+					return bucket !== void 0 && bucket.length === 1 ? bucket[0] : void 0;
+				})();
+				if (hit === void 0) return void 0;
+				return {
+					label: value,
+					title: hit,
+					open: () => {
+						open(hit);
+					}
+				};
+			} };
+		}
 		/**
 		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
 		* U10「继续对话（开分支）」：头部按钮 → 确认框 → `sessions.fork`（官方 ISessions 契约，
@@ -2336,7 +2724,7 @@ window.__ModuleLoader__.load({
 		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
 		*/
 		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose, forkSession, openHostSession } = props;
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			const subscribe = (0, react.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
@@ -2390,11 +2778,34 @@ window.__ModuleLoader__.load({
 				setForkErr(null);
 				setForkTarget({ atSeq: seq });
 			}, []);
+			const [preview, setPreview] = (0, react.useState)(null);
+			const openFile = (0, react.useCallback)((path) => {
+				setPreview(path);
+			}, []);
+			const closePreview = (0, react.useCallback)(() => {
+				setPreview(null);
+			}, []);
 			const order = chat?.order ?? EMPTY_ORDER;
 			const store = chat?.nodes;
 			const keyed = order.length > 0 && store !== void 0;
 			const turns = chat?.timeline?.turns;
-			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, groupPart), [tt, onBranchAt]);
+			const fileOpen = (0, react.useMemo)(() => {
+				if (workspaceFiles === void 0) return void 0;
+				return {
+					open: openFile,
+					mentions: makeFileMentions(collectFilePaths(order, store), openFile)
+				};
+			}, [
+				workspaceFiles,
+				openFile,
+				order,
+				store
+			]);
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart), [
+				tt,
+				onBranchAt,
+				fileOpen
+			]);
 			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
 				keyed,
@@ -2413,7 +2824,7 @@ window.__ModuleLoader__.load({
 				foldCompleted: true,
 				renderNode,
 				t: tt
-			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt)).filter((row) => row !== null && row !== void 0);
+			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen)).filter((row) => row !== null && row !== void 0);
 			const officialCount = officialModuleCount();
 			if (!officialWarned) {
 				officialWarned = true;
@@ -2454,7 +2865,14 @@ window.__ModuleLoader__.load({
 				className: "dsh-tdt-sv-close",
 				"aria-label": tt("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)("div", { className: "dsh-tdt-sv-split" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-chatpane" }, (0, react.createElement)(ChatViewFrame, { children: body })), preview !== null && workspaceFiles !== void 0 ? (0, react.createElement)(FilePreviewPanel, {
+				key: `${sessionId}:${preview}`,
+				workspaceFiles,
+				sessionId,
+				path: preview,
+				t: tt,
+				onClose: closePreview
+			}) : null))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: forkTarget !== null,
 				onClose: () => {
 					if (!forking) setForkTarget(null);
@@ -2833,7 +3251,7 @@ window.__ModuleLoader__.load({
 		* 订阅自动刷新，无需手动重开。整页由布局服务的 `main` 槽承载：选中侧栏条目即替换会话区。
 		*/
 		function TaskPage(props) {
-			const { t, scope, onBack, viewSession, forkSession, openHostSession } = props;
+			const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles } = props;
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -3112,6 +3530,7 @@ window.__ModuleLoader__.load({
 				view: viewing.view,
 				forkSession: forkSession ?? void 0,
 				openHostSession: openHostSession ?? void 0,
+				workspaceFiles: workspaceFiles ?? void 0,
 				onClose: () => {
 					const closed = viewing.sessionId;
 					const needArchive = viewing.didUnarchive === true;
@@ -3393,7 +3812,7 @@ window.__ModuleLoader__.load({
 		* @param props - t 席位、会话视图工厂、返回会话回调。
 		*/
 		function TaskPageHost(props) {
-			const { t, viewRef, forkRef, openRef, onBack } = props;
+			const { t, viewRef, forkRef, openRef, filesRef, onBack } = props;
 			const scope = (0, react.useSyncExternalStore)(subscribeScope, getScopeValue);
 			if (scope === null) return (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("button", {
 				type: "button",
@@ -3407,7 +3826,8 @@ window.__ModuleLoader__.load({
 				onBack,
 				viewSession: viewRef(),
 				forkSession: forkRef(),
-				openHostSession: openRef()
+				openHostSession: openRef(),
+				workspaceFiles: filesRef()
 			});
 		}
 		/**
@@ -3448,6 +3868,11 @@ window.__ModuleLoader__.load({
 				if (ws !== void 0 && typeof ws.openSession === "function") openHostSession = (id) => {
 					ws.openSession(id);
 				};
+			});
+			let workspaceFiles = null;
+			ctx.inject(["remote"], (sub) => {
+				const wf = sub.remote?.workspaceFiles;
+				if (wf !== null && wf !== void 0 && typeof wf.read === "function") workspaceFiles = wf;
 			});
 			let selectPanel = () => {};
 			ctx.inject(["layout"], (sub) => {
@@ -3514,6 +3939,7 @@ window.__ModuleLoader__.load({
 					viewRef: () => viewSession,
 					forkRef: () => forkSession,
 					openRef: () => openHostSession,
+					filesRef: () => workspaceFiles,
 					onBack: () => {
 						selectPanel(null);
 					}

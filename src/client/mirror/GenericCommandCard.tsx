@@ -115,25 +115,50 @@ export function GenericCommandCard(props: {
   errorName?: string
   /** 官方 ToolResultNode.meta（内含 tool-fs 写入的 FileDiff[]；归档会话经 snapshot 透传）。 */
   meta?: unknown
+  /** U11 统一 openFile 入口：给了才把 diff 摘要路径 / 「文件」行渲染成可点链接。 */
+  onOpenFile?: (path: string) => void
   t: Translate
 }): ReturnType<typeof h> {
-  const { name, argsRaw, output, isError, errorName, meta, t } = props
+  const { name, argsRaw, output, isError, errorName, meta, onOpenFile, t } = props
   const [open, setOpen] = useState<boolean>(isError)
   const diffs = diffsFromMeta(meta) ?? diffsFromArgs(name, argsRaw)
   const localized = toolTitle(name, t)
   // 摘要：官方「写入 · 路径 +1 -0」= 下划线文件路径 + diffTotals；无 diff 走人话摘要（generic 补工具名）。
+  // U11：onOpenFile 就位时路径渲染成链接钮（点击走统一 openFile 入口开预览分栏）。
   const totals = diffs === undefined ? undefined : diffTotals(diffs)
+  const diffPath = diffs?.[0]?.path ?? ''
+  const diffPathNode = diffPath === ''
+    ? null
+    : onOpenFile !== undefined
+      ? h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-io-file dsh-tdt-sv-io-file-inline',
+          style: { textDecoration: 'underline', textUnderlineOffset: '2px' },
+          title: diffPath,
+          onClick: () => { onOpenFile(diffPath) },
+        }, diffPath)
+      : h('span', { style: { textDecoration: 'underline', textUnderlineOffset: '2px' } }, diffPath)
   const diffSummary = diffs === undefined || totals === undefined ? null : h(Fragment, null,
-    h('span', { style: { textDecoration: 'underline', textUnderlineOffset: '2px' } }, diffs[0]?.path ?? ''),
+    diffPathNode,
     ` +${totals.added} -${totals.removed}`,
   )
   const summaryText: ReactNode = diffSummary
     ?? (localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output))
   const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? 'error'}` : localized.title
+  // U11「文件」行：无 diff 工具卡（read/grep/glob 等）展开体里的文件路径，可点开预览。
+  const filePathArg = onOpenFile === undefined ? undefined : (() => {
+    const raw = argsRaw.trim()
+    if (!raw.startsWith('{')) return undefined
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      const value = parsed.file_path ?? parsed.path
+      return typeof value === 'string' && value.trim() !== '' ? value : undefined
+    } catch { return undefined }
+  })()
   // 展开（官方格式）：
   //   有 diff（编辑/写入）⇒ DiffBlock 裸放（官方不加 body 外框，色条通到块最左缘——
   //     套 `._5OnbHa_body`（边框+padding）会让色条缩进 = 真机踩过）；
-  //   无 diff ⇒ 输入（参数 JSON，可解析则按官方缩进两格美化）/ 输出（结果文本）两行，行间分隔线。
+  //   无 diff ⇒ 文件（可点）/ 输入（参数 JSON，可解析则按官方缩进两格美化）/ 输出（结果文本）行，行间分隔线。
   const prettyArgs = (() => {
     const raw = argsRaw.trim()
     if (raw === '') return ''
@@ -152,7 +177,7 @@ export function GenericCommandCard(props: {
       icon: h(ActivityIcon, { size: 14 }),
       title: rowTitle,
       open,
-      expandable: diffs !== undefined || prettyArgs !== '' || output !== '',
+      expandable: diffs !== undefined || prettyArgs !== '' || output !== '' || filePathArg !== undefined,
       onToggle: () => { setOpen(value => !value) },
       expandOnRowClick: true,
       keepContentWhenOpen: true,
@@ -167,6 +192,16 @@ export function GenericCommandCard(props: {
       children: diffs !== undefined
         ? h(DiffBlock, { diffs, labels: diffLabels(t) })
         : h('div', { className: 'dsh-tdt-sv-io' },
+            filePathArg === undefined
+              ? null
+              : h('div', { className: 'dsh-tdt-sv-io-row' },
+                  h('span', { className: 'dsh-tdt-sv-io-label' }, t('previewFileLabel')),
+                  h('button', {
+                    type: 'button',
+                    className: 'dsh-tdt-sv-io-file',
+                    title: filePathArg,
+                    onClick: () => { onOpenFile?.(filePathArg) },
+                  }, filePathArg)),
             prettyArgs === ''
               ? null
               : h('div', { className: 'dsh-tdt-sv-io-row' },

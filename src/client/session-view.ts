@@ -38,6 +38,7 @@ import { TurnTriggerNodeViewMirror } from './mirror/TurnTriggerNodeView'
 import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
 import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
+import { FilePreviewPanel, type WorkspaceFilesFace } from './file-preview'
 import { interpolateTranslate, type Translate } from './locales'
 
 export type { Translate } from './locales'
@@ -555,7 +556,7 @@ function blocksOf(value: unknown): readonly AssistantBlockLike[] | undefined {
  * 官方 ToolCallBlock（uic contract/records.d.ts:140）→ 工具卡 props。
  * running 半截（phase: preparing/start）只有 name/argsRaw；settled（kind: tool-result）带输出与错误。
  */
-function toolCallCard(node: ChatNodeFace, t: Translate): Parameters<typeof GenericCommandCard>[0] | null {
+function toolCallCard(node: ChatNodeFace, t: Translate, onOpenFile?: (path: string) => void): Parameters<typeof GenericCommandCard>[0] | null {
   const root = dataOf(node).root as Record<string, unknown> | undefined
   if (root === undefined || root === null) return null
   const settled = root.kind === 'tool-result'
@@ -568,6 +569,7 @@ function toolCallCard(node: ChatNodeFace, t: Translate): Parameters<typeof Gener
     isError: root.isError === true,
     errorName: error?.name,
     meta: root.meta,
+    onOpenFile,
     t,
   }
 }
@@ -578,6 +580,7 @@ function toolCallCard(node: ChatNodeFace, t: Translate): Parameters<typeof Gener
  * @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
  * @param t - 翻译席位（已包占位符替换）。
  * @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
+ * @param fileOpen - U11 文件打开上下文（undefined = workspaceFiles 未就位，链接全部降级为纯文本）。
  * @returns 节点视图；null = 决策 28 过滤的噪音 kind。
  */
 function renderKeyedNode(
@@ -585,6 +588,7 @@ function renderKeyedNode(
   turnProcess: TurnProcessHandle | undefined,
   t: Translate,
   onBranchAt: ((seq: number) => void) | undefined,
+  fileOpen: FileOpenFace | undefined,
   groupPart?: 'response' | 'reasoning',
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
@@ -614,11 +618,11 @@ function renderKeyedNode(
         : groupPart === 'response'
           ? contentBlocks.filter(block => block.kind !== 'reasoning')
           : contentBlocks
-      const parts = assistantBlocks(visible, t)
+      const parts = assistantBlocks(visible, t, fileOpen?.mentions)
       return parts.length === 0 ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-call': {
-      const card = toolCallCard(node, t)
+      const card = toolCallCard(node, t, fileOpen?.open)
       return card === null ? null : h(GenericCommandCard, card)
     }
     case 'user':
@@ -665,13 +669,17 @@ function renderKeyedNode(
  * tool-call 块一律跳过（官方 case "tool-call": break——由独立工具节点渲染，重复画 = ×2）；
  * 未知块折叠原文。
  */
-function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: Translate): ReturnType<typeof h>[] {
+function assistantBlocks(
+  blocks: readonly AssistantBlockLike[] | undefined,
+  t: Translate,
+  fileMentions?: FileOpenFace['mentions'],
+): ReturnType<typeof h>[] {
   if (blocks === undefined) return []
   const parts: ReturnType<typeof h>[] = []
   blocks.forEach((block, index) => {
     switch (block.kind) {
       case 'text':
-        if (block.text.trim() !== '') parts.push(h(AssistantMarkdown, { key: `t${index}`, text: block.text }))
+        if (block.text.trim() !== '') parts.push(h(AssistantMarkdown, { key: `t${index}`, text: block.text, fileMentions }))
         break
       case 'reasoning':
         if (block.text.trim() !== '') parts.push(h(ReasoningRowMirror, { key: `r${index}`, text: block.text, t }))
@@ -696,7 +704,7 @@ function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: T
  * legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
  * 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
  */
-function renderLegacyNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof h> | null {
+function renderLegacyNode(node: ConversationNodeLike, t: Translate, fileOpen?: FileOpenFace): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'user':
     case 'steering': {
@@ -705,7 +713,7 @@ function renderLegacyNode(node: ConversationNodeLike, t: Translate): ReturnType<
       return h(UserMessage, { key: node.seq, text })
     }
     case 'assistant': {
-      const parts = assistantBlocks(node.blocks, t)
+      const parts = assistantBlocks(node.blocks, t, fileOpen?.mentions)
       return parts.length === 0 ? null : h('div', { key: node.seq, className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-result': {
@@ -716,6 +724,7 @@ function renderLegacyNode(node: ConversationNodeLike, t: Translate): ReturnType<
         output: contentText(node.content),
         isError: node.isError === true,
         errorName: node.error?.name,
+        onOpenFile: fileOpen?.open,
         t,
       })
     }
@@ -778,7 +787,7 @@ function groupNodes(list: readonly ConversationNodeLike[]): RenderItem[] {
 }
 
 /** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
-function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate): ReturnType<typeof h>[] {
+function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate, fileOpen?: FileOpenFace): ReturnType<typeof h>[] {
   const items = groupNodes(nodes)
   const rows: ReturnType<typeof h>[] = []
   items.forEach((entry, index) => {
@@ -787,7 +796,7 @@ function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate):
       // legacy 兜底没有 turn 位置 ⇒ 拿不到官方「用时 N 秒」行，退回计数行。
       parts.push(h('div', { key: 'lead', className: 'dsh-tdt-sv-notice' }, `${t('sessionProcess')} · ${entry.nodes.length}`))
       entry.nodes.forEach((node, i) => {
-        const rendered = renderLegacyNode(node, t)
+        const rendered = renderLegacyNode(node, t, fileOpen)
         if (rendered !== null) parts.push(h('div', { key: `p${i}` }, rendered))
       })
     } else {
@@ -803,6 +812,94 @@ function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate):
     rows.push(h('div', { key: `lg${index}`, className: ocOr('ChatView', 'flowItem', 'dsh-tdt-sv-flowitem') }, parts))
   })
   return rows
+}
+
+// ── U11 产出物预览：统一 openFile 单一入口 + markdown 行内文件词表 ──
+
+/** 官方 MarkdownText.fileMentions 的消费面（resolve 命中渲成链接，解析不出保持惰性 code）。 */
+interface FileMentionsFace {
+  resolve(value: string): { open(): void; label: string; title: string } | undefined
+}
+
+/** U11 文件打开上下文：openFile 单一入口（工具卡路径 + md 行内引用共用）+ 词表。 */
+interface FileOpenFace {
+  open(path: string): void
+  mentions: FileMentionsFace
+}
+
+/** 路径归一：去 './' 前缀（词表键与 resolve 两侧同规则）。 */
+function normalizeFilePath(p: string): string {
+  let s = p.trim()
+  while (s.startsWith('./')) s = s.slice(2)
+  return s
+}
+
+/**
+ * 从 keyed 节点流收集真实文件词表（禁模拟：全部来自工具调用参数 / meta.diffs）：
+ * tool-call 节点 argsRaw 的 file_path/path 字段（read/grep/glob/write/edit…）与
+ * tool-fs 写入 meta.diffs[].path。会话级词表 = 官方 per-turn chatFileMentions 的简化偏差
+ * （决策 39：resolve 命中才渲链接，解析不出保持惰性 code，永不猜）。
+ */
+function collectFilePaths(order: readonly string[], store: ChatNodeStoreFace | undefined): string[] {
+  if (store === undefined) return []
+  const out = new Set<string>()
+  for (const key of order) {
+    const node = store.get(key)
+    if (node === undefined || node.kind !== 'tool-call') continue
+    const root = (node.data as { root?: Record<string, unknown> } | undefined)?.root
+    if (root === undefined || root === null || typeof root !== 'object') continue
+    const call = (root.kind === 'tool-result' ? root.call : root) as Record<string, unknown> | undefined
+    if (call === null || typeof call !== 'object') continue
+    const raw = typeof call.argsRaw === 'string' ? call.argsRaw.trim() : ''
+    if (raw.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw) as Record<string, unknown>
+        for (const field of ['file_path', 'path']) {
+          const value = parsed[field]
+          if (typeof value === 'string' && value.trim() !== '') out.add(normalizeFilePath(value))
+        }
+      } catch { /* 非法 JSON 不进词表 */ }
+    }
+    const meta = root.meta
+    if (typeof meta === 'object' && meta !== null) {
+      const diffs = (meta as { diffs?: unknown }).diffs
+      if (Array.isArray(diffs)) {
+        for (const diff of diffs) {
+          const p = (diff as { path?: unknown } | null)?.path
+          if (typeof p === 'string' && p.trim() !== '') out.add(normalizeFilePath(p))
+        }
+      }
+    }
+  }
+  return [...out]
+}
+
+/**
+ * 构建 fileMentions：归一化精确匹配优先、唯一 basename 兜底（官方 fileMentions 语义：
+ * 词表外一律 undefined ⇒ MarkdownText 保持惰性 code，renderer never guesses）。
+ */
+function makeFileMentions(paths: readonly string[], open: (path: string) => void): FileMentionsFace {
+  const exact = new Map<string, string>()
+  const byBase = new Map<string, string[]>()
+  for (const p of paths) {
+    exact.set(p, p)
+    const base = p.includes('/') ? p.slice(p.lastIndexOf('/') + 1) : p
+    const bucket = byBase.get(base)
+    if (bucket === undefined) byBase.set(base, [p])
+    else bucket.push(p)
+  }
+  return {
+    resolve(value: string): { open(): void; label: string; title: string } | undefined {
+      const norm = normalizeFilePath(value)
+      const hit = exact.get(norm) ?? (() => {
+        const base = norm.includes('/') ? norm.slice(norm.lastIndexOf('/') + 1) : norm
+        const bucket = byBase.get(base)
+        return bucket !== undefined && bucket.length === 1 ? bucket[0] : undefined
+      })()
+      if (hit === undefined) return undefined
+      return { label: value, title: hit, open: () => { open(hit) } }
+    },
+  }
 }
 
 /**
@@ -825,8 +922,10 @@ export function SessionViewModal(props: {
   forkSession?: (sessionId: string, atSeq?: number) => Promise<string>
   /** 官方导航跳转：`uiWorkspace.openSession(id)`（会话区打开目标会话）。 */
   openHostSession?: (sessionId: string) => void
+  /** U11 产出物预览：remote.workspaceFiles 服务（未就位 = 不渲染分栏、链接降级纯文本）。 */
+  workspaceFiles?: WorkspaceFilesFace
 }): ReturnType<typeof h> {
-  const { t, heading, sessionId, view, onClose, forkSession, openHostSession } = props
+  const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
   const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
@@ -882,13 +981,27 @@ export function SessionViewModal(props: {
     setForkTarget({ atSeq: seq })
   }, [])
 
+  // U11 产出物预览：openFile 单一入口（拍板②：所有链接只调它，链接处零写死）。
+  // preview = 预览分栏当前路径；FilePreviewPanel 以 sessionId:path 为 key，换文件重挂载。
+  const [preview, setPreview] = useState<string | null>(null)
+  const openFile = useCallback((path: string): void => { setPreview(path) }, [])
+  const closePreview = useCallback((): void => { setPreview(null) }, [])
+
   const order = chat?.order ?? EMPTY_ORDER
   const store = chat?.nodes
   const keyed = order.length > 0 && store !== undefined
   const turns = chat?.timeline?.turns
+  // markdown 行内文件词表（来自 keyed 工具流；workspaceFiles 未就位 = 整个上下文不启用）。
+  const fileOpen = useMemo<FileOpenFace | undefined>(() => {
+    if (workspaceFiles === undefined) return undefined
+    return {
+      open: openFile,
+      mentions: makeFileMentions(collectFilePaths(order, store), openFile),
+    }
+  }, [workspaceFiles, openFile, order, store])
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, groupPart),
-    [tt, onBranchAt],
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart),
+    [tt, onBranchAt, fileOpen],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>
@@ -913,7 +1026,7 @@ export function SessionViewModal(props: {
         renderNode,
         t: tt,
       })
-    : renderLegacyRows(chat?.legacy?.nodes ?? [], tt)
+    : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen)
   const rendered = rows.filter((row): row is NonNullable<ReturnType<typeof h>> => row !== null && row !== undefined)
 
   const officialCount = officialModuleCount()
@@ -975,8 +1088,22 @@ export function SessionViewModal(props: {
             }, h(IconCloseOutlineRegular, { size: 14 })),
           ),
         ),
-        // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
-        h(ChatViewFrame, { children: body }),
+        // U11 分栏推压（决策 39）：左 = 会话区（ChatViewFrame），右 = 文件预览分栏（有 preview 才占位）。
+        h('div', { className: 'dsh-tdt-sv-split' },
+          h('div', { className: 'dsh-tdt-sv-chatpane' },
+            // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
+            h(ChatViewFrame, { children: body })),
+          preview !== null && workspaceFiles !== undefined
+            ? h(FilePreviewPanel, {
+                key: `${sessionId}:${preview}`,
+                workspaceFiles,
+                sessionId,
+                path: preview,
+                t: tt,
+                onClose: closePreview,
+              })
+            : null,
+        ),
       ),
     ),
     // 开分支确认框（用户拍板：必须先确认再 fork，防误点）——官方 primitives Modal + Button

@@ -18,6 +18,7 @@
 import { createElement as h, Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
+import type { WorkspaceFilesFace } from './file-preview'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -383,8 +384,10 @@ function TaskPage(props: {
   forkSession: ((id: string, atSeq?: number) => Promise<string>) | null
   /** U10：官方导航跳转（uiWorkspace.openSession；未就位为 null）。 */
   openHostSession: ((id: string) => void) | null
+  /** U11 产出物预览：remote.workspaceFiles 服务（未就位为 null ⇒ 弹窗不渲染预览分栏）。 */
+  workspaceFiles: WorkspaceFilesFace | null
 }) {
-  const { t, scope, onBack, viewSession, forkSession, openHostSession } = props
+  const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles } = props
   // 面板自己订阅 scope：保存后即时反映生效值，也拿到 writable 状态。
   const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
@@ -771,6 +774,8 @@ function TaskPage(props: {
         // U10：fork + 官方跳转（服务未就位时为 null ⇒ 弹窗不渲染「继续对话」按钮）。
         forkSession: forkSession ?? undefined,
         openHostSession: openHostSession ?? undefined,
+        // U11：产出物预览（remote.workspaceFiles 未就位时 undefined ⇒ 不渲染分栏）。
+        workspaceFiles: workspaceFiles ?? undefined,
         onClose: () => {
           const closed = viewing.sessionId
           const needArchive = viewing.didUnarchive === true
@@ -1035,9 +1040,11 @@ function TaskPageHost(props: {
   forkRef: () => ((id: string, atSeq?: number) => Promise<string>) | null
   /** U10：官方导航跳转（uiWorkspace 服务未就位时为 null ⇒ 弹窗不渲染按钮）。 */
   openRef: () => ((id: string) => void) | null
+  /** U11：remote.workspaceFiles 服务未就位时为 null。 */
+  filesRef: () => WorkspaceFilesFace | null
   onBack: () => void
 }) {
-  const { t, viewRef, forkRef, openRef, onBack } = props
+  const { t, viewRef, forkRef, openRef, filesRef, onBack } = props
   const scope = useSyncExternalStore(subscribeScope, getScopeValue)
   if (scope === null) {
     return h('div', { style: pageStyle },
@@ -1053,7 +1060,7 @@ function TaskPageHost(props: {
       h('p', { style: hintStyle }, t('unavailable')),
     )
   }
-  return h(TaskPage, { t, scope, onBack, viewSession: viewRef(), forkSession: forkRef(), openHostSession: openRef() })
+  return h(TaskPage, { t, scope, onBack, viewSession: viewRef(), forkSession: forkRef(), openHostSession: openRef(), workspaceFiles: filesRef() })
 }
 
 // ─────────────────────────── 插件主体 ───────────────────────────
@@ -1109,6 +1116,17 @@ export function apply(ctx: ClientContext): void {
     const ws = (sub as { uiWorkspace?: { openSession?(id: string): void } }).uiWorkspace
     if (ws !== undefined && typeof ws.openSession === 'function') {
       openHostSession = (id: string): void => { ws.openSession!(id) }
+    }
+  })
+  // U11 产出物预览：remote.workspaceFiles（@deepseek-ai/dsh-api-workspace-files 的挂载点；
+  // 官方 client.js inject = ['resources','remote','remote.workspaceFiles']——本插件声明 'remote'
+  // 后运行时探测命名空间，升级兼容）。未就位 = null ⇒ 弹窗不渲染预览分栏、链接降级纯文本。
+  let workspaceFiles: WorkspaceFilesFace | null = null
+  ctx.inject(['remote'], (sub) => {
+    const remote = (sub as { remote?: Record<string, unknown> }).remote
+    const wf = remote?.workspaceFiles
+    if (wf !== null && wf !== undefined && typeof (wf as WorkspaceFilesFace).read === 'function') {
+      workspaceFiles = wf as WorkspaceFilesFace
     }
   })
   // 布局服务（ctx.layout）：主面板切换——选中整页 / 返回会话。
@@ -1195,6 +1213,7 @@ export function apply(ctx: ClientContext): void {
           viewRef: () => viewSession,
           forkRef: () => forkSession,
           openRef: () => openHostSession,
+          filesRef: () => workspaceFiles,
           onBack: () => { selectPanel(null) },
         }),
       ),

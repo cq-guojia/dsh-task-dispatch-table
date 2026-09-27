@@ -18,11 +18,19 @@ import type { Translate } from '../locales'
 /** markdown 文档级外壳文案（引用稳定——新身份会打断 MarkdownText 的流式渲染缓存）。 */
 const MD_LABELS = { code: { copyLabel: '复制', copiedLabel: '已复制' }, footnotes: '脚注' }
 
-/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。 */
-export function AssistantMarkdown(props: { text: string }): ReturnType<typeof h> {
+/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。
+ * U11：fileMentions 词表就位时行内 code 文件引用渲成可点链接（官方语义：resolve 不出保持惰性 code）。 */
+export function AssistantMarkdown(props: {
+  text: string
+  fileMentions?: { resolve(value: string): { open(): void; label: string; title: string } | undefined }
+}): ReturnType<typeof h> {
   if (props.text.trim() === '') return h('span', null)
   return h('div', { className: ocOr('AssistantMarkdown', 'root', 'dsh-tdt-sv-md') },
-    h(MarkdownText, { text: props.text, labels: MD_LABELS }),
+    h(MarkdownText, {
+      text: props.text,
+      labels: MD_LABELS,
+      fileMentions: props.fileMentions,
+    }),
   )
 }
 

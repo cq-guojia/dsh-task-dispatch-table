@@ -24,6 +24,25 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
     labels: MarkdownLabels
     streaming?: boolean
     variant?: 'body' | 'compact'
+    /** 行内 code 文件词表：resolve 命中 ⇒ 渲成可点链接；解析不出保持惰性 code（renderer never guesses）。 */
+    fileMentions?: {
+      resolve(value: string): { open(): void; label: string; title: string } | undefined
+    }
+  }>
+
+  /** 官方 Shiki 代码块（diff 面与文档预览同源积木；lang 直接传 fence info / 扩展名）。 */
+  export const CodeBlock: ComponentType<{
+    code: string
+    lang?: string
+    streaming?: boolean
+    lineNumbers?: boolean
+    showHeader?: boolean
+    copyLabel?: string
+    copiedLabel?: string
+    toolbarLabels?: Record<string, string>
+    wrap?: boolean
+    className?: string
+    contentRef?: import('react').Ref<HTMLElement>
   }>
 
   /** 官方紧凑折叠行（图标 + 标题 + 箭头，箭头与展开行为自带）。 */
