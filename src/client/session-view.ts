@@ -601,20 +601,19 @@ function renderKeyedNode(
       })
     }
     case 'assistant-step': {
-      const blocks = blocksOf(dataOf(node).blocks)
-      // 官方 groupPart：'reasoning' = 组内只渲染思考块；'response' = 组外只渲染回复正文。
-      if (groupPart === 'reasoning') {
-        const reasoningOnly = blocks?.filter(block => block.kind === 'reasoning')
-        const parts = reasoningOnly === undefined ? [] : assistantBlocks(reasoningOnly, t)
-        return parts.length === 0 ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, parts)
-      }
-      if (groupPart === 'response') {
-        const text = (blocks ?? [])
-          .flatMap(block => (block.kind === 'text' ? [block.text] : []))
-          .join('')
-        return text.trim() === '' ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, h(AssistantMarkdown, { text }))
-      }
-      const parts = assistantBlocks(blocks, t)
+      // 官方块渲染器（lib/client.js:5818-5871）：
+      //   · 整步只有 tool-call 块 ⇒ 整步不渲染（工具调用由独立的 tool-call 节点画）；
+      //   · tool-call 块一律跳过（case "tool-call": break）——重复渲染卡片即真机踩过的「编辑/写入×2」；
+      //   · groupPart 'reasoning' 只画思考块、'response' 跳过思考块；未分组全画（除工具块）。
+      const blocks = blocksOf(dataOf(node).blocks) ?? []
+      const contentBlocks = blocks.filter(block => block.kind !== 'tool-call')
+      if (blocks.length > 0 && contentBlocks.length === 0) return null
+      const visible = groupPart === 'reasoning'
+        ? contentBlocks.filter(block => block.kind === 'reasoning')
+        : groupPart === 'response'
+          ? contentBlocks.filter(block => block.kind !== 'reasoning')
+          : contentBlocks
+      const parts = assistantBlocks(visible, t)
       return parts.length === 0 ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-call': {
@@ -653,7 +652,12 @@ function renderKeyedNode(
   }
 }
 
-/** assistant 内容块 → 子元素数组（text 官方 Markdown、reasoning 官方折叠、tool-call 工具卡）。 */
+/**
+ * assistant 内容块 → 子元素数组（官方块渲染器 lib/client.js:5826-5870 的同构）：
+ * text → 官方 MarkdownText、reasoning → 官方 ReasoningRow（标题「思考」）、image 占位；
+ * tool-call 块一律跳过（官方 case "tool-call": break——由独立工具节点渲染，重复画 = ×2）；
+ * 未知块折叠原文。
+ */
 function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: Translate): ReturnType<typeof h>[] {
   if (blocks === undefined) return []
   const parts: ReturnType<typeof h>[] = []
@@ -669,9 +673,6 @@ function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: T
         parts.push(h('div', { key: `i${index}`, className: 'dsh-tdt-sv-image' }, '[图片]'))
         break
       case 'tool-call':
-        parts.push(h(GenericCommandCard, {
-          key: `c${index}`, name: block.name, argsRaw: block.argsRaw, output: '', isError: false, t,
-        }))
         break
       default:
         // 未知 block：折叠原文，升级不白屏。

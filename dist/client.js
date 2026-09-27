@@ -97,7 +97,6 @@ window.__ModuleLoader__.load({
 			sessionMaxTokens: "该轮达到输出上限",
 			sessionRetry: "模型重试",
 			sessionUnknownKind: "未支持的节点类型：",
-			sessionReasoning: "思考过程",
 			sessionLoading: "正在加载会话记录…",
 			sessionEmpty: "该会话暂无可显示的记录（可能刚建窗或已被清理）。",
 			sessionLoadFailed: "会话记录加载失败（会话可能已不可读）。",
@@ -120,6 +119,7 @@ window.__ModuleLoader__.load({
 			turnProcessFailed: "处理失败",
 			turnStopped: "已停止",
 			chatDeepDiving: "深度求索中",
+			thinkLabel: "思考",
 			durationSeconds: "{seconds}秒",
 			durationMinutes: "{minutes}分{seconds}秒",
 			durationHours: "{hours}小时{minutes}分{seconds}秒",
@@ -253,7 +253,6 @@ window.__ModuleLoader__.load({
 			sessionMaxTokens: "This turn hit the output token cap",
 			sessionRetry: "Model retry",
 			sessionUnknownKind: "Unsupported node kind: ",
-			sessionReasoning: "Reasoning",
 			sessionLoading: "Loading session transcript…",
 			sessionEmpty: "Nothing to show for this session yet (window just opened, or the log was cleaned up).",
 			sessionLoadFailed: "Failed to load the session transcript (the session may no longer be readable).",
@@ -276,6 +275,7 @@ window.__ModuleLoader__.load({
 			turnProcessFailed: "Failed",
 			turnStopped: "Stopped",
 			chatDeepDiving: "Thinking",
+			thinkLabel: "Think",
 			durationSeconds: "{seconds}s",
 			durationMinutes: "{minutes}m {seconds}s",
 			durationHours: "{hours}h {minutes}m {seconds}s",
@@ -369,9 +369,6 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
 .dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
 .dsh-tdt-sv-action:hover{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-reasoning-head{display:flex;align-items:center;gap:8px;width:100%;background:0 0;border:none;cursor:pointer;padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-align:left;}
-.dsh-tdt-sv-reasoning-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-reasoning-chevron{flex:none;}
 .dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.6;word-break:break-word;}
 .dsh-tdt-sv-assistant{align-self:stretch;font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-image{align-self:flex-start;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));border:1px dashed var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 10px;}
@@ -394,12 +391,17 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-md th,.dsh-tdt-sv-md td{border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));padding:4px 8px;text-align:left;}
 .dsh-tdt-sv-md hr{border:none;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));margin:1em 0;}
 .dsh-tdt-sv-md img{max-width:100%;}
-.dsh-tdt-sv-reasoning{align-self:stretch;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));}
-.dsh-tdt-sv-reasoning>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));user-select:none;}
-.dsh-tdt-sv-reasoning>summary::-webkit-details-marker{display:none;}
-.dsh-tdt-sv-reasoning>summary::before{content:'▸';font-size:10px;}
-.dsh-tdt-sv-reasoning[open]>summary::before{content:'▾';}
-.dsh-tdt-sv-reasoning-body{padding:0 12px 10px;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+/* 思考行（ReasoningRow.module.css 照抄：root[row]/leading/chevron/title/separator/summary/thinkBody）。 */
+.dsh-tdt-sv-reasoning{flex-direction:column;display:flex;}
+.dsh-tdt-sv-reasoning:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px));}
+.dsh-tdt-sv-reasoning-row{position:relative;overflow:hidden;}
+.dsh-tdt-sv-reasoning-leading{flex-shrink:0;}
+.dsh-tdt-sv-reasoning-chevron{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-reasoning-title{font-weight:400;}
+.dsh-tdt-sv-reasoning-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
+.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
+.dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
 .dsh-tdt-sv-tool{align-self:stretch;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));overflow:hidden;}
 .dsh-tdt-sv-tool-head{display:flex;align-items:center;gap:8px;padding:6px 10px;flex-wrap:wrap;font-size:12px;}
 .dsh-tdt-sv-tool-name{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-weight:600;color:var(--dsw-alias-brand-primary,#2f6feb);}
@@ -638,7 +640,7 @@ window.__ModuleLoader__.load({
 			const controllerInactive = node.kind === "turn-process" && foldCompleted && !foldable;
 			const compactAnswer = processAnswer && foldable && presentation?.compactAnswer === true && !processOpen;
 			const processHidden = controllerInactive || foldable && processMember && !processOpen;
-			const inner = renderNode(node, turnProcess);
+			const inner = renderNode(node, turnProcess, groupPart);
 			if (inner === null || inner === void 0) return null;
 			const flowKey = groupPart === void 0 || groupPart === "response" ? node.key : JSON.stringify([node.key, groupPart]);
 			return (0, react.createElement)("div", {
@@ -1356,7 +1358,7 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region src/client/mirror/MessageItem.tsx
 		/** markdown 文档级外壳文案（引用稳定——新身份会打断 MarkdownText 的流式渲染缓存）。 */
-		const MD_LABELS = {
+		const MD_LABELS$1 = {
 			code: {
 				copyLabel: "复制",
 				copiedLabel: "已复制"
@@ -1368,36 +1370,65 @@ window.__ModuleLoader__.load({
 			if (props.text.trim() === "") return (0, react.createElement)("span", null);
 			return (0, react.createElement)("div", { className: ocOr("AssistantMarkdown", "root", "dsh-tdt-sv-md") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: props.text,
-				labels: MD_LABELS
+				labels: MD_LABELS$1
 			}));
 		}
 		/** 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）。 */
 		function UserMessage(props) {
 			return (0, react.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: props.text,
-				labels: MD_LABELS
+				labels: MD_LABELS$1
 			}))));
 		}
 		//#endregion
 		//#region src/client/mirror/ReasoningRow.tsx
-		/** 思考行：折叠 = 一行「思考 + 首行预览 + 箭头」；展开 = thinkBody 全文。 */
+		const MD_LABELS = {
+			code: {
+				copyLabel: "复制",
+				copiedLabel: "已复制"
+			},
+			footnotes: "脚注"
+		};
+		/** 官方 firstLine（lib/client.js:5687）：首行。 */
+		function firstLine(text) {
+			const newline = text.indexOf("\n");
+			return newline === -1 ? text : text.slice(0, newline);
+		}
+		/** 思考行：折叠 = 「思考 · 首行预览 ⌄」；展开 = thinkBody 全文（MarkdownText compact）。 */
 		function ReasoningRowMirror(props) {
-			const { text, t } = props;
-			if (text.trim() === "") return null;
+			const { text, running = false, preview = true, t } = props;
 			const [open, setOpen] = (0, react.useState)(false);
-			const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
-			const previewLine = first.length > 90 ? `${first.slice(0, 90)}…` : first;
+			if (text.trim() === "") return null;
+			const summary = firstLine(text).replaceAll("**", "");
 			return (0, react.createElement)("div", {
 				className: ocOr("ReasoningRow", "root", "dsh-tdt-sv-reasoning"),
-				"data-expanded": open || void 0
-			}, (0, react.createElement)("button", {
-				type: "button",
-				className: ocOr("ReasoningRow", "row", "dsh-tdt-sv-reasoning-head"),
-				"aria-expanded": open,
-				onClick: () => {
+				"data-variant": "think",
+				"data-state": running ? "running" : "ok",
+				"data-expanded": open || void 0,
+				"data-preview": preview && summary !== "" || void 0
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 }),
+				title: t("thinkLabel"),
+				open,
+				expandable: true,
+				expandOnRowClick: true,
+				onToggle: () => {
 					setOpen((value) => !value);
-				}
-			}, (0, react.createElement)("span", { className: ocOr("ReasoningRow", "title", "dsh-tdt-sv-tool-name") }, t("sessionReasoning")), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, previewLine), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "chevron", "dsh-tdt-sv-reasoning-chevron") }, open ? "▾" : "▸")), open ? (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, text) : null);
+				},
+				rowClassName: ocOr("ReasoningRow", "row", "dsh-tdt-sv-reasoning-row"),
+				leadingClassName: ocOr("ReasoningRow", "leading", "dsh-tdt-sv-reasoning-leading"),
+				titleClassName: ocOr("ReasoningRow", "title", "dsh-tdt-sv-reasoning-title"),
+				chevronClassName: ocOr("ReasoningRow", "chevron", "dsh-tdt-sv-reasoning-chevron"),
+				collapsedContent: (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
+					className: ocOr("ReasoningRow", "separator", "dsh-tdt-sv-reasoning-sep"),
+					"aria-hidden": true
+				}), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, summary)),
+				children: open ? (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+					text,
+					labels: MD_LABELS,
+					variant: "compact"
+				})) : void 0
+			}));
 		}
 		//#endregion
 		//#region src/client/mirror/TurnProcessNodeView.tsx
@@ -1828,17 +1859,10 @@ window.__ModuleLoader__.load({
 					});
 				}
 				case "assistant-step": {
-					const blocks = blocksOf(dataOf(node).blocks);
-					if (groupPart === "reasoning") {
-						const reasoningOnly = blocks?.filter((block) => block.kind === "reasoning");
-						const parts = reasoningOnly === void 0 ? [] : assistantBlocks(reasoningOnly, t);
-						return parts.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
-					}
-					if (groupPart === "response") {
-						const text = (blocks ?? []).flatMap((block) => block.kind === "text" ? [block.text] : []).join("");
-						return text.trim() === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, (0, react.createElement)(AssistantMarkdown, { text }));
-					}
-					const parts = assistantBlocks(blocks, t);
+					const blocks = blocksOf(dataOf(node).blocks) ?? [];
+					const contentBlocks = blocks.filter((block) => block.kind !== "tool-call");
+					if (blocks.length > 0 && contentBlocks.length === 0) return null;
+					const parts = assistantBlocks(groupPart === "reasoning" ? contentBlocks.filter((block) => block.kind === "reasoning") : groupPart === "response" ? contentBlocks.filter((block) => block.kind !== "reasoning") : contentBlocks, t);
 					return parts.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
 				}
 				case "tool-call": {
@@ -1861,7 +1885,12 @@ window.__ModuleLoader__.load({
 				default: return (0, react.createElement)("details", { className: "dsh-tdt-sv-tool" }, (0, react.createElement)("summary", { className: "dsh-tdt-sv-notice" }, `${t("sessionUnknownKind")} ${node.kind}`), (0, react.createElement)("pre", null, safeJson(node.data)));
 			}
 		}
-		/** assistant 内容块 → 子元素数组（text 官方 Markdown、reasoning 官方折叠、tool-call 工具卡）。 */
+		/**
+		* assistant 内容块 → 子元素数组（官方块渲染器 lib/client.js:5826-5870 的同构）：
+		* text → 官方 MarkdownText、reasoning → 官方 ReasoningRow（标题「思考」）、image 占位；
+		* tool-call 块一律跳过（官方 case "tool-call": break——由独立工具节点渲染，重复画 = ×2）；
+		* 未知块折叠原文。
+		*/
 		function assistantBlocks(blocks, t) {
 			if (blocks === void 0) return [];
 			const parts = [];
@@ -1886,16 +1915,7 @@ window.__ModuleLoader__.load({
 							className: "dsh-tdt-sv-image"
 						}, "[图片]"));
 						break;
-					case "tool-call":
-						parts.push((0, react.createElement)(GenericCommandCard, {
-							key: `c${index}`,
-							name: block.name,
-							argsRaw: block.argsRaw,
-							output: "",
-							isError: false,
-							t
-						}));
-						break;
+					case "tool-call": break;
 					default: parts.push((0, react.createElement)("details", {
 						key: `o${index}`,
 						className: "dsh-tdt-sv-tool"

@@ -26,7 +26,7 @@ export type LocaleKey =
   | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint'
   | 'viewSession' | 'viewSessionHint'
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
-  | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind' | 'sessionReasoning'
+  | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
   | 'sessionProcess'
   // —— 官方会话渲染文案（逐字抄自 ui-chat 中文词典，键名去掉 message. 前缀）——
@@ -34,7 +34,7 @@ export type LocaleKey =
   | 'triggerGithub' | 'triggerWebhook' | 'triggerSchedule' | 'triggerJob' | 'triggerPlugin'
   | 'triggerExplanation'
   | 'turnProcessTook' | 'turnProcessDeepDiving' | 'turnProcessWorked' | 'turnProcessFailed'
-  | 'turnStopped' | 'chatDeepDiving'
+  | 'turnStopped' | 'chatDeepDiving' | 'thinkLabel'
   | 'durationSeconds' | 'durationMinutes' | 'durationHours'
   | 'clockDate' | 'clockDateYear'
   | 'copyLabel' | 'copiedLabel' | 'branchLabel' | 'branchUnavailableLabel'
@@ -149,7 +149,6 @@ export const zh: Record<LocaleKey, string> = {
   sessionMaxTokens: '该轮达到输出上限',
   sessionRetry: '模型重试',
   sessionUnknownKind: '未支持的节点类型：',
-  sessionReasoning: '思考过程',
   sessionLoading: '正在加载会话记录…',
   sessionEmpty: '该会话暂无可显示的记录（可能刚建窗或已被清理）。',
   sessionLoadFailed: '会话记录加载失败（会话可能已不可读）。',
@@ -172,6 +171,7 @@ export const zh: Record<LocaleKey, string> = {
   turnProcessFailed: '处理失败',
   turnStopped: '已停止',
   chatDeepDiving: '深度求索中',
+  thinkLabel: '思考',
   durationSeconds: '{seconds}秒',
   durationMinutes: '{minutes}分{seconds}秒',
   durationHours: '{hours}小时{minutes}分{seconds}秒',
@@ -306,7 +306,6 @@ export const en: Record<LocaleKey, string> = {
   sessionMaxTokens: 'This turn hit the output token cap',
   sessionRetry: 'Model retry',
   sessionUnknownKind: 'Unsupported node kind: ',
-  sessionReasoning: 'Reasoning',
   sessionLoading: 'Loading session transcript…',
   sessionEmpty: 'Nothing to show for this session yet (window just opened, or the log was cleaned up).',
   sessionLoadFailed: 'Failed to load the session transcript (the session may no longer be readable).',
@@ -330,6 +329,7 @@ export const en: Record<LocaleKey, string> = {
   turnProcessFailed: 'Failed',
   turnStopped: 'Stopped',
   chatDeepDiving: 'Thinking',
+  thinkLabel: 'Think',
   durationSeconds: '{seconds}s',
   durationMinutes: '{minutes}m {seconds}s',
   durationHours: '{hours}h {minutes}m {seconds}s',

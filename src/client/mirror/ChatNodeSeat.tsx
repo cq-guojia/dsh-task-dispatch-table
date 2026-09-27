@@ -193,7 +193,10 @@ export function ChatNodeSeatMirror(props: {
   const compactAnswer = processAnswer && foldable && presentation?.compactAnswer === true && !processOpen
   const processHidden = controllerInactive || (foldable && processMember && !processOpen)
 
-  const inner = renderNode(node, turnProcess)
+  // ⚠ groupPart 必须传给节点视图：'reasoning' 只渲染思考块、'response' 只渲染回复正文
+  // （官方块渲染器 lib/client.js:5824-5825）。漏传会把整步（思考+文本+工具块）全画出来——
+  // 步内工具块再画一张 = 与独立工具节点重复（真机踩过，2026-09-27）。
+  const inner = renderNode(node, turnProcess, groupPart)
   if (inner === null || inner === undefined) return null
   const flowKey = groupPart === undefined || groupPart === 'response' ? node.key : JSON.stringify([node.key, groupPart])
   return h('div', {

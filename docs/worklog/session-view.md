@@ -65,3 +65,15 @@
 
 **验证**：typecheck + build（dist 148.96 kB）+ 冒烟 100 项全过；产物抽查 `data-step-process` / `buildProcessGroups` 在 bundle。**待真机**：按用户四级截图逐级比对（一级用时行 → 二级汇总行 → 三级条目展开）。
 
+## 2026-09-27（第三轮）— 真机反馈三连修：编辑/写入×2、「思考过程·」漏出、思考行文案（决策 37 补）
+
+——用户四级截图反馈：① 我们把「编辑 / 写入」画了两遍；② 收起状态下漏出一行「思考过程·」（官方没有这行字）；③ 官方思考行标题是「思考」，不是「思考过程」；并确认理解：「修改了文件，已写入文件，已调用工具」= 整个思考+工具过程的汇总行，所有过程条目都应收在它里面（我们的分组语义没错，错在渲染漏了）。
+
+**定位方式**：不猜。把分组算法（process-groups.ts）与整条渲染路径（ChatNodeListMirror + ChatNodeSeatMirror + ChatGroupSeatMirror）在本地用 react/react-dom + primitives 桩渲染成 HTML 复现（`tsc` 编 CJS + `NODE_PATH`），发现分组算法切分**正确**（每组条目不重复），问题全在渲染层：
+
+1. **根因（重复 ×2）**：`ChatNodeSeatMirror` 调 `renderNode(node, turnProcess)` **漏传 `groupPart`** ⇒ 「回复正文」条目把整步块全画出来；而 assistant 步的 blocks 里带 `tool-call` 块 ⇒ `assistantBlocks` 又为它们各画一张工具卡 ⇒ 与独立 `tool-call` 节点**重复**。官方块渲染器（`lib/client.js:5864`）对步内工具块是 **`case "tool-call": break`（永不渲染）**——工具调用只由独立节点画。修：seat 下发 groupPart + `assistantBlocks` 跳过 tool-call 块 + 步渲染按官方 5818-5871 重写（`groupPart 'reasoning'` 只画思考块 / `'response'` 跳过思考块 / 整步只有工具块 ⇒ 整步 null）。
+2. **根因（「思考过程·」漏出）**：同上——groupPart 漏传让思考块在回复条目里也画了。修后回复条目只有正文。
+3. **思考行照官方重写**（`ReasoningRow.tsx`，官方 5718-5778）：`root[data-variant=think][data-state=running|ok][data-expanded][data-preview]` + DisclosureRow（`IconThinkOutlineRegular` 14px，**`title = t("message.think") = 「思考」`**，collapsedContent = separator(2×2px)+首行预览去 `**`，content = thinkBody 的 `MarkdownText compact`）；兜底 CSS 换官方真值（折叠固定行高 24px+delta、无边框行式，弃旧的有边框盒子）；顺手修掉旧实现「先 return 后 useState」的 hooks 违规。locale 新增 `thinkLabel`（思考/Think），删除已无使用方的 `sessionReasoning`。
+
+**验证手段沉淀**：本地用 `tsc` 把 mirror 编成 CJS + `react-dom/server` 的 `renderToString` + primitives 桩，可在无宿主环境复现整条渲染结构（本轮用一次即中）；复现完删除脚手架不入库。冒烟新增 3 条回归断言（groupPart 下发 / tool-call 块跳过 / thinkLabel），**103 项全过**；typecheck + build（dist 149.70 kB）通过。
+

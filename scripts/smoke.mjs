@@ -415,6 +415,15 @@ try {
     ['frame', 'root', 'scroll', 'column', 'flowItem'].every(k => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`)))
   check('官方类缺失时回退自绘类（dsh-tdt-sv-body/col/flowitem 仍在）',
     clientJs.includes('dsh-tdt-sv-body') && clientJs.includes('dsh-tdt-sv-col') && clientJs.includes('dsh-tdt-sv-flowitem'))
+  // 回归（2026-09-27）：ChatNodeSeat 必须把 groupPart 传给节点视图——漏传会把整步全画出来，
+  // 步内 tool-call 块再画一张 = 与独立工具节点重复（真机「编辑/写入×2」）。
+  check('seat 向节点视图下发 groupPart（reasoning/response 分流）',
+    clientJs.includes('renderNode(node, turnProcess, groupPart)'))
+  // 官方块渲染器 case "tool-call": break——步内工具块永不渲染成卡片。
+  check('assistant 块渲染跳过 tool-call（官方 case break 同构）',
+    /case ['"]tool-call['"]:\s*break/.test(clientJs))
+  check('思考行标题用官方 message.think（「思考」，非「思考过程」）',
+    clientJs.includes('thinkLabel') && !clientJs.includes('sessionReasoning'))
   // 官方 primitives 是 dsh 浏览器内核的平台模块：产物里必须保留成 require（不能内联），
   // 正文走官方 MarkdownText、工具行走官方 DisclosureRow。
   check('正文/工具行用官方 primitives（MarkdownText / DisclosureRow，保留为 require）',
