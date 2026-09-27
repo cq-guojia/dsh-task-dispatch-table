@@ -248,7 +248,7 @@ for (let i=0;i<lines.length;i++){
 | 二、用户消息 | ✅ | userRow/userStack/bubble（右对齐气泡） |
 | 三、助手正文 | ✅ | 官方 `MarkdownText` + `AssistantMarkdown.root` |
 | 三-B、markdown 内容元素（代码块卡片/语法高亮/表格/行内 code/列表/emoji 标题） | ✅ | 随官方 `MarkdownText` 自带——primitives 自带 32 个 CSS module（CodeCard 等）由它自行注入，组件即样式 |
-| 四、工具卡 | ✅ | 官方 `DisclosureRow` + `GenericCommandCard` 类 + 人话摘要 + 默认折叠；keyed 流直接消费 `tool-call` 节点的 `data.root`（ToolCallBlock） |
+| 四、工具卡 | ✅ | 官方 `DisclosureRow` + `GenericCommandCard` 类 + 人话摘要 + 默认折叠；keyed 流直接消费 `tool-call` 节点的 `data.root`（ToolCallBlock）；**图标按 activity 取官方 `PROCESS_ICONS`**（edit/write=铅笔、generic=sparkle、命令=api）；**编辑/写入展开 = 官方 `DiffBlock`**（数据 = 结果 `meta.diffs`，摘要 = `diffTotals` 的 `+N -M`），其余工具展开 = 输入/输出 两行 |
 | 五、思考 | ✅（重写） | **官方 ReasoningRow 照抄**（lib/client.js:5718-5778）：`root[data-variant=think][data-state][data-expanded][data-preview]` + DisclosureRow（`IconThinkOutlineRegular` 14px + **`title = message.think = 「思考」`** + separator(2×2px) + 首行预览去 `**`）+ thinkBody（`MarkdownText compact`）；折叠固定行高 24px+delta；弃「思考过程」旧文案与有边框盒子 |
 | assistant 块渲染 | ✅（修正） | 照官方块渲染器（lib/client.js:5818-5871）：步内 **tool-call 块一律跳过**（`case break`，由独立工具节点画，重复画 = ×2）、groupPart 'reasoning' 只画思考块 / 'response' 跳过思考块、整步只有工具块 ⇒ 整步 null；seat 必须把 groupPart 下发给节点视图（回归断言已加） |
 | 六、turn 元信息（用时） | ✅（keyed） | **换 keyed 流后 turn 位置自带起止时间**（`node.location.turn.start/end`）⇒ 「用时 34 秒」/「深度求索中，用时…」/「已停止」逐字对齐官方（mirror/message-chrome.ts） |
@@ -295,7 +295,7 @@ for (let i=0;i<lines.length;i++){
 29. ✅ 尾部操作行（mirror/TurnTailNodeView + MessageIconActions：复制 / 分支只读态 / `data-actions-reveal` / 结束时钟）
 30. ✅ 用量小标（mirror/TurnUsagePanel + StatDialog：pill + 明细弹层，`formatTokens`/`formatCacheHitPercent` 逐字照抄）
 31. ✅ 弹窗外壳改宿主弹窗惯例尺寸 + 会话区左右边距 = 官方 `scroll` 的 `16px + --dsh-composer-side-clearance`；关闭钮 = 官方 `IconCloseOutlineRegular` 裸图标
-13. ⬜ `TerminalBlock` / `ReadBlock` / `DiffBlock`（按工具名映射，需接 labels）——让 bash/read/write 的**展开内容**也用官方块
+13. 🟡 `TerminalBlock` / `ReadBlock` / `DiffBlock`——**DiffBlock 已接**（编辑/写入展开体：数据 = 工具结果 `meta.diffs`（tool-fs `computeHunkDiffs` 写入），摘要 = `diffTotals` 的 `+N -M`；无 diff 的工具展开 = 输入/输出 两行）；`ReadBlock`（read 展开体，需把输出窗口解析成 `ReadBlockLine[]`）与 `TerminalBlock`（bash 展开体）待接
 15. ⬜ 「到底部」悬浮钮（toBottom/toBottomSlot）
 16. ⬜ 上下文注入行（ContextBody/ContextInjectionRow）——keyed kind=`context` / `system-prompt` 目前仍过滤（决策 28），放行即接
 17. ⬜ 工具卡补 `summary[data-error]` 红色变体（错误行摘要变红，对齐官方）

@@ -28,8 +28,8 @@ import type { Translate } from '../locales'
 import { ChatNodeSeatMirror, readPresentation, type ChatNodeStoreFace, type NodeRenderer, type TurnProcessPresentationFace } from './ChatNodeSeat'
 import { processTitle, type ProcessActivity, type ProcessGroupSnapshot } from './process-groups'
 
-/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）。 */
-const PROCESS_ICONS: Record<ProcessActivity | 'thinking', ComponentType<{ size?: number; className?: string }>> = {
+/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）；工具行图标同源（edit/write=铅笔、generic=sparkle）。 */
+export const PROCESS_ICONS: Record<ProcessActivity | 'thinking', ComponentType<{ size?: number; className?: string }>> = {
   thinking: IconThinkOutlineRegular,
   read: IconBrowseOutlineRegular,
   readImage: IconBrowseOutlineRegular,

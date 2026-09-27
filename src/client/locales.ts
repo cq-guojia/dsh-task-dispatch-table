@@ -53,6 +53,10 @@ export type LocaleKey =
   | 'toolTitleRead' | 'toolTitleReadImage' | 'toolTitleGrep' | 'toolTitleGlob' | 'toolTitleBash'
   | 'toolTitleWrite' | 'toolTitleEdit' | 'toolTitleCode' | 'toolTitleWebSearch' | 'toolTitleWebFetch'
   | 'toolTitleGeneric'
+  // —— 工具卡展开体（输入/输出 + diff 面文案，官方 uic diff.* 词典）——
+  | 'toolInputLabel' | 'toolOutputLabel' | 'codeBlockLabel'
+  | 'diffWrapLabel' | 'diffUnwrapLabel' | 'diffCollapseAria' | 'diffExpandAria'
+  | 'diffCollapseLabel' | 'diffExpandRest'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -223,6 +227,15 @@ export const zh: Record<LocaleKey, string> = {
   toolTitleWebSearch: '网页搜索',
   toolTitleWebFetch: '网页获取',
   toolTitleGeneric: '工具调用',
+  toolInputLabel: '输入',
+  toolOutputLabel: '输出',
+  codeBlockLabel: '代码块',
+  diffWrapLabel: '自动换行',
+  diffUnwrapLabel: '取消换行',
+  diffCollapseAria: '收起差异',
+  diffExpandAria: '展开其余 {count} 行差异',
+  diffCollapseLabel: '收起',
+  diffExpandRest: '… 其余 {count} 行',
 }
 
 /** English copy. */
@@ -381,4 +394,13 @@ export const en: Record<LocaleKey, string> = {
   toolTitleWebSearch: 'Web search',
   toolTitleWebFetch: 'Web fetch',
   toolTitleGeneric: 'Tool call',
+  toolInputLabel: 'Input',
+  toolOutputLabel: 'Output',
+  codeBlockLabel: 'Code',
+  diffWrapLabel: 'Wrap lines',
+  diffUnwrapLabel: 'Unwrap lines',
+  diffCollapseAria: 'Collapse diff',
+  diffExpandAria: 'Expand {count} more diff lines',
+  diffCollapseLabel: 'Collapse',
+  diffExpandRest: '… {count} more lines',
 }

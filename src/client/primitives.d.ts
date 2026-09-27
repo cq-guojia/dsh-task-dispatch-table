@@ -105,4 +105,25 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
     setOpen: (open: boolean) => void,
     panelRef?: { current: HTMLElement | null },
   ): void
+
+  /** 官方文件变更内联 diff 面（编辑/写入工具卡展开体）。 */
+  export function DiffBlock(props: {
+    diffs: ReadonlyArray<{ path: string; oldText: string | null; newText: string }>
+    labels: {
+      codeLabel: string
+      wrapLabel: string
+      unwrapLabel: string
+      copy: string
+      copied: string
+      collapseAria: string
+      expandAria: (hidden: number) => string
+      collapse: string
+      expand: (hidden: number) => string
+    }
+    maxLines?: number
+    className?: string
+  }): ReactNode | null
+
+  /** 官方 diff 统计（+新增 / -删除）。 */
+  export function diffTotals(diffs: ReadonlyArray<{ oldText: string | null; newText: string }>): { added: number; removed: number }
 }

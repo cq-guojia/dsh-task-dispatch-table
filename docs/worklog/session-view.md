@@ -77,3 +77,17 @@
 
 **验证手段沉淀**：本地用 `tsc` 把 mirror 编成 CJS + `react-dom/server` 的 `renderToString` + primitives 桩，可在无宿主环境复现整条渲染结构（本轮用一次即中）；复现完删除脚手架不入库。冒烟新增 3 条回归断言（groupPart 下发 / tool-call 块跳过 / thinkLabel），**103 项全过**；typecheck + build（dist 149.70 kB）通过。
 
+## 2026-09-27（第四轮）— 工具行图标 + 编辑/写入 diff 面 + 思考展开黑带 + 输入/输出（决策 37 补）
+
+——用户四张对照图：① 工具行前面的 icon 各不相同（编辑/写入=铅笔、工具调用=另一种），我们全是 `#`（IconCode）；② 官方编辑/写入展开是 **diff 块**（红 - 绿 +）与「代码块」卡，我们是纯文本；③ 思考一点开出现一条更黑的带，官方没有；④ 工具调用官方展开是 **输入 / 输出** 两行。
+
+**源码事实**：
+- **diff 数据不在参数里，在结果 meta**：`@deepseek-ai/dsh-tool-fs@0.1.7-rc.2`（npm pack 下载读实现）——`computeHunkDiffs`（lib/index.js:408-452）把变更切成 `FileDiff{path, oldText: string|null, newText}[]` 写进**工具结果 `meta.diffs`**；`ToolResultNode.meta?: unknown`（uic records.d.ts:173）随 keyed 流透传 ⇒ 卡片从 `meta.diffs` 取，meta 形态异常按官方 `diffsFromMeta` 的防御收窄回退（不抛）。
+- 渲染面 = primitives 导出的 `DiffBlock`（hunks + labels）与 `diffTotals`（摘要的 `+N -M`）；官方截图摘要「写入 · 路径 +1 -0」即 `diffTotals`。
+- **黑带根因**：官方 `ReasoningRow.module.css` 展开行是 `position:sticky; background:var(--dsw-alias-bg-base)`——官方 chat 页底色就是 bg-base，行底色与页面同色故不可见；我们面板用了 `--dsw-alias-bg-layer-1`（比 bg-base 浅）⇒ 展开时露出一条更黑的带。修 = 面板底色改 `--dsw-alias-bg-base`（官方会话面）。
+- 工具行图标同源 `PROCESS_ICONS`（按 activity：edit/write=IconEditOutlineRegular、tools=IconSparkleRegular、commands=IconApiOutlineRegular…），我们原来全用 IconCode。
+
+**落码**：`GenericCommandCard` 重构——icon 按 activity 取 `PROCESS_ICONS`（ChatGroupSeat 导出共享）；`meta.diffs` 有效 ⇒ 展开 = `DiffBlock`（红 - 绿 +）、摘要 = 路径 + `+N -M`；否则展开 = **输入（参数）/ 输出（结果）** 两行（新增 `toolInputLabel/toolOutputLabel` 文案，替换旧「参数：」）；diff 面文案照官方词典（`diff.collapseAria` 收起差异 / `diff.expandAria` 展开其余 N 行差异 / codeLabel「代码块」）。`session-view.toolCallCard` 透传 `root.meta`；`primitives.d.ts` 补 `DiffBlock`/`diffTotals` 面。
+
+**验证**：typecheck + build（dist 152.21 kB，`DiffBlock`/`diffTotals` 保留为宿主模块表 require）+ 冒烟 103 项全过。**待真机**：编辑/写入展开的 diff 形态、思考展开无黑带、工具行图标。
+

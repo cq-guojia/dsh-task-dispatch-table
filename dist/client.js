@@ -170,7 +170,16 @@ window.__ModuleLoader__.load({
 			toolTitleCode: "代码",
 			toolTitleWebSearch: "网页搜索",
 			toolTitleWebFetch: "网页获取",
-			toolTitleGeneric: "工具调用"
+			toolTitleGeneric: "工具调用",
+			toolInputLabel: "输入",
+			toolOutputLabel: "输出",
+			codeBlockLabel: "代码块",
+			diffWrapLabel: "自动换行",
+			diffUnwrapLabel: "取消换行",
+			diffCollapseAria: "收起差异",
+			diffExpandAria: "展开其余 {count} 行差异",
+			diffCollapseLabel: "收起",
+			diffExpandRest: "… 其余 {count} 行"
 		};
 		/** English copy. */
 		const en = {
@@ -326,7 +335,16 @@ window.__ModuleLoader__.load({
 			toolTitleCode: "Code",
 			toolTitleWebSearch: "Web search",
 			toolTitleWebFetch: "Web fetch",
-			toolTitleGeneric: "Tool call"
+			toolTitleGeneric: "Tool call",
+			toolInputLabel: "Input",
+			toolOutputLabel: "Output",
+			codeBlockLabel: "Code",
+			diffWrapLabel: "Wrap lines",
+			diffUnwrapLabel: "Unwrap lines",
+			diffCollapseAria: "Collapse diff",
+			diffExpandAria: "Expand {count} more diff lines",
+			diffCollapseLabel: "Collapse",
+			diffExpandRest: "… {count} more lines"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -337,7 +355,10 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1010;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
-.dsh-tdt-sv-panel{--dsh-composer-side-clearance:8px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;padding:16px 0 18px;overflow:hidden;}
+/* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
+   官方 ReasoningRow 展开行是 sticky + background:var(--dsw-alias-bg-base)（ReasoningRow.module.css），
+   若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
+.dsh-tdt-sv-panel{--dsh-composer-side-clearance:8px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;padding:16px 0 18px;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 12px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-close{appearance:none;background:0 0;border:none;padding:2px 6px;border-radius:6px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:color .1s,background .1s;}
 .dsh-tdt-sv-close:hover{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
@@ -872,7 +893,7 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/mirror/ChatGroupSeat.tsx
-		/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）。 */
+		/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）；工具行图标同源（edit/write=铅笔、generic=sparkle）。 */
 		const PROCESS_ICONS = {
 			thinking: _deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular,
 			read: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
@@ -1081,31 +1102,6 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/mirror/GenericCommandCard.tsx
-		/** 单行截断（官方 summary 是单行省略号样式）。 */
-		const preview = (text) => {
-			const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
-			return first.length > 90 ? `${first.slice(0, 90)}…` : first;
-		};
-		/** 人话摘要：优先取常见工具参数的关键字段，否则回退「输出优先、参数次之」的首行。 */
-		const summarize = (argsRaw, output) => {
-			const raw = argsRaw.trim();
-			if (raw.startsWith("{")) try {
-				const parsed = JSON.parse(raw);
-				for (const key of [
-					"command",
-					"file_path",
-					"path",
-					"pattern",
-					"query",
-					"url",
-					"title"
-				]) {
-					const value = parsed[key];
-					if (typeof value === "string" && value.trim() !== "") return value;
-				}
-			} catch {}
-			return preview(output.trim() !== "" ? output : argsRaw);
-		};
 		/** 官方 tool.title.*（uic lib/client.js:14703-14719）：工具名 → 本地化标题；未收录走 generic「工具调用」。 */
 		const TOOL_TITLE_KEYS = {
 			read: "toolTitleRead",
@@ -1132,40 +1128,94 @@ window.__ModuleLoader__.load({
 				generic: true
 			};
 		};
+		function diffsFromMeta(meta) {
+			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return void 0;
+			const diffs = meta.diffs;
+			if (!Array.isArray(diffs) || diffs.length === 0) return void 0;
+			return diffs.every((diff) => {
+				if (typeof diff !== "object" || diff === null || Array.isArray(diff)) return false;
+				const { path, oldText, newText } = diff;
+				return typeof path === "string" && (oldText === null || typeof oldText === "string") && typeof newText === "string";
+			}) ? diffs : void 0;
+		}
+		/** 单行截断（官方 summary 是单行省略号样式）。 */
+		const preview = (text) => {
+			const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
+			return first.length > 90 ? `${first.slice(0, 90)}…` : first;
+		};
+		/** 人话摘要：优先取常见工具参数的关键字段，否则回退「输出优先、参数次之」的首行。 */
+		const summarize = (argsRaw, output) => {
+			const raw = argsRaw.trim();
+			if (raw.startsWith("{")) try {
+				const parsed = JSON.parse(raw);
+				for (const key of [
+					"command",
+					"file_path",
+					"path",
+					"pattern",
+					"query",
+					"url",
+					"title"
+				]) {
+					const value = parsed[key];
+					if (typeof value === "string" && value.trim() !== "") return value;
+				}
+			} catch {}
+			return preview(output.trim() !== "" ? output : argsRaw);
+		};
+		/** 官方 diff 面文案（codeLabel = 官方截图里的「代码块」；diff.*：收起差异 / 展开其余 N 行差异）。 */
+		const diffLabels = (t) => ({
+			codeLabel: t("codeBlockLabel"),
+			wrapLabel: t("diffWrapLabel"),
+			unwrapLabel: t("diffUnwrapLabel"),
+			copy: t("copyLabel"),
+			copied: t("copiedLabel"),
+			collapseAria: t("diffCollapseAria"),
+			expandAria: (count) => t("diffExpandAria", { count }),
+			collapse: t("diffCollapseLabel"),
+			expand: (count) => t("diffExpandRest", { count })
+		});
 		/** 工具调用 / 命令卡（默认折叠成一行；错误态摘要变红由 summary[data-error] 承担）。 */
 		function GenericCommandCard(props) {
-			const { name, argsRaw, output, isError, errorName, t } = props;
+			const { name, argsRaw, output, isError, errorName, meta, t } = props;
 			const [open, setOpen] = (0, react.useState)(isError);
-			const summaryCls = ocOr("GenericCommandCard", "summary", "");
+			const diffs = diffsFromMeta(meta);
 			const localized = toolTitle(name, t);
-			const summaryText = localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output);
+			const summaryText = diffs !== void 0 ? (() => {
+				const firstPath = diffs[0]?.path ?? "";
+				const totals = (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
+				return `${firstPath} +${totals.added} -${totals.removed}`;
+			})() : localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output);
 			const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? "error"}` : localized.title;
-			const bodyText = [argsRaw.trim() !== "" ? `${t("sessionArgs")}:\n${argsRaw}` : "", output.trim() !== "" ? `${t("sessionOutput")}:\n${output}` : ""].filter((part) => part !== "").join("\n\n");
+			const bodyText = diffs !== void 0 ? void 0 : [argsRaw.trim() !== "" ? `${t("toolInputLabel")}:\n${argsRaw}` : "", output.trim() !== "" ? `${t("toolOutputLabel")}:\n${output}` : ""].filter((part) => part !== "").join("\n\n");
+			const ActivityIcon = PROCESS_ICONS[toolActivity(name)] ?? PROCESS_ICONS.tools;
 			return (0, react.createElement)("div", {
 				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
 				"data-variant": "others",
 				"data-state": isError ? "error" : "success"
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, {}),
+				icon: (0, react.createElement)(ActivityIcon, { size: 14 }),
 				title: rowTitle,
 				open,
-				expandable: bodyText !== "",
+				expandable: diffs !== void 0 || bodyText !== "",
 				onToggle: () => {
 					setOpen((value) => !value);
 				},
 				expandOnRowClick: true,
+				keepContentWhenOpen: true,
 				rowClassName: ocOr("GenericCommandCard", "row", "dsh-tdt-sv-tool-head"),
-				leadingClassName: ocOr("GenericCommandCard", "leading", ""),
-				titleClassName: ocOr("GenericCommandCard", "title", "dsh-tdt-sv-tool-name"),
-				chevronClassName: ocOr("GenericCommandCard", "chevron", ""),
-				collapsedContent: summaryText === "" ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
+				collapsedContent: (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
 					className: ocOr("GenericCommandCard", "separator", ""),
 					"aria-hidden": true
 				}), (0, react.createElement)("span", {
-					className: summaryCls,
+					className: ocOr("GenericCommandCard", "summary", "dsh-tdt-sv-outcome-ok"),
 					"data-error": isError || void 0
 				}, summaryText)),
-				children: bodyText === "" ? null : (0, react.createElement)("pre", { className: ocOr("GenericCommandCard", "body", "") }, bodyText)
+				children: diffs !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DiffBlock, {
+					diffs,
+					labels: diffLabels(t),
+					className: ocOr("GenericCommandCard", "body", "")
+				}) : bodyText !== void 0 && bodyText !== "" ? (0, react.createElement)("pre", { className: ocOr("GenericCommandCard", "body", "dsh-tdt-sv-tool-body") }, bodyText) : void 0
 			}));
 		}
 		//#endregion
@@ -1827,6 +1877,7 @@ window.__ModuleLoader__.load({
 				output: settled ? contentText(root.content) : "",
 				isError: root.isError === true,
 				errorName: error?.name,
+				meta: root.meta,
 				t
 			};
 		}

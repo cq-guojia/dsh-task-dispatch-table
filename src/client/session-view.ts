@@ -563,6 +563,7 @@ function toolCallCard(node: ChatNodeFace, t: Translate): Parameters<typeof Gener
     output: settled ? contentText(root.content as readonly ContentBlockLike[] | undefined) : '',
     isError: root.isError === true,
     errorName: error?.name,
+    meta: root.meta,
     t,
   }
 }
