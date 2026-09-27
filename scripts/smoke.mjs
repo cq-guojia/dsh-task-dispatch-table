@@ -438,6 +438,13 @@ try {
     injectList.includes('@deepseek-ai/dsh-client-ui-layout'), injectList.join(', '))
   check('inject 清单声明 sidebar 提供方（dsh-client-ui-sidebar，sidebar.panellist 槽）',
     injectList.includes('@deepseek-ai/dsh-client-ui-sidebar'), injectList.join(', '))
+  check('inject 清单声明 uiWorkspace 提供方（dsh-client-ui-workspace，U10 开分支跳转）',
+    injectList.includes('@deepseek-ai/dsh-client-ui-workspace'), injectList.join(', '))
+  // U10「继续对话（开分支）」：官方 ISessions.fork 调用面 + 确认框（先确认再 fork，防误点）。
+  check('bundle 含 sessions.fork 调用面（increaseTitle: true，官方 fork 按钮同款）',
+    clientJs.includes('increaseTitle'))
+  check('bundle 含开分支确认框（forkConfirmText，必须先确认再 fork）',
+    clientJs.includes('forkConfirmText'))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

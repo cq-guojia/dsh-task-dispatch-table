@@ -126,3 +126,25 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 - 清单遗留（下次会话候选）：`ReadBlock`（读取展开）、`TerminalBlock`（命令展开）、上下文注入行、工具卡错误红、重试行官方样式、fileMentions、用户消息操作行、`ChatGroupSeat` 分组视图细节、👍👎（feedback 插槽）。
 - 新功能排期：U10「继续对话（开分支）」按钮（先读 `sessions.fork` 源码）。
 
+## 2026-09-27（第八轮）— U10「继续对话（开分支）」落码（决策 38）
+
+——用户拍板先做 U10，并给出交互硬要求：**不能点一下就直接开分支，必须先出确认框**（误点会多出一个会话还得删、整个窗口还跳出去了，很麻烦）；确认后再开新分支，开完自动跳到新分支的那个会话里去。
+
+**源码核实（先读后动，AGENTS.md 第 4 条；0.1.7-rc.2）**：
+- `sessions.fork` 在**公开契约** `ISessions`（contract/sessions.d.ts:124）：`fork(opts: { sessionId; atSeq?; increaseTitle? }): Promise<SessionId>`，实现体 client.js:3343。
+- `atSeq` 省略 = 「最新已完成 turn 前缀」（commands.d.ts:36-37）⇒ 对归档/完结会话即**全量对话**；`increaseTitle: true` ⇒ 子会话标题递增 ` (1)`（increasedForkTitle，client.js:3066-3072；官方 fork 按钮同款 client.js:837-842）；失败抛 `SessionForkError`（带 rpcError.code/message，client.js:3034-3047）。
+- 归档会话的 fork 子会话 = **独立会话**，不受归档只读闸门限制（archived-session-gate.d.ts:23-24）。
+- **跳转动词**：0.1.7-rc.2 的 `ISessions` 已无 `open(id)`（注释「navigation belongs to view owners」）——决策 27 旧路不可走。改用官方导航服务 `uiWorkspace.openSession(id)`（`@deepseek-ai/dsh-client-ui-workspace@0.1.7-rc.2`，cordis Service 名 `'uiWorkspace'`；client.js:819 → replaceMain:968-991：官方自己 `retain('mainView')` + `selection.set` 持久化 + `selectPanel(null)`）——我方**绝不自己 retain 保留值**（决策 35 同源真机事故教训）。
+
+**落码清单**：
+- `package.json`：inject 清单补 `@deepseek-ai/dsh-client-ui-workspace`。
+- `locales.ts`：双语 7 键（continueBranch / forkConfirmTitle / forkConfirmText / forkConfirmAccept / forkCancel / forkWorking / forkFailed）。
+- `archive-session-css.ts`：头部按钮组 `.dsh-tdt-sv-headerbtns`、分支按钮 `.dsh-tdt-sv-branch`（含 ：disabled）、确认框遮罩 `.dsh-tdt-sv-confirm`（z-index 1030 > 弹窗 1010）+ 440px 卡片 + 主按钮（brand-primary 底白字）。
+- `session-view.ts`：头部「继续对话」按钮（`canFork` = fork 与 openSession 两个动词都就位才渲染，服务缺失自动降级不出现）→ 确认框（标题/正文/取消/「开分支并跳转」主按钮）→ fork 在途双按钮 disabled 防双击；成功 = **先 `onClose()` 再 `openHostSession(child)`**——先关弹窗让 TaskPage 卸载时 dispose/release 源会话 scope，再跳官方会话区（顺序反了 retain 引用泄漏）；失败 = 留在确认框内显示 `SessionForkError` 原因不关弹窗；**aliveRef 守卫**：fork 在途用户手动关弹窗 ⇒ 放弃跳转，组件已卸载不再 setState。
+- `index.ts`：apply 内 `ctx.inject(['sessions','uiConversation'])` 里 duck-typing 取 `sessions.fork`（包一层 `{sessionId, increaseTitle:true}` 调用，保持类型面收窄）；新增 `ctx.inject(['uiWorkspace'])` 取 `openSession`；经 TaskPageHost/TaskPage props 链透传给 SessionViewModal。
+- 冒烟 +3：uiWorkspace inject 声明、bundle 含 `increaseTitle`、bundle 含 `forkConfirmText`。
+
+**验证**：typecheck + build（dist 163.07 kB）+ 冒烟 **106 项全过**（原 103 + 3）。
+
+**待真机**：① 确认框交互（防误点）② fork 成功跳转到新分支会话（标题 `(1)`）③ 源会话保持归档只读 ④ fork 失败提示文案。
+

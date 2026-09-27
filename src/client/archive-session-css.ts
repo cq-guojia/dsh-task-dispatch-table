@@ -164,6 +164,22 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-group-content>*{flex-shrink:0;}
 .dsh-tdt-sv-group-content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px);}
 .dsh-tdt-sv-group-expanded{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible;}
+/* U10 继续对话（开分支）：头部按钮组 + 确认框（叠在会话弹窗之上，z-index 1030 > overlay 1010）。 */
+.dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
+.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 12px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),color .1s;}
+.dsh-tdt-sv-branch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-branch:disabled{opacity:.55;cursor:default;}
+.dsh-tdt-sv-confirm{position:fixed;inset:0;z-index:1030;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+.dsh-tdt-sv-confirm-card{background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(440px,calc(100vw - 48px));padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;}
+.dsh-tdt-sv-confirm-title{font-size:14px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-confirm-text{font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));margin:0;}
+.dsh-tdt-sv-confirm-err{font-size:12px;line-height:1.5;color:var(--dsw-alias-state-error-primary,#c0392b);word-break:break-all;margin:0;}
+.dsh-tdt-sv-confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
+.dsh-tdt-sv-confirm-btn{appearance:none;font:inherit;font-size:12px;line-height:20px;cursor:pointer;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 14px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),opacity .1s;}
+.dsh-tdt-sv-confirm-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-confirm-btn[data-primary='true']{background:var(--dsw-alias-brand-primary,#2f6feb);border-color:transparent;color:#fff;}
+.dsh-tdt-sv-confirm-btn[data-primary='true']:hover{filter:brightness(1.08);background:var(--dsw-alias-brand-primary,#2f6feb);}
+.dsh-tdt-sv-confirm-btn:disabled{opacity:.55;cursor:default;filter:none;}
 `
 
 let injected = false

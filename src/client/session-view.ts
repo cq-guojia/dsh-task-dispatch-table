@@ -24,8 +24,8 @@
 //  message-chrome / Composer）——官方改哪个，diff 哪个文件。折叠判定照抄 ChatNodeSeat，
 // 见 ./mirror/ChatNodeSeat.tsx 顶部注释与 docs/design/session-view-ui-map.md §十七。
 
-import { createElement as h, useCallback, useMemo, useState, useSyncExternalStore } from 'react'
-import { IconCloseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Fragment, createElement as h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { IconBranchOutlineRegular, IconCloseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ensureArchiveSessionStyle } from './archive-session-css'
 import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame, type TurnsFace } from './mirror/ChatView'
 import { GenericCommandCard } from './mirror/GenericCommandCard'
@@ -801,8 +801,13 @@ function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate):
 }
 
 /**
- * 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊（对话框为占位）。
+ * 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
+ * U10「继续对话（开分支）」：头部按钮 → 确认框 → `sessions.fork`（官方 ISessions 契约，
+ * 不带 atSeq = 最新已完成 turn 前缀，increaseTitle 让子会话标题递增 (1)）→ 先关弹窗
+ * （release 源会话）→ `uiWorkspace.openSession(childId)`（官方导航服务：内部自己
+ * retain('mainView') + selection.set + selectPanel(null)，我们只调服务、不碰保留值）。
  * @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
+ *   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
  */
 export function SessionViewModal(props: {
   t: Translate
@@ -811,8 +816,12 @@ export function SessionViewModal(props: {
   sessionId: string
   view: SessionViewTarget
   onClose: () => void
+  /** fork 源会话：`sessions.fork({ sessionId, increaseTitle: true })`，解析为子会话 id。 */
+  forkSession?: (sessionId: string) => Promise<string>
+  /** 官方导航跳转：`uiWorkspace.openSession(id)`（会话区打开目标会话）。 */
+  openHostSession?: (sessionId: string) => void
 }): ReturnType<typeof h> {
-  const { t, heading, sessionId, view, onClose } = props
+  const { t, heading, sessionId, view, onClose, forkSession, openHostSession } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
   const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
@@ -834,6 +843,34 @@ export function SessionViewModal(props: {
       return next
     })
   }, [])
+
+  // U10 开分支：确认框显隐 + fork 进行中 + 失败原因。aliveRef 防「fork 在途时用户关弹窗」
+  // 后仍跳转（await 回来时弹窗已卸载 ⇒ 放弃跳转，不 setState）。
+  const canFork = forkSession !== undefined && openHostSession !== undefined
+  const [confirming, setConfirming] = useState(false)
+  const [forking, setForking] = useState(false)
+  const [forkErr, setForkErr] = useState<string | null>(null)
+  const aliveRef = useRef(true)
+  useEffect(() => () => { aliveRef.current = false }, [])
+  const onForkAccept = useCallback((): void => {
+    if (forking || forkSession === undefined || openHostSession === undefined) return
+    setForking(true)
+    setForkErr(null)
+    void (async () => {
+      try {
+        const child = await forkSession(sessionId)
+        if (!aliveRef.current) return
+        // 先关弹窗（dispose ⇒ release 源会话 scope），再跳宿主会话区（官方导航服务）。
+        onClose()
+        openHostSession(child)
+      } catch (error) {
+        if (!aliveRef.current) return
+        setForkErr(error instanceof Error ? error.message : String(error))
+      } finally {
+        setForking(false)
+      }
+    })()
+  }, [forking, forkSession, openHostSession, sessionId, onClose])
 
   const order = chat?.order ?? EMPTY_ORDER
   const store = chat?.nodes
@@ -895,30 +932,72 @@ export function SessionViewModal(props: {
       ]
 
   // 关闭途径：右上角关闭按钮 / 点遮罩（主面板同款，不监听 document）。
-  return h('div', { className: 'dsh-tdt-sv-overlay', onClick: onClose },
-    h('div', { className: 'dsh-tdt-sv-panel', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-      h('div', { className: 'dsh-tdt-sv-header' },
-        h('div', { className: 'dsh-tdt-sv-heading' },
-          h('div', { className: 'dsh-tdt-sv-title' }, `${tt('sessionViewerTitle')} · ${heading}`),
-          h('div', { className: 'dsh-tdt-sv-sid' }, sessionId),
-          // 可见探针：官方样式未命中时直接显示（省得翻控制台）。命中则不显示。
-          officialCount === 0
-            ? h('div', {
-                className: 'dsh-tdt-sv-sid',
-                style: { color: 'var(--dsw-alias-state-warn-primary, #b7791f)' },
-              }, '⚠ 官方样式未命中（当前为自绘回退）')
-            : null,
+  // U10：头部「继续对话」按钮（fork 服务就位才渲染）→ 确认框（叠 z-index 1030）。
+  return h(Fragment, null,
+    h('div', { className: 'dsh-tdt-sv-overlay', onClick: onClose },
+      h('div', { className: 'dsh-tdt-sv-panel', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+        h('div', { className: 'dsh-tdt-sv-header' },
+          h('div', { className: 'dsh-tdt-sv-heading' },
+            h('div', { className: 'dsh-tdt-sv-title' }, `${tt('sessionViewerTitle')} · ${heading}`),
+            h('div', { className: 'dsh-tdt-sv-sid' }, sessionId),
+            // 可见探针：官方样式未命中时直接显示（省得翻控制台）。命中则不显示。
+            officialCount === 0
+              ? h('div', {
+                  className: 'dsh-tdt-sv-sid',
+                  style: { color: 'var(--dsw-alias-state-warn-primary, #b7791f)' },
+                }, '⚠ 官方样式未命中（当前为自绘回退）')
+              : null,
+          ),
+          h('div', { className: 'dsh-tdt-sv-headerbtns' },
+            canFork
+              ? h('button', {
+                  type: 'button',
+                  className: 'dsh-tdt-sv-branch',
+                  disabled: forking,
+                  title: tt('continueBranch'),
+                  onClick: () => { setForkErr(null); setConfirming(true) },
+                }, h(IconBranchOutlineRegular, { size: 14 }), tt('continueBranch'))
+              : null,
+            h('button', {
+              type: 'button',
+              className: 'dsh-tdt-sv-close',
+              'aria-label': tt('debugClose'),
+              onClick: onClose,
+            }, h(IconCloseOutlineRegular, { size: 16 })),
+          ),
         ),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-close',
-          'aria-label': tt('debugClose'),
-          onClick: onClose,
-        }, h(IconCloseOutlineRegular, { size: 16 })),
+        // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
+        h(ChatViewFrame, { children: body }),
       ),
-      // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
-      h(ChatViewFrame, { children: body }),
     ),
+    // 开分支确认框（用户拍板：必须先确认再 fork，防误点；失败留在弹窗内提示、不关会话弹窗）。
+    confirming
+      ? h('div', {
+          className: 'dsh-tdt-sv-confirm',
+          onClick: () => { if (!forking) setConfirming(false) },
+        },
+          h('div', { className: 'dsh-tdt-sv-confirm-card', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+            h('div', { className: 'dsh-tdt-sv-confirm-title' }, tt('forkConfirmTitle')),
+            h('p', { className: 'dsh-tdt-sv-confirm-text' }, tt('forkConfirmText')),
+            forkErr !== null ? h('p', { className: 'dsh-tdt-sv-confirm-err' }, tt('forkFailed', { error: forkErr })) : null,
+            h('div', { className: 'dsh-tdt-sv-confirm-actions' },
+              h('button', {
+                type: 'button',
+                className: 'dsh-tdt-sv-confirm-btn',
+                disabled: forking,
+                onClick: () => { setConfirming(false) },
+              }, tt('forkCancel')),
+              h('button', {
+                type: 'button',
+                className: 'dsh-tdt-sv-confirm-btn',
+                'data-primary': 'true',
+                disabled: forking,
+                onClick: onForkAccept,
+              }, forking ? tt('forkWorking') : tt('forkConfirmAccept')),
+            ),
+          ),
+        )
+      : null,
   )
 }
 

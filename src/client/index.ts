@@ -379,8 +379,12 @@ function TaskPage(props: {
   onBack: () => void
   /** 页内只读会话视图工厂（决策 28：sessions.binding + uiConversation 组装，归档会话可读）。服务不可用时为 null。 */
   viewSession: ((id: string) => SessionViewTarget | null) | null
+  /** U10：fork 源会话（官方 ISessions.fork；未就位为 null ⇒ 弹窗不渲染「继续对话」）。 */
+  forkSession: ((id: string) => Promise<string>) | null
+  /** U10：官方导航跳转（uiWorkspace.openSession；未就位为 null）。 */
+  openHostSession: ((id: string) => void) | null
 }) {
-  const { t, scope, onBack, viewSession } = props
+  const { t, scope, onBack, viewSession, forkSession, openHostSession } = props
   // 面板自己订阅 scope：保存后即时反映生效值，也拿到 writable 状态。
   const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
@@ -764,6 +768,9 @@ function TaskPage(props: {
         heading: viewing.heading,
         sessionId: viewing.sessionId,
         view: viewing.view,
+        // U10：fork + 官方跳转（服务未就位时为 null ⇒ 弹窗不渲染「继续对话」按钮）。
+        forkSession: forkSession ?? undefined,
+        openHostSession: openHostSession ?? undefined,
         onClose: () => {
           const closed = viewing.sessionId
           const needArchive = viewing.didUnarchive === true
@@ -1024,9 +1031,13 @@ function httpScope(): SettingsScope {
 function TaskPageHost(props: {
   t: Translate
   viewRef: () => ((id: string) => SessionViewTarget | null) | null
+  /** U10：fork 源会话（sessions.fork 服务未就位时为 null ⇒ 弹窗不渲染按钮）。 */
+  forkRef: () => ((id: string) => Promise<string>) | null
+  /** U10：官方导航跳转（uiWorkspace 服务未就位时为 null ⇒ 弹窗不渲染按钮）。 */
+  openRef: () => ((id: string) => void) | null
   onBack: () => void
 }) {
-  const { t, viewRef, onBack } = props
+  const { t, viewRef, forkRef, openRef, onBack } = props
   const scope = useSyncExternalStore(subscribeScope, getScopeValue)
   if (scope === null) {
     return h('div', { style: pageStyle },
@@ -1042,7 +1053,7 @@ function TaskPageHost(props: {
       h('p', { style: hintStyle }, t('unavailable')),
     )
   }
-  return h(TaskPage, { t, scope, onBack, viewSession: viewRef() })
+  return h(TaskPage, { t, scope, onBack, viewSession: viewRef(), forkSession: forkRef(), openHostSession: openRef() })
 }
 
 // ─────────────────────────── 插件主体 ───────────────────────────
@@ -1070,11 +1081,31 @@ export function apply(ctx: ClientContext): void {
   // 声明了两个服务提供方：sessions ← dsh-api-session-controller、uiConversation ←
   // dsh-client-ui-conversation（官方机制：inject 边决定这些包的 client 模块先于本插件组装）。
   let viewSession: ((id: string) => SessionViewTarget | null) | null = null
+  // U10「继续对话（开分支）」：fork = 官方 ISessions 契约方法（0.1.7-rc.2 contract/sessions.d.ts:124，
+  // 实现体 client.js:3343）——不带 atSeq = 最新已完成 turn 前缀（归档/完结会话即全量对话），
+  // increaseTitle = true 让子会话标题递增 (1)（官方 fork 按钮同款 client.js:837-842）。
+  let forkSession: ((id: string) => Promise<string>) | null = null
   ctx.inject(['sessions', 'uiConversation'], (sub) => {
     const sessions = (sub as { sessions?: SessionsFace }).sessions
     const uiConversation = (sub as { uiConversation?: UiConversationFace }).uiConversation
     if (sessions !== undefined && uiConversation !== undefined) {
       viewSession = (id: string): SessionViewTarget | null => openSessionView(sessions, uiConversation, id)
+    }
+    const forkFn = (sessions as unknown as Record<string, unknown> | undefined)?.fork
+    if (typeof forkFn === 'function') {
+      forkSession = (id: string): Promise<string> =>
+        (forkFn as (opts: { sessionId: string; increaseTitle: boolean }) => Promise<string>)
+          .call(sessions, { sessionId: id, increaseTitle: true })
+    }
+  })
+  // U10 跳转：官方导航服务 uiWorkspace（@deepseek-ai/dsh-client-ui-workspace，cordis Service
+  // 名 'uiWorkspace'）——openSession(id) 由官方自己 retain('mainView') + selection.set +
+  // selectPanel(null)。红线：我方绝不自己 retain 'mainView'（宿主保留值，会锁死导航，真机事故）。
+  let openHostSession: ((id: string) => void) | null = null
+  ctx.inject(['uiWorkspace'], (sub) => {
+    const ws = (sub as { uiWorkspace?: { openSession?(id: string): void } }).uiWorkspace
+    if (ws !== undefined && typeof ws.openSession === 'function') {
+      openHostSession = (id: string): void => { ws.openSession!(id) }
     }
   })
   // 布局服务（ctx.layout）：主面板切换——选中整页 / 返回会话。
@@ -1159,6 +1190,8 @@ export function apply(ctx: ClientContext): void {
         (props: { t: Translate }) => h(TaskPageHost, {
           t: props.t,
           viewRef: () => viewSession,
+          forkRef: () => forkSession,
+          openRef: () => openHostSession,
           onBack: () => { selectPanel(null) },
         }),
       ),

@@ -36,6 +36,7 @@
 - **工具卡对齐第二轮（2026-09-27 当日）**：① 工具行图标按 activity 取官方 `PROCESS_ICONS`（edit/write=铅笔、generic=sparkle），弃全量 IconCode；② **编辑/写入展开 = 官方 `DiffBlock`**——数据源 = 工具结果 `meta.diffs`（tool-fs `computeHunkDiffs` 写入 `FileDiff{path,oldText,newText}[]`，经 `ToolResultNode.meta` 透传，源码核实），摘要 = `diffTotals` 的「路径 +N -M」；③ 无 diff 工具展开改官方「输入 / 输出」两行；④ 思考展开黑带根因 = 官方 ReasoningRow 展开行 `background: bg-base` 而面板底色是 layer-1 ⇒ 面板底色改 `--dsw-alias-bg-base`（官方会话面）。typecheck + build + 冒烟 103 项全过。**待真机**：diff 形态 / 图标 / 黑带。
 - **工具展开体格式修正（2026-09-27 当日，第五/六轮）**：① DiffBlock 不再套官方 `GenericCommandCard.body`（带边框+padding 的 pre）——官方 diff 面裸放，色条通到块最左缘；② 无 diff 工具展开 = 「输入 / 输出」两行（行间分隔线，参数 JSON 缩进两格美化，12px 等宽与标签同拍对齐）；③ 思考折叠预览照官方 summary > summaryText 两层补省略号；④ **写入参数侧 diff 兜底**（tool-fs `before===null` 时 `meta.diffs=[]` ⇒ 由参数组 hunk：write 全绿新增 / edit 红绿对比，真实数据非模拟）+ diff 卡摘要 = 下划线路径 + `diffTotals`。typecheck + build + 冒烟 103 项全过。
 - **里程碑 16 收尾（2026-09-27，第七轮）**：弹窗内边距四边等距 **34px**（左右 = 16+clearance 18px；上下 = 面板 18px + scroll 16px）。本大项告一段落——已落地：keyed 流主路 + 三级收折、触发行、尾部操作行、思考行、工具行图标与 diff 面、输入/输出行、弹窗外壳（官方裸叉 + bg-base + 34px 内边距）。**清单遗留见 worklog 收尾快照**（ReadBlock/TerminalBlock/上下文注入行/错误红/重试行/fileMentions 等）；下一大项 = U10「继续对话（开分支）」按钮（先读 `sessions.fork` 源码）。
+- **U10 落码（2026-09-27，决策 38）**：弹窗头部「继续对话」按钮 → **确认框（用户要求防误点）** → `sessions.fork({sessionId, increaseTitle:true})`（官方 ISessions 契约，无 atSeq = 全量已完成对话；子会话标题递增 (1)；归档会话的 fork 子会话 = 独立会话不受闸门限制）→ 先关弹窗（release 源会话）→ **`uiWorkspace.openSession(childId)` 官方导航跳转**（dsh-client-ui-workspace Service，官方自己 retain('mainView')，我方不碰保留值）。fork 失败留在确认框内显示原因；fork 在途关弹窗则放弃跳转。inject 补 `@deepseek-ai/dsh-client-ui-workspace`；冒烟 +3 条（uiWorkspace inject / increaseTitle / forkConfirmText）**106 项全过**，typecheck + build 过（dist 163 kB）。**待真机**：确认框交互、fork 成功跳转到新分支会话（标题 `(1)`）、源会话保持归档、fork 失败提示。
 
 ---
 
@@ -59,6 +60,7 @@
 | 14 | 归档会话弹窗显示（数据链打通，决策 34 自渲染） | ✅ 数据链 | 09-26 | 决策 29（ChatView 挂载）经 T1 证实在 0.1.7-RC.2 不可行 → 决策 34 自渲染；**真机已弹出并显示对话内容**：根因 = 查看前须 `sessions.retain(id,{source})` 物化 scope（源码级定位，见决策 35），与归档无关；自渲染消息/思考/工具卡 + markdown + 官方 `--dsw-alias-*` 变量。**外观与官方差距大 → 转里程碑 15** | [design/archive-session-view.md](design/archive-session-view.md) · [worklog/session-view.md](worklog/session-view.md) |
 | 15 | 会话弹窗外观对齐官方（决策 29 路线复评） | 🔵 进行中 | 09-26~ | 决策 34 自渲染外观用户反馈「与官方完全不一样」。T1 曾判 ChatView 挂载不可行，但**该结论是在未 retain 的前提下得出的**——`retain` 现已证实存在且可用 ⇒ 按源码重评 scoped-slots 引擎装配（`useHost` / `useRootBinding` / `observableHook` / `ScopeBindingProvider` + `entriesOf` / `storeOf` / `scope('session')` + `uiSession.adapter.bindingSource` + `sessions.retain`），在自家弹窗挂官方 ChatView 本体 | [worklog/session-view.md](worklog/session-view.md) |
 | 16 | 官方 keyed 流 + 三级收折照抄 + 弹窗外壳改宿主惯例（决策 36/37） | ✅ 落码 | 09-27 | 渲染主路换 `order + nodes`（keyed ChatNodeStore）；官方 ChatNodeSeat 折叠判定 / TurnProcessNodeView 用时行 / **ChatGroupSeat 过程分组（process-groups 算法移植，二级收折）** / TurnTriggerNodeView 触发行 / TurnTailNodeView+MessageIconActions 操作行 / TurnUsagePanel+StatDialog 用量弹层逐字照抄进 `mirror/`；工具行标题接 `tool.title.*` 字典；弹窗不做续聊（Composer 占位与分支 icon 移除 → U10「开分支继续对话」）；外壳 `min(1120px,100vw-32px)`×`calc(100% - 80px)` + 裸叉关闭钮 + 标题横线 + 内间距定尺 24px。**待真机逐级比对折叠形态** | [worklog/session-view.md](worklog/session-view.md) · [design/session-view-ui-map.md](design/session-view-ui-map.md) |
+| 17 | U10「继续对话（开分支）」落码（决策 38） | 🔵 待真机 | 09-27 | 弹窗头部「继续对话」按钮 → **确认框防误点（用户要求）** → `sessions.fork({sessionId, increaseTitle:true})`（官方 ISessions 契约，无 atSeq = 全量对话，标题递增 `(1)`，归档会话 fork 子会话独立）→ 先关弹窗（release 源会话）→ `uiWorkspace.openSession(childId)` 官方导航跳转（官方自己 retain('mainView')，我方不碰保留值）；inject 补 dsh-client-ui-workspace；fork 失败留确认框显示原因。冒烟 106 项全过 | [worklog/session-view.md](worklog/session-view.md) · [design/decisions.md](design/decisions.md) |
 
 ---
 
@@ -77,14 +79,14 @@
 | U7 | ~~依赖语义边界未拍板~~ → **已定型（决策 33，2026-09-26）** | `latest_success` 改判「上游最近一条必须 `succeeded`」（失败/在跑 ⇒ 阻塞）；删 `freshness`；**不做**水位线/`consumed_upstream` 列/`consumeOnce` 开关；上游「错过」时复用旧产出**只告警不拦**（已知风险，用户接受）；必修 `getLatestSuccess` 排序改 `scheduled_at` | ✅ 已定型 → 剩落码 + 真机验证（里程碑 12），见 [worklog/dependency-semantics.md](worklog/dependency-semantics.md) |
 | U8 | **token 用量取值待真机确认**（列与写回路径已落地） | `extractTokenUsage` 已做**多位置 × 多字段名**探测：位置（`usage` / `tokenUsage` / `tokens` / `data.usage` / `detail.usage` / `message.usage`）× 字段名（`total` / `totalTokens` / `total_tokens` / `prompt+completion` / `input+output` / 下划线命名）。首个事件会打印一次「会话事件字段：…」 | 真机跑一轮看那行日志：含 `usage` ⇒ 已取到；不含 ⇒ 宿主没在事件里暴露用量，需改走「读会话消息」的路子再收紧 |
 | U9 | **依赖（前置任务）真机验证暂未做**（用户 2026-09-26 决定留口子） | 判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，构造成本高 | 待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验：放行 / 阻塞（依赖不存在 id）/ 复用告警三条 |
-| U10 | **「继续对话（开分支）」按钮**（用户 2026-09-27 拍板的后续功能，替代弹窗内续聊） | 弹窗内不做续聊：归档会话 = 留档不可改，底部对话框占位已移除；官方「分支」= 复制当前对话在新会话继续，正合需求。按钮文案待定（「继续对话」/「开分支继续对话」） | 交互：点击 → 确认框「是否需要基于此会话开一个新分支继续对话？」→ 确认后关弹窗、宿主跳转到新分支会话。依赖 `sessions.fork`（0.1.7-rc.2 存在，**落码前先读源码**：fork 的入参 / 返回的新会话 id / 跳转动词） |
+| U10 | **「继续对话（开分支）」按钮**——✅ **落码完成（2026-09-27，决策 38），待真机验证** | 弹窗头部「继续对话」按钮 → 确认框（用户要求防误点）→ `sessions.fork({sessionId, increaseTitle:true})`（官方 ISessions 契约）→ 先关弹窗（release 源会话）→ `uiWorkspace.openSession(childId)` 官方导航跳转；fork 失败留在确认框内显示原因。冒烟 106 项全过 | 真机验证四点：① 确认框交互（防误点）② fork 成功跳转到新分支会话（标题 `(1)`）③ 源会话保持归档只读 ④ fork 失败提示；通过后本行收口 |
 
 ---
 
 ## 五、下一步（接手后从这里开始）
 
 1. **【告一段落·里程碑 15/16】会话弹窗外观对齐官方**：用户 2026-09-27 拍板本大项收尾（内边距四边 34px 为最后一笔）。已落地：keyed 流主路 + 三级收折 + 触发行 + 尾部操作行 + 思考行 + 工具行图标/diff 面/输入输出 + 外壳（裸叉/bg-base/34px）。**清单遗留（新会话候选）**：`ReadBlock`/`TerminalBlock`、上下文注入行、工具卡错误红、重试行官方样式、fileMentions、用户消息操作行、👍👎——照表做：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)。
-1.5. **【U10】「继续对话（开分支）」按钮**：交互已拍板（确认框 → 关弹窗 → 跳新分支会话）；落码前先读 `sessions.fork` 源码（AGENTS.md 第 4 条）。
+1.5. **【U10】真机验证**：落码已完成（决策 38，冒烟 106 项全过），待真机四点——确认框交互 / fork 跳转成功（新会话标题 `(1)`）/ 源会话保持归档 / 失败提示；通过后收口。
 2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
 3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
 4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。

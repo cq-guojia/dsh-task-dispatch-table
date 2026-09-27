@@ -179,7 +179,14 @@ window.__ModuleLoader__.load({
 			diffCollapseAria: "收起差异",
 			diffExpandAria: "展开其余 {count} 行差异",
 			diffCollapseLabel: "收起",
-			diffExpandRest: "… 其余 {count} 行"
+			diffExpandRest: "… 其余 {count} 行",
+			continueBranch: "继续对话",
+			forkConfirmTitle: "开分支继续对话",
+			forkConfirmText: "是否需要基于此会话开一个新分支继续对话？原会话保持只读留档，新分支复制本会话内容并可继续对话。",
+			forkConfirmAccept: "开分支并跳转",
+			forkCancel: "取消",
+			forkWorking: "正在开分支…",
+			forkFailed: "开分支失败：{error}"
 		};
 		/** English copy. */
 		const en = {
@@ -344,7 +351,14 @@ window.__ModuleLoader__.load({
 			diffCollapseAria: "Collapse diff",
 			diffExpandAria: "Expand {count} more diff lines",
 			diffCollapseLabel: "Collapse",
-			diffExpandRest: "… {count} more lines"
+			diffExpandRest: "… {count} more lines",
+			continueBranch: "Continue conversation",
+			forkConfirmTitle: "Fork to continue",
+			forkConfirmText: "Start a new branch from this session to continue the conversation? The original stays read-only; the branch copies this conversation and can continue.",
+			forkConfirmAccept: "Fork & open",
+			forkCancel: "Cancel",
+			forkWorking: "Forking…",
+			forkFailed: "Fork failed: {error}"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -504,6 +518,22 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-group-content>*{flex-shrink:0;}
 .dsh-tdt-sv-group-content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px);}
 .dsh-tdt-sv-group-expanded{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible;}
+/* U10 继续对话（开分支）：头部按钮组 + 确认框（叠在会话弹窗之上，z-index 1030 > overlay 1010）。 */
+.dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
+.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 12px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),color .1s;}
+.dsh-tdt-sv-branch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-branch:disabled{opacity:.55;cursor:default;}
+.dsh-tdt-sv-confirm{position:fixed;inset:0;z-index:1030;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+.dsh-tdt-sv-confirm-card{background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(440px,calc(100vw - 48px));padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;}
+.dsh-tdt-sv-confirm-title{font-size:14px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-confirm-text{font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));margin:0;}
+.dsh-tdt-sv-confirm-err{font-size:12px;line-height:1.5;color:var(--dsw-alias-state-error-primary,#c0392b);word-break:break-all;margin:0;}
+.dsh-tdt-sv-confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
+.dsh-tdt-sv-confirm-btn{appearance:none;font:inherit;font-size:12px;line-height:20px;cursor:pointer;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 14px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),opacity .1s;}
+.dsh-tdt-sv-confirm-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-confirm-btn[data-primary='true']{background:var(--dsw-alias-brand-primary,#2f6feb);border-color:transparent;color:#fff;}
+.dsh-tdt-sv-confirm-btn[data-primary='true']:hover{filter:brightness(1.08);background:var(--dsw-alias-brand-primary,#2f6feb);}
+.dsh-tdt-sv-confirm-btn:disabled{opacity:.55;cursor:default;filter:none;}
 `;
 		let injected = false;
 		/**
@@ -2158,11 +2188,16 @@ window.__ModuleLoader__.load({
 			return rows;
 		}
 		/**
-		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊（对话框为占位）。
+		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
+		* U10「继续对话（开分支）」：头部按钮 → 确认框 → `sessions.fork`（官方 ISessions 契约，
+		* 不带 atSeq = 最新已完成 turn 前缀，increaseTitle 让子会话标题递增 (1)）→ 先关弹窗
+		* （release 源会话）→ `uiWorkspace.openSession(childId)`（官方导航服务：内部自己
+		* retain('mainView') + selection.set + selectPanel(null)，我们只调服务、不碰保留值）。
 		* @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
+		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
 		*/
 		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose } = props;
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			const subscribe = (0, react.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
@@ -2179,6 +2214,38 @@ window.__ModuleLoader__.load({
 					return next;
 				});
 			}, []);
+			const canFork = forkSession !== void 0 && openHostSession !== void 0;
+			const [confirming, setConfirming] = (0, react.useState)(false);
+			const [forking, setForking] = (0, react.useState)(false);
+			const [forkErr, setForkErr] = (0, react.useState)(null);
+			const aliveRef = (0, react.useRef)(true);
+			(0, react.useEffect)(() => () => {
+				aliveRef.current = false;
+			}, []);
+			const onForkAccept = (0, react.useCallback)(() => {
+				if (forking || forkSession === void 0 || openHostSession === void 0) return;
+				setForking(true);
+				setForkErr(null);
+				(async () => {
+					try {
+						const child = await forkSession(sessionId);
+						if (!aliveRef.current) return;
+						onClose();
+						openHostSession(child);
+					} catch (error) {
+						if (!aliveRef.current) return;
+						setForkErr(error instanceof Error ? error.message : String(error));
+					} finally {
+						setForking(false);
+					}
+				})();
+			}, [
+				forking,
+				forkSession,
+				openHostSession,
+				sessionId,
+				onClose
+			]);
 			const order = chat?.order ?? EMPTY_ORDER;
 			const store = chat?.nodes;
 			const keyed = order.length > 0 && store !== void 0;
@@ -2220,7 +2287,7 @@ window.__ModuleLoader__.load({
 					view.loadOlder();
 				}
 			}) : null, ...rendered];
-			return (0, react.createElement)("div", {
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-overlay",
 				onClick: onClose
 			}, (0, react.createElement)("div", {
@@ -2231,12 +2298,44 @@ window.__ModuleLoader__.load({
 			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${tt("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialCount === 0 ? (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-sid",
 				style: { color: "var(--dsw-alias-state-warn-primary, #b7791f)" }
-			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("button", {
+			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-headerbtns" }, canFork ? (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-branch",
+				disabled: forking,
+				title: tt("continueBranch"),
+				onClick: () => {
+					setForkErr(null);
+					setConfirming(true);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, { size: 14 }), tt("continueBranch")) : null, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-sv-close",
 				"aria-label": tt("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 }))), (0, react.createElement)(ChatViewFrame, { children: body })));
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), (0, react.createElement)(ChatViewFrame, { children: body }))), confirming ? (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-confirm",
+				onClick: () => {
+					if (!forking) setConfirming(false);
+				}
+			}, (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-confirm-card",
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-confirm-title" }, tt("forkConfirmTitle")), (0, react.createElement)("p", { className: "dsh-tdt-sv-confirm-text" }, tt("forkConfirmText")), forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-confirm-err" }, tt("forkFailed", { error: forkErr })) : null, (0, react.createElement)("div", { className: "dsh-tdt-sv-confirm-actions" }, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-confirm-btn",
+				disabled: forking,
+				onClick: () => {
+					setConfirming(false);
+				}
+			}, tt("forkCancel")), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-confirm-btn",
+				"data-primary": "true",
+				disabled: forking,
+				onClick: onForkAccept
+			}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))))) : null);
 		}
 		//#endregion
 		//#region src/client/index.ts
@@ -2593,7 +2692,7 @@ window.__ModuleLoader__.load({
 		* 订阅自动刷新，无需手动重开。整页由布局服务的 `main` 槽承载：选中侧栏条目即替换会话区。
 		*/
 		function TaskPage(props) {
-			const { t, scope, onBack, viewSession } = props;
+			const { t, scope, onBack, viewSession, forkSession, openHostSession } = props;
 			const subscribe = (0, react.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -2870,6 +2969,8 @@ window.__ModuleLoader__.load({
 				heading: viewing.heading,
 				sessionId: viewing.sessionId,
 				view: viewing.view,
+				forkSession: forkSession ?? void 0,
+				openHostSession: openHostSession ?? void 0,
 				onClose: () => {
 					const closed = viewing.sessionId;
 					const needArchive = viewing.didUnarchive === true;
@@ -3151,7 +3252,7 @@ window.__ModuleLoader__.load({
 		* @param props - t 席位、会话视图工厂、返回会话回调。
 		*/
 		function TaskPageHost(props) {
-			const { t, viewRef, onBack } = props;
+			const { t, viewRef, forkRef, openRef, onBack } = props;
 			const scope = (0, react.useSyncExternalStore)(subscribeScope, getScopeValue);
 			if (scope === null) return (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("button", {
 				type: "button",
@@ -3163,7 +3264,9 @@ window.__ModuleLoader__.load({
 				t,
 				scope,
 				onBack,
-				viewSession: viewRef()
+				viewSession: viewRef(),
+				forkSession: forkRef(),
+				openHostSession: openRef()
 			});
 		}
 		/**
@@ -3183,10 +3286,23 @@ window.__ModuleLoader__.load({
 				} catch {}
 			});
 			let viewSession = null;
+			let forkSession = null;
 			ctx.inject(["sessions", "uiConversation"], (sub) => {
 				const sessions = sub.sessions;
 				const uiConversation = sub.uiConversation;
 				if (sessions !== void 0 && uiConversation !== void 0) viewSession = (id) => openSessionView(sessions, uiConversation, id);
+				const forkFn = sessions?.fork;
+				if (typeof forkFn === "function") forkSession = (id) => forkFn.call(sessions, {
+					sessionId: id,
+					increaseTitle: true
+				});
+			});
+			let openHostSession = null;
+			ctx.inject(["uiWorkspace"], (sub) => {
+				const ws = sub.uiWorkspace;
+				if (ws !== void 0 && typeof ws.openSession === "function") openHostSession = (id) => {
+					ws.openSession(id);
+				};
 			});
 			let selectPanel = () => {};
 			ctx.inject(["layout"], (sub) => {
@@ -3251,6 +3367,8 @@ window.__ModuleLoader__.load({
 				}, (props) => (0, react.createElement)(TaskPageHost, {
 					t: props.t,
 					viewRef: () => viewSession,
+					forkRef: () => forkSession,
+					openRef: () => openHostSession,
 					onBack: () => {
 						selectPanel(null);
 					}

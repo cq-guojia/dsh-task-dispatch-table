@@ -57,6 +57,9 @@ export type LocaleKey =
   | 'toolInputLabel' | 'toolOutputLabel' | 'codeBlockLabel'
   | 'diffWrapLabel' | 'diffUnwrapLabel' | 'diffCollapseAria' | 'diffExpandAria'
   | 'diffCollapseLabel' | 'diffExpandRest'
+  // —— U10 继续对话（开分支）：弹窗头部按钮 + 确认框 ——
+  | 'continueBranch' | 'forkConfirmTitle' | 'forkConfirmText'
+  | 'forkConfirmAccept' | 'forkCancel' | 'forkWorking' | 'forkFailed'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -236,6 +239,13 @@ export const zh: Record<LocaleKey, string> = {
   diffExpandAria: '展开其余 {count} 行差异',
   diffCollapseLabel: '收起',
   diffExpandRest: '… 其余 {count} 行',
+  continueBranch: '继续对话',
+  forkConfirmTitle: '开分支继续对话',
+  forkConfirmText: '是否需要基于此会话开一个新分支继续对话？原会话保持只读留档，新分支复制本会话内容并可继续对话。',
+  forkConfirmAccept: '开分支并跳转',
+  forkCancel: '取消',
+  forkWorking: '正在开分支…',
+  forkFailed: '开分支失败：{error}',
 }
 
 /** English copy. */
@@ -403,4 +413,11 @@ export const en: Record<LocaleKey, string> = {
   diffExpandAria: 'Expand {count} more diff lines',
   diffCollapseLabel: 'Collapse',
   diffExpandRest: '… {count} more lines',
+  continueBranch: 'Continue conversation',
+  forkConfirmTitle: 'Fork to continue',
+  forkConfirmText: 'Start a new branch from this session to continue the conversation? The original stays read-only; the branch copies this conversation and can continue.',
+  forkConfirmAccept: 'Fork & open',
+  forkCancel: 'Cancel',
+  forkWorking: 'Forking…',
+  forkFailed: 'Fork failed: {error}',
 }
