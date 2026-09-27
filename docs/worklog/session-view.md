@@ -118,8 +118,8 @@
 ## 2026-09-27（第七轮·收尾）— 弹窗内边距四边等距 34px；里程碑 16 告一段落
 
 ——用户拍板：内边距上下（16px）与左右（24px）不等，**四边统一 34px**。
-**实现**：左右 = 官方 scroll 的 `16px + --dsh-composer-side-clearance` ⇒ clearance 8px→**18px**；上下 = 面板纵向 padding 16/18px → **18px**（+ scroll 16px = 34）。四个方向最终结果均为 34px。
-typecheck + build + 冒烟 103 项全过（产物抽查 `composer-side-clearance:18px` / `padding:18px 0`）。
+**实现（含一次返工）**：第一版把纵向 padding 加在面板上——但面板 padding 只会加在**标题栏外侧**，标题分割线与第一条消息之间仍是官方 scroll 固定的 16px（用户复测「上下还是 16」）。改法：面板纵向 padding 归零，纵向间距全部落在会话区——`mirror/ChatView.ChatViewFrame` 加稳定钩子类 `.dsh-tdt-sv-frame{padding:18px 0}` ⇒ 标题线下 16+18=**34**、底部 16+18=**34**；左右 = scroll `16 + clearance(18px)` = **34**；标题栏 padding 18px 34px 12px（文字与内容列左缘对齐）。官方类缺失的兜底 `.dsh-tdt-sv-body` 纵向同步改 16px。
+typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `padding:18px 34px 12px`）。
 
 **里程碑 16 收尾快照**（本大项告一段落，后续开新会话解决其他问题）：
 - 已落地：keyed 流主路 + 三级收折（用时行/过程分组/条目展开）、触发行、尾部操作行（复制/时钟/用量弹层）、思考行（官方 ReasoningRow）、工具行图标与 diff 面（DiffBlock + meta.diffs/参数兜底）、输入/输出行、弹窗外壳（1120×宿主惯例 + 官方裸叉 + bg-base + 四边 34px）。

@@ -12,9 +12,10 @@ import { ChatGroupSeatMirror } from './ChatGroupSeat'
 import { ChatNodeSeatMirror, type ChatNodeStoreFace, type NodeRenderer } from './ChatNodeSeat'
 import type { ChatEntry, ProcessGroupSnapshot } from './process-groups'
 
-/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。 */
+/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。
+ *  `dsh-tdt-sv-frame` = 本插件稳定钩子类：弹窗用它把会话区上下内边距补到 34px（官方 scroll 纵向是固定 16px）。 */
 export function ChatViewFrame(props: { children?: ReactNode }): ReturnType<typeof h> {
-  return h('div', { className: ocOr('ChatView', 'frame', 'dsh-tdt-sv-body') },
+  return h('div', { className: `${ocOr('ChatView', 'frame', 'dsh-tdt-sv-body')} dsh-tdt-sv-frame` },
     h('div', { className: ocOr('ChatView', 'root', '') },
       h('div', { className: ocOr('ChatView', 'scroll', '') },
         h('div', { className: ocOr('ChatView', 'column', 'dsh-tdt-sv-col'), 'data-chat-flow': '' }, props.children),
