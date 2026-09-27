@@ -1,4 +1,4 @@
-// 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染 + 里程碑 15「官方零件 + 自绘容器」）。
+// 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染 + 里程碑 15「照抄官方折叠关系」）。
 //
 // 数据链（全部经源码核实）：
 // 1. `sessions.binding(id)`（api-session-controller/client）：**只查已物化的 scope、从不创建**
@@ -7,31 +7,44 @@
 //    并在内部触发 manager.get(id).open() 拉历史尾页；引用用完 release()。
 // 2. `uiConversation.binding(binding)`：校验 `sessions.binding(sessionId) !== owner` 即抛
 //    `inactive session`（ui-conversation lib/client.js:3083）——retain 之后即通过。
-// 3. `.target('chat')`：快照 = ChatSnapshot，渲染走 `legacy.nodes`（官方兼容投影，
-//    按 anchorSeq 有序的 finalized ConversationNode 流），不碰 keyed 的 ChatNodeStore。
+// 3. `.target('chat')`：快照 = ChatSnapshot，**同时**带两份数据：
+//      · `order` + `nodes`（keyed ChatNodeStore）= 官方 ChatView 真正渲染的那条流，
+//        turn-trigger / turn-process / assistant-step / tool-call / turn-tail 都在这里；
+//      · `legacy.nodes` = 官方兼容投影（老 kind 名，缺 turn-trigger / turn-process）。
+//    里程碑 15 起改用 keyed 流 ⇒ 折叠关系、触发行、尾部操作行与官方同构；
+//    `legacy.nodes` 只作 order 为空时的兜底（归档会话理论上不会走到）。
 //
 // ⛔ 已证伪的两条路（勿再尝试，详见 docs/design/session-view-ui-map.md §十二）：
 //    - 弹窗内渲染官方 ChatView：`ctx.slots.renderSlot` 只接受 key='root'（运行时强制）；
 //    - `retain(source:'mainView')` 切官方视图：会锁死宿主会话导航（真机事故，已回退）。
 //
 // 渲染组织（里程碑 15）：**「官方零件 + 自绘容器」，组件按官方文件名一一对应放在 ./mirror/**
-// （ChatView / MessageItem / GenericCommandCard / ReasoningRow / TurnProcessNodeView /
-//  MessageIconActions / Composer）——官方改哪个，diff 哪个文件；样式值以
-// docs/design/session-view-ui-map.md 为准，逐项实施。
+// （ChatView / ChatNodeSeat / MessageItem / GenericCommandCard / ReasoningRow / TurnProcessNodeView /
+//  TurnTriggerNodeView / TurnTailNodeView / MessageIconActions / TurnUsagePanel / StatDialog /
+//  message-chrome / Composer）——官方改哪个，diff 哪个文件。折叠判定照抄 ChatNodeSeat，
+// 见 ./mirror/ChatNodeSeat.tsx 顶部注释与 docs/design/session-view-ui-map.md §十七。
 
-import { createElement as h, useMemo, useSyncExternalStore } from 'react'
+import { createElement as h, useCallback, useMemo, useState, useSyncExternalStore } from 'react'
+import { IconCloseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ensureArchiveSessionStyle } from './archive-session-css'
 import { ComposerPlaceholder } from './mirror/Composer'
-import { ChatFlowItem, ChatHint, ChatOlderButton, ChatViewFrame } from './mirror/ChatView'
+import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame } from './mirror/ChatView'
 import { GenericCommandCard } from './mirror/GenericCommandCard'
 import { MessageIconActionsMirror } from './mirror/MessageIconActions'
 import { AssistantMarkdown, UserMessage } from './mirror/MessageItem'
 import { ReasoningRowMirror } from './mirror/ReasoningRow'
 import { TurnProcessNodeViewMirror } from './mirror/TurnProcessNodeView'
-import { officialClass, officialModuleCount } from './official-classes'
-import type { LocaleKey } from './locales'
+import { TurnTailNodeViewMirror, hasAssistantReplyContent, type TurnTailDataFace } from './mirror/TurnTailNodeView'
+import { TurnTriggerNodeViewMirror } from './mirror/TurnTriggerNodeView'
+import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
+import { officialClass, officialModuleCount, ocOr } from './official-classes'
+import { interpolateTranslate, type Translate } from './locales'
 
-export type Translate = (key: LocaleKey) => string
+export type { Translate } from './locales'
+
+/** 稳定的空序列（避免默认值每次新建数组）。 */
+const EMPTY_ORDER: readonly string[] = []
+const EMPTY_TURN_ORDER: readonly number[] = []
 
 // ─────────────────────────── 本地结构化类型 ───────────────────────────
 
@@ -68,8 +81,18 @@ export interface SessionsFace {
 
 /** chat target 快照（官方 ChatSnapshot 的消费面子集，ui-chat contract/snapshot.ts:92-99）。 */
 interface ChatViewFace {
+  /** 渲染顺序（官方 order：immutable 的 node key 列表）。 */
+  readonly order?: readonly string[]
+  /** keyed 节点仓库（官方 ChatNodeStore：get + processSource）。 */
+  readonly nodes?: ChatNodeStoreFace
+  /** 时间线（官方 ConversationTimelineSnapshot：turnOrder / turns 供尾部行判定）。 */
+  readonly timeline?: {
+    readonly turnOrder?: readonly number[]
+  }
+  /** 官方兼容投影（老 kind 名；仅在 order 缺失时兜底）。 */
   readonly legacy?: {
     readonly nodes?: readonly ConversationNodeLike[]
+    readonly turnTimings?: ReadonlyMap<number, { startTime: number; endTime?: number }>
   }
 }
 
@@ -500,9 +523,119 @@ function contentText(blocks: readonly ContentBlockLike[] | undefined): string {
   return parts.join('\n')
 }
 
-/** 助手节点的纯文本（复制按钮用）。 */
+/** legacy assistant 节点的纯文本（复制按钮用）。 */
 function assistantText(node: ConversationNodeLike): string {
   return (node.blocks ?? []).map(block => block.kind === 'text' ? block.text : '').join('')
+}
+
+// ─────────────────── keyed 节点流（官方 ChatView 真正渲染的那条流） ───────────────────
+
+/** keyed 节点的 data（官方 ChatNodeDataMap[kind]）。 */
+function dataOf(node: ChatNodeFace): Record<string, unknown> {
+  return node.data ?? {}
+}
+
+/** 节点位置 → turn 位置（官方 node.location 收窄，ChatNodeSeat.tsx:1660 的反向）。 */
+function turnLocationOf(node: ChatNodeFace): TurnLocationFace | undefined {
+  const location = node.location
+  return location?.kind === 'turn' || location?.kind === 'step' ? location.turn : undefined
+}
+
+/** 官方 AssistantChatData.blocks（ui-chat contract/chat-nodes.d.ts:22）。 */
+function blocksOf(value: unknown): readonly AssistantBlockLike[] | undefined {
+  return Array.isArray(value) ? value as readonly AssistantBlockLike[] : undefined
+}
+
+/**
+ * 官方 ToolCallBlock（uic contract/records.d.ts:140）→ 工具卡 props。
+ * running 半截（phase: preparing/start）只有 name/argsRaw；settled（kind: tool-result）带输出与错误。
+ */
+function toolCallCard(node: ChatNodeFace, t: Translate): Parameters<typeof GenericCommandCard>[0] | null {
+  const root = dataOf(node).root as Record<string, unknown> | undefined
+  if (root === undefined || root === null) return null
+  const settled = root.kind === 'tool-result'
+  const call = settled ? root.call as Record<string, unknown> | undefined : root
+  const error = root.error as { name?: string } | undefined
+  return {
+    name: typeof call?.name === 'string' ? call.name : 'tool',
+    argsRaw: typeof call?.argsRaw === 'string' ? call.argsRaw : '',
+    output: settled ? contentText(root.content as readonly ContentBlockLike[] | undefined) : '',
+    isError: root.isError === true,
+    errorName: error?.name,
+    t,
+  }
+}
+
+/**
+ * keyed 节点 → 视图（等价于官方 slot "conversation.chat.node" 的按 kind 分发）。
+ * @param node - keyed ChatNode。
+ * @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
+ * @param t - 翻译席位（已包占位符替换）。
+ * @param lastTurn - 官方 timeline.turnOrder 末位（尾部操作行判定）。
+ * @returns 节点视图；null = 决策 28 过滤的噪音 kind。
+ */
+function renderKeyedNode(
+  node: ChatNodeFace,
+  turnProcess: TurnProcessHandle | undefined,
+  t: Translate,
+  lastTurn: number | undefined,
+): ReturnType<typeof h> | null {
+  switch (node.kind) {
+    case 'turn-trigger':
+      return h(TurnTriggerNodeViewMirror, { data: node.data, t })
+    case 'turn-process':
+      return turnProcess === undefined ? null : h(TurnProcessNodeViewMirror, {
+        turn: turnLocationOf(node),
+        turnProcess,
+        t,
+      })
+    case 'turn-tail': {
+      const data = node.data as unknown as TurnTailDataFace | undefined
+      if (data === undefined || data.closing === null || data.closing === undefined) return null
+      return h(TurnTailNodeViewMirror, {
+        data,
+        endsWithResponse: data.turn === lastTurn && hasAssistantReplyContent(data.closing.blocks),
+        t,
+      })
+    }
+    case 'assistant-step': {
+      const parts = assistantBlocks(blocksOf(dataOf(node).blocks), t)
+      return parts.length === 0 ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, parts)
+    }
+    case 'tool-call': {
+      const card = toolCallCard(node, t)
+      return card === null ? null : h(GenericCommandCard, card)
+    }
+    case 'user':
+    case 'steering': {
+      const text = contentText(dataOf(node).content as readonly ContentBlockLike[] | undefined)
+      if (text === '') return null
+      return h(UserMessage, { text })
+    }
+    case 'turn-error':
+      return h('div', { className: 'dsh-tdt-sv-notice-err' },
+        `${t('sessionTurnError')}${typeof dataOf(node).message === 'string' && dataOf(node).message !== '' ? `：${String(dataOf(node).message)}` : ''}`,
+      )
+    case 'turn-max-tokens':
+      return h('div', { className: 'dsh-tdt-sv-notice' }, t('sessionMaxTokens'))
+    case 'model-retry':
+      return h('div', { className: 'dsh-tdt-sv-notice' },
+        `${t('sessionRetry')}（${typeof dataOf(node).retryState === 'string' ? String(dataOf(node).retryState) : 'scheduled'}）`,
+      )
+    // 决策 28：context（系统注入）/ compaction / unknown 仍默认过滤；
+    // ⚠ ui-map §十一-B：官方 ContextInjectionRow / SystemPromptRow 待实施——届时从这里放行。
+    case 'context':
+    case 'compaction':
+    case 'manual-compaction':
+    case 'unknown':
+      return null
+    default:
+      // 决策 28：不认识的 kind 一律 fallback（折叠原文），升级不白屏。
+      return h('details', { className: 'dsh-tdt-sv-tool' },
+        h('summary', { className: 'dsh-tdt-sv-notice' }, `${t('sessionUnknownKind')} ${node.kind}`),
+        h('pre', null, safeJson(node.data)),
+      )
+  }
 }
 
 /** assistant 内容块 → 子元素数组（text 官方 Markdown、reasoning 官方折叠、tool-call 工具卡）。 */
@@ -536,8 +669,11 @@ function assistantBlocks(blocks: readonly AssistantBlockLike[] | undefined, t: T
   return parts
 }
 
-/** 单个节点的自绘渲染；返回 null = 按决策 28 过滤的噪音 kind。 */
-function renderNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof h> | null {
+/**
+ * legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
+ * 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
+ */
+function renderLegacyNode(node: ConversationNodeLike, t: Translate): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'user':
     case 'steering': {
@@ -619,6 +755,34 @@ function groupNodes(list: readonly ConversationNodeLike[]): RenderItem[] {
   return out
 }
 
+/** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
+function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate): ReturnType<typeof h>[] {
+  const items = groupNodes(nodes)
+  const rows: ReturnType<typeof h>[] = []
+  items.forEach((entry, index) => {
+    const parts: ReturnType<typeof h>[] = []
+    if (entry.kind === 'process') {
+      // legacy 兜底没有 turn 位置 ⇒ 拿不到官方「用时 N 秒」行，退回计数行。
+      parts.push(h('div', { key: 'lead', className: 'dsh-tdt-sv-notice' }, `${t('sessionProcess')} · ${entry.nodes.length}`))
+      entry.nodes.forEach((node, i) => {
+        const rendered = renderLegacyNode(node, t)
+        if (rendered !== null) parts.push(h('div', { key: `p${i}` }, rendered))
+      })
+    } else {
+      const inner = renderLegacyNode(entry.node, t)
+      if (inner !== null) parts.push(inner)
+      if (entry.node.kind === 'assistant') {
+        const next = items[index + 1]
+        const isTurnEnd = next === undefined || !(next.kind === 'node' && next.node.kind === 'assistant')
+        if (isTurnEnd) parts.push(h(MessageIconActionsMirror, { key: 'act', text: assistantText(entry.node), clock: 'end', t }))
+      }
+    }
+    if (parts.length === 0) return
+    rows.push(h('div', { key: `lg${index}`, className: ocOr('ChatView', 'flowItem', 'dsh-tdt-sv-flowitem') }, parts))
+  })
+  return rows
+}
+
 /**
  * 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊（对话框为占位）。
  * @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
@@ -632,10 +796,9 @@ export function SessionViewModal(props: {
   onClose: () => void
 }): ReturnType<typeof h> {
   const { t, heading, sessionId, view, onClose } = props
-  const subscribe = useMemo(() => (onChange: () => void): (() => void) => {
-    const unsub = view.target.subscribe(onChange)
-    return unsub
-  }, [view])
+  // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
+  const tt = useMemo(() => interpolateTranslate(t), [t])
+  const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
   const getSnapshot = useMemo(() => (): ChatViewFace | undefined => view.target.getSnapshot(), [view])
   const chat = useSyncExternalStore(subscribe, getSnapshot)
 
@@ -644,39 +807,45 @@ export function SessionViewModal(props: {
   const sessionGet = useMemo(() => (): SessionSnapshotFace => view.session.getSnapshot(), [view])
   const sessionSnap = useSyncExternalStore(sessionSub, sessionGet)
 
-  const nodes = chat?.legacy?.nodes ?? []
-  // 官方把每个 turn 的工具调用折进「过程」组（默认收起），页面才不会变成一列流水账。
-  const items = groupNodes(nodes)
-  const rendered = items.map((entry, index): ReturnType<typeof h> | null => {
-    let inner: ReturnType<typeof h> | null
-    if (entry.kind === 'process') {
-      inner = h(TurnProcessNodeViewMirror, {
-        key: `g${index}`,
-        count: entry.nodes.length,
-        t,
-        children: entry.nodes.map((node, i) => h(ChatFlowItem, { key: `p${i}` }, renderNode(node, t))),
+  // 折叠状态：turn → 已展开的 answerStep（官方 store 的 storedTurnProcessEntry，同语义）。
+  const [openTurns, setOpenTurns] = useState<ReadonlyMap<number, number>>(() => new Map<number, number>())
+  const onSetOpen = useCallback((turn: number, answerStep: number, open: boolean): void => {
+    setOpenTurns((prev) => {
+      const next = new Map(prev)
+      if (open) next.set(turn, answerStep)
+      else next.delete(turn)
+      return next
+    })
+  }, [])
+
+  const order = chat?.order ?? EMPTY_ORDER
+  const store = chat?.nodes
+  const keyed = order.length > 0 && store !== undefined
+  const turnOrder = chat?.timeline?.turnOrder ?? EMPTY_TURN_ORDER
+  const lastTurn = turnOrder.length === 0 ? undefined : turnOrder[turnOrder.length - 1]
+  const renderNode = useCallback<NodeRenderer>(
+    (node, turnProcess) => renderKeyedNode(node, turnProcess, tt, lastTurn),
+    [tt, lastTurn],
+  )
+
+  // ChatNodeList 直接调用（无 hook 的纯函数）：它产出的是「flowItem 数组」，不是单个元素。
+  const rows: Array<ReturnType<typeof h> | null> = keyed
+    ? ChatNodeListMirror({
+        order,
+        store,
+        openState: openTurns,
+        onSetOpen,
+        // 官方 usePresentation(policy => policy.foldCompletedTurns)：只读历史视图按「折叠已完成轮次」处理。
+        foldCompleted: true,
+        renderNode,
       })
-    } else {
-      inner = renderNode(entry.node, t)
-    }
-    if (inner === null) return null
-    const parts: ReturnType<typeof h>[] = [inner]
-    // 操作行（复制）：官方挂在 turn 尾；我们以「assistant 节点之后不再是 assistant」近似 turn 边界。
-    if (entry.kind === 'node' && entry.node.kind === 'assistant') {
-      const next = items[index + 1]
-      const isTurnEnd = next === undefined || !(next.kind === 'node' && next.node.kind === 'assistant')
-      if (isTurnEnd) {
-        const actions = h(MessageIconActionsMirror, { key: `act${index}`, text: assistantText(entry.node) })
-        if (actions !== null) parts.push(actions)
-      }
-    }
-    return h(ChatFlowItem, { key: `flow${index}` }, parts)
-  }).filter((item): item is NonNullable<ReturnType<typeof h>> => item !== null)
+    : renderLegacyRows(chat?.legacy?.nodes ?? [], tt)
+  const rendered = rows.filter((row): row is NonNullable<ReturnType<typeof h>> => row !== null && row !== undefined)
 
   const officialCount = officialModuleCount()
   if (!officialWarned) {
     officialWarned = true
-    console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass('ChatView', 'frame')} cardRoot=${officialClass('GenericCommandCard', 'root')} bubble=${officialClass('MessageItem', 'bubble')} reasoningRoot=${officialClass('ReasoningRow', 'root')}`)
+    console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass('ChatView', 'frame')} flowItem=${officialClass('ChatView', 'flowItem')} trigger=${officialClass('TurnTriggerNodeView', 'root')} turnProcess=${officialClass('TurnProcessNodeView', 'root')} tail=${officialClass('TurnTailNodeView', 'root')}`)
     if (officialCount === 0) {
       console.warn('[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）')
     }
@@ -685,13 +854,13 @@ export function SessionViewModal(props: {
   const showLoadOlder = sessionSnap?.hasMore !== false
   const body = rendered.length === 0
     ? h(ChatHint, {
-        text: openState === 'error' ? t('sessionLoadFailed')
-          : openState === 'loading' || openState === 'cold' ? t('sessionLoading')
-          : t('sessionEmpty'),
+        text: openState === 'error' ? tt('sessionLoadFailed')
+          : openState === 'loading' || openState === 'cold' ? tt('sessionLoading')
+          : tt('sessionEmpty'),
       })
     : [
         showLoadOlder
-          ? h(ChatOlderButton, { key: 'older', label: t('sessionLoadOlder'), onClick: () => { view.loadOlder() } })
+          ? h(ChatOlderButton, { key: 'older', label: tt('sessionLoadOlder'), onClick: () => { view.loadOlder() } })
           : null,
         ...rendered,
       ]
@@ -701,40 +870,28 @@ export function SessionViewModal(props: {
     h('div', { className: 'dsh-tdt-sv-panel', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
       h('div', { className: 'dsh-tdt-sv-header' },
         h('div', { className: 'dsh-tdt-sv-heading' },
-          h('div', { className: 'dsh-tdt-sv-title' }, `${t('sessionViewerTitle')} · ${heading}`),
+          h('div', { className: 'dsh-tdt-sv-title' }, `${tt('sessionViewerTitle')} · ${heading}`),
           h('div', { className: 'dsh-tdt-sv-sid' }, sessionId),
           // 可见探针：官方样式未命中时直接显示（省得翻控制台）。命中则不显示。
-          officialModuleCount() === 0
+          officialCount === 0
             ? h('div', {
                 className: 'dsh-tdt-sv-sid',
                 style: { color: 'var(--dsw-alias-state-warn-primary, #b7791f)' },
               }, '⚠ 官方样式未命中（当前为自绘回退）')
             : null,
         ),
-        h('div', { className: 'dsh-tdt-sv-actions' },
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-btn dsh-tdt-sv-btn-icon',
-            'aria-label': t('debugClose'),
-            onClick: onClose,
-          }, CloseIcon()),
-        ),
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-close',
+          'aria-label': tt('debugClose'),
+          onClick: onClose,
+        }, h(IconCloseOutlineRegular, { size: 16 })),
       ),
       // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
       h(ChatViewFrame, { children: body }),
       // 对话框占位（续聊未开放）：布局与官方输入区同位，禁用输入。
-      h(ComposerPlaceholder, { placeholder: t('sessionComposerPlaceholder') }),
+      h(ComposerPlaceholder, { placeholder: tt('sessionComposerPlaceholder') }),
     ),
-  )
-}
-
-/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
-function CloseIcon(): ReturnType<typeof h> {
-  return h('svg', {
-    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    strokeWidth: 2, strokeLinecap: 'round',
-  },
-    h('path', { d: 'M6 6l12 12M18 6L6 18' }),
   )
 }
 

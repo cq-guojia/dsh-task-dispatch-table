@@ -244,24 +244,27 @@ for (let i=0;i<lines.length;i++){
 
 | 区块 | 状态 | 说明 |
 |---|---|---|
-| 一、页面骨架 | ✅ | frame/root/scroll/column/flowItem/hint 全用官方类 |
+| 一、页面骨架 | ✅ | frame/root/scroll/column/flowItem/hint 全用官方类（mirror/ChatView + ChatNodeSeat 写 flowItem 属性） |
 | 二、用户消息 | ✅ | userRow/userStack/bubble（右对齐气泡） |
 | 三、助手正文 | ✅ | 官方 `MarkdownText` + `AssistantMarkdown.root` |
 | 三-B、markdown 内容元素（代码块卡片/语法高亮/表格/行内 code/列表/emoji 标题） | ✅ | 随官方 `MarkdownText` 自带——primitives 自带 32 个 CSS module（CodeCard 等）由它自行注入，组件即样式 |
-| 四、工具卡 | ✅ | 官方 `DisclosureRow` + `GenericCommandCard` 类 + 人话摘要 + 默认折叠 |
+| 四、工具卡 | ✅ | 官方 `DisclosureRow` + `GenericCommandCard` 类 + 人话摘要 + 默认折叠；keyed 流直接消费 `tool-call` 节点的 `data.root`（ToolCallBlock） |
 | 五、思考 | 🟡 | `ReasoningRow` 类已挂，但仍是 `<details>`（无固定行高 / data-expanded / running 扫光） |
-| 六、turn 元信息（用时） | ❌ | **缺数据**：turn 起止时间（需从事件流推导，legacy.nodes 没有） |
-| 七、过程组 | ✅ | 连续工具调用 → 「过程 · N」折叠组（`ChatGroupSeat` 类） |
-| 八、过程行分隔线 | ✅ | mirror/TurnProcessNodeView：官方类（root/label/chevron）+ `data-open` 箭头旋转 + `.5px` 下边框 + `:not([data-open]) margin-bottom:8px` |
-| 弹窗固定尺寸 + 对话框占位 | ✅ | panel `width:min(1180px,94vw); height:92vh`（不随内容收缩）；底部 `ComposerPlaceholder`（禁用输入，注明只读） |
-| 九、用量小标 | ❌ | **缺数据**：usage |
-| 六、操作行（复制/分支/👍👎/用时） | 🟡 | **复制按钮已做**（官方 IconCopy→IconCheck 1s + `data-actions-reveal="always"`，挂在 assistant 回合尾）；分支/👍👎 未做；用时缺 turn 起止时间 |
-| 六-B、过程条目 | ❌/🟡 | 重试行展开详情 ❌、工具组行（已写入文件）❌、错误摘要红色 🟡、`+N -N` 差异统计 ❌（来源待核）、思考行 ✅（ReasoningRow 结构：data-expanded + 折叠固定行高） |
+| 六、turn 元信息（用时） | ✅（keyed） | **换 keyed 流后 turn 位置自带起止时间**（`node.location.turn.start/end`）⇒ 「用时 34 秒」/「深度求索中，用时…」/「已停止」逐字对齐官方（mirror/message-chrome.ts） |
+| 七、过程折叠 | ✅（重写） | **官方 ChatNodeSeat 折叠判定整套照抄**（TURN_PROCESS_INDEPENDENT_KINDS / turnProcessAlwaysOpen / processWindowReady / processMember / processAnswer / ownsDisclosure / foldable / controllerInactive / compactAnswer / processHidden），见 mirror/ChatNodeSeat.tsx 顶部注释；legacy「过程 · N」组仅作 order 缺失时的兜底 |
+| 八、过程行分隔线 | ✅ | mirror/TurnProcessNodeView：官方类（root/label/chevron）+ `data-open` 箭头旋转 + `.5px` 下边框 + `:not([data-open]) margin-bottom:8px` + `:disabled` |
+| 触发行（turn-trigger） | ✅（新） | mirror/TurnTriggerNodeView：官方 root/header/icon/title/time/chevron + kind→图标映射（`turnTriggerDetails`），点开展开注入原文 |
+| 尾部操作行（turn-tail） | ✅（新） | mirror/TurnTailNodeView + MessageIconActions：复制（Tooltip + 1s 复位 + `writeClipboard`）/ 分支（只读态 `data-unavailable`）/ `data-actions-reveal`（最后一轮 always、历史轮 hover）/ 结束时钟（官方 `clock.md` 文案） |
+| 用量小标 | ✅（新） | mirror/TurnUsagePanel + StatDialog：`用量 91.5K tok` pill + 明细弹层（本轮用量/提供方·模型/缓存命中/未缓存输入/缓存读取/缓存写入/输出（其中推理 N））；定位复用 primitives `useAnchoredPosition` |
+| 弹窗尺寸 + 布局 | ✅（改） | panel `width:min(1120px,100vw-32px)`、`height:calc(100% - 80px)`、radius 12px（照宿主「左下角弹窗」卡片）；内容列 = 官方上限 920px；会话区左右边距 = 官方 `16px + --dsh-composer-side-clearance(16px)`；关闭钮 = 官方 `IconCloseOutlineRegular` 16px 裸图标 |
+| 对话框占位 | ✅ | 底部 `ComposerPlaceholder`（禁用输入，注明只读） |
+| 操作行 👍👎 | ❌ | 官方走 slots（feedback 插件），弹窗无该插槽 |
+| 六-B、过程条目 | 🟡 | 重试行展开详情 ❌、工具组行（已写入文件）❌、错误摘要红色 🟡、`+N -N` 差异统计 ❌（来源待核）、思考行 ✅ |
 | 文件 mention | ❌ | 正文行内文件下划线 = `MarkdownText` 的 `fileMentions`；用户气泡 chips = `projectUserText`——两者都只需传入解析器即可 |
-| 十一-B、系统提示词行 / 上下文注入行 | ❌ | 结构已核实（DisclosureRow + ContextInjectionRow + OpaqueBody）；数据在 chat 节点 kind=`system-prompt` / context 注入节点里 |
+| 十一-B、系统提示词行 / 上下注入行 | ❌ | 结构已核实（DisclosureRow + ContextInjectionRow + OpaqueBody）；keyed kind=`system-prompt` / `context` 目前仍按决策 28 过滤 |
 | 表格（含宽表 hover 横滚） | ✅ | `MarkdownText` 自带（`.tableScroll` + `.md-table-wide` hover 才出滚动条） |
 | 十一、导航/上下文/其他 | ❌ | 未实现 |
-| 图标 | ✅ | 官方 `IconCodeOutlineRegular`（不再用 `⚙` 字符） |
+| 图标 | ✅ | 官方 primitives 图标（IconCode / IconClose / IconCopy / IconCheck / IconBranch / IconDatabase / 触发行家族） |
 
 ---
 
@@ -271,36 +274,37 @@ for (let i=0;i<lines.length;i++){
 2. ✅ 用户气泡：userRow/userStack/bubble
 3. ✅ 正文：官方 MarkdownText
 4. ✅ 工具行：官方 DisclosureRow + 人话摘要 + 默认折叠
-5. ✅ 过程组：连续工具调用 → 「过程 · N」
+5. ✅ ~~过程组：连续工具调用 → 「过程 · N」~~ → **被 27 取代（keyed 折叠）**
 6. ✅ 工具卡补 `separator`（2×2px 分隔点，`margin:0 8px`）——mirror/GenericCommandCard collapsedContent
 7. ✅ 「过程」行官方样式（`TurnProcessNodeView.root`：高 33px + `.5px` 下边框 + `padding:0 0 8px` + `:not([data-open]){margin-bottom:8px}`）——mirror/TurnProcessNodeView
 8. ✅ 思考块改 `ReasoningRow` 结构（`data-expanded` + 折叠固定行高 24px，去掉 `<details>`）——mirror/ReasoningRow
-9. ⬜ 工具卡 `data-state` 补 `running` 变体（对齐官方 data 属性语义；无 running 数据，暂缓）
+9. ⬜ 工具卡 `data-state` 补 `running` 变体（对齐官方 data 属性语义；keyed `tool-call` 的 `phase: preparing/start` 已具备数据，待接）
 10. ✅ 「加载更早」按钮对齐 `older` 样式（4px 12px / 12px 字号 / radius-sm）——mirror/ChatView.ChatOlderButton（移入列首，官方位置）
 11. 🟡 错误提示：文案走官方 `hint` 类；官方另有 `openError`（错误色）未单独区分
-26. ✅ 弹窗固定尺寸（`min(1180px,94vw)` × `92vh`）+ 底部对话框占位（禁用输入）
-12. ⬜ 用户消息的 turn 元信息行（`MessageIconActions`）——**前置**：先从事件流推导 turn 起止时间
+26. ✅ ~~弹窗固定尺寸（`min(1180px,94vw)` × `92vh`）~~ → **改 28：`min(1120px,100vw-32px)` × `calc(100% - 80px)`（宿主弹窗惯例）+ 底部对话框占位（禁用输入）**
+12. ✅ **数据源换轨 keyed 流（决策 36）**：`order + nodes`（ChatNodeStore）取代 `legacy.nodes` 成为渲染主路；legacy 仅兜底——turn 位置（起止时间）/ 过程行 / 触发行 / 尾部行全部由此获得
+27. ✅ **官方折叠关系整套照抄**（mirror/ChatNodeSeat：TURN_PROCESS_INDEPENDENT_KINDS / turnProcessAlwaysOpen / processWindowReady / processMember / processAnswer / ownsDisclosure / foldable / controllerInactive / compactAnswer / processHidden + flowItem `hidden`）
+28. ✅ 触发行（mirror/TurnTriggerNodeView：kind→图标/标题 + 注入原文展开）
+29. ✅ 尾部操作行（mirror/TurnTailNodeView + MessageIconActions：复制 / 分支只读态 / `data-actions-reveal` / 结束时钟）
+30. ✅ 用量小标（mirror/TurnUsagePanel + StatDialog：pill + 明细弹层，`formatTokens`/`formatCacheHitPercent` 逐字照抄）
+31. ✅ 弹窗外壳改宿主弹窗惯例尺寸 + 会话区左右边距 = 官方 `scroll` 的 `16px + --dsh-composer-side-clearance`；关闭钮 = 官方 `IconCloseOutlineRegular` 裸图标
 13. ⬜ `TerminalBlock` / `ReadBlock` / `DiffBlock`（按工具名映射，需接 labels）——让 bash/read/write 的**展开内容**也用官方块
-14. ⬜ 用量小标（TurnUsagePanel/StatsPills）——**前置**：usage 数据
 15. ⬜ 「到底部」悬浮钮（toBottom/toBottomSlot）
-16. ⬜ 上下文注入行（ContextBody/ContextInjectionRow）——看归档会话里有没有这类节点再定
+16. ⬜ 上下文注入行（ContextBody/ContextInjectionRow）——keyed kind=`context` / `system-prompt` 目前仍过滤（决策 28），放行即接
 17. ⬜ 工具卡补 `summary[data-error]` 红色变体（错误行摘要变红，对齐官方）
-18. ⬜ 思考块改 `ReasoningRow` 结构（`data-expanded` + 折叠固定行高 24px，去掉 `<details>`）
-19. ⬜ 重试行（已重试模型请求 (n/m) · 延迟/原因）——`MessageItem.retryRow` 组，数据在 model-retry 节点里
+19. ⬜ 重试行（已重试模型请求 (n/m) · 延迟/原因）——keyed kind=`model-retry` 已渲染为 notice，未做官方行样式
 20. ⬜ 正文 `fileMentions`（行内文件下划线）+ 用户气泡 `projectUserText`（mention chips）
-21. ⬜ `TerminalBlock` / `ReadBlock` / `DiffBlock`（按工具名映射，接一次 labels）——展开内容用官方块
-22. ⬜ `ChatGroupSeat` 图标↔箭头 hover 互换 + fade 渐隐
-23. ⬜ 操作行（复制按钮：IconCopy→IconCheck 1s + Tooltip；分支：forkAt 语义另有评估）——**前置：turn 起止时间**
-24. ⬜ 用时 N 秒 + TurnProcessNodeView 分隔条样式——**前置：turn 起止时间**（服务端读事件流推导）
-25. ⬜ 用量小标——**前置：usage 数据**
+22. ⬜ `ChatGroupSeat`（grouped('chat') 分组项）——当前走官方 order 兜底路径，分组视图未实现
+23. ⬜ 用户消息的操作行（`MessageIconActions` clock='start'）——keyed user 节点已具备 time，待接
+32. ⬜ 👍👎（官方走 feedback 插槽，弹窗无插槽；如必须显示需自绘并接宿主反馈服务）
 
 ## 十五、数据缺口（决定哪些永远做不了 / 要换数据源）
 
 | 想做 | 缺什么 | 出路 |
 |---|---|---|
-| 用时 N 秒 | turn 起止时间 | 从会话事件流按 turn 边界推导（参考 dsh-better-sidebar 的服务端读法：`ctx.get('sessionPersistence').open(id,'read')` → `handle.read()`） |
-| 用量小标 | usage | 同上（事件里有 usage 的会话才有） |
-| 复制/分支按钮 | 分支 = `sessions.fork`（0.1.7-rc.2 存在）；复制 = 纯前端可做 | 复制随时可做；分支需评估 |
+| ~~用时 N 秒~~ | ~~turn 起止时间~~ | ✅ 已解：keyed 流 `node.location.turn.start/end` 自带（决策 36） |
+| ~~用量小标~~ | ~~usage~~ | ✅ 已解：keyed `turn-tail` 节点 `data.tokenUsage` 自带 |
+| 复制/分支按钮 | 分支 = `sessions.fork`（0.1.7-rc.2 存在）；复制 = 纯前端已做 | 复制已做；分支在只读弹窗里暂以官方 `data-unavailable` 态呈现 |
 
 ---
 

@@ -52,4 +52,48 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconChevronDownOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconCopyOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconCheckOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconCloseOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconBranchOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconDatabaseOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconContextInjectionOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconGoalOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconPaperPlaneOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconAgentPresetOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconGlobeOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconAlarmClockOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconQueueOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconCordisPluginOutlineRegular: ComponentType<{ size?: number; className?: string }>
+
+  /** 官方气泡提示：label + side；children 为唯一锚点元素，ref/事件会被接管。 */
+  export const Tooltip: ComponentType<{
+    label: string
+    side?: 'right' | 'bottom' | 'top'
+    align?: 'start' | 'end' | 'center'
+    gap?: number
+    maxWidth?: number
+    disabled?: boolean
+    children?: ReactNode
+  }>
+
+  /** 官方剪贴板写入：返回是否成功。 */
+  export function writeClipboard(text: string): Promise<boolean>
+
+  /** 官方「固定定位浮层贴住锚点」：滚动 / 尺寸变化时自动重算并夹在视口内。 */
+  export function useAnchoredPosition(options: {
+    open: boolean
+    anchorRef: { current: HTMLElement | null }
+    panelRef: { current: HTMLElement | null }
+    side?: 'top' | 'bottom'
+    align?: 'start' | 'end'
+    gap: number
+    margin: number
+  }): import('react').CSSProperties | undefined
+
+  /** 官方「点外关闭」：锚点与面板之外按下指针时关闭。 */
+  export function useDismissOnOutsidePointer(
+    rootRef: { current: HTMLElement | null },
+    open: boolean,
+    setOpen: (open: boolean) => void,
+    panelRef?: { current: HTMLElement | null },
+  ): void
 }

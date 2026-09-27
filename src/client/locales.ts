@@ -29,6 +29,33 @@ export type LocaleKey =
   | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind' | 'sessionReasoning'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
   | 'sessionProcess' | 'sessionComposerPlaceholder'
+  // —— 官方会话渲染文案（逐字抄自 ui-chat 中文词典，键名去掉 message. 前缀）——
+  | 'triggerRequest' | 'triggerGoal' | 'triggerAgent' | 'triggerTeam' | 'triggerSubagent'
+  | 'triggerGithub' | 'triggerWebhook' | 'triggerSchedule' | 'triggerJob' | 'triggerPlugin'
+  | 'triggerExplanation'
+  | 'turnProcessTook' | 'turnProcessDeepDiving' | 'turnProcessWorked' | 'turnProcessFailed'
+  | 'turnStopped' | 'chatDeepDiving'
+  | 'durationSeconds' | 'durationMinutes' | 'durationHours'
+  | 'clockDate' | 'clockDateYear'
+  | 'copyLabel' | 'copiedLabel' | 'branchLabel' | 'branchUnavailableLabel'
+  | 'turnUsageTitle' | 'turnUsageModel' | 'turnUsageCacheHit' | 'turnUsageInput'
+  | 'turnUsageCacheRead' | 'turnUsageCacheWrite' | 'turnUsageOutput' | 'turnUsageReasoning'
+  | 'turnUsageConsumed' | 'turnUsageCount'
+  | 'numberThousand' | 'numberMillion' | 'numberGroupSeparator'
+
+/**
+ * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
+ */
+export type Translate = (key: LocaleKey, params?: Record<string, string | number>) => string
+
+/** 把宿主给的无参 t 包成带占位符替换的 t（官方模板一律 `{name}`）。 */
+export function interpolateTranslate(base: (key: LocaleKey, params?: Record<string, string | number>) => string): Translate {
+  return (key, params) => {
+    const raw = base(key)
+    if (params === undefined) return raw
+    return raw.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match))
+  }
+}
 
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
@@ -118,6 +145,46 @@ export const zh: Record<LocaleKey, string> = {
   sessionLoadOlder: '加载更早记录',
   sessionProcess: '过程',
   sessionComposerPlaceholder: '已归档会话为只读（续聊功能未开放）',
+  // 以下文案与官方 ui-chat 中文词典逐字一致（便于和官方界面对齐比对）
+  triggerRequest: '收到执行请求',
+  triggerGoal: '继续执行目标',
+  triggerAgent: '收到任务消息',
+  triggerTeam: '收到团队消息',
+  triggerSubagent: '子任务状态更新',
+  triggerGithub: '收到 GitHub 事件',
+  triggerWebhook: '收到外部事件',
+  triggerSchedule: '定时任务',
+  triggerJob: '后台任务状态更新',
+  triggerPlugin: '插件状态更新',
+  triggerExplanation: '这条通知触发了本轮回复。',
+  turnProcessTook: '用时 {duration}',
+  turnProcessDeepDiving: '深度求索中，用时{duration}',
+  turnProcessWorked: '已完成工作',
+  turnProcessFailed: '处理失败',
+  turnStopped: '已停止',
+  chatDeepDiving: '深度求索中',
+  durationSeconds: '{seconds}秒',
+  durationMinutes: '{minutes}分{seconds}秒',
+  durationHours: '{hours}小时{minutes}分{seconds}秒',
+  clockDate: '{m}月{d}日',
+  clockDateYear: '{y}年{m}月{d}日',
+  copyLabel: '复制',
+  copiedLabel: '已复制',
+  branchLabel: '在新对话中分支',
+  branchUnavailableLabel: '只读会话记录不可分支',
+  turnUsageTitle: '本轮用量',
+  turnUsageModel: '提供方 / 模型',
+  turnUsageCacheHit: '缓存命中',
+  turnUsageInput: '未缓存输入',
+  turnUsageCacheRead: '缓存读取',
+  turnUsageCacheWrite: '缓存写入',
+  turnUsageOutput: '输出',
+  turnUsageReasoning: '（其中推理 {tokens}）',
+  turnUsageConsumed: '用量 {total}',
+  turnUsageCount: '{count} tok',
+  numberThousand: '{value}K',
+  numberMillion: '{value}M',
+  numberGroupSeparator: ',',
 }
 
 /** English copy. */
@@ -208,4 +275,44 @@ export const en: Record<LocaleKey, string> = {
   sessionLoadOlder: 'Load earlier messages',
   sessionProcess: 'Process',
   sessionComposerPlaceholder: 'Archived sessions are read-only (follow-up chat not available yet)',
+  // Copy mirrors the official ui-chat English dictionary so screenshots line up.
+  triggerRequest: 'Execution request received',
+  triggerGoal: 'Continuing the goal',
+  triggerAgent: 'Task message received',
+  triggerTeam: 'Team message received',
+  triggerSubagent: 'Subagent status update',
+  triggerGithub: 'GitHub event received',
+  triggerWebhook: 'External event received',
+  triggerSchedule: 'Scheduled task',
+  triggerJob: 'Background task status update',
+  triggerPlugin: 'Plugin status update',
+  triggerExplanation: 'This notification triggered the reply below.',
+  turnProcessTook: 'Took {duration}',
+  turnProcessDeepDiving: 'Thinking, {duration}',
+  turnProcessWorked: 'Work completed',
+  turnProcessFailed: 'Failed',
+  turnStopped: 'Stopped',
+  chatDeepDiving: 'Thinking',
+  durationSeconds: '{seconds}s',
+  durationMinutes: '{minutes}m {seconds}s',
+  durationHours: '{hours}h {minutes}m {seconds}s',
+  clockDate: '{m}/{d}',
+  clockDateYear: '{y}/{m}/{d}',
+  copyLabel: 'Copy',
+  copiedLabel: 'Copied',
+  branchLabel: 'Branch into a new conversation',
+  branchUnavailableLabel: 'A read-only transcript cannot be branched',
+  turnUsageTitle: 'Turn usage',
+  turnUsageModel: 'Provider / model',
+  turnUsageCacheHit: 'Cache hit',
+  turnUsageInput: 'Uncached input',
+  turnUsageCacheRead: 'Cached input',
+  turnUsageCacheWrite: 'Cache write',
+  turnUsageOutput: 'Output',
+  turnUsageReasoning: ' ({tokens} reasoning)',
+  turnUsageConsumed: 'Usage {total}',
+  turnUsageCount: '{count} tok',
+  numberThousand: '{value}K',
+  numberMillion: '{value}M',
+  numberGroupSeparator: ',',
 }

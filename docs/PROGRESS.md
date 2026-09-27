@@ -31,6 +31,7 @@
 - **里程碑 11 完成（含真机验证）**：调度循环重设计（决策 31）+ 独立 `task_log` 表与执行记录冗余字段（决策 32）——懒建行 / 不回看 / 不补跑 / skipped 只进日志；**真机 `cron-5min-探针2` 连续两轮 `succeeded`（01:35 / 01:40），无 skipped 洪水、每 5 分钟恰好一行**；构建 + typecheck + 冒烟 76 项全过。
 - **里程碑 13 完成（2026-09-26）**：token 字段由单个 `tokens` 总数**拆为三列** `token_in` / `token_out` / `token_in_cache`（决策 32 修订）——`extractTokenUsage` 改返回结构化分量（含 `cachedTokens` / OpenAI 风格 `prompt_tokens_details.cached_tokens` 探测），按实例跨重试累计后写回；只认结构化分量、事件仅给总数或不含 usage 则三列留 `null`、不阻塞链路。构建 + 冒烟 93 项全过，已 push（`adbd2e7`）。**U8 仍需真机确认宿主事件是否带结构化 `usage`**。
 - **里程碑 14「查看会话」真机打通（2026-09-26）**：根因 = `sessions.binding(id)` **只查已物化的 scope、从不创建**（`@deepseek-ai/dsh-api-session-controller@0.1.7-rc.2` `lib/client.js:3406`），归档 / 久未打开的会话没有 scope ⇒ 返回 `undefined` ⇒ `uiConversation.binding` 抛 `inactive session`（`@deepseek-ai/dsh-client-ui-conversation` `lib/client.js:3083` 判 `sessions.binding(sessionId) !== owner`）。**正解 = 查看前先 `sessions.retain(id, { source })` 物化 scope**（`retainScope` → `materializeScope`，`client.js:3409/3472`，内部还会触发 `manager.get(id).open()` 拉历史尾页），用完 `release()`；**与归档无关，无需反归档**。弹窗真机已显示对话内容，已 push（`fcabf8b`），冒烟 93 项全过。**外观与官方不一致 → 转里程碑 15**。
+- **里程碑 16 落码（2026-09-27，决策 36）**：弹窗渲染主路**换官方 keyed 节点流**（`order + nodes`，legacy 降为兜底）——官方折叠关系（`ChatNodeSeat` 全套布尔 + flowItem `hidden`）、「用时 34 秒」过程行、触发行、尾部操作行（复制/分支只读态/结束时钟）、用量 pill + 明细弹层全部照抄；**此前「缺 turn 起止时间 / 缺 usage」两条数据缺口随 keyed 流消解**。弹窗外壳改宿主弹窗惯例：`min(1120px,100vw-32px)` × `calc(100% - 80px)`、关闭钮 = 官方 `IconCloseOutlineRegular` 裸图标、会话区左右边距 = 官方 `16px + --dsh-composer-side-clearance`、内容列 = 官方上限 920px。typecheck + build + 冒烟 100 项全过。**待真机逐图比对**。
 
 ---
 
@@ -53,6 +54,7 @@
 | 13 | token 字段三拆列（决策 32 修订） | ✅ | 09-26 | 单个 `tokens` 总数拆为 `token_in` / `token_out` / `token_in_cache`；`extractTokenUsage` 结构化分量探测 + 按实例累计写回；事件无结构化 usage 则三列留 null 不阻塞 | — |
 | 14 | 归档会话弹窗显示（数据链打通，决策 34 自渲染） | ✅ 数据链 | 09-26 | 决策 29（ChatView 挂载）经 T1 证实在 0.1.7-RC.2 不可行 → 决策 34 自渲染；**真机已弹出并显示对话内容**：根因 = 查看前须 `sessions.retain(id,{source})` 物化 scope（源码级定位，见决策 35），与归档无关；自渲染消息/思考/工具卡 + markdown + 官方 `--dsw-alias-*` 变量。**外观与官方差距大 → 转里程碑 15** | [design/archive-session-view.md](design/archive-session-view.md) · [worklog/session-view.md](worklog/session-view.md) |
 | 15 | 会话弹窗外观对齐官方（决策 29 路线复评） | 🔵 进行中 | 09-26~ | 决策 34 自渲染外观用户反馈「与官方完全不一样」。T1 曾判 ChatView 挂载不可行，但**该结论是在未 retain 的前提下得出的**——`retain` 现已证实存在且可用 ⇒ 按源码重评 scoped-slots 引擎装配（`useHost` / `useRootBinding` / `observableHook` / `ScopeBindingProvider` + `entriesOf` / `storeOf` / `scope('session')` + `uiSession.adapter.bindingSource` + `sessions.retain`），在自家弹窗挂官方 ChatView 本体 | [worklog/session-view.md](worklog/session-view.md) |
+| 16 | 官方 keyed 流 + 折叠关系照抄 + 弹窗外壳改宿主惯例（决策 36） | ✅ 落码 | 09-27 | 渲染主路换 `order + nodes`（keyed ChatNodeStore）；官方 ChatNodeSeat 折叠判定 / TurnProcessNodeView 用时行 / TurnTriggerNodeView 触发行 / TurnTailNodeView+MessageIconActions 操作行 / TurnUsagePanel+StatDialog 用量弹层逐字照抄进 `mirror/`；turn 起止时间与 usage 数据缺口随 keyed 流消解；外壳 `min(1120px,100vw-32px)`×`calc(100% - 80px)` + 官方裸叉关闭钮 + 官方会话区边距。**待真机逐图比对** | [worklog/session-view.md](worklog/session-view.md) · [design/session-view-ui-map.md](design/session-view-ui-map.md) |
 
 ---
 
@@ -76,7 +78,7 @@
 
 ## 五、下一步（接手后从这里开始）
 
-1. **【进行中·里程碑 15】会话弹窗外观对齐官方**：路线已定 = **「官方零件 + 自绘容器 + 照表逐项实施」**（弹窗内挂官方本体与跳转方案均已被源码/真机证伪，见决策 35 与 AGENTS.md）。官方每个元素的组件 / CSS module / 语义类 / 关键样式值已整理成对照表：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)（含维护流程：官方升级后提取 diff、逐项实施清单、数据缺口）。已落地：骨架/用户气泡/正文(官方 MarkdownText)/工具行(官方 DisclosureRow)/过程组折叠；**下一步照表从第 6 项起逐项做，做完一项勾一项**。
+1. **【进行中·里程碑 15/16】会话弹窗外观对齐官方**：路线已定 = **「官方零件 + 自绘容器 + 照表逐项实施」**（弹窗内挂官方本体与跳转方案均已被源码/真机证伪，见决策 35 与 AGENTS.md）。对照表：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)。里程碑 16 已把渲染主路换成官方 keyed 流并照抄折叠关系 / 触发行 / 尾部操作行 / 用量弹层（决策 36），**待真机逐图比对**；通过后照清单继续：`TerminalBlock`/`ReadBlock`/`DiffBlock`（第 13 项）、上下文注入行（16）、工具卡错误红（17）、重试行官方样式（19）、fileMentions（20）、用户消息操作行（23）。
 2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
 3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
 4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。

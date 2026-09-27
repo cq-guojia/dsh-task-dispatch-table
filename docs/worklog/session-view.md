@@ -30,3 +30,23 @@
 
 **顺带证伪**：T1 曾判「决策 29 的 ChatView 挂载在 0.1.7-RC.2 不可行（`retain` / `bindingSource` 不存在）」——该结论是在**未 retain** 的前提下得出的；`retain` 经源码确认存在（`client.js:3194`），故决策 29 路线需按源码重评（→ 里程碑 15：外观对齐官方）。
 
+## 2026-09-27 — 里程碑 16：官方 keyed 节点流 + 折叠关系照抄 + 弹窗外壳改宿主惯例（决策 36）
+
+——用户拿两张官方截图逐项对照：① 官方「左下角弹窗」的关闭钮是**裸的黑叉**（无方框），弹窗宽度也没那么宽；② 官方会话区**左右有间距**（我们几乎为 0）；③ 要求**先抄官方的折叠关系**，再看折叠后露出来的样式，把两张图做成一模一样。全程先读源码再动手（AGENTS.md 第 4 条），本轮零真机试错。
+
+**源码核实（0.1.7-rc.2）**：
+- 官方 ChatView 真正渲染的是 **keyed 节点流**（快照 `order + nodes`，`ChatNodeStore.get/processSource`），不是我们一直用的 `legacy.nodes` 兼容投影——turn-trigger / turn-process / assistant-step / tool-call / turn-tail 都只在 keyed 流里，**turn 位置（`location.turn.start/end`）与用量（`turn-tail.data.tokenUsage`）也只在 keyed 流里有** ⇒ 此前「缺 turn 起止时间 / 缺 usage」两条数据缺口直接消解。
+- 折叠判定本体 = `ChatNodeSeat.tsx`（`lib/client.js:1668-1771`）：`TURN_PROCESS_INDEPENDENT_KINDS`（1525）、`turnProcessAlwaysOpen`（1558：live / aborted / error 恒开）、`processWindowReady / processMember / processAnswer / ownsDisclosure / foldable / controllerInactive / compactAnswer / processHidden` 全套布尔；折叠 = flowItem 的 `hidden` 属性。
+- 「用时 34 秒 ⌄」行 = `TurnProcessNodeView`（6129-6196）；触发行 = `TurnTriggerNodeView`（6538-6605 的 `turnTriggerDetails` kind→图标/标题映射）；尾部操作行 = `TurnTailNodeView`（6460-6546，`hasAssistantReplyContent` / `assistantText`）；用量 pill = `TurnUsagePanel`（6378-6452）+ `statDialog`（6278-6350，PANEL_MARGIN 12 / GAP 8，定位直接复用 primitives 的 `useAnchoredPosition` / `useDismissOnOutsidePointer`）；文案与格式化 = `message-chrome.ts`（`用时 {duration}` / `深度求索中，用时{duration}` / `9月26日 01:35` / `91.5K tok`，逐字照抄）+ `token-format.ts`（`formatTokens` / `formatCacheHitPercent` 的 `roundedPercentUnits` 取整算法照抄）。
+
+**落码**（mirror 文件名与官方组件一一对应，官方改哪个 diff 哪个）：
+- 新增 `mirror/ChatNodeSeat.tsx`（折叠判定 + flowItem 属性）、`mirror/TurnTriggerNodeView.tsx`、`mirror/TurnTailNodeView.tsx`、`mirror/TurnUsagePanel.tsx`、`mirror/StatDialog.tsx`、`mirror/message-chrome.ts`（时长/时钟/token 格式化 + `{占位符}` 替换，宿主 t 不做插值则自己替换）；
+- 重写 `mirror/TurnProcessNodeView.tsx`（官方「用时 N 秒」行，label/chevron/disabled/`data-open`）、`mirror/MessageIconActions.tsx`（官方操作行：复制 Tooltip + 1s 复位 + `writeClipboard`、分支只读态 `data-unavailable`、`data-clock`、endInfo）；
+- `mirror/ChatView.tsx` 补官方 `ChatNodeList`（order→seat，grouped 分组项未实现走官方 order 兜底分支）与 toBottom 组件；`session-view.ts` 渲染主路换 keyed 流（`renderKeyedNode` 按 kind 分发），legacy 流降级为 order 缺失时的兜底；
+- 外壳：`width:min(1120px,100vw-32px)`、`height:calc(100% - 80px)`、radius 12px（照宿主「左下角弹窗」卡片 dsh-context `.lc-ov-card`），弃 `min(1180px,94vw)×92vh`；内容列 = 官方上限 920px；会话区左右边距 = 官方 `ChatView.scroll` 的 `16px + --dsh-composer-side-clearance(16px)`（面板上补定义这两个变量）；关闭钮 = 官方 `IconCloseOutlineRegular` 16px 裸图标（hover 才出底色）；
+- `react-dom` 在 PLATFORM_MODULES 里可 require，但仓库无 `@types/react-dom` ⇒ 新增 `src/client/react-dom.d.ts` 声明最小 `createPortal` 面（零新增依赖）；`primitives.d.ts` 补 Tooltip / `writeClipboard` / `useAnchoredPosition` / `useDismissOnOutsidePointer` / 触发行图标家族。
+
+**防降级**：宿主 `processSource` / `get` 形态变化时按「不折叠 / 跳过该节点」处理，不让弹窗白屏；keyed 流缺失自动回退 legacy 渲染。
+
+**验证**：`npm run typecheck` 通过、`npm run build` 通过（dist 128.6 kB，`react-dom` 走宿主模块表 require）、冒烟 100 项全过。**待真机**：折叠关系 / 触发行 / 尾部操作行 / 用量 pill 与官方截图逐项比对。
+

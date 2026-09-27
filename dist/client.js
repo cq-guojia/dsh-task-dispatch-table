@@ -6,7 +6,16 @@ window.__ModuleLoader__.load({
 		Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 		let react = require("react");
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
+		let react_dom = require("react-dom");
 		//#region src/client/locales.ts
+		/** 把宿主给的无参 t 包成带占位符替换的 t（官方模板一律 `{name}`）。 */
+		function interpolateTranslate(base) {
+			return (key, params) => {
+				const raw = base(key);
+				if (params === void 0) return raw;
+				return raw.replace(/\{(\w+)\}/g, (match, name) => name in params ? String(params[name]) : match);
+			};
+		}
 		/** 中文文案。 */
 		const zh = {
 			title: "任务调度表（dsh-task-dispatch-table）",
@@ -94,7 +103,46 @@ window.__ModuleLoader__.load({
 			sessionLoadFailed: "会话记录加载失败（会话可能已不可读）。",
 			sessionLoadOlder: "加载更早记录",
 			sessionProcess: "过程",
-			sessionComposerPlaceholder: "已归档会话为只读（续聊功能未开放）"
+			sessionComposerPlaceholder: "已归档会话为只读（续聊功能未开放）",
+			triggerRequest: "收到执行请求",
+			triggerGoal: "继续执行目标",
+			triggerAgent: "收到任务消息",
+			triggerTeam: "收到团队消息",
+			triggerSubagent: "子任务状态更新",
+			triggerGithub: "收到 GitHub 事件",
+			triggerWebhook: "收到外部事件",
+			triggerSchedule: "定时任务",
+			triggerJob: "后台任务状态更新",
+			triggerPlugin: "插件状态更新",
+			triggerExplanation: "这条通知触发了本轮回复。",
+			turnProcessTook: "用时 {duration}",
+			turnProcessDeepDiving: "深度求索中，用时{duration}",
+			turnProcessWorked: "已完成工作",
+			turnProcessFailed: "处理失败",
+			turnStopped: "已停止",
+			chatDeepDiving: "深度求索中",
+			durationSeconds: "{seconds}秒",
+			durationMinutes: "{minutes}分{seconds}秒",
+			durationHours: "{hours}小时{minutes}分{seconds}秒",
+			clockDate: "{m}月{d}日",
+			clockDateYear: "{y}年{m}月{d}日",
+			copyLabel: "复制",
+			copiedLabel: "已复制",
+			branchLabel: "在新对话中分支",
+			branchUnavailableLabel: "只读会话记录不可分支",
+			turnUsageTitle: "本轮用量",
+			turnUsageModel: "提供方 / 模型",
+			turnUsageCacheHit: "缓存命中",
+			turnUsageInput: "未缓存输入",
+			turnUsageCacheRead: "缓存读取",
+			turnUsageCacheWrite: "缓存写入",
+			turnUsageOutput: "输出",
+			turnUsageReasoning: "（其中推理 {tokens}）",
+			turnUsageConsumed: "用量 {total}",
+			turnUsageCount: "{count} tok",
+			numberThousand: "{value}K",
+			numberMillion: "{value}M",
+			numberGroupSeparator: ","
 		};
 		/** English copy. */
 		const en = {
@@ -183,7 +231,46 @@ window.__ModuleLoader__.load({
 			sessionLoadFailed: "Failed to load the session transcript (the session may no longer be readable).",
 			sessionLoadOlder: "Load earlier messages",
 			sessionProcess: "Process",
-			sessionComposerPlaceholder: "Archived sessions are read-only (follow-up chat not available yet)"
+			sessionComposerPlaceholder: "Archived sessions are read-only (follow-up chat not available yet)",
+			triggerRequest: "Execution request received",
+			triggerGoal: "Continuing the goal",
+			triggerAgent: "Task message received",
+			triggerTeam: "Team message received",
+			triggerSubagent: "Subagent status update",
+			triggerGithub: "GitHub event received",
+			triggerWebhook: "External event received",
+			triggerSchedule: "Scheduled task",
+			triggerJob: "Background task status update",
+			triggerPlugin: "Plugin status update",
+			triggerExplanation: "This notification triggered the reply below.",
+			turnProcessTook: "Took {duration}",
+			turnProcessDeepDiving: "Thinking, {duration}",
+			turnProcessWorked: "Work completed",
+			turnProcessFailed: "Failed",
+			turnStopped: "Stopped",
+			chatDeepDiving: "Thinking",
+			durationSeconds: "{seconds}s",
+			durationMinutes: "{minutes}m {seconds}s",
+			durationHours: "{hours}h {minutes}m {seconds}s",
+			clockDate: "{m}/{d}",
+			clockDateYear: "{y}/{m}/{d}",
+			copyLabel: "Copy",
+			copiedLabel: "Copied",
+			branchLabel: "Branch into a new conversation",
+			branchUnavailableLabel: "A read-only transcript cannot be branched",
+			turnUsageTitle: "Turn usage",
+			turnUsageModel: "Provider / model",
+			turnUsageCacheHit: "Cache hit",
+			turnUsageInput: "Uncached input",
+			turnUsageCacheRead: "Cached input",
+			turnUsageCacheWrite: "Cache write",
+			turnUsageOutput: "Output",
+			turnUsageReasoning: " ({tokens} reasoning)",
+			turnUsageConsumed: "Usage {total}",
+			turnUsageCount: "{count} tok",
+			numberThousand: "{value}K",
+			numberMillion: "{value}M",
+			numberGroupSeparator: ","
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -191,9 +278,12 @@ window.__ModuleLoader__.load({
 		const SV_STYLE_ID = "dsh-task-dispatch-table-archive-session";
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
-.dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1010;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
-.dsh-tdt-sv-panel{--dsh-tdt-content-width:var(--dsh-chat-content-width,748px);--dsh-tdt-flow-gap:var(--dsh-chat-flow-gap,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:14px;box-shadow:var(--dsw-shadow-lv3,0 12px 40px rgba(0,0,0,.32));width:min(1180px,94vw);height:92vh;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
-.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px 10px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
+.dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1010;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+/* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
+.dsh-tdt-sv-panel{--dsh-tdt-content-width:var(--dsh-chat-content-width,920px);--dsh-tdt-flow-gap:var(--dsh-chat-flow-gap,16px);--dsh-composer-side-clearance:16px;--dsh-chat-content-width:min(920px,calc(100vw - 96px));background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;padding:16px 0 18px;overflow:hidden;}
+.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 10px;flex-wrap:wrap;}
+.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;padding:2px 6px;border-radius:6px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:color .1s,background .1s;}
+.dsh-tdt-sv-close:hover{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:15px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));word-break:break-all;}
@@ -201,8 +291,12 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-btn{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 12px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
 .dsh-tdt-sv-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-btn-icon{padding:4px 6px;display:inline-flex;align-items:center;justify-content:center;}
-.dsh-tdt-sv-body{overflow:auto;padding:16px 18px 20px;}
-.dsh-tdt-sv-col{width:100%;max-width:var(--dsh-tdt-content-width);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-tdt-flow-gap);}
+/* 会话区边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(16px) ⇒ 左右各 32px。 */
+.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px calc(var(--dsh-composer-side-clearance,16px) + 16px) 20px;}
+.dsh-tdt-sv-col{width:100%;max-width:var(--dsh-chat-content-width,920px);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-chat-flow-gap,16px);}
+/* 官方 ChatView.column 的兄弟间距（:not([hidden]) 才占位；折叠掉的过程节点不留空档）。 */
+.dsh-tdt-sv-col>:not([hidden]):not(.dsh-tdt-sv-flowitem:empty)~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:var(--dsh-chat-flow-gap,16px);}
+.dsh-tdt-sv-visuallyhidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 .dsh-tdt-sv-flowitem{min-width:0;}
 .dsh-tdt-sv-official{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
 .dsh-tdt-sv-older{display:flex;justify-content:center;}
@@ -218,7 +312,7 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
 .dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
 .dsh-tdt-sv-action:hover{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-composer{flex:none;padding:12px 18px 16px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-sv-composer{flex:none;padding:12px 18px 0;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 .dsh-tdt-sv-composer-box{display:flex;align-items:center;gap:8px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;padding:8px 12px;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));}
 .dsh-tdt-sv-composer-box input{flex:1;appearance:none;font:inherit;font-size:14px;color:var(--dsw-alias-label-primary,#1f2328);background:0 0;border:none;outline:none;}
 .dsh-tdt-sv-composer-box input::placeholder{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
@@ -270,6 +364,36 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-notice{align-self:center;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));padding:2px 8px;}
 .dsh-tdt-sv-notice-err{align-self:center;font-size:12px;color:var(--dsw-alias-state-error-primary,#c0392b);padding:2px 8px;text-align:center;}
 .dsh-tdt-sv-hint{font-size:12px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
+/* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
+.dsh-tdt-sv-process:disabled{cursor:default;}
+.dsh-tdt-sv-trigger{align-self:stretch;background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-xl,12px);transition:background .1s;}
+.dsh-tdt-sv-trigger:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-trigger-header{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:0 0;border:none;cursor:pointer;color:inherit;font:inherit;text-align:left;}
+.dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:none;}
+.dsh-tdt-sv-trigger-title{font-size:var(--dsw-font-xs-13,13px);color:var(--dsw-alias-label-primary,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-trigger-time{margin-left:auto;font-size:var(--dsw-font-xxs-12,12px);color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));white-space:nowrap;}
+.dsh-tdt-sv-trigger-chevron{flex:none;color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));transition:transform .1s;}
+.dsh-tdt-sv-trigger-chevron-open{flex:none;color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));transform:rotate(180deg);}
+.dsh-tdt-sv-trigger-body{padding:0 16px 12px 40px;}
+.dsh-tdt-sv-trigger-explanation{margin:8px 0 0;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-trigger-content{margin-top:6px;font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;}
+.dsh-tdt-sv-tail{display:flex;flex-direction:column;gap:16px;}
+.dsh-tdt-sv-tail-actions{margin-top:4px;margin-left:-6px;}
+.dsh-tdt-sv-clock{font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));white-space:nowrap;}
+.dsh-tdt-sv-endinfo{display:inline-flex;align-items:center;gap:8px;margin-left:8px;}
+.dsh-tdt-sv-usage{display:inline-flex;align-items:center;}
+.dsh-tdt-sv-usage-trigger{display:inline-flex;align-items:center;gap:4px;appearance:none;background:0 0;border:none;cursor:pointer;padding:0 4px;font:inherit;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-usage-trigger:hover{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-stats{position:fixed;z-index:1200;min-width:200px;max-width:min(440px,calc(100vw - 24px));background:var(--dsw-alias-bg-layer-1,rgba(30,30,30,.98));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));padding:12px;font-size:12px;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-stats-title{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.dsh-tdt-sv-stats-titlelabel{display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-stats-titlevalue{font-variant-numeric:tabular-nums;}
+.dsh-tdt-sv-stats-rule{height:1px;background:var(--dsw-alias-border-l2,rgba(128,128,128,.35));margin:8px 0;}
+.dsh-tdt-sv-stats-details{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;}
+.dsh-tdt-sv-stats-details dt{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-stats-details dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;}
+.dsh-tdt-sv-stats-route{word-break:break-all;}
+.dsh-tdt-sv-stats-reasoning{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
 `;
 		let injected = false;
 		/**
@@ -380,14 +504,128 @@ window.__ModuleLoader__.load({
 			return officialClass(module, semantic) ?? fallback;
 		}
 		//#endregion
+		//#region src/client/mirror/ChatNodeSeat.tsx
+		/**
+		* 官方 TURN_PROCESS_INDEPENDENT_KINDS（lib/client.js:1525）：这些 kind 永远不进过程折叠区。
+		*/
+		const TURN_PROCESS_INDEPENDENT_KINDS = /* @__PURE__ */ new Set([
+			"system-prompt",
+			"user",
+			"steering",
+			"turn-trigger",
+			"turn-process",
+			"turn-error",
+			"turn-max-tokens",
+			"turn-tail"
+		]);
+		/**
+		* 读过程席位快照。宿主 API 形态变了也只降级成「不折叠」，不让整个弹窗白屏。
+		*/
+		function readPresentation(store, key) {
+			if (store === void 0) return void 0;
+			try {
+				const source = store.processSource;
+				if (typeof source !== "function") return void 0;
+				return source.call(store, key)?.getSnapshot();
+			} catch {
+				return;
+			}
+		}
+		/** 取节点所属 turn（官方 turnOf，ChatNodeSeat.tsx:1660）。 */
+		function turnOf(node) {
+			const location = node?.location;
+			return location?.kind === "turn" || location?.kind === "step" ? location.turn?.turn : void 0;
+		}
+		/** 官方 turnProcessAlwaysOpen（lib/client.js:1558）：live / 已停止 / 失败的 turn 不折叠。 */
+		function turnProcessAlwaysOpen(node) {
+			const location = node?.location;
+			if (location?.kind !== "turn" && location?.kind !== "step") return false;
+			const reason = location.turn?.end?.data?.reason?.kind;
+			return location.turn?.status === "open" || reason === "aborted" || reason === "error";
+		}
+		/** 一个 keyed 节点 → 一个 flowItem（官方 ChatNodeSeat 的 JSX 等价物）。 */
+		function ChatNodeSeatMirror(props) {
+			const { node, groupPart, store, openState, onSetOpen, foldCompleted, renderNode } = props;
+			const turn = turnOf(node);
+			const presentation = readPresentation(store, node.key);
+			const spec = presentation?.spec ?? void 0 ?? (node.kind === "turn-process" ? node.data : void 0);
+			const liveProcess = presentation !== void 0 && presentation.turnClosed !== true;
+			const interleavedInput = presentation?.hasInterleavedInput === true;
+			const alwaysOpen = liveProcess || interleavedInput || turnProcessAlwaysOpen(node);
+			const storedAnswerStep = turn === void 0 ? void 0 : openState.get(turn);
+			const processOpen = alwaysOpen || spec !== void 0 && storedAnswerStep === (spec.answerStep ?? 0);
+			const setOpen = (open) => {
+				if (spec !== void 0 && !alwaysOpen && turn !== void 0) onSetOpen(turn, spec.answerStep ?? 0, open);
+			};
+			const processWindowReady = spec !== void 0 && presentation !== void 0 && foldCompleted && presentation.turn === spec.turn && (presentation.turnStarted === true || presentation.turnClosed === true);
+			const dataStep = typeof node.data?.step === "number" ? node.data.step : void 0;
+			const processMember = processWindowReady && spec !== void 0 && !TURN_PROCESS_INDEPENDENT_KINDS.has(node.kind) && node.anchorSeq >= spec.processStartSeq && (liveProcess || spec.answerAnchorSeq === null || node.anchorSeq < spec.answerAnchorSeq || groupPart === "reasoning" && node.kind === "assistant-step" && dataStep === spec.answerStep);
+			const processAnswer = processWindowReady && spec !== void 0 && !liveProcess && groupPart !== "reasoning" && node.kind === "assistant-step" && dataStep === spec.answerStep;
+			const ownsDisclosure = node.kind === "turn-process" || processAnswer;
+			const foldable = processWindowReady && (liveProcess || processMember || ownsDisclosure);
+			const turnProcess = spec === void 0 ? void 0 : {
+				spec,
+				foldable,
+				hasContent: !interleavedInput && (presentation?.hasExternalProcess === true || spec.inlineReasoning),
+				open: processOpen,
+				alwaysOpen,
+				setOpen
+			};
+			const controllerInactive = node.kind === "turn-process" && foldCompleted && !foldable;
+			const compactAnswer = processAnswer && foldable && presentation?.compactAnswer === true && !processOpen;
+			const processHidden = controllerInactive || foldable && processMember && !processOpen;
+			const inner = renderNode(node, turnProcess);
+			if (inner === null || inner === void 0) return null;
+			const flowKey = groupPart === void 0 || groupPart === "response" ? node.key : JSON.stringify([node.key, groupPart]);
+			return (0, react.createElement)("div", {
+				className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem"),
+				"data-chat-anchor-key": flowKey,
+				"data-chat-flow-key": flowKey,
+				"data-chat-paging-anchor": node.kind !== "turn-process" || void 0,
+				"data-chat-node-key": node.key,
+				"data-chat-group-part": groupPart,
+				"data-chat-flow-kind": node.kind,
+				"data-chat-turn": turn,
+				"data-turn-process-member": processMember || void 0,
+				"data-turn-process-hidden": processHidden || void 0,
+				"data-turn-process-answer": compactAnswer || void 0,
+				hidden: processHidden || void 0
+			}, inner);
+		}
+		//#endregion
 		//#region src/client/mirror/ChatView.tsx
 		/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。 */
 		function ChatViewFrame(props) {
-			return (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "scroll", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "column", "dsh-tdt-sv-col") }, props.children))));
+			return (0, react.createElement)("div", { className: ocOr("ChatView", "frame", "dsh-tdt-sv-body") }, (0, react.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "scroll", "") }, (0, react.createElement)("div", {
+				className: ocOr("ChatView", "column", "dsh-tdt-sv-col"),
+				"data-chat-flow": ""
+			}, props.children))));
 		}
-		/** 单条流式项：官方块间距规则（`.column > .flowItem ~ .flowItem { margin-top: var(--dsh-chat-flow-gap,16px) }`）的作用目标。 */
-		function ChatFlowItem(props) {
-			return (0, react.createElement)("div", { className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem") }, props.children);
+		/** 官方 ChatNodeList：order → seat 列表（grouped 视图未实现 ⇒ 走官方 order 兜底分支）。 */
+		function ChatNodeListMirror(props) {
+			const { order, store, openState, onSetOpen, foldCompleted, renderNode } = props;
+			const rows = [];
+			const read = store === void 0 ? void 0 : store.get;
+			if (typeof read !== "function" || store === void 0) return rows;
+			for (const key of order) {
+				let node;
+				try {
+					node = read.call(store, key);
+				} catch {
+					continue;
+				}
+				if (node === void 0) continue;
+				rows.push((0, react.createElement)(ChatNodeSeatMirror, {
+					key,
+					node,
+					store,
+					openState,
+					onSetOpen,
+					foldCompleted,
+					renderNode
+				}));
+			}
+			return rows;
 		}
 		/** 加载 / 空态提示行（13px tertiary）。 */
 		function ChatHint(props) {
@@ -462,34 +700,191 @@ window.__ModuleLoader__.load({
 			}));
 		}
 		//#endregion
-		//#region src/client/mirror/MessageIconActions.tsx
-		/** 操作行（复制按钮）：挂在助手答复流式项之后。 */
-		function MessageIconActionsMirror(props) {
-			const [copied, setCopied] = (0, react.useState)(false);
-			const timer = (0, react.useRef)(null);
-			if (props.text.trim() === "") return null;
-			const onCopy = () => {
-				if (copied) return;
-				const clipboard = navigator.clipboard;
-				if (clipboard === void 0) return;
-				clipboard.writeText(props.text).then(() => {
-					setCopied(true);
-					if (timer.current !== null) window.clearTimeout(timer.current);
-					timer.current = window.setTimeout(() => {
-						setCopied(false);
-						timer.current = null;
-					}, 1e3);
-				}).catch(() => void 0);
+		//#region src/client/mirror/message-chrome.ts
+		/** 两位补零（官方 message-chrome pad2）。 */
+		function pad2(n) {
+			return String(n).padStart(2, "0");
+		}
+		/**
+		* 官方 formatRunDuration：整秒；≥1 分带零补秒；≥1 小时带零补分秒。
+		*/
+		function formatRunDuration(ms, t) {
+			const total = Math.max(0, Math.floor(ms / 1e3));
+			const hours = Math.floor(total / 3600);
+			const minutes = Math.floor(total / 60) % 60;
+			const seconds = total % 60;
+			if (hours > 0) return t("durationHours", {
+				hours,
+				minutes: pad2(minutes),
+				seconds: pad2(seconds)
+			});
+			return minutes > 0 ? t("durationMinutes", {
+				minutes,
+				seconds: pad2(seconds)
+			}) : t("durationSeconds", { seconds });
+		}
+		/** 官方 formatLiveRunDuration：秒不补零、分钟自 60 秒起。 */
+		function formatLiveRunDuration(ms, t) {
+			const totalSeconds = Math.max(0, Math.floor(ms / 1e3));
+			const hours = Math.floor(totalSeconds / 3600);
+			const minutes = Math.floor(totalSeconds / 60) % 60;
+			const seconds = String(totalSeconds % 60);
+			if (hours > 0) return t("durationHours", {
+				hours,
+				minutes: pad2(minutes),
+				seconds
+			});
+			return minutes > 0 ? t("durationMinutes", {
+				minutes,
+				seconds
+			}) : t("durationSeconds", { seconds });
+		}
+		/**
+		* 官方 formatMessageClock：同日 → `HH:mm`；同年 → `{m}月{d}日 HH:mm`；跨年 → `{y}年{m}月{d}日 HH:mm`。
+		*/
+		function formatMessageClock(time, t, now = Date.now()) {
+			const d = new Date(time);
+			const n = new Date(now);
+			const clock = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+			if (d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()) return clock;
+			const params = {
+				y: d.getFullYear(),
+				m: d.getMonth() + 1,
+				d: d.getDate()
 			};
+			return `${d.getFullYear() === n.getFullYear() ? t("clockDate", params) : t("clockDateYear", params)} ${clock}`;
+		}
+		/** 官方 formatTokens：517 / 12.2K / 517K / 1.2M。 */
+		function formatTokens(value, t) {
+			const scaled = (candidate) => candidate >= 100 ? String(Math.round(candidate)) : String(Math.round(candidate * 10) / 10);
+			if (value < 1e3) return String(value);
+			if (value < 1e6) return t("numberThousand", { value: scaled(value / 1e3) });
+			return t("numberMillion", { value: scaled(value / 1e6) });
+		}
+		/** 官方 formatCompactCount：紧凑 token 数 + 「 tok」。 */
+		function formatCompactCount(value, t) {
+			return t("turnUsageCount", { count: formatTokens(value, t) });
+		}
+		/** 官方 formatExactTokens：按本地千分位分组（number.groupSeparator）。 */
+		function formatExactTokens(value, t) {
+			const digits = String(value);
+			const groups = [];
+			for (let end = digits.length; end > 0; end -= 3) groups.unshift(digits.slice(Math.max(0, end - 3), end));
+			return groups.join(t("numberGroupSeparator"));
+		}
+		/** 官方 formatExactCount：精确计数 + 「 tok」。 */
+		function formatExactCount(value, t) {
+			return t("turnUsageCount", { count: formatExactTokens(value, t) });
+		}
+		/** 官方 roundedPercentUnits（message-chrome.ts:1024）：按精确比例取整，正半数向上。 */
+		function roundedPercentUnits(cacheReadTokens, denominator, decimalPlaces) {
+			const scale = (decimalPlaces === 0 ? 1 : 10) * 100;
+			const doubledScale = scale * 2;
+			const denominatorQuotient = Math.floor(denominator / doubledScale);
+			const denominatorRemainder = denominator % doubledScale;
+			let lower = 0;
+			let upper = scale;
+			while (lower < upper) {
+				const candidate = Math.floor((lower + upper + 1) / 2);
+				const factor = candidate * 2 - 1;
+				if (cacheReadTokens >= factor * denominatorQuotient + Math.ceil(factor * denominatorRemainder / doubledScale)) lower = candidate;
+				else upper = candidate - 1;
+			}
+			return lower;
+		}
+		/** 官方 displayPercentUnits。 */
+		function displayPercentUnits(units, decimalPlaces) {
+			if (decimalPlaces === 0) return String(units);
+			const whole = Math.floor(units / 10);
+			const tenths = units % 10;
+			return tenths === 0 ? String(whole) : `${whole}.${tenths}`;
+		}
+		/**
+		* 官方 formatCacheHitPercent：缓存命中率；部分命中不四舍五入成 100%（自动加精度）。
+		* @returns 百分比文本；无输入时 null。
+		*/
+		function formatCacheHitPercent(cacheReadTokens, promptTokens, decimalPlaces = 0) {
+			if (promptTokens === 0) return null;
+			const missedInputTokens = promptTokens - cacheReadTokens;
+			if (missedInputTokens === 0) return "100";
+			const roundedUnits = roundedPercentUnits(cacheReadTokens, promptTokens, decimalPlaces);
+			if (roundedUnits < (decimalPlaces === 0 ? 100 : 1e3)) return displayPercentUnits(roundedUnits, decimalPlaces);
+			let distinguishingPlaces = 1;
+			let scaledDoubleGap = missedInputTokens * 200;
+			const denominatorTens = Math.floor(promptTokens / 10);
+			while (scaledDoubleGap <= denominatorTens) {
+				scaledDoubleGap *= 10;
+				distinguishingPlaces += 1;
+			}
+			const denominatorOnes = promptTokens % 10;
+			let roundedLoss = 5;
+			for (let loss = 1; loss < 5; loss += 1) {
+				const factor = loss * 2 + 1;
+				const threshold = factor * denominatorTens + Math.floor(factor * denominatorOnes / 10);
+				if (scaledDoubleGap <= threshold) {
+					roundedLoss = loss;
+					break;
+				}
+			}
+			return `99.${"9".repeat(distinguishingPlaces - 1)}${10 - roundedLoss}`;
+		}
+		//#endregion
+		//#region src/client/mirror/MessageIconActions.tsx
+		/** 官方「已复制」复位时间。 */
+		const COPIED_RESET_MS = 1e3;
+		/** 消息操作行（复制 / 分支 / 用量 / 时钟）。 */
+		function MessageIconActionsMirror(props) {
+			const { text, time, clock, onBranch, branchUnavailable = false, className, extraActions, usageAction, t } = props;
+			const [copied, setCopied] = (0, react.useState)(false);
+			const [pending, setPending] = (0, react.useState)(false);
+			const timerRef = (0, react.useRef)(void 0);
+			(0, react.useEffect)(() => () => {
+				if (timerRef.current !== void 0) clearTimeout(timerRef.current);
+			}, []);
+			const copyLabel = copied ? t("copiedLabel") : t("copyLabel");
+			const onCopy = () => {
+				if (copied || pending) return;
+				setPending(true);
+				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(text).then((ok) => {
+					setPending(false);
+					if (!ok) return;
+					setCopied(true);
+					timerRef.current = setTimeout(() => {
+						setCopied(false);
+					}, COPIED_RESET_MS);
+				});
+			};
+			const clockEl = time === void 0 ? null : (0, react.createElement)("time", {
+				className: ocOr("MessageIconActions", "clock", "dsh-tdt-sv-clock"),
+				dateTime: new Date(time).toISOString()
+			}, formatMessageClock(time, t));
+			const reasonId = "dsh-tdt-branch-unavailable";
 			return (0, react.createElement)("div", {
-				className: ocOr("MessageIconActions", "actions", "dsh-tdt-sv-actions"),
-				"data-actions-reveal": "always"
+				className: `${ocOr("MessageIconActions", "actions", "dsh-tdt-sv-actions")}${className === void 0 ? "" : ` ${className}`}`,
+				"data-clock": clock
+			}, clock === "start" ? clockEl : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: copyLabel,
+				side: "bottom"
 			}, (0, react.createElement)("button", {
 				type: "button",
 				className: ocOr("MessageIconActions", "action", "dsh-tdt-sv-action"),
-				"aria-label": copied ? "已复制" : "复制",
+				"aria-label": copyLabel,
 				onClick: onCopy
-			}, copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})));
+			}, copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, null) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, null))), extraActions, onBranch === void 0 ? null : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: branchUnavailable ? t("branchUnavailableLabel") : t("branchLabel"),
+				side: "bottom"
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("MessageIconActions", "action", "dsh-tdt-sv-action"),
+				"aria-label": t("branchLabel"),
+				"aria-disabled": branchUnavailable || void 0,
+				"aria-describedby": branchUnavailable ? reasonId : void 0,
+				"data-unavailable": branchUnavailable || void 0,
+				onClick: branchUnavailable ? void 0 : onBranch
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, null))), onBranch === void 0 || !branchUnavailable ? null : (0, react.createElement)("span", {
+				id: reasonId,
+				className: ocOr("accessibility", "visuallyHidden", "dsh-tdt-sv-visuallyhidden")
+			}, t("branchUnavailableLabel")), clock === "end" ? (0, react.createElement)("span", { className: ocOr("MessageIconActions", "endInfo", "dsh-tdt-sv-endinfo") }, usageAction, clockEl) : usageAction);
 		}
 		//#endregion
 		//#region src/client/mirror/MessageItem.tsx
@@ -539,22 +934,267 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/mirror/TurnProcessNodeView.tsx
-		/** 过程行：默认收起（label = 过程 · N），点开显示本组工具卡。 */
+		/** 官方 LIVE_RUN_CLOCK_INTERVAL_MS（lib/client.js:979）。 */
+		const LIVE_RUN_CLOCK_INTERVAL_MS = 1e3;
+		/** Turn 过程行：折叠时只有 label + 箭头；点开由外层 seat 把过程节点放出来。 */
 		function TurnProcessNodeViewMirror(props) {
-			const { count, t } = props;
-			const [open, setOpen] = (0, react.useState)(false);
-			if (count === 0) return null;
-			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("button", {
+			const { turn, turnProcess, t } = props;
+			const open = !turnProcess.foldable || turnProcess.open;
+			const [now, setNow] = (0, react.useState)(() => Date.now());
+			const ticking = turn?.status === "open" && turn.start !== void 0;
+			(0, react.useEffect)(() => {
+				if (!ticking) return;
+				setNow(Date.now());
+				const timer = setInterval(() => {
+					setNow(Date.now());
+				}, LIVE_RUN_CLOCK_INTERVAL_MS);
+				return () => {
+					clearInterval(timer);
+				};
+			}, [ticking]);
+			if (turn === void 0 || turn.start === void 0 && turn.status !== "closed") return null;
+			const canCollapse = turnProcess.foldable && turnProcess.hasContent && !turnProcess.alwaysOpen;
+			const running = turn.status === "open";
+			const reason = turn.end?.data?.reason?.kind;
+			const elapsedMs = turn.start === void 0 ? void 0 : Math.max(1e3, (turn.end?.time ?? now) - turn.start.time);
+			const duration = elapsedMs === void 0 ? void 0 : running ? formatLiveRunDuration(elapsedMs, t) : formatRunDuration(elapsedMs, t);
+			const label = running ? duration === void 0 ? t("chatDeepDiving") : t("turnProcessDeepDiving", { duration }) : reason === "aborted" ? t("turnStopped") : reason === "error" ? t("turnProcessFailed") : duration === void 0 ? t("turnProcessWorked") : t("turnProcessTook", { duration });
+			const announcement = running ? t("chatDeepDiving") : reason === "aborted" ? t("turnStopped") : reason === "error" ? t("turnProcessFailed") : t("turnProcessWorked");
+			const spec = turnProcess.spec;
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
+				className: ocOr("accessibility", "visuallyHidden", "dsh-tdt-sv-visuallyhidden"),
+				role: "status",
+				"aria-live": "polite",
+				"aria-atomic": "true"
+			}, announcement), (0, react.createElement)("button", {
 				type: "button",
 				className: ocOr("TurnProcessNodeView", "root", "dsh-tdt-sv-process"),
 				"data-open": open || void 0,
+				"data-turn-process": spec?.turn,
+				"data-turn-process-messages": spec?.messageCount,
+				"data-turn-process-tool-calls": spec?.toolCallCount,
+				"data-turn-process-subagents": spec?.subagentCount,
+				disabled: !canCollapse,
+				"aria-expanded": turnProcess.hasContent ? open : void 0,
+				onClick: () => {
+					turnProcess.setOpen(!open);
+				}
+			}, (0, react.createElement)("span", { className: ocOr("TurnProcessNodeView", "label", "dsh-tdt-sv-process-label") }, label), canCollapse ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: ocOr("TurnProcessNodeView", "chevron", "dsh-tdt-sv-process-chevron") }) : null));
+		}
+		//#endregion
+		//#region src/client/mirror/StatDialog.tsx
+		const PANEL_MARGIN = 12;
+		const PANEL_GAP = 8;
+		/** 官方 useStatDialog：把弹层挂在触发器上方（side: 'top'），点外 / Esc 关闭。 */
+		function useStatDialog(controlled) {
+			const [ownOpen, setOwnOpen] = (0, react.useState)(false);
+			const open = controlled?.open ?? ownOpen;
+			const setOpen = controlled?.setOpen ?? setOwnOpen;
+			const rootRef = (0, react.useRef)(null);
+			const panelRef = (0, react.useRef)(null);
+			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
+				open,
+				anchorRef: rootRef,
+				panelRef,
+				side: "top",
+				gap: PANEL_GAP,
+				margin: PANEL_MARGIN
+			});
+			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onKeyDown = (event) => {
+					if (event.key === "Escape") setOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open, setOpen]);
+			return {
+				open,
+				setOpen,
+				rootRef,
+				panelRef,
+				pos
+			};
+		}
+		//#endregion
+		//#region src/client/mirror/TurnUsagePanel.tsx
+		/** 本轮用量 pill + 明细弹层。 */
+		function TurnUsagePanelMirror(props) {
+			const { usage, t } = props;
+			const { open, setOpen, rootRef, panelRef, pos } = useStatDialog();
+			const cacheHit = usage.cacheReadTokens === void 0 ? null : formatCacheHitPercent(usage.cacheReadTokens, usage.totalTokens - usage.outputTokens, 1);
+			const total = formatCompactCount(usage.totalTokens, t);
+			const routes = usage.routes?.map((route) => `${route.provider}/${route.model}`).join(", ") ?? "";
+			return (0, react.createElement)("span", {
+				ref: rootRef,
+				className: ocOr("TurnUsagePanel", "root", "dsh-tdt-sv-usage")
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("TurnUsagePanel", "trigger", "dsh-tdt-sv-usage-trigger"),
+				"aria-haspopup": "dialog",
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen(!open);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, null), (0, react.createElement)("span", { className: ocOr("TurnUsagePanel", "label", "dsh-tdt-sv-usage-label") }, t("turnUsageConsumed", { total }))), open ? (0, react_dom.createPortal)((0, react.createElement)("div", {
+				ref: panelRef,
+				className: ocOr("statDialog", "panel", "dsh-tdt-sv-stats"),
+				role: "dialog",
+				"aria-label": t("turnUsageTitle"),
+				style: pos
+			}, (0, react.createElement)("div", { className: ocOr("statDialog", "title", "dsh-tdt-sv-stats-title") }, (0, react.createElement)("span", { className: ocOr("statDialog", "titleLabel", "dsh-tdt-sv-stats-titlelabel") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, null), t("turnUsageTitle")), (0, react.createElement)("span", { className: ocOr("statDialog", "titleValue", "dsh-tdt-sv-stats-titlevalue") }, formatExactCount(usage.totalTokens, t))), (0, react.createElement)("div", {
+				className: ocOr("statDialog", "titleRule", "dsh-tdt-sv-stats-rule"),
+				"aria-hidden": true
+			}), (0, react.createElement)("dl", {
+				className: ocOr("statDialog", "details", "dsh-tdt-sv-stats-details"),
+				"data-turn-usage-details": true
+			}, routes === "" ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("dt", null, t("turnUsageModel")), (0, react.createElement)("dd", { className: ocOr("statDialog", "route", "dsh-tdt-sv-stats-route") }, routes)), cacheHit === null ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("dt", null, t("turnUsageCacheHit")), (0, react.createElement)("dd", null, `${cacheHit}%`)), (0, react.createElement)("dt", null, t("turnUsageInput")), (0, react.createElement)("dd", null, formatExactCount(usage.uncachedInputTokens, t)), usage.cacheReadTokens === void 0 ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("dt", null, t("turnUsageCacheRead")), (0, react.createElement)("dd", null, formatExactCount(usage.cacheReadTokens, t))), usage.cacheWriteTokens === void 0 ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("dt", null, t("turnUsageCacheWrite")), (0, react.createElement)("dd", null, formatExactCount(usage.cacheWriteTokens, t))), (0, react.createElement)("dt", null, t("turnUsageOutput")), (0, react.createElement)("dd", null, formatExactCount(usage.outputTokens, t), usage.reasoningTokens === void 0 ? null : (0, react.createElement)("span", { className: ocOr("statDialog", "reasoning", "dsh-tdt-sv-stats-reasoning") }, t("turnUsageReasoning", { tokens: formatExactCount(usage.reasoningTokens, t) }))))), document.body) : null);
+		}
+		//#endregion
+		//#region src/client/mirror/TurnTailNodeView.tsx
+		/** 官方 hasAssistantReplyContent。 */
+		function hasAssistantReplyContent(blocks) {
+			return blocks.some((block) => {
+				if (block.kind === "reasoning" || block.kind === "tool-call") return false;
+				if (block.kind === "text") return (block.text ?? "").trim() !== "";
+				return true;
+			});
+		}
+		/** 官方 assistantText：只取 text 块。 */
+		function assistantText$1(blocks) {
+			return blocks.flatMap((block) => block.kind === "text" ? [block.text ?? ""] : []).join("");
+		}
+		/** Turn 尾部操作行：复制 / 分支（只读⇒不可用态）/ 用量 / 结束时钟。 */
+		function TurnTailNodeViewMirror(props) {
+			const { data, endsWithResponse, t } = props;
+			const closing = data.closing;
+			if (closing === null || closing === void 0) return null;
+			const text = assistantText$1(closing.blocks);
+			return (0, react.createElement)("div", {
+				className: ocOr("TurnTailNodeView", "root", "dsh-tdt-sv-tail"),
+				"data-turn-tail": data.turn,
+				"data-actions-reveal": endsWithResponse ? "always" : "hover"
+			}, (0, react.createElement)(MessageIconActionsMirror, {
+				text,
+				time: closing.time,
+				clock: "end",
+				onBranch: () => {},
+				branchUnavailable: true,
+				className: ocOr("TurnTailNodeView", "actions", "dsh-tdt-sv-tail-actions"),
+				usageAction: data.tokenUsage === void 0 ? void 0 : (0, react.createElement)(TurnUsagePanelMirror, {
+					usage: data.tokenUsage,
+					t
+				}),
+				t
+			}));
+		}
+		//#endregion
+		//#region src/client/mirror/TurnTriggerNodeView.tsx
+		/** 官方 TRIGGER_ICONS（lib/client.js:6634）。 */
+		const TRIGGER_ICONS = {
+			request: _deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular,
+			goal: _deepseek_ai_dsh_client_ui_primitives.IconGoalOutlineRegular,
+			agent: _deepseek_ai_dsh_client_ui_primitives.IconPaperPlaneOutlineRegular,
+			team: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
+			subagent: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
+			github: _deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular,
+			webhook: _deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular,
+			schedule: _deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular,
+			job: _deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular,
+			plugin: _deepseek_ai_dsh_client_ui_primitives.IconCordisPluginOutlineRegular
+		};
+		/** 官方 turnTriggerDetails：source.kind → 标题与图标家族（默认 request）。 */
+		function turnTriggerDetails(source) {
+			const record = (value) => typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+			const src = record(source);
+			switch (typeof src.kind === "string" ? src.kind : "") {
+				case "goal": return {
+					title: "triggerGoal",
+					icon: "goal"
+				};
+				case "agent-message": return {
+					title: "triggerAgent",
+					icon: "agent"
+				};
+				case "team-message": return {
+					title: "triggerTeam",
+					icon: "team"
+				};
+				case "subagent-settled": return {
+					title: "triggerSubagent",
+					icon: "subagent"
+				};
+				case "webhook": return src.provider === "github" ? {
+					title: "triggerGithub",
+					icon: "github"
+				} : {
+					title: "triggerWebhook",
+					icon: "webhook"
+				};
+				case "schedule": return {
+					title: "triggerSchedule",
+					icon: "schedule"
+				};
+				case "tool-jobs": return {
+					title: "triggerJob",
+					icon: "job"
+				};
+				case "cordis-host-runner": return {
+					title: "triggerPlugin",
+					icon: "plugin"
+				};
+				default: return {
+					title: "triggerRequest",
+					icon: "request"
+				};
+			}
+		}
+		/** 触发行：折叠时只有「图标 + 标题 + 时间 + 箭头」，点开展示注入原文。 */
+		function TurnTriggerNodeViewMirror(props) {
+			const { data, t } = props;
+			const [open, setOpen] = (0, react.useState)(false);
+			const details = turnTriggerDetails(data?.source);
+			const TriggerIcon = TRIGGER_ICONS[details.icon] ?? _deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular;
+			const time = typeof data?.time === "number" ? data.time : void 0;
+			const content = triggerContent(data?.content);
+			return (0, react.createElement)("section", {
+				className: ocOr("TurnTriggerNodeView", "root", "dsh-tdt-sv-trigger"),
+				"data-turn-trigger": true
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("TurnTriggerNodeView", "header", "dsh-tdt-sv-trigger-header"),
+				"aria-expanded": open,
 				onClick: () => {
 					setOpen((value) => !value);
 				}
-			}, (0, react.createElement)("span", { className: ocOr("TurnProcessNodeView", "label", "dsh-tdt-sv-process-label") }, `${t("sessionProcess")} · ${count}`), (0, react.createElement)("span", { className: ocOr("TurnProcessNodeView", "chevron", "dsh-tdt-sv-process-chevron") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {}))), open ? (0, react.createElement)("div", { className: ocOr("ChatGroupSeat", "body", "dsh-tdt-sv-process-body") }, props.children) : null);
+			}, (0, react.createElement)("span", {
+				className: ocOr("TurnTriggerNodeView", "icon", "dsh-tdt-sv-trigger-icon"),
+				"aria-hidden": true
+			}, (0, react.createElement)(TriggerIcon, { size: 14 })), (0, react.createElement)("span", { className: ocOr("TurnTriggerNodeView", "title", "dsh-tdt-sv-trigger-title") }, t(details.title)), time === void 0 ? null : (0, react.createElement)("time", {
+				className: ocOr("TurnTriggerNodeView", "time", "dsh-tdt-sv-trigger-time"),
+				dateTime: new Date(time).toISOString()
+			}, formatMessageClock(time, t)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
+				size: 12,
+				className: open ? ocOr("TurnTriggerNodeView", "openChevron", "dsh-tdt-sv-trigger-chevron-open") : ocOr("TurnTriggerNodeView", "chevron", "dsh-tdt-sv-trigger-chevron")
+			})), open ? (0, react.createElement)("div", { className: ocOr("TurnTriggerNodeView", "body", "dsh-tdt-sv-trigger-body") }, (0, react.createElement)("p", { className: ocOr("TurnTriggerNodeView", "explanation", "dsh-tdt-sv-trigger-explanation") }, t("triggerExplanation")), (0, react.createElement)("div", { className: ocOr("TurnTriggerNodeView", "content", "dsh-tdt-sv-trigger-content") }, content === "" ? t("sessionEmpty") : content)) : null);
+		}
+		/** 注入原文：content 块的 text 拼接（官方 NoticeBody 的文本消费面）。 */
+		function triggerContent(content) {
+			if (!Array.isArray(content)) return "";
+			return content.map((block) => {
+				const b = block;
+				if (b !== null && typeof b === "object" && b.type === "text" && typeof b.text === "string") return b.text;
+				return "";
+			}).filter((part) => part !== "").join("\n");
 		}
 		//#endregion
 		//#region src/client/session-view.ts
+		/** 稳定的空序列（避免默认值每次新建数组）。 */
+		const EMPTY_ORDER = [];
+		const EMPTY_TURN_ORDER = [];
 		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
 		let officialWarned = false;
 		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
@@ -658,9 +1298,93 @@ window.__ModuleLoader__.load({
 				return "";
 			}).filter((part) => part !== "").join("\n");
 		}
-		/** 助手节点的纯文本（复制按钮用）。 */
+		/** legacy assistant 节点的纯文本（复制按钮用）。 */
 		function assistantText(node) {
 			return (node.blocks ?? []).map((block) => block.kind === "text" ? block.text : "").join("");
+		}
+		/** keyed 节点的 data（官方 ChatNodeDataMap[kind]）。 */
+		function dataOf(node) {
+			return node.data ?? {};
+		}
+		/** 节点位置 → turn 位置（官方 node.location 收窄，ChatNodeSeat.tsx:1660 的反向）。 */
+		function turnLocationOf(node) {
+			const location = node.location;
+			return location?.kind === "turn" || location?.kind === "step" ? location.turn : void 0;
+		}
+		/** 官方 AssistantChatData.blocks（ui-chat contract/chat-nodes.d.ts:22）。 */
+		function blocksOf(value) {
+			return Array.isArray(value) ? value : void 0;
+		}
+		/**
+		* 官方 ToolCallBlock（uic contract/records.d.ts:140）→ 工具卡 props。
+		* running 半截（phase: preparing/start）只有 name/argsRaw；settled（kind: tool-result）带输出与错误。
+		*/
+		function toolCallCard(node, t) {
+			const root = dataOf(node).root;
+			if (root === void 0 || root === null) return null;
+			const settled = root.kind === "tool-result";
+			const call = settled ? root.call : root;
+			const error = root.error;
+			return {
+				name: typeof call?.name === "string" ? call.name : "tool",
+				argsRaw: typeof call?.argsRaw === "string" ? call.argsRaw : "",
+				output: settled ? contentText(root.content) : "",
+				isError: root.isError === true,
+				errorName: error?.name,
+				t
+			};
+		}
+		/**
+		* keyed 节点 → 视图（等价于官方 slot "conversation.chat.node" 的按 kind 分发）。
+		* @param node - keyed ChatNode。
+		* @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
+		* @param t - 翻译席位（已包占位符替换）。
+		* @param lastTurn - 官方 timeline.turnOrder 末位（尾部操作行判定）。
+		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
+		*/
+		function renderKeyedNode(node, turnProcess, t, lastTurn) {
+			switch (node.kind) {
+				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
+					data: node.data,
+					t
+				});
+				case "turn-process": return turnProcess === void 0 ? null : (0, react.createElement)(TurnProcessNodeViewMirror, {
+					turn: turnLocationOf(node),
+					turnProcess,
+					t
+				});
+				case "turn-tail": {
+					const data = node.data;
+					if (data === void 0 || data.closing === null || data.closing === void 0) return null;
+					return (0, react.createElement)(TurnTailNodeViewMirror, {
+						data,
+						endsWithResponse: data.turn === lastTurn && hasAssistantReplyContent(data.closing.blocks),
+						t
+					});
+				}
+				case "assistant-step": {
+					const parts = assistantBlocks(blocksOf(dataOf(node).blocks), t);
+					return parts.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
+				}
+				case "tool-call": {
+					const card = toolCallCard(node, t);
+					return card === null ? null : (0, react.createElement)(GenericCommandCard, card);
+				}
+				case "user":
+				case "steering": {
+					const text = contentText(dataOf(node).content);
+					if (text === "") return null;
+					return (0, react.createElement)(UserMessage, { text });
+				}
+				case "turn-error": return (0, react.createElement)("div", { className: "dsh-tdt-sv-notice-err" }, `${t("sessionTurnError")}${typeof dataOf(node).message === "string" && dataOf(node).message !== "" ? `：${String(dataOf(node).message)}` : ""}`);
+				case "turn-max-tokens": return (0, react.createElement)("div", { className: "dsh-tdt-sv-notice" }, t("sessionMaxTokens"));
+				case "model-retry": return (0, react.createElement)("div", { className: "dsh-tdt-sv-notice" }, `${t("sessionRetry")}（${typeof dataOf(node).retryState === "string" ? String(dataOf(node).retryState) : "scheduled"}）`);
+				case "context":
+				case "compaction":
+				case "manual-compaction":
+				case "unknown": return null;
+				default: return (0, react.createElement)("details", { className: "dsh-tdt-sv-tool" }, (0, react.createElement)("summary", { className: "dsh-tdt-sv-notice" }, `${t("sessionUnknownKind")} ${node.kind}`), (0, react.createElement)("pre", null, safeJson(node.data)));
+			}
 		}
 		/** assistant 内容块 → 子元素数组（text 官方 Markdown、reasoning 官方折叠、tool-call 工具卡）。 */
 		function assistantBlocks(blocks, t) {
@@ -705,8 +1429,11 @@ window.__ModuleLoader__.load({
 			});
 			return parts;
 		}
-		/** 单个节点的自绘渲染；返回 null = 按决策 28 过滤的噪音 kind。 */
-		function renderNode(node, t) {
+		/**
+		* legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
+		* 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
+		*/
+		function renderLegacyNode(node, t) {
 			switch (node.kind) {
 				case "user":
 				case "steering": {
@@ -795,55 +1522,89 @@ window.__ModuleLoader__.load({
 			flush();
 			return out;
 		}
+		/** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
+		function renderLegacyRows(nodes, t) {
+			const items = groupNodes(nodes);
+			const rows = [];
+			items.forEach((entry, index) => {
+				const parts = [];
+				if (entry.kind === "process") {
+					parts.push((0, react.createElement)("div", {
+						key: "lead",
+						className: "dsh-tdt-sv-notice"
+					}, `${t("sessionProcess")} · ${entry.nodes.length}`));
+					entry.nodes.forEach((node, i) => {
+						const rendered = renderLegacyNode(node, t);
+						if (rendered !== null) parts.push((0, react.createElement)("div", { key: `p${i}` }, rendered));
+					});
+				} else {
+					const inner = renderLegacyNode(entry.node, t);
+					if (inner !== null) parts.push(inner);
+					if (entry.node.kind === "assistant") {
+						const next = items[index + 1];
+						if (next === void 0 || !(next.kind === "node" && next.node.kind === "assistant")) parts.push((0, react.createElement)(MessageIconActionsMirror, {
+							key: "act",
+							text: assistantText(entry.node),
+							clock: "end",
+							t
+						}));
+					}
+				}
+				if (parts.length === 0) return;
+				rows.push((0, react.createElement)("div", {
+					key: `lg${index}`,
+					className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem")
+				}, parts));
+			});
+			return rows;
+		}
 		/**
 		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊（对话框为占位）。
 		* @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
 		*/
 		function SessionViewModal(props) {
 			const { t, heading, sessionId, view, onClose } = props;
-			const subscribe = (0, react.useMemo)(() => (onChange) => {
-				return view.target.subscribe(onChange);
-			}, [view]);
+			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
+			const subscribe = (0, react.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
 			const chat = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
 			const sessionSub = (0, react.useMemo)(() => (onChange) => view.session.subscribe(onChange), [view]);
 			const sessionGet = (0, react.useMemo)(() => () => view.session.getSnapshot(), [view]);
 			const sessionSnap = (0, react.useSyncExternalStore)(sessionSub, sessionGet);
-			const items = groupNodes(chat?.legacy?.nodes ?? []);
-			const rendered = items.map((entry, index) => {
-				let inner;
-				if (entry.kind === "process") inner = (0, react.createElement)(TurnProcessNodeViewMirror, {
-					key: `g${index}`,
-					count: entry.nodes.length,
-					t,
-					children: entry.nodes.map((node, i) => (0, react.createElement)(ChatFlowItem, { key: `p${i}` }, renderNode(node, t)))
+			const [openTurns, setOpenTurns] = (0, react.useState)(() => /* @__PURE__ */ new Map());
+			const onSetOpen = (0, react.useCallback)((turn, answerStep, open) => {
+				setOpenTurns((prev) => {
+					const next = new Map(prev);
+					if (open) next.set(turn, answerStep);
+					else next.delete(turn);
+					return next;
 				});
-				else inner = renderNode(entry.node, t);
-				if (inner === null) return null;
-				const parts = [inner];
-				if (entry.kind === "node" && entry.node.kind === "assistant") {
-					const next = items[index + 1];
-					if (next === void 0 || !(next.kind === "node" && next.node.kind === "assistant")) {
-						const actions = (0, react.createElement)(MessageIconActionsMirror, {
-							key: `act${index}`,
-							text: assistantText(entry.node)
-						});
-						if (actions !== null) parts.push(actions);
-					}
-				}
-				return (0, react.createElement)(ChatFlowItem, { key: `flow${index}` }, parts);
-			}).filter((item) => item !== null);
+			}, []);
+			const order = chat?.order ?? EMPTY_ORDER;
+			const store = chat?.nodes;
+			const keyed = order.length > 0 && store !== void 0;
+			const turnOrder = chat?.timeline?.turnOrder ?? EMPTY_TURN_ORDER;
+			const lastTurn = turnOrder.length === 0 ? void 0 : turnOrder[turnOrder.length - 1];
+			const renderNode = (0, react.useCallback)((node, turnProcess) => renderKeyedNode(node, turnProcess, tt, lastTurn), [tt, lastTurn]);
+			const rendered = (keyed ? ChatNodeListMirror({
+				order,
+				store,
+				openState: openTurns,
+				onSetOpen,
+				foldCompleted: true,
+				renderNode
+			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt)).filter((row) => row !== null && row !== void 0);
 			const officialCount = officialModuleCount();
 			if (!officialWarned) {
 				officialWarned = true;
-				console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass("ChatView", "frame")} cardRoot=${officialClass("GenericCommandCard", "root")} bubble=${officialClass("MessageItem", "bubble")} reasoningRoot=${officialClass("ReasoningRow", "root")}`);
+				console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass("ChatView", "frame")} flowItem=${officialClass("ChatView", "flowItem")} trigger=${officialClass("TurnTriggerNodeView", "root")} turnProcess=${officialClass("TurnProcessNodeView", "root")} tail=${officialClass("TurnTailNodeView", "root")}`);
 				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
 			}
 			const openState = sessionSnap?.openState;
 			const showLoadOlder = sessionSnap?.hasMore !== false;
-			const body = rendered.length === 0 ? (0, react.createElement)(ChatHint, { text: openState === "error" ? t("sessionLoadFailed") : openState === "loading" || openState === "cold" ? t("sessionLoading") : t("sessionEmpty") }) : [showLoadOlder ? (0, react.createElement)(ChatOlderButton, {
+			const body = rendered.length === 0 ? (0, react.createElement)(ChatHint, { text: openState === "error" ? tt("sessionLoadFailed") : openState === "loading" || openState === "cold" ? tt("sessionLoading") : tt("sessionEmpty") }) : [showLoadOlder ? (0, react.createElement)(ChatOlderButton, {
 				key: "older",
-				label: t("sessionLoadOlder"),
+				label: tt("sessionLoadOlder"),
 				onClick: () => {
 					view.loadOlder();
 				}
@@ -856,27 +1617,15 @@ window.__ModuleLoader__.load({
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${t("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialModuleCount() === 0 ? (0, react.createElement)("div", {
+			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${tt("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialCount === 0 ? (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-sid",
 				style: { color: "var(--dsw-alias-state-warn-primary, #b7791f)" }
-			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-actions" }, (0, react.createElement)("button", {
+			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("button", {
 				type: "button",
-				className: "dsh-tdt-sv-btn dsh-tdt-sv-btn-icon",
-				"aria-label": t("debugClose"),
+				className: "dsh-tdt-sv-close",
+				"aria-label": tt("debugClose"),
 				onClick: onClose
-			}, CloseIcon()))), (0, react.createElement)(ChatViewFrame, { children: body }), (0, react.createElement)(ComposerPlaceholder, { placeholder: t("sessionComposerPlaceholder") })));
-		}
-		/** 内联关闭图标（currentColor 跟随主题，与主面板同款画法）。 */
-		function CloseIcon() {
-			return (0, react.createElement)("svg", {
-				width: 15,
-				height: 15,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round"
-			}, (0, react.createElement)("path", { d: "M6 6l12 12M18 6L6 18" }));
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 }))), (0, react.createElement)(ChatViewFrame, { children: body }), (0, react.createElement)(ComposerPlaceholder, { placeholder: tt("sessionComposerPlaceholder") })));
 		}
 		//#endregion
 		//#region src/client/index.ts
