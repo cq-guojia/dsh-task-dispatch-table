@@ -112,7 +112,6 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-outcome-err{color:var(--dsw-alias-state-error-primary,#c0392b);}
 .dsh-tdt-sv-outcome-ok{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-sv-notice{align-self:center;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));padding:2px 8px;}
-.dsh-tdt-sv-notice-err{align-self:center;font-size:12px;color:var(--dsw-alias-state-error-primary,#c0392b);padding:2px 8px;text-align:center;}
 .dsh-tdt-sv-hint{font-size:12px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
 /* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
 .dsh-tdt-sv-process:disabled{cursor:default;}
@@ -177,6 +176,27 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-forkmodal{width:min(440px,100%);}
 /* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
 .dsh-tdt-sv-forkerr{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-state-error-primary,#e5484d);word-break:break-word;}
+/* ── 重试/轮次失败/限长三件套兜底（官方 MessageItem.module.css 逐值照抄，官方类缺失时生效） ── */
+.dsh-tdt-sv-retry{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
+.dsh-tdt-sv-retry-summary{border-radius:var(--dsw-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
+.dsh-tdt-sv-retry-summary::-webkit-details-marker{display:none;}
+.dsh-tdt-sv-retry-summary:after{content:"";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg);}
+.dsh-tdt-sv-retry-summary:hover{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-retry-summary:focus-visible{outline:1.5px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,#4c6bff));outline-offset:2px;}
+.dsh-tdt-sv-retry-text{color:inherit;}
+.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 0%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 40%,var(--dsw-alias-label-secondary,rgba(128,128,128,.95)) 50%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 60%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
+@keyframes dsh-tdt-retry-shimmer{0%{background-position:100%}to{background-position:0}}
+@media (prefers-reduced-motion:reduce){.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{color:inherit;background:0 0;animation:none;}}
+.dsh-tdt-sv-retry[open] .dsh-tdt-sv-retry-summary:after{transform:rotate(45deg);}
+.dsh-tdt-sv-retry-details{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid;}
+.dsh-tdt-sv-retry-label{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid;}
+.dsh-tdt-sv-turnerr-dot{margin-top:5px;}
+.dsh-tdt-sv-turnerr-copy{overflow-wrap:anywhere;min-width:0;}
+.dsh-tdt-sv-turnerr-title{color:var(--dsw-alias-state-error-primary,#e5484d);margin-right:6px;font-weight:600;}
+.dsh-tdt-sv-turnerr-msg{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr-code{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
+.dsh-tdt-sv-turnerr-warn{color:var(--dsw-alias-state-warn-primary,#f5a623);margin-right:6px;font-weight:600;}
 `
 
 let injected = false

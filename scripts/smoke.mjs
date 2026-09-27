@@ -449,6 +449,20 @@ try {
     clientJs.includes('dsh-tdt-sv-forkmodal'))
   check('消息行分支带 atSeq（从该条消息截断开分支）',
     clientJs.includes('atSeq'))
+  // 重试/轮次失败/限长三件套（官方 MessageItem 逐字照抄，2026-09-27 用户反馈对齐官方样式）：
+  // 折叠摘要「已重试模型请求 (n/m) · Ns」+ 展开重试延迟/失败原因；轮次失败 = 红点+红标题+灰原因+右侧机器码。
+  check('重试行挂官方 retryRow 类（MessageItem.retryRow，缺失回退自绘）',
+    clientJs.includes('retryRow') && clientJs.includes('dsh-tdt-sv-retry'))
+  check('重试摘要走官方 retryStatus 模板（retryStatus 文案键在 bundle）',
+    clientJs.includes('retryStatus') && clientJs.includes('retryStarted') && clientJs.includes('retryCancelled'))
+  check('重试展开含重试延迟/失败原因（retryDelay / retryFailure 文案键）',
+    clientJs.includes('retryDelay') && clientJs.includes('retryFailure'))
+  check('轮次失败行走官方 turnErrorRow 组（StateDot + 标题/原因分离 + 机器码标签）',
+    clientJs.includes('turnErrorRow') && clientJs.includes('turnErrorCode') && clientJs.includes('turnErrorTitle'))
+  check('限长行走官方 maxTokensTitle（黄点警示，非红）',
+    clientJs.includes('maxTokensTitle') && clientJs.includes('maxTokensHint'))
+  check('旧自绘 notice-err / 旧文案键已删除（sessionTurnError 不再进 bundle）',
+    !clientJs.includes('dsh-tdt-sv-notice-err') && !clientJs.includes('sessionTurnError'))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

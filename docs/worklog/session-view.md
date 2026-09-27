@@ -183,3 +183,28 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 
 > **封板（2026-09-27）**：真机验证全部通过（确认框官方化 / 头部钮规格 / 尾部操作行恒常显 / 消息行分支截断）。U10 收口 → [PROGRESS.md](../PROGRESS.md) 未决项 U10 关闭、里程碑 17 ✅。本工作包后续增补（清单遗留照 [design/session-view-ui-map.md](../design/session-view-ui-map.md) 第十四节）另起会话再排。下一专题 = U11 产出物打开与展示方式（[design/artifact-opening.md](../design/artifact-opening.md)）。
 
+> **增补（2026-09-27）**：用户在真机上指着截图要求优先补「重试 / 轮次失败 / 限长」三件套的官方样式（清单 19），本会话即排——下面第十一轮。
+
+## 2026-09-27（第十一轮）— 重试/轮次失败/限长三件套照官方 MessageItem 落码（清单 19）
+
+——真机截图对比（用户）：我方旧自绘只有一行红色「处理失败：轮次失败 503:…」整行红；官方是三段式——「已重试模型请求 (5/5) · 9s」**可折叠行**（点开才见「重试延迟：8364 毫秒 / 失败原因：503:…」）+「● 本轮运行失败 503:…」**红点 + 红标题 + 灰原因** + 最右侧灰色机器码标签（SERVER）。要求照官方样式改。
+
+**源码事实（先读后动，AGENTS.md 第 4 条；`dsh-client-ui-chat@0.1.7-rc.2` lib/client.js:1235-1338）**：
+- `ModelRetryItem`：`<details class=retryRow>` + `summary`（内 `retryText[role=status]`）+ `retryDetails` 两行（`retryDetailLabel`「重试延迟：」+ `durationMilliseconds`；「失败原因：」+ 人话原因）。active = `retryState === 'scheduled'`：文案切「正在重试模型请求」、秒数倒计时（`ceil(delayMs/1000)`，250ms tick）+ 渐隐 shimmer（`prefers-reduced-motion` 关闭）；取消态「模型请求重试已取消」；started「已重试模型请求」；scheduled 静默「等待重试模型请求」。模板 `'{label}（{retry}/{maximum}） · {seconds}s'`；maximum = mode `normal` 时取 `maxRetries`，否则 ∞。
+- `TurnErrorItem`：`turnErrorRow`（grid `10px minmax(0,1fr) auto`）= `StateDot(error)` + `turnErrorCopy`（红标题「本轮运行失败」600 + 灰原因 label-secondary）+ 右侧 `<code class=turnErrorCode>` = `node.code`——**即截图右侧 SERVER 标签**（稳定机器路由码，来自 turn/end `reason.error` 的 `LlmFailure.code`）；`ACCOUNT_SIGNED_OUT` 时标题换「任务已停止」。失败原因人话映射：AUTH→「API 密钥无效」、QUOTA→「当前请求的额度已用尽」、ACCOUNT_*→登出/登录两条，否则原文 message。
+- `TurnMaxTokensItem`：StateDot(warning) + 「已达到输出 token 上限」+ 提示「回答被截断，已有输出保留在对话中。发送“继续”可让模型接着输出。」
+- keyed `model-retry` 节点 data = `{ attempts: ModelRetryNode[], current: ModelRetryNode }`，官方 RetryNodeView **只画 `data.current`**（lib/client.js:1493）——旧实现直接读 `dataOf(node).retryState` 永远 undefined ⇒ **恒显 scheduled，是个真缺陷，本轮顺带修掉**。
+- `TURN_PROCESS_INDEPENDENT_KINDS`：turn-error / turn-max-tokens 独立于过程折叠（恒显）；model-retry 是过程成员（折叠时隐藏）——`mirror/ChatNodeSeat` 早已按此实现，无需改。
+- `StateDot` 是 primitives 公开导出（pack 核实），`primitives.d.ts` 补最小声明面。
+
+**落码**：
+- `mirror/MessageItem.tsx`：新增 `ModelRetryItemMirror` / `TurnErrorItemMirror` / `TurnMaxTokensItemMirror`（JSX 逐字照官方，类名 `ocOr('MessageItem', …)` 官方哈希类优先、`dsh-tdt-sv-*` 兜底）+ `failureMessage` 人话映射。
+- `locales.ts`：删旧键 `sessionTurnError` / `sessionMaxTokens` / `sessionRetry`；增 16 键 zh/en 逐字抄官方词典（retry 五态 + retryStatus 模板 + retryDelay/retryFailure/durationMilliseconds + turnErrorTitle/accountStopped + maxTokensTitle/maxTokensHint + failure 四键）。
+- `session-view.ts`：keyed 路 `model-retry` 取 `data.current`（数据薄兜底 attempts 末项，与官方 buildViewNode 取法同构）、`turn-error` / `turn-max-tokens` 接新组件；legacy 路同步；`ConversationNodeLike` 补 mode/retry/maxRetries/delayMs/failure 字段。
+- `archive-session-css.ts`：删无消费者的 `.dsh-tdt-sv-notice-err`；末尾新增兜底样式组（官方 MessageItem.module.css 逐值照抄：折叠行/箭头旋转/hover/focus-visible、shimmer keyframes、错误行 grid 与 `<code>` 等宽、警示行 warn 色）。
+- `scripts/smoke.mjs`：+6 断言（retryRow 语义类在 bundle、retry 五态文案、延迟/失败原因、turnError 三键、maxTokens 两键、旧 `notice-err`/`sessionTurnError` 已删）。
+
+**验证**：typecheck + build（dist 171.69 kB）+ 冒烟 **114 项全过**（原 108 + 6）。本轮纯照官方逐字落码（执行 ui-map 清单 19），无方案取舍，不新增决策。
+
+**待真机**：① 重试行折叠摘要「已重试模型请求 (n/m) · Ns」+ 点开见「重试延迟 / 失败原因」② scheduled 在途时「正在重试…」倒计时 + shimmer ③ 轮次失败行：红点 + 红「本轮运行失败」+ 灰原因 + 右侧 SERVER 等机器码 `<code>` 标签 ④ 限长行黄点警示组 ⑤ 暗色主题配色。
+

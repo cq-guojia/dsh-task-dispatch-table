@@ -30,7 +30,7 @@ import { ensureArchiveSessionStyle } from './archive-session-css'
 import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame, type TurnsFace } from './mirror/ChatView'
 import { GenericCommandCard } from './mirror/GenericCommandCard'
 import { MessageIconActionsMirror } from './mirror/MessageIconActions'
-import { AssistantMarkdown, UserMessage } from './mirror/MessageItem'
+import { AssistantMarkdown, UserMessage, ModelRetryItemMirror, TurnErrorItemMirror, TurnMaxTokensItemMirror, type RetryAttemptFace, type TurnErrorFace } from './mirror/MessageItem'
 import { ReasoningRowMirror } from './mirror/ReasoningRow'
 import { TurnProcessNodeViewMirror } from './mirror/TurnProcessNodeView'
 import { TurnTailNodeViewMirror, type TurnTailDataFace } from './mirror/TurnTailNodeView'
@@ -144,8 +144,13 @@ type ConversationNodeLike = NodeBaseLike & {
   message?: string
   code?: string
   turn?: number
-  // model-retry（records.d.ts:112-122）
+  // model-retry（records.d.ts:112-122，= LlmRetryEventData & { retryState }）
   retryState?: 'scheduled' | 'started' | 'cancelled'
+  mode?: string
+  retry?: number
+  maxRetries?: number
+  delayMs?: number
+  failure?: { message?: string; code?: string } | null
   // compaction（records.d.ts:183-198）
   summary?: string | null
   // unknown（records.d.ts:208-215）
@@ -623,15 +628,21 @@ function renderKeyedNode(
       return h(UserMessage, { text })
     }
     case 'turn-error':
-      return h('div', { className: 'dsh-tdt-sv-notice-err' },
-        `${t('sessionTurnError')}${typeof dataOf(node).message === 'string' && dataOf(node).message !== '' ? `：${String(dataOf(node).message)}` : ''}`,
-      )
+      return h(TurnErrorItemMirror, { node: dataOf(node) as TurnErrorFace, t })
     case 'turn-max-tokens':
-      return h('div', { className: 'dsh-tdt-sv-notice' }, t('sessionMaxTokens'))
-    case 'model-retry':
-      return h('div', { className: 'dsh-tdt-sv-notice' },
-        `${t('sessionRetry')}（${typeof dataOf(node).retryState === 'string' ? String(dataOf(node).retryState) : 'scheduled'}）`,
-      )
+      return h(TurnMaxTokensItemMirror, { t })
+    case 'model-retry': {
+      // 官方 RetryNodeView（lib/client.js:1493）：只画 data.current（链上最近一次尝试），
+      // active = retryState === 'scheduled'。keyed 节点 data = { attempts, current }；
+      // 数据薄时兜底取 attempts 末项（与官方 buildViewNode 的 current 取法同构）。
+      const data = dataOf(node)
+      const attempts = Array.isArray(data.attempts) ? data.attempts as RetryAttemptFace[] : []
+      const current = (typeof data.current === 'object' && data.current !== null
+        ? data.current
+        : attempts[attempts.length - 1]) as RetryAttemptFace | undefined
+      if (current === undefined) return null
+      return h(ModelRetryItemMirror, { node: current, active: current.retryState === 'scheduled', t })
+    }
     // 决策 28：context（系统注入）/ compaction / unknown 仍默认过滤；
     // ⚠ ui-map §十一-B：官方 ContextInjectionRow / SystemPromptRow 待实施——届时从这里放行。
     case 'context':
@@ -719,13 +730,12 @@ function renderLegacyNode(node: ConversationNodeLike, t: Translate): ReturnType<
       })
     }
     case 'turn-error':
-      return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice-err' },
-        `${t('sessionTurnError')}${node.message === undefined || node.message === '' ? '' : `：${node.message}`}`,
-      )
+      return h(TurnErrorItemMirror, { key: node.seq, node, t })
     case 'turn-max-tokens':
-      return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice' }, t('sessionMaxTokens'))
+      return h(TurnMaxTokensItemMirror, { key: node.seq, t })
     case 'model-retry':
-      return h('div', { key: node.seq, className: 'dsh-tdt-sv-notice' }, `${t('sessionRetry')}（${node.retryState ?? 'scheduled'}）`)
+      // legacy 兼容投影的 model-retry = 单次尝试（ModelRetryNode 扁平节点）。
+      return h(ModelRetryItemMirror, { key: node.seq, node, active: node.retryState === 'scheduled', t })
     // 决策 28：默认过滤的噪音 kind —— context（系统注入）、compaction（压缩标记）、
     // unknown（未知事件面）。assistant 里的 reasoning 由 mirror/ReasoningRow 折叠渲染。
     // ⚠ ui-map §十一-B：系统提示/上下文注入行（官方 ContextInjectionRow）待实施——届时从这里放行。

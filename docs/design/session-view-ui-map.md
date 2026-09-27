@@ -62,9 +62,9 @@ for (let i=0;i<lines.length;i++){
 | 附件行 | `attachmentRow`/`fileCard`/`fileIcon`/`fileContent`/`fileName`/`fileMeta` | 附件/文件卡（task 会话基本没有） | ❌（无数据） |
 | 引用摘要 | `referenceSummary` | 13px tertiary | ❌ |
 | 上下文行 | `contextRow` | 上下文注入消息行 | ❌ |
-| 轮次失败 | `turnErrorRow/turnErrorTitle/turnErrorDot/turnErrorCode/turnErrorMessage/turnErrorCopy` | 错误横幅组 | 🟡（我们自己画的 `.dsh-tdt-sv-notice-err`） |
-| 限长 | `maxTokensTitle` | — | 🟡 |
-| 重试 | `retryRow/retrySummary/retryText/retryDetails/retryDetailLabel` | — | 🟡 |
+| 轮次失败 | `turnErrorRow/turnErrorTitle/turnErrorDot/turnErrorCode/turnErrorMessage/turnErrorCopy` | 错误横幅组 | ✅（官方 `TurnErrorItem` 照抄：StateDot(error) + 红标题 + 灰原因 + 右侧 `<code>` 机器码） |
+| 限长 | `maxTokensTitle` | — | ✅（官方 `TurnMaxTokensItem` 照抄：StateDot(warning) + 警示标题 + 提示语） |
+| 重试 | `retryRow/retrySummary/retryText/retryDetails/retryDetailLabel` | — | ✅（官方 `ModelRetryItem` 照抄：`<details>` 折叠 + active 倒计时/shimmer） |
 | 压缩 | `compactionRow/compactionTitle/compactionSummary/compactionBody/…` | 上下文压缩展示 | ❌（决策 28 过滤掉） |
 
 > **注意**：`MessageItem` 里**没有 assistant 气泡类**——官方助手正文不走气泡，直接是 `AssistantMarkdown`（见下）。
@@ -147,7 +147,7 @@ for (let i=0;i<lines.length;i++){
 | 元素 | 官方组件 / 类 | 行为与样式 | 我们 |
 |---|---|---|---|
 | **「用时 29 秒 ⌃」分隔条** | `TurnProcessNodeView.root` | 高 `33px+delta`、**border-bottom `.5px` `--dsw-alias-border-l2`**、`padding:0 0 8px`、`:not([data-open]){margin-bottom:8px}`；点击展开/收起本 turn 的过程条目；`chevron` 14px `[data-open]` 旋转 180° | 🟡（我们有「过程 · N」行但**没有这条分隔线样式**，label 也不是用时） |
-| **重试行**「已重试模型请求 (3/5) · 2s ⌄」 | `MessageItem.retryRow/retrySummary/retryText/retryDetails/retryDetailLabel` | 折叠=摘要；展开=`重试延迟: 1868 毫秒` / `失败原因: 503 {…}`（文案键在 chat 包内，已核实存在） | ❌（我们有 model-retry 提示行，无展开详情） |
+| **重试行**「已重试模型请求 (3/5) · 2s ⌄」 | `MessageItem.retryRow/retrySummary/retryText/retryDetails/retryDetailLabel` | 折叠=摘要；展开=`重试延迟: 1868 毫秒` / `失败原因: 503 {…}`（文案键在 chat 包内，已核实存在） | ✅（mirror/MessageItem `ModelRetryItemMirror` 逐字照抄 lib/client.js:1235：`<details>` 折叠 + active 倒计时/shimmer；keyed kind=`model-retry` 取 `data.current`，legacy 取扁平节点） |
 | **工具组行**「已写入文件 ⌃」 | `ChatGroupSeat`（title/leading/chevron/activityIcon） | 把同一工具的多次调用再收一层，hover 时图标↔箭头互换 | ❌ |
 | **工具行（错误）**「写入 · Error: invalid arguments…」 | `GenericCommandCard`，`data-state=error`、`summary[data-error]` | 摘要红色（`_summary[data-error]` 规则） | 🟡（有 ✕ 标记，摘要未变红） |
 | **工具行（成功）**「写入 · test.txt +1 -0」 | `GenericCommandCard`，`title` + `summary` | `title=工具名`、`summary=目标 + 差异统计`；`+N -N` 差异计数由写入类渲染扩展计算（chat 包内无 `diffTotals` 调用，来源待核） | 🟡（有路径摘要，无差异统计） |
@@ -263,7 +263,7 @@ for (let i=0;i<lines.length;i++){
 | 对话框占位 | ❌ 移除 | 归档会话 = 留档不可改，**弹窗内不做续聊**（决策 37）；后续做「继续对话（开分支）」按钮（PROGRESS U10：确认框 → 关弹窗 → 跳新分支会话，依赖 `sessions.fork`） |
 | 分支 icon | ❌ 移除 | 官方分支 = 复制对话在新会话继续；只读弹窗无 fork 席位且与 U10 方案重合 ⇒ 尾部操作行不渲染分支 icon |
 | 操作行 👍👎 | ❌ | 官方走 slots（feedback 插件），弹窗无该插槽 |
-| 六-B、过程条目 | 🟡 | 重试行展开详情 ❌、工具组行（已写入文件）❌、错误摘要红色 🟡、`+N -N` 差异统计 ❌（来源待核）、思考行 ✅ |
+| 六-B、过程条目 | 🟡 | 重试行 ✅（官方 ModelRetryItem 照抄）、轮次失败行 ✅（官方 TurnErrorItem：StateDot(error)+红标题+灰原因+右侧 `<code>` 机器码，官方截图里的 SERVER 标签即 `turnErrorCode`）、限长行 ✅（官方 TurnMaxTokensItem：黄点+警示标题+提示语）、工具组行（已写入文件）❌、工具错误摘要红色 🟡、`+N -N` 差异统计 ❌（来源待核）、思考行 ✅ |
 | 文件 mention | ❌ | 正文行内文件下划线 = `MarkdownText` 的 `fileMentions`；用户气泡 chips = `projectUserText`——两者都只需传入解析器即可 |
 | 十一-B、系统提示词行 / 上下注入行 | ❌ | 结构已核实（DisclosureRow + ContextInjectionRow + OpaqueBody）；keyed kind=`system-prompt` / `context` 目前仍按决策 28 过滤 |
 | 表格（含宽表 hover 横滚） | ✅ | `MarkdownText` 自带（`.tableScroll` + `.md-table-wide` hover 才出滚动条） |
@@ -299,7 +299,7 @@ for (let i=0;i<lines.length;i++){
 15. ⬜ 「到底部」悬浮钮（toBottom/toBottomSlot）
 16. ⬜ 上下文注入行（ContextBody/ContextInjectionRow）——keyed kind=`context` / `system-prompt` 目前仍过滤（决策 28），放行即接
 17. ⬜ 工具卡补 `summary[data-error]` 红色变体（错误行摘要变红，对齐官方）
-19. ⬜ 重试行（已重试模型请求 (n/m) · 延迟/原因）——keyed kind=`model-retry` 已渲染为 notice，未做官方行样式
+19. ✅ 重试行（已重试模型请求 (n/m) · 延迟/原因）——mirror/MessageItem `ModelRetryItemMirror` 照官方 ModelRetryItem（lib/client.js:1235-1290）逐字落码；同轮补齐轮次失败行（TurnErrorItem）与限长行（TurnMaxTokensItem）；旧自绘 `notice-err` / `sessionTurnError` 等键已删
 20. ⬜ 正文 `fileMentions`（行内文件下划线）+ 用户气泡 `projectUserText`（mention chips）
 22. ✅ `ChatGroupSeat`（grouped('chat') 分组项）——官方 grouped 读取器不在公开契约面 ⇒ `process-groups.js` 算法移植（决策 37）
 23. ⬜ 用户消息的操作行（`MessageIconActions` clock='start'）——keyed user 节点已具备 time，待接

@@ -73,6 +73,14 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
     | { headless?: false; closeLabel: string }
   )): import('react').ReactPortal | null
 
+  /** 官方状态点（10px 布局位、6px currentColor 芯；error 红 / warning 琥珀，色随官方 token）。 */
+  export function StateDot(props: {
+    state: 'done' | 'warning' | 'ongoing' | 'error' | 'idle'
+    size?: number
+    className?: string
+    appearance?: 'dot' | 'step'
+  }): ReactNode
+
   /** 官方图标（1px 线宽）。 */
   export const IconCodeOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronRightOutlineRegular: ComponentType<{ size?: number; className?: string }>

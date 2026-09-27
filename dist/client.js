@@ -93,9 +93,6 @@ window.__ModuleLoader__.load({
 			sessionViewerTitle: "会话记录（只读）",
 			sessionArgs: "参数",
 			sessionOutput: "输出",
-			sessionTurnError: "轮次失败",
-			sessionMaxTokens: "该轮达到输出上限",
-			sessionRetry: "模型重试",
 			sessionUnknownKind: "未支持的节点类型：",
 			sessionLoading: "正在加载会话记录…",
 			sessionEmpty: "该会话暂无可显示的记录（可能刚建窗或已被清理）。",
@@ -123,6 +120,22 @@ window.__ModuleLoader__.load({
 			durationSeconds: "{seconds}秒",
 			durationMinutes: "{minutes}分{seconds}秒",
 			durationHours: "{hours}小时{minutes}分{seconds}秒",
+			retryActive: "正在重试模型请求",
+			retryCancelled: "模型请求重试已取消",
+			retryStarted: "已重试模型请求",
+			retryScheduled: "等待重试模型请求",
+			retryStatus: "{label}（{retry}/{maximum}） · {seconds}s",
+			retryDelay: "重试延迟：",
+			retryFailure: "失败原因：",
+			durationMilliseconds: "{milliseconds}毫秒",
+			turnErrorTitle: "本轮运行失败",
+			accountStopped: "任务已停止",
+			maxTokensTitle: "已达到输出 token 上限",
+			maxTokensHint: "回答被截断，已有输出保留在对话中。发送“继续”可让模型接着输出。",
+			failureAuth: "API 密钥无效",
+			failureQuota: "当前请求的额度已用尽",
+			failureAccountSignedOut: "任务已因退出 DeepSeek 登录而停止。",
+			failureAccountSignInRequired: "请先登录 DeepSeek，并确认请求地址支持账号认证。",
 			clockDate: "{m}月{d}日",
 			clockDateYear: "{y}年{m}月{d}日",
 			copyLabel: "复制",
@@ -265,9 +278,6 @@ window.__ModuleLoader__.load({
 			sessionViewerTitle: "Session transcript (read-only)",
 			sessionArgs: "Arguments",
 			sessionOutput: "Output",
-			sessionTurnError: "Turn failed",
-			sessionMaxTokens: "This turn hit the output token cap",
-			sessionRetry: "Model retry",
 			sessionUnknownKind: "Unsupported node kind: ",
 			sessionLoading: "Loading session transcript…",
 			sessionEmpty: "Nothing to show for this session yet (window just opened, or the log was cleaned up).",
@@ -295,6 +305,22 @@ window.__ModuleLoader__.load({
 			durationSeconds: "{seconds}s",
 			durationMinutes: "{minutes}m {seconds}s",
 			durationHours: "{hours}h {minutes}m {seconds}s",
+			retryActive: "Retrying model request",
+			retryCancelled: "Model request retry cancelled",
+			retryStarted: "Retried model request",
+			retryScheduled: "Waiting to retry model request",
+			retryStatus: "{label} ({retry}/{maximum}) · {seconds}s",
+			retryDelay: "Retry delay: ",
+			retryFailure: "Failure reason: ",
+			durationMilliseconds: "{milliseconds}ms",
+			turnErrorTitle: "This turn failed",
+			accountStopped: "Task stopped",
+			maxTokensTitle: "Output token limit reached",
+			maxTokensHint: "The reply was cut off; earlier output is preserved in the conversation. Send \"continue\" to let the model resume.",
+			failureAuth: "API key is invalid",
+			failureQuota: "Request quota exhausted.",
+			failureAccountSignedOut: "Stopped because you signed out of DeepSeek.",
+			failureAccountSignInRequired: "Sign in to DeepSeek and ensure the request destination supports account authentication.",
 			clockDate: "{m}/{d}",
 			clockDateYear: "{y}/{m}/{d}",
 			copyLabel: "Copy",
@@ -466,7 +492,6 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-outcome-err{color:var(--dsw-alias-state-error-primary,#c0392b);}
 .dsh-tdt-sv-outcome-ok{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-sv-notice{align-self:center;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));padding:2px 8px;}
-.dsh-tdt-sv-notice-err{align-self:center;font-size:12px;color:var(--dsw-alias-state-error-primary,#c0392b);padding:2px 8px;text-align:center;}
 .dsh-tdt-sv-hint{font-size:12px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
 /* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
 .dsh-tdt-sv-process:disabled{cursor:default;}
@@ -531,6 +556,27 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-forkmodal{width:min(440px,100%);}
 /* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
 .dsh-tdt-sv-forkerr{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-state-error-primary,#e5484d);word-break:break-word;}
+/* ── 重试/轮次失败/限长三件套兜底（官方 MessageItem.module.css 逐值照抄，官方类缺失时生效） ── */
+.dsh-tdt-sv-retry{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
+.dsh-tdt-sv-retry-summary{border-radius:var(--dsw-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
+.dsh-tdt-sv-retry-summary::-webkit-details-marker{display:none;}
+.dsh-tdt-sv-retry-summary:after{content:"";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg);}
+.dsh-tdt-sv-retry-summary:hover{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-retry-summary:focus-visible{outline:1.5px solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,#4c6bff));outline-offset:2px;}
+.dsh-tdt-sv-retry-text{color:inherit;}
+.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 0%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 40%,var(--dsw-alias-label-secondary,rgba(128,128,128,.95)) 50%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 60%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
+@keyframes dsh-tdt-retry-shimmer{0%{background-position:100%}to{background-position:0}}
+@media (prefers-reduced-motion:reduce){.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{color:inherit;background:0 0;animation:none;}}
+.dsh-tdt-sv-retry[open] .dsh-tdt-sv-retry-summary:after{transform:rotate(45deg);}
+.dsh-tdt-sv-retry-details{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid;}
+.dsh-tdt-sv-retry-label{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid;}
+.dsh-tdt-sv-turnerr-dot{margin-top:5px;}
+.dsh-tdt-sv-turnerr-copy{overflow-wrap:anywhere;min-width:0;}
+.dsh-tdt-sv-turnerr-title{color:var(--dsw-alias-state-error-primary,#e5484d);margin-right:6px;font-weight:600;}
+.dsh-tdt-sv-turnerr-msg{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr-code{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
+.dsh-tdt-sv-turnerr-warn{color:var(--dsw-alias-state-warn-primary,#f5a623);margin-right:6px;font-weight:600;}
 `;
 		let injected = false;
 		/**
@@ -1510,6 +1556,92 @@ window.__ModuleLoader__.load({
 				labels: MD_LABELS$1
 			}))));
 		}
+		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
+		function retrySeconds(milliseconds) {
+			return Math.max(1, Math.ceil(milliseconds / 1e3));
+		}
+		/**
+		* 官方 failureMessage（lib/client.js:1219）：已知机器码走本地化文案，其余原样展示。
+		* 官方判定顺序逐字：ACCOUNT_SIGNED_OUT / ACCOUNT_SIGN_IN_REQUIRED / QUOTA|ACCOUNT_QUOTA / AUTH。
+		*/
+		function failureMessage(message, code, t) {
+			if (code === "ACCOUNT_SIGNED_OUT") return t("failureAccountSignedOut");
+			if (code === "ACCOUNT_SIGN_IN_REQUIRED") return t("failureAccountSignInRequired");
+			if (code === "QUOTA" || code === "ACCOUNT_QUOTA") return t("failureQuota");
+			return code === "AUTH" ? t("failureAuth") : message ?? "";
+		}
+		/**
+		* 重试行（官方 ModelRetryItem）：折叠 = 「已重试模型请求 (5/5) · 9s ⌄」摘要；
+		* 展开 = 重试延迟 / 失败原因 两行。active（等待重试）时官方走 250ms 倒计时 + 渐隐 shimmer。
+		*/
+		function ModelRetryItemMirror(props) {
+			const { active, t } = props;
+			const node = props.node;
+			const delayMs = typeof node.delayMs === "number" ? node.delayMs : 0;
+			const maximum = node.mode === "normal" && typeof node.maxRetries === "number" ? node.maxRetries : "∞";
+			const deadline = (0, react.useMemo)(() => Date.now() + delayMs, [delayMs, node.retryState]);
+			const scheduledSeconds = retrySeconds(delayMs);
+			const [countdown, setCountdown] = (0, react.useState)(() => ({
+				deadline,
+				seconds: retrySeconds(deadline - Date.now())
+			}));
+			const remainingSeconds = countdown.deadline === deadline ? countdown.seconds : retrySeconds(deadline - Date.now());
+			(0, react.useEffect)(() => {
+				if (!active) return;
+				const updateCountdown = () => {
+					const next = retrySeconds(deadline - Date.now());
+					setCountdown((current) => current.deadline === deadline && current.seconds === next ? current : {
+						deadline,
+						seconds: next
+					});
+					return next;
+				};
+				if (updateCountdown() === 1) return;
+				const timer = window.setInterval(() => {
+					if (updateCountdown() === 1) window.clearInterval(timer);
+				}, 250);
+				return () => {
+					window.clearInterval(timer);
+				};
+			}, [active, deadline]);
+			const label = active ? t("retryActive") : node.retryState === "cancelled" ? t("retryCancelled") : node.retryState === "started" ? t("retryStarted") : t("retryScheduled");
+			const seconds = active ? remainingSeconds : scheduledSeconds;
+			const failure = node.failure;
+			return (0, react.createElement)("details", {
+				className: ocOr("MessageItem", "retryRow", "dsh-tdt-sv-retry"),
+				"data-active": active || void 0
+			}, (0, react.createElement)("summary", { className: ocOr("MessageItem", "retrySummary", "dsh-tdt-sv-retry-summary") }, (0, react.createElement)("span", {
+				className: ocOr("MessageItem", "retryText", "dsh-tdt-sv-retry-text"),
+				role: "status"
+			}, t("retryStatus", {
+				label,
+				retry: node.retry ?? 0,
+				maximum,
+				seconds
+			}))), (0, react.createElement)("div", { className: ocOr("MessageItem", "retryDetails", "dsh-tdt-sv-retry-details") }, (0, react.createElement)("div", null, (0, react.createElement)("span", { className: ocOr("MessageItem", "retryDetailLabel", "dsh-tdt-sv-retry-label") }, t("retryDelay")), t("durationMilliseconds", { milliseconds: Math.round(delayMs) })), (0, react.createElement)("div", null, (0, react.createElement)("span", { className: ocOr("MessageItem", "retryDetailLabel", "dsh-tdt-sv-retry-label") }, t("retryFailure")), failureMessage(failure?.message, failure?.code, t))));
+		}
+		/** 轮次失败行（官方 TurnErrorItem）：红点 + 红标题「本轮运行失败」+ 灰原因 + 右侧机器码标签。 */
+		function TurnErrorItemMirror(props) {
+			const { node, t } = props;
+			return (0, react.createElement)("div", {
+				className: ocOr("MessageItem", "turnErrorRow", "dsh-tdt-sv-turnerr"),
+				role: "status"
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+				state: "error",
+				className: ocOr("MessageItem", "turnErrorDot", "dsh-tdt-sv-turnerr-dot")
+			}), (0, react.createElement)("div", { className: ocOr("MessageItem", "turnErrorCopy", "dsh-tdt-sv-turnerr-copy") }, (0, react.createElement)("span", { className: ocOr("MessageItem", "turnErrorTitle", "dsh-tdt-sv-turnerr-title") }, node.code === "ACCOUNT_SIGNED_OUT" ? t("accountStopped") : t("turnErrorTitle")), (0, react.createElement)("span", { className: ocOr("MessageItem", "turnErrorMessage", "dsh-tdt-sv-turnerr-msg") }, failureMessage(node.message, node.code, t))), node.code !== void 0 && node.code !== "" ? (0, react.createElement)("code", { className: ocOr("MessageItem", "turnErrorCode", "dsh-tdt-sv-turnerr-code") }, node.code) : null);
+		}
+		/** 限长行（官方 TurnMaxTokensItem）：黄点 + 警示标题 + 截断提示。 */
+		function TurnMaxTokensItemMirror(props) {
+			const { t } = props;
+			return (0, react.createElement)("div", {
+				className: ocOr("MessageItem", "turnErrorRow", "dsh-tdt-sv-turnerr"),
+				role: "status"
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+				state: "warning",
+				className: ocOr("MessageItem", "turnErrorDot", "dsh-tdt-sv-turnerr-dot")
+			}), (0, react.createElement)("div", { className: ocOr("MessageItem", "turnErrorCopy", "dsh-tdt-sv-turnerr-copy") }, (0, react.createElement)("span", { className: ocOr("MessageItem", "maxTokensTitle", "dsh-tdt-sv-turnerr-warn") }, t("maxTokensTitle")), (0, react.createElement)("span", { className: ocOr("MessageItem", "turnErrorMessage", "dsh-tdt-sv-turnerr-msg") }, t("maxTokensHint"))));
+		}
 		//#endregion
 		//#region src/client/mirror/ReasoningRow.tsx
 		const MD_LABELS = {
@@ -2000,9 +2132,22 @@ window.__ModuleLoader__.load({
 					if (text === "") return null;
 					return (0, react.createElement)(UserMessage, { text });
 				}
-				case "turn-error": return (0, react.createElement)("div", { className: "dsh-tdt-sv-notice-err" }, `${t("sessionTurnError")}${typeof dataOf(node).message === "string" && dataOf(node).message !== "" ? `：${String(dataOf(node).message)}` : ""}`);
-				case "turn-max-tokens": return (0, react.createElement)("div", { className: "dsh-tdt-sv-notice" }, t("sessionMaxTokens"));
-				case "model-retry": return (0, react.createElement)("div", { className: "dsh-tdt-sv-notice" }, `${t("sessionRetry")}（${typeof dataOf(node).retryState === "string" ? String(dataOf(node).retryState) : "scheduled"}）`);
+				case "turn-error": return (0, react.createElement)(TurnErrorItemMirror, {
+					node: dataOf(node),
+					t
+				});
+				case "turn-max-tokens": return (0, react.createElement)(TurnMaxTokensItemMirror, { t });
+				case "model-retry": {
+					const data = dataOf(node);
+					const attempts = Array.isArray(data.attempts) ? data.attempts : [];
+					const current = typeof data.current === "object" && data.current !== null ? data.current : attempts[attempts.length - 1];
+					if (current === void 0) return null;
+					return (0, react.createElement)(ModelRetryItemMirror, {
+						node: current,
+						active: current.retryState === "scheduled",
+						t
+					});
+				}
 				case "context":
 				case "compaction":
 				case "manual-compaction":
@@ -2088,18 +2233,21 @@ window.__ModuleLoader__.load({
 					isError: node.outcome?.kind === "error",
 					t
 				});
-				case "turn-error": return (0, react.createElement)("div", {
+				case "turn-error": return (0, react.createElement)(TurnErrorItemMirror, {
 					key: node.seq,
-					className: "dsh-tdt-sv-notice-err"
-				}, `${t("sessionTurnError")}${node.message === void 0 || node.message === "" ? "" : `：${node.message}`}`);
-				case "turn-max-tokens": return (0, react.createElement)("div", {
+					node,
+					t
+				});
+				case "turn-max-tokens": return (0, react.createElement)(TurnMaxTokensItemMirror, {
 					key: node.seq,
-					className: "dsh-tdt-sv-notice"
-				}, t("sessionMaxTokens"));
-				case "model-retry": return (0, react.createElement)("div", {
+					t
+				});
+				case "model-retry": return (0, react.createElement)(ModelRetryItemMirror, {
 					key: node.seq,
-					className: "dsh-tdt-sv-notice"
-				}, `${t("sessionRetry")}（${node.retryState ?? "scheduled"}）`);
+					node,
+					active: node.retryState === "scheduled",
+					t
+				});
 				case "context":
 				case "compaction":
 				case "unknown": return null;

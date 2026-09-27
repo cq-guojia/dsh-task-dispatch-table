@@ -26,7 +26,7 @@ export type LocaleKey =
   | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint'
   | 'viewSession' | 'viewSessionHint'
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
-  | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind'
+  | 'sessionUnknownKind'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
   | 'sessionProcess'
   // —— 官方会话渲染文案（逐字抄自 ui-chat 中文词典，键名去掉 message. 前缀）——
@@ -36,6 +36,11 @@ export type LocaleKey =
   | 'turnProcessTook' | 'turnProcessDeepDiving' | 'turnProcessWorked' | 'turnProcessFailed'
   | 'turnStopped' | 'chatDeepDiving' | 'thinkLabel'
   | 'durationSeconds' | 'durationMinutes' | 'durationHours'
+  // —— 官方重试/轮次失败/限长三件套（message.retry.* / message.turnError / message.maxTokens*）——
+  | 'retryActive' | 'retryCancelled' | 'retryStarted' | 'retryScheduled' | 'retryStatus'
+  | 'retryDelay' | 'retryFailure' | 'durationMilliseconds'
+  | 'turnErrorTitle' | 'accountStopped' | 'maxTokensTitle' | 'maxTokensHint'
+  | 'failureAuth' | 'failureQuota' | 'failureAccountSignedOut' | 'failureAccountSignInRequired'
   | 'clockDate' | 'clockDateYear'
   | 'copyLabel' | 'copiedLabel' | 'branchLabel' | 'branchUnavailableLabel'
   | 'turnUsageTitle' | 'turnUsageModel' | 'turnUsageCacheHit' | 'turnUsageInput'
@@ -152,9 +157,6 @@ export const zh: Record<LocaleKey, string> = {
   sessionViewerTitle: '会话记录（只读）',
   sessionArgs: '参数',
   sessionOutput: '输出',
-  sessionTurnError: '轮次失败',
-  sessionMaxTokens: '该轮达到输出上限',
-  sessionRetry: '模型重试',
   sessionUnknownKind: '未支持的节点类型：',
   sessionLoading: '正在加载会话记录…',
   sessionEmpty: '该会话暂无可显示的记录（可能刚建窗或已被清理）。',
@@ -182,6 +184,23 @@ export const zh: Record<LocaleKey, string> = {
   durationSeconds: '{seconds}秒',
   durationMinutes: '{minutes}分{seconds}秒',
   durationHours: '{hours}小时{minutes}分{seconds}秒',
+  // 重试/轮次失败/限长三件套（官方 message.retry.* / message.turnError / message.maxTokens* 逐字）。
+  retryActive: '正在重试模型请求',
+  retryCancelled: '模型请求重试已取消',
+  retryStarted: '已重试模型请求',
+  retryScheduled: '等待重试模型请求',
+  retryStatus: '{label}（{retry}/{maximum}） · {seconds}s',
+  retryDelay: '重试延迟：',
+  retryFailure: '失败原因：',
+  durationMilliseconds: '{milliseconds}毫秒',
+  turnErrorTitle: '本轮运行失败',
+  accountStopped: '任务已停止',
+  maxTokensTitle: '已达到输出 token 上限',
+  maxTokensHint: '回答被截断，已有输出保留在对话中。发送“继续”可让模型接着输出。',
+  failureAuth: 'API 密钥无效',
+  failureQuota: '当前请求的额度已用尽',
+  failureAccountSignedOut: '任务已因退出 DeepSeek 登录而停止。',
+  failureAccountSignInRequired: '请先登录 DeepSeek，并确认请求地址支持账号认证。',
   clockDate: '{m}月{d}日',
   clockDateYear: '{y}年{m}月{d}日',
   copyLabel: '复制',
@@ -325,9 +344,6 @@ export const en: Record<LocaleKey, string> = {
   sessionViewerTitle: 'Session transcript (read-only)',
   sessionArgs: 'Arguments',
   sessionOutput: 'Output',
-  sessionTurnError: 'Turn failed',
-  sessionMaxTokens: 'This turn hit the output token cap',
-  sessionRetry: 'Model retry',
   sessionUnknownKind: 'Unsupported node kind: ',
   sessionLoading: 'Loading session transcript…',
   sessionEmpty: 'Nothing to show for this session yet (window just opened, or the log was cleaned up).',
@@ -356,6 +372,23 @@ export const en: Record<LocaleKey, string> = {
   durationSeconds: '{seconds}s',
   durationMinutes: '{minutes}m {seconds}s',
   durationHours: '{hours}h {minutes}m {seconds}s',
+  // Retry / turn-error / max-tokens strings (verbatim from the official message.retry.* / turnError / maxTokens* dictionaries).
+  retryActive: 'Retrying model request',
+  retryCancelled: 'Model request retry cancelled',
+  retryStarted: 'Retried model request',
+  retryScheduled: 'Waiting to retry model request',
+  retryStatus: '{label} ({retry}/{maximum}) · {seconds}s',
+  retryDelay: 'Retry delay: ',
+  retryFailure: 'Failure reason: ',
+  durationMilliseconds: '{milliseconds}ms',
+  turnErrorTitle: 'This turn failed',
+  accountStopped: 'Task stopped',
+  maxTokensTitle: 'Output token limit reached',
+  maxTokensHint: 'The reply was cut off; earlier output is preserved in the conversation. Send "continue" to let the model resume.',
+  failureAuth: 'API key is invalid',
+  failureQuota: 'Request quota exhausted.',
+  failureAccountSignedOut: 'Stopped because you signed out of DeepSeek.',
+  failureAccountSignInRequired: 'Sign in to DeepSeek and ensure the request destination supports account authentication.',
   clockDate: '{m}/{d}',
   clockDateYear: '{y}/{m}/{d}',
   copyLabel: 'Copy',
