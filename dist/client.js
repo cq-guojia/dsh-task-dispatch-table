@@ -422,12 +422,13 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-reasoning-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
 .dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
 .dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
-/* 工具卡展开体（无 diff 的工具）：输入 / 输出 两行，行间分隔线（官方截图同构）。 */
+/* 工具卡展开体（无 diff 的工具）：输入 / 输出 两行，行间分隔线。
+   对齐与字号照官方截图：标签 13px tertiary、内容 12px 等宽且行高与标签同拍（20px）⇒ 首行与续行同列同基线。 */
 .dsh-tdt-sv-io{flex-direction:column;display:flex;}
-.dsh-tdt-sv-io-row{display:flex;gap:12px;padding:10px 16px;align-items:flex-start;}
+.dsh-tdt-sv-io-row{display:flex;gap:12px;padding:10px 16px;align-items:baseline;}
 .dsh-tdt-sv-io-row+.dsh-tdt-sv-io-row{border-top:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));}
-.dsh-tdt-sv-io-label{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px;padding-top:2px;}
-.dsh-tdt-sv-io-content{flex:1;min-width:0;margin:0;font:var(--dsw-font-markdown-code-block-small,12px/1.5 var(--ds-font-family-code,ui-monospace,monospace));white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-io-label{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px;}
+.dsh-tdt-sv-io-content{flex:1;min-width:0;margin:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;white-space:pre;overflow-x:auto;word-break:normal;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
 .dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
 .dsh-tdt-sv-tool{align-self:stretch;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));overflow:hidden;}
@@ -1145,6 +1146,40 @@ window.__ModuleLoader__.load({
 				return typeof path === "string" && (oldText === null || typeof oldText === "string") && typeof newText === "string";
 			}) ? diffs : void 0;
 		}
+		/**
+		* meta 无 diff 时的参数侧兜底（真实数据，非模拟）：tool-fs 的 `presentationMeta` 在
+		* `before === null`（无观察快照）时给 `diffs: []`（lib/index.js:572）——官方此况走参数呈现。
+		* write（新建文件）⇒ oldText:null 全绿 +；edit ⇒ old_string→new_string 红绿对比。解析失败回 undefined。
+		*/
+		function diffsFromArgs(name, argsRaw) {
+			if (name !== "write" && name !== "edit" && name !== "apply_patch") return void 0;
+			const raw = argsRaw.trim();
+			if (!raw.startsWith("{")) return void 0;
+			let args;
+			try {
+				args = JSON.parse(raw);
+			} catch {
+				return;
+			}
+			const path = args.file_path ?? args.path;
+			if (typeof path !== "string" || path === "") return void 0;
+			if (name === "write") {
+				const content = args.content;
+				if (typeof content !== "string") return void 0;
+				return [{
+					path,
+					oldText: null,
+					newText: content
+				}];
+			}
+			const { old_string: oldString, new_string: newString } = args;
+			if (typeof oldString !== "string" || typeof newString !== "string") return void 0;
+			return [{
+				path,
+				oldText: oldString,
+				newText: newString
+			}];
+		}
 		/** 单行截断（官方 summary 是单行省略号样式）。 */
 		const preview = (text) => {
 			const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
@@ -1186,13 +1221,13 @@ window.__ModuleLoader__.load({
 		function GenericCommandCard(props) {
 			const { name, argsRaw, output, isError, errorName, meta, t } = props;
 			const [open, setOpen] = (0, react.useState)(isError);
-			const diffs = diffsFromMeta(meta);
+			const diffs = diffsFromMeta(meta) ?? diffsFromArgs(name, argsRaw);
 			const localized = toolTitle(name, t);
-			const summaryText = diffs !== void 0 ? (() => {
-				const firstPath = diffs[0]?.path ?? "";
-				const totals = (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
-				return `${firstPath} +${totals.added} -${totals.removed}`;
-			})() : localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output);
+			const totals = diffs === void 0 ? void 0 : (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
+			const summaryText = (diffs === void 0 || totals === void 0 ? null : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", { style: {
+				textDecoration: "underline",
+				textUnderlineOffset: "2px"
+			} }, diffs[0]?.path ?? ""), ` +${totals.added} -${totals.removed}`)) ?? (localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output));
 			const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? "error"}` : localized.title;
 			const prettyArgs = (() => {
 				const raw = argsRaw.trim();

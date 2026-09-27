@@ -82,12 +82,13 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-reasoning-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
 .dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
 .dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
-/* 工具卡展开体（无 diff 的工具）：输入 / 输出 两行，行间分隔线（官方截图同构）。 */
+/* 工具卡展开体（无 diff 的工具）：输入 / 输出 两行，行间分隔线。
+   对齐与字号照官方截图：标签 13px tertiary、内容 12px 等宽且行高与标签同拍（20px）⇒ 首行与续行同列同基线。 */
 .dsh-tdt-sv-io{flex-direction:column;display:flex;}
-.dsh-tdt-sv-io-row{display:flex;gap:12px;padding:10px 16px;align-items:flex-start;}
+.dsh-tdt-sv-io-row{display:flex;gap:12px;padding:10px 16px;align-items:baseline;}
 .dsh-tdt-sv-io-row+.dsh-tdt-sv-io-row{border-top:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));}
-.dsh-tdt-sv-io-label{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px;padding-top:2px;}
-.dsh-tdt-sv-io-content{flex:1;min-width:0;margin:0;font:var(--dsw-font-markdown-code-block-small,12px/1.5 var(--ds-font-family-code,ui-monospace,monospace));white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-io-label{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px;}
+.dsh-tdt-sv-io-content{flex:1;min-width:0;margin:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;white-space:pre;overflow-x:auto;word-break:normal;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
 .dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
 .dsh-tdt-sv-tool{align-self:stretch;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));overflow:hidden;}

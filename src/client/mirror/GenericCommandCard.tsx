@@ -6,6 +6,7 @@
 //   · 摘要：有 diff = 路径 + 「+N -M」（官方截图「写入 · path +1 -0」）；无 diff = 人话摘要
 //   · 展开体：有 diff = DiffBlock（红 - 绿 +）；无 diff = 输入（参数 JSON）/ 输出（结果文本）
 import { Fragment, createElement as h, useState } from 'react'
+import type { ReactNode } from 'react'
 import { DiffBlock, DisclosureRow, diffTotals } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
 import type { LocaleKey, Translate } from '../locales'
@@ -46,6 +47,29 @@ function diffsFromMeta(meta: unknown): FileDiffFace[] | undefined {
     const { path, oldText, newText } = diff as Record<string, unknown>
     return typeof path === 'string' && (oldText === null || typeof oldText === 'string') && typeof newText === 'string'
   }) ? diffs as FileDiffFace[] : undefined
+}
+
+/**
+ * meta 无 diff 时的参数侧兜底（真实数据，非模拟）：tool-fs 的 `presentationMeta` 在
+ * `before === null`（无观察快照）时给 `diffs: []`（lib/index.js:572）——官方此况走参数呈现。
+ * write（新建文件）⇒ oldText:null 全绿 +；edit ⇒ old_string→new_string 红绿对比。解析失败回 undefined。
+ */
+function diffsFromArgs(name: string, argsRaw: string): FileDiffFace[] | undefined {
+  if (name !== 'write' && name !== 'edit' && name !== 'apply_patch') return undefined
+  const raw = argsRaw.trim()
+  if (!raw.startsWith('{')) return undefined
+  let args: Record<string, unknown>
+  try { args = JSON.parse(raw) as Record<string, unknown> } catch { return undefined }
+  const path = args.file_path ?? args.path
+  if (typeof path !== 'string' || path === '') return undefined
+  if (name === 'write') {
+    const content = args.content
+    if (typeof content !== 'string') return undefined
+    return [{ path, oldText: null, newText: content }]
+  }
+  const { old_string: oldString, new_string: newString } = args as Record<string, unknown>
+  if (typeof oldString !== 'string' || typeof newString !== 'string') return undefined
+  return [{ path, oldText: oldString, newText: newString }]
 }
 
 /** 单行截断（官方 summary 是单行省略号样式）。 */
@@ -95,16 +119,16 @@ export function GenericCommandCard(props: {
 }): ReturnType<typeof h> {
   const { name, argsRaw, output, isError, errorName, meta, t } = props
   const [open, setOpen] = useState<boolean>(isError)
-  const diffs = diffsFromMeta(meta)
+  const diffs = diffsFromMeta(meta) ?? diffsFromArgs(name, argsRaw)
   const localized = toolTitle(name, t)
-  // 摘要：官方「写入 · 路径 +1 -0」= 路径 + diffTotals；无 diff 走人话摘要（generic 补工具名）。
-  const summaryText = diffs !== undefined
-    ? (() => {
-        const firstPath = diffs[0]?.path ?? ''
-        const totals = diffTotals(diffs)
-        return `${firstPath} +${totals.added} -${totals.removed}`
-      })()
-    : localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output)
+  // 摘要：官方「写入 · 路径 +1 -0」= 下划线文件路径 + diffTotals；无 diff 走人话摘要（generic 补工具名）。
+  const totals = diffs === undefined ? undefined : diffTotals(diffs)
+  const diffSummary = diffs === undefined || totals === undefined ? null : h(Fragment, null,
+    h('span', { style: { textDecoration: 'underline', textUnderlineOffset: '2px' } }, diffs[0]?.path ?? ''),
+    ` +${totals.added} -${totals.removed}`,
+  )
+  const summaryText: ReactNode = diffSummary
+    ?? (localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output))
   const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? 'error'}` : localized.title
   // 展开（官方格式）：
   //   有 diff（编辑/写入）⇒ DiffBlock 裸放（官方不加 body 外框，色条通到块最左缘——

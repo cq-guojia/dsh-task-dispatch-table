@@ -104,3 +104,14 @@
 
 **验证**：typecheck + build（dist 153.64 kB）+ 冒烟 103 项全过。**待真机**：输入/输出行、diff 左缘、预览省略号。
 
+## 2026-09-27（第六轮）— 写入参数侧兜底 + 摘要下划线路径 + 输入/输出对齐字号
+
+——用户两图：写入应与编辑同款（标题「路径 +N -M」+「代码块」卡全绿新增，没有红/删除）；「输入/输出」后面的内容要照官方对齐与字号。
+
+**源码事实（tool-fs lib/index.js:572）**：write 的 `presentationMeta` = `diffs: value.before === null ? [] : computeHunkDiffs(...)` —— **无观察快照（before === null）时 meta.diffs 为空数组**，官方此况从参数侧呈现 ⇒ 我们的 `diffsFromMeta` 对空数组返回 undefined 后落到「输入/输出」文本，与官方形态不符。
+**修**：新增 `diffsFromArgs`（真实数据兜底，非模拟）：`write` ⇒ `{path: file_path, oldText: null, newText: content}`（全绿 +）；`edit/apply_patch` ⇒ `{oldText: old_string, newText: new_string}`（红绿对比）；解析失败回 undefined 仍走输入/输出。`diffs = diffsFromMeta(meta) ?? diffsFromArgs(...)`。
+**摘要**：diff 卡摘要照官方 = **下划线文件路径** + ` +N -M`（text-underline-offset 2px）。
+**输入/输出对齐**：照官方截图调字号与基线——标签 13px tertiary、内容 12px 等宽、两者行高同拍 20px、`align-items:baseline`；内容 `white-space:pre` + 横向滚动（保住 JSON 缩进列不被折行打歪）。
+
+**验证**：typecheck + build（dist 154.6 kB）+ 冒烟 103 项全过。**待真机**：写入代码块、摘要下划线、输入/输出列对齐。
+
