@@ -358,7 +358,8 @@ window.__ModuleLoader__.load({
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
    官方 ReasoningRow 展开行是 sticky + background:var(--dsw-alias-bg-base)（ReasoningRow.module.css），
    若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
-.dsh-tdt-sv-panel{--dsh-composer-side-clearance:8px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;padding:16px 0 18px;overflow:hidden;}
+/* 内间距定尺（用户拍板：四边等距 34px）：左右 = 官方 scroll 的 16px + clearance(18px) = 34px；上下 = 面板 padding 18px + scroll 16px = 34px。 */
+.dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;padding:18px 0;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 12px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-close{appearance:none;background:0 0;border:none;padding:2px 6px;border-radius:6px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:color .1s,background .1s;}
 .dsh-tdt-sv-close:hover{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}

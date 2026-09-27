@@ -115,3 +115,14 @@
 
 **验证**：typecheck + build（dist 151.5 kB）+ 冒烟 103 项全过。**待真机**：写入代码块、摘要下划线、输入/输出列对齐。
 
+## 2026-09-27（第七轮·收尾）— 弹窗内边距四边等距 34px；里程碑 16 告一段落
+
+——用户拍板：内边距上下（16px）与左右（24px）不等，**四边统一 34px**。
+**实现**：左右 = 官方 scroll 的 `16px + --dsh-composer-side-clearance` ⇒ clearance 8px→**18px**；上下 = 面板纵向 padding 16/18px → **18px**（+ scroll 16px = 34）。四个方向最终结果均为 34px。
+typecheck + build + 冒烟 103 项全过（产物抽查 `composer-side-clearance:18px` / `padding:18px 0`）。
+
+**里程碑 16 收尾快照**（本大项告一段落，后续开新会话解决其他问题）：
+- 已落地：keyed 流主路 + 三级收折（用时行/过程分组/条目展开）、触发行、尾部操作行（复制/时钟/用量弹层）、思考行（官方 ReasoningRow）、工具行图标与 diff 面（DiffBlock + meta.diffs/参数兜底）、输入/输出行、弹窗外壳（1120×宿主惯例 + 官方裸叉 + bg-base + 四边 34px）。
+- 清单遗留（下次会话候选）：`ReadBlock`（读取展开）、`TerminalBlock`（命令展开）、上下文注入行、工具卡错误红、重试行官方样式、fileMentions、用户消息操作行、`ChatGroupSeat` 分组视图细节、👍👎（feedback 插槽）。
+- 新功能排期：U10「继续对话（开分支）」按钮（先读 `sessions.fork` 源码）。
+

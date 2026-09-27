@@ -34,7 +34,8 @@
 - **里程碑 16 落码（2026-09-27，决策 36/37）**：弹窗渲染主路**换官方 keyed 节点流**（`order + nodes`，legacy 降为兜底）。**三级收折照官方**：一级「用时 34 秒」行 → 二级过程分组汇总行（`mirror/ChatGroupSeat`：activity 图标↔箭头互换 + 「已读取文件，执行了命令，已调用工具等」`processTitle` 拼接 + body `max-height min(400px,50vh)` + 渐隐遮罩）→ 三级条目各自展开；分组算法按官方 `process-groups.js` 逐行移植（grouped 读取器不在公开契约面）。触发行 / 尾部操作行（复制/结束时钟）/ 用量 pill + 明细弹层照抄；工具行标题接官方 `tool.title.*` 字典。**弹窗内不做续聊**：底部对话框占位与分支 icon 移除，后续做「继续对话（开分支）」按钮（U10）。内间距定尺：左右各 24px（不再算官方列宽 920px），标题下加横线。
 - **真机反馈三连修（2026-09-27 当日）**：① 「编辑/写入×2」根因 = seat 漏把 `groupPart` 下发给节点视图 + `assistantBlocks` 为步内 tool-call 块又画卡片——官方对步内工具块是 `case break` 永不渲染（lib/client.js:5864）；② 收起态漏出「思考过程·」同根因；③ 思考行照官方 ReasoningRow 重写（标题 = `message.think`「思考」，DisclosureRow + thinkBody，弃「思考过程」与盒子样式）。本地用 `tsc` 编 CJS + `renderToString` + primitives 桩复现整条渲染链定位（复现完删脚手架）；冒烟新增 3 条回归断言，**103 项全过**。**待真机复验**：收起/展开两态 + 三级逐项。
 - **工具卡对齐第二轮（2026-09-27 当日）**：① 工具行图标按 activity 取官方 `PROCESS_ICONS`（edit/write=铅笔、generic=sparkle），弃全量 IconCode；② **编辑/写入展开 = 官方 `DiffBlock`**——数据源 = 工具结果 `meta.diffs`（tool-fs `computeHunkDiffs` 写入 `FileDiff{path,oldText,newText}[]`，经 `ToolResultNode.meta` 透传，源码核实），摘要 = `diffTotals` 的「路径 +N -M」；③ 无 diff 工具展开改官方「输入 / 输出」两行；④ 思考展开黑带根因 = 官方 ReasoningRow 展开行 `background: bg-base` 而面板底色是 layer-1 ⇒ 面板底色改 `--dsw-alias-bg-base`（官方会话面）。typecheck + build + 冒烟 103 项全过。**待真机**：diff 形态 / 图标 / 黑带。
-- **工具展开体格式修正（2026-09-27 当日，第五轮）**：① DiffBlock 不再套官方 `GenericCommandCard.body`（带边框+padding 的 pre）——官方 diff 面裸放，色条通到块最左缘；② 无 diff 工具展开 = 「输入 / 输出」两行（行间分隔线，参数 JSON 缩进两格美化）；③ 思考折叠预览照官方 summary > summaryText 两层补省略号（text-overflow:ellipsis）。typecheck + build + 冒烟 103 项全过。**待真机**。
+- **工具展开体格式修正（2026-09-27 当日，第五/六轮）**：① DiffBlock 不再套官方 `GenericCommandCard.body`（带边框+padding 的 pre）——官方 diff 面裸放，色条通到块最左缘；② 无 diff 工具展开 = 「输入 / 输出」两行（行间分隔线，参数 JSON 缩进两格美化，12px 等宽与标签同拍对齐）；③ 思考折叠预览照官方 summary > summaryText 两层补省略号；④ **写入参数侧 diff 兜底**（tool-fs `before===null` 时 `meta.diffs=[]` ⇒ 由参数组 hunk：write 全绿新增 / edit 红绿对比，真实数据非模拟）+ diff 卡摘要 = 下划线路径 + `diffTotals`。typecheck + build + 冒烟 103 项全过。
+- **里程碑 16 收尾（2026-09-27，第七轮）**：弹窗内边距四边等距 **34px**（左右 = 16+clearance 18px；上下 = 面板 18px + scroll 16px）。本大项告一段落——已落地：keyed 流主路 + 三级收折、触发行、尾部操作行、思考行、工具行图标与 diff 面、输入/输出行、弹窗外壳（官方裸叉 + bg-base + 34px 内边距）。**清单遗留见 worklog 收尾快照**（ReadBlock/TerminalBlock/上下文注入行/错误红/重试行/fileMentions 等）；下一大项 = U10「继续对话（开分支）」按钮（先读 `sessions.fork` 源码）。
 
 ---
 
@@ -82,7 +83,7 @@
 
 ## 五、下一步（接手后从这里开始）
 
-1. **【进行中·里程碑 15/16】会话弹窗外观对齐官方**：路线已定 = **「官方零件 + 自绘容器 + 照表逐项实施」**（弹窗内挂官方本体与跳转方案均已被源码/真机证伪，见决策 35 与 AGENTS.md）。对照表：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)。里程碑 16 已落三级收折（用时行 → 过程分组 → 条目展开，决策 36/37），**待真机逐级比对**；通过后照清单继续：`TerminalBlock`/`ReadBlock`/`DiffBlock`（第 13 项）、上下文注入行（16）、工具卡错误红（17）、重试行官方样式（19）、fileMentions（20）、用户消息操作行（23）。
+1. **【告一段落·里程碑 15/16】会话弹窗外观对齐官方**：用户 2026-09-27 拍板本大项收尾（内边距四边 34px 为最后一笔）。已落地：keyed 流主路 + 三级收折 + 触发行 + 尾部操作行 + 思考行 + 工具行图标/diff 面/输入输出 + 外壳（裸叉/bg-base/34px）。**清单遗留（新会话候选）**：`ReadBlock`/`TerminalBlock`、上下文注入行、工具卡错误红、重试行官方样式、fileMentions、用户消息操作行、👍👎——照表做：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)。
 1.5. **【U10】「继续对话（开分支）」按钮**：交互已拍板（确认框 → 关弹窗 → 跳新分支会话）；落码前先读 `sessions.fork` 源码（AGENTS.md 第 4 条）。
 2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
 3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
