@@ -1687,9 +1687,9 @@ window.__ModuleLoader__.load({
 		function assistantText$1(blocks) {
 			return blocks.flatMap((block) => block.kind === "text" ? [block.text ?? ""] : []).join("");
 		}
-		/** Turn 尾部操作行：复制 / 分支（只读⇒不可用态）/ 用量 / 结束时钟。 */
+		/** Turn 尾部操作行：复制 / 分支 / 用量 / 结束时钟。 */
 		function TurnTailNodeViewMirror(props) {
-			const { data, t } = props;
+			const { data, onBranchAt, t } = props;
 			const closing = data.closing;
 			if (closing === null || closing === void 0) return null;
 			const text = assistantText$1(closing.blocks);
@@ -1701,6 +1701,9 @@ window.__ModuleLoader__.load({
 				text,
 				time: closing.time,
 				clock: "end",
+				onBranch: onBranchAt === void 0 ? void 0 : () => {
+					onBranchAt(data.seq);
+				},
 				className: ocOr("TurnTailNodeView", "actions", "dsh-tdt-sv-tail-actions"),
 				usageAction: data.tokenUsage === void 0 ? void 0 : (0, react.createElement)(TurnUsagePanelMirror, {
 					usage: data.tokenUsage,
@@ -1957,9 +1960,10 @@ window.__ModuleLoader__.load({
 		* @param node - keyed ChatNode。
 		* @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
 		* @param t - 翻译席位（已包占位符替换）。
+		* @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, groupPart) {
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, groupPart) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -1975,6 +1979,7 @@ window.__ModuleLoader__.load({
 					if (data === void 0 || data.closing === null || data.closing === void 0) return null;
 					return (0, react.createElement)(TurnTailNodeViewMirror, {
 						data,
+						onBranchAt,
 						t
 					});
 				}
@@ -2201,7 +2206,7 @@ window.__ModuleLoader__.load({
 				});
 			}, []);
 			const canFork = forkSession !== void 0 && openHostSession !== void 0;
-			const [confirming, setConfirming] = (0, react.useState)(false);
+			const [forkTarget, setForkTarget] = (0, react.useState)(null);
 			const [forking, setForking] = (0, react.useState)(false);
 			const [forkErr, setForkErr] = (0, react.useState)(null);
 			const aliveRef = (0, react.useRef)(true);
@@ -2214,7 +2219,7 @@ window.__ModuleLoader__.load({
 				setForkErr(null);
 				(async () => {
 					try {
-						const child = await forkSession(sessionId);
+						const child = await forkSession(sessionId, forkTarget?.atSeq);
 						if (!aliveRef.current) return;
 						onClose();
 						openHostSession(child);
@@ -2230,13 +2235,18 @@ window.__ModuleLoader__.load({
 				forkSession,
 				openHostSession,
 				sessionId,
+				forkTarget,
 				onClose
 			]);
+			const onBranchAt = (0, react.useCallback)((seq) => {
+				setForkErr(null);
+				setForkTarget({ atSeq: seq });
+			}, []);
 			const order = chat?.order ?? EMPTY_ORDER;
 			const store = chat?.nodes;
 			const keyed = order.length > 0 && store !== void 0;
 			const turns = chat?.timeline?.turns;
-			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, groupPart), [tt]);
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, groupPart), [tt, onBranchAt]);
 			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
 				keyed,
@@ -2289,7 +2299,7 @@ window.__ModuleLoader__.load({
 				title: tt("continueBranch"),
 				onClick: () => {
 					setForkErr(null);
-					setConfirming(true);
+					setForkTarget({});
 				}
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, { size: 14 }), tt("continueBranch")) : null, (0, react.createElement)("button", {
 				type: "button",
@@ -2297,9 +2307,9 @@ window.__ModuleLoader__.load({
 				"aria-label": tt("debugClose"),
 				onClick: onClose
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
-				open: confirming,
+				open: forkTarget !== null,
 				onClose: () => {
-					if (!forking) setConfirming(false);
+					if (!forking) setForkTarget(null);
 				},
 				title: tt("forkConfirmTitle"),
 				closeLabel: tt("debugClose"),
@@ -2310,7 +2320,7 @@ window.__ModuleLoader__.load({
 					variant: "outline",
 					disabled: forking,
 					onClick: () => {
-						setConfirming(false);
+						setForkTarget(null);
 					}
 				}, tt("forkCancel")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 					key: "accept",
@@ -3275,9 +3285,13 @@ window.__ModuleLoader__.load({
 				const uiConversation = sub.uiConversation;
 				if (sessions !== void 0 && uiConversation !== void 0) viewSession = (id) => openSessionView(sessions, uiConversation, id);
 				const forkFn = sessions?.fork;
-				if (typeof forkFn === "function") forkSession = (id) => forkFn.call(sessions, {
+				if (typeof forkFn === "function") forkSession = (id, atSeq) => forkFn.call(sessions, atSeq === void 0 ? {
 					sessionId: id,
 					increaseTitle: true
+				} : {
+					sessionId: id,
+					increaseTitle: true,
+					atSeq
 				});
 			});
 			let openHostSession = null;

@@ -447,6 +447,8 @@ try {
     clientJs.includes('forkConfirmText'))
   check('确认框挂官方 Modal 组件（dsh-tdt-sv-forkmodal，弃自绘弹窗）',
     clientJs.includes('dsh-tdt-sv-forkmodal'))
+  check('消息行分支带 atSeq（从该条消息截断开分支）',
+    clientJs.includes('atSeq'))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

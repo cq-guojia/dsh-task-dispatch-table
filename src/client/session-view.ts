@@ -572,12 +572,14 @@ function toolCallCard(node: ChatNodeFace, t: Translate): Parameters<typeof Gener
  * @param node - keyed ChatNode。
  * @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
  * @param t - 翻译席位（已包占位符替换）。
+ * @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
  * @returns 节点视图；null = 决策 28 过滤的噪音 kind。
  */
 function renderKeyedNode(
   node: ChatNodeFace,
   turnProcess: TurnProcessHandle | undefined,
   t: Translate,
+  onBranchAt: ((seq: number) => void) | undefined,
   groupPart?: 'response' | 'reasoning',
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
@@ -592,7 +594,7 @@ function renderKeyedNode(
     case 'turn-tail': {
       const data = node.data as unknown as TurnTailDataFace | undefined
       if (data === undefined || data.closing === null || data.closing === undefined) return null
-      return h(TurnTailNodeViewMirror, { data, t })
+      return h(TurnTailNodeViewMirror, { data, onBranchAt, t })
     }
     case 'assistant-step': {
       // 官方块渲染器（lib/client.js:5818-5871）：
@@ -810,7 +812,7 @@ export function SessionViewModal(props: {
   view: SessionViewTarget
   onClose: () => void
   /** fork 源会话：`sessions.fork({ sessionId, increaseTitle: true })`，解析为子会话 id。 */
-  forkSession?: (sessionId: string) => Promise<string>
+  forkSession?: (sessionId: string, atSeq?: number) => Promise<string>
   /** 官方导航跳转：`uiWorkspace.openSession(id)`（会话区打开目标会话）。 */
   openHostSession?: (sessionId: string) => void
 }): ReturnType<typeof h> {
@@ -840,7 +842,7 @@ export function SessionViewModal(props: {
   // U10 开分支：确认框显隐 + fork 进行中 + 失败原因。aliveRef 防「fork 在途时用户关弹窗」
   // 后仍跳转（await 回来时弹窗已卸载 ⇒ 放弃跳转，不 setState）。
   const canFork = forkSession !== undefined && openHostSession !== undefined
-  const [confirming, setConfirming] = useState(false)
+  const [forkTarget, setForkTarget] = useState<{ atSeq?: number } | null>(null)
   const [forking, setForking] = useState(false)
   const [forkErr, setForkErr] = useState<string | null>(null)
   const aliveRef = useRef(true)
@@ -851,7 +853,7 @@ export function SessionViewModal(props: {
     setForkErr(null)
     void (async () => {
       try {
-        const child = await forkSession(sessionId)
+        const child = await forkSession(sessionId, forkTarget?.atSeq)
         if (!aliveRef.current) return
         // 先关弹窗（dispose ⇒ release 源会话 scope），再跳宿主会话区（官方导航服务）。
         onClose()
@@ -863,15 +865,20 @@ export function SessionViewModal(props: {
         setForking(false)
       }
     })()
-  }, [forking, forkSession, openHostSession, sessionId, onClose])
+  }, [forking, forkSession, openHostSession, sessionId, forkTarget, onClose])
+  // 消息行分支按钮（官方分支 icon 位置）：从该轮 tail 消息截断开分支（同样先出确认框）。
+  const onBranchAt = useCallback((seq: number): void => {
+    setForkErr(null)
+    setForkTarget({ atSeq: seq })
+  }, [])
 
   const order = chat?.order ?? EMPTY_ORDER
   const store = chat?.nodes
   const keyed = order.length > 0 && store !== undefined
   const turns = chat?.timeline?.turns
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, groupPart),
-    [tt],
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, groupPart),
+    [tt, onBranchAt],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>
@@ -947,7 +954,7 @@ export function SessionViewModal(props: {
                   className: 'dsh-tdt-sv-branch',
                   disabled: forking,
                   title: tt('continueBranch'),
-                  onClick: () => { setForkErr(null); setConfirming(true) },
+                  onClick: () => { setForkErr(null); setForkTarget({}) },
                 }, h(IconBranchOutlineRegular, { size: 14 }), tt('continueBranch'))
               : null,
             h('button', {
@@ -966,14 +973,14 @@ export function SessionViewModal(props: {
     // （官方 RiskConfirmation 同源组合：outline 取消 / primary 确认；primary 底色走
     // --dsw-alias-button-primary-fill，明暗主题自适应；失败留在框内提示、不关会话弹窗）。
     h(Modal, {
-      open: confirming,
-      onClose: () => { if (!forking) setConfirming(false) },
+      open: forkTarget !== null,
+      onClose: () => { if (!forking) setForkTarget(null) },
       title: tt('forkConfirmTitle'),
       closeLabel: tt('debugClose'),
       description: tt('forkConfirmText'),
       className: 'dsh-tdt-sv-forkmodal',
       footer: [
-        h(Button, { key: 'cancel', variant: 'outline', disabled: forking, onClick: () => { setConfirming(false) } }, tt('forkCancel')),
+        h(Button, { key: 'cancel', variant: 'outline', disabled: forking, onClick: () => { setForkTarget(null) } }, tt('forkCancel')),
         h(Button, { key: 'accept', variant: 'primary', disabled: forking, onClick: onForkAccept }, forking ? tt('forkWorking') : tt('forkConfirmAccept')),
       ],
     }, forkErr !== null ? h('p', { className: 'dsh-tdt-sv-forkerr' }, tt('forkFailed', { error: forkErr })) : null),

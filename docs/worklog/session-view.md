@@ -165,3 +165,19 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 
 **第九轮追加（同日）——尾部操作行恒常显（用户拍板）**：官方尾部操作行（复制/用量/结束时钟）= 历史轮 hover 才显、最后一轮常显（`data-actions-reveal='always'|'hover'`）；用户拍板弹窗改为**每轮模型回复的操作行全部常显**（归档会话轮数少，不必悬停翻找）。落码：`TurnTailNodeViewMirror` 的 `data-actions-reveal` 恒 `'always'`，`endsWithResponse` prop 及调用链（session-view 的 `lastTurn` / `turnOrder` / `EMPTY_TURN_ORDER`）全链删除；`hasAssistantReplyContent` 保留导出（官方同构）。build（dist 161.14 kB）+ 冒烟 107 项全过。
 
+## 2026-09-27（第十轮）— 消息行分支 icon 恢复 + atSeq 截断开分支
+
+——真机验证通过（确认框官方化 / 头部钮规格 / 恒常显都没问题）。用户拍板：**把每轮回复操作行上的官方分支 icon 放回来**（决策 37 当时移除），点它 = 调起同一个确认框，确认后**从那条消息的位置截断开分支**（与官方 fork 逻辑一模一样，只是多了确认框）；右上角头部按钮 = 从最后一轮开分支（现状语义不变）。
+
+**源码事实**：官方契约 `atSeq`（commands.d.ts:36-37）= 从指定消息 seq 截断的前缀；省略 = 最新已完成 turn 前缀。api-session-controller fork 实现体（client.js:3347）把 `atSeq` 原样透传 RPC（`SessionSeq(opts.atSeq)`）。mirror 的 `MessageIconActionsMirror` 当初已完整实现官方分支按钮（`onBranch` prop + 官方 Tooltip「在新对话中分支」文案），只是调用侧没传 ⇒ 接上即可。
+
+**落码**：
+- `TurnTailNodeViewMirror`：props 加 `onBranchAt?: (seq: number) => void`，传给 `MessageIconActionsMirror.onBranch`（`data.seq` = 该轮 tail 消息 seq）；不传 `branchUnavailable`（归档会话全是已完成轮次，官方禁用条件天然不触发）。
+- `session-view.ts`：`confirming: boolean` 升级为 `forkTarget: { atSeq?: number } | null`——头部按钮 `setForkTarget({})`（省略 atSeq = 最后一轮）、消息行分支 `onBranchAt(seq) → setForkTarget({ atSeq: seq })`；`onForkAccept` 调 `forkSession(sessionId, forkTarget?.atSeq)`；取消/Escape/遮罩/叉复位 `setForkTarget(null)`。`renderKeyedNode` 加 `onBranchAt` 参数透传（useCallback 依赖同步）。
+- `index.ts`：forkSession 包装签名加 `atSeq?`——`{ sessionId, increaseTitle: true }` 或 `+ atSeq` 条件展开；TaskPage/TaskPageHost 类型链同步。
+- 冒烟 +1：bundle 含 `atSeq`。
+
+**验证**：typecheck + build（dist 162 kB）+ 冒烟 **108 项全过**。
+
+**待真机**：① 每轮回复操作行出现官方分支 icon（hover 有「在新对话中分支」Tooltip）② 点它出确认框 → 确认后跳到新分支会话，且内容**截断到那条消息为止**（后面的轮次不在）③ 头部按钮仍是全量对话 ④ 中间轮次分支的新会话标题同样递增 `(1)`。
+

@@ -380,7 +380,7 @@ function TaskPage(props: {
   /** 页内只读会话视图工厂（决策 28：sessions.binding + uiConversation 组装，归档会话可读）。服务不可用时为 null。 */
   viewSession: ((id: string) => SessionViewTarget | null) | null
   /** U10：fork 源会话（官方 ISessions.fork；未就位为 null ⇒ 弹窗不渲染「继续对话」）。 */
-  forkSession: ((id: string) => Promise<string>) | null
+  forkSession: ((id: string, atSeq?: number) => Promise<string>) | null
   /** U10：官方导航跳转（uiWorkspace.openSession；未就位为 null）。 */
   openHostSession: ((id: string) => void) | null
 }) {
@@ -1032,7 +1032,7 @@ function TaskPageHost(props: {
   t: Translate
   viewRef: () => ((id: string) => SessionViewTarget | null) | null
   /** U10：fork 源会话（sessions.fork 服务未就位时为 null ⇒ 弹窗不渲染按钮）。 */
-  forkRef: () => ((id: string) => Promise<string>) | null
+  forkRef: () => ((id: string, atSeq?: number) => Promise<string>) | null
   /** U10：官方导航跳转（uiWorkspace 服务未就位时为 null ⇒ 弹窗不渲染按钮）。 */
   openRef: () => ((id: string) => void) | null
   onBack: () => void
@@ -1084,7 +1084,7 @@ export function apply(ctx: ClientContext): void {
   // U10「继续对话（开分支）」：fork = 官方 ISessions 契约方法（0.1.7-rc.2 contract/sessions.d.ts:124，
   // 实现体 client.js:3343）——不带 atSeq = 最新已完成 turn 前缀（归档/完结会话即全量对话），
   // increaseTitle = true 让子会话标题递增 (1)（官方 fork 按钮同款 client.js:837-842）。
-  let forkSession: ((id: string) => Promise<string>) | null = null
+  let forkSession: ((id: string, atSeq?: number) => Promise<string>) | null = null
   ctx.inject(['sessions', 'uiConversation'], (sub) => {
     const sessions = (sub as { sessions?: SessionsFace }).sessions
     const uiConversation = (sub as { uiConversation?: UiConversationFace }).uiConversation
@@ -1093,9 +1093,12 @@ export function apply(ctx: ClientContext): void {
     }
     const forkFn = (sessions as unknown as Record<string, unknown> | undefined)?.fork
     if (typeof forkFn === 'function') {
-      forkSession = (id: string): Promise<string> =>
-        (forkFn as (opts: { sessionId: string; increaseTitle: boolean }) => Promise<string>)
-          .call(sessions, { sessionId: id, increaseTitle: true })
+      // atSeq = 从指定消息 seq 截断开分支（官方契约 commands.d.ts:36-37）；省略 = 最新已完成 turn 前缀。
+      forkSession = (id: string, atSeq?: number): Promise<string> =>
+        (forkFn as (opts: { sessionId: string; increaseTitle: boolean; atSeq?: number }) => Promise<string>)
+          .call(sessions, atSeq === undefined
+            ? { sessionId: id, increaseTitle: true }
+            : { sessionId: id, increaseTitle: true, atSeq })
     }
   })
   // U10 跳转：官方导航服务 uiWorkspace（@deepseek-ai/dsh-client-ui-workspace，cordis Service

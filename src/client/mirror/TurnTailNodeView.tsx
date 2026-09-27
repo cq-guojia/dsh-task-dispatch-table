@@ -39,12 +39,14 @@ function assistantText(blocks: ReadonlyArray<ContentBlockFace>): string {
   return blocks.flatMap(block => (block.kind === 'text' ? [block.text ?? ''] : [])).join('')
 }
 
-/** Turn 尾部操作行：复制 / 分支（只读⇒不可用态）/ 用量 / 结束时钟。 */
+/** Turn 尾部操作行：复制 / 分支 / 用量 / 结束时钟。 */
 export function TurnTailNodeViewMirror(props: {
   data: TurnTailDataFace
+  /** 分支：以该轮 tail seq 截断开分支（undefined = 不渲染分支按钮）。 */
+  onBranchAt?: (seq: number) => void
   t: Translate
 }): ReturnType<typeof h> | null {
-  const { data, t } = props
+  const { data, onBranchAt, t } = props
   const closing = data.closing
   if (closing === null || closing === undefined) return null
   const text = assistantText(closing.blocks)
@@ -57,8 +59,9 @@ export function TurnTailNodeViewMirror(props: {
       text,
       time: closing.time,
       clock: 'end',
-      // 分支不做（决策 37：归档会话不可续聊，将来提供「开分支继续对话」按钮替代；
-      // 官方分支 icon 依赖 fork 席位，只读弹窗没有 ⇒ 不渲染）。
+      // 分支恢复（用户拍板 2026-09-27，替代决策 37 的「不做」）：点分支 = 确认框 →
+      // fork({ atSeq: 该轮 tail seq })——从这条消息位置截断开分支；头部按钮 = 省略 atSeq（最后一轮）。
+      onBranch: onBranchAt === undefined ? undefined : () => { onBranchAt(data.seq) },
       className: ocOr('TurnTailNodeView', 'actions', 'dsh-tdt-sv-tail-actions'),
       usageAction: data.tokenUsage === undefined ? undefined : h(TurnUsagePanelMirror, { usage: data.tokenUsage, t }),
       t,
