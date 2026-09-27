@@ -15,8 +15,15 @@
 // readBytes(sessionId, path, ...) → {offset, data: Uint8Array, eof, ...}（全量 ≤32MiB）。
 import { Component, createElement as h, useEffect, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
-import { CodeBlock, IconCloseOutlineRegular, MarkdownText, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  CodeBlock,
+  IconCloseOutlineRegular,
+  MarkdownText,
+  languageForPath,
+  writeClipboard,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import type { LocaleKey, Translate } from './locales'
+import { ocOr } from './official-classes'
 
 /** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
 export class PreviewBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { crashed: boolean }> {
@@ -44,21 +51,39 @@ function shapeOf(value: unknown): string {
 }
 
 /**
+ * 远端结果信封（真机 2026-09-28 实测）：失败时 **resolve 出 `{ ok: false, error }`**
+ * 而不是 reject（typert 远端面把错误封进结果），成功时是结果本身（也可能包一层 `{ value }`）。
+ * ⇒ 先剥信封：失败按官方 bareCode 走错误态文案，成功才交给渲染器。
+ */
+type Envelope = { kind: 'ok'; payload: unknown } | { kind: 'error'; error: unknown }
+
+function unwrapEnvelope(result: unknown): Envelope {
+  if (typeof result === 'object' && result !== null) {
+    const r = result as { ok?: unknown; error?: unknown; value?: unknown }
+    if (r.ok === false) return { kind: 'error', error: r.error }
+    if (r.ok === true && 'value' in r) return { kind: 'ok', payload: r.value }
+  }
+  return { kind: 'ok', payload: result }
+}
+
+/**
  * `read` 结果防御解析（真机 2026-09-28 根因：page.text 为 undefined ⇒ 渲染器内部
  * `endsWith` 抛错 ⇒ 整页黑屏，界面出现「undefined undefined undefined」）。
  * 官方 wire 契约 = `{ offset, text, lines, eof, absolutePath, version, bytes? }`
- * （typert.remote-client.js 的 read_result schema），远端面可能再包一层 `{ value }`；
- * **取不到字符串一律按错误态处理**，绝不把 undefined 喂给官方渲染器。
+ * （typert.remote-client.js 的 read_result schema）；**取不到字符串一律按错误态处理**，
+ * 绝不把 undefined 喂给官方渲染器。
  */
-function textPageOf(page: unknown): { text: string; offset: number; lines: number; eof: boolean } | null {
-  const raw = (page as { value?: unknown } | null | undefined)?.value ?? page
+function textPageOf(result: unknown): { text: string; offset: number; lines: number; eof: boolean } | { failed: unknown } | null {
+  const envelope = unwrapEnvelope(result)
+  if (envelope.kind === 'error') return { failed: envelope.error }
+  const raw = envelope.payload
   if (typeof raw !== 'object' || raw === null) {
-    console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(page)}`)
+    console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(result)}`)
     return null
   }
   const r = raw as { text?: unknown; offset?: unknown; lines?: unknown; eof?: unknown }
   if (typeof r.text !== 'string') {
-    console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(page)}`)
+    console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(result)}`)
     return null
   }
   const offset = typeof r.offset === 'number' ? r.offset : 0
@@ -67,13 +92,18 @@ function textPageOf(page: unknown): { text: string; offset: number; lines: numbe
 }
 
 /** `readBytes` 结果防御解析：data 必须是 Uint8Array（multipart 还原），否则错误态。 */
-function bytesOf(page: unknown): Uint8Array | null {
-  const raw = (page as { value?: unknown } | null | undefined)?.value ?? page
-  const data = (raw as { data?: unknown } | null | undefined)?.data
+function bytesOf(result: unknown): Uint8Array | { failed: unknown } | null {
+  const envelope = unwrapEnvelope(result)
+  if (envelope.kind === 'error') return { failed: envelope.error }
+  const data = (envelope.payload as { data?: unknown } | null | undefined)?.data
   if (data instanceof Uint8Array) return data
-  console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(page)}`)
+  console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(result)}`)
   return null
 }
+
+/** 失败分支判空（TS 收窄用）。 */
+const isFailed = (value: unknown): value is { failed: unknown } =>
+  typeof value === 'object' && value !== null && 'failed' in (value as object)
 
 /** @deepseek-ai/dsh-api-workspace-files 的消费面（官方 remote.workspaceFiles 命名空间的用到的子集）。 */
 export interface WorkspaceFilesFace {
@@ -217,6 +247,7 @@ function BytesPreview(props: {
       .then((page) => {
         if (!alive) return
         const data = bytesOf(page)
+        if (isFailed(data)) { setErr(errView(data.failed)); return }
         if (data === null) { setErr({ key: 'previewBadPayload' }); return }
         objectUrl = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: mime }))
         setUrl(objectUrl)
@@ -256,8 +287,11 @@ function TextPreview(props: {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [err, setErr] = useState<ErrView | null>(null)
+  // md 的两态：渲染视图（官方 MarkdownBody 同款）⇄ 源码（官方 CodeBody 同款）。
+  const [sourceView, setSourceView] = useState(false)
   useEffect(() => {
     let alive = true
+    setSourceView(false)
     setText(null)
     setNextOffset(null)
     setLoading(true)
@@ -266,6 +300,7 @@ function TextPreview(props: {
       .then((page) => {
         if (!alive) return
         const parsed = textPageOf(page)
+        if (isFailed(parsed)) { setErr(errView(parsed.failed)); setLoading(false); return }
         if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoading(false); return }
         setText(parsed.text)
         setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
@@ -284,6 +319,7 @@ function TextPreview(props: {
     workspaceFiles.read(sessionId, path, { offset: nextOffset })
       .then((page) => {
         const parsed = textPageOf(page)
+        if (isFailed(parsed)) { setErr(errView(parsed.failed)); setLoadingMore(false); return }
         if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoadingMore(false); return }
         // 页间以 \n 拼接（官方页末行不带终止符）。
         setText(prev => (prev === null ? parsed.text : `${prev}\n${parsed.text}`))
@@ -299,16 +335,41 @@ function TextPreview(props: {
   if (loading || text === null) {
     return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
   }
+  // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
+  // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
+  // md 默认走 MarkdownText（渲染视图），右上角「源码」切到同一块 CodeBlock（lang=markdown）。
+  // ⚠ 官方预览层没有「编辑」（编辑是另一套编辑器 tab，不在预览契约里），故只做 渲染 ⇄ 源码 两态。
+  const language = languageForPath(path)
+  const showSource = !markdown || sourceView
   return h('div', { className: 'dsh-tdt-sv-preview-body' },
     markdown
-      ? h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS }))
-      : h(CodeBlock, {
+      ? h('div', { className: 'dsh-tdt-sv-preview-mdbar' },
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-preview-mdswitch',
+            'aria-pressed': sourceView,
+            onClick: () => { setSourceView(value => !value) },
+          }, sourceView ? t('previewRender') : t('previewSource')))
+      : null,
+    showSource
+      ? h('div', {
+          className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
+          'data-code-preview': true,
+        },
+        h(CodeBlock, {
+          className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
           code: text,
-          lang: ext === '' ? undefined : ext,
+          lang: language,
+          lineNumbers: true,
           copyLabel: t('copyLabel'),
           copiedLabel: t('copiedLabel'),
-          className: 'dsh-tdt-sv-preview-code',
-        }),
+          toolbarLabels: {
+            codeLabel: t('codeBlockLabel'),
+            wrapLabel: t('diffWrapLabel'),
+            unwrapLabel: t('diffUnwrapLabel'),
+          },
+        }))
+      : h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS })),
     nextOffset !== null
       ? h('div', { className: 'dsh-tdt-sv-older' },
           h('button', { type: 'button', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))

@@ -78,6 +78,7 @@ export type LocaleKey =
   | 'previewCopyPath' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
   | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
+  | 'previewSource' | 'previewRender'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs' | 'outputsEmpty'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
@@ -321,6 +322,8 @@ export const zh: Record<LocaleKey, string> = {
   previewBadPayload: '读取结果不符合官方契约（已记控制台日志），未渲染内容。',
   previewRenderFailed: '预览渲染失败（错误已记录，面板其余部分不受影响）。',
   previewResize: '拖动调整预览栏宽度',
+  previewSource: '源码',
+  previewRender: '预览',
   colOutputs: '产出',
   outputsEmpty: '（无产出）',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
@@ -561,6 +564,8 @@ export const en: Record<LocaleKey, string> = {
   previewBadPayload: 'Read result does not match the official contract (logged to the console); nothing rendered.',
   previewRenderFailed: 'Preview rendering failed (logged); the rest of the panel is unaffected.',
   previewResize: 'Drag to resize the preview pane',
+  previewSource: 'Source',
+  previewRender: 'Preview',
   colOutputs: 'Outputs',
   outputsEmpty: '(no outputs)',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).

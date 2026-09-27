@@ -132,6 +132,8 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconDeliverDocRegular: ComponentType<{ size?: number; className?: string }>
   /** 取文件扩展名（无点 / 尾点返回空串；大小写保持）。 */
   export function fileExtension(path: string): string
+  /** 按路径推语法高亮语言（官方 code/CodeBody 预览体同款入参来源）。 */
+  export function languageForPath(path: string): string | undefined
 
   /** 官方气泡提示：label + side；children 为唯一锚点元素，ref/事件会被接管。 */
   export const Tooltip: ComponentType<{

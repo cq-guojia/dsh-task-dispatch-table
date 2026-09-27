@@ -22,6 +22,8 @@
 //   errorSummary stoppedSummary bodyWrap inspectButton detailsBodyWrap bodyScroll ioCard
 //   ioSection ioLabel ioDivider ioText codeBody terminalBody diffBody readBody imageBody
 //   searchBody webBody searchRecovery imageLabel imageMeta visuallyHidden
+//   ui-sidebar-documentpreview 包（官方文件预览体，2026-09 U11 文本渲染对齐时接入）：
+//   CodeBody(2): renderer code（CodeBlock + lineNumbers 的官方外壳）
 //   ui-deliverables 包（交付文件行 + 交付文件卡，2026-09 U11 产出物入口接入）：
 //   PresentRow(4): summary paths output inspect
 //   Deliverables(16): root hostStatus presented file cardPreview fileIcon fileBody details
@@ -32,6 +34,7 @@ const CSS_PKG_PREFIXES = [
   '@deepseek-ai/dsh-client-ui-chat/',
   '@deepseek-ai/dsh-client-ui-tool/',
   '@deepseek-ai/dsh-client-ui-deliverables/',
+  '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/',
 ]
 
 /** 语义名 → 真实（带哈希）类名。 */

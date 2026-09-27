@@ -483,8 +483,17 @@ try {
   // U11 产出物预览（决策 39）：分栏推压 + 统一 openFile 单一入口 + 官方错误码 + workspaceFiles 注入。
   check('预览分栏组件已打进 bundle（FilePreviewPanel）', clientJs.includes('FilePreviewPanel'))
   // 决策 39 的形态仍是「分栏推压」，但预览面已上提到页面级 dock（第三轮）：弹窗内不再有分栏。
-  check('分栏推压（页面级 dock）已打进 bundle（preview + 让位变量 + 整页 marginRight）',
-    clientJs.includes('dsh-tdt-sv-preview') && clientJs.includes('--dsh-tdt-preview-w') && clientJs.includes('marginRight'))
+  check('分栏推压（页面级 dock）已打进 bundle（preview + 让位变量 + 根容器 flex 分栏）',
+    clientJs.includes('dsh-tdt-sv-preview') && clientJs.includes('--dsh-tdt-preview-w') && clientJs.includes("display:flex"))
+  // 第四轮：dock 占布局（不再遮盖滚动条）+ 远端错误信封 + 文本渲染对齐官方 CodeBody。
+  check('dock 是布局分栏不是浮层（sticky + 占宽，滚动条不被压住）',
+    clientJs.includes('dsh-tdt-sv-preview-dock') && clientJs.includes('position:sticky'))
+  check('远端 {ok:false,error} 信封被识别（失败走官方错误码文案，不再当成空内容）',
+    clientJs.includes('unwrapEnvelope') && clientJs.includes('ok === false'))
+  check('文本渲染照官方 CodeBody（CodeBlock + lineNumbers + languageForPath）',
+    clientJs.includes('languageForPath') && clientJs.includes('lineNumbers'))
+  check('md 两态：渲染视图 ⇄ 源码（官方无「编辑」入口，故只做这两态）',
+    clientJs.includes('previewSource') && clientJs.includes('previewRender') && clientJs.includes('dsh-tdt-sv-preview-mdswitch'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
     clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
   check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',

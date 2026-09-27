@@ -15,9 +15,11 @@ export const ARCHIVE_SESSION_CSS = `
 /* 弹窗让位预览 dock：右侧留出 --dsh-tdt-preview-w（缺省 0）⇒ 弹窗不被预览面遮盖，
    与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/artifact-opening.md §四-C）。 */
 .dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:var(--dsh-tdt-preview-w,0px);z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));transition:right .12s var(--ds-ease-in-out,ease);}
-/* 预览 dock：固定在屏幕最右侧，整页（含弹窗）由外层 margin / overlay right 让位。 */
-/* 双类选择器：盖住后面 .dsh-tdt-sv-preview 的 width:min(520px,48%)，dock 宽度全由变量决定。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:fixed;top:0;right:0;bottom:0;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:none;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
+/* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
+   滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
+   sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
+   弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
+.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区，hover/拖拽时高亮，光标 col-resize）。 */
 .dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
 .dsh-tdt-sv-resizer:hover,.dsh-tdt-sv-resizer:active{background:var(--dsw-alias-brand-primary,#2f6feb);opacity:.35;}
@@ -220,6 +222,14 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
+/* md 两态切换条（渲染视图 ⇄ 源码）：右上角小钮，官方预览层没有「编辑」（那是编辑器 tab），故只做这两态。 */
+.dsh-tdt-sv-preview-mdbar{display:flex;justify-content:flex-end;margin-bottom:8px;}
+.dsh-tdt-sv-preview-mdswitch{appearance:none;font:inherit;font-size:12px;line-height:18px;height:24px;cursor:pointer;display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));background:transparent;border:.5px solid var(--dsw-alias-border-l3,rgba(128,128,128,.4));border-radius:var(--dsw-radius-sm,6px);padding:0 10px;}
+.dsh-tdt-sv-preview-mdswitch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-preview-mdswitch[aria-pressed=true]{color:var(--dsw-alias-label-primary,#1f2328);border-color:var(--dsw-alias-border-l2,rgba(128,128,128,.5));}
+/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、可横向滚动。 */
+.dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
+.dsh-tdt-sv-preview-code{max-width:100%;}
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */

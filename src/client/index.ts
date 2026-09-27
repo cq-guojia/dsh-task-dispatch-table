@@ -613,12 +613,19 @@ function TaskPage(props: {
 
   // 预览 dock 占位宽度（0 = 收回）：整页与弹窗都按这个变量让位 ⇒「弹窗不遮盖预览面」。
   const previewW = preview === null ? 0 : previewWidth
+  // 根容器 = 横向分栏：内容区（整页 + 弹窗层）flex:1，预览 dock 占 --dsh-tdt-preview-w。
+  // dock 是布局成员而非浮层 ⇒ 整页被真正挤窄、滚动条不被遮盖（用户 2026-09-28 要求「分栏压过来，不是盖上去」）。
   return h('div', {
     id: 'dsh-tdt-root',
     className: 'dsh-tdt-root',
-    style: { ['--dsh-tdt-preview-w' as string]: `${previewW}px` },
+    style: {
+      ['--dsh-tdt-preview-w' as string]: `${previewW}px`,
+      display: 'flex',
+      alignItems: 'flex-start',
+      minHeight: '100%',
+    },
   },
-    h('div', { style: { ...pageStyle, marginRight: `${previewW}px` } },
+    h('div', { style: { ...pageStyle, flex: '1 1 auto', minWidth: 0 } },
       // 抬头：左「← 返回会话」+ 标题；右「刷新 · 分组标签」
       h('div', { style: panelHeaderStyle },
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },

@@ -52,8 +52,8 @@
 
 | 项 | 结论 |
 |---|---|
-| 唯一预览面 | `FilePreviewPanel`（dock 形态）渲染在 `TaskPage` 根（`#dsh-tdt-root`）下，`position:fixed;right:0;top:0;bottom:0;z-index:1030`；弹窗与整页**共用这一份**（弹窗不再自带分栏） |
-| 推压方式 | 根容器挂 CSS 变量 `--dsh-tdt-preview-w`（收回 = 0）：整页容器 `marginRight` 让位、弹窗 overlay `right: var(--dsh-tdt-preview-w,0px)` 让位 ⇒ 弹窗自动居中于剩余区域、不被遮盖 |
+| 唯一预览面 | `FilePreviewPanel`（dock 形态）渲染在 `TaskPage` 根（`#dsh-tdt-root`）下，是**布局成员**（`position:sticky; top:0; height:100vh`）而非浮层；弹窗与整页**共用这一份**（弹窗不再自带分栏） |
+| 推压方式 | 根容器 = 横向 flex：内容区 `flex:1 1 auto; min-width:0`，dock 占 `width: var(--dsh-tdt-preview-w)` ⇒ **整页被真正挤窄**（不是被盖住），滚动条留在内容区内不会被压住（真机「弹出来后滚动条没了」的修复）；弹窗是全屏 fixed 层，靠 overlay `right: var(--dsh-tdt-preview-w,0px)` 让位 ⇒ 弹窗不被遮盖且自动居中于剩余区 |
 | 生命周期 | 预览 state 在 `TaskPage` 上 ⇒ **关弹窗不影响预览**，预览可独立收回（头部关闭钮） |
 | 统一入口 | `openFile(sessionId, path)`：弹窗内（工具卡路径 / 正文 fileMentions / 交付卡）经 `onOpenFile(path)` 上提；整页（执行记录行的产出物）直调 ⇒ **两处同一个入口、同一份引擎**（决策 39 ③） |
 | 宽度可调 | dock 左缘 6px 拖拽条（pointerdown/move/up）：拖动期间只改 CSS 变量（不重渲染整页），松手落 state 并持久化 localStorage（`dsh-tdt-preview-width`）；区间 320px ~ 视口 70%，默认 460px |

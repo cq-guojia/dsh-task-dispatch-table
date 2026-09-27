@@ -54,6 +54,16 @@
 6. **执行记录行「产出」列**：`task_instances.outputs`（决策 32③ 完成瞬间写回，真值）经 `parseOutputs`（JSON 数组 / 逗号串兼容）渲染成链接，点之走同一个 `openFile(sessionId, path)` ⇒ 整页也能开预览（无预览能力时降级为文件名文本）。
 7. **质量门**：typecheck 全过；build dist/client.js 237.20 kB；冒烟 +7 = **146 项全过**（dock 与让位变量 / overlay 让位 / 拖拽+持久化 / 错误边界 / 防御解析 / 记录行产出链接 / 弹窗不再自带分栏）。
 
+### 第七轮：真机三反馈（信封错误 / 滚动条 / 文本渲染对齐官方）（2026-09-28）
+
+1. **信封真相（用户贴日志）**：`read 返回形状不符契约（无 text 字段）：{ok,error}` ⇒ **typert 远端面失败时 resolve `{ok:false, error}` 而不是 reject**。成功路径原本就能取到（`{value}` 包一层已在防御解析内）⇒「好多文件正常、个别报错」= 个别文件读取失败（如不在工作区 / 已删除），此前被当成空内容。修：`unwrapEnvelope` 先剥信封，`ok:false` 时把 `error` 交给官方 `errView`（bareCode 分支出正确文案）。
+2. **滚动条**：dock 原是 fixed 浮层，盖住宿主内容区右缘的滚动条 ⇒ 改成**占布局的分栏**：根容器 `#dsh-tdt-root` 横向 flex（内容区 `flex:1 1 auto; min-width:0`，dock `position:sticky; top:0; height:100vh; width:var(--dsh-tdt-preview-w)`）——整页被真正挤窄、滚动条归内容区，关掉预览即回满宽；弹窗 overlay 仍用 `right` 变量让位。用户要求「分栏压过来，不是盖上去」即此。
+3. **文本渲染对齐官方**（读 `dsh-client-ui-sidebar-documentpreview` 实现本体）：
+   - 官方 code/CodeBody（`lib/client.js:5033`）：`CodeBlock{ code, lang: languageForPath(path), lineNumbers: true, wrap, copyLabel/copiedLabel, toolbarLabels{codeLabel,wrapLabel,unwrapLabel} }`，外壳 `.renderer[data-code-preview]` + `.code` 两个类（CodeBody.module.css）。
+   - 官方 markdown/MarkdownBody（`:1586`）：`MarkdownText{ text, streaming:!eof, labels, pathImages }`——**预览层没有「编辑」**（编辑是编辑器 tab，不在预览契约）。
+   - 落码：所有文本（json/js/ts/css/txt…）统一走 CodeBody 同款 CodeBlock（行号 + languageForPath + 官方 toolbar）；md 默认渲染视图 + 右上角「源码」钮切 CodeBlock（lang=markdown，经 languageForPath）；官方类发现扩 `ui-sidebar-documentpreview` 前缀（CodeBody: renderer/code），缺失时走自绘兜底。
+4. **质量门**：typecheck 全过；build（dist ≈240 kB）；冒烟 +4 = **150 项全过**。
+
 ## 二、证据与坐标
 
 - `dsh-api-workspace-files/README.zh.md`：read/readBytes/stat/list/changes 全形状 + 错误码 + inject 清单 `['resources','remote','remote.workspaceFiles']`。

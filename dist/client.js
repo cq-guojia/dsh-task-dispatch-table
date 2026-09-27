@@ -236,6 +236,8 @@ window.__ModuleLoader__.load({
 			previewBadPayload: "读取结果不符合官方契约（已记控制台日志），未渲染内容。",
 			previewRenderFailed: "预览渲染失败（错误已记录，面板其余部分不受影响）。",
 			previewResize: "拖动调整预览栏宽度",
+			previewSource: "源码",
+			previewRender: "预览",
 			colOutputs: "产出",
 			outputsEmpty: "（无产出）",
 			deliverRowTitle: "交付文件",
@@ -472,6 +474,8 @@ window.__ModuleLoader__.load({
 			previewBadPayload: "Read result does not match the official contract (logged to the console); nothing rendered.",
 			previewRenderFailed: "Preview rendering failed (logged); the rest of the panel is unaffected.",
 			previewResize: "Drag to resize the preview pane",
+			previewSource: "Source",
+			previewRender: "Preview",
 			colOutputs: "Outputs",
 			outputsEmpty: "(no outputs)",
 			deliverRowTitle: "Deliver files",
@@ -497,9 +501,11 @@ window.__ModuleLoader__.load({
 /* 弹窗让位预览 dock：右侧留出 --dsh-tdt-preview-w（缺省 0）⇒ 弹窗不被预览面遮盖，
    与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/artifact-opening.md §四-C）。 */
 .dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:var(--dsh-tdt-preview-w,0px);z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));transition:right .12s var(--ds-ease-in-out,ease);}
-/* 预览 dock：固定在屏幕最右侧，整页（含弹窗）由外层 margin / overlay right 让位。 */
-/* 双类选择器：盖住后面 .dsh-tdt-sv-preview 的 width:min(520px,48%)，dock 宽度全由变量决定。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:fixed;top:0;right:0;bottom:0;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:none;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
+/* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
+   滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
+   sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
+   弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
+.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区，hover/拖拽时高亮，光标 col-resize）。 */
 .dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
 .dsh-tdt-sv-resizer:hover,.dsh-tdt-sv-resizer:active{background:var(--dsw-alias-brand-primary,#2f6feb);opacity:.35;}
@@ -702,6 +708,14 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
+/* md 两态切换条（渲染视图 ⇄ 源码）：右上角小钮，官方预览层没有「编辑」（那是编辑器 tab），故只做这两态。 */
+.dsh-tdt-sv-preview-mdbar{display:flex;justify-content:flex-end;margin-bottom:8px;}
+.dsh-tdt-sv-preview-mdswitch{appearance:none;font:inherit;font-size:12px;line-height:18px;height:24px;cursor:pointer;display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));background:transparent;border:.5px solid var(--dsw-alias-border-l3,rgba(128,128,128,.4));border-radius:var(--dsw-radius-sm,6px);padding:0 10px;}
+.dsh-tdt-sv-preview-mdswitch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-preview-mdswitch[aria-pressed=true]{color:var(--dsw-alias-label-primary,#1f2328);border-color:var(--dsw-alias-border-l2,rgba(128,128,128,.5));}
+/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、可横向滚动。 */
+.dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
+.dsh-tdt-sv-preview-code{max-width:100%;}
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
@@ -752,7 +766,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		const CSS_PKG_PREFIXES = [
 			"@deepseek-ai/dsh-client-ui-chat/",
 			"@deepseek-ai/dsh-client-ui-tool/",
-			"@deepseek-ai/dsh-client-ui-deliverables/"
+			"@deepseek-ai/dsh-client-ui-deliverables/",
+			"@deepseek-ai/dsh-client-ui-sidebar-documentpreview/"
 		];
 		let discovered = null;
 		/**
@@ -3389,22 +3404,41 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (Array.isArray(value)) return `array(${value.length})`;
 			return `{${Object.keys(value).slice(0, 12).join(",")}}`;
 		}
+		function unwrapEnvelope(result) {
+			if (typeof result === "object" && result !== null) {
+				const r = result;
+				if (r.ok === false) return {
+					kind: "error",
+					error: r.error
+				};
+				if (r.ok === true && "value" in r) return {
+					kind: "ok",
+					payload: r.value
+				};
+			}
+			return {
+				kind: "ok",
+				payload: result
+			};
+		}
 		/**
 		* `read` 结果防御解析（真机 2026-09-28 根因：page.text 为 undefined ⇒ 渲染器内部
 		* `endsWith` 抛错 ⇒ 整页黑屏，界面出现「undefined undefined undefined」）。
 		* 官方 wire 契约 = `{ offset, text, lines, eof, absolutePath, version, bytes? }`
-		* （typert.remote-client.js 的 read_result schema），远端面可能再包一层 `{ value }`；
-		* **取不到字符串一律按错误态处理**，绝不把 undefined 喂给官方渲染器。
+		* （typert.remote-client.js 的 read_result schema）；**取不到字符串一律按错误态处理**，
+		* 绝不把 undefined 喂给官方渲染器。
 		*/
-		function textPageOf(page) {
-			const raw = page?.value ?? page;
+		function textPageOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return { failed: envelope.error };
+			const raw = envelope.payload;
 			if (typeof raw !== "object" || raw === null) {
-				console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(page)}`);
+				console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(result)}`);
 				return null;
 			}
 			const r = raw;
 			if (typeof r.text !== "string") {
-				console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(page)}`);
+				console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(result)}`);
 				return null;
 			}
 			const offset = typeof r.offset === "number" ? r.offset : 0;
@@ -3417,12 +3451,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 		}
 		/** `readBytes` 结果防御解析：data 必须是 Uint8Array（multipart 还原），否则错误态。 */
-		function bytesOf(page) {
-			const data = (page?.value ?? page)?.data;
+		function bytesOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return { failed: envelope.error };
+			const data = envelope.payload?.data;
 			if (data instanceof Uint8Array) return data;
-			console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(page)}`);
+			console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(result)}`);
 			return null;
 		}
+		/** 失败分支判空（TS 收窄用）。 */
+		const isFailed = (value) => typeof value === "object" && value !== null && "failed" in value;
 		/** markdown 外壳文案（引用稳定——新身份会打断 MarkdownText 的渲染缓存；与 mirror/MessageItem 同款）。 */
 		const MD_LABELS = {
 			code: {
@@ -3533,6 +3571,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				workspaceFiles.readBytes(sessionId, path).then((page) => {
 					if (!alive) return;
 					const data = bytesOf(page);
+					if (isFailed(data)) {
+						setErr(errView(data.failed));
+						return;
+					}
 					if (data === null) {
 						setErr({ key: "previewBadPayload" });
 						return;
@@ -3577,8 +3619,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [loading, setLoading] = (0, react.useState)(true);
 			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
 			const [err, setErr] = (0, react.useState)(null);
+			const [sourceView, setSourceView] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
 				let alive = true;
+				setSourceView(false);
 				setText(null);
 				setNextOffset(null);
 				setLoading(true);
@@ -3586,6 +3630,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				workspaceFiles.read(sessionId, path, {}).then((page) => {
 					if (!alive) return;
 					const parsed = textPageOf(page);
+					if (isFailed(parsed)) {
+						setErr(errView(parsed.failed));
+						setLoading(false);
+						return;
+					}
 					if (parsed === null) {
 						setErr({ key: "previewBadPayload" });
 						setLoading(false);
@@ -3612,6 +3661,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setLoadingMore(true);
 				workspaceFiles.read(sessionId, path, { offset: nextOffset }).then((page) => {
 					const parsed = textPageOf(page);
+					if (isFailed(parsed)) {
+						setErr(errView(parsed.failed));
+						setLoadingMore(false);
+						return;
+					}
 					if (parsed === null) {
 						setErr({ key: "previewBadPayload" });
 						setLoadingMore(false);
@@ -3631,16 +3685,34 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				t
 			});
 			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, markdown ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text,
-				labels: MD_LABELS
-			})) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+			const language = (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path);
+			const showSource = !markdown || sourceView;
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, markdown ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-mdbar" }, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-preview-mdswitch",
+				"aria-pressed": sourceView,
+				onClick: () => {
+					setSourceView((value) => !value);
+				}
+			}, sourceView ? t("previewRender") : t("previewSource"))) : null, showSource ? (0, react.createElement)("div", {
+				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
+				"data-code-preview": true
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
 				code: text,
-				lang: ext === "" ? void 0 : ext,
+				lang: language,
+				lineNumbers: true,
 				copyLabel: t("copyLabel"),
 				copiedLabel: t("copiedLabel"),
-				className: "dsh-tdt-sv-preview-code"
-			}), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
+				toolbarLabels: {
+					codeLabel: t("codeBlockLabel"),
+					wrapLabel: t("diffWrapLabel"),
+					unwrapLabel: t("diffUnwrapLabel")
+				}
+			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text,
+				labels: MD_LABELS
+			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
 				type: "button",
 				disabled: loadingMore,
 				onClick: loadMore
@@ -4259,10 +4331,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return (0, react.createElement)("div", {
 				id: "dsh-tdt-root",
 				className: "dsh-tdt-root",
-				style: { ["--dsh-tdt-preview-w"]: `${previewW}px` }
+				style: {
+					["--dsh-tdt-preview-w"]: `${previewW}px`,
+					display: "flex",
+					alignItems: "flex-start",
+					minHeight: "100%"
+				}
 			}, (0, react.createElement)("div", { style: {
 				...pageStyle,
-				marginRight: `${previewW}px`
+				flex: "1 1 auto",
+				minWidth: 0
 			} }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
