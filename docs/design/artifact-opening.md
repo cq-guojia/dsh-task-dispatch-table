@@ -45,6 +45,43 @@
 4. ✅ **整页留接口**：TaskPageHost 已收 `filesRef` 并透传弹窗，`openFile` 入口就位，不落 UI（场景 2 暂缓）。
 5. ✅ **质量门**：冒烟 +10 断言（预览组件 / 分栏 / 单入口 / 词表 / 真实取数 / 错误码四分支 / 加载更多 / objectURL 生命周期 / inject 清单）共 **124 项全过**；typecheck + build 过（dist/client.js 190.21 kB 入库）。
 
+## 四-B、交付登记路线（决策 40，已拍板·**待实施**）
+
+> 用户 2026-09-28 定：**B（插件代写官方交付事件）+ C（提示词要求模型调 present 兜底）**；否决「插件 UI 自己画卡」。
+> 动工前置条件：先把文件预览/链接可点这条线真机走通（见 PROGRESS U11）；本专题属下一步（U12）。
+
+### 为什么 present 不能由插件代调（源码事实）
+
+| 事实 | 坐标 |
+|---|---|
+| present 是 agent 侧 scoped 工具，只能模型发起；要求「有工作区 + 轮次未结束」 | `dsh-tool-present@0.1.7-rc.2 lib/index.js` execute：`turnBoundary.openTurnStartSeq === null` 抛错；README「工具要求 Agent Session 具有工作区和尚未结束的轮次」 |
+| 交付事件由 present 实例自己写：`ctx.on('tools/result')` → `session.append('deliverables/presented', {turn, callId, files})`，pending WeakMap 只认自己执行的 exec | 同上（文件尾事件段）；README「每个插件实例只记录其实际执行的调用；同名作用域工具不能通过其他实例发布交付」 |
+
+### B 路线可行性（三条公开契约）
+
+| 依据 | 坐标 |
+|---|---|
+| `append<T>(type, data)` 是 Session 公开契约（`'deliverables/presented'` 不在 SurfaceEventType ⇒ 无需第三参 opts） | `dsh-session/lib/types/index.d.ts:246`；`dsh-session/lib/types/types.d.ts:442` |
+| `'deliverables/presented'` 是正式注册事件：`{ turn; callId: ToolCallId; files: PresentedFile[] }` | `dsh-tool-present/lib/types/types.d.ts`（declare module `@deepseek-ai/dsh-session/types`） |
+| 回执工具 execute 第二参 `exec` 带 `agent.session`（Session 本体）与 `callId` | `dsh-tools/lib/types/index.d.ts:217/229`；`dsh-agent/lib/types/runtime-types.d.ts:143` |
+| turn 号 = `turnBoundary` 投影的 `lastTurn`（present 同款取法，agent 作用域 `sessionProjections`） | `dsh-agent-loop/lib/types/index.d.ts:23`；`dsh-tool-present/lib/index.js` execute |
+
+### 实施清单（按顺序，逐项验证）
+
+1. `src/receipt.ts`：execute 改签 `(args, exec)`；成功后取 `exec.agent.session` + `exec.callId` + turn → `session.append('deliverables/presented', { turn, callId, files })`；**files = 已校验过的 outputs**（存在 + mtime 新鲜，`reconcile.ts` 的 checkReceipt 同模）。
+2. turn 获取：注册时从 agentCtx 闭包注入 `sessionProjections`（present 包 inject 同名服务）；执行时 `stateOf(session,'turnBoundary')?.lastTurn`；**取不到即跳过**（不猜 turn —— 猜错会把卡挂到别的轮次或直接不显示）。
+3. 兜底与可观测：整段 try/catch，失败只 `logger.warn`（原因 + 实例 id），**绝不抛给模型**（回执必须照常成功）；成功 log 一行「交付已登记 N 个文件」。
+4. C 兜底：`receiptInstruction` / 派发提示词补一句「若本次产出是独立文件，请调用 present 交付最关键的 1–2 个」；与 B 共存安全（官方按 path Map 后写覆盖）。
+5. 质量门：typecheck + build + 冒烟新增断言（回执流式 append 事件 / 失败只记日志不影响回执结果 / files 取校验后的 outputs / present 提示词文案）；真机跑一轮任务验证：宿主会话视图出官方交付卡 + 我方弹窗出卡 → 说「提交」再 commit+push。
+
+### 三条明确代价（用户已接受）
+
+1. `callId` 是回执调用的 id ⇒ 卡片「用系统应用打开」按钮可能失效（容器无桌面本就不可用）；预览走路径，不受影响。
+2. 拿不到 session / append 失败 ⇒ 静默跳过、只记日志，任务成败不受影响。
+3. 文件清单取**校验后**的 outputs，不取模型原样填值 ⇒ 不会交付不存在的文件。
+
+---
+
 ## 五、复现核实的方法（换机器重跑）
 
 解包源码目录在 /tmp（会丢），重取：`npm pack @deepseek-ai/<pkg>@0.1.7-rc.2` 解包读 `lib/types/**` 与 `README.zh.md`。本次核实过的包：`dsh-api-workspace-files`、`dsh-client-ui-sidebar-files`、`dsh-client-ui-sidebar-documentpreview`、`dsh-client-ui-sidebar-right`、`dsh-tool-present`、`dsh-client-ui-deliverables`、`dsh-api-session-controller`、`dsh-client-ui-conversation`（chat 包 = `dsh-client-ui-conversation`，其 README 描述 MarkdownDelegateProvider 与右栏打开链路）。

@@ -518,6 +518,8 @@ try {
     clientJs.includes('dsh-tdt-sv-deliv-file') && clientJs.includes('dsh-tdt-sv-deliv-grid') && clientJs.includes('dsh-tdt-sv-deliv-toggle'))
   check('workspaceFiles 未就位有诊断日志（真机排障锚点）',
     clientJs.includes('remote.workspaceFiles 未就位'))
+  check('注入键含 dotted remote.workspaceFiles（等命名空间挂载，真机「链接不可点」根因修复）',
+    /inject\(\[.{0,20}remote\.workspaceFiles/.test(clientJs))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

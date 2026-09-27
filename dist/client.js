@@ -4574,9 +4574,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				};
 			});
 			let workspaceFiles = null;
-			ctx.inject(["remote"], (sub) => {
-				const remote = sub.remote;
-				const wf = remote?.workspaceFiles;
+			console.info("[task-dispatch:client] 等待 remote.workspaceFiles 就位…");
+			ctx.inject(["remote", "remote.workspaceFiles"], (sub) => {
+				const rec = sub;
+				const remote = rec.remote;
+				const wf = rec["remote.workspaceFiles"] ?? remote?.workspaceFiles;
 				if (wf !== null && wf !== void 0 && typeof wf.read === "function") {
 					workspaceFiles = wf;
 					console.info("[task-dispatch:client] remote.workspaceFiles 已就位：文件预览与文件链接启用");

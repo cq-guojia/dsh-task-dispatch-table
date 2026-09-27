@@ -1118,13 +1118,18 @@ export function apply(ctx: ClientContext): void {
       openHostSession = (id: string): void => { ws.openSession!(id) }
     }
   })
-  // U11 产出物预览：remote.workspaceFiles（@deepseek-ai/dsh-api-workspace-files 的挂载点；
-  // 官方 client.js inject = ['resources','remote','remote.workspaceFiles']——本插件声明 'remote'
-  // 后运行时探测命名空间，升级兼容）。未就位 = null ⇒ 弹窗不渲染预览分栏、链接降级纯文本。
+  // U11 产出物预览：remote.workspaceFiles（@deepseek-ai/dsh-api-workspace-files 的挂载点）。
+  // ⚠️ 注入键必须带 dotted 'remote.workspaceFiles'（真机根因 2026-09-28）：官方 client 模块
+  // inject = ['resources','remote','remote.workspaceFiles']——dotted 键 = 「等命名空间挂上 remote
+  // 才启动」；只注 'remote' 的话回调在 remote 服务就位瞬间即触发，此刻 workspaceFiles 尚未挂上
+  // ⇒ 探测永久失败 ⇒ 一切文件链接降级纯文本（真机「没有一个能点」的根因）。
+  // 访问双保险：dotted 注入值优先，退回 remote 属性（官方 apply 体即 ctx.remote.workspaceFiles）。
   let workspaceFiles: WorkspaceFilesFace | null = null
-  ctx.inject(['remote'], (sub) => {
-    const remote = (sub as { remote?: Record<string, unknown> }).remote
-    const wf = remote?.workspaceFiles
+  console.info('[task-dispatch:client] 等待 remote.workspaceFiles 就位…')
+  ctx.inject(['remote', 'remote.workspaceFiles'], (sub) => {
+    const rec = sub as unknown as Record<string, unknown>
+    const remote = rec.remote as Record<string, unknown> | undefined
+    const wf = rec['remote.workspaceFiles'] ?? remote?.workspaceFiles
     if (wf !== null && wf !== undefined && typeof (wf as WorkspaceFilesFace).read === 'function') {
       workspaceFiles = wf as WorkspaceFilesFace
       console.info('[task-dispatch:client] remote.workspaceFiles 已就位：文件预览与文件链接启用')

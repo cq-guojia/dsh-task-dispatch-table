@@ -41,7 +41,7 @@
    - **官方「哪些能点」的规律**：① 工具行摘要路径（read/write/edit，error/stopped 态不可点）；② 交付文件卡整卡；③ 回答正文里的行内 code 文件引用 = `chatFileMentions`（**仅当该轮 produced（write/edit 成功）或 presented（present 交付）过该路径**，精确路径或唯一 basename 命中，其余保持惰性 code 不可点）。
 3. **数据可达性**：`deliverables/presented` 事件不在我们消费的 keyed 节点流里 ⇒ 从 `present` 工具调用参数 `files[]`（path + description）**同源推导**（`collectDeliveredFiles`：settled 且成功、按 turn 归组、按路径去重后者覆盖——与官方 `presentedForClosing` 的 map 语义一致）。改动文件卡（ChangedFiles）依赖 Host git 摘要 HTTP 路由，本弹窗无该通道 ⇒ 不渲染（与官方「summary 未就绪不画」同态）。
 4. **落码清单**：`mirror/Deliverables.tsx` 新建（PresentRowMirror + DeliverablesGridMirror/DeliveredFileCard，逐值照抄）；session-view.ts：tool-call/legacy tool-result 分流 present → PresentRowMirror、turn-tail 分支接卡网格（closing 为 null 也渲染，照官方 turnTail 插槽语义）、collectFilePaths 收录 present 交付路径（正文 fileMentions 命中率对齐官方）；official-classes.ts 扩 `dsh-client-ui-deliverables/` 前缀（PresentRow / Deliverables 模块）；locales 13 键（`row.*`/`presented.*` 逐字，预览字样按弹窗分栏语境改写——官方是「在侧边栏预览」）；archive-session-css.ts 兜底样式（PresentRow 3 类 + Deliverables 卡网格逐值含暗色与 container query）；index.ts 补 workspaceFiles 未就位诊断日志（真机排障锚点：链接全降级纯文本时先看这行）。
-5. **真机「没有入口」的两个候选根因**（下轮真机先看日志定位）：① 宿主跑的还是旧 dist（U11/第十二轮均「待真机」，需重装新产物）；② `ctx.inject(['remote'])` 探不到 `remote.workspaceFiles` ⇒ fileOpen 整体 undefined ⇒ fileLink 全降级纯文本（点行即折叠展开，正是用户看到的行为）。新加的诊断日志可直接分辨。
+5. **真机「没有入口」根因确认并修复（2026-09-28 第五轮）**：用户真机截图——读取/写入行路径全部不可点。根因 = **注入键缺 dotted `remote.workspaceFiles`**：官方 client 模块 `inject = ['resources','remote','remote.workspaceFiles']`，dotted 键的语义是「等命名空间挂上 remote 才启动」（官方 apply 体访问的正是 `ctx.remote.workspaceFiles`）；我方只注 `['remote']` ⇒ 回调在 remote 服务就位瞬间触发、此刻 workspaceFiles 尚未挂上、回调不重触发 ⇒ 探测永久失败 ⇒ `fileOpen` 全程 undefined ⇒ 一切 fileLink 降级纯文本。修复 = inject 补 dotted 键 + 取值双保险（`sub['remote.workspaceFiles'] ?? remote.workspaceFiles`）+ 启动时「等待…」/「已就位 / 未就位」三条日志。typecheck + build（dist 227.21 kB）+ 冒烟 +1 = **139 项全过**。
 6. **质量门**：typecheck 全过；build dist/client.js 227.05 kB；冒烟 +8 = **138 项全过**（PresentRow 镜像 / 卡网格 / 折叠上限 / 词典齐备 / present 路径词表 / deliverables 类前缀 / 兜底样式 / 诊断日志）。
 
 ## 二、证据与坐标
@@ -50,6 +50,7 @@
 - `dsh-client-ui-sidebar-right/lib/types/client/service.d.ts`：ISidebarRight 全文（seat 生命周期、openResource/openResourceIn/float/closeTab、mounted undefined 条款）。
 - `dsh-client-ui-sidebar-documentpreview/lib/types/client/index.d.ts` + `TextPreview.d.ts`：PropsRuntime<'sidebar.right.pane.tab'> 槽位绑定、「跨插件只许 import 类型」条款。
 - 解包目录（易失）：/tmp/dshsrc/*、/tmp/dshfiles、/tmp/dshsbfiles、/tmp/dshdocprev、/tmp/dshsbr；重取方法见设计稿 §五。
+- **交付登记（2026-09-28 核对，供 U12 实施复用；包取法同上）**：`dsh-tool-present/lib/index.js` execute + `ctx.on('tools/result')` 事件写入段、`lib/types/types.d.ts` 事件 declare-merge、`README.zh.md`「限制与延期工作」；`dsh-session/lib/types/index.d.ts:246` `append` 签名与 `types.d.ts:442` SurfaceEventType 集合；`dsh-tools/lib/types/index.d.ts:217/229`（callId / agent）、`:305` ToolRunContext；`dsh-agent/lib/types/runtime-types.d.ts:143` Agent.session；`dsh-agent-loop/lib/types/index.d.ts:23` turnBoundary.lastTurn；`dsh-api-workspace-files/lib/client.js` inject 声明（**含 dotted `remote.workspaceFiles`**——2026-09-28 注入根因）与 `apply(ctx)` 里的 `ctx.remote.workspaceFiles` 访问。
 
 ## 三、遗留与下一步
 
