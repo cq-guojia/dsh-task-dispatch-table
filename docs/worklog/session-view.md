@@ -113,5 +113,5 @@
 **摘要**：diff 卡摘要照官方 = **下划线文件路径** + ` +N -M`（text-underline-offset 2px）。
 **输入/输出对齐**：照官方截图调字号与基线——标签 13px tertiary、内容 12px 等宽、两者行高同拍 20px、`align-items:baseline`；内容 `white-space:pre` + 横向滚动（保住 JSON 缩进列不被折行打歪）。
 
-**验证**：typecheck + build（dist 154.6 kB）+ 冒烟 103 项全过。**待真机**：写入代码块、摘要下划线、输入/输出列对齐。
+**验证**：typecheck + build（dist 151.5 kB）+ 冒烟 103 项全过。**待真机**：写入代码块、摘要下划线、输入/输出列对齐。
 
