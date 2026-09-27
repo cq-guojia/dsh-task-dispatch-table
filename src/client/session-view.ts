@@ -27,8 +27,7 @@
 import { createElement as h, useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { IconCloseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ensureArchiveSessionStyle } from './archive-session-css'
-import { ComposerPlaceholder } from './mirror/Composer'
-import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame } from './mirror/ChatView'
+import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame, type TurnsFace } from './mirror/ChatView'
 import { GenericCommandCard } from './mirror/GenericCommandCard'
 import { MessageIconActionsMirror } from './mirror/MessageIconActions'
 import { AssistantMarkdown, UserMessage } from './mirror/MessageItem'
@@ -37,6 +36,7 @@ import { TurnProcessNodeViewMirror } from './mirror/TurnProcessNodeView'
 import { TurnTailNodeViewMirror, hasAssistantReplyContent, type TurnTailDataFace } from './mirror/TurnTailNodeView'
 import { TurnTriggerNodeViewMirror } from './mirror/TurnTriggerNodeView'
 import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
+import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
 import { interpolateTranslate, type Translate } from './locales'
 
@@ -85,9 +85,10 @@ interface ChatViewFace {
   readonly order?: readonly string[]
   /** keyed 节点仓库（官方 ChatNodeStore：get + processSource）。 */
   readonly nodes?: ChatNodeStoreFace
-  /** 时间线（官方 ConversationTimelineSnapshot：turnOrder / turns 供尾部行判定）。 */
+  /** 时间线（官方 ConversationTimelineSnapshot：turnOrder / turns 供尾部行与分组收折判定）。 */
   readonly timeline?: {
     readonly turnOrder?: readonly number[]
+    readonly turns?: TurnsFace
   }
   /** 官方兼容投影（老 kind 名；仅在 order 缺失时兜底）。 */
   readonly legacy?: {
@@ -579,6 +580,7 @@ function renderKeyedNode(
   turnProcess: TurnProcessHandle | undefined,
   t: Translate,
   lastTurn: number | undefined,
+  groupPart?: 'response' | 'reasoning',
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'turn-trigger':
@@ -599,7 +601,20 @@ function renderKeyedNode(
       })
     }
     case 'assistant-step': {
-      const parts = assistantBlocks(blocksOf(dataOf(node).blocks), t)
+      const blocks = blocksOf(dataOf(node).blocks)
+      // 官方 groupPart：'reasoning' = 组内只渲染思考块；'response' = 组外只渲染回复正文。
+      if (groupPart === 'reasoning') {
+        const reasoningOnly = blocks?.filter(block => block.kind === 'reasoning')
+        const parts = reasoningOnly === undefined ? [] : assistantBlocks(reasoningOnly, t)
+        return parts.length === 0 ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, parts)
+      }
+      if (groupPart === 'response') {
+        const text = (blocks ?? [])
+          .flatMap(block => (block.kind === 'text' ? [block.text] : []))
+          .join('')
+        return text.trim() === '' ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, h(AssistantMarkdown, { text }))
+      }
+      const parts = assistantBlocks(blocks, t)
       return parts.length === 0 ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-call': {
@@ -822,10 +837,18 @@ export function SessionViewModal(props: {
   const store = chat?.nodes
   const keyed = order.length > 0 && store !== undefined
   const turnOrder = chat?.timeline?.turnOrder ?? EMPTY_TURN_ORDER
+  const turns = chat?.timeline?.turns
   const lastTurn = turnOrder.length === 0 ? undefined : turnOrder[turnOrder.length - 1]
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess) => renderKeyedNode(node, turnProcess, tt, lastTurn),
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, lastTurn, groupPart),
     [tt, lastTurn],
+  )
+  // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
+  const isTurnClosed = useCallback((turn: number): boolean =>
+    (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== 'open', [turns])
+  const groupedView = useMemo(
+    () => keyed ? buildProcessGroups(order, key => store?.get(key), isTurnClosed) : undefined,
+    [keyed, order, store, isTurnClosed],
   )
 
   // ChatNodeList 直接调用（无 hook 的纯函数）：它产出的是「flowItem 数组」，不是单个元素。
@@ -833,11 +856,15 @@ export function SessionViewModal(props: {
     ? ChatNodeListMirror({
         order,
         store,
+        entries: groupedView?.entries,
+        groups: groupedView?.groups,
+        turns,
         openState: openTurns,
         onSetOpen,
         // 官方 usePresentation(policy => policy.foldCompletedTurns)：只读历史视图按「折叠已完成轮次」处理。
         foldCompleted: true,
         renderNode,
+        t: tt,
       })
     : renderLegacyRows(chat?.legacy?.nodes ?? [], tt)
   const rendered = rows.filter((row): row is NonNullable<ReturnType<typeof h>> => row !== null && row !== undefined)
@@ -889,8 +916,6 @@ export function SessionViewModal(props: {
       ),
       // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
       h(ChatViewFrame, { children: body }),
-      // 对话框占位（续聊未开放）：布局与官方输入区同位，禁用输入。
-      h(ComposerPlaceholder, { placeholder: tt('sessionComposerPlaceholder') }),
     ),
   )
 }

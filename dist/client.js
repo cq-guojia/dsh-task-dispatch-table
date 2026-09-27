@@ -103,7 +103,6 @@ window.__ModuleLoader__.load({
 			sessionLoadFailed: "会话记录加载失败（会话可能已不可读）。",
 			sessionLoadOlder: "加载更早记录",
 			sessionProcess: "过程",
-			sessionComposerPlaceholder: "已归档会话为只读（续聊功能未开放）",
 			triggerRequest: "收到执行请求",
 			triggerGoal: "继续执行目标",
 			triggerAgent: "收到任务消息",
@@ -142,7 +141,36 @@ window.__ModuleLoader__.load({
 			turnUsageCount: "{count} tok",
 			numberThousand: "{value}K",
 			numberMillion: "{value}M",
-			numberGroupSeparator: ","
+			numberGroupSeparator: ",",
+			stepProcessDoneThinking: "已完成分析",
+			stepProcessDoneRead: "已读取文件",
+			stepProcessDoneReadImage: "已读取图片",
+			stepProcessDoneWrite: "已写入文件",
+			stepProcessDoneSearch: "已搜索代码",
+			stepProcessDoneEdit: "修改了文件",
+			stepProcessDoneCommands: "执行了命令",
+			stepProcessDoneCode: "运行了代码",
+			stepProcessDoneWebSearch: "已搜索网页",
+			stepProcessDoneWebFetch: "已访问网页",
+			stepProcessDoneSubagents: "已协调子智能体",
+			stepProcessDonePlan: "更新了计划",
+			stepProcessDoneQuestions: "向用户提出了问题",
+			stepProcessDoneTools: "已调用工具",
+			stepProcessJoinTwo: "{first}并{second}",
+			stepProcessComma: "，",
+			stepProcessSharedPrefix: "已",
+			stepProcessMore: "{title}等",
+			toolTitleRead: "读取",
+			toolTitleReadImage: "读取图片",
+			toolTitleGrep: "搜索文件内容",
+			toolTitleGlob: "查找文件",
+			toolTitleBash: "运行命令",
+			toolTitleWrite: "写入",
+			toolTitleEdit: "编辑",
+			toolTitleCode: "代码",
+			toolTitleWebSearch: "网页搜索",
+			toolTitleWebFetch: "网页获取",
+			toolTitleGeneric: "工具调用"
 		};
 		/** English copy. */
 		const en = {
@@ -231,7 +259,6 @@ window.__ModuleLoader__.load({
 			sessionLoadFailed: "Failed to load the session transcript (the session may no longer be readable).",
 			sessionLoadOlder: "Load earlier messages",
 			sessionProcess: "Process",
-			sessionComposerPlaceholder: "Archived sessions are read-only (follow-up chat not available yet)",
 			triggerRequest: "Execution request received",
 			triggerGoal: "Continuing the goal",
 			triggerAgent: "Task message received",
@@ -270,7 +297,36 @@ window.__ModuleLoader__.load({
 			turnUsageCount: "{count} tok",
 			numberThousand: "{value}K",
 			numberMillion: "{value}M",
-			numberGroupSeparator: ","
+			numberGroupSeparator: ",",
+			stepProcessDoneThinking: "Analysis completed",
+			stepProcessDoneRead: "Read files",
+			stepProcessDoneReadImage: "Read images",
+			stepProcessDoneWrite: "Wrote files",
+			stepProcessDoneSearch: "Searched code",
+			stepProcessDoneEdit: "Edited files",
+			stepProcessDoneCommands: "Ran commands",
+			stepProcessDoneCode: "Ran code",
+			stepProcessDoneWebSearch: "Searched the web",
+			stepProcessDoneWebFetch: "Fetched web pages",
+			stepProcessDoneSubagents: "Coordinated subagents",
+			stepProcessDonePlan: "Updated the plan",
+			stepProcessDoneQuestions: "Asked you questions",
+			stepProcessDoneTools: "Called tools",
+			stepProcessJoinTwo: "{first} and {second}",
+			stepProcessComma: ", ",
+			stepProcessSharedPrefix: "",
+			stepProcessMore: "{title}, etc.",
+			toolTitleRead: "Read",
+			toolTitleReadImage: "Read image",
+			toolTitleGrep: "Search file contents",
+			toolTitleGlob: "Find files",
+			toolTitleBash: "Run command",
+			toolTitleWrite: "Write",
+			toolTitleEdit: "Edit",
+			toolTitleCode: "Code",
+			toolTitleWebSearch: "Web search",
+			toolTitleWebFetch: "Web fetch",
+			toolTitleGeneric: "Tool call"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -280,8 +336,9 @@ window.__ModuleLoader__.load({
 		const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1010;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
-.dsh-tdt-sv-panel{--dsh-tdt-content-width:var(--dsh-chat-content-width,920px);--dsh-tdt-flow-gap:var(--dsh-chat-flow-gap,16px);--dsh-composer-side-clearance:16px;--dsh-chat-content-width:min(920px,calc(100vw - 96px));background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;padding:16px 0 18px;overflow:hidden;}
-.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 10px;flex-wrap:wrap;}
+/* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
+.dsh-tdt-sv-panel{--dsh-composer-side-clearance:8px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;padding:16px 0 18px;overflow:hidden;}
+.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 12px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-close{appearance:none;background:0 0;border:none;padding:2px 6px;border-radius:6px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:color .1s,background .1s;}
 .dsh-tdt-sv-close:hover{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-heading{min-width:0;}
@@ -312,10 +369,6 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
 .dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
 .dsh-tdt-sv-action:hover{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-composer{flex:none;padding:12px 18px 0;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
-.dsh-tdt-sv-composer-box{display:flex;align-items:center;gap:8px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;padding:8px 12px;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));}
-.dsh-tdt-sv-composer-box input{flex:1;appearance:none;font:inherit;font-size:14px;color:var(--dsw-alias-label-primary,#1f2328);background:0 0;border:none;outline:none;}
-.dsh-tdt-sv-composer-box input::placeholder{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
 .dsh-tdt-sv-reasoning-head{display:flex;align-items:center;gap:8px;width:100%;background:0 0;border:none;cursor:pointer;padding:6px 12px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-align:left;}
 .dsh-tdt-sv-reasoning-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-sv-reasoning-chevron{flex:none;}
@@ -394,6 +447,28 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-stats-details dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;}
 .dsh-tdt-sv-stats-route{word-break:break-all;}
 .dsh-tdt-sv-stats-reasoning{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+/* ── 过程分组（二级收折，ChatGroupSeat.module.css 照抄：root/title/leading/activityIcon/chevron/label/body/content/fade） ── */
+.dsh-tdt-sv-group{min-width:0;}
+.dsh-tdt-sv-group-title{max-width:100%;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex;}
+.dsh-tdt-sv-group-title:hover{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-group-leading{width:16px;height:16px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative;}
+.dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0;}
+.dsh-tdt-sv-group-icon{opacity:1;}
+.dsh-tdt-sv-group-chevron{opacity:0;}
+.dsh-tdt-sv-group-title:hover .dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-title:focus-visible .dsh-tdt-sv-group-icon{opacity:0;}
+.dsh-tdt-sv-group-title:hover .dsh-tdt-sv-group-chevron,.dsh-tdt-sv-group-title:focus-visible .dsh-tdt-sv-group-chevron{opacity:1;}
+.dsh-tdt-sv-group-title[aria-expanded=true] .dsh-tdt-sv-group-icon{opacity:0;}
+.dsh-tdt-sv-group-title[aria-expanded=true] .dsh-tdt-sv-group-chevron{opacity:1;}
+.dsh-tdt-sv-group-title[aria-expanded=true]{padding-bottom:16px;}
+.dsh-tdt-sv-group-body{--dsh-chat-flow-gap:8px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(400px,50vh);overflow-y:auto;}
+.dsh-tdt-sv-group-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
+.dsh-tdt-sv-group-fade-top{mask-image:linear-gradient(#0000 0,#000 24px 100%);}
+.dsh-tdt-sv-group-fade-bottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%);}
+.dsh-tdt-sv-group-fade-top.dsh-tdt-sv-group-fade-bottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%);}
+.dsh-tdt-sv-group-content{flex-direction:column;display:flex;}
+.dsh-tdt-sv-group-content>*{flex-shrink:0;}
+.dsh-tdt-sv-group-content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px);}
+.dsh-tdt-sv-group-expanded{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible;}
 `;
 		let injected = false;
 		/**
@@ -409,17 +484,6 @@ window.__ModuleLoader__.load({
 			el.id = SV_STYLE_ID;
 			el.textContent = ARCHIVE_SESSION_CSS;
 			document.head.appendChild(el);
-		}
-		//#endregion
-		//#region src/client/mirror/Composer.tsx
-		/** 对话框占位（禁用）。 */
-		function ComposerPlaceholder(props) {
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-composer" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-composer-box" }, (0, react.createElement)("input", {
-				type: "text",
-				disabled: true,
-				placeholder: props.placeholder,
-				"aria-readonly": true
-			})));
 		}
 		//#endregion
 		//#region src/client/official-classes.ts
@@ -593,6 +657,344 @@ window.__ModuleLoader__.load({
 			}, inner);
 		}
 		//#endregion
+		//#region src/client/mirror/process-groups.ts
+		/** 官方 INDEPENDENT（process-groups.js:10565；注意与 ChatNodeSeat 的清单不同）。 */
+		const INDEPENDENT = /* @__PURE__ */ new Set([
+			"user",
+			"steering",
+			"turn-trigger",
+			"model-retry",
+			"turn-error",
+			"turn-max-tokens",
+			"turn-tail"
+		]);
+		/** 节点所属 turn（官方 turnOf，process-groups.js:10574）。 */
+		function turnOfNode(node) {
+			const location = node.location;
+			return location?.kind === "turn" || location?.kind === "step" ? location.turn?.turn : void 0;
+		}
+		/** 官方 reasoning（10578）：assistant-step 带非空思考块。 */
+		function hasReasoning(node) {
+			if (node.kind !== "assistant-step" || !Array.isArray(node.data?.blocks)) return false;
+			return (node.data?.blocks).some((block) => block?.kind === "reasoning" && (block.text ?? "").trim() !== "");
+		}
+		/** 官方 reply（10581）：assistant-step 带回复内容（reasoning / tool-call 不算，空文本不算）。 */
+		function hasReply(node) {
+			if (node.kind !== "assistant-step" || !Array.isArray(node.data?.blocks)) return false;
+			return (node.data?.blocks).some((block) => {
+				if (block === null || typeof block !== "object") return false;
+				if (block.kind === "reasoning" || block.kind === "tool-call") return false;
+				if (block.kind === "text") return (block.text ?? "").trim() !== "";
+				return true;
+			});
+		}
+		/** 官方 activity（10426-10449）：工具名 → 活动类别。 */
+		function toolActivity(name) {
+			if (name === "read") return "read";
+			if (name === "read_image") return "readImage";
+			if (name === "grep" || name === "glob" || name.endsWith("_inspect")) return "search";
+			if (name === "write") return "write";
+			if (name === "edit" || name === "apply_patch") return "edit";
+			if ([
+				"bash",
+				"pwsh",
+				"exec_command",
+				"write_stdin"
+			].includes(name) || name.startsWith("terminal_")) return "commands";
+			if (name === "run_code") return "code";
+			if (name === "web_search") return "webSearch";
+			if (name === "web_fetch") return "webFetch";
+			if (name === "subagent" || name.startsWith("subagent_")) return "subagents";
+			if ([
+				"todo_write",
+				"create_goal",
+				"update_goal",
+				"get_goal"
+			].includes(name)) return "plan";
+			if (name === "ask_user_question" || name === "request_user_input") return "questions";
+			return "tools";
+		}
+		/** ToolCallBlock → 本次调用的名字面（running 半截在根上，settled 在 call 里）。 */
+		function toolCallFace(root) {
+			const callId = typeof root.callId === "string" ? root.callId : "";
+			if (root.kind === "tool-result") {
+				const name = typeof root.call?.name === "string" ? root.call.name : "";
+				return callId === "" || name === "" ? null : {
+					callId,
+					name
+				};
+			}
+			const name = typeof root.name === "string" ? root.name : "";
+			return callId === "" || name === "" ? null : {
+				callId,
+				name
+			};
+		}
+		/** 官方 processActivity（10527-10561）：按去重调用数排序的活动类别（含子调用递归）。 */
+		function processActivity(nodes) {
+			const counts = /* @__PURE__ */ new Map();
+			const seen = /* @__PURE__ */ new Set();
+			const visit = (tool) => {
+				const face = toolCallFace(tool);
+				if (face !== null && !seen.has(face.callId)) {
+					seen.add(face.callId);
+					const kind = toolActivity(face.name);
+					counts.set(kind, (counts.get(kind) ?? 0) + 1);
+				}
+				for (const child of tool.subCalls ?? []) visit(child);
+			};
+			for (const node of nodes) {
+				if (node.kind !== "tool-call") continue;
+				const root = node.data?.root;
+				if (root !== void 0 && root !== null) visit(root);
+			}
+			return [...counts].map(([kind, count]) => ({
+				kind,
+				count
+			})).sort((left, right) => right.count - left.count);
+		}
+		/**
+		* 官方 TurnGroups.rebuild 的移植：把 keyed 流切成「独立条目 + 过程分组」。
+		* @param order - 官方渲染顺序（node key 列表）。
+		* @param readNode - keyed 节点读取。
+		* @param isTurnClosed - turn 是否已闭合（官方 turns.get(turn).status === 'closed'）。
+		*/
+		function buildProcessGroups(order, readNode, isTurnClosed) {
+			const entries = [];
+			const groups = /* @__PURE__ */ new Map();
+			let pending = [];
+			let currentTurn;
+			const flush = (closed) => {
+				const first = pending[0];
+				if (first === void 0) return;
+				const turn = currentTurn;
+				const ended = closed || turn !== void 0 && isTurnClosed(turn);
+				const members = pending;
+				const nodes = members.map((member) => readNode(member.key)).filter((node) => node !== void 0);
+				const groupKey = JSON.stringify([
+					"process",
+					first.key,
+					first.groupPart ?? null
+				]);
+				groups.set(groupKey, {
+					key: groupKey,
+					members,
+					data: {
+						turn: turn ?? -1,
+						closed: ended,
+						summary: { counts: processActivity(nodes) }
+					}
+				});
+				entries.push({
+					kind: "group",
+					key: groupKey
+				});
+				pending = [];
+			};
+			for (const key of order) {
+				const node = readNode(key);
+				if (node === void 0) continue;
+				const turn = turnOfNode(node);
+				if (turn !== currentTurn) {
+					flush(true);
+					currentTurn = turn;
+				}
+				if (INDEPENDENT.has(node.kind)) {
+					flush(true);
+					entries.push({
+						kind: "node",
+						key
+					});
+				} else if (node.kind === "turn-process") entries.push({
+					kind: "node",
+					key
+				});
+				else if (node.kind === "assistant-step") {
+					if (hasReasoning(node)) pending.push({
+						key,
+						groupPart: "reasoning"
+					});
+					if (hasReply(node)) {
+						flush(true);
+						entries.push({
+							kind: "node",
+							key,
+							groupPart: "response"
+						});
+					}
+				} else pending.push({ key });
+			}
+			flush(currentTurn === void 0 ? true : isTurnClosed(currentTurn));
+			return {
+				entries,
+				groups
+			};
+		}
+		/** 官方 message.stepProcess.done.* 的键面（zh/en 文案见 locales.ts）。 */
+		const STEP_DONE_KEYS = {
+			thinking: "stepProcessDoneThinking",
+			read: "stepProcessDoneRead",
+			readImage: "stepProcessDoneReadImage",
+			write: "stepProcessDoneWrite",
+			search: "stepProcessDoneSearch",
+			edit: "stepProcessDoneEdit",
+			commands: "stepProcessDoneCommands",
+			code: "stepProcessDoneCode",
+			webSearch: "stepProcessDoneWebSearch",
+			webFetch: "stepProcessDoneWebFetch",
+			subagents: "stepProcessDoneSubagents",
+			plan: "stepProcessDonePlan",
+			questions: "stepProcessDoneQuestions",
+			tools: "stepProcessDoneTools"
+		};
+		/**
+		* 官方 processTitle（1820-1836）：closed 组标题 = 前 3 类活动拼接
+		* （2 类用「A并B」且去「已」前缀；≥3 类用「，」连接、超 3 类补「等」）。
+		*/
+		function processTitle(summary, t) {
+			const labels = summary.counts.slice(0, 3).map(({ kind }) => t(STEP_DONE_KEYS[kind]));
+			const first = labels[0];
+			if (first === void 0) return t("stepProcessDoneThinking");
+			const continuation = (label) => label.charAt(0).toLowerCase() + label.slice(1);
+			const second = labels[1];
+			if (second === void 0) return first;
+			if (labels.length === 2) {
+				const prefix = t("stepProcessSharedPrefix");
+				return t("stepProcessJoinTwo", {
+					first,
+					second: continuation(prefix !== "" && first.startsWith(prefix) && second.startsWith(prefix) ? second.slice(prefix.length) : second)
+				});
+			}
+			const title = [first, ...labels.slice(1).map(continuation)].join(t("stepProcessComma"));
+			return summary.counts.length > 3 ? t("stepProcessMore", { title }) : title;
+		}
+		//#endregion
+		//#region src/client/mirror/ChatGroupSeat.tsx
+		/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）。 */
+		const PROCESS_ICONS = {
+			thinking: _deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular,
+			read: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
+			readImage: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
+			search: _deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular,
+			edit: _deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular,
+			write: _deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular,
+			commands: _deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular,
+			code: _deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular,
+			webSearch: _deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular,
+			webFetch: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
+			subagents: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
+			plan: _deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular,
+			questions: _deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular,
+			tools: _deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular
+		};
+		/** 官方图标尺寸（14px，除 thinking/commands/webSearch/plan/questions 用默认）。 */
+		const SMALL_ICONS = /* @__PURE__ */ new Set([
+			"read",
+			"readImage",
+			"search",
+			"edit",
+			"write",
+			"code",
+			"webFetch",
+			"subagents",
+			"tools"
+		]);
+		/** 过程分组（二级收折）：汇总行 + 组内条目。 */
+		function ChatGroupSeatMirror(props) {
+			const { group, grouped, store, openState, onSetOpen, foldCompleted, renderNode, t } = props;
+			const [open, setOpen] = (0, react.useState)(false);
+			const first = group.members[0];
+			const firstNode = first === void 0 ? void 0 : store?.get(first.key);
+			const presentation = first === void 0 ? void 0 : readPresentation(store, first.key);
+			const spec = presentation?.spec ?? void 0;
+			const location = firstNode?.location;
+			const reason = location?.kind === "turn" || location?.kind === "step" ? location.turn?.end?.data?.reason?.kind : void 0;
+			const alwaysOpen = presentation?.turnClosed === false || presentation?.hasInterleavedInput === true || reason === "aborted" || reason === "error";
+			const storedAnswerStep = openState.get(group.data.turn);
+			const outerHidden = foldCompleted && presentation?.turnClosed === true && spec !== void 0 && !alwaysOpen && storedAnswerStep !== (spec.answerStep ?? 0);
+			(0, react.useEffect)(() => {
+				if (outerHidden) setOpen(false);
+			}, [outerHidden]);
+			const bodyRef = (0, react.useRef)(null);
+			const [edges, setEdges] = (0, react.useState)({
+				up: false,
+				down: false
+			});
+			const measure = (0, react.useCallback)(() => {
+				const el = bodyRef.current;
+				if (el === null) return;
+				setEdges({
+					up: el.scrollTop > 1,
+					down: el.scrollTop + el.clientHeight < el.scrollHeight - 1
+				});
+			}, []);
+			(0, react.useEffect)(() => {
+				if (grouped && open) measure();
+			}, [
+				grouped,
+				open,
+				measure
+			]);
+			if (first === void 0 || firstNode === void 0) return null;
+			const label = group.data.closed ? processTitle(group.data.summary, t) : t("stepProcessDoneThinking");
+			const activity = group.data.summary.counts[0]?.kind ?? "thinking";
+			const ActivityIcon = PROCESS_ICONS[activity] ?? _deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular;
+			const bodyClass = [
+				ocOr("ChatGroupSeat", "body", "dsh-tdt-sv-group-body"),
+				grouped ? "" : ocOr("ChatGroupSeat", "expandedBody", "dsh-tdt-sv-group-expanded"),
+				grouped && edges.up ? ocOr("ChatGroupSeat", "fadeTop", "dsh-tdt-sv-group-fade-top") : "",
+				grouped && edges.down ? ocOr("ChatGroupSeat", "fadeBottom", "dsh-tdt-sv-group-fade-bottom") : ""
+			].filter((part) => part !== "").join(" ");
+			return (0, react.createElement)("div", {
+				className: ocOr("ChatGroupSeat", "root", "dsh-tdt-sv-group"),
+				"data-chat-group-key": group.key,
+				"data-chat-flow-key": group.key,
+				"data-chat-anchor-key": `group:${group.key}`,
+				"data-chat-turn": group.data.turn,
+				"data-step-process": true,
+				"data-group-expanded-mode": !grouped || void 0,
+				hidden: outerHidden || void 0
+			}, grouped ? (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("ChatGroupSeat", "title", "dsh-tdt-sv-group-title"),
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen((value) => !value);
+				}
+			}, (0, react.createElement)("span", {
+				className: ocOr("ChatGroupSeat", "leading", "dsh-tdt-sv-group-leading"),
+				"aria-hidden": true
+			}, (0, react.createElement)("span", {
+				className: ocOr("ChatGroupSeat", "activityIcon", "dsh-tdt-sv-group-icon"),
+				"data-step-process-icon": true
+			}, (0, react.createElement)(ActivityIcon, SMALL_ICONS.has(activity) ? { size: 14 } : {})), open ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { className: ocOr("ChatGroupSeat", "chevron", "dsh-tdt-sv-group-chevron") }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: ocOr("ChatGroupSeat", "chevron", "dsh-tdt-sv-group-chevron") })), (0, react.createElement)("span", { className: ocOr("ChatGroupSeat", "label", "dsh-tdt-sv-group-label") }, label)) : null, (0, react.createElement)("div", {
+				ref: bodyRef,
+				className: bodyClass,
+				"data-step-process-body": true,
+				"data-scroll-up": edges.up || void 0,
+				"data-scroll-down": edges.down || void 0,
+				onScroll: measure,
+				hidden: grouped && !open || void 0
+			}, (0, react.createElement)("div", {
+				className: ocOr("ChatGroupSeat", "content", "dsh-tdt-sv-group-content"),
+				"data-step-process-content": true,
+				"data-chat-flow": ""
+			}, group.members.map((member) => (0, react.createElement)(ChatNodeSeatMirror, {
+				key: JSON.stringify([member.key, member.groupPart ?? null]),
+				node: store?.get(member.key) ?? {
+					key: member.key,
+					kind: "",
+					anchorSeq: 0
+				},
+				groupPart: member.groupPart,
+				store,
+				openState,
+				onSetOpen,
+				foldCompleted,
+				renderNode
+			})))));
+		}
+		//#endregion
 		//#region src/client/mirror/ChatView.tsx
 		/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。 */
 		function ChatViewFrame(props) {
@@ -603,17 +1005,50 @@ window.__ModuleLoader__.load({
 		}
 		/** 官方 ChatNodeList：order → seat 列表（grouped 视图未实现 ⇒ 走官方 order 兜底分支）。 */
 		function ChatNodeListMirror(props) {
-			const { order, store, openState, onSetOpen, foldCompleted, renderNode } = props;
+			const { order, store, entries, groups, turns, openState, onSetOpen, foldCompleted, renderNode, t } = props;
 			const rows = [];
 			const read = store === void 0 ? void 0 : store.get;
 			if (typeof read !== "function" || store === void 0) return rows;
-			for (const key of order) {
-				let node;
+			const readSafe = (key) => {
 				try {
-					node = read.call(store, key);
+					return read.call(store, key);
 				} catch {
-					continue;
+					return;
 				}
+			};
+			if (entries !== void 0 && groups !== void 0) {
+				for (const entry of entries) if (entry.kind === "group") {
+					const group = groups.get(entry.key);
+					if (group === void 0) continue;
+					rows.push((0, react.createElement)(ChatGroupSeatMirror, {
+						key: entry.key,
+						group,
+						grouped: turnStatus(turns, group.data.turn) !== "open",
+						store,
+						openState,
+						onSetOpen,
+						foldCompleted,
+						renderNode,
+						t
+					}));
+				} else {
+					const node = readSafe(entry.key);
+					if (node === void 0) continue;
+					rows.push((0, react.createElement)(ChatNodeSeatMirror, {
+						key: JSON.stringify([entry.key, entry.groupPart ?? null]),
+						node,
+						groupPart: entry.groupPart,
+						store,
+						openState,
+						onSetOpen,
+						foldCompleted,
+						renderNode
+					}));
+				}
+				return rows;
+			}
+			for (const key of order) {
+				const node = readSafe(key);
 				if (node === void 0) continue;
 				rows.push((0, react.createElement)(ChatNodeSeatMirror, {
 					key,
@@ -626,6 +1061,10 @@ window.__ModuleLoader__.load({
 				}));
 			}
 			return rows;
+		}
+		/** turn 状态（官方 turns.get(turn)?.status）。 */
+		function turnStatus(turns, turn) {
+			return (turns?.get(turn) ?? turns?.get(String(turn)))?.status;
 		}
 		/** 加载 / 空态提示行（13px tertiary）。 */
 		function ChatHint(props) {
@@ -665,12 +1104,40 @@ window.__ModuleLoader__.load({
 			} catch {}
 			return preview(output.trim() !== "" ? output : argsRaw);
 		};
+		/** 官方 tool.title.*（uic lib/client.js:14703-14719）：工具名 → 本地化标题；未收录走 generic「工具调用」。 */
+		const TOOL_TITLE_KEYS = {
+			read: "toolTitleRead",
+			read_image: "toolTitleReadImage",
+			grep: "toolTitleGrep",
+			glob: "toolTitleGlob",
+			bash: "toolTitleBash",
+			pwsh: "toolTitleBash",
+			write: "toolTitleWrite",
+			edit: "toolTitleEdit",
+			run_code: "toolTitleCode",
+			web_search: "toolTitleWebSearch",
+			web_fetch: "toolTitleWebFetch"
+		};
+		/** 工具行标题：官方字典命中用本地化动词，未命中 = generic（摘要补工具名，对齐官方「工具调用 · name · 摘要」）。 */
+		const toolTitle = (name, t) => {
+			const key = TOOL_TITLE_KEYS[name];
+			if (key !== void 0) return {
+				title: t(key),
+				generic: false
+			};
+			return {
+				title: t("toolTitleGeneric"),
+				generic: true
+			};
+		};
 		/** 工具调用 / 命令卡（默认折叠成一行；错误态摘要变红由 summary[data-error] 承担）。 */
 		function GenericCommandCard(props) {
 			const { name, argsRaw, output, isError, errorName, t } = props;
 			const [open, setOpen] = (0, react.useState)(isError);
 			const summaryCls = ocOr("GenericCommandCard", "summary", "");
-			const summaryText = summarize(argsRaw, output);
+			const localized = toolTitle(name, t);
+			const summaryText = localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output);
+			const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? "error"}` : localized.title;
 			const bodyText = [argsRaw.trim() !== "" ? `${t("sessionArgs")}:\n${argsRaw}` : "", output.trim() !== "" ? `${t("sessionOutput")}:\n${output}` : ""].filter((part) => part !== "").join("\n\n");
 			return (0, react.createElement)("div", {
 				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
@@ -678,7 +1145,7 @@ window.__ModuleLoader__.load({
 				"data-state": isError ? "error" : "success"
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, {}),
-				title: isError ? `${name}  ✕ ${errorName ?? "error"}` : name,
+				title: rowTitle,
 				open,
 				expandable: bodyText !== "",
 				onToggle: () => {
@@ -1081,8 +1548,6 @@ window.__ModuleLoader__.load({
 				text,
 				time: closing.time,
 				clock: "end",
-				onBranch: () => {},
-				branchUnavailable: true,
 				className: ocOr("TurnTailNodeView", "actions", "dsh-tdt-sv-tail-actions"),
 				usageAction: data.tokenUsage === void 0 ? void 0 : (0, react.createElement)(TurnUsagePanelMirror, {
 					usage: data.tokenUsage,
@@ -1342,7 +1807,7 @@ window.__ModuleLoader__.load({
 		* @param lastTurn - 官方 timeline.turnOrder 末位（尾部操作行判定）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, lastTurn) {
+		function renderKeyedNode(node, turnProcess, t, lastTurn, groupPart) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -1363,7 +1828,17 @@ window.__ModuleLoader__.load({
 					});
 				}
 				case "assistant-step": {
-					const parts = assistantBlocks(blocksOf(dataOf(node).blocks), t);
+					const blocks = blocksOf(dataOf(node).blocks);
+					if (groupPart === "reasoning") {
+						const reasoningOnly = blocks?.filter((block) => block.kind === "reasoning");
+						const parts = reasoningOnly === void 0 ? [] : assistantBlocks(reasoningOnly, t);
+						return parts.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
+					}
+					if (groupPart === "response") {
+						const text = (blocks ?? []).flatMap((block) => block.kind === "text" ? [block.text] : []).join("");
+						return text.trim() === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, (0, react.createElement)(AssistantMarkdown, { text }));
+					}
+					const parts = assistantBlocks(blocks, t);
 					return parts.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
 				}
 				case "tool-call": {
@@ -1584,15 +2059,27 @@ window.__ModuleLoader__.load({
 			const store = chat?.nodes;
 			const keyed = order.length > 0 && store !== void 0;
 			const turnOrder = chat?.timeline?.turnOrder ?? EMPTY_TURN_ORDER;
+			const turns = chat?.timeline?.turns;
 			const lastTurn = turnOrder.length === 0 ? void 0 : turnOrder[turnOrder.length - 1];
-			const renderNode = (0, react.useCallback)((node, turnProcess) => renderKeyedNode(node, turnProcess, tt, lastTurn), [tt, lastTurn]);
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, lastTurn, groupPart), [tt, lastTurn]);
+			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
+			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
+				keyed,
+				order,
+				store,
+				isTurnClosed
+			]);
 			const rendered = (keyed ? ChatNodeListMirror({
 				order,
 				store,
+				entries: groupedView?.entries,
+				groups: groupedView?.groups,
+				turns,
 				openState: openTurns,
 				onSetOpen,
 				foldCompleted: true,
-				renderNode
+				renderNode,
+				t: tt
 			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt)).filter((row) => row !== null && row !== void 0);
 			const officialCount = officialModuleCount();
 			if (!officialWarned) {
@@ -1625,7 +2112,7 @@ window.__ModuleLoader__.load({
 				className: "dsh-tdt-sv-close",
 				"aria-label": tt("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 }))), (0, react.createElement)(ChatViewFrame, { children: body }), (0, react.createElement)(ComposerPlaceholder, { placeholder: tt("sessionComposerPlaceholder") })));
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 }))), (0, react.createElement)(ChatViewFrame, { children: body })));
 		}
 		//#endregion
 		//#region src/client/index.ts

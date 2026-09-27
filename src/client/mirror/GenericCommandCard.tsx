@@ -5,7 +5,7 @@
 import { Fragment, createElement as h, useState } from 'react'
 import { DisclosureRow, IconCodeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
-import type { Translate } from '../session-view'
+import type { LocaleKey, Translate } from '../locales'
 
 /** 单行截断（官方 summary 是单行省略号样式）。 */
 const preview = (text: string): string => {
@@ -28,6 +28,28 @@ const summarize = (argsRaw: string, output: string): string => {
   return preview(output.trim() !== '' ? output : argsRaw)
 }
 
+/** 官方 tool.title.*（uic lib/client.js:14703-14719）：工具名 → 本地化标题；未收录走 generic「工具调用」。 */
+const TOOL_TITLE_KEYS: Readonly<Record<string, LocaleKey>> = {
+  read: 'toolTitleRead',
+  read_image: 'toolTitleReadImage',
+  grep: 'toolTitleGrep',
+  glob: 'toolTitleGlob',
+  bash: 'toolTitleBash',
+  pwsh: 'toolTitleBash',
+  write: 'toolTitleWrite',
+  edit: 'toolTitleEdit',
+  run_code: 'toolTitleCode',
+  web_search: 'toolTitleWebSearch',
+  web_fetch: 'toolTitleWebFetch',
+}
+
+/** 工具行标题：官方字典命中用本地化动词，未命中 = generic（摘要补工具名，对齐官方「工具调用 · name · 摘要」）。 */
+const toolTitle = (name: string, t: Translate): { title: string; generic: boolean } => {
+  const key = TOOL_TITLE_KEYS[name]
+  if (key !== undefined) return { title: t(key), generic: false }
+  return { title: t('toolTitleGeneric'), generic: true }
+}
+
 /** 工具调用 / 命令卡（默认折叠成一行；错误态摘要变红由 summary[data-error] 承担）。 */
 export function GenericCommandCard(props: {
   name: string
@@ -40,7 +62,9 @@ export function GenericCommandCard(props: {
   const { name, argsRaw, output, isError, errorName, t } = props
   const [open, setOpen] = useState<boolean>(isError)
   const summaryCls = ocOr('GenericCommandCard', 'summary', '')
-  const summaryText = summarize(argsRaw, output)
+  const localized = toolTitle(name, t)
+  const summaryText = localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output)
+  const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? 'error'}` : localized.title
   const bodyText = [
     argsRaw.trim() !== '' ? `${t('sessionArgs')}:\n${argsRaw}` : '',
     output.trim() !== '' ? `${t('sessionOutput')}:\n${output}` : '',
@@ -52,7 +76,7 @@ export function GenericCommandCard(props: {
   },
     h(DisclosureRow, {
       icon: h(IconCodeOutlineRegular, {}),
-      title: isError ? `${name}  ✕ ${errorName ?? 'error'}` : name,
+      title: rowTitle,
       open,
       expandable: bodyText !== '',
       onToggle: () => { setOpen(value => !value) },

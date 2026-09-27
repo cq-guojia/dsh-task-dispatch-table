@@ -28,7 +28,7 @@ export type LocaleKey =
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
   | 'sessionTurnError' | 'sessionMaxTokens' | 'sessionRetry' | 'sessionUnknownKind' | 'sessionReasoning'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
-  | 'sessionProcess' | 'sessionComposerPlaceholder'
+  | 'sessionProcess'
   // —— 官方会话渲染文案（逐字抄自 ui-chat 中文词典，键名去掉 message. 前缀）——
   | 'triggerRequest' | 'triggerGoal' | 'triggerAgent' | 'triggerTeam' | 'triggerSubagent'
   | 'triggerGithub' | 'triggerWebhook' | 'triggerSchedule' | 'triggerJob' | 'triggerPlugin'
@@ -42,6 +42,17 @@ export type LocaleKey =
   | 'turnUsageCacheRead' | 'turnUsageCacheWrite' | 'turnUsageOutput' | 'turnUsageReasoning'
   | 'turnUsageConsumed' | 'turnUsageCount'
   | 'numberThousand' | 'numberMillion' | 'numberGroupSeparator'
+  // —— 官方过程分组（ChatGroupSeat 汇总行，message.stepProcess.done.*）——
+  | 'stepProcessDoneThinking' | 'stepProcessDoneRead' | 'stepProcessDoneReadImage'
+  | 'stepProcessDoneWrite' | 'stepProcessDoneSearch' | 'stepProcessDoneEdit'
+  | 'stepProcessDoneCommands' | 'stepProcessDoneCode' | 'stepProcessDoneWebSearch'
+  | 'stepProcessDoneWebFetch' | 'stepProcessDoneSubagents' | 'stepProcessDonePlan'
+  | 'stepProcessDoneQuestions' | 'stepProcessDoneTools'
+  | 'stepProcessJoinTwo' | 'stepProcessComma' | 'stepProcessSharedPrefix' | 'stepProcessMore'
+  // —— 官方工具标题（uic tool.title.*，未收录走 generic）——
+  | 'toolTitleRead' | 'toolTitleReadImage' | 'toolTitleGrep' | 'toolTitleGlob' | 'toolTitleBash'
+  | 'toolTitleWrite' | 'toolTitleEdit' | 'toolTitleCode' | 'toolTitleWebSearch' | 'toolTitleWebFetch'
+  | 'toolTitleGeneric'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -144,8 +155,6 @@ export const zh: Record<LocaleKey, string> = {
   sessionLoadFailed: '会话记录加载失败（会话可能已不可读）。',
   sessionLoadOlder: '加载更早记录',
   sessionProcess: '过程',
-  sessionComposerPlaceholder: '已归档会话为只读（续聊功能未开放）',
-  // 以下文案与官方 ui-chat 中文词典逐字一致（便于和官方界面对齐比对）
   triggerRequest: '收到执行请求',
   triggerGoal: '继续执行目标',
   triggerAgent: '收到任务消息',
@@ -185,6 +194,35 @@ export const zh: Record<LocaleKey, string> = {
   numberThousand: '{value}K',
   numberMillion: '{value}M',
   numberGroupSeparator: ',',
+  stepProcessDoneThinking: '已完成分析',
+  stepProcessDoneRead: '已读取文件',
+  stepProcessDoneReadImage: '已读取图片',
+  stepProcessDoneWrite: '已写入文件',
+  stepProcessDoneSearch: '已搜索代码',
+  stepProcessDoneEdit: '修改了文件',
+  stepProcessDoneCommands: '执行了命令',
+  stepProcessDoneCode: '运行了代码',
+  stepProcessDoneWebSearch: '已搜索网页',
+  stepProcessDoneWebFetch: '已访问网页',
+  stepProcessDoneSubagents: '已协调子智能体',
+  stepProcessDonePlan: '更新了计划',
+  stepProcessDoneQuestions: '向用户提出了问题',
+  stepProcessDoneTools: '已调用工具',
+  stepProcessJoinTwo: '{first}并{second}',
+  stepProcessComma: '，',
+  stepProcessSharedPrefix: '已',
+  stepProcessMore: '{title}等',
+  toolTitleRead: '读取',
+  toolTitleReadImage: '读取图片',
+  toolTitleGrep: '搜索文件内容',
+  toolTitleGlob: '查找文件',
+  toolTitleBash: '运行命令',
+  toolTitleWrite: '写入',
+  toolTitleEdit: '编辑',
+  toolTitleCode: '代码',
+  toolTitleWebSearch: '网页搜索',
+  toolTitleWebFetch: '网页获取',
+  toolTitleGeneric: '工具调用',
 }
 
 /** English copy. */
@@ -274,7 +312,6 @@ export const en: Record<LocaleKey, string> = {
   sessionLoadFailed: 'Failed to load the session transcript (the session may no longer be readable).',
   sessionLoadOlder: 'Load earlier messages',
   sessionProcess: 'Process',
-  sessionComposerPlaceholder: 'Archived sessions are read-only (follow-up chat not available yet)',
   // Copy mirrors the official ui-chat English dictionary so screenshots line up.
   triggerRequest: 'Execution request received',
   triggerGoal: 'Continuing the goal',
@@ -315,4 +352,33 @@ export const en: Record<LocaleKey, string> = {
   numberThousand: '{value}K',
   numberMillion: '{value}M',
   numberGroupSeparator: ',',
+  stepProcessDoneThinking: 'Analysis completed',
+  stepProcessDoneRead: 'Read files',
+  stepProcessDoneReadImage: 'Read images',
+  stepProcessDoneWrite: 'Wrote files',
+  stepProcessDoneSearch: 'Searched code',
+  stepProcessDoneEdit: 'Edited files',
+  stepProcessDoneCommands: 'Ran commands',
+  stepProcessDoneCode: 'Ran code',
+  stepProcessDoneWebSearch: 'Searched the web',
+  stepProcessDoneWebFetch: 'Fetched web pages',
+  stepProcessDoneSubagents: 'Coordinated subagents',
+  stepProcessDonePlan: 'Updated the plan',
+  stepProcessDoneQuestions: 'Asked you questions',
+  stepProcessDoneTools: 'Called tools',
+  stepProcessJoinTwo: '{first} and {second}',
+  stepProcessComma: ', ',
+  stepProcessSharedPrefix: '',
+  stepProcessMore: '{title}, etc.',
+  toolTitleRead: 'Read',
+  toolTitleReadImage: 'Read image',
+  toolTitleGrep: 'Search file contents',
+  toolTitleGlob: 'Find files',
+  toolTitleBash: 'Run command',
+  toolTitleWrite: 'Write',
+  toolTitleEdit: 'Edit',
+  toolTitleCode: 'Code',
+  toolTitleWebSearch: 'Web search',
+  toolTitleWebFetch: 'Web fetch',
+  toolTitleGeneric: 'Tool call',
 }

@@ -58,8 +58,8 @@ export function TurnTailNodeViewMirror(props: {
       text,
       time: closing.time,
       clock: 'end',
-      onBranch: () => {},
-      branchUnavailable: true,
+      // 分支不做（决策 37：归档会话不可续聊，将来提供「开分支继续对话」按钮替代；
+      // 官方分支 icon 依赖 fork 席位，只读弹窗没有 ⇒ 不渲染）。
       className: ocOr('TurnTailNodeView', 'actions', 'dsh-tdt-sv-tail-actions'),
       usageAction: data.tokenUsage === undefined ? undefined : h(TurnUsagePanelMirror, { usage: data.tokenUsage, t }),
       t,

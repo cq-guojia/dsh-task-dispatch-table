@@ -63,6 +63,15 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconAlarmClockOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconQueueOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconCordisPluginOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconThinkOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconBrowseOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconSearchOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconEditOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconApiOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconPlanOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconQuestionOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconSparkleRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconChevronUpOutlineRegular: ComponentType<{ size?: number; className?: string }>
 
   /** 官方气泡提示：label + side；children 为唯一锚点元素，ref/事件会被接管。 */
   export const Tooltip: ComponentType<{

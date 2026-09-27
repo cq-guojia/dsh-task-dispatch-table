@@ -50,3 +50,18 @@
 
 **验证**：`npm run typecheck` 通过、`npm run build` 通过（dist 128.6 kB，`react-dom` 走宿主模块表 require）、冒烟 100 项全过。**待真机**：折叠关系 / 触发行 / 尾部操作行 / 用量 pill 与官方截图逐项比对。
 
+## 2026-09-27（第二轮）— 三级收折照抄 + 弹窗去续聊 + 内间距定尺（决策 37）
+
+——用户拿官方四级截图（折到一级 / 二级 / 三级）核对收折，并拍板三件事：① 标题下加横线；② 内间距不按官方内容列宽算，弹窗宽度固定就直接给定尺内边距；③ **弹窗内不做续聊**——官方「分支」= 复制当前对话在新会话继续，正合「会话留档不可改、要聊就开分支」的定位 ⇒ 底部对话框占位与分支 icon 都移除，将来做「继续对话（开分支）」按钮（记 PROGRESS U10：确认框 → 关弹窗 → 跳新分支会话，依赖 `sessions.fork`，落码前先读源码）。另追问 token 数据来源——已答：**弹窗用量取自官方 keyed 流 `turn-tail.data.tokenUsage`（官方会话数据本体，与官方界面同源）**，非插件记录、非模拟；与「执行记录」三列差异 = 后者从 session 事件流抽取（U8 待真机确认字段），两条链路口径不同。用户重申**正常功能禁止模拟数据** ⇒ 升格为 AGENTS.md 第 5 条。
+
+**三级收折源码核实（0.1.7-rc.2）**：
+- 分组算法 = chat 包 `conversation-nodes/process-groups.js`（10563-10772）：每 turn 内，INDEPENDENT kind（user/steering/turn-trigger/model-retry/turn-error/turn-max-tokens/turn-tail）先闭合当前组再独立成条目；turn-process 独立成条目（不闭合组）；assistant-step 有 reasoning 块 ⇒ 以 `groupPart:'reasoning'` 入组、有回复内容 ⇒ 先闭合组再以 `groupPart:'response'` 独立成条目；其余 kind（tool-call 等）入组。组键 = `["process", 首成员 key, groupPart]`。
+- 汇总文案 = `processActivity`（10527：按 tool-call 的 `activity(name)` 分类统计，含 `subCalls` 递归 + callId 去重，按次数排序）+ `processTitle`（1820：前 3 类拼接，2 类走「{first}并{second}」且共享「已」前缀时去前缀，≥3 类用「，」连接、超 3 类补「等」）。
+- 组容器 = `ChatGroupSeat`（2178-2385）：标题 button（activity 图标与箭头同位叠放，hover / 展开时 opacity 互换，展开补 `padding-bottom:16px`）+ body（`max-height:min(400px,50vh)` + 上下 24px 渐隐 mask + `--dsh-chat-flow-gap:8px`）+ 组内条目（ChatNodeSeat 逐个、三级各自展开）。组的外层可见性 = 官方同款 `outerHidden`（一级行收起 ⇒ 整组 hidden）；历史轮才收折（`stepGrouping === 'history' && turn 非 open`），live turn 走 `expandedBody` 不限高。
+- **为什么移植而不是调 API**：官方 `views.grouped('chat')` 读取器挂在内部 assembler（`BoundConversation.viewStore`）上，公开契约 `ConversationBinding`（uic conversation/assembly.d.ts:15-35）只暴露 snapshot / openTurn / activate / target ⇒ 按决策 34 ④「不依赖宿主内部符号」，`mirror/process-groups.ts` 逐行移植，输入只用契约面数据（order + nodes + timeline.turns）。
+- 工具行标题 = ui-conversation 的 `tool.title.*` 本地化字典（写入/读取/运行命令/搜索文件内容…），未收录走 generic「工具调用」且摘要补 `name ·` 前缀（对齐官方截图「工具调用 · task_dispatch_table_receipt · 已记录…」）。
+
+**落码**：新增 `mirror/process-groups.ts`（算法移植）+ `mirror/ChatGroupSeat.tsx`（二级收折容器，body 渐隐边缘用 onScroll 自测）；`mirror/ChatView.ChatNodeListMirror` 增 entries/groups 路径（组条目 → ChatGroupSeatMirror，成员带 groupPart 渲染）；`renderKeyedNode` 支持 groupPart（'reasoning' 只渲染思考块、'response' 只渲染回复正文）；`GenericCommandCard` 接 `tool.title.*`；CSS 增 `.dsh-tdt-sv-group*`（照抄 ChatGroupSeat.module.css）、标题横线、内间距定尺（`--dsh-composer-side-clearance:8px` ⇒ 左右各 24px、`--dsh-chat-content-width:100%`），删除 composer 样式；`mirror/Composer.tsx` 删除。
+
+**验证**：typecheck + build（dist 148.96 kB）+ 冒烟 100 项全过；产物抽查 `data-step-process` / `buildProcessGroups` 在 bundle。**待真机**：按用户四级截图逐级比对（一级用时行 → 二级汇总行 → 三级条目展开）。
+

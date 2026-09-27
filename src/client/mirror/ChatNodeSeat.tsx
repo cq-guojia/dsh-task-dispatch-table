@@ -94,7 +94,7 @@ export interface ChatNodeStoreFace {
 /**
  * 读过程席位快照。宿主 API 形态变了也只降级成「不折叠」，不让整个弹窗白屏。
  */
-function readPresentation(store: ChatNodeStoreFace | undefined, key: string): TurnProcessPresentationFace | undefined {
+export function readPresentation(store: ChatNodeStoreFace | undefined, key: string): TurnProcessPresentationFace | undefined {
   if (store === undefined) return undefined
   try {
     const source = (store as Partial<ChatNodeStoreFace>).processSource
@@ -117,7 +117,12 @@ export interface TurnProcessHandle {
 }
 
 /** 节点视图渲染函数（官方 slot "conversation.chat.node" 的等价物）。 */
-export type NodeRenderer = (node: ChatNodeFace, turnProcess: TurnProcessHandle | undefined) => ReactNode
+export type NodeRenderer = (
+  node: ChatNodeFace,
+  turnProcess: TurnProcessHandle | undefined,
+  /** 官方 groupPart：'reasoning' 只渲染思考块（组内），'response' 只渲染回复正文（组外）。 */
+  groupPart?: 'response' | 'reasoning',
+) => ReactNode
 
 /** 取节点所属 turn（官方 turnOf，ChatNodeSeat.tsx:1660）。 */
 export function turnOf(node: ChatNodeFace | undefined): number | undefined {
