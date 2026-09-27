@@ -126,6 +126,12 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconQuestionOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconSparkleRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronUpOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  /** 官方文件类型图标（按路径分类着色 SVG；交付文件卡同款）。 */
+  export const FileTypeIcon: ComponentType<{ path: string; size?: number; className?: string }>
+  /** 官方交付图标（present 工具行 / 交付文件行）。 */
+  export const IconDeliverDocRegular: ComponentType<{ size?: number; className?: string }>
+  /** 取文件扩展名（无点 / 尾点返回空串；大小写保持）。 */
+  export function fileExtension(path: string): string
 
   /** 官方气泡提示：label + side；children 为唯一锚点元素，ref/事件会被接管。 */
   export const Tooltip: ComponentType<{

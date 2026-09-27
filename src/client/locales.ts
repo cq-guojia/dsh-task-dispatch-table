@@ -77,6 +77,11 @@ export type LocaleKey =
   | 'previewClose' | 'previewLoading' | 'previewLoadMore' | 'previewFileLabel'
   | 'previewCopyPath' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
   | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
+  // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
+  | 'deliverRowTitle' | 'deliverRowPreparing' | 'deliverRowRunning' | 'deliverRowOk'
+  | 'deliverRowError' | 'deliverRowStopped'
+  | 'deliverFileLabel' | 'deliverPreviewHint' | 'deliverPreviewCard'
+  | 'deliverAll' | 'deliverCollapse' | 'deliverExpandAria' | 'deliverCollapseAria'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -310,6 +315,20 @@ export const zh: Record<LocaleKey, string> = {
   previewNotRegular: '该路径不是常规文件（符号链接等），暂不支持预览。',
   previewError: '读取失败：{code}',
   previewUnknownBinary: '二进制文件，暂不支持预览。可复制路径后在工作区中打开。',
+  // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
+  deliverRowTitle: '交付文件',
+  deliverRowPreparing: '准备交付',
+  deliverRowRunning: '正在交付',
+  deliverRowOk: '已交付',
+  deliverRowError: '交付失败',
+  deliverRowStopped: '已中断',
+  deliverFileLabel: '文件',
+  deliverPreviewHint: '预览',
+  deliverPreviewCard: '预览 {name}',
+  deliverAll: '全部 {count} 个文件',
+  deliverCollapse: '收起',
+  deliverExpandAria: '展开全部 {count} 个交付文件',
+  deliverCollapseAria: '收起交付文件列表',
 }
 
 /** English copy. */
@@ -531,4 +550,18 @@ export const en: Record<LocaleKey, string> = {
   previewNotRegular: 'Not a regular file (symlink or similar); preview is not supported.',
   previewError: 'Failed to read: {code}',
   previewUnknownBinary: 'Binary file; preview is not supported. Copy the path to open it in the workspace.',
+  // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).
+  deliverRowTitle: 'Deliver files',
+  deliverRowPreparing: 'Preparing delivery',
+  deliverRowRunning: 'Delivering',
+  deliverRowOk: 'Delivered',
+  deliverRowError: 'Delivery failed',
+  deliverRowStopped: 'Interrupted',
+  deliverFileLabel: 'File',
+  deliverPreviewHint: 'Preview',
+  deliverPreviewCard: 'Preview {name}',
+  deliverAll: 'All {count} files',
+  deliverCollapse: 'Collapse',
+  deliverExpandAria: 'Expand all {count} delivered files',
+  deliverCollapseAria: 'Collapse the delivered-files list',
 }

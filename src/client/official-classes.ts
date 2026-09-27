@@ -22,9 +22,17 @@
 //   errorSummary stoppedSummary bodyWrap inspectButton detailsBodyWrap bodyScroll ioCard
 //   ioSection ioLabel ioDivider ioText codeBody terminalBody diffBody readBody imageBody
 //   searchBody webBody searchRecovery imageLabel imageMeta visuallyHidden
+//   ui-deliverables 包（交付文件行 + 交付文件卡，2026-09 U11 产出物入口接入）：
+//   PresentRow(4): summary paths output inspect
+//   Deliverables(16): root hostStatus presented file cardPreview fileIcon fileBody details
+//   fileName description previewHint secondaryText toggle actions success-fade
 
-/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡）。 */
-const CSS_PKG_PREFIXES = ['@deepseek-ai/dsh-client-ui-chat/', '@deepseek-ai/dsh-client-ui-tool/']
+/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡 + ui-deliverables）。 */
+const CSS_PKG_PREFIXES = [
+  '@deepseek-ai/dsh-client-ui-chat/',
+  '@deepseek-ai/dsh-client-ui-tool/',
+  '@deepseek-ai/dsh-client-ui-deliverables/',
+]
 
 /** 语义名 → 真实（带哈希）类名。 */
 export type OfficialClassMap = Map<string, string>

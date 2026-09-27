@@ -215,6 +215,33 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
+/* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
+/* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
+.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:12px;display:flex;}
+.dsh-tdt-sv-deliv-rowsummary>:first-child{flex-shrink:0;}
+.dsh-tdt-sv-deliv-rowpaths{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
+.dsh-tdt-sv-deliv-rowoutput{border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;padding:12px;font-size:12px;}
+/* 交付文件卡网格（root 内含 container query：≤620px 单列）。 */
+.dsh-tdt-sv-deliv{--deliverable-fill:var(--dsw-static-neutral-50,#f5f5f5);--deliverable-hover:var(--dsw-static-neutral-100,#ededed);flex-direction:column;gap:16px;min-width:0;margin-top:4px;display:flex;container-type:inline-size;}
+body[data-ds-dark-theme] .dsh-tdt-sv-deliv{--deliverable-fill:var(--dsw-static-neutral-850,#2a2a2a);--deliverable-hover:var(--dsw-static-neutral-800,#333);}
+.dsh-tdt-sv-deliv-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;display:grid;}
+.dsh-tdt-sv-deliv-grid[data-single=true]{grid-template-columns:minmax(0,1fr);}
+@container (width<=620px){.dsh-tdt-sv-deliv-grid{grid-template-columns:minmax(0,1fr);}}
+.dsh-tdt-sv-deliv-file{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-lg,10px);background:var(--deliverable-fill);min-width:0;height:60px;color:var(--dsw-alias-label-primary,#1f2328);align-items:center;gap:10px;padding:8px 10px;transition:background-color .12s;display:flex;position:relative;overflow:hidden;}
+.dsh-tdt-sv-deliv-file:hover{background:var(--deliverable-hover);}
+.dsh-tdt-sv-deliv-cardpreview{z-index:1;border-radius:inherit;cursor:pointer;background:0 0;border:0;width:100%;padding:0;position:absolute;inset:0;}
+.dsh-tdt-sv-deliv-cardpreview:focus-visible{box-shadow:inset 0 0 0 2px var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,#4c6bff));outline:none;}
+.dsh-tdt-sv-deliv-icon{z-index:2;box-sizing:border-box;pointer-events:none;border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-lg,10px);background:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);width:40px;height:40px;color:var(--dsw-alias-link,#2f6feb);flex:none;place-items:center;display:grid;position:relative;overflow:hidden;}
+body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);}
+.dsh-tdt-sv-deliv-body{z-index:2;pointer-events:none;flex:1;justify-content:space-between;align-items:center;gap:12px;min-width:0;display:flex;position:relative;}
+.dsh-tdt-sv-deliv-details{flex-direction:column;flex:1;justify-content:center;gap:2px;min-width:0;display:flex;}
+.dsh-tdt-sv-deliv-name{text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;line-height:20px;overflow:hidden;}
+.dsh-tdt-sv-deliv-desc{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:400;line-height:16px;overflow:hidden;}
+.dsh-tdt-sv-deliv-hint,.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-secondary{display:none;}
+.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-hint{display:inline;}
+.dsh-tdt-sv-deliv-toggle{border-radius:var(--dsw-radius-sm,6px);min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:12px;line-height:18px;display:inline-flex;}
+.dsh-tdt-sv-deliv-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 `
 
 let injected = false

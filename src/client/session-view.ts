@@ -35,6 +35,7 @@ import { ReasoningRowMirror } from './mirror/ReasoningRow'
 import { TurnProcessNodeViewMirror } from './mirror/TurnProcessNodeView'
 import { TurnTailNodeViewMirror, type TurnTailDataFace } from './mirror/TurnTailNodeView'
 import { TurnTriggerNodeViewMirror } from './mirror/TurnTriggerNodeView'
+import { DeliverablesGridMirror, PresentRowMirror, type DeliveredFileFace } from './mirror/Deliverables'
 import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
 import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
@@ -579,6 +580,40 @@ function toolCallCard(node: ChatNodeFace, t: Translate, onOpenFile?: (path: stri
   }
 }
 
+/** 官方 Tool / ToolResult block 是否为 present 调用（交付文件行专属渲染；running 名在顶层，结算名在 call 里）。 */
+function isPresentRoot(root: unknown): boolean {
+  if (typeof root !== 'object' || root === null) return false
+  const r = root as { name?: unknown; kind?: unknown; call?: { name?: unknown } | null }
+  if (r.name === 'present') return true
+  return r.kind === 'tool-result' && r.call !== null && typeof r.call === 'object' && r.call.name === 'present'
+}
+
+/** 官方 present 调用参数里的 files（deliverables/presented 事件同源数据）。 */
+function presentFiles(root: unknown): DeliveredFileFace[] {
+  if (typeof root !== 'object' || root === null) return []
+  const r = root as { kind?: unknown; call?: { argsRaw?: unknown } | null; argsRaw?: unknown; isError?: unknown }
+  const settled = r.kind === 'tool-result'
+  if (r.isError === true) return []
+  const raw = settled ? r.call?.argsRaw : r.argsRaw
+  if (typeof raw !== 'string') return []
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    const files = (parsed as { files?: unknown } | null)?.files
+    if (!Array.isArray(files)) return []
+    const out: DeliveredFileFace[] = []
+    for (const file of files) {
+      if (typeof file !== 'object' || file === null) continue
+      const path = (file as { path?: unknown }).path
+      if (typeof path !== 'string' || path.trim() === '') continue
+      const description = (file as { description?: unknown }).description
+      out.push(typeof description === 'string' && description.trim() !== '' ? { path, description } : { path })
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
 /**
  * keyed 节点 → 视图（等价于官方 slot "conversation.chat.node" 的按 kind 分发）。
  * @param node - keyed ChatNode。
@@ -586,6 +621,8 @@ function toolCallCard(node: ChatNodeFace, t: Translate, onOpenFile?: (path: stri
  * @param t - 翻译席位（已包占位符替换）。
  * @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
  * @param fileOpen - U11 文件打开上下文（undefined = workspaceFiles 未就位，链接全部降级为纯文本）。
+ * @param groupPart - 过程分组侧（'response' | 'reasoning'）。
+ * @param deliveredByTurn - 每轮交付文件（present 工具调用同源推导；官方 DeliverablesTail 同态）。
  * @returns 节点视图；null = 决策 28 过滤的噪音 kind。
  */
 function renderKeyedNode(
@@ -595,6 +632,7 @@ function renderKeyedNode(
   onBranchAt: ((seq: number) => void) | undefined,
   fileOpen: FileOpenFace | undefined,
   groupPart?: 'response' | 'reasoning',
+  deliveredByTurn?: ReadonlyMap<number, readonly DeliveredFileFace[]>,
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'turn-trigger':
@@ -606,9 +644,19 @@ function renderKeyedNode(
         t,
       })
     case 'turn-tail': {
+      // 官方 turnTail 插槽（closing === null 也渲染）：本弹窗用它承载交付文件卡网格
+      // （DeliverablesTail 镜像：present 交付的文件整卡可点 → openFile 预览）。
       const data = node.data as unknown as TurnTailDataFace | undefined
-      if (data === undefined || data.closing === null || data.closing === undefined) return null
-      return h(TurnTailNodeViewMirror, { data, onBranchAt, t })
+      const tail = data === undefined || data.closing === null || data.closing === undefined
+        ? null
+        : h(TurnTailNodeViewMirror, { data, onBranchAt, t })
+      const turn = data?.turn ?? turnLocationOf(node)?.turn
+      const delivered = turn === undefined ? undefined : deliveredByTurn?.get(turn)
+      const grid = delivered === undefined || delivered.length === 0
+        ? null
+        : h(DeliverablesGridMirror, { files: delivered, onOpen: fileOpen?.open, t })
+      if (tail === null && grid === null) return null
+      return h(Fragment, null, tail, grid)
     }
     case 'assistant-step': {
       // 官方块渲染器（lib/client.js:5818-5871）：
@@ -627,6 +675,10 @@ function renderKeyedNode(
       return parts.length === 0 ? null : h('div', { className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-call': {
+      // present（交付文件）走官方 tool.call.toolview 槽位 key='present' 的专属 PresentRow
+      // （标题「交付文件」+ 状态词 + 路径列表；不经通用工具卡）。
+      const root = dataOf(node).root
+      if (isPresentRoot(root)) return h(PresentRowMirror, { block: root, t })
       const card = toolCallCard(node, t, fileOpen?.open)
       return card === null ? null : h(GenericCommandCard, card)
     }
@@ -722,6 +774,7 @@ function renderLegacyNode(node: ConversationNodeLike, t: Translate, fileOpen?: F
       return parts.length === 0 ? null : h('div', { key: node.seq, className: 'dsh-tdt-sv-assistant' }, parts)
     }
     case 'tool-result': {
+      if (node.call?.name === 'present') return h(PresentRowMirror, { key: node.seq, block: node, t })
       return h(GenericCommandCard, {
         key: node.seq,
         name: node.call?.name ?? 'tool',
@@ -856,6 +909,11 @@ function collectFilePaths(order: readonly string[], store: ChatNodeStoreFace | u
     if (node === undefined || node.kind !== 'tool-call') continue
     const root = (node.data as { root?: Record<string, unknown> } | undefined)?.root
     if (root === undefined || root === null || typeof root !== 'object') continue
+    if (isPresentRoot(root)) {
+      // present（交付文件）：files[].path 全进词表（官方 chatFileMentions 同源：produced + presented）。
+      for (const file of presentFiles(root)) out.add(normalizeFilePath(file.path))
+      continue
+    }
     const call = (root.kind === 'tool-result' ? root.call : root) as Record<string, unknown> | undefined
     if (call === null || typeof call !== 'object') continue
     const raw = typeof call.argsRaw === 'string' ? call.argsRaw.trim() : ''
@@ -880,6 +938,32 @@ function collectFilePaths(order: readonly string[], store: ChatNodeStoreFace | u
     }
   }
   return [...out]
+}
+
+/**
+ * 每轮交付文件（官方 DeliverablesTail 的 presented 数据同源推导）：keyed 流里
+ * settled 且成功的 present 调用参数 files，按 turn 归组、按路径去重（后者覆盖前者，
+ * 与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
+ */
+function collectDeliveredFiles(order: readonly string[], store: ChatNodeStoreFace | undefined): ReadonlyMap<number, readonly DeliveredFileFace[]> {
+  const out = new Map<number, readonly DeliveredFileFace[]>()
+  const byTurn = new Map<number, Map<string, DeliveredFileFace>>()
+  if (store === undefined) return out
+  for (const key of order) {
+    const node = store.get(key)
+    if (node === undefined || node.kind !== 'tool-call') continue
+    const root = (node.data as { root?: unknown } | undefined)?.root
+    if (!isPresentRoot(root)) continue
+    const turn = turnLocationOf(node)?.turn
+    if (turn === undefined) continue
+    const files = presentFiles(root)
+    if (files.length === 0) continue
+    let bucket = byTurn.get(turn)
+    if (bucket === undefined) { bucket = new Map(); byTurn.set(turn, bucket) }
+    for (const file of files) bucket.set(file.path, file)
+  }
+  byTurn.forEach((bucket, turn) => { out.set(turn, [...bucket.values()]) })
+  return out
 }
 
 /**
@@ -1007,9 +1091,11 @@ export function SessionViewModal(props: {
       mentions: makeFileMentions(collectFilePaths(order, store), openFile),
     }
   }, [workspaceFiles, openFile, order, store])
+  // 每轮交付文件（present 调用同源推导，独立于 workspaceFiles：卡片照官方常渲染，点击才走 openFile）。
+  const deliveredByTurn = useMemo(() => collectDeliveredFiles(order, store), [order, store])
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart),
-    [tt, onBranchAt, fileOpen],
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliveredByTurn),
+    [tt, onBranchAt, fileOpen, deliveredByTurn],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>

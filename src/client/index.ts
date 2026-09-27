@@ -1127,6 +1127,10 @@ export function apply(ctx: ClientContext): void {
     const wf = remote?.workspaceFiles
     if (wf !== null && wf !== undefined && typeof (wf as WorkspaceFilesFace).read === 'function') {
       workspaceFiles = wf as WorkspaceFilesFace
+      console.info('[task-dispatch:client] remote.workspaceFiles 已就位：文件预览与文件链接启用')
+    } else {
+      // 真机排障锚点：链接全部降级纯文本时先看这行（连同 remote 自身的键清单）。
+      console.warn(`[task-dispatch:client] remote.workspaceFiles 未就位：文件预览降级（remote 键=[${remote === undefined ? 'remote 服务缺席' : Object.keys(remote).join(',')}]）`)
     }
   })
   // 布局服务（ctx.layout）：主面板切换——选中整页 / 返回会话。

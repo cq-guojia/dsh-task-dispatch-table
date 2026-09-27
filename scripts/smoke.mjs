@@ -500,6 +500,24 @@ try {
     clientJs.includes('dsh-tdt-sv-preview-md') && clientJs.includes('CodeBlock'))
   check('inject 清单声明 workspace-files 提供方（dsh-api-workspace-files）',
     injectList.includes('@deepseek-ai/dsh-api-workspace-files'), injectList.join(', '))
+  // U11 第二轮（交付文件官方化）：present 行 + 交付文件卡网格 + 词表收录 present 路径。
+  check('present 工具走官方 PresentRow 镜像（data-tool=present + IconDeliverDocRegular，不经通用工具卡）',
+    clientJs.includes('IconDeliverDocRegular') && /data-tool"?\s*[:=]\s*"?present/.test(clientJs))
+  check('交付文件卡网格已打进 bundle（DeliverablesGridMirror + FileTypeIcon，整卡可点 openFile）',
+    clientJs.includes('DeliverablesGridMirror') && clientJs.includes('FileTypeIcon') && clientJs.includes('data-presented-file'))
+  check('交付文件卡折叠上限照官方（>4 折叠 + 全部 N 个文件）',
+    clientJs.includes('deliverAll') && clientJs.includes('deliverExpandAria'))
+  check('交付词典齐备（row.* 五态 + presented 简介/收起）',
+    clientJs.includes('deliverRowOk') && clientJs.includes('deliverRowError') && clientJs.includes('deliverRowStopped')
+      && clientJs.includes('deliverPreviewHint') && clientJs.includes('deliverCollapseAria'))
+  check('词表与交付数据收录 present 交付路径（presentFiles 同源推导，禁模拟）',
+    clientJs.includes('presentFiles') && clientJs.includes('collectDeliveredFiles'))
+  check('官方类发现扩 ui-deliverables 前缀（PresentRow / Deliverables 模块可命中）',
+    clientJs.includes('@deepseek-ai/dsh-client-ui-deliverables/'))
+  check('交付文件兜底样式入库（deliv-file / deliv-grid / deliv-toggle）',
+    clientJs.includes('dsh-tdt-sv-deliv-file') && clientJs.includes('dsh-tdt-sv-deliv-grid') && clientJs.includes('dsh-tdt-sv-deliv-toggle'))
+  check('workspaceFiles 未就位有诊断日志（真机排障锚点）',
+    clientJs.includes('remote.workspaceFiles 未就位'))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

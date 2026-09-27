@@ -232,7 +232,20 @@ window.__ModuleLoader__.load({
 			previewDirectory: "这是一个目录，暂不支持目录浏览。",
 			previewNotRegular: "该路径不是常规文件（符号链接等），暂不支持预览。",
 			previewError: "读取失败：{code}",
-			previewUnknownBinary: "二进制文件，暂不支持预览。可复制路径后在工作区中打开。"
+			previewUnknownBinary: "二进制文件，暂不支持预览。可复制路径后在工作区中打开。",
+			deliverRowTitle: "交付文件",
+			deliverRowPreparing: "准备交付",
+			deliverRowRunning: "正在交付",
+			deliverRowOk: "已交付",
+			deliverRowError: "交付失败",
+			deliverRowStopped: "已中断",
+			deliverFileLabel: "文件",
+			deliverPreviewHint: "预览",
+			deliverPreviewCard: "预览 {name}",
+			deliverAll: "全部 {count} 个文件",
+			deliverCollapse: "收起",
+			deliverExpandAria: "展开全部 {count} 个交付文件",
+			deliverCollapseAria: "收起交付文件列表"
 		};
 		/** English copy. */
 		const en = {
@@ -450,7 +463,20 @@ window.__ModuleLoader__.load({
 			previewDirectory: "This is a directory; browsing directories is not supported yet.",
 			previewNotRegular: "Not a regular file (symlink or similar); preview is not supported.",
 			previewError: "Failed to read: {code}",
-			previewUnknownBinary: "Binary file; preview is not supported. Copy the path to open it in the workspace."
+			previewUnknownBinary: "Binary file; preview is not supported. Copy the path to open it in the workspace.",
+			deliverRowTitle: "Deliver files",
+			deliverRowPreparing: "Preparing delivery",
+			deliverRowRunning: "Delivering",
+			deliverRowOk: "Delivered",
+			deliverRowError: "Delivery failed",
+			deliverRowStopped: "Interrupted",
+			deliverFileLabel: "File",
+			deliverPreviewHint: "Preview",
+			deliverPreviewCard: "Preview {name}",
+			deliverAll: "All {count} files",
+			deliverCollapse: "Collapse",
+			deliverExpandAria: "Expand all {count} delivered files",
+			deliverCollapseAria: "Collapse the delivered-files list"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -661,6 +687,33 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
+/* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
+/* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
+.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:12px;display:flex;}
+.dsh-tdt-sv-deliv-rowsummary>:first-child{flex-shrink:0;}
+.dsh-tdt-sv-deliv-rowpaths{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
+.dsh-tdt-sv-deliv-rowoutput{border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;padding:12px;font-size:12px;}
+/* 交付文件卡网格（root 内含 container query：≤620px 单列）。 */
+.dsh-tdt-sv-deliv{--deliverable-fill:var(--dsw-static-neutral-50,#f5f5f5);--deliverable-hover:var(--dsw-static-neutral-100,#ededed);flex-direction:column;gap:16px;min-width:0;margin-top:4px;display:flex;container-type:inline-size;}
+body[data-ds-dark-theme] .dsh-tdt-sv-deliv{--deliverable-fill:var(--dsw-static-neutral-850,#2a2a2a);--deliverable-hover:var(--dsw-static-neutral-800,#333);}
+.dsh-tdt-sv-deliv-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;display:grid;}
+.dsh-tdt-sv-deliv-grid[data-single=true]{grid-template-columns:minmax(0,1fr);}
+@container (width<=620px){.dsh-tdt-sv-deliv-grid{grid-template-columns:minmax(0,1fr);}}
+.dsh-tdt-sv-deliv-file{box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-lg,10px);background:var(--deliverable-fill);min-width:0;height:60px;color:var(--dsw-alias-label-primary,#1f2328);align-items:center;gap:10px;padding:8px 10px;transition:background-color .12s;display:flex;position:relative;overflow:hidden;}
+.dsh-tdt-sv-deliv-file:hover{background:var(--deliverable-hover);}
+.dsh-tdt-sv-deliv-cardpreview{z-index:1;border-radius:inherit;cursor:pointer;background:0 0;border:0;width:100%;padding:0;position:absolute;inset:0;}
+.dsh-tdt-sv-deliv-cardpreview:focus-visible{box-shadow:inset 0 0 0 2px var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,#4c6bff));outline:none;}
+.dsh-tdt-sv-deliv-icon{z-index:2;box-sizing:border-box;pointer-events:none;border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-lg,10px);background:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);width:40px;height:40px;color:var(--dsw-alias-link,#2f6feb);flex:none;place-items:center;display:grid;position:relative;overflow:hidden;}
+body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);}
+.dsh-tdt-sv-deliv-body{z-index:2;pointer-events:none;flex:1;justify-content:space-between;align-items:center;gap:12px;min-width:0;display:flex;position:relative;}
+.dsh-tdt-sv-deliv-details{flex-direction:column;flex:1;justify-content:center;gap:2px;min-width:0;display:flex;}
+.dsh-tdt-sv-deliv-name{text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;line-height:20px;overflow:hidden;}
+.dsh-tdt-sv-deliv-desc{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:400;line-height:16px;overflow:hidden;}
+.dsh-tdt-sv-deliv-hint,.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-secondary{display:none;}
+.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-hint{display:inline;}
+.dsh-tdt-sv-deliv-toggle{border-radius:var(--dsw-radius-sm,6px);min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:12px;line-height:18px;display:inline-flex;}
+.dsh-tdt-sv-deliv-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 `;
 		let injected = false;
 		/**
@@ -679,8 +732,12 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/official-classes.ts
-		/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡）。 */
-		const CSS_PKG_PREFIXES = ["@deepseek-ai/dsh-client-ui-chat/", "@deepseek-ai/dsh-client-ui-tool/"];
+		/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡 + ui-deliverables）。 */
+		const CSS_PKG_PREFIXES = [
+			"@deepseek-ai/dsh-client-ui-chat/",
+			"@deepseek-ai/dsh-client-ui-tool/",
+			"@deepseek-ai/dsh-client-ui-deliverables/"
+		];
 		let discovered = null;
 		/**
 		* 解析一段官方 CSS module 文本，抽出 {语义名 → 真实类名}。
@@ -2454,6 +2511,119 @@ window.__ModuleLoader__.load({
 			}).filter((part) => part !== "").join("\n");
 		}
 		//#endregion
+		//#region src/client/mirror/Deliverables.tsx
+		const basename = (path) => path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
+		/** 官方 fileNames（PresentRow.tsx）：argsRaw.files[].path 逗号连接；解析不出回原样。 */
+		function fileNames(raw) {
+			let args;
+			try {
+				args = JSON.parse(raw);
+			} catch {
+				return raw;
+			}
+			if (typeof args !== "object" || args === null || !("files" in args) || !Array.isArray(args.files)) return raw;
+			return args.files.flatMap((file) => typeof file === "object" && file !== null && "path" in file && typeof file.path === "string" ? [file.path] : []).join(", ");
+		}
+		/** 官方 PresentRow：present 工具调用的状态行（折叠 = 状态词 + 路径；展开 = 结果原文）。 */
+		function PresentRowMirror(props) {
+			const { block, t } = props;
+			const b = block ?? {};
+			const settled = typeof b.kind === "string";
+			const state = !settled ? b.phase === "preparing" ? "preparing" : "running" : b.error?.code === "interrupted" ? "stopped" : b.isError ? "error" : "ok";
+			const argsRaw = (settled ? b.call?.argsRaw : b.argsRaw) ?? "";
+			const details = settled ? (b.content ?? []).map((item) => item.type === "text" ? item.text ?? "" : JSON.stringify(item)).join("\n") || (b.error ? `${b.error.name ?? ""}: ${b.error.code ?? ""}` : "") : "";
+			const [expanded, setExpanded] = (0, react.useState)(false);
+			const statusKey = state === "preparing" ? "deliverRowPreparing" : state === "running" ? "deliverRowRunning" : state === "error" ? "deliverRowError" : state === "stopped" ? "deliverRowStopped" : "deliverRowOk";
+			return (0, react.createElement)("div", {
+				className: ocOr("ToolRow", "root", "dsh-tdt-sv-tool"),
+				"data-tool": "present",
+				"data-state": state
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDeliverDocRegular, { size: 14 }),
+				title: t("deliverRowTitle"),
+				open: expanded && details !== "",
+				expandable: details !== "",
+				expandOnRowClick: true,
+				keepContentWhenOpen: true,
+				onToggle: () => {
+					setExpanded((value) => !value);
+				},
+				running: state === "running" || state === "preparing",
+				rowClassName: ocOr("ToolRow", "row", "dsh-tdt-sv-tool-row"),
+				leadingClassName: ocOr("ToolRow", "leading", "dsh-tdt-sv-tool-leading"),
+				titleClassName: ocOr("ToolRow", "title", "dsh-tdt-sv-tool-title"),
+				chevronClassName: ocOr("ToolRow", "chevron", "dsh-tdt-sv-tool-chevron"),
+				collapsedContent: (0, react.createElement)("span", { className: ocOr("PresentRow", "summary", "dsh-tdt-sv-deliv-rowsummary") }, (0, react.createElement)("span", null, t(statusKey)), (0, react.createElement)("span", { className: ocOr("PresentRow", "paths", "dsh-tdt-sv-deliv-rowpaths") }, fileNames(argsRaw))),
+				children: details !== "" && expanded ? (0, react.createElement)("pre", { className: ocOr("PresentRow", "output", "dsh-tdt-sv-deliv-rowoutput") }, details) : null
+			}));
+		}
+		/** 官方 COLLAPSED_PRESENTED_COUNT（Deliverables.tsx）：超过 4 张折叠。 */
+		const COLLAPSED_DELIVERED_COUNT = 4;
+		/** 官方 cardDescription：简介去尾部括注后为空则回退扩展名大写（再退「文件」）。 */
+		function cardDescription(description, fallback) {
+			const trimmed = description?.replace(/\s*(?:\([^()]*\)|（[^（）]*）)\s*$/u, "").trim();
+			return trimmed === void 0 || trimmed === "" ? fallback : trimmed;
+		}
+		/** 官方 PresentedFileCard：整卡可点 → onPreview（官方 = 右栏预览，本弹窗 = openFile 分栏）。 */
+		function DeliveredFileCard(props) {
+			const { file, onPreview, t } = props;
+			const name = basename(file.path);
+			const metadata = (0, _deepseek_ai_dsh_client_ui_primitives.fileExtension)(name).toUpperCase() || t("deliverFileLabel");
+			return (0, react.createElement)("div", {
+				className: ocOr("Deliverables", "file", "dsh-tdt-sv-deliv-file"),
+				"data-presented-file": true
+			}, onPreview !== void 0 ? (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("Deliverables", "cardPreview", "dsh-tdt-sv-deliv-cardpreview"),
+				title: file.path,
+				"aria-label": t("deliverPreviewCard", { name: file.path }),
+				onClick: (event) => {
+					event.stopPropagation();
+					onPreview();
+				}
+			}) : null, (0, react.createElement)("span", { className: ocOr("Deliverables", "fileIcon", "dsh-tdt-sv-deliv-icon") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: file.path,
+				size: 20
+			})), (0, react.createElement)("div", { className: ocOr("Deliverables", "fileBody", "dsh-tdt-sv-deliv-body") }, (0, react.createElement)("div", { className: ocOr("Deliverables", "details", "dsh-tdt-sv-deliv-details") }, (0, react.createElement)("span", { className: ocOr("Deliverables", "fileName", "dsh-tdt-sv-deliv-name") }, name), (0, react.createElement)("span", {
+				className: ocOr("Deliverables", "description", "dsh-tdt-sv-deliv-desc"),
+				"data-presented-description": true
+			}, (0, react.createElement)("span", { className: ocOr("Deliverables", "secondaryText", "dsh-tdt-sv-deliv-secondary") }, cardDescription(file.description, metadata)), onPreview !== void 0 ? (0, react.createElement)("span", { className: ocOr("Deliverables", "previewHint", "dsh-tdt-sv-deliv-hint") }, t("deliverPreviewHint")) : null))));
+		}
+		/**
+		* 官方 DeliverablesTail 的 presented 网格（改动文件卡 ChangedFiles 依赖 Host git 摘要路由，
+		* 本弹窗无该通道 ⇒ 不渲染，与官方「summary 未就绪时不画」同态）。
+		*/
+		function DeliverablesGridMirror(props) {
+			const { files, onOpen, t } = props;
+			const [expanded, setExpanded] = (0, react.useState)(false);
+			if (files.length === 0) return null;
+			const collapsible = files.length > COLLAPSED_DELIVERED_COUNT;
+			const shown = collapsible && !expanded ? files.slice(0, COLLAPSED_DELIVERED_COUNT) : files;
+			return (0, react.createElement)("div", {
+				className: ocOr("Deliverables", "root", "dsh-tdt-sv-deliv"),
+				"data-presented-files-grid": true
+			}, (0, react.createElement)("div", {
+				className: ocOr("Deliverables", "presented", "dsh-tdt-sv-deliv-grid"),
+				"data-presented-files-row": true,
+				"data-single": files.length === 1 ? true : void 0
+			}, shown.map((file, index) => (0, react.createElement)(DeliveredFileCard, {
+				key: `${file.path}:${index}`,
+				file,
+				onPreview: onOpen === void 0 ? void 0 : () => {
+					onOpen(file.path);
+				},
+				t
+			}))), collapsible ? (0, react.createElement)("button", {
+				type: "button",
+				className: ocOr("Deliverables", "toggle", "dsh-tdt-sv-deliv-toggle"),
+				"aria-expanded": expanded,
+				"aria-label": t(expanded ? "deliverCollapseAria" : "deliverExpandAria", { count: files.length }),
+				onClick: () => {
+					setExpanded((value) => !value);
+				}
+			}, (0, react.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
+		}
+		//#endregion
 		//#region src/client/file-preview.tsx
 		/** markdown 外壳文案（引用稳定——新身份会打断 MarkdownText 的渲染缓存；与 mirror/MessageItem 同款）。 */
 		const MD_LABELS = {
@@ -2840,6 +3010,40 @@ window.__ModuleLoader__.load({
 				t
 			};
 		}
+		/** 官方 Tool / ToolResult block 是否为 present 调用（交付文件行专属渲染；running 名在顶层，结算名在 call 里）。 */
+		function isPresentRoot(root) {
+			if (typeof root !== "object" || root === null) return false;
+			const r = root;
+			if (r.name === "present") return true;
+			return r.kind === "tool-result" && r.call !== null && typeof r.call === "object" && r.call.name === "present";
+		}
+		/** 官方 present 调用参数里的 files（deliverables/presented 事件同源数据）。 */
+		function presentFiles(root) {
+			if (typeof root !== "object" || root === null) return [];
+			const r = root;
+			const settled = r.kind === "tool-result";
+			if (r.isError === true) return [];
+			const raw = settled ? r.call?.argsRaw : r.argsRaw;
+			if (typeof raw !== "string") return [];
+			try {
+				const files = JSON.parse(raw)?.files;
+				if (!Array.isArray(files)) return [];
+				const out = [];
+				for (const file of files) {
+					if (typeof file !== "object" || file === null) continue;
+					const path = file.path;
+					if (typeof path !== "string" || path.trim() === "") continue;
+					const description = file.description;
+					out.push(typeof description === "string" && description.trim() !== "" ? {
+						path,
+						description
+					} : { path });
+				}
+				return out;
+			} catch {
+				return [];
+			}
+		}
 		/**
 		* keyed 节点 → 视图（等价于官方 slot "conversation.chat.node" 的按 kind 分发）。
 		* @param node - keyed ChatNode。
@@ -2847,9 +3051,11 @@ window.__ModuleLoader__.load({
 		* @param t - 翻译席位（已包占位符替换）。
 		* @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
 		* @param fileOpen - U11 文件打开上下文（undefined = workspaceFiles 未就位，链接全部降级为纯文本）。
+		* @param groupPart - 过程分组侧（'response' | 'reasoning'）。
+		* @param deliveredByTurn - 每轮交付文件（present 工具调用同源推导；官方 DeliverablesTail 同态）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart) {
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliveredByTurn) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -2862,12 +3068,20 @@ window.__ModuleLoader__.load({
 				});
 				case "turn-tail": {
 					const data = node.data;
-					if (data === void 0 || data.closing === null || data.closing === void 0) return null;
-					return (0, react.createElement)(TurnTailNodeViewMirror, {
+					const tail = data === void 0 || data.closing === null || data.closing === void 0 ? null : (0, react.createElement)(TurnTailNodeViewMirror, {
 						data,
 						onBranchAt,
 						t
 					});
+					const turn = data?.turn ?? turnLocationOf(node)?.turn;
+					const delivered = turn === void 0 ? void 0 : deliveredByTurn?.get(turn);
+					const grid = delivered === void 0 || delivered.length === 0 ? null : (0, react.createElement)(DeliverablesGridMirror, {
+						files: delivered,
+						onOpen: fileOpen?.open,
+						t
+					});
+					if (tail === null && grid === null) return null;
+					return (0, react.createElement)(react.Fragment, null, tail, grid);
 				}
 				case "assistant-step": {
 					const blocks = blocksOf(dataOf(node).blocks) ?? [];
@@ -2877,6 +3091,11 @@ window.__ModuleLoader__.load({
 					return parts.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
 				}
 				case "tool-call": {
+					const root = dataOf(node).root;
+					if (isPresentRoot(root)) return (0, react.createElement)(PresentRowMirror, {
+						block: root,
+						t
+					});
 					const card = toolCallCard(node, t, fileOpen?.open);
 					return card === null ? null : (0, react.createElement)(GenericCommandCard, card);
 				}
@@ -2971,19 +3190,25 @@ window.__ModuleLoader__.load({
 						className: "dsh-tdt-sv-assistant"
 					}, parts);
 				}
-				case "tool-result": return (0, react.createElement)(GenericCommandCard, {
-					key: node.seq,
-					name: node.call?.name ?? "tool",
-					argsRaw: node.call?.argsRaw ?? "",
-					output: contentText(node.content),
-					isError: node.isError === true,
-					errorName: node.error?.name,
-					meta: node.meta,
-					settled: true,
-					interrupted: node.error?.code === "interrupted",
-					onOpenFile: fileOpen?.open,
-					t
-				});
+				case "tool-result":
+					if (node.call?.name === "present") return (0, react.createElement)(PresentRowMirror, {
+						key: node.seq,
+						block: node,
+						t
+					});
+					return (0, react.createElement)(GenericCommandCard, {
+						key: node.seq,
+						name: node.call?.name ?? "tool",
+						argsRaw: node.call?.argsRaw ?? "",
+						output: contentText(node.content),
+						isError: node.isError === true,
+						errorName: node.error?.name,
+						meta: node.meta,
+						settled: true,
+						interrupted: node.error?.code === "interrupted",
+						onOpenFile: fileOpen?.open,
+						t
+					});
 				case "command": return (0, react.createElement)(GenericCommandCard, {
 					key: node.seq,
 					name: `/${node.name ?? "?"}`,
@@ -3105,6 +3330,10 @@ window.__ModuleLoader__.load({
 				if (node === void 0 || node.kind !== "tool-call") continue;
 				const root = node.data?.root;
 				if (root === void 0 || root === null || typeof root !== "object") continue;
+				if (isPresentRoot(root)) {
+					for (const file of presentFiles(root)) out.add(normalizeFilePath(file.path));
+					continue;
+				}
 				const call = root.kind === "tool-result" ? root.call : root;
 				if (call === null || typeof call !== "object") continue;
 				const raw = typeof call.argsRaw === "string" ? call.argsRaw.trim() : "";
@@ -3125,6 +3354,36 @@ window.__ModuleLoader__.load({
 				}
 			}
 			return [...out];
+		}
+		/**
+		* 每轮交付文件（官方 DeliverablesTail 的 presented 数据同源推导）：keyed 流里
+		* settled 且成功的 present 调用参数 files，按 turn 归组、按路径去重（后者覆盖前者，
+		* 与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
+		*/
+		function collectDeliveredFiles(order, store) {
+			const out = /* @__PURE__ */ new Map();
+			const byTurn = /* @__PURE__ */ new Map();
+			if (store === void 0) return out;
+			for (const key of order) {
+				const node = store.get(key);
+				if (node === void 0 || node.kind !== "tool-call") continue;
+				const root = node.data?.root;
+				if (!isPresentRoot(root)) continue;
+				const turn = turnLocationOf(node)?.turn;
+				if (turn === void 0) continue;
+				const files = presentFiles(root);
+				if (files.length === 0) continue;
+				let bucket = byTurn.get(turn);
+				if (bucket === void 0) {
+					bucket = /* @__PURE__ */ new Map();
+					byTurn.set(turn, bucket);
+				}
+				for (const file of files) bucket.set(file.path, file);
+			}
+			byTurn.forEach((bucket, turn) => {
+				out.set(turn, [...bucket.values()]);
+			});
+			return out;
 		}
 		/**
 		* 构建 fileMentions：归一化精确匹配优先、唯一 basename 兜底（官方 fileMentions 语义：
@@ -3244,10 +3503,12 @@ window.__ModuleLoader__.load({
 				order,
 				store
 			]);
-			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart), [
+			const deliveredByTurn = (0, react.useMemo)(() => collectDeliveredFiles(order, store), [order, store]);
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliveredByTurn), [
 				tt,
 				onBranchAt,
-				fileOpen
+				fileOpen,
+				deliveredByTurn
 			]);
 			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
@@ -4314,8 +4575,12 @@ window.__ModuleLoader__.load({
 			});
 			let workspaceFiles = null;
 			ctx.inject(["remote"], (sub) => {
-				const wf = sub.remote?.workspaceFiles;
-				if (wf !== null && wf !== void 0 && typeof wf.read === "function") workspaceFiles = wf;
+				const remote = sub.remote;
+				const wf = remote?.workspaceFiles;
+				if (wf !== null && wf !== void 0 && typeof wf.read === "function") {
+					workspaceFiles = wf;
+					console.info("[task-dispatch:client] remote.workspaceFiles 已就位：文件预览与文件链接启用");
+				} else console.warn(`[task-dispatch:client] remote.workspaceFiles 未就位：文件预览降级（remote 键=[${remote === void 0 ? "remote 服务缺席" : Object.keys(remote).join(",")}]）`);
 			});
 			let selectPanel = () => {};
 			ctx.inject(["layout"], (sub) => {
