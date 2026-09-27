@@ -64,6 +64,12 @@
    - 落码：所有文本（json/js/ts/css/txt…）统一走 CodeBody 同款 CodeBlock（行号 + languageForPath + 官方 toolbar）；md 默认渲染视图 + 右上角「源码」钮切 CodeBlock（lang=markdown，经 languageForPath）；官方类发现扩 `ui-sidebar-documentpreview` 前缀（CodeBody: renderer/code），缺失时走自绘兜底。
 4. **质量门**：typecheck 全过；build（dist ≈240 kB）；冒烟 +4 = **150 项全过**。
 
+### 第八轮：真机两反馈（拖拽条高亮 / md 切换样式）（2026-09-28）
+
+1. **拖拽条**：去掉块状高亮（用户明令），只保留 `col-resize` 光标；hover/拖拽时左缘画 **1px 细线**（深色主题纯白、浅色纯黑，55% 透明，`body[data-ds-dark-theme]` 分支）。
+2. **md 两态切换改官方分段控件**：用户贴官方「预览|编辑」分段样式图，要求切换钮放进 CodeBlock 工具条红框位（语言标签右侧、图标左侧），**不加行、不套框**。核实 `CodeBlock`（`lib/types/markdown/CodeBlock.d.ts`）**无自定义插槽 prop**（toolbar 是内部组件）⇒ 用绝对定位 overlay：源码态 `top:3px;right:76px` 叠进工具条，渲染态 `top:8px;right:8px` 浮于渲染视图右上角；样式 = 官方分段（灰底圆角容器 + 选中段对比底胶囊，深浅主题分支）。顺带修「短 md 也有横向滚动条」：md 源码态传 `wrap:true`（官方语义 = 采用调用方换行偏好并隐藏工具条换行钮，md 是 prose 换行合理；代码文件不传 = 保留官方换行钮）。删掉上一轮的 `mdbar` 外加行（正是顶出滚动条的来源）。
+3. **质量门**：typecheck + build（dist ≈241 kB）+ 冒烟 151 项全过（+2 −1：分段控件与无外加行 / resizer 细线）。
+
 ## 二、证据与坐标
 
 - `dsh-api-workspace-files/README.zh.md`：read/readBytes/stat/list/changes 全形状 + 错误码 + inject 清单 `['resources','remote','remote.workspaceFiles']`。

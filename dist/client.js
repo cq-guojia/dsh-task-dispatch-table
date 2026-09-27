@@ -238,6 +238,7 @@ window.__ModuleLoader__.load({
 			previewResize: "拖动调整预览栏宽度",
 			previewSource: "源码",
 			previewRender: "预览",
+			previewMdSwitchAria: "Markdown 视图切换",
 			colOutputs: "产出",
 			outputsEmpty: "（无产出）",
 			deliverRowTitle: "交付文件",
@@ -476,6 +477,7 @@ window.__ModuleLoader__.load({
 			previewResize: "Drag to resize the preview pane",
 			previewSource: "Source",
 			previewRender: "Preview",
+			previewMdSwitchAria: "Markdown view switch",
 			colOutputs: "Outputs",
 			outputsEmpty: "(no outputs)",
 			deliverRowTitle: "Deliver files",
@@ -506,9 +508,12 @@ window.__ModuleLoader__.load({
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
 .dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
-/* 拖拽条（dock 左缘 6px 命中区，hover/拖拽时高亮，光标 col-resize）。 */
+/* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize 即可，**无块状高亮**（用户 2026-09-28）；
+   hover/拖拽时只在左缘画一条 1px 细线（深色主题纯白、浅色纯黑，半透明）。 */
 .dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
-.dsh-tdt-sv-resizer:hover,.dsh-tdt-sv-resizer:active{background:var(--dsw-alias-brand-primary,#2f6feb);opacity:.35;}
+.dsh-tdt-sv-resizer::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:1px;background:transparent;}
+.dsh-tdt-sv-resizer:hover::after,.dsh-tdt-sv-resizer:active::after{background:rgba(0,0,0,.55);}
+body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover::after,body[data-ds-dark-theme] .dsh-tdt-sv-resizer:active::after{background:rgba(255,255,255,.55);}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
@@ -708,11 +713,16 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
-/* md 两态切换条（渲染视图 ⇄ 源码）：右上角小钮，官方预览层没有「编辑」（那是编辑器 tab），故只做这两态。 */
-.dsh-tdt-sv-preview-mdbar{display:flex;justify-content:flex-end;margin-bottom:8px;}
-.dsh-tdt-sv-preview-mdswitch{appearance:none;font:inherit;font-size:12px;line-height:18px;height:24px;cursor:pointer;display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));background:transparent;border:.5px solid var(--dsw-alias-border-l3,rgba(128,128,128,.4));border-radius:var(--dsw-radius-sm,6px);padding:0 10px;}
-.dsh-tdt-sv-preview-mdswitch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-preview-mdswitch[aria-pressed=true]{color:var(--dsw-alias-label-primary,#1f2328);border-color:var(--dsw-alias-border-l2,rgba(128,128,128,.5));}
+/* md 两态切换（用户 2026-09-28 定样式）：官方分段控件（预览|源码），不加行、不套框——
+   绝对定位叠进 CodeBlock 工具条（源码态：语言标签右侧、图标左侧）或渲染态右上角。 */
+.dsh-tdt-sv-preview-mdwrap{position:relative;}
+.dsh-tdt-sv-seg{position:absolute;z-index:3;display:inline-flex;align-items:center;gap:2px;border-radius:8px;background:var(--dsw-alias-interactive-bg,rgba(128,128,128,.14));padding:2px;}
+.dsh-tdt-sv-seg[data-mode=source]{top:3px;right:76px;}
+.dsh-tdt-sv-seg[data-mode=render]{top:8px;right:8px;}
+.dsh-tdt-sv-seg-btn{appearance:none;font:inherit;font-size:12px;line-height:18px;height:20px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;white-space:nowrap;}
+.dsh-tdt-sv-seg-btn:hover{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-00,#fff);color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18);}
+body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-900,#111);color:var(--dsw-static-neutral-00,#fff);}
 /* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、可横向滚动。 */
 .dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
 .dsh-tdt-sv-preview-code{max-width:100%;}
@@ -3687,21 +3697,36 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
 			const language = (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path);
 			const showSource = !markdown || sourceView;
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, markdown ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-mdbar" }, (0, react.createElement)("button", {
+			const seg = markdown ? (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-seg",
+				"data-mode": showSource ? "source" : "render",
+				role: "group",
+				"aria-label": t("previewMdSwitchAria")
+			}, (0, react.createElement)("button", {
 				type: "button",
-				className: "dsh-tdt-sv-preview-mdswitch",
+				className: "dsh-tdt-sv-seg-btn",
+				"aria-pressed": !sourceView,
+				onClick: () => {
+					setSourceView(false);
+				}
+			}, t("previewRender")), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-seg-btn",
 				"aria-pressed": sourceView,
 				onClick: () => {
-					setSourceView((value) => !value);
+					setSourceView(true);
 				}
-			}, sourceView ? t("previewRender") : t("previewSource"))) : null, showSource ? (0, react.createElement)("div", {
+			}, t("previewSource"))) : null;
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, showSource ? (0, react.createElement)("div", {
 				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
-				"data-code-preview": true
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				"data-code-preview": true,
+				style: { position: "relative" }
+			}, seg, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
 				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
 				code: text,
 				lang: language,
 				lineNumbers: true,
+				wrap: markdown === true ? true : void 0,
 				copyLabel: t("copyLabel"),
 				copiedLabel: t("copiedLabel"),
 				toolbarLabels: {
@@ -3709,10 +3734,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					wrapLabel: t("diffWrapLabel"),
 					unwrapLabel: t("diffUnwrapLabel")
 				}
-			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-mdwrap" }, seg, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text,
 				labels: MD_LABELS
-			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
+			}))), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
 				type: "button",
 				disabled: loadingMore,
 				onClick: loadMore

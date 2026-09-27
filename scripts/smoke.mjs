@@ -492,8 +492,11 @@ try {
     clientJs.includes('unwrapEnvelope') && clientJs.includes('ok === false'))
   check('文本渲染照官方 CodeBody（CodeBlock + lineNumbers + languageForPath）',
     clientJs.includes('languageForPath') && clientJs.includes('lineNumbers'))
-  check('md 两态：渲染视图 ⇄ 源码（官方无「编辑」入口，故只做这两态）',
-    clientJs.includes('previewSource') && clientJs.includes('previewRender') && clientJs.includes('dsh-tdt-sv-preview-mdswitch'))
+  check('md 两态：渲染视图 ⇄ 源码（官方分段控件叠进 CodeBlock 工具条，不加行不套框）',
+    clientJs.includes('previewSource') && clientJs.includes('previewRender')
+      && clientJs.includes('dsh-tdt-sv-seg') && !clientJs.includes('dsh-tdt-sv-preview-mdbar'))
+  check('拖拽条无块状高亮（hover 仅 1px 细线，深白浅黑）',
+    clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes('width:1px') && !clientJs.includes('opacity:.35'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
     clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
   check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',

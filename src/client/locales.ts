@@ -78,7 +78,7 @@ export type LocaleKey =
   | 'previewCopyPath' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
   | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
-  | 'previewSource' | 'previewRender'
+  | 'previewSource' | 'previewRender' | 'previewMdSwitchAria'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs' | 'outputsEmpty'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
@@ -324,6 +324,7 @@ export const zh: Record<LocaleKey, string> = {
   previewResize: '拖动调整预览栏宽度',
   previewSource: '源码',
   previewRender: '预览',
+  previewMdSwitchAria: 'Markdown 视图切换',
   colOutputs: '产出',
   outputsEmpty: '（无产出）',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
@@ -566,6 +567,7 @@ export const en: Record<LocaleKey, string> = {
   previewResize: 'Drag to resize the preview pane',
   previewSource: 'Source',
   previewRender: 'Preview',
+  previewMdSwitchAria: 'Markdown view switch',
   colOutputs: 'Outputs',
   outputsEmpty: '(no outputs)',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).

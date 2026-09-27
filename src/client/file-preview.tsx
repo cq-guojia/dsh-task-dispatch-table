@@ -337,30 +337,48 @@ function TextPreview(props: {
   }
   // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
   // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
-  // md 默认走 MarkdownText（渲染视图），右上角「源码」切到同一块 CodeBlock（lang=markdown）。
-  // ⚠ 官方预览层没有「编辑」（编辑是另一套编辑器 tab，不在预览契约里），故只做 渲染 ⇄ 源码 两态。
+  // md 两态切换（用户 2026-09-28 定样式）：官方分段控件（预览|源码），**绝对定位叠进 CodeBlock
+  // 工具条**（语言标签右侧、图标左侧）——不加行（加行会顶出滚动条）、不套框；渲染态时浮在右上角。
+  // ⚠ CodeBlock 无自定义插槽 prop（lib/types/markdown/CodeBlock.d.ts），故只能 overlay。
   const language = languageForPath(path)
   const showSource = !markdown || sourceView
+  const seg = markdown
+    ? h('div', {
+        className: 'dsh-tdt-sv-seg',
+        'data-mode': showSource ? 'source' : 'render',
+        role: 'group',
+        'aria-label': t('previewMdSwitchAria'),
+      },
+      h('button', {
+        type: 'button',
+        className: 'dsh-tdt-sv-seg-btn',
+        'aria-pressed': !sourceView,
+        onClick: () => { setSourceView(false) },
+      }, t('previewRender')),
+      h('button', {
+        type: 'button',
+        className: 'dsh-tdt-sv-seg-btn',
+        'aria-pressed': sourceView,
+        onClick: () => { setSourceView(true) },
+      }, t('previewSource')),
+      )
+    : null
   return h('div', { className: 'dsh-tdt-sv-preview-body' },
-    markdown
-      ? h('div', { className: 'dsh-tdt-sv-preview-mdbar' },
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-preview-mdswitch',
-            'aria-pressed': sourceView,
-            onClick: () => { setSourceView(value => !value) },
-          }, sourceView ? t('previewRender') : t('previewSource')))
-      : null,
     showSource
       ? h('div', {
           className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
           'data-code-preview': true,
+          style: { position: 'relative' },
         },
+        seg,
         h(CodeBlock, {
           className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
           code: text,
           lang: language,
           lineNumbers: true,
+          // md 源码态按 prose 语义换行（官方 wrap 语义 = 采用调用方偏好并隐藏工具条换行钮），
+          // 避免短文档也出现横向滚动条；代码文件不传 = 保留官方换行切换钮。
+          wrap: markdown === true ? true : undefined,
           copyLabel: t('copyLabel'),
           copiedLabel: t('copiedLabel'),
           toolbarLabels: {
@@ -369,7 +387,8 @@ function TextPreview(props: {
             unwrapLabel: t('diffUnwrapLabel'),
           },
         }))
-      : h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS })),
+      : h('div', { className: 'dsh-tdt-sv-preview-mdwrap' }, seg,
+          h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS }))),
     nextOffset !== null
       ? h('div', { className: 'dsh-tdt-sv-older' },
           h('button', { type: 'button', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
