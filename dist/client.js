@@ -421,6 +421,13 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-reasoning-title{font-weight:400;}
 .dsh-tdt-sv-reasoning-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
 .dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
+.dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
+/* 工具卡展开体（无 diff 的工具）：输入 / 输出 两行，行间分隔线（官方截图同构）。 */
+.dsh-tdt-sv-io{flex-direction:column;display:flex;}
+.dsh-tdt-sv-io-row{display:flex;gap:12px;padding:10px 16px;align-items:flex-start;}
+.dsh-tdt-sv-io-row+.dsh-tdt-sv-io-row{border-top:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));}
+.dsh-tdt-sv-io-label{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px;padding-top:2px;}
+.dsh-tdt-sv-io-content{flex:1;min-width:0;margin:0;font:var(--dsw-font-markdown-code-block-small,12px/1.5 var(--ds-font-family-code,ui-monospace,monospace));white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
 .dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
 .dsh-tdt-sv-tool{align-self:stretch;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));overflow:hidden;}
@@ -1187,7 +1194,14 @@ window.__ModuleLoader__.load({
 				return `${firstPath} +${totals.added} -${totals.removed}`;
 			})() : localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output);
 			const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? "error"}` : localized.title;
-			const bodyText = diffs !== void 0 ? void 0 : [argsRaw.trim() !== "" ? `${t("toolInputLabel")}:\n${argsRaw}` : "", output.trim() !== "" ? `${t("toolOutputLabel")}:\n${output}` : ""].filter((part) => part !== "").join("\n\n");
+			const prettyArgs = (() => {
+				const raw = argsRaw.trim();
+				if (raw === "") return "";
+				if (raw.startsWith("{") || raw.startsWith("[")) try {
+					return JSON.stringify(JSON.parse(raw), null, 2);
+				} catch {}
+				return raw;
+			})();
 			const ActivityIcon = PROCESS_ICONS[toolActivity(name)] ?? PROCESS_ICONS.tools;
 			return (0, react.createElement)("div", {
 				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
@@ -1197,7 +1211,7 @@ window.__ModuleLoader__.load({
 				icon: (0, react.createElement)(ActivityIcon, { size: 14 }),
 				title: rowTitle,
 				open,
-				expandable: diffs !== void 0 || bodyText !== "",
+				expandable: diffs !== void 0 || prettyArgs !== "" || output !== "",
 				onToggle: () => {
 					setOpen((value) => !value);
 				},
@@ -1213,9 +1227,8 @@ window.__ModuleLoader__.load({
 				}, summaryText)),
 				children: diffs !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DiffBlock, {
 					diffs,
-					labels: diffLabels(t),
-					className: ocOr("GenericCommandCard", "body", "")
-				}) : bodyText !== void 0 && bodyText !== "" ? (0, react.createElement)("pre", { className: ocOr("GenericCommandCard", "body", "dsh-tdt-sv-tool-body") }, bodyText) : void 0
+					labels: diffLabels(t)
+				}) : (0, react.createElement)("div", { className: "dsh-tdt-sv-io" }, prettyArgs === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolInputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, prettyArgs)), output.trim() === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolOutputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, output)))
 			}));
 		}
 		//#endregion
@@ -1472,7 +1485,7 @@ window.__ModuleLoader__.load({
 				collapsedContent: (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
 					className: ocOr("ReasoningRow", "separator", "dsh-tdt-sv-reasoning-sep"),
 					"aria-hidden": true
-				}), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, summary)),
+				}), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summaryText", "dsh-tdt-sv-reasoning-preview-text") }, summary))),
 				children: open ? (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 					text,
 					labels: MD_LABELS,

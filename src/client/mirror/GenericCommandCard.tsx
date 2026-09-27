@@ -106,12 +106,18 @@ export function GenericCommandCard(props: {
       })()
     : localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output)
   const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? 'error'}` : localized.title
-  const bodyText = diffs !== undefined
-    ? undefined
-    : [
-        argsRaw.trim() !== '' ? `${t('toolInputLabel')}:\n${argsRaw}` : '',
-        output.trim() !== '' ? `${t('toolOutputLabel')}:\n${output}` : '',
-      ].filter(part => part !== '').join('\n\n')
+  // 展开（官方格式）：
+  //   有 diff（编辑/写入）⇒ DiffBlock 裸放（官方不加 body 外框，色条通到块最左缘——
+  //     套 `._5OnbHa_body`（边框+padding）会让色条缩进 = 真机踩过）；
+  //   无 diff ⇒ 输入（参数 JSON，可解析则按官方缩进两格美化）/ 输出（结果文本）两行，行间分隔线。
+  const prettyArgs = (() => {
+    const raw = argsRaw.trim()
+    if (raw === '') return ''
+    if (raw.startsWith('{') || raw.startsWith('[')) {
+      try { return JSON.stringify(JSON.parse(raw), null, 2) } catch { /* 非法 JSON 原样 */ }
+    }
+    return raw
+  })()
   const ActivityIcon = PROCESS_ICONS[toolActivity(name)] ?? PROCESS_ICONS.tools
   return h('div', {
     className: ocOr('GenericCommandCard', 'root', 'dsh-tdt-sv-tool'),
@@ -122,7 +128,7 @@ export function GenericCommandCard(props: {
       icon: h(ActivityIcon, { size: 14 }),
       title: rowTitle,
       open,
-      expandable: diffs !== undefined || bodyText !== '',
+      expandable: diffs !== undefined || prettyArgs !== '' || output !== '',
       onToggle: () => { setOpen(value => !value) },
       expandOnRowClick: true,
       keepContentWhenOpen: true,
@@ -135,10 +141,19 @@ export function GenericCommandCard(props: {
         }, summaryText),
       ),
       children: diffs !== undefined
-        ? h(DiffBlock, { diffs, labels: diffLabels(t), className: ocOr('GenericCommandCard', 'body', '') })
-        : bodyText !== undefined && bodyText !== ''
-          ? h('pre', { className: ocOr('GenericCommandCard', 'body', 'dsh-tdt-sv-tool-body') }, bodyText)
-          : undefined,
+        ? h(DiffBlock, { diffs, labels: diffLabels(t) })
+        : h('div', { className: 'dsh-tdt-sv-io' },
+            prettyArgs === ''
+              ? null
+              : h('div', { className: 'dsh-tdt-sv-io-row' },
+                  h('span', { className: 'dsh-tdt-sv-io-label' }, t('toolInputLabel')),
+                  h('pre', { className: 'dsh-tdt-sv-io-content' }, prettyArgs)),
+            output.trim() === ''
+              ? null
+              : h('div', { className: 'dsh-tdt-sv-io-row' },
+                  h('span', { className: 'dsh-tdt-sv-io-label' }, t('toolOutputLabel')),
+                  h('pre', { className: 'dsh-tdt-sv-io-content' }, output)),
+          ),
     }),
   )
 }

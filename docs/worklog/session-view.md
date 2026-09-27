@@ -91,3 +91,16 @@
 
 **验证**：typecheck + build（dist 152.21 kB，`DiffBlock`/`diffTotals` 保留为宿主模块表 require）+ 冒烟 103 项全过。**待真机**：编辑/写入展开的 diff 形态、思考展开无黑带、工具行图标。
 
+## 2026-09-27（第五轮）— 工具展开体格式修正（输入/输出行 + diff 通到左缘 + 预览省略号）
+
+——用户三张对照图：① 官方「工具调用」展开 = **输入 / 输出** 两行（行间分隔线、参数 JSON 缩进两格），我们原来塞在一个 pre 里且 JSON 没美化；② 官方 diff 的红/绿色条**通到块最左缘**，我们缩进一截；③ 思考折叠预览截断要省略号，不能硬切。
+
+**根因**：
+- ② = 我们把 DiffBlock 套进了官方 `GenericCommandCard.body`（`._5OnbHa_body`：边框 + radius + `margin:4px 0 4px 4px` + `padding:12px 16px` 的 `<pre>` 代码块样式）——那个类是给「无 diff 工具的文本展开体」用的，官方 diff 面是**裸放**的 ⇒ 色条被 padding 顶进一截。修 = DiffBlock 不再套 body 类。
+- ① = 无 diff 工具的展开体照官方重排：`输入`（参数，可解析则 `JSON.stringify(·, null, 2)` 缩进两格）/ `输出`（结果文本）两行，行间 `.5px` 分隔线（`.dsh-tdt-sv-io*` 兜底样式；官方卡片样式在 ui-conversation，取其结构）。
+- ③ = 官方思考预览是 **summary > summaryText 两层**（外层 nowrap 截断、内层 `text-overflow:ellipsis`），我们把文本直接放外层 ⇒ 硬切无省略号。修 = 补内层 span（官方 `summaryText` 类 + 兜底同值）。
+
+**写入的说明（用户确认理解一致）**：写入与编辑走同一 DiffBlock 路径——写入 = 新建文件（`computeHunkDiffs` 以 before='' 计算 ⇒ `oldText: null` 全绿 `+`），没有「输出」行；编辑 = 删一行 + 加一行的红绿对比。均由 `meta.diffs` 驱动。
+
+**验证**：typecheck + build（dist 153.64 kB）+ 冒烟 103 项全过。**待真机**：输入/输出行、diff 左缘、预览省略号。
+

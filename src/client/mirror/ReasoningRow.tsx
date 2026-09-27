@@ -49,7 +49,9 @@ export function ReasoningRowMirror(props: {
       chevronClassName: ocOr('ReasoningRow', 'chevron', 'dsh-tdt-sv-reasoning-chevron'),
       collapsedContent: h(Fragment, null,
         h('span', { className: ocOr('ReasoningRow', 'separator', 'dsh-tdt-sv-reasoning-sep'), 'aria-hidden': true }),
-        h('span', { className: ocOr('ReasoningRow', 'summary', 'dsh-tdt-sv-reasoning-preview') }, summary),
+        // 官方是 summary > summaryText 两层：外层 nowrap 截断、内层 text-overflow:ellipsis（省略号）。
+        h('span', { className: ocOr('ReasoningRow', 'summary', 'dsh-tdt-sv-reasoning-preview') },
+          h('span', { className: ocOr('ReasoningRow', 'summaryText', 'dsh-tdt-sv-reasoning-preview-text') }, summary)),
       ),
       children: open
         ? h('div', { className: ocOr('ReasoningRow', 'thinkBody', 'dsh-tdt-sv-reasoning-body') },
