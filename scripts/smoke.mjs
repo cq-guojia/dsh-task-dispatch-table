@@ -445,6 +445,8 @@ try {
     clientJs.includes('increaseTitle'))
   check('bundle 含开分支确认框（forkConfirmText，必须先确认再 fork）',
     clientJs.includes('forkConfirmText'))
+  check('确认框挂官方 Modal 组件（dsh-tdt-sv-forkmodal，弃自绘弹窗）',
+    clientJs.includes('dsh-tdt-sv-forkmodal'))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }

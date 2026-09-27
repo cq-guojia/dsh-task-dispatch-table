@@ -25,7 +25,7 @@
 // 见 ./mirror/ChatNodeSeat.tsx 顶部注释与 docs/design/session-view-ui-map.md §十七。
 
 import { Fragment, createElement as h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { IconBranchOutlineRegular, IconCloseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, IconBranchOutlineRegular, IconCloseOutlineRegular, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ensureArchiveSessionStyle } from './archive-session-css'
 import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame, type TurnsFace } from './mirror/ChatView'
 import { GenericCommandCard } from './mirror/GenericCommandCard'
@@ -33,7 +33,7 @@ import { MessageIconActionsMirror } from './mirror/MessageIconActions'
 import { AssistantMarkdown, UserMessage } from './mirror/MessageItem'
 import { ReasoningRowMirror } from './mirror/ReasoningRow'
 import { TurnProcessNodeViewMirror } from './mirror/TurnProcessNodeView'
-import { TurnTailNodeViewMirror, hasAssistantReplyContent, type TurnTailDataFace } from './mirror/TurnTailNodeView'
+import { TurnTailNodeViewMirror, type TurnTailDataFace } from './mirror/TurnTailNodeView'
 import { TurnTriggerNodeViewMirror } from './mirror/TurnTriggerNodeView'
 import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
 import { buildProcessGroups } from './mirror/process-groups'
@@ -44,7 +44,6 @@ export type { Translate } from './locales'
 
 /** 稳定的空序列（避免默认值每次新建数组）。 */
 const EMPTY_ORDER: readonly string[] = []
-const EMPTY_TURN_ORDER: readonly number[] = []
 
 // ─────────────────────────── 本地结构化类型 ───────────────────────────
 
@@ -573,14 +572,12 @@ function toolCallCard(node: ChatNodeFace, t: Translate): Parameters<typeof Gener
  * @param node - keyed ChatNode。
  * @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
  * @param t - 翻译席位（已包占位符替换）。
- * @param lastTurn - 官方 timeline.turnOrder 末位（尾部操作行判定）。
  * @returns 节点视图；null = 决策 28 过滤的噪音 kind。
  */
 function renderKeyedNode(
   node: ChatNodeFace,
   turnProcess: TurnProcessHandle | undefined,
   t: Translate,
-  lastTurn: number | undefined,
   groupPart?: 'response' | 'reasoning',
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
@@ -595,11 +592,7 @@ function renderKeyedNode(
     case 'turn-tail': {
       const data = node.data as unknown as TurnTailDataFace | undefined
       if (data === undefined || data.closing === null || data.closing === undefined) return null
-      return h(TurnTailNodeViewMirror, {
-        data,
-        endsWithResponse: data.turn === lastTurn && hasAssistantReplyContent(data.closing.blocks),
-        t,
-      })
+      return h(TurnTailNodeViewMirror, { data, t })
     }
     case 'assistant-step': {
       // 官方块渲染器（lib/client.js:5818-5871）：
@@ -875,12 +868,10 @@ export function SessionViewModal(props: {
   const order = chat?.order ?? EMPTY_ORDER
   const store = chat?.nodes
   const keyed = order.length > 0 && store !== undefined
-  const turnOrder = chat?.timeline?.turnOrder ?? EMPTY_TURN_ORDER
   const turns = chat?.timeline?.turns
-  const lastTurn = turnOrder.length === 0 ? undefined : turnOrder[turnOrder.length - 1]
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, lastTurn, groupPart),
-    [tt, lastTurn],
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, groupPart),
+    [tt],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>
@@ -932,7 +923,8 @@ export function SessionViewModal(props: {
       ]
 
   // 关闭途径：右上角关闭按钮 / 点遮罩（主面板同款，不监听 document）。
-  // U10：头部「继续对话」按钮（fork 服务就位才渲染）→ 确认框（叠 z-index 1030）。
+  // U10：头部「继续对话」按钮（fork 服务就位才渲染）→ 确认框 = 官方 Modal（portal 到 body，
+  // 与本弹窗同 z-index 层、后挂载居上；Escape / 遮罩点击 / 头部叉均触发 onClose）。
   return h(Fragment, null,
     h('div', { className: 'dsh-tdt-sv-overlay', onClick: onClose },
       h('div', { className: 'dsh-tdt-sv-panel', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
@@ -963,41 +955,28 @@ export function SessionViewModal(props: {
               className: 'dsh-tdt-sv-close',
               'aria-label': tt('debugClose'),
               onClick: onClose,
-            }, h(IconCloseOutlineRegular, { size: 16 })),
+            }, h(IconCloseOutlineRegular, { size: 14 })),
           ),
         ),
         // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
         h(ChatViewFrame, { children: body }),
       ),
     ),
-    // 开分支确认框（用户拍板：必须先确认再 fork，防误点；失败留在弹窗内提示、不关会话弹窗）。
-    confirming
-      ? h('div', {
-          className: 'dsh-tdt-sv-confirm',
-          onClick: () => { if (!forking) setConfirming(false) },
-        },
-          h('div', { className: 'dsh-tdt-sv-confirm-card', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-            h('div', { className: 'dsh-tdt-sv-confirm-title' }, tt('forkConfirmTitle')),
-            h('p', { className: 'dsh-tdt-sv-confirm-text' }, tt('forkConfirmText')),
-            forkErr !== null ? h('p', { className: 'dsh-tdt-sv-confirm-err' }, tt('forkFailed', { error: forkErr })) : null,
-            h('div', { className: 'dsh-tdt-sv-confirm-actions' },
-              h('button', {
-                type: 'button',
-                className: 'dsh-tdt-sv-confirm-btn',
-                disabled: forking,
-                onClick: () => { setConfirming(false) },
-              }, tt('forkCancel')),
-              h('button', {
-                type: 'button',
-                className: 'dsh-tdt-sv-confirm-btn',
-                'data-primary': 'true',
-                disabled: forking,
-                onClick: onForkAccept,
-              }, forking ? tt('forkWorking') : tt('forkConfirmAccept')),
-            ),
-          ),
-        )
-      : null,
+    // 开分支确认框（用户拍板：必须先确认再 fork，防误点）——官方 primitives Modal + Button
+    // （官方 RiskConfirmation 同源组合：outline 取消 / primary 确认；primary 底色走
+    // --dsw-alias-button-primary-fill，明暗主题自适应；失败留在框内提示、不关会话弹窗）。
+    h(Modal, {
+      open: confirming,
+      onClose: () => { if (!forking) setConfirming(false) },
+      title: tt('forkConfirmTitle'),
+      closeLabel: tt('debugClose'),
+      description: tt('forkConfirmText'),
+      className: 'dsh-tdt-sv-forkmodal',
+      footer: [
+        h(Button, { key: 'cancel', variant: 'outline', disabled: forking, onClick: () => { setConfirming(false) } }, tt('forkCancel')),
+        h(Button, { key: 'accept', variant: 'primary', disabled: forking, onClick: onForkAccept }, forking ? tt('forkWorking') : tt('forkConfirmAccept')),
+      ],
+    }, forkErr !== null ? h('p', { className: 'dsh-tdt-sv-forkerr' }, tt('forkFailed', { error: forkErr })) : null),
   )
 }
 

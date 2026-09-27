@@ -12,7 +12,7 @@ export const SV_STYLE_ID = 'dsh-task-dispatch-table-archive-session'
 
 /** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 export const ARCHIVE_SESSION_CSS = `
-.dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1010;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+.dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
@@ -24,8 +24,10 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-frame{padding:18px 0;}
-.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;padding:2px 6px;border-radius:6px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:color .1s,background .1s;}
-.dsh-tdt-sv-close:hover{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+/* 头部关闭钮规格照官方 primitives Modal.close（设置窗口关闭钮同源）：28×28、radius-sm、
+   透明底，hover 才出 interactive-bg-hover（官方无色变、无阴影）。 */
+.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;flex:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:15px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));word-break:break-all;}
@@ -164,22 +166,17 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-group-content>*{flex-shrink:0;}
 .dsh-tdt-sv-group-content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px);}
 .dsh-tdt-sv-group-expanded{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible;}
-/* U10 继续对话（开分支）：头部按钮组 + 确认框（叠在会话弹窗之上，z-index 1030 > overlay 1010）。 */
+/* U10 继续对话（开分支）：头部按钮组 + 确认框。确认框 = 官方 primitives Modal + Button
+   （portal 到 body，与本弹窗同 z-index 层、后挂载居上），此处只留头部钮规格与 Modal 内错误行。 */
 .dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
-.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 12px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),color .1s;}
-.dsh-tdt-sv-branch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-branch:disabled{opacity:.55;cursor:default;}
-.dsh-tdt-sv-confirm{position:fixed;inset:0;z-index:1030;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
-.dsh-tdt-sv-confirm-card{background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(440px,calc(100vw - 48px));padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;}
-.dsh-tdt-sv-confirm-title{font-size:14px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-confirm-text{font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));margin:0;}
-.dsh-tdt-sv-confirm-err{font-size:12px;line-height:1.5;color:var(--dsw-alias-state-error-primary,#c0392b);word-break:break-all;margin:0;}
-.dsh-tdt-sv-confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
-.dsh-tdt-sv-confirm-btn{appearance:none;font:inherit;font-size:12px;line-height:20px;cursor:pointer;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 14px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),opacity .1s;}
-.dsh-tdt-sv-confirm-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-confirm-btn[data-primary='true']{background:var(--dsw-alias-brand-primary,#2f6feb);border-color:transparent;color:#fff;}
-.dsh-tdt-sv-confirm-btn[data-primary='true']:hover{filter:brightness(1.08);background:var(--dsw-alias-brand-primary,#2f6feb);}
-.dsh-tdt-sv-confirm-btn:disabled{opacity:.55;cursor:default;filter:none;}
+/* 分支钮对齐官方 outline 小钮（Button.module.css .sm：28 高、radius-sm、0.5px border-l3、12/18 字、padding 0 10px）。 */
+.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;height:28px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:.5px solid var(--dsw-alias-border-l3,rgba(128,128,128,.4));border-radius:var(--dsw-radius-sm,6px);padding:0 10px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-branch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-branch:disabled{opacity:.4;cursor:not-allowed;}
+/* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
+.dsh-tdt-sv-forkmodal{width:min(440px,100%);}
+/* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
+.dsh-tdt-sv-forkerr{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-state-error-primary,#e5484d);word-break:break-word;}
 `
 
 let injected = false

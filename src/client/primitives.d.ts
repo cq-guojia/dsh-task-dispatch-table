@@ -46,6 +46,33 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
     titleClassName?: string
   }>
 
+  /** 官方按钮（variant 各由 --dsw-alias-button-* token 族驱动，明暗主题自适应）。 */
+  export const Button: import('react').ForwardRefExoticComponent<{
+    variant?: 'primary' | 'ghost' | 'outline' | 'toolbar'
+    size?: 'md' | 'sm'
+    icon?: ReactNode
+    className?: string
+    children?: ReactNode
+  } & import('react').ButtonHTMLAttributes<HTMLButtonElement> & import('react').RefAttributes<HTMLButtonElement>>
+
+  /** 官方居中模态弹窗（body portal + mask/blur + 标准头部/正文/footer；Escape 与遮罩点击触发 onClose）。 */
+  export function Modal(props: {
+    open: boolean
+    onClose: () => void
+    title: string
+    description?: string
+    children?: ReactNode
+    footer?: ReactNode
+    className?: string
+    contentClassName?: string
+    shortcutModal?: string
+    onKeyDownCapture?: import('react').KeyboardEventHandler<HTMLDivElement>
+    backdropBlur?: boolean
+  } & (
+    | { headless: true; closeLabel?: never }
+    | { headless?: false; closeLabel: string }
+  )): import('react').ReactPortal | null
+
   /** 官方图标（1px 线宽）。 */
   export const IconCodeOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronRightOutlineRegular: ComponentType<{ size?: number; className?: string }>

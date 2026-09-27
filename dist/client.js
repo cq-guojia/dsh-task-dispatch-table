@@ -366,7 +366,7 @@ window.__ModuleLoader__.load({
 		const SV_STYLE_ID = "dsh-task-dispatch-table-archive-session";
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
-.dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1010;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+.dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
@@ -378,8 +378,10 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-frame{padding:18px 0;}
-.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;padding:2px 6px;border-radius:6px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:color .1s,background .1s;}
-.dsh-tdt-sv-close:hover{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+/* 头部关闭钮规格照官方 primitives Modal.close（设置窗口关闭钮同源）：28×28、radius-sm、
+   透明底，hover 才出 interactive-bg-hover（官方无色变、无阴影）。 */
+.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;flex:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:15px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));word-break:break-all;}
@@ -518,22 +520,17 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-group-content>*{flex-shrink:0;}
 .dsh-tdt-sv-group-content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px);}
 .dsh-tdt-sv-group-expanded{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible;}
-/* U10 继续对话（开分支）：头部按钮组 + 确认框（叠在会话弹窗之上，z-index 1030 > overlay 1010）。 */
+/* U10 继续对话（开分支）：头部按钮组 + 确认框。确认框 = 官方 primitives Modal + Button
+   （portal 到 body，与本弹窗同 z-index 层、后挂载居上），此处只留头部钮规格与 Modal 内错误行。 */
 .dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
-.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 12px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),color .1s;}
-.dsh-tdt-sv-branch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-branch:disabled{opacity:.55;cursor:default;}
-.dsh-tdt-sv-confirm{position:fixed;inset:0;z-index:1030;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
-.dsh-tdt-sv-confirm-card{background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(440px,calc(100vw - 48px));padding:20px 24px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;}
-.dsh-tdt-sv-confirm-title{font-size:14px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-confirm-text{font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));margin:0;}
-.dsh-tdt-sv-confirm-err{font-size:12px;line-height:1.5;color:var(--dsw-alias-state-error-primary,#c0392b);word-break:break-all;margin:0;}
-.dsh-tdt-sv-confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;}
-.dsh-tdt-sv-confirm-btn{appearance:none;font:inherit;font-size:12px;line-height:20px;cursor:pointer;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 14px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),opacity .1s;}
-.dsh-tdt-sv-confirm-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-confirm-btn[data-primary='true']{background:var(--dsw-alias-brand-primary,#2f6feb);border-color:transparent;color:#fff;}
-.dsh-tdt-sv-confirm-btn[data-primary='true']:hover{filter:brightness(1.08);background:var(--dsw-alias-brand-primary,#2f6feb);}
-.dsh-tdt-sv-confirm-btn:disabled{opacity:.55;cursor:default;filter:none;}
+/* 分支钮对齐官方 outline 小钮（Button.module.css .sm：28 高、radius-sm、0.5px border-l3、12/18 字、padding 0 10px）。 */
+.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;height:28px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:.5px solid var(--dsw-alias-border-l3,rgba(128,128,128,.4));border-radius:var(--dsw-radius-sm,6px);padding:0 10px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-branch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-branch:disabled{opacity:.4;cursor:not-allowed;}
+/* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
+.dsh-tdt-sv-forkmodal{width:min(440px,100%);}
+/* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
+.dsh-tdt-sv-forkerr{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-state-error-primary,#e5484d);word-break:break-word;}
 `;
 		let injected = false;
 		/**
@@ -1686,28 +1683,20 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/mirror/TurnTailNodeView.tsx
-		/** 官方 hasAssistantReplyContent。 */
-		function hasAssistantReplyContent(blocks) {
-			return blocks.some((block) => {
-				if (block.kind === "reasoning" || block.kind === "tool-call") return false;
-				if (block.kind === "text") return (block.text ?? "").trim() !== "";
-				return true;
-			});
-		}
 		/** 官方 assistantText：只取 text 块。 */
 		function assistantText$1(blocks) {
 			return blocks.flatMap((block) => block.kind === "text" ? [block.text ?? ""] : []).join("");
 		}
 		/** Turn 尾部操作行：复制 / 分支（只读⇒不可用态）/ 用量 / 结束时钟。 */
 		function TurnTailNodeViewMirror(props) {
-			const { data, endsWithResponse, t } = props;
+			const { data, t } = props;
 			const closing = data.closing;
 			if (closing === null || closing === void 0) return null;
 			const text = assistantText$1(closing.blocks);
 			return (0, react.createElement)("div", {
 				className: ocOr("TurnTailNodeView", "root", "dsh-tdt-sv-tail"),
 				"data-turn-tail": data.turn,
-				"data-actions-reveal": endsWithResponse ? "always" : "hover"
+				"data-actions-reveal": "always"
 			}, (0, react.createElement)(MessageIconActionsMirror, {
 				text,
 				time: closing.time,
@@ -1823,7 +1812,6 @@ window.__ModuleLoader__.load({
 		//#region src/client/session-view.ts
 		/** 稳定的空序列（避免默认值每次新建数组）。 */
 		const EMPTY_ORDER = [];
-		const EMPTY_TURN_ORDER = [];
 		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
 		let officialWarned = false;
 		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
@@ -1969,10 +1957,9 @@ window.__ModuleLoader__.load({
 		* @param node - keyed ChatNode。
 		* @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
 		* @param t - 翻译席位（已包占位符替换）。
-		* @param lastTurn - 官方 timeline.turnOrder 末位（尾部操作行判定）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, lastTurn, groupPart) {
+		function renderKeyedNode(node, turnProcess, t, groupPart) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -1988,7 +1975,6 @@ window.__ModuleLoader__.load({
 					if (data === void 0 || data.closing === null || data.closing === void 0) return null;
 					return (0, react.createElement)(TurnTailNodeViewMirror, {
 						data,
-						endsWithResponse: data.turn === lastTurn && hasAssistantReplyContent(data.closing.blocks),
 						t
 					});
 				}
@@ -2249,10 +2235,8 @@ window.__ModuleLoader__.load({
 			const order = chat?.order ?? EMPTY_ORDER;
 			const store = chat?.nodes;
 			const keyed = order.length > 0 && store !== void 0;
-			const turnOrder = chat?.timeline?.turnOrder ?? EMPTY_TURN_ORDER;
 			const turns = chat?.timeline?.turns;
-			const lastTurn = turnOrder.length === 0 ? void 0 : turnOrder[turnOrder.length - 1];
-			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, lastTurn, groupPart), [tt, lastTurn]);
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, groupPart), [tt]);
 			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
 				keyed,
@@ -2312,30 +2296,29 @@ window.__ModuleLoader__.load({
 				className: "dsh-tdt-sv-close",
 				"aria-label": tt("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), (0, react.createElement)(ChatViewFrame, { children: body }))), confirming ? (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-confirm",
-				onClick: () => {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+				open: confirming,
+				onClose: () => {
 					if (!forking) setConfirming(false);
-				}
-			}, (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-confirm-card",
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-confirm-title" }, tt("forkConfirmTitle")), (0, react.createElement)("p", { className: "dsh-tdt-sv-confirm-text" }, tt("forkConfirmText")), forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-confirm-err" }, tt("forkFailed", { error: forkErr })) : null, (0, react.createElement)("div", { className: "dsh-tdt-sv-confirm-actions" }, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-confirm-btn",
-				disabled: forking,
-				onClick: () => {
-					setConfirming(false);
-				}
-			}, tt("forkCancel")), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-confirm-btn",
-				"data-primary": "true",
-				disabled: forking,
-				onClick: onForkAccept
-			}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))))) : null);
+				},
+				title: tt("forkConfirmTitle"),
+				closeLabel: tt("debugClose"),
+				description: tt("forkConfirmText"),
+				className: "dsh-tdt-sv-forkmodal",
+				footer: [(0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					key: "cancel",
+					variant: "outline",
+					disabled: forking,
+					onClick: () => {
+						setConfirming(false);
+					}
+				}, tt("forkCancel")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					key: "accept",
+					variant: "primary",
+					disabled: forking,
+					onClick: onForkAccept
+				}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))]
+			}, forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
 		}
 		//#endregion
 		//#region src/client/index.ts

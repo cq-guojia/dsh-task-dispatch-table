@@ -1,6 +1,7 @@
 // 官方对照：packages/client/ui-chat/src/client/chat/TurnTailNodeView.tsx（0.1.7-rc.2 lib/client.js:6460-6546）
 //   root（flex column，gap 16px）> actions（margin-top 4px / margin-left -6px）
-//   data-turn-tail = turn；data-actions-reveal = always（本轮就是最后一轮且有回复）| hover（历史轮，悬停才显）。
+//   data-turn-tail = turn；data-actions-reveal 官方 = always（最后一轮且有回复）| hover（历史轮，悬停才显）；
+//   弹窗偏差（用户拍板 2026-09-27）：归档会话轮数少，恒 'always' 每轮操作行全部常显，不做 hover 显隐。
 //   closing === null（本轮没有回复）⇒ 只留 turnTail 插槽；弹窗无插槽 ⇒ 整块不渲染。
 // hasAssistantReplyContent（lib/client.js:6466）：reasoning / tool-call 不算回复，空文本不算。
 import { createElement as h } from 'react'
@@ -41,18 +42,16 @@ function assistantText(blocks: ReadonlyArray<ContentBlockFace>): string {
 /** Turn 尾部操作行：复制 / 分支（只读⇒不可用态）/ 用量 / 结束时钟。 */
 export function TurnTailNodeViewMirror(props: {
   data: TurnTailDataFace
-  /** 官方 endsWithResponse：本轮是最后一轮且最后一条助手消息有回复内容。 */
-  endsWithResponse: boolean
   t: Translate
 }): ReturnType<typeof h> | null {
-  const { data, endsWithResponse, t } = props
+  const { data, t } = props
   const closing = data.closing
   if (closing === null || closing === undefined) return null
   const text = assistantText(closing.blocks)
   return h('div', {
     className: ocOr('TurnTailNodeView', 'root', 'dsh-tdt-sv-tail'),
     'data-turn-tail': data.turn,
-    'data-actions-reveal': endsWithResponse ? 'always' : 'hover',
+    'data-actions-reveal': 'always',
   },
     h(MessageIconActionsMirror, {
       text,

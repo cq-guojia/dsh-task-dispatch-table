@@ -148,3 +148,20 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 
 **待真机**：① 确认框交互（防误点）② fork 成功跳转到新分支会话（标题 `(1)`）③ 源会话保持归档只读 ④ fork 失败提示文案。
 
+## 2026-09-27（第九轮）— 确认框换官方 Modal + Button；头部钮规格对齐官方设置窗口
+
+——真机反馈（附官方设置窗口截图）：① 头部两钮带图标没问题，但 hover 背景/大小要与官方设置窗口一模一样；② 确认框先找官方现成的，「能用现成的不要自己写」；③ **暗色主题下确认框主按钮白底白字看不见**（自绘 `[data-primary]` 写死 `--dsw-alias-brand-primary` + `color:#fff` 的锅——该变量不可靠）。
+
+**源码事实（@deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2，公开导出，本地 pack 读实现本体）**：
+- `Modal`（lib/index.js:5010）：body portal + mask（`--dsw-alias-bg-mask-1` + `--dsw-mask-blur`）+ 居中卡片（默认 380px、`--dsw-alias-bg-layer-2`、`--dsw-elevation-prominent`、radius-panel）；标准头 = title + **28×28 关闭钮**（radius-sm、透明底、hover `--dsw-alias-interactive-bg-hover`、icon 14px——即设置窗口关闭钮同源规格）；footer 插槽右对齐（gap 8、padding 0 24）；Escape / 遮罩点击 / 头部叉统一走 onClose（`useModalLayer` 管 focus 与还原）；root z-index 1000。
+- `Button`（:3179）：variant `primary` = `--dsw-alias-button-primary-fill` 底 + `--dsw-alias-label-primary-foreground` 字（token 族驱动，**明暗自适应**），`outline` = 0.5px `--dsw-alias-border-l3`；size `sm` = 28px 高、12px 字、padding 0 10px；disabled opacity .4。
+- `RiskConfirmation`（:5073）= Modal + footer 双 Button（outline 取消 / primary 确认）的官方先例——本场景无勾选门槛，直接 Modal + footer 同构组合，弃 RiskConfirmation 的 checkbox。
+
+**落码**：确认框整段换 `h(Modal, { open: confirming, onClose: forking 时拦截, title: forkConfirmTitle, closeLabel: debugClose, description: forkConfirmText, className: 'dsh-tdt-sv-forkmodal' }, forkErr 行)` + footer 双 `Button`（outline 取消 / primary 确认，forking 双 disabled、确认钮文案切 forkWorking）；错误行移入 Modal body（`--dsw-alias-state-error-primary`）。自绘 `.dsh-tdt-sv-confirm*` 九条规则全删；头部关闭钮照 Modal.close 重写（28×28 / radius-sm / 去 hover 色变、icon 16→14）；分支钮照官方 outline `.sm` 重写（28 高 / radius-sm / 0.5px border-l3 / padding 0 10px / gap 4 / disabled opacity .4 not-allowed）；弹窗 overlay z-index 1010→1000（与官方 Modal 同层，确认框 portal 到 body 末尾后挂载居上）；`.dsh-tdt-sv-forkmodal{width:min(440px,100%)}`（RiskConfirmation 同款，后注入同特异性覆盖 .dialog 的 380px）。primitives.d.ts 补 `Button` / `Modal` 最小类型面（照官方 d.ts 复述，含 headless/closeLabel 判别联合）。冒烟 +1：确认框挂官方 Modal 断言。
+
+**验证**：typecheck + build（dist 161.89 kB，较自绘版 −1.2 kB）+ 冒烟 **107 项全过**。
+
+**待真机**：① 暗色主题下确认框主按钮可读（官方 primary token）② 确认框形态与官方设置弹窗一致 ③ 头部两钮 hover 背景与设置窗口一致 ④ fork 跳转四点同第八轮。
+
+**第九轮追加（同日）——尾部操作行恒常显（用户拍板）**：官方尾部操作行（复制/用量/结束时钟）= 历史轮 hover 才显、最后一轮常显（`data-actions-reveal='always'|'hover'`）；用户拍板弹窗改为**每轮模型回复的操作行全部常显**（归档会话轮数少，不必悬停翻找）。落码：`TurnTailNodeViewMirror` 的 `data-actions-reveal` 恒 `'always'`，`endsWithResponse` prop 及调用链（session-view 的 `lastTurn` / `turnOrder` / `EMPTY_TURN_ORDER`）全链删除；`hasAssistantReplyContent` 保留导出（官方同构）。build（dist 161.14 kB）+ 冒烟 107 项全过。
+
