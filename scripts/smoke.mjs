@@ -422,6 +422,23 @@ try {
   // 官方块渲染器 case "tool-call": break——步内工具块永不渲染成卡片。
   check('assistant 块渲染跳过 tool-call（官方 case break 同构）',
     /case ['"]tool-call['"]:\s*break/.test(clientJs))
+  // 官方 ui-tool ToolRow 对齐（2026-09-28）：read→ReadBlock(8 行中间截断)、bash→TerminalBlock(∞)、
+  // 其余→ioCard 灰框；官方类发现扩展到 ui-tool 包前缀。
+  // 产物里正则字面量的斜杠是 \/ 转义形式，envelope 只查 '<type>file' 前缀。
+  check('工具卡接官方 ReadBlock（maxLines 8 + read envelope 校验）',
+    clientJs.includes('ReadBlock') && /maxLines:\s*8\b/.test(clientJs) && clientJs.includes('<type>file'))
+  check('工具卡接官方 TerminalBlock（maxLines ∞ + 退出码/信号标记解析）',
+    clientJs.includes('TerminalBlock') && /maxLines:\s*Infinity/.test(clientJs)
+    && clientJs.includes('killed by signal') && clientJs.includes('[exit code: '))
+  check('其余工具展开体 = 官方 ioCard 灰框（输入/分隔/输出 + data-error）',
+    clientJs.includes('ioCard') && clientJs.includes('ioSection') && clientJs.includes('ioDivider') && clientJs.includes('ioText'))
+  check('官方 ToolRow 类发现已扩展 ui-tool 包前缀',
+    clientJs.includes('@deepseek-ai/dsh-client-ui-tool/'))
+  check('官方 ReadBlock/TerminalBlock 文案词典已打进 bundle',
+    clientJs.includes('显示 {shown} / {total} 行') && clientJs.includes('展开其余 {n} 行输出') && clientJs.includes('未正常退出'))
+  check('工具行五态 data-state（preparing/running/ok/error/stopped）+ data-tool/data-variant',
+    ['preparing', 'running', 'stopped'].every(k => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`))
+    && clientJs.includes('"data-tool"') && clientJs.includes('"data-variant"') && clientJs.includes('"data-state"'))
   check('思考行标题用官方 message.think（「思考」，非「思考过程」）',
     clientJs.includes('thinkLabel') && !clientJs.includes('sessionReasoning'))
   // 官方 primitives 是 dsh 浏览器内核的平台模块：产物里必须保留成 require（不能内联），

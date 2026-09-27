@@ -160,6 +160,79 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
     panelRef?: { current: HTMLElement | null },
   ): void
 
+  /** 运行态文字微光（工具行摘要 running 时官方套的 shimmer 壳）。 */
+  export function TextShimmer(props: {
+    active?: boolean
+    className?: string
+    children?: ReactNode
+  }): ReactNode
+
+  /** 官方读取文件卡：行号列 + 中间截断（「… 其余 N 行」）+ Shiki 高亮。 */
+  export const ReadBlock: ComponentType<{
+    /** 顶部横幅标签（文件路径）。 */
+    label?: string
+    /** 返回窗口的行（保留文件自身行号）。 */
+    lines: ReadonlyArray<{ number: number; text: string }>
+    labels: {
+      codeLabel: string
+      wrapLabel: string
+      unwrapLabel: string
+      window: (shown: number, total: number) => string
+      copy: string
+      copied: string
+      collapseAria: string
+      expandAria: (hidden: number) => string
+      collapse: string
+      expand: (hidden: number) => string
+    }
+    /** 文件总行数（「显示 N / M 行」用）。 */
+    totalLines: number
+    /** 语言提示（扩展名推导）；未知 = 纯等宽。 */
+    lang?: string
+    /** 中间截断前的内容行上限（官方 ToolRow 传 8）。 */
+    maxLines?: number
+    className?: string
+  }>
+
+  /** 官方终端卡：命令行 + 输出面 + 退出码/信号 pill。 */
+  export const TerminalBlock: ComponentType<{
+    /** 命令行（提示符后原样渲染）。 */
+    command: string
+    /** 提示符工作目录；缺省渲染裸 `$`。 */
+    cwd?: string
+    /** 宿主 home：cwd 等于它时折叠成 `~`；缺省不折叠。 */
+    home?: string
+    output?: string
+    /** 结算退出码；非零出状态 pill，null = 无退出码。 */
+    exitCode?: number | null
+    /** 结算终止信号；有值时优先于退出码。 */
+    signal?: string
+    /** 仍在运行：无 output 只画提示行。 */
+    running?: boolean
+    /** 输出行上限（官方 ToolRow 传 Infinity = 不截断）。 */
+    maxLines?: number
+    /** 复制载荷覆盖；缺省复制原始输出。 */
+    copyText?: string
+    /** 卡片侧栏运行状态点（官方 ToolRow 让外层行承担 ⇒ 不传）。 */
+    runStateDot?: boolean
+    className?: string
+    labels: {
+      signal: (signal: string) => string
+      exitCode: (exitCode: number) => string
+      noExitCode: string
+      running: string
+      failed: string
+      done: string
+      copy: string
+      copied: string
+      noOutput: string
+      collapseAria: string
+      collapse: string
+      expandAria: (hidden: number) => string
+      expand: (hidden: number) => string
+    }
+  }>
+
   /** 官方文件变更内联 diff 面（编辑/写入工具卡展开体）。 */
   export function DiffBlock(props: {
     diffs: ReadonlyArray<{ path: string; oldText: string | null; newText: string }>

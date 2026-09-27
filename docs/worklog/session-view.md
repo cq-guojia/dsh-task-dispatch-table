@@ -208,3 +208,27 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 
 **待真机**：① 重试行折叠摘要「已重试模型请求 (n/m) · Ns」+ 点开见「重试延迟 / 失败原因」② scheduled 在途时「正在重试…」倒计时 + shimmer ③ 轮次失败行：红点 + 红「本轮运行失败」+ 灰原因 + 右侧 SERVER 等机器码 `<code>` 标签 ④ 限长行黄点警示组 ⑤ 暗色主题配色。
 
+## 2026-09-28（第十二轮）— 工具卡三块官方化：ReadBlock / TerminalBlock / ioCard 灰框（清单 9/13/17）
+
+——用户三张官方截图要求拉齐：① 读取文件展开官方是**代码卡**（头部路径 + 换行/复制钮）+ 行号列 + **中间截断**（头 4 行 + 尾 4 行 + 「… 其余 72 行」），我方把全部行铺出来了且格式不对；② 运行命令展开官方是**深底终端卡**（命令行 + 复制钮 + 输出区），我方是「输入/输出」两行；③ 工具调用官方有个**灰色圆边框容器**（输入 + 分隔线 + 输出），我方内容对但缺这个框。
+
+**源码事实（先读后动；工具行真身不在 chat 包，在 `@deepseek-ai/dsh-client-ui-tool@0.1.7-rc.2`）**：
+- **ToolRow**（lib/client.js:1499-1745）= 无边框裸行 root（flex column）+ DisclosureRow + 五态 `data-state=preparing|running|ok|error|stopped`（`error.code==='interrupted'→stopped`）+ `data-tool`/`data-variant`；**成功结算但 terminalFailed（exitCode≠0 或有 signal）⇒ 整行 error**（GenericToolCard:1767）。展开体**分发链**：askQuestion → `TerminalBlock(maxLines:∞)` → `DiffBlock(maxLines:9)` → `ReadBlock(maxLines:8)` → image → SearchBlock(8) → WebBlock → ToolDetails → 兜底 **ioCard 灰框**（ioSection(输入)+ioDivider+ioSection(输出[data-error])；`border:.5px border-l1; radius-lg; background:markdown-code-block`）——截图三块正对应链上三站。
+- **readCardModel**（421-435）：settled + 非 error + name==='read' + 参数合法 + `readMeta` 收窄（lines 严格递增 ≤totalLines）+ 结果 envelope 正则 `^<path>…</path>\n<type>file</type>\n<content>\n…\n</content>$`——不满足任一条回退 generic。
+- **terminalCardModel**（929-968）：`shellCall` 校验（description 必填，无 = persistent → 结算走 generic）；background → null；`parseExitStatus`（903）剥尾部 `\n[exit code: N]` / `\n[killed by signal: S]`；spill 常量（Full formatted result stored at）命中也回退。
+- **摘要体系**：SUMMARY_KEYS per-variant（bash=description+command、read/write/edit=path、search=query）；TOOL_TITLE_KEYS 专属标题（pwsh/read_image/grep/glob；web_search/web_fetch 落 variant 标题「搜索/读取」）；diff 卡摘要旁**独立 `diffStat` span**（`+N -M`，diffTotals）——此前「来源待核」就在这；read/write/edit 摘要路径 = **fileLink**（下划线，点击 openFile——U11 入口顺势挂上）。VARIANT_ICONS size 14。
+- **ReadBlock / TerminalBlock 是 primitives 公开导出**（.d.ts 全文核实），labels 契约 + 官方 zh 词典逐键抄（「显示 {shown} / {total} 行」「退出码 {code}」「未正常退出」等 22 键）。
+- **类发现坑**：ToolRow 的 CSS module 挂在 `@deepseek-ai/dsh-client-ui-tool/` 前缀的 style 标签上 ⇒ `official-classes.ts` 从单前缀扩成双前缀数组（`dsh-client-ui-chat/` 字面量保留，冒烟旧断言依赖）。
+
+**落码**：
+- `mirror/GenericCommandCard.tsx` 全文重写（~560 行）：官方模型函数集逐值镜像（TOOL_VARIANTS / TOOL_TITLE_KEYS / VARIANT_ICONS / SUMMARY_KEYS / intendedDiff / readMeta / shellCall / parseExitStatus / hasSpillNotice / terminalCardModel…）；展开体按分发链接官方 ReadBlock(8)/TerminalBlock(∞)/DiffBlock(9)/ioCard 灰框（code 变体前置 CodeBlock）；五态 + TextShimmer 摘要 + errmark/stopmark；settled/phase/interrupted 由 session-view 传入。
+- `primitives.d.ts`：补 TextShimmer / ReadBlock / TerminalBlock 声明面。
+- `locales.ts`：+22 键（read 窗口/收展、terminal 信号/退出码/运行态/无输出/收展/发送输入/终端会话等）zh 逐字官方 + en 修正（Bash/Grep/Glob/Search、IN 等）。
+- `official-classes.ts`：CSS_PKG_PREFIXES 双前缀；`archive-session-css.ts`：删旧盒式工具卡与「输入/输出」三行死规则，换官方 ToolRow 兜底镜像（裸行/tool-row hover/io-card/io-section(sticky)/io-divider/io-text[data-error]/tool-terminal `--dsl-terminal-*`）。
+- `session-view.ts`：toolCallCard 传 `settled`/`phase`/`interrupted`（keyed `error.code==='interrupted'`；legacy 同步）+ `ConversationNodeLike.meta` 类型。
+- `scripts/smoke.mjs`：+6 断言（ReadBlock 8 行 + envelope、TerminalBlock ∞ + 退出码/信号标记、ioCard 四类名、ui-tool 前缀发现、zh 词典三串、data-state 五值）。
+
+**验证**：typecheck + build（dist 210.42 kB）+ 冒烟 **130 项全过**（原 124 + 6）。踩坑一则：断言查产物 envelope 用 `includes('<type>file</type>')` 匹配不到——正则字面量入产物后斜杠成 `\/` 转义，改查 `'<type>file'` 前缀。本轮纯照官方逐字落码（ui-map 清单 9/13/17），无方案取舍，不新增决策。
+
+**待真机**：① 读取文件展开 = 行号列 + 头尾各 4 行 + 中间「… 其余 N 行」，点行内「展开其余 N 行」放全 ② 运行命令展开 = 深底终端卡（命令 + 复制 + 输出），失败命令整行红色 + 右侧退出码/信号 ③ 其余工具展开 = 灰色圆边框容器（输入/输出）④ read/write/edit 摘要路径下划线可点（进 U11 分栏预览）⑤ diff 卡摘要旁 `+N -M`。
+

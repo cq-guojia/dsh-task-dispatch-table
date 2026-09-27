@@ -17,9 +17,14 @@
 //   MessageItem(32): bubble userRow userStack contextRow fileCard ... turnErrorRow retryRow ...
 //   GenericCommandCard(8): root row title summary body chevron leading separator
 //   （另有 ContextBody / StatsPills / TurnNavigator / accessibility 等，按需取用）
+//   ui-tool 包（工具卡，2026-09 对齐官方 GenericToolCard 时接入）：
+//   ToolRow(30): root row leading title chevron sep summary summarySuffix diffStat fileLink
+//   errorSummary stoppedSummary bodyWrap inspectButton detailsBodyWrap bodyScroll ioCard
+//   ioSection ioLabel ioDivider ioText codeBody terminalBody diffBody readBody imageBody
+//   searchBody webBody searchRecovery imageLabel imageMeta visuallyHidden
 
-/** 官方 chat 包注入的 style 标签 data-plugin-css 前缀。 */
-const CSS_PREFIX = '@deepseek-ai/dsh-client-ui-chat/'
+/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡）。 */
+const CSS_PKG_PREFIXES = ['@deepseek-ai/dsh-client-ui-chat/', '@deepseek-ai/dsh-client-ui-tool/']
 
 /** 语义名 → 真实（带哈希）类名。 */
 export type OfficialClassMap = Map<string, string>
@@ -75,8 +80,9 @@ export function discoverOfficialClasses(): Map<string, OfficialClassMap> {
     for (let i = 0; i < tags.length; i++) {
       const tag = tags[i] as HTMLElement
       const id = tag.dataset.pluginCss ?? ''
-      if (!id.startsWith(CSS_PREFIX)) continue
-      const module = id.slice(CSS_PREFIX.length).replace(/\.module\.css$/, '')
+      const prefix = CSS_PKG_PREFIXES.find(candidate => id.startsWith(candidate))
+      if (prefix === undefined) continue
+      const module = id.slice(prefix.length).replace(/\.module\.css$/, '')
       const parsed = parseOfficialCss(tag.textContent ?? '')
       // 解析成空表 = 解析器没认出该模块的类名格式（曾在 GenericCommandCard 上踩过：
       // 哈希以 `_` 开头被首下划线切分跳过）⇒ 显式告警，别再静默退回自绘。

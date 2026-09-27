@@ -137,6 +137,8 @@ type ConversationNodeLike = NodeBaseLike & {
   call?: { name: string; argsRaw: string } | null
   isError?: boolean
   error?: { name: string; code: string }
+  /** 官方 ToolResultNode.meta（tool-fs diffs / read 窗口；归档快照透传）。 */
+  meta?: unknown
   // command（records.d.ts:225-247）
   name?: string | null
   args?: string | null
@@ -561,7 +563,7 @@ function toolCallCard(node: ChatNodeFace, t: Translate, onOpenFile?: (path: stri
   if (root === undefined || root === null) return null
   const settled = root.kind === 'tool-result'
   const call = settled ? root.call as Record<string, unknown> | undefined : root
-  const error = root.error as { name?: string } | undefined
+  const error = root.error as { name?: string; code?: string } | undefined
   return {
     name: typeof call?.name === 'string' ? call.name : 'tool',
     argsRaw: typeof call?.argsRaw === 'string' ? call.argsRaw : '',
@@ -569,6 +571,9 @@ function toolCallCard(node: ChatNodeFace, t: Translate, onOpenFile?: (path: stri
     isError: root.isError === true,
     errorName: error?.name,
     meta: root.meta,
+    settled,
+    phase: settled ? undefined : root.phase === 'preparing' ? 'preparing' : 'start',
+    interrupted: error?.code === 'interrupted',
     onOpenFile,
     t,
   }
@@ -724,6 +729,9 @@ function renderLegacyNode(node: ConversationNodeLike, t: Translate, fileOpen?: F
         output: contentText(node.content),
         isError: node.isError === true,
         errorName: node.error?.name,
+        meta: node.meta,
+        settled: true,
+        interrupted: (node.error as { code?: string } | undefined)?.code === 'interrupted',
         onOpenFile: fileOpen?.open,
         t,
       })

@@ -88,29 +88,32 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-reasoning-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
 .dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
 .dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
-/* 工具卡展开体（无 diff 的工具）：输入 / 输出 两行，行间分隔线。
-   对齐与字号照官方截图：标签 13px tertiary、内容 12px 等宽且行高与标签同拍（20px）⇒ 首行与续行同列同基线。 */
-.dsh-tdt-sv-io{flex-direction:column;display:flex;}
-.dsh-tdt-sv-io-row{display:flex;gap:12px;padding:10px 16px;align-items:baseline;}
-.dsh-tdt-sv-io-row+.dsh-tdt-sv-io-row{border-top:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));}
-.dsh-tdt-sv-io-label{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px;}
-.dsh-tdt-sv-io-content{flex:1;min-width:0;margin:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;white-space:pre;overflow-x:auto;word-break:normal;color:var(--dsw-alias-label-primary,#1f2328);}
+/* ── 工具卡（官方 ui-tool ToolRow.module.css 兜底镜像，官方类命中时 ocOr 走官方） ──
+   官方行外观 = 无边框裸行（root 仅 flex column）；展开体分发链：
+   TerminalBlock(∞) → DiffBlock(9) → ReadBlock(8) → ioCard 灰框（输入/分隔/输出）。 */
+.dsh-tdt-sv-tool{flex-direction:column;display:flex;}
+.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-tool-title{font-weight:400;transition:color .1s;}
+.dsh-tdt-sv-tool-chevron{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tool-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
+.dsh-tdt-sv-tool-diffstat{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
+.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-filelink:hover{color:var(--dsw-alias-label-primary,#1f2328);text-decoration-color:currentColor;}
+.dsh-tdt-sv-tool-errmark{color:var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-sv-tool-stopmark{color:var(--dsw-alias-state-warn-label,#f5a623);}
+.dsh-tdt-sv-tool-bodywrap{flex-direction:column;display:flex;}
+.dsh-tdt-sv-io-card{border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
+.dsh-tdt-sv-io-section{grid-template-columns:max-content 1fr;align-items:baseline;column-gap:14px;max-height:150px;padding:12px 16px;display:grid;overflow-y:auto;}
+.dsh-tdt-sv-io-label{color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
+.dsh-tdt-sv-io-divider{background:var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex:none;height:.5px;}
+.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-io-text[data-error]{color:var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-sv-tool-block{margin:4px 0 4px 4px;}
+.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:18px;--dsl-terminal-output-max-height:224px;border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
 .dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
 .dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
-.dsh-tdt-sv-tool{align-self:stretch;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));overflow:hidden;}
-.dsh-tdt-sv-tool-head{display:flex;align-items:center;gap:8px;padding:6px 10px;flex-wrap:wrap;font-size:12px;}
-.dsh-tdt-sv-tool-name{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-weight:600;color:var(--dsw-alias-brand-primary,#2f6feb);}
-.dsh-tdt-sv-tool-err{color:var(--dsw-alias-state-error-primary,#c0392b);font-weight:600;}
-.dsh-tdt-sv-tool details{border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.24));}
-.dsh-tdt-sv-tool summary{cursor:pointer;list-style:none;padding:6px 10px;font-size:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.dsh-tdt-sv-tool summary::-webkit-details-marker{display:none;}
-.dsh-tdt-sv-tool summary>span:last-child{margin-left:auto;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.9));}
-.dsh-tdt-sv-tool>details>summary{border-top:none;}
-.dsh-tdt-sv-tool>details:not(:first-child)>summary{border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.24));}
-.dsh-tdt-sv-tool pre{margin:0;padding:8px 10px;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:14em;overflow:auto;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-outcome{display:block;margin-top:4px;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;}
-.dsh-tdt-sv-outcome-err{color:var(--dsw-alias-state-error-primary,#c0392b);}
-.dsh-tdt-sv-outcome-ok{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-sv-notice{align-self:center;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));padding:2px 8px;}
 .dsh-tdt-sv-hint{font-size:12px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
 /* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
@@ -212,9 +215,6 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
-/* U11 工具卡「文件」行 / diff 摘要路径：mono 链接钮（点击走统一 openFile 入口开预览分栏）。 */
-.dsh-tdt-sv-io-file{appearance:none;background:0 0;border:none;padding:0;margin:0;font:inherit;cursor:pointer;color:var(--dsw-alias-brand-primary,#2f6feb);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;text-align:left;word-break:break-all;}
-.dsh-tdt-sv-io-file:hover{text-decoration:underline;text-underline-offset:2px;}
 `
 
 let injected = false

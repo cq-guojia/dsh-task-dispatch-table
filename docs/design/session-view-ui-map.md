@@ -92,13 +92,15 @@ for (let i=0;i<lines.length;i++){
 | **行内 code chip**（`web_search`、`AGENTS.md`） | `MarkdownText` 行内 code | 小圆角底色 chip | ✅ |
 | **emoji 标题**（🔑 / 💡） | 就是 mdast heading 里的**文本内容**，无特殊组件 | — | ✅ |
 | **列表圆点 / 加粗** | `MarkdownText` | — | ✅ |
-| 文件 mention 下划线 | `MarkdownText` 的 `fileMentions` 参数 | 行内 code 解析为真实文件 → 下划线链接（`openFile`） | ❌（未传，见清单 20） |
+| 文件 mention 下划线 | `MarkdownText` 的 `fileMentions` 参数 | 行内 code 解析为真实文件 → 下划线链接（`openFile`） | ✅（U11：collectFilePaths/makeFileMentions 会话级词表，与工具卡同走 `openFile` 分栏预览） |
 
-> **说明**：primitives 包自带 **32 个可读 `.module.css`**（CodeCard / TerminalBlock / ReadBlock / DiffBlock / SearchBlock / WebBlock / DisclosureRow / user-text（mention chips）/ Button / Pill / Tag / Tooltip / Modal / Menu / JsonTree / StateDot / …），由 primitives 包**自行注入 document**。⇒ 我们用官方组件时**无需**自己发现这些类名（样式随组件走）；`official-classes.ts` 目前只扫 `dsh-client-ui-chat/` 前缀即可覆盖自绘部分，若将来要复用 primitives 的类名再扩展前缀。
+> **说明**：primitives 包自带 **32 个可读 `.module.css`**（CodeCard / TerminalBlock / ReadBlock / DiffBlock / SearchBlock / WebBlock / DisclosureRow / user-text（mention chips）/ Button / Pill / Tag / Tooltip / Modal / Menu / JsonTree / StateDot / …），由 primitives 包**自行注入 document**。⇒ 我们用官方组件时**无需**自己发现这些类名（样式随组件走）；`official-classes.ts` 现扫 `@deepseek-ai/dsh-client-ui-chat/` + `@deepseek-ai/dsh-client-ui-tool/` 两个前缀（ui-tool 是工具行真身 `ToolRow` 所在包，2026-09-28 扩展），primitives 自绘兜底部分仍不扫。
 
 ---
 
-## 四、工具调用 / 命令卡（`GenericCommandCard.module.css`，8 类）
+## 四、工具调用 / 命令卡（chat 包 `GenericCommandCard.module.css`，8 类——command 节点兜底；**工具行真身 = `@deepseek-ai/dsh-client-ui-tool` 的 `ToolRow.module.css`（30 类）+ `GenericToolCard`**）
+
+> **官方 ToolRow 展开（源码核实 2026-09-28，ui-tool lib/client.js）**：行 = `root(无边框裸行 flex column)` + DisclosureRow(`row/leading/title/separator/chevron/summary`) + 五态 `data-state=preparing|running|ok|error|stopped`（`data-tool`/`data-variant` 同挂 root）；**成功结算但终端退出码≠0/有信号 ⇒ 整行 error**（`terminalFailed`）。**展开体分发链**（ToolRow 内部）：`askQuestion` → `TerminalBlock(maxLines:∞)` → `DiffBlock(maxLines:9)` → `ReadBlock(maxLines:8)` → image → `SearchBlock(8)` → `WebBlock` → `ToolDetails` → 兜底 **ioCard 灰框**（`ioSection(输入)+ioDivider+ioSection(输出[data-error])`，`border:.5px border-l1; radius-lg; background:markdown-code-block`）。摘要：per-variant SUMMARY_KEYS（bash=description+command、read/write/edit=path、search=query）+ 专用标题表 TOOL_TITLE_KEYS（pwsh/read_image/grep/glob 等专属，web_search/web_fetch 落 variant 标题）；diff 卡摘要旁独立 `diffStat` span（`+N -M`，`diffTotals` 计算）；read/write/edit 摘要路径 = fileLink（下划线，点击 `openFile`）。镜像实现：mirror/GenericCommandCard.tsx（逐值照抄）。
 
 | 元素 | 类 | 关键样式 | 我们 |
 |---|---|---|---|
@@ -106,13 +108,13 @@ for (let i=0;i<lines.length;i++){
 | 行 | `row` | 由官方 `DisclosureRow` 渲染（primitives，箭头/悬停/展开自带） | ✅ |
 | 前导图标 | `leading` | `flex-shrink:0` | ✅ |
 | 标题 | `title` | `font-weight:400; transition:color .1s`；`:hover` 时变 `label-primary` | ✅ |
-| 分隔点 | `separator` | `width:2px;height:2px;border-radius:1px;margin:0 8px;background:label-caption` | ❌（未加） |
+| 分隔点 | `separator` | `width:2px;height:2px;border-radius:1px;margin:0 8px;background:label-caption` | ✅ |
 | 摘要 | `summary` | `color:label-tertiary; font-size:secondary(13px); line-height:calc(24px+delta); text-overflow:ellipsis; white-space:nowrap; flex:auto`（**flex:auto 把箭头推到最右**） | ✅ |
 | 箭头 | `chevron` | `color:label-secondary` | ✅（由 DisclosureRow 自带） |
-| 正文 | `body` | 折叠展开后的 `<pre>`（`data-error` 变体） | ✅ |
-| 状态 | `data-state` / `data-variant="others"` | 官方用 data 属性表达 running/error | 🟡（我们只写了 error/success） |
+| 正文 | — | ~~折叠展开后的 `<pre>`~~ → **官方展开体分发链**（见上注）：read=ReadBlock(8)、bash=TerminalBlock(∞)、write/edit=DiffBlock(9)、其余=ioCard 灰框 | ✅ |
+| 状态 | `data-state` / `data-variant="others"` | 官方用 data 属性表达 running/error | ✅（五态 preparing/running/ok/error/stopped + data-tool/variant 全挂） |
 
-**官方行为**：折叠时 = `row(leading+title)` + `separator` + `summary`；展开时 = `pre.body`。摘要官方取**人话**（命令/文件名），不是原始 JSON。→ 我们已改为 command/file_path 优先 ✅
+**官方行为**：折叠时 = `row(leading+title)` + `separator` + `summary`；展开时 = 分发链组件（不再是 pre.body）。摘要官方取**人话**（命令/文件名），不是原始 JSON。→ 我们已改为 command/file_path 优先 ✅
 
 ---
 
@@ -149,8 +151,8 @@ for (let i=0;i<lines.length;i++){
 | **「用时 29 秒 ⌃」分隔条** | `TurnProcessNodeView.root` | 高 `33px+delta`、**border-bottom `.5px` `--dsw-alias-border-l2`**、`padding:0 0 8px`、`:not([data-open]){margin-bottom:8px}`；点击展开/收起本 turn 的过程条目；`chevron` 14px `[data-open]` 旋转 180° | 🟡（我们有「过程 · N」行但**没有这条分隔线样式**，label 也不是用时） |
 | **重试行**「已重试模型请求 (3/5) · 2s ⌄」 | `MessageItem.retryRow/retrySummary/retryText/retryDetails/retryDetailLabel` | 折叠=摘要；展开=`重试延迟: 1868 毫秒` / `失败原因: 503 {…}`（文案键在 chat 包内，已核实存在） | ✅（mirror/MessageItem `ModelRetryItemMirror` 逐字照抄 lib/client.js:1235：`<details>` 折叠 + active 倒计时/shimmer；keyed kind=`model-retry` 取 `data.current`，legacy 取扁平节点） |
 | **工具组行**「已写入文件 ⌃」 | `ChatGroupSeat`（title/leading/chevron/activityIcon） | 把同一工具的多次调用再收一层，hover 时图标↔箭头互换 | ❌ |
-| **工具行（错误）**「写入 · Error: invalid arguments…」 | `GenericCommandCard`，`data-state=error`、`summary[data-error]` | 摘要红色（`_summary[data-error]` 规则） | 🟡（有 ✕ 标记，摘要未变红） |
-| **工具行（成功）**「写入 · test.txt +1 -0」 | `GenericCommandCard`，`title` + `summary` | `title=工具名`、`summary=目标 + 差异统计`；`+N -N` 差异计数由写入类渲染扩展计算（chat 包内无 `diffTotals` 调用，来源待核） | 🟡（有路径摘要，无差异统计） |
+| **工具行（错误）**「写入 · Error: invalid arguments…」 | `GenericCommandCard`，`data-state=error`、`summary[data-error]` | 摘要红色（`_summary[data-error]` 规则） | ✅（错误摘要 = 输出首行，errmark/data-error 红色） |
+| **工具行（成功）**「写入 · test.txt +1 -0」 | `GenericCommandCard`，`title` + `summary` | `title=工具名`、`summary=目标 + 差异统计`；`+N -N` 差异计数 = `diffTotals`（ui-tool ToolRow `diffStat` 独立 span，源码核实） | ✅（diffStat 独立 span 照抄） |
 | **思考行**「思考 ⌃」 | `ReasoningRow`（`root:not([data-expanded])` 高 24px） | 折叠=固定一行；展开=`thinkBody` 预览（如 `Done. The file has been created.`） | 🟡 |
 | **正文行内文件下划线**（`test.txt`） | `MarkdownText` 的 `fileMentions` | 行内 code 若解析为真实文件 → 下划线链接，点击走 `openFile` | ❌（`fileMentions` 未传） |
 | **用户气泡里的文件 chips**（`▣ AGENTS.md`） | primitives `projectUserText` | 用户文本里的 `@文件` 渲染成带图标的 mention chip | ❌ |
@@ -248,7 +250,7 @@ for (let i=0;i<lines.length;i++){
 | 二、用户消息 | ✅ | userRow/userStack/bubble（右对齐气泡） |
 | 三、助手正文 | ✅ | 官方 `MarkdownText` + `AssistantMarkdown.root` |
 | 三-B、markdown 内容元素（代码块卡片/语法高亮/表格/行内 code/列表/emoji 标题） | ✅ | 随官方 `MarkdownText` 自带——primitives 自带 32 个 CSS module（CodeCard 等）由它自行注入，组件即样式 |
-| 四、工具卡 | ✅ | 官方 `DisclosureRow` + `GenericCommandCard` 类 + 人话摘要 + 默认折叠；keyed 流直接消费 `tool-call` 节点的 `data.root`（ToolCallBlock）；**图标按 activity 取官方 `PROCESS_ICONS`**（edit/write=铅笔、generic=sparkle、命令=api）；**编辑/写入展开 = 官方 `DiffBlock`**（数据 = 结果 `meta.diffs`，摘要 = `diffTotals` 的 `+N -M`），其余工具展开 = 输入/输出 两行 |
+| 四、工具卡 | ✅（官方 ToolRow 对齐） | **展开体分发链照抄 ui-tool `GenericToolCard`+`ToolRow`**：read=官方 `ReadBlock`（maxLines 8，meta 收窄 + `<path>/<type>file</type>/<content>` envelope 校验，失败回退 ioCard）、bash/pwsh=官方 `TerminalBlock`（maxLines ∞，`parseExitStatus` 剥 `[exit code: N]`/`[killed by signal: S]`，退出码≠0/信号 ⇒ 整行 error；persistent/background/spill/error 回退 ioCard）、write/edit=`DiffBlock`(9)、其余=官方 ioCard 灰框（输入/分隔/输出[data-error]，code 变体前置 CodeBlock）；五态 `data-state` + `data-tool`/`data-variant`；摘要 = per-variant SUMMARY_KEYS + diffStat 独立 span + read/write/edit fileLink（openFile）；图标 = VARIANT_ICONS（ui-tool 专属表）；兜底 CSS = 官方 ToolRow.module.css 逐值镜像进 archive-session-css.ts；官方类发现扩展 ui-tool 包前缀 |
 | 五、思考 | ✅（重写） | **官方 ReasoningRow 照抄**（lib/client.js:5718-5778）：`root[data-variant=think][data-state][data-expanded][data-preview]` + DisclosureRow（`IconThinkOutlineRegular` 14px + **`title = message.think = 「思考」`** + separator(2×2px) + 首行预览去 `**`）+ thinkBody（`MarkdownText compact`）；折叠固定行高 24px+delta；弃「思考过程」旧文案与有边框盒子 |
 | assistant 块渲染 | ✅（修正） | 照官方块渲染器（lib/client.js:5818-5871）：步内 **tool-call 块一律跳过**（`case break`，由独立工具节点画，重复画 = ×2）、groupPart 'reasoning' 只画思考块 / 'response' 跳过思考块、整步只有工具块 ⇒ 整步 null；seat 必须把 groupPart 下发给节点视图（回归断言已加） |
 | 六、turn 元信息（用时） | ✅（keyed） | **换 keyed 流后 turn 位置自带起止时间**（`node.location.turn.start/end`）⇒ 「用时 34 秒」/「深度求索中，用时…」/「已停止」逐字对齐官方（mirror/message-chrome.ts） |
@@ -285,7 +287,7 @@ for (let i=0;i<lines.length;i++){
 6. ✅ 工具卡补 `separator`（2×2px 分隔点，`margin:0 8px`）——mirror/GenericCommandCard collapsedContent
 7. ✅ 「过程」行官方样式（`TurnProcessNodeView.root`：高 33px + `.5px` 下边框 + `padding:0 0 8px` + `:not([data-open]){margin-bottom:8px}`）——mirror/TurnProcessNodeView
 8. ✅ 思考块改 `ReasoningRow` 结构（`data-expanded` + 折叠固定行高 24px，去掉 `<details>`）——mirror/ReasoningRow
-9. ⬜ 工具卡 `data-state` 补 `running` 变体（对齐官方 data 属性语义；keyed `tool-call` 的 `phase: preparing/start` 已具备数据，待接）
+9. ✅ 工具卡 `data-state` 五态（preparing/running/ok/error/stopped，`data-tool`/`data-variant` 同挂 root；keyed `phase: preparing/start` 已接）
 10. ✅ 「加载更早」按钮对齐 `older` 样式（4px 12px / 12px 字号 / radius-sm）——mirror/ChatView.ChatOlderButton（移入列首，官方位置）
 11. 🟡 错误提示：文案走官方 `hint` 类；官方另有 `openError`（错误色）未单独区分
 26. ✅ ~~弹窗固定尺寸（`min(1180px,94vw)` × `92vh`）~~ → **改 28：`min(1120px,100vw-32px)` × `calc(100% - 80px)`（宿主弹窗惯例）+ 底部对话框占位（禁用输入）**
@@ -295,12 +297,12 @@ for (let i=0;i<lines.length;i++){
 29. ✅ 尾部操作行（mirror/TurnTailNodeView + MessageIconActions：复制 / 分支只读态 / `data-actions-reveal` / 结束时钟）
 30. ✅ 用量小标（mirror/TurnUsagePanel + StatDialog：pill + 明细弹层，`formatTokens`/`formatCacheHitPercent` 逐字照抄）
 31. ✅ 弹窗外壳改宿主弹窗惯例尺寸 + 会话区左右边距 = 官方 `scroll` 的 `16px + --dsh-composer-side-clearance`；关闭钮 = 官方 `IconCloseOutlineRegular` 裸图标
-13. 🟡 `TerminalBlock` / `ReadBlock` / `DiffBlock`——**DiffBlock 已接**（编辑/写入展开体：数据 = 工具结果 `meta.diffs`（tool-fs `computeHunkDiffs` 写入），摘要 = `diffTotals` 的 `+N -M`；无 diff 的工具展开 = 输入/输出 两行）；`ReadBlock`（read 展开体，需把输出窗口解析成 `ReadBlockLine[]`）与 `TerminalBlock`（bash 展开体）待接
+13. ✅ `TerminalBlock` / `ReadBlock` / `DiffBlock` 三件全接（2026-09-28，官方 ToolRow 分发链照抄——**read=ReadBlock(8)**：`readCardModel` 收窄（path/offset/lines 严格递增/totalLines）+ 结果 envelope 正则校验，失败回退 ioCard generic；**bash=TerminalBlock(∞)**：`shellCall` 校验 + `parseExitStatus` 剥尾部 `[exit code: N]`/`[killed by signal: S]`，terminalFailed ⇒ 整行 error，persistent/background/spill/error 回退；**write/edit=DiffBlock(9)** 同前）；兜底 ioCard 灰框 + 兜底 CSS 官方 ToolRow.module.css 逐值镜像；原「输入/输出」两行版即官方 ioCard 兜底形态，继续用于 generic 工具
 15. ⬜ 「到底部」悬浮钮（toBottom/toBottomSlot）
 16. ⬜ 上下文注入行（ContextBody/ContextInjectionRow）——keyed kind=`context` / `system-prompt` 目前仍过滤（决策 28），放行即接
-17. ⬜ 工具卡补 `summary[data-error]` 红色变体（错误行摘要变红，对齐官方）
+17. ✅ 工具卡 `summary[data-error]` 红色变体（错误摘要 = 输出首行 errmark，stopped 摘要同理；摘要 span `data-error` 走官方红）
 19. ✅ 重试行（已重试模型请求 (n/m) · 延迟/原因）——mirror/MessageItem `ModelRetryItemMirror` 照官方 ModelRetryItem（lib/client.js:1235-1290）逐字落码；同轮补齐轮次失败行（TurnErrorItem）与限长行（TurnMaxTokensItem）；旧自绘 `notice-err` / `sessionTurnError` 等键已删
-20. ⬜ 正文 `fileMentions`（行内文件下划线）+ 用户气泡 `projectUserText`（mention chips）
+20. ✅ 正文 `fileMentions`（行内文件下划线；U11 与 `openFile` 分栏打通）+ 用户气泡 `projectUserText`（mention chips）——chips 部分待接
 22. ✅ `ChatGroupSeat`（grouped('chat') 分组项）——官方 grouped 读取器不在公开契约面 ⇒ `process-groups.js` 算法移植（决策 37）
 23. ⬜ 用户消息的操作行（`MessageIconActions` clock='start'）——keyed user 节点已具备 time，待接
 32. ⬜ 👍👎（官方走 feedback 插槽，弹窗无插槽；如必须显示需自绘并接宿主反馈服务）
@@ -315,4 +317,4 @@ for (let i=0;i<lines.length;i++){
 
 ---
 
-*最后更新：2026-09-27 · 基于 0.1.7-rc.2 源码逐项核实。*
+*最后更新：2026-09-28 · 基于 0.1.7-rc.2 源码逐项核实；工具行真身（ui-tool ToolRow）分发链已照抄进 mirror/GenericCommandCard。*

@@ -184,8 +184,30 @@ window.__ModuleLoader__.load({
 			toolTitleWebSearch: "网页搜索",
 			toolTitleWebFetch: "网页获取",
 			toolTitleGeneric: "工具调用",
+			toolTitleSearch: "搜索",
 			toolInputLabel: "输入",
 			toolOutputLabel: "输出",
+			rowPreparing: "正在准备调用",
+			rowRunning: "运行中",
+			rowFailed: "失败",
+			rowStopped: "已停止",
+			collapseLabel: "收起",
+			readWindow: "显示 {shown} / {total} 行",
+			readCollapseAria: "收起内容",
+			readExpandAria: "展开其余 {count} 行",
+			readExpandRest: "… 其余 {count} 行",
+			terminalSignal: "信号 {signal}",
+			terminalExitCode: "退出码 {code}",
+			terminalNoExitCode: "未正常退出",
+			terminalRunning: "运行中",
+			terminalFailed: "失败",
+			terminalDone: "已完成",
+			terminalNoOutput: "无输出",
+			terminalCollapseAria: "收起输出",
+			terminalExpandAria: "展开其余 {n} 行输出",
+			terminalExpandRest: "… 其余 {n} 行",
+			terminalSendInput: "（发送输入）",
+			terminalSession: "终端 {sessionId}",
 			codeBlockLabel: "代码块",
 			diffWrapLabel: "自动换行",
 			diffUnwrapLabel: "取消换行",
@@ -371,17 +393,39 @@ window.__ModuleLoader__.load({
 			stepProcessMore: "{title}, etc.",
 			toolTitleRead: "Read",
 			toolTitleReadImage: "Read image",
-			toolTitleGrep: "Search file contents",
-			toolTitleGlob: "Find files",
-			toolTitleBash: "Run command",
+			toolTitleGrep: "Grep",
+			toolTitleGlob: "Glob",
+			toolTitleBash: "Bash",
 			toolTitleWrite: "Write",
 			toolTitleEdit: "Edit",
 			toolTitleCode: "Code",
-			toolTitleWebSearch: "Web search",
-			toolTitleWebFetch: "Web fetch",
+			toolTitleWebSearch: "Search",
+			toolTitleWebFetch: "Fetch",
 			toolTitleGeneric: "Tool call",
-			toolInputLabel: "Input",
-			toolOutputLabel: "Output",
+			toolTitleSearch: "Search",
+			toolInputLabel: "IN",
+			toolOutputLabel: "OUT",
+			rowPreparing: "Preparing tool call",
+			rowRunning: "Running",
+			rowFailed: "Failed",
+			rowStopped: "Stopped",
+			collapseLabel: "Collapse",
+			readWindow: "Showing {shown} of {total} lines",
+			readCollapseAria: "Collapse content",
+			readExpandAria: "Expand {count} more lines",
+			readExpandRest: "… {count} more lines",
+			terminalSignal: "signal {signal}",
+			terminalExitCode: "exit code {code}",
+			terminalNoExitCode: "no exit code",
+			terminalRunning: "Running",
+			terminalFailed: "Failed",
+			terminalDone: "Done",
+			terminalNoOutput: "No output",
+			terminalCollapseAria: "Collapse output",
+			terminalExpandAria: "Expand the remaining {n} output lines",
+			terminalExpandRest: "… {n} more lines",
+			terminalSendInput: "(send input)",
+			terminalSession: "Terminal {sessionId}",
 			codeBlockLabel: "Code",
 			diffWrapLabel: "Wrap lines",
 			diffUnwrapLabel: "Unwrap lines",
@@ -490,29 +534,32 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-reasoning-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
 .dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
 .dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
-/* 工具卡展开体（无 diff 的工具）：输入 / 输出 两行，行间分隔线。
-   对齐与字号照官方截图：标签 13px tertiary、内容 12px 等宽且行高与标签同拍（20px）⇒ 首行与续行同列同基线。 */
-.dsh-tdt-sv-io{flex-direction:column;display:flex;}
-.dsh-tdt-sv-io-row{display:flex;gap:12px;padding:10px 16px;align-items:baseline;}
-.dsh-tdt-sv-io-row+.dsh-tdt-sv-io-row{border-top:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));}
-.dsh-tdt-sv-io-label{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px;}
-.dsh-tdt-sv-io-content{flex:1;min-width:0;margin:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;white-space:pre;overflow-x:auto;word-break:normal;color:var(--dsw-alias-label-primary,#1f2328);}
+/* ── 工具卡（官方 ui-tool ToolRow.module.css 兜底镜像，官方类命中时 ocOr 走官方） ──
+   官方行外观 = 无边框裸行（root 仅 flex column）；展开体分发链：
+   TerminalBlock(∞) → DiffBlock(9) → ReadBlock(8) → ioCard 灰框（输入/分隔/输出）。 */
+.dsh-tdt-sv-tool{flex-direction:column;display:flex;}
+.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-tool-title{font-weight:400;transition:color .1s;}
+.dsh-tdt-sv-tool-chevron{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tool-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
+.dsh-tdt-sv-tool-diffstat{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
+.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-filelink:hover{color:var(--dsw-alias-label-primary,#1f2328);text-decoration-color:currentColor;}
+.dsh-tdt-sv-tool-errmark{color:var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-sv-tool-stopmark{color:var(--dsw-alias-state-warn-label,#f5a623);}
+.dsh-tdt-sv-tool-bodywrap{flex-direction:column;display:flex;}
+.dsh-tdt-sv-io-card{border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
+.dsh-tdt-sv-io-section{grid-template-columns:max-content 1fr;align-items:baseline;column-gap:14px;max-height:150px;padding:12px 16px;display:grid;overflow-y:auto;}
+.dsh-tdt-sv-io-label{color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
+.dsh-tdt-sv-io-divider{background:var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex:none;height:.5px;}
+.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-io-text[data-error]{color:var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-sv-tool-block{margin:4px 0 4px 4px;}
+.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:18px;--dsl-terminal-output-max-height:224px;border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
 .dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
 .dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
-.dsh-tdt-sv-tool{align-self:stretch;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.10));overflow:hidden;}
-.dsh-tdt-sv-tool-head{display:flex;align-items:center;gap:8px;padding:6px 10px;flex-wrap:wrap;font-size:12px;}
-.dsh-tdt-sv-tool-name{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-weight:600;color:var(--dsw-alias-brand-primary,#2f6feb);}
-.dsh-tdt-sv-tool-err{color:var(--dsw-alias-state-error-primary,#c0392b);font-weight:600;}
-.dsh-tdt-sv-tool details{border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.24));}
-.dsh-tdt-sv-tool summary{cursor:pointer;list-style:none;padding:6px 10px;font-size:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.dsh-tdt-sv-tool summary::-webkit-details-marker{display:none;}
-.dsh-tdt-sv-tool summary>span:last-child{margin-left:auto;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.9));}
-.dsh-tdt-sv-tool>details>summary{border-top:none;}
-.dsh-tdt-sv-tool>details:not(:first-child)>summary{border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.24));}
-.dsh-tdt-sv-tool pre{margin:0;padding:8px 10px;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-all;max-height:14em;overflow:auto;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-outcome{display:block;margin-top:4px;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;}
-.dsh-tdt-sv-outcome-err{color:var(--dsw-alias-state-error-primary,#c0392b);}
-.dsh-tdt-sv-outcome-ok{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-sv-notice{align-self:center;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));padding:2px 8px;}
 .dsh-tdt-sv-hint{font-size:12px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
 /* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
@@ -614,9 +661,6 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
-/* U11 工具卡「文件」行 / diff 摘要路径：mono 链接钮（点击走统一 openFile 入口开预览分栏）。 */
-.dsh-tdt-sv-io-file{appearance:none;background:0 0;border:none;padding:0;margin:0;font:inherit;cursor:pointer;color:var(--dsw-alias-brand-primary,#2f6feb);font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:20px;text-align:left;word-break:break-all;}
-.dsh-tdt-sv-io-file:hover{text-decoration:underline;text-underline-offset:2px;}
 `;
 		let injected = false;
 		/**
@@ -635,8 +679,8 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/official-classes.ts
-		/** 官方 chat 包注入的 style 标签 data-plugin-css 前缀。 */
-		const CSS_PREFIX = "@deepseek-ai/dsh-client-ui-chat/";
+		/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡）。 */
+		const CSS_PKG_PREFIXES = ["@deepseek-ai/dsh-client-ui-chat/", "@deepseek-ai/dsh-client-ui-tool/"];
 		let discovered = null;
 		/**
 		* 解析一段官方 CSS module 文本，抽出 {语义名 → 真实类名}。
@@ -689,8 +733,9 @@ window.__ModuleLoader__.load({
 				for (let i = 0; i < tags.length; i++) {
 					const tag = tags[i];
 					const id = tag.dataset.pluginCss ?? "";
-					if (!id.startsWith(CSS_PREFIX)) continue;
-					const module = id.slice(32).replace(/\.module\.css$/, "");
+					const prefix = CSS_PKG_PREFIXES.find((candidate) => id.startsWith(candidate));
+					if (prefix === void 0) continue;
+					const module = id.slice(prefix.length).replace(/\.module\.css$/, "");
 					const parsed = parseOfficialCss(tag.textContent ?? "");
 					if (parsed.size === 0 && (tag.textContent ?? "").includes(".")) console.warn(`[task-dispatch:official-classes] 官方模块 ${module} 类名解析为空（格式可能变了）`);
 					result.set(module, parsed);
@@ -1228,191 +1273,583 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/mirror/GenericCommandCard.tsx
-		/** 官方 tool.title.*（uic lib/client.js:14703-14719）：工具名 → 本地化标题；未收录走 generic「工具调用」。 */
-		const TOOL_TITLE_KEYS = {
+		/** 官方 TOOL_VARIANTS（tool client.js:83-100，cordis_* 一并保留）。 */
+		const TOOL_VARIANTS = {
+			bash: "bash",
+			pwsh: "bash",
+			read: "read",
+			read_image: "read",
+			web_fetch: "read",
+			web_search: "search",
+			grep: "search",
+			glob: "search",
+			write: "write",
+			edit: "edit",
+			run_code: "code",
+			cordis_package_inspect: "read",
+			cordis_runtime_inspect: "read",
+			cordis_run: "others",
+			cordis_stop: "others",
+			cordis_undefine: "others"
+		};
+		const classifyTool = (name) => TOOL_VARIANTS[name] ?? "others";
+		/** 官方 VARIANT_TITLE_KEYS + TOOL_TITLE_KEYS（tool client.js:65-149；本仓库键名前缀 toolTitle）。 */
+		const VARIANT_TITLE_KEYS = {
+			search: "toolTitleSearch",
 			read: "toolTitleRead",
+			bash: "toolTitleBash",
+			write: "toolTitleWrite",
+			edit: "toolTitleEdit",
+			code: "toolTitleCode",
+			others: "toolTitleGeneric"
+		};
+		const TOOL_TITLE_KEYS = {
+			pwsh: "toolTitleBash",
 			read_image: "toolTitleReadImage",
 			grep: "toolTitleGrep",
 			glob: "toolTitleGlob",
-			bash: "toolTitleBash",
-			pwsh: "toolTitleBash",
-			write: "toolTitleWrite",
-			edit: "toolTitleEdit",
-			run_code: "toolTitleCode",
 			web_search: "toolTitleWebSearch",
 			web_fetch: "toolTitleWebFetch"
 		};
-		/** 工具行标题：官方字典命中用本地化动词，未命中 = generic（摘要补工具名，对齐官方「工具调用 · name · 摘要」）。 */
-		const toolTitle = (name, t) => {
-			const key = TOOL_TITLE_KEYS[name];
-			if (key !== void 0) return {
-				title: t(key),
-				generic: false
-			};
-			return {
-				title: t("toolTitleGeneric"),
-				generic: true
-			};
+		const toolTitleKey = (name) => TOOL_TITLE_KEYS[name] ?? VARIANT_TITLE_KEYS[classifyTool(name)];
+		/** 官方 VARIANT_ICONS（tool client.js:1749-1757，size 14）。 */
+		const VARIANT_ICONS = {
+			search: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+			read: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+			bash: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, { size: 14 }),
+			write: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+			edit: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+			code: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
+			others: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
 		};
-		function diffsFromMeta(meta) {
-			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return void 0;
-			const diffs = meta.diffs;
-			if (!Array.isArray(diffs) || diffs.length === 0) return void 0;
-			return diffs.every((diff) => {
-				if (typeof diff !== "object" || diff === null || Array.isArray(diff)) return false;
-				const { path, oldText, newText } = diff;
-				return typeof path === "string" && (oldText === null || typeof oldText === "string") && typeof newText === "string";
-			}) ? diffs : void 0;
-		}
-		/**
-		* meta 无 diff 时的参数侧兜底（真实数据，非模拟）：tool-fs 的 `presentationMeta` 在
-		* `before === null`（无观察快照）时给 `diffs: []`（lib/index.js:572）——官方此况走参数呈现。
-		* write（新建文件）⇒ oldText:null 全绿 +；edit ⇒ old_string→new_string 红绿对比。解析失败回 undefined。
-		*/
-		function diffsFromArgs(name, argsRaw) {
-			if (name !== "write" && name !== "edit" && name !== "apply_patch") return void 0;
-			const raw = argsRaw.trim();
-			if (!raw.startsWith("{")) return void 0;
-			let args;
+		/** 官方 SUMMARY_KEYS（tool client.js:204-220）：摘要取参键偏好。 */
+		const SUMMARY_KEYS = {
+			bash: ["description", "command"],
+			read: [
+				"path",
+				"file_path",
+				"url"
+			],
+			search: [
+				"query",
+				"pattern",
+				"url"
+			],
+			write: ["path", "file_path"],
+			edit: ["path", "file_path"],
+			code: ["description"],
+			others: []
+		};
+		/** 官方 FILE_PATH_VARIANTS（tool client.js:237-241）：摘要可开预览的文件型变体。 */
+		const FILE_PATH_VARIANTS = /* @__PURE__ */ new Set([
+			"read",
+			"write",
+			"edit"
+		]);
+		const firstLine$1 = (text) => {
+			const nl = text.indexOf("\n");
+			return nl === -1 ? text : text.slice(0, nl);
+		};
+		/** 官方 parseArgs（tool client.js:186-192）。 */
+		const parseArgs = (raw) => {
 			try {
-				args = JSON.parse(raw);
+				return JSON.parse(raw);
 			} catch {
 				return;
 			}
-			const path = args.file_path ?? args.path;
-			if (typeof path !== "string" || path === "") return void 0;
-			if (name === "write") {
-				const content = args.content;
-				if (typeof content !== "string") return void 0;
-				return [{
-					path,
-					oldText: null,
-					newText: content
-				}];
+		};
+		const pickString = (args, keys) => {
+			for (const key of keys) {
+				const value = args[key];
+				if (typeof value === "string" && value !== "") return value;
 			}
-			const { old_string: oldString, new_string: newString } = args;
-			if (typeof oldString !== "string" || typeof newString !== "string") return void 0;
-			return [{
-				path,
-				oldText: oldString,
-				newText: newString
-			}];
+		};
+		/** 官方 deriveSummary（tool client.js:221-233）。 */
+		function deriveSummary(variant, argsRaw) {
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return firstLine$1(argsRaw);
+			const args = parsed;
+			if (variant === "search" && Array.isArray(args.queries)) {
+				const queries = args.queries.filter((query) => typeof query === "string" && query !== "");
+				if (queries.length > 0) return queries.map(firstLine$1).join(", ");
+			}
+			const picked = pickString(args, SUMMARY_KEYS[variant]);
+			if (picked !== void 0) return firstLine$1(picked);
+			for (const value of Object.values(args)) if (typeof value === "string" && value !== "") return firstLine$1(value);
+			return firstLine$1(argsRaw);
 		}
-		/** 单行截断（官方 summary 是单行省略号样式）。 */
-		const preview = (text) => {
-			const first = text.split("\n").find((line) => line.trim() !== "") ?? "";
-			return first.length > 90 ? `${first.slice(0, 90)}…` : first;
-		};
-		/** 人话摘要：优先取常见工具参数的关键字段，否则回退「输出优先、参数次之」的首行。 */
-		const summarize = (argsRaw, output) => {
-			const raw = argsRaw.trim();
-			if (raw.startsWith("{")) try {
-				const parsed = JSON.parse(raw);
-				for (const key of [
-					"command",
-					"file_path",
-					"path",
-					"pattern",
-					"query",
-					"url",
-					"title"
-				]) {
-					const value = parsed[key];
-					if (typeof value === "string" && value.trim() !== "") return value;
+		/** 官方 deriveFilePath（tool client.js:242-248）：read/write/edit 的路径取参。 */
+		function deriveFilePath(variant, argsRaw) {
+			if (!FILE_PATH_VARIANTS.has(variant)) return void 0;
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return void 0;
+			const picked = pickString(parsed, ["path", "file_path"]);
+			return picked === void 0 ? void 0 : firstLine$1(picked);
+		}
+		/** 官方 formatToolBody（tool client.js:255-264）：通用展开体的输入正文。 */
+		function formatToolBody(variant, argsRaw) {
+			if (argsRaw === "") return null;
+			const parsed = parseArgs(argsRaw);
+			if (parsed === void 0) return argsRaw;
+			if (variant === "code" && typeof parsed === "object" && parsed !== null) {
+				const code = parsed.code;
+				if (typeof code === "string" && code !== "") return code;
+			}
+			return JSON.stringify(parsed, null, 2);
+		}
+		/** 官方 validEscalationFields（tool client.js:347-353）。 */
+		function validEscalationFields(args) {
+			const permission = args.sandbox_permissions;
+			const justification = args.justification;
+			if (permission === void 0 && justification === void 0) return true;
+			if (permission !== "workspace-write" && permission !== "danger-full-access") return false;
+			return typeof justification === "string" && justification.trim() !== "";
+		}
+		/** 官方 intendedDiff（tool client.js:460-517）：write/edit/str_replace_editor 的参数侧意图 diff。 */
+		function intendedDiff(name, argsRaw) {
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+			const args = parsed;
+			if (name === "str_replace_editor") {
+				const { command, path, file_text: fileText, old_str: oldText, new_str: newText } = args;
+				if (typeof path !== "string" || path.trim() === "") return null;
+				if (command === "create") {
+					if (fileText !== void 0 && typeof fileText !== "string") return null;
+					return {
+						tool: name,
+						diff: {
+							path,
+							oldText: null,
+							newText: typeof fileText === "string" ? fileText : ""
+						}
+					};
 				}
-			} catch {}
-			return preview(output.trim() !== "" ? output : argsRaw);
-		};
-		/** 官方 diff 面文案（codeLabel = 官方截图里的「代码块」；diff.*：收起差异 / 展开其余 N 行差异）。 */
-		const diffLabels = (t) => ({
+				if (command === "str_replace") {
+					if (oldText !== void 0 && typeof oldText !== "string") return null;
+					if (newText !== void 0 && typeof newText !== "string") return null;
+					return {
+						tool: name,
+						diff: {
+							path,
+							oldText: typeof oldText === "string" ? oldText : null,
+							newText: typeof newText === "string" ? newText : ""
+						}
+					};
+				}
+				return null;
+			}
+			const { file_path: path } = args;
+			if (typeof path !== "string" || path.trim() === "") return null;
+			if (!validEscalationFields(args)) return null;
+			if (name === "write") {
+				const { content } = args;
+				return typeof content === "string" ? {
+					tool: name,
+					diff: {
+						path,
+						oldText: null,
+						newText: content
+					}
+				} : null;
+			}
+			if (name !== "edit") return null;
+			const { old_string: oldText, new_string: newText, replace_all: replaceAll } = args;
+			if (typeof oldText !== "string" || typeof newText !== "string") return null;
+			if (replaceAll !== void 0 && typeof replaceAll !== "boolean") return null;
+			return {
+				tool: name,
+				diff: {
+					path,
+					oldText: oldText || null,
+					newText
+				}
+			};
+		}
+		/** 官方 narrowDiffs（tool client.js:443-459）。 */
+		function narrowDiffs(diffs) {
+			if (!Array.isArray(diffs) || diffs.length === 0) return null;
+			const out = [];
+			for (const hunk of diffs) {
+				if (typeof hunk !== "object" || hunk === null || Array.isArray(hunk)) return null;
+				const { path, oldText, newText } = hunk;
+				if (typeof path !== "string") return null;
+				if (oldText !== null && typeof oldText !== "string") return null;
+				if (typeof newText !== "string") return null;
+				out.push({
+					path,
+					oldText,
+					newText
+				});
+			}
+			return out;
+		}
+		/** 官方 appliedDiffs（tool client.js:518-524）。 */
+		function appliedDiffs(meta) {
+			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return null;
+			const diffs = meta.diffs;
+			if (!Array.isArray(diffs)) return null;
+			if (diffs.length === 0) return "empty";
+			return narrowDiffs(diffs);
+		}
+		/** 官方 diffCardModel（tool client.js:534-544；keyed 流里只有根调用，parentCallId 分支略）。 */
+		function diffCardModel(name, argsRaw, meta, isError, settled) {
+			const intended = intendedDiff(name, argsRaw);
+			if (intended === null) return null;
+			if (!settled) return [intended.diff];
+			if (name === "str_replace_editor") return null;
+			if (isError) return null;
+			const applied = appliedDiffs(meta);
+			if (applied === null || applied === "empty") return name === "write" ? [intended.diff] : null;
+			return applied;
+		}
+		const positiveInteger = (value) => typeof value === "number" && Number.isInteger(value) && value >= 1;
+		/** 官方 readMeta（tool client.js:369-395）：宿主写入的读取窗口 meta 收窄。 */
+		function readMeta(meta) {
+			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return null;
+			const { path, offset, lines, totalLines, lang } = meta;
+			if (typeof path !== "string" || typeof offset !== "number" || !Number.isInteger(offset) || offset < 1) return null;
+			if (typeof totalLines !== "number" || !Number.isInteger(totalLines) || totalLines < 0 || !Array.isArray(lines)) return null;
+			if (lang !== void 0 && typeof lang !== "string") return null;
+			const narrowed = [];
+			let previous = offset - 1;
+			for (const line of lines) {
+				if (typeof line !== "object" || line === null || Array.isArray(line)) return null;
+				const { number, text } = line;
+				if (typeof number !== "number" || !Number.isInteger(number) || number < 1 || number <= previous) return null;
+				if (number > totalLines || typeof text !== "string") return null;
+				previous = number;
+				narrowed.push({
+					number,
+					text
+				});
+			}
+			return {
+				label: path,
+				lines: narrowed,
+				totalLines,
+				...lang === void 0 ? {} : { lang }
+			};
+		}
+		/** 官方 readCardModel（tool client.js:421-435）：read + 合法参数 + meta + 结果 envelope。 */
+		function readCardModel(name, argsRaw, output, meta, isError, settled) {
+			if (!settled || isError || name !== "read") return null;
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+			const { file_path: path, offset, limit } = parsed;
+			if (typeof path !== "string" || path.trim() === "") return null;
+			if (offset !== void 0 && !positiveInteger(offset)) return null;
+			if (limit !== void 0 && !positiveInteger(limit)) return null;
+			const face = readMeta(meta);
+			if (face === null) return null;
+			if (/^<path>[^\n]*<\/path>\n<type>file<\/type>\n<content>\n([\s\S]*)\n<\/content>$/u.exec(output)?.[1] === void 0) return null;
+			return face;
+		}
+		/** 官方 shellCall（tool client.js:831-855）：无 description = persistent（结算走 generic）。 */
+		function shellCall(name, args) {
+			if (name !== "bash" && name !== "pwsh") return null;
+			const { command, description, timeoutMs, workdir, run_in_background: background } = args;
+			if (typeof command !== "string" || command.trim() === "") return null;
+			if (timeoutMs !== void 0 && (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs) || timeoutMs <= 0)) return null;
+			if (workdir !== void 0 && typeof workdir !== "string") return null;
+			if (background !== void 0 && typeof background !== "boolean") return null;
+			if (!validEscalationFields(args)) return null;
+			if (description === void 0) return {
+				command,
+				description: "",
+				workdir: void 0,
+				persistent: true,
+				background: false
+			};
+			if (typeof description !== "string" || description.trim() === "") return null;
+			return {
+				command,
+				description,
+				workdir,
+				persistent: false,
+				background: background === true
+			};
+		}
+		/** 官方 terminalSendCall（tool client.js:884-896）。 */
+		function terminalSendCall(name, args) {
+			if (name !== "terminal_send") return null;
+			const { sessionId, text, run_in_background: background } = args;
+			if (typeof sessionId !== "string" || sessionId === "" || typeof text !== "string") return null;
+			if (background !== void 0 && typeof background !== "boolean") return null;
+			return {
+				text,
+				sessionId,
+				background: background === true
+			};
+		}
+		/** 官方 parseExitStatus（tool client.js:903-918）：结果尾部退出码 / 信号标记剥离。 */
+		function parseExitStatus(text) {
+			const signal = /\n\[killed by signal: ([^\]\n]+)\]$/.exec(text);
+			if (signal?.[1] !== void 0) return {
+				output: text.slice(0, signal.index),
+				signal: signal[1]
+			};
+			const exit = /\n\[exit code: (\d+)\]$/.exec(text);
+			if (exit?.[1] !== void 0) return {
+				output: text.slice(0, exit.index),
+				exitCode: Number(exit[1])
+			};
+			return {
+				output: text,
+				exitCode: 0
+			};
+		}
+		/**
+		* 官方 spill notice 识别（spill-policy notice.ts，tool client.js:660-703）：
+		* 结尾 `)` + 「\n\n( Full formatted result stored at: 」段。超长输出被 spill 化的
+		* bash 结果走 generic（官方 isSpilledShellCall 同向；此处放宽为字面匹配，宁滥勿漏）。
+		*/
+		function hasSpillNotice(text) {
+			if (!text.endsWith(")")) return false;
+			return text.includes("\n\n( Full formatted result stored at: ");
+		}
+		/** 官方 resolveTerminalCwd + normalizeSegments（tool client.js:776-798）的显示用简化版：
+		*  弹窗侧拿不到会话 cwd ⇒ 绝对路径原样、相对路径弹出 `.`/`..` 段。 */
+		function normalizeSegments(path) {
+			if (!/(?:^|[/\\])\.\.?(?:[/\\]|$)/.test(path)) return path;
+			const out = [];
+			for (const segment of path.split(/[/\\]+/)) {
+				if (segment === "" || segment === ".") continue;
+				if (segment === "..") {
+					out.pop();
+					continue;
+				}
+				out.push(segment);
+			}
+			return out.join("/");
+		}
+		/** 官方 terminalCardModel（tool client.js:929-968）：running 半截返回 running 卡。 */
+		function terminalCardModel(name, argsRaw, output, isError, settled) {
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+			const args = parsed;
+			const shell = shellCall(name, args);
+			const send = shell === null ? terminalSendCall(name, args) : null;
+			if (shell === null && send === null) return null;
+			if (shell !== null && shell.background || send !== null && send.background) return null;
+			if (!settled) return shell !== null ? {
+				command: shell.command,
+				cwd: shell.workdir === void 0 ? void 0 : normalizeSegments(shell.workdir),
+				running: true
+			} : {
+				command: send.text,
+				running: true,
+				sessionId: send.sessionId
+			};
+			if (isError || shell !== null && shell.persistent || hasSpillNotice(output)) return null;
+			if (send !== null) return {
+				command: send.text,
+				running: false,
+				sessionId: send.sessionId
+			};
+			const shellCmd = shell;
+			const status = parseExitStatus(output);
+			return {
+				command: shellCmd.command,
+				cwd: shellCmd.workdir === void 0 ? void 0 : normalizeSegments(shellCmd.workdir),
+				output: status.output,
+				exitCode: status.exitCode,
+				signal: status.signal,
+				running: false
+			};
+		}
+		/** 词典：代码工具栏（官方 codeToolbarLabels，tool client.js:1098-1104）。 */
+		const codeToolbarLabels = (t) => ({
 			codeLabel: t("codeBlockLabel"),
 			wrapLabel: t("diffWrapLabel"),
-			unwrapLabel: t("diffUnwrapLabel"),
+			unwrapLabel: t("diffUnwrapLabel")
+		});
+		/** 官方 diffBlockLabels（tool client.js:1125-1135）。 */
+		const diffLabels = (t) => ({
+			...codeToolbarLabels(t),
 			copy: t("copyLabel"),
 			copied: t("copiedLabel"),
 			collapseAria: t("diffCollapseAria"),
 			expandAria: (count) => t("diffExpandAria", { count }),
-			collapse: t("diffCollapseLabel"),
+			collapse: t("collapseLabel"),
 			expand: (count) => t("diffExpandRest", { count })
 		});
-		/** 工具调用 / 命令卡（默认折叠成一行；错误态摘要变红由 summary[data-error] 承担）。 */
+		/** 官方 readBlockLabels（tool client.js:1141-1155）。 */
+		const readLabels = (t) => ({
+			...codeToolbarLabels(t),
+			window: (shown, total) => t("readWindow", {
+				shown,
+				total
+			}),
+			copy: t("copyLabel"),
+			copied: t("copiedLabel"),
+			collapseAria: t("readCollapseAria"),
+			expandAria: (count) => t("readExpandAria", { count }),
+			collapse: t("collapseLabel"),
+			expand: (count) => t("readExpandRest", { count })
+		});
+		/** 官方 terminalBlockLabels（tool client.js:708-737 的键面）。 */
+		const terminalLabels = (t) => ({
+			signal: (signal) => t("terminalSignal", { signal }),
+			exitCode: (code) => t("terminalExitCode", { code }),
+			noExitCode: t("terminalNoExitCode"),
+			running: t("terminalRunning"),
+			failed: t("terminalFailed"),
+			done: t("terminalDone"),
+			copy: t("copyLabel"),
+			copied: t("copiedLabel"),
+			noOutput: t("terminalNoOutput"),
+			collapseAria: t("terminalCollapseAria"),
+			collapse: t("collapseLabel"),
+			expandAria: (hidden) => t("terminalExpandAria", { n: hidden }),
+			expand: (hidden) => t("terminalExpandRest", { n: hidden })
+		});
+		/** 摘要链接（官方 fileLink）：点击只跟随、不折叠行。 */
+		const stopLinkClick = (event) => {
+			event.stopPropagation();
+		};
+		/**
+		* 工具调用 / 命令卡（官方 GenericToolCard + ToolRow 镜像）。
+		* 折叠行 = 图标 + 标题 [+ 分隔点 + 摘要（文件路径链接化）+ 后缀]；展开体按官方分发链。
+		*/
 		function GenericCommandCard(props) {
-			const { name, argsRaw, output, isError, errorName, meta, onOpenFile, t } = props;
-			const [open, setOpen] = (0, react.useState)(isError);
-			const diffs = diffsFromMeta(meta) ?? diffsFromArgs(name, argsRaw);
-			const localized = toolTitle(name, t);
-			const totals = diffs === void 0 ? void 0 : (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
-			const diffPath = diffs?.[0]?.path ?? "";
-			const diffPathNode = diffPath === "" ? null : onOpenFile !== void 0 ? (0, react.createElement)("button", {
+			const { name, argsRaw, output, isError, meta, settled = true, phase, interrupted, onOpenFile, t } = props;
+			const [expanded, setExpanded] = (0, react.useState)(false);
+			const variant = classifyTool(name);
+			const titleKey = toolTitleKey(name);
+			const state = !settled ? phase === "preparing" ? "preparing" : "running" : interrupted ? "stopped" : isError ? "error" : "ok";
+			const terminalFace = (0, react.useMemo)(() => terminalCardModel(name, argsRaw, output, isError, settled), [
+				name,
+				argsRaw,
+				output,
+				isError,
+				settled
+			]);
+			const read = (0, react.useMemo)(() => readCardModel(name, argsRaw, output, meta, isError, settled), [
+				name,
+				argsRaw,
+				output,
+				meta,
+				isError,
+				settled
+			]);
+			const diffs = (0, react.useMemo)(() => diffCardModel(name, argsRaw, meta, isError, settled), [
+				name,
+				argsRaw,
+				meta,
+				isError,
+				settled
+			]);
+			const terminal = (0, react.useMemo)(() => {
+				if (terminalFace === null) return null;
+				return terminalFace.sessionId !== void 0 ? {
+					...terminalFace,
+					command: terminalFace.command === "" ? t("terminalSendInput") : terminalFace.command,
+					description: t("terminalSession", { sessionId: terminalFace.sessionId })
+				} : terminalFace;
+			}, [terminalFace, t]);
+			const failedTerminal = terminal !== null && terminal.running !== true && (terminal.exitCode !== void 0 && terminal.exitCode !== 0 || terminal.signal !== void 0);
+			const rowState = state === "ok" && failedTerminal ? "error" : state;
+			const running = rowState === "running" || rowState === "preparing";
+			const generic = titleKey === "toolTitleGeneric";
+			const base = argsRaw === "" ? "" : deriveSummary(variant, argsRaw);
+			const plainSummary = [generic ? name : "", base].filter(Boolean).join(" · ");
+			const errorSummary = rowState === "error" && output !== "" ? firstLine$1(output) : null;
+			const summaryText = (rowState === "error" ? errorSummary ?? terminal?.description ?? plainSummary : null) ?? terminal?.description ?? plainSummary;
+			const totals = diffs === null ? null : (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
+			const diffStat = totals === null ? null : `+${totals.added} -${totals.removed}`;
+			const settledWithCue = rowState === "error" || rowState === "stopped";
+			const suffix = settledWithCue ? null : diffStat;
+			const filePath = argsRaw === "" ? void 0 : deriveFilePath(variant, argsRaw);
+			const openFile = filePath !== void 0 && onOpenFile !== void 0 && !settledWithCue ? () => {
+				onOpenFile(filePath);
+			} : void 0;
+			const inputRaw = argsRaw === "" ? null : argsRaw;
+			const outputText = output === "" ? null : output;
+			const card = terminal !== null ? "terminal" : diffs !== null ? "diff" : read !== null ? "read" : null;
+			const bodyText = expanded && card === null && inputRaw !== null ? formatToolBody(variant, inputRaw) : null;
+			const cardBody = variant === "code" ? null : bodyText;
+			const expandable = rowState !== "preparing" && (inputRaw !== null || outputText !== null || card !== null);
+			const open = expanded && expandable;
+			const blockLabels = (0, react.useMemo)(() => ({
+				diff: diffLabels(t),
+				read: readLabels(t),
+				terminal: terminalLabels(t)
+			}), [t]);
+			const statusText = rowState === "preparing" ? t("rowPreparing") : rowState === "running" ? t("rowRunning") : rowState === "error" ? t("rowFailed") : rowState === "stopped" ? t("rowStopped") : null;
+			const summaryClassName = `${ocOr("ToolRow", "summary", "dsh-tdt-sv-tool-summary")}${rowState === "error" ? ` ${ocOr("ToolRow", "errorSummary", "dsh-tdt-sv-tool-errmark")}` : ""}${rowState === "stopped" ? ` ${ocOr("ToolRow", "stoppedSummary", "dsh-tdt-sv-tool-stopmark")}` : ""}`;
+			const collapsedContent = summaryText === "" ? void 0 : (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
+				className: ocOr("ToolRow", "sep", "dsh-tdt-sv-tool-sep"),
+				"aria-hidden": true
+			}), openFile !== void 0 ? (0, react.createElement)("button", {
 				type: "button",
-				className: "dsh-tdt-sv-io-file dsh-tdt-sv-io-file-inline",
-				style: {
-					textDecoration: "underline",
-					textUnderlineOffset: "2px"
-				},
-				title: diffPath,
-				onClick: () => {
-					onOpenFile(diffPath);
+				className: ocOr("ToolRow", "fileLink", "dsh-tdt-sv-tool-filelink"),
+				onClick: (event) => {
+					stopLinkClick(event);
+					openFile();
 				}
-			}, diffPath) : (0, react.createElement)("span", { style: {
-				textDecoration: "underline",
-				textUnderlineOffset: "2px"
-			} }, diffPath);
-			const summaryText = (diffs === void 0 || totals === void 0 ? null : (0, react.createElement)(react.Fragment, null, diffPathNode, ` +${totals.added} -${totals.removed}`)) ?? (localized.generic ? `${name} · ${summarize(argsRaw, output)}` : summarize(argsRaw, output));
-			const rowTitle = isError ? `${localized.title}  ✕ ${errorName ?? "error"}` : localized.title;
-			const filePathArg = onOpenFile === void 0 ? void 0 : (() => {
-				const raw = argsRaw.trim();
-				if (!raw.startsWith("{")) return void 0;
-				try {
-					const parsed = JSON.parse(raw);
-					const value = parsed.file_path ?? parsed.path;
-					return typeof value === "string" && value.trim() !== "" ? value : void 0;
-				} catch {
-					return;
-				}
-			})();
-			const prettyArgs = (() => {
-				const raw = argsRaw.trim();
-				if (raw === "") return "";
-				if (raw.startsWith("{") || raw.startsWith("[")) try {
-					return JSON.stringify(JSON.parse(raw), null, 2);
-				} catch {}
-				return raw;
-			})();
-			const ActivityIcon = PROCESS_ICONS[toolActivity(name)] ?? PROCESS_ICONS.tools;
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { active: running }, summaryText)) : (0, react.createElement)("span", { className: summaryClassName }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { active: running }, summaryText)), suffix !== null ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+				className: `${ocOr("ToolRow", "summarySuffix", "dsh-tdt-sv-tool-suffix")} ${ocOr("ToolRow", "diffStat", "dsh-tdt-sv-tool-diffstat")}`,
+				active: running
+			}, suffix) : null);
+			const expandedContent = open ? (0, react.createElement)("div", { className: ocOr("ToolRow", "bodyWrap", "dsh-tdt-sv-tool-bodywrap") }, terminal !== null ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.TerminalBlock, {
+				command: terminal.command,
+				cwd: terminal.cwd,
+				output: terminal.output,
+				exitCode: terminal.exitCode,
+				signal: terminal.signal,
+				running: terminal.running,
+				maxLines: Infinity,
+				labels: blockLabels.terminal,
+				className: ocOr("ToolRow", "terminalBody", "dsh-tdt-sv-tool-terminal")
+			}) : diffs !== null ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DiffBlock, {
+				diffs,
+				labels: blockLabels.diff,
+				maxLines: 9,
+				className: ocOr("ToolRow", "diffBody", "dsh-tdt-sv-tool-block")
+			}) : read !== null ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.ReadBlock, {
+				label: read.label,
+				lines: read.lines,
+				totalLines: read.totalLines,
+				lang: read.lang,
+				labels: blockLabels.read,
+				maxLines: 8,
+				className: ocOr("ToolRow", "readBody", "dsh-tdt-sv-tool-block")
+			}) : (0, react.createElement)(react.Fragment, null, variant === "code" && bodyText !== null ? (0, react.createElement)("div", { className: ocOr("ToolRow", "bodyScroll", "dsh-tdt-sv-tool-block") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				code: bodyText,
+				lang: "typescript",
+				copyLabel: t("copyLabel"),
+				copiedLabel: t("copiedLabel"),
+				toolbarLabels: codeToolbarLabels(t),
+				className: ocOr("ToolRow", "codeBody", "dsh-tdt-sv-tool-block")
+			})) : null, (cardBody !== null || outputText !== null) && (0, react.createElement)("div", { className: ocOr("ToolRow", "ioCard", "dsh-tdt-sv-io-card") }, cardBody !== null && (0, react.createElement)("div", { className: ocOr("ToolRow", "ioSection", "dsh-tdt-sv-io-section") }, (0, react.createElement)("span", { className: ocOr("ToolRow", "ioLabel", "dsh-tdt-sv-io-label") }, t("toolInputLabel")), (0, react.createElement)("span", { className: ocOr("ToolRow", "ioText", "dsh-tdt-sv-io-text") }, cardBody)), cardBody !== null && outputText !== null && (0, react.createElement)("span", {
+				className: ocOr("ToolRow", "ioDivider", "dsh-tdt-sv-io-divider"),
+				"aria-hidden": true
+			}), outputText !== null && (0, react.createElement)("div", { className: ocOr("ToolRow", "ioSection", "dsh-tdt-sv-io-section") }, (0, react.createElement)("span", { className: ocOr("ToolRow", "ioLabel", "dsh-tdt-sv-io-label") }, t("toolOutputLabel")), (0, react.createElement)("span", {
+				className: ocOr("ToolRow", "ioText", "dsh-tdt-sv-io-text"),
+				"data-error": rowState === "error" || void 0
+			}, outputText))))) : void 0;
 			return (0, react.createElement)("div", {
-				className: ocOr("GenericCommandCard", "root", "dsh-tdt-sv-tool"),
-				"data-variant": "others",
-				"data-state": isError ? "error" : "success"
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
-				icon: (0, react.createElement)(ActivityIcon, { size: 14 }),
-				title: rowTitle,
+				className: ocOr("ToolRow", "root", "dsh-tdt-sv-tool"),
+				"data-variant": variant,
+				"data-tool": name,
+				"data-state": rowState
+			}, statusText !== null ? (0, react.createElement)("span", { className: ocOr("ToolRow", "visuallyHidden", "dsh-tdt-sv-visuallyhidden") }, statusText) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				rowClassName: ocOr("ToolRow", "row", "dsh-tdt-sv-tool-row"),
+				leadingClassName: ocOr("ToolRow", "leading", "dsh-tdt-sv-tool-leading"),
+				titleClassName: ocOr("ToolRow", "title", "dsh-tdt-sv-tool-title"),
+				chevronClassName: ocOr("ToolRow", "chevron", "dsh-tdt-sv-tool-chevron"),
+				icon: VARIANT_ICONS[variant],
+				title: t(titleKey),
+				running,
 				open,
-				expandable: diffs !== void 0 || prettyArgs !== "" || output !== "" || filePathArg !== void 0,
-				onToggle: () => {
-					setOpen((value) => !value);
-				},
+				expandable,
 				expandOnRowClick: true,
 				keepContentWhenOpen: true,
-				rowClassName: ocOr("GenericCommandCard", "row", "dsh-tdt-sv-tool-head"),
-				collapsedContent: (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
-					className: ocOr("GenericCommandCard", "separator", ""),
-					"aria-hidden": true
-				}), (0, react.createElement)("span", {
-					className: ocOr("GenericCommandCard", "summary", "dsh-tdt-sv-outcome-ok"),
-					"data-error": isError || void 0
-				}, summaryText)),
-				children: diffs !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.DiffBlock, {
-					diffs,
-					labels: diffLabels(t)
-				}) : (0, react.createElement)("div", { className: "dsh-tdt-sv-io" }, filePathArg === void 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("previewFileLabel")), (0, react.createElement)("button", {
-					type: "button",
-					className: "dsh-tdt-sv-io-file",
-					title: filePathArg,
-					onClick: () => {
-						onOpenFile?.(filePathArg);
-					}
-				}, filePathArg)), prettyArgs === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolInputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, prettyArgs)), output.trim() === "" ? null : (0, react.createElement)("div", { className: "dsh-tdt-sv-io-row" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-io-label" }, t("toolOutputLabel")), (0, react.createElement)("pre", { className: "dsh-tdt-sv-io-content" }, output)))
+				onToggle: () => {
+					setExpanded((value) => !value);
+				},
+				collapsedContent,
+				children: expandedContent
 			}));
 		}
 		//#endregion
@@ -2396,6 +2833,9 @@ window.__ModuleLoader__.load({
 				isError: root.isError === true,
 				errorName: error?.name,
 				meta: root.meta,
+				settled,
+				phase: settled ? void 0 : root.phase === "preparing" ? "preparing" : "start",
+				interrupted: error?.code === "interrupted",
 				onOpenFile,
 				t
 			};
@@ -2538,6 +2978,9 @@ window.__ModuleLoader__.load({
 					output: contentText(node.content),
 					isError: node.isError === true,
 					errorName: node.error?.name,
+					meta: node.meta,
+					settled: true,
+					interrupted: node.error?.code === "interrupted",
 					onOpenFile: fileOpen?.open,
 					t
 				});
