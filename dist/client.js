@@ -233,6 +233,11 @@ window.__ModuleLoader__.load({
 			previewNotRegular: "该路径不是常规文件（符号链接等），暂不支持预览。",
 			previewError: "读取失败：{code}",
 			previewUnknownBinary: "二进制文件，暂不支持预览。可复制路径后在工作区中打开。",
+			previewBadPayload: "读取结果不符合官方契约（已记控制台日志），未渲染内容。",
+			previewRenderFailed: "预览渲染失败（错误已记录，面板其余部分不受影响）。",
+			previewResize: "拖动调整预览栏宽度",
+			colOutputs: "产出",
+			outputsEmpty: "（无产出）",
 			deliverRowTitle: "交付文件",
 			deliverRowPreparing: "准备交付",
 			deliverRowRunning: "正在交付",
@@ -464,6 +469,11 @@ window.__ModuleLoader__.load({
 			previewNotRegular: "Not a regular file (symlink or similar); preview is not supported.",
 			previewError: "Failed to read: {code}",
 			previewUnknownBinary: "Binary file; preview is not supported. Copy the path to open it in the workspace.",
+			previewBadPayload: "Read result does not match the official contract (logged to the console); nothing rendered.",
+			previewRenderFailed: "Preview rendering failed (logged); the rest of the panel is unaffected.",
+			previewResize: "Drag to resize the preview pane",
+			colOutputs: "Outputs",
+			outputsEmpty: "(no outputs)",
 			deliverRowTitle: "Deliver files",
 			deliverRowPreparing: "Preparing delivery",
 			deliverRowRunning: "Delivering",
@@ -484,7 +494,15 @@ window.__ModuleLoader__.load({
 		const SV_STYLE_ID = "dsh-task-dispatch-table-archive-session";
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
-.dsh-tdt-sv-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+/* 弹窗让位预览 dock：右侧留出 --dsh-tdt-preview-w（缺省 0）⇒ 弹窗不被预览面遮盖，
+   与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/artifact-opening.md §四-C）。 */
+.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:var(--dsh-tdt-preview-w,0px);z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));transition:right .12s var(--ds-ease-in-out,ease);}
+/* 预览 dock：固定在屏幕最右侧，整页（含弹窗）由外层 margin / overlay right 让位。 */
+/* 双类选择器：盖住后面 .dsh-tdt-sv-preview 的 width:min(520px,48%)，dock 宽度全由变量决定。 */
+.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:fixed;top:0;right:0;bottom:0;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:none;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
+/* 拖拽条（dock 左缘 6px 命中区，hover/拖拽时高亮，光标 col-resize）。 */
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
+.dsh-tdt-sv-resizer:hover,.dsh-tdt-sv-resizer:active{background:var(--dsw-alias-brand-primary,#2f6feb);opacity:.35;}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
@@ -673,11 +691,9 @@ window.__ModuleLoader__.load({
 .dsh-tdt-sv-turnerr-code{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
 .dsh-tdt-sv-turnerr-warn{color:var(--dsw-alias-state-warn-primary,#f5a623);margin-right:6px;font-weight:600;}
 
-/* ── U11 产出物预览：弹窗内右侧分栏（决策 39：分栏推压，弃「弹窗摞弹窗」） ── */
-.dsh-tdt-sv-split{flex:1;min-height:0;display:flex;overflow:hidden;}
-.dsh-tdt-sv-chatpane{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
-.dsh-tdt-sv-chatpane>.dsh-tdt-sv-frame{flex:1;min-height:0;}
-.dsh-tdt-sv-preview{flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));background:var(--dsw-alias-bg-base,#1a1a1a);}
+/* ── U11 产出物预览（决策 39）：页面级 dock 预览面（弹窗与整页共用，见上方 dock 规则） ──
+   旧「弹窗内右侧分栏」那两条规则已随第三轮上提删除（预览面唯一且页面级）。 */
+.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));background:var(--dsw-alias-bg-base,#1a1a1a);}
 .dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 .dsh-tdt-sv-preview-label{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
 .dsh-tdt-sv-preview-title{flex:1;min-width:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -2624,245 +2640,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
 		}
 		//#endregion
-		//#region src/client/file-preview.tsx
-		/** markdown 外壳文案（引用稳定——新身份会打断 MarkdownText 的渲染缓存；与 mirror/MessageItem 同款）。 */
-		const MD_LABELS = {
-			code: {
-				copyLabel: "复制",
-				copiedLabel: "已复制"
-			},
-			footnotes: "脚注"
-		};
-		/** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
-		const IMAGE_MIME = {
-			png: "image/png",
-			jpg: "image/jpeg",
-			jpeg: "image/jpeg",
-			gif: "image/gif",
-			webp: "image/webp",
-			bmp: "image/bmp",
-			svg: "image/svg+xml",
-			ico: "image/x-icon",
-			avif: "image/avif"
-		};
-		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
-		function previewKind(path) {
-			const base = path.slice(path.lastIndexOf("/") + 1);
-			const dot = base.lastIndexOf(".");
-			const ext = dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
-			if (ext !== "" && IMAGE_MIME[ext] !== void 0) return {
-				kind: "image",
-				ext,
-				mime: IMAGE_MIME[ext]
-			};
-			if (ext === "pdf") return {
-				kind: "pdf",
-				ext,
-				mime: "application/pdf"
-			};
-			if (ext === "md" || ext === "markdown") return {
-				kind: "md",
-				ext
-			};
-			return {
-				kind: "text",
-				ext
-			};
-		}
-		/** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
-		function bareCode(code) {
-			return code.includes("/") ? code.slice(code.lastIndexOf("/") + 1) : code;
-		}
-		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
-		function formatBytes(n) {
-			if (n >= 1048576) {
-				const mb = n / 1048576;
-				return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
-			}
-			if (n >= 1024) {
-				const kb = n / 1024;
-				return `${Number.isInteger(kb) ? kb : kb.toFixed(1)} KB`;
-			}
-			return `${n} B`;
-		}
-		/** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
-		function errView(error) {
-			const e = error ?? {};
-			const code = typeof e.code === "string" ? e.code : "";
-			const details = e.details ?? null;
-			switch (bareCode(code)) {
-				case "not-found":
-				case "lookup-not-found": return { key: "previewNotFound" };
-				case "too-large": {
-					const limit = details !== null && typeof details.limit === "number" ? details.limit : void 0;
-					return {
-						key: "previewTooLarge",
-						params: limit === void 0 ? void 0 : { limit: formatBytes(limit) }
-					};
-				}
-				case "not-text": return { key: "previewUnknownBinary" };
-				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
-				default: return {
-					key: "previewError",
-					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
-				};
-			}
-		}
-		/** 错误/空态体：原因文案 + 复制路径（拍板：不可内嵌 = 空态 + 复制路径）。 */
-		function ErrBox(props) {
-			const { err, path, t } = props;
-			const [copied, setCopied] = (0, react.useState)(false);
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(err.key, err.params)), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-btn",
-				onClick: () => {
-					(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(path).then((ok) => {
-						if (ok) setCopied(true);
-					});
-				}
-			}, copied ? t("copiedLabel") : t("previewCopyPath"))));
-		}
-		/** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
-		function BytesPreview(props) {
-			const { workspaceFiles, sessionId, path, kind, mime, t } = props;
-			const [url, setUrl] = (0, react.useState)(null);
-			const [err, setErr] = (0, react.useState)(null);
-			(0, react.useEffect)(() => {
-				let alive = true;
-				let objectUrl = null;
-				setUrl(null);
-				setErr(null);
-				workspaceFiles.readBytes(sessionId, path).then((page) => {
-					if (!alive) return;
-					objectUrl = URL.createObjectURL(new Blob([page.data], { type: mime }));
-					setUrl(objectUrl);
-				}).catch((error) => {
-					if (alive) setErr(errView(error));
-				});
-				return () => {
-					alive = false;
-					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
-				};
-			}, [
-				workspaceFiles,
-				sessionId,
-				path,
-				mime
-			]);
-			if (err !== null) return (0, react.createElement)(ErrBox, {
-				err,
-				path,
-				t
-			});
-			if (url === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
-			if (kind === "pdf") return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react.createElement)("iframe", {
-				className: "dsh-tdt-sv-preview-pdf",
-				src: url,
-				title: path
-			}));
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("img", {
-				className: "dsh-tdt-sv-preview-img",
-				src: url,
-				alt: path
-			}));
-		}
-		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。 */
-		function TextPreview(props) {
-			const { workspaceFiles, sessionId, path, ext, markdown, t } = props;
-			const [text, setText] = (0, react.useState)(null);
-			const [nextOffset, setNextOffset] = (0, react.useState)(null);
-			const [loading, setLoading] = (0, react.useState)(true);
-			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
-			const [err, setErr] = (0, react.useState)(null);
-			(0, react.useEffect)(() => {
-				let alive = true;
-				setText(null);
-				setNextOffset(null);
-				setLoading(true);
-				setErr(null);
-				workspaceFiles.read(sessionId, path, {}).then((page) => {
-					if (!alive) return;
-					setText(page.text);
-					setNextOffset(page.eof ? null : page.offset + page.lines);
-					setLoading(false);
-				}).catch((error) => {
-					if (!alive) return;
-					setErr(errView(error));
-					setLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				workspaceFiles,
-				sessionId,
-				path
-			]);
-			const loadMore = () => {
-				if (nextOffset === null || loadingMore) return;
-				setLoadingMore(true);
-				workspaceFiles.read(sessionId, path, { offset: nextOffset }).then((page) => {
-					setText((prev) => prev === null ? page.text : `${prev}\n${page.text}`);
-					setNextOffset(page.eof ? null : page.offset + page.lines);
-					setLoadingMore(false);
-				}).catch((error) => {
-					setErr(errView(error));
-					setLoadingMore(false);
-				});
-			};
-			if (err !== null) return (0, react.createElement)(ErrBox, {
-				err,
-				path,
-				t
-			});
-			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, markdown ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text,
-				labels: MD_LABELS
-			})) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
-				code: text,
-				lang: ext === "" ? void 0 : ext,
-				copyLabel: t("copyLabel"),
-				copiedLabel: t("copiedLabel"),
-				className: "dsh-tdt-sv-preview-code"
-			}), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
-				type: "button",
-				disabled: loadingMore,
-				onClick: loadMore
-			}, t("previewLoadMore"))) : null);
-		}
-		/**
-		* 文件预览分栏（`.dsh-tdt-sv-preview`）：头 = 「文件 · 路径 · 关闭」，体按扩展名分发。
-		* 调用方须以 `${sessionId}:${path}` 作 React key 重挂载，保证换文件时内部状态归零。
-		*/
-		function FilePreviewPanel(props) {
-			const { workspaceFiles, sessionId, path, t, onClose } = props;
-			const { kind, ext, mime } = previewKind(path);
-			return (0, react.createElement)("aside", { className: "dsh-tdt-sv-preview" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-preview-label" }, t("previewFileLabel")), (0, react.createElement)("span", {
-				className: "dsh-tdt-sv-preview-title",
-				title: path
-			}, path), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-close",
-				"aria-label": t("previewClose"),
-				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))), kind === "image" || kind === "pdf" ? (0, react.createElement)(BytesPreview, {
-				workspaceFiles,
-				sessionId,
-				path,
-				kind,
-				mime: mime ?? "application/octet-stream",
-				t
-			}) : (0, react.createElement)(TextPreview, {
-				workspaceFiles,
-				sessionId,
-				path,
-				ext,
-				markdown: kind === "md",
-				t
-			}));
-		}
-		//#endregion
 		//#region src/client/session-view.ts
 		/** 稳定的空序列（避免默认值每次新建数组）。 */
 		const EMPTY_ORDER = [];
@@ -3426,7 +3203,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
 		*/
 		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles } = props;
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			const subscribe = (0, react.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
@@ -3480,25 +3257,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setForkErr(null);
 				setForkTarget({ atSeq: seq });
 			}, []);
-			const [preview, setPreview] = (0, react.useState)(null);
 			const openFile = (0, react.useCallback)((path) => {
-				setPreview(path);
-			}, []);
-			const closePreview = (0, react.useCallback)(() => {
-				setPreview(null);
-			}, []);
+				onOpenFile?.(path);
+			}, [onOpenFile]);
 			const order = chat?.order ?? EMPTY_ORDER;
 			const store = chat?.nodes;
 			const keyed = order.length > 0 && store !== void 0;
 			const turns = chat?.timeline?.turns;
 			const fileOpen = (0, react.useMemo)(() => {
-				if (workspaceFiles === void 0) return void 0;
+				if (workspaceFiles === void 0 || onOpenFile === void 0) return void 0;
 				return {
 					open: openFile,
 					mentions: makeFileMentions(collectFilePaths(order, store), openFile)
 				};
 			}, [
 				workspaceFiles,
+				onOpenFile,
 				openFile,
 				order,
 				store
@@ -3569,14 +3343,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: "dsh-tdt-sv-close",
 				"aria-label": tt("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)("div", { className: "dsh-tdt-sv-split" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-chatpane" }, (0, react.createElement)(ChatViewFrame, { children: body })), preview !== null && workspaceFiles !== void 0 ? (0, react.createElement)(FilePreviewPanel, {
-				key: `${sessionId}:${preview}`,
-				workspaceFiles,
-				sessionId,
-				path: preview,
-				t: tt,
-				onClose: closePreview
-			}) : null))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: forkTarget !== null,
 				onClose: () => {
 					if (!forking) setForkTarget(null);
@@ -3599,6 +3366,340 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					onClick: onForkAccept
 				}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))]
 			}, forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
+		}
+		//#endregion
+		//#region src/client/file-preview.tsx
+		/** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
+		var PreviewBoundary = class extends react.Component {
+			state = { crashed: false };
+			static getDerivedStateFromError() {
+				return { crashed: true };
+			}
+			componentDidCatch(error, info) {
+				console.warn("[task-dispatch:file-preview] 预览渲染崩溃（已拦在预览体内）:", error, info.componentStack ?? "");
+			}
+			render() {
+				return this.state.crashed ? this.props.fallback : this.props.children;
+			}
+		};
+		/** 值形状取证（真机排障锚点：远端返回与契约不符时打出来，别靠猜）。 */
+		function shapeOf(value) {
+			if (value === null || value === void 0) return String(value);
+			if (typeof value !== "object") return typeof value;
+			if (Array.isArray(value)) return `array(${value.length})`;
+			return `{${Object.keys(value).slice(0, 12).join(",")}}`;
+		}
+		/**
+		* `read` 结果防御解析（真机 2026-09-28 根因：page.text 为 undefined ⇒ 渲染器内部
+		* `endsWith` 抛错 ⇒ 整页黑屏，界面出现「undefined undefined undefined」）。
+		* 官方 wire 契约 = `{ offset, text, lines, eof, absolutePath, version, bytes? }`
+		* （typert.remote-client.js 的 read_result schema），远端面可能再包一层 `{ value }`；
+		* **取不到字符串一律按错误态处理**，绝不把 undefined 喂给官方渲染器。
+		*/
+		function textPageOf(page) {
+			const raw = page?.value ?? page;
+			if (typeof raw !== "object" || raw === null) {
+				console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(page)}`);
+				return null;
+			}
+			const r = raw;
+			if (typeof r.text !== "string") {
+				console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(page)}`);
+				return null;
+			}
+			const offset = typeof r.offset === "number" ? r.offset : 0;
+			const lines = typeof r.lines === "number" ? r.lines : r.text === "" ? 0 : r.text.split("\n").length;
+			return {
+				text: r.text,
+				offset,
+				lines,
+				eof: r.eof !== false
+			};
+		}
+		/** `readBytes` 结果防御解析：data 必须是 Uint8Array（multipart 还原），否则错误态。 */
+		function bytesOf(page) {
+			const data = (page?.value ?? page)?.data;
+			if (data instanceof Uint8Array) return data;
+			console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(page)}`);
+			return null;
+		}
+		/** markdown 外壳文案（引用稳定——新身份会打断 MarkdownText 的渲染缓存；与 mirror/MessageItem 同款）。 */
+		const MD_LABELS = {
+			code: {
+				copyLabel: "复制",
+				copiedLabel: "已复制"
+			},
+			footnotes: "脚注"
+		};
+		/** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
+		const IMAGE_MIME = {
+			png: "image/png",
+			jpg: "image/jpeg",
+			jpeg: "image/jpeg",
+			gif: "image/gif",
+			webp: "image/webp",
+			bmp: "image/bmp",
+			svg: "image/svg+xml",
+			ico: "image/x-icon",
+			avif: "image/avif"
+		};
+		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
+		function previewKind(path) {
+			const base = path.slice(path.lastIndexOf("/") + 1);
+			const dot = base.lastIndexOf(".");
+			const ext = dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
+			if (ext !== "" && IMAGE_MIME[ext] !== void 0) return {
+				kind: "image",
+				ext,
+				mime: IMAGE_MIME[ext]
+			};
+			if (ext === "pdf") return {
+				kind: "pdf",
+				ext,
+				mime: "application/pdf"
+			};
+			if (ext === "md" || ext === "markdown") return {
+				kind: "md",
+				ext
+			};
+			return {
+				kind: "text",
+				ext
+			};
+		}
+		/** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
+		function bareCode(code) {
+			return code.includes("/") ? code.slice(code.lastIndexOf("/") + 1) : code;
+		}
+		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
+		function formatBytes(n) {
+			if (n >= 1048576) {
+				const mb = n / 1048576;
+				return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
+			}
+			if (n >= 1024) {
+				const kb = n / 1024;
+				return `${Number.isInteger(kb) ? kb : kb.toFixed(1)} KB`;
+			}
+			return `${n} B`;
+		}
+		/** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
+		function errView(error) {
+			const e = error ?? {};
+			const code = typeof e.code === "string" ? e.code : "";
+			const details = e.details ?? null;
+			switch (bareCode(code)) {
+				case "not-found":
+				case "lookup-not-found": return { key: "previewNotFound" };
+				case "too-large": {
+					const limit = details !== null && typeof details.limit === "number" ? details.limit : void 0;
+					return {
+						key: "previewTooLarge",
+						params: limit === void 0 ? void 0 : { limit: formatBytes(limit) }
+					};
+				}
+				case "not-text": return { key: "previewUnknownBinary" };
+				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
+				default: return {
+					key: "previewError",
+					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
+				};
+			}
+		}
+		/** 错误/空态体：原因文案 + 复制路径（拍板：不可内嵌 = 空态 + 复制路径）。 */
+		function ErrBox(props) {
+			const { err, path, t } = props;
+			const [copied, setCopied] = (0, react.useState)(false);
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(err.key, err.params)), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-btn",
+				onClick: () => {
+					(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(path).then((ok) => {
+						if (ok) setCopied(true);
+					});
+				}
+			}, copied ? t("copiedLabel") : t("previewCopyPath"))));
+		}
+		/** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
+		function BytesPreview(props) {
+			const { workspaceFiles, sessionId, path, kind, mime, t } = props;
+			const [url, setUrl] = (0, react.useState)(null);
+			const [err, setErr] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				let objectUrl = null;
+				setUrl(null);
+				setErr(null);
+				workspaceFiles.readBytes(sessionId, path).then((page) => {
+					if (!alive) return;
+					const data = bytesOf(page);
+					if (data === null) {
+						setErr({ key: "previewBadPayload" });
+						return;
+					}
+					objectUrl = URL.createObjectURL(new Blob([data], { type: mime }));
+					setUrl(objectUrl);
+				}).catch((error) => {
+					if (alive) setErr(errView(error));
+				});
+				return () => {
+					alive = false;
+					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path,
+				mime
+			]);
+			if (err !== null) return (0, react.createElement)(ErrBox, {
+				err,
+				path,
+				t
+			});
+			if (url === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			if (kind === "pdf") return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react.createElement)("iframe", {
+				className: "dsh-tdt-sv-preview-pdf",
+				src: url,
+				title: path
+			}));
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("img", {
+				className: "dsh-tdt-sv-preview-img",
+				src: url,
+				alt: path
+			}));
+		}
+		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。 */
+		function TextPreview(props) {
+			const { workspaceFiles, sessionId, path, ext, markdown, t } = props;
+			const [text, setText] = (0, react.useState)(null);
+			const [nextOffset, setNextOffset] = (0, react.useState)(null);
+			const [loading, setLoading] = (0, react.useState)(true);
+			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
+			const [err, setErr] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				setText(null);
+				setNextOffset(null);
+				setLoading(true);
+				setErr(null);
+				workspaceFiles.read(sessionId, path, {}).then((page) => {
+					if (!alive) return;
+					const parsed = textPageOf(page);
+					if (parsed === null) {
+						setErr({ key: "previewBadPayload" });
+						setLoading(false);
+						return;
+					}
+					setText(parsed.text);
+					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+					setLoading(false);
+				}).catch((error) => {
+					if (!alive) return;
+					setErr(errView(error));
+					setLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path
+			]);
+			const loadMore = () => {
+				if (nextOffset === null || loadingMore) return;
+				setLoadingMore(true);
+				workspaceFiles.read(sessionId, path, { offset: nextOffset }).then((page) => {
+					const parsed = textPageOf(page);
+					if (parsed === null) {
+						setErr({ key: "previewBadPayload" });
+						setLoadingMore(false);
+						return;
+					}
+					setText((prev) => prev === null ? parsed.text : `${prev}\n${parsed.text}`);
+					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+					setLoadingMore(false);
+				}).catch((error) => {
+					setErr(errView(error));
+					setLoadingMore(false);
+				});
+			};
+			if (err !== null) return (0, react.createElement)(ErrBox, {
+				err,
+				path,
+				t
+			});
+			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, markdown ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text,
+				labels: MD_LABELS
+			})) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				code: text,
+				lang: ext === "" ? void 0 : ext,
+				copyLabel: t("copyLabel"),
+				copiedLabel: t("copiedLabel"),
+				className: "dsh-tdt-sv-preview-code"
+			}), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
+				type: "button",
+				disabled: loadingMore,
+				onClick: loadMore
+			}, t("previewLoadMore"))) : null);
+		}
+		/**
+		* 文件预览分栏（`.dsh-tdt-sv-preview`）：头 = 「文件 · 路径 · 关闭」，体按扩展名分发。
+		*
+		* 唯一一份预览体，两种宿主：
+		*  · 页面级 dock（`dock: true`）——固定在屏幕最右侧，把整页（含弹窗）往左推（用户 2026-09-28 拍板
+		*    「弹窗与整页共用同一个预览面，且弹窗不遮盖它」）；左缘带拖拽条可调宽；
+		*  · 内联（缺省）——历史上的弹窗内分栏形态，保留以防回退。
+		* 调用方须以 `${sessionId}:${path}` 作 React key 重挂载，保证换文件时内部状态归零。
+		*/
+		function FilePreviewPanel(props) {
+			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props;
+			const { kind, ext, mime } = previewKind(path);
+			const fallback = (0, react.createElement)(ErrBox, {
+				err: { key: "previewRenderFailed" },
+				path,
+				t
+			});
+			return (0, react.createElement)("aside", {
+				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
+				"data-preview-dock": dock === true ? true : void 0
+			}, onResizeStart === void 0 ? null : (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-resizer",
+				role: "separator",
+				"aria-orientation": "vertical",
+				title: t("previewResize"),
+				onPointerDown: (event) => {
+					onResizeStart(event);
+				}
+			}), (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-preview-label" }, t("previewFileLabel")), (0, react.createElement)("span", {
+				className: "dsh-tdt-sv-preview-title",
+				title: path
+			}, path), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-close",
+				"aria-label": t("previewClose"),
+				onClick: onClose
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))), (0, react.createElement)(PreviewBoundary, {
+				fallback,
+				children: kind === "image" || kind === "pdf" ? (0, react.createElement)(BytesPreview, {
+					workspaceFiles,
+					sessionId,
+					path,
+					kind,
+					mime: mime ?? "application/octet-stream",
+					t
+				}) : (0, react.createElement)(TextPreview, {
+					workspaceFiles,
+					sessionId,
+					path,
+					ext,
+					markdown: kind === "md",
+					t
+				})
+			}));
 		}
 		//#endregion
 		//#region src/client/index.ts
@@ -3946,6 +4047,45 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			"skipped",
 			"unknown"
 		];
+		/** 预览宽度持久化键（宽度是纯本地偏好，落 localStorage；读写都容错，隐私模式也不崩）。 */
+		const PREVIEW_WIDTH_KEY = "dsh-tdt-preview-width";
+		/** 宽度区间：下限保住可读性，上限给内容留地方（不超过视口 70%）。 */
+		const PREVIEW_MIN = 320;
+		const PREVIEW_MAX_RATIO = .7;
+		const PREVIEW_DEFAULT = 460;
+		/** 读上次宽度（无效 / 越界一律回默认）。 */
+		function readPreviewWidth() {
+			try {
+				const raw = window.localStorage.getItem(PREVIEW_WIDTH_KEY);
+				const value = raw === null ? NaN : Number(raw);
+				if (!Number.isFinite(value)) return PREVIEW_DEFAULT;
+				return clampPreviewWidth(value);
+			} catch {
+				return PREVIEW_DEFAULT;
+			}
+		}
+		/** 夹到允许区间（上限按当前视口算，故运行时求值）。 */
+		function clampPreviewWidth(value) {
+			const max = Math.max(PREVIEW_MIN, Math.floor(window.innerWidth * PREVIEW_MAX_RATIO));
+			return Math.min(Math.max(Math.round(value), PREVIEW_MIN), max);
+		}
+		/** 实例行的产出物（决策 32③写回的 outputs 列：JSON 数组，兼容逗号串）。 */
+		function parseOutputs(raw) {
+			if (typeof raw === "string" && raw.trim() !== "") {
+				try {
+					const parsed = JSON.parse(raw);
+					if (Array.isArray(parsed)) return parsed.filter((item) => typeof item === "string" && item.trim() !== "");
+				} catch {}
+				return raw.split(",").map((part) => part.trim()).filter((part) => part !== "");
+			}
+			if (Array.isArray(raw)) return raw.filter((item) => typeof item === "string" && item.trim() !== "");
+			return [];
+		}
+		/** 路径末段（表格里只显示文件名，完整路径进 title）。 */
+		function basenameOf(path) {
+			const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+			return cut < 0 ? path : path.slice(cut + 1);
+		}
 		/**
 		* 调度表整页（`main` 槽，双标签）：
 		* - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
@@ -3967,6 +4107,40 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
 			const [expanded, setExpanded] = (0, react.useState)(null);
+			const [preview, setPreview] = (0, react.useState)(null);
+			const [previewWidth, setPreviewWidth] = (0, react.useState)(() => readPreviewWidth());
+			const canPreview = workspaceFiles !== null;
+			const openFile = (0, react.useCallback)((sessionId, path) => {
+				if (!canPreview) return;
+				setPreview({
+					sessionId,
+					path
+				});
+			}, [canPreview]);
+			const closePreview = (0, react.useCallback)(() => {
+				setPreview(null);
+			}, []);
+			/** 拖拽调宽：指针移动期间只在 dock 上改 CSS 变量值，松手才落 state（避免每帧重渲染整页）。 */
+			const startResize = (0, react.useCallback)((start) => {
+				const startX = start.clientX;
+				const startWidth = previewWidth;
+				const onMove = (event) => {
+					const next = clampPreviewWidth(startWidth - (event.clientX - startX));
+					const root = document.getElementById("dsh-tdt-root");
+					if (root !== null) root.style.setProperty("--dsh-tdt-preview-w", `${next}px`);
+				};
+				const onUp = (event) => {
+					window.removeEventListener("pointermove", onMove);
+					window.removeEventListener("pointerup", onUp);
+					const next = clampPreviewWidth(startWidth - (event.clientX - startX));
+					setPreviewWidth(next);
+					try {
+						window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next));
+					} catch {}
+				};
+				window.addEventListener("pointermove", onMove);
+				window.addEventListener("pointerup", onUp);
+			}, [previewWidth]);
 			const [viewing, setViewing] = (0, react.useState)(null);
 			const [viewErr, setViewErr] = (0, react.useState)(null);
 			const [dbDump, setDbDump] = (0, react.useState)(null);
@@ -4081,7 +4255,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					title: text
 				}, clipped);
 			})))))));
-			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", { style: {
+			const previewW = preview === null ? 0 : previewWidth;
+			return (0, react.createElement)("div", {
+				id: "dsh-tdt-root",
+				className: "dsh-tdt-root",
+				style: { ["--dsh-tdt-preview-w"]: `${previewW}px` }
+			}, (0, react.createElement)("div", { style: {
+				...pageStyle,
+				marginRight: `${previewW}px`
+			} }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "10px",
@@ -4179,6 +4361,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				t("colStatus"),
 				t("colAttempt"),
 				t("colSession"),
+				t("colOutputs"),
 				t("colUpdated")
 			].map((name) => (0, react.createElement)("th", {
 				key: name,
@@ -4202,7 +4385,26 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						event.stopPropagation();
 						openView(row.session_id, titleOfTask(row.task_id));
 					}
-				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
+				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, (() => {
+					const outputs = parseOutputs(row.outputs);
+					if (outputs.length === 0) return "—";
+					const sid = row.session_id;
+					if (sid === null || !canPreview) return (0, react.createElement)("span", { title: outputs.join("\n") }, outputs.map(basenameOf).join("、"));
+					return (0, react.createElement)("span", { style: {
+						display: "inline-flex",
+						flexWrap: "wrap",
+						gap: "6px"
+					} }, outputs.map((output) => (0, react.createElement)("button", {
+						key: output,
+						type: "button",
+						style: linkStyle,
+						title: output,
+						onClick: (event) => {
+							event.stopPropagation();
+							openFile(sid, output);
+						}
+					}, basenameOf(output))));
+				})()), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
 					colSpan: 6,
 					style: cellStyle
 				}, (0, react.createElement)("div", { style: {
@@ -4235,6 +4437,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				forkSession: forkSession ?? void 0,
 				openHostSession: openHostSession ?? void 0,
 				workspaceFiles: workspaceFiles ?? void 0,
+				onOpenFile: canPreview ? (path) => {
+					openFile(viewing.sessionId, path);
+				} : void 0,
 				onClose: () => {
 					const closed = viewing.sessionId;
 					const needArchive = viewing.didUnarchive === true;
@@ -4283,7 +4488,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setViewErr(null);
 				}
-			}, "✕")) : null);
+			}, "✕")) : null, preview !== null && workspaceFiles !== null ? (0, react.createElement)(FilePreviewPanel, {
+				key: `${preview.sessionId}:${preview.path}`,
+				workspaceFiles,
+				sessionId: preview.sessionId,
+				path: preview.path,
+				t,
+				dock: true,
+				onResizeStart: startResize,
+				onClose: closePreview
+			}) : null);
 		}
 		/**
 		* 设置页卡片：**只留一行「标题 + 描述 + 箭头」**，点一下切到整页（布局服务 selectPanel）。

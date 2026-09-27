@@ -77,6 +77,9 @@ export type LocaleKey =
   | 'previewClose' | 'previewLoading' | 'previewLoadMore' | 'previewFileLabel'
   | 'previewCopyPath' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
   | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
+  | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
+  // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
+  | 'colOutputs' | 'outputsEmpty'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
   | 'deliverRowTitle' | 'deliverRowPreparing' | 'deliverRowRunning' | 'deliverRowOk'
   | 'deliverRowError' | 'deliverRowStopped'
@@ -315,6 +318,11 @@ export const zh: Record<LocaleKey, string> = {
   previewNotRegular: '该路径不是常规文件（符号链接等），暂不支持预览。',
   previewError: '读取失败：{code}',
   previewUnknownBinary: '二进制文件，暂不支持预览。可复制路径后在工作区中打开。',
+  previewBadPayload: '读取结果不符合官方契约（已记控制台日志），未渲染内容。',
+  previewRenderFailed: '预览渲染失败（错误已记录，面板其余部分不受影响）。',
+  previewResize: '拖动调整预览栏宽度',
+  colOutputs: '产出',
+  outputsEmpty: '（无产出）',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
   deliverRowTitle: '交付文件',
   deliverRowPreparing: '准备交付',
@@ -550,6 +558,11 @@ export const en: Record<LocaleKey, string> = {
   previewNotRegular: 'Not a regular file (symlink or similar); preview is not supported.',
   previewError: 'Failed to read: {code}',
   previewUnknownBinary: 'Binary file; preview is not supported. Copy the path to open it in the workspace.',
+  previewBadPayload: 'Read result does not match the official contract (logged to the console); nothing rendered.',
+  previewRenderFailed: 'Preview rendering failed (logged); the rest of the panel is unaffected.',
+  previewResize: 'Drag to resize the preview pane',
+  colOutputs: 'Outputs',
+  outputsEmpty: '(no outputs)',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).
   deliverRowTitle: 'Deliver files',
   deliverRowPreparing: 'Preparing delivery',

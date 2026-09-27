@@ -44,6 +44,16 @@
 5. **真机「没有入口」根因确认并修复（2026-09-28 第五轮）**：用户真机截图——读取/写入行路径全部不可点。根因 = **注入键缺 dotted `remote.workspaceFiles`**：官方 client 模块 `inject = ['resources','remote','remote.workspaceFiles']`，dotted 键的语义是「等命名空间挂上 remote 才启动」（官方 apply 体访问的正是 `ctx.remote.workspaceFiles`）；我方只注 `['remote']` ⇒ 回调在 remote 服务就位瞬间触发、此刻 workspaceFiles 尚未挂上、回调不重触发 ⇒ 探测永久失败 ⇒ `fileOpen` 全程 undefined ⇒ 一切 fileLink 降级纯文本。修复 = inject 补 dotted 键 + 取值双保险（`sub['remote.workspaceFiles'] ?? remote.workspaceFiles`）+ 启动时「等待…」/「已就位 / 未就位」三条日志。typecheck + build（dist 227.21 kB）+ 冒烟 +1 = **139 项全过**。
 6. **质量门**：typecheck 全过；build dist/client.js 227.05 kB；冒烟 +8 = **138 项全过**（PresentRow 镜像 / 卡网格 / 折叠上限 / 词典齐备 / present 路径词表 / deliverables 类前缀 / 兜底样式 / 诊断日志）。
 
+### 第六轮：页面级唯一 dock + 拖拽 + 崩溃隔离 + 记录行产出链接（2026-09-28，自主拍板）
+
+1. **真机三条反馈**：① 点文件路径有的直接黑屏（面板整个挂掉）；② 有的分栏出来了但正文是「undefined undefined undefined」+ 加载更多；③ 分栏不能左右拉宽。另提出形态诉求：**弹窗与整页共用同一个预览面**，预览从屏幕最右挤出、把整页（含弹窗）往左推，弹窗不遮盖它、可关弹窗也可独立收回预览。
+2. **黑屏根因（栈 + 源码双向定位）**：错误栈 `at g8 … endsWith` 起点在 `file-preview.tsx:206 Promise.then` ⇒ `page.text` 为 undefined ⇒ 该值被喂给官方 `MarkdownText` / `CodeBlock`，内部 `endsWith` 抛错 ⇒ React 卸载整页（宿主日志 `slot entry crashed in 'main'`）。官方 wire 契约核对：`dsh-api-workspace-files/lib/typert.remote-client.js` 的 `read_result` schema = `{offset, text, lines, eof, absolutePath, version, bytes?}`、host 实现 `lib/index.js:425` 也返回 `text` ⇒ **契约侧没问题，是运行期取值面有偏差**；故按「先止血 + 留取证」处理，不猜字段。
+3. **三处修复**：① `PreviewBoundary` 错误边界包住预览体 ⇒ 渲染异常只降级预览区，不再拖垮整页；② `textPageOf` / `bytesOf` 按契约防御解析（兼容 `{value}` 包一层），取不到 text/data 走错误态并 `console.warn` 打印真实形状（下轮据此定位）；③ 仅在拿到字符串 / Uint8Array 时才渲染官方组件。
+4. **形态改造（决策记录 = 设计稿 §四-C）**：预览 state 上提到 `TaskPage`，`FilePreviewPanel` 增 `dock` 形态（fixed 屏幕最右、z-index 1030）+ `onResizeStart`；根容器 `#dsh-tdt-root` 挂 `--dsh-tdt-preview-w`，整页 `marginRight` 与弹窗 overlay `right` 同时让位 ⇒ 弹窗自动居中于剩余区、不被遮盖；弹窗内分栏（`.dsh-tdt-sv-split` / `.dsh-tdt-sv-chatpane`）删除，`SessionViewModal` 改收 `onOpenFile` 上提；**关弹窗不动预览状态**（dock 独立于 viewing）。
+5. **拖拽调宽**：dock 左缘 6px 拖拽条（pointerdown/move/up）；拖动期间只 `style.setProperty('--dsh-tdt-preview-w')` 不重渲染整页，松手落 state + localStorage（`dsh-tdt-preview-width`）；区间 320px ~ 视口 70%，默认 460px。
+6. **执行记录行「产出」列**：`task_instances.outputs`（决策 32③ 完成瞬间写回，真值）经 `parseOutputs`（JSON 数组 / 逗号串兼容）渲染成链接，点之走同一个 `openFile(sessionId, path)` ⇒ 整页也能开预览（无预览能力时降级为文件名文本）。
+7. **质量门**：typecheck 全过；build dist/client.js 237.20 kB；冒烟 +7 = **146 项全过**（dock 与让位变量 / overlay 让位 / 拖拽+持久化 / 错误边界 / 防御解析 / 记录行产出链接 / 弹窗不再自带分栏）。
+
 ## 二、证据与坐标
 
 - `dsh-api-workspace-files/README.zh.md`：read/readBytes/stat/list/changes 全形状 + 错误码 + inject 清单 `['resources','remote','remote.workspaceFiles']`。

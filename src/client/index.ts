@@ -18,7 +18,7 @@
 import { createElement as h, Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
-import type { WorkspaceFilesFace } from './file-preview'
+import { FilePreviewPanel, type WorkspaceFilesFace } from './file-preview'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -365,6 +365,52 @@ function scheduleSummary(row: DebugTaskRow): string {
 
 const STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'] as const
 
+// ── U11 页面级预览 dock（弹窗与整页共用同一个预览面） ──
+
+/** 预览宽度持久化键（宽度是纯本地偏好，落 localStorage；读写都容错，隐私模式也不崩）。 */
+const PREVIEW_WIDTH_KEY = 'dsh-tdt-preview-width'
+/** 宽度区间：下限保住可读性，上限给内容留地方（不超过视口 70%）。 */
+const PREVIEW_MIN = 320
+const PREVIEW_MAX_RATIO = 0.7
+const PREVIEW_DEFAULT = 460
+
+/** 读上次宽度（无效 / 越界一律回默认）。 */
+function readPreviewWidth(): number {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_WIDTH_KEY)
+    const value = raw === null ? Number.NaN : Number(raw)
+    if (!Number.isFinite(value)) return PREVIEW_DEFAULT
+    return clampPreviewWidth(value)
+  } catch {
+    return PREVIEW_DEFAULT
+  }
+}
+
+/** 夹到允许区间（上限按当前视口算，故运行时求值）。 */
+function clampPreviewWidth(value: number): number {
+  const max = Math.max(PREVIEW_MIN, Math.floor(window.innerWidth * PREVIEW_MAX_RATIO))
+  return Math.min(Math.max(Math.round(value), PREVIEW_MIN), max)
+}
+
+/** 实例行的产出物（决策 32③写回的 outputs 列：JSON 数组，兼容逗号串）。 */
+function parseOutputs(raw: unknown): string[] {
+  if (typeof raw === 'string' && raw.trim() !== '') {
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      if (Array.isArray(parsed)) return parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+    } catch { /* 非 JSON ⇒ 按逗号串兜底 */ }
+    return raw.split(',').map(part => part.trim()).filter(part => part !== '')
+  }
+  if (Array.isArray(raw)) return raw.filter((item): item is string => typeof item === 'string' && item.trim() !== '')
+  return []
+}
+
+/** 路径末段（表格里只显示文件名，完整路径进 title）。 */
+function basenameOf(path: string): string {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return cut < 0 ? path : path.slice(cut + 1)
+}
+
 /**
  * 调度表整页（`main` 槽，双标签）：
  * - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
@@ -384,7 +430,7 @@ function TaskPage(props: {
   forkSession: ((id: string, atSeq?: number) => Promise<string>) | null
   /** U10：官方导航跳转（uiWorkspace.openSession；未就位为 null）。 */
   openHostSession: ((id: string) => void) | null
-  /** U11 产出物预览：remote.workspaceFiles 服务（未就位为 null ⇒ 弹窗不渲染预览分栏）。 */
+  /** U11 产出物预览：remote.workspaceFiles 服务（未就位为 null ⇒ 不渲染预览面、链接降级纯文本）。 */
   workspaceFiles: WorkspaceFilesFace | null
 }) {
   const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles } = props
@@ -403,6 +449,36 @@ function TaskPage(props: {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [taskFilter, setTaskFilter] = useState<string>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
+  // U11 页面级预览 dock（用户 2026-09-28 拍板）：**唯一一份**预览面，固定在屏幕最右侧并
+  // 把整页（含会话弹窗）往左推；弹窗与整页共用它，关弹窗不影响它，它自己可完整收回。
+  const [preview, setPreview] = useState<{ sessionId: string; path: string } | null>(null)
+  const [previewWidth, setPreviewWidth] = useState<number>(() => readPreviewWidth())
+  // U11 单一入口：整页（记录行产出物）与弹窗（文件链接 / 交付卡）全走它 ⇒ 预览面只有一份。
+  const canPreview = workspaceFiles !== null
+  const openFile = useCallback((sessionId: string, path: string): void => {
+    if (!canPreview) return
+    setPreview({ sessionId, path })
+  }, [canPreview])
+  const closePreview = useCallback((): void => { setPreview(null) }, [])
+  /** 拖拽调宽：指针移动期间只在 dock 上改 CSS 变量值，松手才落 state（避免每帧重渲染整页）。 */
+  const startResize = useCallback((start: { clientX: number }): void => {
+    const startX = start.clientX
+    const startWidth = previewWidth
+    const onMove = (event: PointerEvent): void => {
+      const next = clampPreviewWidth(startWidth - (event.clientX - startX))
+      const root = document.getElementById('dsh-tdt-root')
+      if (root !== null) root.style.setProperty('--dsh-tdt-preview-w', `${next}px`)
+    }
+    const onUp = (event: PointerEvent): void => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      const next = clampPreviewWidth(startWidth - (event.clientX - startX))
+      setPreviewWidth(next)
+      try { window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next)) } catch { /* 隐私模式忽略 */ }
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }, [previewWidth])
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
   const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget; didUnarchive?: boolean } | null>(null)
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
@@ -535,8 +611,14 @@ function TaskPage(props: {
         ),
   )
 
-  return h(Fragment, null,
-    h('div', { style: pageStyle },
+  // 预览 dock 占位宽度（0 = 收回）：整页与弹窗都按这个变量让位 ⇒「弹窗不遮盖预览面」。
+  const previewW = preview === null ? 0 : previewWidth
+  return h('div', {
+    id: 'dsh-tdt-root',
+    className: 'dsh-tdt-root',
+    style: { ['--dsh-tdt-preview-w' as string]: `${previewW}px` },
+  },
+    h('div', { style: { ...pageStyle, marginRight: `${previewW}px` } },
       // 抬头：左「← 返回会话」+ 标题；右「刷新 · 分组标签」
       h('div', { style: panelHeaderStyle },
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
@@ -690,7 +772,7 @@ function TaskPage(props: {
                 ? h('p', { style: hintStyle }, t('debugInstancesEmpty'))
                 : h('table', { style: tableStyle },
                     h('thead', null, h('tr', null,
-                      [t('colTask'), t('colSlot'), t('colStatus'), t('colAttempt'), t('colSession'), t('colUpdated')]
+                      [t('colTask'), t('colSlot'), t('colStatus'), t('colAttempt'), t('colSession'), t('colOutputs'), t('colUpdated')]
                         .map(name => h('th', { key: name, style: cellStyle }, name)))),
                     h('tbody', null, instances.map(row => {
                       const open = expanded === row.id
@@ -721,6 +803,29 @@ function TaskPage(props: {
                                   },
                                 }, row.session_id.slice(0, 8))
                                 : row.session_id.slice(0, 8),
+                          ),
+                          h('td', { style: cellStyle },
+                            (() => {
+                              // 产出物（决策 32③：完成瞬间写回 task_instances.outputs，真值非模拟）。
+                              const outputs = parseOutputs((row as unknown as { outputs?: unknown }).outputs)
+                              if (outputs.length === 0) return '—'
+                              const sid = row.session_id
+                              if (sid === null || !canPreview) {
+                                return h('span', { title: outputs.join('\n') },
+                                  outputs.map(basenameOf).join('、'))
+                              }
+                              return h('span', { style: { display: 'inline-flex', flexWrap: 'wrap', gap: '6px' } },
+                                outputs.map(output => h('button', {
+                                  key: output,
+                                  type: 'button',
+                                  style: linkStyle,
+                                  title: output,
+                                  onClick: (event: { stopPropagation(): void }) => {
+                                    event.stopPropagation()
+                                    openFile(sid, output)
+                                  },
+                                }, basenameOf(output))))
+                            })(),
                           ),
                           h('td', { style: cellStyle }, formatTime(row.updated_at)),
                         ),
@@ -774,8 +879,10 @@ function TaskPage(props: {
         // U10：fork + 官方跳转（服务未就位时为 null ⇒ 弹窗不渲染「继续对话」按钮）。
         forkSession: forkSession ?? undefined,
         openHostSession: openHostSession ?? undefined,
-        // U11：产出物预览（remote.workspaceFiles 未就位时 undefined ⇒ 不渲染分栏）。
+        // U11：产出物预览（remote.workspaceFiles 未就位时 undefined ⇒ 链接降级纯文本）。
         workspaceFiles: workspaceFiles ?? undefined,
+        // 弹窗内所有文件链接 → 页面级唯一预览面（预览与弹窗互不干扰）。
+        onOpenFile: canPreview ? (path: string) => { openFile(viewing.sessionId, path) } : undefined,
         onClose: () => {
           const closed = viewing.sessionId
           const needArchive = viewing.didUnarchive === true
@@ -809,6 +916,20 @@ function TaskPage(props: {
           onClick: () => { setViewErr(null) },
         }, '✕'),
       )
+      : null,
+    // U11 页面级预览 dock：固定在屏幕最右侧，把整页（含会话弹窗）往左推；
+    // 与弹窗互不遮盖、互不干扰——关弹窗预览仍在，收预览整页回满宽。
+    preview !== null && workspaceFiles !== null
+      ? h(FilePreviewPanel, {
+          key: `${preview.sessionId}:${preview.path}`,
+          workspaceFiles,
+          sessionId: preview.sessionId,
+          path: preview.path,
+          t,
+          dock: true,
+          onResizeStart: startResize,
+          onClose: closePreview,
+        })
       : null,
   )
 }

@@ -39,7 +39,7 @@ import { DeliverablesGridMirror, PresentRowMirror, type DeliveredFileFace } from
 import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
 import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
-import { FilePreviewPanel, type WorkspaceFilesFace } from './file-preview'
+import type { WorkspaceFilesFace } from './file-preview'
 import { interpolateTranslate, type Translate } from './locales'
 
 export type { Translate } from './locales'
@@ -1014,10 +1014,16 @@ export function SessionViewModal(props: {
   forkSession?: (sessionId: string, atSeq?: number) => Promise<string>
   /** 官方导航跳转：`uiWorkspace.openSession(id)`（会话区打开目标会话）。 */
   openHostSession?: (sessionId: string) => void
-  /** U11 产出物预览：remote.workspaceFiles 服务（未就位 = 不渲染分栏、链接降级纯文本）。 */
+  /** U11 产出物预览：remote.workspaceFiles 服务（未就位 = 链接降级纯文本，不渲染预览入口）。 */
   workspaceFiles?: WorkspaceFilesFace
+  /**
+   * U11 统一入口（页面级）：点任意文件链接 → 由外层（整页）渲染**唯一那份**预览 dock
+   * （弹窗与整页共用同一个预览面；弹窗不遮盖它，见 docs/design/artifact-opening.md §四-C）。
+   * 未传 = 预览能力未就位 ⇒ 弹窗内链接降级纯文本。
+   */
+  onOpenFile?: (path: string) => void
 }): ReturnType<typeof h> {
-  const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles } = props
+  const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
   const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
@@ -1073,11 +1079,9 @@ export function SessionViewModal(props: {
     setForkTarget({ atSeq: seq })
   }, [])
 
-  // U11 产出物预览：openFile 单一入口（拍板②：所有链接只调它，链接处零写死）。
-  // preview = 预览分栏当前路径；FilePreviewPanel 以 sessionId:path 为 key，换文件重挂载。
-  const [preview, setPreview] = useState<string | null>(null)
-  const openFile = useCallback((path: string): void => { setPreview(path) }, [])
-  const closePreview = useCallback((): void => { setPreview(null) }, [])
+  // U11 统一入口：弹窗内所有文件链接走外层（整页）的 openFile —— 预览面只有一份、页面级，
+  // 弹窗不再自带分栏（用户 2026-09-28 拍板：弹窗与整页共用同一个预览面，弹窗不遮盖它）。
+  const openFile = useCallback((path: string): void => { onOpenFile?.(path) }, [onOpenFile])
 
   const order = chat?.order ?? EMPTY_ORDER
   const store = chat?.nodes
@@ -1085,12 +1089,13 @@ export function SessionViewModal(props: {
   const turns = chat?.timeline?.turns
   // markdown 行内文件词表（来自 keyed 工具流；workspaceFiles 未就位 = 整个上下文不启用）。
   const fileOpen = useMemo<FileOpenFace | undefined>(() => {
-    if (workspaceFiles === undefined) return undefined
+    // 预览能力 = workspaceFiles 已就位 **且** 外层给了 openFile（两者缺一即链接降级纯文本）。
+    if (workspaceFiles === undefined || onOpenFile === undefined) return undefined
     return {
       open: openFile,
       mentions: makeFileMentions(collectFilePaths(order, store), openFile),
     }
-  }, [workspaceFiles, openFile, order, store])
+  }, [workspaceFiles, onOpenFile, openFile, order, store])
   // 每轮交付文件（present 调用同源推导，独立于 workspaceFiles：卡片照官方常渲染，点击才走 openFile）。
   const deliveredByTurn = useMemo(() => collectDeliveredFiles(order, store), [order, store])
   const renderNode = useCallback<NodeRenderer>(
@@ -1182,22 +1187,9 @@ export function SessionViewModal(props: {
             }, h(IconCloseOutlineRegular, { size: 14 })),
           ),
         ),
-        // U11 分栏推压（决策 39）：左 = 会话区（ChatViewFrame），右 = 文件预览分栏（有 preview 才占位）。
-        h('div', { className: 'dsh-tdt-sv-split' },
-          h('div', { className: 'dsh-tdt-sv-chatpane' },
-            // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
-            h(ChatViewFrame, { children: body })),
-          preview !== null && workspaceFiles !== undefined
-            ? h(FilePreviewPanel, {
-                key: `${sessionId}:${preview}`,
-                workspaceFiles,
-                sessionId,
-                path: preview,
-                t: tt,
-                onClose: closePreview,
-              })
-            : null,
-        ),
+        // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
+        // U11：预览面已上提到页面级 dock（弹窗不再自带分栏），此处只留会话区本身。
+        h(ChatViewFrame, { children: body }),
       ),
     ),
     // 开分支确认框（用户拍板：必须先确认再 fork，防误点）——官方 primitives Modal + Button

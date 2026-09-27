@@ -45,6 +45,23 @@
 4. ✅ **整页留接口**：TaskPageHost 已收 `filesRef` 并透传弹窗，`openFile` 入口就位，不落 UI（场景 2 暂缓）。
 5. ✅ **质量门**：冒烟 +10 断言（预览组件 / 分栏 / 单入口 / 词表 / 真实取数 / 错误码四分支 / 加载更多 / objectURL 生命周期 / inject 清单）共 **124 项全过**；typecheck + build 过（dist/client.js 190.21 kB 入库）。
 
+## 四-C、预览面形态：**页面级唯一 dock**（2026-09-28 用户拍板，替代「弹窗内分栏」）
+
+> 决策 39③ 原定的「弹窗内右侧分栏」已**废弃**：用户要求弹窗与整页**共用同一个预览面**，
+> 且**弹窗不遮盖它**——预览从屏幕最右侧挤出，把整页（含弹窗）一起往左推。
+
+| 项 | 结论 |
+|---|---|
+| 唯一预览面 | `FilePreviewPanel`（dock 形态）渲染在 `TaskPage` 根（`#dsh-tdt-root`）下，`position:fixed;right:0;top:0;bottom:0;z-index:1030`；弹窗与整页**共用这一份**（弹窗不再自带分栏） |
+| 推压方式 | 根容器挂 CSS 变量 `--dsh-tdt-preview-w`（收回 = 0）：整页容器 `marginRight` 让位、弹窗 overlay `right: var(--dsh-tdt-preview-w,0px)` 让位 ⇒ 弹窗自动居中于剩余区域、不被遮盖 |
+| 生命周期 | 预览 state 在 `TaskPage` 上 ⇒ **关弹窗不影响预览**，预览可独立收回（头部关闭钮） |
+| 统一入口 | `openFile(sessionId, path)`：弹窗内（工具卡路径 / 正文 fileMentions / 交付卡）经 `onOpenFile(path)` 上提；整页（执行记录行的产出物）直调 ⇒ **两处同一个入口、同一份引擎**（决策 39 ③） |
+| 宽度可调 | dock 左缘 6px 拖拽条（pointerdown/move/up）：拖动期间只改 CSS 变量（不重渲染整页），松手落 state 并持久化 localStorage（`dsh-tdt-preview-width`）；区间 320px ~ 视口 70%，默认 460px |
+| 崩溃隔离 | 预览体外包 `PreviewBoundary`（错误边界）：渲染异常只降级预览区，**不再拖垮整页**（真机 2026-09-28「点了直接黑屏」的直接修复） |
+| 数据契约防御 | `read` / `readBytes` 结果按官方 wire schema 解析，取不到 `text` / `data` ⇒ 走错误态**绝不把 undefined 喂给官方渲染器**（真机「undefined undefined undefined」+ `endsWith` 崩溃的根因面），并打形状日志取证 |
+
+---
+
 ## 四-B、交付登记路线（决策 40，已拍板·**待实施**）
 
 > 用户 2026-09-28 定：**B（插件代写官方交付事件）+ C（提示词要求模型调 present 兜底）**；否决「插件 UI 自己画卡」。

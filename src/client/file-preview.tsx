@@ -13,9 +13,67 @@
 // —— read(sessionId, path, {offset?, limit?}) → {offset, text, lines, eof, ...}（单页
 // 2MiB/5000 行，文本页 \n 连接、末行不带终止符，翻页 offset = 页 offset + lines）；
 // readBytes(sessionId, path, ...) → {offset, data: Uint8Array, eof, ...}（全量 ≤32MiB）。
-import { createElement as h, useEffect, useState } from 'react'
+import { Component, createElement as h, useEffect, useState } from 'react'
+import type { ErrorInfo, ReactNode } from 'react'
 import { CodeBlock, IconCloseOutlineRegular, MarkdownText, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { LocaleKey, Translate } from './locales'
+
+/** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
+export class PreviewBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { crashed: boolean }> {
+  state = { crashed: false }
+
+  static getDerivedStateFromError(): { crashed: boolean } {
+    return { crashed: true }
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    console.warn('[task-dispatch:file-preview] 预览渲染崩溃（已拦在预览体内）:', error, info.componentStack ?? '')
+  }
+
+  render(): ReactNode {
+    return this.state.crashed ? this.props.fallback : this.props.children
+  }
+}
+
+/** 值形状取证（真机排障锚点：远端返回与契约不符时打出来，别靠猜）。 */
+function shapeOf(value: unknown): string {
+  if (value === null || value === undefined) return String(value)
+  if (typeof value !== 'object') return typeof value
+  if (Array.isArray(value)) return `array(${value.length})`
+  return `{${Object.keys(value as object).slice(0, 12).join(',')}}`
+}
+
+/**
+ * `read` 结果防御解析（真机 2026-09-28 根因：page.text 为 undefined ⇒ 渲染器内部
+ * `endsWith` 抛错 ⇒ 整页黑屏，界面出现「undefined undefined undefined」）。
+ * 官方 wire 契约 = `{ offset, text, lines, eof, absolutePath, version, bytes? }`
+ * （typert.remote-client.js 的 read_result schema），远端面可能再包一层 `{ value }`；
+ * **取不到字符串一律按错误态处理**，绝不把 undefined 喂给官方渲染器。
+ */
+function textPageOf(page: unknown): { text: string; offset: number; lines: number; eof: boolean } | null {
+  const raw = (page as { value?: unknown } | null | undefined)?.value ?? page
+  if (typeof raw !== 'object' || raw === null) {
+    console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(page)}`)
+    return null
+  }
+  const r = raw as { text?: unknown; offset?: unknown; lines?: unknown; eof?: unknown }
+  if (typeof r.text !== 'string') {
+    console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(page)}`)
+    return null
+  }
+  const offset = typeof r.offset === 'number' ? r.offset : 0
+  const lines = typeof r.lines === 'number' ? r.lines : (r.text === '' ? 0 : r.text.split('\n').length)
+  return { text: r.text, offset, lines, eof: r.eof !== false }
+}
+
+/** `readBytes` 结果防御解析：data 必须是 Uint8Array（multipart 还原），否则错误态。 */
+function bytesOf(page: unknown): Uint8Array | null {
+  const raw = (page as { value?: unknown } | null | undefined)?.value ?? page
+  const data = (raw as { data?: unknown } | null | undefined)?.data
+  if (data instanceof Uint8Array) return data
+  console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(page)}`)
+  return null
+}
 
 /** @deepseek-ai/dsh-api-workspace-files 的消费面（官方 remote.workspaceFiles 命名空间的用到的子集）。 */
 export interface WorkspaceFilesFace {
@@ -158,7 +216,9 @@ function BytesPreview(props: {
     workspaceFiles.readBytes(sessionId, path)
       .then((page) => {
         if (!alive) return
-        objectUrl = URL.createObjectURL(new Blob([page.data as unknown as BlobPart], { type: mime }))
+        const data = bytesOf(page)
+        if (data === null) { setErr({ key: 'previewBadPayload' }); return }
+        objectUrl = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: mime }))
         setUrl(objectUrl)
       })
       .catch((error: unknown) => { if (alive) setErr(errView(error)) })
@@ -205,8 +265,10 @@ function TextPreview(props: {
     workspaceFiles.read(sessionId, path, {})
       .then((page) => {
         if (!alive) return
-        setText(page.text)
-        setNextOffset(page.eof ? null : page.offset + page.lines)
+        const parsed = textPageOf(page)
+        if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoading(false); return }
+        setText(parsed.text)
+        setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
         setLoading(false)
       })
       .catch((error: unknown) => {
@@ -221,9 +283,11 @@ function TextPreview(props: {
     setLoadingMore(true)
     workspaceFiles.read(sessionId, path, { offset: nextOffset })
       .then((page) => {
+        const parsed = textPageOf(page)
+        if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoadingMore(false); return }
         // 页间以 \n 拼接（官方页末行不带终止符）。
-        setText(prev => (prev === null ? page.text : `${prev}\n${page.text}`))
-        setNextOffset(page.eof ? null : page.offset + page.lines)
+        setText(prev => (prev === null ? parsed.text : `${prev}\n${parsed.text}`))
+        setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
         setLoadingMore(false)
       })
       .catch((error: unknown) => {
@@ -254,6 +318,11 @@ function TextPreview(props: {
 
 /**
  * 文件预览分栏（`.dsh-tdt-sv-preview`）：头 = 「文件 · 路径 · 关闭」，体按扩展名分发。
+ *
+ * 唯一一份预览体，两种宿主：
+ *  · 页面级 dock（`dock: true`）——固定在屏幕最右侧，把整页（含弹窗）往左推（用户 2026-09-28 拍板
+ *    「弹窗与整页共用同一个预览面，且弹窗不遮盖它」）；左缘带拖拽条可调宽；
+ *  · 内联（缺省）——历史上的弹窗内分栏形态，保留以防回退。
  * 调用方须以 `${sessionId}:${path}` 作 React key 重挂载，保证换文件时内部状态归零。
  */
 export function FilePreviewPanel(props: {
@@ -262,10 +331,26 @@ export function FilePreviewPanel(props: {
   path: string
   t: Translate
   onClose: () => void
+  /** 页面级 dock 形态（固定右侧 + 推压整页）。 */
+  dock?: boolean
+  /** 左缘拖拽条按下（调宽）；不传 = 不渲染拖拽条。 */
+  onResizeStart?: (event: { clientX: number; pointerId: number }) => void
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, t, onClose } = props
+  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props
   const { kind, ext, mime } = previewKind(path)
-  return h('aside', { className: 'dsh-tdt-sv-preview' },
+  const fallback = h(ErrBox, { err: { key: 'previewRenderFailed' }, path, t })
+  return h('aside', {
+    className: dock === true ? 'dsh-tdt-sv-preview dsh-tdt-sv-preview-dock' : 'dsh-tdt-sv-preview',
+    'data-preview-dock': dock === true ? true : undefined,
+  },
+    onResizeStart === undefined ? null
+      : h('div', {
+          className: 'dsh-tdt-sv-resizer',
+          role: 'separator',
+          'aria-orientation': 'vertical',
+          title: t('previewResize'),
+          onPointerDown: (event: { clientX: number; pointerId: number }) => { onResizeStart(event) },
+        }),
     h('div', { className: 'dsh-tdt-sv-preview-head' },
       h('span', { className: 'dsh-tdt-sv-preview-label' }, t('previewFileLabel')),
       h('span', { className: 'dsh-tdt-sv-preview-title', title: path }, path),
@@ -276,8 +361,11 @@ export function FilePreviewPanel(props: {
         onClick: onClose,
       }, h(IconCloseOutlineRegular, { size: 14 })),
     ),
-    kind === 'image' || kind === 'pdf'
-      ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t })
-      : h(TextPreview, { workspaceFiles, sessionId, path, ext, markdown: kind === 'md', t }),
+    h(PreviewBoundary, {
+      fallback,
+      children: (kind === 'image' || kind === 'pdf')
+        ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t })
+        : h(TextPreview, { workspaceFiles, sessionId, path, ext, markdown: kind === 'md', t }),
+    }),
   )
 }

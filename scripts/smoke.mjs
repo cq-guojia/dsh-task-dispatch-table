@@ -482,8 +482,9 @@ try {
     !clientJs.includes('dsh-tdt-sv-notice-err') && !clientJs.includes('sessionTurnError'))
   // U11 产出物预览（决策 39）：分栏推压 + 统一 openFile 单一入口 + 官方错误码 + workspaceFiles 注入。
   check('预览分栏组件已打进 bundle（FilePreviewPanel）', clientJs.includes('FilePreviewPanel'))
-  check('分栏推压布局已打进 bundle（dsh-tdt-sv-split / chatpane / preview）',
-    clientJs.includes('dsh-tdt-sv-split') && clientJs.includes('dsh-tdt-sv-chatpane') && clientJs.includes('dsh-tdt-sv-preview'))
+  // 决策 39 的形态仍是「分栏推压」，但预览面已上提到页面级 dock（第三轮）：弹窗内不再有分栏。
+  check('分栏推压（页面级 dock）已打进 bundle（preview + 让位变量 + 整页 marginRight）',
+    clientJs.includes('dsh-tdt-sv-preview') && clientJs.includes('--dsh-tdt-preview-w') && clientJs.includes('marginRight'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
     clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
   check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',
@@ -520,6 +521,21 @@ try {
     clientJs.includes('remote.workspaceFiles 未就位'))
   check('注入键含 dotted remote.workspaceFiles（等命名空间挂载，真机「链接不可点」根因修复）',
     /inject\(\[.{0,20}remote\.workspaceFiles/.test(clientJs))
+  // U11 第三轮（页面级预览 dock）：一份预览面，弹窗与整页共用 + 拖拽调宽 + 崩溃不黑屏 + 记录行产出链接。
+  check('预览面唯一且页面级（dock 形态 + 整页让位变量 --dsh-tdt-preview-w）',
+    clientJs.includes('dsh-tdt-sv-preview-dock') && clientJs.includes('--dsh-tdt-preview-w'))
+  check('弹窗让位预览（overlay right 走同一变量，弹窗不遮盖预览面）',
+    clientJs.includes('right:var(--dsh-tdt-preview-w,0px)'))
+  check('预览栏可拖拽调宽（resizer + pointermove/up + 宽度持久化与夹取）',
+    clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes('pointermove') && clientJs.includes('clampPreviewWidth'))
+  check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
+    clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
+  check('远端返回防御解析（text/data 不符契约走错误态，不把 undefined 喂渲染器）',
+    clientJs.includes('textPageOf') && clientJs.includes('bytesOf') && clientJs.includes('previewBadPayload'))
+  check('执行记录行产出物可点（outputs 列 → 同一 openFile 入口）',
+    clientJs.includes('parseOutputs') && clientJs.includes('basenameOf') && clientJs.includes('colOutputs'))
+  check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
+    clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))
 } finally {
   rmSync(root, { recursive: true, force: true })
 }
