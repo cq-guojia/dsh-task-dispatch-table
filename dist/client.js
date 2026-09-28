@@ -953,17 +953,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:active
 .dsh-tdt-sv-seg-btn:hover{color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-00,#fff);color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18);}
 body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-900,#111);color:var(--dsw-static-neutral-00,#fff);}
-/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、绝不横向滚动。 */
-.dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
-.dsh-tdt-sv-preview-code{max-width:100%;}
-/* 代码块：始终按容器宽度折行（保留缩进/空白，超长串可断行），禁用横向滚动条
-   （用户 2026-09-28 拍板：「该多宽就多宽，到了宽度限制该折行，永不出现横向滚动条」）。
-   官方 CodeBlock 的 data-code-wrap 属性只在其内部 CSS 模块缺对应换行规则（换行规则仅存在于
-   DiffBlock / ReadBlock 模块），此处作用域限定在我方预览外壳直接补上，不区分换行开关态。 */
-.dsh-tdt-sv-preview-coderender [data-code-block-content]{max-width:100%;overflow-x:hidden;}
-.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content],
-.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content] pre,
-.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content] code{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}
+/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面按容器宽度布局。 */
+.dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;}
+.dsh-tdt-sv-preview-code{min-width:0;max-width:100%;}
+/* 换行开关 **完整交回官方 CodeBlock**（源码事实，primitives@0.1.7-rc.2）：
+   · 不传 wrap ⇒ 工具栏渲染换行钮，内部 localWrapped 默认 true ⇒ **默认折行**；
+   · 开 = 根[data-code-wrap=true] ⇒ pre 走 white-space:pre-wrap ⇒ 折行、不溢出；
+   · 关 = 根[data-code-wrap=false] ⇒ pre 走 white-space:pre ⇒ 不折行，
+     由 pre 自带 overflow-x:auto 出横向滚动条（滚动口就是 pre，.content 是 display:contents）。
+   ⚠️ 我方曾传 wrap:true 导致官方 omit 掉换行钮、又用 CSS 覆盖官方换行规则 ⇒ 两次弄坏它。
+   现在只补两条：① pre 宽度受容器约束（折行按容器宽度发生）；② 换行开时禁用横向滚动条。
+   除此之外绝不覆盖官方任何 white-space / overflow 规则。 */
+.dsh-tdt-sv-preview-coderender pre{max-width:100%;}
+.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] pre{overflow-x:hidden;}
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
 /* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
@@ -4076,7 +4078,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				code: text,
 				lang: language,
 				lineNumbers: true,
-				wrap: true,
 				copyLabel: t("copyLabel"),
 				copiedLabel: t("copiedLabel"),
 				toolbarLabels: {

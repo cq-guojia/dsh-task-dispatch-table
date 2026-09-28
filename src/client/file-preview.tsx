@@ -392,9 +392,10 @@ export function TextPreview(props: {
           code: text,
           lang: language,
           lineNumbers: true,
-          // 始终换行（用户 2026-09-28：代码/文本文件此前未传 wrap，官方 data-code-wrap 未置，
-          // 长行不折行撑出横向滚动条；统一 wrap:true，配合 CSS 强制折行 + 禁横向滚动）。
-          wrap: true,
+          // ⚠️ 绝不能传 wrap（源码事实，primitives@0.1.7-rc.2 lib/index.js:10689 + :9285）：
+          // 官方 CodeBlock 的换行钮只在 wrap === undefined 时渲染（onWrap 有值才画；
+          // 传了 wrap ⇒ onWrap 为 undefined ⇒ 官方 **omit** 掉换行钮，按钮直接消失）。
+          // 不传 ⇒ 官方内部 localWrapped 默认 true（默认折行），点钮切不折行，全由官方管。
           copyLabel: t('copyLabel'),
           copiedLabel: t('copiedLabel'),
           toolbarLabels: {
