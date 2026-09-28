@@ -107,11 +107,11 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorScheduleOn'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
-  | 'editorWeekdayAdd' | 'editorWeekdayEmpty' | 'editorWeekdayRemove'
+  | 'editorWeekdayShorts' | 'editorWeekdayEmpty'
   | 'editorToday' | 'editorPrevMonth' | 'editorNextMonth' | 'editorPrevYear' | 'editorNextYear'
   | 'editorMonthTitle' | 'editorHour' | 'editorMinute' | 'editorNow' | 'editorConfirm'
   | 'editorTimezone' | 'editorWindow' | 'editorWindowHint'
-  | 'unitMinutes' | 'unitHours'
+  | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepAdd' | 'editorDepTask' | 'editorDepSemantics'
   | 'editorDepSamePeriod' | 'editorDepLatestSuccess' | 'editorDepRemove' | 'editorDepEmpty'
   | 'editorAdvanced' | 'editorRetry' | 'editorValidStatuses' | 'editorJson' | 'editorJsonHint'
@@ -453,9 +453,8 @@ export const zh: Record<LocaleKey, string> = {
   editorWeekday5: '周五',
   editorWeekday6: '周六',
   editorWeekday7: '周日',
-  editorWeekdayAdd: '添加',
-  editorWeekdayEmpty: '不限（每天）',
-  editorWeekdayRemove: '移除{name}',
+  editorWeekdayShorts: '一|二|三|四|五|六|日',
+  editorWeekdayEmpty: '不选 = 每天',
   editorToday: '今天',
   editorPrevMonth: '上个月',
   editorNextMonth: '下个月',
@@ -471,6 +470,7 @@ export const zh: Record<LocaleKey, string> = {
   editorWindowHint: '只管开始：从计划时刻起这段时间内允许派发与重试',
   unitMinutes: '分钟',
   unitHours: '小时',
+  unitDays: '天',
   editorDeps: '前置任务',
   editorDepAdd: '添加依赖',
   editorDepTask: '任务',
@@ -809,9 +809,8 @@ export const en: Record<LocaleKey, string> = {
   editorWeekday5: 'Fri',
   editorWeekday6: 'Sat',
   editorWeekday7: 'Sun',
-  editorWeekdayAdd: 'Add',
-  editorWeekdayEmpty: 'Any day',
-  editorWeekdayRemove: 'Remove {name}',
+  editorWeekdayShorts: 'Mo|Tu|We|Th|Fr|Sa|Su',
+  editorWeekdayEmpty: 'None = every day',
   editorToday: 'Today',
   editorPrevMonth: 'Previous month',
   editorNextMonth: 'Next month',
@@ -827,6 +826,7 @@ export const en: Record<LocaleKey, string> = {
   editorWindowHint: 'Start only: dispatch and retries are allowed within this window',
   unitMinutes: 'minutes',
   unitHours: 'hours',
+  unitDays: 'days',
   editorDeps: 'Depends on',
   editorDepAdd: 'Add dependency',
   editorDepTask: 'Task',

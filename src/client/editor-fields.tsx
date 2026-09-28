@@ -2,7 +2,7 @@
 //
 // 原则：**能直接用官方组件的一律用官方**——
 //   · 下拉 = 官方 `Menu`（选中项尾随对勾 = 官方默认 `selection: 'check'`，不是自绘）
-//   · 文本 = 官方 `Input` · 开关 = 官方 `Switch` · 分段 = 官方 `SegmentedControl` · chip = 官方 `Pill`
+//   · 文本 = 官方 `Input` · 开关 = 官方 `Switch` · 分段 = 官方 `SegmentedControl`
 //   · 浮层定位/点外关闭 = 官方 hook `useAnchoredPosition` + `useDismissOnOutsidePointer`
 //
 // ⚠️ **官方没有日期 / 时间选择器**（读 @deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2 的
@@ -24,9 +24,7 @@ import {
   IconChevronLeftOutlineRegular,
   IconChevronRightOutlineRegular,
   IconClockOutlineRegular,
-  IconCloseOutlineRegular,
   Menu,
-  Pill,
   SegmentedControl,
   useAnchoredPosition,
   useDismissOnOutsidePointer,
@@ -539,20 +537,22 @@ export function TimeField(props: {
   )
 }
 
-// ─────────────────────── 周几多选（官方 Pill chips + 官方 Menu 添加） ───────────────────────
+// ─────────────────────── 周几多选（小方块勾选） ───────────────────────
 
 export interface WeekdayLabels {
-  /** 周一起 7 项。 */
+  /** 周一起 7 项（完整名，用于 title / 无障碍名）。 */
   weekdays: readonly string[]
-  /** 「添加」入口与无障碍名。 */
-  add: string
+  /** 周一起 7 项的**单字**（方块上显示，如 一…日 / Mo…Su）。 */
+  shorts: readonly string[]
+  /** 一个都不选时的说明（= 每天）。 */
   empty: string
-  remove: (name: string) => string
 }
 
 /**
- * 周几多选：已选项 = 官方 `Pill`（点一下移除，尾随 ✕），末尾 `＋` 打开官方 `Menu` 添加。
- * 值 = ISO 序号 1..7（周一 = 1），与参考图一致。
+ * 周几多选 = 一排**小方块**（28×28，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
+ *
+ * 2026-09-29 用户返工：原来的实现是「官方 Pill chips + 尾随 ✕ + ＋ 菜单」，用户评价
+ * 「特别难看」「太大了」⇒ 换成紧凑方块；一个都不选 = 每天（间隔档就是这个语义）。
  */
 export function WeekdayPicker(props: {
   value: number[]
@@ -560,61 +560,43 @@ export function WeekdayPicker(props: {
   labels: WeekdayLabels
   disabled?: boolean
 }): ReactElement {
-  const [open, setOpen] = useState(false)
+  const [hover, setHover] = useState<number | null>(null)
   const selected = new Set(props.value)
-  const items: MenuEntry[] = props.labels.weekdays.map((name, index) => ({ id: String(index + 1), label: name }))
 
   const toggle = (day: number): void => {
     const next = selected.has(day) ? props.value.filter(item => item !== day) : [...props.value, day]
     props.onChange(next.slice().sort((a, b) => a - b))
   }
 
-  const addButton = h('button', {
-    type: 'button',
-    className: 'dsh-tdt-ed-field',
-    disabled: props.disabled,
-    'aria-haspopup': 'menu',
-    'aria-expanded': open,
-    'aria-label': props.labels.add,
-    title: props.labels.add,
-    onClick: () => { setOpen(!open) },
-    style: {
-      display: 'inline-flex', alignItems: 'center', gap: '4px', height: '24px', padding: '0 8px',
-      border: `1px dashed ${C.borderL2}`, borderRadius: C.radiusSm, background: 'transparent',
-      color: C.textDim, font: 'inherit', fontSize: '12px', cursor: props.disabled === true ? 'not-allowed' : 'pointer',
-    },
-  }, `＋ ${props.labels.add}`)
-
-  return h('div', {
-    style: {
-      display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
-      minHeight: '36px', padding: '5px 8px', border: `0.5px solid ${C.borderL4}`, borderRadius: C.radiusMd,
-      background: C.layer1,
-    },
-  },
-    props.value.length === 0
-      ? h('span', { style: { fontSize: '13px', color: C.dimmed } }, props.labels.empty)
-      : props.value.map(day => h(Pill, {
+  return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' } },
+    props.labels.shorts.map((short, index) => {
+      const day = index + 1
+      const on = selected.has(day)
+      const name = props.labels.weekdays[index] ?? String(day)
+      return h('button', {
         key: day,
-        active: true,
+        type: 'button',
+        className: 'dsh-tdt-ed-field',
+        disabled: props.disabled,
+        'aria-pressed': on,
+        'aria-label': name,
+        title: name,
         onClick: () => { if (props.disabled !== true) toggle(day) },
-        'aria-label': props.labels.remove(props.labels.weekdays[day - 1] ?? String(day)),
-        title: props.labels.remove(props.labels.weekdays[day - 1] ?? String(day)),
-        style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px' },
-      },
-        h('span', null, props.labels.weekdays[day - 1] ?? String(day)),
-        h(IconCloseOutlineRegular, { size: 12 }),
-      )),
-    h(Menu, {
-      open,
-      anchor: addButton,
-      items,
-      selectedIds: props.value.map(String),
-      selection: 'check',
-      align: 'start',
-      portal: true,
-      onSelect: (id: string) => { setOpen(false); toggle(Number(id)) },
-      onClose: () => { setOpen(false) },
+        onPointerEnter: () => { setHover(day) },
+        onPointerLeave: () => { setHover(current => (current === day ? null : current)) },
+        style: {
+          flex: 'none', width: '28px', height: '28px', padding: 0,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          border: `0.5px solid ${on ? C.business : C.borderL4}`, borderRadius: C.radiusSm,
+          background: on ? C.business : (hover === day ? C.hover : C.layer1),
+          color: on ? C.brandFg : C.textDim,
+          font: 'inherit', fontSize: '12px', lineHeight: '18px',
+          cursor: props.disabled === true ? 'not-allowed' : 'pointer', transition,
+        },
+      }, short)
     }),
+    props.value.length === 0
+      ? h('span', { style: { fontSize: '12px', color: C.dimmed } }, props.labels.empty)
+      : null,
   )
 }
