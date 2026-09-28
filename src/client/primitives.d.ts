@@ -241,10 +241,13 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const Tooltip: ComponentType<{
     label: string
     side?: 'right' | 'bottom' | 'top'
-    align?: 'start' | 'end' | 'center'
+    /** 实测只有这两种（官方 types：'center' | 'end'）。 */
+    align?: 'center' | 'end'
     gap?: number
     maxWidth?: number
     disabled?: boolean
+    /** 挂到 document.body，躲开祖先裁剪与层叠上下文。 */
+    portal?: boolean
     children?: ReactNode
   }>
 

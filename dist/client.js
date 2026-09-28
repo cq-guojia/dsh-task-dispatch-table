@@ -326,7 +326,7 @@ window.__ModuleLoader__.load({
 			editorIntervalStep: "间隔步长",
 			editorIntervalUnit: "间隔单位",
 			editorIntervalSuffix: "执行一次",
-			editorScheduleOn: "在",
+			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
 			editorWeekday2: "周二",
 			editorWeekday3: "周三",
@@ -677,7 +677,7 @@ window.__ModuleLoader__.load({
 			editorIntervalStep: "Interval step",
 			editorIntervalUnit: "Interval unit",
 			editorIntervalSuffix: "",
-			editorScheduleOn: "On",
+			editorWeekdayLabel: "Weekdays",
 			editorWeekday1: "Mon",
 			editorWeekday2: "Tue",
 			editorWeekday3: "Wed",
@@ -4736,6 +4736,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function SelectField(props) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const [hover, setHover] = (0, react.useState)(false);
+			const compact = props.size === "sm";
+			const iconSize = compact ? 14 : 16;
 			const usable = props.options.length > 0 && props.disabled !== true;
 			const current = props.options.find((option) => option.value === props.value);
 			const items = (0, react.useMemo)(() => props.options.map((option) => ({
@@ -4761,6 +4763,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				style: {
 					...fieldButtonStyle,
+					...compact ? {
+						height: "28px",
+						gap: "4px",
+						fontSize: "12px",
+						lineHeight: "18px"
+					} : null,
 					width: props.width ?? (props.block === true ? "100%" : void 0),
 					background: hover && usable ? C$1.hover : C$1.layer1,
 					cursor: usable ? "pointer" : "not-allowed",
@@ -4769,7 +4777,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), (0, react.createElement)("span", { style: {
 				...fieldLabelStyle,
 				color: current === void 0 ? C$1.dimmed : C$1.text
-			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
+			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
 			if (!usable) return anchor;
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
 				open,
@@ -5239,7 +5247,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				flexWrap: "wrap",
 				gap: "6px"
-			} }, props.labels.shorts.map((short, index) => {
+			} }, props.label === void 0 ? null : (0, react.createElement)("span", { style: {
+				flex: "none",
+				fontSize: "12px",
+				color: C$1.textDim,
+				marginRight: "2px"
+			} }, props.label), props.labels.shorts.map((short, index) => {
 				const day = index + 1;
 				const on = selected.has(day);
 				const name = props.labels.weekdays[index] ?? String(day);
@@ -5358,10 +5371,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-pfx-label{flex:none;display:inline-flex;align-items:center;padding:0 10px;border-right:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:13px;line-height:18px;white-space:nowrap;}
 .dsh-tdt-ed-pfx-input{flex:1 1 auto;min-width:0;padding:0 10px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;}
 .dsh-tdt-ed-pfx-input::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
-/* 排期区：标签列 + 控件列对齐（此前各控件随手堆一行，是「排版混乱」的根源）。 */
-.dsh-tdt-ed-fieldrow{display:flex;align-items:center;gap:8px;margin-top:8px;}
-.dsh-tdt-ed-fieldrow:first-child{margin-top:0;}
-.dsh-tdt-ed-fieldlabel{flex:none;width:48px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+/* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
+.dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。 */
+.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
+.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
@@ -5513,10 +5527,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: { marginBottom: "6px" }
 			}, props.label), props.children ?? null);
 		}
-		/** 一行「标签 + 控件」（标签列定宽对齐，排期区所有行都走它 ⇒ 不再东一块西一块）。 */
-		function FieldRow(props) {
-			return (0, react.createElement)("div", { className: "dsh-tdt-ed-fieldrow" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-fieldlabel" }, props.label), props.children);
-		}
 		/** 周期档的子控件（单次=日期+时间；每天=时间；每周/双周=周几+时间；每月/每年=日/月+时间）。 */
 		function PeriodControls(props) {
 			const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
@@ -5538,12 +5548,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				value: String(index + 1),
 				label: tt("editorDayOption", { d: index + 1 })
 			})), [tt]);
-			return (0, react.createElement)("div", { style: {
-				marginTop: "8px",
-				display: "flex",
-				flexDirection: "column",
-				gap: "8px"
-			} }, draft.periodFreq === "once" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(DateField, {
+			const above = [];
+			if (draft.periodFreq === "once") above.push((0, react.createElement)(DateField, {
+				key: "date",
 				value: draft.date,
 				onChange: (value) => {
 					patch({ date: value });
@@ -5552,7 +5559,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorDate"),
 				labels: calendarLabels,
 				width: 148
-			}), timeField) : null, draft.periodFreq === "yearly" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(SelectField, {
+			}));
+			if (draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
+				key: "month",
 				value: draft.yearMonth,
 				options: monthOptions,
 				onChange: (value) => {
@@ -5560,9 +5569,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				placeholder: t("editorMonth"),
 				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorMonth"),
-				width: 96
-			})) : null, draft.periodFreq === "monthly" || draft.periodFreq === "yearly" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(SelectField, {
+				ariaLabel: t("editorMonth")
+			}));
+			if (draft.periodFreq === "monthly" || draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
+				key: "day",
 				value: draft.monthDay,
 				options: dayOptions,
 				onChange: (value) => {
@@ -5570,15 +5580,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				placeholder: t("editorDayOfMonth"),
 				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorDayOfMonth"),
-				width: 110
-			})) : null, draft.periodFreq === "weekly" || draft.periodFreq === "biweekly" ? (0, react.createElement)(WeekdayPicker, {
+				ariaLabel: t("editorDayOfMonth")
+			}));
+			above.push(timeField);
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "10px"
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, above), draft.periodFreq === "weekly" || draft.periodFreq === "biweekly" ? (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
 					patch({ weekdays: value });
 				},
-				labels: weekdayLabels
-			}) : null, draft.periodFreq === "once" ? null : (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, timeField), draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
+				labels: weekdayLabels,
+				label: t("editorWeekdayLabel")
+			}) : null, draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
 		}
 		/** 间隔档的子控件（照参考图：每隔 N 单位执行一次 + 周几筛选）。 */
 		function IntervalControls(props) {
@@ -5628,7 +5644,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (value) => {
 					patch({ weekdays: value });
 				},
-				labels: weekdayLabels
+				labels: weekdayLabels,
+				label: t("editorWeekdayLabel")
 			}));
 		}
 		/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
@@ -5868,7 +5885,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorModel"),
 				align: "end"
 			})));
-			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorSchedule")), (0, react.createElement)("div", { style: {
+			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-card-head",
+				style: { marginBottom: "12px" }
+			}, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorSchedule")), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "8px",
@@ -5882,7 +5902,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorFreqDaily"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorFreq"),
-				width: 104
+				width: 96,
+				size: "sm"
 			}) : null, (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-schedule",
 				value: scheduleTab,
@@ -5940,11 +5961,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				weekdayLabels,
 				calendarLabels,
 				timeLabels
-			})), scheduleNote === null ? null : (0, react.createElement)("p", { className: "dsh-tdt-ed-warn" }, scheduleNote), (0, react.createElement)("div", { style: {
-				marginTop: "10px",
-				paddingTop: "8px",
-				borderTop: `1px solid ${C$1.borderL2}`
-			} }, (0, react.createElement)(FieldRow, { label: t("editorTimezone") }, (0, react.createElement)(SelectField, {
+			})), scheduleNote === null ? null : (0, react.createElement)("p", { className: "dsh-tdt-ed-warn" }, scheduleNote), (0, react.createElement)("div", { className: "dsh-tdt-ed-schedfoot" }, (0, react.createElement)(SelectField, {
 				value: draft.timezone,
 				options: tzOptions,
 				onChange: (value) => {
@@ -5953,8 +5970,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorFollowHost"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorTimezone"),
-				width: 148
-			})), (0, react.createElement)(FieldRow, { label: t("editorWindow") }, (0, react.createElement)(SelectField, {
+				size: "sm",
+				align: "end"
+			}), (0, react.createElement)(SelectField, {
 				value: draft.window,
 				options: windowOptions,
 				onChange: (value) => {
@@ -5963,8 +5981,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorWindow"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWindow"),
-				width: 110
-			})), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorWindowHint"))));
+				size: "sm",
+				align: "end"
+			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("editorWindowHint"),
+				side: "top",
+				align: "end"
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-help",
+				"aria-label": t("editorWindowHint")
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })))));
 			const taskOptions = tasks;
 			const depsBlock = (0, react.createElement)(Section, { label: t("editorDeps") }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",

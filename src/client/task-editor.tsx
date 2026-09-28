@@ -23,7 +23,9 @@ import {
   IconCloseOutlineRegular,
   IconFolderOpenOutlineRegular,
   IconPlusOutlineRegular,
+  IconQuestionOutlineRegular,
   Switch,
+  Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   C,
@@ -259,14 +261,6 @@ function Section(props: { label?: string; children?: ReactNode }): ReactElement 
 
 // ─────────────────────── 排期区 ───────────────────────
 
-/** 一行「标签 + 控件」（标签列定宽对齐，排期区所有行都走它 ⇒ 不再东一块西一块）。 */
-function FieldRow(props: { label: string; children?: ReactNode }): ReactElement {
-  return h('div', { className: 'dsh-tdt-ed-fieldrow' },
-    h('span', { className: 'dsh-tdt-ed-fieldlabel' }, props.label),
-    props.children,
-  )
-}
-
 /** 周期档的子控件（单次=日期+时间；每天=时间；每周/双周=周几+时间；每月/每年=日/月+时间）。 */
 function PeriodControls(props: {
   draft: TaskEditorDraft
@@ -295,53 +289,55 @@ function PeriodControls(props: {
     [tt],
   )
 
-  // 外层给上间距：本组件的第一行是「:first-child」（无上间距），但上面还压着三档那一行。
-  // 控件都自带形状（日历图标 / 时钟图标 / 周几方块 /「1 号」），不再各配一个文字标签列。
-  return h('div', { style: { marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' } },
-    draft.periodFreq === 'once'
-      // 日期 + 时间**同一排**（用户 2026-09-29：分成两排没意义）。
-      ? h('div', { className: 'dsh-tdt-ed-row' },
-          h(DateField, {
-            value: draft.date,
-            onChange: value => { patch({ date: value }) },
-            placeholder: t('editorDatePh'),
-            ariaLabel: t('editorDate'),
-            labels: calendarLabels,
-            width: 148,
-          }),
-          timeField,
-        )
-      : null,
-    draft.periodFreq === 'yearly'
-      ? h('div', { className: 'dsh-tdt-ed-row' }, h(SelectField, {
-        value: draft.yearMonth,
-        options: monthOptions,
-        onChange: value => { patch({ yearMonth: value }) },
-        placeholder: t('editorMonth'),
-        emptyLabel: t('editorNoOptions'),
-        ariaLabel: t('editorMonth'),
-        width: 96,
-      }))
-      : null,
-    draft.periodFreq === 'monthly' || draft.periodFreq === 'yearly'
-      ? h('div', { className: 'dsh-tdt-ed-row' }, h(SelectField, {
-        value: draft.monthDay,
-        options: dayOptions,
-        onChange: value => { patch({ monthDay: value }) },
-        placeholder: t('editorDayOfMonth'),
-        emptyLabel: t('editorNoOptions'),
-        ariaLabel: t('editorDayOfMonth'),
-        width: 110,
-      }))
-      : null,
+  // 上面**统一一行**（月 / 日 / 日期 / 时间），下面**统一选星期**——用户 2026-09-29：
+  // 两张截图里「选星期」一会儿在上面一会儿在下面，看着乱。
+  const above: ReactNode[] = []
+  if (draft.periodFreq === 'once') {
+    above.push(h(DateField, {
+      key: 'date',
+      value: draft.date,
+      onChange: value => { patch({ date: value }) },
+      placeholder: t('editorDatePh'),
+      ariaLabel: t('editorDate'),
+      labels: calendarLabels,
+      width: 148,
+    }))
+  }
+  if (draft.periodFreq === 'yearly') {
+    // 不设宽度：让它随内容（「1 月」就两三个字，之前留 96px 是为了英文，中文看着很空）。
+    above.push(h(SelectField, {
+      key: 'month',
+      value: draft.yearMonth,
+      options: monthOptions,
+      onChange: value => { patch({ yearMonth: value }) },
+      placeholder: t('editorMonth'),
+      emptyLabel: t('editorNoOptions'),
+      ariaLabel: t('editorMonth'),
+    }))
+  }
+  if (draft.periodFreq === 'monthly' || draft.periodFreq === 'yearly') {
+    above.push(h(SelectField, {
+      key: 'day',
+      value: draft.monthDay,
+      options: dayOptions,
+      onChange: value => { patch({ monthDay: value }) },
+      placeholder: t('editorDayOfMonth'),
+      emptyLabel: t('editorNoOptions'),
+      ariaLabel: t('editorDayOfMonth'),
+    }))
+  }
+  above.push(timeField)
+
+  return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+    h('div', { className: 'dsh-tdt-ed-row' }, above),
     draft.periodFreq === 'weekly' || draft.periodFreq === 'biweekly'
       ? h(WeekdayPicker, {
         value: draft.weekdays,
         onChange: value => { patch({ weekdays: value }) },
         labels: weekdayLabels,
+        label: t('editorWeekdayLabel'),
       })
       : null,
-    draft.periodFreq === 'once' ? null : h('div', { className: 'dsh-tdt-ed-row' }, timeField),
     draft.periodFreq === 'once'
       ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorOnceHint'))
       : null,
@@ -388,6 +384,7 @@ function IntervalControls(props: {
       value: draft.weekdays,
       onChange: value => { patch({ weekdays: value }) },
       labels: weekdayLabels,
+      label: t('editorWeekdayLabel'),
     }),
   )
 }
@@ -622,7 +619,7 @@ export function TaskEditorDrawer(props: {
   //    「单次」不是第四种排期，它就是「周期档的频率 = 单次」——所以切到单次时把 periodFreq 设成 once，
   //    而在周期档里把频率改成别的，顶部会自动回到「周期」（值是从 periodFreq 推导的，无需额外回写）。
   const scheduleCard = h('div', { className: 'dsh-tdt-ed-card' },
-    h('div', { className: 'dsh-tdt-ed-card-head' },
+    h('div', { className: 'dsh-tdt-ed-card-head', style: { marginBottom: '12px' } },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorSchedule')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
         // 频率下拉**挪到三档的左边**，而且只在「周期」档出现——单次 / 间隔本来就没得选
@@ -635,7 +632,9 @@ export function TaskEditorDrawer(props: {
             placeholder: t('editorFreqDaily'),
             emptyLabel: t('editorNoOptions'),
             ariaLabel: t('editorFreq'),
-            width: 104,
+            width: 96,
+            // 与右边三档**等高**（28px）：否则切到间隔时下拉消失、整块高度变，看着就是「页面在跳」。
+            size: 'sm',
           })
           : null,
         h(Segmented, {
@@ -671,26 +670,36 @@ export function TaskEditorDrawer(props: {
         }),
       ),
     scheduleNote === null ? null : h('p', { className: 'dsh-tdt-ed-warn' }, scheduleNote),
-    h('div', { style: { marginTop: '10px', paddingTop: '8px', borderTop: `1px solid ${C.borderL2}` } },
-      h(FieldRow, { label: t('editorTimezone') }, h(SelectField, {
+    // 底部分隔线：上下各留 12px（用户 2026-09-29：把核心设置和不那么重要的设置分开，
+    // 但别贴着）。时区 / 有效期缩到小号、整体**居右**（不重要，不占主视线），
+    // 「有效期」的解释不再写正文，挂一个小问号，hover 才出（Tooltip）。
+    h('div', { className: 'dsh-tdt-ed-schedfoot' },
+      h(SelectField, {
         value: draft.timezone,
         options: tzOptions,
         onChange: value => { patch({ timezone: value }) },
         placeholder: t('editorFollowHost'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorTimezone'),
-        width: 148,
-      })),
-      h(FieldRow, { label: t('editorWindow') }, h(SelectField, {
+        size: 'sm',
+        align: 'end',
+      }),
+      h(SelectField, {
         value: draft.window,
         options: windowOptions,
         onChange: value => { patch({ window: value }) },
         placeholder: t('editorWindow'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWindow'),
-        width: 110,
-      })),
-      h('p', { className: 'dsh-tdt-ed-hint' }, t('editorWindowHint')),
+        size: 'sm',
+        align: 'end',
+      }),
+      h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end' },
+        // 用 button 而不是 span：天然可聚焦（键盘也能出气泡），不需要自己补 tabIndex/role。
+        h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorWindowHint') },
+          h(IconQuestionOutlineRegular, { size: 14 }),
+        ),
+      ),
     ),
   )
 

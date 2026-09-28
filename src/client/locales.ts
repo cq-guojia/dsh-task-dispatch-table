@@ -105,7 +105,7 @@ export type LocaleKey =
   | 'editorDate' | 'editorDatePh' | 'editorTime' | 'editorTimePh'
   | 'editorMonth' | 'editorMonthOption' | 'editorDayOfMonth' | 'editorDayOption'
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
-  | 'editorScheduleOn'
+  | 'editorWeekdayLabel'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
   | 'editorWeekdayShorts' | 'editorWeekdayEmpty'
   | 'editorToday' | 'editorPrevMonth' | 'editorNextMonth' | 'editorPrevYear' | 'editorNextYear'
@@ -445,7 +445,7 @@ export const zh: Record<LocaleKey, string> = {
   editorIntervalStep: '间隔步长',
   editorIntervalUnit: '间隔单位',
   editorIntervalSuffix: '执行一次',
-  editorScheduleOn: '在',
+  editorWeekdayLabel: '星期',
   editorWeekday1: '周一',
   editorWeekday2: '周二',
   editorWeekday3: '周三',
@@ -801,7 +801,7 @@ export const en: Record<LocaleKey, string> = {
   editorIntervalStep: 'Interval step',
   editorIntervalUnit: 'Interval unit',
   editorIntervalSuffix: '',
-  editorScheduleOn: 'On',
+  editorWeekdayLabel: 'Weekdays',
   editorWeekday1: 'Mon',
   editorWeekday2: 'Tue',
   editorWeekday3: 'Wed',

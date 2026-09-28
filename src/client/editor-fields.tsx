@@ -122,9 +122,16 @@ export function SelectField(props: {
    * span 的 shrink-to-fit 吃掉 ⇒ 得连包装 span 一起撑（见 `BlockWrap`）。
    */
   block?: boolean
+  /**
+   * `sm` = 28px 高 / 12px 字：**和官方分段控件等高**。
+   * 用户 2026-09-29：排期卡头部那个频率下拉比右边三档高，一切换就整页跳。
+   */
+  size?: 'md' | 'sm'
 }): ReactElement {
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
+  const compact = props.size === 'sm'
+  const iconSize = compact ? 14 : 16
   const usable = props.options.length > 0 && props.disabled !== true
   const current = props.options.find(option => option.value === props.value)
   const items: MenuEntry[] = useMemo(
@@ -145,6 +152,7 @@ export function SelectField(props: {
     onClick: () => { setOpen(!open) },
     style: {
       ...fieldButtonStyle,
+      ...(compact ? { height: '28px', gap: '4px', fontSize: '12px', lineHeight: '18px' } : null),
       width: props.width ?? (props.block === true ? '100%' : undefined),
       background: hover && usable ? C.hover : C.layer1,
       cursor: usable ? 'pointer' : 'not-allowed',
@@ -154,7 +162,7 @@ export function SelectField(props: {
     props.icon === undefined ? null : h(IconSeat, null, props.icon),
     h('span', { style: { ...fieldLabelStyle, color: current === undefined ? C.dimmed : C.text } },
       current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
-    h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: 16 })),
+    h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: iconSize })),
   )
 
   if (!usable) return anchor
@@ -558,6 +566,8 @@ export function WeekdayPicker(props: {
   value: number[]
   onChange: (next: number[]) => void
   labels: WeekdayLabels
+  /** 方块左边的说明（「星期」），没有它就是七个光秃秃的字，用户看不懂（2026-09-29）。 */
+  label?: string
   disabled?: boolean
 }): ReactElement {
   const [hover, setHover] = useState<number | null>(null)
@@ -569,6 +579,9 @@ export function WeekdayPicker(props: {
   }
 
   return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' } },
+    props.label === undefined
+      ? null
+      : h('span', { style: { flex: 'none', fontSize: '12px', color: C.textDim, marginRight: '2px' } }, props.label),
     props.labels.shorts.map((short, index) => {
       const day = index + 1
       const on = selected.has(day)
