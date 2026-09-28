@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-28 · U12 交付登记已落码推送（`7293bfc`）待真机复验；U13 **两层循环彻底解耦 + 派发快照（决策 41/42）已落码推送**——Loop A 只写执行记录、Loop B 只读记录 + 快照，`enabled` 等任务设置对已落库实例零影响，会话名改 `[TASK] <260928-1600> · <标题>（· 第N次）`；冒烟 162 项全过，待真机复验。
+> **最后更新**：2026-09-28 · U13 两层循环解耦 + 派发快照（决策 41/42）已落码推送（`ad85d4a`），但真机复验暴露**二次回归**：老库一条卡 running 的历史实例经 `startupScan`→`unknown` 后，被串行互斥永久挡住同任务新刻度（执行记录零写入）；热修 = `unknown` 移出互斥集 + 孤儿 30s 收口 + `running` 失联收口 + `snapOf` 防御默认值（本地老库复现 `scripts/repro-olddb.mjs` 验证通过，冒烟 162 过）→ 待二次推送复验。
 
 ---
 
@@ -95,7 +95,7 @@
 | U10 | **「继续对话（开分支）」按钮**——✅ **完成收口（2026-09-27 真机验证通过，决策 38 含 ⑦）** | 头部「继续对话」按钮（从最后一轮 = 全量分支）+ 每轮回复操作行官方分支 icon（`fork({atSeq: 该轮 seq})` 从该条消息截断开分支）；统一确认框 = 官方 Modal + Button（明暗自适应）；先关弹窗（release 源会话）→ `uiWorkspace.openSession(childId)` 官方跳转；fork 失败留框内提示。冒烟 108 项全过 | 无遗留 |
 | U11 | **产出物打开与展示方式**（2026-09-27 发起；同日拍板 = 决策 39 并落码完成；09-28 第二轮补交付文件官方化、第五轮修「链接不可点」根因） | ✅ 真机验证通过：inject `remote.workspaceFiles`（**含 dotted 键**）+ `file-preview.tsx` 预览引擎 + 页面级唯一 dock 分栏推压 + 工具卡路径 / md 正文 fileMentions / 交付文件卡全走统一 `openFile`；错误态照官方错误码；冒烟 139 项全过 | 场景 2（任务产出物展示）转 U12；产出登记见 U12（B+C） |
 | U12 | **交付登记（任务产出物怎么被看见）**——✅ **方案已拍板（2026-09-28，决策 40 演进为 B-only + 禁止 present）**：插件作**唯一写入方**，回执成功时直写 `deliverables/presented`（files=校验 outputs，放宽到目录，可多目录+多文件混合）；**提示词禁止 LLM 调 `present`**（工具拒目录且调目录会报错），LLM 只在回执 `outputs` 声明产出（目录不限于网页项目）。已否决「插件 UI 自己画卡」 | 🔵 待落码（U11 已收口）：按 [worklog/deliverables-display.md](worklog/deliverables-display.md) 落地——receipt.ts 取 `(args,exec)` → append 事件（失败只 `logger.warn`、不影响回执）/ turn 取 `turnBoundary.lastTurn`（取不到即跳过）/ `outputs` 校验放宽到目录 / 提示词两条（按实际填 outputs + 禁止 present）/ 冒烟补断言 → ✅ 已落码并推送（`7293bfc`）：上述清单全落地（含弹窗交付卡改读 turn 级 `deliverables.presented` 消除空网格回归），冒烟 153 项全过 → 待真机验证（目录+文件混合例） |
-| U13 | **两层循环彻底解耦 + 派发快照（决策 41/42，2026-09-28 拍板并同日落码）** | 真机暴露：`enabled=false` ⇒ 任务被 `loadTasks` 过滤出 `taskMap` ⇒ 对账 `taskOf()` undefined ⇒ `settleByReceipt` 提前 return ⇒ **已交回执的实例永久卡 running**（agent 实际已完成）；且对账实时重读活任务 JSON（retry / window / workspace / validStatuses），中途改设置会反向改写在飞实例裁决。定型表述见 [design/state-machine.md §0](design/state-machine.md)、落码记录见 [worklog/loop-decoupling.md](worklog/loop-decoupling.md) | 🟢 已落码：快照列 + Loop A 落库即止 + Loop B 发动/裁决全走快照 + 模型失败行保留 + 会话名 `[TASK] <260928-1600> · <标题>（· 第N次）`；冒烟 162 项全过 → **待真机验证**（disabled 在飞实例收口 / 中途改设置不影响在跑 / 会话名新格式） |
+| U13 | **两层循环彻底解耦 + 派发快照（决策 41/42，2026-09-28 拍板并同日落码 + 热修）** | 真机暴露：`enabled=false` ⇒ 任务被 `loadTasks` 过滤出 `taskMap` ⇒ 对账 `taskOf()` undefined ⇒ `settleByReceipt` 提前 return ⇒ **已交回执的实例永久卡 running**（agent 实际已完成）；且对账实时重读活任务 JSON（retry / window / workspace / validStatuses），中途改设置会反向改写在飞实例裁决。定型表述见 [design/state-machine.md §0](design/state-machine.md)、落码记录见 [worklog/loop-decoupling.md](worklog/loop-decoupling.md) | 🟢 已落码 + **真机回归热修**：落码后真机发现"老库一条卡 running 的历史实例 → `startupScan` 转 `unknown` → 串行互斥把同 cron 任务新刻度永久挡死 ⇒ 执行记录零写入"。修复 = 串行互斥只认真正在飞的 `dispatched`/`running`，`unknown`（重启孤儿）移出阻塞集 + 30s 短宽限收口 + `running` 长期无活动（漏 created 致 `lease_until` 为 null）也收口 + `snapOf` legacy 回退防御默认值；本地复现（老 schema + 旧运行实例）验证新行照常写出。冒烟 162 项全过 → **待真机复验** |
 
 ---
 

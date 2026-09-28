@@ -33,7 +33,11 @@ export interface DependencyVerdict {
   staleNotes: string[]
 }
 
-const IN_FLIGHT_STATUSES: InstanceStatus[] = ['dispatched', 'running', 'unknown']
+// 串行互斥只认**真正在飞**的状态（决策 8：同任务不并发）。
+// 不含 'unknown'：unknown 只由重启扫描产生（会话句柄已随进程消失、不定态），它应在 sweep 里
+// 被快速收口为终态；若还把它当「在飞」参与互斥，会在老库卡死的孤儿实例上把同任务永久挡死
+// （本次真机 bug：老库一条卡 running 的历史实例 → 重启转 unknown → 同 cron 任务再也写不出新行）。
+const IN_FLIGHT_STATUSES: InstanceStatus[] = ['dispatched', 'running']
 
 // ── 调度输入加载（inline JSON 或目录，按配置择一）──
 function loadTasks(logger: HostLogger, config: PluginConfig): TaskDefinition[] {

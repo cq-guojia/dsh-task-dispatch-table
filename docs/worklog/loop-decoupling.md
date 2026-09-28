@@ -1,7 +1,24 @@
 # 两层循环彻底解耦（决策 41）
 
-> 状态：🟢 已落码（2026-09-28，同日拍板；typecheck + build + 冒烟 162 项全过），**待真机验证**。
-> 定型表述见 [design/state-machine.md §0](../design/state-machine.md) 与 [design/decisions.md 决策 41/42](../design/decisions.md)；本文件记定位过程与落码清单。
+> 状态：🟢 已落码（2026-09-28，同日拍板；typecheck + build + 冒烟 162 项全过），**落码后真机二次回归已热修，待复验**。
+> 定型表述见 [design/state-machine.md §0](../design/state-machine.md) 与 [design/decisions.md 决策 41/42](../design/decisions.md)；本文件记定位过程与落码清单 + 二次回归热修。
+
+## 〇、落码后真机二次回归（2026-09-28，热修）
+
+**现象**：用户重装新版本（`ad85d4a`）后，执行记录**完全零写入**；老库无报错日志。
+**定位**（本地复现 `scripts/repro-olddb.mjs`：老 schema 无 snapshot 列 + 一条旧 `running` 实例）：
+1. 老库迁移**没问题**——`ALTER TABLE ADD COLUMN snapshot` 正常，旧行 `snapshot=NULL`，不崩；所以不是迁移。
+2. 真正根因：旧库一条卡 `running` 的历史实例（上次 `enabled=false` bug 遗留）经 `startupScan` 转成 `unknown`；而落码版 `IN_FLIGHT_STATUSES = ['dispatched','running','unknown']`，`dispatchNewSlots` 的串行互斥（决策 8）把它当"在飞"→ **同任务（cron `480f3ef1`）的新刻度被永久挡死** ⇒ 零写入。
+   更糟：若宿主反复重启，每次 `startupScan` 把 `updated_at` 刷到 `now`，`unknown` 的 5+2 分钟宽限被不断重置 ⇒ 永远收不掉 ⇒ 永远挡死。
+3. `snapOf` 的 legacy 回退路径直接读 `task.contract.validStatuses` / `task.retry.maxAttempts` / `task.schedule.window`，缺字段即崩 ⇒ sweep 每轮抛错（被 `safeTick` 接住记日志，用户未必注意到）；虽真机 `parseInlineTasks` 有默认值不会缺，但属隐患。
+
+**热修**（4 处）：
+- `scheduler.ts`：`IN_FLIGHT_STATUSES` 去掉 `'unknown'`——它只由重启扫描产生（会话句柄随进程消失、不定态），应在 sweep 快速收口，不该绑架同任务的串行互斥。
+- `reconcile.ts`：`unknown` 分支给 30s 短宽限（够活会话经 `onEvent` 复活为 running）后判失败收口，不再等 5+2 分钟、不被重启重置。
+- `reconcile.ts`：`running` 分支新增"`updated_at` 长期无活动（漏 `session/created` 致 `lease_until` 为 null、租约永不触发）也收口"，避免另一种卡死。
+- `reconcile.ts`：`snapOf` legacy 回退加防御默认值（`contract`/`retry`/`schedule` 缺失即回退默认），杜绝 sweep 因畸形定义崩。
+
+**验证**：`scripts/repro-olddb.mjs` 用老 schema + 旧运行实例，确认"老 unknown 实例旁，同任务当前槽照常写出带快照的新 `dispatched` 行"；冒烟 162 项全过。
 
 ## 一、背景与真机现象
 

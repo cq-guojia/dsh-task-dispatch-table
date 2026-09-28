@@ -174,16 +174,20 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
       logger.warn(`旧实例 ${instance.id} 补快照失败：工作区解析不出（${task.target.workspace}）`)
       return undefined
     }
+    // 防御：legacyTask 兜底路径可能拿到畸形定义（缺 contract/retry/schedule），绝不让 sweep 崩。
+    const contract = task.contract ?? { validStatuses: ['ok'] as string[] }
+    const retry = task.retry ?? { maxAttempts: 1 }
+    const schedule = task.schedule ?? { window: 'PT0S' }
     const snap: InstanceSnapshot = {
       title: displayNameOf(task),
-      prompt: task.target.prompt,
+      prompt: task.target.prompt ?? '',
       manual: task.target.manual ?? null,
       workspacePath,
       provider: task.target.provider ?? '',
       model: task.target.model ?? '',
-      validStatuses: task.contract.validStatuses.length > 0 ? [...task.contract.validStatuses] : ['ok'],
-      maxAttempts: task.retry.maxAttempts,
-      window: task.schedule.window,
+      validStatuses: contract.validStatuses.length > 0 ? [...contract.validStatuses] : ['ok'],
+      maxAttempts: retry.maxAttempts >= 1 ? retry.maxAttempts : 1,
+      window: schedule.window ?? 'PT0S',
     }
     try {
       store.setSnapshot(instance.id, snap)
@@ -460,11 +464,19 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
           // 租约超时回收（§3）：会话可能仍在跑，不归档；走重试判定。
           store.appendEvent(instance.id, 'session_event', { type: 'lease-expired' })
           retryOrFail(instance, 'lease-expired')
+        } else if (now > Date.parse(instance.updated_at) + options.unknownGraceMs) {
+          // 长期无活动（如漏掉 session/created 导致 lease_until 为 null、租约永不触发）：
+          // 会话已事实上失联，走重试判定收口，避免卡死阻塞同任务（本次真机 bug 同类）。
+          retryOrFail(instance, 'running-stale')
         }
       }
       for (const instance of store.listByStatus(['unknown'])) {
-        const deadAt = Date.parse(instance.updated_at) + options.unknownGraceMs + 2 * options.leaseMs
-        if (now > deadAt) retryOrFail(instance, 'unknown-dead')
+        // unknown 只可能由 startupScan 产生（= 重启孤儿，插件进程重建致 agent 句柄消失，会话已不可控）。
+        // 给 30s 短宽限：够活会话经 onEvent 复活为 running；超时则判失败收口——不再等 5+2 分钟，
+        // 也避免反复重启不断重置宽限导致永久卡死（且 unknown 已移出串行互斥集，不会挡新刻度）。
+        if (now > Date.parse(instance.updated_at) + Math.min(options.unknownGraceMs, 30_000)) {
+          retryOrFail(instance, 'unknown-orphan')
+        }
       }
     },
   }
