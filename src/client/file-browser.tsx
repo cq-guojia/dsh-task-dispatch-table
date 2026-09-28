@@ -3,18 +3,20 @@
 // 入口与 FilePreviewPanel 同源：调用方 openFile(path) 传入的路径。本组件先 list(path) 探明是
 // 目录还是文件——list 成功 ⇒ 目录（渲染树）；报 not-directory ⇒ 文件（预览，dir 取其父目录）。
 //
-// 面包屑：把当前目录切成可点段，点任意段回跳到该层；点文件后末段显示文件名（不可点，点父段即返回）。
-// 顶栏按钮：「上一级」(chevron-left，回父目录) / 「回到根目录」(folder-open，回最初打开的位置) /
-// 「刷新」/「复制路径」/「关闭」。点文件夹进入并 list；点文件在父目录树内预览，面包屑始终保留 ⇒ 随时能返回。
+// 面包屑：把当前目录切成可点段，点任意段回跳到该层（第一段即「回到根目录」，无需专门按钮——
+// 用户 2026-09-28 复验拍板：去掉「上一级」「回到根目录」，浏览范围以点开的目录为起点即可）；
+// 点文件后末段显示文件名（不可点，点父段即返回）。
+// 头部两行（dock 窄，单行挤不下——用户 2026-09-28 反馈）：第一行 = 操作按钮；第二行 = 面包屑整行。
+// 面包屑超宽时折叠：左侧出 `…`，点开换行展开全部层级供点选。
 //
 // 渲染底层全官方（md=MarkdownText / 代码=CodeBlock / 图片·PDF=readBytes→blob），数据一律
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
-import { createElement as h, Fragment, useEffect, useState } from 'react'
+import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
   FileTypeIcon,
+  IconCheckOutlineRegular,
   IconChevronRightOutlineRegular,
-  IconChevronUpOutlineRegular,
   IconCloseOutlineRegular,
   IconCopyOutlineRegular,
   IconRefreshOutlineRegular,
@@ -116,17 +118,21 @@ export function FileBrowser(props: {
   const [truncated, setTruncated] = useState(false)
   const [viewing, setViewing] = useState<string | null>(null)
   const [listErr, setListErr] = useState<ErrView | null>(null)
-  const [initialDir, setInitialDir] = useState<string>('')
+  // 面包屑折叠（dock 窄，超宽时左侧出 `…`，点开换行展开全部层级）。
+  const [crumbsOverflow, setCrumbsOverflow] = useState(false)
+  const [crumbsExpanded, setCrumbsExpanded] = useState(false)
+  const crumbsRef = useRef<HTMLDivElement>(null)
   // 预览态：md 渲染⇄源码 + 刷新自增（触发 Bytes/Text 重读）。
   const [sourceView, setSourceView] = useState(false)
   const [reloadNonce, setReloadNonce] = useState(0)
   const [copied, setCopied] = useState(false)
 
-  /** 列举并展示某目录（清空 viewing）。 */
+  /** 列举并展示某目录（清空 viewing；面包屑收回折叠态）。 */
   const loadDir = (targetDir: string): void => {
     setDir(targetDir)
     setViewing(null)
     setListErr(null)
+    setCrumbsExpanded(false)
     setMode('loading')
     workspaceFiles.list(sessionId, targetDir)
       .then((result) => {
@@ -148,6 +154,7 @@ export function FileBrowser(props: {
     setViewing(null)
     setSourceView(false)
     setReloadNonce(0)
+    setCrumbsExpanded(false)
     workspaceFiles.list(sessionId, path)
       .then((result) => {
         if (!alive) return
@@ -157,7 +164,6 @@ export function FileBrowser(props: {
           setDir(path)
           setListing(parsed.entries)
           setTruncated(parsed.truncated)
-          setInitialDir(path)
           setMode('dir')
           return
         }
@@ -165,7 +171,6 @@ export function FileBrowser(props: {
         const parent = dirnameOf(path)
         setDir(parent)
         setViewing(path)
-        setInitialDir(parent)
         setMode('file')
         workspaceFiles.list(sessionId, parent)
           .then((pres) => {
@@ -181,11 +186,20 @@ export function FileBrowser(props: {
         const parent = dirnameOf(path)
         setDir(parent)
         setViewing(path)
-        setInitialDir(parent)
         setMode('file')
       })
     return () => { alive = false }
   }, [workspaceFiles, sessionId, path])
+
+  // 面包屑溢出测量：超宽 ⇒ 未展开时显示 `…`；未展开时自动滚到末端（当前层始终可见）。
+  useLayoutEffect(() => {
+    const el = crumbsRef.current
+    if (el === null) return
+    if (crumbsExpanded) { setCrumbsOverflow(false); return }
+    const overflow = el.scrollWidth > el.clientWidth + 1
+    setCrumbsOverflow(overflow)
+    if (overflow) el.scrollLeft = el.scrollWidth
+  }, [dir, viewing, mode, crumbsExpanded, listing])
 
   const reload = (): void => {
     if (viewing !== null) { setReloadNonce(n => n + 1); return }
@@ -199,7 +213,6 @@ export function FileBrowser(props: {
   }
 
   const crumbs = crumbsOf(dir)
-  const canGoUp = initialDir !== '' && dir !== initialDir
   const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'
 
   // —— 主体 ——
@@ -254,39 +267,7 @@ export function FileBrowser(props: {
         onPointerDown: (event: { clientX: number; pointerId: number }) => { onResizeStart(event) },
       }),
     h('div', { className: 'dsh-tdt-sv-preview-head' },
-      h('span', { className: 'dsh-tdt-sv-preview-label' }, t('explorerLabel')),
-      h('nav', { className: 'dsh-tdt-sv-crumbs', 'aria-label': t('explorerCrumbsAria') },
-        crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
-          index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-crumb',
-            onClick: () => { loadDir(crumb.path) },
-          }, crumb.label),
-        )),
-        viewing !== null
-          ? h(Fragment, null,
-            h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }),
-            h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1)),
-          )
-          : null,
-      ),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('explorerUp'),
-          title: t('explorerUp'),
-          disabled: !canGoUp,
-          onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
-        }, h(IconChevronUpOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-head-text',
-          'aria-label': t('explorerRoot'),
-          title: t('explorerRoot'),
-          onClick: () => { if (initialDir !== '') loadDir(initialDir) },
-        }, t('explorerRoot')),
         isMdPreview
           ? h('div', {
             className: 'dsh-tdt-sv-seg',
@@ -303,7 +284,7 @@ export function FileBrowser(props: {
           'aria-label': t('previewCopyPath'),
           title: t('previewCopyPath'),
           onClick: copyPath,
-        }, copied ? h(IconCopyOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 })),
+        }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 })),
         h('button', {
           type: 'button',
           className: 'dsh-tdt-sv-head-btn',
@@ -319,6 +300,35 @@ export function FileBrowser(props: {
           onClick: onClose,
         }, h(IconCloseOutlineRegular, { size: 14 })),
       ),
+    ),
+    h('nav', {
+      ref: crumbsRef,
+      className: crumbsExpanded ? 'dsh-tdt-sv-crumbs dsh-tdt-sv-crumbs-expanded' : 'dsh-tdt-sv-crumbs',
+      'aria-label': t('explorerCrumbsAria'),
+    },
+      crumbsOverflow && !crumbsExpanded
+        ? h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-more',
+          'aria-label': t('explorerCrumbsMore'),
+          title: t('explorerCrumbsMore'),
+          onClick: () => { setCrumbsExpanded(true) },
+        }, '…')
+        : null,
+      crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+        index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-crumb',
+          onClick: () => { loadDir(crumb.path) },
+        }, crumb.label),
+      )),
+      viewing !== null
+        ? h(Fragment, null,
+          h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }),
+          h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1)),
+        )
+        : null,
     ),
     body,
   )

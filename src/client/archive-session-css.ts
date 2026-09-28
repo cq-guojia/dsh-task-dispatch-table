@@ -229,9 +229,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:active
 .dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
 .dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
 .dsh-tdt-sv-head-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-head-btn:disabled{opacity:.4;cursor:default;background:0 0;}
-/* 顶栏文字按钮（「回到根目录」）：与图标钮同盒同交互，宽度自适应文字。 */
-.dsh-tdt-sv-head-btn.dsh-tdt-sv-head-text{width:auto;padding:0 8px;font-size:12px;line-height:18px;}
 .dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
@@ -248,11 +245,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(-
 .dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
 .dsh-tdt-sv-preview-code{max-width:100%;}
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）：树 + 可点路径条 ── */
-/* 顶栏路径条：标签 + 面包屑（横向滚动）+ 按钮组。面包屑每段可点回跳。 */
-.dsh-tdt-sv-crumbs{flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
+/* 面包屑独立成第二行（用户 2026-09-28 复验：单行挤不下——第一行只留按钮，第二行整行给路径）。
+   超宽时横向滚动 + 自动滚到末端（当前层可见），且左侧出省略号按钮，点开换行展开全部层级。 */
+.dsh-tdt-sv-crumbs{flex:none;display:flex;align-items:center;gap:2px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
 .dsh-tdt-sv-crumbs::-webkit-scrollbar{display:none;}
+.dsh-tdt-sv-crumbs-expanded{flex-wrap:wrap;overflow:visible;white-space:normal;row-gap:2px;}
 .dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--dsw-radius-sm,6px);font:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
 .dsh-tdt-sv-crumb:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-crumb-more{flex:none;width:auto;max-width:none;overflow:visible;font-weight:600;}
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));}
