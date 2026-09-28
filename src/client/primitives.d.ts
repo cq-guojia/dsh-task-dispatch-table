@@ -134,6 +134,12 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconApiOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconPlanOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconQuestionOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  /** 时钟（时分选择锚点用）。 */
+  export const IconClockOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  /** 加号（「添加」入口用）。 */
+  export const IconPlusOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  /** 打开的文件夹（工作区 chip 用；实测与官方输入框 chip 同款）。 */
+  export const IconFolderOpenOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconSparkleRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronUpOutlineRegular: ComponentType<{ size?: number; className?: string }>
   /** 官方文件类型图标（按路径分类着色 SVG；交付文件卡同款）。 */
@@ -144,6 +150,92 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export function fileExtension(path: string): string
   /** 按路径推语法高亮语言（官方 code/CodeBody 预览体同款入参来源）。 */
   export function languageForPath(path: string): string | undefined
+
+  // ── 表单件（2026-09-29 核实：官方**有**这一套，此前「官方无表单件」的记载有误）──
+  // 事实来源同上包 lib/types/{Switch,Input,Checkbox,SegmentedControl,SegmentedTabs,Menu,Pill,Tag}.d.ts
+  // 与 lib/*.module.css。⚠️ **官方没有日期 / 时间选择器**（lib/types 与 icons/ 里均无 calendar/datepicker），
+  // 日历与时分列只能自绘（照官方 token 与几何，见 editor-fields.tsx）。
+
+  /** 官方开关：胶囊 36×20、选中 `--dsw-alias-brand-primary`、关闭 `--dsw-alias-border-l3`。 */
+  export const Switch: ComponentType<{
+    checked: boolean
+    onChange: (next: boolean) => void
+    /** 无障碍名（不渲染可见文字，可见标签由调用方自己画）。 */
+    label: string
+    disabled?: boolean
+    title?: string | undefined
+    className?: string | undefined
+  }>
+
+  /** 官方输入框：高度 32、0.5px border-l4、bg-layer-1；icon 为 16px 前置图标。 */
+  export const Input: ComponentType<{
+    icon?: ReactNode
+    className?: string
+  } & import('react').InputHTMLAttributes<HTMLInputElement>>
+
+  /** 官方可选 chip（onClick 存在时渲染为 button）。 */
+  export const Pill: ComponentType<{
+    active?: boolean
+    className?: string | undefined
+    children?: ReactNode
+  } & import('react').ButtonHTMLAttributes<HTMLButtonElement>>
+
+  /** 官方分段控件（滑块指示器；至少两项）。 */
+  export interface SegmentedControlOption<Value extends string> {
+    value: Value
+    label: string
+    disabled?: boolean
+    title?: string
+  }
+  export function SegmentedControl<Value extends string>(props: {
+    id: string
+    value: Value
+    options: readonly SegmentedControlOption<Value>[]
+    onChange: (next: Value) => void
+    label: string
+    disabled?: boolean
+    className?: string | undefined
+  }): ReactNode
+
+  /** 官方菜单项（数据形态）。 */
+  export interface MenuItem {
+    id: string
+    label: ReactNode
+    disabled?: boolean
+    icon?: ReactNode
+    danger?: boolean
+  }
+  /** 分隔线 / 分组标题（非可选项）。 */
+  export interface MenuSeparator { type: 'separator'; id: string }
+  export interface MenuLabel { type: 'label'; id: string; text: string }
+  export type MenuEntry = MenuItem | MenuSeparator | MenuLabel
+
+  /**
+   * 官方下拉菜单：anchor 为锚点元素，列表自带定位/键盘游走/点外关闭。
+   * `selection='check'` 时选中项尾随对勾（官方默认）。**rc.1 起即存在**（`MenuSurface` 则仅 rc.2 有）。
+   */
+  export const Menu: ComponentType<{
+    open: boolean
+    anchor: ReactNode
+    items?: readonly MenuEntry[]
+    children?: ReactNode
+    footer?: readonly MenuEntry[]
+    selectedId?: string | undefined
+    selectedIds?: readonly string[] | undefined
+    onSelect?: (id: string) => void
+    onClose: () => void
+    align?: 'start' | 'end'
+    side?: 'bottom' | 'top' | 'right'
+    portal?: boolean
+    closeOnPointerLeave?: boolean
+    dense?: boolean
+    compact?: boolean
+    autoFocus?: boolean
+    selection?: 'check' | 'fill'
+    getAnchorRect?: () => DOMRect | null
+    className?: string | undefined
+    listClassName?: string | undefined
+  }>
 
   /** 官方气泡提示：label + side；children 为唯一锚点元素，ref/事件会被接管。 */
   export const Tooltip: ComponentType<{

@@ -86,7 +86,7 @@
 ### 硬约束（为什么不是推压）
 
 - 整页右侧已被**页面级预览 dock 长期占用**（U11，那是**占布局的分栏**，变量 `--dsh-tdt-preview-w`）。用户澄清：他要的「右侧拉篮」是**盖上去的浮层弹窗**，与预览 dock 那种推压分栏**不是一回事**，两者不冲突（弹窗在 overlay 层，dock 在其下）。
-- 官方 primitives 有 `Modal` + `Button`，但**没有表单控件**（`primitives.d.ts`）；现有面板的表单件是原生 `<select>` / `<textarea>` + 内联样式 + `--dsw-alias-*` token ⇒ 表单控件自绘照官方观感（Q10 已接受）。
+- ~~官方 primitives 有 `Modal` + `Button`，但**没有表单控件**（`primitives.d.ts`）~~ ❌ **2026-09-29 纠正：结论错误**。真相 = 官方**有一整套表单件**（`Switch` / `Input` / `Checkbox` / `SegmentedControl` / `SegmentedTabs` / `Menu` / `Pill` / `Tag` / `Toast` / `ConfigField` / `SettingsForm`），我们那份 `primitives.d.ts` 只是「当前用得到的最小消费面」，**不是官方全景**；真正**没有**的只有**日期 / 时间选择器**。核实法：`npm pack @deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2` 读 `lib/types/**` + `lib/index.js` 导出清单（已沉淀进 [`design/dsh-capabilities.md`](../design/dsh-capabilities.md)「已关闭的源码核实项」）。⇒ **控件一律改用官方**（下拉 = 官方 `Menu` 带对勾、开关 = 官方 `Switch`、分段 = 官方 `SegmentedControl`、chip = 官方 `Pill`），只有日历与时分列自绘。**教训：判断「官方有没有某件」必须读包本体，不能拿本仓库自写的 `.d.ts` 当依据。**
 
 ---
 
@@ -242,5 +242,48 @@ storages/dsh-task-dispatch-table/prompt-versions/<taskId>/
 ## 十二、下一步
 
 1. ✅ 文档定稿 → 签入推送（本轮）。
-2. **P0 落码**：右上角「+ 新建任务」→ 右侧弹窗 → 全部前端交互（不含保存）。
-3. 调观感 → 再进 P1（数据面）→ P2（保存写回）→ P3（版本管理）。
+2. ✅ **P0 落码**（2026-09-28）：右上角「+ 新建任务」→ 右侧弹窗 → 全部前端交互（不含保存）。
+3. 🔧 **P0.5 观感返工**（2026-09-29，见 §十三）。
+4. 调观感 → 再进 P1（数据面）→ P2（保存写回）→ P3（版本管理）。
+
+---
+
+## 十三、P0.5 返工轮（2026-09-29，真机观感反馈）
+
+用户拿真机截图逐条点名，共 7 条；**全部已落码并推送**（`src/client/task-editor.tsx` 重写 + 新增
+`src/client/editor-fields.tsx` / `src/client/task-editor-css.ts`，旧的 `task-editor.ts` 删除）。
+
+| # | 用户原话要点 | 处置 |
+|---|---|---|
+| 1 | 开关"打开的时候是不是应该是绿色的" | **不是 bug，是官方 token 的正常表现**：官方 `Switch` 选中色 = `--dsw-alias-brand-primary`，暗色主题下 = `#f9fafb`（**近白**），亮色下 = `#0f1115`（近黑）。按用户要求局部改成官方状态色 `success`（官方 `Tag` tone=`success` 的定义正是「a healthy or enabled state」），选择器 `.dsh-tdt-ed-enable button[role='switch'][aria-checked='true']` 特异性高于官方，只影响本弹窗。**要改回官方默认 = 删这一条 CSS** |
+| 2 | 「启用」不该单占一行，放右上角、关闭钮左边 | 已移到头部右侧（`dsh-tdt-ed-enable` 包官方 `Switch` + 可见文字标签，官方 Switch 只画胶囊） |
+| 3 | 「任务编号可选便于查询」这类次要说明放输入框里 | 全部改 placeholder（任务编号 / 手册路径 / 提示词…）；不再是单独一行 hint |
+| 4 | 提示词区照参考图：**左下选工作区、右下选模型**；右侧别显示「手敲/粘贴」 | 卡片布局改成：右上 = 官方 `SegmentedControl` 三档**手输 / 选择 / 上传**（占原「版本历史」位），卡内大输入框，底部一行左下工作区（带官方文件夹图标）、右下模型。版本历史挪进**高级**区（P3，禁用） |
+| 5 | 执行频率太乱，照参考图分「周期 / 间隔」 | 整段重做：顶部两档；周期 = 单次 / 每天 / 每周 / 双周 / 每月 / 每年（周几多选 + 月 / 日选择 + 日期 + 时间 + 时区 + 有效期）；间隔 = 每隔 N 分钟 / 小时执行一次 + 周几筛选 |
+| 6 | 日期 / 时间控件"特别丑"——是你自己写的还是官方的？ | **是我们用的浏览器原生 `<input type="datetime-local">`**（不是官方件）。已换成自绘日历（月份翻页 `‹‹ ‹ › ››`、周一起排、今天描边、底部「今天」）与自绘时分列（24 小时 / 60 分钟 + 「现在」「确定」），配色与几何逐条抄官方 `Input.module.css` 与菜单卡材质 |
+| 7 | 下拉框箭头离右边太近，是不是自己写的？ | **是原生 `<select>`**（浏览器自带箭头，位置不受控）。已换成**官方 `Menu`**（`selection:'check'` 选中项尾随对勾、portal 到 body、键盘游走 / Esc / 点外关闭全由官方负责） |
+
+### 本轮新增的两个事实（已进 capabilities）
+
+- **官方有整表单件**（见 §四纠正）；**唯一没有的是日期 / 时间选择器** ⇒ 日历与时分列自绘。
+- `MenuSurface` / `useModalLayer` 等仅 0.1.7-rc.2 有 ⇒ 一律不用；只用 rc.1/rc.2 都在的那些。
+
+### 本轮新增未决项（都留 P2）
+
+| 项 | 说明 |
+|---|---|
+| N1 **双周** | cron 没有「隔周」位 ⇒ 界面先收着，UI 上直接给黄色提示「双周在 cron 里没有对应位，P2 定」；可选方案：① 加 `everyWeeks` 字段 ② 去掉双周 |
+| N2 **间隔的「天 / 周」单位** | 只留 cron 能表达的**分钟 / 小时**；天 / 周要落到 cron 有跨月 / 跨周边界问题，等 P2 |
+| N3 **排期 → cron 的完整映射** | 现在只在高级区 JSON 逃生口做**只读预览**（best-effort），真写回在 P2；表单草稿内部已是结构化（档 + 粒度 + 时刻 + 周几），不再存 cron 字符串 |
+
+### 已落码的文件
+
+| 文件 | 职责 |
+|---|---|
+| `src/client/editor-fields.tsx`（新） | `SelectField`（官方 `Menu`）/ `DateField`（自绘日历）/ `TimeField`（自绘时分）/ `WeekdayPicker`（官方 `Pill` + 官方 `Menu`）/ `Segmented`（官方 `SegmentedControl`）/ 官方 token 常量 `C` |
+| `src/client/task-editor-css.ts`（新） | 弹窗外壳与伪类样式（照 `archive-session-css.ts` 的注入惯例；`::placeholder`、`:focus`、`:focus-within` 只能走 CSS） |
+| `src/client/task-editor.tsx`（重写，原 `.ts` 删） | 弹窗本体 + 提示词卡 + 排期卡 + 前置任务 + 高级区 + 排期→cron 只读预览 |
+| `src/client/primitives.d.ts` | 补 `Switch` / `Input` / `Pill` / `SegmentedControl` / `Menu` + 三个新图标声明 |
+| `src/client/locales.ts` | 文案重排（来源三档、周期 / 间隔、周几、月份、日历 / 时分），清掉已废弃的 cron 预设键 |
+
+typecheck + build（dist 340.38 kB）+ 冒烟 172 项全过。

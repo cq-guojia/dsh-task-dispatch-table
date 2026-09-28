@@ -2,7 +2,7 @@
 
 > **这是什么**：开发过程中对 DSH 宿主（deepseek-harness）源码逐条核实的能力事实，含结论出处。**只记事实，不记过程**——过程叙事见 [`../worklog/`](../worklog/)。
 > **怎么用**：实现新功能前的 API 疑问先查本清单与决策表，查不到再翻宿主源码（决策 15：结论必须可溯源）。
-> 事实对应宿主 **0.1.6-alpha.2 / 0.1.7-rc.1** 两代（差异已逐条注明）；宿主升级后按需复核。
+> 事实对应宿主 **0.1.6-alpha.2 / 0.1.7-rc.1 / 0.2.0-rc.1** 三代（差异已逐条注明）；**0.2.0-rc.1 已逐包 .d.ts diff 复核（2026-09-29）**：本表所列消费接口（retain/binding/archiveSession/unarchiveSession、session/follow·page、uiConversation 渲染层、configForms/settingsSchema/describe、sidebar.panellist/main/selectPanel）跨 0.1.7-rc.1→0.2.0-rc.1 签名稳定——仅新增可选参数与 layout 服务内部构造参数（宿主侧，非我们调用），无破坏性变更；10 个注入包在 0.2.0-rc.1 均存在。宿主升级后按需复核。
 
 ## 会话与派发
 
@@ -46,6 +46,10 @@
 | 宿主 Node 版本 | engines `^22.19.0 \|\| >=24.0.0` → **SQLite 用内置 `node:sqlite`**，零原生依赖 |
 | ~~provider / model 缺省走宿主默认路由~~ ❌ **原结论已推翻** | 二者**必须成对显式给**：agent-loop `prepareRequest` 对 provider+model 一并校验（`if (!provider \|\| !model) throw`），缺省**不会**填 deployment persona 里的 `{{model}}` ⇒ 报 `has no value ... (section "deployment:persona-prefix")`、本轮秒结束。默认值来源 = `ctx.get('agentDefaultModel').currentSelection()`（= 用户配的 / 上次用的），兜底 = `llm.listProviders()` / `listModels()`。**决策 15 相应更正，见决策 22** |
 | agent 的工具与工作区指令从哪来 | 由 agent 所挂的 **agent preset** 决定：**不挂 = 空的全局层**（真机实测只剩根作用域 MCP 工具，fs/bash 全无 ⇒ agent 干不了活）。挂**部署默认 preset** 后，工具集 / prompt sections / skill 目录（含工作区 `AGENTS.md` 注入）全部跟随系统。已按决策 23 落码 |
+| **官方 primitives 有哪些组件**（2026-09-29 核实，纠正此前「官方无表单件」的错记） | **有**：`Switch` / `Input` / `Checkbox` / `SegmentedControl` / `SegmentedTabs` / `Menu`（+ `MenuItem` / `MenuSeparator` / `MenuLabel` / `MenuItemButton`）/ `MenuSurface` / `Pill` / `Tag` / `Toast` / `Tooltip` / `ConfigField` / `SettingsForm`(`settings-form/`) / `Modal` / `Button` / `JsonTree` / `RiskConfirmation` / `HoverCard` / 279 个 `Icon*`。**没有日期 / 时间选择器**：`lib/types/**` 与 `lib/icons/**` 里无 calendar / datepicker / weekday 任何痕迹 ⇒ 日历与时分列只能自绘（照官方 token 与几何，见 `src/client/editor-fields.tsx`）。核实方式：`npm pack @deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2`，读 `lib/types/*.d.ts` + `lib/*.module.css` + `lib/index.js` |
+| **primitives 版本差异**（同轮核实） | `MenuSurface` / `ShortcutKeys` / `useModalLayer` / `closeTopModal` / `isBehindModal` / `focusWithoutRing` / `observeComposition` / `GuideArtwork*` **仅 0.1.7-rc.2 有**；而 `Switch` / `Input` / `Menu` / `SegmentedControl` / `SegmentedTabs` / `Pill` 在 **0.1.5-rc.2 / 0.1.7-rc.1 / rc.2 都在** ⇒ 跨版本安全，可放心用；不确定的组件别用 rc.2 独有件 |
+| **`--dsw-alias-brand-primary` 的实际色值**（同轮核实，解释「开关打开为什么是白的」） | 亮色主题 = `--dsw-static-neutral-bluish-1000`（`#0f1115`，近黑）；暗色主题 = `--dsw-static-neutral-bluish-50`（`#f9fafb`，近白）⇒ **官方 `Switch` 选中态在暗色下本来就是近白**，不是我方画错。要「打开=绿色」得局部覆盖成 `--dsw-alias-state-success-primary`（= `--dsw-static-green-500`）。出处：`@deepseek-ai/dsh-client-ui-theme@0.1.7-rc.2` |
+| **官方组件签名要点**（同轮核实，踩坑面） | `Input`：`style` / `...rest` 落在**内层 `<input>`**、`className` 落在**外层 `.wrap`**（要控宽度得管外层）；`Menu`：`selection:'check'` 是**默认**（选中项尾随对勾），`portal:true` 才躲祖先滚动裁剪，Escape 会 `preventDefault` ⇒ 外层弹窗据 `defaultPrevented` 让位；`SegmentedControl`：约定面板 id = `<id>-<value>-panel`；`useAnchoredPosition` 只回 `{left, top}` —— `position: fixed` 与 `createPortal` 得调用方自己给 |
 
 ## 会话列表治理策略（已定）
 

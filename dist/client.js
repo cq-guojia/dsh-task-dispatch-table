@@ -277,37 +277,76 @@ window.__ModuleLoader__.load({
 			editorTabRecords: "执行记录",
 			editorRecordsPending: "执行记录待接（P2）",
 			editorEnabled: "启用",
+			editorEnabledOn: "任务已启用，到点会派发",
+			editorEnabledOff: "任务已停用，定义保留但不派发",
 			editorTitle: "任务名称",
 			editorTitlePh: "给任务起个名字",
 			editorCode: "任务编号",
 			editorCodePh: "可选，便于查询",
 			editorPrompt: "提示词",
 			editorPromptPh: "写给 agent 的指令……",
-			editorSource: "来源",
-			editorSourceInline: "手敲 / 粘贴",
-			editorSourceManual: "任务手册（工作区文件）",
-			editorSourceUpload: "上传 MD",
-			editorSourceManualHint: "只记路径，执行那一刻由 agent 自己读取；文件随时改随时生效，我们不做版本管理",
-			editorPickFile: "选择文件",
-			editorUpload: "上传 MD",
-			editorVersions: "版本历史",
+			editorSource: "提示词来源",
+			editorSourceInline: "手输",
+			editorSourceManual: "选择",
+			editorSourceUpload: "上传",
 			editorManualPath: "手册路径",
 			editorManualPathPh: "相对工作区根，如 manuals/xxx.md",
+			editorManualHint: "只记路径，执行那一刻由 agent 自己读取：你随时改随时生效，我们不做它的版本管理",
+			editorPickFile: "选择文件",
+			editorUploadHint: "点击或拖拽上传 .md 手册",
+			editorUploadWarn: "上传的内容由我们保管：每次修改都会留版本，可在高级区查看版本历史",
+			editorVersions: "版本历史",
 			editorWorkspace: "工作区",
+			editorWorkspacePh: "选择工作区",
 			editorModel: "模型",
+			editorModelPh: "跟随宿主默认",
 			editorFollowHost: "跟随宿主默认",
 			editorNoOptions: "暂无可选（数据面待接）",
 			editorSchedule: "执行频率",
-			editorScheduleCron: "周期",
-			editorScheduleOnce: "一次性",
-			editorCron: "cron",
-			editorCronCustom: "自定义",
-			cronDaily9: "每天 09:00",
-			cronHourly: "每小时整点",
-			cronEvery15: "每 15 分钟",
-			cronWeeklyMon: "每周一 09:00",
-			cronMonthly: "每月 1 号 09:00",
-			editorOnceAt: "执行时间",
+			editorSchedulePeriodic: "周期",
+			editorScheduleInterval: "间隔",
+			editorFreq: "频率",
+			editorFreqOnce: "单次",
+			editorFreqDaily: "每天",
+			editorFreqWeekly: "每周",
+			editorFreqBiweekly: "双周",
+			editorFreqMonthly: "每月",
+			editorFreqYearly: "每年",
+			editorOnceHint: "到点执行一次，之后不再重复",
+			editorBiweeklyWarn: "双周在 cron 里没有对应位：先按界面收着，具体怎么落库等 P2 定",
+			editorDate: "日期",
+			editorDatePh: "选择日期",
+			editorTime: "时间",
+			editorTimePh: "选择时间",
+			editorMonth: "月",
+			editorMonthOption: "{m} 月",
+			editorDayOfMonth: "第几天",
+			editorDayOption: "{d} 号",
+			editorIntervalEvery: "每隔",
+			editorIntervalStep: "间隔步长",
+			editorIntervalUnit: "间隔单位",
+			editorIntervalSuffix: "执行一次",
+			editorIntervalOn: "在哪几天执行",
+			editorWeekday1: "周一",
+			editorWeekday2: "周二",
+			editorWeekday3: "周三",
+			editorWeekday4: "周四",
+			editorWeekday5: "周五",
+			editorWeekday6: "周六",
+			editorWeekday7: "周日",
+			editorWeekdayAdd: "添加",
+			editorWeekdayEmpty: "不限（每天）",
+			editorWeekdayRemove: "移除{name}",
+			editorToday: "今天",
+			editorPrevMonth: "上个月",
+			editorNextMonth: "下个月",
+			editorPrevYear: "上一年",
+			editorNextYear: "下一年",
+			editorMonthTitle: "{y}年{m}月",
+			editorHour: "小时",
+			editorMinute: "分钟",
+			editorNow: "现在",
+			editorConfirm: "确定",
 			editorTimezone: "时区",
 			editorWindow: "有效期",
 			editorWindowHint: "只管开始：从计划时刻起这段时间内允许派发与重试",
@@ -326,7 +365,6 @@ window.__ModuleLoader__.load({
 			editorValidStatuses: "成功状态清单",
 			editorJson: "JSON",
 			editorJsonHint: "逃生通道：这里含任务 id，改错会影响任务身份，慎改",
-			editorRequired: "必填",
 			editorUnavailable: "暂不可用（待接数据面）"
 		};
 		/** English copy. */
@@ -590,37 +628,76 @@ window.__ModuleLoader__.load({
 			editorTabRecords: "Run history",
 			editorRecordsPending: "Run history pending (P2)",
 			editorEnabled: "Enabled",
+			editorEnabledOn: "Enabled — dispatches when due",
+			editorEnabledOff: "Disabled — kept but never dispatches",
 			editorTitle: "Task name",
 			editorTitlePh: "Name this task",
 			editorCode: "Task code",
 			editorCodePh: "Optional, for lookup",
 			editorPrompt: "Prompt",
 			editorPromptPh: "Instructions for the agent…",
-			editorSource: "Source",
-			editorSourceInline: "Typed / pasted",
-			editorSourceManual: "Task manual (workspace file)",
-			editorSourceUpload: "Upload MD",
-			editorSourceManualHint: "Only the path is stored; the agent reads it at dispatch time. Edit it anytime — we do not version it",
-			editorPickFile: "Pick file",
-			editorUpload: "Upload MD",
-			editorVersions: "Version history",
+			editorSource: "Prompt source",
+			editorSourceInline: "Type",
+			editorSourceManual: "Pick",
+			editorSourceUpload: "Upload",
 			editorManualPath: "Manual path",
 			editorManualPathPh: "Relative to workspace root, e.g. manuals/xxx.md",
+			editorManualHint: "Only the path is stored; the agent reads it at dispatch time. Edit it anytime — we do not version it",
+			editorPickFile: "Pick file",
+			editorUploadHint: "Click or drop a .md manual",
+			editorUploadWarn: "Uploaded content is ours to keep: every edit gets a version, see Version history in Advanced",
+			editorVersions: "Version history",
 			editorWorkspace: "Workspace",
+			editorWorkspacePh: "Choose workspace",
 			editorModel: "Model",
+			editorModelPh: "Follow host default",
 			editorFollowHost: "Follow host default",
 			editorNoOptions: "Nothing to choose yet (data plane pending)",
 			editorSchedule: "Schedule",
-			editorScheduleCron: "Recurring",
-			editorScheduleOnce: "Once",
-			editorCron: "cron",
-			editorCronCustom: "Custom",
-			cronDaily9: "Daily 09:00",
-			cronHourly: "Hourly",
-			cronEvery15: "Every 15 minutes",
-			cronWeeklyMon: "Weekly Mon 09:00",
-			cronMonthly: "Monthly 1st 09:00",
-			editorOnceAt: "Run at",
+			editorSchedulePeriodic: "Recurring",
+			editorScheduleInterval: "Interval",
+			editorFreq: "Frequency",
+			editorFreqOnce: "Once",
+			editorFreqDaily: "Daily",
+			editorFreqWeekly: "Weekly",
+			editorFreqBiweekly: "Biweekly",
+			editorFreqMonthly: "Monthly",
+			editorFreqYearly: "Yearly",
+			editorOnceHint: "Runs once when due, never repeats",
+			editorBiweeklyWarn: "Cron has no biweekly slot: kept in the UI for now, the real mapping is a P2 decision",
+			editorDate: "Date",
+			editorDatePh: "Pick a date",
+			editorTime: "Time",
+			editorTimePh: "Pick a time",
+			editorMonth: "Month",
+			editorMonthOption: "Month {m}",
+			editorDayOfMonth: "Day",
+			editorDayOption: "Day {d}",
+			editorIntervalEvery: "Every",
+			editorIntervalStep: "Interval step",
+			editorIntervalUnit: "Interval unit",
+			editorIntervalSuffix: "",
+			editorIntervalOn: "Which days",
+			editorWeekday1: "Mon",
+			editorWeekday2: "Tue",
+			editorWeekday3: "Wed",
+			editorWeekday4: "Thu",
+			editorWeekday5: "Fri",
+			editorWeekday6: "Sat",
+			editorWeekday7: "Sun",
+			editorWeekdayAdd: "Add",
+			editorWeekdayEmpty: "Any day",
+			editorWeekdayRemove: "Remove {name}",
+			editorToday: "Today",
+			editorPrevMonth: "Previous month",
+			editorNextMonth: "Next month",
+			editorPrevYear: "Previous year",
+			editorNextYear: "Next year",
+			editorMonthTitle: "{m}/{y}",
+			editorHour: "Hour",
+			editorMinute: "Minute",
+			editorNow: "Now",
+			editorConfirm: "OK",
 			editorTimezone: "Timezone",
 			editorWindow: "Valid for",
 			editorWindowHint: "Start only: dispatch and retries are allowed within this window",
@@ -639,7 +716,6 @@ window.__ModuleLoader__.load({
 			editorValidStatuses: "Valid statuses",
 			editorJson: "JSON",
 			editorJsonHint: "Escape hatch: contains the task id — editing it wrong breaks task identity",
-			editorRequired: "Required",
 			editorUnavailable: "Unavailable (data plane pending)"
 		};
 		//#endregion
@@ -965,14 +1041,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 `;
-		let injected = false;
+		let injected$1 = false;
 		/**
 		* 幂等注入样式（一次挂入 document.head）。SSR / 无 document 环境静默跳过。
 		* 宿主升级换 token 名时，未命中的变量回退到兜底值（仍可读、不崩）。
 		*/
 		function ensureArchiveSessionStyle() {
-			if (injected) return;
-			injected = true;
+			if (injected$1) return;
+			injected$1 = true;
 			if (typeof document === "undefined") return;
 			if (document.getElementById("dsh-task-dispatch-table-archive-session") !== null) return;
 			const el = document.createElement("style");
@@ -2163,7 +2239,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		//#endregion
 		//#region src/client/mirror/message-chrome.ts
 		/** 两位补零（官方 message-chrome pad2）。 */
-		function pad2(n) {
+		function pad2$1(n) {
 			return String(n).padStart(2, "0");
 		}
 		/**
@@ -2176,12 +2252,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const seconds = total % 60;
 			if (hours > 0) return t("durationHours", {
 				hours,
-				minutes: pad2(minutes),
-				seconds: pad2(seconds)
+				minutes: pad2$1(minutes),
+				seconds: pad2$1(seconds)
 			});
 			return minutes > 0 ? t("durationMinutes", {
 				minutes,
-				seconds: pad2(seconds)
+				seconds: pad2$1(seconds)
 			}) : t("durationSeconds", { seconds });
 		}
 		/** 官方 formatLiveRunDuration：秒不补零、分钟自 60 秒起。 */
@@ -2192,7 +2268,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const seconds = String(totalSeconds % 60);
 			if (hours > 0) return t("durationHours", {
 				hours,
-				minutes: pad2(minutes),
+				minutes: pad2$1(minutes),
 				seconds
 			});
 			return minutes > 0 ? t("durationMinutes", {
@@ -2206,7 +2282,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function formatMessageClock(time, t, now = Date.now()) {
 			const d = new Date(time);
 			const n = new Date(now);
-			const clock = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+			const clock = `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
 			if (d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()) return clock;
 			const params = {
 				y: d.getFullYear(),
@@ -4512,23 +4588,749 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 }))))) : null, body);
 		}
 		//#endregion
-		//#region src/client/task-editor.ts
+		//#region src/client/editor-fields.tsx
 		const C$1 = {
 			text: "var(--dsw-alias-label-primary, #1f2328)",
 			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
-			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
+			textTertiary: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
+			dimmed: "var(--dsw-alias-label-dimmed, rgba(128,128,128,0.6))",
+			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))",
 			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
-			layer3: "var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))",
-			mask: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))",
-			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
-			borderStrong: "var(--dsw-alias-border-l3, rgba(128,128,128,0.5))",
-			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
 			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
-			shadow: "var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))",
-			bgBase: "var(--dsw-alias-bg-base, var(--dsw-alias-bg-layer-1, #ffffff))"
+			borderL2: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
+			borderL4: "var(--dsw-alias-border-l4, rgba(128,128,128,0.25))",
+			brand: "var(--dsw-alias-brand-primary, #0f1115)",
+			brandFg: "var(--dsw-alias-label-primary-foreground, #ffffff)",
+			business: "var(--dsw-alias-state-business-primary, #4d6bfe)",
+			menuFill: "var(--dsw-specific-menu, var(--dsw-alias-bg-layer-1, #2b2d31))",
+			elevation: "var(--dsw-elevation-prominent, 0 8px 28px rgba(0,0,0,0.28))",
+			radiusSm: "var(--dsw-radius-sm, 6px)",
+			radiusMd: "var(--dsw-radius-md, 8px)"
 		};
-		const monoFont$1 = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
-		const transition$1 = "background 0.15s ease, color 0.15s ease, border-color 0.15s ease";
+		const transition$1 = "background 120ms ease, color 120ms ease, border-color 120ms ease";
+		/** 锚点按钮：克隆官方 `Input` 的外观（下拉、日期、时分共用同一副壳）。 */
+		const fieldButtonStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "6px",
+			height: "32px",
+			boxSizing: "border-box",
+			minWidth: 0,
+			maxWidth: "100%",
+			padding: "0 8px",
+			border: `0.5px solid ${C$1.borderL4}`,
+			borderRadius: C$1.radiusMd,
+			background: C$1.layer1,
+			color: C$1.text,
+			font: "inherit",
+			fontSize: "14px",
+			lineHeight: "22px",
+			cursor: "pointer",
+			transition: transition$1
+		};
+		const fieldLabelStyle = {
+			flex: "1 1 auto",
+			minWidth: 0,
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			whiteSpace: "nowrap",
+			textAlign: "left"
+		};
+		/**
+		* 浮层卡片：官方菜单卡同款材质（底 + 影 + 圆角）。
+		* `position: fixed` 必须自带宽：`useAnchoredPosition` 只回 `{left, top}`（读官方实现确认），
+		* 定位三件套 = 本样式 + `pos` + `createPortal` 到 body（既躲弹窗内部滚动裁剪，也不受祖先 transform 影响）。
+		*/
+		const layerStyle = {
+			position: "fixed",
+			zIndex: 1100,
+			boxSizing: "border-box",
+			padding: "4px",
+			background: C$1.menuFill,
+			boxShadow: C$1.elevation,
+			borderRadius: C$1.radiusMd,
+			color: C$1.text,
+			fontSize: "13px"
+		};
+		/** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
+		function IconSeat(props) {
+			return (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				width: "16px",
+				height: "16px",
+				alignItems: "center",
+				justifyContent: "center",
+				flex: "none",
+				color: C$1.textTertiary
+			} }, props.children);
+		}
+		/**
+		* 下拉选择：**官方 `Menu`**（portal 到 body，避免被弹窗内部滚动裁掉；
+		* 选中项自动带对勾）。空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
+		*/
+		function SelectField(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [hover, setHover] = (0, react.useState)(false);
+			const usable = props.options.length > 0 && props.disabled !== true;
+			const current = props.options.find((option) => option.value === props.value);
+			const items = (0, react.useMemo)(() => props.options.map((option) => ({
+				id: option.value,
+				label: option.label
+			})), [props.options]);
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-field",
+				disabled: !usable,
+				"aria-haspopup": "menu",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onPointerEnter: () => {
+					setHover(true);
+				},
+				onPointerLeave: () => {
+					setHover(false);
+				},
+				onClick: () => {
+					setOpen(!open);
+				},
+				style: {
+					...fieldButtonStyle,
+					width: props.width,
+					background: hover && usable ? C$1.hover : C$1.layer1,
+					cursor: usable ? "pointer" : "not-allowed",
+					opacity: usable ? 1 : .6
+				}
+			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), (0, react.createElement)("span", { style: {
+				...fieldLabelStyle,
+				color: current === void 0 ? C$1.dimmed : C$1.text
+			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
+			if (!usable) return anchor;
+			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open,
+				anchor,
+				items,
+				selectedId: props.value,
+				selection: "check",
+				align: props.align ?? "start",
+				portal: true,
+				onSelect: (id) => {
+					setOpen(false);
+					props.onChange(id);
+				},
+				onClose: () => {
+					setOpen(false);
+				}
+			});
+		}
+		/** 官方分段控件（options ≥ 2 项）；不锁字面量类型，调用方自行窄化。 */
+		function Segmented(props) {
+			const options = props.options.map((option) => ({
+				value: option.value,
+				label: option.label
+			}));
+			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.SegmentedControl, {
+				id: props.id,
+				value: props.value,
+				options,
+				onChange: props.onChange,
+				label: props.label,
+				className: props.className
+			});
+		}
+		function pad2(value) {
+			return String(value).padStart(2, "0");
+		}
+		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
+		function parseIsoDate(value) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+			if (match === null) return null;
+			return {
+				y: Number(match[1]),
+				m: Number(match[2]),
+				d: Number(match[3])
+			};
+		}
+		function toIsoDate(y, m, d) {
+			return `${y}-${pad2(m)}-${pad2(d)}`;
+		}
+		/** 本地今天（真实时间，非占位）。 */
+		function todayIso$1() {
+			const now = /* @__PURE__ */ new Date();
+			return toIsoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+		}
+		function buildCells(y, m) {
+			const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+			const start = new Date(y, m - 1, 1 - offset);
+			const today = todayIso$1();
+			const cells = [];
+			for (let i = 0; i < 42; i++) {
+				const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+				const iso = toIsoDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
+				cells.push({
+					iso,
+					day: date.getDate(),
+					inMonth: date.getMonth() + 1 === m && date.getFullYear() === y,
+					isToday: iso === today
+				});
+			}
+			return cells;
+		}
+		/** 自绘日历弹层（锚点 = 官方 Input 外观的按钮）。 */
+		function DateField(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [hoverIso, setHoverIso] = (0, react.useState)(null);
+			const rootRef = (0, react.useRef)(null);
+			const panelRef = (0, react.useRef)(null);
+			const parsed = parseIsoDate(props.value);
+			const [cursor, setCursor] = (0, react.useState)(() => {
+				if (parsed !== null) return {
+					y: parsed.y,
+					m: parsed.m
+				};
+				const now = /* @__PURE__ */ new Date();
+				return {
+					y: now.getFullYear(),
+					m: now.getMonth() + 1
+				};
+			});
+			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
+				open,
+				anchorRef: rootRef,
+				panelRef,
+				side: "bottom",
+				align: "start",
+				gap: 4,
+				margin: 12
+			});
+			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					event.preventDefault();
+					setOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open]);
+			/** 打开时把视图对到已选月（或本月）。 */
+			const openPanel = (0, react.useCallback)(() => {
+				const current = parseIsoDate(props.value);
+				if (current !== null) setCursor({
+					y: current.y,
+					m: current.m
+				});
+				setOpen(true);
+			}, [props.value]);
+			const cells = (0, react.useMemo)(() => buildCells(cursor.y, cursor.m), [cursor]);
+			const step = (months) => {
+				const next = new Date(cursor.y, cursor.m - 1 + months, 1);
+				setCursor({
+					y: next.getFullYear(),
+					m: next.getMonth() + 1
+				});
+			};
+			const navButton = (label, months, icon) => (0, react.createElement)("button", {
+				type: "button",
+				"aria-label": label,
+				title: label,
+				onClick: () => {
+					step(months);
+				},
+				style: {
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					width: "26px",
+					height: "26px",
+					padding: 0,
+					border: "none",
+					borderRadius: C$1.radiusSm,
+					background: "transparent",
+					color: C$1.textDim,
+					cursor: "pointer",
+					font: "inherit"
+				}
+			}, icon);
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-field",
+				ref: rootRef,
+				disabled: props.disabled,
+				"aria-haspopup": "dialog",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onClick: () => {
+					if (open) setOpen(false);
+					else openPanel();
+				},
+				style: {
+					...fieldButtonStyle,
+					width: props.width,
+					cursor: props.disabled === true ? "not-allowed" : "pointer",
+					opacity: props.disabled === true ? .6 : 1
+				}
+			}, (0, react.createElement)("span", { style: {
+				...fieldLabelStyle,
+				color: props.value === "" ? C$1.dimmed : C$1.text
+			} }, props.value === "" ? props.placeholder : props.value), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
+			return (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				position: "relative",
+				minWidth: 0
+			} }, anchor, open ? (0, react_dom.createPortal)((0, react.createElement)("div", {
+				ref: panelRef,
+				role: "dialog",
+				"aria-label": props.ariaLabel,
+				style: {
+					...layerStyle,
+					...pos ?? {},
+					padding: "8px",
+					visibility: pos === void 0 ? "hidden" : "visible"
+				}
+			}, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: "4px",
+				marginBottom: "4px"
+			} }, navButton(props.labels.prevYear, -12, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), navButton(props.labels.prevMonth, -1, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), (0, react.createElement)("span", { style: {
+				flex: "1 1 auto",
+				textAlign: "center",
+				fontSize: "13px",
+				fontWeight: 600,
+				color: C$1.text
+			} }, props.labels.monthTitle(cursor.y, cursor.m)), navButton(props.labels.nextMonth, 1, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), navButton(props.labels.nextYear, 12, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("div", { style: {
+				display: "grid",
+				gridTemplateColumns: "repeat(7, 32px)",
+				gap: "2px"
+			} }, props.labels.weekdays.map((name) => (0, react.createElement)("div", {
+				key: name,
+				style: {
+					height: "24px",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					fontSize: "12px",
+					color: C$1.textTertiary
+				}
+			}, name)), cells.map((cell) => {
+				const selected = cell.iso === props.value;
+				const hovered = cell.iso === hoverIso && !selected;
+				return (0, react.createElement)("button", {
+					key: cell.iso,
+					type: "button",
+					"aria-label": cell.iso,
+					"aria-pressed": selected,
+					onPointerEnter: () => {
+						setHoverIso(cell.iso);
+					},
+					onPointerLeave: () => {
+						setHoverIso((current) => current === cell.iso ? null : current);
+					},
+					onClick: () => {
+						props.onChange(cell.iso);
+						setOpen(false);
+					},
+					style: {
+						width: "32px",
+						height: "32px",
+						padding: 0,
+						font: "inherit",
+						fontSize: "13px",
+						cursor: "pointer",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						border: cell.isToday && !selected ? `1px solid ${C$1.business}` : "1px solid transparent",
+						borderRadius: C$1.radiusMd,
+						background: selected ? C$1.brand : hovered ? C$1.hover : "transparent",
+						color: selected ? C$1.brandFg : cell.inMonth ? C$1.text : C$1.dimmed,
+						transition: transition$1
+					}
+				}, String(cell.day));
+			})), (0, react.createElement)("div", { style: {
+				marginTop: "6px",
+				paddingTop: "6px",
+				borderTop: `1px solid ${C$1.borderL2}`
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				onClick: () => {
+					props.onChange(todayIso$1());
+					setOpen(false);
+				},
+				style: {
+					width: "100%",
+					padding: "6px 0",
+					border: "none",
+					borderRadius: C$1.radiusSm,
+					background: "transparent",
+					color: C$1.text,
+					font: "inherit",
+					fontSize: "13px",
+					cursor: "pointer",
+					transition: transition$1
+				},
+				onPointerEnter: (event) => {
+					event.currentTarget.style.background = C$1.hover;
+				},
+				onPointerLeave: (event) => {
+					event.currentTarget.style.background = "transparent";
+				}
+			}, props.labels.today))), document.body) : null);
+		}
+		const HOURS = Array.from({ length: 24 }, (_, i) => pad2(i));
+		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2(i));
+		/** 时分列：`HH:mm`。 */
+		function TimeField(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [hover, setHover] = (0, react.useState)(false);
+			const [draft, setDraft] = (0, react.useState)(props.value);
+			const selectedRef = (0, react.useRef)(null);
+			const rootRef = (0, react.useRef)(null);
+			const panelRef = (0, react.useRef)(null);
+			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
+				open,
+				anchorRef: rootRef,
+				panelRef,
+				side: "bottom",
+				align: "start",
+				gap: 4,
+				margin: 12
+			});
+			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					event.preventDefault();
+					setOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open]);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				selectedRef.current?.scrollIntoView({ block: "center" });
+			}, [open]);
+			const parsed = /^(\d{2}):(\d{2})$/.exec(draft);
+			const hour = parsed === null ? "" : parsed[1];
+			const minute = parsed === null ? "" : parsed[2];
+			const column = (values, active, name, onPick, attachRef) => (0, react.createElement)("div", {
+				role: "listbox",
+				"aria-label": name,
+				style: {
+					width: "56px",
+					maxHeight: "196px",
+					overflowY: "auto",
+					display: "flex",
+					flexDirection: "column",
+					gap: "2px"
+				}
+			}, values.map((item) => (0, react.createElement)("button", {
+				key: item,
+				type: "button",
+				role: "option",
+				"aria-selected": item === active,
+				ref: attachRef && item === active ? selectedRef : void 0,
+				onClick: () => {
+					onPick(item);
+				},
+				style: {
+					padding: "5px 0",
+					border: "none",
+					borderRadius: C$1.radiusSm,
+					font: "inherit",
+					fontSize: "13px",
+					cursor: "pointer",
+					transition: transition$1,
+					background: item === active ? C$1.hover : "transparent",
+					color: item === active ? C$1.text : C$1.textDim,
+					fontWeight: item === active ? 600 : 400
+				}
+			}, item)));
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-field",
+				ref: rootRef,
+				disabled: props.disabled,
+				"aria-haspopup": "dialog",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onPointerEnter: () => {
+					setHover(true);
+				},
+				onPointerLeave: () => {
+					setHover(false);
+				},
+				onClick: () => {
+					if (open) {
+						setOpen(false);
+						return;
+					}
+					setDraft(props.value);
+					setOpen(true);
+				},
+				style: {
+					...fieldButtonStyle,
+					width: props.width,
+					background: hover && props.disabled !== true ? C$1.hover : C$1.layer1,
+					cursor: props.disabled === true ? "not-allowed" : "pointer",
+					opacity: props.disabled === true ? .6 : 1
+				}
+			}, (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react.createElement)("span", { style: {
+				...fieldLabelStyle,
+				color: props.value === "" ? C$1.dimmed : C$1.text
+			} }, props.value === "" ? props.placeholder : props.value));
+			return (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				position: "relative",
+				minWidth: 0
+			} }, anchor, open ? (0, react_dom.createPortal)((0, react.createElement)("div", {
+				ref: panelRef,
+				role: "dialog",
+				"aria-label": props.ariaLabel,
+				style: {
+					...layerStyle,
+					...pos ?? {},
+					padding: "8px",
+					visibility: pos === void 0 ? "hidden" : "visible"
+				}
+			}, (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "4px"
+			} }, column(HOURS, hour, props.labels.hour, (next) => {
+				setDraft(`${next}:${minute === "" ? "00" : minute}`);
+			}, true), column(MINUTES, minute, props.labels.minute, (next) => {
+				setDraft(`${hour === "" ? "00" : hour}:${next}`);
+			}, false)), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: "8px",
+				marginTop: "6px",
+				paddingTop: "6px",
+				borderTop: `1px solid ${C$1.borderL2}`
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				onClick: () => {
+					const now = /* @__PURE__ */ new Date();
+					setDraft(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`);
+				},
+				style: {
+					padding: "4px 8px",
+					border: "none",
+					borderRadius: C$1.radiusSm,
+					background: "transparent",
+					color: C$1.textDim,
+					font: "inherit",
+					fontSize: "12px",
+					cursor: "pointer",
+					transition: transition$1
+				}
+			}, props.labels.now), (0, react.createElement)("button", {
+				type: "button",
+				onClick: () => {
+					props.onChange(draft);
+					setOpen(false);
+				},
+				style: {
+					padding: "5px 14px",
+					border: "none",
+					borderRadius: C$1.radiusSm,
+					font: "inherit",
+					fontSize: "12px",
+					fontWeight: 600,
+					cursor: "pointer",
+					transition: transition$1,
+					background: C$1.business,
+					color: "var(--dsw-alias-label-primary-foreground, #ffffff)"
+				}
+			}, props.labels.confirm))), document.body) : null);
+		}
+		/**
+		* 周几多选：已选项 = 官方 `Pill`（点一下移除，尾随 ✕），末尾 `＋` 打开官方 `Menu` 添加。
+		* 值 = ISO 序号 1..7（周一 = 1），与参考图一致。
+		*/
+		function WeekdayPicker(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const selected = new Set(props.value);
+			const items = props.labels.weekdays.map((name, index) => ({
+				id: String(index + 1),
+				label: name
+			}));
+			const toggle = (day) => {
+				const next = selected.has(day) ? props.value.filter((item) => item !== day) : [...props.value, day];
+				props.onChange(next.slice().sort((a, b) => a - b));
+			};
+			const addButton = (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-field",
+				disabled: props.disabled,
+				"aria-haspopup": "menu",
+				"aria-expanded": open,
+				"aria-label": props.labels.add,
+				title: props.labels.add,
+				onClick: () => {
+					setOpen(!open);
+				},
+				style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "4px",
+					height: "24px",
+					padding: "0 8px",
+					border: `1px dashed ${C$1.borderL2}`,
+					borderRadius: C$1.radiusSm,
+					background: "transparent",
+					color: C$1.textDim,
+					font: "inherit",
+					fontSize: "12px",
+					cursor: props.disabled === true ? "not-allowed" : "pointer"
+				}
+			}, `＋ ${props.labels.add}`);
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexWrap: "wrap",
+				alignItems: "center",
+				gap: "6px",
+				boxSizing: "border-box",
+				minHeight: "36px",
+				padding: "5px 8px",
+				border: `0.5px solid ${C$1.borderL4}`,
+				borderRadius: C$1.radiusMd,
+				background: C$1.layer1
+			} }, props.value.length === 0 ? (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				color: C$1.dimmed
+			} }, props.labels.empty) : props.value.map((day) => (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Pill, {
+				key: day,
+				active: true,
+				onClick: () => {
+					if (props.disabled !== true) toggle(day);
+				},
+				"aria-label": props.labels.remove(props.labels.weekdays[day - 1] ?? String(day)),
+				title: props.labels.remove(props.labels.weekdays[day - 1] ?? String(day)),
+				style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "4px",
+					fontSize: "12px"
+				}
+			}, (0, react.createElement)("span", null, props.labels.weekdays[day - 1] ?? String(day)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 12 }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open,
+				anchor: addButton,
+				items,
+				selectedIds: props.value.map(String),
+				selection: "check",
+				align: "start",
+				portal: true,
+				onSelect: (id) => {
+					setOpen(false);
+					toggle(Number(id));
+				},
+				onClose: () => {
+					setOpen(false);
+				}
+			}));
+		}
+		//#endregion
+		//#region src/client/task-editor-css.ts
+		/** 样式标签 id（幂等注入用）。 */
+		const ED_STYLE_ID = "dsh-task-dispatch-table-task-editor";
+		const TASK_EDITOR_CSS = `
+/* 遮罩：盖在整页之上（含 U11 预览 dock —— dock 是 z 1030 的占布局分栏，此处 1040 压住它）。 */
+.dsh-tdt-ed-overlay{position:fixed;inset:0;z-index:1040;display:flex;justify-content:flex-end;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+/* 面板：右侧贴边、上下顶满、**浮层**（页面本身不动、不被推窄）。 */
+.dsh-tdt-ed-panel{position:relative;display:flex;flex-direction:column;height:100%;box-sizing:border-box;background:var(--dsw-alias-bg-base,var(--dsw-alias-bg-layer-1,#fff));color:var(--dsw-alias-label-primary,#1f2328);border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 40px rgba(0,0,0,.32));}
+/* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。 */
+.dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;background:0 0;}
+.dsh-tdt-ed-resizer:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-ed-title{font-size:15px;font-weight:600;}
+.dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
+/* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
+.dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;}
+/* 选中色：官方 Switch 用 --dsw-alias-brand-primary（暗色主题下近白 #f9fafb / 亮色主题下近黑 #0f1115，
+   所以「打开变白」是官方 token 的正常表现、不是画错）。用户 2026-09-29 要求「打开显示为绿色」
+   ⇒ 局部改用官方**状态色** success（官方 Tag tone:'success' 的定义即「a healthy or enabled state」）。
+   选择器带上标签与 role，特异性高于官方 .switch[aria-checked=true]，与注入先后无关。 */
+.dsh-tdt-ed-enable button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}
+/* 关闭钮：规格照官方 primitives Modal.close（28×28、radius-sm、hover 才出底）。 */
+.dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
+.dsh-tdt-ed-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-tabs{flex:none;display:flex;gap:4px;padding:8px 18px 0;}
+.dsh-tdt-ed-tab{appearance:none;font:inherit;font-size:13px;line-height:18px;padding:5px 12px;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease,color .15s ease;}
+.dsh-tdt-ed-tab:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-tab[aria-selected='true']{background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;}
+.dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
+.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-ed-label{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-ed-hint{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-ed-warn{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-state-warn-primary,#f5a623);}
+.dsh-tdt-ed-section{margin-bottom:16px;}
+.dsh-tdt-ed-section:last-child{margin-bottom:0;}
+/* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
+.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
+.dsh-tdt-ed-card:focus-within{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
+.dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
+/* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
+.dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:1.6;resize:vertical;}
+.dsh-tdt-ed-prompt::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
+.dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.dsh-tdt-ed-spacer{flex:1 1 auto;}
+/* 上传投放区（P1 接真上传；此处只呈现形态 + 文案）。 */
+.dsh-tdt-ed-drop{display:flex;align-items:center;justify-content:center;min-height:96px;box-sizing:border-box;padding:12px;border:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.5));border-radius:var(--dsw-radius-md,8px);color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));font-size:13px;}
+.dsh-tdt-ed-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
+/* 单行文本输入：逐条照官方 Input.module.css（.wrap + .input 合并成一枚裸 input），
+   含官方的 focus 描边与占位色 —— 这两条必须走 CSS，内联样式压不过伪类。 */
+.dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:22px;outline:none;transition:border-color .15s ease;}
+.dsh-tdt-ed-input:focus{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
+.dsh-tdt-ed-input::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
+/* 代码类值（手册路径 / 成功状态清单）：等宽、小一号，照本仓库既有 markdown-code 习惯。 */
+.dsh-tdt-ed-mono{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;}
+/* 自绘控件锚点（下拉 / 日历 / 时分）：键盘可达性描边。 */
+.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d6bfe);outline-offset:1px;}
+.dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
+`;
+		let injected = false;
+		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
+		function ensureTaskEditorStyle() {
+			if (injected) return;
+			injected = true;
+			if (typeof document === "undefined") return;
+			if (document.getElementById("dsh-task-dispatch-table-task-editor") !== null) return;
+			const el = document.createElement("style");
+			el.id = ED_STYLE_ID;
+			el.textContent = TASK_EDITOR_CSS;
+			document.head.appendChild(el);
+		}
+		//#endregion
+		//#region src/client/task-editor.tsx
+		const WEEKDAY_KEYS = [
+			"editorWeekday1",
+			"editorWeekday2",
+			"editorWeekday3",
+			"editorWeekday4",
+			"editorWeekday5",
+			"editorWeekday6",
+			"editorWeekday7"
+		];
+		/** 本地今天（真实时间）。 */
+		function todayIso() {
+			const now = /* @__PURE__ */ new Date();
+			return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
 		function emptyTaskDraft() {
 			return {
@@ -4540,10 +5342,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				manualPath: "",
 				workspace: "",
 				model: "",
-				scheduleKind: "cron",
-				cronPreset: "daily-9",
-				cronCustom: "0 9 * * *",
-				onceAt: "",
+				scheduleKind: "periodic",
+				periodFreq: "daily",
+				weekdays: [
+					1,
+					2,
+					3,
+					4,
+					5
+				],
+				monthDay: "1",
+				yearMonth: "1",
+				intervalUnit: "hour",
+				intervalStep: "1",
+				date: todayIso(),
+				time: "09:00",
 				timezone: "",
 				window: "PT4H",
 				maxAttempts: "1",
@@ -4551,33 +5364,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				deps: []
 			};
 		}
-		const CRON_PRESETS = [
-			{
-				id: "daily-9",
-				cron: "0 9 * * *",
-				labelKey: "cronDaily9"
-			},
-			{
-				id: "hourly",
-				cron: "0 * * * *",
-				labelKey: "cronHourly"
-			},
-			{
-				id: "every15",
-				cron: "*/15 * * * *",
-				labelKey: "cronEvery15"
-			},
-			{
-				id: "weekly-mon-9",
-				cron: "0 9 * * 1",
-				labelKey: "cronWeeklyMon"
-			},
-			{
-				id: "monthly-1-9",
-				cron: "0 9 1 * *",
-				labelKey: "cronMonthly"
-			}
-		];
 		const WINDOW_PRESETS = [
 			"PT30M",
 			"PT1H",
@@ -4586,20 +5372,39 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			"PT8H",
 			"P1D"
 		];
-		/** ISO 8601 时长 → 人读（PT4H → `4 小时`；不支持的形态原样返回）。 */
-		function formatIsoDuration(value, t) {
-			const match = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(value);
-			if (match === null) return value;
-			if (match[1] !== void 0) return `${match[1]} ${t("unitHours")}`;
-			if (match[2] !== void 0) return `${match[2]} ${t("unitMinutes")}`;
-			return value;
+		/** ISO 序号（1..7）→ cron 星期位（0..6）。 */
+		function cronDow(day) {
+			return day === 7 ? 0 : day;
 		}
-		/** 草稿 → 任务定义 JSON（仅供高级区「JSON」逃生口只读展示，不参与保存：保存走 P2）。 */
+		/** 草稿 → 排期的 cron 形态；表达不了的组合返回 null（由调用方给出可见提示，不编假值）。 */
+		function scheduleCron(draft) {
+			const match = /^(\d{2}):(\d{2})$/.exec(draft.time);
+			const hour = match === null ? 9 : Number(match[1]);
+			const minute = match === null ? 0 : Number(match[2]);
+			const days = draft.weekdays.slice().sort((a, b) => a - b).map(cronDow).join(",");
+			if (draft.scheduleKind === "interval") {
+				const step = Number.parseInt(draft.intervalStep, 10);
+				if (!Number.isFinite(step) || step <= 0) return null;
+				const dow = days === "" ? "*" : days;
+				return draft.intervalUnit === "minute" ? `*/${step} * * * *` : `0 */${step} * * ${dow}`;
+			}
+			switch (draft.periodFreq) {
+				case "once": return null;
+				case "daily": return `${minute} ${hour} * * *`;
+				case "weekly": return days === "" ? null : `${minute} ${hour} * * ${days}`;
+				case "biweekly": return null;
+				case "monthly": return `${minute} ${hour} ${draft.monthDay} * *`;
+				case "yearly": return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`;
+			}
+		}
+		/** 草稿 → 任务定义 JSON（**只读预览**用；真保存归 P2）。 */
 		function draftToDefinitionJson(draft) {
-			const cron = draft.cronPreset === "custom" ? draft.cronCustom : CRON_PRESETS.find((p) => p.id === draft.cronPreset)?.cron ?? "";
 			const schedule = { window: draft.window };
-			if (draft.scheduleKind === "once") schedule.once = draft.onceAt;
-			else schedule.cron = cron;
+			if (draft.scheduleKind === "periodic" && draft.periodFreq === "once") schedule.once = `${draft.date}T${draft.time}`;
+			else {
+				const cron = scheduleCron(draft);
+				if (cron !== null) schedule.cron = cron;
+			}
 			if (draft.timezone.trim() !== "") schedule.timezone = draft.timezone.trim();
 			const target = { workspace: draft.workspace };
 			if (draft.model.trim() !== "") {
@@ -4617,169 +5422,144 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				enabled: draft.enabled,
 				schedule,
 				target,
-				contract: { validStatuses: draft.validStatuses.split(",").map((s) => s.trim()).filter((s) => s !== "") },
+				contract: { validStatuses: draft.validStatuses.split(",").map((item) => item.trim()).filter((item) => item !== "") },
 				retry: { maxAttempts: Number.parseInt(draft.maxAttempts, 10) > 0 ? Number.parseInt(draft.maxAttempts, 10) : 1 }
 			};
 			if (draft.title.trim() !== "") definition.title = draft.title.trim();
 			if (draft.code.trim() !== "") definition.code = draft.code.trim();
-			if (draft.deps.length > 0) definition.depends_on = draft.deps.filter((d) => d.task !== "");
+			if (draft.deps.length > 0) definition.depends_on = draft.deps.filter((dep) => dep.task !== "");
 			return JSON.stringify(definition, null, 2);
 		}
-		const overlayStyle = {
-			position: "fixed",
-			inset: 0,
-			zIndex: 1030,
-			display: "flex",
-			justifyContent: "flex-end",
-			background: C$1.mask,
-			backdropFilter: "blur(2px)"
-		};
-		const panelBase = {
-			position: "relative",
-			height: "100%",
-			boxSizing: "border-box",
-			display: "flex",
-			flexDirection: "column",
-			background: C$1.bgBase,
-			borderLeft: `1px solid ${C$1.border}`,
-			boxShadow: C$1.shadow,
-			color: C$1.text
-		};
-		const resizeHandleStyle = {
-			position: "absolute",
-			top: 0,
-			bottom: 0,
-			left: 0,
-			width: "6px",
-			cursor: "col-resize",
-			zIndex: 1
-		};
-		const headerStyle = {
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "space-between",
-			gap: "12px",
-			padding: "14px 18px",
-			borderBottom: `1px solid ${C$1.border}`,
-			flex: "none"
-		};
-		const iconButtonStyle$1 = {
-			display: "inline-flex",
-			alignItems: "center",
-			justifyContent: "center",
-			width: "26px",
-			height: "26px",
-			padding: 0,
-			border: "none",
-			borderRadius: "6px",
-			background: "transparent",
-			color: C$1.textDim,
-			cursor: "pointer",
-			font: "inherit",
-			fontSize: "14px"
-		};
-		const bodyStyle = {
-			flex: "1 1 auto",
-			overflow: "auto",
-			padding: "16px 18px 20px",
-			minHeight: 0
-		};
-		const footerStyle = {
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "flex-end",
-			gap: "8px",
-			padding: "12px 18px",
-			borderTop: `1px solid ${C$1.border}`,
-			flex: "none"
-		};
-		const labelStyle = {
+		/** 单行输入的度量全在 `dsh-tdt-ed-input` 类里（逐条照官方 Input.module.css，含 focus 描边与占位色）。 */
+		const sectionLabelStyle = {
 			fontSize: "12px",
 			fontWeight: 600,
 			color: C$1.text,
-			marginBottom: "4px"
+			marginBottom: "6px"
 		};
-		const hintStyle$1 = {
-			fontSize: "12px",
-			color: C$1.textDim,
-			margin: "4px 0 0",
-			lineHeight: 1.5
-		};
-		const inputStyle = {
-			width: "100%",
-			boxSizing: "border-box",
-			padding: "7px 9px",
-			fontSize: "13px",
-			lineHeight: "18px",
-			color: C$1.text,
-			background: C$1.layer1,
-			border: `1px solid ${C$1.border}`,
-			borderRadius: "8px",
-			fontFamily: "inherit"
-		};
-		const textareaStyle$1 = {
-			...inputStyle,
-			minHeight: "140px",
-			resize: "vertical",
-			lineHeight: 1.6
-		};
-		const blockStyle = {
-			border: `1px solid ${C$1.border}`,
-			borderRadius: "10px",
-			padding: "12px",
-			background: C$1.layer1
-		};
-		const chipRowStyle = {
-			display: "flex",
-			flexWrap: "wrap",
-			gap: "8px",
-			marginTop: "10px"
-		};
-		const smallButtonStyle = {
-			appearance: "none",
-			font: "inherit",
-			fontSize: "12px",
-			lineHeight: "18px",
-			cursor: "pointer",
-			padding: "4px 10px",
-			borderRadius: "7px",
-			border: `1px solid ${C$1.border}`,
-			background: "transparent",
-			color: C$1.text,
-			transition: transition$1
-		};
-		const primaryButtonStyle = {
-			...smallButtonStyle,
-			padding: "6px 14px",
-			fontSize: "13px",
-			fontWeight: 600,
-			border: "1px solid transparent",
-			background: "var(--dsw-alias-button-primary-fill, #2f6feb)",
-			color: "var(--dsw-alias-button-primary-label, #ffffff)"
-		};
-		const summaryRowStyle = {
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "space-between",
-			gap: "8px",
-			width: "100%",
-			padding: "8px 10px",
-			borderRadius: "8px",
-			border: `1px solid ${C$1.border}`,
-			background: C$1.layer1,
-			cursor: "pointer",
-			font: "inherit",
-			fontSize: "12px",
-			color: C$1.text,
-			textAlign: "left"
-		};
-		const depRowStyle = {
-			display: "flex",
-			gap: "8px",
-			alignItems: "center",
-			marginTop: "8px"
-		};
-		/** 宽度持久化（纯本地偏好，读写容错；隐私模式也不崩）。 */
+		function Section(props) {
+			return (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, props.label === void 0 ? null : (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-label",
+				style: { marginBottom: "6px" }
+			}, props.label), props.children ?? null);
+		}
+		/** 周期档的子控件（照参考图：单次=日期+时间；每天=时间；每周/双周=周几+时间；每月/每年=日/月+时间）。 */
+		function PeriodControls(props) {
+			const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
+			const timeField = (0, react.createElement)(TimeField, {
+				value: draft.time,
+				onChange: (value) => {
+					patch({ time: value });
+				},
+				placeholder: t("editorTimePh"),
+				ariaLabel: t("editorTime"),
+				labels: timeLabels,
+				width: 110
+			});
+			const monthOptions = (0, react.useMemo)(() => Array.from({ length: 12 }, (_, index) => ({
+				value: String(index + 1),
+				label: tt("editorMonthOption", { m: index + 1 })
+			})), [tt]);
+			const dayOptions = (0, react.useMemo)(() => Array.from({ length: 31 }, (_, index) => ({
+				value: String(index + 1),
+				label: tt("editorDayOption", { d: index + 1 })
+			})), [tt]);
+			const rows = [];
+			rows.push((0, react.createElement)(DateField, {
+				key: "date",
+				value: draft.date,
+				onChange: (value) => {
+					patch({ date: value });
+				},
+				placeholder: t("editorDatePh"),
+				ariaLabel: t("editorDate"),
+				labels: calendarLabels,
+				width: 148
+			}));
+			if (draft.periodFreq === "yearly") rows.push((0, react.createElement)(SelectField, {
+				key: "month",
+				value: draft.yearMonth,
+				options: monthOptions,
+				onChange: (value) => {
+					patch({ yearMonth: value });
+				},
+				placeholder: t("editorMonth"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorMonth"),
+				width: 96
+			}));
+			if (draft.periodFreq === "monthly" || draft.periodFreq === "yearly") rows.push((0, react.createElement)(SelectField, {
+				key: "day",
+				value: draft.monthDay,
+				options: dayOptions,
+				onChange: (value) => {
+					patch({ monthDay: value });
+				},
+				placeholder: t("editorDayOfMonth"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorDayOfMonth"),
+				width: 110
+			}));
+			rows.push(timeField);
+			return (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, rows), draft.periodFreq === "weekly" || draft.periodFreq === "biweekly" ? (0, react.createElement)("div", { style: { marginTop: "8px" } }, (0, react.createElement)(WeekdayPicker, {
+				value: draft.weekdays,
+				onChange: (value) => {
+					patch({ weekdays: value });
+				},
+				labels: weekdayLabels
+			})) : null, draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
+		}
+		/** 间隔档的子控件（照参考图：每隔 N 单位执行一次 + 周几筛选）。 */
+		function IntervalControls(props) {
+			const { draft, patch, t, weekdayLabels } = props;
+			const unitOptions = [{
+				value: "minute",
+				label: t("unitMinutes")
+			}, {
+				value: "hour",
+				label: t("unitHours")
+			}];
+			return (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				color: C$1.text
+			} }, t("editorIntervalEvery")), (0, react.createElement)("input", {
+				type: "number",
+				min: 1,
+				value: draft.intervalStep,
+				onChange: (event) => {
+					patch({ intervalStep: event.target.value });
+				},
+				"aria-label": t("editorIntervalStep"),
+				className: "dsh-tdt-ed-input",
+				style: {
+					width: "72px",
+					textAlign: "center"
+				}
+			}), (0, react.createElement)(SelectField, {
+				value: draft.intervalUnit,
+				options: unitOptions,
+				onChange: (value) => {
+					patch({ intervalUnit: value });
+				},
+				placeholder: t("unitHours"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorIntervalUnit"),
+				width: 96
+			}), (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				color: C$1.text
+			} }, t("editorIntervalSuffix"))), (0, react.createElement)("div", { style: { marginTop: "8px" } }, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-label",
+				style: { marginBottom: "4px" }
+			}, t("editorIntervalOn")), (0, react.createElement)(WeekdayPicker, {
+				value: draft.weekdays,
+				onChange: (value) => {
+					patch({ weekdays: value });
+				},
+				labels: weekdayLabels
+			})));
+		}
+		/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 		const WIDTH_KEY = "dsh-tdt-editor-width";
 		const WIDTH_DEFAULT = 540;
 		const WIDTH_MIN = 380;
@@ -4796,105 +5576,36 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return WIDTH_DEFAULT;
 			}
 		}
-		function Field(props) {
-			return (0, react.createElement)("div", { style: { marginBottom: "14px" } }, (0, react.createElement)("div", { style: labelStyle }, props.label), props.hint === void 0 ? null : (0, react.createElement)("p", { style: hintStyle$1 }, props.hint), props.children ?? null);
-		}
-		function Select(props) {
-			const usable = props.options.length > 0 && props.disabled !== true;
-			const items = usable ? props.blankLabel !== void 0 ? [{
-				value: "",
-				label: props.blankLabel
-			}, ...props.options] : props.value === "" ? [{
-				value: "",
-				label: "—"
-			}, ...props.options] : props.options : [{
-				value: "",
-				label: props.emptyLabel
-			}];
-			return (0, react.createElement)("select", {
-				value: usable ? props.value : "",
-				disabled: !usable,
-				"aria-label": props.ariaLabel,
-				onChange: (event) => {
-					props.onChange(event.target.value);
-				},
-				style: {
-					...inputStyle,
-					width: "auto",
-					minWidth: "140px",
-					flex: "0 1 auto",
-					cursor: usable ? "pointer" : "not-allowed"
-				}
-			}, items.map((item) => (0, react.createElement)("option", {
-				key: item.value,
-				value: item.value
-			}, item.label)));
-		}
-		function Toggle(props) {
-			return (0, react.createElement)("button", {
-				type: "button",
-				role: "switch",
-				"aria-checked": props.on,
-				onClick: props.onToggle,
-				style: {
-					display: "inline-flex",
-					alignItems: "center",
-					gap: "8px",
-					padding: 0,
-					border: "none",
-					background: "none",
-					cursor: "pointer",
-					font: "inherit",
-					fontSize: "12px",
-					color: C$1.text
-				}
-			}, (0, react.createElement)("span", { style: {
-				width: "34px",
-				height: "20px",
-				borderRadius: "10px",
-				position: "relative",
-				flex: "none",
-				background: props.on ? C$1.brand : C$1.layer3,
-				transition: `background ${transition$1}`
-			} }, (0, react.createElement)("span", { style: {
-				position: "absolute",
-				top: "2px",
-				left: props.on ? "16px" : "2px",
-				width: "16px",
-				height: "16px",
-				borderRadius: "50%",
-				background: "#ffffff",
-				transition: "left 0.15s ease"
-			} })), (0, react.createElement)("span", null, props.label));
-		}
 		/**
-		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在页面上**（不推压页面）。
-		* 与 U11 预览 dock（占布局的分栏）不冲突：弹窗在 overlay 层，dock 在其下、关弹窗后仍在原位。
+		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
 			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave } = props;
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
-			const [scheduleOpen, setScheduleOpen] = (0, react.useState)(false);
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
 			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				ensureTaskEditorStyle();
+			}, []);
 			const patch = (0, react.useCallback)((part) => {
 				onChange({
 					...draft,
 					...part
 				});
 			}, [draft, onChange]);
+			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			(0, react.useEffect)(() => {
 				const onKey = (event) => {
-					if (event.key === "Escape") onClose();
+					if (event.key === "Escape" && !event.defaultPrevented) onClose();
 				};
 				window.addEventListener("keydown", onKey);
 				return () => {
 					window.removeEventListener("keydown", onKey);
 				};
 			}, [onClose]);
-			/** 左缘拖拽调宽：拖动期间只改本地 state（面板窄，逐帧重渲染代价可接受），松手落 localStorage。 */
+			/** 左缘拖拽调宽：拖动期间只改本地 state，松手落 localStorage。 */
 			const startResize = (0, react.useCallback)((start) => {
 				const startX = start.clientX;
 				const startWidth = width;
@@ -4913,10 +5624,39 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				window.addEventListener("pointermove", onMove);
 				window.addEventListener("pointerup", onUp);
 			}, [width]);
-			const cronValue = draft.cronPreset === "custom" ? draft.cronCustom : CRON_PRESETS.find((item) => item.id === draft.cronPreset)?.cron ?? "";
-			const cronLabel = draft.cronPreset === "custom" ? t("editorCronCustom") : t(CRON_PRESETS.find((item) => item.id === draft.cronPreset)?.labelKey ?? "editorCronCustom");
-			const scheduleSummary = draft.scheduleKind === "once" ? `${t("editorScheduleOnce")} · ${draft.onceAt === "" ? "—" : draft.onceAt}` : `${cronLabel} · ${cronValue}`;
-			const sourceOptions = [
+			const weekdayLabels = (0, react.useMemo)(() => ({
+				weekdays: WEEKDAY_KEYS.map((key) => t(key)),
+				add: t("editorWeekdayAdd"),
+				empty: t("editorWeekdayEmpty"),
+				remove: (name) => tt("editorWeekdayRemove", { name })
+			}), [t, tt]);
+			const calendarLabels = (0, react.useMemo)(() => ({
+				today: t("editorToday"),
+				prevMonth: t("editorPrevMonth"),
+				nextMonth: t("editorNextMonth"),
+				prevYear: t("editorPrevYear"),
+				nextYear: t("editorNextYear"),
+				monthTitle: (year, month) => tt("editorMonthTitle", {
+					y: year,
+					m: month
+				}),
+				weekdays: [
+					"editorWeekday1",
+					"editorWeekday2",
+					"editorWeekday3",
+					"editorWeekday4",
+					"editorWeekday5",
+					"editorWeekday6",
+					"editorWeekday7"
+				].map((key) => t(key).replace(/^周/, ""))
+			}), [t, tt]);
+			const timeLabels = (0, react.useMemo)(() => ({
+				hour: t("editorHour"),
+				minute: t("editorMinute"),
+				now: t("editorNow"),
+				confirm: t("editorConfirm")
+			}), [t]);
+			const promptSourceOptions = [
 				{
 					value: "inline",
 					label: t("editorSourceInline")
@@ -4930,226 +5670,209 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					label: t("editorSourceUpload")
 				}
 			];
-			const taskOptions = tasks.map((item) => ({
-				value: item.value,
-				label: item.label
-			}));
-			const body = tab === "records" ? (0, react.createElement)("p", { style: hintStyle$1 }, t("editorRecordsPending")) : (0, react.createElement)("div", null, (0, react.createElement)("div", { style: { marginBottom: "14px" } }, (0, react.createElement)(Toggle, {
-				on: draft.enabled,
-				label: t("editorEnabled"),
-				onToggle: () => {
-					patch({ enabled: !draft.enabled });
+			const freqOptions = [
+				{
+					value: "once",
+					label: t("editorFreqOnce")
+				},
+				{
+					value: "daily",
+					label: t("editorFreqDaily")
+				},
+				{
+					value: "weekly",
+					label: t("editorFreqWeekly")
+				},
+				{
+					value: "biweekly",
+					label: t("editorFreqBiweekly")
+				},
+				{
+					value: "monthly",
+					label: t("editorFreqMonthly")
+				},
+				{
+					value: "yearly",
+					label: t("editorFreqYearly")
 				}
-			})), (0, react.createElement)(Field, { label: t("editorTitle") }, (0, react.createElement)("input", {
-				value: draft.title,
-				placeholder: t("editorTitlePh"),
-				onChange: (event) => {
-					patch({ title: event.target.value });
+			];
+			const tzOptions = [{
+				value: "Asia/Shanghai",
+				label: "Asia/Shanghai"
+			}, {
+				value: "UTC",
+				label: "UTC"
+			}];
+			const windowOptions = WINDOW_PRESETS.map((value) => ({
+				value,
+				label: value
+			}));
+			const scheduleNote = draft.scheduleKind === "periodic" && draft.periodFreq === "biweekly" ? t("editorBiweeklyWarn") : null;
+			const promptCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt")), (0, react.createElement)(Segmented, {
+				id: "dsh-tdt-ed-source",
+				value: draft.promptSource,
+				options: promptSourceOptions,
+				onChange: (value) => {
+					patch({ promptSource: value });
 				},
-				style: inputStyle
-			})), (0, react.createElement)(Field, {
-				label: t("editorCode"),
-				hint: t("editorCodePh")
-			}, (0, react.createElement)("input", {
-				value: draft.code,
-				onChange: (event) => {
-					patch({ code: event.target.value });
-				},
-				style: inputStyle
-			})), (0, react.createElement)("div", { style: blockStyle }, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				gap: "8px"
-			} }, (0, react.createElement)("div", { style: labelStyle }, t("editorPrompt")), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...smallButtonStyle,
-					opacity: .5
-				},
-				disabled: true,
-				title: draft.promptSource === "manual" ? t("editorSourceManualHint") : `${t("editorVersions")}（P3）`
-			}, t("editorVersions"))), (0, react.createElement)("textarea", {
+				label: t("editorSource")
+			})), draft.promptSource === "inline" ? (0, react.createElement)("textarea", {
+				id: "dsh-tdt-ed-source-inline-panel",
+				className: "dsh-tdt-ed-prompt",
 				value: draft.prompt,
 				placeholder: t("editorPromptPh"),
 				spellCheck: false,
 				onChange: (event) => {
 					patch({ prompt: event.target.value });
-				},
-				style: textareaStyle$1
-			}), (0, react.createElement)("div", { style: chipRowStyle }, (0, react.createElement)(Select, {
-				value: draft.promptSource,
-				options: sourceOptions,
-				onChange: (value) => {
-					patch({ promptSource: value });
-				},
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorSource")
-			}), draft.promptSource === "manual" ? (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...smallButtonStyle,
-					opacity: .5
-				},
-				disabled: true,
-				title: t("editorUnavailable")
-			}, t("editorPickFile")) : null, draft.promptSource === "upload" ? (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...smallButtonStyle,
-					opacity: .5
-				},
-				disabled: true,
-				title: t("editorUnavailable")
-			}, t("editorUpload")) : null), draft.promptSource === "manual" ? (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", { style: labelStyle }, t("editorManualPath")), (0, react.createElement)("input", {
+				}
+			}) : draft.promptSource === "manual" ? (0, react.createElement)("div", {
+				id: "dsh-tdt-ed-source-manual-panel",
+				role: "tabpanel",
+				"aria-label": t("editorSourceManual")
+			}, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("input", {
 				value: draft.manualPath,
 				placeholder: t("editorManualPathPh"),
+				spellCheck: false,
 				onChange: (event) => {
 					patch({ manualPath: event.target.value });
 				},
+				"aria-label": t("editorManualPath"),
+				className: "dsh-tdt-ed-input dsh-tdt-ed-mono",
 				style: {
-					...inputStyle,
-					fontFamily: monoFont$1,
-					fontSize: "12px"
+					flex: "1 1 auto",
+					minWidth: 0
 				}
-			}), (0, react.createElement)("p", { style: hintStyle$1 }, t("editorSourceManualHint"))) : null, (0, react.createElement)("div", { style: chipRowStyle }, (0, react.createElement)(Select, {
+			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				disabled: true,
+				title: t("editorUnavailable")
+			}, t("editorPickFile"))), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorManualHint"))) : (0, react.createElement)("div", {
+				id: "dsh-tdt-ed-source-upload-panel",
+				role: "tabpanel",
+				"aria-label": t("editorSourceUpload")
+			}, (0, react.createElement)("div", { className: "dsh-tdt-ed-drop" }, t("editorUploadHint")), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorUploadWarn"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-card-foot" }, (0, react.createElement)(SelectField, {
 				value: draft.workspace,
 				options: workspaces,
 				onChange: (value) => {
 					patch({ workspace: value });
 				},
+				placeholder: t("editorWorkspacePh"),
 				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorWorkspace")
-			}), (0, react.createElement)(Select, {
+				ariaLabel: t("editorWorkspace"),
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 })
+			}), (0, react.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react.createElement)(SelectField, {
 				value: draft.model,
 				options: models,
 				onChange: (value) => {
 					patch({ model: value });
 				},
+				placeholder: t("editorModelPh"),
 				emptyLabel: t("editorNoOptions"),
-				blankLabel: t("editorFollowHost"),
-				ariaLabel: t("editorModel")
-			}))), (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: labelStyle }, t("editorSchedule")), (0, react.createElement)("button", {
-				type: "button",
-				style: summaryRowStyle,
-				onClick: () => {
-					setScheduleOpen(!scheduleOpen);
-				}
-			}, (0, react.createElement)("span", null, `${scheduleSummary} · ${t("editorWindow")} ${formatIsoDuration(draft.window, t)}`), (0, react.createElement)("span", { style: { color: C$1.textDim } }, scheduleOpen ? "▴" : "▾")), scheduleOpen ? (0, react.createElement)("div", { style: {
-				...blockStyle,
-				marginTop: "8px"
-			} }, (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "6px",
-				marginBottom: "10px"
-			} }, (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...smallButtonStyle,
-					background: draft.scheduleKind === "cron" ? C$1.layer2 : "transparent",
-					fontWeight: draft.scheduleKind === "cron" ? 600 : 400
-				},
-				onClick: () => {
-					patch({ scheduleKind: "cron" });
-				}
-			}, t("editorScheduleCron")), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...smallButtonStyle,
-					background: draft.scheduleKind === "once" ? C$1.layer2 : "transparent",
-					fontWeight: draft.scheduleKind === "once" ? 600 : 400
-				},
-				onClick: () => {
-					patch({ scheduleKind: "once" });
-				}
-			}, t("editorScheduleOnce"))), draft.scheduleKind === "cron" ? (0, react.createElement)("div", null, (0, react.createElement)(Select, {
-				value: draft.cronPreset,
-				options: [...CRON_PRESETS.map((item) => ({
-					value: item.id,
-					label: `${t(item.labelKey)} (${item.cron})`
-				})), {
-					value: "custom",
-					label: t("editorCronCustom")
+				ariaLabel: t("editorModel"),
+				align: "end"
+			})));
+			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorSchedule")), (0, react.createElement)(Segmented, {
+				id: "dsh-tdt-ed-schedule",
+				value: draft.scheduleKind,
+				options: [{
+					value: "periodic",
+					label: t("editorSchedulePeriodic")
+				}, {
+					value: "interval",
+					label: t("editorScheduleInterval")
 				}],
 				onChange: (value) => {
-					patch({ cronPreset: value });
+					patch({ scheduleKind: value });
 				},
+				label: t("editorSchedule")
+			})), draft.scheduleKind === "periodic" ? (0, react.createElement)("div", {
+				id: "dsh-tdt-ed-schedule-periodic-panel",
+				role: "tabpanel",
+				"aria-label": t("editorSchedulePeriodic")
+			}, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-row",
+				style: { marginBottom: "8px" }
+			}, (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				color: C$1.text
+			} }, t("editorFreq")), (0, react.createElement)(SelectField, {
+				value: draft.periodFreq,
+				options: freqOptions,
+				onChange: (value) => {
+					patch({ periodFreq: value });
+				},
+				placeholder: t("editorFreqDaily"),
 				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorCron")
-			}), draft.cronPreset === "custom" ? (0, react.createElement)("input", {
-				value: draft.cronCustom,
-				placeholder: "0 9 * * *",
-				onChange: (event) => {
-					patch({ cronCustom: event.target.value });
-				},
-				style: {
-					...inputStyle,
-					marginTop: "8px",
-					fontFamily: monoFont$1,
-					fontSize: "12px"
-				}
-			}) : null) : (0, react.createElement)("input", {
-				type: "datetime-local",
-				value: draft.onceAt,
-				onChange: (event) => {
-					patch({ onceAt: event.target.value });
-				},
-				style: inputStyle,
-				"aria-label": t("editorOnceAt")
-			}), (0, react.createElement)("div", { style: {
-				...chipRowStyle,
-				alignItems: "center"
-			} }, (0, react.createElement)("span", { style: {
+				ariaLabel: t("editorFreq"),
+				width: 110
+			})), (0, react.createElement)(PeriodControls, {
+				draft,
+				patch,
+				t,
+				tt,
+				weekdayLabels,
+				calendarLabels,
+				timeLabels
+			})) : (0, react.createElement)("div", {
+				id: "dsh-tdt-ed-schedule-interval-panel",
+				role: "tabpanel",
+				"aria-label": t("editorScheduleInterval")
+			}, (0, react.createElement)(IntervalControls, {
+				draft,
+				patch,
+				t,
+				weekdayLabels
+			})), scheduleNote === null ? null : (0, react.createElement)("p", { className: "dsh-tdt-ed-warn" }, scheduleNote), (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-row",
+				style: { marginTop: "10px" }
+			}, (0, react.createElement)("span", { style: {
 				fontSize: "12px",
 				color: C$1.textDim
-			} }, t("editorTimezone")), (0, react.createElement)(Select, {
+			} }, t("editorTimezone")), (0, react.createElement)(SelectField, {
 				value: draft.timezone,
-				options: [{
-					value: "Asia/Shanghai",
-					label: "Asia/Shanghai"
-				}, {
-					value: "UTC",
-					label: "UTC"
-				}],
+				options: tzOptions,
 				onChange: (value) => {
 					patch({ timezone: value });
 				},
+				placeholder: t("editorFollowHost"),
 				emptyLabel: t("editorNoOptions"),
-				blankLabel: t("editorFollowHost"),
-				ariaLabel: t("editorTimezone")
+				ariaLabel: t("editorTimezone"),
+				width: 148
 			}), (0, react.createElement)("span", { style: {
 				fontSize: "12px",
 				color: C$1.textDim
-			} }, t("editorWindow")), (0, react.createElement)(Select, {
+			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
 				value: draft.window,
-				options: WINDOW_PRESETS.map((value) => ({
-					value,
-					label: formatIsoDuration(value, t)
-				})),
+				options: windowOptions,
 				onChange: (value) => {
 					patch({ window: value });
 				},
+				placeholder: t("editorWindow"),
 				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorWindow")
-			})), (0, react.createElement)("p", { style: hintStyle$1 }, t("editorWindowHint"))) : null), (0, react.createElement)("div", { style: { marginTop: "16px" } }, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				gap: "8px"
-			} }, (0, react.createElement)("div", { style: labelStyle }, t("editorDeps")), (0, react.createElement)("button", {
-				type: "button",
-				style: smallButtonStyle,
+				ariaLabel: t("editorWindow"),
+				width: 110
+			})), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorWindowHint")));
+			const taskOptions = tasks;
+			const depsBlock = (0, react.createElement)(Section, { label: t("editorDeps") }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 14 }),
 				disabled: taskOptions.length === 0,
+				title: taskOptions.length === 0 ? t("editorNoOptions") : t("editorDepAdd"),
 				onClick: () => {
 					patch({ deps: [...draft.deps, {
 						task: taskOptions[0]?.value ?? "",
 						semantics: "same_period"
 					}] });
 				}
-			}, `＋ ${t("editorDepAdd")}`)), draft.deps.length === 0 ? (0, react.createElement)("p", { style: hintStyle$1 }, t("editorDepEmpty")) : draft.deps.map((dep, index) => (0, react.createElement)("div", {
+			}, t("editorDepAdd")), draft.deps.length === 0 ? (0, react.createElement)("span", {
+				className: "dsh-tdt-ed-hint",
+				style: { margin: 0 }
+			}, t("editorDepEmpty")) : null), draft.deps.length === 0 ? null : (0, react.createElement)("div", null, draft.deps.map((dep, index) => (0, react.createElement)("div", {
 				key: index,
-				style: depRowStyle
-			}, (0, react.createElement)(Select, {
+				className: "dsh-tdt-ed-deprow"
+			}, (0, react.createElement)(SelectField, {
 				value: dep.task,
 				options: taskOptions,
 				onChange: (value) => {
@@ -5160,9 +5883,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					};
 					patch({ deps: next });
 				},
+				placeholder: t("editorDepTask"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorDepTask")
-			}), (0, react.createElement)(Select, {
+			}), (0, react.createElement)(SelectField, {
 				value: dep.semantics,
 				options: [{
 					value: "same_period",
@@ -5179,132 +5903,147 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					};
 					patch({ deps: next });
 				},
+				placeholder: t("editorDepSemantics"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorDepSemantics")
-			}), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...smallButtonStyle,
-					color: C$1.textDim
-				},
+			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "ghost",
+				size: "sm",
+				title: t("editorDepRemove"),
 				onClick: () => {
 					patch({ deps: draft.deps.filter((_, i) => i !== index) });
 				}
-			}, t("editorDepRemove"))))), (0, react.createElement)("div", { style: { marginTop: "16px" } }, (0, react.createElement)("button", {
+			}, t("editorDepRemove"))))));
+			const advancedBlock = (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)("button", {
+				className: "dsh-tdt-ed-summary",
 				type: "button",
-				style: {
-					...summaryRowStyle,
-					background: "transparent"
-				},
+				"aria-expanded": advancedOpen,
 				onClick: () => {
 					setAdvancedOpen(!advancedOpen);
 				}
-			}, (0, react.createElement)("span", null, t("editorAdvanced")), (0, react.createElement)("span", { style: { color: C$1.textDim } }, advancedOpen ? "▴" : "▾")), advancedOpen ? (0, react.createElement)("div", { style: {
-				...blockStyle,
-				marginTop: "8px"
-			} }, (0, react.createElement)(Field, { label: t("editorRetry") }, (0, react.createElement)("input", {
+			}, (0, react.createElement)("span", null, t("editorAdvanced")), (0, react.createElement)("span", { style: { color: C$1.textDim } }, advancedOpen ? "▴" : "▾")), advancedOpen ? (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: C$1.textDim
+			} }, t("editorRetry")), (0, react.createElement)("input", {
 				type: "number",
 				min: 1,
 				value: draft.maxAttempts,
 				onChange: (event) => {
 					patch({ maxAttempts: event.target.value });
 				},
+				"aria-label": t("editorRetry"),
+				className: "dsh-tdt-ed-input",
 				style: {
-					...inputStyle,
-					width: "90px"
+					width: "84px",
+					textAlign: "center"
 				}
-			})), (0, react.createElement)(Field, { label: t("editorValidStatuses") }, (0, react.createElement)("input", {
+			}), (0, react.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				disabled: true,
+				title: t("editorUnavailable")
+			}, `${t("editorVersions")}（P3）`)), (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("editorValidStatuses")), (0, react.createElement)("input", {
 				value: draft.validStatuses,
 				placeholder: "ok",
+				spellCheck: false,
 				onChange: (event) => {
 					patch({ validStatuses: event.target.value });
 				},
-				style: {
-					...inputStyle,
-					fontFamily: monoFont$1,
-					fontSize: "12px"
-				}
-			})), (0, react.createElement)("button", {
+				"aria-label": t("editorValidStatuses"),
+				className: "dsh-tdt-ed-input dsh-tdt-ed-mono",
+				style: { width: "100%" }
+			})), (0, react.createElement)("div", { style: { marginTop: "12px" } }, (0, react.createElement)("button", {
+				className: "dsh-tdt-ed-summary",
 				type: "button",
-				style: smallButtonStyle,
+				"aria-expanded": jsonOpen,
 				onClick: () => {
 					setJsonOpen(!jsonOpen);
 				}
-			}, `⚙ ${t("editorJson")}`), jsonOpen ? (0, react.createElement)("div", { style: { marginTop: "8px" } }, (0, react.createElement)("textarea", {
+			}, (0, react.createElement)("span", null, `⚙ ${t("editorJson")}`), (0, react.createElement)("span", { style: { color: C$1.textDim } }, jsonOpen ? "▴" : "▾")), jsonOpen ? (0, react.createElement)("div", null, (0, react.createElement)("textarea", {
+				className: "dsh-tdt-ed-json",
 				readOnly: true,
 				spellCheck: false,
 				value: draftToDefinitionJson(draft),
-				style: {
-					...textareaStyle$1,
-					minHeight: "12em",
-					fontFamily: monoFont$1,
-					fontSize: "12px"
-				}
-			}), (0, react.createElement)("p", { style: hintStyle$1 }, t("editorJsonHint"))) : null) : null));
+				"aria-label": t("editorJson")
+			}), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorJsonHint"))) : null)) : null);
+			const body = tab === "records" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorRecordsPending")) : (0, react.createElement)("div", null, (0, react.createElement)(Section, { label: t("editorTitle") }, (0, react.createElement)("input", {
+				value: draft.title,
+				placeholder: t("editorTitlePh"),
+				onChange: (event) => {
+					patch({ title: event.target.value });
+				},
+				"aria-label": t("editorTitle"),
+				className: "dsh-tdt-ed-input",
+				style: { width: "100%" }
+			})), (0, react.createElement)(Section, { label: t("editorCode") }, (0, react.createElement)("input", {
+				value: draft.code,
+				placeholder: t("editorCodePh"),
+				onChange: (event) => {
+					patch({ code: event.target.value });
+				},
+				"aria-label": t("editorCode"),
+				className: "dsh-tdt-ed-input",
+				style: { width: "100%" }
+			})), (0, react.createElement)(Section, { label: void 0 }, promptCard), (0, react.createElement)("div", { style: { height: "16px" } }), (0, react.createElement)(Section, { label: void 0 }, scheduleCard), (0, react.createElement)("div", { style: { height: "16px" } }), depsBlock, advancedBlock);
 			return (0, react.createElement)("div", {
-				style: overlayStyle,
+				className: "dsh-tdt-ed-overlay",
 				onPointerDown: (event) => {
 					if (event.target === event.currentTarget) onClose();
 				}
 			}, (0, react.createElement)("div", {
-				style: {
-					...panelBase,
-					width: `${width}px`
-				},
+				className: "dsh-tdt-ed-panel",
+				style: { width: `${width}px` },
 				role: "dialog",
-				"aria-modal": true
+				"aria-modal": true,
+				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
 			}, (0, react.createElement)("div", {
-				style: resizeHandleStyle,
+				className: "dsh-tdt-ed-resizer",
 				title: t("previewResize"),
 				onPointerDown: (event) => {
 					startResize({ clientX: event.clientX });
 				}
-			}), (0, react.createElement)("div", { style: headerStyle }, (0, react.createElement)("div", { style: {
-				fontSize: "15px",
-				fontWeight: 600,
-				color: C$1.text
-			} }, mode === "create" ? t("editorNew") : t("editorEdit")), (0, react.createElement)("button", {
+			}), (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit")), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable" }, (0, react.createElement)("span", null, t("editorEnabled")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				checked: draft.enabled,
+				onChange: (next) => {
+					patch({ enabled: next });
+				},
+				label: t("editorEnabled"),
+				title: draft.enabled ? t("editorEnabledOn") : t("editorEnabledOff")
+			})), (0, react.createElement)("button", {
+				className: "dsh-tdt-ed-close",
 				type: "button",
-				style: iconButtonStyle$1,
 				title: t("editorClose"),
 				"aria-label": t("editorClose"),
 				onClick: onClose
-			}, "✕")), mode === "edit" ? (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "4px",
-				padding: "8px 18px",
-				borderBottom: `1px solid ${C$1.border}`,
-				flex: "none"
-			} }, (0, react.createElement)("button", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), mode === "edit" ? (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-tabs",
+				role: "tablist"
+			}, (0, react.createElement)("button", {
+				className: "dsh-tdt-ed-tab",
 				type: "button",
-				style: {
-					...smallButtonStyle,
-					background: tab === "basic" ? C$1.layer2 : "transparent",
-					fontWeight: tab === "basic" ? 600 : 400
-				},
+				role: "tab",
+				"aria-selected": tab === "basic",
 				onClick: () => {
 					setTab("basic");
 				}
 			}, t("editorTabBasic")), (0, react.createElement)("button", {
+				className: "dsh-tdt-ed-tab",
 				type: "button",
-				style: {
-					...smallButtonStyle,
-					background: tab === "records" ? C$1.layer2 : "transparent",
-					fontWeight: tab === "records" ? 600 : 400
-				},
+				role: "tab",
+				"aria-selected": tab === "records",
 				onClick: () => {
 					setTab("records");
 				}
-			}, t("editorTabRecords"))) : null, (0, react.createElement)("div", { style: bodyStyle }, body), (0, react.createElement)("div", { style: footerStyle }, pendingHint ? (0, react.createElement)("span", { style: {
-				...hintStyle$1,
-				margin: "0 8px 0 0"
-			} }, t("editorSavePending")) : null, (0, react.createElement)("button", {
-				type: "button",
-				style: smallButtonStyle,
+			}, t("editorTabRecords"))) : null, (0, react.createElement)("div", { className: "dsh-tdt-ed-body" }, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, pendingHint ? (0, react.createElement)("span", {
+				className: "dsh-tdt-ed-hint",
+				style: { margin: "0 8px 0 0" }
+			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
 				onClick: onClose
-			}, t("editorCancel")), (0, react.createElement)("button", {
-				type: "button",
-				style: primaryButtonStyle,
+			}, t("editorCancel")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "primary",
+				size: "sm",
 				onClick: () => {
 					if (onSave === void 0) setPendingHint(true);
 					else onSave(draft);
