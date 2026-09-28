@@ -78,9 +78,58 @@ onWrap: wrap === void 0 ? () => { setWrapped((value) => !value); } : void 0
 - `npm run smoke`：172 项全过。
 - dist 产物核对：无受控 `wrap`；新 CSS `data-code-wrap='true'] pre{overflow-x:hidden}` 已入包。
 
-## 六、真机复验点
+## 六、真机复验点（第二轮修法）
 
 1. 打开代码文件 → 右上应**同时有「换行 + 复制」两个图标钮**（换行钮回来了）。
 2. 默认（换行开）→ 长行折行，**无横向滚动条**。
 3. 点换行钮关掉 → 长行不折行，代码卡内部出现横向滚动条（面板底部仍无）。
 4. 图标悬停出官方气泡。
+
+---
+
+## 七、第三轮（真正的根因，commit `dceb221`）——第二轮修法真机仍不折行
+
+用户真机复验（两张截图）：换行开关在、点了也在切，但**两个状态下长行都不折行、横向滚动条都在**。
+同批还报了目录浏览器两点：点目录时面包屑只剩该目录一层（点文件却是全路径）；下拉选层每行 N 个箭头太丑。
+
+### 7.1 换行：真根因在 CodeBody.module.css + ocOr 死规则
+
+- **`ocOr` 陷阱**（`official-classes.ts:140`）：`officialClass(...) ?? fallback` 两者只取其一——
+  官方 `CodeBody.renderer/code` 类命中时，我方兜底类 `.dsh-tdt-sv-preview-coderender` 根本**不挂**到元素上
+  ⇒ 第二轮写的 `.dsh-tdt-sv-preview-coderender …` 两条规则全是**死规则**（官方类命中场景下从未生效）。
+- **官方强制不折行**（`dsh-client-ui-sidebar-documentpreview@0.1.7-rc.2 lib/client.js:5019` 内联的
+  `CodeBody.module.css`）：`.renderer .code{--dsl-code-block-line-white-space:pre}` +
+  `.renderer .code pre{white-space:pre;word-break:normal;overflow-wrap:normal;min-width:100%;overflow:visible}`；
+  只有 `.renderer[data-wrap=true]` 才放开为 pre-wrap。`data-wrap` 由官方预览面板持有状态下传
+  （`register({wrap:true})` → `CodeBody({wrap})` 同时传给 CodeBlock 受控 + 设 `data-wrap`），
+  我方自渲染从不设 `data-wrap` ⇒ 官方这条 pre 恒生效 ⇒ 点工具条换行钮永远不折行。
+  另官方预览面板的换行开关**不在 CodeBlock 工具条上**（受控 wrap ⇒ 工具条换行钮被 omit），
+  是面板级控件——我方保留了工具条钮（不传 wrap），属有意偏差。
+- **修法**：规则改挂 `[data-code-preview]`（官方 CodeBody `client.js:5042` 与我方兜底 div 都带此属性，
+  两条路都命中）+ CodeBlock 自身的 `[data-code-wrap='true']`，复刻官方 `[data-wrap=true]` 同款放开规则：
+  ```css
+  [data-code-preview] [data-code-wrap='true'] [data-code-block-content]{--dsl-code-block-line-white-space:pre-wrap;overflow-x:hidden;}
+  [data-code-preview] [data-code-wrap='true'] [data-code-block-content] pre{white-space:pre-wrap;overflow-wrap:anywhere;}
+  ```
+  特异性 (0,3,·) 压过官方 (0,2,·)；换行关 = 官方默认（pre 不折行 + content `overflow:auto` ⇒ 横向滚动条）。
+  ⚠️ 注意模板字符串注释里不能写反引号（本轮踩过：`` ` `` 直接终止字符串 ⇒ TS1005）。
+
+### 7.2 面包屑：dir 一律以服务端规范路径为准
+
+- 根因：`dir` 直接用入口路径。工具卡文件链接带**宿主绝对路径**（面包屑全）；
+  交付卡 / 执行记录「产出」列把声明路径**原样**传 `openFile`，常是工作区相对名 ⇒ 面包屑只剩一层。
+- 官方 `list` 返回 `path: workspacePathOf(root, target)` = **工作区相对的规范路径**
+  （`dsh-api-workspace-files@0.1.7-rc.2 lib/index.js:494`）。修法 = `fetchDir` / 初次进入 / 文件态父目录
+  三处 `setDir` 一律改用 `parsed.path`（真实取数），两类入口面包屑一致、从工作区列全。
+- 工作区根目录态（crumbs 空）补「（工作区根目录）」占位 crumb（可见态 + 溢出测量条同构）。
+
+### 7.3 下拉选层箭头：一行一个
+
+- 每行只画**一个**右箭头（固定在原第 index 位），行首 (index-1) 个箭头位用
+  `.dsh-tdt-sv-crumbs-chev-slot`（11px + 1px margin，与箭头同宽）**空出但占位**，保持层级缩进；首行无箭头。
+
+### 7.4 验证与复验点
+
+- build（dist 343.04 kB）+ 冒烟 172 项全过 + typecheck 过；dist 产物核对含新 CSS 与 `crumbs-chev-slot`。
+- 真机复验：① 换行**开** → 长行折行、无横向滚动条；② 换行**关** → 不折行、代码卡内出横向滚动条；
+  ③ 从交付卡/产出列点目录 → 面包屑从工作区列全；④ 下拉选层每行一个箭头、缩进不变；⑤ 根目录态面包屑有占位。
