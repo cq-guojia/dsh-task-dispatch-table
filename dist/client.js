@@ -510,12 +510,15 @@ window.__ModuleLoader__.load({
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
 .dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
-/* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize 即可，**无块状高亮**（用户 2026-09-28）；
-   高亮的是拖拽条与内容交界的那条本来的边线（右缘 1px），hover/拖拽时按主题色变亮——
-   不是额外多画一条线。深色纯白、浅色纯黑，半透明。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;border-right:1px solid transparent;}
-.dsh-tdt-sv-resizer:hover,.dsh-tdt-sv-resizer:active{border-right-color:rgba(0,0,0,.55);}
-body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover,body[data-ds-dark-theme] .dsh-tdt-sv-resizer:active{border-right-color:rgba(255,255,255,.55);}
+/* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize 即可，**不画任何线**（用户 2026-09-28）。
+   高亮 = dock 自己那条常驻 border-left（最左缘，原本灰色半透明）在 hover/拖拽时按主题色变纯色——
+   完全复用原线，不新增第二条。深色纯白、浅色纯黑。用 :has() 让子 resizer 的:hover/:active
+   上溯改变父 dock 的 border-left 颜色（resizer 是 dock 子元素，无父选择器，只能靠 :has）。 */
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
+.dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:hover){border-left-color:rgba(0,0,0,1);}
+.dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:active){border-left-color:rgba(0,0,0,1);}
+body[data-ds-dark-theme] .dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:hover){border-left-color:rgba(255,255,255,1);}
+body[data-ds-dark-theme] .dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:active){border-left-color:rgba(255,255,255,1);}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：

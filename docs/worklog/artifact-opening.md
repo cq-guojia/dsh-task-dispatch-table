@@ -79,7 +79,7 @@
    - **刷新重读**：`FilePreviewPanel` 持 `reloadNonce`，刷新钮自增；`TextPreview` 与 `BytesPreview` 的 read 依赖加上它，触发重读（文本重读第一页 / 图片 PDF 重读字节）。
    - **路径跑马灯**：顶栏路径超长 `text-overflow:ellipsis` 省略；hover 时 JS 把内层改 `maxWidth:none` 并 `translateX` 向左平移 3s 露出完整路径（仅溢出时滚动，`onMouseLeave` 复位）。
    - **底部复制路径按钮删除**：错误/空态 `ErrBox` 不再渲染复制路径（顶栏已有，用户明确"下面不需要"）；`ErrBox` 精简为仅文案。
-2. **拖拽条高亮修正**：上一轮在 `left:2px` 用 `::after` 画了**额外一条线**（用户指出"在右边多一条线"）。改为高亮拖拽条与内容**交界的本来的边线**——`border-right:1px`（resizer 右缘），hover/拖拽时按主题色变亮（深白浅黑），不再多画线。
+2. **拖拽条高亮修正（续）**：上一轮把高亮放在 resizer 的 `border-right`（x=6，与内容交界），但 dock 自身 `border-left`（x=0，原线）仍常驻灰显，于是 hover 时仍呈现"两条"。用户明确：**不要画任何新线，就让原来那条高亮**。最终方案——彻底不在 resizer 上画边框，改用 CSS `:has()` 让 dock 在 resizer `:hover`/`:active` 时把自身常驻的 `border-left` 变色（深纯白 `rgba(255,255,255,1)` / 浅纯黑 `rgba(0,0,0,1)`）。零新线、只亮原线。注意 resizer 是 dock 子元素，CSS 无父选择器，故必须靠 `:has()` 上溯（宿主 Chromium 支持）。
 3. **质量门**：typecheck + build（dist ≈246 kB）+ 冒烟 153 项全过（+2 断言：顶栏按钮组 / 拖拽条右缘边线；md 切换不再 overlay）。
 
 ## 二、证据与坐标

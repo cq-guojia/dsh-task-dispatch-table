@@ -505,9 +505,12 @@ try {
   check('顶栏按钮组（复制 / 刷新 / 关闭，图标钮无中文）',
     clientJs.includes('dsh-tdt-sv-head-btn') && clientJs.includes('previewRefresh')
       && clientJs.includes('previewCopyPath') && clientJs.includes('IconRefreshOutlineRegular'))
-  check('拖拽条无块状高亮（hover 高亮的是与内容交界的右缘边线，深白浅黑，非额外多画线）',
-    clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes('border-right')
-      && !clientJs.includes('opacity:.35') && !clientJs.includes('dsh-tdt-sv-resizer::after'))
+  check('拖拽条不画新线（hover/拖拽时高亮 dock 原有 border-left，深纯白浅纯黑，用 :has 上溯父元素）',
+    clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes(':has(')
+      && clientJs.includes('border-left-color')
+      && !clientJs.includes('dsh-tdt-sv-resizer::after')
+      && !clientJs.includes('dsh-tdt-sv-resizer:hover{border')
+      && !clientJs.includes('dsh-tdt-sv-resizer:active{border'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
     clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
   check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',
