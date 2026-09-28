@@ -89,34 +89,108 @@ function isAbsoluteish(p: string): boolean {
 }
 
 /**
+ * 已探明的**工作区根**（宿主绝对路径），按会话缓存。
+ * 官方没有任何「目录的绝对路径」接口（stat 只认 regular file，locateFile 对目录抛
+ * not-regular-file，dsh-api-workspace-files lib/index.js:594），但工作区根可以由
+ * 「任一文件的 relativePath + stat.absolutePath」反推一次后复用 ⇒ 之后**空目录 /
+ * 只含子目录**的相对名目录也能拼出绝对路径（用户 2026-09-29 要求不留遗留）。
+ */
+const workspaceRoots = new Map<string, string>()
+
+/** 由「相对路径 + 该文件宿主绝对路径」反推工作区根并缓存（absolute = 根 + '/' + 相对路径）。 */
+function learnRoot(sessionId: string, relativePath: string, absolutePath: string): string | null {
+  const rel = relativePath.replace(/^\/+/, '').replace(/\/+$/, '')
+  if (rel === '' || !absolutePath.endsWith('/' + rel)) return null
+  const root = absolutePath.slice(0, absolutePath.length - rel.length - 1)
+  workspaceRoots.set(sessionId, root)
+  return root
+}
+
+/** 相对路径拼接（保持工作区相对形态，不做绝对路径处理）。 */
+function relJoin(dir: string, name: string): string {
+  return dir.replace(/\/+$/, '') === '' ? name : dir.replace(/\/+$/, '') + '/' + name
+}
+
+/**
+ * 在相对目录树里找**任意一个文件**并 stat（广度优先、有界：每层最多 5 个目录、最多 3 层）。
+ * 用于目标目录本身没有文件子项（空目录 / 只有子目录）时反推工作区根。
+ * @returns 该文件的宿主绝对路径与相对路径；找不到（工作区里一个文件都没有）返回 null。
+ */
+async function findAnyFileAbs(
+  workspaceFiles: WorkspaceFilesFace,
+  sessionId: string,
+  startDir: string,
+): Promise<{ absolutePath: string; relativePath: string } | null> {
+  const stat = workspaceFiles.stat
+  if (stat === undefined) return null
+  let frontier = [startDir]
+  for (let depth = 0; depth < 3 && frontier.length > 0; depth++) {
+    const nextDirs: string[] = []
+    for (const dir of frontier.slice(0, 5)) {
+      let entries: readonly ListEntry[]
+      try {
+        const parsed = listingOf(await workspaceFiles.list(sessionId, dir))
+        if (isFailed(parsed) || parsed === null) continue
+        entries = parsed.entries
+      } catch { continue }
+      const file = entries.find(entry => entry.type === 'file')
+      if (file !== undefined) {
+        const rel = relJoin(dir, file.name)
+        try {
+          const abs = absolutePathOf(await stat(sessionId, rel))
+          if (abs !== null) return { absolutePath: abs, relativePath: rel }
+        } catch { /* 换下一个候选 */ }
+      }
+      for (const entry of entries) {
+        if (entry.type === 'directory' && nextDirs.length < 5) nextDirs.push(relJoin(dir, entry.name))
+      }
+    }
+    frontier = nextDirs
+  }
+  return null
+}
+
+/**
  * 把「工作区相对名」的目录解析成宿主绝对路径（面包屑才能从工作区根往下列）。
  *
  * 场景（用户 2026-09-29 实测）：交付卡 / 执行记录「产出」列把回契声明的产出**原样**传入
  * `openFile`，常是工作区相对名（如 `20260928`）⇒ 面包屑只剩这一层。
- * 官方没有「目录的绝对路径」接口——stat 只认 regular file，locateFile 对目录直接抛
- * not-regular-file（dsh-api-workspace-files lib/index.js:594）⇒ 反推：
- * 取目录里任一「文件」子项 stat，`absolutePath = 工作区根 + '/' + 目录 + '/' + 文件名`，
- * 掐掉尾部文件名即得目录的宿主绝对路径。
- * 目录为空 / 只有子目录 / stat 不可用或失败 ⇒ 原样返回入参（面包屑退化为相对形式，不阻塞）。
+ * 解析优先级（每一步失败都自然落到下一步）：
+ *   ① 工作区根已缓存 ⇒ 根 + '/' + 规范相对路径（覆盖**空目录 / 只有子目录**）；
+ *   ② 目录里有文件子项 ⇒ stat 它，`absolutePath = 根 + '/' + 目录 + '/' + 文件名`，
+ *      掐掉文件名即得目录绝对路径，并**记住工作区根**供后续复用；
+ *   ③ 目录里没文件 ⇒ 有界 BFS 在目录树里找任一文件 stat 出根，再拼。
+ * 全部失败（工作区里一个文件都没有 / stat 不可用）⇒ 退回入参，浏览不受影响。
  */
-async function absolutizeDirViaChild(
+async function absolutizeDir(
   workspaceFiles: WorkspaceFilesFace,
   sessionId: string,
   dir: string,
+  canonical: string,
   entries: readonly ListEntry[],
 ): Promise<string> {
   if (isAbsoluteish(dir)) return dir
+  const rel = canonical !== '' ? canonical : dir
+  const cached = workspaceRoots.get(sessionId)
+  if (cached !== undefined) return cached + '/' + rel
   const stat = workspaceFiles.stat
   if (stat === undefined) return dir
+  // ② 本目录里的文件子项
   const file = entries.find(entry => entry.type === 'file')
-  if (file === undefined) return dir
-  try {
-    const abs = absolutePathOf(await stat(sessionId, joinPath(dir, file.name)))
-    if (abs === null || !abs.endsWith('/' + file.name)) return dir
-    return abs.slice(0, abs.length - file.name.length - 1)
-  } catch {
-    return dir
+  if (file !== undefined) {
+    try {
+      const sub = relJoin(rel, file.name)
+      const abs = absolutePathOf(await stat(sessionId, sub))
+      if (abs !== null && abs.endsWith('/' + file.name) && learnRoot(sessionId, sub, abs) !== null) {
+        return abs.slice(0, abs.length - file.name.length - 1)
+      }
+    } catch { /* 落到 ③ */ }
   }
+  // ③ 有界 BFS 找一个文件反推根
+  const found = await findAnyFileAbs(workspaceFiles, sessionId, rel)
+  if (found === null) return dir
+  const root = learnRoot(sessionId, found.relativePath, found.absolutePath)
+  return root === null ? dir : root + '/' + rel
 }
 
 /** 内联展开目录拉到的子项缓存：loading / ready(子项) / error。 */
@@ -269,7 +343,7 @@ export function FileBrowser(props: {
           // 直接用入参面包屑只剩这一层（用户 2026-09-29 实测）。官方没有目录级绝对路径
           // 接口（stat 只认 regular file）⇒ 用目录里任一「文件」子项的 stat 反推；
           // 解析不出（空目录/只有子目录/stat 缺失）就退回入参，不阻塞浏览。
-          const absDir = await absolutizeDirViaChild(workspaceFiles, sessionId, path, parsed.entries)
+          const absDir = await absolutizeDir(workspaceFiles, sessionId, path, parsed.path, parsed.entries)
           if (!alive) return
           setDir(absDir)
           setListing(parsed.entries)
@@ -285,7 +359,11 @@ export function FileBrowser(props: {
           if (stat !== undefined) {
             try {
               const abs = absolutePathOf(await stat(sessionId, path))
-              if (abs !== null) parent = dirnameOf(abs)
+              if (abs !== null) {
+                parent = dirnameOf(abs)
+                // 顺带把工作区根记住 ⇒ 之后同会话里「空目录 / 只含子目录」的相对名也能解析。
+                learnRoot(sessionId, path, abs)
+              }
             } catch { /* 解析不出就用入参父目录 */ }
           }
         }
@@ -419,7 +497,7 @@ export function FileBrowser(props: {
   }
 
   // 面包屑 = 入参路径（宿主绝对形态，如 /workspace/Temp）逐段展开 ⇒ 从工作区根往下列。
-  // 相对名入口（交付卡/产出列）已在初次进入时经 absolutizeDirViaChild / stat 解析成宿主绝对路径。
+  // 相对名入口（交付卡/产出列）已在初次进入时经 absolutizeDir / stat 解析成宿主绝对路径（含空目录/只含子目录：workspace-root 缓存 + 有界 BFS）。
   // ⚠️ 切勿改用服务端 list 返回的 path 当面包屑：那是 workspacePathOf(root, target) 的
   //    **工作区相对**形式（dsh-api-workspace-files lib/index.js:494），会丢掉根以下的前导段，
   //    面包屑只剩最近一层（2026-09-29 踩过 ⇒ 已回退为入参路径）。

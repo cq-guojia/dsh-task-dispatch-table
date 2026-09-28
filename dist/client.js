@@ -309,19 +309,22 @@ window.__ModuleLoader__.load({
 			editorFreqOnce: "单次",
 			editorFreqDaily: "每天",
 			editorFreqWeekly: "每周",
-			editorFreqBiweekly: "双周",
 			editorFreqMonthly: "每月",
+			editorFreqQuarterly: "每季度",
 			editorFreqYearly: "每年",
 			editorOnceHint: "到点执行一次，之后不再重复",
-			editorBiweeklyWarn: "双周在 cron 里没有对应位：先按界面收着，具体怎么落库等 P2 定",
+			editorMonthEvery: "每月",
+			editorMonthOdd: "单数月",
+			editorMonthEven: "双数月",
+			editorQuarterMonthOption: "第 {m} 个月",
 			editorDate: "日期",
 			editorDatePh: "选择日期",
 			editorTime: "时间",
 			editorTimePh: "选择时间",
 			editorMonth: "月",
 			editorMonthOption: "{m} 月",
-			editorDayOfMonth: "第几天",
-			editorDayOption: "{d} 号",
+			editorDayOfMonth: "第几日",
+			editorDayOption: "{d} 日",
 			editorIntervalEvery: "每隔",
 			editorIntervalStep: "间隔步长",
 			editorIntervalUnit: "间隔单位",
@@ -346,9 +349,8 @@ window.__ModuleLoader__.load({
 			editorMinute: "分钟",
 			editorNow: "现在",
 			editorConfirm: "确定",
-			editorTimezone: "时区",
-			editorWindow: "有效期",
-			editorWindowHint: "只管开始：从计划时刻起这段时间内允许派发与重试",
+			editorWindow: "允许延迟",
+			editorWindowHint: "从计划时刻起，这段时间内还允许派发和重试；过了就跳过这一次",
 			unitMinutes: "分钟",
 			unitHours: "小时",
 			unitDays: "天",
@@ -660,11 +662,14 @@ window.__ModuleLoader__.load({
 			editorFreqOnce: "Once",
 			editorFreqDaily: "Daily",
 			editorFreqWeekly: "Weekly",
-			editorFreqBiweekly: "Biweekly",
 			editorFreqMonthly: "Monthly",
+			editorFreqQuarterly: "Quarterly",
 			editorFreqYearly: "Yearly",
 			editorOnceHint: "Runs once when due, never repeats",
-			editorBiweeklyWarn: "Cron has no biweekly slot: kept in the UI for now, the real mapping is a P2 decision",
+			editorMonthEvery: "Every month",
+			editorMonthOdd: "Odd months",
+			editorMonthEven: "Even months",
+			editorQuarterMonthOption: "Month {m}",
 			editorDate: "Date",
 			editorDatePh: "Pick a date",
 			editorTime: "Time",
@@ -672,7 +677,7 @@ window.__ModuleLoader__.load({
 			editorMonth: "Month",
 			editorMonthOption: "Month {m}",
 			editorDayOfMonth: "Day",
-			editorDayOption: "Day {d}",
+			editorDayOption: "{d}",
 			editorIntervalEvery: "Every",
 			editorIntervalStep: "Interval step",
 			editorIntervalUnit: "Interval unit",
@@ -697,9 +702,8 @@ window.__ModuleLoader__.load({
 			editorMinute: "Minute",
 			editorNow: "Now",
 			editorConfirm: "OK",
-			editorTimezone: "Timezone",
-			editorWindow: "Valid for",
-			editorWindowHint: "Start only: dispatch and retries are allowed within this window",
+			editorWindow: "Allow delay",
+			editorWindowHint: "From the planned time, dispatch and retries are still allowed within this window; after that this run is skipped",
 			unitMinutes: "minutes",
 			unitHours: "hours",
 			unitDays: "days",
@@ -4159,29 +4163,91 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return p.startsWith("/") || p.startsWith("\\") || /^[a-zA-Z]:[\\/]/.test(p);
 		}
 		/**
+		* 已探明的**工作区根**（宿主绝对路径），按会话缓存。
+		* 官方没有任何「目录的绝对路径」接口（stat 只认 regular file，locateFile 对目录抛
+		* not-regular-file，dsh-api-workspace-files lib/index.js:594），但工作区根可以由
+		* 「任一文件的 relativePath + stat.absolutePath」反推一次后复用 ⇒ 之后**空目录 /
+		* 只含子目录**的相对名目录也能拼出绝对路径（用户 2026-09-29 要求不留遗留）。
+		*/
+		const workspaceRoots = /* @__PURE__ */ new Map();
+		/** 由「相对路径 + 该文件宿主绝对路径」反推工作区根并缓存（absolute = 根 + '/' + 相对路径）。 */
+		function learnRoot(sessionId, relativePath, absolutePath) {
+			const rel = relativePath.replace(/^\/+/, "").replace(/\/+$/, "");
+			if (rel === "" || !absolutePath.endsWith("/" + rel)) return null;
+			const root = absolutePath.slice(0, absolutePath.length - rel.length - 1);
+			workspaceRoots.set(sessionId, root);
+			return root;
+		}
+		/** 相对路径拼接（保持工作区相对形态，不做绝对路径处理）。 */
+		function relJoin(dir, name) {
+			return dir.replace(/\/+$/, "") === "" ? name : dir.replace(/\/+$/, "") + "/" + name;
+		}
+		/**
+		* 在相对目录树里找**任意一个文件**并 stat（广度优先、有界：每层最多 5 个目录、最多 3 层）。
+		* 用于目标目录本身没有文件子项（空目录 / 只有子目录）时反推工作区根。
+		* @returns 该文件的宿主绝对路径与相对路径；找不到（工作区里一个文件都没有）返回 null。
+		*/
+		async function findAnyFileAbs(workspaceFiles, sessionId, startDir) {
+			const stat = workspaceFiles.stat;
+			if (stat === void 0) return null;
+			let frontier = [startDir];
+			for (let depth = 0; depth < 3 && frontier.length > 0; depth++) {
+				const nextDirs = [];
+				for (const dir of frontier.slice(0, 5)) {
+					let entries;
+					try {
+						const parsed = listingOf(await workspaceFiles.list(sessionId, dir));
+						if (isFailed(parsed) || parsed === null) continue;
+						entries = parsed.entries;
+					} catch {
+						continue;
+					}
+					const file = entries.find((entry) => entry.type === "file");
+					if (file !== void 0) {
+						const rel = relJoin(dir, file.name);
+						try {
+							const abs = absolutePathOf(await stat(sessionId, rel));
+							if (abs !== null) return {
+								absolutePath: abs,
+								relativePath: rel
+							};
+						} catch {}
+					}
+					for (const entry of entries) if (entry.type === "directory" && nextDirs.length < 5) nextDirs.push(relJoin(dir, entry.name));
+				}
+				frontier = nextDirs;
+			}
+			return null;
+		}
+		/**
 		* 把「工作区相对名」的目录解析成宿主绝对路径（面包屑才能从工作区根往下列）。
 		*
 		* 场景（用户 2026-09-29 实测）：交付卡 / 执行记录「产出」列把回契声明的产出**原样**传入
 		* `openFile`，常是工作区相对名（如 `20260928`）⇒ 面包屑只剩这一层。
-		* 官方没有「目录的绝对路径」接口——stat 只认 regular file，locateFile 对目录直接抛
-		* not-regular-file（dsh-api-workspace-files lib/index.js:594）⇒ 反推：
-		* 取目录里任一「文件」子项 stat，`absolutePath = 工作区根 + '/' + 目录 + '/' + 文件名`，
-		* 掐掉尾部文件名即得目录的宿主绝对路径。
-		* 目录为空 / 只有子目录 / stat 不可用或失败 ⇒ 原样返回入参（面包屑退化为相对形式，不阻塞）。
+		* 解析优先级（每一步失败都自然落到下一步）：
+		*   ① 工作区根已缓存 ⇒ 根 + '/' + 规范相对路径（覆盖**空目录 / 只有子目录**）；
+		*   ② 目录里有文件子项 ⇒ stat 它，`absolutePath = 根 + '/' + 目录 + '/' + 文件名`，
+		*      掐掉文件名即得目录绝对路径，并**记住工作区根**供后续复用；
+		*   ③ 目录里没文件 ⇒ 有界 BFS 在目录树里找任一文件 stat 出根，再拼。
+		* 全部失败（工作区里一个文件都没有 / stat 不可用）⇒ 退回入参，浏览不受影响。
 		*/
-		async function absolutizeDirViaChild(workspaceFiles, sessionId, dir, entries) {
+		async function absolutizeDir(workspaceFiles, sessionId, dir, canonical, entries) {
 			if (isAbsoluteish(dir)) return dir;
+			const rel = canonical !== "" ? canonical : dir;
+			const cached = workspaceRoots.get(sessionId);
+			if (cached !== void 0) return cached + "/" + rel;
 			const stat = workspaceFiles.stat;
 			if (stat === void 0) return dir;
 			const file = entries.find((entry) => entry.type === "file");
-			if (file === void 0) return dir;
-			try {
-				const abs = absolutePathOf(await stat(sessionId, joinPath(dir, file.name)));
-				if (abs === null || !abs.endsWith("/" + file.name)) return dir;
-				return abs.slice(0, abs.length - file.name.length - 1);
-			} catch {
-				return dir;
-			}
+			if (file !== void 0) try {
+				const sub = relJoin(rel, file.name);
+				const abs = absolutePathOf(await stat(sessionId, sub));
+				if (abs !== null && abs.endsWith("/" + file.name) && learnRoot(sessionId, sub, abs) !== null) return abs.slice(0, abs.length - file.name.length - 1);
+			} catch {}
+			const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
+			if (found === null) return dir;
+			const root = learnRoot(sessionId, found.relativePath, found.absolutePath);
+			return root === null ? dir : root + "/" + rel;
 		}
 		/** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
 		function FileBody(props) {
@@ -4319,7 +4385,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (!alive) return;
 					const parsed = listingOf(result);
 					if (!isFailed(parsed) && parsed !== null) {
-						const absDir = await absolutizeDirViaChild(workspaceFiles, sessionId, path, parsed.entries);
+						const absDir = await absolutizeDir(workspaceFiles, sessionId, path, parsed.path, parsed.entries);
 						if (!alive) return;
 						setDir(absDir);
 						setListing(parsed.entries);
@@ -4332,7 +4398,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						const stat = workspaceFiles.stat;
 						if (stat !== void 0) try {
 							const abs = absolutePathOf(await stat(sessionId, path));
-							if (abs !== null) parent = dirnameOf(abs);
+							if (abs !== null) {
+								parent = dirnameOf(abs);
+								learnRoot(sessionId, path, abs);
+							}
 						} catch {}
 					}
 					if (!alive) return;
@@ -5409,7 +5478,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
-		function emptyTaskDraft(hostTimezone = "") {
+		function emptyTaskDraft() {
 			return {
 				title: "",
 				code: "",
@@ -5426,21 +5495,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					2,
 					3,
 					4,
-					5
+					5,
+					6,
+					7
 				],
 				monthDay: "1",
+				monthMode: "every",
+				quarterMonth: "1",
 				yearMonth: "1",
 				intervalUnit: "hour",
 				intervalStep: "1",
 				date: todayIso(),
 				time: "09:00",
-				timezone: hostTimezone,
 				window: "PT4H",
 				maxAttempts: "1",
 				validStatuses: "ok",
 				deps: []
 			};
 		}
+		/** 每月档的月份口径 → cron 月份位。 */
+		const MONTH_MODE_CRON = {
+			every: "*",
+			odd: "1,3,5,7,9,11",
+			even: "2,4,6,8,10,12"
+		};
 		/** ISO 序号（1..7）→ cron 星期位（0..6）。 */
 		function cronDow(day) {
 			return day === 7 ? 0 : day;
@@ -5461,8 +5539,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				case "once": return null;
 				case "daily": return `${minute} ${hour} * * *`;
 				case "weekly": return days === "" ? null : `${minute} ${hour} * * ${days}`;
-				case "biweekly": return null;
-				case "monthly": return `${minute} ${hour} ${draft.monthDay} * *`;
+				case "monthly": return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`;
+				case "quarterly": {
+					const start = Number.parseInt(draft.quarterMonth, 10);
+					const months = [
+						1,
+						2,
+						3
+					].map((offset) => (Number.isFinite(start) ? start : 1) + offset * 3).join(",");
+					return `${minute} ${hour} ${draft.monthDay} ${months} *`;
+				}
 				case "yearly": return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`;
 			}
 		}
@@ -5474,7 +5560,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				const cron = scheduleCron(draft);
 				if (cron !== null) schedule.cron = cron;
 			}
-			if (draft.timezone.trim() !== "") schedule.timezone = draft.timezone.trim();
 			const target = { workspace: draft.workspace };
 			if (draft.model.trim() !== "") {
 				const slash = draft.model.indexOf("/");
@@ -5527,9 +5612,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: { marginBottom: "6px" }
 			}, props.label), props.children ?? null);
 		}
-		/** 周期档的子控件（单次=日期+时间；每天=时间；每周/双周=周几+时间；每月/每年=日/月+时间）。 */
+		/** 周期档的子控件：内容行 = 频率 + 月/日 + 时间；星期恒定在下面一行。 */
 		function PeriodControls(props) {
-			const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
+			const { draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
 			const timeField = (0, react.createElement)(TimeField, {
 				value: draft.time,
 				onChange: (value) => {
@@ -5548,6 +5633,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				value: String(index + 1),
 				label: tt("editorDayOption", { d: index + 1 })
 			})), [tt]);
+			/** 每月档：每月 / 单数月 / 双数月（隔月执行就选单/双数月）。 */
+			const monthModeOptions = (0, react.useMemo)(() => [
+				{
+					value: "every",
+					label: t("editorMonthEvery")
+				},
+				{
+					value: "odd",
+					label: t("editorMonthOdd")
+				},
+				{
+					value: "even",
+					label: t("editorMonthEven")
+				}
+			], [t]);
+			/** 每季度档：季度里的第 1 / 2 / 3 个月。 */
+			const quarterMonthOptions = (0, react.useMemo)(() => [
+				1,
+				2,
+				3
+			].map((m) => ({
+				value: String(m),
+				label: tt("editorQuarterMonthOption", { m })
+			})), [tt]);
 			const above = [];
 			if (draft.periodFreq === "once") above.push((0, react.createElement)(DateField, {
 				key: "date",
@@ -5560,6 +5669,28 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				labels: calendarLabels,
 				width: 148
 			}));
+			else above.push((0, react.createElement)(SelectField, {
+				key: "freq",
+				value: draft.periodFreq,
+				options: props.freqOptions,
+				onChange: (value) => {
+					patch({ periodFreq: value });
+				},
+				placeholder: t("editorFreqDaily"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorFreq")
+			}));
+			if (draft.periodFreq === "monthly") above.push((0, react.createElement)(SelectField, {
+				key: "month-mode",
+				value: draft.monthMode,
+				options: monthModeOptions,
+				onChange: (value) => {
+					patch({ monthMode: value });
+				},
+				placeholder: t("editorMonthEvery"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorMonth")
+			}));
 			if (draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
 				key: "month",
 				value: draft.yearMonth,
@@ -5571,7 +5702,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorMonth")
 			}));
-			if (draft.periodFreq === "monthly" || draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
+			if (draft.periodFreq === "quarterly") above.push((0, react.createElement)(SelectField, {
+				key: "quarter-month",
+				value: draft.quarterMonth,
+				options: quarterMonthOptions,
+				onChange: (value) => {
+					patch({ quarterMonth: value });
+				},
+				placeholder: quarterMonthOptions[0]?.label ?? t("editorMonth"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorMonth")
+			}));
+			if (draft.periodFreq === "monthly" || draft.periodFreq === "quarterly" || draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
 				key: "day",
 				value: draft.monthDay,
 				options: dayOptions,
@@ -5587,7 +5729,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				flexDirection: "column",
 				gap: "10px"
-			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, above), draft.periodFreq === "weekly" || draft.periodFreq === "biweekly" ? (0, react.createElement)(WeekdayPicker, {
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, above), draft.periodFreq === "weekly" ? (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
 					patch({ weekdays: value });
@@ -5669,7 +5811,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, hostTimezone, onClose, onSave } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave } = props;
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
@@ -5766,28 +5908,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					label: t("editorFreqWeekly")
 				},
 				{
-					value: "biweekly",
-					label: t("editorFreqBiweekly")
-				},
-				{
 					value: "monthly",
 					label: t("editorFreqMonthly")
+				},
+				{
+					value: "quarterly",
+					label: t("editorFreqQuarterly")
 				},
 				{
 					value: "yearly",
 					label: t("editorFreqYearly")
 				}
 			];
-			const tzOptions = props.hostTimezone === "" ? [{
-				value: "UTC",
-				label: "UTC"
-			}] : [{
-				value: props.hostTimezone,
-				label: props.hostTimezone
-			}, ...props.hostTimezone === "UTC" ? [] : [{
-				value: "UTC",
-				label: "UTC"
-			}]];
 			const windowOptions = [
 				{
 					value: "PT30M",
@@ -5814,7 +5946,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					label: `1 ${t("unitDays")}`
 				}
 			];
-			const scheduleNote = draft.scheduleKind === "periodic" && draft.periodFreq === "biweekly" ? t("editorBiweeklyWarn") : null;
 			/**
 			* 顶部三档的当前值：**推导**出来的，不是另存一份状态——
 			* 「单次」只是「周期档的频率 = 单次」，所以周期档里把频率改成别的，顶部自动回到「周期」。
@@ -5893,18 +6024,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				gap: "8px",
 				flex: "none"
-			} }, scheduleTab === "periodic" ? (0, react.createElement)(SelectField, {
-				value: draft.periodFreq,
-				options: freqOptions,
-				onChange: (value) => {
-					patch({ periodFreq: value });
-				},
-				placeholder: t("editorFreqDaily"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorFreq"),
-				width: 96,
-				size: "sm"
-			}) : null, (0, react.createElement)(Segmented, {
+			} }, (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-schedule",
 				value: scheduleTab,
 				options: [
@@ -5956,23 +6076,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(PeriodControls, {
 				draft,
 				patch,
+				freqOptions,
 				t,
 				tt,
 				weekdayLabels,
 				calendarLabels,
 				timeLabels
-			})), scheduleNote === null ? null : (0, react.createElement)("p", { className: "dsh-tdt-ed-warn" }, scheduleNote), (0, react.createElement)("div", { className: "dsh-tdt-ed-schedfoot" }, (0, react.createElement)(SelectField, {
-				value: draft.timezone,
-				options: tzOptions,
-				onChange: (value) => {
-					patch({ timezone: value });
-				},
-				placeholder: t("editorFollowHost"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorTimezone"),
-				size: "sm",
-				align: "end"
-			}), (0, react.createElement)(SelectField, {
+			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-schedfoot" }, (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: C$1.textDim
+			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
 				value: draft.window,
 				options: windowOptions,
 				onChange: (value) => {
@@ -6551,8 +6664,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		];
 		const EMPTY_EDITOR_OPTIONS = {
 			workspaces: [],
-			models: [],
-			hostTimezone: ""
+			models: []
 		};
 		/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 		const encodeModelValue = (provider, id) => `${provider}/${id}`;
@@ -6674,8 +6786,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 					setEditorOptions({
 						workspaces,
-						models,
-						hostTimezone: typeof body.timezone === "string" ? body.timezone : ""
+						models
 					});
 				}).catch(() => {});
 				return () => {
@@ -6862,7 +6973,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setEditor({
 						mode: "create",
-						draft: emptyTaskDraft(editorOptions.hostTimezone)
+						draft: emptyTaskDraft()
 					});
 				}
 			}, `＋ ${t("editorNew")}`))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
@@ -7065,7 +7176,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				workspaces: editorOptions.workspaces,
 				models: editorOptions.models,
 				tasks: taskOptions,
-				hostTimezone: editorOptions.hostTimezone,
 				onClose: () => {
 					setEditor(null);
 				}
