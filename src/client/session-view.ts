@@ -631,6 +631,10 @@ function renderKeyedNode(
   onBranchAt: ((seq: number) => void) | undefined,
   fileOpen: FileOpenFace | undefined,
   groupPart?: 'response' | 'reasoning',
+  /** 交付文件（实例 outputs + 快照合并去重的权威源）；undefined/空 = 不渲染网格。 */
+  deliverFiles?: readonly DeliveredFileFace[],
+  /** 最后一轮 turn-tail 的 turn 号：交付卡只挂在这里（官方 DeliverablesTail 位置 = 每轮收尾之后）。 */
+  lastTailTurn?: number,
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'turn-trigger':
@@ -642,13 +646,20 @@ function renderKeyedNode(
         t,
       })
     case 'turn-tail': {
-      // 官方 turnTail 插槽承载「本轮收尾操作行」（复制/分支等）；交付文件卡网格已上移到弹窗顶部的
-      // 「交付文件」区块（由实例 outputs 权威渲染，不依赖宿主 timeline 快照是否带 deliverables）。
+      // 官方 turnTail 插槽（DeliverablesTail 同位）：本轮收尾操作行之后挂交付文件卡网格。
+      // 数据 = 实例 outputs + 快照 deliverables 合并去重（不依赖宿主投影是否重放成功），
+      // 且只挂最后一轮 tail（会话底部，与官方交付卡位置一致）；样式走官方 Deliverables 类。
       const data = node.data as unknown as TurnTailDataFace | undefined
       const tail = data === undefined || data.closing === null || data.closing === undefined
         ? null
         : h(TurnTailNodeViewMirror, { data, onBranchAt, t })
-      return tail === null ? null : tail
+      const turn = data?.turn ?? turnLocationOf(node)?.turn
+      const grid = deliverFiles === undefined || deliverFiles.length === 0
+        || turn === undefined || lastTailTurn === undefined || turn !== lastTailTurn
+        ? null
+        : h(DeliverablesGridMirror, { files: deliverFiles, onOpen: fileOpen?.open, t })
+      if (tail === null && grid === null) return null
+      return h(Fragment, null, tail, grid)
     }
     case 'assistant-step': {
       // 官方块渲染器（lib/client.js:5818-5871）：
@@ -1136,9 +1147,21 @@ export function SessionViewModal(props: {
     for (const files of deliveredByTurn.values()) for (const file of files) add(file)
     return [...byPath.values()]
   }, [outputs, deliveredByTurn])
+  // 最后一轮 turn-tail 的 turn 号：交付卡只挂这里（官方 DeliverablesTail 位置 = 会话底部收尾之后）。
+  const lastTailTurn = useMemo(() => {
+    if (!keyed || store === undefined) return undefined
+    for (let i = order.length - 1; i >= 0; i--) {
+      const node = store.get(order[i])
+      if (node?.kind !== 'turn-tail') continue
+      const data = node.data as unknown as TurnTailDataFace | undefined
+      const turn = data?.turn ?? turnLocationOf(node)?.turn
+      if (typeof turn === 'number') return turn
+    }
+    return undefined
+  }, [keyed, order, store])
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart),
-    [tt, onBranchAt, fileOpen],
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn),
+    [tt, onBranchAt, fileOpen, deliverFiles, lastTailTurn],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>
@@ -1176,19 +1199,8 @@ export function SessionViewModal(props: {
   }
   const openState = sessionSnap?.openState
   const showLoadOlder = sessionSnap?.hasMore !== false
-  // 「交付文件」区块：弹窗顶部常驻，渲染本实例全部交付物（outputs + 快照合并去重）。
-  const deliverSection = deliverFiles.length === 0 ? null : h('div', {
-    className: 'dsh-tdt-sv-deliver-section',
-    'data-deliverables-section': true,
-    style: { padding: '10px 14px', borderBottom: '0.5px solid var(--dsw-alias-border-l2, #e5e7eb)', background: 'var(--dsw-alias-bg-layer-2, #f7f8fa)' },
-  },
-    h('div', {
-      className: 'dsh-tdt-sv-deliver-heading',
-      style: { fontSize: '12px', fontWeight: 600, color: 'var(--dsw-alias-label-secondary, #6b7280)', marginBottom: '6px' },
-    }, tt('deliverRowTitle')),
-    h(DeliverablesGridMirror, { files: deliverFiles, onOpen: openFile, t: tt }),
-  )
-  const bodyInner = rendered.length === 0
+  // 交付文件卡挂最后一轮 turn-tail（官方 DeliverablesTail 同位，见 renderKeyedNode），此处不再另设区块。
+  const body = rendered.length === 0
     ? h(ChatHint, {
         text: openState === 'error' ? tt('sessionLoadFailed')
           : openState === 'loading' || openState === 'cold' ? tt('sessionLoading')
@@ -1200,7 +1212,6 @@ export function SessionViewModal(props: {
           : null,
         ...rendered,
       ]
-  const body = deliverSection === null ? bodyInner : [deliverSection, bodyInner]
 
   // 关闭途径：右上角关闭按钮 / 点遮罩（主面板同款，不监听 document）。
   // U10：头部「继续对话」按钮（fork 服务就位才渲染）→ 确认框 = 官方 Modal（portal 到 body，

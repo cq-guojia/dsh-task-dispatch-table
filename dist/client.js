@@ -2864,7 +2864,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* @param groupPart - 过程分组侧（'response' | 'reasoning'）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart) {
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -2882,7 +2882,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						onBranchAt,
 						t
 					});
-					return tail === null ? null : tail;
+					const turn = data?.turn ?? turnLocationOf(node)?.turn;
+					const grid = deliverFiles === void 0 || deliverFiles.length === 0 || turn === void 0 || lastTailTurn === void 0 || turn !== lastTailTurn ? null : (0, react.createElement)(DeliverablesGridMirror, {
+						files: deliverFiles,
+						onOpen: fileOpen?.open,
+						t
+					});
+					if (tail === null && grid === null) return null;
+					return (0, react.createElement)(react.Fragment, null, tail, grid);
 				}
 				case "assistant-step": {
 					const blocks = blocksOf(dataOf(node).blocks) ?? [];
@@ -3333,10 +3340,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				for (const files of deliveredByTurn.values()) for (const file of files) add(file);
 				return [...byPath.values()];
 			}, [outputs, deliveredByTurn]);
-			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart), [
+			const lastTailTurn = (0, react.useMemo)(() => {
+				if (!keyed || store === void 0) return void 0;
+				for (let i = order.length - 1; i >= 0; i--) {
+					const node = store.get(order[i]);
+					if (node?.kind !== "turn-tail") continue;
+					const turn = node.data?.turn ?? turnLocationOf(node)?.turn;
+					if (typeof turn === "number") return turn;
+				}
+			}, [
+				keyed,
+				order,
+				store
+			]);
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn), [
 				tt,
 				onBranchAt,
-				fileOpen
+				fileOpen,
+				deliverFiles,
+				lastTailTurn
 			]);
 			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
@@ -3365,35 +3387,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}
 			const openState = sessionSnap?.openState;
 			const showLoadOlder = sessionSnap?.hasMore !== false;
-			const deliverSection = deliverFiles.length === 0 ? null : (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-deliver-section",
-				"data-deliverables-section": true,
-				style: {
-					padding: "10px 14px",
-					borderBottom: "0.5px solid var(--dsw-alias-border-l2, #e5e7eb)",
-					background: "var(--dsw-alias-bg-layer-2, #f7f8fa)"
-				}
-			}, (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-deliver-heading",
-				style: {
-					fontSize: "12px",
-					fontWeight: 600,
-					color: "var(--dsw-alias-label-secondary, #6b7280)",
-					marginBottom: "6px"
-				}
-			}, tt("deliverRowTitle")), (0, react.createElement)(DeliverablesGridMirror, {
-				files: deliverFiles,
-				onOpen: openFile,
-				t: tt
-			}));
-			const bodyInner = rendered.length === 0 ? (0, react.createElement)(ChatHint, { text: openState === "error" ? tt("sessionLoadFailed") : openState === "loading" || openState === "cold" ? tt("sessionLoading") : tt("sessionEmpty") }) : [showLoadOlder ? (0, react.createElement)(ChatOlderButton, {
+			const body = rendered.length === 0 ? (0, react.createElement)(ChatHint, { text: openState === "error" ? tt("sessionLoadFailed") : openState === "loading" || openState === "cold" ? tt("sessionLoading") : tt("sessionEmpty") }) : [showLoadOlder ? (0, react.createElement)(ChatOlderButton, {
 				key: "older",
 				label: tt("sessionLoadOlder"),
 				onClick: () => {
 					view.loadOlder();
 				}
 			}) : null, ...rendered];
-			const body = deliverSection === null ? bodyInner : [deliverSection, bodyInner];
 			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-overlay",
 				onClick: onClose

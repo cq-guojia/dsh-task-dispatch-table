@@ -138,7 +138,7 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
         outputs: {
           type: 'array',
           items: { type: 'string' },
-          description: '产出的文件或目录路径，相对工作区根（如 "report.md" 或 "web-app/"）。整目录就填目录路径；多个产出逐个列（可同时含多个目录与多个文件）；没有产出可省略。',
+          description: '本次真实交付物，相对工作区根。粒度判断：装产物的文件夹是为本任务专门建的（如网页/项目专属文件夹）→ 填文件夹路径（如 "web-app/"）；文件只是写进既有或按规范建的目录（如按日期的日常目录）→ 逐个列文件路径。可同时含多个目录与多个文件；没有产出可省略。',
         },
         note: {
           type: 'string',
@@ -275,7 +275,7 @@ export function receiptInstruction(validStatuses: readonly string[]): string {
     `回执（必须）：任务做完后调用工具 ${RECEIPT_TOOL_NAME} 提交回执。调度器以回执判定任务成败，不提交等于失败。`,
     `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<产物，相对工作区根的路径>"] })`,
     `- status 只能填：${statuses.join(' | ')}（必须如实）；没有产出时省略 outputs。`,
-    `- outputs 填本次真实交付物：整目录就填目录路径（如 "web-app/"）；若干文件就逐个列（如 ["a.md","b.png"]）；可同时含多个目录与多个文件。插件会据此统一生成交付卡片，无需你额外处理。`,
+    `- outputs 按交付粒度判断：装产物的文件夹是为本任务专门建的（如网页/项目专属文件夹）→ 填文件夹路径（如 "web-app/"）；文件只是写进既有或按规范建的目录（如按日期的日常目录）→ 逐个列文件路径（如 ["20260928/a.md","20260928/b.txt"]）；可同时含多个目录与多个文件。插件会据此统一生成交付卡片，无需你额外处理。`,
     `- **不要调用 present 工具**：交付卡片由插件统一生成，所有交付物通过上面的 outputs 声明即可；调用 present 既多余，遇到目录还会直接报错。`,
     `- 工具调用失败时：等约 10 秒后**原样重试**，最多重试 3 次。`,
     `- 重试 3 次仍失败：**立即停止**，不要尝试任何其他手段——不要读写状态库、不要改文件权限、`
