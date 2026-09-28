@@ -301,7 +301,7 @@ window.__ModuleLoader__.load({
 			editorModel: "模型",
 			editorModelPh: "跟随宿主默认",
 			editorFollowHost: "跟随宿主默认",
-			editorNoOptions: "暂无可选（数据面待接）",
+			editorNoOptions: "暂无可选",
 			editorSchedule: "执行频率",
 			editorSchedulePeriodic: "周期",
 			editorScheduleInterval: "间隔",
@@ -652,7 +652,7 @@ window.__ModuleLoader__.load({
 			editorModel: "Model",
 			editorModelPh: "Follow host default",
 			editorFollowHost: "Follow host default",
-			editorNoOptions: "Nothing to choose yet (data plane pending)",
+			editorNoOptions: "Nothing to choose yet",
 			editorSchedule: "Schedule",
 			editorSchedulePeriodic: "Recurring",
 			editorScheduleInterval: "Interval",
@@ -4624,8 +4624,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			background: C$1.layer1,
 			color: C$1.text,
 			font: "inherit",
-			fontSize: "14px",
-			lineHeight: "22px",
+			fontSize: "13px",
+			lineHeight: "20px",
 			cursor: "pointer",
 			transition: transition$1
 		};
@@ -6415,11 +6415,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			"skipped",
 			"unknown"
 		];
-		/**
-		* P1 之前工作区 / 模型**没有数据面** ⇒ 传空数组，下拉显示空态（「暂无可选（数据面待接）」）。
-		* 按仓库规矩：正常功能一律真实取数，**禁止塞假工作区名 / 假模型名**。常量引用避免每帧新建数组。
-		*/
-		const EMPTY_OPTIONS = [];
+		const EMPTY_EDITOR_OPTIONS = {
+			workspaces: [],
+			models: []
+		};
+		/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
+		const encodeModelValue = (provider, id) => `${provider}/${id}`;
 		/** 预览宽度持久化键（宽度是纯本地偏好，落 localStorage；读写都容错，隐私模式也不崩）。 */
 		const PREVIEW_WIDTH_KEY = "dsh-tdt-preview-width";
 		/** 宽度区间：下限保住可读性，上限给内容留地方（不超过视口 70%）。 */
@@ -6515,6 +6516,36 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				window.addEventListener("pointerup", onUp);
 			}, [previewWidth]);
 			const [editor, setEditor] = (0, react.useState)(null);
+			const [editorOptions, setEditorOptions] = (0, react.useState)(EMPTY_EDITOR_OPTIONS);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				fetch(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" }).then((res) => res.json()).then((body) => {
+					if (!alive || body.ok !== true) return;
+					const workspaces = (body.workspaces ?? []).filter((item) => typeof item.title === "string" && item.title !== "").map((item) => ({
+						value: item.title,
+						label: item.title
+					}));
+					const models = [{
+						value: "",
+						label: t("editorFollowHost")
+					}];
+					for (const model of body.models ?? []) {
+						if (typeof model.provider !== "string" || typeof model.id !== "string") continue;
+						const name = typeof model.name === "string" && model.name !== "" ? model.name : model.id;
+						models.push({
+							value: encodeModelValue(model.provider, model.id),
+							label: `${name}（${model.provider}）`
+						});
+					}
+					setEditorOptions({
+						workspaces,
+						models
+					});
+				}).catch(() => {});
+				return () => {
+					alive = false;
+				};
+			}, [t]);
 			const [viewing, setViewing] = (0, react.useState)(null);
 			const [viewErr, setViewErr] = (0, react.useState)(null);
 			const [dbDump, setDbDump] = (0, react.useState)(null);
@@ -6895,8 +6926,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						draft: next
 					});
 				},
-				workspaces: EMPTY_OPTIONS,
-				models: EMPTY_OPTIONS,
+				workspaces: editorOptions.workspaces,
+				models: editorOptions.models,
 				tasks: taskOptions,
 				onClose: () => {
 					setEditor(null);

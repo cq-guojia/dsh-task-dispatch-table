@@ -287,3 +287,20 @@ storages/dsh-task-dispatch-table/prompt-versions/<taskId>/
 | `src/client/locales.ts` | 文案重排（来源三档、周期 / 间隔、周几、月份、日历 / 时分），清掉已废弃的 cron 预设键 |
 
 typecheck + build（dist 340.38 kB）+ 冒烟 172 项全过。
+
+---
+
+## 十四、P1 下拉接真数据面（2026-09-29）
+
+用户点名：「选模型 / 选工作空间的地方不能没有程序」⇒ 提前把 P1 做了（原计划排在观感之后）。
+
+| 项 | 做法 |
+|---|---|
+| 宿主侧新路由 | `GET /api/task-dispatch-table/options`（`src/index.ts`，只读，与其他路由同走 `isTrustedDispatchRequest`）：返回 `{workspaces:[{title,path}], models:[{provider,id,name}], degraded:{workspaces,models}}` |
+| 工作区取值 | `ctx.workspaceRegistry.list()`；option 的 **value = `title`**——因为宿主侧 `resolveWorkspace`（`src/dispatch.ts:33-35`）就是按 **title 精确匹配、id 兜底** |
+| 模型取值 | `ctx.get('llm').listProviders()` + 逐个 `listModels(provider)`；option 的 **value = `provider/id`**（写回时拆成成对的 provider + model，决策 22）。列表首项恒为「跟随宿主默认」（value `''` = 漏斗下漏） |
+| 容错 | registry / llm 面缺失 ⇒ 返回空数组 + `degraded` 标记并打宿主日志；单个 provider 取目录失败只跳该 provider。**取不到就空态，绝不编造** |
+| 客户端 | `src/client/index.ts`：进面板取一次（目录稳定，不轮询），失败保持空态；下拉空态文案由「暂无可选（数据面待接）」改成「暂无可选」（已接上，不该再说待接） |
+| 字号 | 下拉锚点 14px → **13px**（行高 22 → 20）：官方 `Input` 是 14px，放在卡片底部一行里偏粗；13px 与官方菜单行同档 |
+
+typecheck + build（dist/client 341.41 kB + dist/index.js）+ 冒烟 172 项全过。

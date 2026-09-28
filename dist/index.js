@@ -62,8 +62,10 @@ const readDispatchBody = async (req) => {
 const makeDispatchRoutes = (runtimeRef, persistTasksInline, 
 /** 取状态库（settings inject 就绪后非空）；未就绪时 /db 返回 503。 */
 getStore, 
-/** 取 workspaceRegistry（归档会话的临时反归档 / 回归档）。 */
+/** 取 workspaceRegistry（归档会话的临时反归档 / 回归档；任务表单的工作区下拉）。 */
 getRegistry, 
+/** 取 llm 服务（任务表单的模型下拉）；未挂载时返回 undefined。 */
+getLlm, 
 /** 宿主日志（取证：反归档到底有没有跑、宿主有没有该面）。 */
 log) => [
     {
@@ -122,6 +124,52 @@ log) => [
                 const message = error instanceof Error ? error.message : String(error);
                 writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message });
             }
+        },
+    },
+    {
+        // 任务表单的下拉数据面（P1）：真实工作区 + 真实模型目录，只读、不写任何东西。
+        // ⚠️ 只给「宿主真实存在的」——拿不到就是拿不到（返回空数组 + degraded 标记），不塞兜底假值。
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/options`,
+        handler: async (req, res) => {
+            if (req.method !== 'GET')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            const registry = getRegistry();
+            const llm = getLlm();
+            const workspaces = registry === null
+                ? []
+                // value 用 **title**：`resolveWorkspace`（src/dispatch.ts:33-35）就是按 title 精确匹配、id 兜底。
+                : registry.list().map(workspace => ({ title: workspace.title, path: workspace.path }));
+            const models = [];
+            try {
+                for (const provider of llm?.listProviders() ?? []) {
+                    try {
+                        // 模型目录是 advisory（host.ts:157-163）：单个 provider 失败不影响其他。
+                        for (const model of await llm.listModels(provider.id)) {
+                            models.push({ provider: model.provider, id: model.id, name: model.name });
+                        }
+                    }
+                    catch (error) {
+                        log(`[表单下拉] provider ${provider.id} 取模型目录失败：${error instanceof Error ? error.message : String(error)}`);
+                    }
+                }
+            }
+            catch (error) {
+                log(`[表单下拉] 枚举 provider 失败：${error instanceof Error ? error.message : String(error)}`);
+            }
+            if (registry === null)
+                log('[表单下拉] workspaceRegistry 未就绪 ⇒ 工作区下拉为空');
+            if (llm === undefined)
+                log('[表单下拉] 宿主无 llm 服务 ⇒ 模型下拉为空（不填模型仍走决策 22 漏斗）');
+            writeJson(res, 200, {
+                ok: true,
+                workspaces,
+                models,
+                /** 客户端据此区分「真的没有」与「面没接上」，UI 上不撒谎。 */
+                degraded: { workspaces: registry === null, models: llm === undefined },
+            });
         },
     },
     {
@@ -299,9 +347,9 @@ export function apply(ctx, config) {
             wctx.logger.warn('[数据通道] 宿主上下文无 webServer.register 面，HTTP 路由未注册；客户端画面将无数据');
             return;
         }
-        for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry, (msg) => { ctx.logger.info(msg); }))
+        for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry, () => ctx.get('llm'), (msg) => { ctx.logger.info(msg); }))
             webServer.register(route);
-        wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive');
+        wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive');
     });
     ctx.inject(['settings'], (sctx) => {
         const settings = sctx.settings;

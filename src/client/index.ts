@@ -374,11 +374,16 @@ function scheduleSummary(row: DebugTaskRow): string {
 
 const STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'] as const
 
-/**
- * P1 之前工作区 / 模型**没有数据面** ⇒ 传空数组，下拉显示空态（「暂无可选（数据面待接）」）。
- * 按仓库规矩：正常功能一律真实取数，**禁止塞假工作区名 / 假模型名**。常量引用避免每帧新建数组。
- */
-const EMPTY_OPTIONS: EditorOption[] = []
+/** 表单下拉的取值状态：P1 起由 `GET /options` 真取（工作区 / 模型都是宿主的真目录）。 */
+interface EditorOptions {
+  workspaces: EditorOption[]
+  models: EditorOption[]
+}
+
+const EMPTY_EDITOR_OPTIONS: EditorOptions = { workspaces: [], models: [] }
+
+/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
+const encodeModelValue = (provider: string, id: string): string => `${provider}/${id}`
 
 // ── U11 页面级预览 dock（弹窗与整页共用同一个预览面） ──
 
@@ -494,8 +499,35 @@ function TaskPage(props: {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }, [previewWidth])
-  // 新建 / 编辑任务弹窗（P0：只做界面与前端交互，保存逻辑归 P2）。
+  // 新建 / 编辑任务弹窗（P0 界面 / P0.5 观感 / P1 下拉数据面；保存逻辑归 P2）。
   const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; draft: TaskEditorDraft } | null>(null)
+  // 表单下拉数据面（P1）：宿主真实工作区 + 真实模型目录，进面板取一次（不轮询，目录稳定）。
+  const [editorOptions, setEditorOptions] = useState<EditorOptions>(EMPTY_EDITOR_OPTIONS)
+  useEffect(() => {
+    let alive = true
+    fetch(`${DISPATCH_API_PREFIX}/options`, { cache: 'no-store' })
+      .then(res => res.json() as Promise<{
+        ok?: boolean
+        workspaces?: { title?: string }[]
+        models?: { provider?: string; id?: string; name?: string }[]
+      }>)
+      .then(body => {
+        if (!alive || body.ok !== true) return
+        const workspaces: EditorOption[] = (body.workspaces ?? [])
+          // value 用 title：宿主侧 `resolveWorkspace` 就是按 title 精确匹配（src/dispatch.ts:33-35）。
+          .filter(item => typeof item.title === 'string' && item.title !== '')
+          .map(item => ({ value: item.title as string, label: item.title as string }))
+        const models: EditorOption[] = [{ value: '', label: t('editorFollowHost') }]
+        for (const model of body.models ?? []) {
+          if (typeof model.provider !== 'string' || typeof model.id !== 'string') continue
+          const name = typeof model.name === 'string' && model.name !== '' ? model.name : model.id
+          models.push({ value: encodeModelValue(model.provider, model.id), label: `${name}（${model.provider}）` })
+        }
+        setEditorOptions({ workspaces, models })
+      })
+      .catch(() => { /* 取不到就保持空态：下拉显示「暂无可选」，不编造 */ })
+    return () => { alive = false }
+  }, [t])
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
   const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget; didUnarchive?: boolean; outputs?: string[] } | null>(null)
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
@@ -957,15 +989,15 @@ function TaskPage(props: {
       )
       : null,
     // 新建 / 编辑任务弹窗（右侧贴边的**浮层**，盖住整页与预览面，不推压页面）。
-    // P0：只传真数据里已有的前置任务列表；工作区 / 模型留空 ⇒ 下拉显示空态（不塞假数据）。
+    // 工作区 / 模型 = `GET /options` 的真实目录（P1）；前置任务 = 现有任务表（真数据）。
     editor !== null
       ? h(TaskEditorDrawer, {
         t,
         mode: editor.mode,
         draft: editor.draft,
         onChange: (next: TaskEditorDraft) => { setEditor({ mode: editor.mode, draft: next }) },
-        workspaces: EMPTY_OPTIONS,
-        models: EMPTY_OPTIONS,
+        workspaces: editorOptions.workspaces,
+        models: editorOptions.models,
         tasks: taskOptions,
         onClose: () => { setEditor(null) },
       })

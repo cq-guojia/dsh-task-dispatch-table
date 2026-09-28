@@ -70,7 +70,8 @@ const fieldButtonStyle: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', height: '32px', boxSizing: 'border-box',
   minWidth: 0, maxWidth: '100%', padding: '0 8px',
   border: `0.5px solid ${C.borderL4}`, borderRadius: C.radiusMd, background: C.layer1,
-  color: C.text, font: 'inherit', fontSize: '14px', lineHeight: '22px', cursor: 'pointer',
+  // 13px：与官方菜单行字号同档（官方 Input 是 14px，放在卡片底部一行里偏粗）。
+  color: C.text, font: 'inherit', fontSize: '13px', lineHeight: '20px', cursor: 'pointer',
   transition,
 }
 
