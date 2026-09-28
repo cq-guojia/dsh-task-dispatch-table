@@ -754,6 +754,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(-
 /* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、可横向滚动。 */
 .dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
 .dsh-tdt-sv-preview-code{max-width:100%;}
+/* 跟随官方 markdown CodeBlock 的 data-code-wrap 语义补换行规则：官方该组件的
+   data-code-wrap 属性只在其内部 CSS 模块里缺对应规则（换行规则仅存在于 DiffBlock /
+   ReadBlock 模块），导致「自动换行」开关点了没有任何视觉效果。这里作用域限定在我方预览
+   外壳，按官方属性语义补上（不改官方包）。未换行态允许内容区内横向滚动。 */
+.dsh-tdt-sv-preview-coderender [data-code-block-content]{overflow-x:auto;}
+.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content],
+.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content] pre,
+.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content] code{white-space:pre-wrap;overflow-wrap:anywhere;}
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
 /* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
@@ -4072,7 +4080,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				const region = regionRef.current;
 				const measure = measureRef.current;
 				if (region === null || measure === null) return;
-				setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1);
+				const recompute = () => {
+					setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1);
+				};
+				recompute();
+				const ro = new ResizeObserver(recompute);
+				ro.observe(region);
+				return () => ro.disconnect();
 			}, [
 				dir,
 				viewing,
@@ -4177,23 +4191,33 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}), (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-crumbs-menu",
 				role: "menu"
-			}, crumbs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, t("explorerRootName")) : crumbs.map((crumb) => (0, react.createElement)("button", {
-				key: crumb.path,
-				type: "button",
-				role: "menuitem",
-				className: "dsh-tdt-sv-crumbs-menu-item",
-				title: crumb.path,
-				onClick: () => {
-					loadDir(crumb.path);
-				}
-			}, crumb.label)))) : null), (0, react.createElement)("div", {
+			}, crumbs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, t("explorerRootName")) : crumbs.map((crumb, index) => {
+				const isLast = index === crumbs.length - 1;
+				const connector = index === 0 ? "" : isLast ? "└ " : "├ ";
+				return (0, react.createElement)("button", {
+					key: crumb.path,
+					type: "button",
+					role: "menuitem",
+					className: "dsh-tdt-sv-crumbs-menu-item",
+					style: { paddingLeft: 8 + index * 14 },
+					title: crumb.path,
+					onClick: () => {
+						loadDir(crumb.path);
+					}
+				}, connector + crumb.label);
+			}))) : null), (0, react.createElement)("div", {
 				ref: regionRef,
 				className: "dsh-tdt-sv-crumbs-region"
 			}, (0, react.createElement)("span", {
 				ref: measureRef,
 				className: "dsh-tdt-sv-crumbs-measure",
 				"aria-hidden": true
-			}, crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 12 }) : null, (0, react.createElement)("span", null, crumb.label)))), crumbsOverflow ? crumbs.length > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs[crumbs.length - 1].label) : null : crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
+			}, crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 12 }) : null, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-crumb",
+				disabled: true,
+				tabIndex: -1
+			}, crumb.label)))), crumbsOverflow ? crumbs.length > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs[crumbs.length - 1].label) : null : crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
 				className: "dsh-tdt-sv-crumb-sep",
 				size: 12
 			}) : null, (0, react.createElement)("button", {
@@ -4219,13 +4243,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					const p = dirnameOf(dir);
 					if (p !== dir) loadDir(p);
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 })), viewing === null ? (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("previewRefresh"),
+				title: t("previewRefresh"),
+				onClick: reload
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })) : null, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
 				"aria-label": t("previewClose"),
 				title: t("previewClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, viewing !== null ? (0, react.createElement)("span", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), viewing !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react.createElement)("span", {
 				ref: titleRef,
 				className: "dsh-tdt-sv-preview-title",
 				onMouseEnter: startMarquee,
@@ -4234,7 +4264,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ref: titleInnerRef,
 				className: "dsh-tdt-sv-preview-title-inner",
 				title: viewing
-			}, viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1))) : (0, react.createElement)("span", { className: "dsh-tdt-sv-preview-title" }), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)("div", {
+			}, viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-seg",
 				role: "group",
 				"aria-label": t("previewMdSwitchAria")
@@ -4264,7 +4294,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				"aria-label": t("previewRefresh"),
 				title: t("previewRefresh"),
 				onClick: reload
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })))), body);
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })))) : null, body);
 		}
 		//#endregion
 		//#region src/client/index.ts

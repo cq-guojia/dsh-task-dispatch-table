@@ -11,8 +11,9 @@
 > **最后更新**：2026-09-28 · **U11 目录浏览器（面包屑导航）落码**：预览 dock 从单文件预览升级为
 > `FileBrowser`——`openFile(path)` 先 `list` 判别目录/文件；面包屑每段可点回跳，文件预览时面包屑保留
 > （点父段即返回），顶栏「上一级 / 回到根目录 / 刷新 / 复制 / 关闭」；数据全官方
-> `workspaceFiles.list`。冒烟 172 项全过 → **待真机复验**。U14 依赖快照（决策 43）方案已落码待复验；
-> U13 / U12 状态见未决项。
+> `workspaceFiles.list`。冒烟 172 项全过 → **待真机复验**。
+> **本轮调优**（见 [worklog/file-browser-ui-tuning.md](worklog/file-browser-ui-tuning.md)）：① 目录态隐藏文件名行（刷新改放第一排）；② `▾` 下拉选层加层级缩进 + 树形连接符；③ 面包屑溢出判定改用同构测量条 + `ResizeObserver`，不超长即还原完整路径；④ 核实 json/sh 图标为官方 `FileTypeIcon` 行为（不动代码）；⑤ **修代码预览「自动换行」开关无效**——官方 markdown `CodeBlock` 的 `data-code-wrap` 属性在其自身 CSS 模块缺对应换行规则（仅在 DiffBlock/ReadBlock 模块里有），在我方预览外壳作用域内补一条跟随官方属性的 CSS，换行 ↔ 横向滚动即时切换。
+> U14 依赖快照（决策 43）方案已落码待复验；U13 / U12 状态见未决项。
 
 ---
 

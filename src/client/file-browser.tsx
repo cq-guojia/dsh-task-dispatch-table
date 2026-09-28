@@ -3,9 +3,11 @@
 // 入口与 FilePreviewPanel 同源：调用方 openFile(path) 传入的路径。本组件先 list(path) 探明是
 // 目录还是文件——list 成功 ⇒ 目录（渲染树）；报 not-directory ⇒ 文件（预览，dir 取其父目录）。
 //
-// 头部两排（用户 2026-09-28 三验拍板）：第一排 = 面包屑（目录路径，独占一排）；
-// 第二排 = 文件名（跑马灯）+ 操作按钮（md 切段 / 复制 / 刷新 / 关闭）。
-// 面包屑超宽时折叠：行首出一个小图标，点开**下拉菜单**列出全部层级供选层回跳（不换行展开）。
+// 头部两排：第一排 = 面包屑（目录路径，独占一排）+ 导航钮（选层▾/返回/上一层/刷新/关闭）；
+// 第二排 = 文件名（跑马灯）+ 操作按钮（md 切段 / 复制 / 刷新）——**仅文件预览态显示**，
+// 目录态整排隐藏（用户 2026-09-28 本轮：没选文件时空着没意义）。目录态刷新改放第一排。
+// 面包屑超宽时折叠为当前层名（行首▾点开**下拉菜单**列出全部层级、带缩进/树形连接符供选层回跳）；
+// 不超长时**还原完整路径**（溢出判定用与可见态同构的隐藏测量条 + ResizeObserver，确保精确还原）。
 //
 // 渲染底层全官方（md=MarkdownText / 代码=CodeBlock / 图片·PDF=readBytes→blob），数据一律
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
@@ -235,12 +237,20 @@ export function FileBrowser(props: {
     return () => { alive = false }
   }, [workspaceFiles, sessionId, path])
 
-  // 面包屑溢出测量：隐藏测量条永远渲染完整面包屑，宽度超面包屑区域 ⇒ 折叠为当前层名。
+  // 面包屑溢出测量：隐藏测量条渲染与可见态完全相同的 crumb 按钮（含 padding/max-width），
+  // 使溢出判定与真实排版一致——不超长时必定还原完整路径（用户本轮 point3）。ResizeObserver
+  // 同时覆盖 dock 宽度变化 / 初次布局，避免初始 0 宽造成的「卡在折叠态」。
   useLayoutEffect(() => {
     const region = regionRef.current
     const measure = measureRef.current
     if (region === null || measure === null) return
-    setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1)
+    const recompute = (): void => {
+      setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1)
+    }
+    recompute()
+    const ro = new ResizeObserver(recompute)
+    ro.observe(region)
+    return () => ro.disconnect()
   }, [dir, viewing, mode, listing])
 
   const reload = (): void => {
@@ -340,22 +350,30 @@ export function FileBrowser(props: {
             h('div', { className: 'dsh-tdt-sv-crumbs-menu', role: 'menu' },
               crumbs.length === 0
                 ? h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, t('explorerRootName'))
-                : crumbs.map(crumb => h('button', {
-                  key: crumb.path,
-                  type: 'button',
-                  role: 'menuitem',
-                  className: 'dsh-tdt-sv-crumbs-menu-item',
-                  title: crumb.path,
-                  onClick: () => { loadDir(crumb.path) },
-                }, crumb.label)),
+                : crumbs.map((crumb, index) => {
+                  const isLast = index === crumbs.length - 1
+                  const connector = index === 0 ? '' : (isLast ? '└ ' : '├ ')
+                  return h('button', {
+                    key: crumb.path,
+                    type: 'button',
+                    role: 'menuitem',
+                    className: 'dsh-tdt-sv-crumbs-menu-item',
+                    // 层级缩进 + 树形连接符，直观表达「根→…→当前」的嵌套（用户本轮 point2）。
+                    style: { paddingLeft: 8 + index * 14 },
+                    title: crumb.path,
+                    onClick: () => { loadDir(crumb.path) },
+                  }, connector + crumb.label)
+                }),
             ))
           : null,
       ),
       h('div', { ref: regionRef, className: 'dsh-tdt-sv-crumbs-region' },
+        // 隐藏测量条：渲染与可见态完全相同的 crumb 按钮（含 padding/max-width），使溢出判定
+        // 与真实排版一致——不超长时必定还原完整路径（用户本轮 point3）。
         h('span', { ref: measureRef, className: 'dsh-tdt-sv-crumbs-measure', 'aria-hidden': true },
           crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
             index > 0 ? h(IconChevronRightOutlineRegular, { size: 12 }) : null,
-            h('span', null, crumb.label),
+            h('button', { type: 'button', className: 'dsh-tdt-sv-crumb', disabled: true, tabIndex: -1 }, crumb.label),
           ))),
         crumbsOverflow
           ? crumbs.length > 0
@@ -387,6 +405,16 @@ export function FileBrowser(props: {
           disabled: dir === '',
           onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
         }, h(IconChevronUpOutlineRegular, { size: 14 })),
+        // 目录态（未选文件）刷新：放第一排，因第二排整体隐藏（用户本轮 point1）。
+        viewing === null
+          ? h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('previewRefresh'),
+            title: t('previewRefresh'),
+            onClick: reload,
+          }, h(IconRefreshOutlineRegular, { size: 14 }))
+          : null,
         h('button', {
           type: 'button',
           className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
@@ -396,40 +424,41 @@ export function FileBrowser(props: {
         }, h(IconCloseOutlineRegular, { size: 14 })),
       ),
     ),
-    // 第二排：文件名（跑马灯）+ 操作按钮（关闭已上提第一排右上角——用户五验拍板）。
-    h('div', { className: 'dsh-tdt-sv-titlebar' },
-      viewing !== null
-        ? h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },
+    // 第二排：文件名（跑马灯）+ 操作按钮——仅文件预览态显示；目录态整排隐藏
+    // （用户本轮 point1：没选文件时空着没意义，复制/刷新本就该随文件走）。
+    viewing !== null
+      ? h('div', { className: 'dsh-tdt-sv-titlebar' },
+        h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },
           h('span', { ref: titleInnerRef, className: 'dsh-tdt-sv-preview-title-inner', title: viewing },
-            viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1)))
-        : h('span', { className: 'dsh-tdt-sv-preview-title' }),
-      h('div', { className: 'dsh-tdt-sv-head-actions' },
-        isMdPreview
-          ? h('div', {
-            className: 'dsh-tdt-sv-seg',
-            role: 'group',
-            'aria-label': t('previewMdSwitchAria'),
-          },
-            h('button', { type: 'button', className: 'dsh-tdt-sv-seg-btn', 'aria-pressed': !sourceView, onClick: () => { setSourceView(false) } }, t('previewRender')),
-            h('button', { type: 'button', className: 'dsh-tdt-sv-seg-btn', 'aria-pressed': sourceView, onClick: () => { setSourceView(true) } }, t('previewSource')),
-          )
-          : null,
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('previewCopyPath'),
-          title: t('previewCopyPath'),
-          onClick: copyPath,
-        }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('previewRefresh'),
-          title: t('previewRefresh'),
-          onClick: reload,
-        }, h(IconRefreshOutlineRegular, { size: 14 })),
-      ),
-    ),
+            viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1))),
+        h('div', { className: 'dsh-tdt-sv-head-actions' },
+          isMdPreview
+            ? h('div', {
+              className: 'dsh-tdt-sv-seg',
+              role: 'group',
+              'aria-label': t('previewMdSwitchAria'),
+            },
+              h('button', { type: 'button', className: 'dsh-tdt-sv-seg-btn', 'aria-pressed': !sourceView, onClick: () => { setSourceView(false) } }, t('previewRender')),
+              h('button', { type: 'button', className: 'dsh-tdt-sv-seg-btn', 'aria-pressed': sourceView, onClick: () => { setSourceView(true) } }, t('previewSource')),
+            )
+            : null,
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('previewCopyPath'),
+            title: t('previewCopyPath'),
+            onClick: copyPath,
+          }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 })),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('previewRefresh'),
+            title: t('previewRefresh'),
+            onClick: reload,
+          }, h(IconRefreshOutlineRegular, { size: 14 })),
+        ),
+      )
+      : null,
     body,
   )
 }
