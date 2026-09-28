@@ -22,12 +22,17 @@ import {
   IconCopyOutlineRegular,
   IconRefreshOutlineRegular,
   MarkdownText,
+  Tooltip,
   languageForPath,
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { LocaleKey, Translate } from './locales'
 import { MD_LABELS } from './md-labels'
 import { ocOr } from './official-classes'
+
+// 官方气泡提示包裹：给图标钮加 hover/focus tooltip（用户 2026-09-28：图标都缺悬停提示，统一用官方 Tooltip，不自研）。
+const tooled = (label: string, node: ReactNode): ReactNode =>
+  h(Tooltip, { label, side: 'bottom' }, node)
 
 /** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
 export class PreviewBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { crashed: boolean }> {
@@ -387,9 +392,9 @@ export function TextPreview(props: {
           code: text,
           lang: language,
           lineNumbers: true,
-          // md 源码态按 prose 语义换行（官方 wrap 语义 = 采用调用方偏好并隐藏工具条换行钮），
-          // 避免短文档也出现横向滚动条；代码文件不传 = 保留官方换行切换钮。
-          wrap: markdown === true ? true : undefined,
+          // 始终换行（用户 2026-09-28：代码/文本文件此前未传 wrap，官方 data-code-wrap 未置，
+          // 长行不折行撑出横向滚动条；统一 wrap:true，配合 CSS 强制折行 + 禁横向滚动）。
+          wrap: true,
           copyLabel: t('copyLabel'),
           copiedLabel: t('copiedLabel'),
           toolbarLabels: {
@@ -501,24 +506,27 @@ export function FilePreviewPanel(props: {
             }, t('previewSource')),
             )
           : null,
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('previewCopyPath'),
-          onClick: copyPath,
-        }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('previewRefresh'),
-          onClick: () => { setReloadNonce(n => n + 1) },
-        }, h(IconRefreshOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
-          'aria-label': t('previewClose'),
-          onClick: onClose,
-        }, h(IconCloseOutlineRegular, { size: 14 })),
+        tooled(t('previewCopyPath'),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('previewCopyPath'),
+            onClick: copyPath,
+          }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 }))),
+        tooled(t('previewRefresh'),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('previewRefresh'),
+            onClick: () => { setReloadNonce(n => n + 1) },
+          }, h(IconRefreshOutlineRegular, { size: 14 }))),
+        tooled(t('previewClose'),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
+            'aria-label': t('previewClose'),
+            onClick: onClose,
+          }, h(IconCloseOutlineRegular, { size: 14 }))),
       ),
     ),
     h(PreviewBoundary, {

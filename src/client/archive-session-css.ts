@@ -229,7 +229,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:active
 .dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
 .dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
 .dsh-tdt-sv-head-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;}
+.dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
@@ -241,17 +241,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:active
 .dsh-tdt-sv-seg-btn:hover{color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-00,#fff);color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18);}
 body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-900,#111);color:var(--dsw-static-neutral-00,#fff);}
-/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、可横向滚动。 */
+/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、绝不横向滚动。 */
 .dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
 .dsh-tdt-sv-preview-code{max-width:100%;}
-/* 跟随官方 markdown CodeBlock 的 data-code-wrap 语义补换行规则：官方该组件的
-   data-code-wrap 属性只在其内部 CSS 模块里缺对应规则（换行规则仅存在于 DiffBlock /
-   ReadBlock 模块），导致「自动换行」开关点了没有任何视觉效果。这里作用域限定在我方预览
-   外壳，按官方属性语义补上（不改官方包）。未换行态允许内容区内横向滚动。 */
-.dsh-tdt-sv-preview-coderender [data-code-block-content]{overflow-x:auto;}
+/* 代码块：始终按容器宽度折行（保留缩进/空白，超长串可断行），禁用横向滚动条
+   （用户 2026-09-28 拍板：「该多宽就多宽，到了宽度限制该折行，永不出现横向滚动条」）。
+   官方 CodeBlock 的 data-code-wrap 属性只在其内部 CSS 模块缺对应换行规则（换行规则仅存在于
+   DiffBlock / ReadBlock 模块），此处作用域限定在我方预览外壳直接补上，不区分换行开关态。 */
+.dsh-tdt-sv-preview-coderender [data-code-block-content]{max-width:100%;overflow-x:hidden;}
 .dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content],
 .dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content] pre,
-.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content] code{white-space:pre-wrap;overflow-wrap:anywhere;}
+.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] [data-code-block-content] code{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
 /* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */

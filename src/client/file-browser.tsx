@@ -23,6 +23,7 @@ import {
   IconCloseOutlineRegular,
   IconCopyOutlineRegular,
   IconRefreshOutlineRegular,
+  Tooltip,
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
@@ -38,6 +39,10 @@ import {
   type ErrView,
   type WorkspaceFilesFace,
 } from './file-preview'
+
+// 官方气泡提示包裹：给图标钮加 hover/focus tooltip（用户 2026-09-28：图标都缺悬停提示，统一用官方 Tooltip，不自研）。
+const tooled = (label: string, node: ReactNode): ReactNode =>
+  h(Tooltip, { label, side: 'bottom' }, node)
 
 /** 路径工具：取父目录（无父 = 空串，list('') = 工作区根）。 */
 function dirnameOf(p: string): string {
@@ -330,14 +335,14 @@ export function FileBrowser(props: {
           onClick: () => { loadDir(childPath) },
           onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') loadDir(childPath) },
         },
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-tree-toggle' + (isOpen ? ' dsh-tdt-sv-tree-toggle-open' : ''),
-            'aria-expanded': isOpen,
-            'aria-label': isOpen ? t('explorerCollapse') : t('explorerExpand'),
-            title: isOpen ? t('explorerCollapse') : t('explorerExpand'),
-            onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); toggleDir(childPath) },
-          }, h(IconChevronRightOutlineRegular, { size: 16 })),
+          tooled(isOpen ? t('explorerCollapse') : t('explorerExpand'),
+            h('button', {
+              type: 'button',
+              className: 'dsh-tdt-sv-tree-toggle' + (isOpen ? ' dsh-tdt-sv-tree-toggle-open' : ''),
+              'aria-expanded': isOpen,
+              'aria-label': isOpen ? t('explorerCollapse') : t('explorerExpand'),
+              onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); toggleDir(childPath) },
+            }, h(IconChevronRightOutlineRegular, { size: 16 }))),
           h('span', { className: 'dsh-tdt-sv-tree-name' }, entry.name),
         ),
         isOpen
@@ -410,14 +415,14 @@ export function FileBrowser(props: {
       'aria-label': t('explorerCrumbsAria'),
     },
       h('div', { className: 'dsh-tdt-sv-crumbs-menu-wrap' },
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('explorerLevels'),
-          title: t('explorerLevels'),
-          'aria-expanded': menuOpen,
-          onClick: () => { setMenuOpen(value => !value) },
-        }, h(IconChevronDownOutlineRegular, { size: 14 })),
+        tooled(t('explorerLevels'),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('explorerLevels'),
+            'aria-expanded': menuOpen,
+            onClick: () => { setMenuOpen(value => !value) },
+          }, h(IconChevronDownOutlineRegular, { size: 14 }))),
         menuOpen
           ? h(Fragment, null,
             h('div', { className: 'dsh-tdt-sv-crumbs-backdrop', onClick: () => { setMenuOpen(false) } }),
@@ -465,29 +470,29 @@ export function FileBrowser(props: {
           )),
       ),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('explorerBack'),
-          title: t('explorerBack'),
-          disabled: history.length === 0,
-          onClick: goBack,
-        }, h(IconChevronLeftOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn',
-          'aria-label': t('explorerUp'),
-          title: t('explorerUp'),
-          disabled: dir === '',
-          onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
-        }, h(IconChevronUpOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
-          'aria-label': t('previewClose'),
-          title: t('previewClose'),
-          onClick: onClose,
-        }, h(IconCloseOutlineRegular, { size: 14 })),
+        tooled(t('explorerBack'),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('explorerBack'),
+            disabled: history.length === 0,
+            onClick: goBack,
+          }, h(IconChevronLeftOutlineRegular, { size: 14 }))),
+        tooled(t('explorerUp'),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn',
+            'aria-label': t('explorerUp'),
+            disabled: dir === '',
+            onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
+          }, h(IconChevronUpOutlineRegular, { size: 14 }))),
+        tooled(t('previewClose'),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
+            'aria-label': t('previewClose'),
+            onClick: onClose,
+          }, h(IconCloseOutlineRegular, { size: 14 }))),
       ),
     ),
     // 第二排：文件名（跑马灯）+ 操作按钮——仅文件预览态显示；目录态整排隐藏
@@ -508,20 +513,20 @@ export function FileBrowser(props: {
               h('button', { type: 'button', className: 'dsh-tdt-sv-seg-btn', 'aria-pressed': sourceView, onClick: () => { setSourceView(true) } }, t('previewSource')),
             )
             : null,
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('previewCopyPath'),
-            title: t('previewCopyPath'),
-            onClick: copyPath,
-          }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 })),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('previewRefresh'),
-            title: t('previewRefresh'),
-            onClick: reload,
-          }, h(IconRefreshOutlineRegular, { size: 14 })),
+          tooled(t('previewCopyPath'),
+            h('button', {
+              type: 'button',
+              className: 'dsh-tdt-sv-head-btn',
+              'aria-label': t('previewCopyPath'),
+              onClick: copyPath,
+            }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 }))),
+          tooled(t('previewRefresh'),
+            h('button', {
+              type: 'button',
+              className: 'dsh-tdt-sv-head-btn',
+              'aria-label': t('previewRefresh'),
+              onClick: reload,
+            }, h(IconRefreshOutlineRegular, { size: 14 }))),
         ),
       )
       : null,
