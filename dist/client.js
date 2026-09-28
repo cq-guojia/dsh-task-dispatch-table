@@ -3132,9 +3132,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* tool-fs 写入 meta.diffs[].path。会话级词表 = 官方 per-turn chatFileMentions 的简化偏差
 		* （决策 39：resolve 命中才渲链接，解析不出保持惰性 code，永不猜）。
 		*/
-		function collectFilePaths(order, store) {
+		function collectFilePaths(order, store, turns) {
 			if (store === void 0) return [];
 			const out = /* @__PURE__ */ new Set();
+			if (turns !== null && turns !== void 0) {
+				const map = turns;
+				for (const [, face] of map) {
+					const presented = face?.data?.deliverables?.presented;
+					if (!Array.isArray(presented)) continue;
+					for (const file of presented) {
+						const path = typeof file?.path === "string" ? file.path : void 0;
+						if (path !== void 0 && path.trim() !== "") out.add(normalizeFilePath(path));
+					}
+				}
+			}
 			for (const key of order) {
 				const node = store.get(key);
 				if (node === void 0 || node.kind !== "tool-call") continue;
@@ -3166,33 +3177,32 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return [...out];
 		}
 		/**
-		* 每轮交付文件（官方 DeliverablesTail 的 presented 数据同源推导）：keyed 流里
-		* settled 且成功的 present 调用参数 files，按 turn 归组、按路径去重（后者覆盖前者，
-		* 与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
+		* 每轮交付文件（官方 DeliverablesTail 同源数据）：读会话 turn 级 `deliverables.presented`，
+		* 由 `deliverables/presented` 事件经引擎填充——无论事件来自 present 工具还是本插件代写（U12
+		* 决策 40 演进：插件作唯一写入方，禁止 LLM 调 present），同源覆盖。按 turn 归组、按路径去重
+		* （后者覆盖前者，与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
 		*/
-		function collectDeliveredFiles(order, store) {
+		function collectPresentedByTurn(turns) {
 			const out = /* @__PURE__ */ new Map();
-			const byTurn = /* @__PURE__ */ new Map();
-			if (store === void 0) return out;
-			for (const key of order) {
-				const node = store.get(key);
-				if (node === void 0 || node.kind !== "tool-call") continue;
-				const root = node.data?.root;
-				if (!isPresentRoot(root)) continue;
-				const turn = turnLocationOf(node)?.turn;
-				if (turn === void 0) continue;
-				const files = presentFiles(root);
-				if (files.length === 0) continue;
-				let bucket = byTurn.get(turn);
-				if (bucket === void 0) {
-					bucket = /* @__PURE__ */ new Map();
-					byTurn.set(turn, bucket);
+			if (turns === null || turns === void 0) return out;
+			const map = turns;
+			for (const [key, face] of map) {
+				const turn = typeof key === "number" ? key : Number(key);
+				if (!Number.isInteger(turn) || turn < 1) continue;
+				const presented = face?.data?.deliverables?.presented;
+				if (!Array.isArray(presented) || presented.length === 0) continue;
+				const files = [];
+				for (const file of presented) {
+					const path = typeof file?.path === "string" ? file.path : void 0;
+					if (path === void 0 || path.trim() === "") continue;
+					const description = typeof file?.description === "string" && file.description.trim() !== "" ? file.description : void 0;
+					files.push(description === void 0 ? { path } : {
+						path,
+						description
+					});
 				}
-				for (const file of files) bucket.set(file.path, file);
+				if (files.length > 0) out.set(turn, files);
 			}
-			byTurn.forEach((bucket, turn) => {
-				out.set(turn, [...bucket.values()]);
-			});
 			return out;
 		}
 		/**
@@ -3301,7 +3311,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				if (workspaceFiles === void 0 || onOpenFile === void 0) return void 0;
 				return {
 					open: openFile,
-					mentions: makeFileMentions(collectFilePaths(order, store), openFile)
+					mentions: makeFileMentions(collectFilePaths(order, store, turns), openFile)
 				};
 			}, [
 				workspaceFiles,
@@ -3310,7 +3320,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				order,
 				store
 			]);
-			const deliveredByTurn = (0, react.useMemo)(() => collectDeliveredFiles(order, store), [order, store]);
+			const deliveredByTurn = (0, react.useMemo)(() => collectPresentedByTurn(turns), [turns]);
 			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliveredByTurn), [
 				tt,
 				onBranchAt,

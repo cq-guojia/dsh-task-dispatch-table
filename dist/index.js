@@ -8,7 +8,7 @@ export const name = 'dsh-task-dispatch-table';
  * ⚠️ settings 不在此列：settings 服务以「带 register 面」或「惰性形态」两种组合入场，
  * 缺失 register 时硬性依赖会令 entry 卡死/崩；改由 apply 内 ctx.inject(['settings'], ...)
  * 订阅并在 register 就绪才激活（参照 dsh-context installSettings，决策 17 真机教训）。 */
-export const inject = ['timer', 'agents', 'sessions', 'workspaceRegistry', 'sessionTitle'];
+export const inject = ['timer', 'agents', 'sessions', 'workspaceRegistry', 'sessionTitle', 'sessionProjections'];
 export { Config, resolveStatePath };
 // ── 临时调试通道参数（决策 16 例外：完善 UI 后随面板一起回收）──
 /** 告警环形缓冲上限（条）。 */

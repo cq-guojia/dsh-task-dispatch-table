@@ -43,6 +43,11 @@ interface ToolRegistry {
   register(definition: unknown): unknown
 }
 
+/** 宿主 turnBoundary 投影读取面（最小契约；插件刻意不引宿主运行时包，故用松散类型）。 */
+interface TurnBoundaryProjection {
+  stateOf(session: unknown, name: 'turnBoundary'): { lastTurn?: number; openTurnStartSeq?: number | null } | undefined
+}
+
 export interface ReceiptToolDeps {
   store: TaskStore
   task: TaskDefinition
@@ -51,6 +56,8 @@ export interface ReceiptToolDeps {
   /** 闭包注入的本次派发会话，模型不可见 ⇒ 回执不可冒充。 */
   sessionId: string
   logger: HostLogger
+  /** 闭包注入的 turnBoundary 投影读取面：取 `deliverables/presented` 事件所需的 turn。 */
+  sessionProjections?: unknown
 }
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -109,7 +116,7 @@ function receiptStatuses(task: TaskDefinition): readonly string[] {
  * 故无需引宿主包（`defineTool` 那套要引 `@deepseek-ai/dsh-tools`，本插件刻意不依赖宿主运行时包）。
  */
 function buildDefinition(deps: ReceiptToolDeps): unknown {
-  const { store, task, instanceId, sessionId, logger } = deps
+  const { store, task, instanceId, sessionId, logger, sessionProjections } = deps
   const statuses = receiptStatuses(task)
 
   return {
@@ -129,7 +136,7 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
         outputs: {
           type: 'array',
           items: { type: 'string' },
-          description: '产出的文件路径，相对工作区根（如 "report.md"）；没有产出可省略。',
+          description: '产出的文件或目录路径，相对工作区根（如 "report.md" 或 "web-app/"）。整目录就填目录路径；多个产出逐个列（可同时含多个目录与多个文件）；没有产出可省略。',
         },
         note: {
           type: 'string',
@@ -151,7 +158,7 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
         { type: 'text', text: (value as ReceiptResult).message },
       ],
     },
-    execute: async (args: unknown): Promise<ReceiptResult> => {
+    execute: async (args: unknown, exec?: unknown): Promise<ReceiptResult> => {
       try {
         const input = asRecord(args)
         const rawStatus = typeof input.status === 'string' ? input.status : ''
@@ -187,6 +194,33 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
         // 与 submit.ts 写进 receipt 事件的形状完全一致（对账逻辑零改动）：status/outputs/note/session_id。
         store.appendEvent(instanceId, 'receipt', { status, outputs, note, session_id: sessionId })
         logger.info(`回执已记录 ${instanceId}: status=${status}${outputs.length > 0 ? `, outputs=${outputs.length} 项` : ''}`)
+
+        // B 路线：插件代写官方交付事件（决策 40 演进：插件作唯一写入方，禁止 LLM 调 present）。
+        // 失败只记日志、绝不拖垮回执（外层 try 已兜底，这里再独立 try 防任何意外上抛）。
+        try {
+          const execCtx = exec as { agent?: { session?: unknown }; callId?: unknown } | undefined
+          const session = execCtx?.agent?.session
+          const callId = execCtx?.callId
+          const projections = sessionProjections as TurnBoundaryProjection | undefined
+          if (session !== undefined && callId !== undefined && projections !== undefined) {
+            const boundary = projections.stateOf(session, 'turnBoundary')
+            const turn = boundary?.lastTurn
+            if (typeof turn === 'number' && turn >= 1) {
+              ;(session as { append(type: string, data: unknown): unknown }).append('deliverables/presented', {
+                turn,
+                callId,
+                files: outputs.map((path) => ({ path })),
+              })
+            } else {
+              logger.warn(`交付事件跳过（turnBoundary.lastTurn 缺失）${instanceId}`)
+            }
+          } else {
+            logger.warn(`交付事件跳过（session/callId/sessionProjections 缺失）${instanceId}`)
+          }
+        } catch (deliverErr) {
+          logger.warn(`交付事件写入失败 ${instanceId}: ${String(deliverErr)}`)
+        }
+
         return {
           ok: true,
           message: `回执已记录（${instanceId}，status=${status}`
@@ -237,8 +271,10 @@ export function receiptInstruction(task: TaskDefinition): string {
   const statuses = receiptStatuses(task)
   return [
     `回执（必须）：任务做完后调用工具 ${RECEIPT_TOOL_NAME} 提交回执。调度器以回执判定任务成败，不提交等于失败。`,
-    `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<产物文件，相对工作区根的路径>"] })`,
+    `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<产物，相对工作区根的路径>"] })`,
     `- status 只能填：${statuses.join(' | ')}（必须如实）；没有产出时省略 outputs。`,
+    `- outputs 填本次真实交付物：整目录就填目录路径（如 "web-app/"）；若干文件就逐个列（如 ["a.md","b.png"]）；可同时含多个目录与多个文件。插件会据此统一生成交付卡片，无需你额外处理。`,
+    `- **不要调用 present 工具**：交付卡片由插件统一生成，所有交付物通过上面的 outputs 声明即可；调用 present 既多余，遇到目录还会直接报错。`,
     `- 工具调用失败时：等约 10 秒后**原样重试**，最多重试 3 次。`,
     `- 重试 3 次仍失败：**立即停止**，不要尝试任何其他手段——不要读写状态库、不要改文件权限、`
       + `不要拷贝数据库、不要绕过沙箱、不要换别的方式提交。停下来即可，调度器会处理。`,

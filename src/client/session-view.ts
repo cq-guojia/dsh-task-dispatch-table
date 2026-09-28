@@ -901,9 +901,22 @@ function normalizeFilePath(p: string): string {
  * tool-fs 写入 meta.diffs[].path。会话级词表 = 官方 per-turn chatFileMentions 的简化偏差
  * （决策 39：resolve 命中才渲链接，解析不出保持惰性 code，永不猜）。
  */
-function collectFilePaths(order: readonly string[], store: ChatNodeStoreFace | undefined): string[] {
+function collectFilePaths(order: readonly string[], store: ChatNodeStoreFace | undefined, turns: unknown): string[] {
   if (store === undefined) return []
   const out = new Set<string>()
+  // 交付文件（presented）：会话 turn 级 deliverables.presented，同源覆盖 present 工具与插件代写（U12）。
+  if (turns !== null && turns !== undefined) {
+    const map = turns as ReadonlyMap<unknown, unknown>
+    for (const [, face] of map) {
+      const presented = (face as { data?: { deliverables?: { presented?: readonly { path?: unknown }[] } } } | undefined)
+        ?.data?.deliverables?.presented
+      if (!Array.isArray(presented)) continue
+      for (const file of presented) {
+        const path = typeof file?.path === 'string' ? file.path : undefined
+        if (path !== undefined && path.trim() !== '') out.add(normalizeFilePath(path))
+      }
+    }
+  }
   for (const key of order) {
     const node = store.get(key)
     if (node === undefined || node.kind !== 'tool-call') continue
@@ -941,28 +954,30 @@ function collectFilePaths(order: readonly string[], store: ChatNodeStoreFace | u
 }
 
 /**
- * 每轮交付文件（官方 DeliverablesTail 的 presented 数据同源推导）：keyed 流里
- * settled 且成功的 present 调用参数 files，按 turn 归组、按路径去重（后者覆盖前者，
- * 与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
+ * 每轮交付文件（官方 DeliverablesTail 同源数据）：读会话 turn 级 `deliverables.presented`，
+ * 由 `deliverables/presented` 事件经引擎填充——无论事件来自 present 工具还是本插件代写（U12
+ * 决策 40 演进：插件作唯一写入方，禁止 LLM 调 present），同源覆盖。按 turn 归组、按路径去重
+ * （后者覆盖前者，与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
  */
-function collectDeliveredFiles(order: readonly string[], store: ChatNodeStoreFace | undefined): ReadonlyMap<number, readonly DeliveredFileFace[]> {
+function collectPresentedByTurn(turns: unknown): ReadonlyMap<number, readonly DeliveredFileFace[]> {
   const out = new Map<number, readonly DeliveredFileFace[]>()
-  const byTurn = new Map<number, Map<string, DeliveredFileFace>>()
-  if (store === undefined) return out
-  for (const key of order) {
-    const node = store.get(key)
-    if (node === undefined || node.kind !== 'tool-call') continue
-    const root = (node.data as { root?: unknown } | undefined)?.root
-    if (!isPresentRoot(root)) continue
-    const turn = turnLocationOf(node)?.turn
-    if (turn === undefined) continue
-    const files = presentFiles(root)
-    if (files.length === 0) continue
-    let bucket = byTurn.get(turn)
-    if (bucket === undefined) { bucket = new Map(); byTurn.set(turn, bucket) }
-    for (const file of files) bucket.set(file.path, file)
+  if (turns === null || turns === undefined) return out
+  const map = turns as ReadonlyMap<unknown, unknown>
+  for (const [key, face] of map) {
+    const turn = typeof key === 'number' ? key : Number(key)
+    if (!Number.isInteger(turn) || turn < 1) continue
+    const presented = (face as { data?: { deliverables?: { presented?: readonly { path?: unknown; description?: unknown }[] } } } | undefined)
+      ?.data?.deliverables?.presented
+    if (!Array.isArray(presented) || presented.length === 0) continue
+    const files: DeliveredFileFace[] = []
+    for (const file of presented) {
+      const path = typeof file?.path === 'string' ? file.path : undefined
+      if (path === undefined || path.trim() === '') continue
+      const description = typeof file?.description === 'string' && file.description.trim() !== '' ? file.description : undefined
+      files.push(description === undefined ? { path } : { path, description })
+    }
+    if (files.length > 0) out.set(turn, files)
   }
-  byTurn.forEach((bucket, turn) => { out.set(turn, [...bucket.values()]) })
   return out
 }
 
@@ -1093,11 +1108,11 @@ export function SessionViewModal(props: {
     if (workspaceFiles === undefined || onOpenFile === undefined) return undefined
     return {
       open: openFile,
-      mentions: makeFileMentions(collectFilePaths(order, store), openFile),
+      mentions: makeFileMentions(collectFilePaths(order, store, turns), openFile),
     }
   }, [workspaceFiles, onOpenFile, openFile, order, store])
-  // 每轮交付文件（present 调用同源推导，独立于 workspaceFiles：卡片照官方常渲染，点击才走 openFile）。
-  const deliveredByTurn = useMemo(() => collectDeliveredFiles(order, store), [order, store])
+  // 每轮交付文件（会话 turn 级 deliverables.presented，同源覆盖 present 工具与插件代写；独立于 workspaceFiles）。
+  const deliveredByTurn = useMemo(() => collectPresentedByTurn(turns), [turns])
   const renderNode = useCallback<NodeRenderer>(
     (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliveredByTurn),
     [tt, onBranchAt, fileOpen, deliveredByTurn],

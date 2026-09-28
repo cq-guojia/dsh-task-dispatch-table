@@ -20,7 +20,7 @@ export const name = 'dsh-task-dispatch-table'
  * ⚠️ settings 不在此列：settings 服务以「带 register 面」或「惰性形态」两种组合入场，
  * 缺失 register 时硬性依赖会令 entry 卡死/崩；改由 apply 内 ctx.inject(['settings'], ...)
  * 订阅并在 register 就绪才激活（参照 dsh-context installSettings，决策 17 真机教训）。 */
-export const inject = ['timer', 'agents', 'sessions', 'workspaceRegistry', 'sessionTitle'] as const
+export const inject = ['timer', 'agents', 'sessions', 'workspaceRegistry', 'sessionTitle', 'sessionProjections'] as const
 
 export { Config, resolveStatePath }
 export type { PluginConfig }

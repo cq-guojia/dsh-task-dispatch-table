@@ -235,7 +235,7 @@ export async function dispatchTask(input) {
                     await composition.presets.mount(agentCtx, composition.presetId);
                 // 回执工具注册不上 ⇒ 这个会话没有任何回执通道，跑完必然白跑（决策 24）：当作前置条件
                 // 失败直接抛，工厂会回滚作用域、不发布会话；scheduler 按 receipt-tool-unavailable 收敛。
-                if (!registerReceiptTool(agentCtx, { store, task, instanceId, sessionId, logger })) {
+                if (!registerReceiptTool(agentCtx, { store, task, instanceId, sessionId, logger, sessionProjections: ctx.sessionProjections })) {
                     throw new DispatchPreconditionError('receipt-tool-unavailable', `任务 ${task.id} 的回执工具未注册成功（同名冲突或宿主未暴露 tools 服务），不派发`);
                 }
             },

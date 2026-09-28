@@ -1,6 +1,6 @@
 # 交付登记与产出展现（U12 扩展 · 文件/文件夹统一卡片）
 
-> 状态：🔵 规划中（源码事实已核实，方案已收敛为「插件单写 + 禁止 LLM 调 present」，待用户拍板落码）
+> 状态：🟢 已落码（2026-09-28，本地未提交，待真机复验）
 > 跟踪起点：2026-09-28 用户要求「所有产出的文件或文件夹都用交付卡片展现」；经源码核实与多轮澄清，最终收敛为「插件作为唯一写入方，LLM 只通过回执 `outputs` 声明产出，禁止 LLM 调 `present`」。
 > 关联：[`../design/artifact-opening.md §四-B`](../design/artifact-opening.md)（原 U12 B+C 设计，决策 40）、[`../design/decisions.md`](../design/decisions.md)、`src/receipt.ts`、`src/client/file-preview.tsx`、`src/client/mirror/Deliverables.tsx`。
 
@@ -52,25 +52,33 @@
 
 ---
 
-## 四、待拍板 / 未决
+## 四、待拍板 / 未决（落码后状态）
 
-| # | 问题 | 影响 | 方向（未定） |
-|---|---|---|---|
-| D1 | 「所有产出」的边界 | **已收敛**：仅回执 `outputs`（agent 声明）。插件不主动扫描工作区（避免 node_modules 等噪声）。✅ 无需拍板 | — |
-| D2 | `outputs` 校验放宽到目录时，目录「新鲜度」怎么算（存在性 / 子项 mtime 最大值） | 影响 B 路线是否把空目录也当交付 | 建议先用存在性；真机看是否需要子项时间 |
-| D3 | 文件夹在**本插件预览 dock** 里的呈现：目前 `openFile` 按扩展名分派，点目录无预览 | 弹窗/整页点文件夹卡若走本插件预览面，需补「目录 → `workspaceFiles.list` 列文件树」分支；容器无桌面时宿主「打开所在文件夹」不可用 | 二选一或并存：dock 内列目录树 / 仅依赖宿主 reveal；待用户拍板 |
-| D4 | 禁止 `present` 的实现强度：`present` 是 preset 内置工具，插件侧难卸载 | 仅靠提示词禁止，模型偶发仍可能调用（无害——只多一张卡或抛错） | 真机观察；若必禁则评估作用域禁用 `present` |
+| # | 问题 | 落码后状态 |
+|---|---|---|
+| D1 | 「所有产出」的边界 | ✅ 已收敛：仅回执 `outputs`（agent 声明），不扫描工作区。 |
+| D2 | `outputs` 校验放宽目录「新鲜度」 | ➖ **无需改**：`normalizeOutputs` 只归一字符串，从不按文件/目录区分，目录 path 天然可写；无存在性校验故无新鲜度问题。 |
+| D3 | 文件夹在**本插件预览 dock** 里的呈现 | 🔵 暂缓：宿主侧「打开所在文件夹」可用（容器无桌面时不可用）；dock 内 `workspaceFiles.list` 列目录树作为增强，待真机看是否需要。本次未实现（不阻塞主链路）。 |
+| D4 | 禁止 `present` 的强度 | ✅ 提示词禁止已落码；`present` 是 preset 内置，未做作用域禁用。真机观察模型是否仍调；若必禁再评估。 |
 
 ---
 
-## 五、落地清单（拍板后，顺序）
+## 五、落地清单（2026-09-28 已落码）
 
-1. `src/receipt.ts`：execute 改签 `(args, exec)` → 成功后 `session.append('deliverables/presented', …)`（files=校验 outputs，放宽到目录）；try/catch 仅 warn。
-2. `checkReceipt`/`reconcile.ts`：outputs 校验支持目录存在性。
-3. 提示词改两条：① `outputs` 按实际填「目录/文件/混合」；② **明确禁止调 `present`**（插件统一生成卡片）。
-4. （D3）`src/client/file-preview.tsx`：补目录分支（如采用 dock 内列树）。
-5. 冒烟补断言（回执流式 append / 失败只 warn 不影响回执 / files=校验 outputs 含目录 / 目录 path 可写 / 禁止 present 提示词文案）。
-6. 真机一轮任务验证：宿主会话视图出官方交付卡 + 我方弹窗出卡（**目录 + 文件混合**一例即可验证）。
+| # | 项 | 状态 |
+|---|---|---|
+| 1 | `src/receipt.ts`：execute 改签 `(args, exec)` → 回执成功后 `session.append('deliverables/presented', {turn, callId, files})`（files=归一 outputs，含目录）；独立 try/catch 仅 `logger.warn`，绝不拖垮回执 | ✅ 已落码（typecheck/build/smoke 153 全过） |
+| 2 | `checkReceipt`/`reconcile.ts` outputs 校验放宽目录 | ➖ 无需改（见 D2） |
+| 3 | 提示词两条：① outputs 按实际填「目录/文件/混合」；② **明确禁止调 `present`** | ✅ 已落码（`receiptInstruction` + 工具 outputs 描述） |
+| 4 | `src/index.ts` 注入 `sessionProjections` + `src/dispatch.ts` 透传（取 `turnBoundary.lastTurn`） | ✅ 已落码 |
+| 5 | **弹窗回归修复**：交付卡网格与词表改读会话 turn 级 `deliverables.presented`（`collectPresentedByTurn`），同源覆盖 present 工具与插件代写，消除「禁止 present 后弹窗空网格」回归 | ✅ 已落码 |
+| 6 | 冒烟断言更新 | ✅ 已落码 |
+| 7 | 真机一轮任务验证（目录 + 文件混合一例） | 🔵 待你重装 dist 复验 |
+
+### 实施要点（2026-09-28）
+- **B 路线直写事件**：`receipt.ts` 在回执成功、写库之后，取 `exec.agent.session` + `exec.callId` + `sessionProjections.stateOf(session,'turnBoundary').lastTurn`，直写 `deliverables/presented`。绕过 `present` 工具的「拒目录」限制 ⇒ 文件夹也能交付。失败只 `logger.warn`。
+- **禁止 present**：模型提示词明确「不要调用 present，交付卡片由插件统一生成；调 present 遇目录会报错」。单一写入方 ⇒ 结构性无重复卡片。
+- **弹窗同源**：交付卡网格不再从 present 工具调用块推导，改读会话 turn 级 `deliverables.presented`（官方 DeliverablesTail 同源数据，由 `deliverables/presented` 事件经引擎填充）。无论事件来自 present 工具还是本插件代写，弹窗都出卡。
 
 ---
 

@@ -18,6 +18,8 @@ export interface ReceiptToolDeps {
     /** 闭包注入的本次派发会话，模型不可见 ⇒ 回执不可冒充。 */
     sessionId: string;
     logger: HostLogger;
+    /** 闭包注入的 turnBoundary 投影读取面：取 `deliverables/presented` 事件所需的 turn。 */
+    sessionProjections?: unknown;
 }
 /**
  * 把回执工具注册进该 agent 的作用域（**只在 setup 里调**——发布前生效，见文件头）。
