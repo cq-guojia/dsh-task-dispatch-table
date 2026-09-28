@@ -102,7 +102,30 @@
 
 ---
 
-## 七、关联决策
+## 七、弹窗交付卡数据源改为「实例 outputs」权威（2026-09-28 二次复验仍不渲染）
+
+**现象**：§六 的 Map 修复推送后，用户重装 dist 复验——**老任务弹窗仍不出现交付卡**。说明根因不在读取 shape，
+而在**这些会话的快照里压根没有 `deliverables.presented`**：要么插件 `append('deliverables/presented')`
+那段被 `session/callId/sessionProjections` 任一缺失的分支跳过（仅 `logger.warn`），要么宿主 `target('chat')`
+的 timeline 快照没把 `deliverables` 重放进 `turn.data`。依赖「宿主 timeline 带 deliverables」不可靠。
+
+**决策（用户复验暴露后拍板）**：弹窗「交付文件」区块改以**本插件自己的 `task_instances.outputs` 为权威源**
+（回执落库真值、非模拟；执行记录「产出」列能显示即证明它存在），与快照 `deliveredByTurn` **合并去重**——
+`outputs` 覆盖 100%（老任务快照无数据但有 outputs），快照覆盖直接调 `present` 的任务（outputs 可能空），两者互补不重复。
+
+**改动**（`src/client/session-view.ts` + `src/client/index.ts`）：
+- `SessionViewModal` 增 `outputs?: string[]` prop；弹窗顶部常驻「交付文件」区块（`deliverRowTitle` 标题 +
+  `DeliverablesGridMirror`，`onOpen → openFile` 预览），数据 = `outputs` 与 `deliveredByTurn` 按路径去重合并。
+- turn-tail 节点**不再**渲染快照交付卡网格（改由顶部区块统一承载），避免重复。
+- `index.ts`：打开弹窗处（执行记录两处入口）把实例 `outputs` 经 `parseOutputs(row.outputs)` 透传进弹窗状态
+  （`viewing.outputs` → `SessionViewModal`）。
+- 冒烟加断言：`dsh-tdt-sv-deliver-section` + `deliverRowTitle`。typecheck + build + 冒烟 163 项全过。
+
+> 结论：交付卡「数据源」从「宿主 timeline 投影」**迁移到「自有状态库」**——更稳，且老任务免重跑即能渲染。
+
+---
+
+## 八、关联决策
 
 - 决策 40（U12 B+C）**已演进为 B-only + 禁止 present**：原 C 路线（LLM 兜底调 present）被取消，因插件直写已覆盖全部文件/目录场景，且 `present` 工具本身拒绝目录——保留 C 反而引入「目录调 present 必报错」与「两层重复」两个风险。本修订由用户 2026-09-28 拍板。
 - 与 U11 同源：`openFile` 统一入口、`FilePreviewPanel` dock、官方 `MarkdownText`/`CodeBlock` 渲染链均复用。

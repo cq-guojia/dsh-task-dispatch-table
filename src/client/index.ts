@@ -480,7 +480,7 @@ function TaskPage(props: {
     window.addEventListener('pointerup', onUp)
   }, [previewWidth])
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
-  const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget; didUnarchive?: boolean } | null>(null)
+  const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget; didUnarchive?: boolean; outputs?: string[] } | null>(null)
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
   const [viewErr, setViewErr] = useState<string | null>(null)
   // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
@@ -549,7 +549,7 @@ function TaskPage(props: {
     }).catch(() => { /* 回归档失败不阻断交互；该会话会留在列表里，用户可自行归档 */ })
   }
   /** 打开只读会话弹窗：retain 物化 scope 直开；失败才兜底反归档重试；不再静默无反应。 */
-  const openView = async (sessionId: string, heading: string): Promise<void> => {
+  const openView = async (sessionId: string, heading: string, outputs?: string[]): Promise<void> => {
     if (viewSession === null) {
       setViewErr('查看会话不可用：sessions / uiConversation 注入未就位（见控制台）')
       return
@@ -575,7 +575,7 @@ function TaskPage(props: {
       setViewErr('会话无法打开：retain / 物化 scope 失败（原因见控制台 [task-dispatch:session-view] 日志）')
       return
     }
-    setViewing({ sessionId, heading, view: target, didUnarchive })
+    setViewing({ sessionId, heading, view: target, didUnarchive, outputs })
   }
   const instances = (data?.instances ?? [])
     .filter(row => statusFilter === 'all' || row.status === statusFilter)
@@ -806,7 +806,7 @@ function TaskPage(props: {
                                   title: row.session_id,
                                   onClick: (event: { stopPropagation(): void }) => {
                                     event.stopPropagation()
-                                    openView(row.session_id as string, titleOfTask(row.task_id))
+                                    openView(row.session_id as string, titleOfTask(row.task_id), parseOutputs((row as unknown as { outputs?: unknown }).outputs))
                                   },
                                 }, row.session_id.slice(0, 8))
                                 : row.session_id.slice(0, 8),
@@ -850,7 +850,7 @@ function TaskPage(props: {
                                     ? h('button', {
                                       type: 'button',
                                       style: linkStyle,
-                                      onClick: () => { openView(row.session_id as string, titleOfTask(row.task_id)) },
+                                      onClick: () => { openView(row.session_id as string, titleOfTask(row.task_id), parseOutputs((row as unknown as { outputs?: unknown }).outputs)) },
                                     }, `↗ ${t('viewSession')}`)
                                     : null,
                                 ),
@@ -883,6 +883,9 @@ function TaskPage(props: {
         heading: viewing.heading,
         sessionId: viewing.sessionId,
         view: viewing.view,
+        // 交付文件（决策 41/42 派发快照同源）：以实例 outputs 权威渲染弹窗「交付文件」区块，
+        // 与宿主 timeline 快照里的 deliverables 合并去重，保证老/新任务都能展现。
+        outputs: viewing.outputs,
         // U10：fork + 官方跳转（服务未就位时为 null ⇒ 弹窗不渲染「继续对话」按钮）。
         forkSession: forkSession ?? undefined,
         openHostSession: openHostSession ?? undefined,

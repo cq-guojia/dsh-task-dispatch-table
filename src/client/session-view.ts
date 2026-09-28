@@ -622,7 +622,6 @@ function presentFiles(root: unknown): DeliveredFileFace[] {
  * @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
  * @param fileOpen - U11 文件打开上下文（undefined = workspaceFiles 未就位，链接全部降级为纯文本）。
  * @param groupPart - 过程分组侧（'response' | 'reasoning'）。
- * @param deliveredByTurn - 每轮交付文件（present 工具调用同源推导；官方 DeliverablesTail 同态）。
  * @returns 节点视图；null = 决策 28 过滤的噪音 kind。
  */
 function renderKeyedNode(
@@ -632,7 +631,6 @@ function renderKeyedNode(
   onBranchAt: ((seq: number) => void) | undefined,
   fileOpen: FileOpenFace | undefined,
   groupPart?: 'response' | 'reasoning',
-  deliveredByTurn?: ReadonlyMap<number, readonly DeliveredFileFace[]>,
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'turn-trigger':
@@ -644,19 +642,13 @@ function renderKeyedNode(
         t,
       })
     case 'turn-tail': {
-      // 官方 turnTail 插槽（closing === null 也渲染）：本弹窗用它承载交付文件卡网格
-      // （DeliverablesTail 镜像：present 交付的文件整卡可点 → openFile 预览）。
+      // 官方 turnTail 插槽承载「本轮收尾操作行」（复制/分支等）；交付文件卡网格已上移到弹窗顶部的
+      // 「交付文件」区块（由实例 outputs 权威渲染，不依赖宿主 timeline 快照是否带 deliverables）。
       const data = node.data as unknown as TurnTailDataFace | undefined
       const tail = data === undefined || data.closing === null || data.closing === undefined
         ? null
         : h(TurnTailNodeViewMirror, { data, onBranchAt, t })
-      const turn = data?.turn ?? turnLocationOf(node)?.turn
-      const delivered = turn === undefined ? undefined : deliveredByTurn?.get(turn)
-      const grid = delivered === undefined || delivered.length === 0
-        ? null
-        : h(DeliverablesGridMirror, { files: delivered, onOpen: fileOpen?.open, t })
-      if (tail === null && grid === null) return null
-      return h(Fragment, null, tail, grid)
+      return tail === null ? null : tail
     }
     case 'assistant-step': {
       // 官方块渲染器（lib/client.js:5818-5871）：
@@ -1037,6 +1029,12 @@ export function SessionViewModal(props: {
   sessionId: string
   view: SessionViewTarget
   onClose: () => void
+  /**
+   * 本实例的交付物路径（task_instances.outputs，回执落库的真值，非模拟）。
+   * 弹窗「交付文件」区块以它为权威源（不依赖宿主 timeline 快照是否把 deliverables 带上），
+   * 与快照里的 deliveredByTurn 合并去重，保证老/新任务、以及直接调 present 的任务都能展现。
+   */
+  outputs?: readonly string[]
   /** fork 源会话：`sessions.fork({ sessionId, increaseTitle: true })`，解析为子会话 id。 */
   forkSession?: (sessionId: string, atSeq?: number) => Promise<string>
   /** 官方导航跳转：`uiWorkspace.openSession(id)`（会话区打开目标会话）。 */
@@ -1050,7 +1048,7 @@ export function SessionViewModal(props: {
    */
   onOpenFile?: (path: string) => void
 }): ReturnType<typeof h> {
-  const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile } = props
+  const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
   const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
@@ -1123,11 +1121,24 @@ export function SessionViewModal(props: {
       mentions: makeFileMentions(collectFilePaths(order, store, turns), openFile),
     }
   }, [workspaceFiles, onOpenFile, openFile, order, store])
-  // 每轮交付文件（会话 turn 级 deliverables.presented，同源覆盖 present 工具与插件代写；独立于 workspaceFiles）。
+  // 每轮交付文件（会话 turn 级 deliverables.presented，覆盖 present 工具与插件代写；独立于 workspaceFiles）。
   const deliveredByTurn = useMemo(() => collectPresentedByTurn(turns), [turns])
+  // 弹窗「交付文件」区块的权威数据源 = 实例 outputs（回执落库真值）+ 快照 deliveredByTurn，按路径去重合并。
+  // outputs 是 100% 可靠的回执产出；快照 deliverables 仅在宿主投影成功重放时存在 ⇒ 两者互补、不重复。
+  const deliverFiles = useMemo<readonly DeliveredFileFace[]>(() => {
+    const byPath = new Map<string, DeliveredFileFace>()
+    const add = (file: DeliveredFileFace): void => {
+      const key = file.path.trim()
+      if (key === '' || byPath.has(key)) return
+      byPath.set(key, file)
+    }
+    for (const path of (outputs ?? [])) add({ path })
+    for (const files of deliveredByTurn.values()) for (const file of files) add(file)
+    return [...byPath.values()]
+  }, [outputs, deliveredByTurn])
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliveredByTurn),
-    [tt, onBranchAt, fileOpen, deliveredByTurn],
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart),
+    [tt, onBranchAt, fileOpen],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>
@@ -1165,7 +1176,19 @@ export function SessionViewModal(props: {
   }
   const openState = sessionSnap?.openState
   const showLoadOlder = sessionSnap?.hasMore !== false
-  const body = rendered.length === 0
+  // 「交付文件」区块：弹窗顶部常驻，渲染本实例全部交付物（outputs + 快照合并去重）。
+  const deliverSection = deliverFiles.length === 0 ? null : h('div', {
+    className: 'dsh-tdt-sv-deliver-section',
+    'data-deliverables-section': true,
+    style: { padding: '10px 14px', borderBottom: '0.5px solid var(--dsw-alias-border-l2, #e5e7eb)', background: 'var(--dsw-alias-bg-layer-2, #f7f8fa)' },
+  },
+    h('div', {
+      className: 'dsh-tdt-sv-deliver-heading',
+      style: { fontSize: '12px', fontWeight: 600, color: 'var(--dsw-alias-label-secondary, #6b7280)', marginBottom: '6px' },
+    }, tt('deliverRowTitle')),
+    h(DeliverablesGridMirror, { files: deliverFiles, onOpen: openFile, t: tt }),
+  )
+  const bodyInner = rendered.length === 0
     ? h(ChatHint, {
         text: openState === 'error' ? tt('sessionLoadFailed')
           : openState === 'loading' || openState === 'cold' ? tt('sessionLoading')
@@ -1177,6 +1200,7 @@ export function SessionViewModal(props: {
           : null,
         ...rendered,
       ]
+  const body = deliverSection === null ? bodyInner : [deliverSection, bodyInner]
 
   // 关闭途径：右上角关闭按钮 / 点遮罩（主面板同款，不监听 document）。
   // U10：头部「继续对话」按钮（fork 服务就位才渲染）→ 确认框 = 官方 Modal（portal 到 body，
