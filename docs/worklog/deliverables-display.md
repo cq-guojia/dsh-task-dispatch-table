@@ -169,6 +169,17 @@
   （`useLayoutEffect` 测 scrollWidth>clientWidth；展开态导航后自动收回折叠）。
 - ⚠️ CSS 在模板字符串里，注释**不能含反引号**（会终止字符串，TS1127）——省略号用文字描述。冒烟 172 项全过。
 
+**同日五次迭代（三验：两排布局 + 下拉选层 + outside-workspace 人话）**：用户否掉「换行展开」方案，拍板：
+- **两排布局**：第一排 = 面包屑独占（目录路径，无文件名）；第二排 = 文件名（跑马灯，hover 左移露出全名）
+  + 操作按钮（md 切段 / 复制 / 刷新 / 关闭）。
+- **面包屑超宽折叠为下拉**：隐藏测量条永远渲染完整面包屑（折叠态渲染的是收缩内容不能直接量，
+  `useLayoutEffect` 比较测量条与容器宽）；超宽 ⇒ 行首出下拉图标 + 当前层名，点开浮层菜单列出全部层级
+  供选层回跳，透明遮罩点击收起。未超宽照旧内联可点。
+- **`workspace-file/outside-workspace` 翻成人话**：官方 `list` 限定工作区内路径（wire 契约原文
+  「The directory listing or watch path resolves outside the Session's workspace root」），`workspace`
+  条目多半是指向外部的符号链接，官方同样拒绝——非我方 bug。errView 新增该分支 +
+  `previewOutsideWorkspace` 双语文案，不再显示裸错误码。
+
 ---
 
 ## 八、关联决策

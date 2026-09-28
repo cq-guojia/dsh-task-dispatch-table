@@ -233,6 +233,7 @@ window.__ModuleLoader__.load({
 			previewTooLarge: "文件过大，超出预览上限（{limit}）。",
 			previewDirectory: "这是一个目录，暂不支持目录浏览。",
 			previewNotRegular: "该路径不是常规文件（符号链接等），暂不支持预览。",
+			previewOutsideWorkspace: "该路径在会话工作区之外（常见于指向外部的符号链接），官方接口不允许浏览。",
 			previewError: "读取失败：{code}",
 			previewUnknownBinary: "二进制文件，暂不支持预览。可复制路径后在工作区中打开。",
 			previewBadPayload: "读取结果不符合官方契约（已记控制台日志），未渲染内容。",
@@ -478,6 +479,7 @@ window.__ModuleLoader__.load({
 			previewTooLarge: "The file is too large to preview (limit: {limit}).",
 			previewDirectory: "This is a directory; browsing directories is not supported yet.",
 			previewNotRegular: "Not a regular file (symlink or similar); preview is not supported.",
+			previewOutsideWorkspace: "This path resolves outside the session workspace (often a symlink pointing outward); the official API refuses to browse it.",
 			previewError: "Failed to read: {code}",
 			previewUnknownBinary: "Binary file; preview is not supported. Copy the path to open it in the workspace.",
 			previewBadPayload: "Read result does not match the official contract (logged to the console); nothing rendered.",
@@ -744,18 +746,26 @@ body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(-
 /* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、可横向滚动。 */
 .dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
 .dsh-tdt-sv-preview-code{max-width:100%;}
-/* ── U11 目录浏览器（面包屑导航，2026-09-28）：树 + 可点路径条 ── */
-/* 面包屑独立成第二行（用户 2026-09-28 复验：单行挤不下——第一行只留按钮，第二行整行给路径）。
-   超宽时横向滚动 + 自动滚到末端（当前层可见），且左侧出省略号按钮，点开换行展开全部层级。 */
-.dsh-tdt-sv-crumbs{flex:none;display:flex;align-items:center;gap:2px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
-.dsh-tdt-sv-crumbs::-webkit-scrollbar{display:none;}
-.dsh-tdt-sv-crumbs-expanded{flex-wrap:wrap;overflow:visible;white-space:normal;row-gap:2px;}
+/* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
+/* 三验拍板两排布局：第一排面包屑独占（超宽折叠为下拉），第二排文件名 + 按钮。
+   隐藏测量条永远渲染完整面包屑，宽度超容器即折叠（折叠态渲染收缩内容，不能直接量）。 */
+.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));white-space:nowrap;overflow:hidden;}
+.dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
 .dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--dsw-radius-sm,6px);font:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
 .dsh-tdt-sv-crumb:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-crumb-more{flex:none;width:auto;max-width:none;overflow:visible;font-weight:600;}
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));}
+/* 下拉选层：行首图标 + 浮层菜单列出全部层级；透明遮罩点击即收起。 */
+.dsh-tdt-sv-crumbs-menu-wrap{position:relative;display:inline-flex;}
+.dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
+.dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--dsw-static-neutral-00,#fff);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-md,8px);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
+body[data-ds-dark-theme] .dsh-tdt-sv-crumbs-menu{background:var(--dsw-static-neutral-900,#111);}
+.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:12px;line-height:20px;padding:4px 8px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+body[data-ds-dark-theme] .dsh-tdt-sv-crumbs-menu-item{color:var(--dsw-static-neutral-00,#fff);}
+.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+/* 第二排：文件名（跑马灯）+ 操作按钮。 */
+.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
 .dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
 .dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;user-select:none;}
@@ -3681,6 +3691,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 				case "not-text": return { key: "previewUnknownBinary" };
 				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
+				case "outside-workspace": return { key: "previewOutsideWorkspace" };
 				default: return {
 					key: "previewError",
 					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
@@ -3926,17 +3937,41 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [viewing, setViewing] = (0, react.useState)(null);
 			const [listErr, setListErr] = (0, react.useState)(null);
 			const [crumbsOverflow, setCrumbsOverflow] = (0, react.useState)(false);
-			const [crumbsExpanded, setCrumbsExpanded] = (0, react.useState)(false);
-			const crumbsRef = (0, react.useRef)(null);
+			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
+			const barRef = (0, react.useRef)(null);
+			const measureRef = (0, react.useRef)(null);
+			const titleRef = (0, react.useRef)(null);
+			const titleInnerRef = (0, react.useRef)(null);
 			const [sourceView, setSourceView] = (0, react.useState)(false);
 			const [reloadNonce, setReloadNonce] = (0, react.useState)(0);
 			const [copied, setCopied] = (0, react.useState)(false);
-			/** 列举并展示某目录（清空 viewing；面包屑收回折叠态）。 */
+			const startMarquee = () => {
+				const outer = titleRef.current;
+				const inner = titleInnerRef.current;
+				if (outer === null || inner === null) return;
+				inner.style.maxWidth = "none";
+				inner.style.textOverflow = "clip";
+				const shift = inner.scrollWidth - outer.clientWidth;
+				if (shift > 0) {
+					inner.style.transition = "transform 3s linear";
+					inner.offsetWidth;
+					inner.style.transform = `translateX(${-shift}px)`;
+				}
+			};
+			const stopMarquee = () => {
+				const inner = titleInnerRef.current;
+				if (inner === null) return;
+				inner.style.transition = "none";
+				inner.style.transform = "translateX(0)";
+				inner.style.maxWidth = "";
+				inner.style.textOverflow = "";
+			};
+			/** 列举并展示某目录（清空 viewing；收起下拉）。 */
 			const loadDir = (targetDir) => {
 				setDir(targetDir);
 				setViewing(null);
 				setListErr(null);
-				setCrumbsExpanded(false);
+				setMenuOpen(false);
 				setMode("loading");
 				workspaceFiles.list(sessionId, targetDir).then((result) => {
 					const parsed = listingOf(result);
@@ -3965,7 +4000,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setViewing(null);
 				setSourceView(false);
 				setReloadNonce(0);
-				setCrumbsExpanded(false);
+				setMenuOpen(false);
 				workspaceFiles.list(sessionId, path).then((result) => {
 					if (!alive) return;
 					const parsed = listingOf(result);
@@ -4004,20 +4039,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				path
 			]);
 			(0, react.useLayoutEffect)(() => {
-				const el = crumbsRef.current;
-				if (el === null) return;
-				if (crumbsExpanded) {
-					setCrumbsOverflow(false);
-					return;
-				}
-				const overflow = el.scrollWidth > el.clientWidth + 1;
-				setCrumbsOverflow(overflow);
-				if (overflow) el.scrollLeft = el.scrollWidth;
+				const bar = barRef.current;
+				const measure = measureRef.current;
+				if (bar === null || measure === null) return;
+				setCrumbsOverflow(measure.scrollWidth > bar.clientWidth + 1);
 			}, [
 				dir,
 				viewing,
 				mode,
-				crumbsExpanded,
 				listing
 			]);
 			const reload = () => {
@@ -4096,7 +4125,59 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onPointerDown: (event) => {
 					onResizeStart(event);
 				}
-			}), (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-head" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)("div", {
+			}), (0, react.createElement)("nav", {
+				ref: barRef,
+				className: "dsh-tdt-sv-crumbbar",
+				"aria-label": t("explorerCrumbsAria")
+			}, (0, react.createElement)("span", {
+				ref: measureRef,
+				className: "dsh-tdt-sv-crumbs-measure",
+				"aria-hidden": true
+			}, crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 12 }) : null, (0, react.createElement)("span", null, crumb.label)))), crumbsOverflow ? (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-wrap" }, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("explorerCrumbsMore"),
+				title: t("explorerCrumbsMore"),
+				"aria-expanded": menuOpen,
+				onClick: () => {
+					setMenuOpen((value) => !value);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })), menuOpen ? (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-crumbs-backdrop",
+				onClick: () => {
+					setMenuOpen(false);
+				}
+			}), (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-crumbs-menu",
+				role: "menu"
+			}, crumbs.map((crumb) => (0, react.createElement)("button", {
+				key: crumb.path,
+				type: "button",
+				role: "menuitem",
+				className: "dsh-tdt-sv-crumbs-menu-item",
+				title: crumb.path,
+				onClick: () => {
+					loadDir(crumb.path);
+				}
+			}, crumb.label)))) : null), crumbs.length > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs[crumbs.length - 1].label) : null) : crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
+				className: "dsh-tdt-sv-crumb-sep",
+				size: 12
+			}) : null, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-crumb",
+				onClick: () => {
+					loadDir(crumb.path);
+				}
+			}, crumb.label)))), (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, viewing !== null ? (0, react.createElement)("span", {
+				ref: titleRef,
+				className: "dsh-tdt-sv-preview-title",
+				onMouseEnter: startMarquee,
+				onMouseLeave: stopMarquee
+			}, (0, react.createElement)("span", {
+				ref: titleInnerRef,
+				className: "dsh-tdt-sv-preview-title-inner",
+				title: viewing
+			}, viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1))) : (0, react.createElement)("span", { className: "dsh-tdt-sv-preview-title" }), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-seg",
 				role: "group",
 				"aria-label": t("previewMdSwitchAria")
@@ -4132,31 +4213,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				"aria-label": t("previewClose"),
 				title: t("previewClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)("nav", {
-				ref: crumbsRef,
-				className: crumbsExpanded ? "dsh-tdt-sv-crumbs dsh-tdt-sv-crumbs-expanded" : "dsh-tdt-sv-crumbs",
-				"aria-label": t("explorerCrumbsAria")
-			}, crumbsOverflow && !crumbsExpanded ? (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-more",
-				"aria-label": t("explorerCrumbsMore"),
-				title: t("explorerCrumbsMore"),
-				onClick: () => {
-					setCrumbsExpanded(true);
-				}
-			}, "…") : null, crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
-				className: "dsh-tdt-sv-crumb-sep",
-				size: 12
-			}) : null, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				onClick: () => {
-					loadDir(crumb.path);
-				}
-			}, crumb.label))), viewing !== null ? (0, react.createElement)(react.Fragment, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
-				className: "dsh-tdt-sv-crumb-sep",
-				size: 12
-			}), (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1))) : null), body);
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), body);
 		}
 		//#endregion
 		//#region src/client/index.ts

@@ -238,6 +238,9 @@ export function errView(error: unknown): ErrView {
       return details !== null && details.kind === 'directory'
         ? { key: 'previewDirectory' }
         : { key: 'previewNotRegular' }
+    case 'outside-workspace':
+      // 官方 list 限定工作区内；常见于指向外部的符号链接（如 workspace→宿主目录），官方同样拒绝。
+      return { key: 'previewOutsideWorkspace' }
     default:
       return {
         key: 'previewError',

@@ -77,7 +77,7 @@ export type LocaleKey =
   // —— U11 产出物预览（分栏推压）：文件面 + 错误态 + 文本翻页 ——
   | 'previewClose' | 'previewLoading' | 'previewLoadMore' | 'previewFileLabel'
   | 'previewCopyPath' | 'previewRefresh' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
-  | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
+  | 'previewNotRegular' | 'previewOutsideWorkspace' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
   | 'previewSource' | 'previewRender' | 'previewMdSwitchAria'
   | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' | 'explorerCrumbsMore'
@@ -322,6 +322,7 @@ export const zh: Record<LocaleKey, string> = {
   previewTooLarge: '文件过大，超出预览上限（{limit}）。',
   previewDirectory: '这是一个目录，暂不支持目录浏览。',
   previewNotRegular: '该路径不是常规文件（符号链接等），暂不支持预览。',
+  previewOutsideWorkspace: '该路径在会话工作区之外（常见于指向外部的符号链接），官方接口不允许浏览。',
   previewError: '读取失败：{code}',
   previewUnknownBinary: '二进制文件，暂不支持预览。可复制路径后在工作区中打开。',
   previewBadPayload: '读取结果不符合官方契约（已记控制台日志），未渲染内容。',
@@ -571,6 +572,7 @@ export const en: Record<LocaleKey, string> = {
   previewTooLarge: 'The file is too large to preview (limit: {limit}).',
   previewDirectory: 'This is a directory; browsing directories is not supported yet.',
   previewNotRegular: 'Not a regular file (symlink or similar); preview is not supported.',
+  previewOutsideWorkspace: 'This path resolves outside the session workspace (often a symlink pointing outward); the official API refuses to browse it.',
   previewError: 'Failed to read: {code}',
   previewUnknownBinary: 'Binary file; preview is not supported. Copy the path to open it in the workspace.',
   previewBadPayload: 'Read result does not match the official contract (logged to the console); nothing rendered.',

@@ -244,18 +244,26 @@ body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(-
 /* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面撑满预览体、可横向滚动。 */
 .dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;overflow:hidden;}
 .dsh-tdt-sv-preview-code{max-width:100%;}
-/* ── U11 目录浏览器（面包屑导航，2026-09-28）：树 + 可点路径条 ── */
-/* 面包屑独立成第二行（用户 2026-09-28 复验：单行挤不下——第一行只留按钮，第二行整行给路径）。
-   超宽时横向滚动 + 自动滚到末端（当前层可见），且左侧出省略号按钮，点开换行展开全部层级。 */
-.dsh-tdt-sv-crumbs{flex:none;display:flex;align-items:center;gap:2px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));overflow-x:auto;white-space:nowrap;scrollbar-width:none;}
-.dsh-tdt-sv-crumbs::-webkit-scrollbar{display:none;}
-.dsh-tdt-sv-crumbs-expanded{flex-wrap:wrap;overflow:visible;white-space:normal;row-gap:2px;}
+/* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
+/* 三验拍板两排布局：第一排面包屑独占（超宽折叠为下拉），第二排文件名 + 按钮。
+   隐藏测量条永远渲染完整面包屑，宽度超容器即折叠（折叠态渲染收缩内容，不能直接量）。 */
+.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));white-space:nowrap;overflow:hidden;}
+.dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
 .dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--dsw-radius-sm,6px);font:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
 .dsh-tdt-sv-crumb:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-crumb-more{flex:none;width:auto;max-width:none;overflow:visible;font-weight:600;}
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));}
+/* 下拉选层：行首图标 + 浮层菜单列出全部层级；透明遮罩点击即收起。 */
+.dsh-tdt-sv-crumbs-menu-wrap{position:relative;display:inline-flex;}
+.dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
+.dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--dsw-static-neutral-00,#fff);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-md,8px);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
+body[data-ds-dark-theme] .dsh-tdt-sv-crumbs-menu{background:var(--dsw-static-neutral-900,#111);}
+.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:12px;line-height:20px;padding:4px 8px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+body[data-ds-dark-theme] .dsh-tdt-sv-crumbs-menu-item{color:var(--dsw-static-neutral-00,#fff);}
+.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+/* 第二排：文件名（跑马灯）+ 操作按钮。 */
+.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
 .dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
 .dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;user-select:none;}

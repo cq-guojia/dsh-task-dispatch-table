@@ -3,11 +3,9 @@
 // 入口与 FilePreviewPanel 同源：调用方 openFile(path) 传入的路径。本组件先 list(path) 探明是
 // 目录还是文件——list 成功 ⇒ 目录（渲染树）；报 not-directory ⇒ 文件（预览，dir 取其父目录）。
 //
-// 面包屑：把当前目录切成可点段，点任意段回跳到该层（第一段即「回到根目录」，无需专门按钮——
-// 用户 2026-09-28 复验拍板：去掉「上一级」「回到根目录」，浏览范围以点开的目录为起点即可）；
-// 点文件后末段显示文件名（不可点，点父段即返回）。
-// 头部两行（dock 窄，单行挤不下——用户 2026-09-28 反馈）：第一行 = 操作按钮；第二行 = 面包屑整行。
-// 面包屑超宽时折叠：左侧出 `…`，点开换行展开全部层级供点选。
+// 头部两排（用户 2026-09-28 三验拍板）：第一排 = 面包屑（目录路径，独占一排）；
+// 第二排 = 文件名（跑马灯）+ 操作按钮（md 切段 / 复制 / 刷新 / 关闭）。
+// 面包屑超宽时折叠：行首出一个小图标，点开**下拉菜单**列出全部层级供选层回跳（不换行展开）。
 //
 // 渲染底层全官方（md=MarkdownText / 代码=CodeBlock / 图片·PDF=readBytes→blob），数据一律
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
@@ -16,6 +14,7 @@ import type { ReactNode } from 'react'
 import {
   FileTypeIcon,
   IconCheckOutlineRegular,
+  IconChevronDownOutlineRegular,
   IconChevronRightOutlineRegular,
   IconCloseOutlineRegular,
   IconCopyOutlineRegular,
@@ -118,21 +117,47 @@ export function FileBrowser(props: {
   const [truncated, setTruncated] = useState(false)
   const [viewing, setViewing] = useState<string | null>(null)
   const [listErr, setListErr] = useState<ErrView | null>(null)
-  // 面包屑折叠（dock 窄，超宽时左侧出 `…`，点开换行展开全部层级）。
+  // 面包屑折叠（超宽时行首出下拉图标；菜单列出全部层级供选）。
   const [crumbsOverflow, setCrumbsOverflow] = useState(false)
-  const [crumbsExpanded, setCrumbsExpanded] = useState(false)
-  const crumbsRef = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const barRef = useRef<HTMLDivElement>(null)
+  const measureRef = useRef<HTMLSpanElement>(null)
+  // 文件名跑马灯（同 FilePreviewPanel：超长省略，hover 时向左滚动露出全名）。
+  const titleRef = useRef<HTMLSpanElement>(null)
+  const titleInnerRef = useRef<HTMLSpanElement>(null)
   // 预览态：md 渲染⇄源码 + 刷新自增（触发 Bytes/Text 重读）。
   const [sourceView, setSourceView] = useState(false)
   const [reloadNonce, setReloadNonce] = useState(0)
   const [copied, setCopied] = useState(false)
 
-  /** 列举并展示某目录（清空 viewing；面包屑收回折叠态）。 */
+  const startMarquee = (): void => {
+    const outer = titleRef.current
+    const inner = titleInnerRef.current
+    if (outer === null || inner === null) return
+    inner.style.maxWidth = 'none'
+    inner.style.textOverflow = 'clip'
+    const shift = inner.scrollWidth - outer.clientWidth
+    if (shift > 0) {
+      inner.style.transition = 'transform 3s linear'
+      void inner.offsetWidth
+      inner.style.transform = `translateX(${-shift}px)`
+    }
+  }
+  const stopMarquee = (): void => {
+    const inner = titleInnerRef.current
+    if (inner === null) return
+    inner.style.transition = 'none'
+    inner.style.transform = 'translateX(0)'
+    inner.style.maxWidth = ''
+    inner.style.textOverflow = ''
+  }
+
+  /** 列举并展示某目录（清空 viewing；收起下拉）。 */
   const loadDir = (targetDir: string): void => {
     setDir(targetDir)
     setViewing(null)
     setListErr(null)
-    setCrumbsExpanded(false)
+    setMenuOpen(false)
     setMode('loading')
     workspaceFiles.list(sessionId, targetDir)
       .then((result) => {
@@ -154,7 +179,7 @@ export function FileBrowser(props: {
     setViewing(null)
     setSourceView(false)
     setReloadNonce(0)
-    setCrumbsExpanded(false)
+    setMenuOpen(false)
     workspaceFiles.list(sessionId, path)
       .then((result) => {
         if (!alive) return
@@ -191,15 +216,13 @@ export function FileBrowser(props: {
     return () => { alive = false }
   }, [workspaceFiles, sessionId, path])
 
-  // 面包屑溢出测量：超宽 ⇒ 未展开时显示 `…`；未展开时自动滚到末端（当前层始终可见）。
+  // 面包屑溢出测量：隐藏测量条永远渲染完整面包屑，宽度超容器 ⇒ 折叠为「下拉图标 + 当前层名」。
   useLayoutEffect(() => {
-    const el = crumbsRef.current
-    if (el === null) return
-    if (crumbsExpanded) { setCrumbsOverflow(false); return }
-    const overflow = el.scrollWidth > el.clientWidth + 1
-    setCrumbsOverflow(overflow)
-    if (overflow) el.scrollLeft = el.scrollWidth
-  }, [dir, viewing, mode, crumbsExpanded, listing])
+    const bar = barRef.current
+    const measure = measureRef.current
+    if (bar === null || measure === null) return
+    setCrumbsOverflow(measure.scrollWidth > bar.clientWidth + 1)
+  }, [dir, viewing, mode, listing])
 
   const reload = (): void => {
     if (viewing !== null) { setReloadNonce(n => n + 1); return }
@@ -266,7 +289,63 @@ export function FileBrowser(props: {
         title: t('previewResize'),
         onPointerDown: (event: { clientX: number; pointerId: number }) => { onResizeStart(event) },
       }),
-    h('div', { className: 'dsh-tdt-sv-preview-head' },
+    // 第一排：面包屑（目录路径独占一排）。超宽 ⇒ 行首下拉图标 + 当前层名。
+    h('nav', {
+      ref: barRef,
+      className: 'dsh-tdt-sv-crumbbar',
+      'aria-label': t('explorerCrumbsAria'),
+    },
+      h('span', { ref: measureRef, className: 'dsh-tdt-sv-crumbs-measure', 'aria-hidden': true },
+        crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+          index > 0 ? h(IconChevronRightOutlineRegular, { size: 12 }) : null,
+          h('span', null, crumb.label),
+        ))),
+      crumbsOverflow
+        ? h(Fragment, null,
+          h('div', { className: 'dsh-tdt-sv-crumbs-menu-wrap' },
+            h('button', {
+              type: 'button',
+              className: 'dsh-tdt-sv-head-btn',
+              'aria-label': t('explorerCrumbsMore'),
+              title: t('explorerCrumbsMore'),
+              'aria-expanded': menuOpen,
+              onClick: () => { setMenuOpen(value => !value) },
+            }, h(IconChevronDownOutlineRegular, { size: 14 })),
+            menuOpen
+              ? h(Fragment, null,
+                h('div', { className: 'dsh-tdt-sv-crumbs-backdrop', onClick: () => { setMenuOpen(false) } }),
+                h('div', { className: 'dsh-tdt-sv-crumbs-menu', role: 'menu' },
+                  crumbs.map(crumb => h('button', {
+                    key: crumb.path,
+                    type: 'button',
+                    role: 'menuitem',
+                    className: 'dsh-tdt-sv-crumbs-menu-item',
+                    title: crumb.path,
+                    onClick: () => { loadDir(crumb.path) },
+                  }, crumb.label)),
+                ))
+              : null,
+          ),
+          crumbs.length > 0
+            ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, crumbs[crumbs.length - 1].label)
+            : null,
+        )
+        : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+          index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-crumb',
+            onClick: () => { loadDir(crumb.path) },
+          }, crumb.label),
+        )),
+    ),
+    // 第二排：文件名（跑马灯）+ 操作按钮。
+    h('div', { className: 'dsh-tdt-sv-titlebar' },
+      viewing !== null
+        ? h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },
+          h('span', { ref: titleInnerRef, className: 'dsh-tdt-sv-preview-title-inner', title: viewing },
+            viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1)))
+        : h('span', { className: 'dsh-tdt-sv-preview-title' }),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
         isMdPreview
           ? h('div', {
@@ -300,35 +379,6 @@ export function FileBrowser(props: {
           onClick: onClose,
         }, h(IconCloseOutlineRegular, { size: 14 })),
       ),
-    ),
-    h('nav', {
-      ref: crumbsRef,
-      className: crumbsExpanded ? 'dsh-tdt-sv-crumbs dsh-tdt-sv-crumbs-expanded' : 'dsh-tdt-sv-crumbs',
-      'aria-label': t('explorerCrumbsAria'),
-    },
-      crumbsOverflow && !crumbsExpanded
-        ? h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-more',
-          'aria-label': t('explorerCrumbsMore'),
-          title: t('explorerCrumbsMore'),
-          onClick: () => { setCrumbsExpanded(true) },
-        }, '…')
-        : null,
-      crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
-        index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-crumb',
-          onClick: () => { loadDir(crumb.path) },
-        }, crumb.label),
-      )),
-      viewing !== null
-        ? h(Fragment, null,
-          h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }),
-          h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1)),
-        )
-        : null,
     ),
     body,
   )
