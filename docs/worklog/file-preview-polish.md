@@ -114,14 +114,26 @@ onWrap: wrap === void 0 ? () => { setWrapped((value) => !value); } : void 0
   特异性 (0,3,·) 压过官方 (0,2,·)；换行关 = 官方默认（pre 不折行 + content `overflow:auto` ⇒ 横向滚动条）。
   ⚠️ 注意模板字符串注释里不能写反引号（本轮踩过：`` ` `` 直接终止字符串 ⇒ TS1005）。
 
-### 7.2 面包屑：dir 一律以服务端规范路径为准
+### 7.2 面包屑：⚠️「改用服务端规范路径」是错的，已回退（第四轮）
 
-- 根因：`dir` 直接用入口路径。工具卡文件链接带**宿主绝对路径**（面包屑全）；
-  交付卡 / 执行记录「产出」列把声明路径**原样**传 `openFile`，常是工作区相对名 ⇒ 面包屑只剩一层。
-- 官方 `list` 返回 `path: workspacePathOf(root, target)` = **工作区相对的规范路径**
-  （`dsh-api-workspace-files@0.1.7-rc.2 lib/index.js:494`）。修法 = `fetchDir` / 初次进入 / 文件态父目录
-  三处 `setDir` 一律改用 `parsed.path`（真实取数），两类入口面包屑一致、从工作区列全。
-- 工作区根目录态（crumbs 空）补「（工作区根目录）」占位 crumb（可见态 + 溢出测量条同构）。
+**本轮先写错了方向，真机被打回**：为修「点目录只剩一层」，我把 `dir` 改成服务端 `list` 返回的
+`path`。实测把面包屑改得更坏——点**任何文件**都只剩最近一层（`Temp`，原本是 `workspace > Temp`）。
+
+- 根因（源码事实，`dsh-api-workspace-files@0.1.7-rc.2 lib/index.js:494`）：
+  ```js
+  path: workspacePathOf(this.ctx.fs.fileUrl(root), this.ctx.fs.fileUrl(target))
+  ```
+  这个 `path` 是**工作区相对**形式——工作区根为 `/workspace` 时，`/workspace/Temp` 的规范路径就是
+  `Temp`。用它当面包屑 ⇒ 丢掉根以下的所有前导段，只剩最近一层。
+  ⇒ 用户要的是「**从工作区根目录往下列**」= **入参路径**（宿主绝对形态）逐段展开，
+  即**原来的逻辑**。三处 `setDir(parsed.path/pl.path)` 全部**回退**为入参路径（`targetDir` / `path` / 父目录）。
+- 已在 `crumbsOf(dir)` 处加防再犯注释（写明服务端 path 是相对形式、本轮踩过）。
+- 保留（本轮新加、与回退不冲突）：工作区根目录态（crumbs 空）补「（工作区根目录）」占位 crumb
+  （可见态 + 溢出测量条同构）——原本根目录态面包屑是完全空白的。
+- **「点目录只剩一层」仍未解决、也不再猜**：若目录入口拿到的是工作区相对名（如产出声明 `Temp`），
+  入参路径本身就是一层。真正需要的是把它解析成宿主绝对路径——已核实的可用工具是
+  官方 `stat(path)`（`statOf` 返回 `absolutePath: this.ctx.fs.processPath(target)`，**宿主绝对路径**）。
+  待用户确认该场景后再动，避免第三次猜错。
 
 ### 7.3 下拉选层箭头：一行一个
 
