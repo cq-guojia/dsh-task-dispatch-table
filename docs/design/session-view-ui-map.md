@@ -80,13 +80,15 @@ for (let i=0;i<lines.length;i++){
 | 宽表格 | `body .md-table-wide` | 用 `--dsh-table-spare/lead` 让表格越出内容列宽度 | ❌（MarkdownText 自带） |
 | 停止徽标 | `stopped` | `border-radius:var(--dsw-radius-sm); background:interactive-bg-hover; color:label-tertiary` | ❌ |
 
-**渲染器**：官方 `MarkdownText`（primitives，mdast + KaTeX + 代码块工具条；`labels = { code:{copyLabel,copiedLabel}, footnotes }` 必填且需引用稳定）→ ✅ 已接入。
+**渲染器**：官方 `MarkdownText`（primitives，mdast + KaTeX + 代码块工具条；`labels = { code:{copyLabel,copiedLabel,toolbarLabels:{codeLabel,wrapLabel,unwrapLabel}}, footnotes }` 必填且需引用稳定）→ ✅ 已接入（共用常量 `src/client/md-labels.ts`）。
+
+> ⚠ **`code.toolbarLabels` 是官方 `CodeBlock` 的分叉开关**（primitives：有它 ⇒ `CodeToolbar` 图标钮卡片；没它 ⇒ 老式 banner，右 = **文字**「复制」钮、无换行钮）。官方 Chat 的 `markdownLabels(t)` 必传这三条（`ui-chat lib/client.js:196-210`）。谁新起一处 `MarkdownText` 忘了传，症状就是「代码块右边一个中文复制」——2026-09-28 修过一次，详见 [`worklog/code-block-toolbar.md`](../worklog/code-block-toolbar.md)。
 
 ### 三-B、markdown 内容元素（表格 / 代码块 / 行内 code / emoji 标题）——全部由 `MarkdownText` 带出
 
 | 元素 | 官方来源 | 关键样式 / 行为（源码原文） | 我们 |
 |---|---|---|---|
-| **代码块卡片**（左上 `bash`/`json` 语言名，右上「换行 + 复制」两钮） | `MarkdownText` 内部 = primitives **`CodeCard`**（`primitives/lib/CodeCard.module.css`） | `.card{margin:16px 0; background:var(--dsw-alias-markdown-code-block); border-radius:var(--dsw-radius-lg); font:var(--dsw-font-markdown-code-block)}`；`.header{padding:10px 18px 8px 22px; justify-content:space-between}`；`.language{color:label-tertiary; font-family:var(--ds-font-family-code)}`；`.actions{gap:4px}`（`.action` 24px 方钮：**换行切换 + 复制**） | ✅（用 MarkdownText 自动获得；需传 `labels.code`） |
+| **代码块卡片**（左上 `bash`/`json` 语言名，右上「换行 + 复制」两钮） | `MarkdownText` 内部 = primitives **`CodeCard`**（`primitives/lib/CodeCard.module.css`） | `.card{margin:16px 0; background:var(--dsw-alias-markdown-code-block); border-radius:var(--dsw-radius-lg); font:var(--dsw-font-markdown-code-block)}`；`.header{padding:10px 18px 8px 22px; justify-content:space-between}`；`.language{color:label-tertiary; font-family:var(--ds-font-family-code)}`；`.actions{gap:4px}`（`.action` 24px 方钮：**换行切换 + 复制**） | ✅（用 MarkdownText 自动获得；**须传 `labels.code.toolbarLabels`**——缺它官方降级成文字「复制」老式 banner，2026-09-28 修） |
 | **语法高亮**（json 彩色 token） | primitives `CODE_HIGHLIGHT_EXTENSIONS` / `languageForPath` / `useCodeHighlighter`（Lezer） | 由 MarkdownText 内部使用 | ✅ |
 | **表格**（表头行 / 单元格 / 行内 code chip，**横向分隔线、无竖线**） | `MarkdownText` + `AssistantMarkdown.body .md-table-wide` + `MarkdownText.module.css` | 滚动容器：`.tableScroll{max-width:100%; overflow-x:auto}`；**宽表（`.md-table-wide`）平时隐藏横滚条、hover/focus 才出**（`overflow-x:hidden→scroll; padding-bottom:var(--dsh-scrollbar-width,5px)→0`）；`table{border-collapse:collapse; width:max-content; max-width:max-content}`；宽表越出内容列：`--dsh-table-spare/lead` | ✅ |
 | **行内 code chip**（`web_search`、`AGENTS.md`） | `MarkdownText` 行内 code | 小圆角底色 chip | ✅ |
@@ -317,4 +319,4 @@ for (let i=0;i<lines.length;i++){
 
 ---
 
-*最后更新：2026-09-28 · 基于 0.1.7-rc.2 源码逐项核实；工具行真身（ui-tool ToolRow）分发链已照抄进 mirror/GenericCommandCard。*
+*最后更新：2026-09-28 · 基于 0.1.7-rc.2 源码逐项核实；工具行真身（ui-tool ToolRow）分发链已照抄进 mirror/GenericCommandCard；§三 补 `code.toolbarLabels` 必传（官方 CodeBlock 的分叉开关）。*

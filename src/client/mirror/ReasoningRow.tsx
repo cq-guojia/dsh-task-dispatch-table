@@ -7,9 +7,8 @@
 import { Fragment, createElement as h, useState } from 'react'
 import { DisclosureRow, IconThinkOutlineRegular, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
+import { MD_LABELS } from '../md-labels'
 import type { Translate } from '../locales'
-
-const MD_LABELS = { code: { copyLabel: '复制', copiedLabel: '已复制' }, footnotes: '脚注' }
 
 /** 官方 firstLine（lib/client.js:5687）：首行。 */
 function firstLine(text: string): string {

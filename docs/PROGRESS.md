@@ -8,7 +8,7 @@
 > **本文件范围**：只记**开发项**（设计 → 数据模型 → 代码 → 发布）。
 > 内容一旦**定型**就升格到 [`docs/design/`](design/) 下的专题文档，这里只留链接。
 >
-> **最后更新**：2026-09-28 · U11 第八轮（真机反馈）：拖拽条去块状高亮（hover 仅 1px 细线，深白浅黑）；md 切换改官方分段控件（预览|源码）叠进 CodeBlock 工具条（不加行不套框），md 源码态 wrap 避免横向滚动条。冒烟 151 项全过（dist ≈241 kB）。
+> **最后更新**：2026-09-28 · 第九轮（真机反馈）：代码块对齐官方 CodeCard 工具条——`MarkdownText` 的 labels 补 `code.toolbarLabels`（缺它是官方 `CodeBlock` 降级成文字「复制」老式 banner 的分叉点），三处调用点共用 `src/client/md-labels.ts`；冒烟 152 项全过（dist 241.68 kB）。
 
 ---
 
@@ -47,6 +47,7 @@
 - **U11 第三轮：预览面上提为页面级唯一 dock + 拖拽 + 崩溃隔离（2026-09-28）**：用户拍板「弹窗与整页共用同一个预览面、弹窗不遮盖它」⇒ 预览从屏幕最右挤出、把整页（含弹窗）往左推（`--dsh-tdt-preview-w` 变量驱动弹窗 overlay 的 right；第三轮时整页用 marginRight，第四轮改 flex 分栏）；弹窗内分栏形态废弃；**关弹窗不影响预览、预览可独立收回**；左缘 6px 拖拽条调宽（拖时只改变量、松手落 state + localStorage，320px ~ 视口 70%）。同时修两个真机 bug：① 预览体包 `PreviewBoundary` ⇒ 渲染异常不再拖垮整页（「点了直接黑屏」）；② `read`/`readBytes` 结果按官方 wire schema 防御解析，取不到 text/data 走错误态并打形状日志（「undefined undefined undefined」+ `endsWith` 崩溃）。另：**执行记录行新增「产出」列**——回执 outputs（决策 32③ 真值）逐个渲成链接，走同一个 `openFile` 入口。typecheck + build（dist 237.20 kB）+ 冒烟 +7 = **146 项全过**。
 - **U11 第四轮：真机三反馈修复（2026-09-28）**：① 控制台 `read 返回形状不符契约（无 text 字段）：{ok,error}` ⇒ 真相 = **typert 远端面失败时 resolve `{ok:false,error}` 而非 reject** ⇒ 新增 `unwrapEnvelope` 剥信封，失败按官方 bareCode 走错误态文案（原来被当成空内容渲染）；② 「预览弹出后整页滚动条没了」⇒ dock 原是 fixed 浮层压住滚动条 ⇒ 改为**占布局的分栏**（根容器横向 flex：内容区 flex:1，dock sticky 占 `--dsh-tdt-preview-w`）——整页被真正挤窄、滚动条留在内容区，与用户「分栏压过来，不是盖上去」的要求一致；③ 文本渲染对齐官方 `sidebar-documentpreview` 的 CodeBody（`lib/client.js:5033`）：所有文本统一 `CodeBlock + lineNumbers:true + lang=languageForPath(path)` + 官方 toolbar（复制/换行）；md 默认 MarkdownText 渲染视图，右上角「源码」切到同一块 CodeBlock（官方预览层无「编辑」——那是编辑器 tab，不在预览契约 ⇒ 只做渲染⇄源码两态，用户已认）。官方类发现扩 `ui-sidebar-documentpreview` 前缀（CodeBody: renderer/code）。typecheck + build + 冒烟 +4 = **150 项全过**。
 - **U11 真机「链接不可点」根因修复（2026-09-28 第五轮）**：真机截图确认读取/写入行路径全部不可点 ⇒ 根因 = 注入键缺 **dotted `remote.workspaceFiles`**（官方 client 模块同款 inject 语义 = 等命名空间挂上 remote 才启动；只注 `['remote']` 回调先于挂载触发且不重试 ⇒ 探测永久失败 ⇒ `fileOpen` 全程 undefined ⇒ fileLink 全降级纯文本）。修复 = inject 补 dotted 键 + 取值双保险（dotted 注入值优先，退回 remote 属性）+ 等待/就位/未就位三条日志。typecheck + build（dist 227.21 kB）+ 冒烟 +1 = **139 项全过**。**待真机**：重装后控制台应出现「remote.workspaceFiles 已就位」，然后读取/写入行路径、交付文件卡、正文文件链接均可点开右侧预览分栏。
+- **代码块工具条对齐官方（2026-09-28 第九轮）**：真机反馈「官方代码块右上两个图标钮，我们弹窗里是中文『复制』文字钮」。根因（源码级）= 官方 `CodeBlock` 拿 `labels.code.toolbarLabels` 当**分叉开关**（有 ⇒ `CodeToolbar` 图标钮卡片；无 ⇒ 老式 banner，右 = 文字复制钮、无换行钮），而官方 Chat 的 `markdownLabels(t)` **必传**这三条（`ui-chat lib/client.js:196-210`）——我们三处 `MarkdownText` 调用点（正文 / 思考体 / 预览 md 渲染态）都没传。修法 = 新建共用常量 `src/client/md-labels.ts`（单一份，取值接 `locales.ts` zh 词典）+ 三处改用 + `primitives.d.ts` 补 `toolbarLabels?` 类型；预览面板源码态的 CodeBlock 本就传了 `toolbarLabels`，不受影响。typecheck + build（dist 241.68 kB）+ 冒烟 +1 = **152 项全过**。**待真机**：弹窗正文 / 思考展开体 / 预览 md 三处的代码块右上应为「换行 + 复制」两个图标钮（hover 有底、tooltip 出「复制」、复制成功变勾 1 秒复位）。遗留（en 界面下这三条 tooltip 仍中文）见 [worklog/code-block-toolbar.md](worklog/code-block-toolbar.md)。
 
 ---
 
@@ -72,6 +73,7 @@
 | 16 | 官方 keyed 流 + 三级收折照抄 + 弹窗外壳改宿主惯例（决策 36/37） | ✅ 落码 | 09-27 | 渲染主路换 `order + nodes`（keyed ChatNodeStore）；官方 ChatNodeSeat 折叠判定 / TurnProcessNodeView 用时行 / **ChatGroupSeat 过程分组（process-groups 算法移植，二级收折）** / TurnTriggerNodeView 触发行 / TurnTailNodeView+MessageIconActions 操作行 / TurnUsagePanel+StatDialog 用量弹层逐字照抄进 `mirror/`；工具行标题接 `tool.title.*` 字典；弹窗不做续聊（Composer 占位与分支 icon 移除 → U10「开分支继续对话」）；外壳 `min(1120px,100vw-32px)`×`calc(100% - 80px)` + 裸叉关闭钮 + 标题横线 + 内间距定尺 24px。**待真机逐级比对折叠形态** | [worklog/session-view.md](worklog/session-view.md) · [design/session-view-ui-map.md](design/session-view-ui-map.md) |
 | 17 | U10「继续对话（开分支）」（决策 38 含 ⑦） | ✅ 完成（真机验证通过） | 09-27 | 弹窗头部「继续对话」按钮 + 每轮回复操作行官方分支 icon：统一确认框（官方 Modal + Button，防误点）→ `sessions.fork`（increaseTitle 递增 `(1)`；头部 = 全量，消息行 = `atSeq` 截断到该条消息）→ 先关弹窗（release 源会话）→ `uiWorkspace.openSession` 官方导航跳转；尾部操作行恒常显（弹窗偏差，用户拍板）；inject 补 dsh-client-ui-workspace。冒烟 108 项全过 | [worklog/session-view.md](worklog/session-view.md) · [design/decisions.md](design/decisions.md) |
 | 18 | U11 产出物打开（决策 39） | ✅ 落码完成（待真机验证） | 09-27~09-28 | 官方四层能力核实；右栏对本插件证伪；统一 `openFile` 入口 + 弹窗内右侧分栏推压预览面（md=MarkdownText / 代码=CodeBlock Shiki / 图片·PDF=readBytes→blob / 文本=read 分页；错误态照官方错误码；fileMentions 会话级词表）；第二轮补交付文件官方化（present 行 + 交付文件卡网格）+ workspaceFiles 诊断日志；冒烟 138 项全过 | [design/artifact-opening.md](design/artifact-opening.md) · [worklog/artifact-opening.md](worklog/artifact-opening.md) |
+| 19 | 代码块工具条对齐官方 CodeCard（`code.toolbarLabels`） | ✅ 落码完成（待真机验证） | 09-28 | 官方 `CodeBlock` 以 `labels.code.toolbarLabels` 为分叉开关（缺 ⇒ 文字「复制」老式 banner）；三处 `MarkdownText` 调用点补传并收敛到共用 `src/client/md-labels.ts`；冒烟 152 项全过 | [worklog/code-block-toolbar.md](worklog/code-block-toolbar.md) · [design/session-view-ui-map.md](design/session-view-ui-map.md) |
 
 ---
 
@@ -102,6 +104,7 @@
 1.5. **【U10】✅ 真机验证通过，已收口**（2026-09-27；决策 38 含 ⑦：头部按钮全量分支 + 消息行分支 icon 按 `atSeq` 截断）。
 1.6. **【U11】✅ 落码完成（09-27 + 09-28 第二/三/五轮），待真机复验**：入口三处——① 弹窗内（读取·写入·编辑行路径 / 正文 fileMentions / 交付文件卡）；② 执行记录行「产出」列（回执 outputs）；③ 预览面 = **页面级唯一 dock**（屏幕最右挤出，整页与弹窗一起左推，左缘可拖拽调宽，关弹窗不影响它）。**真机先重装新 dist 再看控制台**：`remote.workspaceFiles 已就位` = 注入正常；若预览出现「不符合官方契约」= 把控制台那行 `read 返回形状不符契约（…）` 发我。形态与契约见 [design/artifact-opening.md §四-C](design/artifact-opening.md)。验证通过后说「提交」再 commit+push。：弹窗内点工具卡路径 / md 正文文件链接 / turn 尾部交付文件卡 → 右侧分栏展开（对话左压）按类型渲染（md=MarkdownText、代码=Shiki CodeBlock、图片/PDF=readBytes→blob、文本=read 分页「加载更多」）；present 调用 = 官方交付文件行镜像；错误态（不存在 / 过大 / 二进制 / 目录）+「复制路径」；关闭分栏恢复。**真机先重装新 dist 再看控制台**：`remote.workspaceFiles 已就位` = 注入正常；只有「等待…」或「未就位」= 把那行日志发回。细节见 [design/artifact-opening.md](design/artifact-opening.md) §四与 [worklog/artifact-opening.md](worklog/artifact-opening.md) 第三/四轮。验证通过后说「提交」再 commit+push。
 1.7. **【U12】交付登记（B+C）方案已定、待实施**（排在本条之后，用户明确先解决文件预览）：方案与源码证据见 [design/artifact-opening.md §四-B](design/artifact-opening.md)，决策 40 见 [design/decisions.md](design/decisions.md)。落地顺序：receipt.ts 改 execute 取第二参 exec → 回执成功时 `session.append('deliverables/presented', …)`（失败只记日志）/ turn 取 `turnBoundary.lastTurn`（取不到即跳过）/ 提示词补「调用 present 交付关键文件」/ 冒烟补断言 → 真机一轮任务验双方出卡。
+1.8. **【代码块工具条】✅ 已修（第九轮），待真机**：看三处——弹窗**正文**里带语言的 fenced 代码块、「思考」展开体、预览面板 md **渲染态**（源码态本来就没问题）。期望：卡片左上 = 语言名（语言不被高亮支持时 = 「代码块」），右上 = **换行 + 复制两个 24px 图标钮**（hover 有底、tooltip「复制 / 自动换行」、复制成功变勾 1 秒复位），不再出现中文文字「复制」钮。若仍是文字钮 ⇒ 把该处 `MarkdownText` 的 labels 来源发我（护栏断言见 [worklog/code-block-toolbar.md](worklog/code-block-toolbar.md)）。
 
 2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
 3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。

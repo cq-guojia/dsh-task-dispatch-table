@@ -7,10 +7,18 @@
 declare module '@deepseek-ai/dsh-client-ui-primitives' {
   import type { ComponentType, ReactNode } from 'react'
 
+  /** 代码块卡片工具条文案（官方 CodeToolbarLabels：语言回落名 + 换行/取消换行）。 */
+  export interface MarkdownCodeToolbarLabels {
+    codeLabel: string
+    wrapLabel: string
+    unwrapLabel: string
+  }
   /** markdown 代码块控件的本地化文案。 */
   export interface MarkdownCodeLabels {
     copyLabel: string
     copiedLabel: string
+    /** 共享卡片控件；**缺省即官方降级**为老式 banner（文字复制钮、无换行钮）。 */
+    toolbarLabels?: MarkdownCodeToolbarLabels
   }
   /** markdown 文档的本地化外壳文案。 */
   export interface MarkdownLabels {

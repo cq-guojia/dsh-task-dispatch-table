@@ -445,6 +445,12 @@ try {
   // 正文走官方 MarkdownText、工具行走官方 DisclosureRow。
   check('正文/工具行用官方 primitives（MarkdownText / DisclosureRow，保留为 require）',
     clientJs.includes('@deepseek-ai/dsh-client-ui-primitives'))
+  // 官方 Chat 的 labels **必带** code.toolbarLabels（primitives lib/index.js:10679-10710）：
+  // 缺它 ⇒ 官方 CodeBlock 分叉进老式 banner（右 = **文字**「复制」钮、无换行钮、左 = fence 语言），
+  // 与我们弹窗里该有的官方代码块卡片（CodeToolbar = 语言/「代码块」+ 换行·复制图标钮）不一致。
+  check('代码块走官方卡片工具条（MarkdownText labels 带 code.toolbarLabels）',
+    /code:\s*\{[^}]*toolbarLabels:/.test(clientJs)
+      && clientJs.includes('自动换行') && clientJs.includes('取消换行'))
   const pkg = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'))
   const injectList = pkg.dsh?.client?.inject ?? []
   check('inject 清单声明 sessions 提供方（dsh-api-session-controller）',

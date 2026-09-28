@@ -23,6 +23,7 @@ import {
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { LocaleKey, Translate } from './locales'
+import { MD_LABELS } from './md-labels'
 import { ocOr } from './official-classes'
 
 /** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
@@ -136,9 +137,6 @@ interface ErrView {
   key: LocaleKey
   params?: Record<string, string | number>
 }
-
-/** markdown 外壳文案（引用稳定——新身份会打断 MarkdownText 的渲染缓存；与 mirror/MessageItem 同款）。 */
-const MD_LABELS = { code: { copyLabel: '复制', copiedLabel: '已复制' }, footnotes: '脚注' }
 
 /** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
 const IMAGE_MIME: Readonly<Record<string, string>> = {

@@ -2138,22 +2138,29 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, t("branchUnavailableLabel")), clock === "end" ? (0, react.createElement)("span", { className: ocOr("MessageIconActions", "endInfo", "dsh-tdt-sv-endinfo") }, usageAction, clockEl) : usageAction);
 		}
 		//#endregion
-		//#region src/client/mirror/MessageItem.tsx
-		/** markdown 文档级外壳文案（引用稳定——新身份会打断 MarkdownText 的流式渲染缓存）。 */
-		const MD_LABELS$2 = {
+		//#region src/client/md-labels.ts
+		/** markdown 文档外壳文案（代码块工具条 + 复制 + 脚注）。 */
+		const MD_LABELS = {
 			code: {
-				copyLabel: "复制",
-				copiedLabel: "已复制"
+				copyLabel: zh.copyLabel,
+				copiedLabel: zh.copiedLabel,
+				toolbarLabels: {
+					codeLabel: zh.codeBlockLabel,
+					wrapLabel: zh.diffWrapLabel,
+					unwrapLabel: zh.diffUnwrapLabel
+				}
 			},
 			footnotes: "脚注"
 		};
+		//#endregion
+		//#region src/client/mirror/MessageItem.tsx
 		/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。
 		* U11：fileMentions 词表就位时行内 code 文件引用渲成可点链接（官方语义：resolve 不出保持惰性 code）。 */
 		function AssistantMarkdown(props) {
 			if (props.text.trim() === "") return (0, react.createElement)("span", null);
 			return (0, react.createElement)("div", { className: ocOr("AssistantMarkdown", "root", "dsh-tdt-sv-md") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: props.text,
-				labels: MD_LABELS$2,
+				labels: MD_LABELS,
 				fileMentions: props.fileMentions
 			}));
 		}
@@ -2161,7 +2168,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function UserMessage(props) {
 			return (0, react.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text: props.text,
-				labels: MD_LABELS$2
+				labels: MD_LABELS
 			}))));
 		}
 		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
@@ -2252,13 +2259,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		//#endregion
 		//#region src/client/mirror/ReasoningRow.tsx
-		const MD_LABELS$1 = {
-			code: {
-				copyLabel: "复制",
-				copiedLabel: "已复制"
-			},
-			footnotes: "脚注"
-		};
 		/** 官方 firstLine（lib/client.js:5687）：首行。 */
 		function firstLine(text) {
 			const newline = text.indexOf("\n");
@@ -2295,7 +2295,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}), (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, (0, react.createElement)("span", { className: ocOr("ReasoningRow", "summaryText", "dsh-tdt-sv-reasoning-preview-text") }, summary))),
 				children: open ? (0, react.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 					text,
-					labels: MD_LABELS$1,
+					labels: MD_LABELS,
 					variant: "compact"
 				})) : void 0
 			}));
@@ -3471,14 +3471,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		/** 失败分支判空（TS 收窄用）。 */
 		const isFailed = (value) => typeof value === "object" && value !== null && "failed" in value;
-		/** markdown 外壳文案（引用稳定——新身份会打断 MarkdownText 的渲染缓存；与 mirror/MessageItem 同款）。 */
-		const MD_LABELS = {
-			code: {
-				copyLabel: "复制",
-				copiedLabel: "已复制"
-			},
-			footnotes: "脚注"
-		};
 		/** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
 		const IMAGE_MIME = {
 			png: "image/png",

@@ -13,10 +13,8 @@
 import { createElement as h, useEffect, useMemo, useState } from 'react'
 import { MarkdownText, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
+import { MD_LABELS } from '../md-labels'
 import type { Translate } from '../locales'
-
-/** markdown 文档级外壳文案（引用稳定——新身份会打断 MarkdownText 的流式渲染缓存）。 */
-const MD_LABELS = { code: { copyLabel: '复制', copiedLabel: '已复制' }, footnotes: '脚注' }
 
 /** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。
  * U11：fileMentions 词表就位时行内 code 文件引用渲成可点链接（官方语义：resolve 不出保持惰性 code）。 */
