@@ -16,6 +16,7 @@ import {
   IconCheckOutlineRegular,
   IconChevronDownOutlineRegular,
   IconChevronRightOutlineRegular,
+  IconChevronUpOutlineRegular,
   IconCloseOutlineRegular,
   IconCopyOutlineRegular,
   IconRefreshOutlineRegular,
@@ -117,10 +118,13 @@ export function FileBrowser(props: {
   const [truncated, setTruncated] = useState(false)
   const [viewing, setViewing] = useState<string | null>(null)
   const [listErr, setListErr] = useState<ErrView | null>(null)
-  // 面包屑折叠（超宽时行首出下拉图标；菜单列出全部层级供选）。
+  // 面包屑折叠（超宽时只显示当前层名；行首文件夹图标常驻，点开下拉选层）。
   const [crumbsOverflow, setCrumbsOverflow] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // 导航历史栈：loadDir 压栈，「返回」弹栈回上一次位置（报错页的返回按钮同源）。
+  const [history, setHistory] = useState<string[]>([])
   const barRef = useRef<HTMLDivElement>(null)
+  const regionRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
   // 文件名跑马灯（同 FilePreviewPanel：超长省略，hover 时向左滚动露出全名）。
   const titleRef = useRef<HTMLSpanElement>(null)
@@ -152,8 +156,8 @@ export function FileBrowser(props: {
     inner.style.textOverflow = ''
   }
 
-  /** 列举并展示某目录（清空 viewing；收起下拉）。 */
-  const loadDir = (targetDir: string): void => {
+  /** 列举某目录并展示（清空 viewing；收起下拉）。 */
+  const fetchDir = (targetDir: string): void => {
     setDir(targetDir)
     setViewing(null)
     setListErr(null)
@@ -169,6 +173,20 @@ export function FileBrowser(props: {
         setMode('dir')
       })
       .catch((error: unknown) => { setListErr(errView(error)); setMode('error') })
+  }
+
+  /** 进入某目录：当前目录压栈（供「返回」回跳）。 */
+  const loadDir = (targetDir: string): void => {
+    setHistory(prev => [...prev, dir])
+    fetchDir(targetDir)
+  }
+
+  /** 返回上一次位置（历史栈弹栈；报错页的返回按钮同源）。 */
+  const goBack = (): void => {
+    if (history.length === 0) return
+    const target = history[history.length - 1]
+    setHistory(history.slice(0, -1))
+    fetchDir(target)
   }
 
   // 初次进入（openFile(path)；dock 以 `${sessionId}:${path}` 作 key 重挂载，故每次换新路径都会重跑）。
@@ -216,12 +234,12 @@ export function FileBrowser(props: {
     return () => { alive = false }
   }, [workspaceFiles, sessionId, path])
 
-  // 面包屑溢出测量：隐藏测量条永远渲染完整面包屑，宽度超容器 ⇒ 折叠为「下拉图标 + 当前层名」。
+  // 面包屑溢出测量：隐藏测量条永远渲染完整面包屑，宽度超面包屑区域 ⇒ 折叠为当前层名。
   useLayoutEffect(() => {
-    const bar = barRef.current
+    const region = regionRef.current
     const measure = measureRef.current
-    if (bar === null || measure === null) return
-    setCrumbsOverflow(measure.scrollWidth > bar.clientWidth + 1)
+    if (region === null || measure === null) return
+    setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1)
   }, [dir, viewing, mode, listing])
 
   const reload = (): void => {
@@ -243,7 +261,17 @@ export function FileBrowser(props: {
   if (viewing !== null) {
     body = h(FileBody, { workspaceFiles, sessionId, path: viewing, sourceView, reloadNonce, t })
   } else if (mode === 'error' && listErr !== null) {
-    body = h(ErrBox, { err: listErr, t })
+    // 列举失败（如 outside-workspace）：错误文案 + 「返回」按钮回上一次位置（用户 2026-09-28 四验：
+    // 停在报错页没有任何办法回去，必须在报错下面给一个返回）。
+    body = h('div', { className: 'dsh-tdt-sv-preview-body' },
+      h('div', { className: 'dsh-tdt-sv-preview-err' },
+        h('span', null, t(listErr.key, listErr.params)),
+      ),
+      history.length > 0
+        ? h('div', { className: 'dsh-tdt-sv-err-actions' },
+          h('button', { type: 'button', className: 'dsh-tdt-sv-err-back', onClick: goBack }, t('explorerBack')))
+        : null,
+    )
   } else if (listing !== null) {
     body = listing.length === 0
       ? h('div', { className: 'dsh-tdt-sv-preview-body' },
@@ -289,55 +317,74 @@ export function FileBrowser(props: {
         title: t('previewResize'),
         onPointerDown: (event: { clientX: number; pointerId: number }) => { onResizeStart(event) },
       }),
-    // 第一排：面包屑（目录路径独占一排）。超宽 ⇒ 行首下拉图标 + 当前层名。
+    // 第一排：常驻图标组（下拉选层 / 返回上一层 / 返回）+ 面包屑区域（独占一排）。
+    // 下拉菜单挂在 crumbbar（overflow 可见）下，不被面包屑区域裁剪（四验修复：之前被 overflow:hidden 挡住）。
     h('nav', {
       ref: barRef,
       className: 'dsh-tdt-sv-crumbbar',
       'aria-label': t('explorerCrumbsAria'),
     },
-      h('span', { ref: measureRef, className: 'dsh-tdt-sv-crumbs-measure', 'aria-hidden': true },
-        crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
-          index > 0 ? h(IconChevronRightOutlineRegular, { size: 12 }) : null,
-          h('span', null, crumb.label),
-        ))),
-      crumbsOverflow
-        ? h(Fragment, null,
-          h('div', { className: 'dsh-tdt-sv-crumbs-menu-wrap' },
+      h('div', { className: 'dsh-tdt-sv-crumbs-menu-wrap' },
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-head-btn',
+          'aria-label': t('explorerLevels'),
+          title: t('explorerLevels'),
+          'aria-expanded': menuOpen,
+          onClick: () => { setMenuOpen(value => !value) },
+        }, h(IconChevronDownOutlineRegular, { size: 14 })),
+        menuOpen
+          ? h(Fragment, null,
+            h('div', { className: 'dsh-tdt-sv-crumbs-backdrop', onClick: () => { setMenuOpen(false) } }),
+            h('div', { className: 'dsh-tdt-sv-crumbs-menu', role: 'menu' },
+              crumbs.length === 0
+                ? h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, t('explorerRootName'))
+                : crumbs.map(crumb => h('button', {
+                  key: crumb.path,
+                  type: 'button',
+                  role: 'menuitem',
+                  className: 'dsh-tdt-sv-crumbs-menu-item',
+                  title: crumb.path,
+                  onClick: () => { loadDir(crumb.path) },
+                }, crumb.label)),
+            ))
+          : null,
+      ),
+      h('button', {
+        type: 'button',
+        className: 'dsh-tdt-sv-head-btn',
+        'aria-label': t('explorerUp'),
+        title: t('explorerUp'),
+        disabled: dir === '',
+        onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
+      }, h(IconChevronUpOutlineRegular, { size: 14 })),
+      h('button', {
+        type: 'button',
+        className: 'dsh-tdt-sv-head-btn',
+        'aria-label': t('explorerBack'),
+        title: t('explorerBack'),
+        disabled: history.length === 0,
+        onClick: goBack,
+      }, h('span', { className: 'dsh-tdt-sv-icon-back' }, h(IconChevronRightOutlineRegular, { size: 14 }))),
+      h('div', { ref: regionRef, className: 'dsh-tdt-sv-crumbs-region' },
+        h('span', { ref: measureRef, className: 'dsh-tdt-sv-crumbs-measure', 'aria-hidden': true },
+          crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+            index > 0 ? h(IconChevronRightOutlineRegular, { size: 12 }) : null,
+            h('span', null, crumb.label),
+          ))),
+        crumbsOverflow
+          ? crumbs.length > 0
+            ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, crumbs[crumbs.length - 1].label)
+            : null
+          : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+            index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
             h('button', {
               type: 'button',
-              className: 'dsh-tdt-sv-head-btn',
-              'aria-label': t('explorerCrumbsMore'),
-              title: t('explorerCrumbsMore'),
-              'aria-expanded': menuOpen,
-              onClick: () => { setMenuOpen(value => !value) },
-            }, h(IconChevronDownOutlineRegular, { size: 14 })),
-            menuOpen
-              ? h(Fragment, null,
-                h('div', { className: 'dsh-tdt-sv-crumbs-backdrop', onClick: () => { setMenuOpen(false) } }),
-                h('div', { className: 'dsh-tdt-sv-crumbs-menu', role: 'menu' },
-                  crumbs.map(crumb => h('button', {
-                    key: crumb.path,
-                    type: 'button',
-                    role: 'menuitem',
-                    className: 'dsh-tdt-sv-crumbs-menu-item',
-                    title: crumb.path,
-                    onClick: () => { loadDir(crumb.path) },
-                  }, crumb.label)),
-                ))
-              : null,
-          ),
-          crumbs.length > 0
-            ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, crumbs[crumbs.length - 1].label)
-            : null,
-        )
-        : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
-          index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-crumb',
-            onClick: () => { loadDir(crumb.path) },
-          }, crumb.label),
-        )),
+              className: 'dsh-tdt-sv-crumb',
+              onClick: () => { loadDir(crumb.path) },
+            }, crumb.label),
+          )),
+      ),
     ),
     // 第二排：文件名（跑马灯）+ 操作按钮。
     h('div', { className: 'dsh-tdt-sv-titlebar' },

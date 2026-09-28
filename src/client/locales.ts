@@ -81,6 +81,7 @@ export type LocaleKey =
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
   | 'previewSource' | 'previewRender' | 'previewMdSwitchAria'
   | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' | 'explorerCrumbsMore'
+  | 'explorerLevels' | 'explorerUp' | 'explorerBack' | 'explorerRootName'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs' | 'outputsEmpty'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
@@ -335,6 +336,10 @@ export const zh: Record<LocaleKey, string> = {
   explorerTruncated: '目录内容过多，仅显示部分条目。',
   explorerCrumbsAria: '目录路径导航',
   explorerCrumbsMore: '展开完整路径',
+  explorerLevels: '选择目录层级',
+  explorerUp: '返回上一层',
+  explorerBack: '返回',
+  explorerRootName: '（工作区根目录）',
   colOutputs: '产出',
   outputsEmpty: '（无产出）',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
@@ -585,6 +590,10 @@ export const en: Record<LocaleKey, string> = {
   explorerTruncated: 'The directory is too large; only some entries are shown.',
   explorerCrumbsAria: 'Directory path navigation',
   explorerCrumbsMore: 'Show full path',
+  explorerLevels: 'Choose a directory level',
+  explorerUp: 'Up one level',
+  explorerBack: 'Back',
+  explorerRootName: '(workspace root)',
   colOutputs: 'Outputs',
   outputsEmpty: '(no outputs)',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).

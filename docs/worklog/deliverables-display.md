@@ -177,8 +177,20 @@
   供选层回跳，透明遮罩点击收起。未超宽照旧内联可点。
 - **`workspace-file/outside-workspace` 翻成人话**：官方 `list` 限定工作区内路径（wire 契约原文
   「The directory listing or watch path resolves outside the Session's workspace root」），`workspace`
-  条目多半是指向外部的符号链接，官方同样拒绝——非我方 bug。errView 新增该分支 +
+  条目多半是指向外部的符号链接，官方同样拒绝——非我方 bug。  errView 新增该分支 +
   `previewOutsideWorkspace` 双语文案，不再显示裸错误码。
+
+**同日六次迭代（四验：下拉被裁修复 + 常驻图标组 + 报错页返回）**：用户截图指出两点：
+- **下拉菜单被挡住**：根因 = `.dsh-tdt-sv-crumbbar` 设了 `overflow:hidden`，绝对定位的浮层菜单被裁没
+  （不是 z-index）。修复 = crumbbar 溢出可见；裁剪职责移交给内部 `.dsh-tdt-sv-crumbs-region`
+  （菜单挂图标组下，不在 region 里）。⚠️ 测量也随之下移：测量条对比 region 宽而非 bar 宽。
+- **报错页困死**：点 `workspace`（outside-workspace）报错后停在错误页没有任何办法回去。
+  修复 = 导航历史栈（loadDir 压栈 / goBack 弹栈），报错文案下加「返回」按钮（栈空时不显示）。
+- **常驻图标组**（用户拍板：下拉图标不应只在超宽时出现）：第一排行首三个图标常驻——
+  ① 下拉选层（chevron-down，点开浮层菜单列出全部层级，任何时候都能选）；
+  ② 返回上一层（chevron-up，工作区根禁用）；
+  ③ 返回（历史栈弹栈；包内无左箭头图标，右箭头旋转 180 度代用）。
+  面包屑超宽时只显示当前层名，不超宽照旧内联可点。
 
 ---
 
