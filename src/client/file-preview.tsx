@@ -13,11 +13,14 @@
 // —— read(sessionId, path, {offset?, limit?}) → {offset, text, lines, eof, ...}（单页
 // 2MiB/5000 行，文本页 \n 连接、末行不带终止符，翻页 offset = 页 offset + lines）；
 // readBytes(sessionId, path, ...) → {offset, data: Uint8Array, eof, ...}（全量 ≤32MiB）。
-import { Component, createElement as h, useEffect, useState } from 'react'
+import { Component, createElement as h, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import {
   CodeBlock,
+  IconCheckOutlineRegular,
   IconCloseOutlineRegular,
+  IconCopyOutlineRegular,
+  IconRefreshOutlineRegular,
   MarkdownText,
   languageForPath,
   writeClipboard,
@@ -208,18 +211,12 @@ function errView(error: unknown): ErrView {
   }
 }
 
-/** 错误/空态体：原因文案 + 复制路径（拍板：不可内嵌 = 空态 + 复制路径）。 */
-function ErrBox(props: { err: ErrView; path: string; t: Translate }): ReturnType<typeof h> {
-  const { err, path, t } = props
-  const [copied, setCopied] = useState(false)
+/** 错误/空态体：仅原因文案（复制路径已上提到顶栏按钮组，见 FilePreviewPanel head）。 */
+function ErrBox(props: { err: ErrView; t: Translate }): ReturnType<typeof h> {
+  const { err, t } = props
   return h('div', { className: 'dsh-tdt-sv-preview-body' },
     h('div', { className: 'dsh-tdt-sv-preview-err' },
       h('span', null, t(err.key, err.params)),
-      h('button', {
-        type: 'button',
-        className: 'dsh-tdt-sv-btn',
-        onClick: () => { void writeClipboard(path).then(ok => { if (ok) setCopied(true) }) },
-      }, copied ? t('copiedLabel') : t('previewCopyPath')),
     ),
   )
 }
@@ -232,8 +229,10 @@ function BytesPreview(props: {
   kind: 'image' | 'pdf'
   mime: string
   t: Translate
+  /** 顶栏「刷新」自增，触发重读（重读字节）。 */
+  reloadNonce: number
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, kind, mime, t } = props
+  const { workspaceFiles, sessionId, path, kind, mime, t, reloadNonce } = props
   const [url, setUrl] = useState<string | null>(null)
   const [err, setErr] = useState<ErrView | null>(null)
   useEffect(() => {
@@ -255,8 +254,8 @@ function BytesPreview(props: {
       alive = false
       if (objectUrl !== null) URL.revokeObjectURL(objectUrl)
     }
-  }, [workspaceFiles, sessionId, path, mime])
-  if (err !== null) return h(ErrBox, { err, path, t })
+  }, [workspaceFiles, sessionId, path, mime, reloadNonce])
+  if (err !== null) return h(ErrBox, { err, t })
   if (url === null) {
     return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
   }
@@ -270,26 +269,28 @@ function BytesPreview(props: {
   )
 }
 
-/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。 */
+/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
+ * md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
+ * 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
 function TextPreview(props: {
   workspaceFiles: WorkspaceFilesFace
   sessionId: string
   path: string
   ext: string
   markdown: boolean
+  sourceView: boolean
+  /** 顶栏「刷新」自增，触发重读第一页。 */
+  reloadNonce: number
   t: Translate
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, ext, markdown, t } = props
+  const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t } = props
   const [text, setText] = useState<string | null>(null)
   const [nextOffset, setNextOffset] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [err, setErr] = useState<ErrView | null>(null)
-  // md 的两态：渲染视图（官方 MarkdownBody 同款）⇄ 源码（官方 CodeBody 同款）。
-  const [sourceView, setSourceView] = useState(false)
   useEffect(() => {
     let alive = true
-    setSourceView(false)
     setText(null)
     setNextOffset(null)
     setLoading(true)
@@ -310,7 +311,7 @@ function TextPreview(props: {
         setLoading(false)
       })
     return () => { alive = false }
-  }, [workspaceFiles, sessionId, path])
+  }, [workspaceFiles, sessionId, path, reloadNonce])
   const loadMore = (): void => {
     if (nextOffset === null || loadingMore) return
     setLoadingMore(true)
@@ -329,46 +330,20 @@ function TextPreview(props: {
         setLoadingMore(false)
       })
   }
-  if (err !== null) return h(ErrBox, { err, path, t })
+  if (err !== null) return h(ErrBox, { err, t })
   if (loading || text === null) {
     return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
   }
   // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
   // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
-  // md 两态切换（用户 2026-09-28 定样式）：官方分段控件（预览|源码），**绝对定位叠进 CodeBlock
-  // 工具条**（语言标签右侧、图标左侧）——不加行（加行会顶出滚动条）、不套框；渲染态时浮在右上角。
-  // ⚠ CodeBlock 无自定义插槽 prop（lib/types/markdown/CodeBlock.d.ts），故只能 overlay。
   const language = languageForPath(path)
   const showSource = !markdown || sourceView
-  const seg = markdown
-    ? h('div', {
-        className: 'dsh-tdt-sv-seg',
-        'data-mode': showSource ? 'source' : 'render',
-        role: 'group',
-        'aria-label': t('previewMdSwitchAria'),
-      },
-      h('button', {
-        type: 'button',
-        className: 'dsh-tdt-sv-seg-btn',
-        'aria-pressed': !sourceView,
-        onClick: () => { setSourceView(false) },
-      }, t('previewRender')),
-      h('button', {
-        type: 'button',
-        className: 'dsh-tdt-sv-seg-btn',
-        'aria-pressed': sourceView,
-        onClick: () => { setSourceView(true) },
-      }, t('previewSource')),
-      )
-    : null
   return h('div', { className: 'dsh-tdt-sv-preview-body' },
     showSource
       ? h('div', {
           className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
           'data-code-preview': true,
-          style: { position: 'relative' },
         },
-        seg,
         h(CodeBlock, {
           className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
           code: text,
@@ -385,8 +360,7 @@ function TextPreview(props: {
             unwrapLabel: t('diffUnwrapLabel'),
           },
         }))
-      : h('div', { className: 'dsh-tdt-sv-preview-mdwrap' }, seg,
-          h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS }))),
+      : h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS })),
     nextOffset !== null
       ? h('div', { className: 'dsh-tdt-sv-older' },
           h('button', { type: 'button', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
@@ -416,7 +390,41 @@ export function FilePreviewPanel(props: {
 }): ReturnType<typeof h> {
   const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props
   const { kind, ext, mime } = previewKind(path)
-  const fallback = h(ErrBox, { err: { key: 'previewRenderFailed' }, path, t })
+  const isMd = kind === 'md'
+  // md 两态（渲染 ⇄ 源码）由面板顶层持有，切换控件放在顶栏（不飘进内容区，见上方 head）。
+  const [sourceView, setSourceView] = useState(false)
+  // 「刷新」自增：触发子预览重读（图片/PDF 重读字节、文本重读第一页）。
+  const [reloadNonce, setReloadNonce] = useState(0)
+  const [copied, setCopied] = useState(false)
+  // 顶栏路径跑马灯：超长省略，hover 时向左滚动露出完整路径。
+  const titleRef = useRef<HTMLSpanElement>(null)
+  const titleInnerRef = useRef<HTMLSpanElement>(null)
+  const startMarquee = (): void => {
+    const outer = titleRef.current
+    const inner = titleInnerRef.current
+    if (outer === null || inner === null) return
+    inner.style.maxWidth = 'none'
+    inner.style.textOverflow = 'clip'
+    const shift = inner.scrollWidth - outer.clientWidth
+    if (shift > 0) {
+      inner.style.transition = 'transform 3s linear'
+      // 强制回流后再设 transform，确保 transition 生效。
+      void inner.offsetWidth
+      inner.style.transform = `translateX(${-shift}px)`
+    }
+  }
+  const stopMarquee = (): void => {
+    const inner = titleInnerRef.current
+    if (inner === null) return
+    inner.style.transition = 'none'
+    inner.style.transform = 'translateX(0)'
+    inner.style.maxWidth = ''
+    inner.style.textOverflow = ''
+  }
+  const copyPath = (): void => {
+    void writeClipboard(path).then(ok => { if (ok) { setCopied(true); window.setTimeout(() => setCopied(false), 1500) } })
+  }
+  const fallback = h(ErrBox, { err: { key: 'previewRenderFailed' }, t })
   return h('aside', {
     className: dock === true ? 'dsh-tdt-sv-preview dsh-tdt-sv-preview-dock' : 'dsh-tdt-sv-preview',
     'data-preview-dock': dock === true ? true : undefined,
@@ -431,19 +439,55 @@ export function FilePreviewPanel(props: {
         }),
     h('div', { className: 'dsh-tdt-sv-preview-head' },
       h('span', { className: 'dsh-tdt-sv-preview-label' }, t('previewFileLabel')),
-      h('span', { className: 'dsh-tdt-sv-preview-title', title: path }, path),
-      h('button', {
-        type: 'button',
-        className: 'dsh-tdt-sv-close',
-        'aria-label': t('previewClose'),
-        onClick: onClose,
-      }, h(IconCloseOutlineRegular, { size: 14 })),
+      h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },
+        h('span', { ref: titleInnerRef, className: 'dsh-tdt-sv-preview-title-inner', title: path }, path),
+      ),
+      h('div', { className: 'dsh-tdt-sv-head-actions' },
+        isMd
+          ? h('div', {
+              className: 'dsh-tdt-sv-seg',
+              role: 'group',
+              'aria-label': t('previewMdSwitchAria'),
+            },
+            h('button', {
+              type: 'button',
+              className: 'dsh-tdt-sv-seg-btn',
+              'aria-pressed': !sourceView,
+              onClick: () => { setSourceView(false) },
+            }, t('previewRender')),
+            h('button', {
+              type: 'button',
+              className: 'dsh-tdt-sv-seg-btn',
+              'aria-pressed': sourceView,
+              onClick: () => { setSourceView(true) },
+            }, t('previewSource')),
+            )
+          : null,
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-head-btn',
+          'aria-label': t('previewCopyPath'),
+          onClick: copyPath,
+        }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 })),
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-head-btn',
+          'aria-label': t('previewRefresh'),
+          onClick: () => { setReloadNonce(n => n + 1) },
+        }, h(IconRefreshOutlineRegular, { size: 14 })),
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
+          'aria-label': t('previewClose'),
+          onClick: onClose,
+        }, h(IconCloseOutlineRegular, { size: 14 })),
+      ),
     ),
     h(PreviewBoundary, {
       fallback,
       children: (kind === 'image' || kind === 'pdf')
-        ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t })
-        : h(TextPreview, { workspaceFiles, sessionId, path, ext, markdown: kind === 'md', t }),
+        ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t, reloadNonce })
+        : h(TextPreview, { workspaceFiles, sessionId, path, ext, markdown: isMd, sourceView, reloadNonce, t }),
     }),
   )
 }

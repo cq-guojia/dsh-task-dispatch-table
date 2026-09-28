@@ -21,11 +21,11 @@ export const ARCHIVE_SESSION_CSS = `
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
 .dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize 即可，**无块状高亮**（用户 2026-09-28）；
-   hover/拖拽时只在左缘画一条 1px 细线（深色主题纯白、浅色纯黑，半透明）。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
-.dsh-tdt-sv-resizer::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:1px;background:transparent;}
-.dsh-tdt-sv-resizer:hover::after,.dsh-tdt-sv-resizer:active::after{background:rgba(0,0,0,.55);}
-body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover::after,body[data-ds-dark-theme] .dsh-tdt-sv-resizer:active::after{background:rgba(255,255,255,.55);}
+   高亮的是拖拽条与内容交界的那条本来的边线（右缘 1px），hover/拖拽时按主题色变亮——
+   不是额外多画一条线。深色纯白、浅色纯黑，半透明。 */
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;border-right:1px solid transparent;}
+.dsh-tdt-sv-resizer:hover,.dsh-tdt-sv-resizer:active{border-right-color:rgba(0,0,0,.55);}
+body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover,body[data-ds-dark-theme] .dsh-tdt-sv-resizer:active{border-right-color:rgba(255,255,255,.55);}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
@@ -219,18 +219,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover::after,body[data-ds-dark-them
 .dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));background:var(--dsw-alias-bg-base,#1a1a1a);}
 .dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 .dsh-tdt-sv-preview-label{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-sv-preview-title{flex:1;min-width:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 路径：超长省略（CSS ellipsis），hover 时由 JS 改为向左跑马灯（见 file-preview.tsx startMarquee）。 */
+.dsh-tdt-sv-preview-title{flex:1;min-width:0;display:flex;overflow:hidden;}
+.dsh-tdt-sv-preview-title-inner{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
+/* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
+.dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
+.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-head-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
-/* md 两态切换（用户 2026-09-28 定样式）：官方分段控件（预览|源码），不加行、不套框——
-   绝对定位叠进 CodeBlock 工具条（源码态：语言标签右侧、图标左侧）或渲染态右上角。 */
-.dsh-tdt-sv-preview-mdwrap{position:relative;}
-.dsh-tdt-sv-seg{position:absolute;z-index:3;display:inline-flex;align-items:center;gap:2px;border-radius:8px;background:var(--dsw-alias-interactive-bg,rgba(128,128,128,.14));padding:2px;}
-.dsh-tdt-sv-seg[data-mode=source]{top:3px;right:76px;}
-.dsh-tdt-sv-seg[data-mode=render]{top:8px;right:8px;}
+/* md 两态切换（用户 2026-09-28 定样式，2026-09-28 二次定：放到顶栏按钮组里）：
+   官方分段控件（预览|源码），灰底圆角容器 + 选中段对比胶囊；绝对定位已废弃（不再 overlay 内容区）。 */
+.dsh-tdt-sv-seg{display:inline-flex;align-items:center;gap:2px;border-radius:8px;background:var(--dsw-alias-interactive-bg,rgba(128,128,128,.14));padding:2px;}
 .dsh-tdt-sv-seg-btn{appearance:none;font:inherit;font-size:12px;line-height:18px;height:20px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;white-space:nowrap;}
 .dsh-tdt-sv-seg-btn:hover{color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-00,#fff);color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18);}

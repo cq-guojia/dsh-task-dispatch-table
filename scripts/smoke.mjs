@@ -498,11 +498,16 @@ try {
     clientJs.includes('unwrapEnvelope') && clientJs.includes('ok === false'))
   check('文本渲染照官方 CodeBody（CodeBlock + lineNumbers + languageForPath）',
     clientJs.includes('languageForPath') && clientJs.includes('lineNumbers'))
-  check('md 两态：渲染视图 ⇄ 源码（官方分段控件叠进 CodeBlock 工具条，不加行不套框）',
+  check('md 两态：渲染视图 ⇄ 源码（官方分段控件放在顶栏按钮组，不飘进内容区）',
     clientJs.includes('previewSource') && clientJs.includes('previewRender')
-      && clientJs.includes('dsh-tdt-sv-seg') && !clientJs.includes('dsh-tdt-sv-preview-mdbar'))
-  check('拖拽条无块状高亮（hover 仅 1px 细线，深白浅黑）',
-    clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes('width:1px') && !clientJs.includes('opacity:.35'))
+      && clientJs.includes('dsh-tdt-sv-seg') && !clientJs.includes('dsh-tdt-sv-preview-mdbar')
+      && !clientJs.includes('dsh-tdt-sv-preview-mdwrap'))
+  check('顶栏按钮组（复制 / 刷新 / 关闭，图标钮无中文）',
+    clientJs.includes('dsh-tdt-sv-head-btn') && clientJs.includes('previewRefresh')
+      && clientJs.includes('previewCopyPath') && clientJs.includes('IconRefreshOutlineRegular'))
+  check('拖拽条无块状高亮（hover 高亮的是与内容交界的右缘边线，深白浅黑，非额外多画线）',
+    clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes('border-right')
+      && !clientJs.includes('opacity:.35') && !clientJs.includes('dsh-tdt-sv-resizer::after'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
     clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
   check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',

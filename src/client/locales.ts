@@ -75,7 +75,7 @@ export type LocaleKey =
   | 'forkConfirmAccept' | 'forkCancel' | 'forkWorking' | 'forkFailed'
   // —— U11 产出物预览（分栏推压）：文件面 + 错误态 + 文本翻页 ——
   | 'previewClose' | 'previewLoading' | 'previewLoadMore' | 'previewFileLabel'
-  | 'previewCopyPath' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
+  | 'previewCopyPath' | 'previewRefresh' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
   | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
   | 'previewSource' | 'previewRender' | 'previewMdSwitchAria'
@@ -313,6 +313,7 @@ export const zh: Record<LocaleKey, string> = {
   previewLoadMore: '加载更多',
   previewFileLabel: '文件',
   previewCopyPath: '复制路径',
+  previewRefresh: '刷新',
   previewNotFound: '文件不存在（可能已被移动或删除）。',
   previewTooLarge: '文件过大，超出预览上限（{limit}）。',
   previewDirectory: '这是一个目录，暂不支持目录浏览。',
@@ -556,6 +557,7 @@ export const en: Record<LocaleKey, string> = {
   previewLoadMore: 'Load more',
   previewFileLabel: 'File',
   previewCopyPath: 'Copy path',
+  previewRefresh: 'Refresh',
   previewNotFound: 'File not found (it may have been moved or deleted).',
   previewTooLarge: 'The file is too large to preview (limit: {limit}).',
   previewDirectory: 'This is a directory; browsing directories is not supported yet.',

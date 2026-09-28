@@ -227,6 +227,7 @@ window.__ModuleLoader__.load({
 			previewLoadMore: "加载更多",
 			previewFileLabel: "文件",
 			previewCopyPath: "复制路径",
+			previewRefresh: "刷新",
 			previewNotFound: "文件不存在（可能已被移动或删除）。",
 			previewTooLarge: "文件过大，超出预览上限（{limit}）。",
 			previewDirectory: "这是一个目录，暂不支持目录浏览。",
@@ -466,6 +467,7 @@ window.__ModuleLoader__.load({
 			previewLoadMore: "Load more",
 			previewFileLabel: "File",
 			previewCopyPath: "Copy path",
+			previewRefresh: "Refresh",
 			previewNotFound: "File not found (it may have been moved or deleted).",
 			previewTooLarge: "The file is too large to preview (limit: {limit}).",
 			previewDirectory: "This is a directory; browsing directories is not supported yet.",
@@ -509,11 +511,11 @@ window.__ModuleLoader__.load({
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
 .dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize 即可，**无块状高亮**（用户 2026-09-28）；
-   hover/拖拽时只在左缘画一条 1px 细线（深色主题纯白、浅色纯黑，半透明）。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
-.dsh-tdt-sv-resizer::after{content:'';position:absolute;top:0;bottom:0;left:2px;width:1px;background:transparent;}
-.dsh-tdt-sv-resizer:hover::after,.dsh-tdt-sv-resizer:active::after{background:rgba(0,0,0,.55);}
-body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover::after,body[data-ds-dark-theme] .dsh-tdt-sv-resizer:active::after{background:rgba(255,255,255,.55);}
+   高亮的是拖拽条与内容交界的那条本来的边线（右缘 1px），hover/拖拽时按主题色变亮——
+   不是额外多画一条线。深色纯白、浅色纯黑，半透明。 */
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;border-right:1px solid transparent;}
+.dsh-tdt-sv-resizer:hover,.dsh-tdt-sv-resizer:active{border-right-color:rgba(0,0,0,.55);}
+body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover,body[data-ds-dark-theme] .dsh-tdt-sv-resizer:active{border-right-color:rgba(255,255,255,.55);}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
@@ -707,18 +709,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-resizer:hover::after,body[data-ds-dark-them
 .dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));background:var(--dsw-alias-bg-base,#1a1a1a);}
 .dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 .dsh-tdt-sv-preview-label{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-sv-preview-title{flex:1;min-width:0;font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 路径：超长省略（CSS ellipsis），hover 时由 JS 改为向左跑马灯（见 file-preview.tsx startMarquee）。 */
+.dsh-tdt-sv-preview-title{flex:1;min-width:0;display:flex;overflow:hidden;}
+.dsh-tdt-sv-preview-title-inner{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
+/* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
+.dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
+.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-head-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
-/* md 两态切换（用户 2026-09-28 定样式）：官方分段控件（预览|源码），不加行、不套框——
-   绝对定位叠进 CodeBlock 工具条（源码态：语言标签右侧、图标左侧）或渲染态右上角。 */
-.dsh-tdt-sv-preview-mdwrap{position:relative;}
-.dsh-tdt-sv-seg{position:absolute;z-index:3;display:inline-flex;align-items:center;gap:2px;border-radius:8px;background:var(--dsw-alias-interactive-bg,rgba(128,128,128,.14));padding:2px;}
-.dsh-tdt-sv-seg[data-mode=source]{top:3px;right:76px;}
-.dsh-tdt-sv-seg[data-mode=render]{top:8px;right:8px;}
+/* md 两态切换（用户 2026-09-28 定样式，2026-09-28 二次定：放到顶栏按钮组里）：
+   官方分段控件（预览|源码），灰底圆角容器 + 选中段对比胶囊；绝对定位已废弃（不再 overlay 内容区）。 */
+.dsh-tdt-sv-seg{display:inline-flex;align-items:center;gap:2px;border-radius:8px;background:var(--dsw-alias-interactive-bg,rgba(128,128,128,.14));padding:2px;}
 .dsh-tdt-sv-seg-btn{appearance:none;font:inherit;font-size:12px;line-height:18px;height:20px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;white-space:nowrap;}
 .dsh-tdt-sv-seg-btn:hover{color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-00,#fff);color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18);}
@@ -3546,23 +3551,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				};
 			}
 		}
-		/** 错误/空态体：原因文案 + 复制路径（拍板：不可内嵌 = 空态 + 复制路径）。 */
+		/** 错误/空态体：仅原因文案（复制路径已上提到顶栏按钮组，见 FilePreviewPanel head）。 */
 		function ErrBox(props) {
-			const { err, path, t } = props;
-			const [copied, setCopied] = (0, react.useState)(false);
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(err.key, err.params)), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-btn",
-				onClick: () => {
-					(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(path).then((ok) => {
-						if (ok) setCopied(true);
-					});
-				}
-			}, copied ? t("copiedLabel") : t("previewCopyPath"))));
+			const { err, t } = props;
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(err.key, err.params))));
 		}
 		/** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
 		function BytesPreview(props) {
-			const { workspaceFiles, sessionId, path, kind, mime, t } = props;
+			const { workspaceFiles, sessionId, path, kind, mime, t, reloadNonce } = props;
 			const [url, setUrl] = (0, react.useState)(null);
 			const [err, setErr] = (0, react.useState)(null);
 			(0, react.useEffect)(() => {
@@ -3594,11 +3590,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				workspaceFiles,
 				sessionId,
 				path,
-				mime
+				mime,
+				reloadNonce
 			]);
 			if (err !== null) return (0, react.createElement)(ErrBox, {
 				err,
-				path,
 				t
 			});
 			if (url === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
@@ -3613,18 +3609,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alt: path
 			}));
 		}
-		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。 */
+		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
+		* md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
+		* 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
 		function TextPreview(props) {
-			const { workspaceFiles, sessionId, path, ext, markdown, t } = props;
+			const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t } = props;
 			const [text, setText] = (0, react.useState)(null);
 			const [nextOffset, setNextOffset] = (0, react.useState)(null);
 			const [loading, setLoading] = (0, react.useState)(true);
 			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
 			const [err, setErr] = (0, react.useState)(null);
-			const [sourceView, setSourceView] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
 				let alive = true;
-				setSourceView(false);
 				setText(null);
 				setNextOffset(null);
 				setLoading(true);
@@ -3656,7 +3652,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, [
 				workspaceFiles,
 				sessionId,
-				path
+				path,
+				reloadNonce
 			]);
 			const loadMore = () => {
 				if (nextOffset === null || loadingMore) return;
@@ -3683,37 +3680,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 			if (err !== null) return (0, react.createElement)(ErrBox, {
 				err,
-				path,
 				t
 			});
 			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
 			const language = (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path);
-			const showSource = !markdown || sourceView;
-			const seg = markdown ? (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-seg",
-				"data-mode": showSource ? "source" : "render",
-				role: "group",
-				"aria-label": t("previewMdSwitchAria")
-			}, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-seg-btn",
-				"aria-pressed": !sourceView,
-				onClick: () => {
-					setSourceView(false);
-				}
-			}, t("previewRender")), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-seg-btn",
-				"aria-pressed": sourceView,
-				onClick: () => {
-					setSourceView(true);
-				}
-			}, t("previewSource"))) : null;
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, showSource ? (0, react.createElement)("div", {
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, !markdown || sourceView ? (0, react.createElement)("div", {
 				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
-				"data-code-preview": true,
-				style: { position: "relative" }
-			}, seg, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				"data-code-preview": true
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
 				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
 				code: text,
 				lang: language,
@@ -3726,10 +3700,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					wrapLabel: t("diffWrapLabel"),
 					unwrapLabel: t("diffUnwrapLabel")
 				}
-			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-mdwrap" }, seg, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text,
 				labels: MD_LABELS
-			}))), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
+			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
 				type: "button",
 				disabled: loadingMore,
 				onClick: loadMore
@@ -3747,9 +3721,43 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function FilePreviewPanel(props) {
 			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props;
 			const { kind, ext, mime } = previewKind(path);
+			const isMd = kind === "md";
+			const [sourceView, setSourceView] = (0, react.useState)(false);
+			const [reloadNonce, setReloadNonce] = (0, react.useState)(0);
+			const [copied, setCopied] = (0, react.useState)(false);
+			const titleRef = (0, react.useRef)(null);
+			const titleInnerRef = (0, react.useRef)(null);
+			const startMarquee = () => {
+				const outer = titleRef.current;
+				const inner = titleInnerRef.current;
+				if (outer === null || inner === null) return;
+				inner.style.maxWidth = "none";
+				inner.style.textOverflow = "clip";
+				const shift = inner.scrollWidth - outer.clientWidth;
+				if (shift > 0) {
+					inner.style.transition = "transform 3s linear";
+					inner.offsetWidth;
+					inner.style.transform = `translateX(${-shift}px)`;
+				}
+			};
+			const stopMarquee = () => {
+				const inner = titleInnerRef.current;
+				if (inner === null) return;
+				inner.style.transition = "none";
+				inner.style.transform = "translateX(0)";
+				inner.style.maxWidth = "";
+				inner.style.textOverflow = "";
+			};
+			const copyPath = () => {
+				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(path).then((ok) => {
+					if (ok) {
+						setCopied(true);
+						window.setTimeout(() => setCopied(false), 1500);
+					}
+				});
+			};
 			const fallback = (0, react.createElement)(ErrBox, {
 				err: { key: "previewRenderFailed" },
-				path,
 				t
 			});
 			return (0, react.createElement)("aside", {
@@ -3764,14 +3772,50 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					onResizeStart(event);
 				}
 			}), (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-preview-label" }, t("previewFileLabel")), (0, react.createElement)("span", {
+				ref: titleRef,
 				className: "dsh-tdt-sv-preview-title",
+				onMouseEnter: startMarquee,
+				onMouseLeave: stopMarquee
+			}, (0, react.createElement)("span", {
+				ref: titleInnerRef,
+				className: "dsh-tdt-sv-preview-title-inner",
 				title: path
-			}, path), (0, react.createElement)("button", {
+			}, path)), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMd ? (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-seg",
+				role: "group",
+				"aria-label": t("previewMdSwitchAria")
+			}, (0, react.createElement)("button", {
 				type: "button",
-				className: "dsh-tdt-sv-close",
+				className: "dsh-tdt-sv-seg-btn",
+				"aria-pressed": !sourceView,
+				onClick: () => {
+					setSourceView(false);
+				}
+			}, t("previewRender")), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-seg-btn",
+				"aria-pressed": sourceView,
+				onClick: () => {
+					setSourceView(true);
+				}
+			}, t("previewSource"))) : null, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("previewCopyPath"),
+				onClick: copyPath
+			}, copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 14 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("previewRefresh"),
+				onClick: () => {
+					setReloadNonce((n) => n + 1);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
 				"aria-label": t("previewClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))), (0, react.createElement)(PreviewBoundary, {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)(PreviewBoundary, {
 				fallback,
 				children: kind === "image" || kind === "pdf" ? (0, react.createElement)(BytesPreview, {
 					workspaceFiles,
@@ -3779,13 +3823,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					path,
 					kind,
 					mime: mime ?? "application/octet-stream",
-					t
+					t,
+					reloadNonce
 				}) : (0, react.createElement)(TextPreview, {
 					workspaceFiles,
 					sessionId,
 					path,
 					ext,
-					markdown: kind === "md",
+					markdown: isMd,
+					sourceView,
+					reloadNonce,
 					t
 				})
 			}));

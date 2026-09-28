@@ -70,6 +70,18 @@
 2. **md 两态切换改官方分段控件**：用户贴官方「预览|编辑」分段样式图，要求切换钮放进 CodeBlock 工具条红框位（语言标签右侧、图标左侧），**不加行、不套框**。核实 `CodeBlock`（`lib/types/markdown/CodeBlock.d.ts`）**无自定义插槽 prop**（toolbar 是内部组件）⇒ 用绝对定位 overlay：源码态 `top:3px;right:76px` 叠进工具条，渲染态 `top:8px;right:8px` 浮于渲染视图右上角；样式 = 官方分段（灰底圆角容器 + 选中段对比底胶囊，深浅主题分支）。顺带修「短 md 也有横向滚动条」：md 源码态传 `wrap:true`（官方语义 = 采用调用方换行偏好并隐藏工具条换行钮，md 是 prose 换行合理；代码文件不传 = 保留官方换行钮）。删掉上一轮的 `mdbar` 外加行（正是顶出滚动条的来源）。
 3. **质量门**：typecheck + build（dist ≈241 kB）+ 冒烟 151 项全过（+2 −1：分段控件与无外加行 / resizer 细线）。
 
+### 第九轮：顶栏按钮组 + 拖拽条边线 + 刷新重读（2026-09-28）
+
+1. **顶栏按钮组（替代飘在内容区的切换）**：用户要求 md 的「预览|源码」切换、以及复制/刷新/关闭统一放到顶栏最右（关闭按钮那一行），不飘进内容。
+   - 顺序（左→右）：`[.md 时] 预览|源码 分段` · `复制路径(IconCopyOutlineRegular)` · `刷新(IconRefreshOutlineRegular)` · `关闭(IconCloseOutlineRegular)`；三个动作钮全用 dsh 自带 icon、无中文文字（aria-label 仍用文案键）。
+   - **刷新 icon 核实**：手搓 `primitives.d.ts` 原只抄了部分图标，列表里没有刷新；实测 dsh `@0.1.7-rc.2` 确有 `IconRefreshOutlineRegular`（npm pack 解包确认），已补进类型与 import。
+   - md 两态 `sourceView` 从 `TextPreview` 内部 **提升** 到 `FilePreviewPanel` 顶层持有并下传（切换控件只在顶栏），内容体按 `showSource` 渲染，不再 overlay 任何控件。
+   - **刷新重读**：`FilePreviewPanel` 持 `reloadNonce`，刷新钮自增；`TextPreview` 与 `BytesPreview` 的 read 依赖加上它，触发重读（文本重读第一页 / 图片 PDF 重读字节）。
+   - **路径跑马灯**：顶栏路径超长 `text-overflow:ellipsis` 省略；hover 时 JS 把内层改 `maxWidth:none` 并 `translateX` 向左平移 3s 露出完整路径（仅溢出时滚动，`onMouseLeave` 复位）。
+   - **底部复制路径按钮删除**：错误/空态 `ErrBox` 不再渲染复制路径（顶栏已有，用户明确"下面不需要"）；`ErrBox` 精简为仅文案。
+2. **拖拽条高亮修正**：上一轮在 `left:2px` 用 `::after` 画了**额外一条线**（用户指出"在右边多一条线"）。改为高亮拖拽条与内容**交界的本来的边线**——`border-right:1px`（resizer 右缘），hover/拖拽时按主题色变亮（深白浅黑），不再多画线。
+3. **质量门**：typecheck + build（dist ≈246 kB）+ 冒烟 153 项全过（+2 断言：顶栏按钮组 / 拖拽条右缘边线；md 切换不再 overlay）。
+
 ## 二、证据与坐标
 
 - `dsh-api-workspace-files/README.zh.md`：read/readBytes/stat/list/changes 全形状 + 错误码 + inject 清单 `['resources','remote','remote.workspaceFiles']`。
