@@ -250,6 +250,8 @@ window.__ModuleLoader__.load({
 			explorerUp: "返回上一层",
 			explorerBack: "返回",
 			explorerRootName: "（工作区根目录）",
+			explorerExpand: "展开目录",
+			explorerCollapse: "收起目录",
 			colOutputs: "产出",
 			outputsEmpty: "（无产出）",
 			deliverRowTitle: "交付文件",
@@ -500,6 +502,8 @@ window.__ModuleLoader__.load({
 			explorerUp: "Up one level",
 			explorerBack: "Back",
 			explorerRootName: "(workspace root)",
+			explorerExpand: "Expand directory",
+			explorerCollapse: "Collapse directory",
 			colOutputs: "Outputs",
 			outputsEmpty: "(no outputs)",
 			deliverRowTitle: "Deliver files",
@@ -779,7 +783,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(-
 .dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
 .dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--dsw-static-neutral-00,#fff);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-md,8px);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
 body[data-ds-dark-theme] .dsh-tdt-sv-crumbs-menu{background:var(--dsw-static-neutral-900,#111);}
-.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:12px;line-height:20px;padding:4px 8px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:12px;line-height:20px;padding:4px 8px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 body[data-ds-dark-theme] .dsh-tdt-sv-crumbs-menu-item{color:var(--dsw-static-neutral-00,#fff);}
 .dsh-tdt-sv-crumbs-menu-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-crumbs-menu-empty{font-size:12px;line-height:20px;padding:4px 8px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
@@ -799,6 +803,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-err-back{color:var(--dsw-static-neutral-00,
 .dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:13px;line-height:20px;color:var(--dsw-alias-label-primary,#1f2328);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 body[data-ds-dark-theme] .dsh-tdt-sv-tree-name{color:var(--dsw-static-neutral-00,#fff);}
 .dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+/* 下拉选层：每层前置官方右箭头图标（方案 A），替代 ASCII 树符。 */
+.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));margin-right:1px;}
+.dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
+.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-tree-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
+/* 内联展开子层：左缩进 + 淡竖线引导层级。 */
+.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));display:flex;flex-direction:column;}
+.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-tree-err{color:var(--dsw-alias-state-error-primary,#e5484d);}
 .dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
@@ -3971,6 +3986,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [sourceView, setSourceView] = (0, react.useState)(false);
 			const [reloadNonce, setReloadNonce] = (0, react.useState)(0);
 			const [copied, setCopied] = (0, react.useState)(false);
+			const [openDirs, setOpenDirs] = (0, react.useState)(/* @__PURE__ */ new Set());
+			const [childCache, setChildCache] = (0, react.useState)({});
 			const startMarquee = () => {
 				const outer = titleRef.current;
 				const inner = titleInnerRef.current;
@@ -3999,6 +4016,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setListErr(null);
 				setMenuOpen(false);
 				setMode("loading");
+				setOpenDirs(/* @__PURE__ */ new Set());
+				setChildCache({});
 				workspaceFiles.list(sessionId, targetDir).then((result) => {
 					const parsed = listingOf(result);
 					if (isFailed(parsed)) {
@@ -4021,6 +4040,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 			/** 进入某目录：当前目录压栈（供「返回」回跳）。 */
 			const loadDir = (targetDir) => {
+				if (targetDir === dir) {
+					fetchDir(targetDir);
+					return;
+				}
 				setHistory((prev) => [...prev, dir]);
 				fetchDir(targetDir);
 			};
@@ -4039,6 +4062,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setSourceView(false);
 				setReloadNonce(0);
 				setMenuOpen(false);
+				setOpenDirs(/* @__PURE__ */ new Set());
+				setChildCache({});
 				workspaceFiles.list(sessionId, path).then((result) => {
 					if (!alive) return;
 					const parsed = listingOf(result);
@@ -4110,6 +4135,112 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 				});
 			};
+			/** 内联展开/收起某目录（点 ▸）：只切展开态，不导航、不进历史；首次展开才拉子项。 */
+			const toggleDir = (path) => {
+				setOpenDirs((prev) => {
+					const next = new Set(prev);
+					if (next.has(path)) next.delete(path);
+					else next.add(path);
+					return next;
+				});
+				if (!(path in childCache)) {
+					setChildCache((prev) => ({
+						...prev,
+						[path]: { status: "loading" }
+					}));
+					workspaceFiles.list(sessionId, path).then((result) => {
+						const parsed = listingOf(result);
+						if (isFailed(parsed)) {
+							setChildCache((prev) => ({
+								...prev,
+								[path]: {
+									status: "error",
+									error: errView(parsed.failed)
+								}
+							}));
+							return;
+						}
+						if (parsed === null) {
+							setChildCache((prev) => ({
+								...prev,
+								[path]: {
+									status: "error",
+									error: { key: "previewBadPayload" }
+								}
+							}));
+							return;
+						}
+						setChildCache((prev) => ({
+							...prev,
+							[path]: {
+								status: "ready",
+								entries: parsed.entries,
+								truncated: parsed.truncated
+							}
+						}));
+					}).catch((error) => {
+						setChildCache((prev) => ({
+							...prev,
+							[path]: {
+								status: "error",
+								error: errView(error)
+							}
+						}));
+					});
+				}
+			};
+			/** 递归渲染目录树（内联展开）。file = 点开预览；dir = ▸ 切展开、名字点导航。 */
+			const renderTree = (entries, baseDir) => {
+				return sortEntries(entries).map((entry) => {
+					const childPath = joinPath(baseDir, entry.name);
+					if (!(entry.type === "directory")) return (0, react.createElement)("div", {
+						key: childPath,
+						className: "dsh-tdt-sv-tree-row",
+						role: "button",
+						tabIndex: 0,
+						title: childPath,
+						onClick: () => {
+							setViewing(childPath);
+							setReloadNonce(0);
+							setSourceView(false);
+						},
+						onKeyDown: (event) => {
+							if (event.key === "Enter" || event.key === " ") {
+								setViewing(childPath);
+								setReloadNonce(0);
+								setSourceView(false);
+							}
+						}
+					}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+						path: childPath,
+						size: 18
+					})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name));
+					const cached = childCache[childPath];
+					const isOpen = openDirs.has(childPath);
+					return (0, react.createElement)(react.Fragment, { key: childPath }, (0, react.createElement)("div", {
+						className: "dsh-tdt-sv-tree-row",
+						role: "button",
+						tabIndex: 0,
+						title: childPath,
+						onClick: () => {
+							loadDir(childPath);
+						},
+						onKeyDown: (event) => {
+							if (event.key === "Enter" || event.key === " ") loadDir(childPath);
+						}
+					}, (0, react.createElement)("button", {
+						type: "button",
+						className: "dsh-tdt-sv-tree-toggle" + (isOpen ? " dsh-tdt-sv-tree-toggle-open" : ""),
+						"aria-expanded": isOpen,
+						"aria-label": isOpen ? t("explorerCollapse") : t("explorerExpand"),
+						title: isOpen ? t("explorerCollapse") : t("explorerExpand"),
+						onClick: (event) => {
+							event.stopPropagation();
+							toggleDir(childPath);
+						}
+					}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-loading" }, t("previewLoading")) : cached.status === "error" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react.createElement)(react.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
+				});
+			};
 			const crumbs = crumbsOf(dir);
 			const isMdPreview = viewing !== null && previewKind(viewing).kind === "md";
 			let body;
@@ -4126,38 +4257,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: "dsh-tdt-sv-err-back",
 				onClick: goBack
 			}, t("explorerBack"))) : null);
-			else if (listing !== null) body = listing.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tree" }, sortEntries(listing).map((entry) => {
-				const childPath = joinPath(dir, entry.name);
-				const isDir = entry.type === "directory";
-				return (0, react.createElement)("div", {
-					key: childPath,
-					className: "dsh-tdt-sv-tree-row",
-					role: "button",
-					tabIndex: 0,
-					title: childPath,
-					onClick: () => {
-						if (isDir) loadDir(childPath);
-						else {
-							setViewing(childPath);
-							setReloadNonce(0);
-							setSourceView(false);
-						}
-					},
-					onKeyDown: (event) => {
-						if (event.key === "Enter" || event.key === " ") {
-							if (isDir) loadDir(childPath);
-							else {
-								setViewing(childPath);
-								setReloadNonce(0);
-								setSourceView(false);
-							}
-						}
-					}
-				}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, isDir ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-					path: childPath,
-					size: 18
-				})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name));
-			}), truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
+			else if (listing !== null) body = listing.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
 			else body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
 			return (0, react.createElement)("aside", {
 				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
@@ -4192,19 +4292,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: "dsh-tdt-sv-crumbs-menu",
 				role: "menu"
 			}, crumbs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, t("explorerRootName")) : crumbs.map((crumb, index) => {
-				const isLast = index === crumbs.length - 1;
-				const connector = index === 0 ? "" : isLast ? "└ " : "├ ";
+				const chevrons = index === 0 ? null : Array.from({ length: index }, (_, i) => (0, react.createElement)("span", {
+					key: i,
+					className: "dsh-tdt-sv-crumbs-chev"
+				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 11 })));
 				return (0, react.createElement)("button", {
 					key: crumb.path,
 					type: "button",
 					role: "menuitem",
 					className: "dsh-tdt-sv-crumbs-menu-item",
-					style: { paddingLeft: 8 + index * 14 },
+					style: { paddingLeft: 8 },
 					title: crumb.path,
 					onClick: () => {
 						loadDir(crumb.path);
 					}
-				}, connector + crumb.label);
+				}, chevrons, (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-menu-label" }, crumb.label));
 			}))) : null), (0, react.createElement)("div", {
 				ref: regionRef,
 				className: "dsh-tdt-sv-crumbs-region"
@@ -4243,13 +4345,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					const p = dirnameOf(dir);
 					if (p !== dir) loadDir(p);
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 })), viewing === null ? (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("previewRefresh"),
-				title: t("previewRefresh"),
-				onClick: reload
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })) : null, (0, react.createElement)("button", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
 				"aria-label": t("previewClose"),

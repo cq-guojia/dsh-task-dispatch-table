@@ -77,6 +77,12 @@ function sortEntries(entries: readonly ListEntry[]): ListEntry[] {
   })
 }
 
+/** 内联展开目录拉到的子项缓存：loading / ready(子项) / error。 */
+type ChildData =
+  | { status: 'loading' }
+  | { status: 'ready'; entries: readonly ListEntry[]; truncated: boolean }
+  | { status: 'error'; error: ErrView }
+
 /** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
 function FileBody(props: {
   workspaceFiles: WorkspaceFilesFace
@@ -136,6 +142,9 @@ export function FileBrowser(props: {
   const [sourceView, setSourceView] = useState(false)
   const [reloadNonce, setReloadNonce] = useState(0)
   const [copied, setCopied] = useState(false)
+  // 内联展开：openDirs = 已展开目录路径集合；childCache = 各展开目录拉到的子项（loading/ready/error）。
+  const [openDirs, setOpenDirs] = useState<ReadonlySet<string>>(new Set())
+  const [childCache, setChildCache] = useState<Record<string, ChildData>>({})
 
   const startMarquee = (): void => {
     const outer = titleRef.current
@@ -166,6 +175,9 @@ export function FileBrowser(props: {
     setListErr(null)
     setMenuOpen(false)
     setMode('loading')
+    // 切换顶层目录：清空内联展开态（展开树只属于当前这一层）。
+    setOpenDirs(new Set())
+    setChildCache({})
     workspaceFiles.list(sessionId, targetDir)
       .then((result) => {
         const parsed = listingOf(result)
@@ -180,6 +192,8 @@ export function FileBrowser(props: {
 
   /** 进入某目录：当前目录压栈（供「返回」回跳）。 */
   const loadDir = (targetDir: string): void => {
+    // 点到当前目录本身 = 刷新本层（重列），不压历史栈；否则「返回」会一直绕回自己（用户 2026-09-28）。
+    if (targetDir === dir) { fetchDir(targetDir); return }
     setHistory(prev => [...prev, dir])
     fetchDir(targetDir)
   }
@@ -201,6 +215,8 @@ export function FileBrowser(props: {
     setSourceView(false)
     setReloadNonce(0)
     setMenuOpen(false)
+    setOpenDirs(new Set())
+    setChildCache({})
     workspaceFiles.list(sessionId, path)
       .then((result) => {
         if (!alive) return
@@ -264,6 +280,82 @@ export function FileBrowser(props: {
     void writeClipboard(target).then(ok => { if (ok) { setCopied(true); window.setTimeout(() => setCopied(false), 1500) } })
   }
 
+  /** 内联展开/收起某目录（点 ▸）：只切展开态，不导航、不进历史；首次展开才拉子项。 */
+  const toggleDir = (path: string): void => {
+    setOpenDirs(prev => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path); else next.add(path)
+      return next
+    })
+    if (!(path in childCache)) {
+      setChildCache(prev => ({ ...prev, [path]: { status: 'loading' } }))
+      workspaceFiles.list(sessionId, path)
+        .then((result) => {
+          const parsed = listingOf(result)
+          if (isFailed(parsed)) { setChildCache(prev => ({ ...prev, [path]: { status: 'error', error: errView(parsed.failed) } })); return }
+          if (parsed === null) { setChildCache(prev => ({ ...prev, [path]: { status: 'error', error: { key: 'previewBadPayload' } } })); return }
+          setChildCache(prev => ({ ...prev, [path]: { status: 'ready', entries: parsed.entries, truncated: parsed.truncated } }))
+        })
+        .catch((error: unknown) => { setChildCache(prev => ({ ...prev, [path]: { status: 'error', error: errView(error) } })) })
+    }
+  }
+
+  /** 递归渲染目录树（内联展开）。file = 点开预览；dir = ▸ 切展开、名字点导航。 */
+  const renderTree = (entries: readonly ListEntry[], baseDir: string): ReactNode => {
+    return sortEntries(entries).map((entry) => {
+      const childPath = joinPath(baseDir, entry.name)
+      const isDir = entry.type === 'directory'
+      if (!isDir) {
+        return h('div', {
+          key: childPath,
+          className: 'dsh-tdt-sv-tree-row',
+          role: 'button',
+          tabIndex: 0,
+          title: childPath,
+          onClick: () => { setViewing(childPath); setReloadNonce(0); setSourceView(false) },
+          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') { setViewing(childPath); setReloadNonce(0); setSourceView(false) } },
+        },
+          h('span', { className: 'dsh-tdt-sv-tree-icon' }, h(FileTypeIcon, { path: childPath, size: 18 })),
+          h('span', { className: 'dsh-tdt-sv-tree-name' }, entry.name),
+        )
+      }
+      const cached: ChildData | undefined = childCache[childPath]
+      const isOpen = openDirs.has(childPath)
+      return h(Fragment, { key: childPath },
+        h('div', {
+          className: 'dsh-tdt-sv-tree-row',
+          role: 'button',
+          tabIndex: 0,
+          title: childPath,
+          onClick: () => { loadDir(childPath) },
+          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') loadDir(childPath) },
+        },
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-tree-toggle' + (isOpen ? ' dsh-tdt-sv-tree-toggle-open' : ''),
+            'aria-expanded': isOpen,
+            'aria-label': isOpen ? t('explorerCollapse') : t('explorerExpand'),
+            title: isOpen ? t('explorerCollapse') : t('explorerExpand'),
+            onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); toggleDir(childPath) },
+          }, h(IconChevronRightOutlineRegular, { size: 16 })),
+          h('span', { className: 'dsh-tdt-sv-tree-name' }, entry.name),
+        ),
+        isOpen
+          ? h('div', { className: 'dsh-tdt-sv-tree-children' },
+              cached === undefined || cached.status === 'loading'
+                ? h('div', { className: 'dsh-tdt-sv-tree-loading' }, t('previewLoading'))
+                : cached.status === 'error'
+                  ? h('div', { className: 'dsh-tdt-sv-tree-err' }, t(cached.error.key, cached.error.params))
+                  : h(Fragment, null,
+                      renderTree(cached.entries, childPath),
+                      cached.truncated ? h('div', { className: 'dsh-tdt-sv-tree-truncated' }, t('explorerTruncated')) : null,
+                    ),
+            )
+          : null,
+      )
+    })
+  }
+
   const crumbs = crumbsOf(dir)
   const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'
 
@@ -288,25 +380,7 @@ export function FileBrowser(props: {
       ? h('div', { className: 'dsh-tdt-sv-preview-body' },
         h('div', { className: 'dsh-tdt-sv-hint' }, t('explorerEmpty')))
       : h('div', { className: 'dsh-tdt-sv-tree' },
-        sortEntries(listing).map((entry) => {
-          const childPath = joinPath(dir, entry.name)
-          const isDir = entry.type === 'directory'
-          return h('div', {
-            key: childPath,
-            className: 'dsh-tdt-sv-tree-row',
-            role: 'button',
-            tabIndex: 0,
-            title: childPath,
-            onClick: () => { if (isDir) loadDir(childPath); else { setViewing(childPath); setReloadNonce(0); setSourceView(false) } },
-            onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') { if (isDir) loadDir(childPath); else { setViewing(childPath); setReloadNonce(0); setSourceView(false) } } },
-          },
-            h('span', { className: 'dsh-tdt-sv-tree-icon' },
-              isDir
-                ? h(IconChevronRightOutlineRegular, { size: 16 })
-                : h(FileTypeIcon, { path: childPath, size: 18 })),
-            h('span', { className: 'dsh-tdt-sv-tree-name' }, entry.name),
-          )
-        }),
+        renderTree(listing, dir),
         truncated
           ? h('div', { className: 'dsh-tdt-sv-tree-truncated' }, t('explorerTruncated'))
           : null,
@@ -351,18 +425,20 @@ export function FileBrowser(props: {
               crumbs.length === 0
                 ? h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, t('explorerRootName'))
                 : crumbs.map((crumb, index) => {
-                  const isLast = index === crumbs.length - 1
-                  const connector = index === 0 ? '' : (isLast ? '└ ' : '├ ')
+                  // 方案 A：每层前置 index 个官方右箭头图标表示深度，不再用 ASCII 树符（├/└）。
+                  const chevrons = index === 0
+                    ? null
+                    : Array.from({ length: index }, (_, i) =>
+                      h('span', { key: i, className: 'dsh-tdt-sv-crumbs-chev' }, h(IconChevronRightOutlineRegular, { size: 11 })))
                   return h('button', {
                     key: crumb.path,
                     type: 'button',
                     role: 'menuitem',
                     className: 'dsh-tdt-sv-crumbs-menu-item',
-                    // 层级缩进 + 树形连接符，直观表达「根→…→当前」的嵌套（用户本轮 point2）。
-                    style: { paddingLeft: 8 + index * 14 },
+                    style: { paddingLeft: 8 },
                     title: crumb.path,
                     onClick: () => { loadDir(crumb.path) },
-                  }, connector + crumb.label)
+                  }, chevrons, h('span', { className: 'dsh-tdt-sv-crumbs-menu-label' }, crumb.label))
                 }),
             ))
           : null,
@@ -405,16 +481,6 @@ export function FileBrowser(props: {
           disabled: dir === '',
           onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
         }, h(IconChevronUpOutlineRegular, { size: 14 })),
-        // 目录态（未选文件）刷新：放第一排，因第二排整体隐藏（用户本轮 point1）。
-        viewing === null
-          ? h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('previewRefresh'),
-            title: t('previewRefresh'),
-            onClick: reload,
-          }, h(IconRefreshOutlineRegular, { size: 14 }))
-          : null,
         h('button', {
           type: 'button',
           className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
