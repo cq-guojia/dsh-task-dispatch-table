@@ -190,6 +190,10 @@ export function FileBrowser(props: {
         if (parsed === null) { setListErr({ key: 'previewBadPayload' }); setMode('error'); return }
         setListing(parsed.entries)
         setTruncated(parsed.truncated)
+        // dir 以服务端返回的规范路径为准（workspacePathOf(root, target)，工作区相对形式）：
+        // 入口路径可能是宿主绝对路径（工具卡）/工作区相对名（交付卡·产出列），
+        // 只有采用规范路径，文件与目录两条入口的面包屑才一致、且从工作区列全（用户 2026-09-29）。
+        setDir(parsed.path)
         setMode('dir')
       })
       .catch((error: unknown) => { setListErr(errView(error)); setMode('error') })
@@ -227,8 +231,8 @@ export function FileBrowser(props: {
         if (!alive) return
         const parsed = listingOf(result)
         if (!isFailed(parsed) && parsed !== null) {
-          // 目录：直接展示树。
-          setDir(path)
+          // 目录：直接展示树。dir = 服务端规范路径（见 fetchDir 同款理由）。
+          setDir(parsed.path)
           setListing(parsed.entries)
           setTruncated(parsed.truncated)
           setMode('dir')
@@ -243,7 +247,12 @@ export function FileBrowser(props: {
           .then((pres) => {
             if (!alive) return
             const pl = listingOf(pres)
-            if (!isFailed(pl) && pl !== null) { setListing(pl.entries); setTruncated(pl.truncated) }
+            if (!isFailed(pl) && pl !== null) {
+              setListing(pl.entries)
+              setTruncated(pl.truncated)
+              // 文件态的面包屑同样以父目录的规范路径为准（与目录态一致，用户 2026-09-29）。
+              setDir(pl.path)
+            }
           })
           .catch(() => { /* 父树列不出不影响文件预览 */ })
       })
@@ -430,11 +439,16 @@ export function FileBrowser(props: {
               crumbs.length === 0
                 ? h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, t('explorerRootName'))
                 : crumbs.map((crumb, index) => {
-                  // 方案 A：每层前置 index 个官方右箭头图标表示深度，不再用 ASCII 树符（├/└）。
+                  // 方案 A 修订（用户 2026-09-29）：每行只显示**一个**右箭头——行首先空出
+                  // (index-1) 个箭头位（占位不画、位置保留），箭头固定画在原第 index 位；
+                  // 首行不显示箭头。
                   const chevrons = index === 0
                     ? null
-                    : Array.from({ length: index }, (_, i) =>
-                      h('span', { key: i, className: 'dsh-tdt-sv-crumbs-chev' }, h(IconChevronRightOutlineRegular, { size: 11 })))
+                    : h(Fragment, null,
+                      Array.from({ length: index - 1 }, (_, i) =>
+                        h('span', { key: `s${i}`, className: 'dsh-tdt-sv-crumbs-chev-slot', 'aria-hidden': true })),
+                      h('span', { className: 'dsh-tdt-sv-crumbs-chev' }, h(IconChevronRightOutlineRegular, { size: 11 })),
+                    )
                   return h('button', {
                     key: crumb.path,
                     type: 'button',
@@ -452,15 +466,19 @@ export function FileBrowser(props: {
         // 隐藏测量条：渲染与可见态完全相同的 crumb 按钮（含 padding/max-width），使溢出判定
         // 与真实排版一致——不超长时必定还原完整路径（用户本轮 point3）。
         h('span', { ref: measureRef, className: 'dsh-tdt-sv-crumbs-measure', 'aria-hidden': true },
-          crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
-            index > 0 ? h(IconChevronRightOutlineRegular, { size: 12 }) : null,
-            h('button', { type: 'button', className: 'dsh-tdt-sv-crumb', disabled: true, tabIndex: -1 }, crumb.label),
-          ))),
+          crumbs.length === 0
+            ? h('button', { type: 'button', className: 'dsh-tdt-sv-crumb', disabled: true, tabIndex: -1 }, t('explorerRootName'))
+            : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+              index > 0 ? h(IconChevronRightOutlineRegular, { size: 12 }) : null,
+              h('button', { type: 'button', className: 'dsh-tdt-sv-crumb', disabled: true, tabIndex: -1 }, crumb.label),
+            ))),
+        // 工作区根目录（crumbs 空）也要有可见的面包屑占位（用户 2026-09-29：从工作区开始列）。
         crumbsOverflow
-          ? crumbs.length > 0
-            ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, crumbs[crumbs.length - 1].label)
-            : null
-          : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+          ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' },
+            crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t('explorerRootName'))
+          : crumbs.length === 0
+            ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, t('explorerRootName'))
+            : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
             index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
             h('button', {
               type: 'button',

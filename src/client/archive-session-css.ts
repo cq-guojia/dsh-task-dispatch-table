@@ -241,19 +241,27 @@ body[data-ds-dark-theme] .dsh-tdt-sv-preview-dock:has(.dsh-tdt-sv-resizer:active
 .dsh-tdt-sv-seg-btn:hover{color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-00,#fff);color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18);}
 body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-900,#111);color:var(--dsw-static-neutral-00,#fff);}
-/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面按容器宽度布局。 */
+/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面按容器宽度布局。
+   ⚠️ ocOr 语义 = 官方类命中时我方兜底类**不挂**（officialClass ?? fallback，两者只取其一）
+   ⇒ 作用域一律用 [data-code-preview]：官方 CodeBody（client.js:5042）与我方兜底 div
+   都带这个属性，两条路都命中——此前把规则写在 .dsh-tdt-sv-preview-coderender 下，
+   官方类命中时全是死规则（2026-09-29 源码排障结论）。 */
 .dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;}
 .dsh-tdt-sv-preview-code{min-width:0;max-width:100%;}
-/* 换行开关 **完整交回官方 CodeBlock**（源码事实，primitives@0.1.7-rc.2）：
-   · 不传 wrap ⇒ 工具栏渲染换行钮，内部 localWrapped 默认 true ⇒ **默认折行**；
-   · 开 = 根[data-code-wrap=true] ⇒ pre 走 white-space:pre-wrap ⇒ 折行、不溢出；
-   · 关 = 根[data-code-wrap=false] ⇒ pre 走 white-space:pre ⇒ 不折行，
-     由 pre 自带 overflow-x:auto 出横向滚动条（滚动口就是 pre，.content 是 display:contents）。
-   ⚠️ 我方曾传 wrap:true 导致官方 omit 掉换行钮、又用 CSS 覆盖官方换行规则 ⇒ 两次弄坏它。
-   现在只补两条：① pre 宽度受容器约束（折行按容器宽度发生）；② 换行开时禁用横向滚动条。
-   除此之外绝不覆盖官方任何 white-space / overflow 规则。 */
-.dsh-tdt-sv-preview-coderender pre{max-width:100%;}
-.dsh-tdt-sv-preview-coderender [data-code-wrap='true'] pre{overflow-x:hidden;}
+/* 换行开关（源码事实，0.1.7-rc.2 三包对照，2026-09-29）：
+   · primitives CodeBlock：换行钮只在 wrap === undefined 时渲染（lib/index.js:10689 的
+     onWrap 分支 + :9285），点钮翻转 CodeBlock 根上的 data-code-wrap；
+     但 primitives 自己**没有任何 CSS 消费 CodeBlock 的 data-code-wrap**（换行规则只在
+     DiffBlock/ReadBlock 模块里）。
+   · ui-sidebar-documentpreview CodeBody.module.css：对 .code pre **强制 white-space:pre
+     （默认不折行）**，只有 .renderer[data-wrap=true] 才放开为 pre-wrap——而 data-wrap 是
+     官方预览面板持有状态后下传的（register({wrap:true}) + CodeBody 的 data-wrap 属性），
+     我方从不设 ⇒ 官方这条 pre 恒生效 ⇒ 点工具条换行钮永远不折行（两轮没修好的真根因）。
+   ⇒ 修法 = 用 [data-code-preview] + CodeBlock 自身的 [data-code-wrap='true'] 复刻官方
+     [data-wrap=true] 的同款放开规则；特异性 (0,3,·) 压过官方 (0,2,·)。换行关 = 官方默认
+     （pre 不折行 + content overflow:auto ⇒ 横向滚动条；用户 2026-09-29 认可关态有滚动条）。 */
+[data-code-preview] [data-code-wrap='true'] [data-code-block-content]{--dsl-code-block-line-white-space:pre-wrap;overflow-x:hidden;}
+[data-code-preview] [data-code-wrap='true'] [data-code-block-content] pre{white-space:pre-wrap;overflow-wrap:anywhere;}
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
 /* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
@@ -291,8 +299,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-err-back{color:var(--dsw-static-neutral-00,
 .dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:13px;line-height:20px;color:var(--dsw-alias-label-primary,#1f2328);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 body[data-ds-dark-theme] .dsh-tdt-sv-tree-name{color:var(--dsw-static-neutral-00,#fff);}
 .dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-/* 下拉选层：每层前置官方右箭头图标（方案 A），替代 ASCII 树符。 */
+/* 下拉选层：每行只显示一个右箭头（画在原第 index 位），行首 (index-1) 个箭头位
+   空出但占位（宽度与箭头一致），保持层级缩进（用户 2026-09-29）。 */
 .dsh-tdt-sv-crumbs-chev{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));margin-right:1px;}
+.dsh-tdt-sv-crumbs-chev-slot{flex:none;width:11px;height:11px;margin-right:1px;}
 .dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
 .dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
