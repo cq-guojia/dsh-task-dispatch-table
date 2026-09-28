@@ -13,7 +13,8 @@ import { join } from 'node:path'
 import type { HostContext, HostLogger, HostWorkspace } from './host.js'
 import { parseInlineTasks, type TaskDefinition } from './tasks.js'
 import { displayNameOf, durationMs, logicalDateOf, scheduledSlotsFor } from './tasks.js'
-import type { InstanceSnapshot, TaskInstance, TaskStore, InstanceStatus } from './store.js'
+import type { InstanceSnapshot, ResolvedDependency, TaskInstance, TaskStore, InstanceStatus } from './store.js'
+import { parseInstanceSnapshot } from './store.js'
 import type { Reconciler } from './reconcile.js'
 import { resolveWorkspace } from './dispatch.js'
 import type { PluginConfig } from './config.js'
@@ -27,10 +28,12 @@ export interface Scheduler {
 
 export type Judgement = 'ready' | 'blocked'
 
-/** 依赖判定结果（决策 33）：`staleNotes` = 复用旧产出的告警，只提示不拦。 */
+/** 依赖判定结果（决策 33）：`staleNotes` = 复用旧产出的告警，只提示不拦；
+ *  `resolved` = 放行时固化的上游实例解析（决策 43），阻塞为空数组。 */
 export interface DependencyVerdict {
   ready: boolean
   staleNotes: string[]
+  resolved: ResolvedDependency[]
 }
 
 // 串行互斥只认**真正在飞**的状态（决策 8：同任务不并发）。
@@ -69,6 +72,29 @@ function stripJsoncComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
 }
 
+/**
+ * 上游实例 → 已解析依赖（决策 43）：固化 id / 计划时刻 / 会话 / 上游工作区 / 产出。
+ * 产出取上游实例的 `outputs` 列（回执声明并经 checkReceipt 校验的 JSON 数组，决策 32 修订）；
+ * 旧行 / 坏 JSON / 未声明 ⇒ 空数组（消息里如实写「未声明产出」）。
+ */
+function resolvedOf(dep: { task: string; semantics: 'same_period' | 'latest_success' }, upstream: TaskInstance): ResolvedDependency {
+  let outputs: string[] = []
+  try {
+    const parsed: unknown = upstream.outputs === null ? undefined : JSON.parse(upstream.outputs)
+    if (Array.isArray(parsed)) outputs = parsed.filter((x): x is string => typeof x === 'string')
+  } catch { /* 旧行 / 异常 ⇒ 视为未声明 */ }
+  const upstreamSnap = parseInstanceSnapshot(upstream.snapshot)
+  return {
+    task: dep.task,
+    semantics: dep.semantics,
+    instanceId: upstream.id,
+    scheduledAt: upstream.scheduled_at,
+    sessionId: upstream.session_id,
+    workspacePath: upstreamSnap?.workspacePath ?? null,
+    outputs,
+  }
+}
+
 // ── 依赖判定（决策 8/9）：同周期 / 最近成功。只查已存在的实例（无行即视为缺失）。──
 export function judgeDependencies(
   store: TaskStore,
@@ -77,8 +103,9 @@ export function judgeDependencies(
   scheduledAt: string,
 ): DependencyVerdict {
   const deps = task.depends_on
-  if (!deps || deps.length === 0) return { ready: true, staleNotes: [] }
+  if (!deps || deps.length === 0) return { ready: true, staleNotes: [], resolved: [] }
   const staleNotes: string[] = []
+  const resolved: ResolvedDependency[] = []
   // 「复用旧产出」告警判据：下游上次执行时刻（首次运行无 ⇒ 不告警）。只提示，不拦。
   const lastRun = store.getLatestInstance(task.id)
   const lastRunMs = lastRun === undefined ? undefined : Date.parse(lastRun.scheduled_at)
@@ -86,20 +113,23 @@ export function judgeDependencies(
     if (dep.semantics === 'same_period') {
       // 同周期：同 logical_date 取最新一条，必须 succeeded（决策 33 #2）
       const upstream = store.getSamePeriod(dep.task, logicalDate)
-      if (upstream === undefined || upstream.status !== 'succeeded') return { ready: false, staleNotes: [] }
+      if (upstream === undefined || upstream.status !== 'succeeded') return { ready: false, staleNotes, resolved: [] }
+      // 决策 43：命中即固化——写库那一刻是哪条上游实例放的行，就此定死
+      resolved.push(resolvedOf(dep, upstream))
       continue
     }
     // latest_success（决策 33）：上游**最近一条**（不分状态）必须正好是 succeeded；
     // 在跑 / 失败 / 无记录 ⇒ 阻塞，绝不拿更早的旧成功放行。
     const latest = store.getLatestInstance(dep.task)
-    if (latest === undefined || latest.status !== 'succeeded') return { ready: false, staleNotes: [] }
+    if (latest === undefined || latest.status !== 'succeeded') return { ready: false, staleNotes, resolved: [] }
     const upstreamMs = Date.parse(latest.scheduled_at)
     // 上游这份成功不晚于下游上次执行 ⇒ 下游上次跑时它已存在 ⇒ 复用旧产出，告警
     if (lastRunMs !== undefined && upstreamMs <= lastRunMs) {
       staleNotes.push(`上游 ${dep.task} 无新产出，本次复用 ${latest.scheduled_at} 的旧产出`)
     }
+    resolved.push(resolvedOf(dep, latest))
   }
-  return { ready: true, staleNotes }
+  return { ready: true, staleNotes, resolved }
 }
 
 function isOnce(task: TaskDefinition): boolean {
@@ -147,8 +177,8 @@ function logDepBlocked(depLog: Map<string, number>, store: TaskStore, taskId: st
 // 工作区解析用 dispatch.js 的 resolveWorkspace（Loop A 落库前的前置检查，决策 41：
 // Loop B 发动走 resolveWorkspaceByPath——快照里存的是 path）。
 
-/** 派发快照组装（决策 41）：落库时把执行所需字段固化进实例行，此后与任务设置无关。 */
-function snapshotOf(task: TaskDefinition, workspace: HostWorkspace): InstanceSnapshot {
+/** 派发快照组装（决策 41 + 决策 43）：落库时把执行所需字段（含依赖解析）固化进实例行，此后与任务设置无关。 */
+function snapshotOf(task: TaskDefinition, workspace: HostWorkspace, resolvedDeps: ResolvedDependency[]): InstanceSnapshot {
   return {
     title: displayNameOf(task),
     prompt: task.target.prompt,
@@ -159,6 +189,7 @@ function snapshotOf(task: TaskDefinition, workspace: HostWorkspace): InstanceSna
     validStatuses: task.contract.validStatuses.length > 0 ? [...task.contract.validStatuses] : ['ok'],
     maxAttempts: task.retry.maxAttempts,
     window: task.schedule.window,
+    resolvedDeps,
   }
 }
 
@@ -196,7 +227,7 @@ function dispatchNewSlots(
     // 懒建行（同步）：直接 dispatched + 派发快照，杜绝提前 pending / 未来预建。
     // 决策 41：**落库即止**——发动执行是 Loop B（reconciler.sweep）的事，本循环到此为止。
     const id = randomUUID()
-    if (!store.ensureInstance(id, task.id, slot.logicalDate, slot.scheduledAtIso, 'dispatched', snapshotOf(task, workspace))) continue // 撞唯一索引（极少）
+    if (!store.ensureInstance(id, task.id, slot.logicalDate, slot.scheduledAtIso, 'dispatched', snapshotOf(task, workspace, depVerdict.resolved))) continue // 撞唯一索引（极少）
     logger.info(`已落库执行记录 ${id}（任务 ${task.id} · ${slot.scheduledAtIso}），发动由执行循环接管（决策 41）`)
   }
 }

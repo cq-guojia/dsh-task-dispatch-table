@@ -4,7 +4,7 @@
 //   弹窗偏差（用户拍板 2026-09-27）：归档会话轮数少，恒 'always' 每轮操作行全部常显，不做 hover 显隐。
 //   closing === null（本轮没有回复）⇒ 只留 turnTail 插槽；弹窗无插槽 ⇒ 整块不渲染。
 // hasAssistantReplyContent（lib/client.js:6466）：reasoning / tool-call 不算回复，空文本不算。
-import { createElement as h } from 'react'
+import { createElement as h, type ReactNode } from 'react'
 import { ocOr } from '../official-classes'
 import type { Translate } from '../locales'
 import { MessageIconActionsMirror } from './MessageIconActions'
@@ -44,9 +44,11 @@ export function TurnTailNodeViewMirror(props: {
   data: TurnTailDataFace
   /** 分支：以该轮 tail seq 截断开分支（undefined = 不渲染分支按钮）。 */
   onBranchAt?: (seq: number) => void
+  /** 官方 conversation.chat.turnTail 插槽内容（如 DeliverablesTail），渲染在操作行之前。 */
+  tailSlot?: ReactNode
   t: Translate
 }): ReturnType<typeof h> | null {
-  const { data, onBranchAt, t } = props
+  const { data, onBranchAt, tailSlot, t } = props
   const closing = data.closing
   if (closing === null || closing === undefined) return null
   const text = assistantText(closing.blocks)
@@ -55,6 +57,7 @@ export function TurnTailNodeViewMirror(props: {
     'data-turn-tail': data.turn,
     'data-actions-reveal': 'always',
   },
+    tailSlot === undefined || tailSlot === null ? null : tailSlot,
     h(MessageIconActionsMirror, {
       text,
       time: closing.time,

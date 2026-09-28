@@ -1,6 +1,6 @@
 import type { HostContext, HostLogger } from './host.js';
 import { type TaskDefinition } from './tasks.js';
-import type { TaskStore } from './store.js';
+import type { ResolvedDependency, TaskStore } from './store.js';
 import type { Reconciler } from './reconcile.js';
 import type { PluginConfig } from './config.js';
 export interface Scheduler {
@@ -10,10 +10,12 @@ export interface Scheduler {
     startupDiagnostics: () => void;
 }
 export type Judgement = 'ready' | 'blocked';
-/** 依赖判定结果（决策 33）：`staleNotes` = 复用旧产出的告警，只提示不拦。 */
+/** 依赖判定结果（决策 33）：`staleNotes` = 复用旧产出的告警，只提示不拦；
+ *  `resolved` = 放行时固化的上游实例解析（决策 43），阻塞为空数组。 */
 export interface DependencyVerdict {
     ready: boolean;
     staleNotes: string[];
+    resolved: ResolvedDependency[];
 }
 export declare function judgeDependencies(store: TaskStore, task: TaskDefinition, logicalDate: string, scheduledAt: string): DependencyVerdict;
 export declare function createScheduler(opts: {

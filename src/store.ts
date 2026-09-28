@@ -31,6 +31,23 @@ export interface TaskInstance {
   updated_at: string
 }
 
+/** 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。 */
+export interface ResolvedDependency {
+  /** 上游任务 id（depends_on.task 原值）。 */
+  task: string
+  semantics: 'same_period' | 'latest_success'
+  /** 判定通过那一刻命中的上游实例 id。 */
+  instanceId: string
+  /** 上游实例的计划时刻（ISO）。 */
+  scheduledAt: string
+  /** 上游实例的会话 id（无则 null）。 */
+  sessionId: string | null
+  /** 上游实例快照的工作区 path（产出相对路径的绝对化基准）；上游旧行无快照为 null。 */
+  workspacePath: string | null
+  /** 上游回执声明并校验过的产出（相对上游工作区；未声明为空数组）。 */
+  outputs: string[]
+}
+
 /**
  * 派发快照（决策 41）：Loop A 落库时固化，Loop B（发动 / 重试 / 追问 / 回执裁决）**只读快照**，
  * 与任务设置彻底解耦——中途改任务定义对已落库实例零影响。
@@ -49,6 +66,34 @@ export interface InstanceSnapshot {
   maxAttempts: number
   /** ISO 时长串（超窗判定用，决策 41：快照管「已开工的」窗口边界）。 */
   window: string
+  /** 依赖快照（决策 43）：判定通过那一刻命中的上游实例与产出；决策 41 旧行无此字段。 */
+  resolvedDeps?: ResolvedDependency[]
+}
+
+/** 解析 resolvedDeps（决策 43）：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃。 */
+function parseResolvedDeps(raw: unknown): ResolvedDependency[] | undefined {
+  if (raw === undefined) return undefined
+  if (!Array.isArray(raw)) return undefined
+  const out: ResolvedDependency[] = []
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) return undefined
+    const d = item as Partial<ResolvedDependency>
+    if (typeof d.task !== 'string' || typeof d.instanceId !== 'string' || typeof d.scheduledAt !== 'string'
+      || (d.semantics !== 'same_period' && d.semantics !== 'latest_success')
+      || (d.sessionId !== null && typeof d.sessionId !== 'string')
+      || (d.workspacePath !== null && typeof d.workspacePath !== 'string')
+      || !Array.isArray(d.outputs)) return undefined
+    out.push({
+      task: d.task,
+      semantics: d.semantics,
+      instanceId: d.instanceId,
+      scheduledAt: d.scheduledAt,
+      sessionId: d.sessionId ?? null,
+      workspacePath: d.workspacePath ?? null,
+      outputs: d.outputs.filter((x): x is string => typeof x === 'string'),
+    })
+  }
+  return out
 }
 
 /** 解析实例行的快照 JSON；空 / 坏 JSON / 形状不对返回 undefined（调用方走兜底）。 */
@@ -60,6 +105,7 @@ export function parseInstanceSnapshot(raw: string | null): InstanceSnapshot | un
     const s = value as Partial<InstanceSnapshot>
     if (typeof s.title !== 'string' || typeof s.prompt !== 'string' || typeof s.workspacePath !== 'string') return undefined
     if (!Array.isArray(s.validStatuses)) return undefined
+    const resolvedDeps = parseResolvedDeps(s.resolvedDeps)
     return {
       title: s.title,
       prompt: s.prompt,
@@ -70,6 +116,7 @@ export function parseInstanceSnapshot(raw: string | null): InstanceSnapshot | un
       validStatuses: s.validStatuses.filter((x): x is string => typeof x === 'string'),
       maxAttempts: typeof s.maxAttempts === 'number' && Number.isInteger(s.maxAttempts) && s.maxAttempts >= 1 ? s.maxAttempts : 1,
       window: typeof s.window === 'string' ? s.window : 'PT0S',
+      ...(resolvedDeps === undefined ? {} : { resolvedDeps }),
     }
   } catch {
     return undefined

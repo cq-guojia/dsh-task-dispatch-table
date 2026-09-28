@@ -131,7 +131,19 @@
 - 回执提示词同步修订（`receipt.ts` 两处：工具 outputs 参数说明 + `receiptInstruction`）：
   outputs 粒度由模型判断——装产物的文件夹**是为本任务专门建的**（如网页/项目专属文件夹）→ 报文件夹路径；
   文件只是写进**既有或按规范建的目录**（如按日期的日常目录）→ 逐个报文件。起因：cron 探针任务
-  「建文件夹写两个文件」模型报了两个散文件而未报文件夹。冒烟 164 项全过。
+  「建文件夹写两个文件」模型报了两个散文件而未报文件夹。
+
+**同日二次复验修正（位置再对齐 + 桌面不可用提示）**：用户截图指出网格仍偏下——它跑到了
+`MessageIconActions`（复制/分支/用量/时钟那一行）**下面**。读官方 `TurnTailNodeView` 源码确认：
+官方 root 是 flex column gap 16px，children = `[tailSlot, MessageIconActions]`，即交付卡/提示**必须在
+操作行之前**。我们之前把 `DeliverablesGridMirror` 放在 `TurnTailNodeViewMirror` 返回之后，自然跑到操作行下面。
+已改成：
+- `TurnTailNodeViewMirror` 新增 `tailSlot?: ReactNode` prop，渲染在 `MessageIconActions` 之前；
+- `renderKeyedNode` 在最后一轮 turn-tail 内构建 tailSlot = `[桌面提示, DeliverablesGridMirror]`，
+  传给 `TurnTailNodeViewMirror`，于是顺序 = 收尾文字 → 桌面提示 → 交付卡网格 → 操作栏，和官方一致；
+- 新增桌面不可用提示：调用官方同源接口 `/api/present.host`（`usePresentedHost`），当返回
+  `available=false` 时显示 `presented.unavailable` 文案（"此主机没有可用的桌面……"），文案与官方字典键一致；
+- 该提示官方只在没有可用桌面时出现；本插件弹窗里走同一接口，能判断。冒烟 164 项全过。
 
 ---
 

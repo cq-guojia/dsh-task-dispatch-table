@@ -48,8 +48,9 @@ export declare function resolveModelRoute(ctx: HostContext, logger: HostLogger, 
  */
 export declare function userNotice(text: string, summary: string): UserMessage;
 /**
- * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化）：短指令 prompt + 手册路径 +
- * 回执调用说明。prompt / manual / validStatuses 全部来自派发快照，与任务设置无关。
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段）：
+ * 短指令 prompt + 手册路径 + 上游依赖段 + 回执调用说明。
+ * prompt / manual / validStatuses / resolvedDeps 全部来自派发快照，与任务设置无关。
  */
 export declare function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string): UserMessage;
 export interface DispatchInput {

@@ -142,6 +142,7 @@ window.__ModuleLoader__.load({
 			copiedLabel: "已复制",
 			branchLabel: "在新对话中分支",
 			branchUnavailableLabel: "只读会话记录不可分支",
+			"presented.unavailable": "此主机没有可用的桌面，无法使用外部程序打开文件或文件夹；文件仍可在侧边栏预览",
 			turnUsageTitle: "本轮用量",
 			turnUsageModel: "提供方 / 模型",
 			turnUsageCacheHit: "缓存命中",
@@ -382,6 +383,7 @@ window.__ModuleLoader__.load({
 			copiedLabel: "Copied",
 			branchLabel: "Branch into a new conversation",
 			branchUnavailableLabel: "A read-only transcript cannot be branched",
+			"presented.unavailable": "This host has no available desktop; external programs cannot open files or folders. Files can still be previewed in the sidebar.",
 			turnUsageTitle: "Turn usage",
 			turnUsageModel: "Provider / model",
 			turnUsageCacheHit: "Cache hit",
@@ -2437,7 +2439,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		/** Turn 尾部操作行：复制 / 分支 / 用量 / 结束时钟。 */
 		function TurnTailNodeViewMirror(props) {
-			const { data, onBranchAt, t } = props;
+			const { data, onBranchAt, tailSlot, t } = props;
 			const closing = data.closing;
 			if (closing === null || closing === void 0) return null;
 			const text = assistantText$1(closing.blocks);
@@ -2445,7 +2447,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: ocOr("TurnTailNodeView", "root", "dsh-tdt-sv-tail"),
 				"data-turn-tail": data.turn,
 				"data-actions-reveal": "always"
-			}, (0, react.createElement)(MessageIconActionsMirror, {
+			}, tailSlot === void 0 || tailSlot === null ? null : tailSlot, (0, react.createElement)(MessageIconActionsMirror, {
 				text,
 				time: closing.time,
 				clock: "end",
@@ -2676,6 +2678,41 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		//#region src/client/session-view.ts
 		/** 稳定的空序列（避免默认值每次新建数组）。 */
 		const EMPTY_ORDER = [];
+		/** 官方 usePresentedHost 的简化镜像：查询 /api/present.host，判断外部程序能否打开文件。 */
+		function usePresentedHost() {
+			const [host, setHost] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let cancelled = false;
+				fetch("/api/present.host").then(async (res) => {
+					if (!res.ok) {
+						if (!cancelled) setHost("error");
+						return;
+					}
+					const value = await res.json();
+					if (typeof value !== "object" || value === null || Array.isArray(value)) {
+						if (!cancelled) setHost("error");
+						return;
+					}
+					const h = value;
+					const fileManager = h.fileManager ?? null;
+					if (typeof h.name !== "string" || typeof h.available !== "boolean" || !(fileManager === null || fileManager === "finder" || fileManager === "explorer" || fileManager === "directory")) {
+						if (!cancelled) setHost("error");
+						return;
+					}
+					if (!cancelled) setHost({
+						name: h.name,
+						available: h.available,
+						fileManager
+					});
+				}).catch(() => {
+					if (!cancelled) setHost("error");
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, []);
+			return host;
+		}
 		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
 		let officialWarned = false;
 		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
@@ -2864,7 +2901,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* @param groupPart - 过程分组侧（'response' | 'reasoning'）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn) {
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -2877,19 +2914,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				});
 				case "turn-tail": {
 					const data = node.data;
-					const tail = data === void 0 || data.closing === null || data.closing === void 0 ? null : (0, react.createElement)(TurnTailNodeViewMirror, {
-						data,
-						onBranchAt,
-						t
-					});
 					const turn = data?.turn ?? turnLocationOf(node)?.turn;
-					const grid = deliverFiles === void 0 || deliverFiles.length === 0 || turn === void 0 || lastTailTurn === void 0 || turn !== lastTailTurn ? null : (0, react.createElement)(DeliverablesGridMirror, {
+					const tailSlot = deliverFiles !== void 0 && deliverFiles.length > 0 && turn !== void 0 && lastTailTurn !== void 0 && turn === lastTailTurn ? (0, react.createElement)(react.Fragment, null, host !== void 0 && host !== null && host !== "error" && !host.available ? (0, react.createElement)("span", {
+						className: ocOr("Deliverables", "hostStatus", "dsh-tdt-sv-host-status"),
+						"data-host-unavailable": true
+					}, t("presented.unavailable")) : null, (0, react.createElement)(DeliverablesGridMirror, {
 						files: deliverFiles,
 						onOpen: fileOpen?.open,
 						t
+					})) : null;
+					return data === void 0 || data.closing === null || data.closing === void 0 ? null : (0, react.createElement)(TurnTailNodeViewMirror, {
+						data,
+						onBranchAt,
+						tailSlot,
+						t
 					});
-					if (tail === null && grid === null) return null;
-					return (0, react.createElement)(react.Fragment, null, tail, grid);
 				}
 				case "assistant-step": {
 					const blocks = blocksOf(dataOf(node).blocks) ?? [];
@@ -3353,12 +3392,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				order,
 				store
 			]);
-			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn), [
+			const host = usePresentedHost();
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host), [
 				tt,
 				onBranchAt,
 				fileOpen,
 				deliverFiles,
-				lastTailTurn
+				lastTailTurn,
+				host
 			]);
 			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [

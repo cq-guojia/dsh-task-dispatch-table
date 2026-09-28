@@ -128,6 +128,37 @@ interface NodeBaseLike {
   time: number
 }
 
+/** 官方 /api/present.host 返回的桌面可用性元数据（lib/client.js:289 isPresentedHost）。 */
+interface PresentedHostFace {
+  name: string
+  available: boolean
+  fileManager: null | 'finder' | 'explorer' | 'directory'
+}
+
+/** 官方 usePresentedHost 的简化镜像：查询 /api/present.host，判断外部程序能否打开文件。 */
+function usePresentedHost(): PresentedHostFace | 'error' | null {
+  const [host, setHost] = useState<PresentedHostFace | 'error' | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/present.host')
+      .then(async (res) => {
+        if (!res.ok) { if (!cancelled) setHost('error'); return }
+        const value = await res.json() as unknown
+        if (typeof value !== 'object' || value === null || Array.isArray(value)) { if (!cancelled) setHost('error'); return }
+        const h = value as { name?: unknown; available?: unknown; fileManager?: unknown }
+        const fileManager = h.fileManager ?? null
+        if (typeof h.name !== 'string' || typeof h.available !== 'boolean'
+          || !(fileManager === null || fileManager === 'finder' || fileManager === 'explorer' || fileManager === 'directory')) {
+          if (!cancelled) setHost('error'); return
+        }
+        if (!cancelled) setHost({ name: h.name, available: h.available, fileManager } as PresentedHostFace)
+      })
+      .catch(() => { if (!cancelled) setHost('error') })
+    return () => { cancelled = true }
+  }, [])
+  return host
+}
+
 /** 官方 ConversationNode 联合的渲染字段复述；kind 收窄靠 switch + fallback。 */
 type ConversationNodeLike = NodeBaseLike & {
   // user / steering / context（records.d.ts:45-110）
@@ -635,6 +666,8 @@ function renderKeyedNode(
   deliverFiles?: readonly DeliveredFileFace[],
   /** 最后一轮 turn-tail 的 turn 号：交付卡只挂在这里（官方 DeliverablesTail 位置 = 每轮收尾之后）。 */
   lastTailTurn?: number,
+  /** 官方 /api/present.host 桌面可用性；用于渲染 "presented.unavailable" 提示。 */
+  host?: PresentedHostFace | 'error' | null,
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'turn-trigger':
@@ -646,20 +679,27 @@ function renderKeyedNode(
         t,
       })
     case 'turn-tail': {
-      // 官方 turnTail 插槽（DeliverablesTail 同位）：本轮收尾操作行之后挂交付文件卡网格。
-      // 数据 = 实例 outputs + 快照 deliverables 合并去重（不依赖宿主投影是否重放成功），
-      // 且只挂最后一轮 tail（会话底部，与官方交付卡位置一致）；样式走官方 Deliverables 类。
+      // 官方 turnTail 插槽（DeliverablesTail 同位）：交付卡网格 + host 不可用提示渲染在
+      // TurnTailNodeView 的 tailSlot 里，即在 MessageIconActions（复制/分支/用量/时钟行）之前。
+      // 数据 = 实例 outputs + 快照 deliverables 合并去重，只挂最后一轮 tail，样式走官方 Deliverables 类。
       const data = node.data as unknown as TurnTailDataFace | undefined
+      const turn = data?.turn ?? turnLocationOf(node)?.turn
+      const showGrid = deliverFiles !== undefined && deliverFiles.length > 0
+        && turn !== undefined && lastTailTurn !== undefined && turn === lastTailTurn
+      const tailSlot = showGrid
+        ? h(Fragment, null,
+            host !== undefined && host !== null && host !== 'error' && !host.available
+              ? h('span', {
+                className: ocOr('Deliverables', 'hostStatus', 'dsh-tdt-sv-host-status'),
+                'data-host-unavailable': true,
+              }, t('presented.unavailable'))
+              : null,
+            h(DeliverablesGridMirror, { files: deliverFiles, onOpen: fileOpen?.open, t }))
+        : null
       const tail = data === undefined || data.closing === null || data.closing === undefined
         ? null
-        : h(TurnTailNodeViewMirror, { data, onBranchAt, t })
-      const turn = data?.turn ?? turnLocationOf(node)?.turn
-      const grid = deliverFiles === undefined || deliverFiles.length === 0
-        || turn === undefined || lastTailTurn === undefined || turn !== lastTailTurn
-        ? null
-        : h(DeliverablesGridMirror, { files: deliverFiles, onOpen: fileOpen?.open, t })
-      if (tail === null && grid === null) return null
-      return h(Fragment, null, tail, grid)
+        : h(TurnTailNodeViewMirror, { data, onBranchAt, tailSlot, t })
+      return tail
     }
     case 'assistant-step': {
       // 官方块渲染器（lib/client.js:5818-5871）：
@@ -1159,9 +1199,11 @@ export function SessionViewModal(props: {
     }
     return undefined
   }, [keyed, order, store])
+  // 桌面可用性：官方 Deliverables 组件的 "presented.unavailable" 提示同源（/api/present.host）。
+  const host = usePresentedHost()
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn),
-    [tt, onBranchAt, fileOpen, deliverFiles, lastTailTurn],
+    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host),
+    [tt, onBranchAt, fileOpen, deliverFiles, lastTailTurn, host],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>

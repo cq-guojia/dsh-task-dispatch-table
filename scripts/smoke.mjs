@@ -11,9 +11,10 @@ import {
   ensureIdsInInlineJson, existingUuidIds, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, applyIdentity, isUuid,
   displayNameOf, formatSlotShort, sessionTitleOf,
 } from '../dist/tasks.js'
-import { TaskStore } from '../dist/store.js'
+import { TaskStore, parseInstanceSnapshot } from '../dist/store.js'
 import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
 import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
+import { buildMessage } from '../dist/dispatch.js'
 
 let passed = 0
 const failures = []
@@ -678,6 +679,73 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
   depStore.ensureInstance(randomUUID(), 'C', '2026-09-26', '2026-09-26T11:30:00.000Z', 'succeeded')
   const fresh = judgeDependencies(depStore, mkTask([{ task: 'C', semantics: 'latest_success' }]), '2026-09-26', '2026-09-26T12:00:00.000Z')
   check('上游有新成功 ⇒ 放行且无告警', fresh.ready === true && fresh.staleNotes.length === 0, JSON.stringify(fresh.staleNotes))
+
+  // ── 决策 43：依赖解析冻结（resolvedDeps）+ 产出下传 ──
+  // 上游 D：12:30 成功，带快照（workspacePath=/ws/up）与回执 outputs
+  const upId = randomUUID()
+  depStore.ensureInstance(upId, 'D', '2026-09-26', '2026-09-26T12:30:00.000Z', 'succeeded', {
+    title: 'up', prompt: 'p', manual: null, workspacePath: '/ws/up', provider: '', model: '',
+    validStatuses: ['ok'], maxAttempts: 1, window: 'PT0S',
+  })
+  depStore.recordCompletion(upId, JSON.stringify(['report.md', 'data']), null, null, null)
+
+  const verdict = judgeDependencies(depStore, mkTask([{ task: 'D', semantics: 'latest_success' }]), '2026-09-26', '2026-09-26T13:00:00.000Z')
+  check('依赖放行 ⇒ resolved 固化命中的上游实例（id/工作区/产出，决策 43）',
+    verdict.ready === true && verdict.resolved.length === 1
+    && verdict.resolved[0].instanceId === upId
+    && verdict.resolved[0].sessionId === null
+    && verdict.resolved[0].workspacePath === '/ws/up'
+    && JSON.stringify(verdict.resolved[0].outputs) === JSON.stringify(['report.md', 'data']),
+    JSON.stringify(verdict.resolved))
+  const blocked = judgeDependencies(depStore, mkTask([{ task: 'A', semantics: 'latest_success' }]), '2026-09-26', '2026-09-26T13:00:00.000Z')
+  check('依赖阻塞 ⇒ resolved 为空（决策 43）', blocked.ready === false && blocked.resolved.length === 0)
+
+  // 快照 resolvedDeps 落库 → 读回 → 解析往返无损
+  const rtId = randomUUID()
+  const rtDeps = [{
+    task: 'D', semantics: 'latest_success', instanceId: upId,
+    scheduledAt: '2026-09-26T12:30:00.000Z', sessionId: 'sess-1', workspacePath: '/ws/up', outputs: ['report.md'],
+  }]
+  depStore.ensureInstance(rtId, 'RT', '2026-09-26', '2026-09-26T14:00:00.000Z', 'dispatched', {
+    title: 'rt', prompt: 'p', manual: null, workspacePath: '/ws/down', provider: '', model: '',
+    validStatuses: ['ok'], maxAttempts: 1, window: 'PT2H', resolvedDeps: rtDeps,
+  })
+  const rtParsed = parseInstanceSnapshot(depStore.get(rtId).snapshot)
+  check('resolvedDeps 落库→读回→解析往返无损（决策 43）',
+    rtParsed !== undefined && rtParsed.resolvedDeps !== undefined && rtParsed.resolvedDeps.length === 1
+    && rtParsed.resolvedDeps[0].instanceId === upId && rtParsed.resolvedDeps[0].sessionId === 'sess-1'
+    && rtParsed.resolvedDeps[0].workspacePath === '/ws/up' && rtParsed.resolvedDeps[0].outputs[0] === 'report.md')
+  const legacySnap = parseInstanceSnapshot(JSON.stringify({
+    title: 'x', prompt: 'p', manual: null, workspacePath: '/w', provider: '', model: '',
+    validStatuses: ['ok'], maxAttempts: 1, window: 'PT0S',
+  }))
+  check('旧形状快照（无 resolvedDeps）解析不报错、字段缺失（决策 43）',
+    legacySnap !== undefined && legacySnap.resolvedDeps === undefined)
+  const badSnap = parseInstanceSnapshot(JSON.stringify({
+    title: 'x', prompt: 'p', manual: null, workspacePath: '/w', provider: '', model: '',
+    validStatuses: ['ok'], maxAttempts: 1, window: 'PT0S', resolvedDeps: [{ nope: true }],
+  }))
+  check('坏形状 resolvedDeps 整组丢弃（决策 43）', badSnap !== undefined && badSnap.resolvedDeps === undefined)
+
+  // 派发消息注入
+  const snapWithDeps = {
+    title: 'down', prompt: 'p', manual: null, workspacePath: '/ws/down', provider: '', model: '',
+    validStatuses: ['ok'], maxAttempts: 1, window: 'PT2H', resolvedDeps: rtDeps,
+  }
+  const msgWith = buildMessage(snapWithDeps, '/ws/down', '2026-09-26')
+  const msgText = msgWith.content[0].text
+  check('派发消息注入上游依赖段：产出按上游工作区绝对化（决策 43）',
+    msgText.includes('上游依赖') && msgText.includes('/ws/up/report.md')
+    && msgText.includes(upId.slice(0, 8)) && msgText.includes('2026-09-26T12:30:00.000Z'))
+  const snapNoDeps = { ...snapWithDeps }
+  delete snapNoDeps.resolvedDeps
+  const msgNoDep = buildMessage(snapNoDeps, '/ws/down', '2026-09-26')
+  check('无依赖任务的消息不含上游依赖段（旧行为不变）', !msgNoDep.content[0].text.includes('上游依赖'))
+  const msgUndeclared = buildMessage({
+    ...snapWithDeps,
+    resolvedDeps: [{ task: 'D', semantics: 'latest_success', instanceId: upId, scheduledAt: '2026-09-26T12:30:00.000Z', sessionId: null, workspacePath: null, outputs: [] }],
+  }, '/ws/down', '2026-09-26')
+  check('上游未声明产出 ⇒ 消息如实标注（决策 43）', msgUndeclared.content[0].text.includes('未声明产出'))
 
   depStore.close()
   rmSync(depDir, { recursive: true, force: true })

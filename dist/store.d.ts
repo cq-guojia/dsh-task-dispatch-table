@@ -19,6 +19,22 @@ export interface TaskInstance {
     snapshot: string | null;
     updated_at: string;
 }
+/** 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。 */
+export interface ResolvedDependency {
+    /** 上游任务 id（depends_on.task 原值）。 */
+    task: string;
+    semantics: 'same_period' | 'latest_success';
+    /** 判定通过那一刻命中的上游实例 id。 */
+    instanceId: string;
+    /** 上游实例的计划时刻（ISO）。 */
+    scheduledAt: string;
+    /** 上游实例的会话 id（无则 null）。 */
+    sessionId: string | null;
+    /** 上游实例快照的工作区 path（产出相对路径的绝对化基准）；上游旧行无快照为 null。 */
+    workspacePath: string | null;
+    /** 上游回执声明并校验过的产出（相对上游工作区；未声明为空数组）。 */
+    outputs: string[];
+}
 /**
  * 派发快照（决策 41）：Loop A 落库时固化，Loop B（发动 / 重试 / 追问 / 回执裁决）**只读快照**，
  * 与任务设置彻底解耦——中途改任务定义对已落库实例零影响。
@@ -37,6 +53,8 @@ export interface InstanceSnapshot {
     maxAttempts: number;
     /** ISO 时长串（超窗判定用，决策 41：快照管「已开工的」窗口边界）。 */
     window: string;
+    /** 依赖快照（决策 43）：判定通过那一刻命中的上游实例与产出；决策 41 旧行无此字段。 */
+    resolvedDeps?: ResolvedDependency[];
 }
 /** 解析实例行的快照 JSON；空 / 坏 JSON / 形状不对返回 undefined（调用方走兜底）。 */
 export declare function parseInstanceSnapshot(raw: string | null): InstanceSnapshot | undefined;

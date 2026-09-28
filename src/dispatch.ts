@@ -4,6 +4,7 @@
 // → 工作区 attachSession 归组 → agent.send 拼装消息。
 // 不要预建 ctx.sessions.create——会撞 store 的 'session "…" already exists'（真机教训 2026-09-23）。
 import { randomUUID } from 'node:crypto'
+import { resolve } from 'node:path'
 import type {
   HostAgentDefaultModel, HostAgentPresets, HostContext, HostLogger, HostLlm, HostWorkspace, UserMessage,
 } from './host.js'
@@ -221,14 +222,39 @@ export function userNotice(text: string, summary: string): UserMessage {
 }
 
 /**
- * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化）：短指令 prompt + 手册路径 +
- * 回执调用说明。prompt / manual / validStatuses 全部来自派发快照，与任务设置无关。
+ * 上游依赖段（决策 43）：把快照里冻结的 resolvedDeps 渲染给下游 agent——
+ * 产出路径按**上游**工作区绝对化（基准不是下游工作区）；上游旧行无快照 ⇒ 基准未知，原样给相对路径。
+ */
+function dependencyLines(snapshot: InstanceSnapshot): string[] {
+  const deps = snapshot.resolvedDeps
+  if (deps === undefined || deps.length === 0) return []
+  const lines = ['', '上游依赖（落库时已锁定，勿自行查找最新产出）：']
+  for (const dep of deps) {
+    const head = `- 任务 ${dep.task}（${dep.semantics === 'same_period' ? '同周期' : '最近成功'}）：`
+      + `实例 ${dep.instanceId.slice(0, 8)} · 计划时刻 ${dep.scheduledAt}`
+    if (dep.outputs.length === 0) {
+      lines.push(`${head} · 未声明产出`)
+      continue
+    }
+    lines.push(`${head}，产出：`)
+    for (const output of dep.outputs) {
+      lines.push(`  - ${dep.workspacePath === null ? `${output}（基准工作区未知，相对路径）` : resolve(dep.workspacePath, output)}`)
+    }
+  }
+  return lines
+}
+
+/**
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段）：
+ * 短指令 prompt + 手册路径 + 上游依赖段 + 回执调用说明。
+ * prompt / manual / validStatuses / resolvedDeps 全部来自派发快照，与任务设置无关。
  */
 export function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string): UserMessage {
   const lines = [snapshot.prompt, '', `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`]
   if (snapshot.manual !== null && snapshot.manual.trim() !== '') {
     lines.push(`任务手册：先读工作区内 ${snapshot.manual}，再按手册执行。`)
   }
+  lines.push(...dependencyLines(snapshot))
   lines.push(receiptInstruction(snapshot.validStatuses))
   return userNotice(lines.join('\n'), `[TASK] ${snapshot.title} · ${logicalDate}`)
 }

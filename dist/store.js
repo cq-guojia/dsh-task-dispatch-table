@@ -6,6 +6,35 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 export const TERMINAL_STATUSES = ['succeeded', 'failed', 'skipped'];
 const NON_TERMINAL_STATUSES = ['pending', 'dispatched', 'running', 'unknown'];
+/** 解析 resolvedDeps（决策 43）：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃。 */
+function parseResolvedDeps(raw) {
+    if (raw === undefined)
+        return undefined;
+    if (!Array.isArray(raw))
+        return undefined;
+    const out = [];
+    for (const item of raw) {
+        if (typeof item !== 'object' || item === null)
+            return undefined;
+        const d = item;
+        if (typeof d.task !== 'string' || typeof d.instanceId !== 'string' || typeof d.scheduledAt !== 'string'
+            || (d.semantics !== 'same_period' && d.semantics !== 'latest_success')
+            || (d.sessionId !== null && typeof d.sessionId !== 'string')
+            || (d.workspacePath !== null && typeof d.workspacePath !== 'string')
+            || !Array.isArray(d.outputs))
+            return undefined;
+        out.push({
+            task: d.task,
+            semantics: d.semantics,
+            instanceId: d.instanceId,
+            scheduledAt: d.scheduledAt,
+            sessionId: d.sessionId ?? null,
+            workspacePath: d.workspacePath ?? null,
+            outputs: d.outputs.filter((x) => typeof x === 'string'),
+        });
+    }
+    return out;
+}
 /** 解析实例行的快照 JSON；空 / 坏 JSON / 形状不对返回 undefined（调用方走兜底）。 */
 export function parseInstanceSnapshot(raw) {
     if (raw === null || raw === '')
@@ -19,6 +48,7 @@ export function parseInstanceSnapshot(raw) {
             return undefined;
         if (!Array.isArray(s.validStatuses))
             return undefined;
+        const resolvedDeps = parseResolvedDeps(s.resolvedDeps);
         return {
             title: s.title,
             prompt: s.prompt,
@@ -29,6 +59,7 @@ export function parseInstanceSnapshot(raw) {
             validStatuses: s.validStatuses.filter((x) => typeof x === 'string'),
             maxAttempts: typeof s.maxAttempts === 'number' && Number.isInteger(s.maxAttempts) && s.maxAttempts >= 1 ? s.maxAttempts : 1,
             window: typeof s.window === 'string' ? s.window : 'PT0S',
+            ...(resolvedDeps === undefined ? {} : { resolvedDeps }),
         };
     }
     catch {

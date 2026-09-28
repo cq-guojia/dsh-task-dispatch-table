@@ -43,6 +43,7 @@ export type LocaleKey =
   | 'failureAuth' | 'failureQuota' | 'failureAccountSignedOut' | 'failureAccountSignInRequired'
   | 'clockDate' | 'clockDateYear'
   | 'copyLabel' | 'copiedLabel' | 'branchLabel' | 'branchUnavailableLabel'
+  | 'presented.unavailable'
   | 'turnUsageTitle' | 'turnUsageModel' | 'turnUsageCacheHit' | 'turnUsageInput'
   | 'turnUsageCacheRead' | 'turnUsageCacheWrite' | 'turnUsageOutput' | 'turnUsageReasoning'
   | 'turnUsageConsumed' | 'turnUsageCount'
@@ -228,6 +229,7 @@ export const zh: Record<LocaleKey, string> = {
   copiedLabel: '已复制',
   branchLabel: '在新对话中分支',
   branchUnavailableLabel: '只读会话记录不可分支',
+  'presented.unavailable': '此主机没有可用的桌面，无法使用外部程序打开文件或文件夹；文件仍可在侧边栏预览',
   turnUsageTitle: '本轮用量',
   turnUsageModel: '提供方 / 模型',
   turnUsageCacheHit: '缓存命中',
@@ -472,6 +474,7 @@ export const en: Record<LocaleKey, string> = {
   copiedLabel: 'Copied',
   branchLabel: 'Branch into a new conversation',
   branchUnavailableLabel: 'A read-only transcript cannot be branched',
+  'presented.unavailable': 'This host has no available desktop; external programs cannot open files or folders. Files can still be previewed in the sidebar.',
   turnUsageTitle: 'Turn usage',
   turnUsageModel: 'Provider / model',
   turnUsageCacheHit: 'Cache hit',
