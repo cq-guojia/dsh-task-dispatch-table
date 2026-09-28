@@ -15,6 +15,7 @@ import {
   FileTypeIcon,
   IconCheckOutlineRegular,
   IconChevronDownOutlineRegular,
+  IconChevronLeftOutlineRegular,
   IconChevronRightOutlineRegular,
   IconChevronUpOutlineRegular,
   IconCloseOutlineRegular,
@@ -317,8 +318,8 @@ export function FileBrowser(props: {
         title: t('previewResize'),
         onPointerDown: (event: { clientX: number; pointerId: number }) => { onResizeStart(event) },
       }),
-    // 第一排：常驻图标组（下拉选层 / 返回上一层 / 返回）+ 面包屑区域（独占一排）。
-    // 下拉菜单挂在 crumbbar（overflow 可见）下，不被面包屑区域裁剪（四验修复：之前被 overflow:hidden 挡住）。
+    // 第一排（用户 2026-09-28 五验拍板顺序）：[▾ 选层] [面包屑…] [← 返回] [↑ 上一层] [✕ 关闭]。
+    // 下拉菜单挂在 crumbbar（overflow 可见）下，不被面包屑区域裁剪。
     h('nav', {
       ref: barRef,
       className: 'dsh-tdt-sv-crumbbar',
@@ -350,22 +351,6 @@ export function FileBrowser(props: {
             ))
           : null,
       ),
-      h('button', {
-        type: 'button',
-        className: 'dsh-tdt-sv-head-btn',
-        'aria-label': t('explorerUp'),
-        title: t('explorerUp'),
-        disabled: dir === '',
-        onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
-      }, h(IconChevronUpOutlineRegular, { size: 14 })),
-      h('button', {
-        type: 'button',
-        className: 'dsh-tdt-sv-head-btn',
-        'aria-label': t('explorerBack'),
-        title: t('explorerBack'),
-        disabled: history.length === 0,
-        onClick: goBack,
-      }, h('span', { className: 'dsh-tdt-sv-icon-back' }, h(IconChevronRightOutlineRegular, { size: 14 }))),
       h('div', { ref: regionRef, className: 'dsh-tdt-sv-crumbs-region' },
         h('span', { ref: measureRef, className: 'dsh-tdt-sv-crumbs-measure', 'aria-hidden': true },
           crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
@@ -385,8 +370,33 @@ export function FileBrowser(props: {
             }, crumb.label),
           )),
       ),
+      h('div', { className: 'dsh-tdt-sv-head-actions' },
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-head-btn',
+          'aria-label': t('explorerBack'),
+          title: t('explorerBack'),
+          disabled: history.length === 0,
+          onClick: goBack,
+        }, h(IconChevronLeftOutlineRegular, { size: 14 })),
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-head-btn',
+          'aria-label': t('explorerUp'),
+          title: t('explorerUp'),
+          disabled: dir === '',
+          onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
+        }, h(IconChevronUpOutlineRegular, { size: 14 })),
+        h('button', {
+          type: 'button',
+          className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
+          'aria-label': t('previewClose'),
+          title: t('previewClose'),
+          onClick: onClose,
+        }, h(IconCloseOutlineRegular, { size: 14 })),
+      ),
     ),
-    // 第二排：文件名（跑马灯）+ 操作按钮。
+    // 第二排：文件名（跑马灯）+ 操作按钮（关闭已上提第一排右上角——用户五验拍板）。
     h('div', { className: 'dsh-tdt-sv-titlebar' },
       viewing !== null
         ? h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },
@@ -418,13 +428,6 @@ export function FileBrowser(props: {
           title: t('previewRefresh'),
           onClick: reload,
         }, h(IconRefreshOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
-          'aria-label': t('previewClose'),
-          title: t('previewClose'),
-          onClick: onClose,
-        }, h(IconCloseOutlineRegular, { size: 14 })),
       ),
     ),
     body,

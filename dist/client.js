@@ -767,8 +767,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(-
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));}
 .dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
-/* 「返回」图标：包内无左箭头，右箭头旋转 180 度代用。 */
-.dsh-tdt-sv-icon-back{display:inline-flex;transform:rotate(180deg);}
 /* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
 .dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
 .dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--dsw-static-neutral-00,#fff);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-md,8px);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
@@ -4188,24 +4186,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					loadDir(crumb.path);
 				}
-			}, crumb.label)))) : null), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerUp"),
-				title: t("explorerUp"),
-				disabled: dir === "",
-				onClick: () => {
-					const p = dirnameOf(dir);
-					if (p !== dir) loadDir(p);
-				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerBack"),
-				title: t("explorerBack"),
-				disabled: history.length === 0,
-				onClick: goBack
-			}, (0, react.createElement)("span", { className: "dsh-tdt-sv-icon-back" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 14 }))), (0, react.createElement)("div", {
+			}, crumb.label)))) : null), (0, react.createElement)("div", {
 				ref: regionRef,
 				className: "dsh-tdt-sv-crumbs-region"
 			}, (0, react.createElement)("span", {
@@ -4221,7 +4202,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					loadDir(crumb.path);
 				}
-			}, crumb.label))))), (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, viewing !== null ? (0, react.createElement)("span", {
+			}, crumb.label)))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("explorerBack"),
+				title: t("explorerBack"),
+				disabled: history.length === 0,
+				onClick: goBack
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("explorerUp"),
+				title: t("explorerUp"),
+				disabled: dir === "",
+				onClick: () => {
+					const p = dirnameOf(dir);
+					if (p !== dir) loadDir(p);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
+				"aria-label": t("previewClose"),
+				title: t("previewClose"),
+				onClick: onClose
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, viewing !== null ? (0, react.createElement)("span", {
 				ref: titleRef,
 				className: "dsh-tdt-sv-preview-title",
 				onMouseEnter: startMarquee,
@@ -4260,13 +4264,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				"aria-label": t("previewRefresh"),
 				title: t("previewRefresh"),
 				onClick: reload
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
-				"aria-label": t("previewClose"),
-				title: t("previewClose"),
-				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), body);
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })))), body);
 		}
 		//#endregion
 		//#region src/client/index.ts

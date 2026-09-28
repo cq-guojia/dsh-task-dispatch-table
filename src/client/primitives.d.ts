@@ -112,6 +112,7 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconCodeOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronRightOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronDownOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconChevronLeftOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconCopyOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconCheckOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconCloseOutlineRegular: ComponentType<{ size?: number; className?: string }>
