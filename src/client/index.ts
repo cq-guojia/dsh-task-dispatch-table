@@ -378,11 +378,9 @@ const STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed
 interface EditorOptions {
   workspaces: EditorOption[]
   models: EditorOption[]
-  /** 宿主真实时区（Intl 解出来）；空 = 没读到。 */
-  hostTimezone: string
 }
 
-const EMPTY_EDITOR_OPTIONS: EditorOptions = { workspaces: [], models: [], hostTimezone: '' }
+const EMPTY_EDITOR_OPTIONS: EditorOptions = { workspaces: [], models: [] }
 
 /** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 const encodeModelValue = (provider: string, id: string): string => `${provider}/${id}`
@@ -512,7 +510,6 @@ function TaskPage(props: {
         ok?: boolean
         workspaces?: { title?: string }[]
         models?: { provider?: string; id?: string; name?: string }[]
-        timezone?: string
       }>)
       .then(body => {
         if (!alive || body.ok !== true) return
@@ -526,7 +523,7 @@ function TaskPage(props: {
           const name = typeof model.name === 'string' && model.name !== '' ? model.name : model.id
           models.push({ value: encodeModelValue(model.provider, model.id), label: `${name}（${model.provider}）` })
         }
-        setEditorOptions({ workspaces, models, hostTimezone: typeof body.timezone === 'string' ? body.timezone : '' })
+        setEditorOptions({ workspaces, models })
       })
       .catch(() => { /* 取不到就保持空态：下拉显示「暂无可选」，不编造 */ })
     return () => { alive = false }
@@ -726,7 +723,7 @@ function TaskPage(props: {
             type: 'button',
             style: addButtonStyle,
             title: t('editorNew'),
-            onClick: () => { setEditor({ mode: 'create', draft: emptyTaskDraft(editorOptions.hostTimezone) }) },
+            onClick: () => { setEditor({ mode: 'create', draft: emptyTaskDraft() }) },
           }, `＋ ${t('editorNew')}`),
         ),
       ),
@@ -1002,7 +999,6 @@ function TaskPage(props: {
         workspaces: editorOptions.workspaces,
         models: editorOptions.models,
         tasks: taskOptions,
-        hostTimezone: editorOptions.hostTimezone,
         onClose: () => { setEditor(null) },
       })
       : null,

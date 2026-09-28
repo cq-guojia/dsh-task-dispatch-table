@@ -100,8 +100,9 @@ export type LocaleKey =
   | 'editorWorkspace' | 'editorWorkspacePh' | 'editorModel' | 'editorModelPh' | 'editorFollowHost' | 'editorNoOptions'
   // 执行频率：顶部「周期 / 间隔」两档（2026-09-29 返工）
   | 'editorSchedule' | 'editorSchedulePeriodic' | 'editorScheduleInterval'
-  | 'editorFreq' | 'editorFreqOnce' | 'editorFreqDaily' | 'editorFreqWeekly' | 'editorFreqBiweekly'
-  | 'editorFreqMonthly' | 'editorFreqYearly' | 'editorOnceHint' | 'editorBiweeklyWarn'
+  | 'editorFreq' | 'editorFreqOnce' | 'editorFreqDaily' | 'editorFreqWeekly'
+  | 'editorFreqMonthly' | 'editorFreqQuarterly' | 'editorFreqYearly' | 'editorOnceHint'
+  | 'editorMonthEvery' | 'editorMonthOdd' | 'editorMonthEven' | 'editorQuarterMonthOption'
   | 'editorDate' | 'editorDatePh' | 'editorTime' | 'editorTimePh'
   | 'editorMonth' | 'editorMonthOption' | 'editorDayOfMonth' | 'editorDayOption'
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
@@ -110,7 +111,7 @@ export type LocaleKey =
   | 'editorWeekdayShorts' | 'editorWeekdayEmpty'
   | 'editorToday' | 'editorPrevMonth' | 'editorNextMonth' | 'editorPrevYear' | 'editorNextYear'
   | 'editorMonthTitle' | 'editorHour' | 'editorMinute' | 'editorNow' | 'editorConfirm'
-  | 'editorTimezone' | 'editorWindow' | 'editorWindowHint'
+  | 'editorWindow' | 'editorWindowHint'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepAdd' | 'editorDepTask' | 'editorDepSemantics'
   | 'editorDepSamePeriod' | 'editorDepLatestSuccess' | 'editorDepRemove' | 'editorDepEmpty'
@@ -428,19 +429,22 @@ export const zh: Record<LocaleKey, string> = {
   editorFreqOnce: '单次',
   editorFreqDaily: '每天',
   editorFreqWeekly: '每周',
-  editorFreqBiweekly: '双周',
   editorFreqMonthly: '每月',
+  editorFreqQuarterly: '每季度',
   editorFreqYearly: '每年',
   editorOnceHint: '到点执行一次，之后不再重复',
-  editorBiweeklyWarn: '双周在 cron 里没有对应位：先按界面收着，具体怎么落库等 P2 定',
+  editorMonthEvery: '每月',
+  editorMonthOdd: '单数月',
+  editorMonthEven: '双数月',
+  editorQuarterMonthOption: '第 {m} 个月',
   editorDate: '日期',
   editorDatePh: '选择日期',
   editorTime: '时间',
   editorTimePh: '选择时间',
   editorMonth: '月',
   editorMonthOption: '{m} 月',
-  editorDayOfMonth: '第几天',
-  editorDayOption: '{d} 号',
+  editorDayOfMonth: '第几日',
+  editorDayOption: '{d} 日',
   editorIntervalEvery: '每隔',
   editorIntervalStep: '间隔步长',
   editorIntervalUnit: '间隔单位',
@@ -465,9 +469,8 @@ export const zh: Record<LocaleKey, string> = {
   editorMinute: '分钟',
   editorNow: '现在',
   editorConfirm: '确定',
-  editorTimezone: '时区',
-  editorWindow: '有效期',
-  editorWindowHint: '只管开始：从计划时刻起这段时间内允许派发与重试',
+  editorWindow: '允许延迟',
+  editorWindowHint: '从计划时刻起，这段时间内还允许派发和重试；过了就跳过这一次',
   unitMinutes: '分钟',
   unitHours: '小时',
   unitDays: '天',
@@ -784,11 +787,14 @@ export const en: Record<LocaleKey, string> = {
   editorFreqOnce: 'Once',
   editorFreqDaily: 'Daily',
   editorFreqWeekly: 'Weekly',
-  editorFreqBiweekly: 'Biweekly',
   editorFreqMonthly: 'Monthly',
+  editorFreqQuarterly: 'Quarterly',
   editorFreqYearly: 'Yearly',
   editorOnceHint: 'Runs once when due, never repeats',
-  editorBiweeklyWarn: 'Cron has no biweekly slot: kept in the UI for now, the real mapping is a P2 decision',
+  editorMonthEvery: 'Every month',
+  editorMonthOdd: 'Odd months',
+  editorMonthEven: 'Even months',
+  editorQuarterMonthOption: 'Month {m}',
   editorDate: 'Date',
   editorDatePh: 'Pick a date',
   editorTime: 'Time',
@@ -796,7 +802,7 @@ export const en: Record<LocaleKey, string> = {
   editorMonth: 'Month',
   editorMonthOption: 'Month {m}',
   editorDayOfMonth: 'Day',
-  editorDayOption: 'Day {d}',
+  editorDayOption: '{d}',
   editorIntervalEvery: 'Every',
   editorIntervalStep: 'Interval step',
   editorIntervalUnit: 'Interval unit',
@@ -821,9 +827,8 @@ export const en: Record<LocaleKey, string> = {
   editorMinute: 'Minute',
   editorNow: 'Now',
   editorConfirm: 'OK',
-  editorTimezone: 'Timezone',
-  editorWindow: 'Valid for',
-  editorWindowHint: 'Start only: dispatch and retries are allowed within this window',
+  editorWindow: 'Allow delay',
+  editorWindowHint: 'From the planned time, dispatch and retries are still allowed within this window; after that this run is skipped',
   unitMinutes: 'minutes',
   unitHours: 'hours',
   unitDays: 'days',

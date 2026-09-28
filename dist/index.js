@@ -163,7 +163,8 @@ log) => [
                 log('[表单下拉] workspaceRegistry 未就绪 ⇒ 工作区下拉为空');
             if (llm === undefined)
                 log('[表单下拉] 宿主无 llm 服务 ⇒ 模型下拉为空（不填模型仍走决策 22 漏斗）');
-            // 宿主真实时区（Intl 解出来；用户 2026-09-29 要求表单里直接显示它，别再挂「跟随宿主默认」）。
+            // 宿主真实时区（Intl 解出来）。UI 按用户 2026-09-29 的决定**不再让选时区**（一律跟随宿主），
+            // 这里保留下发：排期判定本来就走宿主时区，将来若要显式指定时区，直接接上即可。
             let timezone = '';
             try {
                 timezone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? '';

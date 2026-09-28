@@ -55,8 +55,15 @@ export type PromptSource = 'inline' | 'manual' | 'upload'
 /** 排期三档（用户 2026-09-29：参考图是「周期 / 间隔」，周期里含「单次」）。 */
 export type ScheduleKind = 'periodic' | 'interval'
 
-/** 周期档内的频率粒度。 */
-export type PeriodFreq = 'once' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly'
+/**
+ * 周期档内的频率粒度。
+ * ⚠️ **没有「双周」**：用户 2026-09-29 问「双周是哪几周、从哪一周开始」——语义不明，
+ * 且 cron 也没有隔周位 ⇒ 直接不做。隔月的诉求改由「单数月 / 双数月」表达（那个 cron 能写）。
+ */
+export type PeriodFreq = 'once' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+
+/** 每月档的月份口径：每月 / 单数月(1,3,5,7,9,11) / 双数月(2,4,6,8,10,12)——用来表达「隔月执行」。 */
+export type MonthMode = 'every' | 'odd' | 'even'
 
 /** 间隔单位（只留 cron 能表达的两种；天/周的映射待 P2 定）。 */
 export type IntervalUnit = 'minute' | 'hour'
@@ -89,9 +96,13 @@ export interface TaskEditorDraft {
   periodFreq: PeriodFreq
   /** 周一 = 1 … 周日 = 7（周期-每周/双周 与 间隔 共用）。 */
   weekdays: number[]
-  /** 每月第几天（1..31）。 */
+  /** 每月 / 每年第几日（1..31）。 */
   monthDay: string
-  /** 每年第几月（1..12）。 */
+  /** 每月档的月份口径（每月 / 单数月 / 双数月）。 */
+  monthMode: MonthMode
+  /** 每季度档：季度里的第几个月（1..3）。 */
+  quarterMonth: string
+  /** 每年档：第几月（1..12）。 */
   yearMonth: string
   intervalUnit: IntervalUnit
   intervalStep: string
@@ -99,7 +110,6 @@ export interface TaskEditorDraft {
   date: string
   /** `HH:mm`。 */
   time: string
-  timezone: string
   window: string
   maxAttempts: string
   validStatuses: string
@@ -118,7 +128,7 @@ function todayIso(): string {
 }
 
 /** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
-export function emptyTaskDraft(hostTimezone = ''): TaskEditorDraft {
+export function emptyTaskDraft(): TaskEditorDraft {
   return {
     title: '',
     code: '',
@@ -130,15 +140,17 @@ export function emptyTaskDraft(hostTimezone = ''): TaskEditorDraft {
     model: '',
     scheduleKind: 'periodic',
     periodFreq: 'daily',
-    weekdays: [1, 2, 3, 4, 5],
+    // 星期默认**一到星期日全选**（用户 2026-09-29）。
+    weekdays: [1, 2, 3, 4, 5, 6, 7],
     monthDay: '1',
+    monthMode: 'every',
+    quarterMonth: '1',
     yearMonth: '1',
     intervalUnit: 'hour',
     intervalStep: '1',
     date: todayIso(),
     time: '09:00',
-    // 时区默认 = 宿主真实时区（`GET /options` 读出来），不再留空挂「跟随宿主默认」。
-    timezone: hostTimezone,
+    // 没有时区字段：**一律跟随宿主时区**（用户 2026-09-29：没人会去选标准时区，要算自己算）。
     window: 'PT4H',
     maxAttempts: '1',
     validStatuses: 'ok',
@@ -148,6 +160,13 @@ export function emptyTaskDraft(hostTimezone = ''): TaskEditorDraft {
 
 // ─────────────────────── 排期 → cron 只读预览（P2 才落真映射） ───────────────────────
 
+
+/** 每月档的月份口径 → cron 月份位。 */
+const MONTH_MODE_CRON: Record<MonthMode, string> = {
+  every: '*',
+  odd: '1,3,5,7,9,11',
+  even: '2,4,6,8,10,12',
+}
 
 /** ISO 序号（1..7）→ cron 星期位（0..6）。 */
 function cronDow(day: number): number {
@@ -177,11 +196,14 @@ function scheduleCron(draft: TaskEditorDraft): string | null {
       return `${minute} ${hour} * * *`
     case 'weekly':
       return days === '' ? null : `${minute} ${hour} * * ${days}`
-    case 'biweekly':
-      // cron 没有「隔周」位；映射方式（加字段 or 别的手段）待 P2 拍板 ⇒ 不编造。
-      return null
     case 'monthly':
-      return `${minute} ${hour} ${draft.monthDay} * *`
+      // 单数月 / 双数月 = 隔月执行，cron 的月份位写得出（1,3,5… / 2,4,6…）。
+      return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`
+    case 'quarterly': {
+      const start = Number.parseInt(draft.quarterMonth, 10)
+      const months = [1, 2, 3].map(offset => (Number.isFinite(start) ? start : 1) + offset * 3).join(',')
+      return `${minute} ${hour} ${draft.monthDay} ${months} *`
+    }
     case 'yearly':
       return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`
   }
@@ -196,7 +218,6 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
     const cron = scheduleCron(draft)
     if (cron !== null) schedule.cron = cron
   }
-  if (draft.timezone.trim() !== '') schedule.timezone = draft.timezone.trim()
 
   const target: Record<string, unknown> = { workspace: draft.workspace }
   if (draft.model.trim() !== '') {
@@ -261,17 +282,18 @@ function Section(props: { label?: string; children?: ReactNode }): ReactElement 
 
 // ─────────────────────── 排期区 ───────────────────────
 
-/** 周期档的子控件（单次=日期+时间；每天=时间；每周/双周=周几+时间；每月/每年=日/月+时间）。 */
+/** 周期档的子控件：内容行 = 频率 + 月/日 + 时间；星期恒定在下面一行。 */
 function PeriodControls(props: {
   draft: TaskEditorDraft
   patch: (part: Partial<TaskEditorDraft>) => void
+  freqOptions: EditorOption[]
   t: T
   tt: (key: LocaleKey, params?: Record<string, string | number>) => string
   weekdayLabels: WeekdayLabels
   calendarLabels: CalendarLabels
   timeLabels: TimeLabels
 }): ReactElement {
-  const { draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels } = props
+  const { draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels } = props
   const timeField = h(TimeField, {
     value: draft.time,
     onChange: value => { patch({ time: value }) },
@@ -288,9 +310,20 @@ function PeriodControls(props: {
     () => Array.from({ length: 31 }, (_, index) => ({ value: String(index + 1), label: tt('editorDayOption', { d: index + 1 }) })),
     [tt],
   )
+  /** 每月档：每月 / 单数月 / 双数月（隔月执行就选单/双数月）。 */
+  const monthModeOptions: EditorOption[] = useMemo(() => [
+    { value: 'every', label: t('editorMonthEvery') },
+    { value: 'odd', label: t('editorMonthOdd') },
+    { value: 'even', label: t('editorMonthEven') },
+  ], [t])
+  /** 每季度档：季度里的第 1 / 2 / 3 个月。 */
+  const quarterMonthOptions: EditorOption[] = useMemo(
+    () => [1, 2, 3].map(m => ({ value: String(m), label: tt('editorQuarterMonthOption', { m }) })),
+    [tt],
+  )
 
-  // 上面**统一一行**（月 / 日 / 日期 / 时间），下面**统一选星期**——用户 2026-09-29：
-  // 两张截图里「选星期」一会儿在上面一会儿在下面，看着乱。
+  // 上面**统一一行**：频率在最前，然后是月 / 日，最后是时间（用户 2026-09-29：
+  // 频率下拉从卡片右上角拿下来，做成「每周 9 点」这种一句话的排法）。
   const above: ReactNode[] = []
   if (draft.periodFreq === 'once') {
     above.push(h(DateField, {
@@ -302,9 +335,29 @@ function PeriodControls(props: {
       labels: calendarLabels,
       width: 148,
     }))
+  } else {
+    above.push(h(SelectField, {
+      key: 'freq',
+      value: draft.periodFreq,
+      options: props.freqOptions,
+      onChange: value => { patch({ periodFreq: value as PeriodFreq }) },
+      placeholder: t('editorFreqDaily'),
+      emptyLabel: t('editorNoOptions'),
+      ariaLabel: t('editorFreq'),
+    }))
+  }
+  if (draft.periodFreq === 'monthly') {
+    above.push(h(SelectField, {
+      key: 'month-mode',
+      value: draft.monthMode,
+      options: monthModeOptions,
+      onChange: value => { patch({ monthMode: value as MonthMode }) },
+      placeholder: t('editorMonthEvery'),
+      emptyLabel: t('editorNoOptions'),
+      ariaLabel: t('editorMonth'),
+    }))
   }
   if (draft.periodFreq === 'yearly') {
-    // 不设宽度：让它随内容（「1 月」就两三个字，之前留 96px 是为了英文，中文看着很空）。
     above.push(h(SelectField, {
       key: 'month',
       value: draft.yearMonth,
@@ -315,7 +368,18 @@ function PeriodControls(props: {
       ariaLabel: t('editorMonth'),
     }))
   }
-  if (draft.periodFreq === 'monthly' || draft.periodFreq === 'yearly') {
+  if (draft.periodFreq === 'quarterly') {
+    above.push(h(SelectField, {
+      key: 'quarter-month',
+      value: draft.quarterMonth,
+      options: quarterMonthOptions,
+      onChange: value => { patch({ quarterMonth: value }) },
+      placeholder: quarterMonthOptions[0]?.label ?? t('editorMonth'),
+      emptyLabel: t('editorNoOptions'),
+      ariaLabel: t('editorMonth'),
+    }))
+  }
+  if (draft.periodFreq === 'monthly' || draft.periodFreq === 'quarterly' || draft.periodFreq === 'yearly') {
     above.push(h(SelectField, {
       key: 'day',
       value: draft.monthDay,
@@ -330,7 +394,7 @@ function PeriodControls(props: {
 
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
     h('div', { className: 'dsh-tdt-ed-row' }, above),
-    draft.periodFreq === 'weekly' || draft.periodFreq === 'biweekly'
+    draft.periodFreq === 'weekly'
       ? h(WeekdayPicker, {
         value: draft.weekdays,
         onChange: value => { patch({ weekdays: value }) },
@@ -425,13 +489,11 @@ export function TaskEditorDrawer(props: {
   models: EditorOption[]
   /** 可选的前置任务（= 现有任务表，真数据）。 */
   tasks: EditorOption[]
-  /** 宿主真实时区（`Intl` 解出来，经 `GET /options` 下发）；空 = 没读到。 */
-  hostTimezone: string
   onClose: () => void
   /** 保存回调；**P0 不传** ⇒ 点「保存」只提示待接，不做任何写入。 */
   onSave?: ((draft: TaskEditorDraft) => void) | undefined
 }): ReactElement {
-  const { t, mode, draft, onChange, workspaces, models, tasks, hostTimezone, onClose, onSave } = props
+  const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave } = props
   const [width, setWidth] = useState<number>(readWidth)
   const [tab, setTab] = useState<'basic' | 'records'>('basic')
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -506,22 +568,16 @@ export function TaskEditorDrawer(props: {
   ]
 
   // 「单次」已经提上去当独立的档了 ⇒ 周期下拉里只有重复的那几个（用户 2026-09-29）。
+  // 「双周」语义不明（哪几周、从哪周开始）且 cron 无隔周位 ⇒ 不做；隔月走「单数月 / 双数月」。
   const freqOptions: EditorOption[] = [
     { value: 'daily', label: t('editorFreqDaily') },
     { value: 'weekly', label: t('editorFreqWeekly') },
-    { value: 'biweekly', label: t('editorFreqBiweekly') },
     { value: 'monthly', label: t('editorFreqMonthly') },
+    { value: 'quarterly', label: t('editorFreqQuarterly') },
     { value: 'yearly', label: t('editorFreqYearly') },
   ]
 
-  // 时区：显示**宿主真实时区**（`GET /options` 读出来），不再拿「跟随宿主默认」当占位。
-  const tzOptions: EditorOption[] = props.hostTimezone === ''
-    ? [{ value: 'UTC', label: 'UTC' }]
-    : [
-      { value: props.hostTimezone, label: props.hostTimezone },
-      ...(props.hostTimezone === 'UTC' ? [] : [{ value: 'UTC', label: 'UTC' }]),
-    ]
-  // 有效期：说人话（`PT4H` 没人看得懂 ⇒ 显示「4 小时」）。
+  // 允许延迟（原「有效期」）：说人话（`PT4H` 没人看得懂 ⇒ 显示「4 小时」）。
   const windowOptions: EditorOption[] = [
     { value: 'PT30M', label: `30 ${t('unitMinutes')}` },
     { value: 'PT1H', label: `1 ${t('unitHours')}` },
@@ -530,10 +586,6 @@ export function TaskEditorDrawer(props: {
     { value: 'PT8H', label: `8 ${t('unitHours')}` },
     { value: 'P1D', label: `1 ${t('unitDays')}` },
   ]
-
-  const scheduleNote = draft.scheduleKind === 'periodic' && draft.periodFreq === 'biweekly'
-    ? t('editorBiweeklyWarn')
-    : null
 
   /**
    * 顶部三档的当前值：**推导**出来的，不是另存一份状态——
@@ -622,21 +674,6 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-card-head', style: { marginBottom: '12px' } },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorSchedule')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
-        // 频率下拉**挪到三档的左边**，而且只在「周期」档出现——单次 / 间隔本来就没得选
-        // （用户 2026-09-29：占一行太长，一共才四五个字）。
-        scheduleTab === 'periodic'
-          ? h(SelectField, {
-            value: draft.periodFreq,
-            options: freqOptions,
-            onChange: value => { patch({ periodFreq: value as PeriodFreq }) },
-            placeholder: t('editorFreqDaily'),
-            emptyLabel: t('editorNoOptions'),
-            ariaLabel: t('editorFreq'),
-            width: 96,
-            // 与右边三档**等高**（28px）：否则切到间隔时下拉消失、整块高度变，看着就是「页面在跳」。
-            size: 'sm',
-          })
-          : null,
         h(Segmented, {
           id: 'dsh-tdt-ed-schedule',
           value: scheduleTab,
@@ -666,24 +703,14 @@ export function TaskEditorDrawer(props: {
         'aria-label': draft.periodFreq === 'once' ? t('editorFreqOnce') : t('editorSchedulePeriodic'),
       },
         h(PeriodControls, {
-          draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels,
+          draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels,
         }),
       ),
-    scheduleNote === null ? null : h('p', { className: 'dsh-tdt-ed-warn' }, scheduleNote),
     // 底部分隔线：上下各留 12px（用户 2026-09-29：把核心设置和不那么重要的设置分开，
     // 但别贴着）。时区 / 有效期缩到小号、整体**居右**（不重要，不占主视线），
     // 「有效期」的解释不再写正文，挂一个小问号，hover 才出（Tooltip）。
     h('div', { className: 'dsh-tdt-ed-schedfoot' },
-      h(SelectField, {
-        value: draft.timezone,
-        options: tzOptions,
-        onChange: value => { patch({ timezone: value }) },
-        placeholder: t('editorFollowHost'),
-        emptyLabel: t('editorNoOptions'),
-        ariaLabel: t('editorTimezone'),
-        size: 'sm',
-        align: 'end',
-      }),
+      h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorWindow')),
       h(SelectField, {
         value: draft.window,
         options: windowOptions,
