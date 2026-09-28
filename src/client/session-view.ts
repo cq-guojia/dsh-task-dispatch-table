@@ -128,14 +128,19 @@ interface NodeBaseLike {
   time: number
 }
 
-/** 官方 /api/present.host 返回的桌面可用性元数据（lib/client.js:289 isPresentedHost）。 */
+/**
+ * 官方 /api/present.host 返回的桌面可用性元数据。
+ * 字段契约须与官方 isPresentedHost（lib/client.js:289）保持对齐；官方改契约时须同步此类型与下方校验。
+ * 注意：官方未导出 usePresentedHost / isPresentedHost，本弹窗独立上下文拿不到官方 store，
+ * 故此处：① 调官方同一接口 /api/present.host（数据权威源）；② 字段校验与文案（presented.unavailable）由本插件按官方契约镜像。
+ */
 interface PresentedHostFace {
   name: string
   available: boolean
   fileManager: null | 'finder' | 'explorer' | 'directory'
 }
 
-/** 官方 usePresentedHost 的简化镜像：查询 /api/present.host，判断外部程序能否打开文件。 */
+/** 调用官方 /api/present.host（与官方 readHost 同源），并按官方 isPresentedHost 契约做字段校验。 */
 function usePresentedHost(): PresentedHostFace | 'error' | null {
   const [host, setHost] = useState<PresentedHostFace | 'error' | null>(null)
   useEffect(() => {

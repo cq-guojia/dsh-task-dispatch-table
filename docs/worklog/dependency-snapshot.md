@@ -34,10 +34,10 @@
 - `src/store.ts`：新增 `ResolvedDependency` 接口；`InstanceSnapshot` 加可选 `resolvedDeps`；`parseInstanceSnapshot` 增加 `parseResolvedDeps`（字段缺失 ⇒ undefined 旧行为不变；任一条形状不对 ⇒ 整组丢弃，不让坏数据进消息）。
 - `src/scheduler.ts`：`DependencyVerdict` 加 `resolved`；`judgeDependencies` 两种语义命中即 `resolvedOf(dep, upstream)` 固化（产出取上游实例 `outputs` 列，坏 JSON / 未声明 ⇒ 空数组；上游工作区取上游快照，旧行无 ⇒ null），阻塞 ⇒ `resolved: []`；`snapshotOf` 收 `resolvedDeps` 写入快照；`dispatchNewSlots` 透传 `depVerdict.resolved`。
 - `src/dispatch.ts`：新增 `dependencyLines`；`buildMessage` 注入「上游依赖（落库时已锁定，勿自行查找最新产出）」段——任务 id + 语义 + 实例短 id + 计划时刻 + 产出**按上游工作区绝对化**（基准未知时原样相对路径并注明）；未声明产出如实写「未声明产出」。
-- `scripts/smoke.mjs`：[9] 节新增 10 条断言（§四清单五组全覆盖）。
+- `scripts/smoke.mjs`：[9] 节新增 8 条断言（design §四清单五组全覆盖：resolved 固化 / 阻塞为空 / 快照往返无损 / 旧形状与坏形状降级 / 消息注入与未声明产出兜底）。
 
 ## 四、验证
 
 - `npm run build` ✅（dist/client.js 248.53 kB）；`npm run typecheck` ✅。
-- `npm run smoke`：**172 项通过，0 项失败**（含新增 10 条）。
+- `npm run smoke`：**172 项通过，0 项失败**（含新增 8 条）。
 - **真机复验未做**，五点清单见 [design/dependency-snapshot.md §六](../design/dependency-snapshot.md)；关键一点：上游在「下游落库」与「下游发动」之间再跑成功一轮 ⇒ 下游会话消息仍指向**落库时**那条上游实例的产出（冻结生效）。

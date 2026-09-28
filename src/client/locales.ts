@@ -229,6 +229,7 @@ export const zh: Record<LocaleKey, string> = {
   copiedLabel: '已复制',
   branchLabel: '在新对话中分支',
   branchUnavailableLabel: '只读会话记录不可分支',
+  // 对齐官方 @deepseek-ai/dsh-client-ui-deliverables 字典键 presented.unavailable（仅文案同步，逻辑/接口见 session-view.ts usePresentedHost）。官方改词时须同步此处。
   'presented.unavailable': '此主机没有可用的桌面，无法使用外部程序打开文件或文件夹；文件仍可在侧边栏预览',
   turnUsageTitle: '本轮用量',
   turnUsageModel: '提供方 / 模型',
