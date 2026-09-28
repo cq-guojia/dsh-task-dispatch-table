@@ -896,6 +896,21 @@ function normalizeFilePath(p: string): string {
 }
 
 /**
+ * 取某 turn 的交付文件清单（官方 `DeliverablesTail` 同源数据）。
+ * ⚠️ 官方 `turn.data` 是 **Map**（见 @deepseek-ai/dsh-client-ui-deliverables `owner.turn.data.get('deliverables')`），
+ * 不是普通对象——对象式 `data.deliverables` 访问对 Map 必为 undefined（此前交付卡在弹窗里永不渲染的根因）。
+ * 这里兼容 Map 与纯对象两种形态。
+ */
+function turnDeliverablesPresented(face: unknown): ReadonlyArray<{ path?: unknown; description?: unknown }> {
+  const data = (face as { data?: unknown } | undefined)?.data
+  const delivered = data instanceof Map
+    ? (data as ReadonlyMap<unknown, unknown>).get('deliverables')
+    : (data as { deliverables?: unknown } | undefined)?.deliverables
+  const presented = (delivered as { presented?: unknown } | undefined)?.presented
+  return Array.isArray(presented) ? (presented as ReadonlyArray<{ path?: unknown; description?: unknown }>) : []
+}
+
+/**
  * 从 keyed 节点流收集真实文件词表（禁模拟：全部来自工具调用参数 / meta.diffs）：
  * tool-call 节点 argsRaw 的 file_path/path 字段（read/grep/glob/write/edit…）与
  * tool-fs 写入 meta.diffs[].path。会话级词表 = 官方 per-turn chatFileMentions 的简化偏差
@@ -908,9 +923,7 @@ function collectFilePaths(order: readonly string[], store: ChatNodeStoreFace | u
   if (turns !== null && turns !== undefined) {
     const map = turns as ReadonlyMap<unknown, unknown>
     for (const [, face] of map) {
-      const presented = (face as { data?: { deliverables?: { presented?: readonly { path?: unknown }[] } } } | undefined)
-        ?.data?.deliverables?.presented
-      if (!Array.isArray(presented)) continue
+      const presented = turnDeliverablesPresented(face)
       for (const file of presented) {
         const path = typeof file?.path === 'string' ? file.path : undefined
         if (path !== undefined && path.trim() !== '') out.add(normalizeFilePath(path))
@@ -966,9 +979,8 @@ function collectPresentedByTurn(turns: unknown): ReadonlyMap<number, readonly De
   for (const [key, face] of map) {
     const turn = typeof key === 'number' ? key : Number(key)
     if (!Number.isInteger(turn) || turn < 1) continue
-    const presented = (face as { data?: { deliverables?: { presented?: readonly { path?: unknown; description?: unknown }[] } } } | undefined)
-      ?.data?.deliverables?.presented
-    if (!Array.isArray(presented) || presented.length === 0) continue
+    const presented = turnDeliverablesPresented(face)
+    if (presented.length === 0) continue
     const files: DeliveredFileFace[] = []
     for (const file of presented) {
       const path = typeof file?.path === 'string' ? file.path : undefined

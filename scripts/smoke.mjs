@@ -599,8 +599,8 @@ try {
   check('交付词典齐备（row.* 五态 + presented 简介/收起）',
     clientJs.includes('deliverRowOk') && clientJs.includes('deliverRowError') && clientJs.includes('deliverRowStopped')
       && clientJs.includes('deliverPreviewHint') && clientJs.includes('deliverCollapseAria'))
-  check('交付数据读会话 turn 级 deliverables.presented（collectPresentedByTurn，同源覆盖 present 工具与插件代写）',
-    clientJs.includes('collectPresentedByTurn') && clientJs.includes('presentFiles'))
+  check('交付数据读会话 turn 级 deliverables.presented（turn.data 是 Map，须用 .get 而非对象式访问；同源覆盖 present 工具与插件代写）',
+    clientJs.includes('turnDeliverablesPresented') && clientJs.includes('instanceof Map') && clientJs.includes("get('deliverables')"))
   check('官方类发现扩 ui-deliverables 前缀（PresentRow / Deliverables 模块可命中）',
     clientJs.includes('@deepseek-ai/dsh-client-ui-deliverables/'))
   check('交付文件兜底样式入库（deliv-file / deliv-grid / deliv-toggle）',

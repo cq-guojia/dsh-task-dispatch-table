@@ -82,7 +82,27 @@
 
 ---
 
-## 六、关联决策
+## 六、热修：弹窗交付卡永不渲染（2026-09-28，真机复验暴露）
+
+**现象**：任务跑成功、执行记录「产出」列也出了链接（回执 `outputs` 正常落库），但点开「会话查看」弹窗，**末尾交付文件卡网格（DeliverablesGrid）整片不出现**。
+
+**根因（读官方源码定位）**：官方 `DeliverablesTail` 取数是 `owner.turn.data.get("deliverables")`
+（`@deepseek-ai/dsh-client-ui-deliverables@0.1.7-rc.2 lib/client.js:1149`，`turn.data` 是 **Map**）。
+而本插件 `collectPresentedByTurn` / `collectFilePaths` 用对象式 `face.data?.deliverables?.presented`
+（`.data` 当普通对象访问）——对 Map 必为 `undefined` ⇒ 每轮交付清单恒空 ⇒ 弹窗里交付卡永远不出来。
+冒烟只校验 bundle 字符串、没用真实 Map 形态的 `turns` 跑渲染，故漏测。
+
+**修复**（`src/client/session-view.ts`）：新增 `turnDeliverablesPresented(face)` 取值 helper，对
+`data instanceof Map` 走 `data.get('deliverables')`、否则退化为对象式访问（兼容两种形态）；
+`collectPresentedByTurn` 与 `collectFilePaths` 均改走该 helper。冒烟加 bundle 级防线
+（`turnDeliverablesPresented` + `instanceof Map` + `get('deliverables')`）。typecheck + build + 冒烟 162 项全过。
+
+> 🧠 记忆纠偏：本文件 §三/§五原写「读会话 turn 级 `deliverables.presented`」——数据位置对，
+> 但漏了「`turn.data` 是 Map、须 `.get()`」这一形态事实；本次补正。
+
+---
+
+## 七、关联决策
 
 - 决策 40（U12 B+C）**已演进为 B-only + 禁止 present**：原 C 路线（LLM 兜底调 present）被取消，因插件直写已覆盖全部文件/目录场景，且 `present` 工具本身拒绝目录——保留 C 反而引入「目录调 present 必报错」与「两层重复」两个风险。本修订由用户 2026-09-28 拍板。
 - 与 U11 同源：`openFile` 统一入口、`FilePreviewPanel` dock、官方 `MarkdownText`/`CodeBlock` 渲染链均复用。
