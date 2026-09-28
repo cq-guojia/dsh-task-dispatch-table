@@ -9,6 +9,7 @@ import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import {
   ensureIdsInInlineJson, existingUuidIds, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, applyIdentity, isUuid,
+  displayNameOf, formatSlotShort, sessionTitleOf,
 } from '../dist/tasks.js'
 import { TaskStore } from '../dist/store.js'
 import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
@@ -259,7 +260,7 @@ try {
     tasksDir: '', tickMs: 60_000, statePath: '', dispatchGraceMs: 60_000, leaseMs: 60_000, unknownGraceMs: 300_000,
     debugSnapshot: '', defaultProvider: '', defaultModel: '', logRetentionDays: 30,
   })
-  const okReconciler = createReconciler({ ctx: okCtx, logger, store: schedStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, tasks: () => new Map() } })
+  const okReconciler = createReconciler({ ctx: okCtx, logger, store: schedStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: okCfg, legacyTask: () => undefined } })
   const okScheduler = createScheduler({ ctx: okCtx, logger, store: schedStore, reconciler: okReconciler, config: okCfg })
   okScheduler.tick() // taskMap 在 tick 内填充 ⇒ getTasks 需在 tick 后取
   const loaded = [...okScheduler.getTasks().values()]
@@ -279,13 +280,70 @@ try {
   )
   okScheduler.tick()
   check('重复 tick 不重复派发同一刻度', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
+  // 决策 41：派发快照随行固化——Loop B 发动 / 裁决只读快照，与任务设置解耦
+  const snap0 = JSON.parse(dispatchedRows[0].snapshot ?? 'null')
+  check(
+    '派发快照已固化（title/prompt/workspacePath/validStatuses/maxAttempts/window）',
+    snap0 !== null && snap0.title === '小时任务' && snap0.prompt === 'x' && snap0.workspacePath === schedDir
+      && Array.isArray(snap0.validStatuses) && snap0.validStatuses[0] === 'ok' && snap0.maxAttempts === 1 && snap0.window === 'PT2H',
+    JSON.stringify(snap0),
+  )
+
+  // ── 5c. 决策 41 两层循环解耦 + 决策 42 会话命名 ──
+  console.log('\n[5c] 决策 41/42：解耦发动 + 派发快照 + 会话命名')
+  // 命名（纯函数）：短时刻本地时区化；attempt>0 追加「第N次」
+  const named = new Date('2026-09-28T16:00:00.000Z')
+  const p2 = (n) => String(n).padStart(2, '0')
+  const expectShort = `${p2(named.getFullYear() % 100)}${p2(named.getMonth() + 1)}${p2(named.getDate())}-${p2(named.getHours())}${p2(named.getMinutes())}`
+  check('计划时刻短格式 YYMMDD-HHmm（本地时区）', formatSlotShort('2026-09-28T16:00:00.000Z') === expectShort, formatSlotShort('2026-09-28T16:00:00.000Z'))
+  check('会话名 = [TASK] <短时刻> · <标题>', sessionTitleOf('2026-09-28T16:00:00.000Z', '周报生成', 0) === `[TASK] ${expectShort} · 周报生成`)
+  check('attempt>0 追加「 · 第N次」', sessionTitleOf('2026-09-28T16:00:00.000Z', '周报生成', 1) === `[TASK] ${expectShort} · 周报生成 · 第2次`)
+  const uuidA2 = '12345678-1234-1234-1234-123456789012'
+  check('display 名 title → code → 短 id 回退',
+    displayNameOf(def({ title: 'T' })) === 'T'
+    && displayNameOf(def({ code: 'C-1' })) === 'C-1'
+    && displayNameOf(def({ id: uuidA2 })) === '12345678')
+
+  // 解耦发动：任务 disabled 只挡新行，在飞实例照常由 Loop B 发动（发动只读快照）
+  const decStore = new TaskStore(join(schedDir, 'state-decouple.db'))
+  const decCfg = () => ({
+    ...okCfg(),
+    tasksInline: JSON.stringify([
+      { id: UUID_A, title: '已停用任务', enabled: false, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'x' } },
+    ]),
+  })
+  const decReconciler = createReconciler({ ctx: okCtx, logger, store: decStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: decCfg, legacyTask: () => undefined } })
+  const decSnapshot = { title: '已停用任务', prompt: 'x', manual: null, workspacePath: schedDir, provider: '', model: '', validStatuses: ['ok'], maxAttempts: 1, window: 'PT2H' }
+  check('带快照落库成功（决策 41）', decStore.ensureInstance(randomUUID(), UUID_A, '2026-09-28', '2026-09-28T08:00:00.000Z', 'dispatched', decSnapshot) === true)
+  const decScheduler = createScheduler({ ctx: okCtx, logger, store: decStore, reconciler: decReconciler, config: decCfg })
+  decScheduler.tick()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  const decRows = decStore.listByStatus(['dispatched', 'running', 'failed'])
+  check('disabled 任务的在飞实例照常被 Loop B 发动（session_id 已落）', decRows.length === 1 && decRows[0].session_id !== null, JSON.stringify(decRows.map(r => [r.status, r.session_id])))
+  check('disabled 不产生新行（仍只有 1 条执行记录）', decStore.dumpTable('task_instances', 500).rows.length === 1, `实际 ${decStore.dumpTable('task_instances', 500).rows.length}`)
+  decStore.close()
+
+  // legacy 兼容：无快照旧行经 legacyTask 当场合成快照并照常发动
+  const healStore = new TaskStore(join(schedDir, 'state-heal.db'))
+  const futureIso = new Date(Date.now() + 3600_000).toISOString()
+  healStore.ensureInstance(randomUUID(), 'legacy-task', futureIso.slice(0, 10), futureIso, 'pending') // 5 参 = 无快照
+  const legacyDef = { id: 'legacy-task', title: '旧任务', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Temp', prompt: 'legacy', provider: '', model: '' }, contract: { validStatuses: ['ok'] }, retry: { maxAttempts: 1 } }
+  const healReconciler = createReconciler({
+    ctx: okCtx, logger, store: healStore,
+    options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: okCfg, legacyTask: (taskId) => (taskId === 'legacy-task' ? legacyDef : undefined) },
+  })
+  healReconciler.sweep()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  const healRow = healStore.dumpTable('task_instances', 500).rows[0]
+  check('旧实例补快照（legacyTask 一次性兼容）并照常发动', healRow.snapshot !== null && healRow.session_id !== null, JSON.stringify({ snapshot: typeof healRow.snapshot, session: healRow.session_id, status: healRow.status }))
+  healStore.close()
 
   // 5b. 预条件失败（工作区找不到）⇒ 不建 task_instances 行，只记 task_log
   const noWsCtx = { workspaceRegistry: { list: () => [], attachWorkspace: async () => {}, archiveSession: async () => {} }, get: () => undefined }
   // 注意：必须带 id（无 id 条目按决策 30 运行时跳过，就走不到预条件分支）
   const noWsCfg = () => ({ ...okCfg(), tasksInline: JSON.stringify([{ id: UUID_A, title: '无工作区', enabled: true, schedule: { cron: '0 * * * *', timezone: 'UTC', window: 'PT2H' }, target: { workspace: 'Nope', prompt: 'x' } }]) })
   const noWsStore = new TaskStore(join(schedDir, 'state-nows.db'))
-  const noWsReconciler = createReconciler({ ctx: noWsCtx, logger, store: noWsStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, tasks: () => new Map() } })
+  const noWsReconciler = createReconciler({ ctx: noWsCtx, logger, store: noWsStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: noWsCfg, legacyTask: () => undefined } })
   const noWsScheduler = createScheduler({ ctx: noWsCtx, logger, store: noWsStore, reconciler: noWsReconciler, config: noWsCfg })
   noWsScheduler.tick()
   check('工作区找不到 ⇒ 不建 task_instances 行', noWsStore.listByStatus(['dispatched', 'pending', 'skipped', 'failed']).length === 0)
@@ -337,7 +395,11 @@ try {
     ctx: realCtx,
     logger,
     store: realStore,
-    options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, tasks: () => new Map() },
+    options: {
+      leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000,
+      config: () => ({ tasksInline: '', tasksDir: '', tickMs: 60_000, statePath: '', dispatchGraceMs: 60_000, leaseMs: 60_000, unknownGraceMs: 300_000, debugSnapshot: '', defaultProvider: '', defaultModel: '' }),
+      legacyTask: () => undefined, // 旧行无快照 ⇒ 如实按失败收敛（不静默猜）
+    },
   })
   const realScheduler = createScheduler({
     ctx: realCtx,

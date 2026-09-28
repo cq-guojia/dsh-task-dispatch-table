@@ -52,6 +52,18 @@ export type TaskDefinition = Omit<TaskDefinitionInput, 'id'> & {
 };
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
 export declare function titleOf(task: TaskDefinition): string;
+/**
+ * 会话显示名标题（决策 42）：title 回退 code，再回退短 id（前 8 位）。
+ * 与 titleOf 的差别：code 也参与回退（编号比 UUID 对人更有意义），且永不落完整 UUID。
+ */
+export declare function displayNameOf(task: TaskDefinition): string;
+/** 计划时刻短格式 `YYMMDD-HHmm`（本地时区，决策 42；例 `260928-1600`）。 */
+export declare function formatSlotShort(scheduledAtIso: string): string;
+/**
+ * 派发会话名（决策 42）：`[TASK] <260928-1600> · <标题>`，attempt>0（第 2 次起）追加「 · 第N次」。
+ * 时间取计划时刻（重试不变，与执行记录「计划时刻」列一致）；重试后缀既点明重试、又防同刻度重名。
+ */
+export declare function sessionTitleOf(scheduledAtIso: string, displayName: string, attempt: number): string;
 /** 任务 id 是否合法：必须是标准 UUID。手写 kebab-case / 旧内容指纹等一律不算。 */
 export declare function isUuid(value: unknown): value is string;
 /** 生成一个任务 id：标准 UUID（决策 30：机器身份与内容、名称彻底解耦，保存时生成并固化写入）。 */

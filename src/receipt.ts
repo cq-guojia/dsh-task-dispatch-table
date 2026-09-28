@@ -16,7 +16,6 @@
 //   · 模型拿不到、也伪造不了 session_id ⇒ 回执无法冒充其它会话；
 //   · 模型不必知道状态库在哪、不必有 node、不必有写权限 ⇒ 零环境猜测（决策 19 的初衷保留）。
 import type { HostLogger } from './host.js'
-import type { TaskDefinition } from './tasks.js'
 import type { TaskStore } from './store.js'
 
 /**
@@ -50,11 +49,14 @@ interface TurnBoundaryProjection {
 
 export interface ReceiptToolDeps {
   store: TaskStore
-  task: TaskDefinition
-  /** 闭包注入的实例身份（形如 `<task_id>:<logical_date>`），模型不可见。 */
+  /** 会话显示名（决策 42 快照 title）：只用于工具描述文案，模型不可据此伪造身份。 */
+  taskName: string
+  /** 闭包注入的实例身份（UUID 主键），模型不可见。 */
   instanceId: string
   /** 闭包注入的本次派发会话，模型不可见 ⇒ 回执不可冒充。 */
   sessionId: string
+  /** 回执 status 合法值（决策 41：来自派发快照，不读活任务表）。 */
+  validStatuses: readonly string[]
   logger: HostLogger
   /** 闭包注入的 turnBoundary 投影读取面：取 `deliverables/presented` 事件所需的 turn。 */
   sessionProjections?: unknown
@@ -106,8 +108,8 @@ function normalizeOutputs(raw: unknown): string[] {
 }
 
 /** 合法 status 清单（空数组兜底成 `['ok']`：schema 允许显式传空，但工具的 enum 不能为空）。 */
-function receiptStatuses(task: TaskDefinition): readonly string[] {
-  return task.contract.validStatuses.length > 0 ? task.contract.validStatuses : ['ok']
+function receiptStatuses(validStatuses: readonly string[]): readonly string[] {
+  return validStatuses.length > 0 ? validStatuses : ['ok']
 }
 
 /**
@@ -116,13 +118,13 @@ function receiptStatuses(task: TaskDefinition): readonly string[] {
  * 故无需引宿主包（`defineTool` 那套要引 `@deepseek-ai/dsh-tools`，本插件刻意不依赖宿主运行时包）。
  */
 function buildDefinition(deps: ReceiptToolDeps): unknown {
-  const { store, task, instanceId, sessionId, logger, sessionProjections } = deps
-  const statuses = receiptStatuses(task)
+  const { store, taskName, instanceId, sessionId, logger, sessionProjections } = deps
+  const statuses = receiptStatuses(deps.validStatuses)
 
   return {
     name: RECEIPT_TOOL_NAME,
     description:
-      `提交任务「${task.id}」的执行回执。任务做完后必须调用一次；调度器以回执判定任务成败，不调用等于失败。`
+      `提交任务「${taskName}」的执行回执。任务做完后必须调用一次；调度器以回执判定任务成败，不调用等于失败。`
       + `参数：status（必填，执行结果）、outputs（可选，产物文件相对工作区根的路径）、note（可选备注）。`,
     parameters: {
       type: 'object',
@@ -267,8 +269,8 @@ export function registerReceiptTool(agentCtx: unknown, deps: ReceiptToolDeps): b
  * ⚠️ 刻意不提供任何替代通道（不跑命令、不写库、不碰沙箱）——真机上 agent 曾自行 `chmod`、
  * 拷库、改用 sqlite3/node 绕道，全是无效动作（沙箱层面就不可能成功），白烧 token。
  */
-export function receiptInstruction(task: TaskDefinition): string {
-  const statuses = receiptStatuses(task)
+export function receiptInstruction(validStatuses: readonly string[]): string {
+  const statuses = receiptStatuses(validStatuses)
   return [
     `回执（必须）：任务做完后调用工具 ${RECEIPT_TOOL_NAME} 提交回执。调度器以回执判定任务成败，不提交等于失败。`,
     `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<产物，相对工作区根的路径>"] })`,

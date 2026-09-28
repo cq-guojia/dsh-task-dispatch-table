@@ -3,6 +3,44 @@
 > 完整定义。覆盖任务实例的全部生命周期：状态转移、运行时参数、窗口语义、重试、串行、补跑入口、依赖判定。
 > 字段与 DDL 见 [data-model.md](data-model.md)；取舍理由见 [decisions.md](decisions.md)。
 
+## 0. 两层循环彻底解耦 + 派发快照（决策 41，2026-09-28 拍板）
+
+> **一句话**：任务调度（Loop A）只管把要执行的任务**写进执行记录**；写完之后这次执行就和任务设置**完全没有关系**——发动执行、失败重试、询问进度、契约回收，全部由执行循环（Loop B）**只凭执行记录**完成。
+
+### 两层循环的职责与数据面
+
+| | Loop A（派发循环） | Loop B（执行循环） |
+|---|---|---|
+| 职责 | 判定「此刻该不该跑」+ **写执行记录**（落库即止，**不发动会话**） | 发动执行（`agents.create` + send）、失败重试、追问（nudge）、契约回收（回执裁决 / 终态 / 归档） |
+| 读什么 | 任务表（`enabled` / cron / window / 依赖 / workspace 声明）+ 执行记录（串行互斥、幂等） | **只读执行记录**（实例行 + 派发快照），**全程不读任务表** |
+| `enabled` 语义 | 只决定**要不要建新行**；disabled 任务的**在飞实例照常由 Loop B 收口** | 不感知 `enabled` |
+| 前置检查 | 依赖 + 工作区（「该不该跑」，不过 ⇒ 不建行，记 `task_log`，决策 31 语义不变） | 模型路由 / preset / `agents.create`（「怎么跑」，失败 ⇒ 走重试判定，**行保留**、原因落事件可追溯） |
+
+### 派发快照（落库时固化进实例行）
+
+Loop A 写行时把执行所需字段一并快照，Loop B 与回执 / 对账一律读快照：
+
+| 快照字段 | 用途 |
+|---|---|
+| `prompt` / `manual` | 发动执行的消息拼装（决策 12） |
+| workspace 解析后的实体 path | cwd + `attachSession` 归组 + 回执 outputs 路径校验 |
+| 模型 route（实测 provider/model + 命中层级） | `agentOptions`（落库时现算、只进快照、不回写任务定义——决策 22「现算、绝不回写」精神不变，下轮执行自然跟上新配置） |
+| `contract.validStatuses` | 回执 status 合法性校验（含回执工具入参归一） |
+| `retry.maxAttempts` / `schedule.window` | 重试判定与超窗判定（§6） |
+| `title` / `scheduled_at` / `attempt` | 会话命名：`[TASK] <计划时刻> · <标题>`（attempt>0 追加「 · 第N次」，决策 42；不再用 UUID） |
+
+插件级运行时参数（租约 / 派发宽限 / 追问上限）来自**插件配置**而非任务设置，保持 live 读取——它们不是「这个任务」的设置。
+
+### 语义推论
+
+- 中途改任务设置（`enabled` / retry / window / workspace / prompt / validStatuses…）对**已落库实例零影响**；「这次跑的是哪一版」由快照回答（未决项 U5 的 `def_snapshot` 方向就此拍板，精简为执行所需字段）。
+- **真机 bug（本次拍板动因）**：`enabled=false` 使 `loadTasks` 把任务过滤出 `taskMap`（`tasks.ts:351` 内嵌 / `:393` 目录）⇒ 对账 `taskOf()` 返回 undefined ⇒ `settleByReceipt` 提前 return（reconcile.ts:195-198）⇒ 已交回执的实例**永久卡 running**（agent 实际已完成）；无回执实例则被 nudge/retryOrFail 判 `failed`。解耦后此 bug 结构性消失。
+- 会话改名也只凭快照 title（现行 `onCreated` 读活任务表，一并修正）。
+
+### 落码状态
+
+本节为**拍板目标态**；现行代码尚有三处耦合待改：① `reconcile.ts` 各处经 `taskOf()` 读活 `taskMap`（retry/window/workspace/validStatuses/title 全在内）；② 模型路由在 Loop A 的 `launchAsync` 里解析（失败删行）；③ 回执工具闭包持有任务对象取 `validStatuses` 与提示词拼装。落码清单与验证见 [worklog/loop-decoupling.md](../worklog/loop-decoupling.md)。
+
 ## 1. 总览：对账判定树
 
 ```

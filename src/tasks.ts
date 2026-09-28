@@ -76,6 +76,33 @@ export function titleOf(task: TaskDefinition): string {
   return task.title ?? task.id
 }
 
+/**
+ * 会话显示名标题（决策 42）：title 回退 code，再回退短 id（前 8 位）。
+ * 与 titleOf 的差别：code 也参与回退（编号比 UUID 对人更有意义），且永不落完整 UUID。
+ */
+export function displayNameOf(task: TaskDefinition): string {
+  if (task.title !== undefined && task.title.trim() !== '') return task.title.trim()
+  if (task.code !== undefined && task.code.trim() !== '') return task.code.trim()
+  return task.id.slice(0, 8)
+}
+
+/** 计划时刻短格式 `YYMMDD-HHmm`（本地时区，决策 42；例 `260928-1600`）。 */
+export function formatSlotShort(scheduledAtIso: string): string {
+  const d = new Date(scheduledAtIso)
+  if (Number.isNaN(d.getTime())) return scheduledAtIso
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${p(d.getFullYear() % 100)}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`
+}
+
+/**
+ * 派发会话名（决策 42）：`[TASK] <260928-1600> · <标题>`，attempt>0（第 2 次起）追加「 · 第N次」。
+ * 时间取计划时刻（重试不变，与执行记录「计划时刻」列一致）；重试后缀既点明重试、又防同刻度重名。
+ */
+export function sessionTitleOf(scheduledAtIso: string, displayName: string, attempt: number): string {
+  const base = `[TASK] ${formatSlotShort(scheduledAtIso)} · ${displayName}`
+  return attempt > 0 ? `${base} · 第${attempt + 1}次` : base
+}
+
 /** 标准 UUID（36 位带横线，大小写不敏感）——任务 id 的唯一合法形态（决策 30 修订）。 */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 

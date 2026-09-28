@@ -6,6 +6,35 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 export const TERMINAL_STATUSES = ['succeeded', 'failed', 'skipped'];
 const NON_TERMINAL_STATUSES = ['pending', 'dispatched', 'running', 'unknown'];
+/** 解析实例行的快照 JSON；空 / 坏 JSON / 形状不对返回 undefined（调用方走兜底）。 */
+export function parseInstanceSnapshot(raw) {
+    if (raw === null || raw === '')
+        return undefined;
+    try {
+        const value = JSON.parse(raw);
+        if (typeof value !== 'object' || value === null)
+            return undefined;
+        const s = value;
+        if (typeof s.title !== 'string' || typeof s.prompt !== 'string' || typeof s.workspacePath !== 'string')
+            return undefined;
+        if (!Array.isArray(s.validStatuses))
+            return undefined;
+        return {
+            title: s.title,
+            prompt: s.prompt,
+            manual: typeof s.manual === 'string' ? s.manual : null,
+            workspacePath: s.workspacePath,
+            provider: typeof s.provider === 'string' ? s.provider : '',
+            model: typeof s.model === 'string' ? s.model : '',
+            validStatuses: s.validStatuses.filter((x) => typeof x === 'string'),
+            maxAttempts: typeof s.maxAttempts === 'number' && Number.isInteger(s.maxAttempts) && s.maxAttempts >= 1 ? s.maxAttempts : 1,
+            window: typeof s.window === 'string' ? s.window : 'PT0S',
+        };
+    }
+    catch {
+        return undefined;
+    }
+}
 const DDL = `
 -- 执行记录表：一行 = **一次执行（一个计划刻度）**。
 -- （决策 25 修订版：任务 id 直接写在用户的任务定义 JSON 里，**不再有 task_defs 登记表**——
@@ -28,6 +57,7 @@ CREATE TABLE IF NOT EXISTS task_instances (
   token_in      INTEGER,
   token_out     INTEGER,
   token_in_cache INTEGER,
+  snapshot      TEXT,
   updated_at    TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS task_events (
@@ -115,6 +145,9 @@ export class TaskStore {
             this.db.exec('ALTER TABLE task_instances ADD COLUMN token_out INTEGER');
         if (!cols.has('token_in_cache'))
             this.db.exec('ALTER TABLE task_instances ADD COLUMN token_in_cache INTEGER');
+        // 决策 41：派发快照列。旧行为 NULL ⇒ 对账走 legacyTask 回退（读一次任务表当场补快照，不静默）。
+        if (!cols.has('snapshot'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN snapshot TEXT');
     }
     close() {
         this.db.close();
@@ -176,14 +209,21 @@ export class TaskStore {
      * 幂等建一条实例（决策 31：懒建行，调用方先生成 id 并判定预条件通过后才调用）。
      * **身份 = 任务 + 计划刻度**——去重走 `UNIQUE(task_id, scheduled_at)`，
      * 同一刻度重复 INSERT 一律 DO NOTHING ⇒ tick 幂等。状态由调用方给定（现仅 'dispatched'）。
+     * `snapshot`（决策 41）：派发快照，Loop A 落库时一并固化；缺省（旧测试 / 手动 SQL）为 NULL。
      */
-    ensureInstance(id, taskId, logicalDate, scheduledAt, status) {
+    ensureInstance(id, taskId, logicalDate, scheduledAt, status, snapshot) {
         const result = this.db
             .prepare(`INSERT OR IGNORE INTO task_instances
-                (id, task_id, logical_date, scheduled_at, status, attempt, updated_at)
-                VALUES (?, ?, ?, ?, ?, 0, ?)`)
-            .run(id, taskId, logicalDate, scheduledAt, status, nowIso());
+                (id, task_id, logical_date, scheduled_at, status, attempt, snapshot, updated_at)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?)`)
+            .run(id, taskId, logicalDate, scheduledAt, status, snapshot === undefined ? null : JSON.stringify(snapshot), nowIso());
         return Number(result.changes) > 0;
+    }
+    /** 旧实例补快照（决策 41 legacy 回退：首次被 Loop B 触到时按任务定义当场合成并固化）。 */
+    setSnapshot(id, snapshot) {
+        this.db
+            .prepare('UPDATE task_instances SET snapshot = ?, updated_at = ? WHERE id = ?')
+            .run(JSON.stringify(snapshot), nowIso(), id);
     }
     /** 删除一条实例（决策 31.6：窗口外残留 pending 直接删，视为未执行）。 */
     deleteInstance(id) {

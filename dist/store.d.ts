@@ -15,8 +15,31 @@ export interface TaskInstance {
     token_in: number | null;
     token_out: number | null;
     token_in_cache: number | null;
+    /** 派发快照（决策 41）：落库时固化的执行所需字段 JSON；旧行 / 异常为 null。 */
+    snapshot: string | null;
     updated_at: string;
 }
+/**
+ * 派发快照（决策 41）：Loop A 落库时固化，Loop B（发动 / 重试 / 追问 / 回执裁决）**只读快照**，
+ * 与任务设置彻底解耦——中途改任务定义对已落库实例零影响。
+ */
+export interface InstanceSnapshot {
+    /** 会话显示名（决策 42）：title 回退 code，再回退短 id。 */
+    title: string;
+    prompt: string;
+    manual: string | null;
+    /** 解析后的工作区实体 path（cwd / attachSession / 回执 outputs 校验都用它）。 */
+    workspacePath: string;
+    /** 模型漏斗第①层提示（任务 target.provider/model；②③④层在发动时按插件配置 / 宿主现算）。 */
+    provider: string;
+    model: string;
+    validStatuses: string[];
+    maxAttempts: number;
+    /** ISO 时长串（超窗判定用，决策 41：快照管「已开工的」窗口边界）。 */
+    window: string;
+}
+/** 解析实例行的快照 JSON；空 / 坏 JSON / 形状不对返回 undefined（调用方走兜底）。 */
+export declare function parseInstanceSnapshot(raw: string | null): InstanceSnapshot | undefined;
 /** 调试快照事件行（detail 截断，临时调试面板用）。带 instance_id 供面板按实例过滤展开。 */
 export interface SnapshotEvent {
     seq: number;
@@ -92,8 +115,11 @@ export declare class TaskStore {
      * 幂等建一条实例（决策 31：懒建行，调用方先生成 id 并判定预条件通过后才调用）。
      * **身份 = 任务 + 计划刻度**——去重走 `UNIQUE(task_id, scheduled_at)`，
      * 同一刻度重复 INSERT 一律 DO NOTHING ⇒ tick 幂等。状态由调用方给定（现仅 'dispatched'）。
+     * `snapshot`（决策 41）：派发快照，Loop A 落库时一并固化；缺省（旧测试 / 手动 SQL）为 NULL。
      */
-    ensureInstance(id: string, taskId: string, logicalDate: string, scheduledAt: string, status: InstanceStatus): boolean;
+    ensureInstance(id: string, taskId: string, logicalDate: string, scheduledAt: string, status: InstanceStatus, snapshot?: InstanceSnapshot): boolean;
+    /** 旧实例补快照（决策 41 legacy 回退：首次被 Loop B 触到时按任务定义当场合成并固化）。 */
+    setSnapshot(id: string, snapshot: InstanceSnapshot): void;
     /** 删除一条实例（决策 31.6：窗口外残留 pending 直接删，视为未执行）。 */
     deleteInstance(id: string): void;
     /** 写入一条诊断日志（决策 31/32：未推进到执行那一步的诊断进 task_log，不污染 task_instances）。 */

@@ -9,8 +9,7 @@ import type {
 } from './host.js'
 import type { PluginConfig } from './config.js'
 import { receiptInstruction, registerReceiptTool } from './receipt.js'
-import type { TaskDefinition } from './tasks.js'
-import type { TaskStore } from './store.js'
+import type { InstanceSnapshot, TaskStore } from './store.js'
 
 /**
  * 派发前置条件失败（决策 22 / 决策 23）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
@@ -27,6 +26,7 @@ export class DispatchPreconditionError extends Error {
  * 工作区名 → 工作区实体（决策 22：target.workspace 语义是**工作区**，不是工作目录；
  * 目录由实体 path 派生）。registry 无按 name 查询 API，遍历 list() 比对：
  * title 精确匹配优先，id 兜底。匹配不到即抛错 ⇒ 任务判失败，绝不落到「未分组」或随便找个目录跑。
+ * （Loop A 落库前的前置检查用；Loop B 发动走 resolveWorkspaceByPath——快照里存的是 path。）
  */
 export function resolveWorkspace(ctx: HostContext, name: string): HostWorkspace {
   const workspaces = ctx.workspaceRegistry.list()
@@ -35,6 +35,19 @@ export function resolveWorkspace(ctx: HostContext, name: string): HostWorkspace 
   if (hit === undefined) {
     throw new Error(`找不到工作区 "${name}"（任务必须挂在一个已注册工作区下；已注册: ${
       workspaces.map(workspace => workspace.title).join(', ') || '(无)'}）`)
+  }
+  return hit
+}
+
+/**
+ * 工作区 path → 工作区实体（决策 41：Loop B 发动只读快照的 workspacePath）。
+ * 快照里的 path 是落库时从实体原样取的，精确比对即可；找不到 = 工作区被删/重建，
+ * 行保留走重试判定（失败原因落事件）。
+ */
+export function resolveWorkspaceByPath(ctx: HostContext, path: string): HostWorkspace {
+  const hit = ctx.workspaceRegistry.list().find(workspace => workspace.path === path)
+  if (hit === undefined) {
+    throw new Error(`找不到 path 为 "${path}" 的工作区（派发时存在、发动时消失；请在工作区注册表里恢复后等重试）`)
   }
   return hit
 }
@@ -99,22 +112,24 @@ async function resolveLayer(
 }
 
 /**
- * 模型解析漏斗（决策 22）：逐层下漏，四层全空返回 undefined（调用方判任务失败，不派发）。
+ * 模型解析漏斗（决策 22，决策 41 修订第①层来源）：逐层下漏，四层全空返回 undefined
+ * （调用方判失败，走重试判定、行保留）。
  *
- * ① 任务定义 target.provider/target.model
+ * ① 派发快照的 provider/model 提示（= 落库时的任务 target，决策 41：Loop B 不读任务表）
  * ② 插件配置 defaultProvider/defaultModel
  * ③ 宿主默认 ctx.get('agentDefaultModel').currentSelection()（= 用户配的 / 上次用的模型）
  * ④ llm 首个可用：listProviders() 首个能列出模型的 provider + 其首个模型
  *
- * ⚠️ 只在派发时现算，**绝不回写**任务定义或配置：用户日后换模型要能自动跟上，
+ * ⚠️ 只在落库 / 发动时现算，**绝不回写**任务定义或配置：用户日后换模型要能自动跟上，
  * 在配置期固化等于自己废掉兜底。
  */
 export async function resolveModelRoute(
-  ctx: HostContext, logger: HostLogger, task: TaskDefinition, config: PluginConfig,
+  ctx: HostContext, logger: HostLogger, providerHint: string, modelHint: string, config: PluginConfig,
+  hintLabel = '派发快照的 target',
 ): Promise<ModelResolution | undefined> {
-  const fromTask = await resolveLayer(ctx, logger, 'task', `任务 ${task.id} 的 target`, {
-    provider: task.target.provider ?? '',
-    model: task.target.model ?? '',
+  const fromTask = await resolveLayer(ctx, logger, 'task', hintLabel, {
+    provider: providerHint,
+    model: modelHint,
   })
   if (fromTask !== undefined) return fromTask
 
@@ -150,7 +165,7 @@ export async function resolveModelRoute(
     }
   }
 
-  logger.warn(`任务 ${task.id} 四层模型漏斗全部落空（决策 22）：请在 target 或插件配置里指定 provider+model`)
+  logger.warn('模型漏斗四层全部落空（决策 22）：请在 target 或插件配置里指定 provider+model')
   return undefined
 }
 
@@ -172,18 +187,18 @@ interface AgentComposition {
  * ——那种部署下这些行住在宿主 composition 的全局层，不挂也看得见，故**跳过而非判失败**。
  */
 async function resolveAgentComposition(
-  ctx: HostContext, logger: HostLogger, task: TaskDefinition,
+  ctx: HostContext, logger: HostLogger, instanceId: string,
 ): Promise<AgentComposition | undefined> {
   const presets: HostAgentPresets | undefined = ctx.get('agentPresets')
   if (presets === undefined) {
-    logger.warn(`任务 ${task.id}: 宿主未挂载 agentPresets 服务，按 rosterless 处理（工具/提示词取全局层）`)
+    logger.warn(`实例 ${instanceId}: 宿主未挂载 agentPresets 服务，按 rosterless 处理（工具/提示词取全局层）`)
     return undefined
   }
   try {
     const { id } = await presets.resolve()
     return { presets, presetId: id }
   } catch (error) {
-    logger.warn(`任务 ${task.id}: 解析部署默认 preset 失败，按 rosterless 处理: ${String(error)}`)
+    logger.warn(`实例 ${instanceId}: 解析部署默认 preset 失败，按 rosterless 处理: ${String(error)}`)
     return undefined
   }
 }
@@ -206,16 +221,16 @@ export function userNotice(text: string, summary: string): UserMessage {
 }
 
 /**
- * 派发消息拼装（决策 12 模板 + 决策 24 回执工具）：短指令 prompt + 手册路径 + 回执调用说明。
- * 回执不再走命令行（决策 24）——说明文案见 receipt.ts，含「失败重试 ≤3 次、仍失败立即停止」的硬策略。
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化）：短指令 prompt + 手册路径 +
+ * 回执调用说明。prompt / manual / validStatuses 全部来自派发快照，与任务设置无关。
  */
-export function buildMessage(task: TaskDefinition, workspacePath: string, logicalDate: string): UserMessage {
-  const lines = [task.target.prompt, '', `任务实例：${task.id} · ${logicalDate}（目标工作区：${workspacePath}）`]
-  if (task.target.manual !== undefined) {
-    lines.push(`任务手册：先读工作区内 ${task.target.manual}，再按手册执行。`)
+export function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string): UserMessage {
+  const lines = [snapshot.prompt, '', `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`]
+  if (snapshot.manual !== null && snapshot.manual.trim() !== '') {
+    lines.push(`任务手册：先读工作区内 ${snapshot.manual}，再按手册执行。`)
   }
-  lines.push(receiptInstruction(task))
-  return userNotice(lines.join('\n'), `[TASK] ${task.id} · ${logicalDate}`)
+  lines.push(receiptInstruction(snapshot.validStatuses))
+  return userNotice(lines.join('\n'), `[TASK] ${snapshot.title} · ${logicalDate}`)
 }
 
 export interface DispatchInput {
@@ -223,13 +238,15 @@ export interface DispatchInput {
   /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
   logger: HostLogger
   store: TaskStore
-  task: TaskDefinition
-  /** 已领取实例：形如 "<task_id>:<logical_date>"，状态应为 dispatched。 */
+  /** 已落库实例：UUID 主键，状态应为 dispatched（决策 41：Loop B 发动）。 */
   instanceId: string
   logicalDate: string
-  /** 已解析的工作区实体（决策 22）：cwd 由它的 path 派生，会话建成后 attach 到它归组。 */
+  scheduledAt: string
+  /** 派发快照（决策 41）：prompt / manual / workspacePath / 模型提示 / validStatuses 全在其中。 */
+  snapshot: InstanceSnapshot
+  /** 已按快照 path 解析的工作区实体（决策 22）：cwd 由它的 path 派生，会话建成后 attach 归组。 */
   workspace: HostWorkspace
-  /** 插件配置（决策 22 漏斗第②层取 defaultProvider/defaultModel，派发时现算）。 */
+  /** 插件配置（决策 22 漏斗第②层取 defaultProvider/defaultModel，发动时现算）。 */
   config: PluginConfig
 }
 
@@ -237,30 +254,30 @@ export interface DispatchInput {
 export type AgentHandle = Awaited<ReturnType<HostContext['agents']['create']>>
 
 /**
- * 派发一个已 CAS 领取的实例（决策 22 顺序 + 决策 23 preset 组装）：
- * 解析模型漏斗 → **解析部署默认 preset** → 落 session_id → agents.create（自建会话并
- * announce session/created，晚于 assign-session，对账收到时实例必已带 session_id；preset 在
- * create 的 setup 里 mount，工具/prompt sections/skill 由此挂上）→ **工作区 attachSession 归组**
+ * 发动一个已落库实例（决策 41：Loop B 发动；决策 22 顺序 + 决策 23 preset 组装）：
+ * 解析模型漏斗（第①层取快照提示）→ **解析部署默认 preset** → 落 session_id → agents.create
+ * （自建会话并 announce session/created，对账收到时实例必已带 session_id；preset 在 create 的
+ * setup 里 mount，工具/prompt sections/skill 由此挂上）→ **工作区 attachSession 归组**
  * → 落 dispatch 事件（含本次实测 route、命中层级与 preset）→ send。
  * 会话改名在 reconciler.onCreated 做——此处拿不到 Session 对象（handle 只有 agent）。
  * @returns sessionId 与 agent handle——handle 供对账层超时追问（决策 19 第二层）。
  * @throws DispatchPreconditionError 模型解析不出、会话建不起来（含 preset 挂载失败）、
- *   或会话建好后无法归组工作区。
+ *   或会话建好后无法归组工作区——调用方（Loop B）按重试判定收敛、**行保留**。
  */
 export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: string; handle: AgentHandle }> {
-  const { ctx, logger, store, task, instanceId, logicalDate, workspace, config } = input
+  const { ctx, logger, store, instanceId, logicalDate, snapshot, workspace, config } = input
 
-  const route = await resolveModelRoute(ctx, logger, task, config)
+  const route = await resolveModelRoute(ctx, logger, snapshot.provider, snapshot.model, config)
   if (route === undefined) {
-    // 前置条件不足：不建会话、不派发（先于 session_id 落库，实例行不留假 session）。
+    // 前置条件不足：不建会话、不发动（先于 session_id 落库，实例行不留假 session）。
     throw new DispatchPreconditionError(
       'no-model-route',
-      `任务 ${task.id} 无法解析出 provider+model，不派发（决策 22 漏斗四层全空）`,
+      `实例 ${instanceId} 无法解析出 provider+model，不发动（决策 22 漏斗四层全空）`,
     )
   }
 
   // 组装方式（决策 23）：部署默认 preset——与用户在 UI 新建会话同一套。
-  const composition = await resolveAgentComposition(ctx, logger, task)
+  const composition = await resolveAgentComposition(ctx, logger, instanceId)
 
   const sessionId = randomUUID()
   // 领取后先把会话身份落到实例行，再建 agent——session/created（factory announce）
@@ -290,16 +307,24 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
       },
       agentOptions: { provider: route.provider, model: route.model },
       // setup 是发布前唯一能组装 agent 作用域的时机（决策 23 / 24）：
-      // ① 挂 preset（工具 / prompt sections / skill 跟随系统）；② 注册本任务专属的回执工具
+      // ① 挂 preset（工具 / prompt sections / skill 跟随系统）；② 注册本实例专属的回执工具
       // （per-agent，只对该会话可见；execute 在插件进程内写库，绕开 agent 沙箱——决策 24）。
       setup: async (agentCtx: unknown): Promise<void> => {
         if (composition !== undefined) await composition.presets.mount(agentCtx, composition.presetId)
         // 回执工具注册不上 ⇒ 这个会话没有任何回执通道，跑完必然白跑（决策 24）：当作前置条件
-        // 失败直接抛，工厂会回滚作用域、不发布会话；scheduler 按 receipt-tool-unavailable 收敛。
-        if (!registerReceiptTool(agentCtx, { store, task, instanceId, sessionId, logger, sessionProjections: (ctx as { sessionProjections?: unknown }).sessionProjections })) {
+        // 失败直接抛，工厂会回滚作用域、不发布会话；Loop B 按 receipt-tool-unavailable 收敛。
+        if (!registerReceiptTool(agentCtx, {
+          store,
+          taskName: snapshot.title,
+          instanceId,
+          sessionId,
+          validStatuses: snapshot.validStatuses,
+          logger,
+          sessionProjections: (ctx as { sessionProjections?: unknown }).sessionProjections,
+        })) {
           throw new DispatchPreconditionError(
             'receipt-tool-unavailable',
-            `任务 ${task.id} 的回执工具未注册成功（同名冲突或宿主未暴露 tools 服务），不派发`,
+            `实例 ${instanceId} 的回执工具未注册成功（同名冲突或宿主未暴露 tools 服务），不发动`,
           )
         }
       },
@@ -310,7 +335,7 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     if (error instanceof DispatchPreconditionError) throw error
     throw new DispatchPreconditionError(
       'agent-create-failed',
-      `任务 ${task.id} 会话 ${sessionId} 未能建立（preset=${composition?.presetId ?? '(rosterless)'}）: ${String(error)}`,
+      `实例 ${instanceId} 会话 ${sessionId} 未能建立（preset=${composition?.presetId ?? '(rosterless)'}）: ${String(error)}`,
     )
   }
 
@@ -335,7 +360,7 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     modelSource: route.source,
     ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
   })
-  // 会话列表治理：规范名在 reconciler.onCreated 改，跑完归档在 succeeded 对账后。
-  handle.agent.send(buildMessage(task, workspace.path, logicalDate), 'next-turn', true)
+  // 会话列表治理：规范名在 reconciler.onCreated 改（决策 42 格式），跑完归档在 succeeded 对账后。
+  handle.agent.send(buildMessage(snapshot, workspace.path, logicalDate), 'next-turn', true)
   return { sessionId, handle }
 }

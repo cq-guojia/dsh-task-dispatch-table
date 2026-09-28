@@ -49,8 +49,8 @@ function normalizeOutputs(raw) {
         .filter(item => item.length > 0);
 }
 /** 合法 status 清单（空数组兜底成 `['ok']`：schema 允许显式传空，但工具的 enum 不能为空）。 */
-function receiptStatuses(task) {
-    return task.contract.validStatuses.length > 0 ? task.contract.validStatuses : ['ok'];
+function receiptStatuses(validStatuses) {
+    return validStatuses.length > 0 ? validStatuses : ['ok'];
 }
 /**
  * 工具定义（**裸 definition**、零依赖）：宿主 `register` 只强校验
@@ -58,11 +58,11 @@ function receiptStatuses(task) {
  * 故无需引宿主包（`defineTool` 那套要引 `@deepseek-ai/dsh-tools`，本插件刻意不依赖宿主运行时包）。
  */
 function buildDefinition(deps) {
-    const { store, task, instanceId, sessionId, logger, sessionProjections } = deps;
-    const statuses = receiptStatuses(task);
+    const { store, taskName, instanceId, sessionId, logger, sessionProjections } = deps;
+    const statuses = receiptStatuses(deps.validStatuses);
     return {
         name: RECEIPT_TOOL_NAME,
-        description: `提交任务「${task.id}」的执行回执。任务做完后必须调用一次；调度器以回执判定任务成败，不调用等于失败。`
+        description: `提交任务「${taskName}」的执行回执。任务做完后必须调用一次；调度器以回执判定任务成败，不调用等于失败。`
             + `参数：status（必填，执行结果）、outputs（可选，产物文件相对工作区根的路径）、note（可选备注）。`,
         parameters: {
             type: 'object',
@@ -205,8 +205,8 @@ export function registerReceiptTool(agentCtx, deps) {
  * ⚠️ 刻意不提供任何替代通道（不跑命令、不写库、不碰沙箱）——真机上 agent 曾自行 `chmod`、
  * 拷库、改用 sqlite3/node 绕道，全是无效动作（沙箱层面就不可能成功），白烧 token。
  */
-export function receiptInstruction(task) {
-    const statuses = receiptStatuses(task);
+export function receiptInstruction(validStatuses) {
+    const statuses = receiptStatuses(validStatuses);
     return [
         `回执（必须）：任务做完后调用工具 ${RECEIPT_TOOL_NAME} 提交回执。调度器以回执判定任务成败，不提交等于失败。`,
         `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<产物，相对工作区根的路径>"] })`,

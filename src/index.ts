@@ -440,17 +440,20 @@ export function apply(ctx: HostContext, config: unknown): void {
       setTimeout(() => { writePending = false; writeSnapshot() }, wait)
     }
 
+    const pluginConfig = (): PluginConfig => ({ ...scope.get(), tasksInline: runtime.tasksInline })
     const reconcileOptions: ReconcileOptions = {
       get leaseMs() { return scope.get().leaseMs },
       get dispatchGraceMs() { return scope.get().dispatchGraceMs },
       get unknownGraceMs() { return scope.get().unknownGraceMs },
-      tasks: () => taskMap,
+      config: pluginConfig,
+      // 决策 41 一次性兼容：旧库实例无快照时按当前任务定义当场补快照（只此一处对账读任务表）。
+      legacyTask: (taskId) => taskMap.get(taskId),
     }
     const reconciler = createReconciler({ ctx: sctx, logger: teeLogger, store, options: reconcileOptions })
     const scheduler: Scheduler = createScheduler({
       ctx: sctx, logger: teeLogger, store, reconciler,
       // tasksInline 以 runtime 内存值为准（用户经 remote 服务改后即时生效，无需等 settings 落盘）。
-      config: () => ({ ...scope.get(), tasksInline: runtime.tasksInline }),
+      config: pluginConfig,
     })
 
     // 启动扫描（机制 #5）：重启期间 disposed 事件可能全部丢失，已派发未定态实例置 unknown，

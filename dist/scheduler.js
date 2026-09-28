@@ -1,19 +1,18 @@
-// scheduler.ts — 调度循环（决策 31 重设计：懒建行 + 不回看 + 不补跑 + skipped 只进日志）。
+// scheduler.ts — 派发循环（决策 31 懒建行 + 决策 41 两层循环彻底解耦）。
 //
-// 两条主循环：
-//   Loop A（dispatchNewSlots）：每 tick 只判「现在这一刻该不该跑」——取满足
-//     scheduled_at <= now <= scheduled_at + window 且无实例行的「最晚」刻度；依赖 / 工作区
-//     不过 ⇒ 只记 task_log、不建 task_instances 行；过了 ⇒ 直接以 dispatched 落库（同步），
-//     再异步拉起会话（模型路由为唯一异步预条件，失败则删掉刚建的新行，仍不留行）。
-//     绝不预建未来 pending、绝不回看补建 skipped。
-//   Loop B（reconciler.sweep + redispatchPending）：只处理已存在的行——追问 / 重试 /
-//     租约 / 崩溃残留 pending（窗口内重派、窗口外删行记日志）。
+// Loop A（本文件 dispatchNewSlots）只管「写执行记录」：
+//   每 tick 只判「现在这一刻该不该跑」——取满足 scheduled_at <= now <= scheduled_at + window
+//   且无实例行的「最晚」刻度；依赖 / 工作区不过 ⇒ 只记 task_log、不建行；过了 ⇒ 把要执行的
+//   任务连同**派发快照**（决策 41）以 dispatched 落库，**落库即止**——不发动会话、不解析模型。
+//   `enabled` 只在这里起作用（挡新行）；已落库实例由 Loop B 收口，与本循环无关。
+// Loop B（reconcile.ts sweep）：只读执行记录 + 快照——发动执行 / 失败重试 / 追问 /
+//   契约回收 / 重试行重派（窗口内转 dispatched 并发动、窗口外删行记日志），全程不读任务表。
 import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseInlineTasks } from './tasks.js';
-import { durationMs, logicalDateOf, scheduledSlotsFor } from './tasks.js';
-import { dispatchTask, resolveModelRoute, DispatchPreconditionError } from './dispatch.js';
+import { displayNameOf, durationMs, logicalDateOf, scheduledSlotsFor } from './tasks.js';
+import { resolveWorkspace } from './dispatch.js';
 const IN_FLIGHT_STATUSES = ['dispatched', 'running', 'unknown'];
 // ── 调度输入加载（inline JSON 或目录，按配置择一）──
 function loadTasks(logger, config) {
@@ -122,49 +121,23 @@ function logDepBlocked(depLog, store, taskId, scheduledAt) {
     depLog.set(taskId, now);
     store.appendLog({ taskId, scheduledAt, level: 'info', kind: 'dep_blocked', message: '被依赖卡住，等待上游成功（下轮再判）' });
 }
-/** 工作区解析（配置错 ⇒ 抛错，由调用方捕获并记日志、不建行）。 */
-function resolveWorkspace(ctx, workspace) {
-    const handle = ctx.workspaceRegistry.list().find((w) => w.title === workspace);
-    if (handle === undefined)
-        throw new Error(`workspace-not-found:${workspace}`);
-    return handle;
+// 工作区解析用 dispatch.js 的 resolveWorkspace（Loop A 落库前的前置检查，决策 41：
+// Loop B 发动走 resolveWorkspaceByPath——快照里存的是 path）。
+/** 派发快照组装（决策 41）：落库时把执行所需字段固化进实例行，此后与任务设置无关。 */
+function snapshotOf(task, workspace) {
+    return {
+        title: displayNameOf(task),
+        prompt: task.target.prompt,
+        manual: task.target.manual ?? null,
+        workspacePath: workspace.path,
+        provider: task.target.provider ?? '',
+        model: task.target.model ?? '',
+        validStatuses: task.contract.validStatuses.length > 0 ? [...task.contract.validStatuses] : ['ok'],
+        maxAttempts: task.retry.maxAttempts,
+        window: task.schedule.window,
+    };
 }
-/**
- * 异步拉起（fire-and-forget）：模型路由为唯一异步预条件；失败 ⇒ 删掉刚建的新行（不留行）或
- * 保留既有 pending 行（重试路径）。拉起失败的行由 sweep 走 dispatch-grace/lease 重试收敛。
- */
-async function launchAsync(ctx, logger, store, reconciler, task, instanceId, slot, workspace, config, deleteOnPrecondition) {
-    let route;
-    try {
-        route = await resolveModelRoute(ctx, logger, task, config);
-    }
-    catch {
-        route = undefined;
-    }
-    if (route === undefined) {
-        store.appendLog({
-            taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'warn', kind: 'precondition',
-            message: `无可用的模型路由（provider=${task.target.provider ?? ''} model=${task.target.model ?? ''}）`,
-        });
-        if (deleteOnPrecondition)
-            store.deleteInstance(instanceId);
-        return;
-    }
-    try {
-        const { sessionId, handle } = await dispatchTask({ ctx, logger, store, task, instanceId, logicalDate: slot.logicalDate, workspace, config });
-        reconciler.registerHandle(sessionId, handle);
-    }
-    catch (error) {
-        if (error instanceof DispatchPreconditionError) {
-            store.appendLog({ taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'warn', kind: 'precondition', message: `派发前置失败：${error.message}` });
-            if (deleteOnPrecondition)
-                store.deleteInstance(instanceId);
-            return;
-        }
-        logger.error(`任务派发异常（实例 ${instanceId}）：${error instanceof Error ? error.message : String(error)}`);
-    }
-}
-function dispatchNewSlots(ctx, logger, store, reconciler, tasks, config, depLog) {
+function dispatchNewSlots(ctx, logger, store, tasks, depLog) {
     const nowMs = Date.now();
     for (const task of tasks) {
         if (task.enabled === false)
@@ -193,50 +166,12 @@ function dispatchNewSlots(ctx, logger, store, reconciler, tasks, config, depLog)
             store.appendLog({ taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'warn', kind: 'precondition', message: `工作区未找到：${task.target.workspace}` });
             continue;
         }
-        // 懒建行（同步）：直接 dispatched，杜绝提前 pending / 未来预建
+        // 懒建行（同步）：直接 dispatched + 派发快照，杜绝提前 pending / 未来预建。
+        // 决策 41：**落库即止**——发动执行是 Loop B（reconciler.sweep）的事，本循环到此为止。
         const id = randomUUID();
-        if (!store.ensureInstance(id, task.id, slot.logicalDate, slot.scheduledAtIso, 'dispatched'))
+        if (!store.ensureInstance(id, task.id, slot.logicalDate, slot.scheduledAtIso, 'dispatched', snapshotOf(task, workspace)))
             continue; // 撞唯一索引（极少）
-        // 异步拉起（fire-and-forget）：必须 catch，避免插件关闭 / 库已关时的异步余波变成未捕获 rejection
-        void launchAsync(ctx, logger, store, reconciler, task, id, slot, workspace, config, true)
-            .catch((error) => logger.warn(`派发异步收尾异常（实例 ${id}）：${error instanceof Error ? error.message : String(error)}`));
-    }
-}
-/** 重派已有 pending 行（决策 10 重试 / 崩溃残留）：窗口内重派，窗口外删行记日志。 */
-function redispatchPending(ctx, logger, store, reconciler, tasks, config, depLog) {
-    const nowMs = Date.now();
-    for (const task of tasks) {
-        if (task.enabled === false)
-            continue;
-        if (store.listByStatus(IN_FLIGHT_STATUSES).some((o) => o.task_id === task.id))
-            continue;
-        const pendings = store.listByStatus(['pending']).filter((o) => o.task_id === task.id);
-        for (const row of pendings) {
-            const deadline = Date.parse(row.scheduled_at) + durationMs(task.schedule.window);
-            if (nowMs > deadline) {
-                store.deleteInstance(row.id); // 窗口外残留 pending（崩溃残留 / 超窗）：删行 + 记日志（决策 31.6）
-                store.appendLog({ taskId: task.id, scheduledAt: row.scheduled_at, level: 'warn', kind: 'stray_pending', message: '窗口外残留 pending，已删除（视为未执行）' });
-                continue;
-            }
-            const depVerdict = judgeDependencies(store, task, row.logical_date, row.scheduled_at);
-            if (!depVerdict.ready) {
-                logDepBlocked(depLog, store, task.id, row.scheduled_at);
-                continue;
-            }
-            for (const note of depVerdict.staleNotes) {
-                store.appendLog({ taskId: task.id, scheduledAt: row.scheduled_at, level: 'warn', kind: 'stale-upstream', message: note });
-            }
-            let workspace;
-            try {
-                workspace = resolveWorkspace(ctx, task.target.workspace);
-            }
-            catch {
-                // 既有 pending 行：工作区缺失只跳过本轮（下轮重试），不删行
-                continue;
-            }
-            void launchAsync(ctx, logger, store, reconciler, task, row.id, { logicalDate: row.logical_date, scheduledAtIso: row.scheduled_at }, workspace, config, false)
-                .catch((error) => logger.warn(`重派异步收尾异常（实例 ${row.id}）：${error instanceof Error ? error.message : String(error)}`));
-        }
+        logger.info(`已落库执行记录 ${id}（任务 ${task.id} · ${slot.scheduledAtIso}），发动由执行循环接管（决策 41）`);
     }
 }
 export function createScheduler(opts) {
@@ -248,11 +183,11 @@ export function createScheduler(opts) {
             const cfg = config();
             const tasks = loadTasks(logger, cfg);
             taskMap = new Map(tasks.map((t) => [t.id, t]));
-            // Loop B：先处理已存在行（追问 / 重试 / 租约 / 残留 pending）
+            // Loop A：先处理新刻度（懒建行 + 不回看 + 不补跑 + 落库即止，决策 41）
+            dispatchNewSlots(ctx, logger, store, tasks, depLog);
+            // Loop B：再收口全部执行记录（发动本 tick 新落库的行 + 追问 / 重试 / 租约——
+            // 只读执行记录 + 快照，决策 41）。放在 Loop A 之后 = 新行当 tick 即被发动，时延不退化。
             reconciler.sweep();
-            // Loop A：再处理新刻度（懒建行 + 不回看 + 不补跑）
-            dispatchNewSlots(ctx, logger, store, reconciler, tasks, cfg, depLog);
-            redispatchPending(ctx, logger, store, reconciler, tasks, cfg, depLog);
             // 保留期清除（决策 32：task_log 可定时清）
             store.purgeLog(cfg.logRetentionDays ?? 30);
         },

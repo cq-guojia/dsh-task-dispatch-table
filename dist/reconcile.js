@@ -1,21 +1,26 @@
-// 事件驱动对账（state-machine §1 判定树 + §3 转移表）：session/created → running+租约；
-// turn/end 与 session/disposed → 查回执收敛；tick 兜底扫描由 sweep() 提供。
-// 回执机制（决策 19 + 24）：agent 经插件注册的工具（见 receipt.ts 的 RECEIPT_TOOL_NAME）写 task_events 的 receipt 事件，
-// 对账只查库不读文件；跑完信号后无回执 → 宽限 → 追问×2 → 按失败收敛。
+// 事件驱动对账（state-machine §1 判定树 + §3 转移表）——**Loop B（执行循环，决策 41）**：
+// 只读执行记录 + 派发快照，全程不读任务表。职责：发动执行（无会话的 dispatched / 窗口内的
+// pending 重试行）、session/created → running+租约、turn/end 与 session/disposed → 查回执收敛、
+// tick 兜底扫描 sweep()。
+// 回执机制（决策 19 + 24）：agent 经插件注册的工具写 task_events 的 receipt 事件，对账只查库
+// 不读文件；跑完信号后无回执 → 宽限 → 追问×2 → 按失败收敛。
+// 唯一例外（决策 41 兼容口）：旧库实例无快照列值时，按 legacyTask 当场合成快照并固化（一次性
+// 兼容、带 warn）——兜底也不落库 ⇒ 无法发动 / 无法校验，如实按失败收敛，绝不静默。
 import { existsSync, statSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
-import { durationMs } from './tasks.js';
-import { resolveWorkspace, userNotice } from './dispatch.js';
+import { displayNameOf, durationMs, sessionTitleOf } from './tasks.js';
+import { dispatchTask, resolveWorkspace, resolveWorkspaceByPath, userNotice, DispatchPreconditionError, } from './dispatch.js';
 import { receiptInstruction } from './receipt.js';
+import { parseInstanceSnapshot } from './store.js';
 /** 跑完信号后允许补交回执的追问上限（写死不加配置，事件表可查次数）。 */
 const NUDGE_LIMIT = 2;
 /**
  * 回执裁决（决策 19，替代旧契约文件三查）：
  * receipt 事件存在 + status ∈ validStatuses + outputs 逐一存在且 mtime 晚于本次派发。
  * outputs 验证沿用「防旧产物冒充」语义；status 必须如实（agent 自报不可信，决策 11）。
+ * 决策 41：workspacePath / validStatuses 来自派发快照，与任务设置无关。
  */
-export function checkReceipt(task, workspacePath, dispatchedAtMs, receipt) {
+export function checkReceipt(workspacePath, validStatuses, dispatchedAtMs, receipt) {
     if (receipt === undefined)
         return { ok: false, reason: 'receipt-missing' };
     let payload;
@@ -25,11 +30,11 @@ export function checkReceipt(task, workspacePath, dispatchedAtMs, receipt) {
     catch (error) {
         return { ok: false, reason: 'receipt-unreadable', detail: String(error) };
     }
-    if (typeof payload.status !== 'string' || !task.contract.validStatuses.includes(payload.status)) {
+    if (typeof payload.status !== 'string' || !validStatuses.includes(payload.status)) {
         return {
             ok: false,
             reason: 'receipt-status-invalid',
-            detail: { status: payload.status, validStatuses: task.contract.validStatuses },
+            detail: { status: payload.status, validStatuses: [...validStatuses] },
         };
     }
     const outputs = Array.isArray(payload.outputs) ? payload.outputs.filter((item) => typeof item === 'string') : [];
@@ -83,11 +88,49 @@ export function createReconciler({ ctx, logger, store, options }) {
     const handles = new Map();
     /** token 用量分量累计（决策 32 修订）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
     const tokenTotals = new Map();
+    /** 发动在途去重（tick 1s 一次，发动是异步的——模型解析期间不能重复发动同一实例）。 */
+    const launching = new Set();
     /** 事件字段只打印一次（用于确认宿主把用量挂在哪，便于收紧取值逻辑）。 */
     let eventShapeLogged = false;
-    const windowDeadline = (instance) => Date.parse(instance.scheduled_at) + durationMs(taskOf(instance)?.schedule.window ?? 'PT0S');
-    function taskOf(instance) {
-        return options.tasks().get(instance.task_id);
+    const windowDeadline = (instance) => Date.parse(instance.scheduled_at) + durationMs(snapOf(instance)?.window ?? 'PT0S');
+    /**
+     * 取实例的派发快照（决策 41）。旧行无快照 ⇒ 按 legacyTask 当场合成并固化（一次性兼容）；
+     * 兜底也不成立 ⇒ undefined（调用方如实按失败收敛，不静默、不猜）。
+     */
+    function snapOf(instance) {
+        const parsed = parseInstanceSnapshot(instance.snapshot);
+        if (parsed !== undefined)
+            return parsed;
+        const task = options.legacyTask?.(instance.task_id);
+        if (task === undefined)
+            return undefined;
+        let workspacePath;
+        try {
+            workspacePath = resolveWorkspace(ctx, task.target.workspace).path;
+        }
+        catch {
+            logger.warn(`旧实例 ${instance.id} 补快照失败：工作区解析不出（${task.target.workspace}）`);
+            return undefined;
+        }
+        const snap = {
+            title: displayNameOf(task),
+            prompt: task.target.prompt,
+            manual: task.target.manual ?? null,
+            workspacePath,
+            provider: task.target.provider ?? '',
+            model: task.target.model ?? '',
+            validStatuses: task.contract.validStatuses.length > 0 ? [...task.contract.validStatuses] : ['ok'],
+            maxAttempts: task.retry.maxAttempts,
+            window: task.schedule.window,
+        };
+        try {
+            store.setSnapshot(instance.id, snap);
+            logger.warn(`旧实例 ${instance.id} 无派发快照，已按当前任务定义补快照（一次性兼容，决策 41）`);
+        }
+        catch (error) {
+            logger.warn(`旧实例 ${instance.id} 补快照写库失败: ${String(error)}`);
+        }
+        return snap;
     }
     function registerHandle(sessionId, handle) {
         handles.set(sessionId, handle);
@@ -112,11 +155,11 @@ export function createReconciler({ ctx, logger, store, options }) {
                 logger.warn(`归档失败 ${instance.session_id}: ${String(error)}`);
             });
     }
-    /** 重试判定（state-machine §6）：attempt+1 < maxAttempts 且未超窗 → 当场回 pending；否则终态 failed。 */
+    /** 重试判定（state-machine §6，决策 41：maxAttempts / 窗口都读快照）：未耗尽且未超窗 → 回 pending；否则终态 failed。 */
     function retryOrFail(instance, reason, detail) {
-        const task = taskOf(instance);
+        const snap = snapOf(instance);
         const overWindow = Date.now() > windowDeadline(instance);
-        if (task !== undefined && !overWindow && instance.attempt + 1 < task.retry.maxAttempts) {
+        if (snap !== undefined && !overWindow && instance.attempt + 1 < snap.maxAttempts) {
             forgetHandle(instance.session_id);
             store.transition(instance.id, {
                 status: 'pending',
@@ -131,19 +174,18 @@ export function createReconciler({ ctx, logger, store, options }) {
         }
         finishTerminal(instance, 'failed', overWindow ? `${reason}:over-window` : reason, detail);
     }
-    /** 回执收敛（state-machine §1 判定树，决策 19 版）。 */
+    /** 回执收敛（state-machine §1 判定树，决策 19 版；决策 41：工作区与合法值读快照）。 */
     function settleByReceipt(instance) {
-        const task = taskOf(instance);
-        if (task === undefined) {
-            logger.warn(`实例 ${instance.id} 的任务定义不在当前任务表，暂不收敛`);
+        const snap = snapOf(instance);
+        if (snap === undefined) {
+            logger.warn(`实例 ${instance.id} 无派发快照，无法校验回执，按失败收敛（决策 41）`);
+            store.appendEvent(instance.id, 'receipt_check', { reason: 'no-snapshot' });
+            retryOrFail(instance, 'no-snapshot');
             return;
         }
-        const taskWorkspace = resolveWorkspacePathSafe(task);
-        if (taskWorkspace === undefined)
-            return;
         const dispatchedAtMs = Date.parse(instance.dispatched_at ?? instance.updated_at);
         const receipt = store.latestReceipt(instance.id, instance.dispatched_at ?? undefined);
-        const verdict = checkReceipt(task, taskWorkspace, dispatchedAtMs, receipt);
+        const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, dispatchedAtMs, receipt);
         if (verdict.ok) {
             const payload = verdict.detail;
             const outputsField = Array.isArray(payload?.outputs) ? JSON.stringify(payload.outputs) : null;
@@ -156,17 +198,17 @@ export function createReconciler({ ctx, logger, store, options }) {
     }
     /** 追问（决策 19 第二层）：跑完信号后无回执，对原会话再推一轮、重发回执命令。 */
     function nudge(instance) {
-        const task = taskOf(instance);
+        const snap = snapOf(instance);
         const handle = instance.session_id !== null ? handles.get(instance.session_id) : undefined;
         store.appendEvent(instance.id, 'nudge', { at: new Date().toISOString() });
-        if (task === undefined || handle === undefined) {
+        if (snap === undefined || handle === undefined) {
             // 追问通道不可用（如插件重启后 handle 丢失）→ 直接按失败收敛。
             retryOrFail(instance, 'receipt-missing-no-handle');
             return;
         }
         try {
             handle.agent.send(userNotice(`任务实例 ${instance.id} 已结束但尚未收到回执。请立即按下面说明调用工具提交回执：\n`
-                + receiptInstruction(task), `[TASK] 回执追问 ${task.id} · ${instance.logical_date}`), 'next-turn', true);
+                + receiptInstruction(snap.validStatuses), `[TASK] 回执追问 ${snap.title} · ${instance.logical_date}`), 'next-turn', true);
         }
         catch (error) {
             logger.warn(`追问发送失败 ${instance.id}: ${String(error)}`);
@@ -185,14 +227,47 @@ export function createReconciler({ ctx, logger, store, options }) {
     function leaseUntil() {
         return new Date(Date.now() + options.leaseMs).toISOString();
     }
-    function resolveWorkspacePathSafe(task) {
+    /**
+     * 发动执行（决策 41：Loop B 独有动作）。只凭实例行 + 快照：
+     * 按 path 反查工作区 → 解析模型漏斗（①层 = 快照提示）→ 建会话挂 preset + 回执工具 → 归组 → 发消息。
+     * 任何前置失败（含模型解析不出、工作区消失、create 失败）⇒ **行保留**、走重试判定，原因落事件。
+     */
+    async function launch(instance) {
+        if (launching.has(instance.id))
+            return;
+        const snap = snapOf(instance);
+        if (snap === undefined) {
+            retryOrFail(instance, 'no-snapshot');
+            return;
+        }
+        launching.add(instance.id);
         try {
-            return resolveWorkspace(ctx, task.target.workspace).path;
+            const workspace = resolveWorkspaceByPath(ctx, snap.workspacePath);
+            const { sessionId, handle } = await dispatchTask({
+                ctx, logger, store,
+                instanceId: instance.id,
+                logicalDate: instance.logical_date,
+                scheduledAt: instance.scheduled_at,
+                snapshot: snap,
+                workspace,
+                config: options.config(),
+            });
+            registerHandle(sessionId, handle);
         }
         catch (error) {
-            logger.warn(`任务 ${task.id} 工作区解析失败: ${String(error)}`);
-            return undefined;
+            const reason = error instanceof DispatchPreconditionError ? error.reason : 'launch-error';
+            logger.warn(`发动失败（实例 ${instance.id}，reason=${reason}）：${error instanceof Error ? error.message : String(error)}`);
+            retryOrFail(store.get(instance.id) ?? instance, reason, String(error));
         }
+        finally {
+            launching.delete(instance.id);
+        }
+    }
+    /** 发动一个实例（fire-and-forget 包装：launch 内部已兜底，这里再拦异步余波）。 */
+    function launchAsyncFire(instance) {
+        void launch(instance).catch((error) => {
+            logger.warn(`发动异步余波异常（实例 ${instance.id}）: ${String(error)}`);
+        });
     }
     /** 跑完信号（turn/end 或 disposed）→ 查回执；有则立即裁决，无则等宽限期后由 sweep 追问（§决策 19）。 */
     function settleBySessionId(sessionId, signal) {
@@ -216,22 +291,25 @@ export function createReconciler({ ctx, logger, store, options }) {
     return {
         registerHandle,
         retryOrFail,
-        /** dispatched → running + 起租约（state-machine §3）。 */
+        /** dispatched → running + 起租约（state-machine §3）；会话改名只凭快照（决策 41/42）。 */
         onCreated(session) {
             const instance = store.getBySession(session.id);
             if (instance === undefined || instance.status !== 'dispatched')
                 return;
             store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'session/created' });
-            // 会话改名（会话列表治理）：Session 对象只能在这里拿——agents.create 自建会话后
-            // announce（见 dispatch.ts 文件头），handle 上没有 session。改名失败只告警不影响对账。
-            const task = options.tasks().get(instance.task_id);
-            if (task !== undefined) {
-                try {
-                    ctx.sessionTitle.rename(session, `[TASK] ${task.id} · ${instance.logical_date}`);
-                }
-                catch (error) {
-                    logger.warn(`会话改名失败 ${session.id}: ${String(error)}`);
-                }
+            const snap = snapOf(instance);
+            if (snap === undefined) {
+                logger.warn(`实例 ${instance.id} 无快照，会话保持默认名（决策 42 改名跳过）`);
+                return;
+            }
+            // 会话改名（会话列表治理，决策 42：[TASK] <260928-1600> · <标题>（· 第N次））。
+            // Session 对象只能在这里拿——agents.create 自建会话后 announce，handle 上没有 session。
+            // 改名失败只告警不影响对账。
+            try {
+                ctx.sessionTitle.rename(session, sessionTitleOf(instance.scheduled_at, snap.title, instance.attempt));
+            }
+            catch (error) {
+                logger.warn(`会话改名失败 ${session.id}: ${String(error)}`);
             }
         },
         onEvent(session, event) {
@@ -264,10 +342,31 @@ export function createReconciler({ ctx, logger, store, options }) {
             settleBySessionId(session.id, 'session/disposed');
             forgetHandle(session.id);
         },
-        /** tick 兜底（重启后事件可能丢失，轮询只作兜底，§10）：宽限 / 回执追问 / 租约 / unknown 超时。 */
+        /** tick 兜底（重启后事件可能丢失，轮询只作兜底，§10）+ **发动执行**（决策 41）。 */
         sweep() {
             const now = Date.now();
+            // 发动①：重试回退的 pending 行——窗口内转 dispatched 并发动；窗口外删行记日志（决策 31.6）。
+            // 依赖不复判：依赖在首次落库时已过（Loop A 职责），重试是同一份执行记录的再发动。
+            for (const instance of store.listByStatus(['pending'])) {
+                if (snapOf(instance) === undefined) {
+                    retryOrFail(instance, 'no-snapshot');
+                    continue;
+                }
+                if (now > windowDeadline(instance)) {
+                    store.deleteInstance(instance.id);
+                    store.appendLog({ taskId: instance.task_id, scheduledAt: instance.scheduled_at, level: 'warn', kind: 'stray_pending', message: '窗口外残留 pending，已删除（视为未执行）' });
+                    continue;
+                }
+                store.transition(instance.id, { status: 'dispatched', detail: 'redispatch' });
+                launchAsyncFire(store.get(instance.id) ?? instance);
+            }
+            // 发动②：无会话的 dispatched 行（Loop A 新落库 / create-failed 撤回的）——发动之。
+            // 已发动（有 session_id）未 created 的走派发宽限期。
             for (const instance of store.listByStatus(['dispatched'])) {
+                if (instance.session_id === null) {
+                    launchAsyncFire(instance);
+                    continue;
+                }
                 const dispatchedAtMs = Date.parse(instance.dispatched_at ?? instance.updated_at);
                 if (now > dispatchedAtMs + options.dispatchGraceMs) {
                     retryOrFail(instance, 'dispatch-grace-exceeded');
