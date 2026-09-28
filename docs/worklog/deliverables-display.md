@@ -145,6 +145,23 @@
   `available=false` 时显示 `presented.unavailable` 文案（"此主机没有可用的桌面……"），文案与官方字典键一致；
 - 该提示官方只在没有可用桌面时出现；本插件弹窗里走同一接口，能判断。冒烟 164 项全过。
 
+**同日三次迭代（U11 目录浏览器 + 面包屑导航）**：用户提出「点了交付卡里的文件，怎么返回目录树？」。
+拍板**面包屑方案**（不做多文件浏览/分栏）：预览 dock 从「单文件预览」升级为「目录浏览器」
+`FileBrowser`（`src/client/file-browser.tsx`，替换 dock 里的 `FilePreviewPanel`）：
+- **目录/文件自动判别**：入口仍是 `openFile(path)`，组件先 `list(path)`——成功 ⇒ 目录树；
+  报 `not-directory` ⇒ 当文件预览（dir = 父目录）。官方 `stat` 不含 kind，`list` 试探是唯一可靠判别。
+  `WorkspaceFilesFace` 补 `list`（官方 wire：`{path, entries:[{name,type:'file'|'directory'|'other',size?}], truncated}`）。
+- **面包屑**：当前目录切成可点段，点任意段回跳；预览文件时末段显示文件名（不可点，点父段即返回）。
+- **顶栏按钮**：「上一级」（上箭头，回父目录）、「回到根目录」（文字钮，回最初打开的位置）、
+  「刷新」（预览态重读 / 目录态重列）、「复制路径」、「关闭」；md 文件保留「渲染⇄源码」分段。
+- **树**：目录在前文件在后、名称升序；目录行进入，文件行在父树内预览（面包屑保留 ⇒ 随时返回）；
+  `truncated` 提示截断。空目录/列举错误各有态。
+- 复用 `file-preview.tsx` 的官方预览体（导出 `BytesPreview`/`TextPreview`/`previewKind`/`errView`/
+  `listingOf`/`ErrBox`），渲染底层仍全官方。
+- ⚠️ 构建用的 primitives **没有** `IconChevronLeftOutlineRegular`/`IconFolderOpenOutlineRegular`
+  （/tmp 解包的另一版本有，别照抄）——上一级用 `IconChevronUpOutlineRegular`、目录行用
+  `IconChevronRightOutlineRegular`、根目录用文字钮。冒烟 172 项全过。
+
 ---
 
 ## 八、关联决策

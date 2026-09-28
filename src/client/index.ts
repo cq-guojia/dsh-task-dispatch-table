@@ -18,7 +18,8 @@
 import { createElement as h, Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
-import { FilePreviewPanel, type WorkspaceFilesFace } from './file-preview'
+import { FileBrowser } from './file-browser'
+import { type WorkspaceFilesFace } from './file-preview'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -930,7 +931,7 @@ function TaskPage(props: {
     // U11 页面级预览 dock：固定在屏幕最右侧，把整页（含会话弹窗）往左推；
     // 与弹窗互不遮盖、互不干扰——关弹窗预览仍在，收预览整页回满宽。
     preview !== null && workspaceFiles !== null
-      ? h(FilePreviewPanel, {
+      ? h(FileBrowser, {
           key: `${preview.sessionId}:${preview.path}`,
           workspaceFiles,
           sessionId: preview.sessionId,

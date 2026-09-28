@@ -80,6 +80,7 @@ export type LocaleKey =
   | 'previewNotRegular' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
   | 'previewSource' | 'previewRender' | 'previewMdSwitchAria'
+  | 'explorerLabel' | 'explorerUp' | 'explorerRoot' | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs' | 'outputsEmpty'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
@@ -329,6 +330,12 @@ export const zh: Record<LocaleKey, string> = {
   previewSource: '源码',
   previewRender: '预览',
   previewMdSwitchAria: 'Markdown 视图切换',
+  explorerLabel: '目录',
+  explorerUp: '上一级',
+  explorerRoot: '回到根目录',
+  explorerEmpty: '空目录',
+  explorerTruncated: '目录内容过多，仅显示部分条目。',
+  explorerCrumbsAria: '目录路径导航',
   colOutputs: '产出',
   outputsEmpty: '（无产出）',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
@@ -574,6 +581,12 @@ export const en: Record<LocaleKey, string> = {
   previewSource: 'Source',
   previewRender: 'Preview',
   previewMdSwitchAria: 'Markdown view switch',
+  explorerLabel: 'Directory',
+  explorerUp: 'Up one level',
+  explorerRoot: 'Back to root',
+  explorerEmpty: 'Empty directory',
+  explorerTruncated: 'The directory is too large; only some entries are shown.',
+  explorerCrumbsAria: 'Directory path navigation',
   colOutputs: 'Outputs',
   outputsEmpty: '(no outputs)',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).

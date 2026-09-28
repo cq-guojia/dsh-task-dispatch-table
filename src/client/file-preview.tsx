@@ -106,8 +106,33 @@ function bytesOf(result: unknown): Uint8Array | { failed: unknown } | null {
 }
 
 /** 失败分支判空（TS 收窄用）。 */
-const isFailed = (value: unknown): value is { failed: unknown } =>
+export const isFailed = (value: unknown): value is { failed: unknown } =>
   typeof value === 'object' && value !== null && 'failed' in (value as object)
+
+/** `list` 结果防御解析：返回 WorkspaceDirectoryListing 或失败/非法信封。 */
+export function listingOf(result: unknown): {
+  path: string
+  entries: ReadonlyArray<{ name: string; type: 'file' | 'directory' | 'other'; size?: number }>
+  truncated: boolean
+} | { failed: unknown } | null {
+  const envelope = unwrapEnvelope(result)
+  if (envelope.kind === 'error') return { failed: envelope.error }
+  const raw = envelope.payload
+  if (typeof raw !== 'object' || raw === null) {
+    console.warn(`[task-dispatch:file-preview] list 返回非对象：${shapeOf(result)}`)
+    return null
+  }
+  const r = raw as { path?: unknown; entries?: unknown; truncated?: unknown }
+  if (typeof r.path !== 'string' || !Array.isArray(r.entries) || typeof r.truncated !== 'boolean') {
+    console.warn(`[task-dispatch:file-preview] list 返回形状不符契约：${shapeOf(result)}`)
+    return null
+  }
+  return {
+    path: r.path,
+    entries: r.entries as ReadonlyArray<{ name: string; type: 'file' | 'directory' | 'other'; size?: number }>,
+    truncated: r.truncated,
+  }
+}
 
 /** @deepseek-ai/dsh-api-workspace-files 的消费面（官方 remote.workspaceFiles 命名空间的用到的子集）。 */
 export interface WorkspaceFilesFace {
@@ -133,10 +158,20 @@ export interface WorkspaceFilesFace {
     opts?: { range?: [number, number] },
     signal?: AbortSignal,
   ): Promise<{ offset: number; data: Uint8Array; eof: boolean; bytes?: number }>
+  /** 目录列举：返回直接子项（官方 list，目录 ≤2000 条，限工作区内）。list 一个文件会报 not-directory。 */
+  list(
+    sessionId: string,
+    path: string,
+    signal?: AbortSignal,
+  ): Promise<{
+    path: string
+    entries: ReadonlyArray<{ name: string; type: 'file' | 'directory' | 'other'; size?: number }>
+    truncated: boolean
+  }>
 }
 
 /** 错误视图：文案键 + 占位参数（官方 RemoteError 按 code 分支，不按消息文本）。 */
-interface ErrView {
+export interface ErrView {
   key: LocaleKey
   params?: Record<string, string | number>
 }
@@ -155,7 +190,7 @@ const IMAGE_MIME: Readonly<Record<string, string>> = {
 }
 
 /** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
-function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'text'; ext: string; mime?: string } {
+export function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'text'; ext: string; mime?: string } {
   const base = path.slice(path.lastIndexOf('/') + 1)
   const dot = base.lastIndexOf('.')
   const ext = dot <= 0 ? '' : base.slice(dot + 1).toLowerCase()
@@ -166,7 +201,7 @@ function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'text'; ext
 }
 
 /** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
-function bareCode(code: string): string {
+export function bareCode(code: string): string {
   return code.includes('/') ? code.slice(code.lastIndexOf('/') + 1) : code
 }
 
@@ -184,7 +219,7 @@ function formatBytes(n: number): string {
 }
 
 /** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
-function errView(error: unknown): ErrView {
+export function errView(error: unknown): ErrView {
   const e = (error ?? {}) as { code?: unknown; details?: unknown; message?: unknown }
   const code = typeof e.code === 'string' ? e.code : ''
   const details = (e.details ?? null) as Record<string, unknown> | null
@@ -212,7 +247,7 @@ function errView(error: unknown): ErrView {
 }
 
 /** 错误/空态体：仅原因文案（复制路径已上提到顶栏按钮组，见 FilePreviewPanel head）。 */
-function ErrBox(props: { err: ErrView; t: Translate }): ReturnType<typeof h> {
+export function ErrBox(props: { err: ErrView; t: Translate }): ReturnType<typeof h> {
   const { err, t } = props
   return h('div', { className: 'dsh-tdt-sv-preview-body' },
     h('div', { className: 'dsh-tdt-sv-preview-err' },
@@ -222,7 +257,7 @@ function ErrBox(props: { err: ErrView; t: Translate }): ReturnType<typeof h> {
 }
 
 /** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
-function BytesPreview(props: {
+export function BytesPreview(props: {
   workspaceFiles: WorkspaceFilesFace
   sessionId: string
   path: string
@@ -272,7 +307,7 @@ function BytesPreview(props: {
 /** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
  * md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
  * 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
-function TextPreview(props: {
+export function TextPreview(props: {
   workspaceFiles: WorkspaceFilesFace
   sessionId: string
   path: string
