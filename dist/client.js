@@ -266,7 +266,68 @@ window.__ModuleLoader__.load({
 			deliverAll: "全部 {count} 个文件",
 			deliverCollapse: "收起",
 			deliverExpandAria: "展开全部 {count} 个交付文件",
-			deliverCollapseAria: "收起交付文件列表"
+			deliverCollapseAria: "收起交付文件列表",
+			editorNew: "新建任务",
+			editorEdit: "编辑任务",
+			editorClose: "关闭",
+			editorCancel: "取消",
+			editorSave: "保存",
+			editorSavePending: "保存逻辑待接（P2）：本轮只做界面与交互",
+			editorTabBasic: "基本信息",
+			editorTabRecords: "执行记录",
+			editorRecordsPending: "执行记录待接（P2）",
+			editorEnabled: "启用",
+			editorTitle: "任务名称",
+			editorTitlePh: "给任务起个名字",
+			editorCode: "任务编号",
+			editorCodePh: "可选，便于查询",
+			editorPrompt: "提示词",
+			editorPromptPh: "写给 agent 的指令……",
+			editorSource: "来源",
+			editorSourceInline: "手敲 / 粘贴",
+			editorSourceManual: "任务手册（工作区文件）",
+			editorSourceUpload: "上传 MD",
+			editorSourceManualHint: "只记路径，执行那一刻由 agent 自己读取；文件随时改随时生效，我们不做版本管理",
+			editorPickFile: "选择文件",
+			editorUpload: "上传 MD",
+			editorVersions: "版本历史",
+			editorManualPath: "手册路径",
+			editorManualPathPh: "相对工作区根，如 manuals/xxx.md",
+			editorWorkspace: "工作区",
+			editorModel: "模型",
+			editorFollowHost: "跟随宿主默认",
+			editorNoOptions: "暂无可选（数据面待接）",
+			editorSchedule: "执行频率",
+			editorScheduleCron: "周期",
+			editorScheduleOnce: "一次性",
+			editorCron: "cron",
+			editorCronCustom: "自定义",
+			cronDaily9: "每天 09:00",
+			cronHourly: "每小时整点",
+			cronEvery15: "每 15 分钟",
+			cronWeeklyMon: "每周一 09:00",
+			cronMonthly: "每月 1 号 09:00",
+			editorOnceAt: "执行时间",
+			editorTimezone: "时区",
+			editorWindow: "有效期",
+			editorWindowHint: "只管开始：从计划时刻起这段时间内允许派发与重试",
+			unitMinutes: "分钟",
+			unitHours: "小时",
+			editorDeps: "前置任务",
+			editorDepAdd: "添加依赖",
+			editorDepTask: "任务",
+			editorDepSemantics: "语义",
+			editorDepSamePeriod: "同一天的",
+			editorDepLatestSuccess: "最近一次成功的",
+			editorDepRemove: "移除",
+			editorDepEmpty: "暂无前置任务",
+			editorAdvanced: "高级",
+			editorRetry: "重试次数",
+			editorValidStatuses: "成功状态清单",
+			editorJson: "JSON",
+			editorJsonHint: "逃生通道：这里含任务 id，改错会影响任务身份，慎改",
+			editorRequired: "必填",
+			editorUnavailable: "暂不可用（待接数据面）"
 		};
 		/** English copy. */
 		const en = {
@@ -518,7 +579,68 @@ window.__ModuleLoader__.load({
 			deliverAll: "All {count} files",
 			deliverCollapse: "Collapse",
 			deliverExpandAria: "Expand all {count} delivered files",
-			deliverCollapseAria: "Collapse the delivered-files list"
+			deliverCollapseAria: "Collapse the delivered-files list",
+			editorNew: "New task",
+			editorEdit: "Edit task",
+			editorClose: "Close",
+			editorCancel: "Cancel",
+			editorSave: "Save",
+			editorSavePending: "Save logic not wired yet (P2): this round is UI only",
+			editorTabBasic: "Basic",
+			editorTabRecords: "Run history",
+			editorRecordsPending: "Run history pending (P2)",
+			editorEnabled: "Enabled",
+			editorTitle: "Task name",
+			editorTitlePh: "Name this task",
+			editorCode: "Task code",
+			editorCodePh: "Optional, for lookup",
+			editorPrompt: "Prompt",
+			editorPromptPh: "Instructions for the agent…",
+			editorSource: "Source",
+			editorSourceInline: "Typed / pasted",
+			editorSourceManual: "Task manual (workspace file)",
+			editorSourceUpload: "Upload MD",
+			editorSourceManualHint: "Only the path is stored; the agent reads it at dispatch time. Edit it anytime — we do not version it",
+			editorPickFile: "Pick file",
+			editorUpload: "Upload MD",
+			editorVersions: "Version history",
+			editorManualPath: "Manual path",
+			editorManualPathPh: "Relative to workspace root, e.g. manuals/xxx.md",
+			editorWorkspace: "Workspace",
+			editorModel: "Model",
+			editorFollowHost: "Follow host default",
+			editorNoOptions: "Nothing to choose yet (data plane pending)",
+			editorSchedule: "Schedule",
+			editorScheduleCron: "Recurring",
+			editorScheduleOnce: "Once",
+			editorCron: "cron",
+			editorCronCustom: "Custom",
+			cronDaily9: "Daily 09:00",
+			cronHourly: "Hourly",
+			cronEvery15: "Every 15 minutes",
+			cronWeeklyMon: "Weekly Mon 09:00",
+			cronMonthly: "Monthly 1st 09:00",
+			editorOnceAt: "Run at",
+			editorTimezone: "Timezone",
+			editorWindow: "Valid for",
+			editorWindowHint: "Start only: dispatch and retries are allowed within this window",
+			unitMinutes: "minutes",
+			unitHours: "hours",
+			editorDeps: "Depends on",
+			editorDepAdd: "Add dependency",
+			editorDepTask: "Task",
+			editorDepSemantics: "Semantics",
+			editorDepSamePeriod: "Same day",
+			editorDepLatestSuccess: "Latest success",
+			editorDepRemove: "Remove",
+			editorDepEmpty: "No dependencies",
+			editorAdvanced: "Advanced",
+			editorRetry: "Retry attempts",
+			editorValidStatuses: "Valid statuses",
+			editorJson: "JSON",
+			editorJsonHint: "Escape hatch: contains the task id — editing it wrong breaks task identity",
+			editorRequired: "Required",
+			editorUnavailable: "Unavailable (data plane pending)"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -4393,6 +4515,806 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })))) : null, body);
 		}
 		//#endregion
+		//#region src/client/task-editor.ts
+		const C$1 = {
+			text: "var(--dsw-alias-label-primary, #1f2328)",
+			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
+			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
+			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
+			layer3: "var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))",
+			mask: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))",
+			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
+			borderStrong: "var(--dsw-alias-border-l3, rgba(128,128,128,0.5))",
+			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
+			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
+			shadow: "var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))",
+			bgBase: "var(--dsw-alias-bg-base, var(--dsw-alias-bg-layer-1, #ffffff))"
+		};
+		const monoFont$1 = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		const transition$1 = "background 0.15s ease, color 0.15s ease, border-color 0.15s ease";
+		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
+		function emptyTaskDraft() {
+			return {
+				title: "",
+				code: "",
+				enabled: true,
+				prompt: "",
+				promptSource: "inline",
+				manualPath: "",
+				workspace: "",
+				model: "",
+				scheduleKind: "cron",
+				cronPreset: "daily-9",
+				cronCustom: "0 9 * * *",
+				onceAt: "",
+				timezone: "",
+				window: "PT4H",
+				maxAttempts: "1",
+				validStatuses: "ok",
+				deps: []
+			};
+		}
+		const CRON_PRESETS = [
+			{
+				id: "daily-9",
+				cron: "0 9 * * *",
+				labelKey: "cronDaily9"
+			},
+			{
+				id: "hourly",
+				cron: "0 * * * *",
+				labelKey: "cronHourly"
+			},
+			{
+				id: "every15",
+				cron: "*/15 * * * *",
+				labelKey: "cronEvery15"
+			},
+			{
+				id: "weekly-mon-9",
+				cron: "0 9 * * 1",
+				labelKey: "cronWeeklyMon"
+			},
+			{
+				id: "monthly-1-9",
+				cron: "0 9 1 * *",
+				labelKey: "cronMonthly"
+			}
+		];
+		const WINDOW_PRESETS = [
+			"PT30M",
+			"PT1H",
+			"PT2H",
+			"PT4H",
+			"PT8H",
+			"P1D"
+		];
+		/** ISO 8601 时长 → 人读（PT4H → `4 小时`；不支持的形态原样返回）。 */
+		function formatIsoDuration(value, t) {
+			const match = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(value);
+			if (match === null) return value;
+			if (match[1] !== void 0) return `${match[1]} ${t("unitHours")}`;
+			if (match[2] !== void 0) return `${match[2]} ${t("unitMinutes")}`;
+			return value;
+		}
+		/** 草稿 → 任务定义 JSON（仅供高级区「JSON」逃生口只读展示，不参与保存：保存走 P2）。 */
+		function draftToDefinitionJson(draft) {
+			const cron = draft.cronPreset === "custom" ? draft.cronCustom : CRON_PRESETS.find((p) => p.id === draft.cronPreset)?.cron ?? "";
+			const schedule = { window: draft.window };
+			if (draft.scheduleKind === "once") schedule.once = draft.onceAt;
+			else schedule.cron = cron;
+			if (draft.timezone.trim() !== "") schedule.timezone = draft.timezone.trim();
+			const target = { workspace: draft.workspace };
+			if (draft.model.trim() !== "") {
+				const slash = draft.model.indexOf("/");
+				if (slash > 0) {
+					target.provider = draft.model.slice(0, slash);
+					target.model = draft.model.slice(slash + 1);
+				} else target.model = draft.model;
+			}
+			if (draft.promptSource === "manual") {
+				if (draft.manualPath.trim() !== "") target.manual = draft.manualPath.trim();
+				target.prompt = draft.prompt.trim() === "" ? "按任务手册执行。" : draft.prompt;
+			} else target.prompt = draft.prompt;
+			const definition = {
+				enabled: draft.enabled,
+				schedule,
+				target,
+				contract: { validStatuses: draft.validStatuses.split(",").map((s) => s.trim()).filter((s) => s !== "") },
+				retry: { maxAttempts: Number.parseInt(draft.maxAttempts, 10) > 0 ? Number.parseInt(draft.maxAttempts, 10) : 1 }
+			};
+			if (draft.title.trim() !== "") definition.title = draft.title.trim();
+			if (draft.code.trim() !== "") definition.code = draft.code.trim();
+			if (draft.deps.length > 0) definition.depends_on = draft.deps.filter((d) => d.task !== "");
+			return JSON.stringify(definition, null, 2);
+		}
+		const overlayStyle = {
+			position: "fixed",
+			inset: 0,
+			zIndex: 1030,
+			display: "flex",
+			justifyContent: "flex-end",
+			background: C$1.mask,
+			backdropFilter: "blur(2px)"
+		};
+		const panelBase = {
+			position: "relative",
+			height: "100%",
+			boxSizing: "border-box",
+			display: "flex",
+			flexDirection: "column",
+			background: C$1.bgBase,
+			borderLeft: `1px solid ${C$1.border}`,
+			boxShadow: C$1.shadow,
+			color: C$1.text
+		};
+		const resizeHandleStyle = {
+			position: "absolute",
+			top: 0,
+			bottom: 0,
+			left: 0,
+			width: "6px",
+			cursor: "col-resize",
+			zIndex: 1
+		};
+		const headerStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: "12px",
+			padding: "14px 18px",
+			borderBottom: `1px solid ${C$1.border}`,
+			flex: "none"
+		};
+		const iconButtonStyle$1 = {
+			display: "inline-flex",
+			alignItems: "center",
+			justifyContent: "center",
+			width: "26px",
+			height: "26px",
+			padding: 0,
+			border: "none",
+			borderRadius: "6px",
+			background: "transparent",
+			color: C$1.textDim,
+			cursor: "pointer",
+			font: "inherit",
+			fontSize: "14px"
+		};
+		const bodyStyle = {
+			flex: "1 1 auto",
+			overflow: "auto",
+			padding: "16px 18px 20px",
+			minHeight: 0
+		};
+		const footerStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "flex-end",
+			gap: "8px",
+			padding: "12px 18px",
+			borderTop: `1px solid ${C$1.border}`,
+			flex: "none"
+		};
+		const labelStyle = {
+			fontSize: "12px",
+			fontWeight: 600,
+			color: C$1.text,
+			marginBottom: "4px"
+		};
+		const hintStyle$1 = {
+			fontSize: "12px",
+			color: C$1.textDim,
+			margin: "4px 0 0",
+			lineHeight: 1.5
+		};
+		const inputStyle = {
+			width: "100%",
+			boxSizing: "border-box",
+			padding: "7px 9px",
+			fontSize: "13px",
+			lineHeight: "18px",
+			color: C$1.text,
+			background: C$1.layer1,
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "8px",
+			fontFamily: "inherit"
+		};
+		const textareaStyle$1 = {
+			...inputStyle,
+			minHeight: "140px",
+			resize: "vertical",
+			lineHeight: 1.6
+		};
+		const blockStyle = {
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "10px",
+			padding: "12px",
+			background: C$1.layer1
+		};
+		const chipRowStyle = {
+			display: "flex",
+			flexWrap: "wrap",
+			gap: "8px",
+			marginTop: "10px"
+		};
+		const smallButtonStyle = {
+			appearance: "none",
+			font: "inherit",
+			fontSize: "12px",
+			lineHeight: "18px",
+			cursor: "pointer",
+			padding: "4px 10px",
+			borderRadius: "7px",
+			border: `1px solid ${C$1.border}`,
+			background: "transparent",
+			color: C$1.text,
+			transition: transition$1
+		};
+		const primaryButtonStyle = {
+			...smallButtonStyle,
+			padding: "6px 14px",
+			fontSize: "13px",
+			fontWeight: 600,
+			border: "1px solid transparent",
+			background: "var(--dsw-alias-button-primary-fill, #2f6feb)",
+			color: "var(--dsw-alias-button-primary-label, #ffffff)"
+		};
+		const summaryRowStyle = {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: "8px",
+			width: "100%",
+			padding: "8px 10px",
+			borderRadius: "8px",
+			border: `1px solid ${C$1.border}`,
+			background: C$1.layer1,
+			cursor: "pointer",
+			font: "inherit",
+			fontSize: "12px",
+			color: C$1.text,
+			textAlign: "left"
+		};
+		const depRowStyle = {
+			display: "flex",
+			gap: "8px",
+			alignItems: "center",
+			marginTop: "8px"
+		};
+		/** 宽度持久化（纯本地偏好，读写容错；隐私模式也不崩）。 */
+		const WIDTH_KEY = "dsh-tdt-editor-width";
+		const WIDTH_DEFAULT = 540;
+		const WIDTH_MIN = 380;
+		function clampWidth(value) {
+			const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * .9));
+			return Math.min(Math.max(Math.round(value), WIDTH_MIN), max);
+		}
+		function readWidth() {
+			try {
+				const raw = window.localStorage.getItem(WIDTH_KEY);
+				const value = raw === null ? NaN : Number(raw);
+				return Number.isFinite(value) ? clampWidth(value) : WIDTH_DEFAULT;
+			} catch {
+				return WIDTH_DEFAULT;
+			}
+		}
+		function Field(props) {
+			return (0, react.createElement)("div", { style: { marginBottom: "14px" } }, (0, react.createElement)("div", { style: labelStyle }, props.label), props.hint === void 0 ? null : (0, react.createElement)("p", { style: hintStyle$1 }, props.hint), props.children ?? null);
+		}
+		function Select(props) {
+			const usable = props.options.length > 0 && props.disabled !== true;
+			const items = usable ? props.blankLabel !== void 0 ? [{
+				value: "",
+				label: props.blankLabel
+			}, ...props.options] : props.value === "" ? [{
+				value: "",
+				label: "—"
+			}, ...props.options] : props.options : [{
+				value: "",
+				label: props.emptyLabel
+			}];
+			return (0, react.createElement)("select", {
+				value: usable ? props.value : "",
+				disabled: !usable,
+				"aria-label": props.ariaLabel,
+				onChange: (event) => {
+					props.onChange(event.target.value);
+				},
+				style: {
+					...inputStyle,
+					width: "auto",
+					minWidth: "140px",
+					flex: "0 1 auto",
+					cursor: usable ? "pointer" : "not-allowed"
+				}
+			}, items.map((item) => (0, react.createElement)("option", {
+				key: item.value,
+				value: item.value
+			}, item.label)));
+		}
+		function Toggle(props) {
+			return (0, react.createElement)("button", {
+				type: "button",
+				role: "switch",
+				"aria-checked": props.on,
+				onClick: props.onToggle,
+				style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "8px",
+					padding: 0,
+					border: "none",
+					background: "none",
+					cursor: "pointer",
+					font: "inherit",
+					fontSize: "12px",
+					color: C$1.text
+				}
+			}, (0, react.createElement)("span", { style: {
+				width: "34px",
+				height: "20px",
+				borderRadius: "10px",
+				position: "relative",
+				flex: "none",
+				background: props.on ? C$1.brand : C$1.layer3,
+				transition: `background ${transition$1}`
+			} }, (0, react.createElement)("span", { style: {
+				position: "absolute",
+				top: "2px",
+				left: props.on ? "16px" : "2px",
+				width: "16px",
+				height: "16px",
+				borderRadius: "50%",
+				background: "#ffffff",
+				transition: "left 0.15s ease"
+			} })), (0, react.createElement)("span", null, props.label));
+		}
+		/**
+		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在页面上**（不推压页面）。
+		* 与 U11 预览 dock（占布局的分栏）不冲突：弹窗在 overlay 层，dock 在其下、关弹窗后仍在原位。
+		*/
+		function TaskEditorDrawer(props) {
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave } = props;
+			const [width, setWidth] = (0, react.useState)(readWidth);
+			const [tab, setTab] = (0, react.useState)("basic");
+			const [scheduleOpen, setScheduleOpen] = (0, react.useState)(false);
+			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
+			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
+			const [pendingHint, setPendingHint] = (0, react.useState)(false);
+			const patch = (0, react.useCallback)((part) => {
+				onChange({
+					...draft,
+					...part
+				});
+			}, [draft, onChange]);
+			(0, react.useEffect)(() => {
+				const onKey = (event) => {
+					if (event.key === "Escape") onClose();
+				};
+				window.addEventListener("keydown", onKey);
+				return () => {
+					window.removeEventListener("keydown", onKey);
+				};
+			}, [onClose]);
+			/** 左缘拖拽调宽：拖动期间只改本地 state（面板窄，逐帧重渲染代价可接受），松手落 localStorage。 */
+			const startResize = (0, react.useCallback)((start) => {
+				const startX = start.clientX;
+				const startWidth = width;
+				const onMove = (event) => {
+					setWidth(clampWidth(startWidth + (startX - event.clientX)));
+				};
+				const onUp = (event) => {
+					window.removeEventListener("pointermove", onMove);
+					window.removeEventListener("pointerup", onUp);
+					const next = clampWidth(startWidth + (startX - event.clientX));
+					setWidth(next);
+					try {
+						window.localStorage.setItem(WIDTH_KEY, String(next));
+					} catch {}
+				};
+				window.addEventListener("pointermove", onMove);
+				window.addEventListener("pointerup", onUp);
+			}, [width]);
+			const cronValue = draft.cronPreset === "custom" ? draft.cronCustom : CRON_PRESETS.find((item) => item.id === draft.cronPreset)?.cron ?? "";
+			const cronLabel = draft.cronPreset === "custom" ? t("editorCronCustom") : t(CRON_PRESETS.find((item) => item.id === draft.cronPreset)?.labelKey ?? "editorCronCustom");
+			const scheduleSummary = draft.scheduleKind === "once" ? `${t("editorScheduleOnce")} · ${draft.onceAt === "" ? "—" : draft.onceAt}` : `${cronLabel} · ${cronValue}`;
+			const sourceOptions = [
+				{
+					value: "inline",
+					label: t("editorSourceInline")
+				},
+				{
+					value: "manual",
+					label: t("editorSourceManual")
+				},
+				{
+					value: "upload",
+					label: t("editorSourceUpload")
+				}
+			];
+			const taskOptions = tasks.map((item) => ({
+				value: item.value,
+				label: item.label
+			}));
+			const body = tab === "records" ? (0, react.createElement)("p", { style: hintStyle$1 }, t("editorRecordsPending")) : (0, react.createElement)("div", null, (0, react.createElement)("div", { style: { marginBottom: "14px" } }, (0, react.createElement)(Toggle, {
+				on: draft.enabled,
+				label: t("editorEnabled"),
+				onToggle: () => {
+					patch({ enabled: !draft.enabled });
+				}
+			})), (0, react.createElement)(Field, { label: t("editorTitle") }, (0, react.createElement)("input", {
+				value: draft.title,
+				placeholder: t("editorTitlePh"),
+				onChange: (event) => {
+					patch({ title: event.target.value });
+				},
+				style: inputStyle
+			})), (0, react.createElement)(Field, {
+				label: t("editorCode"),
+				hint: t("editorCodePh")
+			}, (0, react.createElement)("input", {
+				value: draft.code,
+				onChange: (event) => {
+					patch({ code: event.target.value });
+				},
+				style: inputStyle
+			})), (0, react.createElement)("div", { style: blockStyle }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: "8px"
+			} }, (0, react.createElement)("div", { style: labelStyle }, t("editorPrompt")), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					opacity: .5
+				},
+				disabled: true,
+				title: draft.promptSource === "manual" ? t("editorSourceManualHint") : `${t("editorVersions")}（P3）`
+			}, t("editorVersions"))), (0, react.createElement)("textarea", {
+				value: draft.prompt,
+				placeholder: t("editorPromptPh"),
+				spellCheck: false,
+				onChange: (event) => {
+					patch({ prompt: event.target.value });
+				},
+				style: textareaStyle$1
+			}), (0, react.createElement)("div", { style: chipRowStyle }, (0, react.createElement)(Select, {
+				value: draft.promptSource,
+				options: sourceOptions,
+				onChange: (value) => {
+					patch({ promptSource: value });
+				},
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorSource")
+			}), draft.promptSource === "manual" ? (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					opacity: .5
+				},
+				disabled: true,
+				title: t("editorUnavailable")
+			}, t("editorPickFile")) : null, draft.promptSource === "upload" ? (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					opacity: .5
+				},
+				disabled: true,
+				title: t("editorUnavailable")
+			}, t("editorUpload")) : null), draft.promptSource === "manual" ? (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", { style: labelStyle }, t("editorManualPath")), (0, react.createElement)("input", {
+				value: draft.manualPath,
+				placeholder: t("editorManualPathPh"),
+				onChange: (event) => {
+					patch({ manualPath: event.target.value });
+				},
+				style: {
+					...inputStyle,
+					fontFamily: monoFont$1,
+					fontSize: "12px"
+				}
+			}), (0, react.createElement)("p", { style: hintStyle$1 }, t("editorSourceManualHint"))) : null, (0, react.createElement)("div", { style: chipRowStyle }, (0, react.createElement)(Select, {
+				value: draft.workspace,
+				options: workspaces,
+				onChange: (value) => {
+					patch({ workspace: value });
+				},
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorWorkspace")
+			}), (0, react.createElement)(Select, {
+				value: draft.model,
+				options: models,
+				onChange: (value) => {
+					patch({ model: value });
+				},
+				emptyLabel: t("editorNoOptions"),
+				blankLabel: t("editorFollowHost"),
+				ariaLabel: t("editorModel")
+			}))), (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: labelStyle }, t("editorSchedule")), (0, react.createElement)("button", {
+				type: "button",
+				style: summaryRowStyle,
+				onClick: () => {
+					setScheduleOpen(!scheduleOpen);
+				}
+			}, (0, react.createElement)("span", null, `${scheduleSummary} · ${t("editorWindow")} ${formatIsoDuration(draft.window, t)}`), (0, react.createElement)("span", { style: { color: C$1.textDim } }, scheduleOpen ? "▴" : "▾")), scheduleOpen ? (0, react.createElement)("div", { style: {
+				...blockStyle,
+				marginTop: "8px"
+			} }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "6px",
+				marginBottom: "10px"
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					background: draft.scheduleKind === "cron" ? C$1.layer2 : "transparent",
+					fontWeight: draft.scheduleKind === "cron" ? 600 : 400
+				},
+				onClick: () => {
+					patch({ scheduleKind: "cron" });
+				}
+			}, t("editorScheduleCron")), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					background: draft.scheduleKind === "once" ? C$1.layer2 : "transparent",
+					fontWeight: draft.scheduleKind === "once" ? 600 : 400
+				},
+				onClick: () => {
+					patch({ scheduleKind: "once" });
+				}
+			}, t("editorScheduleOnce"))), draft.scheduleKind === "cron" ? (0, react.createElement)("div", null, (0, react.createElement)(Select, {
+				value: draft.cronPreset,
+				options: [...CRON_PRESETS.map((item) => ({
+					value: item.id,
+					label: `${t(item.labelKey)} (${item.cron})`
+				})), {
+					value: "custom",
+					label: t("editorCronCustom")
+				}],
+				onChange: (value) => {
+					patch({ cronPreset: value });
+				},
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorCron")
+			}), draft.cronPreset === "custom" ? (0, react.createElement)("input", {
+				value: draft.cronCustom,
+				placeholder: "0 9 * * *",
+				onChange: (event) => {
+					patch({ cronCustom: event.target.value });
+				},
+				style: {
+					...inputStyle,
+					marginTop: "8px",
+					fontFamily: monoFont$1,
+					fontSize: "12px"
+				}
+			}) : null) : (0, react.createElement)("input", {
+				type: "datetime-local",
+				value: draft.onceAt,
+				onChange: (event) => {
+					patch({ onceAt: event.target.value });
+				},
+				style: inputStyle,
+				"aria-label": t("editorOnceAt")
+			}), (0, react.createElement)("div", { style: {
+				...chipRowStyle,
+				alignItems: "center"
+			} }, (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: C$1.textDim
+			} }, t("editorTimezone")), (0, react.createElement)(Select, {
+				value: draft.timezone,
+				options: [{
+					value: "Asia/Shanghai",
+					label: "Asia/Shanghai"
+				}, {
+					value: "UTC",
+					label: "UTC"
+				}],
+				onChange: (value) => {
+					patch({ timezone: value });
+				},
+				emptyLabel: t("editorNoOptions"),
+				blankLabel: t("editorFollowHost"),
+				ariaLabel: t("editorTimezone")
+			}), (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: C$1.textDim
+			} }, t("editorWindow")), (0, react.createElement)(Select, {
+				value: draft.window,
+				options: WINDOW_PRESETS.map((value) => ({
+					value,
+					label: formatIsoDuration(value, t)
+				})),
+				onChange: (value) => {
+					patch({ window: value });
+				},
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorWindow")
+			})), (0, react.createElement)("p", { style: hintStyle$1 }, t("editorWindowHint"))) : null), (0, react.createElement)("div", { style: { marginTop: "16px" } }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: "8px"
+			} }, (0, react.createElement)("div", { style: labelStyle }, t("editorDeps")), (0, react.createElement)("button", {
+				type: "button",
+				style: smallButtonStyle,
+				disabled: taskOptions.length === 0,
+				onClick: () => {
+					patch({ deps: [...draft.deps, {
+						task: taskOptions[0]?.value ?? "",
+						semantics: "same_period"
+					}] });
+				}
+			}, `＋ ${t("editorDepAdd")}`)), draft.deps.length === 0 ? (0, react.createElement)("p", { style: hintStyle$1 }, t("editorDepEmpty")) : draft.deps.map((dep, index) => (0, react.createElement)("div", {
+				key: index,
+				style: depRowStyle
+			}, (0, react.createElement)(Select, {
+				value: dep.task,
+				options: taskOptions,
+				onChange: (value) => {
+					const next = draft.deps.slice();
+					next[index] = {
+						...dep,
+						task: value
+					};
+					patch({ deps: next });
+				},
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorDepTask")
+			}), (0, react.createElement)(Select, {
+				value: dep.semantics,
+				options: [{
+					value: "same_period",
+					label: t("editorDepSamePeriod")
+				}, {
+					value: "latest_success",
+					label: t("editorDepLatestSuccess")
+				}],
+				onChange: (value) => {
+					const next = draft.deps.slice();
+					next[index] = {
+						...dep,
+						semantics: value
+					};
+					patch({ deps: next });
+				},
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorDepSemantics")
+			}), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					color: C$1.textDim
+				},
+				onClick: () => {
+					patch({ deps: draft.deps.filter((_, i) => i !== index) });
+				}
+			}, t("editorDepRemove"))))), (0, react.createElement)("div", { style: { marginTop: "16px" } }, (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...summaryRowStyle,
+					background: "transparent"
+				},
+				onClick: () => {
+					setAdvancedOpen(!advancedOpen);
+				}
+			}, (0, react.createElement)("span", null, t("editorAdvanced")), (0, react.createElement)("span", { style: { color: C$1.textDim } }, advancedOpen ? "▴" : "▾")), advancedOpen ? (0, react.createElement)("div", { style: {
+				...blockStyle,
+				marginTop: "8px"
+			} }, (0, react.createElement)(Field, { label: t("editorRetry") }, (0, react.createElement)("input", {
+				type: "number",
+				min: 1,
+				value: draft.maxAttempts,
+				onChange: (event) => {
+					patch({ maxAttempts: event.target.value });
+				},
+				style: {
+					...inputStyle,
+					width: "90px"
+				}
+			})), (0, react.createElement)(Field, { label: t("editorValidStatuses") }, (0, react.createElement)("input", {
+				value: draft.validStatuses,
+				placeholder: "ok",
+				onChange: (event) => {
+					patch({ validStatuses: event.target.value });
+				},
+				style: {
+					...inputStyle,
+					fontFamily: monoFont$1,
+					fontSize: "12px"
+				}
+			})), (0, react.createElement)("button", {
+				type: "button",
+				style: smallButtonStyle,
+				onClick: () => {
+					setJsonOpen(!jsonOpen);
+				}
+			}, `⚙ ${t("editorJson")}`), jsonOpen ? (0, react.createElement)("div", { style: { marginTop: "8px" } }, (0, react.createElement)("textarea", {
+				readOnly: true,
+				spellCheck: false,
+				value: draftToDefinitionJson(draft),
+				style: {
+					...textareaStyle$1,
+					minHeight: "12em",
+					fontFamily: monoFont$1,
+					fontSize: "12px"
+				}
+			}), (0, react.createElement)("p", { style: hintStyle$1 }, t("editorJsonHint"))) : null) : null));
+			return (0, react.createElement)("div", {
+				style: overlayStyle,
+				onPointerDown: (event) => {
+					if (event.target === event.currentTarget) onClose();
+				}
+			}, (0, react.createElement)("div", {
+				style: {
+					...panelBase,
+					width: `${width}px`
+				},
+				role: "dialog",
+				"aria-modal": true
+			}, (0, react.createElement)("div", {
+				style: resizeHandleStyle,
+				title: t("previewResize"),
+				onPointerDown: (event) => {
+					startResize({ clientX: event.clientX });
+				}
+			}), (0, react.createElement)("div", { style: headerStyle }, (0, react.createElement)("div", { style: {
+				fontSize: "15px",
+				fontWeight: 600,
+				color: C$1.text
+			} }, mode === "create" ? t("editorNew") : t("editorEdit")), (0, react.createElement)("button", {
+				type: "button",
+				style: iconButtonStyle$1,
+				title: t("editorClose"),
+				"aria-label": t("editorClose"),
+				onClick: onClose
+			}, "✕")), mode === "edit" ? (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "4px",
+				padding: "8px 18px",
+				borderBottom: `1px solid ${C$1.border}`,
+				flex: "none"
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					background: tab === "basic" ? C$1.layer2 : "transparent",
+					fontWeight: tab === "basic" ? 600 : 400
+				},
+				onClick: () => {
+					setTab("basic");
+				}
+			}, t("editorTabBasic")), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...smallButtonStyle,
+					background: tab === "records" ? C$1.layer2 : "transparent",
+					fontWeight: tab === "records" ? 600 : 400
+				},
+				onClick: () => {
+					setTab("records");
+				}
+			}, t("editorTabRecords"))) : null, (0, react.createElement)("div", { style: bodyStyle }, body), (0, react.createElement)("div", { style: footerStyle }, pendingHint ? (0, react.createElement)("span", { style: {
+				...hintStyle$1,
+				margin: "0 8px 0 0"
+			} }, t("editorSavePending")) : null, (0, react.createElement)("button", {
+				type: "button",
+				style: smallButtonStyle,
+				onClick: onClose
+			}, t("editorCancel")), (0, react.createElement)("button", {
+				type: "button",
+				style: primaryButtonStyle,
+				onClick: () => {
+					if (onSave === void 0) setPendingHint(true);
+					else onSave(draft);
+				}
+			}, t("editorSave")))));
+		}
+		//#endregion
 		//#region src/client/index.ts
 		/** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 		const SETTINGS_NS = "dsh-task-dispatch-table";
@@ -4519,6 +5441,24 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontFamily: "inherit",
 			fontSize: "12px",
 			lineHeight: "18px",
+			transition
+		};
+		/** 「＋ 新建任务」按钮：整页右上角，拉起右侧任务编辑弹窗（P0 只做界面）。 */
+		const addButtonStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "4px",
+			flex: "none",
+			padding: "5px 10px",
+			borderRadius: "8px",
+			border: `1px solid ${C.borderStrong}`,
+			background: C.layer1,
+			color: C.text,
+			cursor: "pointer",
+			fontFamily: "inherit",
+			fontSize: "12px",
+			lineHeight: "18px",
+			fontWeight: 600,
 			transition
 		};
 		/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
@@ -4738,6 +5678,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			"skipped",
 			"unknown"
 		];
+		/**
+		* P1 之前工作区 / 模型**没有数据面** ⇒ 传空数组，下拉显示空态（「暂无可选（数据面待接）」）。
+		* 按仓库规矩：正常功能一律真实取数，**禁止塞假工作区名 / 假模型名**。常量引用避免每帧新建数组。
+		*/
+		const EMPTY_OPTIONS = [];
 		/** 预览宽度持久化键（宽度是纯本地偏好，落 localStorage；读写都容错，隐私模式也不崩）。 */
 		const PREVIEW_WIDTH_KEY = "dsh-tdt-preview-width";
 		/** 宽度区间：下限保住可读性，上限给内容留地方（不超过视口 70%）。 */
@@ -4832,6 +5777,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				window.addEventListener("pointermove", onMove);
 				window.addEventListener("pointerup", onUp);
 			}, [previewWidth]);
+			const [editor, setEditor] = (0, react.useState)(null);
 			const [viewing, setViewing] = (0, react.useState)(null);
 			const [viewErr, setViewErr] = (0, react.useState)(null);
 			const [dbDump, setDbDump] = (0, react.useState)(null);
@@ -4879,6 +5825,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			};
 			const taskRows = data?.tasks ?? [];
+			/** 可选的前置任务 = 现有任务表（真数据）；工作区 / 模型列表待 P1 接数据面，暂传空数组。 */
+			const taskOptions = taskRows.map((row) => ({
+				value: row.id,
+				label: row.title === "" ? row.id : `${row.title}（${row.code ?? row.id}）`
+			}));
 			const titleOfTask = (id) => {
 				const row = taskRows.find((item) => item.id === id);
 				return row === void 0 ? id : `${row.title}（${row.id}）`;
@@ -5000,7 +5951,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setTab("debug");
 				}
-			}, t("tabDebug"))))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
+			}, t("tabDebug"))), (0, react.createElement)("button", {
+				type: "button",
+				style: addButtonStyle,
+				title: t("editorNew"),
+				onClick: () => {
+					setEditor({
+						mode: "create",
+						draft: emptyTaskDraft()
+					});
+				}
+			}, `＋ ${t("editorNew")}`))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
 				...preStyle,
 				color: C.textFaint
 			} }, describeDiag())) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
@@ -5187,7 +6148,23 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setViewErr(null);
 				}
-			}, "✕")) : null, preview !== null && workspaceFiles !== null ? (0, react.createElement)(FileBrowser, {
+			}, "✕")) : null, editor !== null ? (0, react.createElement)(TaskEditorDrawer, {
+				t,
+				mode: editor.mode,
+				draft: editor.draft,
+				onChange: (next) => {
+					setEditor({
+						mode: editor.mode,
+						draft: next
+					});
+				},
+				workspaces: EMPTY_OPTIONS,
+				models: EMPTY_OPTIONS,
+				tasks: taskOptions,
+				onClose: () => {
+					setEditor(null);
+				}
+			}) : null, preview !== null && workspaceFiles !== null ? (0, react.createElement)(FileBrowser, {
 				key: `${preview.sessionId}:${preview.path}`,
 				workspaceFiles,
 				sessionId: preview.sessionId,

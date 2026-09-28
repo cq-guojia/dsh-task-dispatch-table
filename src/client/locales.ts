@@ -89,6 +89,22 @@ export type LocaleKey =
   | 'deliverRowError' | 'deliverRowStopped'
   | 'deliverFileLabel' | 'deliverPreviewHint' | 'deliverPreviewCard'
   | 'deliverAll' | 'deliverCollapse' | 'deliverExpandAria' | 'deliverCollapseAria'
+  // —— 任务表单弹窗（P0 只做界面与交互）：新建 / 编辑任务 ——
+  | 'editorNew' | 'editorEdit' | 'editorClose' | 'editorCancel' | 'editorSave' | 'editorSavePending'
+  | 'editorTabBasic' | 'editorTabRecords' | 'editorRecordsPending'
+  | 'editorEnabled' | 'editorTitle' | 'editorTitlePh' | 'editorCode' | 'editorCodePh'
+  | 'editorPrompt' | 'editorPromptPh' | 'editorSource' | 'editorSourceInline' | 'editorSourceManual'
+  | 'editorSourceUpload' | 'editorSourceManualHint' | 'editorPickFile' | 'editorUpload' | 'editorVersions'
+  | 'editorManualPath' | 'editorManualPathPh'
+  | 'editorWorkspace' | 'editorModel' | 'editorFollowHost' | 'editorNoOptions'
+  | 'editorSchedule' | 'editorScheduleCron' | 'editorScheduleOnce' | 'editorCron' | 'editorCronCustom'
+  | 'cronDaily9' | 'cronHourly' | 'cronEvery15' | 'cronWeeklyMon' | 'cronMonthly'
+  | 'editorOnceAt' | 'editorTimezone' | 'editorWindow' | 'editorWindowHint'
+  | 'unitMinutes' | 'unitHours'
+  | 'editorDeps' | 'editorDepAdd' | 'editorDepTask' | 'editorDepSemantics'
+  | 'editorDepSamePeriod' | 'editorDepLatestSuccess' | 'editorDepRemove' | 'editorDepEmpty'
+  | 'editorAdvanced' | 'editorRetry' | 'editorValidStatuses' | 'editorJson' | 'editorJsonHint'
+  | 'editorRequired' | 'editorUnavailable'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -358,6 +374,68 @@ export const zh: Record<LocaleKey, string> = {
   deliverCollapse: '收起',
   deliverExpandAria: '展开全部 {count} 个交付文件',
   deliverCollapseAria: '收起交付文件列表',
+  // —— 任务表单弹窗 ——
+  editorNew: '新建任务',
+  editorEdit: '编辑任务',
+  editorClose: '关闭',
+  editorCancel: '取消',
+  editorSave: '保存',
+  editorSavePending: '保存逻辑待接（P2）：本轮只做界面与交互',
+  editorTabBasic: '基本信息',
+  editorTabRecords: '执行记录',
+  editorRecordsPending: '执行记录待接（P2）',
+  editorEnabled: '启用',
+  editorTitle: '任务名称',
+  editorTitlePh: '给任务起个名字',
+  editorCode: '任务编号',
+  editorCodePh: '可选，便于查询',
+  editorPrompt: '提示词',
+  editorPromptPh: '写给 agent 的指令……',
+  editorSource: '来源',
+  editorSourceInline: '手敲 / 粘贴',
+  editorSourceManual: '任务手册（工作区文件）',
+  editorSourceUpload: '上传 MD',
+  editorSourceManualHint: '只记路径，执行那一刻由 agent 自己读取；文件随时改随时生效，我们不做版本管理',
+  editorPickFile: '选择文件',
+  editorUpload: '上传 MD',
+  editorVersions: '版本历史',
+  editorManualPath: '手册路径',
+  editorManualPathPh: '相对工作区根，如 manuals/xxx.md',
+  editorWorkspace: '工作区',
+  editorModel: '模型',
+  editorFollowHost: '跟随宿主默认',
+  editorNoOptions: '暂无可选（数据面待接）',
+  editorSchedule: '执行频率',
+  editorScheduleCron: '周期',
+  editorScheduleOnce: '一次性',
+  editorCron: 'cron',
+  editorCronCustom: '自定义',
+  cronDaily9: '每天 09:00',
+  cronHourly: '每小时整点',
+  cronEvery15: '每 15 分钟',
+  cronWeeklyMon: '每周一 09:00',
+  cronMonthly: '每月 1 号 09:00',
+  editorOnceAt: '执行时间',
+  editorTimezone: '时区',
+  editorWindow: '有效期',
+  editorWindowHint: '只管开始：从计划时刻起这段时间内允许派发与重试',
+  unitMinutes: '分钟',
+  unitHours: '小时',
+  editorDeps: '前置任务',
+  editorDepAdd: '添加依赖',
+  editorDepTask: '任务',
+  editorDepSemantics: '语义',
+  editorDepSamePeriod: '同一天的',
+  editorDepLatestSuccess: '最近一次成功的',
+  editorDepRemove: '移除',
+  editorDepEmpty: '暂无前置任务',
+  editorAdvanced: '高级',
+  editorRetry: '重试次数',
+  editorValidStatuses: '成功状态清单',
+  editorJson: 'JSON',
+  editorJsonHint: '逃生通道：这里含任务 id，改错会影响任务身份，慎改',
+  editorRequired: '必填',
+  editorUnavailable: '暂不可用（待接数据面）',
 }
 
 /** English copy. */
@@ -614,4 +692,66 @@ export const en: Record<LocaleKey, string> = {
   deliverCollapse: 'Collapse',
   deliverExpandAria: 'Expand all {count} delivered files',
   deliverCollapseAria: 'Collapse the delivered-files list',
+  // —— 任务表单弹窗 ——
+  editorNew: 'New task',
+  editorEdit: 'Edit task',
+  editorClose: 'Close',
+  editorCancel: 'Cancel',
+  editorSave: 'Save',
+  editorSavePending: 'Save logic not wired yet (P2): this round is UI only',
+  editorTabBasic: 'Basic',
+  editorTabRecords: 'Run history',
+  editorRecordsPending: 'Run history pending (P2)',
+  editorEnabled: 'Enabled',
+  editorTitle: 'Task name',
+  editorTitlePh: 'Name this task',
+  editorCode: 'Task code',
+  editorCodePh: 'Optional, for lookup',
+  editorPrompt: 'Prompt',
+  editorPromptPh: 'Instructions for the agent…',
+  editorSource: 'Source',
+  editorSourceInline: 'Typed / pasted',
+  editorSourceManual: 'Task manual (workspace file)',
+  editorSourceUpload: 'Upload MD',
+  editorSourceManualHint: 'Only the path is stored; the agent reads it at dispatch time. Edit it anytime — we do not version it',
+  editorPickFile: 'Pick file',
+  editorUpload: 'Upload MD',
+  editorVersions: 'Version history',
+  editorManualPath: 'Manual path',
+  editorManualPathPh: 'Relative to workspace root, e.g. manuals/xxx.md',
+  editorWorkspace: 'Workspace',
+  editorModel: 'Model',
+  editorFollowHost: 'Follow host default',
+  editorNoOptions: 'Nothing to choose yet (data plane pending)',
+  editorSchedule: 'Schedule',
+  editorScheduleCron: 'Recurring',
+  editorScheduleOnce: 'Once',
+  editorCron: 'cron',
+  editorCronCustom: 'Custom',
+  cronDaily9: 'Daily 09:00',
+  cronHourly: 'Hourly',
+  cronEvery15: 'Every 15 minutes',
+  cronWeeklyMon: 'Weekly Mon 09:00',
+  cronMonthly: 'Monthly 1st 09:00',
+  editorOnceAt: 'Run at',
+  editorTimezone: 'Timezone',
+  editorWindow: 'Valid for',
+  editorWindowHint: 'Start only: dispatch and retries are allowed within this window',
+  unitMinutes: 'minutes',
+  unitHours: 'hours',
+  editorDeps: 'Depends on',
+  editorDepAdd: 'Add dependency',
+  editorDepTask: 'Task',
+  editorDepSemantics: 'Semantics',
+  editorDepSamePeriod: 'Same day',
+  editorDepLatestSuccess: 'Latest success',
+  editorDepRemove: 'Remove',
+  editorDepEmpty: 'No dependencies',
+  editorAdvanced: 'Advanced',
+  editorRetry: 'Retry attempts',
+  editorValidStatuses: 'Valid statuses',
+  editorJson: 'JSON',
+  editorJsonHint: 'Escape hatch: contains the task id — editing it wrong breaks task identity',
+  editorRequired: 'Required',
+  editorUnavailable: 'Unavailable (data plane pending)',
 }

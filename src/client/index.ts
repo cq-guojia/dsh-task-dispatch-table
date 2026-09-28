@@ -20,6 +20,7 @@ import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 import { FileBrowser } from './file-browser'
 import { type WorkspaceFilesFace } from './file-preview'
+import { emptyTaskDraft, TaskEditorDrawer, type EditorOption, type TaskEditorDraft } from './task-editor'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -177,6 +178,13 @@ const backButtonStyle: Record<string, string | number> = {
   padding: '5px 10px', borderRadius: '8px', border: `1px solid ${C.border}`,
   background: 'transparent', color: C.textDim, cursor: 'pointer',
   fontFamily: 'inherit', fontSize: '12px', lineHeight: '18px', transition,
+}
+/** 「＋ 新建任务」按钮：整页右上角，拉起右侧任务编辑弹窗（P0 只做界面）。 */
+const addButtonStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', gap: '4px', flex: 'none',
+  padding: '5px 10px', borderRadius: '8px', border: `1px solid ${C.borderStrong}`,
+  background: C.layer1, color: C.text, cursor: 'pointer',
+  fontFamily: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: 600, transition,
 }
 /** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
 const panelHeaderStyle: Record<string, string | number> = {
@@ -366,6 +374,12 @@ function scheduleSummary(row: DebugTaskRow): string {
 
 const STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'] as const
 
+/**
+ * P1 之前工作区 / 模型**没有数据面** ⇒ 传空数组，下拉显示空态（「暂无可选（数据面待接）」）。
+ * 按仓库规矩：正常功能一律真实取数，**禁止塞假工作区名 / 假模型名**。常量引用避免每帧新建数组。
+ */
+const EMPTY_OPTIONS: EditorOption[] = []
+
 // ── U11 页面级预览 dock（弹窗与整页共用同一个预览面） ──
 
 /** 预览宽度持久化键（宽度是纯本地偏好，落 localStorage；读写都容错，隐私模式也不崩）。 */
@@ -480,6 +494,8 @@ function TaskPage(props: {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }, [previewWidth])
+  // 新建 / 编辑任务弹窗（P0：只做界面与前端交互，保存逻辑归 P2）。
+  const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; draft: TaskEditorDraft } | null>(null)
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
   const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget; didUnarchive?: boolean; outputs?: string[] } | null>(null)
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
@@ -533,6 +549,11 @@ function TaskPage(props: {
   }
 
   const taskRows = data?.tasks ?? []
+  /** 可选的前置任务 = 现有任务表（真数据）；工作区 / 模型列表待 P1 接数据面，暂传空数组。 */
+  const taskOptions: EditorOption[] = taskRows.map(row => ({
+    value: row.id,
+    label: row.title === '' ? row.id : `${row.title}（${row.code ?? row.id}）`,
+  }))
   const titleOfTask = (id: string): string => {
     const row = taskRows.find(item => item.id === id)
     return row === undefined ? id : `${row.title}（${row.id}）`
@@ -665,6 +686,13 @@ function TaskPage(props: {
               onClick: () => { setTab('debug') },
             }, t('tabDebug')),
           ),
+          // 右上角「＋ 新建任务」：拉起右侧贴边的任务编辑弹窗（P0 只做界面，不接保存）。
+          h('button', {
+            type: 'button',
+            style: addButtonStyle,
+            title: t('editorNew'),
+            onClick: () => { setEditor({ mode: 'create', draft: emptyTaskDraft() }) },
+          }, `＋ ${t('editorNew')}`),
         ),
       ),
       h('p', { style: hintStyle }, t('debugAutoHint')),
@@ -927,6 +955,20 @@ function TaskPage(props: {
           onClick: () => { setViewErr(null) },
         }, '✕'),
       )
+      : null,
+    // 新建 / 编辑任务弹窗（右侧贴边的**浮层**，盖住整页与预览面，不推压页面）。
+    // P0：只传真数据里已有的前置任务列表；工作区 / 模型留空 ⇒ 下拉显示空态（不塞假数据）。
+    editor !== null
+      ? h(TaskEditorDrawer, {
+        t,
+        mode: editor.mode,
+        draft: editor.draft,
+        onChange: (next: TaskEditorDraft) => { setEditor({ mode: editor.mode, draft: next }) },
+        workspaces: EMPTY_OPTIONS,
+        models: EMPTY_OPTIONS,
+        tasks: taskOptions,
+        onClose: () => { setEditor(null) },
+      })
       : null,
     // U11 页面级预览 dock：固定在屏幕最右侧，把整页（含会话弹窗）往左推；
     // 与弹窗互不遮盖、互不干扰——关弹窗预览仍在，收预览整页回满宽。
