@@ -49,7 +49,10 @@ export const C = {
   brand: 'var(--dsw-alias-brand-primary, #0f1115)',
   brandFg: 'var(--dsw-alias-label-primary-foreground, #ffffff)',
   business: 'var(--dsw-alias-state-business-primary, #4d6bfe)',
-  menuFill: 'var(--dsw-specific-menu, var(--dsw-alias-bg-layer-1, #2b2d31))',
+  // ⚠️ 不能用 `--dsw-specific-menu`：它在主题里 = `var(--dsw-menu-surface-fill)`
+  // = `#f8f9fa94`（亮）/ `#43454a73`（暗），**是半透明的**——官方菜单卡自带毛玻璃底（backdrop-filter），
+  // 我们没有那层，照抄就是「把后面的透出来了」。自绘浮层一律用不透明的 `--dsw-alias-bg-base`。
+  menuFill: 'var(--dsw-alias-bg-base, #22252a)',
   elevation: 'var(--dsw-elevation-prominent, 0 8px 28px rgba(0,0,0,0.28))',
   radiusSm: 'var(--dsw-radius-sm, 6px)',
   radiusMd: 'var(--dsw-radius-md, 8px)',
@@ -115,6 +118,12 @@ export function SelectField(props: {
   title?: string
   /** 锚点宽度（数字 = px；不传则随内容）。 */
   width?: number | string
+  /**
+   * 整行下拉（参考图里的「频率」就是这种）：锚点撑满一行。
+   * 官方 `Menu` 把锚点包在自己的 `display:inline-flex` span 里，只给按钮 `width:100%` 会被这个
+   * span 的 shrink-to-fit 吃掉 ⇒ 得连包装 span 一起撑（见 `BlockWrap`）。
+   */
+  block?: boolean
 }): ReactElement {
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
@@ -138,7 +147,7 @@ export function SelectField(props: {
     onClick: () => { setOpen(!open) },
     style: {
       ...fieldButtonStyle,
-      width: props.width,
+      width: props.width ?? (props.block === true ? '100%' : undefined),
       background: hover && usable ? C.hover : C.layer1,
       cursor: usable ? 'pointer' : 'not-allowed',
       opacity: usable ? 1 : 0.6,
@@ -159,6 +168,7 @@ export function SelectField(props: {
     selection: 'check',
     align: props.align ?? 'start',
     portal: true,
+    className: props.block === true ? 'dsh-tdt-ed-selectwrap' : undefined,
     onSelect: (id: string) => { setOpen(false); props.onChange(id) },
     onClose: () => { setOpen(false) },
   })

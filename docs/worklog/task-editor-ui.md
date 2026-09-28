@@ -304,3 +304,18 @@ typecheck + build（dist 340.38 kB）+ 冒烟 172 项全过。
 | 字号 | 下拉锚点 14px → **13px**（行高 22 → 20）：官方 `Input` 是 14px，放在卡片底部一行里偏粗；13px 与官方菜单行同档 |
 
 typecheck + build（dist/client 341.41 kB + dist/index.js）+ 冒烟 172 项全过。
+
+---
+
+## 十五、P0.6 排版返工轮（2026-09-29 真机第二轮）
+
+| # | 用户反馈 | 处置 |
+|---|---|---|
+| 1 | 上下间距不一致：「任务编号 → 提示词」贴太近，「提示词 → 执行频率」又太远 | 根因 = 正文里手写了两个 `16px` 空 div 当间距，而 `Section` 自带 16px margin ⇒ 有的地方 16、有的 32。**删掉空 div，间距一律由 `.dsh-tdt-ed-section` 的 margin 给**，四个区块统一 16px |
+| 2 | 「周期 / 间隔」旁再加一个「**单次**」档：点它自动把周期档的频率置为单次；频率改回别的自动切回「周期」 | 顶部三档 = **单次 / 周期 / 间隔**。实现上**不新增状态**：`scheduleTab` 由 `scheduleKind + periodFreq` **推导**（`interval` ⇒ 间隔；`periodFreq==='once'` ⇒ 单次；否则周期）⇒ 「自动切回」是推导的自然结果，无需回写。点「单次」= `patch({scheduleKind:'periodic', periodFreq:'once'})` |
+| 3 | 两个分段控件（手输/选择/上传、周期/间隔）太大 | 官方是 28px 高 / 13px 字。收成 **22px / 12px**：只能按「元素 + role」覆盖（官方类名是 CSS-module 哈希）。⚠️ 官方指示器位置是**算**出来的（`--dsh-segment-count/index` + padding/间距），padding 由 4px 改 3px ⇒ 指示器的 `top/left/height/width` 算式必须同步改（gap 保持 2px，位移公式才仍成立） |
+| 4.1 | 日期 / 时间弹层是**半透明**的，把后面透出来了 | 根因（源码级）：主题里 `--dsw-specific-menu` = `var(--dsw-menu-surface-fill)` = `#f8f9fa94`（亮）/ `#43454a73`（暗）——**官方菜单卡本来就是半透明材质**，它自带毛玻璃底，我们自绘浮层没有那层 ⇒ 照抄就透。改自绘浮层用不透明的 `--dsw-alias-bg-base` |
+| 4.2 | 执行频率 / 周期 / 间隔排版混乱，要参考 | 重对用户给的两张参考图：① 频率 = **整行下拉**（不是 110px 小方块）——官方 `Menu` 的包装 span 是 `inline-flex`（shrink-to-fit），只给按钮 `width:100%` 撑不满 ⇒ 新增 `block` 开关，连包装 span 一起撑（`.dsh-tdt-ed-selectwrap`）；② 新增 `FieldRow`（定宽标签列 + 控件列），排期区每一行都走它：日期 / 时间 / 月份 / 第几天 / 在 / 每隔 / 时区 / 有效期，全部左对齐成列；③ 时区 / 有效期与上面用一条 hairline 分开 |
+| 4.3 | 「任务名称」「任务编号」别让标签单独占一行 | 新增 `PrefixedInput`：标签做成**框的左半段**（带底 + 分隔线），右半段是输入框，一行搞定（省一半竖向空间） |
+
+typecheck + build（dist/client 346.94 kB）+ 冒烟 172 项全过。

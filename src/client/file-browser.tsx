@@ -190,10 +190,6 @@ export function FileBrowser(props: {
         if (parsed === null) { setListErr({ key: 'previewBadPayload' }); setMode('error'); return }
         setListing(parsed.entries)
         setTruncated(parsed.truncated)
-        // dir 以服务端返回的规范路径为准（workspacePathOf(root, target)，工作区相对形式）：
-        // 入口路径可能是宿主绝对路径（工具卡）/工作区相对名（交付卡·产出列），
-        // 只有采用规范路径，文件与目录两条入口的面包屑才一致、且从工作区列全（用户 2026-09-29）。
-        setDir(parsed.path)
         setMode('dir')
       })
       .catch((error: unknown) => { setListErr(errView(error)); setMode('error') })
@@ -231,8 +227,8 @@ export function FileBrowser(props: {
         if (!alive) return
         const parsed = listingOf(result)
         if (!isFailed(parsed) && parsed !== null) {
-          // 目录：直接展示树。dir = 服务端规范路径（见 fetchDir 同款理由）。
-          setDir(parsed.path)
+          // 目录：直接展示树。
+          setDir(path)
           setListing(parsed.entries)
           setTruncated(parsed.truncated)
           setMode('dir')
@@ -250,8 +246,6 @@ export function FileBrowser(props: {
             if (!isFailed(pl) && pl !== null) {
               setListing(pl.entries)
               setTruncated(pl.truncated)
-              // 文件态的面包屑同样以父目录的规范路径为准（与目录态一致，用户 2026-09-29）。
-              setDir(pl.path)
             }
           })
           .catch(() => { /* 父树列不出不影响文件预览 */ })
@@ -370,6 +364,10 @@ export function FileBrowser(props: {
     })
   }
 
+  // 面包屑 = 入参路径（宿主绝对形态，如 /workspace/Temp）逐段展开 ⇒ 从工作区根往下列。
+  // ⚠️ 切勿改用服务端 list 返回的 path：那是 workspacePathOf(root, target) 的**工作区相对**
+  //    形式（dsh-api-workspace-files lib/index.js:494），会丢掉根以下的前导段，
+  //    面包屑只剩最近一层（2026-09-29 踩过 ⇒ 已回退为入参路径）。
   const crumbs = crumbsOf(dir)
   const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'
 

@@ -63,6 +63,26 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-mono{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;}
 /* 自绘控件锚点（下拉 / 日历 / 时分）：键盘可达性描边。 */
 .dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d6bfe);outline-offset:1px;}
+/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满。 */
+.dsh-tdt-ed-selectwrap{width:100%;}
+/* 官方分段控件收小一号（官方 = 28px 高 / 13px 字）。官方类名是 CSS-module 哈希，
+   只能按「元素 + role」选中；指示器位置由 --dsh-segment-count/index 算出来（不测量 DOM），
+   所以容器 padding 一改，指示器的 top/left/height/width 算式必须同步改（gap 保持 2px，
+   位移公式 index*(100% + 2px) 才仍然成立）。 */
+.dsh-tdt-ed-seg{padding:3px;}
+.dsh-tdt-ed-seg>span[aria-hidden='true']{top:3px;left:3px;height:calc(100% - 6px);width:calc((100% - 6px - 2px*(var(--dsh-segment-count) - 1))/var(--dsh-segment-count));}
+.dsh-tdt-ed-seg>button[role='tab']{height:22px;padding:0 10px;font-size:12px;line-height:18px;}
+/* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
+   省掉标签单独占的一行——弹窗竖向空间紧张。 */
+.dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:32px;box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
+.dsh-tdt-ed-pfx:focus-within{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
+.dsh-tdt-ed-pfx-label{flex:none;display:inline-flex;align-items:center;padding:0 10px;border-right:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:13px;line-height:18px;white-space:nowrap;}
+.dsh-tdt-ed-pfx-input{flex:1 1 auto;min-width:0;padding:0 10px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;}
+.dsh-tdt-ed-pfx-input::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
+/* 排期区：标签列 + 控件列对齐（此前各控件随手堆一行，是「排版混乱」的根源）。 */
+.dsh-tdt-ed-fieldrow{display:flex;align-items:center;gap:8px;margin-top:8px;}
+.dsh-tdt-ed-fieldrow:first-child{margin-top:0;}
+.dsh-tdt-ed-fieldlabel{flex:none;width:48px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}

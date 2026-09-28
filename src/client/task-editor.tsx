@@ -228,6 +228,28 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
 /** 单行输入的度量全在 `dsh-tdt-ed-input` 类里（逐条照官方 Input.module.css，含 focus 描边与占位色）。 */
 const sectionLabelStyle: CSSProperties = { fontSize: '12px', fontWeight: 600, color: C.text, marginBottom: '6px' }
 
+/**
+ * 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
+ * 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
+ */
+function PrefixedInput(props: {
+  prefix: string
+  value: string
+  placeholder: string
+  onChange: (next: string) => void
+}): ReactElement {
+  return h('div', { className: 'dsh-tdt-ed-pfx' },
+    h('span', { className: 'dsh-tdt-ed-pfx-label' }, props.prefix),
+    h('input', {
+      className: 'dsh-tdt-ed-pfx-input',
+      value: props.value,
+      placeholder: props.placeholder,
+      'aria-label': props.prefix,
+      onChange: (event: { target: { value: string } }) => { props.onChange(event.target.value) },
+    }),
+  )
+}
+
 function Section(props: { label?: string; children?: ReactNode }): ReactElement {
   return h('div', { className: 'dsh-tdt-ed-section' },
     props.label === undefined ? null : h('div', { className: 'dsh-tdt-ed-label', style: { marginBottom: '6px' } }, props.label),
@@ -237,7 +259,15 @@ function Section(props: { label?: string; children?: ReactNode }): ReactElement 
 
 // ─────────────────────── 排期区 ───────────────────────
 
-/** 周期档的子控件（照参考图：单次=日期+时间；每天=时间；每周/双周=周几+时间；每月/每年=日/月+时间）。 */
+/** 一行「标签 + 控件」（标签列定宽对齐，排期区所有行都走它 ⇒ 不再东一块西一块）。 */
+function FieldRow(props: { label: string; children?: ReactNode }): ReactElement {
+  return h('div', { className: 'dsh-tdt-ed-fieldrow' },
+    h('span', { className: 'dsh-tdt-ed-fieldlabel' }, props.label),
+    props.children,
+  )
+}
+
+/** 周期档的子控件（单次=日期+时间；每天=时间；每周/双周=周几+时间；每月/每年=日/月+时间）。 */
 function PeriodControls(props: {
   draft: TaskEditorDraft
   patch: (part: Partial<TaskEditorDraft>) => void
@@ -265,53 +295,50 @@ function PeriodControls(props: {
     [tt],
   )
 
-  const rows: ReactNode[] = []
-  rows.push(h(DateField, {
-    key: 'date',
-    value: draft.date,
-    onChange: value => { patch({ date: value }) },
-    placeholder: t('editorDatePh'),
-    ariaLabel: t('editorDate'),
-    labels: calendarLabels,
-    width: 148,
-  }))
-  if (draft.periodFreq === 'yearly') {
-    rows.push(h(SelectField, {
-      key: 'month',
-      value: draft.yearMonth,
-      options: monthOptions,
-      onChange: value => { patch({ yearMonth: value }) },
-      placeholder: t('editorMonth'),
-      emptyLabel: t('editorNoOptions'),
-      ariaLabel: t('editorMonth'),
-      width: 96,
-    }))
-  }
-  if (draft.periodFreq === 'monthly' || draft.periodFreq === 'yearly') {
-    rows.push(h(SelectField, {
-      key: 'day',
-      value: draft.monthDay,
-      options: dayOptions,
-      onChange: value => { patch({ monthDay: value }) },
-      placeholder: t('editorDayOfMonth'),
-      emptyLabel: t('editorNoOptions'),
-      ariaLabel: t('editorDayOfMonth'),
-      width: 110,
-    }))
-  }
-  rows.push(timeField)
-
-  return h('div', null,
-    h('div', { className: 'dsh-tdt-ed-row' }, rows),
+  // 外层给上间距：本组件的第一行是「:first-child」（无上间距），但上面还压着「频率」那一行。
+  return h('div', { style: { marginTop: '8px' } },
+    draft.periodFreq === 'once'
+      ? h(FieldRow, { label: t('editorDate') }, h(DateField, {
+        value: draft.date,
+        onChange: value => { patch({ date: value }) },
+        placeholder: t('editorDatePh'),
+        ariaLabel: t('editorDate'),
+        labels: calendarLabels,
+        width: 148,
+      }))
+      : null,
+    draft.periodFreq === 'yearly'
+      ? h(FieldRow, { label: t('editorMonth') }, h(SelectField, {
+        value: draft.yearMonth,
+        options: monthOptions,
+        onChange: value => { patch({ yearMonth: value }) },
+        placeholder: t('editorMonth'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('editorMonth'),
+        width: 96,
+      }))
+      : null,
+    draft.periodFreq === 'monthly' || draft.periodFreq === 'yearly'
+      ? h(FieldRow, { label: t('editorDayOfMonth') }, h(SelectField, {
+        value: draft.monthDay,
+        options: dayOptions,
+        onChange: value => { patch({ monthDay: value }) },
+        placeholder: t('editorDayOfMonth'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('editorDayOfMonth'),
+        width: 110,
+      }))
+      : null,
     draft.periodFreq === 'weekly' || draft.periodFreq === 'biweekly'
-      ? h('div', { style: { marginTop: '8px' } },
+      ? h(FieldRow, { label: t('editorScheduleOn') }, h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
           h(WeekdayPicker, {
             value: draft.weekdays,
             onChange: value => { patch({ weekdays: value }) },
             labels: weekdayLabels,
           }),
-        )
+        ))
       : null,
+    h(FieldRow, { label: t('editorTime') }, timeField),
     draft.periodFreq === 'once'
       ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorOnceHint'))
       : null,
@@ -331,8 +358,7 @@ function IntervalControls(props: {
     { value: 'hour', label: t('unitHours') },
   ]
   return h('div', null,
-    h('div', { className: 'dsh-tdt-ed-row' },
-      h('span', { style: { fontSize: '13px', color: C.text } }, t('editorIntervalEvery')),
+    h(FieldRow, { label: t('editorIntervalEvery') },
       h('input', {
         type: 'number',
         min: 1,
@@ -340,7 +366,7 @@ function IntervalControls(props: {
         onChange: (event: { target: { value: string } }) => { patch({ intervalStep: event.target.value }) },
         'aria-label': t('editorIntervalStep'),
         className: 'dsh-tdt-ed-input',
-        style: { width: '72px', textAlign: 'center' },
+        style: { width: '68px', textAlign: 'center' },
       }),
       h(SelectField, {
         value: draft.intervalUnit,
@@ -351,15 +377,16 @@ function IntervalControls(props: {
         ariaLabel: t('editorIntervalUnit'),
         width: 96,
       }),
-      h('span', { style: { fontSize: '13px', color: C.text } }, t('editorIntervalSuffix')),
+      h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorIntervalSuffix')),
     ),
-    h('div', { style: { marginTop: '8px' } },
-      h('div', { className: 'dsh-tdt-ed-label', style: { marginBottom: '4px' } }, t('editorIntervalOn')),
-      h(WeekdayPicker, {
-        value: draft.weekdays,
-        onChange: value => { patch({ weekdays: value }) },
-        labels: weekdayLabels,
-      }),
+    h(FieldRow, { label: t('editorScheduleOn') },
+      h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
+        h(WeekdayPicker, {
+          value: draft.weekdays,
+          onChange: value => { patch({ weekdays: value }) },
+          labels: weekdayLabels,
+        }),
+      ),
     ),
   )
 }
@@ -495,6 +522,14 @@ export function TaskEditorDrawer(props: {
     ? t('editorBiweeklyWarn')
     : null
 
+  /**
+   * 顶部三档的当前值：**推导**出来的，不是另存一份状态——
+   * 「单次」只是「周期档的频率 = 单次」，所以周期档里把频率改成别的，顶部自动回到「周期」。
+   */
+  const scheduleTab: 'once' | 'periodic' | 'interval' = draft.scheduleKind === 'interval'
+    ? 'interval'
+    : (draft.periodFreq === 'once' ? 'once' : 'periodic')
+
   // ① 提示词卡（主视觉）：右上角三档来源；左下角工作区、右下角模型。
   const promptCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
@@ -505,6 +540,7 @@ export function TaskEditorDrawer(props: {
         options: promptSourceOptions,
         onChange: value => { patch({ promptSource: value as PromptSource }) },
         label: t('editorSource'),
+        className: 'dsh-tdt-ed-seg',
       }),
     ),
     draft.promptSource === 'inline'
@@ -566,46 +602,56 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  // ② 执行频率卡：周期 / 间隔 两档 + 时区 / 有效期。
+  // ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。
+  //    「单次」不是第四种排期，它就是「周期档的频率 = 单次」——所以切到单次时把 periodFreq 设成 once，
+  //    而在周期档里把频率改成别的，顶部会自动回到「周期」（值是从 periodFreq 推导的，无需额外回写）。
   const scheduleCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorSchedule')),
       h(Segmented, {
         id: 'dsh-tdt-ed-schedule',
-        value: draft.scheduleKind,
+        value: scheduleTab,
         options: [
+          { value: 'once', label: t('editorFreqOnce') },
           { value: 'periodic', label: t('editorSchedulePeriodic') },
           { value: 'interval', label: t('editorScheduleInterval') },
         ],
-        onChange: value => { patch({ scheduleKind: value as ScheduleKind }) },
+        onChange: value => {
+          if (value === 'once') { patch({ scheduleKind: 'periodic', periodFreq: 'once' }); return }
+          if (value === 'interval') { patch({ scheduleKind: 'interval' }); return }
+          // 回到「周期」：原来停在一次性的话，落到每天（否则保持原频率）。
+          patch({ scheduleKind: 'periodic', periodFreq: draft.periodFreq === 'once' ? 'daily' : draft.periodFreq })
+        },
         label: t('editorSchedule'),
+        className: 'dsh-tdt-ed-seg',
       }),
     ),
-    draft.scheduleKind === 'periodic'
-      ? h('div', { id: 'dsh-tdt-ed-schedule-periodic-panel', role: 'tabpanel', 'aria-label': t('editorSchedulePeriodic') },
-          h('div', { className: 'dsh-tdt-ed-row', style: { marginBottom: '8px' } },
-            h('span', { style: { fontSize: '13px', color: C.text } }, t('editorFreq')),
-            h(SelectField, {
-              value: draft.periodFreq,
-              options: freqOptions,
-              onChange: value => { patch({ periodFreq: value as PeriodFreq }) },
-              placeholder: t('editorFreqDaily'),
-              emptyLabel: t('editorNoOptions'),
-              ariaLabel: t('editorFreq'),
-              width: 110,
-            }),
-          ),
-          h(PeriodControls, {
-            draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels,
-          }),
-        )
-      : h('div', { id: 'dsh-tdt-ed-schedule-interval-panel', role: 'tabpanel', 'aria-label': t('editorScheduleInterval') },
+    draft.scheduleKind === 'interval'
+      ? h('div', { id: 'dsh-tdt-ed-schedule-interval-panel', role: 'tabpanel', 'aria-label': t('editorScheduleInterval') },
           h(IntervalControls, { draft, patch, t, weekdayLabels }),
-        ),
+        )
+      : h('div', {
+        id: `dsh-tdt-ed-schedule-${draft.periodFreq === 'once' ? 'once' : 'periodic'}-panel`,
+        role: 'tabpanel',
+        'aria-label': draft.periodFreq === 'once' ? t('editorFreqOnce') : t('editorSchedulePeriodic'),
+      },
+        // 频率 = **整行**下拉（照参考图：一个通栏 select，选项里直接读得出「单次 / 每天 / 每周…」）。
+        h(SelectField, {
+          value: draft.periodFreq,
+          options: freqOptions,
+          onChange: value => { patch({ periodFreq: value as PeriodFreq }) },
+          placeholder: t('editorFreqDaily'),
+          emptyLabel: t('editorNoOptions'),
+          ariaLabel: t('editorFreq'),
+          block: true,
+        }),
+        h(PeriodControls, {
+          draft, patch, t, tt, weekdayLabels, calendarLabels, timeLabels,
+        }),
+      ),
     scheduleNote === null ? null : h('p', { className: 'dsh-tdt-ed-warn' }, scheduleNote),
-    h('div', { className: 'dsh-tdt-ed-row', style: { marginTop: '10px' } },
-      h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorTimezone')),
-      h(SelectField, {
+    h('div', { style: { marginTop: '10px', paddingTop: '8px', borderTop: `1px solid ${C.borderL2}` } },
+      h(FieldRow, { label: t('editorTimezone') }, h(SelectField, {
         value: draft.timezone,
         options: tzOptions,
         onChange: value => { patch({ timezone: value }) },
@@ -613,9 +659,8 @@ export function TaskEditorDrawer(props: {
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorTimezone'),
         width: 148,
-      }),
-      h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorWindow')),
-      h(SelectField, {
+      })),
+      h(FieldRow, { label: t('editorWindow') }, h(SelectField, {
         value: draft.window,
         options: windowOptions,
         onChange: value => { patch({ window: value }) },
@@ -623,9 +668,9 @@ export function TaskEditorDrawer(props: {
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWindow'),
         width: 110,
-      }),
+      })),
+      h('p', { className: 'dsh-tdt-ed-hint' }, t('editorWindowHint')),
     ),
-    h('p', { className: 'dsh-tdt-ed-hint' }, t('editorWindowHint')),
   )
 
   // ③ 前置任务（只做界面；怎么校验归另一个任务）。
@@ -755,30 +800,27 @@ export function TaskEditorDrawer(props: {
   const body = tab === 'records'
     ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorRecordsPending'))
     : h('div', null,
-        h(Section, { label: t('editorTitle') },
-          h('input', {
+        // 任务名称 / 编号：标签**塞进框里**（左半段带底 + 分隔线），不再单独占一行。
+        h('div', { className: 'dsh-tdt-ed-section' },
+          h(PrefixedInput, {
+            prefix: t('editorTitle'),
             value: draft.title,
             placeholder: t('editorTitlePh'),
-            onChange: (event: { target: { value: string } }) => { patch({ title: event.target.value }) },
-            'aria-label': t('editorTitle'),
-            className: 'dsh-tdt-ed-input',
-            style: { width: '100%' },
+            onChange: value => { patch({ title: value }) },
           }),
         ),
-        h(Section, { label: t('editorCode') },
-          h('input', {
+        h('div', { className: 'dsh-tdt-ed-section' },
+          h(PrefixedInput, {
+            prefix: t('editorCode'),
             value: draft.code,
             placeholder: t('editorCodePh'),
-            onChange: (event: { target: { value: string } }) => { patch({ code: event.target.value }) },
-            'aria-label': t('editorCode'),
-            className: 'dsh-tdt-ed-input',
-            style: { width: '100%' },
+            onChange: value => { patch({ code: value }) },
           }),
         ),
-        h(Section, { label: undefined }, promptCard),
-        h('div', { style: { height: '16px' } }),
-        h(Section, { label: undefined }, scheduleCard),
-        h('div', { style: { height: '16px' } }),
+        // 各区块间距统一走 `.dsh-tdt-ed-section` 的 margin（此前这里多了两个 16px 空 div，
+        // 导致「编号 → 提示词」比别的间隔小一截）。
+        h('div', { className: 'dsh-tdt-ed-section' }, promptCard),
+        h('div', { className: 'dsh-tdt-ed-section' }, scheduleCard),
         depsBlock,
         advancedBlock,
       )
