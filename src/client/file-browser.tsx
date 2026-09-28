@@ -28,6 +28,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 import {
+  absolutePathOf,
   BytesPreview,
   ErrBox,
   errView,
@@ -80,6 +81,42 @@ function sortEntries(entries: readonly ListEntry[]): ListEntry[] {
     if (ad !== bd) return ad - bd
     return a.name.toLowerCase().localeCompare(b.name.toLowerCase())
   })
+}
+
+/** 宿主绝对路径形态（/ 开头或 Windows 盘符）。 */
+function isAbsoluteish(p: string): boolean {
+  return p.startsWith('/') || p.startsWith('\\') || /^[a-zA-Z]:[\\/]/.test(p)
+}
+
+/**
+ * 把「工作区相对名」的目录解析成宿主绝对路径（面包屑才能从工作区根往下列）。
+ *
+ * 场景（用户 2026-09-29 实测）：交付卡 / 执行记录「产出」列把回契声明的产出**原样**传入
+ * `openFile`，常是工作区相对名（如 `20260928`）⇒ 面包屑只剩这一层。
+ * 官方没有「目录的绝对路径」接口——stat 只认 regular file，locateFile 对目录直接抛
+ * not-regular-file（dsh-api-workspace-files lib/index.js:594）⇒ 反推：
+ * 取目录里任一「文件」子项 stat，`absolutePath = 工作区根 + '/' + 目录 + '/' + 文件名`，
+ * 掐掉尾部文件名即得目录的宿主绝对路径。
+ * 目录为空 / 只有子目录 / stat 不可用或失败 ⇒ 原样返回入参（面包屑退化为相对形式，不阻塞）。
+ */
+async function absolutizeDirViaChild(
+  workspaceFiles: WorkspaceFilesFace,
+  sessionId: string,
+  dir: string,
+  entries: readonly ListEntry[],
+): Promise<string> {
+  if (isAbsoluteish(dir)) return dir
+  const stat = workspaceFiles.stat
+  if (stat === undefined) return dir
+  const file = entries.find(entry => entry.type === 'file')
+  if (file === undefined) return dir
+  try {
+    const abs = absolutePathOf(await stat(sessionId, joinPath(dir, file.name)))
+    if (abs === null || !abs.endsWith('/' + file.name)) return dir
+    return abs.slice(0, abs.length - file.name.length - 1)
+  } catch {
+    return dir
+  }
 }
 
 /** 内联展开目录拉到的子项缓存：loading / ready(子项) / error。 */
@@ -223,19 +260,36 @@ export function FileBrowser(props: {
     setOpenDirs(new Set())
     setChildCache({})
     workspaceFiles.list(sessionId, path)
-      .then((result) => {
+      .then(async (result) => {
         if (!alive) return
         const parsed = listingOf(result)
         if (!isFailed(parsed) && parsed !== null) {
-          // 目录：直接展示树。
-          setDir(path)
+          // 目录：直接展示树。dir 尽量取宿主绝对路径 ⇒ 面包屑从工作区根往下列。
+          // 入口可能是工作区相对名（交付卡/产出列把回契声明原样传入，如 `20260928`），
+          // 直接用入参面包屑只剩这一层（用户 2026-09-29 实测）。官方没有目录级绝对路径
+          // 接口（stat 只认 regular file）⇒ 用目录里任一「文件」子项的 stat 反推；
+          // 解析不出（空目录/只有子目录/stat 缺失）就退回入参，不阻塞浏览。
+          const absDir = await absolutizeDirViaChild(workspaceFiles, sessionId, path, parsed.entries)
+          if (!alive) return
+          setDir(absDir)
           setListing(parsed.entries)
           setTruncated(parsed.truncated)
           setMode('dir')
           return
         }
         // 不是目录（not-directory / not-found 等）⇒ 当作文件预览，dir 取父目录，尽量把父树也列出来。
-        const parent = dirnameOf(path)
+        // 相对名文件先 stat 自身解析宿主绝对路径再取父目录（stat 恰好只认文件，此处可用）。
+        let parent = dirnameOf(path)
+        if (!isAbsoluteish(path)) {
+          const stat = workspaceFiles.stat
+          if (stat !== undefined) {
+            try {
+              const abs = absolutePathOf(await stat(sessionId, path))
+              if (abs !== null) parent = dirnameOf(abs)
+            } catch { /* 解析不出就用入参父目录 */ }
+          }
+        }
+        if (!alive) return
         setDir(parent)
         setViewing(path)
         setMode('file')
@@ -365,8 +419,9 @@ export function FileBrowser(props: {
   }
 
   // 面包屑 = 入参路径（宿主绝对形态，如 /workspace/Temp）逐段展开 ⇒ 从工作区根往下列。
-  // ⚠️ 切勿改用服务端 list 返回的 path：那是 workspacePathOf(root, target) 的**工作区相对**
-  //    形式（dsh-api-workspace-files lib/index.js:494），会丢掉根以下的前导段，
+  // 相对名入口（交付卡/产出列）已在初次进入时经 absolutizeDirViaChild / stat 解析成宿主绝对路径。
+  // ⚠️ 切勿改用服务端 list 返回的 path 当面包屑：那是 workspacePathOf(root, target) 的
+  //    **工作区相对**形式（dsh-api-workspace-files lib/index.js:494），会丢掉根以下的前导段，
   //    面包屑只剩最近一层（2026-09-29 踩过 ⇒ 已回退为入参路径）。
   const crumbs = crumbsOf(dir)
   const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'

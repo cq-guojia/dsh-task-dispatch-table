@@ -110,6 +110,16 @@ function bytesOf(result: unknown): Uint8Array | { failed: unknown } | null {
   return null
 }
 
+/** `stat` 结果防御解析：只取 absolutePath（信封剥壳同款；stat 仅认 regular file）。 */
+export function absolutePathOf(result: unknown): string | null {
+  const envelope = unwrapEnvelope(result)
+  if (envelope.kind === 'error') return null
+  const raw = envelope.payload
+  if (typeof raw !== 'object' || raw === null) return null
+  const abs = (raw as { absolutePath?: unknown }).absolutePath
+  return typeof abs === 'string' && abs !== '' ? abs : null
+}
+
 /** 失败分支判空（TS 收窄用）。 */
 export const isFailed = (value: unknown): value is { failed: unknown } =>
   typeof value === 'object' && value !== null && 'failed' in (value as object)
@@ -173,6 +183,16 @@ export interface WorkspaceFilesFace {
     entries: ReadonlyArray<{ name: string; type: 'file' | 'directory' | 'other'; size?: number }>
     truncated: boolean
   }>
+  /**
+   * 单文件 stat（可选：宿主过旧无此方法时降级）。**只认 regular file**——目录会抛
+   * not-regular-file（locateFile: `entry.type !== "file"` 即 throw，lib/index.js:594）。
+   * 返回 absolutePath（宿主绝对路径，statOf → fs.processPath）。
+   */
+  stat?(
+    sessionId: string,
+    path: string,
+    signal?: AbortSignal,
+  ): Promise<{ absolutePath: string; version?: number | string; bytes?: number }>
 }
 
 /** 错误视图：文案键 + 占位参数（官方 RemoteError 按 code 分支，不按消息文本）。 */

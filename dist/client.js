@@ -334,9 +334,8 @@ window.__ModuleLoader__.load({
 			editorWeekday5: "周五",
 			editorWeekday6: "周六",
 			editorWeekday7: "周日",
-			editorWeekdayAdd: "添加",
-			editorWeekdayEmpty: "不限（每天）",
-			editorWeekdayRemove: "移除{name}",
+			editorWeekdayShorts: "一|二|三|四|五|六|日",
+			editorWeekdayEmpty: "不选 = 每天",
 			editorToday: "今天",
 			editorPrevMonth: "上个月",
 			editorNextMonth: "下个月",
@@ -352,6 +351,7 @@ window.__ModuleLoader__.load({
 			editorWindowHint: "只管开始：从计划时刻起这段时间内允许派发与重试",
 			unitMinutes: "分钟",
 			unitHours: "小时",
+			unitDays: "天",
 			editorDeps: "前置任务",
 			editorDepAdd: "添加依赖",
 			editorDepTask: "任务",
@@ -685,9 +685,8 @@ window.__ModuleLoader__.load({
 			editorWeekday5: "Fri",
 			editorWeekday6: "Sat",
 			editorWeekday7: "Sun",
-			editorWeekdayAdd: "Add",
-			editorWeekdayEmpty: "Any day",
-			editorWeekdayRemove: "Remove {name}",
+			editorWeekdayShorts: "Mo|Tu|We|Th|Fr|Sa|Su",
+			editorWeekdayEmpty: "None = every day",
 			editorToday: "Today",
 			editorPrevMonth: "Previous month",
 			editorNextMonth: "Next month",
@@ -703,6 +702,7 @@ window.__ModuleLoader__.load({
 			editorWindowHint: "Start only: dispatch and retries are allowed within this window",
 			unitMinutes: "minutes",
 			unitHours: "hours",
+			unitDays: "days",
 			editorDeps: "Depends on",
 			editorDepAdd: "Add dependency",
 			editorDepTask: "Task",
@@ -3849,6 +3849,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(result)}`);
 			return null;
 		}
+		/** `stat` 结果防御解析：只取 absolutePath（信封剥壳同款；stat 仅认 regular file）。 */
+		function absolutePathOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return null;
+			const raw = envelope.payload;
+			if (typeof raw !== "object" || raw === null) return null;
+			const abs = raw.absolutePath;
+			return typeof abs === "string" && abs !== "" ? abs : null;
+		}
 		/** 失败分支判空（TS 收窄用）。 */
 		const isFailed = (value) => typeof value === "object" && value !== null && "failed" in value;
 		/** `list` 结果防御解析：返回 WorkspaceDirectoryListing 或失败/非法信封。 */
@@ -4145,6 +4154,35 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 			});
 		}
+		/** 宿主绝对路径形态（/ 开头或 Windows 盘符）。 */
+		function isAbsoluteish(p) {
+			return p.startsWith("/") || p.startsWith("\\") || /^[a-zA-Z]:[\\/]/.test(p);
+		}
+		/**
+		* 把「工作区相对名」的目录解析成宿主绝对路径（面包屑才能从工作区根往下列）。
+		*
+		* 场景（用户 2026-09-29 实测）：交付卡 / 执行记录「产出」列把回契声明的产出**原样**传入
+		* `openFile`，常是工作区相对名（如 `20260928`）⇒ 面包屑只剩这一层。
+		* 官方没有「目录的绝对路径」接口——stat 只认 regular file，locateFile 对目录直接抛
+		* not-regular-file（dsh-api-workspace-files lib/index.js:594）⇒ 反推：
+		* 取目录里任一「文件」子项 stat，`absolutePath = 工作区根 + '/' + 目录 + '/' + 文件名`，
+		* 掐掉尾部文件名即得目录的宿主绝对路径。
+		* 目录为空 / 只有子目录 / stat 不可用或失败 ⇒ 原样返回入参（面包屑退化为相对形式，不阻塞）。
+		*/
+		async function absolutizeDirViaChild(workspaceFiles, sessionId, dir, entries) {
+			if (isAbsoluteish(dir)) return dir;
+			const stat = workspaceFiles.stat;
+			if (stat === void 0) return dir;
+			const file = entries.find((entry) => entry.type === "file");
+			if (file === void 0) return dir;
+			try {
+				const abs = absolutePathOf(await stat(sessionId, joinPath(dir, file.name)));
+				if (abs === null || !abs.endsWith("/" + file.name)) return dir;
+				return abs.slice(0, abs.length - file.name.length - 1);
+			} catch {
+				return dir;
+			}
+		}
 		/** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
 		function FileBody(props) {
 			const { workspaceFiles, sessionId, path, sourceView, reloadNonce, t } = props;
@@ -4277,17 +4315,27 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setMenuOpen(false);
 				setOpenDirs(/* @__PURE__ */ new Set());
 				setChildCache({});
-				workspaceFiles.list(sessionId, path).then((result) => {
+				workspaceFiles.list(sessionId, path).then(async (result) => {
 					if (!alive) return;
 					const parsed = listingOf(result);
 					if (!isFailed(parsed) && parsed !== null) {
-						setDir(path);
+						const absDir = await absolutizeDirViaChild(workspaceFiles, sessionId, path, parsed.entries);
+						if (!alive) return;
+						setDir(absDir);
 						setListing(parsed.entries);
 						setTruncated(parsed.truncated);
 						setMode("dir");
 						return;
 					}
-					const parent = dirnameOf(path);
+					let parent = dirnameOf(path);
+					if (!isAbsoluteish(path)) {
+						const stat = workspaceFiles.stat;
+						if (stat !== void 0) try {
+							const abs = absolutePathOf(await stat(sessionId, path));
+							if (abs !== null) parent = dirnameOf(abs);
+						} catch {}
+					}
+					if (!alive) return;
 					setDir(parent);
 					setViewing(path);
 					setMode("file");
@@ -5174,90 +5222,67 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.labels.confirm))), document.body) : null);
 		}
 		/**
-		* 周几多选：已选项 = 官方 `Pill`（点一下移除，尾随 ✕），末尾 `＋` 打开官方 `Menu` 添加。
-		* 值 = ISO 序号 1..7（周一 = 1），与参考图一致。
+		* 周几多选 = 一排**小方块**（28×28，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
+		*
+		* 2026-09-29 用户返工：原来的实现是「官方 Pill chips + 尾随 ✕ + ＋ 菜单」，用户评价
+		* 「特别难看」「太大了」⇒ 换成紧凑方块；一个都不选 = 每天（间隔档就是这个语义）。
 		*/
 		function WeekdayPicker(props) {
-			const [open, setOpen] = (0, react.useState)(false);
+			const [hover, setHover] = (0, react.useState)(null);
 			const selected = new Set(props.value);
-			const items = props.labels.weekdays.map((name, index) => ({
-				id: String(index + 1),
-				label: name
-			}));
 			const toggle = (day) => {
 				const next = selected.has(day) ? props.value.filter((item) => item !== day) : [...props.value, day];
 				props.onChange(next.slice().sort((a, b) => a - b));
 			};
-			const addButton = (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-field",
-				disabled: props.disabled,
-				"aria-haspopup": "menu",
-				"aria-expanded": open,
-				"aria-label": props.labels.add,
-				title: props.labels.add,
-				onClick: () => {
-					setOpen(!open);
-				},
-				style: {
-					display: "inline-flex",
-					alignItems: "center",
-					gap: "4px",
-					height: "24px",
-					padding: "0 8px",
-					border: `1px dashed ${C$1.borderL2}`,
-					borderRadius: C$1.radiusSm,
-					background: "transparent",
-					color: C$1.textDim,
-					font: "inherit",
-					fontSize: "12px",
-					cursor: props.disabled === true ? "not-allowed" : "pointer"
-				}
-			}, `＋ ${props.labels.add}`);
 			return (0, react.createElement)("div", { style: {
 				display: "flex",
-				flexWrap: "wrap",
 				alignItems: "center",
-				gap: "6px",
-				boxSizing: "border-box",
-				minHeight: "36px",
-				padding: "5px 8px",
-				border: `0.5px solid ${C$1.borderL4}`,
-				borderRadius: C$1.radiusMd,
-				background: C$1.layer1
-			} }, props.value.length === 0 ? (0, react.createElement)("span", { style: {
-				fontSize: "13px",
+				flexWrap: "wrap",
+				gap: "6px"
+			} }, props.labels.shorts.map((short, index) => {
+				const day = index + 1;
+				const on = selected.has(day);
+				const name = props.labels.weekdays[index] ?? String(day);
+				return (0, react.createElement)("button", {
+					key: day,
+					type: "button",
+					className: "dsh-tdt-ed-field",
+					disabled: props.disabled,
+					"aria-pressed": on,
+					"aria-label": name,
+					title: name,
+					onClick: () => {
+						if (props.disabled !== true) toggle(day);
+					},
+					onPointerEnter: () => {
+						setHover(day);
+					},
+					onPointerLeave: () => {
+						setHover((current) => current === day ? null : current);
+					},
+					style: {
+						flex: "none",
+						width: "28px",
+						height: "28px",
+						padding: 0,
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						border: `0.5px solid ${on ? C$1.business : C$1.borderL4}`,
+						borderRadius: C$1.radiusSm,
+						background: on ? C$1.business : hover === day ? C$1.hover : C$1.layer1,
+						color: on ? C$1.brandFg : C$1.textDim,
+						font: "inherit",
+						fontSize: "12px",
+						lineHeight: "18px",
+						cursor: props.disabled === true ? "not-allowed" : "pointer",
+						transition: transition$1
+					}
+				}, short);
+			}), props.value.length === 0 ? (0, react.createElement)("span", { style: {
+				fontSize: "12px",
 				color: C$1.dimmed
-			} }, props.labels.empty) : props.value.map((day) => (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Pill, {
-				key: day,
-				active: true,
-				onClick: () => {
-					if (props.disabled !== true) toggle(day);
-				},
-				"aria-label": props.labels.remove(props.labels.weekdays[day - 1] ?? String(day)),
-				title: props.labels.remove(props.labels.weekdays[day - 1] ?? String(day)),
-				style: {
-					display: "inline-flex",
-					alignItems: "center",
-					gap: "4px",
-					fontSize: "12px"
-				}
-			}, (0, react.createElement)("span", null, props.labels.weekdays[day - 1] ?? String(day)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 12 }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open,
-				anchor: addButton,
-				items,
-				selectedIds: props.value.map(String),
-				selection: "check",
-				align: "start",
-				portal: true,
-				onSelect: (id) => {
-					setOpen(false);
-					toggle(Number(id));
-				},
-				onClose: () => {
-					setOpen(false);
-				}
-			}));
+			} }, props.labels.empty) : null);
 		}
 		//#endregion
 		//#region src/client/task-editor-css.ts
@@ -5370,7 +5395,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
-		function emptyTaskDraft() {
+		function emptyTaskDraft(hostTimezone = "") {
 			return {
 				title: "",
 				code: "",
@@ -5395,21 +5420,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				intervalStep: "1",
 				date: todayIso(),
 				time: "09:00",
-				timezone: "",
+				timezone: hostTimezone,
 				window: "PT4H",
 				maxAttempts: "1",
 				validStatuses: "ok",
 				deps: []
 			};
 		}
-		const WINDOW_PRESETS = [
-			"PT30M",
-			"PT1H",
-			"PT2H",
-			"PT4H",
-			"PT8H",
-			"P1D"
-		];
 		/** ISO 序号（1..7）→ cron 星期位（0..6）。 */
 		function cronDow(day) {
 			return day === 7 ? 0 : day;
@@ -5521,7 +5538,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				value: String(index + 1),
 				label: tt("editorDayOption", { d: index + 1 })
 			})), [tt]);
-			return (0, react.createElement)("div", { style: { marginTop: "8px" } }, draft.periodFreq === "once" ? (0, react.createElement)(FieldRow, { label: t("editorDate") }, (0, react.createElement)(DateField, {
+			return (0, react.createElement)("div", { style: {
+				marginTop: "8px",
+				display: "flex",
+				flexDirection: "column",
+				gap: "8px"
+			} }, draft.periodFreq === "once" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(DateField, {
 				value: draft.date,
 				onChange: (value) => {
 					patch({ date: value });
@@ -5530,7 +5552,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorDate"),
 				labels: calendarLabels,
 				width: 148
-			})) : null, draft.periodFreq === "yearly" ? (0, react.createElement)(FieldRow, { label: t("editorMonth") }, (0, react.createElement)(SelectField, {
+			}), timeField) : null, draft.periodFreq === "yearly" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(SelectField, {
 				value: draft.yearMonth,
 				options: monthOptions,
 				onChange: (value) => {
@@ -5540,7 +5562,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorMonth"),
 				width: 96
-			})) : null, draft.periodFreq === "monthly" || draft.periodFreq === "yearly" ? (0, react.createElement)(FieldRow, { label: t("editorDayOfMonth") }, (0, react.createElement)(SelectField, {
+			})) : null, draft.periodFreq === "monthly" || draft.periodFreq === "yearly" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(SelectField, {
 				value: draft.monthDay,
 				options: dayOptions,
 				onChange: (value) => {
@@ -5550,16 +5572,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorDayOfMonth"),
 				width: 110
-			})) : null, draft.periodFreq === "weekly" || draft.periodFreq === "biweekly" ? (0, react.createElement)(FieldRow, { label: t("editorScheduleOn") }, (0, react.createElement)("div", { style: {
-				flex: "1 1 auto",
-				minWidth: 0
-			} }, (0, react.createElement)(WeekdayPicker, {
+			})) : null, draft.periodFreq === "weekly" || draft.periodFreq === "biweekly" ? (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
 					patch({ weekdays: value });
 				},
 				labels: weekdayLabels
-			}))) : null, (0, react.createElement)(FieldRow, { label: t("editorTime") }, timeField), draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
+			}) : null, draft.periodFreq === "once" ? null : (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, timeField), draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
 		}
 		/** 间隔档的子控件（照参考图：每隔 N 单位执行一次 + 周几筛选）。 */
 		function IntervalControls(props) {
@@ -5571,7 +5590,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				value: "hour",
 				label: t("unitHours")
 			}];
-			return (0, react.createElement)("div", null, (0, react.createElement)(FieldRow, { label: t("editorIntervalEvery") }, (0, react.createElement)("input", {
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "8px"
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				color: C$1.text
+			} }, t("editorIntervalEvery")), (0, react.createElement)("input", {
 				type: "number",
 				min: 1,
 				value: draft.intervalStep,
@@ -5595,18 +5621,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorIntervalUnit"),
 				width: 96
 			}), (0, react.createElement)("span", { style: {
-				fontSize: "12px",
-				color: C$1.textDim
-			} }, t("editorIntervalSuffix"))), (0, react.createElement)(FieldRow, { label: t("editorScheduleOn") }, (0, react.createElement)("div", { style: {
-				flex: "1 1 auto",
-				minWidth: 0
-			} }, (0, react.createElement)(WeekdayPicker, {
+				fontSize: "13px",
+				color: C$1.text
+			} }, t("editorIntervalSuffix"))), (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
 					patch({ weekdays: value });
 				},
 				labels: weekdayLabels
-			}))));
+			}));
 		}
 		/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 		const WIDTH_KEY = "dsh-tdt-editor-width";
@@ -5629,7 +5652,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, hostTimezone, onClose, onSave } = props;
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
@@ -5673,12 +5696,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				window.addEventListener("pointermove", onMove);
 				window.addEventListener("pointerup", onUp);
 			}, [width]);
+			/** 周几的**单字**标签（方块上显示；`editorWeekdayShorts` 里以 `|` 分隔，两种语言各自给全）。 */
+			const weekdayShorts = (0, react.useMemo)(() => t("editorWeekdayShorts").split("|"), [t]);
 			const weekdayLabels = (0, react.useMemo)(() => ({
 				weekdays: WEEKDAY_KEYS.map((key) => t(key)),
-				add: t("editorWeekdayAdd"),
-				empty: t("editorWeekdayEmpty"),
-				remove: (name) => tt("editorWeekdayRemove", { name })
-			}), [t, tt]);
+				shorts: weekdayShorts,
+				empty: t("editorWeekdayEmpty")
+			}), [t, weekdayShorts]);
 			const calendarLabels = (0, react.useMemo)(() => ({
 				today: t("editorToday"),
 				prevMonth: t("editorPrevMonth"),
@@ -5689,16 +5713,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					y: year,
 					m: month
 				}),
-				weekdays: [
-					"editorWeekday1",
-					"editorWeekday2",
-					"editorWeekday3",
-					"editorWeekday4",
-					"editorWeekday5",
-					"editorWeekday6",
-					"editorWeekday7"
-				].map((key) => t(key).replace(/^周/, ""))
-			}), [t, tt]);
+				weekdays: weekdayShorts
+			}), [
+				t,
+				tt,
+				weekdayShorts
+			]);
 			const timeLabels = (0, react.useMemo)(() => ({
 				hour: t("editorHour"),
 				minute: t("editorMinute"),
@@ -5721,10 +5741,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			];
 			const freqOptions = [
 				{
-					value: "once",
-					label: t("editorFreqOnce")
-				},
-				{
 					value: "daily",
 					label: t("editorFreqDaily")
 				},
@@ -5745,17 +5761,42 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					label: t("editorFreqYearly")
 				}
 			];
-			const tzOptions = [{
-				value: "Asia/Shanghai",
-				label: "Asia/Shanghai"
-			}, {
+			const tzOptions = props.hostTimezone === "" ? [{
 				value: "UTC",
 				label: "UTC"
-			}];
-			const windowOptions = WINDOW_PRESETS.map((value) => ({
-				value,
-				label: value
-			}));
+			}] : [{
+				value: props.hostTimezone,
+				label: props.hostTimezone
+			}, ...props.hostTimezone === "UTC" ? [] : [{
+				value: "UTC",
+				label: "UTC"
+			}]];
+			const windowOptions = [
+				{
+					value: "PT30M",
+					label: `30 ${t("unitMinutes")}`
+				},
+				{
+					value: "PT1H",
+					label: `1 ${t("unitHours")}`
+				},
+				{
+					value: "PT2H",
+					label: `2 ${t("unitHours")}`
+				},
+				{
+					value: "PT4H",
+					label: `4 ${t("unitHours")}`
+				},
+				{
+					value: "PT8H",
+					label: `8 ${t("unitHours")}`
+				},
+				{
+					value: "P1D",
+					label: `1 ${t("unitDays")}`
+				}
+			];
 			const scheduleNote = draft.scheduleKind === "periodic" && draft.periodFreq === "biweekly" ? t("editorBiweeklyWarn") : null;
 			/**
 			* 顶部三档的当前值：**推导**出来的，不是另存一份状态——
@@ -5827,7 +5868,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorModel"),
 				align: "end"
 			})));
-			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorSchedule")), (0, react.createElement)(Segmented, {
+			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorSchedule")), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				flex: "none"
+			} }, scheduleTab === "periodic" ? (0, react.createElement)(SelectField, {
+				value: draft.periodFreq,
+				options: freqOptions,
+				onChange: (value) => {
+					patch({ periodFreq: value });
+				},
+				placeholder: t("editorFreqDaily"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorFreq"),
+				width: 104
+			}) : null, (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-schedule",
 				value: scheduleTab,
 				options: [
@@ -5863,7 +5919,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				label: t("editorSchedule"),
 				className: "dsh-tdt-ed-seg"
-			})), draft.scheduleKind === "interval" ? (0, react.createElement)("div", {
+			}))), draft.scheduleKind === "interval" ? (0, react.createElement)("div", {
 				id: "dsh-tdt-ed-schedule-interval-panel",
 				role: "tabpanel",
 				"aria-label": t("editorScheduleInterval")
@@ -5876,17 +5932,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				id: `dsh-tdt-ed-schedule-${draft.periodFreq === "once" ? "once" : "periodic"}-panel`,
 				role: "tabpanel",
 				"aria-label": draft.periodFreq === "once" ? t("editorFreqOnce") : t("editorSchedulePeriodic")
-			}, (0, react.createElement)(SelectField, {
-				value: draft.periodFreq,
-				options: freqOptions,
-				onChange: (value) => {
-					patch({ periodFreq: value });
-				},
-				placeholder: t("editorFreqDaily"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorFreq"),
-				block: true
-			}), (0, react.createElement)(PeriodControls, {
+			}, (0, react.createElement)(PeriodControls, {
 				draft,
 				patch,
 				t,
@@ -6478,7 +6524,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		];
 		const EMPTY_EDITOR_OPTIONS = {
 			workspaces: [],
-			models: []
+			models: [],
+			hostTimezone: ""
 		};
 		/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 		const encodeModelValue = (provider, id) => `${provider}/${id}`;
@@ -6600,7 +6647,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 					setEditorOptions({
 						workspaces,
-						models
+						models,
+						hostTimezone: typeof body.timezone === "string" ? body.timezone : ""
 					});
 				}).catch(() => {});
 				return () => {
@@ -6787,7 +6835,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setEditor({
 						mode: "create",
-						draft: emptyTaskDraft()
+						draft: emptyTaskDraft(editorOptions.hostTimezone)
 					});
 				}
 			}, `＋ ${t("editorNew")}`))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
@@ -6990,6 +7038,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				workspaces: editorOptions.workspaces,
 				models: editorOptions.models,
 				tasks: taskOptions,
+				hostTimezone: editorOptions.hostTimezone,
 				onClose: () => {
 					setEditor(null);
 				}
