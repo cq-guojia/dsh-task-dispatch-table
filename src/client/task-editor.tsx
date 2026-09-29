@@ -48,6 +48,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 import { MD_LABELS } from './md-labels'
+import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf } from '../attachment-allowlist.js'
 import { FileBrowser } from './file-browser'
 import type { WorkspaceFilesFace } from './file-preview'
 
@@ -969,12 +970,14 @@ export function TaskEditorDrawer(props: {
     const list = Array.from(files)
     if (list.length === 0 || uploading) return
     setUploadError(null)
-    // 先验尺寸再发包（用户 2026-09-29：超限就该当场拒，不该白转半天才报错）。
-    // 超限的跳过并提示，其余照传。
-    const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024
+    // 发包前当场预检（与宿主共用同一份约束，src/attachment-allowlist.ts）：
+    // 尺寸超限 / 扩展名不在白名单都直接拒，不白传（用户 2026-09-29：不该转半天才报错）。
+    // 不合规的跳过并提示，其余照传。
     const oversize = list.filter(file => file.size > ATTACHMENT_MAX_BYTES)
-    const sendable = list.filter(file => file.size <= ATTACHMENT_MAX_BYTES)
+    const badType = list.filter(file => file.size <= ATTACHMENT_MAX_BYTES && !ALLOWED_ATTACHMENT_EXT.has(extOf(file.name)))
+    const sendable = list.filter(file => file.size <= ATTACHMENT_MAX_BYTES && ALLOWED_ATTACHMENT_EXT.has(extOf(file.name)))
     if (oversize.length > 0) setUploadError('payload-too-large')
+    if (badType.length > 0) setUploadError('file-type-not-allowed')
     if (sendable.length === 0) return
     setUploading(true)
     // ⚠️ 多选修复：逐个收进本地数组、循环末**一次性** patch。此前每次 addAttachment 都展开

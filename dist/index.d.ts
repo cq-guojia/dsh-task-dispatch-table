@@ -9,4 +9,6 @@ export declare const name = "dsh-task-dispatch-table";
 export declare const inject: readonly ["timer", "agents", "sessions", "workspaceRegistry", "sessionTitle", "sessionProjections"];
 export { Config, resolveStatePath };
 export type { PluginConfig };
+/** 附件约束（白名单/上限/扩展名解析）与浏览器端预检**共用同一份**，防两处漂移。 */
+export { ATTACHMENT_MAX_BYTES, ALLOWED_ATTACHMENT_EXT, extOf } from './attachment-allowlist.js';
 export declare function apply(ctx: HostContext, config: unknown): void;

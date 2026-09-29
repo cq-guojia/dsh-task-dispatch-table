@@ -54,3 +54,9 @@
 - **锚点来源（官方数据）**：`/options` 路由按工作区下发 `anchorSessionId` = `entity.sessionIds` 末位（最近一个会话；`@deepseek-ai/dsh-workspace@0.2.0-rc.1` `lib/types/entity.d.ts:68` 核实有该 getter，归档会话保留槽位 ⇒ scope 解析无需激活 agent）。没有会话的工作区不下发 ⇒ 选择器显示「该工作区还没有历史会话，暂无法浏览其文件，请使用上传」空态。
 - **官方 Toast**：`primitives` 公开导出（0.2.0-rc.1 `lib/types/Toast.d.ts`）：`{text, tone?, anchor?, holdMs?, onDone}`，重播须换 key 重挂；`primitives.d.ts` 补消费面声明。顶部居中 body 传送门，与抽屉无层叠冲突。
 - **其余两处**：① 删「暂无附加文件」空态文案（投放框常驻已是空态，键 `editorAttachmentNone` 全删）；② **上传先验尺寸再发包**——超 20MB 当场报「文件超过大小限制」，不再白传半天才失败（此前服务端才拦，用户真机抱怨「转了很久才报错」）。
+
+## 八、第四轮（预检补格式 + 附件落点死规则）
+
+- **白名单收敛为共享模块** `src/attachment-allowlist.ts`（`ATTACHMENT_MAX_BYTES` / `ALLOWED_ATTACHMENT_EXT` / `extOf`）：宿主路由与浏览器端预检**必须同一份**，防两处漂移；客户端打包 alwaysBundle 内联、宿主 tsc 直编。
+- **客户端预检补格式判断**：发包前先滤尺寸、再滤扩展名（不在白名单 ⇒ 当场报「格式不支持」），不合规跳过、其余照传；两类都不合规时以最后一条错误显示。
+- **附件落点死规则（用户拍板，写进决策 46 ⑥）**：link 型附件必须位于任务所选工作区内——UI 选择器只列已选工作区是第一道闸，**P2 保存链路宿主必须二道校验（ref 归一后越界 ⇒ 拒绝保存）**；upload 型落插件数据根不受此限。
