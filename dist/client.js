@@ -359,7 +359,7 @@ window.__ModuleLoader__.load({
 			editorAttachments: "附加文件",
 			editorAttachmentLink: "链接",
 			editorAttachmentUpload: "已上传",
-			editorAttachmentRemove: "删除",
+			editorAttachmentRemove: "移除",
 			editorAttachmentAdd: "添加文件",
 			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
 			editorPickWorkspaceFile: "选择工作区文件",
@@ -30764,7 +30764,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		/**
 		Elements are used to compose syntax nodes during parsing.
 		*/
-		var Element$1 = class {
+		var Element$2 = class {
 			/**
 			@internal
 			*/
@@ -30812,7 +30812,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}
 		};
 		function elt(type, from, to, children) {
-			return new Element$1(type, from, to, children);
+			return new Element$2(type, from, to, children);
 		}
 		const EmphasisUnderscore = {
 			resolve: "Emphasis",
@@ -31103,7 +31103,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 					if (open.type.mark) content.push(this.elt(open.type.mark, start, open.to));
 					for (let k = j + 1; k < i; k++) {
-						if (this.parts[k] instanceof Element$1) content.push(this.parts[k]);
+						if (this.parts[k] instanceof Element$2) content.push(this.parts[k]);
 						this.parts[k] = null;
 					}
 					if (close.type.mark) content.push(this.elt(close.type.mark, close.from, end));
@@ -31115,7 +31115,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				let result = [];
 				for (let i = from; i < this.parts.length; i++) {
 					let part = this.parts[i];
-					if (part instanceof Element$1) result.push(part);
+					if (part instanceof Element$2) result.push(part);
 				}
 				return result;
 			}
@@ -31182,7 +31182,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				while (eI < elts.length && elts[eI].to < mark.to) eI++;
 				if (eI < elts.length && elts[eI].from < mark.from) {
 					let e = elts[eI];
-					if (e instanceof Element$1) elts[eI] = new Element$1(e.type, e.from, e.to, injectMarks(e.children, [mark]));
+					if (e instanceof Element$2) elts[eI] = new Element$2(e.type, e.from, e.to, injectMarks(e.children, [mark]));
 				} else elts.splice(eI++, 0, mark);
 			}
 			return elts;
@@ -33155,7 +33155,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		const IncompleteTag = 14;
 		const IncompleteCloseTag = 15;
 		const commentContent$1 = 59;
-		const Element = 21;
+		const Element$1 = 21;
 		const TagName = 23;
 		const Attribute = 24;
 		const AttributeName = 25;
@@ -33315,7 +33315,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return startTagTerms.indexOf(term) > -1 ? new ElementContext(tagNameAfter(input, 1) || "", context) : context;
 			},
 			reduce(context, term) {
-				return term == Element && context ? context.parent : context;
+				return term == Element$1 && context ? context.parent : context;
 			},
 			reuse(context, node, stack, input) {
 				let type = node.type.id;
@@ -33557,7 +33557,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				if (id == ScriptText) return maybeNest(node, input, script);
 				if (id == StyleText) return maybeNest(node, input, style);
 				if (id == TextareaText) return maybeNest(node, input, textarea);
-				if (id == Element && other.length) {
+				if (id == Element$1 && other.length) {
 					let n = node.node, open = n.firstChild, tagName = open && findTagName(open, input), attrs;
 					if (tagName) {
 						for (let tag of other) if (tag.tag == tagName && (!tag.attrs || tag.attrs(attrs || (attrs = getAttrs(open, input))))) {
@@ -37939,6 +37939,35 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
 			const [pickerWs, setPickerWs] = (0, react.useState)("");
+			const pickerAnchorRef = (0, react.useRef)(null);
+			const pickerPanelRef = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				if (!pickerOpen) return;
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					event.preventDefault();
+					setPickerOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [pickerOpen]);
+			(0, react.useEffect)(() => {
+				if (!pickerOpen) return;
+				const onPointerDown = (event) => {
+					const target = event.target;
+					if (!(target instanceof Element)) return;
+					if (pickerPanelRef.current?.contains(target) === true) return;
+					if (pickerAnchorRef.current?.contains(target) === true) return;
+					if (target.closest("[role=\"menu\"], [role=\"menuitem\"], [class*=\"menusurface\" i], [class*=\"menuitem\" i]") !== null) return;
+					setPickerOpen(false);
+				};
+				document.addEventListener("pointerdown", onPointerDown, true);
+				return () => {
+					document.removeEventListener("pointerdown", onPointerDown, true);
+				};
+			}, [pickerOpen]);
 			const [uploadError, setUploadError] = (0, react.useState)(null);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
@@ -38259,7 +38288,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex"
 			} }, (0, react.createElement)("button", {
 				type: "button",
+				ref: pickerAnchorRef,
+				"aria-haspopup": "dialog",
+				"aria-expanded": pickerOpen,
 				onClick: () => {
+					if (pickerOpen) {
+						setPickerOpen(false);
+						return;
+					}
 					setPickerWs(draft.workspace !== "" ? draft.workspace : workspaces[0]?.value ?? "");
 					setPickerOpen(true);
 				},
@@ -38641,36 +38677,36 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onPointerDown: (event) => {
 					startResize({ clientX: event.clientX });
 				}
-			}), panelInner), pickerOpen ? (0, react.createElement)("div", { style: {
-				position: "absolute",
-				inset: 0,
-				zIndex: 30,
+			}), panelInner), pickerOpen && pickerAnchorRef.current !== null ? (0, react_dom.createPortal)((0, react.createElement)("div", {
+				ref: pickerPanelRef,
+				role: "dialog",
+				"aria-label": t("editorPickWorkspaceFile"),
+				style: (() => {
+					const rect = pickerAnchorRef.current.getBoundingClientRect();
+					return {
+						position: "fixed",
+						zIndex: 1100,
+						display: "flex",
+						flexDirection: "column",
+						overflow: "hidden",
+						right: Math.max(12, window.innerWidth - rect.left + 8),
+						bottom: Math.max(12, window.innerHeight - rect.bottom),
+						width: "min(560px, calc(100vw - 24px))",
+						height: "min(440px, 55vh)",
+						background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
+						border: `1px solid ${C$2.borderL2}`,
+						borderRadius: "var(--dsh-radius-panel, 10px)",
+						boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))"
+					};
+				})()
+			}, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
-				justifyContent: "center",
-				padding: "24px",
-				background: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))"
-			} }, (0, react.createElement)("div", { style: {
-				width: "min(720px, 100%)",
-				height: "72vh",
-				boxSizing: "border-box",
-				background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
-				borderRadius: "var(--dsh-radius-panel, 10px)",
-				boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
-				display: "flex",
-				flexDirection: "column",
-				overflow: "hidden"
-			} }, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "12px",
-				padding: "10px 14px",
-				borderBottom: `1px solid ${C$2.borderL2}`
-			} }, (0, react.createElement)("span", { style: {
-				fontSize: "14px",
-				fontWeight: 600,
+				gap: "8px",
+				padding: "8px 10px",
+				borderBottom: `1px solid ${C$2.borderL2}`,
 				flex: "none"
-			} }, t("editorPickWorkspaceFile")), (0, react.createElement)("div", { style: {
+			} }, (0, react.createElement)("div", { style: {
 				flex: "1 1 auto",
 				minWidth: 0
 			} }, (0, react.createElement)(SelectField, {
@@ -38684,13 +38720,28 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorWorkspace"),
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 14 }),
 				size: "sm"
-			})), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
+			})), (0, react.createElement)("button", {
+				type: "button",
+				"aria-label": t("editorPickerCancel"),
+				title: t("editorPickerCancel"),
 				onClick: () => {
 					setPickerOpen(false);
+				},
+				style: {
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					width: "26px",
+					height: "26px",
+					padding: 0,
+					border: "none",
+					borderRadius: C$2.radiusSm,
+					background: "transparent",
+					color: C$2.textDim,
+					cursor: "pointer",
+					font: "inherit"
 				}
-			}, t("editorPickerCancel"))), (() => {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))), (() => {
 				const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? "";
 				return workspaceFiles !== null && workspaceFiles !== void 0 && anchorSessionId !== "" ? (0, react.createElement)(FileBrowser, {
 					key: `${pickerWs}:${anchorSessionId}`,
@@ -38728,7 +38779,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					color: C$2.textDim,
 					fontSize: "13px"
 				} }, t("editorPickerNoSession"));
-			})())) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
+			})()), document.body) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
 				t,
 				onStay: () => {
 					setConfirmDiscard(false);

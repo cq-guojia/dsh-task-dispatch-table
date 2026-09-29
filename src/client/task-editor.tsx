@@ -47,6 +47,7 @@ import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 import { MD_LABELS } from './md-labels'
+import { createPortal } from 'react-dom'
 import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf } from '../attachment-allowlist.js'
 import { FileBrowser } from './file-browser'
 import type { WorkspaceFilesFace } from './file-preview'
@@ -804,6 +805,36 @@ export function TaskEditorDrawer(props: {
   // 选择器可浏览任意有历史会话的工作区（用户 2026-09-29 放开「必须先选任务工作区」）：
   // pickerWs = 当前浏览的工作区 title，打开时默认任务已选工作区（没有就取第一个有锚点的）。
   const [pickerWs, setPickerWs] = useState('')
+  // 选择器浮层：锚定「工作区文件」方按钮（在其左侧展开、下缘齐平），不用全屏弹窗（用户 2026-09-29）。
+  const pickerAnchorRef = useRef<HTMLButtonElement | null>(null)
+  const pickerPanelRef = useRef<HTMLDivElement | null>(null)
+  // Esc 先关浮层（preventDefault ⇒ 抽屉的 window Esc 让路，同 DateField 惯例）。
+  useEffect(() => {
+    if (!pickerOpen) return
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setPickerOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown) }
+  }, [pickerOpen])
+  // 点外关闭（自实现，不用官方 useDismissOnOutsidePointer）：浮层头部的工作区下拉是
+  // portal 到 body 的官方 Menu，点菜单项会被误判「点外」把整个浮层关掉 —— 这里豁免
+  // 官方菜单面（role / class 双保险）再关。
+  useEffect(() => {
+    if (!pickerOpen) return
+    const onPointerDown = (event: PointerEvent): void => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (pickerPanelRef.current?.contains(target) === true) return
+      if (pickerAnchorRef.current?.contains(target) === true) return
+      if (target.closest('[role="menu"], [role="menuitem"], [class*="menusurface" i], [class*="menuitem" i]') !== null) return
+      setPickerOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointerDown, true)
+    return () => { document.removeEventListener('pointerdown', onPointerDown, true) }
+  }, [pickerOpen])
   // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
   const [uploadError, setUploadError] = useState<string | null>(null)
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
@@ -1042,7 +1073,11 @@ export function TaskEditorDrawer(props: {
         // 正方形虚线按钮（用户 2026-09-29：与投放区同语言——加号在上、文字在下）。
         h('button', {
           type: 'button',
+          ref: pickerAnchorRef,
+          'aria-haspopup': 'dialog',
+          'aria-expanded': pickerOpen,
           onClick: () => {
+            if (pickerOpen) { setPickerOpen(false); return }
             // 默认浏览任务已选工作区；没选就取第一个工作区（用户 2026-09-29：默认最近/第一个都行）。
             setPickerWs(draft.workspace !== '' ? draft.workspace : (workspaces[0]?.value ?? ''))
             setPickerOpen(true)
@@ -1395,15 +1430,31 @@ export function TaskEditorDrawer(props: {
       }),
       panelInner,
     ),
-    // 选择工作区文件：覆盖层（盖在表单/编辑器之上、随抽屉一起在宿主之上）；复用 FileBrowser 的目录树，
-    // picker 模式下点文件即回调、不进预览。**可浏览任意工作区**（用户 2026-09-29 放开）：
-    // 每个工作区用自己最近的会话当锚点（/options 逐工作区下发 anchorSessionId，官方 entity.sessionIds 末位）；
-    // 切工作区按 `${ws}:${anchor}` 重挂 FileBrowser（浏览状态归零）。无锚点的工作区列不出来 ⇒ 空态。
-    pickerOpen
-      ? h('div', { style: { position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' } },
-        h('div', { style: { width: 'min(720px, 100%)', height: '72vh', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsh-radius-panel, 10px)', boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
-            h('span', { style: { fontSize: '14px', fontWeight: 600, flex: 'none' } }, t('editorPickWorkspaceFile')),
+    // 选择工作区文件：**锚定浮层**（用户 2026-09-29：不要全屏弹窗，像选日期那样在按钮旁出浮窗，
+    // 且不用那么高）。portal 到 body 躲抽屉层叠；面板在方按钮**左侧**展开、**下缘与按钮下缘齐平**；
+    // 高度收窄（440px / 55vh）。复用 FileBrowser（picker 模式，点文件即回调）。
+    pickerOpen && pickerAnchorRef.current !== null
+      ? createPortal(h('div', {
+          ref: pickerPanelRef,
+          role: 'dialog',
+          'aria-label': t('editorPickWorkspaceFile'),
+          style: (() => {
+            const rect = pickerAnchorRef.current.getBoundingClientRect()
+            return {
+              position: 'fixed', zIndex: 1100, display: 'flex', flexDirection: 'column', overflow: 'hidden',
+              // 右缘 = 按钮左缘 - 8px（在按钮左侧展开）；下缘 = 按钮下缘（齐平）。
+              right: Math.max(12, window.innerWidth - rect.left + 8),
+              bottom: Math.max(12, window.innerHeight - rect.bottom),
+              width: 'min(560px, calc(100vw - 24px))',
+              height: 'min(440px, 55vh)',
+              background: 'var(--dsw-alias-bg-layer-2, #2a2e33)',
+              border: `1px solid ${C.borderL2}`,
+              borderRadius: 'var(--dsh-radius-panel, 10px)',
+              boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))',
+            }
+          })(),
+        },
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderBottom: `1px solid ${C.borderL2}`, flex: 'none' } },
             h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
               h(SelectField, {
                 value: pickerWs,
@@ -1417,7 +1468,13 @@ export function TaskEditorDrawer(props: {
                 size: 'sm',
               }),
             ),
-            h(Button, { variant: 'outline', size: 'sm', onClick: () => { setPickerOpen(false) } }, t('editorPickerCancel')),
+            h('button', {
+              type: 'button',
+              'aria-label': t('editorPickerCancel'),
+              title: t('editorPickerCancel'),
+              onClick: () => { setPickerOpen(false) },
+              style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', padding: 0, border: 'none', borderRadius: C.radiusSm, background: 'transparent', color: C.textDim, cursor: 'pointer', font: 'inherit' },
+            }, h(IconCloseOutlineRegular, { size: 14 })),
           ),
           (() => {
             const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? ''
@@ -1440,8 +1497,7 @@ export function TaskEditorDrawer(props: {
               })
               : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: C.textDim, fontSize: '13px' } }, t('editorPickerNoSession'))
           })(),
-        ),
-      )
+        ), document.body)
       : null,
     // 关闭确认（拉栏内联层，盖在表单/编辑器之上、且随抽屉一起在宿主之上）：改过才出现；
     // 点遮罩/离开 ⇒ 真正关抽屉，继续编辑 ⇒ 留在原处。

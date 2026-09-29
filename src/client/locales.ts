@@ -464,7 +464,7 @@ export const zh: Record<LocaleKey, string> = {
   editorAttachments: '附加文件',
   editorAttachmentLink: '链接',
   editorAttachmentUpload: '已上传',
-  editorAttachmentRemove: '删除',
+  editorAttachmentRemove: '移除',
   editorAttachmentAdd: '添加文件',
   editorAttachmentAddHint: '上传 / 选择文件稍后开放',
   editorPickWorkspaceFile: '选择工作区文件',
