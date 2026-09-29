@@ -8,6 +8,7 @@
 
 | 能力 | 事实 |
 |---|---|
+| **/goal 持久目标（决策 48，2026-09-29 核实）** | Goal service 挂 **`ctx.goals`**（`@deepseek-ai/dsh-goal@0.2.0-rc.2` lib/types/index.d.ts:54 "Goal service (`ctx.goals`)"）；`CreateGoalRequest { objective: string; maxGoalRounds? }`（types.d.ts:24）；session 事件层有 *goal continuation round*（自动续跑多轮），`GoalPhase = active\|paused\|blocked\|complete`；插件侧 `HostGoals` face 可选，缺 ⇒ 派发降级单轮并告警。**Agent Team 无插件通道**：session 层仅事件类型（`team/member`、`team/message/*`、`team/task`），agent/agent-loop/tools/dsh 主包零 teammate/spawn 创建入口——待宿主开放
 | **会话派发** | `ctx.sessions.create()` 只建存储会话、**不驱动模型**；派发 = `ctx.agents.create({ sessionId, meta: { cwd: 工作区绝对路径 }, agentOptions: { provider, model } })` + `agent.send(msg, 'next-turn', true)`，`agent.whenIdle()` 等空闲 |
 | 会话事件 | `ctx.on('session/event', (session, event))` 收**所有会话的所有事件**（同步发射）；`turn/end` 是 `event.type`；`session/created` / `session/disposed` 同步 emit |
 | 会话改名 | 内置 `ctx.sessionTitle.rename` → 写持久 `session/title` 事件 |

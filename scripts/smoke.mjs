@@ -474,8 +474,12 @@ try {
   // ── 8. client 产物检查（决策 28：面板内只读会话弹窗必须真的进了 bundle）──
   // tsdown 产物未混淆（标识符原样保留），可直接按符号名断言。
   console.log('\n[8] client 产物检查（dist/client.js + package.json inject 清单）')
-  const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
+  const dispatchPath = join(import.meta.dirname, '..', 'dist', 'dispatch.js')
+const reconcilePath = join(import.meta.dirname, '..', 'dist', 'reconcile.js')
+const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   const clientJs = readFileSync(clientPath, 'utf8')
+  const dispatchJs = readFileSync(dispatchPath, 'utf8')
+  const reconcileJs = readFileSync(reconcilePath, 'utf8')
   check('SessionViewModal 组件已打进 bundle', clientJs.includes('SessionViewModal'))
   check('openSessionView 数据闸门已打进 bundle', clientJs.includes('openSessionView'))
   check('loadOlder 探测调用已打进 bundle', clientJs.includes('loadOlder'))
@@ -652,6 +656,14 @@ try {
   check('停用（锁住）任务可选且显式标「（已停用）」——前置任务下拉不做启停过滤',
     clientJs.includes('editorDepDisabledTag') && clientJs.includes('（已停用）')
       && /enabled\s*===\s*false/.test(clientJs))
+  check('高级区：重试四档 + /goal 开关（默认开）+ 配置预览只读面板已打进 bundle，成功状态清单 UI 已移除',
+    clientJs.includes('editorRetryFive') && clientJs.includes('editorGoal') && clientJs.includes('editorPreviewOpen')
+      && clientJs.includes('lang: "json"') && !clientJs.includes('editorValidStatuses'))
+  check('派发侧 /goal 接线：快照 goal 开关（缺省开）+ ctx.goals 创建持久目标（失败不阻塞），快照构建读定义 target.goal',
+    dispatchJs.includes('goal-unavailable') && dispatchJs.includes('goal-create-failed')
+      && dispatchJs.includes('goal: snapshot.goal !== false') && dispatchJs.includes('.goals')
+      && dispatchJs.includes('objective')
+      && reconcileJs.includes('goal: task.target.goal !== false'))
   check('前置任务「?」说明含判定方式与产出移交（上一次执行必须成功 / 跳过不算失败 / 移交产出文件）',
     clientJs.includes('添加前置任务') && clientJs.includes('上一次执行必须是成功')
       && clientJs.includes('都算前置任务成功') && clientJs.includes('移交给本次任务'))

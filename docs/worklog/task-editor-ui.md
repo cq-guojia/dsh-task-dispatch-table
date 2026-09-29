@@ -432,3 +432,16 @@ typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡�
 | 3 | 「锁住」的任务为什么不能选？发布 ≠ 立即执行，停用任务也要能设为前置 | 查证：宿主快照 `writeSnapshot`（src/index.ts）与客户端装配**从未按启停过滤**——停用任务本来就在前置任务下拉里。但用户看不出来 ⇒ 任务下拉里停用任务显式标**「（已停用）」**（真数据：快照 `enabled` 字段直传 `EditorTaskOption.enabled`），行为与可见性对齐 |
 
 冒烟 +1 调整后 **182 项全过**（新增：双层跑马灯类名、停用标记 + 无启停过滤断言；「前置任务：」文案断言随删除反转为 `!includes`）。
+
+## 二十、高级区重做 + /goal 接线（2026-09-29，决策 48）
+
+前置任务卡五轮迭代后**用户确认 UI 调完**（跑马灯双层、图标行、停用任务可选均已真机过）。本轮整块重做「高级」：
+
+1. **灰框化 + 默认收起**：advancedBlock 从裸 section 改为 `.dsh-tdt-ed-card`（同前四卡）；展开内容全在框内，不再有黑色 JSON 区。
+2. **每项一排「控件 + 说明」**：重试四档（SelectField 一次/两次/三次/五次 + 说明）、`/goal` 开关（默认开 + 照用户截图文案）、配置预览（打开按钮 + 说明）。
+3. **成功状态清单删除**：draft 字段保留（round-trip），UI 与 locale 键全删。
+4. **配置预览面板**：`ConfigPreviewPanel` 复用全屏编辑器机制（panelInner 三态：表单 / 提示词编辑 / 配置预览），官方 `CodeBlock`（`lang:"json"` + `lineNumbers:true`，自带复制工具条），头部只有「关闭」。
+5. **/goal 接线**（决策 48）：`tasks.ts` target.goal（缺省 true）→ `reconcile.ts` 快照 → `dispatch.ts` `ctx.goals.create`；`host.ts` 加可选 `HostGoals` face；两路降级警告不阻塞派发。通道证据：`npm pack @deepseek-ai/dsh-goal@0.2.0-rc.2`（CreateGoalRequest / goal continuation round / GoalPhase）；`ctx.goals` 字样出自该包 types/index.d.ts:54。
+6. **Agent Team 不加**：全包 grep 只有 session 事件类型（team/member 等），无创建通道——不做假开关（决策 48 记录待跟进）。
+
+冒烟 +2 = **184 项全过**（高级区断言 + 派发 /goal 接线断言），typecheck/build 绿。踩坑：esbuild 产物**非空格压缩**（`lang: "json"` 带空格），smoke 断言按实际产物形态写。

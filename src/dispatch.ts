@@ -385,7 +385,25 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     model: route.model,
     modelSource: route.source,
     ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
+    goal: snapshot.goal !== false,
   })
+
+  // /goal 多轮续跑（决策 48，用户 2026-09-29「默认都是多轮会话」）：目标开启时把任务目标交给
+  // dsh 内置 /goal（ctx.goals，@deepseek-ai/dsh-goal 0.2.0-rc.2：CreateGoalRequest { objective }；
+  // goal continuation round 自动续跑、agent 标记 complete 收束，看板届时才结算）。宿主未暴露
+  // goals 服务或创建失败都不阻塞派发（本轮照常执行），只落警告留痕——行为与开关语义一致。
+  if (snapshot.goal !== false) {
+    const goals = (ctx as { goals?: { create(agent: unknown, request: { objective: string; maxGoalRounds?: number }): Promise<unknown> } }).goals
+    if (goals === undefined) {
+      logger.warn(`[dispatch] goal-unavailable 实例 ${instanceId}：宿主 ctx 未暴露 goals 服务，本轮按单轮执行`)
+    } else {
+      try {
+        await goals.create(handle.agent, { objective: `${snapshot.title}：${snapshot.prompt}` })
+      } catch (error) {
+        logger.warn(`[dispatch] goal-create-failed 实例 ${instanceId}：${String(error)}`)
+      }
+    }
+  }
   // 会话列表治理：规范名在 reconciler.onCreated 改（决策 42 格式），跑完归档在 succeeded 对账后。
   handle.agent.send(buildMessage(snapshot, workspace.path, logicalDate), 'next-turn', true)
   return { sessionId, handle }

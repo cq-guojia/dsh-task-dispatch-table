@@ -435,9 +435,16 @@ window.__ModuleLoader__.load({
 			editorDepDisabledTag: "（已停用）",
 			editorAdvanced: "高级",
 			editorRetry: "重试次数",
-			editorValidStatuses: "成功状态清单",
-			editorJson: "JSON",
-			editorJsonHint: "逃生通道：这里含任务 id，改错会影响任务身份，慎改",
+			editorRetryOnce: "一次",
+			editorRetryTwice: "两次",
+			editorRetryThrice: "三次",
+			editorRetryFive: "五次",
+			editorRetryHint: "本次执行失败后自动重试的上限；重试后仍失败，这一轮才算失败。次数多了也没有太大意义，一到两次就够。",
+			editorGoal: "以 dsh 内置的 /goal 开始执行任务",
+			editorGoalHint: "默认开启：执行时把任务目标作为持久目标交给 dsh 内置 /goal，会话会自动续跑多轮，直到 agent 标记目标完成，看板在该目标真正结束后才结算本次执行。关闭则只执行一轮普通对话。",
+			editorPreview: "配置预览",
+			editorPreviewOpen: "打开配置预览",
+			editorPreviewHint: "从右侧展开一个与「编辑提示词」一样大的只读面板，展示当前配置生成的任务定义 JSON（带行号与语法着色），面板内可一键复制；仅供查看，不允许修改。",
 			editorUnavailable: "暂不可用（待接数据面）"
 		};
 		/** English copy. */
@@ -834,9 +841,16 @@ window.__ModuleLoader__.load({
 			editorDepDisabledTag: " (disabled)",
 			editorAdvanced: "Advanced",
 			editorRetry: "Retry attempts",
-			editorValidStatuses: "Valid statuses",
-			editorJson: "JSON",
-			editorJsonHint: "Escape hatch: contains the task id — editing it wrong breaks task identity",
+			editorRetryOnce: "Once",
+			editorRetryTwice: "Twice",
+			editorRetryThrice: "3 times",
+			editorRetryFive: "5 times",
+			editorRetryHint: "Upper bound of automatic retries after a failed run; only when retries are exhausted does the round count as failed. More retries rarely help — one or two is enough.",
+			editorGoal: "Start the task with the dsh built-in /goal",
+			editorGoalHint: "On by default: the task objective is handed to the dsh built-in /goal as a persistent goal; the session keeps running more turns until the agent marks the goal complete, and the board settles the run only after the goal truly finishes. Off means a single ordinary round.",
+			editorPreview: "Config preview",
+			editorPreviewOpen: "Open config preview",
+			editorPreviewHint: "Opens a read-only panel as large as the prompt editor on the right, showing the task-definition JSON generated from the current form (line numbers + syntax colors), with one-click copy inside; view only, editing is not allowed.",
 			editorUnavailable: "Unavailable (data plane pending)"
 		};
 		//#endregion
@@ -37355,6 +37369,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				window: "PT4H",
 				maxAttempts: "1",
 				validStatuses: "ok",
+				goalMode: true,
 				deps: []
 			};
 		}
@@ -37408,7 +37423,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				const step = Number.parseInt(draft.weekStep, 10);
 				if (draft.periodFreq === "weekly" && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step;
 			} else if (draft.scheduleKind === "interval") schedule.start = `${draft.date}T${draft.time}`;
-			const target = { workspace: draft.workspace };
+			const target = {
+				workspace: draft.workspace,
+				goal: draft.goalMode
+			};
 			if (draft.model.trim() !== "") {
 				const slash = draft.model.indexOf("/");
 				if (slash > 0) {
@@ -38043,6 +38061,54 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}) : null);
 		}
 		/**
+		* 配置预览面板（用户 2026-09-29 定稿）：与「编辑提示词」一样大的右侧面板，覆盖拉篮区域；
+		* 只读展示当前配置生成的任务定义 JSON——官方 CodeBlock（Shiki：行号 + 语法着色 + 自带复制），
+		* 面板按钮只有「关闭」（复制由 CodeBlock 工具条承担），不允许修改。
+		*/
+		function ConfigPreviewPanel(props) {
+			const { t, json, onClose } = props;
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				flex: "1 1 auto",
+				minHeight: 0,
+				background: "var(--dsw-alias-bg-base, #22252a)",
+				color: C$2.text,
+				overflow: "hidden",
+				position: "relative"
+			} }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				gap: "12px",
+				padding: "10px 14px",
+				borderBottom: `1px solid ${C$2.borderL2}`
+			} }, (0, react.createElement)("span", { style: {
+				fontSize: "14px",
+				fontWeight: 600
+			} }, t("editorPreview")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "ghost",
+				size: "sm",
+				onClick: onClose
+			}, t("editorClose"))), (0, react.createElement)("div", { style: {
+				flex: "1 1 auto",
+				minWidth: 0,
+				overflow: "auto",
+				padding: "14px 18px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				code: json,
+				lang: "json",
+				lineNumbers: true,
+				copyLabel: t("copyLabel"),
+				copiedLabel: t("copiedLabel"),
+				toolbarLabels: {
+					codeLabel: t("codeBlockLabel"),
+					wrapLabel: t("diffWrapLabel"),
+					unwrapLabel: t("diffUnwrapLabel")
+				}
+			})));
+		}
+		/**
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
@@ -38052,6 +38118,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
 			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
+			const [previewOpen, setPreviewOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
@@ -38706,58 +38773,87 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					justifyContent: "center"
 				}
 			}, t("editorDepAdd"))));
-			const advancedBlock = (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)("button", {
+			const retryOptions = [
+				{
+					value: "1",
+					label: t("editorRetryOnce")
+				},
+				{
+					value: "2",
+					label: t("editorRetryTwice")
+				},
+				{
+					value: "3",
+					label: t("editorRetryThrice")
+				},
+				{
+					value: "5",
+					label: t("editorRetryFive")
+				}
+			];
+			const advancedBlock = (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("button", {
 				className: "dsh-tdt-ed-summary",
 				type: "button",
 				"aria-expanded": advancedOpen,
 				onClick: () => {
 					setAdvancedOpen(!advancedOpen);
 				}
-			}, (0, react.createElement)("span", null, t("editorAdvanced")), (0, react.createElement)("span", { style: { color: C$2.textDim } }, advancedOpen ? "▴" : "▾")), advancedOpen ? (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
-				fontSize: "12px",
-				color: C$2.textDim
-			} }, t("editorRetry")), (0, react.createElement)("input", {
-				type: "number",
-				min: 1,
+			}, (0, react.createElement)("span", null, t("editorAdvanced")), (0, react.createElement)("span", { style: { color: C$2.textDim } }, advancedOpen ? "▴" : "▾")), advancedOpen ? (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "18px",
+				marginTop: "14px"
+			} }, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
+				...sectionLabelStyle,
+				marginBottom: "8px"
+			} }, t("editorRetry")), (0, react.createElement)(SelectField, {
 				value: draft.maxAttempts,
-				onChange: (event) => {
-					patch({ maxAttempts: event.target.value });
+				options: retryOptions,
+				onChange: (value) => {
+					patch({ maxAttempts: value });
 				},
-				"aria-label": t("editorRetry"),
-				className: "dsh-tdt-ed-input",
+				placeholder: t("editorRetry"),
+				emptyLabel: t("editorRetry"),
+				ariaLabel: t("editorRetry"),
+				width: "160px"
+			}), (0, react.createElement)("p", {
+				className: "dsh-tdt-ed-hint",
+				style: { marginTop: "8px" }
+			}, t("editorRetryHint"))), (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "10px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				checked: draft.goalMode,
+				onChange: (next) => {
+					patch({ goalMode: next });
+				},
+				label: t("editorGoal")
+			}), (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				fontWeight: 600
+			} }, t("editorGoal"))), (0, react.createElement)("p", {
+				className: "dsh-tdt-ed-hint",
 				style: {
-					width: "84px",
-					textAlign: "center"
+					marginTop: "8px",
+					lineHeight: "1.7"
 				}
-			}), (0, react.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, t("editorGoalHint"))), (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
+				...sectionLabelStyle,
+				marginBottom: "8px"
+			} }, t("editorPreview")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
-				disabled: true,
-				title: t("editorUnavailable")
-			}, `${t("editorVersions")}（P3）`)), (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("editorValidStatuses")), (0, react.createElement)("input", {
-				value: draft.validStatuses,
-				placeholder: "ok",
-				spellCheck: false,
-				onChange: (event) => {
-					patch({ validStatuses: event.target.value });
-				},
-				"aria-label": t("editorValidStatuses"),
-				className: "dsh-tdt-ed-input dsh-tdt-ed-mono",
-				style: { width: "100%" }
-			})), (0, react.createElement)("div", { style: { marginTop: "12px" } }, (0, react.createElement)("button", {
-				className: "dsh-tdt-ed-summary",
-				type: "button",
-				"aria-expanded": jsonOpen,
 				onClick: () => {
-					setJsonOpen(!jsonOpen);
+					setPreviewOpen(true);
 				}
-			}, (0, react.createElement)("span", null, `⚙ ${t("editorJson")}`), (0, react.createElement)("span", { style: { color: C$2.textDim } }, jsonOpen ? "▴" : "▾")), jsonOpen ? (0, react.createElement)("div", null, (0, react.createElement)("textarea", {
-				className: "dsh-tdt-ed-json",
-				readOnly: true,
-				spellCheck: false,
-				value: draftToDefinitionJson(draft),
-				"aria-label": t("editorJson")
-			}), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorJsonHint"))) : null)) : null);
+			}, t("editorPreviewOpen")), (0, react.createElement)("p", {
+				className: "dsh-tdt-ed-hint",
+				style: {
+					marginTop: "8px",
+					lineHeight: "1.7"
+				}
+			}, t("editorPreviewHint")))) : null));
 			const body = tab === "records" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorRecordsPending")) : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)(PrefixedInput, {
 				prefix: t("editorTitle"),
 				value: draft.title,
@@ -38783,6 +38879,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				onClose: () => {
 					setEditorOpen(false);
+				}
+			}) : previewOpen ? (0, react.createElement)(ConfigPreviewPanel, {
+				t,
+				json: draftToDefinitionJson(draft),
+				onClose: () => {
+					setPreviewOpen(false);
 				}
 			}) : (0, react.createElement)("div", { style: {
 				display: "flex",

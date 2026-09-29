@@ -123,7 +123,8 @@ export type LocaleKey =
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask' | 'editorDepPickWsFirst'
   | 'editorDepTaskPh' | 'editorDepDisabledTag' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
-  | 'editorAdvanced' | 'editorRetry' | 'editorValidStatuses' | 'editorJson' | 'editorJsonHint'
+  | 'editorAdvanced' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
+  | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorPreview' | 'editorPreviewOpen' | 'editorPreviewHint'
   | 'editorVersions' | 'editorUnavailable'
   | 'editorModeEdit' | 'editorModePreview'
 
@@ -540,9 +541,16 @@ export const zh: Record<LocaleKey, string> = {
   editorDepDisabledTag: '（已停用）',
   editorAdvanced: '高级',
   editorRetry: '重试次数',
-  editorValidStatuses: '成功状态清单',
-  editorJson: 'JSON',
-  editorJsonHint: '逃生通道：这里含任务 id，改错会影响任务身份，慎改',
+  editorRetryOnce: '一次',
+  editorRetryTwice: '两次',
+  editorRetryThrice: '三次',
+  editorRetryFive: '五次',
+  editorRetryHint: '本次执行失败后自动重试的上限；重试后仍失败，这一轮才算失败。次数多了也没有太大意义，一到两次就够。',
+  editorGoal: '以 dsh 内置的 /goal 开始执行任务',
+  editorGoalHint: '默认开启：执行时把任务目标作为持久目标交给 dsh 内置 /goal，会话会自动续跑多轮，直到 agent 标记目标完成，看板在该目标真正结束后才结算本次执行。关闭则只执行一轮普通对话。',
+  editorPreview: '配置预览',
+  editorPreviewOpen: '打开配置预览',
+  editorPreviewHint: '从右侧展开一个与「编辑提示词」一样大的只读面板，展示当前配置生成的任务定义 JSON（带行号与语法着色），面板内可一键复制；仅供查看，不允许修改。',
   editorUnavailable: '暂不可用（待接数据面）',
 }
 
@@ -945,8 +953,15 @@ export const en: Record<LocaleKey, string> = {
   editorDepDisabledTag: ' (disabled)',
   editorAdvanced: 'Advanced',
   editorRetry: 'Retry attempts',
-  editorValidStatuses: 'Valid statuses',
-  editorJson: 'JSON',
-  editorJsonHint: 'Escape hatch: contains the task id — editing it wrong breaks task identity',
+  editorRetryOnce: 'Once',
+  editorRetryTwice: 'Twice',
+  editorRetryThrice: '3 times',
+  editorRetryFive: '5 times',
+  editorRetryHint: 'Upper bound of automatic retries after a failed run; only when retries are exhausted does the round count as failed. More retries rarely help — one or two is enough.',
+  editorGoal: 'Start the task with the dsh built-in /goal',
+  editorGoalHint: 'On by default: the task objective is handed to the dsh built-in /goal as a persistent goal; the session keeps running more turns until the agent marks the goal complete, and the board settles the run only after the goal truly finishes. Off means a single ordinary round.',
+  editorPreview: 'Config preview',
+  editorPreviewOpen: 'Open config preview',
+  editorPreviewHint: 'Opens a read-only panel as large as the prompt editor on the right, showing the task-definition JSON generated from the current form (line numbers + syntax colors), with one-click copy inside; view only, editing is not allowed.',
   editorUnavailable: 'Unavailable (data plane pending)',
 }

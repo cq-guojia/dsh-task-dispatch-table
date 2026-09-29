@@ -47,6 +47,8 @@ export const taskDefinitionSchema = z.object({
     model: z.string().optional(),
     manual: z.string().optional(),
     prompt: z.string().min(1),
+    /** 以 dsh 内置 /goal 开始执行（多轮续跑，决策 48）：缺省 true（用户拍板「默认都是多轮会话」）。 */
+    goal: z.boolean().optional(),
   }),
   // 回执机制（决策 19）：不再有契约文件与 path——agent 经 submit.mjs 直写状态库，
   // 这里只保留 status 合法值清单。

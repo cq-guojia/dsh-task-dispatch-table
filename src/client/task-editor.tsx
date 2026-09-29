@@ -26,6 +26,7 @@ import {
   IconPlusOutlineRegular,
   IconQuestionOutlineRegular,
   MarkdownText,
+  CodeBlock,
   Switch,
   Tooltip,
   IconPlanOutlineRegular,
@@ -172,7 +173,10 @@ export interface TaskEditorDraft {
   time: string
   window: string
   maxAttempts: string
+  /** 保留字段（round-trip）：UI 已砍（用户：无意义），JSON 预览与任务定义照旧带 contract.validStatuses。 */
   validStatuses: string
+  /** 以 dsh 内置 /goal 开始执行（多轮续跑）；默认开（用户 2026-09-29），派发侧缺省一致。 */
+  goalMode: boolean
   deps: EditorDependency[]
 }
 
@@ -217,6 +221,7 @@ export function emptyTaskDraft(): TaskEditorDraft {
     window: 'PT4H',
     maxAttempts: '1',
     validStatuses: 'ok',
+    goalMode: true,
     deps: [],
   }
 }
@@ -290,7 +295,7 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   }
   // scheduleKind === 'interval' 的 cron 映射（每隔 N 分钟/小时）归 P2，此处不产出 schedule.cron。
 
-  const target: Record<string, unknown> = { workspace: draft.workspace }
+  const target: Record<string, unknown> = { workspace: draft.workspace, goal: draft.goalMode }
   if (draft.model.trim() !== '') {
     // 模型下拉的 value 形如 `provider/model`，写回时拆成成对的 provider + model（决策 22）。
     const slash = draft.model.indexOf('/')
@@ -775,6 +780,35 @@ function PromptEditorModal(props: {
 }
 
 /**
+ * 配置预览面板（用户 2026-09-29 定稿）：与「编辑提示词」一样大的右侧面板，覆盖拉篮区域；
+ * 只读展示当前配置生成的任务定义 JSON——官方 CodeBlock（Shiki：行号 + 语法着色 + 自带复制），
+ * 面板按钮只有「关闭」（复制由 CodeBlock 工具条承担），不允许修改。
+ */
+function ConfigPreviewPanel(props: { t: T; json: string; onClose: () => void }): ReactNode {
+  const { t, json, onClose } = props
+  return h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, overflow: 'hidden', position: 'relative' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
+      h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPreview')),
+      h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
+    ),
+    h('div', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'auto', padding: '14px 18px' } },
+      h(CodeBlock, {
+        code: json,
+        lang: 'json',
+        lineNumbers: true,
+        copyLabel: t('copyLabel'),
+        copiedLabel: t('copiedLabel'),
+        toolbarLabels: {
+          codeLabel: t('codeBlockLabel'),
+          wrapLabel: t('diffWrapLabel'),
+          unwrapLabel: t('diffUnwrapLabel'),
+        },
+      }),
+    ),
+  )
+}
+
+/**
  * 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
  */
 export function TaskEditorDrawer(props: {
@@ -806,6 +840,7 @@ export function TaskEditorDrawer(props: {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(false)
   // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -1313,75 +1348,63 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  // ④ 高级：重试 / 成功状态清单 / 版本历史（P3）/ JSON 逃生口。
+  // ④ 高级（用户 2026-09-29 定稿）：默认收起；展开 = 与上面四卡同款灰框（不是黑色），内容放进框里；
+  //    每项「控件一行 + 说明一段」排版宽松——高级功能不是人人认识，说明要写清楚。
+  //    成功状态清单砍掉（无用户意义；contract.validStatuses 字段保留 round-trip）；JSON 逃生口升级为「配置预览」只读面板。
+  const retryOptions: EditorOption[] = [
+    { value: '1', label: t('editorRetryOnce') },
+    { value: '2', label: t('editorRetryTwice') },
+    { value: '3', label: t('editorRetryThrice') },
+    { value: '5', label: t('editorRetryFive') },
+  ]
   const advancedBlock = h('div', { className: 'dsh-tdt-ed-section' },
-    h('button', {
-      className: 'dsh-tdt-ed-summary',
-      type: 'button',
-      'aria-expanded': advancedOpen,
-      onClick: () => { setAdvancedOpen(!advancedOpen) },
-    },
-      h('span', null, t('editorAdvanced')),
-      h('span', { style: { color: C.textDim } }, advancedOpen ? '▴' : '▾'),
-    ),
-    advancedOpen
-      ? h('div', { style: { marginTop: '10px' } },
-          h('div', { className: 'dsh-tdt-ed-row' },
-            h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorRetry')),
-            h('input', {
-              type: 'number',
-              min: 1,
-              value: draft.maxAttempts,
-              onChange: (event: { target: { value: string } }) => { patch({ maxAttempts: event.target.value }) },
-              'aria-label': t('editorRetry'),
-              className: 'dsh-tdt-ed-input',
-              style: { width: '84px', textAlign: 'center' },
-            }),
-            h('span', { className: 'dsh-tdt-ed-spacer' }),
-            h(Button, {
-              variant: 'outline',
-              size: 'sm',
-              disabled: true,
-              title: t('editorUnavailable'),
-            }, `${t('editorVersions')}（P3）`),
-          ),
-          h('div', { style: { marginTop: '10px' } },
-            h('div', { style: sectionLabelStyle }, t('editorValidStatuses')),
-            h('input', {
-              value: draft.validStatuses,
-              placeholder: 'ok',
-              spellCheck: false,
-              onChange: (event: { target: { value: string } }) => { patch({ validStatuses: event.target.value }) },
-              'aria-label': t('editorValidStatuses'),
-              className: 'dsh-tdt-ed-input dsh-tdt-ed-mono',
-              style: { width: '100%' },
-            }),
-          ),
-          h('div', { style: { marginTop: '12px' } },
-            h('button', {
-              className: 'dsh-tdt-ed-summary',
-              type: 'button',
-              'aria-expanded': jsonOpen,
-              onClick: () => { setJsonOpen(!jsonOpen) },
-            },
-              h('span', null, `⚙ ${t('editorJson')}`),
-              h('span', { style: { color: C.textDim } }, jsonOpen ? '▴' : '▾'),
+    h('div', { className: 'dsh-tdt-ed-card' },
+      h('button', {
+        className: 'dsh-tdt-ed-summary',
+        type: 'button',
+        'aria-expanded': advancedOpen,
+        onClick: () => { setAdvancedOpen(!advancedOpen) },
+      },
+        h('span', null, t('editorAdvanced')),
+        h('span', { style: { color: C.textDim } }, advancedOpen ? '▴' : '▾'),
+      ),
+      advancedOpen
+        ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px', marginTop: '14px' } },
+            // ① 重试次数：四档选择（一次/两次/三次/五次），不让用户手输——次数多了没意义（用户 2026-09-29）。
+            h('div', null,
+              h('div', { style: { ...sectionLabelStyle, marginBottom: '8px' } }, t('editorRetry')),
+              h(SelectField, {
+                value: draft.maxAttempts,
+                options: retryOptions,
+                onChange: (value: string) => { patch({ maxAttempts: value }) },
+                placeholder: t('editorRetry'),
+                emptyLabel: t('editorRetry'),
+                ariaLabel: t('editorRetry'),
+                width: '160px',
+              }),
+              h('p', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px' } }, t('editorRetryHint')),
             ),
-            jsonOpen
-              ? h('div', null,
-                  h('textarea', {
-                    className: 'dsh-tdt-ed-json',
-                    readOnly: true,
-                    spellCheck: false,
-                    value: draftToDefinitionJson(draft),
-                    'aria-label': t('editorJson'),
-                  }),
-                  h('p', { className: 'dsh-tdt-ed-hint' }, t('editorJsonHint')),
-                )
-              : null,
-          ),
-        )
-      : null,
+            // ② 以 dsh 内置 /goal 开始执行（多轮续跑），默认开；派发侧缺省一致（决策 48）。
+            h('div', null,
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+                h(Switch, {
+                  checked: draft.goalMode,
+                  onChange: (next: boolean) => { patch({ goalMode: next }) },
+                  label: t('editorGoal'),
+                }),
+                h('span', { style: { fontSize: '13px', fontWeight: 600 } }, t('editorGoal')),
+              ),
+              h('p', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px', lineHeight: '1.7' } }, t('editorGoalHint')),
+            ),
+            // ③ 配置预览：右侧展开只读面板（同「编辑提示词」大小），带行号与着色，可复制不可改。
+            h('div', null,
+              h('div', { style: { ...sectionLabelStyle, marginBottom: '8px' } }, t('editorPreview')),
+              h(Button, { variant: 'outline', size: 'sm', onClick: () => { setPreviewOpen(true) } }, t('editorPreviewOpen')),
+              h('p', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px', lineHeight: '1.7' } }, t('editorPreviewHint')),
+            ),
+          )
+        : null,
+    ),
   )
 
   const body = tab === 'records'
@@ -1424,7 +1447,13 @@ export function TaskEditorDrawer(props: {
       onChange: (value: string) => { patch({ prompt: value }) },
       onClose: () => { setEditorOpen(false) },
     })
-    : h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } },
+    : previewOpen
+      ? h(ConfigPreviewPanel, {
+        t,
+        json: draftToDefinitionJson(draft),
+        onClose: () => { setPreviewOpen(false) },
+      })
+      : h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } },
       // 头部：标题 + 启用开关（关闭钮左边）+ 关闭。启用不再单占一行。
       h('div', { className: 'dsh-tdt-ed-header' },
         h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),

@@ -124,6 +124,7 @@ export function createReconciler({ ctx, logger, store, options }) {
             provider: task.target.provider ?? '',
             model: task.target.model ?? '',
             validStatuses: contract.validStatuses.length > 0 ? [...contract.validStatuses] : ['ok'],
+            goal: task.target.goal !== false,
             maxAttempts: retry.maxAttempts >= 1 ? retry.maxAttempts : 1,
             window: schedule.window ?? 'PT0S',
         };

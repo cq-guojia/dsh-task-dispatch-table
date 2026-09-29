@@ -40,6 +40,8 @@ export interface ResolvedDependency {
  * 与任务设置彻底解耦——中途改任务定义对已落库实例零影响。
  */
 export interface InstanceSnapshot {
+    /** /goal 多轮续跑（决策 48）：undefined 视为 true（用户拍板「默认都是多轮会话」）。 */
+    goal?: boolean;
     /** 会话显示名（决策 42）：title 回退 code，再回退短 id。 */
     title: string;
     prompt: string;

@@ -107,6 +107,12 @@ export interface HostAgentPresets {
   mount(agentCtx: unknown, id?: string): Promise<unknown>
 }
 
+/** GoalRegistry.create（@deepseek-ai/dsh-goal 0.2.0-rc.2 lib/types/index.d.ts:83）：给 agent 挂持久目标；
+ * goal 续跑轮（goal continuation round）由宿主自动接管，直到 agent 标记 complete（GoalPhase）。 */
+export interface HostGoals {
+  create(agent: unknown, request: { objective: string; maxGoalRounds?: number }): Promise<unknown>
+}
+
 /** SessionStore.create(id?)：core/session/src/index.ts:969，id 可由调用者供给。 */
 export interface HostSessions {
   create(id?: SessionId): HostSession
@@ -229,6 +235,8 @@ export interface HostContext {
   on(event: 'dispose', listener: () => void): () => void
   agents: HostAgents
   sessions: HostSessions
+  /** 可选：宿主 0.2.0-rc.2 起 ctx.goals（Goal service，backed by session log）；旧版本无此 face ⇒ 派发侧降级单轮。 */
+  goals?: HostGoals
   workspaceRegistry: HostWorkspaceRegistry
   settings: HostSettings
   sessionTitle: HostSessionTitle

@@ -98,3 +98,21 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 ```
 
 备注：npm 上 DSH 插件多为 **scoped 包**，公开发布时用 scoped 包名防撞且归属清晰。
+
+## 决策 48：高级区重做 + /goal 多轮续跑接线（2026-09-29）
+
+**背景**：用户逐项拍板「高级选项」的形态与内容。
+
+**UI 定稿**：
+- 默认收起；展开 = 与前四卡同款灰框（`.dsh-tdt-ed-card`，不再用黑色 JSON 区）；每项「控件一行 + 说明一段」，排版宽松。
+- **重试次数**：四档选择（一次/两次/三次/五次），不再手输——「次数多了没意义」。
+- **成功状态清单砍掉**：无用户意义；`contract.validStatuses` 字段保留 round-trip（JSON 预览照带，存量无损）。
+- **配置预览**（原「JSON」按钮）：点击从右侧展开与「编辑提示词」一样大的只读面板，官方 `CodeBlock`（Shiki：行号 + 语法着色 + 自带复制）；按钮只有「关闭」（复制在 CodeBlock 工具条），不允许修改。
+
+**/goal 多轮续跑（有真实通道，已接线）**：
+- 通道核实（npm pack `@deepseek-ai/dsh-goal@0.2.0-rc.2`）：Goal service 挂 **`ctx.goals`**，`CreateGoalRequest { objective: string; maxGoalRounds?: number }`；session 事件层有 *goal continuation round*（自动续跑多轮），`GoalPhase = active|paused|blocked|complete`（agent 标记 complete 收束、看板届时结算）。
+- 行为：**默认开启**（用户拍板「默认都是多轮会话」）——任务定义 `target.goal` 缺省 true（`tasks.ts` zod），快照 `InstanceSnapshot.goal`（`reconcile.ts` `task.target.goal !== false`），派发侧（`dispatch.ts`）`snapshot.goal !== false` 时 `ctx.goals.create(handle.agent, { objective: 标题：prompt })`，宿主 face `HostGoals`（`host.ts`，可选）。
+- 降级：宿主 ctx 未暴露 `goals` 或创建失败**不阻塞派发**（本轮照常单轮执行），落 `goal-unavailable` / `goal-create-failed` 警告留痕——不做假成功。
+- 存量任务定义无 `goal` 字段 ⇒ 下次派发起同样按「多轮」执行（缺省开，与用户口径一致）。
+
+**Agent Team（无插件通道，本轮不加）**：grep `dsh-agent / dsh-agent-loop / dsh-session / dsh-tools / dsh@0.2.0-rc.2`——session 层**只有事件类型**（`team/member`、`team/message/*`、`team/task`），**没有可编程的创建/开启入口**（agent/agent-loop/tools 主包零 teammate/spawn 痕迹）。按「正常功能数据一律真实」原则不做假开关；待宿主开放通道后再加（本决策即待跟进记录）。
