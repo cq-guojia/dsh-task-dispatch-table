@@ -588,7 +588,7 @@ try {
       && clientJs.includes('dsh-tdt-sv-resizer:hover{background:var(--dsw-alias-interactive-bg-hover')
       && clientJs.includes('dsh-tdt-sv-resizer:active{background:var(--dsw-alias-interactive-bg-hover')
       && !clientJs.includes('.dsh-tdt-sv-preview-dock:has(')
-      && !clientJs.includes('border-left-color:rgba(255,255,255,1)')))
+      && !clientJs.includes('border-left-color:rgba(255,255,255,1)'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
     clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
   check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',
