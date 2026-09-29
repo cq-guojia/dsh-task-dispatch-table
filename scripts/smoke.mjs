@@ -583,12 +583,12 @@ try {
   check('顶栏按钮组（复制 / 刷新 / 关闭，图标钮无中文）',
     clientJs.includes('dsh-tdt-sv-head-btn') && clientJs.includes('previewRefresh')
       && clientJs.includes('previewCopyPath') && clientJs.includes('IconRefreshOutlineRegular'))
-  check('拖拽条不画新线（hover/拖拽时高亮 dock 原有 border-left，深纯白浅纯黑，用 :has 上溯父元素）',
-    clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes(':has(')
-      && clientJs.includes('border-left-color')
-      && !clientJs.includes('dsh-tdt-sv-resizer::after')
-      && !clientJs.includes('dsh-tdt-sv-resizer:hover{border')
-      && !clientJs.includes('dsh-tdt-sv-resizer:active{border'))
+  check('拖拽条高亮 = 6px 浅色半透明带（与任务抽屉 .dsh-tdt-ed-resizer 同款，2026-09-29 改版；不再变纯白线）',
+    clientJs.includes('dsh-tdt-sv-resizer')
+      && clientJs.includes('dsh-tdt-sv-resizer:hover{background:var(--dsw-alias-interactive-bg-hover')
+      && clientJs.includes('dsh-tdt-sv-resizer:active{background:var(--dsw-alias-interactive-bg-hover')
+      && !clientJs.includes('.dsh-tdt-sv-preview-dock:has(')
+      && !clientJs.includes('border-left-color:rgba(255,255,255,1)')))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
     clientJs.includes('onOpenFile') && clientJs.includes('fileMentions'))
   check('文件词表来自 keyed 工具流（collectFilePaths / makeFileMentions，禁模拟）',
