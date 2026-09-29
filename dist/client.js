@@ -345,7 +345,7 @@ window.__ModuleLoader__.load({
 			editorRestore: "恢复",
 			editorNoVersions: "暂无版本，保存后可在此回滚",
 			editorTaskStart: "任务开始时间",
-			editorTaskStartHint: "任务从这一天开始执行。可以提前把任务建好，等到了这天再自动开跑；「每几周」也从这天开始算第一周。",
+			editorTaskStartHint: "任务自该日起开始执行。可提前创建任务，至该日自动开跑；「每 N 周」亦自该日起算首周。",
 			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
 			editorWeekday2: "周二",
@@ -367,7 +367,7 @@ window.__ModuleLoader__.load({
 			editorNow: "现在",
 			editorConfirm: "确定",
 			editorWindow: "允许延迟",
-			editorWindowHint: "任务到了计划开始执行的时间，如果遇到前置任务还没完成、或其它原因需要推迟，最多允许再等这么久，仍然继续执行；超过这个时间，这一次就直接跳过。",
+			editorWindowHint: "任务到达计划开始执行时间后，若前置任务尚未完成或因其它原因需延后，最长允许在此时长内继续执行；超过该时长则跳过本次执行。",
 			unitMinutes: "分钟",
 			unitHours: "小时",
 			unitDays: "天",
@@ -5333,14 +5333,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.labels.confirm))), document.body) : null);
 		}
 		/**
-		* 周几多选 = 一排**小方块**（24×24，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
+		* 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的官方 SegmentedControl 外观**：
+		* 外层一圈 `interactive-bg-hover` 灰底轨道（包边），里面七枚等宽段，选中段是
+		* 「薄灰底（bg-layer-1）+ 柔和阴影 + 主色字」的浅胶囊（**不是实心蓝**，所以精致不刺眼）。
 		*
-		* 2026-09-29 用户返工：原来的实现是「官方 Pill chips + 尾随 ✕ + ＋ 菜单」，用户评价
-		* 「特别难看」「太大了」⇒ 换成紧凑方块；一个都不选 = 每天（间隔档就是这个语义）。
-		* 2026-09-29 再返工：用户「选中的蓝块太大、胀眼睛、不精致」⇒ 方块收到 24×24，
-		* 选中态由**实心 business 填充**改成「business 描边 + 淡蓝底 + business 字 + 600 字重」。
-		* 淡蓝底走 `color-mix`：宿主 Chromium 支持则是一层薄蓝，不支持则退化为透明，
-		* 此时仍靠描边与字色区分选中，不会画错。
+		* 周几是多选，没法直接套官方 `SegmentedControl`（它只能单选），故照它的尺寸与样式
+		* 自绘：轨道 padding 4 / gap 2 / radius-md，段高 28 / radius-sm / 字 13 weight 500，
+		* 与顶部控件逐条对齐（2026-09-29 用户指定「改成那种」）。一个都不选 = 每天（间隔档语义）。
 		*/
 		function WeekdayPicker(props) {
 			const [hover, setHover] = (0, react.useState)(null);
@@ -5353,13 +5352,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				alignItems: "center",
 				flexWrap: "wrap",
-				gap: "4px"
+				gap: "6px"
 			} }, props.label === void 0 ? null : (0, react.createElement)("span", { style: {
 				flex: "none",
 				fontSize: "12px",
-				color: C$1.textDim,
-				marginRight: "4px"
-			} }, props.label), props.labels.shorts.map((short, index) => {
+				color: C$1.textDim
+			} }, props.label), (0, react.createElement)("div", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "2px",
+				padding: "3px",
+				borderRadius: C$1.radiusMd,
+				background: C$1.hover
+			} }, props.labels.shorts.map((short, index) => {
 				const day = index + 1;
 				const on = selected.has(day);
 				const name = props.labels.weekdays[index] ?? String(day);
@@ -5382,25 +5387,26 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					},
 					style: {
 						flex: "none",
-						width: "24px",
-						height: "24px",
-						padding: 0,
+						minWidth: "26px",
+						height: "26px",
+						padding: "0 4px",
 						display: "inline-flex",
 						alignItems: "center",
 						justifyContent: "center",
-						border: `0.5px solid ${on ? C$1.business : C$1.borderL4}`,
+						border: "0",
 						borderRadius: C$1.radiusSm,
-						background: on ? "color-mix(in srgb, var(--dsw-alias-state-business-primary, #4d6bfe) 16%, transparent)" : hover === day ? C$1.hover : C$1.layer1,
-						color: on ? C$1.business : C$1.textDim,
+						background: on ? C$1.layer1 : "transparent",
+						boxShadow: on ? "var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))" : "none",
+						color: on ? C$1.text : C$1.textDim,
 						font: "inherit",
-						fontSize: "12px",
-						lineHeight: "18px",
+						fontSize: "13px",
+						lineHeight: "20px",
 						fontWeight: on ? 600 : 400,
 						cursor: props.disabled === true ? "not-allowed" : "pointer",
 						transition: transition$1
 					}
 				}, short);
-			}), props.value.length === 0 ? (0, react.createElement)("span", { style: {
+			})), props.value.length === 0 ? (0, react.createElement)("span", { style: {
 				fontSize: "12px",
 				color: C$1.dimmed
 			} }, props.labels.empty) : null);
@@ -5859,8 +5865,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 		const WIDTH_KEY = "dsh-tdt-editor-width";
-		const WIDTH_DEFAULT = 620;
-		const WIDTH_MIN = 560;
+		const WIDTH_DEFAULT = 540;
+		const WIDTH_MIN = 540;
 		function clampWidth(value) {
 			const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * .9));
 			return Math.min(Math.max(Math.round(value), WIDTH_MIN), max);

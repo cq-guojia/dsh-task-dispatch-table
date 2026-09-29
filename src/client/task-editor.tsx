@@ -512,8 +512,8 @@ function IntervalControls(props: {
 
 /** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 const WIDTH_KEY = 'dsh-tdt-editor-width'
-const WIDTH_DEFAULT = 620
-const WIDTH_MIN = 560
+const WIDTH_DEFAULT = 540
+const WIDTH_MIN = 540
 
 function clampWidth(value: number): number {
   const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * 0.9))

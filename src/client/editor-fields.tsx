@@ -557,20 +557,19 @@ export interface WeekdayLabels {
 }
 
 /**
- * 周几多选 = 一排**小方块**（24×24，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
+ * 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的官方 SegmentedControl 外观**：
+ * 外层一圈 `interactive-bg-hover` 灰底轨道（包边），里面七枚等宽段，选中段是
+ * 「薄灰底（bg-layer-1）+ 柔和阴影 + 主色字」的浅胶囊（**不是实心蓝**，所以精致不刺眼）。
  *
- * 2026-09-29 用户返工：原来的实现是「官方 Pill chips + 尾随 ✕ + ＋ 菜单」，用户评价
- * 「特别难看」「太大了」⇒ 换成紧凑方块；一个都不选 = 每天（间隔档就是这个语义）。
- * 2026-09-29 再返工：用户「选中的蓝块太大、胀眼睛、不精致」⇒ 方块收到 24×24，
- * 选中态由**实心 business 填充**改成「business 描边 + 淡蓝底 + business 字 + 600 字重」。
- * 淡蓝底走 `color-mix`：宿主 Chromium 支持则是一层薄蓝，不支持则退化为透明，
- * 此时仍靠描边与字色区分选中，不会画错。
+ * 周几是多选，没法直接套官方 `SegmentedControl`（它只能单选），故照它的尺寸与样式
+ * 自绘：轨道 padding 4 / gap 2 / radius-md，段高 28 / radius-sm / 字 13 weight 500，
+ * 与顶部控件逐条对齐（2026-09-29 用户指定「改成那种」）。一个都不选 = 每天（间隔档语义）。
  */
 export function WeekdayPicker(props: {
   value: number[]
   onChange: (next: number[]) => void
   labels: WeekdayLabels
-  /** 方块左边的说明（「星期」），没有它就是七个光秃秃的字，用户看不懂（2026-09-29）。 */
+  /** 段左边的说明（「星期」），没有它就是七个光秃秃的字，用户看不懂（2026-09-29）。 */
   label?: string
   disabled?: boolean
 }): ReactElement {
@@ -582,38 +581,39 @@ export function WeekdayPicker(props: {
     props.onChange(next.slice().sort((a, b) => a - b))
   }
 
-  return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' } },
+  return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' } },
     props.label === undefined
       ? null
-      : h('span', { style: { flex: 'none', fontSize: '12px', color: C.textDim, marginRight: '4px' } }, props.label),
-    props.labels.shorts.map((short, index) => {
-      const day = index + 1
-      const on = selected.has(day)
-      const name = props.labels.weekdays[index] ?? String(day)
-      return h('button', {
-        key: day,
-        type: 'button',
-        className: 'dsh-tdt-ed-field',
-        disabled: props.disabled,
-        'aria-pressed': on,
-        'aria-label': name,
-        title: name,
-        onClick: () => { if (props.disabled !== true) toggle(day) },
-        onPointerEnter: () => { setHover(day) },
-        onPointerLeave: () => { setHover(current => (current === day ? null : current)) },
-        style: {
-          flex: 'none', width: '24px', height: '24px', padding: 0,
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          border: `0.5px solid ${on ? C.business : C.borderL4}`, borderRadius: C.radiusSm,
-          background: on
-            ? 'color-mix(in srgb, var(--dsw-alias-state-business-primary, #4d6bfe) 16%, transparent)'
-            : (hover === day ? C.hover : C.layer1),
-          color: on ? C.business : C.textDim,
-          font: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: on ? 600 : 400,
-          cursor: props.disabled === true ? 'not-allowed' : 'pointer', transition,
-        },
-      }, short)
-    }),
+      : h('span', { style: { flex: 'none', fontSize: '12px', color: C.textDim } }, props.label),
+    h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '3px', borderRadius: C.radiusMd, background: C.hover } },
+      props.labels.shorts.map((short, index) => {
+        const day = index + 1
+        const on = selected.has(day)
+        const name = props.labels.weekdays[index] ?? String(day)
+        return h('button', {
+          key: day,
+          type: 'button',
+          className: 'dsh-tdt-ed-field',
+          disabled: props.disabled,
+          'aria-pressed': on,
+          'aria-label': name,
+          title: name,
+          onClick: () => { if (props.disabled !== true) toggle(day) },
+          onPointerEnter: () => { setHover(day) },
+          onPointerLeave: () => { setHover(current => (current === day ? null : current)) },
+          style: {
+            flex: 'none', minWidth: '26px', height: '26px', padding: '0 4px',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            border: '0', borderRadius: C.radiusSm,
+            background: on ? C.layer1 : 'transparent',
+            boxShadow: on ? 'var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))' : 'none',
+            color: on ? C.text : C.textDim,
+            font: 'inherit', fontSize: '13px', lineHeight: '20px', fontWeight: on ? 600 : 400,
+            cursor: props.disabled === true ? 'not-allowed' : 'pointer', transition,
+          },
+        }, short)
+      }),
+    ),
     props.value.length === 0
       ? h('span', { style: { fontSize: '12px', color: C.dimmed } }, props.labels.empty)
       : null,
