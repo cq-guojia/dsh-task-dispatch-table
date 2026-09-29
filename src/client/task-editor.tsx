@@ -1455,19 +1455,7 @@ export function TaskEditorDrawer(props: {
           })(),
         },
           h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderBottom: `1px solid ${C.borderL2}`, flex: 'none' } },
-            h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
-              h(SelectField, {
-                value: pickerWs,
-                // 列**全部**工作区（用户 2026-09-29：别只给有会话的）；没会话的选中后正文给提示。
-                options: workspaces,
-                onChange: value => { setPickerWs(value) },
-                placeholder: t('editorWorkspacePh'),
-                emptyLabel: t('editorNoOptions'),
-                ariaLabel: t('editorWorkspace'),
-                icon: h(IconFolderOpenOutlineRegular, { size: 14 }),
-                size: 'sm',
-              }),
-            ),
+            h('span', { style: { flex: '1 1 auto', fontSize: '13px', fontWeight: 600, color: C.text } }, t('editorPickWorkspaceFile')),
             h('button', {
               type: 'button',
               'aria-label': t('editorPickerCancel'),
@@ -1485,6 +1473,10 @@ export function TaskEditorDrawer(props: {
                 sessionId: anchorSessionId,
                 path: '',
                 rootName: pickerWs,
+                // 工作区选择统一收进 ▾ 下拉（用户 2026-09-29：头部下拉冗余，撤掉）：
+                // 顶部列全部工作区（带图标区分当前），下面才是当前路径的缩进层级。
+                workspaces: workspaces.map(w => w.value),
+                onSelectWorkspace: (name: string) => { setPickerWs(name) },
                 t,
                 onClose: () => { setPickerOpen(false) },
                 picker: true,

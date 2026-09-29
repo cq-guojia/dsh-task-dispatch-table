@@ -3892,1010 +3892,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
 		}
 		//#endregion
-		//#region src/client/file-preview.tsx
-		/** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
-		var PreviewBoundary = class extends react.Component {
-			state = { crashed: false };
-			static getDerivedStateFromError() {
-				return { crashed: true };
-			}
-			componentDidCatch(error, info) {
-				console.warn("[task-dispatch:file-preview] 预览渲染崩溃（已拦在预览体内）:", error, info.componentStack ?? "");
-			}
-			render() {
-				return this.state.crashed ? this.props.fallback : this.props.children;
-			}
-		};
-		/** 值形状取证（真机排障锚点：远端返回与契约不符时打出来，别靠猜）。 */
-		function shapeOf(value) {
-			if (value === null || value === void 0) return String(value);
-			if (typeof value !== "object") return typeof value;
-			if (Array.isArray(value)) return `array(${value.length})`;
-			return `{${Object.keys(value).slice(0, 12).join(",")}}`;
-		}
-		function unwrapEnvelope(result) {
-			if (typeof result === "object" && result !== null) {
-				const r = result;
-				if (r.ok === false) return {
-					kind: "error",
-					error: r.error
-				};
-				if (r.ok === true && "value" in r) return {
-					kind: "ok",
-					payload: r.value
-				};
-			}
-			return {
-				kind: "ok",
-				payload: result
-			};
-		}
-		/**
-		* `read` 结果防御解析（真机 2026-09-28 根因：page.text 为 undefined ⇒ 渲染器内部
-		* `endsWith` 抛错 ⇒ 整页黑屏，界面出现「undefined undefined undefined」）。
-		* 官方 wire 契约 = `{ offset, text, lines, eof, absolutePath, version, bytes? }`
-		* （typert.remote-client.js 的 read_result schema）；**取不到字符串一律按错误态处理**，
-		* 绝不把 undefined 喂给官方渲染器。
-		*/
-		function textPageOf(result) {
-			const envelope = unwrapEnvelope(result);
-			if (envelope.kind === "error") return { failed: envelope.error };
-			const raw = envelope.payload;
-			if (typeof raw !== "object" || raw === null) {
-				console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(result)}`);
-				return null;
-			}
-			const r = raw;
-			if (typeof r.text !== "string") {
-				console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(result)}`);
-				return null;
-			}
-			const offset = typeof r.offset === "number" ? r.offset : 0;
-			const lines = typeof r.lines === "number" ? r.lines : r.text === "" ? 0 : r.text.split("\n").length;
-			return {
-				text: r.text,
-				offset,
-				lines,
-				eof: r.eof !== false
-			};
-		}
-		/** `readBytes` 结果防御解析：data 必须是 Uint8Array（multipart 还原），否则错误态。 */
-		function bytesOf(result) {
-			const envelope = unwrapEnvelope(result);
-			if (envelope.kind === "error") return { failed: envelope.error };
-			const data = envelope.payload?.data;
-			if (data instanceof Uint8Array) return data;
-			console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(result)}`);
-			return null;
-		}
-		/** `stat` 结果防御解析：只取 absolutePath（信封剥壳同款；stat 仅认 regular file）。 */
-		function absolutePathOf(result) {
-			const envelope = unwrapEnvelope(result);
-			if (envelope.kind === "error") return null;
-			const raw = envelope.payload;
-			if (typeof raw !== "object" || raw === null) return null;
-			const abs = raw.absolutePath;
-			return typeof abs === "string" && abs !== "" ? abs : null;
-		}
-		/** 失败分支判空（TS 收窄用）。 */
-		const isFailed = (value) => typeof value === "object" && value !== null && "failed" in value;
-		/** `list` 结果防御解析：返回 WorkspaceDirectoryListing 或失败/非法信封。 */
-		function listingOf(result) {
-			const envelope = unwrapEnvelope(result);
-			if (envelope.kind === "error") return { failed: envelope.error };
-			const raw = envelope.payload;
-			if (typeof raw !== "object" || raw === null) {
-				console.warn(`[task-dispatch:file-preview] list 返回非对象：${shapeOf(result)}`);
-				return null;
-			}
-			const r = raw;
-			if (typeof r.path !== "string" || !Array.isArray(r.entries) || typeof r.truncated !== "boolean") {
-				console.warn(`[task-dispatch:file-preview] list 返回形状不符契约：${shapeOf(result)}`);
-				return null;
-			}
-			return {
-				path: r.path,
-				entries: r.entries,
-				truncated: r.truncated
-			};
-		}
-		/** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
-		const IMAGE_MIME = {
-			png: "image/png",
-			jpg: "image/jpeg",
-			jpeg: "image/jpeg",
-			gif: "image/gif",
-			webp: "image/webp",
-			bmp: "image/bmp",
-			svg: "image/svg+xml",
-			ico: "image/x-icon",
-			avif: "image/avif"
-		};
-		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
-		function previewKind(path) {
-			const base = path.slice(path.lastIndexOf("/") + 1);
-			const dot = base.lastIndexOf(".");
-			const ext = dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
-			if (ext !== "" && IMAGE_MIME[ext] !== void 0) return {
-				kind: "image",
-				ext,
-				mime: IMAGE_MIME[ext]
-			};
-			if (ext === "pdf") return {
-				kind: "pdf",
-				ext,
-				mime: "application/pdf"
-			};
-			if (ext === "md" || ext === "markdown") return {
-				kind: "md",
-				ext
-			};
-			return {
-				kind: "text",
-				ext
-			};
-		}
-		/** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
-		function bareCode(code) {
-			return code.includes("/") ? code.slice(code.lastIndexOf("/") + 1) : code;
-		}
-		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
-		function formatBytes(n) {
-			if (n >= 1048576) {
-				const mb = n / 1048576;
-				return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
-			}
-			if (n >= 1024) {
-				const kb = n / 1024;
-				return `${Number.isInteger(kb) ? kb : kb.toFixed(1)} KB`;
-			}
-			return `${n} B`;
-		}
-		/** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
-		function errView(error) {
-			const e = error ?? {};
-			const code = typeof e.code === "string" ? e.code : "";
-			const details = e.details ?? null;
-			switch (bareCode(code)) {
-				case "not-found":
-				case "lookup-not-found": return { key: "previewNotFound" };
-				case "too-large": {
-					const limit = details !== null && typeof details.limit === "number" ? details.limit : void 0;
-					return {
-						key: "previewTooLarge",
-						params: limit === void 0 ? void 0 : { limit: formatBytes(limit) }
-					};
-				}
-				case "not-text": return { key: "previewUnknownBinary" };
-				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
-				case "outside-workspace": return { key: "previewOutsideWorkspace" };
-				default: return {
-					key: "previewError",
-					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
-				};
-			}
-		}
-		/** 错误/空态体：仅原因文案（复制路径已上提到顶栏按钮组，见 FilePreviewPanel head）。 */
-		function ErrBox(props) {
-			const { err, t } = props;
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(err.key, err.params))));
-		}
-		/** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
-		function BytesPreview(props) {
-			const { workspaceFiles, sessionId, path, kind, mime, t, reloadNonce } = props;
-			const [url, setUrl] = (0, react.useState)(null);
-			const [err, setErr] = (0, react.useState)(null);
-			(0, react.useEffect)(() => {
-				let alive = true;
-				let objectUrl = null;
-				setUrl(null);
-				setErr(null);
-				workspaceFiles.readBytes(sessionId, path).then((page) => {
-					if (!alive) return;
-					const data = bytesOf(page);
-					if (isFailed(data)) {
-						setErr(errView(data.failed));
-						return;
-					}
-					if (data === null) {
-						setErr({ key: "previewBadPayload" });
-						return;
-					}
-					objectUrl = URL.createObjectURL(new Blob([data], { type: mime }));
-					setUrl(objectUrl);
-				}).catch((error) => {
-					if (alive) setErr(errView(error));
-				});
-				return () => {
-					alive = false;
-					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
-				};
-			}, [
-				workspaceFiles,
-				sessionId,
-				path,
-				mime,
-				reloadNonce
-			]);
-			if (err !== null) return (0, react.createElement)(ErrBox, {
-				err,
-				t
-			});
-			if (url === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
-			if (kind === "pdf") return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react.createElement)("iframe", {
-				className: "dsh-tdt-sv-preview-pdf",
-				src: url,
-				title: path
-			}));
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("img", {
-				className: "dsh-tdt-sv-preview-img",
-				src: url,
-				alt: path
-			}));
-		}
-		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
-		* md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
-		* 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
-		function TextPreview(props) {
-			const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t } = props;
-			const [text, setText] = (0, react.useState)(null);
-			const [nextOffset, setNextOffset] = (0, react.useState)(null);
-			const [loading, setLoading] = (0, react.useState)(true);
-			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
-			const [err, setErr] = (0, react.useState)(null);
-			(0, react.useEffect)(() => {
-				let alive = true;
-				setText(null);
-				setNextOffset(null);
-				setLoading(true);
-				setErr(null);
-				workspaceFiles.read(sessionId, path, {}).then((page) => {
-					if (!alive) return;
-					const parsed = textPageOf(page);
-					if (isFailed(parsed)) {
-						setErr(errView(parsed.failed));
-						setLoading(false);
-						return;
-					}
-					if (parsed === null) {
-						setErr({ key: "previewBadPayload" });
-						setLoading(false);
-						return;
-					}
-					setText(parsed.text);
-					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
-					setLoading(false);
-				}).catch((error) => {
-					if (!alive) return;
-					setErr(errView(error));
-					setLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				workspaceFiles,
-				sessionId,
-				path,
-				reloadNonce
-			]);
-			const loadMore = () => {
-				if (nextOffset === null || loadingMore) return;
-				setLoadingMore(true);
-				workspaceFiles.read(sessionId, path, { offset: nextOffset }).then((page) => {
-					const parsed = textPageOf(page);
-					if (isFailed(parsed)) {
-						setErr(errView(parsed.failed));
-						setLoadingMore(false);
-						return;
-					}
-					if (parsed === null) {
-						setErr({ key: "previewBadPayload" });
-						setLoadingMore(false);
-						return;
-					}
-					setText((prev) => prev === null ? parsed.text : `${prev}\n${parsed.text}`);
-					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
-					setLoadingMore(false);
-				}).catch((error) => {
-					setErr(errView(error));
-					setLoadingMore(false);
-				});
-			};
-			if (err !== null) return (0, react.createElement)(ErrBox, {
-				err,
-				t
-			});
-			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
-			const language = (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path);
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, !markdown || sourceView ? (0, react.createElement)("div", {
-				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
-				"data-code-preview": true
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
-				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
-				code: text,
-				lang: language,
-				lineNumbers: true,
-				copyLabel: t("copyLabel"),
-				copiedLabel: t("copiedLabel"),
-				toolbarLabels: {
-					codeLabel: t("codeBlockLabel"),
-					wrapLabel: t("diffWrapLabel"),
-					unwrapLabel: t("diffUnwrapLabel")
-				}
-			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text,
-				labels: MD_LABELS
-			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
-				type: "button",
-				disabled: loadingMore,
-				onClick: loadMore
-			}, t("previewLoadMore"))) : null);
-		}
-		//#endregion
-		//#region src/client/file-browser.tsx
-		const tooled = (label, node) => (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-			label,
-			side: "bottom"
-		}, node);
-		/**
-		* list 的线上路径包装：**0.2.0-rc.1 起官方 list 拒绝空路径**（`gateway/bad-request` "path is required"，
-		* 官方 lib/index.js `inspect()` 首行校验；0.1.7-rc.2 还允许空串列根，行为变更）。
-		* 空串（= 工作区根）一律以 `'.'` 上线：路径按 `cwd = 工作区根` 归一 ⇒ `'.'` 解析为根本身，containment 通过。
-		* 响应里根目录的 `path` 仍是 `''`（官方 workspacePathOf 对根返回空串）⇒ 内部目录状态 / 面包屑不受影响。
-		*/
-		function listDir(workspaceFiles, sessionId, dir) {
-			return workspaceFiles.list(sessionId, dir === "" ? "." : dir);
-		}
-		/** 路径工具：取父目录（无父 = 空串，list('') = 工作区根）。 */
-		function dirnameOf(p) {
-			const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
-			if (i <= 0) return "";
-			return p.slice(0, i);
-		}
-		/** 路径工具：dir 拼接 name（处理根与绝对/相对）。 */
-		function joinPath(dir, name) {
-			if (dir === "" || dir === "/") return (dir === "/" ? "/" : "") + name;
-			return dir.replace(/\/+$/, "") + "/" + name;
-		}
-		/**
-		* 面包屑/下拉统一按**工作区相对**展示（用户 2026-09-29：把根目录刨掉、名字不写死）。
-		* dir 为宿主绝对路径时（openFile 入口 / 目录反推），用缓存的 workspaceRoot 把根剥掉——
-		* 根名字每个部署都不同，绝不能写死；根未知或不在根下时原样返回（退化现行为）。
-		*/
-		function relativizeToRoot(dir, sessionId) {
-			if (!dir.startsWith("/")) return dir;
-			const root = workspaceRoots.get(sessionId);
-			if (root === void 0) return dir;
-			const norm = root.replace(/\/+$/, "");
-			if (dir === norm) return "";
-			if (dir.startsWith(norm + "/")) return dir.slice(norm.length + 1);
-			return dir;
-		}
-		/** 面包屑段：把目录路径拆成可点层级（绝对路径保留前导 /）。 */
-		function crumbsOf(dir) {
-			const isAbs = dir.startsWith("/");
-			const segs = dir.split("/").filter((s) => s.length > 0);
-			const out = [];
-			let acc = "";
-			for (const seg of segs) {
-				acc = acc === "" ? isAbs ? "/" + seg : seg : acc + "/" + seg;
-				out.push({
-					label: seg,
-					path: acc
-				});
-			}
-			return out;
-		}
-		/** 子项排序：目录在前，文件在后，各自按名称（不区分大小写）升序。 */
-		function sortEntries(entries) {
-			return [...entries].sort((a, b) => {
-				const ad = a.type === "directory" ? 0 : 1;
-				const bd = b.type === "directory" ? 0 : 1;
-				if (ad !== bd) return ad - bd;
-				return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
-			});
-		}
-		/** 宿主绝对路径形态（/ 开头或 Windows 盘符）。 */
-		function isAbsoluteish(p) {
-			return p.startsWith("/") || p.startsWith("\\") || /^[a-zA-Z]:[\\/]/.test(p);
-		}
-		/**
-		* 已探明的**工作区根**（宿主绝对路径），按会话缓存。
-		* 官方没有任何「目录的绝对路径」接口（stat 只认 regular file，locateFile 对目录抛
-		* not-regular-file，dsh-api-workspace-files lib/index.js:594），但工作区根可以由
-		* 「任一文件的 relativePath + stat.absolutePath」反推一次后复用 ⇒ 之后**空目录 /
-		* 只含子目录**的相对名目录也能拼出绝对路径（用户 2026-09-29 要求不留遗留）。
-		*/
-		const workspaceRoots = /* @__PURE__ */ new Map();
-		/** 由「相对路径 + 该文件宿主绝对路径」反推工作区根并缓存（absolute = 根 + '/' + 相对路径）。 */
-		function learnRoot(sessionId, relativePath, absolutePath) {
-			const rel = relativePath.replace(/^\/+/, "").replace(/\/+$/, "");
-			if (rel === "" || !absolutePath.endsWith("/" + rel)) return null;
-			const root = absolutePath.slice(0, absolutePath.length - rel.length - 1);
-			workspaceRoots.set(sessionId, root);
-			return root;
-		}
-		/** 相对路径拼接（保持工作区相对形态，不做绝对路径处理）。 */
-		function relJoin(dir, name) {
-			return dir.replace(/\/+$/, "") === "" ? name : dir.replace(/\/+$/, "") + "/" + name;
-		}
-		/**
-		* 在相对目录树里找**任意一个文件**并 stat（广度优先、有界：每层最多 5 个目录、最多 3 层）。
-		* 用于目标目录本身没有文件子项（空目录 / 只有子目录）时反推工作区根。
-		* @returns 该文件的宿主绝对路径与相对路径；找不到（工作区里一个文件都没有）返回 null。
-		*/
-		async function findAnyFileAbs(workspaceFiles, sessionId, startDir) {
-			const stat = workspaceFiles.stat;
-			if (stat === void 0) return null;
-			let frontier = [startDir];
-			for (let depth = 0; depth < 3 && frontier.length > 0; depth++) {
-				const nextDirs = [];
-				for (const dir of frontier.slice(0, 5)) {
-					let entries;
-					try {
-						const parsed = listingOf(await listDir(workspaceFiles, sessionId, dir));
-						if (isFailed(parsed) || parsed === null) continue;
-						entries = parsed.entries;
-					} catch {
-						continue;
-					}
-					const file = entries.find((entry) => entry.type === "file");
-					if (file !== void 0) {
-						const rel = relJoin(dir, file.name);
-						try {
-							const abs = absolutePathOf(await stat(sessionId, rel));
-							if (abs !== null) return {
-								absolutePath: abs,
-								relativePath: rel
-							};
-						} catch {}
-					}
-					for (const entry of entries) if (entry.type === "directory" && nextDirs.length < 5) nextDirs.push(relJoin(dir, entry.name));
-				}
-				frontier = nextDirs;
-			}
-			return null;
-		}
-		/**
-		* 把「工作区相对名」的目录解析成宿主绝对路径（面包屑才能从工作区根往下列）。
-		*
-		* 场景（用户 2026-09-29 实测）：交付卡 / 执行记录「产出」列把回契声明的产出**原样**传入
-		* `openFile`，常是工作区相对名（如 `20260928`）⇒ 面包屑只剩这一层。
-		* 解析优先级（每一步失败都自然落到下一步）：
-		*   ① 工作区根已缓存 ⇒ 根 + '/' + 规范相对路径（覆盖**空目录 / 只有子目录**）；
-		*   ② 目录里有文件子项 ⇒ stat 它，`absolutePath = 根 + '/' + 目录 + '/' + 文件名`，
-		*      掐掉文件名即得目录绝对路径，并**记住工作区根**供后续复用；
-		*   ③ 目录里没文件 ⇒ 有界 BFS 在目录树里找任一文件 stat 出根，再拼。
-		* 全部失败（工作区里一个文件都没有 / stat 不可用）⇒ 退回入参，浏览不受影响。
-		*/
-		async function absolutizeDir(workspaceFiles, sessionId, dir, canonical, entries) {
-			if (isAbsoluteish(dir)) return dir;
-			const rel = canonical !== "" ? canonical : dir;
-			const cached = workspaceRoots.get(sessionId);
-			if (cached !== void 0) return cached + "/" + rel;
-			const stat = workspaceFiles.stat;
-			if (stat === void 0) return dir;
-			const file = entries.find((entry) => entry.type === "file");
-			if (file !== void 0) try {
-				const sub = relJoin(rel, file.name);
-				const abs = absolutePathOf(await stat(sessionId, sub));
-				if (abs !== null && abs.endsWith("/" + file.name) && learnRoot(sessionId, sub, abs) !== null) return abs.slice(0, abs.length - file.name.length - 1);
-			} catch {}
-			const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
-			if (found === null) return dir;
-			const root = learnRoot(sessionId, found.relativePath, found.absolutePath);
-			return root === null ? dir : root + "/" + rel;
-		}
-		/** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
-		function FileBody(props) {
-			const { workspaceFiles, sessionId, path, sourceView, reloadNonce, t } = props;
-			const { kind, ext, mime } = previewKind(path);
-			const isMd = kind === "md";
-			const fallback = (0, react.createElement)(ErrBox, {
-				err: { key: "previewRenderFailed" },
-				t
-			});
-			return (0, react.createElement)(PreviewBoundary, {
-				fallback,
-				children: kind === "image" || kind === "pdf" ? (0, react.createElement)(BytesPreview, {
-					workspaceFiles,
-					sessionId,
-					path,
-					kind,
-					mime: mime ?? "application/octet-stream",
-					t,
-					reloadNonce
-				}) : (0, react.createElement)(TextPreview, {
-					workspaceFiles,
-					sessionId,
-					path,
-					ext,
-					markdown: isMd,
-					sourceView,
-					reloadNonce,
-					t
-				})
-			});
-		}
-		/**
-		* 目录浏览器（在预览 dock 内）。与 FilePreviewPanel 同接 `openFile(path)`：
-		* list(path) 成功 ⇒ 目录树；not-directory ⇒ 文件预览（dir = 父目录，面包屑保留可返回）。
-		*/
-		function FileBrowser(props) {
-			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, style } = props;
-			const [mode, setMode] = (0, react.useState)("loading");
-			const [dir, setDir] = (0, react.useState)("");
-			const [listing, setListing] = (0, react.useState)(null);
-			const [truncated, setTruncated] = (0, react.useState)(false);
-			const [viewing, setViewing] = (0, react.useState)(null);
-			const [listErr, setListErr] = (0, react.useState)(null);
-			const [crumbsOverflow, setCrumbsOverflow] = (0, react.useState)(false);
-			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
-			const [history, setHistory] = (0, react.useState)([]);
-			const barRef = (0, react.useRef)(null);
-			const regionRef = (0, react.useRef)(null);
-			const measureRef = (0, react.useRef)(null);
-			const titleRef = (0, react.useRef)(null);
-			const titleInnerRef = (0, react.useRef)(null);
-			const [sourceView, setSourceView] = (0, react.useState)(false);
-			const [reloadNonce, setReloadNonce] = (0, react.useState)(0);
-			const [copied, setCopied] = (0, react.useState)(false);
-			const [openDirs, setOpenDirs] = (0, react.useState)(/* @__PURE__ */ new Set());
-			const [childCache, setChildCache] = (0, react.useState)({});
-			const [, setRootNonce] = (0, react.useState)(0);
-			const startMarquee = () => {
-				const outer = titleRef.current;
-				const inner = titleInnerRef.current;
-				if (outer === null || inner === null) return;
-				inner.style.maxWidth = "none";
-				inner.style.textOverflow = "clip";
-				const shift = inner.scrollWidth - outer.clientWidth;
-				if (shift > 0) {
-					inner.style.transition = "transform 3s linear";
-					inner.offsetWidth;
-					inner.style.transform = `translateX(${-shift}px)`;
-				}
-			};
-			const stopMarquee = () => {
-				const inner = titleInnerRef.current;
-				if (inner === null) return;
-				inner.style.transition = "none";
-				inner.style.transform = "translateX(0)";
-				inner.style.maxWidth = "";
-				inner.style.textOverflow = "";
-			};
-			/** 列举某目录并展示（清空 viewing；收起下拉）。 */
-			const fetchDir = (targetDir) => {
-				setDir(targetDir);
-				setViewing(null);
-				setListErr(null);
-				setMenuOpen(false);
-				setMode("loading");
-				setOpenDirs(/* @__PURE__ */ new Set());
-				setChildCache({});
-				listDir(workspaceFiles, sessionId, targetDir).then((result) => {
-					const parsed = listingOf(result);
-					if (isFailed(parsed)) {
-						setListErr(errView(parsed.failed));
-						setMode("error");
-						return;
-					}
-					if (parsed === null) {
-						setListErr({ key: "previewBadPayload" });
-						setMode("error");
-						return;
-					}
-					setListing(parsed.entries);
-					setTruncated(parsed.truncated);
-					setMode("dir");
-				}).catch((error) => {
-					setListErr(errView(error));
-					setMode("error");
-				});
-			};
-			/** 进入某目录：当前目录压栈（供「返回」回跳）。 */
-			const loadDir = (targetDir) => {
-				if (targetDir === dir) {
-					fetchDir(targetDir);
-					return;
-				}
-				setHistory((prev) => [...prev, dir]);
-				fetchDir(targetDir);
-			};
-			/** 返回上一次位置（历史栈弹栈；报错页的返回按钮同源）。 */
-			const goBack = () => {
-				if (history.length === 0) return;
-				const target = history[history.length - 1];
-				setHistory(history.slice(0, -1));
-				fetchDir(target);
-			};
-			(0, react.useEffect)(() => {
-				let alive = true;
-				setMode("loading");
-				setListErr(null);
-				setViewing(null);
-				setSourceView(false);
-				setReloadNonce(0);
-				setMenuOpen(false);
-				setOpenDirs(/* @__PURE__ */ new Set());
-				setChildCache({});
-				const ensureRootLearned = (currentDir) => {
-					if (workspaceRoots.get(sessionId) !== void 0) return;
-					(async () => {
-						try {
-							const parsed = listingOf(await listDir(workspaceFiles, sessionId, currentDir));
-							if (!alive || isFailed(parsed) || parsed === null) return;
-							const stat = workspaceFiles.stat;
-							if (stat === void 0) return;
-							const rel = parsed.path;
-							const file = parsed.entries.find((entry) => entry.type === "file");
-							if (file !== void 0) {
-								const sub = relJoin(rel, file.name);
-								const abs = absolutePathOf(await stat(sessionId, sub));
-								if (abs !== null && learnRoot(sessionId, sub, abs) !== null) {
-									setRootNonce((n) => n + 1);
-									return;
-								}
-							}
-							const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
-							if (found !== null && learnRoot(sessionId, found.relativePath, found.absolutePath) !== null) setRootNonce((n) => n + 1);
-						} catch {}
-					})();
-				};
-				listDir(workspaceFiles, sessionId, path).then(async (result) => {
-					if (!alive) return;
-					const parsed = listingOf(result);
-					if (!isFailed(parsed) && parsed !== null) {
-						const absDir = await absolutizeDir(workspaceFiles, sessionId, path, parsed.path, parsed.entries);
-						if (!alive) return;
-						setDir(absDir);
-						setListing(parsed.entries);
-						setTruncated(parsed.truncated);
-						setMode("dir");
-						ensureRootLearned(absDir);
-						return;
-					}
-					let parent = dirnameOf(path);
-					if (!isAbsoluteish(path)) {
-						const stat = workspaceFiles.stat;
-						if (stat !== void 0) try {
-							const abs = absolutePathOf(await stat(sessionId, path));
-							if (abs !== null) {
-								parent = dirnameOf(abs);
-								learnRoot(sessionId, path, abs);
-							}
-						} catch {}
-					}
-					if (!alive) return;
-					setDir(parent);
-					setViewing(path);
-					setMode("file");
-					ensureRootLearned(parent);
-					listDir(workspaceFiles, sessionId, parent).then((pres) => {
-						if (!alive) return;
-						const pl = listingOf(pres);
-						if (!isFailed(pl) && pl !== null) {
-							setListing(pl.entries);
-							setTruncated(pl.truncated);
-						}
-					}).catch(() => {});
-				}).catch(() => {
-					if (!alive) return;
-					const parent = dirnameOf(path);
-					setDir(parent);
-					setViewing(path);
-					setMode("file");
-					ensureRootLearned(parent);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				workspaceFiles,
-				sessionId,
-				path
-			]);
-			(0, react.useLayoutEffect)(() => {
-				const region = regionRef.current;
-				const measure = measureRef.current;
-				if (region === null || measure === null) return;
-				const recompute = () => {
-					setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1);
-				};
-				recompute();
-				const ro = new ResizeObserver(recompute);
-				ro.observe(region);
-				return () => ro.disconnect();
-			}, [
-				dir,
-				viewing,
-				mode,
-				listing
-			]);
-			const reload = () => {
-				if (viewing !== null) {
-					setReloadNonce((n) => n + 1);
-					return;
-				}
-				loadDir(dir);
-			};
-			const copyPath = () => {
-				const target = viewing ?? dir;
-				if (target === "") return;
-				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(target).then((ok) => {
-					if (ok) {
-						setCopied(true);
-						window.setTimeout(() => setCopied(false), 1500);
-					}
-				});
-			};
-			/** 内联展开/收起某目录（点 ▸）：只切展开态，不导航、不进历史；首次展开才拉子项。 */
-			const toggleDir = (path) => {
-				setOpenDirs((prev) => {
-					const next = new Set(prev);
-					if (next.has(path)) next.delete(path);
-					else next.add(path);
-					return next;
-				});
-				if (!(path in childCache)) {
-					setChildCache((prev) => ({
-						...prev,
-						[path]: { status: "loading" }
-					}));
-					listDir(workspaceFiles, sessionId, path).then((result) => {
-						const parsed = listingOf(result);
-						if (isFailed(parsed)) {
-							setChildCache((prev) => ({
-								...prev,
-								[path]: {
-									status: "error",
-									error: errView(parsed.failed)
-								}
-							}));
-							return;
-						}
-						if (parsed === null) {
-							setChildCache((prev) => ({
-								...prev,
-								[path]: {
-									status: "error",
-									error: { key: "previewBadPayload" }
-								}
-							}));
-							return;
-						}
-						setChildCache((prev) => ({
-							...prev,
-							[path]: {
-								status: "ready",
-								entries: parsed.entries,
-								truncated: parsed.truncated
-							}
-						}));
-					}).catch((error) => {
-						setChildCache((prev) => ({
-							...prev,
-							[path]: {
-								status: "error",
-								error: errView(error)
-							}
-						}));
-					});
-				}
-			};
-			/** 递归渲染目录树（内联展开）。file = 点开预览；dir = ▸ 切展开、名字点导航。 */
-			const renderTree = (entries, baseDir) => {
-				return sortEntries(entries).map((entry) => {
-					const childPath = joinPath(baseDir, entry.name);
-					if (!(entry.type === "directory")) {
-						const pick = () => {
-							if (picker && onPick !== void 0) {
-								onPick(childPath);
-								return;
-							}
-							setViewing(childPath);
-							setReloadNonce(0);
-							setSourceView(false);
-						};
-						return (0, react.createElement)("div", {
-							key: childPath,
-							className: "dsh-tdt-sv-tree-row" + (picker === true ? " dsh-tdt-sv-tree-row-pick" : ""),
-							role: "button",
-							tabIndex: 0,
-							title: picker === true ? t("editorPickerPick") : childPath,
-							onClick: pick,
-							onKeyDown: (event) => {
-								if (event.key === "Enter" || event.key === " ") pick();
-							}
-						}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-							path: childPath,
-							size: 18
-						})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name));
-					}
-					const cached = childCache[childPath];
-					const isOpen = openDirs.has(childPath);
-					return (0, react.createElement)(react.Fragment, { key: childPath }, (0, react.createElement)("div", {
-						className: "dsh-tdt-sv-tree-row",
-						role: "button",
-						tabIndex: 0,
-						title: childPath,
-						onClick: () => {
-							loadDir(childPath);
-						},
-						onKeyDown: (event) => {
-							if (event.key === "Enter" || event.key === " ") loadDir(childPath);
-						}
-					}, tooled(isOpen ? t("explorerCollapse") : t("explorerExpand"), (0, react.createElement)("button", {
-						type: "button",
-						className: "dsh-tdt-sv-tree-toggle" + (isOpen ? " dsh-tdt-sv-tree-toggle-open" : ""),
-						"aria-expanded": isOpen,
-						"aria-label": isOpen ? t("explorerCollapse") : t("explorerExpand"),
-						onClick: (event) => {
-							event.stopPropagation();
-							toggleDir(childPath);
-						}
-					}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-loading" }, t("previewLoading")) : cached.status === "error" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react.createElement)(react.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
-				});
-			};
-			const rootAbs = workspaceRoots.get(sessionId);
-			const rootLabel = props.rootName ?? (rootAbs !== void 0 ? rootAbs.replace(/\/+$/, "").split("/").pop() ?? "" : "");
-			const crumbs = rootLabel !== "" ? [{
-				label: rootLabel,
-				path: ""
-			}, ...crumbsOf(relativizeToRoot(dir, sessionId))] : crumbsOf(dir);
-			const isMdPreview = viewing !== null && previewKind(viewing).kind === "md";
-			let body;
-			if (viewing !== null) body = (0, react.createElement)(FileBody, {
-				workspaceFiles,
-				sessionId,
-				path: viewing,
-				sourceView,
-				reloadNonce,
-				t
-			});
-			else if (mode === "error" && listErr !== null) body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(listErr.key, listErr.params))), history.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-err-actions" }, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-err-back",
-				onClick: goBack
-			}, t("explorerBack"))) : null);
-			else if (listing !== null) body = listing.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
-			else body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
-			return (0, react.createElement)("aside", {
-				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
-				"data-preview-dock": dock === true ? true : void 0,
-				style: style ?? void 0
-			}, onResizeStart === void 0 ? null : (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-resizer",
-				role: "separator",
-				"aria-orientation": "vertical",
-				title: t("previewResize"),
-				onPointerDown: (event) => {
-					onResizeStart(event);
-				}
-			}), (0, react.createElement)("nav", {
-				ref: barRef,
-				className: "dsh-tdt-sv-crumbbar",
-				"aria-label": t("explorerCrumbsAria")
-			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-wrap" }, tooled(t("explorerLevels"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerLevels"),
-				"aria-expanded": menuOpen,
-				onClick: () => {
-					setMenuOpen((value) => !value);
-				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }))), menuOpen ? (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-crumbs-backdrop",
-				onClick: () => {
-					setMenuOpen(false);
-				}
-			}), (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-crumbs-menu",
-				role: "menu"
-			}, crumbs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, t("explorerRootName")) : crumbs.map((crumb, index) => {
-				const chevrons = index === 0 ? null : (0, react.createElement)(react.Fragment, null, Array.from({ length: index - 1 }, (_, i) => (0, react.createElement)("span", {
-					key: `s${i}`,
-					className: "dsh-tdt-sv-crumbs-chev-slot",
-					"aria-hidden": true
-				})), (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-chev" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 11 })));
-				return (0, react.createElement)("button", {
-					key: crumb.path,
-					type: "button",
-					role: "menuitem",
-					className: "dsh-tdt-sv-crumbs-menu-item",
-					style: { paddingLeft: 8 },
-					title: crumb.path,
-					onClick: () => {
-						loadDir(crumb.path);
-					}
-				}, chevrons, (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-menu-label" }, crumb.label));
-			}))) : null), (0, react.createElement)("div", {
-				ref: regionRef,
-				className: "dsh-tdt-sv-crumbs-region"
-			}, (0, react.createElement)("span", {
-				ref: measureRef,
-				className: "dsh-tdt-sv-crumbs-measure",
-				"aria-hidden": true
-			}, crumbs.length === 0 ? (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				disabled: true,
-				tabIndex: -1
-			}, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 12 }) : null, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				disabled: true,
-				tabIndex: -1
-			}, crumb.label)))), crumbsOverflow ? (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t("explorerRootName")) : crumbs.length === 0 ? (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
-				className: "dsh-tdt-sv-crumb-sep",
-				size: 12
-			}) : null, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				onClick: () => {
-					loadDir(crumb.path);
-				}
-			}, crumb.label)))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("explorerBack"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerBack"),
-				disabled: history.length === 0,
-				onClick: goBack
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 14 }))), tooled(t("explorerUp"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerUp"),
-				disabled: dir === "",
-				onClick: () => {
-					const p = dirnameOf(dir);
-					if (p !== dir) loadDir(p);
-				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 }))), tooled(t("previewClose"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
-				"aria-label": t("previewClose"),
-				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))))), viewing !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react.createElement)("span", {
-				ref: titleRef,
-				className: "dsh-tdt-sv-preview-title",
-				onMouseEnter: startMarquee,
-				onMouseLeave: stopMarquee
-			}, (0, react.createElement)("span", {
-				ref: titleInnerRef,
-				className: "dsh-tdt-sv-preview-title-inner",
-				title: viewing
-			}, viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-seg",
-				role: "group",
-				"aria-label": t("previewMdSwitchAria")
-			}, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-seg-btn",
-				"aria-pressed": !sourceView,
-				onClick: () => {
-					setSourceView(false);
-				}
-			}, t("previewRender")), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-seg-btn",
-				"aria-pressed": sourceView,
-				onClick: () => {
-					setSourceView(true);
-				}
-			}, t("previewSource"))) : null, tooled(t("previewCopyPath"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("previewCopyPath"),
-				onClick: copyPath
-			}, copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 14 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, { size: 14 }))), tooled(t("previewRefresh"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("previewRefresh"),
-				onClick: reload
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 }))))) : null, body);
-		}
-		//#endregion
 		//#region src/client/editor-fields.tsx
 		const C$2 = {
 			text: "var(--dsw-alias-label-primary, #1f2328)",
@@ -5550,6 +4546,1039 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				fontSize: "12px",
 				color: C$2.dimmed
 			} }, props.labels.empty) : null);
+		}
+		//#endregion
+		//#region src/client/file-preview.tsx
+		/** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
+		var PreviewBoundary = class extends react.Component {
+			state = { crashed: false };
+			static getDerivedStateFromError() {
+				return { crashed: true };
+			}
+			componentDidCatch(error, info) {
+				console.warn("[task-dispatch:file-preview] 预览渲染崩溃（已拦在预览体内）:", error, info.componentStack ?? "");
+			}
+			render() {
+				return this.state.crashed ? this.props.fallback : this.props.children;
+			}
+		};
+		/** 值形状取证（真机排障锚点：远端返回与契约不符时打出来，别靠猜）。 */
+		function shapeOf(value) {
+			if (value === null || value === void 0) return String(value);
+			if (typeof value !== "object") return typeof value;
+			if (Array.isArray(value)) return `array(${value.length})`;
+			return `{${Object.keys(value).slice(0, 12).join(",")}}`;
+		}
+		function unwrapEnvelope(result) {
+			if (typeof result === "object" && result !== null) {
+				const r = result;
+				if (r.ok === false) return {
+					kind: "error",
+					error: r.error
+				};
+				if (r.ok === true && "value" in r) return {
+					kind: "ok",
+					payload: r.value
+				};
+			}
+			return {
+				kind: "ok",
+				payload: result
+			};
+		}
+		/**
+		* `read` 结果防御解析（真机 2026-09-28 根因：page.text 为 undefined ⇒ 渲染器内部
+		* `endsWith` 抛错 ⇒ 整页黑屏，界面出现「undefined undefined undefined」）。
+		* 官方 wire 契约 = `{ offset, text, lines, eof, absolutePath, version, bytes? }`
+		* （typert.remote-client.js 的 read_result schema）；**取不到字符串一律按错误态处理**，
+		* 绝不把 undefined 喂给官方渲染器。
+		*/
+		function textPageOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return { failed: envelope.error };
+			const raw = envelope.payload;
+			if (typeof raw !== "object" || raw === null) {
+				console.warn(`[task-dispatch:file-preview] read 返回非对象：${shapeOf(result)}`);
+				return null;
+			}
+			const r = raw;
+			if (typeof r.text !== "string") {
+				console.warn(`[task-dispatch:file-preview] read 返回形状不符契约（无 text 字段）：${shapeOf(result)}`);
+				return null;
+			}
+			const offset = typeof r.offset === "number" ? r.offset : 0;
+			const lines = typeof r.lines === "number" ? r.lines : r.text === "" ? 0 : r.text.split("\n").length;
+			return {
+				text: r.text,
+				offset,
+				lines,
+				eof: r.eof !== false
+			};
+		}
+		/** `readBytes` 结果防御解析：data 必须是 Uint8Array（multipart 还原），否则错误态。 */
+		function bytesOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return { failed: envelope.error };
+			const data = envelope.payload?.data;
+			if (data instanceof Uint8Array) return data;
+			console.warn(`[task-dispatch:file-preview] readBytes 返回形状不符契约：${shapeOf(result)}`);
+			return null;
+		}
+		/** `stat` 结果防御解析：只取 absolutePath（信封剥壳同款；stat 仅认 regular file）。 */
+		function absolutePathOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return null;
+			const raw = envelope.payload;
+			if (typeof raw !== "object" || raw === null) return null;
+			const abs = raw.absolutePath;
+			return typeof abs === "string" && abs !== "" ? abs : null;
+		}
+		/** 失败分支判空（TS 收窄用）。 */
+		const isFailed = (value) => typeof value === "object" && value !== null && "failed" in value;
+		/** `list` 结果防御解析：返回 WorkspaceDirectoryListing 或失败/非法信封。 */
+		function listingOf(result) {
+			const envelope = unwrapEnvelope(result);
+			if (envelope.kind === "error") return { failed: envelope.error };
+			const raw = envelope.payload;
+			if (typeof raw !== "object" || raw === null) {
+				console.warn(`[task-dispatch:file-preview] list 返回非对象：${shapeOf(result)}`);
+				return null;
+			}
+			const r = raw;
+			if (typeof r.path !== "string" || !Array.isArray(r.entries) || typeof r.truncated !== "boolean") {
+				console.warn(`[task-dispatch:file-preview] list 返回形状不符契约：${shapeOf(result)}`);
+				return null;
+			}
+			return {
+				path: r.path,
+				entries: r.entries,
+				truncated: r.truncated
+			};
+		}
+		/** 图片扩展名 → MIME（svg 走 <img> 渲染：img 上下文不执行脚本）。 */
+		const IMAGE_MIME = {
+			png: "image/png",
+			jpg: "image/jpeg",
+			jpeg: "image/jpeg",
+			gif: "image/gif",
+			webp: "image/webp",
+			bmp: "image/bmp",
+			svg: "image/svg+xml",
+			ico: "image/x-icon",
+			avif: "image/avif"
+		};
+		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
+		function previewKind(path) {
+			const base = path.slice(path.lastIndexOf("/") + 1);
+			const dot = base.lastIndexOf(".");
+			const ext = dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
+			if (ext !== "" && IMAGE_MIME[ext] !== void 0) return {
+				kind: "image",
+				ext,
+				mime: IMAGE_MIME[ext]
+			};
+			if (ext === "pdf") return {
+				kind: "pdf",
+				ext,
+				mime: "application/pdf"
+			};
+			if (ext === "md" || ext === "markdown") return {
+				kind: "md",
+				ext
+			};
+			return {
+				kind: "text",
+				ext
+			};
+		}
+		/** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
+		function bareCode(code) {
+			return code.includes("/") ? code.slice(code.lastIndexOf("/") + 1) : code;
+		}
+		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
+		function formatBytes(n) {
+			if (n >= 1048576) {
+				const mb = n / 1048576;
+				return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
+			}
+			if (n >= 1024) {
+				const kb = n / 1024;
+				return `${Number.isInteger(kb) ? kb : kb.toFixed(1)} KB`;
+			}
+			return `${n} B`;
+		}
+		/** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
+		function errView(error) {
+			const e = error ?? {};
+			const code = typeof e.code === "string" ? e.code : "";
+			const details = e.details ?? null;
+			switch (bareCode(code)) {
+				case "not-found":
+				case "lookup-not-found": return { key: "previewNotFound" };
+				case "too-large": {
+					const limit = details !== null && typeof details.limit === "number" ? details.limit : void 0;
+					return {
+						key: "previewTooLarge",
+						params: limit === void 0 ? void 0 : { limit: formatBytes(limit) }
+					};
+				}
+				case "not-text": return { key: "previewUnknownBinary" };
+				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
+				case "outside-workspace": return { key: "previewOutsideWorkspace" };
+				default: return {
+					key: "previewError",
+					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
+				};
+			}
+		}
+		/** 错误/空态体：仅原因文案（复制路径已上提到顶栏按钮组，见 FilePreviewPanel head）。 */
+		function ErrBox(props) {
+			const { err, t } = props;
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(err.key, err.params))));
+		}
+		/** 图片 / PDF：readBytes → Blob → objectURL（卸载 revoke，防内存泄漏）。 */
+		function BytesPreview(props) {
+			const { workspaceFiles, sessionId, path, kind, mime, t, reloadNonce } = props;
+			const [url, setUrl] = (0, react.useState)(null);
+			const [err, setErr] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				let objectUrl = null;
+				setUrl(null);
+				setErr(null);
+				workspaceFiles.readBytes(sessionId, path).then((page) => {
+					if (!alive) return;
+					const data = bytesOf(page);
+					if (isFailed(data)) {
+						setErr(errView(data.failed));
+						return;
+					}
+					if (data === null) {
+						setErr({ key: "previewBadPayload" });
+						return;
+					}
+					objectUrl = URL.createObjectURL(new Blob([data], { type: mime }));
+					setUrl(objectUrl);
+				}).catch((error) => {
+					if (alive) setErr(errView(error));
+				});
+				return () => {
+					alive = false;
+					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path,
+				mime,
+				reloadNonce
+			]);
+			if (err !== null) return (0, react.createElement)(ErrBox, {
+				err,
+				t
+			});
+			if (url === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			if (kind === "pdf") return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react.createElement)("iframe", {
+				className: "dsh-tdt-sv-preview-pdf",
+				src: url,
+				title: path
+			}));
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("img", {
+				className: "dsh-tdt-sv-preview-img",
+				src: url,
+				alt: path
+			}));
+		}
+		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
+		* md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
+		* 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
+		function TextPreview(props) {
+			const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t } = props;
+			const [text, setText] = (0, react.useState)(null);
+			const [nextOffset, setNextOffset] = (0, react.useState)(null);
+			const [loading, setLoading] = (0, react.useState)(true);
+			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
+			const [err, setErr] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				setText(null);
+				setNextOffset(null);
+				setLoading(true);
+				setErr(null);
+				workspaceFiles.read(sessionId, path, {}).then((page) => {
+					if (!alive) return;
+					const parsed = textPageOf(page);
+					if (isFailed(parsed)) {
+						setErr(errView(parsed.failed));
+						setLoading(false);
+						return;
+					}
+					if (parsed === null) {
+						setErr({ key: "previewBadPayload" });
+						setLoading(false);
+						return;
+					}
+					setText(parsed.text);
+					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+					setLoading(false);
+				}).catch((error) => {
+					if (!alive) return;
+					setErr(errView(error));
+					setLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path,
+				reloadNonce
+			]);
+			const loadMore = () => {
+				if (nextOffset === null || loadingMore) return;
+				setLoadingMore(true);
+				workspaceFiles.read(sessionId, path, { offset: nextOffset }).then((page) => {
+					const parsed = textPageOf(page);
+					if (isFailed(parsed)) {
+						setErr(errView(parsed.failed));
+						setLoadingMore(false);
+						return;
+					}
+					if (parsed === null) {
+						setErr({ key: "previewBadPayload" });
+						setLoadingMore(false);
+						return;
+					}
+					setText((prev) => prev === null ? parsed.text : `${prev}\n${parsed.text}`);
+					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+					setLoadingMore(false);
+				}).catch((error) => {
+					setErr(errView(error));
+					setLoadingMore(false);
+				});
+			};
+			if (err !== null) return (0, react.createElement)(ErrBox, {
+				err,
+				t
+			});
+			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			const language = (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path);
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, !markdown || sourceView ? (0, react.createElement)("div", {
+				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
+				"data-code-preview": true
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
+				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
+				code: text,
+				lang: language,
+				lineNumbers: true,
+				copyLabel: t("copyLabel"),
+				copiedLabel: t("copiedLabel"),
+				toolbarLabels: {
+					codeLabel: t("codeBlockLabel"),
+					wrapLabel: t("diffWrapLabel"),
+					unwrapLabel: t("diffUnwrapLabel")
+				}
+			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text,
+				labels: MD_LABELS
+			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
+				type: "button",
+				disabled: loadingMore,
+				onClick: loadMore
+			}, t("previewLoadMore"))) : null);
+		}
+		//#endregion
+		//#region src/client/file-browser.tsx
+		const tooled = (label, node) => (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+			label,
+			side: "bottom"
+		}, node);
+		/**
+		* list 的线上路径包装：**0.2.0-rc.1 起官方 list 拒绝空路径**（`gateway/bad-request` "path is required"，
+		* 官方 lib/index.js `inspect()` 首行校验；0.1.7-rc.2 还允许空串列根，行为变更）。
+		* 空串（= 工作区根）一律以 `'.'` 上线：路径按 `cwd = 工作区根` 归一 ⇒ `'.'` 解析为根本身，containment 通过。
+		* 响应里根目录的 `path` 仍是 `''`（官方 workspacePathOf 对根返回空串）⇒ 内部目录状态 / 面包屑不受影响。
+		*/
+		function listDir(workspaceFiles, sessionId, dir) {
+			return workspaceFiles.list(sessionId, dir === "" ? "." : dir);
+		}
+		/** 路径工具：取父目录（无父 = 空串，list('') = 工作区根）。 */
+		function dirnameOf(p) {
+			const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+			if (i <= 0) return "";
+			return p.slice(0, i);
+		}
+		/** 路径工具：dir 拼接 name（处理根与绝对/相对）。 */
+		function joinPath(dir, name) {
+			if (dir === "" || dir === "/") return (dir === "/" ? "/" : "") + name;
+			return dir.replace(/\/+$/, "") + "/" + name;
+		}
+		/**
+		* 面包屑/下拉统一按**工作区相对**展示（用户 2026-09-29：把根目录刨掉、名字不写死）。
+		* dir 为宿主绝对路径时（openFile 入口 / 目录反推），用缓存的 workspaceRoot 把根剥掉——
+		* 根名字每个部署都不同，绝不能写死；根未知或不在根下时原样返回（退化现行为）。
+		*/
+		function relativizeToRoot(dir, sessionId) {
+			if (!dir.startsWith("/")) return dir;
+			const root = workspaceRoots.get(sessionId);
+			if (root === void 0) return dir;
+			const norm = root.replace(/\/+$/, "");
+			if (dir === norm) return "";
+			if (dir.startsWith(norm + "/")) return dir.slice(norm.length + 1);
+			return dir;
+		}
+		/** 面包屑段：把目录路径拆成可点层级（绝对路径保留前导 /）。 */
+		function crumbsOf(dir) {
+			const isAbs = dir.startsWith("/");
+			const segs = dir.split("/").filter((s) => s.length > 0);
+			const out = [];
+			let acc = "";
+			for (const seg of segs) {
+				acc = acc === "" ? isAbs ? "/" + seg : seg : acc + "/" + seg;
+				out.push({
+					label: seg,
+					path: acc
+				});
+			}
+			return out;
+		}
+		/** 子项排序：目录在前，文件在后，各自按名称（不区分大小写）升序。 */
+		function sortEntries(entries) {
+			return [...entries].sort((a, b) => {
+				const ad = a.type === "directory" ? 0 : 1;
+				const bd = b.type === "directory" ? 0 : 1;
+				if (ad !== bd) return ad - bd;
+				return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+			});
+		}
+		/** 宿主绝对路径形态（/ 开头或 Windows 盘符）。 */
+		function isAbsoluteish(p) {
+			return p.startsWith("/") || p.startsWith("\\") || /^[a-zA-Z]:[\\/]/.test(p);
+		}
+		/**
+		* 已探明的**工作区根**（宿主绝对路径），按会话缓存。
+		* 官方没有任何「目录的绝对路径」接口（stat 只认 regular file，locateFile 对目录抛
+		* not-regular-file，dsh-api-workspace-files lib/index.js:594），但工作区根可以由
+		* 「任一文件的 relativePath + stat.absolutePath」反推一次后复用 ⇒ 之后**空目录 /
+		* 只含子目录**的相对名目录也能拼出绝对路径（用户 2026-09-29 要求不留遗留）。
+		*/
+		const workspaceRoots = /* @__PURE__ */ new Map();
+		/** 由「相对路径 + 该文件宿主绝对路径」反推工作区根并缓存（absolute = 根 + '/' + 相对路径）。 */
+		function learnRoot(sessionId, relativePath, absolutePath) {
+			const rel = relativePath.replace(/^\/+/, "").replace(/\/+$/, "");
+			if (rel === "" || !absolutePath.endsWith("/" + rel)) return null;
+			const root = absolutePath.slice(0, absolutePath.length - rel.length - 1);
+			workspaceRoots.set(sessionId, root);
+			return root;
+		}
+		/** 相对路径拼接（保持工作区相对形态，不做绝对路径处理）。 */
+		function relJoin(dir, name) {
+			return dir.replace(/\/+$/, "") === "" ? name : dir.replace(/\/+$/, "") + "/" + name;
+		}
+		/**
+		* 在相对目录树里找**任意一个文件**并 stat（广度优先、有界：每层最多 5 个目录、最多 3 层）。
+		* 用于目标目录本身没有文件子项（空目录 / 只有子目录）时反推工作区根。
+		* @returns 该文件的宿主绝对路径与相对路径；找不到（工作区里一个文件都没有）返回 null。
+		*/
+		async function findAnyFileAbs(workspaceFiles, sessionId, startDir) {
+			const stat = workspaceFiles.stat;
+			if (stat === void 0) return null;
+			let frontier = [startDir];
+			for (let depth = 0; depth < 3 && frontier.length > 0; depth++) {
+				const nextDirs = [];
+				for (const dir of frontier.slice(0, 5)) {
+					let entries;
+					try {
+						const parsed = listingOf(await listDir(workspaceFiles, sessionId, dir));
+						if (isFailed(parsed) || parsed === null) continue;
+						entries = parsed.entries;
+					} catch {
+						continue;
+					}
+					const file = entries.find((entry) => entry.type === "file");
+					if (file !== void 0) {
+						const rel = relJoin(dir, file.name);
+						try {
+							const abs = absolutePathOf(await stat(sessionId, rel));
+							if (abs !== null) return {
+								absolutePath: abs,
+								relativePath: rel
+							};
+						} catch {}
+					}
+					for (const entry of entries) if (entry.type === "directory" && nextDirs.length < 5) nextDirs.push(relJoin(dir, entry.name));
+				}
+				frontier = nextDirs;
+			}
+			return null;
+		}
+		/**
+		* 把「工作区相对名」的目录解析成宿主绝对路径（面包屑才能从工作区根往下列）。
+		*
+		* 场景（用户 2026-09-29 实测）：交付卡 / 执行记录「产出」列把回契声明的产出**原样**传入
+		* `openFile`，常是工作区相对名（如 `20260928`）⇒ 面包屑只剩这一层。
+		* 解析优先级（每一步失败都自然落到下一步）：
+		*   ① 工作区根已缓存 ⇒ 根 + '/' + 规范相对路径（覆盖**空目录 / 只有子目录**）；
+		*   ② 目录里有文件子项 ⇒ stat 它，`absolutePath = 根 + '/' + 目录 + '/' + 文件名`，
+		*      掐掉文件名即得目录绝对路径，并**记住工作区根**供后续复用；
+		*   ③ 目录里没文件 ⇒ 有界 BFS 在目录树里找任一文件 stat 出根，再拼。
+		* 全部失败（工作区里一个文件都没有 / stat 不可用）⇒ 退回入参，浏览不受影响。
+		*/
+		async function absolutizeDir(workspaceFiles, sessionId, dir, canonical, entries) {
+			if (isAbsoluteish(dir)) return dir;
+			const rel = canonical !== "" ? canonical : dir;
+			const cached = workspaceRoots.get(sessionId);
+			if (cached !== void 0) return cached + "/" + rel;
+			const stat = workspaceFiles.stat;
+			if (stat === void 0) return dir;
+			const file = entries.find((entry) => entry.type === "file");
+			if (file !== void 0) try {
+				const sub = relJoin(rel, file.name);
+				const abs = absolutePathOf(await stat(sessionId, sub));
+				if (abs !== null && abs.endsWith("/" + file.name) && learnRoot(sessionId, sub, abs) !== null) return abs.slice(0, abs.length - file.name.length - 1);
+			} catch {}
+			const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
+			if (found === null) return dir;
+			const root = learnRoot(sessionId, found.relativePath, found.absolutePath);
+			return root === null ? dir : root + "/" + rel;
+		}
+		/** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
+		function FileBody(props) {
+			const { workspaceFiles, sessionId, path, sourceView, reloadNonce, t } = props;
+			const { kind, ext, mime } = previewKind(path);
+			const isMd = kind === "md";
+			const fallback = (0, react.createElement)(ErrBox, {
+				err: { key: "previewRenderFailed" },
+				t
+			});
+			return (0, react.createElement)(PreviewBoundary, {
+				fallback,
+				children: kind === "image" || kind === "pdf" ? (0, react.createElement)(BytesPreview, {
+					workspaceFiles,
+					sessionId,
+					path,
+					kind,
+					mime: mime ?? "application/octet-stream",
+					t,
+					reloadNonce
+				}) : (0, react.createElement)(TextPreview, {
+					workspaceFiles,
+					sessionId,
+					path,
+					ext,
+					markdown: isMd,
+					sourceView,
+					reloadNonce,
+					t
+				})
+			});
+		}
+		/**
+		* 目录浏览器（在预览 dock 内）。与 FilePreviewPanel 同接 `openFile(path)`：
+		* list(path) 成功 ⇒ 目录树；not-directory ⇒ 文件预览（dir = 父目录，面包屑保留可返回）。
+		*/
+		function FileBrowser(props) {
+			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props;
+			const [mode, setMode] = (0, react.useState)("loading");
+			const [dir, setDir] = (0, react.useState)("");
+			const [listing, setListing] = (0, react.useState)(null);
+			const [truncated, setTruncated] = (0, react.useState)(false);
+			const [viewing, setViewing] = (0, react.useState)(null);
+			const [listErr, setListErr] = (0, react.useState)(null);
+			const [crumbsOverflow, setCrumbsOverflow] = (0, react.useState)(false);
+			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
+			const [history, setHistory] = (0, react.useState)([]);
+			const barRef = (0, react.useRef)(null);
+			const regionRef = (0, react.useRef)(null);
+			const measureRef = (0, react.useRef)(null);
+			const titleRef = (0, react.useRef)(null);
+			const titleInnerRef = (0, react.useRef)(null);
+			const [sourceView, setSourceView] = (0, react.useState)(false);
+			const [reloadNonce, setReloadNonce] = (0, react.useState)(0);
+			const [copied, setCopied] = (0, react.useState)(false);
+			const [openDirs, setOpenDirs] = (0, react.useState)(/* @__PURE__ */ new Set());
+			const [childCache, setChildCache] = (0, react.useState)({});
+			const [, setRootNonce] = (0, react.useState)(0);
+			const startMarquee = () => {
+				const outer = titleRef.current;
+				const inner = titleInnerRef.current;
+				if (outer === null || inner === null) return;
+				inner.style.maxWidth = "none";
+				inner.style.textOverflow = "clip";
+				const shift = inner.scrollWidth - outer.clientWidth;
+				if (shift > 0) {
+					inner.style.transition = "transform 3s linear";
+					inner.offsetWidth;
+					inner.style.transform = `translateX(${-shift}px)`;
+				}
+			};
+			const stopMarquee = () => {
+				const inner = titleInnerRef.current;
+				if (inner === null) return;
+				inner.style.transition = "none";
+				inner.style.transform = "translateX(0)";
+				inner.style.maxWidth = "";
+				inner.style.textOverflow = "";
+			};
+			/** 列举某目录并展示（清空 viewing；收起下拉）。 */
+			const fetchDir = (targetDir) => {
+				setDir(targetDir);
+				setViewing(null);
+				setListErr(null);
+				setMenuOpen(false);
+				setMode("loading");
+				setOpenDirs(/* @__PURE__ */ new Set());
+				setChildCache({});
+				listDir(workspaceFiles, sessionId, targetDir).then((result) => {
+					const parsed = listingOf(result);
+					if (isFailed(parsed)) {
+						setListErr(errView(parsed.failed));
+						setMode("error");
+						return;
+					}
+					if (parsed === null) {
+						setListErr({ key: "previewBadPayload" });
+						setMode("error");
+						return;
+					}
+					setListing(parsed.entries);
+					setTruncated(parsed.truncated);
+					setMode("dir");
+				}).catch((error) => {
+					setListErr(errView(error));
+					setMode("error");
+				});
+			};
+			/** 进入某目录：当前目录压栈（供「返回」回跳）。 */
+			const loadDir = (targetDir) => {
+				if (targetDir === dir) {
+					fetchDir(targetDir);
+					return;
+				}
+				setHistory((prev) => [...prev, dir]);
+				fetchDir(targetDir);
+			};
+			/** 返回上一次位置（历史栈弹栈；报错页的返回按钮同源）。 */
+			const goBack = () => {
+				if (history.length === 0) return;
+				const target = history[history.length - 1];
+				setHistory(history.slice(0, -1));
+				fetchDir(target);
+			};
+			(0, react.useEffect)(() => {
+				let alive = true;
+				setMode("loading");
+				setListErr(null);
+				setViewing(null);
+				setSourceView(false);
+				setReloadNonce(0);
+				setMenuOpen(false);
+				setOpenDirs(/* @__PURE__ */ new Set());
+				setChildCache({});
+				const ensureRootLearned = (currentDir) => {
+					if (workspaceRoots.get(sessionId) !== void 0) return;
+					(async () => {
+						try {
+							const parsed = listingOf(await listDir(workspaceFiles, sessionId, currentDir));
+							if (!alive || isFailed(parsed) || parsed === null) return;
+							const stat = workspaceFiles.stat;
+							if (stat === void 0) return;
+							const rel = parsed.path;
+							const file = parsed.entries.find((entry) => entry.type === "file");
+							if (file !== void 0) {
+								const sub = relJoin(rel, file.name);
+								const abs = absolutePathOf(await stat(sessionId, sub));
+								if (abs !== null && learnRoot(sessionId, sub, abs) !== null) {
+									setRootNonce((n) => n + 1);
+									return;
+								}
+							}
+							const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
+							if (found !== null && learnRoot(sessionId, found.relativePath, found.absolutePath) !== null) setRootNonce((n) => n + 1);
+						} catch {}
+					})();
+				};
+				listDir(workspaceFiles, sessionId, path).then(async (result) => {
+					if (!alive) return;
+					const parsed = listingOf(result);
+					if (!isFailed(parsed) && parsed !== null) {
+						const absDir = await absolutizeDir(workspaceFiles, sessionId, path, parsed.path, parsed.entries);
+						if (!alive) return;
+						setDir(absDir);
+						setListing(parsed.entries);
+						setTruncated(parsed.truncated);
+						setMode("dir");
+						ensureRootLearned(absDir);
+						return;
+					}
+					let parent = dirnameOf(path);
+					if (!isAbsoluteish(path)) {
+						const stat = workspaceFiles.stat;
+						if (stat !== void 0) try {
+							const abs = absolutePathOf(await stat(sessionId, path));
+							if (abs !== null) {
+								parent = dirnameOf(abs);
+								learnRoot(sessionId, path, abs);
+							}
+						} catch {}
+					}
+					if (!alive) return;
+					setDir(parent);
+					setViewing(path);
+					setMode("file");
+					ensureRootLearned(parent);
+					listDir(workspaceFiles, sessionId, parent).then((pres) => {
+						if (!alive) return;
+						const pl = listingOf(pres);
+						if (!isFailed(pl) && pl !== null) {
+							setListing(pl.entries);
+							setTruncated(pl.truncated);
+						}
+					}).catch(() => {});
+				}).catch(() => {
+					if (!alive) return;
+					const parent = dirnameOf(path);
+					setDir(parent);
+					setViewing(path);
+					setMode("file");
+					ensureRootLearned(parent);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path
+			]);
+			(0, react.useLayoutEffect)(() => {
+				const region = regionRef.current;
+				const measure = measureRef.current;
+				if (region === null || measure === null) return;
+				const recompute = () => {
+					setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1);
+				};
+				recompute();
+				const ro = new ResizeObserver(recompute);
+				ro.observe(region);
+				return () => ro.disconnect();
+			}, [
+				dir,
+				viewing,
+				mode,
+				listing
+			]);
+			const reload = () => {
+				if (viewing !== null) {
+					setReloadNonce((n) => n + 1);
+					return;
+				}
+				loadDir(dir);
+			};
+			const copyPath = () => {
+				const target = viewing ?? dir;
+				if (target === "") return;
+				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(target).then((ok) => {
+					if (ok) {
+						setCopied(true);
+						window.setTimeout(() => setCopied(false), 1500);
+					}
+				});
+			};
+			/** 内联展开/收起某目录（点 ▸）：只切展开态，不导航、不进历史；首次展开才拉子项。 */
+			const toggleDir = (path) => {
+				setOpenDirs((prev) => {
+					const next = new Set(prev);
+					if (next.has(path)) next.delete(path);
+					else next.add(path);
+					return next;
+				});
+				if (!(path in childCache)) {
+					setChildCache((prev) => ({
+						...prev,
+						[path]: { status: "loading" }
+					}));
+					listDir(workspaceFiles, sessionId, path).then((result) => {
+						const parsed = listingOf(result);
+						if (isFailed(parsed)) {
+							setChildCache((prev) => ({
+								...prev,
+								[path]: {
+									status: "error",
+									error: errView(parsed.failed)
+								}
+							}));
+							return;
+						}
+						if (parsed === null) {
+							setChildCache((prev) => ({
+								...prev,
+								[path]: {
+									status: "error",
+									error: { key: "previewBadPayload" }
+								}
+							}));
+							return;
+						}
+						setChildCache((prev) => ({
+							...prev,
+							[path]: {
+								status: "ready",
+								entries: parsed.entries,
+								truncated: parsed.truncated
+							}
+						}));
+					}).catch((error) => {
+						setChildCache((prev) => ({
+							...prev,
+							[path]: {
+								status: "error",
+								error: errView(error)
+							}
+						}));
+					});
+				}
+			};
+			/** 递归渲染目录树（内联展开）。file = 点开预览；dir = ▸ 切展开、名字点导航。 */
+			const renderTree = (entries, baseDir) => {
+				return sortEntries(entries).map((entry) => {
+					const childPath = joinPath(baseDir, entry.name);
+					if (!(entry.type === "directory")) {
+						const pick = () => {
+							if (picker && onPick !== void 0) {
+								onPick(childPath);
+								return;
+							}
+							setViewing(childPath);
+							setReloadNonce(0);
+							setSourceView(false);
+						};
+						return (0, react.createElement)("div", {
+							key: childPath,
+							className: "dsh-tdt-sv-tree-row" + (picker === true ? " dsh-tdt-sv-tree-row-pick" : ""),
+							role: "button",
+							tabIndex: 0,
+							title: picker === true ? t("editorPickerPick") : childPath,
+							onClick: pick,
+							onKeyDown: (event) => {
+								if (event.key === "Enter" || event.key === " ") pick();
+							}
+						}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+							path: childPath,
+							size: 18
+						})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name));
+					}
+					const cached = childCache[childPath];
+					const isOpen = openDirs.has(childPath);
+					return (0, react.createElement)(react.Fragment, { key: childPath }, (0, react.createElement)("div", {
+						className: "dsh-tdt-sv-tree-row",
+						role: "button",
+						tabIndex: 0,
+						title: childPath,
+						onClick: () => {
+							loadDir(childPath);
+						},
+						onKeyDown: (event) => {
+							if (event.key === "Enter" || event.key === " ") loadDir(childPath);
+						}
+					}, tooled(isOpen ? t("explorerCollapse") : t("explorerExpand"), (0, react.createElement)("button", {
+						type: "button",
+						className: "dsh-tdt-sv-tree-toggle" + (isOpen ? " dsh-tdt-sv-tree-toggle-open" : ""),
+						"aria-expanded": isOpen,
+						"aria-label": isOpen ? t("explorerCollapse") : t("explorerExpand"),
+						onClick: (event) => {
+							event.stopPropagation();
+							toggleDir(childPath);
+						}
+					}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-loading" }, t("previewLoading")) : cached.status === "error" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react.createElement)(react.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
+				});
+			};
+			const rootAbs = workspaceRoots.get(sessionId);
+			const rootLabel = props.rootName ?? (rootAbs !== void 0 ? rootAbs.replace(/\/+$/, "").split("/").pop() ?? "" : "");
+			const crumbs = rootLabel !== "" ? [{
+				label: rootLabel,
+				path: ""
+			}, ...crumbsOf(relativizeToRoot(dir, sessionId))] : crumbsOf(dir);
+			const isMdPreview = viewing !== null && previewKind(viewing).kind === "md";
+			let body;
+			if (viewing !== null) body = (0, react.createElement)(FileBody, {
+				workspaceFiles,
+				sessionId,
+				path: viewing,
+				sourceView,
+				reloadNonce,
+				t
+			});
+			else if (mode === "error" && listErr !== null) body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(listErr.key, listErr.params))), history.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-err-actions" }, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-err-back",
+				onClick: goBack
+			}, t("explorerBack"))) : null);
+			else if (listing !== null) body = listing.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
+			else body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			return (0, react.createElement)("aside", {
+				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
+				"data-preview-dock": dock === true ? true : void 0,
+				style: style ?? void 0
+			}, onResizeStart === void 0 ? null : (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-resizer",
+				role: "separator",
+				"aria-orientation": "vertical",
+				title: t("previewResize"),
+				onPointerDown: (event) => {
+					onResizeStart(event);
+				}
+			}), (0, react.createElement)("nav", {
+				ref: barRef,
+				className: "dsh-tdt-sv-crumbbar",
+				"aria-label": t("explorerCrumbsAria")
+			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-wrap" }, tooled(t("explorerLevels"), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("explorerLevels"),
+				"aria-expanded": menuOpen,
+				onClick: () => {
+					setMenuOpen((value) => !value);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }))), menuOpen ? (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-crumbs-backdrop",
+				onClick: () => {
+					setMenuOpen(false);
+				}
+			}), (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-crumbs-menu",
+				role: "menu"
+			}, (workspaces ?? []).map((ws) => (0, react.createElement)("button", {
+				key: `ws:${ws}`,
+				type: "button",
+				role: "menuitem",
+				className: "dsh-tdt-sv-crumbs-menu-item",
+				style: {
+					paddingLeft: 8,
+					display: "flex",
+					alignItems: "center",
+					gap: "6px"
+				},
+				title: ws,
+				onClick: () => {
+					if (ws !== rootName) onSelectWorkspace?.(ws);
+				}
+			}, (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				flex: "none",
+				color: ws === rootName ? C$2.text : C$2.textDim
+			} }, (0, react.createElement)(ws === rootName ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 13 })), (0, react.createElement)("span", {
+				className: "dsh-tdt-sv-crumbs-menu-label",
+				style: { fontWeight: ws === rootName ? 600 : 400 }
+			}, ws))), (() => {
+				const skip = workspaces !== void 0 && rootName !== "" && crumbs.length > 0 && crumbs[0].path === "" ? 1 : 0;
+				const items = crumbs.slice(skip);
+				if (items.length === 0 && workspaces === void 0) return (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, t("explorerRootName"));
+				return items.map((crumb, i) => {
+					const index = i + skip;
+					const chevrons = index === 0 ? null : (0, react.createElement)(react.Fragment, null, Array.from({ length: index - 1 }, (_, s) => (0, react.createElement)("span", {
+						key: `s${s}`,
+						className: "dsh-tdt-sv-crumbs-chev-slot",
+						"aria-hidden": true
+					})), (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-chev" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 11 })));
+					return (0, react.createElement)("button", {
+						key: crumb.path,
+						type: "button",
+						role: "menuitem",
+						className: "dsh-tdt-sv-crumbs-menu-item",
+						style: { paddingLeft: 8 },
+						title: crumb.path,
+						onClick: () => {
+							loadDir(crumb.path);
+						}
+					}, chevrons, (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-menu-label" }, crumb.label));
+				});
+			})())) : null), (0, react.createElement)("div", {
+				ref: regionRef,
+				className: "dsh-tdt-sv-crumbs-region"
+			}, (0, react.createElement)("span", {
+				ref: measureRef,
+				className: "dsh-tdt-sv-crumbs-measure",
+				"aria-hidden": true
+			}, crumbs.length === 0 ? (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-crumb",
+				disabled: true,
+				tabIndex: -1
+			}, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 12 }) : null, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-crumb",
+				disabled: true,
+				tabIndex: -1
+			}, crumb.label)))), crumbsOverflow ? (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t("explorerRootName")) : crumbs.length === 0 ? (0, react.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react.createElement)(react.Fragment, { key: crumb.path }, index > 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
+				className: "dsh-tdt-sv-crumb-sep",
+				size: 12
+			}) : null, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-crumb",
+				onClick: () => {
+					loadDir(crumb.path);
+				}
+			}, crumb.label)))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("explorerBack"), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("explorerBack"),
+				disabled: history.length === 0,
+				onClick: goBack
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 14 }))), tooled(t("explorerUp"), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("explorerUp"),
+				disabled: dir === "",
+				onClick: () => {
+					const p = dirnameOf(dir);
+					if (p !== dir) loadDir(p);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 }))), tooled(t("previewClose"), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
+				"aria-label": t("previewClose"),
+				onClick: onClose
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))))), viewing !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react.createElement)("span", {
+				ref: titleRef,
+				className: "dsh-tdt-sv-preview-title",
+				onMouseEnter: startMarquee,
+				onMouseLeave: stopMarquee
+			}, (0, react.createElement)("span", {
+				ref: titleInnerRef,
+				className: "dsh-tdt-sv-preview-title-inner",
+				title: viewing
+			}, viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-seg",
+				role: "group",
+				"aria-label": t("previewMdSwitchAria")
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-seg-btn",
+				"aria-pressed": !sourceView,
+				onClick: () => {
+					setSourceView(false);
+				}
+			}, t("previewRender")), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-seg-btn",
+				"aria-pressed": sourceView,
+				onClick: () => {
+					setSourceView(true);
+				}
+			}, t("previewSource"))) : null, tooled(t("previewCopyPath"), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("previewCopyPath"),
+				onClick: copyPath
+			}, copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 14 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, { size: 14 }))), tooled(t("previewRefresh"), (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-head-btn",
+				"aria-label": t("previewRefresh"),
+				onClick: reload
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 }))))) : null, body);
 		}
 		//#endregion
 		//#region src/client/task-editor-css.ts
@@ -38706,21 +38735,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				padding: "8px 10px",
 				borderBottom: `1px solid ${C$2.borderL2}`,
 				flex: "none"
-			} }, (0, react.createElement)("div", { style: {
+			} }, (0, react.createElement)("span", { style: {
 				flex: "1 1 auto",
-				minWidth: 0
-			} }, (0, react.createElement)(SelectField, {
-				value: pickerWs,
-				options: workspaces,
-				onChange: (value) => {
-					setPickerWs(value);
-				},
-				placeholder: t("editorWorkspacePh"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorWorkspace"),
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 14 }),
-				size: "sm"
-			})), (0, react.createElement)("button", {
+				fontSize: "13px",
+				fontWeight: 600,
+				color: C$2.text
+			} }, t("editorPickWorkspaceFile")), (0, react.createElement)("button", {
 				type: "button",
 				"aria-label": t("editorPickerCancel"),
 				title: t("editorPickerCancel"),
@@ -38749,6 +38769,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					sessionId: anchorSessionId,
 					path: "",
 					rootName: pickerWs,
+					workspaces: workspaces.map((w) => w.value),
+					onSelectWorkspace: (name) => {
+						setPickerWs(name);
+					},
 					t,
 					onClose: () => {
 						setPickerOpen(false);

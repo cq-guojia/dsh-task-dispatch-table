@@ -17,6 +17,8 @@ import {
   FileTypeIcon,
   IconCheckOutlineRegular,
   IconChevronDownOutlineRegular,
+  IconFolderCloseRegular,
+  IconFolderOpenOutlineRegular,
   IconChevronLeftOutlineRegular,
   IconChevronRightOutlineRegular,
   IconChevronUpOutlineRegular,
@@ -27,6 +29,7 @@ import {
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
+import { C } from './editor-fields'
 import {
   absolutePathOf,
   BytesPreview,
@@ -265,10 +268,17 @@ export function FileBrowser(props: {
   onPick?: (path: string) => void
   /** 工作区根的显示名（选择器 = 用户选中的工作区名）；不传则用缓存根的末段。 */
   rootName?: string
+  /**
+   * ▾ 下拉顶部的工作区清单（选择器传；dock 不传 = 不显示工作区段——dock 锚定会话所属
+   * 工作区，不该在浏览时切走）。当前工作区（=== rootName）用打开文件夹图标 + 加粗区分。
+   */
+  workspaces?: readonly string[]
+  /** 从 ▾ 下拉选择其他工作区（配合 workspaces；选当前工作区为 no-op）。 */
+  onSelectWorkspace?: (name: string) => void
   /** 外部容器样式（嵌入弹层时撑满高度用）。 */
   style?: CSSProperties
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, style } = props
+  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props
   // mode：加载/目录树/文件预览/列举错误。viewing 非空 ⇒ 在 dir 树内预览文件。
   const [mode, setMode] = useState<'loading' | 'dir' | 'file' | 'error'>('loading')
   const [dir, setDir] = useState<string>('')
@@ -641,17 +651,40 @@ export function FileBrowser(props: {
           ? h(Fragment, null,
             h('div', { className: 'dsh-tdt-sv-crumbs-backdrop', onClick: () => { setMenuOpen(false) } }),
             h('div', { className: 'dsh-tdt-sv-crumbs-menu', role: 'menu' },
-              crumbs.length === 0
-                ? h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, t('explorerRootName'))
-                : crumbs.map((crumb, index) => {
+              // 工作区段（用户 2026-09-29：▾ 下拉顶部列**全部**工作区，选工作区就在这选；
+              // 当前工作区用「打开文件夹」图标 + 加粗区分，其他用关合文件夹图标）。dock 不传
+              // workspaces ⇒ 不显示这段（dock 锚定会话所属工作区，浏览时不该切走）。
+              (workspaces ?? []).map(ws => h('button', {
+                key: `ws:${ws}`,
+                type: 'button',
+                role: 'menuitem',
+                className: 'dsh-tdt-sv-crumbs-menu-item',
+                style: { paddingLeft: 8, display: 'flex', alignItems: 'center', gap: '6px' },
+                title: ws,
+                onClick: () => { if (ws !== rootName) onSelectWorkspace?.(ws) },
+              },
+                h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: ws === rootName ? C.text : C.textDim } },
+                  h(ws === rootName ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 13 })),
+                h('span', { className: 'dsh-tdt-sv-crumbs-menu-label', style: { fontWeight: ws === rootName ? 600 : 400 } }, ws),
+              )),
+              // 路径段：从当前工作区根**下面**一层开始缩进（根名已在上面的工作区段里，
+              // 用户 2026-09-29 的层级示意 = 工作区列表后跟「> 目录1 >> 目录2」）。
+              (() => {
+                const skip = workspaces !== undefined && rootName !== '' && crumbs.length > 0 && crumbs[0].path === '' ? 1 : 0
+                const items = crumbs.slice(skip)
+                if (items.length === 0 && workspaces === undefined) {
+                  return h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, t('explorerRootName'))
+                }
+                return items.map((crumb, i) => {
+                  const index = i + skip
                   // 方案 A 修订（用户 2026-09-29）：每行只显示**一个**右箭头——行首先空出
                   // (index-1) 个箭头位（占位不画、位置保留），箭头固定画在原第 index 位；
                   // 首行不显示箭头。
                   const chevrons = index === 0
                     ? null
                     : h(Fragment, null,
-                      Array.from({ length: index - 1 }, (_, i) =>
-                        h('span', { key: `s${i}`, className: 'dsh-tdt-sv-crumbs-chev-slot', 'aria-hidden': true })),
+                      Array.from({ length: index - 1 }, (_, s) =>
+                        h('span', { key: `s${s}`, className: 'dsh-tdt-sv-crumbs-chev-slot', 'aria-hidden': true })),
                       h('span', { className: 'dsh-tdt-sv-crumbs-chev' }, h(IconChevronRightOutlineRegular, { size: 11 })),
                     )
                   return h('button', {
@@ -663,7 +696,8 @@ export function FileBrowser(props: {
                     title: crumb.path,
                     onClick: () => { loadDir(crumb.path) },
                   }, chevrons, h('span', { className: 'dsh-tdt-sv-crumbs-menu-label' }, crumb.label))
-                }),
+                })
+              })(),
             ))
           : null,
       ),

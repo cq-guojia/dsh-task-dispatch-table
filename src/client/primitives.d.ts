@@ -140,6 +140,8 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconPlusOutlineRegular: ComponentType<{ size?: number; className?: string }>
   /** 打开的文件夹（工作区 chip 用；实测与官方输入框 chip 同款）。 */
   export const IconFolderOpenOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  /** 关合的文件夹（下拉里「其他工作区」用，与当前工作区的打开图标区分）。 */
+  export const IconFolderCloseRegular: ComponentType<{ size?: number; className?: string }>
   export const IconSparkleRegular: ComponentType<{ size?: number; className?: string }>
   export const IconChevronUpOutlineRegular: ComponentType<{ size?: number; className?: string }>
   /** 官方文件类型图标（按路径分类着色 SVG；交付文件卡同款）。 */
