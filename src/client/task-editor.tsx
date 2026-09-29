@@ -1004,8 +1004,13 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
         t('editorAttachments'),
-        h(Tooltip, { label: t('editorAttachmentsHint'), side: 'bottom' },
-          h(IconQuestionOutlineRegular, { size: 14 })),
+        // ⚠️ 照 editorTaskStartHint 的可用形态：图标必须包在真实 DOM 按钮（.dsh-tdt-ed-help）里
+        // 再交给 Tooltip——官方接管 ref/事件需要真元素锚点，裸图标组件 ref 挂不上 ⇒ 悬停无字。
+        h(Tooltip, { label: t('editorAttachmentsHint'), side: 'bottom', maxWidth: 300 },
+          h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorAttachmentsHint') },
+            h(IconQuestionOutlineRegular, { size: 14 }),
+          ),
+        ),
       ),
     ),
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。

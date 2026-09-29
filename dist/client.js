@@ -374,7 +374,7 @@ window.__ModuleLoader__.load({
 			editorUploadErrEmpty: "文件内容为空",
 			editorUploadErrGeneric: "上传失败，请重试",
 			editorPickerNoSession: "该工作区下还没有会话，无法读取文件。",
-			editorAttachmentsHint: "附加文件会同步给任务执行的 Agent，Agent 可读取或操作附加文件里的内容。",
+			editorAttachmentsHint: "附加文件会随任务一起派发给执行的 Agent：任务执行过程中，Agent 可读取或操作这些文件的内容。",
 			editorPickerPick: "选择此文件",
 			editorPickerCancel: "取消",
 			editorOpenEditor: "全屏编辑",
@@ -772,7 +772,7 @@ window.__ModuleLoader__.load({
 			editorUploadErrEmpty: "File is empty",
 			editorUploadErrGeneric: "Upload failed, please retry",
 			editorPickerNoSession: "No sessions in this workspace yet — its files cannot be read.",
-			editorAttachmentsHint: "Attachments are shared with the task’s agent, which can read and operate on their contents.",
+			editorAttachmentsHint: "Attachments are dispatched along with the task: while it runs, the agent can read and operate on their contents.",
 			editorPickerPick: "Pick this file",
 			editorPickerCancel: "Cancel",
 			editorOpenEditor: "Full-screen edit",
@@ -38170,8 +38170,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			}, t("editorAttachments"), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("editorAttachmentsHint"),
-				side: "bottom"
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })))), draft.attachments.length === 0 ? null : (0, react.createElement)("div", { style: {
+				side: "bottom",
+				maxWidth: 300
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-help",
+				"aria-label": t("editorAttachmentsHint")
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))), draft.attachments.length === 0 ? null : (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px",
