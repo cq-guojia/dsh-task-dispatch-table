@@ -116,6 +116,7 @@ export type LocaleKey =
   | 'editorToday' | 'editorPrevMonth' | 'editorNextMonth' | 'editorPrevYear' | 'editorNextYear'
   | 'editorMonthTitle' | 'editorHour' | 'editorMinute' | 'editorNow' | 'editorConfirm'
   | 'editorWindow' | 'editorWindowHint'
+  | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepAdd' | 'editorDepTask' | 'editorDepSemantics'
   | 'editorDepSamePeriod' | 'editorDepLatestSuccess' | 'editorDepRemove' | 'editorDepEmpty'
@@ -493,6 +494,10 @@ export const zh: Record<LocaleKey, string> = {
   editorConfirm: '确定',
   editorWindow: '允许延迟',
   editorWindowHint: '任务到达计划开始执行时间后，若前置任务尚未完成或因其它原因需延后，最长允许在此时长内继续执行；超过该时长则跳过本次执行。',
+  editorDiscardTitle: '放弃未保存的更改？',
+  editorDiscardDesc: '当前内容已修改且尚未保存，关闭后这些更改将丢失。',
+  editorDiscardStay: '继续编辑',
+  editorDiscardLeave: '放弃更改',
   unitMinutes: '分钟',
   unitHours: '小时',
   unitDays: '天',
@@ -869,6 +874,10 @@ export const en: Record<LocaleKey, string> = {
   editorConfirm: 'OK',
   editorWindow: 'Allow delay',
   editorWindowHint: 'When the task reaches its planned start time but a dependency is unfinished or something else delays it, it may wait up to this long and still run; past this, this run is skipped.',
+  editorDiscardTitle: 'Discard unsaved changes?',
+  editorDiscardDesc: 'The content has been modified but not saved. These changes will be lost if you close now.',
+  editorDiscardStay: 'Keep editing',
+  editorDiscardLeave: 'Discard changes',
   unitMinutes: 'minutes',
   unitHours: 'hours',
   unitDays: 'days',

@@ -24,6 +24,7 @@ import {
   IconFolderOpenOutlineRegular,
   IconPlusOutlineRegular,
   IconQuestionOutlineRegular,
+  Modal,
   Switch,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -538,6 +539,18 @@ function formatVersionTime(iso: string): string {
 }
 
 /**
+ * 键序稳定的 JSON 序列化（脏判定专用）：草稿永远是 `{...draft, ...part}` 摊开出来的，
+ * 键序本来就不会变，但这里仍按键名排序，保证「值相同 ⇒ 串相同」与历史无关——
+ * 「1 改成 2 再改回 1」比较结果与最初一致，不算改过（用户 2026-09-29 的判定口径）。
+ */
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'undefined'
+  if (Array.isArray(value)) return `[${value.map(item => stableStringify(item)).join(',')}]`
+  const record = value as Record<string, unknown>
+  return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(',')}}`
+}
+
+/**
  * 全屏提示词编辑器（2026-09-29）：自带行号 + .md 纯文本编辑，右侧版本历史（保存 / 回滚）。
  * 官方无代码 / Markdown 编辑器组件（dsh-capabilities 已核实），故自绘「行号 gutter + textarea」。
  */
@@ -633,6 +646,12 @@ export function TaskEditorDrawer(props: {
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(false)
+  // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  // 原始快照：挂载那一刻定死。弹窗关闭即卸载、重开即重挂 ⇒ 每次打开都从当次初始值算起；
+  // 「改成 2 又改回 1」序列化结果与快照一致 ⇒ 不算改过。
+  const initialDraftRef = useRef(draft)
+  const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current)
 
   useEffect(() => { ensureTaskEditorStyle() }, [])
 
@@ -640,17 +659,25 @@ export function TaskEditorDrawer(props: {
     onChange({ ...draft, ...part })
   }, [draft, onChange])
 
+  /** 统一关闭入口：改过 ⇒ 先弹官方 Modal 确认；没改过 ⇒ 直接关。 */
+  const requestClose = useCallback((): void => {
+    if (dirty) setConfirmDiscard(true)
+    else onClose()
+  }, [dirty, onClose])
+
   // 带 `{name}` 占位符的文案（复用 locales 的替换器；本页 t 席位是无参形态）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
 
   // Esc 关闭；浮层（下拉 / 日历 / 时分）自己先处理并 preventDefault ⇒ 此处不再关弹窗。
+  // 确认弹窗开着时 Esc 归官方 Modal（关确认框），这里必须让路，否则确认框永远关不掉。
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && !event.defaultPrevented) onClose()
+      if (confirmDiscard) return
+      if (event.key === 'Escape' && !event.defaultPrevented) requestClose()
     }
     window.addEventListener('keydown', onKey)
     return () => { window.removeEventListener('keydown', onKey) }
-  }, [onClose])
+  }, [requestClose, confirmDiscard])
 
   /** 左缘拖拽调宽：拖动期间只改本地 state，松手落 localStorage。 */
   const startResize = useCallback((start: { clientX: number }): void => {
@@ -1034,7 +1061,7 @@ export function TaskEditorDrawer(props: {
   return h('div', {
     className: 'dsh-tdt-ed-overlay',
     onPointerDown: (event: { target: unknown; currentTarget: unknown }) => {
-      if (event.target === event.currentTarget) onClose()
+      if (event.target === event.currentTarget) requestClose()
     },
   },
     h('div', { className: 'dsh-tdt-ed-panel', style: { width: `${width}px` }, role: 'dialog', 'aria-modal': true, 'aria-label': mode === 'create' ? t('editorNew') : t('editorEdit') },
@@ -1061,7 +1088,7 @@ export function TaskEditorDrawer(props: {
             type: 'button',
             title: t('editorClose'),
             'aria-label': t('editorClose'),
-            onClick: onClose,
+            onClick: requestClose,
           }, h(IconCloseOutlineRegular, { size: 16 })),
         ),
       ),
@@ -1087,7 +1114,7 @@ export function TaskEditorDrawer(props: {
       h('div', { className: 'dsh-tdt-ed-body' }, body),
       h('div', { className: 'dsh-tdt-ed-footer' },
         pendingHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorSavePending')) : null,
-        h(Button, { variant: 'outline', size: 'sm', onClick: onClose }, t('editorCancel')),
+        h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
         h(Button, {
           variant: 'primary',
           size: 'sm',
@@ -1110,6 +1137,23 @@ export function TaskEditorDrawer(props: {
           onClose: () => { setEditorOpen(false) },
         })
         : null,
+      // 关闭确认（官方 Modal，body 传送门）：改过才出现；确认 ⇒ 真正关弹窗，继续编辑 ⇒ 留在原处。
+      h(Modal, {
+        open: confirmDiscard,
+        onClose: () => { setConfirmDiscard(false) },
+        className: 'dsh-tdt-ed-confirm',
+        title: t('editorDiscardTitle'),
+        description: t('editorDiscardDesc'),
+        closeLabel: t('editorClose'),
+        footer: h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
+          h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmDiscard(false) } }, t('editorDiscardStay')),
+          h(Button, {
+            variant: 'primary',
+            size: 'sm',
+            onClick: () => { setConfirmDiscard(false); onClose() },
+          }, t('editorDiscardLeave')),
+        ),
+      }),
     ),
   )
 }

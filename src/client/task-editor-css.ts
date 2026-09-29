@@ -87,6 +87,10 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
+/* 关闭确认（官方 Modal 是 body 传送门、.root 固定 z 1000）：抽屉遮罩是 z 1040，
+   不抬层级确认框会被压在抽屉底下。只对本实例生效（className 落在 Modal root 上，
+   本样式表后注入 ⇒ 同特异性下覆盖官方 .root 的 z 1000）。 */
+.dsh-tdt-ed-confirm{z-index:1060;}
 `
 
 let injected = false

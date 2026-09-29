@@ -368,6 +368,10 @@ window.__ModuleLoader__.load({
 			editorConfirm: "确定",
 			editorWindow: "允许延迟",
 			editorWindowHint: "任务到达计划开始执行时间后，若前置任务尚未完成或因其它原因需延后，最长允许在此时长内继续执行；超过该时长则跳过本次执行。",
+			editorDiscardTitle: "放弃未保存的更改？",
+			editorDiscardDesc: "当前内容已修改且尚未保存，关闭后这些更改将丢失。",
+			editorDiscardStay: "继续编辑",
+			editorDiscardLeave: "放弃更改",
 			unitMinutes: "分钟",
 			unitHours: "小时",
 			unitDays: "天",
@@ -738,6 +742,10 @@ window.__ModuleLoader__.load({
 			editorConfirm: "OK",
 			editorWindow: "Allow delay",
 			editorWindowHint: "When the task reaches its planned start time but a dependency is unfinished or something else delays it, it may wait up to this long and still run; past this, this run is skipped.",
+			editorDiscardTitle: "Discard unsaved changes?",
+			editorDiscardDesc: "The content has been modified but not saved. These changes will be lost if you close now.",
+			editorDiscardStay: "Keep editing",
+			editorDiscardLeave: "Discard changes",
 			unitMinutes: "minutes",
 			unitHours: "hours",
 			unitDays: "days",
@@ -5493,6 +5501,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
+/* 关闭确认（官方 Modal 是 body 传送门、.root 固定 z 1000）：抽屉遮罩是 z 1040，
+   不抬层级确认框会被压在抽屉底下。只对本实例生效（className 落在 Modal root 上，
+   本样式表后注入 ⇒ 同特异性下覆盖官方 .root 的 z 1000）。 */
+.dsh-tdt-ed-confirm{z-index:1060;}
 `;
 		let injected = false;
 		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
@@ -5887,6 +5899,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 		}
 		/**
+		* 键序稳定的 JSON 序列化（脏判定专用）：草稿永远是 `{...draft, ...part}` 摊开出来的，
+		* 键序本来就不会变，但这里仍按键名排序，保证「值相同 ⇒ 串相同」与历史无关——
+		* 「1 改成 2 再改回 1」比较结果与最初一致，不算改过（用户 2026-09-29 的判定口径）。
+		*/
+		function stableStringify(value) {
+			if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "undefined";
+			if (Array.isArray(value)) return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+			const record = value;
+			return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
+		}
+		/**
 		* 全屏提示词编辑器（2026-09-29）：自带行号 + .md 纯文本编辑，右侧版本历史（保存 / 回滚）。
 		* 官方无代码 / Markdown 编辑器组件（dsh-capabilities 已核实），故自绘「行号 gutter + textarea」。
 		*/
@@ -6070,6 +6093,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
+			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
+			const initialDraftRef = (0, react.useRef)(draft);
+			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);
 			(0, react.useEffect)(() => {
 				ensureTaskEditorStyle();
 			}, []);
@@ -6079,16 +6105,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					...part
 				});
 			}, [draft, onChange]);
+			/** 统一关闭入口：改过 ⇒ 先弹官方 Modal 确认；没改过 ⇒ 直接关。 */
+			const requestClose = (0, react.useCallback)(() => {
+				if (dirty) setConfirmDiscard(true);
+				else onClose();
+			}, [dirty, onClose]);
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			(0, react.useEffect)(() => {
 				const onKey = (event) => {
-					if (event.key === "Escape" && !event.defaultPrevented) onClose();
+					if (confirmDiscard) return;
+					if (event.key === "Escape" && !event.defaultPrevented) requestClose();
 				};
 				window.addEventListener("keydown", onKey);
 				return () => {
 					window.removeEventListener("keydown", onKey);
 				};
-			}, [onClose]);
+			}, [requestClose, confirmDiscard]);
 			/** 左缘拖拽调宽：拖动期间只改本地 state，松手落 localStorage。 */
 			const startResize = (0, react.useCallback)((start) => {
 				const startX = start.clientX;
@@ -6554,7 +6586,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-overlay",
 				onPointerDown: (event) => {
-					if (event.target === event.currentTarget) onClose();
+					if (event.target === event.currentTarget) requestClose();
 				}
 			}, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-panel",
@@ -6580,7 +6612,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				type: "button",
 				title: t("editorClose"),
 				"aria-label": t("editorClose"),
-				onClick: onClose
+				onClick: requestClose
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), mode === "edit" ? (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-tabs",
 				role: "tablist"
@@ -6606,7 +6638,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
-				onClick: onClose
+				onClick: requestClose
 			}, t("editorCancel")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "primary",
 				size: "sm",
@@ -6635,7 +6667,34 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClose: () => {
 					setEditorOpen(false);
 				}
-			}) : null));
+			}) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+				open: confirmDiscard,
+				onClose: () => {
+					setConfirmDiscard(false);
+				},
+				className: "dsh-tdt-ed-confirm",
+				title: t("editorDiscardTitle"),
+				description: t("editorDiscardDesc"),
+				closeLabel: t("editorClose"),
+				footer: (0, react.createElement)("div", { style: {
+					display: "flex",
+					justifyContent: "flex-end",
+					gap: "8px"
+				} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					variant: "outline",
+					size: "sm",
+					onClick: () => {
+						setConfirmDiscard(false);
+					}
+				}, t("editorDiscardStay")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					variant: "primary",
+					size: "sm",
+					onClick: () => {
+						setConfirmDiscard(false);
+						onClose();
+					}
+				}, t("editorDiscardLeave")))
+			})));
 		}
 		//#endregion
 		//#region src/client/index.ts
