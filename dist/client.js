@@ -372,7 +372,8 @@ window.__ModuleLoader__.load({
 			editorUploadErrSize: "文件超过大小限制（单个最大 20MB）",
 			editorUploadErrEmpty: "文件内容为空",
 			editorUploadErrGeneric: "上传失败，请重试",
-			editorPickerNoSession: "该工作区还没有历史会话，暂无法浏览其文件，请使用「上传文件」。",
+			editorPickerNoSession: "该工作区下还没有会话，无法读取文件。",
+			editorAttachmentsHint: "附加文件会同步给任务执行的 Agent，Agent 可读取或操作附加文件里的内容。",
 			editorPickerPick: "选择此文件",
 			editorPickerCancel: "取消",
 			editorOpenEditor: "全屏编辑",
@@ -768,7 +769,8 @@ window.__ModuleLoader__.load({
 			editorUploadErrSize: "File exceeds the size limit (20MB max each)",
 			editorUploadErrEmpty: "File is empty",
 			editorUploadErrGeneric: "Upload failed, please retry",
-			editorPickerNoSession: "This workspace has no past sessions yet, so its files cannot be browsed — use “Upload file” instead.",
+			editorPickerNoSession: "No sessions in this workspace yet — its files cannot be read.",
+			editorAttachmentsHint: "Attachments are shared with the task’s agent, which can read and operate on their contents.",
 			editorPickerPick: "Pick this file",
 			editorPickerCancel: "Cancel",
 			editorOpenEditor: "Full-screen edit",
@@ -4254,6 +4256,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (dir === "" || dir === "/") return (dir === "/" ? "/" : "") + name;
 			return dir.replace(/\/+$/, "") + "/" + name;
 		}
+		/**
+		* 面包屑/下拉统一按**工作区相对**展示（用户 2026-09-29：把根目录刨掉、名字不写死）。
+		* dir 为宿主绝对路径时（openFile 入口 / 目录反推），用缓存的 workspaceRoot 把根剥掉——
+		* 根名字每个部署都不同，绝不能写死；根未知或不在根下时原样返回（退化现行为）。
+		*/
+		function relativizeToRoot(dir, sessionId) {
+			if (!dir.startsWith("/")) return dir;
+			const root = workspaceRoots.get(sessionId);
+			if (root === void 0) return dir;
+			const norm = root.replace(/\/+$/, "");
+			if (dir === norm) return "";
+			if (dir.startsWith(norm + "/")) return dir.slice(norm.length + 1);
+			return dir;
+		}
 		/** 面包屑段：把目录路径拆成可点层级（绝对路径保留前导 /）。 */
 		function crumbsOf(dir) {
 			const isAbs = dir.startsWith("/");
@@ -4693,7 +4709,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-loading" }, t("previewLoading")) : cached.status === "error" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react.createElement)(react.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
 				});
 			};
-			const crumbs = crumbsOf(dir);
+			const crumbs = crumbsOf(relativizeToRoot(dir, sessionId));
 			const isMdPreview = viewing !== null && previewKind(viewing).kind === "md";
 			let body;
 			if (viewing !== null) body = (0, react.createElement)(FileBody, {
@@ -38111,7 +38127,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] });
 				if (lastErr !== null) setUploadError(lastErr);
 			};
-			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorAttachments"))), draft.attachments.length === 0 ? null : (0, react.createElement)("div", { style: {
+			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-label",
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "4px"
+				}
+			}, t("editorAttachments"), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("editorAttachmentsHint"),
+				side: "bottom"
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })))), draft.attachments.length === 0 ? null : (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px",
@@ -38191,15 +38217,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				marginTop: "4px"
 			} }, t("editorDropZoneFormats"))), (0, react.createElement)("div", { style: {
 				flex: "none",
-				display: "flex",
-				alignItems: "center"
+				display: "flex"
 			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
+				style: { height: "100%" },
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 14 }),
 				onClick: () => {
-					const anchored = workspaces.filter((w) => (workspaceAnchors ?? {})[w.value] !== void 0);
-					const fallback = anchored.length > 0 ? anchored[0].value : "";
-					setPickerWs((workspaceAnchors ?? {})[draft.workspace] !== void 0 ? draft.workspace : fallback);
+					setPickerWs(draft.workspace !== "" ? draft.workspace : workspaces[0]?.value ?? "");
 					setPickerOpen(true);
 				}
 			}, t("editorPickWorkspaceFile")))), (0, react.createElement)("input", {
@@ -38597,7 +38622,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				minWidth: 0
 			} }, (0, react.createElement)(SelectField, {
 				value: pickerWs,
-				options: workspaces.filter((w) => (workspaceAnchors ?? {})[w.value] !== void 0),
+				options: workspaces,
 				onChange: (value) => {
 					setPickerWs(value);
 				},

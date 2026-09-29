@@ -68,6 +68,21 @@ function joinPath(dir: string, name: string): string {
   return dir.replace(/\/+$/, '') + '/' + name
 }
 
+/**
+ * 面包屑/下拉统一按**工作区相对**展示（用户 2026-09-29：把根目录刨掉、名字不写死）。
+ * dir 为宿主绝对路径时（openFile 入口 / 目录反推），用缓存的 workspaceRoot 把根剥掉——
+ * 根名字每个部署都不同，绝不能写死；根未知或不在根下时原样返回（退化现行为）。
+ */
+function relativizeToRoot(dir: string, sessionId: string): string {
+  if (!dir.startsWith('/')) return dir
+  const root = workspaceRoots.get(sessionId)
+  if (root === undefined) return dir
+  const norm = root.replace(/\/+$/, '')
+  if (dir === norm) return ''
+  if (dir.startsWith(norm + '/')) return dir.slice(norm.length + 1)
+  return dir
+}
+
 /** 面包屑段：把目录路径拆成可点层级（绝对路径保留前导 /）。 */
 function crumbsOf(dir: string): { label: string; path: string }[] {
   const isAbs = dir.startsWith('/')
@@ -521,7 +536,8 @@ export function FileBrowser(props: {
   // ⚠️ 切勿改用服务端 list 返回的 path 当面包屑：那是 workspacePathOf(root, target) 的
   //    **工作区相对**形式（dsh-api-workspace-files lib/index.js:494），会丢掉根以下的前导段，
   //    面包屑只剩最近一层（2026-09-29 踩过 ⇒ 已回退为入参路径）。
-  const crumbs = crumbsOf(dir)
+  // 面包屑/下拉 = 工作区相对层级（绝对目录先剥掉工作区根；根未知时退化绝对展示）。
+  const crumbs = crumbsOf(relativizeToRoot(dir, sessionId))
   const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'
 
   // —— 主体 ——

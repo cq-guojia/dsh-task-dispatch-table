@@ -107,7 +107,7 @@ export type LocaleKey =
   | 'editorMonth' | 'editorMonthOption' | 'editorDayOfMonth' | 'editorDayOption'
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
-  | 'editorAttachments' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
+  | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
   | 'editorPickWorkspaceFile' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
@@ -477,7 +477,8 @@ export const zh: Record<LocaleKey, string> = {
   editorUploadErrSize: '文件超过大小限制（单个最大 20MB）',
   editorUploadErrEmpty: '文件内容为空',
   editorUploadErrGeneric: '上传失败，请重试',
-  editorPickerNoSession: '该工作区还没有历史会话，暂无法浏览其文件，请使用「上传文件」。',
+  editorPickerNoSession: '该工作区下还没有会话，无法读取文件。',
+  editorAttachmentsHint: '附加文件会同步给任务执行的 Agent，Agent 可读取或操作附加文件里的内容。',
   editorPickerPick: '选择此文件',
   editorPickerCancel: '取消',
   editorOpenEditor: '全屏编辑',
@@ -879,7 +880,8 @@ export const en: Record<LocaleKey, string> = {
   editorUploadErrSize: 'File exceeds the size limit (20MB max each)',
   editorUploadErrEmpty: 'File is empty',
   editorUploadErrGeneric: 'Upload failed, please retry',
-  editorPickerNoSession: 'This workspace has no past sessions yet, so its files cannot be browsed — use “Upload file” instead.',
+  editorPickerNoSession: 'No sessions in this workspace yet — its files cannot be read.',
+  editorAttachmentsHint: 'Attachments are shared with the task’s agent, which can read and operate on their contents.',
   editorPickerPick: 'Pick this file',
   editorPickerCancel: 'Cancel',
   editorOpenEditor: 'Full-screen edit',

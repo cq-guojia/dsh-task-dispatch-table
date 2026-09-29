@@ -1002,7 +1002,11 @@ export function TaskEditorDrawer(props: {
   }
   const attachmentsCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
-      h('div', { className: 'dsh-tdt-ed-label' }, t('editorAttachments')),
+      h('div', { className: 'dsh-tdt-ed-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+        t('editorAttachments'),
+        h(Tooltip, { label: t('editorAttachmentsHint'), side: 'bottom' },
+          h(IconQuestionOutlineRegular, { size: 14 })),
+      ),
     ),
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
     draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
@@ -1029,15 +1033,15 @@ export function TaskEditorDrawer(props: {
         h('div', { style: { fontSize: '13px', color: C.text } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
         uploading ? null : h('div', { style: { fontSize: '11px', color: C.textDim, marginTop: '4px' } }, t('editorDropZoneFormats')),
       ),
-      h('div', { style: { flex: 'none', display: 'flex', alignItems: 'center' } },
+      h('div', { style: { flex: 'none', display: 'flex' } },
         h(Button, {
           variant: 'outline',
           size: 'sm',
+          style: { height: '100%' },
+          icon: h(IconPlusOutlineRegular, { size: 14 }),
           onClick: () => {
-            // 默认浏览任务已选工作区；没选就取第一个有锚点（有历史会话）的工作区。
-            const anchored = workspaces.filter(w => (workspaceAnchors ?? {})[w.value] !== undefined)
-            const fallback = anchored.length > 0 ? anchored[0].value : ''
-            setPickerWs((workspaceAnchors ?? {})[draft.workspace] !== undefined ? draft.workspace : fallback)
+            // 默认浏览任务已选工作区；没选就取第一个工作区（用户 2026-09-29：默认最近/第一个都行）。
+            setPickerWs(draft.workspace !== '' ? draft.workspace : (workspaces[0]?.value ?? ''))
             setPickerOpen(true)
           },
         }, t('editorPickWorkspaceFile')),
@@ -1392,7 +1396,8 @@ export function TaskEditorDrawer(props: {
             h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
               h(SelectField, {
                 value: pickerWs,
-                options: workspaces.filter(w => (workspaceAnchors ?? {})[w.value] !== undefined),
+                // 列**全部**工作区（用户 2026-09-29：别只给有会话的）；没会话的选中后正文给提示。
+                options: workspaces,
                 onChange: value => { setPickerWs(value) },
                 placeholder: t('editorWorkspacePh'),
                 emptyLabel: t('editorNoOptions'),
