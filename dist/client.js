@@ -423,14 +423,15 @@ window.__ModuleLoader__.load({
 			unitMinutes: "分钟",
 			unitHours: "小时",
 			unitDays: "天",
-			editorDeps: "前置任务",
-			editorDepAdd: "添加依赖",
+			editorDeps: "添加前置任务",
+			editorDepsHint: "此任务必须等到前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。",
+			editorDepAdd: "添加",
 			editorDepTask: "任务",
-			editorDepSemantics: "语义",
-			editorDepSamePeriod: "同一天的",
-			editorDepLatestSuccess: "最近一次成功的",
+			editorDepPickWsFirst: "请先选择工作区",
+			editorDepTaskPh: "选择任务",
+			editorDepItemPrefix: "前置任务：",
 			editorDepRemove: "移除",
-			editorDepEmpty: "暂无前置任务",
+			editorDepEmpty: "暂无前置任务，在下方选择工作区与任务后点「添加」。",
 			editorAdvanced: "高级",
 			editorRetry: "重试次数",
 			editorValidStatuses: "成功状态清单",
@@ -820,14 +821,15 @@ window.__ModuleLoader__.load({
 			unitMinutes: "minutes",
 			unitHours: "hours",
 			unitDays: "days",
-			editorDeps: "Depends on",
-			editorDepAdd: "Add dependency",
+			editorDeps: "Add prerequisite tasks",
+			editorDepsHint: "This task starts only after its prerequisites finish. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.",
+			editorDepAdd: "Add",
 			editorDepTask: "Task",
-			editorDepSemantics: "Semantics",
-			editorDepSamePeriod: "Same day",
-			editorDepLatestSuccess: "Latest success",
+			editorDepPickWsFirst: "Select a workspace first",
+			editorDepTaskPh: "Select a task",
+			editorDepItemPrefix: "Prerequisite: ",
 			editorDepRemove: "Remove",
-			editorDepEmpty: "No dependencies",
+			editorDepEmpty: "No prerequisites yet. Pick a workspace and a task below, then add.",
 			editorAdvanced: "Advanced",
 			editorRetry: "Retry attempts",
 			editorValidStatuses: "Valid statuses",
@@ -5686,7 +5688,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
 .dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
+/* 前置任务卡：已加行（浅底衬行，同附加文件行语言）+ 两级选择行（工作区定宽 / 任务弹性）。 */
+.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));}
+.dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
+.dsh-tdt-ed-deppick-ws{flex:0 0 148px;min-width:0;display:inline-flex;}
+.dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:inline-flex;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
@@ -37387,12 +37393,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			}));
 		}
-		function Section(props) {
-			return (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, props.label === void 0 ? null : (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-label",
-				style: { marginBottom: "6px" }
-			}, props.label), props.children ?? null);
-		}
 		/** 周期档的子控件：内容行 = 频率 + 月/日 + 时间；星期恒定在下面一行。 */
 		function PeriodControls(props) {
 			const { draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels } = props;
@@ -38524,67 +38524,107 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: "dsh-tdt-ed-help",
 				"aria-label": t("editorWindowHint")
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))));
-			const taskOptions = tasks;
-			const depsBlock = (0, react.createElement)(Section, { label: t("editorDeps") }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			const [depWs, setDepWs] = (0, react.useState)("");
+			const [depTaskId, setDepTaskId] = (0, react.useState)("");
+			const addedDepIds = new Set(draft.deps.map((dep) => dep.task));
+			const depWsOptions = [];
+			for (const task of tasks) {
+				if (task.workspace === "" || addedDepIds.has(task.id)) continue;
+				if (!depWsOptions.some((option) => option.value === task.workspace)) depWsOptions.push({
+					value: task.workspace,
+					label: task.workspace
+				});
+			}
+			const depTaskOptions = depWs === "" ? [] : tasks.filter((task) => task.workspace === depWs && !addedDepIds.has(task.id)).map((task) => ({
+				value: task.id,
+				label: task.label
+			}));
+			const addDep = () => {
+				if (depTaskId === "" || addedDepIds.has(depTaskId)) return;
+				patch({ deps: [...draft.deps, {
+					task: depTaskId,
+					semantics: "latest_success"
+				}] });
+				setDepTaskId("");
+			};
+			const depsBlock = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-label",
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "4px"
+				}
+			}, t("editorDeps"), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("editorDepsHint"),
+				side: "bottom",
+				maxWidth: 320
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-help",
+				"aria-label": t("editorDepsHint")
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))), draft.deps.length === 0 ? null : (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "6px",
+				marginBottom: "10px"
+			} }, draft.deps.map((dep, index) => {
+				const known = tasks.find((task) => task.id === dep.task);
+				const ws = known?.workspace ?? "";
+				return (0, react.createElement)("div", {
+					key: index,
+					className: "dsh-tdt-ed-depitem"
+				}, (0, react.createElement)("span", { style: {
+					flex: "1 1 auto",
+					minWidth: 0,
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+					whiteSpace: "nowrap",
+					fontSize: "13px"
+				} }, `${t("editorDepItemPrefix")}${known?.label ?? dep.task}`, ws === "" ? null : (0, react.createElement)("span", { style: {
+					color: C$2.textDim,
+					fontSize: "11px",
+					marginLeft: "6px"
+				} }, ws)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					variant: "ghost",
+					size: "sm",
+					onClick: () => {
+						patch({ deps: draft.deps.filter((_, i) => i !== index) });
+					},
+					title: t("editorDepRemove"),
+					"aria-label": t("editorDepRemove")
+				}, t("editorDepRemove")));
+			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-deppick" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-deppick-ws" }, (0, react.createElement)(SelectField, {
+				value: depWs,
+				options: depWsOptions,
+				onChange: (value) => {
+					setDepWs(value);
+					setDepTaskId("");
+				},
+				placeholder: t("editorWorkspacePh"),
+				emptyLabel: t("editorDepEmpty"),
+				ariaLabel: t("editorWorkspace"),
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
+				width: "100%"
+			})), (0, react.createElement)("span", { className: "dsh-tdt-ed-deppick-task" }, (0, react.createElement)(SelectField, {
+				value: depTaskId,
+				options: depTaskOptions,
+				onChange: setDepTaskId,
+				placeholder: depWs === "" ? t("editorDepPickWsFirst") : t("editorDepTaskPh"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorDepTask"),
+				disabled: depWs === "",
+				width: "100%"
+			})), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 14 }),
-				disabled: taskOptions.length === 0,
-				title: taskOptions.length === 0 ? t("editorNoOptions") : t("editorDepAdd"),
-				onClick: () => {
-					patch({ deps: [...draft.deps, {
-						task: taskOptions[0]?.value ?? "",
-						semantics: "same_period"
-					}] });
-				}
-			}, t("editorDepAdd")), draft.deps.length === 0 ? (0, react.createElement)("span", {
+				disabled: depTaskId === "",
+				title: depTaskId === "" ? t("editorDepTaskPh") : t("editorDepAdd"),
+				onClick: addDep
+			}, t("editorDepAdd"))), draft.deps.length === 0 ? (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-hint",
-				style: { margin: 0 }
-			}, t("editorDepEmpty")) : null), draft.deps.length === 0 ? null : (0, react.createElement)("div", null, draft.deps.map((dep, index) => (0, react.createElement)("div", {
-				key: index,
-				className: "dsh-tdt-ed-deprow"
-			}, (0, react.createElement)(SelectField, {
-				value: dep.task,
-				options: taskOptions,
-				onChange: (value) => {
-					const next = draft.deps.slice();
-					next[index] = {
-						...dep,
-						task: value
-					};
-					patch({ deps: next });
-				},
-				placeholder: t("editorDepTask"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorDepTask")
-			}), (0, react.createElement)(SelectField, {
-				value: dep.semantics,
-				options: [{
-					value: "same_period",
-					label: t("editorDepSamePeriod")
-				}, {
-					value: "latest_success",
-					label: t("editorDepLatestSuccess")
-				}],
-				onChange: (value) => {
-					const next = draft.deps.slice();
-					next[index] = {
-						...dep,
-						semantics: value
-					};
-					patch({ deps: next });
-				},
-				placeholder: t("editorDepSemantics"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorDepSemantics")
-			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "ghost",
-				size: "sm",
-				title: t("editorDepRemove"),
-				onClick: () => {
-					patch({ deps: draft.deps.filter((_, i) => i !== index) });
-				}
-			}, t("editorDepRemove"))))));
+				style: { marginTop: "8px" }
+			}, t("editorDepEmpty")) : null);
 			const advancedBlock = (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)("button", {
 				className: "dsh-tdt-ed-summary",
 				type: "button",
@@ -39360,10 +39400,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			};
 			const taskRows = data?.tasks ?? [];
-			/** 可选的前置任务 = 现有任务表（真数据）；工作区 / 模型列表待 P1 接数据面，暂传空数组。 */
-			const taskOptions = taskRows.map((row) => ({
-				value: row.id,
-				label: row.title === "" ? row.id : `${row.title}（${row.code ?? row.id}）`
+			/** 可选的前置任务 = 现有任务表（真数据，带所属工作区 ⇒ 表单里先选工作区再选任务）。 */
+			const editorTasks = taskRows.map((row) => ({
+				id: row.id,
+				label: row.title === "" ? row.id : `${row.title}（${row.code ?? row.id}）`,
+				workspace: row.workspace
 			}));
 			const titleOfTask = (id) => {
 				const row = taskRows.find((item) => item.id === id);
@@ -39695,7 +39736,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				workspaces: editorOptions.workspaces,
 				models: editorOptions.models,
-				tasks: taskOptions,
+				tasks: editorTasks,
 				onClose: () => {
 					setEditor(null);
 				},

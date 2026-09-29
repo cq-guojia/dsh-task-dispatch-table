@@ -20,7 +20,7 @@ import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 import { FileBrowser } from './file-browser'
 import { type WorkspaceFilesFace } from './file-preview'
-import { emptyTaskDraft, TaskEditorDrawer, type EditorOption, type TaskEditorDraft } from './task-editor'
+import { emptyTaskDraft, TaskEditorDrawer, type EditorOption, type EditorTaskOption, type TaskEditorDraft } from './task-editor'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -592,10 +592,11 @@ function TaskPage(props: {
   }
 
   const taskRows = data?.tasks ?? []
-  /** 可选的前置任务 = 现有任务表（真数据）；工作区 / 模型列表待 P1 接数据面，暂传空数组。 */
-  const taskOptions: EditorOption[] = taskRows.map(row => ({
-    value: row.id,
+  /** 可选的前置任务 = 现有任务表（真数据，带所属工作区 ⇒ 表单里先选工作区再选任务）。 */
+  const editorTasks: EditorTaskOption[] = taskRows.map(row => ({
+    id: row.id,
     label: row.title === '' ? row.id : `${row.title}（${row.code ?? row.id}）`,
+    workspace: row.workspace,
   }))
   const titleOfTask = (id: string): string => {
     const row = taskRows.find(item => item.id === id)
@@ -1009,7 +1010,7 @@ function TaskPage(props: {
         onChange: (next: TaskEditorDraft) => { setEditor({ mode: editor.mode, draft: next }) },
         workspaces: editorOptions.workspaces,
         models: editorOptions.models,
-        tasks: taskOptions,
+        tasks: editorTasks,
         onClose: () => { setEditor(null) },
         workspaceFiles,
         workspaceAnchors: editorOptions.workspaceAnchors,

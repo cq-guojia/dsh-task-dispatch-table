@@ -371,3 +371,24 @@ typecheck + build（dist/client 349.96 kB）+ 冒烟 172 项全过。
 - 备选：① 自绘 textarea + 官方 `MarkdownText` 预览（零依赖、零增量、官方 token 原生主题，推荐起步）；② CodeMirror 6 + `@codemirror/lang-markdown`（轻、成熟，候选增强）；③ bytemd（React、轻，但预览自管）；不推荐 Milkdown / TipTap（ProseMirror 系，数百 KB 偏重）。
 
 build（dist/client 369.39 kB）+ typecheck + 冒烟 176 项全过。
+
+---
+
+## 十九、前置任务卡：灰框 + 两级选择 + 判定说明（2026-09-29，用户口述拍板）
+
+原占位形态（一个「添加依赖」按钮 + 每行两个下拉：任务 + 语义）推翻重做。用户逐条需求：
+
+| # | 用户需求 | 落地 |
+|---|---|---|
+| 1 | 整块用灰框框起来（同附加文件卡），别零散放着 | `.dsh-tdt-ed-card` 灰框卡（同款边框 / 圆角 / 底色 / focus 描边） |
+| 2 | 标题后挂小问号，hover 出解释 | 官方 `Tooltip`（`side:'bottom'`、maxWidth 320）+ `IconQuestionOutlineRegular`，图标包真实 `<button class="dsh-tdt-ed-help">`（裸图标 ref 挂不上 ⇒ 悬停无字的老坑） |
+| 3 | 说明三件事：含义（此任务必须等前置任务完成后再开始执行）/ 判定方式（所有前置任务上一次执行必须成功——中间被跳过、只要没失败都算成功）/ 执行机制（放行时系统自动把前置产出的相关文件移交给本次任务） | 文案进 `editorDepsHint`（zh/en 双语，en 不用撇号免转义） |
+| 4 | 先选工作区、再选任务（不然任务多很难选） | 两级下拉：工作区从任务表真数据推导（`DebugTaskRow.workspace`，宿主快照本就带 `task.target.workspace`），**只列确实有可选任务的工作区**，避免选进空工作区卡死；任务下拉按工作区过滤，未选工作区时禁用 + 占位「请先选择工作区」 |
+| 5 | 添加后固定成行「前置任务：xxx」+「移除」；同一任务不能加两次；支持跨工作区 | 行 = 浅底衬行（同附件行语言 `.dsh-tdt-ed-depitem`）+ 所属工作区灰色小字（跨工作区时分得清）；去重 = 选项里排除已加 id + 添加按钮再拦一道；加完**工作区保留、任务清空**，连着加第二个 |
+| 6 | 「同一天的」语义下拉没有意义，判定方式写进说明就行 | 语义下拉删除；新增依赖固定写 `latest_success`（= 用户口述判定方式，决策 33 语义子集）；**存量依赖的 `semantics` 原样保留**（编辑无损往返不变量）；`draftToDefinitionJson` 未动 |
+
+数据装配：`tasks` prop 从 `EditorOption[]` 换成新类型 `EditorTaskOption {id,label,workspace}`（index.ts 由快照 taskRows 装配）；旧的 `dsh-tdt-ed-deprow` 类与 `Section` 小件（已无人用）删除；locales 键 `editorDepSemantics / editorDepSamePeriod / editorDepLatestSuccess` 删除，新增 `editorDepsHint / editorDepPickWsFirst / editorDepTaskPh / editorDepItemPrefix`。
+
+**已知边界**：编辑态「不能把自己加成前置」尚未做——编辑流程（表单 ⇄ 既有任务回填）本身还没接（P2），接的时候须按编辑中的任务 id 从选项里排除自身。
+
+typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡与两级选择类名、说明文案、行文案、语义下拉已删、latest_success 写死）。

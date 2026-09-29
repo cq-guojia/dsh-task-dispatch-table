@@ -116,6 +116,16 @@ export interface EditorDependency {
 }
 
 /**
+ * 前置任务可选项（= 现有任务表行，真数据）。`workspace` = 该任务定义 `target.workspace`
+ * 的工作区 title ⇒ 表单里「先选工作区、再选任务」两级过滤（用户 2026-09-29）。
+ */
+export interface EditorTaskOption {
+  id: string
+  label: string
+  workspace: string
+}
+
+/**
  * 表单草稿：字段与 taskDefinitionSchema（src/tasks.ts:24-63）一一对应（`id` 不在表单里，
  * 只有高级区的 JSON 逃生口认得它）。排期在草稿里是**结构化**的（档 + 粒度 + 时刻），
  * 落到 cron / once 的映射归 P2 —— 本轮 `draftToDefinitionJson` 只做只读预览。
@@ -327,13 +337,6 @@ function PrefixedInput(props: {
       'aria-label': props.prefix,
       onChange: (event: { target: { value: string } }) => { props.onChange(event.target.value) },
     }),
-  )
-}
-
-function Section(props: { label?: string; children?: ReactNode }): ReactElement {
-  return h('div', { className: 'dsh-tdt-ed-section' },
-    props.label === undefined ? null : h('div', { className: 'dsh-tdt-ed-label', style: { marginBottom: '6px' } }, props.label),
-    props.children ?? null,
   )
 }
 
@@ -778,8 +781,8 @@ export function TaskEditorDrawer(props: {
   workspaces: EditorOption[]
   /** 模型列表（P1 接真数据；空 ⇒ 下拉显示空态）。 */
   models: EditorOption[]
-  /** 可选的前置任务（= 现有任务表，真数据）。 */
-  tasks: EditorOption[]
+  /** 可选的前置任务（= 现有任务表，真数据，带所属工作区）。 */
+  tasks: EditorTaskOption[]
   onClose: () => void
   /** 保存回调；**P0 不传** ⇒ 点「保存」只提示待接，不做任何写入。 */
   onSave?: ((draft: TaskEditorDraft) => void) | undefined
@@ -1195,57 +1198,94 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  // ③ 前置任务（只做界面；怎么校验归另一个任务）。
-  const taskOptions = tasks
-  const depsBlock = h(Section, { label: t('editorDeps') },
-    h('div', { className: 'dsh-tdt-ed-row' },
+  // ③ 前置任务卡（用户 2026-09-29 拍板的交互，照「附加文件」卡同款灰框）：
+  //  - 标题「添加前置任务」+「?」Tooltip：含义 / 判定方式（所有前置任务上一次执行必须成功，
+  //    跳过不算失败）/ 执行时自动移交前置产出文件；
+  //  - 选择 = 先工作区后任务两级（工作区下拉只列确实有可选任务的工作区），点「添加」固定成一行，
+  //    行内「移除」可删；同一任务不能加两次（选项里直接排除已加的，按钮再拦一道）；
+  //  - 支持跨工作区（每个前置任务可来自不同工作区）；加完工作区保留、任务清空，连着加第二个；
+  //  - 语义下拉删除（用户：选「同一天的」没有意义）——判定方式就是「上一次执行必须成功」，
+  //    新增依赖固定写 `latest_success`；存量依赖的 semantics 原样保留（编辑无损往返）。
+  const [depWs, setDepWs] = useState('')
+  const [depTaskId, setDepTaskId] = useState('')
+  const addedDepIds = new Set(draft.deps.map(dep => dep.task))
+  const depWsOptions: EditorOption[] = []
+  for (const task of tasks) {
+    if (task.workspace === '' || addedDepIds.has(task.id)) continue
+    if (!depWsOptions.some(option => option.value === task.workspace)) depWsOptions.push({ value: task.workspace, label: task.workspace })
+  }
+  const depTaskOptions: EditorOption[] = depWs === ''
+    ? []
+    : tasks.filter(task => task.workspace === depWs && !addedDepIds.has(task.id))
+      .map(task => ({ value: task.id, label: task.label }))
+  const addDep = (): void => {
+    if (depTaskId === '' || addedDepIds.has(depTaskId)) return
+    // semantics 固定 latest_success = 「上一次执行必须成功」（用户口述的判定方式）。
+    patch({ deps: [...draft.deps, { task: depTaskId, semantics: 'latest_success' }] })
+    setDepTaskId('') // 工作区保留，方便连着加同工作区的第二个、第三个。
+  }
+  const depsBlock = h('div', { className: 'dsh-tdt-ed-card' },
+    h('div', { className: 'dsh-tdt-ed-card-head' },
+      h('div', { className: 'dsh-tdt-ed-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+        t('editorDeps'),
+        // 照附加文件卡的可用形态：图标必须包在真实 DOM 按钮（.dsh-tdt-ed-help）里再交给 Tooltip。
+        h(Tooltip, { label: t('editorDepsHint'), side: 'bottom', maxWidth: 320 },
+          h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorDepsHint') },
+            h(IconQuestionOutlineRegular, { size: 14 }),
+          ),
+        ),
+      ),
+    ),
+    // 已加好的前置任务行：「前置任务：标题（编号）」+ 所属工作区（跨工作区时能分清），右侧「移除」。
+    draft.deps.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
+      draft.deps.map((dep, index) => {
+        const known = tasks.find(task => task.id === dep.task)
+        const ws = known?.workspace ?? ''
+        return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
+          h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } },
+            `${t('editorDepItemPrefix')}${known?.label ?? dep.task}`,
+            ws === '' ? null : h('span', { style: { color: C.textDim, fontSize: '11px', marginLeft: '6px' } }, ws),
+          ),
+          h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ deps: draft.deps.filter((_, i) => i !== index) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
+        )
+      }),
+    ),
+    // 选择行：工作区 → 任务 → 添加。
+    h('div', { className: 'dsh-tdt-ed-deppick' },
+      h('span', { className: 'dsh-tdt-ed-deppick-ws' },
+        h(SelectField, {
+          value: depWs,
+          options: depWsOptions,
+          onChange: value => { setDepWs(value); setDepTaskId('') },
+          placeholder: t('editorWorkspacePh'),
+          emptyLabel: t('editorDepEmpty'),
+          ariaLabel: t('editorWorkspace'),
+          icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
+          width: '100%',
+        }),
+      ),
+      h('span', { className: 'dsh-tdt-ed-deppick-task' },
+        h(SelectField, {
+          value: depTaskId,
+          options: depTaskOptions,
+          onChange: setDepTaskId,
+          placeholder: depWs === '' ? t('editorDepPickWsFirst') : t('editorDepTaskPh'),
+          emptyLabel: t('editorNoOptions'),
+          ariaLabel: t('editorDepTask'),
+          disabled: depWs === '',
+          width: '100%',
+        }),
+      ),
       h(Button, {
         variant: 'outline',
         size: 'sm',
         icon: h(IconPlusOutlineRegular, { size: 14 }),
-        disabled: taskOptions.length === 0,
-        title: taskOptions.length === 0 ? t('editorNoOptions') : t('editorDepAdd'),
-        onClick: () => { patch({ deps: [...draft.deps, { task: taskOptions[0]?.value ?? '', semantics: 'same_period' }] }) },
+        disabled: depTaskId === '',
+        title: depTaskId === '' ? t('editorDepTaskPh') : t('editorDepAdd'),
+        onClick: addDep,
       }, t('editorDepAdd')),
-      draft.deps.length === 0 ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: 0 } }, t('editorDepEmpty')) : null,
     ),
-    draft.deps.length === 0
-      ? null
-      : h('div', null, draft.deps.map((dep, index) => h('div', { key: index, className: 'dsh-tdt-ed-deprow' },
-          h(SelectField, {
-            value: dep.task,
-            options: taskOptions,
-            onChange: value => {
-              const next = draft.deps.slice()
-              next[index] = { ...dep, task: value }
-              patch({ deps: next })
-            },
-            placeholder: t('editorDepTask'),
-            emptyLabel: t('editorNoOptions'),
-            ariaLabel: t('editorDepTask'),
-          }),
-          h(SelectField, {
-            value: dep.semantics,
-            options: [
-              { value: 'same_period', label: t('editorDepSamePeriod') },
-              { value: 'latest_success', label: t('editorDepLatestSuccess') },
-            ],
-            onChange: value => {
-              const next = draft.deps.slice()
-              next[index] = { ...dep, semantics: value as DepSemantics }
-              patch({ deps: next })
-            },
-            placeholder: t('editorDepSemantics'),
-            emptyLabel: t('editorNoOptions'),
-            ariaLabel: t('editorDepSemantics'),
-          }),
-          h(Button, {
-            variant: 'ghost',
-            size: 'sm',
-            title: t('editorDepRemove'),
-            onClick: () => { patch({ deps: draft.deps.filter((_, i) => i !== index) }) },
-          }, t('editorDepRemove')),
-        ))),
+    draft.deps.length === 0 ? h('div', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px' } }, t('editorDepEmpty')) : null,
   )
 
   // ④ 高级：重试 / 成功状态清单 / 版本历史（P3）/ JSON 逃生口。
