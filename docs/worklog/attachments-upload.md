@@ -46,3 +46,11 @@
 3. **附件行样式**：弃 `border`（用户嫌丑），改半透明浅底 `--dsw-alias-interactive-bg-hover`（带 rgba 兜底）；文件名前加官方 `FileTypeIcon`（同 file-browser 目录树）。
 4. **报错说人话**：`uploadError` 改存宿主返回的机器码，渲染按码映射中英文具体文案（格式不支持 / 超 20MB / 空文件 / 通用失败），不再透出 `file-type-not-allowed` 之类。
 5. **「暂无可浏览的工作区」根因定位（未动代码，待讨论）**：选择器依赖 `workspaceSessionId`，而它只在用户点开过会话文件链接（`openFile`）后才有值 ⇒ 新建任务/没浏览过文件时必空。按守则拽官方 `dsh-api-workspace-files@0.1.7-rc.2` 源码核实：**所有方法（list/read/stat/readBytes/changes）第一个参数都是 `workspaceFileScopeId: SessionId`**，scope 由会话 header 的 cwd 派生；**目录列举被限定在「该会话所属工作区根」内**（types 注释：directory listings remain workspace-scoped），read/stat 虽允许工作区外绝对路径但只能读已知路径、不能枚举。**官方没有「按工作区路径列文件」的无会话接口**。可行官方路子 = 给选择器喂一个属于目标工作区的已有会话 id（来源：执行记录 `session_id` / registry 实体 sessionIds）；没跑过会话的工作区官方就没有浏览入口，**不造会话绕开**。根目录本身能读（有会话锚点时 `list('')` 即列该工作区根，U11 已真机验证）——不是用户猜的「跑到工作区上层根目录」问题，是前端压根没拿到会话锚点。
+
+## 七、第三轮（会话锚点落地，用户拍板）
+
+- **先复核了宿主 0.2.0-rc.1**：`dsh-api-workspace-files@0.2.0-rc.1` 与 rc.2 契约**逐字一致**（仍全要 sessionId，无按工作区路径入口）⇒ 无会话直取**官方不支持**，结论已沉淀进 dsh-capabilities.md（含跟进项：官方将来提供直取面就撤锚点方案）。
+- **用户拍板**：不找「根目录」，浏览范围 = **任务已选的那个工作区**；未选工作区点「选择工作区文件」⇒ **官方 Toast** 提示「请选择任务执行的工作区后，再选择工作区文件。」。
+- **锚点来源（官方数据）**：`/options` 路由按工作区下发 `anchorSessionId` = `entity.sessionIds` 末位（最近一个会话；`@deepseek-ai/dsh-workspace@0.2.0-rc.1` `lib/types/entity.d.ts:68` 核实有该 getter，归档会话保留槽位 ⇒ scope 解析无需激活 agent）。没有会话的工作区不下发 ⇒ 选择器显示「该工作区还没有历史会话，暂无法浏览其文件，请使用上传」空态。
+- **官方 Toast**：`primitives` 公开导出（0.2.0-rc.1 `lib/types/Toast.d.ts`）：`{text, tone?, anchor?, holdMs?, onDone}`，重播须换 key 重挂；`primitives.d.ts` 补消费面声明。顶部居中 body 传送门，与抽屉无层叠冲突。
+- **其余两处**：① 删「暂无附加文件」空态文案（投放框常驻已是空态，键 `editorAttachmentNone` 全删）；② **上传先验尺寸再发包**——超 20MB 当场报「文件超过大小限制」，不再白传半天才失败（此前服务端才拦，用户真机抱怨「转了很久才报错」）。

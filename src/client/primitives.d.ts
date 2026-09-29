@@ -254,6 +254,22 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   /** 官方剪贴板写入：返回是否成功。 */
   export function writeClipboard(text: string): Promise<boolean>
 
+  /**
+   * 官方 Toast（顶部居中横幅，body 传送门）：滑入 → holdMs 全显 → 淡出 → onDone（宿主卸载）。
+   * 重播同文案须换 key 重挂（官方文档明说）。事实来源：0.2.0-rc.1 lib/types/Toast.d.ts。
+   */
+  export const Toast: ComponentType<{
+    text: string
+    icon?: ReactNode
+    /** 仅 'success' 有绿圈勾；缺省图标位呈警示色。 */
+    tone?: 'success'
+    /** 横幅水平中心跟随该元素；缺省居中视口。 */
+    anchor?: HTMLElement | null
+    holdMs?: number
+    actions?: readonly { label: string; prefix?: string; onClick: () => void }[]
+    onDone: () => void
+  }>
+
   /** 官方「固定定位浮层贴住锚点」：滚动 / 尺寸变化时自动重算并夹在视口内。 */
   export function useAnchoredPosition(options: {
     open: boolean

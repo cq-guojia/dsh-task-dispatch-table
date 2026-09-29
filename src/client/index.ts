@@ -378,9 +378,11 @@ const STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed
 interface EditorOptions {
   workspaces: EditorOption[]
   models: EditorOption[]
+  /** 工作区 title → 浏览锚点会话 id（该工作区最近一个会话；没有会话的工作区无键）。 */
+  workspaceAnchors: Record<string, string>
 }
 
-const EMPTY_EDITOR_OPTIONS: EditorOptions = { workspaces: [], models: [] }
+const EMPTY_EDITOR_OPTIONS: EditorOptions = { workspaces: [], models: [], workspaceAnchors: {} }
 
 /** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 const encodeModelValue = (provider: string, id: string): string => `${provider}/${id}`
@@ -511,22 +513,28 @@ function TaskPage(props: {
     fetch(`${DISPATCH_API_PREFIX}/options`, { cache: 'no-store' })
       .then(res => res.json() as Promise<{
         ok?: boolean
-        workspaces?: { title?: string }[]
+        workspaces?: { title?: string; anchorSessionId?: string }[]
         models?: { provider?: string; id?: string; name?: string }[]
       }>)
       .then(body => {
         if (!alive || body.ok !== true) return
+        const workspaceAnchors: Record<string, string> = {}
         const workspaces: EditorOption[] = (body.workspaces ?? [])
           // value 用 title：宿主侧 `resolveWorkspace` 就是按 title 精确匹配（src/dispatch.ts:33-35）。
           .filter(item => typeof item.title === 'string' && item.title !== '')
-          .map(item => ({ value: item.title as string, label: item.title as string }))
+          .map(item => {
+            if (typeof item.anchorSessionId === 'string' && item.anchorSessionId !== '') {
+              workspaceAnchors[item.title as string] = item.anchorSessionId
+            }
+            return { value: item.title as string, label: item.title as string }
+          })
         const models: EditorOption[] = [{ value: '', label: t('editorFollowHost') }]
         for (const model of body.models ?? []) {
           if (typeof model.provider !== 'string' || typeof model.id !== 'string') continue
           const name = typeof model.name === 'string' && model.name !== '' ? model.name : model.id
           models.push({ value: encodeModelValue(model.provider, model.id), label: `${name}（${model.provider}）` })
         }
-        setEditorOptions({ workspaces, models })
+        setEditorOptions({ workspaces, models, workspaceAnchors })
       })
       .catch(() => { /* 取不到就保持空态：下拉显示「暂无可选」，不编造 */ })
     return () => { alive = false }
@@ -1004,7 +1012,7 @@ function TaskPage(props: {
         tasks: taskOptions,
         onClose: () => { setEditor(null) },
         workspaceFiles,
-        workspaceSessionId: lastWorkspaceSessionId.current,
+        workspaceAnchors: editorOptions.workspaceAnchors,
       })
       : null,
     // U11 页面级预览 dock：固定在屏幕最右侧，把整页（含会话弹窗）往左推；

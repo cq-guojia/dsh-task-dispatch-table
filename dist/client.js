@@ -357,12 +357,12 @@ window.__ModuleLoader__.load({
 			editorStartTime: "开始时间",
 			editorEveryNWeeks: "每 {n} 周",
 			editorAttachments: "附加文件",
-			editorAttachmentNone: "暂无附加文件",
 			editorAttachmentLink: "链接",
 			editorAttachmentUpload: "已上传",
 			editorAttachmentRemove: "删除",
 			editorAttachmentAdd: "添加文件",
 			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
+			editorPickNeedWorkspace: "请选择任务执行的工作区后，再选择工作区文件。",
 			editorPickWorkspaceFile: "选择工作区文件",
 			editorUploadFile: "上传文件",
 			editorDropZoneHint: "点击或拖拽文件到此处上传，支持多选或单个文件",
@@ -373,7 +373,7 @@ window.__ModuleLoader__.load({
 			editorUploadErrSize: "文件超过大小限制（单个最大 20MB）",
 			editorUploadErrEmpty: "文件内容为空",
 			editorUploadErrGeneric: "上传失败，请重试",
-			editorPickerNoSession: "暂无可浏览的工作区：请先在会话中打开任意文件，或使用「上传文件」",
+			editorPickerNoSession: "该工作区还没有历史会话，暂无法浏览其文件，请使用「上传文件」。",
 			editorPickerPick: "选择此文件",
 			editorPickerCancel: "取消",
 			editorOpenEditor: "全屏编辑",
@@ -754,7 +754,6 @@ window.__ModuleLoader__.load({
 			editorStartTime: "Start time",
 			editorEveryNWeeks: "Every {n} weeks",
 			editorAttachments: "Attachments",
-			editorAttachmentNone: "No attachments yet",
 			editorAttachmentLink: "Linked",
 			editorAttachmentUpload: "Uploaded",
 			editorAttachmentRemove: "Remove",
@@ -770,7 +769,8 @@ window.__ModuleLoader__.load({
 			editorUploadErrSize: "File exceeds the size limit (20MB max each)",
 			editorUploadErrEmpty: "File is empty",
 			editorUploadErrGeneric: "Upload failed, please retry",
-			editorPickerNoSession: "No workspace to browse yet: open any file in a session first, or use “Upload file”",
+			editorPickNeedWorkspace: "Pick a workspace for this task first, then choose workspace files.",
+			editorPickerNoSession: "This workspace has no past sessions yet, so its files cannot be browsed — use “Upload file” instead.",
 			editorPickerPick: "Pick this file",
 			editorPickerCancel: "Cancel",
 			editorOpenEditor: "Full-screen edit",
@@ -37790,7 +37790,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceSessionId } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceAnchors } = props;
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
@@ -37799,6 +37799,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
+			const [toast, setToast] = (0, react.useState)(null);
+			const toastSeq = (0, react.useRef)(0);
+			const showToast = (0, react.useCallback)((text) => {
+				toastSeq.current += 1;
+				setToast({
+					text,
+					seq: toastSeq.current
+				});
+			}, []);
 			const [uploadError, setUploadError] = (0, react.useState)(null);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
@@ -37985,11 +37994,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const uploadFiles = async (files) => {
 				const list = Array.from(files);
 				if (list.length === 0 || uploading) return;
-				setUploading(true);
 				setUploadError(null);
+				const ATTACHMENT_MAX_BYTES = 20971520;
+				const oversize = list.filter((file) => file.size > ATTACHMENT_MAX_BYTES);
+				const sendable = list.filter((file) => file.size <= ATTACHMENT_MAX_BYTES);
+				if (oversize.length > 0) setUploadError("payload-too-large");
+				if (sendable.length === 0) return;
+				setUploading(true);
 				const added = [];
 				let lastErr = null;
-				for (const file of list) try {
+				for (const file of sendable) try {
 					const data = await (await fetch("/api/task-dispatch-table/attachment", {
 						method: "POST",
 						headers: {
@@ -38021,8 +38035,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
-				disabled: workspaceFiles === null || workspaceFiles === void 0,
 				onClick: () => {
+					if (draft.workspace === "") {
+						showToast(t("editorPickNeedWorkspace"));
+						return;
+					}
 					setPickerOpen(true);
 				}
 			}, t("editorPickWorkspaceFile")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -38031,7 +38048,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					if (!uploading) fileInputRef.current?.click();
 				}
-			}, t("editorUploadFile")))), draft.attachments.length === 0 ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAttachmentNone")) : (0, react.createElement)("div", { style: {
+			}, t("editorUploadFile")))), draft.attachments.length === 0 ? null : (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px",
@@ -38499,39 +38516,49 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setPickerOpen(false);
 				}
-			}, t("editorPickerCancel"))), workspaceFiles !== null && workspaceFiles !== void 0 && (workspaceSessionId ?? "") !== "" ? (0, react.createElement)(FileBrowser, {
-				workspaceFiles,
-				sessionId: workspaceSessionId ?? "",
-				path: "",
-				t,
-				onClose: () => {
-					setPickerOpen(false);
-				},
-				picker: true,
-				onPick: (p) => {
-					const name = p.slice(Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")) + 1);
-					addAttachment({
-						id: makeId(),
-						name,
-						kind: "link",
-						ref: p
-					});
-					setPickerOpen(false);
-				},
-				style: {
+			}, t("editorPickerCancel"))), (() => {
+				const anchorSessionId = (workspaceAnchors ?? {})[draft.workspace] ?? "";
+				return workspaceFiles !== null && workspaceFiles !== void 0 && anchorSessionId !== "" ? (0, react.createElement)(FileBrowser, {
+					workspaceFiles,
+					sessionId: anchorSessionId,
+					path: "",
+					t,
+					onClose: () => {
+						setPickerOpen(false);
+					},
+					picker: true,
+					onPick: (p) => {
+						const name = p.slice(Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")) + 1);
+						addAttachment({
+							id: makeId(),
+							name,
+							kind: "link",
+							ref: p
+						});
+						setPickerOpen(false);
+					},
+					style: {
+						flex: "1 1 auto",
+						minHeight: 0
+					}
+				}) : (0, react.createElement)("div", { style: {
 					flex: "1 1 auto",
-					minHeight: 0
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					padding: "24px",
+					textAlign: "center",
+					color: C$2.textDim,
+					fontSize: "13px"
+				} }, t("editorPickerNoSession"));
+			})())) : null, toast === null ? null : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
+				key: toast.seq,
+				text: toast.text,
+				holdMs: 3200,
+				onDone: () => {
+					setToast(null);
 				}
-			}) : (0, react.createElement)("div", { style: {
-				flex: "1 1 auto",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: "24px",
-				textAlign: "center",
-				color: C$2.textDim,
-				fontSize: "13px"
-			} }, t("editorPickerNoSession")))) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
+			}), confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
 				t,
 				onStay: () => {
 					setConfirmDiscard(false);
@@ -38908,7 +38935,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		];
 		const EMPTY_EDITOR_OPTIONS = {
 			workspaces: [],
-			models: []
+			models: [],
+			workspaceAnchors: {}
 		};
 		/** 模型 option 的 value 形如 `provider/id`（写回时拆成成对的 provider + model，决策 22）。 */
 		const encodeModelValue = (provider, id) => `${provider}/${id}`;
@@ -39014,10 +39042,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				let alive = true;
 				fetch(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" }).then((res) => res.json()).then((body) => {
 					if (!alive || body.ok !== true) return;
-					const workspaces = (body.workspaces ?? []).filter((item) => typeof item.title === "string" && item.title !== "").map((item) => ({
-						value: item.title,
-						label: item.title
-					}));
+					const workspaceAnchors = {};
+					const workspaces = (body.workspaces ?? []).filter((item) => typeof item.title === "string" && item.title !== "").map((item) => {
+						if (typeof item.anchorSessionId === "string" && item.anchorSessionId !== "") workspaceAnchors[item.title] = item.anchorSessionId;
+						return {
+							value: item.title,
+							label: item.title
+						};
+					});
 					const models = [{
 						value: "",
 						label: t("editorFollowHost")
@@ -39032,7 +39064,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 					setEditorOptions({
 						workspaces,
-						models
+						models,
+						workspaceAnchors
 					});
 				}).catch(() => {});
 				return () => {
@@ -39426,7 +39459,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setEditor(null);
 				},
 				workspaceFiles,
-				workspaceSessionId: lastWorkspaceSessionId.current
+				workspaceAnchors: editorOptions.workspaceAnchors
 			}) : null, preview !== null && workspaceFiles !== null ? (0, react.createElement)(FileBrowser, {
 				key: `${preview.sessionId}:${preview.path}`,
 				workspaceFiles,

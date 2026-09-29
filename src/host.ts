@@ -121,6 +121,12 @@ export interface HostWorkspace {
   readonly path: string
   readonly title: string
   /**
+   * 本工作区名下的会话 id（0.2.0-rc.1 `entity.sessionIds` getter，源码已核实；含归档会话的槽位，
+   * 追加序）。旧版本实体可能没有 ⇒ optional、取值方判空。用于「选择工作区文件」的浏览锚点：
+   * workspaceFiles.list 以 sessionId 解析工作区根，必须有属于该工作区的会话才能列其文件。
+   */
+  readonly sessionIds?: readonly string[]
+  /**
    * 会话归组的唯一途径（决策 22）：把 sessionId 登记进本工作区记录的 sessionIds。
    * 前置校验 = 读会话 header 的 cwd → realpath 归一 → 必须 === 本工作区 path，
    * 否则抛错（所以 meta.cwd 必须直接用本实体的 path，不可自行拼写）。

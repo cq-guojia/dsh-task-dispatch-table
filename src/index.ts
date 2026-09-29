@@ -253,7 +253,14 @@ const makeDispatchRoutes = (
       const workspaces = registry === null
         ? []
         // value 用 **title**：`resolveWorkspace`（src/dispatch.ts:33-35）就是按 title 精确匹配、id 兜底。
-        : registry.list().map(workspace => ({ title: workspace.title, path: workspace.path }))
+        // anchorSessionId = 该工作区最近一个会话（entity.sessionIds 末位，官方 0.2.0-rc.1 已核实；
+        // 含归档会话槽位 ⇒ scope 解析无需激活 agent）——客户端「选择工作区文件」的浏览锚点。
+        // 没有会话的工作区不下发该字段（客户端显示「无历史会话」空态，不造假会话）。
+        : registry.list().map(workspace => {
+          const sessions = workspace.sessionIds
+          const anchorSessionId = sessions !== undefined && sessions.length > 0 ? sessions[sessions.length - 1] : undefined
+          return { title: workspace.title, path: workspace.path, anchorSessionId }
+        })
       const models: { provider: string; id: string; name: string }[] = []
       try {
         for (const provider of llm?.listProviders() ?? []) {

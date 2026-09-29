@@ -107,8 +107,8 @@ export type LocaleKey =
   | 'editorMonth' | 'editorMonthOption' | 'editorDayOfMonth' | 'editorDayOption'
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
-  | 'editorAttachments' | 'editorAttachmentNone' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
-  | 'editorPickWorkspaceFile' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
+  | 'editorAttachments' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
+  | 'editorPickWorkspaceFile' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickNeedWorkspace' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
@@ -462,12 +462,12 @@ export const zh: Record<LocaleKey, string> = {
   editorStartTime: '开始时间',
   editorEveryNWeeks: '每 {n} 周',
   editorAttachments: '附加文件',
-  editorAttachmentNone: '暂无附加文件',
   editorAttachmentLink: '链接',
   editorAttachmentUpload: '已上传',
   editorAttachmentRemove: '删除',
   editorAttachmentAdd: '添加文件',
   editorAttachmentAddHint: '上传 / 选择文件稍后开放',
+  editorPickNeedWorkspace: '请选择任务执行的工作区后，再选择工作区文件。',
   editorPickWorkspaceFile: '选择工作区文件',
   editorUploadFile: '上传文件',
   editorDropZoneHint: '点击或拖拽文件到此处上传，支持多选或单个文件',
@@ -478,7 +478,7 @@ export const zh: Record<LocaleKey, string> = {
   editorUploadErrSize: '文件超过大小限制（单个最大 20MB）',
   editorUploadErrEmpty: '文件内容为空',
   editorUploadErrGeneric: '上传失败，请重试',
-  editorPickerNoSession: '暂无可浏览的工作区：请先在会话中打开任意文件，或使用「上传文件」',
+  editorPickerNoSession: '该工作区还没有历史会话，暂无法浏览其文件，请使用「上传文件」。',
   editorPickerPick: '选择此文件',
   editorPickerCancel: '取消',
   editorOpenEditor: '全屏编辑',
@@ -865,7 +865,6 @@ export const en: Record<LocaleKey, string> = {
   editorStartTime: 'Start time',
   editorEveryNWeeks: 'Every {n} weeks',
   editorAttachments: 'Attachments',
-  editorAttachmentNone: 'No attachments yet',
   editorAttachmentLink: 'Linked',
   editorAttachmentUpload: 'Uploaded',
   editorAttachmentRemove: 'Remove',
@@ -881,7 +880,8 @@ export const en: Record<LocaleKey, string> = {
   editorUploadErrSize: 'File exceeds the size limit (20MB max each)',
   editorUploadErrEmpty: 'File is empty',
   editorUploadErrGeneric: 'Upload failed, please retry',
-  editorPickerNoSession: 'No workspace to browse yet: open any file in a session first, or use “Upload file”',
+  editorPickNeedWorkspace: 'Pick a workspace for this task first, then choose workspace files.',
+  editorPickerNoSession: 'This workspace has no past sessions yet, so its files cannot be browsed — use “Upload file” instead.',
   editorPickerPick: 'Pick this file',
   editorPickerCancel: 'Cancel',
   editorOpenEditor: 'Full-screen edit',

@@ -27,6 +27,7 @@ import {
   IconQuestionOutlineRegular,
   MarkdownText,
   Switch,
+  Toast,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
@@ -778,10 +779,14 @@ export function TaskEditorDrawer(props: {
   onSave?: ((draft: TaskEditorDraft) => void) | undefined
   /** 工作区文件服务（选择工作区文件用；未就位为 null ⇒ 选择器不可用）。 */
   workspaceFiles?: WorkspaceFilesFace | null
-  /** 选择器的工作区上下文：最近浏览过的会话 id（remote.workspaceFiles 是会话作用域的，需它反查工作区）。 */
-  workspaceSessionId?: string | null
+  /**
+   * 工作区 title → 锚点会话 id（GET /options 下发：该工作区最近一个会话，官方 entity.sessionIds 末位）。
+   * remote.workspaceFiles 的 list 以 sessionId 解析工作区根（0.2.0-rc.1 仍如此，源码已核实）⇒
+   * 浏览某工作区必须有属于它的会话当锚点；没有锚点的工作区官方无浏览入口（不造假会话）。
+   */
+  workspaceAnchors?: Record<string, string>
 }): ReactElement {
-  const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceSessionId } = props
+  const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceAnchors } = props
   const [width, setWidth] = useState<number>(readWidth)
   const [tab, setTab] = useState<'basic' | 'records'>('basic')
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -791,6 +796,13 @@ export function TaskEditorDrawer(props: {
   // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
   const [pickerOpen, setPickerOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
+  // 官方 Toast（顶部居中横幅）：text + 自增 seq 作 key（官方要求按次重挂才会重播）。
+  const [toast, setToast] = useState<{ text: string; seq: number } | null>(null)
+  const toastSeq = useRef(0)
+  const showToast = useCallback((text: string): void => {
+    toastSeq.current += 1
+    setToast({ text, seq: toastSeq.current })
+  }, [])
   // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
   const [uploadError, setUploadError] = useState<string | null>(null)
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
@@ -956,13 +968,20 @@ export function TaskEditorDrawer(props: {
   const uploadFiles = async (files: FileList | File[]): Promise<void> => {
     const list = Array.from(files)
     if (list.length === 0 || uploading) return
-    setUploading(true)
     setUploadError(null)
+    // 先验尺寸再发包（用户 2026-09-29：超限就该当场拒，不该白转半天才报错）。
+    // 超限的跳过并提示，其余照传。
+    const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024
+    const oversize = list.filter(file => file.size > ATTACHMENT_MAX_BYTES)
+    const sendable = list.filter(file => file.size <= ATTACHMENT_MAX_BYTES)
+    if (oversize.length > 0) setUploadError('payload-too-large')
+    if (sendable.length === 0) return
+    setUploading(true)
     // ⚠️ 多选修复：逐个收进本地数组、循环末**一次性** patch。此前每次 addAttachment 都展开
     // 渲染闭包里的旧 draft.attachments ⇒ 多选时后一个把前一个覆盖掉，列表只剩最后一个文件。
     const added: Attachment[] = []
     let lastErr: string | null = null
-    for (const file of list) {
+    for (const file of sendable) {
       try {
         const res = await fetch('/api/task-dispatch-table/attachment', {
           method: 'POST',
@@ -982,14 +1001,24 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorAttachments')),
       // 右上两个小按钮（用户 2026-09-29 拍板的布局）；「上传文件」= 直接弹本地选择框。
+      // 「选择工作区文件」前置条件 = 已选任务工作区（未选 ⇒ 官方 Toast 提示，不开选择器）。
       h('div', { style: { display: 'flex', gap: '8px' } },
-        h(Button, { variant: 'outline', size: 'sm', disabled: workspaceFiles === null || workspaceFiles === undefined, onClick: () => { setPickerOpen(true) } }, t('editorPickWorkspaceFile')),
+        h(Button, {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => {
+            if (draft.workspace === '') {
+              showToast(t('editorPickNeedWorkspace'))
+              return
+            }
+            setPickerOpen(true)
+          },
+        }, t('editorPickWorkspaceFile')),
         h(Button, { variant: 'outline', size: 'sm', onClick: () => { if (!uploading) fileInputRef.current?.click() } }, t('editorUploadFile')),
       ),
     ),
-    draft.attachments.length === 0
-      ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorAttachmentNone'))
-      : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
+    // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
+    draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
           // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
           draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', background: 'var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))' } },
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
@@ -1349,7 +1378,8 @@ export function TaskEditorDrawer(props: {
       panelInner,
     ),
     // 选择工作区文件：覆盖层（盖在表单/编辑器之上、随抽屉一起在宿主之上）；复用 FileBrowser 的目录树，
-    // picker 模式下点文件即回调、不进预览。无可用会话上下文时给明确空态。
+    // picker 模式下点文件即回调、不进预览。浏览范围 = **已选工作区**：锚点会话来自 /options 下发的
+    // 该工作区最近会话（官方 entity.sessionIds 末位）；无锚点（该工作区没跑过会话）⇒ 明确空态。
     pickerOpen
       ? h('div', { style: { position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' } },
         h('div', { style: { width: 'min(720px, 100%)', height: '72vh', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsh-radius-panel, 10px)', boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
@@ -1357,25 +1387,35 @@ export function TaskEditorDrawer(props: {
             h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPickWorkspaceFile')),
             h(Button, { variant: 'outline', size: 'sm', onClick: () => { setPickerOpen(false) } }, t('editorPickerCancel')),
           ),
-          workspaceFiles !== null && workspaceFiles !== undefined && (workspaceSessionId ?? '') !== ''
-            ? h(FileBrowser, {
-              workspaceFiles,
-              sessionId: workspaceSessionId ?? '',
-              path: '',
-              t,
-              onClose: () => { setPickerOpen(false) },
-              picker: true,
-              onPick: (p: string) => {
-                const name = p.slice(Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1)
-                addAttachment({ id: makeId(), name, kind: 'link', ref: p })
-                setPickerOpen(false)
-              },
-              style: { flex: '1 1 auto', minHeight: 0 },
-            })
-            : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: C.textDim, fontSize: '13px' } }, t('editorPickerNoSession')),
+          (() => {
+            const anchorSessionId = (workspaceAnchors ?? {})[draft.workspace] ?? ''
+            return workspaceFiles !== null && workspaceFiles !== undefined && anchorSessionId !== ''
+              ? h(FileBrowser, {
+                workspaceFiles,
+                sessionId: anchorSessionId,
+                path: '',
+                t,
+                onClose: () => { setPickerOpen(false) },
+                picker: true,
+                onPick: (p: string) => {
+                  const name = p.slice(Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1)
+                  addAttachment({ id: makeId(), name, kind: 'link', ref: p })
+                  setPickerOpen(false)
+                },
+                style: { flex: '1 1 auto', minHeight: 0 },
+              })
+              : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: C.textDim, fontSize: '13px' } }, t('editorPickerNoSession'))
+          })(),
         ),
       )
       : null,
+    // 官方 Toast 挂载点（body 传送门，与抽屉层级无冲突）。
+    toast === null ? null : h(Toast, {
+      key: toast.seq,
+      text: toast.text,
+      holdMs: 3200,
+      onDone: () => { setToast(null) },
+    }),
     // 关闭确认（拉栏内联层，盖在表单/编辑器之上、且随抽屉一起在宿主之上）：改过才出现；
     // 点遮罩/离开 ⇒ 真正关抽屉，继续编辑 ⇒ 留在原处。
     confirmDiscard
