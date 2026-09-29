@@ -1034,17 +1034,23 @@ export function TaskEditorDrawer(props: {
         uploading ? null : h('div', { style: { fontSize: '11px', color: C.textDim, marginTop: '4px' } }, t('editorDropZoneFormats')),
       ),
       h('div', { style: { flex: 'none', display: 'flex' } },
-        h(Button, {
-          variant: 'outline',
-          size: 'sm',
-          style: { height: '100%' },
-          icon: h(IconPlusOutlineRegular, { size: 14 }),
+        // 正方形虚线按钮（用户 2026-09-29：与投放区同语言——加号在上、文字在下）。
+        h('button', {
+          type: 'button',
           onClick: () => {
             // 默认浏览任务已选工作区；没选就取第一个工作区（用户 2026-09-29：默认最近/第一个都行）。
             setPickerWs(draft.workspace !== '' ? draft.workspace : (workspaces[0]?.value ?? ''))
             setPickerOpen(true)
           },
-        }, t('editorPickWorkspaceFile')),
+          style: {
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            width: '92px', padding: '8px', border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd,
+            background: C.layer1, cursor: 'pointer', color: C.text,
+          },
+        },
+          h(IconPlusOutlineRegular, { size: 20 }),
+          h('span', { style: { fontSize: '12px', lineHeight: 1.2 } }, t('editorPickWorkspaceFileShort')),
+        ),
       ),
     ),
     h('input', {
@@ -1416,6 +1422,7 @@ export function TaskEditorDrawer(props: {
                 workspaceFiles,
                 sessionId: anchorSessionId,
                 path: '',
+                rootName: pickerWs,
                 t,
                 onClose: () => { setPickerOpen(false) },
                 picker: true,

@@ -363,6 +363,7 @@ window.__ModuleLoader__.load({
 			editorAttachmentAdd: "添加文件",
 			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
 			editorPickWorkspaceFile: "选择工作区文件",
+			editorPickWorkspaceFileShort: "工作区文件",
 			editorUploadFile: "上传文件",
 			editorDropZoneHint: "点击或拖拽文件到此处上传，支持多选或单个文件",
 			editorDropZoneFormats: "支持常见文本 / 代码、图片、文档格式，单个文件不超过 20MB",
@@ -760,6 +761,7 @@ window.__ModuleLoader__.load({
 			editorAttachmentAdd: "Add file",
 			editorAttachmentAddHint: "Upload / pick file — coming soon",
 			editorPickWorkspaceFile: "Pick workspace file",
+			editorPickWorkspaceFileShort: "Files",
 			editorUploadFile: "Upload file",
 			editorDropZoneHint: "Click or drop files here to upload — multiple or single files supported",
 			editorDropZoneFormats: "Common text/code, image and document formats are supported, up to 20MB each",
@@ -4421,7 +4423,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* list(path) 成功 ⇒ 目录树；not-directory ⇒ 文件预览（dir = 父目录，面包屑保留可返回）。
 		*/
 		function FileBrowser(props) {
-			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, style } = props;
+			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, style } = props;
 			const [mode, setMode] = (0, react.useState)("loading");
 			const [dir, setDir] = (0, react.useState)("");
 			const [listing, setListing] = (0, react.useState)(null);
@@ -4709,7 +4711,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-loading" }, t("previewLoading")) : cached.status === "error" ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react.createElement)(react.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
 				});
 			};
-			const crumbs = crumbsOf(relativizeToRoot(dir, sessionId));
+			const rootAbs = workspaceRoots.get(sessionId);
+			const rootLabel = props.rootName ?? (rootAbs !== void 0 ? rootAbs.replace(/\/+$/, "").split("/").pop() ?? "" : "");
+			const crumbs = rootLabel !== "" ? [{
+				label: rootLabel,
+				path: ""
+			}, ...crumbsOf(relativizeToRoot(dir, sessionId))] : crumbsOf(dir);
 			const isMdPreview = viewing !== null && previewKind(viewing).kind === "md";
 			let body;
 			if (viewing !== null) body = (0, react.createElement)(FileBody, {
@@ -38218,16 +38225,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, t("editorDropZoneFormats"))), (0, react.createElement)("div", { style: {
 				flex: "none",
 				display: "flex"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				style: { height: "100%" },
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 14 }),
+			} }, (0, react.createElement)("button", {
+				type: "button",
 				onClick: () => {
 					setPickerWs(draft.workspace !== "" ? draft.workspace : workspaces[0]?.value ?? "");
 					setPickerOpen(true);
+				},
+				style: {
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					justifyContent: "center",
+					gap: "6px",
+					width: "92px",
+					padding: "8px",
+					border: `1px dashed ${C$2.borderL4}`,
+					borderRadius: C$2.radiusMd,
+					background: C$2.layer1,
+					cursor: "pointer",
+					color: C$2.text
 				}
-			}, t("editorPickWorkspaceFile")))), (0, react.createElement)("input", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 20 }), (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				lineHeight: 1.2
+			} }, t("editorPickWorkspaceFileShort"))))), (0, react.createElement)("input", {
 				ref: fileInputRef,
 				type: "file",
 				multiple: true,
@@ -38644,6 +38665,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					workspaceFiles,
 					sessionId: anchorSessionId,
 					path: "",
+					rootName: pickerWs,
 					t,
 					onClose: () => {
 						setPickerOpen(false);

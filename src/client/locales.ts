@@ -108,7 +108,7 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
-  | 'editorPickWorkspaceFile' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
+  | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
@@ -468,6 +468,7 @@ export const zh: Record<LocaleKey, string> = {
   editorAttachmentAdd: '添加文件',
   editorAttachmentAddHint: '上传 / 选择文件稍后开放',
   editorPickWorkspaceFile: '选择工作区文件',
+  editorPickWorkspaceFileShort: '工作区文件',
   editorUploadFile: '上传文件',
   editorDropZoneHint: '点击或拖拽文件到此处上传，支持多选或单个文件',
   editorDropZoneFormats: '支持常见文本 / 代码、图片、文档格式，单个文件不超过 20MB',
@@ -871,6 +872,7 @@ export const en: Record<LocaleKey, string> = {
   editorAttachmentAdd: 'Add file',
   editorAttachmentAddHint: 'Upload / pick file — coming soon',
   editorPickWorkspaceFile: 'Pick workspace file',
+  editorPickWorkspaceFileShort: 'Files',
   editorUploadFile: 'Upload file',
   editorDropZoneHint: 'Click or drop files here to upload — multiple or single files supported',
   editorDropZoneFormats: 'Common text/code, image and document formats are supported, up to 20MB each',

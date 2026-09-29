@@ -263,10 +263,12 @@ export function FileBrowser(props: {
   picker?: boolean
   /** 选择器模式下的选文件回调（path 为工作区绝对路径）。 */
   onPick?: (path: string) => void
+  /** 工作区根的显示名（选择器 = 用户选中的工作区名）；不传则用缓存根的末段。 */
+  rootName?: string
   /** 外部容器样式（嵌入弹层时撑满高度用）。 */
   style?: CSSProperties
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, style } = props
+  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, style } = props
   // mode：加载/目录树/文件预览/列举错误。viewing 非空 ⇒ 在 dir 树内预览文件。
   const [mode, setMode] = useState<'loading' | 'dir' | 'file' | 'error'>('loading')
   const [dir, setDir] = useState<string>('')
@@ -536,8 +538,14 @@ export function FileBrowser(props: {
   // ⚠️ 切勿改用服务端 list 返回的 path 当面包屑：那是 workspacePathOf(root, target) 的
   //    **工作区相对**形式（dsh-api-workspace-files lib/index.js:494），会丢掉根以下的前导段，
   //    面包屑只剩最近一层（2026-09-29 踩过 ⇒ 已回退为入参路径）。
-  // 面包屑/下拉 = 工作区相对层级（绝对目录先剥掉工作区根；根未知时退化绝对展示）。
-  const crumbs = crumbsOf(relativizeToRoot(dir, sessionId))
+  // 面包屑/下拉 = **工作区根 + 其下相对层级**（用户 2026-09-29：从选中的工作区目录开始，
+  // 工作区再往上不显示；根名不写死——选择器传 rootName，dock 用缓存根的末段）。
+  // 根未知（缓存未学出且无 rootName）时退化为原样 crumbs（可能是绝对层级）。
+  const rootAbs = workspaceRoots.get(sessionId)
+  const rootLabel = props.rootName ?? (rootAbs !== undefined ? rootAbs.replace(/\/+$/, '').split('/').pop() ?? '' : '')
+  const crumbs = rootLabel !== ''
+    ? [{ label: rootLabel, path: '' }, ...crumbsOf(relativizeToRoot(dir, sessionId))]
+    : crumbsOf(dir)
   const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'
 
   // —— 主体 ——
