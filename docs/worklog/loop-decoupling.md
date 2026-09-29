@@ -1,6 +1,6 @@
 # 两层循环彻底解耦（决策 41）
 
-> 状态：🟢 已落码（2026-09-28，同日拍板；typecheck + build + 冒烟 162 项全过），**落码后真机二次回归已热修，待复验**。
+> 状态：✅ **已落码并真机验证通过（2026-09-29 结项）**：typecheck + build + 冒烟 162 项全过，落码后真机二次回归热修生效。
 > 定型表述见 [design/state-machine.md §0](../design/state-machine.md) 与 [design/decisions.md 决策 41/42](../design/decisions.md)；本文件记定位过程与落码清单 + 二次回归热修。
 
 ## 〇、落码后真机二次回归（2026-09-28，热修）

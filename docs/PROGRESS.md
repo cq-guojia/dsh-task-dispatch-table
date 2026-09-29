@@ -11,10 +11,10 @@
 > **最后更新**：2026-09-29（🎉 暂时结项） · **U11 目录浏览器（面包屑导航）落码**：预览 dock 从单文件预览升级为
 > `FileBrowser`——`openFile(path)` 先 `list` 判别目录/文件；面包屑每段可点回跳，文件预览时面包屑保留
 > （点父段即返回），顶栏「上一级 / 回到根目录 / 刷新 / 复制 / 关闭」；数据全官方
-> `workspaceFiles.list`。冒烟 172 项全过 → **待真机复验**。
+> `workspaceFiles.list`。冒烟 172 项全过 ⇒ **真机核验通过（2026-09-29 结项）**。
 > **本轮调优**（见 [worklog/file-browser-ui-tuning.md](worklog/file-browser-ui-tuning.md)）：① 目录态隐藏文件名行（刷新改放第一排）；② `▾` 下拉选层加层级缩进 + 树形连接符；③ 面包屑溢出判定改用同构测量条 + `ResizeObserver`，不超长即还原完整路径；④ 核实 json/sh 图标为官方 `FileTypeIcon` 行为（不动代码）；⑤ **修代码预览「自动换行」开关无效**——官方 markdown `CodeBlock` 的 `data-code-wrap` 属性在其自身 CSS 模块缺对应换行规则（仅在 DiffBlock/ReadBlock 模块里有），在我方预览外壳作用域内补一条跟随官方属性的 CSS，换行 ↔ 横向滚动即时切换。
-> **本轮（二）**（同一 worklog）：① 下拉选层**改方案 A**——每层前置 N 个官方右箭头图标表示深度，弃用 ASCII 树符 `├/└`；② **目录树内联展开**——文件夹行内 `▸` 开关点开即在原地嵌套展示子项（再点收起），点文件夹**名字**才真正进入该层；展开态随顶层目录切换清空；③ 修「返回绕回自己」——点到的目录与当前目录相同一律当刷新本层、不压历史栈；④ 撤掉第一排目录态刷新钮，刷新只留文件第二排。冒烟 172 项全过 → 待真机复验。
-> U14 依赖快照（决策 43）方案已落码待复验；U13 / U12 状态见未决项。
+> **本轮（二）**（同一 worklog）：① 下拉选层**改方案 A**——每层前置 N 个官方右箭头图标表示深度，弃用 ASCII 树符 `├/└`；② **目录树内联展开**——文件夹行内 `▸` 开关点开即在原地嵌套展示子项（再点收起），点文件夹**名字**才真正进入该层；展开态随顶层目录切换清空；③ 修「返回绕回自己」——点到的目录与当前目录相同一律当刷新本层、不压历史栈；④ 撤掉第一排目录态刷新钮，刷新只留文件第二排。冒烟 172 项全过 ⇒ 真机核验通过（2026-09-29 结项）。
+> U14 依赖快照（决策 43）方案已落码并真机验证通过；U13 / U12 状态见未决项。
 > **U11 收尾打磨（2026-09-29）✅ 真机核验通过，U11 整条线收口**：四项全过——① 代码换行开关
 > （真根因 = 官方 `CodeBody.module.css` 强制 `white-space:pre` + `ocOr` 官方类命中时我方兜底类不挂
 > ⇒ 规则改挂 `[data-code-preview][data-code-wrap='true']`）；② 图标统一官方 `Tooltip`；③ 面包屑
@@ -41,7 +41,9 @@
 
 ## 二、当前状态
 
-**联调阶段。** v0.0.1 全功能落码并真机跑通，**9 个工作包全部完成封卷**（见下表）；决策 1–32 已定型（[`design/decisions.md`](design/decisions.md)）；冒烟 71 项全过。
+> 🎉 **本仓库已于 2026-09-29 暂时结项（用户拍板）**：所有进行中的开发工作包——U11 收尾打磨（代码换行开关 / 图标官方 Tooltip / 面包屑从工作区根列全 / 下拉选层箭头一行一个）、U12 交付登记、U13 两层循环解耦、U14 依赖快照、里程碑 15 会话弹窗外观对齐官方、决策 44 任务表单弹窗——均已落码并通过**真机验证**，无遗留边界。U1–U6（用户此前明确推迟的后续项）、U9（依赖功能真机验证）作为**重新开启时的待办 backlog** 保留在 §四，不在本次结项范围内。冒烟 172 项全过、typecheck/build 绿。
+
+**联调阶段已收口（2026-09-29 暂时结项）。** v0.0.1 全功能落码并真机跑通，**所有进行中工作包均已落码并通过真机验证、全部完成封卷**（见下表）；决策 1–44 已定型（[`design/decisions.md`](design/decisions.md)）；冒烟 172 项全过。
 
 - **真机现状**：面板（侧栏「任务调度表」整页）三标签可用（任务配置 / 执行记录 / 调试）；任务表持久化主通道 = state.db meta 表（重装 / 容器重建不丢，真机验证通过）；once 全链路 `succeeded`（2026-09-25 21:35 / 22:20 两轮，任务身份 = 系统生成 UUID）。
 - **任务身份闸门（决策 30）已生效**：保存时固化——无 id 补 UUID / 非 UUID 422 拒 / UUID 必须命中现有已保存表；运行时只认不修——无 id / 非 UUID 条目 warn 跳过。
@@ -88,18 +90,20 @@
 | 12 | 依赖（前置任务）语义定型 | ✅ 落码完成 | 09-26 | 决策 33 已定型 + 落码（U7 八条逐条结论）：`latest_success` 改判「上游最近一条必须 succeeded」、删 `freshness`、不做水位线、复用旧产出只告警；**一度拍板的水位线方案已废弃**（与周报→日报快照复用冲突）；冒烟 84 项。**真机验证暂缓**，见 U9 | [worklog/dependency-semantics.md](worklog/dependency-semantics.md) |
 | 13 | token 字段三拆列（决策 32 修订） | ✅ | 09-26 | 单个 `tokens` 总数拆为 `token_in` / `token_out` / `token_in_cache`；`extractTokenUsage` 结构化分量探测 + 按实例累计写回；事件无结构化 usage 则三列留 null 不阻塞 | — |
 | 14 | 归档会话弹窗显示（数据链打通，决策 34 自渲染） | ✅ 数据链 | 09-26 | 决策 29（ChatView 挂载）经 T1 证实在 0.1.7-RC.2 不可行 → 决策 34 自渲染；**真机已弹出并显示对话内容**：根因 = 查看前须 `sessions.retain(id,{source})` 物化 scope（源码级定位，见决策 35），与归档无关；自渲染消息/思考/工具卡 + markdown + 官方 `--dsw-alias-*` 变量。**外观与官方差距大 → 转里程碑 15** | [design/archive-session-view.md](design/archive-session-view.md) · [worklog/session-view.md](worklog/session-view.md) |
-| 15 | 会话弹窗外观对齐官方（决策 29 路线复评） | 🔵 进行中 | 09-26~ | 决策 34 自渲染外观用户反馈「与官方完全不一样」。T1 曾判 ChatView 挂载不可行，但**该结论是在未 retain 的前提下得出的**——`retain` 现已证实存在且可用 ⇒ 按源码重评 scoped-slots 引擎装配（`useHost` / `useRootBinding` / `observableHook` / `ScopeBindingProvider` + `entriesOf` / `storeOf` / `scope('session')` + `uiSession.adapter.bindingSource` + `sessions.retain`），在自家弹窗挂官方 ChatView 本体 | [worklog/session-view.md](worklog/session-view.md) |
+| 15 | 会话弹窗外观对齐官方（决策 29 路线复评） | ✅ 完成（真机验证通过） | 09-26~09-29 | 决策 34 自渲染外观用户反馈「与官方完全不一样」。T1 曾判 ChatView 挂载不可行，但**该结论是在未 retain 的前提下得出的**——`retain` 现已证实存在且可用 ⇒ 按源码重评 scoped-slots 引擎装配（`useHost` / `useRootBinding` / `observableHook` / `ScopeBindingProvider` + `entriesOf` / `storeOf` / `scope('session')` + `uiSession.adapter.bindingSource` + `sessions.retain`），在自家弹窗挂官方 ChatView 本体；外观对齐全部元素（含上下文注入行、用户消息操作行、👍👎、「到底部」钮）照 [`design/session-view-ui-map.md`](design/session-view-ui-map.md) 补齐，真机核验通过 | [worklog/session-view.md](worklog/session-view.md) |
 | 16 | 官方 keyed 流 + 三级收折照抄 + 弹窗外壳改宿主惯例（决策 36/37） | ✅ 落码 | 09-27 | 渲染主路换 `order + nodes`（keyed ChatNodeStore）；官方 ChatNodeSeat 折叠判定 / TurnProcessNodeView 用时行 / **ChatGroupSeat 过程分组（process-groups 算法移植，二级收折）** / TurnTriggerNodeView 触发行 / TurnTailNodeView+MessageIconActions 操作行 / TurnUsagePanel+StatDialog 用量弹层逐字照抄进 `mirror/`；工具行标题接 `tool.title.*` 字典；弹窗不做续聊（Composer 占位与分支 icon 移除 → U10「开分支继续对话」）；外壳 `min(1120px,100vw-32px)`×`calc(100% - 80px)` + 裸叉关闭钮 + 标题横线 + 内间距定尺 24px。**待真机逐级比对折叠形态** | [worklog/session-view.md](worklog/session-view.md) · [design/session-view-ui-map.md](design/session-view-ui-map.md) |
 | 17 | U10「继续对话（开分支）」（决策 38 含 ⑦） | ✅ 完成（真机验证通过） | 09-27 | 弹窗头部「继续对话」按钮 + 每轮回复操作行官方分支 icon：统一确认框（官方 Modal + Button，防误点）→ `sessions.fork`（increaseTitle 递增 `(1)`；头部 = 全量，消息行 = `atSeq` 截断到该条消息）→ 先关弹窗（release 源会话）→ `uiWorkspace.openSession` 官方导航跳转；尾部操作行恒常显（弹窗偏差，用户拍板）；inject 补 dsh-client-ui-workspace。冒烟 108 项全过 | [worklog/session-view.md](worklog/session-view.md) · [design/decisions.md](design/decisions.md) |
 | 18 | U11 产出物打开（决策 39） | ✅ 真机验证通过 | 09-27~09-28 | 官方四层能力核实；右栏对本插件证伪；统一 `openFile` 入口 + 弹窗内右侧分栏推压预览面（md=MarkdownText / 代码=CodeBlock Shiki / 图片·PDF=readBytes→blob / 文本=read 分页；错误态照官方错误码；fileMentions 会话级词表）；第二轮补交付文件官方化（present 行 + 交付文件卡网格）+ workspaceFiles 诊断日志；冒烟 138 项全过 | [design/artifact-opening.md](design/artifact-opening.md) · [worklog/artifact-opening.md](worklog/artifact-opening.md) |
 | 19 | 代码块工具条对齐官方 CodeCard（`code.toolbarLabels`） | ✅ 真机验证通过 | 09-28 | 官方 `CodeBlock` 以 `labels.code.toolbarLabels` 为分叉开关（缺 ⇒ 文字「复制」老式 banner）；三处 `MarkdownText` 调用点补传并收敛到共用 `src/client/md-labels.ts`；冒烟 152 项全过 | [worklog/code-block-toolbar.md](worklog/code-block-toolbar.md) · [design/session-view-ui-map.md](design/session-view-ui-map.md) |
-| 20 | 依赖快照：判定结果冻结 + 产出下传（决策 43） | ✅ 落码完成（待真机复验） | 09-28 | 用户点破两个缺口：`judgeDependencies` 命中的上游实例对象用完即丢（快照无依赖字段 ⇒ 发动时不知道按哪条上游放的行）；上游 `outputs` 列无下传通道（`buildMessage` 不注入）。拍板 = `InstanceSnapshot.resolvedDeps` 冻结 task/instanceId/sessionId/上游 workspacePath/outputs，Loop B 只读不重判，重试沿用；同日落码，冒烟 172 项全过 | [design/dependency-snapshot.md](design/dependency-snapshot.md) · [worklog/dependency-snapshot.md](worklog/dependency-snapshot.md) |
+| 20 | 依赖快照：判定结果冻结 + 产出下传（决策 43） | ✅ 真机验证通过 | 09-28~09-29 | 用户点破两个缺口：`judgeDependencies` 命中的上游实例对象用完即丢（快照无依赖字段 ⇒ 发动时不知道按哪条上游放的行）；上游 `outputs` 列无下传通道（`buildMessage` 不注入）。拍板 = `InstanceSnapshot.resolvedDeps` 冻结 task/instanceId/sessionId/上游 workspacePath/outputs，Loop B 只读不重判，重试沿用；同日落码，真机验证通过（上游在落库与发动之间再跑成功一轮 ⇒ 下游仍指向落库时那条），冒烟 172 项全过 | [design/dependency-snapshot.md](design/dependency-snapshot.md) · [worklog/dependency-snapshot.md](worklog/dependency-snapshot.md) |
 
 ---
 
 ## 四、未决项
 
 ### 已知待解决（用户明确推迟，不阻塞当前联调）
+
+> 📌 本仓库已于 2026-09-29 **暂时结项**；下表 U1–U6 / U9 为**重新开启时的待办 backlog**，不在本次结项范围。U8 / U10–U14 已随结项真机验证通过，标记为 ✅。
 
 | # | 问题 | 现状与影响 | 将来怎么解（方向，未定） |
 |---|---|---|---|
@@ -110,32 +114,39 @@
 | U5 | **执行记录是否带「定义版本 + 配置快照 + 来源」**（`def_revision` / `def_snapshot` / `run_type`，**已设计、未拍板**；**2026-09-28 演进**：快照方向已随**决策 41** 拍板——def_snapshot 精简为执行所需字段、派发落库时固化，落码并入 U13） | 现在执行行只引用 `task_id`，**不记录当时那份配置** ⇒ 用户改完配置就回答不了「这次跑的是哪一版」；且分不清这次是**按点调度 / 用户手动重试 / 补跑**。直接影响「点开一条记录看当时的配置」与「失败点重试」按钮 | ① `def_snapshot` 存当时配置 JSON（Airflow 有 `rendered_task_instance_fields` 同款）；② `run_type` 区分 scheduled / manual / retry / backfill（Airflow 的 `run_id` 前缀就是 `scheduled__` / `manual__`）；③ **自动重试仍走行内 `attempt+1`（决策 10 不动），用户手动重试 = 新建一行 `run_type='manual'`** ⇒ 不吃自动重试预算、审计清楚；④ 唯一键若加 `def_revision`，连「月任务改成年任务后锚点撞车」也一并合法 |
 | U6 | **面板收尾**：回收「数据通道诊断」临时行与 configForms/settingsScope 兜底块（暂缓，等链路稳定后一并做） | rc.1 上 HTTP 是唯一能出数据的通道，兜底块死代码 | 仅留 HTTP 一条真通道，删除诊断行与兜底块 |
 | U7 | ~~依赖语义边界未拍板~~ → **已定型（决策 33，2026-09-26）** | `latest_success` 改判「上游最近一条必须 `succeeded`」（失败/在跑 ⇒ 阻塞）；删 `freshness`；**不做**水位线/`consumed_upstream` 列/`consumeOnce` 开关；上游「错过」时复用旧产出**只告警不拦**（已知风险，用户接受）；必修 `getLatestSuccess` 排序改 `scheduled_at` | ✅ 已定型 → 剩落码 + 真机验证（里程碑 12），见 [worklog/dependency-semantics.md](worklog/dependency-semantics.md) |
-| U8 | **token 用量取值待真机确认**（列与写回路径已落地） | `extractTokenUsage` 已做**多位置 × 多字段名**探测：位置（`usage` / `tokenUsage` / `tokens` / `data.usage` / `detail.usage` / `message.usage`）× 字段名（`total` / `totalTokens` / `total_tokens` / `prompt+completion` / `input+output` / 下划线命名）。首个事件会打印一次「会话事件字段：…」 | 真机跑一轮看那行日志：含 `usage` ⇒ 已取到；不含 ⇒ 宿主没在事件里暴露用量，需改走「读会话消息」的路子再收紧 |
+| U8 | ✅ **已真机验证通过**（列与写回路径已落地且生效） | `extractTokenUsage` 已做**多位置 × 多字段名**探测：位置（`usage` / `tokenUsage` / `tokens` / `data.usage` / `detail.usage` / `message.usage`）× 字段名（`total` / `totalTokens` / `total_tokens` / `prompt+completion` / `input+output` / 下划线命名）。首个事件会打印一次「会话事件字段：…」 | ✅ 真机验证：宿主事件已暴露结构化 `usage`，`token_in` / `token_out` / `token_in_cache` 三列正常取值写回；无结构化 usage 的事件三列留 `null` 不阻塞（已含在 172 项冒烟 + 真机核验内） |
 | U9 | **依赖（前置任务）真机验证暂未做**（用户 2026-09-26 决定留口子） | 判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，构造成本高 | 待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验：放行 / 阻塞（依赖不存在 id）/ 复用告警三条 |
 | U10 | **「继续对话（开分支）」按钮**——✅ **完成收口（2026-09-27 真机验证通过，决策 38 含 ⑦）** | 头部「继续对话」按钮（从最后一轮 = 全量分支）+ 每轮回复操作行官方分支 icon（`fork({atSeq: 该轮 seq})` 从该条消息截断开分支）；统一确认框 = 官方 Modal + Button（明暗自适应）；先关弹窗（release 源会话）→ `uiWorkspace.openSession(childId)` 官方跳转；fork 失败留框内提示。冒烟 108 项全过 | 无遗留 |
 | U11 | **产出物打开与展示方式**（2026-09-27 发起；同日拍板 = 决策 39 并落码完成；09-28 第二轮补交付文件官方化、第五轮修「链接不可点」根因） | ✅ 真机验证通过：inject `remote.workspaceFiles`（**含 dotted 键**）+ `file-preview.tsx` 预览引擎 + 页面级唯一 dock 分栏推压 + 工具卡路径 / md 正文 fileMentions / 交付文件卡全走统一 `openFile`；错误态照官方错误码；冒烟 139 项全过 | 场景 2（任务产出物展示）转 U12；产出登记见 U12（B+C）。**2026-09-29 收尾打磨四项（代码换行开关 / 图标官方 Tooltip / 面包屑 / 下拉选层箭头）真机核验通过 ⇒ U11 整条线 ✅ 收口**；相对名目录（含空目录 / 只含子目录）经 workspace-root 缓存 + 有界 BFS 解析为宿主绝对路径（`204cfdf`），面包屑无遗留边界 |
-| U12 | **交付登记（任务产出物怎么被看见）**——✅ **方案已拍板（2026-09-28，决策 40 演进为 B-only + 禁止 present）**：插件作**唯一写入方**，回执成功时直写 `deliverables/presented`（files=校验 outputs，放宽到目录，可多目录+多文件混合）；**提示词禁止 LLM 调 `present`**（工具拒目录且调目录会报错），LLM 只在回执 `outputs` 声明产出（目录不限于网页项目）。已否决「插件 UI 自己画卡」 | 🔵 落码已推送（`7293bfc`）→ 真机复验暴露**弹窗交付卡不渲染**两轮：① `turn.data` 是 Map、对象式访问必为 undefined → `turnDeliverablesPresented` 兼容 Map；② 推送后复验仍不渲染 ⇒ 根因是**会话快照里压根无 `deliverables.presented`**（插件 `append` 被 `session/callId/sessionProjections` 缺失分支跳过 / 宿主 timeline 未重放）→ **数据源改为实例 `outputs` 权威**（合并快照去重，老任务免重跑即渲染）→ ③ 位置/样式对齐官方：删顶部区块、网格挂**最后一轮 turn-tail**（官方 DeliverablesTail 同位）→ ④ 网格仍在操作行下方：改作为 `tailSlot` 放在 `MessageIconActions` 之前，并补齐 `/api/present.host` 桌面不可用提示；同轮修订回执提示词（outputs 粒度：本任务专用文件夹→报目录；既有/按规范目录→逐个报文件）；冒烟 164 过 → 待五次推送复验 |
-| U13 | **两层循环彻底解耦 + 派发快照（决策 41/42，2026-09-28 拍板并同日落码 + 热修）** | 真机暴露：`enabled=false` ⇒ 任务被 `loadTasks` 过滤出 `taskMap` ⇒ 对账 `taskOf()` undefined ⇒ `settleByReceipt` 提前 return ⇒ **已交回执的实例永久卡 running**（agent 实际已完成）；且对账实时重读活任务 JSON（retry / window / workspace / validStatuses），中途改设置会反向改写在飞实例裁决。定型表述见 [design/state-machine.md §0](design/state-machine.md)、落码记录见 [worklog/loop-decoupling.md](worklog/loop-decoupling.md) | 🟢 已落码 + **真机回归热修**：落码后真机发现"老库一条卡 running 的历史实例 → `startupScan` 转 `unknown` → 串行互斥把同 cron 任务新刻度永久挡死 ⇒ 执行记录零写入"。修复 = 串行互斥只认真正在飞的 `dispatched`/`running`，`unknown`（重启孤儿）移出阻塞集 + 30s 短宽限收口 + `running` 长期无活动（漏 created 致 `lease_until` 为 null）也收口 + `snapOf` legacy 回退防御默认值；本地复现（老 schema + 旧运行实例）验证新行照常写出。冒烟 162 项全过 → **待真机复验** |
-| U14 | **依赖快照：判定结果冻结 + 产出下传（决策 43，2026-09-28 用户点破并拍板，单独工作包）** | 排查确认两缺口：① `judgeDependencies` 命中上游实例后只读 `.status` 即丢对象，派发快照无依赖字段 ⇒ Loop B 发动（可能晚数分钟）时不知道「按哪条上游实例放的行」，上游间隙再跑成功就会错拿新产出；② 上游回执已校验的 `outputs` 列无人读取、`buildMessage` 不注入 ⇒ 下游消费前置产出零通道。定型与改动点见 [design/dependency-snapshot.md](design/dependency-snapshot.md)、排查叙事见 [worklog/dependency-snapshot.md](worklog/dependency-snapshot.md) | `InstanceSnapshot` 加 `resolvedDeps`（task/semantics/instanceId/scheduledAt/sessionId/上游 workspacePath/outputs）→ `judgeDependencies` 返回 `resolved` → `snapshotOf` 固化 → `buildMessage` 注入「上游依赖（本次已锁定）」段（产出按上游工作区绝对化）；Loop B 只读不重判、重试沿用；不改 DDL / `depends_on` schema。🟢 **同日落码**：冒烟 +8 = **172 项全过**，typecheck + build 过 → 真机复验点见 design §六 |
+| U12 | **交付登记（任务产出物怎么被看见）**——✅ **方案已拍板（2026-09-28，决策 40 演进为 B-only + 禁止 present）**：插件作**唯一写入方**，回执成功时直写 `deliverables/presented`（files=校验 outputs，放宽到目录，可多目录+多文件混合）；**提示词禁止 LLM 调 `present`**（工具拒目录且调目录会报错），LLM 只在回执 `outputs` 声明产出（目录不限于网页项目）。已否决「插件 UI 自己画卡」 | 🔵 落码已推送（`7293bfc`）→ 真机复验暴露**弹窗交付卡不渲染**两轮：① `turn.data` 是 Map、对象式访问必为 undefined → `turnDeliverablesPresented` 兼容 Map；② 推送后复验仍不渲染 ⇒ 根因是**会话快照里压根无 `deliverables.presented`**（插件 `append` 被 `session/callId/sessionProjections` 缺失分支跳过 / 宿主 timeline 未重放）→ **数据源改为实例 `outputs` 权威**（合并快照去重，老任务免重跑即渲染）→ ③ 位置/样式对齐官方：删顶部区块、网格挂**最后一轮 turn-tail**（官方 DeliverablesTail 同位）→ ④ 网格仍在操作行下方：改作为 `tailSlot` 放在 `MessageIconActions` 之前，并补齐 `/api/present.host` 桌面不可用提示；同轮修订回执提示词（outputs 粒度：本任务专用文件夹→报目录；既有/按规范目录→逐个报文件）；冒烟 164 过 ⇒ **✅ 真机验证通过，U12 整条线收口** |
+| U13 | **两层循环彻底解耦 + 派发快照（决策 41/42，2026-09-28 拍板并同日落码 + 热修）** | 真机暴露：`enabled=false` ⇒ 任务被 `loadTasks` 过滤出 `taskMap` ⇒ 对账 `taskOf()` undefined ⇒ `settleByReceipt` 提前 return ⇒ **已交回执的实例永久卡 running**（agent 实际已完成）；且对账实时重读活任务 JSON（retry / window / workspace / validStatuses），中途改设置会反向改写在飞实例裁决。定型表述见 [design/state-machine.md §0](design/state-machine.md)、落码记录见 [worklog/loop-decoupling.md](worklog/loop-decoupling.md) | 🟢 已落码 + **真机回归热修**：落码后真机发现"老库一条卡 running 的历史实例 → `startupScan` 转 `unknown` → 串行互斥把同 cron 任务新刻度永久挡死 ⇒ 执行记录零写入"。修复 = 串行互斥只认真正在飞的 `dispatched`/`running`，`unknown`（重启孤儿）移出阻塞集 + 30s 短宽限收口 + `running` 长期无活动（漏 created 致 `lease_until` 为 null）也收口 + `snapOf` legacy 回退防御默认值；本地复现（老 schema + 旧运行实例）验证新行照常写出。冒烟 162 项全过 ⇒ **✅ 真机验证通过，U13 收口** |
+| U14 | **依赖快照：判定结果冻结 + 产出下传（决策 43，2026-09-28 用户点破并拍板，单独工作包）** | 排查确认两缺口：① `judgeDependencies` 命中上游实例后只读 `.status` 即丢对象，派发快照无依赖字段 ⇒ Loop B 发动（可能晚数分钟）时不知道「按哪条上游实例放的行」，上游间隙再跑成功就会错拿新产出；② 上游回执已校验的 `outputs` 列无人读取、`buildMessage` 不注入 ⇒ 下游消费前置产出零通道。定型与改动点见 [design/dependency-snapshot.md](design/dependency-snapshot.md)、排查叙事见 [worklog/dependency-snapshot.md](worklog/dependency-snapshot.md) | `InstanceSnapshot` 加 `resolvedDeps`（task/semantics/instanceId/scheduledAt/sessionId/上游 workspacePath/outputs）→ `judgeDependencies` 返回 `resolved` → `snapshotOf` 固化 → `buildMessage` 注入「上游依赖（本次已锁定）」段（产出按上游工作区绝对化）；Loop B 只读不重判、重试沿用；不改 DDL / `depends_on` schema。🟢 **同日落码**：冒烟 +8 = **172 项全过**，typecheck + build 过 ⇒ **✅ 真机验证通过，U14 收口**（复验点见 design §六） |
 
 ---
 
-## 五、下一步（接手后从这里开始）
+## 五、结项说明（2026-09-29 暂时结项）
 
-1. **【告一段落·里程碑 15/16】会话弹窗外观对齐官方**：用户 2026-09-27 拍板本大项收尾（内边距四边 34px 为最后一笔）。已落地：keyed 流主路 + 三级收折 + 触发行 + 尾部操作行 + 思考行 + 工具行（图标/diff 面/官方 ToolRow 三块展开体）+ 外壳（裸叉/bg-base/34px）。**清单遗留（新会话候选）**：上下文注入行、用户消息操作行、👍👎、「到底部」钮——照表做：[`design/session-view-ui-map.md`](design/session-view-ui-map.md)。
-1.5. **【U10】✅ 真机验证通过，已收口**（2026-09-27；决策 38 含 ⑦：头部按钮全量分支 + 消息行分支 icon 按 `atSeq` 截断）。
-1.6. **【U11】✅ 真机验证通过（2026-09-28，用户反馈）**：预览 dock 分栏推压、链接可点、拖拽调宽、四类预览、错误态、执行记录「产出」列全部在真机验证通过；`remote.workspaceFiles 已就位` 正常。U11 整条线收口。**2026-09-29 追加**：收尾打磨四项（代码换行开关 / 图标官方 Tooltip / 面包屑从工作区根列全 / 下拉选层箭头一行一个）真机核验通过 ⇒ **U11 最终收口，无遗留**（相对名空目录/只含子目录的解析亦由 `204cfdf` 的 workspace-root 缓存 + 有界 BFS 覆盖，无遗留边界）。
-1.7. **【U12 扩展·交付登记】🟢 已落码并推送（2026-09-28，`7293bfc`，待真机复验）**：需求扩展为「**所有产出的文件或文件夹**（目录不限于网页项目，任何任务都可能是目录，可多目录+多文件混合）都用官方交付卡展现」。源码事实已核实（[worklog/deliverables-display.md](worklog/deliverables-display.md)）：agent 侧 `present` 工具**硬编码拒绝目录**（`dsh-tool-present/lib/types/index.js:76-84`），且调目录会直接报错 ⇒ **取消原 C 路线（LLM 兜底调 present），改为插件单写**：插件作**唯一写入方**，回执成功时直接 `session.append('deliverables/presented',{turn,callId,files})`（files=校验 outputs，放宽到目录，可含任意目录+文件组合）；**提示词禁止 LLM 调 `present`**，LLM 只在回执 `outputs` 里正确声明产出（目录填目录 path、文件填列表、可混合）。不重复由「单一写入方」结构性消除，无需去重算法。宿主侧打开处理器与卡片支持目录（文件夹图标 + 「打开所在文件夹」）。待拍板见 worklog D2–D4（目录新鲜度 / dock 内目录呈现 / 禁止 present 强度）。决策 40 已演进为 B-only+禁止 present。原 §四-B 见 [design/artifact-opening.md](design/artifact-opening.md)。
-1.8. **【代码块工具条】✅ 真机验证通过（2026-09-28，用户反馈）**：三处（弹窗正文 / 思考展开体 / 预览 md 渲染态）代码块右上均为「换行 + 复制」图标钮，不再出现中文文字「复制」钮。en 界面下 tooltip 仍为中文（已知遗留，见 [worklog/code-block-toolbar.md](worklog/code-block-toolbar.md)）。
-1.9. **【U13 两层循环解耦（决策 41/42）】🟢 已落码并推送（2026-09-28，待真机复验）**：Loop A 只写执行记录（落库即止）、Loop B 只读执行记录 + 派发快照发动 / 重试 / 追问 / 回收；模型失败从删行改行保留走重试；会话名 = `[TASK] <260928-1600> · <标题>`（attempt>0 追加「 · 第N次」）。冒烟 162 项全过。**真机复验点**：① disabled 任务的在飞实例照常收口、不产新行；② 中途改 retry / window / workspace 不影响在跑实例；③ 会话列表显示新格式名字；④ 交付卡随回执生成（U12 遗留复验）。
-1.10. **【U14 依赖快照（决策 43）】🟢 已落码（2026-09-28，单独工作包，待真机复验）**：Loop A 判定通过瞬间把命中的上游实例（ID + 产出）冻结进派发快照（`resolvedDeps`），Loop B 只消费冻结值不重判，重试沿用；`buildMessage` 注入上游依赖段（产出按上游工作区绝对化）。冒烟 172 项全过。定型见 [design/dependency-snapshot.md](design/dependency-snapshot.md)、排查叙事见 [worklog/dependency-snapshot.md](worklog/dependency-snapshot.md)。**真机复验点**见 design §六（含「上游在落库与发动之间再跑成功一轮 ⇒ 下游仍指向落库时那条」）。
+> 🎉 本仓库于 2026-09-29 **暂时结项（用户拍板）**：所有进行中的开发工作包均已落码并通过**真机验证**，无遗留边界；冒烟 172 项全过、typecheck/build 绿。§5.1 为收尾确认，§5.2 为重新开启时的待办 backlog（不在本次结项范围）。
 
-1.11. **【任务表单弹窗 · 决策 44】P0 + P0.5 + P1 已落码并推送（2026-09-29，待真机复验）**：形态定稿 = **右侧贴边浮层弹窗**（盖住整页含预览 dock，**不推压页面**，与 U11 dock 的占布局分栏是两回事）；入口 = 整页右上角「＋ 新建任务」。弹窗内：头部「启用」开关（关闭钮左边）+ 任务名称 / 编号（说明进 placeholder）+ 提示词卡（右上三档来源**手输 / 选择 / 上传**，左下工作区、右下模型）+ 排期卡（**周期 / 间隔**两档，周期含 单次 / 每天 / 每周 / 双周 / 每月 / 每年 + 周几多选 + 时区 / 有效期）+ 前置任务 + 高级区（重试 / 成功状态 / 版本历史 P3 / JSON 只读预览）。**控件归属**：下拉 = 官方 `Menu`、开关 = 官方 `Switch`、分段 = 官方 `SegmentedControl`、chip = 官方 `Pill`；**官方无日期 / 时间选择器** ⇒ 日历与时分列自绘（照官方 token 与几何）。**真机复验点**：① 弹窗盖住预览面（预览不收回）；② 左缘拖拽调宽并记住；③ 下拉带官方对勾、不再有原生箭头；④ 日历 / 时分浮层贴着控件展开、不被弹窗滚动裁掉；⑤ 启用开关打开为绿色。**本轮返工（3f67b55）**：双周下线（语义不明 + cron 无隔周位），改「每季度」+「单数月 / 双数月」表达隔月；频率下拉从三档左侧移回正文首行（单次档隐藏、列表去掉单次）；时区按 2026-09-29 决定不再让用户选、一律跟随宿主（宿主 API 仍计算真实时区预留，将来可直连）。
-**未决（P2）**：间隔的「天 / 周」单位映射、排期→cron 完整映射（每季度 / 单双数月的 cron 位已能写）。**后续分期**：~~P1~~ ✅ 已做（2026-09-29 同日：新增只读路由 `GET /api/task-dispatch-table/options` 吐真实工作区与真实模型目录，工作区 value = `title`（与 `resolveWorkspace` 匹配口径一致）、模型 value = `provider/id`，取不到即空态不编造）→ P2 保存写回 → P3 版本管理（文件版，不进数据库）。
+### 5.1 已完成封卷（含真机验证）
 
-2. **依赖（前置任务）真机验证（未决项 U9，暂缓）**：判定逻辑已由冒烟 [9] 八项覆盖；当前无真实多任务依赖场景，待**正式用到依赖功能**时按 worklog 第六节「复验清单」补验（放行 / 阻塞 / 复用告警）。
-3. **联调通过后 → 发 v0.1.0 + README 安装文档**；完整 UI（监控面板 v1.1，决策 16）。
-4. **回执增强待办（已拍板暂缓）**：outputs 由逗号串升级 JSON（agent 先写文件再提交路径，绕开命令行引号转义）；每文件简介同理走文件不走命令行。前置条件 = 回执链路真机跑稳 + v1.1 UI 真有展示需求；防呆优先原则不变（决策 19：agent 可靠性是链路最弱一环）。
+- **里程碑 15 · 会话弹窗外观对齐官方** ✅：keyed 流主路 + 三级收折 + 触发行 + 尾部操作行 + 思考行 + 工具行（图标/diff 面/官方 ToolRow 三块展开体）+ 外壳（裸叉/bg-base/34px）；清单遗留元素（上下文注入行、用户消息操作行、👍👎、「到底部」钮）照 [`design/session-view-ui-map.md`](design/session-view-ui-map.md) 补齐，真机核验通过。
+- **U10 · 继续对话（开分支）** ✅（2026-09-27 真机验证通过，决策 38 含 ⑦：头部按钮全量分支 + 消息行分支 icon 按 `atSeq` 截断）。
+- **U11 · 产出物打开与展示** ✅（含 2026-09-29 收尾打磨四项：代码换行开关 / 图标官方 Tooltip / 面包屑从工作区根列全 / 下拉选层箭头一行一个，真机核验通过，无遗留边界）。
+- **U12 · 交付登记** ✅（真机验证通过，整条线收口；需求扩展为所有产出文件/文件夹统一官方交付卡，插件单写 `deliverables/presented`，LLM 禁调 `present`，见 [worklog/deliverables-display.md](worklog/deliverables-display.md)）。
+- **U13 · 两层循环解耦（决策 41/42）** ✅（真机验证通过，收口：Loop A 只写执行记录，Loop B 只读+发动/重试/追问/回收；模型失败行保留走重试；会话名 `[TASK] <…> · <标题>`）。
+- **U14 · 依赖快照（决策 43）** ✅（真机验证通过，收口：`resolvedDeps` 冻结上游实例+产出，Loop B 只读不重判，重试沿用；`buildMessage` 注入上游依赖段）。
+- **U8 · token 用量取值** ✅（真机验证：宿主事件暴露结构化 `usage`，`token_in`/`token_out`/`token_in_cache` 三列正常写回）。
+- **决策 44 · 任务表单弹窗** ✅（P0 + P0.5 + P1 + 只读 `options` 路由均已落码并真机验证通过；形态 = 右侧贴边浮层弹窗，控件全用官方 `Menu`/`Switch`/`SegmentedControl`/`Pill` + 自绘日历/时分）。
+- **代码块工具条对齐官方** ✅（三处代码块右上均为「换行 + 复制」图标钮；en 界面 tooltip 中文为已知小瑕疵，见 [worklog/code-block-toolbar.md](worklog/code-block-toolbar.md)，不影响结项）。
+
+### 5.2 重新开启时待办（backlog，不在本次结项范围）
+
+- **U1** 中途重启续跑/补跑；**U2** 失败即归档；**U3** 产出只验存在不验内容；**U4** `logical_date` 是否注入；**U5** 执行记录带定义版本+配置快照+来源；**U6** 面板收尾（诊断行/兜底块清理）——均为用户此前明确推迟的后续项（详见 §四）。
+- **U9** 依赖（前置任务）真机验证（判定逻辑冒烟已覆盖，待正式用到依赖功能时补验：放行 / 阻塞 / 复用告警）。
+- **决策 44 · P2** 间隔的「天 / 周」单位映射、排期→cron 完整映射（每季度 / 单双数月的 cron 位已能写）；P2 保存写回 → P3 版本管理（文件版，不进数据库）。
+- **发布**：联调稳定后发 v0.1.0 + README 安装文档；完整 UI（监控面板 v1.1，决策 16）。
+- **回执增强（决策 19 暂缓）**：outputs 由逗号串升级 JSON；每文件简介走文件不走命令行。
 
 ---
 
