@@ -109,6 +109,8 @@ export type LocaleKey =
   | 'editorStartTime' | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentNone' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
+  | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
+  | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
   | 'editorTaskStart' | 'editorTaskStartHint'
   | 'editorWeekdayLabel'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
@@ -471,6 +473,14 @@ export const zh: Record<LocaleKey, string> = {
   editorVersionNote: '版本备注（可选）',
   editorRestore: '恢复',
   editorNoVersions: '暂无版本，保存后可在此回滚',
+  editorHistoryVersions: '历史版本',
+  editorNewTaskNoVersions: '新建任务暂未保存，无历史版本可查询',
+  editorDeleteVersion: '删除',
+  editorUseVersion: '使用此版本',
+  editorConfirmDeleteTitle: '删除版本',
+  editorConfirmDeleteDesc: '你确定要删除吗？',
+  editorConfirmUseTitle: '使用历史版本',
+  editorConfirmUseDesc: '我们将用历史版本覆盖你现在提示词编辑器的所有内容，确定吗？',
   editorModeEdit: '编辑',
   editorModePreview: '预览',
   editorTaskStart: '任务开始时间',
@@ -853,6 +863,14 @@ export const en: Record<LocaleKey, string> = {
   editorVersionNote: 'Version note (optional)',
   editorRestore: 'Restore',
   editorNoVersions: 'No versions yet — save one to roll back here',
+  editorHistoryVersions: 'History versions',
+  editorNewTaskNoVersions: 'New task not saved yet — no history versions to query',
+  editorDeleteVersion: 'Delete',
+  editorUseVersion: 'Use this version',
+  editorConfirmDeleteTitle: 'Delete version',
+  editorConfirmDeleteDesc: 'Are you sure you want to delete it?',
+  editorConfirmUseTitle: 'Use history version',
+  editorConfirmUseDesc: 'This will overwrite all current content in your prompt editor with the history version. Are you sure?',
   editorModeEdit: 'Edit',
   editorModePreview: 'Preview',
   editorTaskStart: 'Task start time',

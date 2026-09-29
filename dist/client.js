@@ -369,6 +369,14 @@ window.__ModuleLoader__.load({
 			editorVersionNote: "版本备注（可选）",
 			editorRestore: "恢复",
 			editorNoVersions: "暂无版本，保存后可在此回滚",
+			editorHistoryVersions: "历史版本",
+			editorNewTaskNoVersions: "新建任务暂未保存，无历史版本可查询",
+			editorDeleteVersion: "删除",
+			editorUseVersion: "使用此版本",
+			editorConfirmDeleteTitle: "删除版本",
+			editorConfirmDeleteDesc: "你确定要删除吗？",
+			editorConfirmUseTitle: "使用历史版本",
+			editorConfirmUseDesc: "我们将用历史版本覆盖你现在提示词编辑器的所有内容，确定吗？",
 			editorModeEdit: "编辑",
 			editorModePreview: "预览",
 			editorTaskStart: "任务开始时间",
@@ -745,6 +753,14 @@ window.__ModuleLoader__.load({
 			editorVersionNote: "Version note (optional)",
 			editorRestore: "Restore",
 			editorNoVersions: "No versions yet — save one to roll back here",
+			editorHistoryVersions: "History versions",
+			editorNewTaskNoVersions: "New task not saved yet — no history versions to query",
+			editorDeleteVersion: "Delete",
+			editorUseVersion: "Use this version",
+			editorConfirmDeleteTitle: "Delete version",
+			editorConfirmDeleteDesc: "Are you sure you want to delete it?",
+			editorConfirmUseTitle: "Use history version",
+			editorConfirmUseDesc: "This will overwrite all current content in your prompt editor with the history version. Are you sure?",
 			editorModeEdit: "Edit",
 			editorModePreview: "Preview",
 			editorTaskStart: "Task start time",
@@ -37474,11 +37490,96 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: props.onLeave
 			}, props.t("editorDiscardLeave")))));
 		}
+		/** DEMO 模拟版本（仅样式预览用）：真实接入后由 props.versions 驱动，此常量删除。 */
+		const DEMO_VERSIONS = [
+			{
+				id: "demo-1",
+				ts: "2026-09-28T14:30:00.000Z",
+				content: "# 周一版本\n这里是周一 下午 初版的提示词正文……",
+				note: "周一 下午 · 初版"
+			},
+			{
+				id: "demo-2",
+				ts: "2026-09-29T09:12:00.000Z",
+				content: "# 周二版本\n调整了调度说明与依赖。",
+				note: "周二 上午 · 调整"
+			},
+			{
+				id: "demo-3",
+				ts: "2026-09-30T11:48:00.000Z",
+				content: "# 周三版本\n补充了产出物登记说明。",
+				note: "周三 上午 · 补充"
+			},
+			{
+				id: "demo-4",
+				ts: "2026-10-01T16:24:00.000Z",
+				content: "# 周四版本\n最终定稿，措辞收紧。",
+				note: "周四 下午 · 定稿"
+			}
+		];
+		/** 版本管理内的小型确认框（复用关闭确认的自绘样式：盖在编辑器之上、随抽屉浮在宿主之上）。 */
+		function VersionConfirm(props) {
+			return (0, react.createElement)("div", {
+				role: "alertdialog",
+				"aria-modal": true,
+				style: {
+					position: "absolute",
+					inset: 0,
+					zIndex: 20,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					padding: "24px",
+					background: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))"
+				},
+				onClick: props.onCancel
+			}, (0, react.createElement)("div", {
+				style: {
+					width: "min(380px, 100%)",
+					boxSizing: "border-box",
+					background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
+					borderRadius: "var(--dsw-radius-panel, 10px)",
+					boxShadow: "var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
+					padding: "22px 24px",
+					color: C$2.text
+				},
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("div", { style: {
+				fontSize: "16px",
+				fontWeight: 500,
+				marginBottom: "8px"
+			} }, props.title), (0, react.createElement)("div", { style: {
+				fontSize: "14px",
+				lineHeight: "22px",
+				color: C$2.textDim,
+				marginBottom: "20px"
+			} }, props.desc), (0, react.createElement)("div", { style: {
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: "8px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: props.onCancel
+			}, props.t("editorCancel")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "primary",
+				size: "sm",
+				onClick: props.onConfirm
+			}, props.confirmLabel ?? props.t("editorConfirm")))));
+		}
 		function PromptEditorModal(props) {
-			const { t, value, versions, onChange, onSaveVersion, onRestore, onClose } = props;
+			const { t, mode: editorMode, value, versions, onChange, onClose } = props;
 			const [mode, setMode] = (0, react.useState)("edit");
 			const [showVersions, setShowVersions] = (0, react.useState)(false);
-			const [note, setNote] = (0, react.useState)("");
+			const [localVersions, setLocalVersions] = (0, react.useState)(() => versions.length > 0 ? versions : editorMode === "edit" ? DEMO_VERSIONS : []);
+			const [hoveredId, setHoveredId] = (0, react.useState)(null);
+			const [confirmDeleteId, setConfirmDeleteId] = (0, react.useState)(null);
+			const [confirmUseId, setConfirmUseId] = (0, react.useState)(null);
+			const versionTitle = editorMode === "create" ? t("editorHistoryVersions") : t("editorVersions");
+			const confirmDelete = localVersions.find((v) => v.id === confirmDeleteId) ?? null;
+			const confirmUse = localVersions.find((v) => v.id === confirmUseId) ?? null;
 			return (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
@@ -37486,7 +37587,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				minHeight: 0,
 				background: "var(--dsw-alias-bg-base, #22252a)",
 				color: C$2.text,
-				overflow: "hidden"
+				overflow: "hidden",
+				position: "relative"
 			} }, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -37522,18 +37624,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setShowVersions((v) => !v);
 				}
-			}, t("editorVersions")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, versionTitle), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
 				onClick: onClose
 			}, t("editorClose")))), (0, react.createElement)("div", { style: {
 				flex: "1 1 auto",
 				display: "flex",
-				minHeight: 0
+				minHeight: 0,
+				minWidth: 0
 			} }, mode === "edit" ? (0, react.createElement)("div", { style: {
 				flex: "1 1 auto",
 				display: "flex",
-				minHeight: 0
+				minHeight: 0,
+				minWidth: 0
 			} }, (0, react.createElement)(ReactCodeMirror, {
 				value,
 				onChange: (next) => {
@@ -37548,9 +37652,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					highlightActiveLine: true,
 					autocompletion: false,
 					searchKeymap: false
+				},
+				onCreateEditor: (view) => {
+					view.focus();
 				}
 			})) : (0, react.createElement)("div", { style: {
 				flex: "1 1 auto",
+				minWidth: 0,
 				overflow: "auto",
 				padding: "14px 18px"
 			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
@@ -37567,32 +37675,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				borderBottom: `1px solid ${C$2.borderL4}`,
 				fontSize: "13px",
 				fontWeight: 600
-			} }, t("editorVersions")), (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "6px",
-				padding: "10px 12px"
-			} }, (0, react.createElement)("input", {
-				value: note,
-				placeholder: t("editorVersionNote"),
-				onChange: (event) => {
-					setNote(event.target.value);
-				},
-				style: {
-					flex: "1 1 auto",
-					minWidth: 0,
-					border: `1px solid ${C$2.borderL4}`,
-					borderRadius: "6px",
-					padding: "5px 8px",
-					fontSize: "12px"
-				}
-			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "primary",
-				size: "sm",
-				onClick: () => {
-					onSaveVersion(note);
-					setNote("");
-				}
-			}, t("editorSaveVersion"))), versions.length === 0 ? (0, react.createElement)("p", { style: {
+			} }, versionTitle), editorMode === "create" ? (0, react.createElement)("div", { style: {
+				padding: "16px 12px",
+				fontSize: "12px",
+				color: C$2.textDim,
+				lineHeight: "1.6"
+			} }, t("editorNewTaskNoVersions")) : localVersions.length === 0 ? (0, react.createElement)("p", { style: {
 				padding: "0 12px",
 				fontSize: "12px",
 				color: C$2.textDim
@@ -37601,25 +37689,65 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				margin: 0,
 				padding: "0 12px 12px",
 				overflow: "auto"
-			} }, versions.map((v) => (0, react.createElement)("li", {
+			} }, localVersions.map((v) => (0, react.createElement)("li", {
 				key: v.id,
 				style: {
-					padding: "8px 0",
-					borderBottom: `1px solid ${C$2.borderL4}`
+					padding: "10px 0",
+					borderBottom: `1px solid ${C$2.borderL4}`,
+					position: "relative"
+				},
+				onMouseEnter: () => {
+					setHoveredId(v.id);
+				},
+				onMouseLeave: () => {
+					setHoveredId((cur) => cur === v.id ? null : cur);
 				}
 			}, (0, react.createElement)("div", { style: {
 				fontSize: "11px",
 				color: C$2.textDim
 			} }, formatVersionTime(v.ts)), v.note ? (0, react.createElement)("div", { style: {
 				fontSize: "12px",
-				margin: "2px 0 6px"
-			} }, v.note) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				margin: "2px 0 0"
+			} }, v.note) : null, hoveredId === v.id ? (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "6px",
+				marginTop: "8px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					setConfirmUseId(v.id);
+				}
+			}, t("editorUseVersion")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
 				onClick: () => {
-					onRestore(v.content);
+					setConfirmDeleteId(v.id);
 				}
-			}, t("editorRestore")))))) : null));
+			}, t("editorDeleteVersion"))) : null)))) : null), confirmDelete !== null ? (0, react.createElement)(VersionConfirm, {
+				t,
+				title: t("editorConfirmDeleteTitle"),
+				desc: t("editorConfirmDeleteDesc"),
+				onCancel: () => {
+					setConfirmDeleteId(null);
+				},
+				onConfirm: () => {
+					setLocalVersions((list) => list.filter((x) => x.id !== confirmDelete.id));
+					setConfirmDeleteId(null);
+				}
+			}) : null, confirmUse !== null ? (0, react.createElement)(VersionConfirm, {
+				t,
+				title: t("editorConfirmUseTitle"),
+				desc: t("editorConfirmUseDesc"),
+				confirmLabel: t("editorUseVersion"),
+				onCancel: () => {
+					setConfirmUseId(null);
+				},
+				onConfirm: () => {
+					onChange(confirmUse.content);
+					setConfirmUseId(null);
+				}
+			}) : null);
 		}
 		/**
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
@@ -38127,21 +38255,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, attachmentsCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), depsBlock, advancedBlock);
 			const panelInner = editorOpen ? (0, react.createElement)(PromptEditorModal, {
 				t,
+				mode,
 				value: draft.prompt,
 				versions: draft.versions,
 				onChange: (value) => {
 					patch({ prompt: value });
-				},
-				onSaveVersion: (note) => {
-					patch({ versions: [...draft.versions, {
-						id: crypto.randomUUID(),
-						ts: (/* @__PURE__ */ new Date()).toISOString(),
-						content: draft.prompt,
-						note
-					}] });
-				},
-				onRestore: (content) => {
-					patch({ prompt: content });
 				},
 				onClose: () => {
 					setEditorOpen(false);

@@ -601,23 +601,69 @@ function ConfirmDiscard(props: {
   )
 }
 
+/** DEMO 模拟版本（仅样式预览用）：真实接入后由 props.versions 驱动，此常量删除。 */
+const DEMO_VERSIONS: PromptVersion[] = [
+  { id: 'demo-1', ts: '2026-09-28T14:30:00.000Z', content: '# 周一版本\n这里是周一 下午 初版的提示词正文……', note: '周一 下午 · 初版' },
+  { id: 'demo-2', ts: '2026-09-29T09:12:00.000Z', content: '# 周二版本\n调整了调度说明与依赖。', note: '周二 上午 · 调整' },
+  { id: 'demo-3', ts: '2026-09-30T11:48:00.000Z', content: '# 周三版本\n补充了产出物登记说明。', note: '周三 上午 · 补充' },
+  { id: 'demo-4', ts: '2026-10-01T16:24:00.000Z', content: '# 周四版本\n最终定稿，措辞收紧。', note: '周四 下午 · 定稿' },
+]
+
+/** 版本管理内的小型确认框（复用关闭确认的自绘样式：盖在编辑器之上、随抽屉浮在宿主之上）。 */
+function VersionConfirm(props: {
+  t: T
+  title: string
+  desc: string
+  confirmLabel?: string
+  onCancel: () => void
+  onConfirm: () => void
+}): ReactNode {
+  return h('div', {
+    role: 'alertdialog',
+    'aria-modal': true,
+    style: { position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' },
+    onClick: props.onCancel,
+  },
+    h('div', {
+      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', padding: '22px 24px', color: C.text },
+      onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
+    },
+      h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px' } }, props.title),
+      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: C.textDim, marginBottom: '20px' } }, props.desc),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
+        h(Button, { variant: 'outline', size: 'sm', onClick: props.onCancel }, props.t('editorCancel')),
+        h(Button, { variant: 'primary', size: 'sm', onClick: props.onConfirm }, props.confirmLabel ?? props.t('editorConfirm')),
+      ),
+    ),
+  )
+}
+
 function PromptEditorModal(props: {
   t: T
+  /** 抽屉模式：'create' = 新建（标签叫「历史版本」且暂无可查版本）；'edit' = 编辑（标签「版本历史」）。 */
+  mode: EditorMode
   value: string
   versions: PromptVersion[]
   onChange: (value: string) => void
-  onSaveVersion: (note: string) => void
-  onRestore: (content: string) => void
   onClose: () => void
 }): ReactNode {
-  const { t, value, versions, onChange, onSaveVersion, onRestore, onClose } = props
+  const { t, mode: editorMode, value, versions, onChange, onClose } = props
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [showVersions, setShowVersions] = useState(false)
-  const [note, setNote] = useState('')
-  // 注意：本组件不再自己做「居中弹窗 + 遮罩」。它被渲染进「新建任务」拉栏内部，
-  // 填满整个拉栏（同样的边、同样的宽度、随左缘拖拽一起变宽）；关闭即把后面的表单露出来。
+  // 本地版本表（DEMO：真实版本为空且处于编辑态时，塞 4 个模拟版本用于看样式；真实接入后由 props.versions 驱动）。
+  const [localVersions, setLocalVersions] = useState<PromptVersion[]>(() =>
+    versions.length > 0 ? versions : (editorMode === 'edit' ? DEMO_VERSIONS : []),
+  )
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [confirmUseId, setConfirmUseId] = useState<string | null>(null)
+
+  const versionTitle = editorMode === 'create' ? t('editorHistoryVersions') : t('editorVersions')
+  const confirmDelete = localVersions.find(v => v.id === confirmDeleteId) ?? null
+  const confirmUse = localVersions.find(v => v.id === confirmUseId) ?? null
+
   return h('div', {
-    style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, overflow: 'hidden' },
+    style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, overflow: 'hidden', position: 'relative' },
   },
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
       h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPromptEditorTitle')),
@@ -633,13 +679,14 @@ function PromptEditorModal(props: {
           label: t('editorPromptEditorTitle'),
           className: 'dsh-tdt-ed-seg',
         }),
-        h(Button, { variant: 'outline', size: 'sm', onClick: () => { setShowVersions(v => !v) } }, t('editorVersions')),
+        h(Button, { variant: 'outline', size: 'sm', onClick: () => { setShowVersions(v => !v) } }, versionTitle),
         h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
       ),
     ),
-    h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0 } },
+    // minWidth:0 ⇒ 编辑态长内容时编辑器自行横向滚动，固定 280px 的版本面板不再被挤掉。
+    h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0, minWidth: 0 } },
       mode === 'edit'
-        ? h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0 } },
+        ? h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0, minWidth: 0 } },
             h(CodeMirror, {
               value,
               onChange: (next: string) => { onChange(next) },
@@ -647,30 +694,59 @@ function PromptEditorModal(props: {
               theme: promptEditorTheme,
               height: '100%',
               basicSetup: { lineNumbers: true, foldGutter: false, highlightActiveLine: true, autocompletion: false, searchKeymap: false },
+              // 每次切回编辑（CodeMirror 重新挂载）即聚焦，免去手动点一下。
+              onCreateEditor: (view: EditorView) => { view.focus() },
             } as never),
           )
-        : h('div', { style: { flex: '1 1 auto', overflow: 'auto', padding: '14px 18px' } },
+        : h('div', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'auto', padding: '14px 18px' } },
             h(MarkdownText, { text: value, labels: MD_LABELS }),
           ),
       showVersions
         ? h('div', { style: { flex: '0 0 280px', borderLeft: `1px solid ${C.borderL4}`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
-            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid ${C.borderL4}`, fontSize: '13px', fontWeight: 600 } }, t('editorVersions')),
-            h('div', { style: { display: 'flex', gap: '6px', padding: '10px 12px' } },
-              h('input', { value: note, placeholder: t('editorVersionNote'), onChange: (event: { target: { value: string } }) => { setNote(event.target.value) }, style: { flex: '1 1 auto', minWidth: 0, border: `1px solid ${C.borderL4}`, borderRadius: '6px', padding: '5px 8px', fontSize: '12px' } }),
-              h(Button, { variant: 'primary', size: 'sm', onClick: () => { onSaveVersion(note); setNote('') } }, t('editorSaveVersion')),
-            ),
-            versions.length === 0
-              ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: C.textDim } }, t('editorNoVersions'))
-              : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 12px 12px', overflow: 'auto' } },
-                  versions.map(v => h('li', { key: v.id, style: { padding: '8px 0', borderBottom: `1px solid ${C.borderL4}` } },
-                    h('div', { style: { fontSize: '11px', color: C.textDim } }, formatVersionTime(v.ts)),
-                    v.note ? h('div', { style: { fontSize: '12px', margin: '2px 0 6px' } }, v.note) : null,
-                    h(Button, { variant: 'ghost', size: 'sm', onClick: () => { onRestore(v.content) } }, t('editorRestore')),
-                  )),
-                ),
+            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid ${C.borderL4}`, fontSize: '13px', fontWeight: 600 } }, versionTitle),
+            editorMode === 'create'
+              ? h('div', { style: { padding: '16px 12px', fontSize: '12px', color: C.textDim, lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
+              : localVersions.length === 0
+                ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: C.textDim } }, t('editorNoVersions'))
+                : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 12px 12px', overflow: 'auto' } },
+                    localVersions.map(v => h('li', {
+                      key: v.id,
+                      style: { padding: '10px 0', borderBottom: `1px solid ${C.borderL4}`, position: 'relative' },
+                      onMouseEnter: () => { setHoveredId(v.id) },
+                      onMouseLeave: () => { setHoveredId(cur => (cur === v.id ? null : cur)) },
+                    },
+                      h('div', { style: { fontSize: '11px', color: C.textDim } }, formatVersionTime(v.ts)),
+                      v.note ? h('div', { style: { fontSize: '12px', margin: '2px 0 0' } }, v.note) : null,
+                      hoveredId === v.id
+                        ? h('div', { style: { display: 'flex', gap: '6px', marginTop: '8px' } },
+                            h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmUseId(v.id) } }, t('editorUseVersion')),
+                            h(Button, { variant: 'ghost', size: 'sm', onClick: () => { setConfirmDeleteId(v.id) } }, t('editorDeleteVersion')),
+                          )
+                        : null,
+                    )),
+                  ),
           )
         : null,
     ),
+    confirmDelete !== null
+      ? h(VersionConfirm, {
+        t,
+        title: t('editorConfirmDeleteTitle'),
+        desc: t('editorConfirmDeleteDesc'),
+        onCancel: () => { setConfirmDeleteId(null) },
+        onConfirm: () => { setLocalVersions(list => list.filter(x => x.id !== confirmDelete!.id)); setConfirmDeleteId(null) },
+      })
+      : null,
+    confirmUse !== null
+      ? h(VersionConfirm, {
+        t,
+        title: t('editorConfirmUseTitle'),
+        desc: t('editorConfirmUseDesc'),
+        confirmLabel: t('editorUseVersion'),
+        onCancel: () => { setConfirmUseId(null) },
+        onConfirm: () => { onChange(confirmUse!.content); setConfirmUseId(null) },
+      })
+      : null,
   )
 }
 
@@ -1116,13 +1192,10 @@ export function TaskEditorDrawer(props: {
   const panelInner = editorOpen
     ? h(PromptEditorModal, {
       t,
+      mode,
       value: draft.prompt,
       versions: draft.versions,
       onChange: (value: string) => { patch({ prompt: value }) },
-      onSaveVersion: (note: string) => {
-        patch({ versions: [...draft.versions, { id: crypto.randomUUID(), ts: new Date().toISOString(), content: draft.prompt, note }] })
-      },
-      onRestore: (content: string) => { patch({ prompt: content }) },
       onClose: () => { setEditorOpen(false) },
     })
     : h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } },
