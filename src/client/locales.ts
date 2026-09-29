@@ -122,6 +122,7 @@ export type LocaleKey =
   | 'editorDepSamePeriod' | 'editorDepLatestSuccess' | 'editorDepRemove' | 'editorDepEmpty'
   | 'editorAdvanced' | 'editorRetry' | 'editorValidStatuses' | 'editorJson' | 'editorJsonHint'
   | 'editorVersions' | 'editorUnavailable'
+  | 'editorModeEdit' | 'editorModePreview'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -470,6 +471,8 @@ export const zh: Record<LocaleKey, string> = {
   editorVersionNote: '版本备注（可选）',
   editorRestore: '恢复',
   editorNoVersions: '暂无版本，保存后可在此回滚',
+  editorModeEdit: '编辑',
+  editorModePreview: '预览',
   editorTaskStart: '任务开始时间',
   editorTaskStartHint: '任务自该日起开始执行。可提前创建任务，至该日自动开跑；「每 N 周」亦自该日起算首周。',
   editorWeekdayLabel: '星期',
@@ -850,6 +853,8 @@ export const en: Record<LocaleKey, string> = {
   editorVersionNote: 'Version note (optional)',
   editorRestore: 'Restore',
   editorNoVersions: 'No versions yet — save one to roll back here',
+  editorModeEdit: 'Edit',
+  editorModePreview: 'Preview',
   editorTaskStart: 'Task start time',
   editorTaskStartHint: 'The task starts running on this day. You can create it in advance and it begins automatically once this day arrives; "every N weeks" also counts its first week from this day.',
   editorWeekdayLabel: 'Weekdays',

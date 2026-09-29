@@ -25,6 +25,7 @@ import {
   IconPlusOutlineRegular,
   IconQuestionOutlineRegular,
   Modal,
+  MarkdownText,
   Switch,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -42,6 +43,10 @@ import {
 } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
+import CodeMirror from '@uiw/react-codemirror'
+import { markdown } from '@codemirror/lang-markdown'
+import { EditorView } from '@codemirror/view'
+import { MD_LABELS } from './md-labels'
 
 /** 与 index.ts 同形的 t 席位（本仓库 client 半侧惯例：无参 t；带占位符的文案走 tTemplate）。 */
 type T = (key: LocaleKey) => string
@@ -551,9 +556,22 @@ function stableStringify(value: unknown): string {
 }
 
 /**
- * 全屏提示词编辑器（2026-09-29）：自带行号 + .md 纯文本编辑，右侧版本历史（保存 / 回滚）。
- * 官方无代码 / Markdown 编辑器组件（dsh-capabilities 已核实），故自绘「行号 gutter + textarea」。
+ * 全屏提示词编辑器：编辑态用 CodeMirror 6（@uiw/react-codemirror + @codemirror/lang-markdown）
+ * 提供语法高亮 + 行号；预览态复用官方 MarkdownText（GFM + KaTeX，主题与宿主一致）。
+ * 右侧版本历史（保存 / 回滚）保留；编辑 / 预览切换在顶部（复用任务编辑器 tab 样式）。
  */
+// CodeMirror 主题：背景 / 文字 / 行号全部走宿主 --dsw-alias-* token，明暗自适应；
+// 编辑器本身只负责「带语法高亮的纯文本」（gzip ~60KB，且仅在全屏编辑时才加载）。
+const promptEditorTheme = EditorView.theme({
+  '&': { backgroundColor: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, height: '100%' },
+  '.cm-editor': { height: '100%', backgroundColor: 'var(--dsw-alias-bg-base, #22252a)' },
+  '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '13px', lineHeight: '1.6' },
+  '.cm-gutters': { backgroundColor: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))', color: C.textDim, border: 'none' },
+  '.cm-activeLine': { backgroundColor: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: C.text },
+  '&.cm-focused': { outline: 'none' },
+}, { dark: true })
+
 function PromptEditorModal(props: {
   t: T
   value: string
@@ -564,41 +582,42 @@ function PromptEditorModal(props: {
   onClose: () => void
 }): ReactNode {
   const { t, value, versions, onChange, onSaveVersion, onRestore, onClose } = props
-  const taRef = useRef<HTMLTextAreaElement>(null)
-  const gutterRef = useRef<HTMLDivElement>(null)
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [showVersions, setShowVersions] = useState(false)
   const [note, setNote] = useState('')
-  const lineCount = Math.max(value.split('\n').length, 1)
-  const syncScroll = (): void => {
-    if (gutterRef.current !== null && taRef.current !== null) gutterRef.current.scrollTop = taRef.current.scrollTop
-  }
-  const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1)
   return h('div', {
     style: { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex' },
     onClick: onClose,
   }, h('div', {
-    style: { background: 'var(--dsw-bg, #ffffff)', color: C.text, width: 'min(1100px, 96vw)', maxHeight: '96vh', margin: '2vh auto', display: 'flex', flexDirection: 'column', borderRadius: '10px', boxShadow: '0 12px 40px rgba(0,0,0,0.35)', overflow: 'hidden' },
+    style: { background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, width: 'min(1100px, 96vw)', maxHeight: '96vh', margin: '2vh auto', display: 'flex', flexDirection: 'column', borderRadius: '10px', boxShadow: '0 12px 40px rgba(0,0,0,0.35)', overflow: 'hidden' },
     onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
   },
-    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${C.borderL4}` } },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
       h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPromptEditorTitle')),
-      h('div', { style: { display: 'flex', gap: '8px' } },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+        h('div', { style: { display: 'flex', gap: '4px' } },
+          h('button', { type: 'button', className: 'dsh-tdt-ed-tab', 'aria-pressed': mode === 'edit', onClick: () => { setMode('edit') } }, t('editorModeEdit')),
+          h('button', { type: 'button', className: 'dsh-tdt-ed-tab', 'aria-pressed': mode === 'preview', onClick: () => { setMode('preview') } }, t('editorModePreview')),
+        ),
         h(Button, { variant: 'outline', size: 'sm', onClick: () => { setShowVersions(v => !v) } }, t('editorVersions')),
         h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
       ),
     ),
     h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0 } },
-      h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '13px', lineHeight: '1.6' } },
-        h('div', { ref: gutterRef, style: { overflow: 'hidden', padding: '10px 8px 10px 12px', textAlign: 'right', color: C.textDim, userSelect: 'none', borderRight: `1px solid ${C.borderL4}`, background: C.layer1 } },
-          lineNumbers.map(n => h('div', { key: n, style: { height: '1.6em' } }, String(n)))),
-        h('textarea', {
-          ref: taRef, value, spellCheck: false,
-          onChange: (event: { target: { value: string } }) => { onChange(event.target.value) },
-          onScroll: syncScroll,
-          style: { flex: '1 1 auto', resize: 'none', border: 'none', outline: 'none', padding: '10px 12px', fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', color: 'inherit', background: 'var(--dsw-bg, #ffffff)' },
-          'aria-label': t('editorPromptEditorTitle'),
-        }),
-      ),
+      mode === 'edit'
+        ? h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0 } },
+            h(CodeMirror, {
+              value,
+              onChange: (next: string) => { onChange(next) },
+              extensions: [markdown()],
+              theme: promptEditorTheme,
+              height: '100%',
+              basicSetup: { lineNumbers: true, foldGutter: false, highlightActiveLine: true, autocompletion: false, searchKeymap: false },
+            } as never),
+          )
+        : h('div', { style: { flex: '1 1 auto', overflow: 'auto', padding: '14px 18px' } },
+            h(MarkdownText, { text: value, labels: MD_LABELS }),
+          ),
       showVersions
         ? h('div', { style: { flex: '0 0 280px', borderLeft: `1px solid ${C.borderL4}`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
             h('div', { style: { padding: '10px 12px', borderBottom: `1px solid ${C.borderL4}`, fontSize: '13px', fontWeight: 600 } }, t('editorVersions')),
