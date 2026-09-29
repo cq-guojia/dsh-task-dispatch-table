@@ -15,7 +15,7 @@
 // 结构化声明。客户端 bundle 不打包 src/config.ts（Node 侧），Config 语义在此以
 // 字段名复述。
 
-import { createElement as h, Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
+import { createElement as h, Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 import { FileBrowser } from './file-browser'
@@ -473,10 +473,13 @@ function TaskPage(props: {
   // 把整页（含会话弹窗）往左推；弹窗与整页共用它，关弹窗不影响它，它自己可完整收回。
   const [preview, setPreview] = useState<{ sessionId: string; path: string } | null>(null)
   const [previewWidth, setPreviewWidth] = useState<number>(() => readPreviewWidth())
+  // 选择器工作区上下文：remote.workspaceFiles 是会话作用域的，需最近浏览过的会话 id 反查工作区（详见 task-editor）。
+  const lastWorkspaceSessionId = useRef<string | null>(null)
   // U11 单一入口：整页（记录行产出物）与弹窗（文件链接 / 交付卡）全走它 ⇒ 预览面只有一份。
   const canPreview = workspaceFiles !== null
   const openFile = useCallback((sessionId: string, path: string): void => {
     if (!canPreview) return
+    lastWorkspaceSessionId.current = sessionId
     setPreview({ sessionId, path })
   }, [canPreview])
   const closePreview = useCallback((): void => { setPreview(null) }, [])
@@ -1000,6 +1003,8 @@ function TaskPage(props: {
         models: editorOptions.models,
         tasks: taskOptions,
         onClose: () => { setEditor(null) },
+        workspaceFiles,
+        workspaceSessionId: lastWorkspaceSessionId.current,
       })
       : null,
     // U11 页面级预览 dock：固定在屏幕最右侧，把整页（含会话弹窗）往左推；

@@ -57,6 +57,16 @@ export const taskDefinitionSchema = z.object({
         semantics: z.enum(dependencySemantics),
     }))
         .optional(),
+    // 附加文件（用户 2026-09-29）：link = 工作区路径（不复制）；upload = 插件数据目录文件名（落盘于 task-attachments/）。
+    // 持久化随 P2 落库；此处先纳入 schema，保证手写 JSON 也能带附件、且 P2 无需再改型。
+    attachments: z
+        .array(z.object({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        kind: z.enum(['link', 'upload']),
+        ref: z.string().min(1),
+    }))
+        .optional(),
 });
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
 export function titleOf(task) {

@@ -108,6 +108,7 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentNone' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
+  | 'editorPickWorkspaceFile' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadFailedMsg' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
@@ -467,6 +468,15 @@ export const zh: Record<LocaleKey, string> = {
   editorAttachmentRemove: '删除',
   editorAttachmentAdd: '添加文件',
   editorAttachmentAddHint: '上传 / 选择文件稍后开放',
+  editorPickWorkspaceFile: '选择工作区文件',
+  editorUploadFile: '上传文件',
+  editorDropZoneHint: '点击或拖拽文件到此处上传（支持多选，单个 ≤ 20MB）',
+  editorUploading: '上传中…',
+  editorUploadFailed: '上传失败',
+  editorUploadFailedMsg: '上传失败：{msg}',
+  editorPickerNoSession: '暂无可浏览的工作区：请先在会话中打开任意文件，或使用「上传文件」',
+  editorPickerPick: '选择此文件',
+  editorPickerCancel: '取消',
   editorOpenEditor: '全屏编辑',
   editorPromptEditorTitle: '提示词编辑器（.md）',
   editorSaveVersion: '保存版本',
@@ -857,6 +867,15 @@ export const en: Record<LocaleKey, string> = {
   editorAttachmentRemove: 'Remove',
   editorAttachmentAdd: 'Add file',
   editorAttachmentAddHint: 'Upload / pick file — coming soon',
+  editorPickWorkspaceFile: 'Pick workspace file',
+  editorUploadFile: 'Upload file',
+  editorDropZoneHint: 'Click or drop files here (multi-select, ≤ 20MB each)',
+  editorUploading: 'Uploading…',
+  editorUploadFailed: 'Upload failed',
+  editorUploadFailedMsg: 'Upload failed: {msg}',
+  editorPickerNoSession: 'No workspace to browse yet: open any file in a session first, or use “Upload file”',
+  editorPickerPick: 'Pick this file',
+  editorPickerCancel: 'Cancel',
   editorOpenEditor: 'Full-screen edit',
   editorPromptEditorTitle: 'Prompt editor (.md)',
   editorSaveVersion: 'Save version',

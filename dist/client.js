@@ -363,6 +363,15 @@ window.__ModuleLoader__.load({
 			editorAttachmentRemove: "删除",
 			editorAttachmentAdd: "添加文件",
 			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
+			editorPickWorkspaceFile: "选择工作区文件",
+			editorUploadFile: "上传文件",
+			editorDropZoneHint: "点击或拖拽文件到此处上传（支持多选，单个 ≤ 20MB）",
+			editorUploading: "上传中…",
+			editorUploadFailed: "上传失败",
+			editorUploadFailedMsg: "上传失败：{msg}",
+			editorPickerNoSession: "暂无可浏览的工作区：请先在会话中打开任意文件，或使用「上传文件」",
+			editorPickerPick: "选择此文件",
+			editorPickerCancel: "取消",
 			editorOpenEditor: "全屏编辑",
 			editorPromptEditorTitle: "提示词编辑器（.md）",
 			editorSaveVersion: "保存版本",
@@ -747,6 +756,15 @@ window.__ModuleLoader__.load({
 			editorAttachmentRemove: "Remove",
 			editorAttachmentAdd: "Add file",
 			editorAttachmentAddHint: "Upload / pick file — coming soon",
+			editorPickWorkspaceFile: "Pick workspace file",
+			editorUploadFile: "Upload file",
+			editorDropZoneHint: "Click or drop files here (multi-select, ≤ 20MB each)",
+			editorUploading: "Uploading…",
+			editorUploadFailed: "Upload failed",
+			editorUploadFailedMsg: "Upload failed: {msg}",
+			editorPickerNoSession: "No workspace to browse yet: open any file in a session first, or use “Upload file”",
+			editorPickerPick: "Pick this file",
+			editorPickerCancel: "Cancel",
 			editorOpenEditor: "Full-screen edit",
 			editorPromptEditorTitle: "Prompt editor (.md)",
 			editorSaveVersion: "Save version",
@@ -4372,7 +4390,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* list(path) 成功 ⇒ 目录树；not-directory ⇒ 文件预览（dir = 父目录，面包屑保留可返回）。
 		*/
 		function FileBrowser(props) {
-			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props;
+			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, style } = props;
 			const [mode, setMode] = (0, react.useState)("loading");
 			const [dir, setDir] = (0, react.useState)("");
 			const [listing, setListing] = (0, react.useState)(null);
@@ -4610,28 +4628,31 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const renderTree = (entries, baseDir) => {
 				return sortEntries(entries).map((entry) => {
 					const childPath = joinPath(baseDir, entry.name);
-					if (!(entry.type === "directory")) return (0, react.createElement)("div", {
-						key: childPath,
-						className: "dsh-tdt-sv-tree-row",
-						role: "button",
-						tabIndex: 0,
-						title: childPath,
-						onClick: () => {
+					if (!(entry.type === "directory")) {
+						const pick = () => {
+							if (picker && onPick !== void 0) {
+								onPick(childPath);
+								return;
+							}
 							setViewing(childPath);
 							setReloadNonce(0);
 							setSourceView(false);
-						},
-						onKeyDown: (event) => {
-							if (event.key === "Enter" || event.key === " ") {
-								setViewing(childPath);
-								setReloadNonce(0);
-								setSourceView(false);
+						};
+						return (0, react.createElement)("div", {
+							key: childPath,
+							className: "dsh-tdt-sv-tree-row" + (picker === true ? " dsh-tdt-sv-tree-row-pick" : ""),
+							role: "button",
+							tabIndex: 0,
+							title: picker === true ? t("editorPickerPick") : childPath,
+							onClick: pick,
+							onKeyDown: (event) => {
+								if (event.key === "Enter" || event.key === " ") pick();
 							}
-						}
-					}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-						path: childPath,
-						size: 18
-					})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name));
+						}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+							path: childPath,
+							size: 18
+						})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name));
+					}
 					const cached = childCache[childPath];
 					const isOpen = openDirs.has(childPath);
 					return (0, react.createElement)(react.Fragment, { key: childPath }, (0, react.createElement)("div", {
@@ -4677,7 +4698,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			else body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
 			return (0, react.createElement)("aside", {
 				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
-				"data-preview-dock": dock === true ? true : void 0
+				"data-preview-dock": dock === true ? true : void 0,
+				style: style ?? void 0
 			}, onResizeStart === void 0 ? null : (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-resizer",
 				role: "separator",
@@ -37138,6 +37160,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (draft.title.trim() !== "") definition.title = draft.title.trim();
 			if (draft.code.trim() !== "") definition.code = draft.code.trim();
 			if (draft.deps.length > 0) definition.depends_on = draft.deps.filter((dep) => dep.task !== "");
+			if (draft.attachments.length > 0) definition.attachments = draft.attachments;
 			return JSON.stringify(definition, null, 2);
 		}
 		/** 单行输入的度量全在 `dsh-tdt-ed-input` 类里（逐条照官方 Input.module.css，含 focus 描边与占位色）。 */
@@ -37759,13 +37782,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceSessionId } = props;
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
 			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
+			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
+			const [uploadOpen, setUploadOpen] = (0, react.useState)(false);
+			const [uploading, setUploading] = (0, react.useState)(false);
+			const [uploadError, setUploadError] = (0, react.useState)(null);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
 			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);
@@ -37937,6 +37964,43 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorModel"),
 				align: "end"
 			})));
+			const fileInputRef = (0, react.useRef)(null);
+			const addAttachment = (att) => {
+				patch({ attachments: [...draft.attachments, att] });
+			};
+			const makeId = () => typeof crypto !== "undefined" && crypto.randomUUID !== void 0 ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+			const uploadFiles = async (files) => {
+				const list = Array.from(files);
+				if (list.length === 0) return;
+				setUploading(true);
+				setUploadError(null);
+				let lastErr = null;
+				for (const file of list) try {
+					const data = await (await fetch("/api/task-dispatch-table/attachment", {
+						method: "POST",
+						headers: {
+							"x-filename": encodeURIComponent(file.name),
+							"content-type": "application/octet-stream"
+						},
+						body: file
+					})).json().catch(() => null);
+					if (data === null || data.ok !== true) {
+						lastErr = typeof data?.error === "string" ? data.error : "upload-failed";
+						continue;
+					}
+					addAttachment({
+						id: makeId(),
+						name: data.name,
+						kind: "upload",
+						ref: data.ref
+					});
+				} catch (error) {
+					lastErr = error instanceof Error ? error.message : "network-error";
+				}
+				setUploading(false);
+				if (lastErr !== null) setUploadError(lastErr);
+				else setUploadOpen(false);
+			};
 			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorAttachments"))), draft.attachments.length === 0 ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAttachmentNone")) : (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
@@ -37985,12 +38049,51 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
-				disabled: true,
-				title: t("editorAttachmentAddHint")
-			}, t("editorAttachmentAdd")), (0, react.createElement)("p", {
-				className: "dsh-tdt-ed-hint",
-				style: { margin: 0 }
-			}, t("editorAttachmentAddHint"))));
+				disabled: workspaceFiles === null || workspaceFiles === void 0,
+				onClick: () => {
+					setPickerOpen(true);
+				}
+			}, t("editorPickWorkspaceFile")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					setUploadOpen((v) => !v);
+				}
+			}, t("editorUploadFile"))), uploadOpen ? (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", {
+				style: {
+					border: `1px dashed ${C$2.borderL4}`,
+					borderRadius: C$2.radiusMd,
+					padding: "18px",
+					textAlign: "center",
+					cursor: "pointer",
+					background: C$2.layer1
+				},
+				onClick: () => {
+					if (!uploading) fileInputRef.current?.click();
+				},
+				onDragOver: (event) => {
+					event.preventDefault();
+				},
+				onDrop: (event) => {
+					event.preventDefault();
+					if (!uploading && event.dataTransfer?.files !== void 0) uploadFiles(event.dataTransfer.files);
+				}
+			}, (0, react.createElement)("div", { style: {
+				fontSize: "13px",
+				color: C$2.text
+			} }, uploading ? t("editorUploading") : t("editorDropZoneHint")), uploading ? null : (0, react.createElement)("input", {
+				ref: fileInputRef,
+				type: "file",
+				multiple: true,
+				style: { display: "none" },
+				onChange: (event) => {
+					if (event.target.files !== void 0) uploadFiles(event.target.files);
+				}
+			})), uploadError === null ? null : (0, react.createElement)("p", { style: {
+				color: "#e5484d",
+				fontSize: "12px",
+				margin: "6px 0 0"
+			} }, tt("editorUploadFailedMsg", { msg: uploadError }))) : null);
 			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-card-head",
 				style: { marginBottom: "12px" }
@@ -38339,7 +38442,73 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onPointerDown: (event) => {
 					startResize({ clientX: event.clientX });
 				}
-			}), panelInner), confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
+			}), panelInner), pickerOpen ? (0, react.createElement)("div", { style: {
+				position: "absolute",
+				inset: 0,
+				zIndex: 30,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				padding: "24px",
+				background: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))"
+			} }, (0, react.createElement)("div", { style: {
+				width: "min(720px, 100%)",
+				height: "72vh",
+				boxSizing: "border-box",
+				background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
+				borderRadius: "var(--dsh-radius-panel, 10px)",
+				boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
+				display: "flex",
+				flexDirection: "column",
+				overflow: "hidden"
+			} }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				padding: "10px 14px",
+				borderBottom: `1px solid ${C$2.borderL2}`
+			} }, (0, react.createElement)("span", { style: {
+				fontSize: "14px",
+				fontWeight: 600
+			} }, t("editorPickWorkspaceFile")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					setPickerOpen(false);
+				}
+			}, t("editorPickerCancel"))), workspaceFiles !== null && workspaceFiles !== void 0 && (workspaceSessionId ?? "") !== "" ? (0, react.createElement)(FileBrowser, {
+				workspaceFiles,
+				sessionId: workspaceSessionId ?? "",
+				path: "",
+				t,
+				onClose: () => {
+					setPickerOpen(false);
+				},
+				picker: true,
+				onPick: (p) => {
+					const name = p.slice(Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")) + 1);
+					addAttachment({
+						id: makeId(),
+						name,
+						kind: "link",
+						ref: p
+					});
+					setPickerOpen(false);
+				},
+				style: {
+					flex: "1 1 auto",
+					minHeight: 0
+				}
+			}) : (0, react.createElement)("div", { style: {
+				flex: "1 1 auto",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				padding: "24px",
+				textAlign: "center",
+				color: C$2.textDim,
+				fontSize: "13px"
+			} }, t("editorPickerNoSession")))) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
 				t,
 				onStay: () => {
 					setConfirmDiscard(false);
@@ -38782,9 +38951,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [expanded, setExpanded] = (0, react.useState)(null);
 			const [preview, setPreview] = (0, react.useState)(null);
 			const [previewWidth, setPreviewWidth] = (0, react.useState)(() => readPreviewWidth());
+			const lastWorkspaceSessionId = (0, react.useRef)(null);
 			const canPreview = workspaceFiles !== null;
 			const openFile = (0, react.useCallback)((sessionId, path) => {
 				if (!canPreview) return;
+				lastWorkspaceSessionId.current = sessionId;
 				setPreview({
 					sessionId,
 					path
@@ -39230,7 +39401,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				tasks: taskOptions,
 				onClose: () => {
 					setEditor(null);
-				}
+				},
+				workspaceFiles,
+				workspaceSessionId: lastWorkspaceSessionId.current
 			}) : null, preview !== null && workspaceFiles !== null ? (0, react.createElement)(FileBrowser, {
 				key: `${preview.sessionId}:${preview.path}`,
 				workspaceFiles,

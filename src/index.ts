@@ -9,6 +9,9 @@ import type { PluginConfig } from './config.js'
 import type { TaskDefinition } from './tasks.js'
 import { ensureIdsInInlineJson, existingUuidIds, nextSlotAfter, titleOf } from './tasks.js'
 import { TaskStore } from './store.js'
+import * as fs from 'fs'
+import path from 'path'
+import { randomBytes } from 'crypto'
 import { createReconciler } from './reconcile.js'
 import type { ReconcileOptions } from './reconcile.js'
 import { createScheduler } from './scheduler.js'
@@ -89,6 +92,53 @@ const readDispatchBody = async (req: DispatchWebRequest): Promise<string> => {
   return Buffer.concat(chunks as Buffer[]).toString('utf8')
 }
 
+/** 同 readDispatchBody，但原样返回二进制 Buffer（上传附件用）。 */
+const readDispatchBodyBuffer = async (req: DispatchWebRequest, limit: number): Promise<Buffer> => {
+  const chunks: Buffer[] = []
+  let size = 0
+  for await (const chunk of req) {
+    const buffer = chunk as Buffer
+    size += buffer.length
+    if (size > limit) throw new Error('body-too-large')
+    chunks.push(buffer)
+  }
+  return Buffer.concat(chunks)
+}
+
+/** 附件上传：体积上限（字节）。 */
+const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024
+/** 附件上传：允许的常见扩展名（文本/代码/图片/文档）。命中白名单才收，否则 415。 */
+const ALLOWED_ATTACHMENT_EXT = new Set<string>([
+  // 文本 / 代码
+  'txt', 'md', 'markdown', 'json', 'jsonc', 'yaml', 'yml', 'csv', 'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
+  'py', 'sh', 'bash', 'zsh', 'toml', 'ini', 'cfg', 'log', 'xml', 'html', 'css', 'scss', 'sql', 'go', 'rs',
+  'java', 'c', 'cpp', 'h', 'hpp', 'rb', 'php', 'pl', 'r', 'scala', 'kt', 'swift', 'dockerfile', 'gitignore', 'env',
+  // 图片
+  'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'ico', 'avif',
+  // 文档
+  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'rtf',
+])
+
+/** 取文件名扩展名（小写，无点返回 ''）。 */
+const extOf = (name: string): string => {
+  const base = name.slice(Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1)
+  const dot = base.lastIndexOf('.')
+  return dot <= 0 ? '' : base.slice(dot + 1).toLowerCase()
+}
+
+/** 文件名去路径 + 仅留安全字符，截断到 60，避免落盘文件名注入。 */
+const sanitizeBase = (name: string): string => {
+  const base = name.slice(Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\')) + 1)
+  const dot = base.lastIndexOf('.')
+  const noExt = dot <= 0 ? base : base.slice(0, dot)
+  const cleaned = noExt.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 60)
+  return cleaned === '' ? 'file' : cleaned
+}
+
+const safeDecode = (value: string): string => {
+  try { return decodeURIComponent(value) } catch { return value }
+}
+
 /**
  * 构造本插件的 webServer 路由（快照读 + 任务表写）。
  * @param runtimeRef - 宿主运行时数据 store（apply 内共用同一份）。
@@ -105,7 +155,43 @@ const makeDispatchRoutes = (
   getLlm: () => HostLlm | undefined,
   /** 宿主日志（取证：反归档到底有没有跑、宿主有没有该面）。 */
   log: (msg: string) => void,
+  /** 取附件落盘目录（settings inject 就绪后才有值：statePath 在那里定格）；未就绪时上传返回 503。 */
+  getAttachmentsDir: () => string | null,
 ): DispatchWebRoute[] => [
+  {
+    // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
+    // 原始文件名经 x-filename 头（URL 编码）传入，避免二进制体里夹带名字；扩展名走白名单。
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/attachment`,
+    handler: async (req, res) => {
+      if (req.method !== 'POST') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      const dir = getAttachmentsDir()
+      if (dir === null) return writeJson(res, 503, { ok: false, error: 'attachments-dir-not-ready' })
+      const rawName = typeof req.headers['x-filename'] === 'string' ? (req.headers['x-filename'] as string) : ''
+      const originalName = safeDecode(rawName)
+      if (originalName === '') return writeJson(res, 400, { ok: false, error: 'filename-required' })
+      const ext = extOf(originalName)
+      if (!ALLOWED_ATTACHMENT_EXT.has(ext)) return writeJson(res, 415, { ok: false, error: 'file-type-not-allowed', ext })
+      let buffer: Buffer
+      try {
+        buffer = await readDispatchBodyBuffer(req, ATTACHMENT_MAX_BYTES)
+      } catch {
+        return writeJson(res, 413, { ok: false, error: 'payload-too-large' })
+      }
+      if (buffer.length === 0) return writeJson(res, 400, { ok: false, error: 'empty-file' })
+      const stored = `${sanitizeBase(originalName)}-${randomBytes(3).toString('hex')}${ext === '' ? '' : '.' + ext}`
+      try {
+        // 同步式落盘：本仓库 @types/node 的 fs 命名空间只有回调式重载（promise 版在 fs/promises），
+        // 附件上传是低频操作，mkdirSync/writeFileSync 足够。
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, stored), buffer)
+      } catch (error) {
+        return writeJson(res, 500, { ok: false, error: 'write-failed', message: error instanceof Error ? error.message : String(error) })
+      }
+      writeJson(res, 200, { ok: true, ref: stored, name: originalName })
+    },
+  },
   {
     kind: 'exact',
     path: `${DISPATCH_API_PREFIX}/snapshot`,
@@ -341,6 +427,8 @@ export function apply(ctx: HostContext, config: unknown): void {
   let settingsCtxRef: HostContext | null = null
   /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
   let storeRef: TaskStore | null = null
+  /** settings inject 就绪后的附件落盘目录（插件数据根下 task-attachments/，随 statePath 定格）。 */
+  let attachmentsDirRef: string | null = null
   const persistTasksInline = async (json: string): Promise<void> => {
     // 主通道：写状态库 meta 表（state.db 在宿主数据根 = 挂载卷，容器重建 / 插件重装都不丢）。
     // 未就绪只告警不静默——用户必须知道这次保存没落盘。
@@ -383,6 +471,8 @@ export function apply(ctx: HostContext, config: unknown): void {
       runtime, persistTasksInline,
       () => storeRef, () => ctx.workspaceRegistry, () => ctx.get('llm'),
       (msg) => { ctx.logger.info(msg) },
+      // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
+      () => attachmentsDirRef,
     )) webServer.register(route)
     wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive')
   })
@@ -400,6 +490,8 @@ export function apply(ctx: HostContext, config: unknown): void {
     // statePath 启动时定格，运行期改配置不迁移库。
     const store = new TaskStore(resolveStatePath(scope.get().statePath))
     storeRef = store
+    // 附件上传落盘目录随 statePath 定格（webServer 路由经 attachmentsDirRef 惰性读取）。
+    attachmentsDirRef = path.join(path.dirname(resolveStatePath(scope.get().statePath)), 'task-attachments')
     // 任务表恢复（主通道 = 状态库 meta）：state.db 在宿主数据根（挂载卷），容器重建 /
     // 插件重装都不丢。meta 无行（从未保存过）⇒ 沿用 entry config 初始值（兼容旧部署）。
     const savedInline = store.getMeta('tasksInline')

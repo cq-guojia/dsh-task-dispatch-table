@@ -46,6 +46,8 @@ import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 import { MD_LABELS } from './md-labels'
+import { FileBrowser } from './file-browser'
+import type { WorkspaceFilesFace } from './file-preview'
 
 /** 与 index.ts 同形的 t 席位（本仓库 client 半侧惯例：无参 t；带占位符的文案走 tTemplate）。 */
 type T = (key: LocaleKey) => string
@@ -289,6 +291,7 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   if (draft.title.trim() !== '') definition.title = draft.title.trim()
   if (draft.code.trim() !== '') definition.code = draft.code.trim()
   if (draft.deps.length > 0) definition.depends_on = draft.deps.filter(dep => dep.task !== '')
+  if (draft.attachments.length > 0) definition.attachments = draft.attachments
   return JSON.stringify(definition, null, 2)
 }
 
@@ -772,14 +775,23 @@ export function TaskEditorDrawer(props: {
   onClose: () => void
   /** 保存回调；**P0 不传** ⇒ 点「保存」只提示待接，不做任何写入。 */
   onSave?: ((draft: TaskEditorDraft) => void) | undefined
+  /** 工作区文件服务（选择工作区文件用；未就位为 null ⇒ 选择器不可用）。 */
+  workspaceFiles?: WorkspaceFilesFace | null
+  /** 选择器的工作区上下文：最近浏览过的会话 id（remote.workspaceFiles 是会话作用域的，需它反查工作区）。 */
+  workspaceSessionId?: string | null
 }): ReactElement {
-  const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave } = props
+  const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceSessionId } = props
   const [width, setWidth] = useState<number>(readWidth)
   const [tab, setTab] = useState<'basic' | 'records'>('basic')
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(false)
+  // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   // 原始快照：挂载那一刻定死。弹窗关闭即卸载、重开即重挂 ⇒ 每次打开都从当次初始值算起；
@@ -927,7 +939,34 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  // ①-附加：附加文件卡（一级样式：展示 + 删除；上传 / 选择文件交互用户要求稍后做）。
+  // ①-附加：附加文件卡（展示 + 删除 + 选择/上传入口；选择=链接工作区文件，上传=拖拽/本地文件落盘）。
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const addAttachment = (att: Attachment): void => {
+    patch({ attachments: [...draft.attachments, att] })
+  }
+  const makeId = (): string => (typeof crypto !== 'undefined' && crypto.randomUUID !== undefined ? crypto.randomUUID() : Math.random().toString(36).slice(2))
+  const uploadFiles = async (files: FileList | File[]): Promise<void> => {
+    const list = Array.from(files)
+    if (list.length === 0) return
+    setUploading(true)
+    setUploadError(null)
+    let lastErr: string | null = null
+    for (const file of list) {
+      try {
+        const res = await fetch('/api/task-dispatch-table/attachment', {
+          method: 'POST',
+          headers: { 'x-filename': encodeURIComponent(file.name), 'content-type': 'application/octet-stream' },
+          body: file,
+        })
+        const data = await res.json().catch(() => null)
+        if (data === null || data.ok !== true) { lastErr = typeof data?.error === 'string' ? data.error : 'upload-failed'; continue }
+        addAttachment({ id: makeId(), name: data.name, kind: 'upload', ref: data.ref })
+      } catch (error) { lastErr = error instanceof Error ? error.message : 'network-error' }
+    }
+    setUploading(false)
+    if (lastErr !== null) setUploadError(lastErr)
+    else setUploadOpen(false)
+  }
   const attachmentsCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorAttachments')),
@@ -942,9 +981,32 @@ export function TaskEditorDrawer(props: {
           )),
         ),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
-      h(Button, { variant: 'outline', size: 'sm', disabled: true, title: t('editorAttachmentAddHint') }, t('editorAttachmentAdd')),
-      h('p', { className: 'dsh-tdt-ed-hint', style: { margin: 0 } }, t('editorAttachmentAddHint')),
+      h(Button, { variant: 'outline', size: 'sm', disabled: workspaceFiles === null || workspaceFiles === undefined, onClick: () => { setPickerOpen(true) } }, t('editorPickWorkspaceFile')),
+      h(Button, { variant: 'outline', size: 'sm', onClick: () => { setUploadOpen(v => !v) } }, t('editorUploadFile')),
     ),
+    uploadOpen
+      ? h('div', { style: { marginTop: '10px' } },
+          h('div', {
+            style: { border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '18px', textAlign: 'center', cursor: 'pointer', background: C.layer1 },
+            onClick: () => { if (!uploading) fileInputRef.current?.click() },
+            onDragOver: (event: { preventDefault(): void }) => { event.preventDefault() },
+            onDrop: (event: { preventDefault(): void; dataTransfer?: { files?: FileList } }) => {
+              event.preventDefault()
+              if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
+            },
+          },
+            h('div', { style: { fontSize: '13px', color: C.text } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
+            uploading ? null : h('input', {
+              ref: fileInputRef,
+              type: 'file',
+              multiple: true,
+              style: { display: 'none' },
+              onChange: (event: { target: { files?: FileList } }) => { if (event.target.files !== undefined) void uploadFiles(event.target.files) },
+            }),
+          ),
+          uploadError === null ? null : h('p', { style: { color: '#e5484d', fontSize: '12px', margin: '6px 0 0' } }, tt('editorUploadFailedMsg', { msg: uploadError })),
+        )
+      : null,
   )
 
   // ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。
@@ -1274,6 +1336,34 @@ export function TaskEditorDrawer(props: {
       }),
       panelInner,
     ),
+    // 选择工作区文件：覆盖层（盖在表单/编辑器之上、随抽屉一起在宿主之上）；复用 FileBrowser 的目录树，
+    // picker 模式下点文件即回调、不进预览。无可用会话上下文时给明确空态。
+    pickerOpen
+      ? h('div', { style: { position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' } },
+        h('div', { style: { width: 'min(720px, 100%)', height: '72vh', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsh-radius-panel, 10px)', boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
+          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
+            h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPickWorkspaceFile')),
+            h(Button, { variant: 'outline', size: 'sm', onClick: () => { setPickerOpen(false) } }, t('editorPickerCancel')),
+          ),
+          workspaceFiles !== null && workspaceFiles !== undefined && (workspaceSessionId ?? '') !== ''
+            ? h(FileBrowser, {
+              workspaceFiles,
+              sessionId: workspaceSessionId ?? '',
+              path: '',
+              t,
+              onClose: () => { setPickerOpen(false) },
+              picker: true,
+              onPick: (p: string) => {
+                const name = p.slice(Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1)
+                addAttachment({ id: makeId(), name, kind: 'link', ref: p })
+                setPickerOpen(false)
+              },
+              style: { flex: '1 1 auto', minHeight: 0 },
+            })
+            : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: C.textDim, fontSize: '13px' } }, t('editorPickerNoSession')),
+        ),
+      )
+      : null,
     // 关闭确认（拉栏内联层，盖在表单/编辑器之上、且随抽屉一起在宿主之上）：改过才出现；
     // 点遮罩/离开 ⇒ 真正关抽屉，继续编辑 ⇒ 留在原处。
     confirmDiscard

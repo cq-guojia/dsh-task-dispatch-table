@@ -12,7 +12,7 @@
 // 渲染底层全官方（md=MarkdownText / 代码=CodeBlock / 图片·PDF=readBytes→blob），数据一律
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
 import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import {
   FileTypeIcon,
   IconCheckOutlineRegular,
@@ -234,8 +234,14 @@ export function FileBrowser(props: {
   dock?: boolean
   /** 左缘拖拽条按下（调宽）；不传 = 不渲染拖拽条。 */
   onResizeStart?: (event: { clientX: number; pointerId: number }) => void
+  /** 选择器模式：点文件即回调 onPick（不进预览），用于「选择工作区文件」附件。 */
+  picker?: boolean
+  /** 选择器模式下的选文件回调（path 为工作区绝对路径）。 */
+  onPick?: (path: string) => void
+  /** 外部容器样式（嵌入弹层时撑满高度用）。 */
+  style?: CSSProperties
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props
+  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, style } = props
   // mode：加载/目录树/文件预览/列举错误。viewing 非空 ⇒ 在 dir 树内预览文件。
   const [mode, setMode] = useState<'loading' | 'dir' | 'file' | 'error'>('loading')
   const [dir, setDir] = useState<string>('')
@@ -446,14 +452,18 @@ export function FileBrowser(props: {
       const childPath = joinPath(baseDir, entry.name)
       const isDir = entry.type === 'directory'
       if (!isDir) {
+        const pick = (): void => {
+          if (picker && onPick !== undefined) { onPick(childPath); return }
+          setViewing(childPath); setReloadNonce(0); setSourceView(false)
+        }
         return h('div', {
           key: childPath,
-          className: 'dsh-tdt-sv-tree-row',
+          className: 'dsh-tdt-sv-tree-row' + (picker === true ? ' dsh-tdt-sv-tree-row-pick' : ''),
           role: 'button',
           tabIndex: 0,
-          title: childPath,
-          onClick: () => { setViewing(childPath); setReloadNonce(0); setSourceView(false) },
-          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') { setViewing(childPath); setReloadNonce(0); setSourceView(false) } },
+          title: picker === true ? t('editorPickerPick') : childPath,
+          onClick: pick,
+          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') pick() },
         },
           h('span', { className: 'dsh-tdt-sv-tree-icon' }, h(FileTypeIcon, { path: childPath, size: 18 })),
           h('span', { className: 'dsh-tdt-sv-tree-name' }, entry.name),
@@ -538,6 +548,7 @@ export function FileBrowser(props: {
   return h('aside', {
     className: dock === true ? 'dsh-tdt-sv-preview dsh-tdt-sv-preview-dock' : 'dsh-tdt-sv-preview',
     'data-preview-dock': dock === true ? true : undefined,
+    style: style ?? undefined,
   },
     onResizeStart === undefined ? null
       : h('div', {

@@ -42,6 +42,15 @@ export declare const taskDefinitionSchema: z.ZodObject<{
             latest_success: "latest_success";
         }>;
     }, z.core.$strip>>>;
+    attachments: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        name: z.ZodString;
+        kind: z.ZodEnum<{
+            link: "link";
+            upload: "upload";
+        }>;
+        ref: z.ZodString;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 /** 用户书写形态：`id` 可缺省。 */
 export type TaskDefinitionInput = z.infer<typeof taskDefinitionSchema>;
