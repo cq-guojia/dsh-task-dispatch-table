@@ -102,3 +102,9 @@
 - **浮层头部的「选择工作区」下拉撤掉**（用户拍板：冗余；头部只剩标题 + 关闭叉）。
 - **▾ 面包屑下拉顶部列全部工作区**（`FileBrowser` 新 `workspaces` / `onSelectWorkspace` props）：每行前置文件夹小图标区分身份——当前工作区 = **打开**文件夹图标 + 加粗（C.text），其他 = **关合**文件夹图标（`IconFolderCloseRegular`，primitives.d.ts 补声明）+ 灰；点非当前工作区即切换（pickerWs 变更 → FileBrowser 按 key 重挂，浏览状态归零）。当前工作区根名已在工作区段里 ⇒ 路径段**跳过根 crumb**，从其下一层开始缩进（`> 目录1 >> 目录2`，缩进位计算沿用原方案 A：`index-1` 占位 + 1 箭头）。
 - **dock 不传 workspaces** ⇒ 不显示工作区段（dock 锚定会话所属工作区，浏览时不该切走），下拉与原行为一致。选择器与 dock 仍是同一组件，差异只在传参。
+
+## 十六、第十二轮（dock 拖拽高亮对齐任务抽屉）
+
+- 旧版：hover/拖拽时把 dock 常驻 border-left 按主题色变**纯色线**（深白浅黑，`:has` 上溯）。用户嫌观感不好。
+- 新版：与「新增任务」抽屉拖拽条（`.dsh-tdt-ed-resizer`）**同一套样式与逻辑**——命中区自身 `:hover`/`:active` 浮出 6px 浅色半透明带（`--dsw-alias-interactive-bg-hover`），border-left 保持常驻灰；`:has` 规则全删（archive-session-css.ts）。
+- 冒烟断言同步（旧「不画新线/:has」断言作废，改断言新带样式且无纯白线残留）；过程中两次笔误（断言漏括号致 smoke 崩）已修复，176 项全过。
