@@ -28,10 +28,12 @@ import {
   MarkdownText,
   Switch,
   Tooltip,
+  IconPlanOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   C,
   DateField,
+  MarqueeText,
   SelectField,
   Segmented,
   TimeField,
@@ -1209,14 +1211,16 @@ export function TaskEditorDrawer(props: {
   //    定宽 88px 居右，中间「任务」flex 吃掉剩余宽度（随抽拉分栏同步伸缩）；
   //  - 语义下拉删除（用户：选「同一天的」没有意义）——判定方式就是「上一次执行必须成功」，
   //    新增依赖固定写 `latest_success`；存量依赖的 semantics 原样保留（编辑无损往返）。
-  const [depWs, setDepWs] = useState('')
-  const [depTaskId, setDepTaskId] = useState('')
   const addedDepIds = new Set(draft.deps.map(dep => dep.task))
   const depWsOptions: EditorOption[] = []
   for (const task of tasks) {
     if (task.workspace === '' || addedDepIds.has(task.id)) continue
     if (!depWsOptions.some(option => option.value === task.workspace)) depWsOptions.push({ value: task.workspace, label: task.workspace })
   }
+  // 默认选中：第一个「还有可选任务」的工作区（列表本就按任务表顺序推导）；
+  // 全都加满了没有可选任务 ⇒ 退回第一个工作区（用户 2026-09-29）。
+  const [depWs, setDepWs] = useState(() => depWsOptions[0]?.value ?? workspaces[0]?.value ?? '')
+  const [depTaskId, setDepTaskId] = useState('')
   const depTaskOptions: EditorOption[] = depWs === ''
     ? []
     : tasks.filter(task => task.workspace === depWs && !addedDepIds.has(task.id))
@@ -1254,11 +1258,15 @@ export function TaskEditorDrawer(props: {
               const known = tasks.find(task => task.id === dep.task)
               const ws = known?.workspace ?? ''
               return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
-                h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } },
-                  `${t('editorDepItemPrefix')}${known?.label ?? dep.task}`,
-                  ws === '' ? null : h('span', { style: { color: C.textDim, fontSize: '11px', marginLeft: '6px' } }, ws),
-                ),
-                h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ deps: draft.deps.filter((_, i) => i !== index) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
+                // 行首「有点任务」icon（官方 IconPlanOutlineRegular）+ 固定前缀。
+                h('span', { style: { display: 'inline-flex', flex: 'none', color: C.textTertiary } }, h(IconPlanOutlineRegular, { size: 14 })),
+                h('span', { style: { flex: 'none', fontSize: '13px' } }, t('editorDepItemPrefix')),
+                // 任务名吃剩余宽度：超长省略号，hover 跑马灯（MarqueeText）。
+                h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: '13px' } }),
+                // 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
+                ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: C.textDim, fontSize: '11px' } }),
+                // 「移除」宽度固定（flex none），不被任务名挤动。
+                h(Button, { variant: 'ghost', size: 'sm', style: { flex: 'none' }, onClick: () => { patch({ deps: draft.deps.filter((_, i) => i !== index) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
               )
             }),
           ),
@@ -1297,7 +1305,7 @@ export function TaskEditorDrawer(props: {
         title: depTaskId === '' ? t('editorDepTaskPh') : t('editorDepAdd'),
         onClick: addDep,
         // 三段式右段：定宽、居右（flex 布局里排最后即贴右），文字图标居中。
-        style: { flex: '0 0 88px', justifyContent: 'center' },
+        style: { flex: '0 0 88px', height: '32px', justifyContent: 'center' },
       }, t('editorDepAdd')),
     ),
   )

@@ -16,7 +16,7 @@
 // 版本事实：`Menu` / `Switch` / `Input` / `SegmentedControl` / `Pill` 在 **0.1.7-rc.1 与 rc.2 都在**
 // （`MenuSurface` 才只有 rc.2 有 ⇒ 本文件不用它，自绘浮层底）。
 
-import { createElement as h, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
@@ -618,4 +618,38 @@ export function WeekdayPicker(props: {
       ? h('span', { style: { fontSize: '12px', color: C.dimmed } }, props.labels.empty)
       : null,
   )
+}
+
+/**
+ * 跑马灯文本（用户 2026-09-29 要求）：默认超长省略号；hover 且确实放不下时，来回滚动展示全名。
+ * 自实现原因：官方 primitives 无跑马灯组件。测宽用 ResizeObserver + 文本变化重测；
+ * 滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画），动画时长与距离成正比。
+ */
+export function MarqueeText(props: { text: string; style?: CSSProperties; title?: string }): ReactElement {
+  const ref = useRef<HTMLSpanElement | null>(null)
+  const [dist, setDist] = useState(0)
+  const measure = useCallback(() => {
+    const el = ref.current
+    if (el === null) return
+    setDist(Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth)))
+  }, [])
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (el === null) return
+    measure()
+    const ro = new ResizeObserver(measure) // 抽屉拖宽变窄 / 字体就绪都会改 clientWidth ⇒ 重测
+    ro.observe(el)
+    return () => { ro.disconnect() }
+  }, [measure])
+  useEffect(() => { measure() }, [props.text, measure])
+  const run = dist > 0
+  return h('span', {
+    ref,
+    className: run ? 'dsh-tdt-mq dsh-tdt-mq-run' : 'dsh-tdt-mq',
+    title: props.title,
+    style: {
+      ...props.style,
+      ...(run ? { '--dsh-tdt-mq-dist': `${-dist}px`, '--dsh-tdt-mq-dur': `${Math.max(3, Math.round(dist / 30))}s` } : null),
+    },
+  }, props.text)
 }

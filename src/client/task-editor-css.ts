@@ -92,9 +92,14 @@ export const TASK_EDITOR_CSS = `
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-deppick-ws{flex:0 0 112px;min-width:0;display:flex;}
+.dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
+/* 跑马灯文本（MarqueeText，editor-fields.tsx）：默认超长省略号；确实放不下才挂 .dsh-tdt-mq-run，
+   hover 0.4s 后开始来回滚动，时长与滚动距离成正比（--dsh-tdt-mq-dur / --dsh-tdt-mq-dist 由组件内联写入）。 */
+.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.dsh-tdt-mq-run:hover{animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
+@keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `

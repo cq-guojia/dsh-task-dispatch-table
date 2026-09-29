@@ -4547,6 +4547,46 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				color: C$2.dimmed
 			} }, props.labels.empty) : null);
 		}
+		/**
+		* 跑马灯文本（用户 2026-09-29 要求）：默认超长省略号；hover 且确实放不下时，来回滚动展示全名。
+		* 自实现原因：官方 primitives 无跑马灯组件。测宽用 ResizeObserver + 文本变化重测；
+		* 滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画），动画时长与距离成正比。
+		*/
+		function MarqueeText(props) {
+			const ref = (0, react.useRef)(null);
+			const [dist, setDist] = (0, react.useState)(0);
+			const measure = (0, react.useCallback)(() => {
+				const el = ref.current;
+				if (el === null) return;
+				setDist(Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth)));
+			}, []);
+			(0, react.useLayoutEffect)(() => {
+				const el = ref.current;
+				if (el === null) return;
+				measure();
+				const ro = new ResizeObserver(measure);
+				ro.observe(el);
+				return () => {
+					ro.disconnect();
+				};
+			}, [measure]);
+			(0, react.useEffect)(() => {
+				measure();
+			}, [props.text, measure]);
+			const run = dist > 0;
+			return (0, react.createElement)("span", {
+				ref,
+				className: run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq",
+				title: props.title,
+				style: {
+					...props.style,
+					...run ? {
+						"--dsh-tdt-mq-dist": `${-dist}px`,
+						"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
+					} : null
+				}
+			}, props.text);
+		}
 		//#endregion
 		//#region src/client/file-preview.tsx
 		/** 预览渲染错误边界（真机 2026-09-28：渲染器抛错 ⇒ React 卸载整页 ⇒ 面板黑屏；此处拦在预览体内）。 */
@@ -5697,9 +5737,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-deppick-ws{flex:0 0 112px;min-width:0;display:flex;}
+.dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
+/* 跑马灯文本（MarqueeText，editor-fields.tsx）：默认超长省略号；确实放不下才挂 .dsh-tdt-mq-run，
+   hover 0.4s 后开始来回滚动，时长与滚动距离成正比（--dsh-tdt-mq-dur / --dsh-tdt-mq-dist 由组件内联写入）。 */
+.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.dsh-tdt-mq-run:hover{animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
+@keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
@@ -38531,8 +38576,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: "dsh-tdt-ed-help",
 				"aria-label": t("editorWindowHint")
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))));
-			const [depWs, setDepWs] = (0, react.useState)("");
-			const [depTaskId, setDepTaskId] = (0, react.useState)("");
 			const addedDepIds = new Set(draft.deps.map((dep) => dep.task));
 			const depWsOptions = [];
 			for (const task of tasks) {
@@ -38542,6 +38585,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					label: task.workspace
 				});
 			}
+			const [depWs, setDepWs] = (0, react.useState)(() => depWsOptions[0]?.value ?? workspaces[0]?.value ?? "");
+			const [depTaskId, setDepTaskId] = (0, react.useState)("");
 			const depTaskOptions = depWs === "" ? [] : tasks.filter((task) => task.workspace === depWs && !addedDepIds.has(task.id)).map((task) => ({
 				value: task.id,
 				label: task.label
@@ -38590,19 +38635,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					key: index,
 					className: "dsh-tdt-ed-depitem"
 				}, (0, react.createElement)("span", { style: {
-					flex: "1 1 auto",
-					minWidth: 0,
-					overflow: "hidden",
-					textOverflow: "ellipsis",
-					whiteSpace: "nowrap",
+					display: "inline-flex",
+					flex: "none",
+					color: C$2.textTertiary
+				} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), (0, react.createElement)("span", { style: {
+					flex: "none",
 					fontSize: "13px"
-				} }, `${t("editorDepItemPrefix")}${known?.label ?? dep.task}`, ws === "" ? null : (0, react.createElement)("span", { style: {
-					color: C$2.textDim,
-					fontSize: "11px",
-					marginLeft: "6px"
-				} }, ws)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				} }, t("editorDepItemPrefix")), (0, react.createElement)(MarqueeText, {
+					text: known?.label ?? dep.task,
+					style: {
+						flex: "1 1 auto",
+						minWidth: 0,
+						fontSize: "13px"
+					}
+				}), ws === "" ? null : (0, react.createElement)(MarqueeText, {
+					text: ws,
+					style: {
+						flex: "0 0 72px",
+						color: C$2.textDim,
+						fontSize: "11px"
+					}
+				}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 					variant: "ghost",
 					size: "sm",
+					style: { flex: "none" },
 					onClick: () => {
 						patch({ deps: draft.deps.filter((_, i) => i !== index) });
 					},
@@ -38639,6 +38695,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: addDep,
 				style: {
 					flex: "0 0 88px",
+					height: "32px",
 					justifyContent: "center"
 				}
 			}, t("editorDepAdd"))));

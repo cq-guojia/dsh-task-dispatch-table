@@ -409,3 +409,16 @@ typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡�
 真机截图暴露根因：SelectField 有选项时被官方 `Menu` 的 **shrink-to-fit inline-flex span** 包住，`width:'100%'` 被吃掉 ⇒ 没选工作区时（无选项 = 裸锚点）任务下拉撑满、选了工作区后（有选项 = Menu 包裹）整个缩成内容宽，与「添加」之间一大段空档。
 
 用户定稿三段式（已落码）：**左「工作区」定宽 112px（约 5~6 个字）居左；右「添加」定宽 88px 居右；中间「任务」flex 吃掉剩余宽度**（随抽拉分栏宽窄同步伸缩）。修法 = 外层包 span 用 `> span` 子选择器把 Menu 那层 shrink-to-fit span 一并撑满（`flex:1 1 auto; min-width:0; width:100%`），任务名超长走标签自带省略号。
+
+### 十九·补 3（同日第四轮：选择行细节 + 已加行重构，用户逐条拍板）
+
+| # | 要求 | 落地 |
+|---|---|---|
+| 1 | 「添加」按钮高度与下拉框一模一样 | 下拉锚点高 32px（fieldButtonStyle）⇒ 按钮显式 `height:32px`（原 sm=28px 偏矮） |
+| 2 | 工作区下拉加长到现在的 1.2 倍 | 112px → **134px**（仍定宽居左） |
+| 3 | 默认选中一个有任务的工作区；都没有任务则选第一个工作区 | depWs 初始 = `depWsOptions[0]`（列表本就按「还有可选任务」推导）→ 退回 `workspaces[0]` |
+| 4 | 已加行行首加「有点任务」官方小 icon | 官方 `IconPlanOutlineRegular`（14px，label-tertiary 色）+「前置任务：」前缀固定不缩 |
+| 5 | 行内容又顶出去 | 重排：icon+前缀+**任务名 flex 自适应**（min-width:0 省略号）+ 工作区**定宽 72px** + 「移除」`flex:none`——可收缩的只有任务名，永远顶不出去 |
+| 6 | 任务名/工作区名超长 = 省略号 + hover 跑马灯 | 新组件 `MarqueeText`（editor-fields.tsx）：ResizeObserver + 文本变化测溢出，`scrollWidth>clientWidth` 才挂 `.dsh-tdt-mq-run`；hover 0.4s 后来回滚动，时长与距离成正比（CSS 变量内联写入）。官方 primitives 无跑马灯组件（清单已核），自实现 ~30 行 |
+
+注意：本轮 Edit 工具对该仓文件出现统一 `: ` 前缀错乱（替换全部失配），改用 python 带次数断言的精确替换落码，typecheck/build/冒烟 181 项全过。
