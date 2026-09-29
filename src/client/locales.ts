@@ -108,7 +108,7 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
-  | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
+  | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
@@ -481,7 +481,6 @@ export const zh: Record<LocaleKey, string> = {
   editorPickerNoSession: '该工作区下还没有会话，无法读取文件。',
   editorAttachmentsHint: '附加文件会随任务一起派发给执行的 Agent：任务执行过程中，Agent 可读取或操作这些文件的内容。',
   editorPickerPick: '选择此文件',
-  editorPickerCancel: '取消',
   editorOpenEditor: '全屏编辑',
   editorPromptEditorTitle: '提示词编辑器（.md）',
   editorSaveVersion: '保存版本',
@@ -885,7 +884,6 @@ export const en: Record<LocaleKey, string> = {
   editorPickerNoSession: 'No sessions in this workspace yet — its files cannot be read.',
   editorAttachmentsHint: 'Attachments are dispatched along with the task: while it runs, the agent can read and operate on their contents.',
   editorPickerPick: 'Pick this file',
-  editorPickerCancel: 'Cancel',
   editorOpenEditor: 'Full-screen edit',
   editorPromptEditorTitle: 'Prompt editor (.md)',
   editorSaveVersion: 'Save version',

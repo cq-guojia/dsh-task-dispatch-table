@@ -376,7 +376,6 @@ window.__ModuleLoader__.load({
 			editorPickerNoSession: "该工作区下还没有会话，无法读取文件。",
 			editorAttachmentsHint: "附加文件会随任务一起派发给执行的 Agent：任务执行过程中，Agent 可读取或操作这些文件的内容。",
 			editorPickerPick: "选择此文件",
-			editorPickerCancel: "取消",
 			editorOpenEditor: "全屏编辑",
 			editorPromptEditorTitle: "提示词编辑器（.md）",
 			editorSaveVersion: "保存版本",
@@ -774,7 +773,6 @@ window.__ModuleLoader__.load({
 			editorPickerNoSession: "No sessions in this workspace yet — its files cannot be read.",
 			editorAttachmentsHint: "Attachments are dispatched along with the task: while it runs, the agent can read and operate on their contents.",
 			editorPickerPick: "Pick this file",
-			editorPickerCancel: "Cancel",
 			editorOpenEditor: "Full-screen edit",
 			editorPromptEditorTitle: "Prompt editor (.md)",
 			editorSaveVersion: "Save version",
@@ -38746,50 +38744,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						display: "flex",
 						flexDirection: "column",
 						overflow: "hidden",
-						right: Math.max(12, window.innerWidth - rect.left + 8),
+						right: Math.max(12, window.innerWidth - rect.left),
 						bottom: Math.max(12, window.innerHeight - rect.bottom),
-						width: "min(560px, calc(100vw - 24px))",
-						height: "min(440px, 55vh)",
+						width: "min(840px, calc(100vw - 24px))",
+						height: "min(660px, 82vh)",
 						background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
 						border: `1px solid ${C$2.borderL2}`,
 						borderRadius: "var(--dsh-radius-panel, 10px)",
 						boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))"
 					};
 				})()
-			}, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "8px",
-				padding: "8px 10px",
-				borderBottom: `1px solid ${C$2.borderL2}`,
-				flex: "none"
-			} }, (0, react.createElement)("span", { style: {
-				flex: "1 1 auto",
-				fontSize: "13px",
-				fontWeight: 600,
-				color: C$2.text
-			} }, t("editorPickWorkspaceFile")), (0, react.createElement)("button", {
-				type: "button",
-				"aria-label": t("editorPickerCancel"),
-				title: t("editorPickerCancel"),
-				onClick: () => {
-					setPickerOpen(false);
-				},
-				style: {
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					width: "26px",
-					height: "26px",
-					padding: 0,
-					border: "none",
-					borderRadius: C$2.radiusSm,
-					background: "transparent",
-					color: C$2.textDim,
-					cursor: "pointer",
-					font: "inherit"
-				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))), (() => {
+			}, (() => {
 				const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? "";
 				return workspaceFiles !== null && workspaceFiles !== void 0 && anchorSessionId !== "" ? (0, react.createElement)(FileBrowser, {
 					key: `${pickerWs}:${anchorSessionId}`,

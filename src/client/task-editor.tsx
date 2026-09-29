@@ -1442,11 +1442,12 @@ export function TaskEditorDrawer(props: {
             const rect = pickerAnchorRef.current.getBoundingClientRect()
             return {
               position: 'fixed', zIndex: 1100, display: 'flex', flexDirection: 'column', overflow: 'hidden',
-              // 右缘 = 按钮左缘 - 8px（在按钮左侧展开）；下缘 = 按钮下缘（齐平）。
-              right: Math.max(12, window.innerWidth - rect.left + 8),
+              // 右缘 = 按钮左缘（贴住按钮、不留空隙）；下缘 = 按钮下缘（齐平）。
+              // 尺寸 = 原 560×440 的 1.5 倍（用户 2026-09-29：操作区扩到 1.5 倍）。
+              right: Math.max(12, window.innerWidth - rect.left),
               bottom: Math.max(12, window.innerHeight - rect.bottom),
-              width: 'min(560px, calc(100vw - 24px))',
-              height: 'min(440px, 55vh)',
+              width: 'min(840px, calc(100vw - 24px))',
+              height: 'min(660px, 82vh)',
               background: 'var(--dsw-alias-bg-layer-2, #2a2e33)',
               border: `1px solid ${C.borderL2}`,
               borderRadius: 'var(--dsh-radius-panel, 10px)',
@@ -1454,16 +1455,8 @@ export function TaskEditorDrawer(props: {
             }
           })(),
         },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderBottom: `1px solid ${C.borderL2}`, flex: 'none' } },
-            h('span', { style: { flex: '1 1 auto', fontSize: '13px', fontWeight: 600, color: C.text } }, t('editorPickWorkspaceFile')),
-            h('button', {
-              type: 'button',
-              'aria-label': t('editorPickerCancel'),
-              title: t('editorPickerCancel'),
-              onClick: () => { setPickerOpen(false) },
-              style: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', padding: 0, border: 'none', borderRadius: C.radiusSm, background: 'transparent', color: C.textDim, cursor: 'pointer', font: 'inherit' },
-            }, h(IconCloseOutlineRegular, { size: 14 })),
-          ),
+          // 无标题条（用户 2026-09-29：标题/叉那行没意义，整个去掉）——关闭走 FileBrowser
+          // 自带 ✕、点外部、Esc、再点方按钮四条路。
           (() => {
             const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? ''
             return workspaceFiles !== null && workspaceFiles !== undefined && anchorSessionId !== ''
