@@ -804,6 +804,9 @@ export function TaskEditorDrawer(props: {
     toastSeq.current += 1
     setToast({ text, seq: toastSeq.current })
   }, [])
+  // 未选工作区点「选择工作区文件」⇒ 除了 Toast 提示，还把提示词左下角的工作区下拉**自动展开**，
+  // 让用户看见在哪选（用户 2026-09-29：光提示不知道去哪选）。
+  const [workspaceOpenSignal, setWorkspaceOpenSignal] = useState(0)
   // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
   const [uploadError, setUploadError] = useState<string | null>(null)
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
@@ -939,6 +942,7 @@ export function TaskEditorDrawer(props: {
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWorkspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
+        openSignal: workspaceOpenSignal,
       }),
       h('span', { className: 'dsh-tdt-ed-spacer' }),
       h(SelectField, {
@@ -1012,6 +1016,7 @@ export function TaskEditorDrawer(props: {
           onClick: () => {
             if (draft.workspace === '') {
               showToast(t('editorPickNeedWorkspace'))
+              setWorkspaceOpenSignal(n => n + 1)
               return
             }
             setPickerOpen(true)
@@ -1050,7 +1055,7 @@ export function TaskEditorDrawer(props: {
       style: { display: 'none' },
       onChange: (event: { target: { files?: FileList } }) => { if (event.target.files !== undefined) void uploadFiles(event.target.files) },
     }),
-    uploadError === null ? null : h('p', { style: { color: '#e5484d', fontSize: '12px', margin: '6px 0 0' } }, uploadErrText(uploadError)),
+    uploadError === null ? null : h('p', { style: { color: '#e5484d', fontSize: '12px', margin: '9px 0 0' } }, uploadErrText(uploadError)),
   )
 
   // ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。

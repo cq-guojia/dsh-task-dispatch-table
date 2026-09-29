@@ -4236,6 +4236,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			label,
 			side: "bottom"
 		}, node);
+		/**
+		* list 的线上路径包装：**0.2.0-rc.1 起官方 list 拒绝空路径**（`gateway/bad-request` "path is required"，
+		* 官方 lib/index.js `inspect()` 首行校验；0.1.7-rc.2 还允许空串列根，行为变更）。
+		* 空串（= 工作区根）一律以 `'.'` 上线：路径按 `cwd = 工作区根` 归一 ⇒ `'.'` 解析为根本身，containment 通过。
+		* 响应里根目录的 `path` 仍是 `''`（官方 workspacePathOf 对根返回空串）⇒ 内部目录状态 / 面包屑不受影响。
+		*/
+		function listDir(workspaceFiles, sessionId, dir) {
+			return workspaceFiles.list(sessionId, dir === "" ? "." : dir);
+		}
 		/** 路径工具：取父目录（无父 = 空串，list('') = 工作区根）。 */
 		function dirnameOf(p) {
 			const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
@@ -4309,7 +4318,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				for (const dir of frontier.slice(0, 5)) {
 					let entries;
 					try {
-						const parsed = listingOf(await workspaceFiles.list(sessionId, dir));
+						const parsed = listingOf(await listDir(workspaceFiles, sessionId, dir));
 						if (isFailed(parsed) || parsed === null) continue;
 						entries = parsed.entries;
 					} catch {
@@ -4448,7 +4457,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setMode("loading");
 				setOpenDirs(/* @__PURE__ */ new Set());
 				setChildCache({});
-				workspaceFiles.list(sessionId, targetDir).then((result) => {
+				listDir(workspaceFiles, sessionId, targetDir).then((result) => {
 					const parsed = listingOf(result);
 					if (isFailed(parsed)) {
 						setListErr(errView(parsed.failed));
@@ -4494,7 +4503,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setMenuOpen(false);
 				setOpenDirs(/* @__PURE__ */ new Set());
 				setChildCache({});
-				workspaceFiles.list(sessionId, path).then(async (result) => {
+				listDir(workspaceFiles, sessionId, path).then(async (result) => {
 					if (!alive) return;
 					const parsed = listingOf(result);
 					if (!isFailed(parsed) && parsed !== null) {
@@ -4521,7 +4530,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setDir(parent);
 					setViewing(path);
 					setMode("file");
-					workspaceFiles.list(sessionId, parent).then((pres) => {
+					listDir(workspaceFiles, sessionId, parent).then((pres) => {
 						if (!alive) return;
 						const pl = listingOf(pres);
 						if (!isFailed(pl) && pl !== null) {
@@ -4591,7 +4600,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						...prev,
 						[path]: { status: "loading" }
 					}));
-					workspaceFiles.list(sessionId, path).then((result) => {
+					listDir(workspaceFiles, sessionId, path).then((result) => {
 						const parsed = listingOf(result);
 						if (isFailed(parsed)) {
 							setChildCache((prev) => ({
@@ -4922,6 +4931,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function SelectField(props) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const [hover, setHover] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				if (props.openSignal !== void 0 && props.openSignal > 0) setOpen(true);
+			}, [props.openSignal]);
 			const compact = props.size === "sm";
 			const iconSize = compact ? 14 : 16;
 			const usable = props.options.length > 0 && props.disabled !== true;
@@ -37890,6 +37902,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					seq: toastSeq.current
 				});
 			}, []);
+			const [workspaceOpenSignal, setWorkspaceOpenSignal] = (0, react.useState)(0);
 			const [uploadError, setUploadError] = (0, react.useState)(null);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
@@ -38050,7 +38063,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorWorkspacePh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 })
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
+				openSignal: workspaceOpenSignal
 			}), (0, react.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react.createElement)(SelectField, {
 				value: draft.model,
 				options: models,
@@ -38121,6 +38135,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					if (draft.workspace === "") {
 						showToast(t("editorPickNeedWorkspace"));
+						setWorkspaceOpenSignal((n) => n + 1);
 						return;
 					}
 					setPickerOpen(true);
@@ -38215,7 +38230,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}), uploadError === null ? null : (0, react.createElement)("p", { style: {
 				color: "#e5484d",
 				fontSize: "12px",
-				margin: "6px 0 0"
+				margin: "9px 0 0"
 			} }, uploadErrText(uploadError)));
 			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-card-head",

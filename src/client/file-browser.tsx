@@ -45,6 +45,16 @@ import {
 const tooled = (label: string, node: ReactNode): ReactNode =>
   h(Tooltip, { label, side: 'bottom' }, node)
 
+/**
+ * list 的线上路径包装：**0.2.0-rc.1 起官方 list 拒绝空路径**（`gateway/bad-request` "path is required"，
+ * 官方 lib/index.js `inspect()` 首行校验；0.1.7-rc.2 还允许空串列根，行为变更）。
+ * 空串（= 工作区根）一律以 `'.'` 上线：路径按 `cwd = 工作区根` 归一 ⇒ `'.'` 解析为根本身，containment 通过。
+ * 响应里根目录的 `path` 仍是 `''`（官方 workspacePathOf 对根返回空串）⇒ 内部目录状态 / 面包屑不受影响。
+ */
+function listDir(workspaceFiles: WorkspaceFilesFace, sessionId: string, dir: string): ReturnType<WorkspaceFilesFace['list']> {
+  return workspaceFiles.list(sessionId, dir === '' ? '.' : dir)
+}
+
 /** 路径工具：取父目录（无父 = 空串，list('') = 工作区根）。 */
 function dirnameOf(p: string): string {
   const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'))
@@ -129,7 +139,7 @@ async function findAnyFileAbs(
     for (const dir of frontier.slice(0, 5)) {
       let entries: readonly ListEntry[]
       try {
-        const parsed = listingOf(await workspaceFiles.list(sessionId, dir))
+        const parsed = listingOf(await listDir(workspaceFiles, sessionId, dir))
         if (isFailed(parsed) || parsed === null) continue
         entries = parsed.entries
       } catch { continue }
@@ -300,7 +310,7 @@ export function FileBrowser(props: {
     // 切换顶层目录：清空内联展开态（展开树只属于当前这一层）。
     setOpenDirs(new Set())
     setChildCache({})
-    workspaceFiles.list(sessionId, targetDir)
+    listDir(workspaceFiles, sessionId, targetDir)
       .then((result) => {
         const parsed = listingOf(result)
         if (isFailed(parsed)) { setListErr(errView(parsed.failed)); setMode('error'); return }
@@ -339,7 +349,7 @@ export function FileBrowser(props: {
     setMenuOpen(false)
     setOpenDirs(new Set())
     setChildCache({})
-    workspaceFiles.list(sessionId, path)
+    listDir(workspaceFiles, sessionId, path)
       .then(async (result) => {
         if (!alive) return
         const parsed = listingOf(result)
@@ -377,7 +387,7 @@ export function FileBrowser(props: {
         setDir(parent)
         setViewing(path)
         setMode('file')
-        workspaceFiles.list(sessionId, parent)
+        listDir(workspaceFiles, sessionId, parent)
           .then((pres) => {
             if (!alive) return
             const pl = listingOf(pres)
@@ -435,7 +445,7 @@ export function FileBrowser(props: {
     })
     if (!(path in childCache)) {
       setChildCache(prev => ({ ...prev, [path]: { status: 'loading' } }))
-      workspaceFiles.list(sessionId, path)
+      listDir(workspaceFiles, sessionId, path)
         .then((result) => {
           const parsed = listingOf(result)
           if (isFailed(parsed)) { setChildCache(prev => ({ ...prev, [path]: { status: 'error', error: errView(parsed.failed) } })); return }

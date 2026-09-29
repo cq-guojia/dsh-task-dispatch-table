@@ -60,3 +60,10 @@
 - **白名单收敛为共享模块** `src/attachment-allowlist.ts`（`ATTACHMENT_MAX_BYTES` / `ALLOWED_ATTACHMENT_EXT` / `extOf`）：宿主路由与浏览器端预检**必须同一份**，防两处漂移；客户端打包 alwaysBundle 内联、宿主 tsc 直编。
 - **客户端预检补格式判断**：发包前先滤尺寸、再滤扩展名（不在白名单 ⇒ 当场报「格式不支持」），不合规跳过、其余照传；两类都不合规时以最后一条错误显示。
 - **附件落点死规则（用户拍板，写进决策 46 ⑥）**：link 型附件必须位于任务所选工作区内——UI 选择器只列已选工作区是第一道闸，**P2 保存链路宿主必须二道校验（ref 归一后越界 ⇒ 拒绝保存）**；upload 型落插件数据根不受此限。
+
+## 九、第五轮（rc.1 空路径行为变更 + 三处反馈）
+
+1. **「读取失败：gateway/bad-request」真根因（源码级）**：0.2.0-rc.1 的官方 `list` **拒绝空路径**——`lib/index.js` `inspect()` 首行 `if (path.length === 0) throw new RemoteError('gateway/bad-request', 'path is required')`；0.1.7-rc.2 还允许空串列根，**行为变更**，真机升级后选择器与 U11 预览的列根全会炸。修 = `file-browser.tsx` 加 `listDir` 包装（空串 ⇒ `'.'` 上线，相对 `cwd=工作区根` 归一为根本身；响应里根的 path 仍回空串 ⇒ 内部状态 / 面包屑无感），5 处 list 调用点全部收敛走它。行为变更已记入 dsh-capabilities。
+2. **报错红字间距**：与投放框的间距 6px ⇒ 9px（约 1.5 倍，用户指定）。
+3. **未选工作区点「选择工作区文件」**：除 Toast 外，**自动展开**提示词左下角的工作区下拉（`SelectField` 加 `openSignal` 编号信号 prop，编号一变即展开），让用户看见在哪选。
+4. **FileBrowser 界面观感（未动，等真机确认能读文件后再调）**：用户反馈「界面太大、右边一串不明」——待文件读通后按用户意见重排。
