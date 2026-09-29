@@ -112,6 +112,14 @@ export interface HostGoals {
         maxGoalRounds?: number;
     }): Promise<unknown>;
 }
+/** TeamService 探测面（@deepseek-ai/dsh-experimental-agent-team 0.2.0-rc.2 lib/types/index.d.ts:18）：
+ * 实验性 Agent Teams 服务，experimental profile 启用后才存在（cordis.patch.yml 插 agent-team）。
+ * profile 一并启用 tool-agent-team ⇒ 每个根会话 agent 自动成为 Team Lead 并装上
+ * spawn_teammate / send_message / list_agents / wait_agent / interrupt_agent / team_task_* 模型工具。
+ * 插件只做存在性探测（决策 49：缺 = 降级单轮），不直接驱动 roster。 */
+export interface HostAgentTeams {
+    tryMembership(agent: unknown): unknown;
+}
 /** SessionStore.create(id?)：core/session/src/index.ts:969，id 可由调用者供给。 */
 export interface HostSessions {
     create(id?: SessionId): HostSession;
@@ -227,6 +235,8 @@ export interface HostContext {
     sessions: HostSessions;
     /** 可选：宿主 0.2.0-rc.2 起 ctx.goals（Goal service，backed by session log）；旧版本无此 face ⇒ 派发侧降级单轮。 */
     goals?: HostGoals;
+    /** 可选：实验性 Agent Teams 服务（决策 49）；experimental profile 未启用 ⇒ undefined ⇒ 降级单 Agent。 */
+    agentTeams?: HostAgentTeams;
     workspaceRegistry: HostWorkspaceRegistry;
     settings: HostSettings;
     sessionTitle: HostSessionTitle;

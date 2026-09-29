@@ -42,6 +42,8 @@ export interface ResolvedDependency {
 export interface InstanceSnapshot {
     /** /goal 多轮续跑（决策 48）：undefined 视为 true（用户拍板「默认都是多轮会话」）。 */
     goal?: boolean;
+    /** 多 Agent 协作（决策 49）：undefined 视为 false；派发时探测宿主 ctx.agentTeams，缺则降级单轮。 */
+    agentTeam?: boolean;
     /** 会话显示名（决策 42）：title 回退 code，再回退短 id。 */
     title: string;
     prompt: string;

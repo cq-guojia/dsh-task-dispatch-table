@@ -445,3 +445,26 @@ typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡�
 6. **Agent Team 不加**：全包 grep 只有 session 事件类型（team/member 等），无创建通道——不做假开关（决策 48 记录待跟进）。
 
 冒烟 +2 = **184 项全过**（高级区断言 + 派发 /goal 接线断言），typecheck/build 绿。踩坑：esbuild 产物**非空格压缩**（`lang: "json"` 带空格），smoke 断言按实际产物形态写。
+
+## 二十一、高级区第二轮 + 多 Agent 协作接线（2026-09-29，决策 49）
+
+用户看过真机后逐条拍板返工，并点名「0.2.0 之后 DSH 有多 Agent 任务」要求接上。
+
+**多 Agent 源码核实（推翻决策 48 的「无通道」）**：
+1. 先查 capabilities/decisions（决策 48 结论 = 无通道），但用户坚持有此功能 ⇒ 重新拽源码。
+2. `dsh-session@0.2.0-rc.2`：team 只有 4 个事件类型（同决策 48）；`dsh-agent` / `dsh-agent-loop` / `dsh-tools` / `dsh`（CLI）/ `dsh-web-frontend`（只是 vite 壳）零 team 痕迹。
+3. **转机 = npm search 换关键词**：scope 搜索（`npm search @deepseek-ai`）搜不到 team 包，改搜 `dsh-team` 才现身 experimental 全家桶：`dsh-experimental-agent-team`（`ctx.agentTeams` TeamService）+ `-tool-agent-team`（spawn_teammate/send_message/list_agents/wait_agent/interrupt_agent/team_task_* 六类模型工具）+ `-agent-team-profile`（cordis.patch.yml：禁旧 subagent 四工具、插三件套，maxMembers 8）+ `-client-ui-agent-team`。
+4. **启用 = profile 层不是会话参数**：`SessionCreateRequest` 仅 `workspaceId?/cwd?/sessionId?/agentPreset?`；profile 的 `tool-agent-team.apply` 对每个「根 agent」（`tryMembership`：无 parentSession、无 subagent descriptor ⇒ 隐式 Team Lead）自动装工具 ⇒ 我们派发的会话天生是队长，**插件只需在消息里引导 + 探测服务存在性**。
+5. 落码（/goal 同款语义）：`target.agentTeam` 缺省 false → 快照 `InstanceSnapshot.agentTeam` 固化 → 派发探测 `ctx.agentTeams`：缺 ⇒ `agent-team-unavailable` 告警降级单 Agent；有 ⇒ `buildMessage` 注入团队执行段（如实列官方工具名，收束仍由主会话交回执）。
+
+**顺手修决策 48 缺陷**：`snapshotOf`（scheduler.ts）/ `parseInstanceSnapshot`（store.ts）此前丢 `goal` 字段 ⇒ `goal:false` 形同虚设（派发侧 `!== false` 恒真）。本轮补固化与解析，加 round-trip 冒烟回归。
+
+**高级区 UI 第二轮**：
+1. 撤内层黑框收折钮（`.dsh-tdt-ed-summary` 删除）——收起态整卡一条灰、整行可点（`.dsh-tdt-ed-advhead`）。
+2. 「高级设置」+「?」气泡（`editorAdvancedHelp`）+ 官方 `IconChevronDownOutlineRegular` 12px（展开 rotate 180°——展开图标约定查证自官方 `TurnTriggerNodeView`：`chevron`/`openChevron` 两态，无其他图标）。「?」是 button 内的 span（button 嵌 button 非法），onClick stopPropagation 防误触展开。
+3. 展开体两拍排版（`.dsh-tdt-ed-advitem` 控件行 + 说明行，项间 `border-top: 1px dashed` 虚线）。
+4. 重置次数：SelectField → 官方 `Segmented` 长条四档，标题与控件同排。
+5. 配置预览：标题行删除，按钮直接叫「配置预览」（`editorPreviewOpen` 键删除）。
+6. **滚动位置 bug 修复**：全屏提示词编辑 / 配置预览与表单共用 `panelInner` 三态二选一渲染 ⇒ 面板打开 = 表单卸载、关闭重挂 scrollTop 归零。修法 = `bodyRef` + `savedScrollRef`：两个打开入口先存 `.dsh-tdt-ed-body` 的 scrollTop，关闭后 effect 恢复。
+
+冒烟 +6 = **190 项全过**，typecheck/build 绿。踩坑：esbuild 把源码单引号字符串规范成双引号（`t("editorPreview")`），smoke 字符串断言改正则 `/t\(["']editorPreview["']\)/`；`snapshotOf` 在 dist/scheduler.js 不在 dispatch.js，产物断言别读错文件。

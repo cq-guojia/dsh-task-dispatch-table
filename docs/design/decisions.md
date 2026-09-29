@@ -115,4 +115,25 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 - 降级：宿主 ctx 未暴露 `goals` 或创建失败**不阻塞派发**（本轮照常单轮执行），落 `goal-unavailable` / `goal-create-failed` 警告留痕——不做假成功。
 - 存量任务定义无 `goal` 字段 ⇒ 下次派发起同样按「多轮」执行（缺省开，与用户口径一致）。
 
-**Agent Team（无插件通道，本轮不加）**：grep `dsh-agent / dsh-agent-loop / dsh-session / dsh-tools / dsh@0.2.0-rc.2`——session 层**只有事件类型**（`team/member`、`team/message/*`、`team/task`），**没有可编程的创建/开启入口**（agent/agent-loop/tools 主包零 teammate/spawn 痕迹）。按「正常功能数据一律真实」原则不做假开关；待宿主开放通道后再加（本决策即待跟进记录）。
+**Agent Team（决策 48 当时的结论已推翻，见决策 49）**：当时只 grep 了 `dsh-agent / dsh-agent-loop / dsh-session / dsh-tools / dsh@0.2.0-rc.2`——这些包里确实只有事件类型；真实实现在 **`@deepseek-ai/dsh-experimental-agent-team` 全家桶**（当时没搜到，2026-09-29 决策 49 补查），见下条。
+
+## 决策 49：高级区第二轮 + 多 Agent 协作接线（2026-09-29）
+
+**背景**：用户看过真机后对高级区再提一轮返工，并点名「0.2.0 之后 DSH 有多 Agent 任务，开会话接口应该有这个参数」。
+
+**多 Agent 源码核实（推翻决策 48 的「无通道」）**：
+- `sessions.create`（`dsh-api-session-controller@0.2.0-rc.2` `types.d.ts:279`）**没有 team 参数**——`SessionCreateRequest = { workspaceId?, cwd?, sessionId?, agentPreset? }`。
+- 真实实现 = **experimental 全家桶**（npm search `dsh-team` 才现身，scope 搜索搜不到）：`dsh-experimental-agent-team`（`ctx.agentTeams` TeamService：roster/mailbox/task-board，README「把一个会话变成小团队」）、`dsh-experimental-tool-agent-team`（模型工具 `spawn_teammate`/`send_message`/`list_agents`/`wait_agent`/`interrupt_agent`/`team_task_*`，`lib/index.js:242-445`）、`-agent-team-profile`（cordis.patch.yml：禁用四个旧 subagent 工具、插入 agent-team + tool-agent-team + ui-agent-team，`maxMembers: 8` 等）、`-client-ui-agent-team`（花名册/任务板 UI）。
+- **启用方式 = 宿主 composition/profile 层**，不是会话参数：profile 启用后 `tool-agent-team` 的 `apply` 对**每个根会话 agent**（`tryMembership`：无 parentSession、无 subagent descriptor ⇒ 隐式 Team Lead，`roster.js:64-95`）自动安装全部团队工具 ⇒ **我们派发的会话天生就是队长**。
+- 插件侧做法（与决策 48 /goal 同款语义）：任务定义 `target.agentTeam` 缺省 false → 快照 `InstanceSnapshot.agentTeam` 固化 → 派发时探测 `ctx.agentTeams`：**缺 ⇒ 降级单 Agent**（`agent-team-unavailable` 告警，不阻塞）；**有 ⇒ 派发消息注入团队执行段**（如实列出官方工具名，引导按 spawn/task-board/send 分工；收束仍由主会话交回执）——绝不注入装不出来的假指令。
+
+**顺手修决策 48 落码缺陷**：`snapshotOf`（scheduler.ts）与 `parseInstanceSnapshot`（store.ts）此前**丢 `goal` 字段**——`goal: false` 的任务快照里没有该键 ⇒ 派发侧 `snapshot.goal !== false` 恒真，开关形同虚设。本轮补上解析与固化，并加 round-trip 冒烟回归。
+
+**高级区 UI 第二轮（用户逐条拍板）**：
+- 撤掉内层带边框的收折钮（黑框）——收起态就是**一条灰卡**：整行可点，「高级设置」+「?」说明气泡（「此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。」）+ 官方 `IconChevronDownOutlineRegular` 12px（展开 rotate 180°，照 `TurnTriggerNodeView` 官方展开图标；官方没有别的展开图标约定）。
+- 展开体 = 每项**控件一行 + 说明一行**两拍，项与项之间**虚线分隔**（用户：别全挤成文字）。
+- **重置次数**：弃下拉，改官方 `Segmented` 长条四档（一次/两次/三次/五次），标题与控件同一排（同星期块观感）。
+- **配置预览**：不设标题行，按钮直接叫「配置预览」，其余（只读面板、行号着色、仅关闭/复制）不变。
+- **多 Agent 协作**开关（默认关，见上）加入高级区，说明写明「需宿主启用 Agent Teams，未启用自动降级单 Agent」。
+- **滚动位置 bug**：全屏提示词编辑 / 配置预览共用拉栏容器二选一渲染，面板打开 = 表单整体换挂载 ⇒ 关闭重挂后 scrollTop 归零。修法 = 打开前存 `.dsh-tdt-ed-body` 的 scrollTop（`savedScrollRef`），回到表单后 effect 恢复。
+

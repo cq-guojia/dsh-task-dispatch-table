@@ -480,6 +480,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   const clientJs = readFileSync(clientPath, 'utf8')
   const dispatchJs = readFileSync(dispatchPath, 'utf8')
   const reconcileJs = readFileSync(reconcilePath, 'utf8')
+  const schedulerJs = readFileSync(join(import.meta.dirname, '..', 'dist', 'scheduler.js'), 'utf8')
   check('SessionViewModal 组件已打进 bundle', clientJs.includes('SessionViewModal'))
   check('openSessionView 数据闸门已打进 bundle', clientJs.includes('openSessionView'))
   check('loadOlder 探测调用已打进 bundle', clientJs.includes('loadOlder'))
@@ -656,14 +657,27 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('停用（锁住）任务可选且显式标「（已停用）」——前置任务下拉不做启停过滤',
     clientJs.includes('editorDepDisabledTag') && clientJs.includes('（已停用）')
       && /enabled\s*===\s*false/.test(clientJs))
-  check('高级区：重试四档 + /goal 开关（默认开）+ 配置预览只读面板已打进 bundle，成功状态清单 UI 已移除',
-    clientJs.includes('editorRetryFive') && clientJs.includes('editorGoal') && clientJs.includes('editorPreviewOpen')
+  check('高级区：重试四档 Segmented + /goal 开关（默认开）+ 配置预览按钮直呼「配置预览」已打进 bundle，成功状态清单 UI 已移除',
+    clientJs.includes('editorRetryFive') && clientJs.includes('editorGoal') && /t\(["']editorPreview["']\)/.test(clientJs)
       && clientJs.includes('lang: "json"') && !clientJs.includes('editorValidStatuses'))
+  check('高级区第二轮：灰条收折头（无内层黑框）+「?」说明 + 官方 chevron 展开图标 + 虚线分隔两拍排版',
+    clientJs.includes('dsh-tdt-ed-advhead') && clientJs.includes('editorAdvancedHelp')
+      && clientJs.includes('dsh-tdt-ed-advchevron-open') && clientJs.includes('dsh-tdt-ed-advitem')
+      && !clientJs.includes('dsh-tdt-ed-summary'))
+  check('全屏面板（提示词编辑 / 配置预览）滚动位置保持：打开前存 scrollTop、关闭重挂后恢复',
+    clientJs.includes('savedScrollRef') && clientJs.includes('savedScrollRef.current = bodyRef.current?.scrollTop ?? 0'))
+  check('多 Agent 协作开关（决策 49）：默认关 + 说明含「Agent Teams」与降级语义，配置预览 JSON 带 target.agentTeam',
+    clientJs.includes('editorAgentTeam') && clientJs.includes('agentTeam: false')
+      && clientJs.includes('Agent Teams') && clientJs.includes('agentTeam: draft.agentTeam'))
   check('派发侧 /goal 接线：快照 goal 开关（缺省开）+ ctx.goals 创建持久目标（失败不阻塞），快照构建读定义 target.goal',
     dispatchJs.includes('goal-unavailable') && dispatchJs.includes('goal-create-failed')
       && dispatchJs.includes('goal: snapshot.goal !== false') && dispatchJs.includes('.goals')
       && dispatchJs.includes('objective')
       && reconcileJs.includes('goal: task.target.goal !== false'))
+  check('多 Agent 协作派发（决策 49）：ctx.agentTeams 探测缺则降级（agent-team-unavailable）+ 团队指令段 + 快照固化 target.agentTeam',
+    dispatchJs.includes('agent-team-unavailable') && dispatchJs.includes('spawn_teammate')
+      && dispatchJs.includes('team_task_create') && schedulerJs.includes('agentTeam: task.target.agentTeam === true')
+      && dispatchJs.includes('teamMode'))
   check('前置任务「?」说明含判定方式与产出移交（上一次执行必须成功 / 跳过不算失败 / 移交产出文件）',
     clientJs.includes('添加前置任务') && clientJs.includes('上一次执行必须是成功')
       && clientJs.includes('都算前置任务成功') && clientJs.includes('移交给本次任务'))
@@ -791,6 +805,18 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     resolvedDeps: [{ task: 'D', semantics: 'latest_success', instanceId: upId, scheduledAt: '2026-09-26T12:30:00.000Z', sessionId: null, workspacePath: null, outputs: [] }],
   }, '/ws/down', '2026-09-26')
   check('上游未声明产出 ⇒ 消息如实标注（决策 43）', msgUndeclared.content[0].text.includes('未声明产出'))
+  // 决策 49：多 Agent 指令段只在 teamMode=true 时注入；缺省（老调用）消息不含团队段。
+  const msgTeam = buildMessage({ ...snapWithDeps, agentTeam: true }, '/ws/down', '2026-09-29', true)
+  check('多 Agent 指令段：teamMode=true 注入 spawn_teammate / team_task_create 指引；缺省调用不注入',
+    msgTeam.content[0].text.includes('多 Agent 协作') && msgTeam.content[0].text.includes('spawn_teammate')
+      && msgTeam.content[0].text.includes('team_task_create') && !msgText.includes('spawn_teammate'))
+  // 决策 48 缺陷修复回归：goal / agentTeam 必须经快照 round-trip 保留（此前解析层丢 goal）。
+  const snapRT = parseInstanceSnapshot(JSON.stringify({
+    title: 't', prompt: 'p', manual: null, workspacePath: '/ws', provider: '', model: '',
+    validStatuses: ['ok'], maxAttempts: 1, window: 'PT1H', goal: false, agentTeam: true,
+  }))
+  check('快照 round-trip：goal:false 与 agentTeam:true 不被解析丢弃（决策 48 缺陷修复）',
+    snapRT?.goal === false && snapRT?.agentTeam === true)
 
   depStore.close()
   rmSync(depDir, { recursive: true, force: true })

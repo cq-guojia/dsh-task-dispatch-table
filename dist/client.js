@@ -433,8 +433,9 @@ window.__ModuleLoader__.load({
 			editorDepEmpty: "尚未配置前置任务",
 			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
 			editorDepDisabledTag: "（已停用）",
-			editorAdvanced: "高级",
-			editorRetry: "重试次数",
+			editorAdvanced: "高级设置",
+			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
+			editorRetry: "重置次数",
 			editorRetryOnce: "一次",
 			editorRetryTwice: "两次",
 			editorRetryThrice: "三次",
@@ -442,8 +443,9 @@ window.__ModuleLoader__.load({
 			editorRetryHint: "本次执行失败后自动重试的上限；重试后仍失败，这一轮才算失败。次数多了也没有太大意义，一到两次就够。",
 			editorGoal: "以 dsh 内置的 /goal 开始执行任务",
 			editorGoalHint: "默认开启：执行时把任务目标作为持久目标交给 dsh 内置 /goal，会话会自动续跑多轮，直到 agent 标记目标完成，看板在该目标真正结束后才结算本次执行。关闭则只执行一轮普通对话。",
+			editorAgentTeam: "多 Agent 协作",
+			editorAgentTeamHint: "默认关闭。开启后 agent 以官方 Agent Teams（实验特性）方式执行：主会话作为队长，按需创建命名队友分工协作、共享任务板。需要宿主启用 Agent Teams 组件；未启用时自动按单 Agent 执行，并在执行记录日志留痕。",
 			editorPreview: "配置预览",
-			editorPreviewOpen: "打开配置预览",
 			editorPreviewHint: "从右侧展开一个与「编辑提示词」一样大的只读面板，展示当前配置生成的任务定义 JSON（带行号与语法着色），面板内可一键复制；仅供查看，不允许修改。",
 			editorUnavailable: "暂不可用（待接数据面）"
 		};
@@ -839,7 +841,8 @@ window.__ModuleLoader__.load({
 			editorDepEmpty: "No prerequisites configured yet",
 			editorDepEmptyHint: "Pick a workspace and a task below, then add",
 			editorDepDisabledTag: " (disabled)",
-			editorAdvanced: "Advanced",
+			editorAdvanced: "Advanced settings",
+			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
 			editorRetryOnce: "Once",
 			editorRetryTwice: "Twice",
@@ -848,8 +851,9 @@ window.__ModuleLoader__.load({
 			editorRetryHint: "Upper bound of automatic retries after a failed run; only when retries are exhausted does the round count as failed. More retries rarely help — one or two is enough.",
 			editorGoal: "Start the task with the dsh built-in /goal",
 			editorGoalHint: "On by default: the task objective is handed to the dsh built-in /goal as a persistent goal; the session keeps running more turns until the agent marks the goal complete, and the board settles the run only after the goal truly finishes. Off means a single ordinary round.",
+			editorAgentTeam: "Multi-agent collaboration",
+			editorAgentTeamHint: "Off by default. When on, the agent runs via the official Agent Teams (experimental): the lead session spawns named teammates that share a task board. Requires the host to enable Agent Teams; otherwise it falls back to a single agent and leaves a log entry.",
 			editorPreview: "Config preview",
-			editorPreviewOpen: "Open config preview",
 			editorPreviewHint: "Opens a read-only panel as large as the prompt editor on the right, showing the task-definition JSON generated from the current form (line numbers + syntax colors), with one-click copy inside; view only, editing is not allowed.",
 			editorUnavailable: "Unavailable (data plane pending)"
 		};
@@ -5719,7 +5723,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 上传投放区（P1 接真上传；此处只呈现形态 + 文案）。 */
 .dsh-tdt-ed-drop{display:flex;align-items:center;justify-content:center;min-height:96px;box-sizing:border-box;padding:12px;border:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.5));border-radius:var(--dsw-radius-md,8px);color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));font-size:13px;}
-.dsh-tdt-ed-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
+/* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
+.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--dsw-radius-md,8px);background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
+/* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
+.dsh-tdt-ed-advchevron{flex:none;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));transition:transform .15s ease;}
+.dsh-tdt-ed-advchevron-open{transform:rotate(180deg);}
+/* 展开体：每项「控件行 + 说明行」两拍，项与项之间虚线分隔（用户 2026-09-29：别全挤成文字）。 */
+.dsh-tdt-ed-advbody{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+.dsh-tdt-ed-advitem{padding-top:12px;}
+.dsh-tdt-ed-advitem:first-child{padding-top:0;}
+.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.5));}
 /* 单行文本输入：逐条照官方 Input.module.css（.wrap + .input 合并成一枚裸 input），
    含官方的 focus 描边与占位色 —— 这两条必须走 CSS，内联样式压不过伪类。 */
 .dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:22px;outline:none;transition:border-color .15s ease;}
@@ -5750,7 +5763,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 /* 小问号：挂 Tooltip 的说明入口（不占正文版面）。 */
 .dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
 .dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
    左「工作区」定宽（约 5~6 个字，112px）居左；右「添加」定宽（88px）居右；
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
@@ -37370,6 +37382,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				maxAttempts: "1",
 				validStatuses: "ok",
 				goalMode: true,
+				agentTeam: false,
 				deps: []
 			};
 		}
@@ -37425,7 +37438,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} else if (draft.scheduleKind === "interval") schedule.start = `${draft.date}T${draft.time}`;
 			const target = {
 				workspace: draft.workspace,
-				goal: draft.goalMode
+				goal: draft.goalMode,
+				agentTeam: draft.agentTeam
 			};
 			if (draft.model.trim() !== "") {
 				const slash = draft.model.indexOf("/");
@@ -37451,13 +37465,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (draft.attachments.length > 0) definition.attachments = draft.attachments;
 			return JSON.stringify(definition, null, 2);
 		}
-		/** 单行输入的度量全在 `dsh-tdt-ed-input` 类里（逐条照官方 Input.module.css，含 focus 描边与占位色）。 */
-		const sectionLabelStyle = {
-			fontSize: "12px",
-			fontWeight: 600,
-			color: C$2.text,
-			marginBottom: "6px"
-		};
+		C$2.text;
 		/**
 		* 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
 		* 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
@@ -38156,6 +38164,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
 			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);
+			const bodyRef = (0, react.useRef)(null);
+			const savedScrollRef = (0, react.useRef)(0);
+			const openEditorPanel = (0, react.useCallback)(() => {
+				savedScrollRef.current = bodyRef.current?.scrollTop ?? 0;
+				setEditorOpen(true);
+			}, []);
+			const openPreviewPanel = (0, react.useCallback)(() => {
+				savedScrollRef.current = bodyRef.current?.scrollTop ?? 0;
+				setPreviewOpen(true);
+			}, []);
+			(0, react.useEffect)(() => {
+				if (!editorOpen && !previewOpen && bodyRef.current !== null) bodyRef.current.scrollTop = savedScrollRef.current;
+			}, [editorOpen, previewOpen]);
 			(0, react.useEffect)(() => {
 				ensureTaskEditorStyle();
 			}, []);
@@ -38291,9 +38312,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				size: "sm",
 				title: t("editorOpenEditor"),
 				"aria-label": t("editorOpenEditor"),
-				onClick: () => {
-					setEditorOpen(true);
-				}
+				onClick: openEditorPanel
 			}, t("editorOpenEditor"))), (0, react.createElement)("textarea", {
 				id: "dsh-tdt-ed-source-inline-panel",
 				className: "dsh-tdt-ed-prompt",
@@ -38792,38 +38811,42 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			];
 			const advancedBlock = (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("button", {
-				className: "dsh-tdt-ed-summary",
+				className: "dsh-tdt-ed-advhead",
 				type: "button",
 				"aria-expanded": advancedOpen,
 				onClick: () => {
 					setAdvancedOpen(!advancedOpen);
 				}
-			}, (0, react.createElement)("span", null, t("editorAdvanced")), (0, react.createElement)("span", { style: { color: C$2.textDim } }, advancedOpen ? "▴" : "▾")), advancedOpen ? (0, react.createElement)("div", { style: {
-				display: "flex",
-				flexDirection: "column",
-				gap: "18px",
-				marginTop: "14px"
-			} }, (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
-				...sectionLabelStyle,
-				marginBottom: "8px"
-			} }, t("editorRetry")), (0, react.createElement)(SelectField, {
+			}, (0, react.createElement)("span", {
+				className: "dsh-tdt-ed-label",
+				style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "4px"
+				}
+			}, t("editorAdvanced"), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("editorAdvancedHelp"),
+				side: "bottom",
+				maxWidth: 300
+			}, (0, react.createElement)("span", {
+				className: "dsh-tdt-ed-help",
+				role: "img",
+				"aria-label": t("editorAdvancedHelp"),
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
+				size: 12,
+				className: advancedOpen ? "dsh-tdt-ed-advchevron-open" : "dsh-tdt-ed-advchevron"
+			})), advancedOpen ? (0, react.createElement)("div", { className: "dsh-tdt-ed-advbody" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-label" }, t("editorRetry")), (0, react.createElement)(Segmented, {
+				id: "dsh-tdt-ed-retry",
 				value: draft.maxAttempts,
 				options: retryOptions,
 				onChange: (value) => {
 					patch({ maxAttempts: value });
 				},
-				placeholder: t("editorRetry"),
-				emptyLabel: t("editorRetry"),
-				ariaLabel: t("editorRetry"),
-				width: "160px"
-			}), (0, react.createElement)("p", {
-				className: "dsh-tdt-ed-hint",
-				style: { marginTop: "8px" }
-			}, t("editorRetryHint"))), (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "10px"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				label: t("editorRetry")
+			})), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorRetryHint"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: draft.goalMode,
 				onChange: (next) => {
 					patch({ goalMode: next });
@@ -38832,28 +38855,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}), (0, react.createElement)("span", { style: {
 				fontSize: "13px",
 				fontWeight: 600
-			} }, t("editorGoal"))), (0, react.createElement)("p", {
-				className: "dsh-tdt-ed-hint",
-				style: {
-					marginTop: "8px",
-					lineHeight: "1.7"
-				}
-			}, t("editorGoalHint"))), (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
-				...sectionLabelStyle,
-				marginBottom: "8px"
-			} }, t("editorPreview")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			} }, t("editorGoal"))), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorGoalHint"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				checked: draft.agentTeam,
+				onChange: (next) => {
+					patch({ agentTeam: next });
+				},
+				label: t("editorAgentTeam")
+			}), (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				fontWeight: 600
+			} }, t("editorAgentTeam"))), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAgentTeamHint"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
-				onClick: () => {
-					setPreviewOpen(true);
-				}
-			}, t("editorPreviewOpen")), (0, react.createElement)("p", {
-				className: "dsh-tdt-ed-hint",
-				style: {
-					marginTop: "8px",
-					lineHeight: "1.7"
-				}
-			}, t("editorPreviewHint")))) : null));
+				onClick: openPreviewPanel
+			}, t("editorPreview"))), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorPreviewHint")))) : null));
 			const body = tab === "records" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorRecordsPending")) : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)(PrefixedInput, {
 				prefix: t("editorTitle"),
 				value: draft.title,
@@ -38923,7 +38938,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setTab("records");
 				}
-			}, t("editorTabRecords"))) : null, (0, react.createElement)("div", { className: "dsh-tdt-ed-body" }, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, pendingHint ? (0, react.createElement)("span", {
+			}, t("editorTabRecords"))) : null, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-body",
+				ref: bodyRef
+			}, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, pendingHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
 				style: { margin: "0 8px 0 0" }
 			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {

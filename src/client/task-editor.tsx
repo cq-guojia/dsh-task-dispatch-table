@@ -21,6 +21,7 @@ import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
   Button,
   FileTypeIcon,
+  IconChevronDownOutlineRegular,
   IconCloseOutlineRegular,
   IconFolderOpenOutlineRegular,
   IconPlusOutlineRegular,
@@ -177,6 +178,8 @@ export interface TaskEditorDraft {
   validStatuses: string
   /** 以 dsh 内置 /goal 开始执行（多轮续跑）；默认开（用户 2026-09-29），派发侧缺省一致。 */
   goalMode: boolean
+  /** 多 Agent 协作（决策 49，用户 2026-09-29）：默认关；派发侧缺宿主 Agent Teams 时降级单轮。 */
+  agentTeam: boolean
   deps: EditorDependency[]
 }
 
@@ -222,6 +225,7 @@ export function emptyTaskDraft(): TaskEditorDraft {
     maxAttempts: '1',
     validStatuses: 'ok',
     goalMode: true,
+    agentTeam: false,
     deps: [],
   }
 }
@@ -295,7 +299,7 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   }
   // scheduleKind === 'interval' 的 cron 映射（每隔 N 分钟/小时）归 P2，此处不产出 schedule.cron。
 
-  const target: Record<string, unknown> = { workspace: draft.workspace, goal: draft.goalMode }
+  const target: Record<string, unknown> = { workspace: draft.workspace, goal: draft.goalMode, agentTeam: draft.agentTeam }
   if (draft.model.trim() !== '') {
     // 模型下拉的 value 形如 `provider/model`，写回时拆成成对的 provider + model（决策 22）。
     const slash = draft.model.indexOf('/')
@@ -887,6 +891,25 @@ export function TaskEditorDrawer(props: {
   const initialDraftRef = useRef(draft)
   const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current)
 
+  // 全屏面板（提示词编辑 / 配置预览）滚动位置保持（用户 2026-09-29 bug）：面板打开 = 表单整体
+  // 换挂载（同一容器二选一渲染），关闭重挂后 scrollTop 归零——打开前把滚动位置存下来，
+  // 回到表单后（重挂提交完成）在 effect 里原样恢复。
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+  const savedScrollRef = useRef(0)
+  const openEditorPanel = useCallback((): void => {
+    savedScrollRef.current = bodyRef.current?.scrollTop ?? 0
+    setEditorOpen(true)
+  }, [])
+  const openPreviewPanel = useCallback((): void => {
+    savedScrollRef.current = bodyRef.current?.scrollTop ?? 0
+    setPreviewOpen(true)
+  }, [])
+  useEffect(() => {
+    if (!editorOpen && !previewOpen && bodyRef.current !== null) {
+      bodyRef.current.scrollTop = savedScrollRef.current
+    }
+  }, [editorOpen, previewOpen])
+
   useEffect(() => { ensureTaskEditorStyle() }, [])
 
   const patch = useCallback((part: Partial<TaskEditorDraft>): void => {
@@ -993,7 +1016,7 @@ export function TaskEditorDrawer(props: {
   const promptCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorPrompt')),
-      h(Button, { variant: 'ghost', size: 'sm', title: t('editorOpenEditor'), 'aria-label': t('editorOpenEditor'), onClick: () => { setEditorOpen(true) } }, t('editorOpenEditor')),
+      h(Button, { variant: 'ghost', size: 'sm', title: t('editorOpenEditor'), 'aria-label': t('editorOpenEditor'), onClick: openEditorPanel }, t('editorOpenEditor')),
     ),
     h('textarea', {
       id: 'dsh-tdt-ed-source-inline-panel',
@@ -1348,9 +1371,11 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  // ④ 高级（用户 2026-09-29 定稿）：默认收起；展开 = 与上面四卡同款灰框（不是黑色），内容放进框里；
-  //    每项「控件一行 + 说明一段」排版宽松——高级功能不是人人认识，说明要写清楚。
-  //    成功状态清单砍掉（无用户意义；contract.validStatuses 字段保留 round-trip）；JSON 逃生口升级为「配置预览」只读面板。
+  // ④ 高级设置（用户 2026-09-29 第二轮返工）：收起 = 整卡一条灰、**无内层黑框**——「高级设置」
+  //    +「?」说明气泡 + 官方 chevron-down（12px；展开 rotate 180°，照官方 TurnTriggerNodeView
+  //    的展开图标）。展开 = 每项「控件一行 + 说明一行」两拍，项与项之间虚线分隔。
+  //    重置次数改官方 Segmented 长条（同星期块观感）且标题与控件同一排；配置预览不设标题，
+  //    按钮直接叫「配置预览」；新增「多 Agent 协作」开关（决策 49，默认关，派发侧缺宿主组件降级）。
   const retryOptions: EditorOption[] = [
     { value: '1', label: t('editorRetryOnce') },
     { value: '2', label: t('editorRetryTwice') },
@@ -1360,33 +1385,47 @@ export function TaskEditorDrawer(props: {
   const advancedBlock = h('div', { className: 'dsh-tdt-ed-section' },
     h('div', { className: 'dsh-tdt-ed-card' },
       h('button', {
-        className: 'dsh-tdt-ed-summary',
+        className: 'dsh-tdt-ed-advhead',
         type: 'button',
         'aria-expanded': advancedOpen,
         onClick: () => { setAdvancedOpen(!advancedOpen) },
       },
-        h('span', null, t('editorAdvanced')),
-        h('span', { style: { color: C.textDim } }, advancedOpen ? '▴' : '▾'),
+        h('span', { className: 'dsh-tdt-ed-label', style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } },
+          t('editorAdvanced'),
+          // 「?」说明气泡：span 塞进按钮内（button 嵌 button 非法），点击拦截不触发展开。
+          h(Tooltip, { label: t('editorAdvancedHelp'), side: 'bottom', maxWidth: 300 },
+            h('span', {
+              className: 'dsh-tdt-ed-help',
+              role: 'img',
+              'aria-label': t('editorAdvancedHelp'),
+              onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation() },
+            }, h(IconQuestionOutlineRegular, { size: 14 })),
+          ),
+        ),
+        h(IconChevronDownOutlineRegular, {
+          size: 12,
+          className: advancedOpen ? 'dsh-tdt-ed-advchevron-open' : 'dsh-tdt-ed-advchevron',
+        }),
       ),
       advancedOpen
-        ? h('div', { style: { display: 'flex', flexDirection: 'column', gap: '18px', marginTop: '14px' } },
-            // ① 重试次数：四档选择（一次/两次/三次/五次），不让用户手输——次数多了没意义（用户 2026-09-29）。
-            h('div', null,
-              h('div', { style: { ...sectionLabelStyle, marginBottom: '8px' } }, t('editorRetry')),
-              h(SelectField, {
-                value: draft.maxAttempts,
-                options: retryOptions,
-                onChange: (value: string) => { patch({ maxAttempts: value }) },
-                placeholder: t('editorRetry'),
-                emptyLabel: t('editorRetry'),
-                ariaLabel: t('editorRetry'),
-                width: '160px',
-              }),
-              h('p', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px' } }, t('editorRetryHint')),
+        ? h('div', { className: 'dsh-tdt-ed-advbody' },
+            // ① 重置次数：四档 Segmented 长条（一次/两次/三次/五次），标题与控件同一排。
+            h('div', { className: 'dsh-tdt-ed-advitem' },
+              h('div', { className: 'dsh-tdt-ed-row' },
+                h('span', { className: 'dsh-tdt-ed-label' }, t('editorRetry')),
+                h(Segmented, {
+                  id: 'dsh-tdt-ed-retry',
+                  value: draft.maxAttempts,
+                  options: retryOptions,
+                  onChange: (value: string) => { patch({ maxAttempts: value }) },
+                  label: t('editorRetry'),
+                }),
+              ),
+              h('p', { className: 'dsh-tdt-ed-hint' }, t('editorRetryHint')),
             ),
             // ② 以 dsh 内置 /goal 开始执行（多轮续跑），默认开；派发侧缺省一致（决策 48）。
-            h('div', null,
-              h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+            h('div', { className: 'dsh-tdt-ed-advitem' },
+              h('div', { className: 'dsh-tdt-ed-row' },
                 h(Switch, {
                   checked: draft.goalMode,
                   onChange: (next: boolean) => { patch({ goalMode: next }) },
@@ -1394,13 +1433,28 @@ export function TaskEditorDrawer(props: {
                 }),
                 h('span', { style: { fontSize: '13px', fontWeight: 600 } }, t('editorGoal')),
               ),
-              h('p', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px', lineHeight: '1.7' } }, t('editorGoalHint')),
+              h('p', { className: 'dsh-tdt-ed-hint' }, t('editorGoalHint')),
             ),
-            // ③ 配置预览：右侧展开只读面板（同「编辑提示词」大小），带行号与着色，可复制不可改。
-            h('div', null,
-              h('div', { style: { ...sectionLabelStyle, marginBottom: '8px' } }, t('editorPreview')),
-              h(Button, { variant: 'outline', size: 'sm', onClick: () => { setPreviewOpen(true) } }, t('editorPreviewOpen')),
-              h('p', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px', lineHeight: '1.7' } }, t('editorPreviewHint')),
+            // ③ 多 Agent 协作（决策 49，用户 2026-09-29），默认关：宿主启用 Agent Teams 时
+            //    派发消息注入团队执行指令；未启用自动降级单轮（不阻塞、日志留痕）。
+            h('div', { className: 'dsh-tdt-ed-advitem' },
+              h('div', { className: 'dsh-tdt-ed-row' },
+                h(Switch, {
+                  checked: draft.agentTeam,
+                  onChange: (next: boolean) => { patch({ agentTeam: next }) },
+                  label: t('editorAgentTeam'),
+                }),
+                h('span', { style: { fontSize: '13px', fontWeight: 600 } }, t('editorAgentTeam')),
+              ),
+              h('p', { className: 'dsh-tdt-ed-hint' }, t('editorAgentTeamHint')),
+            ),
+            // ④ 配置预览：右侧展开只读面板（同「编辑提示词」大小），带行号与着色，可复制不可改。
+            //    不设标题，按钮直接叫「配置预览」（用户 2026-09-29）。
+            h('div', { className: 'dsh-tdt-ed-advitem' },
+              h('div', { className: 'dsh-tdt-ed-row' },
+                h(Button, { variant: 'outline', size: 'sm', onClick: openPreviewPanel }, t('editorPreview')),
+              ),
+              h('p', { className: 'dsh-tdt-ed-hint' }, t('editorPreviewHint')),
             ),
           )
         : null,
@@ -1495,7 +1549,7 @@ export function TaskEditorDrawer(props: {
             }, t('editorTabRecords')),
           )
         : null,
-      h('div', { className: 'dsh-tdt-ed-body' }, body),
+      h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef }, body),
       h('div', { className: 'dsh-tdt-ed-footer' },
         pendingHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorSavePending')) : null,
         h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),

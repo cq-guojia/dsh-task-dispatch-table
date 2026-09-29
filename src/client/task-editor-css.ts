@@ -53,7 +53,16 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 上传投放区（P1 接真上传；此处只呈现形态 + 文案）。 */
 .dsh-tdt-ed-drop{display:flex;align-items:center;justify-content:center;min-height:96px;box-sizing:border-box;padding:12px;border:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.5));border-radius:var(--dsw-radius-md,8px);color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));font-size:13px;}
-.dsh-tdt-ed-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
+/* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
+.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--dsw-radius-md,8px);background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
+/* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
+.dsh-tdt-ed-advchevron{flex:none;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));transition:transform .15s ease;}
+.dsh-tdt-ed-advchevron-open{transform:rotate(180deg);}
+/* 展开体：每项「控件行 + 说明行」两拍，项与项之间虚线分隔（用户 2026-09-29：别全挤成文字）。 */
+.dsh-tdt-ed-advbody{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+.dsh-tdt-ed-advitem{padding-top:12px;}
+.dsh-tdt-ed-advitem:first-child{padding-top:0;}
+.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.5));}
 /* 单行文本输入：逐条照官方 Input.module.css（.wrap + .input 合并成一枚裸 input），
    含官方的 focus 描边与占位色 —— 这两条必须走 CSS，内联样式压不过伪类。 */
 .dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:22px;outline:none;transition:border-color .15s ease;}
@@ -84,7 +93,6 @@ export const TASK_EDITOR_CSS = `
 /* 小问号：挂 Tooltip 的说明入口（不占正文版面）。 */
 .dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
 .dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
    左「工作区」定宽（约 5~6 个字，112px）居左；右「添加」定宽（88px）居右；
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。

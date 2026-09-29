@@ -208,16 +208,26 @@ function dependencyLines(snapshot) {
     return lines;
 }
 /**
- * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段）：
- * 短指令 prompt + 手册路径 + 上游依赖段 + 回执调用说明。
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 + 决策 49 团队段）：
+ * 短指令 prompt + 手册路径 + 上游依赖段 + 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
  * prompt / manual / validStatuses / resolvedDeps 全部来自派发快照，与任务设置无关。
  */
-export function buildMessage(snapshot, workspacePath, logicalDate) {
+export function buildMessage(snapshot, workspacePath, logicalDate, teamMode = false) {
     const lines = [snapshot.prompt, '', `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`];
     if (snapshot.manual !== null && snapshot.manual.trim() !== '') {
         lines.push(`任务手册：先读工作区内 ${snapshot.manual}，再按手册执行。`);
     }
     lines.push(...dependencyLines(snapshot));
+    if (teamMode) {
+        // 决策 49 多 Agent 协作段：官方 experimental profile（tool-agent-team）已给根会话 agent
+        // 装好 spawn_teammate / send_message / list_agents / wait_agent / interrupt_agent /
+        // team_task_* 工具（lib/index.js:242-445 源码核实），这里只负责把「按团队方式执行」讲清楚；
+        // 工具名如实列出，不做任何模拟通道。
+        lines.push('执行方式：本次启用多 Agent 协作。你作为团队队长（lead），请按需把可并行的子工作拆给队友：'
+            + '用 spawn_teammate 创建命名队友（写清职责），用 team_task_create 在共享任务板上登记分工与依赖，'
+            + '用 send_message 向队友下发具体指引，并用 wait_agent 等待其完成；'
+            + '队友与你在同一工作区工作。所有工作收束后由你统一汇总，并按下方要求交回执行结果。');
+    }
     lines.push(receiptInstruction(snapshot.validStatuses));
     return userNotice(lines.join('\n'), `[TASK] ${snapshot.title} · ${logicalDate}`);
 }
@@ -305,6 +315,14 @@ export async function dispatchTask(input) {
         void handle.dispose().catch(() => { });
         throw new DispatchPreconditionError('workspace-attach-failed', `会话 ${sessionId} 已建立但无法归入工作区 "${workspace.title}"（${workspace.path}）: ${String(error)}`);
     }
+    // 多 Agent 协作探测（决策 49）：快照开启且宿主暴露 ctx.agentTeams（experimental Agent Teams
+    // profile）才注入团队执行指令；profile 未启用 ⇒ 降级单 Agent + 告警留痕，不阻塞派发
+    // （与决策 48 goal-unavailable 同款语义；正常功能一律真实——绝不注入装不出来的假指令）。
+    const teamAvailable = ctx.agentTeams !== undefined;
+    const teamMode = snapshot.agentTeam === true && teamAvailable;
+    if (snapshot.agentTeam === true && !teamAvailable) {
+        logger.warn(`[dispatch] agent-team-unavailable 实例 ${instanceId}：宿主未启用 Agent Teams（ctx.agentTeams 缺失），按单 Agent 执行`);
+    }
     // route/source/preset 落事件：只记本次实测用了什么，不回写任务定义或配置。
     store.appendEvent(instanceId, 'dispatch', {
         sessionId,
@@ -314,6 +332,8 @@ export async function dispatchTask(input) {
         modelSource: route.source,
         ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
         goal: snapshot.goal !== false,
+        agentTeam: snapshot.agentTeam === true,
+        teamMode,
     });
     // /goal 多轮续跑（决策 48，用户 2026-09-29「默认都是多轮会话」）：目标开启时把任务目标交给
     // dsh 内置 /goal（ctx.goals，@deepseek-ai/dsh-goal 0.2.0-rc.2：CreateGoalRequest { objective }；
@@ -334,6 +354,6 @@ export async function dispatchTask(input) {
         }
     }
     // 会话列表治理：规范名在 reconciler.onCreated 改（决策 42 格式），跑完归档在 succeeded 对账后。
-    handle.agent.send(buildMessage(snapshot, workspace.path, logicalDate), 'next-turn', true);
+    handle.agent.send(buildMessage(snapshot, workspace.path, logicalDate, teamMode), 'next-turn', true);
     return { sessionId, handle };
 }

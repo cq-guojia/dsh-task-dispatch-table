@@ -123,8 +123,8 @@ export type LocaleKey =
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask' | 'editorDepPickWsFirst'
   | 'editorDepTaskPh' | 'editorDepDisabledTag' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
-  | 'editorAdvanced' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
-  | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorPreview' | 'editorPreviewOpen' | 'editorPreviewHint'
+  | 'editorAdvanced' | 'editorAdvancedHelp' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
+  | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorAgentTeam' | 'editorAgentTeamHint' | 'editorPreview' | 'editorPreviewHint'
   | 'editorVersions' | 'editorUnavailable'
   | 'editorModeEdit' | 'editorModePreview'
 
@@ -539,8 +539,9 @@ export const zh: Record<LocaleKey, string> = {
   editorDepEmpty: '尚未配置前置任务',
   editorDepEmptyHint: '在下方选择工作区与任务后点「添加」',
   editorDepDisabledTag: '（已停用）',
-  editorAdvanced: '高级',
-  editorRetry: '重试次数',
+  editorAdvanced: '高级设置',
+  editorAdvancedHelp: '此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。',
+  editorRetry: '重置次数',
   editorRetryOnce: '一次',
   editorRetryTwice: '两次',
   editorRetryThrice: '三次',
@@ -548,8 +549,9 @@ export const zh: Record<LocaleKey, string> = {
   editorRetryHint: '本次执行失败后自动重试的上限；重试后仍失败，这一轮才算失败。次数多了也没有太大意义，一到两次就够。',
   editorGoal: '以 dsh 内置的 /goal 开始执行任务',
   editorGoalHint: '默认开启：执行时把任务目标作为持久目标交给 dsh 内置 /goal，会话会自动续跑多轮，直到 agent 标记目标完成，看板在该目标真正结束后才结算本次执行。关闭则只执行一轮普通对话。',
+  editorAgentTeam: '多 Agent 协作',
+  editorAgentTeamHint: '默认关闭。开启后 agent 以官方 Agent Teams（实验特性）方式执行：主会话作为队长，按需创建命名队友分工协作、共享任务板。需要宿主启用 Agent Teams 组件；未启用时自动按单 Agent 执行，并在执行记录日志留痕。',
   editorPreview: '配置预览',
-  editorPreviewOpen: '打开配置预览',
   editorPreviewHint: '从右侧展开一个与「编辑提示词」一样大的只读面板，展示当前配置生成的任务定义 JSON（带行号与语法着色），面板内可一键复制；仅供查看，不允许修改。',
   editorUnavailable: '暂不可用（待接数据面）',
 }
@@ -951,7 +953,8 @@ export const en: Record<LocaleKey, string> = {
   editorDepEmpty: 'No prerequisites configured yet',
   editorDepEmptyHint: 'Pick a workspace and a task below, then add',
   editorDepDisabledTag: ' (disabled)',
-  editorAdvanced: 'Advanced',
+  editorAdvanced: 'Advanced settings',
+  editorAdvancedHelp: 'This is the advanced configuration area. Read each item\u2019s description before changing it; default values are recommended for routine tasks.',
   editorRetry: 'Retry attempts',
   editorRetryOnce: 'Once',
   editorRetryTwice: 'Twice',
@@ -960,8 +963,9 @@ export const en: Record<LocaleKey, string> = {
   editorRetryHint: 'Upper bound of automatic retries after a failed run; only when retries are exhausted does the round count as failed. More retries rarely help — one or two is enough.',
   editorGoal: 'Start the task with the dsh built-in /goal',
   editorGoalHint: 'On by default: the task objective is handed to the dsh built-in /goal as a persistent goal; the session keeps running more turns until the agent marks the goal complete, and the board settles the run only after the goal truly finishes. Off means a single ordinary round.',
+  editorAgentTeam: 'Multi-agent collaboration',
+  editorAgentTeamHint: 'Off by default. When on, the agent runs via the official Agent Teams (experimental): the lead session spawns named teammates that share a task board. Requires the host to enable Agent Teams; otherwise it falls back to a single agent and leaves a log entry.',
   editorPreview: 'Config preview',
-  editorPreviewOpen: 'Open config preview',
   editorPreviewHint: 'Opens a read-only panel as large as the prompt editor on the right, showing the task-definition JSON generated from the current form (line numbers + syntax colors), with one-click copy inside; view only, editing is not allowed.',
   editorUnavailable: 'Unavailable (data plane pending)',
 }

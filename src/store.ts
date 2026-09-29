@@ -55,6 +55,8 @@ export interface ResolvedDependency {
 export interface InstanceSnapshot {
   /** /goal 多轮续跑（决策 48）：undefined 视为 true（用户拍板「默认都是多轮会话」）。 */
   goal?: boolean
+  /** 多 Agent 协作（决策 49）：undefined 视为 false；派发时探测宿主 ctx.agentTeams，缺则降级单轮。 */
+  agentTeam?: boolean
   /** 会话显示名（决策 42）：title 回退 code，再回退短 id。 */
   title: string
   prompt: string
@@ -118,6 +120,9 @@ export function parseInstanceSnapshot(raw: string | null): InstanceSnapshot | un
       validStatuses: s.validStatuses.filter((x): x is string => typeof x === 'string'),
       maxAttempts: typeof s.maxAttempts === 'number' && Number.isInteger(s.maxAttempts) && s.maxAttempts >= 1 ? s.maxAttempts : 1,
       window: typeof s.window === 'string' ? s.window : 'PT0S',
+      // goal / agentTeam（决策 48 / 49）：JSON 里没有 ⇒ undefined = 各自的缺省（goal 开 / team 关）。
+      ...(typeof s.goal === 'boolean' ? { goal: s.goal } : {}),
+      ...(typeof s.agentTeam === 'boolean' ? { agentTeam: s.agentTeam } : {}),
       ...(resolvedDeps === undefined ? {} : { resolvedDeps }),
     }
   } catch {

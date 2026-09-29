@@ -59,6 +59,9 @@ export function parseInstanceSnapshot(raw) {
             validStatuses: s.validStatuses.filter((x) => typeof x === 'string'),
             maxAttempts: typeof s.maxAttempts === 'number' && Number.isInteger(s.maxAttempts) && s.maxAttempts >= 1 ? s.maxAttempts : 1,
             window: typeof s.window === 'string' ? s.window : 'PT0S',
+            // goal / agentTeam（决策 48 / 49）：JSON 里没有 ⇒ undefined = 各自的缺省（goal 开 / team 关）。
+            ...(typeof s.goal === 'boolean' ? { goal: s.goal } : {}),
+            ...(typeof s.agentTeam === 'boolean' ? { agentTeam: s.agentTeam } : {}),
             ...(resolvedDeps === undefined ? {} : { resolvedDeps }),
         };
     }

@@ -29,6 +29,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         manual: z.ZodOptional<z.ZodString>;
         prompt: z.ZodString;
         goal: z.ZodOptional<z.ZodBoolean>;
+        agentTeam: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>;
     contract: z.ZodDefault<z.ZodObject<{
         validStatuses: z.ZodDefault<z.ZodArray<z.ZodString>>;
