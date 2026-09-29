@@ -5530,10 +5530,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
-/* 关闭确认（官方 Modal 是 body 传送门、.root 固定 z 1000）：抽屉遮罩是 z 1040，
-   不抬层级确认框会被压在抽屉底下。官方样式若在咱之后注入，同级特异性会把它压回 1000，
-   故用 !important 强制盖过（官方 .root 对 z-index 未用 !important）。 */
-.dsh-tdt-ed-confirm{z-index:1100 !important;}
+/* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
 		let injected = false;
 		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
@@ -37421,6 +37418,62 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			},
 			"&.cm-focused": { outline: "none" }
 		}, { dark: true });
+		/** 关闭「新建任务」拉栏前的确认。
+		*  故意不用官方 Modal：其 className 只落到卡片 .dialog，无法抬升整层 .root(z1000)，
+		*  会被拉栏遮罩(z1040)压住、点不了。这里渲染在拉栏遮罩内（overlay 子层），
+		*  绝对定位盖住整个抽屉，天然在表单/编辑器之上，也随抽屉一起浮在宿主之上。 */
+		function ConfirmDiscard(props) {
+			return (0, react.createElement)("div", {
+				role: "alertdialog",
+				"aria-modal": true,
+				"aria-label": props.t("editorDiscardTitle"),
+				style: {
+					position: "absolute",
+					inset: 0,
+					zIndex: 10,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					padding: "24px",
+					background: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))"
+				},
+				onClick: props.onStay
+			}, (0, react.createElement)("div", {
+				style: {
+					width: "min(380px, 100%)",
+					boxSizing: "border-box",
+					background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
+					borderRadius: "var(--dsw-radius-panel, 10px)",
+					boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
+					padding: "22px 24px",
+					color: C$2.text
+				},
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("div", { style: {
+				fontSize: "16px",
+				fontWeight: 500,
+				marginBottom: "8px"
+			} }, props.t("editorDiscardTitle")), (0, react.createElement)("div", { style: {
+				fontSize: "14px",
+				lineHeight: "22px",
+				color: C$2.textDim,
+				marginBottom: "20px"
+			} }, props.t("editorDiscardDesc")), (0, react.createElement)("div", { style: {
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: "8px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: props.onStay
+			}, props.t("editorDiscardStay")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "primary",
+				size: "sm",
+				onClick: props.onLeave
+			}, props.t("editorDiscardLeave")))));
+		}
 		function PromptEditorModal(props) {
 			const { t, value, versions, onChange, onSaveVersion, onRestore, onClose } = props;
 			const [mode, setMode] = (0, react.useState)("edit");
@@ -37448,24 +37501,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				alignItems: "center",
 				gap: "8px"
-			} }, (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "4px"
-			} }, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-tab",
-				"aria-pressed": mode === "edit",
-				onClick: () => {
-					setMode("edit");
-				}
-			}, t("editorModeEdit")), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-tab",
-				"aria-pressed": mode === "preview",
-				onClick: () => {
-					setMode("preview");
-				}
-			}, t("editorModePreview"))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			} }, (0, react.createElement)(Segmented, {
+				id: "dsh-tdt-ed-prompt-mode",
+				value: mode,
+				options: [{
+					value: "edit",
+					label: t("editorModeEdit")
+				}, {
+					value: "preview",
+					label: t("editorModePreview")
+				}],
+				onChange: (next) => {
+					setMode(next);
+				},
+				label: t("editorPromptEditorTitle"),
+				className: "dsh-tdt-ed-seg"
+			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
@@ -37601,7 +37652,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			(0, react.useEffect)(() => {
 				const onKey = (event) => {
-					if (confirmDiscard) return;
+					if (confirmDiscard) {
+						setConfirmDiscard(false);
+						return;
+					}
 					if (event.key === "Escape" && !event.defaultPrevented) requestClose();
 				};
 				window.addEventListener("keydown", onKey);
@@ -38161,34 +38215,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onPointerDown: (event) => {
 					startResize({ clientX: event.clientX });
 				}
-			}), panelInner, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
-				open: confirmDiscard,
-				onClose: () => {
+			}), panelInner), confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
+				t,
+				onStay: () => {
 					setConfirmDiscard(false);
 				},
-				className: "dsh-tdt-ed-confirm",
-				title: t("editorDiscardTitle"),
-				description: t("editorDiscardDesc"),
-				closeLabel: t("editorClose"),
-				footer: (0, react.createElement)("div", { style: {
-					display: "flex",
-					justifyContent: "flex-end",
-					gap: "8px"
-				} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-					variant: "outline",
-					size: "sm",
-					onClick: () => {
-						setConfirmDiscard(false);
-					}
-				}, t("editorDiscardStay")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-					variant: "primary",
-					size: "sm",
-					onClick: () => {
-						setConfirmDiscard(false);
-						onClose();
-					}
-				}, t("editorDiscardLeave")))
-			})));
+				onLeave: () => {
+					setConfirmDiscard(false);
+					onClose();
+				}
+			}) : null);
 		}
 		//#endregion
 		//#region src/client/index.ts

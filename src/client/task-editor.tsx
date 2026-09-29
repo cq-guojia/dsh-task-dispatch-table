@@ -24,7 +24,6 @@ import {
   IconFolderOpenOutlineRegular,
   IconPlusOutlineRegular,
   IconQuestionOutlineRegular,
-  Modal,
   MarkdownText,
   Switch,
   Tooltip,
@@ -572,6 +571,36 @@ const promptEditorTheme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
 }, { dark: true })
 
+/** 关闭「新建任务」拉栏前的确认。
+ *  故意不用官方 Modal：其 className 只落到卡片 .dialog，无法抬升整层 .root(z1000)，
+ *  会被拉栏遮罩(z1040)压住、点不了。这里渲染在拉栏遮罩内（overlay 子层），
+ *  绝对定位盖住整个抽屉，天然在表单/编辑器之上，也随抽屉一起浮在宿主之上。 */
+function ConfirmDiscard(props: {
+  t: T
+  onStay: () => void
+  onLeave: () => void
+}): ReactNode {
+  return h('div', {
+    role: 'alertdialog',
+    'aria-modal': true,
+    'aria-label': props.t('editorDiscardTitle'),
+    style: { position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' },
+    onClick: props.onStay,
+  },
+    h('div', {
+      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', padding: '22px 24px', color: C.text },
+      onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
+    },
+      h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px' } }, props.t('editorDiscardTitle')),
+      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: C.textDim, marginBottom: '20px' } }, props.t('editorDiscardDesc')),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
+        h(Button, { variant: 'outline', size: 'sm', onClick: props.onStay }, props.t('editorDiscardStay')),
+        h(Button, { variant: 'primary', size: 'sm', onClick: props.onLeave }, props.t('editorDiscardLeave')),
+      ),
+    ),
+  )
+}
+
 function PromptEditorModal(props: {
   t: T
   value: string
@@ -593,10 +622,17 @@ function PromptEditorModal(props: {
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
       h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPromptEditorTitle')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-        h('div', { style: { display: 'flex', gap: '4px' } },
-          h('button', { type: 'button', className: 'dsh-tdt-ed-tab', 'aria-pressed': mode === 'edit', onClick: () => { setMode('edit') } }, t('editorModeEdit')),
-          h('button', { type: 'button', className: 'dsh-tdt-ed-tab', 'aria-pressed': mode === 'preview', onClick: () => { setMode('preview') } }, t('editorModePreview')),
-        ),
+        h(Segmented, {
+          id: 'dsh-tdt-ed-prompt-mode',
+          value: mode,
+          options: [
+            { value: 'edit', label: t('editorModeEdit') },
+            { value: 'preview', label: t('editorModePreview') },
+          ],
+          onChange: (next: string) => { setMode(next as 'edit' | 'preview') },
+          label: t('editorPromptEditorTitle'),
+          className: 'dsh-tdt-ed-seg',
+        }),
         h(Button, { variant: 'outline', size: 'sm', onClick: () => { setShowVersions(v => !v) } }, t('editorVersions')),
         h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
       ),
@@ -686,10 +722,10 @@ export function TaskEditorDrawer(props: {
   const tt = useMemo(() => interpolateTranslate(t), [t])
 
   // Esc 关闭；浮层（下拉 / 日历 / 时分）自己先处理并 preventDefault ⇒ 此处不再关弹窗。
-  // 确认弹窗开着时 Esc 归官方 Modal（关确认框），这里必须让路，否则确认框永远关不掉。
+  // 确认弹窗开着时 Esc 关掉确认框（留在编辑）；否则 Esc 走统一关闭入口。
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (confirmDiscard) return
+      if (confirmDiscard) { setConfirmDiscard(false); return }
       if (event.key === 'Escape' && !event.defaultPrevented) requestClose()
     }
     window.addEventListener('keydown', onKey)
@@ -1159,23 +1195,15 @@ export function TaskEditorDrawer(props: {
         onPointerDown: (event: { clientX: number }) => { startResize({ clientX: event.clientX }) },
       }),
       panelInner,
-      // 关闭确认（官方 Modal，body 传送门）：改过才出现；确认 ⇒ 真正关弹窗，继续编辑 ⇒ 留在原处。
-      h(Modal, {
-        open: confirmDiscard,
-        onClose: () => { setConfirmDiscard(false) },
-        className: 'dsh-tdt-ed-confirm',
-        title: t('editorDiscardTitle'),
-        description: t('editorDiscardDesc'),
-        closeLabel: t('editorClose'),
-        footer: h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
-          h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmDiscard(false) } }, t('editorDiscardStay')),
-          h(Button, {
-            variant: 'primary',
-            size: 'sm',
-            onClick: () => { setConfirmDiscard(false); onClose() },
-          }, t('editorDiscardLeave')),
-        ),
-      }),
     ),
+    // 关闭确认（拉栏内联层，盖在表单/编辑器之上、且随抽屉一起在宿主之上）：改过才出现；
+    // 点遮罩/离开 ⇒ 真正关抽屉，继续编辑 ⇒ 留在原处。
+    confirmDiscard
+      ? h(ConfirmDiscard, {
+        t,
+        onStay: () => { setConfirmDiscard(false) },
+        onLeave: () => { setConfirmDiscard(false); onClose() },
+      })
+      : null,
   )
 }
