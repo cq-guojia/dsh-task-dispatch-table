@@ -313,7 +313,7 @@ window.__ModuleLoader__.load({
 			editorFreqQuarterly: "每季度",
 			editorFreqYearly: "每年",
 			editorOnceHint: "到点执行一次，之后不再重复",
-			editorMonthEvery: "每月",
+			editorMonthEvery: "全部月份",
 			editorMonthOdd: "单数月",
 			editorMonthEven: "双数月",
 			editorQuarterMonthOption: "第 {m} 个月",
@@ -666,7 +666,7 @@ window.__ModuleLoader__.load({
 			editorFreqQuarterly: "Quarterly",
 			editorFreqYearly: "Yearly",
 			editorOnceHint: "Runs once when due, never repeats",
-			editorMonthEvery: "Every month",
+			editorMonthEvery: "All months",
 			editorMonthOdd: "Odd months",
 			editorMonthEven: "Even months",
 			editorQuarterMonthOption: "Month {m}",
@@ -5884,20 +5884,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				now: t("editorNow"),
 				confirm: t("editorConfirm")
 			}), [t]);
-			const promptSourceOptions = [
-				{
-					value: "inline",
-					label: t("editorSourceInline")
-				},
-				{
-					value: "manual",
-					label: t("editorSourceManual")
-				},
-				{
-					value: "upload",
-					label: t("editorSourceUpload")
-				}
-			];
 			const freqOptions = [
 				{
 					value: "daily",
@@ -5951,16 +5937,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			* 「单次」只是「周期档的频率 = 单次」，所以周期档里把频率改成别的，顶部自动回到「周期」。
 			*/
 			const scheduleTab = draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic";
-			const promptCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt")), (0, react.createElement)(Segmented, {
-				id: "dsh-tdt-ed-source",
-				value: draft.promptSource,
-				options: promptSourceOptions,
-				onChange: (value) => {
-					patch({ promptSource: value });
-				},
-				label: t("editorSource"),
-				className: "dsh-tdt-ed-seg"
-			})), draft.promptSource === "inline" ? (0, react.createElement)("textarea", {
+			const promptCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt"))), (0, react.createElement)("textarea", {
 				id: "dsh-tdt-ed-source-inline-panel",
 				className: "dsh-tdt-ed-prompt",
 				value: draft.prompt,
@@ -5969,33 +5946,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (event) => {
 					patch({ prompt: event.target.value });
 				}
-			}) : draft.promptSource === "manual" ? (0, react.createElement)("div", {
-				id: "dsh-tdt-ed-source-manual-panel",
-				role: "tabpanel",
-				"aria-label": t("editorSourceManual")
-			}, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("input", {
-				value: draft.manualPath,
-				placeholder: t("editorManualPathPh"),
-				spellCheck: false,
-				onChange: (event) => {
-					patch({ manualPath: event.target.value });
-				},
-				"aria-label": t("editorManualPath"),
-				className: "dsh-tdt-ed-input dsh-tdt-ed-mono",
-				style: {
-					flex: "1 1 auto",
-					minWidth: 0
-				}
-			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				disabled: true,
-				title: t("editorUnavailable")
-			}, t("editorPickFile"))), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorManualHint"))) : (0, react.createElement)("div", {
-				id: "dsh-tdt-ed-source-upload-panel",
-				role: "tabpanel",
-				"aria-label": t("editorSourceUpload")
-			}, (0, react.createElement)("div", { className: "dsh-tdt-ed-drop" }, t("editorUploadHint")), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorUploadWarn"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-card-foot" }, (0, react.createElement)(SelectField, {
+			}), (0, react.createElement)("div", { className: "dsh-tdt-ed-card-foot" }, (0, react.createElement)(SelectField, {
 				value: draft.workspace,
 				options: workspaces,
 				onChange: (value) => {

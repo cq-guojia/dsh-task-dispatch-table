@@ -561,12 +561,7 @@ export function TaskEditorDrawer(props: {
     confirm: t('editorConfirm'),
   }), [t])
 
-  const promptSourceOptions: { value: PromptSource; label: string }[] = [
-    { value: 'inline', label: t('editorSourceInline') },
-    { value: 'manual', label: t('editorSourceManual') },
-    { value: 'upload', label: t('editorSourceUpload') },
-  ]
-
+  // 提示词一律手输（2026-09-29 决定）：来源三档选择器已废除，「选文件 / 上传」挪到下方独立的「附加文件」框。
   // 「单次」已经提上去当独立的档了 ⇒ 周期下拉里只有重复的那几个（用户 2026-09-29）。
   // 「双周」语义不明（哪几周、从哪周开始）且 cron 无隔周位 ⇒ 不做；隔月走「单数月 / 双数月」。
   const freqOptions: EditorOption[] = [
@@ -595,54 +590,20 @@ export function TaskEditorDrawer(props: {
     ? 'interval'
     : (draft.periodFreq === 'once' ? 'once' : 'periodic')
 
-  // ① 提示词卡（主视觉）：右上角三档来源；左下角工作区、右下角模型。
+  // ① 提示词卡（主视觉）：提示词一律手输（版本管理由插件负责，P 待做）；
+  // 选文件 / 上传不再属于提示词，挪到下方独立的「附加文件」框（决策：提示词只手输）。
   const promptCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorPrompt')),
-      h(Segmented, {
-        id: 'dsh-tdt-ed-source',
-        value: draft.promptSource,
-        options: promptSourceOptions,
-        onChange: value => { patch({ promptSource: value as PromptSource }) },
-        label: t('editorSource'),
-        className: 'dsh-tdt-ed-seg',
-      }),
     ),
-    draft.promptSource === 'inline'
-      // 面板 id 与官方 `SegmentedControl` 的 `aria-controls`（`<id>-<value>-panel`）对上。
-      ? h('textarea', {
-        id: 'dsh-tdt-ed-source-inline-panel',
-        className: 'dsh-tdt-ed-prompt',
-        value: draft.prompt,
-        placeholder: t('editorPromptPh'),
-        spellCheck: false,
-        onChange: (event: { target: { value: string } }) => { patch({ prompt: event.target.value }) },
-      })
-      : draft.promptSource === 'manual'
-        ? h('div', { id: 'dsh-tdt-ed-source-manual-panel', role: 'tabpanel', 'aria-label': t('editorSourceManual') },
-            h('div', { className: 'dsh-tdt-ed-row' },
-              h('input', {
-                value: draft.manualPath,
-                placeholder: t('editorManualPathPh'),
-                spellCheck: false,
-                onChange: (event: { target: { value: string } }) => { patch({ manualPath: event.target.value }) },
-                'aria-label': t('editorManualPath'),
-                className: 'dsh-tdt-ed-input dsh-tdt-ed-mono',
-                style: { flex: '1 1 auto', minWidth: 0 },
-              }),
-              h(Button, {
-                variant: 'outline',
-                size: 'sm',
-                disabled: true,
-                title: t('editorUnavailable'),
-              }, t('editorPickFile')),
-            ),
-            h('p', { className: 'dsh-tdt-ed-hint' }, t('editorManualHint')),
-          )
-        : h('div', { id: 'dsh-tdt-ed-source-upload-panel', role: 'tabpanel', 'aria-label': t('editorSourceUpload') },
-            h('div', { className: 'dsh-tdt-ed-drop' }, t('editorUploadHint')),
-            h('p', { className: 'dsh-tdt-ed-hint' }, t('editorUploadWarn')),
-          ),
+    h('textarea', {
+      id: 'dsh-tdt-ed-source-inline-panel',
+      className: 'dsh-tdt-ed-prompt',
+      value: draft.prompt,
+      placeholder: t('editorPromptPh'),
+      spellCheck: false,
+      onChange: (event: { target: { value: string } }) => { patch({ prompt: event.target.value }) },
+    }),
     // 底部一行：左 = 工作区（真实工作区列表，P1 接），右 = 模型（不填 = 跟随宿主默认）。
     h('div', { className: 'dsh-tdt-ed-card-foot' },
       h(SelectField, {
