@@ -1445,9 +1445,9 @@ export function TaskEditorDrawer(props: {
               // 右缘 = 按钮左缘（贴住按钮、不留空隙）；下缘 = 按钮下缘（齐平）。
               right: Math.max(12, window.innerWidth - rect.left),
               bottom: Math.max(12, window.innerHeight - rect.bottom),
-              // 宽 = 用户 2026-09-29：原 840 减半；高 = **按按钮上方实际可用空间算**
+              // 宽 = 用户 2026-09-29：定 480（此前 840 → 420 → 480 微调）；高 = **按按钮上方实际可用空间算**
               // （视口顶 − 12px 余量，封顶 660）——面板向上长，绝不顶出浏览器顶部。
-              width: 'min(420px, calc(100vw - 24px))',
+              width: 'min(480px, calc(100vw - 24px))',
               height: Math.min(660, Math.max(240, rect.top - 12)),
               background: 'var(--dsw-alias-bg-layer-2, #2a2e33)',
               border: `1px solid ${C.borderL2}`,

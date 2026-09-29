@@ -38746,7 +38746,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						overflow: "hidden",
 						right: Math.max(12, window.innerWidth - rect.left),
 						bottom: Math.max(12, window.innerHeight - rect.bottom),
-						width: "min(420px, calc(100vw - 24px))",
+						width: "min(480px, calc(100vw - 24px))",
 						height: Math.min(660, Math.max(240, rect.top - 12)),
 						background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
 						border: `1px solid ${C$2.borderL2}`,
