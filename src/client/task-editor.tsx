@@ -1478,7 +1478,11 @@ export function TaskEditorDrawer(props: {
                   addAttachment({ id: makeId(), name, kind: 'link', ref: p, workspace: pickerWs })
                   setPickerOpen(false)
                 },
-                style: { flex: '1 1 auto', minHeight: 0 },
+                // 复用 FileBrowser 本体，宽高/显示经由 style prop 控制：.dsh-tdt-sv-preview 类里
+                // 带着旧分栏时代的固定宽（min(520px,48%)+flex:0 0 auto）⇒ 浮层里只占一半宽、
+                // 右边全是浮层底色（真机 2026-09-29）。内联样式压过类默认：撑满浮层、去掉
+                // 自带的 border-left（浮层已有外框）。
+                style: { flex: '1 1 auto', width: '100%', minWidth: 0, minHeight: 0, borderLeft: 'none' },
               })
               : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: C.textDim, fontSize: '13px' } }, t('editorPickerNoSession'))
           })(),

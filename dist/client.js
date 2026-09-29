@@ -38784,7 +38784,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					},
 					style: {
 						flex: "1 1 auto",
-						minHeight: 0
+						width: "100%",
+						minWidth: 0,
+						minHeight: 0,
+						borderLeft: "none"
 					}
 				}) : (0, react.createElement)("div", { style: {
 					flex: "1 1 auto",
