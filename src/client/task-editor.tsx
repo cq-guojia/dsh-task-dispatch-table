@@ -1065,6 +1065,10 @@ export function TaskEditorDrawer(props: {
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWorkspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
+        // 超长工作区名不再把整行撑爆：**封顶 200px**，超出即省略号，hover 在图标右侧
+        // 自己的盒子里跑马灯（用户 2026-09-29；跑马灯不得压到文件夹图标下）。
+        maxWidth: 200,
+        marquee: true,
       }),
       // 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
       h(SelectField, {
@@ -1406,7 +1410,8 @@ export function TaskEditorDrawer(props: {
         title: depTaskId === '' ? t('editorDepTaskPh') : t('editorDepAdd'),
         onClick: addDep,
         // 三段式右段：定宽、居右（flex 布局里排最后即贴右），文字图标居中。
-        style: { flex: '0 0 88px', height: '32px', justifyContent: 'center' },
+        // 88 → 72px（用户 2026-09-29：窄一点，把宽度让给中间的任务名）。
+        style: { flex: '0 0 72px', height: '32px', justifyContent: 'center' },
       }, t('editorDepAdd')),
     ),
   )

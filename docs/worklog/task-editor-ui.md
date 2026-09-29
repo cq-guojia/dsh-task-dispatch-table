@@ -479,3 +479,11 @@ typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡�
 冒烟 +6 = **196 项全过**，typecheck/build 绿。踩坑（同上一轮）：esbuild 把单引号规范成双引号（`permission: "default"`），产物断言继续用正则。
 
 **UI 暂时封档（用户 2026-09-29 拍板）**：任务表单弹窗（决策 44–50）到此封卷。下一轮新会话专攻「新增任务 / 编辑任务」功能，提纲见 [`design/creation-edit-design.md`](../design/creation-edit-design.md)。
+
+### 二十二·收尾三处微调（2026-09-29，封档后补）
+
+1. **工作区下拉封顶 200px + 跑马灯**：`SelectField` 新增 `maxWidth` / `marquee` 两个 prop；超长工作区名封顶后省略号，hover 走既有 `MarqueeText` 双层结构（外层裁剪、内层滚动）——它是图标之后的独立 flex 项，**滚动只在自己盒子里，不压行首文件夹图标**。
+2. **权限默认项文案**：「会话默认」没人看得懂 ⇒ 改「**权限：默认**」（`editorPermDefault`，选项与占位同文案；说明气泡里仍保留「会话默认」的语义解释）。
+3. **前置任务「添加」按钮 88px → 72px**：把宽度让给中间的任务名（CSS 注释同步）。
+
+冒烟 +2 = **198 项全过**，typecheck/build 绿。

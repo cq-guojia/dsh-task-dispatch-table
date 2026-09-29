@@ -328,7 +328,7 @@ window.__ModuleLoader__.load({
 			editorFollowHost: "默认模型",
 			editorPermission: "权限",
 			editorPermissionHint: "本次执行授予 agent 的操作范围。默认 = 会话默认（沿用宿主新建会话时的权限设置）；宿主暂未提供按任务下发权限的接口，所选档位以派发消息中的约束指令执行。",
-			editorPermDefault: "会话默认",
+			editorPermDefault: "权限：默认",
 			editorPermReadOnly: "仅可查看",
 			editorPermWorkspace: "工作区内修改",
 			editorPermFull: "完全权限",
@@ -742,7 +742,7 @@ window.__ModuleLoader__.load({
 			editorFollowHost: "Default model",
 			editorPermission: "Permissions",
 			editorPermissionHint: "Scope of actions granted to the agent for this run. Default = session default (inherited from the host’s new-session permission setting). The host has no per-task permission API yet, so the chosen level is enforced through the dispatch instruction.",
-			editorPermDefault: "Session default",
+			editorPermDefault: "Permissions: default",
 			editorPermReadOnly: "View only",
 			editorPermWorkspace: "Edit in workspace",
 			editorPermFull: "Full access",
@@ -4039,11 +4039,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						lineHeight: "18px"
 					} : null,
 					width: props.width ?? (props.block === true ? "100%" : void 0),
+					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
 					background: hover && usable ? C$2.hover : C$2.layer1,
 					cursor: usable ? "pointer" : "not-allowed",
 					opacity: usable ? 1 : .6
 				}
-			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), (0, react.createElement)("span", { style: {
+			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react.createElement)(MarqueeText, {
+				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
+				title: props.title ?? props.ariaLabel,
+				style: {
+					...fieldLabelStyle,
+					color: current === void 0 ? C$2.dimmed : C$2.text
+				}
+			}) : (0, react.createElement)("span", { style: {
 				...fieldLabelStyle,
 				color: current === void 0 ? C$2.dimmed : C$2.text
 			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
@@ -5776,7 +5784,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
 .dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
-   左「工作区」定宽（约 5~6 个字，112px）居左；右「添加」定宽（88px）居右；
+   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
    官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
@@ -38363,7 +38371,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorWorkspacePh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 })
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
+				maxWidth: 200,
+				marquee: true
 			}), (0, react.createElement)(SelectField, {
 				value: draft.permission,
 				options: permissionOptions,
@@ -38830,7 +38840,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				title: depTaskId === "" ? t("editorDepTaskPh") : t("editorDepAdd"),
 				onClick: addDep,
 				style: {
-					flex: "0 0 88px",
+					flex: "0 0 72px",
 					height: "32px",
 					justifyContent: "center"
 				}

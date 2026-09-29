@@ -671,9 +671,13 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && clientJs.includes('任务执行失败后，自动重试的次数。') && clientJs.includes('查看本任务的配置原文件'))
   check('模型下拉默认文案为「默认模型」（不再出现「跟随宿主默认」）',
     clientJs.includes('默认模型') && !clientJs.includes('跟随宿主默认'))
-  check('Agent 权限选择器（决策 50）：工作区右侧四档（会话默认 / 仅可查看 / 工作区内修改 / 完全权限），默认「会话默认」',
-    clientJs.includes('editorPermFull') && clientJs.includes('会话默认') && clientJs.includes('仅可查看')
+  check('Agent 权限选择器（决策 50）：工作区右侧四档（权限：默认 / 仅可查看 / 工作区内修改 / 完全权限），默认「权限：默认」',
+    clientJs.includes('editorPermFull') && clientJs.includes('权限：默认')
+      && clientJs.includes('仅可查看')
       && clientJs.includes('工作区内修改') && clientJs.includes('完全权限') && /permission: ["']default["']/.test(clientJs))
+  check('工作区下拉封顶 + 跑马灯（不压文件夹图标）：SelectField 支持 maxWidth/marquee，工作区传 200px',
+    clientJs.includes('marquee: true') && /maxWidth:\s*200/.test(clientJs) && clientJs.includes('dsh-tdt-mq-in'))
+  check('前置任务「添加」按钮收窄到 72px（把宽度让给任务名）', /flex: ["']0 0 72px["']/.test(clientJs))
   check('多 Agent 协作开关（决策 49）：默认关 + 说明含「Agent Teams」与降级语义，配置预览 JSON 带 target.agentTeam',
     clientJs.includes('editorAgentTeam') && clientJs.includes('agentTeam: false')
       && clientJs.includes('Agent Teams') && clientJs.includes('agentTeam: draft.agentTeam'))

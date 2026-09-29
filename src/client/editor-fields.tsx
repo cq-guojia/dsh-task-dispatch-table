@@ -117,6 +117,16 @@ export function SelectField(props: {
   /** 锚点宽度（数字 = px；不传则随内容）。 */
   width?: number | string
   /**
+   * 锚点**最大**宽度（数字 = px；不传则不限）。超长工作区名会把整行撑爆 ⇒ 由调用方定上限，
+   * 配合 `marquee` 用：达到上限即省略号，hover 再跑马灯展示全名（用户 2026-09-29）。
+   */
+  maxWidth?: number | string
+  /**
+   * 文本超长时是否走 `MarqueeText`（默认省略号 + hover 来回滚动）。
+   * 滚动只发生在**图标右侧自己的裁剪盒里**（双层结构），不会压到行首图标下面。
+   */
+  marquee?: boolean
+  /**
    * 整行下拉（参考图里的「频率」就是这种）：锚点撑满一行。
    * 官方 `Menu` 把锚点包在自己的 `display:inline-flex` span 里，只给按钮 `width:100%` 会被这个
    * span 的 shrink-to-fit 吃掉 ⇒ 得连包装 span 一起撑（见 `BlockWrap`）。
@@ -154,14 +164,23 @@ export function SelectField(props: {
       ...fieldButtonStyle,
       ...(compact ? { height: '28px', gap: '4px', fontSize: '12px', lineHeight: '18px' } : null),
       width: props.width ?? (props.block === true ? '100%' : undefined),
+      ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
       background: hover && usable ? C.hover : C.layer1,
       cursor: usable ? 'pointer' : 'not-allowed',
       opacity: usable ? 1 : 0.6,
     },
   },
     props.icon === undefined ? null : h(IconSeat, null, props.icon),
-    h('span', { style: { ...fieldLabelStyle, color: current === undefined ? C.dimmed : C.text } },
-      current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
+    // 跑马灯模式：`MarqueeText` 自带「外层裁剪 + 内层滚动」的双层结构，且它是图标之后的
+    // 独立 flex 项 ⇒ 滚动只发生在自己的盒子里，绝不会跑到行首文件夹图标下面。
+    props.marquee === true
+      ? h(MarqueeText, {
+        text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
+        title: props.title ?? props.ariaLabel,
+        style: { ...fieldLabelStyle, color: current === undefined ? C.dimmed : C.text },
+      })
+      : h('span', { style: { ...fieldLabelStyle, color: current === undefined ? C.dimmed : C.text } },
+        current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
     h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: iconSize })),
   )
 
