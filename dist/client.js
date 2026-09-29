@@ -5352,16 +5352,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				alignItems: "center",
 				flexWrap: "wrap",
-				gap: "6px"
+				gap: "8px"
 			} }, props.label === void 0 ? null : (0, react.createElement)("span", { style: {
 				flex: "none",
-				fontSize: "12px",
-				color: C$1.textDim
+				fontSize: "13px",
+				color: C$1.text
 			} }, props.label), (0, react.createElement)("div", { style: {
 				display: "inline-flex",
 				alignItems: "center",
-				gap: "2px",
-				padding: "3px",
+				gap: "4px",
+				padding: "8px",
 				borderRadius: C$1.radiusMd,
 				background: C$1.hover
 			} }, props.labels.shorts.map((short, index) => {
@@ -5387,17 +5387,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					},
 					style: {
 						flex: "none",
-						minWidth: "26px",
-						height: "26px",
+						minWidth: "30px",
+						height: "28px",
 						padding: "0 4px",
 						display: "inline-flex",
 						alignItems: "center",
 						justifyContent: "center",
 						border: "0",
 						borderRadius: C$1.radiusSm,
-						background: on ? C$1.layer1 : "transparent",
+						background: on ? C$1.business : "transparent",
 						boxShadow: on ? "var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))" : "none",
-						color: on ? C$1.text : C$1.textDim,
+						color: on ? C$1.brandFg : C$1.textDim,
 						font: "inherit",
 						fontSize: "13px",
 						lineHeight: "20px",
