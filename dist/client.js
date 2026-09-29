@@ -5531,9 +5531,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-deprow{display:flex;align-items:center;gap:8px;margin-top:8px;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认（官方 Modal 是 body 传送门、.root 固定 z 1000）：抽屉遮罩是 z 1040，
-   不抬层级确认框会被压在抽屉底下。只对本实例生效（className 落在 Modal root 上，
-   本样式表后注入 ⇒ 同特异性下覆盖官方 .root 的 z 1000）。 */
-.dsh-tdt-ed-confirm{z-index:1060;}
+   不抬层级确认框会被压在抽屉底下。官方样式若在咱之后注入，同级特异性会把它压回 1000，
+   故用 !important 强制盖过（官方 .root 对 z-index 未用 !important）。 */
+.dsh-tdt-ed-confirm{z-index:1100 !important;}
 `;
 		let injected = false;
 		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
@@ -37426,32 +37426,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [mode, setMode] = (0, react.useState)("edit");
 			const [showVersions, setShowVersions] = (0, react.useState)(false);
 			const [note, setNote] = (0, react.useState)("");
-			return (0, react.createElement)("div", {
-				style: {
-					position: "fixed",
-					inset: 0,
-					zIndex: 1e3,
-					background: "rgba(0,0,0,0.45)",
-					display: "flex"
-				},
-				onClick: onClose
-			}, (0, react.createElement)("div", {
-				style: {
-					background: "var(--dsw-alias-bg-base, #22252a)",
-					color: C$2.text,
-					width: "min(1100px, 96vw)",
-					maxHeight: "96vh",
-					margin: "2vh auto",
-					display: "flex",
-					flexDirection: "column",
-					borderRadius: "10px",
-					boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
-					overflow: "hidden"
-				},
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react.createElement)("div", { style: {
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				flex: "1 1 auto",
+				minHeight: 0,
+				background: "var(--dsw-alias-bg-base, #22252a)",
+				color: C$2.text,
+				overflow: "hidden"
+			} }, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "space-between",
@@ -37585,7 +37568,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					onRestore(v.content);
 				}
-			}, t("editorRestore")))))) : null)));
+			}, t("editorRestore")))))) : null));
 		}
 		/**
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
@@ -38088,24 +38071,33 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					patch({ code: value });
 				}
 			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, attachmentsCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), depsBlock, advancedBlock);
-			return (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-overlay",
-				onPointerDown: (event) => {
-					if (event.target === event.currentTarget) requestClose();
+			const panelInner = editorOpen ? (0, react.createElement)(PromptEditorModal, {
+				t,
+				value: draft.prompt,
+				versions: draft.versions,
+				onChange: (value) => {
+					patch({ prompt: value });
+				},
+				onSaveVersion: (note) => {
+					patch({ versions: [...draft.versions, {
+						id: crypto.randomUUID(),
+						ts: (/* @__PURE__ */ new Date()).toISOString(),
+						content: draft.prompt,
+						note
+					}] });
+				},
+				onRestore: (content) => {
+					patch({ prompt: content });
+				},
+				onClose: () => {
+					setEditorOpen(false);
 				}
-			}, (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-panel",
-				style: { width: `${width}px` },
-				role: "dialog",
-				"aria-modal": true,
-				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
-			}, (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-resizer",
-				title: t("previewResize"),
-				onPointerDown: (event) => {
-					startResize({ clientX: event.clientX });
-				}
-			}), (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit")), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable" }, (0, react.createElement)("span", null, t("editorEnabled")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			}) : (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				flex: "1 1 auto",
+				minHeight: 0
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit")), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable" }, (0, react.createElement)("span", null, t("editorEnabled")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: draft.enabled,
 				onChange: (next) => {
 					patch({ enabled: next });
@@ -38151,28 +38143,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (onSave === void 0) setPendingHint(true);
 					else onSave(draft);
 				}
-			}, t("editorSave"))), editorOpen ? (0, react.createElement)(PromptEditorModal, {
-				t,
-				value: draft.prompt,
-				versions: draft.versions,
-				onChange: (value) => {
-					patch({ prompt: value });
-				},
-				onSaveVersion: (note) => {
-					patch({ versions: [...draft.versions, {
-						id: crypto.randomUUID(),
-						ts: (/* @__PURE__ */ new Date()).toISOString(),
-						content: draft.prompt,
-						note
-					}] });
-				},
-				onRestore: (content) => {
-					patch({ prompt: content });
-				},
-				onClose: () => {
-					setEditorOpen(false);
+			}, t("editorSave"))));
+			return (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-overlay",
+				onPointerDown: (event) => {
+					if (event.target === event.currentTarget) requestClose();
 				}
-			}) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+			}, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-panel",
+				style: { width: `${width}px` },
+				role: "dialog",
+				"aria-modal": true,
+				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
+			}, (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-resizer",
+				title: t("previewResize"),
+				onPointerDown: (event) => {
+					startResize({ clientX: event.clientX });
+				}
+			}), panelInner, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: confirmDiscard,
 				onClose: () => {
 					setConfirmDiscard(false);

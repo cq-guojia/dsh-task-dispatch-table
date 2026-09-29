@@ -585,12 +585,10 @@ function PromptEditorModal(props: {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [showVersions, setShowVersions] = useState(false)
   const [note, setNote] = useState('')
+  // 注意：本组件不再自己做「居中弹窗 + 遮罩」。它被渲染进「新建任务」拉栏内部，
+  // 填满整个拉栏（同样的边、同样的宽度、随左缘拖拽一起变宽）；关闭即把后面的表单露出来。
   return h('div', {
-    style: { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex' },
-    onClick: onClose,
-  }, h('div', {
-    style: { background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, width: 'min(1100px, 96vw)', maxHeight: '96vh', margin: '2vh auto', display: 'flex', flexDirection: 'column', borderRadius: '10px', boxShadow: '0 12px 40px rgba(0,0,0,0.35)', overflow: 'hidden' },
-    onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
+    style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, overflow: 'hidden' },
   },
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
       h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPromptEditorTitle')),
@@ -637,7 +635,7 @@ function PromptEditorModal(props: {
           )
         : null,
     ),
-  ))
+  )
 }
 
 /**
@@ -1077,18 +1075,21 @@ export function TaskEditorDrawer(props: {
         advancedBlock,
       )
 
-  return h('div', {
-    className: 'dsh-tdt-ed-overlay',
-    onPointerDown: (event: { target: unknown; currentTarget: unknown }) => {
-      if (event.target === event.currentTarget) requestClose()
-    },
-  },
-    h('div', { className: 'dsh-tdt-ed-panel', style: { width: `${width}px` }, role: 'dialog', 'aria-modal': true, 'aria-label': mode === 'create' ? t('editorNew') : t('editorEdit') },
-      h('div', {
-        className: 'dsh-tdt-ed-resizer',
-        title: t('previewResize'),
-        onPointerDown: (event: { clientX: number }) => { startResize({ clientX: event.clientX }) },
-      }),
+  // 全屏编辑 = 把整个「新建任务」拉栏的内容换成编辑器（同样的边、同样的宽度、随左缘拖拽一起变宽）；
+  // 关闭编辑器即把后面的表单露出来。故编辑器与表单在拉栏内二选一，而不是再做一个居中弹窗。
+  const panelInner = editorOpen
+    ? h(PromptEditorModal, {
+      t,
+      value: draft.prompt,
+      versions: draft.versions,
+      onChange: (value: string) => { patch({ prompt: value }) },
+      onSaveVersion: (note: string) => {
+        patch({ versions: [...draft.versions, { id: crypto.randomUUID(), ts: new Date().toISOString(), content: draft.prompt, note }] })
+      },
+      onRestore: (content: string) => { patch({ prompt: content }) },
+      onClose: () => { setEditorOpen(false) },
+    })
+    : h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } },
       // 头部：标题 + 启用开关（关闭钮左边）+ 关闭。启用不再单占一行。
       h('div', { className: 'dsh-tdt-ed-header' },
         h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
@@ -1143,19 +1144,21 @@ export function TaskEditorDrawer(props: {
           },
         }, t('editorSave')),
       ),
-      editorOpen
-        ? h(PromptEditorModal, {
-          t,
-          value: draft.prompt,
-          versions: draft.versions,
-          onChange: (value: string) => { patch({ prompt: value }) },
-          onSaveVersion: (note: string) => {
-            patch({ versions: [...draft.versions, { id: crypto.randomUUID(), ts: new Date().toISOString(), content: draft.prompt, note }] })
-          },
-          onRestore: (content: string) => { patch({ prompt: content }) },
-          onClose: () => { setEditorOpen(false) },
-        })
-        : null,
+    )
+
+  return h('div', {
+    className: 'dsh-tdt-ed-overlay',
+    onPointerDown: (event: { target: unknown; currentTarget: unknown }) => {
+      if (event.target === event.currentTarget) requestClose()
+    },
+  },
+    h('div', { className: 'dsh-tdt-ed-panel', style: { width: `${width}px` }, role: 'dialog', 'aria-modal': true, 'aria-label': mode === 'create' ? t('editorNew') : t('editorEdit') },
+      h('div', {
+        className: 'dsh-tdt-ed-resizer',
+        title: t('previewResize'),
+        onPointerDown: (event: { clientX: number }) => { startResize({ clientX: event.clientX }) },
+      }),
+      panelInner,
       // 关闭确认（官方 Modal，body 传送门）：改过才出现；确认 ⇒ 真正关弹窗，继续编辑 ⇒ 留在原处。
       h(Modal, {
         open: confirmDiscard,
