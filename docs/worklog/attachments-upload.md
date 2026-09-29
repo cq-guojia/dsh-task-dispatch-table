@@ -1,0 +1,40 @@
+# 附加文件：选择 / 上传交互（2026-09-29）
+
+> 工作包：任务表单弹窗「附加文件」框的**选择工作区文件**与**本地文件上传**两条交互全链路落码。
+> 前置事实：展示 + 删除已做（`e2bea3a` 一轮的「附加文件卡壳」），「添加文件」按钮当时 disabled。
+
+## 一、方案拍板（动手前与用户对齐）
+
+- 现状核对：`Attachment` 接口已有（`kind:'link'|'upload'`、`ref`、`name`），草稿挂 `attachments:[]`；官方 `primitives` **无** Upload / Dropzone / FilePicker 组件（清单逐项核实过）。
+- **不引包**：范围小（拖拽区 + 隐藏 input 约 30–50 行），按用户规则「(b) 东西少就自己做」；自研才能完全贴合官方 `--dsw-alias-*` token，不给受限 bundle 添依赖。
+- 用户拍板：**选择 + 上传一起做**（含宿主路由）；上传**放开常见类型**（文本/图片/文档扩展名白名单）、体积上限 **20MB**。
+- 形态：`link` = 只记工作区路径（沿用「选文件只记路径」既定语义）；`upload` = 宿主落盘、**不覆盖累加**。
+
+## 二、落码内容（`680d23f`）
+
+**客户端（task-editor.tsx / locales.ts / file-browser.tsx / client/index.ts）**
+
+- 「添加文件」拆两入口：「选择工作区文件」「上传文件」。
+- **选择工作区文件**：官方 `Modal` 内嵌工作区文件选择器——目录浏览逻辑抽自 `file-browser.tsx`（复用 `workspaceFiles.list`，不含预览），面包屑 + 目录/文件列表，选中即关弹窗，挂 `Attachment{kind:'link', ref:路径, name}`。
+- **上传**：拖拽投放区（`onDragOver`/`onDrop`）+ 点击触发隐藏 `<input type=file>`（`multiple`）；文件逐个 `POST /api/task-dispatch-table/attachment`，原始名走 **`x-filename` 头**（URL 编码，避免二进制体夹带名字），成功后挂 `Attachment{kind:'upload', ref, name}`；在途 `uploading` 态、失败红字提示（`editorUploadFailedMsg` 占位符插值）。
+
+**宿主（src/index.ts）**
+
+- 新路由 `POST /api/task-dispatch-table/attachment`：同源守卫 → `x-filename` 解码 → **扩展名白名单**（`ALLOWED_ATTACHMENT_EXT`，文本/图片/文档常见类型）→ 读体（`readDispatchBodyBuffer`，20MB 上限）→ 落盘 `task-attachments/<原始名>-<randomBytes(3) hex><ext>`（**不覆盖累加**：随机尾缀撞名概率可忽略）→ 返回 `{ok, ref, name}`。
+- 目录 = 插件数据根（statePath 同层）下 `task-attachments/`。
+
+## 三、踩坑与修复（本仓库惯例记全）
+
+1. **`scope` 越界**：首版在 webServer inject 回调里直接写 `resolveStatePath(scope.get().statePath)` 求附件目录——但 `scope` 是 **settings inject 里才创建**的（webServer 回调先跑）⇒ `TS2304: Cannot find name 'scope'`。修法 = `attachmentsDirRef` 提到 apply 作用域，settings inject 就绪时随 statePath 定格，路由 handler **惰性读取**（未就绪上传返回 503 `attachments-dir-not-ready`）。这个时序差本身就是事实：statePath 在 settings inject 才定格。
+2. **`@types/node` 的 fs 只有回调式重载**：`fs.mkdir(path, {recursive:true})` 报 `TS2353`（把 options 当 `NoParamCallback` 匹配）、`fs.writeFile(file, buffer)` 报 `TS2554`（要求 3–4 参）——本仓库 `@types/node@22.20.4` 的 `fs` 命名空间 promise 重载在 `fs/promises`，主命名空间全回调式。修法 = `mkdirSync`/`writeFileSync`（低频落盘，同步足够）。
+3. **`t()` 不收插值参数**：`Translate` 类型有 `params` 但组件里解构出的 `t` 是单参形态 ⇒ `TS2554`。仓库惯例 = `tt = useMemo(() => interpolateTranslate(t), [t])`，插值文案一律走 `tt`。
+
+## 四、验证
+
+- typecheck（宿主 + client 两套 tsconfig）+ build（dist 入库）+ 冒烟 **176 项全过**。
+- 真机验证：**待用户测**——选择工作区文件（浏览/选中/卡片出现/删除）、拖拽上传与点选上传、超限与类型拒绝的报错、上传文件卡片展示与删除。
+
+## 五、边界与后续
+
+- 上传文件与任务的关联目前只在**草稿层**（`attachments` 数组）；是否随任务定义持久化、执行时如何注入给 agent，**未做**——待用户拍板（可能并入 P2 保存链路）。
+- `link` 型路径的执行期语义沿用「只记路径、agent 执行时自读」。
