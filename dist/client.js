@@ -395,7 +395,24 @@ window.__ModuleLoader__.load({
 			editorConfirmDeleteTitle: "删除版本",
 			editorConfirmDeleteDesc: "你确定要删除吗？",
 			editorConfirmUseTitle: "使用历史版本",
-			editorConfirmUseDesc: "我们将用历史版本覆盖你现在提示词编辑器的所有内容，确定吗？",
+			editorConfirmUseDesc: "确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词）。",
+			editorDeleteTask: "删除任务",
+			editorDeleteTaskTitle: "删除任务",
+			editorDeleteTaskDesc: "确定所有的移除都是找不回来的，不可逆的。",
+			editorReset: "重置",
+			editorResetDone: "已恢复为打开时的内容",
+			editorSnapshots: "配置快照（整份找回）",
+			editorRestoreAll: "找回全部",
+			editorRestoreAllTitle: "找回全部设置",
+			editorRestoreAllDesc: "确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。",
+			editorRestorePromptTitle: "只找回提示词",
+			editorRestorePromptDesc: "确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词，其余设置保持现状）。",
+			editorCustomCron: "自定义 cron（JSON 里的原值，保存时原样保留）",
+			editorSaved: "已保存",
+			editorSaveFailedHint: "保存失败：",
+			editorTasksTitle: "任务列表",
+			editorTasksEmpty: "还没有任务：点右上角「＋ 新建任务」创建第一条。",
+			editorDisabledTag: "已停用",
 			editorModeEdit: "编辑",
 			editorModePreview: "预览",
 			editorTaskStart: "任务开始时间",
@@ -809,7 +826,24 @@ window.__ModuleLoader__.load({
 			editorConfirmDeleteTitle: "Delete version",
 			editorConfirmDeleteDesc: "Are you sure you want to delete it?",
 			editorConfirmUseTitle: "Use history version",
-			editorConfirmUseDesc: "This will overwrite all current content in your prompt editor with the history version. Are you sure?",
+			editorConfirmUseDesc: "Restoring will overwrite all your current edits with the history version (prompt only this time).",
+			editorDeleteTask: "Delete task",
+			editorDeleteTaskTitle: "Delete task",
+			editorDeleteTaskDesc: "Everything removed is unrecoverable and irreversible.",
+			editorReset: "Reset",
+			editorResetDone: "Restored to the values from when you opened it",
+			editorSnapshots: "Config snapshots (restore all)",
+			editorRestoreAll: "Restore all",
+			editorRestoreAllTitle: "Restore all settings",
+			editorRestoreAllDesc: "Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.",
+			editorRestorePromptTitle: "Restore prompt only",
+			editorRestorePromptDesc: "Restoring will overwrite all your current edits with the history version (prompt only; other settings stay as they are).",
+			editorCustomCron: "Custom cron (raw value from JSON; kept as-is on save)",
+			editorSaved: "Saved",
+			editorSaveFailedHint: "Save failed: ",
+			editorTasksTitle: "Tasks",
+			editorTasksEmpty: "No tasks yet — use \"＋ New task\" in the top-right corner to create the first one.",
+			editorDisabledTag: "Disabled",
 			editorModeEdit: "Edit",
 			editorModePreview: "Preview",
 			editorTaskStart: "Task start time",
@@ -5729,6 +5763,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-label{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-ed-hint{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-ed-warn{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-state-warn-primary,#f5a623);}
+/* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
+.dsh-tdt-ed-danger{color:var(--dsw-alias-state-error-primary,#e5484d)!important;border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;}
+.dsh-tdt-ed-danger:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))!important;}
 .dsh-tdt-ed-section{margin-bottom:16px;}
 .dsh-tdt-ed-section:last-child{margin-bottom:0;}
 /* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
@@ -37435,28 +37472,60 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				case "weekly": return days === "" ? null : `${minute} ${hour} * * ${days}`;
 				case "monthly": return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`;
 				case "quarterly": {
-					const start = Number.parseInt(draft.quarterMonth, 10);
+					const start = Number.isFinite(Number.parseInt(draft.quarterMonth, 10)) ? Number.parseInt(draft.quarterMonth, 10) : 1;
 					const months = [
+						0,
 						1,
 						2,
 						3
-					].map((offset) => (Number.isFinite(start) ? start : 1) + offset * 3).join(",");
+					].map((offset) => start + offset * 3).join(",");
 					return `${minute} ${hour} ${draft.monthDay} ${months} *`;
 				}
 				case "yearly": return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`;
 			}
 		}
-		/** 草稿 → 任务定义 JSON（**只读预览**用；真保存归 P2）。 */
+		/** 结构化排期（双写的 `schedule.ui`）：表单控件的原样留档，供下次编辑反解。 */
+		function structuredOf(draft) {
+			return {
+				scheduleKind: draft.scheduleKind,
+				periodFreq: draft.periodFreq,
+				weekdays: [...draft.weekdays],
+				monthDay: draft.monthDay,
+				monthMode: draft.monthMode,
+				quarterMonth: draft.quarterMonth,
+				yearMonth: draft.yearMonth,
+				intervalUnit: draft.intervalUnit,
+				intervalStep: draft.intervalStep,
+				weekStep: draft.weekStep
+			};
+		}
+		/**
+		* 草稿 → 任务定义 JSON（保存 / 预览同源）。
+		* 排期**双写**（data-model §5.4）：`cron`/`once`/`start`/`everyNWeeks` 是执行真源，
+		* `schedule.ui` 是编辑态反解真源；两者都由**表单**产出 ⇒ 保存以表单为准重写 cron
+		* （用户手改坏了 JSON 里的 cron，保存时被覆盖，不会留个坏 cron 在库里）。
+		*
+		* ⚠️ 间隔档（每隔 N 分钟 / 小时）**必须产出 cron**——此前漏了 ⇒ 任务保存后
+		* `scheduledSlotsFor` 取不到 cron、永不执行（评审 P2 / C1）。
+		*/
 		function draftToDefinitionJson(draft) {
 			const schedule = { window: draft.window };
-			if (draft.scheduleKind === "periodic" && draft.periodFreq === "once") schedule.once = `${draft.date}T${draft.time}`;
+			const customCron = draft.customCron !== void 0 ? draft.customCron.trim() : "";
+			if (customCron !== "") schedule.cron = customCron;
+			else if (draft.scheduleKind === "periodic" && draft.periodFreq === "once") schedule.once = `${draft.date}T${draft.time}`;
 			else if (draft.scheduleKind === "periodic") {
 				const cron = scheduleCron(draft);
 				if (cron !== null) schedule.cron = cron;
 				schedule.start = `${draft.date}T${draft.time}`;
 				const step = Number.parseInt(draft.weekStep, 10);
 				if (draft.periodFreq === "weekly" && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step;
-			} else if (draft.scheduleKind === "interval") schedule.start = `${draft.date}T${draft.time}`;
+				schedule.ui = structuredOf(draft);
+			} else if (draft.scheduleKind === "interval") {
+				const cron = scheduleCron(draft);
+				if (cron !== null) schedule.cron = cron;
+				schedule.start = `${draft.date}T${draft.time}`;
+				schedule.ui = structuredOf(draft);
+			}
 			const target = {
 				workspace: draft.workspace,
 				goal: draft.goalMode,
@@ -37486,6 +37555,201 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (draft.deps.length > 0) definition.depends_on = draft.deps.filter((dep) => dep.task !== "");
 			if (draft.attachments.length > 0) definition.attachments = draft.attachments;
 			return JSON.stringify(definition, null, 2);
+		}
+		/** 附件 / 草稿条目的本地 id（反解时补上定义里缺失的 id）。 */
+		function newAttachmentId() {
+			return typeof crypto !== "undefined" && crypto.randomUUID !== void 0 ? crypto.randomUUID() : `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+		}
+		/** cron 星期位 → ISO 序号（cron 0 = 周日 ⇒ 7）。 */
+		function isoDow(day) {
+			return day === 0 ? 7 : day;
+		}
+		/** 五段 cron → 结构化排期；表达不了的组合返回 null（调用方降级为「自定义 cron」，不丢原值）。 */
+		function scheduleFromCron(cron) {
+			const parts = cron.trim().split(/\s+/);
+			if (parts.length !== 5) return null;
+			const minute = parts[0] ?? "";
+			const hour = parts[1] ?? "";
+			const dom = parts[2] ?? "";
+			const mon = parts[3] ?? "";
+			const dow = parts[4] ?? "";
+			const hh = /^\d{1,2}$/.test(hour) ? hour.padStart(2, "0") : null;
+			const mm = /^\d{1,2}$/.test(minute) ? minute.padStart(2, "0") : null;
+			const time = hh !== null && mm !== null ? `${hh}:${mm}` : null;
+			if (minute.startsWith("*/") && hour === "*" && dom === "*" && mon === "*" && dow === "*") {
+				const step = minute.slice(2);
+				if (!/^\d+$/.test(step) || Number(step) <= 0) return null;
+				return {
+					scheduleKind: "interval",
+					intervalUnit: "minute",
+					intervalStep: step,
+					...time === null ? {} : { time }
+				};
+			}
+			if (hour.startsWith("*/") && dom === "*" && mon === "*") {
+				const step = hour.slice(2);
+				if (!/^\d+$/.test(step) || Number(step) <= 0) return null;
+				const weekdays = dow === "*" ? [
+					1,
+					2,
+					3,
+					4,
+					5,
+					6,
+					7
+				] : dow.split(",").map(Number).filter((n) => Number.isFinite(n)).map(isoDow);
+				if (weekdays.length === 0) return null;
+				return {
+					scheduleKind: "interval",
+					intervalUnit: "hour",
+					intervalStep: step,
+					weekdays,
+					...time === null ? {} : { time }
+				};
+			}
+			if (time === null || dow !== "*" && dom !== "*") {
+				if (dom !== "*" && dow !== "*") return null;
+				if (time === null) return null;
+			}
+			if (dom === "*" && mon === "*" && dow === "*") return {
+				scheduleKind: "periodic",
+				periodFreq: "daily",
+				time
+			};
+			if (dom === "*" && mon === "*" && dow !== "*") {
+				const weekdays = dow.split(",").map(Number).filter((n) => Number.isFinite(n)).map(isoDow);
+				if (weekdays.length === 0) return null;
+				return {
+					scheduleKind: "periodic",
+					periodFreq: "weekly",
+					weekdays,
+					time
+				};
+			}
+			if (!/^\d{1,2}$/.test(dom)) return null;
+			if (mon === "*") return {
+				scheduleKind: "periodic",
+				periodFreq: "monthly",
+				monthDay: dom,
+				monthMode: "every",
+				time
+			};
+			const months = mon.split(",").map(Number).filter((n) => Number.isFinite(n));
+			if (months.length === 1) return {
+				scheduleKind: "periodic",
+				periodFreq: "yearly",
+				yearMonth: String(months[0] ?? 1),
+				monthDay: dom,
+				time
+			};
+			if (months.length === 4 && months.every((m, i) => i === 0 || m - (months[i - 1] ?? 0) === 3)) return {
+				scheduleKind: "periodic",
+				periodFreq: "quarterly",
+				quarterMonth: String(((months[0] ?? 1) - 1) % 3 + 1),
+				monthDay: dom,
+				time
+			};
+			if (months.length === 6) {
+				const odd = [
+					1,
+					3,
+					5,
+					7,
+					9,
+					11
+				];
+				const even = [
+					2,
+					4,
+					6,
+					8,
+					10,
+					12
+				];
+				const mode = months.every((m, i) => m === odd[i]) ? "odd" : months.every((m, i) => m === even[i]) ? "even" : null;
+				if (mode !== null) return {
+					scheduleKind: "periodic",
+					periodFreq: "monthly",
+					monthDay: dom,
+					monthMode: mode,
+					time
+				};
+			}
+			return null;
+		}
+		/**
+		* 任务定义 → 表单草稿（编辑现有任务用）。
+		* 排期反解优先级：`schedule.ui`（双写的结构化留档）> cron 尽力反解 > **自定义 cron 降级**
+		* （保留原串，保存时原样写回 ⇒ 手改过的 cron 不会被悄悄重写）。
+		*/
+		function definitionToDraft(definition) {
+			const base = emptyTaskDraft();
+			const target = definition.target ?? {};
+			const schedule = definition.schedule ?? {};
+			const retry = definition.retry ?? {};
+			const contract = definition.contract ?? {};
+			const model = typeof target.provider === "string" && typeof target.model === "string" ? `${target.provider}/${target.model}` : typeof target.model === "string" ? target.model : "";
+			const draft = {
+				...base,
+				title: typeof definition.title === "string" ? definition.title : "",
+				code: typeof definition.code === "string" ? definition.code : "",
+				enabled: definition.enabled !== false,
+				prompt: typeof target.prompt === "string" ? target.prompt : "",
+				workspace: typeof target.workspace === "string" ? target.workspace : "",
+				model,
+				permission: typeof target.permission === "string" ? target.permission : "default",
+				goalMode: target.goal !== false,
+				agentTeam: target.agentTeam === true,
+				window: typeof schedule.window === "string" ? schedule.window : base.window,
+				maxAttempts: String(typeof retry.maxAttempts === "number" ? retry.maxAttempts : 1),
+				validStatuses: Array.isArray(contract.validStatuses) ? contract.validStatuses.filter((item) => typeof item === "string").join(",") : "ok",
+				deps: Array.isArray(definition.depends_on) ? definition.depends_on.filter((item) => item !== null && typeof item === "object" && typeof item.task === "string" && (item.semantics === "same_period" || item.semantics === "latest_success")).map((item) => ({
+					task: item.task,
+					semantics: item.semantics
+				})) : [],
+				attachments: Array.isArray(definition.attachments) ? definition.attachments.filter((item) => item !== null && typeof item === "object" && typeof item.name === "string" && typeof item.ref === "string" && (item.kind === "link" || item.kind === "upload")).map((item) => ({
+					id: typeof item.id === "string" ? item.id : newAttachmentId(),
+					name: item.name,
+					kind: item.kind,
+					ref: item.ref,
+					...typeof item.workspace === "string" ? { workspace: item.workspace } : {}
+				})) : [],
+				versions: []
+			};
+			const start = typeof schedule.start === "string" ? schedule.start : "";
+			const once = typeof schedule.once === "string" ? schedule.once : "";
+			if (start.length >= 16) {
+				draft.date = start.slice(0, 10);
+				if (once === "") draft.time = start.slice(11, 16);
+			}
+			if (once !== "") {
+				draft.scheduleKind = "periodic";
+				draft.periodFreq = "once";
+				draft.date = once.slice(0, 10);
+				draft.time = once.slice(11, 16);
+			} else {
+				const ui = typeof schedule.ui === "object" && schedule.ui !== null ? schedule.ui : {};
+				if (Object.keys(ui).length > 0) {
+					if (ui.scheduleKind === "interval" || ui.scheduleKind === "periodic") draft.scheduleKind = ui.scheduleKind;
+					if (typeof ui.periodFreq === "string") draft.periodFreq = ui.periodFreq;
+					if (Array.isArray(ui.weekdays)) draft.weekdays = ui.weekdays.filter((n) => typeof n === "number");
+					if (typeof ui.monthDay === "string") draft.monthDay = ui.monthDay;
+					if (ui.monthMode === "every" || ui.monthMode === "odd" || ui.monthMode === "even") draft.monthMode = ui.monthMode;
+					if (typeof ui.quarterMonth === "string") draft.quarterMonth = ui.quarterMonth;
+					if (typeof ui.yearMonth === "string") draft.yearMonth = ui.yearMonth;
+					if (ui.intervalUnit === "minute" || ui.intervalUnit === "hour") draft.intervalUnit = ui.intervalUnit;
+					if (typeof ui.intervalStep === "string") draft.intervalStep = ui.intervalStep;
+					if (typeof ui.weekStep === "string") draft.weekStep = ui.weekStep;
+				} else {
+					const cron = typeof schedule.cron === "string" ? schedule.cron : "";
+					const parsed = cron === "" ? null : scheduleFromCron(cron);
+					if (parsed !== null) Object.assign(draft, parsed);
+					else if (cron !== "") draft.customCron = cron;
+				}
+			}
+			const everyNWeeks = typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : void 0;
+			if (everyNWeeks !== void 0 && everyNWeeks > 1) draft.weekStep = String(everyNWeeks);
+			return draft;
 		}
 		C$2.text;
 		/**
@@ -37830,33 +38094,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: props.onLeave
 			}, props.t("editorDiscardLeave")))));
 		}
-		/** DEMO 模拟版本（仅样式预览用）：真实接入后由 props.versions 驱动，此常量删除。 */
-		const DEMO_VERSIONS = [
-			{
-				id: "demo-1",
-				ts: "2026-09-28T14:30:00.000Z",
-				content: "# 周一版本\n这里是周一 下午 初版的提示词正文……",
-				note: "周一 下午 · 初版"
-			},
-			{
-				id: "demo-2",
-				ts: "2026-09-29T09:12:00.000Z",
-				content: "# 周二版本\n调整了调度说明与依赖。",
-				note: "周二 上午 · 调整"
-			},
-			{
-				id: "demo-3",
-				ts: "2026-09-30T11:48:00.000Z",
-				content: "# 周三版本\n补充了产出物登记说明。",
-				note: "周三 上午 · 补充"
-			},
-			{
-				id: "demo-4",
-				ts: "2026-10-01T16:24:00.000Z",
-				content: "# 周四版本\n最终定稿，措辞收紧。",
-				note: "周四 下午 · 定稿"
-			}
-		];
 		/** 版本管理内的小型确认框（复用关闭确认的自绘样式：盖在编辑器之上、随抽屉浮在宿主之上）。 */
 		function VersionConfirm(props) {
 			return (0, react.createElement)("div", {
@@ -37910,17 +38147,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.confirmLabel ?? props.t("editorConfirm")))));
 		}
 		function PromptEditorModal(props) {
-			const { t, mode: editorMode, value, versions, onChange, onClose } = props;
+			const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onRestoreSnapshot, onDeleteVersion } = props;
 			const cmExtensions = (0, react.useMemo)(() => [markdown(), EditorView.lineWrapping], []);
 			const [mode, setMode] = (0, react.useState)("edit");
 			const [showVersions, setShowVersions] = (0, react.useState)(false);
-			const [localVersions, setLocalVersions] = (0, react.useState)(() => versions.length > 0 ? versions : editorMode === "edit" ? DEMO_VERSIONS : []);
+			const versions = history?.versions ?? [];
+			const snapshots = history?.snapshots ?? [];
 			const [hoveredId, setHoveredId] = (0, react.useState)(null);
-			const [confirmDeleteId, setConfirmDeleteId] = (0, react.useState)(null);
-			const [confirmUseId, setConfirmUseId] = (0, react.useState)(null);
+			const [confirmDeleteFile, setConfirmDeleteFile] = (0, react.useState)(null);
+			const [confirmUseFile, setConfirmUseFile] = (0, react.useState)(null);
+			const [confirmSnapshotFile, setConfirmSnapshotFile] = (0, react.useState)(null);
 			const versionTitle = editorMode === "create" ? t("editorHistoryVersions") : t("editorVersions");
-			const confirmDelete = localVersions.find((v) => v.id === confirmDeleteId) ?? null;
-			const confirmUse = localVersions.find((v) => v.id === confirmUseId) ?? null;
 			return (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
@@ -38021,7 +38258,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				fontSize: "12px",
 				color: C$2.textDim,
 				lineHeight: "1.6"
-			} }, t("editorNewTaskNoVersions")) : localVersions.length === 0 ? (0, react.createElement)("p", { style: {
+			} }, t("editorNewTaskNoVersions")) : (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				minHeight: 0,
+				overflow: "auto"
+			} }, versions.length === 0 ? (0, react.createElement)("p", { style: {
 				padding: "0 12px",
 				fontSize: "12px",
 				color: C$2.textDim
@@ -38030,26 +38272,26 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				margin: 0,
 				padding: "0 12px 12px",
 				overflow: "auto"
-			} }, localVersions.map((v) => (0, react.createElement)("li", {
-				key: v.id,
+			} }, versions.map((v) => (0, react.createElement)("li", {
+				key: v.file,
 				style: {
 					padding: "10px 0",
 					borderBottom: `1px solid ${C$2.borderL4}`,
 					position: "relative"
 				},
 				onMouseEnter: () => {
-					setHoveredId(v.id);
+					setHoveredId(v.file);
 				},
 				onMouseLeave: () => {
-					setHoveredId((cur) => cur === v.id ? null : cur);
+					setHoveredId((cur) => cur === v.file ? null : cur);
 				}
 			}, (0, react.createElement)("div", { style: {
 				fontSize: "11px",
 				color: C$2.textDim
-			} }, formatVersionTime(v.ts)), v.note ? (0, react.createElement)("div", { style: {
+			} }, formatVersionTime(v.ts)), v.note !== "" ? (0, react.createElement)("div", { style: {
 				fontSize: "12px",
 				margin: "2px 0 0"
-			} }, v.note) : null, hoveredId === v.id ? (0, react.createElement)("div", { style: {
+			} }, v.note) : null, hoveredId === v.file ? (0, react.createElement)("div", { style: {
 				display: "flex",
 				gap: "6px",
 				marginTop: "8px"
@@ -38057,36 +38299,76 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
-					setConfirmUseId(v.id);
+					setConfirmUseFile(v.file);
 				}
 			}, t("editorUseVersion")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
 				onClick: () => {
-					setConfirmDeleteId(v.id);
+					setConfirmDeleteFile(v.file);
 				}
-			}, t("editorDeleteVersion"))) : null)))) : null), confirmDelete !== null ? (0, react.createElement)(VersionConfirm, {
+			}, t("editorDeleteVersion"))) : null))), snapshots.length === 0 ? null : (0, react.createElement)("div", { style: {
+				borderTop: `1px solid ${C$2.borderL4}`,
+				padding: "10px 12px 12px"
+			} }, (0, react.createElement)("div", { style: {
+				fontSize: "12px",
+				fontWeight: 600,
+				marginBottom: "6px"
+			} }, t("editorSnapshots")), (0, react.createElement)("ul", { style: {
+				listStyle: "none",
+				margin: 0,
+				padding: 0,
+				overflow: "auto"
+			} }, snapshots.map((s) => (0, react.createElement)("li", {
+				key: s.file,
+				style: {
+					padding: "8px 0",
+					borderBottom: `1px solid ${C$2.borderL4}`
+				}
+			}, (0, react.createElement)("div", { style: {
+				fontSize: "11px",
+				color: C$2.textDim,
+				marginBottom: "6px"
+			} }, formatVersionTime(s.ts)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					setConfirmSnapshotFile(s.file);
+				}
+			}, t("editorRestoreAll")))))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
 				t,
 				title: t("editorConfirmDeleteTitle"),
 				desc: t("editorConfirmDeleteDesc"),
 				onCancel: () => {
-					setConfirmDeleteId(null);
+					setConfirmDeleteFile(null);
 				},
 				onConfirm: () => {
-					setLocalVersions((list) => list.filter((x) => x.id !== confirmDelete.id));
-					setConfirmDeleteId(null);
+					onDeleteVersion(confirmDeleteFile);
+					setConfirmDeleteFile(null);
 				}
-			}) : null, confirmUse !== null ? (0, react.createElement)(VersionConfirm, {
+			}) : null, confirmUseFile !== null ? (0, react.createElement)(VersionConfirm, {
 				t,
-				title: t("editorConfirmUseTitle"),
-				desc: t("editorConfirmUseDesc"),
+				title: t("editorRestorePromptTitle"),
+				desc: t("editorRestorePromptDesc"),
 				confirmLabel: t("editorUseVersion"),
 				onCancel: () => {
-					setConfirmUseId(null);
+					setConfirmUseFile(null);
 				},
 				onConfirm: () => {
-					onChange(confirmUse.content);
-					setConfirmUseId(null);
+					onRestoreVersion(confirmUseFile);
+					setConfirmUseFile(null);
+				}
+			}) : null, confirmSnapshotFile !== null ? (0, react.createElement)(VersionConfirm, {
+				t,
+				title: t("editorRestoreAllTitle"),
+				desc: t("editorRestoreAllDesc"),
+				confirmLabel: t("editorRestoreAll"),
+				onCancel: () => {
+					setConfirmSnapshotFile(null);
+				},
+				onConfirm: () => {
+					onRestoreSnapshot(confirmSnapshotFile);
+					setConfirmSnapshotFile(null);
 				}
 			}) : null);
 		}
@@ -38142,7 +38424,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceAnchors } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onRestoreSnapshot, onDeleteVersion, workspaceFiles, workspaceAnchors } = props;
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
@@ -38150,6 +38432,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const [previewOpen, setPreviewOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
+			const [confirmDeleteTask, setConfirmDeleteTask] = (0, react.useState)(false);
+			const [resetHint, setResetHint] = (0, react.useState)(false);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
 			const [pickerWs, setPickerWs] = (0, react.useState)("");
@@ -38941,12 +39225,23 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				t,
 				mode,
 				value: draft.prompt,
-				versions: draft.versions,
+				history: history ?? null,
 				onChange: (value) => {
 					patch({ prompt: value });
 				},
 				onClose: () => {
 					setEditorOpen(false);
+				},
+				onRestoreVersion: (file) => {
+					onRestoreVersion?.(file);
+					setEditorOpen(false);
+				},
+				onRestoreSnapshot: (file) => {
+					onRestoreSnapshot?.(file);
+					setEditorOpen(false);
+				},
+				onDeleteVersion: (file) => {
+					onDeleteVersion?.(file);
 				}
 			}) : previewOpen ? (0, react.createElement)(ConfigPreviewPanel, {
 				t,
@@ -38994,7 +39289,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, t("editorTabRecords"))) : null, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-body",
 				ref: bodyRef
-			}, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, pendingHint ? (0, react.createElement)("span", {
+			}, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				className: "dsh-tdt-ed-danger",
+				onClick: () => {
+					setConfirmDeleteTask(true);
+				}
+			}, t("editorDeleteTask")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "ghost",
+				size: "sm",
+				onClick: () => {
+					onChange(initialDraftRef.current);
+					setResetHint(true);
+				}
+			}, t("editorReset")), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), resetHint ? (0, react.createElement)("span", {
+				className: "dsh-tdt-ed-hint",
+				style: { margin: "0 8px 0 0" }
+			}, t("editorResetDone")) : null, saveError !== null ? (0, react.createElement)("span", {
+				className: "dsh-tdt-ed-hint",
+				style: {
+					margin: "0 8px 0 0",
+					color: "var(--dsw-alias-state-error-primary, #e5484d)"
+				}
+			}, `${t("editorSaveFailedHint")}${saveError}`) : null, pendingHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
 				style: { margin: "0 8px 0 0" }
 			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -39008,7 +39326,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (onSave === void 0) setPendingHint(true);
 					else onSave(draft);
 				}
-			}, t("editorSave"))));
+			}, t("editorSave"))), confirmDeleteTask ? (0, react.createElement)(VersionConfirm, {
+				t,
+				title: t("editorDeleteTaskTitle"),
+				desc: t("editorDeleteTaskDesc"),
+				confirmLabel: t("editorDeleteTask"),
+				onCancel: () => {
+					setConfirmDeleteTask(false);
+				},
+				onConfirm: () => {
+					setConfirmDeleteTask(false);
+					onDelete?.();
+				}
+			}) : null);
 			return (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-overlay",
 				onPointerDown: (event) => {
@@ -39572,6 +39902,137 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				window.addEventListener("pointerup", onUp);
 			}, [previewWidth]);
 			const [editor, setEditor] = (0, react.useState)(null);
+			const [editorSaving, setEditorSaving] = (0, react.useState)(false);
+			const [editorError, setEditorError] = (0, react.useState)(null);
+			/** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
+			const loadHistory = async (id) => {
+				try {
+					const body = await (await fetch(`${DISPATCH_API_PREFIX}/tasks/history?id=${encodeURIComponent(id)}`, { cache: "no-store" })).json();
+					if (body.ok !== true) return;
+					const history = {
+						versions: Array.isArray(body.versions) ? body.versions : [],
+						snapshots: Array.isArray(body.snapshots) ? body.snapshots : []
+					};
+					setEditor((cur) => cur === null || cur.id !== id ? cur : {
+						...cur,
+						history
+					});
+				} catch {}
+			};
+			/** 打开「编辑任务」：从 tasksInline 取**完整定义**反解成草稿（不是摘要行）。 */
+			const openEditor = (id) => {
+				let found = null;
+				try {
+					const arr = JSON.parse(effectiveInline.trim() === "" ? "[]" : effectiveInline);
+					if (Array.isArray(arr)) found = arr.find((item) => item !== null && typeof item === "object" && item.id === id) ?? null;
+				} catch {
+					found = null;
+				}
+				if (found === null) {
+					setViewErr("找不到该任务的定义，无法编辑（任务表可能刚被改动，请刷新后重试）");
+					return;
+				}
+				setEditorError(null);
+				setEditor({
+					mode: "edit",
+					id,
+					draft: definitionToDraft(found),
+					history: null
+				});
+				loadHistory(id);
+			};
+			/** 保存（新增 / 修改同一条链路）：POST /tasks { task }。 */
+			const saveEditor = async (draft) => {
+				if (editor === null) return;
+				setEditorSaving(true);
+				setEditorError(null);
+				try {
+					const definition = JSON.parse(draftToDefinitionJson(draft));
+					if (editor.mode === "edit") definition.id = editor.id;
+					const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ task: definition })
+					});
+					const body = await res.json();
+					if (body.ok !== true) {
+						setEditorError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`);
+						return;
+					}
+					const missing = Array.isArray(body.missingAttachments) ? body.missingAttachments.filter((item) => typeof item === "string") : [];
+					setEditor(null);
+					if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join("、")}`);
+				} catch (error) {
+					setEditorError(error instanceof Error ? error.message : String(error));
+				} finally {
+					setEditorSaving(false);
+				}
+			};
+			/** 删除任务（定义摘掉 + 任务目录整删；执行记录保留）。 */
+			const deleteEditorTask = async () => {
+				if (editor === null || editor.mode !== "edit") return;
+				try {
+					const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+						method: "DELETE",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ id: editor.id })
+					});
+					const body = await res.json();
+					if (body.ok !== true) {
+						setEditorError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`);
+						return;
+					}
+					setEditor(null);
+				} catch (error) {
+					setEditorError(error instanceof Error ? error.message : String(error));
+				}
+			};
+			/** 只找回提示词：取该版本内容 → 填进编辑器（其余设置不动）。 */
+			const restoreVersion = async (file) => {
+				if (editor === null) return;
+				try {
+					const body = await (await fetch(`${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`, { cache: "no-store" })).json();
+					if (body.ok !== true || typeof body.content !== "string") {
+						setEditorError("该版本内容读不出来，可能已被删除");
+						return;
+					}
+					setEditor((cur) => cur === null ? cur : {
+						...cur,
+						draft: {
+							...cur.draft,
+							prompt: body.content
+						}
+					});
+				} catch (error) {
+					setEditorError(error instanceof Error ? error.message : String(error));
+				}
+			};
+			/** 找回全部设置：取该配置快照 → 反解成草稿 → 整体覆盖表单（id 保持）。 */
+			const restoreSnapshot = async (file) => {
+				if (editor === null) return;
+				try {
+					const body = await (await fetch(`${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=snapshot&file=${encodeURIComponent(file)}`, { cache: "no-store" })).json();
+					if (body.ok !== true || body.content === null || typeof body.content !== "object") {
+						setEditorError("该配置快照读不出来，可能已被删除");
+						return;
+					}
+					const next = definitionToDraft(body.content);
+					setEditor((cur) => cur === null ? cur : {
+						...cur,
+						draft: next
+					});
+				} catch (error) {
+					setEditorError(error instanceof Error ? error.message : String(error));
+				}
+			};
+			/** 删除某个历史版本（用户自己删；系统从不自动删）。 */
+			const deleteVersion = async (file) => {
+				if (editor === null) return;
+				try {
+					await fetch(`${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`, { method: "DELETE" });
+					await loadHistory(editor.id);
+				} catch {}
+			};
 			const [editorOptions, setEditorOptions] = (0, react.useState)(EMPTY_EDITOR_OPTIONS);
 			(0, react.useEffect)(() => {
 				let alive = true;
@@ -39787,15 +40248,52 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: addButtonStyle,
 				title: t("editorNew"),
 				onClick: () => {
+					setEditorError(null);
 					setEditor({
 						mode: "create",
-						draft: emptyTaskDraft()
+						id: "",
+						draft: emptyTaskDraft(),
+						history: null
 					});
 				}
 			}, `＋ ${t("editorNew")}`))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
 				...preStyle,
 				color: C.textFaint
-			} }, describeDiag())) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("label", {
+			} }, describeDiag())) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { style: { marginBottom: "16px" } }, (0, react.createElement)("div", { style: {
+				fontWeight: 600,
+				marginBottom: "6px"
+			} }, t("editorTasksTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("editorTasksEmpty")) : (0, react.createElement)("ul", { style: {
+				listStyle: "none",
+				margin: 0,
+				padding: 0
+			} }, taskRows.map((row) => (0, react.createElement)("li", {
+				key: row.id,
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "10px",
+					padding: "7px 0",
+					borderBottom: `1px solid ${C.border}`
+				}
+			}, (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				fontWeight: 500
+			} }, row.title === "" ? row.id : row.title), (0, react.createElement)("span", { style: {
+				fontSize: "11px",
+				color: C.textFaint
+			} }, row.code ?? row.id), row.enabled === false ? (0, react.createElement)("span", { style: {
+				fontSize: "11px",
+				color: C.textFaint
+			} }, t("editorDisabledTag")) : null, (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...addButtonStyle,
+					padding: "3px 10px"
+				},
+				onClick: () => {
+					openEditor(row.id);
+				}
+			}, t("editorEdit")))))), (0, react.createElement)("label", {
 				htmlFor: "dsh-tdt-modal-inline",
 				style: { fontWeight: 600 }
 			}, t("tasksInlineLabel")), (0, react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")), (0, react.createElement)("textarea", {
@@ -39985,7 +40483,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				draft: editor.draft,
 				onChange: (next) => {
 					setEditor({
-						mode: editor.mode,
+						...editor,
 						draft: next
 					});
 				},
@@ -39994,6 +40492,23 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				tasks: editorTasks,
 				onClose: () => {
 					setEditor(null);
+				},
+				onSave: (draft) => {
+					saveEditor(draft);
+				},
+				onDelete: editor.mode === "edit" ? () => {
+					deleteEditorTask();
+				} : void 0,
+				saveError: editorError,
+				history: editor.history,
+				onRestoreVersion: (file) => {
+					restoreVersion(file);
+				},
+				onRestoreSnapshot: (file) => {
+					restoreSnapshot(file);
+				},
+				onDeleteVersion: (file) => {
+					deleteVersion(file);
 				},
 				workspaceFiles,
 				workspaceAnchors: editorOptions.workspaceAnchors

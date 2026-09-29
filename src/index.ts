@@ -6,9 +6,17 @@ import type {
 } from './host.js'
 import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './config.js'
 import type { PluginConfig } from './config.js'
-import type { TaskDefinition } from './tasks.js'
-import { ensureIdsInInlineJson, existingUuidIds, nextSlotAfter, titleOf } from './tasks.js'
+import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
+import {
+  ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, taskDefinitionSchema, titleOf,
+  upsertDefinitionInline, validateDefinitionForSave,
+} from './tasks.js'
 import { TaskStore } from './store.js'
+import {
+  assetPaths, deleteSnapshot, deleteTaskAssets, deleteVersion, listSnapshots, listVersions, moveAttachmentsIn, purgeTmp,
+  readSnapshot, readVersion, removeAttachmentFiles, saveSnapshot, saveVersion,
+  type AssetPaths, type AttachmentRef,
+} from './task-assets.js'
 import * as fs from 'fs'
 import path from 'path'
 import { randomBytes } from 'crypto'
@@ -44,6 +52,8 @@ const SETTINGS_NS = 'dsh-task-dispatch-table'
 /** 极简请求面（只取本插件用到的字段，避免依赖 @types/node）。 */
 interface DispatchWebRequest {
   method?: string
+  /** 原始 URL（宿主传入的是 Node IncomingMessage，带它；取查询参数用）。 */
+  url?: string
   headers: Record<string, unknown>
   socket: { remoteAddress?: string }
   [Symbol.asyncIterator](): AsyncIterator<unknown>
@@ -122,6 +132,28 @@ const safeDecode = (value: string): string => {
   try { return decodeURIComponent(value) } catch { return value }
 }
 
+/** 取查询参数（GET 路由用；宿主传入的 req 带 url）。 */
+const queryOf = (req: DispatchWebRequest, key: string): string => {
+  const url = req.url ?? ''
+  const mark = url.indexOf('?')
+  if (mark < 0) return ''
+  return new URLSearchParams(url.slice(mark + 1)).get(key) ?? ''
+}
+
+/** 从现有任务表里读出某任务的附件清单（附件搬移的「上一次」基准）。 */
+function readAttachmentsOf(raw: string, id: string): AttachmentRef[] {
+  try {
+    const data = JSON.parse(raw.trim() === '' ? '[]' : raw) as unknown
+    if (!Array.isArray(data)) return []
+    const hit = data.find((item): item is Record<string, unknown> => (
+      item !== null && typeof item === 'object' && (item as { id?: unknown }).id === id
+    ))
+    return hit !== undefined && Array.isArray(hit.attachments) ? hit.attachments as AttachmentRef[] : []
+  } catch {
+    return []
+  }
+}
+
 /**
  * 构造本插件的 webServer 路由（快照读 + 任务表写）。
  * @param runtimeRef - 宿主运行时数据 store（apply 内共用同一份）。
@@ -140,6 +172,10 @@ const makeDispatchRoutes = (
   log: (msg: string) => void,
   /** 取附件落盘目录（settings inject 就绪后才有值：statePath 在那里定格）；未就绪时上传返回 503。 */
   getAttachmentsDir: () => string | null,
+  /** 取任务文件资产根（state.db 同目录）；未就绪时版本 / 快照相关路由返回 503。 */
+  getAssets: () => AssetPaths | null,
+  /** 取插件配置（清道夫天数等）。 */
+  getConfig: () => PluginConfig | null,
 ): DispatchWebRoute[] => [
   {
     // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
@@ -201,26 +237,173 @@ const makeDispatchRoutes = (
     },
   },
   {
+    // 任务保存 / 删除（2026-09-30）：
+    //   POST   { tasksInline } = 整批（配置页 JSON 编辑，走身份闸门）
+    //   POST   { task }        = 单条（新增 / 编辑表单：校验 → 附件落定 → 落库 → 版本 / 快照 → 审计）
+    //   DELETE { id }          = 删除任务（定义摘掉 + 任务目录整删，实例 / 事件保留做审计）
     kind: 'exact',
     path: `${DISPATCH_API_PREFIX}/tasks`,
     handler: async (req, res) => {
-      if (req.method !== 'POST') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (req.method !== 'POST' && req.method !== 'DELETE') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
       if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
       try {
         const body = await readDispatchBody(req)
-        const parsed = JSON.parse(body) as { tasksInline?: unknown }
-        if (typeof parsed.tasksInline !== 'string') return writeJson(res, 400, { ok: false, error: 'tasksInline-required' })
-        // 保存闸门（决策 30 修订 + 第三次拍板：保存时固化，运行时只认，UUID 不能凭空引入）
-        // ——无 id 补 UUID；UUID 必须命中现有已保存表（带 id 即修改）；非 UUID 整批拒绝。
-        const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline, existingUuidIds(runtimeRef.tasksInline))
-        if (error !== null) return writeJson(res, 422, { ok: false, error })
-        runtimeRef.tasksInline = json
-        await persistTasksInline(json)
-        writeJson(res, 200, { ok: true, assigned: changed ? assigned : 0 })
+        const parsed = JSON.parse(body) as { tasksInline?: unknown; task?: unknown; id?: unknown }
+
+        // ── 删除任务：**先落库、后删目录**（评审 P1#3：落库失败时不能已把文件删了）──
+        if (req.method === 'DELETE') {
+          const id = typeof parsed.id === 'string' ? parsed.id : ''
+          if (!isUuid(id)) return writeJson(res, 400, { ok: false, error: 'id-required' })
+          const rm = removeDefinitionInline(runtimeRef.tasksInline, id)
+          if (rm.error !== null) return writeJson(res, 400, { ok: false, error: rm.error })
+          const prevInline = runtimeRef.tasksInline
+          runtimeRef.tasksInline = rm.json
+          try {
+            await persistTasksInline(rm.json)
+          } catch (error) {
+            runtimeRef.tasksInline = prevInline // 回滚内存，定义还在
+            return writeJson(res, 500, { ok: false, error: 'persist-failed', message: error instanceof Error ? error.message : String(error) })
+          }
+          const paths = getAssets()
+          if (paths !== null) deleteTaskAssets(paths, id)
+          getStore()?.appendAudit({ taskId: id, action: 'task_deleted' })
+          log(`任务 ${id} 已删除（定义已摘除，任务目录整删；执行记录保留）`)
+          return writeJson(res, 200, { ok: true, removed: rm.removed })
+        }
+
+        // ── 整批（配置页 JSON 编辑，身份闸门不变）──
+        if (typeof parsed.tasksInline === 'string') {
+          const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline, existingUuidIds(runtimeRef.tasksInline))
+          if (error !== null) return writeJson(res, 422, { ok: false, error })
+          runtimeRef.tasksInline = json
+          await persistTasksInline(json)
+          // 整批替换是最重的改动，审计不能缺（评审 P2#13）。
+          getStore()?.appendAudit({ action: 'tasks_replaced', detail: { bytes: json.length, assigned: changed ? assigned : 0 } })
+          return writeJson(res, 200, { ok: true, assigned: changed ? assigned : 0 })
+        }
+
+        // ── 单条（新增 / 编辑表单）──
+        if (parsed.task === null || typeof parsed.task !== 'object' || Array.isArray(parsed.task)) {
+          return writeJson(res, 400, { ok: false, error: 'task-or-tasksInline-required' })
+        }
+        const store = getStore()
+        const paths = getAssets()
+        if (store === null || paths === null) return writeJson(res, 503, { ok: false, error: 'store-or-assets-not-ready' })
+
+        // ① zod 全量校验（评审 P1#2：坏定义不能 200 假成功进权威表，之后运行时静默跳过）
+        const checked = taskDefinitionSchema.safeParse(parsed.task)
+        if (!checked.success) {
+          const first = checked.error.issues[0]
+          const where = first === undefined ? '' : `${first.path.join('.')}: `
+          return writeJson(res, 422, { ok: false, error: `任务定义不合法（${where}${first?.message ?? '未知原因'}）` })
+        }
+        const def = checked.data as TaskDefinitionInput
+        const existing = existingUuidIds(runtimeRef.tasksInline)
+        const validation = validateDefinitionForSave(def, existing)
+        if (validation.ok !== true) return writeJson(res, 422, { ok: false, error: validation.error })
+
+        // ② 身份：带 UUID 且命中现有表 ⇒ 修改；否则**一律服务端生成新 id**——
+        //    客户端给的 id 不采纳，闸门「UUID 不能凭空引入」不被表单通道旁路（评审 P2#10）。
+        const incomingId = isUuid(def.id) ? def.id : null
+        const isUpdate = incomingId !== null && existing.has(incomingId)
+        const id = isUpdate ? incomingId : newTaskId()
+
+        // ③ 附件搬移：**只搬不删**（评审 P1#3：真删延后到落库成功之后，否则落库失败时文件已没了）
+        const prevAttachments = readAttachmentsOf(runtimeRef.tasksInline, id)
+        const moved = moveAttachmentsIn(paths, id, def.attachments ?? [], prevAttachments)
+        const finalDef: Record<string, unknown> = { ...def, id }
+        if ((def.attachments ?? []).length > 0) finalDef.attachments = moved.attachments
+
+        // ④ 落库（定义先落：它是唯一权威）
+        const up = upsertDefinitionInline(runtimeRef.tasksInline, finalDef as TaskDefinitionInput, { allowNew: true })
+        if (up.error !== null) return writeJson(res, 422, { ok: false, error: up.error })
+        runtimeRef.tasksInline = up.json
+        await persistTasksInline(up.json)
+
+        // ⑤ 落库成功 ⇒ 才真删被移除的附件文件
+        const removeFailed = removeAttachmentFiles(paths, id, moved.removed)
+
+        // ⑥ 版本 / 快照（变了才留；失败只告警，不回滚定义）
+        let versionCreated = false
+        let snapshotCreated = false
+        const promptText = typeof finalDef.target === 'object' && finalDef.target !== null
+          ? (finalDef.target as { prompt?: unknown }).prompt
+          : undefined
+        try { versionCreated = saveVersion(paths, id, typeof promptText === 'string' ? promptText : '', '').created } catch (error) {
+          log(`任务 ${id} 提示词版本留档失败（不阻塞保存）：${error instanceof Error ? error.message : String(error)}`)
+        }
+        try { snapshotCreated = saveSnapshot(paths, id, finalDef).created } catch (error) {
+          log(`任务 ${id} 配置快照留档失败（不阻塞保存）：${error instanceof Error ? error.message : String(error)}`)
+        }
+
+        // ⑦ 审计
+        store.appendAudit({
+          taskId: id,
+          action: up.mode === 'create' ? 'task_created' : 'task_updated',
+          detail: { versionCreated, snapshotCreated, attachments: moved.attachments.length },
+        })
+        if (versionCreated) store.appendAudit({ taskId: id, action: 'version_created' })
+        for (const ref of moved.removed) store.appendAudit({ taskId: id, action: 'attachment_removed', detail: { ref } })
+        for (const name of moved.missing) store.appendAudit({ taskId: id, action: 'attachment_missing', detail: { name } })
+
+        const removedNames = moved.removed.map(ref => prevAttachments.find(item => item.ref === ref)?.name ?? ref)
+        writeJson(res, 200, {
+          ok: true,
+          mode: up.mode,
+          id,
+          versionCreated,
+          snapshotCreated,
+          missingAttachments: moved.missing,
+          removedAttachments: removedNames,
+          assetErrors: [...moved.errors, ...removeFailed],
+      })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
       }
+    },
+  },
+  {
+    // 版本 / 快照列表（编辑态「历史版本」面板）：GET /tasks/history?id=<uuid>
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/tasks/history`,
+    handler: (req, res) => {
+      if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      const paths = getAssets()
+      if (paths === null) return writeJson(res, 503, { ok: false, error: 'assets-not-ready' })
+      const id = queryOf(req, 'id')
+      if (!isUuid(id)) return writeJson(res, 400, { ok: false, error: 'id-required' })
+      writeJson(res, 200, {
+        ok: true,
+        versions: listVersions(paths, id),
+        snapshots: listSnapshots(paths, id),
+      })
+    },
+  },
+  {
+    // 版本 / 快照内容与删除：
+    //   GET    /tasks/history/item?id=&kind=prompt|snapshot&file=   ⇒ 内容（找回时用它回填表单）
+    //   DELETE /tasks/history/item?id=&kind=&file=                  ⇒ 用户自己删（系统从不自动删）
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/tasks/history/item`,
+    handler: (req, res) => {
+      if (req.method !== 'GET' && req.method !== 'DELETE') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      const paths = getAssets()
+      if (paths === null) return writeJson(res, 503, { ok: false, error: 'assets-not-ready' })
+      const id = queryOf(req, 'id')
+      const kind = queryOf(req, 'kind')
+      const file = queryOf(req, 'file')
+      if (!isUuid(id) || file === '') return writeJson(res, 400, { ok: false, error: 'id-and-file-required' })
+      if (req.method === 'DELETE') {
+        const gone = kind === 'snapshot' ? deleteSnapshot(paths, id, file) : deleteVersion(paths, id, file)
+        if (gone) getStore()?.appendAudit({ taskId: id, action: kind === 'snapshot' ? 'snapshot_deleted' : 'version_deleted', detail: { file } })
+        return writeJson(res, 200, { ok: true, deleted: gone })
+      }
+      const content = kind === 'snapshot' ? readSnapshot(paths, id, file) : readVersion(paths, id, file)
+      if (content === null) return writeJson(res, 404, { ok: false, error: 'not-found' })
+      return writeJson(res, 200, { ok: true, content })
     },
   },
   {
@@ -401,6 +584,8 @@ export function apply(ctx: HostContext, config: unknown): void {
     defaultProvider: typeof raw.defaultProvider === 'string' ? raw.defaultProvider : '',
     defaultModel: typeof raw.defaultModel === 'string' ? raw.defaultModel : '',
     logRetentionDays: readConfigField(raw.logRetentionDays, ConfigDefaults.logRetentionDays),
+    historyRetentionDays: readConfigField(raw.historyRetentionDays, ConfigDefaults.historyRetentionDays),
+    attachmentTmpRetentionDays: readConfigField(raw.attachmentTmpRetentionDays, ConfigDefaults.attachmentTmpRetentionDays),
   }
   // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
   // 用户文档层 live 覆盖（packages/settings/settings/src/index.ts:49-59）。
@@ -419,6 +604,10 @@ export function apply(ctx: HostContext, config: unknown): void {
   let storeRef: TaskStore | null = null
   /** settings inject 就绪后的附件落盘目录（插件数据根下 task-attachments/，随 statePath 定格）。 */
   let attachmentsDirRef: string | null = null
+  /** settings inject 就绪后的任务文件资产根（tasks/ 与临时区都在 state.db 同目录）。 */
+  let assetsRef: AssetPaths | null = null
+  /** settings inject 就绪后的插件配置（清道夫天数等；无 register 面时沿用启动配置）。 */
+  let configRef: PluginConfig = initial
   const persistTasksInline = async (json: string): Promise<void> => {
     // 主通道：写状态库 meta 表（state.db 在宿主数据根 = 挂载卷，容器重建 / 插件重装都不丢）。
     // 未就绪只告警不静默——用户必须知道这次保存没落盘。
@@ -463,6 +652,8 @@ export function apply(ctx: HostContext, config: unknown): void {
       (msg) => { ctx.logger.info(msg) },
       // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
       () => attachmentsDirRef,
+      () => assetsRef,
+      () => configRef,
     )) webServer.register(route)
     wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive')
   })
@@ -480,8 +671,12 @@ export function apply(ctx: HostContext, config: unknown): void {
     // statePath 启动时定格，运行期改配置不迁移库。
     const store = new TaskStore(resolveStatePath(scope.get().statePath))
     storeRef = store
-    // 附件上传落盘目录随 statePath 定格（webServer 路由经 attachmentsDirRef 惰性读取）。
-    attachmentsDirRef = path.join(path.dirname(resolveStatePath(scope.get().statePath)), 'task-attachments')
+    // 附件上传落盘目录 = 上传**临时区**（task-attachments-tmp/，2026-09-30）：
+    // 新上传先进临时区，保存时才搬进 tasks/<id>/attachments/（原始名）。旧平铺目录
+    // task-attachments/ 只作老数据迁移源，不再有新文件写入。
+    attachmentsDirRef = path.join(path.dirname(resolveStatePath(scope.get().statePath)), 'task-attachments-tmp')
+    // 任务文件资产根（tasks/<uuid>/ + 上传临时区）随 statePath 定格。
+    assetsRef = assetPaths(resolveStatePath(scope.get().statePath))
     // 任务表恢复（主通道 = 状态库 meta）：state.db 在宿主数据根（挂载卷），容器重建 /
     // 插件重装都不丢。meta 无行（从未保存过）⇒ 沿用 entry config 初始值（兼容旧部署）。
     const savedInline = store.getMeta('tasksInline')
@@ -585,12 +780,16 @@ export function apply(ctx: HostContext, config: unknown): void {
       config: pluginConfig,
       // 决策 41 一次性兼容：旧库实例无快照时按当前任务定义当场补快照（只此一处对账读任务表）。
       legacyTask: (taskId) => taskMap.get(taskId),
+      // 附加文件兜底校验（Loop B 发动前）：资产根随 statePath 定格。
+      assets: () => assetsRef,
     }
     const reconciler = createReconciler({ ctx: sctx, logger: teeLogger, store, options: reconcileOptions })
     const scheduler: Scheduler = createScheduler({
       ctx: sctx, logger: teeLogger, store, reconciler,
       // tasksInline 以 runtime 内存值为准（用户经 remote 服务改后即时生效，无需等 settings 落盘）。
       config: pluginConfig,
+      // 附加文件存在性校验（Loop A）：资产根随 statePath 定格，未就绪 ⇒ 跳过 upload 型校验。
+      assets: () => assetsRef,
     })
 
     // 启动扫描（机制 #5）：重启期间 disposed 事件可能全部丢失，已派发未定态实例置 unknown，
@@ -620,10 +819,31 @@ export function apply(ctx: HostContext, config: unknown): void {
     // tickMs live 变更时重启 interval。
     let stopInterval = sctx.interval(safeTick, scope.get().tickMs)
     scope.watch((next, prev) => {
+      // 配置 live 变更 ⇒ 同步给路由层（清道夫天数等）。
+      configRef = { ...next, tasksInline: runtime.tasksInline }
       if (next.tickMs === prev.tickMs) return
       stopInterval()
       stopInterval = sctx.interval(safeTick, next.tickMs)
     })
+
+    // 上传临时区清道夫：每 6 小时看一次，**跨天**才真干活 ⇒ 平时一轮只多一次日期比较，
+    // 无持续负载。删掉 N 天前没被保存带走的临时文件（data-model §六）。
+    let lastSweepDay = ''
+    const stopSweeper = sctx.interval(() => {
+      const paths = assetsRef
+      if (paths === null) return
+      const day = new Date().toISOString().slice(0, 10)
+      if (day === lastSweepDay) return
+      lastSweepDay = day
+      try {
+        const removed = purgeTmp(paths, configRef.attachmentTmpRetentionDays)
+        if (removed > 0) {
+          sctx.logger.info(`附件临时区清理：删除 ${removed} 个超过 ${configRef.attachmentTmpRetentionDays} 天的未保存文件`)
+        }
+      } catch (error) {
+        sctx.logger.warn(`附件临时区清理失败（不影响调度）：${error instanceof Error ? error.message : String(error)}`)
+      }
+    }, 6 * 3600_000)
 
     safeTick()
     scheduler.startupDiagnostics()
@@ -631,6 +851,7 @@ export function apply(ctx: HostContext, config: unknown): void {
 
     sctx.on('dispose', () => {
       stopInterval()
+      stopSweeper()
       store.close()
     })
   })

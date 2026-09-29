@@ -68,6 +68,19 @@ export interface InstanceSnapshot {
     window: string;
     /** 依赖快照（决策 43）：判定通过那一刻命中的上游实例与产出；决策 41 旧行无此字段。 */
     resolvedDeps?: ResolvedDependency[];
+    /**
+     * 附加文件清单（2026-09-30）：Loop B 发动前要校验「附件还在不在」⇒ 必须随快照冻结，
+     * 否则 Loop B 只能回头读任务定义，违反决策 41「只读快照」。旧行无此字段 = 无附件。
+     */
+    attachments?: SnapshotAttachment[];
+}
+/** 快照里的附件引用（只记引用，不存内容）。 */
+export interface SnapshotAttachment {
+    name: string;
+    kind: 'link' | 'upload';
+    ref: string;
+    /** link 型：来源工作区 title（派发注入 / 校验时按它把 ref 绝对化）。 */
+    workspace?: string;
 }
 /** 解析实例行的快照 JSON；空 / 坏 JSON / 形状不对返回 undefined（调用方走兜底）。 */
 export declare function parseInstanceSnapshot(raw: string | null): InstanceSnapshot | undefined;
@@ -163,6 +176,31 @@ export declare class TaskStore {
     }): void;
     /** 按保留期清除 task_log（决策 32：独立表，可定时清）。返回删除条数。 */
     purgeLog(retentionDays: number): number;
+    /**
+     * 操作审计留痕（2026-09-30）：新增 / 修改 / 删除任务、版本留档 / 找回、附件增删都记一笔。
+     * 与 `task_log`（诊断）分开：审计**默认不清**，要能回答「这任务什么时候被改成什么样」。
+     */
+    appendAudit(entry: {
+        taskId?: string | null;
+        action: string;
+        detail?: unknown;
+    }): void;
+    /** 审计流水（某任务的最近 N 条，新的在前）。 */
+    listAudit(taskId: string, limit?: number): {
+        ts: string;
+        action: string;
+        detail: string | null;
+    }[];
+    /**
+     * 按保留期清除执行记录（**默认不清**：`days <= 0` 直接返回 0）。
+     * 清的时候**保护每个任务最近一条终态记录**（succeeded / failed）：否则月 / 季 / 年任务的历史
+     * 被清干净后，下游 `latest_success` 永远查不到 ⇒ 静默阻塞（评审 P1）。
+     * 删实例行时连带删它的事件，不留孤儿。
+     */
+    purgeHistory(days: number): {
+        instances: number;
+        events: number;
+    };
     /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
     recordCompletion(id: string, outputs: string | null, tokenIn: number | null, tokenOut: number | null, tokenInCache: number | null): void;
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
@@ -173,7 +211,7 @@ export declare class TaskStore {
     /** 写 meta 键值（upsert）。任务表 tasksInline 的持久化主通道走这里。 */
     setMeta(key: string, value: string): void;
     /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
-    static readonly DUMP_TABLES: readonly ["task_instances", "task_events", "task_log", "meta"];
+    static readonly DUMP_TABLES: readonly ["task_instances", "task_events", "task_log", "task_audit", "meta"];
     /**
      * 调试导出：整表原样读出（面板「调试」页用）。
      * @param name - 表名（必须命中白名单）。

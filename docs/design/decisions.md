@@ -156,3 +156,24 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 - 模型下拉默认文案「跟随宿主默认」→「**默认模型**」。
 
 **UI 暂时封档（用户 2026-09-29 拍板）**：任务表单弹窗这一轮（决策 44–50）到此封卷，转入「新增任务 / 编辑任务」的功能设计（见 [`design/creation-edit-design.md`](creation-edit-design.md)），下一轮新会话按该提纲推进。
+## 决策 51：新增 / 编辑任务功能面落码（2026-09-30）
+
+**背景**：需求口径（`creation-edit-requirements.md`）与数据设计（`data-model.md` §五 §六）拍板后，用户授权整条「新增 / 修改」功能线由 agent 主导落码，次日起真机验证。
+
+**存储结论**：任务定义**不拆表**（整份 `tasksInline` + meta 主通道）；**不建**附件表 / 版本表 / 快照表（清单在定义 JSON、内容在文件系统，建表只会多一份会对不上的副本）。文件资产走 `tasks/<uuid>/{prompt-versions,snapshots,attachments}` + `task-attachments-tmp/`（临时区）。
+
+**排期双写（§5.4）**：JSON 并存 `schedule.ui`（表单结构化留档）与 `cron`/`once`；**执行只读 cron、表单反解只读 ui、保存以表单为准重写 cron**。编辑态反解优先级 = `schedule.ui` > cron 尽力反解 > **自定义 cron 降级**（`draft.customCron` 保留原串，保存时原样写回、不生成 ui——否则二次保存会把手写 cron 悄悄覆盖掉）。
+
+**保存链路（单任务通道，POST /tasks {task}）**：zod 全量校验（坏定义不能 200 假成功）→ 保存校验清单（提示词 / 工作区 / cron 与 once 恰有其一且可解析 / 前置任务必须存在（停用可以）/ 时区可识别 / 前置不能是自己）→ 身份（带 UUID 命中现有表 = 修改；否则**一律服务端生成新 id**，客户端 id 不采纳 ⇒ 闸门「UUID 不能凭空引入」不被表单通道旁路）→ **附件只搬不删** → 落库 → **落库成功后才真删**被移除的附件文件（时序反了会两头空）→ 版本 / 快照留档（变了才留；失败只告警不回滚定义）→ `task_audit` 审计。
+
+**间隔档必须产出 cron（P0 缺陷修复）**：`draftToDefinitionJson` 此前间隔档只写 `schedule.start` 不写 cron ⇒ 任务保存后永不执行。已修：`*/N * * * *` / `0 */N * * <dow>`。**每季度 off-by-one**：「每季度第 N 月」= N, N+3, N+6, N+9（起月要跑），旧写法漏起月。
+
+**两循环补齐（非重写，决策 41/42/43 架构不动）**：Loop A 附件存在性校验（缺失 ⇒ **不建行不执行**，只记 `attachment-missing` error；不判 failed 不吃重试额度）+ 依赖阻塞三分类 `dep_blocked` / `dep_disabled`（上游停用）/ `dep_missing`（上游已删除——依赖判定改吃**含停用的全量任务表**，否则停用上游被误报成"已删除"）+ 日志改「**结论变化才记**」（取代 5 分钟一条）。Loop B 发动前凭快照再校验一次（缺 ⇒ 不发动；**超窗删行**，否则 dispatched 行永久占住串行互斥）。派发快照补 `attachments`（Loop B 只读快照即可校验，不必回头读任务定义）。link 型附件按**来源工作区**（`item.workspace`）校验，不拿任务目标工作区误判。
+
+**执行记录保留**：`historyRetentionDays` **默认 0 = 不清**（容量复核：100 实例/天两年 ≈ 0.5GB，SQLite 上限 281TB；历史可查是刚需）；设了天数才清，且**保护每任务最近一条终态记录**（否则 `latest_success` 依赖判定静默阻塞）。临时区默认 7 天。
+
+**版本找回**：两档（只恢复提示词 / **整份找回** = 提示词 + 排期 + 工作区 + 模型 + 权限 + 重试 + 前置 + 附件清单），均带严厉确认（「确定找回会用历史版本覆盖现有修改的所有数据」）；附件已不在 ⇒ 照常保存 + 明示「需重新上传」。删除任务：保存旁红色按钮 + 严厉确认（「确定所有的移除都是找不回来的，不可逆的」）+ 整目录删；实例 / 事件保留做审计。
+
+**安全（评审修正）**：附件 ref 白名单（禁 `..` / 绝对路径 / 反斜杠）进 schema、搬移定位与**真删循环**三处对称设防——否则存在「提交穿越 ref 再保存一次 ⇒ rmSync 删数据根外任意文件」的完整利用链。文件名清洗保留中文 / 空格 / 点，只清控制字符与 `\ / : * ? " < > |`。
+
+**审计**：新表 `task_audit`（ts / task_id / action / detail），**默认不清**；action = task_created / task_updated / task_deleted / tasks_replaced / version_created / version_deleted / attachment_removed / attachment_missing。版本 / 快照管理入口本轮不做 UI（已封档），先只落盘 + `tasks/history` 路由已备。

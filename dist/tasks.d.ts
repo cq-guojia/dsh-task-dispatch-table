@@ -21,6 +21,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         once: z.ZodOptional<z.ZodString>;
         start: z.ZodOptional<z.ZodString>;
         everyNWeeks: z.ZodOptional<z.ZodNumber>;
+        ui: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strip>;
     target: z.ZodObject<{
         workspace: z.ZodString;
@@ -58,6 +59,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
             upload: "upload";
         }>;
         ref: z.ZodString;
+        workspace: z.ZodOptional<z.ZodString>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
 /** 用户书写形态：`id` 可缺省。 */
@@ -116,6 +118,42 @@ export declare function ensureIdsInInlineJson(raw: string, existingIds?: Readonl
  * 无 id（老数据）或 id 非 UUID ⇒ 返回 null，调用方记一条 warn 后跳过，不做任何兜底。
  */
 export declare function applyIdentity(def: TaskDefinitionInput): TaskDefinition | null;
+export interface SaveValidation {
+    ok: boolean;
+    /** 不通过的原因（中文，直接给 UI 展示）。 */
+    error: string | null;
+}
+/**
+ * 单条任务定义的保存校验（服务端把关，data-model §5.2 校验清单）：
+ * ① 提示词非空；② 工作区非空；③ `cron` 与 `once` **恰有其一**且 cron 可解析；
+ * ④ 前置任务必须指向已存在的任务（**停用可以、不存在不行**）。
+ * `title` / `code` **不做**格式与唯一性校验（决策 30：它们只是人读字段）。
+ */
+export declare function validateDefinitionForSave(def: TaskDefinitionInput, existingIds: ReadonlySet<string>): SaveValidation;
+export interface UpsertResult {
+    json: string;
+    mode: 'create' | 'update';
+    /** 落定后的任务 id（新增时为系统刚生成的 UUID）。 */
+    id: string;
+    error: string | null;
+}
+/**
+ * 把一条任务定义并回整表（新增 = 追加，修改 = 按 id 替换）。
+ * **身份闸门在这里落地**：无 id ⇒ 生成 UUID（新增）；带 UUID ⇒ 必须命中现有表（修改）；
+ * 非 UUID ⇒ 拒绝。
+ * @param opts.allowNew - 表单通道专用：带 UUID 但表中没有 ⇒ **视为新增**（id 由服务端刚生成，
+ *   可信）。整批 JSON 通道不传 ⇒ 沿用闸门语义（凭空引入的 UUID 一律拒）。
+ */
+export declare function upsertDefinitionInline(raw: string, definition: TaskDefinitionInput, opts?: {
+    allowNew?: boolean;
+}): UpsertResult;
+export interface RemoveResult {
+    json: string;
+    removed: boolean;
+    error: string | null;
+}
+/** 从整表里摘掉一条任务定义（删除任务；实例 / 事件保留在库里做审计）。 */
+export declare function removeDefinitionInline(raw: string, id: string): RemoveResult;
 /** 把 ISO 8601 时长解析成毫秒。 */
 export declare function durationMs(iso: string): number;
 /** 用 Intl 验证 IANA 时区名（schedule.timezone 缺省 = 宿主时区）。 */
@@ -159,7 +197,9 @@ export declare function onceScheduledAt(task: TaskDefinition, day: string): Date
  * 身份走 `applyIdentity`（决策 30 修订：**运行时只认不修**）——无 id / 非 UUID 的条目
  * warn 跳过，绝不在这里生成或兜底 id；生成只发生在保存闸门 `ensureIdsInInlineJson`。
  */
-export declare function parseInlineTasks(logger: HostLogger, raw: string): TaskDefinition[];
+export declare function parseInlineTasks(logger: HostLogger, raw: string, opts?: {
+    includeDisabled?: boolean;
+}): TaskDefinition[];
 /**
  * 读任务表目录：逐文件 safeParse，坏文件告警跳过；返回 enabled 的定义。
  * 身份同样「运行时只认」（决策 30 修订）：缺 id / id 非 UUID 的文件 warn 跳过，**不再写回**。

@@ -1,8 +1,15 @@
 import type { HostContext, HostLogger, HostSession } from './host.js';
 import type { TaskDefinition } from './tasks.js';
 import type { AgentHandle } from './dispatch.js';
-import type { TaskInstance, TaskStore } from './store.js';
+import type { InstanceSnapshot, TaskInstance, TaskStore } from './store.js';
 import type { PluginConfig } from './config.js';
+import { type AssetPaths } from './task-assets.js';
+/**
+ * 快照里的附加文件是否还在（Loop B 发动前兜底）：返回**缺失**的展示名。
+ * upload 型按任务目录绝对路径（需 task_id），link 型按快照里冻结的工作区路径。
+ * 拿不到基准 ⇒ 跳过不判，绝不猜。
+ */
+export declare function missingSnapshotAttachments(ctx: HostContext, taskId: string, snap: InstanceSnapshot, assets: AssetPaths | null): string[];
 export interface ReconcileOptions {
     leaseMs: number;
     dispatchGraceMs: number;
@@ -14,6 +21,11 @@ export interface ReconcileOptions {
      * 返回 undefined = 无法兜底（任务已删 / 工作区没了）⇒ 该实例如实按失败收敛。
      */
     legacyTask?(taskId: string): TaskDefinition | undefined;
+    /**
+     * 任务文件资产根（2026-09-30）：发动前再次校验附加文件还在不在（Loop A 已查过一次，
+     * 这里是落库后到发动之间的兜底）。未就绪 ⇒ 跳过 upload 型校验，不误拦。
+     */
+    assets?(): AssetPaths | null;
 }
 export interface Reconciler {
     /** 发动成功后登记 agent handle（决策 19：超时追问用），终态/重试时自动遗忘。 */

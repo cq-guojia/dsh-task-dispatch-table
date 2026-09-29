@@ -7,6 +7,28 @@ import { dirname } from 'node:path';
 export const PERMISSION_MODES = ['default', 'readOnly', 'workspace', 'full'];
 export const TERMINAL_STATUSES = ['succeeded', 'failed', 'skipped'];
 const NON_TERMINAL_STATUSES = ['pending', 'dispatched', 'running', 'unknown'];
+/** 解析快照里的附件清单：形状不对的条目丢弃（不猜）。 */
+function parseSnapshotAttachments(raw) {
+    if (!Array.isArray(raw))
+        return undefined;
+    const out = [];
+    for (const item of raw) {
+        if (typeof item !== 'object' || item === null)
+            continue;
+        const a = item;
+        if (typeof a.name !== 'string' || typeof a.ref !== 'string')
+            continue;
+        if (a.kind !== 'link' && a.kind !== 'upload')
+            continue;
+        out.push({
+            name: a.name,
+            kind: a.kind,
+            ref: a.ref,
+            ...(typeof a.workspace === 'string' ? { workspace: a.workspace } : {}),
+        });
+    }
+    return out;
+}
 /** 解析 resolvedDeps（决策 43）：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃。 */
 function parseResolvedDeps(raw) {
     if (raw === undefined)
@@ -50,6 +72,8 @@ export function parseInstanceSnapshot(raw) {
         if (!Array.isArray(s.validStatuses))
             return undefined;
         const resolvedDeps = parseResolvedDeps(s.resolvedDeps);
+        // 附件解析一次；`[]` 也保留字段——「附件从有到无」的快照仍带空清单，Loop B 才能如实校验（评审 P2#14）。
+        const parsedAttachments = parseSnapshotAttachments(s.attachments);
         return {
             title: s.title,
             prompt: s.prompt,
@@ -66,6 +90,7 @@ export function parseInstanceSnapshot(raw) {
             ...(typeof s.agentTeam === 'boolean' ? { agentTeam: s.agentTeam } : {}),
             ...(PERMISSION_MODES.includes(s.permission) ? { permission: s.permission } : {}),
             ...(resolvedDeps === undefined ? {} : { resolvedDeps }),
+            ...(parsedAttachments === undefined ? {} : { attachments: parsedAttachments }),
         };
     }
     catch {
@@ -123,6 +148,17 @@ CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+-- 操作审计表（2026-09-30）：新增 / 修改 / 删除任务、版本留档、版本找回、附件增删
+-- 全部留痕 ⇒ 事后能回答「这个任务什么时候被改成什么样」。
+-- 与 task_log（诊断，30 天清）分开：**默认不清**（design/data-model.md §六）。
+CREATE TABLE IF NOT EXISTS task_audit (
+  seq      INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts       TEXT NOT NULL,
+  task_id  TEXT,
+  action   TEXT NOT NULL,
+  detail   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_audit_task ON task_audit(task_id, seq);
 `;
 const nowIso = () => new Date().toISOString();
 export class TaskStore {
@@ -278,6 +314,60 @@ export class TaskStore {
         const result = this.db.prepare('DELETE FROM task_log WHERE ts < ?').run(cutoff);
         return Number(result.changes);
     }
+    /**
+     * 操作审计留痕（2026-09-30）：新增 / 修改 / 删除任务、版本留档 / 找回、附件增删都记一笔。
+     * 与 `task_log`（诊断）分开：审计**默认不清**，要能回答「这任务什么时候被改成什么样」。
+     */
+    appendAudit(entry) {
+        this.db
+            .prepare('INSERT INTO task_audit (ts, task_id, action, detail) VALUES (?, ?, ?, ?)')
+            .run(nowIso(), entry.taskId ?? null, entry.action, entry.detail === undefined ? null : JSON.stringify(entry.detail));
+    }
+    /** 审计流水（某任务的最近 N 条，新的在前）。 */
+    listAudit(taskId, limit = 100) {
+        return this.db
+            .prepare('SELECT ts, action, detail FROM task_audit WHERE task_id = ? ORDER BY seq DESC LIMIT ?')
+            .all(taskId, limit);
+    }
+    /**
+     * 按保留期清除执行记录（**默认不清**：`days <= 0` 直接返回 0）。
+     * 清的时候**保护每个任务最近一条终态记录**（succeeded / failed）：否则月 / 季 / 年任务的历史
+     * 被清干净后，下游 `latest_success` 永远查不到 ⇒ 静默阻塞（评审 P1）。
+     * 删实例行时连带删它的事件，不留孤儿。
+     */
+    purgeHistory(days) {
+        if (days <= 0)
+            return { instances: 0, events: 0 };
+        const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
+        const doomed = this.db
+            .prepare(`SELECT id FROM task_instances
+                 WHERE updated_at < ?
+                   AND status IN ('succeeded','failed','skipped','unknown')
+                   AND id NOT IN (
+                     SELECT i.id FROM task_instances i
+                     WHERE i.status IN ('succeeded','failed')
+                       AND i.updated_at = (SELECT MAX(j.updated_at) FROM task_instances j
+                                           WHERE j.task_id = i.task_id AND j.status IN ('succeeded','failed'))
+                   )`)
+            .all(cutoff);
+        let events = 0;
+        for (const row of doomed) {
+            const result = this.db.prepare('DELETE FROM task_events WHERE instance_id = ?').run(row.id);
+            events += Number(result.changes);
+        }
+        const result = this.db
+            .prepare(`DELETE FROM task_instances WHERE id IN (SELECT id FROM task_instances
+                 WHERE updated_at < ?
+                   AND status IN ('succeeded','failed','skipped','unknown')
+                   AND id NOT IN (
+                     SELECT i.id FROM task_instances i
+                     WHERE i.status IN ('succeeded','failed')
+                       AND i.updated_at = (SELECT MAX(j.updated_at) FROM task_instances j
+                                           WHERE j.task_id = i.task_id AND j.status IN ('succeeded','failed'))
+                   ))`)
+            .run(cutoff);
+        return { instances: Number(result.changes), events };
+    }
     /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
     recordCompletion(id, outputs, tokenIn, tokenOut, tokenInCache) {
         this.db
@@ -305,7 +395,7 @@ export class TaskStore {
             .run(key, value);
     }
     /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
-    static DUMP_TABLES = ['task_instances', 'task_events', 'task_log', 'meta'];
+    static DUMP_TABLES = ['task_instances', 'task_events', 'task_log', 'task_audit', 'meta'];
     /**
      * 调试导出：整表原样读出（面板「调试」页用）。
      * @param name - 表名（必须命中白名单）。
@@ -319,7 +409,8 @@ export class TaskStore {
         const order = name === 'task_events' ? 'seq DESC'
             : name === 'task_instances' ? 'scheduled_at DESC, id DESC'
                 : name === 'task_log' ? 'ts DESC, seq DESC'
-                    : 'key'; // meta：按 key 升序
+                    : name === 'task_audit' ? 'seq DESC'
+                        : 'key'; // meta：按 key 升序
         const rows = this.db.prepare(`SELECT * FROM ${name} ORDER BY ${order} LIMIT ?`).all(limit);
         const columns = this.db.prepare(`PRAGMA table_info(${name})`).all().map(col => col.name);
         return { name, count, columns, rows, truncated: count > rows.length };

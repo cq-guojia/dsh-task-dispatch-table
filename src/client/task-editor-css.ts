@@ -39,6 +39,9 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-label{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-ed-hint{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-ed-warn{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-state-warn-primary,#f5a623);}
+/* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
+.dsh-tdt-ed-danger{color:var(--dsw-alias-state-error-primary,#e5484d)!important;border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;}
+.dsh-tdt-ed-danger:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))!important;}
 .dsh-tdt-ed-section{margin-bottom:16px;}
 .dsh-tdt-ed-section:last-child{margin-bottom:0;}
 /* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */

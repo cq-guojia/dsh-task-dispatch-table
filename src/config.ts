@@ -28,6 +28,13 @@ export interface PluginConfig {
   defaultModel: string
   /** task_log 保留期（天）：到期行由 tick 内 purgeLog 清除（决策 32）。 */
   logRetentionDays: number
+  /**
+   * 执行记录（task_instances + task_events）保留期（天）：**0 = 不清**（默认）。
+   * 容量不是约束（100 实例/天两年 ≈ 0.5GB），历史可查才是刚需 ⇒ 见 data-model §6.1。
+   */
+  historyRetentionDays: number
+  /** 上传临时区保留期（天）：到期文件由 tick 内清道夫删除（默认 7）。 */
+  attachmentTmpRetentionDays: number
 }
 
 export const ConfigDefaults: Omit<
@@ -39,6 +46,8 @@ export const ConfigDefaults: Omit<
   leaseMs: 30 * 60_000,
   unknownGraceMs: 5 * 60_000,
   logRetentionDays: 30,
+  historyRetentionDays: 0,
+  attachmentTmpRetentionDays: 7,
 }
 
 // ⚠️ rc.1（0.1.7-rc.1）约束：宿主插件配置字段**不能标 .volatile()**。
@@ -63,6 +72,8 @@ export const Config = z.object({
   defaultProvider: z.string().default(''),
   defaultModel: z.string().default(''),
   logRetentionDays: z.number().min(1).default(30),
+  historyRetentionDays: z.number().min(0).default(0),
+  attachmentTmpRetentionDays: z.number().min(1).default(7),
 })
 
 /**

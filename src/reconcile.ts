@@ -19,6 +19,36 @@ import { receiptInstruction } from './receipt.js'
 import type { InstanceSnapshot, TaskInstance, TaskStore } from './store.js'
 import { parseInstanceSnapshot } from './store.js'
 import type { PluginConfig } from './config.js'
+import { join } from 'node:path'
+import { attachmentAbsPath, type AssetPaths } from './task-assets.js'
+
+/**
+ * 快照里的附加文件是否还在（Loop B 发动前兜底）：返回**缺失**的展示名。
+ * upload 型按任务目录绝对路径（需 task_id），link 型按快照里冻结的工作区路径。
+ * 拿不到基准 ⇒ 跳过不判，绝不猜。
+ */
+export function missingSnapshotAttachments(ctx: HostContext, taskId: string, snap: InstanceSnapshot, assets: AssetPaths | null): string[] {
+  const list = snap.attachments
+  if (list === undefined || list.length === 0) return []
+  const out: string[] = []
+  for (const item of list) {
+    let abs: string | null = null
+    if (item.kind === 'upload') {
+      abs = assets === null ? null : attachmentAbsPath(assets, taskId, item.ref)
+    } else {
+      // link 型按附件来源工作区解析（item.workspace 随快照冻结）；来源解析不出 ⇒ 不判，绝不猜。
+      const source = item.workspace !== undefined && item.workspace.trim() !== '' ? item.workspace : null
+      try {
+        abs = source === null ? join(snap.workspacePath, item.ref) : join(resolveWorkspace(ctx, source).path, item.ref)
+      } catch {
+        abs = null
+      }
+    }
+    if (abs === null || abs.includes('..')) continue
+    if (!existsSync(abs)) out.push(item.name)
+  }
+  return out
+}
 
 export interface ReconcileOptions {
   leaseMs: number
@@ -31,6 +61,11 @@ export interface ReconcileOptions {
    * 返回 undefined = 无法兜底（任务已删 / 工作区没了）⇒ 该实例如实按失败收敛。
    */
   legacyTask?(taskId: string): TaskDefinition | undefined
+  /**
+   * 任务文件资产根（2026-09-30）：发动前再次校验附加文件还在不在（Loop A 已查过一次，
+   * 这里是落库后到发动之间的兜底）。未就绪 ⇒ 跳过 upload 型校验，不误拦。
+   */
+  assets?(): AssetPaths | null
 }
 
 /** 跑完信号后允许补交回执的追问上限（写死不加配置，事件表可查次数）。 */
@@ -314,6 +349,29 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
     const snap = snapOf(instance)
     if (snap === undefined) {
       retryOrFail(instance, 'no-snapshot')
+      return
+    }
+    // 附加文件兜底校验（2026-09-30）：只凭快照判定，不读任务定义。
+    // 缺失 ⇒ **不发动**，只记一条实例事件（同一实例不重复记）。不判失败、不吃重试额度——
+    // 重试也不会把文件变回来；文件一旦恢复，下个 tick 自然放行。
+    const gone = missingSnapshotAttachments(ctx, instance.task_id, snap, options.assets === undefined ? null : options.assets())
+    if (gone.length > 0) {
+      if (store.countEvents(instance.id, 'attachment-missing') === 0) {
+        store.appendEvent(instance.id, 'attachment-missing', { files: gone })
+      }
+      logger.warn(`实例 ${instance.id} 未发动：附加文件不存在（${gone.join('、')}）`)
+      // 超过窗口截止 ⇒ 删行（视为未执行，同 stray_pending 语义）：否则行永久 dispatched，
+      // 串行互斥会把同任务后续刻度全部挡死（评审 P1#9）。文件没恢复是常态 ⇒ 不能无限等。
+      if (Date.now() > Date.parse(instance.scheduled_at) + durationMs(snap.window)) {
+        store.deleteInstance(instance.id)
+        store.appendLog({
+          taskId: instance.task_id,
+          scheduledAt: instance.scheduled_at,
+          level: 'error',
+          kind: 'attachment-missing',
+          message: `附加文件缺失且已过窗口截止，执行记录已删除：${gone.join('、')}`,
+        })
+      }
       return
     }
     launching.add(instance.id)

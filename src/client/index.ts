@@ -20,7 +20,11 @@ import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 import { FileBrowser } from './file-browser'
 import { type WorkspaceFilesFace } from './file-preview'
-import { emptyTaskDraft, TaskEditorDrawer, type EditorOption, type EditorTaskOption, type TaskEditorDraft } from './task-editor'
+import {
+  definitionToDraft, draftToDefinitionJson, emptyTaskDraft, TaskEditorDrawer,
+  type EditorHistory, type EditorOption, type EditorTaskOption, type HistorySnapshot, type HistoryVersion,
+  type TaskEditorDraft,
+} from './task-editor'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -504,8 +508,154 @@ function TaskPage(props: {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }, [previewWidth])
-  // 新建 / 编辑任务弹窗（P0 界面 / P0.5 观感 / P1 下拉数据面；保存逻辑归 P2）。
-  const [editor, setEditor] = useState<{ mode: 'create' | 'edit'; draft: TaskEditorDraft } | null>(null)
+  // 新建 / 编辑任务弹窗：保存 / 删除 / 历史版本全部接线（2026-09-30）。
+  // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
+  const [editor, setEditor] = useState<{
+    mode: 'create' | 'edit'
+    id: string
+    draft: TaskEditorDraft
+    history: EditorHistory | null
+  } | null>(null)
+  const [editorSaving, setEditorSaving] = useState(false)
+  const [editorError, setEditorError] = useState<string | null>(null)
+
+  /** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
+  const loadHistory = async (id: string): Promise<void> => {
+    try {
+      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks/history?id=${encodeURIComponent(id)}`, { cache: 'no-store' })
+      const body = await res.json() as { ok?: boolean; versions?: unknown; snapshots?: unknown }
+      if (body.ok !== true) return
+      const history: EditorHistory = {
+        versions: Array.isArray(body.versions) ? body.versions as HistoryVersion[] : [],
+        snapshots: Array.isArray(body.snapshots) ? body.snapshots as HistorySnapshot[] : [],
+      }
+      setEditor(cur => (cur === null || cur.id !== id ? cur : { ...cur, history }))
+    } catch { /* 忽略：版本面板自有空态 */ }
+  }
+
+  /** 打开「编辑任务」：从 tasksInline 取**完整定义**反解成草稿（不是摘要行）。 */
+  const openEditor = (id: string): void => {
+    let found: Record<string, unknown> | null = null
+    try {
+      const arr = JSON.parse(effectiveInline.trim() === '' ? '[]' : effectiveInline) as unknown
+      if (Array.isArray(arr)) {
+        found = arr.find((item): item is Record<string, unknown> => (
+          item !== null && typeof item === 'object' && (item as { id?: unknown }).id === id
+        )) ?? null
+      }
+    } catch { found = null }
+    if (found === null) {
+      setViewErr('找不到该任务的定义，无法编辑（任务表可能刚被改动，请刷新后重试）')
+      return
+    }
+    setEditorError(null)
+    setEditor({ mode: 'edit', id, draft: definitionToDraft(found), history: null })
+    void loadHistory(id)
+  }
+
+  /** 保存（新增 / 修改同一条链路）：POST /tasks { task }。 */
+  const saveEditor = async (draft: TaskEditorDraft): Promise<void> => {
+    if (editor === null) return
+    setEditorSaving(true)
+    setEditorError(null)
+    try {
+      const definition = JSON.parse(draftToDefinitionJson(draft)) as Record<string, unknown>
+      if (editor.mode === 'edit') definition.id = editor.id
+      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ task: definition }),
+      })
+      const body = await res.json() as {
+        ok?: boolean; error?: unknown; id?: unknown; missingAttachments?: unknown
+      }
+      if (body.ok !== true) {
+        setEditorError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`)
+        return
+      }
+      const missing = Array.isArray(body.missingAttachments)
+        ? body.missingAttachments.filter((item): item is string => typeof item === 'string')
+        : []
+      setEditor(null)
+      // 附件失效要说出来（文件被清道夫清掉 / 手删了），否则用户不知道自己存的是个空引用。
+      if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join('、')}`)
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setEditorSaving(false)
+    }
+  }
+
+  /** 删除任务（定义摘掉 + 任务目录整删；执行记录保留）。 */
+  const deleteEditorTask = async (): Promise<void> => {
+    if (editor === null || editor.mode !== 'edit') return
+    try {
+      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: editor.id }),
+      })
+      const body = await res.json() as { ok?: boolean; error?: unknown }
+      if (body.ok !== true) {
+        setEditorError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`)
+        return
+      }
+      setEditor(null)
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  /** 只找回提示词：取该版本内容 → 填进编辑器（其余设置不动）。 */
+  const restoreVersion = async (file: string): Promise<void> => {
+    if (editor === null) return
+    try {
+      const res = await fetch(
+        `${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`,
+        { cache: 'no-store' },
+      )
+      const body = await res.json() as { ok?: boolean; content?: unknown }
+      if (body.ok !== true || typeof body.content !== 'string') {
+        setEditorError('该版本内容读不出来，可能已被删除')
+        return
+      }
+      setEditor(cur => (cur === null ? cur : { ...cur, draft: { ...cur.draft, prompt: body.content as string } }))
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  /** 找回全部设置：取该配置快照 → 反解成草稿 → 整体覆盖表单（id 保持）。 */
+  const restoreSnapshot = async (file: string): Promise<void> => {
+    if (editor === null) return
+    try {
+      const res = await fetch(
+        `${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=snapshot&file=${encodeURIComponent(file)}`,
+        { cache: 'no-store' },
+      )
+      const body = await res.json() as { ok?: boolean; content?: unknown }
+      if (body.ok !== true || body.content === null || typeof body.content !== 'object') {
+        setEditorError('该配置快照读不出来，可能已被删除')
+        return
+      }
+      const next = definitionToDraft(body.content as Record<string, unknown>)
+      setEditor(cur => (cur === null ? cur : { ...cur, draft: next }))
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  /** 删除某个历史版本（用户自己删；系统从不自动删）。 */
+  const deleteVersion = async (file: string): Promise<void> => {
+    if (editor === null) return
+    try {
+      await fetch(
+        `${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`,
+        { method: 'DELETE' },
+      )
+      await loadHistory(editor.id)
+    } catch { /* 删不掉就保持原样，不打断编辑 */ }
+  }
   // 表单下拉数据面（P1）：宿主真实工作区 + 真实模型目录，进面板取一次（不轮询，目录稳定）。
   const [editorOptions, setEditorOptions] = useState<EditorOptions>(EMPTY_EDITOR_OPTIONS)
   useEffect(() => {
@@ -736,7 +886,7 @@ function TaskPage(props: {
             type: 'button',
             style: addButtonStyle,
             title: t('editorNew'),
-            onClick: () => { setEditor({ mode: 'create', draft: emptyTaskDraft() }) },
+            onClick: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null }) },
           }, `＋ ${t('editorNew')}`),
         ),
       ),
@@ -751,6 +901,30 @@ function TaskPage(props: {
           )
         : tab === 'config'
           ? h('div', null,
+              // 任务列表：每行「编辑」入口（修改与新增共用同一表单；JSON 文本域保留作逃生口）。
+              h('div', { style: { marginBottom: '16px' } },
+                h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, t('editorTasksTitle')),
+                taskRows.length === 0
+                  ? h('p', { style: hintStyle }, t('editorTasksEmpty'))
+                  : h('ul', { style: { listStyle: 'none', margin: 0, padding: 0 } },
+                    taskRows.map(row => h('li', {
+                      key: row.id,
+                      style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: `1px solid ${C.border}` },
+                    },
+                      h('span', { style: { fontSize: '13px', fontWeight: 500 } }, row.title === '' ? row.id : row.title),
+                      h('span', { style: { fontSize: '11px', color: C.textFaint } }, row.code ?? row.id),
+                      row.enabled === false
+                        ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('editorDisabledTag'))
+                        : null,
+                      h('span', { style: { flex: '1 1 auto' } }),
+                      h('button', {
+                        type: 'button',
+                        style: { ...addButtonStyle, padding: '3px 10px' },
+                        onClick: () => { openEditor(row.id) },
+                      }, t('editorEdit')),
+                    )),
+                  ),
+              ),
               h('label', { htmlFor: 'dsh-tdt-modal-inline', style: { fontWeight: 600 } }, t('tasksInlineLabel')),
               h('p', { style: hintStyle }, t('tasksInlineHint')),
               h('textarea', {
@@ -1008,11 +1182,18 @@ function TaskPage(props: {
         t,
         mode: editor.mode,
         draft: editor.draft,
-        onChange: (next: TaskEditorDraft) => { setEditor({ mode: editor.mode, draft: next }) },
+        onChange: (next: TaskEditorDraft) => { setEditor({ ...editor, draft: next }) },
         workspaces: editorOptions.workspaces,
         models: editorOptions.models,
         tasks: editorTasks,
         onClose: () => { setEditor(null) },
+        onSave: (draft: TaskEditorDraft) => { void saveEditor(draft) },
+        onDelete: editor.mode === 'edit' ? () => { void deleteEditorTask() } : undefined,
+        saveError: editorError,
+        history: editor.history,
+        onRestoreVersion: (file: string) => { void restoreVersion(file) },
+        onRestoreSnapshot: (file: string) => { void restoreSnapshot(file) },
+        onDeleteVersion: (file: string) => { void deleteVersion(file) },
         workspaceFiles,
         workspaceAnchors: editorOptions.workspaceAnchors,
       })

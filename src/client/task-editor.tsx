@@ -63,6 +63,23 @@ export type { EditorOption }
 
 export type EditorMode = 'create' | 'edit'
 
+/** 服务端历史版本条目（对应 `tasks/<id>/prompt-versions/<时间戳>.md`）。 */
+export interface HistoryVersion {
+  file: string
+  ts: string
+  note: string
+}
+/** 服务端配置快照条目（对应 `tasks/<id>/snapshots/<时间戳>.json`，整份找回用）。 */
+export interface HistorySnapshot {
+  file: string
+  ts: string
+}
+/** 编辑态历史面板的数据面（新建任务为 null）。 */
+export interface EditorHistory {
+  versions: HistoryVersion[]
+  snapshots: HistorySnapshot[]
+}
+
 /** 提示词来源：手输（我们管版本）/ 选择工作区里的任务手册（只记路径）/ 上传 MD（我们管版本）。 */
 export type PromptSource = 'inline' | 'manual' | 'upload'
 
@@ -192,6 +209,11 @@ export interface TaskEditorDraft {
    *  所选档位经派发消息的约束指令执行。 */
   permission: PermissionMode
   deps: EditorDependency[]
+  /**
+   * 排期降级（编辑态反解不出结构化形态时）：**保留 JSON 里的原始 cron**，保存时原样写回
+   * ⇒ 手改过的 cron 不会被表单悄悄重写（不丢原值）。非空即代表「自定义 cron」态。
+   */
+  customCron?: string
 }
 
 const WEEKDAY_KEYS: LocaleKey[] = [
@@ -284,8 +306,12 @@ function scheduleCron(draft: TaskEditorDraft): string | null {
       // 单数月 / 双数月 = 隔月执行，cron 的月份位写得出（1,3,5… / 2,4,6…）。
       return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`
     case 'quarterly': {
-      const start = Number.parseInt(draft.quarterMonth, 10)
-      const months = [1, 2, 3].map(offset => (Number.isFinite(start) ? start : 1) + offset * 3).join(',')
+      // 「每季度第 N 个月」= N, N+3, N+6, N+9（起月本身就要跑）——
+      // 旧写法漏掉起月（选第 1 个月 ⇒ 4,7,10，1 月永不执行，评审 P1#5）。
+      const start = Number.isFinite(Number.parseInt(draft.quarterMonth, 10))
+        ? Number.parseInt(draft.quarterMonth, 10)
+        : 1
+      const months = [0, 1, 2, 3].map(offset => start + offset * 3).join(',')
       return `${minute} ${hour} ${draft.monthDay} ${months} *`
     }
     case 'yearly':
@@ -293,10 +319,39 @@ function scheduleCron(draft: TaskEditorDraft): string | null {
   }
 }
 
-/** 草稿 → 任务定义 JSON（**只读预览**用；真保存归 P2）。 */
+/** 结构化排期（双写的 `schedule.ui`）：表单控件的原样留档，供下次编辑反解。 */
+function structuredOf(draft: TaskEditorDraft): Record<string, unknown> {
+  return {
+    scheduleKind: draft.scheduleKind,
+    periodFreq: draft.periodFreq,
+    weekdays: [...draft.weekdays],
+    monthDay: draft.monthDay,
+    monthMode: draft.monthMode,
+    quarterMonth: draft.quarterMonth,
+    yearMonth: draft.yearMonth,
+    intervalUnit: draft.intervalUnit,
+    intervalStep: draft.intervalStep,
+    weekStep: draft.weekStep,
+  }
+}
+
+/**
+ * 草稿 → 任务定义 JSON（保存 / 预览同源）。
+ * 排期**双写**（data-model §5.4）：`cron`/`once`/`start`/`everyNWeeks` 是执行真源，
+ * `schedule.ui` 是编辑态反解真源；两者都由**表单**产出 ⇒ 保存以表单为准重写 cron
+ * （用户手改坏了 JSON 里的 cron，保存时被覆盖，不会留个坏 cron 在库里）。
+ *
+ * ⚠️ 间隔档（每隔 N 分钟 / 小时）**必须产出 cron**——此前漏了 ⇒ 任务保存后
+ * `scheduledSlotsFor` 取不到 cron、永不执行（评审 P2 / C1）。
+ */
 export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   const schedule: Record<string, unknown> = { window: draft.window }
-  if (draft.scheduleKind === 'periodic' && draft.periodFreq === 'once') {
+  const customCron = draft.customCron !== undefined ? draft.customCron.trim() : ''
+  if (customCron !== '') {
+    // 自定义 cron 降级态（编辑时反解不出来）：cron **原样写回**，且**不写 schedule.ui / start**——
+    // 否则 ui 与 cron 相互矛盾，下次反解会被 ui 带偏、再保存把手写 cron 悄悄覆盖掉（评审 P1#6）。
+    schedule.cron = customCron
+  } else if (draft.scheduleKind === 'periodic' && draft.periodFreq === 'once') {
     schedule.once = `${draft.date}T${draft.time}`
   } else if (draft.scheduleKind === 'periodic') {
     const cron = scheduleCron(draft)
@@ -305,11 +360,14 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
     schedule.start = `${draft.date}T${draft.time}`
     const step = Number.parseInt(draft.weekStep, 10)
     if (draft.periodFreq === 'weekly' && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step
+    schedule.ui = structuredOf(draft)
   } else if (draft.scheduleKind === 'interval') {
-    // 间隔档也有「任务开始时间」锚点（日期 + 时刻）；cron 映射归 P2，此处只落锚点。
+    // 间隔档：cron 必须由表单产出（`*/N * * * *` / `0 */N * * <dow>`），否则任务永不执行。
+    const cron = scheduleCron(draft)
+    if (cron !== null) schedule.cron = cron
     schedule.start = `${draft.date}T${draft.time}`
+    schedule.ui = structuredOf(draft)
   }
-  // scheduleKind === 'interval' 的 cron 映射（每隔 N 分钟/小时）归 P2，此处不产出 schedule.cron。
 
   const target: Record<string, unknown> = {
     workspace: draft.workspace,
@@ -342,6 +400,176 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   if (draft.deps.length > 0) definition.depends_on = draft.deps.filter(dep => dep.task !== '')
   if (draft.attachments.length > 0) definition.attachments = draft.attachments
   return JSON.stringify(definition, null, 2)
+}
+
+// ─────────────────────── 定义 → 草稿（编辑态反解，P1） ───────────────────────
+
+/** 附件 / 草稿条目的本地 id（反解时补上定义里缺失的 id）。 */
+function newAttachmentId(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID !== undefined
+    ? crypto.randomUUID()
+    : `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
+
+/** cron 星期位 → ISO 序号（cron 0 = 周日 ⇒ 7）。 */
+function isoDow(day: number): number {
+  return day === 0 ? 7 : day
+}
+
+/** 五段 cron → 结构化排期；表达不了的组合返回 null（调用方降级为「自定义 cron」，不丢原值）。 */
+function scheduleFromCron(cron: string): Partial<TaskEditorDraft> | null {
+  const parts = cron.trim().split(/\s+/)
+  if (parts.length !== 5) return null
+  const minute = parts[0] ?? ''
+  const hour = parts[1] ?? ''
+  const dom = parts[2] ?? ''
+  const mon = parts[3] ?? ''
+  const dow = parts[4] ?? ''
+  const hh = /^\d{1,2}$/.test(hour) ? hour.padStart(2, '0') : null
+  const mm = /^\d{1,2}$/.test(minute) ? minute.padStart(2, '0') : null
+  const time = hh !== null && mm !== null ? `${hh}:${mm}` : null
+
+  // 间隔档：每隔 N 分钟 / 每小时
+  if (minute.startsWith('*/') && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+    const step = minute.slice(2)
+    if (!/^\d+$/.test(step) || Number(step) <= 0) return null
+    return { scheduleKind: 'interval', intervalUnit: 'minute', intervalStep: step, ...(time === null ? {} : { time }) }
+  }
+  if (hour.startsWith('*/') && dom === '*' && mon === '*') {
+    const step = hour.slice(2)
+    if (!/^\d+$/.test(step) || Number(step) <= 0) return null
+    const weekdays = dow === '*'
+      ? [1, 2, 3, 4, 5, 6, 7]
+      : dow.split(',').map(Number).filter(n => Number.isFinite(n)).map(isoDow)
+    if (weekdays.length === 0) return null
+    return { scheduleKind: 'interval', intervalUnit: 'hour', intervalStep: step, weekdays, ...(time === null ? {} : { time }) }
+  }
+  if (time === null || dow !== '*' && dom !== '*') {
+    // DOM 与 DOW 同时指定 = cron 的 OR 语义，表单表达不了 ⇒ 降级
+    if (dom !== '*' && dow !== '*') return null
+    if (time === null) return null
+  }
+  if (dom === '*' && mon === '*' && dow === '*') return { scheduleKind: 'periodic', periodFreq: 'daily', time }
+  if (dom === '*' && mon === '*' && dow !== '*') {
+    const weekdays = dow.split(',').map(Number).filter(n => Number.isFinite(n)).map(isoDow)
+    if (weekdays.length === 0) return null
+    return { scheduleKind: 'periodic', periodFreq: 'weekly', weekdays, time }
+  }
+  if (!/^\d{1,2}$/.test(dom)) return null
+  if (mon === '*') return { scheduleKind: 'periodic', periodFreq: 'monthly', monthDay: dom, monthMode: 'every', time }
+  const months = mon.split(',').map(Number).filter(n => Number.isFinite(n))
+  if (months.length === 1) {
+    return { scheduleKind: 'periodic', periodFreq: 'yearly', yearMonth: String(months[0] ?? 1), monthDay: dom, time }
+  }
+  if (months.length === 4 && months.every((m, i) => i === 0 || m - (months[i - 1] ?? 0) === 3)) {
+    return {
+      scheduleKind: 'periodic', periodFreq: 'quarterly',
+      quarterMonth: String((((months[0] ?? 1) - 1) % 3) + 1), monthDay: dom, time,
+    }
+  }
+  if (months.length === 6) {
+    const odd = [1, 3, 5, 7, 9, 11]
+    const even = [2, 4, 6, 8, 10, 12]
+    const mode = months.every((m, i) => m === odd[i]) ? 'odd' : months.every((m, i) => m === even[i]) ? 'even' : null
+    if (mode !== null) return { scheduleKind: 'periodic', periodFreq: 'monthly', monthDay: dom, monthMode: mode, time }
+  }
+  return null
+}
+
+/**
+ * 任务定义 → 表单草稿（编辑现有任务用）。
+ * 排期反解优先级：`schedule.ui`（双写的结构化留档）> cron 尽力反解 > **自定义 cron 降级**
+ * （保留原串，保存时原样写回 ⇒ 手改过的 cron 不会被悄悄重写）。
+ */
+export function definitionToDraft(definition: Record<string, unknown>): TaskEditorDraft {
+  const base = emptyTaskDraft()
+  const target = (definition.target ?? {}) as Record<string, unknown>
+  const schedule = (definition.schedule ?? {}) as Record<string, unknown>
+  const retry = (definition.retry ?? {}) as Record<string, unknown>
+  const contract = (definition.contract ?? {}) as Record<string, unknown>
+
+  const model = typeof target.provider === 'string' && typeof target.model === 'string'
+    ? `${target.provider}/${target.model}`
+    : typeof target.model === 'string' ? target.model : ''
+
+  const draft: TaskEditorDraft = {
+    ...base,
+    title: typeof definition.title === 'string' ? definition.title : '',
+    code: typeof definition.code === 'string' ? definition.code : '',
+    enabled: definition.enabled !== false,
+    prompt: typeof target.prompt === 'string' ? target.prompt : '',
+    workspace: typeof target.workspace === 'string' ? target.workspace : '',
+    model,
+    permission: (typeof target.permission === 'string' ? target.permission : 'default') as PermissionMode,
+    goalMode: target.goal !== false,
+    agentTeam: target.agentTeam === true,
+    window: typeof schedule.window === 'string' ? schedule.window : base.window,
+    maxAttempts: String(typeof retry.maxAttempts === 'number' ? retry.maxAttempts : 1),
+    validStatuses: Array.isArray(contract.validStatuses)
+      ? contract.validStatuses.filter((item): item is string => typeof item === 'string').join(',')
+      : 'ok',
+    deps: Array.isArray(definition.depends_on)
+      ? definition.depends_on
+        .filter((item): item is { task: string; semantics: DepSemantics } => (
+          item !== null && typeof item === 'object'
+          && typeof (item as { task?: unknown }).task === 'string'
+          && ((item as { semantics?: unknown }).semantics === 'same_period'
+            || (item as { semantics?: unknown }).semantics === 'latest_success')
+        ))
+        .map(item => ({ task: item.task, semantics: item.semantics }))
+      : [],
+    attachments: Array.isArray(definition.attachments)
+      ? definition.attachments
+        .filter((item): item is Attachment => (
+          item !== null && typeof item === 'object'
+          && typeof (item as { name?: unknown }).name === 'string'
+          && typeof (item as { ref?: unknown }).ref === 'string'
+          && ((item as { kind?: unknown }).kind === 'link' || (item as { kind?: unknown }).kind === 'upload')
+        ))
+        .map(item => ({
+          id: typeof (item as { id?: unknown }).id === 'string' ? (item as { id: string }).id : newAttachmentId(),
+          name: item.name, kind: item.kind, ref: item.ref,
+          ...(typeof (item as { workspace?: unknown }).workspace === 'string'
+            ? { workspace: (item as { workspace: string }).workspace } : {}),
+        }))
+      : [],
+    versions: [],
+  }
+
+  const start = typeof schedule.start === 'string' ? schedule.start : ''
+  const once = typeof schedule.once === 'string' ? schedule.once : ''
+  if (start.length >= 16) {
+    draft.date = start.slice(0, 10)
+    if (once === '') draft.time = start.slice(11, 16)
+  }
+  if (once !== '') {
+    draft.scheduleKind = 'periodic'
+    draft.periodFreq = 'once'
+    draft.date = once.slice(0, 10)
+    draft.time = once.slice(11, 16)
+  } else {
+    const ui = (typeof schedule.ui === 'object' && schedule.ui !== null ? schedule.ui : {}) as Record<string, unknown>
+    if (Object.keys(ui).length > 0) {
+      if (ui.scheduleKind === 'interval' || ui.scheduleKind === 'periodic') draft.scheduleKind = ui.scheduleKind as ScheduleKind
+      if (typeof ui.periodFreq === 'string') draft.periodFreq = ui.periodFreq as PeriodFreq
+      if (Array.isArray(ui.weekdays)) draft.weekdays = ui.weekdays.filter((n): n is number => typeof n === 'number')
+      if (typeof ui.monthDay === 'string') draft.monthDay = ui.monthDay
+      if (ui.monthMode === 'every' || ui.monthMode === 'odd' || ui.monthMode === 'even') draft.monthMode = ui.monthMode
+      if (typeof ui.quarterMonth === 'string') draft.quarterMonth = ui.quarterMonth
+      if (typeof ui.yearMonth === 'string') draft.yearMonth = ui.yearMonth
+      if (ui.intervalUnit === 'minute' || ui.intervalUnit === 'hour') draft.intervalUnit = ui.intervalUnit
+      if (typeof ui.intervalStep === 'string') draft.intervalStep = ui.intervalStep
+      if (typeof ui.weekStep === 'string') draft.weekStep = ui.weekStep
+    } else {
+      const cron = typeof schedule.cron === 'string' ? schedule.cron : ''
+      const parsed = cron === '' ? null : scheduleFromCron(cron)
+      if (parsed !== null) Object.assign(draft, parsed)
+      else if (cron !== '') draft.customCron = cron
+    }
+  }
+  const everyNWeeks = typeof schedule.everyNWeeks === 'number' ? schedule.everyNWeeks : undefined
+  if (everyNWeeks !== undefined && everyNWeeks > 1) draft.weekStep = String(everyNWeeks)
+  return draft
 }
 
 // ─────────────────────── 布局小件 ───────────────────────
@@ -649,14 +877,6 @@ function ConfirmDiscard(props: {
   )
 }
 
-/** DEMO 模拟版本（仅样式预览用）：真实接入后由 props.versions 驱动，此常量删除。 */
-const DEMO_VERSIONS: PromptVersion[] = [
-  { id: 'demo-1', ts: '2026-09-28T14:30:00.000Z', content: '# 周一版本\n这里是周一 下午 初版的提示词正文……', note: '周一 下午 · 初版' },
-  { id: 'demo-2', ts: '2026-09-29T09:12:00.000Z', content: '# 周二版本\n调整了调度说明与依赖。', note: '周二 上午 · 调整' },
-  { id: 'demo-3', ts: '2026-09-30T11:48:00.000Z', content: '# 周三版本\n补充了产出物登记说明。', note: '周三 上午 · 补充' },
-  { id: 'demo-4', ts: '2026-10-01T16:24:00.000Z', content: '# 周四版本\n最终定稿，措辞收紧。', note: '周四 下午 · 定稿' },
-]
-
 /** 版本管理内的小型确认框（复用关闭确认的自绘样式：盖在编辑器之上、随抽屉浮在宿主之上）。 */
 function VersionConfirm(props: {
   t: T
@@ -691,26 +911,30 @@ function PromptEditorModal(props: {
   /** 抽屉模式：'create' = 新建（标签叫「历史版本」且暂无可查版本）；'edit' = 编辑（标签「版本历史」）。 */
   mode: EditorMode
   value: string
-  versions: PromptVersion[]
+  /** 服务端真历史（`tasks/<id>/prompt-versions` 与 `snapshots`）；新建态为 null。 */
+  history: EditorHistory | null
   onChange: (value: string) => void
   onClose: () => void
+  /** 只找回提示词（把该版本内容填进编辑器）。 */
+  onRestoreVersion: (file: string) => void
+  /** 找回全部设置（用该配置快照整体覆盖表单）。 */
+  onRestoreSnapshot: (file: string) => void
+  /** 删除某个版本（用户自己删；系统从不自动删）。 */
+  onDeleteVersion: (file: string) => void
 }): ReactNode {
-  const { t, mode: editorMode, value, versions, onChange, onClose } = props
+  const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onRestoreSnapshot, onDeleteVersion } = props
   // 编辑器扩展固定引用：markdown 高亮 + 软折行（长行自动换行，宽度失控/横向滚动的根源在此）。
   const cmExtensions = useMemo(() => [markdown(), EditorView.lineWrapping], [])
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [showVersions, setShowVersions] = useState(false)
-  // 本地版本表（DEMO：真实版本为空且处于编辑态时，塞 4 个模拟版本用于看样式；真实接入后由 props.versions 驱动）。
-  const [localVersions, setLocalVersions] = useState<PromptVersion[]>(() =>
-    versions.length > 0 ? versions : (editorMode === 'edit' ? DEMO_VERSIONS : []),
-  )
+  const versions = history?.versions ?? []
+  const snapshots = history?.snapshots ?? []
   const [hoveredId, setHoveredId] = useState<string | null>(null)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [confirmUseId, setConfirmUseId] = useState<string | null>(null)
+  const [confirmDeleteFile, setConfirmDeleteFile] = useState<string | null>(null)
+  const [confirmUseFile, setConfirmUseFile] = useState<string | null>(null)
+  const [confirmSnapshotFile, setConfirmSnapshotFile] = useState<string | null>(null)
 
   const versionTitle = editorMode === 'create' ? t('editorHistoryVersions') : t('editorVersions')
-  const confirmDelete = localVersions.find(v => v.id === confirmDeleteId) ?? null
-  const confirmUse = localVersions.find(v => v.id === confirmUseId) ?? null
 
   return h('div', {
     style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, overflow: 'hidden', position: 'relative' },
@@ -756,45 +980,73 @@ function PromptEditorModal(props: {
             h('div', { style: { padding: '10px 12px', borderBottom: `1px solid ${C.borderL4}`, fontSize: '13px', fontWeight: 600 } }, versionTitle),
             editorMode === 'create'
               ? h('div', { style: { padding: '16px 12px', fontSize: '12px', color: C.textDim, lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
-              : localVersions.length === 0
-                ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: C.textDim } }, t('editorNoVersions'))
-                : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 12px 12px', overflow: 'auto' } },
-                    localVersions.map(v => h('li', {
-                      key: v.id,
+              : h('div', { style: { display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' } },
+                versions.length === 0
+                  ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: C.textDim } }, t('editorNoVersions'))
+                  : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 12px 12px', overflow: 'auto' } },
+                    versions.map(v => h('li', {
+                      key: v.file,
                       style: { padding: '10px 0', borderBottom: `1px solid ${C.borderL4}`, position: 'relative' },
-                      onMouseEnter: () => { setHoveredId(v.id) },
-                      onMouseLeave: () => { setHoveredId(cur => (cur === v.id ? null : cur)) },
+                      onMouseEnter: () => { setHoveredId(v.file) },
+                      onMouseLeave: () => { setHoveredId(cur => (cur === v.file ? null : cur)) },
                     },
                       h('div', { style: { fontSize: '11px', color: C.textDim } }, formatVersionTime(v.ts)),
-                      v.note ? h('div', { style: { fontSize: '12px', margin: '2px 0 0' } }, v.note) : null,
-                      hoveredId === v.id
+                      v.note !== '' ? h('div', { style: { fontSize: '12px', margin: '2px 0 0' } }, v.note) : null,
+                      hoveredId === v.file
                         ? h('div', { style: { display: 'flex', gap: '6px', marginTop: '8px' } },
-                            h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmUseId(v.id) } }, t('editorUseVersion')),
-                            h(Button, { variant: 'ghost', size: 'sm', onClick: () => { setConfirmDeleteId(v.id) } }, t('editorDeleteVersion')),
+                            h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseVersion')),
+                            h(Button, { variant: 'ghost', size: 'sm', onClick: () => { setConfirmDeleteFile(v.file) } }, t('editorDeleteVersion')),
                           )
                         : null,
                     )),
                   ),
+                // 配置快照：整份找回（提示词 + 排期 + 工作区 + 模型 + 权限 + 附件清单全恢复）。
+                snapshots.length === 0
+                  ? null
+                  : h('div', { style: { borderTop: `1px solid ${C.borderL4}`, padding: '10px 12px 12px' } },
+                    h('div', { style: { fontSize: '12px', fontWeight: 600, marginBottom: '6px' } }, t('editorSnapshots')),
+                    h('ul', { style: { listStyle: 'none', margin: 0, padding: 0, overflow: 'auto' } },
+                      snapshots.map(s => h('li', {
+                        key: s.file,
+                        style: { padding: '8px 0', borderBottom: `1px solid ${C.borderL4}` },
+                      },
+                        h('div', { style: { fontSize: '11px', color: C.textDim, marginBottom: '6px' } }, formatVersionTime(s.ts)),
+                        h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmSnapshotFile(s.file) } }, t('editorRestoreAll')),
+                      )),
+                    ),
+                  ),
+              ),
           )
         : null,
     ),
-    confirmDelete !== null
+    // 三处确认一律严厉措辞：找回前必须让用户知道「会用历史版本覆盖现有修改的所有数据」。
+    confirmDeleteFile !== null
       ? h(VersionConfirm, {
         t,
         title: t('editorConfirmDeleteTitle'),
         desc: t('editorConfirmDeleteDesc'),
-        onCancel: () => { setConfirmDeleteId(null) },
-        onConfirm: () => { setLocalVersions(list => list.filter(x => x.id !== confirmDelete!.id)); setConfirmDeleteId(null) },
+        onCancel: () => { setConfirmDeleteFile(null) },
+        onConfirm: () => { onDeleteVersion(confirmDeleteFile); setConfirmDeleteFile(null) },
       })
       : null,
-    confirmUse !== null
+    confirmUseFile !== null
       ? h(VersionConfirm, {
         t,
-        title: t('editorConfirmUseTitle'),
-        desc: t('editorConfirmUseDesc'),
+        title: t('editorRestorePromptTitle'),
+        desc: t('editorRestorePromptDesc'),
         confirmLabel: t('editorUseVersion'),
-        onCancel: () => { setConfirmUseId(null) },
-        onConfirm: () => { onChange(confirmUse!.content); setConfirmUseId(null) },
+        onCancel: () => { setConfirmUseFile(null) },
+        onConfirm: () => { onRestoreVersion(confirmUseFile); setConfirmUseFile(null) },
+      })
+      : null,
+    confirmSnapshotFile !== null
+      ? h(VersionConfirm, {
+        t,
+        title: t('editorRestoreAllTitle'),
+        desc: t('editorRestoreAllDesc'),
+        confirmLabel: t('editorRestoreAll'),
+        onCancel: () => { setConfirmSnapshotFile(null) },
+        onConfirm: () => { onRestoreSnapshot(confirmSnapshotFile); setConfirmSnapshotFile(null) },
       })
       : null,
   )
@@ -844,8 +1096,20 @@ export function TaskEditorDrawer(props: {
   /** 可选的前置任务（= 现有任务表，真数据，带所属工作区）。 */
   tasks: EditorTaskOption[]
   onClose: () => void
-  /** 保存回调；**P0 不传** ⇒ 点「保存」只提示待接，不做任何写入。 */
+  /** 保存回调（新增 / 修改都走它）。未接时点「保存」只提示待接。 */
   onSave?: ((draft: TaskEditorDraft) => void) | undefined
+  /** 删除任务（仅编辑态有按钮）；未接时不显示按钮。 */
+  onDelete?: (() => void) | undefined
+  /** 保存失败原因（服务端文案），由外部回传展示。 */
+  saveError?: string | null
+  /** 服务端历史（版本 + 快照）；编辑态由外部拉取后传入。 */
+  history?: EditorHistory | null
+  /** 只找回提示词（外部取内容后回填表单）。 */
+  onRestoreVersion?: ((file: string) => void) | undefined
+  /** 找回全部设置（外部取快照后整体覆盖表单）。 */
+  onRestoreSnapshot?: ((file: string) => void) | undefined
+  /** 删除某个历史版本。 */
+  onDeleteVersion?: ((file: string) => void) | undefined
   /** 工作区文件服务（选择工作区文件用；未就位为 null ⇒ 选择器不可用）。 */
   workspaceFiles?: WorkspaceFilesFace | null
   /**
@@ -855,7 +1119,10 @@ export function TaskEditorDrawer(props: {
    */
   workspaceAnchors?: Record<string, string>
 }): ReactElement {
-  const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, workspaceFiles, workspaceAnchors } = props
+  const {
+    t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
+    history, onRestoreVersion, onRestoreSnapshot, onDeleteVersion, workspaceFiles, workspaceAnchors,
+  } = props
   const [width, setWidth] = useState<number>(readWidth)
   const [tab, setTab] = useState<'basic' | 'records'>('basic')
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -863,6 +1130,8 @@ export function TaskEditorDrawer(props: {
   const [editorOpen, setEditorOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(false)
+  const [confirmDeleteTask, setConfirmDeleteTask] = useState(false)
+  const [resetHint, setResetHint] = useState(false)
   // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
   const [pickerOpen, setPickerOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -1542,9 +1811,12 @@ export function TaskEditorDrawer(props: {
       t,
       mode,
       value: draft.prompt,
-      versions: draft.versions,
+      history: history ?? null,
       onChange: (value: string) => { patch({ prompt: value }) },
       onClose: () => { setEditorOpen(false) },
+      onRestoreVersion: (file: string) => { onRestoreVersion?.(file); setEditorOpen(false) },
+      onRestoreSnapshot: (file: string) => { onRestoreSnapshot?.(file); setEditorOpen(false) },
+      onDeleteVersion: (file: string) => { onDeleteVersion?.(file) },
     })
     : previewOpen
       ? h(ConfigPreviewPanel, {
@@ -1595,7 +1867,21 @@ export function TaskEditorDrawer(props: {
           )
         : null,
       h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef }, body),
+      // 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
       h('div', { className: 'dsh-tdt-ed-footer' },
+        mode === 'edit' && onDelete !== undefined
+          ? h(Button, {
+            variant: 'outline', size: 'sm', className: 'dsh-tdt-ed-danger',
+            onClick: () => { setConfirmDeleteTask(true) },
+          }, t('editorDeleteTask'))
+          : null,
+        h(Button, {
+          variant: 'ghost', size: 'sm',
+          onClick: () => { onChange(initialDraftRef.current); setResetHint(true) },
+        }, t('editorReset')),
+        h('span', { style: { flex: '1 1 auto' } }),
+        resetHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorResetDone')) : null,
+        saveError !== null ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0', color: 'var(--dsw-alias-state-error-primary, #e5484d)' } }, `${t('editorSaveFailedHint')}${saveError}`) : null,
         pendingHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorSavePending')) : null,
         h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
         h(Button, {
@@ -1607,6 +1893,17 @@ export function TaskEditorDrawer(props: {
           },
         }, t('editorSave')),
       ),
+      // 删除任务的严厉确认（用户 2026-09-30：措辞「所有的移除都是找不回来的，不可逆的」）。
+      confirmDeleteTask
+        ? h(VersionConfirm, {
+          t,
+          title: t('editorDeleteTaskTitle'),
+          desc: t('editorDeleteTaskDesc'),
+          confirmLabel: t('editorDeleteTask'),
+          onCancel: () => { setConfirmDeleteTask(false) },
+          onConfirm: () => { setConfirmDeleteTask(false); onDelete?.() },
+        })
+        : null,
     )
 
   return h('div', {

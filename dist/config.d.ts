@@ -22,6 +22,13 @@ export interface PluginConfig {
     defaultModel: string;
     /** task_log 保留期（天）：到期行由 tick 内 purgeLog 清除（决策 32）。 */
     logRetentionDays: number;
+    /**
+     * 执行记录（task_instances + task_events）保留期（天）：**0 = 不清**（默认）。
+     * 容量不是约束（100 实例/天两年 ≈ 0.5GB），历史可查才是刚需 ⇒ 见 data-model §6.1。
+     */
+    historyRetentionDays: number;
+    /** 上传临时区保留期（天）：到期文件由 tick 内清道夫删除（默认 7）。 */
+    attachmentTmpRetentionDays: number;
 }
 export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'>;
 export declare const Config: z<Schemastery.ObjectS<NoInfer<{
@@ -36,6 +43,8 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
     logRetentionDays: z<number, number, "defined">;
+    historyRetentionDays: z<number, number, "defined">;
+    attachmentTmpRetentionDays: z<number, number, "defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     statePath: z<string, string, "defined">;
     tickMs: z<number, number, "defined">;
@@ -48,6 +57,8 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
     logRetentionDays: z<number, number, "defined">;
+    historyRetentionDays: z<number, number, "defined">;
+    attachmentTmpRetentionDays: z<number, number, "defined">;
 }>>, "plain">;
 /**
  * rc.1 volatile 字段的解析结果是**带 get() 的引用**（非纯值）；读取时解包（与参考插件

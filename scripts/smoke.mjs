@@ -2,7 +2,7 @@
 //
 // 跑法：npm run smoke（先 npm run build，本脚本直接引 dist 产物，测的是真正要发布的代码）。
 // 刻意不引任何测试框架：零新增依赖，宿主环境装不了也照样能跑。
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -10,7 +10,12 @@ import { DatabaseSync } from 'node:sqlite'
 import {
   ensureIdsInInlineJson, existingUuidIds, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, applyIdentity, isUuid,
   displayNameOf, formatSlotShort, sessionTitleOf,
+  removeDefinitionInline, upsertDefinitionInline, validateDefinitionForSave,
 } from '../dist/tasks.js'
+import {
+  assetPaths, deleteTaskAssets, deleteVersion, listVersions, purgeTmp, readSnapshot, readVersion,
+  reconcileAttachments, saveSnapshot, saveVersion,
+} from '../dist/task-assets.js'
 import { TaskStore, parseInstanceSnapshot } from '../dist/store.js'
 import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
 import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
@@ -864,6 +869,132 @@ console.log('\n[10] token 用量提取')
   check('detail.usage 仅 total ⇒ undefined', extractTokenUsage({ detail: { usage: { total: 9 } } }) === undefined)
   check('无用量字段 ⇒ undefined（三列留 null，不阻塞）', extractTokenUsage({ type: 'turn/end' }) === undefined)
   check('非对象 ⇒ undefined', extractTokenUsage(null) === undefined)
+}
+
+// ── 11. 保存校验与整表合并（2026-09-30 P2 保存链路）──
+console.log('\n[11] 保存校验 upsert / validate / remove')
+{
+  const base = {
+    enabled: true,
+    schedule: { cron: '0 9 * * *', window: 'PT4H' },
+    target: { workspace: 'Temp', prompt: 'do it' },
+  }
+  const existing = existingUuidIds(JSON.stringify([{ ...base, id: '11111111-1111-4111-8111-111111111111' }]))
+  const validate = (definition, ids = existing) => validateDefinitionForSave(definition, ids)
+  check('校验：合法定义通过', validate(base).ok)
+  check('校验：提示词空 ⇒ 拒', validate({ ...base, target: { workspace: 'Temp', prompt: '  ' } }).error === '提示词不能为空')
+  check('校验：工作区空 ⇒ 拒', validate({ ...base, target: { workspace: ' ', prompt: 'p' } }).error === '工作区不能为空')
+  check('校验：cron 与 once 双缺 ⇒ 拒', validate({ ...base, schedule: { window: 'PT4H' } }).error?.includes('排期缺失') === true)
+  check('校验：cron 与 once 并存 ⇒ 拒', validate({ ...base, schedule: { cron: '0 9 * * *', once: '2026-10-01T09:00', window: 'PT4H' } }).error?.includes('排期冲突') === true)
+  check('校验：坏 cron ⇒ 拒', validate({ ...base, schedule: { cron: 'not a cron', window: 'PT4H' } }).ok === false)
+  check('校验：前置任务不存在 ⇒ 拒', validate({ ...base, depends_on: [{ task: 'ghost', semantics: 'latest_success' }] }).error?.includes('不存在') === true)
+  const upstreamId = '22222222-2222-4222-8222-222222222222'
+  check(
+    '校验：前置任务存在（停用也行）⇒ 通过',
+    validate({ ...base, depends_on: [{ task: upstreamId, semantics: 'latest_success' }] },
+      new Set([upstreamId])).ok,
+  )
+
+  const uuid = '33333333-3333-4333-8333-333333333333'
+  // 新增：无 id ⇒ 系统生成
+  const created = upsertDefinitionInline('[]', { ...base })
+  check('upsert：无 id ⇒ 新建并生成 UUID', created.mode === 'create' && isUuid(created.id))
+  check('upsert：结果 JSON 里有该 id', JSON.parse(created.json).some(row => row.id === created.id))
+  // 修改：命中现有表
+  const seeded = JSON.stringify([{ ...base, id: uuid, title: '旧名' }])
+  const updated = upsertDefinitionInline(seeded, { ...base, title: '新名', id: uuid })
+  check('upsert：带 UUID 命中 ⇒ 修改', updated.mode === 'update' && JSON.parse(updated.json)[0].title === '新名')
+  // 闸门：带 UUID 不在表内 ⇒ 拒（表单通道 allowNew 除外）
+  const ghostId = '44444444-4444-4444-8444-444444444444'
+  check('upsert：凭空 UUID ⇒ 拒', upsertDefinitionInline('[]', { ...base, id: ghostId }).error !== null)
+  check(
+    'upsert：allowNew ⇒ 视为新增（表单通道：id 由服务端刚生成）',
+    upsertDefinitionInline('[]', { ...base, id: ghostId }, { allowNew: true }).mode === 'create',
+  )
+  // 删除
+  const removed = removeDefinitionInline(seeded, uuid)
+  check('remove：按 id 摘除', removed.removed && JSON.parse(removed.json).length === 0)
+  check('remove：id 不存在 ⇒ removed=false', removeDefinitionInline(seeded, ghostId).removed === false)
+}
+
+// ── 12. 执行记录清理 purgeHistory（2026-09-30：默认不清 + 保护每任务最近终态）──
+console.log('\n[12] purgeHistory')
+{
+  const dir = join(root, 'purge-db')
+  const store = new TaskStore(join(dir, 'state.db'))
+  const t0 = '2026-01-01T00:00:00.000Z'
+  const recent = '2100-01-01T00:00:00.000Z'
+  const mk = (id, taskId, status, updated, scheduledAt = t0) => {
+    store.ensureInstance(id, taskId, '2026-01-01', scheduledAt, status, { title: 't', prompt: 'p', workspacePath: '/ws', provider: '', model: '', validStatuses: ['ok'], maxAttempts: 1, window: 'PT1H' })
+    store.transition(id, { status })
+    // 手动把 updated_at 拨到目标时刻（transition 用 now）
+    store.db.prepare('UPDATE task_instances SET updated_at = ? WHERE id = ?').run(updated, id)
+  }
+  const oldDone = '55555555-5555-4555-8555-555555555555'
+  const oldKeep = '66666666-6666-4666-8666-666666666666' // 该任务最近一条终态 ⇒ 保护
+  mk(oldDone, 'task-a', 'failed', t0)
+  mk(oldKeep, 'task-b', 'succeeded', t0)
+  mk('77777777-7777-4777-8777-777777777777', 'task-b', 'failed', '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z')
+  const run1 = store.purgeHistory(0)
+  check('默认（days=0）⇒ 不清', run1.instances === 0)
+  const run2 = store.purgeHistory(90)
+  // task-a：oldDone 是它唯一（=最近）终态 ⇒ 保护；task-b：7777(updated 06-01) 比 oldKeep(updated 01-01) 新
+  // ⇒ 7777 保护、oldKeep 被清。清理 = 删「非该任务最近终态」的过期行。
+  check('清掉过期且非最近终态的行', run2.instances === 1, `实际 ${run2.instances}`)
+  check('保护：task-a 最近终态保留', store.get(oldDone) !== undefined)
+  check('保护：task-b 最近终态保留', store.get('77777777-7777-4777-8777-777777777777') !== undefined)
+  check('task-b 较旧的 succeeded 行被清', store.get(oldKeep) === undefined)
+  store.close()
+  rmSync(dir, { recursive: true, force: true })
+}
+
+// ── 13. 任务文件资产 task-assets（版本 / 快照 / 附件）──
+console.log('\n[13] task-assets')
+{
+  const dir = join(root, 'assets-root')
+  const paths = assetPaths(join(dir, 'state.db'))
+  // 上传路由落盘前会建临时区；直测 reconcile 时也要先有它。
+  mkdirSync(paths.tmpDir, { recursive: true })
+  const taskId = '88888888-8888-4888-8888-888888888888'
+  const save1 = saveVersion(paths, taskId, '# v1\n内容', '初版')
+  check('版本：首次保存 ⇒ 建版', save1.created && save1.file !== '')
+  const save2 = saveVersion(paths, taskId, '# v1\n内容', '')
+  check('版本：内容没变 ⇒ 不留版', save2.created === false)
+  const save3 = saveVersion(paths, taskId, '  # v1\n内容  ', '')
+  check('版本：只差首尾空白 ⇒ 不算改动', save3.created === false)
+  const save4 = saveVersion(paths, taskId, '# v2\n改了', '第二版')
+  check('版本：内容变了 ⇒ 留新版', save4.created && save4.file > save1.file)
+  const versions = listVersions(paths, taskId)
+  check('版本：列表新的在前', versions.length === 2 && versions[0].file === save4.file)
+  check('版本：备注落 .note 文件', versions[1].note === '初版' && versions[0].note === '第二版')
+  check('版本：读回内容一致', readVersion(paths, taskId, save4.file) === '# v2\n改了')
+  check('版本：删除连 note 一起删', deleteVersion(paths, taskId, save4.file) && listVersions(paths, taskId).length === 1)
+
+  const snap1 = saveSnapshot(paths, taskId, { id: taskId, title: 'A' })
+  const snap2 = saveSnapshot(paths, taskId, { id: taskId, title: 'A' })
+  const snap3 = saveSnapshot(paths, taskId, { id: taskId, title: 'B' })
+  check('快照：没变不留 / 变了才留', snap1.created && snap2.created === false && snap3.created)
+  check('快照：读回一致', readSnapshot(paths, taskId, snap3.file).title === 'B')
+
+  // 附件：临时区 → 任务目录（ref 改写为相对路径）→ 移除真删
+  writeFileSync(join(paths.tmpDir, 'tmp-abc.md'), 'hello', 'utf8')
+  const att = [{ id: 'a1', name: '报告.md', kind: 'upload', ref: 'tmp-abc.md' }]
+  const rec1 = reconcileAttachments(paths, taskId, att, [])
+  check('附件：搬进任务目录且 ref 改写', rec1.missing.length === 0 && rec1.attachments[0].ref.startsWith('attachments/') && rec1.attachments[0].ref.endsWith('报告.md'))
+  check('附件：原始名保留（盘上就叫 报告.md）', readFileSync(join(paths.tasksRoot, taskId, 'attachments', '报告.md'), 'utf8') === 'hello')
+  check('附件：已在任务目录 ⇒ 原地不动', reconcileAttachments(paths, taskId, rec1.attachments, rec1.attachments).attachments[0].ref === rec1.attachments[0].ref)
+  check('附件：临时文件丢了 ⇒ missing（不静默）', reconcileAttachments(paths, taskId, [{ ...att[0], ref: 'tmp-gone.md' }], []).missing.length === 1)
+  const rec2 = reconcileAttachments(paths, taskId, [], rec1.attachments)
+  check('附件：移除 ⇒ 真删', rec2.removed.length === 1 && !existsSync(join(paths.tasksRoot, taskId, 'attachments', '报告.md')))
+  // 评审 P0#1 回归：ref 带路径穿越 ⇒ 真删循环直接跳过，绝不碰任务目录外的文件
+  writeFileSync(join(paths.dataRoot, 'guard.txt'), 'x', 'utf8')
+  const recE = reconcileAttachments(paths, taskId, [], [{ id: 'e', name: 'evil', kind: 'upload', ref: '../guard.txt' }])
+  check('附件：穿越 ref 不执行删除', existsSync(join(paths.dataRoot, 'guard.txt')) && recE.errors.filter(x => x.includes('guard')).length === 0)
+  rmSync(join(paths.dataRoot, 'guard.txt'), { force: true })
+
+  check('清道夫：清临时区过期文件', purgeTmp(paths, 7) >= 0)
+  check('删除任务：整目录删', deleteTaskAssets(paths, taskId) && !existsSync(join(paths.tasksRoot, taskId)))
+  rmSync(dir, { recursive: true, force: true })
 }
 
 console.log(`\n冒烟结果：${passed} 项通过，${failures.length} 项失败`)

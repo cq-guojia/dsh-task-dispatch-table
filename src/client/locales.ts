@@ -112,6 +112,11 @@ export type LocaleKey =
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
+  | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone'
+  | 'editorSnapshots' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
+  | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
+  | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint'
+  | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
   | 'editorTaskStart' | 'editorTaskStartHint'
   | 'editorWeekdayLabel'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
@@ -502,7 +507,24 @@ export const zh: Record<LocaleKey, string> = {
   editorConfirmDeleteTitle: '删除版本',
   editorConfirmDeleteDesc: '你确定要删除吗？',
   editorConfirmUseTitle: '使用历史版本',
-  editorConfirmUseDesc: '我们将用历史版本覆盖你现在提示词编辑器的所有内容，确定吗？',
+  editorConfirmUseDesc: '确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词）。',
+  editorDeleteTask: '删除任务',
+  editorDeleteTaskTitle: '删除任务',
+  editorDeleteTaskDesc: '确定所有的移除都是找不回来的，不可逆的。',
+  editorReset: '重置',
+  editorResetDone: '已恢复为打开时的内容',
+  editorSnapshots: '配置快照（整份找回）',
+  editorRestoreAll: '找回全部',
+  editorRestoreAllTitle: '找回全部设置',
+  editorRestoreAllDesc: '确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。',
+  editorRestorePromptTitle: '只找回提示词',
+  editorRestorePromptDesc: '确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词，其余设置保持现状）。',
+  editorCustomCron: '自定义 cron（JSON 里的原值，保存时原样保留）',
+  editorSaved: '已保存',
+  editorSaveFailedHint: '保存失败：',
+  editorTasksTitle: '任务列表',
+  editorTasksEmpty: '还没有任务：点右上角「＋ 新建任务」创建第一条。',
+  editorDisabledTag: '已停用',
   editorModeEdit: '编辑',
   editorModePreview: '预览',
   editorTaskStart: '任务开始时间',
@@ -922,7 +944,24 @@ export const en: Record<LocaleKey, string> = {
   editorConfirmDeleteTitle: 'Delete version',
   editorConfirmDeleteDesc: 'Are you sure you want to delete it?',
   editorConfirmUseTitle: 'Use history version',
-  editorConfirmUseDesc: 'This will overwrite all current content in your prompt editor with the history version. Are you sure?',
+  editorConfirmUseDesc: 'Restoring will overwrite all your current edits with the history version (prompt only this time).',
+  editorDeleteTask: 'Delete task',
+  editorDeleteTaskTitle: 'Delete task',
+  editorDeleteTaskDesc: 'Everything removed is unrecoverable and irreversible.',
+  editorReset: 'Reset',
+  editorResetDone: 'Restored to the values from when you opened it',
+  editorSnapshots: 'Config snapshots (restore all)',
+  editorRestoreAll: 'Restore all',
+  editorRestoreAllTitle: 'Restore all settings',
+  editorRestoreAllDesc: 'Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.',
+  editorRestorePromptTitle: 'Restore prompt only',
+  editorRestorePromptDesc: 'Restoring will overwrite all your current edits with the history version (prompt only; other settings stay as they are).',
+  editorCustomCron: 'Custom cron (raw value from JSON; kept as-is on save)',
+  editorSaved: 'Saved',
+  editorSaveFailedHint: 'Save failed: ',
+  editorTasksTitle: 'Tasks',
+  editorTasksEmpty: 'No tasks yet — use "＋ New task" in the top-right corner to create the first one.',
+  editorDisabledTag: 'Disabled',
   editorModeEdit: 'Edit',
   editorModePreview: 'Preview',
   editorTaskStart: 'Task start time',

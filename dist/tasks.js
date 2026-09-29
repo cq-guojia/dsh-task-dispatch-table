@@ -33,6 +33,11 @@ export const taskDefinitionSchema = z.object({
         start: z.string().optional(),
         /** 每周档的重复步长（周）：1 = 每周；≥2 = 每 N 周。cron 无隔周位 ⇒ 用锚点 + 取模实现（决策）。 */
         everyNWeeks: z.number().int().min(1).optional(),
+        /**
+         * 结构化排期的**编辑态快照**（2026-09-30 双写，data-model §5.4）：表单控件原样留档，
+         * 供「编辑现有任务」反解。**执行永不读它**——排期真源恒为 `cron` / `once`。
+         */
+        ui: z.record(z.string(), z.unknown()).optional(),
     }),
     target: z.object({
         // 工作区（非工作目录，决策 22）：按 registry 的 title 精确匹配、id 兜底；目录由工作区 path 派生。
@@ -72,7 +77,10 @@ export const taskDefinitionSchema = z.object({
         name: z.string().min(1),
         kind: z.enum(['link', 'upload']),
         ref: z.string().min(1),
-    }))
+        /** link 型必带：来源工作区 title（同一路径在不同工作区指向不同文件）。 */
+        workspace: z.string().optional(),
+    })
+        .refine(item => !item.ref.includes('..') && !item.ref.startsWith('/') && !item.ref.includes('\\'), { message: '附件 ref 非法：不允许相对路径上跳、绝对路径或反斜杠' }))
         .optional(),
 });
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */
@@ -206,6 +214,122 @@ export function applyIdentity(def) {
         return null;
     const code = def.code !== undefined && def.code.trim() !== '' ? def.code.trim() : undefined;
     return { ...def, id: def.id, title: def.title ?? def.id, code };
+}
+/**
+ * 单条任务定义的保存校验（服务端把关，data-model §5.2 校验清单）：
+ * ① 提示词非空；② 工作区非空；③ `cron` 与 `once` **恰有其一**且 cron 可解析；
+ * ④ 前置任务必须指向已存在的任务（**停用可以、不存在不行**）。
+ * `title` / `code` **不做**格式与唯一性校验（决策 30：它们只是人读字段）。
+ */
+export function validateDefinitionForSave(def, existingIds) {
+    const prompt = typeof def.target?.prompt === 'string' ? def.target.prompt.trim() : '';
+    if (prompt === '')
+        return { ok: false, error: '提示词不能为空' };
+    const workspace = typeof def.target?.workspace === 'string' ? def.target.workspace.trim() : '';
+    if (workspace === '')
+        return { ok: false, error: '工作区不能为空' };
+    const cron = typeof def.schedule?.cron === 'string' && def.schedule.cron.trim() !== '' ? def.schedule.cron.trim() : undefined;
+    const once = typeof def.schedule?.once === 'string' && def.schedule.once.trim() !== '' ? def.schedule.once.trim() : undefined;
+    if (cron === undefined && once === undefined)
+        return { ok: false, error: '排期缺失：周期任务必须有 cron，单次任务必须有 once' };
+    if (cron !== undefined && once !== undefined)
+        return { ok: false, error: '排期冲突：cron 与 once 只能有一个' };
+    if (cron !== undefined) {
+        try {
+            CronExpressionParser.parse(cron, { tz: typeof def.schedule?.timezone === 'string' ? def.schedule.timezone : undefined });
+        }
+        catch (error) {
+            return { ok: false, error: `cron 无法解析（${cron}）：${error instanceof Error ? error.message : String(error)}` };
+        }
+    }
+    else if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(once ?? '')) {
+        return { ok: false, error: '单次执行时刻格式应为 YYYY-MM-DDTHH:mm' };
+    }
+    const deps = def.depends_on;
+    if (Array.isArray(deps)) {
+        for (const dep of deps) {
+            if (dep === null || typeof dep !== 'object')
+                continue;
+            const task = typeof dep.task === 'string' ? dep.task : '';
+            if (typeof def.id === 'string' && task === def.id) {
+                return { ok: false, error: '前置任务不能是它自己（必然死锁）' };
+            }
+            if (task === '' || !existingIds.has(task)) {
+                return { ok: false, error: `前置任务「${task === '' ? '（空）' : task}」不存在——停用可以，不存在不行` };
+            }
+        }
+    }
+    const timezone = def.schedule?.timezone;
+    if (typeof timezone === 'string' && timezone.trim() !== '') {
+        try {
+            new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+        }
+        catch {
+            return { ok: false, error: `时区「${timezone}」无法识别` };
+        }
+    }
+    return { ok: true, error: null };
+}
+/**
+ * 把一条任务定义并回整表（新增 = 追加，修改 = 按 id 替换）。
+ * **身份闸门在这里落地**：无 id ⇒ 生成 UUID（新增）；带 UUID ⇒ 必须命中现有表（修改）；
+ * 非 UUID ⇒ 拒绝。
+ * @param opts.allowNew - 表单通道专用：带 UUID 但表中没有 ⇒ **视为新增**（id 由服务端刚生成，
+ *   可信）。整批 JSON 通道不传 ⇒ 沿用闸门语义（凭空引入的 UUID 一律拒）。
+ */
+export function upsertDefinitionInline(raw, definition, opts = {}) {
+    const text = raw.trim();
+    let data;
+    if (text === '')
+        data = [];
+    else {
+        try {
+            data = JSON.parse(text);
+        }
+        catch {
+            return { json: raw, mode: 'create', id: '', error: '现有任务表不是合法 JSON，无法保存' };
+        }
+        if (!Array.isArray(data))
+            return { json: raw, mode: 'create', id: '', error: '现有任务表不是数组，无法保存' };
+    }
+    const rows = data;
+    const rawId = definition.id;
+    if (rawId === undefined || rawId === null || (typeof rawId === 'string' && rawId.trim() === '')) {
+        const id = newTaskId();
+        rows.push({ ...definition, id });
+        return { json: JSON.stringify(rows, null, 2), mode: 'create', id, error: null };
+    }
+    if (!isUuid(rawId))
+        return { json: raw, mode: 'update', id: String(rawId), error: `id "${String(rawId)}" 不是合法 UUID` };
+    const index = rows.findIndex(row => row !== null && typeof row === 'object' && row.id === rawId);
+    if (index < 0) {
+        // 表单通道（id 由服务端刚生成）⇒ 视为新增；整批 JSON 通道 ⇒ 拒（闸门：UUID 不能凭空引入）。
+        if (opts.allowNew === true) {
+            rows.push({ ...definition, id: rawId });
+            return { json: JSON.stringify(rows, null, 2), mode: 'create', id: rawId, error: null };
+        }
+        return { json: raw, mode: 'update', id: rawId, error: `任务 ${rawId} 不在现有任务表中，无法修改` };
+    }
+    rows[index] = { ...definition, id: rawId };
+    return { json: JSON.stringify(rows, null, 2), mode: 'update', id: rawId, error: null };
+}
+/** 从整表里摘掉一条任务定义（删除任务；实例 / 事件保留在库里做审计）。 */
+export function removeDefinitionInline(raw, id) {
+    const text = raw.trim();
+    if (text === '')
+        return { json: raw, removed: false, error: null };
+    let data;
+    try {
+        data = JSON.parse(text);
+    }
+    catch {
+        return { json: raw, removed: false, error: '现有任务表不是合法 JSON，无法删除' };
+    }
+    if (!Array.isArray(data))
+        return { json: raw, removed: false, error: '现有任务表不是数组，无法删除' };
+    const rows = data.filter(row => !(row !== null && typeof row === 'object' && row.id === id));
+    const removed = rows.length !== data.length;
+    return { json: JSON.stringify(rows, null, 2), removed, error: null };
 }
 /** 把 ISO 8601 时长解析成毫秒。 */
 export function durationMs(iso) {
@@ -403,7 +527,7 @@ function checkedTask(logger, label, data) {
  * 身份走 `applyIdentity`（决策 30 修订：**运行时只认不修**）——无 id / 非 UUID 的条目
  * warn 跳过，绝不在这里生成或兜底 id；生成只发生在保存闸门 `ensureIdsInInlineJson`。
  */
-export function parseInlineTasks(logger, raw) {
+export function parseInlineTasks(logger, raw, opts = {}) {
     const text = raw.trim();
     if (text.length === 0)
         return [];
@@ -422,7 +546,7 @@ export function parseInlineTasks(logger, raw) {
     const tasks = [];
     for (const [index, item] of data.entries()) {
         const def = checkedTask(logger, `内嵌任务表[${index}]`, item);
-        if (def === undefined || !def.enabled)
+        if (def === undefined || (!opts.includeDisabled && !def.enabled))
             continue;
         const task = applyIdentity(def);
         if (task === null) {
