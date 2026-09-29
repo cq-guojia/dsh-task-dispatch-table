@@ -344,6 +344,8 @@ window.__ModuleLoader__.load({
 			editorVersionNote: "版本备注（可选）",
 			editorRestore: "恢复",
 			editorNoVersions: "暂无版本，保存后可在此回滚",
+			editorTaskStart: "任务开始时间",
+			editorTaskStartHint: "设定任务实际开始执行的日期（间隔档还需选时刻）。周期 / 间隔任务都可提前建好、到时自动开跑；「每 N 周」也以这里选定的日期为起算周。",
 			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
 			editorWeekday2: "周二",
@@ -712,6 +714,8 @@ window.__ModuleLoader__.load({
 			editorVersionNote: "Version note (optional)",
 			editorRestore: "Restore",
 			editorNoVersions: "No versions yet — save one to roll back here",
+			editorTaskStart: "Task start time",
+			editorTaskStartHint: "When the task actually begins running (interval also needs a time). Periodic / interval tasks can be created early and auto-start later; \"every N weeks\" also counts weeks from this date.",
 			editorWeekdayLabel: "Weekdays",
 			editorWeekday1: "Mon",
 			editorWeekday2: "Tue",
@@ -5595,7 +5599,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				schedule.start = `${draft.date}T${draft.time}`;
 				const step = Number.parseInt(draft.weekStep, 10);
 				if (draft.periodFreq === "weekly" && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step;
-			}
+			} else if (draft.scheduleKind === "interval") schedule.start = `${draft.date}T${draft.time}`;
 			const target = { workspace: draft.workspace };
 			if (draft.model.trim() !== "") {
 				const slash = draft.model.indexOf("/");
@@ -5694,68 +5698,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				label: tt("editorQuarterMonthOption", { m })
 			})), [tt]);
 			const above = [];
-			if (draft.periodFreq !== "once") above.push((0, react.createElement)(SelectField, {
-				key: "freq",
-				value: draft.periodFreq,
-				options: props.freqOptions,
-				onChange: (value) => {
-					patch({ periodFreq: value });
-				},
-				placeholder: t("editorFreqDaily"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorFreq")
-			}));
-			if (draft.periodFreq === "monthly") above.push((0, react.createElement)(SelectField, {
-				key: "month-mode",
-				value: draft.monthMode,
-				options: monthModeOptions,
-				onChange: (value) => {
-					patch({ monthMode: value });
-				},
-				placeholder: t("editorMonthEvery"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorMonth")
-			}));
-			if (draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
-				key: "month",
-				value: draft.yearMonth,
-				options: monthOptions,
-				onChange: (value) => {
-					patch({ yearMonth: value });
-				},
-				placeholder: t("editorMonth"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorMonth")
-			}));
-			if (draft.periodFreq === "quarterly") above.push((0, react.createElement)(SelectField, {
-				key: "quarter-month",
-				value: draft.quarterMonth,
-				options: quarterMonthOptions,
-				onChange: (value) => {
-					patch({ quarterMonth: value });
-				},
-				placeholder: quarterMonthOptions[0]?.label ?? t("editorMonth"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorMonth")
-			}));
-			if (draft.periodFreq === "monthly" || draft.periodFreq === "quarterly" || draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
-				key: "day",
-				value: draft.monthDay,
-				options: dayOptions,
-				onChange: (value) => {
-					patch({ monthDay: value });
-				},
-				placeholder: t("editorDayOfMonth"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("editorDayOfMonth")
-			}));
-			const startRow = (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
-				flex: "none",
-				fontSize: "12px",
-				color: C$1.textDim,
-				marginRight: "4px"
-			} }, t("editorStartTime")), (0, react.createElement)(DateField, {
-				key: "start-date",
+			if (draft.periodFreq === "once") above.push((0, react.createElement)(DateField, {
+				key: "once-date",
 				value: draft.date,
 				onChange: (value) => {
 					patch({ date: value });
@@ -5764,39 +5708,97 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorDate"),
 				labels: calendarLabels,
 				width: 148
-			}), timeField);
-			const weekStepRow = draft.periodFreq === "weekly" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(SelectField, {
-				key: "week-step",
-				value: draft.weekStep,
-				options: [
-					1,
-					2,
-					3,
-					4
-				].map((n) => ({
-					value: String(n),
-					label: tt("editorEveryNWeeks", { n })
-				})),
-				onChange: (value) => {
-					patch({ weekStep: value });
-				},
-				placeholder: tt("editorEveryNWeeks", { n: 1 }),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: tt("editorEveryNWeeks", { n: 1 }),
-				width: 120
-			})) : null;
+			}));
+			else {
+				above.push((0, react.createElement)(SelectField, {
+					key: "freq",
+					value: draft.periodFreq,
+					options: props.freqOptions,
+					onChange: (value) => {
+						patch({ periodFreq: value });
+					},
+					placeholder: t("editorFreqDaily"),
+					emptyLabel: t("editorNoOptions"),
+					ariaLabel: t("editorFreq")
+				}));
+				if (draft.periodFreq === "monthly") above.push((0, react.createElement)(SelectField, {
+					key: "month-mode",
+					value: draft.monthMode,
+					options: monthModeOptions,
+					onChange: (value) => {
+						patch({ monthMode: value });
+					},
+					placeholder: t("editorMonthEvery"),
+					emptyLabel: t("editorNoOptions"),
+					ariaLabel: t("editorMonth")
+				}));
+				if (draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
+					key: "month",
+					value: draft.yearMonth,
+					options: monthOptions,
+					onChange: (value) => {
+						patch({ yearMonth: value });
+					},
+					placeholder: t("editorMonth"),
+					emptyLabel: t("editorNoOptions"),
+					ariaLabel: t("editorMonth")
+				}));
+				if (draft.periodFreq === "quarterly") above.push((0, react.createElement)(SelectField, {
+					key: "quarter-month",
+					value: draft.quarterMonth,
+					options: quarterMonthOptions,
+					onChange: (value) => {
+						patch({ quarterMonth: value });
+					},
+					placeholder: quarterMonthOptions[0]?.label ?? t("editorMonth"),
+					emptyLabel: t("editorNoOptions"),
+					ariaLabel: t("editorMonth")
+				}));
+				if (draft.periodFreq === "monthly" || draft.periodFreq === "quarterly" || draft.periodFreq === "yearly") above.push((0, react.createElement)(SelectField, {
+					key: "day",
+					value: draft.monthDay,
+					options: dayOptions,
+					onChange: (value) => {
+						patch({ monthDay: value });
+					},
+					placeholder: t("editorDayOfMonth"),
+					emptyLabel: t("editorNoOptions"),
+					ariaLabel: t("editorDayOfMonth")
+				}));
+				if (draft.periodFreq === "weekly") above.push((0, react.createElement)(SelectField, {
+					key: "week-step",
+					value: draft.weekStep,
+					options: [
+						1,
+						2,
+						3,
+						4
+					].map((n) => ({
+						value: String(n),
+						label: tt("editorEveryNWeeks", { n })
+					})),
+					onChange: (value) => {
+						patch({ weekStep: value });
+					},
+					placeholder: tt("editorEveryNWeeks", { n: 1 }),
+					emptyLabel: t("editorNoOptions"),
+					ariaLabel: tt("editorEveryNWeeks", { n: 1 }),
+					width: 120
+				}));
+			}
+			above.push(timeField);
 			return (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "10px"
-			} }, above.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, above) : null, weekStepRow, draft.periodFreq === "weekly" ? (0, react.createElement)(WeekdayPicker, {
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, above), draft.periodFreq === "weekly" ? (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
 					patch({ weekdays: value });
 				},
 				labels: weekdayLabels,
 				label: t("editorWeekdayLabel")
-			}) : null, startRow, draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
+			}) : null, draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
 		}
 		/** 间隔档的子控件（照参考图：每隔 N 单位执行一次 + 周几筛选）。 */
 		function IntervalControls(props) {
@@ -6177,6 +6179,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			* 「单次」只是「周期档的频率 = 单次」，所以周期档里把频率改成别的，顶部自动回到「周期」。
 			*/
 			const scheduleTab = draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic";
+			const showTaskStart = draft.scheduleKind === "interval" || draft.scheduleKind === "periodic" && draft.periodFreq !== "once";
 			const promptCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
@@ -6335,7 +6338,54 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				weekdayLabels,
 				calendarLabels,
 				timeLabels
-			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-schedfoot" }, (0, react.createElement)("span", { style: {
+			})), (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-schedfoot",
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "10px"
+				}
+			}, showTaskStart ? (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "6px"
+			} }, (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: C$1.text
+			} }, t("editorTaskStart")), (0, react.createElement)(DateField, {
+				value: draft.date,
+				onChange: (value) => {
+					patch({ date: value });
+				},
+				placeholder: t("editorDatePh"),
+				ariaLabel: t("editorTaskStart"),
+				labels: calendarLabels,
+				width: 148
+			}), draft.scheduleKind === "interval" ? (0, react.createElement)(TimeField, {
+				value: draft.time,
+				onChange: (value) => {
+					patch({ time: value });
+				},
+				placeholder: t("editorTimePh"),
+				ariaLabel: t("editorTaskStart"),
+				labels: timeLabels,
+				width: 110
+			}) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("editorTaskStartHint"),
+				side: "top",
+				align: "center"
+			}, (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-help",
+				"aria-label": t("editorTaskStartHint")
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })))) : null, (0, react.createElement)("span", {
+				className: "dsh-tdt-ed-spacer",
+				style: { flex: "1 1 auto" }
+			}), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "6px"
+			} }, (0, react.createElement)("span", { style: {
 				fontSize: "12px",
 				color: C$1.textDim
 			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
@@ -6357,7 +6407,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				type: "button",
 				className: "dsh-tdt-ed-help",
 				"aria-label": t("editorWindowHint")
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })))));
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))));
 			const taskOptions = tasks;
 			const depsBlock = (0, react.createElement)(Section, { label: t("editorDeps") }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",

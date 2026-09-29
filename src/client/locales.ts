@@ -109,6 +109,7 @@ export type LocaleKey =
   | 'editorStartTime' | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentNone' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
+  | 'editorTaskStart' | 'editorTaskStartHint'
   | 'editorWeekdayLabel'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
   | 'editorWeekdayShorts' | 'editorWeekdayEmpty'
@@ -468,6 +469,8 @@ export const zh: Record<LocaleKey, string> = {
   editorVersionNote: '版本备注（可选）',
   editorRestore: '恢复',
   editorNoVersions: '暂无版本，保存后可在此回滚',
+  editorTaskStart: '任务开始时间',
+  editorTaskStartHint: '设定任务实际开始执行的日期（间隔档还需选时刻）。周期 / 间隔任务都可提前建好、到时自动开跑；「每 N 周」也以这里选定的日期为起算周。',
   editorWeekdayLabel: '星期',
   editorWeekday1: '周一',
   editorWeekday2: '周二',
@@ -842,6 +845,8 @@ export const en: Record<LocaleKey, string> = {
   editorVersionNote: 'Version note (optional)',
   editorRestore: 'Restore',
   editorNoVersions: 'No versions yet — save one to roll back here',
+  editorTaskStart: 'Task start time',
+  editorTaskStartHint: 'When the task actually begins running (interval also needs a time). Periodic / interval tasks can be created early and auto-start later; "every N weeks" also counts weeks from this date.',
   editorWeekdayLabel: 'Weekdays',
   editorWeekday1: 'Mon',
   editorWeekday2: 'Tue',

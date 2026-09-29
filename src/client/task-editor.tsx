@@ -250,10 +250,13 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   } else if (draft.scheduleKind === 'periodic') {
     const cron = scheduleCron(draft)
     if (cron !== null) schedule.cron = cron
-    // 「开始时间」(date+time) 作为周期锚点：首跑下界 + 每 N 周取模参考。
+    // 「任务开始时间」(date+time) 作为周期锚点：首跑下界 + 每 N 周取模参考（与频率区时刻对齐，避免跨周偏移）。
     schedule.start = `${draft.date}T${draft.time}`
     const step = Number.parseInt(draft.weekStep, 10)
     if (draft.periodFreq === 'weekly' && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step
+  } else if (draft.scheduleKind === 'interval') {
+    // 间隔档也有「任务开始时间」锚点（日期 + 时刻）；cron 映射归 P2，此处只落锚点。
+    schedule.start = `${draft.date}T${draft.time}`
   }
   // scheduleKind === 'interval' 的 cron 映射（每隔 N 分钟/小时）归 P2，此处不产出 schedule.cron。
 
@@ -360,9 +363,20 @@ function PeriodControls(props: {
     [tt],
   )
 
-  // 频率 / 月 / 日：只在周期档显示（单次档没有频率，只有下面的「开始时间」）。
+  // 单行说完：频率（+ 月 / 日 / 每 N 周）+ 时间，时间直接跟在频率行末尾（用户 2026-09-29）。
+  // 单次档没有频率，整行就是「运行时刻 = 日期 + 时间」。
   const above: ReactNode[] = []
-  if (draft.periodFreq !== 'once') {
+  if (draft.periodFreq === 'once') {
+    above.push(h(DateField, {
+      key: 'once-date',
+      value: draft.date,
+      onChange: value => { patch({ date: value }) },
+      placeholder: t('editorDatePh'),
+      ariaLabel: t('editorDate'),
+      labels: calendarLabels,
+      width: 148,
+    }))
+  } else {
     above.push(h(SelectField, {
       key: 'freq',
       value: draft.periodFreq,
@@ -372,86 +386,69 @@ function PeriodControls(props: {
       emptyLabel: t('editorNoOptions'),
       ariaLabel: t('editorFreq'),
     }))
+    if (draft.periodFreq === 'monthly') {
+      above.push(h(SelectField, {
+        key: 'month-mode',
+        value: draft.monthMode,
+        options: monthModeOptions,
+        onChange: value => { patch({ monthMode: value as MonthMode }) },
+        placeholder: t('editorMonthEvery'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('editorMonth'),
+      }))
+    }
+    if (draft.periodFreq === 'yearly') {
+      above.push(h(SelectField, {
+        key: 'month',
+        value: draft.yearMonth,
+        options: monthOptions,
+        onChange: value => { patch({ yearMonth: value }) },
+        placeholder: t('editorMonth'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('editorMonth'),
+      }))
+    }
+    if (draft.periodFreq === 'quarterly') {
+      above.push(h(SelectField, {
+        key: 'quarter-month',
+        value: draft.quarterMonth,
+        options: quarterMonthOptions,
+        onChange: value => { patch({ quarterMonth: value }) },
+        placeholder: quarterMonthOptions[0]?.label ?? t('editorMonth'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('editorMonth'),
+      }))
+    }
+    if (draft.periodFreq === 'monthly' || draft.periodFreq === 'quarterly' || draft.periodFreq === 'yearly') {
+      above.push(h(SelectField, {
+        key: 'day',
+        value: draft.monthDay,
+        options: dayOptions,
+        onChange: value => { patch({ monthDay: value }) },
+        placeholder: t('editorDayOfMonth'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('editorDayOfMonth'),
+      }))
+    }
+    // 每周档：每 N 周（1–4）与「每周」同排（用户 2026-09-29）。
+    if (draft.periodFreq === 'weekly') {
+      above.push(h(SelectField, {
+        key: 'week-step',
+        value: draft.weekStep,
+        options: [1, 2, 3, 4].map(n => ({ value: String(n), label: tt('editorEveryNWeeks', { n }) })),
+        onChange: value => { patch({ weekStep: value }) },
+        placeholder: tt('editorEveryNWeeks', { n: 1 }),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: tt('editorEveryNWeeks', { n: 1 }),
+        width: 120,
+      }))
+    }
   }
-  if (draft.periodFreq === 'monthly') {
-    above.push(h(SelectField, {
-      key: 'month-mode',
-      value: draft.monthMode,
-      options: monthModeOptions,
-      onChange: value => { patch({ monthMode: value as MonthMode }) },
-      placeholder: t('editorMonthEvery'),
-      emptyLabel: t('editorNoOptions'),
-      ariaLabel: t('editorMonth'),
-    }))
-  }
-  if (draft.periodFreq === 'yearly') {
-    above.push(h(SelectField, {
-      key: 'month',
-      value: draft.yearMonth,
-      options: monthOptions,
-      onChange: value => { patch({ yearMonth: value }) },
-      placeholder: t('editorMonth'),
-      emptyLabel: t('editorNoOptions'),
-      ariaLabel: t('editorMonth'),
-    }))
-  }
-  if (draft.periodFreq === 'quarterly') {
-    above.push(h(SelectField, {
-      key: 'quarter-month',
-      value: draft.quarterMonth,
-      options: quarterMonthOptions,
-      onChange: value => { patch({ quarterMonth: value }) },
-      placeholder: quarterMonthOptions[0]?.label ?? t('editorMonth'),
-      emptyLabel: t('editorNoOptions'),
-      ariaLabel: t('editorMonth'),
-    }))
-  }
-  if (draft.periodFreq === 'monthly' || draft.periodFreq === 'quarterly' || draft.periodFreq === 'yearly') {
-    above.push(h(SelectField, {
-      key: 'day',
-      value: draft.monthDay,
-      options: dayOptions,
-      onChange: value => { patch({ monthDay: value }) },
-      placeholder: t('editorDayOfMonth'),
-      emptyLabel: t('editorNoOptions'),
-      ariaLabel: t('editorDayOfMonth'),
-    }))
-  }
-
-  // 「开始时间」：单次 = 运行时刻；周期 = 首跑下界 + 「每 N 周」取模参考（用户 2026-09-29）。
-  const startRow = h('div', { className: 'dsh-tdt-ed-row' },
-    h('span', { style: { flex: 'none', fontSize: '12px', color: C.textDim, marginRight: '4px' } }, t('editorStartTime')),
-    h(DateField, {
-      key: 'start-date',
-      value: draft.date,
-      onChange: value => { patch({ date: value }) },
-      placeholder: t('editorDatePh'),
-      ariaLabel: t('editorDate'),
-      labels: calendarLabels,
-      width: 148,
-    }),
-    timeField,
-  )
-
-  // 每周档：每 N 周（1–4）。cron 无隔周位 ⇒ 引擎用「开始时间」锚点 + 取模实现。
-  const weekStepRow = draft.periodFreq === 'weekly'
-    ? h('div', { className: 'dsh-tdt-ed-row' },
-        h(SelectField, {
-          key: 'week-step',
-          value: draft.weekStep,
-          options: [1, 2, 3, 4].map(n => ({ value: String(n), label: tt('editorEveryNWeeks', { n }) })),
-          onChange: value => { patch({ weekStep: value }) },
-          placeholder: tt('editorEveryNWeeks', { n: 1 }),
-          emptyLabel: t('editorNoOptions'),
-          ariaLabel: tt('editorEveryNWeeks', { n: 1 }),
-          width: 120,
-        }),
-      )
-    : null
+  // 时间（执行时刻）统一跟在频率行末尾；单次档也走这里（运行时刻）。
+  above.push(timeField)
 
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-    above.length > 0 ? h('div', { className: 'dsh-tdt-ed-row' }, above) : null,
-    weekStepRow,
+    h('div', { className: 'dsh-tdt-ed-row' }, above),
     draft.periodFreq === 'weekly'
       ? h(WeekdayPicker, {
         value: draft.weekdays,
@@ -460,7 +457,6 @@ function PeriodControls(props: {
         label: t('editorWeekdayLabel'),
       })
       : null,
-    startRow,
     draft.periodFreq === 'once'
       ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorOnceHint'))
       : null,
@@ -728,6 +724,9 @@ export function TaskEditorDrawer(props: {
     ? 'interval'
     : (draft.periodFreq === 'once' ? 'once' : 'periodic')
 
+  // 任务开始时间（锚点）：周期（非单次）/ 间隔都有；单次没有（单次整行就是运行时刻）。
+  const showTaskStart = draft.scheduleKind === 'interval' || (draft.scheduleKind === 'periodic' && draft.periodFreq !== 'once')
+
   // ① 提示词卡（主视觉）：提示词一律手输（版本管理由插件负责，P 待做）；
   // 选文件 / 上传不再属于提示词，挪到下方独立的「附加文件」框（决策：提示词只手输）。
   const promptCard = h('div', { className: 'dsh-tdt-ed-card' },
@@ -826,25 +825,54 @@ export function TaskEditorDrawer(props: {
           draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels,
         }),
       ),
-    // 底部分隔线：上下各留 12px（用户 2026-09-29：把核心设置和不那么重要的设置分开，
-    // 但别贴着）。时区 / 有效期缩到小号、整体**居右**（不重要，不占主视线），
-    // 「有效期」的解释不再写正文，挂一个小问号，hover 才出（Tooltip）。
-    h('div', { className: 'dsh-tdt-ed-schedfoot' },
-      h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorWindow')),
-      h(SelectField, {
-        value: draft.window,
-        options: windowOptions,
-        onChange: value => { patch({ window: value }) },
-        placeholder: t('editorWindow'),
-        emptyLabel: t('editorNoOptions'),
-        ariaLabel: t('editorWindow'),
-        size: 'sm',
-        align: 'end',
-      }),
-      h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end' },
-        // 用 button 而不是 span：天然可聚焦（键盘也能出气泡），不需要自己补 tabIndex/role。
-        h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorWindowHint') },
-          h(IconQuestionOutlineRegular, { size: 14 }),
+    // 底部：左 = 任务开始时间（锚点，周期/间隔都有，带 ? 说明），右 = 允许延迟（次要，居右）。
+    h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+      showTaskStart
+        ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+            h('span', { style: { fontSize: '12px', color: C.text } }, t('editorTaskStart')),
+            h(DateField, {
+              value: draft.date,
+              onChange: value => { patch({ date: value }) },
+              placeholder: t('editorDatePh'),
+              ariaLabel: t('editorTaskStart'),
+              labels: calendarLabels,
+              width: 148,
+            }),
+            // 间隔档要选时刻；周期档时刻由上方频率区决定，这里只选日期。
+            draft.scheduleKind === 'interval'
+              ? h(TimeField, {
+                value: draft.time,
+                onChange: value => { patch({ time: value }) },
+                placeholder: t('editorTimePh'),
+                ariaLabel: t('editorTaskStart'),
+                labels: timeLabels,
+                width: 110,
+              })
+              : null,
+            h(Tooltip, { label: t('editorTaskStartHint'), side: 'top', align: 'center' },
+              h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorTaskStartHint') },
+                h(IconQuestionOutlineRegular, { size: 14 }),
+              ),
+            ),
+          )
+        : null,
+      h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto' } }),
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+        h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorWindow')),
+        h(SelectField, {
+          value: draft.window,
+          options: windowOptions,
+          onChange: value => { patch({ window: value }) },
+          placeholder: t('editorWindow'),
+          emptyLabel: t('editorNoOptions'),
+          ariaLabel: t('editorWindow'),
+          size: 'sm',
+          align: 'end',
+        }),
+        h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end' },
+          h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorWindowHint') },
+            h(IconQuestionOutlineRegular, { size: 14 }),
+          ),
         ),
       ),
     ),
