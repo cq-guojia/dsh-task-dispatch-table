@@ -1205,8 +1205,8 @@ export function TaskEditorDrawer(props: {
   //  - 选择 = 先工作区后任务两级（工作区下拉只列确实有可选任务的工作区），点「添加」固定成一行，
   //    行内「移除」可删；同一任务不能加两次（选项里直接排除已加的，按钮再拦一道）；
   //  - 支持跨工作区（每个前置任务可来自不同工作区）；加完工作区保留、任务清空，连着加第二个；
-  //  - 两级下拉都按百分比定宽（32% / 44%）：抽屉拉宽变窄时同步缩放，比例恒定，
-  //    任务名再长也不会盖住右侧「添加」按钮（标签自带省略号）；
+  //  - 三段式选择行（用户定稿）：左「工作区」定宽 112px（约 5~6 个字）居左，右「添加」
+  //    定宽 88px 居右，中间「任务」flex 吃掉剩余宽度（随抽拉分栏同步伸缩）；
   //  - 语义下拉删除（用户：选「同一天的」没有意义）——判定方式就是「上一次执行必须成功」，
   //    新增依赖固定写 `latest_success`；存量依赖的 semantics 原样保留（编辑无损往返）。
   const [depWs, setDepWs] = useState('')
@@ -1296,6 +1296,8 @@ export function TaskEditorDrawer(props: {
         disabled: depTaskId === '',
         title: depTaskId === '' ? t('editorDepTaskPh') : t('editorDepAdd'),
         onClick: addDep,
+        // 三段式右段：定宽、居右（flex 布局里排最后即贴右），文字图标居中。
+        style: { flex: '0 0 88px', justifyContent: 'center' },
       }, t('editorDepAdd')),
     ),
   )
