@@ -108,3 +108,9 @@
 - 旧版：hover/拖拽时把 dock 常驻 border-left 按主题色变**纯色线**（深白浅黑，`:has` 上溯）。用户嫌观感不好。
 - 新版：与「新增任务」抽屉拖拽条（`.dsh-tdt-ed-resizer`）**同一套样式与逻辑**——命中区自身 `:hover`/`:active` 浮出 6px 浅色半透明带（`--dsw-alias-interactive-bg-hover`），border-left 保持常驻灰；`:has` 规则全删（archive-session-css.ts）。
 - 冒烟断言同步（旧「不画新线/:has」断言作废，改断言新带样式且无纯白线残留）；过程中两次笔误（断言漏括号致 smoke 崩）已修复，176 项全过。
+
+## 十七、第十三轮（▾ 下拉条目提炼共用函数 + 当前路径跟在工作区下面）
+
+- **用户点破两处不一**：dock 的 ▾ 下拉没有工作区段（上轮我只给 picker 传了 workspaces）⇒「同一段代码抄两遍」的风险成真。按用户要求**提炼模块级共用函数 `crumbsMenuEntries`**（file-browser.tsx）：入参 = workspaces / rootName / crumbs / 两个回调，picker 与 dock 都只调它，渲染零重复。
+- **排序改版（用户示意）**：**当前工作区排第一（打开图标+加粗）→ 其下路径紧跟（每层一个右箭头缩进）→ 其他工作区**（关合图标+灰）；当前工作区未知（rootName 空或不匹配）时路径段置顶、全部按「其他」罗列。
+- **dock 接上同一套**：TaskPage 把 `editorOptions` 的工作区清单/锚点表传进 dock 的 FileBrowser——rootName = 锚点会话命中的工作区名；切换工作区 = 把 dock 浏览切到目标工作区的锚点会话（`setPreview({sessionId: anchor, path: ''})`）。选择器与 dock 从此**零下拉逻辑分叉**。

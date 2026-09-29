@@ -1027,6 +1027,14 @@ function TaskPage(props: {
           dock: true,
           onResizeStart: startResize,
           onClose: closePreview,
+          // 工作区选择与选择器**同一段下拉代码**（crumbsMenuEntries）：当前工作区（锚点会话
+          // 命中者）排第一、其下路径紧跟；切换 = 把 dock 浏览切到目标工作区的锚点会话。
+          rootName: editorOptions.workspaces.find(w => editorOptions.workspaceAnchors[w.value] === preview.sessionId)?.value,
+          workspaces: editorOptions.workspaces.map(w => w.value),
+          onSelectWorkspace: (name: string) => {
+            const anchor = editorOptions.workspaceAnchors[name]
+            if (anchor !== undefined && anchor !== preview.sessionId) setPreview({ sessionId: anchor, path: '' })
+          },
         })
       : null,
   )

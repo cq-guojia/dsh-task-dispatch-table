@@ -4907,6 +4907,75 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (i <= 0) return "";
 			return p.slice(0, i);
 		}
+		/**
+		* ▾ 下拉条目构造（**picker 与 dock 共用同一段代码**，差别只在入参——用户 2026-09-29 点名提炼，
+		* 严禁两处各写一份）：
+		* - 当前工作区排第一（打开文件夹图标 + 加粗），**其下路径紧跟**（每层一个右箭头位缩进），
+		*   再列其他工作区（关合图标 + 灰）——「打开哪个就跟在哪个下面」；
+		* - 当前工作区未知（rootName 空或不在清单）时路径段置顶、全部工作区按「其他」罗列；
+		* - workspaces 不传 = 不显示工作区段（旧形态兜底：根无箭头、其下逐层缩进）。
+		*/
+		function crumbsMenuEntries(params) {
+			const { workspaces, rootName, rootFallbackLabel, crumbs, onPickWorkspace, onLoadDir } = params;
+			const wsEntry = (ws, current) => (0, react.createElement)("button", {
+				key: `ws:${ws}`,
+				type: "button",
+				role: "menuitem",
+				className: "dsh-tdt-sv-crumbs-menu-item",
+				style: {
+					paddingLeft: 8,
+					display: "flex",
+					alignItems: "center",
+					gap: "6px"
+				},
+				title: ws,
+				onClick: () => {
+					if (!current) onPickWorkspace?.(ws);
+				}
+			}, (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				flex: "none",
+				color: current ? C$2.text : C$2.textDim
+			} }, (0, react.createElement)(current ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 13 })), (0, react.createElement)("span", {
+				className: "dsh-tdt-sv-crumbs-menu-label",
+				style: { fontWeight: current ? 600 : 400 }
+			}, ws));
+			const pathEntry = (crumb, depth, withArrow = true) => (0, react.createElement)("button", {
+				key: `p:${crumb.path}`,
+				type: "button",
+				role: "menuitem",
+				className: "dsh-tdt-sv-crumbs-menu-item",
+				style: { paddingLeft: 8 },
+				title: crumb.path,
+				onClick: () => {
+					onLoadDir(crumb.path);
+				}
+			}, withArrow ? (0, react.createElement)(react.Fragment, null, Array.from({ length: depth }, (_, s) => (0, react.createElement)("span", {
+				key: `s${s}`,
+				className: "dsh-tdt-sv-crumbs-chev-slot",
+				"aria-hidden": true
+			})), (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-chev" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 11 }))) : null, (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-menu-label" }, crumb.label));
+			if (workspaces === void 0) {
+				if (crumbs.length === 0) return [(0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, rootFallbackLabel)];
+				return crumbs.map((crumb, index) => pathEntry(crumb, index === 0 ? 0 : index - 1, index !== 0));
+			}
+			const segments = rootName !== "" && crumbs.length > 0 && crumbs[0].path === "" ? crumbs.slice(1) : crumbs;
+			const out = [];
+			if (rootName !== "" && workspaces.includes(rootName)) {
+				out.push(wsEntry(rootName, true));
+				segments.forEach((crumb, i) => {
+					out.push(pathEntry(crumb, i));
+				});
+				for (const ws of workspaces) if (ws !== rootName) out.push(wsEntry(ws, false));
+			} else {
+				segments.forEach((crumb, i) => {
+					out.push(pathEntry(crumb, i));
+				});
+				for (const ws of workspaces) out.push(wsEntry(ws, false));
+			}
+			return out;
+		}
 		/** 路径工具：dir 拼接 name（处理根与绝对/相对）。 */
 		function joinPath(dir, name) {
 			if (dir === "" || dir === "/") return (dir === "/" ? "/" : "") + name;
@@ -5447,53 +5516,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}), (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-crumbs-menu",
 				role: "menu"
-			}, (workspaces ?? []).map((ws) => (0, react.createElement)("button", {
-				key: `ws:${ws}`,
-				type: "button",
-				role: "menuitem",
-				className: "dsh-tdt-sv-crumbs-menu-item",
-				style: {
-					paddingLeft: 8,
-					display: "flex",
-					alignItems: "center",
-					gap: "6px"
-				},
-				title: ws,
-				onClick: () => {
-					if (ws !== rootName) onSelectWorkspace?.(ws);
-				}
-			}, (0, react.createElement)("span", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				flex: "none",
-				color: ws === rootName ? C$2.text : C$2.textDim
-			} }, (0, react.createElement)(ws === rootName ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 13 })), (0, react.createElement)("span", {
-				className: "dsh-tdt-sv-crumbs-menu-label",
-				style: { fontWeight: ws === rootName ? 600 : 400 }
-			}, ws))), (() => {
-				const skip = workspaces !== void 0 && rootName !== "" && crumbs.length > 0 && crumbs[0].path === "" ? 1 : 0;
-				const items = crumbs.slice(skip);
-				if (items.length === 0 && workspaces === void 0) return (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-empty" }, t("explorerRootName"));
-				return items.map((crumb, i) => {
-					const index = i + skip;
-					const chevrons = index === 0 ? null : (0, react.createElement)(react.Fragment, null, Array.from({ length: index - 1 }, (_, s) => (0, react.createElement)("span", {
-						key: `s${s}`,
-						className: "dsh-tdt-sv-crumbs-chev-slot",
-						"aria-hidden": true
-					})), (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-chev" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 11 })));
-					return (0, react.createElement)("button", {
-						key: crumb.path,
-						type: "button",
-						role: "menuitem",
-						className: "dsh-tdt-sv-crumbs-menu-item",
-						style: { paddingLeft: 8 },
-						title: crumb.path,
-						onClick: () => {
-							loadDir(crumb.path);
-						}
-					}, chevrons, (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbs-menu-label" }, crumb.label));
-				});
-			})())) : null), (0, react.createElement)("div", {
+			}, crumbsMenuEntries({
+				workspaces,
+				rootName: rootLabel,
+				rootFallbackLabel: t("explorerRootName"),
+				crumbs,
+				onPickWorkspace: onSelectWorkspace,
+				onLoadDir: loadDir
+			}))) : null), (0, react.createElement)("div", {
 				ref: regionRef,
 				className: "dsh-tdt-sv-crumbs-region"
 			}, (0, react.createElement)("span", {
@@ -39711,7 +39741,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				t,
 				dock: true,
 				onResizeStart: startResize,
-				onClose: closePreview
+				onClose: closePreview,
+				rootName: editorOptions.workspaces.find((w) => editorOptions.workspaceAnchors[w.value] === preview.sessionId)?.value,
+				workspaces: editorOptions.workspaces.map((w) => w.value),
+				onSelectWorkspace: (name) => {
+					const anchor = editorOptions.workspaceAnchors[name];
+					if (anchor !== void 0 && anchor !== preview.sessionId) setPreview({
+						sessionId: anchor,
+						path: ""
+					});
+				}
 			}) : null);
 		}
 		/**

@@ -65,6 +65,76 @@ function dirnameOf(p: string): string {
   return p.slice(0, i)
 }
 
+/**
+ * ▾ 下拉条目构造（**picker 与 dock 共用同一段代码**，差别只在入参——用户 2026-09-29 点名提炼，
+ * 严禁两处各写一份）：
+ * - 当前工作区排第一（打开文件夹图标 + 加粗），**其下路径紧跟**（每层一个右箭头位缩进），
+ *   再列其他工作区（关合图标 + 灰）——「打开哪个就跟在哪个下面」；
+ * - 当前工作区未知（rootName 空或不在清单）时路径段置顶、全部工作区按「其他」罗列；
+ * - workspaces 不传 = 不显示工作区段（旧形态兜底：根无箭头、其下逐层缩进）。
+ */
+function crumbsMenuEntries(params: {
+  workspaces: readonly string[] | undefined
+  rootName: string
+  /** 根完全未知时下拉的兜底占位文案（调用方传 t('explorerRootName')）。 */
+  rootFallbackLabel: string
+  crumbs: ReadonlyArray<{ label: string; path: string }>
+  onPickWorkspace?: (name: string) => void
+  onLoadDir: (path: string) => void
+}): ReactNode[] {
+  const { workspaces, rootName, rootFallbackLabel, crumbs, onPickWorkspace, onLoadDir } = params
+  const wsEntry = (ws: string, current: boolean): ReactNode => h('button', {
+    key: `ws:${ws}`,
+    type: 'button',
+    role: 'menuitem',
+    className: 'dsh-tdt-sv-crumbs-menu-item',
+    style: { paddingLeft: 8, display: 'flex', alignItems: 'center', gap: '6px' },
+    title: ws,
+    onClick: () => { if (!current) onPickWorkspace?.(ws) },
+  },
+    h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: current ? C.text : C.textDim } },
+      h(current ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 13 })),
+    h('span', { className: 'dsh-tdt-sv-crumbs-menu-label', style: { fontWeight: current ? 600 : 400 } }, ws),
+  )
+  const pathEntry = (crumb: { label: string; path: string }, depth: number, withArrow = true): ReactNode => h('button', {
+    key: `p:${crumb.path}`,
+    type: 'button',
+    role: 'menuitem',
+    className: 'dsh-tdt-sv-crumbs-menu-item',
+    style: { paddingLeft: 8 },
+    title: crumb.path,
+    onClick: () => { onLoadDir(crumb.path) },
+  },
+    withArrow
+      ? h(Fragment, null,
+          Array.from({ length: depth }, (_, s) =>
+            h('span', { key: `s${s}`, className: 'dsh-tdt-sv-crumbs-chev-slot', 'aria-hidden': true })),
+          h('span', { className: 'dsh-tdt-sv-crumbs-chev' }, h(IconChevronRightOutlineRegular, { size: 11 })),
+        )
+      : null,
+    h('span', { className: 'dsh-tdt-sv-crumbs-menu-label' }, crumb.label),
+  )
+  if (workspaces === undefined) {
+    if (crumbs.length === 0) return [h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, rootFallbackLabel)]
+    return crumbs.map((crumb, index) => pathEntry(crumb, index === 0 ? 0 : index - 1, index !== 0))
+  }
+  // 路径段：根 crumb（path=''）已由工作区段表达时剔除，深度从根下一层（0 个占位 + 1 箭头）起算。
+  const segments = rootName !== '' && crumbs.length > 0 && crumbs[0].path === '' ? crumbs.slice(1) : crumbs
+  const out: ReactNode[] = []
+  if (rootName !== '' && workspaces.includes(rootName)) {
+    // 当前工作区排第一，其下路径紧跟，然后是其他工作区（保持原相对顺序）。
+    out.push(wsEntry(rootName, true))
+    segments.forEach((crumb, i) => { out.push(pathEntry(crumb, i)) })
+    for (const ws of workspaces) {
+      if (ws !== rootName) out.push(wsEntry(ws, false))
+    }
+  } else {
+    segments.forEach((crumb, i) => { out.push(pathEntry(crumb, i)) })
+    for (const ws of workspaces) out.push(wsEntry(ws, false))
+  }
+  return out
+}
+
 /** 路径工具：dir 拼接 name（处理根与绝对/相对）。 */
 function joinPath(dir: string, name: string): string {
   if (dir === '' || dir === '/') return (dir === '/' ? '/' : '') + name
@@ -651,53 +721,15 @@ export function FileBrowser(props: {
           ? h(Fragment, null,
             h('div', { className: 'dsh-tdt-sv-crumbs-backdrop', onClick: () => { setMenuOpen(false) } }),
             h('div', { className: 'dsh-tdt-sv-crumbs-menu', role: 'menu' },
-              // 工作区段（用户 2026-09-29：▾ 下拉顶部列**全部**工作区，选工作区就在这选；
-              // 当前工作区用「打开文件夹」图标 + 加粗区分，其他用关合文件夹图标）。dock 不传
-              // workspaces ⇒ 不显示这段（dock 锚定会话所属工作区，浏览时不该切走）。
-              (workspaces ?? []).map(ws => h('button', {
-                key: `ws:${ws}`,
-                type: 'button',
-                role: 'menuitem',
-                className: 'dsh-tdt-sv-crumbs-menu-item',
-                style: { paddingLeft: 8, display: 'flex', alignItems: 'center', gap: '6px' },
-                title: ws,
-                onClick: () => { if (ws !== rootName) onSelectWorkspace?.(ws) },
-              },
-                h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: ws === rootName ? C.text : C.textDim } },
-                  h(ws === rootName ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 13 })),
-                h('span', { className: 'dsh-tdt-sv-crumbs-menu-label', style: { fontWeight: ws === rootName ? 600 : 400 } }, ws),
-              )),
-              // 路径段：从当前工作区根**下面**一层开始缩进（根名已在上面的工作区段里，
-              // 用户 2026-09-29 的层级示意 = 工作区列表后跟「> 目录1 >> 目录2」）。
-              (() => {
-                const skip = workspaces !== undefined && rootName !== '' && crumbs.length > 0 && crumbs[0].path === '' ? 1 : 0
-                const items = crumbs.slice(skip)
-                if (items.length === 0 && workspaces === undefined) {
-                  return h('div', { className: 'dsh-tdt-sv-crumbs-menu-empty' }, t('explorerRootName'))
-                }
-                return items.map((crumb, i) => {
-                  const index = i + skip
-                  // 方案 A 修订（用户 2026-09-29）：每行只显示**一个**右箭头——行首先空出
-                  // (index-1) 个箭头位（占位不画、位置保留），箭头固定画在原第 index 位；
-                  // 首行不显示箭头。
-                  const chevrons = index === 0
-                    ? null
-                    : h(Fragment, null,
-                      Array.from({ length: index - 1 }, (_, s) =>
-                        h('span', { key: `s${s}`, className: 'dsh-tdt-sv-crumbs-chev-slot', 'aria-hidden': true })),
-                      h('span', { className: 'dsh-tdt-sv-crumbs-chev' }, h(IconChevronRightOutlineRegular, { size: 11 })),
-                    )
-                  return h('button', {
-                    key: crumb.path,
-                    type: 'button',
-                    role: 'menuitem',
-                    className: 'dsh-tdt-sv-crumbs-menu-item',
-                    style: { paddingLeft: 8 },
-                    title: crumb.path,
-                    onClick: () => { loadDir(crumb.path) },
-                  }, chevrons, h('span', { className: 'dsh-tdt-sv-crumbs-menu-label' }, crumb.label))
-                })
-              })(),
+              // 条目构造 = 模块级共用函数（picker 与 dock 同一段代码，用户 2026-09-29 点名提炼）。
+              crumbsMenuEntries({
+                workspaces,
+                rootName: rootLabel,
+                rootFallbackLabel: t('explorerRootName'),
+                crumbs,
+                onPickWorkspace: onSelectWorkspace,
+                onLoadDir: loadDir,
+              }),
             ))
           : null,
       ),
