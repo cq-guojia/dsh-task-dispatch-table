@@ -114,3 +114,9 @@
 - **用户点破两处不一**：dock 的 ▾ 下拉没有工作区段（上轮我只给 picker 传了 workspaces）⇒「同一段代码抄两遍」的风险成真。按用户要求**提炼模块级共用函数 `crumbsMenuEntries`**（file-browser.tsx）：入参 = workspaces / rootName / crumbs / 两个回调，picker 与 dock 都只调它，渲染零重复。
 - **排序改版（用户示意）**：**当前工作区排第一（打开图标+加粗）→ 其下路径紧跟（每层一个右箭头缩进）→ 其他工作区**（关合图标+灰）；当前工作区未知（rootName 空或不匹配）时路径段置顶、全部按「其他」罗列。
 - **dock 接上同一套**：TaskPage 把 `editorOptions` 的工作区清单/锚点表传进 dock 的 FileBrowser——rootName = 锚点会话命中的工作区名；切换工作区 = 把 dock 浏览切到目标工作区的锚点会话（`setPreview({sessionId: anchor, path: ''})`）。选择器与 dock 从此**零下拉逻辑分叉**。
+
+## 十八、第十四轮（浮层内 FileBrowser 撑满 + 去标题条 + 1.5 倍）
+
+- **去标题条**：浮层头部「选择工作区文件」+ 叉整行没意义（用户拍板）整体撤掉；关闭走 FileBrowser 自带 ✕ / 点外 / Esc / 再点方按钮；失效键 `editorPickerCancel` 全删。
+- **尺寸 1.5 倍**：560×440 → 840×660（82vh 封顶）；面板右缘从「按钮左缘−8px」改**贴住**按钮。
+- **浮层内只占一半宽的根因**：`.dsh-tdt-sv-preview` 类带着旧分栏时代 `width:min(520px,48%)` + `flex:0 0 auto` ⇒ 840 浮层里 FileBrowser 只有 403px、右边全是浮层底色。**不复制组件**：经既有 `style` prop 内联覆盖（`width:100%` / `flex:1 1 auto` / `borderLeft:none`——浮层已有外框）；dock 走类默认宽度（`--dsh-tdt-preview-w`）不受影响。
