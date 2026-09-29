@@ -108,6 +108,7 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentNone' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
+  | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorWeekdayLabel'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
   | 'editorWeekdayShorts' | 'editorWeekdayEmpty'
@@ -461,6 +462,12 @@ export const zh: Record<LocaleKey, string> = {
   editorAttachmentRemove: '删除',
   editorAttachmentAdd: '添加文件',
   editorAttachmentAddHint: '上传 / 选择文件稍后开放',
+  editorOpenEditor: '全屏编辑',
+  editorPromptEditorTitle: '提示词编辑器（.md）',
+  editorSaveVersion: '保存版本',
+  editorVersionNote: '版本备注（可选）',
+  editorRestore: '恢复',
+  editorNoVersions: '暂无版本，保存后可在此回滚',
   editorWeekdayLabel: '星期',
   editorWeekday1: '周一',
   editorWeekday2: '周二',
@@ -829,6 +836,12 @@ export const en: Record<LocaleKey, string> = {
   editorAttachmentRemove: 'Remove',
   editorAttachmentAdd: 'Add file',
   editorAttachmentAddHint: 'Upload / pick file — coming soon',
+  editorOpenEditor: 'Full-screen edit',
+  editorPromptEditorTitle: 'Prompt editor (.md)',
+  editorSaveVersion: 'Save version',
+  editorVersionNote: 'Version note (optional)',
+  editorRestore: 'Restore',
+  editorNoVersions: 'No versions yet — save one to roll back here',
   editorWeekdayLabel: 'Weekdays',
   editorWeekday1: 'Mon',
   editorWeekday2: 'Tue',

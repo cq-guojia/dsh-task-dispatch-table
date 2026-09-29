@@ -16,7 +16,7 @@
 // **不接保存逻辑**（P2）、**不接工作区/模型数据面**（P1，未接时下拉显示空态，不塞假数据）、
 // **不做版本历史**（P3）。
 
-import { createElement as h, useCallback, useEffect, useMemo, useState } from 'react'
+import { createElement as h, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
   Button,
@@ -64,6 +64,18 @@ export interface Attachment {
   ref: string
 }
 
+/** 提示词版本（2026-09-29）：每次保存快照，文件系统方案落库（P3 决策）。 */
+export interface PromptVersion {
+  /** 版本唯一 id。 */
+  id: string
+  /** ISO 时间戳。 */
+  ts: string
+  /** 该版本的提示词全文。 */
+  content: string
+  /** 版本备注（可选）。 */
+  note: string
+}
+
 /** 排期三档（用户 2026-09-29：参考图是「周期 / 间隔」，周期里含「单次」）。 */
 export type ScheduleKind = 'periodic' | 'interval'
 
@@ -106,6 +118,8 @@ export interface TaskEditorDraft {
   model: string
   /** 附加文件（链接 / 上传），见 {@link Attachment}。 */
   attachments: Attachment[]
+  /** 提示词版本历史，见 {@link PromptVersion}。 */
+  versions: PromptVersion[]
   scheduleKind: ScheduleKind
   periodFreq: PeriodFreq
   /** 周一 = 1 … 周日 = 7（周期-每周/双周 与 间隔 共用）。 */
@@ -155,6 +169,7 @@ export function emptyTaskDraft(): TaskEditorDraft {
     workspace: '',
     model: '',
     attachments: [],
+    versions: [],
     scheduleKind: 'periodic',
     periodFreq: 'daily',
     // 星期默认**一到星期日全选**（用户 2026-09-29）。
@@ -519,6 +534,84 @@ function readWidth(): number {
   }
 }
 
+function formatVersionTime(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const pad = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/**
+ * 全屏提示词编辑器（2026-09-29）：自带行号 + .md 纯文本编辑，右侧版本历史（保存 / 回滚）。
+ * 官方无代码 / Markdown 编辑器组件（dsh-capabilities 已核实），故自绘「行号 gutter + textarea」。
+ */
+function PromptEditorModal(props: {
+  t: T
+  value: string
+  versions: PromptVersion[]
+  onChange: (value: string) => void
+  onSaveVersion: (note: string) => void
+  onRestore: (content: string) => void
+  onClose: () => void
+}): ReactNode {
+  const { t, value, versions, onChange, onSaveVersion, onRestore, onClose } = props
+  const taRef = useRef<HTMLTextAreaElement>(null)
+  const gutterRef = useRef<HTMLDivElement>(null)
+  const [showVersions, setShowVersions] = useState(false)
+  const [note, setNote] = useState('')
+  const lineCount = Math.max(value.split('\n').length, 1)
+  const syncScroll = (): void => {
+    if (gutterRef.current !== null && taRef.current !== null) gutterRef.current.scrollTop = taRef.current.scrollTop
+  }
+  const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1)
+  return h('div', {
+    style: { position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex' },
+    onClick: onClose,
+  }, h('div', {
+    style: { background: 'var(--dsw-bg, #ffffff)', color: C.text, width: 'min(1100px, 96vw)', maxHeight: '96vh', margin: '2vh auto', display: 'flex', flexDirection: 'column', borderRadius: '10px', boxShadow: '0 12px 40px rgba(0,0,0,0.35)', overflow: 'hidden' },
+    onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
+  },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${C.borderL4}` } },
+      h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPromptEditorTitle')),
+      h('div', { style: { display: 'flex', gap: '8px' } },
+        h(Button, { variant: 'outline', size: 'sm', onClick: () => { setShowVersions(v => !v) } }, t('editorVersions')),
+        h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
+      ),
+    ),
+    h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0 } },
+      h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '13px', lineHeight: '1.6' } },
+        h('div', { ref: gutterRef, style: { overflow: 'hidden', padding: '10px 8px 10px 12px', textAlign: 'right', color: C.textDim, userSelect: 'none', borderRight: `1px solid ${C.borderL4}`, background: C.layer1 } },
+          lineNumbers.map(n => h('div', { key: n, style: { height: '1.6em' } }, String(n)))),
+        h('textarea', {
+          ref: taRef, value, spellCheck: false,
+          onChange: (event: { target: { value: string } }) => { onChange(event.target.value) },
+          onScroll: syncScroll,
+          style: { flex: '1 1 auto', resize: 'none', border: 'none', outline: 'none', padding: '10px 12px', fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', color: 'inherit', background: 'var(--dsw-bg, #ffffff)' },
+          'aria-label': t('editorPromptEditorTitle'),
+        }),
+      ),
+      showVersions
+        ? h('div', { style: { flex: '0 0 280px', borderLeft: `1px solid ${C.borderL4}`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
+            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid ${C.borderL4}`, fontSize: '13px', fontWeight: 600 } }, t('editorVersions')),
+            h('div', { style: { display: 'flex', gap: '6px', padding: '10px 12px' } },
+              h('input', { value: note, placeholder: t('editorVersionNote'), onChange: (event: { target: { value: string } }) => { setNote(event.target.value) }, style: { flex: '1 1 auto', minWidth: 0, border: `1px solid ${C.borderL4}`, borderRadius: '6px', padding: '5px 8px', fontSize: '12px' } }),
+              h(Button, { variant: 'primary', size: 'sm', onClick: () => { onSaveVersion(note); setNote('') } }, t('editorSaveVersion')),
+            ),
+            versions.length === 0
+              ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: C.textDim } }, t('editorNoVersions'))
+              : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 12px 12px', overflow: 'auto' } },
+                  versions.map(v => h('li', { key: v.id, style: { padding: '8px 0', borderBottom: `1px solid ${C.borderL4}` } },
+                    h('div', { style: { fontSize: '11px', color: C.textDim } }, formatVersionTime(v.ts)),
+                    v.note ? h('div', { style: { fontSize: '12px', margin: '2px 0 6px' } }, v.note) : null,
+                    h(Button, { variant: 'ghost', size: 'sm', onClick: () => { onRestore(v.content) } }, t('editorRestore')),
+                  )),
+                ),
+          )
+        : null,
+    ),
+  ))
+}
+
 /**
  * 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
  */
@@ -542,6 +635,7 @@ export function TaskEditorDrawer(props: {
   const [tab, setTab] = useState<'basic' | 'records'>('basic')
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(false)
 
   useEffect(() => { ensureTaskEditorStyle() }, [])
@@ -639,6 +733,7 @@ export function TaskEditorDrawer(props: {
   const promptCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorPrompt')),
+      h(Button, { variant: 'ghost', size: 'sm', title: t('editorOpenEditor'), 'aria-label': t('editorOpenEditor'), onClick: () => { setEditorOpen(true) } }, t('editorOpenEditor')),
     ),
     h('textarea', {
       id: 'dsh-tdt-ed-source-inline-panel',
@@ -974,6 +1069,19 @@ export function TaskEditorDrawer(props: {
           },
         }, t('editorSave')),
       ),
+      editorOpen
+        ? h(PromptEditorModal, {
+          t,
+          value: draft.prompt,
+          versions: draft.versions,
+          onChange: (value: string) => { patch({ prompt: value }) },
+          onSaveVersion: (note: string) => {
+            patch({ versions: [...draft.versions, { id: crypto.randomUUID(), ts: new Date().toISOString(), content: draft.prompt, note }] })
+          },
+          onRestore: (content: string) => { patch({ prompt: content }) },
+          onClose: () => { setEditorOpen(false) },
+        })
+        : null,
     ),
   )
 }

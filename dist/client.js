@@ -338,6 +338,12 @@ window.__ModuleLoader__.load({
 			editorAttachmentRemove: "删除",
 			editorAttachmentAdd: "添加文件",
 			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
+			editorOpenEditor: "全屏编辑",
+			editorPromptEditorTitle: "提示词编辑器（.md）",
+			editorSaveVersion: "保存版本",
+			editorVersionNote: "版本备注（可选）",
+			editorRestore: "恢复",
+			editorNoVersions: "暂无版本，保存后可在此回滚",
 			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
 			editorWeekday2: "周二",
@@ -700,6 +706,12 @@ window.__ModuleLoader__.load({
 			editorAttachmentRemove: "Remove",
 			editorAttachmentAdd: "Add file",
 			editorAttachmentAddHint: "Upload / pick file — coming soon",
+			editorOpenEditor: "Full-screen edit",
+			editorPromptEditorTitle: "Prompt editor (.md)",
+			editorSaveVersion: "Save version",
+			editorVersionNote: "Version note (optional)",
+			editorRestore: "Restore",
+			editorNoVersions: "No versions yet — save one to roll back here",
 			editorWeekdayLabel: "Weekdays",
 			editorWeekday1: "Mon",
 			editorWeekday2: "Tue",
@@ -5507,6 +5519,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				workspace: "",
 				model: "",
 				attachments: [],
+				versions: [],
 				scheduleKind: "periodic",
 				periodFreq: "daily",
 				weekdays: [
@@ -5854,6 +5867,185 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return WIDTH_DEFAULT;
 			}
 		}
+		function formatVersionTime(iso) {
+			const d = new Date(iso);
+			if (Number.isNaN(d.getTime())) return iso;
+			const pad = (n) => String(n).padStart(2, "0");
+			return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+		}
+		/**
+		* 全屏提示词编辑器（2026-09-29）：自带行号 + .md 纯文本编辑，右侧版本历史（保存 / 回滚）。
+		* 官方无代码 / Markdown 编辑器组件（dsh-capabilities 已核实），故自绘「行号 gutter + textarea」。
+		*/
+		function PromptEditorModal(props) {
+			const { t, value, versions, onChange, onSaveVersion, onRestore, onClose } = props;
+			const taRef = (0, react.useRef)(null);
+			const gutterRef = (0, react.useRef)(null);
+			const [showVersions, setShowVersions] = (0, react.useState)(false);
+			const [note, setNote] = (0, react.useState)("");
+			const lineCount = Math.max(value.split("\n").length, 1);
+			const syncScroll = () => {
+				if (gutterRef.current !== null && taRef.current !== null) gutterRef.current.scrollTop = taRef.current.scrollTop;
+			};
+			const lineNumbers = Array.from({ length: lineCount }, (_, i) => i + 1);
+			return (0, react.createElement)("div", {
+				style: {
+					position: "fixed",
+					inset: 0,
+					zIndex: 1e3,
+					background: "rgba(0,0,0,0.45)",
+					display: "flex"
+				},
+				onClick: onClose
+			}, (0, react.createElement)("div", {
+				style: {
+					background: "var(--dsw-bg, #ffffff)",
+					color: C$1.text,
+					width: "min(1100px, 96vw)",
+					maxHeight: "96vh",
+					margin: "2vh auto",
+					display: "flex",
+					flexDirection: "column",
+					borderRadius: "10px",
+					boxShadow: "0 12px 40px rgba(0,0,0,0.35)",
+					overflow: "hidden"
+				},
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				padding: "10px 14px",
+				borderBottom: `1px solid ${C$1.borderL4}`
+			} }, (0, react.createElement)("span", { style: {
+				fontSize: "14px",
+				fontWeight: 600
+			} }, t("editorPromptEditorTitle")), (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "8px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					setShowVersions((v) => !v);
+				}
+			}, t("editorVersions")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "ghost",
+				size: "sm",
+				onClick: onClose
+			}, t("editorClose")))), (0, react.createElement)("div", { style: {
+				flex: "1 1 auto",
+				display: "flex",
+				minHeight: 0
+			} }, (0, react.createElement)("div", { style: {
+				flex: "1 1 auto",
+				display: "flex",
+				minHeight: 0,
+				fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+				fontSize: "13px",
+				lineHeight: "1.6"
+			} }, (0, react.createElement)("div", {
+				ref: gutterRef,
+				style: {
+					overflow: "hidden",
+					padding: "10px 8px 10px 12px",
+					textAlign: "right",
+					color: C$1.textDim,
+					userSelect: "none",
+					borderRight: `1px solid ${C$1.borderL4}`,
+					background: C$1.layer1
+				}
+			}, lineNumbers.map((n) => (0, react.createElement)("div", {
+				key: n,
+				style: { height: "1.6em" }
+			}, String(n)))), (0, react.createElement)("textarea", {
+				ref: taRef,
+				value,
+				spellCheck: false,
+				onChange: (event) => {
+					onChange(event.target.value);
+				},
+				onScroll: syncScroll,
+				style: {
+					flex: "1 1 auto",
+					resize: "none",
+					border: "none",
+					outline: "none",
+					padding: "10px 12px",
+					fontFamily: "inherit",
+					fontSize: "inherit",
+					lineHeight: "inherit",
+					color: "inherit",
+					background: "var(--dsw-bg, #ffffff)"
+				},
+				"aria-label": t("editorPromptEditorTitle")
+			})), showVersions ? (0, react.createElement)("div", { style: {
+				flex: "0 0 280px",
+				borderLeft: `1px solid ${C$1.borderL4}`,
+				display: "flex",
+				flexDirection: "column",
+				minHeight: 0
+			} }, (0, react.createElement)("div", { style: {
+				padding: "10px 12px",
+				borderBottom: `1px solid ${C$1.borderL4}`,
+				fontSize: "13px",
+				fontWeight: 600
+			} }, t("editorVersions")), (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "6px",
+				padding: "10px 12px"
+			} }, (0, react.createElement)("input", {
+				value: note,
+				placeholder: t("editorVersionNote"),
+				onChange: (event) => {
+					setNote(event.target.value);
+				},
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0,
+					border: `1px solid ${C$1.borderL4}`,
+					borderRadius: "6px",
+					padding: "5px 8px",
+					fontSize: "12px"
+				}
+			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "primary",
+				size: "sm",
+				onClick: () => {
+					onSaveVersion(note);
+					setNote("");
+				}
+			}, t("editorSaveVersion"))), versions.length === 0 ? (0, react.createElement)("p", { style: {
+				padding: "0 12px",
+				fontSize: "12px",
+				color: C$1.textDim
+			} }, t("editorNoVersions")) : (0, react.createElement)("ul", { style: {
+				listStyle: "none",
+				margin: 0,
+				padding: "0 12px 12px",
+				overflow: "auto"
+			} }, versions.map((v) => (0, react.createElement)("li", {
+				key: v.id,
+				style: {
+					padding: "8px 0",
+					borderBottom: `1px solid ${C$1.borderL4}`
+				}
+			}, (0, react.createElement)("div", { style: {
+				fontSize: "11px",
+				color: C$1.textDim
+			} }, formatVersionTime(v.ts)), v.note ? (0, react.createElement)("div", { style: {
+				fontSize: "12px",
+				margin: "2px 0 6px"
+			} }, v.note) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "ghost",
+				size: "sm",
+				onClick: () => {
+					onRestore(v.content);
+				}
+			}, t("editorRestore")))))) : null)));
+		}
 		/**
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
@@ -5863,6 +6055,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
 			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
+			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
 				ensureTaskEditorStyle();
@@ -5984,7 +6177,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			* 「单次」只是「周期档的频率 = 单次」，所以周期档里把频率改成别的，顶部自动回到「周期」。
 			*/
 			const scheduleTab = draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic";
-			const promptCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt"))), (0, react.createElement)("textarea", {
+			const promptCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "ghost",
+				size: "sm",
+				title: t("editorOpenEditor"),
+				"aria-label": t("editorOpenEditor"),
+				onClick: () => {
+					setEditorOpen(true);
+				}
+			}, t("editorOpenEditor"))), (0, react.createElement)("textarea", {
 				id: "dsh-tdt-ed-source-inline-panel",
 				className: "dsh-tdt-ed-prompt",
 				value: draft.prompt,
@@ -6348,7 +6549,28 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (onSave === void 0) setPendingHint(true);
 					else onSave(draft);
 				}
-			}, t("editorSave")))));
+			}, t("editorSave"))), editorOpen ? (0, react.createElement)(PromptEditorModal, {
+				t,
+				value: draft.prompt,
+				versions: draft.versions,
+				onChange: (value) => {
+					patch({ prompt: value });
+				},
+				onSaveVersion: (note) => {
+					patch({ versions: [...draft.versions, {
+						id: crypto.randomUUID(),
+						ts: (/* @__PURE__ */ new Date()).toISOString(),
+						content: draft.prompt,
+						note
+					}] });
+				},
+				onRestore: (content) => {
+					patch({ prompt: content });
+				},
+				onClose: () => {
+					setEditorOpen(false);
+				}
+			}) : null));
 		}
 		//#endregion
 		//#region src/client/index.ts
