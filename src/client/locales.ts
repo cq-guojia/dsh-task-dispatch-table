@@ -107,6 +107,7 @@ export type LocaleKey =
   | 'editorMonth' | 'editorMonthOption' | 'editorDayOfMonth' | 'editorDayOption'
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
+  | 'editorAttachments' | 'editorAttachmentNone' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
   | 'editorWeekdayLabel'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
   | 'editorWeekdayShorts' | 'editorWeekdayEmpty'
@@ -453,6 +454,13 @@ export const zh: Record<LocaleKey, string> = {
   editorIntervalSuffix: '执行',
   editorStartTime: '开始时间',
   editorEveryNWeeks: '每 {n} 周',
+  editorAttachments: '附加文件',
+  editorAttachmentNone: '暂无附加文件',
+  editorAttachmentLink: '链接',
+  editorAttachmentUpload: '已上传',
+  editorAttachmentRemove: '删除',
+  editorAttachmentAdd: '添加文件',
+  editorAttachmentAddHint: '上传 / 选择文件稍后开放',
   editorWeekdayLabel: '星期',
   editorWeekday1: '周一',
   editorWeekday2: '周二',
@@ -814,6 +822,13 @@ export const en: Record<LocaleKey, string> = {
   editorIntervalSuffix: '',
   editorStartTime: 'Start time',
   editorEveryNWeeks: 'Every {n} weeks',
+  editorAttachments: 'Attachments',
+  editorAttachmentNone: 'No attachments yet',
+  editorAttachmentLink: 'Linked',
+  editorAttachmentUpload: 'Uploaded',
+  editorAttachmentRemove: 'Remove',
+  editorAttachmentAdd: 'Add file',
+  editorAttachmentAddHint: 'Upload / pick file — coming soon',
   editorWeekdayLabel: 'Weekdays',
   editorWeekday1: 'Mon',
   editorWeekday2: 'Tue',

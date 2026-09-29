@@ -331,6 +331,13 @@ window.__ModuleLoader__.load({
 			editorIntervalSuffix: "执行",
 			editorStartTime: "开始时间",
 			editorEveryNWeeks: "每 {n} 周",
+			editorAttachments: "附加文件",
+			editorAttachmentNone: "暂无附加文件",
+			editorAttachmentLink: "链接",
+			editorAttachmentUpload: "已上传",
+			editorAttachmentRemove: "删除",
+			editorAttachmentAdd: "添加文件",
+			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
 			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
 			editorWeekday2: "周二",
@@ -686,6 +693,13 @@ window.__ModuleLoader__.load({
 			editorIntervalSuffix: "",
 			editorStartTime: "Start time",
 			editorEveryNWeeks: "Every {n} weeks",
+			editorAttachments: "Attachments",
+			editorAttachmentNone: "No attachments yet",
+			editorAttachmentLink: "Linked",
+			editorAttachmentUpload: "Uploaded",
+			editorAttachmentRemove: "Remove",
+			editorAttachmentAdd: "Add file",
+			editorAttachmentAddHint: "Upload / pick file — coming soon",
 			editorWeekdayLabel: "Weekdays",
 			editorWeekday1: "Mon",
 			editorWeekday2: "Tue",
@@ -5492,6 +5506,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				manualPath: "",
 				workspace: "",
 				model: "",
+				attachments: [],
 				scheduleKind: "periodic",
 				periodFreq: "daily",
 				weekdays: [
@@ -5999,6 +6014,60 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ariaLabel: t("editorModel"),
 				align: "end"
 			})));
+			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorAttachments"))), draft.attachments.length === 0 ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAttachmentNone")) : (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "6px",
+				marginBottom: "10px"
+			} }, draft.attachments.map((att) => (0, react.createElement)("div", {
+				key: att.id,
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "8px",
+					padding: "6px 8px",
+					border: `1px solid ${C$1.borderL4}`,
+					borderRadius: "6px",
+					background: C$1.layer1
+				}
+			}, (0, react.createElement)("span", { style: {
+				flex: "1 1 auto",
+				minWidth: 0,
+				overflow: "hidden",
+				textOverflow: "ellipsis",
+				whiteSpace: "nowrap",
+				fontSize: "13px"
+			} }, att.name), (0, react.createElement)("span", {
+				title: att.ref,
+				style: {
+					flex: "none",
+					fontSize: "11px",
+					color: C$1.textDim,
+					border: `1px solid ${C$1.borderL4}`,
+					borderRadius: "4px",
+					padding: "1px 6px"
+				}
+			}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "ghost",
+				size: "sm",
+				onClick: () => {
+					patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
+				},
+				title: t("editorAttachmentRemove"),
+				"aria-label": t("editorAttachmentRemove")
+			}, t("editorAttachmentRemove"))))), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "10px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				disabled: true,
+				title: t("editorAttachmentAddHint")
+			}, t("editorAttachmentAdd")), (0, react.createElement)("p", {
+				className: "dsh-tdt-ed-hint",
+				style: { margin: 0 }
+			}, t("editorAttachmentAddHint"))));
 			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-card-head",
 				style: { marginBottom: "12px" }
@@ -6215,7 +6284,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (value) => {
 					patch({ code: value });
 				}
-			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), depsBlock, advancedBlock);
+			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, attachmentsCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), depsBlock, advancedBlock);
 			return (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-overlay",
 				onPointerDown: (event) => {

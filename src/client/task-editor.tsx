@@ -52,6 +52,18 @@ export type EditorMode = 'create' | 'edit'
 /** 提示词来源：手输（我们管版本）/ 选择工作区里的任务手册（只记路径）/ 上传 MD（我们管版本）。 */
 export type PromptSource = 'inline' | 'manual' | 'upload'
 
+/** 附加文件（2026-09-29）：链接工作目录已有文件，或上传到插件数据目录。 */
+export interface Attachment {
+  /** 草稿内唯一 id（用于增删）。 */
+  id: string
+  /** 展示名（上传原名 / 链接文件名）。 */
+  name: string
+  /** 'link' = 链接工作区已有文件（只存路径，不复制）；'upload' = 已上传到插件数据目录（UID-序号. ext，不覆盖累加）。 */
+  kind: 'link' | 'upload'
+  /** link：工作区路径；upload：插件数据目录下的文件名。 */
+  ref: string
+}
+
 /** 排期三档（用户 2026-09-29：参考图是「周期 / 间隔」，周期里含「单次」）。 */
 export type ScheduleKind = 'periodic' | 'interval'
 
@@ -92,6 +104,8 @@ export interface TaskEditorDraft {
   workspace: string
   /** 选中项的 id；`HostLlmModelInfo` 自带 provider ⇒ 一个下拉同时填 provider + model。 */
   model: string
+  /** 附加文件（链接 / 上传），见 {@link Attachment}。 */
+  attachments: Attachment[]
   scheduleKind: ScheduleKind
   periodFreq: PeriodFreq
   /** 周一 = 1 … 周日 = 7（周期-每周/双周 与 间隔 共用）。 */
@@ -140,6 +154,7 @@ export function emptyTaskDraft(): TaskEditorDraft {
     manualPath: '',
     workspace: '',
     model: '',
+    attachments: [],
     scheduleKind: 'periodic',
     periodFreq: 'daily',
     // 星期默认**一到星期日全选**（用户 2026-09-29）。
@@ -657,6 +672,26 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
+  // ①-附加：附加文件卡（一级样式：展示 + 删除；上传 / 选择文件交互用户要求稍后做）。
+  const attachmentsCard = h('div', { className: 'dsh-tdt-ed-card' },
+    h('div', { className: 'dsh-tdt-ed-card-head' },
+      h('div', { className: 'dsh-tdt-ed-label' }, t('editorAttachments')),
+    ),
+    draft.attachments.length === 0
+      ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorAttachmentNone'))
+      : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
+          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', border: `1px solid ${C.borderL4}`, borderRadius: '6px', background: C.layer1 } },
+            h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } }, att.name),
+            h('span', { title: att.ref, style: { flex: 'none', fontSize: '11px', color: C.textDim, border: `1px solid ${C.borderL4}`, borderRadius: '4px', padding: '1px 6px' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
+            h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove') }, t('editorAttachmentRemove')),
+          )),
+        ),
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+      h(Button, { variant: 'outline', size: 'sm', disabled: true, title: t('editorAttachmentAddHint') }, t('editorAttachmentAdd')),
+      h('p', { className: 'dsh-tdt-ed-hint', style: { margin: 0 } }, t('editorAttachmentAddHint')),
+    ),
+  )
+
   // ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。
   //    「单次」不是第四种排期，它就是「周期档的频率 = 单次」——所以切到单次时把 periodFreq 设成 once，
   //    而在周期档里把频率改成别的，顶部会自动回到「周期」（值是从 periodFreq 推导的，无需额外回写）。
@@ -867,6 +902,7 @@ export function TaskEditorDrawer(props: {
         // 各区块间距统一走 `.dsh-tdt-ed-section` 的 margin（此前这里多了两个 16px 空 div，
         // 导致「编号 → 提示词」比别的间隔小一截）。
         h('div', { className: 'dsh-tdt-ed-section' }, promptCard),
+        h('div', { className: 'dsh-tdt-ed-section' }, attachmentsCard),
         h('div', { className: 'dsh-tdt-ed-section' }, scheduleCard),
         depsBlock,
         advancedBlock,
