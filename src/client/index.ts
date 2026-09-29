@@ -743,12 +743,18 @@ function TaskPage(props: {
 
   const taskRows = data?.tasks ?? []
   /** 可选的前置任务 = 现有任务表（真数据，带所属工作区 ⇒ 表单里先选工作区再选任务）。 */
-  const editorTasks: EditorTaskOption[] = taskRows.map(row => ({
-    id: row.id,
-    label: row.title === '' ? row.id : `${row.title}（${row.code ?? row.id}）`,
-    workspace: row.workspace,
-    enabled: row.enabled !== false,
-  }))
+  const editorTasks: EditorTaskOption[] = taskRows.map(row => {
+    const name = row.title === '' ? row.id : row.title
+    // 前置选项文案（决策：用户用编号管理 ⇒ 有编号时 `[编号] 名称`，无编号只显示名称，
+    // 绝不把机器 id 当尾缀拖出来）。
+    const label = row.code ? `[${row.code}] ${name}` : name
+    return {
+      id: row.id,
+      label,
+      workspace: row.workspace,
+      enabled: row.enabled !== false,
+    }
+  })
   const titleOfTask = (id: string): string => {
     const row = taskRows.find(item => item.id === id)
     return row === undefined ? id : `${row.title}（${row.id}）`
@@ -1186,6 +1192,7 @@ function TaskPage(props: {
         workspaces: editorOptions.workspaces,
         models: editorOptions.models,
         tasks: editorTasks,
+        currentTaskId: editor.mode === 'edit' ? editor.id : undefined,
         onClose: () => { setEditor(null) },
         onSave: (draft: TaskEditorDraft) => { void saveEditor(draft) },
         onDelete: editor.mode === 'edit' ? () => { void deleteEditorTask() } : undefined,

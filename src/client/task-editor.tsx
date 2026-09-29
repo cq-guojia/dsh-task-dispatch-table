@@ -1095,6 +1095,8 @@ export function TaskEditorDrawer(props: {
   models: EditorOption[]
   /** 可选的前置任务（= 现有任务表，真数据，带所属工作区）。 */
   tasks: EditorTaskOption[]
+  /** 当前正在编辑的任务 id（编辑态有；新建态无）。用于在前置列表里**排除自己**（防止自我依赖）。 */
+  currentTaskId?: string
   onClose: () => void
   /** 保存回调（新增 / 修改都走它）。未接时点「保存」只提示待接。 */
   onSave?: ((draft: TaskEditorDraft) => void) | undefined
@@ -1122,6 +1124,7 @@ export function TaskEditorDrawer(props: {
   const {
     t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
     history, onRestoreVersion, onRestoreSnapshot, onDeleteVersion, workspaceFiles, workspaceAnchors,
+    currentTaskId,
   } = props
   const [width, setWidth] = useState<number>(readWidth)
   const [tab, setTab] = useState<'basic' | 'records'>('basic')
@@ -1131,7 +1134,14 @@ export function TaskEditorDrawer(props: {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(false)
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
   const [resetHint, setResetHint] = useState(false)
+  // 「已重置」提示过一会儿自动消失（用户 2026-09-30：不要长显占位，像 Toast 一样自退）。
+  useEffect(() => {
+    if (!resetHint) return
+    const id = setTimeout(() => { setResetHint(false) }, 2500)
+    return () => { clearTimeout(id) }
+  }, [resetHint])
   // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
   const [pickerOpen, setPickerOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -1589,7 +1599,7 @@ export function TaskEditorDrawer(props: {
   const addedDepIds = new Set(draft.deps.map(dep => dep.task))
   const depWsOptions: EditorOption[] = []
   for (const task of tasks) {
-    if (task.workspace === '' || addedDepIds.has(task.id)) continue
+    if (task.workspace === '' || addedDepIds.has(task.id) || task.id === currentTaskId) continue
     if (!depWsOptions.some(option => option.value === task.workspace)) depWsOptions.push({ value: task.workspace, label: task.workspace })
   }
   // 默认选中：第一个「还有可选任务」的工作区（列表本就按任务表顺序推导）；
@@ -1598,7 +1608,7 @@ export function TaskEditorDrawer(props: {
   const [depTaskId, setDepTaskId] = useState('')
   const depTaskOptions: EditorOption[] = depWs === ''
     ? []
-    : tasks.filter(task => task.workspace === depWs && !addedDepIds.has(task.id))
+    : tasks.filter(task => task.workspace === depWs && !addedDepIds.has(task.id) && task.id !== currentTaskId)
       .map(task => ({ value: task.id, label: task.enabled === false ? `${task.label}${t('editorDepDisabledTag')}` : task.label }))
   const addDep = (): void => {
     if (depTaskId === '' || addedDepIds.has(depTaskId)) return
@@ -1629,7 +1639,7 @@ export function TaskEditorDrawer(props: {
             h('div', { style: { color: C.textDim, fontSize: '12px', marginTop: '4px' } }, t('editorDepEmptyHint')),
           )
         : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
-            draft.deps.map((dep, index) => {
+            draft.deps.filter(dep => dep.task !== currentTaskId).map((dep, index) => {
               const known = tasks.find(task => task.id === dep.task)
               const ws = known?.workspace ?? ''
               return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
@@ -1640,7 +1650,7 @@ export function TaskEditorDrawer(props: {
                 // 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
                 ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: C.textDim, fontSize: '11px' } }),
                 // 「移除」宽度固定（flex none），不被任务名挤动。
-                h(Button, { variant: 'ghost', size: 'sm', style: { flex: 'none' }, onClick: () => { patch({ deps: draft.deps.filter((_, i) => i !== index) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
+                h(Button, { variant: 'ghost', size: 'sm', style: { flex: 'none' }, onClick: () => { patch({ deps: draft.deps.filter(d => d.task !== dep.task) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
               )
             }),
           ),
@@ -1825,10 +1835,9 @@ export function TaskEditorDrawer(props: {
         onClose: () => { setPreviewOpen(false) },
       })
       : h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } },
-      // 头部：标题 + 启用开关（关闭钮左边）+ 关闭。启用不再单占一行。
+      // 头部：左侧 = 启用开关（标题左边）+ 标题；右侧 = 基本信息/执行记录 切换（仅编辑态）+ 关闭。
       h('div', { className: 'dsh-tdt-ed-header' },
-        h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
-        h('div', { className: 'dsh-tdt-ed-headactions' },
+        h('div', { className: 'dsh-tdt-ed-headleft' },
           h('span', { className: 'dsh-tdt-ed-enable' },
             h('span', null, t('editorEnabled')),
             h(Switch, {
@@ -1838,6 +1847,22 @@ export function TaskEditorDrawer(props: {
               title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
             }),
           ),
+          h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
+        ),
+        h('div', { className: 'dsh-tdt-ed-headactions' },
+          mode === 'edit'
+            ? h(Segmented, {
+              id: 'dsh-tdt-ed-tabs',
+              value: tab,
+              options: [
+                { value: 'basic', label: t('editorTabBasic') },
+                { value: 'records', label: t('editorTabRecords') },
+              ],
+              onChange: (next: string) => { setTab(next as 'basic' | 'records') },
+              label: t('editorTabBasic'),
+              className: 'dsh-tdt-ed-seg',
+            })
+            : null,
           h('button', {
             className: 'dsh-tdt-ed-close',
             type: 'button',
@@ -1847,25 +1872,6 @@ export function TaskEditorDrawer(props: {
           }, h(IconCloseOutlineRegular, { size: 16 })),
         ),
       ),
-      // 编辑态两 tab：基本信息 / 执行记录；创建态只有基本信息。
-      mode === 'edit'
-        ? h('div', { className: 'dsh-tdt-ed-tabs', role: 'tablist' },
-            h('button', {
-              className: 'dsh-tdt-ed-tab',
-              type: 'button',
-              role: 'tab',
-              'aria-selected': tab === 'basic',
-              onClick: () => { setTab('basic') },
-            }, t('editorTabBasic')),
-            h('button', {
-              className: 'dsh-tdt-ed-tab',
-              type: 'button',
-              role: 'tab',
-              'aria-selected': tab === 'records',
-              onClick: () => { setTab('records') },
-            }, t('editorTabRecords')),
-          )
-        : null,
       h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef }, body),
       // 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
       h('div', { className: 'dsh-tdt-ed-footer' },
@@ -1877,7 +1883,7 @@ export function TaskEditorDrawer(props: {
           : null,
         h(Button, {
           variant: 'ghost', size: 'sm',
-          onClick: () => { onChange(initialDraftRef.current); setResetHint(true) },
+          onClick: () => { setConfirmReset(true) },
         }, t('editorReset')),
         h('span', { style: { flex: '1 1 auto' } }),
         resetHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorResetDone')) : null,
@@ -1902,6 +1908,17 @@ export function TaskEditorDrawer(props: {
           confirmLabel: t('editorDeleteTask'),
           onCancel: () => { setConfirmDeleteTask(false) },
           onConfirm: () => { setConfirmDeleteTask(false); onDelete?.() },
+        })
+        : null,
+      // 重置确认（用户 2026-09-30：重置也要先确认，避免误点把已填写内容清空）。
+      confirmReset
+        ? h(VersionConfirm, {
+          t,
+          title: t('editorResetTitle'),
+          desc: t('editorResetDesc'),
+          confirmLabel: t('editorReset'),
+          onCancel: () => { setConfirmReset(false) },
+          onConfirm: () => { setConfirmReset(false); onChange(initialDraftRef.current); setResetHint(true) },
         })
         : null,
     )

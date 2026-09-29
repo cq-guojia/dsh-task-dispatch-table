@@ -401,6 +401,8 @@ window.__ModuleLoader__.load({
 			editorDeleteTaskDesc: "确定所有的移除都是找不回来的，不可逆的。",
 			editorReset: "重置",
 			editorResetDone: "已恢复为打开时的内容",
+			editorResetTitle: "重置当前编辑？",
+			editorResetDesc: "重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。",
 			editorSnapshots: "配置快照（整份找回）",
 			editorRestoreAll: "找回全部",
 			editorRestoreAllTitle: "找回全部设置",
@@ -832,6 +834,8 @@ window.__ModuleLoader__.load({
 			editorDeleteTaskDesc: "Everything removed is unrecoverable and irreversible.",
 			editorReset: "Reset",
 			editorResetDone: "Restored to the values from when you opened it",
+			editorResetTitle: "Reset current edits?",
+			editorResetDesc: "Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.",
 			editorSnapshots: "Config snapshots (restore all)",
 			editorRestoreAll: "Restore all",
 			editorRestoreAllTitle: "Restore all settings",
@@ -5743,6 +5747,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-resizer:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 .dsh-tdt-ed-title{font-size:15px;font-weight:600;}
+/* 头部左侧：启用开关 + 标题 一组（用户 2026-09-30：开关移到标题左边）。 */
+.dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
 .dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;}
@@ -38424,7 +38430,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onRestoreSnapshot, onDeleteVersion, workspaceFiles, workspaceAnchors } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onRestoreSnapshot, onDeleteVersion, workspaceFiles, workspaceAnchors, currentTaskId } = props;
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
@@ -38433,7 +38439,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [previewOpen, setPreviewOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
 			const [confirmDeleteTask, setConfirmDeleteTask] = (0, react.useState)(false);
+			const [confirmReset, setConfirmReset] = (0, react.useState)(false);
 			const [resetHint, setResetHint] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				if (!resetHint) return;
+				const id = setTimeout(() => {
+					setResetHint(false);
+				}, 2500);
+				return () => {
+					clearTimeout(id);
+				};
+			}, [resetHint]);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
 			const [pickerWs, setPickerWs] = (0, react.useState)("");
@@ -39012,7 +39028,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const addedDepIds = new Set(draft.deps.map((dep) => dep.task));
 			const depWsOptions = [];
 			for (const task of tasks) {
-				if (task.workspace === "" || addedDepIds.has(task.id)) continue;
+				if (task.workspace === "" || addedDepIds.has(task.id) || task.id === currentTaskId) continue;
 				if (!depWsOptions.some((option) => option.value === task.workspace)) depWsOptions.push({
 					value: task.workspace,
 					label: task.workspace
@@ -39020,7 +39036,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}
 			const [depWs, setDepWs] = (0, react.useState)(() => depWsOptions[0]?.value ?? workspaces[0]?.value ?? "");
 			const [depTaskId, setDepTaskId] = (0, react.useState)("");
-			const depTaskOptions = depWs === "" ? [] : tasks.filter((task) => task.workspace === depWs && !addedDepIds.has(task.id)).map((task) => ({
+			const depTaskOptions = depWs === "" ? [] : tasks.filter((task) => task.workspace === depWs && !addedDepIds.has(task.id) && task.id !== currentTaskId).map((task) => ({
 				value: task.id,
 				label: task.enabled === false ? `${task.label}${t("editorDepDisabledTag")}` : task.label
 			}));
@@ -39061,7 +39077,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px"
-			} }, draft.deps.map((dep, index) => {
+			} }, draft.deps.filter((dep) => dep.task !== currentTaskId).map((dep, index) => {
 				const known = tasks.find((task) => task.id === dep.task);
 				const ws = known?.workspace ?? "";
 				return (0, react.createElement)("div", {
@@ -39090,7 +39106,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					size: "sm",
 					style: { flex: "none" },
 					onClick: () => {
-						patch({ deps: draft.deps.filter((_, i) => i !== index) });
+						patch({ deps: draft.deps.filter((d) => d.task !== dep.task) });
 					},
 					title: t("editorDepRemove"),
 					"aria-label": t("editorDepRemove")
@@ -39254,39 +39270,35 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0
-			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit")), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable" }, (0, react.createElement)("span", null, t("editorEnabled")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable" }, (0, react.createElement)("span", null, t("editorEnabled")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: draft.enabled,
 				onChange: (next) => {
 					patch({ enabled: next });
 				},
 				label: t("editorEnabled"),
 				title: draft.enabled ? t("editorEnabledOn") : t("editorEnabledOff")
-			})), (0, react.createElement)("button", {
+			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, mode === "edit" ? (0, react.createElement)(Segmented, {
+				id: "dsh-tdt-ed-tabs",
+				value: tab,
+				options: [{
+					value: "basic",
+					label: t("editorTabBasic")
+				}, {
+					value: "records",
+					label: t("editorTabRecords")
+				}],
+				onChange: (next) => {
+					setTab(next);
+				},
+				label: t("editorTabBasic"),
+				className: "dsh-tdt-ed-seg"
+			}) : null, (0, react.createElement)("button", {
 				className: "dsh-tdt-ed-close",
 				type: "button",
 				title: t("editorClose"),
 				"aria-label": t("editorClose"),
 				onClick: requestClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), mode === "edit" ? (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-tabs",
-				role: "tablist"
-			}, (0, react.createElement)("button", {
-				className: "dsh-tdt-ed-tab",
-				type: "button",
-				role: "tab",
-				"aria-selected": tab === "basic",
-				onClick: () => {
-					setTab("basic");
-				}
-			}, t("editorTabBasic")), (0, react.createElement)("button", {
-				className: "dsh-tdt-ed-tab",
-				type: "button",
-				role: "tab",
-				"aria-selected": tab === "records",
-				onClick: () => {
-					setTab("records");
-				}
-			}, t("editorTabRecords"))) : null, (0, react.createElement)("div", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-body",
 				ref: bodyRef
 			}, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -39300,8 +39312,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				variant: "ghost",
 				size: "sm",
 				onClick: () => {
-					onChange(initialDraftRef.current);
-					setResetHint(true);
+					setConfirmReset(true);
 				}
 			}, t("editorReset")), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), resetHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
@@ -39337,6 +39348,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onConfirm: () => {
 					setConfirmDeleteTask(false);
 					onDelete?.();
+				}
+			}) : null, confirmReset ? (0, react.createElement)(VersionConfirm, {
+				t,
+				title: t("editorResetTitle"),
+				desc: t("editorResetDesc"),
+				confirmLabel: t("editorReset"),
+				onCancel: () => {
+					setConfirmReset(false);
+				},
+				onConfirm: () => {
+					setConfirmReset(false);
+					onChange(initialDraftRef.current);
+					setResetHint(true);
 				}
 			}) : null);
 			return (0, react.createElement)("div", {
@@ -40116,12 +40140,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 			const taskRows = data?.tasks ?? [];
 			/** 可选的前置任务 = 现有任务表（真数据，带所属工作区 ⇒ 表单里先选工作区再选任务）。 */
-			const editorTasks = taskRows.map((row) => ({
-				id: row.id,
-				label: row.title === "" ? row.id : `${row.title}（${row.code ?? row.id}）`,
-				workspace: row.workspace,
-				enabled: row.enabled !== false
-			}));
+			const editorTasks = taskRows.map((row) => {
+				const name = row.title === "" ? row.id : row.title;
+				const label = row.code ? `[${row.code}] ${name}` : name;
+				return {
+					id: row.id,
+					label,
+					workspace: row.workspace,
+					enabled: row.enabled !== false
+				};
+			});
 			const titleOfTask = (id) => {
 				const row = taskRows.find((item) => item.id === id);
 				return row === void 0 ? id : `${row.title}（${row.id}）`;
@@ -40490,6 +40518,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				workspaces: editorOptions.workspaces,
 				models: editorOptions.models,
 				tasks: editorTasks,
+				currentTaskId: editor.mode === "edit" ? editor.id : void 0,
 				onClose: () => {
 					setEditor(null);
 				},

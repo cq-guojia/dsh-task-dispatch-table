@@ -354,7 +354,10 @@ export function createScheduler(opts: {
       const allTasks = loadTasks(logger, cfg, true)
       const tasks = allTasks.filter((t) => t.enabled)
       const upstreams = new Map(allTasks.map((t) => [t.id, t]))
-      taskMap = new Map(tasks.map((t) => [t.id, t]))
+      // 快照（getTasks）必须含停用任务：停用只是「暂不开跑」，仍是合法前置候选
+      // （设计约定：设前置不受启停影响）。派发只用 `tasks`（已按 enabled 过滤），
+      // 故这里把全量写进 taskMap，让前端前置列表能选到停用任务。
+      taskMap = new Map(allTasks.map((t) => [t.id, t]))
       // Loop A：先处理新刻度（懒建行 + 不回看 + 不补跑 + 落库即止，决策 41）
       dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets())
       // Loop B：再收口全部执行记录（发动本 tick 新落库的行 + 追问 / 重试 / 租约——

@@ -19,6 +19,8 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-resizer:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 .dsh-tdt-ed-title{font-size:15px;font-weight:600;}
+/* 头部左侧：启用开关 + 标题 一组（用户 2026-09-30：开关移到标题左边）。 */
+.dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
 .dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;}

@@ -112,7 +112,7 @@ export type LocaleKey =
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
-  | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone'
+  | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
   | 'editorSnapshots' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
   | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint'
@@ -513,6 +513,8 @@ export const zh: Record<LocaleKey, string> = {
   editorDeleteTaskDesc: '确定所有的移除都是找不回来的，不可逆的。',
   editorReset: '重置',
   editorResetDone: '已恢复为打开时的内容',
+  editorResetTitle: '重置当前编辑？',
+  editorResetDesc: '重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。',
   editorSnapshots: '配置快照（整份找回）',
   editorRestoreAll: '找回全部',
   editorRestoreAllTitle: '找回全部设置',
@@ -950,6 +952,8 @@ export const en: Record<LocaleKey, string> = {
   editorDeleteTaskDesc: 'Everything removed is unrecoverable and irreversible.',
   editorReset: 'Reset',
   editorResetDone: 'Restored to the values from when you opened it',
+  editorResetTitle: 'Reset current edits?',
+  editorResetDesc: 'Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.',
   editorSnapshots: 'Config snapshots (restore all)',
   editorRestoreAll: 'Restore all',
   editorRestoreAllTitle: 'Restore all settings',

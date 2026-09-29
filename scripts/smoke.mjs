@@ -338,6 +338,8 @@ try {
   check('带快照落库成功（决策 41）', decStore.ensureInstance(randomUUID(), UUID_A, '2026-09-28', '2026-09-28T08:00:00.000Z', 'dispatched', decSnapshot) === true)
   const decScheduler = createScheduler({ ctx: okCtx, logger, store: decStore, reconciler: decReconciler, config: decCfg })
   decScheduler.tick()
+  // 关键：停用任务不能从 getTasks（快照/前置候选来源）被过滤掉——否则它在前置列表里永远不出现。
+  check('停用任务仍进入 getTasks（前置候选不被过滤）', decScheduler.getTasks().has(UUID_A), `getTasks=${[...decScheduler.getTasks().keys()].join(',')}`)
   await new Promise((resolve) => setTimeout(resolve, 0))
   const decRows = decStore.listByStatus(['dispatched', 'running', 'failed'])
   check('disabled 任务的在飞实例照常被 Loop B 发动（session_id 已落）', decRows.length === 1 && decRows[0].session_id !== null, JSON.stringify(decRows.map(r => [r.status, r.session_id])))
