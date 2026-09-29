@@ -424,14 +424,15 @@ window.__ModuleLoader__.load({
 			unitHours: "小时",
 			unitDays: "天",
 			editorDeps: "添加前置任务",
-			editorDepsHint: "此任务必须等到前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。",
+			editorDepsHint: "此任务必须等待『所有』前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。",
 			editorDepAdd: "添加",
 			editorDepTask: "任务",
 			editorDepPickWsFirst: "请先选择工作区",
 			editorDepTaskPh: "选择任务",
 			editorDepItemPrefix: "前置任务：",
 			editorDepRemove: "移除",
-			editorDepEmpty: "暂无前置任务，在下方选择工作区与任务后点「添加」。",
+			editorDepEmpty: "尚未配置前置任务",
+			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
 			editorAdvanced: "高级",
 			editorRetry: "重试次数",
 			editorValidStatuses: "成功状态清单",
@@ -822,14 +823,15 @@ window.__ModuleLoader__.load({
 			unitHours: "hours",
 			unitDays: "days",
 			editorDeps: "Add prerequisite tasks",
-			editorDepsHint: "This task starts only after its prerequisites finish. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.",
+			editorDepsHint: "This task waits for ALL of its prerequisites to finish before it can start. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.",
 			editorDepAdd: "Add",
 			editorDepTask: "Task",
 			editorDepPickWsFirst: "Select a workspace first",
 			editorDepTaskPh: "Select a task",
 			editorDepItemPrefix: "Prerequisite: ",
 			editorDepRemove: "Remove",
-			editorDepEmpty: "No prerequisites yet. Pick a workspace and a task below, then add.",
+			editorDepEmpty: "No prerequisites configured yet",
+			editorDepEmptyHint: "Pick a workspace and a task below, then add",
 			editorAdvanced: "Advanced",
 			editorRetry: "Retry attempts",
 			editorValidStatuses: "Valid statuses",
@@ -5688,11 +5690,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
 .dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-/* 前置任务卡：已加行（浅底衬行，同附加文件行语言）+ 两级选择行（工作区定宽 / 任务弹性）。 */
+/* 前置任务卡：已加行（浅底衬行，同附加文件行语言）；空态虚线占位框直接复用附件投放区的
+   内联 C.* 常量（见 task-editor.tsx），不走 CSS。
+   两级选择行：工作区 / 任务都按百分比定宽 ⇒ 抽屉拉宽变窄同步缩放、比例恒定，
+   任务名再长也只会省略号，不会盖住右侧「添加」按钮。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-deppick-ws{flex:0 0 148px;min-width:0;display:inline-flex;}
-.dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:inline-flex;}
+.dsh-tdt-ed-deppick-ws{flex:0 0 32%;min-width:0;display:inline-flex;}
+.dsh-tdt-ed-deppick-task{flex:0 0 44%;min-width:0;display:inline-flex;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
@@ -38562,11 +38567,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				type: "button",
 				className: "dsh-tdt-ed-help",
 				"aria-label": t("editorDepsHint")
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))), draft.deps.length === 0 ? null : (0, react.createElement)("div", { style: {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))), (0, react.createElement)("div", { style: { marginBottom: "10px" } }, draft.deps.length === 0 ? (0, react.createElement)("div", { style: {
+				border: `1px dashed ${C$2.borderL4}`,
+				borderRadius: C$2.radiusMd,
+				padding: "16px 12px",
+				textAlign: "center",
+				background: C$2.layer1
+			} }, (0, react.createElement)("div", { style: { fontSize: "13px" } }, t("editorDepEmpty")), (0, react.createElement)("div", { style: {
+				color: C$2.textDim,
+				fontSize: "12px",
+				marginTop: "4px"
+			} }, t("editorDepEmptyHint"))) : (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
-				gap: "6px",
-				marginBottom: "10px"
+				gap: "6px"
 			} }, draft.deps.map((dep, index) => {
 				const known = tasks.find((task) => task.id === dep.task);
 				const ws = known?.workspace ?? "";
@@ -38593,7 +38607,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					title: t("editorDepRemove"),
 					"aria-label": t("editorDepRemove")
 				}, t("editorDepRemove")));
-			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-deppick" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-deppick-ws" }, (0, react.createElement)(SelectField, {
+			}))), (0, react.createElement)("div", { className: "dsh-tdt-ed-deppick" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-deppick-ws" }, (0, react.createElement)(SelectField, {
 				value: depWs,
 				options: depWsOptions,
 				onChange: (value) => {
@@ -38621,10 +38635,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				disabled: depTaskId === "",
 				title: depTaskId === "" ? t("editorDepTaskPh") : t("editorDepAdd"),
 				onClick: addDep
-			}, t("editorDepAdd"))), draft.deps.length === 0 ? (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-hint",
-				style: { marginTop: "8px" }
-			}, t("editorDepEmpty")) : null);
+			}, t("editorDepAdd"))));
 			const advancedBlock = (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)("button", {
 				className: "dsh-tdt-ed-summary",
 				type: "button",
@@ -38691,7 +38702,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (value) => {
 					patch({ code: value });
 				}
-			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, attachmentsCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), depsBlock, advancedBlock);
+			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, attachmentsCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
 			const panelInner = editorOpen ? (0, react.createElement)(PromptEditorModal, {
 				t,
 				mode,

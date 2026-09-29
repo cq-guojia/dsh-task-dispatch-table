@@ -85,11 +85,14 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
 .dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-summary:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-/* 前置任务卡：已加行（浅底衬行，同附加文件行语言）+ 两级选择行（工作区定宽 / 任务弹性）。 */
+/* 前置任务卡：已加行（浅底衬行，同附加文件行语言）；空态虚线占位框直接复用附件投放区的
+   内联 C.* 常量（见 task-editor.tsx），不走 CSS。
+   两级选择行：工作区 / 任务都按百分比定宽 ⇒ 抽屉拉宽变窄同步缩放、比例恒定，
+   任务名再长也只会省略号，不会盖住右侧「添加」按钮。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-deppick-ws{flex:0 0 148px;min-width:0;display:inline-flex;}
-.dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:inline-flex;}
+.dsh-tdt-ed-deppick-ws{flex:0 0 32%;min-width:0;display:inline-flex;}
+.dsh-tdt-ed-deppick-task{flex:0 0 44%;min-width:0;display:inline-flex;}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `

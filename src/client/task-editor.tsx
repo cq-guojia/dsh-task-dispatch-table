@@ -1198,12 +1198,15 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  // ③ 前置任务卡（用户 2026-09-29 拍板的交互，照「附加文件」卡同款灰框）：
-  //  - 标题「添加前置任务」+「?」Tooltip：含义 / 判定方式（所有前置任务上一次执行必须成功，
-  //    跳过不算失败）/ 执行时自动移交前置产出文件；
+  // ③ 前置任务卡（用户 2026-09-29 两轮拍板，照「附加文件」卡同款灰框 + 同款外距）：
+  //  - 布局：上 = 已选前置任务列表（空则显示上传投放区同款虚线占位框）；下 = 工作区→任务→添加；
+  //  - 标题「添加前置任务」+「?」Tooltip：含义（强调『所有』）/ 判定方式（所有前置任务上一次
+  //    执行必须成功，跳过不算失败）/ 执行时自动移交前置产出文件；
   //  - 选择 = 先工作区后任务两级（工作区下拉只列确实有可选任务的工作区），点「添加」固定成一行，
   //    行内「移除」可删；同一任务不能加两次（选项里直接排除已加的，按钮再拦一道）；
   //  - 支持跨工作区（每个前置任务可来自不同工作区）；加完工作区保留、任务清空，连着加第二个；
+  //  - 两级下拉都按百分比定宽（32% / 44%）：抽屉拉宽变窄时同步缩放，比例恒定，
+  //    任务名再长也不会盖住右侧「添加」按钮（标签自带省略号）；
   //  - 语义下拉删除（用户：选「同一天的」没有意义）——判定方式就是「上一次执行必须成功」，
   //    新增依赖固定写 `latest_success`；存量依赖的 semantics 原样保留（编辑无损往返）。
   const [depWs, setDepWs] = useState('')
@@ -1236,21 +1239,31 @@ export function TaskEditorDrawer(props: {
         ),
       ),
     ),
-    // 已加好的前置任务行：「前置任务：标题（编号）」+ 所属工作区（跨工作区时能分清），右侧「移除」。
-    draft.deps.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
-      draft.deps.map((dep, index) => {
-        const known = tasks.find(task => task.id === dep.task)
-        const ws = known?.workspace ?? ''
-        return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
-          h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } },
-            `${t('editorDepItemPrefix')}${known?.label ?? dep.task}`,
-            ws === '' ? null : h('span', { style: { color: C.textDim, fontSize: '11px', marginLeft: '6px' } }, ws),
+    // 上：已选前置任务列表；空 = 上传投放区同款虚线占位框（灰字居中，主行 + 次行提示）。
+    h('div', { style: { marginBottom: '10px' } },
+      draft.deps.length === 0
+        ? h('div', {
+            // 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 C.* 常量保证观感一致。
+            style: { border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '16px 12px', textAlign: 'center', background: C.layer1 },
+          },
+            h('div', { style: { fontSize: '13px' } }, t('editorDepEmpty')),
+            h('div', { style: { color: C.textDim, fontSize: '12px', marginTop: '4px' } }, t('editorDepEmptyHint')),
+          )
+        : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+            draft.deps.map((dep, index) => {
+              const known = tasks.find(task => task.id === dep.task)
+              const ws = known?.workspace ?? ''
+              return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
+                h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } },
+                  `${t('editorDepItemPrefix')}${known?.label ?? dep.task}`,
+                  ws === '' ? null : h('span', { style: { color: C.textDim, fontSize: '11px', marginLeft: '6px' } }, ws),
+                ),
+                h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ deps: draft.deps.filter((_, i) => i !== index) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
+              )
+            }),
           ),
-          h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ deps: draft.deps.filter((_, i) => i !== index) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
-        )
-      }),
     ),
-    // 选择行：工作区 → 任务 → 添加。
+    // 下：工作区 → 任务 → 添加（百分比定宽见 .dsh-tdt-ed-deppick-*）。
     h('div', { className: 'dsh-tdt-ed-deppick' },
       h('span', { className: 'dsh-tdt-ed-deppick-ws' },
         h(SelectField, {
@@ -1285,7 +1298,6 @@ export function TaskEditorDrawer(props: {
         onClick: addDep,
       }, t('editorDepAdd')),
     ),
-    draft.deps.length === 0 ? h('div', { className: 'dsh-tdt-ed-hint', style: { marginTop: '8px' } }, t('editorDepEmpty')) : null,
   )
 
   // ④ 高级：重试 / 成功状态清单 / 版本历史（P3）/ JSON 逃生口。
@@ -1384,7 +1396,7 @@ export function TaskEditorDrawer(props: {
         h('div', { className: 'dsh-tdt-ed-section' }, promptCard),
         h('div', { className: 'dsh-tdt-ed-section' }, attachmentsCard),
         h('div', { className: 'dsh-tdt-ed-section' }, scheduleCard),
-        depsBlock,
+        h('div', { className: 'dsh-tdt-ed-section' }, depsBlock),
         advancedBlock,
       )
 

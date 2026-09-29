@@ -122,7 +122,7 @@ export type LocaleKey =
   | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask' | 'editorDepPickWsFirst'
-  | 'editorDepTaskPh' | 'editorDepItemPrefix' | 'editorDepRemove' | 'editorDepEmpty'
+  | 'editorDepTaskPh' | 'editorDepItemPrefix' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
   | 'editorAdvanced' | 'editorRetry' | 'editorValidStatuses' | 'editorJson' | 'editorJsonHint'
   | 'editorVersions' | 'editorUnavailable'
   | 'editorModeEdit' | 'editorModePreview'
@@ -529,14 +529,15 @@ export const zh: Record<LocaleKey, string> = {
   unitHours: '小时',
   unitDays: '天',
   editorDeps: '添加前置任务',
-  editorDepsHint: '此任务必须等到前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。',
+  editorDepsHint: '此任务必须等待『所有』前置任务完成之后再开始执行。判定方式：此任务的所有前置任务，上一次执行必须是成功，本任务才可以执行（中间被跳过、只要没失败，都算前置任务成功）。放行执行时，系统会自动在前置任务完成后，将其产出的相关文件移交给本次任务。',
   editorDepAdd: '添加',
   editorDepTask: '任务',
   editorDepPickWsFirst: '请先选择工作区',
   editorDepTaskPh: '选择任务',
   editorDepItemPrefix: '前置任务：',
   editorDepRemove: '移除',
-  editorDepEmpty: '暂无前置任务，在下方选择工作区与任务后点「添加」。',
+  editorDepEmpty: '尚未配置前置任务',
+  editorDepEmptyHint: '在下方选择工作区与任务后点「添加」',
   editorAdvanced: '高级',
   editorRetry: '重试次数',
   editorValidStatuses: '成功状态清单',
@@ -933,14 +934,15 @@ export const en: Record<LocaleKey, string> = {
   unitHours: 'hours',
   unitDays: 'days',
   editorDeps: 'Add prerequisite tasks',
-  editorDepsHint: 'This task starts only after its prerequisites finish. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.',
+  editorDepsHint: 'This task waits for ALL of its prerequisites to finish before it can start. Rule: the latest run of every prerequisite must have succeeded before this task is allowed to run (skipped runs do not count as failure). At dispatch time the system automatically hands over the files produced by the prerequisites to this task.',
   editorDepAdd: 'Add',
   editorDepTask: 'Task',
   editorDepPickWsFirst: 'Select a workspace first',
   editorDepTaskPh: 'Select a task',
   editorDepItemPrefix: 'Prerequisite: ',
   editorDepRemove: 'Remove',
-  editorDepEmpty: 'No prerequisites yet. Pick a workspace and a task below, then add.',
+  editorDepEmpty: 'No prerequisites configured yet',
+  editorDepEmptyHint: 'Pick a workspace and a task below, then add',
   editorAdvanced: 'Advanced',
   editorRetry: 'Retry attempts',
   editorValidStatuses: 'Valid statuses',
