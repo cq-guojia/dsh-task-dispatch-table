@@ -585,7 +585,7 @@ export function WeekdayPicker(props: {
     props.label === undefined
       ? null
       : h('span', { style: { flex: 'none', fontSize: '13px', color: C.text } }, props.label),
-    h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '8px', borderRadius: C.radiusMd, background: C.hover } },
+    h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '6px', borderRadius: C.radiusMd, background: C.hover } },
       props.labels.shorts.map((short, index) => {
         const day = index + 1
         const on = selected.has(day)
@@ -602,13 +602,13 @@ export function WeekdayPicker(props: {
           onPointerEnter: () => { setHover(day) },
           onPointerLeave: () => { setHover(current => (current === day ? null : current)) },
           style: {
-            flex: 'none', minWidth: '30px', height: '28px', padding: '0 4px',
+            flex: 'none', minWidth: '26px', height: '24px', padding: '0 2px',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             border: '0', borderRadius: C.radiusSm,
             background: on ? C.business : 'transparent',
             boxShadow: on ? 'var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))' : 'none',
             color: on ? C.brandFg : C.textDim,
-            font: 'inherit', fontSize: '13px', lineHeight: '20px', fontWeight: on ? 600 : 400,
+            font: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: on ? 600 : 400,
             cursor: props.disabled === true ? 'not-allowed' : 'pointer', transition,
           },
         }, short)

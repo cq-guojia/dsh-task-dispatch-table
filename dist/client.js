@@ -5360,8 +5360,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, props.label), (0, react.createElement)("div", { style: {
 				display: "inline-flex",
 				alignItems: "center",
-				gap: "4px",
-				padding: "8px",
+				gap: "3px",
+				padding: "6px",
 				borderRadius: C$1.radiusMd,
 				background: C$1.hover
 			} }, props.labels.shorts.map((short, index) => {
@@ -5387,9 +5387,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					},
 					style: {
 						flex: "none",
-						minWidth: "30px",
-						height: "28px",
-						padding: "0 4px",
+						minWidth: "26px",
+						height: "24px",
+						padding: "0 2px",
 						display: "inline-flex",
 						alignItems: "center",
 						justifyContent: "center",
@@ -5399,8 +5399,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						boxShadow: on ? "var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))" : "none",
 						color: on ? C$1.brandFg : C$1.textDim,
 						font: "inherit",
-						fontSize: "13px",
-						lineHeight: "20px",
+						fontSize: "12px",
+						lineHeight: "18px",
 						fontWeight: on ? 600 : 400,
 						cursor: props.disabled === true ? "not-allowed" : "pointer",
 						transition: transition$1
