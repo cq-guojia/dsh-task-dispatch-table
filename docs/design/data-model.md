@@ -25,6 +25,8 @@
 | `contract.validStatuses` | string[]? | 回执 `status` 的合法值清单，默认 `["ok"]` | 决策 19 |
 | `retry.maxAttempts` | int? | 默认 1；重试耗尽 → `failed`，下游跳过 | 决策 10 |
 | `depends_on` | object[]? | `{ task, semantics }`，**由下游声明**；`semantics` = `same_period`（同 logical date）/ `latest_success`（上游最近一条必须 succeeded）。⚠️ `freshness` 字段已于**决策 33 删除** | 决策 8/9/33 |
+| `attachments` | object[]? | **附加文件清单**（只记引用，不存内容）：`{ id, name, kind, ref, workspace? }`。`kind='link'` = 工作区已有文件（只记路径、不复制，`workspace` = 来源工作区 title，派发注入时按它把 `ref` 绝对化）；`kind='upload'` = 已上传到插件数据目录的文件，**`ref` = 相对该任务目录的路径**（`attachments/<原始文件名>`，迁移见 §五.3）。同源文件见 §五 | 2026-09-30 |
+| `schedule.ui` | object? | **结构化排期（编辑态反解用）**：`{ scheduleKind, periodFreq, weekdays[], monthDay, monthMode, quarterMonth, yearMonth, intervalUnit, intervalStep, weekStep }`，与 `cron` / `once` / `start` / `everyNWeeks` **并存**。**执行只读 `cron`/`once`（唯一排期真源），表单反解只读 `schedule.ui`**；两者不一致（用户手改过 cron）⇒ 表单进「自定义 cron」只读态并提示，`schedule.ui` 不回写。⚠️ 待拍（见 §五.4） | 2026-09-30 |
 
 **回执机制（决策 19 + 决策 24 改通道）**：agent 跑完调用插件注册的工具 `task_dispatch_table_receipt({ status, outputs?, note? })` 提交回执——该工具由插件在派发时经 `agentCtx.tools.register` 注册，**只对该任务会话可见**，`execute` 在**插件进程内**直写状态库 `task_events`（`kind='receipt'`，detail 形状 `{ status, outputs, note, session_id }`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + `outputs` 逐一在目标工作区存在且 mtime 晚于本次派发（防旧产物冒充）。只记录不裁决，实例状态仍只由调度器写（决策 11）；重复提交无害（对账取最新）。⚠️ **为什么不再用命令行**：agent 的 bash 在 Landlock 沙箱 `workspace-write` 模式下**只能写工作区**，写不了宿主数据根下的 `state.db`（决策 24 真机证据）；`submit.js` 保留为手动 / 排查备用通道。
 
@@ -121,3 +123,119 @@ CREATE TABLE meta (
 | 锚点粒度 | **`scheduled_at` 刻度（含时分秒）**，不用日历日 | 日历日粒度会让每小时 / 每几分钟的 cron 一天只能出一条；刻度由 cron 决定 ⇒ 迟到不漂移、改周期类型不撞车 |
 | 计划时刻 vs 实际时刻 | 分开存：`scheduled_at`（锚点）/ `dispatched_at`（实际派发）/ `finished_at` | 同 Airflow（`logical_date` vs `start_date`/`end_date`）与 k8s（`cronjob-scheduled-timestamp` annotation）。对账的「mtime 晚于派发」用 `dispatched_at` |
 | 通知机制 | 本期不做 | 只留 `task_events` 证据；渠道选型另立决策，不塞进状态库 |
+
+---
+
+## 五、文件资产与保存链路（2026-09-30 设计）
+
+> 需求口径见 [`creation-edit-requirements.md`](creation-edit-requirements.md)。本节只写**数据长什么样、落在哪、按什么顺序写**。
+
+### 5.0 三类真源（不混淆）
+
+| 真源 | 内容 | 落点 | 谁写 |
+|---|---|---|---|
+| **任务定义** | 任务配置（§一 全字段） | **整份 `tasksInline` JSON 数组**，主通道 = state.db `meta` 表；次通道 = 插件 entry config（尽力写回） | 保存链路（服务端） |
+| **文件资产** | 提示词版本 / 配置快照 / 附件 | 文件系统 `tasks/<uuid>/…` | 保存链路（服务端） |
+| **运行时** | 实例 / 事件 / 诊断日志 | SQLite `task_instances` / `task_events` / `task_log` | Loop A / Loop B |
+
+**不建附件表、不建版本表、不建快照表**：清单在定义 JSON 里，内容在文件系统里，两处都已有真源，建表只会多一份会对不上的副本。任务定义也**不拆表**（保持整份 `tasksInline`）——规模是几十个任务、几 KB，拆表换不来收益；**何时该拆**：任务数上百、或需要「按任务级」并发写 / 复杂查询 / 单条审计时再议。
+
+### 5.1 目录布局
+
+```
+<插件数据根>                       # = dirname(statePath)（state.db 同目录，挂载卷上）
+├── state.db
+├── tasks/<task_uuid>/             # 任务目录，目录名 = 纯 UUID（title/code 可改，不能做目录名）
+│   ├── prompt-versions/
+│   │   ├── 20260930T101530123.md  # 一个版本一个文件（内容即提示词全文）
+│   │   └── 20260930T101530123.note# 版本备注（填了才有）
+│   ├── snapshots/
+│   │   └── 20260930T101530123.json# 整份配置快照（任务定义原文）
+│   └── attachments/<原始文件名>    # upload 型附件（同名冲突加序号后缀）
+└── task-attachments-tmp/          # 上传临时区（每天清 3 天前）
+```
+
+文件名 = 纯时间戳（`yyyyMMddTHHmmssSSS`），字典序 = 时间序 ⇒ **读目录即版本列表**，不需要序号、不需要索引文件。
+
+### 5.2 保存动作里每一步的顺序（服务端一次完成）
+
+| # | 动作 | 失败怎么办 |
+|---|---|---|
+| 1 | 校验 + 身份闸门（决策 30：无 id 补 UUID；带 UUID 必须命中现有表；否则整批 422） | 整批拒，什么都不写 |
+| 2 | **写定义**（meta 表主通道，entry config 次通道尽力） | 报「未持久化」，用户重存 |
+| 3 | 建任务目录（首次才有） | 告警，后续步骤跳过 |
+| 4 | 提示词版本：与最新版本**去首尾空白**比较 ⇒ 不同才写新文件（新建首次无条件写） | 只告警 |
+| 5 | 整份配置快照：与最新快照比较 ⇒ **不同才写**（R1） | 只告警 |
+| 6 | 附件搬移：临时区新文件 → 任务目录；本次从列表移除的 ⇒ **真删** | 只告警 |
+
+> **定义先落、文件动作尽力**：4–6 失败**不回滚定义**。理由：文件动作失败不会让定义不一致（附件缺失由执行期兜住 ⇒ 不执行 + 记 error），而回滚定义会让用户白改一次。
+
+### 5.3 迁移（老数据）
+
+老 upload 附件平铺在 `task-attachments/`、**`ref` = 文件名（原始名+随机尾缀）**。迁移 ⇒ 按 `ref` 在 `task-attachments/` 定位 → 搬进 `tasks/<id>/attachments/<原始名>`（冲突加序号）→ `ref` 改写为**相对任务目录的路径**（如 `attachments/报告.md`）。老库没有 `tasks/` 目录 ⇒ 首次保存时建。**不做静默搬迁**，未保存过的任务不动。
+
+### 5.4 ⚠️ 待拍：结构化排期怎么留（`schedule.ui`）
+
+表单里的排期是结构化的（档 / 粒度 / 星期 / 月日 / 月口径 / 每 N 周 / 间隔步长），落到 JSON 只剩 `cron` + `start` + `everyNWeeks` ⇒ **编辑现有任务时反解不回来**（尤其「每隔 N 天 / 周」cron 表达不了、手改过的 cron 更解不出）。
+
+| 方案 | 做法 | 取舍 |
+|---|---|---|
+| **A（建议）双写** | JSON 里并存 `schedule.ui`（草稿结构化快照）与 `cron`/`once`；执行只读 cron，表单反解只读 `schedule.ui`；两者不符 ⇒ 表单进「自定义 cron」只读态并提示 | 体验最好（改任务不用重新排一遍）；代价 = 两份数据，用「执行只读 cron」这条硬规则约束 |
+| B 纯反解 | 只存 cron，反解不出就降级为「自定义 cron」只读（不丢原值） | 单一真源；代价 = 手改过 cron 或用了间隔档的任务，编辑态只能看 cron 串 |
+
+### 5.5 派发快照要补 `attachments`（落码必做）
+
+`InstanceSnapshot`（`src/store.ts:63`）当前**不含 attachments** ⇒ Loop B 要按需求校验「附件还在不在」就只能回头读任务定义，违反决策 41「Loop B 只读快照」。补字段：
+
+```ts
+attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: string }[]
+```
+
+旧行无此字段 ⇒ `undefined` = 无附件，不猜。
+
+### 5.6 表单控件 → JSON 字段对照（对着新增 / 编辑 UI）
+
+| UI 控件 | 草稿字段 | 落 JSON | 备注 |
+|---|---|---|---|
+| 任务名称 | `title` | `title` | trim，空则不写 |
+| 任务编号 | `code` | `code` | trim，空则不写，不参与唯一性 |
+| 启用开关 | `enabled` | `enabled` | |
+| 提示词（含全屏编辑器） | `prompt` | `target.prompt` | |
+| 工作区 | `workspace` | `target.workspace` | |
+| 模型 | `model`（`provider/model`） | `target.provider` + `target.model` | |
+| 权限下拉 | `permission` | `target.permission` | 决策 50 |
+| 附加文件 | `attachments[]` | `attachments[]` | 内容不进 JSON |
+| 前置任务 | `deps[]` | `depends_on[]` | 固定 `latest_success` |
+| 周期 / 间隔 / 频率 / 星期 / 月日 / 每 N 周 / 开始时间 | `scheduleKind` `periodFreq` `weekdays` `monthDay` `monthMode` `quarterMonth` `yearMonth` `intervalUnit` `intervalStep` `weekStep` `date` `time` | `schedule.cron` / `schedule.start` / `schedule.everyNWeeks` / （`schedule.ui`，见 5.4） | 执行真源 = cron |
+| 单次运行 | `periodFreq='once'` | `schedule.once` | 与 cron 互斥 |
+| 允许延迟 | `window` | `schedule.window` | |
+| 重试次数 | `maxAttempts` | `retry.maxAttempts` | |
+| 高级区 /goal | `goalMode` | `target.goal` | |
+| 高级区 多 Agent 协作 | `agentTeam` | `target.agentTeam` | |
+| 任务手册 | `promptSource` `manualPath` | `target.manual` | UI 已砍入口，**字段保留 round-trip** |
+| 成功状态清单 | `validStatuses` | `contract.validStatuses` | UI 已砍，**保留 round-trip** |
+| 提示词版本面板 | `versions` | **不落 JSON** | 落 `tasks/<id>/prompt-versions/` |
+| — | — | `id` | 不在表单里；保存闸门生成并固化 |
+
+---
+
+## 六、保留与清理（2026-09-30）
+
+| 对象 | 落在 | 策略 |
+|---|---|---|
+| `task_log` | SQLite | `logRetentionDays`（默认 **30 天**），tick 内跨天清（既有） |
+| `task_instances` + `task_events` | SQLite | **新增** `historyRetentionDays`（默认 **90 天**）：按 `updated_at` / `ts` 删，**删实例行时连带删它的 events**（按 `instance_id`） |
+| 上传临时区 | 文件系统 | **3 天**，tick 内跨天清（跨天才干活：一个「上次清理日期」内存变量 + 一次删除，无持续负载） |
+| 提示词版本 / 配置快照 | 文件系统 | **不自动删**；用户在版本面板自己删（配置快照的管理入口本轮不做） |
+| 任务目录 | 文件系统 | 删除任务时**整目录删**（附件 + 版本 + 快照）；删除按钮 + 二次确认待做 |
+
+**插件配置新增两项**：`historyRetentionDays: number`（默认 90）、`attachmentTmpRetentionDays: number`（默认 3）。
+
+**`task_log` 的 kind 扩充**（kind 是文本列，不动 DDL）：
+
+| kind | 何时记 |
+|---|---|
+| `dep_disabled` | Loop A 判定发现上游 `enabled=false`（warn）——与「上游还没成功」的 `dep_blocked` 分开 |
+| `attachment-missing` | 附件在执行期校验时不在（Loop A 记一次、Loop B 记一次） |
+
+**去重改「结论变化才记」**：进程内 Map 记 `taskId → 上次结论签名（kind+原因）`，签名变了才写一条；一直卡住不重复写（取代现状「5 分钟一条」）。重启后 Map 清空 ⇒ 每个卡住的任务各补记一条，可接受。
