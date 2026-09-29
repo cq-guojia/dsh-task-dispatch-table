@@ -38,3 +38,11 @@
 
 - 上传文件与任务的关联目前只在**草稿层**（`attachments` 数组）；是否随任务定义持久化、执行时如何注入给 agent，**未做**——待用户拍板（可能并入 P2 保存链路）。
 - `link` 型路径的执行期语义沿用「只记路径、agent 执行时自读」。
+
+## 六、第二轮（`2bd4ccd`，用户真机反馈五连）
+
+1. **布局重排**：「上传文件 / 选择工作区文件」改卡片**右上两个小按钮**；投放区**常驻**（不经按钮开合，删 `uploadOpen` 态）；「上传文件」点击 = 直接弹本地选择框（隐藏 input 提到卡片层、始终在册）。投放区两行：操作提示 + 支持格式 / 20MB 说明。
+2. **多选丢失（真 bug）**：`uploadFiles` 循环里每次 `addAttachment` 都展开**渲染闭包里的旧 `draft.attachments`** ⇒ 多选时后一个 patch 覆盖前一个，列表只剩最后一个文件。修 = 本地累积 `added[]`、循环末一次性 `patch({attachments:[...draft.attachments, ...added]})`。
+3. **附件行样式**：弃 `border`（用户嫌丑），改半透明浅底 `--dsw-alias-interactive-bg-hover`（带 rgba 兜底）；文件名前加官方 `FileTypeIcon`（同 file-browser 目录树）。
+4. **报错说人话**：`uploadError` 改存宿主返回的机器码，渲染按码映射中英文具体文案（格式不支持 / 超 20MB / 空文件 / 通用失败），不再透出 `file-type-not-allowed` 之类。
+5. **「暂无可浏览的工作区」根因定位（未动代码，待讨论）**：选择器依赖 `workspaceSessionId`，而它只在用户点开过会话文件链接（`openFile`）后才有值 ⇒ 新建任务/没浏览过文件时必空。按守则拽官方 `dsh-api-workspace-files@0.1.7-rc.2` 源码核实：**所有方法（list/read/stat/readBytes/changes）第一个参数都是 `workspaceFileScopeId: SessionId`**，scope 由会话 header 的 cwd 派生；**目录列举被限定在「该会话所属工作区根」内**（types 注释：directory listings remain workspace-scoped），read/stat 虽允许工作区外绝对路径但只能读已知路径、不能枚举。**官方没有「按工作区路径列文件」的无会话接口**。可行官方路子 = 给选择器喂一个属于目标工作区的已有会话 id（来源：执行记录 `session_id` / registry 实体 sessionIds）；没跑过会话的工作区官方就没有浏览入口，**不造会话绕开**。根目录本身能读（有会话锚点时 `list('')` 即列该工作区根，U11 已真机验证）——不是用户猜的「跑到工作区上层根目录」问题，是前端压根没拿到会话锚点。
