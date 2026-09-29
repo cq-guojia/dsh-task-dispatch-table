@@ -597,6 +597,7 @@ function TaskPage(props: {
     id: row.id,
     label: row.title === '' ? row.id : `${row.title}（${row.code ?? row.id}）`,
     workspace: row.workspace,
+    enabled: row.enabled !== false,
   }))
   const titleOfTask = (id: string): string => {
     const row = taskRows.find(item => item.id === id)

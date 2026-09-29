@@ -95,10 +95,13 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
-/* 跑马灯文本（MarqueeText，editor-fields.tsx）：默认超长省略号；确实放不下才挂 .dsh-tdt-mq-run，
-   hover 0.4s 后开始来回滚动，时长与滚动距离成正比（--dsh-tdt-mq-dur / --dsh-tdt-mq-dist 由组件内联写入）。 */
-.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
-.dsh-tdt-mq-run:hover{animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
+/* 跑马灯文本（MarqueeText，editor-fields.tsx）：**双层**——外层 .dsh-tdt-mq 只负责裁剪
+   （overflow:hidden），内层 .dsh-tdt-mq-in 才做 transform 滚动；第一版动画挂外层 ⇒ 整盒
+   位移跑出裁剪框压到行首图标（真机截图踩坑）。非 hover 内层自带省略号；确实放不下才挂
+   .dsh-tdt-mq-run，hover 0.4s 后内层来回滚动，时长与距离成正比（CSS 变量由组件内联写入）。 */
+.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
+.dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
+.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
 @keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */

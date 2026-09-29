@@ -122,7 +122,7 @@ export type LocaleKey =
   | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask' | 'editorDepPickWsFirst'
-  | 'editorDepTaskPh' | 'editorDepItemPrefix' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
+  | 'editorDepTaskPh' | 'editorDepDisabledTag' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
   | 'editorAdvanced' | 'editorRetry' | 'editorValidStatuses' | 'editorJson' | 'editorJsonHint'
   | 'editorVersions' | 'editorUnavailable'
   | 'editorModeEdit' | 'editorModePreview'
@@ -534,10 +534,10 @@ export const zh: Record<LocaleKey, string> = {
   editorDepTask: '任务',
   editorDepPickWsFirst: '请先选择工作区',
   editorDepTaskPh: '选择任务',
-  editorDepItemPrefix: '前置任务：',
   editorDepRemove: '移除',
   editorDepEmpty: '尚未配置前置任务',
   editorDepEmptyHint: '在下方选择工作区与任务后点「添加」',
+  editorDepDisabledTag: '（已停用）',
   editorAdvanced: '高级',
   editorRetry: '重试次数',
   editorValidStatuses: '成功状态清单',
@@ -939,10 +939,10 @@ export const en: Record<LocaleKey, string> = {
   editorDepTask: 'Task',
   editorDepPickWsFirst: 'Select a workspace first',
   editorDepTaskPh: 'Select a task',
-  editorDepItemPrefix: 'Prerequisite: ',
   editorDepRemove: 'Remove',
   editorDepEmpty: 'No prerequisites configured yet',
   editorDepEmptyHint: 'Pick a workspace and a task below, then add',
+  editorDepDisabledTag: ' (disabled)',
   editorAdvanced: 'Advanced',
   editorRetry: 'Retry attempts',
   editorValidStatuses: 'Valid statuses',

@@ -624,32 +624,43 @@ export function WeekdayPicker(props: {
  * 跑马灯文本（用户 2026-09-29 要求）：默认超长省略号；hover 且确实放不下时，来回滚动展示全名。
  * 自实现原因：官方 primitives 无跑马灯组件。测宽用 ResizeObserver + 文本变化重测；
  * 滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画），动画时长与距离成正比。
+ *
+ * **双层结构（真机截图踩坑修正）**：第一版把 transform 直接加在带 overflow:hidden 的同一个
+ * span 上 ⇒ 整盒位移跑出自己的裁剪框，压到行首图标/相邻文字。改为外层 span 只负责裁剪
+ * （`.dsh-tdt-mq`），内层 `.dsh-tdt-mq-in` 才做 transform 滚动——文字永远在自己那一块里跑。
  */
 export function MarqueeText(props: { text: string; style?: CSSProperties; title?: string }): ReactElement {
-  const ref = useRef<HTMLSpanElement | null>(null)
+  const outerRef = useRef<HTMLSpanElement | null>(null)
+  const innerRef = useRef<HTMLSpanElement | null>(null)
   const [dist, setDist] = useState(0)
   const measure = useCallback(() => {
-    const el = ref.current
-    if (el === null) return
-    setDist(Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth)))
+    const outer = outerRef.current
+    const inner = innerRef.current
+    if (outer === null || inner === null) return
+    setDist(Math.max(0, Math.ceil(inner.scrollWidth - outer.clientWidth)))
   }, [])
   useLayoutEffect(() => {
-    const el = ref.current
-    if (el === null) return
+    const outer = outerRef.current
+    if (outer === null) return
     measure()
     const ro = new ResizeObserver(measure) // 抽屉拖宽变窄 / 字体就绪都会改 clientWidth ⇒ 重测
-    ro.observe(el)
+    ro.observe(outer)
     return () => { ro.disconnect() }
   }, [measure])
   useEffect(() => { measure() }, [props.text, measure])
   const run = dist > 0
   return h('span', {
-    ref,
+    ref: outerRef,
     className: run ? 'dsh-tdt-mq dsh-tdt-mq-run' : 'dsh-tdt-mq',
     title: props.title,
-    style: {
-      ...props.style,
-      ...(run ? { '--dsh-tdt-mq-dist': `${-dist}px`, '--dsh-tdt-mq-dur': `${Math.max(3, Math.round(dist / 30))}s` } : null),
-    },
-  }, props.text)
+    style: props.style,
+  },
+    h('span', {
+      ref: innerRef,
+      className: 'dsh-tdt-mq-in',
+      style: {
+        ...(run ? { '--dsh-tdt-mq-dist': `${-dist}px`, '--dsh-tdt-mq-dur': `${Math.max(3, Math.round(dist / 30))}s` } : null),
+      },
+    }, props.text),
+  )
 }

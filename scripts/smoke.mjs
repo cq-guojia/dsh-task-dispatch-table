@@ -646,15 +646,19 @@ try {
   check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
     clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))
   // 前置任务卡（2026-09-29 用户拍板的交互）：灰框卡 + ?说明 + 工作区→任务两级选择 + 添加/移除 + 判定说明。
-  check('前置任务卡灰框与两级选择行已打进 bundle（dsh-tdt-ed-card + dsh-tdt-ed-deppick + 跑马灯 dsh-tdt-mq）',
+  check('前置任务卡灰框与两级选择行已打进 bundle（dsh-tdt-ed-card + dsh-tdt-ed-deppick + 双层跑马灯 dsh-tdt-mq/-in）',
     clientJs.includes('dsh-tdt-ed-card') && clientJs.includes('dsh-tdt-ed-deppick')
-      && clientJs.includes('dsh-tdt-ed-depitem') && clientJs.includes('dsh-tdt-mq'))
+      && clientJs.includes('dsh-tdt-ed-depitem') && clientJs.includes('dsh-tdt-mq') && clientJs.includes('dsh-tdt-mq-in'))
+  check('停用（锁住）任务可选且显式标「（已停用）」——前置任务下拉不做启停过滤',
+    clientJs.includes('editorDepDisabledTag') && clientJs.includes('（已停用）')
+      && /enabled\s*===\s*false/.test(clientJs))
   check('前置任务「?」说明含判定方式与产出移交（上一次执行必须成功 / 跳过不算失败 / 移交产出文件）',
     clientJs.includes('添加前置任务') && clientJs.includes('上一次执行必须是成功')
       && clientJs.includes('都算前置任务成功') && clientJs.includes('移交给本次任务'))
-  check('前置任务行文案、先选工作区占位与空态虚线框文案已打进 bundle',
-    clientJs.includes('前置任务：') && clientJs.includes('请先选择工作区')
-      && clientJs.includes('尚未配置前置任务') && clientJs.includes('在下方选择工作区与任务后点'))
+  check('先选工作区占位与空态虚线框文案已打进 bundle（行内「前置任务：」前缀已按用户要求删除）',
+    clientJs.includes('请先选择工作区')
+      && clientJs.includes('尚未配置前置任务') && clientJs.includes('在下方选择工作区与任务后点')
+      && !clientJs.includes('前置任务：'))
   check('语义下拉已删除（不再出现「同一天的 / 最近一次成功的」选项文案）',
     !clientJs.includes('同一天的') && !clientJs.includes('最近一次成功的'))
   check('新增依赖固定 latest_success（语义写死在添加动作里）',

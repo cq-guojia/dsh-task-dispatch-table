@@ -429,10 +429,10 @@ window.__ModuleLoader__.load({
 			editorDepTask: "任务",
 			editorDepPickWsFirst: "请先选择工作区",
 			editorDepTaskPh: "选择任务",
-			editorDepItemPrefix: "前置任务：",
 			editorDepRemove: "移除",
 			editorDepEmpty: "尚未配置前置任务",
 			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
+			editorDepDisabledTag: "（已停用）",
 			editorAdvanced: "高级",
 			editorRetry: "重试次数",
 			editorValidStatuses: "成功状态清单",
@@ -828,10 +828,10 @@ window.__ModuleLoader__.load({
 			editorDepTask: "Task",
 			editorDepPickWsFirst: "Select a workspace first",
 			editorDepTaskPh: "Select a task",
-			editorDepItemPrefix: "Prerequisite: ",
 			editorDepRemove: "Remove",
 			editorDepEmpty: "No prerequisites configured yet",
 			editorDepEmptyHint: "Pick a workspace and a task below, then add",
+			editorDepDisabledTag: " (disabled)",
 			editorAdvanced: "Advanced",
 			editorRetry: "Retry attempts",
 			editorValidStatuses: "Valid statuses",
@@ -4551,21 +4551,27 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 跑马灯文本（用户 2026-09-29 要求）：默认超长省略号；hover 且确实放不下时，来回滚动展示全名。
 		* 自实现原因：官方 primitives 无跑马灯组件。测宽用 ResizeObserver + 文本变化重测；
 		* 滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画），动画时长与距离成正比。
+		*
+		* **双层结构（真机截图踩坑修正）**：第一版把 transform 直接加在带 overflow:hidden 的同一个
+		* span 上 ⇒ 整盒位移跑出自己的裁剪框，压到行首图标/相邻文字。改为外层 span 只负责裁剪
+		* （`.dsh-tdt-mq`），内层 `.dsh-tdt-mq-in` 才做 transform 滚动——文字永远在自己那一块里跑。
 		*/
 		function MarqueeText(props) {
-			const ref = (0, react.useRef)(null);
+			const outerRef = (0, react.useRef)(null);
+			const innerRef = (0, react.useRef)(null);
 			const [dist, setDist] = (0, react.useState)(0);
 			const measure = (0, react.useCallback)(() => {
-				const el = ref.current;
-				if (el === null) return;
-				setDist(Math.max(0, Math.ceil(el.scrollWidth - el.clientWidth)));
+				const outer = outerRef.current;
+				const inner = innerRef.current;
+				if (outer === null || inner === null) return;
+				setDist(Math.max(0, Math.ceil(inner.scrollWidth - outer.clientWidth)));
 			}, []);
 			(0, react.useLayoutEffect)(() => {
-				const el = ref.current;
-				if (el === null) return;
+				const outer = outerRef.current;
+				if (outer === null) return;
 				measure();
 				const ro = new ResizeObserver(measure);
-				ro.observe(el);
+				ro.observe(outer);
 				return () => {
 					ro.disconnect();
 				};
@@ -4575,17 +4581,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, [props.text, measure]);
 			const run = dist > 0;
 			return (0, react.createElement)("span", {
-				ref,
+				ref: outerRef,
 				className: run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq",
 				title: props.title,
-				style: {
-					...props.style,
-					...run ? {
-						"--dsh-tdt-mq-dist": `${-dist}px`,
-						"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
-					} : null
-				}
-			}, props.text);
+				style: props.style
+			}, (0, react.createElement)("span", {
+				ref: innerRef,
+				className: "dsh-tdt-mq-in",
+				style: { ...run ? {
+					"--dsh-tdt-mq-dist": `${-dist}px`,
+					"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
+				} : null }
+			}, props.text));
 		}
 		//#endregion
 		//#region src/client/file-preview.tsx
@@ -5740,10 +5747,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
-/* 跑马灯文本（MarqueeText，editor-fields.tsx）：默认超长省略号；确实放不下才挂 .dsh-tdt-mq-run，
-   hover 0.4s 后开始来回滚动，时长与滚动距离成正比（--dsh-tdt-mq-dur / --dsh-tdt-mq-dist 由组件内联写入）。 */
-.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
-.dsh-tdt-mq-run:hover{animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
+/* 跑马灯文本（MarqueeText，editor-fields.tsx）：**双层**——外层 .dsh-tdt-mq 只负责裁剪
+   （overflow:hidden），内层 .dsh-tdt-mq-in 才做 transform 滚动；第一版动画挂外层 ⇒ 整盒
+   位移跑出裁剪框压到行首图标（真机截图踩坑）。非 hover 内层自带省略号；确实放不下才挂
+   .dsh-tdt-mq-run，hover 0.4s 后内层来回滚动，时长与距离成正比（CSS 变量由组件内联写入）。 */
+.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
+.dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
+.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
 @keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
@@ -38589,7 +38599,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [depTaskId, setDepTaskId] = (0, react.useState)("");
 			const depTaskOptions = depWs === "" ? [] : tasks.filter((task) => task.workspace === depWs && !addedDepIds.has(task.id)).map((task) => ({
 				value: task.id,
-				label: task.label
+				label: task.enabled === false ? `${task.label}${t("editorDepDisabledTag")}` : task.label
 			}));
 			const addDep = () => {
 				if (depTaskId === "" || addedDepIds.has(depTaskId)) return;
@@ -38638,10 +38648,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					display: "inline-flex",
 					flex: "none",
 					color: C$2.textTertiary
-				} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), (0, react.createElement)("span", { style: {
-					flex: "none",
-					fontSize: "13px"
-				} }, t("editorDepItemPrefix")), (0, react.createElement)(MarqueeText, {
+				} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), (0, react.createElement)(MarqueeText, {
 					text: known?.label ?? dep.task,
 					style: {
 						flex: "1 1 auto",
@@ -39478,7 +39485,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const editorTasks = taskRows.map((row) => ({
 				id: row.id,
 				label: row.title === "" ? row.id : `${row.title}（${row.code ?? row.id}）`,
-				workspace: row.workspace
+				workspace: row.workspace,
+				enabled: row.enabled !== false
 			}));
 			const titleOfTask = (id) => {
 				const row = taskRows.find((item) => item.id === id);

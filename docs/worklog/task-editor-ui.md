@@ -422,3 +422,13 @@ typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡�
 | 6 | 任务名/工作区名超长 = 省略号 + hover 跑马灯 | 新组件 `MarqueeText`（editor-fields.tsx）：ResizeObserver + 文本变化测溢出，`scrollWidth>clientWidth` 才挂 `.dsh-tdt-mq-run`；hover 0.4s 后来回滚动，时长与距离成正比（CSS 变量内联写入）。官方 primitives 无跑马灯组件（清单已核），自实现 ~30 行 |
 
 注意：本轮 Edit 工具对该仓文件出现统一 `: ` 前缀错乱（替换全部失配），改用 python 带次数断言的精确替换落码，typecheck/build/冒烟 181 项全过。
+
+### 十九·补 4（同日第五轮：跑马灯压字修正 + 行首只留图标 + 停用任务可选可见）
+
+| # | 用户指出的 | 根因 / 落地 |
+|---|---|---|
+| 1 | 跑马灯压到前面的字/图标（截图实锤） | **第一版把 transform 挂在带 overflow:hidden 的同一个 span 上** ⇒ 整盒位移跑出自己的裁剪框盖住邻居。重构成**双层**：外层 `.dsh-tdt-mq` 只裁剪，内层 `.dsh-tdt-mq-in` 才滚动（非 hover 内层自带省略号；hover 内层解除裁剪后动画）——文字永远在自己那一块里跑 |
+| 2 | 「前置任务：」太占地方，甚至编号都不要，直接图标 | 已加行 = 图标（`IconPlanOutlineRegular`）+ 任务名（跑马灯）+ 工作区（72px）+ 移除；`editorDepItemPrefix` 键删除 |
+| 3 | 「锁住」的任务为什么不能选？发布 ≠ 立即执行，停用任务也要能设为前置 | 查证：宿主快照 `writeSnapshot`（src/index.ts）与客户端装配**从未按启停过滤**——停用任务本来就在前置任务下拉里。但用户看不出来 ⇒ 任务下拉里停用任务显式标**「（已停用）」**（真数据：快照 `enabled` 字段直传 `EditorTaskOption.enabled`），行为与可见性对齐 |
+
+冒烟 +1 调整后 **182 项全过**（新增：双层跑马灯类名、停用标记 + 无启停过滤断言；「前置任务：」文案断言随删除反转为 `!includes`）。

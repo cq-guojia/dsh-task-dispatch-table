@@ -120,11 +120,14 @@ export interface EditorDependency {
 /**
  * 前置任务可选项（= 现有任务表行，真数据）。`workspace` = 该任务定义 `target.workspace`
  * 的工作区 title ⇒ 表单里「先选工作区、再选任务」两级过滤（用户 2026-09-29）。
+ * `enabled` = 任务启停开关：**停用（锁住）的任务同样可选**——用户 2026-09-29 拍板：
+ * 发布任务只是「暂时不开它」，设置前置不受影响；下拉里显式标「（已停用）」让这件事看得见。
  */
 export interface EditorTaskOption {
   id: string
   label: string
   workspace: string
+  enabled: boolean
 }
 
 /**
@@ -1200,7 +1203,8 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  // ③ 前置任务卡（用户 2026-09-29 两轮拍板，照「附加文件」卡同款灰框 + 同款外距）：
+  // ③ 前置任务卡（用户 2026-09-29 多轮拍板，照「附加文件」卡同款灰框 + 同款外距）：
+  //  - 停用（锁住）的任务同样可选（快照本就全量下发，无启停过滤）；下拉里标「（已停用）」；
   //  - 布局：上 = 已选前置任务列表（空则显示上传投放区同款虚线占位框）；下 = 工作区→任务→添加；
   //  - 标题「添加前置任务」+「?」Tooltip：含义（强调『所有』）/ 判定方式（所有前置任务上一次
   //    执行必须成功，跳过不算失败）/ 执行时自动移交前置产出文件；
@@ -1224,7 +1228,7 @@ export function TaskEditorDrawer(props: {
   const depTaskOptions: EditorOption[] = depWs === ''
     ? []
     : tasks.filter(task => task.workspace === depWs && !addedDepIds.has(task.id))
-      .map(task => ({ value: task.id, label: task.label }))
+      .map(task => ({ value: task.id, label: task.enabled === false ? `${task.label}${t('editorDepDisabledTag')}` : task.label }))
   const addDep = (): void => {
     if (depTaskId === '' || addedDepIds.has(depTaskId)) return
     // semantics 固定 latest_success = 「上一次执行必须成功」（用户口述的判定方式）。
@@ -1258,10 +1262,9 @@ export function TaskEditorDrawer(props: {
               const known = tasks.find(task => task.id === dep.task)
               const ws = known?.workspace ?? ''
               return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
-                // 行首「有点任务」icon（官方 IconPlanOutlineRegular）+ 固定前缀。
+                // 行首只留「有点任务」icon（官方 IconPlanOutlineRegular）——「前置任务：」文字按用户要求删除（太占地方）。
                 h('span', { style: { display: 'inline-flex', flex: 'none', color: C.textTertiary } }, h(IconPlanOutlineRegular, { size: 14 })),
-                h('span', { style: { flex: 'none', fontSize: '13px' } }, t('editorDepItemPrefix')),
-                // 任务名吃剩余宽度：超长省略号，hover 跑马灯（MarqueeText）。
+                // 任务名吃剩余宽度：超长省略号，hover 跑马灯（MarqueeText，动画只在内层 span 上跑）。
                 h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: '13px' } }),
                 // 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
                 ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: C.textDim, fontSize: '11px' } }),
