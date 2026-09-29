@@ -365,10 +365,14 @@ window.__ModuleLoader__.load({
 			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
 			editorPickWorkspaceFile: "选择工作区文件",
 			editorUploadFile: "上传文件",
-			editorDropZoneHint: "点击或拖拽文件到此处上传（支持多选，单个 ≤ 20MB）",
+			editorDropZoneHint: "点击或拖拽文件到此处上传，支持多选或单个文件",
+			editorDropZoneFormats: "支持常见文本 / 代码、图片、文档格式，单个文件不超过 20MB",
 			editorUploading: "上传中…",
 			editorUploadFailed: "上传失败",
-			editorUploadFailedMsg: "上传失败：{msg}",
+			editorUploadErrType: "格式不支持：仅支持常见文本 / 代码、图片、文档文件",
+			editorUploadErrSize: "文件超过大小限制（单个最大 20MB）",
+			editorUploadErrEmpty: "文件内容为空",
+			editorUploadErrGeneric: "上传失败，请重试",
 			editorPickerNoSession: "暂无可浏览的工作区：请先在会话中打开任意文件，或使用「上传文件」",
 			editorPickerPick: "选择此文件",
 			editorPickerCancel: "取消",
@@ -758,10 +762,14 @@ window.__ModuleLoader__.load({
 			editorAttachmentAddHint: "Upload / pick file — coming soon",
 			editorPickWorkspaceFile: "Pick workspace file",
 			editorUploadFile: "Upload file",
-			editorDropZoneHint: "Click or drop files here (multi-select, ≤ 20MB each)",
+			editorDropZoneHint: "Click or drop files here to upload — multiple or single files supported",
+			editorDropZoneFormats: "Common text/code, image and document formats are supported, up to 20MB each",
 			editorUploading: "Uploading…",
 			editorUploadFailed: "Upload failed",
-			editorUploadFailedMsg: "Upload failed: {msg}",
+			editorUploadErrType: "Unsupported file type: only common text/code, image and document files are allowed",
+			editorUploadErrSize: "File exceeds the size limit (20MB max each)",
+			editorUploadErrEmpty: "File is empty",
+			editorUploadErrGeneric: "Upload failed, please retry",
 			editorPickerNoSession: "No workspace to browse yet: open any file in a session first, or use “Upload file”",
 			editorPickerPick: "Pick this file",
 			editorPickerCancel: "Cancel",
@@ -37790,7 +37798,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
-			const [uploadOpen, setUploadOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
 			const [uploadError, setUploadError] = (0, react.useState)(null);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
@@ -37969,11 +37976,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				patch({ attachments: [...draft.attachments, att] });
 			};
 			const makeId = () => typeof crypto !== "undefined" && crypto.randomUUID !== void 0 ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+			const uploadErrText = (code) => {
+				if (code === "file-type-not-allowed") return t("editorUploadErrType");
+				if (code === "payload-too-large" || code === "body-too-large") return t("editorUploadErrSize");
+				if (code === "empty-file") return t("editorUploadErrEmpty");
+				return t("editorUploadErrGeneric");
+			};
 			const uploadFiles = async (files) => {
 				const list = Array.from(files);
-				if (list.length === 0) return;
+				if (list.length === 0 || uploading) return;
 				setUploading(true);
 				setUploadError(null);
+				const added = [];
 				let lastErr = null;
 				for (const file of list) try {
 					const data = await (await fetch("/api/task-dispatch-table/attachment", {
@@ -37988,7 +38002,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						lastErr = typeof data?.error === "string" ? data.error : "upload-failed";
 						continue;
 					}
-					addAttachment({
+					added.push({
 						id: makeId(),
 						name: data.name,
 						kind: "upload",
@@ -37998,10 +38012,26 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					lastErr = error instanceof Error ? error.message : "network-error";
 				}
 				setUploading(false);
+				if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] });
 				if (lastErr !== null) setUploadError(lastErr);
-				else setUploadOpen(false);
 			};
-			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorAttachments"))), draft.attachments.length === 0 ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAttachmentNone")) : (0, react.createElement)("div", { style: {
+			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorAttachments")), (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "8px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				disabled: workspaceFiles === null || workspaceFiles === void 0,
+				onClick: () => {
+					setPickerOpen(true);
+				}
+			}, t("editorPickWorkspaceFile")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					if (!uploading) fileInputRef.current?.click();
+				}
+			}, t("editorUploadFile")))), draft.attachments.length === 0 ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorAttachmentNone")) : (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px",
@@ -38012,12 +38042,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					display: "flex",
 					alignItems: "center",
 					gap: "8px",
-					padding: "6px 8px",
-					border: `1px solid ${C$2.borderL4}`,
+					padding: "6px 10px",
 					borderRadius: "6px",
-					background: C$2.layer1
+					background: "var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))"
 				}
 			}, (0, react.createElement)("span", { style: {
+				flex: "none",
+				display: "flex",
+				alignItems: "center"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: att.name,
+				size: 16
+			})), (0, react.createElement)("span", { style: {
 				flex: "1 1 auto",
 				minWidth: 0,
 				overflow: "hidden",
@@ -38030,9 +38066,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					flex: "none",
 					fontSize: "11px",
 					color: C$2.textDim,
-					border: `1px solid ${C$2.borderL4}`,
 					borderRadius: "4px",
-					padding: "1px 6px"
+					padding: "1px 6px",
+					background: "var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))"
 				}
 			}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
@@ -38042,30 +38078,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				title: t("editorAttachmentRemove"),
 				"aria-label": t("editorAttachmentRemove")
-			}, t("editorAttachmentRemove"))))), (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "10px"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				disabled: workspaceFiles === null || workspaceFiles === void 0,
-				onClick: () => {
-					setPickerOpen(true);
-				}
-			}, t("editorPickWorkspaceFile")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				onClick: () => {
-					setUploadOpen((v) => !v);
-				}
-			}, t("editorUploadFile"))), uploadOpen ? (0, react.createElement)("div", { style: { marginTop: "10px" } }, (0, react.createElement)("div", {
+			}, t("editorAttachmentRemove"))))), (0, react.createElement)("div", {
 				style: {
 					border: `1px dashed ${C$2.borderL4}`,
 					borderRadius: C$2.radiusMd,
-					padding: "18px",
+					padding: "16px 12px",
 					textAlign: "center",
-					cursor: "pointer",
+					cursor: uploading ? "default" : "pointer",
 					background: C$2.layer1
 				},
 				onClick: () => {
@@ -38081,7 +38100,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)("div", { style: {
 				fontSize: "13px",
 				color: C$2.text
-			} }, uploading ? t("editorUploading") : t("editorDropZoneHint")), uploading ? null : (0, react.createElement)("input", {
+			} }, uploading ? t("editorUploading") : t("editorDropZoneHint")), uploading ? null : (0, react.createElement)("div", { style: {
+				fontSize: "11px",
+				color: C$2.textDim,
+				marginTop: "4px"
+			} }, t("editorDropZoneFormats"))), (0, react.createElement)("input", {
 				ref: fileInputRef,
 				type: "file",
 				multiple: true,
@@ -38089,11 +38112,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (event) => {
 					if (event.target.files !== void 0) uploadFiles(event.target.files);
 				}
-			})), uploadError === null ? null : (0, react.createElement)("p", { style: {
+			}), uploadError === null ? null : (0, react.createElement)("p", { style: {
 				color: "#e5484d",
 				fontSize: "12px",
 				margin: "6px 0 0"
-			} }, tt("editorUploadFailedMsg", { msg: uploadError }))) : null);
+			} }, uploadErrText(uploadError)));
 			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-card-head",
 				style: { marginBottom: "12px" }

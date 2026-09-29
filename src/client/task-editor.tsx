@@ -20,6 +20,7 @@ import { createElement as h, useCallback, useEffect, useMemo, useRef, useState }
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
   Button,
+  FileTypeIcon,
   IconCloseOutlineRegular,
   IconFolderOpenOutlineRegular,
   IconPlusOutlineRegular,
@@ -789,8 +790,8 @@ export function TaskEditorDrawer(props: {
   const [pendingHint, setPendingHint] = useState(false)
   // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [uploadOpen, setUploadOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
+  // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
   const [uploadError, setUploadError] = useState<string | null>(null)
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
   const [confirmDiscard, setConfirmDiscard] = useState(false)
@@ -945,11 +946,21 @@ export function TaskEditorDrawer(props: {
     patch({ attachments: [...draft.attachments, att] })
   }
   const makeId = (): string => (typeof crypto !== 'undefined' && crypto.randomUUID !== undefined ? crypto.randomUUID() : Math.random().toString(36).slice(2))
+  // 上传失败机器码 → 具体文案（用户 2026-09-29：报错要按具体情况说人话，不透出机器码）。
+  const uploadErrText = (code: string): string => {
+    if (code === 'file-type-not-allowed') return t('editorUploadErrType')
+    if (code === 'payload-too-large' || code === 'body-too-large') return t('editorUploadErrSize')
+    if (code === 'empty-file') return t('editorUploadErrEmpty')
+    return t('editorUploadErrGeneric')
+  }
   const uploadFiles = async (files: FileList | File[]): Promise<void> => {
     const list = Array.from(files)
-    if (list.length === 0) return
+    if (list.length === 0 || uploading) return
     setUploading(true)
     setUploadError(null)
+    // ⚠️ 多选修复：逐个收进本地数组、循环末**一次性** patch。此前每次 addAttachment 都展开
+    // 渲染闭包里的旧 draft.attachments ⇒ 多选时后一个把前一个覆盖掉，列表只剩最后一个文件。
+    const added: Attachment[] = []
     let lastErr: string | null = null
     for (const file of list) {
       try {
@@ -960,53 +971,54 @@ export function TaskEditorDrawer(props: {
         })
         const data = await res.json().catch(() => null)
         if (data === null || data.ok !== true) { lastErr = typeof data?.error === 'string' ? data.error : 'upload-failed'; continue }
-        addAttachment({ id: makeId(), name: data.name, kind: 'upload', ref: data.ref })
+        added.push({ id: makeId(), name: data.name, kind: 'upload', ref: data.ref })
       } catch (error) { lastErr = error instanceof Error ? error.message : 'network-error' }
     }
     setUploading(false)
+    if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] })
     if (lastErr !== null) setUploadError(lastErr)
-    else setUploadOpen(false)
   }
   const attachmentsCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorAttachments')),
+      // 右上两个小按钮（用户 2026-09-29 拍板的布局）；「上传文件」= 直接弹本地选择框。
+      h('div', { style: { display: 'flex', gap: '8px' } },
+        h(Button, { variant: 'outline', size: 'sm', disabled: workspaceFiles === null || workspaceFiles === undefined, onClick: () => { setPickerOpen(true) } }, t('editorPickWorkspaceFile')),
+        h(Button, { variant: 'outline', size: 'sm', onClick: () => { if (!uploading) fileInputRef.current?.click() } }, t('editorUploadFile')),
+      ),
     ),
     draft.attachments.length === 0
       ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorAttachmentNone'))
       : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
-          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', border: `1px solid ${C.borderL4}`, borderRadius: '6px', background: C.layer1 } },
+          // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
+          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', background: 'var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))' } },
+            h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
             h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } }, att.name),
-            h('span', { title: att.ref, style: { flex: 'none', fontSize: '11px', color: C.textDim, border: `1px solid ${C.borderL4}`, borderRadius: '4px', padding: '1px 6px' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
+            h('span', { title: att.ref, style: { flex: 'none', fontSize: '11px', color: C.textDim, borderRadius: '4px', padding: '1px 6px', background: 'var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
             h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove') }, t('editorAttachmentRemove')),
           )),
         ),
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
-      h(Button, { variant: 'outline', size: 'sm', disabled: workspaceFiles === null || workspaceFiles === undefined, onClick: () => { setPickerOpen(true) } }, t('editorPickWorkspaceFile')),
-      h(Button, { variant: 'outline', size: 'sm', onClick: () => { setUploadOpen(v => !v) } }, t('editorUploadFile')),
+    // 投放区常驻（用户 2026-09-29：不经按钮开合）；隐藏 input 挂卡片层、始终在册。
+    h('div', {
+      style: { border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '16px 12px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer', background: C.layer1 },
+      onClick: () => { if (!uploading) fileInputRef.current?.click() },
+      onDragOver: (event: { preventDefault(): void }) => { event.preventDefault() },
+      onDrop: (event: { preventDefault(): void; dataTransfer?: { files?: FileList } }) => {
+        event.preventDefault()
+        if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
+      },
+    },
+      h('div', { style: { fontSize: '13px', color: C.text } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
+      uploading ? null : h('div', { style: { fontSize: '11px', color: C.textDim, marginTop: '4px' } }, t('editorDropZoneFormats')),
     ),
-    uploadOpen
-      ? h('div', { style: { marginTop: '10px' } },
-          h('div', {
-            style: { border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '18px', textAlign: 'center', cursor: 'pointer', background: C.layer1 },
-            onClick: () => { if (!uploading) fileInputRef.current?.click() },
-            onDragOver: (event: { preventDefault(): void }) => { event.preventDefault() },
-            onDrop: (event: { preventDefault(): void; dataTransfer?: { files?: FileList } }) => {
-              event.preventDefault()
-              if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
-            },
-          },
-            h('div', { style: { fontSize: '13px', color: C.text } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
-            uploading ? null : h('input', {
-              ref: fileInputRef,
-              type: 'file',
-              multiple: true,
-              style: { display: 'none' },
-              onChange: (event: { target: { files?: FileList } }) => { if (event.target.files !== undefined) void uploadFiles(event.target.files) },
-            }),
-          ),
-          uploadError === null ? null : h('p', { style: { color: '#e5484d', fontSize: '12px', margin: '6px 0 0' } }, tt('editorUploadFailedMsg', { msg: uploadError })),
-        )
-      : null,
+    h('input', {
+      ref: fileInputRef,
+      type: 'file',
+      multiple: true,
+      style: { display: 'none' },
+      onChange: (event: { target: { files?: FileList } }) => { if (event.target.files !== undefined) void uploadFiles(event.target.files) },
+    }),
+    uploadError === null ? null : h('p', { style: { color: '#e5484d', fontSize: '12px', margin: '6px 0 0' } }, uploadErrText(uploadError)),
   )
 
   // ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。

@@ -108,7 +108,7 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorStartTime' | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentNone' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
-  | 'editorPickWorkspaceFile' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadFailedMsg' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
+  | 'editorPickWorkspaceFile' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerCancel'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
@@ -470,10 +470,14 @@ export const zh: Record<LocaleKey, string> = {
   editorAttachmentAddHint: '上传 / 选择文件稍后开放',
   editorPickWorkspaceFile: '选择工作区文件',
   editorUploadFile: '上传文件',
-  editorDropZoneHint: '点击或拖拽文件到此处上传（支持多选，单个 ≤ 20MB）',
+  editorDropZoneHint: '点击或拖拽文件到此处上传，支持多选或单个文件',
+  editorDropZoneFormats: '支持常见文本 / 代码、图片、文档格式，单个文件不超过 20MB',
   editorUploading: '上传中…',
   editorUploadFailed: '上传失败',
-  editorUploadFailedMsg: '上传失败：{msg}',
+  editorUploadErrType: '格式不支持：仅支持常见文本 / 代码、图片、文档文件',
+  editorUploadErrSize: '文件超过大小限制（单个最大 20MB）',
+  editorUploadErrEmpty: '文件内容为空',
+  editorUploadErrGeneric: '上传失败，请重试',
   editorPickerNoSession: '暂无可浏览的工作区：请先在会话中打开任意文件，或使用「上传文件」',
   editorPickerPick: '选择此文件',
   editorPickerCancel: '取消',
@@ -869,10 +873,14 @@ export const en: Record<LocaleKey, string> = {
   editorAttachmentAddHint: 'Upload / pick file — coming soon',
   editorPickWorkspaceFile: 'Pick workspace file',
   editorUploadFile: 'Upload file',
-  editorDropZoneHint: 'Click or drop files here (multi-select, ≤ 20MB each)',
+  editorDropZoneHint: 'Click or drop files here to upload — multiple or single files supported',
+  editorDropZoneFormats: 'Common text/code, image and document formats are supported, up to 20MB each',
   editorUploading: 'Uploading…',
   editorUploadFailed: 'Upload failed',
-  editorUploadFailedMsg: 'Upload failed: {msg}',
+  editorUploadErrType: 'Unsupported file type: only common text/code, image and document files are allowed',
+  editorUploadErrSize: 'File exceeds the size limit (20MB max each)',
+  editorUploadErrEmpty: 'File is empty',
+  editorUploadErrGeneric: 'Upload failed, please retry',
   editorPickerNoSession: 'No workspace to browse yet: open any file in a session first, or use “Upload file”',
   editorPickerPick: 'Pick this file',
   editorPickerCancel: 'Cancel',
