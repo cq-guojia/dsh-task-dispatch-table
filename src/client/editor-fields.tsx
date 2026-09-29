@@ -557,10 +557,14 @@ export interface WeekdayLabels {
 }
 
 /**
- * 周几多选 = 一排**小方块**（28×28，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
+ * 周几多选 = 一排**小方块**（24×24，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
  *
  * 2026-09-29 用户返工：原来的实现是「官方 Pill chips + 尾随 ✕ + ＋ 菜单」，用户评价
  * 「特别难看」「太大了」⇒ 换成紧凑方块；一个都不选 = 每天（间隔档就是这个语义）。
+ * 2026-09-29 再返工：用户「选中的蓝块太大、胀眼睛、不精致」⇒ 方块收到 24×24，
+ * 选中态由**实心 business 填充**改成「business 描边 + 淡蓝底 + business 字 + 600 字重」。
+ * 淡蓝底走 `color-mix`：宿主 Chromium 支持则是一层薄蓝，不支持则退化为透明，
+ * 此时仍靠描边与字色区分选中，不会画错。
  */
 export function WeekdayPicker(props: {
   value: number[]
@@ -578,10 +582,10 @@ export function WeekdayPicker(props: {
     props.onChange(next.slice().sort((a, b) => a - b))
   }
 
-  return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' } },
+  return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' } },
     props.label === undefined
       ? null
-      : h('span', { style: { flex: 'none', fontSize: '12px', color: C.textDim, marginRight: '2px' } }, props.label),
+      : h('span', { style: { flex: 'none', fontSize: '12px', color: C.textDim, marginRight: '4px' } }, props.label),
     props.labels.shorts.map((short, index) => {
       const day = index + 1
       const on = selected.has(day)
@@ -598,12 +602,14 @@ export function WeekdayPicker(props: {
         onPointerEnter: () => { setHover(day) },
         onPointerLeave: () => { setHover(current => (current === day ? null : current)) },
         style: {
-          flex: 'none', width: '28px', height: '28px', padding: 0,
+          flex: 'none', width: '24px', height: '24px', padding: 0,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           border: `0.5px solid ${on ? C.business : C.borderL4}`, borderRadius: C.radiusSm,
-          background: on ? C.business : (hover === day ? C.hover : C.layer1),
-          color: on ? C.brandFg : C.textDim,
-          font: 'inherit', fontSize: '12px', lineHeight: '18px',
+          background: on
+            ? 'color-mix(in srgb, var(--dsw-alias-state-business-primary, #4d6bfe) 16%, transparent)'
+            : (hover === day ? C.hover : C.layer1),
+          color: on ? C.business : C.textDim,
+          font: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: on ? 600 : 400,
           cursor: props.disabled === true ? 'not-allowed' : 'pointer', transition,
         },
       }, short)

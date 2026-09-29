@@ -512,8 +512,8 @@ function IntervalControls(props: {
 
 /** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 const WIDTH_KEY = 'dsh-tdt-editor-width'
-const WIDTH_DEFAULT = 540
-const WIDTH_MIN = 440
+const WIDTH_DEFAULT = 620
+const WIDTH_MIN = 560
 
 function clampWidth(value: number): number {
   const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * 0.9))
@@ -849,7 +849,7 @@ export function TaskEditorDrawer(props: {
                 width: 92,
               })
               : null,
-            h(Tooltip, { label: t('editorTaskStartHint'), side: 'top', align: 'center', maxWidth: 280 },
+            h(Tooltip, { label: t('editorTaskStartHint'), side: 'top', align: 'center', maxWidth: 300 },
               h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorTaskStartHint') },
                 h(IconQuestionOutlineRegular, { size: 14 }),
               ),
@@ -858,7 +858,7 @@ export function TaskEditorDrawer(props: {
         : null,
       h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto' } }),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-        h('span', { style: { fontSize: '11px', color: C.textDim } }, t('editorWindow')),
+        h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: '11px', color: C.textDim } }, t('editorWindow')),
         h(SelectField, {
           value: draft.window,
           options: windowOptions,
@@ -869,7 +869,7 @@ export function TaskEditorDrawer(props: {
           size: 'sm',
           align: 'end',
         }),
-        h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 260 },
+        h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 320 },
           h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorWindowHint') },
             h(IconQuestionOutlineRegular, { size: 14 }),
           ),

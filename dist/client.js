@@ -345,7 +345,7 @@ window.__ModuleLoader__.load({
 			editorRestore: "恢复",
 			editorNoVersions: "暂无版本，保存后可在此回滚",
 			editorTaskStart: "任务开始时间",
-			editorTaskStartHint: "设定任务实际开始执行的日期（间隔档还需选时刻）。周期 / 间隔任务都可提前建好、到时自动开跑；「每 N 周」也以这里选定的日期为起算周。",
+			editorTaskStartHint: "任务从这一天开始执行。可以提前把任务建好，等到了这天再自动开跑；「每几周」也从这天开始算第一周。",
 			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
 			editorWeekday2: "周二",
@@ -367,7 +367,7 @@ window.__ModuleLoader__.load({
 			editorNow: "现在",
 			editorConfirm: "确定",
 			editorWindow: "允许延迟",
-			editorWindowHint: "从计划时刻起，这段时间内还允许派发和重试；过了就跳过这一次",
+			editorWindowHint: "任务到了计划开始执行的时间，如果遇到前置任务还没完成、或其它原因需要推迟，最多允许再等这么久，仍然继续执行；超过这个时间，这一次就直接跳过。",
 			unitMinutes: "分钟",
 			unitHours: "小时",
 			unitDays: "天",
@@ -715,7 +715,7 @@ window.__ModuleLoader__.load({
 			editorRestore: "Restore",
 			editorNoVersions: "No versions yet — save one to roll back here",
 			editorTaskStart: "Task start time",
-			editorTaskStartHint: "When the task actually begins running (interval also needs a time). Periodic / interval tasks can be created early and auto-start later; \"every N weeks\" also counts weeks from this date.",
+			editorTaskStartHint: "The task starts running on this day. You can create it in advance and it begins automatically once this day arrives; \"every N weeks\" also counts its first week from this day.",
 			editorWeekdayLabel: "Weekdays",
 			editorWeekday1: "Mon",
 			editorWeekday2: "Tue",
@@ -737,7 +737,7 @@ window.__ModuleLoader__.load({
 			editorNow: "Now",
 			editorConfirm: "OK",
 			editorWindow: "Allow delay",
-			editorWindowHint: "From the planned time, dispatch and retries are still allowed within this window; after that this run is skipped",
+			editorWindowHint: "When the task reaches its planned start time but a dependency is unfinished or something else delays it, it may wait up to this long and still run; past this, this run is skipped.",
 			unitMinutes: "minutes",
 			unitHours: "hours",
 			unitDays: "days",
@@ -5333,10 +5333,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.labels.confirm))), document.body) : null);
 		}
 		/**
-		* 周几多选 = 一排**小方块**（28×28，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
+		* 周几多选 = 一排**小方块**（24×24，点一下勾上/取消），值 = ISO 序号 1..7（周一 = 1）。
 		*
 		* 2026-09-29 用户返工：原来的实现是「官方 Pill chips + 尾随 ✕ + ＋ 菜单」，用户评价
 		* 「特别难看」「太大了」⇒ 换成紧凑方块；一个都不选 = 每天（间隔档就是这个语义）。
+		* 2026-09-29 再返工：用户「选中的蓝块太大、胀眼睛、不精致」⇒ 方块收到 24×24，
+		* 选中态由**实心 business 填充**改成「business 描边 + 淡蓝底 + business 字 + 600 字重」。
+		* 淡蓝底走 `color-mix`：宿主 Chromium 支持则是一层薄蓝，不支持则退化为透明，
+		* 此时仍靠描边与字色区分选中，不会画错。
 		*/
 		function WeekdayPicker(props) {
 			const [hover, setHover] = (0, react.useState)(null);
@@ -5349,12 +5353,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				alignItems: "center",
 				flexWrap: "wrap",
-				gap: "6px"
+				gap: "4px"
 			} }, props.label === void 0 ? null : (0, react.createElement)("span", { style: {
 				flex: "none",
 				fontSize: "12px",
 				color: C$1.textDim,
-				marginRight: "2px"
+				marginRight: "4px"
 			} }, props.label), props.labels.shorts.map((short, index) => {
 				const day = index + 1;
 				const on = selected.has(day);
@@ -5378,19 +5382,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					},
 					style: {
 						flex: "none",
-						width: "28px",
-						height: "28px",
+						width: "24px",
+						height: "24px",
 						padding: 0,
 						display: "inline-flex",
 						alignItems: "center",
 						justifyContent: "center",
 						border: `0.5px solid ${on ? C$1.business : C$1.borderL4}`,
 						borderRadius: C$1.radiusSm,
-						background: on ? C$1.business : hover === day ? C$1.hover : C$1.layer1,
-						color: on ? C$1.brandFg : C$1.textDim,
+						background: on ? "color-mix(in srgb, var(--dsw-alias-state-business-primary, #4d6bfe) 16%, transparent)" : hover === day ? C$1.hover : C$1.layer1,
+						color: on ? C$1.business : C$1.textDim,
 						font: "inherit",
 						fontSize: "12px",
 						lineHeight: "18px",
+						fontWeight: on ? 600 : 400,
 						cursor: props.disabled === true ? "not-allowed" : "pointer",
 						transition: transition$1
 					}
@@ -5854,8 +5859,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 		const WIDTH_KEY = "dsh-tdt-editor-width";
-		const WIDTH_DEFAULT = 540;
-		const WIDTH_MIN = 440;
+		const WIDTH_DEFAULT = 620;
+		const WIDTH_MIN = 560;
 		function clampWidth(value) {
 			const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * .9));
 			return Math.min(Math.max(Math.round(value), WIDTH_MIN), max);
@@ -6374,7 +6379,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				label: t("editorTaskStartHint"),
 				side: "top",
 				align: "center",
-				maxWidth: 280
+				maxWidth: 300
 			}, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-help",
@@ -6387,6 +6392,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				gap: "6px"
 			} }, (0, react.createElement)("span", { style: {
+				flex: "none",
+				whiteSpace: "nowrap",
 				fontSize: "11px",
 				color: C$1.textDim
 			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
@@ -6404,7 +6411,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				label: t("editorWindowHint"),
 				side: "top",
 				align: "end",
-				maxWidth: 260
+				maxWidth: 320
 			}, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-help",
