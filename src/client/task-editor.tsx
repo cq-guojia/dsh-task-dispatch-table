@@ -513,7 +513,7 @@ function IntervalControls(props: {
 /** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 const WIDTH_KEY = 'dsh-tdt-editor-width'
 const WIDTH_DEFAULT = 540
-const WIDTH_MIN = 380
+const WIDTH_MIN = 440
 
 function clampWidth(value: number): number {
   const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * 0.9))
@@ -826,17 +826,17 @@ export function TaskEditorDrawer(props: {
         }),
       ),
     // 底部：左 = 任务开始时间（锚点，周期/间隔都有，带 ? 说明），右 = 允许延迟（次要，居右）。
-    h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+    h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '8px' } },
       showTaskStart
-        ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-            h('span', { style: { fontSize: '12px', color: C.text } }, t('editorTaskStart')),
+        ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+            h('span', { style: { fontSize: '11px', color: C.text } }, t('editorTaskStart')),
             h(DateField, {
               value: draft.date,
               onChange: value => { patch({ date: value }) },
               placeholder: t('editorDatePh'),
               ariaLabel: t('editorTaskStart'),
               labels: calendarLabels,
-              width: 148,
+              width: 126,
             }),
             // 间隔档要选时刻；周期档时刻由上方频率区决定，这里只选日期。
             draft.scheduleKind === 'interval'
@@ -846,10 +846,10 @@ export function TaskEditorDrawer(props: {
                 placeholder: t('editorTimePh'),
                 ariaLabel: t('editorTaskStart'),
                 labels: timeLabels,
-                width: 110,
+                width: 92,
               })
               : null,
-            h(Tooltip, { label: t('editorTaskStartHint'), side: 'top', align: 'center' },
+            h(Tooltip, { label: t('editorTaskStartHint'), side: 'top', align: 'center', maxWidth: 280 },
               h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorTaskStartHint') },
                 h(IconQuestionOutlineRegular, { size: 14 }),
               ),
@@ -858,7 +858,7 @@ export function TaskEditorDrawer(props: {
         : null,
       h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto' } }),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-        h('span', { style: { fontSize: '12px', color: C.textDim } }, t('editorWindow')),
+        h('span', { style: { fontSize: '11px', color: C.textDim } }, t('editorWindow')),
         h(SelectField, {
           value: draft.window,
           options: windowOptions,
@@ -869,7 +869,7 @@ export function TaskEditorDrawer(props: {
           size: 'sm',
           align: 'end',
         }),
-        h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end' },
+        h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 260 },
           h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorWindowHint') },
             h(IconQuestionOutlineRegular, { size: 14 }),
           ),

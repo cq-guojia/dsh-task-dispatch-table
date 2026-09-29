@@ -5855,7 +5855,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 		const WIDTH_KEY = "dsh-tdt-editor-width";
 		const WIDTH_DEFAULT = 540;
-		const WIDTH_MIN = 380;
+		const WIDTH_MIN = 440;
 		function clampWidth(value) {
 			const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * .9));
 			return Math.min(Math.max(Math.round(value), WIDTH_MIN), max);
@@ -6343,14 +6343,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: {
 					display: "flex",
 					alignItems: "center",
-					gap: "10px"
+					gap: "8px"
 				}
 			}, showTaskStart ? (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
-				gap: "6px"
+				gap: "4px"
 			} }, (0, react.createElement)("span", { style: {
-				fontSize: "12px",
+				fontSize: "11px",
 				color: C$1.text
 			} }, t("editorTaskStart")), (0, react.createElement)(DateField, {
 				value: draft.date,
@@ -6360,7 +6360,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorDatePh"),
 				ariaLabel: t("editorTaskStart"),
 				labels: calendarLabels,
-				width: 148
+				width: 126
 			}), draft.scheduleKind === "interval" ? (0, react.createElement)(TimeField, {
 				value: draft.time,
 				onChange: (value) => {
@@ -6369,11 +6369,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorTimePh"),
 				ariaLabel: t("editorTaskStart"),
 				labels: timeLabels,
-				width: 110
+				width: 92
 			}) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("editorTaskStartHint"),
 				side: "top",
-				align: "center"
+				align: "center",
+				maxWidth: 280
 			}, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-help",
@@ -6386,7 +6387,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				gap: "6px"
 			} }, (0, react.createElement)("span", { style: {
-				fontSize: "12px",
+				fontSize: "11px",
 				color: C$1.textDim
 			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
 				value: draft.window,
@@ -6402,7 +6403,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("editorWindowHint"),
 				side: "top",
-				align: "end"
+				align: "end",
+				maxWidth: 260
 			}, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-help",
