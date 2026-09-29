@@ -349,3 +349,25 @@ typecheck + build（dist/client 349.39 kB）+ 冒烟 172 项全过。
 | 7 | 「有效期」要说明但别占版面 ⇒ 挂个小问号，hover 才出 | 用官方 `Tooltip`（`side:'top'`、锚点用 `button` 保证键盘也出气泡）+ 官方 `IconQuestionOutlineRegular`；删掉正文里那行 `editorWindowHint` 说明 |
 
 typecheck + build（dist/client 349.96 kB）+ 冒烟 172 项全过。
+
+---
+
+## 十八、观感第五轮 + 脏判定/关闭确认（2026-09-29）
+
+**观感五连改**（用户逐条反馈）：
+
+| # | 反馈 | 处置 |
+|---|---|---|
+| 1 | 「任务开始时间」提示一溜到底 | 官方 `Tooltip` 有 `maxWidth` prop（弹层 `white-space:pre-line` + `overflow-wrap:break-word`）⇒ 任务开始 300 / 允许延迟 320，自然折 2–3 行，不在文案里塞 `\n` |
+| 2 | 底部排太挤 | 日期 148→126、时刻 110→92；schedfoot 间距 10→8；标签 12px→11px 且 `white-space:nowrap`（不再竖排断字） |
+| 3 | 弹窗宽度 | 默认 / 最小 540→560（宽度存 localStorage，拖过以用户值为准） |
+| 4 | 星期块样式三轮迭代 | 实心蓝 28×28（胀眼睛）→ 描边+淡蓝底（更丑）→ **分段控件同款**：灰底轨道（`interactive-bg-hover`）+ 段 26×24 / 字 12 / 内边距 6 / 段距 3，**选中 = business 蓝底白字 + 柔和浮起**；「星期」标签 13px 与「每隔」同大，轨道左缘与上方数字输入框对齐（同两字标签 + 同 8px 间距） |
+
+**脏判定 + 关闭确认**（决策 45）：`stableStringify`（键序排序）与挂载时 `useRef` 快照全等比较；✕ / 遮罩 / Esc / 取消四路统一 `requestClose`；确认框用官方 `Modal`（`className` 抬 z 1060 盖过抽屉 1040）。
+
+**全屏提示词编辑器——需求已定、仅调研未动工**（用户 2026-09-29 明确「先不要动」）：
+- 需求：不做居中弹窗；点「全屏编辑」在右侧栏**盖满全屏展开**（不管抽屉当前多宽）；顶部「编辑模式 / 预览模式」切换、右上角不放东西；底部「保存 / 取消」。
+- 调研结论（读 `@deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2` `lib/types/**`）：官方**有** `markdown/MarkdownText` 渲染器（GFM + KaTeX、body/compact 两档）⇒「预览模式」官方现成；官方**没有**任何多行文本编辑器（组件清单无 Textarea/CodeEditor，`Input` 单行，无 CodeMirror/Monaco 痕迹）⇒ 用户见到的「能编辑的侧边栏插件」必是插件自做（textarea 或自带第三方库）。
+- 备选：① 自绘 textarea + 官方 `MarkdownText` 预览（零依赖、零增量、官方 token 原生主题，推荐起步）；② CodeMirror 6 + `@codemirror/lang-markdown`（轻、成熟，候选增强）；③ bytemd（React、轻，但预览自管）；不推荐 Milkdown / TipTap（ProseMirror 系，数百 KB 偏重）。
+
+build（dist/client 369.39 kB）+ typecheck + 冒烟 176 项全过。
