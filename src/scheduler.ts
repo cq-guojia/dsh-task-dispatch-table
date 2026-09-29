@@ -190,6 +190,7 @@ function snapshotOf(task: TaskDefinition, workspace: HostWorkspace, resolvedDeps
     // 决策 48/49：goal / agentTeam 随快照固化（此前 goal 漏快照 = goal:false 不生效的缺陷，一并修）。
     goal: task.target.goal !== false,
     agentTeam: task.target.agentTeam === true,
+    permission: task.target.permission ?? 'default',
     maxAttempts: task.retry.maxAttempts,
     window: task.schedule.window,
     resolvedDeps,

@@ -324,8 +324,14 @@ window.__ModuleLoader__.load({
 			editorWorkspace: "工作区",
 			editorWorkspacePh: "选择工作区",
 			editorModel: "模型",
-			editorModelPh: "跟随宿主默认",
-			editorFollowHost: "跟随宿主默认",
+			editorModelPh: "默认模型",
+			editorFollowHost: "默认模型",
+			editorPermission: "权限",
+			editorPermissionHint: "本次执行授予 agent 的操作范围。默认 = 会话默认（沿用宿主新建会话时的权限设置）；宿主暂未提供按任务下发权限的接口，所选档位以派发消息中的约束指令执行。",
+			editorPermDefault: "会话默认",
+			editorPermReadOnly: "仅可查看",
+			editorPermWorkspace: "工作区内修改",
+			editorPermFull: "完全权限",
 			editorNoOptions: "暂无可选",
 			editorSchedule: "执行频率",
 			editorSchedulePeriodic: "周期",
@@ -435,18 +441,18 @@ window.__ModuleLoader__.load({
 			editorDepDisabledTag: "（已停用）",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
-			editorRetry: "重置次数",
+			editorRetry: "重试次数",
 			editorRetryOnce: "一次",
 			editorRetryTwice: "两次",
 			editorRetryThrice: "三次",
 			editorRetryFive: "五次",
-			editorRetryHint: "本次执行失败后自动重试的上限；重试后仍失败，这一轮才算失败。次数多了也没有太大意义，一到两次就够。",
+			editorRetryHint: "任务执行失败后，自动重试的次数。",
 			editorGoal: "以 dsh 内置的 /goal 开始执行任务",
 			editorGoalHint: "默认开启：执行时把任务目标作为持久目标交给 dsh 内置 /goal，会话会自动续跑多轮，直到 agent 标记目标完成，看板在该目标真正结束后才结算本次执行。关闭则只执行一轮普通对话。",
 			editorAgentTeam: "多 Agent 协作",
 			editorAgentTeamHint: "默认关闭。开启后 agent 以官方 Agent Teams（实验特性）方式执行：主会话作为队长，按需创建命名队友分工协作、共享任务板。需要宿主启用 Agent Teams 组件；未启用时自动按单 Agent 执行，并在执行记录日志留痕。",
 			editorPreview: "配置预览",
-			editorPreviewHint: "从右侧展开一个与「编辑提示词」一样大的只读面板，展示当前配置生成的任务定义 JSON（带行号与语法着色），面板内可一键复制；仅供查看，不允许修改。",
+			editorPreviewHint: "查看本任务的配置原文件。",
 			editorUnavailable: "暂不可用（待接数据面）"
 		};
 		/** English copy. */
@@ -732,8 +738,14 @@ window.__ModuleLoader__.load({
 			editorWorkspace: "Workspace",
 			editorWorkspacePh: "Choose workspace",
 			editorModel: "Model",
-			editorModelPh: "Follow host default",
-			editorFollowHost: "Follow host default",
+			editorModelPh: "Default model",
+			editorFollowHost: "Default model",
+			editorPermission: "Permissions",
+			editorPermissionHint: "Scope of actions granted to the agent for this run. Default = session default (inherited from the host’s new-session permission setting). The host has no per-task permission API yet, so the chosen level is enforced through the dispatch instruction.",
+			editorPermDefault: "Session default",
+			editorPermReadOnly: "View only",
+			editorPermWorkspace: "Edit in workspace",
+			editorPermFull: "Full access",
 			editorNoOptions: "Nothing to choose yet",
 			editorSchedule: "Schedule",
 			editorSchedulePeriodic: "Recurring",
@@ -848,13 +860,13 @@ window.__ModuleLoader__.load({
 			editorRetryTwice: "Twice",
 			editorRetryThrice: "3 times",
 			editorRetryFive: "5 times",
-			editorRetryHint: "Upper bound of automatic retries after a failed run; only when retries are exhausted does the round count as failed. More retries rarely help — one or two is enough.",
+			editorRetryHint: "How many automatic retries happen after a failed run.",
 			editorGoal: "Start the task with the dsh built-in /goal",
 			editorGoalHint: "On by default: the task objective is handed to the dsh built-in /goal as a persistent goal; the session keeps running more turns until the agent marks the goal complete, and the board settles the run only after the goal truly finishes. Off means a single ordinary round.",
 			editorAgentTeam: "Multi-agent collaboration",
 			editorAgentTeamHint: "Off by default. When on, the agent runs via the official Agent Teams (experimental): the lead session spawns named teammates that share a task board. Requires the host to enable Agent Teams; otherwise it falls back to a single agent and leaves a log entry.",
 			editorPreview: "Config preview",
-			editorPreviewHint: "Opens a read-only panel as large as the prompt editor on the right, showing the task-definition JSON generated from the current form (line numbers + syntax colors), with one-click copy inside; view only, editing is not allowed.",
+			editorPreviewHint: "View the raw config file of this task.",
 			editorUnavailable: "Unavailable (data plane pending)"
 		};
 		//#endregion
@@ -37383,6 +37395,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				validStatuses: "ok",
 				goalMode: true,
 				agentTeam: false,
+				permission: "default",
 				deps: []
 			};
 		}
@@ -37439,7 +37452,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const target = {
 				workspace: draft.workspace,
 				goal: draft.goalMode,
-				agentTeam: draft.agentTeam
+				agentTeam: draft.agentTeam,
+				permission: draft.permission
 			};
 			if (draft.model.trim() !== "") {
 				const slash = draft.model.indexOf("/");
@@ -38307,6 +38321,24 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			*/
 			const scheduleTab = draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic";
 			const showTaskStart = draft.scheduleKind === "interval" || draft.scheduleKind === "periodic" && draft.periodFreq !== "once";
+			const permissionOptions = [
+				{
+					value: "default",
+					label: t("editorPermDefault")
+				},
+				{
+					value: "readOnly",
+					label: t("editorPermReadOnly")
+				},
+				{
+					value: "workspace",
+					label: t("editorPermWorkspace")
+				},
+				{
+					value: "full",
+					label: t("editorPermFull")
+				}
+			];
 			const promptCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorPrompt")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
@@ -38332,6 +38364,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 })
+			}), (0, react.createElement)(SelectField, {
+				value: draft.permission,
+				options: permissionOptions,
+				onChange: (value) => {
+					patch({ permission: value });
+				},
+				placeholder: t("editorPermDefault"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorPermission"),
+				title: t("editorPermissionHint"),
+				width: "120px"
 			}), (0, react.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react.createElement)(SelectField, {
 				value: draft.model,
 				options: models,

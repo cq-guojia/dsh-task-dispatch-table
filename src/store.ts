@@ -5,6 +5,14 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 
+/**
+ * Agent 权限档位（决策 50）：`default` = 会话默认（沿用宿主新建会话的权限设置，不加约束）。
+ * ⚠️ 与 src/client/task-editor.tsx 的同名类型**两处各写一份**（client bundle 不引 host 模块），
+ * 改枚举务必两边同步。
+ */
+export type PermissionMode = 'default' | 'readOnly' | 'workspace' | 'full'
+export const PERMISSION_MODES: readonly PermissionMode[] = ['default', 'readOnly', 'workspace', 'full']
+
 export const TERMINAL_STATUSES = ['succeeded', 'failed', 'skipped'] as const
 const NON_TERMINAL_STATUSES = ['pending', 'dispatched', 'running', 'unknown'] as const
 export type InstanceStatus =
@@ -57,6 +65,8 @@ export interface InstanceSnapshot {
   goal?: boolean
   /** 多 Agent 协作（决策 49）：undefined 视为 false；派发时探测宿主 ctx.agentTeams，缺则降级单轮。 */
   agentTeam?: boolean
+  /** Agent 权限档位（决策 50）：undefined 视为 'default'（会话默认，不额外约束）。 */
+  permission?: PermissionMode
   /** 会话显示名（决策 42）：title 回退 code，再回退短 id。 */
   title: string
   prompt: string
@@ -120,9 +130,11 @@ export function parseInstanceSnapshot(raw: string | null): InstanceSnapshot | un
       validStatuses: s.validStatuses.filter((x): x is string => typeof x === 'string'),
       maxAttempts: typeof s.maxAttempts === 'number' && Number.isInteger(s.maxAttempts) && s.maxAttempts >= 1 ? s.maxAttempts : 1,
       window: typeof s.window === 'string' ? s.window : 'PT0S',
-      // goal / agentTeam（决策 48 / 49）：JSON 里没有 ⇒ undefined = 各自的缺省（goal 开 / team 关）。
+      // goal / agentTeam / permission（决策 48 / 49 / 50）：JSON 里没有 ⇒ undefined = 各自缺省
+      // （goal 开 / team 关 / permission 会话默认）；非法档位一律丢回缺省，不猜。
       ...(typeof s.goal === 'boolean' ? { goal: s.goal } : {}),
       ...(typeof s.agentTeam === 'boolean' ? { agentTeam: s.agentTeam } : {}),
+      ...(PERMISSION_MODES.includes(s.permission as PermissionMode) ? { permission: s.permission as PermissionMode } : {}),
       ...(resolvedDeps === undefined ? {} : { resolvedDeps }),
     }
   } catch {

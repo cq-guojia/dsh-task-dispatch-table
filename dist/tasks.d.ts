@@ -30,6 +30,12 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         prompt: z.ZodString;
         goal: z.ZodOptional<z.ZodBoolean>;
         agentTeam: z.ZodOptional<z.ZodBoolean>;
+        permission: z.ZodOptional<z.ZodEnum<{
+            default: "default";
+            readOnly: "readOnly";
+            workspace: "workspace";
+            full: "full";
+        }>>;
     }, z.core.$strip>;
     contract: z.ZodDefault<z.ZodObject<{
         validStatuses: z.ZodDefault<z.ZodArray<z.ZodString>>;

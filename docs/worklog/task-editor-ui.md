@@ -468,3 +468,14 @@ typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡�
 6. **滚动位置 bug 修复**：全屏提示词编辑 / 配置预览与表单共用 `panelInner` 三态二选一渲染 ⇒ 面板打开 = 表单卸载、关闭重挂 scrollTop 归零。修法 = `bodyRef` + `savedScrollRef`：两个打开入口先存 `.dsh-tdt-ed-body` 的 scrollTop，关闭后 effect 恢复。
 
 冒烟 +6 = **190 项全过**，typecheck/build 绿。踩坑：esbuild 把源码单引号字符串规范成双引号（`t("editorPreview")`），smoke 字符串断言改正则 `/t\(["']editorPreview["']\)/`；`snapshotOf` 在 dist/scheduler.js 不在 dispatch.js，产物断言别读错文件。
+
+## 二十二、文案收口 + Agent 权限选择器（2026-09-29，决策 50）· UI 暂时封档
+
+1. **文案收口**（用户逐条拍板）：「重置次数」是上一轮笔误，回正**重试次数**；说明改书面短句「任务执行失败后，自动重试的次数。」（删掉会让人纠结「到底是轮还是次数」的措辞和说教句）；配置预览说明简化为「查看本任务的配置原文件。」；模型下拉「跟随宿主默认」→「默认模型」。
+2. **权限选择器**：提示词卡底部顺序 = 工作区 → **权限**（紧挨工作区右侧，120px）→ 弹性空白 → 模型；四档（会话默认/仅可查看/工作区内修改/完全权限），默认「会话默认」。
+3. **宿主通道核实（先查后做）**：`AgentOptions` 只有 provider/model/reasoningEffort/maxTokens，**无权限参数**；全包 grep 无 permissionMode/acceptEdits/sandbox 枚举。故不造假开关——字段真实落库（`target.permission` → 快照 → 派发事件），执行语义 = 派发消息里的约束指令（`permissionInstruction`，工作区档注入真实绝对路径，`{{workspace}}` 占位符替换），说明文案如实写明「宿主暂未提供按任务下发权限的接口」。
+4. `PermissionMode` 类型**两处各写一份**（`src/store.ts` 与 `src/client/task-editor.tsx`）——client bundle 不引 host 模块（双轨构建），两处都写了同步提醒注释。
+
+冒烟 +6 = **196 项全过**，typecheck/build 绿。踩坑（同上一轮）：esbuild 把单引号规范成双引号（`permission: "default"`），产物断言继续用正则。
+
+**UI 暂时封档（用户 2026-09-29 拍板）**：任务表单弹窗（决策 44–50）到此封卷。下一轮新会话专攻「新增任务 / 编辑任务」功能，提纲见 [`design/creation-edit-design.md`](../design/creation-edit-design.md)。

@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+export const PERMISSION_MODES = ['default', 'readOnly', 'workspace', 'full'];
 export const TERMINAL_STATUSES = ['succeeded', 'failed', 'skipped'];
 const NON_TERMINAL_STATUSES = ['pending', 'dispatched', 'running', 'unknown'];
 /** 解析 resolvedDeps（决策 43）：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃。 */
@@ -59,9 +60,11 @@ export function parseInstanceSnapshot(raw) {
             validStatuses: s.validStatuses.filter((x) => typeof x === 'string'),
             maxAttempts: typeof s.maxAttempts === 'number' && Number.isInteger(s.maxAttempts) && s.maxAttempts >= 1 ? s.maxAttempts : 1,
             window: typeof s.window === 'string' ? s.window : 'PT0S',
-            // goal / agentTeam（决策 48 / 49）：JSON 里没有 ⇒ undefined = 各自的缺省（goal 开 / team 关）。
+            // goal / agentTeam / permission（决策 48 / 49 / 50）：JSON 里没有 ⇒ undefined = 各自缺省
+            // （goal 开 / team 关 / permission 会话默认）；非法档位一律丢回缺省，不猜。
             ...(typeof s.goal === 'boolean' ? { goal: s.goal } : {}),
             ...(typeof s.agentTeam === 'boolean' ? { agentTeam: s.agentTeam } : {}),
+            ...(PERMISSION_MODES.includes(s.permission) ? { permission: s.permission } : {}),
             ...(resolvedDeps === undefined ? {} : { resolvedDeps }),
         };
     }

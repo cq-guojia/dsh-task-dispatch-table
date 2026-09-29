@@ -666,6 +666,14 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && !clientJs.includes('dsh-tdt-ed-summary'))
   check('全屏面板（提示词编辑 / 配置预览）滚动位置保持：打开前存 scrollTop、关闭重挂后恢复',
     clientJs.includes('savedScrollRef') && clientJs.includes('savedScrollRef.current = bodyRef.current?.scrollTop ?? 0'))
+  check('文案：高级区为「重试次数」（非「重置次数」），说明只讲失败后重试几次；配置预览说明为「查看本任务的配置原文件」',
+    clientJs.includes('重试次数') && !clientJs.includes('重置次数')
+      && clientJs.includes('任务执行失败后，自动重试的次数。') && clientJs.includes('查看本任务的配置原文件'))
+  check('模型下拉默认文案为「默认模型」（不再出现「跟随宿主默认」）',
+    clientJs.includes('默认模型') && !clientJs.includes('跟随宿主默认'))
+  check('Agent 权限选择器（决策 50）：工作区右侧四档（会话默认 / 仅可查看 / 工作区内修改 / 完全权限），默认「会话默认」',
+    clientJs.includes('editorPermFull') && clientJs.includes('会话默认') && clientJs.includes('仅可查看')
+      && clientJs.includes('工作区内修改') && clientJs.includes('完全权限') && /permission: ["']default["']/.test(clientJs))
   check('多 Agent 协作开关（决策 49）：默认关 + 说明含「Agent Teams」与降级语义，配置预览 JSON 带 target.agentTeam',
     clientJs.includes('editorAgentTeam') && clientJs.includes('agentTeam: false')
       && clientJs.includes('Agent Teams') && clientJs.includes('agentTeam: draft.agentTeam'))
@@ -817,6 +825,22 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
   }))
   check('快照 round-trip：goal:false 与 agentTeam:true 不被解析丢弃（决策 48 缺陷修复）',
     snapRT?.goal === false && snapRT?.agentTeam === true)
+  // 决策 50：权限档位——默认档不发指令；三档各自注入约束，工作区档把真实路径写进去。
+  check('权限档位（决策 50）：默认档不注入权限指令', !msgNoDep.content[0].text.includes('权限：'))
+  check('权限档位（决策 50）：仅可查看 / 工作区内修改 / 完全权限各自注入约束指令，工作区档带真实路径',
+    buildMessage({ ...snapNoDeps, permission: 'readOnly' }, '/ws/down', '2026-09-29').content[0].text.includes('权限：本次仅可查看')
+      && buildMessage({ ...snapNoDeps, permission: 'workspace' }, '/ws/down', '2026-09-29').content[0].text.includes('仅可在目标工作区（/ws/down）内修改')
+      && buildMessage({ ...snapNoDeps, permission: 'full' }, '/ws/down', '2026-09-29').content[0].text.includes('完全权限'))
+  const snapPermRT = parseInstanceSnapshot(JSON.stringify({
+    title: 't', prompt: 'p', manual: null, workspacePath: '/ws', provider: '', model: '',
+    validStatuses: ['ok'], maxAttempts: 1, window: 'PT1H', permission: 'workspace',
+  }))
+  check('权限档位快照 round-trip：合法档位保留、非法档位丢弃回默认',
+    snapPermRT?.permission === 'workspace'
+      && parseInstanceSnapshot(JSON.stringify({
+        title: 't', prompt: 'p', manual: null, workspacePath: '/ws', provider: '', model: '',
+        validStatuses: ['ok'], maxAttempts: 1, window: 'PT1H', permission: 'bogus',
+      }))?.permission === undefined)
 
   depStore.close()
   rmSync(depDir, { recursive: true, force: true })

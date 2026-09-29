@@ -137,3 +137,22 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 - **多 Agent 协作**开关（默认关，见上）加入高级区，说明写明「需宿主启用 Agent Teams，未启用自动降级单 Agent」。
 - **滚动位置 bug**：全屏提示词编辑 / 配置预览共用拉栏容器二选一渲染，面板打开 = 表单整体换挂载 ⇒ 关闭重挂后 scrollTop 归零。修法 = 打开前存 `.dsh-tdt-ed-body` 的 scrollTop（`savedScrollRef`），回到表单后 effect 恢复。
 
+## 决策 50：Agent 权限档位选择器 + 文案收口（2026-09-29）
+
+**背景**：用户看过真机后要求——提示词框底部「工作区」右侧加一个**权限下拉**（照宿主新建会话的权限三档）；同时收口三处文案措辞。
+
+**权限档位（四档）**：`default` 会话默认（**初始值**） / `readOnly` 仅可查看 / `workspace` 工作区内修改 / `full` 完全权限。
+
+**宿主通道核实（源码级，先查后做）**：`AgentOptions`（`@deepseek-ai/dsh-agent@0.2.0-rc.2` `lib/types/runtime-types.d.ts:21-30`）**只有 `provider` / `model` / `reasoningEffort` / `maxTokens` 四个字段，没有任何权限参数**；`agents.create` 的其余字段（meta / setup / seed）也无权限位；官方 preset UI 包文案印证「实际可执行的操作仍由权限设置决定」——权限是**宿主新建会话 UI 的会话级设置**，不是插件可下发的参数。
+
+**因此（不造假开关）**：
+- 字段真实落库（`target.permission` → 快照 `InstanceSnapshot.permission` → 派发事件 `permission`），UI 如实可选。
+- 执行语义 = **派发消息中的约束指令**（`permissionInstruction`）：默认档不发任何指令；仅可查看档禁止写入/修改/删除与有副作用的命令；工作区内修改档限定改动范围为目标工作区（真实绝对路径注入，文案不写死路径）；完全权限档不加限制。**这是我们能真执行的语义**，不做「系统级拦截」的假承诺；宿主一旦开放 per-task 权限参数，改为随派发下发（`dispatch.ts` 已留注释与单点实现）。
+- UI 说明（`editorPermissionHint`）如实写明「宿主暂未提供按任务下发权限的接口，所选档位以派发消息中的约束指令执行」。
+
+**文案收口（用户逐条）**：
+- 「重置次数」是笔误，回正为「**重试次数**」；说明改书面短句「任务执行失败后，自动重试的次数。」（删掉「这一轮才算失败」「次数多了没意义」这类会产生歧义/说教的表述）。
+- 配置预览说明简化为「查看本任务的配置原文件。」（不再描述面板形态）。
+- 模型下拉默认文案「跟随宿主默认」→「**默认模型**」。
+
+**UI 暂时封档（用户 2026-09-29 拍板）**：任务表单弹窗这一轮（决策 44–50）到此封卷，转入「新增任务 / 编辑任务」的功能设计（见 [`design/creation-edit-design.md`](creation-edit-design.md)），下一轮新会话按该提纲推进。

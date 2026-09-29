@@ -1,3 +1,10 @@
+/**
+ * Agent 权限档位（决策 50）：`default` = 会话默认（沿用宿主新建会话的权限设置，不加约束）。
+ * ⚠️ 与 src/client/task-editor.tsx 的同名类型**两处各写一份**（client bundle 不引 host 模块），
+ * 改枚举务必两边同步。
+ */
+export type PermissionMode = 'default' | 'readOnly' | 'workspace' | 'full';
+export declare const PERMISSION_MODES: readonly PermissionMode[];
 export declare const TERMINAL_STATUSES: readonly ["succeeded", "failed", "skipped"];
 export type InstanceStatus = 'pending' | 'dispatched' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'unknown';
 export interface TaskInstance {
@@ -44,6 +51,8 @@ export interface InstanceSnapshot {
     goal?: boolean;
     /** 多 Agent 协作（决策 49）：undefined 视为 false；派发时探测宿主 ctx.agentTeams，缺则降级单轮。 */
     agentTeam?: boolean;
+    /** Agent 权限档位（决策 50）：undefined 视为 'default'（会话默认，不额外约束）。 */
+    permission?: PermissionMode;
     /** 会话显示名（决策 42）：title 回退 code，再回退短 id。 */
     title: string;
     prompt: string;

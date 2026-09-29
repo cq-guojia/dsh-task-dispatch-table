@@ -133,6 +133,14 @@ export interface EditorTaskOption {
 }
 
 /**
+ * Agent 权限档位（决策 50，用户 2026-09-29：照宿主新建会话的权限三档 + 默认档）。
+ * `default` = 会话默认（沿用宿主新建会话时的权限设置，不额外约束）。
+ * ⚠️ 与 src/tasks.ts 的同名类型**两处各写一份**：client bundle 不引 host 模块（构建双轨），
+ * 改枚举务必两边同步。
+ */
+export type PermissionMode = 'default' | 'readOnly' | 'workspace' | 'full'
+
+/**
  * 表单草稿：字段与 taskDefinitionSchema（src/tasks.ts:24-63）一一对应（`id` 不在表单里，
  * 只有高级区的 JSON 逃生口认得它）。排期在草稿里是**结构化**的（档 + 粒度 + 时刻），
  * 落到 cron / once 的映射归 P2 —— 本轮 `draftToDefinitionJson` 只做只读预览。
@@ -180,6 +188,9 @@ export interface TaskEditorDraft {
   goalMode: boolean
   /** 多 Agent 协作（决策 49，用户 2026-09-29）：默认关；派发侧缺宿主 Agent Teams 时降级单轮。 */
   agentTeam: boolean
+  /** Agent 权限档位（决策 50，用户 2026-09-29）：默认「会话默认」；宿主暂无按任务下发权限的接口，
+   *  所选档位经派发消息的约束指令执行。 */
+  permission: PermissionMode
   deps: EditorDependency[]
 }
 
@@ -226,6 +237,7 @@ export function emptyTaskDraft(): TaskEditorDraft {
     validStatuses: 'ok',
     goalMode: true,
     agentTeam: false,
+    permission: 'default',
     deps: [],
   }
 }
@@ -299,7 +311,12 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   }
   // scheduleKind === 'interval' 的 cron 映射（每隔 N 分钟/小时）归 P2，此处不产出 schedule.cron。
 
-  const target: Record<string, unknown> = { workspace: draft.workspace, goal: draft.goalMode, agentTeam: draft.agentTeam }
+  const target: Record<string, unknown> = {
+    workspace: draft.workspace,
+    goal: draft.goalMode,
+    agentTeam: draft.agentTeam,
+    permission: draft.permission,
+  }
   if (draft.model.trim() !== '') {
     // 模型下拉的 value 形如 `provider/model`，写回时拆成成对的 provider + model（决策 22）。
     const slash = draft.model.indexOf('/')
@@ -1011,6 +1028,17 @@ export function TaskEditorDrawer(props: {
   // 任务开始时间（锚点）：周期（非单次）/ 间隔都有；单次没有（单次整行就是运行时刻）。
   const showTaskStart = draft.scheduleKind === 'interval' || (draft.scheduleKind === 'periodic' && draft.periodFreq !== 'once')
 
+  // 权限档位（决策 50，用户 2026-09-29：照宿主新建会话的权限选择）——默认档 = 会话默认
+  // （沿用宿主新建会话的权限设置，我们不加约束）。宿主 0.2.0-rc.2 的 AgentOptions 只有
+  // provider / model / reasoningEffort / maxTokens，**没有按任务下发权限的参数** ⇒ 所选档位
+  // 经派发消息的约束指令执行（真实行为，非系统级拦截），说明文案已如实写明。
+  const permissionOptions: EditorOption[] = [
+    { value: 'default', label: t('editorPermDefault') },
+    { value: 'readOnly', label: t('editorPermReadOnly') },
+    { value: 'workspace', label: t('editorPermWorkspace') },
+    { value: 'full', label: t('editorPermFull') },
+  ]
+
   // ① 提示词卡（主视觉）：提示词一律手输（版本管理由插件负责，P 待做）；
   // 选文件 / 上传不再属于提示词，挪到下方独立的「附加文件」框（决策：提示词只手输）。
   const promptCard = h('div', { className: 'dsh-tdt-ed-card' },
@@ -1026,7 +1054,8 @@ export function TaskEditorDrawer(props: {
       spellCheck: false,
       onChange: (event: { target: { value: string } }) => { patch({ prompt: event.target.value }) },
     }),
-    // 底部一行：左 = 工作区（真实工作区列表，P1 接），右 = 模型（不填 = 跟随宿主默认）。
+    // 底部一行：左 = 工作区（真实工作区列表，P1 接）；工作区右侧 = 权限档位（决策 50）；
+    // 右 = 模型（不填 = 默认模型）。
     h('div', { className: 'dsh-tdt-ed-card-foot' },
       h(SelectField, {
         value: draft.workspace,
@@ -1036,6 +1065,17 @@ export function TaskEditorDrawer(props: {
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWorkspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
+      }),
+      // 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
+      h(SelectField, {
+        value: draft.permission,
+        options: permissionOptions,
+        onChange: value => { patch({ permission: value as PermissionMode }) },
+        placeholder: t('editorPermDefault'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('editorPermission'),
+        title: t('editorPermissionHint'),
+        width: '120px',
       }),
       h('span', { className: 'dsh-tdt-ed-spacer' }),
       h(SelectField, {

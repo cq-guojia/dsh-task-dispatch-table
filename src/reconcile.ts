@@ -188,6 +188,7 @@ export function createReconciler({ ctx, logger, store, options }: ReconcilerDeps
       validStatuses: contract.validStatuses.length > 0 ? [...contract.validStatuses] : ['ok'],
       goal: task.target.goal !== false,
       agentTeam: task.target.agentTeam === true,
+      permission: task.target.permission ?? 'default',
       maxAttempts: retry.maxAttempts >= 1 ? retry.maxAttempts : 1,
       window: schedule.window ?? 'PT0S',
     }

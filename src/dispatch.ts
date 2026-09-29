@@ -10,7 +10,7 @@ import type {
 } from './host.js'
 import type { PluginConfig } from './config.js'
 import { receiptInstruction, registerReceiptTool } from './receipt.js'
-import type { InstanceSnapshot, TaskStore } from './store.js'
+import type { InstanceSnapshot, PermissionMode, TaskStore } from './store.js'
 
 /**
  * 派发前置条件失败（决策 22 / 决策 23）：scheduler 按具体 reason 收敛实例，而非笼统 dispatch-error。
@@ -245,6 +245,21 @@ function dependencyLines(snapshot: InstanceSnapshot): string[] {
 }
 
 /**
+ * 权限约束指令（决策 50）：宿主 0.2.0-rc.2 的 `AgentOptions` 只有 provider / model /
+ * reasoningEffort / maxTokens，**没有按任务下发权限的参数**（权限是宿主新建会话 UI 的会话级设置），
+ * 故所选档位以派发消息中的约束指令执行——这是我们能真执行的语义，不做系统级拦截的假承诺；
+ * 宿主一旦开放 per-task 权限参数，此处改为随派发下发。默认档不加任何指令。
+ */
+function permissionInstruction(mode: PermissionMode): string | null {
+  if (mode === 'readOnly') return '权限：本次仅可查看。只读工作区内容，禁止写入、修改或删除任何文件，禁止执行会产生副作用的命令。'
+  if (mode === 'workspace') return `权限：仅可在目标工作区（${WORKSPACE_PLACEHOLDER}）内修改文件，禁止改动工作区之外的任何内容。`
+  if (mode === 'full') return '权限：完全权限，按任务需要执行（工作目录仍为目标工作区）。'
+  return null
+}
+/** 权限指令里的工作区占位符：拼装时替换成真实工作区绝对路径（文案不写死路径）。 */
+const WORKSPACE_PLACEHOLDER = '{{workspace}}'
+
+/**
  * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 + 决策 49 团队段）：
  * 短指令 prompt + 手册路径 + 上游依赖段 + 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
  * prompt / manual / validStatuses / resolvedDeps 全部来自派发快照，与任务设置无关。
@@ -267,6 +282,8 @@ export function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, 
       + '队友与你在同一工作区工作。所有工作收束后由你统一汇总，并按下方要求交回执行结果。',
     )
   }
+  const permissionLine = permissionInstruction(snapshot.permission ?? 'default')
+  if (permissionLine !== null) lines.push(permissionLine.replace(WORKSPACE_PLACEHOLDER, workspacePath))
   lines.push(receiptInstruction(snapshot.validStatuses))
   return userNotice(lines.join('\n'), `[TASK] ${snapshot.title} · ${logicalDate}`)
 }
@@ -408,6 +425,7 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     ...(composition === undefined ? {} : { agentPreset: composition.presetId }),
     goal: snapshot.goal !== false,
     agentTeam: snapshot.agentTeam === true,
+    permission: snapshot.permission ?? 'default',
     teamMode,
   })
 

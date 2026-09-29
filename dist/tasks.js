@@ -46,6 +46,9 @@ export const taskDefinitionSchema = z.object({
         goal: z.boolean().optional(),
         /** 多 Agent 协作（决策 49）：缺省 false；开启时派发消息注入官方 Agent Teams 执行指令（缺宿主组件降级单轮）。 */
         agentTeam: z.boolean().optional(),
+        /** Agent 权限档位（决策 50）：缺省 'default' = 会话默认。宿主 0.2.0-rc.2 无按任务下发权限的
+         *  参数（AgentOptions 只有 provider/model/reasoningEffort/maxTokens）⇒ 经派发消息约束指令执行。 */
+        permission: z.enum(['default', 'readOnly', 'workspace', 'full']).optional(),
     }),
     // 回执机制（决策 19）：不再有契约文件与 path——agent 经 submit.mjs 直写状态库，
     // 这里只保留 status 合法值清单。
