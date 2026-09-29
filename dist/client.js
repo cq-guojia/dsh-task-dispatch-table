@@ -37411,17 +37411,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			"&": {
 				backgroundColor: "var(--dsw-alias-bg-base, #22252a)",
 				color: C$2.text,
-				height: "100%"
+				height: "100%",
+				width: "100%"
 			},
 			".cm-editor": {
 				height: "100%",
+				width: "100%",
 				backgroundColor: "var(--dsw-alias-bg-base, #22252a)"
 			},
 			".cm-scroller": {
 				fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
 				fontSize: "13px",
-				lineHeight: "1.6"
+				lineHeight: "1.6",
+				overflowX: "hidden"
 			},
+			".cm-content": { width: "100%" },
+			".cm-line": { padding: "0 4px" },
 			".cm-gutters": {
 				backgroundColor: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))",
 				color: C$2.textDim,
@@ -37571,6 +37576,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		function PromptEditorModal(props) {
 			const { t, mode: editorMode, value, versions, onChange, onClose } = props;
+			const cmExtensions = (0, react.useMemo)(() => [markdown(), EditorView.lineWrapping], []);
 			const [mode, setMode] = (0, react.useState)("edit");
 			const [showVersions, setShowVersions] = (0, react.useState)(false);
 			const [localVersions, setLocalVersions] = (0, react.useState)(() => versions.length > 0 ? versions : editorMode === "edit" ? DEMO_VERSIONS : []);
@@ -37643,7 +37649,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (next) => {
 					onChange(next);
 				},
-				extensions: [markdown()],
+				extensions: cmExtensions,
 				theme: promptEditorTheme,
 				height: "100%",
 				basicSetup: {

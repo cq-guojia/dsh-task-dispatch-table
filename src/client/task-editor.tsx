@@ -562,9 +562,12 @@ function stableStringify(value: unknown): string {
 // CodeMirror 主题：背景 / 文字 / 行号全部走宿主 --dsw-alias-* token，明暗自适应；
 // 编辑器本身只负责「带语法高亮的纯文本」（gzip ~60KB，且仅在全屏编辑时才加载）。
 const promptEditorTheme = EditorView.theme({
-  '&': { backgroundColor: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, height: '100%' },
-  '.cm-editor': { height: '100%', backgroundColor: 'var(--dsw-alias-bg-base, #22252a)' },
-  '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '13px', lineHeight: '1.6' },
+  '&': { backgroundColor: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, height: '100%', width: '100%' },
+  '.cm-editor': { height: '100%', width: '100%', backgroundColor: 'var(--dsw-alias-bg-base, #22252a)' },
+  // 软折行：长行自动换行，不出现横向滚动条（编辑器随列宽收缩也跟着重折）。
+  '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '13px', lineHeight: '1.6', overflowX: 'hidden' },
+  '.cm-content': { width: '100%' },
+  '.cm-line': { padding: '0 4px' },
   '.cm-gutters': { backgroundColor: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))', color: C.textDim, border: 'none' },
   '.cm-activeLine': { backgroundColor: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))' },
   '.cm-activeLineGutter': { backgroundColor: 'transparent', color: C.text },
@@ -648,6 +651,8 @@ function PromptEditorModal(props: {
   onClose: () => void
 }): ReactNode {
   const { t, mode: editorMode, value, versions, onChange, onClose } = props
+  // 编辑器扩展固定引用：markdown 高亮 + 软折行（长行自动换行，宽度失控/横向滚动的根源在此）。
+  const cmExtensions = useMemo(() => [markdown(), EditorView.lineWrapping], [])
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [showVersions, setShowVersions] = useState(false)
   // 本地版本表（DEMO：真实版本为空且处于编辑态时，塞 4 个模拟版本用于看样式；真实接入后由 props.versions 驱动）。
@@ -690,7 +695,7 @@ function PromptEditorModal(props: {
             h(CodeMirror, {
               value,
               onChange: (next: string) => { onChange(next) },
-              extensions: [markdown()],
+              extensions: cmExtensions,
               theme: promptEditorTheme,
               height: '100%',
               basicSetup: { lineNumbers: true, foldGutter: false, highlightActiveLine: true, autocompletion: false, searchKeymap: false },
