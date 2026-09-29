@@ -26,7 +26,7 @@
 | `retry.maxAttempts` | int? | 默认 1；重试耗尽 → `failed`，下游跳过 | 决策 10 |
 | `depends_on` | object[]? | `{ task, semantics }`，**由下游声明**；`semantics` = `same_period`（同 logical date）/ `latest_success`（上游最近一条必须 succeeded）。⚠️ `freshness` 字段已于**决策 33 删除** | 决策 8/9/33 |
 | `attachments` | object[]? | **附加文件清单**（只记引用，不存内容）：`{ id, name, kind, ref, workspace? }`。`kind='link'` = 工作区已有文件（只记路径、不复制，`workspace` = 来源工作区 title，派发注入时按它把 `ref` 绝对化）；`kind='upload'` = 已上传到插件数据目录的文件，**`ref` = 相对该任务目录的路径**（`attachments/<原始文件名>`，迁移见 §五.3）。同源文件见 §五 | 2026-09-30 |
-| `schedule.ui` | object? | **结构化排期（编辑态反解用）**：`{ scheduleKind, periodFreq, weekdays[], monthDay, monthMode, quarterMonth, yearMonth, intervalUnit, intervalStep, weekStep }`，与 `cron` / `once` / `start` / `everyNWeeks` **并存**。**执行只读 `cron`/`once`（唯一排期真源），表单反解只读 `schedule.ui`**；两者不一致（用户手改过 cron）⇒ 表单进「自定义 cron」只读态并提示，`schedule.ui` 不回写。⚠️ 待拍（见 §五.4） | 2026-09-30 |
+| `schedule.ui` | object? | **结构化排期（编辑态反解用）**：`{ scheduleKind, periodFreq, weekdays[], monthDay, monthMode, quarterMonth, yearMonth, intervalUnit, intervalStep, weekStep }`，与 `cron` / `once` / `start` / `everyNWeeks` **并存**。**执行只读 `cron`/`once`（唯一排期真源），表单反解只读 `schedule.ui`**；两者不一致（用户手改过 cron）⇒ 表单进「自定义 cron」只读态并提示，`schedule.ui` 不回写。✅ 已定双写（见 §5.4） | 2026-09-30 |
 
 **回执机制（决策 19 + 决策 24 改通道）**：agent 跑完调用插件注册的工具 `task_dispatch_table_receipt({ status, outputs?, note? })` 提交回执——该工具由插件在派发时经 `agentCtx.tools.register` 注册，**只对该任务会话可见**，`execute` 在**插件进程内**直写状态库 `task_events`（`kind='receipt'`，detail 形状 `{ status, outputs, note, session_id }`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + `outputs` 逐一在目标工作区存在且 mtime 晚于本次派发（防旧产物冒充）。只记录不裁决，实例状态仍只由调度器写（决策 11）；重复提交无害（对账取最新）。⚠️ **为什么不再用命令行**：agent 的 bash 在 Landlock 沙箱 `workspace-write` 模式下**只能写工作区**，写不了宿主数据根下的 `state.db`（决策 24 真机证据）；`submit.js` 保留为手动 / 排查备用通道。
 
@@ -249,12 +249,36 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 | 对象 | 落在 | 策略 |
 |---|---|---|
 | `task_log` | SQLite | `logRetentionDays`（默认 **30 天**），tick 内跨天清（既有） |
-| `task_instances` + `task_events` | SQLite | **新增** `historyRetentionDays`（默认 **90 天**）：按 `updated_at` / `ts` 删，**删实例行时连带删它的 events**（按 `instance_id`）。⚠️ **例外：每个任务的「最近一条终态记录（succeeded / failed）永不删」** ——否则月 / 季 / 年任务的历史被清干净后，下游 `latest_success` 永远查不到 ⇒ **静默阻塞**（评审项 P1） |
-| 上传临时区 | 文件系统 | **3 天**，tick 内跨天清（跨天才干活：一个「上次清理日期」内存变量 + 一次删除，无持续负载） |
+| `task_instances` + `task_events` | SQLite | **默认不清**（`historyRetentionDays = 0` = 不清；用户设了天数才清）。清理时按 `updated_at` / `ts` 删、**删实例行连带删它的 events**，且**每任务最近一条终态记录永不删**（否则 `latest_success` 判定静默阻塞，评审 P1）。⚠️ 删行不会让 SQLite 文件变小，要回收磁盘还得 `VACUUM`——这也是「干脆不清」的一条理由 |
+| 上传临时区 | 文件系统 | **7 天**（D1 已拍），tick 内跨天清（一个「上次清理日期」内存变量 + 一次删除，无持续负载） |
 | 提示词版本 / 配置快照 | 文件系统 | **不自动删**；用户在版本面板自己删（配置快照的管理入口本轮不做） |
 | 任务目录 | 文件系统 | 删除任务时**整目录删**（附件 + 版本 + 快照）；删除按钮 + 二次确认待做 |
 
-**插件配置新增两项**：`historyRetentionDays: number`（默认 90）、`attachmentTmpRetentionDays: number`（默认 3）。
+### 6.1 容量：为什么执行记录可以不清（2026-09-30 复核）
+
+用户质疑「90 天」⇒ 复核后**推翻原设计**：执行记录**默认不清**。理由不是「SQLite 撑不住」，恰恰相反——**数据量根本不是约束**。
+
+**单实例的数据量**（实测代码口径，非估算上限）：
+
+| 项 | 量级 |
+|---|---|
+| `task_instances` 一行 | 固定字段 ~400 B + `snapshot` JSON（含 prompt / manual / resolvedDeps，**提示词越长越大**）≈ **1.5–4 KB** |
+| `task_events` 每实例 | **约 8–15 条**（dispatch 1 + state_change 3~5 + receipt 1 + receipt_check 1~2 + session_event 信号 1~3 + nudge 0~3）。`session_event` **只在信号时记**（turn/end、lease-expired），不是每个 token 一条 ⇒ 单实例事件合计 ≈ **2–4 KB** |
+| 合计 | **≈ 5–8 KB / 实例** |
+
+**按此推算**：
+
+| 每天实例数 | 1 年行数（实例+事件） | 2 年累计体积（估） |
+|---|---|---|
+| 10 | ~15 万 | **~50 MB** |
+| 100 | ~150 万 | **~0.5 GB** |
+| 1000（极端：每 1.4 分钟一个实例） | ~1500 万 | **~5 GB** |
+
+**SQLite 承受力**（官方 `sqlite.org/limits.html`）：单库上限 **281 TB**、单表行数上限 **2^64**；百万行表带索引的按 `instance_id` / `task_id` 查询是毫秒级。**十万、百万行完全不在话下**——所以「怕撑不住而清理」这个前提不成立。
+
+> 结论：**历史查询的价值（年任务想看去年跑了什么）远大于几百 MB 的磁盘成本** ⇒ 执行记录默认不清；真需要控制体积时由用户自己设 `historyRetentionDays`（此时 P1 的保护规则生效）。
+
+**插件配置新增两项**：`historyRetentionDays: number`（**默认 0 = 不清**；>0 才按天清）、`attachmentTmpRetentionDays: number`（默认 **7**）。
 
 **`task_log` 的 kind 扩充**（kind 是文本列，不动 DDL）：
 
@@ -275,18 +299,19 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 |---|---|---|---|
 | P1 | **清理执行记录会打断依赖判定** | 上游（月 / 季 / 年任务）历史被清干净 ⇒ 下游 `latest_success` 永远查不到 ⇒ 静默阻塞，日志只显示 `dep_blocked`，排查不出原因 | ✅ **已修**：清理时**保护每个任务最近一条终态记录**（§六） |
 | P2 | **间隔档不产出 cron** | 用户选「每隔 N 分钟 / 小时」保存后，JSON 里没有 cron ⇒ 任务**永不执行** | ✅ **已写入设计**（§5.4 C1），落码列为 **P0 必修** |
-| P3 | **临时区清理 vs 未保存草稿** | 上传后超过 3 天没保存 ⇒ 文件被清 ⇒ 定义里 `ref` 悬空 ⇒ 执行期才报错 | ✅ **已修**：保存时若临时文件已不在 ⇒ 照常保存 + UI 明示「以下附件已失效，需重新上传」（§5.2）。⏳ **待拍**：保留期是否从 3 天放宽到 7 天 |
+| P3 | **临时区清理 vs 未保存草稿** | 上传后超过 3 天没保存 ⇒ 文件被清 ⇒ 定义里 `ref` 悬空 ⇒ 执行期才报错 | ✅ **已修**：保存时若临时文件已不在 ⇒ 照常保存 + UI 明示「以下附件已失效，需重新上传」（§5.2）；临时区保留期 **已拍 7 天**（D1） |
 | P4 | **删除任务 ⇒ 依赖悬空** | 下游的 `depends_on` 指向已删任务 ⇒ 永远阻塞，且与「上游还没成功」「上游停用」混为一谈 | ✅ **已修**：新增日志 kind **`dep_missing`**（上游任务已不存在），与 `dep_disabled` 并列；删除确认框明示「有 N 个任务以它为前置」 |
 | P5 | **临时区平铺 + 保留原始名** | 两个任务上传同名文件 ⇒ 后传覆盖先传，附件张冠李戴 | ✅ **已修**：临时区内**随机尾缀唯一命名**，搬进任务目录时**恢复原始名**（§5.2 第 6 步） |
 | P6 | **删除任务后实例 / 事件变孤儿** | 执行记录页出现无主行 | ✅ **已定**：定义与任务目录**物理删**；实例 / 事件**保留**（审计证据）；面板按 `taskMap` 展示，无主行不显示 |
 | P7 | **整批覆盖保存的并发覆盖** | 两端同时改不同任务 ⇒ 后写覆盖先写 | ⚠️ **已知取舍，不做乐观锁**（单用户、规模小） |
-| P8 | **附件总量无上限** | 磁盘可无限涨 | ⏳ **待拍**：是否加单任务总量上限（建议先不做，用户自己管；单文件 20MB 上限不变） |
+| P8 | **附件总量无上限** | 磁盘可无限涨 | ✅ **已拍不做**（D2）：用户自己的系统自己管，插件不替用户设限；单文件 20MB 上限不变 |
 
 **评审没发现问题的地方**（记录结论，免得下次重复审）：cron 的 DOM/DOW 未同时指定（无 OR 语义陷阱）；时区单一口径（跟随宿主）；身份不随改名 / 回滚漂移（UUID 恒定）；同名附件跨任务不冲突（各任务独立目录）；upload 型附件互不共享（各存一份）⇒ 删一个不影响另一个。
 
-### 待拍（就两条）
+### 待拍（2026-09-30 已全部拍定）
 
-| # | 问题 | 我的倾向 |
+| # | 问题 | 结论 |
 |---|---|---|
-| D1 | 临时区保留期 **3 天** vs **7 天** | 7 天（3 天对「今天传、周末再来保存」的工作节奏太紧；失效提示已兜底，延长代价很小） |
-| D2 | 单任务附件总量上限 | **先不做**（用户自己管；单文件 20MB 上限不变） |
+| D1 | 临时区保留期 | **7 天** |
+| D2 | 单任务附件总量上限 | **不做**——用户自己的系统自己管，插件不替用户设限；单文件 20MB 上限不变 |
+| D3 | 执行记录保留期 | **默认不清**（`historyRetentionDays = 0`），见 §6.1；此前设计的「90 天」**已推翻**——数据量不是约束，历史查询才是刚需 |
