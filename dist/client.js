@@ -4443,6 +4443,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [copied, setCopied] = (0, react.useState)(false);
 			const [openDirs, setOpenDirs] = (0, react.useState)(/* @__PURE__ */ new Set());
 			const [childCache, setChildCache] = (0, react.useState)({});
+			const [, setRootNonce] = (0, react.useState)(0);
 			const startMarquee = () => {
 				const outer = titleRef.current;
 				const inner = titleInnerRef.current;
@@ -4519,6 +4520,29 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setMenuOpen(false);
 				setOpenDirs(/* @__PURE__ */ new Set());
 				setChildCache({});
+				const ensureRootLearned = (currentDir) => {
+					if (workspaceRoots.get(sessionId) !== void 0) return;
+					(async () => {
+						try {
+							const parsed = listingOf(await listDir(workspaceFiles, sessionId, currentDir));
+							if (!alive || isFailed(parsed) || parsed === null) return;
+							const stat = workspaceFiles.stat;
+							if (stat === void 0) return;
+							const rel = parsed.path;
+							const file = parsed.entries.find((entry) => entry.type === "file");
+							if (file !== void 0) {
+								const sub = relJoin(rel, file.name);
+								const abs = absolutePathOf(await stat(sessionId, sub));
+								if (abs !== null && learnRoot(sessionId, sub, abs) !== null) {
+									setRootNonce((n) => n + 1);
+									return;
+								}
+							}
+							const found = await findAnyFileAbs(workspaceFiles, sessionId, rel);
+							if (found !== null && learnRoot(sessionId, found.relativePath, found.absolutePath) !== null) setRootNonce((n) => n + 1);
+						} catch {}
+					})();
+				};
 				listDir(workspaceFiles, sessionId, path).then(async (result) => {
 					if (!alive) return;
 					const parsed = listingOf(result);
@@ -4529,6 +4553,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						setListing(parsed.entries);
 						setTruncated(parsed.truncated);
 						setMode("dir");
+						ensureRootLearned(absDir);
 						return;
 					}
 					let parent = dirnameOf(path);
@@ -4546,6 +4571,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setDir(parent);
 					setViewing(path);
 					setMode("file");
+					ensureRootLearned(parent);
 					listDir(workspaceFiles, sessionId, parent).then((pres) => {
 						if (!alive) return;
 						const pl = listingOf(pres);
@@ -4560,6 +4586,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setDir(parent);
 					setViewing(path);
 					setMode("file");
+					ensureRootLearned(parent);
 				});
 				return () => {
 					alive = false;

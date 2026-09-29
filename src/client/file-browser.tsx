@@ -294,6 +294,8 @@ export function FileBrowser(props: {
   // 内联展开：openDirs = 已展开目录路径集合；childCache = 各展开目录拉到的子项（loading/ready/error）。
   const [openDirs, setOpenDirs] = useState<ReadonlySet<string>>(new Set())
   const [childCache, setChildCache] = useState<Record<string, ChildData>>({})
+  // 工作区根补学完成信号（workspaceRoots 是模块级 Map 非响应式，学成后 bump 触发面包屑重算）。
+  const [, setRootNonce] = useState(0)
 
   const startMarquee = (): void => {
     const outer = titleRef.current
@@ -366,6 +368,30 @@ export function FileBrowser(props: {
     setMenuOpen(false)
     setOpenDirs(new Set())
     setChildCache({})
+    // 补学工作区根（面包屑根名显示用）：绝对路径入口此前会跳过学习（absolutizeDir / 文件 stat
+    // 都对 isAbsoluteish 提前返回）⇒ dock 面包屑退化成宿主绝对层级（真机 2026-09-29 实测）。
+    // 列当前目录拿**规范相对路径**（list 响应恒为工作区相对）→ 目录内有文件就 stat 它反推根，
+    // 没有就走有界 BFS；学成 setRootNonce 触发重渲染。选择器不依赖它（rootName 直传）。
+    const ensureRootLearned = (currentDir: string): void => {
+      if (workspaceRoots.get(sessionId) !== undefined) return
+      void (async () => {
+        try {
+          const parsed = listingOf(await listDir(workspaceFiles, sessionId, currentDir))
+          if (!alive || isFailed(parsed) || parsed === null) return
+          const stat = workspaceFiles.stat
+          if (stat === undefined) return
+          const rel = parsed.path
+          const file = parsed.entries.find(entry => entry.type === 'file')
+          if (file !== undefined) {
+            const sub = relJoin(rel, file.name)
+            const abs = absolutePathOf(await stat(sessionId, sub))
+            if (abs !== null && learnRoot(sessionId, sub, abs) !== null) { setRootNonce(n => n + 1); return }
+          }
+          const found = await findAnyFileAbs(workspaceFiles, sessionId, rel)
+          if (found !== null && learnRoot(sessionId, found.relativePath, found.absolutePath) !== null) setRootNonce(n => n + 1)
+        } catch { /* 学不出就维持退化显示 */ }
+      })()
+    }
     listDir(workspaceFiles, sessionId, path)
       .then(async (result) => {
         if (!alive) return
@@ -382,6 +408,7 @@ export function FileBrowser(props: {
           setListing(parsed.entries)
           setTruncated(parsed.truncated)
           setMode('dir')
+          ensureRootLearned(absDir)
           return
         }
         // 不是目录（not-directory / not-found 等）⇒ 当作文件预览，dir 取父目录，尽量把父树也列出来。
@@ -404,6 +431,7 @@ export function FileBrowser(props: {
         setDir(parent)
         setViewing(path)
         setMode('file')
+        ensureRootLearned(parent)
         listDir(workspaceFiles, sessionId, parent)
           .then((pres) => {
             if (!alive) return
@@ -422,6 +450,7 @@ export function FileBrowser(props: {
         setDir(parent)
         setViewing(path)
         setMode('file')
+        ensureRootLearned(parent)
       })
     return () => { alive = false }
   }, [workspaceFiles, sessionId, path])
