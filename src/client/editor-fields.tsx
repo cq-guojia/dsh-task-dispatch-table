@@ -127,15 +127,9 @@ export function SelectField(props: {
    * 用户 2026-09-29：排期卡头部那个频率下拉比右边三档高，一切换就整页跳。
    */
   size?: 'md' | 'sm'
-  /** 展开信号：编号一变即自动展开下拉（用于「未选工作区点选择文件」时引导用户去哪选）。 */
-  openSignal?: number
 }): ReactElement {
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
-  useEffect(() => {
-    if (props.openSignal !== undefined && props.openSignal > 0) setOpen(true)
-    // 只响应编号变化，不响应首次挂载（0 不展开）。
-  }, [props.openSignal])
   const compact = props.size === 'sm'
   const iconSize = compact ? 14 : 16
   const usable = props.options.length > 0 && props.disabled !== true

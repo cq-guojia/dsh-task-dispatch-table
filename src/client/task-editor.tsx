@@ -27,7 +27,6 @@ import {
   IconQuestionOutlineRegular,
   MarkdownText,
   Switch,
-  Toast,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
@@ -72,6 +71,11 @@ export interface Attachment {
   kind: 'link' | 'upload'
   /** link：工作区路径；upload：插件数据目录下的文件名。 */
   ref: string
+  /**
+   * link：来源工作区 title（选择器现可浏览任意有历史会话的工作区，同一路径在不同工作区
+   * 指向不同文件 ⇒ 必须带上来源，P2 派发注入时按它把 ref 绝对化）。upload 无此字段。
+   */
+  workspace?: string
 }
 
 /** 提示词版本（2026-09-29）：每次保存快照，文件系统方案落库（P3 决策）。 */
@@ -797,16 +801,9 @@ export function TaskEditorDrawer(props: {
   // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
   const [pickerOpen, setPickerOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
-  // 官方 Toast（顶部居中横幅）：text + 自增 seq 作 key（官方要求按次重挂才会重播）。
-  const [toast, setToast] = useState<{ text: string; seq: number } | null>(null)
-  const toastSeq = useRef(0)
-  const showToast = useCallback((text: string): void => {
-    toastSeq.current += 1
-    setToast({ text, seq: toastSeq.current })
-  }, [])
-  // 未选工作区点「选择工作区文件」⇒ 除了 Toast 提示，还把提示词左下角的工作区下拉**自动展开**，
-  // 让用户看见在哪选（用户 2026-09-29：光提示不知道去哪选）。
-  const [workspaceOpenSignal, setWorkspaceOpenSignal] = useState(0)
+  // 选择器可浏览任意有历史会话的工作区（用户 2026-09-29 放开「必须先选任务工作区」）：
+  // pickerWs = 当前浏览的工作区 title，打开时默认任务已选工作区（没有就取第一个有锚点的）。
+  const [pickerWs, setPickerWs] = useState('')
   // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
   const [uploadError, setUploadError] = useState<string | null>(null)
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
@@ -942,7 +939,6 @@ export function TaskEditorDrawer(props: {
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWorkspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
-        openSignal: workspaceOpenSignal,
       }),
       h('span', { className: 'dsh-tdt-ed-spacer' }),
       h(SelectField, {
@@ -1007,23 +1003,6 @@ export function TaskEditorDrawer(props: {
   const attachmentsCard = h('div', { className: 'dsh-tdt-ed-card' },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorAttachments')),
-      // 右上两个小按钮（用户 2026-09-29 拍板的布局）；「上传文件」= 直接弹本地选择框。
-      // 「选择工作区文件」前置条件 = 已选任务工作区（未选 ⇒ 官方 Toast 提示，不开选择器）。
-      h('div', { style: { display: 'flex', gap: '8px' } },
-        h(Button, {
-          variant: 'outline',
-          size: 'sm',
-          onClick: () => {
-            if (draft.workspace === '') {
-              showToast(t('editorPickNeedWorkspace'))
-              setWorkspaceOpenSignal(n => n + 1)
-              return
-            }
-            setPickerOpen(true)
-          },
-        }, t('editorPickWorkspaceFile')),
-        h(Button, { variant: 'outline', size: 'sm', onClick: () => { if (!uploading) fileInputRef.current?.click() } }, t('editorUploadFile')),
-      ),
     ),
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
     draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
@@ -1035,18 +1014,34 @@ export function TaskEditorDrawer(props: {
             h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove') }, t('editorAttachmentRemove')),
           )),
         ),
-    // 投放区常驻（用户 2026-09-29：不经按钮开合）；隐藏 input 挂卡片层、始终在册。
-    h('div', {
-      style: { border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '16px 12px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer', background: C.layer1 },
-      onClick: () => { if (!uploading) fileInputRef.current?.click() },
-      onDragOver: (event: { preventDefault(): void }) => { event.preventDefault() },
-      onDrop: (event: { preventDefault(): void; dataTransfer?: { files?: FileList } }) => {
-        event.preventDefault()
-        if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
+    // 一行两块（用户 2026-09-29）：左边大块 = 点击/拖拽上传；右边 = 小号「选择工作区文件」按钮。
+    // 隐藏 input 挂卡片层、始终在册。
+    h('div', { style: { display: 'flex', gap: '10px', alignItems: 'stretch' } },
+      h('div', {
+        style: { flex: '1 1 auto', border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '16px 12px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer', background: C.layer1 },
+        onClick: () => { if (!uploading) fileInputRef.current?.click() },
+        onDragOver: (event: { preventDefault(): void }) => { event.preventDefault() },
+        onDrop: (event: { preventDefault(): void; dataTransfer?: { files?: FileList } }) => {
+          event.preventDefault()
+          if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
+        },
       },
-    },
-      h('div', { style: { fontSize: '13px', color: C.text } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
-      uploading ? null : h('div', { style: { fontSize: '11px', color: C.textDim, marginTop: '4px' } }, t('editorDropZoneFormats')),
+        h('div', { style: { fontSize: '13px', color: C.text } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
+        uploading ? null : h('div', { style: { fontSize: '11px', color: C.textDim, marginTop: '4px' } }, t('editorDropZoneFormats')),
+      ),
+      h('div', { style: { flex: 'none', display: 'flex', alignItems: 'center' } },
+        h(Button, {
+          variant: 'outline',
+          size: 'sm',
+          onClick: () => {
+            // 默认浏览任务已选工作区；没选就取第一个有锚点（有历史会话）的工作区。
+            const anchored = workspaces.filter(w => (workspaceAnchors ?? {})[w.value] !== undefined)
+            const fallback = anchored.length > 0 ? anchored[0].value : ''
+            setPickerWs((workspaceAnchors ?? {})[draft.workspace] !== undefined ? draft.workspace : fallback)
+            setPickerOpen(true)
+          },
+        }, t('editorPickWorkspaceFile')),
+      ),
     ),
     h('input', {
       ref: fileInputRef,
@@ -1386,19 +1381,33 @@ export function TaskEditorDrawer(props: {
       panelInner,
     ),
     // 选择工作区文件：覆盖层（盖在表单/编辑器之上、随抽屉一起在宿主之上）；复用 FileBrowser 的目录树，
-    // picker 模式下点文件即回调、不进预览。浏览范围 = **已选工作区**：锚点会话来自 /options 下发的
-    // 该工作区最近会话（官方 entity.sessionIds 末位）；无锚点（该工作区没跑过会话）⇒ 明确空态。
+    // picker 模式下点文件即回调、不进预览。**可浏览任意工作区**（用户 2026-09-29 放开）：
+    // 每个工作区用自己最近的会话当锚点（/options 逐工作区下发 anchorSessionId，官方 entity.sessionIds 末位）；
+    // 切工作区按 `${ws}:${anchor}` 重挂 FileBrowser（浏览状态归零）。无锚点的工作区列不出来 ⇒ 空态。
     pickerOpen
       ? h('div', { style: { position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' } },
         h('div', { style: { width: 'min(720px, 100%)', height: '72vh', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsh-radius-panel, 10px)', boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
-          h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
-            h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPickWorkspaceFile')),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
+            h('span', { style: { fontSize: '14px', fontWeight: 600, flex: 'none' } }, t('editorPickWorkspaceFile')),
+            h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
+              h(SelectField, {
+                value: pickerWs,
+                options: workspaces.filter(w => (workspaceAnchors ?? {})[w.value] !== undefined),
+                onChange: value => { setPickerWs(value) },
+                placeholder: t('editorWorkspacePh'),
+                emptyLabel: t('editorNoOptions'),
+                ariaLabel: t('editorWorkspace'),
+                icon: h(IconFolderOpenOutlineRegular, { size: 14 }),
+                size: 'sm',
+              }),
+            ),
             h(Button, { variant: 'outline', size: 'sm', onClick: () => { setPickerOpen(false) } }, t('editorPickerCancel')),
           ),
           (() => {
-            const anchorSessionId = (workspaceAnchors ?? {})[draft.workspace] ?? ''
+            const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? ''
             return workspaceFiles !== null && workspaceFiles !== undefined && anchorSessionId !== ''
               ? h(FileBrowser, {
+                key: `${pickerWs}:${anchorSessionId}`,
                 workspaceFiles,
                 sessionId: anchorSessionId,
                 path: '',
@@ -1407,7 +1416,7 @@ export function TaskEditorDrawer(props: {
                 picker: true,
                 onPick: (p: string) => {
                   const name = p.slice(Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1)
-                  addAttachment({ id: makeId(), name, kind: 'link', ref: p })
+                  addAttachment({ id: makeId(), name, kind: 'link', ref: p, workspace: pickerWs })
                   setPickerOpen(false)
                 },
                 style: { flex: '1 1 auto', minHeight: 0 },
@@ -1417,13 +1426,6 @@ export function TaskEditorDrawer(props: {
         ),
       )
       : null,
-    // 官方 Toast 挂载点（body 传送门，与抽屉层级无冲突）。
-    toast === null ? null : h(Toast, {
-      key: toast.seq,
-      text: toast.text,
-      holdMs: 3200,
-      onDone: () => { setToast(null) },
-    }),
     // 关闭确认（拉栏内联层，盖在表单/编辑器之上、且随抽屉一起在宿主之上）：改过才出现；
     // 点遮罩/离开 ⇒ 真正关抽屉，继续编辑 ⇒ 留在原处。
     confirmDiscard

@@ -362,7 +362,6 @@ window.__ModuleLoader__.load({
 			editorAttachmentRemove: "删除",
 			editorAttachmentAdd: "添加文件",
 			editorAttachmentAddHint: "上传 / 选择文件稍后开放",
-			editorPickNeedWorkspace: "请选择任务执行的工作区后，再选择工作区文件。",
 			editorPickWorkspaceFile: "选择工作区文件",
 			editorUploadFile: "上传文件",
 			editorDropZoneHint: "点击或拖拽文件到此处上传，支持多选或单个文件",
@@ -769,7 +768,6 @@ window.__ModuleLoader__.load({
 			editorUploadErrSize: "File exceeds the size limit (20MB max each)",
 			editorUploadErrEmpty: "File is empty",
 			editorUploadErrGeneric: "Upload failed, please retry",
-			editorPickNeedWorkspace: "Pick a workspace for this task first, then choose workspace files.",
 			editorPickerNoSession: "This workspace has no past sessions yet, so its files cannot be browsed — use “Upload file” instead.",
 			editorPickerPick: "Pick this file",
 			editorPickerCancel: "Cancel",
@@ -4931,9 +4929,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function SelectField(props) {
 			const [open, setOpen] = (0, react.useState)(false);
 			const [hover, setHover] = (0, react.useState)(false);
-			(0, react.useEffect)(() => {
-				if (props.openSignal !== void 0 && props.openSignal > 0) setOpen(true);
-			}, [props.openSignal]);
 			const compact = props.size === "sm";
 			const iconSize = compact ? 14 : 16;
 			const usable = props.options.length > 0 && props.disabled !== true;
@@ -37893,16 +37888,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
-			const [toast, setToast] = (0, react.useState)(null);
-			const toastSeq = (0, react.useRef)(0);
-			const showToast = (0, react.useCallback)((text) => {
-				toastSeq.current += 1;
-				setToast({
-					text,
-					seq: toastSeq.current
-				});
-			}, []);
-			const [workspaceOpenSignal, setWorkspaceOpenSignal] = (0, react.useState)(0);
+			const [pickerWs, setPickerWs] = (0, react.useState)("");
 			const [uploadError, setUploadError] = (0, react.useState)(null);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
@@ -38063,8 +38049,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorWorkspacePh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
-				openSignal: workspaceOpenSignal
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 })
 			}), (0, react.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react.createElement)(SelectField, {
 				value: draft.model,
 				options: models,
@@ -38126,27 +38111,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] });
 				if (lastErr !== null) setUploadError(lastErr);
 			};
-			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorAttachments")), (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "8px"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				onClick: () => {
-					if (draft.workspace === "") {
-						showToast(t("editorPickNeedWorkspace"));
-						setWorkspaceOpenSignal((n) => n + 1);
-						return;
-					}
-					setPickerOpen(true);
-				}
-			}, t("editorPickWorkspaceFile")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				onClick: () => {
-					if (!uploading) fileInputRef.current?.click();
-				}
-			}, t("editorUploadFile")))), draft.attachments.length === 0 ? null : (0, react.createElement)("div", { style: {
+			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorAttachments"))), draft.attachments.length === 0 ? null : (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px",
@@ -38193,8 +38158,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				title: t("editorAttachmentRemove"),
 				"aria-label": t("editorAttachmentRemove")
-			}, t("editorAttachmentRemove"))))), (0, react.createElement)("div", {
+			}, t("editorAttachmentRemove"))))), (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "10px",
+				alignItems: "stretch"
+			} }, (0, react.createElement)("div", {
 				style: {
+					flex: "1 1 auto",
 					border: `1px dashed ${C$2.borderL4}`,
 					borderRadius: C$2.radiusMd,
 					padding: "16px 12px",
@@ -38219,7 +38189,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				fontSize: "11px",
 				color: C$2.textDim,
 				marginTop: "4px"
-			} }, t("editorDropZoneFormats"))), (0, react.createElement)("input", {
+			} }, t("editorDropZoneFormats"))), (0, react.createElement)("div", { style: {
+				flex: "none",
+				display: "flex",
+				alignItems: "center"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					const anchored = workspaces.filter((w) => (workspaceAnchors ?? {})[w.value] !== void 0);
+					const fallback = anchored.length > 0 ? anchored[0].value : "";
+					setPickerWs((workspaceAnchors ?? {})[draft.workspace] !== void 0 ? draft.workspace : fallback);
+					setPickerOpen(true);
+				}
+			}, t("editorPickWorkspaceFile")))), (0, react.createElement)("input", {
 				ref: fileInputRef,
 				type: "file",
 				multiple: true,
@@ -38602,21 +38585,37 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
-				justifyContent: "space-between",
+				gap: "12px",
 				padding: "10px 14px",
 				borderBottom: `1px solid ${C$2.borderL2}`
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "14px",
-				fontWeight: 600
-			} }, t("editorPickWorkspaceFile")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				fontWeight: 600,
+				flex: "none"
+			} }, t("editorPickWorkspaceFile")), (0, react.createElement)("div", { style: {
+				flex: "1 1 auto",
+				minWidth: 0
+			} }, (0, react.createElement)(SelectField, {
+				value: pickerWs,
+				options: workspaces.filter((w) => (workspaceAnchors ?? {})[w.value] !== void 0),
+				onChange: (value) => {
+					setPickerWs(value);
+				},
+				placeholder: t("editorWorkspacePh"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("editorWorkspace"),
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 14 }),
+				size: "sm"
+			})), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
 					setPickerOpen(false);
 				}
 			}, t("editorPickerCancel"))), (() => {
-				const anchorSessionId = (workspaceAnchors ?? {})[draft.workspace] ?? "";
+				const anchorSessionId = (workspaceAnchors ?? {})[pickerWs] ?? "";
 				return workspaceFiles !== null && workspaceFiles !== void 0 && anchorSessionId !== "" ? (0, react.createElement)(FileBrowser, {
+					key: `${pickerWs}:${anchorSessionId}`,
 					workspaceFiles,
 					sessionId: anchorSessionId,
 					path: "",
@@ -38631,7 +38630,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 							id: makeId(),
 							name,
 							kind: "link",
-							ref: p
+							ref: p,
+							workspace: pickerWs
 						});
 						setPickerOpen(false);
 					},
@@ -38649,14 +38649,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					color: C$2.textDim,
 					fontSize: "13px"
 				} }, t("editorPickerNoSession"));
-			})())) : null, toast === null ? null : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
-				key: toast.seq,
-				text: toast.text,
-				holdMs: 3200,
-				onDone: () => {
-					setToast(null);
-				}
-			}), confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
+			})())) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
 				t,
 				onStay: () => {
 					setConfirmDiscard(false);
