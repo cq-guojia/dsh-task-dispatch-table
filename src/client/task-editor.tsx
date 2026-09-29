@@ -57,8 +57,8 @@ export type ScheduleKind = 'periodic' | 'interval'
 
 /**
  * 周期档内的频率粒度。
- * ⚠️ **没有「双周」**：用户 2026-09-29 问「双周是哪几周、从哪一周开始」——语义不明，
- * 且 cron 也没有隔周位 ⇒ 直接不做。隔月的诉求改由「单数月 / 双数月」表达（那个 cron 能写）。
+ * 「每 N 周」（含双周）不靠 cron 的隔周位——cron 没有该位——而是由每周档的 `weekStep`
+ * + 任务定义的 `start` 锚点 + 引擎取模实现（用户 2026-09-29）。隔月仍走「单数月 / 双数月」。
  */
 export type PeriodFreq = 'once' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
 
@@ -106,7 +106,9 @@ export interface TaskEditorDraft {
   yearMonth: string
   intervalUnit: IntervalUnit
   intervalStep: string
-  /** `YYYY-MM-DD`（单次 / 周期锚点）。 */
+  /** 每周档重复步长（周）：1=每周，2=每两周……上限 4（用户 2026-09-29）。 */
+  weekStep: string
+  /** `YYYY-MM-DD`（单次运行时刻 / 周期锚点「开始时间」）。 */
   date: string
   /** `HH:mm`。 */
   time: string
@@ -148,6 +150,7 @@ export function emptyTaskDraft(): TaskEditorDraft {
     yearMonth: '1',
     intervalUnit: 'hour',
     intervalStep: '1',
+    weekStep: '1',
     date: todayIso(),
     time: '09:00',
     // 没有时区字段：**一律跟随宿主时区**（用户 2026-09-29：没人会去选标准时区，要算自己算）。
@@ -214,10 +217,15 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   const schedule: Record<string, unknown> = { window: draft.window }
   if (draft.scheduleKind === 'periodic' && draft.periodFreq === 'once') {
     schedule.once = `${draft.date}T${draft.time}`
-  } else {
+  } else if (draft.scheduleKind === 'periodic') {
     const cron = scheduleCron(draft)
     if (cron !== null) schedule.cron = cron
+    // 「开始时间」(date+time) 作为周期锚点：首跑下界 + 每 N 周取模参考。
+    schedule.start = `${draft.date}T${draft.time}`
+    const step = Number.parseInt(draft.weekStep, 10)
+    if (draft.periodFreq === 'weekly' && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step
   }
+  // scheduleKind === 'interval' 的 cron 映射（每隔 N 分钟/小时）归 P2，此处不产出 schedule.cron。
 
   const target: Record<string, unknown> = { workspace: draft.workspace }
   if (draft.model.trim() !== '') {
@@ -322,20 +330,9 @@ function PeriodControls(props: {
     [tt],
   )
 
-  // 上面**统一一行**：频率在最前，然后是月 / 日，最后是时间（用户 2026-09-29：
-  // 频率下拉从卡片右上角拿下来，做成「每周 9 点」这种一句话的排法）。
+  // 频率 / 月 / 日：只在周期档显示（单次档没有频率，只有下面的「开始时间」）。
   const above: ReactNode[] = []
-  if (draft.periodFreq === 'once') {
-    above.push(h(DateField, {
-      key: 'date',
-      value: draft.date,
-      onChange: value => { patch({ date: value }) },
-      placeholder: t('editorDatePh'),
-      ariaLabel: t('editorDate'),
-      labels: calendarLabels,
-      width: 148,
-    }))
-  } else {
+  if (draft.periodFreq !== 'once') {
     above.push(h(SelectField, {
       key: 'freq',
       value: draft.periodFreq,
@@ -390,10 +387,41 @@ function PeriodControls(props: {
       ariaLabel: t('editorDayOfMonth'),
     }))
   }
-  above.push(timeField)
+
+  // 「开始时间」：单次 = 运行时刻；周期 = 首跑下界 + 「每 N 周」取模参考（用户 2026-09-29）。
+  const startRow = h('div', { className: 'dsh-tdt-ed-row' },
+    h('span', { style: { flex: 'none', fontSize: '12px', color: C.textDim, marginRight: '4px' } }, t('editorStartTime')),
+    h(DateField, {
+      key: 'start-date',
+      value: draft.date,
+      onChange: value => { patch({ date: value }) },
+      placeholder: t('editorDatePh'),
+      ariaLabel: t('editorDate'),
+      labels: calendarLabels,
+      width: 148,
+    }),
+    timeField,
+  )
+
+  // 每周档：每 N 周（1–4）。cron 无隔周位 ⇒ 引擎用「开始时间」锚点 + 取模实现。
+  const weekStepRow = draft.periodFreq === 'weekly'
+    ? h('div', { className: 'dsh-tdt-ed-row' },
+        h(SelectField, {
+          key: 'week-step',
+          value: draft.weekStep,
+          options: [1, 2, 3, 4].map(n => ({ value: String(n), label: tt('editorEveryNWeeks', { n }) })),
+          onChange: value => { patch({ weekStep: value }) },
+          placeholder: tt('editorEveryNWeeks', { n: 1 }),
+          emptyLabel: t('editorNoOptions'),
+          ariaLabel: tt('editorEveryNWeeks', { n: 1 }),
+          width: 120,
+        }),
+      )
+    : null
 
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-    h('div', { className: 'dsh-tdt-ed-row' }, above),
+    above.length > 0 ? h('div', { className: 'dsh-tdt-ed-row' }, above) : null,
+    weekStepRow,
     draft.periodFreq === 'weekly'
       ? h(WeekdayPicker, {
         value: draft.weekdays,
@@ -402,6 +430,7 @@ function PeriodControls(props: {
         label: t('editorWeekdayLabel'),
       })
       : null,
+    startRow,
     draft.periodFreq === 'once'
       ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorOnceHint'))
       : null,

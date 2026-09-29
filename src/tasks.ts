@@ -34,6 +34,10 @@ export const taskDefinitionSchema = z.object({
     timezone: z.string().optional(),
     window: isoDuration,
     once: z.string().optional(),
+    /** 周期任务的锚点（YYYY-MM-DDTHH:mm）：首跑下界，也是「每 N 周」取模的参考周（该周 = 第 0 周）。缺省无锚点。 */
+    start: z.string().optional(),
+    /** 每周档的重复步长（周）：1 = 每周；≥2 = 每 N 周。cron 无隔周位 ⇒ 用锚点 + 取模实现（决策）。 */
+    everyNWeeks: z.number().int().min(1).optional(),
   }),
   target: z.object({
     // 工作区（非工作目录，决策 22）：按 registry 的 title 精确匹配、id 兜底；目录由工作区 path 派生。
@@ -254,13 +258,51 @@ export function scheduledSlotsFor(task: TaskDefinition | TaskDefinitionInput, fr
     currentDate: new Date(from.getTime() - 1),
     tz: task.schedule.timezone,
   })
-  const slots: Date[] = []
+  const raw: Date[] = []
   for (let i = 0; i < cap; i++) {
     const next = interval.next().toDate()
     if (next.getTime() >= to.getTime()) break
-    if (next.getTime() >= from.getTime()) slots.push(next)
+    if (next.getTime() >= from.getTime()) raw.push(next)
   }
-  return slots
+  return filterSlotsBySchedule(task, raw)
+}
+
+/**
+ * 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」）：
+ * - `start`：首跑下界（不早于此时）；也是「每 N 周」取模的参考周（start 所在周 = 第 0 周）。
+ * - `everyNWeeks`：每周档的重复步长。cron 没有「第几周」位 ⇒ 用「刻度与 start 的整周差 % N」
+ *   过滤，天然覆盖用户诉求：开始时间设下周一、每 2 周 ⇒ 下周一跑、下下周跳过、再下一周跑。
+ */
+export function filterSlotsBySchedule(task: TaskDefinition | TaskDefinitionInput, slots: Date[]): Date[] {
+  const startIso = task.schedule.start
+  const startAbs = startIso === undefined ? undefined : wallClockToAbsolute(startIso, task.schedule.timezone)
+  const start = startAbs === null ? undefined : startAbs
+  const nWeeks = task.schedule.everyNWeeks
+  if (start === undefined && (nWeeks === undefined || nWeeks <= 1)) return slots
+  const ref = start ?? slots[0]
+  if (ref === undefined) return slots
+  const WEEK = 7 * 24 * 3600 * 1000
+  return slots.filter(slot => {
+    if (start !== undefined && slot.getTime() < start.getTime()) return false
+    if (nWeeks !== undefined && nWeeks > 1) {
+      const weeks = Math.floor((slot.getTime() - ref.getTime()) / WEEK)
+      if (((weeks % nWeeks) + nWeeks) % nWeeks !== 0) return false
+    }
+    return true
+  })
+}
+
+/** "YYYY-MM-DDTHH:mm" 按某时区墙上时间 → 绝对时刻（与 once 同款解释；缺省 = 宿主本地时区）。 */
+function wallClockToAbsolute(iso: string, tz?: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(iso)
+  if (match === null) return null
+  const [, y, mo, d, h, mi] = match
+  const wallAsUTC = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi))
+  if (tz === undefined) return new Date(`${iso}:00`)
+  let t = new Date(wallAsUTC)
+  t = new Date(wallAsUTC - tzOffsetMs(t, tz))
+  t = new Date(wallAsUTC - tzOffsetMs(t, tz))
+  return t
 }
 
 /**
@@ -348,6 +390,10 @@ function checkedTask(logger: HostLogger, label: string, data: unknown): TaskDefi
     }
   } else if (def.schedule.once !== undefined && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(def.schedule.once)) {
     logger.warn(`任务定义 once 格式非法 ${label}: ${def.schedule.once}（应为 YYYY-MM-DDTHH:mm）`)
+    return undefined
+  }
+  if (def.schedule.start !== undefined && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(def.schedule.start)) {
+    logger.warn(`任务定义 start 格式非法 ${label}: ${def.schedule.start}（应为 YYYY-MM-DDTHH:mm）`)
     return undefined
   }
   return def

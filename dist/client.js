@@ -328,7 +328,9 @@ window.__ModuleLoader__.load({
 			editorIntervalEvery: "每隔",
 			editorIntervalStep: "间隔步长",
 			editorIntervalUnit: "间隔单位",
-			editorIntervalSuffix: "执行一次",
+			editorIntervalSuffix: "执行",
+			editorStartTime: "开始时间",
+			editorEveryNWeeks: "每 {n} 周",
 			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
 			editorWeekday2: "周二",
@@ -682,6 +684,8 @@ window.__ModuleLoader__.load({
 			editorIntervalStep: "Interval step",
 			editorIntervalUnit: "Interval unit",
 			editorIntervalSuffix: "",
+			editorStartTime: "Start time",
+			editorEveryNWeeks: "Every {n} weeks",
 			editorWeekdayLabel: "Weekdays",
 			editorWeekday1: "Mon",
 			editorWeekday2: "Tue",
@@ -5505,6 +5509,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				yearMonth: "1",
 				intervalUnit: "hour",
 				intervalStep: "1",
+				weekStep: "1",
 				date: todayIso(),
 				time: "09:00",
 				window: "PT4H",
@@ -5556,9 +5561,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function draftToDefinitionJson(draft) {
 			const schedule = { window: draft.window };
 			if (draft.scheduleKind === "periodic" && draft.periodFreq === "once") schedule.once = `${draft.date}T${draft.time}`;
-			else {
+			else if (draft.scheduleKind === "periodic") {
 				const cron = scheduleCron(draft);
 				if (cron !== null) schedule.cron = cron;
+				schedule.start = `${draft.date}T${draft.time}`;
+				const step = Number.parseInt(draft.weekStep, 10);
+				if (draft.periodFreq === "weekly" && Number.isFinite(step) && step > 1) schedule.everyNWeeks = step;
 			}
 			const target = { workspace: draft.workspace };
 			if (draft.model.trim() !== "") {
@@ -5658,18 +5666,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				label: tt("editorQuarterMonthOption", { m })
 			})), [tt]);
 			const above = [];
-			if (draft.periodFreq === "once") above.push((0, react.createElement)(DateField, {
-				key: "date",
-				value: draft.date,
-				onChange: (value) => {
-					patch({ date: value });
-				},
-				placeholder: t("editorDatePh"),
-				ariaLabel: t("editorDate"),
-				labels: calendarLabels,
-				width: 148
-			}));
-			else above.push((0, react.createElement)(SelectField, {
+			if (draft.periodFreq !== "once") above.push((0, react.createElement)(SelectField, {
 				key: "freq",
 				value: draft.periodFreq,
 				options: props.freqOptions,
@@ -5724,19 +5721,54 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorDayOfMonth")
 			}));
-			above.push(timeField);
+			const startRow = (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
+				flex: "none",
+				fontSize: "12px",
+				color: C$1.textDim,
+				marginRight: "4px"
+			} }, t("editorStartTime")), (0, react.createElement)(DateField, {
+				key: "start-date",
+				value: draft.date,
+				onChange: (value) => {
+					patch({ date: value });
+				},
+				placeholder: t("editorDatePh"),
+				ariaLabel: t("editorDate"),
+				labels: calendarLabels,
+				width: 148
+			}), timeField);
+			const weekStepRow = draft.periodFreq === "weekly" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)(SelectField, {
+				key: "week-step",
+				value: draft.weekStep,
+				options: [
+					1,
+					2,
+					3,
+					4
+				].map((n) => ({
+					value: String(n),
+					label: tt("editorEveryNWeeks", { n })
+				})),
+				onChange: (value) => {
+					patch({ weekStep: value });
+				},
+				placeholder: tt("editorEveryNWeeks", { n: 1 }),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: tt("editorEveryNWeeks", { n: 1 }),
+				width: 120
+			})) : null;
 			return (0, react.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "10px"
-			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, above), draft.periodFreq === "weekly" ? (0, react.createElement)(WeekdayPicker, {
+			} }, above.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, above) : null, weekStepRow, draft.periodFreq === "weekly" ? (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
 					patch({ weekdays: value });
 				},
 				labels: weekdayLabels,
 				label: t("editorWeekdayLabel")
-			}) : null, draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
+			}) : null, startRow, draft.periodFreq === "once" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorOnceHint")) : null);
 		}
 		/** 间隔档的子控件（照参考图：每隔 N 单位执行一次 + 周几筛选）。 */
 		function IntervalControls(props) {

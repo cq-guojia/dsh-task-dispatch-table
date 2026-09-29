@@ -72,6 +72,21 @@ try {
   const onceSlots = scheduledSlotsFor(onceTask, day0, day3)
   check('once 任务不走 cron（刻度为空）', onceSlots.length === 0)
 
+  // 1.1 开始时间（锚点）+ 每 N 周（cron 无隔周位 ⇒ 引擎用锚点 + 取模）
+  console.log('\n[1.1] 开始时间 + 每 N 周')
+  const anchor = '2026-09-28T09:00' // 锚点（首跑取锚点之后的第一个周一，周几无关）
+  const every2 = def({ id: 'e2', schedule: { cron: '0 9 * * 1', timezone: 'UTC', window: 'PT4H', start: anchor, everyNWeeks: 2 } })
+  const e2Slots = scheduledSlotsFor(every2, new Date('2026-09-28T00:00:00Z'), new Date('2026-11-10T00:00:00Z'))
+  check('每 2 周：刻度均落在周一 09:00', e2Slots.length > 0 && e2Slots.every(s => s.getUTCDay() === 1 && s.getUTCHours() === 9))
+  check('每 2 周：相邻刻度间隔 14 天', e2Slots.every((s, i) => i === 0 || (s.getTime() - e2Slots[i - 1].getTime() === 14 * 24 * 3600 * 1000)))
+  check('每 2 周：首刻 = 锚点之后的第一个周一',
+    e2Slots.length > 0 && e2Slots[0].getTime() >= Date.parse(`${anchor}:00Z`)
+      && (e2Slots[0].getTime() - Date.parse(`${anchor}:00Z`)) < 7 * 24 * 3600 * 1000)
+  const startLower = def({ id: 'sl', schedule: { cron: '0 9 * * *', timezone: 'UTC', window: 'PT4H', start: '2026-10-01T09:00' } })
+  const slSlots = scheduledSlotsFor(startLower, new Date('2026-09-28T00:00:00Z'), new Date('2026-10-10T00:00:00Z'))
+  check('开始时间作为下界：首刻不早于锚点', slSlots.length > 0 && slSlots[0].getTime() === Date.parse('2026-10-01T09:00:00Z'),
+    slSlots.map(s => s.toISOString()).slice(0, 1).join())
+
   const first = firstSlotOnDay(daily, '2026-09-25')
   check('firstSlotOnDay 命中当日刻度', first !== undefined && first.getUTCHours() === 9)
   // 一年只跑 1 月 1 号的 cron，问 9 月 24 号必然没有刻度

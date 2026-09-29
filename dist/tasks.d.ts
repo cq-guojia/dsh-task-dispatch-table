@@ -19,6 +19,8 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         timezone: z.ZodOptional<z.ZodString>;
         window: z.ZodString;
         once: z.ZodOptional<z.ZodString>;
+        start: z.ZodOptional<z.ZodString>;
+        everyNWeeks: z.ZodOptional<z.ZodNumber>;
     }, z.core.$strip>;
     target: z.ZodObject<{
         workspace: z.ZodString;
@@ -113,6 +115,13 @@ export declare function logicalDateOf(date: Date, timeZone: string | undefined):
  * @param cap 迭代上限（防御 cron 表达成极小间隔导致死循环）；超出即截断。
  */
 export declare function scheduledSlotsFor(task: TaskDefinition | TaskDefinitionInput, from: Date, to: Date, cap?: number): Date[];
+/**
+ * 周期任务的锚点 / 步长过滤（「开始时间」+「每 N 周」）：
+ * - `start`：首跑下界（不早于此时）；也是「每 N 周」取模的参考周（start 所在周 = 第 0 周）。
+ * - `everyNWeeks`：每周档的重复步长。cron 没有「第几周」位 ⇒ 用「刻度与 start 的整周差 % N」
+ *   过滤，天然覆盖用户诉求：开始时间设下周一、每 2 周 ⇒ 下周一跑、下下周跳过、再下一周跑。
+ */
+export declare function filterSlotsBySchedule(task: TaskDefinition | TaskDefinitionInput, slots: Date[]): Date[];
 /**
  * 某日历日上的第一个刻度（面板展示「下次执行」/ 目录模式历史锚点用；
  * 决策 20 的 live 重排与 §7 backfill 已于决策 31 移除，不再依赖「天」粒度补跑）。
