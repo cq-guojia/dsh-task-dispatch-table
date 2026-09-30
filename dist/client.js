@@ -37426,6 +37426,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
   82%{opacity:1;transform:translate(-50%,0);}
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
+/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 `;
 		let injected = false;
 		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
@@ -37608,6 +37610,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (draft.deps.length > 0) definition.depends_on = draft.deps.filter((dep) => dep.task !== "");
 			if (draft.attachments.length > 0) definition.attachments = draft.attachments;
 			return JSON.stringify(definition, null, 2);
+		}
+		/**
+		* 保存前的客户端校验（用户 2026-09-30：别把宿主那串机器码「任务定义不合法（target.workspace: Too small…）」
+		* 直接甩给用户——先在本地把必填项查清楚、用人话列出来）。返回人话问题清单；空数组 = 可保存。
+		*
+		* 必填判定严格对齐宿主 zod schema（src/tasks.ts）：`target.workspace` 与 `target.prompt` 都是 `.min(1)`，
+		* 二者空了保存必被拒。`title` 在 schema 里是可选（空则回退 id）⇒ 不强制；提示词在「按任务手册」模式下由
+		* `manual` 兜底默认句 ⇒ 也不空。
+		*/
+		function validateTaskDraft(draft) {
+			const problems = [];
+			if (draft.workspace.trim() === "") problems.push("请选择工作区");
+			if (draft.promptSource !== "manual" && draft.prompt.trim() === "") problems.push("请填写提示词");
+			return problems;
+		}
+		/**
+		* 把宿主返回的机器码错误翻成人话（保底用：客户端校验已拦掉绝大多数必填问题，这里只兜底漏网的）。
+		* 命中已知 zod 片段就翻译，否则原样返回（前缀「任务定义不合法（…）」尽量保留上下文）。
+		*/
+		function humanizeTaskError(raw) {
+			if (raw.includes("target.workspace") && raw.toLowerCase().includes("too small")) return "工作区不能为空，请先选择工作区";
+			if (raw.includes("target.prompt") && raw.toLowerCase().includes("too small")) return "提示词不能为空，请先填写提示词";
+			if (raw.includes(".title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
+			return raw;
 		}
 		/** 附件 / 草稿条目的本地 id（反解时补上定义里缺失的 id）。 */
 		function newAttachmentId() {
@@ -38540,15 +38566,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				};
 			}, [pickerOpen]);
 			const [uploadError, setUploadError] = (0, react.useState)(null);
-			(0, react.useEffect)(() => {
-				if (uploadError === null) return;
-				const id = setTimeout(() => {
-					setUploadError(null);
-				}, 2500);
-				return () => {
-					clearTimeout(id);
-				};
-			}, [uploadError]);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
 			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);
@@ -38947,11 +38964,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (event) => {
 					if (event.target.files !== void 0) uploadFiles(event.target.files);
 				}
-			}), uploadError === null ? null : (0, react.createElement)("p", { style: {
-				color: "#e5484d",
-				fontSize: "12px",
-				margin: "9px 0 0"
-			} }, uploadErrText(uploadError)));
+			}));
 			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-card-head",
 				style: { marginBottom: "12px" }
@@ -39303,7 +39316,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (value) => {
 					patch({ code: value });
 				}
-			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, attachmentsCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
+			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { style: { position: "relative" } }, attachmentsCard, uploadError !== null ? (0, react.createElement)("div", {
+				key: uploadError,
+				className: "dsh-tdt-toast",
+				onAnimationEnd: () => {
+					setUploadError(null);
+				}
+			}, uploadErrText(uploadError)) : null), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
 			const panelInner = editorOpen ? (0, react.createElement)(PromptEditorModal, {
 				t,
 				mode,
@@ -39390,7 +39409,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onAnimationEnd: () => {
 					setSaveErrToast(null);
 				}
-			}, `${t("editorSaveFailedHint")}${saveErrToast.msg}`) : null, pendingHint ? (0, react.createElement)("span", {
+			}, saveErrToast.msg) : null, pendingHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
 				style: { margin: "0 8px 0 0" }
 			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -39401,8 +39420,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				variant: "primary",
 				size: "sm",
 				onClick: () => {
-					if (onSave === void 0) setPendingHint(true);
-					else onSave(draft);
+					if (onSave === void 0) {
+						setPendingHint(true);
+						return;
+					}
+					const problems = validateTaskDraft(draft);
+					if (problems.length > 0) {
+						saveErrSeq.current += 1;
+						setSaveErrToast({
+							msg: problems.join("；"),
+							seq: saveErrSeq.current
+						});
+						return;
+					}
+					onSave(draft);
 				}
 			}, t("editorSave"))), confirmDeleteTask ? (0, react.createElement)(VersionConfirm, {
 				t,
@@ -39953,6 +39984,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [saving, setSaving] = (0, react.useState)(false);
 			const [failed, setFailed] = (0, react.useState)(null);
 			const [failedKey, setFailedKey] = (0, react.useState)(0);
+			const [invalidToast, setInvalidToast] = (0, react.useState)({
+				on: false,
+				key: 0
+			});
+			const invalidSeq = (0, react.useRef)(0);
 			const [manualAt, setManualAt] = (0, react.useState)(void 0);
 			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
@@ -40048,7 +40084,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					});
 					const body = await res.json();
 					if (body.ok !== true) {
-						setEditorError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`);
+						setEditorError(humanizeTaskError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`));
 						return;
 					}
 					const missing = Array.isArray(body.missingAttachments) ? body.missingAttachments.filter((item) => typeof item === "string") : [];
@@ -40071,12 +40107,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					});
 					const body = await res.json();
 					if (body.ok !== true) {
-						setEditorError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`);
+						setEditorError(humanizeTaskError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`));
 						return;
 					}
 					setEditor(null);
 				} catch (error) {
-					setEditorError(error instanceof Error ? error.message : String(error));
+					setEditorError(humanizeTaskError(error instanceof Error ? error.message : String(error)));
 				}
 			};
 			/** 只找回提示词：取该版本内容 → 填进编辑器（其余设置不动）。 */
@@ -40191,6 +40227,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const current = draft ?? effectiveInline;
 			const invalid = draft !== void 0 && !isValidTaskTable(draft);
 			const dirty = draft !== void 0 && draft !== effectiveInline;
+			(0, react.useEffect)(() => {
+				if (!invalid) {
+					setInvalidToast((v) => v.on ? {
+						on: false,
+						key: v.key
+					} : v);
+					return;
+				}
+				invalidSeq.current += 1;
+				setInvalidToast({
+					on: true,
+					key: invalidSeq.current
+				});
+			}, [invalid]);
 			const writable = snapshot.status === "ready" && snapshot.writable && !saving;
 			const save = async () => {
 				if (draft === void 0 || invalid || !writable) return;
@@ -40202,7 +40252,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setDraft(void 0);
 				} catch (error) {
 					const msg = error instanceof Error ? error.message : String(error);
-					setFailed(msg);
+					setFailed(humanizeTaskError(msg));
 					setFailedKey((prev) => prev + 1);
 				} finally {
 					setSaving(false);
@@ -40404,7 +40454,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				spellCheck: false,
 				style: textareaStyle
-			}), invalid ? (0, react.createElement)("p", { style: errorStyle }, t("invalidJson")) : null, (0, react.createElement)("div", { style: { position: "relative" } }, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
+			}), (0, react.createElement)("div", { style: { position: "relative" } }, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
 				type: "button",
 				onClick: () => {
 					save();
@@ -40423,7 +40473,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onAnimationEnd: () => {
 					setFailed(null);
 				}
-			}, failed) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+			}, failed) : null, invalidToast.on ? (0, react.createElement)("div", {
+				key: `inv-${invalidToast.key}`,
+				className: "dsh-tdt-toast dsh-tdt-toast--sticky"
+			}, t("invalidJson")) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				t("colId"),
 				t("colTitle"),
 				t("colCode"),

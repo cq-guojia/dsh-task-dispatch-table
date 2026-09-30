@@ -37,6 +37,8 @@ export const TOAST_CSS = `
   82%{opacity:1;transform:translate(-50%,0);}
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
+/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 `
 
 let injected = false

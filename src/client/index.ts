@@ -26,6 +26,7 @@ import {
   type TaskEditorDraft,
 } from './task-editor'
 import { ensureToastStyle } from './toast-css'
+import { humanizeTaskError } from './task-editor'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -472,6 +473,9 @@ function TaskPage(props: {
   const [failed, setFailed] = useState<string | null>(null)
   // 每次保存失败自增，用作 Toast 的 React key ⇒ 同一条错误连点也能重播淡入淡出动画。
   const [failedKey, setFailedKey] = useState(0)
+  // JSON 不合法：持续态校验，浮层常驻 Toast（不自动消失）浮在保存行上方，不占版面、不挤压下方。
+  const [invalidToast, setInvalidToast] = useState<{ on: boolean; key: number }>({ on: false, key: 0 })
+  const invalidSeq = useRef(0)
   // 手动刷新：settings 快照本身经订阅 live 更新，此按钮兜底重渲染并记录刷新时刻，
   // 让「时间戳不动」可区分是数据没变还是页面没刷。
   const [manualAt, setManualAt] = useState<number | undefined>(undefined)
@@ -573,7 +577,8 @@ function TaskPage(props: {
         ok?: boolean; error?: unknown; id?: unknown; missingAttachments?: unknown
       }
       if (body.ok !== true) {
-        setEditorError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`)
+        // 服务端机器码错误（如必填项）翻人话，再由编辑器浮层 Toast 呈现（用户 2026-09-30）。
+        setEditorError(humanizeTaskError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`))
         return
       }
       const missing = Array.isArray(body.missingAttachments)
@@ -600,12 +605,12 @@ function TaskPage(props: {
       })
       const body = await res.json() as { ok?: boolean; error?: unknown }
       if (body.ok !== true) {
-        setEditorError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`)
+        setEditorError(humanizeTaskError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`))
         return
       }
       setEditor(null)
     } catch (error) {
-      setEditorError(error instanceof Error ? error.message : String(error))
+      setEditorError(humanizeTaskError(error instanceof Error ? error.message : String(error)))
     }
   }
 
@@ -725,6 +730,12 @@ function TaskPage(props: {
   const current = draft ?? effectiveInline
   const invalid = draft !== undefined && !isValidTaskTable(draft)
   const dirty = draft !== undefined && draft !== effectiveInline
+  // JSON 不合法 → 常驻 Toast 浮在保存行上方（invalid 变 true 时自增 key 重播出现；变 false 时撤掉）。
+  useEffect(() => {
+    if (!invalid) { setInvalidToast(v => (v.on ? { on: false, key: v.key } : v)); return }
+    invalidSeq.current += 1
+    setInvalidToast({ on: true, key: invalidSeq.current })
+  }, [invalid])
   const writable = snapshot.status === 'ready' && snapshot.writable && !saving
 
   const save = async (): Promise<void> => {
@@ -737,10 +748,9 @@ function TaskPage(props: {
       else await scope.set('tasksInline', draft)
       setDraft(undefined)
     } catch (error) {
-      // 保存失败（含保存闸门 422 的 id 校验文案）：显示服务端原因，草稿保留可改完再存。
-      // 浮层 Toast（2.5s 自退）由 failed + failedKey 驱动，不占版面。
+      // 保存失败（含保存闸门 422 的 id 校验文案）：机器码翻人话后浮层 Toast 自退，草稿保留可改完再存。
       const msg = error instanceof Error ? error.message : String(error)
-      setFailed(msg)
+      setFailed(humanizeTaskError(msg))
       setFailedKey(prev => prev + 1)
     } finally {
       setSaving(false)
@@ -949,9 +959,10 @@ function TaskPage(props: {
                 spellCheck: false,
                 style: textareaStyle,
               }),
-              invalid ? h('p', { style: errorStyle }, t('invalidJson')) : null,
-              // 保存 / 放弃行：外层 position:relative，让保存失败 Toast 悬浮在本行正上方，
-              // 不挤占下方「已解析的任务」等版面（用户 2026-09-30：长显占位改为浮层自退）。
+              // 保存 / 放弃行：外层 position:relative，让所有错误 Toast 悬浮在本行正上方，
+              // 不挤占下方「已解析的任务」等版面（用户 2026-09-30：长显占位 / 散落红字统一改为浮层）。
+              // - failed：保存失败（动画 2.5s 自退）
+              // - invalidToast：JSON 不合法（常驻，直到改对）
               h('div', { style: { position: 'relative' } },
                 h('div', { style: rowStyle },
                   h('button', {
@@ -971,6 +982,12 @@ function TaskPage(props: {
                     className: 'dsh-tdt-toast',
                     onAnimationEnd: () => { setFailed(null) },
                   }, failed)
+                  : null,
+                invalidToast.on
+                  ? h('div', {
+                    key: `inv-${invalidToast.key}`,
+                    className: 'dsh-tdt-toast dsh-tdt-toast--sticky',
+                  }, t('invalidJson'))
                   : null,
               ),
 

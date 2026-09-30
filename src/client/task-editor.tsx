@@ -403,6 +403,41 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   return JSON.stringify(definition, null, 2)
 }
 
+/**
+ * 保存前的客户端校验（用户 2026-09-30：别把宿主那串机器码「任务定义不合法（target.workspace: Too small…）」
+ * 直接甩给用户——先在本地把必填项查清楚、用人话列出来）。返回人话问题清单；空数组 = 可保存。
+ *
+ * 必填判定严格对齐宿主 zod schema（src/tasks.ts）：`target.workspace` 与 `target.prompt` 都是 `.min(1)`，
+ * 二者空了保存必被拒。`title` 在 schema 里是可选（空则回退 id）⇒ 不强制；提示词在「按任务手册」模式下由
+ * `manual` 兜底默认句 ⇒ 也不空。
+ */
+export function validateTaskDraft(draft: TaskEditorDraft): string[] {
+  const problems: string[] = []
+  if (draft.workspace.trim() === '') problems.push('请选择工作区')
+  // 非「按任务手册」模式：提示词就是 draft.prompt，空了就空了（手册模式下 manual 缺失会兜底默认句，不会空）。
+  if (draft.promptSource !== 'manual' && draft.prompt.trim() === '') {
+    problems.push('请填写提示词')
+  }
+  return problems
+}
+
+/**
+ * 把宿主返回的机器码错误翻成人话（保底用：客户端校验已拦掉绝大多数必填问题，这里只兜底漏网的）。
+ * 命中已知 zod 片段就翻译，否则原样返回（前缀「任务定义不合法（…）」尽量保留上下文）。
+ */
+export function humanizeTaskError(raw: string): string {
+  if (raw.includes('target.workspace') && raw.toLowerCase().includes('too small')) {
+    return '工作区不能为空，请先选择工作区'
+  }
+  if (raw.includes('target.prompt') && raw.toLowerCase().includes('too small')) {
+    return '提示词不能为空，请先填写提示词'
+  }
+  if (raw.includes('.title') && raw.toLowerCase().includes('too small')) {
+    return '任务名称不能为空'
+  }
+  return raw
+}
+
 // ─────────────────────── 定义 → 草稿（编辑态反解，P1） ───────────────────────
 
 /** 附件 / 草稿条目的本地 id（反解时补上定义里缺失的 id）。 */
@@ -1189,13 +1224,8 @@ export function TaskEditorDrawer(props: {
     return () => { document.removeEventListener('pointerdown', onPointerDown, true) }
   }, [pickerOpen])
   // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
+  // 呈现为浮层 Toast（与保存失败同款），动画结束 onAnimationEnd 自退，不占卡内版面。
   const [uploadError, setUploadError] = useState<string | null>(null)
-  // 附件错误红字过 2.5s 自动消失（用户 2026-09-30：与「重置完成」提示一致，不要长显占位）。
-  useEffect(() => {
-    if (uploadError === null) return
-    const id = setTimeout(() => { setUploadError(null) }, 2500)
-    return () => { clearTimeout(id) }
-  }, [uploadError])
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   // 原始快照：挂载那一刻定死。弹窗关闭即卸载、重开即重挂 ⇒ 每次打开都从当次初始值算起；
@@ -1505,7 +1535,6 @@ export function TaskEditorDrawer(props: {
       style: { display: 'none' },
       onChange: (event: { target: { files?: FileList } }) => { if (event.target.files !== undefined) void uploadFiles(event.target.files) },
     }),
-    uploadError === null ? null : h('p', { style: { color: '#e5484d', fontSize: '12px', margin: '9px 0 0' } }, uploadErrText(uploadError)),
   )
 
   // ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。
@@ -1824,7 +1853,17 @@ export function TaskEditorDrawer(props: {
         // 各区块间距统一走 `.dsh-tdt-ed-section` 的 margin（此前这里多了两个 16px 空 div，
         // 导致「编号 → 提示词」比别的间隔小一截）。
         h('div', { className: 'dsh-tdt-ed-section' }, promptCard),
-        h('div', { className: 'dsh-tdt-ed-section' }, attachmentsCard),
+        // 附件卡：外层 position:relative，让上传失败提示浮在卡正上方（用户 2026-09-30：统一走浮层 Toast）。
+        h('div', { style: { position: 'relative' } },
+          attachmentsCard,
+          uploadError !== null
+            ? h('div', {
+              key: uploadError,
+              className: 'dsh-tdt-toast',
+              onAnimationEnd: () => { setUploadError(null) },
+            }, uploadErrText(uploadError))
+            : null,
+        ),
         h('div', { className: 'dsh-tdt-ed-section' }, scheduleCard),
         h('div', { className: 'dsh-tdt-ed-section' }, depsBlock),
         advancedBlock,
@@ -1903,13 +1942,14 @@ export function TaskEditorDrawer(props: {
         }, t('editorReset')),
         h('span', { style: { flex: '1 1 auto' } }),
         resetHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorResetDone')) : null,
-        // 保存失败：浮层 Toast（2.5s 自退，上飘淡出），不占 footer 行内空间（用户 2026-09-30）。
+        // 保存失败 / 校验不过：浮层 Toast（2.5s 自退，上飘淡出），不占 footer 行内空间（用户 2026-09-30）。
+        // 文案已是完整人话（校验问题 or 翻译后的服务端原因），无需再拼前缀。
         saveErrToast !== null
           ? h('div', {
             key: saveErrToast.seq,
             className: 'dsh-tdt-toast',
             onAnimationEnd: () => { setSaveErrToast(null) },
-          }, `${t('editorSaveFailedHint')}${saveErrToast.msg}`)
+          }, saveErrToast.msg)
           : null,
         pendingHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorSavePending')) : null,
         h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
@@ -1917,8 +1957,15 @@ export function TaskEditorDrawer(props: {
           variant: 'primary',
           size: 'sm',
           onClick: () => {
-            if (onSave === undefined) setPendingHint(true)
-            else onSave(draft)
+            if (onSave === undefined) { setPendingHint(true); return }
+            // 保存前先本地查必填（用户 2026-09-30：别把机器码甩给用户，人话列问题）。
+            const problems = validateTaskDraft(draft)
+            if (problems.length > 0) {
+              saveErrSeq.current += 1
+              setSaveErrToast({ msg: problems.join('；'), seq: saveErrSeq.current })
+              return
+            }
+            onSave(draft)
           },
         }, t('editorSave')),
       ),
