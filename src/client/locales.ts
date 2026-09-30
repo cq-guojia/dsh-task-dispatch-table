@@ -115,7 +115,7 @@ export type LocaleKey =
   | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
   | 'editorSnapshots' | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
   | 'editorUseShort' | 'editorRemoveShort' | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
-  | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermCheck'
+  | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermCheck' | 'editorTaskSaved'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
   | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint'
   | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
@@ -533,6 +533,7 @@ export const zh: Record<LocaleKey, string> = {
   editorFullPermTitle: '这条任务将以完全权限运行',
   editorFullPermDesc: '这条任务会以「完全权限」无人值守执行，意味着 AI 可以直接：\n· 写入 / 修改 / 删除工作区内的文件\n· 执行命令、发起网络请求等敏感操作\n执行期间请勿关闭电脑或退出客户端。',
   editorFullPermCheck: '我已了解风险，并愿意为该任务的执行结果负责。',
+  editorTaskSaved: '任务已保存',
   editorSchedHourlyOnce: '每小时执行一次',
   editorSchedNoDaySuffix: '，但还没选生效日',
   editorSchedWeeklyDayPrefix: '每周',
@@ -1001,6 +1002,7 @@ export const en: Record<LocaleKey, string> = {
   editorFullPermTitle: 'This task will run with full access',
   editorFullPermDesc: 'This task runs unattended with FULL access — the AI can directly:\n· create / modify / delete files in the workspace\n· run commands, make network requests and other sensitive operations\nDo not shut down the machine or close the client while it runs.',
   editorFullPermCheck: 'I understand the risk and accept responsibility for this task\'s results.',
+  editorTaskSaved: 'Task saved',
   editorSchedHourlyOnce: 'runs hourly',
   editorSchedNoDaySuffix: ', but no active day is selected',
   editorSchedWeeklyDayPrefix: 'every ',

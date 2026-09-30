@@ -414,6 +414,7 @@ window.__ModuleLoader__.load({
 			editorFullPermTitle: "这条任务将以完全权限运行",
 			editorFullPermDesc: "这条任务会以「完全权限」无人值守执行，意味着 AI 可以直接：\n· 写入 / 修改 / 删除工作区内的文件\n· 执行命令、发起网络请求等敏感操作\n执行期间请勿关闭电脑或退出客户端。",
 			editorFullPermCheck: "我已了解风险，并愿意为该任务的执行结果负责。",
+			editorTaskSaved: "任务已保存",
 			editorSchedHourlyOnce: "每小时执行一次",
 			editorSchedNoDaySuffix: "，但还没选生效日",
 			editorSchedWeeklyDayPrefix: "每周",
@@ -876,6 +877,7 @@ window.__ModuleLoader__.load({
 			editorFullPermTitle: "This task will run with full access",
 			editorFullPermDesc: "This task runs unattended with FULL access — the AI can directly:\n· create / modify / delete files in the workspace\n· run commands, make network requests and other sensitive operations\nDo not shut down the machine or close the client while it runs.",
 			editorFullPermCheck: "I understand the risk and accept responsibility for this task's results.",
+			editorTaskSaved: "Task saved",
 			editorSchedHourlyOnce: "runs hourly",
 			editorSchedNoDaySuffix: ", but no active day is selected",
 			editorSchedWeeklyDayPrefix: "every ",
@@ -39553,7 +39555,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				onRestoreVersion: (file) => {
 					onRestoreVersion?.(file);
-					setEditorOpen(false);
 				},
 				onDeleteVersion: (file) => {
 					onDeleteVersion?.(file);
@@ -40250,6 +40251,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [saving, setSaving] = (0, react.useState)(false);
 			const [failed, setFailed] = (0, react.useState)(null);
 			const [failedKey, setFailedKey] = (0, react.useState)(0);
+			const [savedToast, setSavedToast] = (0, react.useState)(0);
+			const savedSeq = (0, react.useRef)(0);
+			const notifySaved = () => {
+				savedSeq.current += 1;
+				setSavedToast(savedSeq.current);
+			};
 			const [invalidToast, setInvalidToast] = (0, react.useState)({
 				on: false,
 				key: 0
@@ -40376,6 +40383,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 					const missing = Array.isArray(body.missingAttachments) ? body.missingAttachments.filter((item) => typeof item === "string") : [];
 					setEditor(null);
+					notifySaved();
 					if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join("、")}`);
 				} catch (error) {
 					setEditorError(error instanceof Error ? error.message : String(error));
@@ -40519,6 +40527,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (draft.trim() === "") await scope.unset("tasksInline");
 					else await scope.set("tasksInline", draft);
 					setDraft(void 0);
+					notifySaved();
 				} catch (error) {
 					const msg = error instanceof Error ? error.message : String(error);
 					setFailed(humanizeTaskError(msg));
@@ -40749,6 +40758,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				sticky: true,
 				onDone: () => {},
 				text: t("invalidJson")
+			}) : null, savedToast !== 0 ? (0, react.createElement)(FloatingToast, {
+				seq: savedToast,
+				tone: "success",
+				onDone: () => {
+					setSavedToast(0);
+				},
+				text: t("editorTaskSaved")
 			}) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				t("colId"),
 				t("colTitle"),

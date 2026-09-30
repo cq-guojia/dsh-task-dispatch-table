@@ -473,6 +473,10 @@ function TaskPage(props: {
   const [failed, setFailed] = useState<string | null>(null)
   // 每次保存失败自增，用作 Toast 的 React key ⇒ 同一条错误连点也能重播淡入淡出动画。
   const [failedKey, setFailedKey] = useState(0)
+  // 保存成功 Toast（用户 2026-09-30：保存成功不许静默，弹绿色「任务已保存」再自退）。
+  const [savedToast, setSavedToast] = useState(0)
+  const savedSeq = useRef(0)
+  const notifySaved = (): void => { savedSeq.current += 1; setSavedToast(savedSeq.current) }
   // JSON 不合法：持续态校验，浮层常驻 Toast（不自动消失）浮在保存行上方，不占版面、不挤压下方。
   const [invalidToast, setInvalidToast] = useState<{ on: boolean; key: number }>({ on: false, key: 0 })
   const invalidSeq = useRef(0)
@@ -606,6 +610,8 @@ function TaskPage(props: {
         ? body.missingAttachments.filter((item): item is string => typeof item === 'string')
         : []
       setEditor(null)
+      // 保存成功不许静默（用户 2026-09-30）：关窗同时弹绿色「任务已保存」。
+      notifySaved()
       // 附件失效要说出来（文件被清道夫清掉 / 手删了），否则用户不知道自己存的是个空引用。
       if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join('、')}`)
     } catch (error) {
@@ -748,6 +754,7 @@ function TaskPage(props: {
       if (draft.trim() === '') await scope.unset('tasksInline')
       else await scope.set('tasksInline', draft)
       setDraft(undefined)
+      notifySaved()
     } catch (error) {
       // 保存失败（含保存闸门 422 的 id 校验文案）：机器码翻人话后浮层 Toast 自退，草稿保留可改完再存。
       const msg = error instanceof Error ? error.message : String(error)
@@ -992,6 +999,14 @@ function TaskPage(props: {
                     sticky: true,
                     onDone: () => { /* sticky：不自动消失，改对 JSON 后由 effect 撤除 */ },
                     text: t('invalidJson'),
+                  })
+                  : null,
+                savedToast !== 0
+                  ? h(FloatingToast, {
+                    seq: savedToast,
+                    tone: 'success',
+                    onDone: () => { setSavedToast(0) },
+                    text: t('editorTaskSaved'),
                   })
                   : null,
               ),

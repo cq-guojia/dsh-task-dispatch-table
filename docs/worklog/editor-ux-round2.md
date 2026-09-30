@@ -106,3 +106,9 @@
 - 选「完全权限」点保存 ⇒ 先弹**高危确认**（复用 VersionConfirm 扩展）：标题警告橙（`state-warning-primary`）、描述列风险清单（`\n` 逐行 + pre-line）、**勾选「我已了解风险，并愿意为该任务的执行结果负责。」后确认钮才解禁**；确认按钮就叫「保存」（用户明确不改成「默认全权运行」），勾选每次弹窗都重勾（高危不记忆）。
 - VersionConfirm 扩展项：`warning?: boolean`（标题染橙）、`checkbox?: {label, checked, onToggle}`（原生 checkbox，accent-color 走警告色，勾选前置灰确认钮）、desc `white-space:pre-line`。
 - 冒烟 +1 = **250 项全过**；typecheck/build 绿；真机验证待做。
+
+## 十一、同日第八轮：保存成功反馈 + 版本找回不关窗
+
+1. **保存成功不许静默**（用户点名「莫名其妙」）：编辑器表单保存成功（关窗时）与面板 tasksInline 保存成功，都弹共用 FloatingToast **绿色「任务已保存」**（`editorTaskSaved`，2.8s 自退），锚在面板保存行上方——选用户的方案 2（统一 Toast），没做「窗内提示再关窗」的方案 1。
+2. **版本找回不关全屏编辑器**（用户：找回 = 把内容覆盖到左边编辑器继续编辑）：`onRestoreVersion` 透传后不再 `setEditorOpen(false)`；index.ts 的 restoreVersion 本就把快照内容回填 `draft.prompt`，全屏编辑器 value 即 draft.prompt ⇒ 内容原地覆盖、编辑器保持打开。
+3. 冒烟 +1 = **251 项全过**；typecheck/build 绿；真机验证待做。

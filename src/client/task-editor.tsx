@@ -2000,7 +2000,8 @@ export function TaskEditorDrawer(props: {
       history: history ?? null,
       onChange: (value: string) => { patch({ prompt: value }) },
       onClose: () => { setEditorOpen(false) },
-      onRestoreVersion: (file: string) => { onRestoreVersion?.(file); setEditorOpen(false) },
+      // 找回版本 = 把内容覆盖到左侧编辑器（用户 2026-09-30：不关全屏编辑器，用户接着改）。
+      onRestoreVersion: (file: string) => { onRestoreVersion?.(file) },
       onDeleteVersion: (file: string) => { onDeleteVersion?.(file) },
     })
     : previewOpen
