@@ -14,7 +14,7 @@
 | `code` | string? | **任务编号（可选，人读）**：用户自编便于查询与管理，**只做记录、不参与任何唯一性判断**（空格 / 重名 / 格式差异都不影响身份——判断只走 `id` + 计划刻度）。存前 trim，空白视为未填。快照与面板任务表展示 | 决策 30 |
 | `enabled` | bool | 停用任务不删定义 | — |
 | `schedule.cron` | string? | 生成计划时刻；纯程序解析，零 token。**与 `once` 互斥**（周期任务用） | 架构约束 |
-| `schedule.once` | string? | `YYYY-MM-DDTHH:mm`；按 `timezone` 墙上时间解释，仅该日派发一次，跑完自动停。**与 `cron` 互斥**（一次性任务用，决策 18） | 决策 18 |
+| `schedule.once` | string? | `YYYY-MM-DDTHH:mm`；按 `timezone` 墙上时间解释，仅该日派发一次，跑完自动停。**与 `cron` 互斥**（一次性任务用，决策 18）。**窗口内才作数**（2026-09-30 拍板 A）：`once + window` 之内迟到照旧补跑，**出窗口即过期作废**，并补一条 `skipped`（事件 `expired-once`）留痕 | 决策 18 / 拍板 A |
 | `schedule.timezone` | string? | 缺省用宿主时区；**logical date 的归属判定靠它** | 决策 9 |
 | `schedule.window` | string | ISO 8601 时长（如 `PT4H`）；计划时刻 + 窗口 = 当日截止线，过窗 → `skipped` 并切次日 | 决策 10 |
 | `target.workspace` | string | 派发到哪个**工作区**（按 registry 的 `title` 精确匹配、`id` 兜底；**不是工作目录**——cwd 由工作区实体的 `path` 派生）。匹配不到 ⇒ 实例判失败，不派发 | 决策 4 / 22 |
