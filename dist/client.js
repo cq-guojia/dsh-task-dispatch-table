@@ -38011,6 +38011,29 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const now = /* @__PURE__ */ new Date();
 			return `${now.getFullYear()}-${pad2$1(now.getMonth() + 1)}-${pad2$1(now.getDate())}`;
 		}
+		/**
+		* 表单里的「日期 + 时刻」是否**已经过去**（缺值 / 解析不出也算过去 ⇒ 走智能默认）。
+		* 用户在表单里填的是**宿主本地时间**（没有时区字段，见草稿注释）⇒ 这里也按本地解析，口径一致。
+		*/
+		function isPastMoment(date, time) {
+			const parsed = Date.parse(`${date}T${time}`);
+			return !Number.isFinite(parsed) || parsed <= Date.now();
+		}
+		/**
+		* **新建任务的智能默认时刻**（用户 2026-09-30）：`现在 + 1 小时` → 再**往上取整点**。
+		* 例：22:10 → 23:10 → 次日 `00:00`；8:50 → 9:50 → `10:00`。正好落在整点就取它本身（提前量仍 ≥ 1 小时）。
+		*
+		* 目的：单次执行 / 间隔锚点**别默认落在过去** —— 原先写死「今天 09:00」，晚上新建时那个时刻早就过了
+		* （用户真机点名）。周期档不参与：每天 / 每周… 本来就不挑「今天这一下」。
+		*/
+		function smartDefaultMoment(now = /* @__PURE__ */ new Date()) {
+			const target = new Date(now.getTime() + 36e5);
+			if (target.getMinutes() !== 0 || target.getSeconds() !== 0 || target.getMilliseconds() !== 0) target.setHours(target.getHours() + 1, 0, 0, 0);
+			return {
+				date: `${target.getFullYear()}-${pad2$1(target.getMonth() + 1)}-${pad2$1(target.getDate())}`,
+				time: `${pad2$1(target.getHours())}:${pad2$1(target.getMinutes())}`
+			};
+		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
 		function emptyTaskDraft() {
 			return {
@@ -39523,15 +39546,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 				],
 				onChange: (value) => {
+					const notPast = () => isPastMoment(draft.date, draft.time) ? smartDefaultMoment() : {};
 					if (value === "once") {
 						patch({
 							scheduleKind: "periodic",
-							periodFreq: "once"
+							periodFreq: "once",
+							...notPast()
 						});
 						return;
 					}
 					if (value === "interval") {
-						patch({ scheduleKind: "interval" });
+						patch({
+							scheduleKind: "interval",
+							...notPast()
+						});
 						return;
 					}
 					patch({

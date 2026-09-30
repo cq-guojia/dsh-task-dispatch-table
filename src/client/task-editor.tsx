@@ -266,6 +266,33 @@ function todayIso(): string {
   return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
 }
 
+/**
+ * 表单里的「日期 + 时刻」是否**已经过去**（缺值 / 解析不出也算过去 ⇒ 走智能默认）。
+ * 用户在表单里填的是**宿主本地时间**（没有时区字段，见草稿注释）⇒ 这里也按本地解析，口径一致。
+ */
+function isPastMoment(date: string, time: string): boolean {
+  const parsed = Date.parse(`${date}T${time}`)
+  return !Number.isFinite(parsed) || parsed <= Date.now()
+}
+
+/**
+ * **新建任务的智能默认时刻**（用户 2026-09-30）：`现在 + 1 小时` → 再**往上取整点**。
+ * 例：22:10 → 23:10 → 次日 `00:00`；8:50 → 9:50 → `10:00`。正好落在整点就取它本身（提前量仍 ≥ 1 小时）。
+ *
+ * 目的：单次执行 / 间隔锚点**别默认落在过去** —— 原先写死「今天 09:00」，晚上新建时那个时刻早就过了
+ * （用户真机点名）。周期档不参与：每天 / 每周… 本来就不挑「今天这一下」。
+ */
+function smartDefaultMoment(now: Date = new Date()): { date: string; time: string } {
+  const target = new Date(now.getTime() + 3_600_000)
+  if (target.getMinutes() !== 0 || target.getSeconds() !== 0 || target.getMilliseconds() !== 0) {
+    target.setHours(target.getHours() + 1, 0, 0, 0)
+  }
+  return {
+    date: `${target.getFullYear()}-${pad2(target.getMonth() + 1)}-${pad2(target.getDate())}`,
+    time: `${pad2(target.getHours())}:${pad2(target.getMinutes())}`,
+  }
+}
+
 /** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
 export function emptyTaskDraft(): TaskEditorDraft {
   return {
@@ -1668,8 +1695,12 @@ export function TaskEditorDrawer(props: {
           { value: 'interval', label: t('editorScheduleInterval') },
         ],
         onChange: value => {
-          if (value === 'once') { patch({ scheduleKind: 'periodic', periodFreq: 'once' }); return }
-          if (value === 'interval') { patch({ scheduleKind: 'interval' }); return }
+          // 智能默认（用户 2026-09-30）：切到「单次 / 间隔」时，若表单里那个时刻**已经过去**，就换成
+          // 「现在 + 1 小时再取整点」（22:10 ⇒ 次日 00:00；8:50 ⇒ 10:00）—— 免得一进表单就是个过期时刻
+          //（原先写死「今天 09:00」）。**已填的未来时刻不覆盖**；周期档（每天/每周…）不参与。
+          const notPast = (): Partial<TaskEditorDraft> => (isPastMoment(draft.date, draft.time) ? smartDefaultMoment() : {})
+          if (value === 'once') { patch({ scheduleKind: 'periodic', periodFreq: 'once', ...notPast() }); return }
+          if (value === 'interval') { patch({ scheduleKind: 'interval', ...notPast() }); return }
           // 回到「周期」：原来停在一次性的话，落到每天（否则保持原频率）。
           patch({ scheduleKind: 'periodic', periodFreq: draft.periodFreq === 'once' ? 'daily' : draft.periodFreq })
         },
