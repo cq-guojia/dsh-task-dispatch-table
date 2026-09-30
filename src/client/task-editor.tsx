@@ -1391,7 +1391,9 @@ export function TaskEditorDrawer(props: {
     nextMonth: t('editorNextMonth'),
     prevYear: t('editorPrevYear'),
     nextYear: t('editorNextYear'),
-    monthTitle: (year: number, month: number) => tt('editorMonthTitle', { y: year, m: month }),
+    // 月补两位（用户 2026-09-30「日期和时间的显示都补成两位」）⇒ zh「2026年09月」/ en「09/2026」。
+    monthTitle: (year: number, month: number) =>
+      tt('editorMonthTitle', { y: String(year), m: String(month).padStart(2, '0') }),
     // 日历表头就用单字（一…日 / Mo…Su），日历的通用写法。
     weekdays: weekdayShorts,
   }), [t, tt, weekdayShorts])

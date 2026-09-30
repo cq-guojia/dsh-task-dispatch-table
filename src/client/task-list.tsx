@@ -258,7 +258,8 @@ function countdownText(iso: string, nowMs: number, tt: Translate): string {
   const minutes = Math.floor((total % 3600) / 60)
   const seconds = total % 60
   const p = (v: number): string => String(v).padStart(2, '0')
-  return hours > 0 ? `${hours}:${p(minutes)}:${p(seconds)}` : `${minutes}:${p(seconds)}`
+  // 数字一律两位（用户 2026-09-30：「都把它补成两位」）⇒ `05:09` / `01:05:09`，位数恒定不跳。
+  return hours > 0 ? `${p(hours)}:${p(minutes)}:${p(seconds)}` : `${p(minutes)}:${p(seconds)}`
 }
 
 // ── 全局秒级心跳（单 timer + 局部订阅）────────────────────────────────
@@ -299,11 +300,12 @@ function clockOf(iso: string): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-/** 「9 月 28 日」（本机时区）。 */
+/** 「09 月 28 日」（本机时区；月 / 日补两位，用户 2026-09-30）。 */
 function dateOf(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return `${d.getMonth() + 1} 月 ${d.getDate()} 日`
+  const p = (v: number): string => String(v).padStart(2, '0')
+  return `${p(d.getMonth() + 1)} 月 ${p(d.getDate())} 日`
 }
 
 // ── 排序（时间轴：马上要跑的最上，关闭的沉底）──────────────────────────

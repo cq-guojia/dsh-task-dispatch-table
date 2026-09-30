@@ -553,6 +553,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 保存后乐观补行 ⇒ 改完**立刻**可见，不等服务端那 ~1 秒的落盘 + 重拉。
   check('保存后乐观补行（patchRow + rowPatchOf）',
     clientJs.includes('patchRow') && clientJs.includes('rowPatchOf'))
+  // 时间显示一律两位（用户 2026-09-30：「都把它补成两位」）——倒计时小时补零、时间戳自己拼秒。
+  check('时间显示一律两位（倒计时 p(hours) + 时间戳显式拼秒，不再用 toLocaleString）',
+    clientJs.includes('p(hours)') && clientJs.includes('p(d.getSeconds())') && !clientJs.includes('toLocaleString('))
   check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
   check('无下次执行显示 --:-- 占位（图标保留）', clientJs.includes('--:--'))
   check('展开区四区块（执行设置 / 附加文件 / 前置任务 / 提示词）',

@@ -39220,8 +39220,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				prevYear: t("editorPrevYear"),
 				nextYear: t("editorNextYear"),
 				monthTitle: (year, month) => tt("editorMonthTitle", {
-					y: year,
-					m: month
+					y: String(year),
+					m: String(month).padStart(2, "0")
 				}),
 				weekdays: weekdayShorts
 			}), [
@@ -40384,7 +40384,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const minutes = Math.floor(total % 3600 / 60);
 			const seconds = total % 60;
 			const p = (v) => String(v).padStart(2, "0");
-			return hours > 0 ? `${hours}:${p(minutes)}:${p(seconds)}` : `${minutes}:${p(seconds)}`;
+			return hours > 0 ? `${p(hours)}:${p(minutes)}:${p(seconds)}` : `${p(minutes)}:${p(seconds)}`;
 		}
 		const tickerListeners = /* @__PURE__ */ new Set();
 		let tickerTimer = null;
@@ -40423,11 +40423,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (Number.isNaN(d.getTime())) return "—";
 			return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 		}
-		/** 「9 月 28 日」（本机时区）。 */
+		/** 「09 月 28 日」（本机时区；月 / 日补两位，用户 2026-09-30）。 */
 		function dateOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
-			return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+			const p = (v) => String(v).padStart(2, "0");
+			return `${p(d.getMonth() + 1)} 月 ${p(d.getDate())} 日`;
 		}
 		function sortRows(rows) {
 			const groupOf = (row) => {
@@ -41170,11 +41171,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return false;
 			}
 		}
-		/** 宿主写入的 ISO 时间串 → 浏览器本机时区可读格式（解析失败原样返回）。 */
+		/**
+		* 宿主写入的 ISO 时间串 → `YYYY-MM-DD HH:mm:ss`（本机时区，解析失败原样返回）。
+		* ⚠️ 不用 `toLocaleString`：它的补零与分隔符随语言 / 运行环境变（用户 2026-09-30 反馈出现过
+		* 个位数分钟）⇒ 自己拼，**月 / 日 / 时 / 分 / 秒一律两位**。
+		*/
 		function formatTime(iso) {
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return iso;
-			return new Date(ms).toLocaleString(void 0, { hour12: false });
+			const d = new Date(ms);
+			const p = (v) => String(v).padStart(2, "0");
+			return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 		}
 		/** 任务行归一：旧版快照的 tasks 是 string[]（只有 id），兼容成明细行。 */
 		function normalizeTaskRow(item) {
