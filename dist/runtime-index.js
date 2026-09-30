@@ -1,4 +1,4 @@
-import { nextSlotAfter, titleOf } from './tasks.js';
+import { durationMs, nextSlotAfter, scheduledSlotsFor, titleOf } from './tasks.js';
 /** 影响「下一刻度」的定义指纹（改了才重算；不动则每轮零成本）。 */
 function scheduleKeyOf(task) {
     const s = task.schedule;
@@ -69,6 +69,38 @@ export function createRuntimeIndex() {
         try {
             const next = nextSlotAfter(task, new Date(nowMs));
             return next === undefined ? null : next.toISOString();
+        }
+        catch {
+            return null;
+        }
+    };
+    /**
+     * 待补跑的那一槽（U17 / Plan A，2026-09-30）：与服务端 Loop A `dueSlot` **同一算法**——
+     * 窗口内最晚、且没有实例行的刻度。这里用进程内 entry 近似 `store.findBySlot`：
+     * 最新槽若是「在飞的那一趟」或「最近一次已完结」，就当它已有行、不计补跑。
+     * 解决用户真机冲突：卡片按 `nextSlotAfter(now)`（严格晚于此刻）显示 15:40，但循环会先补跑 15:30 ⇒
+     * 这里把 15:30 也算出来给卡片，让它显示「补跑 15:30」，跑起来后自动变回「15:40」。
+     */
+    const computeDueSlotAt = (task, entry, nowMs) => {
+        if (task.enabled === false)
+            return null;
+        try {
+            const windowMs = durationMs(task.schedule.window);
+            const from = new Date(nowMs - windowMs);
+            const to = new Date(nowMs + 1000);
+            let chosen;
+            for (const s of scheduledSlotsFor(task, from, to)) {
+                if (s.getTime() <= nowMs && (chosen === undefined || s.getTime() > chosen.getTime()))
+                    chosen = s;
+            }
+            if (chosen === undefined)
+                return null;
+            const iso = chosen.toISOString();
+            if (entry.running && entry.runningSince === iso)
+                return null; // 在飞的正是这一槽
+            if (entry.lastScheduledAt === iso)
+                return null; // 最近一次已完结，就是这一槽
+            return iso;
         }
         catch {
             return null;
@@ -209,6 +241,7 @@ export function createRuntimeIndex() {
                     lastScheduledAt: entry.lastScheduledAt,
                     lastFinishedAt: entry.lastFinishedAt,
                     nextSlotAt: entry.nextSlotAt,
+                    dueSlotAt: computeDueSlotAt(task, entry, nowMs),
                 });
             }
             // 已删任务的残留条目：任务表里没了就别再占着内存。

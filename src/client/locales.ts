@@ -149,6 +149,7 @@ export type LocaleKey =
   | 'relJustNow' | 'relMinutesAgo' | 'relHoursAgo' | 'relDaysAgo' | 'relWeeksAgo' | 'relMonthsAgo' | 'relYearsAgo'
   | 'relToday' | 'relTomorrow' | 'relWeeks' | 'relMonths' | 'relYears'
   | 'listAgoOk' | 'listAgoFailed' | 'listLastFullTitle' | 'listNextFullTitle'
+  | 'listNextCatchupPrefix' | 'listNextCatchupTitle'
   | 'listEmpty' | 'listEmptyFiltered'
   | 'listSectionSchedule' | 'listSectionAttachments' | 'listSectionDepends' | 'listSectionPrompt'
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
@@ -675,6 +676,9 @@ export const zh: Record<LocaleKey, string> = {
   listAgoFailed: '{when}执行失败',
   listLastFullTitle: '上次执行：{when}',
   listNextFullTitle: '下次执行：{when}',
+  // U17 / Plan A（2026-09-30）：启用后循环会先补跑「窗口内最晚、还没跑过的那一槽」，卡片据此显示「补跑 15:30」。
+  listNextCatchupPrefix: '补跑 ',
+  listNextCatchupTitle: '待补跑：{when}',
   listEmpty: '还没有任务。点右上角「＋ 新建任务」创建第一个。',
   listEmptyFiltered: '没有符合当前筛选的任务。',
   listSectionSchedule: '执行设置',
@@ -1200,6 +1204,8 @@ export const en: Record<LocaleKey, string> = {
   listAgoFailed: 'failed {when}',
   listLastFullTitle: 'Last run: {when}',
   listNextFullTitle: 'Next run: {when}',
+  listNextCatchupPrefix: 'Catch-up ',
+  listNextCatchupTitle: 'Pending catch-up: {when}',
   listEmpty: 'No tasks yet. Use “+ New task” to create the first one.',
   listEmptyFiltered: 'No task matches the current filter.',
   listSectionSchedule: 'Execution settings',

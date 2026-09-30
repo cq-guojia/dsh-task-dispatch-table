@@ -53,6 +53,8 @@ export interface TaskOverviewRow {
   lastScheduledAt: string | null
   lastFinishedAt: string | null
   nextSlotAt: string | null
+  /** 待补跑槽（U17 / Plan A）：与服务端 dueSlot 同算法；有值 = 循环此刻会先补跑它。 */
+  dueSlotAt: string | null
 }
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
@@ -450,18 +452,26 @@ function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   )
 }
 
-/** 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。 */
+/**
+ * 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。
+ *
+ * ⚠️ 待补跑（U17 / Plan A，2026-09-30）：`row.dueSlotAt` 有值 ⇔ 循环此刻会先补跑「窗口内最晚、还没跑过的那一槽」
+ * （如 15:30），而 `nextSlotAt` 是严格晚于此刻的下一槽（15:40）。两者不一致时优先显示「补跑 15:30」+
+ * 倒计时；等它跑起来（`running` 翻转）`dueSlotAt` 变回 null，自动切回「15:40」——**显示与行为对齐**。
+ */
 function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
-  const title = row.nextSlotAt === null
-    ? t('listNextNone')
-    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
+  const catchup = row.dueSlotAt
+  const title = catchup === null
+    ? (row.nextSlotAt === null ? t('listNextNone') : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) }))
+    : tt('listNextCatchupTitle', { when: formatFull(catchup) })
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
       h('span', { style: pillIconCell(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): string => {
+          if (catchup !== null) return `${t('listNextCatchupPrefix')}${countdownText(catchup, nowMs, tt)}`
           if (row.nextSlotAt === null) return NO_TIME
           const diff = Date.parse(row.nextSlotAt) - nowMs
           return diff < 24 * 3600_000

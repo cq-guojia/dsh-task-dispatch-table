@@ -539,6 +539,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('function PastPill') && clientJs.includes('function NextPill') && !clientJs.includes('RunPills'))
   check('悬浮提示挂在真 DOM 上（Tooltip 子元素是真 <div>，不再是裸 LiveText）',
     /side: "bottom"\s*\},\s*\(0, react\.createElement\)\("div", \{ style: pillOuterStyle \}/.test(clientJs))
+  // U17 / Plan A（2026-09-30）：启用后循环先补跑「窗口内最晚未跑那一槽」，卡片据此显示「补跑 15:30」。
+  check('待补跑显示接上（NextPill 走 catchup 分支 + 中文前缀「补跑 」）',
+    clientJs.includes('listNextCatchupPrefix') && clientJs.includes('listNextCatchupTitle'))
   // 排期人话**单源**（用户 2026-09-30 拍板：列表与编辑器不许各写一份，否则同一排期两处文案不一样）：
   // 两处都走 client/schedule-text.ts，旧的 cronToHuman 已删。
   check('排期文案单源（scheduleSpecFromSchedule + scheduleSpecFromDraft，旧 cronToHuman 已删）',
@@ -1152,6 +1155,29 @@ console.log('\n[14] runtime-index')
 
   const pruned = idx.overview([taskB], Date.parse('2026-09-02T10:00:00.000Z'))
   check('overview：任务表里没有的条目被剔除', pruned.rows.length === 1 && pruned.rows[0].id === 'task-b')
+
+  // U17 / Plan A（2026-09-30）：启用后循环先补跑「窗口内最晚、还没跑过的那一槽」，
+  // 卡片据此显示「补跑 15:30」；跑起来后待补槽消失，回到「15:40」。
+  {
+    const dir2 = join(root, 'runtime-db-catchup')
+    const s2 = new TaskStore(join(dir2, 'state.db'))
+    const taskX = def({ id: 'task-x', title: '每10分', target: { workspace: 'Temp', prompt: 'x' },
+      schedule: { cron: '*/10 * * * *', timezone: 'UTC', window: 'PT4H' } })
+    const nowMs = Date.parse('2026-09-30T15:34:00.000Z')
+    idx.rebuild([taskX], s2, nowMs)
+    const r0 = idx.overview([taskX], nowMs).rows[0]
+    check('U17：待补槽 = 窗口内最晚未跑那一槽（15:30），与 nextSlotAt（15:40）区分开',
+      r0?.dueSlotAt === '2026-09-30T15:30:00.000Z' && r0?.nextSlotAt === '2026-09-30T15:40:00.000Z',
+      `due=${r0?.dueSlotAt} next=${r0?.nextSlotAt}`)
+    // 循环挑中它并落库 ⇒ 在飞，待补槽消失，回到 15:40（显示与行为对齐）。
+    idx.markDispatched('task-x', '2026-09-30T15:30:00.000Z')
+    const r1 = idx.overview([taskX], nowMs).rows[0]
+    check('U17：落库后「补跑」标记消失（running=true, dueSlotAt=null）',
+      r1?.running === true && r1?.dueSlotAt === null, `running=${r1?.running} due=${r1?.dueSlotAt}`)
+    s2.close()
+    rmSync(dir2, { recursive: true, force: true })
+  }
+
   store.close()
   rmSync(dir, { recursive: true, force: true })
 }

@@ -541,6 +541,8 @@ window.__ModuleLoader__.load({
 			listAgoFailed: "{when}执行失败",
 			listLastFullTitle: "上次执行：{when}",
 			listNextFullTitle: "下次执行：{when}",
+			listNextCatchupPrefix: "补跑 ",
+			listNextCatchupTitle: "待补跑：{when}",
 			listEmpty: "还没有任务。点右上角「＋ 新建任务」创建第一个。",
 			listEmptyFiltered: "没有符合当前筛选的任务。",
 			listSectionSchedule: "执行设置",
@@ -1057,6 +1059,8 @@ window.__ModuleLoader__.load({
 			listAgoFailed: "failed {when}",
 			listLastFullTitle: "Last run: {when}",
 			listNextFullTitle: "Next run: {when}",
+			listNextCatchupPrefix: "Catch-up ",
+			listNextCatchupTitle: "Pending catch-up: {when}",
 			listEmpty: "No tasks yet. Use “+ New task” to create the first one.",
 			listEmptyFiltered: "No task matches the current filter.",
 			listSectionSchedule: "Execution settings",
@@ -40580,16 +40584,24 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			})));
 		}
-		/** 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。 */
+		/**
+		* 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。
+		*
+		* ⚠️ 待补跑（U17 / Plan A，2026-09-30）：`row.dueSlotAt` 有值 ⇔ 循环此刻会先补跑「窗口内最晚、还没跑过的那一槽」
+		* （如 15:30），而 `nextSlotAt` 是严格晚于此刻的下一槽（15:40）。两者不一致时优先显示「补跑 15:30」+
+		* 倒计时；等它跑起来（`running` 翻转）`dueSlotAt` 变回 null，自动切回「15:40」——**显示与行为对齐**。
+		*/
 		function NextPill(props) {
 			const { row, t, tt } = props;
-			const title = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			const catchup = row.dueSlotAt;
+			const title = catchup === null ? row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) }) : tt("listNextCatchupTitle", { when: formatFull(catchup) });
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
 			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(C$1.layer3, C$1.text) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
+					if (catchup !== null) return `${t("listNextCatchupPrefix")}${countdownText(catchup, nowMs, tt)}`;
 					if (row.nextSlotAt === null) return NO_TIME;
 					return Date.parse(row.nextSlotAt) - nowMs < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);
 				}

@@ -178,3 +178,16 @@
 - 侧栏 / 面板图标换成用户给的 `assets/icon-scheduler.svg`（左右方括号 + 红方块拼的「S」）：**内联进 client bundle**（`src/client/index.ts` 的 `TaskIcon`）。⚠️ 必须内联——宿主只服务 client bundle，仓库 `assets/` 不会到浏览器；配色沿用原图（品牌蓝 40% + 红），**不走 `currentColor`**（用户给的设计稿配色，要随选中态变色再改）。
 
 **新增 2 条冒烟断言**（展示名 + 图标内联），**298 项全过**。
+
+### 8.6 U17：下次执行与补跑显示对齐（Plan A，同日落码）
+
+8.4 核实出「真正的缺陷是显示」：卡片按 `nextSlotAfter(now)`（严格晚于此刻）显示 15:40，但循环会先补跑窗口内最晚、未跑过的那一槽（15:30）⇒ 显示与行为冲突。
+
+**Plan A（用户拍板「继续」后实施）**：服务端把「Loop A 此刻会挑中的那一槽」也算出来塞进 overview，卡片据此显示「补跑 15:30」，跑起来后自动切回「15:40」。
+
+- `src/runtime-index.ts`：新增 `dueSlotAt` 字段；新增 `computeDueSlotAt(task, entry, nowMs)`——**复用 `dueSlot` 同算法**（窗口内最晚、且进程内 entry 没有行的那一槽：在飞的那一趟 / 最近一次已完结 → 当已有行不计）。`overview()` 每轮就地算，不进 `overviewKeyOf`（不 bump rev）。
+- `src/client/task-list.tsx` `NextPill`：当 `dueSlotAt` 有值时显示 `补跑 15:30`（倒计时）+ Tooltip「待补跑：…」，跑起来 `running` 翻转 ⇒ `dueSlotAt=null` 自动切回 `下次 15:40`。
+- `src/client/locales.ts`：新增 `listNextCatchupPrefix`（补跑 / Catch-up）/ `listNextCatchupTitle`（待补跑：{when}）。
+- 冒烟新增 **3 条**（runtime 待补槽 / 落库后消失 / 客户端「补跑 」前缀），**301 项全过**，typecheck + build 绿。
+
+> ⚠️ 注意：Plan A 是**显示对齐**，不改变调度语义（仍只补窗口内最晚一槽，绝不窗口内全补）。这与 8.4 核实结论一致。
