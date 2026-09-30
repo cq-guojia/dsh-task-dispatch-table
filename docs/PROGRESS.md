@@ -53,6 +53,8 @@
 
 ## 二、当前状态
 
+> 📌 **2026-09-30（三）· 编辑器 UX 第二轮（决策 52）**——真机试用反馈集中返工：① 错误提示**人话化**（`validateTaskDraft` 结构化逐项校验：必填对齐 zod + 排期冲突；点保存才判定，判定后持久总览列全 + 问题框描红随改随消，`humanizeTaskError` 兜底翻译服务端机器码）；② 错误呈现**统一自研浮层 Toast**（`toast-css.ts`：保存失败 / 附件上传失败同款 2.8s 上飘淡出自退，JSON 不合法 `--sticky` 常驻）；③ 执行频率卡「任务开始时间」上方两线之间新增**「预计执行」实时人话说明**（通用 `describeSchedule(draft,t)`，可复用任务列表）；④ **版本历史拆分**：提示词编辑器只管提示词版本（条目时钟图标 + hover 右侧浮出按钮行高不变），配置快照移主编辑器（前置卡下方 + 严厉确认），「版本」开关改自绘 toggle（时钟图标 + 两字，选中 business 高亮）；⑤ 修附件卡丢 `.dsh-tdt-ed-section` 的 16px 间距回归。冒烟 **237 项全过**、typecheck/build 绿。**⏳ 真机验证待做**（清单见 [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) §四）。
+
 > 📌 **2026-09-30（三）· 新增 / 编辑任务功能面落码完成（决策 51）**——需求 + 数据设计 + 落码一天走完：需求口径 ⇒ [`design/creation-edit-requirements.md`](design/creation-edit-requirements.md)；数据设计 ⇒ [`design/data-model.md`](design/data-model.md) §五 §六；落码过程与评审见 [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md)。已落：保存链路（zod 校验 / 身份闸门 / 附件只搬不删→落库后才真删）、文件资产（`tasks/<uuid>/` 版本·快照·附件 + 临时区清道夫）、编辑态反解（schedule.ui 双写 > cron 反解 > customCron 降级）、版本找回两档（严厉确认）、删除任务（红钮 + 不可逆确认 + 整目录删）、`task_audit` 审计、两循环补齐（附件缺失拦停 / dep_disabled·dep_missing / 日志结论变化才记 / 快照补 attachments / 执行记录默认不清）。**专家组评审 14 条：P0×1 + P1×8 全修**（含附件穿越删除利用链、季度 cron 漏起月、customCron 二次覆盖），冒烟 **236 项全过**、typecheck/build 绿。**⏳ 真机验证待做**（清单见 worklog §四；`req.url` query 行为存疑，版本面板空先查它）。
 
 > 🎉 **本仓库已于 2026-09-29 暂时结项（用户拍板）**：所有进行中的开发工作包——U11 收尾打磨（代码换行开关 / 图标官方 Tooltip / 面包屑从工作区根列全 / 下拉选层箭头一行一个）、U12 交付登记、U13 两层循环解耦、U14 依赖快照、里程碑 15 会话弹窗外观对齐官方、决策 44 任务表单弹窗——均已落码并通过**真机验证**，无遗留边界。U1–U6（用户此前明确推迟的后续项）、U9（依赖功能真机验证）作为**重新开启时的待办 backlog** 保留在 §四，不在本次结项范围内。冒烟 172 项全过、typecheck/build 绿。
@@ -117,6 +119,7 @@
 | 25 | UI 收口 + Agent 权限选择器（决策 50）· 表单弹窗封档 | ✅ 封卷（真机待验） | 09-29 | 文案收口（重试次数 / 预览说明 / 默认模型）；工作区右侧权限下拉四档（默认「会话默认」）；源码核实宿主 `AgentOptions` 无权限参数 ⇒ 落库 + 派发消息约束指令执行，不造假开关；**用户拍板新增 UI 封档**，后续转入新增/编辑任务设计（提纲见 creation-edit-design.md）。冒烟 196 项全过 | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 · [design/decisions.md](design/decisions.md) 决策 50 |
 | 26 | 高级区第二轮 + 多 Agent 协作接线（决策 49） | 🔵 落码（真机待验） | 09-29 | 源码核实推翻「Agent Team 无通道」：experimental 全家桶（`ctx.agentTeams` + 6 类团队工具，启用 = 宿主 profile 层，派发会话天生 Team Lead）→ 高级区「多 Agent 协作」开关（缺组件降级单 Agent）+ 派发消息注入团队执行段；高级区 UI 二轮：撤黑框灰条头 +「?」气泡 + 官方 chevron、两拍排版虚线分隔、重置次数 Segmented 同排、配置预览去标题、修全屏面板滚动回顶；顺手修决策 48 快照丢 goal 缺陷；冒烟 190 项全过 | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十一 · [design/decisions.md](design/decisions.md) 决策 49 |
 | 27 | 新增 / 编辑任务功能面落码（决策 51） | 🔵 落码（**真机待验**） | 09-30 | 保存链路（zod / 闸门 / 附件先搬后删）、`task-assets.ts`（版本·快照·附件·清道夫·整目录删）、编辑态反解（双写 > cron > customCron 降级）、版本找回两档严厉确认、删除任务红钮、`task_audit`、两循环补齐（附件拦停 / dep_disabled·dep_missing / 日志去重 / 执行记录默认不清）；**专家组评审 14 条 P0×1+P1×8 全修**（附件穿越删除链 / 季度 cron 漏起月 / customCron 二次覆盖等）；冒烟 236 全过 | [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md) · [design/decisions.md](design/decisions.md) 决策 51 |
+| 28 | 编辑器 UX 第二轮：错误人话化 / 统一浮层 / 预计执行说明 / 版本历史拆分（决策 52） | 🔵 落码（**真机待验**） | 09-30 | `validateTaskDraft` 逐项校验（必填+排期冲突）→ 持久总览列全 + 问题框描红随改随消；`humanizeTaskError` 翻译服务端机器码；保存失败 / 附件上传失败统一自研浮层 Toast（JSON 不合法 sticky 常驻）；`describeSchedule` 通用排期→人话实时说明（两线之间）；提示词历史与配置快照拆分（快照移主编辑器）；版本开关改 toggle（时钟图标+「版本」）；修附件卡 16px 间距回归；冒烟 237 全过 | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) · [design/decisions.md](design/decisions.md) 决策 52 |
 
 ---
 

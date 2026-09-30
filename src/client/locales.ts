@@ -113,9 +113,9 @@ export type LocaleKey =
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
   | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
-  | 'editorSnapshots' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
+  | 'editorSnapshots' | 'editorSnapshotsHint' | 'editorNoSnapshots' | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
-  | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint'
+  | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint' | 'editorErrorsTitle'
   | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
   | 'editorTaskStart' | 'editorTaskStartHint'
   | 'editorWeekdayLabel'
@@ -124,6 +124,11 @@ export type LocaleKey =
   | 'editorToday' | 'editorPrevMonth' | 'editorNextMonth' | 'editorPrevYear' | 'editorNextYear'
   | 'editorMonthTitle' | 'editorHour' | 'editorMinute' | 'editorNow' | 'editorConfirm'
   | 'editorWindow' | 'editorWindowHint'
+  | 'editorSchedForecast' | 'editorSchedRun' | 'editorSchedEveryday' | 'editorSchedNoDay'
+  | 'editorSchedDaily' | 'editorSchedWeekly' | 'editorSchedEveryNWeek' | 'editorSchedMonthly'
+  | 'editorSchedQuarterly' | 'editorSchedIntervalMin' | 'editorSchedIntervalHour'
+  | 'editorSchedOnce' | 'editorSchedInvalidStep'
+  | 'editorMonthMode_every' | 'editorMonthMode_odd' | 'editorMonthMode_even'
   | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask' | 'editorDepPickWsFirst'
@@ -516,6 +521,9 @@ export const zh: Record<LocaleKey, string> = {
   editorResetTitle: '重置当前编辑？',
   editorResetDesc: '重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。',
   editorSnapshots: '配置快照（整份找回）',
+  editorSnapshotsHint: '每次保存提示词时系统会同时留一份「整份设置」的快照。点「找回全部」会用那份快照覆盖当前所有设置（提示词、排期、工作区、模型、权限、前置任务与附件清单），覆盖前会再确认。',
+  editorNoSnapshots: '暂无配置快照——保存一次提示词后这里就会出现。',
+  editorVersionToggle: '版本',
   editorRestoreAll: '找回全部',
   editorRestoreAllTitle: '找回全部设置',
   editorRestoreAllDesc: '确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。',
@@ -524,6 +532,7 @@ export const zh: Record<LocaleKey, string> = {
   editorCustomCron: '自定义 cron（JSON 里的原值，保存时原样保留）',
   editorSaved: '已保存',
   editorSaveFailedHint: '保存失败：',
+  editorErrorsTitle: '保存前请先处理以下问题',
   editorTasksTitle: '任务列表',
   editorTasksEmpty: '还没有任务：点右上角「＋ 新建任务」创建第一条。',
   editorDisabledTag: '已停用',
@@ -553,6 +562,22 @@ export const zh: Record<LocaleKey, string> = {
   editorConfirm: '确定',
   editorWindow: '允许延迟',
   editorWindowHint: '任务到达计划开始执行时间后，若前置任务尚未完成或因其它原因需延后，最长允许在此时长内继续执行；超过该时长则跳过本次执行。',
+  editorSchedForecast: '预计执行',
+  editorSchedRun: '执行',
+  editorSchedEveryday: '每天',
+  editorSchedNoDay: '未选生效日',
+  editorSchedDaily: '每天',
+  editorSchedWeekly: '每周',
+  editorSchedEveryNWeek: '每 {n} 周',
+  editorSchedMonthly: '每月',
+  editorSchedQuarterly: '每季度第 {n} 个月',
+  editorSchedIntervalMin: '每 {n} 分钟执行一次',
+  editorSchedIntervalHour: '每 {n} 小时执行一次',
+  editorSchedOnce: '执行一次',
+  editorSchedInvalidStep: '执行间隔没填，无法生成执行计划',
+  editorMonthMode_every: '每月',
+  editorMonthMode_odd: '单数月',
+  editorMonthMode_even: '双数月',
   editorDiscardTitle: '放弃未保存的更改？',
   editorDiscardDesc: '当前内容已修改且尚未保存，关闭后这些更改将丢失。',
   editorDiscardStay: '继续编辑',
@@ -955,6 +980,9 @@ export const en: Record<LocaleKey, string> = {
   editorResetTitle: 'Reset current edits?',
   editorResetDesc: 'Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.',
   editorSnapshots: 'Config snapshots (restore all)',
+  editorSnapshotsHint: 'Each time you save the prompt, the system also keeps a snapshot of the whole task. "Restore all" overwrites every current setting (prompt, schedule, workspace, model, permission, dependencies and attachments) with that snapshot — you will be asked to confirm first.',
+  editorNoSnapshots: 'No config snapshots yet — they appear here after you save the prompt once.',
+  editorVersionToggle: 'Versions',
   editorRestoreAll: 'Restore all',
   editorRestoreAllTitle: 'Restore all settings',
   editorRestoreAllDesc: 'Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.',
@@ -963,6 +991,7 @@ export const en: Record<LocaleKey, string> = {
   editorCustomCron: 'Custom cron (raw value from JSON; kept as-is on save)',
   editorSaved: 'Saved',
   editorSaveFailedHint: 'Save failed: ',
+  editorErrorsTitle: 'Please fix the following before saving',
   editorTasksTitle: 'Tasks',
   editorTasksEmpty: 'No tasks yet — use "＋ New task" in the top-right corner to create the first one.',
   editorDisabledTag: 'Disabled',
@@ -992,6 +1021,22 @@ export const en: Record<LocaleKey, string> = {
   editorConfirm: 'OK',
   editorWindow: 'Allow delay',
   editorWindowHint: 'When the task reaches its planned start time but a dependency is unfinished or something else delays it, it may wait up to this long and still run; past this, this run is skipped.',
+  editorSchedForecast: 'Forecast',
+  editorSchedRun: 'runs',
+  editorSchedEveryday: 'every day',
+  editorSchedNoDay: 'no active day',
+  editorSchedDaily: 'Every day',
+  editorSchedWeekly: 'Weekly',
+  editorSchedEveryNWeek: 'Every {n} weeks',
+  editorSchedMonthly: 'Monthly',
+  editorSchedQuarterly: 'Month {n} of each quarter',
+  editorSchedIntervalMin: 'Runs every {n} minutes',
+  editorSchedIntervalHour: 'Runs every {n} hours',
+  editorSchedOnce: 'runs once',
+  editorSchedInvalidStep: 'Interval not set — cannot build a schedule',
+  editorMonthMode_every: 'Every month',
+  editorMonthMode_odd: 'Odd months',
+  editorMonthMode_even: 'Even months',
   editorDiscardTitle: 'Discard unsaved changes?',
   editorDiscardDesc: 'The content has been modified but not saved. These changes will be lost if you close now.',
   editorDiscardStay: 'Keep editing',

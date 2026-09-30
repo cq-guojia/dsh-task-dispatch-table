@@ -177,3 +177,19 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 **安全（评审修正）**：附件 ref 白名单（禁 `..` / 绝对路径 / 反斜杠）进 schema、搬移定位与**真删循环**三处对称设防——否则存在「提交穿越 ref 再保存一次 ⇒ rmSync 删数据根外任意文件」的完整利用链。文件名清洗保留中文 / 空格 / 点，只清控制字符与 `\ / : * ? " < > |`。
 
 **审计**：新表 `task_audit`（ts / task_id / action / detail），**默认不清**；action = task_created / task_updated / task_deleted / tasks_replaced / version_created / version_deleted / attachment_removed / attachment_missing。版本 / 快照管理入口本轮不做 UI（已封档），先只落盘 + `tasks/history` 路由已备。
+
+## 决策 52：编辑器 UX 第二轮——错误提示人话化 / 统一浮层 / 「预计执行」说明 / 版本历史拆分（2026-09-30）
+
+**背景**：真机试用集中反馈四点——保存失败提示是机器码（`target.workspace: Too small…`）看不懂；错误提示散落多处、红字挤占版面；排期设置完不知道「实际什么时候执行」；提示词版本历史与配置快照混在一个面板里。
+
+**错误提示（逐项判定 + 框描红 + 一次性列全）**：
+- 客户端先行校验 `validateTaskDraft`：必填对齐宿主 zod（`target.workspace` / `target.prompt` 均 `.min(1)`）+ 排期冲突（每周没勾星期 / 间隔步长非法 = 产不出 cron ⇒ 任务永不执行）；`title` schema 可选（空回退 id）不强制。
+- **点保存才判定**；判定后问题**逐项列出**（持久错误总览，不自动消失——用户原话：2.5 秒记不住、没法对照着改）+ **问题框描红**（卡片 / `SelectField` / 提示词 textarea 三种 `--error` 变体，颜色走 `--dsw-alias-state-error-primary` 明暗自适应），随修正实时消退，全部处理完才真正提交。
+- 服务端机器码兜底 `humanizeTaskError`：`Too small` 片段翻人话（「工作区不能为空，请先选择工作区」等）；面板保存失败、编辑器保存 / 删除失败三路都先翻译再显示。
+- 呈现统一为**自研浮层 Toast**（`src/client/toast-css.ts` 运行时注入 `.dsh-tdt-toast`）：保存失败（面板 + 编辑器 footer 正上方）、附件上传失败（附件卡正上方）共用同一动画时间线 2.8s（稳定 ≈2.5s 后上飘淡出，`onAnimationEnd` 自退）；「JSON 不合法」是持续态 ⇒ `--sticky` 常驻变体（不占版面、改对才撤）。
+
+**「预计执行」实时说明**：通用方法 `describeSchedule(draft, t)`——排期结构 → 一句人话（如「预计每周一到周日每天 9 点执行」「每 5 分钟执行一次」），设计为可复用（后续任务列表可直接调用）；渲染在执行频率卡「任务开始时间」上方两条分隔线之间，随编辑实时刷新；文案全走 locale（zh / en）。
+
+**版本历史拆分**：提示词编辑器右侧面板**只管提示词版本**（条目 = 时钟图标 + 时间 + 备注，hover 时右侧浮出「使用版本 / 删除」、行高不变）；**配置快照移到主编辑器**（前置任务卡下方独立区块 + 说明，找回沿用严厉确认）。「历史版本」开关按钮弃 outline Button，改自绘 toggle（官方时钟图标 + 「版本」两字；选中 = business 高亮、未选中灰盒，明暗一致，与「预览/编辑」分段同拍）。
+
+**顺手修**：附件卡容器此前丢 `.dsh-tdt-ed-section` 导致与「执行频率」卡 16px 间距消失（回归）——已修。冒烟 237 项全过；**真机验证待做**。

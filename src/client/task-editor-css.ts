@@ -49,11 +49,31 @@ export const TASK_EDITOR_CSS = `
 /* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
 .dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
 .dsh-tdt-ed-card:focus-within{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
+/* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
+.dsh-tdt-ed-card--error{border-color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.08));}
+.dsh-tdt-ed-field--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
+/* 保存前的错误总览：把全部问题一次性列出来（不自动消失），让用户对照着改。 */
+.dsh-tdt-ed-errors{margin:0 0 12px;padding:10px 12px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.10));border:1px solid var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-ed-errors-title{font-size:12px;font-weight:600;color:var(--dsw-alias-state-error-primary,#e5484d);margin:0 0 6px;}
+.dsh-tdt-ed-errors li{font-size:12px;line-height:1.7;color:var(--dsw-alias-label-primary,#1f2328);}
+/* 历史版本开关：与「预览/编辑」分段控件同源（默认灰盒；选中=高亮，明暗自适应）。 */
+.dsh-tdt-ed-histtoggle{appearance:none;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;line-height:18px;padding:5px 12px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;}
+.dsh-tdt-ed-histtoggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-histtoggle--on{background:var(--dsw-alias-state-business-primary,#4d6bfe);border-color:var(--dsw-alias-state-business-primary,#4d6bfe);color:#fff;}
+/* 版本条目：左 = 图标+时间+备注，右 = hover 浮出「使用版本/删除」（不撑高，高度恒定）。 */
+.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--dsw-alias-border-l3,rgba(128,128,128,.18));}
+.dsh-tdt-ed-ver-ic{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;}
+.dsh-tdt-ed-ver-time{font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-ed-ver-note{font-size:12px;margin:2px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-ed-ver-actions{display:flex;gap:6px;opacity:0;transition:opacity .12s ease;}
+.dsh-tdt-ed-ver:hover .dsh-tdt-ed-ver-actions{opacity:1;}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
 .dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:1.6;resize:vertical;}
 .dsh-tdt-ed-prompt::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
+.dsh-tdt-ed-prompt--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 上传投放区（P1 接真上传；此处只呈现形态 + 文案）。 */

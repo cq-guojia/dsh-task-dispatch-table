@@ -23,6 +23,7 @@ import {
   FileTypeIcon,
   IconChevronDownOutlineRegular,
   IconCloseOutlineRegular,
+  IconClockOutlineRegular,
   IconFolderOpenOutlineRegular,
   IconPlusOutlineRegular,
   IconQuestionOutlineRegular,
@@ -337,6 +338,49 @@ function structuredOf(draft: TaskEditorDraft): Record<string, unknown> {
 }
 
 /**
+ * 排期 → 人话（用户 2026-09-30：用户看不懂设置，要直接告诉他「预计什么时候执行」）。
+ * 通用方法：吃草稿、吐一句中文执行说明；编辑时实时改、也能给任务列表复用。
+ * 文案全部走 locale（含周几 / 月口径），明暗自适应。
+ */
+function weekdayText(t: T, days: number[]): string {
+  if (days.length === 0) return ''
+  if (days.length >= 7) return t('editorSchedEveryday')
+  return days.map(day => t(WEEKDAY_KEYS[day - 1])).join('、')
+}
+
+export function describeSchedule(draft: TaskEditorDraft, t: T): string {
+  const time = /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : '09:00'
+  const step = Number.parseInt(draft.intervalStep, 10)
+  const stepN = Number.isFinite(step) && step > 0 ? step : 0
+  const days = [...draft.weekdays].sort((a, b) => a - b)
+  const wd = weekdayText(t, days)
+
+  if (draft.scheduleKind === 'interval') {
+    if (stepN === 0) return t('editorSchedInvalidStep')
+    if (draft.intervalUnit === 'minute') return t('editorSchedIntervalMin').replace('{n}', String(stepN))
+    const base = t('editorSchedIntervalHour').replace('{n}', String(stepN))
+    return wd === '' ? `${base}（${t('editorSchedNoDay')}）` : `${base}（${wd}）`
+  }
+  if (draft.periodFreq === 'once') return `${draft.date} ${time} ${t('editorSchedOnce')}`
+  switch (draft.periodFreq) {
+    case 'daily':
+      return `${t('editorSchedDaily')} ${time} ${t('editorSchedRun')}`
+    case 'weekly': {
+      if (wd === '') return `${t('editorSchedWeekly')} ${time} ${t('editorSchedRun')}（${t('editorSchedNoDay')}）`
+      const wstep = Number.parseInt(draft.weekStep, 10)
+      const every = Number.isFinite(wstep) && wstep > 1 ? t('editorSchedEveryNWeek').replace('{n}', String(wstep)) : ''
+      return `${every}${t('editorSchedWeekly')}${wd} ${time} ${t('editorSchedRun')}`
+    }
+    case 'monthly':
+      return `${t(`editorMonthMode_${draft.monthMode}`)}${draft.monthDay} 日 ${time} ${t('editorSchedRun')}`
+    case 'quarterly':
+      return `${t('editorSchedQuarterly').replace('{n}', draft.quarterMonth)} ${draft.monthDay} 日 ${time} ${t('editorSchedRun')}`
+    case 'yearly':
+      return `${t('editorMonthMode_every')}${draft.yearMonth} 月 ${draft.monthDay} 日 ${time} ${t('editorSchedRun')}`
+  }
+}
+
+/**
  * 草稿 → 任务定义 JSON（保存 / 预览同源）。
  * 排期**双写**（data-model §5.4）：`cron`/`once`/`start`/`everyNWeeks` 是执行真源，
  * `schedule.ui` 是编辑态反解真源；两者都由**表单**产出 ⇒ 保存以表单为准重写 cron
@@ -403,20 +447,39 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   return JSON.stringify(definition, null, 2)
 }
 
+/** 校验出的问题归属字段（决定哪个框描红）。 */
+export type ErrorField = 'workspace' | 'prompt' | 'schedule'
+
+/** 一条校验问题：归属字段 + 人话说明（用户 2026-09-30：逐项判断、逐框描红、文案说人话不啰嗦但讲清后果）。 */
+export interface FieldProblem {
+  field: ErrorField
+  message: string
+}
+
 /**
  * 保存前的客户端校验（用户 2026-09-30：别把宿主那串机器码「任务定义不合法（target.workspace: Too small…）」
- * 直接甩给用户——先在本地把必填项查清楚、用人话列出来）。返回人话问题清单；空数组 = 可保存。
+ * 直接甩给用户——先在本地把必填项 / 排期冲突查清楚、用人话列出来）。空数组 = 可保存。
  *
  * 必填判定严格对齐宿主 zod schema（src/tasks.ts）：`target.workspace` 与 `target.prompt` 都是 `.min(1)`，
  * 二者空了保存必被拒。`title` 在 schema 里是可选（空则回退 id）⇒ 不强制；提示词在「按任务手册」模式下由
- * `manual` 兜底默认句 ⇒ 也不空。
+ * `manual` 兜底默认句 ⇒ 也不空。排期则对齐 `scheduleCron`：每周没勾星期 / 间隔步长非法都产不出 cron ⇒ 永不执行。
  */
-export function validateTaskDraft(draft: TaskEditorDraft): string[] {
-  const problems: string[] = []
-  if (draft.workspace.trim() === '') problems.push('请选择工作区')
-  // 非「按任务手册」模式：提示词就是 draft.prompt，空了就空了（手册模式下 manual 缺失会兜底默认句，不会空）。
+export function validateTaskDraft(draft: TaskEditorDraft): FieldProblem[] {
+  const problems: FieldProblem[] = []
+  // ① 必填：工作区（target.workspace .min(1)）。
+  if (draft.workspace.trim() === '') {
+    problems.push({ field: 'workspace', message: '还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。' })
+  }
+  // ② 必填：提示词（target.prompt .min(1)）；「按任务手册」模式由 manual 兜底，不在此查。
   if (draft.promptSource !== 'manual' && draft.prompt.trim() === '') {
-    problems.push('请填写提示词')
+    problems.push({ field: 'prompt', message: '还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。' })
+  }
+  // ③ 排期冲突：产不出 cron 的组合（每周没勾星期 / 间隔步长非法）⇒ 任务永不执行。
+  const step = Number.parseInt(draft.intervalStep, 10)
+  if (draft.scheduleKind === 'interval' && (!Number.isFinite(step) || step <= 0)) {
+    problems.push({ field: 'schedule', message: '执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。' })
+  } else if (draft.scheduleKind === 'periodic' && draft.periodFreq === 'weekly' && draft.weekdays.length === 0) {
+    problems.push({ field: 'schedule', message: '每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。' })
   }
   return problems
 }
@@ -953,22 +1016,18 @@ function PromptEditorModal(props: {
   onClose: () => void
   /** 只找回提示词（把该版本内容填进编辑器）。 */
   onRestoreVersion: (file: string) => void
-  /** 找回全部设置（用该配置快照整体覆盖表单）。 */
-  onRestoreSnapshot: (file: string) => void
   /** 删除某个版本（用户自己删；系统从不自动删）。 */
   onDeleteVersion: (file: string) => void
 }): ReactNode {
-  const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onRestoreSnapshot, onDeleteVersion } = props
+  const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onDeleteVersion } = props
   // 编辑器扩展固定引用：markdown 高亮 + 软折行（长行自动换行，宽度失控/横向滚动的根源在此）。
   const cmExtensions = useMemo(() => [markdown(), EditorView.lineWrapping], [])
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [showVersions, setShowVersions] = useState(false)
   const versions = history?.versions ?? []
-  const snapshots = history?.snapshots ?? []
   const [hoveredId, setHoveredId] = useState<string | null>(null)
   const [confirmDeleteFile, setConfirmDeleteFile] = useState<string | null>(null)
   const [confirmUseFile, setConfirmUseFile] = useState<string | null>(null)
-  const [confirmSnapshotFile, setConfirmSnapshotFile] = useState<string | null>(null)
 
   const versionTitle = editorMode === 'create' ? t('editorHistoryVersions') : t('editorVersions')
 
@@ -989,7 +1048,12 @@ function PromptEditorModal(props: {
           label: t('editorPromptEditorTitle'),
           className: 'dsh-tdt-ed-seg',
         }),
-        h(Button, { variant: 'outline', size: 'sm', onClick: () => { setShowVersions(v => !v) } }, versionTitle),
+        h('button', {
+          type: 'button',
+          className: `dsh-tdt-ed-histtoggle${showVersions ? ' dsh-tdt-ed-histtoggle--on' : ''}`,
+          onClick: () => { setShowVersions(v => !v) },
+          'aria-pressed': showVersions,
+        }, h(IconClockOutlineRegular, { size: 14 }), t('editorVersionToggle')),
         h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
       ),
     ),
@@ -1022,34 +1086,22 @@ function PromptEditorModal(props: {
                   : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 12px 12px', overflow: 'auto' } },
                     versions.map(v => h('li', {
                       key: v.file,
-                      style: { padding: '10px 0', borderBottom: `1px solid ${C.borderL4}`, position: 'relative' },
+                      className: 'dsh-tdt-ed-ver',
                       onMouseEnter: () => { setHoveredId(v.file) },
                       onMouseLeave: () => { setHoveredId(cur => (cur === v.file ? null : cur)) },
                     },
-                      h('div', { style: { fontSize: '11px', color: C.textDim } }, formatVersionTime(v.ts)),
-                      v.note !== '' ? h('div', { style: { fontSize: '12px', margin: '2px 0 0' } }, v.note) : null,
+                      h('span', { className: 'dsh-tdt-ed-ver-ic' }, h(IconClockOutlineRegular, { size: 14 })),
+                      h('div', { className: 'dsh-tdt-ed-ver-main' },
+                        h('div', { className: 'dsh-tdt-ed-ver-time' }, formatVersionTime(v.ts)),
+                        v.note !== '' ? h('div', { className: 'dsh-tdt-ed-ver-note' }, v.note) : null,
+                      ),
                       hoveredId === v.file
-                        ? h('div', { style: { display: 'flex', gap: '6px', marginTop: '8px' } },
+                        ? h('div', { className: 'dsh-tdt-ed-ver-actions' },
                             h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseVersion')),
                             h(Button, { variant: 'ghost', size: 'sm', onClick: () => { setConfirmDeleteFile(v.file) } }, t('editorDeleteVersion')),
                           )
                         : null,
                     )),
-                  ),
-                // 配置快照：整份找回（提示词 + 排期 + 工作区 + 模型 + 权限 + 附件清单全恢复）。
-                snapshots.length === 0
-                  ? null
-                  : h('div', { style: { borderTop: `1px solid ${C.borderL4}`, padding: '10px 12px 12px' } },
-                    h('div', { style: { fontSize: '12px', fontWeight: 600, marginBottom: '6px' } }, t('editorSnapshots')),
-                    h('ul', { style: { listStyle: 'none', margin: 0, padding: 0, overflow: 'auto' } },
-                      snapshots.map(s => h('li', {
-                        key: s.file,
-                        style: { padding: '8px 0', borderBottom: `1px solid ${C.borderL4}` },
-                      },
-                        h('div', { style: { fontSize: '11px', color: C.textDim, marginBottom: '6px' } }, formatVersionTime(s.ts)),
-                        h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmSnapshotFile(s.file) } }, t('editorRestoreAll')),
-                      )),
-                    ),
                   ),
               ),
           )
@@ -1073,16 +1125,6 @@ function PromptEditorModal(props: {
         confirmLabel: t('editorUseVersion'),
         onCancel: () => { setConfirmUseFile(null) },
         onConfirm: () => { onRestoreVersion(confirmUseFile); setConfirmUseFile(null) },
-      })
-      : null,
-    confirmSnapshotFile !== null
-      ? h(VersionConfirm, {
-        t,
-        title: t('editorRestoreAllTitle'),
-        desc: t('editorRestoreAllDesc'),
-        confirmLabel: t('editorRestoreAll'),
-        onCancel: () => { setConfirmSnapshotFile(null) },
-        onConfirm: () => { onRestoreSnapshot(confirmSnapshotFile); setConfirmSnapshotFile(null) },
       })
       : null,
   )
@@ -1162,6 +1204,7 @@ export function TaskEditorDrawer(props: {
     history, onRestoreVersion, onRestoreSnapshot, onDeleteVersion, workspaceFiles, workspaceAnchors,
     currentTaskId,
   } = props
+  const snapshots = history?.snapshots ?? []
   const [width, setWidth] = useState<number>(readWidth)
   const [tab, setTab] = useState<'basic' | 'records'>('basic')
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -1171,6 +1214,7 @@ export function TaskEditorDrawer(props: {
   const [pendingHint, setPendingHint] = useState(false)
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmSnapshotFile, setConfirmSnapshotFile] = useState<string | null>(null)
   const [resetHint, setResetHint] = useState(false)
   // 保存失败：服务端文案不「长显」占 footer，改为浮现 Toast（用户 2026-09-30：与面板保存提示同款）。
   // 用本地副本 + 自增 seq，使得同一句错误连点也能重播淡入淡出动画。
@@ -1181,6 +1225,12 @@ export function TaskEditorDrawer(props: {
     saveErrSeq.current += 1
     setSaveErrToast({ msg: saveError, seq: saveErrSeq.current })
   }, [saveError])
+  // 保存前的客户端校验总览（用户 2026-09-30：点保存才判定；判定后问题逐项列出、对应框描红，随用户修正实时消退）。
+  const [showErrors, setShowErrors] = useState(false)
+  const fieldProblems = showErrors ? validateTaskDraft(draft) : []
+  const fieldErrorMap: Record<string, string> = {}
+  for (const p of fieldProblems) if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message
+  const problemsByField = (field: ErrorField): boolean => field in fieldErrorMap
   // 「已重置」提示过一会儿自动消失（用户 2026-09-30：不要长显占位，像 Toast 一样自退）。
   useEffect(() => {
     if (!resetHint) return
@@ -1373,7 +1423,7 @@ export function TaskEditorDrawer(props: {
     ),
     h('textarea', {
       id: 'dsh-tdt-ed-source-inline-panel',
-      className: 'dsh-tdt-ed-prompt',
+      className: `dsh-tdt-ed-prompt${problemsByField('prompt') ? ' dsh-tdt-ed-prompt--error' : ''}`,
       value: draft.prompt,
       placeholder: t('editorPromptPh'),
       spellCheck: false,
@@ -1389,6 +1439,7 @@ export function TaskEditorDrawer(props: {
         placeholder: t('editorWorkspacePh'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWorkspace'),
+        error: problemsByField('workspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
         // 超长工作区名不再把整行撑爆：**封顶 200px**，超出即省略号，hover 在图标右侧
         // 自己的盒子里跑马灯（用户 2026-09-29；跑马灯不得压到文件夹图标下）。
@@ -1540,7 +1591,7 @@ export function TaskEditorDrawer(props: {
   // ② 执行频率卡：**单次 / 周期 / 间隔** 三档 + 时区 / 有效期。
   //    「单次」不是第四种排期，它就是「周期档的频率 = 单次」——所以切到单次时把 periodFreq 设成 once，
   //    而在周期档里把频率改成别的，顶部会自动回到「周期」（值是从 periodFreq 推导的，无需额外回写）。
-  const scheduleCard = h('div', { className: 'dsh-tdt-ed-card' },
+  const scheduleCard = h('div', { className: `dsh-tdt-ed-card${problemsByField('schedule') ? ' dsh-tdt-ed-card--error' : ''}` },
     h('div', { className: 'dsh-tdt-ed-card-head', style: { marginBottom: '12px' } },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorSchedule')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
@@ -1576,8 +1627,16 @@ export function TaskEditorDrawer(props: {
           draft, patch, freqOptions, t, tt, weekdayLabels, calendarLabels, timeLabels,
         }),
       ),
+    // 「预计执行」人话说明（用户 2026-09-30）：在「任务开始时间」上方画两条线，中间夹一句实时翻译。
+    h('div', { style: { marginTop: '14px' } },
+      h('div', { style: { borderTop: `1px solid ${C.borderL2}`, paddingTop: '10px', fontSize: '12px', lineHeight: '1.6', color: C.textDim } },
+        h('span', { style: { color: C.text, fontWeight: 600, marginRight: '4px' } }, t('editorSchedForecast') + '：'),
+        describeSchedule(draft, t),
+      ),
+      h('div', { style: { borderTop: `1px solid ${C.borderL2}`, marginTop: '10px' } }),
+    ),
     // 底部：左 = 任务开始时间（锚点，周期/间隔都有，带 ? 说明），右 = 允许延迟（次要，居右）。
-    h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+    h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '8px', borderTop: 'none' } },
       showTaskStart
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
             h('span', { style: { fontSize: '11px', color: C.text } }, t('editorTaskStart')),
@@ -1853,8 +1912,8 @@ export function TaskEditorDrawer(props: {
         // 各区块间距统一走 `.dsh-tdt-ed-section` 的 margin（此前这里多了两个 16px 空 div，
         // 导致「编号 → 提示词」比别的间隔小一截）。
         h('div', { className: 'dsh-tdt-ed-section' }, promptCard),
-        // 附件卡：外层 position:relative，让上传失败提示浮在卡正上方（用户 2026-09-30：统一走浮层 Toast）。
-        h('div', { style: { position: 'relative' } },
+        // 附件卡：外层 position:relative（兼带 .dsh-tdt-ed-section 的 16px 下间距，避免与「执行频率」卡贴在一起）。
+        h('div', { className: 'dsh-tdt-ed-section', style: { position: 'relative' } },
           attachmentsCard,
           uploadError !== null
             ? h('div', {
@@ -1866,6 +1925,27 @@ export function TaskEditorDrawer(props: {
         ),
         h('div', { className: 'dsh-tdt-ed-section' }, scheduleCard),
         h('div', { className: 'dsh-tdt-ed-section' }, depsBlock),
+        // 配置快照（整份找回：提示词 + 排期 + 工作区 + 模型 + 权限 + 附件清单全部恢复）。
+        // 与「编辑提示词的历史」分开——后者在提示词编辑器里，这里只管整份设置（用户 2026-09-30）。
+        h('div', { className: 'dsh-tdt-ed-section' },
+          h('div', { className: 'dsh-tdt-ed-card' },
+            h('div', { className: 'dsh-tdt-ed-cardtitle' }, t('editorSnapshots')),
+            h('p', { className: 'dsh-tdt-ed-hint' }, t('editorSnapshotsHint')),
+            snapshots.length === 0
+              ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorNoSnapshots'))
+              : h('ul', { style: { listStyle: 'none', margin: '8px 0 0', padding: 0 } },
+                snapshots.map(s => h('li', { className: 'dsh-tdt-ed-ver' },
+                  h('span', { className: 'dsh-tdt-ed-ver-ic' }, h(IconClockOutlineRegular, { size: 14 })),
+                  h('div', { className: 'dsh-tdt-ed-ver-main' },
+                    h('div', { className: 'dsh-tdt-ed-ver-time' }, formatVersionTime(s.ts)),
+                  ),
+                  h('div', { className: 'dsh-tdt-ed-ver-actions', style: { opacity: 1 } },
+                    h(Button, { variant: 'outline', size: 'sm', onClick: () => { setConfirmSnapshotFile(s.file) } }, t('editorRestoreAll')),
+                  ),
+                )),
+              ),
+          ),
+        ),
         advancedBlock,
       )
 
@@ -1880,7 +1960,6 @@ export function TaskEditorDrawer(props: {
       onChange: (value: string) => { patch({ prompt: value }) },
       onClose: () => { setEditorOpen(false) },
       onRestoreVersion: (file: string) => { onRestoreVersion?.(file); setEditorOpen(false) },
-      onRestoreSnapshot: (file: string) => { onRestoreSnapshot?.(file); setEditorOpen(false) },
       onDeleteVersion: (file: string) => { onDeleteVersion?.(file) },
     })
     : previewOpen
@@ -1928,6 +2007,15 @@ export function TaskEditorDrawer(props: {
         ),
       ),
       h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef }, body),
+      // 保存前校验总览：把全部问题一次性列出来（不自动消失），对应框已描红，用户对照着改。
+      fieldProblems.length > 0
+        ? h('div', { className: 'dsh-tdt-ed-section', style: { marginBottom: 0 } },
+          h('ul', { className: 'dsh-tdt-ed-errors' },
+            h('div', { className: 'dsh-tdt-ed-errors-title' }, t('editorErrorsTitle')),
+            ...fieldProblems.map(p => h('li', { key: p.field }, p.message)),
+          ),
+        )
+        : null,
       // 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
       h('div', { className: 'dsh-tdt-ed-footer' },
         mode === 'edit' && onDelete !== undefined
@@ -1958,13 +2046,13 @@ export function TaskEditorDrawer(props: {
           size: 'sm',
           onClick: () => {
             if (onSave === undefined) { setPendingHint(true); return }
-            // 保存前先本地查必填（用户 2026-09-30：别把机器码甩给用户，人话列问题）。
+            // 保存前先本地查必填 / 排期冲突（用户 2026-09-30：逐项判断、框描红、总览列全，不让用户猜）。
             const problems = validateTaskDraft(draft)
             if (problems.length > 0) {
-              saveErrSeq.current += 1
-              setSaveErrToast({ msg: problems.join('；'), seq: saveErrSeq.current })
+              setShowErrors(true)
               return
             }
+            setShowErrors(false)
             onSave(draft)
           },
         }, t('editorSave')),
@@ -1989,6 +2077,17 @@ export function TaskEditorDrawer(props: {
           confirmLabel: t('editorReset'),
           onCancel: () => { setConfirmReset(false) },
           onConfirm: () => { setConfirmReset(false); onChange(initialDraftRef.current); setResetHint(true) },
+        })
+        : null,
+      // 配置快照找回确认（整份恢复：提示词 + 排期 + 工作区 + 模型 + 权限 + 附件清单）。
+      confirmSnapshotFile !== null
+        ? h(VersionConfirm, {
+          t,
+          title: t('editorRestoreAllTitle'),
+          desc: t('editorRestoreAllDesc'),
+          confirmLabel: t('editorRestoreAll'),
+          onCancel: () => { setConfirmSnapshotFile(null) },
+          onConfirm: () => { onRestoreSnapshot?.(confirmSnapshotFile); setConfirmSnapshotFile(null) },
         })
         : null,
     )

@@ -404,6 +404,9 @@ window.__ModuleLoader__.load({
 			editorResetTitle: "重置当前编辑？",
 			editorResetDesc: "重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。",
 			editorSnapshots: "配置快照（整份找回）",
+			editorSnapshotsHint: "每次保存提示词时系统会同时留一份「整份设置」的快照。点「找回全部」会用那份快照覆盖当前所有设置（提示词、排期、工作区、模型、权限、前置任务与附件清单），覆盖前会再确认。",
+			editorNoSnapshots: "暂无配置快照——保存一次提示词后这里就会出现。",
+			editorVersionToggle: "版本",
 			editorRestoreAll: "找回全部",
 			editorRestoreAllTitle: "找回全部设置",
 			editorRestoreAllDesc: "确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。",
@@ -412,6 +415,7 @@ window.__ModuleLoader__.load({
 			editorCustomCron: "自定义 cron（JSON 里的原值，保存时原样保留）",
 			editorSaved: "已保存",
 			editorSaveFailedHint: "保存失败：",
+			editorErrorsTitle: "保存前请先处理以下问题",
 			editorTasksTitle: "任务列表",
 			editorTasksEmpty: "还没有任务：点右上角「＋ 新建任务」创建第一条。",
 			editorDisabledTag: "已停用",
@@ -441,6 +445,22 @@ window.__ModuleLoader__.load({
 			editorConfirm: "确定",
 			editorWindow: "允许延迟",
 			editorWindowHint: "任务到达计划开始执行时间后，若前置任务尚未完成或因其它原因需延后，最长允许在此时长内继续执行；超过该时长则跳过本次执行。",
+			editorSchedForecast: "预计执行",
+			editorSchedRun: "执行",
+			editorSchedEveryday: "每天",
+			editorSchedNoDay: "未选生效日",
+			editorSchedDaily: "每天",
+			editorSchedWeekly: "每周",
+			editorSchedEveryNWeek: "每 {n} 周",
+			editorSchedMonthly: "每月",
+			editorSchedQuarterly: "每季度第 {n} 个月",
+			editorSchedIntervalMin: "每 {n} 分钟执行一次",
+			editorSchedIntervalHour: "每 {n} 小时执行一次",
+			editorSchedOnce: "执行一次",
+			editorSchedInvalidStep: "执行间隔没填，无法生成执行计划",
+			editorMonthMode_every: "每月",
+			editorMonthMode_odd: "单数月",
+			editorMonthMode_even: "双数月",
 			editorDiscardTitle: "放弃未保存的更改？",
 			editorDiscardDesc: "当前内容已修改且尚未保存，关闭后这些更改将丢失。",
 			editorDiscardStay: "继续编辑",
@@ -837,6 +857,9 @@ window.__ModuleLoader__.load({
 			editorResetTitle: "Reset current edits?",
 			editorResetDesc: "Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.",
 			editorSnapshots: "Config snapshots (restore all)",
+			editorSnapshotsHint: "Each time you save the prompt, the system also keeps a snapshot of the whole task. \"Restore all\" overwrites every current setting (prompt, schedule, workspace, model, permission, dependencies and attachments) with that snapshot — you will be asked to confirm first.",
+			editorNoSnapshots: "No config snapshots yet — they appear here after you save the prompt once.",
+			editorVersionToggle: "Versions",
 			editorRestoreAll: "Restore all",
 			editorRestoreAllTitle: "Restore all settings",
 			editorRestoreAllDesc: "Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.",
@@ -845,6 +868,7 @@ window.__ModuleLoader__.load({
 			editorCustomCron: "Custom cron (raw value from JSON; kept as-is on save)",
 			editorSaved: "Saved",
 			editorSaveFailedHint: "Save failed: ",
+			editorErrorsTitle: "Please fix the following before saving",
 			editorTasksTitle: "Tasks",
 			editorTasksEmpty: "No tasks yet — use \"＋ New task\" in the top-right corner to create the first one.",
 			editorDisabledTag: "Disabled",
@@ -874,6 +898,22 @@ window.__ModuleLoader__.load({
 			editorConfirm: "OK",
 			editorWindow: "Allow delay",
 			editorWindowHint: "When the task reaches its planned start time but a dependency is unfinished or something else delays it, it may wait up to this long and still run; past this, this run is skipped.",
+			editorSchedForecast: "Forecast",
+			editorSchedRun: "runs",
+			editorSchedEveryday: "every day",
+			editorSchedNoDay: "no active day",
+			editorSchedDaily: "Every day",
+			editorSchedWeekly: "Weekly",
+			editorSchedEveryNWeek: "Every {n} weeks",
+			editorSchedMonthly: "Monthly",
+			editorSchedQuarterly: "Month {n} of each quarter",
+			editorSchedIntervalMin: "Runs every {n} minutes",
+			editorSchedIntervalHour: "Runs every {n} hours",
+			editorSchedOnce: "runs once",
+			editorSchedInvalidStep: "Interval not set — cannot build a schedule",
+			editorMonthMode_every: "Every month",
+			editorMonthMode_odd: "Odd months",
+			editorMonthMode_even: "Even months",
 			editorDiscardTitle: "Discard unsaved changes?",
 			editorDiscardDesc: "The content has been modified but not saved. These changes will be lost if you close now.",
 			editorDiscardStay: "Keep editing",
@@ -4053,7 +4093,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			})), [props.options]);
 			const anchor = (0, react.createElement)("button", {
 				type: "button",
-				className: "dsh-tdt-ed-field",
+				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
 				disabled: !usable,
 				"aria-haspopup": "menu",
 				"aria-expanded": open,
@@ -5777,11 +5817,31 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 /* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
 .dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
 .dsh-tdt-ed-card:focus-within{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
+/* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
+.dsh-tdt-ed-card--error{border-color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.08));}
+.dsh-tdt-ed-field--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
+/* 保存前的错误总览：把全部问题一次性列出来（不自动消失），让用户对照着改。 */
+.dsh-tdt-ed-errors{margin:0 0 12px;padding:10px 12px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.10));border:1px solid var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-ed-errors-title{font-size:12px;font-weight:600;color:var(--dsw-alias-state-error-primary,#e5484d);margin:0 0 6px;}
+.dsh-tdt-ed-errors li{font-size:12px;line-height:1.7;color:var(--dsw-alias-label-primary,#1f2328);}
+/* 历史版本开关：与「预览/编辑」分段控件同源（默认灰盒；选中=高亮，明暗自适应）。 */
+.dsh-tdt-ed-histtoggle{appearance:none;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;line-height:18px;padding:5px 12px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;}
+.dsh-tdt-ed-histtoggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-histtoggle--on{background:var(--dsw-alias-state-business-primary,#4d6bfe);border-color:var(--dsw-alias-state-business-primary,#4d6bfe);color:#fff;}
+/* 版本条目：左 = 图标+时间+备注，右 = hover 浮出「使用版本/删除」（不撑高，高度恒定）。 */
+.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--dsw-alias-border-l3,rgba(128,128,128,.18));}
+.dsh-tdt-ed-ver-ic{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;}
+.dsh-tdt-ed-ver-time{font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-ed-ver-note{font-size:12px;margin:2px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-ed-ver-actions{display:flex;gap:6px;opacity:0;transition:opacity .12s ease;}
+.dsh-tdt-ed-ver:hover .dsh-tdt-ed-ver-actions{opacity:1;}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
 .dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:1.6;resize:vertical;}
 .dsh-tdt-ed-prompt::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
+.dsh-tdt-ed-prompt--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 上传投放区（P1 接真上传；此处只呈现形态 + 文案）。 */
@@ -37555,6 +37615,40 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 		}
 		/**
+		* 排期 → 人话（用户 2026-09-30：用户看不懂设置，要直接告诉他「预计什么时候执行」）。
+		* 通用方法：吃草稿、吐一句中文执行说明；编辑时实时改、也能给任务列表复用。
+		* 文案全部走 locale（含周几 / 月口径），明暗自适应。
+		*/
+		function weekdayText(t, days) {
+			if (days.length === 0) return "";
+			if (days.length >= 7) return t("editorSchedEveryday");
+			return days.map((day) => t(WEEKDAY_KEYS[day - 1])).join("、");
+		}
+		function describeSchedule(draft, t) {
+			const time = /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : "09:00";
+			const step = Number.parseInt(draft.intervalStep, 10);
+			const stepN = Number.isFinite(step) && step > 0 ? step : 0;
+			const wd = weekdayText(t, [...draft.weekdays].sort((a, b) => a - b));
+			if (draft.scheduleKind === "interval") {
+				if (stepN === 0) return t("editorSchedInvalidStep");
+				if (draft.intervalUnit === "minute") return t("editorSchedIntervalMin").replace("{n}", String(stepN));
+				const base = t("editorSchedIntervalHour").replace("{n}", String(stepN));
+				return wd === "" ? `${base}（${t("editorSchedNoDay")}）` : `${base}（${wd}）`;
+			}
+			if (draft.periodFreq === "once") return `${draft.date} ${time} ${t("editorSchedOnce")}`;
+			switch (draft.periodFreq) {
+				case "daily": return `${t("editorSchedDaily")} ${time} ${t("editorSchedRun")}`;
+				case "weekly": {
+					if (wd === "") return `${t("editorSchedWeekly")} ${time} ${t("editorSchedRun")}（${t("editorSchedNoDay")}）`;
+					const wstep = Number.parseInt(draft.weekStep, 10);
+					return `${Number.isFinite(wstep) && wstep > 1 ? t("editorSchedEveryNWeek").replace("{n}", String(wstep)) : ""}${t("editorSchedWeekly")}${wd} ${time} ${t("editorSchedRun")}`;
+				}
+				case "monthly": return `${t(`editorMonthMode_${draft.monthMode}`)}${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
+				case "quarterly": return `${t("editorSchedQuarterly").replace("{n}", draft.quarterMonth)} ${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
+				case "yearly": return `${t("editorMonthMode_every")}${draft.yearMonth} 月 ${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
+			}
+		}
+		/**
 		* 草稿 → 任务定义 JSON（保存 / 预览同源）。
 		* 排期**双写**（data-model §5.4）：`cron`/`once`/`start`/`everyNWeeks` 是执行真源，
 		* `schedule.ui` 是编辑态反解真源；两者都由**表单**产出 ⇒ 保存以表单为准重写 cron
@@ -37613,16 +37707,31 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		/**
 		* 保存前的客户端校验（用户 2026-09-30：别把宿主那串机器码「任务定义不合法（target.workspace: Too small…）」
-		* 直接甩给用户——先在本地把必填项查清楚、用人话列出来）。返回人话问题清单；空数组 = 可保存。
+		* 直接甩给用户——先在本地把必填项 / 排期冲突查清楚、用人话列出来）。空数组 = 可保存。
 		*
 		* 必填判定严格对齐宿主 zod schema（src/tasks.ts）：`target.workspace` 与 `target.prompt` 都是 `.min(1)`，
 		* 二者空了保存必被拒。`title` 在 schema 里是可选（空则回退 id）⇒ 不强制；提示词在「按任务手册」模式下由
-		* `manual` 兜底默认句 ⇒ 也不空。
+		* `manual` 兜底默认句 ⇒ 也不空。排期则对齐 `scheduleCron`：每周没勾星期 / 间隔步长非法都产不出 cron ⇒ 永不执行。
 		*/
 		function validateTaskDraft(draft) {
 			const problems = [];
-			if (draft.workspace.trim() === "") problems.push("请选择工作区");
-			if (draft.promptSource !== "manual" && draft.prompt.trim() === "") problems.push("请填写提示词");
+			if (draft.workspace.trim() === "") problems.push({
+				field: "workspace",
+				message: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。"
+			});
+			if (draft.promptSource !== "manual" && draft.prompt.trim() === "") problems.push({
+				field: "prompt",
+				message: "还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。"
+			});
+			const step = Number.parseInt(draft.intervalStep, 10);
+			if (draft.scheduleKind === "interval" && (!Number.isFinite(step) || step <= 0)) problems.push({
+				field: "schedule",
+				message: "执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。"
+			});
+			else if (draft.scheduleKind === "periodic" && draft.periodFreq === "weekly" && draft.weekdays.length === 0) problems.push({
+				field: "schedule",
+				message: "每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。"
+			});
 			return problems;
 		}
 		/**
@@ -38226,16 +38335,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.confirmLabel ?? props.t("editorConfirm")))));
 		}
 		function PromptEditorModal(props) {
-			const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onRestoreSnapshot, onDeleteVersion } = props;
+			const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onDeleteVersion } = props;
 			const cmExtensions = (0, react.useMemo)(() => [markdown(), EditorView.lineWrapping], []);
 			const [mode, setMode] = (0, react.useState)("edit");
 			const [showVersions, setShowVersions] = (0, react.useState)(false);
 			const versions = history?.versions ?? [];
-			const snapshots = history?.snapshots ?? [];
 			const [hoveredId, setHoveredId] = (0, react.useState)(null);
 			const [confirmDeleteFile, setConfirmDeleteFile] = (0, react.useState)(null);
 			const [confirmUseFile, setConfirmUseFile] = (0, react.useState)(null);
-			const [confirmSnapshotFile, setConfirmSnapshotFile] = (0, react.useState)(null);
 			const versionTitle = editorMode === "create" ? t("editorHistoryVersions") : t("editorVersions");
 			return (0, react.createElement)("div", { style: {
 				display: "flex",
@@ -38275,13 +38382,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				label: t("editorPromptEditorTitle"),
 				className: "dsh-tdt-ed-seg"
-			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
+			}), (0, react.createElement)("button", {
+				type: "button",
+				className: `dsh-tdt-ed-histtoggle${showVersions ? " dsh-tdt-ed-histtoggle--on" : ""}`,
 				onClick: () => {
 					setShowVersions((v) => !v);
-				}
-			}, versionTitle), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				},
+				"aria-pressed": showVersions
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 14 }), t("editorVersionToggle")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
 				onClick: onClose
@@ -38353,28 +38461,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				overflow: "auto"
 			} }, versions.map((v) => (0, react.createElement)("li", {
 				key: v.file,
-				style: {
-					padding: "10px 0",
-					borderBottom: `1px solid ${C$2.borderL4}`,
-					position: "relative"
-				},
+				className: "dsh-tdt-ed-ver",
 				onMouseEnter: () => {
 					setHoveredId(v.file);
 				},
 				onMouseLeave: () => {
 					setHoveredId((cur) => cur === v.file ? null : cur);
 				}
-			}, (0, react.createElement)("div", { style: {
-				fontSize: "11px",
-				color: C$2.textDim
-			} }, formatVersionTime(v.ts)), v.note !== "" ? (0, react.createElement)("div", { style: {
-				fontSize: "12px",
-				margin: "2px 0 0"
-			} }, v.note) : null, hoveredId === v.file ? (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "6px",
-				marginTop: "8px"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-ic" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 14 })), (0, react.createElement)("div", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-ver-time" }, formatVersionTime(v.ts)), v.note !== "" ? (0, react.createElement)("div", { className: "dsh-tdt-ed-ver-note" }, v.note) : null), hoveredId === v.file ? (0, react.createElement)("div", { className: "dsh-tdt-ed-ver-actions" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
@@ -38386,35 +38480,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setConfirmDeleteFile(v.file);
 				}
-			}, t("editorDeleteVersion"))) : null))), snapshots.length === 0 ? null : (0, react.createElement)("div", { style: {
-				borderTop: `1px solid ${C$2.borderL4}`,
-				padding: "10px 12px 12px"
-			} }, (0, react.createElement)("div", { style: {
-				fontSize: "12px",
-				fontWeight: 600,
-				marginBottom: "6px"
-			} }, t("editorSnapshots")), (0, react.createElement)("ul", { style: {
-				listStyle: "none",
-				margin: 0,
-				padding: 0,
-				overflow: "auto"
-			} }, snapshots.map((s) => (0, react.createElement)("li", {
-				key: s.file,
-				style: {
-					padding: "8px 0",
-					borderBottom: `1px solid ${C$2.borderL4}`
-				}
-			}, (0, react.createElement)("div", { style: {
-				fontSize: "11px",
-				color: C$2.textDim,
-				marginBottom: "6px"
-			} }, formatVersionTime(s.ts)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
-				size: "sm",
-				onClick: () => {
-					setConfirmSnapshotFile(s.file);
-				}
-			}, t("editorRestoreAll")))))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
+			}, t("editorDeleteVersion"))) : null))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
 				t,
 				title: t("editorConfirmDeleteTitle"),
 				desc: t("editorConfirmDeleteDesc"),
@@ -38436,18 +38502,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onConfirm: () => {
 					onRestoreVersion(confirmUseFile);
 					setConfirmUseFile(null);
-				}
-			}) : null, confirmSnapshotFile !== null ? (0, react.createElement)(VersionConfirm, {
-				t,
-				title: t("editorRestoreAllTitle"),
-				desc: t("editorRestoreAllDesc"),
-				confirmLabel: t("editorRestoreAll"),
-				onCancel: () => {
-					setConfirmSnapshotFile(null);
-				},
-				onConfirm: () => {
-					onRestoreSnapshot(confirmSnapshotFile);
-					setConfirmSnapshotFile(null);
 				}
 			}) : null);
 		}
@@ -38504,6 +38558,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		*/
 		function TaskEditorDrawer(props) {
 			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onRestoreSnapshot, onDeleteVersion, workspaceFiles, workspaceAnchors, currentTaskId } = props;
+			const snapshots = history?.snapshots ?? [];
 			const [width, setWidth] = (0, react.useState)(readWidth);
 			const [tab, setTab] = (0, react.useState)("basic");
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
@@ -38513,6 +38568,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [pendingHint, setPendingHint] = (0, react.useState)(false);
 			const [confirmDeleteTask, setConfirmDeleteTask] = (0, react.useState)(false);
 			const [confirmReset, setConfirmReset] = (0, react.useState)(false);
+			const [confirmSnapshotFile, setConfirmSnapshotFile] = (0, react.useState)(null);
 			const [resetHint, setResetHint] = (0, react.useState)(false);
 			const [saveErrToast, setSaveErrToast] = (0, react.useState)(null);
 			const saveErrSeq = (0, react.useRef)(0);
@@ -38524,6 +38580,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					seq: saveErrSeq.current
 				});
 			}, [saveError]);
+			const [showErrors, setShowErrors] = (0, react.useState)(false);
+			const fieldProblems = showErrors ? validateTaskDraft(draft) : [];
+			const fieldErrorMap = {};
+			for (const p of fieldProblems) if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message;
+			const problemsByField = (field) => field in fieldErrorMap;
 			(0, react.useEffect)(() => {
 				if (!resetHint) return;
 				const id = setTimeout(() => {
@@ -38739,7 +38800,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: openEditorPanel
 			}, t("editorOpenEditor"))), (0, react.createElement)("textarea", {
 				id: "dsh-tdt-ed-source-inline-panel",
-				className: "dsh-tdt-ed-prompt",
+				className: `dsh-tdt-ed-prompt${problemsByField("prompt") ? " dsh-tdt-ed-prompt--error" : ""}`,
 				value: draft.prompt,
 				placeholder: t("editorPromptPh"),
 				spellCheck: false,
@@ -38755,6 +38816,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				placeholder: t("editorWorkspacePh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
+				error: problemsByField("workspace"),
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
 				maxWidth: 200,
 				marquee: true
@@ -38965,7 +39027,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (event.target.files !== void 0) uploadFiles(event.target.files);
 				}
 			}));
-			const scheduleCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", {
+			const scheduleCard = (0, react.createElement)("div", { className: `dsh-tdt-ed-card${problemsByField("schedule") ? " dsh-tdt-ed-card--error" : ""}` }, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-card-head",
 				style: { marginBottom: "12px" }
 			}, (0, react.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorSchedule")), (0, react.createElement)("div", { style: {
@@ -39031,12 +39093,26 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				weekdayLabels,
 				calendarLabels,
 				timeLabels
-			})), (0, react.createElement)("div", {
+			})), (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
+				borderTop: `1px solid ${C$2.borderL2}`,
+				paddingTop: "10px",
+				fontSize: "12px",
+				lineHeight: "1.6",
+				color: C$2.textDim
+			} }, (0, react.createElement)("span", { style: {
+				color: C$2.text,
+				fontWeight: 600,
+				marginRight: "4px"
+			} }, t("editorSchedForecast") + "："), describeSchedule(draft, t)), (0, react.createElement)("div", { style: {
+				borderTop: `1px solid ${C$2.borderL2}`,
+				marginTop: "10px"
+			} })), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-schedfoot",
 				style: {
 					display: "flex",
 					alignItems: "center",
-					gap: "8px"
+					gap: "8px",
+					borderTop: "none"
 				}
 			}, showTaskStart ? (0, react.createElement)("div", { style: {
 				display: "flex",
@@ -39316,13 +39392,29 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (value) => {
 					patch({ code: value });
 				}
-			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", { style: { position: "relative" } }, attachmentsCard, uploadError !== null ? (0, react.createElement)("div", {
+			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-section",
+				style: { position: "relative" }
+			}, attachmentsCard, uploadError !== null ? (0, react.createElement)("div", {
 				key: uploadError,
 				className: "dsh-tdt-toast",
 				onAnimationEnd: () => {
 					setUploadError(null);
 				}
-			}, uploadErrText(uploadError)) : null), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
+			}, uploadErrText(uploadError)) : null), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-cardtitle" }, t("editorSnapshots")), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorSnapshotsHint")), snapshots.length === 0 ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorNoSnapshots")) : (0, react.createElement)("ul", { style: {
+				listStyle: "none",
+				margin: "8px 0 0",
+				padding: 0
+			} }, snapshots.map((s) => (0, react.createElement)("li", { className: "dsh-tdt-ed-ver" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-ic" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 14 })), (0, react.createElement)("div", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-ver-time" }, formatVersionTime(s.ts))), (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-ver-actions",
+				style: { opacity: 1 }
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: () => {
+					setConfirmSnapshotFile(s.file);
+				}
+			}, t("editorRestoreAll")))))))), advancedBlock);
 			const panelInner = editorOpen ? (0, react.createElement)(PromptEditorModal, {
 				t,
 				mode,
@@ -39336,10 +39428,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				onRestoreVersion: (file) => {
 					onRestoreVersion?.(file);
-					setEditorOpen(false);
-				},
-				onRestoreSnapshot: (file) => {
-					onRestoreSnapshot?.(file);
 					setEditorOpen(false);
 				},
 				onDeleteVersion: (file) => {
@@ -39387,7 +39475,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-body",
 				ref: bodyRef
-			}, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, body), fieldProblems.length > 0 ? (0, react.createElement)("div", {
+				className: "dsh-tdt-ed-section",
+				style: { marginBottom: 0 }
+			}, (0, react.createElement)("ul", { className: "dsh-tdt-ed-errors" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-errors-title" }, t("editorErrorsTitle")), ...fieldProblems.map((p) => (0, react.createElement)("li", { key: p.field }, p.message)))) : null, (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				className: "dsh-tdt-ed-danger",
@@ -39424,15 +39515,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						setPendingHint(true);
 						return;
 					}
-					const problems = validateTaskDraft(draft);
-					if (problems.length > 0) {
-						saveErrSeq.current += 1;
-						setSaveErrToast({
-							msg: problems.join("；"),
-							seq: saveErrSeq.current
-						});
+					if (validateTaskDraft(draft).length > 0) {
+						setShowErrors(true);
 						return;
 					}
+					setShowErrors(false);
 					onSave(draft);
 				}
 			}, t("editorSave"))), confirmDeleteTask ? (0, react.createElement)(VersionConfirm, {
@@ -39459,6 +39546,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setConfirmReset(false);
 					onChange(initialDraftRef.current);
 					setResetHint(true);
+				}
+			}) : null, confirmSnapshotFile !== null ? (0, react.createElement)(VersionConfirm, {
+				t,
+				title: t("editorRestoreAllTitle"),
+				desc: t("editorRestoreAllDesc"),
+				confirmLabel: t("editorRestoreAll"),
+				onCancel: () => {
+					setConfirmSnapshotFile(null);
+				},
+				onConfirm: () => {
+					onRestoreSnapshot?.(confirmSnapshotFile);
+					setConfirmSnapshotFile(null);
 				}
 			}) : null);
 			return (0, react.createElement)("div", {

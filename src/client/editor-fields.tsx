@@ -137,6 +137,8 @@ export function SelectField(props: {
    * 用户 2026-09-29：排期卡头部那个频率下拉比右边三档高，一切换就整页跳。
    */
   size?: 'md' | 'sm'
+  /** 校验不通过：描红边（明暗自适应，走宿主 error token），与卡片级红框同源。 */
+  error?: boolean
 }): ReactElement {
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
@@ -151,7 +153,7 @@ export function SelectField(props: {
 
   const anchor = h('button', {
     type: 'button',
-    className: 'dsh-tdt-ed-field',
+    className: `dsh-tdt-ed-field${props.error === true ? ' dsh-tdt-ed-field--error' : ''}`,
     disabled: !usable,
     'aria-haspopup': 'menu',
     'aria-expanded': open,
