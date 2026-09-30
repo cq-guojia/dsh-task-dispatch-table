@@ -655,8 +655,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     !clientJs.includes('title: t("expandHint")') && clientJs.includes('listExpandHint'))
   // ⚠️ 2026-09-30 复核教训：客户端内部逻辑不在冒烟覆盖面内，曾有编辑被静默丢掉（谁都没发现）。
   // 决策 54：到点钳位整套已删（抖动改由服务端冻结刻度解决）⇒ 这里改钉「它确实消失了」。
-  check('到点钳位已整删（bundle 里不再有 prunePins / justCrossedSlot）',
-    !clientJs.includes('prunePins') && !clientJs.includes('justCrossedSlot'))
+  check('到点钳位状态机已从客户端删除（bundle 里不再有 prunePins）',
+    !clientJs.includes('prunePins'))
+  // ⚠️ `justCrossedSlot` 此刻**仍留在 `task-sort.ts` 的导出里**（阶段三才删）⇒ 这里先不断言它的缺席。
   check('小时间隔反解与执行器同口径（守卫：分钟须具体数字 / 整点才等价「每隔 1 小时」）',
     clientJs.includes('/^\\d+$/.test(minute)') && clientJs.includes('minute === "0"'))
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
