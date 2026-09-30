@@ -258,16 +258,40 @@ function RefreshIcon() {
   )
 }
 
-/** 任务表图标（内联 SVG：清单勾选，颜色走 currentColor ⇒ 自动跟随主题）。 */
+/**
+ * 侧栏 / 面板图标（用户 2026-09-30 指定）：`assets/icon-scheduler.svg` 的**内联等价物**——
+ * 左右方括号（品牌蓝、40% 透明）+ 红方块拼出的「S」。
+ *
+ * ⚠️ 为什么内联而不是引文件：宿主只服务 client bundle，仓库里的 `assets/` 不会随 bundle 到浏览器；
+ * 而该图标的唯一消费点就是这里（`TaskPanelIcon`），故按原图**逐值**内联，`viewBox 128` 等比缩放。
+ * 颜色沿用原图（品牌蓝 + 红）而不走 `currentColor`——这是用户给的设计稿配色；
+ * 若日后要跟随侧栏选中态变色，把两处 `stroke` 改成 `currentColor` 即可。
+ */
 function TaskIcon(props: { size?: number }) {
   const size = props.size ?? 18
+  // 「S」= 3 列 × 5 行的 16px 方块（顶横 / 左上 / 中横 / 右下 / 底横），坐标照原图。
+  const blocks: Array<[number, number]> = [
+    [36, 16], [56, 16], [76, 16],
+    [36, 36],
+    [36, 56], [56, 56], [76, 56],
+    [76, 76],
+    [36, 96], [56, 96], [76, 96],
+  ]
   return h('svg', {
-    width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+    width: size, height: size, viewBox: '0 0 128 128', fill: 'none', 'aria-hidden': true,
   },
-    h('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }),
-    h('path', { d: 'M8 9.5l2 2 3.5-3.5' }),
-    h('path', { d: 'M8 15.5h8' }),
+    h('path', {
+      d: 'M19 16 H9 V112 H19',
+      stroke: '#4D6BFE', strokeOpacity: 0.4, strokeWidth: 7,
+      strokeLinecap: 'round', strokeLinejoin: 'round',
+    }),
+    h('path', {
+      d: 'M109 16 H119 V112 H109',
+      stroke: '#4D6BFE', strokeOpacity: 0.4, strokeWidth: 7,
+      strokeLinecap: 'round', strokeLinejoin: 'round',
+    }),
+    h('g', { fill: '#E03E3E' },
+      blocks.map(([x, y]) => h('rect', { key: `${x}-${y}`, x, y, width: 16, height: 16 }))),
   )
 }
 

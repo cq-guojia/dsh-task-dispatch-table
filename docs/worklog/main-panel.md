@@ -171,3 +171,10 @@
 - 窗口（`window`）的真实作用 = **那一槽可以晚多久才跑**，不是「窗口内全补」。当间隔 < 窗口（本例 10min < 4h）时，窗口实际上不产生任何额外执行。
 
 ⇒ 用户担心的「4 小时内全补」不成立；**真正的缺陷是显示**：卡片「下次执行」按 `nextSlotAfter(now)`（严格晚于此刻）算，不体现「马上要补跑的那一槽」，于是出现「显示 15:40、实际立刻跑 15:30」的冲突。已记入 [`PROGRESS.md`](../PROGRESS.md) 未决项 U17 待拍板显示方案。
+
+### 8.5 展示名与图标（同日追加）
+
+- 展示名统一为**「定时任务调度器」**（用户拍板）：`src/client/locales.ts` 的 `title` / `trayLabel` / `panelTitle`（zh 中文名，en `Scheduled task dispatcher`）。此前 UI 仍叫「任务调度表」，与 README / `package.json` description 不一致（用户已在 `3392b4d` 改了后者，本轮补齐 UI 侧）。
+- 侧栏 / 面板图标换成用户给的 `assets/icon-scheduler.svg`（左右方括号 + 红方块拼的「S」）：**内联进 client bundle**（`src/client/index.ts` 的 `TaskIcon`）。⚠️ 必须内联——宿主只服务 client bundle，仓库 `assets/` 不会到浏览器；配色沿用原图（品牌蓝 40% + 红），**不走 `currentColor`**（用户给的设计稿配色，要随选中态变色再改）。
+
+**新增 2 条冒烟断言**（展示名 + 图标内联），**298 项全过**。

@@ -79,7 +79,7 @@ window.__ModuleLoader__.load({
 			debugInstancesEmpty: "（尚无实例）",
 			debugEvents: "事件 task_events（最近 200 条，旧 → 新）",
 			debugEventsEmpty: "（尚无事件）",
-			panelTitle: "任务调度表",
+			panelTitle: "定时任务调度器",
 			backToConversation: "返回会话",
 			tabConfig: "任务配置",
 			tabRecords: "执行记录",
@@ -561,7 +561,7 @@ window.__ModuleLoader__.load({
 		const en = {
 			title: "Task dispatch table (dsh-task-dispatch-table)",
 			description: "Schedule agent tasks from a task table: configure tasks and review every run. Click to open the panel.",
-			trayLabel: "Task dispatch",
+			trayLabel: "Scheduled task dispatcher",
 			unavailable: "The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.",
 			tasksInlineLabel: "Task table (tasksInline, JSON array)",
 			tasksInlineHint: "One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).",
@@ -595,7 +595,7 @@ window.__ModuleLoader__.load({
 			debugInstancesEmpty: "(no instances yet)",
 			debugEvents: "Events task_events (latest 200, oldest → newest)",
 			debugEventsEmpty: "(no events yet)",
-			panelTitle: "Task dispatch table",
+			panelTitle: "Scheduled task dispatcher",
 			backToConversation: "Back to conversation",
 			tabConfig: "Configuration",
 			tabRecords: "Run records",
@@ -41142,25 +41142,56 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontSize: "12px",
 			transition
 		};
-		/** 任务表图标（内联 SVG：清单勾选，颜色走 currentColor ⇒ 自动跟随主题）。 */
+		/**
+		* 侧栏 / 面板图标（用户 2026-09-30 指定）：`assets/icon-scheduler.svg` 的**内联等价物**——
+		* 左右方括号（品牌蓝、40% 透明）+ 红方块拼出的「S」。
+		*
+		* ⚠️ 为什么内联而不是引文件：宿主只服务 client bundle，仓库里的 `assets/` 不会随 bundle 到浏览器；
+		* 而该图标的唯一消费点就是这里（`TaskPanelIcon`），故按原图**逐值**内联，`viewBox 128` 等比缩放。
+		* 颜色沿用原图（品牌蓝 + 红）而不走 `currentColor`——这是用户给的设计稿配色；
+		* 若日后要跟随侧栏选中态变色，把两处 `stroke` 改成 `currentColor` 即可。
+		*/
 		function TaskIcon(props) {
 			const size = props.size ?? 18;
 			return (0, react.createElement)("svg", {
 				width: size,
 				height: size,
-				viewBox: "0 0 24 24",
+				viewBox: "0 0 128 128",
 				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
+				"aria-hidden": true
+			}, (0, react.createElement)("path", {
+				d: "M19 16 H9 V112 H19",
+				stroke: "#4D6BFE",
+				strokeOpacity: .4,
+				strokeWidth: 7,
 				strokeLinecap: "round",
 				strokeLinejoin: "round"
-			}, (0, react.createElement)("rect", {
-				x: 4,
-				y: 4,
+			}), (0, react.createElement)("path", {
+				d: "M109 16 H119 V112 H109",
+				stroke: "#4D6BFE",
+				strokeOpacity: .4,
+				strokeWidth: 7,
+				strokeLinecap: "round",
+				strokeLinejoin: "round"
+			}), (0, react.createElement)("g", { fill: "#E03E3E" }, [
+				[36, 16],
+				[56, 16],
+				[76, 16],
+				[36, 36],
+				[36, 56],
+				[56, 56],
+				[76, 56],
+				[76, 76],
+				[36, 96],
+				[56, 96],
+				[76, 96]
+			].map(([x, y]) => (0, react.createElement)("rect", {
+				key: `${x}-${y}`,
+				x,
+				y,
 				width: 16,
-				height: 16,
-				rx: 3
-			}), (0, react.createElement)("path", { d: "M8 9.5l2 2 3.5-3.5" }), (0, react.createElement)("path", { d: "M8 15.5h8" }));
+				height: 16
+			}))));
 		}
 		/** 任务表草稿是否为宿主可解析的 JSON 数组（空白串视为清空，合法）。 */
 		function isValidTaskTable(text) {

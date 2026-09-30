@@ -556,6 +556,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 时间显示一律两位（用户 2026-09-30：「都把它补成两位」）——倒计时小时补零、时间戳自己拼秒。
   check('时间显示一律两位（倒计时 p(hours) + 时间戳显式拼秒，不再用 toLocaleString）',
     clientJs.includes('p(hours)') && clientJs.includes('p(d.getSeconds())') && !clientJs.includes('toLocaleString('))
+  // 展示名与图标（用户 2026-09-30 拍板：名字用「定时任务调度器」，图标用 assets/icon-scheduler.svg）。
+  check('面板 / 侧栏展示名 = 定时任务调度器', clientJs.includes('定时任务调度器'))
+  check('侧栏图标 = 用户指定的调度器图标（方括号 + 红 S 方块，内联进 bundle）',
+    clientJs.includes('M19 16 H9 V112 H19') && clientJs.includes('#E03E3E'))
   check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
   check('无下次执行显示 --:-- 占位（图标保留）', clientJs.includes('--:--'))
   check('展开区四区块（执行设置 / 附加文件 / 前置任务 / 提示词）',
