@@ -466,6 +466,26 @@ try {
   const logs = noWsStore.dumpTable('task_log', 500)
   check('工作区找不到 ⇒ 记 task_log(precondition)', logs.rows.some(l => l.kind === 'precondition'), JSON.stringify(logs.rows.map(l => l.kind)))
   noWsStore.close()
+  // 一次性任务的**窗口闸门**（用户 2026-09-30 拍板 A）：`到期时刻 + window` 之内照旧补跑，出了窗口就**不跑**。
+  // 配对断言：① 窗口内（迟到 1 分钟）⇒ 会派发（正例，同时证明这套 ctx / 工作区是可用的）；
+  //           ② 出窗口（2020 年）⇒ 一条实例行都不建（不再无限期补跑，面板与调度器口径一致）。
+  // ⚠️ `once` 的格式是 **"YYYY-MM-DDTHH:mm"**（不带秒 / 不带 Z），按 `timezone` 的墙上时间解释；
+  // 写成 ISO（带 `.000Z`）会被 `checkedTask` 直接判非法 ⇒ 任务根本没进模型（断言会「假通过」）。
+  const onceInWindowCfg = () => ({ ...okCfg(), tasksInline: JSON.stringify([{ id: UUID_A, title: '一次性(窗口内)', enabled: true, schedule: { once: new Date(Date.now() - 60_000).toISOString().slice(0, 16), timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'Temp', prompt: 'x' } }]) })
+  const onceOkStore = new TaskStore(join(schedDir, 'state-once-ok.db'))
+  const onceOkReconciler = createReconciler({ ctx: okCtx, logger, store: onceOkStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: onceInWindowCfg, legacyTask: () => undefined } })
+  createScheduler({ ctx: okCtx, logger, store: onceOkStore, reconciler: onceOkReconciler, config: onceInWindowCfg }).tick()
+  check('一次性任务在窗口内（迟到 1 分钟）⇒ 照旧补跑',
+    onceOkStore.listByStatus(['dispatched', 'pending', 'running']).length === 1)
+  const onceExpiredCfg = () => ({ ...okCfg(), tasksInline: JSON.stringify([{ id: UUID_A, title: '一次性(已过期)', enabled: true, schedule: { once: '2020-01-01T00:00', timezone: 'UTC', window: 'PT4H' }, target: { workspace: 'Temp', prompt: 'x' } }]) })
+  const onceExpiredStore = new TaskStore(join(schedDir, 'state-once-expired.db'))
+  const onceExpiredReconciler = createReconciler({ ctx: okCtx, logger, store: onceExpiredStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: onceExpiredCfg, legacyTask: () => undefined } })
+  createScheduler({ ctx: okCtx, logger, store: onceExpiredStore, reconciler: onceExpiredReconciler, config: onceExpiredCfg }).tick()
+  // 出窗口 ⇒ 不派发；且它属「停机/创建之前 」的槽（gateMs 门禁）⇒ 也不补「过期未执行」记录。
+  check('一次性任务出窗口（2020 年）⇒ 不再补跑（一条实例行都不建）',
+    onceExpiredStore.listByStatus(['dispatched', 'pending', 'running', 'skipped']).length === 0)
+  onceOkStore.close()
+  onceExpiredStore.close()
   schedStore.close()
   rmSync(schedDir, { recursive: true, force: true })
   // ── 6. 真机形态旧库兼容：老 id 形态 + 各状态历史行 + 新代码跑一遍 ──

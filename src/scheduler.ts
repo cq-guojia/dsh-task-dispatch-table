@@ -13,7 +13,7 @@ import { join } from 'node:path'
 import { attachmentAbsPath, type AssetPaths } from './task-assets.js'
 import type { HostContext, HostLogger, HostWorkspace } from './host.js'
 import { parseInlineTasks, type TaskDefinition } from './tasks.js'
-import { displayNameOf, durationMs, logicalDateOf, scheduledSlotsFor } from './tasks.js'
+import { displayNameOf, durationMs, logicalDateOf, onceScheduledAt, scheduledSlotsFor } from './tasks.js'
 import type { InstanceSnapshot, ResolvedDependency, TaskInstance, TaskStore, InstanceStatus } from './store.js'
 import { parseInstanceSnapshot } from './store.js'
 import type { Reconciler } from './reconcile.js'
@@ -180,8 +180,19 @@ function dueSlot(task: TaskDefinition, nowMs: number, store: TaskStore): {
   let chosen: Date | undefined
   let previous: Date | undefined
   if (isOnce(task)) {
-    const od = onceDate(task)
-    if (od !== undefined && od.getTime() <= nowMs) chosen = od
+    // 一次性任务**同样受窗口约束**（用户 2026-09-30 拍板 A）：`到期时刻 + window` 之内还算数（迟到也补跑），
+    // 出了窗口就当**过期不跑**。此前这里完全不看窗口 ⇒ 面板已经显示「没有下次了」，调度器却仍会派发
+    // （两侧口径分裂）。window 解析失败 ⇒ 0 ⇒ 只有「正好那一刻」算数，绝不无限期补跑。
+    // ⚠️ 必须用 `onceScheduledAt`（**按 `schedule.timezone` 的墙上时间**解释，2026-09-30 修）：此前用
+    // 本地 `onceDate` 解读 ⇒ 任务时区与宿主本地不一致时（宿主 UTC+8、任务写 UTC 之类）「到点 / 过期」
+    // 整体偏掉一个时差，而面板走的是时区正确那条路 ⇒ 两侧对同一任务给出不同结论。
+    const onceStr = task.schedule.once ?? ''
+    const od = onceScheduledAt(task, onceStr.slice(0, 10))
+    if (od !== undefined && od.getTime() <= nowMs) {
+      let windowMs = 0
+      try { windowMs = durationMs(task.schedule.window) } catch { windowMs = 0 }
+      if (nowMs <= od.getTime() + windowMs) chosen = od
+    }
   } else {
     const windowMs = durationMs(task.schedule.window)
     const from = new Date(nowMs - windowMs)
@@ -264,6 +275,55 @@ function recordTaskError(
   // ⚠️ 内存运行态**放在事务外**：事务里改了内存而库又回滚 ⇒ 两边不一致；放外面语义也更清楚
   //（库提交成功了才认这条记录）。
   if (written) runtime?.markTerminal(task.id, 'skipped', slot.scheduledAtIso, new Date().toISOString())
+}
+
+/**
+ * **一次性任务的「过期未执行」记录**（用户 2026-09-30 拍板 A 的配套）。
+ *
+ * 一次性任务加了窗口闸门（`dueSlot`）之后「出窗口就再也不跑」；若那一槽从来没跑过（典型：那一刻它
+ * 被上游堵着 / 附件缺失，一直拖到窗口过完），它会**无声无息地消失** —— 面板显示「没有下次了」、
+ * 执行记录里一条都没有。这里补一条终态 `skipped`（`attempt=0` ⇒ 天然不重试），把「该跑没跑、而且
+ * 再也不会跑」**留在用户看得见的地方**：卡片标红 + 执行记录一条 + 原因挂在该行事件上。
+ *
+ * 门禁与「补记前一个槽」**完全一致**（`gateMs` = 本进程启动 / 任务创建 的较晚者）：**停机期间**跨过
+ * 那一刻的不补（用户口径：服务没跑的那段时间不用管），否则用户新建一个「上一刻已过期」的一次性任务
+ * 会被凭空标红。返回「本槽是否按过期处理」（调用方据此决定要不要清掉悬浮原因）。
+ */
+function recordExpiredOnce(
+  store: TaskStore,
+  runtime: RuntimeIndex | null,
+  task: TaskDefinition,
+  nowMs: number,
+  gateMs: number,
+): boolean {
+  const onceStr = task.schedule.once
+  if (onceStr === undefined) return false
+  const once = onceScheduledAt(task, onceStr.slice(0, 10)) // 与 `dueSlot` / 面板同口径（按任务时区）
+  if (once === undefined) return false
+  const onceMs = once.getTime()
+  if (onceMs > nowMs || onceMs < gateMs) return false // 还没到点 / 属停机期间 ⇒ 不管
+  let windowMs = 0
+  try { windowMs = durationMs(task.schedule.window) } catch { windowMs = 0 }
+  if (nowMs <= onceMs + windowMs) return false // 还在窗口内 ⇒ 下一步会派发，不算「过期」
+  const iso = once.toISOString()
+  const detail = '一次性任务已过期未执行（超过补跑窗口）'
+  const existing = store.findBySlot(task.id, iso)
+  if (existing !== undefined) {
+    // 已经有行：是本函数写的那条 ⇒ 继续保留悬浮原因（移上去能看见为什么）；真跑过 ⇒ 不打扰。
+    if (existing.status === 'skipped') { runtime?.markBlocked(task.id, detail); return true }
+    return false
+  }
+  const instanceId = randomUUID()
+  const recorded = store.transaction(() => {
+    if (!store.ensureSkipped(instanceId, task.id, logicalDateOf(once, task.schedule.timezone), iso)) return false
+    store.appendEvent(instanceId, 'expired-once', { scheduledAt: iso, reason: detail })
+    store.appendLog({ taskId: task.id, scheduledAt: iso, level: 'error', kind: 'expired-once', message: detail })
+    return true
+  })
+  if (!recorded) return false
+  runtime?.markTerminal(task.id, 'skipped', iso, new Date().toISOString())
+  runtime?.markBlocked(task.id, detail) // 悬浮看得见原因（卡片已红 + 执行记录里有一条）
+  return true
 }
 
 /**
@@ -350,20 +410,26 @@ function dispatchNewSlots(
     if (task.enabled === false) { runtime?.markBlocked(task.id, null); continue }
     // 串行语义（§8）：同任务已有在飞实例则跳过本次新槽
     if (store.listByStatus(IN_FLIGHT_STATUSES).some((o) => o.task_id === task.id)) continue
+    // 门禁（2026-09-30 评审 P0）：不补「本进程启动之前」**以及「任务创建之前」**的槽；一次性任务的
+    // 「过期未执行」记录**共用同一道门禁**。少了后半句就会：宿主已跑了一天，用户 10:03 新建一个每 10
+    // 分钟的任务（默认 window PT4H）⇒ 第一个 tick 就把 09:50 补成「未执行」，卡片立刻标红（假记录）。
+    // ⚠️ 提到 `dueSlot` 之前：下面「无到期槽」那个分支也要用它（一次性任务的过期记录）。
+    const createdMs = task.createdAt === undefined ? Number.NEGATIVE_INFINITY : Date.parse(task.createdAt)
+    const gateMs = Math.max(startedAtMs, Number.isFinite(createdMs) ? createdMs : Number.NEGATIVE_INFINITY)
     const slot = dueSlot(task, nowMs, store)
-    // 本 tick 无到期槽（没到点 / 已处理 / **窗口已过**）⇒ 同样清原因：出窗后卡片会转成「下一次执行」
-    // 的倒计时，留着旧原因就变成「倒计时 + 延期说明」自相矛盾（2026-09-30 复核 P1）。
-    if (slot === undefined) { runtime?.markBlocked(task.id, null); continue }
+    // 本 tick 无到期槽（没到点 / 已处理 / **窗口已过**）⇒ 清掉「被挡住」的原因：出窗后卡片会转成
+    // 「下一次执行」的倒计时，留着旧原因就变成「倒计时 + 延期说明」自相矛盾（2026-09-30 复核 P1）。
+    // **例外**：一次性任务过期是「再也不会跑」⇒ 补一条「过期未执行」的记录（用户拍板 A 的配套，
+    // 否则它会无声无息地消失），并保留悬浮原因。
+    if (slot === undefined) {
+      if (!recordExpiredOnce(store, runtime, task, nowMs, gateMs)) runtime?.markBlocked(task.id, null)
+      continue
+    }
     // 补记「未执行」（决策 54，用户拍板）：**等到下一个该执行的时刻**才判——紧邻的前一槽若始终没有
     // 实例行，说明它彻底没戏了（窗口里已经出现更晚的刻度 ⇒ 调度器再也不会选它），补记**一条** `skipped`。
     // 规则：只补紧邻那一条（中间漏掉的 N 条不补）；停机期间不补（`startedAtMs` 门禁）；once 不适用。
     // ⚠️ 主键必须用**被漏那一槽自己的时刻**：用当前槽会撞当前槽真实执行行的唯一键，
     // `INSERT OR IGNORE` 静默丢弃 ⇒ 任务永久不再执行。
-    // ⚠️ 门禁（2026-09-30 评审 P0）：不补「本进程启动之前」**以及「任务创建之前」**的槽。
-    // 少了后半句就会：宿主已跑了一天，用户 10:03 新建一个每 10 分钟的任务（默认 window PT4H）
-    // ⇒ 第一个 tick 就把 09:50 补成「未执行」，卡片立刻标红、还多一条 error 日志（假记录）。
-    const createdMs = task.createdAt === undefined ? Number.NEGATIVE_INFINITY : Date.parse(task.createdAt)
-    const gateMs = Math.max(startedAtMs, Number.isFinite(createdMs) ? createdMs : Number.NEGATIVE_INFINITY)
     if (slot.previous !== undefined && !isOnce(task) && slot.previous.getTime() >= gateMs) {
       const prevIso = slot.previous.toISOString()
       if (store.findBySlot(task.id, prevIso) === undefined) {
