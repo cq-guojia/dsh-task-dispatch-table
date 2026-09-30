@@ -2100,7 +2100,8 @@ export function TaskEditorDrawer(props: {
             if (problems.length > 0) {
               setShowErrors(true)
               problemsSeq.current += 1
-              setProblemsToast({ text: problems.map(p => p.message).join('；'), seq: problemsSeq.current })
+              // 一行一条（\n 换行，Toast 文字区 pre-line），每条以句号收尾——标点统一，不混分号。
+              setProblemsToast({ text: problems.map(p => p.message).join('\n'), seq: problemsSeq.current })
               return
             }
             setShowErrors(false)

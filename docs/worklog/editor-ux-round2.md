@@ -92,3 +92,11 @@
 3. 删除版本确认文案照用户原文：`你确定要删除此版本的记录吗？删除后不可撤销，请谨慎操作。`（en 同步）。
 
 冒烟 249 项全过；typecheck/build 绿；真机验证待做。
+
+## 九、同日第六轮（Toast 收口确认）
+
+1. **唯一实现确认 + 最后一处收编**：全站检索 `dsh-tdt-toast`，仅剩面板「JSON 不合法」常驻提示是手写 div ⇒ FloatingToast 加 `sticky` 档后收编。至此**所有 Toast 调用 = 同一个组件方法**（FloatingToast：text / tone / seq / below / sticky / onDone），差异全部是传参，没有第二份实现。
+2. **圆点独立元素**：`::before` 内联点改 flex 子元素 `.dsh-tdt-toast-dot`（左上对齐，多行不飘）；文字区 `.dsh-tdt-toast-text` `white-space:pre-line` 支持 `\n` 换行、左对齐。
+3. **多问题逐行展示**：校验 Toast 拼接由「；」改 `\n`——一行一条、每条句号收尾（标点统一，不混分号）。
+
+冒烟 249 项全过；typecheck/build 绿；真机验证待做。

@@ -986,10 +986,13 @@ function TaskPage(props: {
                   })
                   : null,
                 invalidToast.on
-                  ? h('div', {
-                    key: `inv-${invalidToast.key}`,
-                    className: 'dsh-tdt-toast dsh-tdt-toast--sticky',
-                  }, t('invalidJson'))
+                  ? h(FloatingToast, {
+                    seq: `inv-${invalidToast.key}`,
+                    tone: 'error',
+                    sticky: true,
+                    onDone: () => { /* sticky：不自动消失，改对 JSON 后由 effect 撤除 */ },
+                    text: t('invalidJson'),
+                  })
                   : null,
               ),
 

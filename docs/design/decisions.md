@@ -216,3 +216,5 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 - footer 行内提示（重置完成 / 预览态不可保存）全部收编 FloatingToast 中性档；resetHint 定时器删除，自退统一走动画 onDone。
 - Toast 形态定稿：居中 + 最大宽 520px 折行 + **不透明淡色底**（`color-mix(tone 10%, bg-layer-1)`）+ 同色系深描边 + 语义色圆点 + 深色正文；**四档色** error / success / warning / neutral（反色实面）。
 - viewErr（页面级会话失败条，需手动关闭）外观对齐中性档，保留不自动消失。
+
+**修订四（同日第六轮）**：FloatingToast 加 `sticky` 档收编最后一处手写（面板 JSON 不合法）⇒ **全站 Toast 唯一实现**（差异全是传参）；圆点改独立 flex 元素左上对齐；文字区 `pre-line` 支持 `\n` 换行；多问题校验提示一行一条、句号统一。

@@ -32,18 +32,25 @@ export const TOAST_CSS = `
   color:var(--dsw-alias-label-primary,#1f2328);
   font-size:12px;
   line-height:1.6;
-  text-align:center;
+  display:flex;
+  align-items:flex-start;
+  text-align:left;
   box-shadow:0 4px 16px rgba(0,0,0,.18);
   opacity:0;
   animation:dsh-tdt-toast 2.8s ease forwards;
 }
-/* 语义色圆点（对照官方四档 toast 的图标位，自绘最小形态）。 */
-.dsh-tdt-toast::before{
-  content:'';
-  display:inline-block;
+/* 圆点 = 独立 flex 元素，**左上对齐**（多行文字时不飘）；文字区 white-space:pre-line 支持 \n 换行。 */
+.dsh-tdt-toast-dot{
+  flex:none;
   width:7px;height:7px;border-radius:50%;
   background:var(--tone);
-  margin-right:7px;vertical-align:1px;
+  margin:6px 8px 0 0;
+}
+.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
+.dsh-tdt-toast-text{
+  flex:1 1 auto;min-width:0;
+  white-space:pre-line;
+  text-align:left;
 }
 @keyframes dsh-tdt-toast{
   0%{opacity:0;transform:translate(-50%,10px);}
@@ -60,8 +67,7 @@ export const TOAST_CSS = `
   color:var(--dsw-alias-label-primary-inverted,#fff);
   border-color:transparent;
 }
-.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
-/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
@@ -90,7 +96,7 @@ import type { ReactElement } from 'react'
 export type ToastTone = 'success' | 'error' | 'warning' | 'neutral'
 
 export function FloatingToast(props: {
-  /** 文案（已是完整人话，组件不再拼前缀）。 */
+  /** 文案（已是完整人话，组件不再拼前缀）；支持 \n 换行（white-space:pre-line），多问题一行一条。 */
   text: string
   /** 语义色，缺省 = error（红）。 */
   tone?: ToastTone
@@ -98,16 +104,22 @@ export function FloatingToast(props: {
   seq: number | string
   /** 浮在锚点下方（编辑器头部启用开关用）；缺省浮在上方。 */
   below?: boolean
-  /** 动画结束自退（父级把状态清空）。 */
+  /** 常驻不自动消失（持续态校验，如 JSON 不合法）；onDone 不会触发，由外部撤除。 */
+  sticky?: boolean
+  /** 动画结束自退（父级把状态清空）；sticky 恒不触发。 */
   onDone: () => void
 }): ReactElement {
   const tone = props.tone ?? 'error'
   const cls = [
     'dsh-tdt-toast',
     props.below === true ? 'dsh-tdt-toast--below' : '',
+    props.sticky === true ? 'dsh-tdt-toast--sticky' : '',
     tone === 'success' ? 'dsh-tdt-toast--success' : '',
     tone === 'warning' ? 'dsh-tdt-toast--warning' : '',
     tone === 'neutral' ? 'dsh-tdt-toast--neutral' : '',
   ].filter(Boolean).join(' ')
-  return h('div', { key: props.seq, className: cls, onAnimationEnd: props.onDone }, props.text)
+  return h('div', { key: props.seq, className: cls, onAnimationEnd: props.onDone },
+    h('span', { className: 'dsh-tdt-toast-dot' }),
+    h('span', { className: 'dsh-tdt-toast-text' }, props.text),
+  )
 }

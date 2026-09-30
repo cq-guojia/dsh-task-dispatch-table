@@ -37502,18 +37502,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
   color:var(--dsw-alias-label-primary,#1f2328);
   font-size:12px;
   line-height:1.6;
-  text-align:center;
+  display:flex;
+  align-items:flex-start;
+  text-align:left;
   box-shadow:0 4px 16px rgba(0,0,0,.18);
   opacity:0;
   animation:dsh-tdt-toast 2.8s ease forwards;
 }
-/* 语义色圆点（对照官方四档 toast 的图标位，自绘最小形态）。 */
-.dsh-tdt-toast::before{
-  content:'';
-  display:inline-block;
+/* 圆点 = 独立 flex 元素，**左上对齐**（多行文字时不飘）；文字区 white-space:pre-line 支持 \n 换行。 */
+.dsh-tdt-toast-dot{
+  flex:none;
   width:7px;height:7px;border-radius:50%;
   background:var(--tone);
-  margin-right:7px;vertical-align:1px;
+  margin:6px 8px 0 0;
+}
+.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
+.dsh-tdt-toast-text{
+  flex:1 1 auto;min-width:0;
+  white-space:pre-line;
+  text-align:left;
 }
 @keyframes dsh-tdt-toast{
   0%{opacity:0;transform:translate(-50%,10px);}
@@ -37530,8 +37537,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
   color:var(--dsw-alias-label-primary-inverted,#fff);
   border-color:transparent;
 }
-.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
-/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
@@ -37553,6 +37559,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const cls = [
 				"dsh-tdt-toast",
 				props.below === true ? "dsh-tdt-toast--below" : "",
+				props.sticky === true ? "dsh-tdt-toast--sticky" : "",
 				tone === "success" ? "dsh-tdt-toast--success" : "",
 				tone === "warning" ? "dsh-tdt-toast--warning" : "",
 				tone === "neutral" ? "dsh-tdt-toast--neutral" : ""
@@ -37561,7 +37568,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				key: props.seq,
 				className: cls,
 				onAnimationEnd: props.onDone
-			}, props.text);
+			}, (0, react.createElement)("span", { className: "dsh-tdt-toast-dot" }), (0, react.createElement)("span", { className: "dsh-tdt-toast-text" }, props.text));
 		}
 		//#endregion
 		//#region src/client/task-editor.tsx
@@ -39626,7 +39633,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						setShowErrors(true);
 						problemsSeq.current += 1;
 						setProblemsToast({
-							text: problems.map((p) => p.message).join("；"),
+							text: problems.map((p) => p.message).join("\n"),
 							seq: problemsSeq.current
 						});
 						return;
@@ -40678,10 +40685,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setFailed(null);
 				},
 				text: failed
-			}) : null, invalidToast.on ? (0, react.createElement)("div", {
-				key: `inv-${invalidToast.key}`,
-				className: "dsh-tdt-toast dsh-tdt-toast--sticky"
-			}, t("invalidJson")) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+			}) : null, invalidToast.on ? (0, react.createElement)(FloatingToast, {
+				seq: `inv-${invalidToast.key}`,
+				tone: "error",
+				sticky: true,
+				onDone: () => {},
+				text: t("invalidJson")
+			}) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				t("colId"),
 				t("colTitle"),
 				t("colCode"),
