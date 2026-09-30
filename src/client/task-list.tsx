@@ -12,7 +12,7 @@
 //
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
-import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { formatDateTime, pad2 } from './format'
 import {
   IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular, IconEditOutlineRegular,
@@ -377,8 +377,12 @@ function subscribeTicker(cb: () => void): () => void {
   }
 }
 
-/** 每秒自刷新的一小段文本：只有它自己重渲染（render 永远取最新闭包，ref 转发）。 */
-function LiveText(props: { render: (nowMs: number) => string; style?: Record<string, string | number> }) {
+/**
+ * 每秒自刷新的一小块内容：只有它自己重渲染（render 永远取最新闭包，ref 转发）。
+ * 2026-09-30（决策 54）：`render` 由「只能返回字符串」放宽为**可返回节点** —— 「到点未派发」
+ * 时要在这里就地换成三个方块的活动指示（文案换不出来，只能给节点）。
+ */
+function LiveText(props: { render: (nowMs: number) => ReactNode; style?: Record<string, string | number> }) {
   const [, force] = useState(0)
   const renderRef = useRef(props.render)
   renderRef.current = props.render
@@ -583,9 +587,19 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
       h('span', { style: pillIconCell(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
-        render: (nowMs: number): string => {
+        render: (nowMs: number): ReactNode => {
           if (row.nextSlotAt === null) return NO_TIME
           const diff = Date.parse(row.nextSlotAt) - nowMs
+          // 已到点（`diff <= 0`）⇒ **不再显示「即将执行」**，直接显三个方块的活动指示（用户 2026-09-30 拍板）。
+          // 服务端闸门生效后「到点」= `nextSlotAt` 是过去时刻且该槽还没被处理（`!row.running`）。
+          if (diff <= 0) {
+            // loading 上界（决策 54「时长分档」）：≈ 巡检间隔 60s + 2×轮询 10s + 余量。
+            // 超过它仍没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥），
+            // **不能一直装成在跑** ⇒ 退回如实显示（下一步 P3b 把它换成「延期」徽标 + 原因）。
+            const DUE_LOADING_MS = 90_000
+            if (-diff <= DUE_LOADING_MS) return h(RunningBlocks, {})
+            return tt('relNow')
+          }
           return diff < 24 * 3600_000
             ? countdownText(row.nextSlotAt, nowMs, tt)
             : relativeFuture(row.nextSlotAt, nowMs, tt)
