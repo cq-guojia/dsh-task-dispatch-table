@@ -48,11 +48,27 @@ export declare function resolveModelRoute(ctx: HostContext, logger: HostLogger, 
  */
 export declare function userNotice(text: string, summary: string): UserMessage;
 /**
- * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 + 决策 49 团队段）：
- * 短指令 prompt + 手册路径 + 上游依赖段 + 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
- * prompt / manual / validStatuses / resolvedDeps 全部来自派发快照，与任务设置无关。
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 +
+ * 决策 49 团队段 + **随附文件段（决策 54）**）：短指令 prompt + 手册路径 + 上游依赖段 + **随附文件段** +
+ * 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
+ * prompt / manual / validStatuses / resolvedDeps / attachments 全部来自派发快照，与任务设置无关。
+ *
+ * ⚠️ 随附文件**只能给路径**（宿主 `UserMessage.content` 目前只声明 text 内容块）⇒ 这里把**绝对路径**
+ * 逐条写清（「从哪一层开始」就是它），并显式声明「允许读取」，否则会与下面的权限指令（「仅工作区」）打架
+ * ——upload 型附件落在**任务目录**（工作区之外），不开口子模型就等于看不见。
  */
-export declare function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string, teamMode?: boolean): UserMessage;
+export declare function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string, teamMode?: boolean, attachments?: readonly DispatchAttachment[]): UserMessage;
+/**
+ * 派发消息里的随附文件条目（2026-09-30）：ref 已在 Loop B 解析成**绝对路径**。
+ * `path === null` = 来源工作区解析不出 ⇒ 如实标注「工作区相对路径」，**绝不猜**。
+ */
+export interface DispatchAttachment {
+    name: string;
+    kind: 'link' | 'upload';
+    /** link 型的工作区相对路径原文（基准未知时如实展示）。 */
+    ref: string;
+    path: string | null;
+}
 export interface DispatchInput {
     ctx: HostContext;
     /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
@@ -66,6 +82,11 @@ export interface DispatchInput {
     snapshot: InstanceSnapshot;
     /** 已按快照 path 解析的工作区实体（决策 22）：cwd 由它的 path 派生，会话建成后 attach 归组。 */
     workspace: HostWorkspace;
+    /**
+     * 随附文件（2026-09-30）：ref 已由 Loop B 解析成**绝对路径**，随派发消息注入。
+     * （只能给路径：宿主 `UserMessage.content` 目前只声明 text 内容块，见 buildMessage 注释。）
+     */
+    attachments: readonly DispatchAttachment[];
     /** 插件配置（决策 22 漏斗第②层取 defaultProvider/defaultModel，发动时现算）。 */
     config: PluginConfig;
 }

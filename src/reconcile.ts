@@ -14,7 +14,7 @@ import { displayNameOf, durationMs, sessionTitleOf } from './tasks.js'
 import {
   dispatchTask, resolveWorkspace, resolveWorkspaceByPath, userNotice, DispatchPreconditionError,
 } from './dispatch.js'
-import type { AgentHandle } from './dispatch.js'
+import type { AgentHandle, DispatchAttachment } from './dispatch.js'
 import { receiptInstruction } from './receipt.js'
 import type { InstanceSnapshot, TaskInstance, TaskStore } from './store.js'
 import { parseInstanceSnapshot } from './store.js'
@@ -369,7 +369,8 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
     // 附加文件兜底校验（2026-09-30）：只凭快照判定，不读任务定义。
     // 缺失 ⇒ **不发动**，只记一条实例事件（同一实例不重复记）。不判失败、不吃重试额度——
     // 重试也不会把文件变回来；文件一旦恢复，下个 tick 自然放行。
-    const gone = missingSnapshotAttachments(ctx, instance.task_id, snap, options.assets === undefined ? null : options.assets())
+    const assets = options.assets === undefined ? null : options.assets()
+    const gone = missingSnapshotAttachments(ctx, instance.task_id, snap, assets)
     if (gone.length > 0) {
       if (store.countEvents(instance.id, 'attachment-missing') === 0) {
         store.appendEvent(instance.id, 'attachment-missing', { files: gone })
@@ -393,6 +394,24 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
     launching.add(instance.id)
     try {
       const workspace = resolveWorkspaceByPath(ctx, snap.workspacePath)
+      // 随附文件段（2026-09-30）：把快照里的附件 ref 解析成**绝对路径**随派发消息注入
+      // （用户要求：必须让模型明确知道文件在哪一层、在什么地方）。与上面存在性校验同款口径——
+      // link 按附件来源工作区、upload 按任务目录；解析不出 ⇒ path=null（如实标注，绝不猜）。
+      const attachments: DispatchAttachment[] = (snap.attachments ?? []).map(item => {
+        let path: string | null = null
+        if (item.kind === 'upload') {
+          path = assets === null ? null : attachmentAbsPath(assets, instance.task_id, item.ref)
+        } else {
+          const source = item.workspace !== undefined && item.workspace.trim() !== '' ? item.workspace : null
+          try {
+            path = source === null ? join(snap.workspacePath, item.ref) : join(resolveWorkspace(ctx, source).path, item.ref)
+          } catch {
+            path = null
+          }
+        }
+        if (path !== null && path.includes('..')) path = null
+        return { name: item.name, kind: item.kind, ref: item.ref, path }
+      })
       const { sessionId, handle } = await dispatchTask({
         ctx, logger, store,
         instanceId: instance.id,
@@ -400,6 +419,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
         scheduledAt: instance.scheduled_at,
         snapshot: snap,
         workspace,
+        attachments,
         config: options.config(),
       })
       registerHandle(sessionId, handle)

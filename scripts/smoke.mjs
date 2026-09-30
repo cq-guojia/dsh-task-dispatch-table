@@ -13,8 +13,8 @@ import {
   removeDefinitionInline, setEnabledDefinitionInline, upsertDefinitionInline, validateDefinitionForSave,
 } from '../dist/tasks.js'
 import {
-  assetPaths, deleteTaskAssets, deleteVersion, listVersions, purgeTmp, readSnapshot, readVersion,
-  reconcileAttachments, saveSnapshot, saveVersion,
+  assetPaths, attachmentAbsPath, deleteTaskAssets, deleteVersion, listVersions, moveAttachmentsIn,
+  purgeTmp, readSnapshot, readVersion, reconcileAttachments, saveSnapshot, saveVersion,
 } from '../dist/task-assets.js'
 import { TaskStore, parseInstanceSnapshot } from '../dist/store.js'
 import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
@@ -137,6 +137,25 @@ try {
     check('到点判定：旧刻度过久（超过 2×pinMs）⇒ 不算刚跨过',
       justCrossedSlot('2026-09-30T16:00:00.000Z', '2026-09-30T18:10:00.000Z', nowMs, age) === false
       && justCrossedSlot('2026-09-30T18:00:00.000Z', '2026-09-30T18:10:00.000Z', nowMs, age) === true)
+  }
+  // 附件路径**写 → 读往返**（2026-09-30 真机根因）：保存时把上传文件搬到 `<任务目录>/attachments/<名>`
+  // 并把 ref 改写成 `attachments/<名>`；执行前校验必须按**同一基准**解析回同一个绝对路径。
+  // 此前读侧把 `attachments/` 前缀剥掉（少一层）⇒ 带上传附件的任务恒判「附件不存在」：
+  // Loop A 不建实例行、Loop B 不发动 ⇒ 执行记录里一条都没有。这条断言就是当时缺的那条。
+  {
+    const rpRoot = join(root, 'attach-roundtrip')
+    mkdirSync(rpRoot, { recursive: true })
+    const rpPaths = assetPaths(join(rpRoot, 'state.db'))
+    const rpTaskId = randomUUID()
+    mkdirSync(rpPaths.tmpDir, { recursive: true })
+    writeFileSync(join(rpPaths.tmpDir, 'nv.html'), '<h1>hi</h1>')
+    const moved = moveAttachmentsIn(rpPaths, rpTaskId, [{ id: 'a1', name: 'nv.html', kind: 'upload', ref: 'nv.html' }], [])
+    const rpRef = moved.attachments[0]?.ref
+    check('附件落定：ref 改写为「相对任务目录」的 attachments/<名>', rpRef === 'attachments/nv.html', `实际 ${rpRef}`)
+    check('附件校验：attachmentAbsPath 解析回真实落盘路径（写读同一基准）',
+      rpRef !== undefined
+      && attachmentAbsPath(rpPaths, rpTaskId, rpRef) === join(rpPaths.tasksRoot, rpTaskId, 'attachments', 'nv.html')
+      && existsSync(attachmentAbsPath(rpPaths, rpTaskId, rpRef)))
   }
   check('钳位时长跟着巡检间隔走（默认 60s ⇒ 80s；带 30s ~ 10min 上下限）',
     pinMsFor(60_000, 10_000) === 80_000 && pinMsFor(5_000, 10_000) === 30_000 && pinMsFor(3_600_000, 10_000) === 600_000)
@@ -972,6 +991,26 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     resolvedDeps: [{ task: 'D', semantics: 'latest_success', instanceId: upId, scheduledAt: '2026-09-26T12:30:00.000Z', sessionId: null, workspacePath: null, outputs: [] }],
   }, '/ws/down', '2026-09-26')
   check('上游未声明产出 ⇒ 消息如实标注（决策 43）', msgUndeclared.content[0].text.includes('未声明产出'))
+  // 随附文件段（2026-09-30 真机需求）：附件必须**明确告诉模型在哪一层** —— 逐条给绝对路径；
+  // upload 型落在任务目录（工作区之外）⇒ 必须同时给权限豁免，否则会被「仅工作区」的指令挡掉。
+  {
+    const msgAtt = buildMessage(snapNoDeps, '/ws/down', '2026-09-26', false, [
+      { name: 'nv.html', kind: 'upload', ref: 'attachments/nv.html', path: '/data/tasks/T1/attachments/nv.html' },
+      { name: 'cfg.json', kind: 'link', ref: 'conf/cfg.json', path: '/ws/up/conf/cfg.json' },
+      { name: 'gone.json', kind: 'link', ref: 'gone.json', path: null },
+    ])
+    const attText = msgAtt.content[0].text
+    check('随附文件段：逐条注入绝对路径 + 标注来源（上传 / 工作区）',
+      attText.includes('本次随附文件') && attText.includes('/data/tasks/T1/attachments/nv.html')
+      && attText.includes('/ws/up/conf/cfg.json') && attText.includes('（上传）') && attText.includes('（工作区）'))
+    check('随附文件段：基准工作区解析不出 ⇒ 如实标注，绝不猜路径',
+      attText.includes('gone.json') && attText.includes('基准工作区未知'))
+    check('随附文件段：无附件时整段不注入（旧行为不变）', !msgNoDep.content[0].text.includes('本次随附文件'))
+    check('随附文件 + 权限指令：显式豁免「仅工作区」（只放开读）',
+      buildMessage({ ...snapNoDeps, permission: 'workspace' }, '/ws/down', '2026-09-26', false, [
+        { name: 'nv.html', kind: 'upload', ref: 'attachments/nv.html', path: '/data/nv.html' },
+      ]).content[0].text.includes('不受本条权限指令里「仅在目标工作区内」的限制'))
+  }
   // 决策 49：多 Agent 指令段只在 teamMode=true 时注入；缺省（老调用）消息不含团队段。
   const msgTeam = buildMessage({ ...snapWithDeps, agentTeam: true }, '/ws/down', '2026-09-29', true)
   check('多 Agent 指令段：teamMode=true 注入 spawn_teammate / team_task_create 指引；缺省调用不注入',

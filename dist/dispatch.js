@@ -238,11 +238,16 @@ function permissionInstruction(mode) {
 /** 权限指令里的工作区占位符：拼装时替换成真实工作区绝对路径（文案不写死路径）。 */
 const WORKSPACE_PLACEHOLDER = '{{workspace}}';
 /**
- * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 + 决策 49 团队段）：
- * 短指令 prompt + 手册路径 + 上游依赖段 + 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
- * prompt / manual / validStatuses / resolvedDeps 全部来自派发快照，与任务设置无关。
+ * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 +
+ * 决策 49 团队段 + **随附文件段（决策 54）**）：短指令 prompt + 手册路径 + 上游依赖段 + **随附文件段** +
+ * 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
+ * prompt / manual / validStatuses / resolvedDeps / attachments 全部来自派发快照，与任务设置无关。
+ *
+ * ⚠️ 随附文件**只能给路径**（宿主 `UserMessage.content` 目前只声明 text 内容块）⇒ 这里把**绝对路径**
+ * 逐条写清（「从哪一层开始」就是它），并显式声明「允许读取」，否则会与下面的权限指令（「仅工作区」）打架
+ * ——upload 型附件落在**任务目录**（工作区之外），不开口子模型就等于看不见。
  */
-export function buildMessage(snapshot, workspacePath, logicalDate, teamMode = false) {
+export function buildMessage(snapshot, workspacePath, logicalDate, teamMode = false, attachments = []) {
     // ⚠️ 回执说明**放最前**（用户 2026-09-30 拍板）：它是判定成败的唯一依据，必须压过任务指令本身——
     // 真机已发生「任务指令写着『不要做任何其他操作』⇒ 模型把回执也当成多余操作跳过、要追问第二次才交」。
     // 只放最前、不首尾各放一次（用户明确说没必要）。
@@ -257,6 +262,7 @@ export function buildMessage(snapshot, workspacePath, logicalDate, teamMode = fa
         lines.push(`任务手册：先读工作区内 ${snapshot.manual}，再按手册执行。`);
     }
     lines.push(...dependencyLines(snapshot));
+    lines.push(...attachmentLines(attachments));
     if (teamMode) {
         // 决策 49 多 Agent 协作段：官方 experimental profile（tool-agent-team）已给根会话 agent
         // 装好 spawn_teammate / send_message / list_agents / wait_agent / interrupt_agent /
@@ -268,10 +274,29 @@ export function buildMessage(snapshot, workspacePath, logicalDate, teamMode = fa
             + '队友与你在同一工作区工作。所有工作收束后由你统一汇总，并按下方要求交回执行结果。');
     }
     const permissionLine = permissionInstruction(snapshot.permission ?? 'default');
-    if (permissionLine !== null)
+    if (permissionLine !== null) {
         lines.push(permissionLine.replace(WORKSPACE_PLACEHOLDER, workspacePath));
+        // 权限口子：随附文件可能是「工作区之外」的只读输入 ⇒ 必须显式豁免，且只放开读、不放开写。
+        if (attachments.length > 0) {
+            lines.push('说明：上方「本次随附文件」列出的路径是本次派发随附的只读输入，允许读取；'
+                + '它们不受本条权限指令里「仅在目标工作区内」的限制（同样不得修改、删除）。');
+        }
+    }
     lines.push(receiptInstruction(snapshot.validStatuses));
     return userNotice(lines.join('\n'), `[TASK] ${snapshot.title} · ${logicalDate}`);
+}
+/** 随附文件段（用户 2026-09-30：必须让模型明确知道文件在哪一层、在什么地方）。 */
+function attachmentLines(list) {
+    if (list.length === 0)
+        return [];
+    const lines = ['', '本次随附文件（只读输入，请勿修改；以下均为可直接读取的绝对路径）：'];
+    for (const item of list) {
+        const tag = item.kind === 'upload' ? '上传' : '工作区';
+        lines.push(item.path === null
+            ? `  - ${item.name}（${tag}）：${item.ref}（基准工作区未知，为工作区相对路径）`
+            : `  - ${item.name}（${tag}）：${item.path}`);
+    }
+    return lines;
 }
 /**
  * 发动一个已落库实例（决策 41：Loop B 发动；决策 22 顺序 + 决策 23 preset 组装）：
@@ -399,6 +424,6 @@ export async function dispatchTask(input) {
         }
     }
     // 会话列表治理：规范名在 reconciler.onCreated 改（决策 42 格式），跑完归档在 succeeded 对账后。
-    handle.agent.send(buildMessage(snapshot, workspace.path, logicalDate, teamMode), 'next-turn', true);
+    handle.agent.send(buildMessage(snapshot, workspace.path, logicalDate, teamMode, input.attachments), 'next-turn', true);
     return { sessionId, handle };
 }

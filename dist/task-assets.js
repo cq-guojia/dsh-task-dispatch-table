@@ -310,14 +310,15 @@ export function reconcileAttachments(paths, taskId, next, prev) {
     }
     return { ...moved, removed: removedNames, errors: [...moved.errors, ...removeFailed] };
 }
-/** 按 ref 定位已上传文件：任务目录 → 临时区 → 旧平铺目录。找不到返回 null。 */
+/** 按 ref 定位**待搬移**的上传文件：临时区 → 旧平铺目录。找不到返回 null。 */
 function locateUploaded(paths, ref) {
     if (!isSafeAttachmentRef(ref))
         return null;
-    const candidates = [];
-    if (ref.startsWith(ATTACHMENT_PREFIX))
-        candidates.push(join(paths.tasksRoot, ref));
-    candidates.push(join(paths.tmpDir, ref), join(paths.legacyDir, ref));
+    // ⚠️ 这里**不**放「任务目录」候选：调用方 `moveAttachmentsIn` 在调本函数**之前**已按
+    // `attachmentAbsPath` 判过「已在任务目录就原地不动」，走到这里就说明它不在任务目录。
+    // （2026-09-30 修：此前用 `join(paths.tasksRoot, ref)` 充当任务目录候选 —— 那个基准也是错的，
+    // 正确基准是 `tasks/<任务id>/`，缺任务 id 根本拼不出来；删掉这个永不命中的假候选。）
+    const candidates = [join(paths.tmpDir, ref), join(paths.legacyDir, ref)];
     for (const file of candidates) {
         if (!existsSync(file))
             continue;
@@ -329,11 +330,19 @@ function locateUploaded(paths, ref) {
     }
     return null;
 }
-/** 附件绝对路径（执行期存在性校验用）。 */
+/**
+ * 附件绝对路径（执行期存在性校验 Loop A / Loop B、派发注入共用）。
+ *
+ * ref 的基准是**任务目录**：upload 型由 `moveAttachmentsIn` 落盘到 `<任务目录>/attachments/<文件名>`
+ * 并把 ref 记成 `attachments/<文件名>` ⇒ **直接拼接**即可。
+ *
+ * ⚠️ 2026-09-30 真机修：此前把 `attachments/` 前缀**剥掉**再拼（拼成 `<任务目录>/<文件名>`，少一层），
+ * 而写入侧与「已在任务目录」判断（`moveAttachmentsIn`）用的都是**带 `attachments/` 的**基准 ⇒
+ * **任何带上传附件的任务恒被判「附件不存在」**：Loop A 不建实例行（`scheduler` 校验后 continue 在
+ * `ensureInstance` 之前）、Loop B 不发动（`reconcile` 兜底同款）⇒ 执行记录里一条都没有、任务永不执行。
+ */
 export function attachmentAbsPath(paths, taskId, ref) {
-    return ref.startsWith(ATTACHMENT_PREFIX)
-        ? join(taskDirOf(paths, taskId), ref.slice(ATTACHMENT_PREFIX.length))
-        : join(taskDirOf(paths, taskId), ref);
+    return join(taskDirOf(paths, taskId), ref);
 }
 // ─────────────────────── 清理与删除 ───────────────────────
 /** 清上传临时区：删掉 mtime 早于 N 天前的文件（跨天调用一次即可）。 */

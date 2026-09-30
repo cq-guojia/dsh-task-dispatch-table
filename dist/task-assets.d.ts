@@ -106,7 +106,17 @@ export declare function removeAttachmentFiles(paths: AssetPaths, taskId: string,
  * webServer 保存链路**必须**分两步走，见 moveAttachmentsIn 注释）。
  */
 export declare function reconcileAttachments(paths: AssetPaths, taskId: string, next: AttachmentRef[], prev: AttachmentRef[]): ReconcileResult;
-/** 附件绝对路径（执行期存在性校验用）。 */
+/**
+ * 附件绝对路径（执行期存在性校验 Loop A / Loop B、派发注入共用）。
+ *
+ * ref 的基准是**任务目录**：upload 型由 `moveAttachmentsIn` 落盘到 `<任务目录>/attachments/<文件名>`
+ * 并把 ref 记成 `attachments/<文件名>` ⇒ **直接拼接**即可。
+ *
+ * ⚠️ 2026-09-30 真机修：此前把 `attachments/` 前缀**剥掉**再拼（拼成 `<任务目录>/<文件名>`，少一层），
+ * 而写入侧与「已在任务目录」判断（`moveAttachmentsIn`）用的都是**带 `attachments/` 的**基准 ⇒
+ * **任何带上传附件的任务恒被判「附件不存在」**：Loop A 不建实例行（`scheduler` 校验后 continue 在
+ * `ensureInstance` 之前）、Loop B 不发动（`reconcile` 兜底同款）⇒ 执行记录里一条都没有、任务永不执行。
+ */
 export declare function attachmentAbsPath(paths: AssetPaths, taskId: string, ref: string): string;
 /** 清上传临时区：删掉 mtime 早于 N 天前的文件（跨天调用一次即可）。 */
 export declare function purgeTmp(paths: AssetPaths, days: number): number;
