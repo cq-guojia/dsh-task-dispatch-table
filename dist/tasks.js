@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 // cron-parser 5.x 为 ESM，命名导出 CronExpressionParser。
 import { CronExpressionParser } from 'cron-parser';
+import { isSafeAttachmentRef } from './attachment-allowlist.js';
 /** ISO 8601 时长（如 PT4H），只支持 H/M/S 组合——窗口与新鲜度够用。 */
 const isoDuration = z.string().regex(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, 'ISO 8601 时长，如 PT4H');
 export const dependencySemantics = ['same_period', 'latest_success'];
@@ -85,7 +86,9 @@ export const taskDefinitionSchema = z.object({
         /** link 型必带：来源工作区 title（同一路径在不同工作区指向不同文件）。 */
         workspace: z.string().optional(),
     })
-        .refine(item => !item.ref.includes('..') && !item.ref.startsWith('/') && !item.ref.includes('\\'), { message: '附件 ref 非法：不允许相对路径上跳、绝对路径或反斜杠' }))
+        .refine(
+    // 唯一实现 = attachment-allowlist.isSafeAttachmentRef（客户端保存前校验 / 真删 / 上传定位同源）。
+    item => isSafeAttachmentRef(item.ref), { message: '附件 ref 非法：不允许相对路径上跳、绝对路径或反斜杠' }))
         .optional(),
 });
 /** 展示名：优先 title，回退 id（决策 25：title 只是给人看的，永不参与身份）。 */

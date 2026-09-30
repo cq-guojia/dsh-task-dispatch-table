@@ -37,7 +37,6 @@ export interface TaskOverviewRow {
   enabled: boolean
   workspace: string
   createdAt: string | null
-  provider: string | null
   model: string | null
   retryMax: number
   /** 排期原值（卡片「执行方式」人话由客户端按它生成，服务端不做 i18n）。 */
@@ -76,8 +75,6 @@ export interface RuntimeIndex {
   markTerminal(taskId: string, status: InstanceStatus, scheduledAt: string, finishedAt: string): void
   /** 实例行被删（窗口外 pending / 附件缺失）⇒ 该任务不再算在飞。 */
   clearRunning(taskId: string): void
-  /** 任务被删除。 */
-  forget(taskId: string): void
   /**
    * **定义被改动的统一入口**（2026-09-30 抽象统一）：任何写路径改完任务定义后调它一次即可——
    * 重算展示指纹与下一刻度、按需 bump rev。调用方**不需要**再各自去碰内存条目。
@@ -222,9 +219,6 @@ export function createRuntimeIndex(): RuntimeIndex {
       rev++
     },
 
-    forget(taskId) {
-      if (entries.delete(taskId)) rev++
-    },
 
     markDefinitionsChanged(tasks) {
       const nowMs = Date.now()
@@ -276,7 +270,6 @@ export function createRuntimeIndex(): RuntimeIndex {
           enabled: task.enabled,
           workspace: task.target.workspace,
           createdAt: task.createdAt ?? null,
-          provider: task.target.provider ?? null,
           model: task.target.model ?? null,
           // 防御取值：overview 是展示面，畸形定义也不能让它崩（zod 有默认值的字段仍按可选读）。
           retryMax: task.retry?.maxAttempts ?? 1,

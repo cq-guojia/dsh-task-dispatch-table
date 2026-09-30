@@ -12,10 +12,10 @@ export type LocaleKey =
   | 'paramStatePath' | 'paramTickMs' | 'paramDispatchGraceMs'
   | 'paramLeaseMs' | 'paramUnknownGraceMs' | 'paramTasksDir'
   | 'paramDefaultProvider' | 'paramDefaultModel'
-  | 'debugButton' | 'debugTitle' | 'debugClose' | 'debugEmpty' | 'debugRaw'
+  | 'debugClose' | 'debugEmpty' | 'debugRaw'
   | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
-  | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents' | 'debugEventsEmpty'
-  | 'debugRefresh' | 'debugRefreshedAt' | 'debugAutoHint'
+  | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents'
+  | 'debugRefreshedAt'
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabDebug'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
@@ -94,9 +94,8 @@ export type LocaleKey =
   | 'editorTabBasic' | 'editorTabRecords' | 'editorRecordsPending'
   | 'editorEnabled' | 'editorEnabledOn' | 'editorEnabledOff'
   | 'editorTitle' | 'editorTitlePh' | 'editorCode' | 'editorCodePh'
-  | 'editorPrompt' | 'editorPromptPh' | 'editorSource' | 'editorSourceInline' | 'editorSourceManual'
-  | 'editorSourceUpload' | 'editorManualPath' | 'editorManualPathPh' | 'editorManualHint'
-  | 'editorPickFile' | 'editorUploadHint' | 'editorUploadWarn'
+  | 'editorPrompt' | 'editorPromptPh'
+  | 'editorManualPathPh'
   | 'editorWorkspace' | 'editorWorkspacePh' | 'editorModel' | 'editorModelPh' | 'editorFollowHost' | 'editorNoOptions'
   // 执行频率：顶部「周期 / 间隔」两档（2026-09-29 返工）
   | 'editorSchedule' | 'editorSchedulePeriodic' | 'editorScheduleInterval'
@@ -106,18 +105,18 @@ export type LocaleKey =
   | 'editorDate' | 'editorDatePh' | 'editorTime' | 'editorTimePh'
   | 'editorMonth' | 'editorMonthOption' | 'editorDayOfMonth' | 'editorDayOption'
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
-  | 'editorStartTime' | 'editorEveryNWeeks'
-  | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd' | 'editorAttachmentAddHint'
+  | 'editorEveryNWeeks'
+  | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd'
   | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick'
-  | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorRestore' | 'editorNoVersions'
+  | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
   | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
-  | 'editorSnapshots' | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
+  | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
   | 'editorUseShort' | 'editorRemoveShort' | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
   | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermB1' | 'editorFullPermB2' | 'editorFullPermCheck' | 'editorTaskSaved'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
-  | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint'
+  | 'editorCustomCron'
   | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
   | 'editorTaskStart' | 'editorTaskStartHint'
   | 'editorWeekdayLabel'
@@ -126,8 +125,8 @@ export type LocaleKey =
   | 'editorToday' | 'editorPrevMonth' | 'editorNextMonth' | 'editorPrevYear' | 'editorNextYear'
   | 'editorMonthTitle' | 'editorHour' | 'editorMinute' | 'editorNow' | 'editorConfirm'
   | 'editorWindow' | 'editorWindowHint'
-  | 'editorSchedForecast' | 'editorSchedRun' | 'editorSchedEveryday' | 'editorSchedNoDay'
-  | 'editorSchedDaily' | 'editorSchedWeekly' | 'editorSchedEveryNWeek' | 'editorSchedMonthly'
+  | 'editorSchedForecast' | 'editorSchedRun' | 'editorSchedEveryday'
+  | 'editorSchedDaily' | 'editorSchedWeekly' | 'editorSchedEveryNWeek'
   | 'editorSchedQuarterly' | 'editorSchedIntervalMin' | 'editorSchedIntervalHour'
   | 'editorSchedOnce' | 'editorSchedInvalidStep' | 'editorSchedHourlyOnce' | 'editorSchedNoDaySuffix' | 'editorSchedWeeklyDayPrefix'
   | 'editorMonthMode_every' | 'editorMonthMode_odd' | 'editorMonthMode_even'
@@ -138,17 +137,17 @@ export type LocaleKey =
   | 'editorAdvanced' | 'editorAdvancedHelp' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
   | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorAgentTeam' | 'editorAgentTeamHint' | 'editorPreview' | 'editorPreviewHint'
   | 'editorPermission' | 'editorPermissionHint' | 'editorPermDefault' | 'editorPermReadOnly' | 'editorPermWorkspace' | 'editorPermFull'
-  | 'editorVersions' | 'editorUnavailable'
+  | 'editorVersions'
   | 'editorModeEdit' | 'editorModePreview'
   // —— 主界面任务列表（2026-09-30：卡片式任务视图）——
-  | 'listFilterAll' | 'listFilterEnabled' | 'listFilterDisabled' | 'listFilterAbnormal' | 'listFilterWorkspace'
+  | 'listFilterAll' | 'listFilterEnabled' | 'listFilterDisabled' | 'listFilterAbnormal'
   | 'listFilterWorkspaceAll' | 'listSearchPlaceholder'
-  | 'listRunning' | 'listLastPrefix' | 'listNextPrefix' | 'listNextNone' | 'listNever'
-  | 'listCreatedPrefix' | 'listStatusOk' | 'listStatusFailed'
+  | 'listRunning' | 'listNextNone' | 'listNever'
+  | 'listCreatedPrefix'
   | 'relNow' | 'relMinutes' | 'relHours' | 'relDays' | 'relPast'
   | 'relJustNow' | 'relMinutesAgo' | 'relHoursAgo' | 'relDaysAgo' | 'relWeeksAgo' | 'relMonthsAgo' | 'relYearsAgo'
   | 'relToday' | 'relTomorrow' | 'relWeeks' | 'relMonths' | 'relYears'
-  | 'listAgoOk' | 'listAgoFailed' | 'listLastFullTitle' | 'listNextFullTitle'
+  | 'listLastFullTitle' | 'listNextFullTitle'
   | 'listEmpty' | 'listEmptyFiltered'
   | 'listSectionSchedule' | 'listSectionAttachments' | 'listSectionDepends' | 'listSectionPrompt'
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
@@ -192,12 +191,8 @@ export const zh: Record<LocaleKey, string> = {
   paramTasksDir: '任务目录 tasksDir',
   paramDefaultProvider: '默认模型 provider defaultProvider',
   paramDefaultModel: '默认模型 model defaultModel',
-  debugButton: '打开面板（配置 / 执行记录）',
-  debugTitle: '调试快照（临时面板，随宿主状态自动刷新）',
   debugClose: '关闭',
-  debugRefresh: '刷新',
   debugRefreshedAt: '手动刷新于',
-  debugAutoHint: '快照随宿主调度自动刷新（每 tick / 会话事件 / 5 分钟心跳）；时间为本机时区。',
   debugEmpty: '暂无快照：宿主完成一次调度（或派发 / 会话事件）后自动写入。若持续为空，说明宿主侧运行的还是旧版插件，请重装后重试。',
   debugRaw: '快照解析失败，原文如下：',
   debugTasks: '已加载任务',
@@ -206,7 +201,6 @@ export const zh: Record<LocaleKey, string> = {
   debugInstances: '实例 task_instances',
   debugInstancesEmpty: '（尚无实例）',
   debugEvents: '事件 task_events（最近 200 条，旧 → 新）',
-  debugEventsEmpty: '（尚无事件）',
   panelTitle: '定时任务调度器',
   backToConversation: '返回会话',
   tabConfig: '任务配置',
@@ -442,16 +436,7 @@ export const zh: Record<LocaleKey, string> = {
   editorCodePh: '可选，便于查询',
   editorPrompt: '提示词',
   editorPromptPh: '写给 agent 的指令……',
-  editorSource: '提示词来源',
-  editorSourceInline: '手输',
-  editorSourceManual: '选择',
-  editorSourceUpload: '上传',
-  editorManualPath: '手册路径',
   editorManualPathPh: '相对工作区根，如 manuals/xxx.md',
-  editorManualHint: '只记路径，执行那一刻由 agent 自己读取：你随时改随时生效，我们不做它的版本管理',
-  editorPickFile: '选择文件',
-  editorUploadHint: '点击或拖拽上传 .md 手册',
-  editorUploadWarn: '上传的内容由我们保管：每次修改都会留版本，可在高级区查看版本历史',
   editorVersions: '版本历史',
   editorWorkspace: '工作区',
   editorWorkspacePh: '选择工作区',
@@ -493,14 +478,12 @@ export const zh: Record<LocaleKey, string> = {
   editorIntervalUnit: '间隔单位',
   // 原「执行一次」易被误读成「只跑一次」；去掉「一次」，明确是循环执行。
   editorIntervalSuffix: '执行',
-  editorStartTime: '开始时间',
   editorEveryNWeeks: '每 {n} 周',
   editorAttachments: '附加文件',
   editorAttachmentLink: '链接',
   editorAttachmentUpload: '已上传',
   editorAttachmentRemove: '移除',
   editorAttachmentAdd: '添加文件',
-  editorAttachmentAddHint: '上传 / 选择文件稍后开放',
   editorPickWorkspaceFile: '选择工作区文件',
   editorPickWorkspaceFileShort: '工作区文件',
   editorUploadFile: '上传文件',
@@ -519,7 +502,6 @@ export const zh: Record<LocaleKey, string> = {
   editorPromptEditorTitle: '提示词编辑器（.md）',
   editorSaveVersion: '保存版本',
   editorVersionNote: '版本备注（可选）',
-  editorRestore: '恢复',
   editorNoVersions: '暂无版本，保存后可在此回滚',
   editorHistoryVersions: '历史版本',
   editorNewTaskNoVersions: '新建任务暂未保存，无历史版本可查询',
@@ -536,7 +518,6 @@ export const zh: Record<LocaleKey, string> = {
   editorResetDone: '已恢复为打开时的内容',
   editorResetTitle: '重置当前编辑？',
   editorResetDesc: '重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。',
-  editorSnapshots: '配置快照（整份找回）',
   editorVersionToggle: '版本',
   editorUseShort: '使用',
   editorRemoveShort: '移除',
@@ -559,8 +540,6 @@ export const zh: Record<LocaleKey, string> = {
   editorRestorePromptTitle: '只找回提示词',
   editorRestorePromptDesc: '确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词，其余设置保持现状）。',
   editorCustomCron: '自定义 cron（JSON 里的原值，保存时原样保留）',
-  editorSaved: '已保存',
-  editorSaveFailedHint: '保存失败：',
   editorTasksTitle: '任务列表',
   editorTasksEmpty: '还没有任务：点右上角「＋ 新建任务」创建第一条。',
   editorDisabledTag: '已停用',
@@ -593,11 +572,9 @@ export const zh: Record<LocaleKey, string> = {
   editorSchedForecast: '预计执行',
   editorSchedRun: '执行',
   editorSchedEveryday: '每天',
-  editorSchedNoDay: '未选生效日',
   editorSchedDaily: '每天',
   editorSchedWeekly: '每周',
   editorSchedEveryNWeek: '每 {n} 周',
-  editorSchedMonthly: '每月',
   editorSchedQuarterly: '每季度第 {n} 个月',
   editorSchedIntervalMin: '每 {n} 分钟执行一次',
   editorSchedIntervalHour: '每 {n} 小时执行一次',
@@ -637,23 +614,17 @@ export const zh: Record<LocaleKey, string> = {
   editorAgentTeamHint: '默认关闭。开启后 agent 以官方 Agent Teams（实验特性）方式执行：主会话作为队长，按需创建命名队友分工协作、共享任务板。需要宿主启用 Agent Teams 组件；未启用时自动按单 Agent 执行，并在执行记录日志留痕。',
   editorPreview: '配置预览',
   editorPreviewHint: '查看本任务的配置原文件。',
-  editorUnavailable: '暂不可用（待接数据面）',
   // ── 主界面任务列表 ──
   listFilterAll: '全部',
   listFilterEnabled: '已开启',
   listFilterDisabled: '已关闭',
   listFilterAbnormal: '异常',
-  listFilterWorkspace: '工作区',
   listFilterWorkspaceAll: '全部工作区',
   listSearchPlaceholder: '搜索任务名称或编号',
   listRunning: '运行中',
-  listLastPrefix: '上次',
-  listNextPrefix: '下次',
   listNextNone: '无后续执行',
   listNever: '尚未执行',
   listCreatedPrefix: '创建于',
-  listStatusOk: '成功',
-  listStatusFailed: '失败',
   relNow: '即将执行',
   relMinutes: '{n} 分钟后',
   relHours: '{n} 小时后',
@@ -671,8 +642,6 @@ export const zh: Record<LocaleKey, string> = {
   relWeeks: '{n} 周后',
   relMonths: '{n} 个月后',
   relYears: '{n} 年后',
-  listAgoOk: '{when}执行成功',
-  listAgoFailed: '{when}执行失败',
   listLastFullTitle: '上次执行：{when}',
   listNextFullTitle: '下次执行：{when}',
   listEmpty: '还没有任务。点右上角「＋ 新建任务」创建第一个。',
@@ -717,12 +686,8 @@ export const en: Record<LocaleKey, string> = {
   paramTasksDir: 'Task directory tasksDir',
   paramDefaultProvider: 'Default model provider defaultProvider',
   paramDefaultModel: 'Default model defaultModel',
-  debugButton: 'Open panel (config / runs)',
-  debugTitle: 'Debug snapshot (temporary panel; auto-refreshes with host state)',
   debugClose: 'Close',
-  debugRefresh: 'Refresh',
   debugRefreshedAt: 'Manual refresh at',
-  debugAutoHint: 'Snapshot auto-refreshes with host scheduling (every tick / session event / 5-min heartbeat); times are in your local timezone.',
   debugEmpty: 'No snapshot yet: the host writes one after each scheduling pass (or dispatch / session event). If it stays empty, the host is still running an old plugin build — reinstall and retry.',
   debugRaw: 'Failed to parse the snapshot; raw text below:',
   debugTasks: 'Loaded tasks',
@@ -731,7 +696,6 @@ export const en: Record<LocaleKey, string> = {
   debugInstances: 'Instances task_instances',
   debugInstancesEmpty: '(no instances yet)',
   debugEvents: 'Events task_events (latest 200, oldest → newest)',
-  debugEventsEmpty: '(no events yet)',
   panelTitle: 'Scheduled task dispatcher',
   backToConversation: 'Back to conversation',
   tabConfig: 'Configuration',
@@ -967,16 +931,7 @@ export const en: Record<LocaleKey, string> = {
   editorCodePh: 'Optional, for lookup',
   editorPrompt: 'Prompt',
   editorPromptPh: 'Instructions for the agent…',
-  editorSource: 'Prompt source',
-  editorSourceInline: 'Type',
-  editorSourceManual: 'Pick',
-  editorSourceUpload: 'Upload',
-  editorManualPath: 'Manual path',
   editorManualPathPh: 'Relative to workspace root, e.g. manuals/xxx.md',
-  editorManualHint: 'Only the path is stored; the agent reads it at dispatch time. Edit it anytime — we do not version it',
-  editorPickFile: 'Pick file',
-  editorUploadHint: 'Click or drop a .md manual',
-  editorUploadWarn: 'Uploaded content is ours to keep: every edit gets a version, see Version history in Advanced',
   editorVersions: 'Version history',
   editorWorkspace: 'Workspace',
   editorWorkspacePh: 'Choose workspace',
@@ -1018,14 +973,12 @@ export const en: Record<LocaleKey, string> = {
   editorIntervalUnit: 'Interval unit',
   // English suffix stays empty — "Every 1 hour" already reads as recurring.
   editorIntervalSuffix: '',
-  editorStartTime: 'Start time',
   editorEveryNWeeks: 'Every {n} weeks',
   editorAttachments: 'Attachments',
   editorAttachmentLink: 'Linked',
   editorAttachmentUpload: 'Uploaded',
   editorAttachmentRemove: 'Remove',
   editorAttachmentAdd: 'Add file',
-  editorAttachmentAddHint: 'Upload / pick file — coming soon',
   editorPickWorkspaceFile: 'Pick workspace file',
   editorPickWorkspaceFileShort: 'Files',
   editorUploadFile: 'Upload file',
@@ -1044,7 +997,6 @@ export const en: Record<LocaleKey, string> = {
   editorPromptEditorTitle: 'Prompt editor (.md)',
   editorSaveVersion: 'Save version',
   editorVersionNote: 'Version note (optional)',
-  editorRestore: 'Restore',
   editorNoVersions: 'No versions yet — save one to roll back here',
   editorHistoryVersions: 'History versions',
   editorNewTaskNoVersions: 'New task not saved yet — no history versions to query',
@@ -1061,7 +1013,6 @@ export const en: Record<LocaleKey, string> = {
   editorResetDone: 'Restored to the values from when you opened it',
   editorResetTitle: 'Reset current edits?',
   editorResetDesc: 'Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.',
-  editorSnapshots: 'Config snapshots (restore all)',
   editorVersionToggle: 'Versions',
   editorUseShort: 'Use',
   editorRemoveShort: 'Remove',
@@ -1084,8 +1035,6 @@ export const en: Record<LocaleKey, string> = {
   editorRestorePromptTitle: 'Restore prompt only',
   editorRestorePromptDesc: 'Restoring will overwrite all your current edits with the history version (prompt only; other settings stay as they are).',
   editorCustomCron: 'Custom cron (raw value from JSON; kept as-is on save)',
-  editorSaved: 'Saved',
-  editorSaveFailedHint: 'Save failed: ',
   editorTasksTitle: 'Tasks',
   editorTasksEmpty: 'No tasks yet — use "＋ New task" in the top-right corner to create the first one.',
   editorDisabledTag: 'Disabled',
@@ -1118,11 +1067,9 @@ export const en: Record<LocaleKey, string> = {
   editorSchedForecast: 'Forecast',
   editorSchedRun: 'runs',
   editorSchedEveryday: 'every day',
-  editorSchedNoDay: 'no active day',
   editorSchedDaily: 'Every day',
   editorSchedWeekly: 'Weekly',
   editorSchedEveryNWeek: 'Every {n} weeks',
-  editorSchedMonthly: 'Monthly',
   editorSchedQuarterly: 'Month {n} of each quarter',
   editorSchedIntervalMin: 'Runs every {n} minutes',
   editorSchedIntervalHour: 'Runs every {n} hours',
@@ -1162,23 +1109,17 @@ export const en: Record<LocaleKey, string> = {
   editorAgentTeamHint: 'Off by default. When on, the agent runs via the official Agent Teams (experimental): the lead session spawns named teammates that share a task board. Requires the host to enable Agent Teams; otherwise it falls back to a single agent and leaves a log entry.',
   editorPreview: 'Config preview',
   editorPreviewHint: 'View the raw config file of this task.',
-  editorUnavailable: 'Unavailable (data plane pending)',
   // ── Main panel task list ──
   listFilterAll: 'All',
   listFilterEnabled: 'Enabled',
   listFilterDisabled: 'Disabled',
   listFilterAbnormal: 'Abnormal',
-  listFilterWorkspace: 'Workspace',
   listFilterWorkspaceAll: 'All workspaces',
   listSearchPlaceholder: 'Search by name or code',
   listRunning: 'Running',
-  listLastPrefix: 'Last',
-  listNextPrefix: 'Next',
   listNextNone: 'No further runs',
   listNever: 'Never run',
   listCreatedPrefix: 'Created',
-  listStatusOk: 'succeeded',
-  listStatusFailed: 'failed',
   relNow: 'due now',
   relMinutes: 'in {n} min',
   relHours: 'in {n} h',
@@ -1196,8 +1137,6 @@ export const en: Record<LocaleKey, string> = {
   relWeeks: 'in {n} weeks',
   relMonths: 'in {n} months',
   relYears: 'in {n} years',
-  listAgoOk: 'succeeded {when}',
-  listAgoFailed: 'failed {when}',
   listLastFullTitle: 'Last run: {when}',
   listNextFullTitle: 'Next run: {when}',
   listEmpty: 'No tasks yet. Use “+ New task” to create the first one.',

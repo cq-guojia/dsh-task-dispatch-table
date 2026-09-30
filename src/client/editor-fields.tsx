@@ -17,6 +17,7 @@
 // （`MenuSurface` 才只有 rc.2 有 ⇒ 本文件不用它，自绘浮层底）。
 
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { pad2 } from './format'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
@@ -237,10 +238,6 @@ export interface CalendarLabels {
   monthTitle: (year: number, month: number) => string
   /** 周标题，**周一起**共 7 项。 */
   weekdays: readonly string[]
-}
-
-function pad2(value: number): string {
-  return String(value).padStart(2, '0')
 }
 
 /** `YYYY-MM-DD` → 年月日；不合法返回 null。 */

@@ -246,4 +246,38 @@
 - **验证**：冒烟 +1（`InfoRow` + `infoLabelStyle`），**301 全过**；typecheck + build 绿。
 - ⏳ 这是第一版；继续打磨方向（待用户真机看效果再定）：附加文件 / 前置任务改成逐条 chip、标签列宽随内容自适应、运行中状态在展开区给一句人话进度。
 
+## 十一、9.3 落地：死码清理 + 抽象收敛（2026-09-30）
+
+### 11.1 死码清理（全部删净）
+
+| 类别 | 明细 | 核对方式 |
+|---|---|---|
+| 死 locale 键 | **30 个**（zh + en 共 60 行 + 联合类型 18 行）：列表遗留 7、编辑器遗留 16、调试面板 5、`editorSnapshots` | 脚本删 + **tsc 兜底**（删错会被 `t('key')` 类型检查抓住，实际零误删） |
+| 死 CSS 类 | `.dsh-tdt-ed-tab`（含 hover/aria）、`.dsh-tdt-ed-tabs`（只剩当 id 用）、`.dsh-tdt-ed-warn`、`.dsh-tdt-ed-ver-time`、`.dsh-tdt-ed-drop`、`.dsh-tdt-ed-mono`、`.dsh-tdt-ed-json`，共 **11 行** | **先逐个 grep 确认零引用再删**（CSS 不受 tsc 保护） |
+| 死字段 / 导出 | `TaskOverviewRow.provider`（两侧投影 + `rowPatchOf`）；`runtime-index.forget()`；`LiveText.title` prop | grep 确认 + tsc |
+| 随迁 | `isoDow`（cron 0=周日⇒7 的换算，随旧解析器内聚进 `schedule-text`） | — |
+
+⚠️ 9.3 记的 `runtime-index.revision()` **没删**——复核时发现 `smoke.mjs` 在用（上一轮评审漏了这一处），保留。
+
+### 11.2 抽象收敛（4 组落到单一实现）
+
+| 收敛项 | 此前 | 现在 |
+|---|---|---|
+| **cron → 结构化**（最关键） | `schedule-text.specFromCron`（列表文案）与 `task-editor.scheduleFromCron`（编辑器表单反解）**两份、严格度还不一致** —— 同一个 cron 两处说法不一样，修 bug 得两边分别修 | 唯一实现 = `scheduleSpecFromCron`（`schedule-text.ts`）；编辑器只剩 **spec → 表单字段映射**（`scheduleFromCron`），`isoDow` 随迁。此前「列表说 `1-5` 是每天、编辑器却降级自定义」那类打架从此不可能 |
+| **附件 ref 合法性** | **4 份且各有出入**：宿主 zod（拒 `..`/绝对/反斜杠）、客户端保存前校验（多查开头 `\`）、真删防御（没查开头 `\`）、上传定位（连反斜杠都没查） | `attachment-allowlist.isSafeAttachmentRef` **唯一实现，4 处调用**。这正是「选工作区文件报 422」那类漂移 bug 的温床 |
+| **补零 / 时间串** | `padStart(2,'0')` 散在 6 处；`YYYY-MM-DD HH:mm[:ss]` 手拼 3 份（有无秒、失败回退 `'—'` 还是原串，口径各差一点） | 新增 [`client/format.ts`](../../src/client/format.ts)：`pad2` + `formatDateTime(iso, { seconds?, fallback? })`，3 处时间串全部改走它 |
+| **「?」说明钮** | 同一段 JSX 写了 5 份，每份还得配一段「图标必须包真 DOM」的注释提醒 | `HelpButton` 组件（含 `insideClickable` 处理可点行内的冒泡），**坑固化在一处** |
+
+### 11.3 验证
+
+- `npm run typecheck`（宿主 + 客户端）+ `npm run build`：全绿。
+- `npm run smoke`：**301 项全过**（1 条断言原绑死旧局部变量名 `p(hours)`，改为断共用 `pad2`/`formatDateTime`）。
+- 收敛核对：`pad2` / `formatDateTime` / `isSafeAttachmentRef` / cron 反解 各 **1 处定义**；`HelpButton` 1 定义 5 使用；残留 `padStart(2,'0')` 仅 2 处（`format.ts` 自身 + `mirror/message-chrome.ts`）。
+
+### 11.4 本轮**未做**（记录理由，避免「以为做了」）
+
+- **主题 token `C` ×3**（`editor-fields` / `task-list` / `index` 各一份，键名还不一致：`textFaint` vs `textTertiary`）：合并是纯视觉改动、**键名映射错一处就是一屏配色回归**，且我这边没有真机可验 ⇒ 留给真机验证后单独做。
+- **`<style>` 幂等注入样板 ×4**：纯样板、收益小；等下次碰这几个文件时顺手收。
+- **`mirror/message-chrome.ts` 的 `pad2`**：不在主 client 打包路径上，暂不动。
+
 

@@ -18,6 +18,7 @@
 import {
   copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync,
 } from 'node:fs'
+import { isSafeAttachmentRef } from './attachment-allowlist.js'
 import { basename, dirname, extname, join } from 'node:path'
 
 /** 任务目录根名。 */
@@ -311,7 +312,7 @@ export function removeAttachmentFiles(paths: AssetPaths, taskId: string, removed
   const dir = join(taskDirOf(paths, taskId), 'attachments')
   const failed: string[] = []
   for (const ref of removedRefs) {
-    if (ref.includes('..') || ref.startsWith('/') || ref.includes('\\')) continue
+    if (!isSafeAttachmentRef(ref)) continue
     const target = ref.startsWith(ATTACHMENT_PREFIX)
       ? join(dir, ref.slice(ATTACHMENT_PREFIX.length))
       : join(paths.legacyDir, ref)
@@ -343,7 +344,7 @@ export function reconcileAttachments(
 
 /** 按 ref 定位已上传文件：任务目录 → 临时区 → 旧平铺目录。找不到返回 null。 */
 function locateUploaded(paths: AssetPaths, ref: string): string | null {
-  if (ref.startsWith('/') || ref.includes('..')) return null
+  if (!isSafeAttachmentRef(ref)) return null
   const candidates: string[] = []
   if (ref.startsWith(ATTACHMENT_PREFIX)) candidates.push(join(paths.tasksRoot, ref))
   candidates.push(join(paths.tmpDir, ref), join(paths.legacyDir, ref))

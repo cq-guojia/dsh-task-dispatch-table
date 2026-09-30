@@ -125,10 +125,6 @@ export function createRuntimeIndex() {
             entry.runningSince = null;
             rev++;
         },
-        forget(taskId) {
-            if (entries.delete(taskId))
-                rev++;
-        },
         markDefinitionsChanged(tasks) {
             const nowMs = Date.now();
             for (const task of tasks) {
@@ -179,7 +175,6 @@ export function createRuntimeIndex() {
                     enabled: task.enabled,
                     workspace: task.target.workspace,
                     createdAt: task.createdAt ?? null,
-                    provider: task.target.provider ?? null,
                     model: task.target.model ?? null,
                     // 防御取值：overview 是展示面，畸形定义也不能让它崩（zod 有默认值的字段仍按可选读）。
                     retryMax: task.retry?.maxAttempts ?? 1,

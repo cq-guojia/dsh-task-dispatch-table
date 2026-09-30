@@ -13,6 +13,7 @@
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { formatDateTime, pad2 } from './format'
 import {
   IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular, IconEditOutlineRegular,
   IconSearchOutlineRegular,
@@ -31,7 +32,6 @@ export interface TaskOverviewRow {
   enabled: boolean
   workspace: string
   createdAt: string | null
-  provider: string | null
   model: string | null
   retryMax: number
   schedule: {
@@ -206,12 +206,8 @@ export function useTaskOverview(): {
 // 过去：刚刚 → N 分钟前 → N 小时前 → N 天前 → N 周前 → N 个月前 → N 年前；
 // 未来：即将执行 → N 分钟后 → 今天/明天 HH:mm → N 天后 → N 周后 → N 个月后 → N 年后。
 // 具体时刻一律放进 hover Tooltip（listLastFullTitle / listNextFullTitle）。
-function formatFull(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  const p = (v: number): string => String(v).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
+/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
+const formatFull = (iso: string): string => formatDateTime(iso, { fallback: '—' })
 
 const sameCalendarDay = (a: Date, b: Date): boolean =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -269,9 +265,8 @@ function countdownText(iso: string, nowMs: number, tt: Translate): string {
   const hours = Math.floor(total / 3600)
   const minutes = Math.floor((total % 3600) / 60)
   const seconds = total % 60
-  const p = (v: number): string => String(v).padStart(2, '0')
   // 数字一律两位（用户 2026-09-30：「都把它补成两位」）⇒ `05:09` / `01:05:09`，位数恒定不跳。
-  return hours > 0 ? `${p(hours)}:${p(minutes)}:${p(seconds)}` : `${p(minutes)}:${p(seconds)}`
+  return hours > 0 ? `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}` : `${pad2(minutes)}:${pad2(seconds)}`
 }
 
 // ── 全局秒级心跳（单 timer + 局部订阅）────────────────────────────────
@@ -307,27 +302,26 @@ function subscribeTicker(cb: () => void): () => void {
 }
 
 /** 每秒自刷新的一小段文本：只有它自己重渲染（render 永远取最新闭包，ref 转发）。 */
-function LiveText(props: { render: (nowMs: number) => string; style?: Record<string, string | number>; title?: string }) {
+function LiveText(props: { render: (nowMs: number) => string; style?: Record<string, string | number> }) {
   const [, force] = useState(0)
   const renderRef = useRef(props.render)
   renderRef.current = props.render
   useEffect(() => subscribeTicker(() => force(v => v + 1)), [])
-  return h('span', { style: props.style, title: props.title }, renderRef.current(Date.now()))
+  return h('span', { style: props.style }, renderRef.current(Date.now()))
 }
 
 /** HH:mm（本机时区）。 */
 function clockOf(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
 /** 「09 月 28 日」（本机时区；月 / 日补两位，用户 2026-09-30）。 */
 function dateOf(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  const p = (v: number): string => String(v).padStart(2, '0')
-  return `${p(d.getMonth() + 1)} 月 ${p(d.getDate())} 日`
+  return `${pad2(d.getMonth() + 1)} 月 ${pad2(d.getDate())} 日`
 }
 
 // ── 排序（时间轴：马上要跑的最上，关闭的沉底）──────────────────────────

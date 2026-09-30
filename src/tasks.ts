@@ -7,6 +7,7 @@ import { z } from 'zod'
 // cron-parser 5.x 为 ESM，命名导出 CronExpressionParser。
 import { CronExpressionParser } from 'cron-parser'
 import type { HostLogger } from './host.js'
+import { isSafeAttachmentRef } from './attachment-allowlist.js'
 
 /** ISO 8601 时长（如 PT4H），只支持 H/M/S 组合——窗口与新鲜度够用。 */
 const isoDuration = z.string().regex(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/, 'ISO 8601 时长，如 PT4H')
@@ -94,7 +95,8 @@ export const taskDefinitionSchema = z.object({
         workspace: z.string().optional(),
       })
       .refine(
-        item => !item.ref.includes('..') && !item.ref.startsWith('/') && !item.ref.includes('\\'),
+        // 唯一实现 = attachment-allowlist.isSafeAttachmentRef（客户端保存前校验 / 真删 / 上传定位同源）。
+        item => isSafeAttachmentRef(item.ref),
         { message: '附件 ref 非法：不允许相对路径上跳、绝对路径或反斜杠' },
       ),
     )

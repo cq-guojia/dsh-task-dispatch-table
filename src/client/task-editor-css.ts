@@ -32,15 +32,10 @@ export const TASK_EDITOR_CSS = `
 /* 关闭钮：规格照官方 primitives Modal.close（28×28、radius-sm、hover 才出底）。 */
 .dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
 .dsh-tdt-ed-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-tabs{flex:none;display:flex;gap:4px;padding:8px 18px 0;}
-.dsh-tdt-ed-tab{appearance:none;font:inherit;font-size:13px;line-height:18px;padding:5px 12px;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease,color .15s ease;}
-.dsh-tdt-ed-tab:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-tab[aria-selected='true']{background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;}
 .dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
 .dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-label{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-ed-hint{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
-.dsh-tdt-ed-warn{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-state-warn-primary,#f5a623);}
 /* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
 .dsh-tdt-ed-danger{color:var(--dsw-alias-state-error-primary,#e5484d)!important;border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;}
 .dsh-tdt-ed-danger:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))!important;}
@@ -69,7 +64,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:11px;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-ed-ver-note{display:block;font-size:10px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
-.dsh-tdt-ed-ver-time{font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:nowrap;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
 /* 「使用」= 纯文字钮（用户：药丸太长），hover 才垫一个小背景；「×」= 官方叉图标，hover 变红。 */
 .dsh-tdt-ed-ver-use{appearance:none;border:none;background:none;padding:1px 4px;border-radius:var(--dsw-radius-sm,4px);color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease;}
@@ -84,8 +78,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-prompt--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
-/* 上传投放区（P1 接真上传；此处只呈现形态 + 文案）。 */
-.dsh-tdt-ed-drop{display:flex;align-items:center;justify-content:center;min-height:96px;box-sizing:border-box;padding:12px;border:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.5));border-radius:var(--dsw-radius-md,8px);color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));font-size:13px;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
 .dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--dsw-radius-md,8px);background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
 /* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
@@ -101,8 +93,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:22px;outline:none;transition:border-color .15s ease;}
 .dsh-tdt-ed-input:focus{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
 .dsh-tdt-ed-input::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
-/* 代码类值（手册路径 / 成功状态清单）：等宽、小一号，照本仓库既有 markdown-code 习惯。 */
-.dsh-tdt-ed-mono{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;}
 /* 自绘控件锚点（下拉 / 日历 / 时分）：键盘可达性描边。 */
 .dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d6bfe);outline-offset:1px;}
 /* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满。 */
@@ -145,7 +135,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
 .dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
 @keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
-.dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `
 

@@ -15,6 +15,7 @@
 // 文件名 = 纯时间戳（yyyyMMddTHHmmssSSS，本地墙上时间）⇒ 字典序 = 时间序，
 // 读目录即得版本列表，不需要序号维护、不需要索引文件。
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync, } from 'node:fs';
+import { isSafeAttachmentRef } from './attachment-allowlist.js';
 import { basename, dirname, extname, join } from 'node:path';
 /** 任务目录根名。 */
 export const TASKS_DIR_NAME = 'tasks';
@@ -279,7 +280,7 @@ export function removeAttachmentFiles(paths, taskId, removedRefs) {
     const dir = join(taskDirOf(paths, taskId), 'attachments');
     const failed = [];
     for (const ref of removedRefs) {
-        if (ref.includes('..') || ref.startsWith('/') || ref.includes('\\'))
+        if (!isSafeAttachmentRef(ref))
             continue;
         const target = ref.startsWith(ATTACHMENT_PREFIX)
             ? join(dir, ref.slice(ATTACHMENT_PREFIX.length))
@@ -311,7 +312,7 @@ export function reconcileAttachments(paths, taskId, next, prev) {
 }
 /** 按 ref 定位已上传文件：任务目录 → 临时区 → 旧平铺目录。找不到返回 null。 */
 function locateUploaded(paths, ref) {
-    if (ref.startsWith('/') || ref.includes('..'))
+    if (!isSafeAttachmentRef(ref))
         return null;
     const candidates = [];
     if (ref.startsWith(ATTACHMENT_PREFIX))

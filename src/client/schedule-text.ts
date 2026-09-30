@@ -13,6 +13,7 @@
 //
 // 文案一律走 locale（明暗自适应、可翻译），与编辑器原「预计执行」逐字一致（列表从此对齐它）。
 import { createElement as h } from 'react'
+import { pad2 } from './format'
 import type { CSSProperties, ReactNode } from 'react'
 import type { LocaleKey } from './locales'
 
@@ -61,7 +62,6 @@ const WEEKDAY_KEYS: LocaleKey[] = [
   'editorWeekday5', 'editorWeekday6', 'editorWeekday7',
 ]
 
-const pad2 = (v: string): string => (v.length === 1 && /^\d$/.test(v) ? `0${v}` : v)
 const fmt = (template: string, vars: Record<string, string>): string =>
   Object.entries(vars).reduce((acc, [key, value]) => acc.replace(`{${key}}`, value), template)
 
@@ -151,8 +151,14 @@ const weekdaysFromDow = (dow: string): number[] | null => {
   return dow.split(',').map(Number).map(n => (n === 0 ? 7 : n))
 }
 
-/** 老任务（没有结构化 `ui`）：从 cron 反解出 spec。认得几个常见形态，认不出走 `custom`（原样显示）。 */
-function specFromCron(cron: string, everyNWeeks: number | null): ScheduleSpec {
+/**
+ * 老任务（没有结构化 `ui`）：从 cron 反解出 spec。认得几个常见形态，认不出走 `custom`（原样显示）。
+ *
+ * **cron → 结构化的唯一实现**（2026-09-30 抽象收敛）：此前列表文案（这里）与编辑器表单反解
+ * （`task-editor.scheduleFromCron`）各写一份、严格度还不一致 ⇒ 同一个 cron 两处说法不一样，
+ * 修 bug 还得两边分别修。现在编辑器也只调这里。
+ */
+export function scheduleSpecFromCron(cron: string, everyNWeeks: number | null): ScheduleSpec {
   const base = { ...EMPTY_SPEC, cron }
   const parts = cron.trim().split(/\s+/)
   if (parts.length !== 5) return base
@@ -259,7 +265,7 @@ export function scheduleSpecFromSchedule(sched: ScheduleRowInput): ScheduleSpec 
       cron,
     }
   }
-  return specFromCron(cron, sched.everyNWeeks)
+  return scheduleSpecFromCron(cron, sched.everyNWeeks)
 }
 
 // ── ② 出文字：spec → 文案（可带样式）────────────────────────────────────

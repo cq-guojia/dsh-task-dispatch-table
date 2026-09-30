@@ -560,9 +560,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 保存后乐观补行 ⇒ 改完**立刻**可见，不等服务端那 ~1 秒的落盘 + 重拉。
   check('保存后乐观补行（patchRow + rowPatchOf）',
     clientJs.includes('patchRow') && clientJs.includes('rowPatchOf'))
-  // 时间显示一律两位（用户 2026-09-30：「都把它补成两位」）——倒计时小时补零、时间戳自己拼秒。
-  check('时间显示一律两位（倒计时 p(hours) + 时间戳显式拼秒，不再用 toLocaleString）',
-    clientJs.includes('p(hours)') && clientJs.includes('p(d.getSeconds())') && !clientJs.includes('toLocaleString('))
+  // 时间显示一律两位（用户 2026-09-30：「都把它补成两位」）——补零收敛到共用 pad2，时间戳显式拼秒。
+  check('时间显示一律两位（共用 pad2 + formatDateTime 拼秒，不再用 toLocaleString）',
+    clientJs.includes('function pad2') && clientJs.includes('function formatDateTime') && !clientJs.includes('toLocaleString('))
   // 展示名与图标（用户 2026-09-30 拍板：名字用「定时任务调度器」，图标用 assets/icon-scheduler.svg）。
   check('面板 / 侧栏展示名 = 定时任务调度器', clientJs.includes('定时任务调度器'))
   check('侧栏图标 = 用户指定的调度器图标（方括号 + 红 S 方块，内联进 bundle）',

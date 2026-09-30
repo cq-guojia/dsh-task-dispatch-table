@@ -17,6 +17,7 @@
 // **不做版本历史**（P3）。
 
 import { createElement as h, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { formatDateTime, pad2 } from './format'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
   Button,
@@ -47,16 +48,47 @@ import {
 } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
-import { renderSchedule, scheduleSpecFromDraft } from './schedule-text'
+import { renderSchedule, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
 import { MD_LABELS } from './md-labels'
 import { createPortal } from 'react-dom'
-import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf } from '../attachment-allowlist.js'
+import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf, isSafeAttachmentRef } from '../attachment-allowlist.js'
 import { FileBrowser } from './file-browser'
 import type { WorkspaceFilesFace } from './file-preview'
 import { ensureToastStyle, FloatingToast } from './toast-css'
+
+/**
+ * 「?」说明钮（2026-09-30 抽象收敛：此前同样的 JSX 写了 5 份）。
+ *
+ * ⚠️ 图标**必须包在真实 DOM 元素**里再交给官方 Tooltip——它靠给子元素挂 ref，
+ * 裸图标组件 ref 挂不上 ⇒ 悬停无字（本仓库踩过两次的坑，此处固化）。
+ * `insideClickable`：挂在可点行（如「高级设置」折叠头）里时用 `span + role=img`，
+ * 并吞掉点击冒泡，免得点说明把行本身开关了。
+ */
+function HelpButton(props: {
+  hint: string
+  side?: 'top' | 'bottom'
+  align?: 'center' | 'end'
+  maxWidth?: number
+  insideClickable?: boolean
+}) {
+  const { hint, side = 'bottom', align, maxWidth = 300, insideClickable = false } = props
+  const anchor = insideClickable
+    ? h('span', {
+        className: 'dsh-tdt-ed-help',
+        role: 'img',
+        'aria-label': hint,
+        onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation() },
+      }, h(IconQuestionOutlineRegular, { size: 14 }))
+    : h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': hint },
+        h(IconQuestionOutlineRegular, { size: 14 }))
+  const tip: { label: string; side: 'top' | 'bottom'; maxWidth: number; align?: 'center' | 'end' } =
+    { label: hint, side, maxWidth }
+  if (align !== undefined) tip.align = align
+  return h(Tooltip, tip, anchor)
+}
 
 /** 与 index.ts 同形的 t 席位（本仓库 client 半侧惯例：无参 t；带占位符的文案走 tTemplate）。 */
 type T = (key: LocaleKey) => string
@@ -226,7 +258,7 @@ const WEEKDAY_KEYS: LocaleKey[] = [
 /** 本地今天（真实时间）。 */
 function todayIso(): string {
   const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
 }
 
 /** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
@@ -449,7 +481,7 @@ export function validateTaskDraft(draft: TaskEditorDraft): FieldProblem[] {
   // ④ 附加文件：link 型 ref 必须**工作区相对**（宿主 zod：不许 `..` / 绝对路径 / 反斜杠）。
   //    ⚠️ 用户 2026-09-30 真机：选工作区文件曾把**绝对路径**当 ref 存 ⇒ 保存被 422 拒、且**无红框**、文案还是黑话。
   //    根因已在选择器修（回调改为工作区相对路径）；这里是**兜底** + 归属附件卡描红，防止再有非法 ref 写进来。
-  const badAttachment = draft.attachments.find(att => att.ref.startsWith('/') || att.ref.startsWith('\\') || att.ref.includes('..') || att.ref.includes('\\'))
+  const badAttachment = draft.attachments.find(att => !isSafeAttachmentRef(att.ref))
   if (badAttachment !== undefined) {
     problems.push({ field: 'attachments', message: `附加文件「${badAttachment.name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。` })
   }
@@ -494,76 +526,40 @@ function newAttachmentId(): string {
     : `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 }
 
-/** cron 星期位 → ISO 序号（cron 0 = 周日 ⇒ 7）。 */
-function isoDow(day: number): number {
-  return day === 0 ? 7 : day
-}
-
-/** 五段 cron → 结构化排期；表达不了的组合返回 null（调用方降级为「自定义 cron」，不丢原值）。 */
-function scheduleFromCron(cron: string): Partial<TaskEditorDraft> | null {
-  const parts = cron.trim().split(/\s+/)
-  if (parts.length !== 5) return null
-  const minute = parts[0] ?? ''
-  const hour = parts[1] ?? ''
-  const dom = parts[2] ?? ''
-  const mon = parts[3] ?? ''
-  const dow = parts[4] ?? ''
-  const hh = /^\d{1,2}$/.test(hour) ? hour.padStart(2, '0') : null
-  const mm = /^\d{1,2}$/.test(minute) ? minute.padStart(2, '0') : null
-  const time = hh !== null && mm !== null ? `${hh}:${mm}` : null
-
-  // 间隔档：每隔 N 分钟 / 每小时
-  if (minute.startsWith('*/') && hour === '*' && dom === '*' && mon === '*') {
-    const step = minute.slice(2)
-    if (!/^\d+$/.test(step) || Number(step) <= 0) return null
-    // 星期位：`*` = 每天（表单默认全选）；否则按数字列表解析。
-    // ⚠️ 2026-09-30 复核：此前硬要 `dow === '*'`，而编辑器现在会生成带星期位的 `*/N * * * 1,2,3,...`
-    // ⇒ 这类（没有 `ui` 的）定义反解失败、被降级成自定义 cron，与列表文案（`*/N` ⇒ 每 N 分钟）打架。
-    const weekdays = dow === '*'
-      ? [1, 2, 3, 4, 5, 6, 7]
-      : dow.split(',').map(Number).filter(n => Number.isFinite(n)).map(isoDow)
-    if (weekdays.length === 0) return null
-    return { scheduleKind: 'interval', intervalUnit: 'minute', intervalStep: step, weekdays, ...(time === null ? {} : { time }) }
-  }
-  if (hour.startsWith('*/') && dom === '*' && mon === '*') {
-    const step = hour.slice(2)
-    if (!/^\d+$/.test(step) || Number(step) <= 0) return null
-    const weekdays = dow === '*'
-      ? [1, 2, 3, 4, 5, 6, 7]
-      : dow.split(',').map(Number).filter(n => Number.isFinite(n)).map(isoDow)
-    if (weekdays.length === 0) return null
-    return { scheduleKind: 'interval', intervalUnit: 'hour', intervalStep: step, weekdays, ...(time === null ? {} : { time }) }
-  }
-  if (time === null || dow !== '*' && dom !== '*') {
-    // DOM 与 DOW 同时指定 = cron 的 OR 语义，表单表达不了 ⇒ 降级
-    if (dom !== '*' && dow !== '*') return null
-    if (time === null) return null
-  }
-  if (dom === '*' && mon === '*' && dow === '*') return { scheduleKind: 'periodic', periodFreq: 'daily', time }
-  if (dom === '*' && mon === '*' && dow !== '*') {
-    const weekdays = dow.split(',').map(Number).filter(n => Number.isFinite(n)).map(isoDow)
-    if (weekdays.length === 0) return null
-    return { scheduleKind: 'periodic', periodFreq: 'weekly', weekdays, time }
-  }
-  if (!/^\d{1,2}$/.test(dom)) return null
-  if (mon === '*') return { scheduleKind: 'periodic', periodFreq: 'monthly', monthDay: dom, monthMode: 'every', time }
-  const months = mon.split(',').map(Number).filter(n => Number.isFinite(n))
-  if (months.length === 1) {
-    return { scheduleKind: 'periodic', periodFreq: 'yearly', yearMonth: String(months[0] ?? 1), monthDay: dom, time }
-  }
-  if (months.length === 4 && months.every((m, i) => i === 0 || m - (months[i - 1] ?? 0) === 3)) {
-    return {
-      scheduleKind: 'periodic', periodFreq: 'quarterly',
-      quarterMonth: String((((months[0] ?? 1) - 1) % 3) + 1), monthDay: dom, time,
+/**
+ * 五段 cron → 表单字段；表达不了的组合返回 null（调用方降级为「自定义 cron」，不丢原值）。
+ *
+ * ⚠️ **解析唯一实现** = [`./schedule-text.ts`](./schedule-text.ts) 的 `scheduleSpecFromCron`
+ * （2026-09-30 抽象收敛：此前列表文案与编辑器**各写一份反解**、严格度还不一致 ⇒
+ * 同一个 cron 两处说法不一样，修 bug 还得两边分别修）。这里只做 spec → 表单字段的映射。
+ */
+function scheduleFromCron(cron: string, everyNWeeks: number | null): Partial<TaskEditorDraft> | null {
+  const spec = scheduleSpecFromCron(cron, everyNWeeks)
+  if (spec.kind === 'custom' || spec.kind === 'once') return null
+  const draft: Partial<TaskEditorDraft> = spec.kind === 'interval'
+    ? {
+        scheduleKind: 'interval',
+        intervalUnit: spec.intervalUnit,
+        intervalStep: String(spec.intervalStep),
+        weekdays: spec.weekdays,
+      }
+    : {
+        scheduleKind: 'periodic',
+        periodFreq: spec.freq,
+        weekdays: spec.weekdays,
+        weekStep: String(spec.weekStep),
+      }
+  if (spec.kind === 'periodic') {
+    if (spec.freq === 'monthly') {
+      draft.monthDay = spec.monthDay
+      // spec.monthMode 是宽泛 string（来自 cron / 老 `ui`）⇒ 收窄到表单三档，认不出回 'every'。
+      draft.monthMode = spec.monthMode === 'odd' || spec.monthMode === 'even' ? spec.monthMode : 'every'
     }
+    if (spec.freq === 'quarterly') { draft.monthDay = spec.monthDay; draft.quarterMonth = spec.quarterMonth }
+    if (spec.freq === 'yearly') { draft.monthDay = spec.monthDay; draft.yearMonth = spec.yearMonth }
   }
-  if (months.length === 6) {
-    const odd = [1, 3, 5, 7, 9, 11]
-    const even = [2, 4, 6, 8, 10, 12]
-    const mode = months.every((m, i) => m === odd[i]) ? 'odd' : months.every((m, i) => m === even[i]) ? 'even' : null
-    if (mode !== null) return { scheduleKind: 'periodic', periodFreq: 'monthly', monthDay: dom, monthMode: mode, time }
-  }
-  return null
+  draft.time = spec.time
+  return draft
 }
 
 /**
@@ -652,7 +648,8 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
       if (typeof ui.weekStep === 'string') draft.weekStep = ui.weekStep
     } else {
       const cron = typeof schedule.cron === 'string' ? schedule.cron : ''
-      const parsed = cron === '' ? null : scheduleFromCron(cron)
+      const nWeeks = typeof schedule.everyNWeeks === 'number' ? schedule.everyNWeeks : null
+      const parsed = cron === '' ? null : scheduleFromCron(cron, nWeeks)
       if (parsed !== null) Object.assign(draft, parsed)
       else if (cron !== '') draft.customCron = cron
     }
@@ -900,12 +897,8 @@ function readWidth(): number {
   }
 }
 
-function formatVersionTime(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  const pad = (n: number): string => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+/** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
+const formatVersionTime = (iso: string): string => formatDateTime(iso)
 
 /**
  * 键序稳定的 JSON 序列化（脏判定专用）：草稿永远是 `{...draft, ...part}` 摊开出来的，
@@ -1413,7 +1406,7 @@ export function TaskEditorDrawer(props: {
     nextYear: t('editorNextYear'),
     // 月补两位（用户 2026-09-30「日期和时间的显示都补成两位」）⇒ zh「2026年09月」/ en「09/2026」。
     monthTitle: (year: number, month: number) =>
-      tt('editorMonthTitle', { y: String(year), m: String(month).padStart(2, '0') }),
+      tt('editorMonthTitle', { y: String(year), m: pad2(month) }),
     // 日历表头就用单字（一…日 / Mo…Su），日历的通用写法。
     weekdays: weekdayShorts,
   }), [t, tt, weekdayShorts])
@@ -1577,13 +1570,7 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
         t('editorAttachments'),
-        // ⚠️ 照 editorTaskStartHint 的可用形态：图标必须包在真实 DOM 按钮（.dsh-tdt-ed-help）里
-        // 再交给 Tooltip——官方接管 ref/事件需要真元素锚点，裸图标组件 ref 挂不上 ⇒ 悬停无字。
-        h(Tooltip, { label: t('editorAttachmentsHint'), side: 'bottom', maxWidth: 300 },
-          h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorAttachmentsHint') },
-            h(IconQuestionOutlineRegular, { size: 14 }),
-          ),
-        ),
+        h(HelpButton, { hint: t('editorAttachmentsHint') }),
       ),
     ),
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
@@ -1717,11 +1704,7 @@ export function TaskEditorDrawer(props: {
                 width: 92,
               })
               : null,
-            h(Tooltip, { label: t('editorTaskStartHint'), side: 'top', align: 'center', maxWidth: 300 },
-              h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorTaskStartHint') },
-                h(IconQuestionOutlineRegular, { size: 14 }),
-              ),
-            ),
+            h(HelpButton, { hint: t('editorTaskStartHint'), side: 'top', align: 'center' }),
           )
         : null,
       h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto' } }),
@@ -1737,11 +1720,7 @@ export function TaskEditorDrawer(props: {
           size: 'sm',
           align: 'end',
         }),
-        h(Tooltip, { label: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 320 },
-          h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorWindowHint') },
-            h(IconQuestionOutlineRegular, { size: 14 }),
-          ),
-        ),
+        h(HelpButton, { hint: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 320 }),
       ),
     ),
   )
@@ -1782,12 +1761,7 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
         t('editorDeps'),
-        // 照附加文件卡的可用形态：图标必须包在真实 DOM 按钮（.dsh-tdt-ed-help）里再交给 Tooltip。
-        h(Tooltip, { label: t('editorDepsHint'), side: 'bottom', maxWidth: 320 },
-          h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': t('editorDepsHint') },
-            h(IconQuestionOutlineRegular, { size: 14 }),
-          ),
-        ),
+        h(HelpButton, { hint: t('editorDepsHint'), maxWidth: 320 }),
       ),
     ),
     // 上：已选前置任务列表；空 = 上传投放区同款虚线占位框（灰字居中，主行 + 次行提示）。
@@ -1879,14 +1853,7 @@ export function TaskEditorDrawer(props: {
         h('span', { className: 'dsh-tdt-ed-label', style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } },
           t('editorAdvanced'),
           // 「?」说明气泡：span 塞进按钮内（button 嵌 button 非法），点击拦截不触发展开。
-          h(Tooltip, { label: t('editorAdvancedHelp'), side: 'bottom', maxWidth: 300 },
-            h('span', {
-              className: 'dsh-tdt-ed-help',
-              role: 'img',
-              'aria-label': t('editorAdvancedHelp'),
-              onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation() },
-            }, h(IconQuestionOutlineRegular, { size: 14 })),
-          ),
+          h(HelpButton, { hint: t('editorAdvancedHelp'), insideClickable: true }),
         ),
         h(IconChevronDownOutlineRegular, {
           size: 12,
