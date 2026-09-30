@@ -600,6 +600,15 @@ function RunningBlocks() {
  */
 function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
+  // ⚠️ 这一格**自走时钟（1 秒）**：下面那格的显示由 `LiveText` 的 1 秒心跳驱动，而**悬浮文案是在组件
+  // 渲染那一刻算好的字符串** —— 两个时钟不同源时，"到点"那一秒会出现「方块已经切过来、文案却还写着
+  // 『下次执行：<刚过去的时间>』」（用户 2026-09-30 真机撞上，最长约一个轮询周期 ≈10 秒）。
+  // 旧注释说"本组件每秒自刷"并不成立（自转的只有 `LiveText`），这句一并纠正。
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1_000)
+    return () => window.clearInterval(timer)
+  }, [])
   if (row.running) {
     return h(Tooltip, { label: t('listRunning'), side: 'bottom' },
       h('div', { style: pillOuterStyle },
@@ -614,17 +623,17 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   // ⚠️ 2026-09-30 评审 P1：延期徽标此前**又套了一层 Tooltip** ⇒ 悬停同时冒出**两个气泡**
   // （外层通用说明 + 内层原因）。现在全组件**只有这一层** Tooltip（子元素为真 DOM 节点，
   // 裸函数组件挂不上 ref ⇒ 提示会静默失效，2026-09-30 那次真机教训）。
-  // 已到点（`nextSlotAt` 是**过去时刻**且还没被派发）⇒ 这一格现在是"三块脉动"或"延期"，
+  // 已到点（`nextSlotAt` 是**过去时刻**）⇒ 这一格现在是"三块脉动"或"延期"，
   // **不能再说「下次执行：<一个已经过去的时间>」**（用户 2026-09-30 真机点名）。三种档位：
-  //   ① 还在 loading 上界内 ⇒ 「任务进行中」（与真在跑同一句，用户明确说不用区分）；
+  //   ① 还在 loading 上界内 ⇒ 「运行中」（与真在跑同一句，用户明确说不用区分）；
   //   ② 超上界 ⇒ 「延期」（有具体原因就带上）；
   //   ③ 未到点 ⇒ 原来的「下次执行：…」。
-  const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= Date.now() && !row.running
+  const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs
   const deferredTitle = typeof row.blockedReason === 'string' && row.blockedReason !== ''
     ? `${row.blockedReason}｜${tt('listDeferredTitle')}`
     : tt('listDeferredTitle')
   const title = dueNow
-    ? (Date.now() - Date.parse(row.nextSlotAt ?? '') <= dueLoadingMs() ? t('listRunning') : deferredTitle)
+    ? (nowMs - Date.parse(row.nextSlotAt ?? '') <= dueLoadingMs() ? t('listRunning') : deferredTitle)
     : (typeof row.blockedReason === 'string' && row.blockedReason !== ''
         ? deferredTitle
         : (row.nextSlotAt === null

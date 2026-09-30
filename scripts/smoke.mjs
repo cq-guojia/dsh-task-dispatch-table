@@ -742,6 +742,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('inflight.add(controller)'))
   check('超时 fetch 默认 8s（< 10s 轮询间隔）+ finally 清定时器',
     clientJs.includes('DEFAULT_TIMEOUT_MS = 8e3') && clientJs.includes('clearTimeout(timer)'))
+  // 悬浮文案必须与那一格**同一个 1 秒时钟**（用户 2026-09-30 真机：到点那一秒方块已切过来、
+  // 文案还写着「下次执行：<刚过去的时间>」——因为它原先只在组件渲染时算一次，最长滞后一个轮询周期）。
+  check('「下次执行」格的悬浮文案与方块同源（1 秒时钟驱动，不再滞后）',
+    clientJs.includes('setNowMs(Date.now())'))
   // 2026-09-30 二轮评审：服务端事务（三条改动里**唯一零覆盖**的核心机制）必须真断言，
   // 否则「行 + 原因事件要么都在、要么都不在」随时会被静默改掉。
   {

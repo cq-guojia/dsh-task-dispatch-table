@@ -40660,6 +40660,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		*/
 		function NextPill(props) {
 			const { row, t, tt } = props;
+			const [nowMs, setNowMs] = (0, react.useState)(() => Date.now());
+			(0, react.useEffect)(() => {
+				const timer = window.setInterval(() => setNowMs(Date.now()), 1e3);
+				return () => window.clearInterval(timer);
+			}, []);
 			if (row.running) return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listRunning"),
 				side: "bottom"
@@ -40667,9 +40672,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				...pillTimeCell,
 				color: C$1.success
 			} }, (0, react.createElement)(RunningBlocks, {}))));
-			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= Date.now() && !row.running;
+			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
 			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
-			const title = dueNow ? Date.now() - Date.parse(row.nextSlotAt ?? "") <= dueLoadingMs() ? t("listRunning") : deferredTitle : typeof row.blockedReason === "string" && row.blockedReason !== "" ? deferredTitle : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			const title = dueNow ? nowMs - Date.parse(row.nextSlotAt ?? "") <= dueLoadingMs() ? t("listRunning") : deferredTitle : typeof row.blockedReason === "string" && row.blockedReason !== "" ? deferredTitle : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
