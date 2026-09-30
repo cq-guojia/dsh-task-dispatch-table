@@ -995,9 +995,15 @@ function VersionConfirm(props: {
   title: string
   desc: string
   confirmLabel?: string
+  /** 标题染警告橙（高危确认，如「完全权限」保存确认）。 */
+  warning?: boolean
+  /** 勾选确认：提供时确认钮在勾选前置灰（用户 2026-09-30：完全权限保存前须打勾）。 */
+  checkbox?: { label: string; checked: boolean; onToggle: (next: boolean) => void }
   onCancel: () => void
   onConfirm: () => void
 }): ReactNode {
+  const needAck = props.checkbox !== undefined
+  const acked = needAck && props.checkbox?.checked === true
   return h('div', {
     role: 'alertdialog',
     'aria-modal': true,
@@ -1008,11 +1014,22 @@ function VersionConfirm(props: {
       style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', padding: '22px 24px', color: C.text },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
-      h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px' } }, props.title),
-      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: C.textDim, marginBottom: '20px' } }, props.desc),
+      h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px', ...(props.warning === true ? { color: 'var(--dsw-alias-state-warning-primary,#e6a23c)' } : {}) } }, props.title),
+      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: C.textDim, marginBottom: needAck ? '12px' : '20px', whiteSpace: 'pre-line' } }, props.desc),
+      needAck
+        ? h('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', lineHeight: '20px', cursor: 'pointer', marginBottom: '16px' } },
+          h('input', {
+            type: 'checkbox',
+            checked: props.checkbox?.checked === true,
+            onChange: (event: { target: { checked: boolean } }) => { props.checkbox?.onToggle(event.target.checked) },
+            style: { flex: 'none', margin: '2px 0 0', accentColor: 'var(--dsw-alias-state-warning-primary,#e6a23c)', width: '14px', height: '14px', cursor: 'pointer' },
+          }),
+          h('span', null, props.checkbox?.label),
+        )
+        : null,
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
         h(Button, { variant: 'outline', size: 'sm', onClick: props.onCancel }, props.t('editorCancel')),
-        h(Button, { variant: 'primary', size: 'sm', onClick: props.onConfirm }, props.confirmLabel ?? props.t('editorConfirm')),
+        h(Button, { variant: 'primary', size: 'sm', disabled: needAck && !acked, onClick: props.onConfirm }, props.confirmLabel ?? props.t('editorConfirm')),
       ),
     ),
   )
@@ -1255,6 +1272,10 @@ export function TaskEditorDrawer(props: {
   // 文字提示是一次性的：点保存弹一次、统一 2.8s 自退，全部问题拼成一句（红框负责逐项指位）。
   const [problemsToast, setProblemsToast] = useState<{ text: string; seq: number } | null>(null)
   const problemsSeq = useRef(0)
+  // 「完全权限」保存确认（用户 2026-09-30）：选 full 时点保存先弹高危确认，**打勾后**确认钮才可点；
+  // 确认按钮就叫「保存」（保持原样），确认即执行保存。勾选每次打开弹窗都要重勾（高危操作不记忆）。
+  const [fullPermOpen, setFullPermOpen] = useState(false)
+  const [fullPermAck, setFullPermAck] = useState(false)
   // 启用开关 = 独立操作（用户 2026-09-30）：编辑态点击即写回（不走保存链路），成败都弹 Toast；
   // 新建态只改草稿（统一保存时建）。写回成功后同步脏判定基线 ⇒ 关弹窗不会被误问「放弃更改」。
   const [enabledToast, setEnabledToast] = useState<{ msg: string; err: boolean; seq: number } | null>(null)
@@ -2106,6 +2127,12 @@ export function TaskEditorDrawer(props: {
             }
             setShowErrors(false)
             setProblemsToast(null)
+            // 「完全权限」= 高危档：保存前强制勾选确认（每次保存都确认，勾选不记忆）。
+            if (draft.permission === 'full') {
+              setFullPermAck(false)
+              setFullPermOpen(true)
+              return
+            }
             onSave(draft)
           },
         }, t('editorSave')),
@@ -2130,6 +2157,19 @@ export function TaskEditorDrawer(props: {
           confirmLabel: t('editorReset'),
           onCancel: () => { setConfirmReset(false) },
           onConfirm: () => { setConfirmReset(false); onChange(initialDraftRef.current); hintSeq.current += 1; setResetHint(hintSeq.current) },
+        })
+        : null,
+      // 「完全权限」保存确认（高危）：标题警告橙 + 风险清单 + 勾选「我已了解风险」后才可点「保存」。
+      fullPermOpen
+        ? h(VersionConfirm, {
+          t,
+          warning: true,
+          title: t('editorFullPermTitle'),
+          desc: t('editorFullPermDesc'),
+          checkbox: { label: t('editorFullPermCheck'), checked: fullPermAck, onToggle: setFullPermAck },
+          confirmLabel: t('editorSave'),
+          onCancel: () => { setFullPermOpen(false) },
+          onConfirm: () => { setFullPermOpen(false); onSave?.(draft) },
         })
         : null,
     )

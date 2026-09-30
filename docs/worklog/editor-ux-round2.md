@@ -100,3 +100,9 @@
 3. **多问题逐行展示**：校验 Toast 拼接由「；」改 `\n`——一行一条、每条句号收尾（标点统一，不混分号）。
 
 冒烟 249 项全过；typecheck/build 绿；真机验证待做。
+
+## 十、同日第七轮：完全权限保存确认（用户新需求）
+
+- 选「完全权限」点保存 ⇒ 先弹**高危确认**（复用 VersionConfirm 扩展）：标题警告橙（`state-warning-primary`）、描述列风险清单（`\n` 逐行 + pre-line）、**勾选「我已了解风险，并愿意为该任务的执行结果负责。」后确认钮才解禁**；确认按钮就叫「保存」（用户明确不改成「默认全权运行」），勾选每次弹窗都重勾（高危不记忆）。
+- VersionConfirm 扩展项：`warning?: boolean`（标题染橙）、`checkbox?: {label, checked, onToggle}`（原生 checkbox，accent-color 走警告色，勾选前置灰确认钮）、desc `white-space:pre-line`。
+- 冒烟 +1 = **250 项全过**；typecheck/build 绿；真机验证待做。

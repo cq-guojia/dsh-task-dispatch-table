@@ -218,3 +218,5 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 - viewErr（页面级会话失败条，需手动关闭）外观对齐中性档，保留不自动消失。
 
 **修订四（同日第六轮）**：FloatingToast 加 `sticky` 档收编最后一处手写（面板 JSON 不合法）⇒ **全站 Toast 唯一实现**（差异全是传参）；圆点改独立 flex 元素左上对齐；文字区 `pre-line` 支持 `\n` 换行；多问题校验提示一行一条、句号统一。
+
+**修订五（同日第七轮，用户新需求）**：选「完全权限」保存前强制高危确认——VersionConfirm 扩展 `warning` 标题染橙 + `checkbox` 勾选门槛（勾后确认钮解禁、每次重勾）+ desc 换行；确认钮沿用「保存」不改名，确认即提交。

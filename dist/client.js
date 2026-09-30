@@ -411,6 +411,9 @@ window.__ModuleLoader__.load({
 			editorEnabledStateOff: "已关闭",
 			editorToggleOn: "任务已启用",
 			editorToggleOff: "任务已关闭",
+			editorFullPermTitle: "这条任务将以完全权限运行",
+			editorFullPermDesc: "这条任务会以「完全权限」无人值守执行，意味着 AI 可以直接：\n· 写入 / 修改 / 删除工作区内的文件\n· 执行命令、发起网络请求等敏感操作\n执行期间请勿关闭电脑或退出客户端。",
+			editorFullPermCheck: "我已了解风险，并愿意为该任务的执行结果负责。",
 			editorSchedHourlyOnce: "每小时执行一次",
 			editorSchedNoDaySuffix: "，但还没选生效日",
 			editorSchedWeeklyDayPrefix: "每周",
@@ -870,6 +873,9 @@ window.__ModuleLoader__.load({
 			editorEnabledStateOff: "Off",
 			editorToggleOn: "Task enabled",
 			editorToggleOff: "Task disabled",
+			editorFullPermTitle: "This task will run with full access",
+			editorFullPermDesc: "This task runs unattended with FULL access — the AI can directly:\n· create / modify / delete files in the workspace\n· run commands, make network requests and other sensitive operations\nDo not shut down the machine or close the client while it runs.",
+			editorFullPermCheck: "I understand the risk and accept responsibility for this task's results.",
 			editorSchedHourlyOnce: "runs hourly",
 			editorSchedNoDaySuffix: ", but no active day is selected",
 			editorSchedWeeklyDayPrefix: "every ",
@@ -38358,6 +38364,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		/** 版本管理内的小型确认框（复用关闭确认的自绘样式：盖在编辑器之上、随抽屉浮在宿主之上）。 */
 		function VersionConfirm(props) {
+			const needAck = props.checkbox !== void 0;
+			const acked = needAck && props.checkbox?.checked === true;
 			return (0, react.createElement)("div", {
 				role: "alertdialog",
 				"aria-modal": true,
@@ -38388,13 +38396,37 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)("div", { style: {
 				fontSize: "16px",
 				fontWeight: 500,
-				marginBottom: "8px"
+				marginBottom: "8px",
+				...props.warning === true ? { color: "var(--dsw-alias-state-warning-primary,#e6a23c)" } : {}
 			} }, props.title), (0, react.createElement)("div", { style: {
 				fontSize: "14px",
 				lineHeight: "22px",
 				color: C$2.textDim,
-				marginBottom: "20px"
-			} }, props.desc), (0, react.createElement)("div", { style: {
+				marginBottom: needAck ? "12px" : "20px",
+				whiteSpace: "pre-line"
+			} }, props.desc), needAck ? (0, react.createElement)("label", { style: {
+				display: "flex",
+				alignItems: "flex-start",
+				gap: "8px",
+				fontSize: "13px",
+				lineHeight: "20px",
+				cursor: "pointer",
+				marginBottom: "16px"
+			} }, (0, react.createElement)("input", {
+				type: "checkbox",
+				checked: props.checkbox?.checked === true,
+				onChange: (event) => {
+					props.checkbox?.onToggle(event.target.checked);
+				},
+				style: {
+					flex: "none",
+					margin: "2px 0 0",
+					accentColor: "var(--dsw-alias-state-warning-primary,#e6a23c)",
+					width: "14px",
+					height: "14px",
+					cursor: "pointer"
+				}
+			}), (0, react.createElement)("span", null, props.checkbox?.label)) : null, (0, react.createElement)("div", { style: {
 				display: "flex",
 				justifyContent: "flex-end",
 				gap: "8px"
@@ -38405,6 +38437,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.t("editorCancel")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "primary",
 				size: "sm",
+				disabled: needAck && !acked,
 				onClick: props.onConfirm
 			}, props.confirmLabel ?? props.t("editorConfirm")))));
 		}
@@ -38665,6 +38698,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const problemsByField = (field) => field in fieldErrorMap;
 			const [problemsToast, setProblemsToast] = (0, react.useState)(null);
 			const problemsSeq = (0, react.useRef)(0);
+			const [fullPermOpen, setFullPermOpen] = (0, react.useState)(false);
+			const [fullPermAck, setFullPermAck] = (0, react.useState)(false);
 			const [enabledToast, setEnabledToast] = (0, react.useState)(null);
 			const enabledSeq = (0, react.useRef)(0);
 			const handleToggleEnabled = (next) => {
@@ -39640,6 +39675,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 					setShowErrors(false);
 					setProblemsToast(null);
+					if (draft.permission === "full") {
+						setFullPermAck(false);
+						setFullPermOpen(true);
+						return;
+					}
 					onSave(draft);
 				}
 			}, t("editorSave"))), confirmDeleteTask ? (0, react.createElement)(VersionConfirm, {
@@ -39667,6 +39707,24 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					onChange(initialDraftRef.current);
 					hintSeq.current += 1;
 					setResetHint(hintSeq.current);
+				}
+			}) : null, fullPermOpen ? (0, react.createElement)(VersionConfirm, {
+				t,
+				warning: true,
+				title: t("editorFullPermTitle"),
+				desc: t("editorFullPermDesc"),
+				checkbox: {
+					label: t("editorFullPermCheck"),
+					checked: fullPermAck,
+					onToggle: setFullPermAck
+				},
+				confirmLabel: t("editorSave"),
+				onCancel: () => {
+					setFullPermOpen(false);
+				},
+				onConfirm: () => {
+					setFullPermOpen(false);
+					onSave?.(draft);
 				}
 			}) : null);
 			return (0, react.createElement)("div", {

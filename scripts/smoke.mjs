@@ -502,6 +502,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('浮层 Toast 共用组件 + 四档语义色（success/warning/neutral/error）',
     clientJs.includes('FloatingToast') && clientJs.includes('dsh-tdt-toast--success') && clientJs.includes('dsh-tdt-toast--warning') && clientJs.includes('dsh-tdt-toast--neutral'))
   check('派发 ctx 属性读取带防抛错护栏（readCtxProp，agentTeams/goals 未注入不再炸派发）', dispatchJs.includes('readCtxProp'))
+  // 完全权限保存确认（2026-09-30）：勾选后确认钮才可点；确认钮沿用「保存」不改名
+  check('完全权限保存确认弹窗（勾选门槛 + 确认钮沿用保存）',
+    clientJs.includes('editorFullPermTitle') && clientJs.includes('editorFullPermCheck') && clientJs.includes("full") && clientJs.includes('confirmLabel'))
   check('chat target 组装已打进 bundle（target("chat")）', clientJs.includes('target("chat")') || clientJs.includes("target('chat')") || /target\(["']chat["']\)/.test(clientJs))
   // 官方外观复用（方案 ①）：运行时从宿主注入的 style 标签解析官方真实 CSS-module 类名。
   // 纯解析函数 parseOfficialCss 无 DOM 依赖（可对夹具断言）；冒烟这里只验产物里确实带上了。
