@@ -614,9 +614,13 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
             // ② 超上界仍未 `running` ⇒ **「延期」**：该槽已经过了但还没真正开始执行
             //    （上游没跑完 / 附件缺失 / 串行互斥）。**不能一直装成在跑**（决策 54 红线），
             //    也**不再显示「即将执行」**那句（用户 2026-09-30 点名去掉）。
-            //    ⚠️ 具体原因（为什么没跑）由服务端透出后再挂到悬浮提示上（P3b 后半段）。
             if (-diff <= dueLoadingMs()) return h(RunningBlocks, {})
-            return tt('listDeferred')
+            // 悬浮说明（用户要求「鼠标移上去能看到说明」）。这里用官方 Tooltip + **真 DOM 子元素**
+            // （裸函数组件挂不上 ref ⇒ 提示静默失效，2026-09-30 那次真机教训）。
+            // ⚠️ 本组件每秒自刷（ticker）⇒ 每秒重建同类型同位置的元素：React 就地复用、不重挂 ⇒ 不打断悬停。
+            // 「具体原因」（上游没跑完 / 附件缺失 …）由服务端透出后接在这句后面（P3b 后半段）。
+            return h(Tooltip, { label: tt('listDeferredTitle'), side: 'bottom' },
+              h('span', { style: { cursor: 'default' } }, tt('listDeferred')))
           }
           return diff < 24 * 3600_000
             ? countdownText(row.nextSlotAt, nowMs, tt)

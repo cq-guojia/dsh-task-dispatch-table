@@ -23,7 +23,7 @@ export type LocaleKey =
   | 'colStatus' | 'colAttempt' | 'colSession' | 'colUpdated'
   | 'colSeq' | 'colTs' | 'colKind' | 'colDetail'
   | 'filterStatus' | 'filterTask' | 'filterAll'
-  | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint' | 'listExpandHint' | 'listDeferred'
+  | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint' | 'listExpandHint' | 'listDeferred' | 'listDeferredTitle'
   | 'viewSession' | 'viewSessionHint'
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
   | 'sessionUnknownKind'
@@ -237,6 +237,8 @@ export const zh: Record<LocaleKey, string> = {
   listExpandHint: '展开任务详情',
   // 决策 54：该槽已到点、但过了「等派发」的上界仍没真正开始执行（上游没跑完 / 附件缺失 / 串行互斥）。
   listDeferred: '延期',
+  // 延期悬浮说明（暂时只讲事实；「具体是哪个原因」由服务端透出后接在后面）。
+  listDeferredTitle: '已过计划时刻但还没开始执行。常见原因：前置任务未完成 / 附加文件找不到 / 上一轮还在运行。',
   eventsOf: '本次执行的事件',
   eventsEmpty: '（该次执行暂无事件，或已超出最近 200 条的快照窗口）',
   recordsHint: '一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。',
@@ -734,6 +736,7 @@ export const en: Record<LocaleKey, string> = {
   expandHint: 'Click any row to expand the event timeline of that run',
   listExpandHint: 'Expand task details',
   listDeferred: 'Delayed',
+  listDeferredTitle: 'Past its planned time but has not started. Usual causes: upstream task not finished / attachment missing / previous run still running.',
   eventsOf: 'Events of this run',
   eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
   recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',
