@@ -179,10 +179,14 @@ export function scheduleSpecFromCron(cron: string, everyNWeeks: number | null): 
     if (hour === '*' && (minute === '*' || minuteStep !== null)) {
       return { ...base, kind: 'interval', intervalUnit: 'minute', intervalStep: minuteStep === null ? 1 : Number(minuteStep[1]), time, weekdays: everyDay }
     }
-    if (hourStep !== null) {
+    // 小时间隔：**与执行器 `tasks.intervalSpecOf` 同口径**（分钟位必须是具体数字）——否则
+    // `*/5 */2 * * *` 会被说成「每 2 小时」（实际是「偶数小时里每 5 分钟」），`0-30 * * * *`
+    // 会被说成「每小时执行一次」（实际每小时 30 次）；且表单再保存会把时刻静默改掉。
+    if (hourStep !== null && /^\d+$/.test(minute)) {
       return { ...base, kind: 'interval', intervalUnit: 'hour', intervalStep: Number(hourStep[1]), time, weekdays: everyDay }
     }
-    if (hour === '*') {
+    // 每小时的整点（`0 * * * *`）≡「每隔 1 小时」；分钟不是 0 的（如 `30 * * * *`）表单表达不了 ⇒ 降级 custom。
+    if (hour === '*' && minute === '0') {
       return { ...base, kind: 'interval', intervalUnit: 'hour', intervalStep: 1, time, weekdays: everyDay }
     }
     // 每天 / 每周：分 + 小时都必须是**具体数字**，否则（如 `* 9 * * *`）表单表达不了 ⇒ 降级 custom。

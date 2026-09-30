@@ -6109,7 +6109,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					time,
 					weekdays: everyDay
 				};
-				if (hourStep !== null) return {
+				if (hourStep !== null && /^\d+$/.test(minute)) return {
 					...base,
 					kind: "interval",
 					intervalUnit: "hour",
@@ -6117,7 +6117,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					time,
 					weekdays: everyDay
 				};
-				if (hour === "*") return {
+				if (hour === "*" && minute === "0") return {
 					...base,
 					kind: "interval",
 					intervalUnit: "hour",
@@ -40276,7 +40276,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						if (!res.ok) return;
 						const body = await res.json();
 						if (!alive || body.ok !== true) return;
-						if (body.unchanged === true) return;
+						if (body.unchanged === true) {
+							prunePins();
+							syncPinned();
+							return;
+						}
 						revRef.current = String(body.rev ?? "");
 						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
 						const serverNow = typeof body.now === "number" && Number.isFinite(body.now) ? body.now : Date.now();

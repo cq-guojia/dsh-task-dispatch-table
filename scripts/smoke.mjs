@@ -465,7 +465,7 @@ try {
 
   // ⚠️ 第二个参数此前是**字面 `true`** ⇒ 恒真、什么都没证明（构造若抛错会直接从 try 逃逸、脚本栈退出）。
   // 2026-09-30 复核点名，改为真跑一次构造（同文件别处的 try/catch 写法）。
-  const openOk = (() => { try { new TaskStore(realPath); return true } catch { return false } })()
+  const openOk = (() => { try { new TaskStore(realPath).close(); return true } catch { return false } })()
   check('旧库打开不抛错（自动迁移成功）', openOk)
   const realStore = new TaskStore(realPath)
   check('旧库没有重复行被合并（正常应为 0）', realStore.dupRowsRemoved === 0, `实际 ${realStore.dupRowsRemoved}`)
@@ -606,6 +606,12 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 与卡片实际展开的「任务设置」对不上）⇒ 撤掉该 title，另立 listExpandHint 作无障碍名。
   check('卡片展开箭头不再复用执行记录页的展开提示（title 不再挂 expandHint）',
     !clientJs.includes('title: t("expandHint")') && clientJs.includes('listExpandHint'))
+  // ⚠️ 2026-09-30 复核教训：这两处客户端逻辑**不在冒烟覆盖面内**，上一轮编辑被静默丢掉（同文件批量替换的坑）
+  // 谁都没发现。补两条产物断言钉住它们（client 侧不可 import，只能在 bundle 里断）。
+  check('到点钳位到期在 `unchanged` 轮也扫（prunePins 出现 ≥3 处：定义 + 两条调用路径）',
+    (clientJs.match(/prunePins/g) ?? []).length >= 3)
+  check('小时间隔反解与执行器同口径（守卫：分钟须具体数字 / 整点才等价「每隔 1 小时」）',
+    clientJs.includes('/^\\d+$/.test(minute)') && clientJs.includes('minute === "0"'))
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
   // 修法 = ① 选择器回调**工作区相对**路径；② 客户端兜底校验 + 归属附件卡描红；③ 服务端错误翻人话。
   check('附件 ref 改为工作区相对（选择器走 relativizeToRoot）', clientJs.includes('relativizeToRoot'))

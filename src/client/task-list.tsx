@@ -196,7 +196,9 @@ export function useTaskOverview(): {
           ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown; now?: unknown; tickMs?: unknown
         }
         if (!alive || body.ok !== true) return
-        if (body.unchanged === true) return // 内容没变：不重渲染、不重排、不播动画
+        // 内容没变：不重渲染、不重排、不播动画 —— 但**钳位到期仍要扫**，否则永远松不开
+        // （2026-09-30 复核：这条早 return 曾把到期判定整段跳过 ⇒ 永久钉在组 1 最前）。
+        if (body.unchanged === true) { prunePins(); syncPinned(); return }
         revRef.current = String(body.rev ?? '')
         const nextRows = Array.isArray(body.tasks) ? body.tasks as TaskOverviewRow[] : []
         // ── 到点钳位（排序抖动，2026-09-30）：机制与三条红线见 ../task-sort.ts 头注释 ──
