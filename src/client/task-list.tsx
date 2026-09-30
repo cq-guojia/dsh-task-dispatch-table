@@ -475,8 +475,18 @@ function RunningRail() {
 function StatusRail(props: { row: TaskOverviewRow }) {
   const { row } = props
   if (row.running) return h(RunningRail, {})
-  const color = !row.enabled ? C.textFaint : row.lastStatus === 'failed' ? C.danger : C.success
-  const hint = !row.enabled ? '已关闭' : row.lastStatus === 'failed' ? '最近一次执行失败' : '计划运行中'
+  // `skipped` = 「未执行」（决策 54 补记的终态行：附件找不到 / 工作区不存在等任务级错误）——
+  // 必须**和失败一样显眼**（用户：都是这个任务出错了），但提示要说清是「没执行」而不是「跑砸了」。
+  const color = !row.enabled
+    ? C.textFaint
+    : row.lastStatus === 'failed' || row.lastStatus === 'skipped' ? C.danger : C.success
+  const hint = !row.enabled
+    ? '已关闭'
+    : row.lastStatus === 'failed'
+      ? '最近一次执行失败'
+      : row.lastStatus === 'skipped'
+        ? '最近一次未执行（配置或前置不满足，详见执行记录）'
+        : '计划运行中'
   return h('span', {
     title: hint,
     style: {

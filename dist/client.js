@@ -40517,8 +40517,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function StatusRail(props) {
 			const { row } = props;
 			if (row.running) return (0, react.createElement)(RunningRail, {});
-			const color = !row.enabled ? C$1.textFaint : row.lastStatus === "failed" ? C$1.danger : C$1.success;
-			const hint = !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : "计划运行中";
+			const color = !row.enabled ? C$1.textFaint : row.lastStatus === "failed" || row.lastStatus === "skipped" ? C$1.danger : C$1.success;
+			const hint = !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : row.lastStatus === "skipped" ? "最近一次未执行（配置或前置不满足，详见执行记录）" : "计划运行中";
 			return (0, react.createElement)("span", {
 				title: hint,
 				style: {
