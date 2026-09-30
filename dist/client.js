@@ -39976,6 +39976,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			textFaint: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
 			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
 			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
+			layer3: "var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))",
 			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
 			borderStrong: "var(--dsw-alias-border-l3, rgba(128,128,128,0.5))",
 			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
@@ -40023,7 +40024,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 				`.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
 				`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
-				".dsh-tdt-tl-switch, .dsh-tdt-tl-switch * { border-radius: 5px !important; }",
 				".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }"
 			].join("\n");
 			document.head.appendChild(tag);
@@ -40161,6 +40161,45 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (months < 12) return tt("relMonths", { n: months });
 			return tt("relYears", { n: Math.floor(days / 365) });
 		}
+		/** 24 小时内的秒级倒计时（HH:mm:ss）。每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。 */
+		function countdownText(iso, nowMs, tt) {
+			const diff = Date.parse(iso) - nowMs;
+			if (diff <= 0) return tt("relNow");
+			const total = Math.floor(diff / 1e3);
+			const p = (v) => String(v).padStart(2, "0");
+			return `${p(Math.floor(total / 3600))}:${p(Math.floor(total % 3600 / 60))}:${p(total % 60)}`;
+		}
+		const tickerListeners = /* @__PURE__ */ new Set();
+		let tickerTimer = null;
+		function subscribeTicker(cb) {
+			tickerListeners.add(cb);
+			if (tickerTimer === null) {
+				tickerTimer = window.setInterval(() => {
+					for (const l of [...tickerListeners]) l();
+				}, 1e3);
+				document.addEventListener("visibilitychange", () => {
+					for (const l of [...tickerListeners]) l();
+				});
+			}
+			return () => {
+				tickerListeners.delete(cb);
+				if (tickerListeners.size === 0 && tickerTimer !== null) {
+					window.clearInterval(tickerTimer);
+					tickerTimer = null;
+				}
+			};
+		}
+		/** 每秒自刷新的一小段文本：只有它自己重渲染（render 永远取最新闭包，ref 转发）。 */
+		function LiveText(props) {
+			const [, force] = (0, react.useState)(0);
+			const renderRef = (0, react.useRef)(props.render);
+			renderRef.current = props.render;
+			(0, react.useEffect)(() => subscribeTicker(() => force((v) => v + 1)), []);
+			return (0, react.createElement)("span", {
+				style: props.style,
+				title: props.title
+			}, renderRef.current(Date.now()));
+		}
 		/** HH:mm（本机时区）。 */
 		function clockOf(iso) {
 			const d = new Date(iso);
@@ -40263,52 +40302,71 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			});
 		}
 		/**
-		* 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：外观对齐开关——外面一圈框套着，
-		* 框与内部色块之间留 2px 间距；内部左右两块各自小圆角：
-		* 左 = 上次执行（成功绿底 / 失败红底），右 = 下次执行（常规灰底）。
-		* 文字「社交化」：左 = 「3 分钟前执行成功」，右 = 「下次 今天 14:00 / 6 分钟后」；
-		* hover 才给完整时刻（Tooltip）。**运行中不改左块**——上次该成功还是成功。
+		* 「历史执行」与「下次执行」两个**独立**小标签（2026-09-30 用户拍板，两格式照「品牌|三得利」：
+		* 左格 = 语义底色 + 图标，右格 = 浅底 + 文字，整体一个圆角细边框）。
+		* - 历史执行：左格成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；右格只写时间——
+		*   当天 HH:mm、跨天「3 小时前 / 1 天前」；hover 给完整时刻。
+		* - 下次执行：左格执行（闹钟）图标；右格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
+		*   超过 24 小时 = 明天 / 三天后 / N 周后。
 		*/
-		function RunPill(props) {
-			const { row, t, tt, nowMs } = props;
-			const hasLast = row.lastStatus !== null && row.lastScheduledAt !== null;
-			const lastBg = !hasLast ? C$1.layer2 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
-			const lastFg = hasLast ? "#fff" : C$1.textDim;
-			const when = hasLast ? relativePast(row.lastScheduledAt ?? "", nowMs, tt) : "";
-			const lastText = hasLast ? t(row.lastStatus === "succeeded" ? "listAgoOk" : "listAgoFailed", { when }) : t("listNever");
-			const lastTitle = hasLast ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
-			const nextTitle = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
-			const nextText = row.nextSlotAt === null ? t("listNextNone") : `${t("listNextPrefix")} ${relativeFuture(row.nextSlotAt, nowMs, tt)}`;
-			const halfStyle = (bg, fg) => ({
-				display: "inline-flex",
-				alignItems: "center",
-				padding: "0 7px",
-				whiteSpace: "nowrap",
-				fontSize: "11px",
-				lineHeight: "14px",
-				borderRadius: "5px",
-				background: bg,
-				color: fg,
-				transition: `background ${C$1.duration} ${C$1.ease}`
-			});
-			return (0, react.createElement)("div", { style: {
-				display: "inline-flex",
-				alignItems: "stretch",
-				flex: "none",
-				gap: "2px",
-				height: "20px",
-				padding: "2px",
-				boxSizing: "border-box",
-				borderRadius: "7px",
-				border: `1px solid ${C$1.border}`,
-				background: C$1.layer1
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: lastTitle,
+		const pillOuterStyle = {
+			display: "inline-flex",
+			alignItems: "stretch",
+			flex: "none",
+			height: "20px",
+			borderRadius: "7px",
+			overflow: "hidden",
+			border: `1px solid ${C$1.border}`
+		};
+		const pillLeftStyle = (bg, fg) => ({
+			display: "inline-flex",
+			alignItems: "center",
+			padding: "0 6px",
+			background: bg,
+			color: fg,
+			flex: "none"
+		});
+		const pillRightStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			padding: "0 8px",
+			background: C$1.layer1,
+			color: C$1.text,
+			fontSize: "11px",
+			lineHeight: "14px",
+			whiteSpace: "nowrap"
+		};
+		function PastPill(props) {
+			const { row, t, tt } = props;
+			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
+			const leftBg = !has ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
+			const leftFg = has ? "#fff" : C$1.textDim;
+			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
+			return (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillLeftStyle(leftBg, leftFg) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
 				side: "bottom"
-			}, (0, react.createElement)("span", { style: halfStyle(lastBg, lastFg) }, lastText)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: nextTitle,
+			}, (0, react.createElement)(LiveText, {
+				style: pillRightStyle,
+				render: (nowMs) => {
+					if (!has) return t("listNever");
+					const iso = row.lastScheduledAt ?? "";
+					return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt);
+				}
+			})));
+		}
+		function NextPill(props) {
+			const { row, t, tt } = props;
+			const title = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			return (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillLeftStyle(C$1.layer3, C$1.text) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
 				side: "bottom"
-			}, (0, react.createElement)("span", { style: halfStyle(C$1.layer2, C$1.textDim) }, nextText)));
+			}, (0, react.createElement)(LiveText, {
+				style: pillRightStyle,
+				render: (nowMs) => {
+					if (row.nextSlotAt === null) return t("listNextNone");
+					return Date.parse(row.nextSlotAt) - nowMs < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);
+				}
+			})));
 		}
 		const cardStyle$1 = {
 			display: "block",
@@ -40371,7 +40429,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			transition: transition$1
 		};
 		function TaskCard(props) {
-			const { row, t, tt, nowMs, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props;
+			const { row, t, tt, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props;
 			const scheduleText = cronToHuman(row.schedule.cron, row.schedule.once, row.schedule.everyNWeeks, tt);
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react.createElement)("div", {
@@ -40409,11 +40467,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				gap: "8px",
 				flex: "none"
-			} }, (0, react.createElement)(RunPill, {
+			} }, (0, react.createElement)(PastPill, {
 				row,
 				t,
-				tt,
-				nowMs
+				tt
+			}), (0, react.createElement)(NextPill, {
+				row,
+				t,
+				tt
 			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: row.enabled,
 				onChange: (next) => {
@@ -40479,15 +40540,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			(0, react.useEffect)(() => {
 				setOptimistic({});
 			}, [rows]);
-			const [nowMs, setNowMs] = (0, react.useState)(() => Date.now());
-			(0, react.useEffect)(() => {
-				const timer = window.setInterval(() => {
-					setNowMs(Date.now());
-				}, 1e3);
-				return () => {
-					window.clearInterval(timer);
-				};
-			}, []);
 			const workspaces = (0, react.useMemo)(() => [...new Set(rowsWithOptimistic.map((r) => r.workspace))].sort(), [rowsWithOptimistic]);
 			/** 异常数 = 内存摘要里「最近一次执行失败」的任务数（全量统计，不受当前筛选影响）。 */
 			const abnormalCount = (0, react.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed").length, [rowsWithOptimistic]);
@@ -40636,7 +40688,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				row,
 				t,
 				tt,
-				nowMs,
 				open: openId === row.id,
 				onToggleOpen: () => {
 					setOpenId((cur) => cur === row.id ? null : row.id);

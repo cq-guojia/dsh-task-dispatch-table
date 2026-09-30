@@ -14,7 +14,8 @@
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
-  IconChevronDownOutlineRegular, IconEditOutlineRegular, IconRefreshOutlineRegular, IconSearchOutlineRegular,
+  IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular, IconEditOutlineRegular,
+  IconRefreshOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
@@ -58,6 +59,7 @@ const C = {
   textFaint: 'var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))',
   layer1: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))',
   layer2: 'var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))',
+  layer3: 'var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))',
   border: 'var(--dsw-alias-border-l2, rgba(128,128,128,0.35))',
   borderStrong: 'var(--dsw-alias-border-l3, rgba(128,128,128,0.5))',
   brand: 'var(--dsw-alias-brand-primary, #2f6feb)',
@@ -101,8 +103,6 @@ const ensureTaskListStyle = (): void => {
     // 工作区下拉：**定长**（切选项时宽度不动，不再左右晃），内容超长尾部省略号。
     // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
     `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
-    // 开关圆角与左侧组合标签统一（官方 Switch 是全圆胶囊 ⇒ 压成小圆角方形，用户 2026-09-30）。
-    '.dsh-tdt-tl-switch, .dsh-tdt-tl-switch * { border-radius: 5px !important; }',
     '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
   ].join('\n')
   document.head.appendChild(tag)
@@ -250,6 +250,46 @@ function relativeFuture(iso: string, nowMs: number, tt: Translate): string {
   return tt('relYears', { n: Math.floor(days / 365) })
 }
 
+/** 24 小时内的秒级倒计时（HH:mm:ss）。每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。 */
+function countdownText(iso: string, nowMs: number, tt: Translate): string {
+  const diff = Date.parse(iso) - nowMs
+  if (diff <= 0) return tt('relNow')
+  const total = Math.floor(diff / 1000)
+  const p = (v: number): string => String(v).padStart(2, '0')
+  return `${p(Math.floor(total / 3600))}:${p(Math.floor((total % 3600) / 60))}:${p(total % 60)}`
+}
+
+// ── 全局秒级心跳（单 timer + 局部订阅）────────────────────────────────
+// ⚠️ 性能关键（用户 2026-09-30 反馈「延迟太严重」）：**不能**在列表顶层每秒 setState
+// （那会整列表重渲染）。正确做法 = 全模块只有一个 interval，需要动的文本（倒计时）
+// 各自订阅，每秒只重渲染那一小块。
+const tickerListeners = new Set<() => void>()
+let tickerTimer: number | null = null
+function subscribeTicker(cb: () => void): () => void {
+  tickerListeners.add(cb)
+  if (tickerTimer === null) {
+    tickerTimer = window.setInterval(() => { for (const l of [...tickerListeners]) l() }, 1000)
+    // 标签页被浏览器节流（后台 / 休眠）后回来 ⇒ 立刻对一次表，倒计时自动追上。
+    document.addEventListener('visibilitychange', () => { for (const l of [...tickerListeners]) l() })
+  }
+  return () => {
+    tickerListeners.delete(cb)
+    if (tickerListeners.size === 0 && tickerTimer !== null) {
+      window.clearInterval(tickerTimer)
+      tickerTimer = null
+    }
+  }
+}
+
+/** 每秒自刷新的一小段文本：只有它自己重渲染（render 永远取最新闭包，ref 转发）。 */
+function LiveText(props: { render: (nowMs: number) => string; style?: Record<string, string | number>; title?: string }) {
+  const [, force] = useState(0)
+  const renderRef = useRef(props.render)
+  renderRef.current = props.render
+  useEffect(() => subscribeTicker(() => force(v => v + 1)), [])
+  return h('span', { style: props.style, title: props.title }, renderRef.current(Date.now()))
+}
+
 /** HH:mm（本机时区）。 */
 function clockOf(iso: string): string {
   const d = new Date(iso)
@@ -359,47 +399,65 @@ function StatusRail(props: { row: TaskOverviewRow }) {
 }
 
 /**
- * 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：外观对齐开关——外面一圈框套着，
- * 框与内部色块之间留 2px 间距；内部左右两块各自小圆角：
- * 左 = 上次执行（成功绿底 / 失败红底），右 = 下次执行（常规灰底）。
- * 文字「社交化」：左 = 「3 分钟前执行成功」，右 = 「下次 今天 14:00 / 6 分钟后」；
- * hover 才给完整时刻（Tooltip）。**运行中不改左块**——上次该成功还是成功。
+ * 「历史执行」与「下次执行」两个**独立**小标签（2026-09-30 用户拍板，两格式照「品牌|三得利」：
+ * 左格 = 语义底色 + 图标，右格 = 浅底 + 文字，整体一个圆角细边框）。
+ * - 历史执行：左格成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；右格只写时间——
+ *   当天 HH:mm、跨天「3 小时前 / 1 天前」；hover 给完整时刻。
+ * - 下次执行：左格执行（闹钟）图标；右格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
+ *   超过 24 小时 = 明天 / 三天后 / N 周后。
  */
-function RunPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate; nowMs: number }) {
-  const { row, t, tt, nowMs } = props
-  const hasLast = row.lastStatus !== null && row.lastScheduledAt !== null
-  const lastBg = !hasLast ? C.layer2 : row.lastStatus === 'succeeded' ? C.success : C.danger
-  const lastFg = hasLast ? '#fff' : C.textDim
-  const when = hasLast ? relativePast(row.lastScheduledAt ?? '', nowMs, tt) : ''
-  const lastText = hasLast
-    ? t(row.lastStatus === 'succeeded' ? 'listAgoOk' : 'listAgoFailed', { when })
-    : t('listNever')
-  const lastTitle = hasLast
-    ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') })
-    : t('listNever')
-  const nextTitle = row.nextSlotAt === null
+const pillOuterStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'stretch', flex: 'none', height: '20px',
+  borderRadius: '7px', overflow: 'hidden', border: `1px solid ${C.border}`,
+}
+const pillLeftStyle = (bg: string, fg: string): Record<string, string | number> => ({
+  display: 'inline-flex', alignItems: 'center', padding: '0 6px', background: bg, color: fg, flex: 'none',
+})
+const pillRightStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: C.layer1, color: C.text,
+  fontSize: '11px', lineHeight: '14px', whiteSpace: 'nowrap',
+}
+
+function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
+  const { row, t, tt } = props
+  const has = row.lastStatus !== null && row.lastScheduledAt !== null
+  const leftBg = !has ? C.layer3 : row.lastStatus === 'succeeded' ? C.success : C.danger
+  const leftFg = has ? '#fff' : C.textDim
+  const title = has ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') }) : t('listNever')
+  return h('div', { style: pillOuterStyle },
+    h('span', { style: pillLeftStyle(leftBg, leftFg) }, h(IconClockOutlineRegular, { size: 12 })),
+    h(Tooltip, { label: title, side: 'bottom' },
+      h(LiveText, {
+        style: pillRightStyle,
+        render: (nowMs: number): string => {
+          if (!has) return t('listNever')
+          const iso = row.lastScheduledAt ?? ''
+          return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt)
+        },
+      }),
+    ),
+  )
+}
+
+function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
+  const { row, t, tt } = props
+  const title = row.nextSlotAt === null
     ? t('listNextNone')
     : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
-  const nextText = row.nextSlotAt === null
-    ? t('listNextNone')
-    : `${t('listNextPrefix')} ${relativeFuture(row.nextSlotAt, nowMs, tt)}`
-  const halfStyle = (bg: string, fg: string): Record<string, string | number> => ({
-    display: 'inline-flex', alignItems: 'center', padding: '0 7px', whiteSpace: 'nowrap',
-    fontSize: '11px', lineHeight: '14px', borderRadius: '5px', background: bg, color: fg,
-    transition: `background ${C.duration} ${C.ease}`,
-  })
-  return h('div', {
-    style: {
-      display: 'inline-flex', alignItems: 'stretch', flex: 'none', gap: '2px',
-      height: '20px', padding: '2px', boxSizing: 'border-box', borderRadius: '7px',
-      border: `1px solid ${C.border}`, background: C.layer1,
-    },
-  },
-    h(Tooltip, { label: lastTitle, side: 'bottom' },
-      h('span', { style: halfStyle(lastBg, lastFg) }, lastText),
-    ),
-    h(Tooltip, { label: nextTitle, side: 'bottom' },
-      h('span', { style: halfStyle(C.layer2, C.textDim) }, nextText),
+  return h('div', { style: pillOuterStyle },
+    h('span', { style: pillLeftStyle(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+    h(Tooltip, { label: title, side: 'bottom' },
+      h(LiveText, {
+        style: pillRightStyle,
+        render: (nowMs: number): string => {
+          if (row.nextSlotAt === null) return t('listNextNone')
+          // 一天以内 = HH:mm:ss 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后。
+          const diff = Date.parse(row.nextSlotAt) - nowMs
+          return diff < 24 * 3600_000
+            ? countdownText(row.nextSlotAt, nowMs, tt)
+            : relativeFuture(row.nextSlotAt, nowMs, tt)
+        },
+      }),
     ),
   )
 }
@@ -428,14 +486,13 @@ function TaskCard(props: {
   row: TaskOverviewRow
   t: Translate
   tt: Translate
-  nowMs: number
   open: boolean
   onToggleOpen: () => void
   onEdit: (id: string) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
   refOf: (el: HTMLElement | null) => void
 }) {
-  const { row, t, tt, nowMs, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props
+  const { row, t, tt, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props
   const scheduleText = cronToHuman(row.schedule.cron, row.schedule.once, row.schedule.everyNWeeks, tt)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
 
@@ -454,9 +511,10 @@ function TaskCard(props: {
         h('div', { style: { ...metaStyle, minWidth: 0 } }, h(MarqueeText, { text: scheduleText })),
         row.createdAt === null ? null : h('div', { style: faintStyle }, `${t('listCreatedPrefix')} ${dateOf(row.createdAt)}`),
       ),
-      // 右：上次 / 下次组合标签 → 启用拨片 → 展开箭头（「编辑」移到展开区右下角）。
+      // 右：历史执行 / 下次执行两个独立小标签 → 启用拨片 → 展开箭头（「编辑」在展开区右下角）。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
-        h(RunPill, { row, t, tt, nowMs }),
+        h(PastPill, { row, t, tt }),
+        h(NextPill, { row, t, tt }),
         h(Switch, {
           checked: row.enabled,
           onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
@@ -533,12 +591,8 @@ export function TaskListView(props: {
   // 真实数据到位 ⇒ 清掉乐观值（避免长期覆盖服务端值）。
   useEffect(() => { setOptimistic({}) }, [rows])
 
-  // 相对时间（「10 分钟后」）本地每秒推进：**不产生请求、也不触发重排**（重排只发生在数据真变时）。
-  const [nowMs, setNowMs] = useState(() => Date.now())
-  useEffect(() => {
-    const timer = window.setInterval(() => { setNowMs(Date.now()) }, 1_000)
-    return () => { window.clearInterval(timer) }
-  }, [])
+  // ⚠️ 这里**不放**每秒 setState：倒计时的时间流走 LiveText 的全局心跳（局部重渲染），
+  // 列表本体只在数据真变时才动——这正是「每秒刷新会不会卡」的答案。
 
   const workspaces = useMemo(() => [...new Set(rowsWithOptimistic.map(r => r.workspace))].sort(), [rowsWithOptimistic])
   /** 异常数 = 内存摘要里「最近一次执行失败」的任务数（全量统计，不受当前筛选影响）。 */
@@ -639,7 +693,7 @@ export function TaskListView(props: {
         : h('div', { style: { position: 'relative' } },
           visible.map(row => h(TaskCard, {
             key: row.id,
-            row, t, tt, nowMs,
+            row, t, tt,
             open: openId === row.id,
             onToggleOpen: () => { setOpenId(cur => (cur === row.id ? null : row.id)) },
             onEdit,
