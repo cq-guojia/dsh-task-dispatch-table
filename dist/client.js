@@ -40121,26 +40121,33 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (!row.enabled) return 3;
 			return row.nextSlotAt === null ? 2 : 1;
 		};
-		/** 组 1 的组内键：被钳位的排最前（哨兵 -1），其余按下次执行升序。 */
-		const sortKeyOf = (row, pinned) => {
-			if (row.nextSlotAt === null) return Number.POSITIVE_INFINITY;
-			return pinned ? -1 : Date.parse(row.nextSlotAt);
-		};
 		/**
-		* 排序（时间轴：马上要跑的最上，关闭的沉底）。
-		* @param pinnedIds 处于「到点钳位」的任务（判定见 `justCrossedSlot`，时长见 `pinMsFor`）。
+		* 组 1 的组内键：**按下次执行升序**。
+		* ⚠️ 决策 54：原来的「到点钳位哨兵 -1」（把刚跨过刻度的卡强插到组内最前）**已整删** ——
+		* 服务端会**冻结**「已到点但还没处理」的刻度，于是这类行的 `nextSlotAt` 本身就是**过去时刻**，
+		* 在这里**自然排最前**，不需要任何哨兵。
 		*/
-		function sortRows(rows, pinnedIds = /* @__PURE__ */ new Set()) {
+		const sortKeyOf = (row) => {
+			if (row.nextSlotAt === null) return Number.POSITIVE_INFINITY;
+			return Date.parse(row.nextSlotAt);
+		};
+		/** 排序（时间轴：马上要跑的最上，关闭的沉底）。 */
+		function sortRows(rows) {
 			return [...rows].sort((a, b) => {
 				const ga = groupOf(a);
 				const gb = groupOf(b);
 				if (ga !== gb) return ga - gb;
-				if (ga === 1) return sortKeyOf(a, pinnedIds.has(a.id)) - sortKeyOf(b, pinnedIds.has(b.id));
+				if (ga === 1) return sortKeyOf(a) - sortKeyOf(b);
 				const ta = Date.parse(a.lastScheduledAt ?? a.runningSince ?? "") || 0;
 				return (Date.parse(b.lastScheduledAt ?? b.runningSince ?? "") || 0) - ta;
 			});
 		}
-		/** 钳位时长：**跟着巡检间隔走**（默认 `tickMs` 60s ⇒ 约 80s），带上下限兜底（30s ~ 10min）。 */
+		/**
+		* **派发延迟预算**（毫秒）= 巡检间隔 + 2×轮询，夹在 30s ~ 10min。
+		* 2026-09-30（决策 54）：它原本是「到点钳位」的时长；钳位已删，本函数保留为**同一口径的唯一出处** ——
+		* 客户端「到点未派发」的 loading 上界（`client/task-list.tsx` 的 `dueLoadingMs`）与它同源，
+		* 免得将来两处各写一个魔数悄悄漂移（执行后评审点过这一条）。
+		*/
 		function pinMsFor(tickMs, pollMs) {
 			return Math.min(6e5, Math.max(3e4, (Number.isFinite(tickMs) && tickMs > 0 ? tickMs : 6e4) + 2 * pollMs));
 		}
