@@ -152,6 +152,12 @@ export type LocaleKey =
   | 'listSectionSchedule' | 'listSectionAttachments' | 'listSectionDepends' | 'listSectionPrompt'
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
   | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
+  // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
+  | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
+  | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
+  | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword'
+  | 'cardRecordsEmpty' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
+  | 'colTokens'
   | 'schedCustom'
   // —— 插件设置页（plugins.bundle.config 详情页表单）——
   | 'settingsBasic' | 'settingsTitleFormat' | 'settingsDesc' | 'settingsLang' | 'settingsLangValue'
@@ -671,6 +677,23 @@ export const zh: Record<LocaleKey, string> = {
   listFieldWindow: '允许延迟',
   listNone: '（无）',
   listDisabledTag: '（已停用）',
+  // —— 任务卡片三面板（决策 55）——
+  cardTabInfo: '基础信息',
+  cardTabRecords: '执行记录',
+  cardTabLogs: '日志',
+  cardDelete: '删除',
+  cardDeleteTitle: '删除任务',
+  cardDeleteDesc: '确定要删除这个任务吗？任务定义、附加文件与历史版本都会被移除，不可恢复（执行记录保留备查）。',
+  cardCancel: '取消',
+  cardFrom: '从',
+  cardTo: '到',
+  cardKeyword: '关键字',
+  cardLogLimit: '条数',
+  cardRecordsEmpty: '（该任务还没有执行记录）',
+  cardLogsEmpty: '（该任务还没有日志）',
+  cardLoadFailed: '读取失败',
+  cardEventsEmpty: '（该次执行暂无事件）',
+  colTokens: 'Token',
   // 排期文案的**唯一实现**在 `client/schedule-text.ts`（列表与编辑器共用，正文键走 editorSched*）；
   // 这里只剩「认不出的 cron 原样显示」一条（真实值，不编造）。
   schedCustom: '{cron}',
@@ -1190,6 +1213,23 @@ export const en: Record<LocaleKey, string> = {
   listFieldWindow: 'Late window',
   listNone: '(none)',
   listDisabledTag: '(disabled)',
+  // Task card three panels (decision 55).
+  cardTabInfo: 'Basic info',
+  cardTabRecords: 'Run records',
+  cardTabLogs: 'Logs',
+  cardDelete: 'Delete',
+  cardDeleteTitle: 'Delete task',
+  cardDeleteDesc: 'Delete this task? Its definition, attachments and version history will be removed permanently (run records are kept for audit).',
+  cardCancel: 'Cancel',
+  cardFrom: 'From',
+  cardTo: 'To',
+  cardKeyword: 'Keyword',
+  cardLogLimit: 'Rows',
+  cardRecordsEmpty: '(no run records for this task yet)',
+  cardLogsEmpty: '(no logs for this task yet)',
+  cardLoadFailed: 'Failed to load',
+  cardEventsEmpty: '(no events for this run)',
+  colTokens: 'Token',
   // The single schedule-text implementation lives in `client/schedule-text.ts`; only the
   // unrecognised-cron passthrough remains here.
   schedCustom: '{cron}',

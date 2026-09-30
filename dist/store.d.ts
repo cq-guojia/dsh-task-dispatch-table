@@ -114,6 +114,55 @@ export interface TableDump {
     /** true = 总行数超出 limit，rows 只含最新 limit 条。 */
     truncated: boolean;
 }
+export interface InstanceQuery {
+    taskId?: string;
+    /** 已解析的工作区任务集合（workspace 过滤由调用方解析，store 不持有任务定义）。 */
+    taskIds?: readonly string[];
+    statuses?: readonly InstanceStatus[];
+    /** scheduled_at 区间（含端点，ISO 字符串）。 */
+    fromTs?: string;
+    toTs?: string;
+    /** 编码末行 `(scheduled_at, id)`。 */
+    cursor?: string;
+    limit?: number;
+}
+export interface InstancePage {
+    rows: TaskInstance[];
+    /** 还有下一页时为末行游标，否则 null。 */
+    nextCursor: string | null;
+}
+export interface LogQuery {
+    taskId?: string;
+    taskIds?: readonly string[];
+    levels?: readonly string[];
+    /** message 子串匹配（LIKE %kw%）。 */
+    keyword?: string;
+    fromTs?: string;
+    toTs?: string;
+    /** 编码末行 `(ts, seq)`。 */
+    cursor?: string;
+    limit?: number;
+}
+export interface LogRow {
+    seq: number;
+    ts: string;
+    task_id: string | null;
+    scheduled_at: string | null;
+    level: string;
+    kind: string;
+    message: string;
+}
+export interface LogPage {
+    rows: LogRow[];
+    nextCursor: string | null;
+}
+/** 某实例的事件时间线（执行记录下钻用），按 seq 升序（旧→新）。 */
+export interface InstanceEventRow {
+    seq: number;
+    ts: string;
+    kind: string;
+    detail: string | null;
+}
 export declare class TaskStore {
     private readonly db;
     /** 事务嵌套深度（`transaction` 用）：> 0 = 已在事务里 ⇒ 内层并入外层，不再 BEGIN。 */
@@ -284,4 +333,17 @@ export declare class TaskStore {
      * ⚠️ 排序必须按 `scheduled_at`：原按 `logical_date` 只到「日」，同日多次取哪条不确定。
      */
     getLatestInstance(taskId: string): TaskInstance | undefined;
+    /**
+     * 按任务 / 工作区 + 状态 / 时间过滤的执行记录（任务卡片「执行记录」面板 + 未来总查询页共用）。
+     * 排序 `scheduled_at DESC, id DESC`；`cursor` 编码末行 `(scheduled_at, id)`，`LIMIT limit+1` 判定是否还有下一页
+     * （limit+1 弹出一行 ⇒ 有剩余才给 cursor，恰好取尽时不会多翻一页）。全部条件走占位绑定，无注入面。
+     */
+    listInstancesByQuery(q: InstanceQuery): InstancePage;
+    /**
+     * 按任务 / 工作区 + 级别 / 关键字 / 时间过滤的诊断日志（任务卡片「日志」面板 + 未来总查询页共用）。
+     * 排序 `ts DESC, seq DESC`；`cursor` 编码末行 `(ts, seq)`。`keyword` 走 `LIKE %kw%`（参数化，不拼 SQL）。
+     */
+    listLogsByQuery(q: LogQuery): LogPage;
+    /** 某实例的事件时间线（执行记录下钻用）：seq 升序 = 旧→新，日志阅读顺序。 */
+    listEventsByInstance(instanceId: string): InstanceEventRow[];
 }

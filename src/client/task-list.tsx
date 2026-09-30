@@ -21,6 +21,8 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
+// 三面板数据通道（决策 55）：执行记录 / 日志 / 事件时间线，与未来总查询页共用同一套 fetch。
+import { fetchEvents, fetchInstances, fetchLogs, type EventRow, type InstanceRow, type LogRow } from './query'
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
 // 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { pinMsFor, sortRows } from '../task-sort.js'
@@ -699,6 +701,403 @@ const iconBtnStyle: Record<string, string | number> = {
   fontFamily: 'inherit', fontSize: '12px', transition,
 }
 
+// ── 展开区三面板（决策 55，design/task-expand-panels-design.md §三）──────────────────
+/** 内容区统一最大高度（用户 2026-10-01 拍板：切 tab 卡片不抖；基础信息短就撑不满，多了内部滚动）。 */
+const PANEL_MAX_H = 360
+
+const panelWrapStyle: Record<string, string | number> = {
+  marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '10px',
+}
+const panelScrollStyle: Record<string, string | number> = {
+  maxHeight: `${PANEL_MAX_H}px`, overflowY: 'auto',
+}
+const panelBarStyle: Record<string, string | number> = {
+  marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed ${C.border}`,
+  display: 'flex', alignItems: 'center', gap: '8px',
+}
+/** 三滑块轨道与选中态：与顶部筛选 tabs 同一套观感（灰底轨道 + 选中加重），颜色全走主题变量。 */
+const segTrackStyle: Record<string, string | number> = {
+  display: 'inline-flex', gap: '2px', padding: '2px', borderRadius: '8px',
+  background: C.layer1, border: `1px solid ${C.border}`,
+}
+const segStyle = (active: boolean): Record<string, string | number> => ({
+  appearance: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+  fontSize: '12px', lineHeight: '18px', padding: '2px 10px', borderRadius: '6px', transition,
+  background: active ? C.layer3 : 'transparent',
+  color: active ? C.text : C.textDim,
+  fontWeight: active ? 600 : 400,
+})
+const filterSelectStyle: Record<string, string | number> = {
+  height: `${CONTROL_H}px`, borderRadius: '6px', border: `1px solid ${C.border}`,
+  background: C.layer1, color: C.text, fontFamily: 'inherit', fontSize: '12px', padding: '0 6px',
+}
+const filterInputStyle: Record<string, string | number> = {
+  height: `${CONTROL_H}px`, borderRadius: '6px', border: `1px solid ${C.border}`,
+  background: 'transparent', color: C.text, fontFamily: 'inherit', fontSize: '12px',
+  padding: '0 8px', boxSizing: 'border-box',
+}
+const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: '12px' }
+const miniCellStyle: Record<string, string | number> = {
+  padding: '4px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'left',
+  color: C.text, whiteSpace: 'nowrap', fontSize: '12px',
+}
+const miniCellWrapStyle: Record<string, string | number> = { ...miniCellStyle, whiteSpace: 'normal', wordBreak: 'break-word' }
+/** 日志 / 事件文本框：跟随宿主主题变量 + 等宽字体（用户 2026-10-01：颜色跟着环境风格走）。 */
+const logBoxStyle: Record<string, string | number> = {
+  fontFamily: monoFont, fontSize: '11px', lineHeight: '18px',
+  background: C.layer1, border: `1px solid ${C.border}`, borderRadius: '8px',
+  padding: '8px 10px', wordBreak: 'break-all',
+}
+const overlayStyle: Record<string, string | number> = {
+  position: 'fixed', inset: 0, zIndex: 1070, background: 'rgba(0,0,0,0.45)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+const dialogStyle: Record<string, string | number> = {
+  width: '360px', maxWidth: 'calc(100vw - 48px)', boxSizing: 'border-box',
+  background: 'var(--dsw-alias-bg-base, #fff)', color: C.text,
+  border: `1px solid ${C.border}`, borderRadius: '12px', padding: '18px',
+  boxShadow: 'var(--dsw-shadow-lv3, 0 12px 32px rgba(0,0,0,0.4))',
+}
+
+const INSTANCE_STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'] as const
+
+/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
+const formatStamp = (iso: string | null): string =>
+  iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
+
+/** 日期输入（YYYY-MM-DD）→ 当天起点 / 终点 ISO（本机时区；空 / 非法 ⇒ undefined = 不过滤）。 */
+const dayStartIso = (date: string): string | undefined => {
+  if (date === '') return undefined
+  const d = new Date(`${date}T00:00:00`)
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
+}
+const dayEndIso = (date: string): string | undefined => {
+  if (date === '') return undefined
+  const d = new Date(`${date}T23:59:59.999`)
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
+}
+
+/** 回执产出清单（决策 32③ 真值 JSON）→ 字符串数组；形状不符返回空（不猜）。 */
+const outputsOf = (raw: string | null): string[] => {
+  if (raw === null || raw === '') return []
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+  } catch {
+    return []
+  }
+}
+/** 产出路径 → 展示名（目录保留尾部 `/`）。 */
+const outputNameOf = (output: string): string => {
+  const isDir = output.endsWith('/')
+  const trimmed = isDir ? output.slice(0, -1) : output
+  const idx = trimmed.lastIndexOf('/')
+  return (idx < 0 ? trimmed : trimmed.slice(idx + 1)) + (isDir ? '/' : '')
+}
+/** token 用量一格：in / out（三拆列，决策 32 修订；两列都空 = 未回执 ⇒ '—'）。 */
+const tokensOf = (row: { token_in: number | null; token_out: number | null }): string =>
+  row.token_in === null && row.token_out === null ? '—' : `${row.token_in ?? 0} / ${row.token_out ?? 0}`
+/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
+const statusStyleOf = (status: string): Record<string, string | number> | undefined =>
+  status === 'failed' || status === 'skipped' ? { color: C.danger, fontWeight: 600 } : undefined
+
+/**
+ * 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
+ * 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
+ * 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
+ */
+function TaskExpandPanel(props: {
+  row: TaskOverviewRow
+  t: Translate
+  tt: Translate
+  scheduleLine: string
+  modelText: string
+  onEdit: (id: string) => void
+  onDelete: (id: string) => Promise<string | null>
+}) {
+  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete } = props
+  const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
+
+  // ── 执行记录面板 ──
+  const [recStatus, setRecStatus] = useState('all')
+  const [recFrom, setRecFrom] = useState('')
+  const [recTo, setRecTo] = useState('')
+  const [records, setRecords] = useState<InstanceRow[] | null>(null)
+  const [recLoading, setRecLoading] = useState(false)
+  const [recError, setRecError] = useState<string | null>(null)
+  const [openInstance, setOpenInstance] = useState<string | null>(null)
+  const [events, setEvents] = useState<EventRow[] | null>(null)
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsError, setEventsError] = useState<string | null>(null)
+
+  // ── 日志面板 ──
+  const [logKeyword, setLogKeyword] = useState('')
+  const [logFrom, setLogFrom] = useState('')
+  const [logTo, setLogTo] = useState('')
+  const [logLimit, setLogLimit] = useState(100)
+  const [logs, setLogs] = useState<LogRow[] | null>(null)
+  const [logLoading, setLogLoading] = useState(false)
+  const [logError, setLogError] = useState<string | null>(null)
+
+  // ── 删除确认 ──
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  // 切到执行记录 / 筛选变化 ⇒ 重拉（alive 守卫防旧轮响应覆盖新轮；筛选变了顺手收起下钻行）。
+  useEffect(() => {
+    if (tab !== 'records') return
+    let alive = true
+    setRecLoading(true)
+    setRecError(null)
+    fetchInstances({
+      taskId: row.id,
+      statuses: recStatus === 'all' ? undefined : [recStatus],
+      from: dayStartIso(recFrom),
+      to: dayEndIso(recTo),
+      limit: 100,
+    })
+      .then(({ rows }) => {
+        if (!alive) return
+        setRecords(rows)
+        setOpenInstance(null)
+        setEvents(null)
+      })
+      .catch((error: unknown) => { if (alive) setRecError(error instanceof Error ? error.message : String(error)) })
+      .finally(() => { if (alive) setRecLoading(false) })
+    return () => { alive = false }
+  }, [tab, row.id, recStatus, recFrom, recTo])
+
+  // 点一行 ⇒ 取该次执行的事件时间线（seq 升序 = 旧→新）。
+  useEffect(() => {
+    if (openInstance === null) return
+    let alive = true
+    setEventsLoading(true)
+    setEventsError(null)
+    setEvents(null)
+    fetchEvents(openInstance)
+      .then(rows => { if (alive) setEvents(rows) })
+      .catch((error: unknown) => { if (alive) setEventsError(error instanceof Error ? error.message : String(error)) })
+      .finally(() => { if (alive) setEventsLoading(false) })
+    return () => { alive = false }
+  }, [openInstance])
+
+  // 切到日志 / 关键字、日期、条数变化 ⇒ 重拉。
+  useEffect(() => {
+    if (tab !== 'logs') return
+    let alive = true
+    setLogLoading(true)
+    setLogError(null)
+    fetchLogs({
+      taskId: row.id,
+      keyword: logKeyword.trim() === '' ? undefined : logKeyword.trim(),
+      from: dayStartIso(logFrom),
+      to: dayEndIso(logTo),
+      limit: logLimit,
+    })
+      .then(({ rows }) => { if (alive) setLogs(rows) })
+      .catch((error: unknown) => { if (alive) setLogError(error instanceof Error ? error.message : String(error)) })
+      .finally(() => { if (alive) setLogLoading(false) })
+    return () => { alive = false }
+  }, [tab, row.id, logKeyword, logFrom, logTo, logLimit])
+
+  const renderInfo = (): ReturnType<typeof h> => h('div', null,
+    h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
+    InfoRow({ label: t('listFieldSchedule'), value: scheduleLine }),
+    InfoRow({ label: t('listFieldWorkspace'), value: row.workspace }),
+    InfoRow({ label: t('listFieldModel'), value: modelText }),
+    InfoRow({ label: t('listFieldRetry'), value: String(row.retryMax) }),
+    InfoRow({ label: t('listFieldWindow'), value: row.schedule.window }),
+    h('div', { style: sectionLabelStyle }, t('listSectionAttachments')),
+    h('div', { style: sectionBodyStyle },
+      row.attachments.length === 0
+        ? t('listNone')
+        : row.attachments.map(item => `${item.name}${item.kind === 'link' ? `（${t('editorAttachmentLink')}）` : ''}`).join('、'),
+    ),
+    h('div', { style: sectionLabelStyle }, t('listSectionDepends')),
+    h('div', { style: sectionBodyStyle },
+      row.depends.length === 0
+        ? t('listNone')
+        : row.depends.map(dep => `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`).join('、'),
+    ),
+    h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
+    h('div', { style: { ...sectionBodyStyle, color: C.textDim, whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
+  )
+
+  const renderRecords = (): ReturnType<typeof h> => h('div', null,
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' } },
+      h('select', {
+        value: recStatus, style: filterSelectStyle, 'aria-label': t('colStatus'),
+        onChange: (event: { target: { value: string } }) => { setRecStatus(event.target.value) },
+      },
+        h('option', { value: 'all' }, tt('filterAll')),
+        INSTANCE_STATUS_OPTIONS.map(status => h('option', { key: status, value: status }, status)),
+      ),
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+        t('cardFrom'),
+        h('input', { type: 'date', value: recFrom, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setRecFrom(event.target.value) } }),
+      ),
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+        t('cardTo'),
+        h('input', { type: 'date', value: recTo, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setRecTo(event.target.value) } }),
+      ),
+      recLoading ? h('span', { style: faintStyle }, t('loading')) : null,
+      recError !== null ? h('span', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${recError}`) : null,
+    ),
+    h('p', { style: faintStyle }, t('expandHint')),
+    records === null
+      ? null
+      : records.length === 0
+        ? h('p', { style: faintStyle }, t('cardRecordsEmpty'))
+        : h('table', { style: miniTableStyle },
+          h('thead', null, h('tr', null,
+            [t('colSlot'), t('colStatus'), t('colAttempt'), t('colSession'), t('colOutputs'), t('colTokens'), t('colUpdated')]
+              .map(name => h('th', { key: name, style: miniCellStyle }, name)))),
+          h('tbody', null,
+            records.flatMap(instance => {
+              const open = openInstance === instance.id
+              const outputs = outputsOf(instance.outputs)
+              const mainRow = h('tr', {
+                key: instance.id,
+                style: { cursor: 'pointer', background: open ? C.layer2 : 'transparent' },
+                onClick: () => { setOpenInstance(open ? null : instance.id) },
+              },
+                h('td', { style: miniCellStyle }, formatStamp(instance.scheduled_at)),
+                h('td', { style: miniCellStyle }, h('span', { style: statusStyleOf(instance.status) }, instance.status)),
+                h('td', { style: miniCellStyle }, String(instance.attempt)),
+                h('td', { style: miniCellStyle }, instance.session_id === null ? '—' : instance.session_id.slice(0, 8)),
+                h('td', { style: miniCellWrapStyle },
+                  outputs.length === 0
+                    ? '—'
+                    : h('span', { title: outputs.join('\n') }, outputs.map(outputNameOf).join('、'))),
+                h('td', { style: miniCellStyle }, tokensOf(instance)),
+                h('td', { style: miniCellStyle }, formatStamp(instance.updated_at)),
+              )
+              const eventRow = open
+                ? h('tr', { key: `${instance.id}-events` },
+                  h('td', { colSpan: 7, style: miniCellWrapStyle },
+                    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } },
+                      h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('eventsOf')),
+                      eventsLoading ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('loading')) : null,
+                    ),
+                    eventsError !== null
+                      ? h('div', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${eventsError}`)
+                      : events === null
+                        ? null
+                        : events.length === 0
+                          ? h('div', { style: { fontSize: '11px', color: C.textFaint } }, t('cardEventsEmpty'))
+                          : h('div', { style: logBoxStyle },
+                            events.map(event => h('div', { key: event.seq },
+                              h('span', { style: { color: C.textFaint } }, `${formatStamp(event.ts)} `),
+                              h('span', { style: { color: C.brand } }, `${event.kind} `),
+                              h('span', null, event.detail ?? ''),
+                            ))),
+                  ),
+                )
+                : null
+              return [mainRow, eventRow]
+            }),
+          ),
+        ),
+  )
+
+  const renderLogs = (): ReturnType<typeof h> => h('div', null,
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' } },
+      h('input', {
+        type: 'text', value: logKeyword, placeholder: t('cardKeyword'),
+        style: { ...filterInputStyle, width: '140px' },
+        onChange: (event: { target: { value: string } }) => { setLogKeyword(event.target.value) },
+      }),
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+        t('cardFrom'),
+        h('input', { type: 'date', value: logFrom, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setLogFrom(event.target.value) } }),
+      ),
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+        t('cardTo'),
+        h('input', { type: 'date', value: logTo, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setLogTo(event.target.value) } }),
+      ),
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+        t('cardLogLimit'),
+        h('select', {
+          value: String(logLimit), style: filterSelectStyle,
+          onChange: (event: { target: { value: string } }) => { setLogLimit(Number(event.target.value)) },
+        },
+          [50, 100, 200].map(n => h('option', { key: n, value: String(n) }, String(n))),
+        ),
+      ),
+      logLoading ? h('span', { style: faintStyle }, t('loading')) : null,
+      logError !== null ? h('span', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${logError}`) : null,
+    ),
+    logs === null
+      ? null
+      : logs.length === 0
+        ? h('p', { style: faintStyle }, t('cardLogsEmpty'))
+        : h('div', { style: logBoxStyle },
+          logs.map(row => h('div', { key: row.seq },
+            h('span', { style: { color: C.textFaint } }, `${formatStamp(row.ts)} `),
+            h('span', {
+              style: {
+                color: row.level === 'error' ? C.danger : row.level === 'warn' ? C.brand : C.textFaint,
+                fontWeight: row.level === 'error' ? 600 : 400,
+              },
+            }, `[${row.level}]`),
+            ' ',
+            h('span', { style: { color: C.brand } }, `${row.kind}: `),
+            h('span', null, row.message),
+          ))),
+  )
+
+  /** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
+  const renderConfirm = (): ReturnType<typeof h> => h('div', {
+    style: overlayStyle,
+    onClick: () => { if (!deleting) setConfirmDelete(false) },
+  },
+    h('div', { style: dialogStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+      h('div', { style: { fontSize: '14px', fontWeight: 600, marginBottom: '8px' } }, t('cardDeleteTitle')),
+      h('div', { style: { fontSize: '12px', color: C.textDim, lineHeight: '18px', marginBottom: '14px' } }, t('cardDeleteDesc')),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
+        h('button', {
+          type: 'button', disabled: deleting, style: iconBtnStyle,
+          onClick: () => { setConfirmDelete(false) },
+        }, t('cardCancel')),
+        h('button', {
+          type: 'button', disabled: deleting,
+          style: { ...iconBtnStyle, color: '#fff', background: C.danger, borderColor: C.danger, opacity: deleting ? 0.6 : 1 },
+          onClick: () => {
+            setDeleting(true)
+            void onDelete(row.id).finally(() => { setDeleting(false); setConfirmDelete(false) })
+          },
+        }, deleting ? t('loading') : t('cardDelete')),
+      ),
+    ),
+  )
+
+  return h('div', { style: panelWrapStyle },
+    // 内容区：三选一替换，统一最大高度滚动容器（切 tab 卡片高度稳定）。
+    h('div', { style: panelScrollStyle },
+      tab === 'info' ? renderInfo() : tab === 'records' ? renderRecords() : renderLogs(),
+    ),
+    // 底栏：左 = 三滑块；右 = 编辑任务 + 删除。
+    h('div', { style: panelBarStyle },
+      h('div', { style: segTrackStyle },
+        (['info', 'records', 'logs'] as const).map(key => h('button', {
+          key, type: 'button', style: segStyle(tab === key), 'aria-pressed': tab === key,
+          onClick: () => { setTab(key) },
+        }, t(key === 'info' ? 'cardTabInfo' : key === 'records' ? 'cardTabRecords' : 'cardTabLogs'))),
+      ),
+      h('span', { style: { flex: '1 1 auto' } }),
+      h('button', {
+        type: 'button', style: { ...iconBtnStyle, padding: '0 10px' },
+        onClick: () => { onEdit(row.id) },
+      }, h(IconEditOutlineRegular, { size: 14 }), t('editorEdit')),
+      h('button', {
+        type: 'button', style: { ...iconBtnStyle, padding: '0 10px', color: C.danger },
+        onClick: () => { setConfirmDelete(true) },
+      }, t('cardDelete')),
+    ),
+    confirmDelete ? renderConfirm() : null,
+  )
+}
+
 function TaskCard(props: {
   row: TaskOverviewRow
   t: Translate
@@ -706,10 +1105,12 @@ function TaskCard(props: {
   open: boolean
   onToggleOpen: () => void
   onEdit: (id: string) => void
+  /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（由父级 Toast 展示）。 */
+  onDelete: (id: string) => Promise<string | null>
   onToggleEnabled: (id: string, enabled: boolean) => void
   refOf: (el: HTMLElement | null) => void
 }) {
-  const { row, t, tt, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props
+  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onToggleEnabled, refOf } = props
   // 排期人话与编辑器「预计执行」**同一份实现**（`schedule-text.ts`，优先吃结构化 ui）⇒ 两处必然一致。
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
@@ -754,39 +1155,8 @@ function TaskCard(props: {
         }, h(IconChevronDownOutlineRegular, { size: 14 })),
       ),
     ),
-    // ── 展开区：就地拉伸，上方原样，下方读任务设置（「详细说明」）──
-    // 用户 2026-09-30：「太丑了」——从「一句 `·` 串联的长文本」改成**标签 / 值两栏**：
-    // 执行设置逐字段成行（左淡标签、右正文），区块之间小组标题 + 间距分层，长文本（提示词）独立换行。
-    open ? h('div', { style: { marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '10px' } },
-      h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
-      InfoRow({ label: t('listFieldSchedule'), value: scheduleLine }),
-      InfoRow({ label: t('listFieldWorkspace'), value: row.workspace }),
-      InfoRow({ label: t('listFieldModel'), value: modelText }),
-      InfoRow({ label: t('listFieldRetry'), value: String(row.retryMax) }),
-      InfoRow({ label: t('listFieldWindow'), value: row.schedule.window }),
-      h('div', { style: sectionLabelStyle }, t('listSectionAttachments')),
-      h('div', { style: sectionBodyStyle },
-        row.attachments.length === 0
-          ? t('listNone')
-          : row.attachments.map(item => `${item.name}${item.kind === 'link' ? `（${t('editorAttachmentLink')}）` : ''}`).join('、'),
-      ),
-      h('div', { style: sectionLabelStyle }, t('listSectionDepends')),
-      h('div', { style: sectionBodyStyle },
-        row.depends.length === 0
-          ? t('listNone')
-          : row.depends.map(dep => `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`).join('、'),
-      ),
-      h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
-      h('div', { style: { ...sectionBodyStyle, color: C.textDim, whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
-      // 详细说明下面再来一条虚线，右下角放「编辑」——不是每次都要编辑，不占主行的重要位置。
-      h('div', { style: { marginTop: '12px', paddingTop: '10px', borderTop: `1px dashed ${C.border}`, display: 'flex', justifyContent: 'flex-end' } },
-        h('button', {
-          type: 'button',
-          style: { ...iconBtnStyle, padding: '0 10px' },
-          onClick: () => { onEdit(row.id) },
-        }, h(IconEditOutlineRegular, { size: 14 }), t('editorEdit')),
-      ),
-    ) : null,
+    // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
+    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete }) : null,
   )
 }
 
@@ -796,10 +1166,12 @@ export function TaskListView(props: {
   rows: readonly TaskOverviewRow[]
   ready: boolean
   onEdit: (id: string) => void
+  /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（父级 Toast 展示、列表靠 overview 刷新少一行）。 */
+  onDelete: (id: string) => Promise<string | null>
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onToggleEnabled } = props
+  const { t, rows, ready, onEdit, onDelete, onToggleEnabled } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
@@ -941,6 +1313,7 @@ export function TaskListView(props: {
             open: openId === row.id,
             onToggleOpen: () => { setOpenId(cur => (cur === row.id ? null : row.id)) },
             onEdit,
+            onDelete,
             onToggleEnabled: (id: string, enabled: boolean): void => {
               setOptimistic(cur => ({ ...cur, [id]: enabled })) // 点了立刻变，不等请求往返
               // ⚠️ 失败必须**撤掉这条乐观值**（2026-09-30 专家团复核）：失败时服务端没变、也不会 bump rev

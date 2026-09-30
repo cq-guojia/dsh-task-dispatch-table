@@ -303,3 +303,33 @@ Loop B `sweep` 只遍历 `pending / dispatched / running / unknown`；`skipped` 
   - **不在本轮范围**：**执行记录页**（用户明示「属新功能，未经明示不动」）；**任务展开区 UI 重做**（用户早前提出，被本线工作挤出，待排）。
   - 已知小尾巴：`historyRetentionDays > 0` 时补记的 `skipped` 行不在 purge 保护名单内（默认 0 = 不清，暂不影响）。
 - **已知缺口**：任务编辑器的「执行记录」标签页目前是**占位**（标着「P2 待接」），面板执行记录页只有按钮没有列表 ⇒ 「用户能在执行记录里看到」还需先补那个页面；在那之前实例行只能在**调试页**看到。
+
+## 决策 55：任务卡片展开区三面板（基础信息 / 执行记录 / 日志）+ 快捷删除 + 统一查询抽象（2026-10-01）
+
+> 设计提纲 [`task-expand-panels-design.md`](task-expand-panels-design.md)（§三 拍板 / §四 接口）；过程见 [`../worklog/task-expand-panels.md`](../worklog/task-expand-panels.md) §六。
+
+### 1. 布局与高度（用户拍板）
+
+- 展开区 = **左下三个分段按钮**（基础信息 / 执行记录 / 日志，默认基础信息）+ **中间内容区三选一替换** + **右下按钮区**（编辑任务 + 删除）。
+- 内容区统一**最大高度滚动容器（360px）**：基础信息短就撑不满，执行记录 / 日志长则内部滚动 ⇒ **切 tab 卡片高度不抖**（用户口径「高度定死」的落地方式）。
+- 基础信息四区块（执行设置 / 附加文件 / 前置任务 / 提示词首段）**原样并入**；「提示词全文」升级是后续项（用户：基础资料后面再改、放最后）。
+
+### 2. 小面板加载口径（用户拍板）
+
+- **执行记录**：最新 **100 条**（`scheduled_at DESC`）+ 状态 / 时间筛选；**无翻页、无「加载更多」**（小面板没有页码空间）；点一行下钻该次执行的**事件时间线**（`GET /tasks/events?instanceId=` 按实例精确取，不再依赖全局 debugSnapshot 的「最近 200 条」窗口）；关键字搜索**留给总页面**。
+- **日志**：默认 **100 条** + **50 / 100 / 200** 条数选择器（`ts DESC`）+ 关键字 / 日期筛选；宿主主题变量 + 等宽字体的滚动文本框。
+- **删除**：确认框 → 既有 `DELETE /tasks`（摘定义 + 整删任务目录，实例 / 事件保留审计）；失败走 viewErr 条（操作类失败留时间读），成功 `overview.refresh()` 立即少一行。
+
+### 3. 查询统一抽象（本决策核心，为总页面铺路）
+
+用户后续要做**总页面**（日志查询 + 执行记录查询：按任务 / 工作区 / 状态筛选 + 详细搜索 + 分页）⇒ 查询**一套实现两种用法**，绝不允许两处各写一份：
+
+- `store.listInstancesByQuery` / `store.listLogsByQuery`：过滤（taskId / taskIds / statuses·levels / keyword / fromTs·toTs）+ **游标分页**（cursor = base64 编码末行排序键；`LIMIT limit+1` 弹一行判定有无下一页，恰好取尽不多翻）；排序 `scheduled_at DESC, id DESC` / `ts DESC, seq DESC`（决策 25 身份键做 tiebreaker，同刻度不重不漏）。
+- `GET /tasks/instances`、`GET /tasks/log`、`GET /tasks/events?instanceId=` 三条路由；**workspace 过滤在路由层**——`task_instances` / `task_log` 均无工作区列，由 `tasksInline` 反查「该工作区 task_id 集合」再 `WHERE task_id IN`，**不碰表结构**。
+- 客户端 `src/client/query.ts`（叶子模块，静态 import 内联单文件产物）：`fetchInstances` / `fetchLogs` / `fetchEvents`；小面板传 `limit` 取最新 N，总页面传 `cursor` 即翻页。
+- 全部条件占位绑定，无注入面；非法 status / level 不拦（IN 参数化查不到即为空）。
+
+### 4. 验证与遗留
+
+- 冒烟 **364/0**（+14 条断言钉死：按任务隔离不串 / `scheduled_at DESC` / limit+cursor 翻页不重不漏·末页无游标 / 状态与时间过滤 / 不存在任务空态 / workspace 走 taskIds / 日志隔离·关键字·级别 / 事件按实例精确取且 seq 升序 / 路由·方法·文案键产物证据）；typecheck + build 绿。**真机验证待做**（用户次日验收）。
+- 遗留：执行记录行的「查看会话」与产出物点击入口未接（需把 `openView` / `openFile` 链路穿过 TaskListView，留给总页面一并做）；编辑器内「执行记录」占位标签仍是独立缺口。

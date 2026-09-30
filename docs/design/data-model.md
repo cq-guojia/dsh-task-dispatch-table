@@ -81,7 +81,7 @@ CREATE TABLE task_log (
   task_id      TEXT,                     -- 可能为空（如启动汇总）
   scheduled_at TEXT,                     -- 错过的刻度，可能为空
   level        TEXT NOT NULL,            -- info | warn | error
-  kind         TEXT NOT NULL,            -- missed_slot | startup_missed | precondition | dep_blocked | stray_pending
+  kind         TEXT NOT NULL,            -- dep_blocked | dep_disabled | dep_missing | expired-once | missed-slot | stale-upstream | precondition | attachment-missing | startup_missed | stray_pending（2026-10-01 依 scheduler/reconcile 实际写入更正）
   message      TEXT NOT NULL
 );
 
@@ -300,7 +300,7 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 | P1 | **清理执行记录会打断依赖判定** | 上游（月 / 季 / 年任务）历史被清干净 ⇒ 下游 `latest_success` 永远查不到 ⇒ 静默阻塞，日志只显示 `dep_blocked`，排查不出原因 | ✅ **已修**：清理时**保护每个任务最近一条终态记录**（§六） |
 | P2 | **间隔档不产出 cron** | 用户选「每隔 N 分钟 / 小时」保存后，JSON 里没有 cron ⇒ 任务**永不执行** | ✅ **已写入设计**（§5.4 C1），落码列为 **P0 必修** |
 | P3 | **临时区清理 vs 未保存草稿** | 上传后超过 3 天没保存 ⇒ 文件被清 ⇒ 定义里 `ref` 悬空 ⇒ 执行期才报错 | ✅ **已修**：保存时若临时文件已不在 ⇒ 照常保存 + UI 明示「以下附件已失效，需重新上传」（§5.2）；临时区保留期 **已拍 7 天**（D1） |
-| P4 | **删除任务 ⇒ 依赖悬空** | 下游的 `depends_on` 指向已删任务 ⇒ 永远阻塞，且与「上游还没成功」「上游停用」混为一谈 | ✅ **已修**：新增日志 kind **`dep_missing`**（上游任务已不存在），与 `dep_disabled` 并列；删除确认框明示「有 N 个任务以它为前置」 |
+| P4 | **删除任务 ⇒ 依赖悬空** | 下游的 `depends_on` 指向已删任务 ⇒ 永远阻塞，且与「上游还没成功」「上游停用」混为一谈 | ✅ **已修**：新增日志 kind **`dep_missing`**（上游任务已不存在），与 `dep_disabled` 并列。⚠️ **更正（2026-10-01）**：删除确认框**尚未**明示「有 N 个任务以它为前置」——此前记为「已修」有误；当前删除确认仅有不可逆措辞（`src/client/task-editor.tsx` 的 `confirmDeleteTask` → `editorDeleteTaskDesc`）。 |
 | P5 | **临时区平铺 + 保留原始名** | 两个任务上传同名文件 ⇒ 后传覆盖先传，附件张冠李戴 | ✅ **已修**：临时区内**随机尾缀唯一命名**，搬进任务目录时**恢复原始名**（§5.2 第 6 步） |
 | P6 | **删除任务后实例 / 事件变孤儿** | 执行记录页出现无主行 | ✅ **已定**：定义与任务目录**物理删**；实例 / 事件**保留**（审计证据）；面板按 `taskMap` 展示，无主行不显示 |
 | P7 | **整批覆盖保存的并发覆盖** | 两端同时改不同任务 ⇒ 后写覆盖先写 | ⚠️ **已知取舍，不做乐观锁**（单用户、规模小） |

@@ -655,6 +655,33 @@ function TaskPage(props: {
     }
   }
 
+  /**
+   * 删除任务（决策 55，卡片右下角快捷删除）：DELETE /tasks { id }。
+   * 服务端语义：摘定义 + 整删任务目录（附件 / 版本 / 快照），实例 / 事件保留做审计；
+   * 成功后 overview.refresh() 让列表立刻少一行。失败走 viewErr 条（操作类失败留时间读）。
+   */
+  const deleteTask = async (id: string): Promise<string | null> => {
+    try {
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const body = await res.json() as { ok?: boolean; error?: unknown }
+      if (body.ok !== true) {
+        const message = humanizeTaskError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`)
+        setViewErr(message)
+        return message
+      }
+      overview.refresh()
+      return null
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      setViewErr(message)
+      return message
+    }
+  }
+
   /** 保存（新增 / 修改同一条链路）：POST /tasks { task }。 */
   const saveEditor = async (draft: TaskEditorDraft): Promise<void> => {
     if (editor === null) return
@@ -1006,6 +1033,7 @@ function TaskPage(props: {
             rows: overview.rows,
             ready: overview.ready,
             onEdit: openEditor,
+            onDelete: deleteTask,
             // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
             // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。
             onToggleEnabled: toggleTaskEnabled,

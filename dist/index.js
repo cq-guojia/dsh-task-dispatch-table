@@ -99,6 +99,36 @@ const queryOf = (req, key) => {
         return '';
     return new URLSearchParams(url.slice(mark + 1)).get(key) ?? '';
 };
+/**
+ * 从 tasksInline 反查「某工作区下的全部任务 id」（决策 55：workspace 过滤）。
+ * `task_instances` / `task_log` 均无工作区列 ⇒ 由任务定义反查 task_id 集合再 `WHERE task_id IN`（不碰表结构）。
+ * 只读展示面：解析失败 / 形状不符一律返回空数组（调用方据此返回空结果，不猜）。
+ */
+function workspaceTaskIdsOf(raw, workspace) {
+    try {
+        const data = JSON.parse(raw.trim());
+        if (!Array.isArray(data))
+            return [];
+        const out = [];
+        for (const item of data) {
+            if (typeof item !== 'object' || item === null)
+                continue;
+            const task = item;
+            const target = task.target;
+            if (typeof target !== 'object' || target === null)
+                continue;
+            if (typeof task.id !== 'string')
+                continue;
+            const ws = target.workspace;
+            if (typeof ws === 'string' && ws === workspace)
+                out.push(task.id);
+        }
+        return out;
+    }
+    catch {
+        return [];
+    }
+}
 /** 从现有任务表里读出某任务的附件清单（附件搬移的「上一次」基准）。 */
 function readAttachmentsOf(raw, id) {
     try {
@@ -740,6 +770,98 @@ updateScopeConfig) => [
             }
         },
     },
+    {
+        // 按任务 / 工作区检索执行记录（任务卡片「执行记录」面板 + 未来总查询页共用，决策 55）：
+        //   GET /tasks/instances?taskId=&workspace=&status=a,b&from=&to=&cursor=&limit=
+        // workspace 过滤：`task_instances` 无工作区列 ⇒ 由 tasksInline 反查 task_id 集合（不碰表结构）；
+        // taskId 与 workspace 同时给时以 taskId 为准（单任务面板只用 taskId）。
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/tasks/instances`,
+        handler: (req, res) => {
+            if (req.method !== 'GET')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            const store = getStore();
+            if (store === null)
+                return writeJson(res, 503, { ok: false, error: 'store-not-ready' });
+            const taskId = queryOf(req, 'taskId') || undefined;
+            const workspace = queryOf(req, 'workspace') || undefined;
+            const statusRaw = queryOf(req, 'status');
+            // 逗号分隔多状态；非法值不拦——IN 子句参数化，查不到即为空，无注入面。
+            const statuses = statusRaw === '' ? undefined : statusRaw.split(',').filter(s => s !== '');
+            const limitRaw = queryOf(req, 'limit');
+            const limit = limitRaw === '' || !Number.isFinite(Number(limitRaw)) ? undefined : Number(limitRaw);
+            const taskIds = taskId === undefined && workspace !== undefined
+                ? workspaceTaskIdsOf(runtimeRef.tasksInline, workspace)
+                : undefined;
+            const page = store.listInstancesByQuery({
+                taskId,
+                taskIds,
+                statuses,
+                fromTs: queryOf(req, 'from') || undefined,
+                toTs: queryOf(req, 'to') || undefined,
+                cursor: queryOf(req, 'cursor') || undefined,
+                limit,
+            });
+            writeJson(res, 200, { ok: true, rows: page.rows, nextCursor: page.nextCursor });
+        },
+    },
+    {
+        // 按任务 / 工作区检索诊断日志（任务卡片「日志」面板 + 未来总查询页共用，决策 55）：
+        //   GET /tasks/log?taskId=&workspace=&level=error,warn&keyword=&from=&to=&cursor=&limit=
+        // keyword = message 子串（LIKE %kw%，参数化）；`task_id` 为 NULL 的启动汇总行不命中按任务 / 工作区过滤（符合直觉）。
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/tasks/log`,
+        handler: (req, res) => {
+            if (req.method !== 'GET')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            const store = getStore();
+            if (store === null)
+                return writeJson(res, 503, { ok: false, error: 'store-not-ready' });
+            const taskId = queryOf(req, 'taskId') || undefined;
+            const workspace = queryOf(req, 'workspace') || undefined;
+            const levelRaw = queryOf(req, 'level');
+            const levels = levelRaw === '' ? undefined : levelRaw.split(',').filter(s => s !== '');
+            const limitRaw = queryOf(req, 'limit');
+            const limit = limitRaw === '' || !Number.isFinite(Number(limitRaw)) ? undefined : Number(limitRaw);
+            const taskIds = taskId === undefined && workspace !== undefined
+                ? workspaceTaskIdsOf(runtimeRef.tasksInline, workspace)
+                : undefined;
+            const page = store.listLogsByQuery({
+                taskId,
+                taskIds,
+                levels,
+                keyword: queryOf(req, 'keyword') || undefined,
+                fromTs: queryOf(req, 'from') || undefined,
+                toTs: queryOf(req, 'to') || undefined,
+                cursor: queryOf(req, 'cursor') || undefined,
+                limit,
+            });
+            writeJson(res, 200, { ok: true, rows: page.rows, nextCursor: page.nextCursor });
+        },
+    },
+    {
+        // 某次执行的事件时间线（执行记录下钻，决策 55）：GET /tasks/events?instanceId=<uuid>
+        // legacy `records` 标签从全局 debugSnapshot（最近 200 条）里捞 ⇒ 按任务面板改走按实例精确取。
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/tasks/events`,
+        handler: (req, res) => {
+            if (req.method !== 'GET')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            const store = getStore();
+            if (store === null)
+                return writeJson(res, 503, { ok: false, error: 'store-not-ready' });
+            const instanceId = queryOf(req, 'instanceId');
+            if (instanceId === '')
+                return writeJson(res, 400, { ok: false, error: 'instanceId-required' });
+            writeJson(res, 200, { ok: true, events: store.listEventsByInstance(instanceId) });
+        },
+    },
 ];
 /**
  * 无 `register` 面时的等价作用域（dsh 0.1.7-rc.1 起把注册改成「注册项 Config 自动投影」）。
@@ -891,7 +1013,7 @@ export function apply(ctx, config) {
         // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
         () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig))
             webServer.register(route);
-        wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled');
+        wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、GET /api/task-dispatch-table/tasks/instances、GET /api/task-dispatch-table/tasks/log、GET /api/task-dispatch-table/tasks/events、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled');
     });
     ctx.inject(['settings'], (sctx) => {
         const settings = sctx.settings;

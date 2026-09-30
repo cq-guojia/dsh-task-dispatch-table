@@ -277,6 +277,72 @@ CREATE INDEX IF NOT EXISTS idx_audit_task ON task_audit(task_id, seq);
 
 const nowIso = (): string => new Date().toISOString()
 
+// ── 按任务 / 工作区过滤 + 游标分页（任务卡片三面板 + 未来总查询页共用，design/task-expand-panels-design.md §四）──
+// cursor 用 base64(JSON) 编码「排序键末行」：小面板只传 limit 取最新 N；未来总页面带 cursor 即翻页。一套实现两种用法。
+function encodeCursor(values: readonly (string | number)[]): string {
+  return Buffer.from(JSON.stringify(values)).toString('base64')
+}
+function decodeCursor(raw: string): (string | number)[] | null {
+  try {
+    const value: unknown = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'))
+    return Array.isArray(value) ? (value as (string | number)[]) : null
+  } catch {
+    return null
+  }
+}
+
+export interface InstanceQuery {
+  taskId?: string
+  /** 已解析的工作区任务集合（workspace 过滤由调用方解析，store 不持有任务定义）。 */
+  taskIds?: readonly string[]
+  statuses?: readonly InstanceStatus[]
+  /** scheduled_at 区间（含端点，ISO 字符串）。 */
+  fromTs?: string
+  toTs?: string
+  /** 编码末行 `(scheduled_at, id)`。 */
+  cursor?: string
+  limit?: number
+}
+export interface InstancePage {
+  rows: TaskInstance[]
+  /** 还有下一页时为末行游标，否则 null。 */
+  nextCursor: string | null
+}
+
+export interface LogQuery {
+  taskId?: string
+  taskIds?: readonly string[]
+  levels?: readonly string[]
+  /** message 子串匹配（LIKE %kw%）。 */
+  keyword?: string
+  fromTs?: string
+  toTs?: string
+  /** 编码末行 `(ts, seq)`。 */
+  cursor?: string
+  limit?: number
+}
+export interface LogRow {
+  seq: number
+  ts: string
+  task_id: string | null
+  scheduled_at: string | null
+  level: string
+  kind: string
+  message: string
+}
+export interface LogPage {
+  rows: LogRow[]
+  nextCursor: string | null
+}
+
+/** 某实例的事件时间线（执行记录下钻用），按 seq 升序（旧→新）。 */
+export interface InstanceEventRow {
+  seq: number
+  ts: string
+  kind: string
+  detail: string | null
+}
+
 export class TaskStore {
   private readonly db: DatabaseSync
   /** 事务嵌套深度（`transaction` 用）：> 0 = 已在事务里 ⇒ 内层并入外层，不再 BEGIN。 */
@@ -761,6 +827,107 @@ export class TaskStore {
     return this.db
       .prepare('SELECT * FROM task_instances WHERE task_id = ? ORDER BY scheduled_at DESC LIMIT 1')
       .get(taskId) as TaskInstance | undefined
+  }
+
+  /**
+   * 按任务 / 工作区 + 状态 / 时间过滤的执行记录（任务卡片「执行记录」面板 + 未来总查询页共用）。
+   * 排序 `scheduled_at DESC, id DESC`；`cursor` 编码末行 `(scheduled_at, id)`，`LIMIT limit+1` 判定是否还有下一页
+   * （limit+1 弹出一行 ⇒ 有剩余才给 cursor，恰好取尽时不会多翻一页）。全部条件走占位绑定，无注入面。
+   */
+  listInstancesByQuery(q: InstanceQuery): InstancePage {
+    const where: string[] = []
+    const params: Array<string | number> = []
+    if (q.taskId !== undefined) {
+      where.push('task_id = ?')
+      params.push(q.taskId)
+    }
+    if (q.taskIds !== undefined && q.taskIds.length > 0) {
+      where.push(`task_id IN (${q.taskIds.map(() => '?').join(',')})`)
+      params.push(...q.taskIds)
+    }
+    if (q.statuses !== undefined && q.statuses.length > 0) {
+      where.push(`status IN (${q.statuses.map(() => '?').join(',')})`)
+      params.push(...q.statuses)
+    }
+    if (q.fromTs !== undefined) {
+      where.push('scheduled_at >= ?')
+      params.push(q.fromTs)
+    }
+    if (q.toTs !== undefined) {
+      where.push('scheduled_at <= ?')
+      params.push(q.toTs)
+    }
+    const cursor = q.cursor === undefined ? null : decodeCursor(q.cursor)
+    if (cursor !== null && cursor.length === 2) {
+      // row-value 比较：DESC 序里「排在游标之后」= 键更小（决策 25 身份键做 tiebreaker，同刻度不重不漏）。
+      where.push('(scheduled_at, id) < (?, ?)')
+      params.push(String(cursor[0]), String(cursor[1]))
+    }
+    const limit = Math.max(1, Math.min(q.limit ?? 100, 500))
+    const sql = `SELECT * FROM task_instances${where.length > 0 ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY scheduled_at DESC, id DESC LIMIT ?`
+    const rows = this.db.prepare(sql).all(...params, limit + 1) as unknown as TaskInstance[]
+    let nextCursor: string | null = null
+    if (rows.length > limit) {
+      rows.pop()
+      const last = rows[rows.length - 1]
+      nextCursor = encodeCursor([last.scheduled_at, last.id])
+    }
+    return { rows, nextCursor }
+  }
+
+  /**
+   * 按任务 / 工作区 + 级别 / 关键字 / 时间过滤的诊断日志（任务卡片「日志」面板 + 未来总查询页共用）。
+   * 排序 `ts DESC, seq DESC`；`cursor` 编码末行 `(ts, seq)`。`keyword` 走 `LIKE %kw%`（参数化，不拼 SQL）。
+   */
+  listLogsByQuery(q: LogQuery): LogPage {
+    const where: string[] = []
+    const params: Array<string | number> = []
+    if (q.taskId !== undefined) {
+      where.push('task_id = ?')
+      params.push(q.taskId)
+    }
+    if (q.taskIds !== undefined && q.taskIds.length > 0) {
+      where.push(`task_id IN (${q.taskIds.map(() => '?').join(',')})`)
+      params.push(...q.taskIds)
+    }
+    if (q.levels !== undefined && q.levels.length > 0) {
+      where.push(`level IN (${q.levels.map(() => '?').join(',')})`)
+      params.push(...q.levels)
+    }
+    if (q.keyword !== undefined && q.keyword.trim() !== '') {
+      where.push('message LIKE ?')
+      params.push(`%${q.keyword.trim()}%`)
+    }
+    if (q.fromTs !== undefined) {
+      where.push('ts >= ?')
+      params.push(q.fromTs)
+    }
+    if (q.toTs !== undefined) {
+      where.push('ts <= ?')
+      params.push(q.toTs)
+    }
+    const cursor = q.cursor === undefined ? null : decodeCursor(q.cursor)
+    if (cursor !== null && cursor.length === 2) {
+      where.push('(ts, seq) < (?, ?)')
+      params.push(String(cursor[0]), Number(cursor[1]))
+    }
+    const limit = Math.max(1, Math.min(q.limit ?? 100, 500))
+    const sql = `SELECT seq, ts, task_id, scheduled_at, level, kind, message FROM task_log${where.length > 0 ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY ts DESC, seq DESC LIMIT ?`
+    const rows = this.db.prepare(sql).all(...params, limit + 1) as unknown as LogRow[]
+    let nextCursor: string | null = null
+    if (rows.length > limit) {
+      rows.pop()
+      const last = rows[rows.length - 1]
+      nextCursor = encodeCursor([last.ts, last.seq])
+    }
+    return { rows, nextCursor }
+  }
+
+  /** 某实例的事件时间线（执行记录下钻用）：seq 升序 = 旧→新，日志阅读顺序。 */
+  listEventsByInstance(instanceId: string): InstanceEventRow[] {
+    return this.db
+      .prepare('SELECT seq, ts, kind, detail FROM task_events WHERE instance_id = ? ORDER BY seq ASC')
+      .all(instanceId) as unknown as InstanceEventRow[]
   }
 
   /* 手动补跑标准 SQL（state-machine §7）——插件不提供 UI，按需手工执行。

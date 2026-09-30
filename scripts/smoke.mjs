@@ -1471,6 +1471,94 @@ console.log('\n[14] runtime-index')
   rmSync(dir, { recursive: true, force: true })
 }
 
+// ── 任务卡片三面板数据通道（决策 55）：过滤 + 游标分页 + 按任务隔离 ──
+{
+  const dir = join(root, 'panels-db')
+  const store = new TaskStore(join(dir, 'state.db'))
+  // 两个任务各 3 条实例（交错时刻）⇒ 验「按任务隔离」不串；A 的前两条带事件。
+  const idA1 = randomUUID()
+  store.ensureInstance(idA1, 'panel-a', '2026-09-01', '2026-09-01T08:00:00.000Z', 'succeeded')
+  const idA2 = randomUUID()
+  store.ensureInstance(idA2, 'panel-a', '2026-09-02', '2026-09-02T08:00:00.000Z', 'failed')
+  store.ensureInstance(randomUUID(), 'panel-a', '2026-09-03', '2026-09-03T08:00:00.000Z', 'skipped')
+  store.ensureInstance(randomUUID(), 'panel-b', '2026-09-02', '2026-09-02T09:00:00.000Z', 'succeeded')
+  store.ensureInstance(randomUUID(), 'panel-b', '2026-09-03', '2026-09-03T09:00:00.000Z', 'pending')
+  store.ensureInstance(randomUUID(), 'panel-b', '2026-09-04', '2026-09-04T09:00:00.000Z', 'running')
+  // appendLog 的 ts = 写入时刻（非 scheduledAt）⇒ 后写的 seq 更大、排在更前。
+  store.appendLog({ taskId: 'panel-a', scheduledAt: '2026-09-02T08:00:00.000Z', level: 'error', kind: 'missed-slot', message: '附件 nv.html 不见了' })
+  store.appendLog({ taskId: 'panel-a', scheduledAt: '2026-09-03T08:00:00.000Z', level: 'info', kind: 'dep_blocked', message: '等上游成功' })
+  store.appendLog({ taskId: 'panel-b', scheduledAt: '2026-09-04T09:00:00.000Z', level: 'warn', kind: 'stale-upstream', message: '复用旧产出' })
+  store.appendEvent(idA1, 'state_change', { to: 'succeeded' })
+  store.appendEvent(idA1, 'receipt', { ok: true })
+  store.appendEvent(idA2, 'state_change', { to: 'failed' })
+
+  check('三面板·执行记录按任务隔离（A 只见 A 的 3 条，不串 B）',
+    store.listInstancesByQuery({ taskId: 'panel-a' }).rows.length === 3
+    && store.listInstancesByQuery({ taskId: 'panel-a' }).rows.every(r => r.task_id === 'panel-a'))
+  check('三面板·执行记录排序 scheduled_at DESC（最新在前）',
+    JSON.stringify(store.listInstancesByQuery({ taskId: 'panel-a' }).rows.map(r => r.scheduled_at.slice(0, 10)))
+      === JSON.stringify(['2026-09-03', '2026-09-02', '2026-09-01']))
+  check('三面板·limit 取最新 N，剩余才给 nextCursor',
+    (() => {
+      const p = store.listInstancesByQuery({ taskId: 'panel-a', limit: 2 })
+      return p.rows.length === 2 && p.nextCursor !== null
+        && p.rows[0].scheduled_at === '2026-09-03T08:00:00.000Z'
+    })())
+  check('三面板·cursor 翻页接续不重不漏（末页无游标）',
+    (() => {
+      const p1 = store.listInstancesByQuery({ taskId: 'panel-a', limit: 2 })
+      const p2 = store.listInstancesByQuery({ taskId: 'panel-a', limit: 2, cursor: p1.nextCursor ?? '' })
+      return p2.rows.length === 1 && p2.nextCursor === null
+        && p2.rows[0].scheduled_at === '2026-09-01T08:00:00.000Z'
+    })())
+  check('三面板·状态过滤（failed + skipped）',
+    store.listInstancesByQuery({ taskId: 'panel-a', statuses: ['failed', 'skipped'] }).rows.length === 2)
+  check('三面板·时间范围过滤（只 09-02 当天）',
+    store.listInstancesByQuery({ taskId: 'panel-a', fromTs: '2026-09-02T00:00:00.000Z', toTs: '2026-09-02T23:59:59.999Z' }).rows.length === 1)
+  check('三面板·不存在的任务 = 空态（空 rows + 无游标）',
+    (() => {
+      const p = store.listInstancesByQuery({ taskId: 'no-such-task' })
+      return p.rows.length === 0 && p.nextCursor === null
+    })())
+  check('三面板·workspace 过滤走 taskIds（全量 6 条 / 单工作区只见该区）',
+    store.listInstancesByQuery({ taskIds: ['panel-a', 'panel-b'] }).rows.length === 6
+    && store.listInstancesByQuery({ taskIds: ['panel-b'] }).rows.every(r => r.task_id === 'panel-b'))
+  check('三面板·日志按任务隔离 + ts DESC（A 只见 A 的 2 条，最新在前）',
+    (() => {
+      const p = store.listLogsByQuery({ taskId: 'panel-a' })
+      return p.rows.length === 2 && p.rows[0].kind === 'dep_blocked' && p.rows[1].kind === 'missed-slot'
+    })())
+  check('三面板·日志关键字过滤（message LIKE）',
+    (() => {
+      const p = store.listLogsByQuery({ taskId: 'panel-a', keyword: '附件' })
+      return p.rows.length === 1 && p.rows[0].kind === 'missed-slot'
+    })())
+  check('三面板·日志级别过滤（只 error）',
+    store.listLogsByQuery({ taskId: 'panel-a', levels: ['error'] }).rows.length === 1)
+  check('三面板·事件时间线按实例精确取且 seq 升序',
+    (() => {
+      const ev1 = store.listEventsByInstance(idA1)
+      const ev2 = store.listEventsByInstance(idA2)
+      return ev1.length === 2 && ev1[0].seq < ev1[1].seq && ev2.length === 1
+    })())
+  check('三面板·产物证据：路由 / 查询方法 / 客户端通道与文案键都在发布物里',
+    readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8').includes('/tasks/instances')
+    && readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8').includes('/tasks/log')
+    && readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8').includes('/tasks/events')
+    && readFileSync(join(process.cwd(), 'dist', 'store.js'), 'utf8').includes('listInstancesByQuery')
+    && readFileSync(join(process.cwd(), 'dist', 'store.js'), 'utf8').includes('listLogsByQuery')
+    && readFileSync(join(process.cwd(), 'dist', 'store.js'), 'utf8').includes('listEventsByInstance')
+    && (() => {
+      const client = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+      return client.includes('fetchInstances') && client.includes('fetchLogs') && client.includes('fetchEvents')
+        && client.includes('cardTabInfo') && client.includes('cardTabRecords') && client.includes('cardTabLogs')
+        && client.includes('cardDeleteDesc') && client.includes('cardRecordsEmpty') && client.includes('cardLogsEmpty')
+    })())
+
+  store.close()
+  rmSync(dir, { recursive: true, force: true })
+}
+
 console.log(`\n冒烟结果：${passed} 项通过，${failures.length} 项失败`)
 if (failures.length > 0) {
   for (const item of failures) console.log(`  - ${item}`)

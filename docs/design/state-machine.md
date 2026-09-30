@@ -102,7 +102,7 @@ Loop A 写行时把执行所需字段一并快照，Loop B 与回执 / 对账一
 
 **窗口只管「能不能开始」，不管「必须结束」。**
 
-- 过窗刻度**不再建行**：`now > scheduled_at + window` 的刻度一律不生成 `task_instances` 记录，只在 `task_log` 记 `missed_slot`（决策 31）——「错过」是诊断信息，不该占用任务记录表；
+- 过窗刻度**不再建行**：`now > scheduled_at + window` 的刻度一律不生成 `task_instances` 记录，只在 `task_log` 记 `missed-slot`（决策 31；2026-10-01 依源码更正拼写，文档旧写 `missed_slot`）——「错过」是诊断信息，不该占用任务记录表；
   - **例外 · 一次性任务的「过期未执行」**（2026-09-30 拍板 A 落地）：`schedule.once` 的那一刻 + `window` 都没等来执行（典型：被上游堵着 / 附件缺失，一直拖到出窗）⇒ **建一条**终态 `skipped`（`attempt=0`、事件 `expired-once`、error 日志，同一事务）。理由：它会**永远不再跑**，只写日志等于让它无声无息地消失（用户要求「该跑没跑就得看得见」）。门禁：**整个窗口都在本进程启动之前**的「停机期间错过」**不记**（服务没跑的那段时间不用管）；
   - 另一次例外见决策 54（任务级错误：附件找不到 / 工作区不存在 ⇒ 当场建一条 `skipped`）；
 - 已存在的 `pending` 过窗 → 走重试判定（§6），超窗即 `failed`；
@@ -127,7 +127,7 @@ Loop A 写行时把执行所需字段一并快照，Loop B 与回执 / 对账一
 | 层 | 机制 | 覆盖场景 |
 |---|---|---|
 | 到点派发 | **懒建行**：每 tick 只判「现在这一刻该不该跑」——取最晚满足 `scheduled_at <= now <= scheduled_at + window` 且 `(task_id, scheduled_at)` 无实例行的刻度；依赖 / 工作区 / 模型任一不过 ⇒ **不建行**、只记 `task_log`；过了 ⇒ 直接以 `dispatched` 落库并派发 | 正常派发（含分钟级 cron） |
-| 诊断 | `task_log` 表（独立、可清：`logRetentionDays` 默认 30 天）：错过刻度（`missed_slot` / `startup_missed`）、依赖卡顿（`dep_blocked`）、预条件失败（`precondition`）、残留 pending（`stray_pending`） | 排障，不进任务记录表 |
+| 诊断 | `task_log` 表（独立、可清：`logRetentionDays` 默认 30 天）：错过刻度（`missed-slot` / `startup_missed`）、依赖卡顿（`dep_blocked` / `dep_disabled` / `dep_missing`）、预条件失败（`precondition` / `attachment-missing`）、一次性过期（`expired-once`）、复用旧产出（`stale-upstream`）、残留 pending（`stray_pending`） | 排障，不进任务记录表 |
 | 手动 | 标准 SQL 重置 | 单实例补跑 |
 
 手动重置标准语句：

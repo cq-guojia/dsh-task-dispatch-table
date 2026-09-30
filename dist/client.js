@@ -561,6 +561,22 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "允许延迟",
 			listNone: "（无）",
 			listDisabledTag: "（已停用）",
+			cardTabInfo: "基础信息",
+			cardTabRecords: "执行记录",
+			cardTabLogs: "日志",
+			cardDelete: "删除",
+			cardDeleteTitle: "删除任务",
+			cardDeleteDesc: "确定要删除这个任务吗？任务定义、附加文件与历史版本都会被移除，不可恢复（执行记录保留备查）。",
+			cardCancel: "取消",
+			cardFrom: "从",
+			cardTo: "到",
+			cardKeyword: "关键字",
+			cardLogLimit: "条数",
+			cardRecordsEmpty: "（该任务还没有执行记录）",
+			cardLogsEmpty: "（该任务还没有日志）",
+			cardLoadFailed: "读取失败",
+			cardEventsEmpty: "（该次执行暂无事件）",
+			colTokens: "Token",
 			schedCustom: "{cron}",
 			settingsBasic: "基础信息",
 			settingsTitleFormat: "标题写法",
@@ -1070,6 +1086,22 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "Late window",
 			listNone: "(none)",
 			listDisabledTag: "(disabled)",
+			cardTabInfo: "Basic info",
+			cardTabRecords: "Run records",
+			cardTabLogs: "Logs",
+			cardDelete: "Delete",
+			cardDeleteTitle: "Delete task",
+			cardDeleteDesc: "Delete this task? Its definition, attachments and version history will be removed permanently (run records are kept for audit).",
+			cardCancel: "Cancel",
+			cardFrom: "From",
+			cardTo: "To",
+			cardKeyword: "Keyword",
+			cardLogLimit: "Rows",
+			cardRecordsEmpty: "(no run records for this task yet)",
+			cardLogsEmpty: "(no logs for this task yet)",
+			cardLoadFailed: "Failed to load",
+			cardEventsEmpty: "(no events for this run)",
+			colTokens: "Token",
 			schedCustom: "{cron}",
 			settingsBasic: "Basic info",
 			settingsTitleFormat: "Title format",
@@ -40205,6 +40237,52 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}) : null);
 		}
 		//#endregion
+		//#region src/client/query.ts
+		const PREFIX = "api/task-dispatch-table";
+		/** 查询参数 → query string（undefined / 空串跳过；数组逗号合并；cursor 走标准 URL 编码）。 */
+		function qsOf(params) {
+			const search = new URLSearchParams();
+			for (const [key, value] of Object.entries(params)) {
+				if (value === void 0 || value === "") continue;
+				if (Array.isArray(value)) {
+					if (value.length > 0) search.set(key, value.join(","));
+				} else search.set(key, String(value));
+			}
+			const text = search.toString();
+			return text === "" ? "" : `?${text}`;
+		}
+		/** 剥信封：`{ok:true,...}` 之外一律抛错（调用方显示错误态，不猜兜底值）。 */
+		async function unwrap(res, what) {
+			if (!res.ok) throw new Error(`${what}: HTTP ${res.status}`);
+			const body = await res.json();
+			if (body.ok !== true) throw new Error(`${what}: ok=false`);
+			return body;
+		}
+		/** 按任务 / 工作区检索执行记录（服务端 `store.listInstancesByQuery`，排序 scheduled_at DESC）。 */
+		async function fetchInstances(params) {
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({ ...params })}`), "执行记录读取失败");
+			if (!Array.isArray(body.rows)) throw new Error("执行记录读取失败：rows 形状不符");
+			return {
+				rows: body.rows,
+				nextCursor: typeof body.nextCursor === "string" ? body.nextCursor : null
+			};
+		}
+		/** 按任务 / 工作区检索诊断日志（服务端 `store.listLogsByQuery`，排序 ts DESC）。 */
+		async function fetchLogs(params) {
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({ ...params })}`), "日志读取失败");
+			if (!Array.isArray(body.rows)) throw new Error("日志读取失败：rows 形状不符");
+			return {
+				rows: body.rows,
+				nextCursor: typeof body.nextCursor === "string" ? body.nextCursor : null
+			};
+		}
+		/** 某次执行的事件时间线（服务端 `store.listEventsByInstance`，seq 升序 = 旧→新）。 */
+		async function fetchEvents(instanceId) {
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`), "事件读取失败");
+			if (!Array.isArray(body.events)) throw new Error("事件读取失败：events 形状不符");
+			return body.events;
+		}
+		//#endregion
 		//#region src/task-sort.ts
 		/** 分组：运行中 0 → 已启用 1 → 无刻度 2 → 已关闭 3。 */
 		const groupOf = (row) => {
@@ -40821,8 +40899,535 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontSize: "12px",
 			transition: transition$1
 		};
+		/** 内容区统一最大高度（用户 2026-10-01 拍板：切 tab 卡片不抖；基础信息短就撑不满，多了内部滚动）。 */
+		const PANEL_MAX_H = 360;
+		const panelWrapStyle = {
+			marginTop: "10px",
+			borderTop: `1px dashed ${C$1.border}`,
+			paddingTop: "10px"
+		};
+		const panelScrollStyle = {
+			maxHeight: `${PANEL_MAX_H}px`,
+			overflowY: "auto"
+		};
+		const panelBarStyle = {
+			marginTop: "10px",
+			paddingTop: "10px",
+			borderTop: `1px dashed ${C$1.border}`,
+			display: "flex",
+			alignItems: "center",
+			gap: "8px"
+		};
+		/** 三滑块轨道与选中态：与顶部筛选 tabs 同一套观感（灰底轨道 + 选中加重），颜色全走主题变量。 */
+		const segTrackStyle = {
+			display: "inline-flex",
+			gap: "2px",
+			padding: "2px",
+			borderRadius: "8px",
+			background: C$1.layer1,
+			border: `1px solid ${C$1.border}`
+		};
+		const segStyle = (active) => ({
+			appearance: "none",
+			border: "none",
+			cursor: "pointer",
+			fontFamily: "inherit",
+			fontSize: "12px",
+			lineHeight: "18px",
+			padding: "2px 10px",
+			borderRadius: "6px",
+			transition: transition$1,
+			background: active ? C$1.layer3 : "transparent",
+			color: active ? C$1.text : C$1.textDim,
+			fontWeight: active ? 600 : 400
+		});
+		const filterSelectStyle = {
+			height: `${CONTROL_H}px`,
+			borderRadius: "6px",
+			border: `1px solid ${C$1.border}`,
+			background: C$1.layer1,
+			color: C$1.text,
+			fontFamily: "inherit",
+			fontSize: "12px",
+			padding: "0 6px"
+		};
+		const filterInputStyle = {
+			height: `${CONTROL_H}px`,
+			borderRadius: "6px",
+			border: `1px solid ${C$1.border}`,
+			background: "transparent",
+			color: C$1.text,
+			fontFamily: "inherit",
+			fontSize: "12px",
+			padding: "0 8px",
+			boxSizing: "border-box"
+		};
+		const miniTableStyle = {
+			width: "100%",
+			borderCollapse: "collapse",
+			fontSize: "12px"
+		};
+		const miniCellStyle = {
+			padding: "4px 8px",
+			borderBottom: `1px solid ${C$1.border}`,
+			textAlign: "left",
+			color: C$1.text,
+			whiteSpace: "nowrap",
+			fontSize: "12px"
+		};
+		const miniCellWrapStyle = {
+			...miniCellStyle,
+			whiteSpace: "normal",
+			wordBreak: "break-word"
+		};
+		/** 日志 / 事件文本框：跟随宿主主题变量 + 等宽字体（用户 2026-10-01：颜色跟着环境风格走）。 */
+		const logBoxStyle = {
+			fontFamily: monoFont$1,
+			fontSize: "11px",
+			lineHeight: "18px",
+			background: C$1.layer1,
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "8px",
+			padding: "8px 10px",
+			wordBreak: "break-all"
+		};
+		const overlayStyle = {
+			position: "fixed",
+			inset: 0,
+			zIndex: 1070,
+			background: "rgba(0,0,0,0.45)",
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center"
+		};
+		const dialogStyle = {
+			width: "360px",
+			maxWidth: "calc(100vw - 48px)",
+			boxSizing: "border-box",
+			background: "var(--dsw-alias-bg-base, #fff)",
+			color: C$1.text,
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "12px",
+			padding: "18px",
+			boxShadow: "var(--dsw-shadow-lv3, 0 12px 32px rgba(0,0,0,0.4))"
+		};
+		const INSTANCE_STATUS_OPTIONS = [
+			"pending",
+			"dispatched",
+			"running",
+			"succeeded",
+			"failed",
+			"skipped",
+			"unknown"
+		];
+		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
+		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
+			seconds: true,
+			fallback: "—"
+		});
+		/** 日期输入（YYYY-MM-DD）→ 当天起点 / 终点 ISO（本机时区；空 / 非法 ⇒ undefined = 不过滤）。 */
+		const dayStartIso = (date) => {
+			if (date === "") return void 0;
+			const d = /* @__PURE__ */ new Date(`${date}T00:00:00`);
+			return Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+		};
+		const dayEndIso = (date) => {
+			if (date === "") return void 0;
+			const d = /* @__PURE__ */ new Date(`${date}T23:59:59.999`);
+			return Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+		};
+		/** 回执产出清单（决策 32③ 真值 JSON）→ 字符串数组；形状不符返回空（不猜）。 */
+		const outputsOf = (raw) => {
+			if (raw === null || raw === "") return [];
+			try {
+				const parsed = JSON.parse(raw);
+				return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+			} catch {
+				return [];
+			}
+		};
+		/** 产出路径 → 展示名（目录保留尾部 `/`）。 */
+		const outputNameOf = (output) => {
+			const isDir = output.endsWith("/");
+			const trimmed = isDir ? output.slice(0, -1) : output;
+			const idx = trimmed.lastIndexOf("/");
+			return (idx < 0 ? trimmed : trimmed.slice(idx + 1)) + (isDir ? "/" : "");
+		};
+		/** token 用量一格：in / out（三拆列，决策 32 修订；两列都空 = 未回执 ⇒ '—'）。 */
+		const tokensOf = (row) => row.token_in === null && row.token_out === null ? "—" : `${row.token_in ?? 0} / ${row.token_out ?? 0}`;
+		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
+		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
+			color: C$1.danger,
+			fontWeight: 600
+		} : void 0;
+		/**
+		* 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
+		* 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
+		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
+		*/
+		function TaskExpandPanel(props) {
+			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete } = props;
+			const [tab, setTab] = (0, react.useState)("info");
+			const [recStatus, setRecStatus] = (0, react.useState)("all");
+			const [recFrom, setRecFrom] = (0, react.useState)("");
+			const [recTo, setRecTo] = (0, react.useState)("");
+			const [records, setRecords] = (0, react.useState)(null);
+			const [recLoading, setRecLoading] = (0, react.useState)(false);
+			const [recError, setRecError] = (0, react.useState)(null);
+			const [openInstance, setOpenInstance] = (0, react.useState)(null);
+			const [events, setEvents] = (0, react.useState)(null);
+			const [eventsLoading, setEventsLoading] = (0, react.useState)(false);
+			const [eventsError, setEventsError] = (0, react.useState)(null);
+			const [logKeyword, setLogKeyword] = (0, react.useState)("");
+			const [logFrom, setLogFrom] = (0, react.useState)("");
+			const [logTo, setLogTo] = (0, react.useState)("");
+			const [logLimit, setLogLimit] = (0, react.useState)(100);
+			const [logs, setLogs] = (0, react.useState)(null);
+			const [logLoading, setLogLoading] = (0, react.useState)(false);
+			const [logError, setLogError] = (0, react.useState)(null);
+			const [confirmDelete, setConfirmDelete] = (0, react.useState)(false);
+			const [deleting, setDeleting] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				if (tab !== "records") return;
+				let alive = true;
+				setRecLoading(true);
+				setRecError(null);
+				fetchInstances({
+					taskId: row.id,
+					statuses: recStatus === "all" ? void 0 : [recStatus],
+					from: dayStartIso(recFrom),
+					to: dayEndIso(recTo),
+					limit: 100
+				}).then(({ rows }) => {
+					if (!alive) return;
+					setRecords(rows);
+					setOpenInstance(null);
+					setEvents(null);
+				}).catch((error) => {
+					if (alive) setRecError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setRecLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				recStatus,
+				recFrom,
+				recTo
+			]);
+			(0, react.useEffect)(() => {
+				if (openInstance === null) return;
+				let alive = true;
+				setEventsLoading(true);
+				setEventsError(null);
+				setEvents(null);
+				fetchEvents(openInstance).then((rows) => {
+					if (alive) setEvents(rows);
+				}).catch((error) => {
+					if (alive) setEventsError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setEventsLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [openInstance]);
+			(0, react.useEffect)(() => {
+				if (tab !== "logs") return;
+				let alive = true;
+				setLogLoading(true);
+				setLogError(null);
+				fetchLogs({
+					taskId: row.id,
+					keyword: logKeyword.trim() === "" ? void 0 : logKeyword.trim(),
+					from: dayStartIso(logFrom),
+					to: dayEndIso(logTo),
+					limit: logLimit
+				}).then(({ rows }) => {
+					if (alive) setLogs(rows);
+				}).catch((error) => {
+					if (alive) setLogError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setLogLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				logKeyword,
+				logFrom,
+				logTo,
+				logLimit
+			]);
+			const renderInfo = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), InfoRow({
+				label: t("listFieldSchedule"),
+				value: scheduleLine
+			}), InfoRow({
+				label: t("listFieldWorkspace"),
+				value: row.workspace
+			}), InfoRow({
+				label: t("listFieldModel"),
+				value: modelText
+			}), InfoRow({
+				label: t("listFieldRetry"),
+				value: String(row.retryMax)
+			}), InfoRow({
+				label: t("listFieldWindow"),
+				value: row.schedule.window
+			}), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? `（${t("editorAttachmentLink")}）` : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
+				...sectionBodyStyle,
+				color: C$1.textDim,
+				whiteSpace: "pre-wrap",
+				wordBreak: "break-word"
+			} }, row.promptHead));
+			const renderRecords = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "6px",
+				flexWrap: "wrap",
+				marginBottom: "8px"
+			} }, (0, react.createElement)("select", {
+				value: recStatus,
+				style: filterSelectStyle,
+				"aria-label": t("colStatus"),
+				onChange: (event) => {
+					setRecStatus(event.target.value);
+				}
+			}, (0, react.createElement)("option", { value: "all" }, tt("filterAll")), INSTANCE_STATUS_OPTIONS.map((status) => (0, react.createElement)("option", {
+				key: status,
+				value: status
+			}, status))), (0, react.createElement)("label", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				fontSize: "11px",
+				color: C$1.textFaint
+			} }, t("cardFrom"), (0, react.createElement)("input", {
+				type: "date",
+				value: recFrom,
+				style: filterInputStyle,
+				onChange: (event) => {
+					setRecFrom(event.target.value);
+				}
+			})), (0, react.createElement)("label", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				fontSize: "11px",
+				color: C$1.textFaint
+			} }, t("cardTo"), (0, react.createElement)("input", {
+				type: "date",
+				value: recTo,
+				style: filterInputStyle,
+				onChange: (event) => {
+					setRecTo(event.target.value);
+				}
+			})), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
+				fontSize: "11px",
+				color: C$1.danger
+			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react.createElement)("p", { style: faintStyle }, t("expandHint")), records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("table", { style: miniTableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+				t("colSlot"),
+				t("colStatus"),
+				t("colAttempt"),
+				t("colSession"),
+				t("colOutputs"),
+				t("colTokens"),
+				t("colUpdated")
+			].map((name) => (0, react.createElement)("th", {
+				key: name,
+				style: miniCellStyle
+			}, name)))), (0, react.createElement)("tbody", null, records.flatMap((instance) => {
+				const open = openInstance === instance.id;
+				const outputs = outputsOf(instance.outputs);
+				return [(0, react.createElement)("tr", {
+					key: instance.id,
+					style: {
+						cursor: "pointer",
+						background: open ? C$1.layer2 : "transparent"
+					},
+					onClick: () => {
+						setOpenInstance(open ? null : instance.id);
+					}
+				}, (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.scheduled_at)), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { style: statusStyleOf(instance.status) }, instance.status)), (0, react.createElement)("td", { style: miniCellStyle }, String(instance.attempt)), (0, react.createElement)("td", { style: miniCellStyle }, instance.session_id === null ? "—" : instance.session_id.slice(0, 8)), (0, react.createElement)("td", { style: miniCellWrapStyle }, outputs.length === 0 ? "—" : (0, react.createElement)("span", { title: outputs.join("\n") }, outputs.map(outputNameOf).join("、"))), (0, react.createElement)("td", { style: miniCellStyle }, tokensOf(instance)), (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.updated_at))), open ? (0, react.createElement)("tr", { key: `${instance.id}-events` }, (0, react.createElement)("td", {
+					colSpan: 7,
+					style: miniCellWrapStyle
+				}, (0, react.createElement)("div", { style: {
+					display: "flex",
+					justifyContent: "space-between",
+					alignItems: "center",
+					marginBottom: "4px"
+				} }, (0, react.createElement)("span", { style: {
+					fontSize: "11px",
+					color: C$1.textFaint
+				} }, t("eventsOf")), eventsLoading ? (0, react.createElement)("span", { style: {
+					fontSize: "11px",
+					color: C$1.textFaint
+				} }, t("loading")) : null), eventsError !== null ? (0, react.createElement)("div", { style: {
+					fontSize: "11px",
+					color: C$1.danger
+				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react.createElement)("div", { style: {
+					fontSize: "11px",
+					color: C$1.textFaint
+				} }, t("cardEventsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: C$1.brand } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? "")))))) : null];
+			}))));
+			const renderLogs = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "6px",
+				flexWrap: "wrap",
+				marginBottom: "8px"
+			} }, (0, react.createElement)("input", {
+				type: "text",
+				value: logKeyword,
+				placeholder: t("cardKeyword"),
+				style: {
+					...filterInputStyle,
+					width: "140px"
+				},
+				onChange: (event) => {
+					setLogKeyword(event.target.value);
+				}
+			}), (0, react.createElement)("label", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				fontSize: "11px",
+				color: C$1.textFaint
+			} }, t("cardFrom"), (0, react.createElement)("input", {
+				type: "date",
+				value: logFrom,
+				style: filterInputStyle,
+				onChange: (event) => {
+					setLogFrom(event.target.value);
+				}
+			})), (0, react.createElement)("label", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				fontSize: "11px",
+				color: C$1.textFaint
+			} }, t("cardTo"), (0, react.createElement)("input", {
+				type: "date",
+				value: logTo,
+				style: filterInputStyle,
+				onChange: (event) => {
+					setLogTo(event.target.value);
+				}
+			})), (0, react.createElement)("label", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				fontSize: "11px",
+				color: C$1.textFaint
+			} }, t("cardLogLimit"), (0, react.createElement)("select", {
+				value: String(logLimit),
+				style: filterSelectStyle,
+				onChange: (event) => {
+					setLogLimit(Number(event.target.value));
+				}
+			}, [
+				50,
+				100,
+				200
+			].map((n) => (0, react.createElement)("option", {
+				key: n,
+				value: String(n)
+			}, String(n))))), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
+				fontSize: "11px",
+				color: C$1.danger
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
+				color: row.level === "error" ? C$1.danger : row.level === "warn" ? C$1.brand : C$1.textFaint,
+				fontWeight: row.level === "error" ? 600 : 400
+			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: C$1.brand } }, `${row.kind}: `), (0, react.createElement)("span", null, row.message)))));
+			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
+			const renderConfirm = () => (0, react.createElement)("div", {
+				style: overlayStyle,
+				onClick: () => {
+					if (!deleting) setConfirmDelete(false);
+				}
+			}, (0, react.createElement)("div", {
+				style: dialogStyle,
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("div", { style: {
+				fontSize: "14px",
+				fontWeight: 600,
+				marginBottom: "8px"
+			} }, t("cardDeleteTitle")), (0, react.createElement)("div", { style: {
+				fontSize: "12px",
+				color: C$1.textDim,
+				lineHeight: "18px",
+				marginBottom: "14px"
+			} }, t("cardDeleteDesc")), (0, react.createElement)("div", { style: {
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: "8px"
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				disabled: deleting,
+				style: iconBtnStyle,
+				onClick: () => {
+					setConfirmDelete(false);
+				}
+			}, t("cardCancel")), (0, react.createElement)("button", {
+				type: "button",
+				disabled: deleting,
+				style: {
+					...iconBtnStyle,
+					color: "#fff",
+					background: C$1.danger,
+					borderColor: C$1.danger,
+					opacity: deleting ? .6 : 1
+				},
+				onClick: () => {
+					setDeleting(true);
+					onDelete(row.id).finally(() => {
+						setDeleting(false);
+						setConfirmDelete(false);
+					});
+				}
+			}, deleting ? t("loading") : t("cardDelete")))));
+			return (0, react.createElement)("div", { style: panelWrapStyle }, (0, react.createElement)("div", { style: panelScrollStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs()), (0, react.createElement)("div", { style: panelBarStyle }, (0, react.createElement)("div", { style: segTrackStyle }, [
+				"info",
+				"records",
+				"logs"
+			].map((key) => (0, react.createElement)("button", {
+				key,
+				type: "button",
+				style: segStyle(tab === key),
+				"aria-pressed": tab === key,
+				onClick: () => {
+					setTab(key);
+				}
+			}, t(key === "info" ? "cardTabInfo" : key === "records" ? "cardTabRecords" : "cardTabLogs")))), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...iconBtnStyle,
+					padding: "0 10px"
+				},
+				onClick: () => {
+					onEdit(row.id);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit")), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...iconBtnStyle,
+					padding: "0 10px",
+					color: C$1.danger
+				},
+				onClick: () => {
+					setConfirmDelete(true);
+				}
+			}, t("cardDelete"))), confirmDelete ? renderConfirm() : null);
+		}
 		function TaskCard(props) {
-			const { row, t, tt, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props;
+			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onToggleEnabled, refOf } = props;
 			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react.createElement)("div", {
@@ -40885,49 +41490,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				"aria-label": t("listExpandHint"),
 				onClick: onToggleOpen,
 				"aria-expanded": open
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })))), open ? (0, react.createElement)("div", { style: {
-				marginTop: "10px",
-				borderTop: `1px dashed ${C$1.border}`,
-				paddingTop: "10px"
-			} }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), InfoRow({
-				label: t("listFieldSchedule"),
-				value: scheduleLine
-			}), InfoRow({
-				label: t("listFieldWorkspace"),
-				value: row.workspace
-			}), InfoRow({
-				label: t("listFieldModel"),
-				value: modelText
-			}), InfoRow({
-				label: t("listFieldRetry"),
-				value: String(row.retryMax)
-			}), InfoRow({
-				label: t("listFieldWindow"),
-				value: row.schedule.window
-			}), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? `（${t("editorAttachmentLink")}）` : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
-				...sectionBodyStyle,
-				color: C$1.textDim,
-				whiteSpace: "pre-wrap",
-				wordBreak: "break-word"
-			} }, row.promptHead), (0, react.createElement)("div", { style: {
-				marginTop: "12px",
-				paddingTop: "10px",
-				borderTop: `1px dashed ${C$1.border}`,
-				display: "flex",
-				justifyContent: "flex-end"
-			} }, (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...iconBtnStyle,
-					padding: "0 10px"
-				},
-				onClick: () => {
-					onEdit(row.id);
-				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit")))) : null);
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })))), open ? (0, react.createElement)(TaskExpandPanel, {
+				row,
+				t,
+				tt,
+				scheduleLine,
+				modelText,
+				onEdit,
+				onDelete
+			}) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onToggleEnabled } = props;
+			const { t, rows, ready, onEdit, onDelete, onToggleEnabled } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
@@ -41108,6 +41682,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setOpenId((cur) => cur === row.id ? null : row.id);
 				},
 				onEdit,
+				onDelete,
 				onToggleEnabled: (id, enabled) => {
 					setOptimistic((cur) => ({
 						...cur,
@@ -41919,6 +42494,32 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					return error instanceof Error ? error.message : String(error);
 				}
 			};
+			/**
+			* 删除任务（决策 55，卡片右下角快捷删除）：DELETE /tasks { id }。
+			* 服务端语义：摘定义 + 整删任务目录（附件 / 版本 / 快照），实例 / 事件保留做审计；
+			* 成功后 overview.refresh() 让列表立刻少一行。失败走 viewErr 条（操作类失败留时间读）。
+			*/
+			const deleteTask = async (id) => {
+				try {
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
+						method: "DELETE",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ id })
+					});
+					const body = await res.json();
+					if (body.ok !== true) {
+						const message = humanizeTaskError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`);
+						setViewErr(message);
+						return message;
+					}
+					overview.refresh();
+					return null;
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					setViewErr(message);
+					return message;
+				}
+			};
 			/** 保存（新增 / 修改同一条链路）：POST /tasks { task }。 */
 			const saveEditor = async (draft) => {
 				if (editor === null) return;
@@ -42228,6 +42829,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				rows: overview.rows,
 				ready: overview.ready,
 				onEdit: openEditor,
+				onDelete: deleteTask,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,
