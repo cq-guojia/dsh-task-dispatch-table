@@ -40650,8 +40650,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					const diff = Date.parse(row.nextSlotAt) - nowMs;
 					if (diff <= 0) {
 						if (-diff <= dueLoadingMs()) return (0, react.createElement)(RunningBlocks, {});
+						const reason = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
 						return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-							label: tt("listDeferredTitle"),
+							label: reason,
 							side: "bottom"
 						}, (0, react.createElement)("span", { style: { cursor: "default" } }, tt("listDeferred")));
 					}

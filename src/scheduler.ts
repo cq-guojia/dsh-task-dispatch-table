@@ -348,6 +348,11 @@ function dispatchNewSlots(
     const depVerdict = judgeDependencies(store, task, slot.logicalDate, slot.scheduledAtIso, upstreams)
     if (!depVerdict.ready) {
       logBlocked(verdictLog, store, task.id, slot.scheduledAtIso, depVerdict.reason)
+      // 顺手把「被什么挡住」透给运行态（决策 54 · P3b：延期悬浮说明要能说出**具体原因**）。
+      // 只加展示数据、**不改调度语义**；放行时（下面 verdictLog.delete 处）清空。
+      runtime?.markBlocked(task.id, depVerdict.reason === undefined
+        ? '被前置任务挡住'
+        : (BLOCK_KIND[depVerdict.reason]?.message ?? '被前置任务挡住'))
       continue
     }
     // 复用旧产出：只告警，不拦（决策 33 已知风险）
@@ -376,10 +381,13 @@ function dispatchNewSlots(
           message: `附加文件不存在，本次不执行：${missing.join('、')}（请重新上传或移除该附件）`,
         })
       }
+      // 透出原因（决策 54 · P3b）：附件找不到属**任务级错误**，用户必须知道是哪一个文件。
+      runtime?.markBlocked(task.id, `附加文件不存在：${missing.join('、')}`)
       continue
     }
-    // 全部预条件通过 ⇒ 清掉阻塞 / 缺附件签名，下次再卡住能重新记一条。
+    // 全部预条件通过 ⇒ 清掉阻塞 / 缺附件签名，下次再卡住能重新记一条；顺带清掉展示用的阻塞原因。
     verdictLog.delete(task.id)
+    runtime?.markBlocked(task.id, null)
     // 懒建行（同步）：直接 dispatched + 派发快照，杜绝提前 pending / 未来预建。
     // 决策 41：**落库即止**——发动执行是 Loop B（reconciler.sweep）的事，本循环到此为止。
     const id = randomUUID()

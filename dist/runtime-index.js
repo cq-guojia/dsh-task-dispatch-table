@@ -125,6 +125,19 @@ export function createRuntimeIndex() {
             entry.runningSince = null;
             rev++;
         },
+        /**
+         * 记录 / 清除「这一槽被什么挡住」（决策 54 · P3b）：Loop A 判阻塞时写人话原因，放行时传 `null` 清。
+         * **边沿触发** rev：值真变了才 bump（否则每 tick 都整份重发，`unchanged` 优化报废）。
+         * 值变化随下一份完整 overview 送达客户端（`unchanged` 响应不带行）。
+         */
+        markBlocked(taskId, reason) {
+            const entry = entryOf(taskId);
+            const next = reason === null || reason === '' ? null : reason;
+            if ((entry.blockedReason ?? null) === next)
+                return;
+            entry.blockedReason = next;
+            rev++;
+        },
         markDefinitionsChanged(tasks) {
             const nowMs = Date.now();
             for (const task of tasks) {
@@ -236,6 +249,8 @@ export function createRuntimeIndex() {
                     lastScheduledAt: entry.lastScheduledAt,
                     lastFinishedAt: entry.lastFinishedAt,
                     nextSlotAt: entry.nextSlotAt,
+                    // 「被什么挡住」（决策 54 · P3b）：客户端只在「延期」悬浮说明里用它补全原因。
+                    blockedReason: entry.blockedReason ?? null,
                 });
             }
             // 已删任务的残留条目：任务表里没了就别再占着内存。

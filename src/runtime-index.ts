@@ -23,6 +23,11 @@ export interface TaskRuntimeEntry {
   lastScheduledAt: string | null
   lastFinishedAt: string | null
   nextSlotAt: string | null
+  /**
+   * 「这一槽被什么挡住了」的人话原因（决策 54，P3b）：由 Loop A 判定阻塞时顺手写入
+   * （`markBlocked`），只为展示；放行时清空。不进 `overviewKeyOf`（运行态，靠显式 rev 边沿）。
+   */
+  blockedReason?: string | null
   /** 展示指纹（`overviewKeyOf`）：变了 ⇒ rev 自增 ⇒ 客户端必拿到新数据。 */
   overviewKey?: string
   /** 排期指纹（`scheduleKeyOf`）：变了才重算 nextSlotAt。 */
@@ -64,6 +69,8 @@ export interface TaskOverviewRow {
   lastScheduledAt: string | null
   lastFinishedAt: string | null
   nextSlotAt: string | null
+  /** 「这一槽被什么挡住了」的人话原因（决策 54 · P3b）：客户端在「延期」悬浮说明里补全。 */
+  blockedReason?: string | null
 }
 
 export interface RuntimeIndex {
@@ -73,6 +80,8 @@ export interface RuntimeIndex {
   markDispatched(taskId: string, scheduledAt: string): void
   /** Loop B 实例进终态（reconcile.ts）。 */
   markTerminal(taskId: string, status: InstanceStatus, scheduledAt: string, finishedAt: string): void
+  /** 记录 / 清除「这一槽被什么挡住」（决策 54 · P3b：延期悬浮说明用；只展示，不参与调度）。 */
+  markBlocked(taskId: string, reason: string | null): void
   /** 实例行被删（窗口外 pending / 附件缺失）⇒ 该任务不再算在飞。 */
   clearRunning(taskId: string): void
   /**
@@ -219,6 +228,19 @@ export function createRuntimeIndex(): RuntimeIndex {
       rev++
     },
 
+    /**
+     * 记录 / 清除「这一槽被什么挡住」（决策 54 · P3b）：Loop A 判阻塞时写人话原因，放行时传 `null` 清。
+     * **边沿触发** rev：值真变了才 bump（否则每 tick 都整份重发，`unchanged` 优化报废）。
+     * 值变化随下一份完整 overview 送达客户端（`unchanged` 响应不带行）。
+     */
+    markBlocked(taskId, reason) {
+      const entry = entryOf(taskId)
+      const next = reason === null || reason === '' ? null : reason
+      if ((entry.blockedReason ?? null) === next) return
+      entry.blockedReason = next
+      rev++
+    },
+
 
     markDefinitionsChanged(tasks) {
       const nowMs = Date.now()
@@ -326,6 +348,8 @@ export function createRuntimeIndex(): RuntimeIndex {
           lastScheduledAt: entry.lastScheduledAt,
           lastFinishedAt: entry.lastFinishedAt,
           nextSlotAt: entry.nextSlotAt,
+          // 「被什么挡住」（决策 54 · P3b）：客户端只在「延期」悬浮说明里用它补全原因。
+          blockedReason: entry.blockedReason ?? null,
         })
       }
       // 已删任务的残留条目：任务表里没了就别再占着内存。

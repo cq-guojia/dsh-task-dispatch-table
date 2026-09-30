@@ -54,6 +54,8 @@ export interface TaskOverviewRow {
   lastScheduledAt: string | null
   lastFinishedAt: string | null
   nextSlotAt: string | null
+  /** 「这一槽被什么挡住了」的人话原因（决策 54 · P3b）：只在延期时用来补全悬浮说明。 */
+  blockedReason?: string | null
 }
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
@@ -618,8 +620,11 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
             // 悬浮说明（用户要求「鼠标移上去能看到说明」）。这里用官方 Tooltip + **真 DOM 子元素**
             // （裸函数组件挂不上 ref ⇒ 提示静默失效，2026-09-30 那次真机教训）。
             // ⚠️ 本组件每秒自刷（ticker）⇒ 每秒重建同类型同位置的元素：React 就地复用、不重挂 ⇒ 不打断悬停。
-            // 「具体原因」（上游没跑完 / 附件缺失 …）由服务端透出后接在这句后面（P3b 后半段）。
-            return h(Tooltip, { label: tt('listDeferredTitle'), side: 'bottom' },
+            // 「具体原因」（上游没完成 / 附件找不到 / 上一轮还在跑）由服务端随行下发 ⇒ 放在通用说明前面。
+            const reason = typeof row.blockedReason === 'string' && row.blockedReason !== ''
+              ? `${row.blockedReason}｜${tt('listDeferredTitle')}`
+              : tt('listDeferredTitle')
+            return h(Tooltip, { label: reason, side: 'bottom' },
               h('span', { style: { cursor: 'default' } }, tt('listDeferred')))
           }
           return diff < 24 * 3600_000

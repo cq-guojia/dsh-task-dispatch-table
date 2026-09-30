@@ -10,6 +10,11 @@ export interface TaskRuntimeEntry {
     lastScheduledAt: string | null;
     lastFinishedAt: string | null;
     nextSlotAt: string | null;
+    /**
+     * 「这一槽被什么挡住了」的人话原因（决策 54，P3b）：由 Loop A 判定阻塞时顺手写入
+     * （`markBlocked`），只为展示；放行时清空。不进 `overviewKeyOf`（运行态，靠显式 rev 边沿）。
+     */
+    blockedReason?: string | null;
     /** 展示指纹（`overviewKeyOf`）：变了 ⇒ rev 自增 ⇒ 客户端必拿到新数据。 */
     overviewKey?: string;
     /** 排期指纹（`scheduleKeyOf`）：变了才重算 nextSlotAt。 */
@@ -57,6 +62,8 @@ export interface TaskOverviewRow {
     lastScheduledAt: string | null;
     lastFinishedAt: string | null;
     nextSlotAt: string | null;
+    /** 「这一槽被什么挡住了」的人话原因（决策 54 · P3b）：客户端在「延期」悬浮说明里补全。 */
+    blockedReason?: string | null;
 }
 export interface RuntimeIndex {
     /** 启动 / 定义整批变更后重建（一条聚合 SQL + 逐任务算下一刻度）；`nowMs` 供确定性测试。 */
@@ -65,6 +72,8 @@ export interface RuntimeIndex {
     markDispatched(taskId: string, scheduledAt: string): void;
     /** Loop B 实例进终态（reconcile.ts）。 */
     markTerminal(taskId: string, status: InstanceStatus, scheduledAt: string, finishedAt: string): void;
+    /** 记录 / 清除「这一槽被什么挡住」（决策 54 · P3b：延期悬浮说明用；只展示，不参与调度）。 */
+    markBlocked(taskId: string, reason: string | null): void;
     /** 实例行被删（窗口外 pending / 附件缺失）⇒ 该任务不再算在飞。 */
     clearRunning(taskId: string): void;
     /**
