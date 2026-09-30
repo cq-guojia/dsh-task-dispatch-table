@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="定时任务调度器">
+  <title>定时任务调度器</title>
+  <!-- 左方括号 -->
+  <path d="M19 16 H9 V112 H19" fill="none" stroke="#4D6BFE" stroke-opacity="0.4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 右方括号 -->
+  <path d="M109 16 H119 V112 H109" fill="none" stroke="#4D6BFE" stroke-opacity="0.4" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- S：3 列 x 5 行，16x16 方块，标准 S 形（顶横/左上/中横/右下/底横） -->
+  <g fill="#E03E3E">
+    <!-- 顶横 -->
+    <rect x="36" y="16" width="16" height="16"/>
+    <rect x="56" y="16" width="16" height="16"/>
+    <rect x="76" y="16" width="16" height="16"/>
+    <!-- 左上竖 -->
+    <rect x="36" y="36" width="16" height="16"/>
+    <!-- 中横 -->
+    <rect x="36" y="56" width="16" height="16"/>
+    <rect x="56" y="56" width="16" height="16"/>
+    <rect x="76" y="56" width="16" height="16"/>
+    <!-- 右下竖 -->
+    <rect x="76" y="76" width="16" height="16"/>
+    <!-- 底横 -->
+    <rect x="36" y="96" width="16" height="16"/>
+    <rect x="56" y="96" width="16" height="16"/>
+    <rect x="76" y="96" width="16" height="16"/>
+  </g>
+</svg>

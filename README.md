@@ -1,4 +1,4 @@
-# dsh-task-dispatch-table
+# dsh-task-dispatch-table · 定时任务调度器
 
 一个 **dsh（DeepSeek Harness）host 层插件**：用**一张任务定义表**驱动周期性任务，按时间窗与依赖关系把每个任务派发成一个**独立的 dsh 会话**去执行。
 

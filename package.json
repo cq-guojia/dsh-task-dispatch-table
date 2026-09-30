@@ -1,7 +1,7 @@
 {
   "name": "dsh-task-dispatch-table",
   "version": "0.0.1",
-  "description": "一个 dsh host 层插件：用一张任务定义表驱动周期性任务，按时间窗与依赖把任务派发成独立会话执行（调度层零大模型介入）",
+  "description": "定时任务调度器：一个 dsh host 层插件，用一张任务定义表驱动周期性任务，按时间窗与依赖把任务派发成独立会话执行（调度层零大模型介入）",
   "keywords": [
     "deepseek",
     "harness",
@@ -25,6 +25,7 @@
   "files": [
     "dist",
     "cordis.patch.yml",
+    "assets",
     "README.md",
     "LICENSE"
   ],
