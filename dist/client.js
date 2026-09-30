@@ -40259,17 +40259,27 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const busySinceRef = (0, react.useRef)(0);
 			/** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
 			const pendingRef = (0, react.useRef)(false);
+			/**
+			* 轮次令牌（2026-09-30 评审 P1）：看门狗会**强制放行**并把新一轮发出去，而**旧那轮仍在飞**；
+			* 旧轮稍后 settle 时的 `finally` 若不加判别，就会把**新一轮**的 busy 位清掉 ⇒ 第三轮趁虚而入、
+			* 后台被节流时请求层层叠加。所有「收口动作」（清 busy / 补跑）只在**令牌仍是自己的**时候做。
+			*/
+			const genRef = (0, react.useRef)(0);
 			const [tick, setTick] = (0, react.useState)(0);
 			(0, react.useEffect)(() => {
 				let alive = true;
+				/** 本 effect 内**在飞**的请求（换轮 / 卸载时统一 abort，不留悬空连接）。 */
+				const inflight = /* @__PURE__ */ new Set();
 				const poll = async () => {
 					if (busyRef.current) {
 						if (busySinceRef.current !== 0 && Date.now() - busySinceRef.current < 3 * POLL_MS) return;
 						busyRef.current = false;
 					}
+					const myGen = ++genRef.current;
 					busyRef.current = true;
 					busySinceRef.current = Date.now();
 					const controller = new AbortController();
+					inflight.add(controller);
 					const abortTimer = window.setTimeout(() => controller.abort(), 8e3);
 					try {
 						const query = revRef.current === "" ? "" : `?rev=${encodeURIComponent(revRef.current)}`;
@@ -40288,11 +40298,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						setReady(true);
 					} catch {} finally {
 						window.clearTimeout(abortTimer);
-						busyRef.current = false;
-						busySinceRef.current = 0;
-						if (pendingRef.current) {
-							pendingRef.current = false;
-							setTick((v) => v + 1);
+						inflight.delete(controller);
+						if (genRef.current === myGen) {
+							busyRef.current = false;
+							busySinceRef.current = 0;
+							if (pendingRef.current) {
+								pendingRef.current = false;
+								if (alive) setTick((v) => v + 1);
+							}
 						}
 					}
 				};
@@ -40303,6 +40316,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return () => {
 					alive = false;
 					window.clearInterval(timer);
+					for (const c of inflight) c.abort();
+					inflight.clear();
+					busyRef.current = false;
+					busySinceRef.current = 0;
 				};
 			}, [tick]);
 			return {
@@ -40556,8 +40573,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function PastPill(props) {
 			const { row, t, tt } = props;
 			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
-			const colored = has && (row.lastStatus === "succeeded" || row.lastStatus === "failed");
-			const bg = !has ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : row.lastStatus === "failed" ? C$1.danger : C$1.layer3;
+			const colored = has && row.lastStatus !== null && row.lastStatus !== "unknown";
+			const bg = !has || row.lastStatus === "unknown" ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
 			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
@@ -40594,7 +40611,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				...pillTimeCell,
 				color: C$1.success
 			} }, (0, react.createElement)(RunningBlocks, {}))));
-			const title = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			const title = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
@@ -40604,12 +40621,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (row.nextSlotAt === null) return NO_TIME;
 					const diff = Date.parse(row.nextSlotAt) - nowMs;
 					if (diff <= 0) {
-						if (-diff <= dueLoadingMs()) return (0, react.createElement)(RunningBlocks, {});
-						const reason = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
-						return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-							label: reason,
-							side: "bottom"
-						}, (0, react.createElement)("span", { style: { cursor: "default" } }, tt("listDeferred")));
+						if (-diff <= dueLoadingMs()) return (0, react.createElement)("span", { style: {
+							display: "inline-flex",
+							alignItems: "center",
+							color: C$1.success
+						} }, (0, react.createElement)(RunningBlocks, {}));
+						return (0, react.createElement)("span", { style: {
+							cursor: "default",
+							opacity: .85
+						} }, tt("listDeferred"));
 					}
 					return diff < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);
 				}

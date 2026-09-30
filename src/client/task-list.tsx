@@ -172,10 +172,18 @@ export function useTaskOverview(): {
   const busySinceRef = useRef(0)
   /** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
   const pendingRef = useRef(false)
+  /**
+   * 轮次令牌（2026-09-30 评审 P1）：看门狗会**强制放行**并把新一轮发出去，而**旧那轮仍在飞**；
+   * 旧轮稍后 settle 时的 `finally` 若不加判别，就会把**新一轮**的 busy 位清掉 ⇒ 第三轮趁虚而入、
+   * 后台被节流时请求层层叠加。所有「收口动作」（清 busy / 补跑）只在**令牌仍是自己的**时候做。
+   */
+  const genRef = useRef(0)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
     let alive = true
+    /** 本 effect 内**在飞**的请求（换轮 / 卸载时统一 abort，不留悬空连接）。 */
+    const inflight = new Set<AbortController>()
     const poll = async (): Promise<void> => {
       // 看门狗（决策 54）：abort 定时器本身也可能被后台节流 ⇒ 超过 3×轮询仍未收口就**强制放行**，
       // 否则一次挂起会把这条通道永久堵死（真机「卡片 5 分钟不动、倒计时照跳」的根因）。
@@ -183,11 +191,13 @@ export function useTaskOverview(): {
         if (busySinceRef.current !== 0 && Date.now() - busySinceRef.current < 3 * POLL_MS) return
         busyRef.current = false
       }
+      const myGen = ++genRef.current
       busyRef.current = true
       busySinceRef.current = Date.now()
       // 超时兜底（决策 54）：此前**没有 signal** ⇒ 请求永不 settle 时 busyRef 永远 true、
       // 后续轮询全早退、到期清理再也不跑。8s < 10s 轮询间隔，避免一轮拖过下一轮把间隔拉成 2 倍。
       const controller = new AbortController()
+      inflight.add(controller)
       const abortTimer = window.setTimeout(() => controller.abort(), 8_000)
       try {
         const query = revRef.current === '' ? '' : `?rev=${encodeURIComponent(revRef.current)}`
@@ -209,17 +219,29 @@ export function useTaskOverview(): {
         setReady(true)
       } catch { /* 通道短暂不可用 / 超时已 abort：保持上一次的数据，下轮再取 */ } finally {
         window.clearTimeout(abortTimer)
-        busyRef.current = false
-        busySinceRef.current = 0
-        if (pendingRef.current) {
-          pendingRef.current = false
-          setTick(v => v + 1) // 补跑被在途那轮吞掉的刷新请求
+        inflight.delete(controller)
+        // ⚠️ 只有**最新那一轮**才有资格收口（看门狗放行过 ⇒ 旧轮令牌已过期）。
+        if (genRef.current === myGen) {
+          busyRef.current = false
+          busySinceRef.current = 0
+          if (pendingRef.current) {
+            pendingRef.current = false
+            if (alive) setTick(v => v + 1) // 补跑被在途那轮吞掉的刷新请求（卸载后不再 setState）
+          }
         }
       }
     }
     void poll()
     const timer = window.setInterval(() => { void poll() }, POLL_MS)
-    return () => { alive = false; window.clearInterval(timer) }
+    return () => {
+      alive = false
+      window.clearInterval(timer)
+      for (const c of inflight) c.abort()
+      inflight.clear()
+      // 换轮 / 卸载：把 busy 位交还给**下一轮** —— 否则新一轮会因「上一轮还在飞」而空转到看门狗超时（30s）。
+      busyRef.current = false
+      busySinceRef.current = 0
+    }
   }, [tick])
 
   /**
@@ -504,10 +526,14 @@ const pillTimeCell: Record<string, string | number> = {
 function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
   const has = row.lastStatus !== null && row.lastScheduledAt !== null
-  // 只有 `failed` 才染红；`skipped`（依赖停用跳过）/ `unknown`（重启收口）不是失败 ⇒ 中性灰
-  // （2026-09-30 专家团复核：此前非 succeeded 一律染红，与状态条把 skipped/unknown 当正常的口径打架）。
-  const colored = has && (row.lastStatus === 'succeeded' || row.lastStatus === 'failed')
-  const bg = !has ? C.layer3 : row.lastStatus === 'succeeded' ? C.success : row.lastStatus === 'failed' ? C.danger : C.layer3
+  // 2026-09-30 用户拍板：`skipped` = **未执行**（附件找不到 / 工作区不存在 / 被吃掉的槽补记）——
+  // 那是「这个任务坏了、且不会自己好」⇒ **必须显眼标红**。用户原话：不能让用户觉得天下太平、
+  // 也不能「有的错误去翻日志、有的在记录里」，看不出门道。
+  // `unknown`（重启收口）仍中性：它会被下一轮正常收掉。⇒ 只有 succeeded / unknown 不染红。
+  const colored = has && row.lastStatus !== null && row.lastStatus !== 'unknown'
+  const bg = !has || row.lastStatus === 'unknown'
+    ? C.layer3
+    : row.lastStatus === 'succeeded' ? C.success : C.danger
   const title = has ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') }) : t('listNever')
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
@@ -551,9 +577,17 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
       ),
     )
   }
-  const title = row.nextSlotAt === null
-    ? t('listNextNone')
-    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
+  // 被挡住时（上游没完成 / 附件找不到 / 上一轮还在跑…）把**具体原因**并进这**一个**悬浮提示，
+  // 放在通用说明前面（用户要求「鼠标移上去能看到说明」）。原因由服务端随行下发。
+  //
+  // ⚠️ 2026-09-30 评审 P1：延期徽标此前**又套了一层 Tooltip** ⇒ 悬停同时冒出**两个气泡**
+  // （外层通用说明 + 内层原因）。现在全组件**只有这一层** Tooltip（子元素为真 DOM 节点，
+  // 裸函数组件挂不上 ref ⇒ 提示会静默失效，2026-09-30 那次真机教训）。
+  const title = typeof row.blockedReason === 'string' && row.blockedReason !== ''
+    ? `${row.blockedReason}｜${tt('listDeferredTitle')}`
+    : (row.nextSlotAt === null
+        ? t('listNextNone')
+        : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) }))
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
       h('span', { style: pillIconCell(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
@@ -565,20 +599,15 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
           // 已到点（`diff <= 0`）⇒ **不再显示「即将执行」**，直接显三个方块的活动指示（用户 2026-09-30 拍板）。
           // 服务端闸门生效后「到点」= `nextSlotAt` 是过去时刻且该槽还没被处理（`!row.running`）。
           if (diff <= 0) {
-            // ① 上界内 ⇒ 三个方块（正在等派发，视觉上就是「在跑」）；
+            // ① 上界内 ⇒ 三个方块（正在等派发，视觉上就是「在跑」）——**与「运行中」同色**。
+            //    2026-09-30 评审 P1：此前这里继承正文色（黑），跟运行中的绿对不上，看着像两回事。
+            if (-diff <= dueLoadingMs()) {
+              return h('span', { style: { display: 'inline-flex', alignItems: 'center', color: C.success } }, h(RunningBlocks, {}))
+            }
             // ② 超上界仍未 `running` ⇒ **「延期」**：该槽已经过了但还没真正开始执行
             //    （上游没跑完 / 附件缺失 / 串行互斥）。**不能一直装成在跑**（决策 54 红线），
             //    也**不再显示「即将执行」**那句（用户 2026-09-30 点名去掉）。
-            if (-diff <= dueLoadingMs()) return h(RunningBlocks, {})
-            // 悬浮说明（用户要求「鼠标移上去能看到说明」）。这里用官方 Tooltip + **真 DOM 子元素**
-            // （裸函数组件挂不上 ref ⇒ 提示静默失效，2026-09-30 那次真机教训）。
-            // ⚠️ 本组件每秒自刷（ticker）⇒ 每秒重建同类型同位置的元素：React 就地复用、不重挂 ⇒ 不打断悬停。
-            // 「具体原因」（上游没完成 / 附件找不到 / 上一轮还在跑）由服务端随行下发 ⇒ 放在通用说明前面。
-            const reason = typeof row.blockedReason === 'string' && row.blockedReason !== ''
-              ? `${row.blockedReason}｜${tt('listDeferredTitle')}`
-              : tt('listDeferredTitle')
-            return h(Tooltip, { label: reason, side: 'bottom' },
-              h('span', { style: { cursor: 'default' } }, tt('listDeferred')))
+            return h('span', { style: { cursor: 'default', opacity: 0.85 } }, tt('listDeferred'))
           }
           return diff < 24 * 3600_000
             ? countdownText(row.nextSlotAt, nowMs, tt)
