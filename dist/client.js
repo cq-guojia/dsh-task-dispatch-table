@@ -123,6 +123,7 @@ window.__ModuleLoader__.load({
 			filterAll: "全部",
 			expandHint: "点击任意一行展开该次执行的事件时间线",
 			listExpandHint: "展开任务详情",
+			listDeferred: "延期",
 			eventsOf: "本次执行的事件",
 			eventsEmpty: "（该次执行暂无事件，或已超出最近 200 条的快照窗口）",
 			recordsHint: "一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。",
@@ -610,6 +611,7 @@ window.__ModuleLoader__.load({
 			filterAll: "All",
 			expandHint: "Click any row to expand the event timeline of that run",
 			listExpandHint: "Expand task details",
+			listDeferred: "Delayed",
 			eventsOf: "Events of this run",
 			eventsEmpty: "(no events for this run, or it falls outside the latest-200 snapshot window)",
 			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.",
@@ -40646,7 +40648,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					const diff = Date.parse(row.nextSlotAt) - nowMs;
 					if (diff <= 0) {
 						if (-diff <= dueLoadingMs()) return (0, react.createElement)(RunningBlocks, {});
-						return tt("relNow");
+						return tt("listDeferred");
 					}
 					return diff < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);
 				}

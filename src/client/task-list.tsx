@@ -610,10 +610,13 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
           // 已到点（`diff <= 0`）⇒ **不再显示「即将执行」**，直接显三个方块的活动指示（用户 2026-09-30 拍板）。
           // 服务端闸门生效后「到点」= `nextSlotAt` 是过去时刻且该槽还没被处理（`!row.running`）。
           if (diff <= 0) {
+            // ① 上界内 ⇒ 三个方块（正在等派发，视觉上就是「在跑」）；
+            // ② 超上界仍未 `running` ⇒ **「延期」**：该槽已经过了但还没真正开始执行
+            //    （上游没跑完 / 附件缺失 / 串行互斥）。**不能一直装成在跑**（决策 54 红线），
+            //    也**不再显示「即将执行」**那句（用户 2026-09-30 点名去掉）。
+            //    ⚠️ 具体原因（为什么没跑）由服务端透出后再挂到悬浮提示上（P3b 后半段）。
             if (-diff <= dueLoadingMs()) return h(RunningBlocks, {})
-            // 超上界仍没 `running` ⇒ 大概率被挡住（上游没跑完 / 附件缺失 / 串行互斥），
-            // **不能一直装成在跑** ⇒ 退回如实显示（P3b 会把它换成「延期」徽标 + 原因）。
-            return tt('relNow')
+            return tt('listDeferred')
           }
           return diff < 24 * 3600_000
             ? countdownText(row.nextSlotAt, nowMs, tt)

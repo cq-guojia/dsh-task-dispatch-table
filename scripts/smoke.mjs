@@ -645,6 +645,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 此前**只有「运行中」分支有断言** ⇒ 到点分支零覆盖（正是「改动被静默丢掉」那类教训要防的）。
   check('到点分支也显活动指示（走 pinMsFor 算加载上界，不再写死魔数）',
     clientJs.includes('dueLoadingMs') && clientJs.includes('pinMsFor(currentTickMs'))
+  // 决策 54 · P3b：超上界仍未派发 ⇒ 显「延期」（用户点名：卡片上不要再出现「即将执行」那句）。
+  // ⚠️ 不能断言「bundle 里没有 relNow」——该键仍被 `relativePast`/`relativeFuture` 合法复用
+  //（「刚刚」「N 分钟后」那几档）；这里只钉住新分支的文案键已进包。
+  check('超上界改显「延期」（listDeferred 进包）', clientJs.includes('listDeferred'))
   // 用户 2026-09-30：卡片展开箭头误用了执行记录页的 `expandHint`（悬停冒出「展开该次执行的事件时间线」，
   // 与卡片实际展开的「任务设置」对不上）⇒ 撤掉该 title，另立 listExpandHint 作无障碍名。
   check('卡片展开箭头不再复用执行记录页的展开提示（title 不再挂 expandHint）',
