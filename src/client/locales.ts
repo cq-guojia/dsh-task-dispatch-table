@@ -140,6 +140,18 @@ export type LocaleKey =
   | 'editorPermission' | 'editorPermissionHint' | 'editorPermDefault' | 'editorPermReadOnly' | 'editorPermWorkspace' | 'editorPermFull'
   | 'editorVersions' | 'editorUnavailable'
   | 'editorModeEdit' | 'editorModePreview'
+  // —— 主界面任务列表（2026-09-30：卡片式任务视图）——
+  | 'listFilterAll' | 'listFilterEnabled' | 'listFilterDisabled' | 'listFilterWorkspace'
+  | 'listFilterWorkspaceAll' | 'listSearchPlaceholder'
+  | 'listRunning' | 'listLastPrefix' | 'listNextPrefix' | 'listNextNone' | 'listNever'
+  | 'listCreatedPrefix' | 'listStatusOk' | 'listStatusFailed'
+  | 'relNow' | 'relMinutes' | 'relHours' | 'relDays' | 'relPast'
+  | 'listEmpty' | 'listEmptyFiltered'
+  | 'listSectionSchedule' | 'listSectionAttachments' | 'listSectionDepends' | 'listSectionPrompt'
+  | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
+  | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
+  | 'schedEveryMinute' | 'schedEveryNMinutes' | 'schedHourly' | 'schedDaily' | 'schedWeekly'
+  | 'schedMonthly' | 'schedOnce' | 'schedCustom'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -624,6 +636,48 @@ export const zh: Record<LocaleKey, string> = {
   editorPreview: '配置预览',
   editorPreviewHint: '查看本任务的配置原文件。',
   editorUnavailable: '暂不可用（待接数据面）',
+  // ── 主界面任务列表 ──
+  listFilterAll: '全部',
+  listFilterEnabled: '已开启',
+  listFilterDisabled: '已关闭',
+  listFilterWorkspace: '工作区',
+  listFilterWorkspaceAll: '全部工作区',
+  listSearchPlaceholder: '搜索任务名称或编号',
+  listRunning: '运行中',
+  listLastPrefix: '上次',
+  listNextPrefix: '下次',
+  listNextNone: '无后续执行',
+  listNever: '尚未执行',
+  listCreatedPrefix: '创建于',
+  listStatusOk: '成功',
+  listStatusFailed: '失败',
+  relNow: '即将执行',
+  relMinutes: '{n} 分钟后',
+  relHours: '{n} 小时后',
+  relDays: '{n} 天后',
+  relPast: '已过期',
+  listEmpty: '还没有任务。点右上角「＋ 新建任务」创建第一个。',
+  listEmptyFiltered: '没有符合当前筛选的任务。',
+  listSectionSchedule: '执行设置',
+  listSectionAttachments: '附加文件',
+  listSectionDepends: '前置任务',
+  listSectionPrompt: '提示词',
+  listFieldWorkspace: '工作区',
+  listFieldModel: '模型',
+  listFieldModelDefault: '默认模型',
+  listFieldRetry: '失败重试',
+  listFieldSchedule: '排期',
+  listFieldWindow: '允许延迟',
+  listNone: '（无）',
+  listDisabledTag: '（已停用）',
+  schedEveryMinute: '每分钟',
+  schedEveryNMinutes: '每 {n} 分钟',
+  schedHourly: '每小时 {minute} 分',
+  schedDaily: '每天 {time}',
+  schedWeekly: '每周{weekdays} {time}',
+  schedMonthly: '每月 {day} 日 {time}',
+  schedOnce: '{date} {time} 执行一次',
+  schedCustom: '{cron}',
 }
 
 /** English copy. */
@@ -1095,4 +1149,46 @@ export const en: Record<LocaleKey, string> = {
   editorPreview: 'Config preview',
   editorPreviewHint: 'View the raw config file of this task.',
   editorUnavailable: 'Unavailable (data plane pending)',
+  // ── Main panel task list ──
+  listFilterAll: 'All',
+  listFilterEnabled: 'Enabled',
+  listFilterDisabled: 'Disabled',
+  listFilterWorkspace: 'Workspace',
+  listFilterWorkspaceAll: 'All workspaces',
+  listSearchPlaceholder: 'Search by name or code',
+  listRunning: 'Running',
+  listLastPrefix: 'Last',
+  listNextPrefix: 'Next',
+  listNextNone: 'No further runs',
+  listNever: 'Never run',
+  listCreatedPrefix: 'Created',
+  listStatusOk: 'succeeded',
+  listStatusFailed: 'failed',
+  relNow: 'due now',
+  relMinutes: 'in {n} min',
+  relHours: 'in {n} h',
+  relDays: 'in {n} days',
+  relPast: 'overdue',
+  listEmpty: 'No tasks yet. Use “+ New task” to create the first one.',
+  listEmptyFiltered: 'No task matches the current filter.',
+  listSectionSchedule: 'Execution settings',
+  listSectionAttachments: 'Attachments',
+  listSectionDepends: 'Upstream tasks',
+  listSectionPrompt: 'Prompt',
+  listFieldWorkspace: 'Workspace',
+  listFieldModel: 'Model',
+  listFieldModelDefault: 'Default model',
+  listFieldRetry: 'Retries',
+  listFieldSchedule: 'Schedule',
+  listFieldWindow: 'Late window',
+  listNone: '(none)',
+  listDisabledTag: '(disabled)',
+  schedEveryMinute: 'Every minute',
+  schedEveryNMinutes: 'Every {n} minutes',
+  schedHourly: 'Hourly at minute {minute}',
+  schedDaily: 'Daily at {time}',
+  schedWeekly: 'Weekly on {weekdays} at {time}',
+  schedMonthly: 'Monthly on day {day} at {time}',
+  schedOnce: 'Once on {date} at {time}',
+  schedCustom: '{cron}',
 }

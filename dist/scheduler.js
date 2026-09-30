@@ -241,7 +241,9 @@ function snapshotOf(task, workspace, resolvedDeps) {
         })),
     };
 }
-function dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets) {
+function dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets, 
+/** 主界面运行态内存索引（2026-09-30）：落库即顺手标记「运行中」，不额外查库。 */
+runtime) {
     const nowMs = Date.now();
     for (const task of tasks) {
         if (task.enabled === false)
@@ -294,11 +296,13 @@ function dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, asse
         const id = randomUUID();
         if (!store.ensureInstance(id, task.id, slot.logicalDate, slot.scheduledAtIso, 'dispatched', snapshotOf(task, workspace, depVerdict.resolved)))
             continue; // 撞唯一索引（极少）
+        // 主界面运行态（内存，非真源）：刚落库 ⇒ 该任务在飞。Loop B 收口时会由 markTerminal 清除。
+        runtime?.markDispatched(task.id, slot.scheduledAtIso);
         logger.info(`已落库执行记录 ${id}（任务 ${task.id} · ${slot.scheduledAtIso}），发动由执行循环接管（决策 41）`);
     }
 }
 export function createScheduler(opts) {
-    const { ctx, logger, store, reconciler, config, assets } = opts;
+    const { ctx, logger, store, reconciler, config, assets, runtime } = opts;
     const verdictLog = new Map();
     let taskMap = new Map();
     return {
@@ -314,7 +318,7 @@ export function createScheduler(opts) {
             // 故这里把全量写进 taskMap，让前端前置列表能选到停用任务。
             taskMap = new Map(allTasks.map((t) => [t.id, t]));
             // Loop A：先处理新刻度（懒建行 + 不回看 + 不补跑 + 落库即止，决策 41）
-            dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets());
+            dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets(), runtime ?? null);
             // Loop B：再收口全部执行记录（发动本 tick 新落库的行 + 追问 / 重试 / 租约——
             // 只读执行记录 + 快照，决策 41）。放在 Loop A 之后 = 新行当 tick 即被发动，时延不退化。
             reconciler.sweep();

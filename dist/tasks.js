@@ -24,6 +24,11 @@ export const taskDefinitionSchema = z.object({
     /** 任务编号（决策 30）：可选、纯记录与查询用，不参与唯一性判断；存前 trim，空白视为未填。 */
     code: z.string().optional(),
     enabled: z.boolean(),
+    /**
+     * 创建时间（2026-09-30，主界面卡片「创建于 X」）：**首次保存时由服务端写入，此后不再改**。
+     * 可选 —— 老定义 / 手写 JSON 没有它，卡片就不显示这一行（不编造时间）。
+     */
+    createdAt: z.string().optional(),
     schedule: z.object({
         cron: z.string().min(1).optional(),
         timezone: z.string().optional(),

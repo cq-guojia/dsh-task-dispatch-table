@@ -14,6 +14,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
     title: z.ZodOptional<z.ZodString>;
     code: z.ZodOptional<z.ZodString>;
     enabled: z.ZodBoolean;
+    createdAt: z.ZodOptional<z.ZodString>;
     schedule: z.ZodObject<{
         cron: z.ZodOptional<z.ZodString>;
         timezone: z.ZodOptional<z.ZodString>;

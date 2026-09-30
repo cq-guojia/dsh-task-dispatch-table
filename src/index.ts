@@ -24,6 +24,8 @@ import { createReconciler } from './reconcile.js'
 import type { ReconcileOptions } from './reconcile.js'
 import { createScheduler } from './scheduler.js'
 import type { Scheduler } from './scheduler.js'
+import { createRuntimeIndex } from './runtime-index.js'
+import type { RuntimeIndex } from './runtime-index.js'
 
 export const name = 'dsh-task-dispatch-table'
 
@@ -176,6 +178,10 @@ const makeDispatchRoutes = (
   getAssets: () => AssetPaths | null,
   /** 取插件配置（清道夫天数等）。 */
   getConfig: () => PluginConfig | null,
+  /** 主界面运行态内存索引（2026-09-30：卡片「运行中 / 上次 / 下次」的读源，不查库）。 */
+  runtimeIndex: RuntimeIndex,
+  /** 当前任务定义（含停用）—— overview 组装用。 */
+  getTasks: () => Map<string, TaskDefinition>,
 ): DispatchWebRoute[] => [
   {
     // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
@@ -312,6 +318,9 @@ const makeDispatchRoutes = (
         const prevAttachments = readAttachmentsOf(runtimeRef.tasksInline, id)
         const moved = moveAttachmentsIn(paths, id, def.attachments ?? [], prevAttachments)
         const finalDef: Record<string, unknown> = { ...def, id }
+        // 创建时间（主界面卡片「创建于 X」）：**首次保存时写一次**，此后不改——
+        // 改标题 / 改排期都不算重建；老定义没有它 ⇒ 卡片不显示这一行（不编造时间）。
+        if (!isUpdate && def.createdAt === undefined) finalDef.createdAt = new Date().toISOString()
         if ((def.attachments ?? []).length > 0) finalDef.attachments = moved.attachments
 
         // ④ 落库（定义先落：它是唯一权威）
@@ -396,6 +405,26 @@ const makeDispatchRoutes = (
         const message = error instanceof Error ? error.message : String(error)
         writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
       }
+    },
+  },
+  {
+    // 主界面任务列表数据（2026-09-30，design/main-panel-design.md §四）：
+    // **一次请求出全部卡片数据** = 任务定义投影 + 内存运行态（运行中 / 上次执行 / 下次执行）。
+    // **不查库**：运行态全在内存摘要里（启动一条聚合 SQL 建索引 + Loop A/B 事件增量维护），
+    // 定义指纹变了才重算刻度、刻度过期才就地前移 ⇒ 10 秒轮询的成本是一次内存遍历。
+    // `?rev=` 带上一次的版本号：未变即回 unchanged（几十字节）。
+    // ⚠️ 该参数只是省流量，**功能不依赖它**——宿主若不透传 query（`req.url` 是否带 query
+    // 评审后仍无法离线核实，见 worklog/creation-edit-implementation.md），则 rev 取不到 ⇒
+    // 照常返回全量，行为完全一致。
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/tasks/overview`,
+    handler: (req, res) => {
+      if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      const { rev, rows } = runtimeIndex.overview([...getTasks().values()], Date.now())
+      const asked = queryOf(req, 'rev')
+      if (asked !== '' && asked === String(rev)) return writeJson(res, 200, { ok: true, unchanged: true })
+      writeJson(res, 200, { ok: true, rev, tasks: rows })
     },
   },
   {
@@ -633,6 +662,14 @@ export function apply(ctx: HostContext, config: unknown): void {
     tasksInline: initial.tasksInline,
     debugSnapshot: '',
   }
+  /**
+   * 主界面运行态内存索引（2026-09-30，design/main-panel-design.md §四）：
+   * 卡片「运行中 / 上次执行 / 下次执行」的读源。**派生态、不入数据库**——
+   * 状态库就绪后建一次索引（一条聚合 SQL），之后由 Loop A 落库 / Loop B 收口事件增量维护。
+   */
+  const runtimeIndex = createRuntimeIndex()
+  /** 当前任务定义（含停用）：overview 路由组装卡片用；随 tick 同步。 */
+  let panelTaskMap: Map<string, TaskDefinition> = new Map()
   /** settings inject 就绪后的宿主上下文（persistTasksInline 经它找 configEditor）。 */
   let settingsCtxRef: HostContext | null = null
   /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
@@ -689,6 +726,8 @@ export function apply(ctx: HostContext, config: unknown): void {
       () => attachmentsDirRef,
       () => assetsRef,
       () => configRef,
+      runtimeIndex,
+      () => panelTaskMap,
     )) webServer.register(route)
     wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled')
   })
@@ -818,9 +857,9 @@ export function apply(ctx: HostContext, config: unknown): void {
       // 附加文件兜底校验（Loop B 发动前）：资产根随 statePath 定格。
       assets: () => assetsRef,
     }
-    const reconciler = createReconciler({ ctx: sctx, logger: teeLogger, store, options: reconcileOptions })
+    const reconciler = createReconciler({ ctx: sctx, logger: teeLogger, store, options: reconcileOptions, runtime: runtimeIndex })
     const scheduler: Scheduler = createScheduler({
-      ctx: sctx, logger: teeLogger, store, reconciler,
+      ctx: sctx, logger: teeLogger, store, reconciler, runtime: runtimeIndex,
       // tasksInline 以 runtime 内存值为准（用户经 remote 服务改后即时生效，无需等 settings 落盘）。
       config: pluginConfig,
       // 附加文件存在性校验（Loop A）：资产根随 statePath 定格，未就绪 ⇒ 跳过 upload 型校验。
@@ -843,6 +882,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       try {
         scheduler.tick()
         taskMap = scheduler.getTasks()
+        panelTaskMap = taskMap
       } catch (error) {
         pushWarn('error', `tick 异常: ${String(error)}`)
         sctx.logger.error(`tick 异常: ${String(error)}`)
@@ -881,6 +921,9 @@ export function apply(ctx: HostContext, config: unknown): void {
     }, 6 * 3600_000)
 
     safeTick()
+    // 主界面运行态**启动初始化一次**：一条聚合 SQL 取每任务最近执行 + 在飞行扫描 + 逐任务算下一刻度。
+    // 之后全靠事件增量维护（Loop A 落库 / Loop B 收口），轮询不再查库。
+    runtimeIndex.rebuild([...taskMap.values()], store)
     scheduler.startupDiagnostics()
     updateSnapshot() // 启动诊断可能写 task_log，立即落一版快照
 

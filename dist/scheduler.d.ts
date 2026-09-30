@@ -3,6 +3,7 @@ import type { HostContext, HostLogger } from './host.js';
 import { type TaskDefinition } from './tasks.js';
 import type { ResolvedDependency, TaskStore } from './store.js';
 import type { Reconciler } from './reconcile.js';
+import type { RuntimeIndex } from './runtime-index.js';
 import type { PluginConfig } from './config.js';
 export interface Scheduler {
     tick: () => void;
@@ -41,4 +42,6 @@ export declare function createScheduler(opts: {
     config: () => PluginConfig;
     /** 任务文件资产根（附加文件存在性校验用）；未就绪传 null ⇒ 跳过 upload 型校验。 */
     assets?: () => AssetPaths | null;
+    /** 主界面运行态内存索引（2026-09-30）；未装配则跳过（不影响调度）。 */
+    runtime?: RuntimeIndex;
 }): Scheduler;

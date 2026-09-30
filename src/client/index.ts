@@ -27,6 +27,7 @@ import {
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
 import { humanizeTaskError } from './task-editor'
+import { TaskListView, useTaskOverview } from './task-list'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
@@ -35,6 +36,8 @@ const SETTINGS_NS = 'dsh-task-dispatch-table'
 const LOCALE_NS = SETTINGS_NS
 /** 主面板 id：`main` 槽的 key 与 `sidebar.panellist` 条目的 id 必须一致，选中才对得上。 */
 const PANEL_ID = SETTINGS_NS
+/** 旧「任务配置」界面（JSON 逃生口 + 只读参数）开关：主界面重建后关闭，待面板收尾时连状态一起清。 */
+const LEGACY_CONFIG_VIEW = false
 /** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 let runtimeT: Translate = (key) => key
 
@@ -522,6 +525,10 @@ function TaskPage(props: {
   }, [previewWidth])
   // 新建 / 编辑任务弹窗：保存 / 删除 / 历史版本全部接线（2026-09-30）。
   // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
+  // 主界面任务列表数据（2026-09-30）：一次请求出全部卡片数据，10 秒轮询 + rev 比对
+  // ⇒ 服务端只读内存摘要、不查库（design/main-panel-design.md §四）。
+  const overview = useTaskOverview()
+
   const [editor, setEditor] = useState<{
     mode: 'create' | 'edit'
     id: string
@@ -933,7 +940,22 @@ function TaskPage(props: {
             h('pre', { style: { ...preStyle, color: C.textFaint } }, describeDiag()),
           )
         : tab === 'config'
-          ? h('div', null,
+          // 任务列表视图（2026-09-30 主界面重建）：卡片式，限宽居中，数据走 /tasks/overview。
+          ? h(TaskListView, {
+            t,
+            rows: overview.rows,
+            ready: overview.ready,
+            onRefresh: overview.refresh,
+            onNew: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null }) },
+            onEdit: openEditor,
+            onToggleEnabled: (id: string, enabled: boolean): void => {
+              void toggleTaskEnabled(id, enabled).then(err => { if (err !== null) setViewErr(err) })
+            },
+          })
+          // ↓ 旧「任务配置」界面（JSON 逃生口 + 只读参数）：主界面重建后由常量关掉，暂不删——
+          // 删了会牵出一串只服务于它的状态；等面板整体收尾（U6 调试债清理）时连状态一起清。
+          : LEGACY_CONFIG_VIEW
+            ? h('div', null,
               // 任务列表：每行「编辑」入口（修改与新增共用同一表单；JSON 文本域保留作逃生口）。
               h('div', { style: { marginBottom: '16px' } },
                 h('div', { style: { fontWeight: 600, marginBottom: '6px' } }, t('editorTasksTitle')),

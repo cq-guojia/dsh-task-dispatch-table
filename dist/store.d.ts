@@ -148,6 +148,19 @@ export declare class TaskStore {
         instances: TaskInstance[];
         events: SnapshotEvent[];
     };
+    /**
+     * 主界面运行态初始化（2026-09-30）：**一条聚合 SQL** 取每任务最近一条实例。
+     * SQLite 文档化行为：查询含 min/max 聚合时，其余裸列取**该聚合所在行**的值
+     * ⇒ `MAX(scheduled_at)` 那条的 `status` / `finished_at` 正是「最近一次执行」。
+     * 走 `idx_instances_slot(task_id, scheduled_at)`，绝不做「每任务一次查询」。
+     */
+    lastRunByTask(): Map<string, {
+        status: InstanceStatus;
+        scheduledAt: string;
+        finishedAt: string | null;
+    }>;
+    /** 在飞行（dispatched / running）的实例 ⇒ 主界面「运行中」。同样一条聚合 SQL。 */
+    inFlightByTask(): Map<string, string>;
     /** 晚于某时刻的最新回执事件（决策 19：回执对账按次取新，防止上一轮 attempt 的旧回执冒充）。 */
     latestReceipt(instanceId: string, afterIso: string | undefined): {
         ts: string;

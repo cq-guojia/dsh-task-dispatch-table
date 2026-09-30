@@ -504,7 +504,48 @@ window.__ModuleLoader__.load({
 			editorAgentTeamHint: "默认关闭。开启后 agent 以官方 Agent Teams（实验特性）方式执行：主会话作为队长，按需创建命名队友分工协作、共享任务板。需要宿主启用 Agent Teams 组件；未启用时自动按单 Agent 执行，并在执行记录日志留痕。",
 			editorPreview: "配置预览",
 			editorPreviewHint: "查看本任务的配置原文件。",
-			editorUnavailable: "暂不可用（待接数据面）"
+			editorUnavailable: "暂不可用（待接数据面）",
+			listFilterAll: "全部",
+			listFilterEnabled: "已开启",
+			listFilterDisabled: "已关闭",
+			listFilterWorkspace: "工作区",
+			listFilterWorkspaceAll: "全部工作区",
+			listSearchPlaceholder: "搜索任务名称或编号",
+			listRunning: "运行中",
+			listLastPrefix: "上次",
+			listNextPrefix: "下次",
+			listNextNone: "无后续执行",
+			listNever: "尚未执行",
+			listCreatedPrefix: "创建于",
+			listStatusOk: "成功",
+			listStatusFailed: "失败",
+			relNow: "即将执行",
+			relMinutes: "{n} 分钟后",
+			relHours: "{n} 小时后",
+			relDays: "{n} 天后",
+			relPast: "已过期",
+			listEmpty: "还没有任务。点右上角「＋ 新建任务」创建第一个。",
+			listEmptyFiltered: "没有符合当前筛选的任务。",
+			listSectionSchedule: "执行设置",
+			listSectionAttachments: "附加文件",
+			listSectionDepends: "前置任务",
+			listSectionPrompt: "提示词",
+			listFieldWorkspace: "工作区",
+			listFieldModel: "模型",
+			listFieldModelDefault: "默认模型",
+			listFieldRetry: "失败重试",
+			listFieldSchedule: "排期",
+			listFieldWindow: "允许延迟",
+			listNone: "（无）",
+			listDisabledTag: "（已停用）",
+			schedEveryMinute: "每分钟",
+			schedEveryNMinutes: "每 {n} 分钟",
+			schedHourly: "每小时 {minute} 分",
+			schedDaily: "每天 {time}",
+			schedWeekly: "每周{weekdays} {time}",
+			schedMonthly: "每月 {day} 日 {time}",
+			schedOnce: "{date} {time} 执行一次",
+			schedCustom: "{cron}"
 		};
 		/** English copy. */
 		const en = {
@@ -969,7 +1010,48 @@ window.__ModuleLoader__.load({
 			editorAgentTeamHint: "Off by default. When on, the agent runs via the official Agent Teams (experimental): the lead session spawns named teammates that share a task board. Requires the host to enable Agent Teams; otherwise it falls back to a single agent and leaves a log entry.",
 			editorPreview: "Config preview",
 			editorPreviewHint: "View the raw config file of this task.",
-			editorUnavailable: "Unavailable (data plane pending)"
+			editorUnavailable: "Unavailable (data plane pending)",
+			listFilterAll: "All",
+			listFilterEnabled: "Enabled",
+			listFilterDisabled: "Disabled",
+			listFilterWorkspace: "Workspace",
+			listFilterWorkspaceAll: "All workspaces",
+			listSearchPlaceholder: "Search by name or code",
+			listRunning: "Running",
+			listLastPrefix: "Last",
+			listNextPrefix: "Next",
+			listNextNone: "No further runs",
+			listNever: "Never run",
+			listCreatedPrefix: "Created",
+			listStatusOk: "succeeded",
+			listStatusFailed: "failed",
+			relNow: "due now",
+			relMinutes: "in {n} min",
+			relHours: "in {n} h",
+			relDays: "in {n} days",
+			relPast: "overdue",
+			listEmpty: "No tasks yet. Use “+ New task” to create the first one.",
+			listEmptyFiltered: "No task matches the current filter.",
+			listSectionSchedule: "Execution settings",
+			listSectionAttachments: "Attachments",
+			listSectionDepends: "Upstream tasks",
+			listSectionPrompt: "Prompt",
+			listFieldWorkspace: "Workspace",
+			listFieldModel: "Model",
+			listFieldModelDefault: "Default model",
+			listFieldRetry: "Retries",
+			listFieldSchedule: "Schedule",
+			listFieldWindow: "Late window",
+			listNone: "(none)",
+			listDisabledTag: "(disabled)",
+			schedEveryMinute: "Every minute",
+			schedEveryNMinutes: "Every {n} minutes",
+			schedHourly: "Hourly at minute {minute}",
+			schedDaily: "Daily at {time}",
+			schedWeekly: "Weekly on {weekdays} at {time}",
+			schedMonthly: "Monthly on day {day} at {time}",
+			schedOnce: "Once on {date} at {time}",
+			schedCustom: "{cron}"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -4025,7 +4107,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		//#endregion
 		//#region src/client/editor-fields.tsx
-		const C$2 = {
+		const C$3 = {
 			text: "var(--dsw-alias-label-primary, #1f2328)",
 			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
 			textTertiary: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
@@ -4043,7 +4125,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			radiusSm: "var(--dsw-radius-sm, 6px)",
 			radiusMd: "var(--dsw-radius-md, 8px)"
 		};
-		const transition$1 = "background 120ms ease, color 120ms ease, border-color 120ms ease";
+		const transition$2 = "background 120ms ease, color 120ms ease, border-color 120ms ease";
 		/** 锚点按钮：克隆官方 `Input` 的外观（下拉、日期、时分共用同一副壳）。 */
 		const fieldButtonStyle = {
 			display: "inline-flex",
@@ -4054,15 +4136,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			minWidth: 0,
 			maxWidth: "100%",
 			padding: "0 8px",
-			border: `0.5px solid ${C$2.borderL4}`,
-			borderRadius: C$2.radiusMd,
-			background: C$2.layer1,
-			color: C$2.text,
+			border: `0.5px solid ${C$3.borderL4}`,
+			borderRadius: C$3.radiusMd,
+			background: C$3.layer1,
+			color: C$3.text,
 			font: "inherit",
 			fontSize: "13px",
 			lineHeight: "20px",
 			cursor: "pointer",
-			transition: transition$1
+			transition: transition$2
 		};
 		const fieldLabelStyle = {
 			flex: "1 1 auto",
@@ -4082,10 +4164,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			zIndex: 1100,
 			boxSizing: "border-box",
 			padding: "4px",
-			background: C$2.menuFill,
-			boxShadow: C$2.elevation,
-			borderRadius: C$2.radiusMd,
-			color: C$2.text,
+			background: C$3.menuFill,
+			boxShadow: C$3.elevation,
+			borderRadius: C$3.radiusMd,
+			color: C$3.text,
 			fontSize: "13px"
 		};
 		/** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
@@ -4097,7 +4179,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				justifyContent: "center",
 				flex: "none",
-				color: C$2.textTertiary
+				color: C$3.textTertiary
 			} }, props.children);
 		}
 		/**
@@ -4142,7 +4224,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					} : null,
 					width: props.width ?? (props.block === true ? "100%" : void 0),
 					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-					background: hover && usable ? C$2.hover : C$2.layer1,
+					background: hover && usable ? C$3.hover : C$3.layer1,
 					cursor: usable ? "pointer" : "not-allowed",
 					opacity: usable ? 1 : .6
 				}
@@ -4151,11 +4233,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				title: props.title ?? props.ariaLabel,
 				style: {
 					...fieldLabelStyle,
-					color: current === void 0 ? C$2.dimmed : C$2.text
+					color: current === void 0 ? C$3.dimmed : C$3.text
 				}
 			}) : (0, react.createElement)("span", { style: {
 				...fieldLabelStyle,
-				color: current === void 0 ? C$2.dimmed : C$2.text
+				color: current === void 0 ? C$3.dimmed : C$3.text
 			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
 			if (!usable) return anchor;
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
@@ -4301,9 +4383,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					height: "26px",
 					padding: 0,
 					border: "none",
-					borderRadius: C$2.radiusSm,
+					borderRadius: C$3.radiusSm,
 					background: "transparent",
-					color: C$2.textDim,
+					color: C$3.textDim,
 					cursor: "pointer",
 					font: "inherit"
 				}
@@ -4329,7 +4411,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			}, (0, react.createElement)("span", { style: {
 				...fieldLabelStyle,
-				color: props.value === "" ? C$2.dimmed : C$2.text
+				color: props.value === "" ? C$3.dimmed : C$3.text
 			} }, props.value === "" ? props.placeholder : props.value), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
 			return (0, react.createElement)("span", { style: {
 				display: "inline-flex",
@@ -4356,7 +4438,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				textAlign: "center",
 				fontSize: "13px",
 				fontWeight: 600,
-				color: C$2.text
+				color: C$3.text
 			} }, props.labels.monthTitle(cursor.y, cursor.m)), navButton(props.labels.nextMonth, 1, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), navButton(props.labels.nextYear, 12, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("div", { style: {
 				display: "grid",
 				gridTemplateColumns: "repeat(7, 32px)",
@@ -4369,7 +4451,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					alignItems: "center",
 					justifyContent: "center",
 					fontSize: "12px",
-					color: C$2.textTertiary
+					color: C$3.textTertiary
 				}
 			}, name)), cells.map((cell) => {
 				const selected = cell.iso === props.value;
@@ -4399,17 +4481,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						display: "flex",
 						alignItems: "center",
 						justifyContent: "center",
-						border: cell.isToday && !selected ? `1px solid ${C$2.business}` : "1px solid transparent",
-						borderRadius: C$2.radiusMd,
-						background: selected ? C$2.brand : hovered ? C$2.hover : "transparent",
-						color: selected ? C$2.brandFg : cell.inMonth ? C$2.text : C$2.dimmed,
-						transition: transition$1
+						border: cell.isToday && !selected ? `1px solid ${C$3.business}` : "1px solid transparent",
+						borderRadius: C$3.radiusMd,
+						background: selected ? C$3.brand : hovered ? C$3.hover : "transparent",
+						color: selected ? C$3.brandFg : cell.inMonth ? C$3.text : C$3.dimmed,
+						transition: transition$2
 					}
 				}, String(cell.day));
 			})), (0, react.createElement)("div", { style: {
 				marginTop: "6px",
 				paddingTop: "6px",
-				borderTop: `1px solid ${C$2.borderL2}`
+				borderTop: `1px solid ${C$3.borderL2}`
 			} }, (0, react.createElement)("button", {
 				type: "button",
 				onClick: () => {
@@ -4420,16 +4502,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					width: "100%",
 					padding: "6px 0",
 					border: "none",
-					borderRadius: C$2.radiusSm,
+					borderRadius: C$3.radiusSm,
 					background: "transparent",
-					color: C$2.text,
+					color: C$3.text,
 					font: "inherit",
 					fontSize: "13px",
 					cursor: "pointer",
-					transition: transition$1
+					transition: transition$2
 				},
 				onPointerEnter: (event) => {
-					event.currentTarget.style.background = C$2.hover;
+					event.currentTarget.style.background = C$3.hover;
 				},
 				onPointerLeave: (event) => {
 					event.currentTarget.style.background = "transparent";
@@ -4498,13 +4580,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: {
 					padding: "5px 0",
 					border: "none",
-					borderRadius: C$2.radiusSm,
+					borderRadius: C$3.radiusSm,
 					font: "inherit",
 					fontSize: "13px",
 					cursor: "pointer",
-					transition: transition$1,
-					background: item === active ? C$2.hover : "transparent",
-					color: item === active ? C$2.text : C$2.textDim,
+					transition: transition$2,
+					background: item === active ? C$3.hover : "transparent",
+					color: item === active ? C$3.text : C$3.textDim,
 					fontWeight: item === active ? 600 : 400
 				}
 			}, item)));
@@ -4534,13 +4616,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: {
 					...fieldButtonStyle,
 					width: props.width,
-					background: hover && props.disabled !== true ? C$2.hover : C$2.layer1,
+					background: hover && props.disabled !== true ? C$3.hover : C$3.layer1,
 					cursor: props.disabled === true ? "not-allowed" : "pointer",
 					opacity: props.disabled === true ? .6 : 1
 				}
 			}, (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react.createElement)("span", { style: {
 				...fieldLabelStyle,
-				color: props.value === "" ? C$2.dimmed : C$2.text
+				color: props.value === "" ? C$3.dimmed : C$3.text
 			} }, props.value === "" ? props.placeholder : props.value));
 			return (0, react.createElement)("span", { style: {
 				display: "inline-flex",
@@ -4570,7 +4652,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				gap: "8px",
 				marginTop: "6px",
 				paddingTop: "6px",
-				borderTop: `1px solid ${C$2.borderL2}`
+				borderTop: `1px solid ${C$3.borderL2}`
 			} }, (0, react.createElement)("button", {
 				type: "button",
 				onClick: () => {
@@ -4580,13 +4662,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: {
 					padding: "4px 8px",
 					border: "none",
-					borderRadius: C$2.radiusSm,
+					borderRadius: C$3.radiusSm,
 					background: "transparent",
-					color: C$2.textDim,
+					color: C$3.textDim,
 					font: "inherit",
 					fontSize: "12px",
 					cursor: "pointer",
-					transition: transition$1
+					transition: transition$2
 				}
 			}, props.labels.now), (0, react.createElement)("button", {
 				type: "button",
@@ -4597,13 +4679,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: {
 					padding: "5px 14px",
 					border: "none",
-					borderRadius: C$2.radiusSm,
+					borderRadius: C$3.radiusSm,
 					font: "inherit",
 					fontSize: "12px",
 					fontWeight: 600,
 					cursor: "pointer",
-					transition: transition$1,
-					background: C$2.business,
+					transition: transition$2,
+					background: C$3.business,
 					color: "var(--dsw-alias-label-primary-foreground, #ffffff)"
 				}
 			}, props.labels.confirm))), document.body) : null);
@@ -4632,14 +4714,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, props.label === void 0 ? null : (0, react.createElement)("span", { style: {
 				flex: "none",
 				fontSize: "13px",
-				color: C$2.text
+				color: C$3.text
 			} }, props.label), (0, react.createElement)("div", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "3px",
 				padding: "6px",
-				borderRadius: C$2.radiusMd,
-				background: C$2.hover
+				borderRadius: C$3.radiusMd,
+				background: C$3.hover
 			} }, props.labels.shorts.map((short, index) => {
 				const day = index + 1;
 				const on = selected.has(day);
@@ -4670,21 +4752,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						alignItems: "center",
 						justifyContent: "center",
 						border: "0",
-						borderRadius: C$2.radiusSm,
-						background: on ? C$2.business : "transparent",
+						borderRadius: C$3.radiusSm,
+						background: on ? C$3.business : "transparent",
 						boxShadow: on ? "var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))" : "none",
-						color: on ? C$2.brandFg : C$2.textDim,
+						color: on ? C$3.brandFg : C$3.textDim,
 						font: "inherit",
 						fontSize: "12px",
 						lineHeight: "18px",
 						fontWeight: on ? 600 : 400,
 						cursor: props.disabled === true ? "not-allowed" : "pointer",
-						transition: transition$1
+						transition: transition$2
 					}
 				}, short);
 			})), props.value.length === 0 ? (0, react.createElement)("span", { style: {
 				fontSize: "12px",
-				color: C$2.dimmed
+				color: C$3.dimmed
 			} }, props.labels.empty) : null);
 		}
 		/**
@@ -5125,7 +5207,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "inline-flex",
 				alignItems: "center",
 				flex: "none",
-				color: current ? C$2.text : C$2.textDim
+				color: current ? C$3.text : C$3.textDim
 			} }, (0, react.createElement)(current ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 13 })), (0, react.createElement)("span", {
 				className: "dsh-tdt-sv-crumbs-menu-label",
 				style: { fontWeight: current ? 600 : 400 }
@@ -9469,8 +9551,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		//#endregion
 		//#region node_modules/style-mod/src/style-mod.js
-		const C$1 = "ͼ";
-		const COUNT = typeof Symbol == "undefined" ? "__ͼ" : Symbol.for(C$1);
+		const C$2 = "ͼ";
+		const COUNT = typeof Symbol == "undefined" ? "__ͼ" : Symbol.for(C$2);
 		const SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : Symbol("styleSet");
 		const top = typeof globalThis != "undefined" ? globalThis : typeof window != "undefined" ? window : {};
 		var StyleModule = class {
@@ -9501,7 +9583,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			static newName() {
 				let id = top[COUNT] || 1;
 				top[COUNT] = id + 1;
-				return C$1 + id.toString(36);
+				return C$2 + id.toString(36);
 			}
 			static mount(root, modules, options) {
 				let set = root[SET], nonce = options && options.nonce;
@@ -38025,7 +38107,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (everyNWeeks !== void 0 && everyNWeeks > 1) draft.weekStep = String(everyNWeeks);
 			return draft;
 		}
-		C$2.text;
+		C$3.text;
 		/**
 		* 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
 		* 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
@@ -38205,7 +38287,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				gap: "8px"
 			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
 				fontSize: "13px",
-				color: C$2.text
+				color: C$3.text
 			} }, t("editorIntervalEvery")), (0, react.createElement)("input", {
 				type: "number",
 				min: 1,
@@ -38231,7 +38313,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				width: 96
 			}), (0, react.createElement)("span", { style: {
 				fontSize: "13px",
-				color: C$2.text
+				color: C$3.text
 			} }, t("editorIntervalSuffix"))), (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
@@ -38283,7 +38365,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		const promptEditorTheme = EditorView.theme({
 			"&": {
 				backgroundColor: "var(--dsw-alias-bg-base, #22252a)",
-				color: C$2.text,
+				color: C$3.text,
 				height: "100%",
 				width: "100%"
 			},
@@ -38302,13 +38384,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			".cm-line": { padding: "0 4px" },
 			".cm-gutters": {
 				backgroundColor: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))",
-				color: C$2.textDim,
+				color: C$3.textDim,
 				border: "none"
 			},
 			".cm-activeLine": { backgroundColor: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))" },
 			".cm-activeLineGutter": {
 				backgroundColor: "transparent",
-				color: C$2.text
+				color: C$3.text
 			},
 			"&.cm-focused": { outline: "none" }
 		}, { dark: true });
@@ -38340,7 +38422,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					borderRadius: "var(--dsw-radius-panel, 10px)",
 					boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
 					padding: "22px 24px",
-					color: C$2.text
+					color: C$3.text
 				},
 				onClick: (event) => {
 					event.stopPropagation();
@@ -38352,7 +38434,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, props.t("editorDiscardTitle")), (0, react.createElement)("div", { style: {
 				fontSize: "14px",
 				lineHeight: "22px",
-				color: C$2.textDim,
+				color: C$3.textDim,
 				marginBottom: "20px"
 			} }, props.t("editorDiscardDesc")), (0, react.createElement)("div", { style: {
 				display: "flex",
@@ -38394,7 +38476,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					borderRadius: "var(--dsw-radius-panel, 10px)",
 					boxShadow: "var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
 					padding: "20px 24px 18px",
-					color: C$2.text
+					color: C$3.text
 				},
 				onClick: (event) => {
 					event.stopPropagation();
@@ -38408,7 +38490,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, props.title), props.desc !== "" ? (0, react.createElement)("div", { style: {
 				fontSize: "13px",
 				lineHeight: "21px",
-				color: C$2.textDim,
+				color: C$3.textDim,
 				marginBottom: props.bullets !== void 0 ? "8px" : "18px"
 			} }, props.desc) : null, props.bullets !== void 0 && props.bullets.length > 0 ? (0, react.createElement)("ul", { style: {
 				listStyle: "none",
@@ -38487,7 +38569,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				flex: "1 1 auto",
 				minHeight: 0,
 				background: "var(--dsw-alias-bg-base, #22252a)",
-				color: C$2.text,
+				color: C$3.text,
 				overflow: "hidden",
 				position: "relative"
 			} }, (0, react.createElement)("div", { style: {
@@ -38496,7 +38578,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				justifyContent: "space-between",
 				gap: "12px",
 				padding: "10px 14px",
-				borderBottom: `1px solid ${C$2.borderL2}`
+				borderBottom: `1px solid ${C$3.borderL2}`
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "14px",
 				fontWeight: 600
@@ -38568,19 +38650,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				labels: MD_LABELS
 			})), showVersions ? (0, react.createElement)("div", { style: {
 				flex: "0 0 232px",
-				borderLeft: `1px solid ${C$2.borderL4}`,
+				borderLeft: `1px solid ${C$3.borderL4}`,
 				display: "flex",
 				flexDirection: "column",
 				minHeight: 0
 			} }, (0, react.createElement)("div", { style: {
 				padding: "10px 12px",
-				borderBottom: `1px solid ${C$2.borderL4}`,
+				borderBottom: `1px solid ${C$3.borderL4}`,
 				fontSize: "13px",
 				fontWeight: 600
 			} }, versionTitle), editorMode === "create" ? (0, react.createElement)("div", { style: {
 				padding: "16px 12px",
 				fontSize: "12px",
-				color: C$2.textDim,
+				color: C$3.textDim,
 				lineHeight: "1.6"
 			} }, t("editorNewTaskNoVersions")) : (0, react.createElement)("div", { style: {
 				display: "flex",
@@ -38590,7 +38672,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, versions.length === 0 ? (0, react.createElement)("p", { style: {
 				padding: "0 12px",
 				fontSize: "12px",
-				color: C$2.textDim
+				color: C$3.textDim
 			} }, t("editorNoVersions")) : (0, react.createElement)("ul", { style: {
 				listStyle: "none",
 				margin: 0,
@@ -38660,7 +38742,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				flex: "1 1 auto",
 				minHeight: 0,
 				background: "var(--dsw-alias-bg-base, #22252a)",
-				color: C$2.text,
+				color: C$3.text,
 				overflow: "hidden",
 				position: "relative"
 			} }, (0, react.createElement)("div", { style: {
@@ -38669,7 +38751,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				justifyContent: "space-between",
 				gap: "12px",
 				padding: "10px 14px",
-				borderBottom: `1px solid ${C$2.borderL2}`
+				borderBottom: `1px solid ${C$3.borderL2}`
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "14px",
 				fontWeight: 600
@@ -39105,7 +39187,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: {
 					flex: "none",
 					fontSize: "11px",
-					color: C$2.textDim,
+					color: C$3.textDim,
 					borderRadius: "4px",
 					padding: "1px 6px",
 					background: "var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))"
@@ -39125,12 +39207,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, (0, react.createElement)("div", {
 				style: {
 					flex: "1 1 auto",
-					border: `1px dashed ${C$2.borderL4}`,
-					borderRadius: C$2.radiusMd,
+					border: `1px dashed ${C$3.borderL4}`,
+					borderRadius: C$3.radiusMd,
 					padding: "16px 12px",
 					textAlign: "center",
 					cursor: uploading ? "default" : "pointer",
-					background: C$2.layer1
+					background: C$3.layer1
 				},
 				onClick: () => {
 					if (!uploading) fileInputRef.current?.click();
@@ -39144,10 +39226,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			}, (0, react.createElement)("div", { style: {
 				fontSize: "13px",
-				color: C$2.text
+				color: C$3.text
 			} }, uploading ? t("editorUploading") : t("editorDropZoneHint")), uploading ? null : (0, react.createElement)("div", { style: {
 				fontSize: "11px",
-				color: C$2.textDim,
+				color: C$3.textDim,
 				marginTop: "4px"
 			} }, t("editorDropZoneFormats"))), (0, react.createElement)("div", { style: {
 				flex: "none",
@@ -39173,11 +39255,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					gap: "6px",
 					width: "92px",
 					padding: "8px",
-					border: `1px dashed ${C$2.borderL4}`,
-					borderRadius: C$2.radiusMd,
-					background: C$2.layer1,
+					border: `1px dashed ${C$3.borderL4}`,
+					borderRadius: C$3.radiusMd,
+					background: C$3.layer1,
 					cursor: "pointer",
-					color: C$2.text
+					color: C$3.text
 				}
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 20 }), (0, react.createElement)("span", { style: {
 				fontSize: "12px",
@@ -39258,17 +39340,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				calendarLabels,
 				timeLabels
 			})), (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
-				borderTop: `1px dashed ${C$2.borderL2}`,
+				borderTop: `1px dashed ${C$3.borderL2}`,
 				paddingTop: "10px",
 				fontSize: "12px",
 				lineHeight: "1.6",
-				color: C$2.textDim
+				color: C$3.textDim
 			} }, (0, react.createElement)("span", { style: {
-				color: C$2.text,
+				color: C$3.text,
 				fontWeight: 600,
 				marginRight: "4px"
 			} }, t("editorSchedForecast") + "："), describeSchedule(draft, t)), (0, react.createElement)("div", { style: {
-				borderTop: `1px dashed ${C$2.borderL2}`,
+				borderTop: `1px dashed ${C$3.borderL2}`,
 				marginTop: "10px"
 			} })), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-schedfoot",
@@ -39286,7 +39368,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				gap: "4px"
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "11px",
-				color: C$2.text
+				color: C$3.text
 			} }, t("editorTaskStart")), (0, react.createElement)(DateField, {
 				value: draft.date,
 				onChange: (value) => {
@@ -39325,7 +39407,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				flex: "none",
 				whiteSpace: "nowrap",
 				fontSize: "11px",
-				color: C$2.textDim
+				color: C$3.textDim
 			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
 				value: draft.window,
 				options: windowOptions,
@@ -39386,13 +39468,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: "dsh-tdt-ed-help",
 				"aria-label": t("editorDepsHint")
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }))))), (0, react.createElement)("div", { style: { marginBottom: "10px" } }, draft.deps.length === 0 ? (0, react.createElement)("div", { style: {
-				border: `1px dashed ${C$2.borderL4}`,
-				borderRadius: C$2.radiusMd,
+				border: `1px dashed ${C$3.borderL4}`,
+				borderRadius: C$3.radiusMd,
 				padding: "16px 12px",
 				textAlign: "center",
-				background: C$2.layer1
+				background: C$3.layer1
 			} }, (0, react.createElement)("div", { style: { fontSize: "13px" } }, t("editorDepEmpty")), (0, react.createElement)("div", { style: {
-				color: C$2.textDim,
+				color: C$3.textDim,
 				fontSize: "12px",
 				marginTop: "4px"
 			} }, t("editorDepEmptyHint"))) : (0, react.createElement)("div", { style: {
@@ -39408,7 +39490,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}, (0, react.createElement)("span", { style: {
 					display: "inline-flex",
 					flex: "none",
-					color: C$2.textTertiary
+					color: C$3.textTertiary
 				} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), (0, react.createElement)(MarqueeText, {
 					text: known?.label ?? dep.task,
 					style: {
@@ -39420,7 +39502,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					text: ws,
 					style: {
 						flex: "0 0 72px",
-						color: C$2.textDim,
+						color: C$3.textDim,
 						fontSize: "11px"
 					}
 				}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -39791,7 +39873,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						width: "min(480px, calc(100vw - 24px))",
 						height: Math.min(660, Math.max(240, rect.top - 12)),
 						background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
-						border: `1px solid ${C$2.borderL2}`,
+						border: `1px solid ${C$3.borderL2}`,
 						borderRadius: "var(--dsh-radius-panel, 10px)",
 						boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))"
 					};
@@ -39838,7 +39920,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					justifyContent: "center",
 					padding: "24px",
 					textAlign: "center",
-					color: C$2.textDim,
+					color: C$3.textDim,
 					fontSize: "13px"
 				} }, t("editorPickerNoSession"));
 			})()), document.body) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
@@ -39853,6 +39935,530 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}) : null);
 		}
 		//#endregion
+		//#region src/client/task-list.tsx
+		const C$1 = {
+			text: "var(--dsw-alias-label-primary, #1f2328)",
+			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
+			textFaint: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
+			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
+			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
+			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
+			borderStrong: "var(--dsw-alias-border-l3, rgba(128,128,128,0.5))",
+			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
+			danger: "var(--dsw-alias-state-error-primary, #c0392b)",
+			success: "var(--dsw-alias-state-success-primary, #2da44e)",
+			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
+			duration: "var(--ds-transition-duration, 0.15s)",
+			ease: "var(--ds-ease-in-out, ease)"
+		};
+		const transition$1 = `background ${C$1.duration} ${C$1.ease}, color ${C$1.duration} ${C$1.ease}, border-color ${C$1.duration} ${C$1.ease}`;
+		const POLL_MS = 1e4;
+		/** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
+		function useTaskOverview() {
+			const [rows, setRows] = (0, react.useState)([]);
+			const [ready, setReady] = (0, react.useState)(false);
+			const revRef = (0, react.useRef)("");
+			const busyRef = (0, react.useRef)(false);
+			const [tick, setTick] = (0, react.useState)(0);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				const poll = async () => {
+					if (busyRef.current) return;
+					busyRef.current = true;
+					try {
+						const query = revRef.current === "" ? "" : `?rev=${encodeURIComponent(revRef.current)}`;
+						const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, { cache: "no-store" });
+						if (!res.ok) return;
+						const body = await res.json();
+						if (!alive || body.ok !== true) return;
+						if (body.unchanged === true) return;
+						revRef.current = String(body.rev ?? "");
+						setRows(Array.isArray(body.tasks) ? body.tasks : []);
+						setReady(true);
+					} catch {} finally {
+						busyRef.current = false;
+					}
+				};
+				poll();
+				const timer = window.setInterval(() => {
+					poll();
+				}, POLL_MS);
+				return () => {
+					alive = false;
+					window.clearInterval(timer);
+				};
+			}, [tick]);
+			return {
+				rows,
+				ready,
+				refresh: (0, react.useCallback)(() => {
+					setTick((v) => v + 1);
+				}, [])
+			};
+		}
+		const WEEKDAY_NAMES = [
+			"日",
+			"一",
+			"二",
+			"三",
+			"四",
+			"五",
+			"六"
+		];
+		/** cron（5 段）→ 人话；认不出的形态原样显示 cron（真实值，不编造）。 */
+		function cronToHuman(cron, once, everyNWeeks, tt) {
+			if (once !== null && once !== "") return tt("schedOnce", {
+				date: once.slice(0, 10),
+				time: once.slice(11, 16)
+			});
+			if (cron === null || cron === "") return "—";
+			const parts = cron.trim().split(/\s+/);
+			if (parts.length !== 5) return tt("schedCustom", { cron });
+			const [minute, hour, dom, , dow] = parts;
+			const pad = (v) => v.length === 1 && /^\d$/.test(v) ? `0${v}` : v;
+			const minuteStep = /^\*\/(\d+)$/.exec(minute);
+			const hourStep = /^\*\/(\d+)$/.exec(hour);
+			let text;
+			if (minute === "*" || minuteStep?.[1] === "1") text = tt("schedEveryMinute");
+			else if (minuteStep !== null) text = tt("schedEveryNMinutes", { n: minuteStep[1] });
+			else if (hour === "*" || hourStep !== null) text = tt("schedHourly", { minute: pad(minute) });
+			else if (dom === "*" && dow === "*") text = tt("schedDaily", { time: `${pad(hour)}:${pad(minute)}` });
+			else if (dom === "*" && dow !== "*") text = tt("schedWeekly", {
+				weekdays: dow.split(",").map((d) => WEEKDAY_NAMES[Number(d)] ?? d).join("、"),
+				time: `${pad(hour)}:${pad(minute)}`
+			});
+			else if (dom !== "*" && dow === "*") text = tt("schedMonthly", {
+				day: dom,
+				time: `${pad(hour)}:${pad(minute)}`
+			});
+			else return tt("schedCustom", { cron });
+			if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${text}`;
+			return text;
+		}
+		/** 下次执行的相对说法（客户端本地算，不靠请求）。 */
+		function relativeText(iso, nowMs, tt) {
+			if (iso === null) return tt("listNextNone");
+			const diff = Date.parse(iso) - nowMs;
+			if (diff <= 0) return tt("relPast");
+			const minutes = Math.floor(diff / 6e4);
+			if (minutes < 1) return tt("relNow");
+			if (minutes < 60) return tt("relMinutes", { n: minutes });
+			const hours = Math.floor(minutes / 60);
+			if (hours < 24) return tt("relHours", { n: hours });
+			return tt("relDays", { n: Math.floor(hours / 24) });
+		}
+		/** HH:mm（本机时区）。 */
+		function clockOf(iso) {
+			const d = new Date(iso);
+			if (Number.isNaN(d.getTime())) return "—";
+			return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+		}
+		/** 「9 月 28 日」（本机时区）。 */
+		function dateOf(iso) {
+			const d = new Date(iso);
+			if (Number.isNaN(d.getTime())) return "—";
+			return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+		}
+		/** 上次执行的一句话（真实值：没有就是没跑过，不编造）。 */
+		function lastRunText(row, tt) {
+			if (row.lastStatus === null || row.lastScheduledAt === null) return tt("listNever");
+			const ok = row.lastStatus === "succeeded";
+			return `${clockOf(row.lastScheduledAt)} ${ok ? tt("listStatusOk") : tt("listStatusFailed")}`;
+		}
+		function sortRows(rows) {
+			const groupOf = (row) => {
+				if (row.running) return 0;
+				if (!row.enabled) return 3;
+				return row.nextSlotAt === null ? 2 : 1;
+			};
+			return [...rows].sort((a, b) => {
+				const ga = groupOf(a);
+				const gb = groupOf(b);
+				if (ga !== gb) return ga - gb;
+				if (ga === 1) return Date.parse(a.nextSlotAt ?? "") - Date.parse(b.nextSlotAt ?? "");
+				const ta = Date.parse(a.lastScheduledAt ?? a.runningSince ?? "") || 0;
+				return (Date.parse(b.lastScheduledAt ?? b.runningSince ?? "") || 0) - ta;
+			});
+		}
+		function useFlip(signature) {
+			const nodes = (0, react.useRef)(/* @__PURE__ */ new Map());
+			const prevTop = (0, react.useRef)(/* @__PURE__ */ new Map());
+			(0, react.useLayoutEffect)(() => {
+				const moved = [];
+				for (const [id, el] of nodes.current) {
+					const top = el.getBoundingClientRect().top;
+					const prev = prevTop.current.get(id);
+					if (prev !== void 0 && Math.abs(prev - top) > .5) moved.push([el, prev - top]);
+					prevTop.current.set(id, top);
+				}
+				if (moved.length === 0) return;
+				if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true) return;
+				for (const [el, delta] of moved) {
+					el.style.transition = "none";
+					el.style.transform = `translateY(${delta}px)`;
+				}
+				const frame = requestAnimationFrame(() => {
+					for (const [el] of moved) {
+						el.style.transition = `transform 260ms ${C$1.ease}`;
+						el.style.transform = "";
+					}
+					window.setTimeout(() => {
+						for (const [el] of moved) el.style.transition = "";
+					}, 320);
+				});
+				return () => {
+					cancelAnimationFrame(frame);
+				};
+			}, [signature]);
+			const callbacks = (0, react.useRef)(/* @__PURE__ */ new Map());
+			return (0, react.useCallback)((id) => {
+				const hit = callbacks.current.get(id);
+				if (hit !== void 0) return hit;
+				const fn = (el) => {
+					if (el === null) nodes.current.delete(id);
+					else nodes.current.set(id, el);
+				};
+				callbacks.current.set(id, fn);
+				return fn;
+			}, []);
+		}
+		/** 转圈动画（@keyframes 无法写进内联 style）⇒ 注入一次，幂等。 */
+		function ensureSpinKeyframes() {
+			if (typeof document === "undefined") return;
+			const id = "dsh-tdt-spin-keyframes";
+			if (document.getElementById(id) !== null) return;
+			const tag = document.createElement("style");
+			tag.id = id;
+			tag.textContent = "@keyframes dsh-tdt-spin { to { transform: rotate(360deg) } }";
+			document.head.appendChild(tag);
+		}
+		/** 转圈（运行中）：纯 CSS 动画，零请求。 */
+		function Spinner() {
+			return (0, react.createElement)("span", { style: {
+				display: "inline-block",
+				width: "10px",
+				height: "10px",
+				borderRadius: "50%",
+				border: `1.5px solid ${C$1.brand}`,
+				borderTopColor: "transparent",
+				animation: "dsh-tdt-spin 800ms linear infinite"
+			} });
+		}
+		function StatusDot(props) {
+			const { row } = props;
+			if (row.running) return (0, react.createElement)(Spinner, {});
+			const color = !row.enabled ? C$1.textFaint : row.lastStatus === "failed" ? C$1.danger : C$1.success;
+			return (0, react.createElement)("span", {
+				title: !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : "计划运行中",
+				style: {
+					display: "inline-block",
+					width: "8px",
+					height: "8px",
+					borderRadius: "50%",
+					background: color,
+					flex: "none",
+					transition: `background ${C$1.duration} ${C$1.ease}`
+				}
+			});
+		}
+		const cardStyle$1 = {
+			display: "block",
+			width: "100%",
+			boxSizing: "border-box",
+			textAlign: "left",
+			padding: "12px 14px",
+			marginBottom: "10px",
+			borderRadius: "10px",
+			border: `1px solid ${C$1.border}`,
+			background: C$1.layer1,
+			color: C$1.text,
+			transition: `border-color ${C$1.duration} ${C$1.ease}, background ${C$1.duration} ${C$1.ease}`
+		};
+		const titleStyle = {
+			fontSize: "14px",
+			fontWeight: 600,
+			color: C$1.text,
+			lineHeight: "20px"
+		};
+		const metaStyle = {
+			fontSize: "12px",
+			color: C$1.textDim,
+			lineHeight: "18px",
+			marginTop: "2px"
+		};
+		const faintStyle = {
+			fontSize: "11px",
+			color: C$1.textFaint,
+			lineHeight: "16px",
+			marginTop: "2px"
+		};
+		const iconBtnStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			justifyContent: "center",
+			gap: "4px",
+			height: "26px",
+			minWidth: "26px",
+			padding: "0 6px",
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "6px",
+			background: "transparent",
+			color: C$1.textDim,
+			cursor: "pointer",
+			fontFamily: "inherit",
+			fontSize: "12px",
+			transition: transition$1
+		};
+		const sectionLabelStyle = {
+			fontSize: "11px",
+			color: C$1.textFaint,
+			marginTop: "10px",
+			marginBottom: "2px"
+		};
+		const sectionBodyStyle = {
+			fontSize: "12px",
+			color: C$1.text,
+			lineHeight: "18px"
+		};
+		function TaskCard(props) {
+			const { row, t, tt, nowMs, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props;
+			const scheduleText = cronToHuman(row.schedule.cron, row.schedule.once, row.schedule.everyNWeeks, tt);
+			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
+			return (0, react.createElement)("div", {
+				ref: refOf,
+				style: cardStyle$1
+			}, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "flex-start",
+				gap: "10px"
+			} }, (0, react.createElement)("div", { style: {
+				paddingTop: "5px",
+				flex: "none"
+			} }, (0, react.createElement)(StatusDot, { row })), (0, react.createElement)("div", { style: {
+				flex: "1 1 auto",
+				minWidth: 0
+			} }, (0, react.createElement)("div", { style: titleStyle }, row.title, row.code !== null ? (0, react.createElement)("span", { style: {
+				...faintStyle,
+				marginLeft: "6px",
+				display: "inline"
+			} }, `[${row.code}]`) : null, row.enabled ? null : (0, react.createElement)("span", { style: {
+				...faintStyle,
+				marginLeft: "6px",
+				display: "inline"
+			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: metaStyle }, row.running ? `${t("listRunning")} · ${scheduleText}` : `${scheduleText} · ${t("listLastPrefix")} ${lastRunText(row, tt)} · ${t("listNextPrefix")} ${row.nextSlotAt === null ? t("listNextNone") : `${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`}`), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "6px",
+				flex: "none"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				checked: row.enabled,
+				onChange: (next) => {
+					onToggleEnabled(row.id, next);
+				},
+				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
+			}), (0, react.createElement)("button", {
+				type: "button",
+				style: iconBtnStyle,
+				title: t("editorEdit"),
+				onClick: () => {
+					onEdit(row.id);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...iconBtnStyle,
+					border: "none",
+					transform: open ? "rotate(180deg)" : "none"
+				},
+				title: t("expandHint"),
+				onClick: onToggleOpen,
+				"aria-expanded": open
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })))), open ? (0, react.createElement)("div", { style: {
+				marginTop: "10px",
+				borderTop: `1px dashed ${C$1.border}`,
+				paddingTop: "8px"
+			} }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), (0, react.createElement)("div", { style: sectionBodyStyle }, `${t("listFieldSchedule")}：${scheduleText} · ${t("listFieldWorkspace")}：${row.workspace} · ${t("listFieldModel")}：${modelText} · ${t("listFieldRetry")}：${row.retryMax} · ${t("listFieldWindow")}：${row.schedule.window}`), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? "（工作区）" : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
+				...sectionBodyStyle,
+				color: C$1.textDim,
+				whiteSpace: "pre-wrap",
+				wordBreak: "break-word"
+			} }, row.promptHead)) : null);
+		}
+		function TaskListView(props) {
+			const { t, rows, ready, onRefresh, onNew, onEdit, onToggleEnabled } = props;
+			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
+			ensureSpinKeyframes();
+			const [filter, setFilter] = (0, react.useState)("all");
+			const [workspace, setWorkspace] = (0, react.useState)("");
+			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
+			const [query, setQuery] = (0, react.useState)("");
+			const [openId, setOpenId] = (0, react.useState)(null);
+			const [nowMs, setNowMs] = (0, react.useState)(() => Date.now());
+			(0, react.useEffect)(() => {
+				const timer = window.setInterval(() => {
+					setNowMs(Date.now());
+				}, 1e3);
+				return () => {
+					window.clearInterval(timer);
+				};
+			}, []);
+			const workspaces = (0, react.useMemo)(() => [...new Set(rows.map((r) => r.workspace))].sort(), [rows]);
+			const visible = (0, react.useMemo)(() => {
+				const q = query.trim().toLowerCase();
+				return sortRows(rows.filter((row) => {
+					if (filter === "enabled" && !row.enabled) return false;
+					if (filter === "disabled" && row.enabled) return false;
+					if (workspace !== "" && row.workspace !== workspace) return false;
+					if (q === "") return true;
+					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
+				}));
+			}, [
+				rows,
+				filter,
+				workspace,
+				query
+			]);
+			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
+			const menuItems = (0, react.useMemo)(() => [{
+				id: "",
+				label: t("listFilterWorkspaceAll")
+			}, ...workspaces.map((name) => ({
+				id: name,
+				label: name
+			}))], [workspaces, t]);
+			const tabStyle = (active) => ({
+				padding: "3px 12px",
+				borderRadius: "6px",
+				border: "none",
+				cursor: "pointer",
+				fontSize: "12px",
+				lineHeight: "18px",
+				fontFamily: "inherit",
+				transition: transition$1,
+				background: active ? C$1.layer1 : "transparent",
+				color: active ? C$1.text : C$1.textDim,
+				fontWeight: active ? 600 : 400
+			});
+			return (0, react.createElement)("div", { style: {
+				width: "100%",
+				display: "flex",
+				justifyContent: "center"
+			} }, (0, react.createElement)("div", { style: {
+				width: "100%",
+				maxWidth: "1120px",
+				minWidth: "760px",
+				boxSizing: "border-box"
+			} }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				marginBottom: "12px",
+				flexWrap: "wrap"
+			} }, (0, react.createElement)("div", { style: {
+				display: "inline-flex",
+				gap: "2px",
+				padding: "2px",
+				borderRadius: "8px",
+				background: C$1.layer2,
+				border: `1px solid ${C$1.border}`
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				style: tabStyle(filter === "all"),
+				onClick: () => {
+					setFilter("all");
+				}
+			}, t("listFilterAll")), (0, react.createElement)("button", {
+				type: "button",
+				style: tabStyle(filter === "enabled"),
+				onClick: () => {
+					setFilter("enabled");
+				}
+			}, t("listFilterEnabled")), (0, react.createElement)("button", {
+				type: "button",
+				style: tabStyle(filter === "disabled"),
+				onClick: () => {
+					setFilter("disabled");
+				}
+			}, t("listFilterDisabled"))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open: menuOpen,
+				anchor: (0, react.createElement)("button", {
+					type: "button",
+					style: {
+						...iconBtnStyle,
+						height: "26px",
+						padding: "0 10px"
+					},
+					onClick: () => {
+						setMenuOpen((v) => !v);
+					}
+				}, `${t("listFilterWorkspace")}：${workspace === "" ? t("listFilterWorkspaceAll") : workspace}`),
+				items: menuItems,
+				selectedId: workspace,
+				onSelect: (id) => {
+					setWorkspace(id);
+					setMenuOpen(false);
+				},
+				onClose: () => {
+					setMenuOpen(false);
+				}
+			}), (0, react.createElement)("div", { style: {
+				position: "relative",
+				flex: "1 1 160px",
+				minWidth: "140px"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Input, {
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+				value: query,
+				placeholder: t("listSearchPlaceholder"),
+				onChange: (event) => {
+					setQuery(event.target.value);
+				}
+			})), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...iconBtnStyle,
+					height: "26px"
+				},
+				title: t("debugRefresh"),
+				onClick: onRefresh
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "4px",
+					flex: "none",
+					height: "26px",
+					padding: "0 10px",
+					borderRadius: "6px",
+					border: `1px solid ${C$1.borderStrong}`,
+					background: C$1.layer1,
+					color: C$1.text,
+					cursor: "pointer",
+					fontFamily: "inherit",
+					fontSize: "12px",
+					fontWeight: 600,
+					transition: transition$1
+				},
+				onClick: onNew
+			}, `＋ ${t("editorNew")}`)), visible.length === 0 ? (0, react.createElement)("p", { style: {
+				...metaStyle,
+				marginTop: "8px"
+			} }, rows.length === 0 && !ready ? "" : rows.length === 0 ? t("listEmpty") : t("listEmptyFiltered")) : (0, react.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react.createElement)(TaskCard, {
+				key: row.id,
+				row,
+				t,
+				tt,
+				nowMs,
+				open: openId === row.id,
+				onToggleOpen: () => {
+					setOpenId((cur) => cur === row.id ? null : row.id);
+				},
+				onEdit,
+				onToggleEnabled,
+				refOf: refOf(row.id)
+			})))));
+		}
+		//#endregion
 		//#region src/client/index.ts
 		/** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 		const SETTINGS_NS = "dsh-task-dispatch-table";
@@ -39862,12 +40468,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		const PANEL_ID = SETTINGS_NS;
 		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 		let runtimeT = (key) => key;
-		/** 只读参数展示值：undefined 显示占位符，statePath 空串 = 宿主数据根默认（决策 14）。 */
-		function displayParam(t, value) {
-			if (value === void 0) return "—";
-			if (typeof value === "string" && value.trim() === "") return t("paramDefault");
-			return String(value);
-		}
 		const C = {
 			text: "var(--dsw-alias-label-primary, #1f2328)",
 			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
@@ -39888,20 +40488,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		};
 		const monoFont = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 		const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`;
-		const textareaStyle = {
-			width: "100%",
-			boxSizing: "border-box",
-			minHeight: "16em",
-			resize: "vertical",
-			fontFamily: monoFont,
-			fontSize: "12px",
-			lineHeight: 1.5,
-			padding: "8px",
-			color: C.text,
-			background: C.layer1,
-			border: `1px solid ${C.border}`,
-			borderRadius: "8px"
-		};
+		C.text, C.layer1, `${C.border}`;
 		const hintStyle = {
 			color: C.textDim,
 			fontSize: "12px",
@@ -39916,12 +40503,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			display: "flex",
 			gap: "8px",
 			margin: "8px 0"
-		};
-		const dlStyle = {
-			display: "grid",
-			gridTemplateColumns: "auto 1fr",
-			gap: "4px 16px",
-			margin: "8px 0 0"
 		};
 		const cardStyle = {
 			display: "flex",
@@ -40201,12 +40782,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return;
 			}
 		}
-		/** 周期摘要：once 优先，其次 cron（带时区），都没有显示占位。 */
-		function scheduleSummary(row) {
-			if (row.once !== null && row.once !== "") return `once ${row.once}`;
-			if (row.cron !== null && row.cron !== "") return `cron ${row.cron}${row.timezone === null ? "" : ` (${row.timezone})`}`;
-			return "—";
-		}
 		const STATUS_OPTIONS = [
 			"pending",
 			"dispatched",
@@ -40331,6 +40906,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				window.addEventListener("pointermove", onMove);
 				window.addEventListener("pointerup", onUp);
 			}, [previewWidth]);
+			const overview = useTaskOverview();
 			const [editor, setEditor] = (0, react.useState)(null);
 			const [editorSaving, setEditorSaving] = (0, react.useState)(false);
 			const [editorError, setEditorError] = (0, react.useState)(null);
@@ -40530,9 +41106,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
 			const data = parseDebugSnapshot(raw);
 			const effectiveInline = typeof section.tasksInline === "string" ? section.tasksInline : "";
-			const current = draft ?? effectiveInline;
 			const invalid = draft !== void 0 && !isValidTaskTable(draft);
-			const dirty = draft !== void 0 && draft !== effectiveInline;
 			(0, react.useEffect)(() => {
 				if (!invalid) {
 					setInvalidToast((v) => v.on ? {
@@ -40547,24 +41121,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					key: invalidSeq.current
 				});
 			}, [invalid]);
-			const writable = snapshot.status === "ready" && snapshot.writable && !saving;
-			const save = async () => {
-				if (draft === void 0 || invalid || !writable) return;
-				setSaving(true);
-				setFailed(null);
-				try {
-					if (draft.trim() === "") await scope.unset("tasksInline");
-					else await scope.set("tasksInline", draft);
-					setDraft(void 0);
-					notifySaved();
-				} catch (error) {
-					const msg = error instanceof Error ? error.message : String(error);
-					setFailed(humanizeTaskError(msg));
-					setFailedKey((prev) => prev + 1);
-				} finally {
-					setSaving(false);
-				}
-			};
+			snapshot.status === "ready" && snapshot.writable;
 			const taskRows = data?.tasks ?? [];
 			/** 可选的前置任务 = 现有任务表（真数据，带所属工作区 ⇒ 表单里先选工作区再选任务）。 */
 			const editorTasks = taskRows.map((row) => {
@@ -40715,96 +41272,27 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, `＋ ${t("editorNew")}`))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
 				...preStyle,
 				color: C.textFaint
-			} }, describeDiag())) : tab === "config" ? (0, react.createElement)("div", null, (0, react.createElement)("div", { style: { marginBottom: "16px" } }, (0, react.createElement)("div", { style: {
-				fontWeight: 600,
-				marginBottom: "6px"
-			} }, t("editorTasksTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("editorTasksEmpty")) : (0, react.createElement)("ul", { style: {
-				listStyle: "none",
-				margin: 0,
-				padding: 0
-			} }, taskRows.map((row) => (0, react.createElement)("li", {
-				key: row.id,
-				style: {
-					display: "flex",
-					alignItems: "center",
-					gap: "10px",
-					padding: "7px 0",
-					borderBottom: `1px solid ${C.border}`
+			} }, describeDiag())) : tab === "config" ? (0, react.createElement)(TaskListView, {
+				t,
+				rows: overview.rows,
+				ready: overview.ready,
+				onRefresh: overview.refresh,
+				onNew: () => {
+					setEditorError(null);
+					setEditor({
+						mode: "create",
+						id: "",
+						draft: emptyTaskDraft(),
+						history: null
+					});
+				},
+				onEdit: openEditor,
+				onToggleEnabled: (id, enabled) => {
+					toggleTaskEnabled(id, enabled).then((err) => {
+						if (err !== null) setViewErr(err);
+					});
 				}
-			}, (0, react.createElement)("span", { style: {
-				fontSize: "13px",
-				fontWeight: 500
-			} }, row.title === "" ? row.id : row.title), (0, react.createElement)("span", { style: {
-				fontSize: "11px",
-				color: C.textFaint
-			} }, row.code ?? row.id), row.enabled === false ? (0, react.createElement)("span", { style: {
-				fontSize: "11px",
-				color: C.textFaint
-			} }, t("editorDisabledTag")) : null, (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...addButtonStyle,
-					padding: "3px 10px"
-				},
-				onClick: () => {
-					openEditor(row.id);
-				}
-			}, t("editorEdit")))))), (0, react.createElement)("label", {
-				htmlFor: "dsh-tdt-modal-inline",
-				style: { fontWeight: 600 }
-			}, t("tasksInlineLabel")), (0, react.createElement)("p", { style: hintStyle }, t("tasksInlineHint")), (0, react.createElement)("textarea", {
-				id: "dsh-tdt-modal-inline",
-				value: current,
-				disabled: !writable,
-				onChange: (event) => {
-					setDraft(event.target.value);
-				},
-				spellCheck: false,
-				style: textareaStyle
-			}), (0, react.createElement)("div", { style: { position: "relative" } }, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
-				type: "button",
-				onClick: () => {
-					save();
-				},
-				disabled: !writable || invalid || !dirty
-			}, saving ? t("saving") : t("save")), (0, react.createElement)("button", {
-				type: "button",
-				onClick: () => {
-					setDraft(void 0);
-					setFailed(null);
-				},
-				disabled: saving || !dirty
-			}, t("discard"))), failed !== null ? (0, react.createElement)(FloatingToast, {
-				seq: failedKey,
-				tone: "error",
-				onDone: () => {
-					setFailed(null);
-				},
-				text: failed
-			}) : null, invalidToast.on ? (0, react.createElement)(FloatingToast, {
-				seq: `inv-${invalidToast.key}`,
-				tone: "error",
-				sticky: true,
-				onDone: () => {},
-				text: t("invalidJson")
-			}) : null, savedToast !== 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
-				key: savedToast,
-				text: t("editorTaskSaved"),
-				tone: "success",
-				holdMs: 2500,
-				onDone: () => {
-					setSavedToast(0);
-				}
-			}) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
-				t("colId"),
-				t("colTitle"),
-				t("colCode"),
-				t("colSchedule"),
-				t("colNext")
-			].map((name) => (0, react.createElement)("th", {
-				key: name,
-				style: cellStyle
-			}, name)))), (0, react.createElement)("tbody", null, taskRows.map((row) => (0, react.createElement)("tr", { key: row.id }, (0, react.createElement)("td", { style: cellStyle }, row.id), (0, react.createElement)("td", { style: cellStyle }, row.title), (0, react.createElement)("td", { style: cellStyle }, row.code ?? "—"), (0, react.createElement)("td", { style: cellStyle }, scheduleSummary(row)), (0, react.createElement)("td", { style: cellStyle }, row.next === null ? "—" : formatTime(row.next)))))), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("debugWarns")), data.warns.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugNoWarns")) : (0, react.createElement)("pre", { style: preStyle }, data.warns.join("\n")), (0, react.createElement)("details", { style: { marginTop: "16px" } }, (0, react.createElement)("summary", null, t("paramsTitle")), (0, react.createElement)("dl", { style: dlStyle }, (0, react.createElement)("dt", null, t("paramStatePath")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.statePath)), (0, react.createElement)("dt", null, t("paramTickMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tickMs)), (0, react.createElement)("dt", null, t("paramDispatchGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.dispatchGraceMs)), (0, react.createElement)("dt", null, t("paramLeaseMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.leaseMs)), (0, react.createElement)("dt", null, t("paramUnknownGraceMs")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.unknownGraceMs)), (0, react.createElement)("dt", null, t("paramTasksDir")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.tasksDir)), (0, react.createElement)("dt", null, t("paramDefaultProvider")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultProvider)), (0, react.createElement)("dt", null, t("paramDefaultModel")), (0, react.createElement)("dd", { style: { margin: 0 } }, displayParam(t, section.defaultModel))))) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
+			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,
 				onChange: (event) => {
 					setStatusFilter(event.target.value);

@@ -20,6 +20,7 @@ import { TaskStore, parseInstanceSnapshot } from '../dist/store.js'
 import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
 import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
 import { buildMessage } from '../dist/dispatch.js'
+import { createRuntimeIndex } from '../dist/runtime-index.js'
 
 let passed = 0
 const failures = []
@@ -521,6 +522,17 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     ['frame', 'root', 'scroll', 'column', 'flowItem'].every(k => clientJs.includes(`'${k}'`) || clientJs.includes(`"${k}"`)))
   check('官方类缺失时回退自绘类（dsh-tdt-sv-body/col/flowitem 仍在）',
     clientJs.includes('dsh-tdt-sv-body') && clientJs.includes('dsh-tdt-sv-col') && clientJs.includes('dsh-tdt-sv-flowitem'))
+  // 主界面任务列表重建（2026-09-30，design/main-panel-design.md）
+  check('任务列表视图已打进 bundle（TaskListView + useTaskOverview）',
+    clientJs.includes('TaskListView') && clientJs.includes('useTaskOverview'))
+  check('卡片数据走聚合端点 tasks/overview（不逐任务查库）', clientJs.includes('tasks/overview'))
+  check('轮询带 rev 比对（unchanged 即不重渲染、不重排）', clientJs.includes('unchanged') && clientJs.includes('rev='))
+  check('内容列限宽居中（min 760 / max 1120）', clientJs.includes('760px') && clientJs.includes('1120px'))
+  check('排序位移走 FLIP 动画 + 尊重减弱动效', clientJs.includes('translateY(') && clientJs.includes('prefers-reduced-motion'))
+  check('运行中状态点转圈（纯 CSS keyframes，零请求）', clientJs.includes('dsh-tdt-spin'))
+  check('展开区四区块（执行设置 / 附加文件 / 前置任务 / 提示词）',
+    clientJs.includes('listSectionSchedule') && clientJs.includes('listSectionAttachments')
+    && clientJs.includes('listSectionDepends') && clientJs.includes('listSectionPrompt'))
   // 回归（2026-09-27）：ChatNodeSeat 必须把 groupPart 传给节点视图——漏传会把整步全画出来，
   // 步内 tool-call 块再画一张 = 与独立工具节点重复（真机「编辑/写入×2」）。
   check('seat 向节点视图下发 groupPart（reasoning/response 分流）',
@@ -1018,6 +1030,74 @@ console.log('\n[13] task-assets')
 
   check('清道夫：清临时区过期文件', purgeTmp(paths, 7) >= 0)
   check('删除任务：整目录删', deleteTaskAssets(paths, taskId) && !existsSync(join(paths.tasksRoot, taskId)))
+  rmSync(dir, { recursive: true, force: true })
+}
+
+// ── 14. 主界面运行态内存索引（2026-09-30：一条聚合 SQL 建索引 + 两循环事件增量维护 ⇒ 轮询不查库）──
+console.log('\n[14] runtime-index')
+{
+  const dir = join(root, 'runtime-db')
+  const store = new TaskStore(join(dir, 'state.db'))
+  // task-a：08:00 失败 → 09:00 成功（最近一条必须是 09:00 那条）；task-b：一条在飞的 dispatched。
+  const a1 = randomUUID()
+  store.ensureInstance(a1, 'task-a', '2026-09-01', '2026-09-01T08:00:00.000Z', 'failed')
+  store.transition(a1, { status: 'failed', finished_at: '2026-09-01T08:01:00.000Z' })
+  const a2 = randomUUID()
+  store.ensureInstance(a2, 'task-a', '2026-09-01', '2026-09-01T09:00:00.000Z', 'succeeded')
+  store.transition(a2, { status: 'succeeded', finished_at: '2026-09-01T09:05:00.000Z' })
+  store.ensureInstance(randomUUID(), 'task-b', '2026-09-01', '2026-09-01T09:00:00.000Z', 'dispatched')
+
+  const last = store.lastRunByTask()
+  check('lastRunByTask：取每任务最近一条（不是最早）', last.get('task-a')?.status === 'succeeded' && last.get('task-a')?.scheduledAt === '2026-09-01T09:00:00.000Z')
+  check('lastRunByTask：finished_at 同源', last.get('task-a')?.finishedAt === '2026-09-01T09:05:00.000Z')
+  const flying = store.inFlightByTask()
+  check('inFlightByTask：只认 dispatched/running', flying.has('task-b') && !flying.has('task-a'))
+
+  const idx = createRuntimeIndex()
+  const taskA = def({ id: 'task-a', title: '日报', target: { workspace: 'Temp', prompt: '写日报' } })
+  const taskB = def({ id: 'task-b', title: '周报', enabled: false, target: { workspace: 'Temp', prompt: '写周报' } })
+  const t0 = Date.parse('2026-09-01T10:00:00.000Z')
+  idx.rebuild([taskA, taskB], store, t0)
+  const base = idx.overview([taskA, taskB], Date.parse('2026-09-01T10:00:00.000Z'))
+  const rowA = base.rows.find(r => r.id === 'task-a')
+  const rowB = base.rows.find(r => r.id === 'task-b')
+  check('rebuild：上次执行取自库里最近一条', rowA?.lastStatus === 'succeeded' && rowA?.lastScheduledAt === '2026-09-01T09:00:00.000Z')
+  check('rebuild：在飞行实例 ⇒ running', rowB?.running === true && rowB?.runningSince === '2026-09-01T09:00:00.000Z')
+  check('nextSlotAt：按 cron 算出下一刻度（次日 09:00）', rowA?.nextSlotAt === '2026-09-02T09:00:00.000Z', `实际 ${rowA?.nextSlotAt}`)
+  check('停用任务也算下一刻度（排序要能放进「已关闭」组）', rowB?.nextSlotAt !== null)
+
+  const revBefore = base.rev
+  const again = idx.overview([taskA, taskB], Date.parse('2026-09-01T10:30:00.000Z'))
+  check('overview：内容未变 ⇒ rev 不变（轮询可回 unchanged，不传整份）', again.rev === revBefore)
+
+  const moved = idx.overview([taskA, taskB], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('overview：刻度过期 ⇒ 就地前移 + rev 变化', moved.rows.find(r => r.id === 'task-a')?.nextSlotAt === '2026-09-03T09:00:00.000Z' && moved.rev !== revBefore)
+
+  const taskA2 = def({ id: 'task-a', title: '日报', schedule: { cron: '0 18 * * *', timezone: 'UTC', window: 'PT4H' } })
+  const edited = idx.overview([taskA2, taskB], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('overview：排期改了 ⇒ 立刻重算（18:00）', new Date(edited.rows.find(r => r.id === 'task-a')?.nextSlotAt).getUTCHours() === 18 && edited.rev !== moved.rev)
+
+  idx.markDispatched('task-a', '2026-09-02T18:00:00.000Z')
+  check('markDispatched：卡片转运行中', idx.overview([taskA2], Date.parse('2026-09-02T10:00:00.000Z')).rows[0]?.running === true)
+  idx.markTerminal('task-a', 'failed', '2026-09-02T18:00:00.000Z', '2026-09-02T18:03:00.000Z')
+  const done = idx.overview([taskA2], Date.parse('2026-09-02T10:00:00.000Z')).rows[0]
+  check('markTerminal：不再在飞 + 记录上次失败', done?.running === false && done?.lastStatus === 'failed' && done?.lastFinishedAt === '2026-09-02T18:03:00.000Z')
+
+  const long = '长'.repeat(300)
+  const rich = def({
+    id: 'task-a', title: '日报', code: 'D1', target: { workspace: 'Temp', prompt: long },
+    attachments: [{ id: 'a1', name: '报告.md', kind: 'upload', ref: 'x.md' }],
+    depends_on: [{ task: 'task-b', semantics: 'latest_success' }],
+  })
+  const proj = idx.overview([rich, taskB], Date.parse('2026-09-02T10:00:00.000Z')).rows.find(r => r.id === 'task-a')
+  check('投影：提示词只给首段（不传全文）', proj?.promptHead.length === 121 && proj?.promptHead.endsWith('…'))
+  check('投影：附件只给名与类型', proj?.attachments.length === 1 && proj?.attachments[0].name === '报告.md' && proj?.attachments[0].kind === 'upload')
+  check('投影：前置任务带标题与启停', proj?.depends[0]?.title === '周报' && proj?.depends[0]?.enabled === false)
+  check('投影：createdAt 缺省为 null（不编造时间）', proj?.createdAt === null)
+
+  const pruned = idx.overview([taskB], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('overview：任务表里没有的条目被剔除', pruned.rows.length === 1 && pruned.rows[0].id === 'task-b')
+  store.close()
   rmSync(dir, { recursive: true, force: true })
 }
 

@@ -118,7 +118,7 @@ export function extractTokenUsage(event) {
     }
     return undefined;
 }
-export function createReconciler({ ctx, logger, store, options }) {
+export function createReconciler({ ctx, logger, store, options, runtime }) {
     const handles = new Map();
     /** token 用量分量累计（决策 32 修订）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
     const tokenTotals = new Map();
@@ -180,11 +180,24 @@ export function createReconciler({ ctx, logger, store, options }) {
         if (sessionId !== null)
             handles.delete(sessionId);
     }
+    /**
+     * 实例行被删（窗口外残留 pending / 附件缺失过窗）后的运行态同步：
+     * 该任务若已无任何在飞行实例（一条聚合 SQL，删行是低频事件），主界面的转圈就该停。
+     */
+    function syncRunningAfterDrop(taskId) {
+        if (runtime === undefined)
+            return;
+        if (!store.inFlightByTask().has(taskId))
+            runtime.clearRunning(taskId);
+    }
     function finishTerminal(instance, status, reason, detail, outputs) {
         const tk = tokenTotals.get(instance.id);
         if (tokenTotals.has(instance.id))
             tokenTotals.delete(instance.id);
-        store.transition(instance.id, { status, finished_at: new Date().toISOString(), detail: reason });
+        const finishedAt = new Date().toISOString();
+        store.transition(instance.id, { status, finished_at: finishedAt, detail: reason });
+        // 主界面运行态（内存，非真源）：实例进终态 ⇒ 该任务不再在飞，并记录「上次执行」。
+        runtime?.markTerminal(instance.task_id, status, instance.scheduled_at, finishedAt);
         if (detail !== undefined)
             store.appendEvent(instance.id, 'receipt_check', { reason, detail });
         // 决策 32 修订：完成瞬间写回产出与 token 三拆列到总表（冗余，task_events 仍为真源）
@@ -294,6 +307,7 @@ export function createReconciler({ ctx, logger, store, options }) {
             // 串行互斥会把同任务后续刻度全部挡死（评审 P1#9）。文件没恢复是常态 ⇒ 不能无限等。
             if (Date.now() > Date.parse(instance.scheduled_at) + durationMs(snap.window)) {
                 store.deleteInstance(instance.id);
+                syncRunningAfterDrop(instance.task_id);
                 store.appendLog({
                     taskId: instance.task_id,
                     scheduledAt: instance.scheduled_at,
@@ -418,6 +432,7 @@ export function createReconciler({ ctx, logger, store, options }) {
                 }
                 if (now > windowDeadline(instance)) {
                     store.deleteInstance(instance.id);
+                    syncRunningAfterDrop(instance.task_id);
                     store.appendLog({ taskId: instance.task_id, scheduledAt: instance.scheduled_at, level: 'warn', kind: 'stray_pending', message: '窗口外残留 pending，已删除（视为未执行）' });
                     continue;
                 }

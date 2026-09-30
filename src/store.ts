@@ -384,6 +384,35 @@ export class TaskStore {
     return { instances, events }
   }
 
+  /**
+   * 主界面运行态初始化（2026-09-30）：**一条聚合 SQL** 取每任务最近一条实例。
+   * SQLite 文档化行为：查询含 min/max 聚合时，其余裸列取**该聚合所在行**的值
+   * ⇒ `MAX(scheduled_at)` 那条的 `status` / `finished_at` 正是「最近一次执行」。
+   * 走 `idx_instances_slot(task_id, scheduled_at)`，绝不做「每任务一次查询」。
+   */
+  lastRunByTask(): Map<string, { status: InstanceStatus; scheduledAt: string; finishedAt: string | null }> {
+    const rows = this.db
+      .prepare(`SELECT task_id, MAX(scheduled_at) AS scheduled_at, status, finished_at
+                FROM task_instances GROUP BY task_id`)
+      .all() as Array<{ task_id: string; scheduled_at: string; status: InstanceStatus; finished_at: string | null }>
+    const out = new Map<string, { status: InstanceStatus; scheduledAt: string; finishedAt: string | null }>()
+    for (const row of rows) {
+      out.set(row.task_id, { status: row.status, scheduledAt: row.scheduled_at, finishedAt: row.finished_at })
+    }
+    return out
+  }
+
+  /** 在飞行（dispatched / running）的实例 ⇒ 主界面「运行中」。同样一条聚合 SQL。 */
+  inFlightByTask(): Map<string, string> {
+    const rows = this.db
+      .prepare(`SELECT task_id, MIN(scheduled_at) AS scheduled_at FROM task_instances
+                WHERE status IN ('dispatched','running') GROUP BY task_id`)
+      .all() as Array<{ task_id: string; scheduled_at: string }>
+    const out = new Map<string, string>()
+    for (const row of rows) out.set(row.task_id, row.scheduled_at)
+    return out
+  }
+
   /** 晚于某时刻的最新回执事件（决策 19：回执对账按次取新，防止上一轮 attempt 的旧回执冒充）。 */
   latestReceipt(instanceId: string, afterIso: string | undefined): { ts: string; detail: string | null } | undefined {
     return this.db

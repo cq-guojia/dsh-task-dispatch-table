@@ -17,6 +17,7 @@ import { displayNameOf, durationMs, logicalDateOf, scheduledSlotsFor } from './t
 import type { InstanceSnapshot, ResolvedDependency, TaskInstance, TaskStore, InstanceStatus } from './store.js'
 import { parseInstanceSnapshot } from './store.js'
 import type { Reconciler } from './reconcile.js'
+import type { RuntimeIndex } from './runtime-index.js'
 import { resolveWorkspace } from './dispatch.js'
 import type { PluginConfig } from './config.js'
 
@@ -281,6 +282,8 @@ function dispatchNewSlots(
   verdictLog: Map<string, string>,
   upstreams: ReadonlyMap<string, TaskDefinition>,
   assets: AssetPaths | null,
+  /** 主界面运行态内存索引（2026-09-30）：落库即顺手标记「运行中」，不额外查库。 */
+  runtime: RuntimeIndex | null,
 ): void {
   const nowMs = Date.now()
   for (const task of tasks) {
@@ -329,6 +332,8 @@ function dispatchNewSlots(
     // 决策 41：**落库即止**——发动执行是 Loop B（reconciler.sweep）的事，本循环到此为止。
     const id = randomUUID()
     if (!store.ensureInstance(id, task.id, slot.logicalDate, slot.scheduledAtIso, 'dispatched', snapshotOf(task, workspace, depVerdict.resolved))) continue // 撞唯一索引（极少）
+    // 主界面运行态（内存，非真源）：刚落库 ⇒ 该任务在飞。Loop B 收口时会由 markTerminal 清除。
+    runtime?.markDispatched(task.id, slot.scheduledAtIso)
     logger.info(`已落库执行记录 ${id}（任务 ${task.id} · ${slot.scheduledAtIso}），发动由执行循环接管（决策 41）`)
   }
 }
@@ -341,8 +346,10 @@ export function createScheduler(opts: {
   config: () => PluginConfig
   /** 任务文件资产根（附加文件存在性校验用）；未就绪传 null ⇒ 跳过 upload 型校验。 */
   assets?: () => AssetPaths | null
+  /** 主界面运行态内存索引（2026-09-30）；未装配则跳过（不影响调度）。 */
+  runtime?: RuntimeIndex
 }): Scheduler {
-  const { ctx, logger, store, reconciler, config, assets } = opts
+  const { ctx, logger, store, reconciler, config, assets, runtime } = opts
   const verdictLog = new Map<string, string>()
   let taskMap = new Map<string, TaskDefinition>()
 
@@ -359,7 +366,7 @@ export function createScheduler(opts: {
       // 故这里把全量写进 taskMap，让前端前置列表能选到停用任务。
       taskMap = new Map(allTasks.map((t) => [t.id, t]))
       // Loop A：先处理新刻度（懒建行 + 不回看 + 不补跑 + 落库即止，决策 41）
-      dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets())
+      dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets(), runtime ?? null)
       // Loop B：再收口全部执行记录（发动本 tick 新落库的行 + 追问 / 重试 / 租约——
       // 只读执行记录 + 快照，决策 41）。放在 Loop A 之后 = 新行当 tick 即被发动，时延不退化。
       reconciler.sweep()
