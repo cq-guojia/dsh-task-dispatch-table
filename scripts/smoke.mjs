@@ -456,7 +456,13 @@ try {
   const noWsReconciler = createReconciler({ ctx: noWsCtx, logger, store: noWsStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: noWsCfg, legacyTask: () => undefined } })
   const noWsScheduler = createScheduler({ ctx: noWsCtx, logger, store: noWsStore, reconciler: noWsReconciler, config: noWsCfg })
   noWsScheduler.tick()
-  check('工作区找不到 ⇒ 不建 task_instances 行', noWsStore.listByStatus(['dispatched', 'pending', 'skipped', 'failed']).length === 0)
+  // 2026-09-30 口径变更（用户拍板）：工作区找不到属**任务级错误** ⇒ **当场写一条执行记录**
+  //（终态 skipped ⇒ 永不重试；卡片立刻红、执行记录里看得见），不再是旧的「只记日志不建行」。
+  const noWsRows = noWsStore.listByStatus(['skipped'])
+  check('工作区找不到 ⇒ 当场写一条 skipped 执行记录（任务级错误）',
+    noWsRows.length === 1 && noWsStore.listByStatus(['dispatched', 'pending', 'failed']).length === 0)
+  check('工作区找不到 ⇒ 该记录挂原因事件（执行记录展开能看到为什么没跑）',
+    noWsStore.countEvents(noWsRows[0].id, 'task-error') === 1)
   const logs = noWsStore.dumpTable('task_log', 500)
   check('工作区找不到 ⇒ 记 task_log(precondition)', logs.rows.some(l => l.kind === 'precondition'), JSON.stringify(logs.rows.map(l => l.kind)))
   noWsStore.close()

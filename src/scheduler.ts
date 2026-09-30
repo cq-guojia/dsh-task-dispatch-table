@@ -232,6 +232,36 @@ function logBlocked(
 }
 
 /**
+ * **任务级错误 ⇒ 当场写一条执行记录**（用户 2026-09-30 拍板，纠正我此前「等下一刻度再补记」的说法）。
+ *
+ * 用户的分层口径（与「延期」严格分开，按**谁的责任**分）：
+ * - **前置没跑完 / 上一轮还在跑 / 服务停机** ⇒ **延期**：等得起、会自愈 ⇒ **不写行**（只上徽标 + 日志）；
+ * - **附件找不到 / 工作区不存在** ⇒ **任务级错误**：不修就永远跑不了 ⇒ **当场写行**（卡片立刻红）。
+ *
+ * 判定的先后正是用户说的顺序：**先判前置**（被挡住 ⇒ 延期，根本走不到这里），
+ * **前置过了才判工作区 / 附件**（错 ⇒ 写行）—— 与 `dispatchNewSlots` 里的分支顺序一致。
+ *
+ * 写法：复用终态 `skipped` + `attempt=0`。**不需要另加「不必重试」字段** —— `skipped` 是终态，
+ * 第二个循环只巡检 pending/dispatched/running/unknown（`NON_TERMINAL_STATUSES`）⇒ **天然不重试**。
+ * 主键用**本槽自己的时刻**；同一槽被多轮 tick 看到由 `UNIQUE(task_id, scheduled_at)` + `OR IGNORE` 幂等。
+ * 原因挂在该行的事件上（实例行没有文案列）⇒ 执行记录展开即可看到「为什么没跑」。
+ */
+function recordTaskError(
+  store: TaskStore,
+  runtime: RuntimeIndex | null,
+  task: TaskDefinition,
+  slot: { logicalDate: string; scheduledAtIso: string },
+  detail: string,
+): void {
+  const instanceId = randomUUID()
+  if (store.ensureSkipped(instanceId, task.id, slot.logicalDate, slot.scheduledAtIso)) {
+    store.appendEvent(instanceId, 'task-error', { scheduledAt: slot.scheduledAtIso, reason: detail })
+    // 内存运行态顺手更新（否则卡片要等重启 rebuild 才显示这条）。
+    runtime?.markTerminal(task.id, 'skipped', slot.scheduledAtIso, new Date().toISOString())
+  }
+}
+
+/**
  * 附加文件存在性校验（2026-09-30）：返回**缺失**的展示名。
  * upload 型按任务目录绝对路径；link 型按**附件来源工作区**（item.workspace）解析——
  * 附件可以选自任意工作区，拿任务目标工作区的 path 去判会误报（评审 P1#8）。
@@ -369,9 +399,14 @@ function dispatchNewSlots(
       workspace = resolveWorkspace(ctx, task.target.workspace)
     } catch {
       const workspaceMissing = `工作区未找到：${task.target.workspace}`
-      store.appendLog({ taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'warn', kind: 'precondition', message: workspaceMissing })
+      // 任务级错误 ⇒ **当场写一条执行记录**（同附件分支）。日志也收进「结论变化才记」——
+      // 2026-09-30 评审 P0：本分支此前**每 tick 一条**、且漏了 markBlocked。
+      if (verdictLog.get(task.id) !== 'workspace-missing') {
+        verdictLog.set(task.id, 'workspace-missing')
+        recordTaskError(store, runtime, task, slot, workspaceMissing)
+        store.appendLog({ taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'error', kind: 'precondition', message: workspaceMissing })
+      }
       // 透出原因（决策 54 · P3b）：工作区找不到也是**任务级错误**，用户必须知道是哪一个工作区。
-      // 2026-09-30 评审 P0：本分支此前漏了 markBlocked ⇒「延期」悬浮只有通用文案。
       runtime?.markBlocked(task.id, workspaceMissing)
       continue
     }
@@ -380,18 +415,22 @@ function dispatchNewSlots(
     // 日志走「结论变化才记」的同一张签名表，缺着不修就不会每 tick 刷一条。
     const missing = missingAttachments(ctx, task, workspace.path, assets)
     if (missing.length > 0) {
+      const detail = `附加文件不存在：${missing.join('、')}`
       if (verdictLog.get(task.id) !== 'attachment-missing') {
         verdictLog.set(task.id, 'attachment-missing')
+        // 任务级错误 ⇒ **当场写一条执行记录**（用户 2026-09-30 拍板）。放在「结论变化才记」里，
+        // 同一阻塞段只写一次；同一槽被多轮 tick 看到也由唯一键幂等。
+        recordTaskError(store, runtime, task, slot, detail)
         store.appendLog({
           taskId: task.id,
           scheduledAt: slot.scheduledAtIso,
           level: 'error',
           kind: 'attachment-missing',
-          message: `附加文件不存在，本次不执行：${missing.join('、')}（请重新上传或移除该附件）`,
+          message: `${detail}（请重新上传或移除该附件）`,
         })
       }
       // 透出原因（决策 54 · P3b）：附件找不到属**任务级错误**，用户必须知道是哪一个文件。
-      runtime?.markBlocked(task.id, `附加文件不存在：${missing.join('、')}`)
+      runtime?.markBlocked(task.id, detail)
       continue
     }
     // 全部预条件通过 ⇒ 清掉阻塞 / 缺附件签名，下次再卡住能重新记一条；顺带清掉展示用的阻塞原因。
