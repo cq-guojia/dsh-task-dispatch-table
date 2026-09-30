@@ -40224,6 +40224,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			document.head.appendChild(tag);
 		};
 		const POLL_MS = 1e4;
+		/**
+		* 服务端下发的巡检间隔（**显示用**；初始 = 默认值，每轮轮询回来后更新）。
+		* ⚠️ 只用于算「到点未派发」的 loading 上界，**不参与任何调度判定**。
+		*/
+		let currentTickMs = 6e4;
+		/**
+		* 「到点未派发」的 loading 上界（决策 54「时长分档」，执行后评审要求）：与**派发延迟同口径**——
+		* 复用 `pinMsFor` 的公式（巡检间隔 + 2×轮询；默认 60s + 20s = 80s，夹在 30s~10min），
+		* 而不是另写一个魔数（此前写死 90s，与那套公式并存 ⇒ 迟早漂移；且运维调大巡检间隔时会在
+		* 正常派发之前就退出 loading）。
+		* 超过它还没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥）⇒ **不能一直装成在跑**。
+		*/
+		const dueLoadingMs = () => pinMsFor(currentTickMs, POLL_MS);
 		/** 空钳位集合（缺省值用；避免每次渲染 new 一个 Set 打破 useMemo 依赖）。 */
 		const NO_PINS = /* @__PURE__ */ new Set();
 		/** 两个 id 集合是否相同（钳位集合没变就不 setState，免得白白触发重排与 FLIP）。 */
@@ -40295,6 +40308,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						revRef.current = String(body.rev ?? "");
 						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
 						const serverNow = typeof body.now === "number" && Number.isFinite(body.now) ? body.now : Date.now();
+						if (typeof body.tickMs === "number" && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs;
 						const pinMs = pinMsFor(typeof body.tickMs === "number" ? body.tickMs : 6e4, POLL_MS);
 						const pins = pinsRef.current;
 						const prevNext = prevNextRef.current;
@@ -40631,7 +40645,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (row.nextSlotAt === null) return NO_TIME;
 					const diff = Date.parse(row.nextSlotAt) - nowMs;
 					if (diff <= 0) {
-						if (-diff <= 9e4) return (0, react.createElement)(RunningBlocks, {});
+						if (-diff <= dueLoadingMs()) return (0, react.createElement)(RunningBlocks, {});
 						return tt("relNow");
 					}
 					return diff < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);

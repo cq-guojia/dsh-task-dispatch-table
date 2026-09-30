@@ -641,6 +641,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 上一轮的「补跑时间」显示已撤（用户：根本不用判断补跑时间）。
   check('运行中改显活动指示（dsh-tdt-run-blocks + 动画），补跑时间显示已撤',
     clientJs.includes('dsh-tdt-run-blocks') && clientJs.includes('@keyframes dsh-tdt-run-block') && !clientJs.includes('listNextCatchupPrefix'))
+  // 到点分支（决策 54 · P3a）：`diff <= 0`（该槽已到点且还没被处理）⇒ 也显活动指示，不再显示「即将执行」。
+  // 此前**只有「运行中」分支有断言** ⇒ 到点分支零覆盖（正是「改动被静默丢掉」那类教训要防的）。
+  check('到点分支也显活动指示（走 pinMsFor 算加载上界，不再写死魔数）',
+    clientJs.includes('dueLoadingMs') && clientJs.includes('pinMsFor(currentTickMs'))
   // 用户 2026-09-30：卡片展开箭头误用了执行记录页的 `expandHint`（悬停冒出「展开该次执行的事件时间线」，
   // 与卡片实际展开的「任务设置」对不上）⇒ 撤掉该 title，另立 listExpandHint 作无障碍名。
   check('卡片展开箭头不再复用执行记录页的展开提示（title 不再挂 expandHint）',

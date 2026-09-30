@@ -131,6 +131,21 @@ const ensureTaskListStyle = (): void => {
 // ── 轮询 ──────────────────────────────────────────────────────────────
 const POLL_MS = 10_000
 
+/**
+ * 服务端下发的巡检间隔（**显示用**；初始 = 默认值，每轮轮询回来后更新）。
+ * ⚠️ 只用于算「到点未派发」的 loading 上界，**不参与任何调度判定**。
+ */
+let currentTickMs = 60_000
+
+/**
+ * 「到点未派发」的 loading 上界（决策 54「时长分档」，执行后评审要求）：与**派发延迟同口径**——
+ * 复用 `pinMsFor` 的公式（巡检间隔 + 2×轮询；默认 60s + 20s = 80s，夹在 30s~10min），
+ * 而不是另写一个魔数（此前写死 90s，与那套公式并存 ⇒ 迟早漂移；且运维调大巡检间隔时会在
+ * 正常派发之前就退出 loading）。
+ * 超过它还没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥）⇒ **不能一直装成在跑**。
+ */
+const dueLoadingMs = (): number => pinMsFor(currentTickMs, POLL_MS)
+
 /** 空钳位集合（缺省值用；避免每次渲染 new 一个 Set 打破 useMemo 依赖）。 */
 const NO_PINS: ReadonlySet<string> = new Set()
 
@@ -216,6 +231,8 @@ export function useTaskOverview(): {
         // ── 到点钳位（排序抖动，2026-09-30）：机制与三条红线见 ../task-sort.ts 头注释 ──
         // `now` 用服务端时间（客户端时钟可能与宿主有时差）；`tickMs` 决定钳位时长（不写死）。
         const serverNow = typeof body.now === 'number' && Number.isFinite(body.now) ? body.now : Date.now()
+        // 记下服务端下发的巡检间隔：供「到点未派发」的 loading 上界用（见 `dueLoadingMs`）。
+        if (typeof body.tickMs === 'number' && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs
         const pinMs = pinMsFor(typeof body.tickMs === 'number' ? body.tickMs : 60_000, POLL_MS)
         const pins = pinsRef.current
         const prevNext = prevNextRef.current
@@ -593,11 +610,9 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
           // 已到点（`diff <= 0`）⇒ **不再显示「即将执行」**，直接显三个方块的活动指示（用户 2026-09-30 拍板）。
           // 服务端闸门生效后「到点」= `nextSlotAt` 是过去时刻且该槽还没被处理（`!row.running`）。
           if (diff <= 0) {
-            // loading 上界（决策 54「时长分档」）：≈ 巡检间隔 60s + 2×轮询 10s + 余量。
-            // 超过它仍没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥），
-            // **不能一直装成在跑** ⇒ 退回如实显示（下一步 P3b 把它换成「延期」徽标 + 原因）。
-            const DUE_LOADING_MS = 90_000
-            if (-diff <= DUE_LOADING_MS) return h(RunningBlocks, {})
+            if (-diff <= dueLoadingMs()) return h(RunningBlocks, {})
+            // 超上界仍没 `running` ⇒ 大概率被挡住（上游没跑完 / 附件缺失 / 串行互斥），
+            // **不能一直装成在跑** ⇒ 退回如实显示（P3b 会把它换成「延期」徽标 + 原因）。
             return tt('relNow')
           }
           return diff < 24 * 3600_000
