@@ -254,11 +254,16 @@ function recordTaskError(
   detail: string,
 ): void {
   const instanceId = randomUUID()
-  if (store.ensureSkipped(instanceId, task.id, slot.logicalDate, slot.scheduledAtIso)) {
+  // **原子**（2026-09-30 复核 P2）：行 + 原因事件**要么都在、要么都不在** —— 此前是两步独立写库，
+  // 中途被杀会留下「执行记录里有这条 skipped、展开却看不到为什么」的半截记录。
+  const written = store.transaction(() => {
+    if (!store.ensureSkipped(instanceId, task.id, slot.logicalDate, slot.scheduledAtIso)) return false
     store.appendEvent(instanceId, 'task-error', { scheduledAt: slot.scheduledAtIso, reason: detail })
-    // 内存运行态顺手更新（否则卡片要等重启 rebuild 才显示这条）。
-    runtime?.markTerminal(task.id, 'skipped', slot.scheduledAtIso, new Date().toISOString())
-  }
+    return true
+  })
+  // ⚠️ 内存运行态**放在事务外**：事务里改了内存而库又回滚 ⇒ 两边不一致；放外面语义也更清楚
+  //（库提交成功了才认这条记录）。
+  if (written) runtime?.markTerminal(task.id, 'skipped', slot.scheduledAtIso, new Date().toISOString())
 }
 
 /**
@@ -364,12 +369,14 @@ function dispatchNewSlots(
       if (store.findBySlot(task.id, prevIso) === undefined) {
         const missedId = randomUUID()
         const prevLogical = logicalDateOf(slot.previous, task.schedule.timezone)
-        if (store.ensureSkipped(missedId, task.id, prevLogical, prevIso)) {
-          // 原因取「本轮该任务上一次记录的阻塞结论」（签名表）——现成文案复用 BLOCK_KIND，认不出就如实说。
-          const signature = verdictLog.get(task.id)
-          const detail = signature === undefined
-            ? '上一刻度未执行（该轮未记录到原因）'
-            : (BLOCK_KIND[signature]?.message ?? `上一刻度未执行（${signature}）`)
+        // 原因取「本轮该任务上一次记录的阻塞结论」（签名表）——现成文案复用 BLOCK_KIND，认不出就如实说。
+        const signature = verdictLog.get(task.id)
+        const detail = signature === undefined
+          ? '上一刻度未执行（该轮未记录到原因）'
+          : (BLOCK_KIND[signature]?.message ?? `上一刻度未执行（${signature}）`)
+        // **原子**（2026-09-30 复核 P2）：行 + 事件 + 诊断日志**一次提交**，中途被杀不会只剩半截。
+        const recorded = store.transaction(() => {
+          if (!store.ensureSkipped(missedId, task.id, prevLogical, prevIso)) return false
           store.appendEvent(missedId, 'missed-slot', { scheduledAt: prevIso, reason: detail })
           store.appendLog({
             taskId: task.id,
@@ -378,9 +385,10 @@ function dispatchNewSlots(
             kind: 'missed-slot',
             message: `上一刻度未执行，已补记一条记录：${detail}`,
           })
-          // 内存运行态顺手更新（否则卡片要等重启 rebuild 才显示这条）。
-          runtime?.markTerminal(task.id, 'skipped', prevIso, new Date().toISOString())
-        }
+          return true
+        })
+        // 内存运行态顺手更新（否则卡片要等重启 rebuild 才显示这条）——**放事务外**，提交成功才认。
+        if (recorded) runtime?.markTerminal(task.id, 'skipped', prevIso, new Date().toISOString())
       }
     }
     // 同步预条件：依赖 + 工作区（不过 ⇒ 不建行、记日志）

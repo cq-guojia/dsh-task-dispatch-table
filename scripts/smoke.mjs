@@ -662,6 +662,53 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('genRef.current !== myGen'))
   check('轮询收口只在令牌仍属本轮时执行（旧轮不得清掉新一轮的 busy）',
     clientJs.includes('if (genRef.current === myGen)'))
+  // 2026-09-30 收尾：① 超时 fetch 收敛到**叶子模块** `./http`（静态 import ⇒ 被内联进单文件 bundle）；
+  // ② 会话弹窗那条**全仓唯一没有超时**的请求补上；③ 轮询那条**刻意不合并**（要持有 controller 句柄）。
+  check('超时 fetch 收敛到共用叶子模块（http.ts 已内联进 bundle）',
+    clientJs.includes('fetchWithTimeout'))
+  check('present.host 走超时封装（不再裸 fetch：端口一挂不再永久 pending）',
+    clientJs.includes('fetchWithTimeout("/api/present.host"') && !clientJs.includes('fetch("/api/present.host"'))
+  check('轮询那条仍持有 controller（卸载 abort 与超时是两种需求，刻意不合并）',
+    clientJs.includes('inflight.add(controller)'))
+  check('超时 fetch 默认 8s（< 10s 轮询间隔）+ finally 清定时器',
+    clientJs.includes('DEFAULT_TIMEOUT_MS = 8e3') && clientJs.includes('clearTimeout(timer)'))
+  // 2026-09-30 二轮评审：服务端事务（三条改动里**唯一零覆盖**的核心机制）必须真断言，
+  // 否则「行 + 原因事件要么都在、要么都不在」随时会被静默改掉。
+  {
+    const txDir = join(process.cwd(), '.smoke-tx')
+    rmSync(txDir, { recursive: true, force: true })
+    const txStore = new TaskStore(join(txDir, 'state.db'))
+    const txFalse = txStore.transaction(() => {
+      txStore.ensureSkipped(randomUUID(), 'task-tx', '2026-09-30', '2026-09-30T19:00:00.000Z')
+      return false
+    })
+    check('事务：fn 返回 false 仍 COMMIT（连接不会卡在事务里）',
+      txFalse === false
+      && txStore.listByStatus(['skipped']).some(o => o.task_id === 'task-tx')
+      && txStore.transaction(() => true) === true)
+    let txThrew = false
+    try {
+      txStore.transaction(() => {
+        txStore.ensureSkipped(randomUUID(), 'task-tx2', '2026-09-30', '2026-09-30T19:01:00.000Z')
+        throw new Error('boom')
+      })
+    } catch { txThrew = true }
+    check('事务：抛异常 ⇒ ROLLBACK（半截行不留，且之后还能正常开事务）',
+      txThrew === true
+      && !txStore.listByStatus(['skipped']).some(o => o.task_id === 'task-tx2')
+      && txStore.transaction(() => true) === true)
+    txStore.close()
+    rmSync(txDir, { recursive: true, force: true })
+  }
+  // 产物证据（防静默丢弃）：两条「写行 + 写原因」的服务端路径必须**真的**包在事务里。
+  {
+    const schedulerJs = readFileSync(join(process.cwd(), 'dist', 'scheduler.js'), 'utf8')
+    check('调度器两处写行点已包事务（产物证据）',
+      /const written = store\.transaction\(/.test(schedulerJs) && /const recorded = store\.transaction\(/.test(schedulerJs))
+    check('runtime-index 的闸门抽成单点（产物证据：两个私有函数都在）',
+      /latestDueSlotIso/.test(readFileSync(join(process.cwd(), 'dist', 'runtime-index.js'), 'utf8'))
+      && /freezeOrAdvance/.test(readFileSync(join(process.cwd(), 'dist', 'runtime-index.js'), 'utf8')))
+  }
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
   // 修法 = ① 选择器回调**工作区相对**路径；② 客户端兜底校验 + 归属附件卡描红；③ 服务端错误翻人话。
   check('附件 ref 改为工作区相对（选择器走 relativizeToRoot）', clientJs.includes('relativizeToRoot'))

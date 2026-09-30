@@ -49,6 +49,22 @@ window.__ModuleLoader__.load({
 			return opts?.seconds === true ? `${base}:${pad2$1(d.getSeconds())}` : base;
 		}
 		//#endregion
+		//#region src/client/http.ts
+		const DEFAULT_TIMEOUT_MS = 8e3;
+		/** 带超时的 fetch：超时即 `controller.abort()`（调用方按「本次请求失败」处理，保持上一份数据）。 */
+		async function fetchWithTimeout(input, init = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
+			const controller = new AbortController();
+			const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+			try {
+				return await fetch(input, {
+					...init,
+					signal: controller.signal
+				});
+			} finally {
+				window.clearTimeout(timer);
+			}
+		}
+		//#endregion
 		//#region src/client/locales.ts
 		/** 把宿主给的无参 t 包成带占位符替换的 t（官方模板一律 `{name}`）。 */
 		function interpolateTranslate(base) {
@@ -3287,7 +3303,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [host, setHost] = (0, react.useState)(null);
 			(0, react.useEffect)(() => {
 				let cancelled = false;
-				fetch("/api/present.host").then(async (res) => {
+				fetchWithTimeout("/api/present.host", { cache: "no-store" }).then(async (res) => {
 					if (!res.ok) {
 						if (!cancelled) setHost("error");
 						return;
@@ -41222,23 +41238,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			maxWidth: "480px"
 		};
 		/** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
-		/**
-		* 带超时的 fetch（决策 54）：本文件的请求**一律走它**——原先几处 `fetch` 都没有超时，
-		* 一次挂起就让对应通道**永久停摆**（列表那条已单独修：真机「卡片 5 分钟不动」的根因）。
-		* 表现：面板 2 秒通道停摆却仍显示 ready（假象）；「保存任务」永远停在「保存中」、按钮永久禁用。
-		*/
-		async function fetchWithTimeout(input, init = {}, timeoutMs = 8e3) {
-			const controller = new AbortController();
-			const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-			try {
-				return await fetch(input, {
-					...init,
-					signal: controller.signal
-				});
-			} finally {
-				window.clearTimeout(timer);
-			}
-		}
 		const linkStyle = {
 			color: C.brand,
 			cursor: "pointer",

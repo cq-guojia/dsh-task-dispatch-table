@@ -11,7 +11,7 @@
 // ⚠️ 这是**派生缓存，不是真源**：丢了能从 task_instances 重建，故**不落数据库**（用户 2026-09-30
 // 拍板：不引入 task_runtime 派生表）；任务定义本身也绝不迁进数据库（与决策 25 冲突）。
 import type { InstanceStatus, TaskStore } from './store.js'
-import { durationMs, nextSlotAfter, titleOf, type TaskDefinition } from './tasks.js'
+import { durationMs, nextSlotAfter, scheduledSlotsFor, titleOf, type TaskDefinition } from './tasks.js'
 
 /** 一条任务的运行态（派生）。 */
 export interface TaskRuntimeEntry {
@@ -173,6 +173,75 @@ export function createRuntimeIndex(): RuntimeIndex {
     }
   }
 
+  /**
+   * 窗口内「最晚且已到点」的那一槽（**纯计算、不查库**）：重启 / 改任务之后用来找回「本该被冻住的刻度」。
+   * 水位（`runningSince` / `lastScheduledAt`）已由 `rebuild` 的两条聚合 SQL 填好 ⇒ 这里只做 cron 数学。
+   * 口径与 `scheduler.dueSlot` 一致（`[now - window, now]` 里取最晚一条）；没有候选（未来才到点 /
+   * 停用 / 解析失败）⇒ `null`。
+   */
+  const latestDueSlotIso = (task: TaskDefinition, nowMs: number): string | null => {
+    if (task.enabled === false) return null
+    // `once`（决策 18）：那一刻不随窗口前移 ⇒ 直接问 `computeNext`（过去 / 未来都可能拿到）。
+    if (task.schedule.once !== undefined) {
+      const onceIso = computeNext(task, nowMs)
+      if (onceIso === null) return null
+      const onceMs = Date.parse(onceIso)
+      return Number.isFinite(onceMs) && onceMs <= nowMs ? onceIso : null
+    }
+    // window 防御取值（对齐本文件「畸形定义也不能让它崩」的约定）：解析失败 ⇒ 0 ⇒ 视作无窗口。
+    let windowMs = 0
+    try { windowMs = durationMs(task.schedule.window) } catch { windowMs = 0 }
+    try {
+      let latest: Date | undefined
+      for (const s of scheduledSlotsFor(task, new Date(nowMs - windowMs), new Date(nowMs + 1_000))) {
+        if (s.getTime() > nowMs) continue
+        latest = s
+      }
+      return latest === undefined ? null : latest.toISOString()
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * **「这一槽处理了吗」闸门抽成单点，三处复用**（2026-09-30 复核 P1）。
+   *
+   * 语义：`entry.nextSlotAt` 若**已到点、尚未处理、且仍在窗口内** ⇒ **冻结**（返回 `true`，刻度不动 ⇒
+   * 卡片显示「到点未派发 / 延期」，且它是过去时刻 ⇒ 在该组「按 `nextSlotAt` 升序」里**自然排最前**，
+   * 不再需要客户端那套本地「到点钳位」）；否则前移到下一个**未来**刻度（`once` ⇒ `null`），
+   * 刻度真变了才 `rev++`（边沿触发，`unchanged` 优化不受影响）。
+   *
+   * 判定走**内存水位、不查库**：`runningSince`（在飞那一槽）/ `lastScheduledAt`（最近一条非在飞行的槽，
+   * **含 pending / skipped / unknown**）任一 ≥ 该槽 ⇒ 已处理。
+   *
+   * 上界论证（为什么不会永久冻结）：冻结持续 ⟺ `¬handled ∧ now ≤ 槽 + window` ⇒ **最长一个 window**。
+   * 少了这道闸门就是**排序抖动的根源**：读时无脑前移会让排序键从「刚过去的时刻」跳到「+一个间隔」
+   * ⇒ 卡片在组内掉到后面，等 `running` 翻转又跳回最前（真机「先掉下去、再砰地跳回来」）。
+   *
+   * 三处调用点差别只在「进来之前 `entry.nextSlotAt` 是什么」：`rebuild` / `markDefinitionsChanged`
+   * 先用 `latestDueSlotIso` 找回候选，`overview` 走现值的懒前移。
+   */
+  const freezeOrAdvance = (entry: ReturnType<typeof entryOf>, task: TaskDefinition, nowMs: number): boolean => {
+    const slotIso = entry.nextSlotAt
+    if (slotIso === null) return false
+    const slotMs = Date.parse(slotIso)
+    if (!Number.isFinite(slotMs) || slotMs > nowMs) return false // 还没到点（或刻度坏）⇒ 没有可冻的东西
+    const watermarks = [entry.runningSince, entry.lastScheduledAt]
+      .map(iso => (iso === null ? Number.NEGATIVE_INFINITY : Date.parse(iso)))
+      .filter(ms => Number.isFinite(ms))
+    const handled = watermarks.some(ms => ms >= slotMs)
+    let windowMs = 0
+    try { windowMs = durationMs(task.schedule.window) } catch { windowMs = 0 }
+    if (!handled && nowMs <= slotMs + windowMs) return true // 冻结：未处理且仍在窗口内
+    // 已处理 / 已出窗口 ⇒ 前移。`once` 且已收尾 ⇒ **没有下次了**（`nextSlotAfter` 对 once 恒返回那个
+    // 过去时刻，不置 null 就会永远钉在组 1 最前、永远显示「即将执行」）。
+    const next = task.schedule.once !== undefined ? null : computeNext(task, nowMs)
+    if (next === entry.nextSlotAt) return false
+    entry.nextSlotAt = next
+    rev++
+    return false
+  }
+
 
   return {
     rebuild(tasks, store, nowMs = Date.now()) {
@@ -196,9 +265,13 @@ export function createRuntimeIndex(): RuntimeIndex {
         const entry = entryOf(task.id)
         entry.overviewKey = overviewKeyOf(task)
         entry.scheduleKey = scheduleKeyOf(task)
-        entry.nextSlotAt = computeNext(task, nowMs)
+        // ⚠️ 2026-09-30 复核 P1：这里原先**无条件**取「下一个未来刻度」⇒ 重启后卡片上「到点未派发 /
+        // 延期」会整段消失（与 Loop A 的实际派发不一致）。先纯计算找回「窗口内最晚且已到点」那一槽
+        // （水位上面已填好，零新增查询），再交给同一道闸门判「该冻还是该前移」。
+        entry.nextSlotAt = latestDueSlotIso(task, nowMs) ?? computeNext(task, nowMs)
+        freezeOrAdvance(entry, task, nowMs)
       }
-      rev++
+      rev++ // 整批重建一律 bump（闸门内部那次边沿 bump 不必区分）
     },
 
     markDispatched(taskId, scheduledAt) {
@@ -257,7 +330,10 @@ export function createRuntimeIndex(): RuntimeIndex {
         }
         if (entry.scheduleKey !== scheduleKey) {
           entry.scheduleKey = scheduleKey
-          entry.nextSlotAt = computeNext(task, nowMs)
+          // 改排期 / 启停之后同样先找回「窗口内最晚且已到点」的刻度（新启用的任务往往当场就有该跑的槽），
+          // 再交给同一道闸门判「该冻还是该前移」（2026-09-30 复核 P1）。
+          entry.nextSlotAt = latestDueSlotIso(task, nowMs) ?? computeNext(task, nowMs)
+          freezeOrAdvance(entry, task, nowMs)
           rev++
         }
       }
@@ -278,42 +354,15 @@ export function createRuntimeIndex(): RuntimeIndex {
         const scheduleKey = scheduleKeyOf(task)
         if (entry.scheduleKey !== scheduleKey) {
           entry.scheduleKey = scheduleKey
-          entry.nextSlotAt = computeNext(task, nowMs)
+          entry.nextSlotAt = latestDueSlotIso(task, nowMs) ?? computeNext(task, nowMs)
+          freezeOrAdvance(entry, task, nowMs)
           rev++
         } else if (entry.nextSlotAt !== null && Date.parse(entry.nextSlotAt) <= nowMs) {
-          // 刻度已过（时间自然推进）⇒ 就地前移到下一个 —— **但先问一句「这一槽处理了吗」**。
-          //
-          // 2026-09-30（决策 54）：**少了这道闸门就是排序抖动的根源**——`nextSlotAt` 是客户端的排序键，
-          // 读时无脑前移会让它从「刚过去的时刻」直接跳到「+一个间隔」⇒ 卡片在「已启用」组里**掉到后面**；
-          // 等 `running` 翻转又**跳回最前**（真机「先掉下去、再砰地跳回来」）。旧办法是客户端本地计时器
-          // 「到点钳位」——那套派生状态在轮询卡住时永不解开（真机「5 分钟不动」），**本批只上这道服务端
-          // 闸门；客户端那套钳位留待本批后段整删**（闸门生效后它已基本不触发：`justCrossedSlot` 要求
-          // 「新刻度在未来」，而冻结后新旧都是同一个过去时刻 ⇒ 判 false）。
-          //
-          // 判定走**内存水位、不查库**：`runningSince`（在飞那一槽）/ `lastScheduledAt`（最近一条非在飞
-          // 行的槽）任一 ≥ 该槽 ⇒ 已处理。**未处理且仍在窗口内 ⇒ 冻结不前移**：键稳定 ⇒ 不抖；且它是
-          // **过去时刻**，在该组「按 nextSlotAt 升序」里**自然排最前**（「到点还没跑」本来就该在最前）。
-          // 出窗口（`now > 槽 + window`）⇒ 调度器再也不会选它 ⇒ 按已处理对待。
-          // 上界论证：冻结持续 ⟺ `¬handled ∧ now ≤ 槽 + window` ⇒ **最长一个 window**，不会永久停滞。
-          const slotMs = Date.parse(entry.nextSlotAt)
-          const watermarks = [entry.runningSince, entry.lastScheduledAt]
-            .map(iso => (iso === null ? Number.NEGATIVE_INFINITY : Date.parse(iso)))
-            .filter(ms => Number.isFinite(ms))
-          const handled = watermarks.some(ms => ms >= slotMs)
-          // window 防御取值（对齐本文件 overview「畸形定义也不能让它崩」的约定）：解析失败 ⇒ 0
-          // ⇒ 视作「无窗口」⇒ 闸门必然放行（退回旧的「过期即前移」行为，绝不永久冻结）。
-          // 注：schema 允许 `PT` / `PT0S`（正则各组可选）⇒ 0 是**可达**的合法输入。
-          let windowMs = 0
-          try { windowMs = durationMs(task.schedule.window) } catch { windowMs = 0 }
-          if (handled || nowMs > slotMs + windowMs) {
-            // once 且已处理 / 已出窗口 ⇒ **没有下次了**：`nextSlotAfter` 对 once 恒返回那个过去时刻，
-            // 不前移成 null 就会永远钉在组 1 最前、永远显示「即将执行」。
-            const next = task.schedule.once !== undefined ? null : computeNext(task, nowMs)
-            if (next !== entry.nextSlotAt) {
-              entry.nextSlotAt = next
-              rev++
-            }
-          }
+          // 刻度已过（时间自然推进）⇒ 交给**统一闸门**：未处理且仍在窗口内 ⇒ 冻结不前移（键稳定 ⇒ 不抖，
+          // 且它是过去时刻 ⇒ 组内自然排最前）；已处理 / 出窗口 ⇒ 前移（`once` ⇒ `null`）。
+          // 判定细节、为什么不查库、以及「少了这道闸门就是排序抖动根源」的完整论证，
+          // 全部收在 `freezeOrAdvance` 的文档注释里（三处共用同一份口径，别再就地复刻）。
+          freezeOrAdvance(entry, task, nowMs)
         }
         rows.push({
           id: task.id,

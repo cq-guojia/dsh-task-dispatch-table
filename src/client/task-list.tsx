@@ -196,6 +196,13 @@ export function useTaskOverview(): {
       busySinceRef.current = Date.now()
       // 超时兜底（决策 54）：此前**没有 signal** ⇒ 请求永不 settle 时 busyRef 永远 true、
       // 后续轮询全早退、到期清理再也不跑。8s < 10s 轮询间隔，避免一轮拖过下一轮把间隔拉成 2 倍。
+      //
+      // ⚠️ **刻意不与 `./http` 的 `fetchWithTimeout` 合并**（2026-09-30 收敛时评审核实）：这条需要
+      // **持有 controller 句柄**，换轮 / 卸载时把 `inflight` 里逐个 abort（见下方 cleanup）。而
+      // `fetchWithTimeout` 只做「超时 abort」；合并两种需求要用 `AbortSignal.any`，产物 target 是
+      // chrome99（没有它）⇒ 合并等于把「卸载 abort」弄丢（弹窗关掉后请求仍在飞、还可能把旧数据盖回来）。
+      // 需要自建 controller 的路径一共**两处、都是刻意的**：这里的轮询（换轮 / 卸载要逐个 abort）、
+      // 以及 `task-editor.tsx` 的**附件上传**（90s，按文件逐个 abort）。其余请求一律走 `./http`。
       const controller = new AbortController()
       inflight.add(controller)
       const abortTimer = window.setTimeout(() => controller.abort(), 8_000)

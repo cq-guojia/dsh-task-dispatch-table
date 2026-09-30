@@ -116,6 +116,8 @@ export interface TableDump {
 }
 export declare class TaskStore {
     private readonly db;
+    /** 事务嵌套深度（`transaction` 用）：> 0 = 已在事务里 ⇒ 内层并入外层，不再 BEGIN。 */
+    private txDepth;
     /**
      * 迁移时因「同任务同刻度重复」被合并掉的行数。
      * > 0 说明历史数据里存在重复（正常不该有），宿主会打告警——**绝不静默删数据**。
@@ -132,6 +134,19 @@ export declare class TaskStore {
     /** 决策 32（修订）：兼容旧库（无 outputs / token 三拆列）。 */
     private ensureInstanceColumns;
     close(): void;
+    /**
+     * 把多次写库合成一个**原子单元**（2026-09-30 复核 P2）：`ensureSkipped` → `appendEvent`（→ `appendLog`）
+     * 原先是两/三步独立写，中途被杀会留下**「执行记录里有这条未执行、展开却看不到为什么」**的半截记录。
+     *
+     * - `node:sqlite` 的 `DatabaseSync` 没有事务包装，但 `exec('BEGIN'/'COMMIT'/'ROLLBACK')` 与
+     *   `prepare(...).run()` 走**同一条连接** ⇒ 天然同事务。用 `BEGIN IMMEDIATE` 立刻取写锁，
+     *   避免「先读后写」在事务中途升级锁失败（配合构造里的 `busy_timeout = 5000`）。
+     * - **嵌套守卫**：SQLite 不支持嵌套 BEGIN（会抛 `cannot start a transaction within a transaction`）
+     *   ⇒ `txDepth > 0` 时内层直接并入外层，原子性由**最外层**统一提交 / 回滚。
+     * - 异常一律 `ROLLBACK` 后**原样抛出**；`fn` 内返回 `false` 也算**正常结束** ⇒ 走 COMMIT，
+     *   否则连接会留在事务里、后续写被隐式吞进这个永远不提交的事务。
+     */
+    transaction<T>(fn: () => T): T;
     appendEvent(instanceId: string, kind: string, detail?: unknown): void;
     /** 实例某类事件的最新一条（回执对账 / 追问判定用）。 */
     latestEvent(instanceId: string, kind: string): {

@@ -17,6 +17,8 @@
 
 import { createElement as h, Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { formatDateTime } from './format'
+// 带超时的 fetch：共用**叶子模块**（2026-09-30 收敛三份实现；session-view 也引它，故不能放在本文件里）。
+import { fetchWithTimeout } from './http'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 import { FileBrowser } from './file-browser'
@@ -243,20 +245,8 @@ const detailCellStyle: Record<string, string | number> = {
   ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
 }
 /** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
-/**
- * 带超时的 fetch（决策 54）：本文件的请求**一律走它**——原先几处 `fetch` 都没有超时，
- * 一次挂起就让对应通道**永久停摆**（列表那条已单独修：真机「卡片 5 分钟不动」的根因）。
- * 表现：面板 2 秒通道停摆却仍显示 ready（假象）；「保存任务」永远停在「保存中」、按钮永久禁用。
- */
-async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = 8_000): Promise<Response> {
-  const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    return await fetch(input, { ...init, signal: controller.signal })
-  } finally {
-    window.clearTimeout(timer)
-  }
-}
+// 带超时的 fetch 已抽到共用叶子模块 `./http`（2026-09-30 收敛：本文件与 session-view 共用一份；
+// 两条**需要持有 controller 句柄**的路径——任务列表轮询、附件上传——仍各自内联，理由见 `http.ts` 顶部）。
 
 const linkStyle: Record<string, string | number> = {
   color: C.brand, cursor: 'pointer', background: 'none', border: 'none', padding: 0,

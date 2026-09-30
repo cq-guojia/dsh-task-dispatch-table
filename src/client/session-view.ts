@@ -41,6 +41,8 @@ import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
 import type { WorkspaceFilesFace } from './file-preview'
 import { interpolateTranslate, type Translate } from './locales'
+// 带超时的 fetch（共用叶子模块）：本文件原先那条请求是**全仓唯一没有超时**的。
+import { fetchWithTimeout } from './http'
 
 export type { Translate } from './locales'
 
@@ -145,7 +147,9 @@ function usePresentedHost(): PresentedHostFace | 'error' | null {
   const [host, setHost] = useState<PresentedHostFace | 'error' | null>(null)
   useEffect(() => {
     let cancelled = false
-    fetch('/api/present.host')
+    // 2026-09-30：本处原先是**全仓唯一没有超时**的 fetch —— 端口一挂就永久 pending，弹窗的桌面
+    // 可用性永远停在 `null`（既不报错也不可用）。改走共用封装（默认 8s）。
+    fetchWithTimeout('/api/present.host', { cache: 'no-store' })
       .then(async (res) => {
         if (!res.ok) { if (!cancelled) setHost('error'); return }
         const value = await res.json() as unknown
