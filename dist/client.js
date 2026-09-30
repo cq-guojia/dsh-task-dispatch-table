@@ -525,6 +525,22 @@ window.__ModuleLoader__.load({
 			relHours: "{n} 小时后",
 			relDays: "{n} 天后",
 			relPast: "已过期",
+			relJustNow: "刚刚",
+			relMinutesAgo: "{n} 分钟前",
+			relHoursAgo: "{n} 小时前",
+			relDaysAgo: "{n} 天前",
+			relWeeksAgo: "{n} 周前",
+			relMonthsAgo: "{n} 个月前",
+			relYearsAgo: "{n} 年前",
+			relToday: "今天 {time}",
+			relTomorrow: "明天 {time}",
+			relWeeks: "{n} 周后",
+			relMonths: "{n} 个月后",
+			relYears: "{n} 年后",
+			listAgoOk: "{when}执行成功",
+			listAgoFailed: "{when}执行失败",
+			listLastFullTitle: "上次执行：{when}",
+			listNextFullTitle: "下次执行：{when}",
 			listEmpty: "还没有任务。点右上角「＋ 新建任务」创建第一个。",
 			listEmptyFiltered: "没有符合当前筛选的任务。",
 			listSectionSchedule: "执行设置",
@@ -1032,6 +1048,22 @@ window.__ModuleLoader__.load({
 			relHours: "in {n} h",
 			relDays: "in {n} days",
 			relPast: "overdue",
+			relJustNow: "just now",
+			relMinutesAgo: "{n} min ago",
+			relHoursAgo: "{n} h ago",
+			relDaysAgo: "{n} days ago",
+			relWeeksAgo: "{n} weeks ago",
+			relMonthsAgo: "{n} months ago",
+			relYearsAgo: "{n} years ago",
+			relToday: "Today {time}",
+			relTomorrow: "Tomorrow {time}",
+			relWeeks: "in {n} weeks",
+			relMonths: "in {n} months",
+			relYears: "in {n} years",
+			listAgoOk: "succeeded {when}",
+			listAgoFailed: "failed {when}",
+			listLastFullTitle: "Last run: {when}",
+			listNextFullTitle: "Next run: {when}",
 			listEmpty: "No tasks yet. Use “+ New task” to create the first one.",
 			listEmptyFiltered: "No task matches the current filter.",
 			listSectionSchedule: "Execution settings",
@@ -39991,6 +40023,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 				`.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
 				`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
+				".dsh-tdt-tl-switch, .dsh-tdt-tl-switch * { border-radius: 5px !important; }",
 				".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }"
 			].join("\n");
 			document.head.appendChild(tag);
@@ -40087,17 +40120,46 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${full}`;
 			return full;
 		}
-		/** 下次执行的相对说法（客户端本地算，不靠请求）。 */
-		function relativeText(iso, nowMs, tt) {
-			if (iso === null) return tt("listNextNone");
-			const diff = Date.parse(iso) - nowMs;
-			if (diff <= 0) return tt("relPast");
+		function formatFull(iso) {
+			const d = new Date(iso);
+			if (Number.isNaN(d.getTime())) return "—";
+			const p = (v) => String(v).padStart(2, "0");
+			return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+		}
+		const sameCalendarDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+		function relativePast(iso, nowMs, tt) {
+			const diff = nowMs - Date.parse(iso);
+			if (!(diff >= 0)) return tt("relNow");
+			if (diff < 6e4) return tt("relJustNow");
 			const minutes = Math.floor(diff / 6e4);
-			if (minutes < 1) return tt("relNow");
-			if (minutes < 60) return tt("relMinutes", { n: minutes });
+			if (minutes < 60) return tt("relMinutesAgo", { n: minutes });
 			const hours = Math.floor(minutes / 60);
-			if (hours < 24) return tt("relHours", { n: hours });
-			return tt("relDays", { n: Math.floor(hours / 24) });
+			if (hours < 24) return tt("relHoursAgo", { n: hours });
+			const days = Math.floor(hours / 24);
+			if (days < 7) return tt("relDaysAgo", { n: days });
+			if (days < 30) return tt("relWeeksAgo", { n: Math.floor(days / 7) });
+			const months = Math.floor(days / 30);
+			if (months < 12) return tt("relMonthsAgo", { n: months });
+			return tt("relYearsAgo", { n: Math.floor(days / 365) });
+		}
+		function relativeFuture(iso, nowMs, tt) {
+			const target = Date.parse(iso);
+			const diff = target - nowMs;
+			if (diff <= 0) return tt("relPast");
+			if (diff < 6e4) return tt("relNow");
+			const minutes = Math.floor(diff / 6e4);
+			if (minutes < 60) return tt("relMinutes", { n: minutes });
+			const date = new Date(target);
+			const now = new Date(nowMs);
+			const tomorrow = new Date(now.getTime() + 864e5);
+			if (sameCalendarDay(date, now)) return tt("relToday", { time: clockOf(iso) });
+			if (sameCalendarDay(date, tomorrow)) return tt("relTomorrow", { time: clockOf(iso) });
+			const days = Math.ceil(diff / 864e5);
+			if (days < 7) return tt("relDays", { n: days });
+			if (days < 30) return tt("relWeeks", { n: Math.floor(days / 7) });
+			const months = Math.floor(days / 30);
+			if (months < 12) return tt("relMonths", { n: months });
+			return tt("relYears", { n: Math.floor(days / 365) });
 		}
 		/** HH:mm（本机时区）。 */
 		function clockOf(iso) {
@@ -40110,12 +40172,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
 			return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
-		}
-		/** 上次执行的一句话（真实值：没有就是没跑过，不编造）。 */
-		function lastRunText(row, tt) {
-			if (row.lastStatus === null || row.lastScheduledAt === null) return tt("listNever");
-			const ok = row.lastStatus === "succeeded";
-			return `${clockOf(row.lastScheduledAt)} ${ok ? tt("listStatusOk") : tt("listStatusFailed")}`;
 		}
 		function sortRows(rows) {
 			const groupOf = (row) => {
@@ -40176,7 +40232,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		const RAIL_W = 6;
 		const RAIL_H = 36;
-		/** 运行中：整条转起来（纯 CSS 动画，零请求）。 */
+		/** 运行中：整条**绿色**明暗脉动（用户 2026-09-30：执行中是正常状态，不能灰/白闪）。 */
 		function RunningRail() {
 			return (0, react.createElement)("span", { style: {
 				display: "inline-block",
@@ -40184,7 +40240,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				height: `${RAIL_H}px`,
 				flex: "none",
 				borderRadius: "3px",
-				background: C$1.brand,
+				background: C$1.success,
 				animation: "dsh-tdt-rail-pulse 900ms ease-in-out infinite"
 			} });
 		}
@@ -40207,24 +40263,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			});
 		}
 		/**
-		* 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：一个带圆角的长方形，内部左右两块——
-		* 左 = 上次执行（成功绿底 / 失败红底 / 运行中品牌色），右 = 下次执行（常规色）。
-		* 位置：卡片右侧、开关**前面**，与开关、展开箭头一起垂直居中。
+		* 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：外观对齐开关——外面一圈框套着，
+		* 框与内部色块之间留 2px 间距；内部左右两块各自小圆角：
+		* 左 = 上次执行（成功绿底 / 失败红底），右 = 下次执行（常规灰底）。
+		* 文字「社交化」：左 = 「3 分钟前执行成功」，右 = 「下次 今天 14:00 / 6 分钟后」；
+		* hover 才给完整时刻（Tooltip）。**运行中不改左块**——上次该成功还是成功。
 		*/
 		function RunPill(props) {
 			const { row, t, tt, nowMs } = props;
 			const hasLast = row.lastStatus !== null && row.lastScheduledAt !== null;
-			const lastBg = row.running ? C$1.brand : !hasLast ? C$1.layer2 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
-			const lastFg = row.running || hasLast ? "#fff" : C$1.textDim;
-			const lastText = row.running ? t("listRunning") : hasLast ? `${t("listLastPrefix")} ${lastRunText(row, tt)}` : t("listNever");
-			const nextText = row.nextSlotAt === null ? t("listNextNone") : `${t("listNextPrefix")} ${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`;
+			const lastBg = !hasLast ? C$1.layer2 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
+			const lastFg = hasLast ? "#fff" : C$1.textDim;
+			const when = hasLast ? relativePast(row.lastScheduledAt ?? "", nowMs, tt) : "";
+			const lastText = hasLast ? t(row.lastStatus === "succeeded" ? "listAgoOk" : "listAgoFailed", { when }) : t("listNever");
+			const lastTitle = hasLast ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
+			const nextTitle = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			const nextText = row.nextSlotAt === null ? t("listNextNone") : `${t("listNextPrefix")} ${relativeFuture(row.nextSlotAt, nowMs, tt)}`;
 			const halfStyle = (bg, fg) => ({
 				display: "inline-flex",
 				alignItems: "center",
-				padding: "0 8px",
+				padding: "0 7px",
 				whiteSpace: "nowrap",
 				fontSize: "11px",
-				lineHeight: "16px",
+				lineHeight: "14px",
+				borderRadius: "5px",
 				background: bg,
 				color: fg,
 				transition: `background ${C$1.duration} ${C$1.ease}`
@@ -40233,17 +40295,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "inline-flex",
 				alignItems: "stretch",
 				flex: "none",
-				height: "24px",
-				borderRadius: "6px",
-				overflow: "hidden",
-				border: `1px solid ${C$1.border}`
-			} }, (0, react.createElement)("span", {
-				style: halfStyle(lastBg, lastFg),
-				title: lastText
-			}, lastText), (0, react.createElement)("span", {
-				style: halfStyle(C$1.layer2, C$1.textDim),
-				title: nextText
-			}, nextText));
+				gap: "2px",
+				height: "20px",
+				padding: "2px",
+				boxSizing: "border-box",
+				borderRadius: "7px",
+				border: `1px solid ${C$1.border}`,
+				background: C$1.layer1
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: lastTitle,
+				side: "bottom"
+			}, (0, react.createElement)("span", { style: halfStyle(lastBg, lastFg) }, lastText)), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: nextTitle,
+				side: "bottom"
+			}, (0, react.createElement)("span", { style: halfStyle(C$1.layer2, C$1.textDim) }, nextText)));
 		}
 		const cardStyle$1 = {
 			display: "block",
@@ -40342,7 +40407,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (next) => {
 					onToggleEnabled(row.id, next);
 				},
-				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
+				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
+				className: "dsh-tdt-tl-switch"
 			}), (0, react.createElement)("button", {
 				type: "button",
 				style: {

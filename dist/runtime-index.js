@@ -72,8 +72,8 @@ export function createRuntimeIndex() {
             const entry = entryOf(taskId);
             entry.running = true;
             entry.runningSince = entry.runningSince ?? scheduledAt;
-            entry.lastScheduledAt = scheduledAt;
-            entry.lastStatus = 'dispatched';
+            // ⚠️ **不覆盖「上次执行」**（用户 2026-09-30）：上次 = 最近一次**出了结果**的执行，
+            // 该成功还是成功、该失败还是失败；正在跑的这一趟要等 finishTerminal 出结果后才覆盖。
             rev++;
         },
         markTerminal(taskId, status, scheduledAt, finishedAt) {

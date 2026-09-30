@@ -1054,6 +1054,7 @@ console.log('\n[14] runtime-index')
   check('lastRunByTask：finished_at 同源', last.get('task-a')?.finishedAt === '2026-09-01T09:05:00.000Z')
   const flying = store.inFlightByTask()
   check('inFlightByTask：只认 dispatched/running', flying.has('task-b') && !flying.has('task-a'))
+  check('lastRunByTask：在飞行的行不算「上次执行」（运行中不得覆盖上次）', !last.has('task-b'))
 
   const idx = createRuntimeIndex()
   const taskA = def({ id: 'task-a', title: '日报', target: { workspace: 'Temp', prompt: '写日报' } })
@@ -1081,6 +1082,10 @@ console.log('\n[14] runtime-index')
 
   idx.markDispatched('task-a', '2026-09-02T18:00:00.000Z')
   check('markDispatched：卡片转运行中', idx.overview([taskA2], Date.parse('2026-09-02T10:00:00.000Z')).rows[0]?.running === true)
+  check('markDispatched：**不覆盖上次执行**（该成功还是成功）', (() => {
+    const r = idx.overview([taskA2], Date.parse('2026-09-02T10:00:00.000Z')).rows[0]
+    return r?.lastStatus === 'succeeded' && r?.lastScheduledAt === '2026-09-01T09:00:00.000Z'
+  })())
   idx.markTerminal('task-a', 'failed', '2026-09-02T18:00:00.000Z', '2026-09-02T18:03:00.000Z')
   const done = idx.overview([taskA2], Date.parse('2026-09-02T10:00:00.000Z')).rows[0]
   check('markTerminal：不再在飞 + 记录上次失败', done?.running === false && done?.lastStatus === 'failed' && done?.lastFinishedAt === '2026-09-02T18:03:00.000Z')

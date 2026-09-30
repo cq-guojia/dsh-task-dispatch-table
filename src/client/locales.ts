@@ -146,6 +146,9 @@ export type LocaleKey =
   | 'listRunning' | 'listLastPrefix' | 'listNextPrefix' | 'listNextNone' | 'listNever'
   | 'listCreatedPrefix' | 'listStatusOk' | 'listStatusFailed'
   | 'relNow' | 'relMinutes' | 'relHours' | 'relDays' | 'relPast'
+  | 'relJustNow' | 'relMinutesAgo' | 'relHoursAgo' | 'relDaysAgo' | 'relWeeksAgo' | 'relMonthsAgo' | 'relYearsAgo'
+  | 'relToday' | 'relTomorrow' | 'relWeeks' | 'relMonths' | 'relYears'
+  | 'listAgoOk' | 'listAgoFailed' | 'listLastFullTitle' | 'listNextFullTitle'
   | 'listEmpty' | 'listEmptyFiltered'
   | 'listSectionSchedule' | 'listSectionAttachments' | 'listSectionDepends' | 'listSectionPrompt'
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
@@ -657,6 +660,22 @@ export const zh: Record<LocaleKey, string> = {
   relHours: '{n} 小时后',
   relDays: '{n} 天后',
   relPast: '已过期',
+  relJustNow: '刚刚',
+  relMinutesAgo: '{n} 分钟前',
+  relHoursAgo: '{n} 小时前',
+  relDaysAgo: '{n} 天前',
+  relWeeksAgo: '{n} 周前',
+  relMonthsAgo: '{n} 个月前',
+  relYearsAgo: '{n} 年前',
+  relToday: '今天 {time}',
+  relTomorrow: '明天 {time}',
+  relWeeks: '{n} 周后',
+  relMonths: '{n} 个月后',
+  relYears: '{n} 年后',
+  listAgoOk: '{when}执行成功',
+  listAgoFailed: '{when}执行失败',
+  listLastFullTitle: '上次执行：{when}',
+  listNextFullTitle: '下次执行：{when}',
   listEmpty: '还没有任务。点右上角「＋ 新建任务」创建第一个。',
   listEmptyFiltered: '没有符合当前筛选的任务。',
   listSectionSchedule: '执行设置',
@@ -1172,6 +1191,22 @@ export const en: Record<LocaleKey, string> = {
   relHours: 'in {n} h',
   relDays: 'in {n} days',
   relPast: 'overdue',
+  relJustNow: 'just now',
+  relMinutesAgo: '{n} min ago',
+  relHoursAgo: '{n} h ago',
+  relDaysAgo: '{n} days ago',
+  relWeeksAgo: '{n} weeks ago',
+  relMonthsAgo: '{n} months ago',
+  relYearsAgo: '{n} years ago',
+  relToday: 'Today {time}',
+  relTomorrow: 'Tomorrow {time}',
+  relWeeks: 'in {n} weeks',
+  relMonths: 'in {n} months',
+  relYears: 'in {n} years',
+  listAgoOk: 'succeeded {when}',
+  listAgoFailed: 'failed {when}',
+  listLastFullTitle: 'Last run: {when}',
+  listNextFullTitle: 'Next run: {when}',
   listEmpty: 'No tasks yet. Use “+ New task” to create the first one.',
   listEmptyFiltered: 'No task matches the current filter.',
   listSectionSchedule: 'Execution settings',

@@ -15,7 +15,7 @@
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   IconChevronDownOutlineRegular, IconEditOutlineRegular, IconRefreshOutlineRegular, IconSearchOutlineRegular,
-  Input, Menu, Switch,
+  Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
 
@@ -99,6 +99,8 @@ const ensureTaskListStyle = (): void => {
     // 工作区下拉：**定长**（切选项时宽度不动，不再左右晃），内容超长尾部省略号。
     // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
     `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
+    // 开关圆角与左侧组合标签统一（官方 Switch 是全圆胶囊 ⇒ 压成小圆角方形，用户 2026-09-30）。
+    '.dsh-tdt-tl-switch, .dsh-tdt-tl-switch * { border-radius: 5px !important; }',
     '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
   ].join('\n')
   document.head.appendChild(tag)
@@ -196,17 +198,54 @@ export function cronToHuman(
   return full
 }
 
-/** 下次执行的相对说法（客户端本地算，不靠请求）。 */
-function relativeText(iso: string | null, nowMs: number, tt: Translate): string {
-  if (iso === null) return tt('listNextNone')
-  const diff = Date.parse(iso) - nowMs
-  if (diff <= 0) return tt('relPast')
+// ── 时间「社交化」表达（2026-09-30 用户要求；分级取 GitHub / Telegram 一类公认口径）──
+// 过去：刚刚 → N 分钟前 → N 小时前 → N 天前 → N 周前 → N 个月前 → N 年前；
+// 未来：即将执行 → N 分钟后 → 今天/明天 HH:mm → N 天后 → N 周后 → N 个月后 → N 年后。
+// 具体时刻一律放进 hover Tooltip（listLastFullTitle / listNextFullTitle）。
+function formatFull(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  const p = (v: number): string => String(v).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+const sameCalendarDay = (a: Date, b: Date): boolean =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+
+function relativePast(iso: string, nowMs: number, tt: Translate): string {
+  const diff = nowMs - Date.parse(iso)
+  if (!(diff >= 0)) return tt('relNow')
+  if (diff < 60_000) return tt('relJustNow')
   const minutes = Math.floor(diff / 60_000)
-  if (minutes < 1) return tt('relNow')
-  if (minutes < 60) return tt('relMinutes', { n: minutes })
+  if (minutes < 60) return tt('relMinutesAgo', { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return tt('relHours', { n: hours })
-  return tt('relDays', { n: Math.floor(hours / 24) })
+  if (hours < 24) return tt('relHoursAgo', { n: hours })
+  const days = Math.floor(hours / 24)
+  if (days < 7) return tt('relDaysAgo', { n: days })
+  if (days < 30) return tt('relWeeksAgo', { n: Math.floor(days / 7) })
+  const months = Math.floor(days / 30)
+  if (months < 12) return tt('relMonthsAgo', { n: months })
+  return tt('relYearsAgo', { n: Math.floor(days / 365) })
+}
+
+function relativeFuture(iso: string, nowMs: number, tt: Translate): string {
+  const target = Date.parse(iso)
+  const diff = target - nowMs
+  if (diff <= 0) return tt('relPast')
+  if (diff < 60_000) return tt('relNow')
+  const minutes = Math.floor(diff / 60_000)
+  if (minutes < 60) return tt('relMinutes', { n: minutes })
+  const date = new Date(target)
+  const now = new Date(nowMs)
+  const tomorrow = new Date(now.getTime() + 24 * 3600_000)
+  if (sameCalendarDay(date, now)) return tt('relToday', { time: clockOf(iso) })
+  if (sameCalendarDay(date, tomorrow)) return tt('relTomorrow', { time: clockOf(iso) })
+  const days = Math.ceil(diff / 86_400_000)
+  if (days < 7) return tt('relDays', { n: days })
+  if (days < 30) return tt('relWeeks', { n: Math.floor(days / 7) })
+  const months = Math.floor(days / 30)
+  if (months < 12) return tt('relMonths', { n: months })
+  return tt('relYears', { n: Math.floor(days / 365) })
 }
 
 /** HH:mm（本机时区）。 */
@@ -221,13 +260,6 @@ function dateOf(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
   return `${d.getMonth() + 1} 月 ${d.getDate()} 日`
-}
-
-/** 上次执行的一句话（真实值：没有就是没跑过，不编造）。 */
-function lastRunText(row: TaskOverviewRow, tt: Translate): string {
-  if (row.lastStatus === null || row.lastScheduledAt === null) return tt('listNever')
-  const ok = row.lastStatus === 'succeeded'
-  return `${clockOf(row.lastScheduledAt)} ${ok ? tt('listStatusOk') : tt('listStatusFailed')}`
 }
 
 // ── 排序（时间轴：马上要跑的最上，关闭的沉底）──────────────────────────
@@ -298,12 +330,12 @@ function useFlip(signature: string): (id: string) => (el: HTMLElement | null) =>
 const RAIL_W = 6
 const RAIL_H = 36
 
-/** 运行中：整条转起来（纯 CSS 动画，零请求）。 */
+/** 运行中：整条**绿色**明暗脉动（用户 2026-09-30：执行中是正常状态，不能灰/白闪）。 */
 function RunningRail() {
   return h('span', {
     style: {
       display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
-      borderRadius: '3px', background: C.brand,
+      borderRadius: '3px', background: C.success,
       animation: 'dsh-tdt-rail-pulse 900ms ease-in-out infinite',
     },
   })
@@ -325,35 +357,48 @@ function StatusRail(props: { row: TaskOverviewRow }) {
 }
 
 /**
- * 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：一个带圆角的长方形，内部左右两块——
- * 左 = 上次执行（成功绿底 / 失败红底 / 运行中品牌色），右 = 下次执行（常规色）。
- * 位置：卡片右侧、开关**前面**，与开关、展开箭头一起垂直居中。
+ * 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：外观对齐开关——外面一圈框套着，
+ * 框与内部色块之间留 2px 间距；内部左右两块各自小圆角：
+ * 左 = 上次执行（成功绿底 / 失败红底），右 = 下次执行（常规灰底）。
+ * 文字「社交化」：左 = 「3 分钟前执行成功」，右 = 「下次 今天 14:00 / 6 分钟后」；
+ * hover 才给完整时刻（Tooltip）。**运行中不改左块**——上次该成功还是成功。
  */
 function RunPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate; nowMs: number }) {
   const { row, t, tt, nowMs } = props
   const hasLast = row.lastStatus !== null && row.lastScheduledAt !== null
-  const lastBg = row.running ? C.brand : !hasLast ? C.layer2 : row.lastStatus === 'succeeded' ? C.success : C.danger
-  const lastFg = row.running || hasLast ? '#fff' : C.textDim
-  const lastText = row.running
-    ? t('listRunning')
-    : hasLast ? `${t('listLastPrefix')} ${lastRunText(row, tt)}` : t('listNever')
+  const lastBg = !hasLast ? C.layer2 : row.lastStatus === 'succeeded' ? C.success : C.danger
+  const lastFg = hasLast ? '#fff' : C.textDim
+  const when = hasLast ? relativePast(row.lastScheduledAt ?? '', nowMs, tt) : ''
+  const lastText = hasLast
+    ? t(row.lastStatus === 'succeeded' ? 'listAgoOk' : 'listAgoFailed', { when })
+    : t('listNever')
+  const lastTitle = hasLast
+    ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') })
+    : t('listNever')
+  const nextTitle = row.nextSlotAt === null
+    ? t('listNextNone')
+    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
   const nextText = row.nextSlotAt === null
     ? t('listNextNone')
-    : `${t('listNextPrefix')} ${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`
+    : `${t('listNextPrefix')} ${relativeFuture(row.nextSlotAt, nowMs, tt)}`
   const halfStyle = (bg: string, fg: string): Record<string, string | number> => ({
-    display: 'inline-flex', alignItems: 'center', padding: '0 8px', whiteSpace: 'nowrap',
-    fontSize: '11px', lineHeight: '16px', background: bg, color: fg,
+    display: 'inline-flex', alignItems: 'center', padding: '0 7px', whiteSpace: 'nowrap',
+    fontSize: '11px', lineHeight: '14px', borderRadius: '5px', background: bg, color: fg,
     transition: `background ${C.duration} ${C.ease}`,
   })
   return h('div', {
     style: {
-      display: 'inline-flex', alignItems: 'stretch', flex: 'none',
-      height: '24px', borderRadius: '6px', overflow: 'hidden',
-      border: `1px solid ${C.border}`,
+      display: 'inline-flex', alignItems: 'stretch', flex: 'none', gap: '2px',
+      height: '20px', padding: '2px', boxSizing: 'border-box', borderRadius: '7px',
+      border: `1px solid ${C.border}`, background: C.layer1,
     },
   },
-    h('span', { style: halfStyle(lastBg, lastFg), title: lastText }, lastText),
-    h('span', { style: halfStyle(C.layer2, C.textDim), title: nextText }, nextText),
+    h(Tooltip, { label: lastTitle, side: 'bottom' },
+      h('span', { style: halfStyle(lastBg, lastFg) }, lastText),
+    ),
+    h(Tooltip, { label: nextTitle, side: 'bottom' },
+      h('span', { style: halfStyle(C.layer2, C.textDim) }, nextText),
+    ),
   )
 }
 
@@ -413,6 +458,7 @@ function TaskCard(props: {
           checked: row.enabled,
           onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
           label: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
+          className: 'dsh-tdt-tl-switch',
         }),
         h('button', {
           type: 'button', style: { ...iconBtnStyle, border: 'none', transform: open ? 'rotate(180deg)' : 'none' },

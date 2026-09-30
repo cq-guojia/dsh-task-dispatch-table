@@ -149,9 +149,10 @@ export declare class TaskStore {
         events: SnapshotEvent[];
     };
     /**
-     * 主界面运行态初始化（2026-09-30）：**一条聚合 SQL** 取每任务最近一条实例。
-     * SQLite 文档化行为：查询含 min/max 聚合时，其余裸列取**该聚合所在行**的值
-     * ⇒ `MAX(scheduled_at)` 那条的 `status` / `finished_at` 正是「最近一次执行」。
+     * 主界面运行态初始化（2026-09-30）：**一条聚合 SQL** 取每任务最近一条**终态**实例。
+     * 只认终态（succeeded/failed/skipped/unknown）——「上次执行」= 最近一次**出了结果**的执行，
+     * 刚落库还在跑的不算（用户 2026-09-30：运行中不得覆盖上次执行）。
+     * SQLite 文档化行为：查询含 min/max 聚合时，其余裸列取**该聚合所在行**的值。
      * 走 `idx_instances_slot(task_id, scheduled_at)`，绝不做「每任务一次查询」。
      */
     lastRunByTask(): Map<string, {
