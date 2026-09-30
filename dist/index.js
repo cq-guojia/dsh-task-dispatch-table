@@ -932,8 +932,16 @@ export function apply(ctx, config) {
                 sctx.logger.warn(`附件临时区清理失败（不影响调度）：${error instanceof Error ? error.message : String(error)}`);
             }
         }, 6 * 3600_000);
-        // 定义被改动后的同步钩子（主界面「点了开关立即生效」就靠它）。
-        resyncTaskMap = () => { safeTick(); };
+        /**
+         * 定义被改动的**唯一同步点**（2026-09-30 抽象统一）：保存 / 删除 / 启停等任何写路径改完
+         * 都只调这一个 ⇒ ① 重解析任务表（刷新 panelTaskMap）② 让运行态索引重算展示指纹与下一
+         * 刻度并按需 bump rev（客户端下一次轮询必定拿到新数据）。
+         * ⚠️ 新增写路径时**只在这里加一处**，不要在各自 handler 里散着改内存。
+         */
+        resyncTaskMap = () => {
+            safeTick();
+            runtimeIndex.markDefinitionsChanged([...taskMap.values()]);
+        };
         safeTick();
         // 主界面运行态**启动初始化一次**：一条聚合 SQL 取每任务最近执行 + 在飞行扫描 + 逐任务算下一刻度。
         // 之后全靠事件增量维护（Loop A 落库 / Loop B 收口），轮询不再查库。

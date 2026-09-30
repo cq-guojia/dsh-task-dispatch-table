@@ -532,6 +532,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('运行中状态条脉动（纯 CSS keyframes，零请求）', clientJs.includes('dsh-tdt-rail-pulse'))
   check('「异常」筛选（上次执行失败计数，0 不显示）', clientJs.includes('listFilterAbnormal'))
   check('拨片乐观更新（点了即变，不等轮询）', clientJs.includes('optimistic'))
+  check('刷新请求不被在途那轮吞掉（pendingRef 补跑）', clientJs.includes('pendingRef'))
+  check('上次 / 下次合并成一整条（RunPills，中间直线无圆角）', clientJs.includes('RunPills'))
+  check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
+  check('无下次执行显示 --:-- 占位（图标保留）', clientJs.includes('--:--'))
   check('展开区四区块（执行设置 / 附加文件 / 前置任务 / 提示词）',
     clientJs.includes('listSectionSchedule') && clientJs.includes('listSectionAttachments')
     && clientJs.includes('listSectionDepends') && clientJs.includes('listSectionPrompt'))
@@ -1067,7 +1071,9 @@ console.log('\n[14] runtime-index')
   check('rebuild：上次执行取自库里最近一条', rowA?.lastStatus === 'succeeded' && rowA?.lastScheduledAt === '2026-09-01T09:00:00.000Z')
   check('rebuild：在飞行实例 ⇒ running', rowB?.running === true && rowB?.runningSince === '2026-09-01T09:00:00.000Z')
   check('nextSlotAt：按 cron 算出下一刻度（次日 09:00）', rowA?.nextSlotAt === '2026-09-02T09:00:00.000Z', `实际 ${rowA?.nextSlotAt}`)
-  check('停用任务也算下一刻度（排序要能放进「已关闭」组）', rowB?.nextSlotAt !== null)
+  // 2026-09-30 修订（用户拍板）：关掉的任务**不再**判断下次几点跑 ⇒ 没有刻度；
+  // 排序仍按「已关闭」组沉底（组内按上次执行倒序，不依赖 nextSlotAt）。
+  check('停用任务不给下一刻度（关掉了不判断几点跑）', rowB?.nextSlotAt === null && rowB?.enabled === false)
 
   const revBefore = base.rev
   const again = idx.overview([taskA, taskB], Date.parse('2026-09-01T10:30:00.000Z'))
@@ -1101,6 +1107,22 @@ console.log('\n[14] runtime-index')
   check('投影：附件只给名与类型', proj?.attachments.length === 1 && proj?.attachments[0].name === '报告.md' && proj?.attachments[0].kind === 'upload')
   check('投影：前置任务带标题与启停', proj?.depends[0]?.title === '周报' && proj?.depends[0]?.enabled === false)
   check('投影：createdAt 缺省为 null（不编造时间）', proj?.createdAt === null)
+
+  // ── rev 必须覆盖**全部展示字段**（历史 bug：只比排期 ⇒ 改标题 / 提示词 / 附件永远不刷新）──
+  const revBeforeEdit = idx.revision()
+  const renamed = def({ id: 'task-b', title: '周报改名了', enabled: false, target: { workspace: 'Temp', prompt: '写周报' } })
+  const afterRename = idx.overview([taskA2, renamed], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('rev：改标题也算变化（界面必须刷新）', afterRename.rev !== revBeforeEdit, `rev ${revBeforeEdit} → ${afterRename.rev}`)
+  const stillSame = idx.overview([taskA2, renamed], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('rev：内容未变 ⇒ rev 不变（可回 unchanged）', stillSame.rev === afterRename.rev)
+  check('停用任务：nextSlotAt = null（关掉了不再算几点跑）',
+    afterRename.rows.find(r => r.id === 'task-b')?.nextSlotAt === null)
+  // 定义改动的统一入口：调一次即重算指纹（幂等，重复调不再 bump）
+  idx.markDefinitionsChanged([def({ id: 'task-b', title: '又改名' })])
+  const afterHook = idx.overview([taskA2, def({ id: 'task-b', title: '又改名', enabled: false })], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('markDefinitionsChanged：定义改动统一入口生效', afterHook.rev !== stillSame.rev)
+  const afterHook2 = idx.overview([taskA2, def({ id: 'task-b', title: '又改名', enabled: false })], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('markDefinitionsChanged：幂等（重复调用不刷 rev）', afterHook2.rev === afterHook.rev)
 
   const pruned = idx.overview([taskB], Date.parse('2026-09-02T10:00:00.000Z'))
   check('overview：任务表里没有的条目被剔除', pruned.rows.length === 1 && pruned.rows[0].id === 'task-b')

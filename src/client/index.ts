@@ -589,6 +589,9 @@ function TaskPage(props: {
       if (body.ok !== true) {
         return humanizeTaskError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`)
       }
+      // 启停成功的**唯一**刷新点（2026-09-30 抽象统一）：列表拨片与编辑态开关共用这一条路径，
+      // 调用方不必各自刷新。
+      overview.refresh()
       return null
     } catch (error) {
       return error instanceof Error ? error.message : String(error)
@@ -622,6 +625,8 @@ function TaskPage(props: {
       setEditor(null)
       // 保存成功不许静默（用户 2026-09-30）：关窗同时弹绿色「任务已保存」。
       notifySaved()
+      // 保存完**立刻**重拉列表（改标题 / 提示词这类改动服务端已 bump rev；不 refresh 就要等 10 秒轮询）。
+      overview.refresh()
       // 附件失效要说出来（文件被清道夫清掉 / 手删了），否则用户不知道自己存的是个空引用。
       if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join('、')}`)
     } catch (error) {
@@ -646,6 +651,7 @@ function TaskPage(props: {
         return
       }
       setEditor(null)
+      overview.refresh() // 删除后列表立即少一行
     } catch (error) {
       setEditorError(humanizeTaskError(error instanceof Error ? error.message : String(error)))
     }
@@ -941,14 +947,9 @@ function TaskPage(props: {
             ready: overview.ready,
             onRefresh: () => { setManualAt(Date.now()); overview.refresh() },
             onEdit: openEditor,
-            onToggleEnabled: (id: string, enabled: boolean): void => {
-              // 拨片要**立刻生效**：服务端写库成功后会同步任务表快照，这里马上再拉一次
-              // （不等 10 秒轮询）；卡片本身已做乐观更新，点下去即变。
-              void toggleTaskEnabled(id, enabled).then(err => {
-                if (err !== null) { setViewErr(err); return }
-                overview.refresh()
-              })
-            },
+            // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
+            // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。
+            onToggleEnabled: toggleTaskEnabled,
           })
           // ↓ 旧「任务配置」界面（JSON 逃生口 + 只读参数）：主界面重建后由常量关掉，暂不删——
           // 删了会牵出一串只服务于它的状态；等面板整体收尾（U6 调试债清理）时连状态一起清。

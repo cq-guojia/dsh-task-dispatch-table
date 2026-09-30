@@ -10,8 +10,10 @@ export interface TaskRuntimeEntry {
     lastScheduledAt: string | null;
     lastFinishedAt: string | null;
     nextSlotAt: string | null;
-    /** 定义指纹（排期 + 启停）：变了才重算 nextSlotAt。 */
-    defKey?: string;
+    /** 展示指纹（`overviewKeyOf`）：变了 ⇒ rev 自增 ⇒ 客户端必拿到新数据。 */
+    overviewKey?: string;
+    /** 排期指纹（`scheduleKeyOf`）：变了才重算 nextSlotAt。 */
+    scheduleKey?: string;
 }
 /** 主界面一行（定义投影 + 运行态），客户端拿它直接渲染卡片（含展开区）。 */
 export interface TaskOverviewRow {
@@ -62,6 +64,11 @@ export interface RuntimeIndex {
     clearRunning(taskId: string): void;
     /** 任务被删除。 */
     forget(taskId: string): void;
+    /**
+     * **定义被改动的统一入口**（2026-09-30 抽象统一）：任何写路径改完任务定义后调它一次即可——
+     * 重算展示指纹与下一刻度、按需 bump rev。调用方**不需要**再各自去碰内存条目。
+     */
+    markDefinitionsChanged(tasks: readonly TaskDefinition[]): void;
     /** 组装主界面数据（就地重算过期刻度，剔除已删任务的残留）。 */
     overview(tasks: readonly TaskDefinition[], nowMs: number): {
         rev: number;

@@ -125,6 +125,21 @@ type TaskRuntime = {
 - 变了 ⇒ `{ ok: true, rev, tasks: [{ id, title, code, enabled, workspace, scheduleText, createdAt, running, runningSince, lastStatus, lastScheduledAt, lastFinishedAt, nextSlotAt }] }`。
 - 展开态所需的**细节**（附加文件 / 前置任务 / 提示词首段）**不进 overview**；展开时按需取（复用 `GET /tasks/history` 或新增按 id 的详情端点），做到「不展开不读」。
 
+### 4.3.1 同步总纲（2026-09-30 抽象统一，本文件为唯一定义）
+
+**所有写路径只调一个入口**；新增写路径时**只在这里加一处**，不在各 handler 里散着改内存：
+
+| 层 | 唯一入口 | 做什么 |
+|---|---|---|
+| 服务端 | `resyncTaskMap()`（`src/index.ts`）= `safeTick()` + `runtimeIndex.markDefinitionsChanged(...)` | 重解析任务表 → 刷新 `panelTaskMap`；重算展示指纹与下一刻度并按需 `rev++` |
+| 客户端 | `overview.refresh()`（`useTaskOverview`） | 立刻重拉一次（在途则记为待办，那轮结束补跑，绝不丢） |
+
+- **写路径**（4 条：整批保存 / 单条保存 / 删除 / 启停）统一调用 `onDefinitionsChanged()` → 上面那个入口。
+- **`rev` 的两个指纹分工**：`overviewKeyOf`（覆盖**全部展示字段**）管 rev；`scheduleKeyOf`（排期 + 启停）只管是否重算 `nextSlotAt`。
+  > ⚠️ 历史 bug：rev 过去只由排期驱动 ⇒ 改标题 / 提示词 / 附件永远回 `unchanged` ⇒ 界面不刷新。现在由 `overviewKeyOf` 兜住。
+- **停用任务没有下次刻度**：`enabled === false` ⇒ `nextSlotAt = null`（所有出口统一，前端显示 `--:--`）。
+- **运行中不覆盖上次执行**：`markDispatched` 只置 running；只有 `markTerminal`（出了成功/失败）才覆盖 last*。
+
 ### 4.4 客户端刷新
 
 - 轮询：**10s**。

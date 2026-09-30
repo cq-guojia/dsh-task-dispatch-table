@@ -23,8 +23,10 @@ export interface TaskRuntimeEntry {
   lastScheduledAt: string | null
   lastFinishedAt: string | null
   nextSlotAt: string | null
-  /** 定义指纹（排期 + 启停）：变了才重算 nextSlotAt。 */
-  defKey?: string
+  /** 展示指纹（`overviewKeyOf`）：变了 ⇒ rev 自增 ⇒ 客户端必拿到新数据。 */
+  overviewKey?: string
+  /** 排期指纹（`scheduleKeyOf`）：变了才重算 nextSlotAt。 */
+  scheduleKey?: string
 }
 
 /** 主界面一行（定义投影 + 运行态），客户端拿它直接渲染卡片（含展开区）。 */
@@ -70,6 +72,11 @@ export interface RuntimeIndex {
   clearRunning(taskId: string): void
   /** 任务被删除。 */
   forget(taskId: string): void
+  /**
+   * **定义被改动的统一入口**（2026-09-30 抽象统一）：任何写路径改完任务定义后调它一次即可——
+   * 重算展示指纹与下一刻度、按需 bump rev。调用方**不需要**再各自去碰内存条目。
+   */
+  markDefinitionsChanged(tasks: readonly TaskDefinition[]): void
   /** 组装主界面数据（就地重算过期刻度，剔除已删任务的残留）。 */
   overview(tasks: readonly TaskDefinition[], nowMs: number): { rev: number; rows: TaskOverviewRow[] }
   /** 内容版本：客户端带上一次的值做比对，未变即回 unchanged，省掉整份传输。 */
@@ -87,6 +94,33 @@ function scheduleKeyOf(task: TaskDefinition): string {
     s.start ?? '',
     s.everyNWeeks === undefined ? '' : String(s.everyNWeeks),
   ].join('|')
+}
+
+/**
+ * **展示指纹**（2026-09-30 抽象统一）：主界面卡片上**看得见的任何字段**变了 ⇒ 指纹变 ⇒
+ * `rev` 自增 ⇒ 客户端下一次轮询必定拿到新数据。
+ *
+ * ⚠️ 历史 bug：rev 过去只由排期 + 启停驱动（`scheduleKeyOf`），改标题 / 提示词 / 附件 / 工作区
+ * 等一律不 bump ⇒ 服务端一直回 `unchanged` ⇒ 界面永远不刷新。现在两个指纹**分工**：
+ * - `overviewKeyOf`（本函数）：管 rev —— 覆盖面 = 卡片全部展示字段；
+ * - `scheduleKeyOf`：只管「要不要重算 nextSlotAt」—— 覆盖面 = 排期 + 启停（算刻度只依赖这些）。
+ */
+function overviewKeyOf(task: TaskDefinition): string {
+  const s = task.schedule
+  return JSON.stringify({
+    title: task.title ?? '',
+    code: task.code ?? '',
+    enabled: task.enabled,
+    createdAt: task.createdAt ?? '',
+    workspace: task.target.workspace,
+    provider: task.target.provider ?? '',
+    model: task.target.model ?? '',
+    prompt: task.target.prompt,
+    schedule: { cron: s.cron ?? '', once: s.once ?? '', timezone: s.timezone ?? '', start: s.start ?? '', everyNWeeks: s.everyNWeeks ?? 0, window: s.window },
+    retry: task.retry?.maxAttempts ?? 1,
+    attachments: (task.attachments ?? []).map(a => `${a.name}:${a.kind}:${a.ref}`),
+    depends: (task.depends_on ?? []).map(d => d.task),
+  })
 }
 
 /** 提示词首段（按字符截断，中文不按字节切）。 */
@@ -113,8 +147,12 @@ export function createRuntimeIndex(): RuntimeIndex {
     return created
   }
 
-  /** 单个任务的刻度计算异常（非法 cron 等）不能连累整份列表。 */
+  /**
+   * 单个任务的刻度计算异常（非法 cron 等）不能连累整份列表。
+   * 停用任务**没有下次执行时刻** ⇒ 不给刻度（用户 2026-09-30：关掉了还在算几点跑是错的）。
+   */
   const computeNext = (task: TaskDefinition, nowMs: number): string | null => {
+    if (task.enabled === false) return null
     try {
       const next = nextSlotAfter(task, new Date(nowMs))
       return next === undefined ? null : next.toISOString()
@@ -143,7 +181,8 @@ export function createRuntimeIndex(): RuntimeIndex {
       }
       for (const task of tasks) {
         const entry = entryOf(task.id)
-        entry.defKey = scheduleKeyOf(task)
+        entry.overviewKey = overviewKeyOf(task)
+        entry.scheduleKey = scheduleKeyOf(task)
         entry.nextSlotAt = computeNext(task, nowMs)
       }
       rev++
@@ -180,15 +219,39 @@ export function createRuntimeIndex(): RuntimeIndex {
       if (entries.delete(taskId)) rev++
     },
 
+    markDefinitionsChanged(tasks) {
+      const nowMs = Date.now()
+      for (const task of tasks) {
+        const entry = entryOf(task.id)
+        const overviewKey = overviewKeyOf(task)
+        const scheduleKey = scheduleKeyOf(task)
+        if (entry.overviewKey !== overviewKey) {
+          entry.overviewKey = overviewKey
+          rev++
+        }
+        if (entry.scheduleKey !== scheduleKey) {
+          entry.scheduleKey = scheduleKey
+          entry.nextSlotAt = computeNext(task, nowMs)
+          rev++
+        }
+      }
+    },
+
     overview(tasks, nowMs) {
       const byId = new Map(tasks.map(task => [task.id, task]))
       const rows: TaskOverviewRow[] = []
       for (const task of tasks) {
         const entry = entryOf(task.id)
-        const key = scheduleKeyOf(task)
-        if (entry.defKey !== key) {
-          // 排期 / 启停变了 ⇒ 重算下一刻度（用户改完必须立刻看到新时间）。
-          entry.defKey = key
+        // ① 展示指纹变了（标题 / 提示词 / 附件 / 工作区 … 任何看得见的字段）⇒ 必须让客户端拿到新数据。
+        const overviewKey = overviewKeyOf(task)
+        if (entry.overviewKey !== overviewKey) {
+          entry.overviewKey = overviewKey
+          rev++
+        }
+        // ② 排期 / 启停变了 ⇒ 重算下一刻度（用户改完必须立刻看到新时间）。
+        const scheduleKey = scheduleKeyOf(task)
+        if (entry.scheduleKey !== scheduleKey) {
+          entry.scheduleKey = scheduleKey
           entry.nextSlotAt = computeNext(task, nowMs)
           rev++
         } else if (entry.nextSlotAt !== null && Date.parse(entry.nextSlotAt) <= nowMs) {

@@ -70,6 +70,10 @@ const C = {
   ease: 'var(--ds-ease-in-out, ease)',
 }
 const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`
+/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
+const monoFont = 'var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
+/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
+const NO_TIME = '--:--'
 /** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
 const CONTROL_H = 26
 /** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
@@ -121,6 +125,8 @@ export function useTaskOverview(): {
   const [ready, setReady] = useState(false)
   const revRef = useRef('')
   const busyRef = useRef(false)
+  /** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
+  const pendingRef = useRef(false)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -140,6 +146,10 @@ export function useTaskOverview(): {
         setReady(true)
       } catch { /* 通道短暂不可用：保持上一次的数据，下轮再取 */ } finally {
         busyRef.current = false
+        if (pendingRef.current) {
+          pendingRef.current = false
+          setTick(v => v + 1) // 补跑被在途那轮吞掉的刷新请求
+        }
       }
     }
     void poll()
@@ -147,7 +157,14 @@ export function useTaskOverview(): {
     return () => { alive = false; window.clearInterval(timer) }
   }, [tick])
 
-  const refresh = useCallback((): void => { setTick(v => v + 1) }, [])
+  /**
+   * 手动刷新 / 操作后刷新：若此刻正有一轮在途（busy），**不能丢**——记下待办，
+   * 那一轮结束立刻补一次（否则「保存后刷新」会被吞掉，又退回等 10 秒轮询）。
+   */
+  const refresh = useCallback((): void => {
+    if (busyRef.current) { pendingRef.current = true; return }
+    setTick(v => v + 1)
+  }, [])
   return { rows, ready, refresh }
 }
 
@@ -250,13 +267,22 @@ function relativeFuture(iso: string, nowMs: number, tt: Translate): string {
   return tt('relYears', { n: Math.floor(days / 365) })
 }
 
-/** 24 小时内的秒级倒计时（HH:mm:ss）。每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。 */
+/**
+ * 24 小时内的秒级倒计时（用户 2026-09-30 定的分级）：
+ * - 小时为 0 ⇒ 不显示小时（几分几秒 显示 `5:09`）；
+ * - 只剩秒 ⇒ 仍要显示分位（`0:09`）；
+ * - 超过 24 小时由调用方走 `relativeFuture`（明天 / 三天后 / N 周后）。
+ * 每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。
+ */
 function countdownText(iso: string, nowMs: number, tt: Translate): string {
   const diff = Date.parse(iso) - nowMs
   if (diff <= 0) return tt('relNow')
   const total = Math.floor(diff / 1000)
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
   const p = (v: number): string => String(v).padStart(2, '0')
-  return `${p(Math.floor(total / 3600))}:${p(Math.floor((total % 3600) / 60))}:${p(total % 60)}`
+  return hours > 0 ? `${hours}:${p(minutes)}:${p(seconds)}` : `${minutes}:${p(seconds)}`
 }
 
 // ── 全局秒级心跳（单 timer + 局部订阅）────────────────────────────────
@@ -418,40 +444,54 @@ const pillRightStyle: Record<string, string | number> = {
   fontSize: '11px', lineHeight: '14px', whiteSpace: 'nowrap',
 }
 
-function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
+/** 格子通用样式（外框一体 ⇒ 内部分隔是**直线**，只有最左 / 最右有圆角）。 */
+const pillCell = (extra?: Record<string, string | number>): Record<string, string | number> => ({
+  display: 'inline-flex', alignItems: 'center', padding: '0 7px', flex: 'none', ...extra,
+})
+/**
+ * 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。
+ */
+const pillTimeCell: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: C.layer1, color: C.text,
+  fontSize: '11px', lineHeight: '14px', whiteSpace: 'nowrap',
+  fontVariantNumeric: 'tabular-nums', fontFamily: monoFont,
+}
+
+function RunPills(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
   const has = row.lastStatus !== null && row.lastScheduledAt !== null
   const leftBg = !has ? C.layer3 : row.lastStatus === 'succeeded' ? C.success : C.danger
   const leftFg = has ? '#fff' : C.textDim
-  const title = has ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') }) : t('listNever')
+  const lastTitle = has
+    ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') })
+    : t('listNever')
+  const nextTitle = row.nextSlotAt === null
+    ? t('listNextNone')
+    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
   return h('div', { style: pillOuterStyle },
-    h('span', { style: pillLeftStyle(leftBg, leftFg) }, h(IconClockOutlineRegular, { size: 12 })),
-    h(Tooltip, { label: title, side: 'bottom' },
+    // ① 历史时钟（成功绿 / 失败红 / 无状态灰）
+    h('span', { style: pillCell({ background: leftBg, color: leftFg }) }, h(IconClockOutlineRegular, { size: 12 })),
+    // ② 历史时间：当天 HH:mm，跨天「3 小时前 / 1 天前」
+    h(Tooltip, { label: lastTitle, side: 'bottom' },
       h(LiveText, {
-        style: pillRightStyle,
+        style: pillTimeCell,
         render: (nowMs: number): string => {
-          if (!has) return t('listNever')
+          if (!has) return NO_TIME
           const iso = row.lastScheduledAt ?? ''
           return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt)
         },
       }),
     ),
-  )
-}
-
-function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
-  const { row, t, tt } = props
-  const title = row.nextSlotAt === null
-    ? t('listNextNone')
-    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
-  return h('div', { style: pillOuterStyle },
-    h('span', { style: pillLeftStyle(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
-    h(Tooltip, { label: title, side: 'bottom' },
+    // ③ 闹钟（下次执行）：左边界一条直线与上一格相连 ⇒ 两块合并成一个整体
+    h('span', {
+      style: pillCell({ background: C.layer3, color: C.text, borderLeft: `1px solid ${C.border}` }),
+    }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+    // ④ 下次时间：一天以内 = 秒级倒计时（H:MM:SS / M:SS），超过 24 小时 = 明天 / 三天后 / N 周后
+    h(Tooltip, { label: nextTitle, side: 'bottom' },
       h(LiveText, {
-        style: pillRightStyle,
+        style: { ...pillTimeCell, borderLeft: `1px solid ${C.border}` },
         render: (nowMs: number): string => {
-          if (row.nextSlotAt === null) return t('listNextNone')
-          // 一天以内 = HH:mm:ss 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后。
+          if (row.nextSlotAt === null) return NO_TIME
           const diff = Date.parse(row.nextSlotAt) - nowMs
           return diff < 24 * 3600_000
             ? countdownText(row.nextSlotAt, nowMs, tt)
@@ -511,10 +551,9 @@ function TaskCard(props: {
         h('div', { style: { ...metaStyle, minWidth: 0 } }, h(MarqueeText, { text: scheduleText })),
         row.createdAt === null ? null : h('div', { style: faintStyle }, `${t('listCreatedPrefix')} ${dateOf(row.createdAt)}`),
       ),
-      // 右：历史执行 / 下次执行两个独立小标签 → 启用拨片 → 展开箭头（「编辑」在展开区右下角）。
+      // 右：历史执行 / 下次执行**合并成一条**（外框圆角、中间直线）→ 启用拨片 → 展开箭头。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
-        h(PastPill, { row, t, tt }),
-        h(NextPill, { row, t, tt }),
+        h(RunPills, { row, t, tt }),
         h(Switch, {
           checked: row.enabled,
           onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
@@ -567,7 +606,8 @@ export function TaskListView(props: {
   ready: boolean
   onRefresh: () => void
   onEdit: (id: string) => void
-  onToggleEnabled: (id: string, enabled: boolean) => void
+  /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
+  onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
 }): ReturnType<typeof h> {
   const { t, rows, ready, onRefresh, onEdit, onToggleEnabled } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])

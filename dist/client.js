@@ -39987,6 +39987,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			ease: "var(--ds-ease-in-out, ease)"
 		};
 		const transition$1 = `background ${C$1.duration} ${C$1.ease}, color ${C$1.duration} ${C$1.ease}, border-color ${C$1.duration} ${C$1.ease}`;
+		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
+		const monoFont$1 = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
+		const NO_TIME = "--:--";
 		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
 		const CONTROL_H = 26;
 		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
@@ -40035,6 +40039,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [ready, setReady] = (0, react.useState)(false);
 			const revRef = (0, react.useRef)("");
 			const busyRef = (0, react.useRef)(false);
+			/** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
+			const pendingRef = (0, react.useRef)(false);
 			const [tick, setTick] = (0, react.useState)(0);
 			(0, react.useEffect)(() => {
 				let alive = true;
@@ -40053,6 +40059,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						setReady(true);
 					} catch {} finally {
 						busyRef.current = false;
+						if (pendingRef.current) {
+							pendingRef.current = false;
+							setTick((v) => v + 1);
+						}
 					}
 				};
 				poll();
@@ -40068,6 +40078,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				rows,
 				ready,
 				refresh: (0, react.useCallback)(() => {
+					if (busyRef.current) {
+						pendingRef.current = true;
+						return;
+					}
 					setTick((v) => v + 1);
 				}, [])
 			};
@@ -40161,13 +40175,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (months < 12) return tt("relMonths", { n: months });
 			return tt("relYears", { n: Math.floor(days / 365) });
 		}
-		/** 24 小时内的秒级倒计时（HH:mm:ss）。每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。 */
+		/**
+		* 24 小时内的秒级倒计时（用户 2026-09-30 定的分级）：
+		* - 小时为 0 ⇒ 不显示小时（几分几秒 显示 `5:09`）；
+		* - 只剩秒 ⇒ 仍要显示分位（`0:09`）；
+		* - 超过 24 小时由调用方走 `relativeFuture`（明天 / 三天后 / N 周后）。
+		* 每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。
+		*/
 		function countdownText(iso, nowMs, tt) {
 			const diff = Date.parse(iso) - nowMs;
 			if (diff <= 0) return tt("relNow");
 			const total = Math.floor(diff / 1e3);
+			const hours = Math.floor(total / 3600);
+			const minutes = Math.floor(total % 3600 / 60);
+			const seconds = total % 60;
 			const p = (v) => String(v).padStart(2, "0");
-			return `${p(Math.floor(total / 3600))}:${p(Math.floor(total % 3600 / 60))}:${p(total % 60)}`;
+			return hours > 0 ? `${hours}:${p(minutes)}:${p(seconds)}` : `${minutes}:${p(seconds)}`;
 		}
 		const tickerListeners = /* @__PURE__ */ new Set();
 		let tickerTimer = null;
@@ -40318,15 +40341,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			overflow: "hidden",
 			border: `1px solid ${C$1.border}`
 		};
-		const pillLeftStyle = (bg, fg) => ({
+		C$1.layer1, C$1.text;
+		/** 格子通用样式（外框一体 ⇒ 内部分隔是**直线**，只有最左 / 最右有圆角）。 */
+		const pillCell = (extra) => ({
 			display: "inline-flex",
 			alignItems: "center",
-			padding: "0 6px",
-			background: bg,
-			color: fg,
-			flex: "none"
+			padding: "0 7px",
+			flex: "none",
+			...extra
 		});
-		const pillRightStyle = {
+		/**
+		* 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。
+		*/
+		const pillTimeCell = {
 			display: "inline-flex",
 			alignItems: "center",
 			padding: "0 8px",
@@ -40334,36 +40361,44 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			color: C$1.text,
 			fontSize: "11px",
 			lineHeight: "14px",
-			whiteSpace: "nowrap"
+			whiteSpace: "nowrap",
+			fontVariantNumeric: "tabular-nums",
+			fontFamily: monoFont$1
 		};
-		function PastPill(props) {
+		function RunPills(props) {
 			const { row, t, tt } = props;
 			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
 			const leftBg = !has ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
 			const leftFg = has ? "#fff" : C$1.textDim;
-			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
-			return (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillLeftStyle(leftBg, leftFg) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: title,
+			const lastTitle = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
+			const nextTitle = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			return (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillCell({
+				background: leftBg,
+				color: leftFg
+			}) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: lastTitle,
 				side: "bottom"
 			}, (0, react.createElement)(LiveText, {
-				style: pillRightStyle,
+				style: pillTimeCell,
 				render: (nowMs) => {
-					if (!has) return t("listNever");
+					if (!has) return NO_TIME;
 					const iso = row.lastScheduledAt ?? "";
 					return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt);
 				}
-			})));
-		}
-		function NextPill(props) {
-			const { row, t, tt } = props;
-			const title = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
-			return (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillLeftStyle(C$1.layer3, C$1.text) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: title,
+			})), (0, react.createElement)("span", { style: pillCell({
+				background: C$1.layer3,
+				color: C$1.text,
+				borderLeft: `1px solid ${C$1.border}`
+			}) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: nextTitle,
 				side: "bottom"
 			}, (0, react.createElement)(LiveText, {
-				style: pillRightStyle,
+				style: {
+					...pillTimeCell,
+					borderLeft: `1px solid ${C$1.border}`
+				},
 				render: (nowMs) => {
-					if (row.nextSlotAt === null) return t("listNextNone");
+					if (row.nextSlotAt === null) return NO_TIME;
 					return Date.parse(row.nextSlotAt) - nowMs < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);
 				}
 			})));
@@ -40467,11 +40502,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				gap: "8px",
 				flex: "none"
-			} }, (0, react.createElement)(PastPill, {
-				row,
-				t,
-				tt
-			}), (0, react.createElement)(NextPill, {
+			} }, (0, react.createElement)(RunPills, {
 				row,
 				t,
 				tt
@@ -41181,6 +41212,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					});
 					const body = await res.json();
 					if (body.ok !== true) return humanizeTaskError(typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`);
+					overview.refresh();
 					return null;
 				} catch (error) {
 					return error instanceof Error ? error.message : String(error);
@@ -41207,6 +41239,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					const missing = Array.isArray(body.missingAttachments) ? body.missingAttachments.filter((item) => typeof item === "string") : [];
 					setEditor(null);
 					notifySaved();
+					overview.refresh();
 					if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join("、")}`);
 				} catch (error) {
 					setEditorError(error instanceof Error ? error.message : String(error));
@@ -41229,6 +41262,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						return;
 					}
 					setEditor(null);
+					overview.refresh();
 				} catch (error) {
 					setEditorError(humanizeTaskError(error instanceof Error ? error.message : String(error)));
 				}
@@ -41496,15 +41530,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					overview.refresh();
 				},
 				onEdit: openEditor,
-				onToggleEnabled: (id, enabled) => {
-					toggleTaskEnabled(id, enabled).then((err) => {
-						if (err !== null) {
-							setViewErr(err);
-							return;
-						}
-						overview.refresh();
-					});
-				}
+				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,
 				onChange: (event) => {

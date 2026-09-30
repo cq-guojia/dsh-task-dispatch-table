@@ -67,7 +67,35 @@
 4. **裸定义没有 zod 默认值**：冒烟的 `def()` 是无 `retry` 的裸对象，`overview` 里 `task.retry.maxAttempts` 直接崩。改为防御取值 `task.retry?.maxAttempts ?? 1`——展示面不能因畸形定义崩。
 5. **官方没有列表/卡片件**：P1 核实（primitives 组件清单）确认只有 `Switch` / `Input` / `Menu` / `Pill` / `SegmentedControl` / `Button` / `Tooltip` / `StateDot` / `Modal` / `Toast` 等控件 ⇒ 卡片外壳自绘，控件用官方件。
 
-## 五、验证
+## 五、同步机制大收敛（2026-09-30，用户报「保存后一直不刷新」）
+
+用户要求「不要改一个东西要在 N 多地方改」。组织了专家团评审 + 观察团验证，结论与落码：
+
+### 5.1 根因（专家团定位）
+
+`rev` 过去只由 `scheduleKeyOf`（排期 + 启停）驱动 ⇒ **改标题 / 提示词 / 附件 / 工作区 / 模型 / 依赖都不 bump** ⇒ 服务端一直回 `{unchanged:true}` ⇒ 界面永不刷新；只有恰好发生派发 / 终态 / 刻度过期时才「顺带」刷一次。加上 `saveEditor` 成功后没有 `refresh()` ⇒ 最长要等 10 秒。
+
+### 5.2 抽象（收敛为两个唯一入口）
+
+| 层 | 唯一入口 | 说明 |
+|---|---|---|
+| 服务端 | `resyncTaskMap()` = `safeTick()` + `runtimeIndex.markDefinitionsChanged(tasks)` | 4 条写路径（整批 / 单条 / 删除 / 启停）都只调 `onDefinitionsChanged()` → 这一处 |
+| 客户端 | `overview.refresh()` | 保存 / 删除 / 启停成功后统一调；在途则记待办补跑 |
+
+指纹分工：`overviewKeyOf`（全展示字段）管 rev；`scheduleKeyOf` 只管是否重算刻度。
+
+### 5.3 观察团抓到的两个漏网（已修）
+
+1. **`saveEditor` 的 refresh 被我的并发编辑覆盖掉了**（同文件并发 `replace` 会互相覆盖，本仓库已第二次踩到）⇒ 补回。
+2. **拨片失败时乐观值永久残留**：失败只弹错误不清乐观值 ⇒ 服务端没变、后续一直 unchanged ⇒ 拨片永久停在错状态。改为 `onToggleEnabled` 返回错误文案，列表据此回滚乐观值。
+
+### 5.4 其他（观察团提示，已确认可接受）
+
+- `resyncTaskMap` 会顺带跑一次 tick（可能触发到期刻度落库）——幂等，且符合「保存即生效」的直觉。
+- `refresh()` 在轮询在途时曾被吞掉 ⇒ 加 `pendingRef` 补跑。
+- `runtimeIndex.forget()` 是死代码（删除走 overview 剪枝）——保留不影响，后续清理时删。
+
+## 六、验证
 
 - `npx tsc --noEmit`（宿主）+ `npx tsc --noEmit -p tsconfig.client.json`（客户端）：全绿。
 - `npm run build`：`dist/` 已重新生成（client 1.69 MB）。
