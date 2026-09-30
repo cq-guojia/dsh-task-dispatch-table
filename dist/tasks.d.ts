@@ -154,6 +154,16 @@ export interface RemoveResult {
 }
 /** 从整表里摘掉一条任务定义（删除任务；实例 / 事件保留在库里做审计）。 */
 export declare function removeDefinitionInline(raw: string, id: string): RemoveResult;
+export interface SetEnabledResult {
+    json: string;
+    changed: boolean;
+    error: string | null;
+}
+/**
+ * 只改一条任务的 `enabled`（编辑器头部的启用开关实时写回，用户 2026-09-30：独立于保存按钮）。
+ * 定义不存在 ⇒ error（404 语义）；值没变 ⇒ changed=false（不落库不审计）。
+ */
+export declare function setEnabledDefinitionInline(raw: string, id: string, enabled: boolean): SetEnabledResult;
 /** 把 ISO 8601 时长解析成毫秒。 */
 export declare function durationMs(iso: string): number;
 /** 用 Intl 验证 IANA 时区名（schedule.timezone 缺省 = 宿主时区）。 */

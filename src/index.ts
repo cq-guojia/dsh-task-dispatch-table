@@ -8,7 +8,7 @@ import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './con
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
 import {
-  ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, taskDefinitionSchema, titleOf,
+  ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, setEnabledDefinitionInline, taskDefinitionSchema, titleOf,
   upsertDefinitionInline, validateDefinitionForSave,
 } from './tasks.js'
 import { TaskStore } from './store.js'
@@ -364,6 +364,41 @@ const makeDispatchRoutes = (
     },
   },
   {
+    // 启用开关实时写回（用户 2026-09-30：编辑态头部开关点了立即生效，不走整个保存链路）：
+    //   POST { id, enabled } ⇒ 只改该任务定义的 enabled 字段并落库（定义不存在 = task-not-found）。
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/tasks/enabled`,
+    handler: async (req, res) => {
+      if (req.method !== 'POST') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+      if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
+      try {
+        const body = await readDispatchBody(req)
+        const parsed = JSON.parse(body) as { id?: unknown; enabled?: unknown }
+        const id = typeof parsed.id === 'string' ? parsed.id : ''
+        if (!isUuid(id)) return writeJson(res, 400, { ok: false, error: 'id-required' })
+        if (typeof parsed.enabled !== 'boolean') return writeJson(res, 400, { ok: false, error: 'enabled-required' })
+        const r = setEnabledDefinitionInline(runtimeRef.tasksInline, id, parsed.enabled)
+        if (r.error !== null) return writeJson(res, r.error === 'task-not-found' ? 404 : 400, { ok: false, error: r.error })
+        if (r.changed) {
+          const prevInline = runtimeRef.tasksInline
+          runtimeRef.tasksInline = r.json
+          try {
+            await persistTasksInline(r.json)
+          } catch (error) {
+            runtimeRef.tasksInline = prevInline // 回滚内存，开关维持原值
+            return writeJson(res, 500, { ok: false, error: 'persist-failed', message: error instanceof Error ? error.message : String(error) })
+          }
+          getStore()?.appendAudit({ taskId: id, action: 'task_updated', detail: { enabled: parsed.enabled } })
+          log(`任务 ${id} 启用开关已实时写回：${parsed.enabled ? 'enabled' : 'disabled'}`)
+        }
+        writeJson(res, 200, { ok: true, id, enabled: parsed.enabled })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
+      }
+    },
+  },
+  {
     // 版本 / 快照列表（编辑态「历史版本」面板）：GET /tasks/history?id=<uuid>
     kind: 'exact',
     path: `${DISPATCH_API_PREFIX}/tasks/history`,
@@ -655,7 +690,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       () => assetsRef,
       () => configRef,
     )) webServer.register(route)
-    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive')
+    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled')
   })
   ctx.inject(['settings'], (sctx: HostContext) => {
     const settings = sctx.settings

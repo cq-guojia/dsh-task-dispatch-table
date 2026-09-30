@@ -560,6 +560,27 @@ function TaskPage(props: {
     void loadHistory(id)
   }
 
+  /**
+   * 启用开关实时写回（编辑态专用，用户 2026-09-30）：POST /tasks/enabled { id, enabled }。
+   * 返回 null = 成功；否则返回人话错误文案。快照由 2s 轮询自动同步，无需手动刷。
+   */
+  const toggleTaskEnabled = async (id: string, enabled: boolean): Promise<string | null> => {
+    try {
+      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks/enabled`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, enabled }),
+      })
+      const body = await res.json() as { ok?: boolean; error?: unknown }
+      if (body.ok !== true) {
+        return humanizeTaskError(typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`)
+      }
+      return null
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error)
+    }
+  }
+
   /** 保存（新增 / 修改同一条链路）：POST /tasks { task }。 */
   const saveEditor = async (draft: TaskEditorDraft): Promise<void> => {
     if (editor === null) return
@@ -628,26 +649,6 @@ function TaskPage(props: {
         return
       }
       setEditor(cur => (cur === null ? cur : { ...cur, draft: { ...cur.draft, prompt: body.content as string } }))
-    } catch (error) {
-      setEditorError(error instanceof Error ? error.message : String(error))
-    }
-  }
-
-  /** 找回全部设置：取该配置快照 → 反解成草稿 → 整体覆盖表单（id 保持）。 */
-  const restoreSnapshot = async (file: string): Promise<void> => {
-    if (editor === null) return
-    try {
-      const res = await fetch(
-        `${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=snapshot&file=${encodeURIComponent(file)}`,
-        { cache: 'no-store' },
-      )
-      const body = await res.json() as { ok?: boolean; content?: unknown }
-      if (body.ok !== true || body.content === null || typeof body.content !== 'object') {
-        setEditorError('该配置快照读不出来，可能已被删除')
-        return
-      }
-      const next = definitionToDraft(body.content as Record<string, unknown>)
-      setEditor(cur => (cur === null ? cur : { ...cur, draft: next }))
     } catch (error) {
       setEditorError(error instanceof Error ? error.message : String(error))
     }
@@ -1234,8 +1235,8 @@ function TaskPage(props: {
         saveError: editorError,
         history: editor.history,
         onRestoreVersion: (file: string) => { void restoreVersion(file) },
-        onRestoreSnapshot: (file: string) => { void restoreSnapshot(file) },
         onDeleteVersion: (file: string) => { void deleteVersion(file) },
+        onToggleEnabled: (enabled: boolean) => toggleTaskEnabled(editor.id, enabled),
         workspaceFiles,
         workspaceAnchors: editorOptions.workspaceAnchors,
       })

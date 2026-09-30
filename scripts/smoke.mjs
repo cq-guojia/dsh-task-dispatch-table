@@ -10,7 +10,7 @@ import { DatabaseSync } from 'node:sqlite'
 import {
   ensureIdsInInlineJson, existingUuidIds, firstSlotOnDay, nextSlotAfter, parseInlineTasks, scheduledSlotsFor, applyIdentity, isUuid,
   displayNameOf, formatSlotShort, sessionTitleOf,
-  removeDefinitionInline, upsertDefinitionInline, validateDefinitionForSave,
+  removeDefinitionInline, setEnabledDefinitionInline, upsertDefinitionInline, validateDefinitionForSave,
 } from '../dist/tasks.js'
 import {
   assetPaths, deleteTaskAssets, deleteVersion, listVersions, purgeTmp, readSnapshot, readVersion,
@@ -491,6 +491,13 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('SessionViewModal 组件已打进 bundle', clientJs.includes('SessionViewModal'))
   check('openSessionView 数据闸门已打进 bundle', clientJs.includes('openSessionView'))
   check('loadOlder 探测调用已打进 bundle', clientJs.includes('loadOlder'))
+  // 编辑器 UX 第二轮（2026-09-30）：版本开关分段同款 / 条目卡片+hover 小钮 / 启用 Toast / 校验红框 / 快照 UI 已删
+  check('版本开关走分段同款（histtoggle 轨道+亮片）', clientJs.includes('dsh-tdt-ed-histtoggle') && clientJs.includes('dsh-tdt-ed-histtoggle-seg'))
+  check('版本条目卡片式 + 使用/移除小钮', clientJs.includes('dsh-tdt-ed-ver-use') && clientJs.includes('dsh-tdt-ed-ver-del') && clientJs.includes('MarqueeText'))
+  check('启用开关写回 Toast（--below 变体）', clientJs.includes('dsh-tdt-toast--below'))
+  check('任务名称/下拉校验红框类', clientJs.includes('dsh-tdt-ed-pfx--error') && clientJs.includes('dsh-tdt-ed-field--error'))
+  check('配置快照 UI 已整体移除（无 Snapshots 区块文案）', !clientJs.includes('editorSnapshotsHint') && !clientJs.includes('editorNoSnapshots'))
+  check('启用实时写回走独立端点 tasks/enabled', dispatchJs.includes('tasks/enabled') || clientJs.includes('tasks/enabled'))
   check('chat target 组装已打进 bundle（target("chat")）', clientJs.includes('target("chat")') || clientJs.includes("target('chat')") || /target\(["']chat["']\)/.test(clientJs))
   // 官方外观复用（方案 ①）：运行时从宿主注入的 style 标签解析官方真实 CSS-module 类名。
   // 纯解析函数 parseOfficialCss 无 DOM 依赖（可对夹具断言）；冒烟这里只验产物里确实带上了。
@@ -917,6 +924,12 @@ console.log('\n[11] 保存校验 upsert / validate / remove')
   const removed = removeDefinitionInline(seeded, uuid)
   check('remove：按 id 摘除', removed.removed && JSON.parse(removed.json).length === 0)
   check('remove：id 不存在 ⇒ removed=false', removeDefinitionInline(seeded, ghostId).removed === false)
+  // 启用开关实时写回（2026-09-30：编辑器头部开关独立操作，不走保存链路）
+  const en1 = setEnabledDefinitionInline(seeded, uuid, false)
+  check('enabled：命中 ⇒ 改写并落 JSON', en1.error === null && en1.changed && JSON.parse(en1.json)[0].enabled === false)
+  check('enabled：值没变 ⇒ 不动（changed=false）', setEnabledDefinitionInline(en1.json, uuid, false).changed === false)
+  check('enabled：id 不存在 ⇒ task-not-found', setEnabledDefinitionInline(seeded, ghostId, true).error === 'task-not-found')
+  check('enabled：空表 ⇒ task-not-found', setEnabledDefinitionInline('', uuid, true).error === 'task-not-found')
 }
 
 // ── 12. 执行记录清理 purgeHistory（2026-09-30：默认不清 + 保护每任务最近终态）──

@@ -47,3 +47,17 @@
 4. 「附加文件」与「执行频率」间距恢复 16px。
 5. 提示词编辑器：右侧版本列表条目 hover 右侧出「使用版本 / 删除」且行高不变；「版本」开关按钮选中高亮 / 未选中灰盒；面板内不再出现配置快照。
 6. 主编辑器前置任务卡下方出现「配置快照」区块，找回走严厉确认。
+
+## 五、同日第二轮返工（真机试用逐条反馈）
+
+> 用户批评点：**未经允许在主界面加了配置快照 UI**——记为流程红线：**界面改动只做点名要求的，不自主加**。
+
+1. **配置快照 UI 全撤**：主编辑器快照区块 / `confirmSnapshotFile` / `onRestoreSnapshot` prop / `restoreSnapshot` 客户端函数 / `editorSnapshotsHint`·`editorNoSnapshots` 文案全删；服务端 `saveSnapshot` 留档保留（无界面纯落盘，将来单独做按钮时直接用）。
+2. 「预计执行」两条线改虚线；「任务开始时间」上间距 = 14px 对齐上边线离「星期」的间距（`.dsh-tdt-ed-schedfoot` 原 margin12+padding12=24 修为 margin14+padding0）。
+3. 间隔小时档句式：生效日在前无括号「周一、周三、周五每小时执行一次」（新 key `editorSchedHourlyOnce` / `editorSchedNoDaySuffix`，未勾日改「，但还没选生效日」后缀）。
+4. 任务名称必填：`ErrorField` 加 `title`、`PrefixedInput` 加 `error` prop（`.dsh-tdt-ed-pfx--error`）。
+5. 「版本」开关照官方 `SegmentedControl.module.css` 逐值重写（轨道 `interactive-bg-hover`+padding4、选中段 `bg-layer-1`+`elevation-soft` 白亮片）——此前 business 蓝底在用户主题下显绿被点名。
+6. 版本条目：小尖括号（`IconChevronDownOutlineRegular` rotate −90°）、卡片行无分隔线、主文本 `MarqueeText`（省略号+hover 盒内跑马灯不盖图标）、hover 右侧「使用」药丸 +「移除」小字（常态显示时间小字，行高恒定）。
+7. **启用开关独立操作**：服务端新端点 `POST /tasks/enabled`（`setEnabledDefinitionInline` 只改 enabled、值没变不落库、404=task-not-found、审计 task_updated）；客户端 `toggleTaskEnabled`；drawer `onToggleEnabled` 成功 Toast「任务已启用/已关闭」（`--below` 变体浮在 header 下）、失败开关回弹；成功同步 `initialDraftRef` 保持脏判定干净；开关旁联动「已启用/已关闭」。
+
+冒烟 **247 项全过**（+10：enabled 四条 + 产物六条）；typecheck/build 绿；真机验证待做（§四清单 5/6 已过时——快照 UI 已撤，以本节为准）。

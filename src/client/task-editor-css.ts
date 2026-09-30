@@ -17,7 +17,7 @@ export const TASK_EDITOR_CSS = `
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。 */
 .dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;background:0 0;}
 .dsh-tdt-ed-resizer:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:15px;font-weight:600;}
 /* 头部左侧：启用开关 + 标题 一组（用户 2026-09-30：开关移到标题左边）。 */
 .dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
@@ -56,18 +56,25 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-errors{margin:0 0 12px;padding:10px 12px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.10));border:1px solid var(--dsw-alias-state-error-primary,#e5484d);}
 .dsh-tdt-ed-errors-title{font-size:12px;font-weight:600;color:var(--dsw-alias-state-error-primary,#e5484d);margin:0 0 6px;}
 .dsh-tdt-ed-errors li{font-size:12px;line-height:1.7;color:var(--dsw-alias-label-primary,#1f2328);}
-/* 历史版本开关：与「预览/编辑」分段控件同源（默认灰盒；选中=高亮，明暗自适应）。 */
-.dsh-tdt-ed-histtoggle{appearance:none;display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;line-height:18px;padding:5px 12px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;}
-.dsh-tdt-ed-histtoggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-histtoggle--on{background:var(--dsw-alias-state-business-primary,#4d6bfe);border-color:var(--dsw-alias-state-business-primary,#4d6bfe);color:#fff;}
-/* 版本条目：左 = 图标+时间+备注，右 = hover 浮出「使用版本/删除」（不撑高，高度恒定）。 */
-.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--dsw-alias-border-l3,rgba(128,128,128,.18));}
-.dsh-tdt-ed-ver-ic{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;}
-.dsh-tdt-ed-ver-time{font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
-.dsh-tdt-ed-ver-note{font-size:12px;margin:2px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-ed-ver-actions{display:flex;gap:6px;opacity:0;transition:opacity .12s ease;}
-.dsh-tdt-ed-ver:hover .dsh-tdt-ed-ver-actions{opacity:1;}
+/* 历史版本开关（用户 2026-09-30：与「编辑/预览」分段控件一模一样，只有一个「版本」段）——
+   外层 = 官方 SegmentedControl 的轨道（interactive-bg-hover + padding 4 + radius md），
+   内层 seg = 段位：默认透明底灰字，选中 = 官方选中态白亮片（bg-layer-1 + elevation-soft + 主字色）。 */
+.dsh-tdt-ed-histtoggle{appearance:none;display:inline-flex;align-items:stretch;padding:4px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));cursor:pointer;font:inherit;}
+.dsh-tdt-ed-histtoggle-seg{display:inline-flex;align-items:center;height:24px;padding:0 14px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:13px;line-height:20px;font-weight:500;white-space:nowrap;transition:color .12s ease,background .16s ease,box-shadow .16s ease;}
+.dsh-tdt-ed-histtoggle:hover .dsh-tdt-ed-histtoggle-seg{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-ed-histtoggle--on .dsh-tdt-ed-histtoggle-seg{background:var(--dsw-alias-bg-layer-1,rgba(255,255,255,.92));box-shadow:var(--dsw-elevation-soft,0 1px 4px rgba(0,0,0,.25));color:var(--dsw-alias-label-primary,#1f2328);}
+/* 版本条目（用户 2026-09-30：样式对齐附加文件列表——圆角卡片行、无分隔线）：
+   左 = 小尖括号图标；中 = 备注/时间（MarqueeText 超长省略 + hover 跑马灯，只在自己盒子里跑）；
+   右 = 常态时间小字，hover 换「使用（药丸）/ 移除（小字）」，行高恒定。 */
+.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;margin:0 0 8px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));}
+.dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:12px;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-ed-ver-time{flex:none;font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:nowrap;}
+.dsh-tdt-ed-ver-actions{flex:none;display:flex;align-items:center;gap:8px;}
+.dsh-tdt-ed-ver-use{appearance:none;border:none;border-radius:999px;padding:2px 10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.2));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
+.dsh-tdt-ed-ver-use:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.3));}
+.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
+.dsh-tdt-ed-ver-del:hover{color:var(--dsw-alias-state-error-primary,#e5484d);}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
@@ -113,6 +120,7 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-pfx-label{flex:none;display:inline-flex;align-items:center;padding:0 10px;border-right:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:13px;line-height:18px;white-space:nowrap;}
 .dsh-tdt-ed-pfx-input{flex:1 1 auto;min-width:0;padding:0 10px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;}
 .dsh-tdt-ed-pfx-input::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
+.dsh-tdt-ed-pfx--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
 /* 小问号：挂 Tooltip 的说明入口（不占正文版面）。 */

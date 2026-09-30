@@ -113,7 +113,8 @@ export type LocaleKey =
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
   | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
-  | 'editorSnapshots' | 'editorSnapshotsHint' | 'editorNoSnapshots' | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
+  | 'editorSnapshots' | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
+  | 'editorUseShort' | 'editorRemoveShort' | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
   | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint' | 'editorErrorsTitle'
   | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
@@ -127,7 +128,7 @@ export type LocaleKey =
   | 'editorSchedForecast' | 'editorSchedRun' | 'editorSchedEveryday' | 'editorSchedNoDay'
   | 'editorSchedDaily' | 'editorSchedWeekly' | 'editorSchedEveryNWeek' | 'editorSchedMonthly'
   | 'editorSchedQuarterly' | 'editorSchedIntervalMin' | 'editorSchedIntervalHour'
-  | 'editorSchedOnce' | 'editorSchedInvalidStep'
+  | 'editorSchedOnce' | 'editorSchedInvalidStep' | 'editorSchedHourlyOnce' | 'editorSchedNoDaySuffix'
   | 'editorMonthMode_every' | 'editorMonthMode_odd' | 'editorMonthMode_even'
   | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
@@ -521,9 +522,15 @@ export const zh: Record<LocaleKey, string> = {
   editorResetTitle: '重置当前编辑？',
   editorResetDesc: '重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。',
   editorSnapshots: '配置快照（整份找回）',
-  editorSnapshotsHint: '每次保存提示词时系统会同时留一份「整份设置」的快照。点「找回全部」会用那份快照覆盖当前所有设置（提示词、排期、工作区、模型、权限、前置任务与附件清单），覆盖前会再确认。',
-  editorNoSnapshots: '暂无配置快照——保存一次提示词后这里就会出现。',
   editorVersionToggle: '版本',
+  editorUseShort: '使用',
+  editorRemoveShort: '移除',
+  editorEnabledStateOn: '已启用',
+  editorEnabledStateOff: '已关闭',
+  editorToggleOn: '任务已启用',
+  editorToggleOff: '任务已关闭',
+  editorSchedHourlyOnce: '每小时执行一次',
+  editorSchedNoDaySuffix: '，但还没选生效日',
   editorRestoreAll: '找回全部',
   editorRestoreAllTitle: '找回全部设置',
   editorRestoreAllDesc: '确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。',
@@ -980,9 +987,15 @@ export const en: Record<LocaleKey, string> = {
   editorResetTitle: 'Reset current edits?',
   editorResetDesc: 'Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.',
   editorSnapshots: 'Config snapshots (restore all)',
-  editorSnapshotsHint: 'Each time you save the prompt, the system also keeps a snapshot of the whole task. "Restore all" overwrites every current setting (prompt, schedule, workspace, model, permission, dependencies and attachments) with that snapshot — you will be asked to confirm first.',
-  editorNoSnapshots: 'No config snapshots yet — they appear here after you save the prompt once.',
   editorVersionToggle: 'Versions',
+  editorUseShort: 'Use',
+  editorRemoveShort: 'Remove',
+  editorEnabledStateOn: 'On',
+  editorEnabledStateOff: 'Off',
+  editorToggleOn: 'Task enabled',
+  editorToggleOff: 'Task disabled',
+  editorSchedHourlyOnce: 'runs hourly',
+  editorSchedNoDaySuffix: ', but no active day is selected',
   editorRestoreAll: 'Restore all',
   editorRestoreAllTitle: 'Restore all settings',
   editorRestoreAllDesc: 'Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.',

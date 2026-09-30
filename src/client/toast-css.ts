@@ -39,6 +39,8 @@ export const TOAST_CSS = `
 }
 /* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
+/* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
+.dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
 `
 
 let injected = false

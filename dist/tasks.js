@@ -331,6 +331,32 @@ export function removeDefinitionInline(raw, id) {
     const removed = rows.length !== data.length;
     return { json: JSON.stringify(rows, null, 2), removed, error: null };
 }
+/**
+ * 只改一条任务的 `enabled`（编辑器头部的启用开关实时写回，用户 2026-09-30：独立于保存按钮）。
+ * 定义不存在 ⇒ error（404 语义）；值没变 ⇒ changed=false（不落库不审计）。
+ */
+export function setEnabledDefinitionInline(raw, id, enabled) {
+    const text = raw.trim();
+    let data;
+    if (text === '')
+        return { json: raw, changed: false, error: 'task-not-found' };
+    try {
+        data = JSON.parse(text);
+    }
+    catch {
+        return { json: raw, changed: false, error: '现有任务表不是合法 JSON，无法修改' };
+    }
+    if (!Array.isArray(data))
+        return { json: raw, changed: false, error: '现有任务表不是数组，无法修改' };
+    const rows = data;
+    const row = rows.find(item => item !== null && typeof item === 'object' && item.id === id);
+    if (row === undefined)
+        return { json: raw, changed: false, error: 'task-not-found' };
+    if (row.enabled === enabled)
+        return { json: raw, changed: false, error: null };
+    row.enabled = enabled;
+    return { json: JSON.stringify(rows, null, 2), changed: true, error: null };
+}
 /** 把 ISO 8601 时长解析成毫秒。 */
 export function durationMs(iso) {
     const match = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso);
