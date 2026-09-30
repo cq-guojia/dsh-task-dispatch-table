@@ -76,7 +76,7 @@ const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
 const monoFont = 'var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
 /** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
-const NO_TIME = '--:--'
+const NO_TIME = '--'
 /** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
 const CONTROL_H = 26
 /** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */

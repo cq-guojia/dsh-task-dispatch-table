@@ -543,6 +543,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 上一轮的「补跑时间」显示已撤（用户：根本不用判断补跑时间）。
   check('运行中改显活动指示（dsh-tdt-run-blocks + 动画），补跑时间显示已撤',
     clientJs.includes('dsh-tdt-run-blocks') && clientJs.includes('@keyframes dsh-tdt-run-block') && !clientJs.includes('listNextCatchupPrefix'))
+  // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
+  // 修法 = ① 选择器回调**工作区相对**路径；② 客户端兜底校验 + 归属附件卡描红；③ 服务端错误翻人话。
+  check('附件 ref 改为工作区相对（选择器走 relativizeToRoot）', clientJs.includes('relativizeToRoot'))
+  check('附件 ref 客户端兜底校验 + 人话文案', clientJs.includes('引用路径不合法'))
   // 排期人话**单源**（用户 2026-09-30 拍板：列表与编辑器不许各写一份，否则同一排期两处文案不一样）：
   // 两处都走 client/schedule-text.ts，旧的 cronToHuman 已删。
   check('排期文案单源（scheduleSpecFromSchedule + scheduleSpecFromDraft，旧 cronToHuman 已删）',
@@ -565,7 +569,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('侧栏图标 = 用户指定的调度器图标（方括号 + 红 S 方块，内联进 bundle）',
     clientJs.includes('M19 16 H9 V112 H19') && clientJs.includes('#E03E3E'))
   check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
-  check('无下次执行显示 --:-- 占位（图标保留）', clientJs.includes('--:--'))
+  check('无下次执行占位符 = `--`（图标保留，不再 `--:--`）', !clientJs.includes('--:--') && clientJs.includes('const NO_TIME = "--"'))
   check('展开区四区块（执行设置 / 附加文件 / 前置任务 / 提示词）',
     clientJs.includes('listSectionSchedule') && clientJs.includes('listSectionAttachments')
     && clientJs.includes('listSectionDepends') && clientJs.includes('listSectionPrompt'))

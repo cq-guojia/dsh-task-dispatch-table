@@ -93,7 +93,7 @@ export interface Attachment {
   name: string
   /** 'link' = 链接工作区已有文件（只存路径，不复制）；'upload' = 已上传到插件数据目录（UID-序号. ext，不覆盖累加）。 */
   kind: 'link' | 'upload'
-  /** link：工作区路径；upload：插件数据目录下的文件名。 */
+  /** link：**工作区相对**路径（宿主 zod 拒绝对路径 / `..` / 反斜杠；派发期按 workspace 绝对化）；upload：插件数据目录下的文件名。 */
   ref: string
   /**
    * link：来源工作区 title（选择器现可浏览任意有历史会话的工作区，同一路径在不同工作区
@@ -415,7 +415,7 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
 }
 
 /** 校验出的问题归属字段（决定哪个框描红）。 */
-export type ErrorField = 'title' | 'workspace' | 'prompt' | 'schedule'
+export type ErrorField = 'title' | 'workspace' | 'prompt' | 'schedule' | 'attachments'
 
 /** 一条校验问题：归属字段 + 人话说明（用户 2026-09-30：逐项判断、逐框描红、文案说人话不啰嗦但讲清后果）。 */
 export interface FieldProblem {
@@ -430,6 +430,7 @@ export interface FieldProblem {
  * 必填判定严格对齐宿主 zod schema（src/tasks.ts）：`target.workspace` 与 `target.prompt` 都是 `.min(1)`，
  * 二者空了保存必被拒。`title` 在 schema 里是可选（空则回退 id）⇒ 不强制；提示词在「按任务手册」模式下由
  * `manual` 兜底默认句 ⇒ 也不空。排期则对齐 `scheduleCron`：每周没勾星期 / 间隔步长非法都产不出 cron ⇒ 永不执行。
+ * 附件则对齐 schema 的 `ref` refine：link 型 ref 必须是**工作区相对路径**（不许绝对 / `..` / 反斜杠）。
  */
 export function validateTaskDraft(draft: TaskEditorDraft): FieldProblem[] {
   const problems: FieldProblem[] = []
@@ -452,6 +453,13 @@ export function validateTaskDraft(draft: TaskEditorDraft): FieldProblem[] {
   } else if (draft.scheduleKind === 'periodic' && draft.periodFreq === 'weekly' && draft.weekdays.length === 0) {
     problems.push({ field: 'schedule', message: '每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。' })
   }
+  // ④ 附加文件：link 型 ref 必须**工作区相对**（宿主 zod：不许 `..` / 绝对路径 / 反斜杠）。
+  //    ⚠️ 用户 2026-09-30 真机：选工作区文件曾把**绝对路径**当 ref 存 ⇒ 保存被 422 拒、且**无红框**、文案还是黑话。
+  //    根因已在选择器修（回调改为工作区相对路径）；这里是**兜底** + 归属附件卡描红，防止再有非法 ref 写进来。
+  const badAttachment = draft.attachments.find(att => att.ref.startsWith('/') || att.ref.startsWith('\\') || att.ref.includes('..') || att.ref.includes('\\'))
+  if (badAttachment !== undefined) {
+    problems.push({ field: 'attachments', message: `附加文件「${badAttachment.name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。` })
+  }
   return problems
 }
 
@@ -468,6 +476,10 @@ export function humanizeTaskError(raw: string): string {
   }
   if (raw.includes('.title') && raw.toLowerCase().includes('too small')) {
     return '任务名称不能为空'
+  }
+  // 附件 ref 非法（选工作区文件的历史 bug 会走到这里）：给出可执行的动作，别把「相对路径上跳」这种黑话甩给用户。
+  if (raw.includes('附件 ref 非法') || (raw.includes('attachments') && raw.includes('ref'))) {
+    return '附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。'
   }
   return raw
 }
@@ -1551,7 +1563,7 @@ export function TaskEditorDrawer(props: {
     if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] })
     if (lastErr !== null) setUploadError(lastErr)
   }
-  const attachmentsCard = h('div', { className: 'dsh-tdt-ed-card' },
+  const attachmentsCard = h('div', { className: `dsh-tdt-ed-card${problemsByField('attachments') ? ' dsh-tdt-ed-card--error' : ''}` },
     h('div', { className: 'dsh-tdt-ed-card-head' },
       h('div', { className: 'dsh-tdt-ed-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
         t('editorAttachments'),

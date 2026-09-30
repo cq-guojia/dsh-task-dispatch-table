@@ -5705,7 +5705,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (!(entry.type === "directory")) {
 						const pick = () => {
 							if (picker && onPick !== void 0) {
-								onPick(childPath);
+								onPick(relativizeToRoot(childPath, sessionId));
 								return;
 							}
 							setViewing(childPath);
@@ -38145,6 +38145,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 必填判定严格对齐宿主 zod schema（src/tasks.ts）：`target.workspace` 与 `target.prompt` 都是 `.min(1)`，
 		* 二者空了保存必被拒。`title` 在 schema 里是可选（空则回退 id）⇒ 不强制；提示词在「按任务手册」模式下由
 		* `manual` 兜底默认句 ⇒ 也不空。排期则对齐 `scheduleCron`：每周没勾星期 / 间隔步长非法都产不出 cron ⇒ 永不执行。
+		* 附件则对齐 schema 的 `ref` refine：link 型 ref 必须是**工作区相对路径**（不许绝对 / `..` / 反斜杠）。
 		*/
 		function validateTaskDraft(draft) {
 			const problems = [];
@@ -38169,6 +38170,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				field: "schedule",
 				message: "每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。"
 			});
+			const badAttachment = draft.attachments.find((att) => att.ref.startsWith("/") || att.ref.startsWith("\\") || att.ref.includes("..") || att.ref.includes("\\"));
+			if (badAttachment !== void 0) problems.push({
+				field: "attachments",
+				message: `附加文件「${badAttachment.name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。`
+			});
 			return problems;
 		}
 		/**
@@ -38179,6 +38185,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (raw.includes("target.workspace") && raw.toLowerCase().includes("too small")) return "工作区不能为空，请先选择工作区";
 			if (raw.includes("target.prompt") && raw.toLowerCase().includes("too small")) return "提示词不能为空，请先填写提示词";
 			if (raw.includes(".title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
+			if (raw.includes("附件 ref 非法") || raw.includes("attachments") && raw.includes("ref")) return "附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。";
 			return raw;
 		}
 		/** 附件 / 草稿条目的本地 id（反解时补上定义里缺失的 id）。 */
@@ -39407,7 +39414,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] });
 				if (lastErr !== null) setUploadError(lastErr);
 			};
-			const attachmentsCard = (0, react.createElement)("div", { className: "dsh-tdt-ed-card" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", {
+			const attachmentsCard = (0, react.createElement)("div", { className: `dsh-tdt-ed-card${problemsByField("attachments") ? " dsh-tdt-ed-card--error" : ""}` }, (0, react.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-label",
 				style: {
 					display: "flex",
@@ -40225,7 +40232,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
 		const monoFont$1 = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 		/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
-		const NO_TIME = "--:--";
+		const NO_TIME = "--";
 		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
 		const CONTROL_H = 26;
 		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
