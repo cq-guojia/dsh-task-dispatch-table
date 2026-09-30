@@ -248,17 +248,6 @@ const linkStyle: Record<string, string | number> = {
   font: 'inherit', fontSize: '12px', transition,
 }
 
-/** 刷新图标（内联 SVG：不引宿主包，颜色走 currentColor ⇒ 自动跟随主题）。 */
-function RefreshIcon() {
-  return h('svg', {
-    width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
-  },
-    h('path', { d: 'M21 12a9 9 0 1 1-2.64-6.36' }),
-    h('path', { d: 'M21 3v6h-6' }),
-  )
-}
-
 /**
  * 侧栏 / 面板图标（用户 2026-09-30 指定）：`assets/icon-scheduler.svg` 的**内联等价物**——
  * 左右方括号（品牌蓝、40% 透明）+ 红方块拼出的「S」。

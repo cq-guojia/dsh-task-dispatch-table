@@ -53,14 +53,22 @@ export function sortRows(rows, pinnedIds = new Set()) {
  * 「刚跨过自己的刻度」判定：上一版的 `nextSlotAt` **已过去**（不大于服务端当前时间），
  * 而这一版在未来。以**服务端时间**为准（客户端时钟可能与宿主有时差）。
  */
-export function justCrossedSlot(prevNext, nextNext, serverNowMs) {
+export function justCrossedSlot(prevNext, nextNext, serverNowMs, 
+/**
+ * 旧刻度允许「已经过去多久」仍算刚跨过（缺省不限）。传 `2 × pinMs` 可挡掉把**很久以前**的刻度
+ * 误判成「刚跨过」——典型：`once` 任务的过期槽（`nextSlotAfter` 对它恒返回那个过去时刻），
+ * 用户随后把它改成 cron ⇒ 新刻度在未来、旧刻度在很久以前 ⇒ 白钉一次。
+ */
+maxAgeMs = Number.POSITIVE_INFINITY) {
     if (prevNext === null || nextNext === null)
         return false;
     const p = Date.parse(prevNext);
     const n = Date.parse(nextNext);
     if (!Number.isFinite(p) || !Number.isFinite(n))
         return false;
-    return p <= serverNowMs && n > serverNowMs;
+    if (!(p <= serverNowMs && n > serverNowMs))
+        return false;
+    return serverNowMs - p <= maxAgeMs;
 }
 /** 钳位时长：**跟着巡检间隔走**（默认 `tickMs` 60s ⇒ 约 80s），带上下限兜底（30s ~ 10min）。 */
 export function pinMsFor(tickMs, pollMs) {

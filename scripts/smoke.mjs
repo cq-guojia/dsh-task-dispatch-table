@@ -131,6 +131,13 @@ try {
     justCrossedSlot('2026-09-30T18:20:00.000Z', '2026-09-30T18:30:00.000Z', nowMs) === false
     && justCrossedSlot('2026-09-30T18:00:00.000Z', null, nowMs) === false
     && justCrossedSlot(null, '2026-09-30T18:10:00.000Z', nowMs) === false)
+  // 时效上限（2026-09-30 复核）：旧刻度是**很久以前**的（典型：once 任务的过期槽）⇒ 不算「刚跨过」，别白钉。
+  {
+    const age = 2 * pinMsFor(60_000, 10_000)
+    check('到点判定：旧刻度过久（超过 2×pinMs）⇒ 不算刚跨过',
+      justCrossedSlot('2026-09-30T16:00:00.000Z', '2026-09-30T18:10:00.000Z', nowMs, age) === false
+      && justCrossedSlot('2026-09-30T18:00:00.000Z', '2026-09-30T18:10:00.000Z', nowMs, age) === true)
+  }
   check('钳位时长跟着巡检间隔走（默认 60s ⇒ 80s；带 30s ~ 10min 上下限）',
     pinMsFor(60_000, 10_000) === 80_000 && pinMsFor(5_000, 10_000) === 30_000 && pinMsFor(3_600_000, 10_000) === 600_000)
   check('排序键：无刻度 = +∞；钳位 = 最前哨兵 -1',
@@ -456,8 +463,11 @@ try {
   insertRow.run('daily-report:2026-09-22', 'daily-report', '2026-09-22', '2026-09-22T21:00:00.000Z', 'dispatched', 0, 'legacy-session', '2026-09-22T21:00:05.000Z')
   seed.close()
 
+  // ⚠️ 第二个参数此前是**字面 `true`** ⇒ 恒真、什么都没证明（构造若抛错会直接从 try 逃逸、脚本栈退出）。
+  // 2026-09-30 复核点名，改为真跑一次构造（同文件别处的 try/catch 写法）。
+  const openOk = (() => { try { new TaskStore(realPath); return true } catch { return false } })()
+  check('旧库打开不抛错（自动迁移成功）', openOk)
   const realStore = new TaskStore(realPath)
-  check('旧库打开不抛错（自动迁移成功）', true)
   check('旧库没有重复行被合并（正常应为 0）', realStore.dupRowsRemoved === 0, `实际 ${realStore.dupRowsRemoved}`)
   check('历史行一条不少', realStore.listByStatus(['succeeded', 'failed', 'skipped', 'pending', 'unknown', 'dispatched']).length === 7)
   const scanned = realStore.startupScan()
@@ -554,7 +564,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('派发 ctx 属性读取带防抛错护栏（readCtxProp，agentTeams/goals 未注入不再炸派发）', dispatchJs.includes('readCtxProp'))
   // 完全权限保存确认（2026-09-30）：勾选后确认钮才可点；确认钮沿用「保存」不改名
   check('完全权限保存确认弹窗（勾选门槛 + 确认钮沿用保存）',
-    clientJs.includes('editorFullPermTitle') && clientJs.includes('editorFullPermCheck') && clientJs.includes("full") && clientJs.includes('confirmLabel'))
+    clientJs.includes('editorFullPermTitle') && clientJs.includes('editorFullPermCheck') && clientJs.includes('confirmLabel'))
   // 保存成功反馈（2026-09-30）：成功弹绿色「任务已保存」；版本找回不关全屏编辑器
   check('保存成功 Toast（editorTaskSaved）打进 bundle', clientJs.includes('editorTaskSaved'))
   check('chat target 组装已打进 bundle（target("chat")）', clientJs.includes('target("chat")') || clientJs.includes("target('chat')") || /target\(["']chat["']\)/.test(clientJs))

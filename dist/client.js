@@ -6258,11 +6258,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (spec.kind === "interval") {
 				if (spec.intervalStep <= 0) return [{ text: t("editorSchedInvalidStep") }];
 				const per = spec.intervalUnit === "minute" ? fmt(t("editorSchedIntervalMin"), { n: String(spec.intervalStep) }) : spec.intervalStep === 1 ? t("editorSchedHourlyOnce") : fmt(t("editorSchedIntervalHour"), { n: String(spec.intervalStep) });
-				if (spec.weekdays.length === 0) return [{
-					text: per,
-					emphasis: true
-				}, { text: t("editorSchedNoDaySuffix") }];
-				if (spec.weekdays.length >= 7) return [{
+				if (spec.weekdays.length === 0 || spec.weekdays.length >= 7) return [{
 					text: per,
 					emphasis: true
 				}];
@@ -38241,7 +38237,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					draft.yearMonth = spec.yearMonth;
 				}
 			}
-			draft.time = spec.time;
+			if (spec.kind === "periodic") draft.time = spec.time;
 			return draft;
 		}
 		/**
@@ -40144,12 +40140,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 「刚跨过自己的刻度」判定：上一版的 `nextSlotAt` **已过去**（不大于服务端当前时间），
 		* 而这一版在未来。以**服务端时间**为准（客户端时钟可能与宿主有时差）。
 		*/
-		function justCrossedSlot(prevNext, nextNext, serverNowMs) {
+		function justCrossedSlot(prevNext, nextNext, serverNowMs, maxAgeMs = Number.POSITIVE_INFINITY) {
 			if (prevNext === null || nextNext === null) return false;
 			const p = Date.parse(prevNext);
 			const n = Date.parse(nextNext);
 			if (!Number.isFinite(p) || !Number.isFinite(n)) return false;
-			return p <= serverNowMs && n > serverNowMs;
+			if (!(p <= serverNowMs && n > serverNowMs)) return false;
+			return serverNowMs - p <= maxAgeMs;
 		}
 		/** 钳位时长：**跟着巡检间隔走**（默认 `tickMs` 60s ⇒ 约 80s），带上下限兜底（30s ~ 10min）。 */
 		function pinMsFor(tickMs, pollMs) {
@@ -40244,8 +40241,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const pinnedIdsRef = (0, react.useRef)(/* @__PURE__ */ new Set());
 			/** 上一版的 `nextSlotAt`（按 id）：判定「刚跨过自己的刻度」用。 */
 			const prevNextRef = (0, react.useRef)(/* @__PURE__ */ new Map());
-			/** 钳位解除时刻（服务端时间基准）。 */
+			/** 钳位解除时刻（**本地时钟**基准：只用于「什么时候松开」；跨时钟判定另有服务端 `now`）。 */
 			const pinsRef = (0, react.useRef)(/* @__PURE__ */ new Map());
+			/**
+			* 移除已到期的钳位。**必须每轮都跑**（含服务端回 `unchanged` 的那些轮）——否则
+			* 「到点却永不被派发」的任务（上游停用 / 附件缺失 / 串行互斥）会被**永久**钉在组 1 最前，
+			* `pinMs` 形同不存在（2026-09-30 复核发现的硬伤：到期判定曾写在 `unchanged` 提前 return 之后）。
+			*/
+			const prunePins = () => {
+				const nowLocal = Date.now();
+				for (const [id, until] of [...pinsRef.current]) if (until <= nowLocal) pinsRef.current.delete(id);
+			};
+			/** 钳位集合有变化才 setState（否则白白重排 + 播 FLIP）。 */
+			const syncPinned = () => {
+				const pins = pinsRef.current;
+				if (sameIdSet(pinnedIdsRef.current, pins)) return;
+				const snapshot = new Set(pins.keys());
+				pinnedIdsRef.current = snapshot;
+				setPinnedIds(snapshot);
+			};
 			const revRef = (0, react.useRef)("");
 			const busyRef = (0, react.useRef)(false);
 			/** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
@@ -40274,22 +40288,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 								pins.delete(row.id);
 								continue;
 							}
-							if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow)) pins.set(row.id, serverNow + pinMs);
-							else {
-								const until = pins.get(row.id);
-								if (until !== void 0 && until <= serverNow) pins.delete(row.id);
-							}
+							if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow, 2 * pinMs)) pins.set(row.id, Date.now() + pinMs);
 						}
 						const aliveIds = new Set(nextRows.map((row) => row.id));
 						for (const id of [...pins.keys()]) if (!aliveIds.has(id)) pins.delete(id);
+						prunePins();
 						prevNextRef.current = new Map(nextRows.map((row) => [row.id, row.nextSlotAt]));
 						setRows(nextRows);
 						setReady(true);
-						if (!sameIdSet(pinnedIdsRef.current, pins)) {
-							const snapshot = new Set(pins.keys());
-							pinnedIdsRef.current = snapshot;
-							setPinnedIds(snapshot);
-						}
+						syncPinned();
 					} catch {} finally {
 						busyRef.current = false;
 						if (pendingRef.current) {
@@ -40813,7 +40820,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				} : row);
 			}, [rows, optimistic]);
 			(0, react.useEffect)(() => {
-				setOptimistic({});
+				setOptimistic((cur) => Object.keys(cur).length === 0 ? cur : {});
 			}, [rows]);
 			const workspaces = (0, react.useMemo)(() => [...new Set(rowsWithOptimistic.map((r) => r.workspace))].sort(), [rowsWithOptimistic]);
 			/** 异常数 = 内存摘要里「最近一次执行失败」的任务数（全量统计，不受当前筛选影响）。 */

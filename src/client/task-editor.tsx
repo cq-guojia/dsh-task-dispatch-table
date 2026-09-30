@@ -565,7 +565,11 @@ function scheduleFromCron(cron: string, everyNWeeks: number | null): Partial<Tas
     if (spec.freq === 'quarterly') { draft.monthDay = spec.monthDay; draft.quarterMonth = spec.quarterMonth }
     if (spec.freq === 'yearly') { draft.monthDay = spec.monthDay; draft.yearMonth = spec.yearMonth }
   }
-  draft.time = spec.time
+  // ⚠️ 只有**周期档**才把 cron 的时分当执行时刻套用（那时分/时是具体数字）。间隔档的 cron 形如
+  // `*/N …`，`spec.time` 是 `timeFromCron` 认不出时**编造**的 `09:00`——套上去会把 `start` 推导出的
+  // 真实锚点（如 18:03）覆盖掉，保存即写回 `T09:00`，用户设的「18:03 起每 10 分钟」当场作废
+  // （2026-09-30 复核发现的硬伤）。
+  if (spec.kind === 'periodic') draft.time = spec.time
   return draft
 }
 

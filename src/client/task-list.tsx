@@ -158,8 +158,25 @@ export function useTaskOverview(): {
   const pinnedIdsRef = useRef<ReadonlySet<string>>(new Set())
   /** 上一版的 `nextSlotAt`（按 id）：判定「刚跨过自己的刻度」用。 */
   const prevNextRef = useRef(new Map<string, string | null>())
-  /** 钳位解除时刻（服务端时间基准）。 */
+  /** 钳位解除时刻（**本地时钟**基准：只用于「什么时候松开」；跨时钟判定另有服务端 `now`）。 */
   const pinsRef = useRef(new Map<string, number>())
+  /**
+   * 移除已到期的钳位。**必须每轮都跑**（含服务端回 `unchanged` 的那些轮）——否则
+   * 「到点却永不被派发」的任务（上游停用 / 附件缺失 / 串行互斥）会被**永久**钉在组 1 最前，
+   * `pinMs` 形同不存在（2026-09-30 复核发现的硬伤：到期判定曾写在 `unchanged` 提前 return 之后）。
+   */
+  const prunePins = (): void => {
+    const nowLocal = Date.now()
+    for (const [id, until] of [...pinsRef.current]) if (until <= nowLocal) pinsRef.current.delete(id)
+  }
+  /** 钳位集合有变化才 setState（否则白白重排 + 播 FLIP）。 */
+  const syncPinned = (): void => {
+    const pins = pinsRef.current
+    if (sameIdSet(pinnedIdsRef.current, pins)) return
+    const snapshot: ReadonlySet<string> = new Set(pins.keys())
+    pinnedIdsRef.current = snapshot
+    setPinnedIds(snapshot)
+  }
   const revRef = useRef('')
   const busyRef = useRef(false)
   /** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
@@ -191,23 +208,19 @@ export function useTaskOverview(): {
         for (const row of nextRows) {
           // running / 停用 / 无刻度 ⇒ 一律解除钳位（该由正常分组决定位置）。
           if (row.running || !row.enabled || row.nextSlotAt === null) { pins.delete(row.id); continue }
-          if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow)) {
-            pins.set(row.id, serverNow + pinMs) // 刚跨过自己的刻度 ⇒ 钉住（组 1 最前），等 running 或超时
-          } else {
-            const until = pins.get(row.id)
-            if (until !== undefined && until <= serverNow) pins.delete(row.id) // 超时松开：回正常排队
+          // 「刚跨过自己的刻度」用**服务端 now** 判（跨时钟正确）；`maxAge = 2×pinMs` 挡掉把
+          // **很久以前**的刻度（典型：`once` 任务的过期槽）误判成「刚跨过」而白钉一次。
+          if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow, 2 * pinMs)) {
+            pins.set(row.id, Date.now() + pinMs) // 期限走本地时钟：等 running 翻转，或由 prunePins 松开
           }
         }
         const aliveIds = new Set(nextRows.map(row => row.id))
         for (const id of [...pins.keys()]) if (!aliveIds.has(id)) pins.delete(id) // 任务被删 ⇒ 清残留
+        prunePins() // 到期的松开（回按下次执行正常排队）
         prevNextRef.current = new Map(nextRows.map(row => [row.id, row.nextSlotAt]))
         setRows(nextRows)
         setReady(true)
-        if (!sameIdSet(pinnedIdsRef.current, pins)) {
-          const snapshot: ReadonlySet<string> = new Set(pins.keys())
-          pinnedIdsRef.current = snapshot
-          setPinnedIds(snapshot)
-        }
+        syncPinned()
       } catch { /* 通道短暂不可用：保持上一次的数据，下轮再取 */ } finally {
         busyRef.current = false
         if (pendingRef.current) {
@@ -707,8 +720,9 @@ export function TaskListView(props: {
     return rows.map(row => (row.id in optimistic ? { ...row, enabled: optimistic[row.id] } : row))
   }, [rows, optimistic])
 
-  // 真实数据到位 ⇒ 清掉乐观值（避免长期覆盖服务端值）。
-  useEffect(() => { setOptimistic({}) }, [rows])
+  // 真实数据到位 ⇒ 清掉乐观值（避免长期覆盖服务端值）。已经空的时候返回**同一个引用**让 React bail out——
+  // 此前每次全量响应都塞个新对象字面量 ⇒ `Object.is` 必不等 ⇒ 每轮多渲染一次（2026-09-30 复核）。
+  useEffect(() => { setOptimistic(cur => (Object.keys(cur).length === 0 ? cur : {})) }, [rows])
 
   // ⚠️ 这里**不放**每秒 setState：倒计时的时间流走 LiveText 的全局心跳（局部重渲染），
   // 列表本体只在数据真变时才动——这正是「每秒刷新会不会卡」的答案。
