@@ -39546,7 +39546,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					}
 				],
 				onChange: (value) => {
-					const notPast = () => isPastMoment(draft.date, draft.time) ? smartDefaultMoment() : {};
+					const notPast = () => mode === "create" && isPastMoment(draft.date, draft.time) ? smartDefaultMoment() : {};
 					if (value === "once") {
 						patch({
 							scheduleKind: "periodic",

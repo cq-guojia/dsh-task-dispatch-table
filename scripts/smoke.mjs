@@ -510,6 +510,13 @@ try {
     check('一次性任务还在窗口内 ⇒ 不记（下一步会照常派发）',
       recordExpiredOnce(expStore3, null, expTask, Date.parse('2026-10-01T09:30:00.000Z'), 0) === false
       && expStore3.listByStatus(['skipped']).length === 0)
+    // 门禁**区分度**（二轮验收评审要求）：gate 落在窗口**之内**（进程在窗口内接管过）⇒ 出窗必须留痕。
+    // 这条能区分正确判据 `once+window < gate` 与错误判据 `once < gate`（后者在这里会返回 false ⇒ 假绿）。
+    const expStore4 = new TaskStore(join(expDir, 'state4.db'))
+    check('过期一次性任务：进程在窗口内接管过（gate 落在窗口内）⇒ 出窗必须留痕',
+      recordExpiredOnce(expStore4, null, expTask, expNow, Date.parse('2026-10-01T09:30:00.000Z')) === true
+      && expStore4.listByStatus(['skipped']).length === 1)
+    expStore4.close()
     expStore.close()
     expStore2.close()
     expStore3.close()

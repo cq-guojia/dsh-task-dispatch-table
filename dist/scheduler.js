@@ -533,7 +533,15 @@ export function createScheduler(opts) {
             for (const task of tasks) {
                 if (task.enabled === false)
                     continue;
-                const windowMs = isOnce(task) ? 0 : durationMs(task.schedule.window);
+                // 一次性任务**也读它自己的窗口**（2026-09-30 验收评审）：原先这里写死 0 ⇒「窗口内、还没轮到
+                // 第一次 tick」的一次性任务会被误报成「错过 1 个刻度（不补跑）」。与 `dueSlot` 同口径：**出窗**才算错过。
+                let windowMs = 0;
+                try {
+                    windowMs = durationMs(task.schedule.window);
+                }
+                catch {
+                    windowMs = 0;
+                }
                 const lookback = Math.max(windowMs, 2 * 3600_000);
                 const from = new Date(nowMs - lookback);
                 const to = new Date(nowMs - windowMs);

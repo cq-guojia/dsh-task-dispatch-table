@@ -1698,7 +1698,11 @@ export function TaskEditorDrawer(props: {
           // 智能默认（用户 2026-09-30）：切到「单次 / 间隔」时，若表单里那个时刻**已经过去**，就换成
           // 「现在 + 1 小时再取整点」（22:10 ⇒ 次日 00:00；8:50 ⇒ 10:00）—— 免得一进表单就是个过期时刻
           //（原先写死「今天 09:00」）。**已填的未来时刻不覆盖**；周期档（每天/每周…）不参与。
-          const notPast = (): Partial<TaskEditorDraft> => (isPastMoment(draft.date, draft.time) ? smartDefaultMoment() : {})
+          // ⚠️ **只在「新建」态替换**（2026-09-30 验收评审抓到的必修项）：编辑既有任务时点一下档位，
+          // 就会把人家填好的时刻换成「明天整点」，保存即写回 `schedule.start` / `once` —— 间隔任务的
+          // 锚点是创建时刻（必然在过去）⇒ 被改后 `filterSlotsBySchedule` 会丢掉所有早于 `start` 的刻度
+          // ⇒ **当天直接不再跑、相位也变了**。
+          const notPast = (): Partial<TaskEditorDraft> => (mode === 'create' && isPastMoment(draft.date, draft.time) ? smartDefaultMoment() : {})
           if (value === 'once') { patch({ scheduleKind: 'periodic', periodFreq: 'once', ...notPast() }); return }
           if (value === 'interval') { patch({ scheduleKind: 'interval', ...notPast() }); return }
           // 回到「周期」：原来停在一次性的话，落到每天（否则保持原频率）。
