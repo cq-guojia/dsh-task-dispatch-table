@@ -569,6 +569,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('M19 16 H9 V112 H19') && clientJs.includes('#E03E3E'))
   check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
   check('无下次执行占位符 = `--`（图标保留，不再 `--:--`）', !clientJs.includes('--:--') && clientJs.includes('const NO_TIME = "--"'))
+  // 用户 2026-09-30：展开区「太丑了」——从「一句 `·` 串联的长文本」改成「标签 / 值两栏」逐字段成行。
+  check('展开区为标签/值两栏（InfoRow + infoLabelStyle）', clientJs.includes('InfoRow') && clientJs.includes('infoLabelStyle'))
   check('展开区四区块（执行设置 / 附加文件 / 前置任务 / 提示词）',
     clientJs.includes('listSectionSchedule') && clientJs.includes('listSectionAttachments')
     && clientJs.includes('listSectionDepends') && clientJs.includes('listSectionPrompt'))

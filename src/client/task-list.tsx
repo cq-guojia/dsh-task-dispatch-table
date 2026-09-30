@@ -539,8 +539,18 @@ const cardStyle: Record<string, string | number> = {
 const titleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: C.text, lineHeight: '20px' }
 const metaStyle: Record<string, string | number> = { fontSize: '12px', color: C.textDim, lineHeight: '18px', marginTop: '2px' }
 const faintStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, lineHeight: '16px', marginTop: '2px' }
-const sectionLabelStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, marginTop: '10px', marginBottom: '2px' }
+const sectionLabelStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, marginTop: '12px', marginBottom: '4px' }
 const sectionBodyStyle: Record<string, string | number> = { fontSize: '12px', color: C.text, lineHeight: '18px' }
+// 展开区的「标签 | 值」两栏（用户 2026-09-30：展开区太丑 ⇒ 从「一句 `·` 串联的长文本」改成逐字段成行）。
+const infoLabelStyle: Record<string, string | number> = { flex: 'none', width: '64px', fontSize: '12px', color: C.textDim, lineHeight: '20px' }
+const infoValueStyle: Record<string, string | number> = { flex: '1 1 auto', minWidth: 0, fontSize: '12px', color: C.text, lineHeight: '20px', wordBreak: 'break-word' }
+/** 展开区一行信息：左标签（定宽淡色）+ 右值（自适应换行）。 */
+function InfoRow(props: { label: string; value: string }) {
+  return h('div', { style: { display: 'flex', gap: '8px', alignItems: 'flex-start' } },
+    h('span', { style: infoLabelStyle }, props.label),
+    h('span', { style: infoValueStyle }, props.value),
+  )
+}
 /** 图标按钮：与顶部一排同高（26px）。 */
 const iconBtnStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
@@ -601,16 +611,20 @@ function TaskCard(props: {
       ),
     ),
     // ── 展开区：就地拉伸，上方原样，下方读任务设置（「详细说明」）──
-    open ? h('div', { style: { marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '8px' } },
+    // 用户 2026-09-30：「太丑了」——从「一句 `·` 串联的长文本」改成**标签 / 值两栏**：
+    // 执行设置逐字段成行（左淡标签、右正文），区块之间小组标题 + 间距分层，长文本（提示词）独立换行。
+    open ? h('div', { style: { marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '10px' } },
       h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
-      h('div', { style: sectionBodyStyle },
-        `${t('listFieldSchedule')}：${scheduleLine} · ${t('listFieldWorkspace')}：${row.workspace} · ${t('listFieldModel')}：${modelText} · ${t('listFieldRetry')}：${row.retryMax} · ${t('listFieldWindow')}：${row.schedule.window}`,
-      ),
+      InfoRow({ label: t('listFieldSchedule'), value: scheduleLine }),
+      InfoRow({ label: t('listFieldWorkspace'), value: row.workspace }),
+      InfoRow({ label: t('listFieldModel'), value: modelText }),
+      InfoRow({ label: t('listFieldRetry'), value: String(row.retryMax) }),
+      InfoRow({ label: t('listFieldWindow'), value: row.schedule.window }),
       h('div', { style: sectionLabelStyle }, t('listSectionAttachments')),
       h('div', { style: sectionBodyStyle },
         row.attachments.length === 0
           ? t('listNone')
-          : row.attachments.map(item => `${item.name}${item.kind === 'link' ? '（工作区）' : ''}`).join('、'),
+          : row.attachments.map(item => `${item.name}${item.kind === 'link' ? `（${t('editorAttachmentLink')}）` : ''}`).join('、'),
       ),
       h('div', { style: sectionLabelStyle }, t('listSectionDepends')),
       h('div', { style: sectionBodyStyle },
@@ -621,7 +635,7 @@ function TaskCard(props: {
       h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
       h('div', { style: { ...sectionBodyStyle, color: C.textDim, whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
       // 详细说明下面再来一条虚线，右下角放「编辑」——不是每次都要编辑，不占主行的重要位置。
-      h('div', { style: { marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}`, display: 'flex', justifyContent: 'flex-end' } },
+      h('div', { style: { marginTop: '12px', paddingTop: '10px', borderTop: `1px dashed ${C.border}`, display: 'flex', justifyContent: 'flex-end' } },
         h('button', {
           type: 'button',
           style: { ...iconBtnStyle, padding: '0 10px' },

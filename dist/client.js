@@ -40707,14 +40707,37 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		const sectionLabelStyle = {
 			fontSize: "11px",
 			color: C$1.textFaint,
-			marginTop: "10px",
-			marginBottom: "2px"
+			marginTop: "12px",
+			marginBottom: "4px"
 		};
 		const sectionBodyStyle = {
 			fontSize: "12px",
 			color: C$1.text,
 			lineHeight: "18px"
 		};
+		const infoLabelStyle = {
+			flex: "none",
+			width: "64px",
+			fontSize: "12px",
+			color: C$1.textDim,
+			lineHeight: "20px"
+		};
+		const infoValueStyle = {
+			flex: "1 1 auto",
+			minWidth: 0,
+			fontSize: "12px",
+			color: C$1.text,
+			lineHeight: "20px",
+			wordBreak: "break-word"
+		};
+		/** 展开区一行信息：左标签（定宽淡色）+ 右值（自适应换行）。 */
+		function InfoRow(props) {
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				gap: "8px",
+				alignItems: "flex-start"
+			} }, (0, react.createElement)("span", { style: infoLabelStyle }, props.label), (0, react.createElement)("span", { style: infoValueStyle }, props.value));
+		}
 		/** 图标按钮：与顶部一排同高（26px）。 */
 		const iconBtnStyle = {
 			display: "inline-flex",
@@ -40800,15 +40823,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })))), open ? (0, react.createElement)("div", { style: {
 				marginTop: "10px",
 				borderTop: `1px dashed ${C$1.border}`,
-				paddingTop: "8px"
-			} }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), (0, react.createElement)("div", { style: sectionBodyStyle }, `${t("listFieldSchedule")}：${scheduleLine} · ${t("listFieldWorkspace")}：${row.workspace} · ${t("listFieldModel")}：${modelText} · ${t("listFieldRetry")}：${row.retryMax} · ${t("listFieldWindow")}：${row.schedule.window}`), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? "（工作区）" : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
+				paddingTop: "10px"
+			} }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), InfoRow({
+				label: t("listFieldSchedule"),
+				value: scheduleLine
+			}), InfoRow({
+				label: t("listFieldWorkspace"),
+				value: row.workspace
+			}), InfoRow({
+				label: t("listFieldModel"),
+				value: modelText
+			}), InfoRow({
+				label: t("listFieldRetry"),
+				value: String(row.retryMax)
+			}), InfoRow({
+				label: t("listFieldWindow"),
+				value: row.schedule.window
+			}), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? `（${t("editorAttachmentLink")}）` : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
 				...sectionBodyStyle,
 				color: C$1.textDim,
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead), (0, react.createElement)("div", { style: {
-				marginTop: "10px",
-				paddingTop: "8px",
+				marginTop: "12px",
+				paddingTop: "10px",
 				borderTop: `1px dashed ${C$1.border}`,
 				display: "flex",
 				justifyContent: "flex-end"
