@@ -1252,8 +1252,17 @@ console.log('\n[14] runtime-index')
   const again = idx.overview([taskA, taskB], Date.parse('2026-09-01T10:30:00.000Z'))
   check('overview：内容未变 ⇒ rev 不变（轮询可回 unchanged，不传整份）', again.rev === revBefore)
 
+  // 2026-09-30（决策 54）：刻度过期**但该槽还没被处理、且仍在窗口内** ⇒ **冻结不前移**
+  // —— 这是「排序键不随读变化」的关键（否则到点瞬间键跳大 ⇒ 卡片掉下去、running 翻转又跳回来）。
+  const frozen = idx.overview([taskA, taskB], Date.parse('2026-09-02T10:00:00.000Z'))
+  check('overview：刻度过期但未处理且在窗口内 ⇒ 冻结不前移（键稳定 ⇒ rev 也不用变）',
+    frozen.rows.find(r => r.id === 'task-a')?.nextSlotAt === '2026-09-02T09:00:00.000Z'
+    && frozen.rev === revBefore)
+  // 该槽被处理（有实例行）⇒ 正常前移。
+  idx.markDispatched('task-a', '2026-09-02T09:00:00.000Z')
   const moved = idx.overview([taskA, taskB], Date.parse('2026-09-02T10:00:00.000Z'))
-  check('overview：刻度过期 ⇒ 就地前移 + rev 变化', moved.rows.find(r => r.id === 'task-a')?.nextSlotAt === '2026-09-03T09:00:00.000Z' && moved.rev !== revBefore)
+  check('overview：该槽已处理 ⇒ 就地前移 + rev 变化',
+    moved.rows.find(r => r.id === 'task-a')?.nextSlotAt === '2026-09-03T09:00:00.000Z' && moved.rev !== revBefore)
 
   const taskA2 = def({ id: 'task-a', title: '日报', schedule: { cron: '0 18 * * *', timezone: 'UTC', window: 'PT4H' } })
   const edited = idx.overview([taskA2, taskB], Date.parse('2026-09-02T10:00:00.000Z'))

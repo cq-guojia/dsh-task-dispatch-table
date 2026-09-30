@@ -11,7 +11,7 @@
 // ⚠️ 这是**派生缓存，不是真源**：丢了能从 task_instances 重建，故**不落数据库**（用户 2026-09-30
 // 拍板：不引入 task_runtime 派生表）；任务定义本身也绝不迁进数据库（与决策 25 冲突）。
 import type { InstanceStatus, TaskStore } from './store.js'
-import { nextSlotAfter, titleOf, type TaskDefinition } from './tasks.js'
+import { durationMs, nextSlotAfter, titleOf, type TaskDefinition } from './tasks.js'
 
 /** 一条任务的运行态（派生）。 */
 export interface TaskRuntimeEntry {
@@ -256,11 +256,30 @@ export function createRuntimeIndex(): RuntimeIndex {
           entry.nextSlotAt = computeNext(task, nowMs)
           rev++
         } else if (entry.nextSlotAt !== null && Date.parse(entry.nextSlotAt) <= nowMs) {
-          // 刻度已过（时间自然推进）⇒ 就地前移到下一个。
-          const next = computeNext(task, nowMs)
-          if (next !== entry.nextSlotAt) {
-            entry.nextSlotAt = next
-            rev++
+          // 刻度已过（时间自然推进）⇒ 就地前移到下一个 —— **但先问一句「这一槽处理了吗」**。
+          //
+          // 2026-09-30（决策 54）：**少了这道闸门就是排序抖动的根源**——`nextSlotAt` 是客户端的排序键，
+          // 读时无脑前移会让它从「刚过去的时刻」直接跳到「+一个间隔」⇒ 卡片在「已启用」组里**掉到后面**；
+          // 等 `running` 翻转又**跳回最前**（真机「先掉下去、再砰地跳回来」）。旧办法是客户端本地计时器
+          // 「到点钳位」——那套派生状态在轮询卡住时永不解开（真机「5 分钟不动」），已整删。
+          //
+          // 判定走**内存水位、不查库**：`runningSince`（在飞那一槽）/ `lastScheduledAt`（最近一条非在飞
+          // 行的槽）任一 ≥ 该槽 ⇒ 已处理。**未处理且仍在窗口内 ⇒ 冻结不前移**：键稳定 ⇒ 不抖；且它是
+          // **过去时刻**，在该组「按 nextSlotAt 升序」里**自然排最前**（「到点还没跑」本来就该在最前）。
+          // 出窗口（`now > 槽 + window`）⇒ 调度器再也不会选它 ⇒ 按已处理对待。
+          const slotMs = Date.parse(entry.nextSlotAt)
+          const watermarks = [entry.runningSince, entry.lastScheduledAt]
+            .map(iso => (iso === null ? Number.NEGATIVE_INFINITY : Date.parse(iso)))
+            .filter(ms => Number.isFinite(ms))
+          const handled = watermarks.some(ms => ms >= slotMs)
+          if (handled || nowMs > slotMs + durationMs(task.schedule.window)) {
+            // once 且已处理 / 已出窗口 ⇒ **没有下次了**：`nextSlotAfter` 对 once 恒返回那个过去时刻，
+            // 不前移成 null 就会永远钉在组 1 最前、永远显示「即将执行」。
+            const next = task.schedule.once !== undefined ? null : computeNext(task, nowMs)
+            if (next !== entry.nextSlotAt) {
+              entry.nextSlotAt = next
+              rev++
+            }
           }
         }
         rows.push({
