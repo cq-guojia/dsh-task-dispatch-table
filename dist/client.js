@@ -39321,27 +39321,34 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setUploading(true);
 				const added = [];
 				let lastErr = null;
-				for (const file of sendable) try {
-					const data = await (await fetch("/api/task-dispatch-table/attachment", {
-						method: "POST",
-						headers: {
-							"x-filename": encodeURIComponent(file.name),
-							"content-type": "application/octet-stream"
-						},
-						body: file
-					})).json().catch(() => null);
-					if (data === null || data.ok !== true) {
-						lastErr = typeof data?.error === "string" ? data.error : "upload-failed";
-						continue;
+				for (const file of sendable) {
+					const controller = new AbortController();
+					const abortTimer = window.setTimeout(() => controller.abort(), 9e4);
+					try {
+						const data = await (await fetch("/api/task-dispatch-table/attachment", {
+							method: "POST",
+							headers: {
+								"x-filename": encodeURIComponent(file.name),
+								"content-type": "application/octet-stream"
+							},
+							body: file,
+							signal: controller.signal
+						})).json().catch(() => null);
+						if (data === null || data.ok !== true) {
+							lastErr = typeof data?.error === "string" ? data.error : "upload-failed";
+							continue;
+						}
+						added.push({
+							id: makeId(),
+							name: data.name,
+							kind: "upload",
+							ref: data.ref
+						});
+					} catch (error) {
+						lastErr = error instanceof Error ? error.message : "network-error";
+					} finally {
+						window.clearTimeout(abortTimer);
 					}
-					added.push({
-						id: makeId(),
-						name: data.name,
-						kind: "upload",
-						ref: data.ref
-					});
-				} catch (error) {
-					lastErr = error instanceof Error ? error.message : "network-error";
 				}
 				setUploading(false);
 				if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] });
@@ -41636,7 +41643,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [editorOptions, setEditorOptions] = (0, react.useState)(EMPTY_EDITOR_OPTIONS);
 			(0, react.useEffect)(() => {
 				let alive = true;
-				fetch(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" }).then((res) => res.json()).then((body) => {
+				fetchWithTimeout(`${DISPATCH_API_PREFIX}/options`, { cache: "no-store" }).then((res) => res.json()).then((body) => {
 					if (!alive || body.ok !== true) return;
 					const workspaceAnchors = {};
 					const workspaces = (body.workspaces ?? []).filter((item) => typeof item.title === "string" && item.title !== "").map((item) => {
@@ -41676,7 +41683,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				if (tab !== "debug") return;
 				let alive = true;
 				setDbState("loading");
-				fetch(`${DISPATCH_API_PREFIX}/db`).then((res) => res.json()).then((body) => {
+				fetchWithTimeout(`${DISPATCH_API_PREFIX}/db`).then((res) => res.json()).then((body) => {
 					if (!alive) return;
 					if (body.ok === true && Array.isArray(body.tables)) {
 						setDbDump({
@@ -41734,7 +41741,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			* 仅当 retain 仍失败时才兜底反归档重试，并在关闭时归档回去。
 			*/
 			const rearchive = (sessionId) => {
-				fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
+				fetchWithTimeout(`${DISPATCH_API_PREFIX}/session/archive`, {
 					method: "POST",
 					headers: { "content-type": "application/json" },
 					body: JSON.stringify({ sessionId })

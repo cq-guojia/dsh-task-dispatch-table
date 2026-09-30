@@ -760,7 +760,7 @@ function TaskPage(props: {
   const [editorOptions, setEditorOptions] = useState<EditorOptions>(EMPTY_EDITOR_OPTIONS)
   useEffect(() => {
     let alive = true
-    fetch(`${DISPATCH_API_PREFIX}/options`, { cache: 'no-store' })
+    fetchWithTimeout(`${DISPATCH_API_PREFIX}/options`, { cache: 'no-store' })
       .then(res => res.json() as Promise<{
         ok?: boolean
         workspaces?: { title?: string; anchorSessionId?: string }[]
@@ -801,7 +801,7 @@ function TaskPage(props: {
     if (tab !== 'debug') return
     let alive = true
     setDbState('loading')
-    fetch(`${DISPATCH_API_PREFIX}/db`)
+    fetchWithTimeout(`${DISPATCH_API_PREFIX}/db`)
       .then(res => res.json() as Promise<{ ok?: boolean; at?: string; tables?: DbTableDump[] }>)
       .then(body => {
         if (!alive) return
@@ -874,7 +874,7 @@ function TaskPage(props: {
    * 仅当 retain 仍失败时才兜底反归档重试，并在关闭时归档回去。
    */
   const rearchive = (sessionId: string): void => {
-    void fetch(`${DISPATCH_API_PREFIX}/session/archive`, {
+    void fetchWithTimeout(`${DISPATCH_API_PREFIX}/session/archive`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ sessionId }),

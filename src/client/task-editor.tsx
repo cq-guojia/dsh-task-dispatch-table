@@ -1564,16 +1564,24 @@ export function TaskEditorDrawer(props: {
     const added: Attachment[] = []
     let lastErr: string | null = null
     for (const file of sendable) {
+      // 每个文件独立超时（90s：附件上限 20MB，给慢盘留余量）——此前**没有超时**，
+      // 一旦请求挂住 ⇒ 循环卡死、`setUploading(false)` 永不执行 ⇒ **上传按钮永久禁用**
+      // （2026-09-30 评审 P0；与列表轮询那条同款病）。
+      const controller = new AbortController()
+      const abortTimer = window.setTimeout(() => controller.abort(), 90_000)
       try {
         const res = await fetch('/api/task-dispatch-table/attachment', {
           method: 'POST',
           headers: { 'x-filename': encodeURIComponent(file.name), 'content-type': 'application/octet-stream' },
           body: file,
+          signal: controller.signal,
         })
         const data = await res.json().catch(() => null)
         if (data === null || data.ok !== true) { lastErr = typeof data?.error === 'string' ? data.error : 'upload-failed'; continue }
         added.push({ id: makeId(), name: data.name, kind: 'upload', ref: data.ref })
-      } catch (error) { lastErr = error instanceof Error ? error.message : 'network-error' }
+      } catch (error) { lastErr = error instanceof Error ? error.message : 'network-error' } finally {
+        window.clearTimeout(abortTimer)
+      }
     }
     setUploading(false)
     if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] })
