@@ -279,7 +279,12 @@ startedAtMs) {
         // 规则：只补紧邻那一条（中间漏掉的 N 条不补）；停机期间不补（`startedAtMs` 门禁）；once 不适用。
         // ⚠️ 主键必须用**被漏那一槽自己的时刻**：用当前槽会撞当前槽真实执行行的唯一键，
         // `INSERT OR IGNORE` 静默丢弃 ⇒ 任务永久不再执行。
-        if (slot.previous !== undefined && !isOnce(task) && slot.previous.getTime() >= startedAtMs) {
+        // ⚠️ 门禁（2026-09-30 评审 P0）：不补「本进程启动之前」**以及「任务创建之前」**的槽。
+        // 少了后半句就会：宿主已跑了一天，用户 10:03 新建一个每 10 分钟的任务（默认 window PT4H）
+        // ⇒ 第一个 tick 就把 09:50 补成「未执行」，卡片立刻标红、还多一条 error 日志（假记录）。
+        const createdMs = task.createdAt === undefined ? Number.NEGATIVE_INFINITY : Date.parse(task.createdAt);
+        const gateMs = Math.max(startedAtMs, Number.isFinite(createdMs) ? createdMs : Number.NEGATIVE_INFINITY);
+        if (slot.previous !== undefined && !isOnce(task) && slot.previous.getTime() >= gateMs) {
             const prevIso = slot.previous.toISOString();
             if (store.findBySlot(task.id, prevIso) === undefined) {
                 const missedId = randomUUID();
@@ -323,7 +328,11 @@ startedAtMs) {
             workspace = resolveWorkspace(ctx, task.target.workspace);
         }
         catch {
-            store.appendLog({ taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'warn', kind: 'precondition', message: `工作区未找到：${task.target.workspace}` });
+            const workspaceMissing = `工作区未找到：${task.target.workspace}`;
+            store.appendLog({ taskId: task.id, scheduledAt: slot.scheduledAtIso, level: 'warn', kind: 'precondition', message: workspaceMissing });
+            // 透出原因（决策 54 · P3b）：工作区找不到也是**任务级错误**，用户必须知道是哪一个工作区。
+            // 2026-09-30 评审 P0：本分支此前漏了 markBlocked ⇒「延期」悬浮只有通用文案。
+            runtime?.markBlocked(task.id, workspaceMissing);
             continue;
         }
         // 附加文件校验（2026-09-30）：缺失 ⇒ **不建行、不执行**，只记 error。

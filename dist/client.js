@@ -40819,14 +40819,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setOptimistic((cur) => Object.keys(cur).length === 0 ? cur : {});
 			}, [rows]);
 			const workspaces = (0, react.useMemo)(() => [...new Set(rowsWithOptimistic.map((r) => r.workspace))].sort(), [rowsWithOptimistic]);
-			/** 异常数 = 内存摘要里「最近一次执行失败」的任务数（全量统计，不受当前筛选影响）。 */
-			const abnormalCount = (0, react.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed").length, [rowsWithOptimistic]);
+			/**
+			* 异常数 = 「最近一次**失败**」或「最近一次**未执行**」的任务数（全量统计，不受当前筛选影响）。
+			* ⚠️ 2026-09-30 评审 P0：状态条已把 `skipped`（未执行）与 `failed` 一起标红，这里（与下面的异常筛选）
+			* 却只认 `failed` ⇒ 卡片红着却不在「异常」里，口径分叉。两处必须同口径。
+			*/
+			const abnormalCount = (0, react.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed" || row.lastStatus === "skipped").length, [rowsWithOptimistic]);
 			const visible = (0, react.useMemo)(() => {
 				const q = query.trim().toLowerCase();
 				return sortRows(rowsWithOptimistic.filter((row) => {
 					if (filter === "enabled" && !row.enabled) return false;
 					if (filter === "disabled" && row.enabled) return false;
-					if (filter === "abnormal" && row.lastStatus !== "failed") return false;
+					if (filter === "abnormal" && row.lastStatus !== "failed" && row.lastStatus !== "skipped") return false;
 					if (workspace !== "" && row.workspace !== workspace) return false;
 					if (q === "") return true;
 					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
