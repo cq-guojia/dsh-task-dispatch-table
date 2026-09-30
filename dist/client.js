@@ -40230,14 +40230,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		*/
 		const dueLoadingMs = () => pinMsFor(currentTickMs, POLL_MS);
 		/**
-		* 「到点钳位」已整删（决策 54），这里只留一个**空集合占位**维持视图侧的签名形状；
-		* 下一阶段连同 `pinnedIds` 一起从签名里摘掉。
-		* 排序抖动现在由**服务端**解决：`runtime-index.overview` 冻结「已到点但还没处理」的刻度
-		* ⇒ 排序键不随读变化，客户端**不再有任何本地派生排序状态**（那套状态一旦轮询卡住就永不解开，
-		* 正是真机「卡片 5 分钟不动」的根源）。
+		* 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。
+		*
+		* ⚠️ 2026-09-30（决策 54）：原来的「到点钳位」**整套已删**（那套客户端本地派生排序状态一旦轮询卡住
+		* 就永不解开，正是真机「卡片 5 分钟不动」的根源）。排序抖动改由**服务端**解决 ——
+		* `runtime-index.overview` 冻结「已到点但还没处理」的刻度 ⇒ 排序键不随读变化。
 		*/
-		const NO_PINS = /* @__PURE__ */ new Set();
-		/** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
 		function useTaskOverview() {
 			const [rows, setRows] = (0, react.useState)([]);
 			const [ready, setReady] = (0, react.useState)(false);
@@ -40308,8 +40306,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						...row,
 						...patch
 					} : row));
-				}, []),
-				pinnedIds: NO_PINS
+				}, [])
 			};
 		}
 		/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
@@ -40793,7 +40790,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit")))) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onToggleEnabled, pinnedIds = NO_PINS } = props;
+			const { t, rows, ready, onEdit, onToggleEnabled } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
@@ -40826,13 +40823,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (workspace !== "" && row.workspace !== workspace) return false;
 					if (q === "") return true;
 					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
-				}), pinnedIds);
+				}));
 			}, [
 				rowsWithOptimistic,
 				filter,
 				workspace,
-				query,
-				pinnedIds
+				query
 			]);
 			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
 			const menuItems = (0, react.useMemo)(() => [{
@@ -41856,7 +41852,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				t,
 				rows: overview.rows,
 				ready: overview.ready,
-				pinnedIds: overview.pinnedIds,
 				onEdit: openEditor,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {

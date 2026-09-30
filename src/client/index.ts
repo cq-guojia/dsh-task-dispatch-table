@@ -1014,7 +1014,6 @@ function TaskPage(props: {
             t,
             rows: overview.rows,
             ready: overview.ready,
-            pinnedIds: overview.pinnedIds,
             onEdit: openEditor,
             // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
             // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。

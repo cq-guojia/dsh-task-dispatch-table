@@ -151,23 +151,18 @@ let currentTickMs = 60_000
 const dueLoadingMs = (): number => pinMsFor(currentTickMs, POLL_MS)
 
 /**
- * 「到点钳位」已整删（决策 54），这里只留一个**空集合占位**维持视图侧的签名形状；
- * 下一阶段连同 `pinnedIds` 一起从签名里摘掉。
- * 排序抖动现在由**服务端**解决：`runtime-index.overview` 冻结「已到点但还没处理」的刻度
- * ⇒ 排序键不随读变化，客户端**不再有任何本地派生排序状态**（那套状态一旦轮询卡住就永不解开，
- * 正是真机「卡片 5 分钟不动」的根源）。
+ * 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。
+ *
+ * ⚠️ 2026-09-30（决策 54）：原来的「到点钳位」**整套已删**（那套客户端本地派生排序状态一旦轮询卡住
+ * 就永不解开，正是真机「卡片 5 分钟不动」的根源）。排序抖动改由**服务端**解决 ——
+ * `runtime-index.overview` 冻结「已到点但还没处理」的刻度 ⇒ 排序键不随读变化。
  */
-const NO_PINS: ReadonlySet<string> = new Set()
-
-/** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
 export function useTaskOverview(): {
   rows: TaskOverviewRow[]
   ready: boolean
   refresh: () => void
   /** 就地补一条行（乐观更新，见 patchRow）。 */
   patchRow: (id: string, patch: Partial<TaskOverviewRow>) => void
-  /** @deprecated 到点钳位已删（决策 54）；恒为空集合，下一阶段从签名里摘掉。 */
-  pinnedIds: ReadonlySet<string>
 } {
   const [rows, setRows] = useState<TaskOverviewRow[]>([])
   const [ready, setReady] = useState(false)
@@ -246,8 +241,7 @@ export function useTaskOverview(): {
     setRows(list => list.map(row => (row.id === id ? { ...row, ...patch } : row)))
   }, [])
 
-  // `pinnedIds` 恒为空集合（钳位已删，决策 54）；保留字段只为过渡，下一阶段从签名摘掉。
-  return { rows, ready, refresh, patchRow, pinnedIds: NO_PINS }
+  return { rows, ready, refresh, patchRow }
 }
 
 // ── 文案与时间 ─────────────────────────────────────────────────────────
@@ -724,10 +718,8 @@ export function TaskListView(props: {
   onEdit: (id: string) => void
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
-  /** 处于「到点钳位」的任务（排序用；来自 useTaskOverview）。 */
-  pinnedIds?: ReadonlySet<string>
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onToggleEnabled, pinnedIds = NO_PINS } = props
+  const { t, rows, ready, onEdit, onToggleEnabled } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
@@ -770,10 +762,10 @@ export function TaskListView(props: {
       if (q === '') return true
       return row.title.toLowerCase().includes(q) || (row.code ?? '').toLowerCase().includes(q)
     })
-    return sortRows(filtered, pinnedIds)
+    return sortRows(filtered)
     // 排序只依赖内容本身；nowMs 变化不参与 ⇒ 每秒 tick 不会引起重排与动画。
-    // `pinnedIds`（到点钳位）变化时会重排一次——这正是「钉住/松开」生效的时刻。
-  }, [rowsWithOptimistic, filter, workspace, query, pinnedIds])
+    // （原「到点钳位」会在钉住/松开时重排一次；钳位已删 ⇒ 排序键由**服务端**保证稳定，见决策 54。）
+  }, [rowsWithOptimistic, filter, workspace, query])
 
   // FLIP 签名：只在「可见集合与顺序」变化时触发动画。
   const signature = visible.map(r => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join('|')
