@@ -767,9 +767,11 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /latestDueSlotIso/.test(readFileSync(join(process.cwd(), 'dist', 'runtime-index.js'), 'utf8'))
       && /freezeOrAdvance/.test(readFileSync(join(process.cwd(), 'dist', 'runtime-index.js'), 'utf8')))
     // 新建任务的智能默认时刻（用户 2026-09-30）：单次执行 / 间隔锚点别再默认落在过去。
-    check('新建任务：切到「单次/间隔」时，时刻已过 ⇒ 换成「现在+1h 再取整点」',
+    // ⚠️ **必须带 `mode === "create"` 守卫这条断言**（2026-09-30 收口验收）：上一轮"编辑既有任务点档位
+    // 被静默改时刻"的必修项，正是因为没钉住它才漏到验收轮才被发现。
+    check('新建任务：切到「单次/间隔」时，时刻已过 ⇒ 换成「现在+1h 再取整点」（且**仅新建态**）',
       clientJs.includes('smartDefaultMoment') && clientJs.includes('isPastMoment')
-      && clientJs.includes('setHours'))
+      && clientJs.includes('setHours') && clientJs.includes('mode === "create" && isPastMoment'))
   }
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
   // 修法 = ① 选择器回调**工作区相对**路径；② 客户端兜底校验 + 归属附件卡描红；③ 服务端错误翻人话。
