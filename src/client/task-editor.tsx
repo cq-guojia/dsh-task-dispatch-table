@@ -994,6 +994,8 @@ function VersionConfirm(props: {
   t: T
   title: string
   desc: string
+  /** 结构化圆点清单（用户 2026-09-30：正文别糊成一坨——说明是说明、条目是条目，层级拉开）。 */
+  bullets?: readonly string[]
   confirmLabel?: string
   /** 标题染警告橙（高危确认，如「完全权限」保存确认）。 */
   warning?: boolean
@@ -1011,11 +1013,22 @@ function VersionConfirm(props: {
     onClick: props.onCancel,
   },
     h('div', {
-      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', padding: '22px 24px', color: C.text },
+      style: { width: 'min(400px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', padding: '20px 24px 18px', color: C.text },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
-      h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px', ...(props.warning === true ? { color: 'var(--dsw-alias-state-warning-primary,#e6a23c)' } : {}) } }, props.title),
-      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: C.textDim, marginBottom: needAck ? '12px' : '20px', whiteSpace: 'pre-line' } }, props.desc),
+      // 层级：标题 15/600（警告橙可选）→ 说明 13 次要色 → 圆点清单 13 主色、条目间留呼吸 → 勾选 → 按钮。
+      h('div', { style: { fontSize: '15px', fontWeight: 600, lineHeight: '22px', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--dsw-alias-state-warning-primary,#e6a23c)' } : {}) } }, props.title),
+      props.desc !== ''
+        ? h('div', { style: { fontSize: '13px', lineHeight: '21px', color: C.textDim, marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
+        : null,
+      props.bullets !== undefined && props.bullets.length > 0
+        ? h('ul', { style: { listStyle: 'none', margin: '0 0 18px', padding: '10px 12px', borderRadius: 'var(--dsw-radius-md,8px)', background: 'var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08))', display: 'flex', flexDirection: 'column', gap: '6px' } },
+          ...props.bullets.map(b => h('li', { key: b, style: { fontSize: '13px', lineHeight: '20px', display: 'flex', gap: '8px' } },
+            h('span', { style: { flex: 'none', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--dsw-alias-label-tertiary,rgba(128,128,128,.8))', margin: '7px 0 0' } }),
+            h('span', null, b),
+          )),
+        )
+        : null,
       needAck
         ? h('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', lineHeight: '20px', cursor: 'pointer', marginBottom: '16px' } },
           h('input', {
@@ -2160,13 +2173,14 @@ export function TaskEditorDrawer(props: {
           onConfirm: () => { setConfirmReset(false); onChange(initialDraftRef.current); hintSeq.current += 1; setResetHint(hintSeq.current) },
         })
         : null,
-      // 「完全权限」保存确认（高危）：标题警告橙 + 风险清单 + 勾选「我已了解风险」后才可点「保存」。
+      // 「完全权限」保存确认（高危）：标题警告橙 + 结构化风险清单 + 勾选「我已了解风险」后才可点「保存」。
       fullPermOpen
         ? h(VersionConfirm, {
           t,
           warning: true,
           title: t('editorFullPermTitle'),
           desc: t('editorFullPermDesc'),
+          bullets: [t('editorFullPermB1'), t('editorFullPermB2')],
           checkbox: { label: t('editorFullPermCheck'), checked: fullPermAck, onToggle: setFullPermAck },
           confirmLabel: t('editorSave'),
           onCancel: () => { setFullPermOpen(false) },

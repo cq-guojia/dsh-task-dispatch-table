@@ -412,7 +412,9 @@ window.__ModuleLoader__.load({
 			editorToggleOn: "任务已启用",
 			editorToggleOff: "任务已关闭",
 			editorFullPermTitle: "这条任务将以完全权限运行",
-			editorFullPermDesc: "这条任务会以「完全权限」无人值守执行，意味着 AI 可以直接：\n· 写入 / 修改 / 删除工作区内的文件\n· 执行命令、发起网络请求等敏感操作\n执行期间请勿关闭电脑或退出客户端。",
+			editorFullPermDesc: "这条任务会以「完全权限」无人值守执行，意味着 AI 可以直接：",
+			editorFullPermB1: "写入 / 修改 / 删除工作区内的文件",
+			editorFullPermB2: "执行命令、发起网络请求等敏感操作",
 			editorFullPermCheck: "我已了解风险，并愿意为该任务的执行结果负责。",
 			editorTaskSaved: "任务已保存",
 			editorSchedHourlyOnce: "每小时执行一次",
@@ -875,7 +877,9 @@ window.__ModuleLoader__.load({
 			editorToggleOn: "Task enabled",
 			editorToggleOff: "Task disabled",
 			editorFullPermTitle: "This task will run with full access",
-			editorFullPermDesc: "This task runs unattended with FULL access — the AI can directly:\n· create / modify / delete files in the workspace\n· run commands, make network requests and other sensitive operations\nDo not shut down the machine or close the client while it runs.",
+			editorFullPermDesc: "This task runs unattended with FULL access — the AI can directly:",
+			editorFullPermB1: "create / modify / delete files in the workspace",
+			editorFullPermB2: "run commands, make network requests and other sensitive operations",
 			editorFullPermCheck: "I understand the risk and accept responsibility for this task's results.",
 			editorTaskSaved: "Task saved",
 			editorSchedHourlyOnce: "runs hourly",
@@ -38384,29 +38388,53 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: props.onCancel
 			}, (0, react.createElement)("div", {
 				style: {
-					width: "min(380px, 100%)",
+					width: "min(400px, 100%)",
 					boxSizing: "border-box",
 					background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
 					borderRadius: "var(--dsw-radius-panel, 10px)",
 					boxShadow: "var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
-					padding: "22px 24px",
+					padding: "20px 24px 18px",
 					color: C$2.text
 				},
 				onClick: (event) => {
 					event.stopPropagation();
 				}
 			}, (0, react.createElement)("div", { style: {
-				fontSize: "16px",
-				fontWeight: 500,
-				marginBottom: "8px",
-				...props.warning === true ? { color: "var(--dsw-alias-state-warning-primary,#e6a23c)" } : {}
-			} }, props.title), (0, react.createElement)("div", { style: {
-				fontSize: "14px",
+				fontSize: "15px",
+				fontWeight: 600,
 				lineHeight: "22px",
+				marginBottom: "10px",
+				...props.warning === true ? { color: "var(--dsw-alias-state-warning-primary,#e6a23c)" } : {}
+			} }, props.title), props.desc !== "" ? (0, react.createElement)("div", { style: {
+				fontSize: "13px",
+				lineHeight: "21px",
 				color: C$2.textDim,
-				marginBottom: needAck ? "12px" : "20px",
-				whiteSpace: "pre-line"
-			} }, props.desc), needAck ? (0, react.createElement)("label", { style: {
+				marginBottom: props.bullets !== void 0 ? "8px" : "18px"
+			} }, props.desc) : null, props.bullets !== void 0 && props.bullets.length > 0 ? (0, react.createElement)("ul", { style: {
+				listStyle: "none",
+				margin: "0 0 18px",
+				padding: "10px 12px",
+				borderRadius: "var(--dsw-radius-md,8px)",
+				background: "var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08))",
+				display: "flex",
+				flexDirection: "column",
+				gap: "6px"
+			} }, ...props.bullets.map((b) => (0, react.createElement)("li", {
+				key: b,
+				style: {
+					fontSize: "13px",
+					lineHeight: "20px",
+					display: "flex",
+					gap: "8px"
+				}
+			}, (0, react.createElement)("span", { style: {
+				flex: "none",
+				width: "5px",
+				height: "5px",
+				borderRadius: "50%",
+				background: "var(--dsw-alias-label-tertiary,rgba(128,128,128,.8))",
+				margin: "7px 0 0"
+			} }), (0, react.createElement)("span", null, b)))) : null, needAck ? (0, react.createElement)("label", { style: {
 				display: "flex",
 				alignItems: "flex-start",
 				gap: "8px",
@@ -39714,6 +39742,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				warning: true,
 				title: t("editorFullPermTitle"),
 				desc: t("editorFullPermDesc"),
+				bullets: [t("editorFullPermB1"), t("editorFullPermB2")],
 				checkbox: {
 					label: t("editorFullPermCheck"),
 					checked: fullPermAck,
@@ -40758,13 +40787,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				sticky: true,
 				onDone: () => {},
 				text: t("invalidJson")
-			}) : null, savedToast !== 0 ? (0, react.createElement)(FloatingToast, {
-				seq: savedToast,
+			}) : null, savedToast !== 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
+				key: savedToast,
+				text: t("editorTaskSaved"),
 				tone: "success",
+				holdMs: 2500,
 				onDone: () => {
 					setSavedToast(0);
-				},
-				text: t("editorTaskSaved")
+				}
 			}) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				t("colId"),
 				t("colTitle"),

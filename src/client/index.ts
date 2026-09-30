@@ -27,6 +27,7 @@ import {
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
 import { humanizeTaskError } from './task-editor'
+import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -1002,11 +1003,12 @@ function TaskPage(props: {
                   })
                   : null,
                 savedToast !== 0
-                  ? h(FloatingToast, {
-                    seq: savedToast,
-                    tone: 'success',
-                    onDone: () => { setSavedToast(0) },
+                  ? h(Toast, {
+                    key: savedToast,
                     text: t('editorTaskSaved'),
+                    tone: 'success',
+                    holdMs: 2500,
+                    onDone: () => { setSavedToast(0) },
                   })
                   : null,
               ),

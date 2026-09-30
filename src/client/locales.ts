@@ -115,7 +115,7 @@ export type LocaleKey =
   | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
   | 'editorSnapshots' | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
   | 'editorUseShort' | 'editorRemoveShort' | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
-  | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermCheck' | 'editorTaskSaved'
+  | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermB1' | 'editorFullPermB2' | 'editorFullPermCheck' | 'editorTaskSaved'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
   | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint'
   | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
@@ -531,7 +531,9 @@ export const zh: Record<LocaleKey, string> = {
   editorToggleOn: '任务已启用',
   editorToggleOff: '任务已关闭',
   editorFullPermTitle: '这条任务将以完全权限运行',
-  editorFullPermDesc: '这条任务会以「完全权限」无人值守执行，意味着 AI 可以直接：\n· 写入 / 修改 / 删除工作区内的文件\n· 执行命令、发起网络请求等敏感操作\n执行期间请勿关闭电脑或退出客户端。',
+  editorFullPermDesc: '这条任务会以「完全权限」无人值守执行，意味着 AI 可以直接：',
+  editorFullPermB1: '写入 / 修改 / 删除工作区内的文件',
+  editorFullPermB2: '执行命令、发起网络请求等敏感操作',
   editorFullPermCheck: '我已了解风险，并愿意为该任务的执行结果负责。',
   editorTaskSaved: '任务已保存',
   editorSchedHourlyOnce: '每小时执行一次',
@@ -1000,7 +1002,9 @@ export const en: Record<LocaleKey, string> = {
   editorToggleOn: 'Task enabled',
   editorToggleOff: 'Task disabled',
   editorFullPermTitle: 'This task will run with full access',
-  editorFullPermDesc: 'This task runs unattended with FULL access — the AI can directly:\n· create / modify / delete files in the workspace\n· run commands, make network requests and other sensitive operations\nDo not shut down the machine or close the client while it runs.',
+  editorFullPermDesc: 'This task runs unattended with FULL access — the AI can directly:',
+  editorFullPermB1: 'create / modify / delete files in the workspace',
+  editorFullPermB2: 'run commands, make network requests and other sensitive operations',
   editorFullPermCheck: 'I understand the risk and accept responsibility for this task\'s results.',
   editorTaskSaved: 'Task saved',
   editorSchedHourlyOnce: 'runs hourly',
