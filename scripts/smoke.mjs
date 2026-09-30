@@ -592,6 +592,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 上一轮的「补跑时间」显示已撤（用户：根本不用判断补跑时间）。
   check('运行中改显活动指示（dsh-tdt-run-blocks + 动画），补跑时间显示已撤',
     clientJs.includes('dsh-tdt-run-blocks') && clientJs.includes('@keyframes dsh-tdt-run-block') && !clientJs.includes('listNextCatchupPrefix'))
+  // 用户 2026-09-30：卡片展开箭头误用了执行记录页的 `expandHint`（悬停冒出「展开该次执行的事件时间线」，
+  // 与卡片实际展开的「任务设置」对不上）⇒ 撤掉该 title，另立 listExpandHint 作无障碍名。
+  check('卡片展开箭头不再复用执行记录页的展开提示（title 不再挂 expandHint）',
+    !clientJs.includes('title: t("expandHint")') && clientJs.includes('listExpandHint'))
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
   // 修法 = ① 选择器回调**工作区相对**路径；② 客户端兜底校验 + 归属附件卡描红；③ 服务端错误翻人话。
   check('附件 ref 改为工作区相对（选择器走 relativizeToRoot）', clientJs.includes('relativizeToRoot'))

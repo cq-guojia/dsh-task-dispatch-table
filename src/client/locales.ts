@@ -23,7 +23,7 @@ export type LocaleKey =
   | 'colStatus' | 'colAttempt' | 'colSession' | 'colUpdated'
   | 'colSeq' | 'colTs' | 'colKind' | 'colDetail'
   | 'filterStatus' | 'filterTask' | 'filterAll'
-  | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint'
+  | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint' | 'listExpandHint'
   | 'viewSession' | 'viewSessionHint'
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
   | 'sessionUnknownKind'
@@ -232,6 +232,9 @@ export const zh: Record<LocaleKey, string> = {
   filterTask: '任务筛选',
   filterAll: '全部',
   expandHint: '点击任意一行展开该次执行的事件时间线',
+  // 主界面卡片右侧展开箭头的无障碍名（用户 2026-09-30：此前误用执行记录页的 `expandHint`，
+  // 悬停冒出「展开该次执行的事件时间线」——与卡片实际展开的「任务设置」对不上，故另立一词）。
+  listExpandHint: '展开任务详情',
   eventsOf: '本次执行的事件',
   eventsEmpty: '（该次执行暂无事件，或已超出最近 200 条的快照窗口）',
   recordsHint: '一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。',
@@ -727,6 +730,7 @@ export const en: Record<LocaleKey, string> = {
   filterTask: 'Task filter',
   filterAll: 'All',
   expandHint: 'Click any row to expand the event timeline of that run',
+  listExpandHint: 'Expand task details',
   eventsOf: 'Events of this run',
   eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
   recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',

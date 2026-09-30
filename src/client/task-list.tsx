@@ -632,7 +632,11 @@ function TaskCard(props: {
         ),
         h('button', {
           type: 'button', style: { ...iconBtnStyle, border: 'none', transform: open ? 'rotate(180deg)' : 'none' },
-          title: t('expandHint'), onClick: onToggleOpen,
+          // 这里**故意不挂 `title`**：此前复用了执行记录页的 `expandHint`（「点击任意一行展开该次执行的
+          // 事件时间线」），语义完全对不上——卡片展开的是**本任务的设置**，不是某次执行的事件时间线，
+          // 悬停冒出一句驴唇不对马嘴的提示（用户 2026-09-30 真机点名）。图标本身自明，只留无障碍名。
+          'aria-label': t('listExpandHint'),
+          onClick: onToggleOpen,
           'aria-expanded': open,
         }, h(IconChevronDownOutlineRegular, { size: 14 })),
       ),

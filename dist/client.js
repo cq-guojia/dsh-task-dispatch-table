@@ -122,6 +122,7 @@ window.__ModuleLoader__.load({
 			filterTask: "任务筛选",
 			filterAll: "全部",
 			expandHint: "点击任意一行展开该次执行的事件时间线",
+			listExpandHint: "展开任务详情",
 			eventsOf: "本次执行的事件",
 			eventsEmpty: "（该次执行暂无事件，或已超出最近 200 条的快照窗口）",
 			recordsHint: "一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。",
@@ -608,6 +609,7 @@ window.__ModuleLoader__.load({
 			filterTask: "Task filter",
 			filterAll: "All",
 			expandHint: "Click any row to expand the event timeline of that run",
+			listExpandHint: "Expand task details",
 			eventsOf: "Events of this run",
 			eventsEmpty: "(no events for this run, or it falls outside the latest-200 snapshot window)",
 			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.",
@@ -40747,7 +40749,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					border: "none",
 					transform: open ? "rotate(180deg)" : "none"
 				},
-				title: t("expandHint"),
+				"aria-label": t("listExpandHint"),
 				onClick: onToggleOpen,
 				"aria-expanded": open
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })))), open ? (0, react.createElement)("div", { style: {
