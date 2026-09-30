@@ -200,6 +200,17 @@ const makeDispatchRoutes = (
    * 否则要等下一个 tick 才把新定义同步给 overview，用户看到的就是「点了没反应」。
    */
   onDefinitionsChanged: () => void,
+  /**
+   * 取插件配置（运行期 live 合并值：base + 用户层）。设置页 GET 当前值用。
+   * 注：本插件配置刻意非 volatile（rc.1 约束），官方 configForms 不可用，
+   * 故设置页走本项目自有的 HTTP 通道读写，而非 configForms。
+   */
+  getScopeConfig: () => PluginConfig,
+  /**
+   * 写回插件配置（仅限计时类字段）。经 settings scope.update 合并进用户层并持久化，
+   * scope.watch 即时生效（tickMs 重启 interval，其余字段 reconcile/scheduler 实时读 scope.get()）。
+   */
+  updateScopeConfig: (patch: Partial<PluginConfig>) => Promise<boolean>,
 ): DispatchWebRoute[] => [
   {
     // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
@@ -632,6 +643,87 @@ const makeDispatchRoutes = (
       }
     },
   },
+  // —— 插件设置页（基础信息 + 计时参数）HTTP 通道 ——
+  // 本插件配置刻意非 volatile，官方 configForms 不可用，故设置表单走自有 HTTP 通道读写。
+  {
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/config`,
+    handler: (req, res) => {
+      if (req.method !== 'GET') {
+        writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+        return
+      }
+      if (!isTrustedDispatchRequest(req)) {
+        writeJson(res, 403, { ok: false, error: 'forbidden' })
+        return
+      }
+      const config = getScopeConfig()
+      writeJson(res, 200, {
+        ok: true,
+        config: {
+          tickMs: config.tickMs,
+          dispatchGraceMs: config.dispatchGraceMs,
+          leaseMs: config.leaseMs,
+          unknownGraceMs: config.unknownGraceMs,
+        },
+      })
+    },
+  },
+  {
+    kind: 'exact',
+    path: `${DISPATCH_API_PREFIX}/config`,
+    handler: async (req, res) => {
+      if (req.method !== 'POST') {
+        writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
+        return
+      }
+      if (!isTrustedDispatchRequest(req)) {
+        writeJson(res, 403, { ok: false, error: 'forbidden' })
+        return
+      }
+      try {
+        const body = JSON.parse(await readDispatchBody(req)) as Record<string, unknown>
+        const allowed = ['tickMs', 'dispatchGraceMs', 'leaseMs', 'unknownGraceMs'] as const
+        const patch: Record<string, number> = {}
+        for (const key of allowed) {
+          const raw = body[key]
+          if (raw === undefined) continue
+          if (typeof raw !== 'number' || !Number.isFinite(raw)) {
+            writeJson(res, 400, { ok: false, error: `invalid-${key}` })
+            return
+          }
+          // 下限 1s、上限 7 天，避免误填把调度器打挂。
+          if (raw < 1000 || raw > 7 * 24 * 3600 * 1000) {
+            writeJson(res, 400, { ok: false, error: `out-of-range-${key}` })
+            return
+          }
+          patch[key] = raw
+        }
+        if (Object.keys(patch).length === 0) {
+          writeJson(res, 400, { ok: false, error: 'empty-patch' })
+          return
+        }
+        const ok = await updateScopeConfig(patch)
+        if (!ok) {
+          writeJson(res, 503, { ok: false, error: 'update-failed' })
+          return
+        }
+        const config = getScopeConfig()
+        writeJson(res, 200, {
+          ok: true,
+          config: {
+            tickMs: config.tickMs,
+            dispatchGraceMs: config.dispatchGraceMs,
+            leaseMs: config.leaseMs,
+            unknownGraceMs: config.unknownGraceMs,
+          },
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
+      }
+    },
+  },
 ]
 
 /**
@@ -734,6 +826,18 @@ export function apply(ctx: HostContext, config: unknown): void {
   let assetsRef: AssetPaths | null = null
   /** settings inject 就绪后的插件配置（清道夫天数等；无 register 面时沿用启动配置）。 */
   let configRef: PluginConfig = initial
+  /** settings inject 就绪后捕获的官方/降级作用域，供设置页经 scope.update 写回配置。 */
+  let scopeRef: SettingsScope<PluginConfig> | null = null
+  /** 设置页写回插件配置（仅计时字段经 route 校验后调用）；作用域未就绪时返回 false。 */
+  const updateScopeConfig = async (patch: Partial<PluginConfig>): Promise<boolean> => {
+    if (!scopeRef) return false
+    try {
+      await scopeRef.update(patch as Record<string, unknown>)
+      return true
+    } catch {
+      return false
+    }
+  }
   const persistTasksInline = async (json: string): Promise<void> => {
     // 主通道：写状态库 meta 表（state.db 在宿主数据根 = 挂载卷，容器重建 / 插件重装都不丢）。
     // 未就绪只告警不静默——用户必须知道这次保存没落盘。
@@ -783,8 +887,10 @@ export function apply(ctx: HostContext, config: unknown): void {
       runtimeIndex,
       () => panelTaskMap,
       () => { resyncTaskMap?.() },
+      () => configRef,
+      updateScopeConfig,
     )) webServer.register(route)
-    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled')
+    wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled')
   })
   ctx.inject(['settings'], (sctx: HostContext) => {
     const settings = sctx.settings
@@ -793,6 +899,7 @@ export function apply(ctx: HostContext, config: unknown): void {
     const scope = typeof settings.register === 'function'
       ? settings.register<PluginConfig>(SETTINGS_NS, Config as unknown as z_any<PluginConfig>, { base: initial })
       : fallbackScope(sctx, settings, initial)
+    scopeRef = scope
     // ── rc.1 运行时数据通道：宿主插件不能走 configForms（volatile 会让 entry 不激活），
     // 改走 webServer HTTP 路由（照抄参考插件 dsh-task-board 的已验证通道：宿主注册
     // GET /api/<name>/snapshot，客户端同源 fetch 轮询）。runtime 提升到 apply 作用域供路由闭包读。

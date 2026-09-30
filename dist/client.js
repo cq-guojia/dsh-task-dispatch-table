@@ -561,7 +561,27 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "允许延迟",
 			listNone: "（无）",
 			listDisabledTag: "（已停用）",
-			schedCustom: "{cron}"
+			schedCustom: "{cron}",
+			settingsBasic: "基础信息",
+			settingsTitleFormat: "标题写法",
+			settingsDesc: "简介",
+			settingsLang: "界面语言",
+			settingsLangValue: "跟随宿主（中文 / English）",
+			settingsParams: "运行参数（实时生效）",
+			settingsLoopSec: "循环间隔（秒）",
+			settingsLoopHint: "调度器多久巡检一次，看是否有任务到点。改小会更频繁地检查，但更费资源。",
+			settingsWaitSec: "派发宽限（秒）",
+			settingsWaitHint: "任务派发后，等待会话创建 / 开始运行的最长宽限；超时按「等待超时」处理。",
+			settingsLeaseSec: "运行租约（秒）",
+			settingsLeaseHint: "单个任务运行占用的最长租约（分配 / 调度循环）；超时回收占用，避免卡死。",
+			settingsUnknownSec: "观察宽限（秒）",
+			settingsUnknownHint: "会话状态未知时保留的宽限；超过则判定为异常并回收。",
+			settingsSaveSuccess: "设置已保存",
+			settingsLoadFailed: "读取当前设置失败，请稍后重试",
+			settingsUnitSec: "秒",
+			settingsResetDone: "已恢复默认",
+			loading: "加载中…",
+			invalidNumber: "请输入有效的整数秒"
 		};
 		/** English copy. */
 		const en = {
@@ -1050,7 +1070,27 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "Late window",
 			listNone: "(none)",
 			listDisabledTag: "(disabled)",
-			schedCustom: "{cron}"
+			schedCustom: "{cron}",
+			settingsBasic: "Basic info",
+			settingsTitleFormat: "Title format",
+			settingsDesc: "Description",
+			settingsLang: "Interface language",
+			settingsLangValue: "Follow host (Chinese / English)",
+			settingsParams: "Runtime parameters (live)",
+			settingsLoopSec: "Loop interval (sec)",
+			settingsLoopHint: "How often the scheduler checks whether a task is due. Smaller = more frequent checks but more resource use.",
+			settingsWaitSec: "Dispatch grace (sec)",
+			settingsWaitHint: "Max wait after dispatch for the session to be created / start running; on timeout it is treated as a wait timeout.",
+			settingsLeaseSec: "Run lease (sec)",
+			settingsLeaseHint: "Max run lease per task (allocation / scheduling loop); on timeout the slot is reclaimed to avoid stalls.",
+			settingsUnknownSec: "Unknown grace (sec)",
+			settingsUnknownHint: "Grace kept while the session status is unknown; beyond it the task is judged abnormal and reclaimed.",
+			settingsSaveSuccess: "Settings saved",
+			settingsLoadFailed: "Failed to load current settings, please retry later",
+			settingsUnitSec: "sec",
+			settingsResetDone: "Reset to default",
+			loading: "Loading…",
+			invalidNumber: "Please enter a valid integer number of seconds"
 		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -41087,6 +41127,249 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			})))));
 		}
 		//#endregion
+		//#region src/client/config-panel.tsx
+		const FIELDS = [
+			{
+				key: "tickMs",
+				labelKey: "settingsLoopSec",
+				hintKey: "settingsLoopHint",
+				minSec: 1
+			},
+			{
+				key: "dispatchGraceMs",
+				labelKey: "settingsWaitSec",
+				hintKey: "settingsWaitHint",
+				minSec: 1
+			},
+			{
+				key: "leaseMs",
+				labelKey: "settingsLeaseSec",
+				hintKey: "settingsLeaseHint",
+				minSec: 1
+			},
+			{
+				key: "unknownGraceMs",
+				labelKey: "settingsUnknownSec",
+				hintKey: "settingsUnknownHint",
+				minSec: 1
+			}
+		];
+		const API = "api/task-dispatch-table/config";
+		const toSecs = (c) => ({
+			tickMs: Math.round(c.tickMs / 1e3),
+			dispatchGraceMs: Math.round(c.dispatchGraceMs / 1e3),
+			leaseMs: Math.round(c.leaseMs / 1e3),
+			unknownGraceMs: Math.round(c.unknownGraceMs / 1e3)
+		});
+		const toMs = (s) => ({
+			tickMs: s.tickMs * 1e3,
+			dispatchGraceMs: s.dispatchGraceMs * 1e3,
+			leaseMs: s.leaseMs * 1e3,
+			unknownGraceMs: s.unknownGraceMs * 1e3
+		});
+		function ConfigPanel(props) {
+			const { t, view } = props;
+			if (view !== void 0 && view !== "page") return null;
+			const [draft, setDraft] = (0, react.useState)(null);
+			const [saved, setSaved] = (0, react.useState)(null);
+			const [saving, setSaving] = (0, react.useState)(false);
+			const [loadFailed, setLoadFailed] = (0, react.useState)(false);
+			const [toast, setToast] = (0, react.useState)(null);
+			const toastSeq = (0, react.useRef)(0);
+			const flash = (text, tone) => {
+				toastSeq.current += 1;
+				setToast({
+					text,
+					tone,
+					seq: toastSeq.current
+				});
+			};
+			(0, react.useEffect)(() => {
+				ensureToastStyle();
+			}, []);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				(async () => {
+					try {
+						const res = await fetch(API, { cache: "no-store" });
+						if (!res.ok) {
+							if (alive) setLoadFailed(true);
+							return;
+						}
+						const body = await res.json();
+						if (!body.ok || !body.config) {
+							if (alive) setLoadFailed(true);
+							return;
+						}
+						const secs = toSecs(body.config);
+						if (alive) {
+							setDraft(secs);
+							setSaved(secs);
+							setLoadFailed(false);
+						}
+					} catch {
+						if (alive) setLoadFailed(true);
+					}
+				})();
+				return () => {
+					alive = false;
+				};
+			}, []);
+			if (draft === null || saved === null) return (0, react.createElement)("div", { style: { padding: "4px 2px" } }, (0, react.createElement)("p", { style: {
+				color: "var(--dsw-alias-label-secondary,#888)",
+				fontSize: "13px",
+				margin: 0
+			} }, loadFailed ? t("settingsLoadFailed") : t("loading")));
+			const dirty = FIELDS.some((f) => draft[f.key] !== saved[f.key]);
+			const onSave = async () => {
+				for (const f of FIELDS) {
+					const v = draft[f.key];
+					if (!Number.isInteger(v) || v < f.minSec) {
+						flash(t("invalidNumber"), "error");
+						return;
+					}
+				}
+				setSaving(true);
+				try {
+					const patch = toMs(draft);
+					const res = await fetch(API, {
+						method: "POST",
+						cache: "no-store",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify(patch)
+					});
+					const body = await res.json();
+					if (!res.ok || !body.ok || !body.config) {
+						flash(t("saveFailed"), "error");
+						return;
+					}
+					const secs = toSecs(body.config);
+					setDraft(secs);
+					setSaved(secs);
+					flash(t("settingsSaveSuccess"), "success");
+				} catch {
+					flash(t("saveFailed"), "error");
+				} finally {
+					setSaving(false);
+				}
+			};
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "22px",
+				padding: "4px 2px",
+				maxWidth: "640px"
+			} }, (0, react.createElement)("section", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "10px"
+			} }, (0, react.createElement)("h3", { style: {
+				fontSize: "13px",
+				fontWeight: 700,
+				color: "var(--dsw-alias-label-primary,#1a1a1a)",
+				margin: "0",
+				letterSpacing: ".02em"
+			} }, t("settingsBasic")), infoRow(t("settingsTitleFormat"), t("title")), infoRow(t("settingsDesc"), t("description")), infoRow(t("settingsLang"), t("settingsLangValue"))), (0, react.createElement)("section", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "16px"
+			} }, (0, react.createElement)("h3", { style: {
+				fontSize: "13px",
+				fontWeight: 700,
+				color: "var(--dsw-alias-label-primary,#1a1a1a)",
+				margin: "0",
+				letterSpacing: ".02em"
+			} }, t("settingsParams")), ...FIELDS.map((f) => (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "6px"
+			} }, (0, react.createElement)("label", { style: {
+				fontSize: "13px",
+				fontWeight: 600,
+				color: "var(--dsw-alias-label-primary,#1a1a1a)"
+			} }, t(f.labelKey)), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px"
+			} }, (0, react.createElement)("input", {
+				type: "number",
+				min: String(f.minSec),
+				step: "1",
+				value: String(draft[f.key]),
+				disabled: saving,
+				onInput: (e) => {
+					const el = e.target;
+					const n = Number(el.value);
+					setDraft((prev) => prev === null ? prev : {
+						...prev,
+						[f.key]: n
+					});
+				},
+				style: {
+					width: "160px",
+					padding: "7px 10px",
+					borderRadius: "7px",
+					border: "1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.15))",
+					background: "var(--dsw-alias-bg-layer-1,#fff)",
+					color: "var(--dsw-alias-label-primary,#1a1a1a)",
+					fontSize: "13px",
+					outline: "none"
+				}
+			}), (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: "var(--dsw-alias-label-secondary,#888)"
+			} }, t("settingsUnitSec"))), (0, react.createElement)("p", { style: {
+				fontSize: "12px",
+				color: "var(--dsw-alias-label-secondary,#888)",
+				lineHeight: 1.5,
+				margin: 0
+			} }, t(f.hintKey)))), (0, react.createElement)("button", {
+				type: "button",
+				disabled: !dirty || saving,
+				onClick: () => void onSave(),
+				style: {
+					alignSelf: "flex-start",
+					marginTop: "2px",
+					padding: "8px 18px",
+					borderRadius: "8px",
+					border: "none",
+					background: "var(--dsw-alias-brand-primary,#3b6cff)",
+					color: "#fff",
+					fontSize: "13px",
+					fontWeight: 600,
+					cursor: !dirty || saving ? "not-allowed" : "pointer",
+					opacity: !dirty || saving ? .5 : 1
+				}
+			}, saving ? t("saving") : t("save"))), toast !== null ? (0, react.createElement)(FloatingToast, {
+				seq: toast.seq,
+				tone: toast.tone,
+				onDone: () => {
+					setToast(null);
+				},
+				text: toast.text
+			}) : null);
+		}
+		function infoRow(label, value) {
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				gap: "4px",
+				padding: "10px 12px",
+				borderRadius: "8px",
+				background: "var(--dsw-alias-bg-layer-2,#f5f5f5)",
+				border: "1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.08))"
+			} }, (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: "var(--dsw-alias-label-secondary,#888)",
+				fontWeight: 600
+			} }, label), (0, react.createElement)("span", { style: {
+				fontSize: "13px",
+				color: "var(--dsw-alias-label-primary,#1a1a1a)",
+				lineHeight: 1.5,
+				whiteSpace: "pre-wrap"
+			} }, value));
+		}
+		//#endregion
 		//#region src/client/index.ts
 		/** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 		const SETTINGS_NS = "dsh-task-dispatch-table";
@@ -42506,6 +42789,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				currentScope = httpScope();
 				afterAdopt();
 				registerCard(sub);
+			});
+			ctx.inject(["slots"], (sub) => {
+				sub.slots.inject("plugins.bundle.config", () => sub.slots.register({
+					name: "plugins.bundle.config",
+					key: SETTINGS_NS,
+					locale: LOCALE_NS
+				}, ConfigPanel));
 			});
 			ctx.inject(["slots"], (sub) => {
 				sub.slots.inject("sidebar.panellist", () => sub.slots.register({

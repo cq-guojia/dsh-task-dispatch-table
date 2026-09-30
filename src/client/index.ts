@@ -31,6 +31,7 @@ import {
 import { ensureToastStyle, FloatingToast } from './toast-css'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
+import { ConfigPanel } from './config-panel'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
@@ -1756,6 +1757,20 @@ export function apply(ctx: ClientContext): void {
     currentScope = httpScope()
     afterAdopt()
     registerCard(sub)
+  })
+
+  // 宿主「插件」管理详情页（dsh 0.1.7 原生 plugins.bundle.config 槽，参考 dsh-session-title-pattern）：
+  // 左侧「插件」按钮 → 已安装插件列表 → 点进本插件，宿主在上方渲染图标/名称/简介，
+  // 下方本配置区渲染运行参数表单。key 必须与包名逐字相同（宿主用 ledger.bundles.has(pkg.name)
+  // 判定是否渲染本配置区）。表单走自有 HTTP 通道（config-panel.tsx + host /config 路由），
+  // 不依赖 unavailable 的 configForms（本插件配置刻意非 volatile）。
+  ctx.inject(['slots'], (sub) => {
+    sub.slots.inject('plugins.bundle.config', () =>
+      sub.slots.register(
+        { name: 'plugins.bundle.config', key: SETTINGS_NS, locale: LOCALE_NS },
+        ConfigPanel,
+      ),
+    )
   })
 
   // 侧栏顶部条目 + 主区整页（dsh 0.1.7-rc.1 原生「主面板」机制）：

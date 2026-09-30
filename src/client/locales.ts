@@ -153,6 +153,12 @@ export type LocaleKey =
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
   | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
   | 'schedCustom'
+  // —— 插件设置页（plugins.bundle.config 详情页表单）——
+  | 'settingsBasic' | 'settingsTitleFormat' | 'settingsDesc' | 'settingsLang' | 'settingsLangValue'
+  | 'settingsParams' | 'settingsLoopSec' | 'settingsLoopHint' | 'settingsWaitSec' | 'settingsWaitHint'
+  | 'settingsLeaseSec' | 'settingsLeaseHint' | 'settingsUnknownSec' | 'settingsUnknownHint'
+  | 'settingsSaveSuccess' | 'settingsLoadFailed' | 'settingsUnitSec' | 'settingsResetDone'
+  | 'loading' | 'invalidNumber'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -668,6 +674,27 @@ export const zh: Record<LocaleKey, string> = {
   // 排期文案的**唯一实现**在 `client/schedule-text.ts`（列表与编辑器共用，正文键走 editorSched*）；
   // 这里只剩「认不出的 cron 原样显示」一条（真实值，不编造）。
   schedCustom: '{cron}',
+  // —— 插件设置页（plugins.bundle.config 详情页表单）——
+  settingsBasic: '基础信息',
+  settingsTitleFormat: '标题写法',
+  settingsDesc: '简介',
+  settingsLang: '界面语言',
+  settingsLangValue: '跟随宿主（中文 / English）',
+  settingsParams: '运行参数（实时生效）',
+  settingsLoopSec: '循环间隔（秒）',
+  settingsLoopHint: '调度器多久巡检一次，看是否有任务到点。改小会更频繁地检查，但更费资源。',
+  settingsWaitSec: '派发宽限（秒）',
+  settingsWaitHint: '任务派发后，等待会话创建 / 开始运行的最长宽限；超时按「等待超时」处理。',
+  settingsLeaseSec: '运行租约（秒）',
+  settingsLeaseHint: '单个任务运行占用的最长租约（分配 / 调度循环）；超时回收占用，避免卡死。',
+  settingsUnknownSec: '观察宽限（秒）',
+  settingsUnknownHint: '会话状态未知时保留的宽限；超过则判定为异常并回收。',
+  settingsSaveSuccess: '设置已保存',
+  settingsLoadFailed: '读取当前设置失败，请稍后重试',
+  settingsUnitSec: '秒',
+  settingsResetDone: '已恢复默认',
+  loading: '加载中…',
+  invalidNumber: '请输入有效的整数秒',
 }
 
 /** English copy. */
@@ -1166,4 +1193,25 @@ export const en: Record<LocaleKey, string> = {
   // The single schedule-text implementation lives in `client/schedule-text.ts`; only the
   // unrecognised-cron passthrough remains here.
   schedCustom: '{cron}',
+  // —— Plugin settings page (plugins.bundle.config detail page form) ——
+  settingsBasic: 'Basic info',
+  settingsTitleFormat: 'Title format',
+  settingsDesc: 'Description',
+  settingsLang: 'Interface language',
+  settingsLangValue: 'Follow host (Chinese / English)',
+  settingsParams: 'Runtime parameters (live)',
+  settingsLoopSec: 'Loop interval (sec)',
+  settingsLoopHint: 'How often the scheduler checks whether a task is due. Smaller = more frequent checks but more resource use.',
+  settingsWaitSec: 'Dispatch grace (sec)',
+  settingsWaitHint: 'Max wait after dispatch for the session to be created / start running; on timeout it is treated as a wait timeout.',
+  settingsLeaseSec: 'Run lease (sec)',
+  settingsLeaseHint: 'Max run lease per task (allocation / scheduling loop); on timeout the slot is reclaimed to avoid stalls.',
+  settingsUnknownSec: 'Unknown grace (sec)',
+  settingsUnknownHint: 'Grace kept while the session status is unknown; beyond it the task is judged abnormal and reclaimed.',
+  settingsSaveSuccess: 'Settings saved',
+  settingsLoadFailed: 'Failed to load current settings, please retry later',
+  settingsUnitSec: 'sec',
+  settingsResetDone: 'Reset to default',
+  loading: 'Loading…',
+  invalidNumber: 'Please enter a valid integer number of seconds',
 }
