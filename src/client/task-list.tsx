@@ -18,6 +18,8 @@ import {
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
+import { MarqueeText } from './editor-fields'
+import { ensureTaskEditorStyle } from './task-editor-css'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -442,13 +444,14 @@ function TaskCard(props: {
     h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
       h(StatusRail, { row }),
       h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
-        h('div', { style: titleStyle },
-          row.title,
-          row.code !== null ? h('span', { style: { ...faintStyle, marginLeft: '6px', display: 'inline' } }, `[${row.code}]`) : null,
-          row.enabled ? null : h('span', { style: { ...faintStyle, marginLeft: '6px', display: 'inline' } }, t('listDisabledTag')),
+        // 标题 / 执行方式：**单行省略号 + hover 跑马灯**（窗口窄、文字长不再撑高卡片，用户 2026-09-30）。
+        h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 } },
+          h('div', { style: { ...titleStyle, flex: '0 1 auto', minWidth: 0 } }, h(MarqueeText, { text: row.title })),
+          row.code !== null ? h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, `[${row.code}]`) : null,
+          row.enabled ? null : h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, t('listDisabledTag')),
         ),
-        // 执行方式写成完整一句话（「每周一、周二，每 10 分钟执行一次」），不再是孤立的「每 10 分钟」。
-        h('div', { style: metaStyle }, scheduleText),
+        // 执行方式是完整一句话（「每周一、周二，每 10 分钟执行一次」），放不下同样跑马灯。
+        h('div', { style: { ...metaStyle, minWidth: 0 } }, h(MarqueeText, { text: scheduleText })),
         row.createdAt === null ? null : h('div', { style: faintStyle }, `${t('listCreatedPrefix')} ${dateOf(row.createdAt)}`),
       ),
       // 右：上次 / 下次组合标签 → 启用拨片 → 展开箭头（「编辑」移到展开区右下角）。
@@ -511,6 +514,8 @@ export function TaskListView(props: {
   const { t, rows, ready, onRefresh, onEdit, onToggleEnabled } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
+  // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
+  ensureTaskEditorStyle()
   const [filter, setFilter] = useState<'all' | 'enabled' | 'disabled' | 'abnormal'>('all')
   const [workspace, setWorkspace] = useState<string>('')
   const [menuOpen, setMenuOpen] = useState(false)

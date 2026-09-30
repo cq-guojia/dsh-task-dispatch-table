@@ -40384,15 +40384,27 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, (0, react.createElement)(StatusRail, { row }), (0, react.createElement)("div", { style: {
 				flex: "1 1 auto",
 				minWidth: 0
-			} }, (0, react.createElement)("div", { style: titleStyle }, row.title, row.code !== null ? (0, react.createElement)("span", { style: {
+			} }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "baseline",
+				gap: "6px",
+				minWidth: 0
+			} }, (0, react.createElement)("div", { style: {
+				...titleStyle,
+				flex: "0 1 auto",
+				minWidth: 0
+			} }, (0, react.createElement)(MarqueeText, { text: row.title })), row.code !== null ? (0, react.createElement)("span", { style: {
 				...faintStyle,
-				marginLeft: "6px",
+				flex: "none",
 				display: "inline"
 			} }, `[${row.code}]`) : null, row.enabled ? null : (0, react.createElement)("span", { style: {
 				...faintStyle,
-				marginLeft: "6px",
+				flex: "none",
 				display: "inline"
-			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: metaStyle }, scheduleText), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
+			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: {
+				...metaStyle,
+				minWidth: 0
+			} }, (0, react.createElement)(MarqueeText, { text: scheduleText })), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "8px",
@@ -40449,6 +40461,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const { t, rows, ready, onRefresh, onEdit, onToggleEnabled } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
+			ensureTaskEditorStyle();
 			const [filter, setFilter] = (0, react.useState)("all");
 			const [workspace, setWorkspace] = (0, react.useState)("");
 			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
