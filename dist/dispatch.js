@@ -248,12 +248,12 @@ const WORKSPACE_PLACEHOLDER = '{{workspace}}';
  * ——upload 型附件落在**任务目录**（工作区之外），不开口子模型就等于看不见。
  */
 export function buildMessage(snapshot, workspacePath, logicalDate, teamMode = false, attachments = []) {
-    // ⚠️ 回执说明**放最前**（用户 2026-09-30 拍板）：它是判定成败的唯一依据，必须压过任务指令本身——
-    // 真机已发生「任务指令写着『不要做任何其他操作』⇒ 模型把回执也当成多余操作跳过、要追问第二次才交」。
-    // 只放最前、不首尾各放一次（用户明确说没必要）。
+    // 回执说明**只放一处、且放最末**（用户 2026-09-30 拍板，推翻先前的"放最前 + 首尾双写"）：
+    // 真机证据 —— 模型**跳过了第 1 段**的回执要求（回了句问候就收工），而插件那条**只含回执要求**的
+    // 追问它**立刻照做** ⇒ 越靠后、越"只讲这一件事"的段落遵守率越高；同一条指令出现两处，反而被当成
+    // 背景噪音（注释此前写着"只放最前"，代码却首尾各放一次 ⇒ 一处口径、一处行为，本次一并纠正）。
+    // 任务提示词排在最前，靠**末段那句显式优先级裁决**压住「不要做其他事情」这类说法。
     const lines = [
-        receiptInstruction(snapshot.validStatuses),
-        '',
         snapshot.prompt,
         '',
         `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`,
@@ -416,7 +416,13 @@ export async function dispatchTask(input) {
         }
         else {
             try {
-                await goals.create(handle.agent, { objective: `${snapshot.title}：${snapshot.prompt}` });
+                // ⚠️ goal 是**另一个指令入口**（宿主持久目标 + 自动续跑轮）：真机"首轮只回一句问候、不交回执"
+                // 与它高度吻合（那一轮模型可能只看到 objective，而它原先**不含任何回执要求**）。补一句指针做
+                // 零风险对冲 —— 完整说明仍在派发消息最末段。
+                await goals.create(handle.agent, {
+                    objective: `${snapshot.title}：${snapshot.prompt}\n\n`
+                        + '【回执】本轮回复结束前必须按派发消息里的说明提交回执（不提交等于失败；没有产出也要交）。',
+                });
             }
             catch (error) {
                 logger.warn(`[dispatch] goal-create-failed 实例 ${instanceId}：${String(error)}`);

@@ -1121,12 +1121,16 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
   check('无依赖任务的消息不含上游依赖段（旧行为不变）', !msgNoDep.content[0].text.includes('上游依赖'))
   // 用户 2026-09-30：回执说明必须**压过任务指令**（真机上「不要做任何其他操作」被理解成连回执也跳过），
   // 且要**置顶**（不首尾各放）。文案里用通用说法，不举具体那句误写的任务指令。
+  // 2026-09-30 拍板（**推翻**旧结构"置顶 + 不首尾各放"）：回执段**只在最末出现一处** ——
+  // 真机证据是「模型跳过第 1 段、却对只含回执要求的追问立刻照做」⇒ 末段 + 只讲这一件事才被遵守。
   {
     const text = msgNoDep.content[0].text
-    const iReceipt = text.indexOf('【最高优先级·必做】')
-    check('回执说明置于任务内容之前 + 含「高于任务指令本身」与「没有产出也要回执」',
-      iReceipt >= 0 && text.indexOf('任务实例：') > iReceipt
-      && text.includes('高于任务指令本身') && text.includes('不等于「不用回执」'))
+    const marker = '【回执·唯一权威段】'
+    const iReceipt = text.indexOf(marker)
+    check('回执说明只在**最末**出现一处 + 含冲突裁决与「本轮回复结束前」',
+      iReceipt > text.indexOf('任务实例：')            // 在任务内容之后
+      && text.indexOf(marker, iReceipt + 1) === -1     // 全消息只此一处（不再首尾重复）
+      && text.includes('冲突裁决') && text.includes('本轮回复结束前'))
   }
   const msgUndeclared = buildMessage({
     ...snapWithDeps,

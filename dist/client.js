@@ -40655,7 +40655,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				...pillTimeCell,
 				color: C$1.success
 			} }, (0, react.createElement)(RunningBlocks, {}))));
-			const title = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= Date.now() && !row.running;
+			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
+			const title = dueNow ? Date.now() - Date.parse(row.nextSlotAt ?? "") <= dueLoadingMs() ? t("listRunning") : deferredTitle : typeof row.blockedReason === "string" && row.blockedReason !== "" ? deferredTitle : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"

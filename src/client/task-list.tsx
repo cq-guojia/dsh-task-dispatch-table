@@ -592,11 +592,22 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   // ⚠️ 2026-09-30 评审 P1：延期徽标此前**又套了一层 Tooltip** ⇒ 悬停同时冒出**两个气泡**
   // （外层通用说明 + 内层原因）。现在全组件**只有这一层** Tooltip（子元素为真 DOM 节点，
   // 裸函数组件挂不上 ref ⇒ 提示会静默失效，2026-09-30 那次真机教训）。
-  const title = typeof row.blockedReason === 'string' && row.blockedReason !== ''
+  // 已到点（`nextSlotAt` 是**过去时刻**且还没被派发）⇒ 这一格现在是"三块脉动"或"延期"，
+  // **不能再说「下次执行：<一个已经过去的时间>」**（用户 2026-09-30 真机点名）。三种档位：
+  //   ① 还在 loading 上界内 ⇒ 「任务进行中」（与真在跑同一句，用户明确说不用区分）；
+  //   ② 超上界 ⇒ 「延期」（有具体原因就带上）；
+  //   ③ 未到点 ⇒ 原来的「下次执行：…」。
+  const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= Date.now() && !row.running
+  const deferredTitle = typeof row.blockedReason === 'string' && row.blockedReason !== ''
     ? `${row.blockedReason}｜${tt('listDeferredTitle')}`
-    : (row.nextSlotAt === null
-        ? t('listNextNone')
-        : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) }))
+    : tt('listDeferredTitle')
+  const title = dueNow
+    ? (Date.now() - Date.parse(row.nextSlotAt ?? '') <= dueLoadingMs() ? t('listRunning') : deferredTitle)
+    : (typeof row.blockedReason === 'string' && row.blockedReason !== ''
+        ? deferredTitle
+        : (row.nextSlotAt === null
+            ? t('listNextNone')
+            : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })))
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
       h('span', { style: pillIconCell(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),

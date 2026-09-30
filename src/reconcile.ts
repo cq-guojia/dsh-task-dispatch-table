@@ -548,7 +548,10 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
         const signalType = parseEventType(store.latestEvent(instance.id, 'session_event')?.detail)
         if (signalType === 'turn/end' || signalType === 'session/disposed') {
           const signalAtMs = Date.parse(store.latestEvent(instance.id, 'session_event')?.ts ?? instance.updated_at)
-          if (now > signalAtMs + options.dispatchGraceMs
+          // 追问的等待时长（用户 2026-09-30 拍板）：**会话这一轮真的结束（`turn/end`）之后 30 秒**
+          // 还没回执就追问。不再借用 `dispatchGraceMs`（那是"等会话建立"的语义）：真机实测 60 秒宽限
+          // + 一轮 tick 粒度 = 118 秒才追问。模型还在干活（没有 `turn/end`）时**绝不追问**，不打扰它。
+          if (now > signalAtMs + 30_000
             && store.latestReceipt(instance.id, instance.dispatched_at ?? undefined) === undefined) {
             if (store.countEvents(instance.id, 'nudge') < NUDGE_LIMIT) {
               nudge(instance)
