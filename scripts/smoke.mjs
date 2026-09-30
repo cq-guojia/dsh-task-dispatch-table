@@ -376,7 +376,11 @@ try {
   check('title 保留用户写的（不被 id 顶替）', loaded.some(task => task.title === '小时任务'))
   check('当前刻度恰好派发 1 条 dispatched（懒建行）', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
   check('不预建 pending', schedStore.listByStatus(['pending']).length === 0)
-  check('不补建 skipped（无洪水）', schedStore.listByStatus(['skipped']).length === 0)
+  // 2026-09-30 门禁放宽（用户拍板）：紧邻的前一槽若没跑过，**会补一条**「未执行」——
+  // 但仍**只补紧邻那一条**（无洪水）：这里同时钉住"补了"与"只补一条"。
+  const okSkipped = schedStore.listByStatus(['skipped'])
+  check('补记：只补紧邻一条「未执行」（不是不补、也不是刷屏）',
+    okSkipped.length === 1 && schedStore.countEvents(okSkipped[0].id, 'missed-slot') === 1)
   // 让异步拉起（launchAsync）跑完，验证派发确实写了 dispatched_at：
   // 回执校验「产物 mtime > dispatched_at」与 sweep 派发宽限都依赖它；缺失会回退 updated_at ⇒ 每次误判 output-stale
   await new Promise((resolve) => setTimeout(resolve, 0))
@@ -458,11 +462,14 @@ try {
   noWsScheduler.tick()
   // 2026-09-30 口径变更（用户拍板）：工作区找不到属**任务级错误** ⇒ **当场写一条执行记录**
   //（终态 skipped ⇒ 永不重试；卡片立刻红、执行记录里看得见），不再是旧的「只记日志不建行」。
+  // ⚠️ 门禁放宽后这里会有**两条** skipped：一条是「任务级错误」（task-error）、一条是补记紧邻前槽
+  // （missed-slot，此前被"插件启动/任务创建"门禁挡掉）⇒ 断言要**按事件类型挑那条**，不能按数量。
   const noWsRows = noWsStore.listByStatus(['skipped'])
+  const noWsErrRows = noWsRows.filter(r => noWsStore.countEvents(r.id, 'task-error') === 1)
   check('工作区找不到 ⇒ 当场写一条 skipped 执行记录（任务级错误）',
-    noWsRows.length === 1 && noWsStore.listByStatus(['dispatched', 'pending', 'failed']).length === 0)
+    noWsErrRows.length === 1 && noWsStore.listByStatus(['dispatched', 'pending', 'failed']).length === 0)
   check('工作区找不到 ⇒ 该记录挂原因事件（执行记录展开能看到为什么没跑）',
-    noWsStore.countEvents(noWsRows[0].id, 'task-error') === 1)
+    noWsErrRows.length === 1 && noWsStore.countEvents(noWsErrRows[0].id, 'task-error') === 1)
   const logs = noWsStore.dumpTable('task_log', 500)
   check('工作区找不到 ⇒ 记 task_log(precondition)', logs.rows.some(l => l.kind === 'precondition'), JSON.stringify(logs.rows.map(l => l.kind)))
   noWsStore.close()
@@ -481,9 +488,14 @@ try {
   const onceExpiredStore = new TaskStore(join(schedDir, 'state-once-expired.db'))
   const onceExpiredReconciler = createReconciler({ ctx: okCtx, logger, store: onceExpiredStore, options: { leaseMs: 60_000, dispatchGraceMs: 60_000, unknownGraceMs: 300_000, config: onceExpiredCfg, legacyTask: () => undefined } })
   createScheduler({ ctx: okCtx, logger, store: onceExpiredStore, reconciler: onceExpiredReconciler, config: onceExpiredCfg }).tick()
-  // 出窗口 ⇒ 不派发；且它属「停机/创建之前 」的槽（gateMs 门禁）⇒ 也不补「过期未执行」记录。
-  check('一次性任务出窗口（2020 年）⇒ 不再补跑（一条实例行都不建）',
-    onceExpiredStore.listByStatus(['dispatched', 'pending', 'running', 'skipped']).length === 0)
+  // 出窗口 ⇒ **不派发**；门禁放宽后（用户 2026-09-30：「时间输错了、前面漏了多少次也补一条」）⇒
+  // 它会留一条「过期未执行」的记录 —— 这正是要的效果：**不无声无息地消失**。
+  // （此前"整个窗口都在进程/任务创建之前 ⇒ 不记"的分支由下面 `gate = expNow` 那条单测覆盖。）
+  const onceExpiredRows = onceExpiredStore.listByStatus(['skipped'])
+  check('一次性任务出窗口（2020 年）⇒ 不派发，但留一条「过期未执行」记录',
+    onceExpiredStore.listByStatus(['dispatched', 'pending', 'running']).length === 0
+    && onceExpiredRows.length === 1
+    && onceExpiredStore.countEvents(onceExpiredRows[0].id, 'expired-once') === 1)
   // 一次性任务「过期未执行」记录（拍板 A 的配套）：本轮唯一新增逻辑，**集成测试几乎构造不出来**
   //（门禁要求 once 时刻晚于进程启动，而 once 精度只到分钟）⇒ 直接单测（该函数已导出）。
   {

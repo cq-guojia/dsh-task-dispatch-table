@@ -151,6 +151,19 @@ let currentTickMs = 60_000
 const dueLoadingMs = (): number => pinMsFor(currentTickMs, POLL_MS)
 
 /**
+ * **排序调试日志**（用户 2026-09-30：不要截图 —— 把"一切会影响排序的状态变化"打到浏览器 console，
+ * 复制 `[tdt-sort]` 开头的行给我即可）。只打**变化**，不打每次心跳；不用了把 `DEBUG_SORT` 改成 false。
+ */
+const DEBUG_SORT = true
+/** 一行概括"影响排序/显示的那几个字段"，用于 diff 出「谁因为什么变了」。 */
+const sortFactsOf = (rows: readonly TaskOverviewRow[]): string => rows
+  .map(r => `${r.id.slice(0, 8)} run=${r.running ? 1 : 0} en=${r.enabled ? 1 : 0} next=${r.nextSlotAt ?? '-'} last=${r.lastStatus ?? '-'}@${r.lastScheduledAt ?? '-'}`)
+  .join(' | ')
+/** 上一次打印过的快照 / 面板顺序（模块级即可：调试用，面板单实例）。 */
+let lastFacts = ''
+let lastOrder = ''
+
+/**
  * 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。
  *
  * ⚠️ 2026-09-30（决策 54）：原来的「到点钳位」**整套已删**（那套客户端本地派生排序状态一旦轮询卡住
@@ -225,6 +238,15 @@ export function useTaskOverview(): {
         // 客户端**不再有任何本地派生排序状态**（原「到点钳位」整套已删，决策 54）。
         if (typeof body.tickMs === 'number' && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs
         setRows(nextRows)
+        // 排序调试（见文件顶部 `DEBUG_SORT`）：服务端下发的**快照变化**全打出来 ——
+        // 影响排序/显示的字段都在 `sortFactsOf` 里，谁变了、变成什么，一眼可见。
+        if (DEBUG_SORT) {
+          const facts = sortFactsOf(nextRows)
+          if (facts !== lastFacts) {
+            console.log(`[tdt-sort] 快照变化 rev=${String(body.rev ?? '')}\n  before: ${lastFacts === '' ? '(空)' : lastFacts}\n  after:  ${facts}`)
+            lastFacts = facts
+          }
+        }
         setReady(true)
       } catch { /* 通道短暂不可用 / 超时已 abort：保持上一次的数据，下轮再取 */ } finally {
         window.clearTimeout(abortTimer)
@@ -815,7 +837,20 @@ export function TaskListView(props: {
       if (q === '') return true
       return row.title.toLowerCase().includes(q) || (row.code ?? '').toLowerCase().includes(q)
     })
-    return sortRows(filtered)
+    const sorted = sortRows(filtered)
+    // 排序调试（见文件顶部 `DEBUG_SORT`）：**面板顺序一变就打**，并带上决定顺序的键（在飞 + 下次执行）。
+    // 你看到的"掉下去 / 又回来"就是这里连打两次顺序变化 —— 把 `[tdt-sort]` 开头的行复制给我即可定位。
+    if (DEBUG_SORT) {
+      const order = sorted.map(r => r.id.slice(0, 8)).join(' > ')
+      if (order !== lastOrder) {
+        console.log(
+          `[tdt-sort] 面板顺序变化\n  before: ${lastOrder === '' ? '(空)' : lastOrder}\n  after:  ${order}\n`
+          + `  键: ${sorted.map(r => `${r.id.slice(0, 8)}[run=${r.running ? 1 : 0} next=${r.nextSlotAt ?? '-'}]`).join(' ')}`,
+        )
+        lastOrder = order
+      }
+    }
+    return sorted
     // 排序只依赖内容本身；nowMs 变化不参与 ⇒ 每秒 tick 不会引起重排与动画。
     // （原「到点钳位」会在钉住/松开时重排一次；钳位已删 ⇒ 排序键由**服务端**保证稳定，见决策 54。）
   }, [rowsWithOptimistic, filter, workspace, query])

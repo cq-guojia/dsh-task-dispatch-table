@@ -40287,6 +40287,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 超过它还没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥）⇒ **不能一直装成在跑**。
 		*/
 		const dueLoadingMs = () => pinMsFor(currentTickMs, POLL_MS);
+		/** 一行概括"影响排序/显示的那几个字段"，用于 diff 出「谁因为什么变了」。 */
+		const sortFactsOf = (rows) => rows.map((r) => `${r.id.slice(0, 8)} run=${r.running ? 1 : 0} en=${r.enabled ? 1 : 0} next=${r.nextSlotAt ?? "-"} last=${r.lastStatus ?? "-"}@${r.lastScheduledAt ?? "-"}`).join(" | ");
+		/** 上一次打印过的快照 / 面板顺序（模块级即可：调试用，面板单实例）。 */
+		let lastFacts = "";
+		let lastOrder = "";
 		/**
 		* 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。
 		*
@@ -40339,6 +40344,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
 						if (typeof body.tickMs === "number" && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs;
 						setRows(nextRows);
+						{
+							const facts = sortFactsOf(nextRows);
+							if (facts !== lastFacts) {
+								console.log(`[tdt-sort] 快照变化 rev=${String(body.rev ?? "")}\n  before: ${lastFacts === "" ? "(空)" : lastFacts}\n  after:  ${facts}`);
+								lastFacts = facts;
+							}
+						}
 						setReady(true);
 					} catch {} finally {
 						window.clearTimeout(abortTimer);
@@ -40900,7 +40912,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const abnormalCount = (0, react.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed" || row.lastStatus === "skipped").length, [rowsWithOptimistic]);
 			const visible = (0, react.useMemo)(() => {
 				const q = query.trim().toLowerCase();
-				return sortRows(rowsWithOptimistic.filter((row) => {
+				const sorted = sortRows(rowsWithOptimistic.filter((row) => {
 					if (filter === "enabled" && !row.enabled) return false;
 					if (filter === "disabled" && row.enabled) return false;
 					if (filter === "abnormal" && row.lastStatus !== "failed" && row.lastStatus !== "skipped") return false;
@@ -40908,6 +40920,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (q === "") return true;
 					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
 				}));
+				{
+					const order = sorted.map((r) => r.id.slice(0, 8)).join(" > ");
+					if (order !== lastOrder) {
+						console.log(`[tdt-sort] 面板顺序变化\n  before: ${lastOrder === "" ? "(空)" : lastOrder}\n  after:  ${order}\n  键: ${sorted.map((r) => `${r.id.slice(0, 8)}[run=${r.running ? 1 : 0} next=${r.nextSlotAt ?? "-"}]`).join(" ")}`);
+						lastOrder = order;
+					}
+				}
+				return sorted;
 			}, [
 				rowsWithOptimistic,
 				filter,

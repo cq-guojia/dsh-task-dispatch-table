@@ -416,8 +416,13 @@ function dispatchNewSlots(
     // 「过期未执行」记录**共用同一道门禁**。少了后半句就会：宿主已跑了一天，用户 10:03 新建一个每 10
     // 分钟的任务（默认 window PT4H）⇒ 第一个 tick 就把 09:50 补成「未执行」，卡片立刻标红（假记录）。
     // ⚠️ 提到 `dueSlot` 之前：下面「无到期槽」那个分支也要用它（一次性任务的过期记录）。
+    // 门禁 = **任务创建时刻**（用户 2026-09-30 拍板**放宽**，推翻先前"插件启动也算门禁"）：
+    // 重启 / 停机期间被吃掉的那一条**也要补** —— 用户原话：「时间输错了，前面漏了多少次，也补一条，
+    // 让人有个明确交代」。仍保留「任务创建之前不补」（否则刚建的任务会被凭空标红：宿主已跑一天、
+    // 用户 10:03 新建一个每 10 分钟的任务、窗口 PT4H ⇒ 第一个 tick 就把 09:50 记成「未执行」＝假记录）。
+    // `startedAtMs` 不再参与门禁，只用于在原因里标注「这条是重启 / 停机期间漏的」。
     const createdMs = task.createdAt === undefined ? Number.NEGATIVE_INFINITY : Date.parse(task.createdAt)
-    const gateMs = Math.max(startedAtMs, Number.isFinite(createdMs) ? createdMs : Number.NEGATIVE_INFINITY)
+    const gateMs = Number.isFinite(createdMs) ? createdMs : Number.NEGATIVE_INFINITY
     const slot = dueSlot(task, nowMs, store)
     // 本 tick 无到期槽（没到点 / 已处理 / **窗口已过**）⇒ 清掉「被挡住」的原因：出窗后卡片会转成
     // 「下一次执行」的倒计时，留着旧原因就变成「倒计时 + 延期说明」自相矛盾（2026-09-30 复核 P1）。
@@ -439,9 +444,12 @@ function dispatchNewSlots(
         const prevLogical = logicalDateOf(slot.previous, task.schedule.timezone)
         // 原因取「本轮该任务上一次记录的阻塞结论」（签名表）——现成文案复用 BLOCK_KIND，认不出就如实说。
         const signature = verdictLog.get(task.id)
-        const detail = signature === undefined
+        const base = signature === undefined
           ? '上一刻度未执行（该轮未记录到原因）'
           : (BLOCK_KIND[signature]?.message ?? `上一刻度未执行（${signature}）`)
+        // 标清楚"这条是本次插件启动**之前**漏的"（重启 / 停机期间）—— 门禁已放宽，这类也会补，
+        // 标注出来你就一眼能分辨"是它自己没跑成" 还是 "那段插件没在跑"。
+        const detail = slot.previous.getTime() < startedAtMs ? `${base}（发生在本次插件启动之前）` : base
         // **原子**（2026-09-30 复核 P2）：行 + 事件 + 诊断日志**一次提交**，中途被杀不会只剩半截。
         const recorded = store.transaction(() => {
           if (!store.ensureSkipped(missedId, task.id, prevLogical, prevIso)) return false
