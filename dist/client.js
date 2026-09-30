@@ -539,12 +539,12 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "允许延迟",
 			listNone: "（无）",
 			listDisabledTag: "（已停用）",
-			schedEveryMinute: "每分钟",
-			schedEveryNMinutes: "每 {n} 分钟",
-			schedHourly: "每小时 {minute} 分",
-			schedDaily: "每天 {time}",
-			schedWeekly: "每周{weekdays} {time}",
-			schedMonthly: "每月 {day} 日 {time}",
+			schedEveryMinute: "每分钟执行一次",
+			schedEveryNMinutes: "每 {n} 分钟执行一次",
+			schedHourly: "每小时第 {minute} 分执行一次",
+			schedDaily: "每天 {time} 执行一次",
+			schedWeekly: "每周{weekdays} {time} 执行一次",
+			schedMonthly: "每月 {day} 日 {time} 执行一次",
 			schedOnce: "{date} {time} 执行一次",
 			schedCustom: "{cron}"
 		};
@@ -1046,13 +1046,13 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "Late window",
 			listNone: "(none)",
 			listDisabledTag: "(disabled)",
-			schedEveryMinute: "Every minute",
-			schedEveryNMinutes: "Every {n} minutes",
-			schedHourly: "Hourly at minute {minute}",
-			schedDaily: "Daily at {time}",
-			schedWeekly: "Weekly on {weekdays} at {time}",
-			schedMonthly: "Monthly on day {day} at {time}",
-			schedOnce: "Once on {date} at {time}",
+			schedEveryMinute: "Runs every minute",
+			schedEveryNMinutes: "Runs every {n} minutes",
+			schedHourly: "Runs hourly at minute {minute}",
+			schedDaily: "Runs daily at {time}",
+			schedWeekly: "Runs weekly on {weekdays} at {time}",
+			schedMonthly: "Runs monthly on day {day} at {time}",
+			schedOnce: "Runs once on {date} at {time}",
 			schedCustom: "{cron}"
 		};
 		//#endregion
@@ -39956,6 +39956,29 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		const transition$1 = `background ${C$1.duration} ${C$1.ease}, color ${C$1.duration} ${C$1.ease}, border-color ${C$1.duration} ${C$1.ease}`;
 		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
 		const CONTROL_H = 26;
+		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
+		const WS_WIDTH = 180;
+		/**
+		* 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉与刷新按钮都用它，
+		* 保证「搜索 / 工作区 / 刷新」三个是**一样的高、一样的样式**。
+		*/
+		const controlBoxStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "6px",
+			boxSizing: "border-box",
+			height: `${CONTROL_H}px`,
+			padding: "0 10px",
+			borderRadius: "6px",
+			border: `1px solid ${C$1.border}`,
+			background: C$1.layer1,
+			color: C$1.text,
+			fontFamily: "inherit",
+			fontSize: "12px",
+			lineHeight: "18px",
+			cursor: "pointer",
+			transition: transition$1
+		};
 		const ensureTaskListStyle = () => {
 			if (typeof document === "undefined") return;
 			const id = "dsh-tdt-list-style";
@@ -39964,10 +39987,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			tag.id = id;
 			tag.textContent = [
 				"@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }",
-				`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}px; }`,
+				`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}px; border-radius: 6px; }`,
+				`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 				`.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
-				".dsh-tdt-tl-ws { max-width: 160px; }",
-				".dsh-tdt-tl-ws-label { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }"
+				`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
+				".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }"
 			].join("\n");
 			document.head.appendChild(tag);
 		};
@@ -40037,13 +40061,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const pad = (v) => v.length === 1 && /^\d$/.test(v) ? `0${v}` : v;
 			const minuteStep = /^\*\/(\d+)$/.exec(minute);
 			const hourStep = /^\*\/(\d+)$/.exec(hour);
+			const weekdays = dow === "*" ? "" : dow.split(",").map((d) => WEEKDAY_NAMES[Number(d)] ?? d).join("、");
 			let text;
-			if (minute === "*" || minuteStep?.[1] === "1") text = tt("schedEveryMinute");
-			else if (minuteStep !== null) text = tt("schedEveryNMinutes", { n: minuteStep[1] });
-			else if (hour === "*" || hourStep !== null) text = tt("schedHourly", { minute: pad(minute) });
-			else if (dom === "*" && dow === "*") text = tt("schedDaily", { time: `${pad(hour)}:${pad(minute)}` });
+			let isInterval = false;
+			if (minute === "*" || minuteStep?.[1] === "1") {
+				text = tt("schedEveryMinute");
+				isInterval = true;
+			} else if (minuteStep !== null) {
+				text = tt("schedEveryNMinutes", { n: minuteStep[1] });
+				isInterval = true;
+			} else if (hour === "*" || hourStep !== null) {
+				text = tt("schedHourly", { minute: pad(minute) });
+				isInterval = true;
+			} else if (dom === "*" && dow === "*") text = tt("schedDaily", { time: `${pad(hour)}:${pad(minute)}` });
 			else if (dom === "*" && dow !== "*") text = tt("schedWeekly", {
-				weekdays: dow.split(",").map((d) => WEEKDAY_NAMES[Number(d)] ?? d).join("、"),
+				weekdays,
 				time: `${pad(hour)}:${pad(minute)}`
 			});
 			else if (dom !== "*" && dow === "*") text = tt("schedMonthly", {
@@ -40051,8 +40083,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				time: `${pad(hour)}:${pad(minute)}`
 			});
 			else return tt("schedCustom", { cron });
-			if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${text}`;
-			return text;
+			const full = isInterval && weekdays !== "" ? `周${weekdays}，${text}` : text;
+			if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${full}`;
+			return full;
 		}
 		/** 下次执行的相对说法（客户端本地算，不靠请求）。 */
 		function relativeText(iso, nowMs, tt) {
@@ -40173,6 +40206,45 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			});
 		}
+		/**
+		* 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：一个带圆角的长方形，内部左右两块——
+		* 左 = 上次执行（成功绿底 / 失败红底 / 运行中品牌色），右 = 下次执行（常规色）。
+		* 位置：卡片右侧、开关**前面**，与开关、展开箭头一起垂直居中。
+		*/
+		function RunPill(props) {
+			const { row, t, tt, nowMs } = props;
+			const hasLast = row.lastStatus !== null && row.lastScheduledAt !== null;
+			const lastBg = row.running ? C$1.brand : !hasLast ? C$1.layer2 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
+			const lastFg = row.running || hasLast ? "#fff" : C$1.textDim;
+			const lastText = row.running ? t("listRunning") : hasLast ? `${t("listLastPrefix")} ${lastRunText(row, tt)}` : t("listNever");
+			const nextText = row.nextSlotAt === null ? t("listNextNone") : `${t("listNextPrefix")} ${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`;
+			const halfStyle = (bg, fg) => ({
+				display: "inline-flex",
+				alignItems: "center",
+				padding: "0 8px",
+				whiteSpace: "nowrap",
+				fontSize: "11px",
+				lineHeight: "16px",
+				background: bg,
+				color: fg,
+				transition: `background ${C$1.duration} ${C$1.ease}`
+			});
+			return (0, react.createElement)("div", { style: {
+				display: "inline-flex",
+				alignItems: "stretch",
+				flex: "none",
+				height: "24px",
+				borderRadius: "6px",
+				overflow: "hidden",
+				border: `1px solid ${C$1.border}`
+			} }, (0, react.createElement)("span", {
+				style: halfStyle(lastBg, lastFg),
+				title: lastText
+			}, lastText), (0, react.createElement)("span", {
+				style: halfStyle(C$1.layer2, C$1.textDim),
+				title: nextText
+			}, nextText));
+		}
 		const cardStyle$1 = {
 			display: "block",
 			width: "100%",
@@ -40255,12 +40327,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				...faintStyle,
 				marginLeft: "6px",
 				display: "inline"
-			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: metaStyle }, row.running ? `${t("listRunning")} · ${scheduleText}` : `${scheduleText} · ${t("listLastPrefix")} ${lastRunText(row, tt)} · ${t("listNextPrefix")} ${row.nextSlotAt === null ? t("listNextNone") : `${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`}`), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
+			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: metaStyle }, scheduleText), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "8px",
 				flex: "none"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			} }, (0, react.createElement)(RunPill, {
+				row,
+				t,
+				tt,
+				nowMs
+			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: row.enabled,
 				onChange: (next) => {
 					onToggleEnabled(row.id, next);
@@ -40453,25 +40530,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				anchor: (0, react.createElement)("button", {
 					type: "button",
 					className: "dsh-tdt-tl-ws",
-					style: {
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "4px",
-						height: `${CONTROL_H}px`,
-						padding: "0 10px",
-						border: `1px solid ${C$1.border}`,
-						borderRadius: "6px",
-						background: "transparent",
-						color: C$1.text,
-						fontFamily: "inherit",
-						fontSize: "12px",
-						cursor: "pointer",
-						transition: transition$1
-					},
+					style: controlBoxStyle,
 					onClick: () => {
 						setMenuOpen((v) => !v);
 					}
-				}, (0, react.createElement)("span", { className: "dsh-tdt-tl-ws-label" }, workspace === "" ? t("listFilterWorkspaceAll") : workspace)),
+				}, (0, react.createElement)("span", { className: "dsh-tdt-tl-ws-label" }, workspace === "" ? t("listFilterWorkspaceAll") : workspace), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })),
 				items: menuItems,
 				selectedId: workspace,
 				onSelect: (id) => {
@@ -40483,7 +40546,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			}), (0, react.createElement)("button", {
 				type: "button",
-				style: iconBtnStyle,
+				style: controlBoxStyle,
 				title: t("debugRefresh"),
 				onClick: onRefresh
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })))), visible.length === 0 ? (0, react.createElement)("p", { style: {

@@ -68,6 +68,19 @@ const C = {
 const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`
 /** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
 const CONTROL_H = 26
+/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
+const WS_WIDTH = 180
+/**
+ * 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉与刷新按钮都用它，
+ * 保证「搜索 / 工作区 / 刷新」三个是**一样的高、一样的样式**。
+ */
+const controlBoxStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
+  height: `${CONTROL_H}px`, padding: '0 10px', borderRadius: '6px',
+  border: `1px solid ${C.border}`, background: C.layer1, color: C.text,
+  fontFamily: 'inherit', fontSize: '12px', lineHeight: '18px', cursor: 'pointer',
+  transition,
+}
 
 // ── 顶部一排的样式注入（官方 Input 默认 32px 高，需压到与按钮同高；工作区按钮定长 + 省略号）──
 const ensureTaskListStyle = (): void => {
@@ -79,11 +92,14 @@ const ensureTaskListStyle = (): void => {
   tag.textContent = [
     // 状态条运行中：整条明暗脉动（竖条不适合旋转，脉动更显眼）。
     '@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }',
-    `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}px; }`,
+    // 官方 Input 默认 32px 高、边框色 l4 ⇒ 压到与按钮同高、并统一成同一套观感。
+    `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}px; border-radius: 6px; }`,
+    `.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
     `.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
-    // 工作区下拉：定长 + 超长省略号；展开后的列表项不受影响（可显示完整长度）。
-    '.dsh-tdt-tl-ws { max-width: 160px; }',
-    '.dsh-tdt-tl-ws-label { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }',
+    // 工作区下拉：**定长**（切选项时宽度不动，不再左右晃），内容超长尾部省略号。
+    // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
+    `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
+    '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
   ].join('\n')
   document.head.appendChild(tag)
 }
@@ -151,26 +167,33 @@ export function cronToHuman(
   const pad = (v: string): string => (v.length === 1 && /^\d$/.test(v) ? `0${v}` : v)
   const minuteStep = /^\*\/(\d+)$/.exec(minute)
   const hourStep = /^\*\/(\d+)$/.exec(hour)
+  const weekdays = dow === '*' ? '' : dow.split(',').map(d => WEEKDAY_NAMES[Number(d)] ?? d).join('、')
   let text: string
+  let isInterval = false
   if (minute === '*' || minuteStep?.[1] === '1') {
     text = tt('schedEveryMinute')
+    isInterval = true
   } else if (minuteStep !== null) {
     text = tt('schedEveryNMinutes', { n: minuteStep[1] })
+    isInterval = true
   } else if (hour === '*' || hourStep !== null) {
     text = tt('schedHourly', { minute: pad(minute) })
+    isInterval = true
   } else if (dom === '*' && dow === '*') {
     text = tt('schedDaily', { time: `${pad(hour)}:${pad(minute)}` })
   } else if (dom === '*' && dow !== '*') {
-    const names = dow.split(',').map(d => WEEKDAY_NAMES[Number(d)] ?? d).join('、')
-    text = tt('schedWeekly', { weekdays: names, time: `${pad(hour)}:${pad(minute)}` })
+    text = tt('schedWeekly', { weekdays, time: `${pad(hour)}:${pad(minute)}` })
   } else if (dom !== '*' && dow === '*') {
     text = tt('schedMonthly', { day: dom, time: `${pad(hour)}:${pad(minute)}` })
   } else {
     return tt('schedCustom', { cron })
   }
+  // 间隔档（每 N 分钟 / 每小时）若还限定了星期 ⇒ 星期在前：「周一、周二，每 10 分钟执行一次」
+  // （照编辑器「预计执行」的句式，光写「每 10 分钟」看不懂）。
+  const full = isInterval && weekdays !== '' ? `周${weekdays}，${text}` : text
   // 「每 N 周」是 cron 表达不出来的维度（靠锚点 + 取模过滤）⇒ 补在句首。
-  if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${text}`
-  return text
+  if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${full}`
+  return full
 }
 
 /** 下次执行的相对说法（客户端本地算，不靠请求）。 */
@@ -301,6 +324,39 @@ function StatusRail(props: { row: TaskOverviewRow }) {
   })
 }
 
+/**
+ * 上次 / 下次 **组合标签**（2026-09-30 用户拍板）：一个带圆角的长方形，内部左右两块——
+ * 左 = 上次执行（成功绿底 / 失败红底 / 运行中品牌色），右 = 下次执行（常规色）。
+ * 位置：卡片右侧、开关**前面**，与开关、展开箭头一起垂直居中。
+ */
+function RunPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate; nowMs: number }) {
+  const { row, t, tt, nowMs } = props
+  const hasLast = row.lastStatus !== null && row.lastScheduledAt !== null
+  const lastBg = row.running ? C.brand : !hasLast ? C.layer2 : row.lastStatus === 'succeeded' ? C.success : C.danger
+  const lastFg = row.running || hasLast ? '#fff' : C.textDim
+  const lastText = row.running
+    ? t('listRunning')
+    : hasLast ? `${t('listLastPrefix')} ${lastRunText(row, tt)}` : t('listNever')
+  const nextText = row.nextSlotAt === null
+    ? t('listNextNone')
+    : `${t('listNextPrefix')} ${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`
+  const halfStyle = (bg: string, fg: string): Record<string, string | number> => ({
+    display: 'inline-flex', alignItems: 'center', padding: '0 8px', whiteSpace: 'nowrap',
+    fontSize: '11px', lineHeight: '16px', background: bg, color: fg,
+    transition: `background ${C.duration} ${C.ease}`,
+  })
+  return h('div', {
+    style: {
+      display: 'inline-flex', alignItems: 'stretch', flex: 'none',
+      height: '24px', borderRadius: '6px', overflow: 'hidden',
+      border: `1px solid ${C.border}`,
+    },
+  },
+    h('span', { style: halfStyle(lastBg, lastFg), title: lastText }, lastText),
+    h('span', { style: halfStyle(C.layer2, C.textDim), title: nextText }, nextText),
+  )
+}
+
 // ── 卡片 ───────────────────────────────────────────────────────────────
 const cardStyle: Record<string, string | number> = {
   display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'left',
@@ -346,15 +402,13 @@ function TaskCard(props: {
           row.code !== null ? h('span', { style: { ...faintStyle, marginLeft: '6px', display: 'inline' } }, `[${row.code}]`) : null,
           row.enabled ? null : h('span', { style: { ...faintStyle, marginLeft: '6px', display: 'inline' } }, t('listDisabledTag')),
         ),
-        h('div', { style: metaStyle },
-          row.running
-            ? `${t('listRunning')} · ${scheduleText}`
-            : `${scheduleText} · ${t('listLastPrefix')} ${lastRunText(row, tt)} · ${t('listNextPrefix')} ${row.nextSlotAt === null ? t('listNextNone') : `${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`}`,
-        ),
+        // 执行方式写成完整一句话（「每周一、周二，每 10 分钟执行一次」），不再是孤立的「每 10 分钟」。
+        h('div', { style: metaStyle }, scheduleText),
         row.createdAt === null ? null : h('div', { style: faintStyle }, `${t('listCreatedPrefix')} ${dateOf(row.createdAt)}`),
       ),
-      // 右侧只留两个操作：启用拨片 + 展开箭头（「编辑」移到展开区右下角）。
+      // 右：上次 / 下次组合标签 → 启用拨片 → 展开箭头（「编辑」移到展开区右下角）。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
+        h(RunPill, { row, t, tt, nowMs }),
         h(Switch, {
           checked: row.enabled,
           onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
@@ -508,23 +562,22 @@ export function TaskListView(props: {
           }),
           h(Menu, {
             open: menuOpen,
+            // 与搜索框**同款同高**（controlBoxStyle），右侧带 chevron ⇒ 一眼看得出是下拉框。
             anchor: h('button', {
-              type: 'button', className: 'dsh-tdt-tl-ws',
-              style: {
-                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                height: `${CONTROL_H}px`, padding: '0 10px', border: `1px solid ${C.border}`,
-                borderRadius: '6px', background: 'transparent', color: C.text,
-                fontFamily: 'inherit', fontSize: '12px', cursor: 'pointer', transition,
-              },
+              type: 'button', className: 'dsh-tdt-tl-ws', style: controlBoxStyle,
               onClick: () => { setMenuOpen(v => !v) },
-            }, h('span', { className: 'dsh-tdt-tl-ws-label' }, workspace === '' ? t('listFilterWorkspaceAll') : workspace)),
+            },
+              h('span', { className: 'dsh-tdt-tl-ws-label' }, workspace === '' ? t('listFilterWorkspaceAll') : workspace),
+              h(IconChevronDownOutlineRegular, { size: 14 }),
+            ),
             items: menuItems,
             selectedId: workspace,
             onSelect: (id: string) => { setWorkspace(id); setMenuOpen(false) },
             onClose: () => { setMenuOpen(false) },
           }),
+          // 刷新：同样套 controlBoxStyle ⇒ 与搜索框、工作区下拉完全一样的样式和高度。
           h('button', {
-            type: 'button', style: iconBtnStyle, title: t('debugRefresh'),
+            type: 'button', style: controlBoxStyle, title: t('debugRefresh'),
             onClick: onRefresh,
           }, h(IconRefreshOutlineRegular, { size: 14 })),
         ),
