@@ -157,6 +157,26 @@ try {
       && attachmentAbsPath(rpPaths, rpTaskId, rpRef) === join(rpPaths.tasksRoot, rpTaskId, 'attachments', 'nv.html')
       && existsSync(attachmentAbsPath(rpPaths, rpTaskId, rpRef)))
   }
+  // 补记「未执行」（决策 54）：终态 `skipped` + `attempt=0` + **幂等**（同一刻度只写一条）。
+  // 用户明确要求「要确定：重试几次也不要去重试」⇒ 这里钉住它**进不了 Loop B 的巡检范围**
+  // （sweep 只遍历 pending/dispatched/running/unknown，见 reconcile.ts 的四张列表）。
+  {
+    const skRoot = join(root, 'skipped-record')
+    const skStore = new TaskStore(join(skRoot, 'state.db'))
+    const slotIso = '2026-09-30T18:44:00.000Z'
+    const first = skStore.ensureSkipped(randomUUID(), 'task-y', '2026-09-30', slotIso)
+    const latest = skStore.getLatestInstance('task-y')
+    check('补记「未执行」：写一条 skipped 终态行（attempt=0、无 session/lease/快照）',
+      first === true && latest?.status === 'skipped' && latest?.attempt === 0
+      && latest?.session_id === null && latest?.snapshot === null)
+    check('补记「未执行」：同一刻度重复写不新增（唯一键闸门 ⇒ tick 幂等）',
+      skStore.ensureSkipped(randomUUID(), 'task-y', '2026-09-30', slotIso) === false
+      && skStore.listByStatus(['skipped']).length === 1)
+    check('补记「未执行」：不在 Loop B 的巡检范围内 ⇒ 永不重试',
+      skStore.listByStatus(['pending', 'dispatched', 'running', 'unknown']).length === 0)
+    skStore.close()
+    rmSync(skRoot, { recursive: true, force: true })
+  }
   check('钳位时长跟着巡检间隔走（默认 60s ⇒ 80s；带 30s ~ 10min 上下限）',
     pinMsFor(60_000, 10_000) === 80_000 && pinMsFor(5_000, 10_000) === 30_000 && pinMsFor(3_600_000, 10_000) === 600_000)
   check('排序键：无刻度 = +∞；钳位 = 最前哨兵 -1',

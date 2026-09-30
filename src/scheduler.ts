@@ -168,8 +168,17 @@ function onceDate(task: TaskDefinition): Date | undefined {
 }
 
 /** 取「当前该跑的那一下」：最晚满足 scheduled_at <= now <= scheduled_at+window 且无实例行的刻度。 */
-function dueSlot(task: TaskDefinition, nowMs: number, store: TaskStore): { logicalDate: string; scheduledAtIso: string } | undefined {
+function dueSlot(task: TaskDefinition, nowMs: number, store: TaskStore): {
+  logicalDate: string
+  scheduledAtIso: string
+  /**
+   * 紧邻的**前一槽**（决策 54 补记「未执行」用）= 窗口内第二晚的刻度。
+   * 判据意义：窗口里已经出现**更晚**的刻度 ⇒ 调度器再也不会选前一个 ⇒ 它彻底没戏了。
+   */
+  previous?: Date
+} | undefined {
   let chosen: Date | undefined
+  let previous: Date | undefined
   if (isOnce(task)) {
     const od = onceDate(task)
     if (od !== undefined && od.getTime() <= nowMs) chosen = od
@@ -178,8 +187,10 @@ function dueSlot(task: TaskDefinition, nowMs: number, store: TaskStore): { logic
     const from = new Date(nowMs - windowMs)
     const to = new Date(nowMs + 1000) // 容差 1s
     try {
+      // 升序遍历：每次选中更晚的刻度时，被顶掉的那一个就是「前一槽」。
       for (const s of scheduledSlotsFor(task, from, to)) {
-        if (s.getTime() <= nowMs && (chosen === undefined || s.getTime() > chosen.getTime())) chosen = s
+        if (s.getTime() > nowMs) continue
+        if (chosen === undefined || s.getTime() > chosen.getTime()) { previous = chosen; chosen = s }
       }
     } catch {
       return undefined
@@ -188,7 +199,17 @@ function dueSlot(task: TaskDefinition, nowMs: number, store: TaskStore): { logic
   if (chosen === undefined) return undefined
   const iso = chosen.toISOString()
   if (store.findBySlot(task.id, iso) !== undefined) return undefined // 已有实例（幂等/此前已处理）
-  return { logicalDate: logicalDateOf(chosen, task.schedule.timezone), scheduledAtIso: iso }
+  // 窗口里只有一条刻度（间隔 > 窗口，如日更 + PT4H）⇒ 前一槽在窗口之外，单独**有界回溯**一次。
+  // 只在「窗口内 ≤1 条」时才走这条路 ⇒ 稀疏任务才付这个成本，分钟级任务不会。
+  if (previous === undefined && !isOnce(task)) {
+    const lookbackMs = Math.max(durationMs(task.schedule.window) * 2, 8 * 86_400_000)
+    try {
+      const earlier = scheduledSlotsFor(task, new Date(chosen.getTime() - lookbackMs), new Date(chosen.getTime() + 1000))
+      const last = earlier[earlier.length - 1]
+      if (last !== undefined && last.getTime() < chosen.getTime()) previous = last
+    } catch { /* 回溯失败 ⇒ 当作没有前一槽，不补记（绝不猜） */ }
+  }
+  return { logicalDate: logicalDateOf(chosen, task.schedule.timezone), scheduledAtIso: iso, previous }
 }
 
 /**
@@ -284,6 +305,8 @@ function dispatchNewSlots(
   assets: AssetPaths | null,
   /** 主界面运行态内存索引（2026-09-30）：落库即顺手标记「运行中」，不额外查库。 */
   runtime: RuntimeIndex | null,
+  /** 本进程启动时刻（决策 54）：补记「未执行」只补**启动之后**的槽 ⇒ 停机期间漏的不补。 */
+  startedAtMs: number,
 ): void {
   const nowMs = Date.now()
   for (const task of tasks) {
@@ -292,6 +315,35 @@ function dispatchNewSlots(
     if (store.listByStatus(IN_FLIGHT_STATUSES).some((o) => o.task_id === task.id)) continue
     const slot = dueSlot(task, nowMs, store)
     if (slot === undefined) continue
+    // 补记「未执行」（决策 54，用户拍板）：**等到下一个该执行的时刻**才判——紧邻的前一槽若始终没有
+    // 实例行，说明它彻底没戏了（窗口里已经出现更晚的刻度 ⇒ 调度器再也不会选它），补记**一条** `skipped`。
+    // 规则：只补紧邻那一条（中间漏掉的 N 条不补）；停机期间不补（`startedAtMs` 门禁）；once 不适用。
+    // ⚠️ 主键必须用**被漏那一槽自己的时刻**：用当前槽会撞当前槽真实执行行的唯一键，
+    // `INSERT OR IGNORE` 静默丢弃 ⇒ 任务永久不再执行。
+    if (slot.previous !== undefined && !isOnce(task) && slot.previous.getTime() >= startedAtMs) {
+      const prevIso = slot.previous.toISOString()
+      if (store.findBySlot(task.id, prevIso) === undefined) {
+        const missedId = randomUUID()
+        const prevLogical = logicalDateOf(slot.previous, task.schedule.timezone)
+        if (store.ensureSkipped(missedId, task.id, prevLogical, prevIso)) {
+          // 原因取「本轮该任务上一次记录的阻塞结论」（签名表）——现成文案复用 BLOCK_KIND，认不出就如实说。
+          const signature = verdictLog.get(task.id)
+          const detail = signature === undefined
+            ? '上一刻度未执行（该轮未记录到原因）'
+            : (BLOCK_KIND[signature]?.message ?? `上一刻度未执行（${signature}）`)
+          store.appendEvent(missedId, 'missed-slot', { scheduledAt: prevIso, reason: detail })
+          store.appendLog({
+            taskId: task.id,
+            scheduledAt: prevIso,
+            level: 'error',
+            kind: 'missed-slot',
+            message: `上一刻度未执行，已补记一条记录：${detail}`,
+          })
+          // 内存运行态顺手更新（否则卡片要等重启 rebuild 才显示这条）。
+          runtime?.markTerminal(task.id, 'skipped', prevIso, new Date().toISOString())
+        }
+      }
+    }
     // 同步预条件：依赖 + 工作区（不过 ⇒ 不建行、记日志）
     const depVerdict = judgeDependencies(store, task, slot.logicalDate, slot.scheduledAtIso, upstreams)
     if (!depVerdict.ready) {
@@ -352,6 +404,8 @@ export function createScheduler(opts: {
   const { ctx, logger, store, reconciler, config, assets, runtime } = opts
   const verdictLog = new Map<string, string>()
   let taskMap = new Map<string, TaskDefinition>()
+  /** 进程启动时刻（决策 54）：补记「未执行」的门禁 —— 停机期间漏掉的槽**不补**。 */
+  const startedAtMs = Date.now()
 
   return {
     tick() {
@@ -366,7 +420,7 @@ export function createScheduler(opts: {
       // 故这里把全量写进 taskMap，让前端前置列表能选到停用任务。
       taskMap = new Map(allTasks.map((t) => [t.id, t]))
       // Loop A：先处理新刻度（懒建行 + 不回看 + 不补跑 + 落库即止，决策 41）
-      dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets(), runtime ?? null)
+      dispatchNewSlots(ctx, logger, store, tasks, verdictLog, upstreams, assets === undefined ? null : assets(), runtime ?? null, startedAtMs)
       // Loop B：再收口全部执行记录（发动本 tick 新落库的行 + 追问 / 重试 / 租约——
       // 只读执行记录 + 快照，决策 41）。放在 Loop A 之后 = 新行当 tick 即被发动，时延不退化。
       reconciler.sweep()
