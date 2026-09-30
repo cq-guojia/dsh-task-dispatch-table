@@ -459,6 +459,43 @@
   `latest_success` 行为与文案「跳过不算失败」不符；`scheduler.ts:345` 串行互斥无任何痕迹；
   `reconcile.ts:381-391/524-528` 删行只写日志。
 
+## 十六、三条收尾（2026-09-30 深夜）：方案先评审 → 落地 → 二轮评审
+
+> 流程（用户要求）：**先出修改方案送评审**（拿硬约束与逐字代码）→ **直接改** → **改完再评审**。两轮都是「只读不写」的独立评审，且**源码 + `dist/` 产物双核**。
+
+### 16.1 落地内容
+
+| # | 改了什么 | 为什么 |
+|---|---|---|
+| ① | **闸门抽单点**：`runtime-index.ts` 新增 `latestDueSlotIso`（纯计算、**不查库**）+ `freezeOrAdvance`，`rebuild` / `markDefinitionsChanged` / `overview` **三处复用** | 此前只有 `overview` 的懒路径判「这一槽处理了吗」，`rebuild` / `markDefinitionsChanged` **无条件**前移到未来刻度 ⇒ 重启 / 改任务 / 启停后卡片上「到点未派发 / 延期 / 到点排最前」**整段消失**，且与 Loop A 实际派发不一致。上界不变：冻结 ⟺ `¬handled ∧ now ≤ 槽 + window` ⇒ **最长一个 window**，不会永久停滞 |
+| ② | **写库事务**：`store.transaction`（`BEGIN IMMEDIATE` / `COMMIT` / 失败 `ROLLBACK` 原样抛 / 嵌套并入外层；`txDepth` 守卫）+ `busy_timeout = 5000`；`recordTaskError` 与「补记 missed-slot」两条「写行 + 事件（+ 日志）」改成**一次提交**，`markTerminal` 移到事务外 | 三条独立写库，中途被杀会留下**「执行记录里有这条未执行、展开却看不到为什么」**的半截记录 |
+| ③ | **超时收敛**：新增叶子模块 `src/client/http.ts`（`fetchWithTimeout`，默认 8s，**刻意不接受外部 signal**），`index.ts` 删本地副本改 import；`session-view.ts` 的 `/api/present.host` 是**全仓唯一没有超时**的请求，已补 | 「一份实现三处各写」+ 一处漏网；两条**需要持有 controller 句柄**的路径（轮询的换轮/卸载 abort、上传的按文件 abort）**刻意保留自建**（合并需要 `AbortSignal.any`，产物 target 是 chrome99）—— 已写进注释，避免后人误删 |
+
+### 16.2 二轮评审结论
+
+- 三条**全部 ✅ 落盘**（源码 + 产物双侧）：闸门三处调用点无漏、停用/`null`/坏刻度边界全保留、冻结路径不 bump rev；事务无嵌套冲突、`false` 仍 COMMIT、`appendEvent`/`appendLog` 同连接同事务；`http.ts` **确实内联**进单文件产物、**无循环依赖**。
+- 评审**另指出两处**，已修：
+  1. `task-list.tsx` 注释自称「唯一允许自建 controller 的路径」**与事实矛盾**（`task-editor.tsx` 的上传也是）⇒ 已改成「两处、都是刻意的」；
+  2. **断言盲区**：三条改动里**服务端事务与闸门零覆盖**（只有客户端字符串断言）⇒ 已补 6 条（事务：`false` 仍提交 / 异常回滚 / 回滚后仍可用；超时默认 8s + `finally` 清定时器；调度器两处 `store.transaction(` 与闸门两函数的**产物证据**）。
+
+### 16.3 已知残留（留档，按性质）
+
+**行为放大（需用户定语义）**
+- **保存后可能"当场显延期"**：`scheduleKey` 一变就用 `latestDueSlotIso` 找回候选 ⇒ 若窗口里存在「无实例行的已到点槽」，保存/启停后**立刻**显示「到点未派发 / 延期」（旧逻辑从不显示）。**一个 tick 内自愈**（下一 tick 派发即 handled）。
+- **`once` 的窗口分裂**（既有，非本轮引入）：面板对 `once` **看窗口**（出窗 ⇒ `nextSlotAt = null`「无下次」），而 `scheduler.dueSlot` 对 `once` **不看窗口** ⇒ 停机跨过窗口且该槽无行时，「面板说没有下次了、调度器本轮照派」。二选一收口（面板不看窗口 / `dueSlot` 加窗口闸门）**需要用户定**。
+- **`schedule.window` 无上限**（`tasks.ts` 正则允许任意 `PT…`）：配上「前置长期被堵（不落行）」⇒ 卡片可连续一个 window（编辑器最大档 `PT24H`）显示「延期」并钉在组内最前。手写超大 window 才近似永久。
+
+**其他（未做）**
+- 事务抛异常会吞掉**整轮 tick**（`dispatchNewSlots` 无 try，冒到 `safeTick` 只记 warn）⇒ Loop A 剩余任务与 Loop B sweep 都不跑；
+- `purgeHistory` / `startupScan` 仍是裸写；
+- `docs/design/decisions.md` 里「面板 9 处 fetch」已陈旧（实际 12 处）。
+
+### 16.4 验证
+
+- `npm run typecheck` + `npm run build`：全绿。
+- `npm run smoke`：**334 → 342**（+8：超时收敛 3 条 + 事务 2 条 + 产物证据 3 条）。
+- 新增文件：`src/client/http.ts`（叶子模块，静态 import ⇒ 内联进单文件 bundle）。
+
 ### 15.4 验证
 
 - `npm run typecheck` + `npm run build`：全绿。
