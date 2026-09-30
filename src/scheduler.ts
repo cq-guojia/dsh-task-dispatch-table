@@ -340,11 +340,15 @@ function dispatchNewSlots(
 ): void {
   const nowMs = Date.now()
   for (const task of tasks) {
-    if (task.enabled === false) continue
+    // 停用 ⇒ **顺手清掉「被挡住」的原因**（2026-09-30 复核 P1）：否则一张**已关掉**的卡片悬停时
+    // 还在喊「工作区未找到…｜已过计划时刻但还没开始执行」—— 它根本没在等。
+    if (task.enabled === false) { runtime?.markBlocked(task.id, null); continue }
     // 串行语义（§8）：同任务已有在飞实例则跳过本次新槽
     if (store.listByStatus(IN_FLIGHT_STATUSES).some((o) => o.task_id === task.id)) continue
     const slot = dueSlot(task, nowMs, store)
-    if (slot === undefined) continue
+    // 本 tick 无到期槽（没到点 / 已处理 / **窗口已过**）⇒ 同样清原因：出窗后卡片会转成「下一次执行」
+    // 的倒计时，留着旧原因就变成「倒计时 + 延期说明」自相矛盾（2026-09-30 复核 P1）。
+    if (slot === undefined) { runtime?.markBlocked(task.id, null); continue }
     // 补记「未执行」（决策 54，用户拍板）：**等到下一个该执行的时刻**才判——紧邻的前一槽若始终没有
     // 实例行，说明它彻底没戏了（窗口里已经出现更晚的刻度 ⇒ 调度器再也不会选它），补记**一条** `skipped`。
     // 规则：只补紧邻那一条（中间漏掉的 N 条不补）；停机期间不补（`startedAtMs` 门禁）；once 不适用。

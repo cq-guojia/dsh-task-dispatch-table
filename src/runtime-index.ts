@@ -217,6 +217,9 @@ export function createRuntimeIndex(): RuntimeIndex {
       entry.lastStatus = status
       entry.lastScheduledAt = scheduledAt
       entry.lastFinishedAt = finishedAt
+      // 终态 ⇒ **这一槽已收尾，不再「被挡住」**（2026-09-30 复核 P1 兜底）。调用顺序安全：
+      // `recordTaskError` 内部先写行再 `markTerminal`，而 `markBlocked` 一律排在其后 ⇒ 原因不会被误清。
+      entry.blockedReason = null
       rev++
     },
 

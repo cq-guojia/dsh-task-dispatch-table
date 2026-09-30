@@ -206,7 +206,9 @@ export function useTaskOverview(): {
         const body = await res.json() as {
           ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown; now?: unknown; tickMs?: unknown
         }
-        if (!alive || body.ok !== true) return
+        // ⚠️ 令牌判别（2026-09-30 复核 P1）：看门狗放行后**旧轮仍在飞**，abort 只能缩小窗口——
+        // 旧轮若在 abort 生效前拿到响应，会把**旧数据**盖到新一轮上（短暂回退）。⇒ 认领数据也要验令牌。
+        if (!alive || genRef.current !== myGen || body.ok !== true) return
         // 内容没变：不重渲染、不重排、不播动画（`rev` 相同 ⇒ 行数据与上一份逐字节相同）。
         if (body.unchanged === true) return
         revRef.current = String(body.rev ?? '')

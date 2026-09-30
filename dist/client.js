@@ -40289,7 +40289,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						});
 						if (!res.ok) return;
 						const body = await res.json();
-						if (!alive || body.ok !== true) return;
+						if (!alive || genRef.current !== myGen || body.ok !== true) return;
 						if (body.unchanged === true) return;
 						revRef.current = String(body.rev ?? "");
 						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
