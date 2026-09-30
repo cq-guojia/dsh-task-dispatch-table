@@ -41238,6 +41238,23 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			maxWidth: "480px"
 		};
 		/** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
+		/**
+		* 带超时的 fetch（决策 54）：本文件的请求**一律走它**——原先几处 `fetch` 都没有超时，
+		* 一次挂起就让对应通道**永久停摆**（列表那条已单独修：真机「卡片 5 分钟不动」的根因）。
+		* 表现：面板 2 秒通道停摆却仍显示 ready（假象）；「保存任务」永远停在「保存中」、按钮永久禁用。
+		*/
+		async function fetchWithTimeout(input, init = {}, timeoutMs = 8e3) {
+			const controller = new AbortController();
+			const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+			try {
+				return await fetch(input, {
+					...init,
+					signal: controller.signal
+				});
+			} finally {
+				window.clearTimeout(timer);
+			}
+		}
 		const linkStyle = {
 			color: C.brand,
 			cursor: "pointer",
@@ -41525,7 +41542,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			/** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
 			const loadHistory = async (id) => {
 				try {
-					const body = await (await fetch(`${DISPATCH_API_PREFIX}/tasks/history?id=${encodeURIComponent(id)}`, { cache: "no-store" })).json();
+					const body = await (await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/history?id=${encodeURIComponent(id)}`, { cache: "no-store" })).json();
 					if (body.ok !== true) return;
 					const history = {
 						versions: Array.isArray(body.versions) ? body.versions : [],
@@ -41565,7 +41582,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			*/
 			const toggleTaskEnabled = async (id, enabled) => {
 				try {
-					const res = await fetch(`${DISPATCH_API_PREFIX}/tasks/enabled`, {
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/enabled`, {
 						method: "POST",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({
@@ -41589,7 +41606,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				try {
 					const definition = JSON.parse(draftToDefinitionJson(draft));
 					if (editor.mode === "edit") definition.id = editor.id;
-					const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
 						method: "POST",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({ task: definition })
@@ -41615,7 +41632,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const deleteEditorTask = async () => {
 				if (editor === null || editor.mode !== "edit") return;
 				try {
-					const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
 						method: "DELETE",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({ id: editor.id })
@@ -41635,7 +41652,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const restoreVersion = async (file) => {
 				if (editor === null) return;
 				try {
-					const body = await (await fetch(`${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`, { cache: "no-store" })).json();
+					const body = await (await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`, { cache: "no-store" })).json();
 					if (body.ok !== true || typeof body.content !== "string") {
 						setEditorError("该版本内容读不出来，可能已被删除");
 						return;
@@ -41655,7 +41672,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const deleteVersion = async (file) => {
 				if (editor === null) return;
 				try {
-					await fetch(`${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`, { method: "DELETE" });
+					await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`, { method: "DELETE" });
 					await loadHistory(editor.id);
 				} catch {}
 			};
@@ -41776,7 +41793,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				let target = viewSession(sessionId);
 				let didUnarchive = false;
 				if (target === null) try {
-					const res = await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/session/unarchive`, {
 						method: "POST",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({ sessionId })
@@ -42245,7 +42262,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				if (busy) return;
 				busy = true;
 				try {
-					const res = await fetch(`${DISPATCH_API_PREFIX}/snapshot`, { cache: "no-store" });
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: "no-store" });
 					if (!res.ok) {
 						channelDiag = {
 							...channelDiag,
@@ -42311,7 +42328,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				set: async (field, value) => {
 					if (field !== "tasksInline") return;
-					const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
 						method: "POST",
 						headers: { "content-type": "application/json" },
 						body: JSON.stringify({ tasksInline: String(value) })

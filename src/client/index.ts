@@ -243,6 +243,21 @@ const detailCellStyle: Record<string, string | number> = {
   ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
 }
 /** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
+/**
+ * 带超时的 fetch（决策 54）：本文件的请求**一律走它**——原先几处 `fetch` 都没有超时，
+ * 一次挂起就让对应通道**永久停摆**（列表那条已单独修：真机「卡片 5 分钟不动」的根因）。
+ * 表现：面板 2 秒通道停摆却仍显示 ready（假象）；「保存任务」永远停在「保存中」、按钮永久禁用。
+ */
+async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = 8_000): Promise<Response> {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
 const linkStyle: Record<string, string | number> = {
   color: C.brand, cursor: 'pointer', background: 'none', border: 'none', padding: 0,
   font: 'inherit', fontSize: '12px', transition,
@@ -594,7 +609,7 @@ function TaskPage(props: {
   /** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
   const loadHistory = async (id: string): Promise<void> => {
     try {
-      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks/history?id=${encodeURIComponent(id)}`, { cache: 'no-store' })
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/history?id=${encodeURIComponent(id)}`, { cache: 'no-store' })
       const body = await res.json() as { ok?: boolean; versions?: unknown; snapshots?: unknown }
       if (body.ok !== true) return
       const history: EditorHistory = {
@@ -631,7 +646,7 @@ function TaskPage(props: {
    */
   const toggleTaskEnabled = async (id: string, enabled: boolean): Promise<string | null> => {
     try {
-      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks/enabled`, {
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/enabled`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id, enabled }),
@@ -657,7 +672,7 @@ function TaskPage(props: {
     try {
       const definition = JSON.parse(draftToDefinitionJson(draft)) as Record<string, unknown>
       if (editor.mode === 'edit') definition.id = editor.id
-      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ task: definition }),
@@ -694,7 +709,7 @@ function TaskPage(props: {
   const deleteEditorTask = async (): Promise<void> => {
     if (editor === null || editor.mode !== 'edit') return
     try {
-      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
         method: 'DELETE',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id: editor.id }),
@@ -715,7 +730,7 @@ function TaskPage(props: {
   const restoreVersion = async (file: string): Promise<void> => {
     if (editor === null) return
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`,
         { cache: 'no-store' },
       )
@@ -734,7 +749,7 @@ function TaskPage(props: {
   const deleteVersion = async (file: string): Promise<void> => {
     if (editor === null) return
     try {
-      await fetch(
+      await fetchWithTimeout(
         `${DISPATCH_API_PREFIX}/tasks/history/item?id=${encodeURIComponent(editor.id)}&kind=prompt&file=${encodeURIComponent(file)}`,
         { method: 'DELETE' },
       )
@@ -876,7 +891,7 @@ function TaskPage(props: {
     let didUnarchive = false
     if (target === null) {
       try {
-        const res = await fetch(`${DISPATCH_API_PREFIX}/session/unarchive`, {
+        const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/session/unarchive`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ sessionId }),
@@ -1516,7 +1531,7 @@ function httpScope(): SettingsScope {
     if (busy) return
     busy = true
     try {
-      const res = await fetch(`${DISPATCH_API_PREFIX}/snapshot`, { cache: 'no-store' })
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: 'no-store' })
       if (!res.ok) {
         channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: `HTTP ${res.status}（轮询中）` }
         return
@@ -1560,7 +1575,7 @@ function httpScope(): SettingsScope {
     },
     set: async (field, value) => {
       if (field !== 'tasksInline') return
-      const res = await fetch(`${DISPATCH_API_PREFIX}/tasks`, {
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ tasksInline: String(value) }),
