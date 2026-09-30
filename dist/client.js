@@ -555,13 +555,6 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "允许延迟",
 			listNone: "（无）",
 			listDisabledTag: "（已停用）",
-			schedEveryMinute: "每分钟执行一次",
-			schedEveryNMinutes: "每 {n} 分钟执行一次",
-			schedHourly: "每小时第 {minute} 分执行一次",
-			schedDaily: "每天 {time} 执行一次",
-			schedWeekly: "每周{weekdays} {time} 执行一次",
-			schedMonthly: "每月 {day} 日 {time} 执行一次",
-			schedOnce: "{date} {time} 执行一次",
 			schedCustom: "{cron}"
 		};
 		/** English copy. */
@@ -1078,13 +1071,6 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "Late window",
 			listNone: "(none)",
 			listDisabledTag: "(disabled)",
-			schedEveryMinute: "Runs every minute",
-			schedEveryNMinutes: "Runs every {n} minutes",
-			schedHourly: "Runs hourly at minute {minute}",
-			schedDaily: "Runs daily at {time}",
-			schedWeekly: "Runs weekly on {weekdays} at {time}",
-			schedMonthly: "Runs monthly on day {day} at {time}",
-			schedOnce: "Runs once on {date} at {time}",
 			schedCustom: "{cron}"
 		};
 		//#endregion
@@ -2618,7 +2604,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		//#endregion
 		//#region src/client/mirror/message-chrome.ts
 		/** 两位补零（官方 message-chrome pad2）。 */
-		function pad2$1(n) {
+		function pad2$2(n) {
 			return String(n).padStart(2, "0");
 		}
 		/**
@@ -2631,12 +2617,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const seconds = total % 60;
 			if (hours > 0) return t("durationHours", {
 				hours,
-				minutes: pad2$1(minutes),
-				seconds: pad2$1(seconds)
+				minutes: pad2$2(minutes),
+				seconds: pad2$2(seconds)
 			});
 			return minutes > 0 ? t("durationMinutes", {
 				minutes,
-				seconds: pad2$1(seconds)
+				seconds: pad2$2(seconds)
 			}) : t("durationSeconds", { seconds });
 		}
 		/** 官方 formatLiveRunDuration：秒不补零、分钟自 60 秒起。 */
@@ -2647,7 +2633,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const seconds = String(totalSeconds % 60);
 			if (hours > 0) return t("durationHours", {
 				hours,
-				minutes: pad2$1(minutes),
+				minutes: pad2$2(minutes),
 				seconds
 			});
 			return minutes > 0 ? t("durationMinutes", {
@@ -2661,7 +2647,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function formatMessageClock(time, t, now = Date.now()) {
 			const d = new Date(time);
 			const n = new Date(now);
-			const clock = `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			const clock = `${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
 			if (d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()) return clock;
 			const params = {
 				y: d.getFullYear(),
@@ -4307,7 +4293,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				className: props.className
 			});
 		}
-		function pad2(value) {
+		function pad2$1(value) {
 			return String(value).padStart(2, "0");
 		}
 		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
@@ -4321,7 +4307,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 		}
 		function toIsoDate(y, m, d) {
-			return `${y}-${pad2(m)}-${pad2(d)}`;
+			return `${y}-${pad2$1(m)}-${pad2$1(d)}`;
 		}
 		/** 本地今天（真实时间，非占位）。 */
 		function todayIso$1() {
@@ -4552,8 +4538,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			}, props.labels.today))), document.body) : null);
 		}
-		const HOURS = Array.from({ length: 24 }, (_, i) => pad2(i));
-		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2(i));
+		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$1(i));
+		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$1(i));
 		/** 时分列：`HH:mm`。 */
 		function TimeField(props) {
 			const [open, setOpen] = (0, react.useState)(false);
@@ -4691,7 +4677,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				type: "button",
 				onClick: () => {
 					const now = /* @__PURE__ */ new Date();
-					setDraft(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`);
+					setDraft(`${pad2$1(now.getHours())}:${pad2$1(now.getMinutes())}`);
 				},
 				style: {
 					padding: "4px 8px",
@@ -6067,6 +6053,291 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			el.id = ED_STYLE_ID;
 			el.textContent = TASK_EDITOR_CSS;
 			document.head.appendChild(el);
+		}
+		//#endregion
+		//#region src/client/schedule-text.ts
+		const WEEKDAY_KEYS$1 = [
+			"editorWeekday1",
+			"editorWeekday2",
+			"editorWeekday3",
+			"editorWeekday4",
+			"editorWeekday5",
+			"editorWeekday6",
+			"editorWeekday7"
+		];
+		const pad2 = (v) => v.length === 1 && /^\d$/.test(v) ? `0${v}` : v;
+		const fmt = (template, vars) => Object.entries(vars).reduce((acc, [key, value]) => acc.replace(`{${key}}`, value), template);
+		/** 周几串：全选 = 「每天」；未选 = 空串（由调用方补「还没选生效日」）。 */
+		function weekdayText(t, days) {
+			if (days.length === 0) return "";
+			if (days.length >= 7) return t("editorSchedEveryday");
+			return [...days].sort((a, b) => a - b).map((day) => t(WEEKDAY_KEYS$1[day - 1])).join("、");
+		}
+		const EMPTY_SPEC = {
+			kind: "custom",
+			freq: "daily",
+			weekdays: [],
+			weekStep: 1,
+			monthDay: "1",
+			monthMode: "every",
+			quarterMonth: "1",
+			yearMonth: "1",
+			intervalUnit: "minute",
+			intervalStep: 0,
+			time: "09:00",
+			date: "",
+			cron: ""
+		};
+		/** 表单草稿 → spec（编辑器用）。 */
+		function scheduleSpecFromDraft(draft) {
+			const step = Number.parseInt(draft.intervalStep, 10);
+			const wstep = Number.parseInt(draft.weekStep, 10);
+			return {
+				kind: draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic",
+				freq: draft.periodFreq === "once" ? "daily" : draft.periodFreq,
+				weekdays: [...draft.weekdays],
+				weekStep: Number.isFinite(wstep) && wstep > 0 ? wstep : 1,
+				monthDay: draft.monthDay,
+				monthMode: draft.monthMode,
+				quarterMonth: draft.quarterMonth,
+				yearMonth: draft.yearMonth,
+				intervalUnit: draft.intervalUnit,
+				intervalStep: Number.isFinite(step) && step > 0 ? step : 0,
+				time: /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : "09:00",
+				date: draft.date,
+				cron: ""
+			};
+		}
+		/** cron 的「分 时」两位 → `HH:mm`（间隔档分钟位是「星号 + 斜杠 + N」，取不到就给默认，反正间隔档不用它）。 */
+		function timeFromCron(cron) {
+			const parts = cron.trim().split(/\s+/);
+			if (parts.length !== 5) return "09:00";
+			const [minute, hour] = parts;
+			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
+			return `${pad2(hour)}:${pad2(minute)}`;
+		}
+		/** cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。 */
+		const weekdaysFromDow = (dow) => dow === "" ? [] : dow.split(",").map((part) => Number(part)).filter((n) => Number.isInteger(n) && n >= 0 && n <= 7).map((n) => n === 0 ? 7 : n);
+		/** 老任务（没有结构化 `ui`）：从 cron 反解出 spec。认得几个常见形态，认不出走 `custom`（原样显示）。 */
+		function specFromCron(cron, everyNWeeks) {
+			const base = {
+				...EMPTY_SPEC,
+				cron
+			};
+			const parts = cron.trim().split(/\s+/);
+			if (parts.length !== 5) return base;
+			const [minute, hour, dom, months, dow] = parts;
+			const minuteStep = /^\*\/(\d+)$/.exec(minute);
+			const hourStep = /^\*\/(\d+)$/.exec(hour);
+			const time = timeFromCron(cron);
+			if (minute === "*" || minuteStep?.[1] === "1") return {
+				...base,
+				kind: "interval",
+				intervalUnit: "minute",
+				intervalStep: 1,
+				time,
+				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
+			};
+			if (minuteStep !== null) return {
+				...base,
+				kind: "interval",
+				intervalUnit: "minute",
+				intervalStep: Number(minuteStep[1]),
+				time,
+				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
+			};
+			if (hour === "*") return {
+				...base,
+				kind: "interval",
+				intervalUnit: "hour",
+				intervalStep: 1,
+				time,
+				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
+			};
+			if (hourStep !== null) return {
+				...base,
+				kind: "interval",
+				intervalUnit: "hour",
+				intervalStep: Number(hourStep[1]),
+				time,
+				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
+			};
+			if (dom === "*" && dow === "*") return {
+				...base,
+				kind: "periodic",
+				freq: "daily",
+				time
+			};
+			if (dom === "*" && dow !== "*") return {
+				...base,
+				kind: "periodic",
+				freq: "weekly",
+				time,
+				weekdays: weekdaysFromDow(dow),
+				weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1
+			};
+			if (dom !== "*" && dow === "*") {
+				const monthList = months === "*" ? null : months.split(",").map(Number).filter(Number.isInteger);
+				if (monthList !== null && monthList.length === 12) return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "every"
+				};
+				if (monthList !== null && monthList.length === 6 && monthList.every((m) => m % 2 === 1)) return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "odd"
+				};
+				if (monthList !== null && monthList.length === 6 && monthList.every((m) => m % 2 === 0)) return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "even"
+				};
+				if (monthList !== null && monthList.length > 1) {
+					const sorted = [...monthList].sort((a, b) => a - b);
+					if (sorted.every((m, i) => i === 0 || m - sorted[i - 1] === 3) && sorted.length === 4) return {
+						...base,
+						kind: "periodic",
+						freq: "quarterly",
+						time,
+						monthDay: dom,
+						quarterMonth: String(sorted[0])
+					};
+					return base;
+				}
+				if (monthList !== null && monthList.length === 1) return {
+					...base,
+					kind: "periodic",
+					freq: "yearly",
+					time,
+					monthDay: dom,
+					yearMonth: String(monthList[0])
+				};
+				return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "every"
+				};
+			}
+			return base;
+		}
+		/** 任务定义 `schedule` → spec（列表用）。优先结构化 `ui`，没有则从 cron 反解。 */
+		function scheduleSpecFromSchedule(sched) {
+			if (sched.once !== null && sched.once !== "") return {
+				...EMPTY_SPEC,
+				kind: "once",
+				date: sched.once.slice(0, 10),
+				time: sched.once.length >= 16 ? sched.once.slice(11, 16) : "00:00"
+			};
+			const cron = sched.cron ?? "";
+			const ui = sched.ui ?? null;
+			if (ui !== null && typeof ui === "object") {
+				const days = Array.isArray(ui.weekdays) ? ui.weekdays.filter((d) => typeof d === "number" && d >= 1 && d <= 7) : [];
+				const kindNum = (v, fallback) => {
+					const n = typeof v === "string" ? Number.parseInt(v, 10) : typeof v === "number" ? v : NaN;
+					return Number.isFinite(n) && n > 0 ? n : fallback;
+				};
+				const stepNum = (v) => {
+					const n = typeof v === "string" ? Number.parseInt(v, 10) : typeof v === "number" ? v : NaN;
+					return Number.isFinite(n) && n > 0 ? n : 0;
+				};
+				const str = (v, fallback) => typeof v === "string" && v !== "" ? v : fallback;
+				const uiKind = ui.scheduleKind === "interval" ? "interval" : "periodic";
+				const uiFreq = ui.periodFreq;
+				return {
+					kind: uiKind,
+					freq: uiKind === "interval" ? "daily" : uiFreq === "daily" || uiFreq === "weekly" || uiFreq === "monthly" || uiFreq === "quarterly" || uiFreq === "yearly" ? uiFreq : "daily",
+					weekdays: days,
+					weekStep: kindNum(ui.weekStep, sched.everyNWeeks ?? 1),
+					monthDay: str(ui.monthDay, "1"),
+					monthMode: str(ui.monthMode, "every"),
+					quarterMonth: str(ui.quarterMonth, "1"),
+					yearMonth: str(ui.yearMonth, "1"),
+					intervalUnit: ui.intervalUnit === "hour" ? "hour" : "minute",
+					intervalStep: stepNum(ui.intervalStep),
+					time: timeFromCron(cron),
+					date: "",
+					cron
+				};
+			}
+			return specFromCron(cron, sched.everyNWeeks);
+		}
+		/** 时间嵌在句子中间（每天 **09:00** 执行）：拆成「前 / 时间 / 后」三段，时间标 emphasis。 */
+		const withTime = (spec, head, tail) => [
+			{ text: head },
+			{
+				text: spec.time,
+				emphasis: true
+			},
+			{ text: tail }
+		];
+		/**
+		* spec → 文案片段（**唯一**的文案生成处）。`emphasis` 标出「关键片段」，
+		* 调用方可用 `renderSchedule` 给它们加粗 / 加色 / 加间距（用户 2026-09-30 要求的样式参数）。
+		*/
+		function scheduleSegments(spec, t) {
+			if (spec.kind === "custom") return [{ text: spec.cron === "" ? "—" : fmt(t("schedCustom"), { cron: spec.cron }) }];
+			if (spec.kind === "once") return [{ text: `${spec.date} ${spec.time} ${t("editorSchedOnce")}` }];
+			if (spec.kind === "interval") {
+				if (spec.intervalStep <= 0) return [{ text: t("editorSchedInvalidStep") }];
+				const per = spec.intervalUnit === "minute" ? fmt(t("editorSchedIntervalMin"), { n: String(spec.intervalStep) }) : spec.intervalStep === 1 ? t("editorSchedHourlyOnce") : fmt(t("editorSchedIntervalHour"), { n: String(spec.intervalStep) });
+				const wd = weekdayText(t, spec.weekdays);
+				return wd === "" ? [{
+					text: per,
+					emphasis: true
+				}, { text: t("editorSchedNoDaySuffix") }] : [{ text: wd }, {
+					text: per,
+					emphasis: true
+				}];
+			}
+			switch (spec.freq) {
+				case "daily": return withTime(spec, `${t("editorSchedDaily")} `, ` ${t("editorSchedRun")}`);
+				case "weekly": {
+					const wd = weekdayText(t, spec.weekdays);
+					const everyN = spec.weekStep > 1;
+					if (wd === "") {
+						const head = `${everyN ? fmt(t("editorSchedEveryNWeek"), { n: String(spec.weekStep) }) : t("editorSchedWeekly")} `;
+						return [...withTime(spec, head, ` ${t("editorSchedRun")}`), { text: t("editorSchedNoDaySuffix") }];
+					}
+					const dayText = everyN ? wd : [...spec.weekdays].sort((a, b) => a - b).map((d) => `${t("editorSchedWeeklyDayPrefix")}${t(WEEKDAY_KEYS$1[d - 1]).replace(/^周/, "")}`).join("、");
+					const head = `${everyN ? fmt(t("editorSchedEveryNWeek"), { n: String(spec.weekStep) }) : ""}${dayText} `;
+					return withTime(spec, head, ` ${t("editorSchedRun")}`);
+				}
+				case "monthly": return withTime(spec, `${t(`editorMonthMode_${spec.monthMode}`)}${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
+				case "quarterly": return withTime(spec, `${fmt(t("editorSchedQuarterly"), { n: spec.quarterMonth })} ${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
+				case "yearly": return withTime(spec, `${t("editorMonthMode_every")}${spec.yearMonth} 月 ${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
+			}
+		}
+		/** spec → 纯文本（任务列表跑马灯等只收字符串的地方用）。 */
+		function scheduleText(spec, t) {
+			return scheduleSegments(spec, t).map((seg) => seg.text).join("");
+		}
+		/**
+		* spec → React 节点：默认等价 `scheduleText`；传了 `emphasisStyle` 则把关键片段包一层。
+		* 这就是用户要的「方法支持样式参数」——加粗 / 换色 / 加间距都从这里出，不必各写一份。
+		*/
+		function renderSchedule(spec, t, opts) {
+			const segments = scheduleSegments(spec, t);
+			if (opts?.emphasisStyle === void 0) return scheduleText(spec, t);
+			return segments.map((seg, index) => seg.emphasis === true ? (0, react.createElement)("strong", {
+				key: index,
+				style: {
+					fontWeight: 600,
+					...opts.emphasisStyle
+				}
+			}, seg.text) : (0, react.createElement)("span", { key: index }, seg.text));
 		}
 		//#endregion
 		//#region node_modules/@babel/runtime/helpers/extends.js
@@ -37811,42 +38082,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 		}
 		/**
-		* 排期 → 人话（用户 2026-09-30：用户看不懂设置，要直接告诉他「预计什么时候执行」）。
-		* 通用方法：吃草稿、吐一句中文执行说明；编辑时实时改、也能给任务列表复用。
-		* 文案全部走 locale（含周几 / 月口径），明暗自适应。
-		*/
-		function weekdayText(t, days) {
-			if (days.length === 0) return "";
-			if (days.length >= 7) return t("editorSchedEveryday");
-			return days.map((day) => t(WEEKDAY_KEYS[day - 1])).join("、");
-		}
-		function describeSchedule(draft, t) {
-			const time = /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : "09:00";
-			const step = Number.parseInt(draft.intervalStep, 10);
-			const stepN = Number.isFinite(step) && step > 0 ? step : 0;
-			const days = [...draft.weekdays].sort((a, b) => a - b);
-			const wd = weekdayText(t, days);
-			if (draft.scheduleKind === "interval") {
-				if (stepN === 0) return t("editorSchedInvalidStep");
-				const per = draft.intervalUnit === "minute" ? t("editorSchedIntervalMin").replace("{n}", String(stepN)) : stepN === 1 ? t("editorSchedHourlyOnce") : t("editorSchedIntervalHour").replace("{n}", String(stepN));
-				return wd === "" ? `${per}${t("editorSchedNoDaySuffix")}` : `${wd}${per}`;
-			}
-			if (draft.periodFreq === "once") return `${draft.date} ${time} ${t("editorSchedOnce")}`;
-			switch (draft.periodFreq) {
-				case "daily": return `${t("editorSchedDaily")} ${time} ${t("editorSchedRun")}`;
-				case "weekly": {
-					const wstep = Number.parseInt(draft.weekStep, 10);
-					const everyN = Number.isFinite(wstep) && wstep > 1;
-					if (wd === "") return `${everyN ? t("editorSchedEveryNWeek").replace("{n}", String(wstep)) : t("editorSchedWeekly")} ${time} ${t("editorSchedRun")}${t("editorSchedNoDaySuffix")}`;
-					const dayText = everyN ? wd : days.map((d) => `${t("editorSchedWeeklyDayPrefix")}${t(WEEKDAY_KEYS[d - 1]).replace(/^周/, "")}`).join("、");
-					return `${everyN ? t("editorSchedEveryNWeek").replace("{n}", String(wstep)) : ""}${dayText} ${time} ${t("editorSchedRun")}`;
-				}
-				case "monthly": return `${t(`editorMonthMode_${draft.monthMode}`)}${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
-				case "quarterly": return `${t("editorSchedQuarterly").replace("{n}", draft.quarterMonth)} ${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
-				case "yearly": return `${t("editorMonthMode_every")}${draft.yearMonth} 月 ${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
-			}
-		}
-		/**
 		* 草稿 → 任务定义 JSON（保存 / 预览同源）。
 		* 排期**双写**（data-model §5.4）：`cron`/`once`/`start`/`everyNWeeks` 是执行真源，
 		* `schedule.ui` 是编辑态反解真源；两者都由**表单**产出 ⇒ 保存以表单为准重写 cron
@@ -39383,7 +39618,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				color: C$3.text,
 				fontWeight: 600,
 				marginRight: "4px"
-			} }, t("editorSchedForecast") + "："), describeSchedule(draft, t)), (0, react.createElement)("div", { style: {
+			} }, t("editorSchedForecast") + "："), renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: C$3.text } })), (0, react.createElement)("div", { style: {
 				borderTop: `1px dashed ${C$3.borderL2}`,
 				marginTop: "10px"
 			} })), (0, react.createElement)("div", {
@@ -40028,7 +40263,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 				`.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
 				`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
-				".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }"
+				".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
+				".dsh-tdt-tl-switchwrap button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}"
 			].join("\n");
 			document.head.appendChild(tag);
 		};
@@ -40083,56 +40319,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						return;
 					}
 					setTick((v) => v + 1);
+				}, []),
+				patchRow: (0, react.useCallback)((id, patch) => {
+					setRows((list) => list.map((row) => row.id === id ? {
+						...row,
+						...patch
+					} : row));
 				}, [])
 			};
-		}
-		const WEEKDAY_NAMES = [
-			"日",
-			"一",
-			"二",
-			"三",
-			"四",
-			"五",
-			"六"
-		];
-		/** cron（5 段）→ 人话；认不出的形态原样显示 cron（真实值，不编造）。 */
-		function cronToHuman(cron, once, everyNWeeks, tt) {
-			if (once !== null && once !== "") return tt("schedOnce", {
-				date: once.slice(0, 10),
-				time: once.slice(11, 16)
-			});
-			if (cron === null || cron === "") return "—";
-			const parts = cron.trim().split(/\s+/);
-			if (parts.length !== 5) return tt("schedCustom", { cron });
-			const [minute, hour, dom, , dow] = parts;
-			const pad = (v) => v.length === 1 && /^\d$/.test(v) ? `0${v}` : v;
-			const minuteStep = /^\*\/(\d+)$/.exec(minute);
-			const hourStep = /^\*\/(\d+)$/.exec(hour);
-			const weekdays = dow === "*" ? "" : dow.split(",").map((d) => WEEKDAY_NAMES[Number(d)] ?? d).join("、");
-			let text;
-			let isInterval = false;
-			if (minute === "*" || minuteStep?.[1] === "1") {
-				text = tt("schedEveryMinute");
-				isInterval = true;
-			} else if (minuteStep !== null) {
-				text = tt("schedEveryNMinutes", { n: minuteStep[1] });
-				isInterval = true;
-			} else if (hour === "*" || hourStep !== null) {
-				text = tt("schedHourly", { minute: pad(minute) });
-				isInterval = true;
-			} else if (dom === "*" && dow === "*") text = tt("schedDaily", { time: `${pad(hour)}:${pad(minute)}` });
-			else if (dom === "*" && dow !== "*") text = tt("schedWeekly", {
-				weekdays,
-				time: `${pad(hour)}:${pad(minute)}`
-			});
-			else if (dom !== "*" && dow === "*") text = tt("schedMonthly", {
-				day: dom,
-				time: `${pad(hour)}:${pad(minute)}`
-			});
-			else return tt("schedCustom", { cron });
-			const full = isInterval && weekdays !== "" ? `周${weekdays}，${text}` : text;
-			if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${full}`;
-			return full;
 		}
 		function formatFull(iso) {
 			const d = new Date(iso);
@@ -40325,12 +40519,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			});
 		}
 		/**
-		* 「历史执行」与「下次执行」两个**独立**小标签（2026-09-30 用户拍板，两格式照「品牌|三得利」：
-		* 左格 = 语义底色 + 图标，右格 = 浅底 + 文字，整体一个圆角细边框）。
-		* - 历史执行：左格成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；右格只写时间——
-		*   当天 HH:mm、跨天「3 小时前 / 1 天前」；hover 给完整时刻。
-		* - 下次执行：左格执行（闹钟）图标；右格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
+		* 「历史执行」与「下次执行」是**两个独立**小标签（2026-09-30 用户拍板：不要合成一格四段，
+		* 拆成两块更清爽）。每个标签 = 语义底色的图标格 + 时间格，整体一个圆角细边框。
+		* - 历史执行：成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；时间格当天 HH:mm、跨天「3 小时前 / 1 天前」。
+		* - 下次执行：图标 = 闹钟；时间格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
 		*   超过 24 小时 = 明天 / 三天后 / N 周后。
+		*
+		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+		* 提示**静默失效**（用户 2026-09-30 真机反馈「移上去没提示」的根因，与 task-editor 里
+		* 「图标要包真 `<button>`」是同一个坑）。
 		*/
 		const pillOuterStyle = {
 			display: "inline-flex",
@@ -40341,18 +40539,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			overflow: "hidden",
 			border: `1px solid ${C$1.border}`
 		};
-		C$1.layer1, C$1.text;
-		/** 格子通用样式（外框一体 ⇒ 内部分隔是**直线**，只有最左 / 最右有圆角）。 */
-		const pillCell = (extra) => ({
+		/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
+		const pillIconCell = (bg, fg) => ({
 			display: "inline-flex",
 			alignItems: "center",
-			padding: "0 7px",
-			flex: "none",
-			...extra
+			padding: "0 6px",
+			background: bg,
+			color: fg,
+			flex: "none"
 		});
-		/**
-		* 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。
-		*/
+		/** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
 		const pillTimeCell = {
 			display: "inline-flex",
 			alignItems: "center",
@@ -40365,38 +40561,33 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontVariantNumeric: "tabular-nums",
 			fontFamily: monoFont$1
 		};
-		function RunPills(props) {
+		/** 历史执行标签（成功绿 / 失败红 / 无状态灰）。 */
+		function PastPill(props) {
 			const { row, t, tt } = props;
 			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
-			const leftBg = !has ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
-			const leftFg = has ? "#fff" : C$1.textDim;
-			const lastTitle = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
-			const nextTitle = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
-			return (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillCell({
-				background: leftBg,
-				color: leftFg
-			}) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: lastTitle,
+			const bg = !has ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
+			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
+			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
 				side: "bottom"
-			}, (0, react.createElement)(LiveText, {
+			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(bg, has ? "#fff" : C$1.textDim) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
 					if (!has) return NO_TIME;
 					const iso = row.lastScheduledAt ?? "";
 					return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt);
 				}
-			})), (0, react.createElement)("span", { style: pillCell({
-				background: C$1.layer3,
-				color: C$1.text,
-				borderLeft: `1px solid ${C$1.border}`
-			}) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: nextTitle,
+			})));
+		}
+		/** 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。 */
+		function NextPill(props) {
+			const { row, t, tt } = props;
+			const title = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
 				side: "bottom"
-			}, (0, react.createElement)(LiveText, {
-				style: {
-					...pillTimeCell,
-					borderLeft: `1px solid ${C$1.border}`
-				},
+			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(C$1.layer3, C$1.text) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
+				style: pillTimeCell,
 				render: (nowMs) => {
 					if (row.nextSlotAt === null) return NO_TIME;
 					return Date.parse(row.nextSlotAt) - nowMs < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);
@@ -40465,7 +40656,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		};
 		function TaskCard(props) {
 			const { row, t, tt, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props;
-			const scheduleText = cronToHuman(row.schedule.cron, row.schedule.once, row.schedule.everyNWeeks, tt);
+			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react.createElement)("div", {
 				ref: refOf,
@@ -40497,23 +40688,27 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: {
 				...metaStyle,
 				minWidth: 0
-			} }, (0, react.createElement)(MarqueeText, { text: scheduleText })), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
+			} }, (0, react.createElement)(MarqueeText, { text: scheduleLine })), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "8px",
 				flex: "none"
-			} }, (0, react.createElement)(RunPills, {
+			} }, (0, react.createElement)(PastPill, {
 				row,
 				t,
 				tt
-			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			}), (0, react.createElement)(NextPill, {
+				row,
+				t,
+				tt
+			}), (0, react.createElement)("span", { className: "dsh-tdt-tl-switchwrap" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: row.enabled,
 				onChange: (next) => {
 					onToggleEnabled(row.id, next);
 				},
 				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
-				className: "dsh-tdt-tl-switch"
-			}), (0, react.createElement)("button", {
+				title: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
+			})), (0, react.createElement)("button", {
 				type: "button",
 				style: {
 					...iconBtnStyle,
@@ -40527,7 +40722,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				marginTop: "10px",
 				borderTop: `1px dashed ${C$1.border}`,
 				paddingTop: "8px"
-			} }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), (0, react.createElement)("div", { style: sectionBodyStyle }, `${t("listFieldSchedule")}：${scheduleText} · ${t("listFieldWorkspace")}：${row.workspace} · ${t("listFieldModel")}：${modelText} · ${t("listFieldRetry")}：${row.retryMax} · ${t("listFieldWindow")}：${row.schedule.window}`), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? "（工作区）" : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
+			} }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), (0, react.createElement)("div", { style: sectionBodyStyle }, `${t("listFieldSchedule")}：${scheduleLine} · ${t("listFieldWorkspace")}：${row.workspace} · ${t("listFieldModel")}：${modelText} · ${t("listFieldRetry")}：${row.retryMax} · ${t("listFieldWindow")}：${row.schedule.window}`), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? "（工作区）" : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
 				...sectionBodyStyle,
 				color: C$1.textDim,
 				whiteSpace: "pre-wrap",
@@ -40550,7 +40745,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit")))) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onRefresh, onEdit, onToggleEnabled } = props;
+			const { t, rows, ready, onEdit, onToggleEnabled } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
@@ -40706,12 +40901,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClose: () => {
 					setMenuOpen(false);
 				}
-			}), (0, react.createElement)("button", {
-				type: "button",
-				style: controlBoxStyle,
-				title: t("debugRefresh"),
-				onClick: onRefresh
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })))), visible.length === 0 ? (0, react.createElement)("p", { style: {
+			}))), visible.length === 0 ? (0, react.createElement)("p", { style: {
 				...metaStyle,
 				marginTop: "8px"
 			} }, rows.length === 0 && !ready ? "" : rows.length === 0 ? t("listEmpty") : t("listEmptyFiltered")) : (0, react.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react.createElement)(TaskCard, {
@@ -41087,6 +41277,41 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return cut < 0 ? path : path.slice(cut + 1);
 		}
 		/**
+		* 从**刚提交的任务定义**里取卡片可见字段做一次乐观补丁（用户 2026-09-30：改完要**立刻**看到，
+		* 不等服务端那 ~1 秒的落盘 + 重拉）。
+		*
+		* 只补「能由定义原样算出」的字段：标题 / 编号 / 启停 / 工作区 / 模型 / 重试 / 排期。
+		* 提示词首段（服务端截断）、附件、前置任务标题、下次执行时刻（服务端按 cron 算）**不在其中**——
+		* 那些交给紧接着的 `refresh()` 拉回服务端真值。排期直接搬 `schedule` 原值 ⇒ 卡片与编辑器的
+		* 文案仍由同一个 `schedule-text.ts` 生成，不产生第二份口径。
+		*/
+		function rowPatchOf(definition) {
+			const target = definition.target ?? {};
+			const schedule = definition.schedule ?? {};
+			const retry = definition.retry ?? {};
+			const str = (value) => typeof value === "string" && value !== "" ? value : null;
+			const attempts = Number.parseInt(String(retry.maxAttempts ?? ""), 10);
+			const patch = {
+				enabled: definition.enabled !== false,
+				code: typeof definition.code === "string" && definition.code.trim() !== "" ? definition.code.trim() : null,
+				workspace: typeof target.workspace === "string" ? target.workspace : "",
+				provider: str(target.provider),
+				model: str(target.model),
+				retryMax: Number.isFinite(attempts) && attempts > 0 ? attempts : 1,
+				schedule: {
+					cron: str(schedule.cron),
+					once: str(schedule.once),
+					timezone: str(schedule.timezone),
+					start: str(schedule.start),
+					everyNWeeks: typeof schedule.everyNWeeks === "number" ? schedule.everyNWeeks : null,
+					window: typeof schedule.window === "string" && schedule.window !== "" ? schedule.window : "PT0S",
+					ui: schedule.ui ?? null
+				}
+			};
+			if (typeof definition.title === "string" && definition.title.trim() !== "") patch.title = definition.title.trim();
+			return patch;
+		}
+		/**
 		* 调度表整页（`main` 槽，双标签）：
 		* - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
 		* - **执行记录**：全部执行记录，支持按状态 / 按任务过滤，点一行展开该次执行的事件时间线。
@@ -41239,6 +41464,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					const missing = Array.isArray(body.missingAttachments) ? body.missingAttachments.filter((item) => typeof item === "string") : [];
 					setEditor(null);
 					notifySaved();
+					if (typeof body.id === "string" && body.id !== "") overview.patchRow(body.id, rowPatchOf(definition));
 					overview.refresh();
 					if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join("、")}`);
 				} catch (error) {
@@ -41353,7 +41579,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return () => {
 					alive = false;
 				};
-			}, [tab, manualAt]);
+			}, [tab]);
 			const section = snapshot.value ?? {};
 			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
 			const data = parseDebugSnapshot(raw);
@@ -41525,10 +41751,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				t,
 				rows: overview.rows,
 				ready: overview.ready,
-				onRefresh: () => {
-					setManualAt(Date.now());
-					overview.refresh();
-				},
 				onEdit: openEditor,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {

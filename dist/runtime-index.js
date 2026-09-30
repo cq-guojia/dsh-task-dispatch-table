@@ -31,7 +31,7 @@ function overviewKeyOf(task) {
         provider: task.target.provider ?? '',
         model: task.target.model ?? '',
         prompt: task.target.prompt,
-        schedule: { cron: s.cron ?? '', once: s.once ?? '', timezone: s.timezone ?? '', start: s.start ?? '', everyNWeeks: s.everyNWeeks ?? 0, window: s.window },
+        schedule: { cron: s.cron ?? '', once: s.once ?? '', timezone: s.timezone ?? '', start: s.start ?? '', everyNWeeks: s.everyNWeeks ?? 0, window: s.window, ui: s.ui ?? null },
         retry: task.retry?.maxAttempts ?? 1,
         attachments: (task.attachments ?? []).map(a => `${a.name}:${a.kind}:${a.ref}`),
         depends: (task.depends_on ?? []).map(d => d.task),
@@ -191,6 +191,7 @@ export function createRuntimeIndex() {
                         everyNWeeks: task.schedule.everyNWeeks ?? null,
                         // 防御取值：overview 是展示面，畸形定义也不能让它崩（zod 有默认值的字段仍按可选读）。
                         window: task.schedule.window ?? 'PT0S',
+                        ui: task.schedule.ui ?? null,
                     },
                     promptHead: headOf(task.target.prompt),
                     attachments: (task.attachments ?? []).map(item => ({ name: item.name, kind: item.kind })),

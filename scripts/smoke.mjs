@@ -533,7 +533,26 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('「异常」筛选（上次执行失败计数，0 不显示）', clientJs.includes('listFilterAbnormal'))
   check('拨片乐观更新（点了即变，不等轮询）', clientJs.includes('optimistic'))
   check('刷新请求不被在途那轮吞掉（pendingRef 补跑）', clientJs.includes('pendingRef'))
-  check('上次 / 下次合并成一整条（RunPills，中间直线无圆角）', clientJs.includes('RunPills'))
+  // 2026-09-30 真机返工：合并成一条太丑 ⇒ 恢复**两个独立小标签**；悬浮提示挂在真 DOM 上
+  // （裸函数组件 ref 挂不上 ⇒ 官方 Tooltip 静默失效，正是用户「移上去没提示」的根因）。
+  check('上次 / 下次恢复成两个独立小标签（PastPill + NextPill，不再合并）',
+    clientJs.includes('function PastPill') && clientJs.includes('function NextPill') && !clientJs.includes('RunPills'))
+  check('悬浮提示挂在真 DOM 上（Tooltip 子元素是真 <div>，不再是裸 LiveText）',
+    /side: "bottom"\s*\},\s*\(0, react\.createElement\)\("div", \{ style: pillOuterStyle \}/.test(clientJs))
+  // 排期人话**单源**（用户 2026-09-30 拍板：列表与编辑器不许各写一份，否则同一排期两处文案不一样）：
+  // 两处都走 client/schedule-text.ts，旧的 cronToHuman 已删。
+  check('排期文案单源（scheduleSpecFromSchedule + scheduleSpecFromDraft，旧 cronToHuman 已删）',
+    clientJs.includes('scheduleSpecFromSchedule') && clientJs.includes('scheduleSpecFromDraft') && !clientJs.includes('cronToHuman'))
+  check('排期文案支持样式参数（scheduleSegments 片段 + emphasis 标记）',
+    clientJs.includes('scheduleSegments') && clientJs.includes('emphasis'))
+  check('排期反解读结构化 ui（老任务才退回 cron）', clientJs.includes('ui.weekdays'))
+  // 列表启用开关与编辑器同款（官方默认选中色是 brand-primary ⇒ 亮色近黑 / 暗色近白，两处看着不一样）。
+  check('列表启用开关与编辑器同款（switchwrap + success 绿）', clientJs.includes('dsh-tdt-tl-switchwrap'))
+  // 右上角刷新按钮已撤（用户 2026-09-30：反正改完立刻刷新，按钮没用）。
+  check('右上角刷新按钮已移除（不再有 debugRefresh 按钮）', !clientJs.includes('title: t("debugRefresh")'))
+  // 保存后乐观补行 ⇒ 改完**立刻**可见，不等服务端那 ~1 秒的落盘 + 重拉。
+  check('保存后乐观补行（patchRow + rowPatchOf）',
+    clientJs.includes('patchRow') && clientJs.includes('rowPatchOf'))
   check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
   check('无下次执行显示 --:-- 占位（图标保留）', clientJs.includes('--:--'))
   check('展开区四区块（执行设置 / 附加文件 / 前置任务 / 提示词）',

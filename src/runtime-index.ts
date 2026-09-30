@@ -48,6 +48,12 @@ export interface TaskOverviewRow {
     start: string | null
     everyNWeeks: number | null
     window: string
+    /**
+     * 结构化排期（新建 / 编辑时双写的 `schedule.ui`，2026-09-30 用户拍板）：
+     * 卡片的「执行方式」人话与编辑器「预计执行」**同源**（都走 `client/schedule-text.ts`），
+     * 不再各处各写一份 ⇒ 老任务为 null，客户端退回从 cron 反解。
+     */
+    ui: Record<string, unknown> | null
   }
   /** 提示词首段（展开区展示用，服务端截断，不传全文）。 */
   promptHead: string
@@ -116,7 +122,7 @@ function overviewKeyOf(task: TaskDefinition): string {
     provider: task.target.provider ?? '',
     model: task.target.model ?? '',
     prompt: task.target.prompt,
-    schedule: { cron: s.cron ?? '', once: s.once ?? '', timezone: s.timezone ?? '', start: s.start ?? '', everyNWeeks: s.everyNWeeks ?? 0, window: s.window },
+    schedule: { cron: s.cron ?? '', once: s.once ?? '', timezone: s.timezone ?? '', start: s.start ?? '', everyNWeeks: s.everyNWeeks ?? 0, window: s.window, ui: s.ui ?? null },
     retry: task.retry?.maxAttempts ?? 1,
     attachments: (task.attachments ?? []).map(a => `${a.name}:${a.kind}:${a.ref}`),
     depends: (task.depends_on ?? []).map(d => d.task),
@@ -281,6 +287,7 @@ export function createRuntimeIndex(): RuntimeIndex {
             everyNWeeks: task.schedule.everyNWeeks ?? null,
             // 防御取值：overview 是展示面，畸形定义也不能让它崩（zod 有默认值的字段仍按可选读）。
             window: task.schedule.window ?? 'PT0S',
+            ui: task.schedule.ui ?? null,
           },
           promptHead: headOf(task.target.prompt),
           attachments: (task.attachments ?? []).map(item => ({ name: item.name, kind: item.kind })),

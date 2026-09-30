@@ -27,7 +27,7 @@ import {
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
 import { humanizeTaskError } from './task-editor'
-import { TaskListView, useTaskOverview } from './task-list'
+import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
@@ -446,6 +446,43 @@ function basenameOf(path: string): string {
 }
 
 /**
+ * 从**刚提交的任务定义**里取卡片可见字段做一次乐观补丁（用户 2026-09-30：改完要**立刻**看到，
+ * 不等服务端那 ~1 秒的落盘 + 重拉）。
+ *
+ * 只补「能由定义原样算出」的字段：标题 / 编号 / 启停 / 工作区 / 模型 / 重试 / 排期。
+ * 提示词首段（服务端截断）、附件、前置任务标题、下次执行时刻（服务端按 cron 算）**不在其中**——
+ * 那些交给紧接着的 `refresh()` 拉回服务端真值。排期直接搬 `schedule` 原值 ⇒ 卡片与编辑器的
+ * 文案仍由同一个 `schedule-text.ts` 生成，不产生第二份口径。
+ */
+function rowPatchOf(definition: Record<string, unknown>): Partial<TaskOverviewRow> {
+  const target = (definition.target ?? {}) as Record<string, unknown>
+  const schedule = (definition.schedule ?? {}) as Record<string, unknown>
+  const retry = (definition.retry ?? {}) as Record<string, unknown>
+  const str = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null)
+  const attempts = Number.parseInt(String(retry.maxAttempts ?? ''), 10)
+  const patch: Partial<TaskOverviewRow> = {
+    enabled: definition.enabled !== false,
+    code: typeof definition.code === 'string' && definition.code.trim() !== '' ? definition.code.trim() : null,
+    workspace: typeof target.workspace === 'string' ? target.workspace : '',
+    provider: str(target.provider),
+    model: str(target.model),
+    retryMax: Number.isFinite(attempts) && attempts > 0 ? attempts : 1,
+    schedule: {
+      cron: str(schedule.cron),
+      once: str(schedule.once),
+      timezone: str(schedule.timezone),
+      start: str(schedule.start),
+      everyNWeeks: typeof schedule.everyNWeeks === 'number' ? schedule.everyNWeeks : null,
+      window: typeof schedule.window === 'string' && schedule.window !== '' ? schedule.window : 'PT0S',
+      ui: (schedule.ui ?? null) as Record<string, unknown> | null,
+    },
+  }
+  // 标题清空时服务端回退成任务 id；本地没有 id 可显示 ⇒ 留原值（马上被重拉覆盖，不编造）。
+  if (typeof definition.title === 'string' && definition.title.trim() !== '') patch.title = definition.title.trim()
+  return patch
+}
+
+/**
  * 调度表整页（`main` 槽，双标签）：
  * - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
  * - **执行记录**：全部执行记录，支持按状态 / 按任务过滤，点一行展开该次执行的事件时间线。
@@ -625,7 +662,10 @@ function TaskPage(props: {
       setEditor(null)
       // 保存成功不许静默（用户 2026-09-30）：关窗同时弹绿色「任务已保存」。
       notifySaved()
-      // 保存完**立刻**重拉列表（改标题 / 提示词这类改动服务端已 bump rev；不 refresh 就要等 10 秒轮询）。
+      // ① 先乐观补该行 ⇒ 改标题 / 排期**立刻**可见（用户 2026-09-30：不等那一秒）。
+      if (typeof body.id === 'string' && body.id !== '') overview.patchRow(body.id, rowPatchOf(definition))
+      // ② 再立刻重拉一次，用服务端真值（含提示词首段 / 下次执行时刻）覆盖那份乐观值
+      //    （改动已 bump rev；不 refresh 就要等 10 秒轮询）。
       overview.refresh()
       // 附件失效要说出来（文件被清道夫清掉 / 手删了），否则用户不知道自己存的是个空引用。
       if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join('、')}`)
@@ -743,7 +783,7 @@ function TaskPage(props: {
       })
       .catch(() => { if (alive) setDbState('fail') })
     return () => { alive = false }
-  }, [tab, manualAt])
+  }, [tab])
 
   const section = (snapshot.value ?? {}) as Record<string, unknown>
   // 快照由 host 周期写入 debugSnapshot 字段；页订阅同一 scope 自动刷新。
@@ -945,7 +985,6 @@ function TaskPage(props: {
             t,
             rows: overview.rows,
             ready: overview.ready,
-            onRefresh: () => { setManualAt(Date.now()); overview.refresh() },
             onEdit: openEditor,
             // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
             // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。

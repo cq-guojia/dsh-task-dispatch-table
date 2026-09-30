@@ -34,6 +34,12 @@ export interface TaskOverviewRow {
         start: string | null;
         everyNWeeks: number | null;
         window: string;
+        /**
+         * 结构化排期（新建 / 编辑时双写的 `schedule.ui`，2026-09-30 用户拍板）：
+         * 卡片的「执行方式」人话与编辑器「预计执行」**同源**（都走 `client/schedule-text.ts`），
+         * 不再各处各写一份 ⇒ 老任务为 null，客户端退回从 cron 反解。
+         */
+        ui: Record<string, unknown> | null;
     };
     /** 提示词首段（展开区展示用，服务端截断，不传全文）。 */
     promptHead: string;

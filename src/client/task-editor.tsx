@@ -47,6 +47,7 @@ import {
 } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
+import { renderSchedule, scheduleSpecFromDraft, scheduleText } from './schedule-text'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
@@ -337,54 +338,13 @@ function structuredOf(draft: TaskEditorDraft): Record<string, unknown> {
 
 /**
  * 排期 → 人话（用户 2026-09-30：用户看不懂设置，要直接告诉他「预计什么时候执行」）。
- * 通用方法：吃草稿、吐一句中文执行说明；编辑时实时改、也能给任务列表复用。
- * 文案全部走 locale（含周几 / 月口径），明暗自适应。
+ *
+ * ⚠️ **唯一实现已抽到 [`./schedule-text.ts`](./schedule-text.ts)**——用户 2026-09-30 拍板：
+ * 列表与编辑器不许各写一份，否则同一个排期两处文案不一样（真机已出现「周一…每 10 分钟执行一次」
+ * vs「每天每 10 分钟执行一次」）。这里只负责「表单草稿 → 结构化 spec」再交给它。
  */
-function weekdayText(t: T, days: number[]): string {
-  if (days.length === 0) return ''
-  if (days.length >= 7) return t('editorSchedEveryday')
-  return days.map(day => t(WEEKDAY_KEYS[day - 1])).join('、')
-}
-
 export function describeSchedule(draft: TaskEditorDraft, t: T): string {
-  const time = /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : '09:00'
-  const step = Number.parseInt(draft.intervalStep, 10)
-  const stepN = Number.isFinite(step) && step > 0 ? step : 0
-  const days = [...draft.weekdays].sort((a, b) => a - b)
-  const wd = weekdayText(t, days)
-
-  if (draft.scheduleKind === 'interval') {
-    if (stepN === 0) return t('editorSchedInvalidStep')
-    // 间隔档：参照周期档句式——生效日在前、不加括号：「周一、周三每小时执行一次」。
-    const per = draft.intervalUnit === 'minute'
-      ? t('editorSchedIntervalMin').replace('{n}', String(stepN))
-      : (stepN === 1 ? t('editorSchedHourlyOnce') : t('editorSchedIntervalHour').replace('{n}', String(stepN)))
-    return wd === '' ? `${per}${t('editorSchedNoDaySuffix')}` : `${wd}${per}`
-  }
-  if (draft.periodFreq === 'once') return `${draft.date} ${time} ${t('editorSchedOnce')}`
-  switch (draft.periodFreq) {
-    case 'daily':
-      return `${t('editorSchedDaily')} ${time} ${t('editorSchedRun')}`
-    case 'weekly': {
-      // 每 N 周（N>1）⇒「每 4 周周一、周二 09:00 执行」；恰好每周 ⇒ 用户举例的「每周一、每周二 …」。
-      const wstep = Number.parseInt(draft.weekStep, 10)
-      const everyN = Number.isFinite(wstep) && wstep > 1
-      if (wd === '') {
-        return `${everyN ? t('editorSchedEveryNWeek').replace('{n}', String(wstep)) : t('editorSchedWeekly')} ${time} ${t('editorSchedRun')}${t('editorSchedNoDaySuffix')}`
-      }
-      // zh：'每周'+'一' ⇒「每周一」；en：'every '+'Mon' ⇒「every Mon」（星期键去掉「周」字后拼前缀）。
-      const dayText = everyN
-        ? wd
-        : days.map(d => `${t('editorSchedWeeklyDayPrefix')}${t(WEEKDAY_KEYS[d - 1]).replace(/^周/, '')}`).join('、')
-      return `${everyN ? t('editorSchedEveryNWeek').replace('{n}', String(wstep)) : ''}${dayText} ${time} ${t('editorSchedRun')}`
-    }
-    case 'monthly':
-      return `${t(`editorMonthMode_${draft.monthMode}`)}${draft.monthDay} 日 ${time} ${t('editorSchedRun')}`
-    case 'quarterly':
-      return `${t('editorSchedQuarterly').replace('{n}', draft.quarterMonth)} ${draft.monthDay} 日 ${time} ${t('editorSchedRun')}`
-    case 'yearly':
-      return `${t('editorMonthMode_every')}${draft.yearMonth} 月 ${draft.monthDay} 日 ${time} ${t('editorSchedRun')}`
-  }
+  return scheduleText(scheduleSpecFromDraft(draft), t)
 }
 
 /**
@@ -1703,7 +1663,8 @@ export function TaskEditorDrawer(props: {
     h('div', { style: { marginTop: '14px' } },
       h('div', { style: { borderTop: `1px dashed ${C.borderL2}`, paddingTop: '10px', fontSize: '12px', lineHeight: '1.6', color: C.textDim } },
         h('span', { style: { color: C.text, fontWeight: 600, marginRight: '4px' } }, t('editorSchedForecast') + '：'),
-        describeSchedule(draft, t),
+        // 关键片段（时间 / 「每 N 分钟执行一次」）加粗提亮（用户 2026-09-30：方法要支持样式参数）。
+        renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: C.text } }),
       ),
       h('div', { style: { borderTop: `1px dashed ${C.borderL2}`, marginTop: '10px' } }),
     ),

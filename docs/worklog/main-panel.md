@@ -118,3 +118,31 @@
 - 任务简介自动生成（LLM）：本轮**不做**，也未加 `summary` 字段（避免死代码）。接上时务必让它不参与脏判定 / 快照留档 / 提示词版本比较。
 - 旧「任务配置」界面（JSON 逃生口 + 只读参数）由 `LEGACY_CONFIG_VIEW = false` 关闭，代码与配套状态待面板收尾（U6）时一并清。
 - 执行记录视图、审计消费面：后续工作包。
+
+## 八、真机返工轮（2026-09-30，用户逐条 6 点）
+
+用户在真机上逐条提了 6 点，全部落码（冒烟 275 → **295**）：
+
+| # | 用户反馈 | 处置 |
+|---|---|---|
+| 1 | 上次 / 下次合并成一条太丑，改回**分开** | 一格四段的 `RunPills` 拆回 `PastPill` + `NextPill`（`bb45853` 曾分开、`49f3125` 合并，本轮恢复分开） |
+| 2 | 鼠标移到「上次运行 / 下次即将运行」**没有提示** | 根因 = 官方 Tooltip 要给子元素挂 ref，原来子元素是**裸 `LiveText` 函数组件** ⇒ ref 挂不上、**静默失效**。改法：Tooltip 包**整个标签**、子元素是真 `<div>` |
+| 3 | 改完任务要等一秒，能不能**通知式**立刻刷新 | 保存 / 拨片本就「改完即重拉」（不等 10 秒轮询），剩下一秒是服务端落盘。本轮加**乐观补行**：保存成功先 `patchRow` 用刚提交的定义补该行，紧接着 `refresh()` 用服务端真值覆盖 |
+| 4 | 列表开关与编辑器开关**不一样** | 官方 Switch 选中色是 `brand-primary`（亮色近黑 / 暗色近白）；编辑器早已局部覆盖成 `state-success-primary` 绿。列表补同款覆盖（`.dsh-tdt-tl-switchwrap` 包一层） |
+| 5 | 列表「周一…每 10 分钟执行一次」 vs 编辑器「每天每 10 分钟执行一次」 | 根因 = **两处各写了一份实现**（列表 `cronToHuman` 反解 cron / 编辑器 `describeSchedule` 读草稿）。抽象成单一实现 `schedule-text.ts`（见决策 53） |
+| 6 | 既然一秒就刷新，右上角刷新按钮没用 | 删除按钮与 `onRefresh` 通道（连同只服务于它的 `manualAt` 状态） |
+
+### 8.1 排期文案单源（本轮最大改动）
+
+- 新增 `src/client/schedule-text.ts`，两步走：
+  - **取结构化**：`scheduleSpecFromDraft`（表单草稿）/ `scheduleSpecFromSchedule`（任务定义 `schedule`，**优先吃结构化 `ui`**，老任务退回 cron 反解）⇒ 同一个 `ScheduleSpec`；
+  - **出文字**：`scheduleSegments`（片段带 `emphasis` 标记）/ `scheduleText`（纯文本，跑马灯用）/ `renderSchedule`（**支持样式参数** `emphasisStyle`——编辑器「预计执行」的关键片段因此加粗提亮）。
+- 删除列表的 `cronToHuman` 与列表自有文案键（`schedEveryMinute…schedOnce`，仅留 `schedCustom` 给认不出的 cron 原样显示）。
+- `TaskOverviewRow.schedule` 增加 `ui`（结构化排期），并纳入 `overviewKeyOf` ⇒ 改排期表单必 bump rev、客户端必拿到新数据。
+- 老任务（无 `ui`）由 `specFromCron` 反解（分钟 / 小时间隔、每天 / 每周 / 每月 / 单双月 / 每季度 / 每年），认不出的走 `custom`。
+- 文案口径**统一采用编辑器「预计执行」的句式**（列表从此对齐，不再有第二套说法）。
+
+### 8.2 验证
+
+- `npm run typecheck`（宿主 + 客户端）+ `npm run build`：全绿。
+- `npm run smoke`：**295 项全过**；[8] 客户端产物由 7 条扩到 14 条——两独立标签（且 `RunPills` 已不存在）、Tooltip 子元素是真 `<div>`（正则断言）、排期单源（`cronToHuman` 已不存在）、`ui` 反解、样式参数（`scheduleSegments` + `emphasis`）、开关同款（`switchwrap`）、刷新钮移除、乐观补行（`patchRow` + `rowPatchOf`）。

@@ -15,10 +15,11 @@
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular, IconEditOutlineRegular,
-  IconRefreshOutlineRegular, IconSearchOutlineRegular,
+  IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
+import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
 import { MarqueeText } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 
@@ -40,6 +41,8 @@ export interface TaskOverviewRow {
     start: string | null
     everyNWeeks: number | null
     window: string
+    /** 结构化排期（新建 / 编辑双写）；老任务为 null ⇒ 文案模块退回从 cron 反解。 */
+    ui: Record<string, unknown> | null
   }
   promptHead: string
   attachments: Array<{ name: string; kind: 'link' | 'upload' }>
@@ -108,6 +111,9 @@ const ensureTaskListStyle = (): void => {
     // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
     `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
     '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
+    // 启用开关选中色 = 官方 success 绿（与编辑器头部开关 `.dsh-tdt-ed-enable` **逐值一致**，
+    // 用户 2026-09-30 要求两处统一）。选择器带包装类 + role ⇒ 特异性高于官方 `.switch[aria-checked=true]`。
+    ".dsh-tdt-tl-switchwrap button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}",
   ].join('\n')
   document.head.appendChild(tag)
 }
@@ -120,6 +126,8 @@ export function useTaskOverview(): {
   rows: TaskOverviewRow[]
   ready: boolean
   refresh: () => void
+  /** 就地补一条行（乐观更新，见 patchRow）。 */
+  patchRow: (id: string, patch: Partial<TaskOverviewRow>) => void
 } {
   const [rows, setRows] = useState<TaskOverviewRow[]>([])
   const [ready, setReady] = useState(false)
@@ -165,57 +173,25 @@ export function useTaskOverview(): {
     if (busyRef.current) { pendingRef.current = true; return }
     setTick(v => v + 1)
   }, [])
-  return { rows, ready, refresh }
+
+  /**
+   * 就地补一条行（乐观更新，用户 2026-09-30）：保存成功后**立刻**把改动落在列表上，
+   * 不等服务端那 ~1 秒的落盘 + 重拉（用户：「改完还要等一秒，烦」）。改动用客户端已知的真值
+   * （刚提交的草稿）填充，不编造；紧接着的 `refresh()` 会拉回服务端真值整体替换它，
+   * 所以这里只是「先显示出来」，不构成第二份真源。
+   */
+  const patchRow = useCallback((id: string, patch: Partial<TaskOverviewRow>): void => {
+    setRows(list => list.map(row => (row.id === id ? { ...row, ...patch } : row)))
+  }, [])
+
+  return { rows, ready, refresh, patchRow }
 }
 
 // ── 文案与时间 ─────────────────────────────────────────────────────────
-const WEEKDAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'] as const
-
-/** cron（5 段）→ 人话；认不出的形态原样显示 cron（真实值，不编造）。 */
-export function cronToHuman(
-  cron: string | null,
-  once: string | null,
-  everyNWeeks: number | null,
-  tt: Translate,
-): string {
-  if (once !== null && once !== '') {
-    return tt('schedOnce', { date: once.slice(0, 10), time: once.slice(11, 16) })
-  }
-  if (cron === null || cron === '') return '—'
-  const parts = cron.trim().split(/\s+/)
-  if (parts.length !== 5) return tt('schedCustom', { cron })
-  const [minute, hour, dom, , dow] = parts
-  const pad = (v: string): string => (v.length === 1 && /^\d$/.test(v) ? `0${v}` : v)
-  const minuteStep = /^\*\/(\d+)$/.exec(minute)
-  const hourStep = /^\*\/(\d+)$/.exec(hour)
-  const weekdays = dow === '*' ? '' : dow.split(',').map(d => WEEKDAY_NAMES[Number(d)] ?? d).join('、')
-  let text: string
-  let isInterval = false
-  if (minute === '*' || minuteStep?.[1] === '1') {
-    text = tt('schedEveryMinute')
-    isInterval = true
-  } else if (minuteStep !== null) {
-    text = tt('schedEveryNMinutes', { n: minuteStep[1] })
-    isInterval = true
-  } else if (hour === '*' || hourStep !== null) {
-    text = tt('schedHourly', { minute: pad(minute) })
-    isInterval = true
-  } else if (dom === '*' && dow === '*') {
-    text = tt('schedDaily', { time: `${pad(hour)}:${pad(minute)}` })
-  } else if (dom === '*' && dow !== '*') {
-    text = tt('schedWeekly', { weekdays, time: `${pad(hour)}:${pad(minute)}` })
-  } else if (dom !== '*' && dow === '*') {
-    text = tt('schedMonthly', { day: dom, time: `${pad(hour)}:${pad(minute)}` })
-  } else {
-    return tt('schedCustom', { cron })
-  }
-  // 间隔档（每 N 分钟 / 每小时）若还限定了星期 ⇒ 星期在前：「周一、周二，每 10 分钟执行一次」
-  // （照编辑器「预计执行」的句式，光写「每 10 分钟」看不懂）。
-  const full = isInterval && weekdays !== '' ? `周${weekdays}，${text}` : text
-  // 「每 N 周」是 cron 表达不出来的维度（靠锚点 + 取模过滤）⇒ 补在句首。
-  if (everyNWeeks !== null && everyNWeeks > 1) return `每 ${everyNWeeks} 周 · ${full}`
-  return full
-}
+// ⚠️ 排期人话（卡片「执行方式」/ 编辑器「预计执行」）**不在这里写**——统一在
+// [`./schedule-text.ts`](./schedule-text.ts)（用户 2026-09-30 拍板：同一个排期不许两处各写一份文案，
+// 真机已出现「周一…每 10 分钟执行一次」vs「每天每 10 分钟执行一次」）。此处只把任务定义的
+// `schedule` 交给它。
 
 // ── 时间「社交化」表达（2026-09-30 用户要求；分级取 GitHub / Telegram 一类公认口径）──
 // 过去：刚刚 → N 分钟前 → N 小时前 → N 天前 → N 周前 → N 个月前 → N 年前；
@@ -425,54 +401,41 @@ function StatusRail(props: { row: TaskOverviewRow }) {
 }
 
 /**
- * 「历史执行」与「下次执行」两个**独立**小标签（2026-09-30 用户拍板，两格式照「品牌|三得利」：
- * 左格 = 语义底色 + 图标，右格 = 浅底 + 文字，整体一个圆角细边框）。
- * - 历史执行：左格成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；右格只写时间——
- *   当天 HH:mm、跨天「3 小时前 / 1 天前」；hover 给完整时刻。
- * - 下次执行：左格执行（闹钟）图标；右格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
+ * 「历史执行」与「下次执行」是**两个独立**小标签（2026-09-30 用户拍板：不要合成一格四段，
+ * 拆成两块更清爽）。每个标签 = 语义底色的图标格 + 时间格，整体一个圆角细边框。
+ * - 历史执行：成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；时间格当天 HH:mm、跨天「3 小时前 / 1 天前」。
+ * - 下次执行：图标 = 闹钟；时间格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
  *   超过 24 小时 = 明天 / 三天后 / N 周后。
+ *
+ * ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+ * 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+ * 提示**静默失效**（用户 2026-09-30 真机反馈「移上去没提示」的根因，与 task-editor 里
+ * 「图标要包真 `<button>`」是同一个坑）。
  */
 const pillOuterStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'stretch', flex: 'none', height: '20px',
   borderRadius: '7px', overflow: 'hidden', border: `1px solid ${C.border}`,
 }
-const pillLeftStyle = (bg: string, fg: string): Record<string, string | number> => ({
+/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
+const pillIconCell = (bg: string, fg: string): Record<string, string | number> => ({
   display: 'inline-flex', alignItems: 'center', padding: '0 6px', background: bg, color: fg, flex: 'none',
 })
-const pillRightStyle: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: C.layer1, color: C.text,
-  fontSize: '11px', lineHeight: '14px', whiteSpace: 'nowrap',
-}
-
-/** 格子通用样式（外框一体 ⇒ 内部分隔是**直线**，只有最左 / 最右有圆角）。 */
-const pillCell = (extra?: Record<string, string | number>): Record<string, string | number> => ({
-  display: 'inline-flex', alignItems: 'center', padding: '0 7px', flex: 'none', ...extra,
-})
-/**
- * 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。
- */
+/** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
 const pillTimeCell: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: C.layer1, color: C.text,
   fontSize: '11px', lineHeight: '14px', whiteSpace: 'nowrap',
   fontVariantNumeric: 'tabular-nums', fontFamily: monoFont,
 }
 
-function RunPills(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
+/** 历史执行标签（成功绿 / 失败红 / 无状态灰）。 */
+function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
   const has = row.lastStatus !== null && row.lastScheduledAt !== null
-  const leftBg = !has ? C.layer3 : row.lastStatus === 'succeeded' ? C.success : C.danger
-  const leftFg = has ? '#fff' : C.textDim
-  const lastTitle = has
-    ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') })
-    : t('listNever')
-  const nextTitle = row.nextSlotAt === null
-    ? t('listNextNone')
-    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
-  return h('div', { style: pillOuterStyle },
-    // ① 历史时钟（成功绿 / 失败红 / 无状态灰）
-    h('span', { style: pillCell({ background: leftBg, color: leftFg }) }, h(IconClockOutlineRegular, { size: 12 })),
-    // ② 历史时间：当天 HH:mm，跨天「3 小时前 / 1 天前」
-    h(Tooltip, { label: lastTitle, side: 'bottom' },
+  const bg = !has ? C.layer3 : row.lastStatus === 'succeeded' ? C.success : C.danger
+  const title = has ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') }) : t('listNever')
+  return h(Tooltip, { label: title, side: 'bottom' },
+    h('div', { style: pillOuterStyle },
+      h('span', { style: pillIconCell(bg, has ? '#fff' : C.textDim) }, h(IconClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): string => {
@@ -482,14 +445,20 @@ function RunPills(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
         },
       }),
     ),
-    // ③ 闹钟（下次执行）：左边界一条直线与上一格相连 ⇒ 两块合并成一个整体
-    h('span', {
-      style: pillCell({ background: C.layer3, color: C.text, borderLeft: `1px solid ${C.border}` }),
-    }, h(IconAlarmClockOutlineRegular, { size: 12 })),
-    // ④ 下次时间：一天以内 = 秒级倒计时（H:MM:SS / M:SS），超过 24 小时 = 明天 / 三天后 / N 周后
-    h(Tooltip, { label: nextTitle, side: 'bottom' },
+  )
+}
+
+/** 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。 */
+function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
+  const { row, t, tt } = props
+  const title = row.nextSlotAt === null
+    ? t('listNextNone')
+    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
+  return h(Tooltip, { label: title, side: 'bottom' },
+    h('div', { style: pillOuterStyle },
+      h('span', { style: pillIconCell(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
       h(LiveText, {
-        style: { ...pillTimeCell, borderLeft: `1px solid ${C.border}` },
+        style: pillTimeCell,
         render: (nowMs: number): string => {
           if (row.nextSlotAt === null) return NO_TIME
           const diff = Date.parse(row.nextSlotAt) - nowMs
@@ -533,7 +502,8 @@ function TaskCard(props: {
   refOf: (el: HTMLElement | null) => void
 }) {
   const { row, t, tt, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props
-  const scheduleText = cronToHuman(row.schedule.cron, row.schedule.once, row.schedule.everyNWeeks, tt)
+  // 排期人话与编辑器「预计执行」**同一份实现**（`schedule-text.ts`，优先吃结构化 ui）⇒ 两处必然一致。
+  const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
 
   return h('div', { ref: refOf, style: cardStyle },
@@ -548,18 +518,23 @@ function TaskCard(props: {
           row.enabled ? null : h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, t('listDisabledTag')),
         ),
         // 执行方式是完整一句话（「每周一、周二，每 10 分钟执行一次」），放不下同样跑马灯。
-        h('div', { style: { ...metaStyle, minWidth: 0 } }, h(MarqueeText, { text: scheduleText })),
+        h('div', { style: { ...metaStyle, minWidth: 0 } }, h(MarqueeText, { text: scheduleLine })),
         row.createdAt === null ? null : h('div', { style: faintStyle }, `${t('listCreatedPrefix')} ${dateOf(row.createdAt)}`),
       ),
-      // 右：历史执行 / 下次执行**合并成一条**（外框圆角、中间直线）→ 启用拨片 → 展开箭头。
+      // 右：历史执行 / 下次执行两个**独立**小标签 → 启用拨片 → 展开箭头。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
-        h(RunPills, { row, t, tt }),
-        h(Switch, {
-          checked: row.enabled,
-          onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
-          label: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
-          className: 'dsh-tdt-tl-switch',
-        }),
+        h(PastPill, { row, t, tt }),
+        h(NextPill, { row, t, tt }),
+        // 开关与编辑器头部开关**统一**：包一层类名壳，交给 CSS 把选中态刷成官方 success 绿。
+        // （官方 Switch 默认选中色是 brand-primary：亮色主题下近乎黑、暗色近乎白 ⇒ 两处看着不一样。）
+        h('span', { className: 'dsh-tdt-tl-switchwrap' },
+          h(Switch, {
+            checked: row.enabled,
+            onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
+            label: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
+            title: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
+          }),
+        ),
         h('button', {
           type: 'button', style: { ...iconBtnStyle, border: 'none', transform: open ? 'rotate(180deg)' : 'none' },
           title: t('expandHint'), onClick: onToggleOpen,
@@ -571,7 +546,7 @@ function TaskCard(props: {
     open ? h('div', { style: { marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '8px' } },
       h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
       h('div', { style: sectionBodyStyle },
-        `${t('listFieldSchedule')}：${scheduleText} · ${t('listFieldWorkspace')}：${row.workspace} · ${t('listFieldModel')}：${modelText} · ${t('listFieldRetry')}：${row.retryMax} · ${t('listFieldWindow')}：${row.schedule.window}`,
+        `${t('listFieldSchedule')}：${scheduleLine} · ${t('listFieldWorkspace')}：${row.workspace} · ${t('listFieldModel')}：${modelText} · ${t('listFieldRetry')}：${row.retryMax} · ${t('listFieldWindow')}：${row.schedule.window}`,
       ),
       h('div', { style: sectionLabelStyle }, t('listSectionAttachments')),
       h('div', { style: sectionBodyStyle },
@@ -604,12 +579,11 @@ export function TaskListView(props: {
   t: Translate
   rows: readonly TaskOverviewRow[]
   ready: boolean
-  onRefresh: () => void
   onEdit: (id: string) => void
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onRefresh, onEdit, onToggleEnabled } = props
+  const { t, rows, ready, onEdit, onToggleEnabled } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
@@ -720,11 +694,6 @@ export function TaskListView(props: {
             onSelect: (id: string) => { setWorkspace(id); setMenuOpen(false) },
             onClose: () => { setMenuOpen(false) },
           }),
-          // 刷新：同样套 controlBoxStyle ⇒ 与搜索框、工作区下拉完全一样的样式和高度。
-          h('button', {
-            type: 'button', style: controlBoxStyle, title: t('debugRefresh'),
-            onClick: onRefresh,
-          }, h(IconRefreshOutlineRegular, { size: 14 })),
         ),
       ),
       visible.length === 0

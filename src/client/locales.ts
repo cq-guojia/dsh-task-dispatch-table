@@ -153,8 +153,7 @@ export type LocaleKey =
   | 'listSectionSchedule' | 'listSectionAttachments' | 'listSectionDepends' | 'listSectionPrompt'
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
   | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
-  | 'schedEveryMinute' | 'schedEveryNMinutes' | 'schedHourly' | 'schedDaily' | 'schedWeekly'
-  | 'schedMonthly' | 'schedOnce' | 'schedCustom'
+  | 'schedCustom'
 
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
@@ -690,14 +689,8 @@ export const zh: Record<LocaleKey, string> = {
   listFieldWindow: '允许延迟',
   listNone: '（无）',
   listDisabledTag: '（已停用）',
-  // 排期一律写成**一句完整的话**（光写「每 10 分钟」看不懂，照编辑器「预计执行」的句式）
-  schedEveryMinute: '每分钟执行一次',
-  schedEveryNMinutes: '每 {n} 分钟执行一次',
-  schedHourly: '每小时第 {minute} 分执行一次',
-  schedDaily: '每天 {time} 执行一次',
-  schedWeekly: '每周{weekdays} {time} 执行一次',
-  schedMonthly: '每月 {day} 日 {time} 执行一次',
-  schedOnce: '{date} {time} 执行一次',
+  // 排期文案的**唯一实现**在 `client/schedule-text.ts`（列表与编辑器共用，正文键走 editorSched*）；
+  // 这里只剩「认不出的 cron 原样显示」一条（真实值，不编造）。
   schedCustom: '{cron}',
 }
 
@@ -1221,13 +1214,7 @@ export const en: Record<LocaleKey, string> = {
   listFieldWindow: 'Late window',
   listNone: '(none)',
   listDisabledTag: '(disabled)',
-  // Schedule is always a full sentence ("every 10 minutes" alone is unreadable).
-  schedEveryMinute: 'Runs every minute',
-  schedEveryNMinutes: 'Runs every {n} minutes',
-  schedHourly: 'Runs hourly at minute {minute}',
-  schedDaily: 'Runs daily at {time}',
-  schedWeekly: 'Runs weekly on {weekdays} at {time}',
-  schedMonthly: 'Runs monthly on day {day} at {time}',
-  schedOnce: 'Runs once on {date} at {time}',
+  // The single schedule-text implementation lives in `client/schedule-text.ts`; only the
+  // unrecognised-cron passthrough remains here.
   schedCustom: '{cron}',
 }

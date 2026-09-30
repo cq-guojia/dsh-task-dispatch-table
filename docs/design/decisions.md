@@ -224,3 +224,28 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 **修订七（同日结案轮）**：① 删「执行期间请勿关闭电脑」提醒——调度跑在宿主进程（Docker 常驻），不依赖网页打开（已向用户答疑）；② 确认弹窗排版层级化（标题 15/600 → 说明 13 → 结构化圆点清单浅底块 → 勾选 → 按钮，宽 400）；③ 保存成功提示改**官方 primitives Toast**（顶部居中、绿勾、holdMs 2500）——分工定案：页面级反馈用官方 Toast，锚定上下文的反馈用自制 FloatingToast。本工作包（编辑器 UX 第二轮）结案。
 
 **修订六（同日第八轮）**：① 保存成功不再静默——编辑器/面板保存成功均弹共用 Toast 绿色「任务已保存」（方案 2，统一 Toast）；② 版本找回 = 内容覆盖到左侧编辑器、**不关全屏编辑器**（用户接着改）。
+
+---
+
+## 决策 53：排期文案必须单源 + 主界面真机返工口径（2026-09-30）
+
+**背景**：主界面真机试用暴露**同一个排期两处文案不一致**——列表写「周一…每 10 分钟执行一次」，编辑器「预计执行」写「每天每 10 分钟执行一次」。根因不是文案笔误，而是**两处各写了一份实现**（列表 `cronToHuman` 从 cron 字符串反解、编辑器 `describeSchedule` 从表单草稿生成）。用户拍板：必须抽象成一个，不许一个功能两处各写一套。
+
+**定型（排期「结构化 → 人话」唯一实现 = [`src/client/schedule-text.ts`](../../src/client/schedule-text.ts)）**：
+
+1. **取结构化**（两个来源收敛到同一个 `ScheduleSpec`）：
+   - `scheduleSpecFromDraft(draft)` —— 编辑器有表单草稿；
+   - `scheduleSpecFromSchedule(schedule)` —— 列表只有任务定义，**优先吃结构化 `ui`**（新建 / 编辑双写的 `schedule.ui`），老任务没有 `ui` 才退回 `specFromCron` 反解。
+2. **出文字**（吃 spec、吐文案，方法本身支持样式参数）：
+   - `scheduleSegments(spec, t)` —— 片段数组，关键片段带 `emphasis` 标记（唯一文案生成处）；
+   - `scheduleText(spec, t)` —— 纯文本（跑马灯等只收字符串的地方）；
+   - `renderSchedule(spec, t, opts?)` —— React 节点，传 `emphasisStyle` 即把关键片段包一层（加粗 / 换色 / 加间距都从这里出）。
+
+**配套**：`cronToHuman` 与列表自有文案键删除；`TaskOverviewRow.schedule` 增加 `ui` 并纳入展示指纹 `overviewKeyOf`（改排期表单必 bump rev）；文案口径统一采用编辑器「预计执行」的句式。
+
+**同轮真机口径（原样记，避免以后重犯）**：
+
+- 上次 / 下次恢复成**两个独立小标签**（曾短暂合并成一条 `RunPills`，用户嫌丑 ⇒ 拆回 `PastPill` + `NextPill`）。
+- **官方 `Tooltip` 的子元素必须是真 DOM 元素**：裸函数组件（`LiveText`、官方 `Icon*` 等）ref 挂不上 ⇒ 提示**静默失效**。此坑第二次踩到（`task-editor` 里「图标要包真 `<button>`」已记过一次）。
+- 启用开关两处**必须同款**：官方 Switch 选中色是 `brand-primary`（亮色近黑 / 暗色近白），故要让列表与编辑器一致就得两处都局部覆盖成官方状态色 success 绿（`state-success-primary`）。
+- **右上角刷新按钮移除**（保存 / 拨片已即时刷新）；保存成功后先做**乐观补行**（`patchRow` + `rowPatchOf`，只补能由定义原样算出的字段）让改动立刻可见，紧接着重拉服务端真值覆盖它。
