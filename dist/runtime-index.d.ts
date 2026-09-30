@@ -58,13 +58,6 @@ export interface TaskOverviewRow {
     lastScheduledAt: string | null;
     lastFinishedAt: string | null;
     nextSlotAt: string | null;
-    /**
-     * 待补跑的那一槽（U17 / Plan A，2026-09-30）：与服务端 Loop A `dueSlot` **同一算法**——
-     * 窗口内最晚、且「还没有实例行」的那一下。有值 ⇔ 循环此刻会先补跑它（而非 nextSlotAt）。
-     * 卡片据此在它跑起来前显示「补跑 15:30」，跑起来后 entry 翻转 ⇒ 自动变回「15:40」，显示与行为对齐。
-     * ⚠️ 不进 `overviewKeyOf`：随运行态 / 时间变，每轮 overview 就地算，不 bump rev。
-     */
-    dueSlotAt: string | null;
 }
 export interface RuntimeIndex {
     /** 启动 / 定义整批变更后重建（一条聚合 SQL + 逐任务算下一刻度）；`nowMs` 供确定性测试。 */

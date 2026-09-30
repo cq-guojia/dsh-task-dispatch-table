@@ -53,8 +53,6 @@ export interface TaskOverviewRow {
   lastScheduledAt: string | null
   lastFinishedAt: string | null
   nextSlotAt: string | null
-  /** 待补跑槽（U17 / Plan A）：与服务端 dueSlot 同算法；有值 = 循环此刻会先补跑它。 */
-  dueSlotAt: string | null
 }
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
@@ -116,6 +114,15 @@ const ensureTaskListStyle = (): void => {
     // 启用开关选中色 = 官方 success 绿（与编辑器头部开关 `.dsh-tdt-ed-enable` **逐值一致**，
     // 用户 2026-09-30 要求两处统一）。选择器带包装类 + role ⇒ 特异性高于官方 `.switch[aria-checked=true]`。
     ".dsh-tdt-tl-switchwrap button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}",
+    // 运行中的活动指示（用户 2026-09-30）：三个小方块依次脉动，类似手机充电 / 加载中。
+    // `currentColor` ⇒ 跟随所在格的文字色（这里被设成 success 绿）。
+    '@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }',
+    '.dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }',
+    '.dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }',
+    '.dsh-tdt-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }',
+    '.dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }',
+    // 尊重「减少动效」偏好：不做动画，三个方块常亮。
+    '@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }',
   ].join('\n')
   document.head.appendChild(tag)
 }
@@ -452,26 +459,40 @@ function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   )
 }
 
+/** 运行中的活动指示：三个小方块依次脉动（用户 2026-09-30：跑起来就别再跳倒计时，用动效表示「在跑」）。 */
+function RunningBlocks() {
+  return h('span', { className: 'dsh-tdt-run-blocks' }, h('i', null), h('i', null), h('i', null))
+}
+
 /**
- * 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。
+ * 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
+ * - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
+ * - 未运行 ⇒ 一天以内 = `HH:mm:ss` 秒级倒计时（`LiveText` 自转），超过 24 小时 = 明天 / 三天后 / N 周后；
+ * - 无后续 ⇒ 占位符。
  *
- * ⚠️ 待补跑（U17 / Plan A，2026-09-30）：`row.dueSlotAt` 有值 ⇔ 循环此刻会先补跑「窗口内最晚、还没跑过的那一槽」
- * （如 15:30），而 `nextSlotAt` 是严格晚于此刻的下一槽（15:40）。两者不一致时优先显示「补跑 15:30」+
- * 倒计时；等它跑起来（`running` 翻转）`dueSlotAt` 变回 null，自动切回「15:40」——**显示与行为对齐**。
+ * ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+ * 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+ * 提示静默失效（用户 2026-09-30 真机反馈「移上去没提示」的根因）。
  */
 function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
-  const catchup = row.dueSlotAt
-  const title = catchup === null
-    ? (row.nextSlotAt === null ? t('listNextNone') : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) }))
-    : tt('listNextCatchupTitle', { when: formatFull(catchup) })
+  if (row.running) {
+    return h(Tooltip, { label: t('listRunning'), side: 'bottom' },
+      h('div', { style: pillOuterStyle },
+        h('span', { style: pillIconCell(C.success, '#fff') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+        h('span', { style: { ...pillTimeCell, color: C.success } }, h(RunningBlocks, {})),
+      ),
+    )
+  }
+  const title = row.nextSlotAt === null
+    ? t('listNextNone')
+    : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
       h('span', { style: pillIconCell(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): string => {
-          if (catchup !== null) return `${t('listNextCatchupPrefix')}${countdownText(catchup, nowMs, tt)}`
           if (row.nextSlotAt === null) return NO_TIME
           const diff = Date.parse(row.nextSlotAt) - nowMs
           return diff < 24 * 3600_000

@@ -541,8 +541,6 @@ window.__ModuleLoader__.load({
 			listAgoFailed: "{when}执行失败",
 			listLastFullTitle: "上次执行：{when}",
 			listNextFullTitle: "下次执行：{when}",
-			listNextCatchupPrefix: "补跑 ",
-			listNextCatchupTitle: "待补跑：{when}",
 			listEmpty: "还没有任务。点右上角「＋ 新建任务」创建第一个。",
 			listEmptyFiltered: "没有符合当前筛选的任务。",
 			listSectionSchedule: "执行设置",
@@ -1059,8 +1057,6 @@ window.__ModuleLoader__.load({
 			listAgoFailed: "failed {when}",
 			listLastFullTitle: "Last run: {when}",
 			listNextFullTitle: "Next run: {when}",
-			listNextCatchupPrefix: "Catch-up ",
-			listNextCatchupTitle: "Pending catch-up: {when}",
 			listEmpty: "No tasks yet. Use “+ New task” to create the first one.",
 			listEmptyFiltered: "No task matches the current filter.",
 			listSectionSchedule: "Execution settings",
@@ -40268,7 +40264,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				`.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
 				`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
 				".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
-				".dsh-tdt-tl-switchwrap button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}"
+				".dsh-tdt-tl-switchwrap button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}",
+				"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
+				".dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }",
+				".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
+				".dsh-tdt-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }",
+				".dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }",
+				"@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }"
 			].join("\n");
 			document.head.appendChild(tag);
 		};
@@ -40584,24 +40586,36 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			})));
 		}
+		/** 运行中的活动指示：三个小方块依次脉动（用户 2026-09-30：跑起来就别再跳倒计时，用动效表示「在跑」）。 */
+		function RunningBlocks() {
+			return (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null));
+		}
 		/**
-		* 下次执行标签（一天以内 = 秒级倒计时；超过 24 小时 = 明天 / 三天后 / N 周后）。
+		* 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
+		* - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
+		* - 未运行 ⇒ 一天以内 = `HH:mm:ss` 秒级倒计时（`LiveText` 自转），超过 24 小时 = 明天 / 三天后 / N 周后；
+		* - 无后续 ⇒ 占位符。
 		*
-		* ⚠️ 待补跑（U17 / Plan A，2026-09-30）：`row.dueSlotAt` 有值 ⇔ 循环此刻会先补跑「窗口内最晚、还没跑过的那一槽」
-		* （如 15:30），而 `nextSlotAt` 是严格晚于此刻的下一槽（15:40）。两者不一致时优先显示「补跑 15:30」+
-		* 倒计时；等它跑起来（`running` 翻转）`dueSlotAt` 变回 null，自动切回「15:40」——**显示与行为对齐**。
+		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+		* 提示静默失效（用户 2026-09-30 真机反馈「移上去没提示」的根因）。
 		*/
 		function NextPill(props) {
 			const { row, t, tt } = props;
-			const catchup = row.dueSlotAt;
-			const title = catchup === null ? row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) }) : tt("listNextCatchupTitle", { when: formatFull(catchup) });
+			if (row.running) return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("listRunning"),
+				side: "bottom"
+			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(C$1.success, "#fff") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)("span", { style: {
+				...pillTimeCell,
+				color: C$1.success
+			} }, (0, react.createElement)(RunningBlocks, {}))));
+			const title = row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
 			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(C$1.layer3, C$1.text) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
-					if (catchup !== null) return `${t("listNextCatchupPrefix")}${countdownText(catchup, nowMs, tt)}`;
 					if (row.nextSlotAt === null) return NO_TIME;
 					return Date.parse(row.nextSlotAt) - nowMs < 864e5 ? countdownText(row.nextSlotAt, nowMs, tt) : relativeFuture(row.nextSlotAt, nowMs, tt);
 				}

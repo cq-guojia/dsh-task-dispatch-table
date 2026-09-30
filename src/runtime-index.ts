@@ -11,7 +11,7 @@
 // ⚠️ 这是**派生缓存，不是真源**：丢了能从 task_instances 重建，故**不落数据库**（用户 2026-09-30
 // 拍板：不引入 task_runtime 派生表）；任务定义本身也绝不迁进数据库（与决策 25 冲突）。
 import type { InstanceStatus, TaskStore } from './store.js'
-import { durationMs, nextSlotAfter, scheduledSlotsFor, titleOf, type TaskDefinition } from './tasks.js'
+import { nextSlotAfter, titleOf, type TaskDefinition } from './tasks.js'
 
 /** 一条任务的运行态（派生）。 */
 export interface TaskRuntimeEntry {
@@ -65,13 +65,6 @@ export interface TaskOverviewRow {
   lastScheduledAt: string | null
   lastFinishedAt: string | null
   nextSlotAt: string | null
-  /**
-   * 待补跑的那一槽（U17 / Plan A，2026-09-30）：与服务端 Loop A `dueSlot` **同一算法**——
-   * 窗口内最晚、且「还没有实例行」的那一下。有值 ⇔ 循环此刻会先补跑它（而非 nextSlotAt）。
-   * 卡片据此在它跑起来前显示「补跑 15:30」，跑起来后 entry 翻转 ⇒ 自动变回「15:40」，显示与行为对齐。
-   * ⚠️ 不进 `overviewKeyOf`：随运行态 / 时间变，每轮 overview 就地算，不 bump rev。
-   */
-  dueSlotAt: string | null
 }
 
 export interface RuntimeIndex {
@@ -174,32 +167,6 @@ export function createRuntimeIndex(): RuntimeIndex {
     }
   }
 
-  /**
-   * 待补跑的那一槽（U17 / Plan A，2026-09-30）：与服务端 Loop A `dueSlot` **同一算法**——
-   * 窗口内最晚、且没有实例行的刻度。这里用进程内 entry 近似 `store.findBySlot`：
-   * 最新槽若是「在飞的那一趟」或「最近一次已完结」，就当它已有行、不计补跑。
-   * 解决用户真机冲突：卡片按 `nextSlotAfter(now)`（严格晚于此刻）显示 15:40，但循环会先补跑 15:30 ⇒
-   * 这里把 15:30 也算出来给卡片，让它显示「补跑 15:30」，跑起来后自动变回「15:40」。
-   */
-  const computeDueSlotAt = (task: TaskDefinition, entry: TaskRuntimeEntry, nowMs: number): string | null => {
-    if (task.enabled === false) return null
-    try {
-      const windowMs = durationMs(task.schedule.window)
-      const from = new Date(nowMs - windowMs)
-      const to = new Date(nowMs + 1000)
-      let chosen: Date | undefined
-      for (const s of scheduledSlotsFor(task, from, to)) {
-        if (s.getTime() <= nowMs && (chosen === undefined || s.getTime() > chosen.getTime())) chosen = s
-      }
-      if (chosen === undefined) return null
-      const iso = chosen.toISOString()
-      if (entry.running && entry.runningSince === iso) return null // 在飞的正是这一槽
-      if (entry.lastScheduledAt === iso) return null // 最近一次已完结，就是这一槽
-      return iso
-    } catch {
-      return null
-    }
-  }
 
   return {
     rebuild(tasks, store, nowMs = Date.now()) {
@@ -339,7 +306,6 @@ export function createRuntimeIndex(): RuntimeIndex {
           lastScheduledAt: entry.lastScheduledAt,
           lastFinishedAt: entry.lastFinishedAt,
           nextSlotAt: entry.nextSlotAt,
-          dueSlotAt: computeDueSlotAt(task, entry, nowMs),
         })
       }
       // 已删任务的残留条目：任务表里没了就别再占着内存。
