@@ -1240,14 +1240,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 `;
-		let injected$1 = false;
+		let injected$2 = false;
 		/**
 		* 幂等注入样式（一次挂入 document.head）。SSR / 无 document 环境静默跳过。
 		* 宿主升级换 token 名时，未命中的变量回退到兜底值（仍可读、不崩）。
 		*/
 		function ensureArchiveSessionStyle() {
-			if (injected$1) return;
-			injected$1 = true;
+			if (injected$2) return;
+			injected$2 = true;
 			if (typeof document === "undefined") return;
 			if (document.getElementById("dsh-task-dispatch-table-archive-session") !== null) return;
 			const el = document.createElement("style");
@@ -5765,7 +5765,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-tab:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-tab[aria-selected='true']{background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;}
 .dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
-.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-label{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-ed-hint{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
 .dsh-tdt-ed-warn{margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-state-warn-primary,#f5a623);}
@@ -5847,11 +5847,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-json{display:block;width:100%;box-sizing:border-box;min-height:11em;margin-top:8px;padding:8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:1.5;resize:vertical;}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
-		let injected = false;
+		let injected$1 = false;
 		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
 		function ensureTaskEditorStyle() {
-			if (injected) return;
-			injected = true;
+			if (injected$1) return;
+			injected$1 = true;
 			if (typeof document === "undefined") return;
 			if (document.getElementById("dsh-task-dispatch-table-task-editor") !== null) return;
 			const el = document.createElement("style");
@@ -37393,6 +37393,53 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
 		};
 		//#endregion
+		//#region src/client/toast-css.ts
+		/** 样式标签 id（幂等注入用）。 */
+		const TOAST_STYLE_ID = "dsh-task-dispatch-table-toast";
+		const TOAST_CSS = `
+/* 悬浮错误提示：绝对定位在「保存操作行」上方（父容器需 position:relative），不占版面。
+   2.8s 时间线：0~8% 淡入并上滑归位 → 8%~82% 稳定显示（≈2.5s）→ 82%~100% 上飘淡出。 */
+.dsh-tdt-toast{
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translate(-50%,10px);
+  z-index:6;
+  pointer-events:none;
+  max-width:calc(100% - 24px);
+  box-sizing:border-box;
+  margin:0;
+  padding:8px 12px;
+  border-radius:var(--dsw-radius-md,8px);
+  background:var(--dsw-alias-state-error-primary,#e5484d);
+  color:#fff;
+  font-size:12px;
+  line-height:1.5;
+  text-align:center;
+  box-shadow:0 6px 20px rgba(0,0,0,.25);
+  opacity:0;
+  animation:dsh-tdt-toast 2.8s ease forwards;
+}
+@keyframes dsh-tdt-toast{
+  0%{opacity:0;transform:translate(-50%,10px);}
+  8%{opacity:1;transform:translate(-50%,0);}
+  82%{opacity:1;transform:translate(-50%,0);}
+  100%{opacity:0;transform:translate(-50%,-16px);}
+}
+`;
+		let injected = false;
+		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
+		function ensureToastStyle() {
+			if (injected) return;
+			injected = true;
+			if (typeof document === "undefined") return;
+			if (document.getElementById("dsh-task-dispatch-table-toast") !== null) return;
+			const el = document.createElement("style");
+			el.id = TOAST_STYLE_ID;
+			el.textContent = TOAST_CSS;
+			document.head.appendChild(el);
+		}
+		//#endregion
 		//#region src/client/task-editor.tsx
 		const WEEKDAY_KEYS = [
 			"editorWeekday1",
@@ -38441,6 +38488,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [confirmDeleteTask, setConfirmDeleteTask] = (0, react.useState)(false);
 			const [confirmReset, setConfirmReset] = (0, react.useState)(false);
 			const [resetHint, setResetHint] = (0, react.useState)(false);
+			const [saveErrToast, setSaveErrToast] = (0, react.useState)(null);
+			const saveErrSeq = (0, react.useRef)(0);
+			(0, react.useEffect)(() => {
+				if (saveError === null || saveError === void 0) return;
+				saveErrSeq.current += 1;
+				setSaveErrToast({
+					msg: saveError,
+					seq: saveErrSeq.current
+				});
+			}, [saveError]);
 			(0, react.useEffect)(() => {
 				if (!resetHint) return;
 				const id = setTimeout(() => {
@@ -38510,6 +38567,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, [editorOpen, previewOpen]);
 			(0, react.useEffect)(() => {
 				ensureTaskEditorStyle();
+				ensureToastStyle();
 			}, []);
 			const patch = (0, react.useCallback)((part) => {
 				onChange({
@@ -39326,13 +39384,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, t("editorReset")), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), resetHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
 				style: { margin: "0 8px 0 0" }
-			}, t("editorResetDone")) : null, saveError !== null ? (0, react.createElement)("span", {
-				className: "dsh-tdt-ed-hint",
-				style: {
-					margin: "0 8px 0 0",
-					color: "var(--dsw-alias-state-error-primary, #e5484d)"
+			}, t("editorResetDone")) : null, saveErrToast !== null ? (0, react.createElement)("div", {
+				key: saveErrToast.seq,
+				className: "dsh-tdt-toast",
+				onAnimationEnd: () => {
+					setSaveErrToast(null);
 				}
-			}, `${t("editorSaveFailedHint")}${saveError}`) : null, pendingHint ? (0, react.createElement)("span", {
+			}, `${t("editorSaveFailedHint")}${saveErrToast.msg}`) : null, pendingHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
 				style: { margin: "0 8px 0 0" }
 			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -39894,6 +39952,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [draft, setDraft] = (0, react.useState)(void 0);
 			const [saving, setSaving] = (0, react.useState)(false);
 			const [failed, setFailed] = (0, react.useState)(null);
+			const [failedKey, setFailedKey] = (0, react.useState)(0);
 			const [manualAt, setManualAt] = (0, react.useState)(void 0);
 			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
@@ -40142,7 +40201,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					else await scope.set("tasksInline", draft);
 					setDraft(void 0);
 				} catch (error) {
-					setFailed(error instanceof Error ? error.message : String(error));
+					const msg = error instanceof Error ? error.message : String(error);
+					setFailed(msg);
+					setFailedKey((prev) => prev + 1);
 				} finally {
 					setSaving(false);
 				}
@@ -40228,6 +40289,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}, clipped);
 			})))))));
 			const previewW = preview === null ? 0 : previewWidth;
+			ensureToastStyle();
 			return (0, react.createElement)("div", {
 				id: "dsh-tdt-root",
 				className: "dsh-tdt-root",
@@ -40342,7 +40404,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				spellCheck: false,
 				style: textareaStyle
-			}), invalid ? (0, react.createElement)("p", { style: errorStyle }, t("invalidJson")) : null, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
+			}), invalid ? (0, react.createElement)("p", { style: errorStyle }, t("invalidJson")) : null, (0, react.createElement)("div", { style: { position: "relative" } }, (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("button", {
 				type: "button",
 				onClick: () => {
 					save();
@@ -40355,7 +40417,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setFailed(null);
 				},
 				disabled: saving || !dirty
-			}, t("discard"))), failed !== null ? (0, react.createElement)("p", { style: errorStyle }, failed) : null, (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
+			}, t("discard"))), failed !== null ? (0, react.createElement)("div", {
+				key: failedKey,
+				className: "dsh-tdt-toast",
+				onAnimationEnd: () => {
+					setFailed(null);
+				}
+			}, failed) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 				t("colId"),
 				t("colTitle"),
 				t("colCode"),

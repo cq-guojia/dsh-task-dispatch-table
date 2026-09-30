@@ -55,6 +55,7 @@ import { createPortal } from 'react-dom'
 import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf } from '../attachment-allowlist.js'
 import { FileBrowser } from './file-browser'
 import type { WorkspaceFilesFace } from './file-preview'
+import { ensureToastStyle } from './toast-css'
 
 /** 与 index.ts 同形的 t 席位（本仓库 client 半侧惯例：无参 t；带占位符的文案走 tTemplate）。 */
 type T = (key: LocaleKey) => string
@@ -1136,6 +1137,15 @@ export function TaskEditorDrawer(props: {
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const [resetHint, setResetHint] = useState(false)
+  // 保存失败：服务端文案不「长显」占 footer，改为浮现 Toast（用户 2026-09-30：与面板保存提示同款）。
+  // 用本地副本 + 自增 seq，使得同一句错误连点也能重播淡入淡出动画。
+  const [saveErrToast, setSaveErrToast] = useState<{ msg: string; seq: number } | null>(null)
+  const saveErrSeq = useRef(0)
+  useEffect(() => {
+    if (saveError === null || saveError === undefined) return
+    saveErrSeq.current += 1
+    setSaveErrToast({ msg: saveError, seq: saveErrSeq.current })
+  }, [saveError])
   // 「已重置」提示过一会儿自动消失（用户 2026-09-30：不要长显占位，像 Toast 一样自退）。
   useEffect(() => {
     if (!resetHint) return
@@ -1212,7 +1222,7 @@ export function TaskEditorDrawer(props: {
     }
   }, [editorOpen, previewOpen])
 
-  useEffect(() => { ensureTaskEditorStyle() }, [])
+  useEffect(() => { ensureTaskEditorStyle(); ensureToastStyle() }, [])
 
   const patch = useCallback((part: Partial<TaskEditorDraft>): void => {
     onChange({ ...draft, ...part })
@@ -1893,7 +1903,14 @@ export function TaskEditorDrawer(props: {
         }, t('editorReset')),
         h('span', { style: { flex: '1 1 auto' } }),
         resetHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorResetDone')) : null,
-        saveError !== null ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0', color: 'var(--dsw-alias-state-error-primary, #e5484d)' } }, `${t('editorSaveFailedHint')}${saveError}`) : null,
+        // 保存失败：浮层 Toast（2.5s 自退，上飘淡出），不占 footer 行内空间（用户 2026-09-30）。
+        saveErrToast !== null
+          ? h('div', {
+            key: saveErrToast.seq,
+            className: 'dsh-tdt-toast',
+            onAnimationEnd: () => { setSaveErrToast(null) },
+          }, `${t('editorSaveFailedHint')}${saveErrToast.msg}`)
+          : null,
         pendingHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorSavePending')) : null,
         h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
         h(Button, {

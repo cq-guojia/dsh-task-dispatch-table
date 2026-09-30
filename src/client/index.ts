@@ -25,6 +25,7 @@ import {
   type EditorHistory, type EditorOption, type EditorTaskOption, type HistorySnapshot, type HistoryVersion,
   type TaskEditorDraft,
 } from './task-editor'
+import { ensureToastStyle } from './toast-css'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table'
@@ -469,6 +470,8 @@ function TaskPage(props: {
   const [draft, setDraft] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
+  // 每次保存失败自增，用作 Toast 的 React key ⇒ 同一条错误连点也能重播淡入淡出动画。
+  const [failedKey, setFailedKey] = useState(0)
   // 手动刷新：settings 快照本身经订阅 live 更新，此按钮兜底重渲染并记录刷新时刻，
   // 让「时间戳不动」可区分是数据没变还是页面没刷。
   const [manualAt, setManualAt] = useState<number | undefined>(undefined)
@@ -734,8 +737,11 @@ function TaskPage(props: {
       else await scope.set('tasksInline', draft)
       setDraft(undefined)
     } catch (error) {
-      // 保存失败（含保存闸门 422 的 id 校验文案）：显示服务端原因，草稿保留可改完再存
-      setFailed(error instanceof Error ? error.message : String(error))
+      // 保存失败（含保存闸门 422 的 id 校验文案）：显示服务端原因，草稿保留可改完再存。
+      // 浮层 Toast（2.5s 自退）由 failed + failedKey 驱动，不占版面。
+      const msg = error instanceof Error ? error.message : String(error)
+      setFailed(msg)
+      setFailedKey(prev => prev + 1)
     } finally {
       setSaving(false)
     }
@@ -836,6 +842,8 @@ function TaskPage(props: {
 
   // 预览 dock 占位宽度（0 = 收回）：整页与弹窗都按这个变量让位 ⇒「弹窗不遮盖预览面」。
   const previewW = preview === null ? 0 : previewWidth
+  // 浮层 Toast 样式注入（保存失败提示用，幂等）。
+  ensureToastStyle()
   // 根容器 = 横向分栏：内容区（整页 + 弹窗层）flex:1，预览 dock 占 --dsh-tdt-preview-w。
   // dock 是布局成员而非浮层 ⇒ 整页被真正挤窄、滚动条不被遮盖（用户 2026-09-28 要求「分栏压过来，不是盖上去」）。
   return h('div', {
@@ -942,19 +950,29 @@ function TaskPage(props: {
                 style: textareaStyle,
               }),
               invalid ? h('p', { style: errorStyle }, t('invalidJson')) : null,
-              h('div', { style: rowStyle },
-                h('button', {
-                  type: 'button',
-                  onClick: () => { void save() },
-                  disabled: !writable || invalid || !dirty,
-                }, saving ? t('saving') : t('save')),
-                h('button', {
-                  type: 'button',
-                  onClick: () => { setDraft(undefined); setFailed(null) },
-                  disabled: saving || !dirty,
-                }, t('discard')),
+              // 保存 / 放弃行：外层 position:relative，让保存失败 Toast 悬浮在本行正上方，
+              // 不挤占下方「已解析的任务」等版面（用户 2026-09-30：长显占位改为浮层自退）。
+              h('div', { style: { position: 'relative' } },
+                h('div', { style: rowStyle },
+                  h('button', {
+                    type: 'button',
+                    onClick: () => { void save() },
+                    disabled: !writable || invalid || !dirty,
+                  }, saving ? t('saving') : t('save')),
+                  h('button', {
+                    type: 'button',
+                    onClick: () => { setDraft(undefined); setFailed(null) },
+                    disabled: saving || !dirty,
+                  }, t('discard')),
+                ),
+                failed !== null
+                  ? h('div', {
+                    key: failedKey,
+                    className: 'dsh-tdt-toast',
+                    onAnimationEnd: () => { setFailed(null) },
+                  }, failed)
+                  : null,
               ),
-              failed !== null ? h('p', { style: errorStyle }, failed) : null,
 
               h('h4', { style: sectionTitleStyle }, t('tasksParsedTitle')),
               taskRows.length === 0
