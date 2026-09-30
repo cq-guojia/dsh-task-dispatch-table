@@ -323,6 +323,28 @@ export class TaskStore {
             .run(id, taskId, logicalDate, scheduledAt, status, snapshot === undefined ? null : JSON.stringify(snapshot), nowIso());
         return Number(result.changes) > 0;
     }
+    /**
+     * 补记一条「未执行」记录（决策 54）：某个该跑的刻度**最终没跑**时，用它留一条痕迹
+     * （用户：不能只在日志里，执行记录里必须看得见）。
+     *
+     * 身份同样是「任务 + 计划刻度」（唯一索引保证同一槽只写一条、天然幂等），但状态固定 `skipped`：
+     * - `skipped` 属**终态** ⇒ Loop B `sweep` 只遍历 pending/dispatched/running/unknown，**永不重试**；
+     *   `startupScan` 只改 dispatched/running，也碰不到它。
+     * - **绝不能用 `unknown`/`pending`**：那会被重试逻辑真的拉起来执行，或悄悄变成 failed。
+     *
+     * ⚠️ `scheduledAt` 必须是被漏掉那一槽的**真实时刻**：若用「当前槽」会撞当前槽真实执行行的唯一键，
+     * `INSERT OR IGNORE` 静默丢弃 ⇒ **任务永久不再执行**。
+     * 原因（为什么没跑）走 `appendEvent` / `appendLog`——本表没有 message 列。
+     */
+    ensureSkipped(id, taskId, logicalDate, scheduledAt) {
+        const now = nowIso();
+        const result = this.db
+            .prepare(`INSERT OR IGNORE INTO task_instances
+                (id, task_id, logical_date, scheduled_at, status, attempt, finished_at, updated_at)
+                VALUES (?, ?, ?, ?, 'skipped', 0, ?, ?)`)
+            .run(id, taskId, logicalDate, scheduledAt, now, now);
+        return Number(result.changes) > 0;
+    }
     /** 旧实例补快照（决策 41 legacy 回退：首次被 Loop B 触到时按任务定义当场合成并固化）。 */
     setSnapshot(id, snapshot) {
         this.db

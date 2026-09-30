@@ -40262,17 +40262,28 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 			const revRef = (0, react.useRef)("");
 			const busyRef = (0, react.useRef)(false);
+			/** 本轮请求的开始时刻（看门狗用；0 = 空闲）。 */
+			const busySinceRef = (0, react.useRef)(0);
 			/** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
 			const pendingRef = (0, react.useRef)(false);
 			const [tick, setTick] = (0, react.useState)(0);
 			(0, react.useEffect)(() => {
 				let alive = true;
 				const poll = async () => {
-					if (busyRef.current) return;
+					if (busyRef.current) {
+						if (busySinceRef.current !== 0 && Date.now() - busySinceRef.current < 3 * POLL_MS) return;
+						busyRef.current = false;
+					}
 					busyRef.current = true;
+					busySinceRef.current = Date.now();
+					const controller = new AbortController();
+					const abortTimer = window.setTimeout(() => controller.abort(), 8e3);
 					try {
 						const query = revRef.current === "" ? "" : `?rev=${encodeURIComponent(revRef.current)}`;
-						const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, { cache: "no-store" });
+						const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, {
+							cache: "no-store",
+							signal: controller.signal
+						});
 						if (!res.ok) return;
 						const body = await res.json();
 						if (!alive || body.ok !== true) return;
@@ -40302,7 +40313,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						setReady(true);
 						syncPinned();
 					} catch {} finally {
+						window.clearTimeout(abortTimer);
 						busyRef.current = false;
+						busySinceRef.current = 0;
 						if (pendingRef.current) {
 							pendingRef.current = false;
 							setTick((v) => v + 1);

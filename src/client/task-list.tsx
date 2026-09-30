@@ -179,6 +179,8 @@ export function useTaskOverview(): {
   }
   const revRef = useRef('')
   const busyRef = useRef(false)
+  /** 本轮请求的开始时刻（看门狗用；0 = 空闲）。 */
+  const busySinceRef = useRef(0)
   /** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
   const pendingRef = useRef(false)
   const [tick, setTick] = useState(0)
@@ -186,11 +188,21 @@ export function useTaskOverview(): {
   useEffect(() => {
     let alive = true
     const poll = async (): Promise<void> => {
-      if (busyRef.current) return
+      // 看门狗（决策 54）：abort 定时器本身也可能被后台节流 ⇒ 超过 3×轮询仍未收口就**强制放行**，
+      // 否则一次挂起会把这条通道永久堵死（真机「卡片 5 分钟不动、倒计时照跳」的根因）。
+      if (busyRef.current) {
+        if (busySinceRef.current !== 0 && Date.now() - busySinceRef.current < 3 * POLL_MS) return
+        busyRef.current = false
+      }
       busyRef.current = true
+      busySinceRef.current = Date.now()
+      // 超时兜底（决策 54）：此前**没有 signal** ⇒ 请求永不 settle 时 busyRef 永远 true、
+      // 后续轮询全早退、到期清理再也不跑。8s < 10s 轮询间隔，避免一轮拖过下一轮把间隔拉成 2 倍。
+      const controller = new AbortController()
+      const abortTimer = window.setTimeout(() => controller.abort(), 8_000)
       try {
         const query = revRef.current === '' ? '' : `?rev=${encodeURIComponent(revRef.current)}`
-        const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, { cache: 'no-store' })
+        const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, { cache: 'no-store', signal: controller.signal })
         if (!res.ok) return
         const body = await res.json() as {
           ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown; now?: unknown; tickMs?: unknown
@@ -223,8 +235,10 @@ export function useTaskOverview(): {
         setRows(nextRows)
         setReady(true)
         syncPinned()
-      } catch { /* 通道短暂不可用：保持上一次的数据，下轮再取 */ } finally {
+      } catch { /* 通道短暂不可用 / 超时已 abort：保持上一次的数据，下轮再取 */ } finally {
+        window.clearTimeout(abortTimer)
         busyRef.current = false
+        busySinceRef.current = 0
         if (pendingRef.current) {
           pendingRef.current = false
           setTick(v => v + 1) // 补跑被在途那轮吞掉的刷新请求
