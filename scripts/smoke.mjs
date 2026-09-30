@@ -656,6 +656,12 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // ⚠️ `justCrossedSlot` 此刻**仍留在 `task-sort.ts` 的导出里**（阶段三才删）⇒ 这里先不断言它的缺席。
   check('小时间隔反解与执行器同口径（守卫：分钟须具体数字 / 整点才等价「每隔 1 小时」）',
     clientJs.includes('/^\\d+$/.test(minute)') && clientJs.includes('minute === "0"'))
+  // 轮询轮次令牌（2026-09-30 复核 P1）：看门狗把新一轮放出去时**旧轮仍在飞**，abort 只缩小窗口 ⇒
+  // ① 认领数据也要验令牌（否则旧响应把旧数据盖回新数据上）；② 收口（清 busy / 补跑）只在令牌属于自己时做。
+  check('轮询认领数据前验轮次令牌（旧轮不得覆盖新数据）',
+    clientJs.includes('genRef.current !== myGen'))
+  check('轮询收口只在令牌仍属本轮时执行（旧轮不得清掉新一轮的 busy）',
+    clientJs.includes('if (genRef.current === myGen)'))
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。
   // 修法 = ① 选择器回调**工作区相对**路径；② 客户端兜底校验 + 归属附件卡描红；③ 服务端错误翻人话。
   check('附件 ref 改为工作区相对（选择器走 relativizeToRoot）', clientJs.includes('relativizeToRoot'))

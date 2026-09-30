@@ -1195,7 +1195,15 @@ function TaskPage(props: {
                         },
                           h('td', { style: cellStyle }, titleOfTask(row.task_id)),
                           h('td', { style: cellStyle }, formatTime(row.scheduled_at)),
-                          h('td', { style: cellStyle }, row.status),
+                          // 状态列（2026-09-30 复核 P2）：`skipped`（**未执行**：附件找不到 / 工作区不存在 /
+                          // 被吃掉的槽补记）与 `failed` 一样**标红加粗**。此前原样打印灰字 —— 卡片上已经标红，
+                          // 点进执行记录反而白底黑字，用户会以为没事（用户要求：错就得让他在记录里看见）。
+                          h('td', { style: cellStyle },
+                            h('span', {
+                              style: row.status === 'skipped' || row.status === 'failed'
+                                ? { color: C.danger, fontWeight: 600 }
+                                : undefined,
+                            }, row.status)),
                           h('td', { style: cellStyle }, String(row.attempt)),
                           h('td', { style: cellStyle },
                             row.session_id === null ? '—'
