@@ -484,6 +484,37 @@ try {
   // 出窗口 ⇒ 不派发；且它属「停机/创建之前 」的槽（gateMs 门禁）⇒ 也不补「过期未执行」记录。
   check('一次性任务出窗口（2020 年）⇒ 不再补跑（一条实例行都不建）',
     onceExpiredStore.listByStatus(['dispatched', 'pending', 'running', 'skipped']).length === 0)
+  // 一次性任务「过期未执行」记录（拍板 A 的配套）：本轮唯一新增逻辑，**集成测试几乎构造不出来**
+  //（门禁要求 once 时刻晚于进程启动，而 once 精度只到分钟）⇒ 直接单测（该函数已导出）。
+  {
+    const { recordExpiredOnce } = await import('../dist/scheduler.js')
+    const expDir = join(process.cwd(), '.smoke-expired-once')
+    rmSync(expDir, { recursive: true, force: true })
+    const expTask = { id: UUID_A, title: '一次性(过期记录)', enabled: true, schedule: { once: '2026-10-01T09:00', timezone: 'UTC', window: 'PT1H' }, target: { workspace: 'Temp', prompt: 'x' } }
+    const expNow = Date.parse('2026-10-01T10:00:01.000Z') // 窗口 09:00–10:00 已过
+    const expStore = new TaskStore(join(expDir, 'state.db'))
+    const wrote = recordExpiredOnce(expStore, null, expTask, expNow, 0)
+    const expRows = expStore.listByStatus(['skipped'])
+    check('过期一次性任务 ⇒ 写一条 skipped + expired-once 事件 + 日志',
+      wrote === true && expRows.length === 1
+      && expStore.countEvents(expRows[0].id, 'expired-once') === 1
+      && expStore.dumpTable('task_log', 20).rows.some(l => l.kind === 'expired-once'))
+    check('过期一次性任务：再跑一轮 ⇒ 幂等（仍只 1 条，不重复写）',
+      recordExpiredOnce(expStore, null, expTask, expNow, 0) === true
+      && expStore.listByStatus(['skipped']).length === 1)
+    const expStore2 = new TaskStore(join(expDir, 'state2.db'))
+    check('过期一次性任务：**整个窗口都在进程启动之前**（停机期间错过）⇒ 不记',
+      recordExpiredOnce(expStore2, null, expTask, expNow, expNow) === false
+      && expStore2.listByStatus(['skipped']).length === 0)
+    const expStore3 = new TaskStore(join(expDir, 'state3.db'))
+    check('一次性任务还在窗口内 ⇒ 不记（下一步会照常派发）',
+      recordExpiredOnce(expStore3, null, expTask, Date.parse('2026-10-01T09:30:00.000Z'), 0) === false
+      && expStore3.listByStatus(['skipped']).length === 0)
+    expStore.close()
+    expStore2.close()
+    expStore3.close()
+    rmSync(expDir, { recursive: true, force: true })
+  }
   onceOkStore.close()
   onceExpiredStore.close()
   schedStore.close()

@@ -28,6 +28,19 @@ export declare function judgeDependencies(store: TaskStore, task: TaskDefinition
  */
 upstreams?: ReadonlyMap<string, TaskDefinition>): DependencyVerdict;
 /**
+ * **一次性任务的「过期未执行」记录**（用户 2026-09-30 拍板 A 的配套）。
+ *
+ * 一次性任务加了窗口闸门（`dueSlot`）之后「出窗口就再也不跑」；若那一槽从来没跑过（典型：那一刻它
+ * 被上游堵着 / 附件缺失，一直拖到窗口过完），它会**无声无息地消失** —— 面板显示「没有下次了」、
+ * 执行记录里一条都没有。这里补一条终态 `skipped`（`attempt=0` ⇒ 天然不重试），把「该跑没跑、而且
+ * 再也不会跑」**留在用户看得见的地方**：卡片标红 + 执行记录一条 + 原因挂在该行事件上。
+ *
+ * 门禁与「补记前一个槽」**完全一致**（`gateMs` = 本进程启动 / 任务创建 的较晚者）：**停机期间**跨过
+ * 那一刻的不补（用户口径：服务没跑的那段时间不用管），否则用户新建一个「上一刻已过期」的一次性任务
+ * 会被凭空标红。返回「本槽是否按过期处理」（调用方据此决定要不要清掉悬浮原因）。
+ */
+export declare function recordExpiredOnce(store: TaskStore, runtime: RuntimeIndex | null, task: TaskDefinition, nowMs: number, gateMs: number): boolean;
+/**
  * 附加文件存在性校验（2026-09-30）：返回**缺失**的展示名。
  * upload 型按任务目录绝对路径；link 型按**附件来源工作区**（item.workspace）解析——
  * 附件可以选自任意工作区，拿任务目标工作区的 path 去判会误报（评审 P1#8）。

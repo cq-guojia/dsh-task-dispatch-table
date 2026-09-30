@@ -161,11 +161,9 @@ export function judgeDependencies(
 function isOnce(task: TaskDefinition): boolean {
   return task.schedule.once !== undefined
 }
-function onceDate(task: TaskDefinition): Date | undefined {
-  if (task.schedule.once === undefined) return undefined
-  const d = new Date(task.schedule.once)
-  return Number.isNaN(d.getTime()) ? undefined : d
-}
+// 原先这里有个本地口径的 `onceDate`（`new Date(task.schedule.once)` = **宿主本地时区**），
+// 2026-09-30 二轮评审确认它三处都会与「按任务 timezone」的 `onceScheduledAt` 分歧 ⇒ **整删**，
+// 一次性时刻一律走 `onceScheduledAt`（派发 / 面板 / 过期记录 / 启动诊断同口径）。
 
 /** 取「当前该跑的那一下」：最晚满足 scheduled_at <= now <= scheduled_at+window 且无实例行的刻度。 */
 function dueSlot(task: TaskDefinition, nowMs: number, store: TaskStore): {
@@ -289,7 +287,7 @@ function recordTaskError(
  * 那一刻的不补（用户口径：服务没跑的那段时间不用管），否则用户新建一个「上一刻已过期」的一次性任务
  * 会被凭空标红。返回「本槽是否按过期处理」（调用方据此决定要不要清掉悬浮原因）。
  */
-function recordExpiredOnce(
+export function recordExpiredOnce(
   store: TaskStore,
   runtime: RuntimeIndex | null,
   task: TaskDefinition,
@@ -301,9 +299,13 @@ function recordExpiredOnce(
   const once = onceScheduledAt(task, onceStr.slice(0, 10)) // 与 `dueSlot` / 面板同口径（按任务时区）
   if (once === undefined) return false
   const onceMs = once.getTime()
-  if (onceMs > nowMs || onceMs < gateMs) return false // 还没到点 / 属停机期间 ⇒ 不管
   let windowMs = 0
   try { windowMs = durationMs(task.schedule.window) } catch { windowMs = 0 }
+  // 门禁（2026-09-30 二轮评审修正）：只跳过「**整个窗口都在本进程启动之前**」的槽 —— 那就是停机期间
+  // 错过的（用户口径：服务没跑的那段时间不用管）。若本进程**在窗口内接管过**它、却一直没跑成
+  //（被上游堵 / 附件缺失），出窗时必须留痕，所以判据是 `once + window < gateMs`，**不是** `once < gateMs`
+  //（后者会把「窗口内重启后被堵到出窗」这种**能跑没跑成**的情况静默漏记）。
+  if (onceMs > nowMs || onceMs + windowMs < gateMs) return false
   if (nowMs <= onceMs + windowMs) return false // 还在窗口内 ⇒ 下一步会派发，不算「过期」
   const iso = once.toISOString()
   const detail = '一次性任务已过期未执行（超过补跑窗口）'
@@ -580,7 +582,11 @@ export function createScheduler(opts: {
         let missed = 0
         try {
           const slots = isOnce(task)
-            ? (onceDate(task) !== undefined && onceDate(task)!.getTime() < nowMs - windowMs ? [onceDate(task)!] : [])
+            // 2026-09-30 二轮评审：这里原先用**宿主本地**的 `onceDate` ⇒ 任务时区与宿主不同时，
+            // 启动诊断会把「六小时后才该跑」的一次性任务误报成「错过 1 个刻度」。改用与派发/面板同口径。
+            ? ((onceScheduledAt(task, (task.schedule.once ?? '').slice(0, 10))?.getTime() ?? Number.POSITIVE_INFINITY) < nowMs - windowMs
+                ? [onceScheduledAt(task, (task.schedule.once ?? '').slice(0, 10))!]
+                : [])
             : scheduledSlotsFor(task, from, to)
           for (const s of slots) {
             if (store.findBySlot(task.id, s.toISOString()) === undefined) missed++
