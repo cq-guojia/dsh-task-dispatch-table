@@ -466,10 +466,14 @@ const makeDispatchRoutes = (
     handler: (req, res) => {
       if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
       if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
-      const { rev, rows } = runtimeIndex.overview([...getTasks().values()], Date.now())
+      const nowMs = Date.now()
+      const { rev, rows } = runtimeIndex.overview([...getTasks().values()], nowMs)
       const asked = queryOf(req, 'rev')
       if (asked !== '' && asked === String(rev)) return writeJson(res, 200, { ok: true, unchanged: true })
-      writeJson(res, 200, { ok: true, rev, tasks: rows })
+      // `now` / `tickMs` 供客户端做「到点钳位」（排序抖动，2026-09-30）：`now` = 服务端当前时间
+      // （客户端时钟可能与宿主有时差，判定「上一版刻度是否已过去」以它为准）；`tickMs` = 巡检间隔
+      // （钳位时长跟着它走，不写死）。两者都是**只读**展示/排序辅助，不参与调度。
+      writeJson(res, 200, { ok: true, rev, tasks: rows, now: nowMs, tickMs: getConfig()?.tickMs ?? 60_000 })
     },
   },
   {

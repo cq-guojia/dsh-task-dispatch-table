@@ -40112,6 +40112,48 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}) : null);
 		}
 		//#endregion
+		//#region src/task-sort.ts
+		/** 分组：运行中 0 → 已启用 1 → 无刻度 2 → 已关闭 3。 */
+		const groupOf = (row) => {
+			if (row.running) return 0;
+			if (!row.enabled) return 3;
+			return row.nextSlotAt === null ? 2 : 1;
+		};
+		/** 组 1 的组内键：被钳位的排最前（哨兵 -1），其余按下次执行升序。 */
+		const sortKeyOf = (row, pinned) => {
+			if (row.nextSlotAt === null) return Number.POSITIVE_INFINITY;
+			return pinned ? -1 : Date.parse(row.nextSlotAt);
+		};
+		/**
+		* 排序（时间轴：马上要跑的最上，关闭的沉底）。
+		* @param pinnedIds 处于「到点钳位」的任务（判定见 `justCrossedSlot`，时长见 `pinMsFor`）。
+		*/
+		function sortRows(rows, pinnedIds = /* @__PURE__ */ new Set()) {
+			return [...rows].sort((a, b) => {
+				const ga = groupOf(a);
+				const gb = groupOf(b);
+				if (ga !== gb) return ga - gb;
+				if (ga === 1) return sortKeyOf(a, pinnedIds.has(a.id)) - sortKeyOf(b, pinnedIds.has(b.id));
+				const ta = Date.parse(a.lastScheduledAt ?? a.runningSince ?? "") || 0;
+				return (Date.parse(b.lastScheduledAt ?? b.runningSince ?? "") || 0) - ta;
+			});
+		}
+		/**
+		* 「刚跨过自己的刻度」判定：上一版的 `nextSlotAt` **已过去**（不大于服务端当前时间），
+		* 而这一版在未来。以**服务端时间**为准（客户端时钟可能与宿主有时差）。
+		*/
+		function justCrossedSlot(prevNext, nextNext, serverNowMs) {
+			if (prevNext === null || nextNext === null) return false;
+			const p = Date.parse(prevNext);
+			const n = Date.parse(nextNext);
+			if (!Number.isFinite(p) || !Number.isFinite(n)) return false;
+			return p <= serverNowMs && n > serverNowMs;
+		}
+		/** 钳位时长：**跟着巡检间隔走**（默认 `tickMs` 60s ⇒ 约 80s），带上下限兜底（30s ~ 10min）。 */
+		function pinMsFor(tickMs, pollMs) {
+			return Math.min(6e5, Math.max(3e4, (Number.isFinite(tickMs) && tickMs > 0 ? tickMs : 6e4) + 2 * pollMs));
+		}
+		//#endregion
 		//#region src/client/task-list.tsx
 		const C$1 = {
 			text: "var(--dsw-alias-label-primary, #1f2328)",
@@ -40183,10 +40225,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			document.head.appendChild(tag);
 		};
 		const POLL_MS = 1e4;
+		/** 空钳位集合（缺省值用；避免每次渲染 new 一个 Set 打破 useMemo 依赖）。 */
+		const NO_PINS = /* @__PURE__ */ new Set();
+		/** 两个 id 集合是否相同（钳位集合没变就不 setState，免得白白触发重排与 FLIP）。 */
+		const sameIdSet = (a, b) => {
+			if (a.size !== b.size) return false;
+			for (const id of a) if (!b.has(id)) return false;
+			return true;
+		};
 		/** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
 		function useTaskOverview() {
 			const [rows, setRows] = (0, react.useState)([]);
 			const [ready, setReady] = (0, react.useState)(false);
+			/** 「到点钳位」集合：只在真的变化时 setState（否则白白重排 + 播 FLIP）。 */
+			const [pinnedIds, setPinnedIds] = (0, react.useState)(/* @__PURE__ */ new Set());
+			const pinnedIdsRef = (0, react.useRef)(/* @__PURE__ */ new Set());
+			/** 上一版的 `nextSlotAt`（按 id）：判定「刚跨过自己的刻度」用。 */
+			const prevNextRef = (0, react.useRef)(/* @__PURE__ */ new Map());
+			/** 钳位解除时刻（服务端时间基准）。 */
+			const pinsRef = (0, react.useRef)(/* @__PURE__ */ new Map());
 			const revRef = (0, react.useRef)("");
 			const busyRef = (0, react.useRef)(false);
 			/** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
@@ -40205,8 +40262,32 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						if (!alive || body.ok !== true) return;
 						if (body.unchanged === true) return;
 						revRef.current = String(body.rev ?? "");
-						setRows(Array.isArray(body.tasks) ? body.tasks : []);
+						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
+						const serverNow = typeof body.now === "number" && Number.isFinite(body.now) ? body.now : Date.now();
+						const pinMs = pinMsFor(typeof body.tickMs === "number" ? body.tickMs : 6e4, POLL_MS);
+						const pins = pinsRef.current;
+						const prevNext = prevNextRef.current;
+						for (const row of nextRows) {
+							if (row.running || !row.enabled || row.nextSlotAt === null) {
+								pins.delete(row.id);
+								continue;
+							}
+							if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow)) pins.set(row.id, serverNow + pinMs);
+							else {
+								const until = pins.get(row.id);
+								if (until !== void 0 && until <= serverNow) pins.delete(row.id);
+							}
+						}
+						const aliveIds = new Set(nextRows.map((row) => row.id));
+						for (const id of [...pins.keys()]) if (!aliveIds.has(id)) pins.delete(id);
+						prevNextRef.current = new Map(nextRows.map((row) => [row.id, row.nextSlotAt]));
+						setRows(nextRows);
 						setReady(true);
+						if (!sameIdSet(pinnedIdsRef.current, pins)) {
+							const snapshot = new Set(pins.keys());
+							pinnedIdsRef.current = snapshot;
+							setPinnedIds(snapshot);
+						}
 					} catch {} finally {
 						busyRef.current = false;
 						if (pendingRef.current) {
@@ -40239,7 +40320,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						...row,
 						...patch
 					} : row));
-				}, [])
+				}, []),
+				pinnedIds
 			};
 		}
 		/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
@@ -40346,21 +40428,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
 			return `${pad2$1(d.getMonth() + 1)} 月 ${pad2$1(d.getDate())} 日`;
-		}
-		function sortRows(rows) {
-			const groupOf = (row) => {
-				if (row.running) return 0;
-				if (!row.enabled) return 3;
-				return row.nextSlotAt === null ? 2 : 1;
-			};
-			return [...rows].sort((a, b) => {
-				const ga = groupOf(a);
-				const gb = groupOf(b);
-				if (ga !== gb) return ga - gb;
-				if (ga === 1) return Date.parse(a.nextSlotAt ?? "") - Date.parse(b.nextSlotAt ?? "");
-				const ta = Date.parse(a.lastScheduledAt ?? a.runningSince ?? "") || 0;
-				return (Date.parse(b.lastScheduledAt ?? b.runningSince ?? "") || 0) - ta;
-			});
 		}
 		function useFlip(signature) {
 			const nodes = (0, react.useRef)(/* @__PURE__ */ new Map());
@@ -40725,7 +40792,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit")))) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onToggleEnabled } = props;
+			const { t, rows, ready, onEdit, onToggleEnabled, pinnedIds = NO_PINS } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
@@ -40758,12 +40825,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					if (workspace !== "" && row.workspace !== workspace) return false;
 					if (q === "") return true;
 					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
-				}));
+				}), pinnedIds);
 			}, [
 				rowsWithOptimistic,
 				filter,
 				workspace,
-				query
+				query,
+				pinnedIds
 			]);
 			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
 			const menuItems = (0, react.useMemo)(() => [{
@@ -41770,6 +41838,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				t,
 				rows: overview.rows,
 				ready: overview.ready,
+				pinnedIds: overview.pinnedIds,
 				onEdit: openEditor,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {

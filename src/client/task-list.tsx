@@ -21,6 +21,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
+import { justCrossedSlot, pinMsFor, sortRows } from '../task-sort.js'
 import { MarqueeText } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 
@@ -130,6 +131,16 @@ const ensureTaskListStyle = (): void => {
 // ── 轮询 ──────────────────────────────────────────────────────────────
 const POLL_MS = 10_000
 
+/** 空钳位集合（缺省值用；避免每次渲染 new 一个 Set 打破 useMemo 依赖）。 */
+const NO_PINS: ReadonlySet<string> = new Set()
+
+/** 两个 id 集合是否相同（钳位集合没变就不 setState，免得白白触发重排与 FLIP）。 */
+const sameIdSet = (a: ReadonlySet<string>, b: ReadonlyMap<string, number>): boolean => {
+  if (a.size !== b.size) return false
+  for (const id of a) if (!b.has(id)) return false
+  return true
+}
+
 /** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
 export function useTaskOverview(): {
   rows: TaskOverviewRow[]
@@ -137,9 +148,18 @@ export function useTaskOverview(): {
   refresh: () => void
   /** 就地补一条行（乐观更新，见 patchRow）。 */
   patchRow: (id: string, patch: Partial<TaskOverviewRow>) => void
+  /** 处于「到点钳位」的任务（排序用；判定与时长见 `../task-sort.ts`）。 */
+  pinnedIds: ReadonlySet<string>
 } {
   const [rows, setRows] = useState<TaskOverviewRow[]>([])
   const [ready, setReady] = useState(false)
+  /** 「到点钳位」集合：只在真的变化时 setState（否则白白重排 + 播 FLIP）。 */
+  const [pinnedIds, setPinnedIds] = useState<ReadonlySet<string>>(new Set())
+  const pinnedIdsRef = useRef<ReadonlySet<string>>(new Set())
+  /** 上一版的 `nextSlotAt`（按 id）：判定「刚跨过自己的刻度」用。 */
+  const prevNextRef = useRef(new Map<string, string | null>())
+  /** 钳位解除时刻（服务端时间基准）。 */
+  const pinsRef = useRef(new Map<string, number>())
   const revRef = useRef('')
   const busyRef = useRef(false)
   /** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
@@ -155,12 +175,39 @@ export function useTaskOverview(): {
         const query = revRef.current === '' ? '' : `?rev=${encodeURIComponent(revRef.current)}`
         const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, { cache: 'no-store' })
         if (!res.ok) return
-        const body = await res.json() as { ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown }
+        const body = await res.json() as {
+          ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown; now?: unknown; tickMs?: unknown
+        }
         if (!alive || body.ok !== true) return
         if (body.unchanged === true) return // 内容没变：不重渲染、不重排、不播动画
         revRef.current = String(body.rev ?? '')
-        setRows(Array.isArray(body.tasks) ? body.tasks as TaskOverviewRow[] : [])
+        const nextRows = Array.isArray(body.tasks) ? body.tasks as TaskOverviewRow[] : []
+        // ── 到点钳位（排序抖动，2026-09-30）：机制与三条红线见 ../task-sort.ts 头注释 ──
+        // `now` 用服务端时间（客户端时钟可能与宿主有时差）；`tickMs` 决定钳位时长（不写死）。
+        const serverNow = typeof body.now === 'number' && Number.isFinite(body.now) ? body.now : Date.now()
+        const pinMs = pinMsFor(typeof body.tickMs === 'number' ? body.tickMs : 60_000, POLL_MS)
+        const pins = pinsRef.current
+        const prevNext = prevNextRef.current
+        for (const row of nextRows) {
+          // running / 停用 / 无刻度 ⇒ 一律解除钳位（该由正常分组决定位置）。
+          if (row.running || !row.enabled || row.nextSlotAt === null) { pins.delete(row.id); continue }
+          if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow)) {
+            pins.set(row.id, serverNow + pinMs) // 刚跨过自己的刻度 ⇒ 钉住（组 1 最前），等 running 或超时
+          } else {
+            const until = pins.get(row.id)
+            if (until !== undefined && until <= serverNow) pins.delete(row.id) // 超时松开：回正常排队
+          }
+        }
+        const aliveIds = new Set(nextRows.map(row => row.id))
+        for (const id of [...pins.keys()]) if (!aliveIds.has(id)) pins.delete(id) // 任务被删 ⇒ 清残留
+        prevNextRef.current = new Map(nextRows.map(row => [row.id, row.nextSlotAt]))
+        setRows(nextRows)
         setReady(true)
+        if (!sameIdSet(pinnedIdsRef.current, pins)) {
+          const snapshot: ReadonlySet<string> = new Set(pins.keys())
+          pinnedIdsRef.current = snapshot
+          setPinnedIds(snapshot)
+        }
       } catch { /* 通道短暂不可用：保持上一次的数据，下轮再取 */ } finally {
         busyRef.current = false
         if (pendingRef.current) {
@@ -193,7 +240,7 @@ export function useTaskOverview(): {
     setRows(list => list.map(row => (row.id === id ? { ...row, ...patch } : row)))
   }, [])
 
-  return { rows, ready, refresh, patchRow }
+  return { rows, ready, refresh, patchRow, pinnedIds }
 }
 
 // ── 文案与时间 ─────────────────────────────────────────────────────────
@@ -325,22 +372,8 @@ function dateOf(iso: string): string {
 }
 
 // ── 排序（时间轴：马上要跑的最上，关闭的沉底）──────────────────────────
-function sortRows(rows: readonly TaskOverviewRow[]): TaskOverviewRow[] {
-  const groupOf = (row: TaskOverviewRow): number => {
-    if (row.running) return 0
-    if (!row.enabled) return 3
-    return row.nextSlotAt === null ? 2 : 1
-  }
-  return [...rows].sort((a, b) => {
-    const ga = groupOf(a)
-    const gb = groupOf(b)
-    if (ga !== gb) return ga - gb
-    if (ga === 1) return Date.parse(a.nextSlotAt ?? '') - Date.parse(b.nextSlotAt ?? '')
-    const ta = Date.parse(a.lastScheduledAt ?? a.runningSince ?? '') || 0
-    const tb = Date.parse(b.lastScheduledAt ?? b.runningSince ?? '') || 0
-    return tb - ta
-  })
-}
+// 实现在 [`../task-sort.ts`](../task-sort.ts)：放 `src/` 是为了让冒烟能**真断言**（client 侧只能 grep 产物）。
+// 除分组排序外，那里还有「到点钳位」的判定与时长（排序抖动，2026-09-30）。
 
 // ── FLIP 动画：卡片「下去 / 上来」平滑位移（自研，不引包）──────────────
 function useFlip(signature: string): (id: string) => (el: HTMLElement | null) => void {
@@ -648,8 +681,10 @@ export function TaskListView(props: {
   onEdit: (id: string) => void
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
+  /** 处于「到点钳位」的任务（排序用；来自 useTaskOverview）。 */
+  pinnedIds?: ReadonlySet<string>
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onToggleEnabled } = props
+  const { t, rows, ready, onEdit, onToggleEnabled, pinnedIds = NO_PINS } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
@@ -691,9 +726,10 @@ export function TaskListView(props: {
       if (q === '') return true
       return row.title.toLowerCase().includes(q) || (row.code ?? '').toLowerCase().includes(q)
     })
-    return sortRows(filtered)
+    return sortRows(filtered, pinnedIds)
     // 排序只依赖内容本身；nowMs 变化不参与 ⇒ 每秒 tick 不会引起重排与动画。
-  }, [rowsWithOptimistic, filter, workspace, query])
+    // `pinnedIds`（到点钳位）变化时会重排一次——这正是「钉住/松开」生效的时刻。
+  }, [rowsWithOptimistic, filter, workspace, query, pinnedIds])
 
   // FLIP 签名：只在「可见集合与顺序」变化时触发动画。
   const signature = visible.map(r => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join('|')

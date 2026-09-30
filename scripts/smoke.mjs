@@ -21,6 +21,7 @@ import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
 import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
 import { buildMessage } from '../dist/dispatch.js'
 import { createRuntimeIndex } from '../dist/runtime-index.js'
+import { groupOf, justCrossedSlot, pinMsFor, sortKeyOf, sortRows } from '../dist/task-sort.js'
 
 let passed = 0
 const failures = []
@@ -106,6 +107,34 @@ try {
   const noStart = def({ id: 'ns', schedule: { cron: '*/10 * * * *', timezone: 'UTC', window: 'PT4H' } })
   check('间隔锚点：锚点缺失（老数据 / 手写）⇒ 退回 cron 整点对齐，不猜',
     scheduledSlotsFor(noStart, new Date('2026-09-30T18:00:00Z'), new Date('2026-09-30T19:00:00Z'))[0].toISOString() === '2026-09-30T18:00:00.000Z')
+
+  // ── 1b. 排序 + 到点钳位（排序抖动，2026-09-30）──
+  console.log('\n[1b] 排序 sortRows + 到点钳位 justCrossedSlot / pinMsFor')
+  const rowOf = (id, over = {}) => ({ id, enabled: true, running: false, nextSlotAt: null, lastScheduledAt: null, runningSince: null, ...over })
+  check('分组：运行中 0 / 已启用 1 / 无刻度 2 / 已关闭 3',
+    groupOf(rowOf('a', { running: true })) === 0 && groupOf(rowOf('a', { nextSlotAt: '2026-09-30T18:10:00.000Z' })) === 1
+    && groupOf(rowOf('a')) === 2 && groupOf(rowOf('a', { enabled: false })) === 3)
+  // 用户报的原场景：A 每 10 分钟、B 还有 3 分钟。A 的刻度刚过 ⇒ nextSlotAt 前移到 10 分钟后，
+  // 于是 A 在「已启用」组里键变大、掉到 B 后面（这就是「先往后挪」）。
+  const rowA = rowOf('A', { nextSlotAt: '2026-09-30T18:10:00.000Z' })
+  const rowB = rowOf('B', { nextSlotAt: '2026-09-30T18:03:00.000Z' })
+  check('不钳位：A（10 分钟后）排在 B（3 分钟后）之后 —— 即「往后挪」',
+    sortRows([rowA, rowB]).map(r => r.id).join(',') === 'B,A')
+  check('钳位后：A 钉在「已启用」组最前 —— 「往后挪」消失',
+    sortRows([rowA, rowB], new Set(['A'])).map(r => r.id).join(',') === 'A,B')
+  check('钳位不得越过「运行中」组（真在跑的永远在最上）',
+    sortRows([rowA, rowOf('C', { running: true, nextSlotAt: '2026-09-30T18:20:00.000Z' })], new Set(['A'])).map(r => r.id).join(',') === 'C,A')
+  const nowMs = Date.parse('2026-09-30T18:00:10.000Z')
+  check('到点判定：上一版已过期 + 这一版在未来 ⇒ 刚跨过（该钳位）',
+    justCrossedSlot('2026-09-30T18:00:00.000Z', '2026-09-30T18:10:00.000Z', nowMs) === true)
+  check('到点判定：上一版还没到 / 新值为空 ⇒ 不算跨过（不钳位）',
+    justCrossedSlot('2026-09-30T18:20:00.000Z', '2026-09-30T18:30:00.000Z', nowMs) === false
+    && justCrossedSlot('2026-09-30T18:00:00.000Z', null, nowMs) === false
+    && justCrossedSlot(null, '2026-09-30T18:10:00.000Z', nowMs) === false)
+  check('钳位时长跟着巡检间隔走（默认 60s ⇒ 80s；带 30s ~ 10min 上下限）',
+    pinMsFor(60_000, 10_000) === 80_000 && pinMsFor(5_000, 10_000) === 30_000 && pinMsFor(3_600_000, 10_000) === 600_000)
+  check('排序键：无刻度 = +∞；钳位 = 最前哨兵 -1',
+    sortKeyOf(rowOf('x', { nextSlotAt: null }), false) === Number.POSITIVE_INFINITY && sortKeyOf(rowA, true) === -1)
   check('每 2 周：首刻 = 锚点之后的第一个周一',
     e2Slots.length > 0 && e2Slots[0].getTime() >= Date.parse(`${anchor}:00Z`)
       && (e2Slots[0].getTime() - Date.parse(`${anchor}:00Z`)) < 7 * 24 * 3600 * 1000)
