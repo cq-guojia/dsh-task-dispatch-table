@@ -653,10 +653,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 与卡片实际展开的「任务设置」对不上）⇒ 撤掉该 title，另立 listExpandHint 作无障碍名。
   check('卡片展开箭头不再复用执行记录页的展开提示（title 不再挂 expandHint）',
     !clientJs.includes('title: t("expandHint")') && clientJs.includes('listExpandHint'))
-  // ⚠️ 2026-09-30 复核教训：这两处客户端逻辑**不在冒烟覆盖面内**，上一轮编辑被静默丢掉（同文件批量替换的坑）
-  // 谁都没发现。补两条产物断言钉住它们（client 侧不可 import，只能在 bundle 里断）。
-  check('到点钳位到期在 `unchanged` 轮也扫（prunePins 出现 ≥3 处：定义 + 两条调用路径）',
-    (clientJs.match(/prunePins/g) ?? []).length >= 3)
+  // ⚠️ 2026-09-30 复核教训：客户端内部逻辑不在冒烟覆盖面内，曾有编辑被静默丢掉（谁都没发现）。
+  // 决策 54：到点钳位整套已删（抖动改由服务端冻结刻度解决）⇒ 这里改钉「它确实消失了」。
+  check('到点钳位已整删（bundle 里不再有 prunePins / justCrossedSlot）',
+    !clientJs.includes('prunePins') && !clientJs.includes('justCrossedSlot'))
   check('小时间隔反解与执行器同口径（守卫：分钟须具体数字 / 整点才等价「每隔 1 小时」）',
     clientJs.includes('/^\\d+$/.test(minute)') && clientJs.includes('minute === "0"'))
   // 用户 2026-09-30 真机：选工作区文件报 422「附件 ref 非法」、无红框、文案看不懂。

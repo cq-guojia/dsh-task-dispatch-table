@@ -21,7 +21,9 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
-import { justCrossedSlot, pinMsFor, sortRows } from '../task-sort.js'
+// `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
+// 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
+import { pinMsFor, sortRows } from '../task-sort.js'
 import { MarqueeText } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 
@@ -148,15 +150,14 @@ let currentTickMs = 60_000
  */
 const dueLoadingMs = (): number => pinMsFor(currentTickMs, POLL_MS)
 
-/** 空钳位集合（缺省值用；避免每次渲染 new 一个 Set 打破 useMemo 依赖）。 */
+/**
+ * 「到点钳位」已整删（决策 54），这里只留一个**空集合占位**维持视图侧的签名形状；
+ * 下一阶段连同 `pinnedIds` 一起从签名里摘掉。
+ * 排序抖动现在由**服务端**解决：`runtime-index.overview` 冻结「已到点但还没处理」的刻度
+ * ⇒ 排序键不随读变化，客户端**不再有任何本地派生排序状态**（那套状态一旦轮询卡住就永不解开，
+ * 正是真机「卡片 5 分钟不动」的根源）。
+ */
 const NO_PINS: ReadonlySet<string> = new Set()
-
-/** 两个 id 集合是否相同（钳位集合没变就不 setState，免得白白触发重排与 FLIP）。 */
-const sameIdSet = (a: ReadonlySet<string>, b: ReadonlyMap<string, number>): boolean => {
-  if (a.size !== b.size) return false
-  for (const id of a) if (!b.has(id)) return false
-  return true
-}
 
 /** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
 export function useTaskOverview(): {
@@ -165,35 +166,11 @@ export function useTaskOverview(): {
   refresh: () => void
   /** 就地补一条行（乐观更新，见 patchRow）。 */
   patchRow: (id: string, patch: Partial<TaskOverviewRow>) => void
-  /** 处于「到点钳位」的任务（排序用；判定与时长见 `../task-sort.ts`）。 */
+  /** @deprecated 到点钳位已删（决策 54）；恒为空集合，下一阶段从签名里摘掉。 */
   pinnedIds: ReadonlySet<string>
 } {
   const [rows, setRows] = useState<TaskOverviewRow[]>([])
   const [ready, setReady] = useState(false)
-  /** 「到点钳位」集合：只在真的变化时 setState（否则白白重排 + 播 FLIP）。 */
-  const [pinnedIds, setPinnedIds] = useState<ReadonlySet<string>>(new Set())
-  const pinnedIdsRef = useRef<ReadonlySet<string>>(new Set())
-  /** 上一版的 `nextSlotAt`（按 id）：判定「刚跨过自己的刻度」用。 */
-  const prevNextRef = useRef(new Map<string, string | null>())
-  /** 钳位解除时刻（**本地时钟**基准：只用于「什么时候松开」；跨时钟判定另有服务端 `now`）。 */
-  const pinsRef = useRef(new Map<string, number>())
-  /**
-   * 移除已到期的钳位。**必须每轮都跑**（含服务端回 `unchanged` 的那些轮）——否则
-   * 「到点却永不被派发」的任务（上游停用 / 附件缺失 / 串行互斥）会被**永久**钉在组 1 最前，
-   * `pinMs` 形同不存在（2026-09-30 复核发现的硬伤：到期判定曾写在 `unchanged` 提前 return 之后）。
-   */
-  const prunePins = (): void => {
-    const nowLocal = Date.now()
-    for (const [id, until] of [...pinsRef.current]) if (until <= nowLocal) pinsRef.current.delete(id)
-  }
-  /** 钳位集合有变化才 setState（否则白白重排 + 播 FLIP）。 */
-  const syncPinned = (): void => {
-    const pins = pinsRef.current
-    if (sameIdSet(pinnedIdsRef.current, pins)) return
-    const snapshot: ReadonlySet<string> = new Set(pins.keys())
-    pinnedIdsRef.current = snapshot
-    setPinnedIds(snapshot)
-  }
   const revRef = useRef('')
   const busyRef = useRef(false)
   /** 本轮请求的开始时刻（看门狗用；0 = 空闲）。 */
@@ -225,35 +202,16 @@ export function useTaskOverview(): {
           ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown; now?: unknown; tickMs?: unknown
         }
         if (!alive || body.ok !== true) return
-        // 内容没变：不重渲染、不重排、不播动画 —— 但**钳位到期仍要扫**，否则永远松不开
-        // （2026-09-30 复核：这条早 return 曾把到期判定整段跳过 ⇒ 永久钉在组 1 最前）。
-        if (body.unchanged === true) { prunePins(); syncPinned(); return }
+        // 内容没变：不重渲染、不重排、不播动画（`rev` 相同 ⇒ 行数据与上一份逐字节相同）。
+        if (body.unchanged === true) return
         revRef.current = String(body.rev ?? '')
         const nextRows = Array.isArray(body.tasks) ? body.tasks as TaskOverviewRow[] : []
-        // ── 到点钳位（排序抖动，2026-09-30）：机制与三条红线见 ../task-sort.ts 头注释 ──
-        // `now` 用服务端时间（客户端时钟可能与宿主有时差）；`tickMs` 决定钳位时长（不写死）。
-        const serverNow = typeof body.now === 'number' && Number.isFinite(body.now) ? body.now : Date.now()
-        // 记下服务端下发的巡检间隔：供「到点未派发」的 loading 上界用（见 `dueLoadingMs`）。
+        // 只取「巡检间隔」用于「到点未派发」的 loading 上界（见 `dueLoadingMs`）。
+        // ⚠️ 到点排序抖动现在由**服务端闸门**解决（冻结未处理刻度 ⇒ 排序键不随读变化），
+        // 客户端**不再有任何本地派生排序状态**（原「到点钳位」整套已删，决策 54）。
         if (typeof body.tickMs === 'number' && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs
-        const pinMs = pinMsFor(typeof body.tickMs === 'number' ? body.tickMs : 60_000, POLL_MS)
-        const pins = pinsRef.current
-        const prevNext = prevNextRef.current
-        for (const row of nextRows) {
-          // running / 停用 / 无刻度 ⇒ 一律解除钳位（该由正常分组决定位置）。
-          if (row.running || !row.enabled || row.nextSlotAt === null) { pins.delete(row.id); continue }
-          // 「刚跨过自己的刻度」用**服务端 now** 判（跨时钟正确）；`maxAge = 2×pinMs` 挡掉把
-          // **很久以前**的刻度（典型：`once` 任务的过期槽）误判成「刚跨过」而白钉一次。
-          if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow, 2 * pinMs)) {
-            pins.set(row.id, Date.now() + pinMs) // 期限走本地时钟：等 running 翻转，或由 prunePins 松开
-          }
-        }
-        const aliveIds = new Set(nextRows.map(row => row.id))
-        for (const id of [...pins.keys()]) if (!aliveIds.has(id)) pins.delete(id) // 任务被删 ⇒ 清残留
-        prunePins() // 到期的松开（回按下次执行正常排队）
-        prevNextRef.current = new Map(nextRows.map(row => [row.id, row.nextSlotAt]))
         setRows(nextRows)
         setReady(true)
-        syncPinned()
       } catch { /* 通道短暂不可用 / 超时已 abort：保持上一次的数据，下轮再取 */ } finally {
         window.clearTimeout(abortTimer)
         busyRef.current = false
@@ -288,7 +246,8 @@ export function useTaskOverview(): {
     setRows(list => list.map(row => (row.id === id ? { ...row, ...patch } : row)))
   }, [])
 
-  return { rows, ready, refresh, patchRow, pinnedIds }
+  // `pinnedIds` 恒为空集合（钳位已删，决策 54）；保留字段只为过渡，下一阶段从签名摘掉。
+  return { rows, ready, refresh, patchRow, pinnedIds: NO_PINS }
 }
 
 // ── 文案与时间 ─────────────────────────────────────────────────────────

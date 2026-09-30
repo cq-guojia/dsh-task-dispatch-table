@@ -40140,18 +40140,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return (Date.parse(b.lastScheduledAt ?? b.runningSince ?? "") || 0) - ta;
 			});
 		}
-		/**
-		* 「刚跨过自己的刻度」判定：上一版的 `nextSlotAt` **已过去**（不大于服务端当前时间），
-		* 而这一版在未来。以**服务端时间**为准（客户端时钟可能与宿主有时差）。
-		*/
-		function justCrossedSlot(prevNext, nextNext, serverNowMs, maxAgeMs = Number.POSITIVE_INFINITY) {
-			if (prevNext === null || nextNext === null) return false;
-			const p = Date.parse(prevNext);
-			const n = Date.parse(nextNext);
-			if (!Number.isFinite(p) || !Number.isFinite(n)) return false;
-			if (!(p <= serverNowMs && n > serverNowMs)) return false;
-			return serverNowMs - p <= maxAgeMs;
-		}
 		/** 钳位时长：**跟着巡检间隔走**（默认 `tickMs` 60s ⇒ 约 80s），带上下限兜底（30s ~ 10min）。 */
 		function pinMsFor(tickMs, pollMs) {
 			return Math.min(6e5, Math.max(3e4, (Number.isFinite(tickMs) && tickMs > 0 ? tickMs : 6e4) + 2 * pollMs));
@@ -40241,42 +40229,18 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 超过它还没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥）⇒ **不能一直装成在跑**。
 		*/
 		const dueLoadingMs = () => pinMsFor(currentTickMs, POLL_MS);
-		/** 空钳位集合（缺省值用；避免每次渲染 new 一个 Set 打破 useMemo 依赖）。 */
+		/**
+		* 「到点钳位」已整删（决策 54），这里只留一个**空集合占位**维持视图侧的签名形状；
+		* 下一阶段连同 `pinnedIds` 一起从签名里摘掉。
+		* 排序抖动现在由**服务端**解决：`runtime-index.overview` 冻结「已到点但还没处理」的刻度
+		* ⇒ 排序键不随读变化，客户端**不再有任何本地派生排序状态**（那套状态一旦轮询卡住就永不解开，
+		* 正是真机「卡片 5 分钟不动」的根源）。
+		*/
 		const NO_PINS = /* @__PURE__ */ new Set();
-		/** 两个 id 集合是否相同（钳位集合没变就不 setState，免得白白触发重排与 FLIP）。 */
-		const sameIdSet = (a, b) => {
-			if (a.size !== b.size) return false;
-			for (const id of a) if (!b.has(id)) return false;
-			return true;
-		};
 		/** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
 		function useTaskOverview() {
 			const [rows, setRows] = (0, react.useState)([]);
 			const [ready, setReady] = (0, react.useState)(false);
-			/** 「到点钳位」集合：只在真的变化时 setState（否则白白重排 + 播 FLIP）。 */
-			const [pinnedIds, setPinnedIds] = (0, react.useState)(/* @__PURE__ */ new Set());
-			const pinnedIdsRef = (0, react.useRef)(/* @__PURE__ */ new Set());
-			/** 上一版的 `nextSlotAt`（按 id）：判定「刚跨过自己的刻度」用。 */
-			const prevNextRef = (0, react.useRef)(/* @__PURE__ */ new Map());
-			/** 钳位解除时刻（**本地时钟**基准：只用于「什么时候松开」；跨时钟判定另有服务端 `now`）。 */
-			const pinsRef = (0, react.useRef)(/* @__PURE__ */ new Map());
-			/**
-			* 移除已到期的钳位。**必须每轮都跑**（含服务端回 `unchanged` 的那些轮）——否则
-			* 「到点却永不被派发」的任务（上游停用 / 附件缺失 / 串行互斥）会被**永久**钉在组 1 最前，
-			* `pinMs` 形同不存在（2026-09-30 复核发现的硬伤：到期判定曾写在 `unchanged` 提前 return 之后）。
-			*/
-			const prunePins = () => {
-				const nowLocal = Date.now();
-				for (const [id, until] of [...pinsRef.current]) if (until <= nowLocal) pinsRef.current.delete(id);
-			};
-			/** 钳位集合有变化才 setState（否则白白重排 + 播 FLIP）。 */
-			const syncPinned = () => {
-				const pins = pinsRef.current;
-				if (sameIdSet(pinnedIdsRef.current, pins)) return;
-				const snapshot = new Set(pins.keys());
-				pinnedIdsRef.current = snapshot;
-				setPinnedIds(snapshot);
-			};
 			const revRef = (0, react.useRef)("");
 			const busyRef = (0, react.useRef)(false);
 			/** 本轮请求的开始时刻（看门狗用；0 = 空闲）。 */
@@ -40304,32 +40268,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						if (!res.ok) return;
 						const body = await res.json();
 						if (!alive || body.ok !== true) return;
-						if (body.unchanged === true) {
-							prunePins();
-							syncPinned();
-							return;
-						}
+						if (body.unchanged === true) return;
 						revRef.current = String(body.rev ?? "");
 						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
-						const serverNow = typeof body.now === "number" && Number.isFinite(body.now) ? body.now : Date.now();
 						if (typeof body.tickMs === "number" && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs;
-						const pinMs = pinMsFor(typeof body.tickMs === "number" ? body.tickMs : 6e4, POLL_MS);
-						const pins = pinsRef.current;
-						const prevNext = prevNextRef.current;
-						for (const row of nextRows) {
-							if (row.running || !row.enabled || row.nextSlotAt === null) {
-								pins.delete(row.id);
-								continue;
-							}
-							if (justCrossedSlot(prevNext.get(row.id) ?? null, row.nextSlotAt, serverNow, 2 * pinMs)) pins.set(row.id, Date.now() + pinMs);
-						}
-						const aliveIds = new Set(nextRows.map((row) => row.id));
-						for (const id of [...pins.keys()]) if (!aliveIds.has(id)) pins.delete(id);
-						prunePins();
-						prevNextRef.current = new Map(nextRows.map((row) => [row.id, row.nextSlotAt]));
 						setRows(nextRows);
 						setReady(true);
-						syncPinned();
 					} catch {} finally {
 						window.clearTimeout(abortTimer);
 						busyRef.current = false;
@@ -40365,7 +40309,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						...patch
 					} : row));
 				}, []),
-				pinnedIds
+				pinnedIds: NO_PINS
 			};
 		}
 		/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
