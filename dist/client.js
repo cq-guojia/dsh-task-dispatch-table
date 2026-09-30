@@ -393,7 +393,7 @@ window.__ModuleLoader__.load({
 			editorDeleteVersion: "删除",
 			editorUseVersion: "使用此版本",
 			editorConfirmDeleteTitle: "删除版本",
-			editorConfirmDeleteDesc: "你确定要删除吗？",
+			editorConfirmDeleteDesc: "你确定要删除此版本的记录吗？删除后不可撤销，请谨慎操作。",
 			editorConfirmUseTitle: "使用历史版本",
 			editorConfirmUseDesc: "确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词）。",
 			editorDeleteTask: "删除任务",
@@ -852,7 +852,7 @@ window.__ModuleLoader__.load({
 			editorDeleteVersion: "Delete",
 			editorUseVersion: "Use this version",
 			editorConfirmDeleteTitle: "Delete version",
-			editorConfirmDeleteDesc: "Are you sure you want to delete it?",
+			editorConfirmDeleteDesc: "Delete this version record? This cannot be undone — please proceed with care.",
 			editorConfirmUseTitle: "Use history version",
 			editorConfirmUseDesc: "Restoring will overwrite all your current edits with the history version (prompt only this time).",
 			editorDeleteTask: "Delete task",
@@ -5847,13 +5847,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-ver:last-child{border-bottom:none;}
 .dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
 .dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:11px;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-ed-ver-right{flex:none;position:relative;width:104px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
+.dsh-tdt-ed-ver-note{display:block;font-size:10px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-time{font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:nowrap;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-ver-use{appearance:none;border:none;border-radius:999px;padding:1px 9px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.2));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
-.dsh-tdt-ed-ver-use:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.3));}
-.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
-.dsh-tdt-ed-ver-del:hover{color:var(--dsw-alias-state-error-primary,#e5484d);}
+/* 「使用」= 纯文字钮（用户：药丸太长），hover 才垫一个小背景；「×」= 官方叉图标，hover 变红。 */
+.dsh-tdt-ed-ver-use{appearance:none;border:none;background:none;padding:1px 4px;border-radius:var(--dsw-radius-sm,4px);color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease;}
+.dsh-tdt-ed-ver-use:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.2));}
+.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:2px;border-radius:var(--dsw-radius-sm,4px);display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .12s ease,color .12s ease;}
+.dsh-tdt-ed-ver-del:hover{color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.2));}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
@@ -38536,7 +38538,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-ver-ic",
 				style: { transform: "rotate(-90deg)" }
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)(MarqueeText, { text: v.note })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react.createElement)("button", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)(MarqueeText, { text: formatVersionTime(v.ts) }), v.note !== "" ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-note" }, v.note) : null), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-ver-use",
 				onClick: () => {
@@ -38545,10 +38547,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, t("editorUseShort")), (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-ver-del",
+				title: t("editorDeleteVersion"),
+				"aria-label": t("editorDeleteVersion"),
 				onClick: () => {
 					setConfirmDeleteFile(v.file);
 				}
-			}, t("editorRemoveShort"))) : (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-time" }, formatVersionTime(v.ts)))))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 12 }))) : null)))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
 				t,
 				title: t("editorConfirmDeleteTitle"),
 				desc: t("editorConfirmDeleteDesc"),

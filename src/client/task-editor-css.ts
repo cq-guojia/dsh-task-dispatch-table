@@ -67,13 +67,15 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-ver:last-child{border-bottom:none;}
 .dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
 .dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:11px;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-ed-ver-right{flex:none;position:relative;width:104px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
+.dsh-tdt-ed-ver-note{display:block;font-size:10px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-time{font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:nowrap;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-ver-use{appearance:none;border:none;border-radius:999px;padding:1px 9px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.2));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
-.dsh-tdt-ed-ver-use:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.3));}
-.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
-.dsh-tdt-ed-ver-del:hover{color:var(--dsw-alias-state-error-primary,#e5484d);}
+/* 「使用」= 纯文字钮（用户：药丸太长），hover 才垫一个小背景；「×」= 官方叉图标，hover 变红。 */
+.dsh-tdt-ed-ver-use{appearance:none;border:none;background:none;padding:1px 4px;border-radius:var(--dsw-radius-sm,4px);color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease;}
+.dsh-tdt-ed-ver-use:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.2));}
+.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:2px;border-radius:var(--dsw-radius-sm,4px);display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .12s ease,color .12s ease;}
+.dsh-tdt-ed-ver-del:hover{color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.2));}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */

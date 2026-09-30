@@ -1107,19 +1107,20 @@ function PromptEditorModal(props: {
                       // 行首小尖括号（用户 2026-09-30：弃时钟，用右指小角标）。
                       h('span', { className: 'dsh-tdt-ed-ver-ic', style: { transform: 'rotate(-90deg)' } },
                         h(IconChevronDownOutlineRegular, { size: 12 })),
-                      // 主文本 = 备注（无备注就留空 ⇒ 右侧只显示一次时间，**不出现两个日期**）。
-                      // 超长省略，hover 在自己盒子里跑马灯（不盖行首图标）。
+                      // 左边 = **版本日期**（用户点名：左边正常显示日期，别挪去右边）；有备注补一行小字。
                       h('span', { className: 'dsh-tdt-ed-ver-main' },
-                        h(MarqueeText, { text: v.note })),
-                      // 右侧固定槽（宽高恒定 ⇒ hover 换按钮绝不撑高行高）：无备注常态也显示时间，
-                      // 有备注常态显示时间、hover 换「使用（药丸）/ 移除（小字）」。
+                        h(MarqueeText, { text: formatVersionTime(v.ts) }),
+                        v.note !== '' ? h('span', { className: 'dsh-tdt-ed-ver-note' }, v.note) : null,
+                      ),
+                      // 右侧固定槽（宽高恒定 ⇒ hover 出按钮绝不撑高行高）：常态空，hover 出「使用 / ×」。
                       h('span', { className: 'dsh-tdt-ed-ver-right' },
                         hoveredId === v.file
                           ? h('span', { className: 'dsh-tdt-ed-ver-actions' },
                             h('button', { type: 'button', className: 'dsh-tdt-ed-ver-use', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseShort')),
-                            h('button', { type: 'button', className: 'dsh-tdt-ed-ver-del', onClick: () => { setConfirmDeleteFile(v.file) } }, t('editorRemoveShort')),
+                            h('button', { type: 'button', className: 'dsh-tdt-ed-ver-del', title: t('editorDeleteVersion'), 'aria-label': t('editorDeleteVersion'), onClick: () => { setConfirmDeleteFile(v.file) } },
+                              h(IconCloseOutlineRegular, { size: 12 })),
                           )
-                          : h('span', { className: 'dsh-tdt-ed-ver-time' }, formatVersionTime(v.ts)),
+                          : null,
                       ),
                     )),
                   ),
