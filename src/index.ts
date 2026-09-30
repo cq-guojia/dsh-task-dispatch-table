@@ -182,6 +182,11 @@ const makeDispatchRoutes = (
   runtimeIndex: RuntimeIndex,
   /** 当前任务定义（含停用）—— overview 组装用。 */
   getTasks: () => Map<string, TaskDefinition>,
+  /**
+   * 任务定义被改动后立刻同步快照（2026-09-30）：主界面「点了开关要立即生效」——
+   * 否则要等下一个 tick 才把新定义同步给 overview，用户看到的就是「点了没反应」。
+   */
+  onDefinitionsChanged: () => void,
 ): DispatchWebRoute[] => [
   {
     // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
@@ -274,6 +279,7 @@ const makeDispatchRoutes = (
           if (paths !== null) deleteTaskAssets(paths, id)
           getStore()?.appendAudit({ taskId: id, action: 'task_deleted' })
           log(`任务 ${id} 已删除（定义已摘除，任务目录整删；执行记录保留）`)
+          onDefinitionsChanged()
           return writeJson(res, 200, { ok: true, removed: rm.removed })
         }
 
@@ -285,6 +291,7 @@ const makeDispatchRoutes = (
           await persistTasksInline(json)
           // 整批替换是最重的改动，审计不能缺（评审 P2#13）。
           getStore()?.appendAudit({ action: 'tasks_replaced', detail: { bytes: json.length, assigned: changed ? assigned : 0 } })
+          onDefinitionsChanged()
           return writeJson(res, 200, { ok: true, assigned: changed ? assigned : 0 })
         }
 
@@ -356,6 +363,7 @@ const makeDispatchRoutes = (
         for (const name of moved.missing) store.appendAudit({ taskId: id, action: 'attachment_missing', detail: { name } })
 
         const removedNames = moved.removed.map(ref => prevAttachments.find(item => item.ref === ref)?.name ?? ref)
+        onDefinitionsChanged()
         writeJson(res, 200, {
           ok: true,
           mode: up.mode,
@@ -399,6 +407,8 @@ const makeDispatchRoutes = (
           }
           getStore()?.appendAudit({ taskId: id, action: 'task_updated', detail: { enabled: parsed.enabled } })
           log(`任务 ${id} 启用开关已实时写回：${parsed.enabled ? 'enabled' : 'disabled'}`)
+          // 立即同步任务表快照 ⇒ 客户端紧接着拉的那一次 overview 就能拿到新值。
+          onDefinitionsChanged()
         }
         writeJson(res, 200, { ok: true, id, enabled: parsed.enabled })
       } catch (error) {
@@ -670,6 +680,11 @@ export function apply(ctx: HostContext, config: unknown): void {
   const runtimeIndex = createRuntimeIndex()
   /** 当前任务定义（含停用）：overview 路由组装卡片用；随 tick 同步。 */
   let panelTaskMap: Map<string, TaskDefinition> = new Map()
+  /**
+   * 「任务定义改了」的同步钩子：settings inject 内赋值为 safeTick（重跑一次 tick 即可刷新
+   * panelTaskMap）。webServer 注入早于 settings ⇒ 只能先声明、后赋值。
+   */
+  let resyncTaskMap: (() => void) | null = null
   /** settings inject 就绪后的宿主上下文（persistTasksInline 经它找 configEditor）。 */
   let settingsCtxRef: HostContext | null = null
   /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
@@ -728,6 +743,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       () => configRef,
       runtimeIndex,
       () => panelTaskMap,
+      () => { resyncTaskMap?.() },
     )) webServer.register(route)
     wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled')
   })
@@ -920,6 +936,8 @@ export function apply(ctx: HostContext, config: unknown): void {
       }
     }, 6 * 3600_000)
 
+    // 定义被改动后的同步钩子（主界面「点了开关立即生效」就靠它）。
+    resyncTaskMap = () => { safeTick() }
     safeTick()
     // 主界面运行态**启动初始化一次**：一条聚合 SQL 取每任务最近执行 + 在飞行扫描 + 逐任务算下一刻度。
     // 之后全靠事件增量维护（Loop A 落库 / Loop B 收口），轮询不再查库。

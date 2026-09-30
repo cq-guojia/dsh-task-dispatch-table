@@ -199,7 +199,9 @@ const addButtonStyle: Record<string, string | number> = {
 /** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
 const panelHeaderStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  gap: '12px', marginBottom: '4px', flexWrap: 'wrap',
+  gap: '12px', flexWrap: 'wrap',
+  // 主标题与下面任务列表那排的间距（用户 2026-09-30 要求「至少是现在的两倍」，先给 40px 看效果）。
+  marginBottom: '40px',
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
 const panelTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: C.text }
@@ -883,31 +885,22 @@ function TaskPage(props: {
     },
   },
     h('div', { style: { ...pageStyle, flex: '1 1 auto', minWidth: 0 } },
-      // 抬头：左「← 返回会话」+ 标题；右「刷新 · 分组标签」
-      h('div', { style: panelHeaderStyle },
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
-          h('button', {
-            type: 'button',
-            style: backButtonStyle,
-            title: t('backToConversation'),
-            onClick: onBack,
-          }, `← ${t('backToConversation')}`),
-          h('div', { style: { minWidth: 0 } },
-            h('div', { style: panelTitleStyle }, t('panelTitle')),
-            data !== undefined
-              ? h('div', { style: { ...hintStyle, margin: '2px 0 0' } }, formatTime(data.at))
-              : null,
-          ),
-        ),
-        h('div', { style: headerRightStyle },
-          h('button', {
-            type: 'button',
-            style: iconButtonStyle,
-            title: t('debugRefresh'),
-            'aria-label': t('debugRefresh'),
-            onClick: () => { setManualAt(Date.now()) },
-          }, h(RefreshIcon, {})),
-          h('div', { style: segmentedStyle },
+      // 抬头：**与任务列表同宽居中**（用户 2026-09-30：主窗口标题也得收拢，不能全屏铺开）；
+      // 标题下面不再写时间与提示（用户 2026-09-30：只留「← 返回会话」和标题）。
+      h('div', { style: { display: 'flex', justifyContent: 'center' } },
+        h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
+          h('div', { style: panelHeaderStyle },
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
+              h('button', {
+                type: 'button',
+                style: backButtonStyle,
+                title: t('backToConversation'),
+                onClick: onBack,
+              }, `← ${t('backToConversation')}`),
+              h('div', { style: panelTitleStyle }, t('panelTitle')),
+            ),
+            h('div', { style: headerRightStyle },
+              h('div', { style: segmentedStyle },
             h('button', {
               type: 'button', style: segmentStyle(tab === 'config'),
               onClick: () => { setTab('config') },
@@ -928,9 +921,10 @@ function TaskPage(props: {
             title: t('editorNew'),
             onClick: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null }) },
           }, `＋ ${t('editorNew')}`),
+            ),
+          ),
         ),
       ),
-      h('p', { style: hintStyle }, t('debugAutoHint')),
 
       data === undefined
         ? h('div', null,
@@ -945,11 +939,15 @@ function TaskPage(props: {
             t,
             rows: overview.rows,
             ready: overview.ready,
-            onRefresh: overview.refresh,
-            onNew: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null }) },
+            onRefresh: () => { setManualAt(Date.now()); overview.refresh() },
             onEdit: openEditor,
             onToggleEnabled: (id: string, enabled: boolean): void => {
-              void toggleTaskEnabled(id, enabled).then(err => { if (err !== null) setViewErr(err) })
+              // 拨片要**立刻生效**：服务端写库成功后会同步任务表快照，这里马上再拉一次
+              // （不等 10 秒轮询）；卡片本身已做乐观更新，点下去即变。
+              void toggleTaskEnabled(id, enabled).then(err => {
+                if (err !== null) { setViewErr(err); return }
+                overview.refresh()
+              })
             },
           })
           // ↓ 旧「任务配置」界面（JSON 逃生口 + 只读参数）：主界面重建后由常量关掉，暂不删——

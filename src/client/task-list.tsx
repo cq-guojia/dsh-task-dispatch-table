@@ -1,11 +1,14 @@
 // task-list.tsx — 主界面任务列表视图（2026-09-30，design/main-panel-design.md）。
 //
-// 形态：限宽居中的卡片列表。每张卡片 = 状态点 + 标题 + 执行方式 + 上次 / 下次 + 创建于 + 三个操作。
+// 形态：限宽居中的卡片列表。每张卡片 = 状态条 + 标题 + 执行方式 + 上次 / 下次 + 创建于 + 两个操作。
 // 排序按「时间轴」：运行中 → 已启用按下次执行升序 → 已完结（无下次） → 已关闭沉底。
 //
 // **效率约定（用户 2026-09-30 明确要求）**：卡片数据全来自 `GET /tasks/overview`（服务端内存摘要，
 // 不查库），10 秒轮询一次并带 `rev` 比对——未变只回 `{unchanged:true}`；「10 分钟后 → 9 分钟后」
 // 这类相对时间由**本地计时器**渲染，不产生请求、也不触发重排。
+//
+// **即时性**：拨片（启用 / 停用）走「本地乐观更新 + 立刻重新拉一次」，不等下一轮轮询
+// ——服务端在写库成功后会同步任务表快照，所以重新拉的这一次就能拿到新值。
 //
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
@@ -14,7 +17,7 @@ import {
   IconChevronDownOutlineRegular, IconEditOutlineRegular, IconRefreshOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { interpolateTranslate, type LocaleKey, type Translate } from './locales'
+import { interpolateTranslate, type Translate } from './locales'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -63,6 +66,27 @@ const C = {
   ease: 'var(--ds-ease-in-out, ease)',
 }
 const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`
+/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
+const CONTROL_H = 26
+
+// ── 顶部一排的样式注入（官方 Input 默认 32px 高，需压到与按钮同高；工作区按钮定长 + 省略号）──
+const ensureTaskListStyle = (): void => {
+  if (typeof document === 'undefined') return
+  const id = 'dsh-tdt-list-style'
+  if (document.getElementById(id) !== null) return
+  const tag = document.createElement('style')
+  tag.id = id
+  tag.textContent = [
+    // 状态条运行中：整条明暗脉动（竖条不适合旋转，脉动更显眼）。
+    '@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }',
+    `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}px; }`,
+    `.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
+    // 工作区下拉：定长 + 超长省略号；展开后的列表项不受影响（可显示完整长度）。
+    '.dsh-tdt-tl-ws { max-width: 160px; }',
+    '.dsh-tdt-tl-ws-label { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }',
+  ].join('\n')
+  document.head.appendChild(tag)
+}
 
 // ── 轮询 ──────────────────────────────────────────────────────────────
 const POLL_MS = 10_000
@@ -245,38 +269,34 @@ function useFlip(signature: string): (id: string) => (el: HTMLElement | null) =>
   }, [])
 }
 
-/** 转圈动画（@keyframes 无法写进内联 style）⇒ 注入一次，幂等。 */
-function ensureSpinKeyframes(): void {
-  if (typeof document === 'undefined') return
-  const id = 'dsh-tdt-spin-keyframes'
-  if (document.getElementById(id) !== null) return
-  const tag = document.createElement('style')
-  tag.id = id
-  tag.textContent = '@keyframes dsh-tdt-spin { to { transform: rotate(360deg) } }'
-  document.head.appendChild(tag)
-}
+// ── 状态条（StatusRail）───────────────────────────────────────────────
+// 命名：中文「**状态条**」，组件 `StatusRail`——它是贴在卡片左缘、与正文两行等高的竖向色条，
+// 比原来的小圆点显眼得多（用户 2026-09-30：只给个点儿出颜色，看不清）。
+const RAIL_W = 6
+const RAIL_H = 36
 
-// ── 状态点 ─────────────────────────────────────────────────────────────
-/** 转圈（运行中）：纯 CSS 动画，零请求。 */
-function Spinner() {
+/** 运行中：整条转起来（纯 CSS 动画，零请求）。 */
+function RunningRail() {
   return h('span', {
     style: {
-      display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%',
-      border: `1.5px solid ${C.brand}`, borderTopColor: 'transparent',
-      animation: 'dsh-tdt-spin 800ms linear infinite',
+      display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
+      borderRadius: '3px', background: C.brand,
+      animation: 'dsh-tdt-rail-pulse 900ms ease-in-out infinite',
     },
   })
 }
 
-function StatusDot(props: { row: TaskOverviewRow }) {
+function StatusRail(props: { row: TaskOverviewRow }) {
   const { row } = props
-  if (row.running) return h(Spinner, {})
+  if (row.running) return h(RunningRail, {})
   const color = !row.enabled ? C.textFaint : row.lastStatus === 'failed' ? C.danger : C.success
+  const hint = !row.enabled ? '已关闭' : row.lastStatus === 'failed' ? '最近一次执行失败' : '计划运行中'
   return h('span', {
-    title: !row.enabled ? '已关闭' : row.lastStatus === 'failed' ? '最近一次执行失败' : '计划运行中',
+    title: hint,
     style: {
-      display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%',
-      background: color, flex: 'none', transition: `background ${C.duration} ${C.ease}`,
+      display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
+      borderRadius: '3px', background: color,
+      transition: `background ${C.duration} ${C.ease}`,
     },
   })
 }
@@ -291,14 +311,15 @@ const cardStyle: Record<string, string | number> = {
 const titleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: C.text, lineHeight: '20px' }
 const metaStyle: Record<string, string | number> = { fontSize: '12px', color: C.textDim, lineHeight: '18px', marginTop: '2px' }
 const faintStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, lineHeight: '16px', marginTop: '2px' }
+const sectionLabelStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, marginTop: '10px', marginBottom: '2px' }
+const sectionBodyStyle: Record<string, string | number> = { fontSize: '12px', color: C.text, lineHeight: '18px' }
+/** 图标按钮：与顶部一排同高（26px）。 */
 const iconBtnStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-  height: '26px', minWidth: '26px', padding: '0 6px', border: `1px solid ${C.border}`,
+  height: `${CONTROL_H}px`, minWidth: `${CONTROL_H}px`, padding: '0 6px', border: `1px solid ${C.border}`,
   borderRadius: '6px', background: 'transparent', color: C.textDim, cursor: 'pointer',
   fontFamily: 'inherit', fontSize: '12px', transition,
 }
-const sectionLabelStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, marginTop: '10px', marginBottom: '2px' }
-const sectionBodyStyle: Record<string, string | number> = { fontSize: '12px', color: C.text, lineHeight: '18px' }
 
 function TaskCard(props: {
   row: TaskOverviewRow
@@ -316,8 +337,9 @@ function TaskCard(props: {
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
 
   return h('div', { ref: refOf, style: cardStyle },
-    h('div', { style: { display: 'flex', alignItems: 'flex-start', gap: '10px' } },
-      h('div', { style: { paddingTop: '5px', flex: 'none' } }, h(StatusDot, { row })),
+    // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+      h(StatusRail, { row }),
       h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
         h('div', { style: titleStyle },
           row.title,
@@ -331,16 +353,13 @@ function TaskCard(props: {
         ),
         row.createdAt === null ? null : h('div', { style: faintStyle }, `${t('listCreatedPrefix')} ${dateOf(row.createdAt)}`),
       ),
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flex: 'none' } },
+      // 右侧只留两个操作：启用拨片 + 展开箭头（「编辑」移到展开区右下角）。
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
         h(Switch, {
           checked: row.enabled,
           onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
           label: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
         }),
-        h('button', {
-          type: 'button', style: iconBtnStyle, title: t('editorEdit'),
-          onClick: () => { onEdit(row.id) },
-        }, h(IconEditOutlineRegular, { size: 14 })),
         h('button', {
           type: 'button', style: { ...iconBtnStyle, border: 'none', transform: open ? 'rotate(180deg)' : 'none' },
           title: t('expandHint'), onClick: onToggleOpen,
@@ -348,7 +367,7 @@ function TaskCard(props: {
         }, h(IconChevronDownOutlineRegular, { size: 14 })),
       ),
     ),
-    // ── 展开区：就地拉伸，上方原样，下方读任务设置（不进编辑页）──
+    // ── 展开区：就地拉伸，上方原样，下方读任务设置（「详细说明」）──
     open ? h('div', { style: { marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '8px' } },
       h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
       h('div', { style: sectionBodyStyle },
@@ -368,6 +387,14 @@ function TaskCard(props: {
       ),
       h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
       h('div', { style: { ...sectionBodyStyle, color: C.textDim, whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
+      // 详细说明下面再来一条虚线，右下角放「编辑」——不是每次都要编辑，不占主行的重要位置。
+      h('div', { style: { marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}`, display: 'flex', justifyContent: 'flex-end' } },
+        h('button', {
+          type: 'button',
+          style: { ...iconBtnStyle, padding: '0 10px' },
+          onClick: () => { onEdit(row.id) },
+        }, h(IconEditOutlineRegular, { size: 14 }), t('editorEdit')),
+      ),
     ) : null,
   )
 }
@@ -378,18 +405,29 @@ export function TaskListView(props: {
   rows: readonly TaskOverviewRow[]
   ready: boolean
   onRefresh: () => void
-  onNew: () => void
   onEdit: (id: string) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onRefresh, onNew, onEdit, onToggleEnabled } = props
+  const { t, rows, ready, onRefresh, onEdit, onToggleEnabled } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
-  ensureSpinKeyframes()
-  const [filter, setFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
+  ensureTaskListStyle()
+  const [filter, setFilter] = useState<'all' | 'enabled' | 'disabled' | 'abnormal'>('all')
   const [workspace, setWorkspace] = useState<string>('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
+  /** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
+  const [optimistic, setOptimistic] = useState<Record<string, boolean>>({})
+
+  const rowsWithOptimistic = useMemo(() => {
+    const keys = Object.keys(optimistic)
+    if (keys.length === 0) return rows
+    return rows.map(row => (row.id in optimistic ? { ...row, enabled: optimistic[row.id] } : row))
+  }, [rows, optimistic])
+
+  // 真实数据到位 ⇒ 清掉乐观值（避免长期覆盖服务端值）。
+  useEffect(() => { setOptimistic({}) }, [rows])
+
   // 相对时间（「10 分钟后」）本地每秒推进：**不产生请求、也不触发重排**（重排只发生在数据真变时）。
   const [nowMs, setNowMs] = useState(() => Date.now())
   useEffect(() => {
@@ -397,19 +435,26 @@ export function TaskListView(props: {
     return () => { window.clearInterval(timer) }
   }, [])
 
-  const workspaces = useMemo(() => [...new Set(rows.map(r => r.workspace))].sort(), [rows])
+  const workspaces = useMemo(() => [...new Set(rowsWithOptimistic.map(r => r.workspace))].sort(), [rowsWithOptimistic])
+  /** 异常数 = 内存摘要里「最近一次执行失败」的任务数（全量统计，不受当前筛选影响）。 */
+  const abnormalCount = useMemo(
+    () => rowsWithOptimistic.filter(row => row.lastStatus === 'failed').length,
+    [rowsWithOptimistic],
+  )
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const filtered = rows.filter(row => {
+    const filtered = rowsWithOptimistic.filter(row => {
       if (filter === 'enabled' && !row.enabled) return false
       if (filter === 'disabled' && row.enabled) return false
+      if (filter === 'abnormal' && row.lastStatus !== 'failed') return false
       if (workspace !== '' && row.workspace !== workspace) return false
       if (q === '') return true
       return row.title.toLowerCase().includes(q) || (row.code ?? '').toLowerCase().includes(q)
     })
     return sortRows(filtered)
     // 排序只依赖内容本身；nowMs 变化不参与 ⇒ 每秒 tick 不会引起重排与动画。
-  }, [rows, filter, workspace, query])
+  }, [rowsWithOptimistic, filter, workspace, query])
 
   // FLIP 签名：只在「可见集合与顺序」变化时触发动画。
   const signature = visible.map(r => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join('|')
@@ -421,58 +466,72 @@ export function TaskListView(props: {
   ], [workspaces, t])
 
   const tabStyle = (active: boolean): Record<string, string | number> => ({
-    padding: '3px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-    fontSize: '12px', lineHeight: '18px', fontFamily: 'inherit', transition,
+    display: 'inline-flex', alignItems: 'center', gap: '4px',
+    height: `${CONTROL_H}px`, padding: '0 12px', border: 'none', cursor: 'pointer',
+    fontSize: '12px', fontFamily: 'inherit', transition, borderRadius: '6px',
     background: active ? C.layer1 : 'transparent',
     color: active ? C.text : C.textDim,
     fontWeight: active ? 600 : 400,
   })
+  /** 异常数的角标（0 不显示）。 */
+  const countBadge = (n: number): ReturnType<typeof h> | null => (
+    n > 0
+      ? h('span', {
+        style: {
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          minWidth: '16px', height: '16px', padding: '0 4px', borderRadius: '8px',
+          background: C.danger, color: '#fff', fontSize: '11px', lineHeight: '16px',
+        },
+      }, String(n))
+      : null
+  )
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
-      // 顶部：筛选 + 搜索 + 新建
+      // 顶部一排：左 = 分组按钮（全部 / 已开启 / 已关闭 / 异常）；右 = 搜索 → 工作区下拉 → 刷新。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' } },
         h('div', { style: { display: 'inline-flex', gap: '2px', padding: '2px', borderRadius: '8px', background: C.layer2, border: `1px solid ${C.border}` } },
           h('button', { type: 'button', style: tabStyle(filter === 'all'), onClick: () => { setFilter('all') } }, t('listFilterAll')),
           h('button', { type: 'button', style: tabStyle(filter === 'enabled'), onClick: () => { setFilter('enabled') } }, t('listFilterEnabled')),
           h('button', { type: 'button', style: tabStyle(filter === 'disabled'), onClick: () => { setFilter('disabled') } }, t('listFilterDisabled')),
+          h('button', { type: 'button', style: tabStyle(filter === 'abnormal'), onClick: () => { setFilter('abnormal') } },
+            t('listFilterAbnormal'), countBadge(abnormalCount)),
         ),
-        h(Menu, {
-          open: menuOpen,
-          anchor: h('button', {
-            type: 'button', style: { ...iconBtnStyle, height: '26px', padding: '0 10px' },
-            onClick: () => { setMenuOpen(v => !v) },
-          }, `${t('listFilterWorkspace')}：${workspace === '' ? t('listFilterWorkspaceAll') : workspace}`),
-          items: menuItems,
-          selectedId: workspace,
-          onSelect: (id: string) => { setWorkspace(id); setMenuOpen(false) },
-          onClose: () => { setMenuOpen(false) },
-        }),
-        h('div', { style: { position: 'relative', flex: '1 1 160px', minWidth: '140px' } },
+        h('span', { style: { flex: '1 1 auto' } }),
+        h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
           h(Input, {
+            className: 'dsh-tdt-tl-input',
             icon: h(IconSearchOutlineRegular, { size: 14 }),
             value: query,
             placeholder: t('listSearchPlaceholder'),
             onChange: (event: { target: { value: string } }) => { setQuery(event.target.value) },
           }),
+          h(Menu, {
+            open: menuOpen,
+            anchor: h('button', {
+              type: 'button', className: 'dsh-tdt-tl-ws',
+              style: {
+                display: 'inline-flex', alignItems: 'center', gap: '4px',
+                height: `${CONTROL_H}px`, padding: '0 10px', border: `1px solid ${C.border}`,
+                borderRadius: '6px', background: 'transparent', color: C.text,
+                fontFamily: 'inherit', fontSize: '12px', cursor: 'pointer', transition,
+              },
+              onClick: () => { setMenuOpen(v => !v) },
+            }, h('span', { className: 'dsh-tdt-tl-ws-label' }, workspace === '' ? t('listFilterWorkspaceAll') : workspace)),
+            items: menuItems,
+            selectedId: workspace,
+            onSelect: (id: string) => { setWorkspace(id); setMenuOpen(false) },
+            onClose: () => { setMenuOpen(false) },
+          }),
+          h('button', {
+            type: 'button', style: iconBtnStyle, title: t('debugRefresh'),
+            onClick: onRefresh,
+          }, h(IconRefreshOutlineRegular, { size: 14 })),
         ),
-        h('button', {
-          type: 'button', style: { ...iconBtnStyle, height: '26px' }, title: t('debugRefresh'),
-          onClick: onRefresh,
-        }, h(IconRefreshOutlineRegular, { size: 14 })),
-        h('button', {
-          type: 'button',
-          style: {
-            display: 'inline-flex', alignItems: 'center', gap: '4px', flex: 'none', height: '26px',
-            padding: '0 10px', borderRadius: '6px', border: `1px solid ${C.borderStrong}`,
-            background: C.layer1, color: C.text, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: '12px', fontWeight: 600, transition,
-          },
-          onClick: onNew,
-        }, `＋ ${t('editorNew')}`),
       ),
       visible.length === 0
-        ? h('p', { style: { ...metaStyle, marginTop: '8px' } }, rows.length === 0 && !ready ? '' : rows.length === 0 ? t('listEmpty') : t('listEmptyFiltered'))
+        ? h('p', { style: { ...metaStyle, marginTop: '8px' } },
+          rows.length === 0 && !ready ? '' : rows.length === 0 ? t('listEmpty') : t('listEmptyFiltered'))
         : h('div', { style: { position: 'relative' } },
           visible.map(row => h(TaskCard, {
             key: row.id,
@@ -480,7 +539,10 @@ export function TaskListView(props: {
             open: openId === row.id,
             onToggleOpen: () => { setOpenId(cur => (cur === row.id ? null : row.id)) },
             onEdit,
-            onToggleEnabled,
+            onToggleEnabled: (id: string, enabled: boolean): void => {
+              setOptimistic(cur => ({ ...cur, [id]: enabled })) // 点了立刻变，不等请求往返
+              onToggleEnabled(id, enabled)
+            },
             refOf: refOf(row.id),
           })),
         ),

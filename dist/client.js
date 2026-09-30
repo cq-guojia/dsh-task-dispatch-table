@@ -508,6 +508,7 @@ window.__ModuleLoader__.load({
 			listFilterAll: "全部",
 			listFilterEnabled: "已开启",
 			listFilterDisabled: "已关闭",
+			listFilterAbnormal: "异常",
 			listFilterWorkspace: "工作区",
 			listFilterWorkspaceAll: "全部工作区",
 			listSearchPlaceholder: "搜索任务名称或编号",
@@ -1014,6 +1015,7 @@ window.__ModuleLoader__.load({
 			listFilterAll: "All",
 			listFilterEnabled: "Enabled",
 			listFilterDisabled: "Disabled",
+			listFilterAbnormal: "Abnormal",
 			listFilterWorkspace: "Workspace",
 			listFilterWorkspaceAll: "All workspaces",
 			listSearchPlaceholder: "Search by name or code",
@@ -39952,6 +39954,23 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			ease: "var(--ds-ease-in-out, ease)"
 		};
 		const transition$1 = `background ${C$1.duration} ${C$1.ease}, color ${C$1.duration} ${C$1.ease}, border-color ${C$1.duration} ${C$1.ease}`;
+		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
+		const CONTROL_H = 26;
+		const ensureTaskListStyle = () => {
+			if (typeof document === "undefined") return;
+			const id = "dsh-tdt-list-style";
+			if (document.getElementById(id) !== null) return;
+			const tag = document.createElement("style");
+			tag.id = id;
+			tag.textContent = [
+				"@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }",
+				`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}px; }`,
+				`.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
+				".dsh-tdt-tl-ws { max-width: 160px; }",
+				".dsh-tdt-tl-ws-label { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }"
+			].join("\n");
+			document.head.appendChild(tag);
+		};
 		const POLL_MS = 1e4;
 		/** 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。 */
 		function useTaskOverview() {
@@ -40122,41 +40141,34 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return fn;
 			}, []);
 		}
-		/** 转圈动画（@keyframes 无法写进内联 style）⇒ 注入一次，幂等。 */
-		function ensureSpinKeyframes() {
-			if (typeof document === "undefined") return;
-			const id = "dsh-tdt-spin-keyframes";
-			if (document.getElementById(id) !== null) return;
-			const tag = document.createElement("style");
-			tag.id = id;
-			tag.textContent = "@keyframes dsh-tdt-spin { to { transform: rotate(360deg) } }";
-			document.head.appendChild(tag);
-		}
-		/** 转圈（运行中）：纯 CSS 动画，零请求。 */
-		function Spinner() {
+		const RAIL_W = 6;
+		const RAIL_H = 36;
+		/** 运行中：整条转起来（纯 CSS 动画，零请求）。 */
+		function RunningRail() {
 			return (0, react.createElement)("span", { style: {
 				display: "inline-block",
-				width: "10px",
-				height: "10px",
-				borderRadius: "50%",
-				border: `1.5px solid ${C$1.brand}`,
-				borderTopColor: "transparent",
-				animation: "dsh-tdt-spin 800ms linear infinite"
+				width: `${RAIL_W}px`,
+				height: `${RAIL_H}px`,
+				flex: "none",
+				borderRadius: "3px",
+				background: C$1.brand,
+				animation: "dsh-tdt-rail-pulse 900ms ease-in-out infinite"
 			} });
 		}
-		function StatusDot(props) {
+		function StatusRail(props) {
 			const { row } = props;
-			if (row.running) return (0, react.createElement)(Spinner, {});
+			if (row.running) return (0, react.createElement)(RunningRail, {});
 			const color = !row.enabled ? C$1.textFaint : row.lastStatus === "failed" ? C$1.danger : C$1.success;
+			const hint = !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : "计划运行中";
 			return (0, react.createElement)("span", {
-				title: !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : "计划运行中",
+				title: hint,
 				style: {
 					display: "inline-block",
-					width: "8px",
-					height: "8px",
-					borderRadius: "50%",
-					background: color,
+					width: `${RAIL_W}px`,
+					height: `${RAIL_H}px`,
 					flex: "none",
+					borderRadius: "3px",
+					background: color,
 					transition: `background ${C$1.duration} ${C$1.ease}`
 				}
 			});
@@ -40192,23 +40204,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			lineHeight: "16px",
 			marginTop: "2px"
 		};
-		const iconBtnStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			justifyContent: "center",
-			gap: "4px",
-			height: "26px",
-			minWidth: "26px",
-			padding: "0 6px",
-			border: `1px solid ${C$1.border}`,
-			borderRadius: "6px",
-			background: "transparent",
-			color: C$1.textDim,
-			cursor: "pointer",
-			fontFamily: "inherit",
-			fontSize: "12px",
-			transition: transition$1
-		};
 		const sectionLabelStyle = {
 			fontSize: "11px",
 			color: C$1.textFaint,
@@ -40220,6 +40215,24 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			color: C$1.text,
 			lineHeight: "18px"
 		};
+		/** 图标按钮：与顶部一排同高（26px）。 */
+		const iconBtnStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			justifyContent: "center",
+			gap: "4px",
+			height: `${CONTROL_H}px`,
+			minWidth: `${CONTROL_H}px`,
+			padding: "0 6px",
+			border: `1px solid ${C$1.border}`,
+			borderRadius: "6px",
+			background: "transparent",
+			color: C$1.textDim,
+			cursor: "pointer",
+			fontFamily: "inherit",
+			fontSize: "12px",
+			transition: transition$1
+		};
 		function TaskCard(props) {
 			const { row, t, tt, nowMs, open, onToggleOpen, onEdit, onToggleEnabled, refOf } = props;
 			const scheduleText = cronToHuman(row.schedule.cron, row.schedule.once, row.schedule.everyNWeeks, tt);
@@ -40229,12 +40242,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: cardStyle$1
 			}, (0, react.createElement)("div", { style: {
 				display: "flex",
-				alignItems: "flex-start",
-				gap: "10px"
-			} }, (0, react.createElement)("div", { style: {
-				paddingTop: "5px",
-				flex: "none"
-			} }, (0, react.createElement)(StatusDot, { row })), (0, react.createElement)("div", { style: {
+				alignItems: "center",
+				gap: "12px"
+			} }, (0, react.createElement)(StatusRail, { row }), (0, react.createElement)("div", { style: {
 				flex: "1 1 auto",
 				minWidth: 0
 			} }, (0, react.createElement)("div", { style: titleStyle }, row.title, row.code !== null ? (0, react.createElement)("span", { style: {
@@ -40248,7 +40258,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: metaStyle }, row.running ? `${t("listRunning")} · ${scheduleText}` : `${scheduleText} · ${t("listLastPrefix")} ${lastRunText(row, tt)} · ${t("listNextPrefix")} ${row.nextSlotAt === null ? t("listNextNone") : `${clockOf(row.nextSlotAt)}（${relativeText(row.nextSlotAt, nowMs, tt)}）`}`), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
-				gap: "6px",
+				gap: "8px",
 				flex: "none"
 			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: row.enabled,
@@ -40257,13 +40267,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
 			}), (0, react.createElement)("button", {
-				type: "button",
-				style: iconBtnStyle,
-				title: t("editorEdit"),
-				onClick: () => {
-					onEdit(row.id);
-				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
 				type: "button",
 				style: {
 					...iconBtnStyle,
@@ -40282,17 +40285,44 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				color: C$1.textDim,
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
-			} }, row.promptHead)) : null);
+			} }, row.promptHead), (0, react.createElement)("div", { style: {
+				marginTop: "10px",
+				paddingTop: "8px",
+				borderTop: `1px dashed ${C$1.border}`,
+				display: "flex",
+				justifyContent: "flex-end"
+			} }, (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...iconBtnStyle,
+					padding: "0 10px"
+				},
+				onClick: () => {
+					onEdit(row.id);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit")))) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onRefresh, onNew, onEdit, onToggleEnabled } = props;
+			const { t, rows, ready, onRefresh, onEdit, onToggleEnabled } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
-			ensureSpinKeyframes();
+			ensureTaskListStyle();
 			const [filter, setFilter] = (0, react.useState)("all");
 			const [workspace, setWorkspace] = (0, react.useState)("");
 			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
 			const [query, setQuery] = (0, react.useState)("");
 			const [openId, setOpenId] = (0, react.useState)(null);
+			/** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
+			const [optimistic, setOptimistic] = (0, react.useState)({});
+			const rowsWithOptimistic = (0, react.useMemo)(() => {
+				if (Object.keys(optimistic).length === 0) return rows;
+				return rows.map((row) => row.id in optimistic ? {
+					...row,
+					enabled: optimistic[row.id]
+				} : row);
+			}, [rows, optimistic]);
+			(0, react.useEffect)(() => {
+				setOptimistic({});
+			}, [rows]);
 			const [nowMs, setNowMs] = (0, react.useState)(() => Date.now());
 			(0, react.useEffect)(() => {
 				const timer = window.setInterval(() => {
@@ -40302,18 +40332,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					window.clearInterval(timer);
 				};
 			}, []);
-			const workspaces = (0, react.useMemo)(() => [...new Set(rows.map((r) => r.workspace))].sort(), [rows]);
+			const workspaces = (0, react.useMemo)(() => [...new Set(rowsWithOptimistic.map((r) => r.workspace))].sort(), [rowsWithOptimistic]);
+			/** 异常数 = 内存摘要里「最近一次执行失败」的任务数（全量统计，不受当前筛选影响）。 */
+			const abnormalCount = (0, react.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed").length, [rowsWithOptimistic]);
 			const visible = (0, react.useMemo)(() => {
 				const q = query.trim().toLowerCase();
-				return sortRows(rows.filter((row) => {
+				return sortRows(rowsWithOptimistic.filter((row) => {
 					if (filter === "enabled" && !row.enabled) return false;
 					if (filter === "disabled" && row.enabled) return false;
+					if (filter === "abnormal" && row.lastStatus !== "failed") return false;
 					if (workspace !== "" && row.workspace !== workspace) return false;
 					if (q === "") return true;
 					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
 				}));
 			}, [
-				rows,
+				rowsWithOptimistic,
 				filter,
 				workspace,
 				query
@@ -40327,18 +40360,35 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				label: name
 			}))], [workspaces, t]);
 			const tabStyle = (active) => ({
-				padding: "3px 12px",
-				borderRadius: "6px",
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				height: `${CONTROL_H}px`,
+				padding: "0 12px",
 				border: "none",
 				cursor: "pointer",
 				fontSize: "12px",
-				lineHeight: "18px",
 				fontFamily: "inherit",
 				transition: transition$1,
+				borderRadius: "6px",
 				background: active ? C$1.layer1 : "transparent",
 				color: active ? C$1.text : C$1.textDim,
 				fontWeight: active ? 600 : 400
 			});
+			/** 异常数的角标（0 不显示）。 */
+			const countBadge = (n) => n > 0 ? (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				justifyContent: "center",
+				minWidth: "16px",
+				height: "16px",
+				padding: "0 4px",
+				borderRadius: "8px",
+				background: C$1.danger,
+				color: "#fff",
+				fontSize: "11px",
+				lineHeight: "16px"
+			} }, String(n)) : null;
 			return (0, react.createElement)("div", { style: {
 				width: "100%",
 				display: "flex",
@@ -40379,19 +40429,49 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setFilter("disabled");
 				}
-			}, t("listFilterDisabled"))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+			}, t("listFilterDisabled")), (0, react.createElement)("button", {
+				type: "button",
+				style: tabStyle(filter === "abnormal"),
+				onClick: () => {
+					setFilter("abnormal");
+				}
+			}, t("listFilterAbnormal"), countBadge(abnormalCount))), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				flex: "none"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Input, {
+				className: "dsh-tdt-tl-input",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+				value: query,
+				placeholder: t("listSearchPlaceholder"),
+				onChange: (event) => {
+					setQuery(event.target.value);
+				}
+			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
 				open: menuOpen,
 				anchor: (0, react.createElement)("button", {
 					type: "button",
+					className: "dsh-tdt-tl-ws",
 					style: {
-						...iconBtnStyle,
-						height: "26px",
-						padding: "0 10px"
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "4px",
+						height: `${CONTROL_H}px`,
+						padding: "0 10px",
+						border: `1px solid ${C$1.border}`,
+						borderRadius: "6px",
+						background: "transparent",
+						color: C$1.text,
+						fontFamily: "inherit",
+						fontSize: "12px",
+						cursor: "pointer",
+						transition: transition$1
 					},
 					onClick: () => {
 						setMenuOpen((v) => !v);
 					}
-				}, `${t("listFilterWorkspace")}：${workspace === "" ? t("listFilterWorkspaceAll") : workspace}`),
+				}, (0, react.createElement)("span", { className: "dsh-tdt-tl-ws-label" }, workspace === "" ? t("listFilterWorkspaceAll") : workspace)),
 				items: menuItems,
 				selectedId: workspace,
 				onSelect: (id) => {
@@ -40401,46 +40481,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClose: () => {
 					setMenuOpen(false);
 				}
-			}), (0, react.createElement)("div", { style: {
-				position: "relative",
-				flex: "1 1 160px",
-				minWidth: "140px"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Input, {
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
-				value: query,
-				placeholder: t("listSearchPlaceholder"),
-				onChange: (event) => {
-					setQuery(event.target.value);
-				}
-			})), (0, react.createElement)("button", {
+			}), (0, react.createElement)("button", {
 				type: "button",
-				style: {
-					...iconBtnStyle,
-					height: "26px"
-				},
+				style: iconBtnStyle,
 				title: t("debugRefresh"),
 				onClick: onRefresh
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					display: "inline-flex",
-					alignItems: "center",
-					gap: "4px",
-					flex: "none",
-					height: "26px",
-					padding: "0 10px",
-					borderRadius: "6px",
-					border: `1px solid ${C$1.borderStrong}`,
-					background: C$1.layer1,
-					color: C$1.text,
-					cursor: "pointer",
-					fontFamily: "inherit",
-					fontSize: "12px",
-					fontWeight: 600,
-					transition: transition$1
-				},
-				onClick: onNew
-			}, `＋ ${t("editorNew")}`)), visible.length === 0 ? (0, react.createElement)("p", { style: {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 })))), visible.length === 0 ? (0, react.createElement)("p", { style: {
 				...metaStyle,
 				marginTop: "8px"
 			} }, rows.length === 0 && !ready ? "" : rows.length === 0 ? t("listEmpty") : t("listEmptyFiltered")) : (0, react.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react.createElement)(TaskCard, {
@@ -40454,7 +40500,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setOpenId((cur) => cur === row.id ? null : row.id);
 				},
 				onEdit,
-				onToggleEnabled,
+				onToggleEnabled: (id, enabled) => {
+					setOptimistic((cur) => ({
+						...cur,
+						[id]: enabled
+					}));
+					onToggleEnabled(id, enabled);
+				},
 				refOf: refOf(row.id)
 			})))));
 		}
@@ -40586,8 +40638,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			alignItems: "center",
 			justifyContent: "space-between",
 			gap: "12px",
-			marginBottom: "4px",
-			flexWrap: "wrap"
+			flexWrap: "wrap",
+			marginBottom: "40px"
 		};
 		const headerRightStyle = {
 			display: "flex",
@@ -40625,21 +40677,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				boxShadow: active ? C.shadow : "none"
 			};
 		}
-		/** 图标按钮（刷新 / 关闭）：方形、圆角、悬停高亮，尺寸与分段控件同高。 */
-		const iconButtonStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			justifyContent: "center",
-			width: "26px",
-			height: "26px",
-			padding: 0,
-			border: "none",
-			borderRadius: "6px",
-			background: "transparent",
-			color: C.textDim,
-			cursor: "pointer",
-			transition
-		};
+		C.textDim;
 		const sectionTitleStyle = {
 			margin: "12px 0 4px",
 			fontSize: "13px",
@@ -40689,19 +40727,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontSize: "12px",
 			transition
 		};
-		/** 刷新图标（内联 SVG：不引宿主包，颜色走 currentColor ⇒ 自动跟随主题）。 */
-		function RefreshIcon() {
-			return (0, react.createElement)("svg", {
-				width: 15,
-				height: 15,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round",
-				strokeLinejoin: "round"
-			}, (0, react.createElement)("path", { d: "M21 12a9 9 0 1 1-2.64-6.36" }), (0, react.createElement)("path", { d: "M21 3v6h-6" }));
-		}
 		/** 任务表图标（内联 SVG：清单勾选，颜色走 currentColor ⇒ 自动跟随主题）。 */
 		function TaskIcon(props) {
 			const size = props.size ?? 18;
@@ -41217,6 +41242,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				...pageStyle,
 				flex: "1 1 auto",
 				minWidth: 0
+			} }, (0, react.createElement)("div", { style: {
+				display: "flex",
+				justifyContent: "center"
+			} }, (0, react.createElement)("div", { style: {
+				width: "100%",
+				maxWidth: "1120px",
+				minWidth: "760px",
+				boxSizing: "border-box"
 			} }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -41227,18 +41260,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: backButtonStyle,
 				title: t("backToConversation"),
 				onClick: onBack
-			}, `← ${t("backToConversation")}`), (0, react.createElement)("div", { style: { minWidth: 0 } }, (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle")), data !== void 0 ? (0, react.createElement)("div", { style: {
-				...hintStyle,
-				margin: "2px 0 0"
-			} }, formatTime(data.at)) : null)), (0, react.createElement)("div", { style: headerRightStyle }, (0, react.createElement)("button", {
-				type: "button",
-				style: iconButtonStyle,
-				title: t("debugRefresh"),
-				"aria-label": t("debugRefresh"),
-				onClick: () => {
-					setManualAt(Date.now());
-				}
-			}, (0, react.createElement)(RefreshIcon, {})), (0, react.createElement)("div", { style: segmentedStyle }, (0, react.createElement)("button", {
+			}, `← ${t("backToConversation")}`), (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react.createElement)("div", { style: headerRightStyle }, (0, react.createElement)("div", { style: segmentedStyle }, (0, react.createElement)("button", {
 				type: "button",
 				style: segmentStyle(tab === "config"),
 				onClick: () => {
@@ -41269,27 +41291,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						history: null
 					});
 				}
-			}, `＋ ${t("editorNew")}`))), (0, react.createElement)("p", { style: hintStyle }, t("debugAutoHint")), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
+			}, `＋ ${t("editorNew")}`))))), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
 				...preStyle,
 				color: C.textFaint
 			} }, describeDiag())) : tab === "config" ? (0, react.createElement)(TaskListView, {
 				t,
 				rows: overview.rows,
 				ready: overview.ready,
-				onRefresh: overview.refresh,
-				onNew: () => {
-					setEditorError(null);
-					setEditor({
-						mode: "create",
-						id: "",
-						draft: emptyTaskDraft(),
-						history: null
-					});
+				onRefresh: () => {
+					setManualAt(Date.now());
+					overview.refresh();
 				},
 				onEdit: openEditor,
 				onToggleEnabled: (id, enabled) => {
 					toggleTaskEnabled(id, enabled).then((err) => {
-						if (err !== null) setViewErr(err);
+						if (err !== null) {
+							setViewErr(err);
+							return;
+						}
+						overview.refresh();
 					});
 				}
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
