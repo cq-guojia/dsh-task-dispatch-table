@@ -38483,6 +38483,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				};
 			}, [pickerOpen]);
 			const [uploadError, setUploadError] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				if (uploadError === null) return;
+				const id = setTimeout(() => {
+					setUploadError(null);
+				}, 2500);
+				return () => {
+					clearTimeout(id);
+				};
+			}, [uploadError]);
 			const [confirmDiscard, setConfirmDiscard] = (0, react.useState)(false);
 			const initialDraftRef = (0, react.useRef)(draft);
 			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);

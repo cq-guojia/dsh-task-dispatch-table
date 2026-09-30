@@ -1180,6 +1180,12 @@ export function TaskEditorDrawer(props: {
   }, [pickerOpen])
   // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
   const [uploadError, setUploadError] = useState<string | null>(null)
+  // 附件错误红字过 2.5s 自动消失（用户 2026-09-30：与「重置完成」提示一致，不要长显占位）。
+  useEffect(() => {
+    if (uploadError === null) return
+    const id = setTimeout(() => { setUploadError(null) }, 2500)
+    return () => { clearTimeout(id) }
+  }, [uploadError])
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   // 原始快照：挂载那一刻定死。弹窗关闭即卸载、重开即重挂 ⇒ 每次打开都从当次初始值算起；
