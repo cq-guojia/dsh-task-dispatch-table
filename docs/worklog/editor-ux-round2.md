@@ -73,3 +73,14 @@
 7. **派发失败 bug（`launch-error: cannot get property "agentTeams" without inject`）**：宿主 ctx 命名空间属性是 getter，**模块未 inject 时读取直接 throw** ⇒ `dispatch.ts` 无条件读 `ctx.agentTeams` 把整次派发炸掉（`ctx.goals` 同款隐患）。修复 = `readCtxProp` 护栏读（throw 归一为 undefined）⇒ agentTeam / goal 按既有语义降级单 Agent 单轮 + 告警留痕，不再阻塞派发。
 
 冒烟 **249 项全过**（+2）；typecheck/build 绿；真机验证待做。
+
+## 七、同日第四次返工（Toast 定稿）
+
+1. **错误总览块（截图那个大红块）撤销** ⇒ 与判断逻辑**解耦**：字段描红保持持续态（改好才退），文字提示改为一次性 Toast——点保存弹一次、全部问题「；」连成一句、统一 2.8s 自退（用户原话：「它就是一个提示，提示完就没了，跟你的判断逻辑没有关系」）。`.dsh-tdt-ed-errors*` CSS 与 `editorErrorsTitle` key 删除。
+2. **footer 行内提示全部收编**：重置完成（`editorResetDone`）与「预览态不可保存」（`editorSavePending`）两个行内 span 改共用 FloatingToast 中性档；resetHint / pendingHint 改 seq 型状态，删除 resetHint 的 2.5s 定时器（自退交给动画 onDone，全站统一时间线）。
+3. **Toast 样式定稿**（对照用户两张示意图）：居中 + `width:max-content` + `max-width:min(520px, 100%-24px)` 超出折行；**不透明淡色底**（`color-mix(tone 10%, bg-layer-1)`，不支持时回退写死色）+ **同色系深一点描边** + 语义色圆点（`::before`）+ 深色正文——不再是大红实面白字。
+4. **四档语义色**：error 红（默认）/ success 绿（`state-success-primary`）/ **warning 橙**（新增，`state-warning-primary`）/ neutral 反色实面（深色浅白灰、浅色近黑灰，`label-primary` + `label-primary-inverted`）。
+5. **viewErr（页面级「查看会话失败」条）外观对齐** Toast 中性档（反色面 + 圆点 + 同圆角）；保留手动关闭——操作类失败要留时间读，不自动消失。
+6. 间距问题（大红块上方的空格）随总览块撤销自然消失（Toast 绝对定位不占版面）。
+
+冒烟 249 项全过；typecheck/build 绿；真机验证待做。

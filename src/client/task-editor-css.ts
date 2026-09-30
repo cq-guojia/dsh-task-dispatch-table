@@ -52,10 +52,6 @@ export const TASK_EDITOR_CSS = `
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
 .dsh-tdt-ed-card--error{border-color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.08));}
 .dsh-tdt-ed-field--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
-/* 保存前的错误总览：把全部问题一次性列出来（不自动消失），让用户对照着改。 */
-.dsh-tdt-ed-errors{margin:0 0 12px;padding:10px 12px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.10));border:1px solid var(--dsw-alias-state-error-primary,#e5484d);}
-.dsh-tdt-ed-errors-title{font-size:12px;font-weight:600;color:var(--dsw-alias-state-error-primary,#e5484d);margin:0 0 6px;}
-.dsh-tdt-ed-errors li{font-size:12px;line-height:1.7;color:var(--dsw-alias-label-primary,#1f2328);}
 /* 历史版本开关（用户 2026-09-30：与「编辑/预览」分段控件一模一样，只有一个「版本」段）——
    外层 = 官方 SegmentedControl 的轨道（interactive-bg-hover + padding 4 + radius md），
    内层 seg = 段位：默认透明底灰字，选中 = 官方选中态白亮片（bg-layer-1 + elevation-soft + 主字色）。 */

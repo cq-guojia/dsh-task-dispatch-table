@@ -422,7 +422,6 @@ window.__ModuleLoader__.load({
 			editorCustomCron: "自定义 cron（JSON 里的原值，保存时原样保留）",
 			editorSaved: "已保存",
 			editorSaveFailedHint: "保存失败：",
-			editorErrorsTitle: "保存前请先处理以下问题",
 			editorTasksTitle: "任务列表",
 			editorTasksEmpty: "还没有任务：点右上角「＋ 新建任务」创建第一条。",
 			editorDisabledTag: "已停用",
@@ -882,7 +881,6 @@ window.__ModuleLoader__.load({
 			editorCustomCron: "Custom cron (raw value from JSON; kept as-is on save)",
 			editorSaved: "Saved",
 			editorSaveFailedHint: "Save failed: ",
-			editorErrorsTitle: "Please fix the following before saving",
 			editorTasksTitle: "Tasks",
 			editorTasksEmpty: "No tasks yet — use \"＋ New task\" in the top-right corner to create the first one.",
 			editorDisabledTag: "Disabled",
@@ -5834,10 +5832,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
 .dsh-tdt-ed-card--error{border-color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.08));}
 .dsh-tdt-ed-field--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
-/* 保存前的错误总览：把全部问题一次性列出来（不自动消失），让用户对照着改。 */
-.dsh-tdt-ed-errors{margin:0 0 12px;padding:10px 12px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.10));border:1px solid var(--dsw-alias-state-error-primary,#e5484d);}
-.dsh-tdt-ed-errors-title{font-size:12px;font-weight:600;color:var(--dsw-alias-state-error-primary,#e5484d);margin:0 0 6px;}
-.dsh-tdt-ed-errors li{font-size:12px;line-height:1.7;color:var(--dsw-alias-label-primary,#1f2328);}
 /* 历史版本开关（用户 2026-09-30：与「编辑/预览」分段控件一模一样，只有一个「版本」段）——
    外层 = 官方 SegmentedControl 的轨道（interactive-bg-hover + padding 4 + radius md），
    内层 seg = 段位：默认透明底灰字，选中 = 官方选中态白亮片（bg-layer-1 + elevation-soft + 主字色）。 */
@@ -37482,28 +37476,42 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		/** 样式标签 id（幂等注入用）。 */
 		const TOAST_STYLE_ID = "dsh-task-dispatch-table-toast";
 		const TOAST_CSS = `
-/* 悬浮错误提示：绝对定位在「保存操作行」上方（父容器需 position:relative），不占版面。
-   2.8s 时间线：0~8% 淡入并上滑归位 → 8%~82% 稳定显示（≈2.5s）→ 82%~100% 上飘淡出。 */
+/* 悬浮提示 Toast（全站唯一实现）：绝对定位在锚点上方（父容器需 position:relative），不占版面。
+   形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
+   语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
 .dsh-tdt-toast{
+  --tone:var(--dsw-alias-state-error-primary,#e5484d);
   position:absolute;
   left:50%;
   bottom:calc(100% + 8px);
   transform:translate(-50%,10px);
   z-index:6;
   pointer-events:none;
-  max-width:calc(100% - 24px);
+  width:max-content;
+  max-width:min(520px,calc(100% - 24px));
   box-sizing:border-box;
   margin:0;
-  padding:8px 12px;
+  padding:8px 14px;
   border-radius:var(--dsw-radius-md,8px);
-  background:var(--dsw-alias-state-error-primary,#e5484d);
-  color:#fff;
+  border:1px solid var(--tone);
+  /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
+  background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.15));
+  background:color-mix(in srgb,var(--tone) 10%,var(--dsw-alias-bg-layer-1,#fff));
+  color:var(--dsw-alias-label-primary,#1f2328);
   font-size:12px;
-  line-height:1.5;
+  line-height:1.6;
   text-align:center;
-  box-shadow:0 6px 20px rgba(0,0,0,.25);
+  box-shadow:0 4px 16px rgba(0,0,0,.18);
   opacity:0;
   animation:dsh-tdt-toast 2.8s ease forwards;
+}
+/* 语义色圆点（对照官方四档 toast 的图标位，自绘最小形态）。 */
+.dsh-tdt-toast::before{
+  content:'';
+  display:inline-block;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--tone);
+  margin-right:7px;vertical-align:1px;
 }
 @keyframes dsh-tdt-toast{
   0%{opacity:0;transform:translate(-50%,10px);}
@@ -37511,14 +37519,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
   82%{opacity:1;transform:translate(-50%,0);}
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
+/* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
+.dsh-tdt-toast--success{--tone:var(--dsw-alias-state-success-primary,#2f9e44);}
+.dsh-tdt-toast--warning{--tone:var(--dsw-alias-state-warning-primary,#e6a23c);}
+.dsh-tdt-toast--neutral{
+  --tone:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));
+  background:var(--dsw-alias-label-primary,#1f2328);
+  color:var(--dsw-alias-label-primary-inverted,#fff);
+  border-color:transparent;
+}
+.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
 /* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
-/* 三档语义色（用户 2026-09-30：不许全红）——成功 = 绿（宿主 success token）、
-   中性 = 反色面（深色主题浅白灰、浅色主题近黑灰，走 label-primary / inverted 对），错误 = 默认红。 */
-.dsh-tdt-toast--success{background:var(--dsw-alias-state-success-primary,#2f9e44);}
-.dsh-tdt-toast--neutral{background:var(--dsw-alias-label-primary,#1f2328);color:var(--dsw-alias-label-primary-inverted,#fff);}
 `;
 		let injected = false;
 		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
@@ -37538,6 +37552,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				"dsh-tdt-toast",
 				props.below === true ? "dsh-tdt-toast--below" : "",
 				tone === "success" ? "dsh-tdt-toast--success" : "",
+				tone === "warning" ? "dsh-tdt-toast--warning" : "",
 				tone === "neutral" ? "dsh-tdt-toast--neutral" : ""
 			].filter(Boolean).join(" ");
 			return (0, react.createElement)("div", {
@@ -38617,10 +38632,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
 			const [previewOpen, setPreviewOpen] = (0, react.useState)(false);
-			const [pendingHint, setPendingHint] = (0, react.useState)(false);
+			const [pendingHint, setPendingHint] = (0, react.useState)(0);
 			const [confirmDeleteTask, setConfirmDeleteTask] = (0, react.useState)(false);
 			const [confirmReset, setConfirmReset] = (0, react.useState)(false);
-			const [resetHint, setResetHint] = (0, react.useState)(false);
+			const [resetHint, setResetHint] = (0, react.useState)(0);
+			const hintSeq = (0, react.useRef)(0);
 			const [saveErrToast, setSaveErrToast] = (0, react.useState)(null);
 			const saveErrSeq = (0, react.useRef)(0);
 			(0, react.useEffect)(() => {
@@ -38636,6 +38652,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const fieldErrorMap = {};
 			for (const p of fieldProblems) if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message;
 			const problemsByField = (field) => field in fieldErrorMap;
+			const [problemsToast, setProblemsToast] = (0, react.useState)(null);
+			const problemsSeq = (0, react.useRef)(0);
 			const [enabledToast, setEnabledToast] = (0, react.useState)(null);
 			const enabledSeq = (0, react.useRef)(0);
 			const handleToggleEnabled = (next) => {
@@ -38664,15 +38682,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					});
 				});
 			};
-			(0, react.useEffect)(() => {
-				if (!resetHint) return;
-				const id = setTimeout(() => {
-					setResetHint(false);
-				}, 2500);
-				return () => {
-					clearTimeout(id);
-				};
-			}, [resetHint]);
 			const [pickerOpen, setPickerOpen] = (0, react.useState)(false);
 			const [uploading, setUploading] = (0, react.useState)(false);
 			const [pickerWs, setPickerWs] = (0, react.useState)("");
@@ -39554,10 +39563,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-body",
 				ref: bodyRef
-			}, body), fieldProblems.length > 0 ? (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-section",
-				style: { marginBottom: 0 }
-			}, (0, react.createElement)("ul", { className: "dsh-tdt-ed-errors" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-errors-title" }, t("editorErrorsTitle")), ...fieldProblems.map((p) => (0, react.createElement)("li", { key: p.field }, p.message)))) : null, (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				className: "dsh-tdt-ed-danger",
@@ -39570,20 +39576,35 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setConfirmReset(true);
 				}
-			}, t("editorReset")), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), resetHint ? (0, react.createElement)("span", {
-				className: "dsh-tdt-ed-hint",
-				style: { margin: "0 8px 0 0" }
-			}, t("editorResetDone")) : null, saveErrToast !== null ? (0, react.createElement)(FloatingToast, {
+			}, t("editorReset")), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), problemsToast !== null ? (0, react.createElement)(FloatingToast, {
+				seq: problemsToast.seq,
+				tone: "error",
+				onDone: () => {
+					setProblemsToast(null);
+				},
+				text: problemsToast.text
+			}) : null, resetHint !== 0 ? (0, react.createElement)(FloatingToast, {
+				seq: resetHint,
+				tone: "neutral",
+				onDone: () => {
+					setResetHint(0);
+				},
+				text: t("editorResetDone")
+			}) : null, saveErrToast !== null ? (0, react.createElement)(FloatingToast, {
 				seq: saveErrToast.seq,
 				tone: "error",
 				onDone: () => {
 					setSaveErrToast(null);
 				},
 				text: saveErrToast.msg
-			}) : null, pendingHint ? (0, react.createElement)("span", {
-				className: "dsh-tdt-ed-hint",
-				style: { margin: "0 8px 0 0" }
-			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}) : null, pendingHint !== 0 ? (0, react.createElement)(FloatingToast, {
+				seq: pendingHint,
+				tone: "neutral",
+				onDone: () => {
+					setPendingHint(0);
+				},
+				text: t("editorSavePending")
+			}) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				onClick: requestClose
@@ -39592,14 +39613,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				size: "sm",
 				onClick: () => {
 					if (onSave === void 0) {
-						setPendingHint(true);
+						hintSeq.current += 1;
+						setPendingHint(hintSeq.current);
 						return;
 					}
-					if (validateTaskDraft(draft).length > 0) {
+					const problems = validateTaskDraft(draft);
+					if (problems.length > 0) {
 						setShowErrors(true);
+						problemsSeq.current += 1;
+						setProblemsToast({
+							text: problems.map((p) => p.message).join("；"),
+							seq: problemsSeq.current
+						});
 						return;
 					}
 					setShowErrors(false);
+					setProblemsToast(null);
 					onSave(draft);
 				}
 			}, t("editorSave"))), confirmDeleteTask ? (0, react.createElement)(VersionConfirm, {
@@ -39625,7 +39654,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onConfirm: () => {
 					setConfirmReset(false);
 					onChange(initialDraftRef.current);
-					setResetHint(true);
+					hintSeq.current += 1;
+					setResetHint(hintSeq.current);
 				}
 			}) : null);
 			return (0, react.createElement)("div", {
@@ -40775,22 +40805,29 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					zIndex: 1020,
 					maxWidth: "90%",
 					boxSizing: "border-box",
-					background: "var(--dsw-alias-bg-layer-1, rgba(40,40,40,.92))",
-					color: "var(--dsw-alias-label-primary, #fff)",
-					border: "1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.4))",
-					borderRadius: "10px",
-					padding: "10px 14px",
+					background: "var(--dsw-alias-label-primary, rgba(40,40,40,.92))",
+					color: "var(--dsw-alias-label-primary-inverted, #fff)",
+					border: "none",
+					borderRadius: "var(--dsw-radius-md, 8px)",
+					padding: "8px 14px",
 					fontSize: "12px",
-					lineHeight: "1.5",
+					lineHeight: "1.6",
 					display: "flex",
 					alignItems: "center",
-					gap: "10px",
+					gap: "8px",
 					boxShadow: "var(--dsw-shadow-lv3, 0 8px 28px rgba(0,0,0,.3))"
 				},
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, (0, react.createElement)("span", null, viewErr), (0, react.createElement)("button", {
+			}, (0, react.createElement)("span", { style: {
+				flex: "none",
+				width: "7px",
+				height: "7px",
+				borderRadius: "50%",
+				background: "var(--dsw-alias-label-primary-inverted, #fff)",
+				opacity: .65
+			} }), (0, react.createElement)("span", null, viewErr), (0, react.createElement)("button", {
 				type: "button",
 				style: {
 					appearance: "none",

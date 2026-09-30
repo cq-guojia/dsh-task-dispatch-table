@@ -1230,10 +1230,11 @@ export function TaskEditorDrawer(props: {
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
-  const [pendingHint, setPendingHint] = useState(false)
+  const [pendingHint, setPendingHint] = useState(0) // >0 = Toast seq（「预览态不可保存」中性提示）
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
-  const [resetHint, setResetHint] = useState(false)
+  const [resetHint, setResetHint] = useState(0) // >0 = Toast seq（「已恢复为打开时的内容」中性提示）
+  const hintSeq = useRef(0)
   // 保存失败：服务端文案不「长显」占 footer，改为浮现 Toast（用户 2026-09-30：与面板保存提示同款）。
   // 用本地副本 + 自增 seq，使得同一句错误连点也能重播淡入淡出动画。
   const [saveErrToast, setSaveErrToast] = useState<{ msg: string; seq: number } | null>(null)
@@ -1249,6 +1250,10 @@ export function TaskEditorDrawer(props: {
   const fieldErrorMap: Record<string, string> = {}
   for (const p of fieldProblems) if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message
   const problemsByField = (field: ErrorField): boolean => field in fieldErrorMap
+  // 校验提示 Toast：**与判断逻辑解耦**（用户 2026-09-30）——红框是持续态（改好才退），
+  // 文字提示是一次性的：点保存弹一次、统一 2.8s 自退，全部问题拼成一句（红框负责逐项指位）。
+  const [problemsToast, setProblemsToast] = useState<{ text: string; seq: number } | null>(null)
+  const problemsSeq = useRef(0)
   // 启用开关 = 独立操作（用户 2026-09-30）：编辑态点击即写回（不走保存链路），成败都弹 Toast；
   // 新建态只改草稿（统一保存时建）。写回成功后同步脏判定基线 ⇒ 关弹窗不会被误问「放弃更改」。
   const [enabledToast, setEnabledToast] = useState<{ msg: string; err: boolean; seq: number } | null>(null)
@@ -1268,12 +1273,7 @@ export function TaskEditorDrawer(props: {
       setEnabledToast({ msg: next ? t('editorToggleOn') : t('editorToggleOff'), err: false, seq: enabledSeq.current })
     })
   }
-  // 「已重置」提示过一会儿自动消失（用户 2026-09-30：不要长显占位，像 Toast 一样自退）。
-  useEffect(() => {
-    if (!resetHint) return
-    const id = setTimeout(() => { setResetHint(false) }, 2500)
-    return () => { clearTimeout(id) }
-  }, [resetHint])
+  // 「已重置」提示自退交给 FloatingToast 动画（onDone），不再用定时器（统一 2.8s 时间线）。
   // 附加文件：选择器 / 上传交互状态（2026-09-29 本轮新增）。
   const [pickerOpen, setPickerOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -2037,16 +2037,9 @@ export function TaskEditorDrawer(props: {
         ),
       ),
       h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef }, body),
-      // 保存前校验总览：把全部问题一次性列出来（不自动消失），对应框已描红，用户对照着改。
-      fieldProblems.length > 0
-        ? h('div', { className: 'dsh-tdt-ed-section', style: { marginBottom: 0 } },
-          h('ul', { className: 'dsh-tdt-ed-errors' },
-            h('div', { className: 'dsh-tdt-ed-errors-title' }, t('editorErrorsTitle')),
-            ...fieldProblems.map(p => h('li', { key: p.field }, p.message)),
-          ),
-        )
-        : null,
       // 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
+      // 提示全部收编共用 FloatingToast（浮在 footer 正上方、统一 2.8s 自退、不占版面）：
+      //   校验问题 = 错误红（一次性，与描红解耦）/ 重置完成 = 中性灰 / 预览态不可保存 = 中性灰 / 保存失败 = 错误红。
       h('div', { className: 'dsh-tdt-ed-footer' },
         mode === 'edit' && onDelete !== undefined
           ? h(Button, {
@@ -2059,8 +2052,22 @@ export function TaskEditorDrawer(props: {
           onClick: () => { setConfirmReset(true) },
         }, t('editorReset')),
         h('span', { style: { flex: '1 1 auto' } }),
-        resetHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorResetDone')) : null,
-        // 保存失败 / 校验不过：共用浮层 Toast（错误红），2.5s 自退上飘淡出，不占 footer 行内空间。
+        problemsToast !== null
+          ? h(FloatingToast, {
+            seq: problemsToast.seq,
+            tone: 'error',
+            onDone: () => { setProblemsToast(null) },
+            text: problemsToast.text,
+          })
+          : null,
+        resetHint !== 0
+          ? h(FloatingToast, {
+            seq: resetHint,
+            tone: 'neutral',
+            onDone: () => { setResetHint(0) },
+            text: t('editorResetDone'),
+          })
+          : null,
         saveErrToast !== null
           ? h(FloatingToast, {
             seq: saveErrToast.seq,
@@ -2069,20 +2076,34 @@ export function TaskEditorDrawer(props: {
             text: saveErrToast.msg,
           })
           : null,
-        pendingHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorSavePending')) : null,
+        pendingHint !== 0
+          ? h(FloatingToast, {
+            seq: pendingHint,
+            tone: 'neutral',
+            onDone: () => { setPendingHint(0) },
+            text: t('editorSavePending'),
+          })
+          : null,
         h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
         h(Button, {
           variant: 'primary',
           size: 'sm',
           onClick: () => {
-            if (onSave === undefined) { setPendingHint(true); return }
-            // 保存前先本地查必填 / 排期冲突（用户 2026-09-30：逐项判断、框描红、总览列全，不让用户猜）。
+            if (onSave === undefined) {
+              hintSeq.current += 1
+              setPendingHint(hintSeq.current)
+              return
+            }
+            // 保存前先本地查必填 / 排期冲突：问题字段描红（持续态）+ 一次性 Toast 列全部问题。
             const problems = validateTaskDraft(draft)
             if (problems.length > 0) {
               setShowErrors(true)
+              problemsSeq.current += 1
+              setProblemsToast({ text: problems.map(p => p.message).join('；'), seq: problemsSeq.current })
               return
             }
             setShowErrors(false)
+            setProblemsToast(null)
             onSave(draft)
           },
         }, t('editorSave')),
@@ -2106,7 +2127,7 @@ export function TaskEditorDrawer(props: {
           desc: t('editorResetDesc'),
           confirmLabel: t('editorReset'),
           onCancel: () => { setConfirmReset(false) },
-          onConfirm: () => { setConfirmReset(false); onChange(initialDraftRef.current); setResetHint(true) },
+          onConfirm: () => { setConfirmReset(false); onChange(initialDraftRef.current); hintSeq.current += 1; setResetHint(hintSeq.current) },
         })
         : null,
     )

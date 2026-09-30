@@ -499,8 +499,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('配置快照 UI 已整体移除（无 Snapshots 区块文案）', !clientJs.includes('editorSnapshotsHint') && !clientJs.includes('editorNoSnapshots'))
   check('启用实时写回走独立端点 tasks/enabled', dispatchJs.includes('tasks/enabled') || clientJs.includes('tasks/enabled'))
   // UX 第二轮·第三次返工（2026-09-30）：Toast 抽象共用（三色）+ 派发 ctx 读护栏
-  check('浮层 Toast 共用组件 + 三档语义色（success/neutral/error）',
-    clientJs.includes('FloatingToast') && clientJs.includes('dsh-tdt-toast--success') && clientJs.includes('dsh-tdt-toast--neutral'))
+  check('浮层 Toast 共用组件 + 四档语义色（success/warning/neutral/error）',
+    clientJs.includes('FloatingToast') && clientJs.includes('dsh-tdt-toast--success') && clientJs.includes('dsh-tdt-toast--warning') && clientJs.includes('dsh-tdt-toast--neutral'))
   check('派发 ctx 属性读取带防抛错护栏（readCtxProp，agentTeams/goals 未注入不再炸派发）', dispatchJs.includes('readCtxProp'))
   check('chat target 组装已打进 bundle（target("chat")）', clientJs.includes('target("chat")') || clientJs.includes("target('chat')") || /target\(["']chat["']\)/.test(clientJs))
   // 官方外观复用（方案 ①）：运行时从宿主注入的 style 标签解析官方真实 CSS-module 类名。

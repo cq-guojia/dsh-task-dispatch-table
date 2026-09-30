@@ -210,3 +210,9 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 - 「版本」开关尺寸与「编辑/预览」分段逐值对齐（padding3/段高22/字12）。
 - 版本条目：全宽虚线分隔（拉通整栏）、右侧固定槽（104×18，时间/按钮同槽换显 ⇒ hover 不撑高）、双日期修掉（主文本=备注，无备注只显一处时间）、主文本 11px、面板 280→232px。
 - **派发 launch-error 根因**：宿主 ctx 命名空间属性是 getter、模块未 inject 时读取直接 throw ⇒ `readCtxProp` 护栏读（throw 归一 undefined），agentTeams / goals 探测按既有语义降级，不再炸派发。
+
+**修订三（同日第四轮，Toast 定稿）**：
+- **错误总览持久块撤销** ⇒ 提示与判断逻辑解耦：字段描红是持续态，文字提示是一次性 Toast（点保存弹一次、全部问题「；」连一句、统一 2.8s 自退）。
+- footer 行内提示（重置完成 / 预览态不可保存）全部收编 FloatingToast 中性档；resetHint 定时器删除，自退统一走动画 onDone。
+- Toast 形态定稿：居中 + 最大宽 520px 折行 + **不透明淡色底**（`color-mix(tone 10%, bg-layer-1)`）+ 同色系深描边 + 语义色圆点 + 深色正文；**四档色** error / success / warning / neutral（反色实面）。
+- viewErr（页面级会话失败条，需手动关闭）外观对齐中性档，保留不自动消失。

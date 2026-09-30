@@ -8,28 +8,42 @@
 export const TOAST_STYLE_ID = 'dsh-task-dispatch-table-toast'
 
 export const TOAST_CSS = `
-/* 悬浮错误提示：绝对定位在「保存操作行」上方（父容器需 position:relative），不占版面。
-   2.8s 时间线：0~8% 淡入并上滑归位 → 8%~82% 稳定显示（≈2.5s）→ 82%~100% 上飘淡出。 */
+/* 悬浮提示 Toast（全站唯一实现）：绝对定位在锚点上方（父容器需 position:relative），不占版面。
+   形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
+   语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
 .dsh-tdt-toast{
+  --tone:var(--dsw-alias-state-error-primary,#e5484d);
   position:absolute;
   left:50%;
   bottom:calc(100% + 8px);
   transform:translate(-50%,10px);
   z-index:6;
   pointer-events:none;
-  max-width:calc(100% - 24px);
+  width:max-content;
+  max-width:min(520px,calc(100% - 24px));
   box-sizing:border-box;
   margin:0;
-  padding:8px 12px;
+  padding:8px 14px;
   border-radius:var(--dsw-radius-md,8px);
-  background:var(--dsw-alias-state-error-primary,#e5484d);
-  color:#fff;
+  border:1px solid var(--tone);
+  /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
+  background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.15));
+  background:color-mix(in srgb,var(--tone) 10%,var(--dsw-alias-bg-layer-1,#fff));
+  color:var(--dsw-alias-label-primary,#1f2328);
   font-size:12px;
-  line-height:1.5;
+  line-height:1.6;
   text-align:center;
-  box-shadow:0 6px 20px rgba(0,0,0,.25);
+  box-shadow:0 4px 16px rgba(0,0,0,.18);
   opacity:0;
   animation:dsh-tdt-toast 2.8s ease forwards;
+}
+/* 语义色圆点（对照官方四档 toast 的图标位，自绘最小形态）。 */
+.dsh-tdt-toast::before{
+  content:'';
+  display:inline-block;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--tone);
+  margin-right:7px;vertical-align:1px;
 }
 @keyframes dsh-tdt-toast{
   0%{opacity:0;transform:translate(-50%,10px);}
@@ -37,14 +51,20 @@ export const TOAST_CSS = `
   82%{opacity:1;transform:translate(-50%,0);}
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
+/* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
+.dsh-tdt-toast--success{--tone:var(--dsw-alias-state-success-primary,#2f9e44);}
+.dsh-tdt-toast--warning{--tone:var(--dsw-alias-state-warning-primary,#e6a23c);}
+.dsh-tdt-toast--neutral{
+  --tone:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));
+  background:var(--dsw-alias-label-primary,#1f2328);
+  color:var(--dsw-alias-label-primary-inverted,#fff);
+  border-color:transparent;
+}
+.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
 /* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
-/* 三档语义色（用户 2026-09-30：不许全红）——成功 = 绿（宿主 success token）、
-   中性 = 反色面（深色主题浅白灰、浅色主题近黑灰，走 label-primary / inverted 对），错误 = 默认红。 */
-.dsh-tdt-toast--success{background:var(--dsw-alias-state-success-primary,#2f9e44);}
-.dsh-tdt-toast--neutral{background:var(--dsw-alias-label-primary,#1f2328);color:var(--dsw-alias-label-primary-inverted,#fff);}
 `
 
 let injected = false
@@ -66,8 +86,8 @@ export function ensureToastStyle(): void {
 import { createElement as h } from 'react'
 import type { ReactElement } from 'react'
 
-/** 语义色三档（用户 2026-09-30：不许全红）——成功绿 / 错误红 / 中性反色面（深浅色自适应）。 */
-export type ToastTone = 'success' | 'error' | 'neutral'
+/** 语义色四档（用户 2026-09-30 定稿）：成功绿 / 错误红 / 警告橙 / 中性反色面。 */
+export type ToastTone = 'success' | 'error' | 'warning' | 'neutral'
 
 export function FloatingToast(props: {
   /** 文案（已是完整人话，组件不再拼前缀）。 */
@@ -86,6 +106,7 @@ export function FloatingToast(props: {
     'dsh-tdt-toast',
     props.below === true ? 'dsh-tdt-toast--below' : '',
     tone === 'success' ? 'dsh-tdt-toast--success' : '',
+    tone === 'warning' ? 'dsh-tdt-toast--warning' : '',
     tone === 'neutral' ? 'dsh-tdt-toast--neutral' : '',
   ].filter(Boolean).join(' ')
   return h('div', { key: props.seq, className: cls, onAnimationEnd: props.onDone }, props.text)

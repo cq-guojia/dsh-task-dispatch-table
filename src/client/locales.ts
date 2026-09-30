@@ -116,7 +116,7 @@ export type LocaleKey =
   | 'editorSnapshots' | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
   | 'editorUseShort' | 'editorRemoveShort' | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
-  | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint' | 'editorErrorsTitle'
+  | 'editorCustomCron' | 'editorSaved' | 'editorSaveFailedHint'
   | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
   | 'editorTaskStart' | 'editorTaskStartHint'
   | 'editorWeekdayLabel'
@@ -540,7 +540,6 @@ export const zh: Record<LocaleKey, string> = {
   editorCustomCron: '自定义 cron（JSON 里的原值，保存时原样保留）',
   editorSaved: '已保存',
   editorSaveFailedHint: '保存失败：',
-  editorErrorsTitle: '保存前请先处理以下问题',
   editorTasksTitle: '任务列表',
   editorTasksEmpty: '还没有任务：点右上角「＋ 新建任务」创建第一条。',
   editorDisabledTag: '已停用',
@@ -1006,7 +1005,6 @@ export const en: Record<LocaleKey, string> = {
   editorCustomCron: 'Custom cron (raw value from JSON; kept as-is on save)',
   editorSaved: 'Saved',
   editorSaveFailedHint: 'Save failed: ',
-  editorErrorsTitle: 'Please fix the following before saving',
   editorTasksTitle: 'Tasks',
   editorTasksEmpty: 'No tasks yet — use "＋ New task" in the top-right corner to create the first one.',
   editorDisabledTag: 'Disabled',

@@ -1194,21 +1194,23 @@ function TaskPage(props: {
         },
       })
       : null,
-    // 查看会话失败提示条（固定底部中央，可读可关）。
+    // 查看会话失败提示条（固定底部中央，可读可关）。外观与共用 Toast 的中性档统一
+    // （反色实面 + 圆点）；保留手动关闭——操作类失败要给用户时间读，不自动消失。
     viewErr !== null
       ? h('div', {
         style: {
           position: 'fixed', left: '50%', bottom: '18px', transform: 'translateX(-50%)',
           zIndex: 1020, maxWidth: '90%', boxSizing: 'border-box',
-          background: 'var(--dsw-alias-bg-layer-1, rgba(40,40,40,.92))',
-          color: 'var(--dsw-alias-label-primary, #fff)',
-          border: '1px solid var(--dsw-alias-border-l2, rgba(128,128,128,.4))',
-          borderRadius: '10px', padding: '10px 14px', fontSize: '12px', lineHeight: '1.5',
-          display: 'flex', alignItems: 'center', gap: '10px',
+          background: 'var(--dsw-alias-label-primary, rgba(40,40,40,.92))',
+          color: 'var(--dsw-alias-label-primary-inverted, #fff)',
+          border: 'none',
+          borderRadius: 'var(--dsw-radius-md, 8px)', padding: '8px 14px', fontSize: '12px', lineHeight: '1.6',
+          display: 'flex', alignItems: 'center', gap: '8px',
           boxShadow: 'var(--dsw-shadow-lv3, 0 8px 28px rgba(0,0,0,.3))',
         },
         onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
       },
+        h('span', { style: { flex: 'none', width: '7px', height: '7px', borderRadius: '50%', background: 'var(--dsw-alias-label-primary-inverted, #fff)', opacity: .65 } }),
         h('span', null, viewErr),
         h('button', {
           type: 'button',
