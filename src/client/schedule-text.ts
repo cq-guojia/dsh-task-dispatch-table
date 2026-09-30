@@ -139,11 +139,17 @@ function timeFromCron(cron: string): string {
   return `${pad2(hour)}:${pad2(minute)}`
 }
 
-/** cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。 */
-const weekdaysFromDow = (dow: string): number[] => dow === ''
-  ? []
-  : dow.split(',').map(part => Number(part)).filter(n => Number.isInteger(n) && n >= 0 && n <= 7)
-    .map(n => (n === 0 ? 7 : n))
+/**
+ * cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
+ * ⚠️ **只认「纯数字逗号列表」**（如 `1,2,5`）；`1-5` / `MON-FRI` / 步长写法 这类返回 `null`，
+ * 由调用方**整体降级 custom**——绝不静默滤空（2026-09-30 专家团复核：此前 `0 9 * * 1-5` 被滤成空数组，
+ * 文案反而说「还没选生效日」，与「周一到周五都跑」的事实相反）。
+ */
+const weekdaysFromDow = (dow: string): number[] | null => {
+  if (dow === '' || dow === '*') return []
+  if (!/^\d+(,\d+)*$/.test(dow)) return null
+  return dow.split(',').map(Number).map(n => (n === 0 ? 7 : n))
+}
 
 /** 老任务（没有结构化 `ui`）：从 cron 反解出 spec。认得几个常见形态，认不出走 `custom`（原样显示）。 */
 function specFromCron(cron: string, everyNWeeks: number | null): ScheduleSpec {
@@ -154,23 +160,29 @@ function specFromCron(cron: string, everyNWeeks: number | null): ScheduleSpec {
   const minuteStep = /^\*\/(\d+)$/.exec(minute)
   const hourStep = /^\*\/(\d+)$/.exec(hour)
   const time = timeFromCron(cron)
-  // 间隔档
-  if (minute === '*' || minuteStep?.[1] === '1') {
-    return { ...base, kind: 'interval', intervalUnit: 'minute', intervalStep: 1, time, weekdays: weekdaysFromDow(dow === '*' ? '' : dow) }
-  }
-  if (minuteStep !== null) {
-    return { ...base, kind: 'interval', intervalUnit: 'minute', intervalStep: Number(minuteStep[1]), time, weekdays: weekdaysFromDow(dow === '*' ? '' : dow) }
-  }
-  if (hour === '*') {
-    return { ...base, kind: 'interval', intervalUnit: 'hour', intervalStep: 1, time, weekdays: weekdaysFromDow(dow === '*' ? '' : dow) }
-  }
-  if (hourStep !== null) {
-    return { ...base, kind: 'interval', intervalUnit: 'hour', intervalStep: Number(hourStep[1]), time, weekdays: weekdaysFromDow(dow === '*' ? '' : dow) }
-  }
-  // 周期档
-  if (dom === '*' && dow === '*') return { ...base, kind: 'periodic', freq: 'daily', time }
-  if (dom === '*' && dow !== '*') {
-    return { ...base, kind: 'periodic', freq: 'weekly', time, weekdays: weekdaysFromDow(dow), weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1 }
+  const wd = weekdaysFromDow(dow)
+  if (wd === null) return base // 星期位认不出（区间 / 名称 / 步长）⇒ 整体 custom，别猜
+  // 间隔 / 每天 / 每周：都要求「日 + 月」不限定（2026-09-30 复核：此前忽略月份位 ⇒
+  // `0 9 * 6 *`（仅 6 月）被误说成「每天 09:00 执行」）。
+  if (dom === '*' && months === '*') {
+    // `dow` 为 `*`/空 = cron 未限定星期 = **每天**（不是表单的「没勾选」）⇒ 补成全 7 天，
+    // 免得文案把「每天跑」说成「还没选生效日」（2026-09-30 复核）。表单草稿侧的空数组另有语义。
+    const everyDay = wd.length === 0 ? [1, 2, 3, 4, 5, 6, 7] : wd
+    // 分钟间隔：**必须「小时不限定」**——否则 `* 9 * * *`（9 点内每分钟）/`*/1 9 * * *` 会被
+    // 误说成「每分钟执行一次」（2026-09-30 复核复现），实际只在那一个小时里跑。
+    if (hour === '*' && (minute === '*' || minuteStep !== null)) {
+      return { ...base, kind: 'interval', intervalUnit: 'minute', intervalStep: minuteStep === null ? 1 : Number(minuteStep[1]), time, weekdays: everyDay }
+    }
+    if (hourStep !== null) {
+      return { ...base, kind: 'interval', intervalUnit: 'hour', intervalStep: Number(hourStep[1]), time, weekdays: everyDay }
+    }
+    if (hour === '*') {
+      return { ...base, kind: 'interval', intervalUnit: 'hour', intervalStep: 1, time, weekdays: everyDay }
+    }
+    // 每天 / 每周：分 + 小时都必须是**具体数字**，否则（如 `* 9 * * *`）表单表达不了 ⇒ 降级 custom。
+    if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return base
+    if (dow === '*') return { ...base, kind: 'periodic', freq: 'daily', time }
+    return { ...base, kind: 'periodic', freq: 'weekly', time, weekdays: wd, weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1 }
   }
   if (dom !== '*' && dow === '*') {
     const monthList = months === '*' ? null : months.split(',').map(Number).filter(Number.isInteger)

@@ -6116,8 +6116,17 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
 			return `${pad2(hour)}:${pad2(minute)}`;
 		}
-		/** cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。 */
-		const weekdaysFromDow = (dow) => dow === "" ? [] : dow.split(",").map((part) => Number(part)).filter((n) => Number.isInteger(n) && n >= 0 && n <= 7).map((n) => n === 0 ? 7 : n);
+		/**
+		* cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
+		* ⚠️ **只认「纯数字逗号列表」**（如 `1,2,5`）；`1-5` / `MON-FRI` / 步长写法 这类返回 `null`，
+		* 由调用方**整体降级 custom**——绝不静默滤空（2026-09-30 专家团复核：此前 `0 9 * * 1-5` 被滤成空数组，
+		* 文案反而说「还没选生效日」，与「周一到周五都跑」的事实相反）。
+		*/
+		const weekdaysFromDow = (dow) => {
+			if (dow === "" || dow === "*") return [];
+			if (!/^\d+(,\d+)*$/.test(dow)) return null;
+			return dow.split(",").map(Number).map((n) => n === 0 ? 7 : n);
+		};
 		/** 老任务（没有结构化 `ui`）：从 cron 反解出 spec。认得几个常见形态，认不出走 `custom`（原样显示）。 */
 		function specFromCron(cron, everyNWeeks) {
 			const base = {
@@ -6130,52 +6139,58 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const minuteStep = /^\*\/(\d+)$/.exec(minute);
 			const hourStep = /^\*\/(\d+)$/.exec(hour);
 			const time = timeFromCron(cron);
-			if (minute === "*" || minuteStep?.[1] === "1") return {
-				...base,
-				kind: "interval",
-				intervalUnit: "minute",
-				intervalStep: 1,
-				time,
-				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
-			};
-			if (minuteStep !== null) return {
-				...base,
-				kind: "interval",
-				intervalUnit: "minute",
-				intervalStep: Number(minuteStep[1]),
-				time,
-				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
-			};
-			if (hour === "*") return {
-				...base,
-				kind: "interval",
-				intervalUnit: "hour",
-				intervalStep: 1,
-				time,
-				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
-			};
-			if (hourStep !== null) return {
-				...base,
-				kind: "interval",
-				intervalUnit: "hour",
-				intervalStep: Number(hourStep[1]),
-				time,
-				weekdays: weekdaysFromDow(dow === "*" ? "" : dow)
-			};
-			if (dom === "*" && dow === "*") return {
-				...base,
-				kind: "periodic",
-				freq: "daily",
-				time
-			};
-			if (dom === "*" && dow !== "*") return {
-				...base,
-				kind: "periodic",
-				freq: "weekly",
-				time,
-				weekdays: weekdaysFromDow(dow),
-				weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1
-			};
+			const wd = weekdaysFromDow(dow);
+			if (wd === null) return base;
+			if (dom === "*" && months === "*") {
+				const everyDay = wd.length === 0 ? [
+					1,
+					2,
+					3,
+					4,
+					5,
+					6,
+					7
+				] : wd;
+				if (hour === "*" && (minute === "*" || minuteStep !== null)) return {
+					...base,
+					kind: "interval",
+					intervalUnit: "minute",
+					intervalStep: minuteStep === null ? 1 : Number(minuteStep[1]),
+					time,
+					weekdays: everyDay
+				};
+				if (hourStep !== null) return {
+					...base,
+					kind: "interval",
+					intervalUnit: "hour",
+					intervalStep: Number(hourStep[1]),
+					time,
+					weekdays: everyDay
+				};
+				if (hour === "*") return {
+					...base,
+					kind: "interval",
+					intervalUnit: "hour",
+					intervalStep: 1,
+					time,
+					weekdays: everyDay
+				};
+				if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return base;
+				if (dow === "*") return {
+					...base,
+					kind: "periodic",
+					freq: "daily",
+					time
+				};
+				return {
+					...base,
+					kind: "periodic",
+					freq: "weekly",
+					time,
+					weekdays: wd,
+					weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1
+				};
+			}
 			if (dom !== "*" && dow === "*") {
 				const monthList = months === "*" ? null : months.split(",").map(Number).filter(Number.isInteger);
 				if (monthList !== null && monthList.length === 12) return {
@@ -38046,7 +38061,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (draft.scheduleKind === "interval") {
 				const step = Number.parseInt(draft.intervalStep, 10);
 				if (!Number.isFinite(step) || step <= 0) return null;
-				return `*/${step} * * * ${days === "" ? "*" : days}`;
+				const dow = days === "" ? "*" : days;
+				return draft.intervalUnit === "hour" ? `0 */${step} * * ${dow}` : `*/${step} * * * ${dow}`;
 			}
 			switch (draft.periodFreq) {
 				case "once": return null;
@@ -38184,7 +38200,9 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function humanizeTaskError(raw) {
 			if (raw.includes("target.workspace") && raw.toLowerCase().includes("too small")) return "工作区不能为空，请先选择工作区";
 			if (raw.includes("target.prompt") && raw.toLowerCase().includes("too small")) return "提示词不能为空，请先填写提示词";
-			if (raw.includes(".title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
+			if (raw.includes("title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
+			if (raw.includes("ISO 8601") || raw.includes("schedule.window")) return "「允许延迟」的时长不合法——请从下拉里重选一个（如 4 小时）。";
+			if (raw.includes("schedule.cron")) return "执行排期不合法——请重新选一次执行频率。";
 			if (raw.includes("附件 ref 非法") || raw.includes("attachments") && raw.includes("ref")) return "附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。";
 			return raw;
 		}
@@ -38208,13 +38226,24 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const hh = /^\d{1,2}$/.test(hour) ? hour.padStart(2, "0") : null;
 			const mm = /^\d{1,2}$/.test(minute) ? minute.padStart(2, "0") : null;
 			const time = hh !== null && mm !== null ? `${hh}:${mm}` : null;
-			if (minute.startsWith("*/") && hour === "*" && dom === "*" && mon === "*" && dow === "*") {
+			if (minute.startsWith("*/") && hour === "*" && dom === "*" && mon === "*") {
 				const step = minute.slice(2);
 				if (!/^\d+$/.test(step) || Number(step) <= 0) return null;
+				const weekdays = dow === "*" ? [
+					1,
+					2,
+					3,
+					4,
+					5,
+					6,
+					7
+				] : dow.split(",").map(Number).filter((n) => Number.isFinite(n)).map(isoDow);
+				if (weekdays.length === 0) return null;
 				return {
 					scheduleKind: "interval",
 					intervalUnit: "minute",
 					intervalStep: step,
+					weekdays,
 					...time === null ? {} : { time }
 				};
 			}
@@ -39286,7 +39315,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					label: `8 ${t("unitHours")}`
 				},
 				{
-					value: "P1D",
+					value: "PT24H",
 					label: `1 ${t("unitDays")}`
 				}
 			];
@@ -40365,6 +40394,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		function relativeFuture(iso, nowMs, tt) {
 			const target = Date.parse(iso);
+			if (!Number.isFinite(target)) return NO_TIME;
 			const diff = target - nowMs;
 			if (diff <= 0) return tt("relPast");
 			if (diff < 6e4) return tt("relNow");
@@ -40391,6 +40421,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		*/
 		function countdownText(iso, nowMs, tt) {
 			const diff = Date.parse(iso) - nowMs;
+			if (Number.isNaN(diff)) return NO_TIME;
 			if (diff <= 0) return tt("relNow");
 			const total = Math.floor(diff / 1e3);
 			const hours = Math.floor(total / 3600);
@@ -40401,15 +40432,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		}
 		const tickerListeners = /* @__PURE__ */ new Set();
 		let tickerTimer = null;
+		/**
+		* `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
+		* 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
+		* 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
+		*/
+		const onVisibilityChange = () => {
+			for (const l of [...tickerListeners]) l();
+		};
+		let visibilityBound = false;
 		function subscribeTicker(cb) {
 			tickerListeners.add(cb);
 			if (tickerTimer === null) {
 				tickerTimer = window.setInterval(() => {
 					for (const l of [...tickerListeners]) l();
 				}, 1e3);
-				document.addEventListener("visibilitychange", () => {
-					for (const l of [...tickerListeners]) l();
-				});
+				if (!visibilityBound && typeof document !== "undefined") {
+					document.addEventListener("visibilitychange", onVisibilityChange);
+					visibilityBound = true;
+				}
 			}
 			return () => {
 				tickerListeners.delete(cb);
@@ -40493,8 +40534,11 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				const hit = callbacks.current.get(id);
 				if (hit !== void 0) return hit;
 				const fn = (el) => {
-					if (el === null) nodes.current.delete(id);
-					else nodes.current.set(id, el);
+					if (el === null) {
+						nodes.current.delete(id);
+						callbacks.current.delete(id);
+						prevTop.current.delete(id);
+					} else nodes.current.set(id, el);
 				};
 				callbacks.current.set(id, fn);
 				return fn;
@@ -40579,12 +40623,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function PastPill(props) {
 			const { row, t, tt } = props;
 			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
-			const bg = !has ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
+			const colored = has && (row.lastStatus === "succeeded" || row.lastStatus === "failed");
+			const bg = !has ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : row.lastStatus === "failed" ? C$1.danger : C$1.layer3;
 			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
-			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(bg, has ? "#fff" : C$1.textDim) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
+			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(bg, colored ? "#fff" : C$1.textDim) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
 					if (!has) return NO_TIME;
@@ -40953,7 +40998,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						...cur,
 						[id]: enabled
 					}));
-					onToggleEnabled(id, enabled);
+					onToggleEnabled(id, enabled).then((err) => {
+						if (err === null) return;
+						setOptimistic((cur) => {
+							if (!(id in cur)) return cur;
+							const next = { ...cur };
+							delete next[id];
+							return next;
+						});
+					});
 				},
 				refOf: refOf(row.id)
 			})))));

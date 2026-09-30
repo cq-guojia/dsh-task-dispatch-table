@@ -189,3 +189,54 @@
 - 冒烟：删 3 条（U17 待补槽）+ 加 1 条（运行中活动指示），**299 项全过**；typecheck + build 绿。
 
 > ⚠️ 调度语义未动：仍只补窗口内最晚一槽（8.4 结论），8.6 只改「运行中怎么显示」。
+
+## 九、专家团复核轮（2026-09-30）：真机 bug 修复 + 既有逻辑全量复核
+
+用户要求：修完真机 bug 后，**组一个专家团把此前逻辑再核一遍**（① 逻辑该有的有没有 ② 有无硬伤 ③ 有无垃圾代码 ④ 该抽象的有没有抽象），提出问题就改、改完复核、直到没问题。
+
+### 9.1 用户真机 bug（已修）
+
+| 反馈 | 根因 | 处置 |
+|---|---|---|
+| 无执行计划时显示 `--:--` | 占位常量 | `TaskListView` 的 `NO_TIME` 改 `--`（停用 / 从未执行都对齐） |
+| 「选工作区文件」报 `任务定义不合法（attachments.0: 附件 ref 非法…）` | 选择器把**绝对路径**当 link 附件 `ref` 存；而宿主 zod（`tasks.ts:96`）/ `data-model §一`/ `reconcile.ts:43` 三处都要求**工作区相对**路径 ⇒ 保存必被 422 拒 | `FileBrowser` 选择器 `onPick` 改为回传**工作区相对**路径（`relativizeToRoot`）；另加**客户端兜底校验**（`validateTaskDraft` 新增 `attachments` 字段、附件卡描红）+ `humanizeTaskError` 把该机器码翻人话 |
+| 「报了错没有红框、文案看不懂」 | 该错误只在服务端 422 才出现，而客户端校验不覆盖附件 ⇒ 只有一条 Toast、无字段定位 | 同上（归属附件卡描红 + 人话） |
+
+### 9.2 专家团复核发现并**已修**
+
+三人组分工：① 主界面运行态（runtime-index + task-list）② 排期与附件链路 ③ 死代码与抽象。
+
+**硬伤（按严重度）**
+- **`scheduleCron` 的 interval 档忽略 `intervalUnit`** ⇒ 选「每 2 小时」实际按**每 2 分钟**跑（文案却写「每 2 小时」）。本轮最严重。
+- 允许延迟下拉的 `P1D` **不符合宿主 `isoDuration`**（只认 `PT…H/M/S`）⇒ 选「1 天」保存 422 + 机器码文案。改 `PT24H`。
+- **编辑保存抹掉「表单不管理」的字段**：`createdAt`（卡片「创建于」消失）、`schedule.timezone`（执行时刻整体偏移）、`target.manual`、自定义 cron 降级时的 `start`/`everyNWeeks`（每 N 周退化成每周）。修法：服务端更新时从原定义**保留**（新增 `readDefinitionOf`，在 `{...def}` 之后补齐）。
+- **`schedule-text.ts` 反解三处说反话**：星期区间 `1-5` 被静默滤空 ⇒ 文案「还没选生效日」（实际周一到周五都跑）；月份位被忽略 ⇒ `0 9 * 6 *`（仅 6 月）误称「每天」；`* 9 * * *`（9 点内每分钟）误称「每分钟执行一次」。修：非「纯数字逗号列表」的星期位整体降级 custom；间隔 / 每天 / 每周档要求「日 + 月」都不限定；分钟间隔档要求「小时不限定」；`dow=*` 视为**每天**（不再是「没选生效日」）。
+- **`scheduleFromCron` 的分钟间隔硬要 `dow === '*'`** ⇒ 编辑器新产出的带星期位 `*/N * * * 1,2,…`（没有 `ui` 的老定义）反解失败、降级成自定义 cron，与列表文案打架。修：支持星期位。
+- **`PastPill` 把非 `succeeded` 一律染红**（含 `skipped`/`unknown`），与状态条把二者当正常的口径打架；改后**图标前景色错配**（白图标压浅灰几乎不可见）。均已修（只 `failed` 红；前景跟随底色）。
+- **`relativeFuture`/`countdownText` 无 NaN 兜底** ⇒ 畸形 ISO 渲染出「NaN 年后」/`NaN:NaN`。已加兜底。
+- **`subscribeTicker` 的 `visibilitychange` 监听每次订阅起停都注册且从不移除** ⇒ 反复重挂面板累积泄漏。改为只注册一次。
+- **`useFlip` 的 `callbacks`/`prevTop` 两张 Map 卸载不清理** ⇒ 无界增长 + id 复用错位动画。已清。
+- **列表拨片失败不撤乐观值** ⇒ 服务端没变也不 bump rev ⇒ 开关永久停在与服务端相反的位置。已撤。
+- **`humanizeTaskError` 的 `title` 分支写成 `.title`**（宿主路径是 `title`）永不命中。已修，并补 `ISO 8601`/`schedule.cron` 兜底。
+- **smoke 两条空转断言**（断的标识根本不存在 ⇒ 恒真）+ 一条依赖产物字面量。已清理。
+
+**垃圾代码（本轮删）**：`task-editor.tsx` 的 `describeSchedule`（死函数，全仓无引用，产物里已被 tree-shake）+ 随之失效的 `scheduleText` 导入。
+
+### 9.3 复核发现但**本轮未做**（待办，避免遗忘）
+
+- **死 locale 键**（有定义无使用）：`listFilterWorkspace` `listLastPrefix` `listNextPrefix` `listStatusOk` `listStatusFailed` `listAgoOk` `listAgoFailed`；`editorSchedMonthly` `editorSchedNoDay` `editorStartTime` `editorSaved` `editorSaveFailedHint` `editorUnavailable` `editorSource` `editorSourceInline` `editorSourceManual` `editorSourceUpload` `editorManualPath` `editorManualHint` `editorPickFile` `editorUploadHint` `editorUploadWarn` `editorAttachmentAddHint` `editorRestore` `editorSnapshots`；`debugRefresh` `debugButton` `debugTitle` `debugAutoHint` `debugEventsEmpty`。
+- **死 CSS 类**（`task-editor-css.ts`）：`.dsh-tdt-ed-tab`（含 hover/aria）、`.dsh-tdt-ed-tabs`（现只当 id 用）、`.dsh-tdt-ed-warn`、`.dsh-tdt-ed-ver-time`、`.dsh-tdt-ed-drop`、`.dsh-tdt-ed-mono`、`.dsh-tdt-ed-json`。
+- **死字段 / 导出**：`TaskOverviewRow.provider`（两侧投影 + `rowPatchOf` 三处写，卡片从不渲染）；`runtime-index.revision()` / `forget()`（全仓无引用）；`LiveText.title` prop；`TaskRuntimeEntry` / `ED_STYLE_ID` / `TASK_EDITOR_CSS` 的 `export`；`schedule-text.ts` 一批内部类型 `export`。
+- **抽象缺失（同逻辑多份）**：**cron → 结构化仍两份**（`schedule-text.ts specFromCron` vs `task-editor.tsx scheduleFromCron`，本轮各修各的、未合并）；主题 token `C` ×3 + `monoFont` ×2 + `transition` ×3；`pad2` ×8；`formatFull` / `formatTime` / `formatVersionTime` 三份；附件 ref 合法性三份（宿主 zod / 客户端 / `task-assets`）；「问号 Tooltip 按钮」JSX ×5；`<style>` 幂等注入样板 ×4。
+- **`markTerminal` 无条件清 `running` + 覆盖 `last*`**：重启孤儿（`unknown` 收口）与新实例并存时，可能把**新实例**的 `running` 清掉、`last*` 倒退。应按 `scheduledAt` 比较后再写。
+- **`rev` 无条件 `++`**：`markDispatched` / `markTerminal` 值没变也 ++（10s 轮询下影响小，但是「省流」设计的裂缝）。
+- **乐观更新两套并存**：`TaskListView.optimistic`（map，含未用的回滚）vs `useTaskOverview.patchRow`（无回滚），语义重名。
+- **写入路径 rev 兜底**：`resyncTaskMap` 未就绪时写路径不 bump rev（同型历史 bug 风险，`runtime-index.ts` 头注释记载过的那类）。
+
+### 9.4 验证
+
+- `npm run typecheck`（宿主 + 客户端）+ `npm run build`：全绿。
+- `npm run smoke`：**300 项全过**（含本轮新增的附件 ref 修复 / 占位符断言；删掉 1 条空转断言）。
+- 复核轮：专家团对着「本轮修复清单」逐条核对，确认第 1、4 条各有一处**残留**（已当场再修：`* 9 * * *` 仍误判 / 分钟间隔带星期位反解失败），第 5 条有一处**副作用**（图标前景色），三条均已修复并复跑绿。
+
+

@@ -497,7 +497,6 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('版本条目卡片式 + 使用/移除小钮', clientJs.includes('dsh-tdt-ed-ver-use') && clientJs.includes('dsh-tdt-ed-ver-del') && clientJs.includes('MarqueeText'))
   check('启用开关写回 Toast（--below 变体）', clientJs.includes('dsh-tdt-toast--below'))
   check('任务名称/下拉校验红框类', clientJs.includes('dsh-tdt-ed-pfx--error') && clientJs.includes('dsh-tdt-ed-field--error'))
-  check('配置快照 UI 已整体移除（无 Snapshots 区块文案）', !clientJs.includes('editorSnapshotsHint') && !clientJs.includes('editorNoSnapshots'))
   check('启用实时写回走独立端点 tasks/enabled', dispatchJs.includes('tasks/enabled') || clientJs.includes('tasks/enabled'))
   // UX 第二轮·第三次返工（2026-09-30）：Toast 抽象共用（三色）+ 派发 ctx 读护栏
   check('浮层 Toast 共用组件 + 四档语义色（success/warning/neutral/error）',

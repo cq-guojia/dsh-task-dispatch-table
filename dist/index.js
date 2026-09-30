@@ -112,6 +112,18 @@ function readAttachmentsOf(raw, id) {
         return [];
     }
 }
+/** 从现有任务表里读出某任务的**整份定义**（更新时保留「表单不管理的字段」用）。 */
+function readDefinitionOf(raw, id) {
+    try {
+        const data = JSON.parse(raw.trim() === '' ? '[]' : raw);
+        if (!Array.isArray(data))
+            return undefined;
+        return data.find((item) => (item !== null && typeof item === 'object' && item.id === id));
+    }
+    catch {
+        return undefined;
+    }
+}
 /**
  * 构造本插件的 webServer 路由（快照读 + 任务表写）。
  * @param runtimeRef - 宿主运行时数据 store（apply 内共用同一份）。
@@ -300,6 +312,33 @@ onDefinitionsChanged) => [
                     finalDef.createdAt = new Date().toISOString();
                 if ((def.attachments ?? []).length > 0)
                     finalDef.attachments = moved.attachments;
+                // ⑤ 表单不管理的字段：更新时从原定义**保留**（2026-09-30 专家团复核发现的「编辑即丢」）。
+                //    这些字段执行 / 展示要用，但编辑表单没有入口 ⇒ 表单 JSON 天然不带，不保留就被抹掉：
+                //    ① createdAt（卡片「创建于」消失）；② schedule.timezone（显式时区任务被改成宿主机本地时区，
+                //    执行时刻整体偏移）；③ target.manual（任务手册引用被删，派发手册段随之消失）；
+                //    ④ 自定义 cron 降级保存时表单只写 cron ⇒ 保留原 start / everyNWeeks（每 N 周的取模基准）。
+                if (isUpdate) {
+                    const prev = readDefinitionOf(runtimeRef.tasksInline, id);
+                    if (prev !== undefined) {
+                        if (finalDef.createdAt === undefined && prev.createdAt !== undefined)
+                            finalDef.createdAt = prev.createdAt;
+                        const finalTarget = (finalDef.target ?? {});
+                        const prevTarget = (prev.target ?? {});
+                        if (finalTarget.manual === undefined && prevTarget.manual !== undefined)
+                            finalTarget.manual = prevTarget.manual;
+                        const finalSchedule = (finalDef.schedule ?? {});
+                        const prevSchedule = (prev.schedule ?? {});
+                        if (finalSchedule.timezone === undefined && prevSchedule.timezone !== undefined)
+                            finalSchedule.timezone = prevSchedule.timezone;
+                        // 降级态（有 cron、没有结构化 ui）⇒ 表单没产出 start / everyNWeeks，从原定义保留。
+                        if (finalSchedule.cron !== undefined && finalSchedule.ui === undefined) {
+                            if (finalSchedule.start === undefined && prevSchedule.start !== undefined)
+                                finalSchedule.start = prevSchedule.start;
+                            if (finalSchedule.everyNWeeks === undefined && prevSchedule.everyNWeeks !== undefined)
+                                finalSchedule.everyNWeeks = prevSchedule.everyNWeeks;
+                        }
+                    }
+                }
                 // ④ 落库（定义先落：它是唯一权威）
                 const up = upsertDefinitionInline(runtimeRef.tasksInline, finalDef, { allowNew: true });
                 if (up.error !== null)

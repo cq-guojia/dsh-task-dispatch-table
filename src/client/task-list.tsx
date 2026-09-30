@@ -234,6 +234,8 @@ function relativePast(iso: string, nowMs: number, tt: Translate): string {
 
 function relativeFuture(iso: string, nowMs: number, tt: Translate): string {
   const target = Date.parse(iso)
+  // 解析失败（畸形 ISO）⇒ 占位符，别渲染出「NaN 年后」（2026-09-30 专家团复核）。
+  if (!Number.isFinite(target)) return NO_TIME
   const diff = target - nowMs
   if (diff <= 0) return tt('relPast')
   if (diff < 60_000) return tt('relNow')
@@ -261,6 +263,7 @@ function relativeFuture(iso: string, nowMs: number, tt: Translate): string {
  */
 function countdownText(iso: string, nowMs: number, tt: Translate): string {
   const diff = Date.parse(iso) - nowMs
+  if (Number.isNaN(diff)) return NO_TIME // 畸形 ISO ⇒ 占位符，别渲染出 NaN:NaN
   if (diff <= 0) return tt('relNow')
   const total = Math.floor(diff / 1000)
   const hours = Math.floor(total / 3600)
@@ -277,12 +280,22 @@ function countdownText(iso: string, nowMs: number, tt: Translate): string {
 // 各自订阅，每秒只重渲染那一小块。
 const tickerListeners = new Set<() => void>()
 let tickerTimer: number | null = null
+/**
+ * `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
+ * 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
+ * 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
+ */
+const onVisibilityChange = (): void => { for (const l of [...tickerListeners]) l() }
+let visibilityBound = false
 function subscribeTicker(cb: () => void): () => void {
   tickerListeners.add(cb)
   if (tickerTimer === null) {
     tickerTimer = window.setInterval(() => { for (const l of [...tickerListeners]) l() }, 1000)
     // 标签页被浏览器节流（后台 / 休眠）后回来 ⇒ 立刻对一次表，倒计时自动追上。
-    document.addEventListener('visibilitychange', () => { for (const l of [...tickerListeners]) l() })
+    if (!visibilityBound && typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange)
+      visibilityBound = true
+    }
   }
   return () => {
     tickerListeners.delete(cb)
@@ -371,8 +384,15 @@ function useFlip(signature: string): (id: string) => (el: HTMLElement | null) =>
     const hit = callbacks.current.get(id)
     if (hit !== undefined) return hit
     const fn = (el: HTMLElement | null): void => {
-      if (el === null) nodes.current.delete(id)
-      else nodes.current.set(id, el)
+      if (el === null) {
+        nodes.current.delete(id)
+        // 卸载时一并清掉「回调缓存」与「上次坐标」——否则长会话里随历史任务 id 无界增长，
+        // 且 id 复用时用陈旧坐标做错误位移动画（2026-09-30 专家团复核）。
+        callbacks.current.delete(id)
+        prevTop.current.delete(id)
+      } else {
+        nodes.current.set(id, el)
+      }
     }
     callbacks.current.set(id, fn)
     return fn
@@ -442,11 +462,16 @@ const pillTimeCell: Record<string, string | number> = {
 function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
   const has = row.lastStatus !== null && row.lastScheduledAt !== null
-  const bg = !has ? C.layer3 : row.lastStatus === 'succeeded' ? C.success : C.danger
+  // 只有 `failed` 才染红；`skipped`（依赖停用跳过）/ `unknown`（重启收口）不是失败 ⇒ 中性灰
+  // （2026-09-30 专家团复核：此前非 succeeded 一律染红，与状态条把 skipped/unknown 当正常的口径打架）。
+  const colored = has && (row.lastStatus === 'succeeded' || row.lastStatus === 'failed')
+  const bg = !has ? C.layer3 : row.lastStatus === 'succeeded' ? C.success : row.lastStatus === 'failed' ? C.danger : C.layer3
   const title = has ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') }) : t('listNever')
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
-      h('span', { style: pillIconCell(bg, has ? '#fff' : C.textDim) }, h(IconClockOutlineRegular, { size: 12 })),
+      // ⚠️ 图标前景跟着底色走：白字只配「绿 / 红」实底；中性浅灰底（无状态 / skipped / unknown）
+      // 必须用常态文字色，否则白图标压在浅灰上几乎看不见（2026-09-30 复核）。
+      h('span', { style: pillIconCell(bg, colored ? '#fff' : C.textDim) }, h(IconClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): string => {
@@ -741,7 +766,17 @@ export function TaskListView(props: {
             onEdit,
             onToggleEnabled: (id: string, enabled: boolean): void => {
               setOptimistic(cur => ({ ...cur, [id]: enabled })) // 点了立刻变，不等请求往返
-              onToggleEnabled(id, enabled)
+              // ⚠️ 失败必须**撤掉这条乐观值**（2026-09-30 专家团复核）：失败时服务端没变、也不会 bump rev
+              // ⇒ 不清就永久停在和服务端相反的位置（要等别的任务改动静默自愈）。
+              void onToggleEnabled(id, enabled).then(err => {
+                if (err === null) return
+                setOptimistic(cur => {
+                  if (!(id in cur)) return cur
+                  const next = { ...cur }
+                  delete next[id]
+                  return next
+                })
+              })
             },
             refOf: refOf(row.id),
           })),

@@ -47,7 +47,7 @@ import {
 } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
-import { renderSchedule, scheduleSpecFromDraft, scheduleText } from './schedule-text'
+import { renderSchedule, scheduleSpecFromDraft } from './schedule-text'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
@@ -292,8 +292,12 @@ function scheduleCron(draft: TaskEditorDraft): string | null {
     const step = Number.parseInt(draft.intervalStep, 10)
     if (!Number.isFinite(step) || step <= 0) return null
     const dow = days === '' ? '*' : days
-    // 分钟档同样带星期位（用户 2026-09-30：选了生效日就照办，文案也如实带星期）。
-    return `*/${step} * * * ${dow}`
+    // ⚠️ 必须按 intervalUnit 出**正确形态**（2026-09-30 专家团复核发现的硬伤）：
+    //    此前两种单位都出 `*/N * * * *` ⇒ 选「每 2 小时」实际按**每 2 分钟**跑（文案却写「每 2 小时」）。
+    //    分钟档 = `*/N * * * <dow>`；小时档 = `0 */N * * <dow>`（分钟固定 0，与「每 N 小时」一致）。
+    return draft.intervalUnit === 'hour'
+      ? `0 */${step} * * ${dow}`
+      : `*/${step} * * * ${dow}`
   }
 
   switch (draft.periodFreq) {
@@ -334,17 +338,6 @@ function structuredOf(draft: TaskEditorDraft): Record<string, unknown> {
     intervalStep: draft.intervalStep,
     weekStep: draft.weekStep,
   }
-}
-
-/**
- * 排期 → 人话（用户 2026-09-30：用户看不懂设置，要直接告诉他「预计什么时候执行」）。
- *
- * ⚠️ **唯一实现已抽到 [`./schedule-text.ts`](./schedule-text.ts)**——用户 2026-09-30 拍板：
- * 列表与编辑器不许各写一份，否则同一个排期两处文案不一样（真机已出现「周一…每 10 分钟执行一次」
- * vs「每天每 10 分钟执行一次」）。这里只负责「表单草稿 → 结构化 spec」再交给它。
- */
-export function describeSchedule(draft: TaskEditorDraft, t: T): string {
-  return scheduleText(scheduleSpecFromDraft(draft), t)
 }
 
 /**
@@ -474,8 +467,16 @@ export function humanizeTaskError(raw: string): string {
   if (raw.includes('target.prompt') && raw.toLowerCase().includes('too small')) {
     return '提示词不能为空，请先填写提示词'
   }
-  if (raw.includes('.title') && raw.toLowerCase().includes('too small')) {
+  // ⚠️ 宿主路径是 `title`（`path.join('.')`，**无前导点**）——此前写成 `.title` 永不命中（2026-09-30 专家团复核）。
+  if (raw.includes('title') && raw.toLowerCase().includes('too small')) {
     return '任务名称不能为空'
+  }
+  // 排期时长（允许延迟）非法：宿主只认 `PT…H/M/S`（如选了 `P1D` 这类会走到这里）。
+  if (raw.includes('ISO 8601') || raw.includes('schedule.window')) {
+    return '「允许延迟」的时长不合法——请从下拉里重选一个（如 4 小时）。'
+  }
+  if (raw.includes('schedule.cron')) {
+    return '执行排期不合法——请重新选一次执行频率。'
   }
   // 附件 ref 非法（选工作区文件的历史 bug 会走到这里）：给出可执行的动作，别把「相对路径上跳」这种黑话甩给用户。
   if (raw.includes('附件 ref 非法') || (raw.includes('attachments') && raw.includes('ref'))) {
@@ -512,10 +513,17 @@ function scheduleFromCron(cron: string): Partial<TaskEditorDraft> | null {
   const time = hh !== null && mm !== null ? `${hh}:${mm}` : null
 
   // 间隔档：每隔 N 分钟 / 每小时
-  if (minute.startsWith('*/') && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+  if (minute.startsWith('*/') && hour === '*' && dom === '*' && mon === '*') {
     const step = minute.slice(2)
     if (!/^\d+$/.test(step) || Number(step) <= 0) return null
-    return { scheduleKind: 'interval', intervalUnit: 'minute', intervalStep: step, ...(time === null ? {} : { time }) }
+    // 星期位：`*` = 每天（表单默认全选）；否则按数字列表解析。
+    // ⚠️ 2026-09-30 复核：此前硬要 `dow === '*'`，而编辑器现在会生成带星期位的 `*/N * * * 1,2,3,...`
+    // ⇒ 这类（没有 `ui` 的）定义反解失败、被降级成自定义 cron，与列表文案（`*/N` ⇒ 每 N 分钟）打架。
+    const weekdays = dow === '*'
+      ? [1, 2, 3, 4, 5, 6, 7]
+      : dow.split(',').map(Number).filter(n => Number.isFinite(n)).map(isoDow)
+    if (weekdays.length === 0) return null
+    return { scheduleKind: 'interval', intervalUnit: 'minute', intervalStep: step, weekdays, ...(time === null ? {} : { time }) }
   }
   if (hour.startsWith('*/') && dom === '*' && mon === '*') {
     const step = hour.slice(2)
@@ -1435,7 +1443,9 @@ export function TaskEditorDrawer(props: {
     { value: 'PT2H', label: `2 ${t('unitHours')}` },
     { value: 'PT4H', label: `4 ${t('unitHours')}` },
     { value: 'PT8H', label: `8 ${t('unitHours')}` },
-    { value: 'P1D', label: `1 ${t('unitDays')}` },
+    // ⚠️ 必须写 `PT24H` 而不是 `P1D`：宿主 isoDuration 正则只认 `PT…H/M/S`（2026-09-30 专家团复核：
+    //    选「1 天」此前会 422「must match pattern /^PT…/」，且文案是机器码）。
+    { value: 'PT24H', label: `1 ${t('unitDays')}` },
   ]
 
   /**
