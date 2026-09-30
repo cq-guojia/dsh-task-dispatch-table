@@ -55,7 +55,7 @@ import { createPortal } from 'react-dom'
 import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf } from '../attachment-allowlist.js'
 import { FileBrowser } from './file-browser'
 import type { WorkspaceFilesFace } from './file-preview'
-import { ensureToastStyle } from './toast-css'
+import { ensureToastStyle, FloatingToast } from './toast-css'
 
 /** 与 index.ts 同形的 t 席位（本仓库 client 半侧惯例：无参 t；带占位符的文案走 tTemplate）。 */
 type T = (key: LocaleKey) => string
@@ -291,9 +291,8 @@ function scheduleCron(draft: TaskEditorDraft): string | null {
     const step = Number.parseInt(draft.intervalStep, 10)
     if (!Number.isFinite(step) || step <= 0) return null
     const dow = days === '' ? '*' : days
-    return draft.intervalUnit === 'minute'
-      ? `*/${step} * * * *`
-      : `0 */${step} * * ${dow}`
+    // 分钟档同样带星期位（用户 2026-09-30：选了生效日就照办，文案也如实带星期）。
+    return `*/${step} * * * ${dow}`
   }
 
   switch (draft.periodFreq) {
@@ -356,10 +355,10 @@ export function describeSchedule(draft: TaskEditorDraft, t: T): string {
 
   if (draft.scheduleKind === 'interval') {
     if (stepN === 0) return t('editorSchedInvalidStep')
-    // 间隔分钟档：cron 无星期位（全天候），不带生效日。
-    if (draft.intervalUnit === 'minute') return t('editorSchedIntervalMin').replace('{n}', String(stepN))
-    // 间隔小时档：参照周期档句式——生效日在前、不加括号：「周一、周三、周五每小时执行一次」。
-    const per = stepN === 1 ? t('editorSchedHourlyOnce') : t('editorSchedIntervalHour').replace('{n}', String(stepN))
+    // 间隔档：参照周期档句式——生效日在前、不加括号：「周一、周三每小时执行一次」。
+    const per = draft.intervalUnit === 'minute'
+      ? t('editorSchedIntervalMin').replace('{n}', String(stepN))
+      : (stepN === 1 ? t('editorSchedHourlyOnce') : t('editorSchedIntervalHour').replace('{n}', String(stepN)))
     return wd === '' ? `${per}${t('editorSchedNoDaySuffix')}` : `${wd}${per}`
   }
   if (draft.periodFreq === 'once') return `${draft.date} ${time} ${t('editorSchedOnce')}`
@@ -367,10 +366,17 @@ export function describeSchedule(draft: TaskEditorDraft, t: T): string {
     case 'daily':
       return `${t('editorSchedDaily')} ${time} ${t('editorSchedRun')}`
     case 'weekly': {
-      if (wd === '') return `${t('editorSchedWeekly')} ${time} ${t('editorSchedRun')}${t('editorSchedNoDaySuffix')}`
+      // 每 N 周（N>1）⇒「每 4 周周一、周二 09:00 执行」；恰好每周 ⇒ 用户举例的「每周一、每周二 …」。
       const wstep = Number.parseInt(draft.weekStep, 10)
-      const every = Number.isFinite(wstep) && wstep > 1 ? t('editorSchedEveryNWeek').replace('{n}', String(wstep)) : ''
-      return `${every}${t('editorSchedWeekly')}${wd} ${time} ${t('editorSchedRun')}`
+      const everyN = Number.isFinite(wstep) && wstep > 1
+      if (wd === '') {
+        return `${everyN ? t('editorSchedEveryNWeek').replace('{n}', String(wstep)) : t('editorSchedWeekly')} ${time} ${t('editorSchedRun')}${t('editorSchedNoDaySuffix')}`
+      }
+      // zh：'每周'+'一' ⇒「每周一」；en：'every '+'Mon' ⇒「every Mon」（星期键去掉「周」字后拼前缀）。
+      const dayText = everyN
+        ? wd
+        : days.map(d => `${t('editorSchedWeeklyDayPrefix')}${t(WEEKDAY_KEYS[d - 1]).replace(/^周/, '')}`).join('、')
+      return `${everyN ? t('editorSchedEveryNWeek').replace('{n}', String(wstep)) : ''}${dayText} ${time} ${t('editorSchedRun')}`
     }
     case 'monthly':
       return `${t(`editorMonthMode_${draft.monthMode}`)}${draft.monthDay} 日 ${time} ${t('editorSchedRun')}`
@@ -1064,7 +1070,7 @@ function PromptEditorModal(props: {
         h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
       ),
     ),
-    // minWidth:0 ⇒ 编辑态长内容时编辑器自行横向滚动，固定 280px 的版本面板不再被挤掉。
+    // minWidth:0 ⇒ 编辑态长内容时编辑器自行横向滚动，固定 232px 的版本面板不再被挤掉。
     h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0, minWidth: 0 } },
       mode === 'edit'
         ? h('div', { style: { flex: '1 1 auto', display: 'flex', minHeight: 0, minWidth: 0 } },
@@ -1083,14 +1089,15 @@ function PromptEditorModal(props: {
             h(MarkdownText, { text: value, labels: MD_LABELS }),
           ),
       showVersions
-        ? h('div', { style: { flex: '0 0 280px', borderLeft: `1px solid ${C.borderL4}`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
+        // 面板缩窄（用户 2026-09-30：固定 280 太占地方）= 232px：够放日期 + hover 两个小钮，左栏多让 48px。
+        ? h('div', { style: { flex: '0 0 232px', borderLeft: `1px solid ${C.borderL4}`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
             h('div', { style: { padding: '10px 12px', borderBottom: `1px solid ${C.borderL4}`, fontSize: '13px', fontWeight: 600 } }, versionTitle),
             editorMode === 'create'
               ? h('div', { style: { padding: '16px 12px', fontSize: '12px', color: C.textDim, lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
               : h('div', { style: { display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' } },
                 versions.length === 0
                   ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: C.textDim } }, t('editorNoVersions'))
-                  : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 12px 12px', overflow: 'auto' } },
+                  : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 0 8px', overflow: 'auto' } },
                     versions.map(v => h('li', {
                       key: v.file,
                       className: 'dsh-tdt-ed-ver',
@@ -1100,16 +1107,20 @@ function PromptEditorModal(props: {
                       // 行首小尖括号（用户 2026-09-30：弃时钟，用右指小角标）。
                       h('span', { className: 'dsh-tdt-ed-ver-ic', style: { transform: 'rotate(-90deg)' } },
                         h(IconChevronDownOutlineRegular, { size: 12 })),
-                      // 主文本：备注（无备注 = 时间）；超长省略，hover 在自己盒子里跑马灯（不盖行首图标）。
+                      // 主文本 = 备注（无备注就留空 ⇒ 右侧只显示一次时间，**不出现两个日期**）。
+                      // 超长省略，hover 在自己盒子里跑马灯（不盖行首图标）。
                       h('span', { className: 'dsh-tdt-ed-ver-main' },
-                        h(MarqueeText, { text: v.note !== '' ? v.note : formatVersionTime(v.ts) })),
-                      // 右侧：常态 = 时间小字；hover = 「使用（小药丸）/ 移除（小字）」，行高恒定。
-                      hoveredId === v.file
-                        ? h('span', { className: 'dsh-tdt-ed-ver-actions' },
-                          h('button', { type: 'button', className: 'dsh-tdt-ed-ver-use', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseShort')),
-                          h('button', { type: 'button', className: 'dsh-tdt-ed-ver-del', onClick: () => { setConfirmDeleteFile(v.file) } }, t('editorRemoveShort')),
-                        )
-                        : h('span', { className: 'dsh-tdt-ed-ver-time' }, formatVersionTime(v.ts)),
+                        h(MarqueeText, { text: v.note })),
+                      // 右侧固定槽（宽高恒定 ⇒ hover 换按钮绝不撑高行高）：无备注常态也显示时间，
+                      // 有备注常态显示时间、hover 换「使用（药丸）/ 移除（小字）」。
+                      h('span', { className: 'dsh-tdt-ed-ver-right' },
+                        hoveredId === v.file
+                          ? h('span', { className: 'dsh-tdt-ed-ver-actions' },
+                            h('button', { type: 'button', className: 'dsh-tdt-ed-ver-use', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseShort')),
+                            h('button', { type: 'button', className: 'dsh-tdt-ed-ver-del', onClick: () => { setConfirmDeleteFile(v.file) } }, t('editorRemoveShort')),
+                          )
+                          : h('span', { className: 'dsh-tdt-ed-ver-time' }, formatVersionTime(v.ts)),
+                      ),
                     )),
                   ),
               ),
@@ -1944,11 +1955,12 @@ export function TaskEditorDrawer(props: {
         h('div', { className: 'dsh-tdt-ed-section', style: { position: 'relative' } },
           attachmentsCard,
           uploadError !== null
-            ? h('div', {
-              key: uploadError,
-              className: 'dsh-tdt-toast',
-              onAnimationEnd: () => { setUploadError(null) },
-            }, uploadErrText(uploadError))
+            ? h(FloatingToast, {
+              seq: uploadError,
+              tone: 'error',
+              onDone: () => { setUploadError(null) },
+              text: uploadErrText(uploadError),
+            })
             : null,
         ),
         h('div', { className: 'dsh-tdt-ed-section' }, scheduleCard),
@@ -1992,14 +2004,15 @@ export function TaskEditorDrawer(props: {
           h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
         ),
         h('div', { className: 'dsh-tdt-ed-headactions' },
-          // 启用开关写回结果 Toast：浮在头部下方，2.5s 上飘淡出自退（不占版面）。
+          // 启用开关写回结果 Toast（共用组件：成功绿 / 失败红），浮在头部下方，2.5s 上飘淡出自退。
           enabledToast !== null
-            ? h('div', {
-              key: enabledToast.seq,
-              className: 'dsh-tdt-toast dsh-tdt-toast--below',
-              onAnimationEnd: () => { setEnabledToast(null) },
-              style: enabledToast.err ? { background: 'var(--dsw-alias-state-error-primary,#e5484d)' } : undefined,
-            }, enabledToast.msg)
+            ? h(FloatingToast, {
+              seq: enabledToast.seq,
+              tone: enabledToast.err ? 'error' : 'success',
+              below: true,
+              onDone: () => { setEnabledToast(null) },
+              text: enabledToast.msg,
+            })
             : null,
           mode === 'edit'
             ? h(Segmented, {
@@ -2047,14 +2060,14 @@ export function TaskEditorDrawer(props: {
         }, t('editorReset')),
         h('span', { style: { flex: '1 1 auto' } }),
         resetHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorResetDone')) : null,
-        // 保存失败 / 校验不过：浮层 Toast（2.5s 自退，上飘淡出），不占 footer 行内空间（用户 2026-09-30）。
-        // 文案已是完整人话（校验问题 or 翻译后的服务端原因），无需再拼前缀。
+        // 保存失败 / 校验不过：共用浮层 Toast（错误红），2.5s 自退上飘淡出，不占 footer 行内空间。
         saveErrToast !== null
-          ? h('div', {
-            key: saveErrToast.seq,
-            className: 'dsh-tdt-toast',
-            onAnimationEnd: () => { setSaveErrToast(null) },
-          }, saveErrToast.msg)
+          ? h(FloatingToast, {
+            seq: saveErrToast.seq,
+            tone: 'error',
+            onDone: () => { setSaveErrToast(null) },
+            text: saveErrToast.msg,
+          })
           : null,
         pendingHint ? h('span', { className: 'dsh-tdt-ed-hint', style: { margin: '0 8px 0 0' } }, t('editorSavePending')) : null,
         h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),

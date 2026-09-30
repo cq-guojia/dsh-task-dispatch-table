@@ -128,7 +128,7 @@ export type LocaleKey =
   | 'editorSchedForecast' | 'editorSchedRun' | 'editorSchedEveryday' | 'editorSchedNoDay'
   | 'editorSchedDaily' | 'editorSchedWeekly' | 'editorSchedEveryNWeek' | 'editorSchedMonthly'
   | 'editorSchedQuarterly' | 'editorSchedIntervalMin' | 'editorSchedIntervalHour'
-  | 'editorSchedOnce' | 'editorSchedInvalidStep' | 'editorSchedHourlyOnce' | 'editorSchedNoDaySuffix'
+  | 'editorSchedOnce' | 'editorSchedInvalidStep' | 'editorSchedHourlyOnce' | 'editorSchedNoDaySuffix' | 'editorSchedWeeklyDayPrefix'
   | 'editorMonthMode_every' | 'editorMonthMode_odd' | 'editorMonthMode_even'
   | 'editorDiscardTitle' | 'editorDiscardDesc' | 'editorDiscardStay' | 'editorDiscardLeave'
   | 'unitMinutes' | 'unitHours' | 'unitDays'
@@ -531,6 +531,7 @@ export const zh: Record<LocaleKey, string> = {
   editorToggleOff: '任务已关闭',
   editorSchedHourlyOnce: '每小时执行一次',
   editorSchedNoDaySuffix: '，但还没选生效日',
+  editorSchedWeeklyDayPrefix: '每周',
   editorRestoreAll: '找回全部',
   editorRestoreAllTitle: '找回全部设置',
   editorRestoreAllDesc: '确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。',
@@ -996,6 +997,7 @@ export const en: Record<LocaleKey, string> = {
   editorToggleOff: 'Task disabled',
   editorSchedHourlyOnce: 'runs hourly',
   editorSchedNoDaySuffix: ', but no active day is selected',
+  editorSchedWeeklyDayPrefix: 'every ',
   editorRestoreAll: 'Restore all',
   editorRestoreAllTitle: 'Restore all settings',
   editorRestoreAllDesc: 'Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.',

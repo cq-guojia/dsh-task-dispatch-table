@@ -25,7 +25,7 @@ import {
   type EditorHistory, type EditorOption, type EditorTaskOption, type HistorySnapshot, type HistoryVersion,
   type TaskEditorDraft,
 } from './task-editor'
-import { ensureToastStyle } from './toast-css'
+import { ensureToastStyle, FloatingToast } from './toast-css'
 import { humanizeTaskError } from './task-editor'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
@@ -978,11 +978,12 @@ function TaskPage(props: {
                   }, t('discard')),
                 ),
                 failed !== null
-                  ? h('div', {
-                    key: failedKey,
-                    className: 'dsh-tdt-toast',
-                    onAnimationEnd: () => { setFailed(null) },
-                  }, failed)
+                  ? h(FloatingToast, {
+                    seq: failedKey,
+                    tone: 'error',
+                    onDone: () => { setFailed(null) },
+                    text: failed,
+                  })
                   : null,
                 invalidToast.on
                   ? h('div', {

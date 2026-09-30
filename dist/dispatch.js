@@ -185,6 +185,19 @@ export function userNotice(text, summary) {
     };
 }
 /**
+ * 宿主 ctx 命名空间属性的安全读取：ctx 的属性是 getter，**对应模块未 inject 时读取直接 throw**
+ * （真机实证：`cannot get property "agentTeams" without inject` ⇒ 派发 launch-error）。
+ * 探测语义 = 「有就用、没有就降级」，所以这里把 throw 归一成 undefined，绝不让它炸掉派发。
+ */
+function readCtxProp(ctx, key) {
+    try {
+        return ctx[key];
+    }
+    catch {
+        return undefined;
+    }
+}
+/**
  * 上游依赖段（决策 43）：把快照里冻结的 resolvedDeps 渲染给下游 agent——
  * 产出路径按**上游**工作区绝对化（基准不是下游工作区）；上游旧行无快照 ⇒ 基准未知，原样给相对路径。
  */
@@ -338,7 +351,9 @@ export async function dispatchTask(input) {
     // 多 Agent 协作探测（决策 49）：快照开启且宿主暴露 ctx.agentTeams（experimental Agent Teams
     // profile）才注入团队执行指令；profile 未启用 ⇒ 降级单 Agent + 告警留痕，不阻塞派发
     // （与决策 48 goal-unavailable 同款语义；正常功能一律真实——绝不注入装不出来的假指令）。
-    const teamAvailable = ctx.agentTeams !== undefined;
+    // ⚠️ 宿主 ctx 的命名空间属性是 getter：**对应模块未 inject 时读取会直接 throw**（真机实证：
+    // `cannot get property "agentTeams" without inject` ⇒ 整次派发 launch-error），必须护栏读。
+    const teamAvailable = readCtxProp(ctx, 'agentTeams') !== undefined;
     const teamMode = snapshot.agentTeam === true && teamAvailable;
     if (snapshot.agentTeam === true && !teamAvailable) {
         logger.warn(`[dispatch] agent-team-unavailable 实例 ${instanceId}：宿主未启用 Agent Teams（ctx.agentTeams 缺失），按单 Agent 执行`);
@@ -361,7 +376,7 @@ export async function dispatchTask(input) {
     // goal continuation round 自动续跑、agent 标记 complete 收束，看板届时才结算）。宿主未暴露
     // goals 服务或创建失败都不阻塞派发（本轮照常执行），只落警告留痕——行为与开关语义一致。
     if (snapshot.goal !== false) {
-        const goals = ctx.goals;
+        const goals = readCtxProp(ctx, 'goals');
         if (goals === undefined) {
             logger.warn(`[dispatch] goal-unavailable 实例 ${instanceId}：宿主 ctx 未暴露 goals 服务，本轮按单轮执行`);
         }

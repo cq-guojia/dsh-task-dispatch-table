@@ -41,6 +41,10 @@ export const TOAST_CSS = `
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
+/* 三档语义色（用户 2026-09-30：不许全红）——成功 = 绿（宿主 success token）、
+   中性 = 反色面（深色主题浅白灰、浅色主题近黑灰，走 label-primary / inverted 对），错误 = 默认红。 */
+.dsh-tdt-toast--success{background:var(--dsw-alias-state-success-primary,#2f9e44);}
+.dsh-tdt-toast--neutral{background:var(--dsw-alias-label-primary,#1f2328);color:var(--dsw-alias-label-primary-inverted,#fff);}
 `
 
 let injected = false
@@ -55,4 +59,34 @@ export function ensureToastStyle(): void {
   el.id = TOAST_STYLE_ID
   el.textContent = TOAST_CSS
   document.head.appendChild(el)
+}
+
+// ─────────────────────── 共用浮层 Toast 组件（全站唯一实现，不许各处再手写） ───────────────────────
+
+import { createElement as h } from 'react'
+import type { ReactElement } from 'react'
+
+/** 语义色三档（用户 2026-09-30：不许全红）——成功绿 / 错误红 / 中性反色面（深浅色自适应）。 */
+export type ToastTone = 'success' | 'error' | 'neutral'
+
+export function FloatingToast(props: {
+  /** 文案（已是完整人话，组件不再拼前缀）。 */
+  text: string
+  /** 语义色，缺省 = error（红）。 */
+  tone?: ToastTone
+  /** 每次触发换一个值 ⇒ React 重挂载重播动画（连点同句也能再弹一次）。 */
+  seq: number | string
+  /** 浮在锚点下方（编辑器头部启用开关用）；缺省浮在上方。 */
+  below?: boolean
+  /** 动画结束自退（父级把状态清空）。 */
+  onDone: () => void
+}): ReactElement {
+  const tone = props.tone ?? 'error'
+  const cls = [
+    'dsh-tdt-toast',
+    props.below === true ? 'dsh-tdt-toast--below' : '',
+    tone === 'success' ? 'dsh-tdt-toast--success' : '',
+    tone === 'neutral' ? 'dsh-tdt-toast--neutral' : '',
+  ].filter(Boolean).join(' ')
+  return h('div', { key: props.seq, className: cls, onAnimationEnd: props.onDone }, props.text)
 }

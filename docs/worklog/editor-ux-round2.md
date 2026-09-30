@@ -61,3 +61,15 @@
 7. **启用开关独立操作**：服务端新端点 `POST /tasks/enabled`（`setEnabledDefinitionInline` 只改 enabled、值没变不落库、404=task-not-found、审计 task_updated）；客户端 `toggleTaskEnabled`；drawer `onToggleEnabled` 成功 Toast「任务已启用/已关闭」（`--below` 变体浮在 header 下）、失败开关回弹；成功同步 `initialDraftRef` 保持脏判定干净；开关旁联动「已启用/已关闭」。
 
 冒烟 **247 项全过**（+10：enabled 四条 + 产物六条）；typecheck/build 绿；真机验证待做（§四清单 5/6 已过时——快照 UI 已撤，以本节为准）。
+
+## 六、同日第三次返工（真机逐条）
+
+1. **每周档句式**：「每 4 周每周周一…」叠词修掉——N>1 ⇒「每 4 周周一、周二 09:00 执行」；恰好每周 ⇒「每周一、每周二 …」（前缀 key `editorSchedWeeklyDayPrefix`，en = 'every Mon'）。
+2. **间隔分钟档**：cron `*/N * * * *` 原本不带星期位 ⇒ 选了生效日也不生效；改为 `*/N * * * <dow>`，文案同步「周一、周三每 N 分钟执行一次」。
+3. **Toast 抽象共用（不许各处再手写）**：`toast-css.ts` 新增 `FloatingToast` 组件（text / tone / seq / below / onDone），四处手写（面板 failed、编辑器 saveErr、启用开关、附件失败）全部替换。
+4. **三档语义色**：success = `--dsw-alias-state-success-primary`（绿）、error = 默认红、neutral = `--dsw-alias-label-primary` 底 + `label-primary-inverted` 字（深色主题浅白灰 / 浅色主题近黑灰，正是用户要的反色面）。
+5. **「版本」开关高度**：与「编辑/预览」分段（`.dsh-tdt-ed-seg` padding3/段高22/字12）逐值对齐，不再忽高忽低。
+6. **版本条目**：弃卡片背景改**全宽虚线**（一条虚线拉通整栏、`li:last-child` 不画）；右侧改**固定槽** `.dsh-tdt-ed-ver-right`（104×18，时间与按钮同槽换显）⇒ hover 出按钮**绝不撑高行高**（此前上下蹦，用户点名）；双日期修掉——主文本只显示备注、无备注右侧显示唯一时间；主文本字号 11px 与右侧日期一致；面板 280 → **232px**。
+7. **派发失败 bug（`launch-error: cannot get property "agentTeams" without inject`）**：宿主 ctx 命名空间属性是 getter，**模块未 inject 时读取直接 throw** ⇒ `dispatch.ts` 无条件读 `ctx.agentTeams` 把整次派发炸掉（`ctx.goals` 同款隐患）。修复 = `readCtxProp` 护栏读（throw 归一为 undefined）⇒ agentTeam / goal 按既有语义降级单 Agent 单轮 + 告警留痕，不再阻塞派发。
+
+冒烟 **249 项全过**（+2）；typecheck/build 绿；真机验证待做。

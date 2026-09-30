@@ -413,6 +413,7 @@ window.__ModuleLoader__.load({
 			editorToggleOff: "任务已关闭",
 			editorSchedHourlyOnce: "每小时执行一次",
 			editorSchedNoDaySuffix: "，但还没选生效日",
+			editorSchedWeeklyDayPrefix: "每周",
 			editorRestoreAll: "找回全部",
 			editorRestoreAllTitle: "找回全部设置",
 			editorRestoreAllDesc: "确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。",
@@ -872,6 +873,7 @@ window.__ModuleLoader__.load({
 			editorToggleOff: "Task disabled",
 			editorSchedHourlyOnce: "runs hourly",
 			editorSchedNoDaySuffix: ", but no active day is selected",
+			editorSchedWeeklyDayPrefix: "every ",
 			editorRestoreAll: "Restore all",
 			editorRestoreAllTitle: "Restore all settings",
 			editorRestoreAllDesc: "Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.",
@@ -5839,19 +5841,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 /* 历史版本开关（用户 2026-09-30：与「编辑/预览」分段控件一模一样，只有一个「版本」段）——
    外层 = 官方 SegmentedControl 的轨道（interactive-bg-hover + padding 4 + radius md），
    内层 seg = 段位：默认透明底灰字，选中 = 官方选中态白亮片（bg-layer-1 + elevation-soft + 主字色）。 */
-.dsh-tdt-ed-histtoggle{appearance:none;display:inline-flex;align-items:stretch;padding:4px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));cursor:pointer;font:inherit;}
-.dsh-tdt-ed-histtoggle-seg{display:inline-flex;align-items:center;height:24px;padding:0 14px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:13px;line-height:20px;font-weight:500;white-space:nowrap;transition:color .12s ease,background .16s ease,box-shadow .16s ease;}
+/* 高度/字号/内距与「编辑/预览」分段（.dsh-tdt-ed-seg：padding3 + 段高22 + 字12）逐值一致，不忽高忽低。 */
+.dsh-tdt-ed-histtoggle{appearance:none;display:inline-flex;align-items:stretch;padding:3px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));cursor:pointer;font:inherit;}
+.dsh-tdt-ed-histtoggle-seg{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;transition:color .12s ease,background .16s ease,box-shadow .16s ease;}
 .dsh-tdt-ed-histtoggle:hover .dsh-tdt-ed-histtoggle-seg{color:var(--dsw-alias-label-primary,#1f2328);}
 .dsh-tdt-ed-histtoggle--on .dsh-tdt-ed-histtoggle-seg{background:var(--dsw-alias-bg-layer-1,rgba(255,255,255,.92));box-shadow:var(--dsw-elevation-soft,0 1px 4px rgba(0,0,0,.25));color:var(--dsw-alias-label-primary,#1f2328);}
-/* 版本条目（用户 2026-09-30：样式对齐附加文件列表——圆角卡片行、无分隔线）：
-   左 = 小尖括号图标；中 = 备注/时间（MarqueeText 超长省略 + hover 跑马灯，只在自己盒子里跑）；
-   右 = 常态时间小字，hover 换「使用（药丸）/ 移除（小字）」，行高恒定。 */
-.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;margin:0 0 8px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12));}
+/* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
+   右侧 = 固定宽高槽：常态时间小字、hover 换「使用（药丸）/ 移除（小字）」——槽位尺寸恒定，
+   hover 出按钮**绝不撑高行高**（此前按钮把行撑大上下蹦，用户点名）。 */
+.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.35));}
+.dsh-tdt-ed-ver:last-child{border-bottom:none;}
 .dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:12px;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-ed-ver-time{flex:none;font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:nowrap;}
-.dsh-tdt-ed-ver-actions{flex:none;display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-ver-use{appearance:none;border:none;border-radius:999px;padding:2px 10px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.2));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
+.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:11px;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-ed-ver-right{flex:none;position:relative;width:104px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
+.dsh-tdt-ed-ver-time{font-size:11px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:nowrap;}
+.dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
+.dsh-tdt-ed-ver-use{appearance:none;border:none;border-radius:999px;padding:1px 9px;background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.2));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
 .dsh-tdt-ed-ver-use:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.3));}
 .dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;}
 .dsh-tdt-ed-ver-del:hover{color:var(--dsw-alias-state-error-primary,#e5484d);}
@@ -37510,6 +37515,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
+/* 三档语义色（用户 2026-09-30：不许全红）——成功 = 绿（宿主 success token）、
+   中性 = 反色面（深色主题浅白灰、浅色主题近黑灰，走 label-primary / inverted 对），错误 = 默认红。 */
+.dsh-tdt-toast--success{background:var(--dsw-alias-state-success-primary,#2f9e44);}
+.dsh-tdt-toast--neutral{background:var(--dsw-alias-label-primary,#1f2328);color:var(--dsw-alias-label-primary-inverted,#fff);}
 `;
 		let injected = false;
 		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
@@ -37522,6 +37531,20 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			el.id = TOAST_STYLE_ID;
 			el.textContent = TOAST_CSS;
 			document.head.appendChild(el);
+		}
+		function FloatingToast(props) {
+			const tone = props.tone ?? "error";
+			const cls = [
+				"dsh-tdt-toast",
+				props.below === true ? "dsh-tdt-toast--below" : "",
+				tone === "success" ? "dsh-tdt-toast--success" : "",
+				tone === "neutral" ? "dsh-tdt-toast--neutral" : ""
+			].filter(Boolean).join(" ");
+			return (0, react.createElement)("div", {
+				key: props.seq,
+				className: cls,
+				onAnimationEnd: props.onDone
+			}, props.text);
 		}
 		//#endregion
 		//#region src/client/task-editor.tsx
@@ -37600,8 +37623,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (draft.scheduleKind === "interval") {
 				const step = Number.parseInt(draft.intervalStep, 10);
 				if (!Number.isFinite(step) || step <= 0) return null;
-				const dow = days === "" ? "*" : days;
-				return draft.intervalUnit === "minute" ? `*/${step} * * * *` : `0 */${step} * * ${dow}`;
+				return `*/${step} * * * ${days === "" ? "*" : days}`;
 			}
 			switch (draft.periodFreq) {
 				case "once": return null;
@@ -37650,20 +37672,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const time = /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : "09:00";
 			const step = Number.parseInt(draft.intervalStep, 10);
 			const stepN = Number.isFinite(step) && step > 0 ? step : 0;
-			const wd = weekdayText(t, [...draft.weekdays].sort((a, b) => a - b));
+			const days = [...draft.weekdays].sort((a, b) => a - b);
+			const wd = weekdayText(t, days);
 			if (draft.scheduleKind === "interval") {
 				if (stepN === 0) return t("editorSchedInvalidStep");
-				if (draft.intervalUnit === "minute") return t("editorSchedIntervalMin").replace("{n}", String(stepN));
-				const per = stepN === 1 ? t("editorSchedHourlyOnce") : t("editorSchedIntervalHour").replace("{n}", String(stepN));
+				const per = draft.intervalUnit === "minute" ? t("editorSchedIntervalMin").replace("{n}", String(stepN)) : stepN === 1 ? t("editorSchedHourlyOnce") : t("editorSchedIntervalHour").replace("{n}", String(stepN));
 				return wd === "" ? `${per}${t("editorSchedNoDaySuffix")}` : `${wd}${per}`;
 			}
 			if (draft.periodFreq === "once") return `${draft.date} ${time} ${t("editorSchedOnce")}`;
 			switch (draft.periodFreq) {
 				case "daily": return `${t("editorSchedDaily")} ${time} ${t("editorSchedRun")}`;
 				case "weekly": {
-					if (wd === "") return `${t("editorSchedWeekly")} ${time} ${t("editorSchedRun")}${t("editorSchedNoDaySuffix")}`;
 					const wstep = Number.parseInt(draft.weekStep, 10);
-					return `${Number.isFinite(wstep) && wstep > 1 ? t("editorSchedEveryNWeek").replace("{n}", String(wstep)) : ""}${t("editorSchedWeekly")}${wd} ${time} ${t("editorSchedRun")}`;
+					const everyN = Number.isFinite(wstep) && wstep > 1;
+					if (wd === "") return `${everyN ? t("editorSchedEveryNWeek").replace("{n}", String(wstep)) : t("editorSchedWeekly")} ${time} ${t("editorSchedRun")}${t("editorSchedNoDaySuffix")}`;
+					const dayText = everyN ? wd : days.map((d) => `${t("editorSchedWeeklyDayPrefix")}${t(WEEKDAY_KEYS[d - 1]).replace(/^周/, "")}`).join("、");
+					return `${everyN ? t("editorSchedEveryNWeek").replace("{n}", String(wstep)) : ""}${dayText} ${time} ${t("editorSchedRun")}`;
 				}
 				case "monthly": return `${t(`editorMonthMode_${draft.monthMode}`)}${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
 				case "quarterly": return `${t("editorSchedQuarterly").replace("{n}", draft.quarterMonth)} ${draft.monthDay} 日 ${time} ${t("editorSchedRun")}`;
@@ -38456,7 +38480,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				text: value,
 				labels: MD_LABELS
 			})), showVersions ? (0, react.createElement)("div", { style: {
-				flex: "0 0 280px",
+				flex: "0 0 232px",
 				borderLeft: `1px solid ${C$2.borderL4}`,
 				display: "flex",
 				flexDirection: "column",
@@ -38483,7 +38507,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, t("editorNoVersions")) : (0, react.createElement)("ul", { style: {
 				listStyle: "none",
 				margin: 0,
-				padding: "0 12px 12px",
+				padding: "0 0 8px",
 				overflow: "auto"
 			} }, versions.map((v) => (0, react.createElement)("li", {
 				key: v.file,
@@ -38497,7 +38521,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-ver-ic",
 				style: { transform: "rotate(-90deg)" }
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)(MarqueeText, { text: v.note !== "" ? v.note : formatVersionTime(v.ts) })), hoveredId === v.file ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react.createElement)("button", {
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)(MarqueeText, { text: v.note })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-ver-use",
 				onClick: () => {
@@ -38509,7 +38533,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setConfirmDeleteFile(v.file);
 				}
-			}, t("editorRemoveShort"))) : (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-time" }, formatVersionTime(v.ts))))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
+			}, t("editorRemoveShort"))) : (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-time" }, formatVersionTime(v.ts)))))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
 				t,
 				title: t("editorConfirmDeleteTitle"),
 				desc: t("editorConfirmDeleteDesc"),
@@ -39453,13 +39477,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			})), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, promptCard), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-section",
 				style: { position: "relative" }
-			}, attachmentsCard, uploadError !== null ? (0, react.createElement)("div", {
-				key: uploadError,
-				className: "dsh-tdt-toast",
-				onAnimationEnd: () => {
+			}, attachmentsCard, uploadError !== null ? (0, react.createElement)(FloatingToast, {
+				seq: uploadError,
+				tone: "error",
+				onDone: () => {
 					setUploadError(null);
-				}
-			}, uploadErrText(uploadError)) : null), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
+				},
+				text: uploadErrText(uploadError)
+			}) : null), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, scheduleCard), (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, depsBlock), advancedBlock);
 			const panelInner = editorOpen ? (0, react.createElement)(PromptEditorModal, {
 				t,
 				mode,
@@ -39497,14 +39522,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}), (0, react.createElement)("span", { style: {
 				fontSize: "12px",
 				color: "var(--dsw-alias-label-secondary,rgba(128,128,128,.95))"
-			} }, draft.enabled ? t("editorEnabledStateOn") : t("editorEnabledStateOff"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react.createElement)("div", {
-				key: enabledToast.seq,
-				className: "dsh-tdt-toast dsh-tdt-toast--below",
-				onAnimationEnd: () => {
+			} }, draft.enabled ? t("editorEnabledStateOn") : t("editorEnabledStateOff"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react.createElement)(FloatingToast, {
+				seq: enabledToast.seq,
+				tone: enabledToast.err ? "error" : "success",
+				below: true,
+				onDone: () => {
 					setEnabledToast(null);
 				},
-				style: enabledToast.err ? { background: "var(--dsw-alias-state-error-primary,#e5484d)" } : void 0
-			}, enabledToast.msg) : null, mode === "edit" ? (0, react.createElement)(Segmented, {
+				text: enabledToast.msg
+			}) : null, mode === "edit" ? (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-tabs",
 				value: tab,
 				options: [{
@@ -39547,13 +39573,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, t("editorReset")), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), resetHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
 				style: { margin: "0 8px 0 0" }
-			}, t("editorResetDone")) : null, saveErrToast !== null ? (0, react.createElement)("div", {
-				key: saveErrToast.seq,
-				className: "dsh-tdt-toast",
-				onAnimationEnd: () => {
+			}, t("editorResetDone")) : null, saveErrToast !== null ? (0, react.createElement)(FloatingToast, {
+				seq: saveErrToast.seq,
+				tone: "error",
+				onDone: () => {
 					setSaveErrToast(null);
-				}
-			}, saveErrToast.msg) : null, pendingHint ? (0, react.createElement)("span", {
+				},
+				text: saveErrToast.msg
+			}) : null, pendingHint ? (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-hint",
 				style: { margin: "0 8px 0 0" }
 			}, t("editorSavePending")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -40610,13 +40637,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setFailed(null);
 				},
 				disabled: saving || !dirty
-			}, t("discard"))), failed !== null ? (0, react.createElement)("div", {
-				key: failedKey,
-				className: "dsh-tdt-toast",
-				onAnimationEnd: () => {
+			}, t("discard"))), failed !== null ? (0, react.createElement)(FloatingToast, {
+				seq: failedKey,
+				tone: "error",
+				onDone: () => {
 					setFailed(null);
-				}
-			}, failed) : null, invalidToast.on ? (0, react.createElement)("div", {
+				},
+				text: failed
+			}) : null, invalidToast.on ? (0, react.createElement)("div", {
 				key: `inv-${invalidToast.key}`,
 				className: "dsh-tdt-toast dsh-tdt-toast--sticky"
 			}, t("invalidJson")) : null), (0, react.createElement)("h4", { style: sectionTitleStyle }, t("tasksParsedTitle")), taskRows.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("tasksParsedEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [

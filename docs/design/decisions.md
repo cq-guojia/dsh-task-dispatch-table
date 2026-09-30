@@ -202,3 +202,11 @@ gh api -X GET search/repositories -f q='<name> in:name' --jq '.items[].name' | g
 - 「版本」开关与「编辑/预览」分段**一模一样**（轨道 interactive-bg-hover + padding4 + 选中白亮片 bg-layer-1 + elevation-soft），弃 business 蓝底（用户主题下显绿）。
 - 版本条目：弃时钟图标改**小尖括号**、弃分隔线改**卡片行**（对齐附加文件列表）、主文本超长 hover 跑马灯（MarqueeText，只在自己盒子里跑不盖图标）、hover 右侧 = 「使用」小药丸 + 「移除」小字（11px，行高恒定）。
 - **启用开关独立操作**：编辑态点击即 `POST /tasks/enabled` 实时写回（只改 enabled 字段 + 审计，不走保存链路；值没变不落库），成功 Toast「任务已启用/已关闭」、失败开关回弹并报错；开关旁联动文字「已启用/已关闭」；写回成功同步脏判定基线（关弹窗不误问「放弃更改」）；新建态只改草稿统一保存。
+
+**修订二（同日第三轮真机反馈）**：
+- 每周档叠词修掉：N>1 ⇒「每 4 周周一、周二 09:00 执行」；恰好每周 ⇒「每周一、每周二 …」。
+- **间隔分钟档 cron 改带星期位** `*/N * * * <dow>`（原 `*/N * * * *` 无视生效日），文案同步。
+- **Toast 抽象共用 `FloatingToast`**（toast-css.ts：text/tone/seq/below/onDone），四处手写全替换；**三档语义色** success 绿（`state-success-primary`）/ error 红 / neutral 反色面（`label-primary` 底 + `label-primary-inverted` 字，深浅自适应）。
+- 「版本」开关尺寸与「编辑/预览」分段逐值对齐（padding3/段高22/字12）。
+- 版本条目：全宽虚线分隔（拉通整栏）、右侧固定槽（104×18，时间/按钮同槽换显 ⇒ hover 不撑高）、双日期修掉（主文本=备注，无备注只显一处时间）、主文本 11px、面板 280→232px。
+- **派发 launch-error 根因**：宿主 ctx 命名空间属性是 getter、模块未 inject 时读取直接 throw ⇒ `readCtxProp` 护栏读（throw 归一 undefined），agentTeams / goals 探测按既有语义降级，不再炸派发。
