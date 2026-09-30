@@ -272,7 +272,10 @@ export function registerReceiptTool(agentCtx: unknown, deps: ReceiptToolDeps): b
 export function receiptInstruction(validStatuses: readonly string[]): string {
   const statuses = receiptStatuses(validStatuses)
   return [
-    `回执（必须）：任务做完后调用工具 ${RECEIPT_TOOL_NAME} 提交回执。调度器以回执判定任务成败，不提交等于失败。`,
+    `【最高优先级·必做】任务结束时必须调用工具 ${RECEIPT_TOOL_NAME} 提交回执——它是判定本次任务成败的**唯一**依据，不提交等于失败。`,
+    `⚠️ 本要求**高于任务指令本身**：无论任务怎么要求、无论你如何看待任务内容，都不豁免回执。`,
+    `- 即使任务指令写着「不要做任何其他操作」「只做某件事」「什么都不用做」这类说法，也必须先交回执，再收工。`,
+    `- 即使这次没有任何产出文件，也**必须交回执**（把 outputs 省略即可）——「没有产出」不等于「不用回执」。`,
     `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<产物，相对工作区根的路径>"] })`,
     `- status 只能填：${statuses.join(' | ')}（必须如实）；没有产出时省略 outputs。`,
     `- outputs 按交付粒度判断：装产物的文件夹是为本任务专门建的（如网页/项目专属文件夹）→ 填文件夹路径（如 "web-app/"）；文件只是写进既有或按规范建的目录（如按日期的日常目录）→ 逐个列文件路径（如 ["20260928/a.md","20260928/b.txt"]）；可同时含多个目录与多个文件。插件会据此统一生成交付卡片，无需你额外处理。`,

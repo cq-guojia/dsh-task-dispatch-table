@@ -290,11 +290,12 @@ export function scheduleSegments(spec: ScheduleSpec, t: T): ScheduleSegment[] {
     const per = spec.intervalUnit === 'minute'
       ? fmt(t('editorSchedIntervalMin'), { n: String(spec.intervalStep) })
       : (spec.intervalStep === 1 ? t('editorSchedHourlyOnce') : fmt(t('editorSchedIntervalHour'), { n: String(spec.intervalStep) }))
-    const wd = weekdayText(t, spec.weekdays)
-    // 生效日在前、不加括号（用户 2026-09-30）；关键字片段单独成段 ⇒ 可加样式。
-    return wd === ''
-      ? [{ text: per, emphasis: true }, { text: t('editorSchedNoDaySuffix') }]
-      : [{ text: wd }, { text: per, emphasis: true }]
+    // 生效日：**全选 7 天（全天候）不写「每天」**——间隔本身就含连续义，写出来是废话（用户 2026-09-30：
+    // 「不用去提『每天』，它就是每 10 分钟执行一次」）；只有限定星期（子集，周末确实不跑）时才写星期。
+    // 未选星期仍提示「还没选生效日」。
+    if (spec.weekdays.length === 0) return [{ text: per, emphasis: true }, { text: t('editorSchedNoDaySuffix') }]
+    if (spec.weekdays.length >= 7) return [{ text: per, emphasis: true }]
+    return [{ text: weekdayText(t, spec.weekdays) }, { text: per, emphasis: true }]
   }
   // periodic
   switch (spec.freq) {

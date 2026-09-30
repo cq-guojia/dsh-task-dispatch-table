@@ -211,6 +211,11 @@ export interface TaskEditorDraft {
   attachments: Attachment[]
   /** 提示词版本历史，见 {@link PromptVersion}。 */
   versions: PromptVersion[]
+  /**
+   * 创建时间（**表单不管理**，只做原样透传，用户 2026-09-30）：编辑保存必须把它带回定义，
+   * 否则卡片「创建于 X」会消失。服务端更新时也会从原定义保留一份，这里是**双保险**。
+   */
+  createdAt?: string
   scheduleKind: ScheduleKind
   periodFreq: PeriodFreq
   /** 周一 = 1 … 周日 = 7（周期-每周/双周 与 间隔 共用）。 */
@@ -434,6 +439,8 @@ export function draftToDefinitionJson(draft: TaskEditorDraft): string {
   }
   if (draft.title.trim() !== '') definition.title = draft.title.trim()
   if (draft.code.trim() !== '') definition.code = draft.code.trim()
+  // 创建时间原样带回（表单不管理它，只透传）—— 用户 2026-09-30：编辑保存不能把「创建于」弄丢。
+  if (draft.createdAt !== undefined && draft.createdAt !== '') definition.createdAt = draft.createdAt
   if (draft.deps.length > 0) definition.depends_on = draft.deps.filter(dep => dep.task !== '')
   if (draft.attachments.length > 0) definition.attachments = draft.attachments
   return JSON.stringify(definition, null, 2)
@@ -620,6 +627,8 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
         }))
       : [],
     versions: [],
+    // 创建时间原样反解进草稿（表单不管理它，只透传）——保存时再写回，双保险防「创建于」消失。
+    ...(typeof definition.createdAt === 'string' && definition.createdAt !== '' ? { createdAt: definition.createdAt } : {}),
   }
 
   const start = typeof schedule.start === 'string' ? schedule.start : ''
@@ -2035,10 +2044,14 @@ export function TaskEditorDrawer(props: {
             onClick: () => { setConfirmDeleteTask(true) },
           }, t('editorDeleteTask'))
           : null,
-        h(Button, {
-          variant: 'ghost', size: 'sm',
-          onClick: () => { setConfirmReset(true) },
-        }, t('editorReset')),
+        // 「重置」只在**改过内容**时才出现（用户 2026-09-30）：直接复用关闭确认那份脏判定
+        // （`dirty` = 当前草稿 ≠ 打开时快照）；重置后草稿回到初始 ⇒ dirty 变 false ⇒ 按钮自己消失。
+        dirty
+          ? h(Button, {
+            variant: 'ghost', size: 'sm',
+            onClick: () => { setConfirmReset(true) },
+          }, t('editorReset'))
+          : null,
         h('span', { style: { flex: '1 1 auto' } }),
         problemsToast !== null
           ? h(FloatingToast, {

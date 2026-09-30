@@ -6256,11 +6256,15 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (spec.kind === "interval") {
 				if (spec.intervalStep <= 0) return [{ text: t("editorSchedInvalidStep") }];
 				const per = spec.intervalUnit === "minute" ? fmt(t("editorSchedIntervalMin"), { n: String(spec.intervalStep) }) : spec.intervalStep === 1 ? t("editorSchedHourlyOnce") : fmt(t("editorSchedIntervalHour"), { n: String(spec.intervalStep) });
-				const wd = weekdayText(t, spec.weekdays);
-				return wd === "" ? [{
+				if (spec.weekdays.length === 0) return [{
 					text: per,
 					emphasis: true
-				}, { text: t("editorSchedNoDaySuffix") }] : [{ text: wd }, {
+				}, { text: t("editorSchedNoDaySuffix") }];
+				if (spec.weekdays.length >= 7) return [{
+					text: per,
+					emphasis: true
+				}];
+				return [{ text: weekdayText(t, spec.weekdays) }, {
 					text: per,
 					emphasis: true
 				}];
@@ -38139,6 +38143,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			};
 			if (draft.title.trim() !== "") definition.title = draft.title.trim();
 			if (draft.code.trim() !== "") definition.code = draft.code.trim();
+			if (draft.createdAt !== void 0 && draft.createdAt !== "") definition.createdAt = draft.createdAt;
 			if (draft.deps.length > 0) definition.depends_on = draft.deps.filter((dep) => dep.task !== "");
 			if (draft.attachments.length > 0) definition.attachments = draft.attachments;
 			return JSON.stringify(definition, null, 2);
@@ -38274,7 +38279,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					ref: item.ref,
 					...typeof item.workspace === "string" ? { workspace: item.workspace } : {}
 				})) : [],
-				versions: []
+				versions: [],
+				...typeof definition.createdAt === "string" && definition.createdAt !== "" ? { createdAt: definition.createdAt } : {}
 			};
 			const start = typeof schedule.start === "string" ? schedule.start : "";
 			const once = typeof schedule.once === "string" ? schedule.once : "";
@@ -39898,13 +39904,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClick: () => {
 					setConfirmDeleteTask(true);
 				}
-			}, t("editorDeleteTask")) : null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, t("editorDeleteTask")) : null, dirty ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
 				onClick: () => {
 					setConfirmReset(true);
 				}
-			}, t("editorReset")), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), problemsToast !== null ? (0, react.createElement)(FloatingToast, {
+			}, t("editorReset")) : null, (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), problemsToast !== null ? (0, react.createElement)(FloatingToast, {
 				seq: problemsToast.seq,
 				tone: "error",
 				onDone: () => {

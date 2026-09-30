@@ -243,7 +243,16 @@ const WORKSPACE_PLACEHOLDER = '{{workspace}}';
  * prompt / manual / validStatuses / resolvedDeps 全部来自派发快照，与任务设置无关。
  */
 export function buildMessage(snapshot, workspacePath, logicalDate, teamMode = false) {
-    const lines = [snapshot.prompt, '', `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`];
+    // ⚠️ 回执说明**放最前**（用户 2026-09-30 拍板）：它是判定成败的唯一依据，必须压过任务指令本身——
+    // 真机已发生「任务指令写着『不要做任何其他操作』⇒ 模型把回执也当成多余操作跳过、要追问第二次才交」。
+    // 只放最前、不首尾各放一次（用户明确说没必要）。
+    const lines = [
+        receiptInstruction(snapshot.validStatuses),
+        '',
+        snapshot.prompt,
+        '',
+        `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`,
+    ];
     if (snapshot.manual !== null && snapshot.manual.trim() !== '') {
         lines.push(`任务手册：先读工作区内 ${snapshot.manual}，再按手册执行。`);
     }

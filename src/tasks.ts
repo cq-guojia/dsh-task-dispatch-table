@@ -422,6 +422,78 @@ export function logicalDateOf(date: Date, timeZone: string | undefined): string 
   }).format(date)
 }
 
+/** 间隔型任务的解析结果；非间隔型（或认不出）返回 null。 */
+interface IntervalSpec {
+  unit: 'minute' | 'hour'
+  step: number
+  /** cron 星期位（ISO：周一 = 1 … 周日 = 7）；null = 不限（每天）。 */
+  dows: readonly number[] | null
+}
+
+/**
+ * 认「间隔型」cron：分钟档 = `*&#47;N * * * <dow>`；小时档 = `M *&#47;N * * <dow>`。
+ * 认不出返回 null（走普通 cron 路径）。
+ */
+function intervalSpecOf(task: TaskDefinition | TaskDefinitionInput): IntervalSpec | null {
+  const cron = task.schedule.cron
+  if (cron === undefined) return null
+  const parts = cron.trim().split(/\s+/)
+  if (parts.length !== 5) return null
+  const [minute, hour, dom, mon, dow] = parts
+  if (dom !== '*' || mon !== '*') return null
+  const mStep = /^\*\/(\d+)$/.exec(minute)
+  const hStep = /^\*\/(\d+)$/.exec(hour)
+  let unit: 'minute' | 'hour'
+  let step: number
+  if (mStep !== null && hour === '*') { unit = 'minute'; step = Number(mStep[1]) }
+  else if (hStep !== null && /^\d+$/.test(minute)) { unit = 'hour'; step = Number(hStep[1]) }
+  else return null
+  if (!Number.isFinite(step) || step <= 0) return null
+  if (dow === '*') return { unit, step, dows: null }
+  const dows = dow.split(',').map(Number)
+    .filter(n => Number.isInteger(n) && n >= 0 && n <= 7)
+    .map(n => (n === 0 ? 7 : n))
+  return dows.length === 0 ? null : { unit, step, dows }
+}
+
+/** 某时刻在任务时区里的 ISO 星期（周一 = 1 … 周日 = 7）。 */
+function isoWeekdayOf(date: Date, timezone?: string): number {
+  const day = logicalDateOf(date, timezone)
+  const wd = new Date(`${day}T00:00:00Z`).getUTCDay()
+  return wd === 0 ? 7 : wd
+}
+
+/**
+ * 间隔型刻度 = **锚点（任务开始时间）+ k×步长**（用户 2026-09-30 拍板）：
+ * 「18:03 起每 10 分钟」就该是 18:03 / 18:13 / 18:23…，而不是 cron `*&#47;10` 的**整点对齐**（:00/:10/…）。
+ * 锚点缺失（老数据 / 手写 JSON）⇒ 返回 null，退回 cron 行为（不猜）。
+ */
+function anchoredIntervalSlots(
+  task: TaskDefinition | TaskDefinitionInput,
+  iv: IntervalSpec,
+  from: Date,
+  to: Date,
+  cap: number,
+): Date[] | null {
+  const startIso = task.schedule.start
+  if (startIso === undefined || startIso === '') return null
+  const anchor = wallClockToAbsolute(startIso, task.schedule.timezone)
+  if (anchor === null) return null
+  const stepMs = (iv.unit === 'minute' ? iv.step : iv.step * 60) * 60_000
+  const anchorMs = anchor.getTime()
+  // 直接跳到「第一个 ≥ from 的刻度」（O(1)，不做线性扫描）；锚点之前不产刻度。
+  let k = Math.max(0, Math.ceil((from.getTime() - anchorMs) / stepMs))
+  const out: Date[] = []
+  for (let i = 0; i < cap; i++, k++) {
+    const t = anchorMs + k * stepMs
+    if (t >= to.getTime()) break
+    const slot = new Date(t)
+    if (iv.dows !== null && !iv.dows.includes(isoWeekdayOf(slot, task.schedule.timezone))) continue
+    out.push(slot)
+  }
+  return out
+}
+
 /**
  * cron 在 `[from, to)` 区间内的**全部刻度**（决策 25 的核心改动）。
  *
@@ -434,6 +506,12 @@ export function logicalDateOf(date: Date, timeZone: string | undefined): string 
 export function scheduledSlotsFor(task: TaskDefinition | TaskDefinitionInput, from: Date, to: Date, cap = 20_000): Date[] {
   const cron = task.schedule.cron
   if (cron === undefined) return [] // once 任务不走 cron（互斥校验保证恰有其一）
+  // 间隔型：按「锚点 + k×步长」生成（见 anchoredIntervalSlots）。锚点缺失才退回下面的 cron 对齐。
+  const iv = intervalSpecOf(task)
+  if (iv !== null) {
+    const anchored = anchoredIntervalSlots(task, iv, from, to, cap)
+    if (anchored !== null) return filterSlotsBySchedule(task, anchored)
+  }
   const interval = CronExpressionParser.parse(cron, {
     // -1ms：保证恰好落在 from 上的刻度不会被漏掉（cron-parser 的 next() 是严格大于）。
     currentDate: new Date(from.getTime() - 1),

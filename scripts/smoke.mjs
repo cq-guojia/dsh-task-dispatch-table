@@ -85,6 +85,27 @@ try {
   const e2Slots = scheduledSlotsFor(every2, new Date('2026-09-28T00:00:00Z'), new Date('2026-11-10T00:00:00Z'))
   check('每 2 周：刻度均落在周一 09:00', e2Slots.length > 0 && e2Slots.every(s => s.getUTCDay() === 1 && s.getUTCHours() === 9))
   check('每 2 周：相邻刻度间隔 14 天', e2Slots.every((s, i) => i === 0 || (s.getTime() - e2Slots[i - 1].getTime() === 14 * 24 * 3600 * 1000)))
+
+  // ── 间隔型：刻度 = 锚点（任务开始时间）+ k×步长（用户 2026-09-30 拍板，不再整点对齐）──
+  const anchored = def({ id: 'anchored', schedule: { cron: '*/10 * * * *', timezone: 'UTC', window: 'PT4H', start: '2026-09-30T18:03' } })
+  const aSlots = scheduledSlotsFor(anchored, new Date('2026-09-30T18:00:00Z'), new Date('2026-09-30T19:00:00Z'))
+  check('间隔锚点：18:03 起每 10 分钟 ⇒ 18:03 / 18:13 / …（不是 :00 / :10 整点）',
+    aSlots.length === 6 && aSlots[0].toISOString() === '2026-09-30T18:03:00.000Z' && aSlots[1].toISOString() === '2026-09-30T18:13:00.000Z',
+    `实际 ${aSlots.slice(0, 3).map(s => s.toISOString()).join(',')}`)
+  check('间隔锚点：锚点之前不产刻度（开始时间是下界）',
+    scheduledSlotsFor(anchored, new Date('2026-09-30T17:00:00Z'), new Date('2026-09-30T18:20:00Z'))
+      .every(s => s.getTime() >= Date.parse('2026-09-30T18:03:00.000Z')))
+  const anchoredHour = def({ id: 'ah', schedule: { cron: '0 */2 * * *', timezone: 'UTC', window: 'PT4H', start: '2026-09-30T18:30' } })
+  const hSlots = scheduledSlotsFor(anchoredHour, new Date('2026-09-30T18:00:00Z'), new Date('2026-10-01T01:00:00Z'))
+  check('间隔锚点：小时档同理（18:30 起每 2 小时 ⇒ 18:30 / 20:30 …）',
+    hSlots.length === 4 && hSlots[0].toISOString() === '2026-09-30T18:30:00.000Z' && hSlots[1].toISOString() === '2026-09-30T20:30:00.000Z')
+  const anchoredWeek = def({ id: 'aw', schedule: { cron: '*/10 * * * 1,2,3,4,5', timezone: 'UTC', window: 'PT4H', start: '2026-09-30T18:03' } })
+  const wSlots = scheduledSlotsFor(anchoredWeek, new Date('2026-09-30T18:00:00Z'), new Date('2026-10-05T00:00:00Z'))
+  check('间隔锚点：星期位照旧生效（周一~周五，周末不产刻度）',
+    wSlots.length > 0 && wSlots.every(s => s.getUTCDay() >= 1 && s.getUTCDay() <= 5))
+  const noStart = def({ id: 'ns', schedule: { cron: '*/10 * * * *', timezone: 'UTC', window: 'PT4H' } })
+  check('间隔锚点：锚点缺失（老数据 / 手写）⇒ 退回 cron 整点对齐，不猜',
+    scheduledSlotsFor(noStart, new Date('2026-09-30T18:00:00Z'), new Date('2026-09-30T19:00:00Z'))[0].toISOString() === '2026-09-30T18:00:00.000Z')
   check('每 2 周：首刻 = 锚点之后的第一个周一',
     e2Slots.length > 0 && e2Slots[0].getTime() >= Date.parse(`${anchor}:00Z`)
       && (e2Slots[0].getTime() - Date.parse(`${anchor}:00Z`)) < 7 * 24 * 3600 * 1000)
@@ -888,6 +909,15 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
   delete snapNoDeps.resolvedDeps
   const msgNoDep = buildMessage(snapNoDeps, '/ws/down', '2026-09-26')
   check('无依赖任务的消息不含上游依赖段（旧行为不变）', !msgNoDep.content[0].text.includes('上游依赖'))
+  // 用户 2026-09-30：回执说明必须**压过任务指令**（真机上「不要做任何其他操作」被理解成连回执也跳过），
+  // 且要**置顶**（不首尾各放）。文案里用通用说法，不举具体那句误写的任务指令。
+  {
+    const text = msgNoDep.content[0].text
+    const iReceipt = text.indexOf('【最高优先级·必做】')
+    check('回执说明置于任务内容之前 + 含「高于任务指令本身」与「没有产出也要回执」',
+      iReceipt >= 0 && text.indexOf('任务实例：') > iReceipt
+      && text.includes('高于任务指令本身') && text.includes('不等于「不用回执」'))
+  }
   const msgUndeclared = buildMessage({
     ...snapWithDeps,
     resolvedDeps: [{ task: 'D', semantics: 'latest_success', instanceId: upId, scheduledAt: '2026-09-26T12:30:00.000Z', sessionId: null, workspacePath: null, outputs: [] }],
