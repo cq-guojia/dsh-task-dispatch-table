@@ -232,13 +232,7 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:14px;line-height:1.7;word-break:break-word;}
-/* md 两态切换（用户 2026-09-28 定样式，2026-09-28 二次定：放到顶栏按钮组里）：
-   官方分段控件（预览|源码），灰底圆角容器 + 选中段对比胶囊；绝对定位已废弃（不再 overlay 内容区）。 */
-.dsh-tdt-sv-seg{display:inline-flex;align-items:center;gap:2px;border-radius:8px;background:var(--dsw-alias-interactive-bg,rgba(128,128,128,.14));padding:2px;}
-.dsh-tdt-sv-seg-btn{appearance:none;font:inherit;font-size:12px;line-height:18px;height:20px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;white-space:nowrap;}
-.dsh-tdt-sv-seg-btn:hover{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-00,#fff);color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.18);}
-body[data-ds-dark-theme] .dsh-tdt-sv-seg-btn[aria-pressed=true]{background:var(--dsw-static-neutral-900,#111);color:var(--dsw-static-neutral-00,#fff);}
+
 /* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面按容器宽度布局。
    ⚠️ ocOr 语义 = 官方类命中时我方兜底类**不挂**（officialClass ?? fallback，两者只取其一）
    ⇒ 作用域一律用 [data-code-preview]：官方 CodeBody（client.js:5042）与我方兜底 div

@@ -13,6 +13,7 @@
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
 import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
+import { Segmented } from './ui'
 import {
   FileTypeIcon,
   IconCheckOutlineRegular,
@@ -796,14 +797,17 @@ export function FileBrowser(props: {
             viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1))),
         h('div', { className: 'dsh-tdt-sv-head-actions' },
           isMdPreview
-            ? h('div', {
-              className: 'dsh-tdt-sv-seg',
-              role: 'group',
-              'aria-label': t('previewMdSwitchAria'),
-            },
-              h('button', { type: 'button', className: 'dsh-tdt-sv-seg-btn', 'aria-pressed': !sourceView, onClick: () => { setSourceView(false) } }, t('previewRender')),
-              h('button', { type: 'button', className: 'dsh-tdt-sv-seg-btn', 'aria-pressed': sourceView, onClick: () => { setSourceView(true) } }, t('previewSource')),
-            )
+            ?             h(Segmented, {
+              size: 'sm',
+              variant: 'default',
+              label: t('previewMdSwitchAria'),
+              value: sourceView ? 'source' : 'render',
+              items: [
+                { value: 'render', label: t('previewRender') },
+                { value: 'source', label: t('previewSource') },
+              ],
+              onChange: (next: string) => { setSourceView(next === 'source') },
+            })
             : null,
           tooled(t('previewCopyPath'),
             h('button', {

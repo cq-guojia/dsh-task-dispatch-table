@@ -904,9 +904,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('unwrapEnvelope') && clientJs.includes('ok === false'))
   check('文本渲染照官方 CodeBody（CodeBlock + lineNumbers + languageForPath）',
     clientJs.includes('languageForPath') && clientJs.includes('lineNumbers'))
-  check('md 两态：渲染视图 ⇄ 源码（官方分段控件放在顶栏按钮组，不飘进内容区）',
+  check('md 两态：渲染视图 ⇄ 源码 已迁统一 Segmented（顶栏按钮组，不飘进内容区；旧自绘 sv-seg / 浮层 mdbar·mdwrap 已删）',
     clientJs.includes('previewSource') && clientJs.includes('previewRender')
-      && clientJs.includes('dsh-tdt-sv-seg') && !clientJs.includes('dsh-tdt-sv-preview-mdbar')
+      && !clientJs.includes('dsh-tdt-sv-seg') && !clientJs.includes('dsh-tdt-sv-seg-btn')
+      && !clientJs.includes('dsh-tdt-sv-preview-mdbar')
       && !clientJs.includes('dsh-tdt-sv-preview-mdwrap'))
   check('顶栏按钮组（复制 / 刷新 / 关闭，图标钮无中文）',
     clientJs.includes('dsh-tdt-sv-head-btn') && clientJs.includes('previewRefresh')
@@ -1614,8 +1615,10 @@ console.log('\n[14] runtime-index')
     check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',
       !p1Js.includes('segTrackStyle') && !p1Js.includes('segStyle') && !p1Js.includes('tabStyle')
       && !p1Js.includes('countBadge') && !p1Js.includes('segmentStyle') && !p1Js.includes('segmentedStyle'))
-    check('P1 只迁这三处（预览两态等其余分段仍按原样，留给后续分期）',
-      p1Js.includes('dsh-tdt-sv-seg') && p1Js.includes('dsh-tdt-ed-histtoggle'))
+    check('预览 渲染/源码 已迁到统一 Segmented（自绘 sv-seg + 深色特判已删；版本开关仍保留单段 toggle 不纳入分段）',
+      !p1Js.includes('dsh-tdt-sv-seg') && !p1Js.includes('dsh-tdt-sv-seg-btn')
+      && p1Js.includes('previewRender') && p1Js.includes('previewSource')
+      && p1Js.includes('dsh-tdt-ed-histtoggle'))
   }
 
   // ── 17. UI 基础层 P1b：编辑器分段控件也归一（删官方薄封装 + 周几多选走统一件）──

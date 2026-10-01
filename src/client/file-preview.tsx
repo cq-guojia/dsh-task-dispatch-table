@@ -15,6 +15,7 @@
 // readBytes(sessionId, path, ...) → {offset, data: Uint8Array, eof, ...}（全量 ≤32MiB）。
 import { Component, createElement as h, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import { Segmented } from './ui'
 import {
   CodeBlock,
   IconCheckOutlineRegular,
@@ -508,24 +509,17 @@ export function FilePreviewPanel(props: {
       ),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
         isMd
-          ? h('div', {
-              className: 'dsh-tdt-sv-seg',
-              role: 'group',
-              'aria-label': t('previewMdSwitchAria'),
-            },
-            h('button', {
-              type: 'button',
-              className: 'dsh-tdt-sv-seg-btn',
-              'aria-pressed': !sourceView,
-              onClick: () => { setSourceView(false) },
-            }, t('previewRender')),
-            h('button', {
-              type: 'button',
-              className: 'dsh-tdt-sv-seg-btn',
-              'aria-pressed': sourceView,
-              onClick: () => { setSourceView(true) },
-            }, t('previewSource')),
-            )
+          ? h(Segmented, {
+              size: 'sm',
+              variant: 'default',
+              label: t('previewMdSwitchAria'),
+              value: sourceView ? 'source' : 'render',
+              items: [
+                { value: 'render', label: t('previewRender') },
+                { value: 'source', label: t('previewSource') },
+              ],
+              onChange: (next: string) => { setSourceView(next === 'source') },
+            })
           : null,
         tooled(t('previewCopyPath'),
           h('button', {
