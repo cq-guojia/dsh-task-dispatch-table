@@ -38,3 +38,4 @@
 | 10-01 | UI 基础层收口（对齐 + 死代码清理） | 编号/名称满行、允许延迟与间隔回标准高、三下拉限宽+可收缩省略、问号统一去底色且可弹气泡、列表搜索框补 `box-sizing` 修 2px、过滤行/卡片底栏/头部控件同档对齐；input/前缀框/数字框/按钮圆角统一 `radius-md`、字号跟档；清死 CSS 15 条并补回记录表头吸顶 | [worklog/ui-alignment-round.md](worklog/ui-alignment-round.md) |
 | 10-01 | 真机验证批次（主界面 / 高级区 / 表单弹窗 / 附加文件选择+上传 / UI 基础层收口） | 用户 10-01 复核五项真机验收通过，PROGRESS §1.2 待验项结清；验收清单见各 worklog | [worklog/main-panel.md](worklog/main-panel.md) §六/§8 · [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §十八/§二十一 · [worklog/attachments-upload.md](worklog/attachments-upload.md) §四 · [worklog/ui-alignment-round.md](worklog/ui-alignment-round.md) §五 |
 | 10-01 | 代码侧小收尾 | 删 `manualAt` 死状态（全仓未调用）+ 同步 5 处过时「刷新」注释（index.ts:174/488-490、task-list.tsx:75/80/1353）；冒烟 390/0、build 绿 | 本文件 §三 |
+| 10-01 | 新增/编辑任务（U16）真机验收 | 用户装 dist/ 简单验收通过（保存链路/版本/删除/审计/附件）；问题后续反馈再回改 | [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md) §四 |

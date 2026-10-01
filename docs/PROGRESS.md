@@ -21,12 +21,11 @@
 
 | 事项 | 状态 | 真机验证清单 |
 |---|---|---|
-| 新增 / 编辑任务（保存链路 / 版本 / 删除 / 审计） | 🔵 落码（冒烟 236）⏳ **真机验证待做** | [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md) §四 |
-| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 落码（冒烟 364/0）⏳ **早期特糙、待迭代** | [worklog/task-expand-panels.md](worklog/task-expand-panels.md) §六 |
+| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 落码（冒烟 364/0）⏳ **删除已验；展开三面板仍特糙、待迭代** | [worklog/task-expand-panels.md](worklog/task-expand-panels.md) §六 |
 | UI 收口 + Agent 权限选择器 | ✅ 封卷（随主界面复验） | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 |
 | 编辑器 UX 第二轮 | ✅ 结案（随主界面复验） | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
 
-> 已验项（用户 2026-10-01 复核）已移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)：主界面+运行态摘要、高级区第二轮+多 Agent 协作、表单弹窗观感第五轮+脏判定、附加文件选择+上传（U15①）、UI 基础层收口（冒烟 390）。
+> 已验项（用户 2026-10-01 复核）已移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)：主界面+运行态摘要、高级区第二轮+多 Agent 协作、表单弹窗观感第五轮+脏判定、附加文件选择+上传（U15①）、UI 基础层收口（冒烟 390）、新增/编辑任务（U16，用户简单验收、问题后续反馈）。
 
 ---
 
@@ -64,7 +63,7 @@
 > 文档体系整理已于 2026-10-01 结案（见 [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md)）。以下为在办事项。
 
 1. ~~**UI 基础层统一（样式专项）**~~ ✅ **已完成封卷（2026-10-01）** —— P0–P6 + 尺寸/圆角/字号归一 + 死代码清理，冒烟 390/0；结案行见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)，剩余「待抽象」登记为 **U20** 与 [`ui-style-guide.md`](design/ui-style-guide.md) §三。
-2. **真机验证**（用户装 `dist/` 实测）：剩 **新增/编辑任务（U16）** 与 **任务展开三面板** 两条待验，清单见 §1.2 表；主界面 / 高级区 / 表单弹窗 / 附加文件 / UI 收口 已验（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）。
+2. **真机验证**（用户装 `dist/` 实测）：剩 **任务展开三面板**（删除已验、展开三面板待迭代）；新增/编辑（U16）用户 10-01 简单验收、问题后续反馈；其余已验见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)。
 3. ✅ **代码侧小收尾（2026-10-01 完成）**：删 `manualAt` 死状态（全仓 `setManualAt` 从未调用）+ 同步 5 处过时「刷新」注释（实际坐标 `index.ts:174` / `index.ts:488-490` / `task-list.tsx:75` / `task-list.tsx:80` / `task-list.tsx:1353`；原记的 `index.ts:205` / `task-list.tsx:1406` 已漂移）。冒烟 390/0、build 绿。
 
 
