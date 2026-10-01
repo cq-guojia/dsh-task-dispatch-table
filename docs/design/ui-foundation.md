@@ -213,7 +213,7 @@ body[data-ds-dark-theme]{
 | 编辑器「编辑 / 预览」「单次 / 周期 / 间隔」「基础信息 / 执行记录」 | 官方件 + `--seg` 覆写（指示器算式脆弱） | ✅ P1b：同一个 `Segmented`（不再覆写官方指示器） |
 | 星期选择（多选，官方不支持） | `editor-fields.tsx` 自绘 | ✅ P1b：同一个 `Segmented multiple` |
 | 版本开关（单段） | `task-editor-css.ts:54-57` 自绘 | `Segmented`（版本开关当前仍是单段 toggle，保持现状，未纳入分段） |
-| 预览「渲染 / 源码」 | `archive-session-css.ts:237-241` 自绘 + 深色特判 | `Segmented size="sm" variant="default"`（不再需要深色特判；P1b 未做，留待后续） |
+| 预览「渲染 / 源码」 | `archive-session-css.ts` 自绘 + 深色特判 | ✅ P1b：同一个 `Segmented size="sm" variant="default"`（深色特判已删，由 token 自动跟随明暗） |
 
 ### 5.2 其它控件
 
