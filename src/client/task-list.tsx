@@ -808,7 +808,7 @@ function TaskExpandPanel(props: {
   /** 产出文件点开（U11 预览面单一入口；undefined = 预览面不可用 ⇒ chips 降级不可点）。 */
   onOpenFile?: (sessionId: string, path: string) => void
   /** 会话弹窗（undefined = 会话面不可用 ⇒ 不出链接）。 */
-  onOpenSession?: (sessionId: string, heading: string) => void
+  onOpenSession?: (sessionId: string, heading: string, outputs?: string[]) => void
 }) {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
@@ -1029,7 +1029,7 @@ function TaskExpandPanel(props: {
                             style: { ...plainIconBtnStyle, width: 'auto', fontSize: 'var(--tdt-font-md)' },
                             onClick: (event: { stopPropagation(): void }) => {
                               event.stopPropagation()
-                              if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid, row.title)
+                              if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid, row.title, outputs)
                             },
                           }, '…')
                           : null,
@@ -1041,7 +1041,7 @@ function TaskExpandPanel(props: {
                       ? h('button', {
                         type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
                         style: plainIconBtnStyle,
-                        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title) },
+                        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title, outputs) },
                       }, h(IconNewChatOutlineRegular, { size: 16 }))
                       : null,
                   ),
@@ -1063,7 +1063,7 @@ function TaskExpandPanel(props: {
                           ? (onOpenSession !== undefined
                             ? h(Button, {
                               variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link',
-                              onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenSession(sid, row.title) },
+                              onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenSession(sid, row.title, outputs) },
                             }, `↗ ${t('viewSession')}`)
                             : h('span', null, `${t('colSession')}：${sid.slice(0, 8)}`))
                           : null,
@@ -1226,7 +1226,7 @@ function TaskCard(props: {
   /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（由父级 Toast 展示）。 */
   onDelete: (id: string) => Promise<string | null>
   onOpenFile?: (sessionId: string, path: string) => void
-  onOpenSession?: (sessionId: string, heading: string) => void
+  onOpenSession?: (sessionId: string, heading: string, outputs?: string[]) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
   refOf: (el: HTMLElement | null) => void
 }) {
@@ -1292,7 +1292,7 @@ export function TaskListView(props: {
   /** 产出文件点开（U11 预览面；undefined = 不可用 ⇒ 产出降级纯文本）。 */
   onOpenFile?: (sessionId: string, path: string) => void
   /** 会话弹窗（undefined = 不可用 ⇒ 不出链接）。 */
-  onOpenSession?: (sessionId: string, heading: string) => void
+  onOpenSession?: (sessionId: string, heading: string, outputs?: string[]) => void
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
 }): ReturnType<typeof h> {

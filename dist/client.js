@@ -42109,7 +42109,7 @@ body[data-ds-dark-theme]{
 					},
 					onClick: (event) => {
 						event.stopPropagation();
-						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title);
+						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs);
 					}
 				}, "…") : null)), (0, react.createElement)("td", { style: miniCellStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)("button", {
 					type: "button",
@@ -42118,7 +42118,7 @@ body[data-ds-dark-theme]{
 					style: plainIconBtnStyle,
 					onClick: (event) => {
 						event.stopPropagation();
-						openSession(sid, row.title);
+						openSession(sid, row.title, outputs);
 					}
 				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconNewChatOutlineRegular, { size: 16 })) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
 					colSpan: 6,
@@ -42136,7 +42136,7 @@ body[data-ds-dark-theme]{
 					className: "dsh-tdt-btn--link",
 					onClick: (event) => {
 						event.stopPropagation();
-						onOpenSession(sid, row.title);
+						onOpenSession(sid, row.title, outputs);
 					}
 				}, `↗ ${t("viewSession")}`) : (0, react.createElement)("span", null, `${t("colSession")}：${sid.slice(0, 8)}`) : null), outputs.length > 0 ? (0, react.createElement)("div", { style: { marginBottom: "6px" } }, outputs.map((output) => (0, react.createElement)("div", {
 					key: output,
@@ -43591,8 +43591,8 @@ body[data-ds-dark-theme]{
 				onEdit: openEditor,
 				onDelete: deleteTask,
 				onOpenFile: canPreview ? openFile : void 0,
-				onOpenSession: viewSession !== null ? (sessionId, heading) => {
-					openView(sessionId, heading);
+				onOpenSession: viewSession !== null ? (sessionId, heading, outputs) => {
+					openView(sessionId, heading, outputs);
 				} : void 0,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "var(--tdt-font-sm)" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
