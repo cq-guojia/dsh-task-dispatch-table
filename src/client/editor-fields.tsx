@@ -602,7 +602,7 @@ export function WeekdayPicker(props: {
       multiple: true,
       value: props.value.map(String),
       items,
-      size: 'md',
+      size: 'lg',
       variant: 'inset',
       className: 'dsh-tdt-seg--weekday',
       label: props.label,
