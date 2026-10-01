@@ -47,14 +47,8 @@ export const TASK_EDITOR_CSS = `
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
 .dsh-tdt-ed-card--error{border-color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.08));}
 .dsh-tdt-ed-field--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
-/* 历史版本开关（用户 2026-09-30：与「编辑/预览」分段控件一模一样，只有一个「版本」段）——
-   外层 = 官方 SegmentedControl 的轨道（interactive-bg-hover + padding 4 + radius md），
-   内层 seg = 段位：默认透明底灰字，选中 = 官方选中态白亮片（bg-layer-1 + elevation-soft + 主字色）。 */
-/* 高度/字号/内距与「编辑/预览」分段（.dsh-tdt-ed-seg：padding3 + 段高22 + 字12）逐值一致，不忽高忽低。 */
-.dsh-tdt-ed-histtoggle{appearance:none;display:inline-flex;align-items:stretch;padding:3px;border:none;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));cursor:pointer;font:inherit;}
-.dsh-tdt-ed-histtoggle-seg{display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:var(--dsw-radius-sm,6px);color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:12px;line-height:18px;font-weight:500;white-space:nowrap;transition:color .12s ease,background .16s ease,box-shadow .16s ease;}
-.dsh-tdt-ed-histtoggle:hover .dsh-tdt-ed-histtoggle-seg{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-ed-histtoggle--on .dsh-tdt-ed-histtoggle-seg{background:var(--dsw-alias-bg-layer-1,rgba(255,255,255,.92));box-shadow:var(--dsw-elevation-soft,0 1px 4px rgba(0,0,0,.25));color:var(--dsw-alias-label-primary,#1f2328);}
+/* 历史版本开关（2026-10-01：已并入统一分段控件 Segmented，根 id=dsh-tdt-ed-histtoggle、multiple 单段做 on/off；
+   样式完全走 controls-css.ts 的 .dsh-tdt-seg，这里不再留任何皮肤——旧 .dsh-tdt-ed-histtoggle* 规则已删。 */
 /* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
    右侧 = 固定宽高槽：常态时间小字、hover 换「使用（药丸）/ 移除（小字）」——槽位尺寸恒定，
    hover 出按钮**绝不撑高行高**（此前按钮把行撑大上下蹦，用户点名）。 */

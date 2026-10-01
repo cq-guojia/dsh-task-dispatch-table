@@ -658,7 +658,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('openSessionView 数据闸门已打进 bundle', clientJs.includes('openSessionView'))
   check('loadOlder 探测调用已打进 bundle', clientJs.includes('loadOlder'))
   // 编辑器 UX 第二轮（2026-09-30）：版本开关分段同款 / 条目卡片+hover 小钮 / 启用 Toast / 校验红框 / 快照 UI 已删
-  check('版本开关走分段同款（histtoggle 轨道+亮片）', clientJs.includes('dsh-tdt-ed-histtoggle') && clientJs.includes('dsh-tdt-ed-histtoggle-seg'))
+  // 2026-10-01：版本开关已并入统一 Segmented（id=dsh-tdt-ed-histtoggle，multiple 单段），旧 .dsh-tdt-ed-histtoggle-seg 类已删
+  check('版本开关走统一 Segmented（id dsh-tdt-ed-histtoggle + 旧自绘类已删）', clientJs.includes('dsh-tdt-ed-histtoggle') && clientJs.includes('dsh-tdt-seg') && !clientJs.includes('dsh-tdt-ed-histtoggle-seg'))
   check('版本条目卡片式 + 使用/移除小钮', clientJs.includes('dsh-tdt-ed-ver-use') && clientJs.includes('dsh-tdt-ed-ver-del') && clientJs.includes('MarqueeText'))
   check('启用开关写回 Toast（--below 变体）', clientJs.includes('dsh-tdt-toast--below'))
   check('任务名称/下拉校验红框类', clientJs.includes('dsh-tdt-ed-pfx--error') && clientJs.includes('dsh-tdt-ed-field--error'))
@@ -1607,18 +1608,18 @@ console.log('\n[14] runtime-index')
     check('分段控件进了产物（段 / 变体 / 两档高度 / 段内角标 / 无障碍组）',
       p1Js.includes('dsh-tdt-seg__item') && p1Js.includes('dsh-tdt-seg--default') && p1Js.includes('dsh-tdt-seg--inset')
       && p1Js.includes('dsh-tdt-seg--md') && p1Js.includes('dsh-tdt-seg__badge') && p1Js.includes('aria-pressed'))
-    check('皮肤只消费 token 层（轨道/亮片走变体变量，段高只两档，角标走 --tdt-on-signal）',
-      p1Js.includes('--seg-track:var(--tdt-surface-2)') && p1Js.includes('--seg-track:var(--tdt-surface-1)')
-      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)') && p1Js.includes('--seg-thumb:var(--tdt-surface-3)')
+    check('皮肤只消费 token 层（轨道=交互灰 hover 底、亮片=raised 底、无外描边；段高两档；角标走 --tdt-on-signal）',
+      p1Js.includes('--seg-track:var(--tdt-hover)') && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)')
       && p1Js.includes('height:calc(var(--tdt-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--tdt-control-h-md) - 6px)')
       && p1Js.includes('background:var(--tdt-danger);color:var(--tdt-on-signal)'))
     check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',
       !p1Js.includes('segTrackStyle') && !p1Js.includes('segStyle') && !p1Js.includes('tabStyle')
       && !p1Js.includes('countBadge') && !p1Js.includes('segmentStyle') && !p1Js.includes('segmentedStyle'))
-    check('预览 渲染/源码 已迁到统一 Segmented（自绘 sv-seg + 深色特判已删；版本开关仍保留单段 toggle 不纳入分段）',
+    check('预览 渲染/源码 + 版本开关 都已迁到统一 Segmented（自绘 sv-seg / 旧 histtoggle 类已删）',
       !p1Js.includes('dsh-tdt-sv-seg') && !p1Js.includes('dsh-tdt-sv-seg-btn')
-      && p1Js.includes('previewRender') && p1Js.includes('previewSource')
-      && p1Js.includes('dsh-tdt-ed-histtoggle'))
+        && !p1Js.includes('dsh-tdt-ed-histtoggle-seg')
+        && p1Js.includes('previewRender') && p1Js.includes('previewSource')
+        && p1Js.includes('dsh-tdt-ed-histtoggle') && p1Js.includes('dsh-tdt-seg'))
   }
 
   // ── 17. UI 基础层 P1b：编辑器分段控件也归一（删官方薄封装 + 周几多选走统一件）──

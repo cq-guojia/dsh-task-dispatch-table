@@ -198,9 +198,11 @@ body[data-ds-dark-theme]{
 .dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
 .dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-lg) - 6px);}
 
-/* 变体：**只覆盖两个颜色变量** —— 这正是用户说的「颜色重载」 */
-.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);}
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-surface-1);--seg-thumb:var(--tdt-surface-3);}
+/* 变体：**只覆盖两个颜色变量** —— 这正是用户说的「颜色重载」。
+   2026-10-01 起：default / inset 两个轴名保留但视觉同款（都抄「版本」开关观感：
+   轨道=交互灰 hover 底、无外描边、选中=亮片底+浮起影），见 controls-css.ts 的 .dsh-tdt-seg。 */
+.dsh-tdt-seg--default{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);}
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);}
 ```
 
 对应到用户截图的三处（**同一份基础样式，只换 variant**）：
@@ -212,7 +214,7 @@ body[data-ds-dark-theme]{
 | 卡片展开「基础信息 / 执行记录 / 日志」（截图 3） | `task-list.tsx` 自绘 28px（底色却与上面不同） | ✅ P1：`<Segmented size="md" variant="inset">` |
 | 编辑器「编辑 / 预览」「单次 / 周期 / 间隔」「基础信息 / 执行记录」 | 官方件 + `--seg` 覆写（指示器算式脆弱） | ✅ P1b：同一个 `Segmented`（不再覆写官方指示器） |
 | 星期选择（多选，官方不支持） | `editor-fields.tsx` 自绘 | ✅ P1b：同一个 `Segmented multiple` |
-| 版本开关（单段） | `task-editor-css.ts:54-57` 自绘 | `Segmented`（版本开关当前仍是单段 toggle，保持现状，未纳入分段） |
+| 版本开关（单段） | `task-editor-css.ts:54-57` 自绘 | ✅ 2026-10-01：并入统一 `Segmented`（multiple 单段做 on/off，id `dsh-tdt-ed-histtoggle`） |
 | 预览「渲染 / 源码」 | `archive-session-css.ts` 自绘 + 深色特判 | ✅ P1b：同一个 `Segmented size="sm" variant="default"`（深色特判已删，由 token 自动跟随明暗） |
 
 ### 5.2 其它控件
@@ -255,7 +257,7 @@ body[data-ds-dark-theme]{
 |---|---|---|---|
 | **P0 地基** ✅ | `ui/tokens.ts` + `ui/style.ts` + `ui/index.ts`；宿主 alias / 字号 / 圆角 / 焦点已核实完毕（见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md)） | 一套 token + 一个注入器；**不迁任何调用点** ⇒ 界面零变化 | ✅ 已落码（2026-10-01，冒烟 372/0；「`--tdt-` 只在一处定义」等 6 项断言见 worklog §八） |
 | **P1a 分段控件·三处自绘** ✅ | 3 处自绘 → 1 个 `Segmented` | 主面板三 tab / 列表筛选 tabs（带角标）/ 卡片三面板 | ✅ 已落码（2026-10-01，冒烟 376/0；4 项正/反断言见 worklog §九） |
-| **P1b 分段控件·其余 4 类** | 编辑器官方覆写 ×3 + 星期多选 + 版本开关 + 预览两态 → 同一个 `Segmented` | `Segmented` 增补 `multiple`（星期）与 `raised`（版本开关）两个变体 | 反断言：旧类名 `dsh-tdt-ed-histtoggle` / `dsh-tdt-sv-seg` 消失；明暗双主题一致 |
+| **P1b 分段控件·其余 4 类** ✅ | 编辑器官方覆写 ×3 + 星期多选 + 版本开关 + 预览两态 → 同一个 `Segmented` | `Segmented` 增补 `multiple`（星期）与「版本开关并入（multiple 单段）」；统一皮肤抄「版本」观感、去外描边 | ✅ 已落码（2026-10-01，冒烟通过）；反断言：旧类名 `dsh-tdt-ed-histtoggle-seg` / `dsh-tdt-sv-seg` 消失；明暗双主题一致 |
 | **P2 按钮 + 图标钮** | 15+ 套 → 3 variant × 2 size | `Button` / `IconButton` | 各页面按钮外观归一 |
 | **P3 输入 + 下拉** | 3 套 CSS + 3 处原生 + 官方 2 处 → 1 套 | `Field`（Input / Select / PrefixedInput） | 高度只剩两档 |
 | **P4 开关 + 日期时间 + 浮层** | 开关 2 处重复覆盖合并；日期时间全内联转皮肤；卡/浮层/Toast 归一 | `SwitchToggle` / `DateTime` / 容器皮肤 | 明暗特判只剩 token 层 |
@@ -269,7 +271,7 @@ body[data-ds-dark-theme]{
 
 1. **正向冒烟**（bundle 断言，现有冒烟已擅长）：`--tdt-control-h-sm`、`dsh-tdt-seg__item`、`TdtSegmented` 等唯一实现标识存在于 `dist/client.js`。
 2. **反向冒烟**（防回归，关键）：旧的重复实现标识**消失**，例如：
-   - `!clientJs.includes('dsh-tdt-ed-histtoggle')`（版本开关并入分段）
+   - `!clientJs.includes('dsh-tdt-ed-histtoggle-seg')`（版本开关旧自绘类消失；根 id `dsh-tdt-ed-histtoggle` 保留在统一 Segmented 上）
    - `!clientJs.includes('dsh-tdt-sv-seg')`（预览两态并入分段）
    - 业务文件里 `--dsw-alias-` / `body[data-ds-dark-theme]` 出现 **0 次**（用仓库搜索工具直接查，比断言更硬）。
 3. **明暗双主题**：每个迁移期都必须在「明色」与「暗色」两种宿主主题下各走查一遍关键界面（用户当前主题偏暗，暗色下的对比度是重点）。
