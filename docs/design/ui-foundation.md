@@ -125,7 +125,7 @@
 | `--tdt-font-xs` / `-sm` / `-md` / `-lg` / `-xl` | **直绑宿主字号族子 token**：`--dsw-font-xxxs-11-font-size`(11) / `-xxs-12-`(12) / `-xs-13-`(13) / `-s-14-`(14) / `-base-16-`(16)；加粗用宿主 `-strong-` 变体 | 收敛现有 10~16px 七档；**不自己定 px 刻度** |
 | `--tdt-line-xs` / `-sm` / `-md` / `-lg` / `-xl` | 同族 `-line-height` 子 token：14 / 18 / 20 / 22 / 24 | 字号成对给行高（宿主就是这么配的），避免各处自己试行高 |
 | `--tdt-font-mono` | `--ds-font-family-code` | 等宽栈（代码 / 路径） |
-| `--tdt-control-h-sm` / `-md` | **24 / 28px**（`md` 与官方分段控件段高 28px 一致） | 全站只此两档高度（P0 已按此落码） |
+| `--tdt-control-h-sm` / `-md` / `-lg` | **24 / 28 / 32px**（`md` 与官方分段控件段高 28 一致；`lg=32` 为用户 2026-10-01 拍板的「32 标准行」，且为**全站默认档**） | 全站只此三档高度；任何控件的 `size` 都映射到这三档，不许各自翻译 |
 | `--tdt-space-1` / `-2` / `-3` / `-4` | 4 / 8 / 12 / 16px | 间距四拍 |
 | `--tdt-z-dock` / `-drawer` / `-modal` / `-menu` / `-tip` | 1030 / 1040 / 1070 / 1100 / 1200 | 层级阶梯（业务文件不许写裸 `z-index`）。现网散落值 2/6/10/20/30/31/1000/1020/1030/1040/1070/1100/1200 在分期迁移时逐点对齐到阶梯 |
 | `--tdt-dur` / `-fast` / `--tdt-ease` | `--ds-transition-duration`(+`-fast`) / `--ds-ease-in-out` | 动效 |
@@ -189,7 +189,7 @@ body[data-ds-dark-theme]{
 
 ```css
 /* 基础：结构 + 交互 + 三档高度，全部唯一（✅ P1 已落码，真实实现见 src/client/ui/controls-css.ts） */
-.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;
+.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;
   border-radius:var(--tdt-radius-md);background:var(--seg-track);}
 .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;
   border:0;border-radius:var(--tdt-radius-sm);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
@@ -202,11 +202,12 @@ body[data-ds-dark-theme]{
    2026-10-01 用户拍板：保留「纯黑面 / 灰底面」两套、不合并：
    - default（纯黑面）= 轨道第二层面 + 外描边；
    - inset（灰底面）= 抄「版本」开关观感（轨道交互灰 hover 底、无外描边），用户觉得比原灰底那套好看。
-   ⚠️ 高度对齐（2026-10-01 用户拍板）：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
-   两者都是「1px 边框 + 3px padding」的几何——default 真边框 1px + padding 3px；inset 无边框，padding 收 4px 补回缺的 1px。
-   段高算式 - 6px 不用动，两种外观总高一致；以后 Button / Input 的有边 / 无边同此规则。 */
+   ⚠️ 高度对齐（2026-10-01 拍板，同日修正 **+2**）：有边 / 无边外框必须**严格 == token**，边框在内部补回。
+   统一几何 = 段高 token − 6px（上下各 **2px padding + 1px 边框**）——default 真边框 1px + padding **2px**；inset 无边框 padding 收 **3px** 补回缺的 1px。
+   段高算式 − 6px 不用动，两种外观总高都 == 24/28/32；以后 Button / Input 的有边 / 无边同此规则。
+   （早期「3px / 4px」写法会让外框比 token 多 +2px，已废。） */
 .dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:3px;}
 ```
 
 对应到用户截图的三处（**同一份基础样式，只换 variant**）：
@@ -223,15 +224,16 @@ body[data-ds-dark-theme]{
 
 ### 5.2 其它控件
 
-| 控件 | variant 轴 | size 轴 | 唯一实现位置 |
+| 控件 | variant 轴 | size 轴（全部映射 24/28/32） | 唯一实现位置 |
 |---|---|---|---|
-| 按钮 | `primary` / `outline` / `ghost` / `danger` | sm / md | `Button.tsx` + `controls-css.ts`（现 15+ 套） |
-| 图标钮 | `plain`（默认）/ `danger`（hover 变红） | 26 / 28（绑 `--tdt-control-h-*`） | 同上（现 5+ 套） |
-| 输入框 | `default` / `error`（描红） | md（32）/ sm（26） | `Field.tsx`（现 3 套 CSS + 3 处原生） |
-| 下拉 | `default` / `form`（表单行）/ `filter`（筛选行） | 同上 | `Field.tsx`（包装官方 `Menu`；现官方 2 处 + 自绘浮层 1 套 + 原生 select 1 处） |
-| 开关 | `success`（唯一，选中 = success 绿） | 官方尺寸 | `SwitchToggle.tsx`（现两处重复覆盖：`task-editor-css.ts:31` / `task-list.tsx:125`） |
-| 日期 / 时间 | `calendar` / `time` | 32 | `DateTime.tsx`（官方无此件，自绘；现 `editor-fields.tsx:304-443`、`459+` 全内联） |
-| 浮层容器（卡 / 弹层 / Toast） | `card` / `popover` / `toast`（四档语义色沿用现有 `FloatingToast`） | — | `controls-css.ts` + 现有 `toast-css.ts` 并入 |
+| 按钮 | `primary` / `outline` / `ghost` / `danger`（+ 修饰类 `--link` / `--danger-ink`） | sm / md / lg（默认 lg） | `ui/Button.tsx` + `ui/controls-css.ts` ✅ |
+| 图标钮 | `plain`（默认）/ `outline` / `danger` | sm / md / lg（默认 lg） | `ui/Button.tsx`（`IconButton`）✅ |
+| 输入框 / 前缀框 / 数字框 | 输入框 `error`（描红）；数字框显式 ±、`inputWidth` 可调宽度 | sm / md / lg（默认 lg） | `ui/Field.tsx` ✅ |
+| 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽、`marquee` 跑马灯） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`）✅ |
+| 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
+| 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
+| Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
+| 卡 / 浮层外壳 | — | — | ⏳ 未抽象（同构 7 处，见 [`ui-style-guide.md`](ui-style-guide.md) §三「待抽象」） |
 
 ### 5.3 官方件策略（**优先用官方的，但观感只覆盖一次**）
 

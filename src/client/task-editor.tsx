@@ -707,7 +707,7 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
 
 // ─────────────────────── 布局小件 ───────────────────────
 
-/** 单行输入的度量全在 `dsh-tdt-ed-input` 类里（逐条照官方 Input.module.css，含 focus 描边与占位色）。 */
+/** 区块小标题（分组标签）：600 字重小字。（原注释指向已删除的 `dsh-tdt-ed-input` 类，2026-10-01 修正。） */
 const sectionLabelStyle: CSSProperties = { fontSize: 'var(--tdt-font-sm)', fontWeight: 600, color: 'var(--tdt-fg)', marginBottom: '6px' }
 
 /**

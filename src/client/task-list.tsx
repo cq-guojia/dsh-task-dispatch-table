@@ -102,6 +102,9 @@ const TASK_LIST_CSS = [
   // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
   `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
   '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
+  // 记录表头吸顶（内容区定高滚动、表头不动）：原注释声称由 `.dsh-tdt-rec-head th` 接管，
+  // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--tdt-surface-1）免得滚动时透内容。
+  '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-surface-1); }',
   // 运行中的活动指示（用户 2026-09-30）：三个小方块依次脉动，类似手机充电 / 加载中。
   // `currentColor` ⇒ 跟随所在格的文字色（这里被设成 success 绿）。
   '@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }',
@@ -1229,9 +1232,9 @@ function TaskCard(props: {
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
         h(PastPill, { row, t, tt }),
         h(NextPill, { row, t, tt }),
-        // 开关与编辑器头部开关**统一**：包一层类名壳，交给 CSS 把选中态刷成官方 success 绿。
+        // 开关与编辑器头部开关**统一**：挂 `dsh-tdt-switch` 交给 CSS 把选中态刷成官方 success 绿。
         // （官方 Switch 默认选中色是 brand-primary：亮色主题下近乎黑、暗色近乎白 ⇒ 两处看着不一样。）
-        h('span', { className: 'dsh-tdt-tl-switchwrap dsh-tdt-switch' },
+        h('span', { className: 'dsh-tdt-switch' },
           h(Switch, {
             checked: row.enabled,
             onChange: (next: boolean) => { onToggleEnabled(row.id, next) },

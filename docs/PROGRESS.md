@@ -11,15 +11,11 @@
 
 ## 一、当前状态
 
-### 1.1 UI 基础层统一（样式专项）—— ✅ **完成**（P0 地基 / P1 分段 / P2 按钮 / P3 输入下拉 / P4 数字·日期时间·开关 / P5 容器 / P6 收尾）
+### 1.1 UI 基础层统一（样式专项）—— ✅ **完成封卷**（P0–P6 + 尺寸/圆角/字号归一 + 死代码清理）
 
-2026-10-01 用户发话推进：① 宿主源码核实 ✅（宿主 0.2.0-rc.2 解包五包）；② **P0 地基 ✅**（`ui/tokens.ts` + `ui/style.ts` + `ui/index.ts`，界面零变化）；③ **P1a 分段控件 ✅**（`ui/Segmented.tsx` + `ui/controls-css.ts`；主面板三 tab / 列表筛选 tabs / 卡片三面板三处自绘已收敛为共用组件）。**P1b ✅**（编辑器官方覆写 ×3 / 星期多选 / 预览两态 已迁统一 Segmented，仅版本开关按用户拍板保留单段 toggle，不纳入分段）。**P2 按钮/图标钮 ✅**（`ui/Button.tsx`：primary/outline/ghost/danger × sm/md + IconButton；主界面 / 编辑器 / 文件浏览器 / 文件预览 / 会话页 / 日历已迁，删 6+ 套样式常量）。**P3 输入 ✅**（`ui/Field.tsx`：Input / PrefixedInput / **NumberInput**；两处原生 `<input type=number>` 已重写为显式 ±，前缀输入与列表过滤迁入；两处原生 `<select>` 已收编到 `SelectField`）。**P4 ✅**（`ui/DateTime.tsx` 自绘日历 + 时分列皮肤化，`editor-fields` 改为再导出；开关 success 绿覆盖上提基础层 `.dsh-tdt-switch`；死变量清零）。**P5 ✅**（业务文件 `body[data-ds-dark-theme]` 特判 7 处 → 0，浮层/交付卡/树行走 `--tdt-*`；焦点环死引用清零）。**P6 核心 ✅**：3 份共享 `C` 常量表已删（178 处 `C.*` → `--tdt-*`）；业务文件宿主变量直引 **255 → 0**（`--dsw-` 只留在 `ui/tokens.ts`）；补 `--tdt-surface-base/menu/code-*/warning-label` token；源码级反断言已进冒烟（389/0）。**P6 收尾 ✅**：4 处使用点自注入 `<style>` 统一到 `ui/style.ts`（单 style 标签 + 按域登记）；字号/圆角/行高字面量 token 化（87 → 3，剩 `50%`/`1px` 例外）；控件高度统一三档（`CONTROL_H` 26 → `--tdt-control-h-md`，删死 `iconBtnStyle`；编辑器 32 → `lg`、28 → `md`；会话头/分支/关闭 28 → `md`、动作 24 → `sm`）；`index.ts` 遗留「保存/放弃」原生按钮 → `Button`。剩余例外已登记进 [`ui-style-guide.md`](design/ui-style-guide.md) §三「已知例外」。`SelectField` / `MarqueeText` 实现已搬进 `ui/Field.tsx` / `ui/MarqueeText.tsx`，`editor-fields.tsx` 改为再导出（只剩 `calendarLabelsOf` 文案单源 + `WeekdayPicker`）。**P6 全部完成**：C 表 0、宿主变量 0、明暗特判 0、自注入 0、字号/圆角/行高字面量仅剩已登记例外、控件高度统一三档；剩余未迁的「特化按钮」（折叠头/菜单项/面包屑/chip/投放区壳/浮层触发壳/mirror）已登记进 [`ui-style-guide.md`](design/ui-style-guide.md) §三「已知例外」。
+> **已结案，详见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)**。规格 = [design/ui-foundation.md](design/ui-foundation.md)，手册 = [design/ui-style-guide.md](design/ui-style-guide.md)；过程 = [worklog/ui-foundation.md](worklog/ui-foundation.md)（P0–P6）、[worklog/size-unification.md](worklog/size-unification.md)（尺寸归一）、[worklog/ui-alignment-round.md](worklog/ui-alignment-round.md)（本轮收口 + 审计）。
 
-- 已起草（未拍板、未落码）：规范 [`design/ui-foundation.md`](design/ui-foundation.md)（分层 / token / 控件皮肤 / 交付 / 分期 / 验收 / 边界）、手册 [`design/ui-style-guide.md`](design/ui-style-guide.md)（决策树 / 唯一实现表 / 允许禁止 / 自检）。
-- 2026-10-01 已**去过程化**：原设计文档里的「要解决的问题 / 目标 / 待拍板 / 待核实 / 文档落位 / 下一步」全部移入 [worklog/ui-foundation.md](worklog/ui-foundation.md) §六，设计文档只留规范。
-- ✅ **开工前 4 项源码核实已完成**：结论唯一真源 = [`design/external/dsh-capabilities.md`](design/external/dsh-capabilities.md) §主题与设计变量；过程与回改清单见 [worklog/ui-foundation.md](worklog/ui-foundation.md) §七。
-- ✅ **P0 地基已落码**（2026-10-01）：`src/client/ui/{tokens,style,index}.ts` + 入口 `ensureUiBase()`；token 表按核实结果直绑宿主变量，明暗差异只此一处。交付说明与真机复验点见 [worklog/ui-foundation.md](worklog/ui-foundation.md) §八。
-- ✅ **P1a 分段控件已落码**（2026-10-01）：`src/client/ui/{Segmented.tsx,controls-css.ts}`；三处自绘（主面板三 tab / 列表筛选 tabs / 卡片三面板）已改调共用组件，旧的 4 份就地样式对象已删。视觉差异逐项对照 + 真机复验点见 [worklog/ui-foundation.md](worklog/ui-foundation.md) §九。
+2026-10-01 全专项完成：① 宿主源码核实（0.2.0-rc.2 五包）；② P0 token 层 + 统一样式入口；③ P1 分段控件全站归一（含编辑器官方覆写 / 星期多选 / 版本开关 / 预览两态）；④ P2 按钮 / 图标钮；⑤ P3 输入 / 前缀框 / 数字框（原生 number / select 清零）；⑥ P4 日期时间 / 开关；⑦ P5 明暗特判 7 → 0；⑧ P6 收尾（`C` 表 3 份删、宿主变量 255 → 0、自注入 0、字面量 token 化、高度三档）；⑨ **2026-10-01 收口**：尺寸归一（sm24/md28/lg32，默认 lg）、圆角统一 `radius-md`、字号跟档、死代码清理（详见 [worklog/ui-alignment-round.md](worklog/ui-alignment-round.md)）。
 
 ### 1.2 落码完成、⏳ 真机验证待做（用户装 `dist/` 实测）
 
@@ -33,14 +29,13 @@
 | 表单弹窗观感第五轮 + 脏判定 / 关闭确认 | 🔵 落码 | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §十八 |
 | UI 收口 + Agent 权限选择器 | ✅ 封卷（随主界面复验） | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 |
 | 编辑器 UX 第二轮 | ✅ 结案（随主界面复验） | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
-| UI 基础层 P0（token 层 + 统一样式入口） | 🔵 落码（冒烟 372/0） | 复验点 = **与之前完全一样**（本期只定义变量、无规则消费）→ [worklog/ui-foundation.md](worklog/ui-foundation.md) §8.3 |
-| UI 基础层 P1a（分段控件三处收敛） | 🔵 落码（冒烟 376/0） | 主面板三 tab / 列表筛选 tabs / 卡片三面板的视觉差异逐项对照 + 复验点 → [worklog/ui-foundation.md](worklog/ui-foundation.md) §9.2 §9.3 |
+| UI 基础层收口（尺寸 / 圆角 / 字号归一 + 死代码清理） | 🔵 落码（冒烟 390/0） | 同排控件零误差 / 三下拉省略不撑破 / 问号弹气泡 / 记录表头吸顶 → [worklog/ui-alignment-round.md](worklog/ui-alignment-round.md) §五 |
 
 ---
 
 ## 二、未决项
 
-> 📌 下表 U1–U6 / U9 为用户此前明确推迟的 backlog；U18 为本轮新立且**已挂起**的专项。
+> 📌 下表 U1–U6 / U9 为用户此前明确推迟的 backlog；**U18 已封卷**（移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）；**U20** 为 2026-10-01 审计新立的「待抽象」专项。
 
 | # | 问题 | 现状与影响 | 将来怎么解（方向，未定） |
 |---|---|---|---|
@@ -62,7 +57,8 @@
 | U16 | **新增 / 编辑任务的功能设计**（2026-09-29 UI 封档后立项） | ✅ **2026-09-30 全线完成（落码 + 评审 + 冒烟 236 全过），⏳ 真机验证待做**：需求口径 [`design/features/creation-edit.md`](design/features/creation-edit.md) + 数据设计 [`design/data-model.md`](design/data-model.md) §五 §六 + 决策 51 + 落码叙事 [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md)。遗留小项：保存时版本备注未接（UI 备注字段已在版本面板）；审计 UI 消费面等面板整体重建；GET /tasks/history 的 query 透传存疑（真机优先核实） | 真机验证清单见 worklog §四 |
 | U17 | **主界面「下次执行」与运行中显示**（2026-09-30 真机提出 → 同日落码） | 现象：任务在跑时，卡片「下次执行」仍跳「下一槽倒计时」（如 8 分多钟），与「已经在跑」矛盾。**核实结论（源码级）**：只补**窗口内最晚那一槽**（`scheduler.ts` 的 `dueSlot` 只取 max、该槽已有实例行即 `undefined`、不向更早回退）＋ 同任务串行互斥 ⇒ `15:20`/`15:10` 永不补；`window` 只决定那一槽能晚多久跑，**非窗口内全补**。 | 🟢 **已落码（用户 2026-09-30 拍板）**：**不判断补跑时间**——`NextPill` 见 `row.running` 即改显「三个小方块脉动」活动指示（像手机充电），跑完才回到下一槽倒计时。曾试「显示补跑 15:30」（Plan A）**已撤**，`dueSlotAt` / 文案键全删（不留死代码）。冒烟 299 全过。见 [worklog/main-panel.md §8.6](worklog/main-panel.md) |
 | ~~U19~~ | ~~删除 `decisions.md` 后遗留的 9 处口径冲突~~ → ✅ **已全部回改**（2026-10-01，用户拍板「以现在实现的为准」，逐条到源码核实后回改） | ① `skipped` 进 `task_instances`（三类场景，见 data-model.md 头注）；② 上游无记录 ⇒ **阻塞**（`upstream-not-succeeded`）；③ 会话名 `[TASK] YYMMDD-HHmm · 标题`；④ 预览 = **页面级唯一 dock**；⑤ `sessions.retain` **存在且必须调用**；⑥ 数据源 = **keyed**；⑦ U10 分支 **已实现**；⑧ 保留期 **默认不清**；⑨ 刷新按钮 **已不存在** | 无遗留；过程记在 [worklog/docs-reorganization.md](worklog/docs-reorganization.md) §2.7 |
-| U18 | **UI 基础层统一（样式专项）** —— 🚧 **进行中**（2026-10-01 用户发话推进：先做源码核实，已完成；**仍未落码**） | 同一个控件（滑动块 / 按钮 / 下拉 / 输入 / 开关 / 日期时间）各处各写一份：分段控件 **10 处**（4 官方 / 6 自绘）、段高 **5 种**、设计令牌 **3 份 `C` 表**、内联数值字面量 **~151 处**、`body[data-ds-dark-theme]` 特判 **7 处**、**4 条 `<style>` 注入 + 2 套 id**。方案 [design/ui-foundation.md](design/ui-foundation.md)（四层架构 + 两轴 size×variant + 两档高度 + 明暗差异单点）、手册 [design/ui-style-guide.md](design/ui-style-guide.md) | ✅ **4 项源码核实已完成（2026-10-01，宿主 0.2.0-rc.2 解包 `theme`/`primitives`/`conversation`/`chat`/`renderer` 五包）**，结论唯一真源 = [design/external/dsh-capabilities.md](design/external/dsh-capabilities.md) §主题与设计变量：alias / static / font 三族全表；明暗判据**唯一** `body[data-ds-dark-theme]`（`prefers-color-scheme` 归宿主内部）；官方 `SegmentedControl` 指示器算式**保留**（由组件 JS 内联变量驱动 ⇒ 仍按计划自绘统一体）；三处疑点裁决 = `state-warn-primary` **真** / `state-warning-primary` **死**、`focus-ring-color` 真但默认 **`transparent`** / `border-focus` **死**、宿主字号体系 **成立**（11/12/13/14/16/18/20/24 + strong）。**顺带揪出本仓 5 个不存在的变量名**（`interactive-bg`、`border-focus`、`state-warning-primary`、`dsh-elevation-prominent`、`dsh-radius-panel`，涉 **7 个使用点**，一直取硬编码兜底色、明暗不跟随 ⇒ 真 bug，P4/P5 一并修）。**②✅ P0 地基已落码（2026-10-01，冒烟 372/0、界面零变化）**：`ui/tokens.ts`（token 表，直绑宿主真变量，明暗差异只此一处）+ `ui/style.ts`（单 id 注入器、按域登记、`tokens` 恒最前）+ `ui/index.ts`（唯一出口 + `ensureUiBase()`），入口调一次。高度档位已按 sm 24 / md 28 落码。**③✅ P1a 分段控件三处自绘已落码（2026-10-01，冒烟 376/0）**：`ui/Segmented.tsx`（`size` × `variant` 两轴 + badge/block/label + aria-pressed/焦点环）+ `ui/controls-css.ts`（变体只覆盖两个颜色变量）；旧的 4 份就地样式对象（`segmentedStyle`/`segmentStyle`/`segTrackStyle`/`segStyle`/`tabStyle`/`countBadge`）已删。**P1b ✅**（全站分段控件已统一到 Segmented；仅版本开关按用户拍板保留单段 toggle），**下一步 = P2 按钮统一**（15+ 套内联样式收敛），之后 P3→P5 分期，每期 build + 冒烟正/反断言 + 明暗双主题真机走查 |
+| U18 | **UI 基础层统一（样式专项）** —— ✅ **已完成封卷（2026-10-01）**（P0–P6 + 尺寸/圆角/字号归一 + 死代码清理；结案行见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)） | 同一个控件（滑动块 / 按钮 / 下拉 / 输入 / 开关 / 日期时间）各处各写一份：分段控件 **10 处**（4 官方 / 6 自绘）、段高 **5 种**、设计令牌 **3 份 `C` 表**、内联数值字面量 **~151 处**、`body[data-ds-dark-theme]` 特判 **7 处**、**4 条 `<style>` 注入 + 2 套 id**。方案 [design/ui-foundation.md](design/ui-foundation.md)（四层架构 + 两轴 size×variant + 两档高度 + 明暗差异单点）、手册 [design/ui-style-guide.md](design/ui-style-guide.md) | ✅ **4 项源码核实已完成（2026-10-01，宿主 0.2.0-rc.2 解包 `theme`/`primitives`/`conversation`/`chat`/`renderer` 五包）**，结论唯一真源 = [design/external/dsh-capabilities.md](design/external/dsh-capabilities.md) §主题与设计变量：alias / static / font 三族全表；明暗判据**唯一** `body[data-ds-dark-theme]`（`prefers-color-scheme` 归宿主内部）；官方 `SegmentedControl` 指示器算式**保留**（由组件 JS 内联变量驱动 ⇒ 仍按计划自绘统一体）；三处疑点裁决 = `state-warn-primary` **真** / `state-warning-primary` **死**、`focus-ring-color` 真但默认 **`transparent`** / `border-focus` **死**、宿主字号体系 **成立**（11/12/13/14/16/18/20/24 + strong）。**顺带揪出本仓 5 个不存在的变量名**（`interactive-bg`、`border-focus`、`state-warning-primary`、`dsh-elevation-prominent`、`dsh-radius-panel`，涉 **7 个使用点**，一直取硬编码兜底色、明暗不跟随 ⇒ 真 bug，P4/P5 一并修）。**②✅ P0 地基已落码（2026-10-01，冒烟 372/0、界面零变化）**：`ui/tokens.ts`（token 表，直绑宿主真变量，明暗差异只此一处）+ `ui/style.ts`（单 id 注入器、按域登记、`tokens` 恒最前）+ `ui/index.ts`（唯一出口 + `ensureUiBase()`），入口调一次。高度档位已按 sm 24 / md 28 落码。**③✅ P1a 分段控件三处自绘已落码（2026-10-01，冒烟 376/0）**：`ui/Segmented.tsx`（`size` × `variant` 两轴 + badge/block/label + aria-pressed/焦点环）+ `ui/controls-css.ts`（变体只覆盖两个颜色变量）；旧的 4 份就地样式对象（`segmentedStyle`/`segmentStyle`/`segTrackStyle`/`segStyle`/`tabStyle`/`countBadge`）已删。**P1b ✅**（全站分段控件已统一到 Segmented；仅版本开关按用户拍板保留单段 toggle），**下一步 = P2 按钮统一**（15+ 套内联样式收敛），之后 P3→P5 分期，每期 build + 冒烟正/反断言 + 明暗双主题真机走查 |
+| U20 | **UI 基础层「待抽象」残留**（2026-10-01 审计登记，**未做**） | 「一类控件一个实现」已达标；残留的是**同构重复 / 该上提未上提**：省略号三件套 19 处 · 会话域手搓图标钮 · 6px 拖拽条（两处同款）· 卡/浮层外壳 7 处 · `index.ts` 手搓中性 Toast · 缺 `Textarea` / `Checkbox` 基础层件 · token 兜底字面量不统一 · 实面反白字写死 `#fff` | 逐项见 [`design/ui-style-guide.md`](design/ui-style-guide.md) §三「待抽象」；属改动中等以上，待排期 |
 
 ---
 
@@ -70,7 +66,7 @@
 
 > 文档体系整理已于 2026-10-01 结案（见 [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md)）。以下为在办事项。
 
-1. **UI 基础层统一（样式专项）** 🚧 进行中 —— 核实 ✅、P0 地基 ✅、P1a 分段控件三处 ✅、**P1b 分段归一 ✅**（全站分段控件统一到 `Segmented`：编辑器官方覆写 ×3 / 星期多选 / 预览两态 已迁，旧 `dsh-tdt-ed-histtoggle` 仅版本开关保留、`dsh-tdt-sv-seg` 已删；冒烟已钉）。**P2 ✅**（`ui/Button.tsx`，全站按钮/图标钮迁移，冒烟 +3 断言）。**P3 ✅**（`ui/Field.tsx`：Input/PrefixedInput/NumberInput；原生 number / select 清零）。**P4 ✅**：日期/时间搬 `ui/DateTime.tsx`（自绘日历 + 时分列皮肤化）；开关覆盖合并（`.dsh-tdt-switch`）；死变量清零。**P5 ✅**：业务文件明暗特判 7 → 0。**P6 ✅ 全部完成**（`C` 表 178 处已删、宿主变量 255→0、明暗特判 0、自注入 0、字面量 token 化、高度三档、`SelectField`/`MarqueeText` 搬 ui、旧 config 按钮迁 Button；冒烟 390/0）。剩余特化按钮 / 微几何已登记 [ui-style-guide.md](design/ui-style-guide.md) §三「已知例外」。
+1. ~~**UI 基础层统一（样式专项）**~~ ✅ **已完成封卷（2026-10-01）** —— P0–P6 + 尺寸/圆角/字号归一 + 死代码清理，冒烟 390/0；结案行见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)，剩余「待抽象」登记为 **U20** 与 [`ui-style-guide.md`](design/ui-style-guide.md) §三。
 2. **真机验证**（用户装 `dist/` 实测）：三面板 / 主界面 / 新增编辑 三条，清单见 §1.2 表。
 3. **小收尾（代码侧，属开发会话）**：源码两处注释与实现不符 —— `src/client/index.ts:205` 与 `src/client/task-list.tsx:1406` 仍写着抬头/右侧有「刷新」按钮（实际已移除），`manualAt` 为死代码。
 

@@ -27,9 +27,6 @@ export const TASK_EDITOR_CSS = `
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
 .dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:var(--tdt-font-md);color:var(--tdt-fg,#1f2328);cursor:pointer;}
 /* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
-/* 关闭钮：规格照官方 primitives Modal.close（28×28、radius-sm、hover 才出底）。 */
-.dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);padding:0;border:none;border-radius:var(--tdt-radius-sm,6px);background:0 0;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
-.dsh-tdt-ed-close:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
 .dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-label{font-size:var(--tdt-font-sm);font-weight:600;color:var(--tdt-fg,#1f2328);}
@@ -56,11 +53,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-ver-note{display:block;font-size:var(--tdt-font-xs);color:var(--tdt-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
-/* 「使用」= 纯文字钮（用户：药丸太长），hover 才垫一个小背景；「×」= 官方叉图标，hover 变红。 */
-.dsh-tdt-ed-ver-use{appearance:none;border:none;background:none;padding:1px 4px;border-radius:var(--tdt-radius-sm,4px);color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease;}
-.dsh-tdt-ed-ver-use:hover{background:var(--tdt-hover,rgba(128,128,128,.2));}
-.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:2px;border-radius:var(--tdt-radius-sm,4px);display:inline-flex;align-items:center;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;transition:background .12s ease,color .12s ease;}
-.dsh-tdt-ed-ver-del:hover{color:var(--tdt-danger,#e5484d);background:var(--tdt-hover,rgba(128,128,128,.2));}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
@@ -83,19 +75,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-advitem{padding-top:12px;}
 .dsh-tdt-ed-advitem:first-child{padding-top:0;}
 .dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--tdt-border-strong,rgba(128,128,128,.5));}
-/* 单行文本输入：逐条照官方 Input.module.css（.wrap + .input 合并成一枚裸 input），
-   含官方的 focus 描边与占位色 —— 这两条必须走 CSS，内联样式压不过伪类。 */
-.dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);outline:none;transition:border-color .15s ease;}
-.dsh-tdt-ed-input:focus{border-color:var(--tdt-business,#4d6bfe);}
-.dsh-tdt-ed-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-/* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
-   省掉标签单独占的一行——弹窗竖向空间紧张。 */
-.dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:var(--tdt-control-h-lg);box-sizing:border-box;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
-.dsh-tdt-ed-pfx:focus-within{border-color:var(--tdt-business,#4d6bfe);}
-.dsh-tdt-ed-pfx-label{flex:none;display:inline-flex;align-items:center;padding:0 10px;border-right:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-md);line-height:var(--tdt-line-sm);white-space:nowrap;}
-.dsh-tdt-ed-pfx-input{flex:1 1 auto;min-width:0;padding:0 10px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-md);}
-.dsh-tdt-ed-pfx-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-.dsh-tdt-ed-pfx--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */

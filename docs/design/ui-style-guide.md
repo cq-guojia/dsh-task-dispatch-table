@@ -1,6 +1,6 @@
 # UI 开发手册（写插件界面时照这个做）
 
-> **状态**：📝 随 [`ui-foundation.md`](ui-foundation.md) 一并待拍板（2026-10-01 起草）
+> **状态**：✅ **生效**（2026-10-01 UI 基础层收口：三档高度 / 圆角 / 字号已归一，见 §五）
 > **这一份是**：「以后每次都照这个做」的操作手册。**技术方案与规格**看 [`ui-foundation.md`](ui-foundation.md)。
 > **一句话**：**新界面只许用 `src/client/ui/` 的组件与 `--tdt-*` token；不许自己写颜色、尺寸、圆角、字号。**
 
@@ -26,16 +26,16 @@
 
 ## 二、唯一实现表（同一个控件只准有一个实现）
 
-| 控件 | 唯一位置 | 怎么用（示例） | 现状重复数 |
+| 控件 | 唯一位置 | 怎么用（示例） | 状态（2026-10-01 收口） |
 |---|---|---|---|
-| 分段控件（滑动块） | `ui/Segmented.tsx` | `h(Segmented<'a' \| 'b'>, { value: v, size: 'md', variant: 'inset', items: [{ value: 'a', label: '甲', badge: 3 }], onChange: setV })` | ✅ **P1a 已收敛 3 处**（主面板 / 列表筛选 / 卡片三面板）；余 7 处（编辑器官方覆写 ×3 / 星期 / 版本开关 / 预览两态）待 P1b |
-| 按钮 | `ui/Button.tsx` | `<TdtButton variant="outline" size="sm">重置</TdtButton>` | 15+ |
-| 图标钮 | `ui/Button.tsx`（`IconButton`） | `<TdtIconButton icon={IconCloseOutlineRegular} label="关闭"/>` | 5+ |
-| 输入框 | `ui/Field.tsx` | `<TdtInput value={v} onChange={…} size="sm" error={bad}/>` | 3 套 + 3 原生 |
-| 下拉 | `ui/Field.tsx`（包装官方 `Menu`） | `<TdtSelect options={…} value={v} onChange={…}/>` | 官方 2 + 自绘 1 + 原生 1 |
-| 开关 | `ui/SwitchToggle.tsx` | `<TdtSwitch checked={on} onChange={…}/>` | 官方 4 + 覆写 2 处 |
-| 日期 / 时间 | `ui/DateTime.tsx` | `<TdtDateField value={d} onChange={…}/>` | 各 1（全内联） |
-| 卡 / 浮层 / Toast | `ui/controls-css.ts` + `ui/Toast.tsx` | `<TdtCard>` / `<FloatingToast tone="error" …/>` | 卡 2 套、Toast 已唯一 |
+| 分段控件（滑动块） | `ui/Segmented.tsx` | `h(Segmented<'a' \| 'b'>, { value: v, size: 'md', variant: 'inset', items: [{ value: 'a', label: '甲', badge: 3 }], onChange: setV })` | ✅ 全站唯一（主面板 / 列表筛选 / 卡片三面板 / 编辑器官方覆写 ×3 / 星期多选 / 版本开关 / 预览两态） |
+| 按钮 / 图标钮 | `ui/Button.tsx`（`Button` / `IconButton`） | `h(Button, { variant: 'outline', size: 'md' }, '重置')` | ✅ 全站唯一 |
+| 输入框 / 前缀框 / 数字框 | `ui/Field.tsx`（`Input` / `PrefixedInput` / `NumberInput`） | `h(Input, { value: v, onChange, size: 'lg', error: bad })` | ✅ 全站唯一（原生 `<input type=number>` 已清零） |
+| 下拉 | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ 全站唯一（原生 `<select>` 已收编） |
+| 开关 | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（皮肤在 `ui/controls-css.ts`） | `h('span', { className: 'dsh-tdt-switch' }, h(Switch, { checked, onChange }))` | ✅ 全站共用一个包装类（选中 success 绿只此一处） |
+| 日期 / 时间 | `ui/DateTime.tsx`（`DateField` / `TimeField`） | `h(DateField, { value: d, onChange, size: 'lg' })` | ✅ 全站唯一（自绘日历 + 时分列） |
+| Toast | `toast-css.ts`（`FloatingToast`） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一；⚠️ `index.ts` 仍有一处手搓中性 Toast（见 §三「待抽象」） |
+| 卡 / 浮层外壳 | 暂无（散在各业务 CSS：`task-editor-css` 的 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel`、`archive-session-css` 的 `.dsh-tdt-sv-panel`） | — | ⏳ **未抽象**（同构 7 处，见 §三「待抽象」） |
 
 > 表外的控件一旦被写第二遍，就是本手册要拦住的事。
 
@@ -55,19 +55,19 @@
 
 ### ❌ 禁止（逐条给出当前违规位置，便于对照修）
 
-| 禁止 | 现状反例 |
+| 禁止 | 现状（2026-10-01 收口后） |
 |---|---|
-| 在使用点写颜色 / 圆角 / 字号字面量 | P1a 已清掉主面板分段那处；仍存：`index.ts` 的 `iconButtonStyle` / `addButtonStyle`、`task-list.tsx` 的 `iconBtnStyle` / `panelBarStyle` 等内联字面量 |
-| 在使用点写死高度 | `height:'26px'`（约 10 处）、段高 20/22/24/26/28 五种 |
-| 直接引用宿主变量 | 业务文件里的 `var(--dsw-alias-…)`——必须改用 `var(--tdt-…)` |
-| 自己写 `body[data-ds-dark-theme]` | `archive-session-css.ts:241,279,281,287,298,322,331`（7 处 ⇒ 收敛进 token 层） |
-| 再抄一份 `C` 常量表 | 现存 3 份（`index.ts:143-160` / `task-list.tsx:68-83` / `editor-fields.tsx:39-59`） |
-| 自己 `createElement('style')` 注入 | 现存 4 条注入、2 套 id 命名 ⇒ 统一走 `ui/style.ts` |
-| 覆写官方件的观感（在使用点） | 「Switch 变绿」现在写了两遍（`task-editor-css.ts:31`、`task-list.tsx:125`）⇒ 归 `official-skins.ts` |
+| 在使用点写颜色 / 圆角 / 字号字面量 | ✅ 已清零（业务文件 `borderRadius:` / `fontSize:` 字面量 = 0；仅剩本节「已知例外」登记项） |
+| 在使用点写死控件高度 | ✅ 已清零（一律走 `size` 档 sm/md/lg，不再写 26px 之类） |
+| 直接引用宿主变量 | ✅ 已清零（`--dsw-*` 只允许出现在 `ui/tokens.ts`；冒烟反断言钉住） |
+| 自己写 `body[data-ds-dark-theme]` | ✅ 已清零（明暗差异只在 token 层一处） |
+| 再抄一份 `C` 常量表 | ✅ 已删净（3 份 `C` 表全清，冒烟钉住） |
+| 自己 `createElement('style')` 注入 | ✅ 已清零（统一走 `ui/style.ts` 的 `applyStyle`） |
+| 覆写官方件的观感（在使用点） | ✅ 「Switch 变绿」已合并到 `ui/controls-css.ts` 一处（`.dsh-tdt-switch`） |
 | 写死官方 CSS-module 类名 | 哈希会变；只能按元素 + role 选（`official-classes.ts`） |
-| 硬编码 `#fff` / `rgba(0,0,0,.45)` | ✅ 段内角标已随 P1a 收敛（走 `--tdt-on-signal`）；仍存：保存钮 `config-panel.tsx:180`、遮罩 `task-list.tsx:755` |
-| 混用**同义宿主变量** | `state-warn-primary`(2 处) 与 `state-warning-primary`(3 处) 并存 —— **已裁决：前者真、后者宿主无定义（死）**；`focus-ring-color`（真，但默认 `transparent`）与 `border-focus`（死）同理 ⇒ 一律由 token 层定一个名，见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 |
-| 注释与代码不一致 | `editor-fields.tsx:603-604` 写着 padding4/段高28，实际 padding6/段高24 ⇒ 改代码必须同步注释 |
+| 硬编码 `#fff` / `rgba(…)` | 🟡 语义色**实面上的反白字**下游仍有几处直接写 `#fff`（见「待抽象」），应统一走 `--tdt-on-signal` |
+| 混用**同义宿主变量** | 已裁决：`state-warn-primary` 真 / `state-warning-primary` 死；`focus-ring-color` 真但默认 `transparent` / `border-focus` 死 ⇒ 一律由 token 层定一个名，见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 |
+| 注释与代码不一致 | 🟡 仍偶有（改代码必须同步注释；2026-10-01 修掉一批指向已删类的旧注释） |
 
 ### 已知例外（P6 登记，2026-10-01）
 
@@ -85,6 +85,21 @@
 | 会话镜像官方样式 | `archive-session-css.ts` 的 `--dsh-content-*` / `--dsh-chat-*` | `ui-foundation.md` §九 边界（复刻官方会话面） |
 | 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`file-browser.tsx` 菜单项 / 面包屑 / 树 toggle；`task-list.tsx` chip；`mirror/*` 折叠头 | 语义非普通按钮，走各自专用类与计算属性 |
 
+### 待抽象（2026-10-01 审计登记，**未做**——显式记账，别当没看见）
+
+审计确认「一类控件一个实现」这条已**达标**；下列是**同构重复 / 该上提而未上提**的残留，属改动中等以上，登记待办（不在本次收口范围）：
+
+| # | 事项 | 现状 | 建议 |
+|---|---|---|---|
+| 1 | 省略号三件套 | `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` 全仓 **19 处**（会话 CSS 约 14 处） | 基础层加一个 `.dsh-tdt-ellipsis` |
+| 2 | 手搓图标钮 | `archive-session-css.ts` 的 `head-btn`(28×28) / `tree-toggle`(20×20) 仍自绘 | 收编 `ui/IconButton` |
+| 3 | 6px 拖拽条 | `task-editor-css.ts` 与 `archive-session-css.ts` 各写一遍（后者注释自称「同一套」） | 上提 `.dsh-tdt-resizer` |
+| 4 | 卡 / 浮层外壳 | 同构 **7 处**（`ed-card` / `ed-panel` / `sv-panel` / `sv-stats` / `layer` …） | 基础层加 Panel / Card 壳 |
+| 5 | 手搓中性 Toast | `index.ts` 自绘一个（关钮 + 圆点），与 `FloatingToast` 中性档重复 | `FloatingToast` 加 `closable` 变体后删自绘 |
+| 6 | 缺基础层件 | 无 `Textarea`（提示词框皮肤写在业务 CSS）、无 `Checkbox`（编辑器用裸 `<input type=checkbox>`） | 补进 `ui/` 后删业务皮肤 |
+| 7 | token 兜底字面量不统一 | `--tdt-fg` 兜底 `#1a1a1a` / `#1f2328` 两派；`--tdt-hover` 兜底 `rgba(128,128,128,.16)` / `rgba(127,127,127,.14)` | 兜底只在 `tokens.ts` 一处，调用点写 `var(--tdt-x)` 不带兜底 |
+| 8 | 实面反白字 | 下游仍有几处写死 `#fff` | 统一 `--tdt-on-signal` |
+
 ---
 
 ## 四、主题（明暗）规则
@@ -98,10 +113,12 @@
 
 ## 五、要「多一档尺寸」或「多一个外观」怎么办
 
-- **想要新的高度**：离散三档 `--tdt-control-h-sm`(24) / `-md`(28) / `-lg`(32)（lg=32 由用户 2026-10-01 拍板作为预估第三档）。
-  需要再增一档 ⇒ 在 `tokens.ts` 加一条 `--tdt-control-h-xx`（一处，直绑宿主两主题变量），调用点用 `size="xx"` 选；**真不够用才允许在调用点本地覆盖 `--tdt-control-h-*` 这一个变量**，且须在本文档「已知例外」表记一条（组件 `style` 只许补布局、覆盖高度，不许另写结构）。
+- **尺寸以三档为唯一刻度**（`sm=24 / md=28 / lg=32`，真源 `tokens.ts` 的 `--tdt-control-h-*`）：任何控件说 `size="md"` 就**等于 28**，不许各自翻译。**全站默认走 `lg=32`**（用户 2026-10-01 拍板：「所有输入走 32 标准」，个别太高才显式降 `md`/`sm`）。
+  - **字号跟档走**：`sm` 用 `--tdt-font-sm`(12)、`md`/`lg` 用 `--tdt-font-md`(13)（前缀框 / 数字框已按此修正，此前写死 12 ⇒ 看着「input 字比 select 小」）。
+  - **圆角统一 `--tdt-radius-md`(12)**：输入框 / 前缀框 / 数字框 / 按钮与下拉同圆角（2026-10-01 拍板；`radius-sm` 不再用于控件本体）。
+  - 需要再增一档 ⇒ 在 `tokens.ts` 加一条 `--tdt-control-h-xx`（一处，直绑宿主两主题变量），调用点用 `size="xx"` 选；**真不够用才允许在调用点本地覆盖 `--tdt-control-h-*` 这一个变量**，且须在本文档「已知例外」表记一条（组件 `style` 只许补布局、覆盖高度，不许另写结构）。
 - **想要新的外观（variant）**：在 `controls-css.ts` 里加一个 variant 类，且**只允许覆盖 token 变量**（颜色），结构/尺寸/交互规则不许重写。
-- **有边 / 无边必须等高**（2026-10-01 用户拍板）：边框必须在内部补回，不许额外撑高。统一几何 =「1px 边框 + 3px padding」——有边框的 variant 用真边框 + padding 3px；无边框的 variant 用 padding 4px 补回缺的 1px。`Segmented` 已按此落地（`default` 真边框 + 3px padding；`inset` 无边框 + 4px padding），以后 `Button` / `Input` 的有边 / 无边同此规则。
+- **有边 / 无边必须等高**（2026-10-01 拍板，同日修正 **+2**）：边框必须在内部补回，外框**严格 == token**。统一几何 = 段高 `token − 6px`（上下各 **2px padding + 1px 边框**）——有边框的 variant 用真边框 + padding **2px**；无边框的 variant padding 收 **3px** 补回缺的 1px。`Segmented` 已按此落地（`default` 真边框 + 2px；`inset` 无边框 + 3px，外框严格 24/28/32），`Button` / `Input` 的有边 / 无边同此规则。⚠️ 早期文档写的「3px / 4px」**已废**：那会让外框比 token 多 **+2px**（就是「滑轨比同排输入框高两像素」的根因）。
 - **想要新的控件**：按 §一 第三个分支，在 `ui/` 里建唯一实现，并在本手册 §二 表里加一行。
 - **想要新的 token**（颜色 / 圆角 / 字号 / 间距 / 层级）：加进 `ui/tokens.ts` **一处**（命名 `--tdt-*`，映射宿主 alias 并留兜底值），同时在 [`ui-foundation.md`](ui-foundation.md) §四 的表里登记；**不许在使用点直接写 `var(--dsw-*)`**。
 
@@ -134,7 +151,8 @@
 | 同一个意思的宿主变量有两个名字 | `state-warning-primary` / `border-focus` **宿主根本无定义**（写它们只会拿兜底色、不随主题）；`focus-ring-color` 有定义但默认值是 `transparent`（`var()` 兜底不生效 ⇒ 焦点环会隐身） | [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 §4 |
 | 宿主自带字号体系 | **成立且成族**：`--dsw-font-{xxxs-11,xxs-12,xs-13,s-14,base-16,m-18,l-20,xl-24}` + `-strong-` 变体 + 子 token ⇒ **字号一律映射宿主 token，不要自己定 px 刻度** | theme `lib/client.js`（capabilities §2） |
 | 「看着有、其实没有」的变量名 | 本仓已踩 5 处：`--dsw-alias-interactive-bg`、`--dsw-alias-border-focus`、`--dsw-alias-state-warning-primary`、`--dsh-elevation-prominent`、`--dsh-radius-panel` | [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §4 |
-| Tooltip 子元素必须是真 DOM | 裸函数组件 ref 挂不上 ⇒ 提示静默失效（踩过两次） | 决策 53 同轮口径 |
+| Tooltip 子元素必须是真 DOM | 裸函数组件（含 `IconButton`）ref 挂不上 ⇒ 提示静默失效（踩过两次）；故问号统一用原生 `span`/`button` 当 Tooltip 子节点 | 决策 53 同轮口径；`task-editor.tsx` `HelpButton` |
+| 下拉超长会撑破整行 | `SelectField` 锚点**必须给 `maxWidth`**；且官方 `Menu` 把锚点包进一层 shrink-to-fit 的 `span`，要让**这层也能收缩**（父容器加 `> *{min-width:0}`）才会压宽度出省略号——否则封了顶照样顶破容器 | `ui/Field.tsx`；`task-editor-css.ts` 的 `.dsh-tdt-ed-card-foot > *` |
 
 ---
 

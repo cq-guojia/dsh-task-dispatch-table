@@ -2369,17 +2369,10 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-frame{padding:18px 0;}
-/* 头部关闭钮规格照官方 primitives Modal.close（设置窗口关闭钮同源）：28×28、radius-sm、
-   透明底，hover 才出 interactive-bg-hover（官方无色变、无阴影）。 */
-.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;flex:none;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-close:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
 .dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-sv-btn{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);cursor:pointer;color:var(--tdt-fg,#1f2328);background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm);padding:4px 12px;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-btn:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-btn-icon{padding:4px 6px;display:inline-flex;align-items:center;justify-content:center;}
 /* 会话区边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px；纵向由 frame 补足。 */
 .dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px calc(var(--dsh-composer-side-clearance,16px) + 16px) 16px;}
 .dsh-tdt-sv-col{width:100%;max-width:var(--dsh-chat-content-width,920px);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-chat-flow-gap,16px);}
@@ -2387,7 +2380,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-col>:not([hidden]):not(.dsh-tdt-sv-flowitem:empty)~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:var(--dsh-chat-flow-gap,16px);}
 .dsh-tdt-sv-visuallyhidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 .dsh-tdt-sv-flowitem{min-width:0;}
-.dsh-tdt-sv-official{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
 .dsh-tdt-sv-older{display:flex;justify-content:center;}
 .dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.9));background:var(--tdt-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--tdt-radius-sm,6px);padding:4px 12px;}
 .dsh-tdt-sv-older button:disabled{cursor:default;opacity:.6;}
@@ -2397,7 +2389,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-process-label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
 .dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--tdt-fg-4,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
 .dsh-tdt-sv-process[data-open] .dsh-tdt-sv-process-chevron{transform:rotate(180deg);}
-.dsh-tdt-sv-process-body{min-width:0;}
 .dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
 .dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
 .dsh-tdt-sv-action:hover{color:var(--tdt-fg,#1f2328);}
@@ -2516,10 +2507,6 @@ body[data-ds-dark-theme]{
 /* U10 继续对话（开分支）：头部按钮组 + 确认框。确认框 = 官方 primitives Modal + Button
    （portal 到 body，与本弹窗同 z-index 层、后挂载居上），此处只留头部钮规格与 Modal 内错误行。 */
 .dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
-/* 分支钮对齐官方 outline 小钮（Button.module.css .sm：28 高、radius-sm、0.5px border-l3、12/18 字、padding 0 10px）。 */
-.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);height:var(--tdt-control-h-md);cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--tdt-fg,#1f2328);background:transparent;border:.5px solid var(--tdt-border-strong,rgba(128,128,128,.4));border-radius:var(--tdt-radius-sm,6px);padding:0 10px;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-branch:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-branch:disabled{opacity:.4;cursor:not-allowed;}
 /* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
 .dsh-tdt-sv-forkmodal{width:min(440px,100%);}
 /* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
@@ -2606,8 +2593,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 /* 报错页「返回」按钮（四验：停在报错页没有任何办法回去）。 */
 .dsh-tdt-sv-err-actions{margin-top:12px;}
-.dsh-tdt-sv-err-back{appearance:none;border:1px solid var(--tdt-border);background:0 0;border-radius:var(--tdt-radius-sm);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 14px;color:var(--tdt-fg);cursor:pointer;}
-.dsh-tdt-sv-err-back:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 第二排：文件名（跑马灯）+ 操作按钮。 */
 .dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
@@ -6515,9 +6500,6 @@ body[data-ds-dark-theme]{
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
 .dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:var(--tdt-font-md);color:var(--tdt-fg,#1f2328);cursor:pointer;}
 /* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
-/* 关闭钮：规格照官方 primitives Modal.close（28×28、radius-sm、hover 才出底）。 */
-.dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);padding:0;border:none;border-radius:var(--tdt-radius-sm,6px);background:0 0;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
-.dsh-tdt-ed-close:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
 .dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-label{font-size:var(--tdt-font-sm);font-weight:600;color:var(--tdt-fg,#1f2328);}
@@ -6544,11 +6526,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-ver-note{display:block;font-size:var(--tdt-font-xs);color:var(--tdt-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
-/* 「使用」= 纯文字钮（用户：药丸太长），hover 才垫一个小背景；「×」= 官方叉图标，hover 变红。 */
-.dsh-tdt-ed-ver-use{appearance:none;border:none;background:none;padding:1px 4px;border-radius:var(--tdt-radius-sm,4px);color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease;}
-.dsh-tdt-ed-ver-use:hover{background:var(--tdt-hover,rgba(128,128,128,.2));}
-.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:2px;border-radius:var(--tdt-radius-sm,4px);display:inline-flex;align-items:center;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;transition:background .12s ease,color .12s ease;}
-.dsh-tdt-ed-ver-del:hover{color:var(--tdt-danger,#e5484d);background:var(--tdt-hover,rgba(128,128,128,.2));}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
@@ -6571,19 +6548,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-advitem{padding-top:12px;}
 .dsh-tdt-ed-advitem:first-child{padding-top:0;}
 .dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--tdt-border-strong,rgba(128,128,128,.5));}
-/* 单行文本输入：逐条照官方 Input.module.css（.wrap + .input 合并成一枚裸 input），
-   含官方的 focus 描边与占位色 —— 这两条必须走 CSS，内联样式压不过伪类。 */
-.dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);outline:none;transition:border-color .15s ease;}
-.dsh-tdt-ed-input:focus{border-color:var(--tdt-business,#4d6bfe);}
-.dsh-tdt-ed-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-/* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
-   省掉标签单独占的一行——弹窗竖向空间紧张。 */
-.dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:var(--tdt-control-h-lg);box-sizing:border-box;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
-.dsh-tdt-ed-pfx:focus-within{border-color:var(--tdt-business,#4d6bfe);}
-.dsh-tdt-ed-pfx-label{flex:none;display:inline-flex;align-items:center;padding:0 10px;border-right:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-md);line-height:var(--tdt-line-sm);white-space:nowrap;}
-.dsh-tdt-ed-pfx-input{flex:1 1 auto;min-width:0;padding:0 10px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-md);}
-.dsh-tdt-ed-pfx-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-.dsh-tdt-ed-pfx--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
@@ -40883,6 +40847,7 @@ body[data-ds-dark-theme]{
 			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
 			`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
 			".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
+			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-surface-1); }",
 			"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
 			".dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }",
 			".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
@@ -42059,7 +42024,7 @@ body[data-ds-dark-theme]{
 				row,
 				t,
 				tt
-			}), (0, react.createElement)("span", { className: "dsh-tdt-tl-switchwrap dsh-tdt-switch" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			}), (0, react.createElement)("span", { className: "dsh-tdt-switch" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: row.enabled,
 				onChange: (next) => {
 					onToggleEnabled(row.id, next);

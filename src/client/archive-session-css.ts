@@ -40,17 +40,10 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-frame{padding:18px 0;}
-/* 头部关闭钮规格照官方 primitives Modal.close（设置窗口关闭钮同源）：28×28、radius-sm、
-   透明底，hover 才出 interactive-bg-hover（官方无色变、无阴影）。 */
-.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;flex:none;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-close:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
 .dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-sv-btn{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);cursor:pointer;color:var(--tdt-fg,#1f2328);background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm);padding:4px 12px;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-btn:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-btn-icon{padding:4px 6px;display:inline-flex;align-items:center;justify-content:center;}
 /* 会话区边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px；纵向由 frame 补足。 */
 .dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px calc(var(--dsh-composer-side-clearance,16px) + 16px) 16px;}
 .dsh-tdt-sv-col{width:100%;max-width:var(--dsh-chat-content-width,920px);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-chat-flow-gap,16px);}
@@ -58,7 +51,6 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-col>:not([hidden]):not(.dsh-tdt-sv-flowitem:empty)~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:var(--dsh-chat-flow-gap,16px);}
 .dsh-tdt-sv-visuallyhidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 .dsh-tdt-sv-flowitem{min-width:0;}
-.dsh-tdt-sv-official{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
 .dsh-tdt-sv-older{display:flex;justify-content:center;}
 .dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.9));background:var(--tdt-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--tdt-radius-sm,6px);padding:4px 12px;}
 .dsh-tdt-sv-older button:disabled{cursor:default;opacity:.6;}
@@ -68,7 +60,6 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-process-label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
 .dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--tdt-fg-4,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
 .dsh-tdt-sv-process[data-open] .dsh-tdt-sv-process-chevron{transform:rotate(180deg);}
-.dsh-tdt-sv-process-body{min-width:0;}
 .dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
 .dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
 .dsh-tdt-sv-action:hover{color:var(--tdt-fg,#1f2328);}
@@ -187,10 +178,6 @@ export const ARCHIVE_SESSION_CSS = `
 /* U10 继续对话（开分支）：头部按钮组 + 确认框。确认框 = 官方 primitives Modal + Button
    （portal 到 body，与本弹窗同 z-index 层、后挂载居上），此处只留头部钮规格与 Modal 内错误行。 */
 .dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
-/* 分支钮对齐官方 outline 小钮（Button.module.css .sm：28 高、radius-sm、0.5px border-l3、12/18 字、padding 0 10px）。 */
-.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);height:var(--tdt-control-h-md);cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--tdt-fg,#1f2328);background:transparent;border:.5px solid var(--tdt-border-strong,rgba(128,128,128,.4));border-radius:var(--tdt-radius-sm,6px);padding:0 10px;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-branch:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-branch:disabled{opacity:.4;cursor:not-allowed;}
 /* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
 .dsh-tdt-sv-forkmodal{width:min(440px,100%);}
 /* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
@@ -277,8 +264,6 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 /* 报错页「返回」按钮（四验：停在报错页没有任何办法回去）。 */
 .dsh-tdt-sv-err-actions{margin-top:12px;}
-.dsh-tdt-sv-err-back{appearance:none;border:1px solid var(--tdt-border);background:0 0;border-radius:var(--tdt-radius-sm);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 14px;color:var(--tdt-fg);cursor:pointer;}
-.dsh-tdt-sv-err-back:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 第二排：文件名（跑马灯）+ 操作按钮。 */
 .dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */

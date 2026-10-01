@@ -660,9 +660,14 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 编辑器 UX 第二轮（2026-09-30）：版本开关分段同款 / 条目卡片+hover 小钮 / 启用 Toast / 校验红框 / 快照 UI 已删
   // 2026-10-01：版本开关已并入统一 Segmented（id=dsh-tdt-ed-histtoggle，multiple 单段），旧 .dsh-tdt-ed-histtoggle-seg 类已删
   check('版本开关走统一 Segmented（id dsh-tdt-ed-histtoggle + 旧自绘类已删）', clientJs.includes('dsh-tdt-ed-histtoggle') && clientJs.includes('dsh-tdt-seg') && !clientJs.includes('dsh-tdt-ed-histtoggle-seg'))
-  check('版本条目卡片式 + 使用/移除小钮', clientJs.includes('dsh-tdt-ed-ver-use') && clientJs.includes('dsh-tdt-ed-ver-del') && clientJs.includes('MarqueeText'))
+  // 2026-10-01：版本条目「使用/移除」已收编基础层（使用 = Button link 档；移除 = IconButton danger），旧自绘类已删。
+  check('版本条目 + 使用/移除钮走基础层（link 钮 + danger 图标钮；旧自绘类已删）',
+    clientJs.includes('dsh-tdt-btn--link') && clientJs.includes('dsh-tdt-iconbtn--danger')
+    && !clientJs.includes('dsh-tdt-ed-ver-use') && !clientJs.includes('dsh-tdt-ed-ver-del') && clientJs.includes('MarqueeText'))
   check('启用开关写回 Toast（--below 变体）', clientJs.includes('dsh-tdt-toast--below'))
-  check('任务名称/下拉校验红框类', clientJs.includes('dsh-tdt-ed-pfx--error') && clientJs.includes('dsh-tdt-ed-field--error'))
+  // 2026-10-01：前缀框红框已走 ui 基础层 `.dsh-tdt-pfx--error`（旧 `.dsh-tdt-ed-pfx--error` 已删）；下拉用 `.dsh-tdt-ed-field--error`。
+  check('任务名称/下拉校验红框类（走 ui 基础层 .dsh-tdt-pfx--error）',
+    clientJs.includes('dsh-tdt-pfx--error') && clientJs.includes('dsh-tdt-ed-field--error') && !clientJs.includes('dsh-tdt-ed-pfx--error'))
   check('启用实时写回走独立端点 tasks/enabled', dispatchJs.includes('tasks/enabled') || clientJs.includes('tasks/enabled'))
   // UX 第二轮·第三次返工（2026-09-30）：Toast 抽象共用（三色）+ 派发 ctx 读护栏
   check('浮层 Toast 共用组件 + 四档语义色（success/warning/neutral/error）',
@@ -802,7 +807,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('scheduleSegments') && clientJs.includes('emphasis'))
   check('排期反解读结构化 ui（老任务才退回 cron）', clientJs.includes('ui.weekdays'))
   // 列表启用开关与编辑器同款（官方默认选中色是 brand-primary ⇒ 亮色近黑 / 暗色近白，两处看着不一样）。
-  check('列表启用开关与编辑器同款（switchwrap + success 绿）', clientJs.includes('dsh-tdt-tl-switchwrap'))
+  // 2026-10-01：列表与编辑器启用开关共用 `.dsh-tdt-switch` 包装类（选中 success 绿）；空壳 `dsh-tdt-tl-switchwrap` 已删。
+  check('列表启用开关与编辑器同款（共用 .dsh-tdt-switch，选中 success 绿）',
+    clientJs.includes('dsh-tdt-switch') && clientJs.includes('--tdt-success') && !clientJs.includes('dsh-tdt-tl-switchwrap'))
   // 右上角刷新按钮已撤（用户 2026-09-30：反正改完立刻刷新，按钮没用）。
   check('右上角刷新按钮已移除（不再有 debugRefresh 按钮）', !clientJs.includes('title: t("debugRefresh")'))
   // 保存后乐观补行 ⇒ 改完**立刻**可见，不等服务端那 ~1 秒的落盘 + 重拉。
