@@ -32,7 +32,7 @@ export const TOAST_CSS = `
   background:var(--tdt-surface-1,rgba(128,128,128,.15));
   background:color-mix(in srgb,var(--tone) 10%,var(--tdt-surface-1,#fff));
   color:var(--tdt-fg,#1f2328);
-  font-size:12px;
+  font-size:var(--tdt-font-sm);
   line-height:1.6;
   display:flex;
   align-items:flex-start;

@@ -701,7 +701,7 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
 // ─────────────────────── 布局小件 ───────────────────────
 
 /** 单行输入的度量全在 `dsh-tdt-ed-input` 类里（逐条照官方 Input.module.css，含 focus 描边与占位色）。 */
-const sectionLabelStyle: CSSProperties = { fontSize: '12px', fontWeight: 600, color: 'var(--tdt-fg)', marginBottom: '6px' }
+const sectionLabelStyle: CSSProperties = { fontSize: 'var(--tdt-font-sm)', fontWeight: 600, color: 'var(--tdt-fg)', marginBottom: '6px' }
 
 /**
  * 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
@@ -882,7 +882,7 @@ function IntervalControls(props: {
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
     // 一行说完：每隔 [1] [小时] 执行一次（照参考图的写法，不再拆成标签列）。
     h('div', { className: 'dsh-tdt-ed-row' },
-      h('span', { style: { fontSize: '13px', color: 'var(--tdt-fg)' } }, t('editorIntervalEvery')),
+      h('span', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, t('editorIntervalEvery')),
       h(NumberInput, {
         value: Number.parseInt(draft.intervalStep, 10) || 1,
         min: 1,
@@ -900,7 +900,7 @@ function IntervalControls(props: {
         ariaLabel: t('editorIntervalUnit'),
         width: 96,
       }),
-      h('span', { style: { fontSize: '13px', color: 'var(--tdt-fg)' } }, t('editorIntervalSuffix')),
+      h('span', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, t('editorIntervalSuffix')),
     ),
     h(WeekdayPicker, {
       value: draft.weekdays,
@@ -959,7 +959,7 @@ const promptEditorTheme = EditorView.theme({
   '&': { backgroundColor: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', height: '100%', width: '100%' },
   '.cm-editor': { height: '100%', width: '100%', backgroundColor: 'var(--tdt-surface-base, #22252a)' },
   // 软折行：长行自动换行，不出现横向滚动条（编辑器随列宽收缩也跟着重折）。
-  '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '13px', lineHeight: '1.6', overflowX: 'hidden' },
+  '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 'var(--tdt-font-md)', lineHeight: '1.6', overflowX: 'hidden' },
   '.cm-content': { width: '100%' },
   '.cm-line': { padding: '0 4px' },
   '.cm-gutters': { backgroundColor: 'var(--tdt-surface-1, rgba(128,128,128,0.08))', color: 'var(--tdt-fg-2)', border: 'none' },
@@ -988,8 +988,8 @@ function ConfirmDiscard(props: {
       style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--tdt-surface-2, #2a2e33)', borderRadius: 'var(--tdt-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '22px 24px', color: 'var(--tdt-fg)' },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
-      h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px' } }, props.t('editorDiscardTitle')),
-      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: 'var(--tdt-fg-2)', marginBottom: '20px' } }, props.t('editorDiscardDesc')),
+      h('div', { style: { fontSize: 'var(--tdt-font-xl)', fontWeight: 500, marginBottom: '8px' } }, props.t('editorDiscardTitle')),
+      h('div', { style: { fontSize: 'var(--tdt-font-lg)', lineHeight: 'var(--tdt-line-lg)', color: 'var(--tdt-fg-2)', marginBottom: '20px' } }, props.t('editorDiscardDesc')),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
         h(Button, { variant: 'outline', size: 'sm', onClick: props.onStay }, props.t('editorDiscardStay')),
         h(Button, { variant: 'primary', size: 'sm', onClick: props.onLeave }, props.t('editorDiscardLeave')),
@@ -1026,20 +1026,20 @@ function VersionConfirm(props: {
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
       // 层级：标题 15/600（警告橙可选）→ 说明 13 次要色 → 圆点清单 13 主色、条目间留呼吸 → 勾选 → 按钮。
-      h('div', { style: { fontSize: '15px', fontWeight: 600, lineHeight: '22px', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--tdt-warning)' } : {}) } }, props.title),
+      h('div', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, lineHeight: 'var(--tdt-line-lg)', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--tdt-warning)' } : {}) } }, props.title),
       props.desc !== ''
-        ? h('div', { style: { fontSize: '13px', lineHeight: '21px', color: 'var(--tdt-fg-2)', marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
+        ? h('div', { style: { fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', color: 'var(--tdt-fg-2)', marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
         : null,
       props.bullets !== undefined && props.bullets.length > 0
         ? h('ul', { style: { listStyle: 'none', margin: '0 0 18px', padding: '10px 12px', borderRadius: 'var(--tdt-radius-md,8px)', background: 'var(--tdt-surface-1,rgba(128,128,128,.08))', display: 'flex', flexDirection: 'column', gap: '6px' } },
-          ...props.bullets.map(b => h('li', { key: b, style: { fontSize: '13px', lineHeight: '20px', display: 'flex', gap: '8px' } },
+          ...props.bullets.map(b => h('li', { key: b, style: { fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', display: 'flex', gap: '8px' } },
             h('span', { style: { flex: 'none', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--tdt-fg-3,rgba(128,128,128,.8))', margin: '7px 0 0' } }),
             h('span', null, b),
           )),
         )
         : null,
       needAck
-        ? h('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', lineHeight: '20px', cursor: 'pointer', marginBottom: '16px' } },
+        ? h('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', cursor: 'pointer', marginBottom: '16px' } },
           h('input', {
             type: 'checkbox',
             checked: props.checkbox?.checked === true,
@@ -1087,7 +1087,7 @@ function PromptEditorModal(props: {
     style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', overflow: 'hidden', position: 'relative' },
   },
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--tdt-border)` } },
-      h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPromptEditorTitle')),
+      h('span', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600 } }, t('editorPromptEditorTitle')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
         h(Segmented, {
           id: 'dsh-tdt-ed-prompt-mode',
@@ -1137,12 +1137,12 @@ function PromptEditorModal(props: {
       showVersions
         // 面板缩窄（用户 2026-09-30：固定 280 太占地方）= 232px：够放日期 + hover 两个小钮，左栏多让 48px。
         ? h('div', { style: { flex: '0 0 232px', borderLeft: `1px solid var(--tdt-border-heavy)`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
-            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid var(--tdt-border-heavy)`, fontSize: '13px', fontWeight: 600 } }, versionTitle),
+            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid var(--tdt-border-heavy)`, fontSize: 'var(--tdt-font-md)', fontWeight: 600 } }, versionTitle),
             editorMode === 'create'
-              ? h('div', { style: { padding: '16px 12px', fontSize: '12px', color: 'var(--tdt-fg-2)', lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
+              ? h('div', { style: { padding: '16px 12px', fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
               : h('div', { style: { display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' } },
                 versions.length === 0
-                  ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: 'var(--tdt-fg-2)' } }, t('editorNoVersions'))
+                  ? h('p', { style: { padding: '0 12px', fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)' } }, t('editorNoVersions'))
                   : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 0 8px', overflow: 'auto' } },
                     versions.map(v => h('li', {
                       key: v.file,
@@ -1205,7 +1205,7 @@ function ConfigPreviewPanel(props: { t: T; json: string; onClose: () => void }):
   const { t, json, onClose } = props
   return h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', overflow: 'hidden', position: 'relative' } },
     h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--tdt-border)` } },
-      h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPreview')),
+      h('span', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600 } }, t('editorPreview')),
       h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
     ),
     h('div', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'auto', padding: '14px 18px' } },
@@ -1616,10 +1616,10 @@ export function TaskEditorDrawer(props: {
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
     draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
           // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
-          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } },
+          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-sm)', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } },
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
-            h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } }, att.name),
-            h('span', { title: att.ref, style: { flex: 'none', fontSize: '11px', color: 'var(--tdt-fg-2)', borderRadius: '4px', padding: '1px 6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
+            h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-md)' } }, att.name),
+            h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
             h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove') }, t('editorAttachmentRemove')),
           )),
         ),
@@ -1635,8 +1635,8 @@ export function TaskEditorDrawer(props: {
           if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
         },
       },
-        h('div', { style: { fontSize: '13px', color: 'var(--tdt-fg)' } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
-        uploading ? null : h('div', { style: { fontSize: '11px', color: 'var(--tdt-fg-2)', marginTop: '4px' } }, t('editorDropZoneFormats')),
+        h('div', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
+        uploading ? null : h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', marginTop: '4px' } }, t('editorDropZoneFormats')),
       ),
       h('div', { style: { flex: 'none', display: 'flex' } },
         // 正方形虚线按钮（用户 2026-09-29：与投放区同语言——加号在上、文字在下）。
@@ -1658,7 +1658,7 @@ export function TaskEditorDrawer(props: {
           },
         },
           h(IconPlusOutlineRegular, { size: 20 }),
-          h('span', { style: { fontSize: '12px', lineHeight: 1.2 } }, t('editorPickWorkspaceFileShort')),
+          h('span', { style: { fontSize: 'var(--tdt-font-sm)', lineHeight: 1.2 } }, t('editorPickWorkspaceFileShort')),
         ),
       ),
     ),
@@ -1721,7 +1721,7 @@ export function TaskEditorDrawer(props: {
       ),
     // 「预计执行」人话说明（用户 2026-09-30）：在「任务开始时间」上方画两条**虚线**，中间夹一句实时翻译。
     h('div', { style: { marginTop: '14px' } },
-      h('div', { style: { borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px', fontSize: '12px', lineHeight: '1.6', color: 'var(--tdt-fg-2)' } },
+      h('div', { style: { borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px', fontSize: 'var(--tdt-font-sm)', lineHeight: '1.6', color: 'var(--tdt-fg-2)' } },
         h('span', { style: { color: 'var(--tdt-fg)', fontWeight: 600, marginRight: '4px' } }, t('editorSchedForecast') + '：'),
         // 关键片段（时间 / 「每 N 分钟执行一次」）加粗提亮（用户 2026-09-30：方法要支持样式参数）。
         renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: 'var(--tdt-fg)' } }),
@@ -1733,7 +1733,7 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '8px', borderTop: 'none', marginTop: '14px', paddingTop: '0' } },
       showTaskStart
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
-            h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg)' } }, t('editorTaskStart')),
+            h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg)' } }, t('editorTaskStart')),
             h(DateField, {
               value: draft.date,
               onChange: value => { patch({ date: value }) },
@@ -1758,7 +1758,7 @@ export function TaskEditorDrawer(props: {
         : null,
       h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto' } }),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-        h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: '11px', color: 'var(--tdt-fg-2)' } }, t('editorWindow')),
+        h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)' } }, t('editorWindow')),
         h(SelectField, {
           value: draft.window,
           options: windowOptions,
@@ -1820,8 +1820,8 @@ export function TaskEditorDrawer(props: {
             // 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 --tdt-* token 保证观感一致。
             style: { border: `1px dashed var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)', padding: '16px 12px', textAlign: 'center', background: 'var(--tdt-surface-1)' },
           },
-            h('div', { style: { fontSize: '13px' } }, t('editorDepEmpty')),
-            h('div', { style: { color: 'var(--tdt-fg-2)', fontSize: '12px', marginTop: '4px' } }, t('editorDepEmptyHint')),
+            h('div', { style: { fontSize: 'var(--tdt-font-md)' } }, t('editorDepEmpty')),
+            h('div', { style: { color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-sm)', marginTop: '4px' } }, t('editorDepEmptyHint')),
           )
         : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
             draft.deps.filter(dep => dep.task !== currentTaskId).map((dep, index) => {
@@ -1831,9 +1831,9 @@ export function TaskEditorDrawer(props: {
                 // 行首只留「有点任务」icon（官方 IconPlanOutlineRegular）——「前置任务：」文字按用户要求删除（太占地方）。
                 h('span', { style: { display: 'inline-flex', flex: 'none', color: 'var(--tdt-fg-3)' } }, h(IconPlanOutlineRegular, { size: 14 })),
                 // 任务名吃剩余宽度：超长省略号，hover 跑马灯（MarqueeText，动画只在内层 span 上跑）。
-                h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: '13px' } }),
+                h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } }),
                 // 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
-                ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: 'var(--tdt-fg-2)', fontSize: '11px' } }),
+                ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)' } }),
                 // 「移除」宽度固定（flex none），不被任务名挤动。
                 h(Button, { variant: 'ghost', size: 'sm', style: { flex: 'none' }, onClick: () => { patch({ deps: draft.deps.filter(d => d.task !== dep.task) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
               )
@@ -1875,7 +1875,7 @@ export function TaskEditorDrawer(props: {
         onClick: addDep,
         // 三段式右段：定宽、居右（flex 布局里排最后即贴右），文字图标居中。
         // 88 → 72px（用户 2026-09-29：窄一点，把宽度让给中间的任务名）。
-        style: { flex: '0 0 72px', height: '32px', justifyContent: 'center' },
+        style: { flex: '0 0 72px', height: 'var(--tdt-control-h-lg)', justifyContent: 'center' },
       }, t('editorDepAdd')),
     ),
   )
@@ -1935,7 +1935,7 @@ export function TaskEditorDrawer(props: {
                   onChange: (next: boolean) => { patch({ goalMode: next }) },
                   label: t('editorGoal'),
                 }),
-                h('span', { style: { fontSize: '13px', fontWeight: 600 } }, t('editorGoal')),
+                h('span', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600 } }, t('editorGoal')),
               ),
               h('p', { className: 'dsh-tdt-ed-hint' }, t('editorGoalHint')),
             ),
@@ -1948,7 +1948,7 @@ export function TaskEditorDrawer(props: {
                   onChange: (next: boolean) => { patch({ agentTeam: next }) },
                   label: t('editorAgentTeam'),
                 }),
-                h('span', { style: { fontSize: '13px', fontWeight: 600 } }, t('editorAgentTeam')),
+                h('span', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600 } }, t('editorAgentTeam')),
               ),
               h('p', { className: 'dsh-tdt-ed-hint' }, t('editorAgentTeamHint')),
             ),
@@ -2037,7 +2037,7 @@ export function TaskEditorDrawer(props: {
               label: t('editorEnabled'),
               title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
             }),
-            h('span', { style: { fontSize: '12px', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
+            h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
               draft.enabled ? t('editorEnabledStateOn') : t('editorEnabledStateOff')),
           ),
           h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
@@ -2266,7 +2266,7 @@ export function TaskEditorDrawer(props: {
                 // 自带的 border-left（浮层已有外框）。
                 style: { flex: '1 1 auto', width: '100%', minWidth: 0, minHeight: 0, borderLeft: 'none' },
               })
-              : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: 'var(--tdt-fg-2)', fontSize: '13px' } }, t('editorPickerNoSession'))
+              : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-md)' } }, t('editorPickerNoSession'))
           })(),
         ), document.body)
       : null,

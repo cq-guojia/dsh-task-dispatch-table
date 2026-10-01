@@ -1672,13 +1672,16 @@ console.log('\n[14] runtime-index')
     ]
     let dswFiles = 0
     let cTableFiles = 0
+    let selfInjectFiles = 0
     for (const f of business) {
       const src = readFileSync(join(process.cwd(), 'src', 'client', f), 'utf8')
       if (src.includes('--dsw-')) dswFiles++
       if (src.includes('const C = {')) cTableFiles++
+      if (src.includes("createElement('style')")) selfInjectFiles++
     }
     check('业务文件宿主变量引用清零（--dsw- 只应出现在 ui/tokens.ts）', dswFiles === 0)
     check('C 常量表已删净（const C = { 为 0）', cTableFiles === 0)
+    check('使用点不再自注入 <style>（统一走 ui/style.ts 的 applyStyle）', selfInjectFiles === 0)
   }
 
   store.close()

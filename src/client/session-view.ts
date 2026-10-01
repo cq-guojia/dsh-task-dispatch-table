@@ -1334,5 +1334,5 @@ export const sessionLinkStyle: Record<string, string | number> = {
   border: 'none',
   padding: 0,
   font: 'inherit',
-  fontSize: '12px',
+  fontSize: 'var(--tdt-font-sm)',
 }

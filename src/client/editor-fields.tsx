@@ -48,11 +48,11 @@ export interface EditorOption {
 
 /** 锚点按钮：克隆官方 `Input` 的外观（下拉、日期、时分共用同一副壳）。 */
 const fieldButtonStyle: CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: '6px', height: '32px', boxSizing: 'border-box',
+  display: 'inline-flex', alignItems: 'center', gap: '6px', height: 'var(--tdt-control-h-lg)', boxSizing: 'border-box',
   minWidth: 0, maxWidth: '100%', padding: '0 8px',
   border: `0.5px solid var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)', background: 'var(--tdt-surface-1)',
   // 13px：与官方菜单行字号同档（官方 Input 是 14px，放在卡片底部一行里偏粗）。
-  color: 'var(--tdt-fg)', font: 'inherit', fontSize: '13px', lineHeight: '20px', cursor: 'pointer',
+  color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', cursor: 'pointer',
   transition,
 }
 
@@ -69,7 +69,7 @@ const fieldLabelStyle: CSSProperties = {
 const layerStyle: CSSProperties = {
   position: 'fixed', zIndex: 1100, boxSizing: 'border-box', padding: '4px',
   background: 'var(--tdt-surface-menu)', boxShadow: 'var(--tdt-shadow-2)', borderRadius: 'var(--tdt-radius-md)',
-  color: 'var(--tdt-fg)', fontSize: '13px',
+  color: 'var(--tdt-fg)', fontSize: 'var(--tdt-font-md)',
 }
 
 /** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
@@ -144,7 +144,7 @@ export function SelectField(props: {
     onClick: () => { setOpen(!open) },
     style: {
       ...fieldButtonStyle,
-      ...(compact ? { height: '28px', gap: '4px', fontSize: '12px', lineHeight: '18px' } : null),
+      ...(compact ? { height: 'var(--tdt-control-h-md)', gap: '4px', fontSize: 'var(--tdt-font-sm)', lineHeight: 'var(--tdt-line-sm)' } : null),
       width: props.width ?? (props.block === true ? '100%' : undefined),
       ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
       background: hover && usable ? 'var(--tdt-hover)' : 'var(--tdt-surface-1)',
@@ -242,7 +242,7 @@ export function WeekdayPicker(props: {
   return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
     props.label === undefined
       ? null
-      : h('span', { style: { flex: 'none', fontSize: '13px', color: 'var(--tdt-fg)' } }, props.label),
+      : h('span', { style: { flex: 'none', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' } }, props.label),
     // 多选；放在间隔卡里 ⇒ variant="inset"；星期多选做成「正方形 + 蓝选中」的特殊化变体
     // （用户 2026-10-01：原 WeekdayPicker 即蓝底方块，统一到 Segmented 后由 .dsh-tdt-seg--weekday 补回）。
     h(Segmented, {
@@ -257,7 +257,7 @@ export function WeekdayPicker(props: {
       onChange: (next: string[]) => { props.onChange(next.map(Number).sort((a, b) => a - b)) },
     }),
     props.value.length === 0
-      ? h('span', { style: { fontSize: '12px', color: 'var(--tdt-fg-dim)' } }, props.labels.empty)
+      ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-dim)' } }, props.labels.empty)
       : null,
   )
 }

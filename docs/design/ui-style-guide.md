@@ -69,6 +69,22 @@
 | 混用**同义宿主变量** | `state-warn-primary`(2 处) 与 `state-warning-primary`(3 处) 并存 —— **已裁决：前者真、后者宿主无定义（死）**；`focus-ring-color`（真，但默认 `transparent`）与 `border-focus`（死）同理 ⇒ 一律由 token 层定一个名，见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 |
 | 注释与代码不一致 | `editor-fields.tsx:603-604` 写着 padding4/段高28，实际 padding6/段高24 ⇒ 改代码必须同步注释 |
 
+### 已知例外（P6 登记，2026-10-01）
+
+以下内联字面量经评审保留，**不纳入「数值必须来自 token」的硬约束**；每次新增同类须回本表加一条。
+
+| 类别 | 位置样例 | 理由 |
+|---|---|---|
+| 图标尺寸 | `task-list.tsx` 18/16、`editor-fields.tsx` 16、`task-editor.tsx` 14、`archive-session-css.ts` 14/16/6/11/40/14、`index.ts` 16 | 图标 / 图标底板与控件总高无绑定 |
+| 圆点 / 装饰点 | `task-list.tsx` 5、`task-editor.tsx` 5、`index.ts` 7、`toast-css.ts` 7、`archive-session-css.ts` 2 | 装饰元素，无三档语义 |
+| 分隔线 / 1px 圆角 | `archive-session-css.ts` 1px / 1×1 | 线宽语义 |
+| 圆形 `border-radius:50%` | `task-editor.tsx` 圆点、`task-list.tsx` 圆点 | 圆点必须圆 |
+| 内容区定高 / 限高 | `task-list.tsx` 360（刻意定高）、`task-editor-css.ts` 132、`archive-session-css.ts` 150/224/240/60、`index.ts` 16em/12em | 内容区尺寸，与控件档无关 |
+| 紧凑树开关 20×20 | `archive-session-css.ts` `.dsh-tdt-sv-tree-toggle` | 树行密度专用第四档 |
+| 随字号缩放行高 | `archive-session-css.ts` `calc(Npx + var(--dsh-content-font-delta))` | 承担字号自适应，换 token 会丢掉缩放能力 |
+| 会话镜像官方样式 | `archive-session-css.ts` 的 `--dsh-content-*` / `--dsh-chat-*` | `ui-foundation.md` §九 边界（复刻官方会话面） |
+| 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`file-browser.tsx` 菜单项 / 面包屑 / 树 toggle；`task-list.tsx` chip；`mirror/*` 折叠头 | 语义非普通按钮，走各自专用类与计算属性 |
+
 ---
 
 ## 四、主题（明暗）规则

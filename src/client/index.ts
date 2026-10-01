@@ -146,23 +146,23 @@ const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-d
 
 const textareaStyle: Record<string, string | number> = {
   width: '100%', boxSizing: 'border-box', minHeight: '16em', resize: 'vertical',
-  fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, padding: '8px',
-  color: 'var(--tdt-fg)', background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`, borderRadius: '8px',
+  fontFamily: monoFont, fontSize: 'var(--tdt-font-sm)', lineHeight: 1.5, padding: '8px',
+  color: 'var(--tdt-fg)', background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`, borderRadius: 'var(--tdt-radius-sm)',
 }
-const hintStyle: Record<string, string | number> = { color: 'var(--tdt-fg-2)', fontSize: '12px', margin: '4px 0 8px' }
-const errorStyle: Record<string, string | number> = { color: 'var(--tdt-danger)', fontSize: '12px', margin: '4px 0 0' }
+const hintStyle: Record<string, string | number> = { color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-sm)', margin: '4px 0 8px' }
+const errorStyle: Record<string, string | number> = { color: 'var(--tdt-danger)', fontSize: 'var(--tdt-font-sm)', margin: '4px 0 0' }
 const rowStyle: Record<string, string | number> = { display: 'flex', gap: '8px', margin: '8px 0' }
 const dlStyle: Record<string, string | number> = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 16px', margin: '8px 0 0' }
 
 // ── 设置页卡片：只留一行「标题 + 描述 + 箭头」，点一下开面板（与宿主其它插件卡片同形）──
 const cardStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-  padding: '12px 14px', border: `1px solid var(--tdt-border)`, borderRadius: '10px',
+  padding: '12px 14px', border: `1px solid var(--tdt-border)`, borderRadius: 'var(--tdt-radius-sm)',
   cursor: 'pointer', width: '100%', boxSizing: 'border-box', background: 'transparent',
   textAlign: 'left', color: 'var(--tdt-fg)', transition,
 }
-const cardTitleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: 'var(--tdt-fg)' }
-const cardDescStyle: Record<string, string | number> = { fontSize: '12px', color: 'var(--tdt-fg-2)', marginTop: '2px' }
+const cardTitleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)' }
+const cardDescStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', marginTop: '2px' }
 const chevronStyle: Record<string, string | number> = { color: 'var(--tdt-fg-3)', display: 'flex', alignItems: 'center' }
 
 // ── 面板（main 槽整页）样式 ──
@@ -179,15 +179,15 @@ const panelHeaderStyle: Record<string, string | number> = {
   marginBottom: '40px',
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
-const panelTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: 'var(--tdt-fg)' }
-const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px', color: 'var(--tdt-fg)' }
+const panelTitleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)' }
+const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' }
 const preStyle: Record<string, string | number> = {
-  fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, margin: '4px 0',
+  fontFamily: monoFont, fontSize: 'var(--tdt-font-sm)', lineHeight: 1.5, margin: '4px 0',
   whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '12em', overflow: 'auto',
-  background: 'var(--tdt-surface-2)', color: 'var(--tdt-fg)', padding: '8px', borderRadius: '6px',
+  background: 'var(--tdt-surface-2)', color: 'var(--tdt-fg)', padding: '8px', borderRadius: 'var(--tdt-radius-sm)',
 }
 const tableStyle: Record<string, string | number> = {
-  borderCollapse: 'collapse', width: '100%', fontFamily: monoFont, fontSize: '12px', margin: '4px 0',
+  borderCollapse: 'collapse', width: '100%', fontFamily: monoFont, fontSize: 'var(--tdt-font-sm)', margin: '4px 0',
 }
 const cellStyle: Record<string, string | number> = {
   border: `1px solid var(--tdt-border)`, padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
@@ -999,10 +999,10 @@ function TaskPage(props: {
                       key: row.id,
                       style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: `1px solid var(--tdt-border)` },
                     },
-                      h('span', { style: { fontSize: '13px', fontWeight: 500 } }, row.title === '' ? row.id : row.title),
-                      h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, row.code ?? row.id),
+                      h('span', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 500 } }, row.title === '' ? row.id : row.title),
+                      h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, row.code ?? row.id),
                       row.enabled === false
-                        ? h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, t('editorDisabledTag'))
+                        ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('editorDisabledTag'))
                         : null,
                       h('span', { style: { flex: '1 1 auto' } }),
                       h(Button, {
@@ -1029,13 +1029,15 @@ function TaskPage(props: {
               // - invalidToast：JSON 不合法（常驻，直到改对）
               h('div', { style: { position: 'relative' } },
                 h('div', { style: rowStyle },
-                  h('button', {
-                    type: 'button',
+                  h(Button, {
+                    variant: 'primary',
+                    size: 'sm',
                     onClick: () => { void save() },
                     disabled: !writable || invalid || !dirty,
                   }, saving ? t('saving') : t('save')),
-                  h('button', {
-                    type: 'button',
+                  h(Button, {
+                    variant: 'outline',
+                    size: 'sm',
                     onClick: () => { setDraft(undefined); setFailed(null) },
                     disabled: saving || !dirty,
                   }, t('discard')),
@@ -1119,7 +1121,7 @@ function TaskPage(props: {
           : h('div', null,
               h('p', { style: hintStyle }, t('recordsHint')),
               h('div', { style: rowStyle },
-                h('label', { style: { fontSize: '12px' } },
+                h('label', { style: { fontSize: 'var(--tdt-font-sm)' } },
                   `${t('filterStatus')} `,
                   h('select', {
                     value: statusFilter,
@@ -1129,7 +1131,7 @@ function TaskPage(props: {
                     INSTANCE_STATUSES.map(status => h('option', { key: status, value: status }, statusTextOf(status, t))),
                   ),
                 ),
-                h('label', { style: { fontSize: '12px' } },
+                h('label', { style: { fontSize: 'var(--tdt-font-sm)' } },
                   `${t('filterTask')} `,
                   h('select', {
                     value: taskFilter,
@@ -1217,7 +1219,7 @@ function TaskPage(props: {
                               h('td', { colSpan: 6, style: cellStyle },
                                 h('div', {
                                   style: {
-                                    fontSize: '12px', marginBottom: '4px',
+                                    fontSize: 'var(--tdt-font-sm)', marginBottom: '4px',
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px',
                                   },
                                 },
@@ -1290,7 +1292,7 @@ function TaskPage(props: {
           background: 'var(--tdt-fg, rgba(40,40,40,.92))',
           color: 'var(--tdt-fg-inverse, #fff)',
           border: 'none',
-          borderRadius: 'var(--tdt-radius-md, 8px)', padding: '8px 14px', fontSize: '12px', lineHeight: '1.6',
+          borderRadius: 'var(--tdt-radius-md, 8px)', padding: '8px 14px', fontSize: 'var(--tdt-font-sm)', lineHeight: '1.6',
           display: 'flex', alignItems: 'center', gap: '8px',
           boxShadow: 'var(--tdt-shadow-2, 0 8px 28px rgba(0,0,0,.3))',
         },
