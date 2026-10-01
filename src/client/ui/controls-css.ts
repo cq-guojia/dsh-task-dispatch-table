@@ -20,13 +20,13 @@ export const SEGMENTED_CSS = `
 /* 两套基础样式（2026-10-01 用户拍板：保留「纯黑面」与「灰底面」两套，不可合并）：
    - default = 纯黑面：轨道=第二层面 + 外描边，选中=亮片底；
    - inset = 灰底面：抄「版本」开关观感（轨道=交互灰 hover 底、无外描边、选中=亮片底），用户觉得比原灰底那套好看。
-   ⚠️ 高度对齐规则（2026-10-01 用户拍板）：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
-   落下形态 = 两者都是「1px 边框 + 3px padding」的几何——default 真边框 1px + padding 3px；
-   inset 无边框，所以 padding 收 4px 把缺的 1px 补回来。段高算式 - 6px 不用动，两种外观总高一致。
+   ⚠️ 高度对齐规则（2026-10-01 用户拍板，同日修正 +2）：有边 / 无边总高必须 == 控件 token，边框在内部补回，不许额外撑高。
+   几何 = 段高 = token − 6px（上下各 2px padding + 1px 边框）；default 真边框 1px + padding 2px，
+   inset 无边框故 padding 收 3px 把缺的 1px 补回，两种外观总高都 == token（24/28/32），不再多 +2px。
    以后 Button / Input 的有边 / 无边同此规则。 */
-.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
+.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
 .dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:3px;}
 
 .dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
   height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);
@@ -64,7 +64,7 @@ export const SEGMENTED_CSS = `
 /** 按钮 / 图标钮的皮肤规则（P2）。 */
 export const BUTTON_CSS = `
 /* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────
-   与 Segmented 同一条高度纪律：--tdt-control-h-sm(24) / -md(28)，
+   与 Segmented 同一条高度纪律：--tdt-control-h-sm(24) / -md(28) / -lg(32)，
    有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
    variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
 .dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--tdt-space-1);
@@ -73,6 +73,7 @@ export const BUTTON_CSS = `
   transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-btn--sm{height:var(--tdt-control-h-sm);padding:0 10px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
 .dsh-tdt-btn--md{height:var(--tdt-control-h-md);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-btn--lg{height:var(--tdt-control-h-lg);padding:0 14px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
 .dsh-tdt-btn__icon{display:inline-flex;align-items:center;flex:none;}
 
 .dsh-tdt-btn--primary{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
@@ -98,6 +99,7 @@ export const BUTTON_CSS = `
   transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-iconbtn--sm{width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);font-size:var(--tdt-font-sm);}
 .dsh-tdt-iconbtn--md{width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);font-size:var(--tdt-font-md);}
+.dsh-tdt-iconbtn--lg{width:var(--tdt-control-h-lg);height:var(--tdt-control-h-lg);font-size:var(--tdt-font-md);}
 .dsh-tdt-iconbtn--plain{color:var(--tdt-fg-2);}
 .dsh-tdt-iconbtn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border);color:var(--tdt-fg-2);}
 .dsh-tdt-iconbtn--danger{color:var(--tdt-danger);}
@@ -117,6 +119,7 @@ export const FIELD_CSS = `
   transition:border-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-input--sm{height:var(--tdt-control-h-sm);padding:0 8px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
 .dsh-tdt-input--md{height:var(--tdt-control-h-md);padding:0 10px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-input--lg{height:var(--tdt-control-h-lg);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
 .dsh-tdt-input::placeholder{color:var(--tdt-fg-dim);}
 .dsh-tdt-input:focus{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
 .dsh-tdt-input--error{border-color:var(--tdt-danger);}
@@ -126,6 +129,7 @@ export const FIELD_CSS = `
   border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
 .dsh-tdt-pfx--sm{height:var(--tdt-control-h-sm);}
 .dsh-tdt-pfx--md{height:var(--tdt-control-h-md);}
+.dsh-tdt-pfx--lg{height:var(--tdt-control-h-lg);}
 .dsh-tdt-pfx--error{border-color:var(--tdt-danger);}
 .dsh-tdt-pfx:focus-within{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
 .dsh-tdt-pfx__label{padding:0 8px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;border-right:1px solid var(--tdt-border);}
@@ -137,6 +141,7 @@ export const FIELD_CSS = `
   border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
 .dsh-tdt-num--sm{height:var(--tdt-control-h-sm);}
 .dsh-tdt-num--md{height:var(--tdt-control-h-md);}
+.dsh-tdt-num--lg{height:var(--tdt-control-h-lg);}
 .dsh-tdt-num--disabled{opacity:.5;}
 .dsh-tdt-num__input{width:44px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
   font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);text-align:center;outline:none;}
@@ -158,6 +163,10 @@ export const DATETIME_CSS = `
   min-width:0;max-width:100%;padding:0 8px;border:1px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
   background:var(--tdt-surface-1);color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);
   cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease);}
+/* 日期 / 时间锚点：三档高度（默认 lg=32）。base 已含 lg 高度作兜底，下面三档按 size 覆盖。 */
+.dsh-tdt-dtf--sm{height:var(--tdt-control-h-sm);padding:0 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
+.dsh-tdt-dtf--md{height:var(--tdt-control-h-md);padding:0 8px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-dtf--lg{height:var(--tdt-control-h-lg);padding:0 8px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
 .dsh-tdt-dtf:hover:not(:disabled){background:var(--tdt-hover);}
 .dsh-tdt-dtf:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
 .dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}

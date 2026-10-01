@@ -3,7 +3,7 @@
  *
  * 两轴模型（同 Segmented）：
  *  - `variant`：`primary`（实心强调）/ `outline`（描边中性）/ `ghost`（无底无边）/ `danger`（实心红，破坏性确认）
- *  - `size`：`sm`(24) / `md`(28) —— 高度一律吃 `--tdt-control-h-*`，**有边 / 无边同高**（边框在内部补回）
+ *  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— 高度一律吃 `--tdt-control-h-*`，**有边 / 无边同高**（边框在内部补回）
  *
  * `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
  * 链接型文字钮 = `Button variant="ghost"` + 修饰类 `dsh-tdt-btn--link`（红字危险描边 = `outline` + `dsh-tdt-btn--danger-ink`）。
@@ -16,8 +16,8 @@ import { ensureControlsStyle } from './controls-css'
 
 /** 按钮外观档。 */
 export type ButtonVariant = 'primary' | 'outline' | 'ghost' | 'danger'
-/** 按钮高度档（sm 24 / md 28）。 */
-export type ButtonSize = 'sm' | 'md'
+/** 按钮高度档（sm 24 / md 28 / lg 32）。 */
+export type ButtonSize = 'sm' | 'md' | 'lg'
 
 export interface ButtonProps {
   /** 外观档（默认 outline）。 */
@@ -66,7 +66,7 @@ function buttonClass(variant: ButtonVariant, size: ButtonSize, extra?: string): 
  */
 export function Button(props: ButtonProps): ReturnType<typeof h> {
   ensureControlsStyle()
-  const { variant = 'outline', size = 'sm', icon, className, style, children, ...rest } = props
+  const { variant = 'outline', size = 'lg', icon, className, style, children, ...rest } = props
   const attrs = {
     ...rest,
     type: (rest.type as string | undefined) ?? 'button',
@@ -86,7 +86,7 @@ export function Button(props: ButtonProps): ReturnType<typeof h> {
  */
 export function IconButton(props: IconButtonProps): ReturnType<typeof h> {
   ensureControlsStyle()
-  const { variant = 'plain', size = 'sm', icon, label, className, style, ...rest } = props
+  const { variant = 'plain', size = 'lg', icon, label, className, style, ...rest } = props
   const attrs = {
     ...rest,
     type: (rest.type as string | undefined) ?? 'button',

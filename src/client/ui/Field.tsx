@@ -1,7 +1,7 @@
 /**
  * 输入类控件 —— **全站唯一实现**（L2 组件皮肤，P3）
  *
- * - `Input`：文本输入（size sm 24 / md 28，error 描红）；
+ * - `Input`：文本输入（size sm 24 / md 28 / lg 32，error 描红）；
  * - `PrefixedInput`：前缀 + 文本输入（如路径 / 接口前缀）；
  * - `NumberInput`：数字步进（显式 `− / +`，替换原生 `<input type="number">` 的浏览器 spinner，
  *   支持 step / min / max、clamp、Enter 提交、失焦回弹）。
@@ -14,11 +14,11 @@ import { IconButton } from './Button'
 import { ensureControlsStyle } from './controls-css'
 import { MarqueeText } from './MarqueeText'
 
-/** 输入高度档（sm 24 / md 28）。 */
-export type FieldSize = 'sm' | 'md'
+/** 输入高度档（sm 24 / md 28 / lg 32）。 */
+export type FieldSize = 'sm' | 'md' | 'lg'
 
 function sizeClass(size: FieldSize): string {
-  return size === 'md' ? '--md' : '--sm'
+  return size === 'lg' ? '--lg' : size === 'md' ? '--md' : '--sm'
 }
 
 export interface InputProps {
@@ -49,7 +49,7 @@ export interface InputProps {
 /** 文本输入。 */
 export function Input(props: InputProps): ReturnType<typeof h> {
   ensureControlsStyle()
-  const { value, onChange, placeholder, size = 'sm', error, disabled, type, className, style } = props
+  const { value, onChange, placeholder, size = 'lg', error, disabled, type, className, style } = props
   return h('input', {
     type: type ?? 'text',
     value,
@@ -73,7 +73,7 @@ export interface PrefixedInputProps extends Omit<InputProps, 'className'> {
 /** 前缀 + 文本输入。 */
 export function PrefixedInput(props: PrefixedInputProps): ReturnType<typeof h> {
   ensureControlsStyle()
-  const { prefix, value, onChange, placeholder, size = 'sm', error, disabled, type, className, style } = props
+  const { prefix, value, onChange, placeholder, size = 'lg', error, disabled, type, className, style } = props
   return h('div', {
     className: `dsh-tdt-pfx dsh-tdt-pfx${sizeClass(size)}${error === true ? ' dsh-tdt-pfx--error' : ''}${className !== undefined && className !== '' ? ' ' + className : ''}`,
     style,
@@ -129,7 +129,7 @@ export interface NumberInputProps {
 export function NumberInput(props: NumberInputProps): ReturnType<typeof h> {
   ensureControlsStyle()
   const {
-    value, onChange, min = -Infinity, max = Infinity, step = 1, size = 'sm',
+    value, onChange, min = -Infinity, max = Infinity, step = 1, size = 'lg',
     disabled, suffix, label, decreaseLabel = '减少', increaseLabel = '增加', className, style,
   } = props
   const [text, setText] = useState(String(value))
@@ -221,8 +221,8 @@ export interface SelectFieldProps {
   marquee?: boolean
   /** 整行下拉（撑满父宽）。 */
   block?: boolean
-  /** 高度档（sm = 28 紧凑）。 */
-  size?: 'md' | 'sm'
+  /** 高度档（sm 24 / md 28 / lg 32，默认 lg = 32 标准行）。 */
+  size?: 'sm' | 'md' | 'lg'
   /** 校验不通过：描红。 */
   error?: boolean
 }
@@ -235,8 +235,12 @@ export function SelectField(props: SelectFieldProps): ReactElement {
   ensureControlsStyle()
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
-  const compact = props.size === 'sm'
-  const iconSize = compact ? 14 : 16
+  const size = props.size ?? 'lg'
+  const sizeHeight = size === 'sm' ? 'var(--tdt-control-h-sm)' : size === 'md' ? 'var(--tdt-control-h-md)' : 'var(--tdt-control-h-lg)'
+  const iconSize = size === 'sm' ? 14 : 16
+  const sizeGap = size === 'sm' ? '4px' : '6px'
+  const sizeFont = size === 'sm' ? 'var(--tdt-font-sm)' : 'var(--tdt-font-md)'
+  const sizeLine = size === 'sm' ? 'var(--tdt-line-sm)' : 'var(--tdt-line-md)'
   const usable = props.options.length > 0 && props.disabled !== true
   const current = props.options.find(option => option.value === props.value)
   const items: MenuEntry[] = useMemo(
@@ -257,7 +261,7 @@ export function SelectField(props: SelectFieldProps): ReactElement {
     onClick: () => { setOpen(!open) },
     style: {
       ...fieldButtonStyle,
-      ...(compact ? { height: 'var(--tdt-control-h-md)', gap: '4px', fontSize: 'var(--tdt-font-sm)', lineHeight: 'var(--tdt-line-sm)' } : null),
+      height: sizeHeight, gap: sizeGap, fontSize: sizeFont, lineHeight: sizeLine,
       width: props.width ?? (props.block === true ? '100%' : undefined),
       ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
       background: hover && usable ? 'var(--tdt-hover)' : 'var(--tdt-surface-1)',

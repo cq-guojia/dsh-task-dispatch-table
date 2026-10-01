@@ -1613,12 +1613,12 @@ console.log('\n[14] runtime-index')
       && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)')
       && p1Js.includes('height:calc(var(--tdt-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--tdt-control-h-md) - 6px)')
       && p1Js.includes('background:var(--tdt-danger);color:var(--tdt-on-signal)'))
-    // 2026-10-01 用户拍板：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
-    // 统一几何 = 1px 边框 + 3px padding：default 真边框 + padding3；inset 无边框 + padding4 补回缺的 1px。
-    check('有边 / 无边等高（1px 边框 + 3px padding：default 真边框 + padding3；inset 无边框 + padding4）',
-      p1Js.includes('.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;')
+    // 2026-10-01 用户拍板（同日修正 +2）：有边 / 无边总高必须 == token，边框在内部补回，不许额外撑高。
+    // 统一几何 = 段高 = token − 6px（上下各 2px padding + 1px 边框）：default 真边框 + padding2；inset 无边框 + padding3 补回缺的 1px。
+    check('有边 / 无边等高（1px 边框 + 2px padding：default 真边框 + padding2；inset 无边框 + padding3，外框 == token）',
+      p1Js.includes('.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;')
       && p1Js.includes('--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}')
-      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}'))
+      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised);border:0;padding:3px;}'))
     check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',
       !p1Js.includes('segTrackStyle') && !p1Js.includes('segStyle') && !p1Js.includes('tabStyle')
       && !p1Js.includes('countBadge') && !p1Js.includes('segmentStyle') && !p1Js.includes('segmentedStyle'))

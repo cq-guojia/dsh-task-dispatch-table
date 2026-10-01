@@ -35,7 +35,7 @@ export interface SegmentedItem<T extends string = string> {
 interface SegmentedBaseProps<T extends string = string> {
   /** 段定义。 */
   items: readonly SegmentedItem<T>[]
-  /** 高度档（默认 sm）。 */
+  /** 高度档（默认 lg = 32 标准行）。 */
   size?: 'sm' | 'md' | 'lg'
   /** 外观档（默认 default）。 */
   variant?: 'default' | 'inset'
@@ -80,7 +80,7 @@ export function Segmented<T extends string>(props: SegmentedProps<T>): ReturnTyp
   // 幂等：token 层 + 控件皮肤（首次渲染时挂上，之后是空转）
   ensureUiBase()
   ensureControlsStyle()
-  const size = props.size ?? 'sm'
+  const size = props.size ?? 'lg'
   const variant = props.variant ?? 'default'
   const multiple = props.multiple === true
   const value = props.value

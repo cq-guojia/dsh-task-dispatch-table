@@ -96,8 +96,11 @@ export function DateField(props: {
   disabled?: boolean
   title?: string
   width?: number | string
+  /** 高度档（sm 24 / md 28 / lg 32，默认 lg = 32 标准行）。 */
+  size?: 'sm' | 'md' | 'lg'
 }): ReactElement {
   ensureControlsStyle()
+  const size = props.size ?? 'lg'
   const [open, setOpen] = useState(false)
   const [hoverIso, setHoverIso] = useState<string | null>(null)
   const rootRef = useRef<HTMLButtonElement | null>(null)
@@ -144,7 +147,7 @@ export function DateField(props: {
 
   const anchor = h('button', {
     type: 'button',
-    className: 'dsh-tdt-dtf',
+    className: `dsh-tdt-dtf dsh-tdt-dtf--${size}`,
     ref: rootRef,
     disabled: props.disabled,
     'aria-haspopup': 'dialog',
@@ -220,8 +223,11 @@ export function TimeField(props: {
   disabled?: boolean
   title?: string
   width?: number | string
+  /** 高度档（sm 24 / md 28 / lg 32，默认 lg = 32 标准行）。 */
+  size?: 'sm' | 'md' | 'lg'
 }): ReactElement {
   ensureControlsStyle()
+  const size = props.size ?? 'lg'
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(props.value)
   const selectedRef = useRef<HTMLButtonElement | null>(null)
@@ -266,7 +272,7 @@ export function TimeField(props: {
 
   const anchor = h('button', {
     type: 'button',
-    className: 'dsh-tdt-dtf',
+    className: `dsh-tdt-dtf dsh-tdt-dtf--${size}`,
     ref: rootRef,
     disabled: props.disabled,
     'aria-haspopup': 'dialog',
