@@ -1532,13 +1532,49 @@ body[data-ds-dark-theme]{
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn{transition:none;}}
 `;
+		/** 输入 / 前缀输入 / 数字步进的皮肤规则（P3）。 */
+		const FIELD_CSS = `
+/* ── 输入类 P3 ────────────────────────────────────────────────────────── */
+.dsh-tdt-input{box-sizing:border-box;border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);
+  background:var(--tdt-surface-1);color:var(--tdt-fg);font-family:inherit;outline:none;
+  transition:border-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-input--sm{height:var(--tdt-control-h-sm);padding:0 8px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
+.dsh-tdt-input--md{height:var(--tdt-control-h-md);padding:0 10px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-input::placeholder{color:var(--tdt-fg-dim);}
+.dsh-tdt-input:focus{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
+.dsh-tdt-input--error{border-color:var(--tdt-danger);}
+.dsh-tdt-input:disabled{cursor:default;opacity:.5;}
+
+.dsh-tdt-pfx{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
+  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
+.dsh-tdt-pfx--sm{height:var(--tdt-control-h-sm);}
+.dsh-tdt-pfx--md{height:var(--tdt-control-h-md);}
+.dsh-tdt-pfx--error{border-color:var(--tdt-danger);}
+.dsh-tdt-pfx:focus-within{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
+.dsh-tdt-pfx__label{padding:0 8px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;border-right:1px solid var(--tdt-border);}
+.dsh-tdt-pfx__input{flex:1 1 auto;min-width:0;height:100%;padding:0 8px;border:0;background:transparent;color:var(--tdt-fg);
+  font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);outline:none;}
+.dsh-tdt-pfx__input::placeholder{color:var(--tdt-fg-dim);}
+
+.dsh-tdt-num{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
+  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
+.dsh-tdt-num--sm{height:var(--tdt-control-h-sm);}
+.dsh-tdt-num--md{height:var(--tdt-control-h-md);}
+.dsh-tdt-num--disabled{opacity:.5;}
+.dsh-tdt-num__input{width:44px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
+  font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);text-align:center;outline:none;}
+.dsh-tdt-num__suffix{padding:0 6px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);white-space:nowrap;}
+.dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--tdt-fg-2);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
+`;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 		const CONTROLS_DOMAIN = "controls";
 		/**
 		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
 		*/
 		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS);
+			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS);
 		}
 		//#endregion
 		//#region src/client/ui/Segmented.tsx
@@ -1655,6 +1691,127 @@ body[data-ds-dark-theme]{
 				style
 			};
 			return (0, react.createElement)("button", attrs, icon);
+		}
+		//#endregion
+		//#region src/client/ui/Field.tsx
+		/**
+		* 输入类控件 —— **全站唯一实现**（L2 组件皮肤，P3）
+		*
+		* - `Input`：文本输入（size sm 24 / md 28，error 描红）；
+		* - `PrefixedInput`：前缀 + 文本输入（如路径 / 接口前缀）；
+		* - `NumberInput`：数字步进（显式 `− / +`，替换原生 `<input type="number">` 的浏览器 spinner，
+		*   支持 step / min / max、clamp、Enter 提交、失焦回弹）。
+		*
+		* 高度一律吃 `--tdt-control-h-*`；有边 / 无边同高（边框在内部补回）。
+		*/
+		function sizeClass(size) {
+			return size === "md" ? "--md" : "--sm";
+		}
+		/** 文本输入。 */
+		function Input$1(props) {
+			ensureControlsStyle();
+			const { value, onChange, placeholder, size = "sm", error, disabled, type, className, style } = props;
+			return (0, react.createElement)("input", {
+				type: type ?? "text",
+				value,
+				placeholder,
+				disabled,
+				"aria-label": props["aria-label"],
+				title: props.title,
+				className: `dsh-tdt-input dsh-tdt-input${sizeClass(size)}${error === true ? " dsh-tdt-input--error" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				style,
+				onChange: (event) => {
+					onChange(event.target.value);
+				}
+			});
+		}
+		/** 前缀 + 文本输入。 */
+		function PrefixedInput$1(props) {
+			ensureControlsStyle();
+			const { prefix, value, onChange, placeholder, size = "sm", error, disabled, type, className, style } = props;
+			return (0, react.createElement)("div", {
+				className: `dsh-tdt-pfx dsh-tdt-pfx${sizeClass(size)}${error === true ? " dsh-tdt-pfx--error" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				style
+			}, (0, react.createElement)("span", { className: "dsh-tdt-pfx__label" }, prefix), (0, react.createElement)("input", {
+				type: type ?? "text",
+				value,
+				placeholder,
+				disabled,
+				"aria-label": props["aria-label"],
+				title: props.title,
+				className: "dsh-tdt-pfx__input",
+				onChange: (event) => {
+					onChange(event.target.value);
+				}
+			}));
+		}
+		/**
+		* 数字步进输入：显式 `− / +` 按钮 + 可输入数字。
+		*
+		* @param props 见 {@link NumberInputProps}。
+		* @returns 数字步进控件。
+		*/
+		function NumberInput(props) {
+			ensureControlsStyle();
+			const { value, onChange, min = -Infinity, max = Infinity, step = 1, size = "sm", disabled, suffix, label, decreaseLabel = "减少", increaseLabel = "增加", className, style } = props;
+			const [text, setText] = (0, react.useState)(String(value));
+			(0, react.useEffect)(() => {
+				setText(String(value));
+			}, [value]);
+			const clamp = (n) => Math.min(max, Math.max(min, n));
+			const commit = (raw) => {
+				const n = Number(raw);
+				if (!Number.isFinite(n)) {
+					setText(String(value));
+					return;
+				}
+				const next = clamp(n);
+				setText(String(next));
+				if (next !== value) onChange(next);
+			};
+			const bump = (dir) => {
+				const base = Number.isFinite(Number(text)) ? Number(text) : value;
+				const next = clamp(base + dir * step);
+				setText(String(next));
+				if (next !== value) onChange(next);
+			};
+			return (0, react.createElement)("div", {
+				className: `dsh-tdt-num dsh-tdt-num${sizeClass(size)}${disabled === true ? " dsh-tdt-num--disabled" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				style
+			}, (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size,
+				icon: "−",
+				label: decreaseLabel,
+				disabled,
+				onClick: () => {
+					bump(-1);
+				}
+			}), (0, react.createElement)("input", {
+				className: "dsh-tdt-num__input",
+				value: text,
+				disabled,
+				inputMode: "numeric",
+				"aria-label": label,
+				onChange: (event) => {
+					setText(event.target.value);
+				},
+				onBlur: () => {
+					commit(text);
+				},
+				onKeyDown: (event) => {
+					if (event.key === "Enter") commit(text);
+				}
+			}), suffix !== void 0 ? (0, react.createElement)("span", { className: "dsh-tdt-num__suffix" }, suffix) : null, (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size,
+				icon: "+",
+				label: increaseLabel,
+				disabled,
+				onClick: () => {
+					bump(1);
+				}
+			}));
 		}
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -38872,15 +39029,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
 		*/
 		function PrefixedInput(props) {
-			return (0, react.createElement)("div", { className: `dsh-tdt-ed-pfx${props.error === true ? " dsh-tdt-ed-pfx--error" : ""}` }, (0, react.createElement)("span", { className: "dsh-tdt-ed-pfx-label" }, props.prefix), (0, react.createElement)("input", {
-				className: "dsh-tdt-ed-pfx-input",
+			return (0, react.createElement)(PrefixedInput$1, {
+				prefix: props.prefix,
 				value: props.value,
 				placeholder: props.placeholder,
+				error: props.error,
 				"aria-label": props.prefix,
-				onChange: (event) => {
-					props.onChange(event.target.value);
-				}
-			}));
+				onChange: props.onChange
+			});
 		}
 		/** 周期档的子控件：内容行 = 频率 + 月/日 + 时间；星期恒定在下面一行。 */
 		function PeriodControls(props) {
@@ -39047,18 +39203,14 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
 				fontSize: "13px",
 				color: C$3.text
-			} }, t("editorIntervalEvery")), (0, react.createElement)("input", {
-				type: "number",
+			} }, t("editorIntervalEvery")), (0, react.createElement)(NumberInput, {
+				value: Number.parseInt(draft.intervalStep, 10) || 1,
 				min: 1,
-				value: draft.intervalStep,
-				onChange: (event) => {
-					patch({ intervalStep: event.target.value });
-				},
-				"aria-label": t("editorIntervalStep"),
-				className: "dsh-tdt-ed-input",
-				style: {
-					width: "68px",
-					textAlign: "center"
+				step: 1,
+				size: "sm",
+				label: t("editorIntervalStep"),
+				onChange: (n) => {
+					patch({ intervalStep: String(n) });
 				}
 			}), (0, react.createElement)(SelectField, {
 				value: draft.intervalUnit,
@@ -41371,17 +41523,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontSize: "12px",
 			padding: "0 6px"
 		};
-		const filterInputStyle = {
-			height: `${CONTROL_H}px`,
-			borderRadius: "6px",
-			border: `1px solid ${C$1.border}`,
-			background: "transparent",
-			color: C$1.text,
-			fontFamily: "inherit",
-			fontSize: "12px",
-			padding: "0 8px",
-			boxSizing: "border-box"
-		};
 		const miniTableStyle = {
 			width: "100%",
 			borderCollapse: "collapse",
@@ -41842,17 +41983,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					color: C$1.textFaint
 				} }, t("cardEventsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: C$1.brand } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? "")))))) : null];
 			})))));
-			const renderLogs = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)("input", {
-				type: "text",
+			const renderLogs = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
 				value: logKeyword,
+				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),
-				style: {
-					...filterInputStyle,
-					width: "140px"
-				},
-				onChange: (event) => {
-					setLogKeyword(event.target.value);
-				}
+				size: "sm",
+				style: { width: "140px" }
 			}), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",
@@ -42391,34 +42527,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				alignItems: "center",
 				gap: "8px"
-			} }, (0, react.createElement)("input", {
-				type: "number",
-				min: String(f.minSec),
-				step: "1",
-				value: String(draft[f.key]),
+			} }, (0, react.createElement)(NumberInput, {
+				value: draft[f.key],
+				min: f.minSec,
+				step: 1,
+				size: "sm",
+				suffix: t("settingsUnitSec"),
+				label: t(f.labelKey),
 				disabled: saving,
-				onInput: (e) => {
-					const el = e.target;
-					const n = Number(el.value);
+				onChange: (n) => {
 					setDraft((prev) => prev === null ? prev : {
 						...prev,
 						[f.key]: n
 					});
-				},
-				style: {
-					width: "160px",
-					padding: "7px 10px",
-					borderRadius: "7px",
-					border: "1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.15))",
-					background: "var(--dsw-alias-bg-layer-1,#fff)",
-					color: "var(--dsw-alias-label-primary,#1a1a1a)",
-					fontSize: "13px",
-					outline: "none"
 				}
-			}), (0, react.createElement)("span", { style: {
-				fontSize: "12px",
-				color: "var(--dsw-alias-label-secondary,#888)"
-			} }, t("settingsUnitSec"))), (0, react.createElement)("p", { style: {
+			})), (0, react.createElement)("p", { style: {
 				fontSize: "12px",
 				color: "var(--dsw-alias-label-secondary,#888)",
 				lineHeight: 1.5,

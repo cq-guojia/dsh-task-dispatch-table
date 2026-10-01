@@ -10,7 +10,7 @@
 import { createElement as h, useEffect, useRef, useState } from 'react'
 import { FloatingToast, ensureToastStyle } from './toast-css'
 import type { Translate } from './locales'
-import { Button } from './ui'
+import { Button, NumberInput } from './ui'
 
 interface ScopeConfig {
   tickMs: number
@@ -149,26 +149,16 @@ export function ConfigPanel(props: ConfigPanelProps) {
       ...FIELDS.map((f) => h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
         h('label', { style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary,#1a1a1a)' } }, t(f.labelKey)),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-          h('input', {
-            type: 'number',
-            min: String(f.minSec),
-            step: '1',
-            value: String(draft[f.key]),
+          h(NumberInput, {
+            value: draft[f.key],
+            min: f.minSec,
+            step: 1,
+            size: 'sm',
+            suffix: t('settingsUnitSec'),
+            label: t(f.labelKey),
             disabled: saving,
-            onInput: (e: Event) => {
-              const el = e.target as HTMLInputElement
-              const n = Number(el.value)
-              setDraft((prev: Record<FieldKey, number> | null) => (prev === null ? prev : { ...prev, [f.key]: n }))
-            },
-            style: {
-              width: '160px', padding: '7px 10px', borderRadius: '7px',
-              border: '1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.15))',
-              background: 'var(--dsw-alias-bg-layer-1,#fff)',
-              color: 'var(--dsw-alias-label-primary,#1a1a1a)',
-              fontSize: '13px', outline: 'none',
-            },
+            onChange: (n: number) => { setDraft((prev: Record<FieldKey, number> | null) => (prev === null ? prev : { ...prev, [f.key]: n })) },
           }),
-          h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary,#888)' } }, t('settingsUnitSec')),
         ),
         h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary,#888)', lineHeight: 1.5, margin: 0 } }, t(f.hintKey)),
       )),

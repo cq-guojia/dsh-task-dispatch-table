@@ -109,6 +109,43 @@ export const BUTTON_CSS = `
 @media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn{transition:none;}}
 `
 
+/** 输入 / 前缀输入 / 数字步进的皮肤规则（P3）。 */
+export const FIELD_CSS = `
+/* ── 输入类 P3 ────────────────────────────────────────────────────────── */
+.dsh-tdt-input{box-sizing:border-box;border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);
+  background:var(--tdt-surface-1);color:var(--tdt-fg);font-family:inherit;outline:none;
+  transition:border-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-input--sm{height:var(--tdt-control-h-sm);padding:0 8px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
+.dsh-tdt-input--md{height:var(--tdt-control-h-md);padding:0 10px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-input::placeholder{color:var(--tdt-fg-dim);}
+.dsh-tdt-input:focus{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
+.dsh-tdt-input--error{border-color:var(--tdt-danger);}
+.dsh-tdt-input:disabled{cursor:default;opacity:.5;}
+
+.dsh-tdt-pfx{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
+  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
+.dsh-tdt-pfx--sm{height:var(--tdt-control-h-sm);}
+.dsh-tdt-pfx--md{height:var(--tdt-control-h-md);}
+.dsh-tdt-pfx--error{border-color:var(--tdt-danger);}
+.dsh-tdt-pfx:focus-within{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
+.dsh-tdt-pfx__label{padding:0 8px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;border-right:1px solid var(--tdt-border);}
+.dsh-tdt-pfx__input{flex:1 1 auto;min-width:0;height:100%;padding:0 8px;border:0;background:transparent;color:var(--tdt-fg);
+  font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);outline:none;}
+.dsh-tdt-pfx__input::placeholder{color:var(--tdt-fg-dim);}
+
+.dsh-tdt-num{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
+  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
+.dsh-tdt-num--sm{height:var(--tdt-control-h-sm);}
+.dsh-tdt-num--md{height:var(--tdt-control-h-md);}
+.dsh-tdt-num--disabled{opacity:.5;}
+.dsh-tdt-num__input{width:44px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
+  font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);text-align:center;outline:none;}
+.dsh-tdt-num__suffix{padding:0 6px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);white-space:nowrap;}
+.dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--tdt-fg-2);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
+`
+
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 export const CONTROLS_DOMAIN = 'controls'
 
@@ -116,5 +153,5 @@ export const CONTROLS_DOMAIN = 'controls'
  * 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
  */
 export function ensureControlsStyle(): void {
-  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS)
+  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS)
 }

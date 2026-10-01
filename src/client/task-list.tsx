@@ -30,8 +30,8 @@ import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { pinMsFor, sortRows } from '../task-sort.js'
 import { DateField, MarqueeText, calendarLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
-// UI 基础层（P1/P2）：分段控件 / 按钮 / 图标钮唯一实现。
-import { Button, IconButton, Segmented } from './ui'
+// UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
+import { Button, IconButton, Input as TdtInput, Segmented } from './ui'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -724,11 +724,6 @@ const filterSelectStyle: Record<string, string | number> = {
   height: `${CONTROL_H}px`, borderRadius: '6px', border: `1px solid ${C.border}`,
   background: C.layer1, color: C.text, fontFamily: 'inherit', fontSize: '12px', padding: '0 6px',
 }
-const filterInputStyle: Record<string, string | number> = {
-  height: `${CONTROL_H}px`, borderRadius: '6px', border: `1px solid ${C.border}`,
-  background: 'transparent', color: C.text, fontFamily: 'inherit', fontSize: '12px',
-  padding: '0 8px', boxSizing: 'border-box',
-}
 const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: '12px' }
 const miniCellStyle: Record<string, string | number> = {
   padding: '4px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'left',
@@ -1116,10 +1111,12 @@ function TaskExpandPanel(props: {
   const renderLogs = (): ReturnType<typeof h> => h('div', null,
     // 过滤行在滚动区**外**（与执行记录面板同口径）。
     h('div', { style: filterRowStyle },
-      h('input', {
-        type: 'text', value: logKeyword, placeholder: t('cardKeyword'),
-        style: { ...filterInputStyle, width: '140px' },
-        onChange: (event: { target: { value: string } }) => { setLogKeyword(event.target.value) },
+      h(TdtInput, {
+        value: logKeyword,
+        onChange: setLogKeyword,
+        placeholder: t('cardKeyword'),
+        size: 'sm',
+        style: { width: '140px' },
       }),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardFrom'),

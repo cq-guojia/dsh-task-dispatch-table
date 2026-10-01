@@ -46,7 +46,7 @@ import {
   type TimeLabels,
   type WeekdayLabels,
 } from './editor-fields'
-import { Button as TdtButton, IconButton, Segmented } from './ui'
+import { Button as TdtButton, IconButton, NumberInput, PrefixedInput as TdtPrefixedInput, Segmented } from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
 import { renderSchedule, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
@@ -716,16 +716,14 @@ function PrefixedInput(props: {
   /** 校验不通过：描红边（明暗自适应，与卡片 / 下拉同源）。 */
   error?: boolean
 }): ReactElement {
-  return h('div', { className: `dsh-tdt-ed-pfx${props.error === true ? ' dsh-tdt-ed-pfx--error' : ''}` },
-    h('span', { className: 'dsh-tdt-ed-pfx-label' }, props.prefix),
-    h('input', {
-      className: 'dsh-tdt-ed-pfx-input',
-      value: props.value,
-      placeholder: props.placeholder,
-      'aria-label': props.prefix,
-      onChange: (event: { target: { value: string } }) => { props.onChange(event.target.value) },
-    }),
-  )
+  return h(TdtPrefixedInput, {
+    prefix: props.prefix,
+    value: props.value,
+    placeholder: props.placeholder,
+    error: props.error,
+    'aria-label': props.prefix,
+    onChange: props.onChange,
+  })
 }
 
 // ─────────────────────── 排期区 ───────────────────────
@@ -886,14 +884,13 @@ function IntervalControls(props: {
     // 一行说完：每隔 [1] [小时] 执行一次（照参考图的写法，不再拆成标签列）。
     h('div', { className: 'dsh-tdt-ed-row' },
       h('span', { style: { fontSize: '13px', color: C.text } }, t('editorIntervalEvery')),
-      h('input', {
-        type: 'number',
+      h(NumberInput, {
+        value: Number.parseInt(draft.intervalStep, 10) || 1,
         min: 1,
-        value: draft.intervalStep,
-        onChange: (event: { target: { value: string } }) => { patch({ intervalStep: event.target.value }) },
-        'aria-label': t('editorIntervalStep'),
-        className: 'dsh-tdt-ed-input',
-        style: { width: '68px', textAlign: 'center' },
+        step: 1,
+        size: 'sm',
+        label: t('editorIntervalStep'),
+        onChange: (n: number) => { patch({ intervalStep: String(n) }) },
       }),
       h(SelectField, {
         value: draft.intervalUnit,
