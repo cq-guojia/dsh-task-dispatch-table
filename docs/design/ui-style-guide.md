@@ -53,7 +53,7 @@
 <div style={{ display:'flex', gap:'var(--tdt-space-2)', marginTop:'var(--tdt-space-3)' }}>
 ```
 
-### ❌ 禁止（现状里正在发生的事，逐条对应）
+### ❌ 禁止（逐条给出当前违规位置，便于对照修）
 
 | 禁止 | 现状反例 |
 |---|---|

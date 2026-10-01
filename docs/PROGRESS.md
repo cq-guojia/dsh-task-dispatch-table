@@ -15,7 +15,8 @@
 
 用户 2026-10-01 拍板：先放一放，作为**单独一个进行中的事项**，文档整理完再按文档要求开工。
 
-- 已起草（未拍板、未落码）：方案 [`design/ui-foundation.md`](design/ui-foundation.md)、手册 [`design/ui-style-guide.md`](design/ui-style-guide.md)。
+- 已起草（未拍板、未落码）：规范 [`design/ui-foundation.md`](design/ui-foundation.md)（分层 / token / 控件皮肤 / 交付 / 分期 / 验收 / 边界）、手册 [`design/ui-style-guide.md`](design/ui-style-guide.md)（决策树 / 唯一实现表 / 允许禁止 / 自检）。
+- 2026-10-01 已**去过程化**：原设计文档里的「要解决的问题 / 目标 / 待拍板 / 待核实 / 文档落位 / 下一步」全部移入 [worklog/ui-foundation.md](worklog/ui-foundation.md) §六，设计文档只留规范。
 - 开工前 4 项源码核实见未决项 **U18**。
 
 ### 1.2 落码完成、⏳ 真机验证待做（用户装 `dist/` 实测）
