@@ -203,7 +203,7 @@
 | 内容 | 落哪 | 说明 |
 |---|---|---|
 | **技术方案与规格**（本文） | `docs/design/ui-foundation.md` | 定型层；长命 |
-| **开发手册**（写界面时照做） | [`docs/design/ui-style-guide.md`](ui-style-guide.md) | 定型层；**「以后每次都照这个做」的那一份** |
+| **开发手册**（写界面时照做） | [`docs/design/ui-style-guide.md`](../design/ui-style-guide.md) | 定型层；**「以后每次都照这个做」的那一份** |
 | 过程与调研证据 | [`docs/worklog/ui-foundation.md`](../worklog/ui-foundation.md) | 叙事层；做完封卷、不再修改 |
 | 进度与未决 | [`docs/PROGRESS.md`](../PROGRESS.md) | 现场层；未决项编号 **U18** |
 | 拍板结论 | **归属文档**（功能 / 样式各自的文档） | **待用户拍板后**直接写进归属文档，只留结论与理由；不另建决策文件 |
@@ -211,7 +211,7 @@
 
 **与既有文档的边界**（防止两份副本）：
 
-- [`session-view-ui-map.md`](session-view-ui-map.md) 管的是「**会话弹窗里镜像官方 UI**」——那是照抄宿主元素，属另一件事，继续照它做。
+- [`session-view-ui-map.md`](../design/session-view-ui-map.md) 管的是「**会话弹窗里镜像官方 UI**」——那是照抄宿主元素，属另一件事，继续照它做。
 - 本文管的是「**插件自有 UI**」——自有控件的皮肤、尺寸、token。两者在预览面板一处会碰面（预览顶栏分段控件）：结构归本文，镜像官方的行为细节归 ui-map。
 
 ---
