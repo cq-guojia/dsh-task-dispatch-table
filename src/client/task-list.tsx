@@ -30,8 +30,8 @@ import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { pinMsFor, sortRows } from '../task-sort.js'
 import { DateField, MarqueeText, calendarLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
-// UI 基础层（P1）：分段控件唯一实现 —— 本文件的筛选 tabs 与卡片三面板都改用它。
-import { Segmented } from './ui'
+// UI 基础层（P1/P2）：分段控件 / 按钮 / 图标钮唯一实现。
+import { Button, IconButton, Segmented } from './ui'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -802,11 +802,6 @@ const chipStyleOf = (clickable: boolean): Record<string, string | number> => ({
   color: clickable ? C.brand : C.textDim, fontSize: '10px', lineHeight: '16px',
   cursor: clickable ? 'pointer' : 'default', fontFamily: 'inherit', transition,
 })
-/** 展开详情里的小链接（会话 / 产出文件名）。 */
-const linkMiniStyle: Record<string, string | number> = {
-  appearance: 'none', background: 'none', border: 'none', padding: 0,
-  color: C.brand, cursor: 'pointer', font: 'inherit', fontSize: '11px', textAlign: 'left',
-}
 /** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
 const filterRowStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px',
@@ -1072,8 +1067,8 @@ function TaskExpandPanel(props: {
                           : null,
                         sid !== null
                           ? (onOpenSession !== undefined
-                            ? h('button', {
-                              type: 'button', style: linkMiniStyle,
+                            ? h(Button, {
+                              variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link',
                               onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenSession(sid, row.title) },
                             }, `↗ ${t('viewSession')}`)
                             : h('span', null, `${t('colSession')}：${sid.slice(0, 8)}`))
@@ -1084,8 +1079,8 @@ function TaskExpandPanel(props: {
                         ? h('div', { style: { marginBottom: '6px' } },
                           outputs.map(output => h('div', { key: output, style: { fontSize: '12px', lineHeight: '18px' } },
                             sid !== null && onOpenFile !== undefined
-                              ? h('button', {
-                                type: 'button', style: linkMiniStyle, title: output,
+                              ? h(Button, {
+                                variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link', title: output,
                                 onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenFile(sid, output) },
                               }, outputNameOf(output))
                               : h('span', { title: output }, outputNameOf(output)),
@@ -1175,13 +1170,12 @@ function TaskExpandPanel(props: {
       h('div', { style: { fontSize: '14px', fontWeight: 600, marginBottom: '8px' } }, t('cardDeleteTitle')),
       h('div', { style: { fontSize: '12px', color: C.textDim, lineHeight: '18px', marginBottom: '14px' } }, t('cardDeleteDesc')),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
-        h('button', {
-          type: 'button', disabled: deleting, style: iconBtnStyle,
+        h(Button, {
+          variant: 'outline', size: 'sm', disabled: deleting,
           onClick: () => { setConfirmDelete(false) },
         }, t('cardCancel')),
-        h('button', {
-          type: 'button', disabled: deleting,
-          style: { ...iconBtnStyle, color: '#fff', background: C.danger, borderColor: C.danger, opacity: deleting ? 0.6 : 1 },
+        h(Button, {
+          variant: 'danger', size: 'sm', disabled: deleting,
           onClick: () => {
             setDeleting(true)
             void onDelete(row.id).finally(() => { setDeleting(false); setConfirmDelete(false) })
@@ -1210,14 +1204,14 @@ function TaskExpandPanel(props: {
       }),
       h('span', { style: { flex: '1 1 auto' } }),
       // 右下按钮区顺序（用户 2026-10-02）：删除在编辑**左边**。
-      h('button', {
-        type: 'button', style: { ...iconBtnStyle, padding: '0 10px', color: C.danger },
+      h(Button, {
+        variant: 'outline', size: 'sm', className: 'dsh-tdt-btn--danger-ink',
         onClick: () => { setConfirmDelete(true) },
       }, t('cardDelete')),
-      h('button', {
-        type: 'button', style: { ...iconBtnStyle, padding: '0 10px' },
+      h(Button, {
+        variant: 'outline', size: 'sm', icon: h(IconEditOutlineRegular, { size: 14 }),
         onClick: () => { onEdit(row.id) },
-      }, h(IconEditOutlineRegular, { size: 14 }), t('editorEdit')),
+      }, t('editorEdit')),
     ),
     confirmDelete ? renderConfirm() : null,
   )
@@ -1271,15 +1265,16 @@ function TaskCard(props: {
             title: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
           }),
         ),
-        h('button', {
-          type: 'button', style: { ...iconBtnStyle, border: 'none', transform: open ? 'rotate(180deg)' : 'none' },
+        h(IconButton, {
+          variant: 'plain', size: 'sm', icon: h(IconChevronDownOutlineRegular, { size: 14 }),
           // 这里**故意不挂 `title`**：此前复用了执行记录页的 `expandHint`（「点击任意一行展开该次执行的
           // 事件时间线」），语义完全对不上——卡片展开的是**本任务的设置**，不是某次执行的事件时间线，
           // 悬停冒出一句驴唇不对马嘴的提示（用户 2026-09-30 真机点名）。图标本身自明，只留无障碍名。
-          'aria-label': t('listExpandHint'),
+          label: t('listExpandHint'),
           onClick: onToggleOpen,
           'aria-expanded': open,
-        }, h(IconChevronDownOutlineRegular, { size: 14 })),
+          style: { transform: open ? 'rotate(180deg)' : 'none' },
+        }),
       ),
     ),
     // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──

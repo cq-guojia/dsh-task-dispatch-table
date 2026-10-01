@@ -4531,13 +4531,60 @@ body[data-ds-dark-theme]{
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
 `;
+		/** 按钮 / 图标钮的皮肤规则（P2）。 */
+		const BUTTON_CSS = `
+/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────
+   与 Segmented 同一条高度纪律：--tdt-control-h-sm(24) / -md(28)，
+   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
+   variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
+.dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--tdt-space-1);
+  box-sizing:border-box;border:1px solid transparent;border-radius:var(--tdt-radius-sm);
+  background:transparent;color:var(--tdt-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-btn--sm{height:var(--tdt-control-h-sm);padding:0 10px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
+.dsh-tdt-btn--md{height:var(--tdt-control-h-md);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-btn__icon{display:inline-flex;align-items:center;flex:none;}
+
+.dsh-tdt-btn--primary{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
+.dsh-tdt-btn--primary:hover:not(:disabled){opacity:.9;}
+.dsh-tdt-btn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border-strong);color:var(--tdt-fg);}
+.dsh-tdt-btn--outline:hover:not(:disabled){background:var(--tdt-hover);}
+.dsh-tdt-btn--ghost{color:var(--tdt-fg-2);}
+.dsh-tdt-btn--ghost:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
+.dsh-tdt-btn--danger{background:var(--tdt-danger);color:var(--tdt-on-signal);}
+.dsh-tdt-btn--danger:hover:not(:disabled){opacity:.9;}
+/* danger-ink：红字描边（破坏性次要操作，如卡片上的「删除」），挂与 outline 组合的修饰类 */
+.dsh-tdt-btn--danger-ink{border-color:var(--tdt-danger);color:var(--tdt-danger);}
+.dsh-tdt-btn--danger-ink:hover:not(:disabled){background:color-mix(in srgb,var(--tdt-danger) 10%,transparent);color:var(--tdt-danger);}
+/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */
+.dsh-tdt-btn--link{height:auto;padding:0;border:0;background:none;color:var(--tdt-link);font-weight:400;text-align:left;}
+.dsh-tdt-btn--link:hover:not(:disabled){background:none;color:var(--tdt-link);text-decoration:underline;}
+.dsh-tdt-btn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-btn:disabled{cursor:default;opacity:.5;}
+
+.dsh-tdt-iconbtn{appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;
+  border:1px solid transparent;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
+  font-family:inherit;cursor:pointer;flex:none;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-iconbtn--sm{width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);font-size:var(--tdt-font-sm);}
+.dsh-tdt-iconbtn--md{width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);font-size:var(--tdt-font-md);}
+.dsh-tdt-iconbtn--plain{color:var(--tdt-fg-2);}
+.dsh-tdt-iconbtn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border);color:var(--tdt-fg-2);}
+.dsh-tdt-iconbtn--danger{color:var(--tdt-danger);}
+.dsh-tdt-iconbtn:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
+.dsh-tdt-iconbtn--danger:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-danger);}
+.dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-iconbtn:disabled{cursor:default;opacity:.4;}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn{transition:none;}}
+`;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 		const CONTROLS_DOMAIN = "controls";
 		/**
 		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
 		*/
 		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS);
+			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS);
 		}
 		//#endregion
 		//#region src/client/ui/Segmented.tsx
@@ -4599,6 +4646,61 @@ body[data-ds-dark-theme]{
 					onClick: handle
 				}, item.label, item.badge !== void 0 && item.badge > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-seg__badge" }, String(item.badge)) : null);
 			}));
+		}
+		//#endregion
+		//#region src/client/ui/Button.tsx
+		/**
+		* 按钮 / 图标钮 —— **全站唯一实现**（L2 组件皮肤，P2）
+		*
+		* 两轴模型（同 Segmented）：
+		*  - `variant`：`primary`（实心强调）/ `outline`（描边中性）/ `ghost`（无底无边）/ `danger`（实心红，破坏性确认）
+		*  - `size`：`sm`(24) / `md`(28) —— 高度一律吃 `--tdt-control-h-*`，**有边 / 无边同高**（边框在内部补回）
+		*
+		* `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
+		* 链接型文字钮 = `Button variant="ghost"` + 修饰类 `dsh-tdt-btn--link`（红字危险描边 = `outline` + `dsh-tdt-btn--danger-ink`）。
+		*
+		* ⚠️ 不许在任何使用点就地写按钮样式；要多一档外观 ⇒ 走
+		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
+		*/
+		/** 组装按钮 class（结构一套 + 轴类）。 */
+		function buttonClass(variant, size, extra) {
+			return `dsh-tdt-btn dsh-tdt-btn--${variant} dsh-tdt-btn--${size}${extra !== void 0 && extra !== "" ? " " + extra : ""}`;
+		}
+		/**
+		* 渲染一个文字 / 图标 + 文字按钮。
+		*
+		* @param props 见 {@link ButtonProps}。
+		* @returns 按钮元素。
+		*/
+		function Button$1(props) {
+			ensureControlsStyle();
+			const { variant = "outline", size = "sm", icon, className, style, children, ...rest } = props;
+			const attrs = {
+				...rest,
+				type: rest.type ?? "button",
+				className: buttonClass(variant, size, className),
+				style
+			};
+			return (0, react.createElement)("button", attrs, icon !== void 0 && icon !== null ? (0, react.createElement)("span", { className: "dsh-tdt-btn__icon" }, icon) : null, children);
+		}
+		/**
+		* 渲染一个纯图标按钮。
+		*
+		* @param props 见 {@link IconButtonProps}。
+		* @returns 图标按钮元素。
+		*/
+		function IconButton(props) {
+			ensureControlsStyle();
+			const { variant = "plain", size = "sm", icon, label, className, style, ...rest } = props;
+			const attrs = {
+				...rest,
+				type: rest.type ?? "button",
+				title: rest.title ?? label,
+				"aria-label": rest["aria-label"] ?? label,
+				className: `dsh-tdt-iconbtn dsh-tdt-iconbtn--${variant} dsh-tdt-iconbtn--${size}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				style
+			};
+			return (0, react.createElement)("button", attrs, icon);
 		}
 		//#endregion
 		//#region src/client/editor-fields.tsx
@@ -41277,24 +41379,7 @@ body[data-ds-dark-theme]{
 				alignItems: "flex-start"
 			} }, (0, react.createElement)("span", { style: infoLabelStyle }, props.label), (0, react.createElement)("span", { style: infoValueStyle }, props.value));
 		}
-		/** 图标按钮：与顶部一排同高（26px）。 */
-		const iconBtnStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			justifyContent: "center",
-			gap: "4px",
-			height: `${CONTROL_H}px`,
-			minWidth: `${CONTROL_H}px`,
-			padding: "0 6px",
-			border: `1px solid ${C$1.border}`,
-			borderRadius: "6px",
-			background: "transparent",
-			color: C$1.textDim,
-			cursor: "pointer",
-			fontFamily: "inherit",
-			fontSize: "12px",
-			transition: transition$1
-		};
+		`${C$1.border}`, C$1.textDim;
 		/** 内容区统一**定高**（用户 2026-10-02 真机：max-height 会让矮内容显矮、切 tab 高度蹦）——每个任务展开一律同高，内容多就内部滚。 */
 		const PANEL_MAX_H = 360;
 		const panelWrapStyle = {
@@ -41450,18 +41535,6 @@ body[data-ds-dark-theme]{
 			fontFamily: "inherit",
 			transition: transition$1
 		});
-		/** 展开详情里的小链接（会话 / 产出文件名）。 */
-		const linkMiniStyle = {
-			appearance: "none",
-			background: "none",
-			border: "none",
-			padding: 0,
-			color: C$1.brand,
-			cursor: "pointer",
-			font: "inherit",
-			fontSize: "11px",
-			textAlign: "left"
-		};
 		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
 		const filterRowStyle = {
 			display: "flex",
@@ -41765,9 +41838,10 @@ body[data-ds-dark-theme]{
 					fontSize: "11px",
 					color: C$1.textDim,
 					marginBottom: "6px"
-				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)("button", {
-					type: "button",
-					style: linkMiniStyle,
+				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$1, {
+					variant: "ghost",
+					size: "sm",
+					className: "dsh-tdt-btn--link",
 					onClick: (event) => {
 						event.stopPropagation();
 						onOpenSession(sid, row.title);
@@ -41778,9 +41852,10 @@ body[data-ds-dark-theme]{
 						fontSize: "12px",
 						lineHeight: "18px"
 					}
-				}, sid !== null && onOpenFile !== void 0 ? (0, react.createElement)("button", {
-					type: "button",
-					style: linkMiniStyle,
+				}, sid !== null && onOpenFile !== void 0 ? (0, react.createElement)(Button$1, {
+					variant: "ghost",
+					size: "sm",
+					className: "dsh-tdt-btn--link",
 					title: output,
 					onClick: (event) => {
 						event.stopPropagation();
@@ -41896,23 +41971,17 @@ body[data-ds-dark-theme]{
 				display: "flex",
 				justifyContent: "flex-end",
 				gap: "8px"
-			} }, (0, react.createElement)("button", {
-				type: "button",
+			} }, (0, react.createElement)(Button$1, {
+				variant: "outline",
+				size: "sm",
 				disabled: deleting,
-				style: iconBtnStyle,
 				onClick: () => {
 					setConfirmDelete(false);
 				}
-			}, t("cardCancel")), (0, react.createElement)("button", {
-				type: "button",
+			}, t("cardCancel")), (0, react.createElement)(Button$1, {
+				variant: "danger",
+				size: "sm",
 				disabled: deleting,
-				style: {
-					...iconBtnStyle,
-					color: "#fff",
-					background: C$1.danger,
-					borderColor: C$1.danger,
-					opacity: deleting ? .6 : 1
-				},
 				onClick: () => {
 					setDeleting(true);
 					onDelete(row.id).finally(() => {
@@ -41940,26 +42009,21 @@ body[data-ds-dark-theme]{
 					}
 				],
 				onChange: setTab
-			}), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...iconBtnStyle,
-					padding: "0 10px",
-					color: C$1.danger
-				},
+			}), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)(Button$1, {
+				variant: "outline",
+				size: "sm",
+				className: "dsh-tdt-btn--danger-ink",
 				onClick: () => {
 					setConfirmDelete(true);
 				}
-			}, t("cardDelete")), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...iconBtnStyle,
-					padding: "0 10px"
-				},
+			}, t("cardDelete")), (0, react.createElement)(Button$1, {
+				variant: "outline",
+				size: "sm",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
 				onClick: () => {
 					onEdit(row.id);
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit"))), confirmDelete ? renderConfirm() : null);
+			}, t("editorEdit"))), confirmDelete ? renderConfirm() : null);
 		}
 		function TaskCard(props) {
 			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf } = props;
@@ -42015,17 +42079,15 @@ body[data-ds-dark-theme]{
 				},
 				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
 				title: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
-			})), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...iconBtnStyle,
-					border: "none",
-					transform: open ? "rotate(180deg)" : "none"
-				},
-				"aria-label": t("listExpandHint"),
+			})), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
+				label: t("listExpandHint"),
 				onClick: onToggleOpen,
-				"aria-expanded": open
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })))), open ? (0, react.createElement)(TaskExpandPanel, {
+				"aria-expanded": open,
+				style: { transform: open ? "rotate(180deg)" : "none" }
+			}))), open ? (0, react.createElement)(TaskExpandPanel, {
 				row,
 				t,
 				tt,
@@ -42399,23 +42461,15 @@ body[data-ds-dark-theme]{
 				color: "var(--dsw-alias-label-secondary,#888)",
 				lineHeight: 1.5,
 				margin: 0
-			} }, t(f.hintKey)))), (0, react.createElement)("button", {
-				type: "button",
+			} }, t(f.hintKey)))), (0, react.createElement)(Button$1, {
+				variant: "primary",
+				size: "sm",
 				disabled: !dirty || saving,
-				onClick: () => void onSave(),
 				style: {
 					alignSelf: "flex-start",
-					marginTop: "2px",
-					padding: "8px 18px",
-					borderRadius: "8px",
-					border: "none",
-					background: "var(--dsw-alias-brand-primary,#3b6cff)",
-					color: "#fff",
-					fontSize: "13px",
-					fontWeight: 600,
-					cursor: !dirty || saving ? "not-allowed" : "pointer",
-					opacity: !dirty || saving ? .5 : 1
-				}
+					marginTop: "2px"
+				},
+				onClick: () => void onSave()
 			}, saving ? t("saving") : t("save"))), toast !== null ? (0, react.createElement)(FloatingToast, {
 				seq: toast.seq,
 				tone: toast.tone,

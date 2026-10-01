@@ -61,6 +61,54 @@ export const SEGMENTED_CSS = `
 @media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
 `
 
+/** 按钮 / 图标钮的皮肤规则（P2）。 */
+export const BUTTON_CSS = `
+/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────
+   与 Segmented 同一条高度纪律：--tdt-control-h-sm(24) / -md(28)，
+   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
+   variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
+.dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--tdt-space-1);
+  box-sizing:border-box;border:1px solid transparent;border-radius:var(--tdt-radius-sm);
+  background:transparent;color:var(--tdt-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-btn--sm{height:var(--tdt-control-h-sm);padding:0 10px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
+.dsh-tdt-btn--md{height:var(--tdt-control-h-md);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-btn__icon{display:inline-flex;align-items:center;flex:none;}
+
+.dsh-tdt-btn--primary{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
+.dsh-tdt-btn--primary:hover:not(:disabled){opacity:.9;}
+.dsh-tdt-btn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border-strong);color:var(--tdt-fg);}
+.dsh-tdt-btn--outline:hover:not(:disabled){background:var(--tdt-hover);}
+.dsh-tdt-btn--ghost{color:var(--tdt-fg-2);}
+.dsh-tdt-btn--ghost:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
+.dsh-tdt-btn--danger{background:var(--tdt-danger);color:var(--tdt-on-signal);}
+.dsh-tdt-btn--danger:hover:not(:disabled){opacity:.9;}
+/* danger-ink：红字描边（破坏性次要操作，如卡片上的「删除」），挂与 outline 组合的修饰类 */
+.dsh-tdt-btn--danger-ink{border-color:var(--tdt-danger);color:var(--tdt-danger);}
+.dsh-tdt-btn--danger-ink:hover:not(:disabled){background:color-mix(in srgb,var(--tdt-danger) 10%,transparent);color:var(--tdt-danger);}
+/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */
+.dsh-tdt-btn--link{height:auto;padding:0;border:0;background:none;color:var(--tdt-link);font-weight:400;text-align:left;}
+.dsh-tdt-btn--link:hover:not(:disabled){background:none;color:var(--tdt-link);text-decoration:underline;}
+.dsh-tdt-btn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-btn:disabled{cursor:default;opacity:.5;}
+
+.dsh-tdt-iconbtn{appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;
+  border:1px solid transparent;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
+  font-family:inherit;cursor:pointer;flex:none;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-iconbtn--sm{width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);font-size:var(--tdt-font-sm);}
+.dsh-tdt-iconbtn--md{width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);font-size:var(--tdt-font-md);}
+.dsh-tdt-iconbtn--plain{color:var(--tdt-fg-2);}
+.dsh-tdt-iconbtn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border);color:var(--tdt-fg-2);}
+.dsh-tdt-iconbtn--danger{color:var(--tdt-danger);}
+.dsh-tdt-iconbtn:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
+.dsh-tdt-iconbtn--danger:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-danger);}
+.dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-iconbtn:disabled{cursor:default;opacity:.4;}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn{transition:none;}}
+`
+
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 export const CONTROLS_DOMAIN = 'controls'
 
@@ -68,5 +116,5 @@ export const CONTROLS_DOMAIN = 'controls'
  * 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
  */
 export function ensureControlsStyle(): void {
-  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS)
+  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS)
 }

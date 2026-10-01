@@ -10,6 +10,7 @@
 import { createElement as h, useEffect, useRef, useState } from 'react'
 import { FloatingToast, ensureToastStyle } from './toast-css'
 import type { Translate } from './locales'
+import { Button } from './ui'
 
 interface ScopeConfig {
   tickMs: number
@@ -171,15 +172,12 @@ export function ConfigPanel(props: ConfigPanelProps) {
         ),
         h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary,#888)', lineHeight: 1.5, margin: 0 } }, t(f.hintKey)),
       )),
-      h('button', {
-        type: 'button',
+      h(Button, {
+        variant: 'primary',
+        size: 'sm',
         disabled: !dirty || saving,
+        style: { alignSelf: 'flex-start', marginTop: '2px' },
         onClick: () => void onSave(),
-        style: {
-          alignSelf: 'flex-start', marginTop: '2px', padding: '8px 18px', borderRadius: '8px', border: 'none',
-          background: 'var(--dsw-alias-brand-primary,#3b6cff)', color: '#fff', fontSize: '13px', fontWeight: 600,
-          cursor: (!dirty || saving) ? 'not-allowed' : 'pointer', opacity: (!dirty || saving) ? 0.5 : 1,
-        },
       }, saving ? t('saving') : t('save')),
     ),
     toast !== null
