@@ -17,13 +17,12 @@ export const SEGMENTED_CSS = `
    结构一套 + 两个受控轴：size(sm|md|lg) × variant(default|inset)。
    变体**只覆盖两个颜色变量**（--seg-track 轨道底 / --seg-thumb 选中块），
    这正是「同一份样式、只重载颜色」的落地形态。 */
-/* 统一皮肤（2026-10-01：抄「版本」开关观感——轨道=交互灰 hover 底、无外描边；选中=亮片底 + 浮起影）。
-   default / inset 两个轴名继续保留（兼容旧调用点 className），但视觉上都落在这同一套版本派生样式上，
-   不再有「纯黑 vs 灰底」两套外观——满足「全站只有两种基础样式、版本即其一」的诉求。 */
-.dsh-tdt-seg{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);display:inline-flex;align-items:center;gap:2px;padding:3px;border:0;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
-/* 兼容旧调用点的轴类名（当前与基础同款；若日后要为纯黑面再开一档，回这里加 --seg-* 即可） */
-.dsh-tdt-seg--default{}
-.dsh-tdt-seg--inset{}
+/* 两套基础样式（2026-10-01 用户拍板：保留「纯黑面」与「灰底面」两套，不可合并）：
+   - default = 纯黑面：轨道=第二层面 + 外描边，选中=亮片底；
+   - inset = 灰底面：抄「版本」开关观感（轨道=交互灰 hover 底、无外描边、选中=亮片底），用户觉得比原灰底那套好看。 */
+.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
+.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;}
 
 .dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
   height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);

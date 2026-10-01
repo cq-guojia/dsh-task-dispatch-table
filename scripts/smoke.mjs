@@ -1608,8 +1608,9 @@ console.log('\n[14] runtime-index')
     check('分段控件进了产物（段 / 变体 / 两档高度 / 段内角标 / 无障碍组）',
       p1Js.includes('dsh-tdt-seg__item') && p1Js.includes('dsh-tdt-seg--default') && p1Js.includes('dsh-tdt-seg--inset')
       && p1Js.includes('dsh-tdt-seg--md') && p1Js.includes('dsh-tdt-seg__badge') && p1Js.includes('aria-pressed'))
-    check('皮肤只消费 token 层（轨道=交互灰 hover 底、亮片=raised 底、无外描边；段高两档；角标走 --tdt-on-signal）',
-      p1Js.includes('--seg-track:var(--tdt-hover)') && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)')
+    check('两套基础样式都在（纯黑 default=第二层面+描边 / 灰底 inset=交互灰 hover 底无描边；段高两档；角标 --tdt-on-signal）',
+      p1Js.includes('--seg-track:var(--tdt-surface-2)') && p1Js.includes('--seg-track:var(--tdt-hover)')
+      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)')
       && p1Js.includes('height:calc(var(--tdt-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--tdt-control-h-md) - 6px)')
       && p1Js.includes('background:var(--tdt-danger);color:var(--tdt-on-signal)'))
     check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',

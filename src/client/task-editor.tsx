@@ -1107,11 +1107,11 @@ function PromptEditorModal(props: {
           label: t('editorPromptEditorTitle'),
         }),
         // 版本开关（2026-10-01：并入统一 Segmented——multiple 单段做 on/off，根 id 保留 dsh-tdt-ed-histtoggle
-        // 供冒烟/锚点使用；样式完全走 .dsh-tdt-seg，不再有独立的版本自绘皮肤）
+        // 供冒烟/锚点使用；样式走灰底变体 inset，即「版本」观感本身）
         h(Segmented, {
           id: 'dsh-tdt-ed-histtoggle',
           size: 'md',
-          variant: 'default',
+          variant: 'inset',
           multiple: true,
           value: showVersions ? ['on'] : [],
           items: [{ value: 'on', label: t('editorVersionToggle') }],
