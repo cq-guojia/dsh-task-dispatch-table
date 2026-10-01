@@ -192,6 +192,21 @@ export const DATETIME_CSS = `
 @media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-cal__cell,.dsh-tdt-time__opt{transition:none;}}
 `
 
+/** 下拉锚点 / 跑马灯的皮肤规则（P6：原 editor-fields 内联 + task-editor-css 迁入基础层）。 */
+export const SELECT_CSS = `
+/* 下拉 / 日历 / 时分锚点：键盘可达性描边 + 校验描红（类名从业务层沿用，皮肤归位基础层） */
+.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--tdt-business);outline-offset:1px;}
+.dsh-tdt-ed-field--error{border-color:var(--tdt-danger)!important;box-shadow:0 0 0 1px var(--tdt-danger);}
+/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
+.dsh-tdt-ed-selectwrap{width:100%;}
+
+/* 跑马灯文本（MarqueeText）：双层——外层只裁剪，内层才 transform 滚动；非 hover 内层自带省略号 */
+.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
+.dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
+.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
+@keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
+`
+
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 export const CONTROLS_DOMAIN = 'controls'
 
@@ -199,5 +214,5 @@ export const CONTROLS_DOMAIN = 'controls'
  * 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
  */
 export function ensureControlsStyle(): void {
-  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS)
+  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS)
 }

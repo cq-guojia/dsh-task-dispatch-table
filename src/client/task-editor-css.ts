@@ -44,7 +44,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-card:focus-within{border-color:var(--tdt-business,#4d6bfe);}
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
 .dsh-tdt-ed-card--error{border-color:var(--tdt-danger,#e5484d);background:var(--tdt-danger,rgba(229,72,77,.08));}
-.dsh-tdt-ed-field--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 历史版本开关（2026-10-01：已并入统一分段控件 Segmented，根 id=dsh-tdt-ed-histtoggle、multiple 单段做 on/off；
    样式完全走 controls-css.ts 的 .dsh-tdt-seg，这里不再留任何皮肤——旧 .dsh-tdt-ed-histtoggle* 规则已删。 */
 /* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
@@ -85,10 +84,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);outline:none;transition:border-color .15s ease;}
 .dsh-tdt-ed-input:focus{border-color:var(--tdt-business,#4d6bfe);}
 .dsh-tdt-ed-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-/* 自绘控件锚点（下拉 / 日历 / 时分）：键盘可达性描边。 */
-.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--tdt-business,#4d6bfe);outline-offset:1px;}
-/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满。 */
-.dsh-tdt-ed-selectwrap{width:100%;}
 /* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
    省掉标签单独占的一行——弹窗竖向空间紧张。 */
 .dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:var(--tdt-control-h-lg);box-sizing:border-box;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
@@ -112,14 +107,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
-/* 跑马灯文本（MarqueeText，editor-fields.tsx）：**双层**——外层 .dsh-tdt-mq 只负责裁剪
-   （overflow:hidden），内层 .dsh-tdt-mq-in 才做 transform 滚动；第一版动画挂外层 ⇒ 整盒
-   位移跑出裁剪框压到行首图标（真机截图踩坑）。非 hover 内层自带省略号；确实放不下才挂
-   .dsh-tdt-mq-run，hover 0.4s 后内层来回滚动，时长与距离成正比（CSS 变量由组件内联写入）。 */
-.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
-.dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
-.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
-@keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `
 

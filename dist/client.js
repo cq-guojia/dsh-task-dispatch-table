@@ -1622,13 +1622,27 @@ body[data-ds-dark-theme]{
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-cal__cell,.dsh-tdt-time__opt{transition:none;}}
 `;
+		/** 下拉锚点 / 跑马灯的皮肤规则（P6：原 editor-fields 内联 + task-editor-css 迁入基础层）。 */
+		const SELECT_CSS = `
+/* 下拉 / 日历 / 时分锚点：键盘可达性描边 + 校验描红（类名从业务层沿用，皮肤归位基础层） */
+.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--tdt-business);outline-offset:1px;}
+.dsh-tdt-ed-field--error{border-color:var(--tdt-danger)!important;box-shadow:0 0 0 1px var(--tdt-danger);}
+/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
+.dsh-tdt-ed-selectwrap{width:100%;}
+
+/* 跑马灯文本（MarqueeText）：双层——外层只裁剪，内层才 transform 滚动；非 hover 内层自带省略号 */
+.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
+.dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
+.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
+@keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
+`;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 		const CONTROLS_DOMAIN = "controls";
 		/**
 		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
 		*/
 		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS);
+			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS);
 		}
 		//#endregion
 		//#region src/client/ui/Segmented.tsx
@@ -1745,6 +1759,56 @@ body[data-ds-dark-theme]{
 				style
 			};
 			return (0, react.createElement)("button", attrs, icon);
+		}
+		//#endregion
+		//#region src/client/ui/MarqueeText.tsx
+		/**
+		* 跑马灯文本 —— **全站唯一实现**（L2，P6 从 editor-fields 迁入 ui）
+		*
+		* 默认超长省略号；hover 且确实放不下时，来回滚动展示全名。自实现原因：官方 primitives 无跑马灯组件。
+		* 测宽用 ResizeObserver + 文本变化重测；滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画）。
+		*
+		* **双层结构**：外层 `.dsh-tdt-mq` 只负责裁剪（overflow:hidden），内层 `.dsh-tdt-mq-in` 才做
+		* transform 滚动——文字永远在自己那一块里跑，不会压到相邻文字。皮肤在 `controls-css.ts`。
+		*/
+		/** 跑马灯文本。 */
+		function MarqueeText(props) {
+			const outerRef = (0, react.useRef)(null);
+			const innerRef = (0, react.useRef)(null);
+			const [dist, setDist] = (0, react.useState)(0);
+			const measure = (0, react.useCallback)(() => {
+				const outer = outerRef.current;
+				const inner = innerRef.current;
+				if (outer === null || inner === null) return;
+				setDist(Math.max(0, Math.ceil(inner.scrollWidth - outer.clientWidth)));
+			}, []);
+			(0, react.useLayoutEffect)(() => {
+				const outer = outerRef.current;
+				if (outer === null) return;
+				measure();
+				const ro = new ResizeObserver(measure);
+				ro.observe(outer);
+				return () => {
+					ro.disconnect();
+				};
+			}, [measure]);
+			(0, react.useEffect)(() => {
+				measure();
+			}, [props.text, measure]);
+			const run = dist > 0;
+			return (0, react.createElement)("span", {
+				ref: outerRef,
+				className: run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq",
+				title: props.title,
+				style: props.style
+			}, (0, react.createElement)("span", {
+				ref: innerRef,
+				className: "dsh-tdt-mq-in",
+				style: { ...run ? {
+					"--dsh-tdt-mq-dist": `${-dist}px`,
+					"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
+				} : null }
+			}, props.text));
 		}
 		//#endregion
 		//#region src/client/ui/Field.tsx
@@ -1866,6 +1930,121 @@ body[data-ds-dark-theme]{
 					bump(1);
 				}
 			}));
+		}
+		const fieldButtonStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "6px",
+			height: "var(--tdt-control-h-lg)",
+			boxSizing: "border-box",
+			minWidth: 0,
+			maxWidth: "100%",
+			padding: "0 8px",
+			border: "0.5px solid var(--tdt-border-heavy)",
+			borderRadius: "var(--tdt-radius-md)",
+			background: "var(--tdt-surface-1)",
+			color: "var(--tdt-fg)",
+			font: "inherit",
+			fontSize: "var(--tdt-font-md)",
+			lineHeight: "var(--tdt-line-md)",
+			cursor: "pointer",
+			transition: "background 120ms ease, color 120ms ease, border-color 120ms ease"
+		};
+		const fieldLabelStyle = {
+			flex: "1 1 auto",
+			minWidth: 0,
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			whiteSpace: "nowrap",
+			textAlign: "left"
+		};
+		function IconSeat(props) {
+			return (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				width: "16px",
+				height: "16px",
+				alignItems: "center",
+				justifyContent: "center",
+				flex: "none",
+				color: "var(--tdt-fg-3)"
+			} }, props.children);
+		}
+		/**
+		* 下拉选择：官方 `Menu`（portal 到 body，避免被弹窗内部滚动裁掉；选中项自动带对勾）。
+		* 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
+		*/
+		function SelectField(props) {
+			ensureControlsStyle();
+			const [open, setOpen] = (0, react.useState)(false);
+			const [hover, setHover] = (0, react.useState)(false);
+			const compact = props.size === "sm";
+			const iconSize = compact ? 14 : 16;
+			const usable = props.options.length > 0 && props.disabled !== true;
+			const current = props.options.find((option) => option.value === props.value);
+			const items = (0, react.useMemo)(() => props.options.map((option) => ({
+				id: option.value,
+				label: option.label
+			})), [props.options]);
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
+				disabled: !usable,
+				"aria-haspopup": "menu",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onPointerEnter: () => {
+					setHover(true);
+				},
+				onPointerLeave: () => {
+					setHover(false);
+				},
+				onClick: () => {
+					setOpen(!open);
+				},
+				style: {
+					...fieldButtonStyle,
+					...compact ? {
+						height: "var(--tdt-control-h-md)",
+						gap: "4px",
+						fontSize: "var(--tdt-font-sm)",
+						lineHeight: "var(--tdt-line-sm)"
+					} : null,
+					width: props.width ?? (props.block === true ? "100%" : void 0),
+					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
+					background: hover && usable ? "var(--tdt-hover)" : "var(--tdt-surface-1)",
+					cursor: usable ? "pointer" : "not-allowed",
+					opacity: usable ? 1 : .6
+				}
+			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react.createElement)(MarqueeText, {
+				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
+				title: props.title ?? props.ariaLabel,
+				style: {
+					...fieldLabelStyle,
+					color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+				}
+			}) : (0, react.createElement)("span", { style: {
+				...fieldLabelStyle,
+				color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
+			if (!usable) return anchor;
+			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open,
+				anchor,
+				items,
+				selectedId: props.value,
+				selection: "check",
+				align: props.align ?? "start",
+				portal: true,
+				className: props.block === true ? "dsh-tdt-ed-selectwrap" : void 0,
+				onSelect: (id) => {
+					setOpen(false);
+					props.onChange(id);
+				},
+				onClose: () => {
+					setOpen(false);
+				}
+			});
 		}
 		//#endregion
 		//#region src/client/ui/DateTime.tsx
@@ -6241,122 +6420,6 @@ body[data-ds-dark-theme]{
 		}
 		//#endregion
 		//#region src/client/editor-fields.tsx
-		/** 锚点按钮：克隆官方 `Input` 的外观（下拉、日期、时分共用同一副壳）。 */
-		const fieldButtonStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "6px",
-			height: "var(--tdt-control-h-lg)",
-			boxSizing: "border-box",
-			minWidth: 0,
-			maxWidth: "100%",
-			padding: "0 8px",
-			border: `0.5px solid var(--tdt-border-heavy)`,
-			borderRadius: "var(--tdt-radius-md)",
-			background: "var(--tdt-surface-1)",
-			color: "var(--tdt-fg)",
-			font: "inherit",
-			fontSize: "var(--tdt-font-md)",
-			lineHeight: "var(--tdt-line-md)",
-			cursor: "pointer",
-			transition: "background 120ms ease, color 120ms ease, border-color 120ms ease"
-		};
-		const fieldLabelStyle = {
-			flex: "1 1 auto",
-			minWidth: 0,
-			overflow: "hidden",
-			textOverflow: "ellipsis",
-			whiteSpace: "nowrap",
-			textAlign: "left"
-		};
-		/** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
-		function IconSeat(props) {
-			return (0, react.createElement)("span", { style: {
-				display: "inline-flex",
-				width: "16px",
-				height: "16px",
-				alignItems: "center",
-				justifyContent: "center",
-				flex: "none",
-				color: "var(--tdt-fg-3)"
-			} }, props.children);
-		}
-		/**
-		* 下拉选择：**官方 `Menu`**（portal 到 body，避免被弹窗内部滚动裁掉；
-		* 选中项自动带对勾）。空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
-		*/
-		function SelectField(props) {
-			const [open, setOpen] = (0, react.useState)(false);
-			const [hover, setHover] = (0, react.useState)(false);
-			const compact = props.size === "sm";
-			const iconSize = compact ? 14 : 16;
-			const usable = props.options.length > 0 && props.disabled !== true;
-			const current = props.options.find((option) => option.value === props.value);
-			const items = (0, react.useMemo)(() => props.options.map((option) => ({
-				id: option.value,
-				label: option.label
-			})), [props.options]);
-			const anchor = (0, react.createElement)("button", {
-				type: "button",
-				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
-				disabled: !usable,
-				"aria-haspopup": "menu",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onPointerEnter: () => {
-					setHover(true);
-				},
-				onPointerLeave: () => {
-					setHover(false);
-				},
-				onClick: () => {
-					setOpen(!open);
-				},
-				style: {
-					...fieldButtonStyle,
-					...compact ? {
-						height: "var(--tdt-control-h-md)",
-						gap: "4px",
-						fontSize: "var(--tdt-font-sm)",
-						lineHeight: "var(--tdt-line-sm)"
-					} : null,
-					width: props.width ?? (props.block === true ? "100%" : void 0),
-					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-					background: hover && usable ? "var(--tdt-hover)" : "var(--tdt-surface-1)",
-					cursor: usable ? "pointer" : "not-allowed",
-					opacity: usable ? 1 : .6
-				}
-			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react.createElement)(MarqueeText, {
-				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
-				title: props.title ?? props.ariaLabel,
-				style: {
-					...fieldLabelStyle,
-					color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
-				}
-			}) : (0, react.createElement)("span", { style: {
-				...fieldLabelStyle,
-				color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
-			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
-			if (!usable) return anchor;
-			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open,
-				anchor,
-				items,
-				selectedId: props.value,
-				selection: "check",
-				align: props.align ?? "start",
-				portal: true,
-				className: props.block === true ? "dsh-tdt-ed-selectwrap" : void 0,
-				onSelect: (id) => {
-					setOpen(false);
-					props.onChange(id);
-				},
-				onClose: () => {
-					setOpen(false);
-				}
-			});
-		}
 		/**
 		* 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
 		* 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
@@ -6415,53 +6478,6 @@ body[data-ds-dark-theme]{
 				color: "var(--tdt-fg-dim)"
 			} }, props.labels.empty) : null);
 		}
-		/**
-		* 跑马灯文本（用户 2026-09-29 要求）：默认超长省略号；hover 且确实放不下时，来回滚动展示全名。
-		* 自实现原因：官方 primitives 无跑马灯组件。测宽用 ResizeObserver + 文本变化重测；
-		* 滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画），动画时长与距离成正比。
-		*
-		* **双层结构（真机截图踩坑修正）**：第一版把 transform 直接加在带 overflow:hidden 的同一个
-		* span 上 ⇒ 整盒位移跑出自己的裁剪框，压到行首图标/相邻文字。改为外层 span 只负责裁剪
-		* （`.dsh-tdt-mq`），内层 `.dsh-tdt-mq-in` 才做 transform 滚动——文字永远在自己那一块里跑。
-		*/
-		function MarqueeText(props) {
-			const outerRef = (0, react.useRef)(null);
-			const innerRef = (0, react.useRef)(null);
-			const [dist, setDist] = (0, react.useState)(0);
-			const measure = (0, react.useCallback)(() => {
-				const outer = outerRef.current;
-				const inner = innerRef.current;
-				if (outer === null || inner === null) return;
-				setDist(Math.max(0, Math.ceil(inner.scrollWidth - outer.clientWidth)));
-			}, []);
-			(0, react.useLayoutEffect)(() => {
-				const outer = outerRef.current;
-				if (outer === null) return;
-				measure();
-				const ro = new ResizeObserver(measure);
-				ro.observe(outer);
-				return () => {
-					ro.disconnect();
-				};
-			}, [measure]);
-			(0, react.useEffect)(() => {
-				measure();
-			}, [props.text, measure]);
-			const run = dist > 0;
-			return (0, react.createElement)("span", {
-				ref: outerRef,
-				className: run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq",
-				title: props.title,
-				style: props.style
-			}, (0, react.createElement)("span", {
-				ref: innerRef,
-				className: "dsh-tdt-mq-in",
-				style: { ...run ? {
-					"--dsh-tdt-mq-dist": `${-dist}px`,
-					"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
-				} : null }
-			}, props.text));
-		}
 		//#endregion
 		//#region src/client/task-editor-css.ts
 		const TASK_EDITOR_CSS = `
@@ -6497,7 +6513,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-card:focus-within{border-color:var(--tdt-business,#4d6bfe);}
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
 .dsh-tdt-ed-card--error{border-color:var(--tdt-danger,#e5484d);background:var(--tdt-danger,rgba(229,72,77,.08));}
-.dsh-tdt-ed-field--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 历史版本开关（2026-10-01：已并入统一分段控件 Segmented，根 id=dsh-tdt-ed-histtoggle、multiple 单段做 on/off；
    样式完全走 controls-css.ts 的 .dsh-tdt-seg，这里不再留任何皮肤——旧 .dsh-tdt-ed-histtoggle* 规则已删。 */
 /* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
@@ -6538,10 +6553,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);outline:none;transition:border-color .15s ease;}
 .dsh-tdt-ed-input:focus{border-color:var(--tdt-business,#4d6bfe);}
 .dsh-tdt-ed-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-/* 自绘控件锚点（下拉 / 日历 / 时分）：键盘可达性描边。 */
-.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--tdt-business,#4d6bfe);outline-offset:1px;}
-/* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满。 */
-.dsh-tdt-ed-selectwrap{width:100%;}
 /* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
    省掉标签单独占的一行——弹窗竖向空间紧张。 */
 .dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:var(--tdt-control-h-lg);box-sizing:border-box;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
@@ -6565,14 +6576,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
-/* 跑马灯文本（MarqueeText，editor-fields.tsx）：**双层**——外层 .dsh-tdt-mq 只负责裁剪
-   （overflow:hidden），内层 .dsh-tdt-mq-in 才做 transform 滚动；第一版动画挂外层 ⇒ 整盒
-   位移跑出裁剪框压到行首图标（真机截图踩坑）。非 hover 内层自带省略号；确实放不下才挂
-   .dsh-tdt-mq-run，hover 0.4s 后内层来回滚动，时长与距离成正比（CSS 变量由组件内联写入）。 */
-.dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
-.dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
-.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
-@keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */

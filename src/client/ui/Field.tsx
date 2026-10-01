@@ -8,9 +8,11 @@
  *
  * 高度一律吃 `--tdt-control-h-*`；有边 / 无边同高（边框在内部补回）。
  */
-import { createElement as h, useEffect, useState, type CSSProperties } from 'react'
+import { createElement as h, useEffect, useMemo, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react'
+import { IconChevronDownOutlineRegular, Menu, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { IconButton } from './Button'
 import { ensureControlsStyle } from './controls-css'
+import { MarqueeText } from './MarqueeText'
 
 /** 输入高度档（sm 24 / md 28）。 */
 export type FieldSize = 'sm' | 'md'
@@ -164,4 +166,128 @@ export function NumberInput(props: NumberInputProps): ReturnType<typeof h> {
     } as never),
     suffix !== undefined ? h('span', { className: 'dsh-tdt-num__suffix' }, suffix) : null,
     h(IconButton, { variant: 'plain', size, icon: '+', label: increaseLabel, disabled, onClick: () => { bump(1) } }))
+}
+
+// ─────────────────────── 下拉（官方 Menu）P6 ───────────────────────
+
+/** 下拉 / 日期 / 时分的选项（value = 写进任务定义的真值）。 */
+export interface EditorOption {
+  value: string
+  label: string
+}
+
+const fieldButtonStyle: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: '6px', height: 'var(--tdt-control-h-lg)', boxSizing: 'border-box',
+  minWidth: 0, maxWidth: '100%', padding: '0 8px',
+  border: '0.5px solid var(--tdt-border-heavy)', borderRadius: 'var(--tdt-radius-md)', background: 'var(--tdt-surface-1)',
+  color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', cursor: 'pointer',
+  transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
+}
+
+const fieldLabelStyle: CSSProperties = {
+  flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left',
+}
+
+function IconSeat(props: { children: ReactNode }): ReactElement {
+  return h('span', { style: { display: 'inline-flex', width: '16px', height: '16px', alignItems: 'center', justifyContent: 'center', flex: 'none', color: 'var(--tdt-fg-3)' } }, props.children)
+}
+
+export interface SelectFieldProps {
+  /** 当前值。 */
+  value: string
+  /** 选项。 */
+  options: EditorOption[]
+  /** 选中回调。 */
+  onChange: (value: string) => void
+  /** 未选中时的占位。 */
+  placeholder: string
+  /** 列表为空时的文案。 */
+  emptyLabel: string
+  /** 无障碍名。 */
+  ariaLabel: string
+  /** 行首图标。 */
+  icon?: ReactNode
+  /** 浮层对齐。 */
+  align?: 'start' | 'end'
+  /** 禁用。 */
+  disabled?: boolean
+  /** 悬停提示。 */
+  title?: string
+  /** 锚点宽度（数字 = px）。 */
+  width?: number | string
+  /** 锚点最大宽度（数字 = px）。 */
+  maxWidth?: number | string
+  /** 文本超长时走 MarqueeText（默认省略号）。 */
+  marquee?: boolean
+  /** 整行下拉（撑满父宽）。 */
+  block?: boolean
+  /** 高度档（sm = 28 紧凑）。 */
+  size?: 'md' | 'sm'
+  /** 校验不通过：描红。 */
+  error?: boolean
+}
+
+/**
+ * 下拉选择：官方 `Menu`（portal 到 body，避免被弹窗内部滚动裁掉；选中项自动带对勾）。
+ * 空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
+ */
+export function SelectField(props: SelectFieldProps): ReactElement {
+  ensureControlsStyle()
+  const [open, setOpen] = useState(false)
+  const [hover, setHover] = useState(false)
+  const compact = props.size === 'sm'
+  const iconSize = compact ? 14 : 16
+  const usable = props.options.length > 0 && props.disabled !== true
+  const current = props.options.find(option => option.value === props.value)
+  const items: MenuEntry[] = useMemo(
+    () => props.options.map(option => ({ id: option.value, label: option.label })),
+    [props.options],
+  )
+
+  const anchor = h('button', {
+    type: 'button',
+    className: `dsh-tdt-ed-field${props.error === true ? ' dsh-tdt-ed-field--error' : ''}`,
+    disabled: !usable,
+    'aria-haspopup': 'menu',
+    'aria-expanded': open,
+    'aria-label': props.ariaLabel,
+    title: props.title,
+    onPointerEnter: () => { setHover(true) },
+    onPointerLeave: () => { setHover(false) },
+    onClick: () => { setOpen(!open) },
+    style: {
+      ...fieldButtonStyle,
+      ...(compact ? { height: 'var(--tdt-control-h-md)', gap: '4px', fontSize: 'var(--tdt-font-sm)', lineHeight: 'var(--tdt-line-sm)' } : null),
+      width: props.width ?? (props.block === true ? '100%' : undefined),
+      ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
+      background: hover && usable ? 'var(--tdt-hover)' : 'var(--tdt-surface-1)',
+      cursor: usable ? 'pointer' : 'not-allowed',
+      opacity: usable ? 1 : 0.6,
+    },
+  },
+    props.icon === undefined ? null : h(IconSeat, null, props.icon),
+    props.marquee === true
+      ? h(MarqueeText, {
+        text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
+        title: props.title ?? props.ariaLabel,
+        style: { ...fieldLabelStyle, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' },
+      })
+      : h('span', { style: { ...fieldLabelStyle, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' } },
+        current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
+    h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: iconSize })),
+  )
+
+  if (!usable) return anchor
+  return h(Menu, {
+    open,
+    anchor,
+    items,
+    selectedId: props.value,
+    selection: 'check',
+    align: props.align ?? 'start',
+    portal: true,
+    className: props.block === true ? 'dsh-tdt-ed-selectwrap' : undefined,
+    onSelect: (id: string) => { setOpen(false); props.onChange(id) },
+    onClose: () => { setOpen(false) },
+  })
 }
