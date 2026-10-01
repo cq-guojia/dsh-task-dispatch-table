@@ -1,14 +1,14 @@
 # 已核实的 DSH 能力（源码级事实清单）
 
 > **类型**：🌐 **外部事实** —— 记的是**宿主（DSH）**能给什么，不是本项目的设计
-> **适用版本**：**0.1.6-alpha.2 / 0.1.7-rc.1 / 0.2.0-rc.1 / 0.2.0-rc.2**（逐条注明差异；最近两轮源码核对用的是 **0.2.0-rc.2**）；**宿主升级后按 §〇 复核**
+> **适用版本**：**0.1.6-alpha.2 / 0.1.7-rc.1 / 0.2.0-rc.1 / 0.2.0-rc.2**（逐条注明差异；最近一轮源码核对用的是 **0.2.0-rc.2**，并对 UI 五包 `ui-theme` / `ui-primitives` / `ui-conversation` / `ui-chat` / `ui-renderer` 做了设计变量级核实）；**宿主升级后按 §〇 复核**
 > **状态**：✅ 持续维护
 > **来源**：`@deepseek-ai/*` 各包源码（`lib/*.js` / `lib/types/*.d.ts`）逐条核实
 > **配套**：[`session-view-ui-map.md`](./session-view-ui-map.md)（官方 UI 元素对照）· 实现新功能前先查本清单，查不到再翻源码
 >
 > **这是什么**：开发过程中对 DSH 宿主（deepseek-harness）源码逐条核实的能力事实，含结论出处。**只记事实，不记过程**——过程叙事见 [`../worklog/`](../worklog/)。
 > **怎么用**：实现新功能前的 API 疑问先查本清单与决策表，查不到再翻宿主源码（决策 15：结论必须可溯源）。
-> 事实对应宿主 **0.1.6-alpha.2 / 0.1.7-rc.1 / 0.2.0-rc.1** 三代（差异已逐条注明）；**0.2.0-rc.1 已逐包 .d.ts diff 复核（2026-09-29）**：本表所列消费接口（retain/binding/archiveSession/unarchiveSession、session/follow·page、uiConversation 渲染层、configForms/settingsSchema/describe、sidebar.panellist/main/selectPanel）跨 0.1.7-rc.1→0.2.0-rc.1 签名稳定——仅新增可选参数与 layout 服务内部构造参数（宿主侧，非我们调用），无破坏性变更；10 个注入包在 0.2.0-rc.1 均存在。宿主升级后按需复核。
+> 事实对应宿主 **0.1.6-alpha.2 / 0.1.7-rc.1 / 0.2.0-rc.1** 三代（差异已逐条注明）；**0.2.0-rc.1 已逐包 .d.ts diff 复核（2026-09-29）**：本表所列消费接口（retain/binding/archiveSession/unarchiveSession、session/follow·page、uiConversation 渲染层、configForms/settingsSchema/describe、sidebar.panellist/main/selectPanel）跨 0.1.7-rc.1→0.2.0-rc.1 签名稳定——仅新增可选参数与 layout 服务内部构造参数（宿主侧，非我们调用），无破坏性变更；10 个注入包在 0.2.0-rc.1 均存在。宿主升级后按需复核。**2026-10-01 又对 UI 五包做了设计变量级核实（结果见下方「主题与设计变量」节，适用版本 0.2.0-rc.2）。**
 
 ## 会话与派发
 
@@ -60,6 +60,93 @@
 | **primitives 版本差异**（同轮核实） | `MenuSurface` / `ShortcutKeys` / `useModalLayer` / `closeTopModal` / `isBehindModal` / `focusWithoutRing` / `observeComposition` / `GuideArtwork*` **仅 0.1.7-rc.2 有**；而 `Switch` / `Input` / `Menu` / `SegmentedControl` / `SegmentedTabs` / `Pill` 在 **0.1.5-rc.2 / 0.1.7-rc.1 / rc.2 都在** ⇒ 跨版本安全，可放心用；不确定的组件别用 rc.2 独有件 |
 | **`--dsw-alias-brand-primary` 的实际色值**（同轮核实，解释「开关打开为什么是白的」） | 亮色主题 = `--dsw-static-neutral-bluish-1000`（`#0f1115`，近黑）；暗色主题 = `--dsw-static-neutral-bluish-50`（`#f9fafb`，近白）⇒ **官方 `Switch` 选中态在暗色下本来就是近白**，不是我方画错。要「打开=绿色」得局部覆盖成 `--dsw-alias-state-success-primary`（= `--dsw-static-green-500`）。出处：`@deepseek-ai/dsh-client-ui-theme@0.1.7-rc.2` |
 | **官方组件签名要点**（同轮核实，踩坑面） | `Input`：`style` / `...rest` 落在**内层 `<input>`**、`className` 落在**外层 `.wrap`**（要控宽度得管外层）；`Menu`：`selection:'check'` 是**默认**（选中项尾随对勾），`portal:true` 才躲祖先滚动裁剪，Escape 会 `preventDefault` ⇒ 外层弹窗据 `defaultPrevented` 让位；`SegmentedControl`：约定面板 id = `<id>-<value>-panel`；`useAnchoredPosition` 只回 `{left, top}` —— `position: fixed` 与 `createPortal` 得调用方自己给 |
+
+## 主题与设计变量（`@deepseek-ai/dsh-client-ui-theme` / `-primitives`）
+
+> 核实轮次：**2026-10-01**，宿主 **0.2.0-rc.2**。方式 = `npm pack @deepseek-ai/<包>@0.2.0-rc.2` 解包到**仓库外**临时目录，读 `lib/client.js`（内嵌 CSS 字符串）与 `lib/*.module.css` + `lib/index.js`（脚本按行号/分段取证），并用脚本把「本仓引用的宿主变量」与「宿主真源定义」做差集。过程见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §七。
+
+### 1. 变量真源与明暗判据
+
+| 事实 | 结论 | 出处 |
+|---|---|---|
+| 设计变量定义在哪 | `@deepseek-ai/dsh-client-ui-theme` 的 **`lib/client.js` 内嵌 CSS 字符串**（本包**无独立 `.css`**，只有 `lib/styles/brand-font.css` 是字体声明）；去重后约 **400 个 `--dsw-*` 名**（`alias` 107 / `static` 77 / `font` 族 182，余为组件专用族）+ 5 个 `--ds-*` 名（`ds-transition-duration`(+`-fast/-slow`)、`ds-ease-in-out`、`ds-font-family-code`） | theme@0.2.0-rc.2 `lib/client.js`（606 处定义点，脚本实测） |
+| **明暗判据只有一个** | `body[data-ds-dark-theme]`（8 个覆盖块，均在 theme `lib/client.js:1148` 起）。宿主启动脚本里写定：`document.body.toggleAttribute('data-ds-dark-theme', dark)`、`document.documentElement.dataset.dsThemeSource = preference`（`light` / `dark` / `system`）、`document.body.style.setProperty('--dsh-content-font-size', '<N>px')`（默认 14） | theme@0.2.0-rc.2 `lib/index.js`（`bootThemeBodyScript`，49–56 行区） |
+| `prefers-color-scheme` 归谁用 | **只在宿主内部**，用于把 preference=`system` 解析成 dark（`lib/index.js:43,52`；`lib/client.js:1366` `ThemeRuntime` 持 media query，仅当 preference 为 `system` 时重发）⇒ **插件侧不得自己使用**：它跟的是操作系统、不是用户在宿主里的选择 | 同上 |
+| 明暗差异落在哪 | 只有 alias 族、部分 static 族、gradient、shiki 语法色在暗色段被覆盖；**圆角 / 字号 / elevation / shadow 无暗色覆盖** | theme `lib/client.js` 分段解析 |
+
+### 2. 字号体系（**成立** —— 插件应映射，不要自定 px 刻度）
+
+`--dsw-font-<role>` = 简写（`[weight] size/line-height family`），并各有子 token `--dsw-font-<role>-font-size` / `-line-height` / `-font-weight` / `-font-family`：
+
+| 简写 token | 值 | 同族变体 |
+|---|---|---|
+| `--dsw-font-xxxs-11` | 11px/14px | `--dsw-font-xxxs-strong-11` |
+| `--dsw-font-xxs-12` | 12px/18px | `--dsw-font-xxs-strong-12` |
+| `--dsw-font-xs-13` | 13px/20px | `--dsw-font-xs-strong-13`（500 字重） |
+| `--dsw-font-s-14` | 14px/22px | `--dsw-font-s-strong-14` |
+| `--dsw-font-base-16` | 16px/24px | `--dsw-font-base-strong-16` |
+| `--dsw-font-m-18` | 500 16px/28px | — |
+| `--dsw-font-l-20` | 500 20px/28px | — |
+| `--dsw-font-xl-24` | 600 24px/32px | — |
+
+另：`--dsw-font-family`（系统字体栈）、`--dsw-font-family-brand`（Montserrat 在前）、`--ds-font-family-code`（等宽栈）、markdown 族 `--dsw-font-markdown-*` 共 15 个。
+
+### 3. 三处同义变量：裁决（已核实哪一方是死变量）
+
+| 疑点 | 裁决 | 证据 |
+|---|---|---|
+| `state-warn-primary` vs `state-warning-primary` | **`--dsw-alias-state-warn-primary` 是真变量**（= `--dsw-static-amber-500`，明暗同值；同族还有 `-warn-secondary` / `-warn-tertiary` / `-warn-label`）。**`--dsw-alias-state-warning-primary` 在宿主五个包里 0 处定义** ⇒ 写它只会拿到自己的兜底色、不随主题。官方用法统计：`state-warn-primary` 7 处、`state-warning-primary` 0 处 | theme `lib/client.js:1151` 区；primitives + conversation 全量 grep |
+| `focus-ring-color` vs `border-focus` | **`--dsw-focus-ring-color` 真**（配 `--dsw-focus-ring-width: 2px`），但 ⚠️ 其默认值是 **`transparent`**；官方组件写 `outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary))` —— 因为 `transparent` 是**有效值**，`var()` 的兜底根本不会生效 ⇒ **想要可见焦点环必须自己指定颜色**。**`--dsw-alias-border-focus` 宿主 0 处定义**（死） | theme `lib/client.js:1151`；primitives `lib/SegmentedControl.module.css` `.tab:focus-visible` |
+| 宿主是否有字号体系 | **有**（见 §2）。此前镜像官方会话面时引用的 `--dsw-font-xxs-12` / `--dsw-font-xs-13` 都是真 token | theme `lib/client.js` |
+
+### 4. 看着有、其实没有的变量（本仓已踩的 5 处）
+
+| 我们写的 | 真实情况 | 正解 | 本仓出处 |
+|---|---|---|---|
+| `--dsw-alias-interactive-bg` | 宿主**没有**这个名（只有 `-hover` / `-active` / `-hover-solid` / `-hover-accent` / `-hover-danger`） | 轨道 / 下沉底用 `--dsw-alias-interactive-bg-hover`（官方 `SegmentedControl` 轨道即用它） | `archive-session-css.ts:237` |
+| `--dsw-alias-border-focus` | 无定义 | `--dsw-focus-ring-width` + 自己给色的焦点环（或用 `--dsw-alias-state-business-primary`） | `archive-session-css.ts:295` |
+| `--dsw-alias-state-warning-primary` | 无定义 | `--dsw-alias-state-warn-primary` | `task-editor.tsx:1034,1052`、`toast-css.ts:63` |
+| `--dsh-elevation-prominent` | 前缀写错（`dsh-` ≠ `dsw-`） | `--dsw-elevation-prominent` | `task-editor.tsx:1030` |
+| `--dsh-radius-panel` | 前缀写错 | `--dsw-radius-panel`（28px） | `task-editor.tsx:2230` |
+
+⚠️ **两个真变量不能用「grep 定义」判定**（差集脚本会误判成死引用）：
+- `--dsh-content-font-size`：宿主用 `style.setProperty()` 写在 **body 内联样式**上（theme `lib/index.js:55`），CSS 文件里搜不到定义 ⇒ 真变量（`archive-session-css.ts:165` 用法正确）；
+- `--dsh-segment-count` / `--dsh-segment-index`：**由官方 `SegmentedControl` 组件内联写在 tablist 的 style 上**（primitives `lib/index.js`：`"--dsh-segment-count": String(options.length)`、`"--dsh-segment-index": String(selected)`）⇒ 只在官方件子树内有效，外部想借它算位置就得连 padding 一起改（脆弱，见 §6）。
+
+### 5. 圆角 / 焦点 / 语义色真值（明色 | 暗色）
+
+| token | 明色 | 暗色 |
+|---|---|---|
+| `--dsw-radius-xs/-sm/-md/-lg/-xl/-panel` | 4 / 8 / 12 / 16 / 20 / 28 px | 无暗色覆盖 |
+| `--dsw-focus-ring-width` / `--dsw-focus-ring-color` | 2px / `transparent` | 同 |
+| `--dsw-alias-bg-base` | `static-neutral-bluish-00` | `…-bluish-950` |
+| `--dsw-alias-bg-layer-1/-2/-3` | bluish-00 / 00 / 00 | bluish-875 / 850 / 800 |
+| `--dsw-alias-border-l1/-l2/-l3/-l4` | `#0000000a` / `1a` / `1f` / `29` | `#ffffff0f` / `1f` / `29` / `fff3` |
+| `--dsw-alias-interactive-bg-hover` / `-active` | `#2631480f` / `#2631481a` | `#ffffff14` / `#ffffff24` |
+| `--dsw-alias-label-primary/-secondary/-tertiary` | bluish-1000 / 700 / 600 | bluish-50 / 300 / 400 |
+| `--dsw-alias-label-caption` / `-dimmed` | bluish-400 / 200 | bluish-600 / 750 |
+| `--dsw-alias-label-primary-inverted` / `-foreground` | bluish-00 / bluish-00 | bluish-800 / bluish-1000 |
+| **`--dsw-alias-brand-primary`** | **bluish-1000（近黑）** | **bluish-50（近白）** |
+| `--dsw-alias-state-business-primary` | deepseek-500 | deepseek-400 |
+| `--dsw-alias-state-success-primary` / `-warn-primary` | green-500 / amber-500 | 同值（不随主题变） |
+| `--dsw-alias-state-error-primary` | red-600 | red-400 |
+| `--dsw-alias-bg-mask-1` | `#0000003d` | `#00000080` |
+| `--dsw-elevation-soft` / `-prominent` / `-panel` | `stroke` + 4px16px/3px8px/3px8px 阴影 | 无覆盖（仅 stroke 色变） |
+| `--dsw-elevation-stroke-color` | `border-l4` | `border-l3` |
+| `--dsw-shadow-lv1` / `-lv2` / `-lv3` | `0 2px 4px` / `0 4px 12px + 0 2px 8px` / `0 0 1px + 0 0 4px + 0 12px 32px` | 无覆盖 |
+| `--dsw-alias-toast-bg` / `-label` | bluish-800 / bluish-00 | bluish-750 / bluish-00 |
+
+⚠️ **`--dsw-alias-brand-primary` 不是蓝色**：明色近黑、暗色近白（官方 `Switch` 打开「变白」即此，见上文既有条目）。界面上的**蓝色强调 / 选中**应走 `--dsw-alias-state-business-primary`。
+
+### 6. 官方 `SegmentedControl` 规格（0.2.0-rc.2，决定「覆写官方」还是「自绘统一体」）
+
+出处：`@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2` `lib/SegmentedControl.module.css` + `lib/index.js`。
+
+- **轨道** `.control`：`inline-grid` + `grid-auto-flow:column` + `grid-auto-columns:1fr`、`gap:2px`、`padding:4px`、`border-radius:var(--dsw-radius-md)`、`background:var(--dsw-alias-interactive-bg-hover)`。
+- **指示器** `.indicator`：`top/left:4px`、`width:calc((100% - 8px - 2px*(var(--dsh-segment-count) - 1))/var(--dsh-segment-count))`、`height:calc(100% - 8px)`、`border-radius:var(--dsw-radius-sm)`、`background:var(--dsw-alias-bg-layer-1)`、`box-shadow:var(--dsw-elevation-soft)`、`transform:translateX(calc(var(--dsh-segment-index)*(100% + 2px)))`、`transition:transform 160ms ease`。
+- **段** `.tab`：`height:28px`、`padding:0 16px`、`border-radius:var(--dsw-radius-sm)`、`font-size:13px`、`line-height:20px`、`font-weight:500`、字色 `--dsw-alias-label-secondary` ⇒ hover / 选中 `--dsw-alias-label-primary`。
+- **只支持单选**（`options.length` + selected index）⇒ **多选场景（星期）只能自绘**。
+- ⚠️ 计数/索引靠 JS 内联变量（§4）⇒ **外部改 padding 必须同步改指示器 top/left/height/width 算式**；本仓 `task-editor-css.ts:104-106` 正是这么覆写的（padding 3 + 段高 22 + 字 12）。
 
 ## 会话列表治理策略（已定）
 

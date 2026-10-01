@@ -48,6 +48,9 @@
 | `DateTime.tsx` | `DateField` / `TimeField`（官方**没有**日期时间件 ⇒ 自绘，走同一套 token） |
 | `index.ts` | 对 L3 的**唯一出口**：非本文件导出的东西，L3 不许 import |
 
+> ✅ **P0 已落码（2026-10-01）**：`ui/tokens.ts`（token 表）、`ui/style.ts`（统一注入器）、`ui/index.ts`（唯一出口 + `ensureUiBase()`）已建；`client/index.ts` 在渲染入口调一次 `ensureUiBase()`（幂等）。
+> ✅ **P1a 已落码（2026-10-01）**：`ui/Segmented.tsx` + `ui/controls-css.ts` 已建，分段控件三处自绘调用点（主面板 / 列表筛选 / 卡片三面板）已改调共用组件。**其余控件皮肤（表里 Button / Field / SwitchToggle / DateTime / official-skins）尚未建，P2 起逐个加。** 落码记录见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §八 §九。
+
 ### 3.1 公用 CSS 放哪
 
 **结论：公用 CSS 不建 `.css` 文件，放在 `src/client/ui/` 里的 `.ts` 字符串常量中，由一个统一注入器打进同一条 `<style>`。**
@@ -93,48 +96,59 @@
 | token | 映射（宿主变量） | 语义 |
 |---|---|---|
 | `--tdt-fg` / `--tdt-fg-2` / `--tdt-fg-3` / `--tdt-fg-dim` | `--dsw-alias-label-primary / -secondary / -tertiary / -dimmed` | 正文 / 次要 / 更弱 / 占位符 |
-| `--tdt-fg-inverse` | `--dsw-alias-label-primary-inverted` | 反色面上的字（角标、实心钮） |
+| `--tdt-fg-inverse` | `--dsw-alias-label-primary-foreground` | 反色面上的字（角标、实心钮）。**不用 `-inverted`**：暗色下它只到 bluish-800，实心面（暗色近白）上该用 `-foreground`（暗色 bluish-1000） |
 | `--tdt-fg-4` | `--dsw-alias-label-caption` | 最弱一级文字（时间戳 / 分隔点；官方会话面已用 8 处） |
-| `--tdt-surface-1` / `-2` / `-3` | `--dsw-alias-bg-layer-1 / -2 / -3` | 三层面 |
-| `--tdt-surface-raised` | `--dsw-alias-bg-layer-1` + `--dsw-elevation-soft` | 「选中亮片」底盘 |
-| `--tdt-surface-sunken` | `--dsw-alias-interactive-bg` | 下沉轨道底 |
-| `--tdt-border` / `-strong` / `-faint` | `--dsw-alias-border-l2 / -l3 / -l1` | 描边三级 |
-| `--tdt-accent` | `--dsw-alias-brand-primary` | 品牌强调 |
+| `--tdt-surface-1` / `-2` / `-3` | `--dsw-alias-bg-layer-1 / -2 / -3` | 三层面（暗色下即 bluish-875 / 850 / 800） |
+| `--tdt-surface-raised` | `--dsw-alias-bg-layer-1` | 「选中亮片」底盘**色** |
+| `--tdt-shadow-raised` | `--dsw-elevation-soft` | 亮片的浮起投影（亮片三件套 = 上面两条 + `--tdt-radius-sm`，官方 `SegmentedControl` 指示器同款） |
+| `--tdt-surface-sunken` | `--dsw-alias-interactive-bg-hover` | 下沉轨道底（官方分段控件轨道即用此变量） |
+| `--tdt-solid` / `--tdt-on-solid` | `--dsw-static-neutral-00` / `--dsw-alias-label-primary`（暗色段覆盖为 `-900` / `-00`） | 固定中性实面 + 面上的字（自绘浮层；深色下必须自己变的那几个） |
+| `--tdt-plate` / `--tdt-plate-hover` | `--dsw-static-neutral-50 / -100`（暗色段覆盖为 `-850` / `-800`） | 「浅底盘 + hover 加深」两拍（交付文件卡） |
+| `--tdt-icon-plate` | `color-mix(in srgb, --dsw-static-neutral-00 …)`（明 50% / 暗 5%） | 图标底 |
+| `--tdt-border-faint` / `--tdt-border` / `-strong` / `-heavy` | `--dsw-alias-border-l1 / -l2 / -l3 / -l4` | 描边四档（宿主真值 4% / 10% / 12% / 16%；官方 `Input` 描边用 `-l4`） |
+| `--tdt-accent` | `--dsw-alias-brand-primary` | 品牌**面**色。⚠️ 它的真值是**明色近黑 / 暗色近白**，不是蓝色 |
+| `--tdt-business` | `--dsw-alias-state-business-primary` | **蓝色强调 / 选中态**（deepseek-500 / 400）——界面上所有「蓝」都走这条 |
 | `--tdt-success` / `--tdt-danger` | `--dsw-alias-state-success/error-primary` | 语义色 |
-| `--tdt-warning` | `--dsw-alias-state-warning-primary` ⚠️ **命名未核实** | 警告色（同义变量 `state-warn-primary` 并存，见 §4.5 疑点 ①） |
+| `--tdt-warning` | `--dsw-alias-state-warn-primary` ✅ **已核实** | 警告色（amber-500，明暗同值）。**`state-warning-primary` 是死变量**，宿主无此定义 |
 | `--tdt-hover` / `--tdt-active` | `--dsw-alias-interactive-bg-hover / -active` | 交互底 |
 | `--tdt-mask` | `--dsw-alias-bg-mask-1` | 遮罩 |
 | `--tdt-shadow-1` / `-2` | `--dsw-elevation-soft` / `--dsw-shadow-lv3` | 浮层投影 |
-| `--tdt-focus` | `--dsw-focus-ring-color` ⚠️ **命名未核实** | 键盘焦点环（同义变量 `--dsw-alias-border-focus` 并存，见 §4.5 疑点 ②） |
+| `--tdt-focus` | `--dsw-alias-state-business-primary` | 键盘焦点环。⚠️ **不用 `--dsw-focus-ring-color`**：宿主已把它定义为 `transparent`，`var()` 兜底不会生效 ⇒ 焦点环会隐身 |
 
-> ⚠️ **未核实**：宿主题包 `@deepseek-ai/dsh-client-ui-theme` 的 alias **全表**尚未在本仓留下记录（本地 `node_modules/@deepseek-ai/` 只有 `cosmokit`/`schemastery`，宿主 UI 包不在本地）⇒ 需 `npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>` 读一遍，补齐上表并确认拼写。**开工前必须先补**（前置项见 [`../PROGRESS.md`](../PROGRESS.md) 未决项 U18）。
-> 在此之前，§4.5 给出的是**本仓实测正在用的变量全表**（可自证，能覆盖 90% 的 token 设计需求）。
+> ✅ **变量名已逐一核实**（2026-10-01，宿主 0.2.0-rc.2，解包 theme + primitives + conversation + chat + renderer 五包）：上表每个宿主变量都有真源定义，圆角 / 字号 / 语义色真值见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §主题与设计变量。**外部事实只有一个真源在那份文档，本文只记「我们映射成什么」。**
 
 ### 4.3 几何 / 排版 / 动效 token
 
 | token | 建议值 | 说明 |
 |---|---|---|
-| `--tdt-radius-xs` / `-sm` / `-md` / `-lg` | 4 / 6 / 8 / 10px（绑 `--dsw-radius-sm/md/lg`） | 收敛现有 4/6/7/8/10/12 六种 |
-| `--tdt-font-1` / `-2` / `-3` / `-4` | **优先映射宿主排版 token**：`--dsw-font-xxs-12` / `--dsw-font-xs-13` / `--dsh-content-font-size-secondary` / `--dsw-font-markdown-code-block-small`（px 只作兜底） | 收敛现有 10~16px 七档；**宿主自带字号体系 ⇒ 不自己定 px 刻度**（见 §4.5） |
-| `--tdt-control-h-sm` / `-md` | **未定**（暂按 24 / 28px） | 全站只此两档高度 |
+| `--tdt-radius-xs` / `-sm` / `-md` / `-lg` / `-xl` | **直绑宿主**：4 / 8 / 12 / 16 / 20px（`--dsw-radius-xs/sm/md/lg/xl`；另有 `-panel`=28） | 收敛现有 4/6/7/8/10/12 六种。⚠️ 宿主真值与旧稿不同（旧稿按 4/6/8/10 写的，已按核实结果改） |
+| `--tdt-font-xs` / `-sm` / `-md` / `-lg` / `-xl` | **直绑宿主字号族子 token**：`--dsw-font-xxxs-11-font-size`(11) / `-xxs-12-`(12) / `-xs-13-`(13) / `-s-14-`(14) / `-base-16-`(16)；加粗用宿主 `-strong-` 变体 | 收敛现有 10~16px 七档；**不自己定 px 刻度** |
+| `--tdt-line-xs` / `-sm` / `-md` / `-lg` / `-xl` | 同族 `-line-height` 子 token：14 / 18 / 20 / 22 / 24 | 字号成对给行高（宿主就是这么配的），避免各处自己试行高 |
+| `--tdt-font-mono` | `--ds-font-family-code` | 等宽栈（代码 / 路径） |
+| `--tdt-control-h-sm` / `-md` | **24 / 28px**（`md` 与官方分段控件段高 28px 一致） | 全站只此两档高度（P0 已按此落码） |
 | `--tdt-space-1` / `-2` / `-3` / `-4` | 4 / 8 / 12 / 16px | 间距四拍 |
-| `--tdt-dur` / `--tdt-ease` | `--ds-transition-duration` / `--ds-ease-in-out` | 动效 |
+| `--tdt-z-dock` / `-drawer` / `-modal` / `-menu` / `-tip` | 1030 / 1040 / 1070 / 1100 / 1200 | 层级阶梯（业务文件不许写裸 `z-index`）。现网散落值 2/6/10/20/30/31/1000/1020/1030/1040/1070/1100/1200 在分期迁移时逐点对齐到阶梯 |
+| `--tdt-dur` / `-fast` / `--tdt-ease` | `--ds-transition-duration`(+`-fast`) / `--ds-ease-in-out` | 动效 |
 
 ### 4.4 明暗两段的写法
 
 ```css
-/* tokens.ts（示意） */
-.dsh-tdt-scope{
+/* ui/tokens.ts（P0 已落码的真实形态） */
+body{
   --tdt-fg: var(--dsw-alias-label-primary,#1f2328);
-  --tdt-surface-sunken: var(--dsw-alias-interactive-bg,rgba(128,128,128,.14));
+  --tdt-surface-sunken: var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
   /* …上表全部… */
   /* 只有 alias 表达不了的「固定中性面」才在这里写默认段 */
-  --tdt-neutral-card: var(--dsw-static-neutral-50,#f5f5f5);
+  --tdt-plate: var(--dsw-static-neutral-50,#fafafa);
 }
-body[data-ds-dark-theme] .dsh-tdt-scope{
-  --tdt-neutral-card: var(--dsw-static-neutral-850,#2a2a2a);
+body[data-ds-dark-theme]{
+  --tdt-solid: var(--dsw-static-neutral-900,#0f0f0f);
+  --tdt-plate: var(--dsw-static-neutral-850,#212123);
 }
 ```
+
+**挂载点选 `body`**（不是某个 `.dsh-tdt-scope` 类）：插件界面（含 portal 到 body 的弹窗）全在 body 内，
+定义在 body 上零调用点成本；token 名统一带 `--tdt-` 前缀，不会和宿主变量打架。
 
 两条硬规则：
 1. **默认段优先**：能用 `--dsw-alias-*` 表达的，一律不要写覆盖段（alias 自己随主题变）。
@@ -155,13 +169,13 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 | 字体 | `ds-font-family-code`(9) `ds-transition-duration`(8) `ds-ease-in-out`(9) **`dsw-font-xxs-12`(1)** **`dsw-font-xs-13`(1)** `dsw-font-markdown-code-block-small`(3) `dsh-content-font-size-secondary`(2) |
 | 专用面 | `dsw-specific-menu`(2) `dsw-specific-bubble`(1) `dsw-menu-surface-fill`(1) `dsw-alias-markdown-code-block`(2) `dsw-alias-button-primary-fill`(1，仅注释) |
 
-**三处疑点（P0 必须查清，否则 token 层会继承错误）**：
+**三处疑点：✅ 已裁决（2026-10-01，宿主 0.2.0-rc.2 解包核实，证据全表见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §主题与设计变量 §3）**：
 
-| # | 疑点 | 证据 | 影响 |
+| # | 疑点 | 裁决（已核实） | 我们怎么做 |
 |---|---|---|---|
-| ① | `state-warn-primary` 与 `state-warning-primary` **并存**，兜底值还不同（`#f5a623` vs `#e6a23c`） | `archive-session-css.ts:216` / `session-view.ts:1281`（warn，抄官方会话面）vs `toast-css.ts:63` / `task-editor.tsx:1034`（warning，插件自有） | 必有一个是**死变量**（取兜底值、不随主题变）⇒ 警告色在明暗主题下可能不跟随 |
-| ② | `focus-ring-color` 与 `border-focus` 并存 | `archive-session-css.ts:295` / `task-editor-css.ts:97(用 business)` vs `official-classes` 等 | 焦点环在两处可能不同色 |
-| ③ | 宿主疑似有**字号体系**（`--dsw-font-xxs-12` / `--dsw-font-xs-13` / `--dsh-content-font-size-secondary`） | `archive-session-css.ts:139,140,115`、`mirror/TurnTriggerNodeView.tsx:5` 注释 | 若成立 ⇒ `--tdt-font-*` 应**映射宿主字号 token**，不该自己定 px（见 §4.3） |
+| ① | `state-warn-primary` 与 `state-warning-primary` 并存 | **`state-warn-primary` 是真变量**（amber-500，明暗同值）；`state-warning-primary` 宿主 0 处定义 ⇒ 写它的 3 处（`task-editor.tsx:1034,1052`、`toast-css.ts:63`）一直取的是自己的兜底色 | token 层定 `--tdt-warning` = `state-warn-primary`；3 处调用点随 P4 一并改掉 |
+| ② | `focus-ring-color` 与 `border-focus` 并存 | **`focus-ring-color` 存在但默认值是 `transparent`**（`var()` 兜底不生效）；`border-focus` **宿主 0 处定义**（`archive-session-css.ts:295` 也是死引用） | token 层定 `--tdt-focus` = `state-business-primary`（可见蓝），不再引用这两个名 |
+| ③ | 宿主是否有**字号体系** | **有，且成族**：`--dsw-font-{xxxs-11,xxs-12,xs-13,s-14,base-16,m-18,l-20,xl-24}` + `-strong-` 变体 + 子 token | `--tdt-font-*` 直绑宿主字号 token（见 §4.3），不自定 px |
 
 ---
 
@@ -172,17 +186,17 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 ### 5.1 分段控件
 
 ```css
-/* 基础：结构 + 交互 + 两档高度，全部唯一 */
+/* 基础：结构 + 交互 + 两档高度，全部唯一（✅ P1 已落码，真实实现见 src/client/ui/controls-css.ts） */
 .dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;
-  border-radius:var(--tdt-radius-md);background:var(--seg-track);border:1px solid var(--tdt-border);}
-.dsh-tdt-seg__item{height:calc(var(--tdt-control-h-sm) - 6px);padding:0 10px;
-  border:0;border-radius:var(--tdt-radius-sm);font-size:var(--tdt-font-2);
+  border-radius:var(--tdt-radius-sm);background:var(--seg-track);border:1px solid var(--tdt-border);}
+.dsh-tdt-seg__item{height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;
+  border:0;border-radius:var(--tdt-radius-sm);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   color:var(--tdt-fg-2);background:transparent;cursor:pointer;}
-.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);color:var(--tdt-fg);font-weight:600;}
+.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--tdt-shadow-raised);color:var(--tdt-fg);font-weight:600;}
 .dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
 
 /* 变体：**只覆盖两个颜色变量** —— 这正是用户说的「颜色重载」 */
-.dsh-tdt-seg{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);}
+.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);}
 .dsh-tdt-seg--inset{--seg-track:var(--tdt-surface-1);--seg-thumb:var(--tdt-surface-3);}
 ```
 
@@ -190,9 +204,9 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 
 | 位置 | 现在 | 收敛后 |
 |---|---|---|
-| 主面板「任务配置 / 执行记录 / 调试」（截图 1） | `index.ts:215-228` 自绘 | `<TdtSegmented size="sm" variant="default">` |
-| 任务列表「全部 / 已开启 / 已关闭 / 异常」（截图 2，带角标） | `task-list.tsx:1252-1271` 自绘 | `<TdtSegmented size="sm" variant="default" badge>` |
-| 卡片展开「基础信息 / 执行记录 / 日志」（截图 3） | `task-list.tsx:722-732` 自绘（底色却与上面不同） | `<TdtSegmented size="sm" variant="inset">` |
+| 主面板「任务配置 / 执行记录 / 调试」（截图 1） | `index.ts` 自绘 30px 高 | ✅ P1：`<Segmented size="md" variant="default">` |
+| 任务列表「全部 / 已开启 / 已关闭 / 异常」（截图 2，带角标） | `task-list.tsx` 自绘 32px 高 | ✅ P1：`<Segmented size="md" variant="default" badge>` |
+| 卡片展开「基础信息 / 执行记录 / 日志」（截图 3） | `task-list.tsx` 自绘 28px（底色却与上面不同） | ✅ P1：`<Segmented size="md" variant="inset">` |
 | 编辑器「编辑 / 预览」「单次 / 周期 / 间隔」「基础信息 / 执行记录」 | 官方件 + `--seg` 覆写（指示器算式脆弱） | 同一个 `TdtSegmented`（不再覆写官方指示器） |
 | 星期选择（多选，官方不支持） | `editor-fields.tsx:606-658` 自绘 | `TdtSegmented multiple` |
 | 版本开关（单段） | `task-editor-css.ts:54-57` 自绘 | `TdtSegmented variant="raised"`（或 `TdtToggle`） |
@@ -215,7 +229,7 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 - **优先官方件**：`Switch` / `Input` / `Menu` / `SegmentedControl` / `Button` / `Tooltip` / `Modal` / `StateDot` —— 它们自带明暗自适应与可访问性，能用就用（官方 `SegmentedControl` 只支持单选 ⇒ 多选场景自绘）。
 - **覆盖集中一处**：官方件的观感偏差（如「Switch 打开要绿」「Input 高度 32→26」）只在 `official-skins.ts` 写一次；选择器统一带 `role` / 标签提升特异性（现有两条注释已确立的做法：`task-editor-css.ts:30`、`task-list.tsx:124` —— 与注入顺序无关）。
 - **已知覆盖限制**（写进手册，避免再踩）：
-  - `SegmentedControl` 指示器靠 `--dsh-segment-count/index` 算位置 ⇒ 外部改 padding 必须同步改算式（`task-editor-css.ts:101-105` 注释已自认脆弱）⇒ **新体系不再覆写官方指示器，改自绘统一体**。
+  - `SegmentedControl` 指示器靠 `--dsh-segment-count/index` 算位置（**已核实：两个变量由官方组件 JS 内联写在 tablist 上**，官方基线 = padding 4px / gap 2px / 段高 28 / 字 13，出处 `@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2` `lib/SegmentedControl.module.css`）⇒ 外部改 padding 必须同步改算式（本仓 `task-editor-css.ts:104-106` 正是这么覆写的）⇒ **新体系不再覆写官方指示器，改自绘统一体**。
   - `Input`：`className` 落外层 `.wrap`、`style` 落内层 `<input>`（`primitives.d.ts:172`）。
   - `Modal`：`className` 只落 `.dialog`，抬不了整层 `.root`(z1000) ⇒ 编辑器故意不用官方 Modal（`task-editor.tsx:977-979`）。
   - 官方类名是 CSS-module 哈希，**不许写死**，只能按元素 + role 选（`official-classes.ts` 的 `ocOr` 二选一语义已有踩坑记录）。
@@ -236,12 +250,13 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 
 | 期 | 范围 | 产出 | 验收 |
 |---|---|---|---|
-| **P0 地基** | `ui/tokens.ts` + `ui/style.ts`；核实宿主 alias 全表（§十一） | 一套 token + 一个注入器；**不迁任何调用点** | `npm run build` 后 bundle 里 `--tdt-` 只在一处定义 |
-| **P1 分段控件**（第一优先） | 10 处 → 1 个 `TdtSegmented` | 三张截图那三处 + 编辑器四档 + 星期 + 版本开关 + 预览两态 | 截图三处在明暗两主题下与现状一致；冒烟有正/反断言 |
+| **P0 地基** ✅ | `ui/tokens.ts` + `ui/style.ts` + `ui/index.ts`；宿主 alias / 字号 / 圆角 / 焦点已核实完毕（见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md)） | 一套 token + 一个注入器；**不迁任何调用点** ⇒ 界面零变化 | ✅ 已落码（2026-10-01，冒烟 372/0；「`--tdt-` 只在一处定义」等 6 项断言见 worklog §八） |
+| **P1a 分段控件·三处自绘** ✅ | 3 处自绘 → 1 个 `Segmented` | 主面板三 tab / 列表筛选 tabs（带角标）/ 卡片三面板 | ✅ 已落码（2026-10-01，冒烟 376/0；4 项正/反断言见 worklog §九） |
+| **P1b 分段控件·其余 4 类** | 编辑器官方覆写 ×3 + 星期多选 + 版本开关 + 预览两态 → 同一个 `Segmented` | `Segmented` 增补 `multiple`（星期）与 `raised`（版本开关）两个变体 | 反断言：旧类名 `dsh-tdt-ed-histtoggle` / `dsh-tdt-sv-seg` 消失；明暗双主题一致 |
 | **P2 按钮 + 图标钮** | 15+ 套 → 3 variant × 2 size | `Button` / `IconButton` | 各页面按钮外观归一 |
 | **P3 输入 + 下拉** | 3 套 CSS + 3 处原生 + 官方 2 处 → 1 套 | `Field`（Input / Select / PrefixedInput） | 高度只剩两档 |
 | **P4 开关 + 日期时间 + 浮层** | 开关 2 处重复覆盖合并；日期时间全内联转皮肤；卡/浮层/Toast 归一 | `SwitchToggle` / `DateTime` / 容器皮肤 | 明暗特判只剩 token 层 |
-| **P5 收尾** | 删 3 份 `C` 表 → 0；内联数值字面量清零；注释与代码对齐（§一 第 9 条） | 干净的基础层 | 冒烟反例断言全绿 + `npm run typecheck` |
+| **P5 收尾** | 删 3 份 `C` 表 → 0；内联数值字面量清零；注释与代码对齐（现状清单见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §六） | 干净的基础层 | 冒烟反例断言全绿 + `npm run typecheck` |
 
 **每期通用纪律**（照 [`ui-style-guide.md`](ui-style-guide.md) 执行）：`npm run build` → `npm run smoke` → `npm run typecheck` → 明暗双主题真机走查 → 回写 PROGRESS/worklog。
 
@@ -265,7 +280,7 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 - **不自造一套主题色**：颜色一律来自宿主 alias；插件的 `--tdt-*` 只是**语义命名层**，不是第二套调色板。
 - **不改构建链**（§六）。
 - **不重排现有界面结构 / 布局**：本专项只统一「同一控件的皮肤与尺寸」，谁在哪儿、多大间距不动。
-- **不动会话弹窗里「镜像官方样式」的部分**：那部分继续照 [`session-view-ui-map.md`](external/session-view-ui-map.md) 做（边界见 §十二）。
+- **不动会话弹窗里「镜像官方样式」的部分**：那部分继续照 [`session-view-ui-map.md`](external/session-view-ui-map.md) 做（边界说明见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §六「与既有文档的边界」）。
 
 ---
 

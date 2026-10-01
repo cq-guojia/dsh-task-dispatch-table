@@ -1569,6 +1569,55 @@ console.log('\n[14] runtime-index')
       return client.includes('statusTextOf') && client.includes('statusPending') && client.includes('待执行')
     })())
 
+  // ── 15. UI 基础层 P0：token 层（--tdt-*）与唯一样式注入入口 ──
+  // 本期的验收口径：地基进产物、变量名/取值按宿主 0.2.0-rc.2 核实结果直绑、明暗差异只有一处、
+  // 注入入口唯一；**且界面零变化**（此时还没有任何规则消费 --tdt-*）。
+  console.log('\n[15] UI 基础层 P0（token 层 + 统一样式入口）')
+  {
+    const uiJs = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    const countOf = (needle) => uiJs.split(needle).length - 1
+    check('token 表已打进产物（文字 / 面 / 两档控件高度）',
+      uiJs.includes('--tdt-fg:') && uiJs.includes('--tdt-surface-sunken:')
+      && uiJs.includes('--tdt-control-h-sm:24px') && uiJs.includes('--tdt-control-h-md:28px'))
+    check('token 直绑宿主真变量（含 warn 真名；焦点环不走默认透明的 focus-ring-color）',
+      uiJs.includes('--tdt-warning:var(--dsw-alias-state-warn-primary')
+      && uiJs.includes('--tdt-focus:var(--dsw-alias-state-business-primary')
+      && uiJs.includes('--tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover')
+      && !uiJs.includes('--tdt-focus:var(--dsw-focus-ring-color'))
+    check('字号 / 圆角直绑宿主字号族与圆角真值（不自定 px 刻度）',
+      uiJs.includes('--tdt-font-md:var(--dsw-font-xs-13-font-size')
+      && uiJs.includes('--tdt-radius-md:var(--dsw-radius-md,12px)'))
+    check('同一 token 只在一处定义（P0「--tdt- 只有一处定义」验收）',
+      countOf('--tdt-control-h-md:') === 1 && countOf('--tdt-fg:') === 1 && countOf('--tdt-radius-sm:') === 1)
+    check('明暗差异唯一落点 = token 层（固定中性面覆盖段在产物里）',
+      uiJs.includes('body[data-ds-dark-theme]{') && uiJs.includes('--tdt-plate:var(--dsw-static-neutral-850'))
+    // 注：applyStyle 是给 P5 过渡期用的便捷入口，此刻无调用点 ⇒ 被摇树属正常，不为它写断言。
+    check('统一样式入口唯一（单 style id + 注入器 API + 入口接线）',
+      uiJs.includes('dsh-task-dispatch-table-ui') && uiJs.includes('ensureUiBase')
+      && uiJs.includes('registerStyle') && uiJs.includes('ensureUiStyles'))
+  }
+
+  // ── 16. UI 基础层 P1：分段控件（滑动块）唯一实现 ──
+  // 正向 = 组件 + 皮肤进产物、皮肤只吃 token；
+  // 反向 = 三处就地自绘的旧实现标识全部消失（它们才是「同一个控件写三遍」的证据）。
+  console.log('\n[16] UI 基础层 P1（分段控件唯一实现）')
+  {
+    const p1Js = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('分段控件进了产物（段 / 变体 / 两档高度 / 段内角标 / 无障碍组）',
+      p1Js.includes('dsh-tdt-seg__item') && p1Js.includes('dsh-tdt-seg--default') && p1Js.includes('dsh-tdt-seg--inset')
+      && p1Js.includes('dsh-tdt-seg--md') && p1Js.includes('dsh-tdt-seg__badge') && p1Js.includes('aria-pressed'))
+    check('皮肤只消费 token 层（轨道/亮片走变体变量，段高只两档，角标走 --tdt-on-signal）',
+      p1Js.includes('--seg-track:var(--tdt-surface-2)') && p1Js.includes('--seg-track:var(--tdt-surface-1)')
+      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)') && p1Js.includes('--seg-thumb:var(--tdt-surface-3)')
+      && p1Js.includes('height:calc(var(--tdt-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--tdt-control-h-md) - 6px)')
+      && p1Js.includes('background:var(--tdt-danger);color:var(--tdt-on-signal)'))
+    check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',
+      !p1Js.includes('segTrackStyle') && !p1Js.includes('segStyle') && !p1Js.includes('tabStyle')
+      && !p1Js.includes('countBadge') && !p1Js.includes('segmentStyle') && !p1Js.includes('segmentedStyle'))
+    check('P1 只迁这三处（预览两态等其余分段仍按原样，留给后续分期）',
+      p1Js.includes('dsh-tdt-sv-seg') && p1Js.includes('dsh-tdt-ed-histtoggle'))
+  }
+
   store.close()
   rmSync(dir, { recursive: true, force: true })
 }

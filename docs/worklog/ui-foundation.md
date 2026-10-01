@@ -1,6 +1,6 @@
 # 工作包：UI 基础层统一（design token + 组件皮肤）
 
-> **状态**：🚧 **进行中**（2026-10-01 起）· 当前阶段 = **方案文档已起草、待用户拍板**；**未改任何源码**（用户明确「你先不要动」）
+> **状态**：🚧 **进行中**（2026-10-01 起）· 当前阶段 = **方案已起草 + 宿主源码核实已完成**（2026-10-01 解包 0.2.0-rc.2 五包，见 §七）；**仍未改任何源码**（用户明确「你先不要动」）
 > **来源**：用户 2026-10-01 口述需求（三张分段控件截图 + 口述「滑动块 / button / 下拉 / input / 日期时间 / switch 全是这样」）
 > **产出文档**：[`design/ui-foundation.md`](../design/ui-foundation.md)（技术方案）· [`design/ui-style-guide.md`](../design/ui-style-guide.md)（开发手册）
 
@@ -114,16 +114,20 @@
 | A | 高度方案 (a) / (b) | **(b) 收窄版**：token 两档 + `size` prop，调用点不许自定义高度 |
 | B | 两档取值 | **sm 24 / md 28**（`md` 与官方分段一致，覆写最少） |
 | C | P1 先动哪处 | **截图那三处**（主面板三 tab / 列表筛选 tabs / 卡片展开三面板，均自绘、风险最低） |
-| D | 授权下载宿主主题包做源码核实 | ❌ **未授权**（`npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>`，只解包读、不进仓库） |
+| D | 授权下载宿主主题包做源码核实 | ✅ **已授权并完成**（2026-10-01；用户告知宿主 = **0.2.0-rc.2**，解包 `ui-theme` / `ui-primitives` / `ui-conversation` / `ui-chat` / `ui-renderer` 五包到**仓库外**临时目录，未进仓库） |
 
-## 五、开工前必须先核实（P0 前置，源码级）
+## 五、开工前必须先核实（P0 前置，源码级）—— ✅ 已全部完成
 
-1. 宿主主题包 `@deepseek-ai/dsh-client-ui-theme` 的 alias **全表**（本地 `node_modules/@deepseek-ai/` 只有 `cosmokit` / `schemastery`，UI 包不在本地）⇒ 需 `npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>` 解包读 —— **下载写盘，需用户授权**。
-2. 「明暗判据是否只有 `body[data-ds-dark-theme]`」—— 同上解包后溯源（现有 7 处特判从未溯源核实过）。
-3. 官方 `SegmentedControl` 的指示器覆写算式是否保留 —— 决定「覆写官方」还是「自绘统一体」（方案倾向自绘，理由见 foundation §5.3）。
-4. §2.7 三处疑点：`state-warn`/`state-warning` 哪个是真的、`focus-ring-color` / `border-focus` 哪个是真的、宿主是否真有字号体系 —— 前两项必有一个是死变量，token 层不能继承错误命名。
+> 2026-10-01 完成（宿主 **0.2.0-rc.2**）。**结论真源已回写 [`../design/external/dsh-capabilities.md`](../design/external/dsh-capabilities.md) §主题与设计变量**（外部事实唯一真源），下方只留结论摘要与过程去向。
 
-> 第 1/2/4 项同源于主题包的一次解包，**一次授权即可做完三项**；第 3 项需另解 primitives 包（同一次授权可一并做）。
+| # | 待核实 | 结论（已核实） |
+|---|---|---|
+| 1 | 宿主 alias 全表 | 定义真源 = theme `lib/client.js` 内嵌 CSS（无独立 .css），去重后约 400 个 `--dsw-*` 名 + 5 个 `--ds-*`；alias / static / font 三族已按族整理入册 |
+| 2 | 明暗判据 | **唯一**：`body[data-ds-dark-theme]`，由宿主启动脚本 `toggleAttribute` 写入；`prefers-color-scheme` 只在宿主内部解析 `system` ⇒ 插件侧禁用 |
+| 3 | 官方分段控件指示器算式 | **保留（未废弃）**：官方靠 `--dsh-segment-count/index`（组件 JS 内联写）算位置，改 padding 必改算式 ⇒ 维持「自绘统一体」的结论，并已抄下官方基线（padding 4 / gap 2 / 段高 28 / 字 13 / radius-sm 指示器 / elevation-soft） |
+| 4 | 三处疑点 | ① `state-warn-primary` 真、`state-warning-primary` 死；② `focus-ring-color` 真但默认 `transparent`、`border-focus` 死；③ 宿主字号体系**成立**（11/12/13/14/16/18/20/24 + strong 变体） |
+
+**额外发现（原计划外，价值高）**：把「本仓引用的 71 个 `--dsw/--ds/--dsh` 变量（含本仓自有的 `--dsh-tdt-*` 与注释残片）」与「宿主真源定义」做差集，**揪出 5 个不存在的变量名**（`interactive-bg` / `border-focus` / `state-warning-primary` / `dsh-elevation-prominent` / `dsh-radius-panel`，**涉及 7 个使用点**）——这些点一直取的是硬编码兜底色，**明暗切换时根本不跟随**，属真 bug（P4/P5 一并修）。
 
 ---
 
@@ -222,3 +226,109 @@
 2. 完成 §十一 的三项源码核实（需授权下载宿主主题包）。
 3. 立 P0：写 `ui/tokens.ts` + `ui/style.ts`（不改任何调用点，build 绿即可）。
 4. 按 P1 开工分段控件，走一遍完整验收（冒烟正反断言 + 明暗双主题真机）。
+
+---
+
+## 七、宿主源码核实轮次（2026-10-01，宿主 0.2.0-rc.2）
+
+### 7.1 怎么取的（可复现）
+
+```bash
+# 只解包读，落在仓库外临时目录；不进仓库、不改 package.json
+cd "$(mktemp -d)" && npm pack @deepseek-ai/dsh-client-ui-theme@0.2.0-rc.2
+# 另取 primitives / conversation / chat / renderer 同版本，共五包
+```
+
+- 为什么要五个包：`--dsw-*` 变量既可能定义在 theme，也可能被组件包内联写入（`--dsh-segment-count`）或由宿主启动脚本设置（`--dsh-content-font-size`）⇒ **只读 theme 会误判**。
+- 判定脚本（仓库外）：① 收集所有 `--name: value` 定义（跨五包 lib 的 `.js`/`.css`）；② 抽本仓 `src/**/*.ts(x)` 引用的宿主变量；③ 求差集 ⇒ 死引用清单。
+- 主题包内嵌 CSS 的**明暗分段解析**：先定位所有 `body[data-ds-dark-theme]{…}` 区段（花括号配平），段内 = 暗色值、段外 = 默认（亮色）值。
+
+### 7.2 与旧稿不一致、已回改文档的地方
+
+| 旧稿写的 | 实测 | 回改落点 |
+|---|---|---|
+| `--tdt-warning` = `state-warning-primary`（存疑） | 该名宿主无定义；真名 `state-warn-primary` | foundation §4.2；style-guide §三 §七 |
+| `--tdt-focus` = `focus-ring-color`（存疑） | 该名存在但值是 `transparent`（兜底不生效）⇒ 取 `state-business-primary` | foundation §4.2 |
+| `--tdt-surface-sunken` = `interactive-bg` | 该名宿主无定义；轨道底真名 `interactive-bg-hover` | foundation §4.2 |
+| `--tdt-fg-inverse` = `label-primary-inverted` | 实心面上应为 `label-primary-foreground`（`-inverted` 暗色只到 bluish-800） | foundation §4.2 |
+| 圆角「4 / 6 / 8 / 10px」 | 宿主真值 4 / 8 / 12 / 16 / 20（+panel 28） | foundation §4.3 |
+| `--tdt-font-*` 映射哪些未定 | 字号族已核实，改成直绑（xxxs-11 / xxs-12 / xs-13 / s-14 / base-16 + strong） | foundation §4.3 |
+| `brand-primary` 当作「品牌色/蓝」 | 真值 **明色近黑 / 暗色近白**；蓝色一律 `state-business-primary` | foundation §4.2（新增 `--tdt-business` 行）；capabilities §5 |
+| 文档里 3 处失效交叉引用（§十一 / §一 第9条 / §十二） | 指向的章节早已移入本文件 §六 | foundation §七 §九 |
+
+### 7.3 没做的事
+
+- **未改任何源码**（用户「先不要动」仍有效）⇒ 5 处死引用仍在代码里，等 P4/P5 按新 token 层一并改。
+- 未改 `AGENTS.md`（需单独授权）。
+- 未拍板 A/B/C（高度档位与 P1 起手点），仍按 §四 暂定值。
+
+---
+
+## 八、P0 地基落码（2026-10-01）
+
+### 8.1 改了哪些文件
+
+| 文件 | 动作 |
+|---|---|
+| `src/client/ui/tokens.ts` | **新建**：L1 token 表（`--tdt-*`），`body{}` 默认段 + `body[data-ds-dark-theme]{}` 覆盖段；每个 token 带兜底值（兜底值取宿主真值） |
+| `src/client/ui/style.ts` | **新建**：统一样式注入器 —— 单 id（`dsh-task-dispatch-table-ui`）、按域登记（`tokens` 恒最前）、幂等、`registerStyle` / `ensureUiStyles` / `applyStyle` |
+| `src/client/ui/index.ts` | **新建**：ui 层唯一出口 + `ensureUiBase()`（登记 token 层并注入） |
+| `src/client/index.ts` | 渲染入口 `ensureToastStyle()` 旁加一行 `ensureUiBase()`（**未改任何界面代码**） |
+| `scripts/smoke.mjs` | 新增 `[15]` 节 6 项断言 |
+
+### 8.2 与 `ui-foundation.md` 的 3 处偏差（已回改文档）
+
+| # | 旧稿写法 | 落码实际 | 为什么 |
+|---|---|---|---|
+| ① | token 挂在 `.dsh-tdt-scope` 类上 | 挂在 **`body`** 上 | 插件界面（含 portal 到 body 的弹窗）全在 body 内 ⇒ 挂 body 零调用点成本；挂在 scope 类上则每个根节点都得记得加类，一旦漏加 token 静默失效。名字带 `--tdt-` 前缀，不会与宿主打架 |
+| ② | `--tdt-surface-raised` = 「bg-layer-1 + elevation-soft」 | **拆两条**：`--tdt-surface-raised`（色）+ `--tdt-shadow-raised`（投影） | 一个 CSS 变量只能存一个值，颜色与阴影塞不进同一条 |
+| ③ | `--tdt-font-1..4` | 改为 `--tdt-font-xs/sm/md/lg/xl` + 成对的 `--tdt-line-*` | 直绑宿主的 `-font-size` / `-line-height` 子 token（比绑简写更省事：现有代码本来就是 font-size / line-height 分开写） |
+
+另外 P0 顺手登记了实现必须有的几条：`--tdt-solid/-on-solid`、`--tdt-plate/-plate-hover`、`--tdt-icon-plate`（吸收现有 7 处暗色特判）、`--tdt-border-heavy`、`--tdt-font-mono`、`--tdt-z-*` 阶梯、`--tdt-dur-fast`。
+
+### 8.3 验收
+
+- `npm run build` ✅ · `npm run typecheck` ✅ · `npm run smoke` **372 项全过、0 失败**（新增 6 项：token 表进产物 / 直绑真变量 / 字号圆角直绑 / 同一 token 只在一处定义 / 明暗唯一落点在 token 层 / 样式入口唯一）。
+- **界面零变化的依据**：本阶段注入的 CSS 只定义 `--tdt-*` 变量，**没有任何规则消费它们** ⇒ 渲染结果不可能变。真机复验点 = 装上新 `dist/` 后随便走一遍主界面 / 编辑器 / 会话弹窗，看与装之前**是否完全一样**。
+- 仍未做的事：4 条旧 `<style>` 注入未收编（留待 P5，过渡期用 `applyStyle` 逐个换）、5 个错变量名未修（P4/P5 随对应控件一起改）。
+
+---
+
+## 九、P1a 分段控件落码（2026-10-01）
+
+### 9.1 改了哪些文件
+
+| 文件 | 动作 |
+|---|---|
+| `src/client/ui/controls-css.ts` | **新建**：L2 控件皮肤第一份 —— 分段控件规则（结构一套 + `size` × `variant` 两轴；变体只覆盖 `--seg-track` / `--seg-thumb` 两个颜色变量） |
+| `src/client/ui/Segmented.tsx` | **新建**：`Segmented` 组件（`h()` 写法，跟仓库既有约定一致），支持 `badge` 角标 / `block` 撑满 / `label` 无障碍名 |
+| `src/client/ui/index.ts` | 追加导出 `Segmented` 与皮肤；`ensureUiBase()` 从 index 移到 `style.ts`（避免组件 ↔ 出口循环依赖） |
+| `src/client/ui/style.ts` | 新增 `ensureUiBase()`（登记 token + 注入） |
+| `src/client/ui/tokens.ts` | 新增 `--tdt-on-signal`（语义色实面上的字，明暗同值 —— 吸收角标里写死的 `#fff`） |
+| `src/client/index.ts` | 主面板三 tab 改调 `Segmented`；删 `segmentedStyle` / `segmentStyle` |
+| `src/client/task-list.tsx` | 列表筛选 tabs（带角标）+ 卡片三面板改调 `Segmented`；删 `segTrackStyle` / `segStyle` / `tabStyle` / `countBadge` |
+| `scripts/smoke.mjs` | 新增 `[16]` 节 4 项断言（2 正 / 1 反 / 1 范围钉） |
+
+### 9.2 视觉差异（刻意收口，逐项可对照）
+
+| 位置 | 之前 | 现在（`size="md"`） | 差异 |
+|---|---|---|---|
+| 主面板三 tab | 总高 30（`padding 2` + 段 `3+18+3` + 描边 1） | 总高 28 | 矮 2px；段圆角 6→8；选中块阴影 `shadow-lv3`→`elevation-soft`（更轻，与官方指示器同款）；**新增** hover 变字色、键盘焦点环 |
+| 列表筛选 tabs | 总高 32（段高 26） | 总高 28 | 矮 4px（与同排 26px 搜索框 / 下拉更齐）；段圆角 6→8；角标颜色不变（`#fff` → `--tdt-on-signal`，同值但走 token） |
+| 卡片三面板 | 总高 28（段 `padding 2px 10px`） | 总高 28（`variant="inset"` 的轨道/亮片配色**不变**） | 高度不变；段内边距 `2px 10px`→`0 12px`（每段宽 4px）；段圆角 6→8 |
+
+三处的轨道色 / 选中块色 **完全保持原样**（前两处 = default，第三处 = inset），所以「看起来是同一个控件了」但配色语义没有变。
+
+### 9.3 验收
+
+- `npm run build` ✅ · `npm run typecheck` ✅ · `npm run smoke` **376 项全过、0 失败**（`[16]` 四项：组件与皮肤进产物 / 皮肤只吃 token / **三处旧实现标识全消失** / P1 只迁这三处）。
+- 无障碍顺带补齐：三个调用点现在都带 `aria-pressed`（此前只有卡片三面板有），可键盘聚焦且焦点环走 `--tdt-focus`，动效尊重 `prefers-reduced-motion`。
+- **真机复验点**（装 `dist/` 实测）：
+  1. 主面板右上三 tab —— 高度略矮、圆角略圆，选中块阴影更柔和；明暗两主题下选中块都清晰可辨；
+  2. 列表顶部筛选 tabs —— 整排高度与右侧搜索框/下拉更齐；「异常」数量角标样式不变；
+  3. 卡片展开的三面板滑块 —— 与之前基本无差异；
+  4. 键盘 Tab 走到滑块上，能看到蓝色焦点环；点击切换正常。
+
+### 9.4 未做（P1b）
+
+编辑器里的官方分段覆写 ×3（编辑/预览、单次/周期/间隔、基础信息/执行记录）、星期多选、版本开关（`dsh-tdt-ed-histtoggle`）、预览两态（`dsh-tdt-sv-seg`）四处仍按原样 —— 它们需要给 `Segmented` 增补 `multiple` / `raised` 两个变体后再迁；冒烟里已用「范围钉」断言把这一步钉住。

@@ -29,6 +29,7 @@ import {
   type TaskEditorDraft,
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
+import { Segmented, ensureUiBase } from './ui'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
@@ -211,21 +212,6 @@ const panelHeaderStyle: Record<string, string | number> = {
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
 const panelTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: C.text }
-/** 分组标签组（分段控件）：与宿主「近 24 小时 / 近 7 天 …」同形。 */
-const segmentedStyle: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', gap: '2px', padding: '2px',
-  borderRadius: '8px', background: C.layer2, border: `1px solid ${C.border}`,
-}
-function segmentStyle(active: boolean): Record<string, string | number> {
-  return {
-    padding: '3px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-    fontSize: '12px', lineHeight: '18px', fontFamily: 'inherit', transition,
-    background: active ? C.layer1 : 'transparent',
-    color: active ? C.text : C.textDim,
-    fontWeight: active ? 600 : 400,
-    boxShadow: active ? C.shadow : 'none',
-  }
-}
 /** 图标按钮（刷新 / 关闭）：方形、圆角、悬停高亮，尺寸与分段控件同高。 */
 const iconButtonStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -965,6 +951,9 @@ function TaskPage(props: {
   const previewW = preview === null ? 0 : previewWidth
   // 浮层 Toast 样式注入（保存失败提示用，幂等）。
   ensureToastStyle()
+  // UI 基础层（P0）：登记 token 层（--tdt-* 变量表）并注入唯一样式入口。
+  // 阶段说明：此刻还没有任何规则消费 --tdt-*，所以**界面零变化**；逐期（P1→）把调用点搬上来。
+  ensureUiBase()
   // 根容器 = 横向分栏：内容区（整页 + 弹窗层）flex:1，预览 dock 占 --dsh-tdt-preview-w。
   // dock 是布局成员而非浮层 ⇒ 整页被真正挤窄、滚动条不被遮盖（用户 2026-09-28 要求「分栏压过来，不是盖上去」）。
   return h('div', {
@@ -993,20 +982,17 @@ function TaskPage(props: {
               h('div', { style: panelTitleStyle }, t('panelTitle')),
             ),
             h('div', { style: headerRightStyle },
-              h('div', { style: segmentedStyle },
-            h('button', {
-              type: 'button', style: segmentStyle(tab === 'config'),
-              onClick: () => { setTab('config') },
-            }, t('tabConfig')),
-            h('button', {
-              type: 'button', style: segmentStyle(tab === 'records'),
-              onClick: () => { setTab('records') },
-            }, t('tabRecords')),
-            h('button', {
-              type: 'button', style: segmentStyle(tab === 'debug'),
-              onClick: () => { setTab('debug') },
-            }, t('tabDebug')),
-          ),
+              // 分段控件走 UI 基础层唯一实现（P1）：以前这里是一份就地自绘的样式（已删）
+              h(Segmented<'config' | 'records' | 'debug'>, {
+                value: tab,
+                size: 'md',
+                items: [
+                  { value: 'config', label: t('tabConfig') },
+                  { value: 'records', label: t('tabRecords') },
+                  { value: 'debug', label: t('tabDebug') },
+                ],
+                onChange: setTab,
+              }),
           // 右上角「＋ 新建任务」：拉起右侧贴边的任务编辑弹窗（P0 只做界面，不接保存）。
           h('button', {
             type: 'button',

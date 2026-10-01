@@ -28,7 +28,7 @@
 
 | 控件 | 唯一位置 | 怎么用（示例） | 现状重复数 |
 |---|---|---|---|
-| 分段控件（滑动块） | `ui/Segmented.tsx` | `<TdtSegmented size="sm" variant="inset" value={v} onChange={setV} items={[…]}/>` | 10 |
+| 分段控件（滑动块） | `ui/Segmented.tsx` | `h(Segmented<'a' \| 'b'>, { value: v, size: 'md', variant: 'inset', items: [{ value: 'a', label: '甲', badge: 3 }], onChange: setV })` | ✅ **P1a 已收敛 3 处**（主面板 / 列表筛选 / 卡片三面板）；余 7 处（编辑器官方覆写 ×3 / 星期 / 版本开关 / 预览两态）待 P1b |
 | 按钮 | `ui/Button.tsx` | `<TdtButton variant="outline" size="sm">重置</TdtButton>` | 15+ |
 | 图标钮 | `ui/Button.tsx`（`IconButton`） | `<TdtIconButton icon={IconCloseOutlineRegular} label="关闭"/>` | 5+ |
 | 输入框 | `ui/Field.tsx` | `<TdtInput value={v} onChange={…} size="sm" error={bad}/>` | 3 套 + 3 原生 |
@@ -57,7 +57,7 @@
 
 | 禁止 | 现状反例 |
 |---|---|
-| 在使用点写颜色 / 圆角 / 字号字面量 | `padding:'3px 12px', borderRadius:'6px', fontSize:'12px'`（`index.ts:219-228`） |
+| 在使用点写颜色 / 圆角 / 字号字面量 | P1a 已清掉主面板分段那处；仍存：`index.ts` 的 `iconButtonStyle` / `addButtonStyle`、`task-list.tsx` 的 `iconBtnStyle` / `panelBarStyle` 等内联字面量 |
 | 在使用点写死高度 | `height:'26px'`（约 10 处）、段高 20/22/24/26/28 五种 |
 | 直接引用宿主变量 | 业务文件里的 `var(--dsw-alias-…)`——必须改用 `var(--tdt-…)` |
 | 自己写 `body[data-ds-dark-theme]` | `archive-session-css.ts:241,279,281,287,298,322,331`（7 处 ⇒ 收敛进 token 层） |
@@ -65,8 +65,8 @@
 | 自己 `createElement('style')` 注入 | 现存 4 条注入、2 套 id 命名 ⇒ 统一走 `ui/style.ts` |
 | 覆写官方件的观感（在使用点） | 「Switch 变绿」现在写了两遍（`task-editor-css.ts:31`、`task-list.tsx:125`）⇒ 归 `official-skins.ts` |
 | 写死官方 CSS-module 类名 | 哈希会变；只能按元素 + role 选（`official-classes.ts`） |
-| 硬编码 `#fff` / `rgba(0,0,0,.45)` | 角标 `task-list.tsx:1267`、保存钮 `config-panel.tsx:180`、遮罩 `task-list.tsx:755` |
-| 混用**同义宿主变量** | `state-warn-primary`(2 处) 与 `state-warning-primary`(3 处) 并存、兜底值还不同 ⇒ 必有一个是死变量；`focus-ring-color` 与 `border-focus` 同理 —— 一律由 token 层定一个名 |
+| 硬编码 `#fff` / `rgba(0,0,0,.45)` | ✅ 段内角标已随 P1a 收敛（走 `--tdt-on-signal`）；仍存：保存钮 `config-panel.tsx:180`、遮罩 `task-list.tsx:755` |
+| 混用**同义宿主变量** | `state-warn-primary`(2 处) 与 `state-warning-primary`(3 处) 并存 —— **已裁决：前者真、后者宿主无定义（死）**；`focus-ring-color`（真，但默认 `transparent`）与 `border-focus`（死）同理 ⇒ 一律由 token 层定一个名，见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 |
 | 注释与代码不一致 | `editor-fields.tsx:603-604` 写着 padding4/段高28，实际 padding6/段高24 ⇒ 改代码必须同步注释 |
 
 ---
@@ -114,8 +114,9 @@
 | 官方没有日期 / 时间选择器 | 只能自绘，但要走同一套 token 与皮肤命名 | `primitives.d.ts:158-159` |
 | 样式注入顺序不保证 | 覆盖官方件时必须靠「元素 + role」提高特异性，不靠先后 | `task-editor-css.ts:30`、`task-list.tsx:124` |
 | `import './x.css'` 在 client 产物里**不被加载** | client 是内核消费的 CJS 闭包 ⇒ CSS 只能运行时注入 `<style>`，不许改成 import | `task-editor-css.ts:3-4` |
-| 同一个意思的宿主变量有两个名字 | `state-warn-primary`(2 处) 与 `state-warning-primary`(3 处) 并存、兜底值不同 ⇒ **必有一个取兜底值、不随主题变**；`focus-ring-color` / `border-focus` 同理 | foundation §4.5 疑点 ①② |
-| 宿主自带字号体系 | `--dsw-font-xxs-12` / `--dsw-font-xs-13` / `--dsh-content-font-size-secondary` 正在被官方镜像部分使用 ⇒ **字号优先映射宿主 token，不要自己定 px 刻度** | `archive-session-css.ts:139,140,115` |
+| 同一个意思的宿主变量有两个名字 | `state-warning-primary` / `border-focus` **宿主根本无定义**（写它们只会拿兜底色、不随主题）；`focus-ring-color` 有定义但默认值是 `transparent`（`var()` 兜底不生效 ⇒ 焦点环会隐身） | [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 §4 |
+| 宿主自带字号体系 | **成立且成族**：`--dsw-font-{xxxs-11,xxs-12,xs-13,s-14,base-16,m-18,l-20,xl-24}` + `-strong-` 变体 + 子 token ⇒ **字号一律映射宿主 token，不要自己定 px 刻度** | theme `lib/client.js`（capabilities §2） |
+| 「看着有、其实没有」的变量名 | 本仓已踩 5 处：`--dsw-alias-interactive-bg`、`--dsw-alias-border-focus`、`--dsw-alias-state-warning-primary`、`--dsh-elevation-prominent`、`--dsh-radius-panel` | [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §4 |
 | Tooltip 子元素必须是真 DOM | 裸函数组件 ref 挂不上 ⇒ 提示静默失效（踩过两次） | 决策 53 同轮口径 |
 
 ---

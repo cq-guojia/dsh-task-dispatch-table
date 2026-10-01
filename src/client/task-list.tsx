@@ -30,6 +30,8 @@ import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { pinMsFor, sortRows } from '../task-sort.js'
 import { DateField, MarqueeText, calendarLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
+// UI 基础层（P1）：分段控件唯一实现 —— 本文件的筛选 tabs 与卡片三面板都改用它。
+import { Segmented } from './ui'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -718,18 +720,6 @@ const panelBarStyle: Record<string, string | number> = {
   marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed ${C.border}`,
   display: 'flex', alignItems: 'center', gap: '8px',
 }
-/** 三滑块轨道与选中态：与顶部筛选 tabs 同一套观感（灰底轨道 + 选中加重），颜色全走主题变量。 */
-const segTrackStyle: Record<string, string | number> = {
-  display: 'inline-flex', gap: '2px', padding: '2px', borderRadius: '8px',
-  background: C.layer1, border: `1px solid ${C.border}`,
-}
-const segStyle = (active: boolean): Record<string, string | number> => ({
-  appearance: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-  fontSize: '12px', lineHeight: '18px', padding: '2px 10px', borderRadius: '6px', transition,
-  background: active ? C.layer3 : 'transparent',
-  color: active ? C.text : C.textDim,
-  fontWeight: active ? 600 : 400,
-})
 const filterSelectStyle: Record<string, string | number> = {
   height: `${CONTROL_H}px`, borderRadius: '6px', border: `1px solid ${C.border}`,
   background: C.layer1, color: C.text, fontFamily: 'inherit', fontSize: '12px', padding: '0 6px',
@@ -1206,12 +1196,18 @@ function TaskExpandPanel(props: {
     tab === 'info' ? renderInfo() : tab === 'records' ? renderRecords() : renderLogs(),
     // 底栏：左 = 三滑块；右 = 编辑任务 + 删除。
     h('div', { style: panelBarStyle },
-      h('div', { style: segTrackStyle },
-        (['info', 'records', 'logs'] as const).map(key => h('button', {
-          key, type: 'button', style: segStyle(tab === key), 'aria-pressed': tab === key,
-          onClick: () => { setTab(key) },
-        }, t(key === 'info' ? 'cardTabInfo' : key === 'records' ? 'cardTabRecords' : 'cardTabLogs'))),
-      ),
+      // 三面板滑块走 UI 基础层唯一实现：variant="inset" = 在卡片底色上（轨道下沉、选中抬到第三层面）
+      h(Segmented<'info' | 'records' | 'logs'>, {
+        value: tab,
+        size: 'md',
+        variant: 'inset',
+        items: [
+          { value: 'info', label: t('cardTabInfo') },
+          { value: 'records', label: t('cardTabRecords') },
+          { value: 'logs', label: t('cardTabLogs') },
+        ],
+        onChange: setTab,
+      }),
       h('span', { style: { flex: '1 1 auto' } }),
       // 右下按钮区顺序（用户 2026-10-02）：删除在编辑**左边**。
       h('button', {
@@ -1380,38 +1376,22 @@ export function TaskListView(props: {
     ...workspaces.map(name => ({ id: name, label: name })),
   ], [workspaces, t])
 
-  const tabStyle = (active: boolean): Record<string, string | number> => ({
-    display: 'inline-flex', alignItems: 'center', gap: '4px',
-    height: `${CONTROL_H}px`, padding: '0 12px', border: 'none', cursor: 'pointer',
-    fontSize: '12px', fontFamily: 'inherit', transition, borderRadius: '6px',
-    background: active ? C.layer1 : 'transparent',
-    color: active ? C.text : C.textDim,
-    fontWeight: active ? 600 : 400,
-  })
-  /** 异常数的角标（0 不显示）。 */
-  const countBadge = (n: number): ReturnType<typeof h> | null => (
-    n > 0
-      ? h('span', {
-        style: {
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          minWidth: '16px', height: '16px', padding: '0 4px', borderRadius: '8px',
-          background: C.danger, color: '#fff', fontSize: '11px', lineHeight: '16px',
-        },
-      }, String(n))
-      : null
-  )
-
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
       // 顶部一排：左 = 分组按钮（全部 / 已开启 / 已关闭 / 异常）；右 = 搜索 → 工作区下拉 → 刷新。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' } },
-        h('div', { style: { display: 'inline-flex', gap: '2px', padding: '2px', borderRadius: '8px', background: C.layer2, border: `1px solid ${C.border}` } },
-          h('button', { type: 'button', style: tabStyle(filter === 'all'), onClick: () => { setFilter('all') } }, t('listFilterAll')),
-          h('button', { type: 'button', style: tabStyle(filter === 'enabled'), onClick: () => { setFilter('enabled') } }, t('listFilterEnabled')),
-          h('button', { type: 'button', style: tabStyle(filter === 'disabled'), onClick: () => { setFilter('disabled') } }, t('listFilterDisabled')),
-          h('button', { type: 'button', style: tabStyle(filter === 'abnormal'), onClick: () => { setFilter('abnormal') } },
-            t('listFilterAbnormal'), countBadge(abnormalCount)),
-        ),
+        // 筛选 tabs 走 UI 基础层唯一实现（P1）：角标也由组件统一渲染（不再写死 #fff）
+        h(Segmented<'all' | 'enabled' | 'disabled' | 'abnormal'>, {
+          value: filter,
+          size: 'md',
+          items: [
+            { value: 'all', label: t('listFilterAll') },
+            { value: 'enabled', label: t('listFilterEnabled') },
+            { value: 'disabled', label: t('listFilterDisabled') },
+            { value: 'abnormal', label: t('listFilterAbnormal'), badge: abnormalCount },
+          ],
+          onChange: setFilter,
+        }),
         h('span', { style: { flex: '1 1 auto' } }),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
           h(Input, {
