@@ -66,6 +66,7 @@
 | 覆写官方件的观感（在使用点） | 「Switch 变绿」现在写了两遍（`task-editor-css.ts:31`、`task-list.tsx:125`）⇒ 归 `official-skins.ts` |
 | 写死官方 CSS-module 类名 | 哈希会变；只能按元素 + role 选（`official-classes.ts`） |
 | 硬编码 `#fff` / `rgba(0,0,0,.45)` | 角标 `task-list.tsx:1267`、保存钮 `config-panel.tsx:180`、遮罩 `task-list.tsx:755` |
+| 混用**同义宿主变量** | `state-warn-primary`(2 处) 与 `state-warning-primary`(3 处) 并存、兜底值还不同 ⇒ 必有一个是死变量；`focus-ring-color` 与 `border-focus` 同理 —— 一律由 token 层定一个名 |
 | 注释与代码不一致 | `editor-fields.tsx:603-604` 写着 padding4/段高28，实际 padding6/段高24 ⇒ 改代码必须同步注释 |
 
 ---
@@ -82,7 +83,7 @@
 ## 五、要「多一档尺寸」或「多一个外观」怎么办
 
 - **想要新的高度**：默认**不允许**。高度只有 `--tdt-control-h-sm` / `-md` 两档。
-  确实需要第三档 ⇒ 先说明「哪几个使用点需要、为什么现有两档不行」，改 `tokens.ts`（一处），并在 `decisions.md` 记一条 —— **不许在使用点就地写高度**。
+  确实需要第三档 ⇒ 先说明「哪几个使用点需要、为什么现有两档不行」，改 `tokens.ts`（一处），并在本文档「已知例外」表记一条 —— **不许在使用点就地写高度**。
 - **想要新的外观（variant）**：在 `controls-css.ts` 里加一个 variant 类，且**只允许覆盖 token 变量**（颜色），结构/尺寸/交互规则不许重写。
 - **想要新的控件**：按 §一 第三个分支，在 `ui/` 里建唯一实现，并在本手册 §二 表里加一行。
 
@@ -111,7 +112,9 @@
 | 官方没有日期 / 时间选择器 | 只能自绘，但要走同一套 token 与皮肤命名 | `primitives.d.ts:158-159` |
 | 样式注入顺序不保证 | 覆盖官方件时必须靠「元素 + role」提高特异性，不靠先后 | `task-editor-css.ts:30`、`task-list.tsx:124` |
 | `import './x.css'` 在 client 产物里**不被加载** | client 是内核消费的 CJS 闭包 ⇒ CSS 只能运行时注入 `<style>`，不许改成 import | `task-editor-css.ts:3-4` |
-| Tooltip 子元素必须是真 DOM | 裸函数组件 ref 挂不上 ⇒ 提示静默失效（踩过两次） | `decisions.md` 决策 53 同轮口径 |
+| 同一个意思的宿主变量有两个名字 | `state-warn-primary`(2 处) 与 `state-warning-primary`(3 处) 并存、兜底值不同 ⇒ **必有一个取兜底值、不随主题变**；`focus-ring-color` / `border-focus` 同理 | foundation §4.5 疑点 ①② |
+| 宿主自带字号体系 | `--dsw-font-xxs-12` / `--dsw-font-xs-13` / `--dsh-content-font-size-secondary` 正在被官方镜像部分使用 ⇒ **字号优先映射宿主 token，不要自己定 px 刻度** | `archive-session-css.ts:139,140,115` |
+| Tooltip 子元素必须是真 DOM | 裸函数组件 ref 挂不上 ⇒ 提示静默失效（踩过两次） | 决策 53 同轮口径 |
 
 ---
 

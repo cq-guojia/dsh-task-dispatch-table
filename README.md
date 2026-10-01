@@ -27,22 +27,35 @@
 - **控制平面与数据平面分离**：agent 只写产物，**任务状态只由调度器写**。
 - **状态存 SQLite**（原子领取），任务定义存 JSON。
 
-完整的 14 条决策与理由见 [`docs/design/decisions.md`](docs/design/decisions.md)。
+选型理由（为什么不引外部工作流引擎 / 不走 ACP / 不用 subagent 派发）见 [`docs/design/architecture.md`](docs/design/architecture.md) 的「关键约束」。
 
 ## 文档
 
 | 想看什么 | 去哪 |
 |---|---|
 | 项目进度、未决项、下一步 | [`docs/PROGRESS.md`](docs/PROGRESS.md) |
-| 三层架构与职责边界 | [`docs/design/architecture.md`](docs/design/architecture.md) |
-| 决策与理由（14 条） | [`docs/design/decisions.md`](docs/design/decisions.md) |
-| 状态机、依赖语义、必补机制 | [`docs/design/state-machine.md`](docs/design/state-machine.md) |
+| **文档规范**（写文档放哪、怎么写） | [`docs/README.md`](docs/README.md) |
+| 三层架构与职责边界、选型约束 | [`docs/design/architecture.md`](docs/design/architecture.md) |
+| 表结构与字段语义 | [`docs/design/data-model.md`](docs/design/data-model.md) |
+| 有哪些功能、对应哪个页面 | [`docs/design/features.md`](docs/design/features.md) |
+| 状态机、依赖语义、必补机制 | [`docs/design/features/state-machine.md`](docs/design/features/state-machine.md) |
+| 通用方法复用规范 | [`docs/design/code-conventions.md`](docs/design/code-conventions.md) |
+| 界面样式规范 | [`docs/design/ui-style-guide.md`](docs/design/ui-style-guide.md) |
 | agent 接手守则（工具自动挂载） | [`AGENTS.md`](AGENTS.md) |
 | 公用规则真源（跨工作区） | [`RULES.md`](RULES.md) |
 
+## 环境前提（脱敏）
+
+| 项 | 结论 |
+|---|---|
+| 宿主形态 | DSH 以容器运行，工作区是**挂载卷** ⇒ SQLite 状态文件必须落在挂载卷内，否则容器重建即丢 |
+| 网络 | 宿主同时接内网与公网 ⇒ 可直连内网服务；注意代理 / `NO_PROXY` 配置 |
+| 容器巡检数据入口 | Docker 引擎提供只读 HTTP API；容器内无 curl，用 node `fetch` |
+| 配置生效 | 改工作区文件不等于改运行中的配置，实际生效以部署侧为准 |
+
 ## 项目信息
 
-- 包名规划：采用 scoped 包名（npm 上 dsh 插件多为 scoped 包），命名与查重记录见决策文档附录。
+- 包名规划：采用 scoped 包名（npm 上 dsh 插件多为 scoped 包）。
 - 当前最缺拍板的几个问题列在 [`docs/PROGRESS.md`](docs/PROGRESS.md) 的「未决项」。
 
 ## License

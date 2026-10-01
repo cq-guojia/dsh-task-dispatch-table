@@ -2,7 +2,7 @@
 
 > 状态：✅ 方案定型（2026-09-28 用户拍板）并落码。
 > 关联：决策 33（依赖判定语义）、决策 41（两层循环解耦 + 派发快照）。
-> 问题排查记录见 [worklog/dependency-snapshot.md](../worklog/dependency-snapshot.md)。
+> 问题排查记录见 [worklog/dependency-snapshot.md](../../worklog/dependency-snapshot.md)。
 
 ---
 

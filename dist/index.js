@@ -482,7 +482,7 @@ updateScopeConfig) => [
         },
     },
     {
-        // 主界面任务列表数据（2026-09-30，design/main-panel-design.md §四）：
+        // 主界面任务列表数据（2026-09-30，design/features/main-panel.md §四）：
         // **一次请求出全部卡片数据** = 任务定义投影 + 内存运行态（运行中 / 上次执行 / 下次执行）。
         // **不查库**：运行态全在内存摘要里（启动一条聚合 SQL 建索引 + Loop A/B 事件增量维护），
         // 定义指纹变了才重算刻度、刻度过期才就地前移 ⇒ 10 秒轮询的成本是一次内存遍历。
@@ -929,7 +929,7 @@ export function apply(ctx, config) {
         debugSnapshot: '',
     };
     /**
-     * 主界面运行态内存索引（2026-09-30，design/main-panel-design.md §四）：
+     * 主界面运行态内存索引（2026-09-30，design/features/main-panel.md §四）：
      * 卡片「运行中 / 上次执行 / 下次执行」的读源。**派生态、不入数据库**——
      * 状态库就绪后建一次索引（一条聚合 SQL），之后由 Loop A 落库 / Loop B 收口事件增量维护。
      */

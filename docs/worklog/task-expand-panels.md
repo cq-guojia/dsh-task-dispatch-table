@@ -1,7 +1,7 @@
 # 任务展开三面板（基础资料 / 执行记录 / 日志）
 
 > **状态**：🔵 **已落码**（2026-10-01，决策 55；typecheck + build 绿，冒烟 **364/0**），⏳ **真机验证待做**（清单见 §六）
-> **设计提纲**：[`design/task-expand-panels-design.md`](../design/task-expand-panels-design.md)
+> **设计提纲**：[`design/features/task-expand-panels.md`](../design/features/task-expand-panels.md)
 > **范围**：点击任务列表的每条记录展开为三个面板（基础资料 / 执行记录 / 日志）。本工作包**新会话实施**。
 
 ---

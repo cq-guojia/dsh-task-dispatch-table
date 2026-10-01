@@ -2,7 +2,7 @@
 
 > **状态**：🔵 **已落码**（2026-10-01，决策 55；typecheck + build 绿，冒烟 **364/0**）⏳ 真机验证待做
 > **来源**：用户口述需求 + 2026-10-01 三轮确认
-> **配套工作包**：[`worklog/task-expand-panels.md`](../worklog/task-expand-panels.md)
+> **配套工作包**：[`worklog/task-expand-panels.md`](../../worklog/task-expand-panels.md)
 
 ---
 
@@ -68,7 +68,7 @@
 - 因此查询**统一抽象为一套「过滤 + 游标分页」模型**，本面板与未来总页面**共用同一实现**：本面板传 `limit`（取最新 N）；总页面再传 `cursor` 即翻页。
 
 ### 3.6 真实数据纪律
-- 依 [`AGENTS.md`](../../AGENTS.md) 第五条：面板展示数据必须来自宿主 / 自有存储**真实值**，不得 mock。
+- 依 [`AGENTS.md`](../../../AGENTS.md) 第五条：面板展示数据必须来自宿主 / 自有存储**真实值**，不得 mock。
 
 ---
 

@@ -1,4 +1,4 @@
-// task-list.tsx — 主界面任务列表视图（2026-09-30，design/main-panel-design.md）。
+// task-list.tsx — 主界面任务列表视图（2026-09-30，design/features/main-panel.md）。
 //
 // 形态：限宽居中的卡片列表。每张卡片 = 状态条 + 标题 + 执行方式 + 上次 / 下次 + 创建于 + 两个操作。
 // 排序按「时间轴」：运行中 → 已启用按下次执行升序 → 已完结（无下次） → 已关闭沉底。
@@ -703,7 +703,7 @@ const iconBtnStyle: Record<string, string | number> = {
   fontFamily: 'inherit', fontSize: '12px', transition,
 }
 
-// ── 展开区三面板（决策 55，design/task-expand-panels-design.md §三）──────────────────
+// ── 展开区三面板（决策 55，design/features/task-expand-panels.md §三）──────────────────
 /** 内容区统一**定高**（用户 2026-10-02 真机：max-height 会让矮内容显矮、切 tab 高度蹦）——每个任务展开一律同高，内容多就内部滚。 */
 const PANEL_MAX_H = 360
 

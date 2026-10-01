@@ -2,7 +2,7 @@
 
 > 状态：✅ **已落码并真机验证通过（2026-09-29 结项）**
 > 跟踪起点：2026-09-28 用户要求「所有产出的文件或文件夹都用交付卡片展现」；经源码核实与多轮澄清，最终收敛为「插件作为唯一写入方，LLM 只通过回执 `outputs` 声明产出，禁止 LLM 调 `present`」。
-> 关联：[`../design/artifact-opening.md §四-B`](../design/artifact-opening.md)（原 U12 B+C 设计，决策 40）、[`../design/decisions.md`](../design/decisions.md)、`src/receipt.ts`、`src/client/file-preview.tsx`、`src/client/mirror/Deliverables.tsx`。
+> 关联：[`../design/features/artifact-opening.md §四-B`](../design/features/artifact-opening.md)（原 U12 B+C 设计，决策 40）、决策记录（已并入各专题文档）、`src/receipt.ts`、`src/client/file-preview.tsx`、`src/client/mirror/Deliverables.tsx`。
 
 ---
 

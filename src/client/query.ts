@@ -1,4 +1,4 @@
-// query.ts — 任务卡片三面板的数据通道（决策 55，design/task-expand-panels-design.md §四）。
+// query.ts — 任务卡片三面板的数据通道（决策 55，design/features/task-expand-panels.md §四）。
 //
 // **为什么单独成文件**：卡片「执行记录 / 日志」面板与未来的**总查询页**（日志查询 + 执行记录查询）
 // 共用同一套「过滤 + 游标分页」接口——小面板传 `limit` 取最新 N，总页面再传 `cursor` 即翻页，

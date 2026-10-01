@@ -3,7 +3,7 @@
 > 工作包：把「人改 JSON」升级为**交互式任务创建 / 编辑界面**。
 > 状态：✅ **形态已拍板 + P0/P0.5/P1 已落码并真机验证通过（2026-09-29 结项）**。
 > 拍板顺序：需求草案（09-28 上午，用户口述 + 三张参考图）→ 形态与范围拍板（09-28 下午）→ **P0 只做界面与前端交互，不接后端程序**。
-> 关联：[design/data-model.md](../design/data-model.md)（字段真源）、[design/decisions.md](../design/decisions.md)（决策 16「v1 零自建 UI」被本工作包部分修订）、[design/dsh-capabilities.md](../design/dsh-capabilities.md)（宿主接口事实）。
+> 关联：[design/data-model.md](../design/data-model.md)（字段真源）、决策记录（已并入各专题文档）（决策 16「v1 零自建 UI」被本工作包部分修订）、[design/dsh-capabilities.md](../design/dsh-capabilities.md)（宿主接口事实）。
 
 ---
 
@@ -478,7 +478,7 @@ typecheck + build（dist/client 1.62 MB）+ 冒烟 **181 项全过**（+5：卡�
 
 冒烟 +6 = **196 项全过**，typecheck/build 绿。踩坑（同上一轮）：esbuild 把单引号规范成双引号（`permission: "default"`），产物断言继续用正则。
 
-**UI 暂时封档（用户 2026-09-29 拍板）**：任务表单弹窗（决策 44–50）到此封卷。下一轮新会话专攻「新增任务 / 编辑任务」功能，提纲见 [`design/creation-edit-design.md`](../design/creation-edit-design.md)。
+**UI 暂时封档（用户 2026-09-29 拍板）**：任务表单弹窗（决策 44–50）到此封卷。下一轮新会话专攻「新增任务 / 编辑任务」功能，提纲见 [`design/features/creation-edit.md`](../design/features/creation-edit.md)。
 
 ### 二十二·收尾三处微调（2026-09-29，封档后补）
 

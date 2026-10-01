@@ -77,6 +77,20 @@
 - `dist/client.js` 当前 **1.68 MB**、`dist/` 下**无任何 `.css`**。
 - 冒烟 `scripts/smoke.mjs` 对 `dist/client.js` 做字符串断言（**可正可反** ⇒ 本专项的回归防线直接用它：`check('…', clientJs.includes('…'))` 与 `!includes`）。
 
+### 2.7 宿主变量实测全表（2026-10-01 抓取，自证）
+
+`grep -rhoE '\-\-(dsw|ds)-[a-z0-9-]+' src | sort | uniq -c | sort -rn` ⇒ 本仓实际引用 **约 60 个**宿主变量。高频：`label-primary`(44)、`label-secondary`(39)、`label-tertiary`(37)、`border-l2`(31)、`interactive-bg-hover`(30)、`state-error-primary`(19)、`radius-sm`(16)、`bg-layer-1`(15)、`bg-base`(13)。完整分组表见 [`design/ui-foundation.md`](../design/ui-foundation.md) §4.5。
+
+抓取过程中**新发现三处疑点**（此前无人记录，且直接影响 token 层正确性）：
+
+| # | 疑点 | 证据 |
+|---|---|---|
+| ① | `state-warn-primary`(2) 与 `state-warning-primary`(3) **并存且兜底值不同**（`#f5a623` vs `#e6a23c`） | `archive-session-css.ts:216`、`session-view.ts:1281`（warn，抄官方会话面）vs `toast-css.ts:63`、`task-editor.tsx:1034`（warning，插件自有）⇒ **必有一个是死变量**，警告色可能不随主题变 |
+| ② | `focus-ring-color`(2) 与 `border-focus`(2) 并存 | `archive-session-css.ts:295` 等 |
+| ③ | 宿主疑似有字号体系 | `--dsw-font-xxs-12`(1)、`--dsw-font-xs-13`(1)、`--dsh-content-font-size-secondary`(2)、`--dsw-font-markdown-code-block-small`(3) ⇒ 若成立，`--tdt-font-*` 应映射宿主而非自定 px |
+
+方案据此做了一处**修正**：`--tdt-font-*` 由「自定 11/12/13/14px」改为「优先映射宿主排版 token，px 仅兜底」（foundation §4.3）。
+
 ---
 
 ## 三、本轮产出（只补文档，未改代码）
@@ -93,12 +107,20 @@
 
 ## 四、待用户拍板（阻塞 P0 开工）
 
-1. **高度方案**：用户提的 (a) / (b) —— 建议取 (b) 的收窄版（token 定两档 + 组件 `size` prop，调用点不许自定义高度）。
-2. **两档取值**：`sm=24 / md=28`（建议，`md` 与官方分段一致）还是 `sm=26 / md=32`。
-3. **P1 先动哪处**：建议先动用户截图那三处分段控件（自绘、风险最低）。
+用户在本轮对话中**未逐项勾选**（答复「继续」）⇒ 以下 A–C **按建议栏暂定执行**（已同步 foundation §十），D 未获授权、仍阻塞。
+
+| # | 事项 | 暂定 |
+|---|---|---|
+| A | 高度方案 (a) / (b) | **(b) 收窄版**：token 两档 + `size` prop，调用点不许自定义高度 |
+| B | 两档取值 | **sm 24 / md 28**（`md` 与官方分段一致，覆写最少） |
+| C | P1 先动哪处 | **截图那三处**（主面板三 tab / 列表筛选 tabs / 卡片展开三面板，均自绘、风险最低） |
+| D | 授权下载宿主主题包做源码核实 | ❌ **未授权**（`npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>`，只解包读、不进仓库） |
 
 ## 五、开工前必须先核实（P0 前置，源码级）
 
 1. 宿主主题包 `@deepseek-ai/dsh-client-ui-theme` 的 alias **全表**（本地 `node_modules/@deepseek-ai/` 只有 `cosmokit` / `schemastery`，UI 包不在本地）⇒ 需 `npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>` 解包读 —— **下载写盘，需用户授权**。
 2. 「明暗判据是否只有 `body[data-ds-dark-theme]`」—— 同上解包后溯源（现有 7 处特判从未溯源核实过）。
 3. 官方 `SegmentedControl` 的指示器覆写算式是否保留 —— 决定「覆写官方」还是「自绘统一体」（方案倾向自绘，理由见 foundation §5.3）。
+4. §2.7 三处疑点：`state-warn`/`state-warning` 哪个是真的、`focus-ring-color` / `border-focus` 哪个是真的、宿主是否真有字号体系 —— 前两项必有一个是死变量，token 层不能继承错误命名。
+
+> 第 1/2/4 项同源于主题包的一次解包，**一次授权即可做完三项**；第 3 项需另解 primitives 包（同一次授权可一并做）。

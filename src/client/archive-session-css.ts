@@ -13,7 +13,7 @@ export const SV_STYLE_ID = 'dsh-task-dispatch-table-archive-session'
 /** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 export const ARCHIVE_SESSION_CSS = `
 /* 弹窗让位预览 dock：右侧留出 --dsh-tdt-preview-w（缺省 0）⇒ 弹窗不被预览面遮盖，
-   与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/artifact-opening.md §四-C）。 */
+   与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
 .dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:var(--dsh-tdt-preview-w,0px);z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));transition:right .12s var(--ds-ease-in-out,ease);}
 /* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
    滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；

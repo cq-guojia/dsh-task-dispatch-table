@@ -1,5 +1,9 @@
 # 已核实的 DSH 能力（源码级事实清单）
 
+> **状态**：✅ 持续维护（**宿主升级后按 §〇 复核**）
+> **来源**：`@deepseek-ai/*` 各包源码（`lib/*.js` / `lib/types/*.d.ts`）逐条核实
+> **配套**：[`session-view-ui-map.md`](session-view-ui-map.md)（官方 UI 元素对照）· 实现新功能前先查本清单，查不到再翻源码
+>
 > **这是什么**：开发过程中对 DSH 宿主（deepseek-harness）源码逐条核实的能力事实，含结论出处。**只记事实，不记过程**——过程叙事见 [`../worklog/`](../worklog/)。
 > **怎么用**：实现新功能前的 API 疑问先查本清单与决策表，查不到再翻宿主源码（决策 15：结论必须可溯源）。
 > 事实对应宿主 **0.1.6-alpha.2 / 0.1.7-rc.1 / 0.2.0-rc.1** 三代（差异已逐条注明）；**0.2.0-rc.1 已逐包 .d.ts diff 复核（2026-09-29）**：本表所列消费接口（retain/binding/archiveSession/unarchiveSession、session/follow·page、uiConversation 渲染层、configForms/settingsSchema/describe、sidebar.panellist/main/selectPanel）跨 0.1.7-rc.1→0.2.0-rc.1 签名稳定——仅新增可选参数与 layout 服务内部构造参数（宿主侧，非我们调用），无破坏性变更；10 个注入包在 0.2.0-rc.1 均存在。宿主升级后按需复核。
@@ -60,3 +64,8 @@
 派发时用 `ctx.sessionTitle.rename` 起规范名（如 `[TASK] 镜像升级日报 · 2026-09-20`），跑完 `archiveSession` 归档。
 ⚠️ **人在调度器派发的会话里插话会干扰任务** ⇒ 自动任务会话应视为机器专用。
 **原则：会话列表不是任务日志，产物目录才是。**
+
+## 宿主写法硬约束（自历史决策并入）
+
+- **顶层禁止导出 `inject`**：声明组合满足不了的依赖会让 entry 一直 pending、**卡死整个 dsh 启动**；服务等待一律写在 `apply` 内的 `ctx.inject`。
+- **`ctx` 只透传、不包装**：所有模块只收原始 `ctx`（给 ctx 赋属性会抛错、`{...ctx}` 拿不到 mixin）；替 logger 走显式参数。

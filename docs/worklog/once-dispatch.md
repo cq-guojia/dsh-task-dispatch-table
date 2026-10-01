@@ -4,7 +4,7 @@
 > 
 > 决策 18（schedule.once）→ 19（回执机制，推翻契约文件）→ 20（计划时刻 live 重排）→ 21（ctx 透传）→ 22（模型漏斗）→ 23（agent preset）→ 24（per-agent 回执工具），🎉 2026-09-23 首次全链路真机跑绿（once7/8 两轮 succeeded）。
 >
-> 定型结论见 [`design/decisions.md`](../design/decisions.md)；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
+> 定型结论见 决策记录（已并入各专题文档）；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
 
 ## 2026-09-21 — 拍板决策 18 + 落码：一次性任务 `schedule.once`
 

@@ -87,6 +87,36 @@
 | `DateTime.tsx` | `DateField` / `TimeField`（官方**没有**日期时间件 ⇒ 自绘，走同一套 token） |
 | `index.ts` | 对 L3 的**唯一出口**：非本文件导出的东西，L3 不许 import |
 
+### 3.1 「公用的 CSS 放哪」（用户点名要写清楚）
+
+**结论：公用 CSS 不建 `.css` 文件，放在 `src/client/ui/` 里的 `.ts` 字符串常量中，由一个统一注入器打进同一条 `<style>`。**
+
+| 问 | 答 |
+|---|---|
+| 为什么不建 `src/client/ui/ui.css`？ | client 产物是**内核消费的 CJS 闭包**，`import './ui.css'` **不会被加载**（`task-editor-css.ts:3-4`、`archive-session-css.ts:3-5`、`toast-css.ts:4-5` 三条注释已结论）；`dist/` 里**没有任何 `.css`**（已核实 29 个产物）⇒ CSS 只能作为字符串在运行时注入。引入 CSS 构建插件收益小、回归面大，本方案不动构建链。 |
+| 那它存在哪？ | **三个文件、三段职责**：`ui/tokens.ts`（变量定义）／`ui/controls-css.ts`（控件皮肤）／`ui/official-skins.ts`（官方件覆盖）。三者都是 `export const XXX_CSS = \`…\`` 的 TS 模板字符串。 |
+| 怎么进页面？ | 只经 **`ui/style.ts`**：`registerStyle('tokens', UI_TOKENS_CSS)` … `ensureUiStyles()` ⇒ **一条 `<style id="dsh-task-dispatch-table-ui">`**，幂等。现状的 4 条注入 / 5 处调用 / 2 套 id 全部收编。 |
+| 各页面私有的样式怎么办？ | **允许保留**，但必须：① 放自己的 `*-css.ts`（如 `task-editor-css.ts`）；② 通过 `ui/style.ts` 注册（不再自己 `createElement('style')`）；③ 只能消费 `--tdt-*`，不许再定义颜色/尺寸字面量。 |
+| 类名会不会撞？ | 继续沿用既有前缀 `dsh-tdt-`（**不改名**，避免大范围回归）：控件级 = `dsh-tdt-seg*` / `dsh-tdt-btn*` / `dsh-tdt-input*`，域私有保持 `-ed-` / `-sv-` / `-tl-` 子域。 |
+
+### 3.2 文件落位总表（一眼看完）
+
+| 类别 | 落位 | 谁用 |
+|---|---|---|
+| **公用 token（CSS 变量定义）** | `src/client/ui/tokens.ts` | 全站；只允许被 `var(--tdt-*)` 消费 |
+| **公用控件皮肤（CSS 规则）** | `src/client/ui/controls-css.ts` | 全站控件 |
+| **官方件观感覆盖** | `src/client/ui/official-skins.ts` | 官方 `Switch`/`Input`/`Menu`/`SegmentedControl` |
+| **样式注入入口（唯一）** | `src/client/ui/style.ts` | 所有 `*-css.ts` 在此注册 |
+| **公用控件组件** | `src/client/ui/{Segmented,Button,Field,SwitchToggle,DateTime}.tsx` | L3 使用点 |
+| **公用出口（唯一 import 面）** | `src/client/ui/index.ts` | L3 只 import 这个 |
+| **域私有样式** | `src/client/task-editor-css.ts` / `archive-session-css.ts` / `toast-css.ts`（过渡期保留，最终并入 `ui/`） | 各自页面 |
+| **技术方案（定型）** | `docs/design/ui-foundation.md`（本文） | 设计与评审 |
+| **开发手册（定型）** | `docs/design/ui-style-guide.md` | **每天写界面时照它做** |
+| **过程（叙事）** | `docs/worklog/ui-foundation.md` | 回溯踩坑 |
+| **进度 / 未决** | `docs/PROGRESS.md`（U18、里程碑 31） | 换会话接手 |
+| **拍板结论** | 归属文档：功能决策进 `features/<功能>.md`、样式决策进本文 | 拍板后直接写进归属文档，只留结论与理由；**不另建决策文件** |
+| **agent 强制入口** | `AGENTS.md` 第二条（⏳ **拟加，待用户授权**） | 每个新会话自动遵守 |
+
 ---
 
 ## 四、Token 规格（L1，初稿）
@@ -103,25 +133,28 @@
 |---|---|---|
 | `--tdt-fg` / `--tdt-fg-2` / `--tdt-fg-3` / `--tdt-fg-dim` | `--dsw-alias-label-primary / -secondary / -tertiary / -dimmed` | 正文 / 次要 / 更弱 / 占位符 |
 | `--tdt-fg-inverse` | `--dsw-alias-label-primary-inverted` | 反色面上的字（角标、实心钮） |
+| `--tdt-fg-4` | `--dsw-alias-label-caption` | 最弱一级文字（时间戳 / 分隔点；官方会话面已用 8 处） |
 | `--tdt-surface-1` / `-2` / `-3` | `--dsw-alias-bg-layer-1 / -2 / -3` | 三层面 |
 | `--tdt-surface-raised` | `--dsw-alias-bg-layer-1` + `--dsw-elevation-soft` | 「选中亮片」底盘 |
 | `--tdt-surface-sunken` | `--dsw-alias-interactive-bg` | 下沉轨道底 |
 | `--tdt-border` / `-strong` / `-faint` | `--dsw-alias-border-l2 / -l3 / -l1` | 描边三级 |
 | `--tdt-accent` | `--dsw-alias-brand-primary` | 品牌强调 |
-| `--tdt-success` / `--tdt-danger` / `--tdt-warning` | `--dsw-alias-state-success/error/warning-primary` | 语义色 |
+| `--tdt-success` / `--tdt-danger` | `--dsw-alias-state-success/error-primary` | 语义色 |
+| `--tdt-warning` | `--dsw-alias-state-warning-primary` ⚠️ **命名待核实** | 警告色（同义变量 `state-warn-primary` 并存，见 §4.5 疑点 ①） |
 | `--tdt-hover` / `--tdt-active` | `--dsw-alias-interactive-bg-hover / -active` | 交互底 |
 | `--tdt-mask` | `--dsw-alias-bg-mask-1` | 遮罩 |
 | `--tdt-shadow-1` / `-2` | `--dsw-elevation-soft` / `--dsw-shadow-lv3` | 浮层投影 |
-| `--tdt-focus` | `--dsw-focus-ring-color` | 键盘焦点环 |
+| `--tdt-focus` | `--dsw-focus-ring-color` ⚠️ **命名待核实** | 键盘焦点环（同义变量 `--dsw-alias-border-focus` 并存，见 §4.5 疑点 ②） |
 
 > ⚠️ **待核实（P0 前置，见 §十一）**：宿主题包 `@deepseek-ai/dsh-client-ui-theme` 的 alias **全表**尚未在本仓留下记录（本地 `node_modules/@deepseek-ai/` 只有 `cosmokit`/`schemastery`，宿主 UI 包不在本地）⇒ 需 `npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>` 读一遍，补齐上表并确认拼写。**这是动手前唯一必须先补的事实**。
+> 在此之前，§4.5 给出的是**本仓实测正在用的变量全表**（可自证，能覆盖 90% 的 token 设计需求）。
 
 ### 4.3 几何 / 排版 / 动效 token
 
 | token | 建议值 | 说明 |
 |---|---|---|
-| `--tdt-radius-xs` / `-sm` / `-md` / `-lg` | 4 / 6 / 8 / 10px（绑 `--dsw-radius-*`） | 收敛现有 4/6/7/8/10/12 六种 |
-| `--tdt-font-1` / `-2` / `-3` / `-4` | 11 / 12 / 13 / 14px | 收敛现有 10~16px 七档 |
+| `--tdt-radius-xs` / `-sm` / `-md` / `-lg` | 4 / 6 / 8 / 10px（绑 `--dsw-radius-sm/md/lg`） | 收敛现有 4/6/7/8/10/12 六种 |
+| `--tdt-font-1` / `-2` / `-3` / `-4` | **优先映射宿主排版 token**：`--dsw-font-xxs-12` / `--dsw-font-xs-13` / `--dsh-content-font-size-secondary` / `--dsw-font-markdown-code-block-small`（px 只作兜底） | 收敛现有 10~16px 七档；**宿主自带字号体系 ⇒ 不自己定 px 刻度**（见 §4.5） |
 | `--tdt-control-h-sm` / `-md` | **待拍板（§十 A/B）**：建议 24 / 28px | 全站只此两档高度 |
 | `--tdt-space-1` / `-2` / `-3` / `-4` | 4 / 8 / 12 / 16px | 间距四拍 |
 | `--tdt-dur` / `--tdt-ease` | `--ds-transition-duration` / `--ds-ease-in-out` | 动效 |
@@ -145,6 +178,29 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 两条硬规则：
 1. **默认段优先**：能用 `--dsw-alias-*` 表达的，一律不要写覆盖段（alias 自己随主题变）。
 2. **覆盖段只允许出现在 `tokens.ts`**，且只覆盖「固定中性面 / 反色面」这类语义（现有 7 处 `body[data-ds-dark-theme]` 全部收编到这里）。
+
+### 4.5 本仓实测在用的宿主变量全表（2026-10-01 抓取，可自证）
+
+抓取方式：`grep -rhoE '\-\-(dsw|ds)-[a-z0-9-]+' src | sort | uniq -c | sort -rn`，共约 **60 个**（去掉注释里的通配写法 `--dsw-alias-` / `--dsw-alias-button-`）。
+
+| 族 | 变量（括号内 = 本仓引用次数） |
+|---|---|
+| 文字 | `label-primary`(44) `label-secondary`(39) `label-tertiary`(37) `label-caption`(8) `label-dimmed`(4) `label-primary-inverted`(5) `label-primary-foreground`(2) |
+| 面 | `bg-layer-1`(15) `bg-base`(13) `bg-layer-2`(11) `bg-layer-3`(2) `bg-mask-1`(5) `interactive-bg`(1) `interactive-bg-hover`(30) `interactive-bg-active`(1) `interactive-bg-hover-solid`(1) |
+| 描边 | `border-l1`(5) `border-l2`(31) `border-l3`(6) `border-l4`(5) `border-focus`(2) |
+| 状态 / 品牌 | `state-error-primary`(19) `state-success-primary`(4) `state-business-primary`(7) `state-warning-primary`(3) `state-warn-primary`(2) `state-warn-label`(1) `brand-primary`(8) `link`(1) |
+| 静态中性 | `static-neutral-00`(8) `-50`(1) `-100`(1) `-800`(1) `-850`(1) `-900`(2) |
+| 圆角 / 阴影 / 焦点 | `radius-sm`(16) `radius-md`(10) `radius-lg`(5) `radius-xl`(1) `radius-panel`(2) `shadow-lv3`(7) `elevation-soft`(2) `elevation-prominent`(4) `focus-ring-color`(2) |
+| 字体 | `ds-font-family-code`(9) `ds-transition-duration`(8) `ds-ease-in-out`(9) **`dsw-font-xxs-12`(1)** **`dsw-font-xs-13`(1)** `dsw-font-markdown-code-block-small`(3) `dsh-content-font-size-secondary`(2) |
+| 专用面 | `dsw-specific-menu`(2) `dsw-specific-bubble`(1) `dsw-menu-surface-fill`(1) `dsw-alias-markdown-code-block`(2) `dsw-alias-button-primary-fill`(1，仅注释) |
+
+**三处疑点（P0 必须查清，否则 token 层会继承错误）**：
+
+| # | 疑点 | 证据 | 影响 |
+|---|---|---|---|
+| ① | `state-warn-primary` 与 `state-warning-primary` **并存**，兜底值还不同（`#f5a623` vs `#e6a23c`） | `archive-session-css.ts:216` / `session-view.ts:1281`（warn，抄官方会话面）vs `toast-css.ts:63` / `task-editor.tsx:1034`（warning，插件自有） | 必有一个是**死变量**（取兜底值、不随主题变）⇒ 警告色在明暗主题下可能不跟随 |
+| ② | `focus-ring-color` 与 `border-focus` 并存 | `archive-session-css.ts:295` / `task-editor-css.ts:97(用 business)` vs `official-classes` 等 | 焦点环在两处可能不同色 |
+| ③ | 宿主疑似有**字号体系**（`--dsw-font-xxs-12` / `--dsw-font-xs-13` / `--dsh-content-font-size-secondary`） | `archive-session-css.ts:139,140,115`、`mirror/TurnTriggerNodeView.tsx:5` 注释 | 若成立 ⇒ `--tdt-font-*` 应**映射宿主字号 token**，不该自己定 px（见 §4.3） |
 
 ---
 
@@ -254,11 +310,14 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 
 ## 十、待用户拍板（3 项）
 
-| # | 事项 | 选项 | 建议 |
+> ⚠️ 用户在本轮对话中**尚未逐项勾选**（答复为「继续」）。为使后续调研不空转，下文按「建议」栏**暂定执行**，并在 `worklog/ui-foundation.md` 记为「暂定」；**用户拍板后转正并更新本节**。
+
+| # | 事项 | 选项 | 建议 | 暂定 |
 |---|---|---|---|
-| **A** | 用户提的高度方案 (a) 还是 (b) | (a) 基础只定一个高度、各处单独定 ／ (b) 基础里直接定 2–3 档高度 | **取 (b) 的收窄版**：token 定两档 `sm/md`，组件用 `size` prop 选；**任何调用点不许自定义高度**（纯 (a) 会立刻退化成今天这样；纯 (b) 又不给你「这一个地方要矮一点」的表达） |
-| **B** | 收敛后的两档高度取值 | ① `sm=24 / md=28`（`md` 与官方 `SegmentedControl` 一致，覆写最少） ② `sm=26 / md=32`（贴现有列表 26 / 官方 Input 32） | ① —— 与官方对齐的档位越多，需要覆写的官方样式越少 |
-| **C** | P1 先动哪一处 | ① 先动三张截图那三处分段控件 ② 先动编辑器里的官方件覆写 | ① —— 正是用户点名的地方，且都是自绘、风险最低 |
+| **A** | 用户提的高度方案 (a) 还是 (b) | (a) 基础只定一个高度、各处单独定 ／ (b) 基础里直接定 2–3 档高度 | **取 (b) 的收窄版**：token 定两档 `sm/md`，组件用 `size` prop 选；**任何调用点不许自定义高度**（纯 (a) 会立刻退化成今天这样；纯 (b) 又不给你「这一个地方要矮一点」的表达） | **(b) 收窄版** |
+| **B** | 收敛后的两档高度取值 | ① `sm=24 / md=28`（`md` 与官方 `SegmentedControl` 一致，覆写最少） ② `sm=26 / md=32`（贴现有列表 26 / 官方 Input 32） | ① —— 与官方对齐的档位越多，需要覆写的官方样式越少 | **24 / 28** |
+| **C** | P1 先动哪一处 | ① 先动三张截图那三处分段控件 ② 先动编辑器里的官方件覆写 | ① —— 正是用户点名的地方，且都是自绘、风险最低 | **截图那三处** |
+| **D** | 是否授权下载宿主主题包做源码核实 | ① 授权（`npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>`，只解包读、不进仓库） ② 暂不授权 | ① —— §十一 四项核实全部依赖它，不核实就写 token 等于猜 | ❌ **未授权**，仍阻塞 |
 
 ---
 
@@ -269,8 +328,10 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 | 1 | 宿主主题包 alias **全表**（`--dsw-alias-*` / `--dsw-static-*` / `--dsw-radius-*` / `--dsw-elevation-*` 名称与语义） | 本地 `node_modules/@deepseek-ai/` **没有** UI 包 ⇒ 需 `npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>` 解包读 `lib/*.css` / `lib/*.js`（**下载写入磁盘，需用户授权**） | token 表要照它写，猜错名字 = 全站颜色失效 |
 | 2 | 「明暗判据」是否只有 `body[data-ds-dark-theme]` | 上一步解包后全局搜该属性在官方主题包里的定义 | 现有 7 处特判都依赖它，但从未溯源核实过 |
 | 3 | 官方 `SegmentedControl` 覆写算式（`--dsh-segment-count/index`）是否值得保留 | 读 primitives 包 `SegmentedControl.module.css` | 决定「覆写官方」还是「自绘统一体」（本方案倾向自绘，见 §5.3） |
+| 4 | **§4.5 三处疑点**：`state-warn-primary` vs `state-warning-primary`、`focus-ring-color` vs `border-focus`、宿主是否真有字号体系（`--dsw-font-xxs-12` / `--dsw-font-xs-13`） | 同第 1 项解包后全局搜；字号体系另查 `--dsw-font-*` 全族 | ①② 必有一个是死变量（不随主题变）⇒ token 层不能继承错误命名；③ 决定 `--tdt-font-*` 是映射宿主还是自定 px |
 
-> 依 [`AGENTS.md`](../../AGENTS.md) 第二条：涉及宿主接口**先读源码再动手**，禁止靠真机试探猜 API。上表第 1–3 项即本专项的「先读源码」动作，**必须在 P0 开工前完成**。
+> 依 [`AGENTS.md`](../../AGENTS.md) 第二条：涉及宿主接口**先读源码再动手**，禁止靠真机试探猜 API。上表第 1–4 项即本专项的「先读源码」动作，**必须在 P0 开工前完成**。
+> 第 1/2/4 项同源于一次解包 ⇒ **一次授权即可做完三项**；第 3 项需另解 primitives 包（同一次授权可一并做）。
 
 ---
 
@@ -282,7 +343,7 @@ body[data-ds-dark-theme] .dsh-tdt-scope{
 | **开发手册**（写界面时照做） | [`docs/design/ui-style-guide.md`](ui-style-guide.md) | 定型层；**「以后每次都照这个做」的那一份** |
 | 过程与调研证据 | [`docs/worklog/ui-foundation.md`](../worklog/ui-foundation.md) | 叙事层；做完封卷、不再修改 |
 | 进度与未决 | [`docs/PROGRESS.md`](../PROGRESS.md) | 现场层；未决项编号 **U18** |
-| 拍板结论 | `docs/design/decisions.md` | **待用户拍板后**追加（编号 56 起），只留结论与理由 |
+| 拍板结论 | **归属文档**（功能 / 样式各自的文档） | **待用户拍板后**直接写进归属文档，只留结论与理由；不另建决策文件 |
 | agent 强制入口 | `AGENTS.md` 第二条（本仓库独有约定）加一条「新增 UI 一律走 `src/client/ui/` 基础层」 | ⚠️ **改 AGENTS.md 需用户单独授权**，本轮未改 |
 
 **与既有文档的边界**（防止两份副本）：

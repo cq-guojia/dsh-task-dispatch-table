@@ -1,7 +1,7 @@
 # 状态机与依赖语义
 
 > 完整定义。覆盖任务实例的全部生命周期：状态转移、运行时参数、窗口语义、重试、串行、补跑入口、依赖判定。
-> 字段与 DDL 见 [data-model.md](data-model.md)；取舍理由见 [decisions.md](decisions.md)。
+> 字段与 DDL 见 [data-model.md](../data-model.md)；取舍理由见 决策记录（已并入各专题文档）。
 
 ## 0. 两层循环彻底解耦 + 派发快照（决策 41，2026-09-28 拍板）
 
@@ -39,7 +39,7 @@ Loop A 写行时把执行所需字段一并快照，Loop B 与回执 / 对账一
 
 ### 落码状态
 
-本节为**拍板目标态**；现行代码尚有三处耦合待改：① `reconcile.ts` 各处经 `taskOf()` 读活 `taskMap`（retry/window/workspace/validStatuses/title 全在内）；② 模型路由在 Loop A 的 `launchAsync` 里解析（失败删行）；③ 回执工具闭包持有任务对象取 `validStatuses` 与提示词拼装。落码清单与验证见 [worklog/loop-decoupling.md](../worklog/loop-decoupling.md)。
+本节为**拍板目标态**；现行代码尚有三处耦合待改：① `reconcile.ts` 各处经 `taskOf()` 读活 `taskMap`（retry/window/workspace/validStatuses/title 全在内）；② 模型路由在 Loop A 的 `launchAsync` 里解析（失败删行）；③ 回执工具闭包持有任务对象取 `validStatuses` 与提示词拼装。落码清单与验证见 [worklog/loop-decoupling.md](../../worklog/loop-decoupling.md)。
 
 ## 1. 总览：对账判定树
 
@@ -151,7 +151,7 @@ WHERE task_id = '<task_id>' AND scheduled_at = '<计划时刻>';  -- 决策 25�
 | `latest_success` | 取上游**最近一条**实例（**不分状态**），**必须正好是 `succeeded`**（决策 33） | 在跑 / 失败 / 无记录 → 下游**不建行**，记 `dep_blocked`，下轮再判；窗口过期记 `missed_slot`。⚠️ 上游「错过」（无记录）时会取到**上一次**成功 ⇒ 放行但记 **warn**「复用旧产出」（已知风险，**不拦**） | 月报 → 季报、周报 → 日报（快照复用） |
 
 ⚠️ **决策 33**：`freshness` 字段已删除；水位线方案已废弃（与「周报→日报」快照复用冲突）。
-完整结论见 [decisions.md](decisions.md) 决策 33 与 [worklog/dependency-semantics.md](../worklog/dependency-semantics.md)。
+完整结论见 决策记录（已并入各专题文档） 决策 33 与 [worklog/dependency-semantics.md](../../worklog/dependency-semantics.md)。
 
 ⚠️ **归属用「计划时刻 `scheduled_at`」，不是「实际开始时间」**——任务 9:00 计划、因等前置 11:00 才跑，它仍属**今天**。这与「过窗切次日」（§5、§7 实例保障）天然咬合。
 
@@ -183,7 +183,7 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 | 弃用 | 原因 |
 |---|---|
 | 让调度器**发消息问会话**「完成了吗？回 Y/N」 | ① 又唤起一次 agent，白烧 token ② **agent 会撒谎** ③ 会话若已 disposed 未必收得到。（决策 19 的追问 ≠ 此方案：不问「完成了吗」，只重发回执提交命令，成败仍由程序查库裁决） |
-| **事件驱动**（前置完成时主动唤醒下游） | 「拉」比「推」可复用——加下游不改上游，见 [decisions.md](decisions.md) 决策 8 |
+| **事件驱动**（前置完成时主动唤醒下游） | 「拉」比「推」可复用——加下游不改上游，见 决策记录（已并入各专题文档） 决策 8 |
 
 ## 13. 计划时刻的 live 重排（决策 20）——**已废除**
 
@@ -253,3 +253,11 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 **为什么必须这样**（真机 2026-09-23）：agent 的 bash 在 **Landlock 沙箱 `workspace-write`** 下**只能写工作区**；`submit.js` 要写宿主数据根下的 `state.db` ⇒ SQLite 报 `attempt to write a readonly database`，`chmod u+w` 无效（拦的是沙箱不是权限位），`cp` 回写被 `[sandbox: file access denied under workspace-write mode]` 拒绝，容器内又无 `sqlite3` / `file`，agent 转而拷库绕道。**在 agent 沙箱里写宿主状态库本身不成立**，与「路径怎么传」无关。
 
 对账判定树（§1）与追问机制（宽限 → 追问 ×2 → 失败）不变，只是追问消息改为重发工具用法（`receiptInstruction`）。
+
+---
+
+## 补记 · 补跑 · 上游判定（自历史决策并入）
+
+- **补记 `skipped` 的粒度**：每个漏掉的刻度**各一条**（8h/10min = 48 条是预期），不是每阻塞段一条；主键必须用被漏那一槽自己的时刻（否则撞唯一约束 ⇒ 任务永久不再执行）。
+- **补跑语义**：停用再启用只补窗口内**最晚那一槽**（`dueSlot` 只取 max）+ 同任务串行互斥 ⇒ 任何时刻至多补一次；`window` 不是「窗口内全补」。
+- **上游判定的现行口径**：上游最近一条非 succeeded（**含无记录**）⇒ **阻塞**；是 succeeded 但早于下游上次执行 ⇒ 放行 + `stale-upstream` warn（旧「无记录即复用」口径已被取代，以源码 `src/scheduler.ts` 为准）。

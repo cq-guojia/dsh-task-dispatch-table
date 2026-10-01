@@ -277,7 +277,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_task ON task_audit(task_id, seq);
 
 const nowIso = (): string => new Date().toISOString()
 
-// ── 按任务 / 工作区过滤 + 游标分页（任务卡片三面板 + 未来总查询页共用，design/task-expand-panels-design.md §四）──
+// ── 按任务 / 工作区过滤 + 游标分页（任务卡片三面板 + 未来总查询页共用，design/features/task-expand-panels.md §四）──
 // cursor 用 base64(JSON) 编码「排序键末行」：小面板只传 limit 取最新 N；未来总页面带 cursor 即翻页。一套实现两种用法。
 function encodeCursor(values: readonly (string | number)[]): string {
   return Buffer.from(JSON.stringify(values)).toString('base64')

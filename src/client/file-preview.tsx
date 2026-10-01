@@ -1,4 +1,4 @@
-// U11 产出物预览（决策 39，docs/design/artifact-opening.md §四）：弹窗内右侧分栏的文件预览引擎。
+// U11 产出物预览（决策 39，docs/design/features/artifact-opening.md §四）：弹窗内右侧分栏的文件预览引擎。
 //
 // 渲染底层全官方（拍板红线：不许自研预览器）：
 //   · markdown   → 官方 MarkdownText；

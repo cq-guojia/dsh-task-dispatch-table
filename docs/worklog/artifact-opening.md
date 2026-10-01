@@ -1,6 +1,6 @@
 # U11 · 产出物打开（artifact-opening）工作包
 
-> 2026-09-27；决策 39；设计文档 [design/artifact-opening.md](../design/artifact-opening.md)。
+> 2026-09-27；决策 39；设计文档 [design/features/artifact-opening.md](../design/features/artifact-opening.md)。
 > 本包当前进度：**落码完成 + 第二轮「交付文件官方化」落码（2026-09-28）**，待真机验证；冒烟 138 项全过，typecheck + build 过（dist 227.05 kB）。
 
 ## 一、过程叙事

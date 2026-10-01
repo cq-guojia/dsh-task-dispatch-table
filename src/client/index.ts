@@ -585,7 +585,7 @@ function TaskPage(props: {
   // 新建 / 编辑任务弹窗：保存 / 删除 / 历史版本全部接线（2026-09-30）。
   // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
   // 主界面任务列表数据（2026-09-30）：一次请求出全部卡片数据，10 秒轮询 + rev 比对
-  // ⇒ 服务端只读内存摘要、不查库（design/main-panel-design.md §四）。
+  // ⇒ 服务端只读内存摘要、不查库（design/features/main-panel.md §四）。
   const overview = useTaskOverview()
 
   const [editor, setEditor] = useState<{

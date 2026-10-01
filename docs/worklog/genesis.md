@@ -4,7 +4,7 @@
 > 
 > 从四类自动化需求到「DSH host 插件 + SQLite 调度器」的选型定型，决策 1-18，v0.0.1 骨架落码并真机首装跑通，Web 配置页（client bundle）真机验证通过。
 >
-> 定型结论见 [`design/decisions.md`](../design/decisions.md)；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
+> 定型结论见 决策记录（已并入各专题文档）；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
 
 ## 2026-09-19 — 进度条目
 
@@ -32,7 +32,7 @@
 
 ## 2026-09-20 — 进度条目
 
-完成插件命名查重（npm + GitHub 实测），记录见 [`design/decisions.md`](design/decisions.md) 附录
+完成插件命名查重（npm + GitHub 实测），记录见 决策记录（已并入各专题文档） 附录
 
 ## 2026-09-20 — 插件名定为 `dsh-task-dispatch-table`
 
@@ -56,15 +56,15 @@
 
 ## 2026-09-21 — 数据模型定型
 
-（[`design/data-model.md`](design/data-model.md)）：任务定义 13 字段 + 状态库两表（`task_instances` / `task_events`）；实例身份 = `task_id + logical_date`，重试行内递增，派发 CAS 领取；通知机制本期不做（用户拍板）
+（[`design/data-model.md`](../design/data-model.md)）：任务定义 13 字段 + 状态库两表（`task_instances` / `task_events`）；实例身份 = `task_id + logical_date`，重试行内递增，派发 CAS 领取；通知机制本期不做（用户拍板）
 
 ## 2026-09-21 — 首个任务样例定型
 
-（[`examples/image-upgrade-daily.md`](examples/image-upgrade-daily.md)）：镜像升级日报——任务定义 + 产物契约 + 手册骨架；仅文档示例，与插件代码零耦合
+（[`examples/image-upgrade-daily.md`](../examples/image-upgrade-daily.md)）：镜像升级日报——任务定义 + 产物契约 + 手册骨架；仅文档示例，与插件代码零耦合
 
 ## 2026-09-21 — 状态机完整定义
 
-（[`design/state-machine.md`](design/state-machine.md)）：完整转移表、租约 30min 心跳续租、`unknown` 只观察不重派、窗口只管开始、重试当场回 `pending`、同任务严格串行、补跑三层入口（自动实例保障 / `backfill.days` / SQL 手动重置）；数据模型随之增补第 14 个字段 `backfill.days`
+（[`design/features/state-machine.md`](../design/features/state-machine.md)）：完整转移表、租约 30min 心跳续租、`unknown` 只观察不重派、窗口只管开始、重试当场回 `pending`、同任务严格串行、补跑三层入口（自动实例保障 / `backfill.days` / SQL 手动重置）；数据模型随之增补第 14 个字段 `backfill.days`
 
 ## 2026-09-21 — 宿主源码核实完成，未决项 1–4 全关
 

@@ -4,7 +4,7 @@
 > 
 > 决策 25 落码：主键 UUID + UNIQUE(task_id, scheduled_at) 刻度化调度（小时/分钟级 cron 可跑）；决策 26：双标签面板 + npm run smoke；task_defs 登记表废弃（id 直写 JSON）；旧库兼容实测。
 >
-> 定型结论见 [`design/decisions.md`](../design/decisions.md)；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
+> 定型结论见 决策记录（已并入各专题文档）；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
 
 ## 2026-09-24 — 决策 25（只落文档、代码未动）：执行身份重设计 = 三层分离 + 锚点用「计划时刻」+ 主键用 UUID
 

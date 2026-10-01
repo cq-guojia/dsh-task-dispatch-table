@@ -20,7 +20,7 @@
 
 ## 二、方案定型（2026-09-28 拍板）
 
-见 [design/dependency-snapshot.md](../design/dependency-snapshot.md)（决策 43）。要点：
+见 [design/features/dependency-snapshot.md](../design/features/dependency-snapshot.md)（决策 43）。要点：
 
 - `InstanceSnapshot` 加 `resolvedDeps: ResolvedDependency[]`（task / semantics / instanceId / scheduledAt / sessionId / 上游 workspacePath / outputs）。
 - `judgeDependencies` 放行时返回 `resolved`；`snapshotOf` 写入快照；Loop B 只读不重判，重试沿用。
@@ -40,4 +40,4 @@
 
 - `npm run build` ✅（dist/client.js 248.53 kB）；`npm run typecheck` ✅。
 - `npm run smoke`：**172 项通过，0 项失败**（含新增 8 条）。
-- **真机复验未做**，五点清单见 [design/dependency-snapshot.md §六](../design/dependency-snapshot.md)；关键一点：上游在「下游落库」与「下游发动」之间再跑成功一轮 ⇒ 下游会话消息仍指向**落库时**那条上游实例的产出（冻结生效）。
+- **真机复验未做**，五点清单见 [design/features/dependency-snapshot.md §六](../design/features/dependency-snapshot.md)；关键一点：上游在「下游落库」与「下游发动」之间再跑成功一轮 ⇒ 下游会话消息仍指向**落库时**那条上游实例的产出（冻结生效）。

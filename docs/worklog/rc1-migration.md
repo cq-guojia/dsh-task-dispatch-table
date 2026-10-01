@@ -4,7 +4,7 @@
 > 
 > 侧栏入口迁移 sidebar.panellist + main 整页化；settings register 崩溃修复；数据通道五连败（volatile / configForms / remote）后定案 webServer HTTP 路由 + 同源 fetch，最终真机跑通。
 >
-> 定型结论见 [`design/decisions.md`](../design/decisions.md)；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
+> 定型结论见 决策记录（已并入各专题文档）；设计与事实清单见 [`design/`](../design/)。本文只保留过程叙事：踩坑、定位、修复与真机证据。
 
 ## 2026-09-24 — 主界面常驻入口落码（`sidebar.footer.action`）
 

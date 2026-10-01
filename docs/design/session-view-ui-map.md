@@ -1,5 +1,9 @@
 # 会话弹窗「官方样式对照表」（专属任务文档）
 
+> **状态**：✅ 持续维护（官方升级后跑提取命令 diff，见 §〇）
+> **来源**：`@deepseek-ai/dsh-client-ui-chat` / `-primitives` / `-conversation` @0.1.7-rc.2 源码原文摘录
+> **配套**：[`dsh-capabilities.md`](dsh-capabilities.md)（宿主能力）· 插件自有控件样式走 [`ui-style-guide.md`](ui-style-guide.md)，本表只管**镜像官方**的部分
+>
 > **这是什么**：把官方会话页面的**每一个元素**——组件、CSS module、语义类、关键样式值（间距 / 字号 / 颜色变量）、所需数据——整理成一张**可长期维护的对照表**。
 > **怎么用**：实现时**逐行对着表做**，一行做完勾一行；官方升级后跑一遍「提取命令」diff 出变化，再照表补。**不再凭观感瞎改。**
 > **事实来源**：`@deepseek-ai/dsh-client-ui-chat@0.1.7-rc.2`、`@deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2`、`@deepseek-ai/dsh-client-ui-conversation@0.1.7-rc.2` 的 `lib/client.js`（内嵌 CSS module 原文）与 `lib/types/*.d.ts`。CSS 值均为**源码原文摘录**，非目测。

@@ -1,7 +1,7 @@
 # 插件主界面重建：任务列表视图
 
 > **状态**：🔵 落码完成（2026-09-30），⏳ **真机验证待做**
-> **设计提纲**：[`design/main-panel-design.md`](../design/main-panel-design.md)（口径以此为准）
+> **设计提纲**：[`design/features/main-panel.md`](../design/features/main-panel.md)（口径以此为准）
 > **范围**：本轮只做任务列表视图。执行记录视图、审计消费面、调试债清理归后续工作包。
 
 ---
@@ -490,7 +490,7 @@
 **顺带改掉一处会让人误设时间的默认值**（用户 2026-09-30）：新建任务时**单次执行 / 间隔锚点**的默认时刻原先是写死的「今天 09:00」，晚上新建即已过期 ⇒ 改成**智能默认**：`现在 + 1 小时` 再往上取整点（22:10 ⇒ 次日 00:00；8:50 ⇒ 10:00），且**仅当表单里那个时刻已经过去时**才替换（不覆盖用户自己填的未来时刻）；周期档（每天/每周…）不动。
 
 **以下为最初的遗留记录（现已全部处理，留档）**：
-- `docs/design/state-machine.md:105` 与 `docs/design/decisions.md:37`（决策 31 ④）写着「过窗 / skipped **不进 `task_instances`**」—— 本轮是**第二次**开例外（第一次是决策 54 的任务级错误），必须显式写明「一次性任务过期 ⇒ 建一条 `skipped`」。
+- `docs/design/features/state-machine.md:105` 与 `docs/design/decisions.md:37`（决策 31 ④）写着「过窗 / skipped **不进 `task_instances`**」—— 本轮是**第二次**开例外（第一次是决策 54 的任务级错误），必须显式写明「一次性任务过期 ⇒ 建一条 `skipped`」。
 - `docs/design/decisions.md:24`（决策 18）与 `docs/design/data-model.md:17` 的「一次性任务跑完自动停」需补「**窗口内**未跑 ⇒ 过期作废 + `expired-once` 留痕」。
 - 本轮「拍板 A」尚无决策编号（`decisions.md` 最后一条是决策 54）⇒ 建议记为决策 55 / 决策 54 修订；注意 `state-machine.md:101` 已有一个同名的「## 5. 窗口语义（拍板 A）」，别混。
 

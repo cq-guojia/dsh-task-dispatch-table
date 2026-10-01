@@ -1103,7 +1103,7 @@ export function SessionViewModal(props: {
   workspaceFiles?: WorkspaceFilesFace
   /**
    * U11 统一入口（页面级）：点任意文件链接 → 由外层（整页）渲染**唯一那份**预览 dock
-   * （弹窗与整页共用同一个预览面；弹窗不遮盖它，见 docs/design/artifact-opening.md §四-C）。
+   * （弹窗与整页共用同一个预览面；弹窗不遮盖它，见 docs/design/features/artifact-opening.md §四-C）。
    * 未传 = 预览能力未就位 ⇒ 弹窗内链接降级纯文本。
    */
   onOpenFile?: (path: string) => void
