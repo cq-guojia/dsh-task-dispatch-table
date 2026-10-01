@@ -18,6 +18,7 @@
 
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { pad2 } from './format'
+import { interpolateTranslate, type Translate } from './locales'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
@@ -278,6 +279,25 @@ function buildCells(y: number, m: number): CalendarCell[] {
     cells.push({ iso, day: date.getDate(), inMonth: date.getMonth() + 1 === m && date.getFullYear() === y, isToday: iso === today })
   }
   return cells
+}
+
+/**
+ * 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
+ * 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
+ */
+export function calendarLabelsOf(t: Translate): CalendarLabels {
+  const tt = interpolateTranslate(t)
+  return {
+    today: t('editorToday'),
+    prevMonth: t('editorPrevMonth'),
+    nextMonth: t('editorNextMonth'),
+    prevYear: t('editorPrevYear'),
+    nextYear: t('editorNextYear'),
+    // 月补两位（用户 2026-09-30「日期和时间的显示都补成两位」）⇒ zh「2026年09月」/ en「09/2026」。
+    monthTitle: (year: number, month: number) => tt('editorMonthTitle', { y: String(year), m: pad2(month) }),
+    // 日历表头用单字（一…日 / Mo…Su），日历的通用写法。
+    weekdays: t('editorWeekdayShorts').split('|'),
+  }
 }
 
 /** 自绘日历弹层（锚点 = 官方 Input 外观的按钮）。 */

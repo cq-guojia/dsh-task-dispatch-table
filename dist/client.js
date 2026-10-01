@@ -4379,6 +4379,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}
 			return cells;
 		}
+		/**
+		* 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
+		* 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
+		*/
+		function calendarLabelsOf(t) {
+			const tt = interpolateTranslate(t);
+			return {
+				today: t("editorToday"),
+				prevMonth: t("editorPrevMonth"),
+				nextMonth: t("editorNextMonth"),
+				prevYear: t("editorPrevYear"),
+				nextYear: t("editorNextYear"),
+				monthTitle: (year, month) => tt("editorMonthTitle", {
+					y: String(year),
+					m: pad2$1(month)
+				}),
+				weekdays: t("editorWeekdayShorts").split("|")
+			};
+		}
 		/** 自绘日历弹层（锚点 = 官方 Input 外观的按钮）。 */
 		function DateField(props) {
 			const [open, setOpen] = (0, react.useState)(false);
@@ -39264,22 +39283,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				shorts: weekdayShorts,
 				empty: t("editorWeekdayEmpty")
 			}), [t, weekdayShorts]);
-			const calendarLabels = (0, react.useMemo)(() => ({
-				today: t("editorToday"),
-				prevMonth: t("editorPrevMonth"),
-				nextMonth: t("editorNextMonth"),
-				prevYear: t("editorPrevYear"),
-				nextYear: t("editorNextYear"),
-				monthTitle: (year, month) => tt("editorMonthTitle", {
-					y: String(year),
-					m: pad2$1(month)
-				}),
-				weekdays: weekdayShorts
-			}), [
-				t,
-				tt,
-				weekdayShorts
-			]);
+			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const timeLabels = (0, react.useMemo)(() => ({
 				hour: t("editorHour"),
 				minute: t("editorMinute"),
@@ -40899,7 +40903,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontSize: "12px",
 			transition: transition$1
 		};
-		/** 内容区统一最大高度（用户 2026-10-01 拍板：切 tab 卡片不抖；基础信息短就撑不满，多了内部滚动）。 */
+		/** 内容区统一**定高**（用户 2026-10-02 真机：max-height 会让矮内容显矮、切 tab 高度蹦）——每个任务展开一律同高，内容多就内部滚。 */
 		const PANEL_MAX_H = 360;
 		const panelWrapStyle = {
 			marginTop: "10px",
@@ -40907,7 +40911,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			paddingTop: "10px"
 		};
 		const panelScrollStyle = {
-			maxHeight: `${PANEL_MAX_H}px`,
+			height: `${PANEL_MAX_H}px`,
 			overflowY: "auto"
 		};
 		const panelBarStyle = {
@@ -41068,6 +41072,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function TaskExpandPanel(props) {
 			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete } = props;
 			const [tab, setTab] = (0, react.useState)("info");
+			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const [recStatus, setRecStatus] = (0, react.useState)("all");
 			const [recFrom, setRecFrom] = (0, react.useState)("");
 			const [recTo, setRecTo] = (0, react.useState)("");
@@ -41207,26 +41212,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				gap: "4px",
 				fontSize: "11px",
 				color: C$1.textFaint
-			} }, t("cardFrom"), (0, react.createElement)("input", {
-				type: "date",
+			} }, t("cardFrom"), (0, react.createElement)(DateField, {
 				value: recFrom,
-				style: filterInputStyle,
-				onChange: (event) => {
-					setRecFrom(event.target.value);
-				}
+				onChange: (next) => {
+					setRecFrom(next);
+				},
+				placeholder: t("cardFrom"),
+				ariaLabel: t("cardFrom"),
+				labels: calendarLabels,
+				width: 120
 			})), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px",
 				fontSize: "11px",
 				color: C$1.textFaint
-			} }, t("cardTo"), (0, react.createElement)("input", {
-				type: "date",
+			} }, t("cardTo"), (0, react.createElement)(DateField, {
 				value: recTo,
-				style: filterInputStyle,
-				onChange: (event) => {
-					setRecTo(event.target.value);
-				}
+				onChange: (next) => {
+					setRecTo(next);
+				},
+				placeholder: t("cardTo"),
+				ariaLabel: t("cardTo"),
+				labels: calendarLabels,
+				width: 120
 			})), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "11px",
 				color: C$1.danger
@@ -41298,26 +41307,30 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				gap: "4px",
 				fontSize: "11px",
 				color: C$1.textFaint
-			} }, t("cardFrom"), (0, react.createElement)("input", {
-				type: "date",
+			} }, t("cardFrom"), (0, react.createElement)(DateField, {
 				value: logFrom,
-				style: filterInputStyle,
-				onChange: (event) => {
-					setLogFrom(event.target.value);
-				}
+				onChange: (next) => {
+					setLogFrom(next);
+				},
+				placeholder: t("cardFrom"),
+				ariaLabel: t("cardFrom"),
+				labels: calendarLabels,
+				width: 120
 			})), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px",
 				fontSize: "11px",
 				color: C$1.textFaint
-			} }, t("cardTo"), (0, react.createElement)("input", {
-				type: "date",
+			} }, t("cardTo"), (0, react.createElement)(DateField, {
 				value: logTo,
-				style: filterInputStyle,
-				onChange: (event) => {
-					setLogTo(event.target.value);
-				}
+				onChange: (next) => {
+					setLogTo(next);
+				},
+				placeholder: t("cardTo"),
+				ariaLabel: t("cardTo"),
+				labels: calendarLabels,
+				width: 120
 			})), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",

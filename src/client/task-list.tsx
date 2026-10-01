@@ -26,7 +26,7 @@ import { fetchEvents, fetchInstances, fetchLogs, type EventRow, type InstanceRow
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
 // 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { pinMsFor, sortRows } from '../task-sort.js'
-import { MarqueeText } from './editor-fields'
+import { DateField, MarqueeText, calendarLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
@@ -702,14 +702,15 @@ const iconBtnStyle: Record<string, string | number> = {
 }
 
 // ── 展开区三面板（决策 55，design/task-expand-panels-design.md §三）──────────────────
-/** 内容区统一最大高度（用户 2026-10-01 拍板：切 tab 卡片不抖；基础信息短就撑不满，多了内部滚动）。 */
+/** 内容区统一**定高**（用户 2026-10-02 真机：max-height 会让矮内容显矮、切 tab 高度蹦）——每个任务展开一律同高，内容多就内部滚。 */
 const PANEL_MAX_H = 360
 
 const panelWrapStyle: Record<string, string | number> = {
   marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '10px',
 }
 const panelScrollStyle: Record<string, string | number> = {
-  maxHeight: `${PANEL_MAX_H}px`, overflowY: 'auto',
+  // **定高**（不是 max-height）：无论哪个任务、哪个滑块、有没有数据，展开高度都一模一样。
+  height: `${PANEL_MAX_H}px`, overflowY: 'auto',
 }
 const panelBarStyle: Record<string, string | number> = {
   marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed ${C.border}`,
@@ -817,6 +818,8 @@ function TaskExpandPanel(props: {
 }) {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
+  // 日历文案**单源**（与任务编辑器同一份 DateField 文案，editor-fields.calendarLabelsOf）。
+  const calendarLabels = useMemo(() => calendarLabelsOf(t), [t])
 
   // ── 执行记录面板 ──
   const [recStatus, setRecStatus] = useState('all')
@@ -934,11 +937,11 @@ function TaskExpandPanel(props: {
       ),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardFrom'),
-        h('input', { type: 'date', value: recFrom, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setRecFrom(event.target.value) } }),
+        h(DateField, { value: recFrom, onChange: (next: string) => { setRecFrom(next) }, placeholder: t('cardFrom'), ariaLabel: t('cardFrom'), labels: calendarLabels, width: 120 }),
       ),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardTo'),
-        h('input', { type: 'date', value: recTo, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setRecTo(event.target.value) } }),
+        h(DateField, { value: recTo, onChange: (next: string) => { setRecTo(next) }, placeholder: t('cardTo'), ariaLabel: t('cardTo'), labels: calendarLabels, width: 120 }),
       ),
       recLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       recError !== null ? h('span', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${recError}`) : null,
@@ -1009,11 +1012,11 @@ function TaskExpandPanel(props: {
       }),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardFrom'),
-        h('input', { type: 'date', value: logFrom, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setLogFrom(event.target.value) } }),
+        h(DateField, { value: logFrom, onChange: (next: string) => { setLogFrom(next) }, placeholder: t('cardFrom'), ariaLabel: t('cardFrom'), labels: calendarLabels, width: 120 }),
       ),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardTo'),
-        h('input', { type: 'date', value: logTo, style: filterInputStyle, onChange: (event: { target: { value: string } }) => { setLogTo(event.target.value) } }),
+        h(DateField, { value: logTo, onChange: (next: string) => { setLogTo(next) }, placeholder: t('cardTo'), ariaLabel: t('cardTo'), labels: calendarLabels, width: 120 }),
       ),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardLogLimit'),

@@ -35,6 +35,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
   C,
+  calendarLabelsOf,
   DateField,
   MarqueeText,
   SelectField,
@@ -1438,18 +1439,8 @@ export function TaskEditorDrawer(props: {
     empty: t('editorWeekdayEmpty'),
   }), [t, weekdayShorts])
 
-  const calendarLabels: CalendarLabels = useMemo(() => ({
-    today: t('editorToday'),
-    prevMonth: t('editorPrevMonth'),
-    nextMonth: t('editorNextMonth'),
-    prevYear: t('editorPrevYear'),
-    nextYear: t('editorNextYear'),
-    // 月补两位（用户 2026-09-30「日期和时间的显示都补成两位」）⇒ zh「2026年09月」/ en「09/2026」。
-    monthTitle: (year: number, month: number) =>
-      tt('editorMonthTitle', { y: String(year), m: pad2(month) }),
-    // 日历表头就用单字（一…日 / Mo…Su），日历的通用写法。
-    weekdays: weekdayShorts,
-  }), [t, tt, weekdayShorts])
+  // 日历文案走**单源** `calendarLabelsOf`（editor-fields，决策 55 起与任务卡片三面板共用，不再各处各拼）。
+  const calendarLabels: CalendarLabels = useMemo(() => calendarLabelsOf(t), [t])
 
   const timeLabels: TimeLabels = useMemo(() => ({
     hour: t('editorHour'),
