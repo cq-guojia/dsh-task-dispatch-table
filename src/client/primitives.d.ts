@@ -148,6 +148,8 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const FileTypeIcon: ComponentType<{ path: string; size?: number; className?: string }>
   /** 官方交付图标（present 工具行 / 交付文件行）。 */
   export const IconDeliverDocRegular: ComponentType<{ size?: number; className?: string }>
+  /** 官方「新建对话 / 打开会话」图标（会话记录列入口用；0.2.0-rc.2 核实存在于 icons/index.d.ts）。 */
+  export const IconNewChatOutlineRegular: ComponentType<{ size?: number; className?: string }>
   /** 取文件扩展名（无点 / 尾点返回空串；大小写保持）。 */
   export function fileExtension(path: string): string
   /** 按路径推语法高亮语言（官方 code/CodeBody 预览体同款入参来源）。 */

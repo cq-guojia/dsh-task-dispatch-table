@@ -11,7 +11,7 @@ import { createElement as h, useMemo } from 'react'
 import { pad2 } from './format'
 import { interpolateTranslate, type Translate } from './locales'
 import type { ReactElement } from 'react'
-import { Segmented, type CalendarLabels, type SegmentedItem } from './ui'
+import { Segmented, type CalendarLabels, type SegmentedItem, type TimeLabels } from './ui'
 
 // ─────────────────────── 统一控件再导出（实现都在 ui/） ───────────────────────
 
@@ -38,6 +38,19 @@ export function calendarLabelsOf(t: Translate): CalendarLabels {
     monthTitle: (year: number, month: number) => tt('editorMonthTitle', { y: String(year), m: pad2(month) }),
     // 日历表头用单字（一…日 / Mo…Su），日历的通用写法。
     weekdays: t('editorWeekdayShorts').split('|'),
+  }
+}
+
+/**
+ * 时分文案**单源**：`TimeField` 的所有调用方（任务编辑器 / 时间范围控件）共用这一份，
+ * 不再各处各拼「小时 / 分钟 / 现在 / 确定」。
+ */
+export function timeLabelsOf(t: Translate): TimeLabels {
+  return {
+    hour: t('editorHour'),
+    minute: t('editorMinute'),
+    now: t('editorNow'),
+    confirm: t('editorConfirm'),
   }
 }
 

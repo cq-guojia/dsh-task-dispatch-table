@@ -40,3 +40,13 @@ export {
   type CalendarLabels,
   type TimeLabels,
 } from './DateTime'
+export { TimeRange, type TimeRangeProps, type TimeRangeLabels, type TimePresetLabels } from './TimeRange'
+export {
+  presetRange,
+  rangeToQuery,
+  ALL_TIME_PRESETS,
+  type TimePrecision,
+  type TimePresetId,
+  type TimeRangeValue,
+  type TimeQuery,
+} from './time-range'

@@ -21,7 +21,7 @@
 
 | 事项 | 状态 | 真机验证清单 |
 |---|---|---|
-| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 落码（冒烟 390/0）⏳ **删除已验；展开三面板第四轮 UX 迭代（定高 / 表格列重排 / 时间筛控件 / 状态过滤失效修复），方案待用户拍板** | [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §三 · [worklog/task-expand-panels.md](worklog/task-expand-panels.md) §六 |
+| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 **第四轮 UX 迭代已落码（定高 / 表格列重排 / 时间范围控件 / 状态过滤修复 / 滚动结构；typecheck·build 绿）** ⏳ 真机验证待做 | [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §三 · [worklog/expand-panels-round4.md](worklog/expand-panels-round4.md) |
 | UI 收口 + Agent 权限选择器 | ✅ 封卷（随主界面复验） | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 |
 | 编辑器 UX 第二轮 | ✅ 结案（随主界面复验） | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
 

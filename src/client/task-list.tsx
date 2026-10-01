@@ -13,10 +13,10 @@
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { formatDateTime, formatDuration, formatShortStamp, formatTokenCount, pad2 } from './format'
+import { formatClock, formatDateTime, formatDuration, formatDurationHms, formatPlanStamp, formatTokenCount, pad2 } from './format'
 import {
-  IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular, IconEditOutlineRegular,
-  IconSearchOutlineRegular,
+  FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
+  IconEditOutlineRegular, IconNewChatOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
@@ -28,10 +28,10 @@ import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
 // 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { pinMsFor, sortRows } from '../task-sort.js'
-import { DateField, MarqueeText, SelectField, calendarLabelsOf } from './editor-fields'
+import { MarqueeText, SelectField, calendarLabelsOf, timeLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, IconButton, Input as TdtInput, Segmented } from './ui'
+import { applyStyle, Button, IconButton, Input as TdtInput, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -679,15 +679,18 @@ function InfoRow(props: { label: string; value: string }) {
   )
 }
 // ── 展开区三面板（决策 55，design/features/task-expand-panels.md §三）──────────────────
-/** 内容区统一**定高**（用户 2026-10-02 真机：max-height 会让矮内容显矮、切 tab 高度蹦）——每个任务展开一律同高，内容多就内部滚。 */
-const PANEL_MAX_H = 360
-
+/** 内容区**定高**（用户 2026-10-02：矮内容显矮、切 tab 高度蹦）——三个 tab 一律同高，内容多就内部滚。 */
+const PANEL_H = 360
+/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。 */
+const panelBoxStyle: Record<string, string | number> = {
+  height: `${PANEL_H}px`, display: 'flex', flexDirection: 'column', minHeight: 0,
+}
+/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
+const panelScrollFillStyle: Record<string, string | number> = {
+  flex: '1 1 auto', minHeight: 0, overflowY: 'auto',
+}
 const panelWrapStyle: Record<string, string | number> = {
   marginTop: '10px', borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px',
-}
-const panelScrollStyle: Record<string, string | number> = {
-  // **定高**（不是 max-height）：无论哪个任务、哪个滑块、有没有数据，展开高度都一模一样。
-  height: `${PANEL_MAX_H}px`, overflowY: 'auto',
 }
 const panelBarStyle: Record<string, string | number> = {
   marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed var(--tdt-border)`,
@@ -720,18 +723,6 @@ const dialogStyle: Record<string, string | number> = {
 const formatStamp = (iso: string | null): string =>
   iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
 
-/** 日期输入（YYYY-MM-DD）→ 当天起点 / 终点 ISO（本机时区；空 / 非法 ⇒ undefined = 不过滤）。 */
-const dayStartIso = (date: string): string | undefined => {
-  if (date === '') return undefined
-  const d = new Date(`${date}T00:00:00`)
-  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
-}
-const dayEndIso = (date: string): string | undefined => {
-  if (date === '') return undefined
-  const d = new Date(`${date}T23:59:59.999`)
-  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
-}
-
 /** 回执产出清单（决策 32③ 真值 JSON）→ 字符串数组；形状不符返回空（不猜）。 */
 const outputsOf = (raw: string | null): string[] => {
   if (raw === null || raw === '') return []
@@ -758,14 +749,16 @@ const FILTER_BUCKETS: Readonly<Record<string, readonly string[]>> = {
   failed: ['failed', 'skipped'],
   succeeded: ['succeeded'],
 }
-/** 产出引用小圆点（用户示意 1/2/3）：可点开文件时亮色，否则弱化不可点。 */
-const chipStyleOf = (clickable: boolean): Record<string, string | number> => ({
+/** 产出物 / 会话列的裸图标按钮（无边框、无底色；用户 2026-10-02 第四轮：图标化）。 */
+const plainIconBtnStyle: Record<string, string | number> = {
   appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: '18px', height: '18px', padding: 0, borderRadius: '50%', flex: 'none',
-  border: `1px solid var(--tdt-border)`, background: 'var(--tdt-surface-1)',
-  color: clickable ? 'var(--tdt-accent)' : 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
-  cursor: clickable ? 'pointer' : 'default', fontFamily: 'inherit', transition,
-})
+  width: '20px', height: '20px', padding: 0, border: 'none', background: 'transparent',
+  color: 'var(--tdt-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit', transition,
+}
+/** 产出物图标格（最多 3 个 +「…」更多）。 */
+const outputCellStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', gap: '2px', flexWrap: 'nowrap',
+}
 /** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
 const filterRowStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px',
@@ -819,13 +812,21 @@ function TaskExpandPanel(props: {
 }) {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
-  // 日历文案**单源**（与任务编辑器同一份 DateField 文案，editor-fields.calendarLabelsOf）。
+  // 日历 / 时分文案**单源**（与任务编辑器同一份：editor-fields.calendarLabelsOf / timeLabelsOf）。
   const calendarLabels = useMemo(() => calendarLabelsOf(t), [t])
+  const timeLabels = useMemo(() => timeLabelsOf(t), [t])
+  // 时间范围控件文案（records / logs 共用一份）。
+  const timeRangeLabels: TimeRangeLabels = useMemo(() => ({
+    preset: t('trPreset'), from: t('cardFrom'), to: t('cardTo'), clear: t('trClear'),
+    presets: {
+      today: t('trToday'), yesterday: t('trYesterday'), thisWeek: t('trThisWeek'),
+      lastWeek: t('trLastWeek'), thisMonth: t('trThisMonth'), lastMonth: t('trLastMonth'),
+    },
+  }), [t])
 
   // ── 执行记录面板 ──
   const [recStatus, setRecStatus] = useState('all')
-  const [recFrom, setRecFrom] = useState('')
-  const [recTo, setRecTo] = useState('')
+  const [recRange, setRecRange] = useState<TimeRangeValue>({ from: '', to: '' })
   const [records, setRecords] = useState<InstanceRow[] | null>(null)
   const [recLoading, setRecLoading] = useState(false)
   const [recError, setRecError] = useState<string | null>(null)
@@ -836,8 +837,7 @@ function TaskExpandPanel(props: {
 
   // ── 日志面板 ──
   const [logKeyword, setLogKeyword] = useState('')
-  const [logFrom, setLogFrom] = useState('')
-  const [logTo, setLogTo] = useState('')
+  const [logRange, setLogRange] = useState<TimeRangeValue>({ from: '', to: '' })
   const [logLimit, setLogLimit] = useState(100)
   const [logs, setLogs] = useState<LogRow[] | null>(null)
   const [logLoading, setLogLoading] = useState(false)
@@ -853,12 +853,14 @@ function TaskExpandPanel(props: {
     let alive = true
     setRecLoading(true)
     setRecError(null)
+    // 边界归一（半开区间 [from, to)）只在 ui/time-range 一处算（用户 2026-10-02 第四轮）。
+    const range = rangeToQuery(recRange, 'day')
     fetchInstances({
       taskId: row.id,
       // 三档桶（用户 2026-10-02）：执行中 = pending/dispatched/running/unknown；失败 = failed/skipped；成功 = succeeded。
       statuses: recStatus === 'all' ? undefined : FILTER_BUCKETS[recStatus],
-      from: dayStartIso(recFrom),
-      to: dayEndIso(recTo),
+      from: range.fromTs,
+      to: range.toTs,
       limit: 100,
     })
       .then(({ rows }) => {
@@ -870,7 +872,7 @@ function TaskExpandPanel(props: {
       .catch((error: unknown) => { if (alive) setRecError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setRecLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id, recStatus, recFrom, recTo])
+  }, [tab, row.id, recStatus, recRange])
 
   // 点一行 ⇒ 取该次执行的事件时间线（seq 升序 = 旧→新）。
   useEffect(() => {
@@ -892,44 +894,49 @@ function TaskExpandPanel(props: {
     let alive = true
     setLogLoading(true)
     setLogError(null)
+    // 日志按**分钟级**粒度（用户 2026-10-02：要定位到哪一分钟出错），边界同样半开区间。
+    const range = rangeToQuery(logRange, 'minute')
     fetchLogs({
       taskId: row.id,
       keyword: logKeyword.trim() === '' ? undefined : logKeyword.trim(),
-      from: dayStartIso(logFrom),
-      to: dayEndIso(logTo),
+      from: range.fromTs,
+      to: range.toTs,
       limit: logLimit,
     })
       .then(({ rows }) => { if (alive) setLogs(rows) })
       .catch((error: unknown) => { if (alive) setLogError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setLogLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id, logKeyword, logFrom, logTo, logLimit])
+  }, [tab, row.id, logKeyword, logRange, logLimit])
 
-  const renderInfo = (): ReturnType<typeof h> => h('div', null,
-    h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
-    InfoRow({ label: t('listFieldSchedule'), value: scheduleLine }),
-    InfoRow({ label: t('listFieldWorkspace'), value: row.workspace }),
-    InfoRow({ label: t('listFieldModel'), value: modelText }),
-    InfoRow({ label: t('listFieldRetry'), value: String(row.retryMax) }),
-    InfoRow({ label: t('listFieldWindow'), value: row.schedule.window }),
-    h('div', { style: sectionLabelStyle }, t('listSectionAttachments')),
-    h('div', { style: sectionBodyStyle },
-      row.attachments.length === 0
-        ? t('listNone')
-        : row.attachments.map(item => `${item.name}${item.kind === 'link' ? `（${t('editorAttachmentLink')}）` : ''}`).join('、'),
+  const renderInfo = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
+    // 基础信息也纳入**同一个定高盒**（用户 2026-10-02 第四轮：缺这一层会导致切 tab 高度蹦）。
+    h('div', { style: panelScrollFillStyle },
+      h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
+      InfoRow({ label: t('listFieldSchedule'), value: scheduleLine }),
+      InfoRow({ label: t('listFieldWorkspace'), value: row.workspace }),
+      InfoRow({ label: t('listFieldModel'), value: modelText }),
+      InfoRow({ label: t('listFieldRetry'), value: String(row.retryMax) }),
+      InfoRow({ label: t('listFieldWindow'), value: row.schedule.window }),
+      h('div', { style: sectionLabelStyle }, t('listSectionAttachments')),
+      h('div', { style: sectionBodyStyle },
+        row.attachments.length === 0
+          ? t('listNone')
+          : row.attachments.map(item => `${item.name}${item.kind === 'link' ? `（${t('editorAttachmentLink')}）` : ''}`).join('、'),
+      ),
+      h('div', { style: sectionLabelStyle }, t('listSectionDepends')),
+      h('div', { style: sectionBodyStyle },
+        row.depends.length === 0
+          ? t('listNone')
+          : row.depends.map(dep => `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`).join('、'),
+      ),
+      h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
+      h('div', { style: { ...sectionBodyStyle, color: 'var(--tdt-fg-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
     ),
-    h('div', { style: sectionLabelStyle }, t('listSectionDepends')),
-    h('div', { style: sectionBodyStyle },
-      row.depends.length === 0
-        ? t('listNone')
-        : row.depends.map(dep => `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`).join('、'),
-    ),
-    h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
-    h('div', { style: { ...sectionBodyStyle, color: 'var(--tdt-fg-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
   )
 
-  const renderRecords = (): ReturnType<typeof h> => h('div', null,
-    // 过滤行在滚动区**外**（用户 2026-10-02：过滤框和表头不滚，只滚内容区）。
+  const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
+    // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 时间范围控件（用户 2026-10-02 第四轮）。
     h('div', { style: filterRowStyle },
       h(SelectField, {
         value: recStatus,
@@ -942,48 +949,51 @@ function TaskExpandPanel(props: {
         placeholder: tt('filterAll'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('colStatus'),
-        // 高度走默认 lg(=32)，与同排「从…到…」的 DateField 同档（用户 2026-10-01：此前 sm=24 与时间框差一截）。
-        width: 100,
+        // 收窄一档（用户 2026-10-02 第四轮）：md(28)，与时间范围控件同档。
+        size: 'md',
+        width: 96,
       }),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
-        t('cardFrom'),
-        h(DateField, { value: recFrom, onChange: (next: string) => { setRecFrom(next) }, placeholder: t('cardFrom'), ariaLabel: t('cardFrom'), labels: calendarLabels, width: 120 }),
-      ),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
-        t('cardTo'),
-        h(DateField, { value: recTo, onChange: (next: string) => { setRecTo(next) }, placeholder: t('cardTo'), ariaLabel: t('cardTo'), labels: calendarLabels, width: 120 }),
-      ),
+      h(TimeRange, {
+        value: recRange, onChange: setRecRange,
+        labels: timeRangeLabels, calendarLabels, timeLabels,
+        precision: 'day', size: 'md',
+      }),
       recLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       recError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${recError}`) : null,
     ),
-    records === null
-      ? null
-      : records.length === 0
-        ? h('p', { style: faintStyle }, t('cardRecordsEmpty'))
-        : // 只有内容区滚（定高盒），表头 sticky 吸顶。
-        h('div', { style: panelScrollStyle },
-          h('table', { style: { ...miniTableStyle, tableLayout: 'fixed' } },
+    h('div', { style: panelScrollFillStyle },
+      records === null
+        ? null
+        : records.length === 0
+          ? h('p', { style: faintStyle }, t('cardRecordsEmpty'))
+          : h('table', { style: { ...miniTableStyle, tableLayout: 'fixed' } },
             h('thead', { className: 'dsh-tdt-rec-head' }, h('tr', null,
-              h('th', { style: { ...recHeadStyle, width: '96px' } }, t('colStatus')),
+              h('th', { style: { ...recHeadStyle, width: '84px' } }, t('colStatus')),
+              h('th', { style: { ...recHeadStyle, width: '104px' } }, t('colPlanned')),
+              h('th', { style: { ...recHeadStyle, width: '84px' } }, t('colActualStart')),
+              h('th', { style: { ...recHeadStyle, width: '68px' } }, t('colDuration')),
               h('th', { style: recHeadStyle }, t('colOutputs')),
-              h('th', { style: { ...recHeadStyle, width: '88px' } }, t('colDuration')),
-              h('th', { style: { ...recHeadStyle, width: '100px' } }, t('colSlot')),
+              h('th', { style: { ...recHeadStyle, width: '56px' } }, t('colSession')),
             )),
             h('tbody', null,
               records.flatMap(instance => {
                 const open = openInstance === instance.id
                 const outputs = outputsOf(instance.outputs)
                 const sid = instance.session_id
-                const canOpenFile = sid !== null && onOpenFile !== undefined
+                const openFile = onOpenFile
+                const openSession = onOpenSession
+                const canOpenFile = sid !== null && openFile !== undefined
+                const canOpenSession = sid !== null && openSession !== undefined
+                // 时长 = 结束 − **实际开始**（未派发回退计划时刻；在跑 / 未回执 ⇒ NaN ⇒ '-'）。
                 const durMs = instance.finished_at === null
                   ? Number.NaN
-                  : Date.parse(instance.finished_at) - Date.parse(instance.scheduled_at)
+                  : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at)
                 const mainRow = h('tr', {
                   key: instance.id,
                   style: { cursor: 'pointer', background: open ? 'var(--tdt-surface-2)' : 'transparent' },
                   onClick: () => { setOpenInstance(open ? null : instance.id) },
                 },
-                  // ① 状态：明显 icon（绿勾=成功 / 红叉=失败·未执行 / 转圈=执行中 / 空心=待执行）+ 通用短名。
+                  // ① 状态图标 + 通用短名。
                   h('td', { style: miniCellStyle },
                     h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
                       h(StatusDot, { status: instance.status }),
@@ -992,39 +1002,53 @@ function TaskExpandPanel(props: {
                       }, statusTextOf(instance.status, t)),
                     ),
                   ),
-                  // ② 产出：引用式编号圆点（1/2/3，点了直接弹文件预览）；>8 收「+N」，全量在展开里逐条列。
-                  //    会话不显示 id —— 只留一个图标链接（用户 2026-10-02），点了弹会话弹窗。
-                  h('td', { style: miniCellWrapStyle },
-                    h('span', { style: { display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' } },
-                      outputs.length === 0
-                        ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '—')
-                        : outputs.slice(0, 8).map((output, index) => h('button', {
+                  // ② 计划执行：YYMMDD HH:mm（完整时刻进 hover）。
+                  h('td', { style: miniCellStyle },
+                    h('span', { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))),
+                  // ③ 实际开始：HH:mm:ss（未派发 ⇒ '-'）。
+                  h('td', { style: miniCellStyle },
+                    h('span', { title: instance.dispatched_at === null ? undefined : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))),
+                  // ④ 执行时长：H:MM:SS（有小时）/ MM:SS。
+                  h('td', { style: miniCellStyle }, formatDurationHms(durMs)),
+                  // ⑤ 产出物：官方文件类型图标 ≤3 个；>3 收「…」（点开会话看完整）；无产出 ⇒ 该格空（压缩）。
+                  h('td', { style: miniCellStyle },
+                    outputs.length === 0
+                      ? null
+                      : h('span', { style: outputCellStyle },
+                        outputs.slice(0, 3).map(output => h('button', {
                           key: output, type: 'button', title: output,
-                          style: chipStyleOf(canOpenFile),
+                          style: { ...plainIconBtnStyle, cursor: canOpenFile ? 'pointer' : 'default' },
                           onClick: (event: { stopPropagation(): void }) => {
                             event.stopPropagation()
-                            if (canOpenFile && sid !== null) onOpenFile(sid, output)
+                            if (canOpenFile && openFile !== undefined && sid !== null) openFile(sid, output)
                           },
-                        }, String(index + 1))),
-                      outputs.length > 8 ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, `+${outputs.length - 8}`) : null,
-                      sid !== null && onOpenSession !== undefined
-                        ? h('button', {
-                          type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
-                          style: chipStyleOf(true),
-                          onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenSession(sid, row.title) },
-                        }, '↗')
-                        : null,
-                    ),
+                        }, h(FileTypeIcon, { path: output, size: 16 }))),
+                        outputs.length > 3
+                          ? h('button', {
+                            type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
+                            style: { ...plainIconBtnStyle, width: 'auto', fontSize: 'var(--tdt-font-md)' },
+                            onClick: (event: { stopPropagation(): void }) => {
+                              event.stopPropagation()
+                              if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid, row.title)
+                            },
+                          }, '…')
+                          : null,
+                      ),
                   ),
-                  // ③ 时长 = 结束 − 计划（在跑 / 未回执 ⇒ '—'，状态列的转圈已说明在跑）。
-                  h('td', { style: miniCellStyle }, formatDuration(durMs, tt)),
-                  // ④ 计划时刻：两位月日时分（计划本来就没有「秒」），完整时刻进 hover。
+                  // ⑥ 会话记录：会话图标（点击打开会话）。
                   h('td', { style: miniCellStyle },
-                    h('span', { title: formatStamp(instance.scheduled_at) }, formatShortStamp(instance.scheduled_at))),
+                    canOpenSession && openSession !== undefined && sid !== null
+                      ? h('button', {
+                        type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
+                        style: plainIconBtnStyle,
+                        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title) },
+                      }, h(IconNewChatOutlineRegular, { size: 16 }))
+                      : null,
+                  ),
                 )
                 const detailRow = open
                   ? h('tr', { key: `${instance.id}-detail` },
-                    h('td', { colSpan: 4, style: miniCellWrapStyle },
+                    h('td', { colSpan: 6, style: miniCellWrapStyle },
                       // 详情小字段行：token 走 K/M 大众格式（用户 2026-10-02：不占一级空间）。
                       h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', marginBottom: '6px' } },
                         h('span', null, `${t('colAttempt')}：${instance.attempt}`),
@@ -1083,24 +1107,21 @@ function TaskExpandPanel(props: {
         ),
   )
 
-  const renderLogs = (): ReturnType<typeof h> => h('div', null,
-    // 过滤行在滚动区**外**（与执行记录面板同口径）。
+  const renderLogs = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
+    // 过滤行固定在定高盒外（与执行记录面板同口径）：关键字 + **分钟级**时间范围 + 条数。
     h('div', { style: filterRowStyle },
       h(TdtInput, {
         value: logKeyword,
         onChange: setLogKeyword,
         placeholder: t('cardKeyword'),
-        // 高度走默认 lg(=32)，与同排时间框同档（用户 2026-10-01 口径：过滤行内控统一同高）。
+        size: 'md',
         style: { width: '140px' },
       }),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
-        t('cardFrom'),
-        h(DateField, { value: logFrom, onChange: (next: string) => { setLogFrom(next) }, placeholder: t('cardFrom'), ariaLabel: t('cardFrom'), labels: calendarLabels, width: 120 }),
-      ),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
-        t('cardTo'),
-        h(DateField, { value: logTo, onChange: (next: string) => { setLogTo(next) }, placeholder: t('cardTo'), ariaLabel: t('cardTo'), labels: calendarLabels, width: 120 }),
-      ),
+      h(TimeRange, {
+        value: logRange, onChange: setLogRange,
+        labels: timeRangeLabels, calendarLabels, timeLabels,
+        precision: 'minute', size: 'md',
+      }),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
         t('cardLogLimit'),
         h(SelectField, {
@@ -1110,31 +1131,32 @@ function TaskExpandPanel(props: {
           placeholder: String(logLimit),
           emptyLabel: t('editorNoOptions'),
           ariaLabel: t('cardLogLimit'),
-          // 高度走默认 lg(=32)，与同排时间框同档。
+          size: 'md',
           width: 70,
         }),
       ),
       logLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       logError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${logError}`) : null,
     ),
-    logs === null
-      ? null
-      : logs.length === 0
-        ? h('p', { style: faintStyle }, t('cardLogsEmpty'))
-        : h('div', { style: panelScrollStyle },
-          h('div', { style: logBoxStyle },
+    h('div', { style: panelScrollFillStyle },
+      logs === null
+        ? null
+        : logs.length === 0
+          ? h('p', { style: faintStyle }, t('cardLogsEmpty'))
+          : h('div', { style: logBoxStyle },
             logs.map(row => h('div', { key: row.seq },
-            h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(row.ts)} `),
-            h('span', {
-              style: {
-                color: row.level === 'error' ? 'var(--tdt-danger)' : row.level === 'warn' ? 'var(--tdt-accent)' : 'var(--tdt-fg-3)',
-                fontWeight: row.level === 'error' ? 600 : 400,
-              },
-            }, `[${row.level}]`),
-            ' ',
-            h('span', { style: { color: 'var(--tdt-accent)' } }, `${row.kind}: `),
-            h('span', null, row.message),
-          )))),
+              h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(row.ts)} `),
+              h('span', {
+                style: {
+                  color: row.level === 'error' ? 'var(--tdt-danger)' : row.level === 'warn' ? 'var(--tdt-accent)' : 'var(--tdt-fg-3)',
+                  fontWeight: row.level === 'error' ? 600 : 400,
+                },
+              }, `[${row.level}]`),
+              ' ',
+              h('span', { style: { color: 'var(--tdt-accent)' } }, `${row.kind}: `),
+              h('span', null, row.message),
+            ))),
+    ),
   )
 
   /** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */

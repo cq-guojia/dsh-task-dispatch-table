@@ -160,7 +160,9 @@ export type LocaleKey =
   // —— 实例状态通用短名（status-text.ts 单源；zh：待执行/已派发/执行中/成功/失败/未执行/未知）——
   | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
   // —— 执行记录行（用户 2026-10-02 示意改版）：时长列 / 派发·结束时刻 / 时长句式 ——
-  | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt'
+  | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt' | 'colPlanned' | 'colActualStart'
+  // —— 时间范围控件（ui/TimeRange，全站复用）：预设档 + 清除 ——
+  | 'trPreset' | 'trClear' | 'trToday' | 'trYesterday' | 'trThisWeek' | 'trLastWeek' | 'trThisMonth' | 'trLastMonth'
   | 'durSec' | 'durMinSec' | 'durHourMin' | 'durDayHour'
   | 'schedCustom'
   // —— 插件设置页（plugins.bundle.config 详情页表单）——
@@ -707,6 +709,16 @@ export const zh: Record<LocaleKey, string> = {
   colDuration: '时长',
   colDispatchedAt: '派发于',
   colFinishedAt: '结束于',
+  colPlanned: '计划执行',
+  colActualStart: '实际开始',
+  trPreset: '预设',
+  trClear: '清除',
+  trToday: '今天',
+  trYesterday: '昨天',
+  trThisWeek: '本周',
+  trLastWeek: '上周',
+  trThisMonth: '本月',
+  trLastMonth: '上个月',
   durSec: '{n} 秒',
   durMinSec: '{m} 分 {s} 秒',
   durHourMin: '{h} 小时 {m} 分',
@@ -1256,6 +1268,16 @@ export const en: Record<LocaleKey, string> = {
   colDuration: 'Duration',
   colDispatchedAt: 'Dispatched',
   colFinishedAt: 'Finished',
+  colPlanned: 'Scheduled',
+  colActualStart: 'Started',
+  trPreset: 'Preset',
+  trClear: 'Clear',
+  trToday: 'Today',
+  trYesterday: 'Yesterday',
+  trThisWeek: 'This week',
+  trLastWeek: 'Last week',
+  trThisMonth: 'This month',
+  trLastMonth: 'Last month',
   durSec: '{n}s',
   durMinSec: '{m}m {s}s',
   durHourMin: '{h}h {m}m',

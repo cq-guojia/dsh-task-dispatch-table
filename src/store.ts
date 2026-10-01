@@ -854,7 +854,9 @@ export class TaskStore {
       params.push(q.fromTs)
     }
     if (q.toTs !== undefined) {
-      where.push('scheduled_at <= ?')
+      // 半开区间：`< to`（to = 结束日的**次日 00:00**，由客户端 ui/time-range.rangeToQuery 归一）。
+      // 不用 `<=` + 23:59:59.999 的补丁式含尾（见 design/features/task-expand-panels.md §3.11）。
+      where.push('scheduled_at < ?')
       params.push(q.toTs)
     }
     const cursor = q.cursor === undefined ? null : decodeCursor(q.cursor)
@@ -903,7 +905,8 @@ export class TaskStore {
       params.push(q.fromTs)
     }
     if (q.toTs !== undefined) {
-      where.push('ts <= ?')
+      // 半开区间：`< to`（与执行记录同口径，见 ui/time-range.rangeToQuery）。
+      where.push('ts < ?')
       params.push(q.toTs)
     }
     const cursor = q.cursor === undefined ? null : decodeCursor(q.cursor)

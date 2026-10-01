@@ -93,7 +93,10 @@ async function unwrap<T>(res: Response, what: string): Promise<T> {
 
 /** 按任务 / 工作区检索执行记录（服务端 `store.listInstancesByQuery`，排序 scheduled_at DESC）。 */
 export async function fetchInstances(params: InstancesParams): Promise<{ rows: InstanceRow[]; nextCursor: string | null }> {
-  const res = await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({ ...params })}`)
+  // 线上参数名 = 单数 `status`（服务端 src/index.ts 契约）；本地字段叫 statuses ⇒ 出口处改名。
+  // （2026-10-02 修 bug：此前直接把 `statuses` 发出去，服务端读的是 `status` ⇒ 状态过滤恒等于「全部」。）
+  const { statuses, ...rest } = params
+  const res = await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({ ...rest, status: statuses })}`)
   const body = await unwrap<{ rows?: unknown; nextCursor?: unknown }>(res, '执行记录读取失败')
   if (!Array.isArray(body.rows)) throw new Error('执行记录读取失败：rows 形状不符')
   return { rows: body.rows as InstanceRow[], nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null }
@@ -101,7 +104,9 @@ export async function fetchInstances(params: InstancesParams): Promise<{ rows: I
 
 /** 按任务 / 工作区检索诊断日志（服务端 `store.listLogsByQuery`，排序 ts DESC）。 */
 export async function fetchLogs(params: LogsParams): Promise<{ rows: LogRow[]; nextCursor: string | null }> {
-  const res = await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({ ...params })}`)
+  // 线上参数名 = 单数 `level`（服务端契约）；本地字段叫 levels ⇒ 出口处改名（同 instances 的 status 口径）。
+  const { levels, ...rest } = params
+  const res = await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({ ...rest, level: levels })}`)
   const body = await unwrap<{ rows?: unknown; nextCursor?: unknown }>(res, '日志读取失败')
   if (!Array.isArray(body.rows)) throw new Error('日志读取失败：rows 形状不符')
   return { rows: body.rows as LogRow[], nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null }

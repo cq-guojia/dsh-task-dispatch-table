@@ -34,6 +34,7 @@
 | 下拉 | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ 全站唯一（原生 `<select>` 已收编） |
 | 开关 | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（皮肤在 `ui/controls-css.ts`） | `h('span', { className: 'dsh-tdt-switch' }, h(Switch, { checked, onChange }))` | ✅ 全站共用一个包装类（选中 success 绿只此一处） |
 | 日期 / 时间 | `ui/DateTime.tsx`（`DateField` / `TimeField`） | `h(DateField, { value: d, onChange, size: 'lg' })` | ✅ 全站唯一（自绘日历 + 时分列） |
+| 时间范围筛选 | `ui/TimeRange.tsx`（预设 + 起止一体） | `h(TimeRange, { value, onChange, labels, calendarLabels, timeLabels, precision: 'minute', size: 'md' })` | ✅ 全站唯一（执行记录 / 日志 / 未来总查询页共用；`size` **必传**、`precision` 选 `day`/`minute`；边界归一在 `ui/time-range.ts` 半开区间） |
 | Toast | `toast-css.ts`（`FloatingToast`） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一；⚠️ `index.ts` 仍有一处手搓中性 Toast（见 §三「待抽象」） |
 | 卡 / 浮层外壳 | 暂无（散在各业务 CSS：`task-editor-css` 的 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel`、`archive-session-css` 的 `.dsh-tdt-sv-panel`） | — | ⏳ **未抽象**（同构 7 处，见 §三「待抽象」） |
 

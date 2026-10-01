@@ -34,7 +34,7 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		//#region src/client/format.ts
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
-		function pad2$2(value) {
+		function pad2$3(value) {
 			return String(value).padStart(2, "0");
 		}
 		/**
@@ -45,15 +45,35 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return opts?.fallback ?? iso;
 			const d = new Date(ms);
-			const base = `${d.getFullYear()}-${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())} ${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
-			return opts?.seconds === true ? `${base}:${pad2$2(d.getSeconds())}` : base;
+			const base = `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			return opts?.seconds === true ? `${base}:${pad2$3(d.getSeconds())}` : base;
 		}
-		/** 短时刻（用户 2026-10-02：计划时刻本来就没有「秒」，月日时分各两位即可）：`MM-DD HH:mm`。 */
-		function formatShortStamp(iso) {
+		/** 计划执行列（用户 2026-10-02 第四轮）：`YYMMDD HH:mm`（两位年 + 两位月日 + 时分）。 */
+		function formatPlanStamp(iso) {
 			const ms = Date.parse(iso);
-			if (Number.isNaN(ms)) return "—";
+			if (Number.isNaN(ms)) return "-";
 			const d = new Date(ms);
-			return `${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())} ${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
+			return `${pad2$3(d.getFullYear() % 100)}${pad2$3(d.getMonth() + 1)}${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+		}
+		/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
+		function formatClock(iso) {
+			if (iso === null) return "-";
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return "-";
+			const d = new Date(ms);
+			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}:${pad2$3(d.getSeconds())}`;
+		}
+		/**
+		* 执行时长列（用户 2026-10-02 第四轮）：有小时 ⇒ `H:MM:SS`（如 `1:15:30`）；
+		* 不足 1 小时 ⇒ `MM:SS`（**分、秒一律两位补零**，如 `05:30` / `00:30`）。NaN / 负 ⇒ `-`。
+		*/
+		function formatDurationHms(ms) {
+			if (!Number.isFinite(ms) || ms < 0) return "-";
+			const totalSec = Math.round(ms / 1e3);
+			const h = Math.floor(totalSec / 3600);
+			const m = Math.floor(totalSec % 3600 / 60);
+			const s = totalSec % 60;
+			return h > 0 ? `${h}:${pad2$3(m)}:${pad2$3(s)}` : `${pad2$3(m)}:${pad2$3(s)}`;
 		}
 		/** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
 		function formatTokenCount(n) {
@@ -622,6 +642,16 @@ window.__ModuleLoader__.load({
 			colDuration: "时长",
 			colDispatchedAt: "派发于",
 			colFinishedAt: "结束于",
+			colPlanned: "计划执行",
+			colActualStart: "实际开始",
+			trPreset: "预设",
+			trClear: "清除",
+			trToday: "今天",
+			trYesterday: "昨天",
+			trThisWeek: "本周",
+			trLastWeek: "上周",
+			trThisMonth: "本月",
+			trLastMonth: "上个月",
 			durSec: "{n} 秒",
 			durMinSec: "{m} 分 {s} 秒",
 			durHourMin: "{h} 小时 {m} 分",
@@ -1158,6 +1188,16 @@ window.__ModuleLoader__.load({
 			colDuration: "Duration",
 			colDispatchedAt: "Dispatched",
 			colFinishedAt: "Finished",
+			colPlanned: "Scheduled",
+			colActualStart: "Started",
+			trPreset: "Preset",
+			trClear: "Clear",
+			trToday: "Today",
+			trYesterday: "Yesterday",
+			trThisWeek: "This week",
+			trLastWeek: "Last week",
+			trThisMonth: "This month",
+			trLastMonth: "Last month",
 			durSec: "{n}s",
 			durMinSec: "{m}m {s}s",
 			durHourMin: "{h}h {m}m",
@@ -2066,7 +2106,7 @@ body[data-ds-dark-theme]{
 		* 颜色 / 尺寸 / 圆角 / 影全走 `--tdt-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
 		* 浮层定位 / 点外关闭走官方 `useAnchoredPosition` + `useDismissOnOutsidePointer`。
 		*/
-		function pad2$1(n) {
+		function pad2$2(n) {
 			return String(n).padStart(2, "0");
 		}
 		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
@@ -2080,17 +2120,17 @@ body[data-ds-dark-theme]{
 			};
 		}
 		function toIsoDate(y, m, d) {
-			return `${y}-${pad2$1(m)}-${pad2$1(d)}`;
+			return `${y}-${pad2$2(m)}-${pad2$2(d)}`;
 		}
 		/** 本地今天（真实时间，非占位）。 */
-		function todayIso$1() {
+		function todayIso$2() {
 			const now = /* @__PURE__ */ new Date();
 			return toIsoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
 		}
 		function buildCells(y, m) {
 			const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
 			const start = new Date(y, m - 1, 1 - offset);
-			const today = todayIso$1();
+			const today = todayIso$2();
 			const cells = [];
 			for (let i = 0; i < 42; i++) {
 				const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
@@ -2225,13 +2265,13 @@ body[data-ds-dark-theme]{
 				size: "sm",
 				style: { width: "100%" },
 				onClick: () => {
-					props.onChange(todayIso$1());
+					props.onChange(todayIso$2());
 					setOpen(false);
 				}
 			}, props.labels.today))), document.body) : null);
 		}
-		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$1(i));
-		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$1(i));
+		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$2(i));
+		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$2(i));
 		/** 时分列：`HH:mm`。 */
 		function TimeField(props) {
 			ensureControlsStyle();
@@ -2322,7 +2362,7 @@ body[data-ds-dark-theme]{
 				size: "sm",
 				onClick: () => {
 					const now = /* @__PURE__ */ new Date();
-					setDraft(`${pad2$1(now.getHours())}:${pad2$1(now.getMinutes())}`);
+					setDraft(`${pad2$2(now.getHours())}:${pad2$2(now.getMinutes())}`);
 				}
 			}, props.labels.now), (0, react.createElement)(Button$2, {
 				variant: "primary",
@@ -2332,6 +2372,250 @@ body[data-ds-dark-theme]{
 					setOpen(false);
 				}
 			}, props.labels.confirm))), document.body) : null);
+		}
+		//#endregion
+		//#region src/client/ui/time-range.ts
+		/** 全部预设档（缺省显示顺序）。 */
+		const ALL_TIME_PRESETS = [
+			"today",
+			"yesterday",
+			"thisWeek",
+			"lastWeek",
+			"thisMonth",
+			"lastMonth"
+		];
+		function pad2$1(n) {
+			return String(n).padStart(2, "0");
+		}
+		function ymd(d) {
+			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
+		}
+		function ymdhm(d) {
+			return `${ymd(d)} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+		}
+		/** 当天 00:00（本机时区）。 */
+		function startOfDay(d) {
+			return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+		}
+		/** 周一为一周之始的 00:00。 */
+		function startOfWeek(d) {
+			const s = startOfDay(d);
+			const offset = (s.getDay() + 6) % 7;
+			s.setDate(s.getDate() - offset);
+			return s;
+		}
+		/** 值串 → 年月日时分；不合法返回 null。 */
+		function parseValue(value) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(value);
+			if (match === null) return null;
+			return {
+				y: Number(match[1]),
+				m: Number(match[2]),
+				d: Number(match[3]),
+				hh: match[4] === void 0 ? 0 : Number(match[4]),
+				mm: match[5] === void 0 ? 0 : Number(match[5])
+			};
+		}
+		/** 预设档 → 起止（本机时区、真实当前时间，非占位）。 */
+		function presetRange(id, precision, now = /* @__PURE__ */ new Date()) {
+			const withTime = precision === "minute";
+			const fmt = (d) => withTime ? ymdhm(d) : ymd(d);
+			const endOfDay = (d) => `${ymd(d)} 23:59`;
+			const start = startOfDay(now);
+			switch (id) {
+				case "today": return {
+					from: fmt(start),
+					to: withTime ? ymdhm(now) : ymd(now)
+				};
+				case "yesterday": {
+					const y = new Date(start);
+					y.setDate(y.getDate() - 1);
+					return {
+						from: fmt(y),
+						to: withTime ? endOfDay(y) : ymd(y)
+					};
+				}
+				case "thisWeek": return {
+					from: fmt(startOfWeek(now)),
+					to: withTime ? ymdhm(now) : ymd(now)
+				};
+				case "lastWeek": {
+					const mon = startOfWeek(now);
+					mon.setDate(mon.getDate() - 7);
+					const sun = new Date(mon);
+					sun.setDate(sun.getDate() + 6);
+					return {
+						from: fmt(mon),
+						to: withTime ? endOfDay(sun) : ymd(sun)
+					};
+				}
+				case "thisMonth": return {
+					from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)),
+					to: withTime ? ymdhm(now) : ymd(now)
+				};
+				case "lastMonth": {
+					const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+					const last = new Date(now.getFullYear(), now.getMonth(), 0);
+					return {
+						from: fmt(first),
+						to: withTime ? endOfDay(last) : ymd(last)
+					};
+				}
+			}
+		}
+		/**
+		* 受控值 → 查询用**半开区间** `[from, to)`：
+		* - day：from = 当日 00:00，to = 结束日的**次日 00:00**；
+		* - minute：from = 当时分 :00，to = 结束分的**下一分钟 :00**。
+		* 空串 / 不合法 ⇒ 该端 undefined（不过滤）。
+		*/
+		function rangeToQuery(value, precision) {
+			const fromParsed = value.from === "" ? null : parseValue(value.from);
+			const toParsed = value.to === "" ? null : parseValue(value.to);
+			let fromTs;
+			if (fromParsed !== null) {
+				const d = precision === "minute" ? new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, fromParsed.hh, fromParsed.mm, 0, 0) : new Date(fromParsed.y, fromParsed.m - 1, fromParsed.d, 0, 0, 0, 0);
+				fromTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+			}
+			let toTs;
+			if (toParsed !== null) {
+				const d = precision === "minute" ? new Date(toParsed.y, toParsed.m - 1, toParsed.d, toParsed.hh, toParsed.mm + 1, 0, 0) : new Date(toParsed.y, toParsed.m - 1, toParsed.d + 1, 0, 0, 0, 0);
+				toTs = Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
+			}
+			return {
+				fromTs,
+				toTs
+			};
+		}
+		//#endregion
+		//#region src/client/ui/TimeRange.tsx
+		/**
+		* 时间范围筛选控件 —— **全站唯一实现**（执行记录 / 日志 / 未来总查询页复用）。
+		*
+		* 形态（用户 2026-10-02 第四轮）：把「预设档 + 开始框 + 结束框」**包成一件事**，调用方一行渲染。
+		* - `precision`：`day`（只到天）/ `minute`（日期 + 时:分，日志定位到分钟用）；
+		* - `size`：**必传**高度档（各使用处高度不一定一样，由调用方给）；
+		* - 边界归一（半开区间）在 `time-range.ts`，控件本身只产出展示值，不算边界。
+		*
+		* 颜色 / 尺寸 / 圆角全走 `--tdt-*`；官方件只有 `Menu`（预设下拉）与图标。
+		*/
+		const labelStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "4px",
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-3)",
+			flex: "none"
+		};
+		/** 预设下拉锚点按钮（与任务列表顶部下拉同款外壳；高度吃 `--tdt-control-h-*`）。 */
+		function anchorStyle(size) {
+			return {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "6px",
+				boxSizing: "border-box",
+				height: `var(--tdt-control-h-${size})`,
+				padding: "0 10px",
+				borderRadius: "var(--tdt-radius-sm)",
+				border: `1px solid var(--tdt-border)`,
+				background: "var(--tdt-surface-1)",
+				color: "var(--tdt-fg)",
+				fontFamily: "inherit",
+				fontSize: "var(--tdt-font-sm)",
+				cursor: "pointer"
+			};
+		}
+		/** 本机今天（`YYYY-MM-DD`）—— 分钟档里只选了时刻、没选日期时补的默认日期。 */
+		function todayIso$1() {
+			const d = /* @__PURE__ */ new Date();
+			return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+		}
+		function TimeRange(props) {
+			const { value, onChange, labels, calendarLabels, timeLabels } = props;
+			const precision = props.precision ?? "day";
+			const size = props.size ?? "md";
+			const presets = props.presets ?? ALL_TIME_PRESETS;
+			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
+			const withTime = precision === "minute";
+			const merge = (patch) => {
+				onChange({
+					...value,
+					...patch
+				});
+			};
+			const dateOf = (v) => withTime ? v.slice(0, 10) : v;
+			const timeOf = (v) => withTime && v.length >= 16 ? v.slice(11, 16) : "";
+			/** 日期 + 时刻 → 值串；日期空 ⇒ 值串为空（不产半截值）。 */
+			const join = (date, time) => {
+				if (date === "") return "";
+				return withTime ? `${date} ${time === "" ? "00:00" : time}` : date;
+			};
+			const endFields = (which) => {
+				const raw = value[which];
+				const date = dateOf(raw);
+				const time = timeOf(raw);
+				return (0, react.createElement)("label", { style: labelStyle }, which === "from" ? labels.from : labels.to, (0, react.createElement)(DateField, {
+					value: date,
+					onChange: (next) => {
+						merge({ [which]: join(next, time) });
+					},
+					placeholder: which === "from" ? labels.from : labels.to,
+					ariaLabel: which === "from" ? labels.from : labels.to,
+					labels: calendarLabels,
+					size,
+					disabled: props.disabled
+				}), withTime ? (0, react.createElement)(TimeField, {
+					value: time,
+					onChange: (next) => {
+						merge({ [which]: join(date === "" ? todayIso$1() : date, next) });
+					},
+					placeholder: "HH:mm",
+					ariaLabel: which === "from" ? labels.from : labels.to,
+					labels: timeLabels,
+					size,
+					disabled: props.disabled,
+					width: 84
+				}) : null);
+			};
+			return (0, react.createElement)("div", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "6px",
+				flexWrap: "wrap"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open: menuOpen,
+				align: "start",
+				anchor: (0, react.createElement)("button", {
+					type: "button",
+					style: anchorStyle(size),
+					title: labels.preset,
+					"aria-label": labels.preset,
+					disabled: props.disabled,
+					onClick: () => {
+						setMenuOpen((open) => !open);
+					}
+				}, labels.preset, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })),
+				items: presets.map((id) => ({
+					id,
+					label: labels.presets[id]
+				})),
+				onSelect: (id) => {
+					onChange(presetRange(id, precision));
+					setMenuOpen(false);
+				},
+				onClose: () => {
+					setMenuOpen(false);
+				}
+			}), endFields("from"), endFields("to"), value.from !== "" || value.to !== "" ? (0, react.createElement)(Button$2, {
+				variant: "ghost",
+				size,
+				onClick: () => {
+					onChange({
+						from: "",
+						to: ""
+					});
+				}
+			}, labels.clear) : null);
 		}
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -2351,7 +2635,7 @@ body[data-ds-dark-theme]{
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
    （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;user-select:none;}
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
@@ -6434,9 +6718,21 @@ body[data-ds-dark-theme]{
 				nextYear: t("editorNextYear"),
 				monthTitle: (year, month) => tt("editorMonthTitle", {
 					y: String(year),
-					m: pad2$2(month)
+					m: pad2$3(month)
 				}),
 				weekdays: t("editorWeekdayShorts").split("|")
+			};
+		}
+		/**
+		* 时分文案**单源**：`TimeField` 的所有调用方（任务编辑器 / 时间范围控件）共用这一份，
+		* 不再各处各拼「小时 / 分钟 / 现在 / 确定」。
+		*/
+		function timeLabelsOf(t) {
+			return {
+				hour: t("editorHour"),
+				minute: t("editorMinute"),
+				now: t("editorNow"),
+				confirm: t("editorConfirm")
 			};
 		}
 		/**
@@ -6482,13 +6778,15 @@ body[data-ds-dark-theme]{
 		//#region src/client/task-editor-css.ts
 		const TASK_EDITOR_CSS = `
 /* 分栏：**占布局的一列**（U21，2026-10-01）——与 U11 预览 dock（archive-session-css.ts 的
-   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，sticky + 100vh 让它在页面滚动时
+   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，   sticky + 100vh 让它在页面滚动时
    保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
    旧的遮罩层已废：用户要求「别盖住主窗口」。
-   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 560 = 浮层时代的弹窗宽度。 */
-.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,560px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
-/* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。 */
-.dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;background:0 0;}
+   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 500（用户 2026-10-02 收窄）。 */
+.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,500px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
+/* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
+   user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
+   见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
+.dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;user-select:none;background:0 0;}
 .dsh-tdt-ed-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
@@ -6627,7 +6925,7 @@ body[data-ds-dark-theme]{
 			if (parts.length !== 5) return "09:00";
 			const [minute, hour] = parts;
 			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
-			return `${pad2$2(hour)}:${pad2$2(minute)}`;
+			return `${pad2$3(hour)}:${pad2$3(minute)}`;
 		}
 		/**
 		* cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
@@ -38548,7 +38846,7 @@ body[data-ds-dark-theme]{
 		/** 本地今天（真实时间）。 */
 		function todayIso() {
 			const now = /* @__PURE__ */ new Date();
-			return `${now.getFullYear()}-${pad2$2(now.getMonth() + 1)}-${pad2$2(now.getDate())}`;
+			return `${now.getFullYear()}-${pad2$3(now.getMonth() + 1)}-${pad2$3(now.getDate())}`;
 		}
 		/**
 		* 表单里的「日期 + 时刻」是否**已经过去**（缺值 / 解析不出也算过去 ⇒ 走智能默认）。
@@ -38569,8 +38867,8 @@ body[data-ds-dark-theme]{
 			const target = new Date(now.getTime() + 36e5);
 			if (target.getMinutes() !== 0 || target.getSeconds() !== 0 || target.getMilliseconds() !== 0) target.setHours(target.getHours() + 1, 0, 0, 0);
 			return {
-				date: `${target.getFullYear()}-${pad2$2(target.getMonth() + 1)}-${pad2$2(target.getDate())}`,
-				time: `${pad2$2(target.getHours())}:${pad2$2(target.getMinutes())}`
+				date: `${target.getFullYear()}-${pad2$3(target.getMonth() + 1)}-${pad2$3(target.getDate())}`,
+				time: `${pad2$3(target.getHours())}:${pad2$3(target.getMinutes())}`
 			};
 		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
@@ -39110,13 +39408,13 @@ body[data-ds-dark-theme]{
 		}
 		/** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 		const EDITOR_WIDTH_KEY = "dsh-tdt-editor-width";
-		/** 最小宽度 = 浮层时代那个弹窗的宽度（用户 2026-10-01：保持现在的弹窗宽度作为最小宽度）。 */
-		const EDITOR_WIDTH_MIN = 560;
-		const EDITOR_WIDTH_DEFAULT = 560;
+		/** 最小宽度（用户 2026-10-02：560 偏宽，改 500 —— 仍是「浮层时代弹窗宽度」这个口径的收窄版）。 */
+		const EDITOR_WIDTH_MIN = 500;
+		const EDITOR_WIDTH_DEFAULT = 500;
 		/**
 		* 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
 		* 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
-		* 下限保住 560，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
+		* 下限保住 500，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
 		* @param value - 目标宽度。
 		* @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
 		*/
@@ -39135,12 +39433,20 @@ body[data-ds-dark-theme]{
 				return EDITOR_WIDTH_DEFAULT;
 			}
 		}
-		/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认 560）。 */
+		/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认宽度）。 */
 		function writeEditorWidth(value) {
 			try {
 				window.localStorage.setItem(EDITOR_WIDTH_KEY, String(value));
 			} catch {}
 		}
+		/**
+		* 提示词卡底部三下拉的**定宽**（用户 2026-10-02）：
+		* 以「权限」为基准 120px，工作区 / 模型 = 1.5 倍 = 180px。
+		* 不再按选项文字自适应宽度——那样换一个选项宽度就变一下（先各自撑到上限、三个都长才开始挤），
+		* 观感一直在跳；用户很清楚自己选的工作区和模型，显示不下就省略号（MarqueeText 悬停可读全名）。
+		*/
+		const PROMPT_SELECT_BASE = "120px";
+		const PROMPT_SELECT_WIDE = "180px";
 		/** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
 		const formatVersionTime = (iso) => formatDateTime(iso);
 		/**
@@ -39725,11 +40031,22 @@ body[data-ds-dark-theme]{
 			/**
 			* 左缘拖拽调宽（U21：与预览 dock 同一套手势）：拖动期间**只改 CSS 变量**
 			* `--dsh-tdt-editor-w`（不重渲染整页），松手才回调父 state + 落 localStorage。
+			*
+			* 拖拽为什么会「选中文字」（用户 2026-10-02）：pointerdown 的默认动作会开一次**文本选区**，
+			* 指针扫过主窗口的文字时选区跟着扩 ⇒ 看着像在拖选。两道闸：
+			*   ① `preventDefault()`：掐掉 pointerdown 的默认动作（连带后面的兼容 mousedown），选区压根不起；
+			*   ② 拖动期间给 `document.body` 上 `user-select:none`（window pointerup 恢复）：即使有别处
+			*      已存在的选区，拖动过程中也不会再变，也不会刷出高亮。
 			*/
 			const startResize = (0, react.useCallback)((start) => {
+				start.preventDefault?.();
 				const startX = start.clientX;
 				const startWidth = width;
 				const next = (clientX) => clampEditorWidth(startWidth + (startX - clientX), reserved);
+				const body = document.body;
+				const prevUserSelect = body.style.userSelect;
+				body.style.userSelect = "none";
+				window.getSelection()?.removeAllRanges();
 				const onMove = (event) => {
 					const root = document.getElementById("dsh-tdt-root");
 					if (root !== null) root.style.setProperty("--dsh-tdt-editor-w", `${next(event.clientX)}px`);
@@ -39737,6 +40054,7 @@ body[data-ds-dark-theme]{
 				const onUp = (event) => {
 					window.removeEventListener("pointermove", onMove);
 					window.removeEventListener("pointerup", onUp);
+					body.style.userSelect = prevUserSelect;
 					onWidthChange(next(event.clientX));
 				};
 				window.addEventListener("pointermove", onMove);
@@ -39858,7 +40176,7 @@ body[data-ds-dark-theme]{
 				ariaLabel: t("editorWorkspace"),
 				error: problemsByField("workspace"),
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
-				maxWidth: 200,
+				width: PROMPT_SELECT_WIDE,
 				marquee: true
 			}), (0, react.createElement)(SelectField, {
 				value: draft.permission,
@@ -39870,7 +40188,7 @@ body[data-ds-dark-theme]{
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorPermission"),
 				title: t("editorPermissionHint"),
-				width: "120px"
+				width: PROMPT_SELECT_BASE
 			}), (0, react.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react.createElement)(SelectField, {
 				value: draft.model,
 				options: models,
@@ -39880,7 +40198,7 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorModelPh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorModel"),
-				maxWidth: 200,
+				width: PROMPT_SELECT_WIDE,
 				align: "end"
 			})));
 			const fileInputRef = (0, react.useRef)(null);
@@ -40611,7 +40929,7 @@ body[data-ds-dark-theme]{
 				className: "dsh-tdt-ed-resizer",
 				title: t("previewResize"),
 				onPointerDown: (event) => {
-					startResize({ clientX: event.clientX });
+					startResize(event);
 				}
 			}), panelInner, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
 				t,
@@ -40715,7 +41033,11 @@ body[data-ds-dark-theme]{
 		}
 		/** 按任务 / 工作区检索执行记录（服务端 `store.listInstancesByQuery`，排序 scheduled_at DESC）。 */
 		async function fetchInstances(params) {
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({ ...params })}`), "执行记录读取失败");
+			const { statuses, ...rest } = params;
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({
+				...rest,
+				status: statuses
+			})}`), "执行记录读取失败");
 			if (!Array.isArray(body.rows)) throw new Error("执行记录读取失败：rows 形状不符");
 			return {
 				rows: body.rows,
@@ -40724,7 +41046,11 @@ body[data-ds-dark-theme]{
 		}
 		/** 按任务 / 工作区检索诊断日志（服务端 `store.listLogsByQuery`，排序 ts DESC）。 */
 		async function fetchLogs(params) {
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({ ...params })}`), "日志读取失败");
+			const { levels, ...rest } = params;
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({
+				...rest,
+				level: levels
+			})}`), "日志读取失败");
 			if (!Array.isArray(body.rows)) throw new Error("日志读取失败：rows 形状不符");
 			return {
 				rows: body.rows,
@@ -41029,7 +41355,7 @@ body[data-ds-dark-theme]{
 			const hours = Math.floor(total / 3600);
 			const minutes = Math.floor(total % 3600 / 60);
 			const seconds = total % 60;
-			return hours > 0 ? `${pad2$2(hours)}:${pad2$2(minutes)}:${pad2$2(seconds)}` : `${pad2$2(minutes)}:${pad2$2(seconds)}`;
+			return hours > 0 ? `${pad2$3(hours)}:${pad2$3(minutes)}:${pad2$3(seconds)}` : `${pad2$3(minutes)}:${pad2$3(seconds)}`;
 		}
 		const tickerListeners = /* @__PURE__ */ new Set();
 		let tickerTimer = null;
@@ -41077,13 +41403,13 @@ body[data-ds-dark-theme]{
 		function clockOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
+			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 		}
 		/** 「09 月 28 日」（本机时区；月 / 日补两位，用户 2026-09-30）。 */
 		function dateOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$2(d.getMonth() + 1)} 月 ${pad2$2(d.getDate())} 日`;
+			return `${pad2$3(d.getMonth() + 1)} 月 ${pad2$3(d.getDate())} 日`;
 		}
 		function useFlip(signature) {
 			const nodes = (0, react.useRef)(/* @__PURE__ */ new Map());
@@ -41343,16 +41669,23 @@ body[data-ds-dark-theme]{
 				alignItems: "flex-start"
 			} }, (0, react.createElement)("span", { style: infoLabelStyle }, props.label), (0, react.createElement)("span", { style: infoValueStyle }, props.value));
 		}
-		/** 内容区统一**定高**（用户 2026-10-02 真机：max-height 会让矮内容显矮、切 tab 高度蹦）——每个任务展开一律同高，内容多就内部滚。 */
-		const PANEL_MAX_H = 360;
+		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。 */
+		const panelBoxStyle = {
+			height: `360px`,
+			display: "flex",
+			flexDirection: "column",
+			minHeight: 0
+		};
+		/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
+		const panelScrollFillStyle = {
+			flex: "1 1 auto",
+			minHeight: 0,
+			overflowY: "auto"
+		};
 		const panelWrapStyle = {
 			marginTop: "10px",
 			borderTop: `1px dashed var(--tdt-border)`,
 			paddingTop: "10px"
-		};
-		const panelScrollStyle = {
-			height: `${PANEL_MAX_H}px`,
-			overflowY: "auto"
 		};
 		const panelBarStyle = {
 			marginTop: "10px",
@@ -41416,17 +41749,6 @@ body[data-ds-dark-theme]{
 			seconds: true,
 			fallback: "—"
 		});
-		/** 日期输入（YYYY-MM-DD）→ 当天起点 / 终点 ISO（本机时区；空 / 非法 ⇒ undefined = 不过滤）。 */
-		const dayStartIso = (date) => {
-			if (date === "") return void 0;
-			const d = /* @__PURE__ */ new Date(`${date}T00:00:00`);
-			return Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
-		};
-		const dayEndIso = (date) => {
-			if (date === "") return void 0;
-			const d = /* @__PURE__ */ new Date(`${date}T23:59:59.999`);
-			return Number.isNaN(d.getTime()) ? void 0 : d.toISOString();
-		};
 		/** 回执产出清单（决策 32③ 真值 JSON）→ 字符串数组；形状不符返回空（不猜）。 */
 		const outputsOf = (raw) => {
 			if (raw === null || raw === "") return [];
@@ -41457,26 +41779,30 @@ body[data-ds-dark-theme]{
 			failed: ["failed", "skipped"],
 			succeeded: ["succeeded"]
 		};
-		/** 产出引用小圆点（用户示意 1/2/3）：可点开文件时亮色，否则弱化不可点。 */
-		const chipStyleOf = (clickable) => ({
+		/** 产出物 / 会话列的裸图标按钮（无边框、无底色；用户 2026-10-02 第四轮：图标化）。 */
+		const plainIconBtnStyle = {
 			appearance: "none",
 			display: "inline-flex",
 			alignItems: "center",
 			justifyContent: "center",
-			width: "18px",
-			height: "18px",
+			width: "20px",
+			height: "20px",
 			padding: 0,
-			borderRadius: "50%",
-			flex: "none",
-			border: `1px solid var(--tdt-border)`,
-			background: "var(--tdt-surface-1)",
-			color: clickable ? "var(--tdt-accent)" : "var(--tdt-fg-2)",
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-sm)",
-			cursor: clickable ? "pointer" : "default",
+			border: "none",
+			background: "transparent",
+			color: "var(--tdt-fg-2)",
+			cursor: "pointer",
+			lineHeight: 0,
 			fontFamily: "inherit",
 			transition: transition$1
-		});
+		};
+		/** 产出物图标格（最多 3 个 +「…」更多）。 */
+		const outputCellStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "2px",
+			flexWrap: "nowrap"
+		};
 		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
 		const filterRowStyle = {
 			display: "flex",
@@ -41549,9 +41875,26 @@ body[data-ds-dark-theme]{
 			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props;
 			const [tab, setTab] = (0, react.useState)("info");
 			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
+			const timeLabels = (0, react.useMemo)(() => timeLabelsOf(t), [t]);
+			const timeRangeLabels = (0, react.useMemo)(() => ({
+				preset: t("trPreset"),
+				from: t("cardFrom"),
+				to: t("cardTo"),
+				clear: t("trClear"),
+				presets: {
+					today: t("trToday"),
+					yesterday: t("trYesterday"),
+					thisWeek: t("trThisWeek"),
+					lastWeek: t("trLastWeek"),
+					thisMonth: t("trThisMonth"),
+					lastMonth: t("trLastMonth")
+				}
+			}), [t]);
 			const [recStatus, setRecStatus] = (0, react.useState)("all");
-			const [recFrom, setRecFrom] = (0, react.useState)("");
-			const [recTo, setRecTo] = (0, react.useState)("");
+			const [recRange, setRecRange] = (0, react.useState)({
+				from: "",
+				to: ""
+			});
 			const [records, setRecords] = (0, react.useState)(null);
 			const [recLoading, setRecLoading] = (0, react.useState)(false);
 			const [recError, setRecError] = (0, react.useState)(null);
@@ -41560,8 +41903,10 @@ body[data-ds-dark-theme]{
 			const [eventsLoading, setEventsLoading] = (0, react.useState)(false);
 			const [eventsError, setEventsError] = (0, react.useState)(null);
 			const [logKeyword, setLogKeyword] = (0, react.useState)("");
-			const [logFrom, setLogFrom] = (0, react.useState)("");
-			const [logTo, setLogTo] = (0, react.useState)("");
+			const [logRange, setLogRange] = (0, react.useState)({
+				from: "",
+				to: ""
+			});
 			const [logLimit, setLogLimit] = (0, react.useState)(100);
 			const [logs, setLogs] = (0, react.useState)(null);
 			const [logLoading, setLogLoading] = (0, react.useState)(false);
@@ -41573,11 +41918,12 @@ body[data-ds-dark-theme]{
 				let alive = true;
 				setRecLoading(true);
 				setRecError(null);
+				const range = rangeToQuery(recRange, "day");
 				fetchInstances({
 					taskId: row.id,
 					statuses: recStatus === "all" ? void 0 : FILTER_BUCKETS[recStatus],
-					from: dayStartIso(recFrom),
-					to: dayEndIso(recTo),
+					from: range.fromTs,
+					to: range.toTs,
 					limit: 100
 				}).then(({ rows }) => {
 					if (!alive) return;
@@ -41596,8 +41942,7 @@ body[data-ds-dark-theme]{
 				tab,
 				row.id,
 				recStatus,
-				recFrom,
-				recTo
+				recRange
 			]);
 			(0, react.useEffect)(() => {
 				if (openInstance === null) return;
@@ -41621,11 +41966,12 @@ body[data-ds-dark-theme]{
 				let alive = true;
 				setLogLoading(true);
 				setLogError(null);
+				const range = rangeToQuery(logRange, "minute");
 				fetchLogs({
 					taskId: row.id,
 					keyword: logKeyword.trim() === "" ? void 0 : logKeyword.trim(),
-					from: dayStartIso(logFrom),
-					to: dayEndIso(logTo),
+					from: range.fromTs,
+					to: range.toTs,
 					limit: logLimit
 				}).then(({ rows }) => {
 					if (alive) setLogs(rows);
@@ -41641,11 +41987,10 @@ body[data-ds-dark-theme]{
 				tab,
 				row.id,
 				logKeyword,
-				logFrom,
-				logTo,
+				logRange,
 				logLimit
 			]);
-			const renderInfo = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), InfoRow({
+			const renderInfo = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: panelScrollFillStyle }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), InfoRow({
 				label: t("listFieldSchedule"),
 				value: scheduleLine
 			}), InfoRow({
@@ -41665,8 +42010,8 @@ body[data-ds-dark-theme]{
 				color: "var(--tdt-fg-2)",
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
-			} }, row.promptHead));
-			const renderRecords = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
+			} }, row.promptHead)));
+			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [{
 					value: "all",
@@ -41685,58 +42030,46 @@ body[data-ds-dark-theme]{
 				placeholder: tt("filterAll"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("colStatus"),
-				width: 100
-			}), (0, react.createElement)("label", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "4px",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("cardFrom"), (0, react.createElement)(DateField, {
-				value: recFrom,
-				onChange: (next) => {
-					setRecFrom(next);
-				},
-				placeholder: t("cardFrom"),
-				ariaLabel: t("cardFrom"),
-				labels: calendarLabels,
-				width: 120
-			})), (0, react.createElement)("label", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "4px",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("cardTo"), (0, react.createElement)(DateField, {
-				value: recTo,
-				onChange: (next) => {
-					setRecTo(next);
-				},
-				placeholder: t("cardTo"),
-				ariaLabel: t("cardTo"),
-				labels: calendarLabels,
-				width: 120
-			})), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
+				size: "md",
+				width: 96
+			}), (0, react.createElement)(TimeRange, {
+				value: recRange,
+				onChange: setRecRange,
+				labels: timeRangeLabels,
+				calendarLabels,
+				timeLabels,
+				precision: "day",
+				size: "md"
+			}), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${recError}`) : null), records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("table", { style: {
+			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("table", { style: {
 				...miniTableStyle,
 				tableLayout: "fixed"
 			} }, (0, react.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react.createElement)("tr", null, (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "96px"
-			} }, t("colStatus")), (0, react.createElement)("th", { style: recHeadStyle }, t("colOutputs")), (0, react.createElement)("th", { style: {
+				width: "84px"
+			} }, t("colStatus")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "88px"
-			} }, t("colDuration")), (0, react.createElement)("th", { style: {
+				width: "104px"
+			} }, t("colPlanned")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "100px"
-			} }, t("colSlot")))), (0, react.createElement)("tbody", null, records.flatMap((instance) => {
+				width: "84px"
+			} }, t("colActualStart")), (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "68px"
+			} }, t("colDuration")), (0, react.createElement)("th", { style: recHeadStyle }, t("colOutputs")), (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "56px"
+			} }, t("colSession")))), (0, react.createElement)("tbody", null, records.flatMap((instance) => {
 				const open = openInstance === instance.id;
 				const outputs = outputsOf(instance.outputs);
 				const sid = instance.session_id;
-				const canOpenFile = sid !== null && onOpenFile !== void 0;
-				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.scheduled_at);
+				const openFile = onOpenFile;
+				const openSession = onOpenSession;
+				const canOpenFile = sid !== null && openFile !== void 0;
+				const canOpenSession = sid !== null && openSession !== void 0;
+				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at);
 				return [(0, react.createElement)("tr", {
 					key: instance.id,
 					style: {
@@ -41750,34 +42083,45 @@ body[data-ds-dark-theme]{
 					display: "inline-flex",
 					alignItems: "center",
 					gap: "6px"
-				} }, (0, react.createElement)(StatusDot, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellWrapStyle }, (0, react.createElement)("span", { style: {
-					display: "inline-flex",
-					alignItems: "center",
-					flexWrap: "wrap",
-					gap: "4px"
-				} }, outputs.length === 0 ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : outputs.slice(0, 8).map((output, index) => (0, react.createElement)("button", {
+				} }, (0, react.createElement)(StatusDot, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react.createElement)("td", { style: miniCellStyle }, formatDurationHms(durMs)), (0, react.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react.createElement)("button", {
 					key: output,
 					type: "button",
 					title: output,
-					style: chipStyleOf(canOpenFile),
+					style: {
+						...plainIconBtnStyle,
+						cursor: canOpenFile ? "pointer" : "default"
+					},
 					onClick: (event) => {
 						event.stopPropagation();
-						if (canOpenFile && sid !== null) onOpenFile(sid, output);
+						if (canOpenFile && openFile !== void 0 && sid !== null) openFile(sid, output);
 					}
-				}, String(index + 1))), outputs.length > 8 ? (0, react.createElement)("span", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
-				} }, `+${outputs.length - 8}`) : null, sid !== null && onOpenSession !== void 0 ? (0, react.createElement)("button", {
+				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: output,
+					size: 16
+				}))), outputs.length > 3 ? (0, react.createElement)("button", {
 					type: "button",
 					title: t("viewSession"),
 					"aria-label": t("viewSession"),
-					style: chipStyleOf(true),
+					style: {
+						...plainIconBtnStyle,
+						width: "auto",
+						fontSize: "var(--tdt-font-md)"
+					},
 					onClick: (event) => {
 						event.stopPropagation();
-						onOpenSession(sid, row.title);
+						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title);
 					}
-				}, "↗") : null)), (0, react.createElement)("td", { style: miniCellStyle }, formatDuration(durMs, tt)), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatShortStamp(instance.scheduled_at)))), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
-					colSpan: 4,
+				}, "…") : null)), (0, react.createElement)("td", { style: miniCellStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)("button", {
+					type: "button",
+					title: t("viewSession"),
+					"aria-label": t("viewSession"),
+					style: plainIconBtnStyle,
+					onClick: (event) => {
+						event.stopPropagation();
+						openSession(sid, row.title);
+					}
+				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconNewChatOutlineRegular, { size: 16 })) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
+					colSpan: 6,
 					style: miniCellWrapStyle
 				}, (0, react.createElement)("div", { style: {
 					display: "flex",
@@ -41828,42 +42172,21 @@ body[data-ds-dark-theme]{
 					color: "var(--tdt-fg-3)"
 				} }, t("cardEventsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? "")))))) : null];
 			})))));
-			const renderLogs = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
+			const renderLogs = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
 				value: logKeyword,
 				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),
+				size: "md",
 				style: { width: "140px" }
+			}), (0, react.createElement)(TimeRange, {
+				value: logRange,
+				onChange: setLogRange,
+				labels: timeRangeLabels,
+				calendarLabels,
+				timeLabels,
+				precision: "minute",
+				size: "md"
 			}), (0, react.createElement)("label", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "4px",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("cardFrom"), (0, react.createElement)(DateField, {
-				value: logFrom,
-				onChange: (next) => {
-					setLogFrom(next);
-				},
-				placeholder: t("cardFrom"),
-				ariaLabel: t("cardFrom"),
-				labels: calendarLabels,
-				width: 120
-			})), (0, react.createElement)("label", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "4px",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("cardTo"), (0, react.createElement)(DateField, {
-				value: logTo,
-				onChange: (next) => {
-					setLogTo(next);
-				},
-				placeholder: t("cardTo"),
-				ariaLabel: t("cardTo"),
-				labels: calendarLabels,
-				width: 120
-			})), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px",
@@ -41885,11 +42208,12 @@ body[data-ds-dark-theme]{
 				placeholder: String(logLimit),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("cardLogLimit"),
+				size: "md",
 				width: 70
 			})), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${logError}`) : null), logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
 				color: row.level === "error" ? "var(--tdt-danger)" : row.level === "warn" ? "var(--tdt-accent)" : "var(--tdt-fg-3)",
 				fontWeight: row.level === "error" ? 600 : 400
 			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${row.kind}: `), (0, react.createElement)("span", null, row.message))))));
@@ -42835,10 +43159,21 @@ body[data-ds-dark-theme]{
 			const closePreview = (0, react.useCallback)(() => {
 				setPreview(null);
 			}, []);
-			/** 拖拽调宽：指针移动期间只在 dock 上改 CSS 变量值，松手才落 state（避免每帧重渲染整页）。 */
+			/**
+			* 拖拽调宽：指针移动期间只在 dock 上改 CSS 变量值，松手才落 state（避免每帧重渲染整页）。
+			*
+			* 拖拽不再「顺手选中文字」（用户 2026-10-02，与编辑分栏同一处理）：pointerdown 的默认动作会
+			* 开一次文本选区 ⇒ ① preventDefault 掐掉默认动作；② 拖动期间 `body.user-select:none`，
+			* pointerup 恢复，并清掉已有选区。
+			*/
 			const startResize = (0, react.useCallback)((start) => {
+				start.preventDefault?.();
 				const startX = start.clientX;
 				const startWidth = previewWidth;
+				const body = document.body;
+				const prevUserSelect = body.style.userSelect;
+				body.style.userSelect = "none";
+				window.getSelection()?.removeAllRanges();
 				const onMove = (event) => {
 					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
 					const root = document.getElementById("dsh-tdt-root");
@@ -42852,6 +43187,7 @@ body[data-ds-dark-theme]{
 					try {
 						window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next));
 					} catch {}
+					body.style.userSelect = prevUserSelect;
 				};
 				window.addEventListener("pointermove", onMove);
 				window.addEventListener("pointerup", onUp);

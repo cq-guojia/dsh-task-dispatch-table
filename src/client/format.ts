@@ -35,6 +35,36 @@ export function formatShortStamp(iso: string): string {
   return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
+/** 计划执行列（用户 2026-10-02 第四轮）：`YYMMDD HH:mm`（两位年 + 两位月日 + 时分）。 */
+export function formatPlanStamp(iso: string): string {
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return '-'
+  const d = new Date(ms)
+  return `${pad2(d.getFullYear() % 100)}${pad2(d.getMonth() + 1)}${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
+export function formatClock(iso: string | null): string {
+  if (iso === null) return '-'
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return '-'
+  const d = new Date(ms)
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
+}
+
+/**
+ * 执行时长列（用户 2026-10-02 第四轮）：有小时 ⇒ `H:MM:SS`（如 `1:15:30`）；
+ * 不足 1 小时 ⇒ `MM:SS`（**分、秒一律两位补零**，如 `05:30` / `00:30`）。NaN / 负 ⇒ `-`。
+ */
+export function formatDurationHms(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return '-'
+  const totalSec = Math.round(ms / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  return h > 0 ? `${h}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`
+}
+
 /** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
 export function formatTokenCount(n: number): string {
   if (!Number.isFinite(n)) return '—'
