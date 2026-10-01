@@ -4,7 +4,9 @@
 // 交付方式与 task-editor-css.ts / archive-session-css.ts 同源：client 产物是内核消费的
 // CJS 闭包，`import './x.css'` 不会被加载 ⇒ 运行时注入 <style>。
 
-/** 样式标签 id（幂等注入用）。 */
+import { applyStyle } from './ui/style'
+
+/** 样式标签 id（历史遗留；注入已统一走 ui/style.ts）。 */
 export const TOAST_STYLE_ID = 'dsh-task-dispatch-table-toast'
 
 export const TOAST_CSS = `
@@ -73,18 +75,9 @@ export const TOAST_CSS = `
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
 `
 
-let injected = false
-
-/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
+/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 export function ensureToastStyle(): void {
-  if (injected) return
-  injected = true
-  if (typeof document === 'undefined') return
-  if (document.getElementById(TOAST_STYLE_ID) !== null) return
-  const el = document.createElement('style')
-  el.id = TOAST_STYLE_ID
-  el.textContent = TOAST_CSS
-  document.head.appendChild(el)
+  applyStyle('domain:toast', TOAST_CSS)
 }
 
 // ─────────────────────── 共用浮层 Toast 组件（全站唯一实现，不许各处再手写） ───────────────────────

@@ -7,7 +7,9 @@
 // 颜色一律引用 `--tdt-*`（由 ui/tokens.ts 映射宿主变量，明/暗自动跟随，括号内为兜底值）；
 // 布局 token 取聊天专属 `--dsh-chat-*`（0.1.7-RC.2 核实的真值，带兜底）。不引用任何宿主内部符号。
 
-/** 弹窗根类名前缀（稳定，不随宿主哈希变化）。 */
+import { applyStyle } from './ui/style'
+
+/** 弹窗根类名前缀（历史遗留；注入已统一走 ui/style.ts）。 */
 export const SV_STYLE_ID = 'dsh-task-dispatch-table-archive-session'
 
 /** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
@@ -328,19 +330,9 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 `
 
-let injected = false
-
 /**
- * 幂等注入样式（一次挂入 document.head）。SSR / 无 document 环境静默跳过。
- * 宿主升级换 token 名时，未命中的变量回退到兜底值（仍可读、不崩）。
+ * 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
  */
 export function ensureArchiveSessionStyle(): void {
-  if (injected) return
-  injected = true
-  if (typeof document === 'undefined') return
-  if (document.getElementById(SV_STYLE_ID) !== null) return
-  const el = document.createElement('style')
-  el.id = SV_STYLE_ID
-  el.textContent = ARCHIVE_SESSION_CSS
-  document.head.appendChild(el)
+  applyStyle('domain:session-view', ARCHIVE_SESSION_CSS)
 }

@@ -6,7 +6,9 @@
 // 用 CSS 而不是内联样式的只有两类：**伪类**（:hover / :focus-within / ::placeholder）
 // 与整页外壳骨架；控件内部的度量仍在 editor-fields.tsx 里内联（照官方 Input 逐条抄）。
 
-/** 样式标签 id（幂等注入用）。 */
+import { applyStyle } from './ui/style'
+
+/** 样式标签 id（历史遗留；注入已统一走 ui/style.ts）。 */
 export const ED_STYLE_ID = 'dsh-task-dispatch-table-task-editor'
 
 export const TASK_EDITOR_CSS = `
@@ -121,16 +123,7 @@ export const TASK_EDITOR_CSS = `
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `
 
-let injected = false
-
-/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
+/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 export function ensureTaskEditorStyle(): void {
-  if (injected) return
-  injected = true
-  if (typeof document === 'undefined') return
-  if (document.getElementById(ED_STYLE_ID) !== null) return
-  const el = document.createElement('style')
-  el.id = ED_STYLE_ID
-  el.textContent = TASK_EDITOR_CSS
-  document.head.appendChild(el)
+  applyStyle('domain:editor', TASK_EDITOR_CSS)
 }

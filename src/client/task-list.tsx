@@ -31,7 +31,7 @@ import { pinMsFor, sortRows } from '../task-sort.js'
 import { DateField, MarqueeText, SelectField, calendarLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { Button, IconButton, Input as TdtInput, Segmented } from './ui'
+import { applyStyle, Button, IconButton, Input as TdtInput, Segmented } from './ui'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {

@@ -2143,8 +2143,6 @@ body[data-ds-dark-theme]{
 		}
 		//#endregion
 		//#region src/client/archive-session-css.ts
-		/** 弹窗根类名前缀（稳定，不随宿主哈希变化）。 */
-		const SV_STYLE_ID = "dsh-task-dispatch-table-archive-session";
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
 /* 弹窗让位预览 dock：右侧留出 --dsh-tdt-preview-w（缺省 0）⇒ 弹窗不被预览面遮盖，
@@ -2462,20 +2460,11 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 `;
-		let injected$2 = false;
 		/**
-		* 幂等注入样式（一次挂入 document.head）。SSR / 无 document 环境静默跳过。
-		* 宿主升级换 token 名时，未命中的变量回退到兜底值（仍可读、不崩）。
+		* 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
 		*/
 		function ensureArchiveSessionStyle() {
-			if (injected$2) return;
-			injected$2 = true;
-			if (typeof document === "undefined") return;
-			if (document.getElementById("dsh-task-dispatch-table-archive-session") !== null) return;
-			const el = document.createElement("style");
-			el.id = SV_STYLE_ID;
-			el.textContent = ARCHIVE_SESSION_CSS;
-			document.head.appendChild(el);
+			applyStyle("domain:session-view", ARCHIVE_SESSION_CSS);
 		}
 		//#endregion
 		//#region src/client/official-classes.ts
@@ -6475,8 +6464,6 @@ body[data-ds-dark-theme]{
 		}
 		//#endregion
 		//#region src/client/task-editor-css.ts
-		/** 样式标签 id（幂等注入用）。 */
-		const ED_STYLE_ID = "dsh-task-dispatch-table-task-editor";
 		const TASK_EDITOR_CSS = `
 /* 遮罩：盖在整页之上（含 U11 预览 dock —— dock 是 z 1030 的占布局分栏，此处 1040 压住它）。 */
 .dsh-tdt-ed-overlay{position:fixed;inset:0;z-index:1040;display:flex;justify-content:flex-end;background:var(--tdt-mask,rgba(0,0,0,.45));}
@@ -6588,17 +6575,9 @@ body[data-ds-dark-theme]{
 @keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 /* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
-		let injected$1 = false;
-		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		function ensureTaskEditorStyle() {
-			if (injected$1) return;
-			injected$1 = true;
-			if (typeof document === "undefined") return;
-			if (document.getElementById("dsh-task-dispatch-table-task-editor") !== null) return;
-			const el = document.createElement("style");
-			el.id = ED_STYLE_ID;
-			el.textContent = TASK_EDITOR_CSS;
-			document.head.appendChild(el);
+			applyStyle("domain:editor", TASK_EDITOR_CSS);
 		}
 		//#endregion
 		//#region src/client/schedule-text.ts
@@ -38451,8 +38430,6 @@ body[data-ds-dark-theme]{
 		const isSafeAttachmentRef = (ref) => ref !== "" && !ref.includes("..") && !ref.startsWith("/") && !ref.startsWith("\\") && !ref.includes("\\");
 		//#endregion
 		//#region src/client/toast-css.ts
-		/** 样式标签 id（幂等注入用）。 */
-		const TOAST_STYLE_ID = "dsh-task-dispatch-table-toast";
 		const TOAST_CSS = `
 /* 悬浮提示 Toast（全站唯一实现）：绝对定位在锚点上方（父容器需 position:relative），不占版面。
    形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
@@ -38518,17 +38495,9 @@ body[data-ds-dark-theme]{
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
 `;
-		let injected = false;
-		/** 幂等注入（无 document 时静默跳过；宿主升级换 token 名时回退兜底值）。 */
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		function ensureToastStyle() {
-			if (injected) return;
-			injected = true;
-			if (typeof document === "undefined") return;
-			if (document.getElementById("dsh-task-dispatch-table-toast") !== null) return;
-			const el = document.createElement("style");
-			el.id = TOAST_STYLE_ID;
-			el.textContent = TOAST_CSS;
-			document.head.appendChild(el);
+			applyStyle("domain:toast", TOAST_CSS);
 		}
 		function FloatingToast(props) {
 			const tone = props.tone ?? "error";
