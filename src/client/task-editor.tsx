@@ -46,7 +46,7 @@ import {
   type TimeLabels,
   type WeekdayLabels,
 } from './editor-fields'
-import { Segmented } from './ui'
+import { Button as TdtButton, IconButton, Segmented } from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
 import { renderSchedule, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
@@ -83,8 +83,7 @@ function HelpButton(props: {
         'aria-label': hint,
         onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation() },
       }, h(IconQuestionOutlineRegular, { size: 14 }))
-    : h('button', { type: 'button', className: 'dsh-tdt-ed-help', 'aria-label': hint },
-        h(IconQuestionOutlineRegular, { size: 14 }))
+    : h(IconButton, { variant: 'plain', size: 'sm', icon: h(IconQuestionOutlineRegular, { size: 14 }), label: hint })
   const tip: { label: string; side: 'top' | 'bottom'; maxWidth: number; align?: 'center' | 'end' } =
     { label: hint, side, maxWidth }
   if (align !== undefined) tip.align = align
@@ -1167,9 +1166,8 @@ function PromptEditorModal(props: {
                       h('span', { className: 'dsh-tdt-ed-ver-right' },
                         hoveredId === v.file
                           ? h('span', { className: 'dsh-tdt-ed-ver-actions' },
-                            h('button', { type: 'button', className: 'dsh-tdt-ed-ver-use', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseShort')),
-                            h('button', { type: 'button', className: 'dsh-tdt-ed-ver-del', title: t('editorDeleteVersion'), 'aria-label': t('editorDeleteVersion'), onClick: () => { setConfirmDeleteFile(v.file) } },
-                              h(IconCloseOutlineRegular, { size: 12 })),
+                            h(TdtButton, { variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link', onClick: () => { setConfirmUseFile(v.file) } }, t('editorUseShort')),
+                            h(IconButton, { variant: 'danger', size: 'sm', icon: h(IconCloseOutlineRegular, { size: 12 }), label: t('editorDeleteVersion'), onClick: () => { setConfirmDeleteFile(v.file) } }),
                           )
                           : null,
                       ),
@@ -2073,13 +2071,13 @@ export function TaskEditorDrawer(props: {
               label: t('editorTabBasic'),
             })
             : null,
-          h('button', {
-            className: 'dsh-tdt-ed-close',
-            type: 'button',
-            title: t('editorClose'),
-            'aria-label': t('editorClose'),
+          h(IconButton, {
+            variant: 'plain',
+            size: 'md',
+            icon: h(IconCloseOutlineRegular, { size: 16 }),
+            label: t('editorClose'),
             onClick: requestClose,
-          }, h(IconCloseOutlineRegular, { size: 16 })),
+          }),
         ),
       ),
       h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef }, body),

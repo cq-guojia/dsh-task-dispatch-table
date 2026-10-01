@@ -29,7 +29,7 @@ import {
   type TaskEditorDraft,
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
-import { Segmented, ensureUiBase } from './ui'
+import { Button, IconButton, Segmented, ensureUiBase } from './ui'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
@@ -189,20 +189,6 @@ const pageStyle: Record<string, string | number> = {
   height: '100%', width: '100%', boxSizing: 'border-box', overflow: 'auto',
   padding: '18px 22px', color: C.text, background: 'transparent',
 }
-/** 「返回会话」按钮：轻量文字按钮，退回会话区（selectPanel(null)）。 */
-const backButtonStyle: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', gap: '6px', flex: 'none',
-  padding: '5px 10px', borderRadius: '8px', border: `1px solid ${C.border}`,
-  background: 'transparent', color: C.textDim, cursor: 'pointer',
-  fontFamily: 'inherit', fontSize: '12px', lineHeight: '18px', transition,
-}
-/** 「＋ 新建任务」按钮：整页右上角，拉起右侧任务编辑弹窗（P0 只做界面）。 */
-const addButtonStyle: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', gap: '4px', flex: 'none',
-  padding: '5px 10px', borderRadius: '8px', border: `1px solid ${C.borderStrong}`,
-  background: C.layer1, color: C.text, cursor: 'pointer',
-  fontFamily: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: 600, transition,
-}
 /** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
 const panelHeaderStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -212,12 +198,6 @@ const panelHeaderStyle: Record<string, string | number> = {
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
 const panelTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: C.text }
-/** 图标按钮（刷新 / 关闭）：方形、圆角、悬停高亮，尺寸与分段控件同高。 */
-const iconButtonStyle: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: '26px', height: '26px', padding: 0, border: 'none', borderRadius: '6px',
-  background: 'transparent', color: C.textDim, cursor: 'pointer', transition,
-}
 const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px', color: C.text }
 const preStyle: Record<string, string | number> = {
   fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, margin: '4px 0',
@@ -233,14 +213,8 @@ const cellStyle: Record<string, string | number> = {
 const detailCellStyle: Record<string, string | number> = {
   ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
 }
-/** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
 // 带超时的 fetch 已抽到共用叶子模块 `./http`（2026-09-30 收敛：本文件与 session-view 共用一份；
 // 两条**需要持有 controller 句柄**的路径——任务列表轮询、附件上传——仍各自内联，理由见 `http.ts` 顶部）。
-
-const linkStyle: Record<string, string | number> = {
-  color: C.brand, cursor: 'pointer', background: 'none', border: 'none', padding: 0,
-  font: 'inherit', fontSize: '12px', transition,
-}
 
 /**
  * 侧栏 / 面板图标（用户 2026-09-30 指定）：`assets/icon-scheduler.svg` 的**内联等价物**——
@@ -973,9 +947,9 @@ function TaskPage(props: {
         h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
           h('div', { style: panelHeaderStyle },
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
-              h('button', {
-                type: 'button',
-                style: backButtonStyle,
+              h(Button, {
+                variant: 'outline',
+                size: 'sm',
                 title: t('backToConversation'),
                 onClick: onBack,
               }, `← ${t('backToConversation')}`),
@@ -994,9 +968,9 @@ function TaskPage(props: {
                 onChange: setTab,
               }),
           // 右上角「＋ 新建任务」：拉起右侧贴边的任务编辑弹窗（P0 只做界面，不接保存）。
-          h('button', {
-            type: 'button',
-            style: addButtonStyle,
+          h(Button, {
+            variant: 'outline',
+            size: 'sm',
             title: t('editorNew'),
             onClick: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null }) },
           }, `＋ ${t('editorNew')}`),
@@ -1049,9 +1023,9 @@ function TaskPage(props: {
                         ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('editorDisabledTag'))
                         : null,
                       h('span', { style: { flex: '1 1 auto' } }),
-                      h('button', {
-                        type: 'button',
-                        style: { ...addButtonStyle, padding: '3px 10px' },
+                      h(Button, {
+                        variant: 'outline',
+                        size: 'sm',
                         onClick: () => { openEditor(row.id) },
                       }, t('editorEdit')),
                     )),
@@ -1218,9 +1192,10 @@ function TaskPage(props: {
                           h('td', { style: cellStyle },
                             row.session_id === null ? '—'
                               : viewSession !== null
-                                ? h('button', {
-                                  type: 'button',
-                                  style: linkStyle,
+                                ? h(Button, {
+                                  variant: 'ghost',
+                                  size: 'sm',
+                                  className: 'dsh-tdt-btn--link',
                                   title: row.session_id,
                                   onClick: (event: { stopPropagation(): void }) => {
                                     event.stopPropagation()
@@ -1240,10 +1215,11 @@ function TaskPage(props: {
                                   outputs.map(basenameOf).join('、'))
                               }
                               return h('span', { style: { display: 'inline-flex', flexWrap: 'wrap', gap: '6px' } },
-                                outputs.map(output => h('button', {
+                                outputs.map(output => h(Button, {
                                   key: output,
-                                  type: 'button',
-                                  style: linkStyle,
+                                  variant: 'ghost',
+                                  size: 'sm',
+                                  className: 'dsh-tdt-btn--link',
                                   title: output,
                                   onClick: (event: { stopPropagation(): void }) => {
                                     event.stopPropagation()
@@ -1265,9 +1241,10 @@ function TaskPage(props: {
                                 },
                                   h('span', null, t('eventsOf')),
                                   (viewSession !== null && row.session_id !== null)
-                                    ? h('button', {
-                                      type: 'button',
-                                      style: linkStyle,
+                                    ? h(Button, {
+                                      variant: 'ghost',
+                                      size: 'sm',
+                                      className: 'dsh-tdt-btn--link',
                                       onClick: () => { openView(row.session_id as string, titleOfTask(row.task_id), parseOutputs((row as unknown as { outputs?: unknown }).outputs)) },
                                     }, `↗ ${t('viewSession')}`)
                                     : null,
@@ -1339,12 +1316,14 @@ function TaskPage(props: {
       },
         h('span', { style: { flex: 'none', width: '7px', height: '7px', borderRadius: '50%', background: 'var(--dsw-alias-label-primary-inverted, #fff)', opacity: .65 } }),
         h('span', null, viewErr),
-        h('button', {
-          type: 'button',
-          style: { appearance: 'none', font: 'inherit', fontSize: '12px', cursor: 'pointer', color: 'inherit', background: 'none', border: 'none', padding: '0 2px' },
-          'aria-label': t('debugClose'),
+        h(IconButton, {
+          variant: 'plain',
+          size: 'sm',
+          icon: '✕',
+          label: t('debugClose'),
+          style: { color: 'inherit' },
           onClick: () => { setViewErr(null) },
-        }, '✕'),
+        }),
       )
       : null,
     // 新建 / 编辑任务弹窗（右侧贴边的**浮层**，盖住整页与预览面，不推压页面）。
@@ -1632,9 +1611,9 @@ function TaskPageHost(props: {
   if (scope === null) {
     return h('div', { style: pageStyle },
       h('div', { style: panelHeaderStyle },
-        h('button', {
-          type: 'button',
-          style: backButtonStyle,
+        h(Button, {
+          variant: 'outline',
+          size: 'sm',
           title: t('backToConversation'),
           onClick: onBack,
         }, `← ${t('backToConversation')}`),

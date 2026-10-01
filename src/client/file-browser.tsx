@@ -13,7 +13,7 @@
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
 import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { Segmented } from './ui'
+import { Button, IconButton, Segmented } from './ui'
 import {
   FileTypeIcon,
   IconCheckOutlineRegular,
@@ -674,7 +674,7 @@ export function FileBrowser(props: {
       ),
       history.length > 0
         ? h('div', { className: 'dsh-tdt-sv-err-actions' },
-          h('button', { type: 'button', className: 'dsh-tdt-sv-err-back', onClick: goBack }, t('explorerBack')))
+          h(Button, { variant: 'outline', size: 'sm', onClick: goBack }, t('explorerBack')))
         : null,
     )
   } else if (listing !== null) {
@@ -714,13 +714,12 @@ export function FileBrowser(props: {
     },
       h('div', { className: 'dsh-tdt-sv-crumbs-menu-wrap' },
         tooled(t('explorerLevels'),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('explorerLevels'),
+          h(IconButton, {
+            variant: 'plain', size: 'md', icon: h(IconChevronDownOutlineRegular, { size: 14 }),
+            label: t('explorerLevels'),
             'aria-expanded': menuOpen,
             onClick: () => { setMenuOpen(value => !value) },
-          }, h(IconChevronDownOutlineRegular, { size: 14 }))),
+          })),
         menuOpen
           ? h(Fragment, null,
             h('div', { className: 'dsh-tdt-sv-crumbs-backdrop', onClick: () => { setMenuOpen(false) } }),
@@ -764,28 +763,25 @@ export function FileBrowser(props: {
       ),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
         tooled(t('explorerBack'),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('explorerBack'),
+          h(IconButton, {
+            variant: 'plain', size: 'md', icon: h(IconChevronLeftOutlineRegular, { size: 14 }),
+            label: t('explorerBack'),
             disabled: history.length === 0,
             onClick: goBack,
-          }, h(IconChevronLeftOutlineRegular, { size: 14 }))),
+          })),
         tooled(t('explorerUp'),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('explorerUp'),
+          h(IconButton, {
+            variant: 'plain', size: 'md', icon: h(IconChevronUpOutlineRegular, { size: 14 }),
+            label: t('explorerUp'),
             disabled: dir === '',
             onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
-          }, h(IconChevronUpOutlineRegular, { size: 14 }))),
+          })),
         tooled(t('previewClose'),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
-            'aria-label': t('previewClose'),
+          h(IconButton, {
+            variant: 'plain', size: 'md', icon: h(IconCloseOutlineRegular, { size: 14 }),
+            label: t('previewClose'),
             onClick: onClose,
-          }, h(IconCloseOutlineRegular, { size: 14 }))),
+          })),
       ),
     ),
     // 第二排：文件名（跑马灯）+ 操作按钮——仅文件预览态显示；目录态整排隐藏
@@ -810,19 +806,17 @@ export function FileBrowser(props: {
             })
             : null,
           tooled(t('previewCopyPath'),
-            h('button', {
-              type: 'button',
-              className: 'dsh-tdt-sv-head-btn',
-              'aria-label': t('previewCopyPath'),
+            h(IconButton, {
+              variant: 'plain', size: 'md', icon: copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 }),
+              label: t('previewCopyPath'),
               onClick: copyPath,
-            }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 }))),
+            })),
           tooled(t('previewRefresh'),
-            h('button', {
-              type: 'button',
-              className: 'dsh-tdt-sv-head-btn',
-              'aria-label': t('previewRefresh'),
+            h(IconButton, {
+              variant: 'plain', size: 'md', icon: h(IconRefreshOutlineRegular, { size: 14 }),
+              label: t('previewRefresh'),
               onClick: reload,
-            }, h(IconRefreshOutlineRegular, { size: 14 }))),
+            })),
         ),
       )
       : null,

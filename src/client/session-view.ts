@@ -26,6 +26,7 @@
 
 import { Fragment, createElement as h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Button, IconBranchOutlineRegular, IconCloseOutlineRegular, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button as TdtButton, IconButton } from './ui'
 import { ensureArchiveSessionStyle } from './archive-session-css'
 import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame, type TurnsFace } from './mirror/ChatView'
 import { GenericCommandCard } from './mirror/GenericCommandCard'
@@ -1284,20 +1285,22 @@ export function SessionViewModal(props: {
           ),
           h('div', { className: 'dsh-tdt-sv-headerbtns' },
             canFork
-              ? h('button', {
-                  type: 'button',
-                  className: 'dsh-tdt-sv-branch',
+              ? h(TdtButton, {
+                  variant: 'outline',
+                  size: 'sm',
                   disabled: forking,
                   title: tt('continueBranch'),
+                  icon: h(IconBranchOutlineRegular, { size: 14 }),
                   onClick: () => { setForkErr(null); setForkTarget({}) },
-                }, h(IconBranchOutlineRegular, { size: 14 }), tt('continueBranch'))
+                }, tt('continueBranch'))
               : null,
-            h('button', {
-              type: 'button',
-              className: 'dsh-tdt-sv-close',
-              'aria-label': tt('debugClose'),
+            h(IconButton, {
+              variant: 'plain',
+              size: 'md',
+              icon: h(IconCloseOutlineRegular, { size: 14 }),
+              label: tt('debugClose'),
               onClick: onClose,
-            }, h(IconCloseOutlineRegular, { size: 14 })),
+            }),
           ),
         ),
         // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。

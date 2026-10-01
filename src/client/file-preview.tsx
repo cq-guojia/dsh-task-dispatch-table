@@ -15,7 +15,7 @@
 // readBytes(sessionId, path, ...) → {offset, data: Uint8Array, eof, ...}（全量 ≤32MiB）。
 import { Component, createElement as h, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
-import { Segmented } from './ui'
+import { Button, IconButton, Segmented } from './ui'
 import {
   CodeBlock,
   IconCheckOutlineRegular,
@@ -428,7 +428,7 @@ export function TextPreview(props: {
       : h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS })),
     nextOffset !== null
       ? h('div', { className: 'dsh-tdt-sv-older' },
-          h('button', { type: 'button', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
+          h(Button, { variant: 'outline', size: 'sm', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
       : null,
   )
 }
@@ -522,26 +522,23 @@ export function FilePreviewPanel(props: {
             })
           : null,
         tooled(t('previewCopyPath'),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('previewCopyPath'),
+          h(IconButton, {
+            variant: 'plain', size: 'md', icon: copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 }),
+            label: t('previewCopyPath'),
             onClick: copyPath,
-          }, copied ? h(IconCheckOutlineRegular, { size: 14 }) : h(IconCopyOutlineRegular, { size: 14 }))),
+          })),
         tooled(t('previewRefresh'),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn',
-            'aria-label': t('previewRefresh'),
+          h(IconButton, {
+            variant: 'plain', size: 'md', icon: h(IconRefreshOutlineRegular, { size: 14 }),
+            label: t('previewRefresh'),
             onClick: () => { setReloadNonce(n => n + 1) },
-          }, h(IconRefreshOutlineRegular, { size: 14 }))),
+          })),
         tooled(t('previewClose'),
-          h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-head-btn dsh-tdt-sv-close',
-            'aria-label': t('previewClose'),
+          h(IconButton, {
+            variant: 'plain', size: 'md', icon: h(IconCloseOutlineRegular, { size: 14 }),
+            label: t('previewClose'),
             onClick: onClose,
-          }, h(IconCloseOutlineRegular, { size: 14 }))),
+          })),
       ),
     ),
     h(PreviewBoundary, {

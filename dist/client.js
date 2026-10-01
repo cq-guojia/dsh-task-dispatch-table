@@ -1191,6 +1191,472 @@ window.__ModuleLoader__.load({
 			invalidNumber: "Please enter a valid integer number of seconds"
 		};
 		//#endregion
+		//#region src/client/ui/tokens.ts
+		/**
+		* L1 语义 token 层（UI 基础层 · P0 地基）
+		*
+		* 这一份文件是**全站唯一的「宿主变量 → 插件语义名」翻译表**。规矩见
+		* docs/design/ui-style-guide.md：
+		*  - `--tdt-*` **只允许在本文件定义**；其它任何文件只能 `var(--tdt-*)` 消费，
+		*    不许再定义 `--tdt-*`，也不许直接写 `var(--dsw-*)`；
+		*  - 每个 token 都带兜底值 ⇒ 宿主升级换名时不炸（最坏退到兜底色，不会白屏）；
+		*  - **明暗差异只写在本文件**：能靠宿主 alias 表达的一律不写覆盖段（alias 自己随主题变），
+		*    只有 alias 表达不了的「固定中性面 / 反色面」才进 `body[data-ds-dark-theme]` 段。
+		*
+		* 宿主变量名 / 亮暗取值 / 哪个是真变量 —— 真源是
+		* docs/design/external/dsh-capabilities.md §主题与设计变量
+		* （2026-10-01 按宿主 0.2.0-rc.2 解包五个包逐条核实；兜底值取的就是宿主真值）。
+		*
+		* 挂载点选 `body`：插件界面（含 portal 到 body 的弹窗）全在 body 内，
+		* 定义在 body 上零调用点成本；名字统一带 `--tdt-` 前缀，不会与宿主变量打架。
+		*/
+		const UI_TOKENS_CSS = `
+/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */
+body{
+  --tdt-fg:var(--dsw-alias-label-primary,#1f2328);
+  --tdt-fg-2:var(--dsw-alias-label-secondary,#5c6370);
+  --tdt-fg-3:var(--dsw-alias-label-tertiary,#767d87);
+  --tdt-fg-4:var(--dsw-alias-label-caption,#9aa1ab);
+  --tdt-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);
+  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */
+  --tdt-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);
+
+  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */
+  --tdt-surface-1:var(--dsw-alias-bg-layer-1,#fff);
+  --tdt-surface-2:var(--dsw-alias-bg-layer-2,#fff);
+  --tdt-surface-3:var(--dsw-alias-bg-layer-3,#fff);
+  /* 「选中亮片」的底盘色（配 --tdt-shadow-raised 用） */
+  --tdt-surface-raised:var(--dsw-alias-bg-layer-1,#fff);
+  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */
+  --tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
+  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */
+  --tdt-solid:var(--dsw-static-neutral-00,#fff);
+  --tdt-on-solid:var(--dsw-alias-label-primary,#1f2328);
+  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */
+  --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
+  --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
+  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
+
+  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
+  --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
+  --tdt-border:var(--dsw-alias-border-l2,#0000001a);
+  --tdt-border-strong:var(--dsw-alias-border-l3,#0000001f);
+  --tdt-border-heavy:var(--dsw-alias-border-l4,#00000029);
+
+  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */
+  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */
+  --tdt-accent:var(--dsw-alias-brand-primary,#0f1115);
+  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */
+  --tdt-business:var(--dsw-alias-state-business-primary,#3b5bdb);
+  --tdt-success:var(--dsw-alias-state-success-primary,#22c55e);
+  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */
+  --tdt-warning:var(--dsw-alias-state-warn-primary,#f59e0b);
+  --tdt-danger:var(--dsw-alias-state-error-primary,#ec1313);
+  --tdt-link:var(--dsw-alias-link,#3b5bdb);
+  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
+     故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
+  --tdt-on-signal:#fff;
+
+  /* ── 交互底 / 遮罩 ────────────────────────────────────────────────── */
+  --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
+  --tdt-active:var(--dsw-alias-interactive-bg-active,#2631481a);
+  --tdt-mask:var(--dsw-alias-bg-mask-1,#0000003d);
+
+  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
+  --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
+  /* 亮片自带的浮起感（选中态用；与 --tdt-surface-raised 配对） */
+  --tdt-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
+  --tdt-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);
+  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */
+  --tdt-focus:var(--dsw-alias-state-business-primary,#3b5bdb);
+
+  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */
+  --tdt-radius-xs:var(--dsw-radius-xs,4px);
+  --tdt-radius-sm:var(--dsw-radius-sm,8px);
+  --tdt-radius-md:var(--dsw-radius-md,12px);
+  --tdt-radius-lg:var(--dsw-radius-lg,16px);
+  --tdt-radius-xl:var(--dsw-radius-xl,20px);
+  --tdt-radius-panel:var(--dsw-radius-panel,28px);
+
+  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */
+  --tdt-space-1:4px;
+  --tdt-space-2:8px;
+  --tdt-space-3:12px;
+  --tdt-space-4:16px;
+
+  /* ── 控件高度：离散三档（控件用 size="sm|md|lg" 选；调用点不许自定义高度，
+       真不够用才允许在调用点本地覆盖 --tdt-control-h-*，属例外而非常态）── */
+  --tdt-control-h-sm:24px;
+  --tdt-control-h-md:28px;
+  --tdt-control-h-lg:32px;
+
+  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */
+  --tdt-font-xs:var(--dsw-font-xxxs-11-font-size,11px);
+  --tdt-font-sm:var(--dsw-font-xxs-12-font-size,12px);
+  --tdt-font-md:var(--dsw-font-xs-13-font-size,13px);
+  --tdt-font-lg:var(--dsw-font-s-14-font-size,14px);
+  --tdt-font-xl:var(--dsw-font-base-16-font-size,16px);
+  --tdt-line-xs:var(--dsw-font-xxxs-11-line-height,14px);
+  --tdt-line-sm:var(--dsw-font-xxs-12-line-height,18px);
+  --tdt-line-md:var(--dsw-font-xs-13-line-height,20px);
+  --tdt-line-lg:var(--dsw-font-s-14-line-height,22px);
+  --tdt-line-xl:var(--dsw-font-base-16-line-height,24px);
+  --tdt-font-mono:var(--ds-font-family-code,monospace);
+
+  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */
+  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */
+  --tdt-z-dock:1030;
+  --tdt-z-drawer:1040;
+  --tdt-z-modal:1070;
+  --tdt-z-menu:1100;
+  --tdt-z-tip:1200;
+
+  /* ── 动效 ─────────────────────────────────────────────────────────── */
+  --tdt-dur:var(--ds-transition-duration,.2s);
+  --tdt-dur-fast:var(--ds-transition-duration-fast,.12s);
+  --tdt-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));
+}
+
+/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────
+   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，
+   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。
+   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */
+body[data-ds-dark-theme]{
+  --tdt-solid:var(--dsw-static-neutral-900,#0f0f0f);
+  --tdt-on-solid:var(--dsw-static-neutral-00,#fff);
+  --tdt-plate:var(--dsw-static-neutral-850,#212123);
+  --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
+  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
+}
+`;
+		//#endregion
+		//#region src/client/ui/style.ts
+		/**
+		* 统一样式注入器（UI 基础层 · P0 地基）
+		*
+		* 为什么必须运行时注入：客户端产物是 `window.__ModuleLoader__.load({ factory })` 的 CJS 闭包，
+		* `import './x.css'` 只会产出独立 css 资源、内核不会加载它（task-editor-css.ts / archive-session-css.ts /
+		* toast-css.ts 三处注释已结论）⇒ CSS 只能以字符串在运行时打进 `<style>`。
+		*
+		* 本模块把「各文件自己 createElement('style')」收成**唯一入口**：
+		*  - 全站只有**一个** `<style id="dsh-task-dispatch-table-ui">`；
+		*  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` …），
+		*    同一域重复登记 = 覆盖（后写胜），便于过渡期逐块搬；
+		*  - `tokens` 域恒排最前 —— 变量定义必须先于消费它的规则出现（同一条 style 内也讲先后）；
+		*  - 幂等：重复调用不重复插入；`registerStyle` 在标签已挂上时会立刻刷新内容。
+		*
+		* 三条硬规矩（docs/design/ui-style-guide.md）：
+		*  ① 不许再有第二处 `document.createElement('style')`；
+		*  ② 不许再出现第二套 style 标签 id；
+		*  ③ 域内的规则只能消费 `var(--tdt-*)`（颜色 / 尺寸 / 字号一律来自 token 层）。
+		*/
+		/** 全站唯一的样式标签 id（改名 = 大范围回归，不要动）。 */
+		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
+		/** 契约：域 → CSS 文本（插入顺序 = 首次登记顺序，`tokens` 恒最前）。 */
+		const domains = /* @__PURE__ */ new Map();
+		/** token 域固定名（`ui/index.ts` 的 ensureUiBase 用它登记变量表）。 */
+		const TOKENS_DOMAIN = "tokens";
+		/** 已挂载的 style 标签（缓存引用；被外部移除时 ensureUiStyles 会重新接管）。 */
+		let tag = null;
+		/** 内容是否落后于 domains（登记后置位，flush 后清除）。 */
+		let dirty = true;
+		/** 按「tokens 优先、其余按登记顺序」拼出整条 CSS。 */
+		function buildCss() {
+			const entries = [...domains.entries()];
+			entries.sort((a, b) => a[0] === "tokens" ? -1 : b[0] === "tokens" ? 1 : 0);
+			return entries.map(([, css]) => css).join("\n");
+		}
+		/** 把最新内容写进标签（唯一写点）。 */
+		function flush() {
+			if (tag === null) return;
+			tag.textContent = buildCss();
+			dirty = false;
+		}
+		/**
+		* 登记一个域的样式（纯登记，不强制挂载）。
+		*
+		* @param domain 域名（见本文件头部的清单）；同名重复登记 = 覆盖。
+		* @param css 该域的 CSS 文本。
+		*/
+		function registerStyle(domain, css) {
+			if (domains.get(domain) === css) return;
+			domains.set(domain, css);
+			dirty = true;
+			if (tag !== null && tag.isConnected) flush();
+		}
+		/**
+		* 确保样式已挂载且是最新（幂等；无 document / 无 head 的环境静默跳过）。
+		*/
+		function ensureUiStyles() {
+			if (typeof document === "undefined") return;
+			if (tag === null || !tag.isConnected) {
+				const found = document.getElementById(UI_STYLE_ID);
+				if (found !== null) tag = found;
+				else {
+					const head = document.head;
+					if (head === null) return;
+					const el = document.createElement("style");
+					el.id = UI_STYLE_ID;
+					head.appendChild(el);
+					tag = el;
+				}
+				dirty = true;
+			}
+			if (dirty) flush();
+		}
+		/**
+		* 过渡期便捷入口：登记 + 立刻确保挂载（老 `ensureXxxStyle()` 一行替换成这个）。
+		*
+		* @param domain 域名。
+		* @param css 该域的 CSS 文本。
+		*/
+		function applyStyle(domain, css) {
+			registerStyle(domain, css);
+			ensureUiStyles();
+		}
+		/**
+		* 入口 / 组件调用一次即可：登记 token 层并确保样式已注入（幂等）。
+		*
+		* 放在本文件（而不是 index.ts）是为了让 `ui/` 内的组件也能直接调用它而不产生循环依赖。
+		*/
+		function ensureUiBase() {
+			registerStyle(TOKENS_DOMAIN, UI_TOKENS_CSS);
+			ensureUiStyles();
+		}
+		//#endregion
+		//#region src/client/ui/controls-css.ts
+		/**
+		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
+		*
+		* 规矩（docs/design/ui-style-guide.md §三）：
+		*  - **只消费 `var(--tdt-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
+		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达（本文件的 `--seg-*`）；
+		*  - 高度只取 `--tdt-control-h-sm` / `-md` / `-lg` 三档（段高 = 控件总高 − 6px：上下 padding 2px×2 + 描边 1px×2；真不够用才在调用点本地覆盖 `--tdt-control-h-*`，属例外）。
+		*
+		* 分期：P1 只有分段控件（滑动块）；P2 按钮 / P3 输入下拉 / P4 开关日期时间会往本文件追加，
+		* 追加时保持「一段一控件、段头写清哪一期」的写法。
+		*/
+		/** 分段控件的皮肤规则（P1）。 */
+		const SEGMENTED_CSS = `
+/* ── 分段控件（滑动块）P1 ────────────────────────────────────────────────
+   结构一套 + 两个受控轴：size(sm|md|lg) × variant(default|inset)。
+   变体**只覆盖两个颜色变量**（--seg-track 轨道底 / --seg-thumb 选中块），
+   这正是「同一份样式、只重载颜色」的落地形态。 */
+/* 两套基础样式（2026-10-01 用户拍板：保留「纯黑面」与「灰底面」两套，不可合并）：
+   - default = 纯黑面：轨道=第二层面 + 外描边，选中=亮片底；
+   - inset = 灰底面：抄「版本」开关观感（轨道=交互灰 hover 底、无外描边、选中=亮片底），用户觉得比原灰底那套好看。
+   ⚠️ 高度对齐规则（2026-10-01 用户拍板）：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
+   落下形态 = 两者都是「1px 边框 + 3px padding」的几何——default 真边框 1px + padding 3px；
+   inset 无边框，所以 padding 收 4px 把缺的 1px 补回来。段高算式 - 6px 不用动，两种外观总高一致。
+   以后 Button / Input 的有边 / 无边同此规则。 */
+.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
+.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}
+
+.dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
+  height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);
+  background:transparent;color:var(--tdt-fg-2);font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
+  font-weight:400;white-space:nowrap;cursor:pointer;
+  transition:color var(--tdt-dur-fast) var(--tdt-ease),background-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
+.dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-lg) - 6px);}
+.dsh-tdt-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--tdt-fg);}
+.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--tdt-shadow-raised);color:var(--tdt-fg);font-weight:600;}
+.dsh-tdt-seg__item:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
+.dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
+
+/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染 */
+.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;
+  border-radius:var(--tdt-radius-sm);background:var(--tdt-danger);color:var(--tdt-on-signal);
+  font-size:var(--tdt-font-xs);line-height:16px;font-weight:400;}
+
+/* block：撑满父宽（表单行用），各段等分 */
+.dsh-tdt-seg--block{display:flex;width:100%;}
+.dsh-tdt-seg--block .dsh-tdt-seg__item{flex:1 1 auto;justify-content:center;}
+
+/* weekday：星期多选方块（任务新增 / 编辑页）。基础插件的特殊化定制（用户 2026-10-01 明确要求：
+   原 WeekdayPicker 即「蓝底 + 近似方形」，统一到 Segmented 后由这一修饰类补回两处差异）：
+   - 每格做成正方形（宽 = 段高）；
+   - 选中态用品牌蓝（--tdt-business）、反白字，轨道用 hover 灰（与原自绘轨道一致）。
+   皮肤集中在此、不内联；调用点只挂 .dsh-tdt-seg--weekday 一个修饰类，符合「皮肤只在 controls-css」的规矩。 */
+.dsh-tdt-seg--weekday{--seg-track:var(--tdt-hover);}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-lg) - 6px);padding:0;justify-content:center;}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item[aria-pressed='true']{background:var(--tdt-business);color:var(--tdt-fg-inverse);box-shadow:var(--tdt-shadow-raised);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
+`;
+		/** 按钮 / 图标钮的皮肤规则（P2）。 */
+		const BUTTON_CSS = `
+/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────
+   与 Segmented 同一条高度纪律：--tdt-control-h-sm(24) / -md(28)，
+   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
+   variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
+.dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--tdt-space-1);
+  box-sizing:border-box;border:1px solid transparent;border-radius:var(--tdt-radius-sm);
+  background:transparent;color:var(--tdt-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-btn--sm{height:var(--tdt-control-h-sm);padding:0 10px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
+.dsh-tdt-btn--md{height:var(--tdt-control-h-md);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-btn__icon{display:inline-flex;align-items:center;flex:none;}
+
+.dsh-tdt-btn--primary{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
+.dsh-tdt-btn--primary:hover:not(:disabled){opacity:.9;}
+.dsh-tdt-btn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border-strong);color:var(--tdt-fg);}
+.dsh-tdt-btn--outline:hover:not(:disabled){background:var(--tdt-hover);}
+.dsh-tdt-btn--ghost{color:var(--tdt-fg-2);}
+.dsh-tdt-btn--ghost:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
+.dsh-tdt-btn--danger{background:var(--tdt-danger);color:var(--tdt-on-signal);}
+.dsh-tdt-btn--danger:hover:not(:disabled){opacity:.9;}
+/* danger-ink：红字描边（破坏性次要操作，如卡片上的「删除」），挂与 outline 组合的修饰类 */
+.dsh-tdt-btn--danger-ink{border-color:var(--tdt-danger);color:var(--tdt-danger);}
+.dsh-tdt-btn--danger-ink:hover:not(:disabled){background:color-mix(in srgb,var(--tdt-danger) 10%,transparent);color:var(--tdt-danger);}
+/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */
+.dsh-tdt-btn--link{height:auto;padding:0;border:0;background:none;color:var(--tdt-link);font-weight:400;text-align:left;}
+.dsh-tdt-btn--link:hover:not(:disabled){background:none;color:var(--tdt-link);text-decoration:underline;}
+.dsh-tdt-btn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-btn:disabled{cursor:default;opacity:.5;}
+
+.dsh-tdt-iconbtn{appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;
+  border:1px solid transparent;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
+  font-family:inherit;cursor:pointer;flex:none;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-iconbtn--sm{width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);font-size:var(--tdt-font-sm);}
+.dsh-tdt-iconbtn--md{width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);font-size:var(--tdt-font-md);}
+.dsh-tdt-iconbtn--plain{color:var(--tdt-fg-2);}
+.dsh-tdt-iconbtn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border);color:var(--tdt-fg-2);}
+.dsh-tdt-iconbtn--danger{color:var(--tdt-danger);}
+.dsh-tdt-iconbtn:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
+.dsh-tdt-iconbtn--danger:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-danger);}
+.dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-iconbtn:disabled{cursor:default;opacity:.4;}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn{transition:none;}}
+`;
+		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
+		const CONTROLS_DOMAIN = "controls";
+		/**
+		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
+		*/
+		function ensureControlsStyle() {
+			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS);
+		}
+		//#endregion
+		//#region src/client/ui/Segmented.tsx
+		/**
+		* 分段控件（滑动块）—— **全站唯一实现**（L2 组件皮肤，P1）
+		*
+		* 它是「同一份结构 + 两个受控轴」的样板：
+		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— **离散三档**，调用点**不许**自己写高度
+		*    （真不够用才允许在调用点本地覆盖 `--tdt-control-h-*`，属例外而非常态）；
+		*  - `variant`：`default`（纯黑面：轨道=第二层面 + 外描边）/ `inset`（灰底面：抄「版本」开关观感，
+		*    轨道=交互灰 hover 底、无外描边）—— 两套都保留、不合并；变体只改两个颜色变量，结构 / 尺寸 / 交互规则零重复。
+		*
+		* 用法：
+		*   // 单选
+		*   h(Segmented<'a' | 'b'>, { value: v, size: 'md', items: [{ value: 'a', label: '甲' }], onChange: setV })
+		*   // 多选（如星期）
+		*   h(Segmented<'1' | '2'>, { multiple: true, value: vs, items: [...], onChange: setVs })
+		*
+		* ⚠️ 不许在任何使用点就地写分段样式；要多一档高度 / 多一个外观 ⇒ 走
+		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
+		*/
+		/**
+		* 渲染一个分段控件（单选 / 多选同体）。
+		*
+		* @param props 见 {@link SegmentedProps}。
+		* @returns 分段控件元素。
+		*/
+		function Segmented(props) {
+			ensureUiBase();
+			ensureControlsStyle();
+			const size = props.size ?? "sm";
+			const variant = props.variant ?? "default";
+			const multiple = props.multiple === true;
+			const value = props.value;
+			const onChange = props.onChange;
+			return (0, react.createElement)("div", {
+				role: "group",
+				"aria-label": props.label,
+				id: props.id,
+				className: `dsh-tdt-seg dsh-tdt-seg--${variant} dsh-tdt-seg--${size}${props.block === true ? " dsh-tdt-seg--block" : ""}${props.className !== void 0 ? " " + props.className : ""}`,
+				style: props.style
+			}, props.items.map((item) => {
+				const on = multiple ? value.includes(item.value) : value === item.value;
+				const disabled = item.disabled === true || props.disabled === true;
+				const handle = () => {
+					if (disabled) return;
+					if (multiple) {
+						const arr = value;
+						const next = arr.includes(item.value) ? arr.filter((v) => v !== item.value) : [...arr, item.value];
+						onChange(next);
+					} else onChange(item.value);
+				};
+				return (0, react.createElement)("button", {
+					key: item.value,
+					type: "button",
+					className: "dsh-tdt-seg__item",
+					"aria-pressed": on,
+					disabled,
+					onClick: handle
+				}, item.label, item.badge !== void 0 && item.badge > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-seg__badge" }, String(item.badge)) : null);
+			}));
+		}
+		//#endregion
+		//#region src/client/ui/Button.tsx
+		/**
+		* 按钮 / 图标钮 —— **全站唯一实现**（L2 组件皮肤，P2）
+		*
+		* 两轴模型（同 Segmented）：
+		*  - `variant`：`primary`（实心强调）/ `outline`（描边中性）/ `ghost`（无底无边）/ `danger`（实心红，破坏性确认）
+		*  - `size`：`sm`(24) / `md`(28) —— 高度一律吃 `--tdt-control-h-*`，**有边 / 无边同高**（边框在内部补回）
+		*
+		* `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
+		* 链接型文字钮 = `Button variant="ghost"` + 修饰类 `dsh-tdt-btn--link`（红字危险描边 = `outline` + `dsh-tdt-btn--danger-ink`）。
+		*
+		* ⚠️ 不许在任何使用点就地写按钮样式；要多一档外观 ⇒ 走
+		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
+		*/
+		/** 组装按钮 class（结构一套 + 轴类）。 */
+		function buttonClass(variant, size, extra) {
+			return `dsh-tdt-btn dsh-tdt-btn--${variant} dsh-tdt-btn--${size}${extra !== void 0 && extra !== "" ? " " + extra : ""}`;
+		}
+		/**
+		* 渲染一个文字 / 图标 + 文字按钮。
+		*
+		* @param props 见 {@link ButtonProps}。
+		* @returns 按钮元素。
+		*/
+		function Button$2(props) {
+			ensureControlsStyle();
+			const { variant = "outline", size = "sm", icon, className, style, children, ...rest } = props;
+			const attrs = {
+				...rest,
+				type: rest.type ?? "button",
+				className: buttonClass(variant, size, className),
+				style
+			};
+			return (0, react.createElement)("button", attrs, icon !== void 0 && icon !== null ? (0, react.createElement)("span", { className: "dsh-tdt-btn__icon" }, icon) : null, children);
+		}
+		/**
+		* 渲染一个纯图标按钮。
+		*
+		* @param props 见 {@link IconButtonProps}。
+		* @returns 图标按钮元素。
+		*/
+		function IconButton(props) {
+			ensureControlsStyle();
+			const { variant = "plain", size = "sm", icon, label, className, style, ...rest } = props;
+			const attrs = {
+				...rest,
+				type: rest.type ?? "button",
+				title: rest.title ?? label,
+				"aria-label": rest["aria-label"] ?? label,
+				className: `dsh-tdt-iconbtn dsh-tdt-iconbtn--${variant} dsh-tdt-iconbtn--${size}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				style
+			};
+			return (0, react.createElement)("button", attrs, icon);
+		}
+		//#endregion
 		//#region src/client/archive-session-css.ts
 		/** 弹窗根类名前缀（稳定，不随宿主哈希变化）。 */
 		const SV_STYLE_ID = "dsh-task-dispatch-table-archive-session";
@@ -4198,21 +4664,23 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${tt("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialCount === 0 ? (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-sid",
 				style: { color: "var(--dsw-alias-state-warn-primary, #b7791f)" }
-			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-headerbtns" }, canFork ? (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-branch",
+			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-headerbtns" }, canFork ? (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
 				disabled: forking,
 				title: tt("continueBranch"),
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, { size: 14 }),
 				onClick: () => {
 					setForkErr(null);
 					setForkTarget({});
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, { size: 14 }), tt("continueBranch")) : null, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-close",
-				"aria-label": tt("debugClose"),
+			}, tt("continueBranch")) : null, (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
+				label: tt("debugClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 })))), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+			}))), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: forkTarget !== null,
 				onClose: () => {
 					if (!forking) setForkTarget(null);
@@ -4235,472 +4703,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					onClick: onForkAccept
 				}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))]
 			}, forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
-		}
-		//#endregion
-		//#region src/client/ui/tokens.ts
-		/**
-		* L1 语义 token 层（UI 基础层 · P0 地基）
-		*
-		* 这一份文件是**全站唯一的「宿主变量 → 插件语义名」翻译表**。规矩见
-		* docs/design/ui-style-guide.md：
-		*  - `--tdt-*` **只允许在本文件定义**；其它任何文件只能 `var(--tdt-*)` 消费，
-		*    不许再定义 `--tdt-*`，也不许直接写 `var(--dsw-*)`；
-		*  - 每个 token 都带兜底值 ⇒ 宿主升级换名时不炸（最坏退到兜底色，不会白屏）；
-		*  - **明暗差异只写在本文件**：能靠宿主 alias 表达的一律不写覆盖段（alias 自己随主题变），
-		*    只有 alias 表达不了的「固定中性面 / 反色面」才进 `body[data-ds-dark-theme]` 段。
-		*
-		* 宿主变量名 / 亮暗取值 / 哪个是真变量 —— 真源是
-		* docs/design/external/dsh-capabilities.md §主题与设计变量
-		* （2026-10-01 按宿主 0.2.0-rc.2 解包五个包逐条核实；兜底值取的就是宿主真值）。
-		*
-		* 挂载点选 `body`：插件界面（含 portal 到 body 的弹窗）全在 body 内，
-		* 定义在 body 上零调用点成本；名字统一带 `--tdt-` 前缀，不会与宿主变量打架。
-		*/
-		const UI_TOKENS_CSS = `
-/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */
-body{
-  --tdt-fg:var(--dsw-alias-label-primary,#1f2328);
-  --tdt-fg-2:var(--dsw-alias-label-secondary,#5c6370);
-  --tdt-fg-3:var(--dsw-alias-label-tertiary,#767d87);
-  --tdt-fg-4:var(--dsw-alias-label-caption,#9aa1ab);
-  --tdt-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);
-  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */
-  --tdt-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);
-
-  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */
-  --tdt-surface-1:var(--dsw-alias-bg-layer-1,#fff);
-  --tdt-surface-2:var(--dsw-alias-bg-layer-2,#fff);
-  --tdt-surface-3:var(--dsw-alias-bg-layer-3,#fff);
-  /* 「选中亮片」的底盘色（配 --tdt-shadow-raised 用） */
-  --tdt-surface-raised:var(--dsw-alias-bg-layer-1,#fff);
-  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */
-  --tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
-  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */
-  --tdt-solid:var(--dsw-static-neutral-00,#fff);
-  --tdt-on-solid:var(--dsw-alias-label-primary,#1f2328);
-  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */
-  --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
-  --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
-  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
-
-  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
-  --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
-  --tdt-border:var(--dsw-alias-border-l2,#0000001a);
-  --tdt-border-strong:var(--dsw-alias-border-l3,#0000001f);
-  --tdt-border-heavy:var(--dsw-alias-border-l4,#00000029);
-
-  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */
-  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */
-  --tdt-accent:var(--dsw-alias-brand-primary,#0f1115);
-  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */
-  --tdt-business:var(--dsw-alias-state-business-primary,#3b5bdb);
-  --tdt-success:var(--dsw-alias-state-success-primary,#22c55e);
-  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */
-  --tdt-warning:var(--dsw-alias-state-warn-primary,#f59e0b);
-  --tdt-danger:var(--dsw-alias-state-error-primary,#ec1313);
-  --tdt-link:var(--dsw-alias-link,#3b5bdb);
-  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
-     故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
-  --tdt-on-signal:#fff;
-
-  /* ── 交互底 / 遮罩 ────────────────────────────────────────────────── */
-  --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
-  --tdt-active:var(--dsw-alias-interactive-bg-active,#2631481a);
-  --tdt-mask:var(--dsw-alias-bg-mask-1,#0000003d);
-
-  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
-  --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
-  /* 亮片自带的浮起感（选中态用；与 --tdt-surface-raised 配对） */
-  --tdt-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
-  --tdt-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);
-  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */
-  --tdt-focus:var(--dsw-alias-state-business-primary,#3b5bdb);
-
-  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */
-  --tdt-radius-xs:var(--dsw-radius-xs,4px);
-  --tdt-radius-sm:var(--dsw-radius-sm,8px);
-  --tdt-radius-md:var(--dsw-radius-md,12px);
-  --tdt-radius-lg:var(--dsw-radius-lg,16px);
-  --tdt-radius-xl:var(--dsw-radius-xl,20px);
-  --tdt-radius-panel:var(--dsw-radius-panel,28px);
-
-  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */
-  --tdt-space-1:4px;
-  --tdt-space-2:8px;
-  --tdt-space-3:12px;
-  --tdt-space-4:16px;
-
-  /* ── 控件高度：离散三档（控件用 size="sm|md|lg" 选；调用点不许自定义高度，
-       真不够用才允许在调用点本地覆盖 --tdt-control-h-*，属例外而非常态）── */
-  --tdt-control-h-sm:24px;
-  --tdt-control-h-md:28px;
-  --tdt-control-h-lg:32px;
-
-  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */
-  --tdt-font-xs:var(--dsw-font-xxxs-11-font-size,11px);
-  --tdt-font-sm:var(--dsw-font-xxs-12-font-size,12px);
-  --tdt-font-md:var(--dsw-font-xs-13-font-size,13px);
-  --tdt-font-lg:var(--dsw-font-s-14-font-size,14px);
-  --tdt-font-xl:var(--dsw-font-base-16-font-size,16px);
-  --tdt-line-xs:var(--dsw-font-xxxs-11-line-height,14px);
-  --tdt-line-sm:var(--dsw-font-xxs-12-line-height,18px);
-  --tdt-line-md:var(--dsw-font-xs-13-line-height,20px);
-  --tdt-line-lg:var(--dsw-font-s-14-line-height,22px);
-  --tdt-line-xl:var(--dsw-font-base-16-line-height,24px);
-  --tdt-font-mono:var(--ds-font-family-code,monospace);
-
-  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */
-  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */
-  --tdt-z-dock:1030;
-  --tdt-z-drawer:1040;
-  --tdt-z-modal:1070;
-  --tdt-z-menu:1100;
-  --tdt-z-tip:1200;
-
-  /* ── 动效 ─────────────────────────────────────────────────────────── */
-  --tdt-dur:var(--ds-transition-duration,.2s);
-  --tdt-dur-fast:var(--ds-transition-duration-fast,.12s);
-  --tdt-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));
-}
-
-/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────
-   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，
-   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。
-   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */
-body[data-ds-dark-theme]{
-  --tdt-solid:var(--dsw-static-neutral-900,#0f0f0f);
-  --tdt-on-solid:var(--dsw-static-neutral-00,#fff);
-  --tdt-plate:var(--dsw-static-neutral-850,#212123);
-  --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
-  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
-}
-`;
-		//#endregion
-		//#region src/client/ui/style.ts
-		/**
-		* 统一样式注入器（UI 基础层 · P0 地基）
-		*
-		* 为什么必须运行时注入：客户端产物是 `window.__ModuleLoader__.load({ factory })` 的 CJS 闭包，
-		* `import './x.css'` 只会产出独立 css 资源、内核不会加载它（task-editor-css.ts / archive-session-css.ts /
-		* toast-css.ts 三处注释已结论）⇒ CSS 只能以字符串在运行时打进 `<style>`。
-		*
-		* 本模块把「各文件自己 createElement('style')」收成**唯一入口**：
-		*  - 全站只有**一个** `<style id="dsh-task-dispatch-table-ui">`；
-		*  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` …），
-		*    同一域重复登记 = 覆盖（后写胜），便于过渡期逐块搬；
-		*  - `tokens` 域恒排最前 —— 变量定义必须先于消费它的规则出现（同一条 style 内也讲先后）；
-		*  - 幂等：重复调用不重复插入；`registerStyle` 在标签已挂上时会立刻刷新内容。
-		*
-		* 三条硬规矩（docs/design/ui-style-guide.md）：
-		*  ① 不许再有第二处 `document.createElement('style')`；
-		*  ② 不许再出现第二套 style 标签 id；
-		*  ③ 域内的规则只能消费 `var(--tdt-*)`（颜色 / 尺寸 / 字号一律来自 token 层）。
-		*/
-		/** 全站唯一的样式标签 id（改名 = 大范围回归，不要动）。 */
-		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
-		/** 契约：域 → CSS 文本（插入顺序 = 首次登记顺序，`tokens` 恒最前）。 */
-		const domains = /* @__PURE__ */ new Map();
-		/** token 域固定名（`ui/index.ts` 的 ensureUiBase 用它登记变量表）。 */
-		const TOKENS_DOMAIN = "tokens";
-		/** 已挂载的 style 标签（缓存引用；被外部移除时 ensureUiStyles 会重新接管）。 */
-		let tag = null;
-		/** 内容是否落后于 domains（登记后置位，flush 后清除）。 */
-		let dirty = true;
-		/** 按「tokens 优先、其余按登记顺序」拼出整条 CSS。 */
-		function buildCss() {
-			const entries = [...domains.entries()];
-			entries.sort((a, b) => a[0] === "tokens" ? -1 : b[0] === "tokens" ? 1 : 0);
-			return entries.map(([, css]) => css).join("\n");
-		}
-		/** 把最新内容写进标签（唯一写点）。 */
-		function flush() {
-			if (tag === null) return;
-			tag.textContent = buildCss();
-			dirty = false;
-		}
-		/**
-		* 登记一个域的样式（纯登记，不强制挂载）。
-		*
-		* @param domain 域名（见本文件头部的清单）；同名重复登记 = 覆盖。
-		* @param css 该域的 CSS 文本。
-		*/
-		function registerStyle(domain, css) {
-			if (domains.get(domain) === css) return;
-			domains.set(domain, css);
-			dirty = true;
-			if (tag !== null && tag.isConnected) flush();
-		}
-		/**
-		* 确保样式已挂载且是最新（幂等；无 document / 无 head 的环境静默跳过）。
-		*/
-		function ensureUiStyles() {
-			if (typeof document === "undefined") return;
-			if (tag === null || !tag.isConnected) {
-				const found = document.getElementById(UI_STYLE_ID);
-				if (found !== null) tag = found;
-				else {
-					const head = document.head;
-					if (head === null) return;
-					const el = document.createElement("style");
-					el.id = UI_STYLE_ID;
-					head.appendChild(el);
-					tag = el;
-				}
-				dirty = true;
-			}
-			if (dirty) flush();
-		}
-		/**
-		* 过渡期便捷入口：登记 + 立刻确保挂载（老 `ensureXxxStyle()` 一行替换成这个）。
-		*
-		* @param domain 域名。
-		* @param css 该域的 CSS 文本。
-		*/
-		function applyStyle(domain, css) {
-			registerStyle(domain, css);
-			ensureUiStyles();
-		}
-		/**
-		* 入口 / 组件调用一次即可：登记 token 层并确保样式已注入（幂等）。
-		*
-		* 放在本文件（而不是 index.ts）是为了让 `ui/` 内的组件也能直接调用它而不产生循环依赖。
-		*/
-		function ensureUiBase() {
-			registerStyle(TOKENS_DOMAIN, UI_TOKENS_CSS);
-			ensureUiStyles();
-		}
-		//#endregion
-		//#region src/client/ui/controls-css.ts
-		/**
-		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
-		*
-		* 规矩（docs/design/ui-style-guide.md §三）：
-		*  - **只消费 `var(--tdt-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
-		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达（本文件的 `--seg-*`）；
-		*  - 高度只取 `--tdt-control-h-sm` / `-md` / `-lg` 三档（段高 = 控件总高 − 6px：上下 padding 2px×2 + 描边 1px×2；真不够用才在调用点本地覆盖 `--tdt-control-h-*`，属例外）。
-		*
-		* 分期：P1 只有分段控件（滑动块）；P2 按钮 / P3 输入下拉 / P4 开关日期时间会往本文件追加，
-		* 追加时保持「一段一控件、段头写清哪一期」的写法。
-		*/
-		/** 分段控件的皮肤规则（P1）。 */
-		const SEGMENTED_CSS = `
-/* ── 分段控件（滑动块）P1 ────────────────────────────────────────────────
-   结构一套 + 两个受控轴：size(sm|md|lg) × variant(default|inset)。
-   变体**只覆盖两个颜色变量**（--seg-track 轨道底 / --seg-thumb 选中块），
-   这正是「同一份样式、只重载颜色」的落地形态。 */
-/* 两套基础样式（2026-10-01 用户拍板：保留「纯黑面」与「灰底面」两套，不可合并）：
-   - default = 纯黑面：轨道=第二层面 + 外描边，选中=亮片底；
-   - inset = 灰底面：抄「版本」开关观感（轨道=交互灰 hover 底、无外描边、选中=亮片底），用户觉得比原灰底那套好看。
-   ⚠️ 高度对齐规则（2026-10-01 用户拍板）：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
-   落下形态 = 两者都是「1px 边框 + 3px padding」的几何——default 真边框 1px + padding 3px；
-   inset 无边框，所以 padding 收 4px 把缺的 1px 补回来。段高算式 - 6px 不用动，两种外观总高一致。
-   以后 Button / Input 的有边 / 无边同此规则。 */
-.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
-.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}
-
-.dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
-  height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);
-  background:transparent;color:var(--tdt-fg-2);font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
-  font-weight:400;white-space:nowrap;cursor:pointer;
-  transition:color var(--tdt-dur-fast) var(--tdt-ease),background-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
-.dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-lg) - 6px);}
-.dsh-tdt-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--tdt-fg);}
-.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--tdt-shadow-raised);color:var(--tdt-fg);font-weight:600;}
-.dsh-tdt-seg__item:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
-.dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
-
-/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染 */
-.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;
-  border-radius:var(--tdt-radius-sm);background:var(--tdt-danger);color:var(--tdt-on-signal);
-  font-size:var(--tdt-font-xs);line-height:16px;font-weight:400;}
-
-/* block：撑满父宽（表单行用），各段等分 */
-.dsh-tdt-seg--block{display:flex;width:100%;}
-.dsh-tdt-seg--block .dsh-tdt-seg__item{flex:1 1 auto;justify-content:center;}
-
-/* weekday：星期多选方块（任务新增 / 编辑页）。基础插件的特殊化定制（用户 2026-10-01 明确要求：
-   原 WeekdayPicker 即「蓝底 + 近似方形」，统一到 Segmented 后由这一修饰类补回两处差异）：
-   - 每格做成正方形（宽 = 段高）；
-   - 选中态用品牌蓝（--tdt-business）、反白字，轨道用 hover 灰（与原自绘轨道一致）。
-   皮肤集中在此、不内联；调用点只挂 .dsh-tdt-seg--weekday 一个修饰类，符合「皮肤只在 controls-css」的规矩。 */
-.dsh-tdt-seg--weekday{--seg-track:var(--tdt-hover);}
-.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-lg) - 6px);padding:0;justify-content:center;}
-.dsh-tdt-seg--weekday .dsh-tdt-seg__item[aria-pressed='true']{background:var(--tdt-business);color:var(--tdt-fg-inverse);box-shadow:var(--tdt-shadow-raised);}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
-`;
-		/** 按钮 / 图标钮的皮肤规则（P2）。 */
-		const BUTTON_CSS = `
-/* ── 按钮 / 图标钮 P2 ───────────────────────────────────────────────────
-   与 Segmented 同一条高度纪律：--tdt-control-h-sm(24) / -md(28)，
-   有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
-   variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
-.dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--tdt-space-1);
-  box-sizing:border-box;border:1px solid transparent;border-radius:var(--tdt-radius-sm);
-  background:transparent;color:var(--tdt-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
-  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-btn--sm{height:var(--tdt-control-h-sm);padding:0 10px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
-.dsh-tdt-btn--md{height:var(--tdt-control-h-md);padding:0 12px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
-.dsh-tdt-btn__icon{display:inline-flex;align-items:center;flex:none;}
-
-.dsh-tdt-btn--primary{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
-.dsh-tdt-btn--primary:hover:not(:disabled){opacity:.9;}
-.dsh-tdt-btn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border-strong);color:var(--tdt-fg);}
-.dsh-tdt-btn--outline:hover:not(:disabled){background:var(--tdt-hover);}
-.dsh-tdt-btn--ghost{color:var(--tdt-fg-2);}
-.dsh-tdt-btn--ghost:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
-.dsh-tdt-btn--danger{background:var(--tdt-danger);color:var(--tdt-on-signal);}
-.dsh-tdt-btn--danger:hover:not(:disabled){opacity:.9;}
-/* danger-ink：红字描边（破坏性次要操作，如卡片上的「删除」），挂与 outline 组合的修饰类 */
-.dsh-tdt-btn--danger-ink{border-color:var(--tdt-danger);color:var(--tdt-danger);}
-.dsh-tdt-btn--danger-ink:hover:not(:disabled){background:color-mix(in srgb,var(--tdt-danger) 10%,transparent);color:var(--tdt-danger);}
-/* link：行内文字链接型（会话 / 产出文件名），无底无边、品牌蓝、hover 下划线 */
-.dsh-tdt-btn--link{height:auto;padding:0;border:0;background:none;color:var(--tdt-link);font-weight:400;text-align:left;}
-.dsh-tdt-btn--link:hover:not(:disabled){background:none;color:var(--tdt-link);text-decoration:underline;}
-.dsh-tdt-btn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
-.dsh-tdt-btn:disabled{cursor:default;opacity:.5;}
-
-.dsh-tdt-iconbtn{appearance:none;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;
-  border:1px solid transparent;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
-  font-family:inherit;cursor:pointer;flex:none;
-  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-iconbtn--sm{width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);font-size:var(--tdt-font-sm);}
-.dsh-tdt-iconbtn--md{width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);font-size:var(--tdt-font-md);}
-.dsh-tdt-iconbtn--plain{color:var(--tdt-fg-2);}
-.dsh-tdt-iconbtn--outline{background:var(--tdt-surface-1);border-color:var(--tdt-border);color:var(--tdt-fg-2);}
-.dsh-tdt-iconbtn--danger{color:var(--tdt-danger);}
-.dsh-tdt-iconbtn:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-fg);}
-.dsh-tdt-iconbtn--danger:hover:not(:disabled){background:var(--tdt-hover);color:var(--tdt-danger);}
-.dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
-.dsh-tdt-iconbtn:disabled{cursor:default;opacity:.4;}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn{transition:none;}}
-`;
-		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
-		const CONTROLS_DOMAIN = "controls";
-		/**
-		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
-		*/
-		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS);
-		}
-		//#endregion
-		//#region src/client/ui/Segmented.tsx
-		/**
-		* 分段控件（滑动块）—— **全站唯一实现**（L2 组件皮肤，P1）
-		*
-		* 它是「同一份结构 + 两个受控轴」的样板：
-		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— **离散三档**，调用点**不许**自己写高度
-		*    （真不够用才允许在调用点本地覆盖 `--tdt-control-h-*`，属例外而非常态）；
-		*  - `variant`：`default`（纯黑面：轨道=第二层面 + 外描边）/ `inset`（灰底面：抄「版本」开关观感，
-		*    轨道=交互灰 hover 底、无外描边）—— 两套都保留、不合并；变体只改两个颜色变量，结构 / 尺寸 / 交互规则零重复。
-		*
-		* 用法：
-		*   // 单选
-		*   h(Segmented<'a' | 'b'>, { value: v, size: 'md', items: [{ value: 'a', label: '甲' }], onChange: setV })
-		*   // 多选（如星期）
-		*   h(Segmented<'1' | '2'>, { multiple: true, value: vs, items: [...], onChange: setVs })
-		*
-		* ⚠️ 不许在任何使用点就地写分段样式；要多一档高度 / 多一个外观 ⇒ 走
-		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
-		*/
-		/**
-		* 渲染一个分段控件（单选 / 多选同体）。
-		*
-		* @param props 见 {@link SegmentedProps}。
-		* @returns 分段控件元素。
-		*/
-		function Segmented(props) {
-			ensureUiBase();
-			ensureControlsStyle();
-			const size = props.size ?? "sm";
-			const variant = props.variant ?? "default";
-			const multiple = props.multiple === true;
-			const value = props.value;
-			const onChange = props.onChange;
-			return (0, react.createElement)("div", {
-				role: "group",
-				"aria-label": props.label,
-				id: props.id,
-				className: `dsh-tdt-seg dsh-tdt-seg--${variant} dsh-tdt-seg--${size}${props.block === true ? " dsh-tdt-seg--block" : ""}${props.className !== void 0 ? " " + props.className : ""}`,
-				style: props.style
-			}, props.items.map((item) => {
-				const on = multiple ? value.includes(item.value) : value === item.value;
-				const disabled = item.disabled === true || props.disabled === true;
-				const handle = () => {
-					if (disabled) return;
-					if (multiple) {
-						const arr = value;
-						const next = arr.includes(item.value) ? arr.filter((v) => v !== item.value) : [...arr, item.value];
-						onChange(next);
-					} else onChange(item.value);
-				};
-				return (0, react.createElement)("button", {
-					key: item.value,
-					type: "button",
-					className: "dsh-tdt-seg__item",
-					"aria-pressed": on,
-					disabled,
-					onClick: handle
-				}, item.label, item.badge !== void 0 && item.badge > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-seg__badge" }, String(item.badge)) : null);
-			}));
-		}
-		//#endregion
-		//#region src/client/ui/Button.tsx
-		/**
-		* 按钮 / 图标钮 —— **全站唯一实现**（L2 组件皮肤，P2）
-		*
-		* 两轴模型（同 Segmented）：
-		*  - `variant`：`primary`（实心强调）/ `outline`（描边中性）/ `ghost`（无底无边）/ `danger`（实心红，破坏性确认）
-		*  - `size`：`sm`(24) / `md`(28) —— 高度一律吃 `--tdt-control-h-*`，**有边 / 无边同高**（边框在内部补回）
-		*
-		* `IconButton` 是纯图标钮：`plain`（默认无底无边，hover 起灰底）/ `outline`（描边）/ `danger`（红）。
-		* 链接型文字钮 = `Button variant="ghost"` + 修饰类 `dsh-tdt-btn--link`（红字危险描边 = `outline` + `dsh-tdt-btn--danger-ink`）。
-		*
-		* ⚠️ 不许在任何使用点就地写按钮样式；要多一档外观 ⇒ 走
-		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
-		*/
-		/** 组装按钮 class（结构一套 + 轴类）。 */
-		function buttonClass(variant, size, extra) {
-			return `dsh-tdt-btn dsh-tdt-btn--${variant} dsh-tdt-btn--${size}${extra !== void 0 && extra !== "" ? " " + extra : ""}`;
-		}
-		/**
-		* 渲染一个文字 / 图标 + 文字按钮。
-		*
-		* @param props 见 {@link ButtonProps}。
-		* @returns 按钮元素。
-		*/
-		function Button$1(props) {
-			ensureControlsStyle();
-			const { variant = "outline", size = "sm", icon, className, style, children, ...rest } = props;
-			const attrs = {
-				...rest,
-				type: rest.type ?? "button",
-				className: buttonClass(variant, size, className),
-				style
-			};
-			return (0, react.createElement)("button", attrs, icon !== void 0 && icon !== null ? (0, react.createElement)("span", { className: "dsh-tdt-btn__icon" }, icon) : null, children);
-		}
-		/**
-		* 渲染一个纯图标按钮。
-		*
-		* @param props 见 {@link IconButtonProps}。
-		* @returns 图标按钮元素。
-		*/
-		function IconButton(props) {
-			ensureControlsStyle();
-			const { variant = "plain", size = "sm", icon, label, className, style, ...rest } = props;
-			const attrs = {
-				...rest,
-				type: rest.type ?? "button",
-				title: rest.title ?? label,
-				"aria-label": rest["aria-label"] ?? label,
-				className: `dsh-tdt-iconbtn dsh-tdt-iconbtn--${variant} dsh-tdt-iconbtn--${size}${className !== void 0 && className !== "" ? " " + className : ""}`,
-				style
-			};
-			return (0, react.createElement)("button", attrs, icon);
 		}
 		//#endregion
 		//#region src/client/editor-fields.tsx
@@ -4966,28 +4968,16 @@ body[data-ds-dark-theme]{
 					m: next.getMonth() + 1
 				});
 			};
-			const navButton = (label, months, icon) => (0, react.createElement)("button", {
-				type: "button",
-				"aria-label": label,
+			const navButton = (label, months, icon) => (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon,
+				label,
 				title: label,
 				onClick: () => {
 					step(months);
-				},
-				style: {
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					width: "26px",
-					height: "26px",
-					padding: 0,
-					border: "none",
-					borderRadius: C$3.radiusSm,
-					background: "transparent",
-					color: C$3.textDim,
-					cursor: "pointer",
-					font: "inherit"
 				}
-			}, icon);
+			});
 			const anchor = (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-field",
@@ -5090,29 +5080,13 @@ body[data-ds-dark-theme]{
 				marginTop: "6px",
 				paddingTop: "6px",
 				borderTop: `1px solid ${C$3.borderL2}`
-			} }, (0, react.createElement)("button", {
-				type: "button",
+			} }, (0, react.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				style: { width: "100%" },
 				onClick: () => {
 					props.onChange(todayIso$1());
 					setOpen(false);
-				},
-				style: {
-					width: "100%",
-					padding: "6px 0",
-					border: "none",
-					borderRadius: C$3.radiusSm,
-					background: "transparent",
-					color: C$3.text,
-					font: "inherit",
-					fontSize: "13px",
-					cursor: "pointer",
-					transition: transition$2
-				},
-				onPointerEnter: (event) => {
-					event.currentTarget.style.background = C$3.hover;
-				},
-				onPointerLeave: (event) => {
-					event.currentTarget.style.background = "transparent";
 				}
 			}, props.labels.today))), document.body) : null);
 		}
@@ -5251,40 +5225,19 @@ body[data-ds-dark-theme]{
 				marginTop: "6px",
 				paddingTop: "6px",
 				borderTop: `1px solid ${C$3.borderL2}`
-			} }, (0, react.createElement)("button", {
-				type: "button",
+			} }, (0, react.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
 				onClick: () => {
 					const now = /* @__PURE__ */ new Date();
 					setDraft(`${pad2$1(now.getHours())}:${pad2$1(now.getMinutes())}`);
-				},
-				style: {
-					padding: "4px 8px",
-					border: "none",
-					borderRadius: C$3.radiusSm,
-					background: "transparent",
-					color: C$3.textDim,
-					font: "inherit",
-					fontSize: "12px",
-					cursor: "pointer",
-					transition: transition$2
 				}
-			}, props.labels.now), (0, react.createElement)("button", {
-				type: "button",
+			}, props.labels.now), (0, react.createElement)(Button$2, {
+				variant: "primary",
+				size: "sm",
 				onClick: () => {
 					props.onChange(draft);
 					setOpen(false);
-				},
-				style: {
-					padding: "5px 14px",
-					border: "none",
-					borderRadius: C$3.radiusSm,
-					font: "inherit",
-					fontSize: "12px",
-					fontWeight: 600,
-					cursor: "pointer",
-					transition: transition$2,
-					background: C$3.business,
-					color: "var(--dsw-alias-label-primary-foreground, #ffffff)"
 				}
 			}, props.labels.confirm))), document.body) : null);
 		}
@@ -5709,8 +5662,9 @@ body[data-ds-dark-theme]{
 			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text,
 				labels: MD_LABELS
-			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("button", {
-				type: "button",
+			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
 				disabled: loadingMore,
 				onClick: loadMore
 			}, t("previewLoadMore"))) : null);
@@ -6306,9 +6260,9 @@ body[data-ds-dark-theme]{
 				reloadNonce,
 				t
 			});
-			else if (mode === "error" && listErr !== null) body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(listErr.key, listErr.params))), history.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-err-actions" }, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-err-back",
+			else if (mode === "error" && listErr !== null) body = (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react.createElement)("span", null, t(listErr.key, listErr.params))), history.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-err-actions" }, (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
 				onClick: goBack
 			}, t("explorerBack"))) : null);
 			else if (listing !== null) body = listing.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
@@ -6329,15 +6283,16 @@ body[data-ds-dark-theme]{
 				ref: barRef,
 				className: "dsh-tdt-sv-crumbbar",
 				"aria-label": t("explorerCrumbsAria")
-			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-wrap" }, tooled(t("explorerLevels"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerLevels"),
+			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-crumbs-menu-wrap" }, tooled(t("explorerLevels"), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
+				label: t("explorerLevels"),
 				"aria-expanded": menuOpen,
 				onClick: () => {
 					setMenuOpen((value) => !value);
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }))), menuOpen ? (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
+			})), menuOpen ? (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-crumbs-backdrop",
 				onClick: () => {
 					setMenuOpen(false);
@@ -6378,27 +6333,30 @@ body[data-ds-dark-theme]{
 				onClick: () => {
 					loadDir(crumb.path);
 				}
-			}, crumb.label)))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("explorerBack"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerBack"),
+			}, crumb.label)))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("explorerBack"), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 14 }),
+				label: t("explorerBack"),
 				disabled: history.length === 0,
 				onClick: goBack
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 14 }))), tooled(t("explorerUp"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("explorerUp"),
+			})), tooled(t("explorerUp"), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 }),
+				label: t("explorerUp"),
 				disabled: dir === "",
 				onClick: () => {
 					const p = dirnameOf(dir);
 					if (p !== dir) loadDir(p);
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 }))), tooled(t("previewClose"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn dsh-tdt-sv-close",
-				"aria-label": t("previewClose"),
+			})), tooled(t("previewClose"), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
+				label: t("previewClose"),
 				onClick: onClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }))))), viewing !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react.createElement)("span", {
+			})))), viewing !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react.createElement)("span", {
 				ref: titleRef,
 				className: "dsh-tdt-sv-preview-title",
 				onMouseEnter: startMarquee,
@@ -6422,17 +6380,19 @@ body[data-ds-dark-theme]{
 				onChange: (next) => {
 					setSourceView(next === "source");
 				}
-			}) : null, tooled(t("previewCopyPath"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("previewCopyPath"),
+			}) : null, tooled(t("previewCopyPath"), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 14 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, { size: 14 }),
+				label: t("previewCopyPath"),
 				onClick: copyPath
-			}, copied ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 14 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, { size: 14 }))), tooled(t("previewRefresh"), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-head-btn",
-				"aria-label": t("previewRefresh"),
+			})), tooled(t("previewRefresh"), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 }),
+				label: t("previewRefresh"),
 				onClick: reload
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 }))))) : null, body);
+			})))) : null, body);
 		}
 		//#endregion
 		//#region src/client/task-editor-css.ts
@@ -38530,11 +38490,12 @@ body[data-ds-dark-theme]{
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })) : (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-help",
-				"aria-label": hint
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }));
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })) : (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }),
+				label: hint
+			});
 			const tip = {
 				label: hint,
 				side,
@@ -39492,21 +39453,22 @@ body[data-ds-dark-theme]{
 			}, (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-ver-ic",
 				style: { transform: "rotate(-90deg)" }
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)(MarqueeText, { text: formatVersionTime(v.ts) }), v.note !== "" ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-note" }, v.note) : null), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-ver-use",
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-main" }, (0, react.createElement)(MarqueeText, { text: formatVersionTime(v.ts) }), v.note !== "" ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-note" }, v.note) : null), (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-right" }, hoveredId === v.file ? (0, react.createElement)("span", { className: "dsh-tdt-ed-ver-actions" }, (0, react.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				className: "dsh-tdt-btn--link",
 				onClick: () => {
 					setConfirmUseFile(v.file);
 				}
-			}, t("editorUseShort")), (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-ver-del",
-				title: t("editorDeleteVersion"),
-				"aria-label": t("editorDeleteVersion"),
+			}, t("editorUseShort")), (0, react.createElement)(IconButton, {
+				variant: "danger",
+				size: "sm",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 12 }),
+				label: t("editorDeleteVersion"),
 				onClick: () => {
 					setConfirmDeleteFile(v.file);
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 12 }))) : null)))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
+			})) : null)))))) : null), confirmDeleteFile !== null ? (0, react.createElement)(VersionConfirm, {
 				t,
 				title: t("editorConfirmDeleteTitle"),
 				desc: t("editorConfirmDeleteDesc"),
@@ -40484,13 +40446,13 @@ body[data-ds-dark-theme]{
 					setTab(next);
 				},
 				label: t("editorTabBasic")
-			}) : null, (0, react.createElement)("button", {
-				className: "dsh-tdt-ed-close",
-				type: "button",
-				title: t("editorClose"),
-				"aria-label": t("editorClose"),
+			}) : null, (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 }),
+				label: t("editorClose"),
 				onClick: requestClose
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 })))), (0, react.createElement)("div", {
+			}))), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-body",
 				ref: bodyRef
 			}, body), (0, react.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -41838,7 +41800,7 @@ body[data-ds-dark-theme]{
 					fontSize: "11px",
 					color: C$1.textDim,
 					marginBottom: "6px"
-				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$1, {
+				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$2, {
 					variant: "ghost",
 					size: "sm",
 					className: "dsh-tdt-btn--link",
@@ -41852,7 +41814,7 @@ body[data-ds-dark-theme]{
 						fontSize: "12px",
 						lineHeight: "18px"
 					}
-				}, sid !== null && onOpenFile !== void 0 ? (0, react.createElement)(Button$1, {
+				}, sid !== null && onOpenFile !== void 0 ? (0, react.createElement)(Button$2, {
 					variant: "ghost",
 					size: "sm",
 					className: "dsh-tdt-btn--link",
@@ -41971,14 +41933,14 @@ body[data-ds-dark-theme]{
 				display: "flex",
 				justifyContent: "flex-end",
 				gap: "8px"
-			} }, (0, react.createElement)(Button$1, {
+			} }, (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				disabled: deleting,
 				onClick: () => {
 					setConfirmDelete(false);
 				}
-			}, t("cardCancel")), (0, react.createElement)(Button$1, {
+			}, t("cardCancel")), (0, react.createElement)(Button$2, {
 				variant: "danger",
 				size: "sm",
 				disabled: deleting,
@@ -42009,14 +41971,14 @@ body[data-ds-dark-theme]{
 					}
 				],
 				onChange: setTab
-			}), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)(Button$1, {
+			}), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				className: "dsh-tdt-btn--danger-ink",
 				onClick: () => {
 					setConfirmDelete(true);
 				}
-			}, t("cardDelete")), (0, react.createElement)(Button$1, {
+			}, t("cardDelete")), (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
@@ -42461,7 +42423,7 @@ body[data-ds-dark-theme]{
 				color: "var(--dsw-alias-label-secondary,#888)",
 				lineHeight: 1.5,
 				margin: 0
-			} }, t(f.hintKey)))), (0, react.createElement)(Button$1, {
+			} }, t(f.hintKey)))), (0, react.createElement)(Button$2, {
 				variant: "primary",
 				size: "sm",
 				disabled: !dirty || saving,
@@ -42586,41 +42548,6 @@ body[data-ds-dark-theme]{
 			color: C.text,
 			background: "transparent"
 		};
-		/** 「返回会话」按钮：轻量文字按钮，退回会话区（selectPanel(null)）。 */
-		const backButtonStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "6px",
-			flex: "none",
-			padding: "5px 10px",
-			borderRadius: "8px",
-			border: `1px solid ${C.border}`,
-			background: "transparent",
-			color: C.textDim,
-			cursor: "pointer",
-			fontFamily: "inherit",
-			fontSize: "12px",
-			lineHeight: "18px",
-			transition
-		};
-		/** 「＋ 新建任务」按钮：整页右上角，拉起右侧任务编辑弹窗（P0 只做界面）。 */
-		const addButtonStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "4px",
-			flex: "none",
-			padding: "5px 10px",
-			borderRadius: "8px",
-			border: `1px solid ${C.borderStrong}`,
-			background: C.layer1,
-			color: C.text,
-			cursor: "pointer",
-			fontFamily: "inherit",
-			fontSize: "12px",
-			lineHeight: "18px",
-			fontWeight: 600,
-			transition
-		};
 		/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
 		const panelHeaderStyle = {
 			display: "flex",
@@ -42640,7 +42567,6 @@ body[data-ds-dark-theme]{
 			fontWeight: 600,
 			color: C.text
 		};
-		C.textDim;
 		const sectionTitleStyle = {
 			margin: "12px 0 4px",
 			fontSize: "13px",
@@ -42678,17 +42604,6 @@ body[data-ds-dark-theme]{
 			whiteSpace: "pre-wrap",
 			wordBreak: "break-all",
 			maxWidth: "480px"
-		};
-		/** 行内文字按钮（链接样式）：用于「查看会话」等轻量动作。 */
-		const linkStyle = {
-			color: C.brand,
-			cursor: "pointer",
-			background: "none",
-			border: "none",
-			padding: 0,
-			font: "inherit",
-			fontSize: "12px",
-			transition
 		};
 		/**
 		* 侧栏 / 面板图标（用户 2026-09-30 指定）：`assets/icon-scheduler.svg` 的**内联等价物**——
@@ -43306,9 +43221,9 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "10px",
 				minWidth: 0
-			} }, (0, react.createElement)("button", {
-				type: "button",
-				style: backButtonStyle,
+			} }, (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
 				title: t("backToConversation"),
 				onClick: onBack
 			}, `← ${t("backToConversation")}`), (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react.createElement)("div", { style: headerRightStyle }, (0, react.createElement)(Segmented, {
@@ -43329,9 +43244,9 @@ body[data-ds-dark-theme]{
 					}
 				],
 				onChange: setTab
-			}), (0, react.createElement)("button", {
-				type: "button",
-				style: addButtonStyle,
+			}), (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
 				title: t("editorNew"),
 				onClick: () => {
 					setEditorError(null);
@@ -43397,9 +43312,10 @@ body[data-ds-dark-theme]{
 				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, (0, react.createElement)("span", { style: row.status === "skipped" || row.status === "failed" ? {
 					color: C.danger,
 					fontWeight: 600
-				} : void 0 }, statusTextOf(row.status, t))), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : viewSession !== null ? (0, react.createElement)("button", {
-					type: "button",
-					style: linkStyle,
+				} : void 0 }, statusTextOf(row.status, t))), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : viewSession !== null ? (0, react.createElement)(Button$2, {
+					variant: "ghost",
+					size: "sm",
+					className: "dsh-tdt-btn--link",
 					title: row.session_id,
 					onClick: (event) => {
 						event.stopPropagation();
@@ -43414,10 +43330,11 @@ body[data-ds-dark-theme]{
 						display: "inline-flex",
 						flexWrap: "wrap",
 						gap: "6px"
-					} }, outputs.map((output) => (0, react.createElement)("button", {
+					} }, outputs.map((output) => (0, react.createElement)(Button$2, {
 						key: output,
-						type: "button",
-						style: linkStyle,
+						variant: "ghost",
+						size: "sm",
+						className: "dsh-tdt-btn--link",
 						title: output,
 						onClick: (event) => {
 							event.stopPropagation();
@@ -43434,9 +43351,10 @@ body[data-ds-dark-theme]{
 					justifyContent: "space-between",
 					alignItems: "center",
 					gap: "8px"
-				} }, (0, react.createElement)("span", null, t("eventsOf")), viewSession !== null && row.session_id !== null ? (0, react.createElement)("button", {
-					type: "button",
-					style: linkStyle,
+				} }, (0, react.createElement)("span", null, t("eventsOf")), viewSession !== null && row.session_id !== null ? (0, react.createElement)(Button$2, {
+					variant: "ghost",
+					size: "sm",
+					className: "dsh-tdt-btn--link",
 					onClick: () => {
 						openView(row.session_id, titleOfTask(row.task_id), parseOutputs(row.outputs));
 					}
@@ -43500,23 +43418,16 @@ body[data-ds-dark-theme]{
 				borderRadius: "50%",
 				background: "var(--dsw-alias-label-primary-inverted, #fff)",
 				opacity: .65
-			} }), (0, react.createElement)("span", null, viewErr), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					appearance: "none",
-					font: "inherit",
-					fontSize: "12px",
-					cursor: "pointer",
-					color: "inherit",
-					background: "none",
-					border: "none",
-					padding: "0 2px"
-				},
-				"aria-label": t("debugClose"),
+			} }), (0, react.createElement)("span", null, viewErr), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: "✕",
+				label: t("debugClose"),
+				style: { color: "inherit" },
 				onClick: () => {
 					setViewErr(null);
 				}
-			}, "✕")) : null, editor !== null ? (0, react.createElement)(TaskEditorDrawer, {
+			})) : null, editor !== null ? (0, react.createElement)(TaskEditorDrawer, {
 				t,
 				mode: editor.mode,
 				draft: editor.draft,
@@ -43803,9 +43714,9 @@ body[data-ds-dark-theme]{
 		function TaskPageHost(props) {
 			const { t, viewRef, forkRef, openRef, filesRef, onBack } = props;
 			const scope = (0, react.useSyncExternalStore)(subscribeScope, getScopeValue);
-			if (scope === null) return (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)("button", {
-				type: "button",
-				style: backButtonStyle,
+			if (scope === null) return (0, react.createElement)("div", { style: pageStyle }, (0, react.createElement)("div", { style: panelHeaderStyle }, (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
 				title: t("backToConversation"),
 				onClick: onBack
 			}, `← ${t("backToConversation")}`), (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react.createElement)("p", { style: hintStyle }, t("unavailable")));

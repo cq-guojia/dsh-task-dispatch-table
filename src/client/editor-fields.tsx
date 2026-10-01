@@ -31,7 +31,7 @@ import {
   useDismissOnOutsidePointer,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { Segmented, type SegmentedItem } from './ui'
+import { Button, IconButton, Segmented, type SegmentedItem } from './ui'
 
 // ─────────────────────── token（全部取宿主主题变量，明暗自适应） ───────────────────────
 
@@ -329,17 +329,14 @@ export function DateField(props: {
     setCursor({ y: next.getFullYear(), m: next.getMonth() + 1 })
   }
 
-  const navButton = (label: string, months: number, icon: ReactElement): ReactElement => h('button', {
-    type: 'button',
-    'aria-label': label,
+  const navButton = (label: string, months: number, icon: ReactElement): ReactElement => h(IconButton, {
+    variant: 'plain',
+    size: 'md',
+    icon,
+    label,
     title: label,
     onClick: () => { step(months) },
-    style: {
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px',
-      padding: 0, border: 'none', borderRadius: C.radiusSm, background: 'transparent', color: C.textDim,
-      cursor: 'pointer', font: 'inherit',
-    },
-  }, icon)
+  })
 
   const anchor = h('button', {
     type: 'button',
@@ -404,15 +401,11 @@ export function DateField(props: {
           }),
         ),
         h('div', { style: { marginTop: '6px', paddingTop: '6px', borderTop: `1px solid ${C.borderL2}` } },
-          h('button', {
-            type: 'button',
+          h(Button, {
+            variant: 'ghost',
+            size: 'sm',
+            style: { width: '100%' },
             onClick: () => { props.onChange(todayIso()); setOpen(false) },
-            style: {
-              width: '100%', padding: '6px 0', border: 'none', borderRadius: C.radiusSm, background: 'transparent',
-              color: C.text, font: 'inherit', fontSize: '13px', cursor: 'pointer', transition,
-            },
-            onPointerEnter: (event: { currentTarget: { style: CSSProperties } }) => { event.currentTarget.style.background = C.hover },
-            onPointerLeave: (event: { currentTarget: { style: CSSProperties } }) => { event.currentTarget.style.background = 'transparent' },
           }, props.labels.today),
         ),
       ), document.body)
@@ -538,22 +531,18 @@ export function TimeField(props: {
           column(MINUTES, minute, props.labels.minute, next => { setDraft(`${hour === '' ? '00' : hour}:${next}`) }, false),
         ),
         h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '6px', paddingTop: '6px', borderTop: `1px solid ${C.borderL2}` } },
-          h('button', {
-            type: 'button',
+          h(Button, {
+            variant: 'ghost',
+            size: 'sm',
             onClick: () => {
               const now = new Date()
               setDraft(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`)
             },
-            style: { padding: '4px 8px', border: 'none', borderRadius: C.radiusSm, background: 'transparent', color: C.textDim, font: 'inherit', fontSize: '12px', cursor: 'pointer', transition },
           }, props.labels.now),
-          h('button', {
-            type: 'button',
+          h(Button, {
+            variant: 'primary',
+            size: 'sm',
             onClick: () => { props.onChange(draft); setOpen(false) },
-            style: {
-              padding: '5px 14px', border: 'none', borderRadius: C.radiusSm, font: 'inherit', fontSize: '12px',
-              fontWeight: 600, cursor: 'pointer', transition,
-              background: C.business, color: 'var(--dsw-alias-label-primary-foreground, #ffffff)',
-            },
           }, props.labels.confirm),
         ),
       ), document.body)
