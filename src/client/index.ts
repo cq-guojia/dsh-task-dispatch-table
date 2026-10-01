@@ -931,7 +931,7 @@ function TaskPage(props: {
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
               h(Button, {
                 variant: 'outline',
-                size: 'sm',
+                size: 'md',
                 title: t('backToConversation'),
                 onClick: onBack,
               }, `← ${t('backToConversation')}`),
@@ -950,9 +950,10 @@ function TaskPage(props: {
                 onChange: setTab,
               }),
           // 右上角「＋ 新建任务」：拉起右侧贴边的任务编辑弹窗（P0 只做界面，不接保存）。
+          // 高度跟旁边三 tab 分段条同走 md(28)（用户 2026-10-01：此前 sm=24 比滑块矮 4px）。
           h(Button, {
             variant: 'outline',
-            size: 'sm',
+            size: 'md',
             title: t('editorNew'),
             onClick: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null }) },
           }, `＋ ${t('editorNew')}`),

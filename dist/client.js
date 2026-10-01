@@ -1501,7 +1501,7 @@ body[data-ds-dark-theme]{
    有边框的 variant 用 1px 真边框 + 内部 padding 补回，**有边 / 无边同高**。
    variant 只换颜色，结构 / 尺寸 / 交互只此一份。 */
 .dsh-tdt-btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:var(--tdt-space-1);
-  box-sizing:border-box;border:1px solid transparent;border-radius:var(--tdt-radius-sm);
+  box-sizing:border-box;border:1px solid transparent;border-radius:var(--tdt-radius-md);
   background:transparent;color:var(--tdt-fg);font-family:inherit;font-weight:500;white-space:nowrap;cursor:pointer;
   transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease),opacity var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-btn--sm{height:var(--tdt-control-h-sm);padding:0 10px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
@@ -1546,7 +1546,7 @@ body[data-ds-dark-theme]{
 		/** 输入 / 前缀输入 / 数字步进的皮肤规则（P3）。 */
 		const FIELD_CSS = `
 /* ── 输入类 P3 ────────────────────────────────────────────────────────── */
-.dsh-tdt-input{box-sizing:border-box;border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);
+.dsh-tdt-input{box-sizing:border-box;border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-md);
   background:var(--tdt-surface-1);color:var(--tdt-fg);font-family:inherit;outline:none;
   transition:border-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-input--sm{height:var(--tdt-control-h-sm);padding:0 8px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);}
@@ -1558,10 +1558,13 @@ body[data-ds-dark-theme]{
 .dsh-tdt-input:disabled{cursor:default;opacity:.5;}
 
 .dsh-tdt-pfx{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
-  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
+  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg);}
 .dsh-tdt-pfx--sm{height:var(--tdt-control-h-sm);}
 .dsh-tdt-pfx--md{height:var(--tdt-control-h-md);}
 .dsh-tdt-pfx--lg{height:var(--tdt-control-h-lg);}
+/* md / lg 档字号跟档走（与同档下拉同字号）：此前写死 sm(12px)，同排下拉是 13px ⇒ 显得「input 字小」。 */
+.dsh-tdt-pfx--md .dsh-tdt-pfx__label,.dsh-tdt-pfx--lg .dsh-tdt-pfx__label{font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-pfx--md .dsh-tdt-pfx__input,.dsh-tdt-pfx--lg .dsh-tdt-pfx__input{font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
 .dsh-tdt-pfx--error{border-color:var(--tdt-danger);}
 .dsh-tdt-pfx:focus-within{border-color:var(--tdt-focus);box-shadow:0 0 0 1px var(--tdt-focus);}
 .dsh-tdt-pfx__label{padding:0 8px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;border-right:1px solid var(--tdt-border);}
@@ -1570,10 +1573,12 @@ body[data-ds-dark-theme]{
 .dsh-tdt-pfx__input::placeholder{color:var(--tdt-fg-dim);}
 
 .dsh-tdt-num{display:inline-flex;align-items:center;box-sizing:border-box;overflow:hidden;
-  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);background:var(--tdt-surface-1);color:var(--tdt-fg);}
+  border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg);}
 .dsh-tdt-num--sm{height:var(--tdt-control-h-sm);}
 .dsh-tdt-num--md{height:var(--tdt-control-h-md);}
 .dsh-tdt-num--lg{height:var(--tdt-control-h-lg);}
+.dsh-tdt-num--md .dsh-tdt-num__input,.dsh-tdt-num--lg .dsh-tdt-num__input{font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+.dsh-tdt-num--md .dsh-tdt-num__suffix,.dsh-tdt-num--lg .dsh-tdt-num__suffix{font-size:var(--tdt-font-md);}
 .dsh-tdt-num--disabled{opacity:.5;}
 .dsh-tdt-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
   font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);text-align:center;outline:none;}
@@ -6546,6 +6551,10 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-ver-del:hover{color:var(--tdt-danger,#e5484d);background:var(--tdt-hover,rgba(128,128,128,.2));}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
+/* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
+   官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
+   配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
+.dsh-tdt-ed-card-foot > *{min-width:0;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
 .dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:1.6;resize:vertical;}
 .dsh-tdt-ed-prompt::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
@@ -39890,7 +39899,7 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorModelPh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorModel"),
-				maxWidth: 220,
+				maxWidth: 200,
 				align: "end"
 			})));
 			const fileInputRef = (0, react.useRef)(null);
@@ -43208,7 +43217,7 @@ body[data-ds-dark-theme]{
 				minWidth: 0
 			} }, (0, react.createElement)(Button$2, {
 				variant: "outline",
-				size: "sm",
+				size: "md",
 				title: t("backToConversation"),
 				onClick: onBack
 			}, `← ${t("backToConversation")}`), (0, react.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react.createElement)("div", { style: headerRightStyle }, (0, react.createElement)(Segmented, {
@@ -43231,7 +43240,7 @@ body[data-ds-dark-theme]{
 				onChange: setTab
 			}), (0, react.createElement)(Button$2, {
 				variant: "outline",
-				size: "sm",
+				size: "md",
 				title: t("editorNew"),
 				onClick: () => {
 					setEditorError(null);

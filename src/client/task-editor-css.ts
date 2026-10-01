@@ -63,6 +63,10 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-ver-del:hover{color:var(--tdt-danger,#e5484d);background:var(--tdt-hover,rgba(128,128,128,.2));}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
+/* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
+   官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
+   配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
+.dsh-tdt-ed-card-foot > *{min-width:0;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
 .dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:1.6;resize:vertical;}
 .dsh-tdt-ed-prompt::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}

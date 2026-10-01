@@ -1556,8 +1556,8 @@ export function TaskEditorDrawer(props: {
         placeholder: t('editorModelPh'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorModel'),
-        // 超长模型名不再把整行撑爆：封顶 220px、超出尾部省略号（用户 2026-10-01；此前无上限，一选就拉长）。
-        maxWidth: 220,
+        // 超长模型名不再把整行撑爆：封顶 200px（与工作区同 cap）、超出尾部省略号（用户 2026-10-01）。
+        maxWidth: 200,
         align: 'end',
       }),
     ),
