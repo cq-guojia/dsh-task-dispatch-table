@@ -171,7 +171,7 @@ const pageStyle: Record<string, string | number> = {
   height: '100%', width: '100%', boxSizing: 'border-box', overflow: 'auto',
   padding: '18px 22px', color: 'var(--tdt-fg)', background: 'transparent',
 }
-/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
+/** 抬头的三块：标题在左，右依次是「分组标签 · 关闭」。 */
 const panelHeaderStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   gap: '12px', flexWrap: 'wrap',
@@ -485,9 +485,6 @@ function TaskPage(props: {
   // JSON 不合法：持续态校验，浮层常驻 Toast（不自动消失）浮在保存行上方，不占版面、不挤压下方。
   const [invalidToast, setInvalidToast] = useState<{ on: boolean; key: number }>({ on: false, key: 0 })
   const invalidSeq = useRef(0)
-  // 手动刷新：settings 快照本身经订阅 live 更新，此按钮兜底重渲染并记录刷新时刻，
-  // 让「时间戳不动」可区分是数据没变还是页面没刷。
-  const [manualAt, setManualAt] = useState<number | undefined>(undefined)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [taskFilter, setTaskFilter] = useState<string>('all')
   const [expanded, setExpanded] = useState<string | null>(null)

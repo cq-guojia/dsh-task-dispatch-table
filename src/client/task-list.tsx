@@ -72,13 +72,13 @@ const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-d
 const monoFont = 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
 /** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
 const NO_TIME = '--'
-/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
+/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。 */
 const CONTROL_H = 'var(--tdt-control-h-md)'
 /** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
 const WS_WIDTH = 180
 /**
- * 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉与刷新按钮都用它，
- * 保证「搜索 / 工作区 / 刷新」三个是**一样的高、一样的样式**。
+ * 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉用它，
+ * 保证「搜索 / 工作区」是**一样的高、一样的样式**。
  */
 const controlBoxStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
@@ -1350,7 +1350,7 @@ export function TaskListView(props: {
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
-      // 顶部一排：左 = 分组按钮（全部 / 已开启 / 已关闭 / 异常）；右 = 搜索 → 工作区下拉 → 刷新。
+      // 顶部一排：左 = 分组按钮（全部 / 已开启 / 已关闭 / 异常）；右 = 搜索 → 工作区下拉。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' } },
         // 筛选 tabs 走 UI 基础层唯一实现（P1）：角标也由组件统一渲染（不再写死 #fff）
         h(Segmented<'all' | 'enabled' | 'disabled' | 'abnormal'>, {

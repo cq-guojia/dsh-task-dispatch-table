@@ -21,15 +21,12 @@
 
 | 事项 | 状态 | 真机验证清单 |
 |---|---|---|
-| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 落码（冒烟 364/0） | [worklog/task-expand-panels.md](worklog/task-expand-panels.md) §六 |
-| 插件主界面：任务列表视图 + 运行态摘要 | 🔵 落码（冒烟 299） | [worklog/main-panel.md](worklog/main-panel.md) |
-| 新增 / 编辑任务（保存链路 / 版本 / 删除 / 审计） | 🔵 落码（冒烟 236） | [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md) §四 |
-| 高级区第二轮 + 多 Agent 协作接线 | 🔵 落码 | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十一 |
-| 附加文件：选择工作区文件 + 上传本地文件 | 🔵 落码 | [worklog/attachments-upload.md](worklog/attachments-upload.md) §四 |
-| 表单弹窗观感第五轮 + 脏判定 / 关闭确认 | 🔵 落码 | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §十八 |
+| 新增 / 编辑任务（保存链路 / 版本 / 删除 / 审计） | 🔵 落码（冒烟 236）⏳ **真机验证待做** | [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md) §四 |
+| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 落码（冒烟 364/0）⏳ **早期特糙、待迭代** | [worklog/task-expand-panels.md](worklog/task-expand-panels.md) §六 |
 | UI 收口 + Agent 权限选择器 | ✅ 封卷（随主界面复验） | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 |
 | 编辑器 UX 第二轮 | ✅ 结案（随主界面复验） | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
-| UI 基础层收口（尺寸 / 圆角 / 字号归一 + 死代码清理） | 🔵 落码（冒烟 390/0） | 同排控件零误差 / 三下拉省略不撑破 / 问号弹气泡 / 记录表头吸顶 → [worklog/ui-alignment-round.md](worklog/ui-alignment-round.md) §五 |
+
+> 已验项（用户 2026-10-01 复核）已移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)：主界面+运行态摘要、高级区第二轮+多 Agent 协作、表单弹窗观感第五轮+脏判定、附加文件选择+上传（U15①）、UI 基础层收口（冒烟 390）。
 
 ---
 
@@ -53,7 +50,7 @@
 | U12 | **交付登记（任务产出物怎么被看见）**——✅ **方案已拍板（2026-09-28，决策 40 演进为 B-only + 禁止 present）**：插件作**唯一写入方**，回执成功时直写 `deliverables/presented`（files=校验 outputs，放宽到目录，可多目录+多文件混合）；**提示词禁止 LLM 调 `present`**（工具拒目录且调目录会报错），LLM 只在回执 `outputs` 声明产出（目录不限于网页项目）。已否决「插件 UI 自己画卡」 | 🔵 落码已推送（`7293bfc`）→ 真机复验暴露**弹窗交付卡不渲染**两轮：① `turn.data` 是 Map、对象式访问必为 undefined → `turnDeliverablesPresented` 兼容 Map；② 推送后复验仍不渲染 ⇒ 根因是**会话快照里压根无 `deliverables.presented`**（插件 `append` 被 `session/callId/sessionProjections` 缺失分支跳过 / 宿主 timeline 未重放）→ **数据源改为实例 `outputs` 权威**（合并快照去重，老任务免重跑即渲染）→ ③ 位置/样式对齐官方：删顶部区块、网格挂**最后一轮 turn-tail**（官方 DeliverablesTail 同位）→ ④ 网格仍在操作行下方：改作为 `tailSlot` 放在 `MessageIconActions` 之前，并补齐 `/api/present.host` 桌面不可用提示；同轮修订回执提示词（outputs 粒度：本任务专用文件夹→报目录；既有/按规范目录→逐个报文件）；冒烟 164 过 ⇒ **✅ 真机验证通过，U12 整条线收口** |
 | U13 | **两层循环彻底解耦 + 派发快照（决策 41/42，2026-09-28 拍板并同日落码 + 热修）** | 真机暴露：`enabled=false` ⇒ 任务被 `loadTasks` 过滤出 `taskMap` ⇒ 对账 `taskOf()` undefined ⇒ `settleByReceipt` 提前 return ⇒ **已交回执的实例永久卡 running**（agent 实际已完成）；且对账实时重读活任务 JSON（retry / window / workspace / validStatuses），中途改设置会反向改写在飞实例裁决。定型表述见 [design/features/state-machine.md §0](design/features/state-machine.md)、落码记录见 [worklog/loop-decoupling.md](worklog/loop-decoupling.md) | 🟢 已落码 + **真机回归热修**：落码后真机发现"老库一条卡 running 的历史实例 → `startupScan` 转 `unknown` → 串行互斥把同 cron 任务新刻度永久挡死 ⇒ 执行记录零写入"。修复 = 串行互斥只认真正在飞的 `dispatched`/`running`，`unknown`（重启孤儿）移出阻塞集 + 30s 短宽限收口 + `running` 长期无活动（漏 created 致 `lease_until` 为 null）也收口 + `snapOf` legacy 回退防御默认值；本地复现（老 schema + 旧运行实例）验证新行照常写出。冒烟 162 项全过 ⇒ **✅ 真机验证通过，U13 收口** |
 | U14 | **依赖快照：判定结果冻结 + 产出下传（决策 43，2026-09-28 用户点破并拍板，单独工作包）** | 排查确认两缺口：① `judgeDependencies` 命中上游实例后只读 `.status` 即丢对象，派发快照无依赖字段 ⇒ Loop B 发动（可能晚数分钟）时不知道「按哪条上游实例放的行」，上游间隙再跑成功就会错拿新产出；② 上游回执已校验的 `outputs` 列无人读取、`buildMessage` 不注入 ⇒ 下游消费前置产出零通道。定型与改动点见 [design/features/dependency-snapshot.md](design/features/dependency-snapshot.md)、排查叙事见 [worklog/dependency-snapshot.md](worklog/dependency-snapshot.md) | `InstanceSnapshot` 加 `resolvedDeps`（task/semantics/instanceId/scheduledAt/sessionId/上游 workspacePath/outputs）→ `judgeDependencies` 返回 `resolved` → `snapshotOf` 固化 → `buildMessage` 注入「上游依赖（本次已锁定）」段（产出按上游工作区绝对化）；Loop B 只读不重判、重试沿用；不改 DDL / `depends_on` schema。🟢 **同日落码**：冒烟 +8 = **172 项全过**，typecheck + build 过 ⇒ **✅ 真机验证通过，U14 收口**（复验点见 design §六） |
-| U15 | **附加文件链路收尾**（2026-09-29 落码，决策 46；选择 + 上传已推送 `680d23f`） | ① 真机验证未做（选择浏览/选中/卡片、拖拽+点选上传、超限与类型拒绝报错，清单见 [worklog/attachments-upload.md](worklog/attachments-upload.md) §四）；② 附件（尤其 upload 落盘文件）与任务定义的**持久化关联未做**——目前 `attachments` 只在草稿层；③ 执行期如何把附件注入给 agent 未定 | ① 用户真机测，问题回改；② 可能并入 P2 保存链路（任务定义 JSON 已有 `attachments` 字段位）；③ 注入形态（消息里贴路径清单 / 内容内联）待拍板 |
+| U15 | **附加文件链路收尾**（2026-09-29 落码，决策 46；选择 + 上传已推送 `680d23f`） | ① ✅ **真机验证通过（用户 2026-10-01 确认：选择浏览/选中/卡片、拖拽+点选上传、超限与类型拒绝报错）**；② 附件（尤其 upload 落盘文件）与任务定义的**持久化关联未做**——目前 `attachments` 只在草稿层；③ 执行期如何把附件注入给 agent 未定 | ② 可能并入 P2 保存链路（任务定义 JSON 已有 `attachments` 字段位）；③ 注入形态（消息里贴路径清单 / 内容内联）待拍板 |
 | U16 | **新增 / 编辑任务的功能设计**（2026-09-29 UI 封档后立项） | ✅ **2026-09-30 全线完成（落码 + 评审 + 冒烟 236 全过），⏳ 真机验证待做**：需求口径 [`design/features/creation-edit.md`](design/features/creation-edit.md) + 数据设计 [`design/data-model.md`](design/data-model.md) §五 §六 + 决策 51 + 落码叙事 [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md)。遗留小项：保存时版本备注未接（UI 备注字段已在版本面板）；审计 UI 消费面等面板整体重建；GET /tasks/history 的 query 透传存疑（真机优先核实） | 真机验证清单见 worklog §四 |
 | U17 | **主界面「下次执行」与运行中显示**（2026-09-30 真机提出 → 同日落码） | 现象：任务在跑时，卡片「下次执行」仍跳「下一槽倒计时」（如 8 分多钟），与「已经在跑」矛盾。**核实结论（源码级）**：只补**窗口内最晚那一槽**（`scheduler.ts` 的 `dueSlot` 只取 max、该槽已有实例行即 `undefined`、不向更早回退）＋ 同任务串行互斥 ⇒ `15:20`/`15:10` 永不补；`window` 只决定那一槽能晚多久跑，**非窗口内全补**。 | 🟢 **已落码（用户 2026-09-30 拍板）**：**不判断补跑时间**——`NextPill` 见 `row.running` 即改显「三个小方块脉动」活动指示（像手机充电），跑完才回到下一槽倒计时。曾试「显示补跑 15:30」（Plan A）**已撤**，`dueSlotAt` / 文案键全删（不留死代码）。冒烟 299 全过。见 [worklog/main-panel.md §8.6](worklog/main-panel.md) |
 | ~~U19~~ | ~~删除 `decisions.md` 后遗留的 9 处口径冲突~~ → ✅ **已全部回改**（2026-10-01，用户拍板「以现在实现的为准」，逐条到源码核实后回改） | ① `skipped` 进 `task_instances`（三类场景，见 data-model.md 头注）；② 上游无记录 ⇒ **阻塞**（`upstream-not-succeeded`）；③ 会话名 `[TASK] YYMMDD-HHmm · 标题`；④ 预览 = **页面级唯一 dock**；⑤ `sessions.retain` **存在且必须调用**；⑥ 数据源 = **keyed**；⑦ U10 分支 **已实现**；⑧ 保留期 **默认不清**；⑨ 刷新按钮 **已不存在** | 无遗留；过程记在 [worklog/docs-reorganization.md](worklog/docs-reorganization.md) §2.7 |
@@ -67,7 +64,7 @@
 > 文档体系整理已于 2026-10-01 结案（见 [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md)）。以下为在办事项。
 
 1. ~~**UI 基础层统一（样式专项）**~~ ✅ **已完成封卷（2026-10-01）** —— P0–P6 + 尺寸/圆角/字号归一 + 死代码清理，冒烟 390/0；结案行见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)，剩余「待抽象」登记为 **U20** 与 [`ui-style-guide.md`](design/ui-style-guide.md) §三。
-2. **真机验证**（用户装 `dist/` 实测）：三面板 / 主界面 / 新增编辑 三条，清单见 §1.2 表。
-3. **小收尾（代码侧，属开发会话）**：源码两处注释与实现不符 —— `src/client/index.ts:205` 与 `src/client/task-list.tsx:1406` 仍写着抬头/右侧有「刷新」按钮（实际已移除），`manualAt` 为死代码。
+2. **真机验证**（用户装 `dist/` 实测）：剩 **新增/编辑任务（U16）** 与 **任务展开三面板** 两条待验，清单见 §1.2 表；主界面 / 高级区 / 表单弹窗 / 附加文件 / UI 收口 已验（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）。
+3. ✅ **代码侧小收尾（2026-10-01 完成）**：删 `manualAt` 死状态（全仓 `setManualAt` 从未调用）+ 同步 5 处过时「刷新」注释（实际坐标 `index.ts:174` / `index.ts:488-490` / `task-list.tsx:75` / `task-list.tsx:80` / `task-list.tsx:1353`；原记的 `index.ts:205` / `task-list.tsx:1406` 已漂移）。冒烟 390/0、build 绿。
 
 

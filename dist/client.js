@@ -40815,13 +40815,13 @@ body[data-ds-dark-theme]{
 		const monoFont$1 = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 		/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
 		const NO_TIME = "--";
-		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
+		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。 */
 		const CONTROL_H = "var(--tdt-control-h-md)";
 		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
 		const WS_WIDTH = 180;
 		/**
-		* 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉与刷新按钮都用它，
-		* 保证「搜索 / 工作区 / 刷新」三个是**一样的高、一样的样式**。
+		* 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉用它，
+		* 保证「搜索 / 工作区」是**一样的高、一样的样式**。
 		*/
 		const controlBoxStyle = {
 			display: "inline-flex",
@@ -42507,7 +42507,7 @@ body[data-ds-dark-theme]{
 			color: "var(--tdt-fg)",
 			background: "transparent"
 		};
-		/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
+		/** 抬头的三块：标题在左，右依次是「分组标签 · 关闭」。 */
 		const panelHeaderStyle = {
 			display: "flex",
 			alignItems: "center",
@@ -42785,7 +42785,6 @@ body[data-ds-dark-theme]{
 				key: 0
 			});
 			const invalidSeq = (0, react.useRef)(0);
-			const [manualAt, setManualAt] = (0, react.useState)(void 0);
 			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
 			const [expanded, setExpanded] = (0, react.useState)(null);
