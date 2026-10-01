@@ -915,8 +915,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && clientJs.includes('previewCopyPath') && clientJs.includes('IconRefreshOutlineRegular'))
   check('拖拽条高亮 = 6px 浅色半透明带（与任务抽屉 .dsh-tdt-ed-resizer 同款，2026-09-29 改版；不再变纯白线）',
     clientJs.includes('dsh-tdt-sv-resizer')
-      && clientJs.includes('dsh-tdt-sv-resizer:hover{background:var(--dsw-alias-interactive-bg-hover')
-      && clientJs.includes('dsh-tdt-sv-resizer:active{background:var(--dsw-alias-interactive-bg-hover')
+      && clientJs.includes('dsh-tdt-sv-resizer:hover{background:var(--tdt-hover')
+      && clientJs.includes('dsh-tdt-sv-resizer:active{background:var(--tdt-hover')
       && !clientJs.includes('.dsh-tdt-sv-preview-dock:has(')
       && !clientJs.includes('border-left-color:rgba(255,255,255,1)'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
@@ -1661,6 +1661,24 @@ console.log('\n[14] runtime-index')
       p23Js.includes('.dsh-tdt-dtf{') && p23Js.includes('.dsh-tdt-cal__cell{') && p23Js.includes('.dsh-tdt-time__opt{'))
     check('业务文件明暗特判已清零（body[data-ds-dark-theme] 只剩 token 层）',
       !p23Js.includes('body[data-ds-dark-theme] .dsh-tdt') && p23Js.includes('body[data-ds-dark-theme]{'))
+  }
+
+  // ── 19. P6：业务文件不许再出现宿主变量直引 / C 常量表（源码级反断言）──
+  {
+    const business = [
+      'index.ts', 'task-list.tsx', 'task-editor.tsx', 'task-editor-css.ts', 'editor-fields.tsx',
+      'file-browser.tsx', 'file-preview.tsx', 'config-panel.tsx', 'session-view.ts',
+      'archive-session-css.ts', 'toast-css.ts',
+    ]
+    let dswFiles = 0
+    let cTableFiles = 0
+    for (const f of business) {
+      const src = readFileSync(join(process.cwd(), 'src', 'client', f), 'utf8')
+      if (src.includes('--dsw-')) dswFiles++
+      if (src.includes('const C = {')) cTableFiles++
+    }
+    check('业务文件宿主变量引用清零（--dsw- 只应出现在 ui/tokens.ts）', dswFiles === 0)
+    check('C 常量表已删净（const C = { 为 0）', cTableFiles === 0)
   }
 
   store.close()

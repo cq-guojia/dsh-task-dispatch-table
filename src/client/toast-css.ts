@@ -12,7 +12,7 @@ export const TOAST_CSS = `
    形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
    语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
 .dsh-tdt-toast{
-  --tone:var(--dsw-alias-state-error-primary,#e5484d);
+  --tone:var(--tdt-danger,#e5484d);
   position:absolute;
   left:50%;
   bottom:calc(100% + 8px);
@@ -24,12 +24,12 @@ export const TOAST_CSS = `
   box-sizing:border-box;
   margin:0;
   padding:8px 14px;
-  border-radius:var(--dsw-radius-md,8px);
+  border-radius:var(--tdt-radius-md,8px);
   border:1px solid var(--tone);
   /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
-  background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.15));
-  background:color-mix(in srgb,var(--tone) 10%,var(--dsw-alias-bg-layer-1,#fff));
-  color:var(--dsw-alias-label-primary,#1f2328);
+  background:var(--tdt-surface-1,rgba(128,128,128,.15));
+  background:color-mix(in srgb,var(--tone) 10%,var(--tdt-surface-1,#fff));
+  color:var(--tdt-fg,#1f2328);
   font-size:12px;
   line-height:1.6;
   display:flex;
@@ -46,7 +46,7 @@ export const TOAST_CSS = `
   background:var(--tone);
   margin:6px 8px 0 0;
 }
-.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
+.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--tdt-fg-inverse,#fff);opacity:.65;}
 .dsh-tdt-toast-text{
   flex:1 1 auto;min-width:0;
   white-space:pre-line;
@@ -59,15 +59,15 @@ export const TOAST_CSS = `
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
 /* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
-.dsh-tdt-toast--success{--tone:var(--dsw-alias-state-success-primary,#2f9e44);}
+.dsh-tdt-toast--success{--tone:var(--tdt-success,#2f9e44);}
 .dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
 .dsh-tdt-toast--neutral{
-  --tone:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));
-  background:var(--dsw-alias-label-primary,#1f2328);
-  color:var(--dsw-alias-label-primary-inverted,#fff);
+  --tone:var(--tdt-fg-2,rgba(128,128,128,.95));
+  background:var(--tdt-fg,#1f2328);
+  color:var(--tdt-fg-inverse,#fff);
   border-color:transparent;
 }
-.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--neutral::before{background:var(--tdt-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}

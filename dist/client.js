@@ -1229,6 +1229,15 @@ body{
   --tdt-surface-raised:var(--dsw-alias-bg-layer-1,#fff);
   /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */
   --tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
+  /* 整页 / 编辑器底（bg-base） */
+  --tdt-surface-base:var(--dsw-alias-bg-base,#fff);
+  /* 自绘浮层 / 菜单卡的不透明底（= base；不要用半透明的 specific-menu） */
+  --tdt-surface-menu:var(--tdt-surface-base);
+  /* markdown 代码块面 / 字体（会话镜像里用到） */
+  --tdt-code-surface:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));
+  --tdt-code-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,monospace));
+  /* 警告文字色（宿主 state-warn-label） */
+  --tdt-warning-label:var(--dsw-alias-state-warn-label,#f5a623);
   /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */
   --tdt-solid:var(--dsw-static-neutral-00,#fff);
   --tdt-on-solid:var(--dsw-alias-label-primary,#1f2328);
@@ -2140,40 +2149,40 @@ body[data-ds-dark-theme]{
 		const ARCHIVE_SESSION_CSS = `
 /* 弹窗让位预览 dock：右侧留出 --dsh-tdt-preview-w（缺省 0）⇒ 弹窗不被预览面遮盖，
    与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
-.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:var(--dsh-tdt-preview-w,0px);z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));transition:right .12s var(--ds-ease-in-out,ease);}
+.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:var(--dsh-tdt-preview-w,0px);z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--tdt-mask,rgba(0,0,0,.45));transition:right .12s var(--tdt-ease,ease);}
 /* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
    滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));}
+.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
-   （--dsw-alias-interactive-bg-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
+   （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
 .dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;}
-.dsh-tdt-sv-resizer:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-resizer:active{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
-/* 面板底色 = 官方会话面 --dsw-alias-bg-base（官方 chat 页即此色）：
-   官方 ReasoningRow 展开行是 sticky + background:var(--dsw-alias-bg-base)（ReasoningRow.module.css），
+/* 面板底色 = 官方会话面 --tdt-surface-base（官方 chat 页即此色）：
+   官方 ReasoningRow 展开行是 sticky + background:var(--tdt-surface-base)（ReasoningRow.module.css），
    若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
 /* 内间距定尺（用户拍板：四边等距 34px）。纵向全在会话区上：官方 scroll 纵向固定 16px，
    面板不再吃纵向 padding（否则只会加在标题栏外侧，标题分割线与首条消息之间仍是 16px——真机踩过），
    由 .dsh-tdt-sv-frame 补 18px ⇒ 标题线下 16+18=34、底部 16+18=34；左右 = 16 + clearance(18px) = 34。 */
-.dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--dsw-alias-bg-base,#1a1a1a);color:var(--dsw-alias-label-primary,#1f2328);border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
-.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex-wrap:wrap;}
+.dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
+.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-frame{padding:18px 0;}
 /* 头部关闭钮规格照官方 primitives Modal.close（设置窗口关闭钮同源）：28×28、radius-sm、
    透明底，hover 才出 interactive-bg-hover（官方无色变、无阴影）。 */
-.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;flex:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
-.dsh-tdt-sv-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-close{appearance:none;background:0 0;border:none;flex:none;width:28px;height:28px;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-close:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-heading{min-width:0;}
-.dsh-tdt-sv-title{font-size:15px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-sid{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));word-break:break-all;}
+.dsh-tdt-sv-title{font-size:15px;font-weight:600;color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:11px;color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
 .dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-sv-btn{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 12px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
-.dsh-tdt-sv-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-btn{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;color:var(--tdt-fg,#1f2328);background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:8px;padding:4px 12px;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-btn:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-btn-icon{padding:4px 6px;display:inline-flex;align-items:center;justify-content:center;}
 /* 会话区边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px；纵向由 frame 补足。 */
 .dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px calc(var(--dsh-composer-side-clearance,16px) + 16px) 16px;}
@@ -2184,21 +2193,21 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-flowitem{min-width:0;}
 .dsh-tdt-sv-official{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
 .dsh-tdt-sv-older{display:flex;justify-content:center;}
-.dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.9));background:var(--dsw-alias-interactive-bg-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--dsw-radius-sm,6px);padding:4px 12px;}
+.dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:12px;line-height:18px;cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.9));background:var(--tdt-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--tdt-radius-sm,6px);padding:4px 12px;}
 .dsh-tdt-sv-older button:disabled{cursor:default;opacity:.6;}
-.dsh-tdt-sv-process{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex;}
-.dsh-tdt-sv-process:hover{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-process{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex;}
+.dsh-tdt-sv-process:hover{color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-process:not([data-open]){margin-bottom:8px;}
 .dsh-tdt-sv-process-label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
-.dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--dsw-alias-label-caption,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
+.dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--tdt-fg-4,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
 .dsh-tdt-sv-process[data-open] .dsh-tdt-sv-process-chevron{transform:rotate(180deg);}
 .dsh-tdt-sv-process-body{min-width:0;}
 .dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
-.dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
-.dsh-tdt-sv-action:hover{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.6;word-break:break-word;}
+.dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;color:var(--tdt-fg-3,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
+.dsh-tdt-sv-action:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.6;word-break:break-word;}
 .dsh-tdt-sv-assistant{align-self:stretch;font-size:14px;line-height:1.7;word-break:break-word;}
-.dsh-tdt-sv-image{align-self:flex-start;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));border:1px dashed var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:8px;padding:4px 10px;}
+.dsh-tdt-sv-image{align-self:flex-start;font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));border:1px dashed var(--tdt-border,rgba(128,128,128,.35));border-radius:8px;padding:4px 10px;}
 .dsh-tdt-sv-md>*:first-child{margin-top:0;}
 .dsh-tdt-sv-md>*:last-child{margin-bottom:0;}
 .dsh-tdt-sv-md p{margin:.5em 0;}
@@ -2208,89 +2217,89 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-md h3{font-size:1.1em;}
 .dsh-tdt-sv-md ul,.dsh-tdt-sv-md ol{margin:.5em 0;padding-left:1.4em;}
 .dsh-tdt-sv-md li{margin:.2em 0;}
-.dsh-tdt-sv-md code{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:.9em;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));padding:.1em .35em;border-radius:4px;}
-.dsh-tdt-sv-md pre{margin:.6em 0;background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.14));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:8px;padding:10px 12px;overflow:auto;font-size:12px;line-height:1.5;}
+.dsh-tdt-sv-md code{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:.9em;background:var(--tdt-surface-2,rgba(128,128,128,.14));padding:.1em .35em;border-radius:4px;}
+.dsh-tdt-sv-md pre{margin:.6em 0;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:8px;padding:10px 12px;overflow:auto;font-size:12px;line-height:1.5;}
 .dsh-tdt-sv-md pre code{background:none;padding:0;font-size:inherit;}
-.dsh-tdt-sv-md blockquote{margin:.5em 0;padding:.2em .9em;border-left:3px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
-.dsh-tdt-sv-md a{color:var(--dsw-alias-brand-primary,#2f6feb);text-decoration:none;}
+.dsh-tdt-sv-md blockquote{margin:.5em 0;padding:.2em .9em;border-left:3px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-md a{color:var(--tdt-accent,#2f6feb);text-decoration:none;}
 .dsh-tdt-sv-md a:hover{text-decoration:underline;}
 .dsh-tdt-sv-md table{border-collapse:collapse;font-size:12px;margin:.6em 0;display:block;overflow:auto;}
-.dsh-tdt-sv-md th,.dsh-tdt-sv-md td{border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));padding:4px 8px;text-align:left;}
-.dsh-tdt-sv-md hr{border:none;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));margin:1em 0;}
+.dsh-tdt-sv-md th,.dsh-tdt-sv-md td{border:1px solid var(--tdt-border,rgba(128,128,128,.35));padding:4px 8px;text-align:left;}
+.dsh-tdt-sv-md hr{border:none;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));margin:1em 0;}
 .dsh-tdt-sv-md img{max-width:100%;}
 /* 思考行（ReasoningRow.module.css 照抄：root[row]/leading/chevron/title/separator/summary/thinkBody）。 */
 .dsh-tdt-sv-reasoning{flex-direction:column;display:flex;}
 .dsh-tdt-sv-reasoning:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px));}
 .dsh-tdt-sv-reasoning-row{position:relative;overflow:hidden;}
 .dsh-tdt-sv-reasoning-leading{flex-shrink:0;}
-.dsh-tdt-sv-reasoning-chevron{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-reasoning-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-reasoning-title{font-weight:400;}
-.dsh-tdt-sv-reasoning-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
-.dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
+.dsh-tdt-sv-reasoning-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
 .dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
 /* ── 工具卡（官方 ui-tool ToolRow.module.css 兜底镜像，官方类命中时 ocOr 走官方） ──
    官方行外观 = 无边框裸行（root 仅 flex column）；展开体分发链：
    TerminalBlock(∞) → DiffBlock(9) → ReadBlock(8) → ioCard 灰框（输入/分隔/输出）。 */
 .dsh-tdt-sv-tool{flex-direction:column;display:flex;}
-.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-tool-title{font-weight:400;transition:color .1s;}
-.dsh-tdt-sv-tool-chevron{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
-.dsh-tdt-sv-tool-sep{background:var(--dsw-alias-label-caption,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
-.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
-.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
-.dsh-tdt-sv-tool-diffstat{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
-.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
-.dsh-tdt-sv-tool-filelink:hover{color:var(--dsw-alias-label-primary,#1f2328);text-decoration-color:currentColor;}
-.dsh-tdt-sv-tool-errmark{color:var(--dsw-alias-state-error-primary,#e5484d);}
-.dsh-tdt-sv-tool-stopmark{color:var(--dsw-alias-state-warn-label,#f5a623);}
+.dsh-tdt-sv-tool-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tool-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
+.dsh-tdt-sv-tool-diffstat{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--tdt-fg-4,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
+.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-2,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--tdt-fg-3,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-filelink:hover{color:var(--tdt-fg,#1f2328);text-decoration-color:currentColor;}
+.dsh-tdt-sv-tool-errmark{color:var(--tdt-danger,#e5484d);}
+.dsh-tdt-sv-tool-stopmark{color:var(--tdt-warning-label,#f5a623);}
 .dsh-tdt-sv-tool-bodywrap{flex-direction:column;display:flex;}
-.dsh-tdt-sv-io-card{border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
+.dsh-tdt-sv-io-card{border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-code-surface,rgba(128,128,128,.10));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
 .dsh-tdt-sv-io-section{grid-template-columns:max-content 1fr;align-items:baseline;column-gap:14px;max-height:150px;padding:12px 16px;display:grid;overflow-y:auto;}
-.dsh-tdt-sv-io-label{color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
-.dsh-tdt-sv-io-divider{background:var(--dsw-alias-border-l2,rgba(128,128,128,.35));flex:none;height:.5px;}
-.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
-.dsh-tdt-sv-io-text[data-error]{color:var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-sv-io-label{color:var(--tdt-fg-4,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
+.dsh-tdt-sv-io-divider{background:var(--tdt-border,rgba(128,128,128,.35));flex:none;height:.5px;}
+.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-io-text[data-error]{color:var(--tdt-danger,#e5484d);}
 .dsh-tdt-sv-tool-block{margin:4px 0 4px 4px;}
-.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:18px;--dsl-terminal-output-max-height:224px;border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
+.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:18px;--dsl-terminal-output-max-height:224px;border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
 .dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
 .dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
-.dsh-tdt-sv-notice{align-self:center;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));padding:2px 8px;}
-.dsh-tdt-sv-hint{font-size:12px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
+.dsh-tdt-sv-notice{align-self:center;font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));padding:2px 8px;}
+.dsh-tdt-sv-hint{font-size:12px;color:var(--tdt-fg-2,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
 /* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
 .dsh-tdt-sv-process:disabled{cursor:default;}
-.dsh-tdt-sv-trigger{align-self:stretch;background:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));border:.5px solid var(--dsw-alias-border-l1,rgba(128,128,128,.24));border-radius:var(--dsw-radius-xl,12px);transition:background .1s;}
-.dsh-tdt-sv-trigger:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-trigger{align-self:stretch;background:var(--tdt-code-surface,rgba(128,128,128,.10));border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-xl,12px);transition:background .1s;}
+.dsh-tdt-sv-trigger:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-trigger-header{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:0 0;border:none;cursor:pointer;color:inherit;font:inherit;text-align:left;}
-.dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:none;}
-.dsh-tdt-sv-trigger-title{font-size:var(--dsw-font-xs-13,13px);color:var(--dsw-alias-label-primary,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-trigger-time{margin-left:auto;font-size:var(--dsw-font-xxs-12,12px);color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));white-space:nowrap;}
-.dsh-tdt-sv-trigger-chevron{flex:none;color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));transition:transform .1s;}
-.dsh-tdt-sv-trigger-chevron-open{flex:none;color:var(--dsw-alias-label-caption,rgba(128,128,128,.7));transform:rotate(180deg);}
+.dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;}
+.dsh-tdt-sv-trigger-title{font-size:var(--tdt-font-md,13px);color:var(--tdt-fg,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-trigger-time{margin-left:auto;font-size:var(--tdt-font-sm,12px);color:var(--tdt-fg-4,rgba(128,128,128,.7));white-space:nowrap;}
+.dsh-tdt-sv-trigger-chevron{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transition:transform .1s;}
+.dsh-tdt-sv-trigger-chevron-open{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transform:rotate(180deg);}
 .dsh-tdt-sv-trigger-body{padding:0 16px 12px 40px;}
-.dsh-tdt-sv-trigger-explanation{margin:8px 0 0;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-sv-trigger-content{margin-top:6px;font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;}
+.dsh-tdt-sv-trigger-explanation{margin:8px 0 0;font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-trigger-content{margin-top:6px;font-size:13px;line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;}
 .dsh-tdt-sv-tail{display:flex;flex-direction:column;gap:16px;}
 .dsh-tdt-sv-tail-actions{margin-top:4px;margin-left:-6px;}
-.dsh-tdt-sv-clock{font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));white-space:nowrap;}
+.dsh-tdt-sv-clock{font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));white-space:nowrap;}
 .dsh-tdt-sv-endinfo{display:inline-flex;align-items:center;gap:8px;margin-left:8px;}
 .dsh-tdt-sv-usage{display:inline-flex;align-items:center;}
-.dsh-tdt-sv-usage-trigger{display:inline-flex;align-items:center;gap:4px;appearance:none;background:0 0;border:none;cursor:pointer;padding:0 4px;font:inherit;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-sv-usage-trigger:hover{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-stats{position:fixed;z-index:1200;min-width:200px;max-width:min(440px,calc(100vw - 24px));background:var(--dsw-alias-bg-layer-1,rgba(30,30,30,.98));border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--dsw-shadow-lv3,0 12px 32px rgba(0,0,0,.4));padding:12px;font-size:12px;color:var(--dsw-alias-label-primary,#1f2328);}
+.dsh-tdt-sv-usage-trigger{display:inline-flex;align-items:center;gap:4px;appearance:none;background:0 0;border:none;cursor:pointer;padding:0 4px;font:inherit;font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-usage-trigger:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-stats{position:fixed;z-index:1200;min-width:200px;max-width:min(440px,calc(100vw - 24px));background:var(--tdt-surface-1,rgba(30,30,30,.98));border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:12px;box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));padding:12px;font-size:12px;color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-stats-title{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.dsh-tdt-sv-stats-titlelabel{display:inline-flex;align-items:center;gap:6px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-stats-titlelabel{display:inline-flex;align-items:center;gap:6px;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-stats-titlevalue{font-variant-numeric:tabular-nums;}
-.dsh-tdt-sv-stats-rule{height:1px;background:var(--dsw-alias-border-l2,rgba(128,128,128,.35));margin:8px 0;}
+.dsh-tdt-sv-stats-rule{height:1px;background:var(--tdt-border,rgba(128,128,128,.35));margin:8px 0;}
 .dsh-tdt-sv-stats-details{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;}
-.dsh-tdt-sv-stats-details dt{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-stats-details dt{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 .dsh-tdt-sv-stats-details dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;}
 .dsh-tdt-sv-stats-route{word-break:break-all;}
-.dsh-tdt-sv-stats-reasoning{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-stats-reasoning{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 /* ── 过程分组（二级收折，ChatGroupSeat.module.css 照抄：root/title/leading/activityIcon/chevron/label/body/content/fade） ── */
 .dsh-tdt-sv-group{min-width:0;}
-.dsh-tdt-sv-group-title{max-width:100%;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex;}
-.dsh-tdt-sv-group-title:hover{color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-group-leading{width:16px;height:16px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative;}
+.dsh-tdt-sv-group-title{max-width:100%;color:var(--tdt-fg-2,rgba(128,128,128,.95));font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex;}
+.dsh-tdt-sv-group-title:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-group-leading{width:16px;height:16px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative;}
 .dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0;}
 .dsh-tdt-sv-group-icon{opacity:1;}
 .dsh-tdt-sv-group-chevron{opacity:0;}
@@ -2312,47 +2321,47 @@ body[data-ds-dark-theme]{
    （portal 到 body，与本弹窗同 z-index 层、后挂载居上），此处只留头部钮规格与 Modal 内错误行。 */
 .dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
 /* 分支钮对齐官方 outline 小钮（Button.module.css .sm：28 高、radius-sm、0.5px border-l3、12/18 字、padding 0 10px）。 */
-.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;height:28px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--dsw-alias-label-primary,#1f2328);background:transparent;border:.5px solid var(--dsw-alias-border-l3,rgba(128,128,128,.4));border-radius:var(--dsw-radius-sm,6px);padding:0 10px;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
-.dsh-tdt-sv-branch:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-branch{appearance:none;font:inherit;font-size:12px;line-height:18px;height:28px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;color:var(--tdt-fg,#1f2328);background:transparent;border:.5px solid var(--tdt-border-strong,rgba(128,128,128,.4));border-radius:var(--tdt-radius-sm,6px);padding:0 10px;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-branch:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-branch:disabled{opacity:.4;cursor:not-allowed;}
 /* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
 .dsh-tdt-sv-forkmodal{width:min(440px,100%);}
 /* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
-.dsh-tdt-sv-forkerr{margin:0;font-size:14px;line-height:22px;color:var(--dsw-alias-state-error-primary,#e5484d);word-break:break-word;}
+.dsh-tdt-sv-forkerr{margin:0;font-size:14px;line-height:22px;color:var(--tdt-danger,#e5484d);word-break:break-word;}
 /* ── 重试/轮次失败/限长三件套兜底（官方 MessageItem.module.css 逐值照抄，官方类缺失时生效） ── */
-.dsh-tdt-sv-retry{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
-.dsh-tdt-sv-retry-summary{border-radius:var(--dsw-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
+.dsh-tdt-sv-retry{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
+.dsh-tdt-sv-retry-summary{border-radius:var(--tdt-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
 .dsh-tdt-sv-retry-summary::-webkit-details-marker{display:none;}
 .dsh-tdt-sv-retry-summary:after{content:"";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg);}
-.dsh-tdt-sv-retry-summary:hover{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-retry-summary:hover{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-retry-summary:focus-visible{outline:1.5px solid var(--tdt-focus);outline-offset:2px;}
 .dsh-tdt-sv-retry-text{color:inherit;}
-.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 0%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 40%,var(--dsw-alias-label-secondary,rgba(128,128,128,.95)) 50%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 60%,var(--dsw-alias-label-tertiary,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
+.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--tdt-fg-3,rgba(128,128,128,.8)) 0%,var(--tdt-fg-3,rgba(128,128,128,.8)) 40%,var(--tdt-fg-2,rgba(128,128,128,.95)) 50%,var(--tdt-fg-3,rgba(128,128,128,.8)) 60%,var(--tdt-fg-3,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
 @keyframes dsh-tdt-retry-shimmer{0%{background-position:100%}to{background-position:0}}
 @media (prefers-reduced-motion:reduce){.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{color:inherit;background:0 0;animation:none;}}
 .dsh-tdt-sv-retry[open] .dsh-tdt-sv-retry-summary:after{transform:rotate(45deg);}
 .dsh-tdt-sv-retry-details{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid;}
-.dsh-tdt-sv-retry-label{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-retry-label{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-turnerr{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid;}
 .dsh-tdt-sv-turnerr-dot{margin-top:5px;}
 .dsh-tdt-sv-turnerr-copy{overflow-wrap:anywhere;min-width:0;}
-.dsh-tdt-sv-turnerr-title{color:var(--dsw-alias-state-error-primary,#e5484d);margin-right:6px;font-weight:600;}
-.dsh-tdt-sv-turnerr-msg{color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
-.dsh-tdt-sv-turnerr-code{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
-.dsh-tdt-sv-turnerr-warn{color:var(--dsw-alias-state-warn-primary,#f5a623);margin-right:6px;font-weight:600;}
+.dsh-tdt-sv-turnerr-title{color:var(--tdt-danger,#e5484d);margin-right:6px;font-weight:600;}
+.dsh-tdt-sv-turnerr-msg{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr-code{color:var(--tdt-fg-3,rgba(128,128,128,.8));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
+.dsh-tdt-sv-turnerr-warn{color:var(--tdt-warning,#f5a623);margin-right:6px;font-weight:600;}
 
 /* ── U11 产出物预览（决策 39）：页面级 dock 预览面（弹窗与整页共用，见上方 dock 规则） ──
    旧「弹窗内右侧分栏」那两条规则已随第三轮上提删除（预览面唯一且页面级）。 */
-.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));background:var(--dsw-alias-bg-base,#1a1a1a);}
-.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
-.dsh-tdt-sv-preview-label{flex:none;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
+.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
+.dsh-tdt-sv-preview-label{flex:none;font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 /* 路径：超长省略（CSS ellipsis），hover 时由 JS 改为向左跑马灯（见 file-preview.tsx startMarquee）。 */
 .dsh-tdt-sv-preview-title{flex:1;min-width:0;display:flex;overflow:hidden;}
-.dsh-tdt-sv-preview-title-inner{font-family:var(--ds-font-family-code,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
+.dsh-tdt-sv-preview-title-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:12px;line-height:18px;color:var(--tdt-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
 /* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
 .dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
-.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
-.dsh-tdt-sv-head-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:28px;height:28px;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-head-btn:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
@@ -2383,53 +2392,53 @@ body[data-ds-dark-theme]{
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
 /* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
-.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));white-space:nowrap;}
+.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));white-space:nowrap;}
 .dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
 .dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
 .dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
-.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--dsw-radius-sm,6px);font:inherit;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
-.dsh-tdt-sv-crumb:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-sv-crumb-current{cursor:default;color:var(--dsw-alias-label-primary,#1f2328);font-weight:600;max-width:200px;}
+.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:12px;line-height:18px;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
+.dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
-.dsh-tdt-sv-crumb-sep{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));}
+.dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
 .dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
 /* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
 .dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
 .dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--tdt-surface-1);border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
 .dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:12px;line-height:20px;padding:4px 8px;border-radius:var(--tdt-radius-sm);color:var(--tdt-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-crumbs-menu-empty{font-size:12px;line-height:20px;padding:4px 8px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-crumbs-menu-empty{font-size:12px;line-height:20px;padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 /* 报错页「返回」按钮（四验：停在报错页没有任何办法回去）。 */
 .dsh-tdt-sv-err-actions{margin-top:12px;}
 .dsh-tdt-sv-err-back{appearance:none;border:1px solid var(--tdt-border);background:0 0;border-radius:var(--tdt-radius-sm);font:inherit;font-size:12px;line-height:20px;padding:4px 14px;color:var(--tdt-fg);cursor:pointer;}
-.dsh-tdt-sv-err-back:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-err-back:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 第二排：文件名（跑马灯）+ 操作按钮。 */
-.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
 .dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
-.dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;user-select:none;}
-.dsh-tdt-sv-tree-row:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;user-select:none;}
+.dsh-tdt-sv-tree-row:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-tree-row:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
-.dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:13px;line-height:20px;color:var(--tdt-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
+.dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 /* 下拉选层：每行只显示一个右箭头（画在原第 index 位），行首 (index-1) 个箭头位
    空出但占位（宽度与箭头一致），保持层级缩进（用户 2026-09-29）。 */
-.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.7));margin-right:1px;}
+.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));margin-right:1px;}
 .dsh-tdt-sv-crumbs-chev-slot{flex:none;width:11px;height:11px;margin-right:1px;}
 .dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
-.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--dsw-radius-sm,6px);cursor:pointer;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease),background var(--ds-transition-duration,.15s) var(--ds-ease-in-out,ease);}
-.dsh-tdt-sv-tree-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--tdt-dur,.15s) var(--tdt-ease,ease),background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-tree-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
 /* 内联展开子层：左缩进 + 淡竖线引导层级。 */
-.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));display:flex;flex-direction:column;}
-.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:12px;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-sv-tree-err{color:var(--dsw-alias-state-error-primary,#e5484d);}
-.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));padding:8px 0;}
+.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--tdt-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
+.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:12px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-tree-err{color:var(--tdt-danger,#e5484d);}
+.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:12px;line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));padding:8px 0;}
 /* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
 /* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
-.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:12px;display:flex;}
+.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:12px;display:flex;}
 .dsh-tdt-sv-deliv-rowsummary>:first-child{flex-shrink:0;}
 .dsh-tdt-sv-deliv-rowpaths{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
 .dsh-tdt-sv-deliv-rowoutput{border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg-2);white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;padding:12px;font-size:12px;}
@@ -2446,11 +2455,11 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-body{z-index:2;pointer-events:none;flex:1;justify-content:space-between;align-items:center;gap:12px;min-width:0;display:flex;position:relative;}
 .dsh-tdt-sv-deliv-details{flex-direction:column;flex:1;justify-content:center;gap:2px;min-width:0;display:flex;}
 .dsh-tdt-sv-deliv-name{text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;line-height:20px;overflow:hidden;}
-.dsh-tdt-sv-deliv-desc{color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:400;line-height:16px;overflow:hidden;}
+.dsh-tdt-sv-deliv-desc{color:var(--tdt-fg-3,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:400;line-height:16px;overflow:hidden;}
 .dsh-tdt-sv-deliv-hint,.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-secondary{display:none;}
 .dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-hint{display:inline;}
-.dsh-tdt-sv-deliv-toggle{border-radius:var(--dsw-radius-sm,6px);min-width:0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:12px;line-height:18px;display:inline-flex;}
-.dsh-tdt-sv-deliv-toggle:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:12px;line-height:18px;display:inline-flex;}
+.dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 `;
 		let injected$2 = false;
@@ -5133,7 +5142,7 @@ body[data-ds-dark-theme]{
 				}
 			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-title" }, `${tt("sessionViewerTitle")} · ${heading}`), (0, react.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialCount === 0 ? (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-sid",
-				style: { color: "var(--dsw-alias-state-warn-primary, #b7791f)" }
+				style: { color: "var(--tdt-warning, #b7791f)" }
 			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react.createElement)("div", { className: "dsh-tdt-sv-headerbtns" }, canFork ? (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
@@ -5173,248 +5182,6 @@ body[data-ds-dark-theme]{
 					onClick: onForkAccept
 				}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))]
 			}, forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
-		}
-		//#endregion
-		//#region src/client/editor-fields.tsx
-		const C$3 = {
-			text: "var(--dsw-alias-label-primary, #1f2328)",
-			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
-			textTertiary: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
-			dimmed: "var(--dsw-alias-label-dimmed, rgba(128,128,128,0.6))",
-			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))",
-			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
-			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
-			borderL2: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
-			borderL4: "var(--dsw-alias-border-l4, rgba(128,128,128,0.25))",
-			brand: "var(--dsw-alias-brand-primary, #0f1115)",
-			brandFg: "var(--dsw-alias-label-primary-foreground, #ffffff)",
-			business: "var(--dsw-alias-state-business-primary, #4d6bfe)",
-			menuFill: "var(--dsw-alias-bg-base, #22252a)",
-			elevation: "var(--tdt-shadow-2)",
-			radiusSm: "var(--dsw-radius-sm, 6px)",
-			radiusMd: "var(--dsw-radius-md, 8px)"
-		};
-		/** 锚点按钮：克隆官方 `Input` 的外观（下拉、日期、时分共用同一副壳）。 */
-		const fieldButtonStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "6px",
-			height: "32px",
-			boxSizing: "border-box",
-			minWidth: 0,
-			maxWidth: "100%",
-			padding: "0 8px",
-			border: `0.5px solid ${C$3.borderL4}`,
-			borderRadius: C$3.radiusMd,
-			background: C$3.layer1,
-			color: C$3.text,
-			font: "inherit",
-			fontSize: "13px",
-			lineHeight: "20px",
-			cursor: "pointer",
-			transition: "background 120ms ease, color 120ms ease, border-color 120ms ease"
-		};
-		const fieldLabelStyle = {
-			flex: "1 1 auto",
-			minWidth: 0,
-			overflow: "hidden",
-			textOverflow: "ellipsis",
-			whiteSpace: "nowrap",
-			textAlign: "left"
-		};
-		C$3.menuFill, C$3.elevation, C$3.radiusMd, C$3.text;
-		/** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
-		function IconSeat(props) {
-			return (0, react.createElement)("span", { style: {
-				display: "inline-flex",
-				width: "16px",
-				height: "16px",
-				alignItems: "center",
-				justifyContent: "center",
-				flex: "none",
-				color: C$3.textTertiary
-			} }, props.children);
-		}
-		/**
-		* 下拉选择：**官方 `Menu`**（portal 到 body，避免被弹窗内部滚动裁掉；
-		* 选中项自动带对勾）。空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
-		*/
-		function SelectField(props) {
-			const [open, setOpen] = (0, react.useState)(false);
-			const [hover, setHover] = (0, react.useState)(false);
-			const compact = props.size === "sm";
-			const iconSize = compact ? 14 : 16;
-			const usable = props.options.length > 0 && props.disabled !== true;
-			const current = props.options.find((option) => option.value === props.value);
-			const items = (0, react.useMemo)(() => props.options.map((option) => ({
-				id: option.value,
-				label: option.label
-			})), [props.options]);
-			const anchor = (0, react.createElement)("button", {
-				type: "button",
-				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
-				disabled: !usable,
-				"aria-haspopup": "menu",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onPointerEnter: () => {
-					setHover(true);
-				},
-				onPointerLeave: () => {
-					setHover(false);
-				},
-				onClick: () => {
-					setOpen(!open);
-				},
-				style: {
-					...fieldButtonStyle,
-					...compact ? {
-						height: "28px",
-						gap: "4px",
-						fontSize: "12px",
-						lineHeight: "18px"
-					} : null,
-					width: props.width ?? (props.block === true ? "100%" : void 0),
-					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
-					background: hover && usable ? C$3.hover : C$3.layer1,
-					cursor: usable ? "pointer" : "not-allowed",
-					opacity: usable ? 1 : .6
-				}
-			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react.createElement)(MarqueeText, {
-				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
-				title: props.title ?? props.ariaLabel,
-				style: {
-					...fieldLabelStyle,
-					color: current === void 0 ? C$3.dimmed : C$3.text
-				}
-			}) : (0, react.createElement)("span", { style: {
-				...fieldLabelStyle,
-				color: current === void 0 ? C$3.dimmed : C$3.text
-			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
-			if (!usable) return anchor;
-			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open,
-				anchor,
-				items,
-				selectedId: props.value,
-				selection: "check",
-				align: props.align ?? "start",
-				portal: true,
-				className: props.block === true ? "dsh-tdt-ed-selectwrap" : void 0,
-				onSelect: (id) => {
-					setOpen(false);
-					props.onChange(id);
-				},
-				onClose: () => {
-					setOpen(false);
-				}
-			});
-		}
-		/**
-		* 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
-		* 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
-		*/
-		function calendarLabelsOf(t) {
-			const tt = interpolateTranslate(t);
-			return {
-				today: t("editorToday"),
-				prevMonth: t("editorPrevMonth"),
-				nextMonth: t("editorNextMonth"),
-				prevYear: t("editorPrevYear"),
-				nextYear: t("editorNextYear"),
-				monthTitle: (year, month) => tt("editorMonthTitle", {
-					y: String(year),
-					m: pad2$2(month)
-				}),
-				weekdays: t("editorWeekdayShorts").split("|")
-			};
-		}
-		/**
-		* 周几多选 = 全站统一分段控件 `Segmented`（multiple 模式），不再自绘一套
-		* （2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
-		* 唯二差异走「特殊化变体」`.dsh-tdt-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
-		*   - 每格正方形（宽 = 段高）；
-		*   - 选中态品牌蓝 + 反白字（原自绘即蓝底）。
-		* 皮肤集中在 `controls-css.ts`、不内联，调用点只挂一个修饰类。一个都不选 = 每天（间隔档语义）。
-		*/
-		function WeekdayPicker(props) {
-			const items = (0, react.useMemo)(() => props.labels.shorts.map((short, index) => ({
-				value: String(index + 1),
-				label: short
-			})), [props.labels.shorts]);
-			return (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				flexWrap: "wrap",
-				gap: "8px"
-			} }, props.label === void 0 ? null : (0, react.createElement)("span", { style: {
-				flex: "none",
-				fontSize: "13px",
-				color: C$3.text
-			} }, props.label), (0, react.createElement)(Segmented, {
-				multiple: true,
-				value: props.value.map(String),
-				items,
-				size: "lg",
-				variant: "inset",
-				className: "dsh-tdt-seg--weekday",
-				label: props.label,
-				disabled: props.disabled,
-				onChange: (next) => {
-					props.onChange(next.map(Number).sort((a, b) => a - b));
-				}
-			}), props.value.length === 0 ? (0, react.createElement)("span", { style: {
-				fontSize: "12px",
-				color: C$3.dimmed
-			} }, props.labels.empty) : null);
-		}
-		/**
-		* 跑马灯文本（用户 2026-09-29 要求）：默认超长省略号；hover 且确实放不下时，来回滚动展示全名。
-		* 自实现原因：官方 primitives 无跑马灯组件。测宽用 ResizeObserver + 文本变化重测；
-		* 滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画），动画时长与距离成正比。
-		*
-		* **双层结构（真机截图踩坑修正）**：第一版把 transform 直接加在带 overflow:hidden 的同一个
-		* span 上 ⇒ 整盒位移跑出自己的裁剪框，压到行首图标/相邻文字。改为外层 span 只负责裁剪
-		* （`.dsh-tdt-mq`），内层 `.dsh-tdt-mq-in` 才做 transform 滚动——文字永远在自己那一块里跑。
-		*/
-		function MarqueeText(props) {
-			const outerRef = (0, react.useRef)(null);
-			const innerRef = (0, react.useRef)(null);
-			const [dist, setDist] = (0, react.useState)(0);
-			const measure = (0, react.useCallback)(() => {
-				const outer = outerRef.current;
-				const inner = innerRef.current;
-				if (outer === null || inner === null) return;
-				setDist(Math.max(0, Math.ceil(inner.scrollWidth - outer.clientWidth)));
-			}, []);
-			(0, react.useLayoutEffect)(() => {
-				const outer = outerRef.current;
-				if (outer === null) return;
-				measure();
-				const ro = new ResizeObserver(measure);
-				ro.observe(outer);
-				return () => {
-					ro.disconnect();
-				};
-			}, [measure]);
-			(0, react.useEffect)(() => {
-				measure();
-			}, [props.text, measure]);
-			const run = dist > 0;
-			return (0, react.createElement)("span", {
-				ref: outerRef,
-				className: run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq",
-				title: props.title,
-				style: props.style
-			}, (0, react.createElement)("span", {
-				ref: innerRef,
-				className: "dsh-tdt-mq-in",
-				style: { ...run ? {
-					"--dsh-tdt-mq-dist": `${-dist}px`,
-					"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
-				} : null }
-			}, props.text));
 		}
 		//#endregion
 		//#region src/client/file-preview.tsx
@@ -5808,7 +5575,7 @@ body[data-ds-dark-theme]{
 				display: "inline-flex",
 				alignItems: "center",
 				flex: "none",
-				color: current ? C$3.text : C$3.textDim
+				color: current ? "var(--tdt-fg)" : "var(--tdt-fg-2)"
 			} }, (0, react.createElement)(current ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 13 })), (0, react.createElement)("span", {
 				className: "dsh-tdt-sv-crumbs-menu-label",
 				style: { fontWeight: current ? 600 : 400 }
@@ -6484,106 +6251,329 @@ body[data-ds-dark-theme]{
 			})))) : null, body);
 		}
 		//#endregion
+		//#region src/client/editor-fields.tsx
+		/** 锚点按钮：克隆官方 `Input` 的外观（下拉、日期、时分共用同一副壳）。 */
+		const fieldButtonStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "6px",
+			height: "32px",
+			boxSizing: "border-box",
+			minWidth: 0,
+			maxWidth: "100%",
+			padding: "0 8px",
+			border: `0.5px solid var(--tdt-border-heavy)`,
+			borderRadius: "var(--tdt-radius-md)",
+			background: "var(--tdt-surface-1)",
+			color: "var(--tdt-fg)",
+			font: "inherit",
+			fontSize: "13px",
+			lineHeight: "20px",
+			cursor: "pointer",
+			transition: "background 120ms ease, color 120ms ease, border-color 120ms ease"
+		};
+		const fieldLabelStyle = {
+			flex: "1 1 auto",
+			minWidth: 0,
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			whiteSpace: "nowrap",
+			textAlign: "left"
+		};
+		/** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
+		function IconSeat(props) {
+			return (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				width: "16px",
+				height: "16px",
+				alignItems: "center",
+				justifyContent: "center",
+				flex: "none",
+				color: "var(--tdt-fg-3)"
+			} }, props.children);
+		}
+		/**
+		* 下拉选择：**官方 `Menu`**（portal 到 body，避免被弹窗内部滚动裁掉；
+		* 选中项自动带对勾）。空列表 ⇒ 禁用并显示空态文案（接不到真数据时不塞假值）。
+		*/
+		function SelectField(props) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const [hover, setHover] = (0, react.useState)(false);
+			const compact = props.size === "sm";
+			const iconSize = compact ? 14 : 16;
+			const usable = props.options.length > 0 && props.disabled !== true;
+			const current = props.options.find((option) => option.value === props.value);
+			const items = (0, react.useMemo)(() => props.options.map((option) => ({
+				id: option.value,
+				label: option.label
+			})), [props.options]);
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: `dsh-tdt-ed-field${props.error === true ? " dsh-tdt-ed-field--error" : ""}`,
+				disabled: !usable,
+				"aria-haspopup": "menu",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onPointerEnter: () => {
+					setHover(true);
+				},
+				onPointerLeave: () => {
+					setHover(false);
+				},
+				onClick: () => {
+					setOpen(!open);
+				},
+				style: {
+					...fieldButtonStyle,
+					...compact ? {
+						height: "28px",
+						gap: "4px",
+						fontSize: "12px",
+						lineHeight: "18px"
+					} : null,
+					width: props.width ?? (props.block === true ? "100%" : void 0),
+					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
+					background: hover && usable ? "var(--tdt-hover)" : "var(--tdt-surface-1)",
+					cursor: usable ? "pointer" : "not-allowed",
+					opacity: usable ? 1 : .6
+				}
+			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react.createElement)(MarqueeText, {
+				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
+				title: props.title ?? props.ariaLabel,
+				style: {
+					...fieldLabelStyle,
+					color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+				}
+			}) : (0, react.createElement)("span", { style: {
+				...fieldLabelStyle,
+				color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
+			if (!usable) return anchor;
+			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open,
+				anchor,
+				items,
+				selectedId: props.value,
+				selection: "check",
+				align: props.align ?? "start",
+				portal: true,
+				className: props.block === true ? "dsh-tdt-ed-selectwrap" : void 0,
+				onSelect: (id) => {
+					setOpen(false);
+					props.onChange(id);
+				},
+				onClose: () => {
+					setOpen(false);
+				}
+			});
+		}
+		/**
+		* 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
+		* 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
+		*/
+		function calendarLabelsOf(t) {
+			const tt = interpolateTranslate(t);
+			return {
+				today: t("editorToday"),
+				prevMonth: t("editorPrevMonth"),
+				nextMonth: t("editorNextMonth"),
+				prevYear: t("editorPrevYear"),
+				nextYear: t("editorNextYear"),
+				monthTitle: (year, month) => tt("editorMonthTitle", {
+					y: String(year),
+					m: pad2$2(month)
+				}),
+				weekdays: t("editorWeekdayShorts").split("|")
+			};
+		}
+		/**
+		* 周几多选 = 全站统一分段控件 `Segmented`（multiple 模式），不再自绘一套
+		* （2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
+		* 唯二差异走「特殊化变体」`.dsh-tdt-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
+		*   - 每格正方形（宽 = 段高）；
+		*   - 选中态品牌蓝 + 反白字（原自绘即蓝底）。
+		* 皮肤集中在 `controls-css.ts`、不内联，调用点只挂一个修饰类。一个都不选 = 每天（间隔档语义）。
+		*/
+		function WeekdayPicker(props) {
+			const items = (0, react.useMemo)(() => props.labels.shorts.map((short, index) => ({
+				value: String(index + 1),
+				label: short
+			})), [props.labels.shorts]);
+			return (0, react.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				flexWrap: "wrap",
+				gap: "8px"
+			} }, props.label === void 0 ? null : (0, react.createElement)("span", { style: {
+				flex: "none",
+				fontSize: "13px",
+				color: "var(--tdt-fg)"
+			} }, props.label), (0, react.createElement)(Segmented, {
+				multiple: true,
+				value: props.value.map(String),
+				items,
+				size: "lg",
+				variant: "inset",
+				className: "dsh-tdt-seg--weekday",
+				label: props.label,
+				disabled: props.disabled,
+				onChange: (next) => {
+					props.onChange(next.map(Number).sort((a, b) => a - b));
+				}
+			}), props.value.length === 0 ? (0, react.createElement)("span", { style: {
+				fontSize: "12px",
+				color: "var(--tdt-fg-dim)"
+			} }, props.labels.empty) : null);
+		}
+		/**
+		* 跑马灯文本（用户 2026-09-29 要求）：默认超长省略号；hover 且确实放不下时，来回滚动展示全名。
+		* 自实现原因：官方 primitives 无跑马灯组件。测宽用 ResizeObserver + 文本变化重测；
+		* 滚动距离 0 时不启用 hover 动画（`.dsh-tdt-mq-run` 才有动画），动画时长与距离成正比。
+		*
+		* **双层结构（真机截图踩坑修正）**：第一版把 transform 直接加在带 overflow:hidden 的同一个
+		* span 上 ⇒ 整盒位移跑出自己的裁剪框，压到行首图标/相邻文字。改为外层 span 只负责裁剪
+		* （`.dsh-tdt-mq`），内层 `.dsh-tdt-mq-in` 才做 transform 滚动——文字永远在自己那一块里跑。
+		*/
+		function MarqueeText(props) {
+			const outerRef = (0, react.useRef)(null);
+			const innerRef = (0, react.useRef)(null);
+			const [dist, setDist] = (0, react.useState)(0);
+			const measure = (0, react.useCallback)(() => {
+				const outer = outerRef.current;
+				const inner = innerRef.current;
+				if (outer === null || inner === null) return;
+				setDist(Math.max(0, Math.ceil(inner.scrollWidth - outer.clientWidth)));
+			}, []);
+			(0, react.useLayoutEffect)(() => {
+				const outer = outerRef.current;
+				if (outer === null) return;
+				measure();
+				const ro = new ResizeObserver(measure);
+				ro.observe(outer);
+				return () => {
+					ro.disconnect();
+				};
+			}, [measure]);
+			(0, react.useEffect)(() => {
+				measure();
+			}, [props.text, measure]);
+			const run = dist > 0;
+			return (0, react.createElement)("span", {
+				ref: outerRef,
+				className: run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq",
+				title: props.title,
+				style: props.style
+			}, (0, react.createElement)("span", {
+				ref: innerRef,
+				className: "dsh-tdt-mq-in",
+				style: { ...run ? {
+					"--dsh-tdt-mq-dist": `${-dist}px`,
+					"--dsh-tdt-mq-dur": `${Math.max(3, Math.round(dist / 30))}s`
+				} : null }
+			}, props.text));
+		}
+		//#endregion
 		//#region src/client/task-editor-css.ts
 		/** 样式标签 id（幂等注入用）。 */
 		const ED_STYLE_ID = "dsh-task-dispatch-table-task-editor";
 		const TASK_EDITOR_CSS = `
 /* 遮罩：盖在整页之上（含 U11 预览 dock —— dock 是 z 1030 的占布局分栏，此处 1040 压住它）。 */
-.dsh-tdt-ed-overlay{position:fixed;inset:0;z-index:1040;display:flex;justify-content:flex-end;background:var(--dsw-alias-bg-mask-1,rgba(0,0,0,.45));}
+.dsh-tdt-ed-overlay{position:fixed;inset:0;z-index:1040;display:flex;justify-content:flex-end;background:var(--tdt-mask,rgba(0,0,0,.45));}
 /* 面板：右侧贴边、上下顶满、**浮层**（页面本身不动、不被推窄）。 */
-.dsh-tdt-ed-panel{position:relative;display:flex;flex-direction:column;height:100%;box-sizing:border-box;background:var(--dsw-alias-bg-base,var(--dsw-alias-bg-layer-1,#fff));color:var(--dsw-alias-label-primary,#1f2328);border-left:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));box-shadow:var(--dsw-shadow-lv3,0 12px 40px rgba(0,0,0,.32));}
+.dsh-tdt-ed-panel{position:relative;display:flex;flex-direction:column;height:100%;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。 */
 .dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;background:0 0;}
-.dsh-tdt-ed-resizer:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
-.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));position:relative;}
+.dsh-tdt-ed-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:15px;font-weight:600;}
 /* 头部左侧：启用开关 + 标题 一组（用户 2026-09-30：开关移到标题左边）。 */
 .dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
-.dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;}
+.dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--tdt-fg,#1f2328);cursor:pointer;}
 /* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
 /* 关闭钮：规格照官方 primitives Modal.close（28×28、radius-sm、hover 才出底）。 */
-.dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
-.dsh-tdt-ed-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:var(--tdt-radius-sm,6px);background:0 0;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
+.dsh-tdt-ed-close:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
-.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));position:relative;}
-.dsh-tdt-ed-label{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-ed-hint{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));}
+.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
+.dsh-tdt-ed-label{font-size:12px;font-weight:600;color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-ed-hint{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
 /* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
-.dsh-tdt-ed-danger{color:var(--dsw-alias-state-error-primary,#e5484d)!important;border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;}
-.dsh-tdt-ed-danger:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16))!important;}
+.dsh-tdt-ed-danger{color:var(--tdt-danger,#e5484d)!important;border-color:var(--tdt-danger,#e5484d)!important;}
+.dsh-tdt-ed-danger:hover{background:var(--tdt-hover,rgba(128,128,128,.16))!important;}
 .dsh-tdt-ed-section{margin-bottom:16px;}
 .dsh-tdt-ed-section:last-child{margin-bottom:0;}
 /* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
-.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));border-radius:var(--dsw-radius-lg,10px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
-.dsh-tdt-ed-card:focus-within{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
+.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-surface-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
+.dsh-tdt-ed-card:focus-within{border-color:var(--tdt-business,#4d6bfe);}
 /* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
-.dsh-tdt-ed-card--error{border-color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-state-error-primary,rgba(229,72,77,.08));}
-.dsh-tdt-ed-field--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-ed-card--error{border-color:var(--tdt-danger,#e5484d);background:var(--tdt-danger,rgba(229,72,77,.08));}
+.dsh-tdt-ed-field--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 历史版本开关（2026-10-01：已并入统一分段控件 Segmented，根 id=dsh-tdt-ed-histtoggle、multiple 单段做 on/off；
    样式完全走 controls-css.ts 的 .dsh-tdt-seg，这里不再留任何皮肤——旧 .dsh-tdt-ed-histtoggle* 规则已删。 */
 /* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
    右侧 = 固定宽高槽：常态时间小字、hover 换「使用（药丸）/ 移除（小字）」——槽位尺寸恒定，
    hover 出按钮**绝不撑高行高**（此前按钮把行撑大上下蹦，用户点名）。 */
-.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.35));}
+.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px dashed var(--tdt-border-strong,rgba(128,128,128,.35));}
 .dsh-tdt-ed-ver:last-child{border-bottom:none;}
-.dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));}
-.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:11px;color:var(--dsw-alias-label-primary,#1f2328);}
-.dsh-tdt-ed-ver-note{display:block;font-size:10px;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:11px;color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-ed-ver-note{display:block;font-size:10px;color:var(--tdt-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
 .dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
 /* 「使用」= 纯文字钮（用户：药丸太长），hover 才垫一个小背景；「×」= 官方叉图标，hover 变红。 */
-.dsh-tdt-ed-ver-use{appearance:none;border:none;background:none;padding:1px 4px;border-radius:var(--dsw-radius-sm,4px);color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease;}
-.dsh-tdt-ed-ver-use:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.2));}
-.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:2px;border-radius:var(--dsw-radius-sm,4px);display:inline-flex;align-items:center;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .12s ease,color .12s ease;}
-.dsh-tdt-ed-ver-del:hover{color:var(--dsw-alias-state-error-primary,#e5484d);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.2));}
+.dsh-tdt-ed-ver-use{appearance:none;border:none;background:none;padding:1px 4px;border-radius:var(--tdt-radius-sm,4px);color:var(--tdt-fg,#1f2328);font:inherit;font-size:11px;line-height:16px;cursor:pointer;white-space:nowrap;transition:background .12s ease,color .12s ease;}
+.dsh-tdt-ed-ver-use:hover{background:var(--tdt-hover,rgba(128,128,128,.2));}
+.dsh-tdt-ed-ver-del{appearance:none;border:none;background:none;padding:2px;border-radius:var(--tdt-radius-sm,4px);display:inline-flex;align-items:center;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;transition:background .12s ease,color .12s ease;}
+.dsh-tdt-ed-ver-del:hover{color:var(--tdt-danger,#e5484d);background:var(--tdt-hover,rgba(128,128,128,.2));}
 .dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
 /* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
-.dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:1.6;resize:vertical;}
-.dsh-tdt-ed-prompt::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
-.dsh-tdt-ed-prompt--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:14px;line-height:1.6;resize:vertical;}
+.dsh-tdt-ed-prompt::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
+.dsh-tdt-ed-prompt--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
-.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--dsw-radius-md,8px);background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
+.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--tdt-radius-md,8px);background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:13px;cursor:pointer;text-align:left;}
 /* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
-.dsh-tdt-ed-advchevron{flex:none;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));transition:transform .15s ease;}
+.dsh-tdt-ed-advchevron{flex:none;color:var(--tdt-fg-2,rgba(128,128,128,.95));transition:transform .15s ease;}
 .dsh-tdt-ed-advchevron-open{transform:rotate(180deg);}
 /* 展开体：每项「控件行 + 说明行」两拍，项与项之间虚线分隔（用户 2026-09-29：别全挤成文字）。 */
 .dsh-tdt-ed-advbody{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
 .dsh-tdt-ed-advitem{padding-top:12px;}
 .dsh-tdt-ed-advitem:first-child{padding-top:0;}
-.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--dsw-alias-border-l3,rgba(128,128,128,.5));}
+.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--tdt-border-strong,rgba(128,128,128,.5));}
 /* 单行文本输入：逐条照官方 Input.module.css（.wrap + .input 合并成一枚裸 input），
    含官方的 focus 描边与占位色 —— 这两条必须走 CSS，内联样式压不过伪类。 */
-.dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:14px;line-height:22px;outline:none;transition:border-color .15s ease;}
-.dsh-tdt-ed-input:focus{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
-.dsh-tdt-ed-input::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
+.dsh-tdt-ed-input{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));color:var(--tdt-fg,#1f2328);font:inherit;font-size:14px;line-height:22px;outline:none;transition:border-color .15s ease;}
+.dsh-tdt-ed-input:focus{border-color:var(--tdt-business,#4d6bfe);}
+.dsh-tdt-ed-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
 /* 自绘控件锚点（下拉 / 日历 / 时分）：键盘可达性描边。 */
-.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d6bfe);outline-offset:1px;}
+.dsh-tdt-ed-field:focus-visible{outline:2px solid var(--tdt-business,#4d6bfe);outline-offset:1px;}
 /* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满。 */
 .dsh-tdt-ed-selectwrap{width:100%;}
 /* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
    省掉标签单独占的一行——弹窗竖向空间紧张。 */
-.dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:32px;box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
-.dsh-tdt-ed-pfx:focus-within{border-color:var(--dsw-alias-state-business-primary,#4d6bfe);}
-.dsh-tdt-ed-pfx-label{flex:none;display:inline-flex;align-items:center;padding:0 10px;border-right:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));font-size:13px;line-height:18px;white-space:nowrap;}
-.dsh-tdt-ed-pfx-input{flex:1 1 auto;min-width:0;padding:0 10px;border:none;outline:none;background:0 0;color:var(--dsw-alias-label-primary,#1f2328);font:inherit;font-size:13px;}
-.dsh-tdt-ed-pfx-input::placeholder{color:var(--dsw-alias-label-dimmed,rgba(128,128,128,.6));}
-.dsh-tdt-ed-pfx--error{border-color:var(--dsw-alias-state-error-primary,#e5484d)!important;box-shadow:0 0 0 1px var(--dsw-alias-state-error-primary,#e5484d);}
+.dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:32px;box-sizing:border-box;border:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
+.dsh-tdt-ed-pfx:focus-within{border-color:var(--tdt-business,#4d6bfe);}
+.dsh-tdt-ed-pfx-label{flex:none;display:inline-flex;align-items:center;padding:0 10px;border-right:.5px solid var(--tdt-border-heavy,rgba(128,128,128,.25));background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:13px;line-height:18px;white-space:nowrap;}
+.dsh-tdt-ed-pfx-input{flex:1 1 auto;min-width:0;padding:0 10px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:13px;}
+.dsh-tdt-ed-pfx-input::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
+.dsh-tdt-ed-pfx--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
-.dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.35));}
+.dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 小问号：挂 Tooltip 的说明入口（不占正文版面）。 */
-.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--dsw-alias-label-tertiary,rgba(128,128,128,.8));cursor:help;}
-.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--dsw-alias-label-primary,#1f2328);background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
+.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
+.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
    左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
    官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
-.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--dsw-alias-interactive-bg-hover,rgba(127,127,127,.14));}
+.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--tdt-hover,rgba(127,127,127,.14));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
@@ -10432,8 +10422,8 @@ body[data-ds-dark-theme]{
 		}
 		//#endregion
 		//#region node_modules/style-mod/src/style-mod.js
-		const C$2 = "ͼ";
-		const COUNT = typeof Symbol == "undefined" ? "__ͼ" : Symbol.for(C$2);
+		const C = "ͼ";
+		const COUNT = typeof Symbol == "undefined" ? "__ͼ" : Symbol.for(C);
 		const SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : Symbol("styleSet");
 		const top = typeof globalThis != "undefined" ? globalThis : typeof window != "undefined" ? window : {};
 		var StyleModule = class {
@@ -10464,7 +10454,7 @@ body[data-ds-dark-theme]{
 			static newName() {
 				let id = top[COUNT] || 1;
 				top[COUNT] = id + 1;
-				return C$2 + id.toString(36);
+				return C + id.toString(36);
 			}
 			static mount(root, modules, options) {
 				let set = root[SET], nonce = options && options.nonce;
@@ -38468,7 +38458,7 @@ body[data-ds-dark-theme]{
    形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
    语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
 .dsh-tdt-toast{
-  --tone:var(--dsw-alias-state-error-primary,#e5484d);
+  --tone:var(--tdt-danger,#e5484d);
   position:absolute;
   left:50%;
   bottom:calc(100% + 8px);
@@ -38480,12 +38470,12 @@ body[data-ds-dark-theme]{
   box-sizing:border-box;
   margin:0;
   padding:8px 14px;
-  border-radius:var(--dsw-radius-md,8px);
+  border-radius:var(--tdt-radius-md,8px);
   border:1px solid var(--tone);
   /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
-  background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.15));
-  background:color-mix(in srgb,var(--tone) 10%,var(--dsw-alias-bg-layer-1,#fff));
-  color:var(--dsw-alias-label-primary,#1f2328);
+  background:var(--tdt-surface-1,rgba(128,128,128,.15));
+  background:color-mix(in srgb,var(--tone) 10%,var(--tdt-surface-1,#fff));
+  color:var(--tdt-fg,#1f2328);
   font-size:12px;
   line-height:1.6;
   display:flex;
@@ -38502,7 +38492,7 @@ body[data-ds-dark-theme]{
   background:var(--tone);
   margin:6px 8px 0 0;
 }
-.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}
+.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--tdt-fg-inverse,#fff);opacity:.65;}
 .dsh-tdt-toast-text{
   flex:1 1 auto;min-width:0;
   white-space:pre-line;
@@ -38515,15 +38505,15 @@ body[data-ds-dark-theme]{
   100%{opacity:0;transform:translate(-50%,-16px);}
 }
 /* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
-.dsh-tdt-toast--success{--tone:var(--dsw-alias-state-success-primary,#2f9e44);}
+.dsh-tdt-toast--success{--tone:var(--tdt-success,#2f9e44);}
 .dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
 .dsh-tdt-toast--neutral{
-  --tone:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));
-  background:var(--dsw-alias-label-primary,#1f2328);
-  color:var(--dsw-alias-label-primary-inverted,#fff);
+  --tone:var(--tdt-fg-2,rgba(128,128,128,.95));
+  background:var(--tdt-fg,#1f2328);
+  color:var(--tdt-fg-inverse,#fff);
   border-color:transparent;
 }
-.dsh-tdt-toast--neutral::before{background:var(--dsw-alias-label-primary-inverted,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--neutral::before{background:var(--tdt-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
@@ -38951,7 +38941,6 @@ body[data-ds-dark-theme]{
 			if (everyNWeeks !== void 0 && everyNWeeks > 1) draft.weekStep = String(everyNWeeks);
 			return draft;
 		}
-		C$3.text;
 		/**
 		* 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
 		* 用户 2026-09-29：「任务名称」别单独占一行，位置紧张。
@@ -39130,7 +39119,7 @@ body[data-ds-dark-theme]{
 				gap: "8px"
 			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { style: {
 				fontSize: "13px",
-				color: C$3.text
+				color: "var(--tdt-fg)"
 			} }, t("editorIntervalEvery")), (0, react.createElement)(NumberInput, {
 				value: Number.parseInt(draft.intervalStep, 10) || 1,
 				min: 1,
@@ -39152,7 +39141,7 @@ body[data-ds-dark-theme]{
 				width: 96
 			}), (0, react.createElement)("span", { style: {
 				fontSize: "13px",
-				color: C$3.text
+				color: "var(--tdt-fg)"
 			} }, t("editorIntervalSuffix"))), (0, react.createElement)(WeekdayPicker, {
 				value: draft.weekdays,
 				onChange: (value) => {
@@ -39199,15 +39188,15 @@ body[data-ds-dark-theme]{
 		*/
 		const promptEditorTheme = EditorView.theme({
 			"&": {
-				backgroundColor: "var(--dsw-alias-bg-base, #22252a)",
-				color: C$3.text,
+				backgroundColor: "var(--tdt-surface-base, #22252a)",
+				color: "var(--tdt-fg)",
 				height: "100%",
 				width: "100%"
 			},
 			".cm-editor": {
 				height: "100%",
 				width: "100%",
-				backgroundColor: "var(--dsw-alias-bg-base, #22252a)"
+				backgroundColor: "var(--tdt-surface-base, #22252a)"
 			},
 			".cm-scroller": {
 				fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
@@ -39218,14 +39207,14 @@ body[data-ds-dark-theme]{
 			".cm-content": { width: "100%" },
 			".cm-line": { padding: "0 4px" },
 			".cm-gutters": {
-				backgroundColor: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))",
-				color: C$3.textDim,
+				backgroundColor: "var(--tdt-surface-1, rgba(128,128,128,0.08))",
+				color: "var(--tdt-fg-2)",
 				border: "none"
 			},
-			".cm-activeLine": { backgroundColor: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))" },
+			".cm-activeLine": { backgroundColor: "var(--tdt-hover, rgba(128,128,128,0.16))" },
 			".cm-activeLineGutter": {
 				backgroundColor: "transparent",
-				color: C$3.text
+				color: "var(--tdt-fg)"
 			},
 			"&.cm-focused": { outline: "none" }
 		}, { dark: true });
@@ -39246,18 +39235,18 @@ body[data-ds-dark-theme]{
 					alignItems: "center",
 					justifyContent: "center",
 					padding: "24px",
-					background: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))"
+					background: "var(--tdt-mask, rgba(0,0,0,0.45))"
 				},
 				onClick: props.onStay
 			}, (0, react.createElement)("div", {
 				style: {
 					width: "min(380px, 100%)",
 					boxSizing: "border-box",
-					background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
-					borderRadius: "var(--dsw-radius-panel, 10px)",
+					background: "var(--tdt-surface-2, #2a2e33)",
+					borderRadius: "var(--tdt-radius-panel, 10px)",
 					boxShadow: "var(--tdt-shadow-2)",
 					padding: "22px 24px",
-					color: C$3.text
+					color: "var(--tdt-fg)"
 				},
 				onClick: (event) => {
 					event.stopPropagation();
@@ -39269,7 +39258,7 @@ body[data-ds-dark-theme]{
 			} }, props.t("editorDiscardTitle")), (0, react.createElement)("div", { style: {
 				fontSize: "14px",
 				lineHeight: "22px",
-				color: C$3.textDim,
+				color: "var(--tdt-fg-2)",
 				marginBottom: "20px"
 			} }, props.t("editorDiscardDesc")), (0, react.createElement)("div", { style: {
 				display: "flex",
@@ -39300,18 +39289,18 @@ body[data-ds-dark-theme]{
 					alignItems: "center",
 					justifyContent: "center",
 					padding: "24px",
-					background: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))"
+					background: "var(--tdt-mask, rgba(0,0,0,0.45))"
 				},
 				onClick: props.onCancel
 			}, (0, react.createElement)("div", {
 				style: {
 					width: "min(400px, 100%)",
 					boxSizing: "border-box",
-					background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
-					borderRadius: "var(--dsw-radius-panel, 10px)",
+					background: "var(--tdt-surface-2, #2a2e33)",
+					borderRadius: "var(--tdt-radius-panel, 10px)",
 					boxShadow: "var(--tdt-shadow-2)",
 					padding: "20px 24px 18px",
-					color: C$3.text
+					color: "var(--tdt-fg)"
 				},
 				onClick: (event) => {
 					event.stopPropagation();
@@ -39325,14 +39314,14 @@ body[data-ds-dark-theme]{
 			} }, props.title), props.desc !== "" ? (0, react.createElement)("div", { style: {
 				fontSize: "13px",
 				lineHeight: "21px",
-				color: C$3.textDim,
+				color: "var(--tdt-fg-2)",
 				marginBottom: props.bullets !== void 0 ? "8px" : "18px"
 			} }, props.desc) : null, props.bullets !== void 0 && props.bullets.length > 0 ? (0, react.createElement)("ul", { style: {
 				listStyle: "none",
 				margin: "0 0 18px",
 				padding: "10px 12px",
-				borderRadius: "var(--dsw-radius-md,8px)",
-				background: "var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08))",
+				borderRadius: "var(--tdt-radius-md,8px)",
+				background: "var(--tdt-surface-1,rgba(128,128,128,.08))",
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px"
@@ -39349,7 +39338,7 @@ body[data-ds-dark-theme]{
 				width: "5px",
 				height: "5px",
 				borderRadius: "50%",
-				background: "var(--dsw-alias-label-tertiary,rgba(128,128,128,.8))",
+				background: "var(--tdt-fg-3,rgba(128,128,128,.8))",
 				margin: "7px 0 0"
 			} }), (0, react.createElement)("span", null, b)))) : null, needAck ? (0, react.createElement)("label", { style: {
 				display: "flex",
@@ -39403,8 +39392,8 @@ body[data-ds-dark-theme]{
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0,
-				background: "var(--dsw-alias-bg-base, #22252a)",
-				color: C$3.text,
+				background: "var(--tdt-surface-base, #22252a)",
+				color: "var(--tdt-fg)",
 				overflow: "hidden",
 				position: "relative"
 			} }, (0, react.createElement)("div", { style: {
@@ -39413,7 +39402,7 @@ body[data-ds-dark-theme]{
 				justifyContent: "space-between",
 				gap: "12px",
 				padding: "10px 14px",
-				borderBottom: `1px solid ${C$3.borderL2}`
+				borderBottom: `1px solid var(--tdt-border)`
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "14px",
 				fontWeight: 600
@@ -39493,19 +39482,19 @@ body[data-ds-dark-theme]{
 				labels: MD_LABELS
 			})), showVersions ? (0, react.createElement)("div", { style: {
 				flex: "0 0 232px",
-				borderLeft: `1px solid ${C$3.borderL4}`,
+				borderLeft: `1px solid var(--tdt-border-heavy)`,
 				display: "flex",
 				flexDirection: "column",
 				minHeight: 0
 			} }, (0, react.createElement)("div", { style: {
 				padding: "10px 12px",
-				borderBottom: `1px solid ${C$3.borderL4}`,
+				borderBottom: `1px solid var(--tdt-border-heavy)`,
 				fontSize: "13px",
 				fontWeight: 600
 			} }, versionTitle), editorMode === "create" ? (0, react.createElement)("div", { style: {
 				padding: "16px 12px",
 				fontSize: "12px",
-				color: C$3.textDim,
+				color: "var(--tdt-fg-2)",
 				lineHeight: "1.6"
 			} }, t("editorNewTaskNoVersions")) : (0, react.createElement)("div", { style: {
 				display: "flex",
@@ -39515,7 +39504,7 @@ body[data-ds-dark-theme]{
 			} }, versions.length === 0 ? (0, react.createElement)("p", { style: {
 				padding: "0 12px",
 				fontSize: "12px",
-				color: C$3.textDim
+				color: "var(--tdt-fg-2)"
 			} }, t("editorNoVersions")) : (0, react.createElement)("ul", { style: {
 				listStyle: "none",
 				margin: 0,
@@ -39585,8 +39574,8 @@ body[data-ds-dark-theme]{
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0,
-				background: "var(--dsw-alias-bg-base, #22252a)",
-				color: C$3.text,
+				background: "var(--tdt-surface-base, #22252a)",
+				color: "var(--tdt-fg)",
 				overflow: "hidden",
 				position: "relative"
 			} }, (0, react.createElement)("div", { style: {
@@ -39595,7 +39584,7 @@ body[data-ds-dark-theme]{
 				justifyContent: "space-between",
 				gap: "12px",
 				padding: "10px 14px",
-				borderBottom: `1px solid ${C$3.borderL2}`
+				borderBottom: `1px solid var(--tdt-border)`
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "14px",
 				fontWeight: 600
@@ -39994,7 +39983,7 @@ body[data-ds-dark-theme]{
 					gap: "8px",
 					padding: "6px 10px",
 					borderRadius: "6px",
-					background: "var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))"
+					background: "var(--tdt-hover, rgba(127, 127, 127, 0.14))"
 				}
 			}, (0, react.createElement)("span", { style: {
 				flex: "none",
@@ -40015,10 +40004,10 @@ body[data-ds-dark-theme]{
 				style: {
 					flex: "none",
 					fontSize: "11px",
-					color: C$3.textDim,
+					color: "var(--tdt-fg-2)",
 					borderRadius: "4px",
 					padding: "1px 6px",
-					background: "var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))"
+					background: "var(--tdt-hover, rgba(127, 127, 127, 0.14))"
 				}
 			}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
@@ -40035,12 +40024,12 @@ body[data-ds-dark-theme]{
 			} }, (0, react.createElement)("div", {
 				style: {
 					flex: "1 1 auto",
-					border: `1px dashed ${C$3.borderL4}`,
-					borderRadius: C$3.radiusMd,
+					border: `1px dashed var(--tdt-border-heavy)`,
+					borderRadius: "var(--tdt-radius-md)",
 					padding: "16px 12px",
 					textAlign: "center",
 					cursor: uploading ? "default" : "pointer",
-					background: C$3.layer1
+					background: "var(--tdt-surface-1)"
 				},
 				onClick: () => {
 					if (!uploading) fileInputRef.current?.click();
@@ -40054,10 +40043,10 @@ body[data-ds-dark-theme]{
 				}
 			}, (0, react.createElement)("div", { style: {
 				fontSize: "13px",
-				color: C$3.text
+				color: "var(--tdt-fg)"
 			} }, uploading ? t("editorUploading") : t("editorDropZoneHint")), uploading ? null : (0, react.createElement)("div", { style: {
 				fontSize: "11px",
-				color: C$3.textDim,
+				color: "var(--tdt-fg-2)",
 				marginTop: "4px"
 			} }, t("editorDropZoneFormats"))), (0, react.createElement)("div", { style: {
 				flex: "none",
@@ -40083,11 +40072,11 @@ body[data-ds-dark-theme]{
 					gap: "6px",
 					width: "92px",
 					padding: "8px",
-					border: `1px dashed ${C$3.borderL4}`,
-					borderRadius: C$3.radiusMd,
-					background: C$3.layer1,
+					border: `1px dashed var(--tdt-border-heavy)`,
+					borderRadius: "var(--tdt-radius-md)",
+					background: "var(--tdt-surface-1)",
 					cursor: "pointer",
-					color: C$3.text
+					color: "var(--tdt-fg)"
 				}
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlusOutlineRegular, { size: 20 }), (0, react.createElement)("span", { style: {
 				fontSize: "12px",
@@ -40174,17 +40163,17 @@ body[data-ds-dark-theme]{
 				calendarLabels,
 				timeLabels
 			})), (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
-				borderTop: `1px dashed ${C$3.borderL2}`,
+				borderTop: `1px dashed var(--tdt-border)`,
 				paddingTop: "10px",
 				fontSize: "12px",
 				lineHeight: "1.6",
-				color: C$3.textDim
+				color: "var(--tdt-fg-2)"
 			} }, (0, react.createElement)("span", { style: {
-				color: C$3.text,
+				color: "var(--tdt-fg)",
 				fontWeight: 600,
 				marginRight: "4px"
-			} }, t("editorSchedForecast") + "："), renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: C$3.text } })), (0, react.createElement)("div", { style: {
-				borderTop: `1px dashed ${C$3.borderL2}`,
+			} }, t("editorSchedForecast") + "："), renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--tdt-fg)" } })), (0, react.createElement)("div", { style: {
+				borderTop: `1px dashed var(--tdt-border)`,
 				marginTop: "10px"
 			} })), (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-schedfoot",
@@ -40202,7 +40191,7 @@ body[data-ds-dark-theme]{
 				gap: "4px"
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "11px",
-				color: C$3.text
+				color: "var(--tdt-fg)"
 			} }, t("editorTaskStart")), (0, react.createElement)(DateField, {
 				value: draft.date,
 				onChange: (value) => {
@@ -40236,7 +40225,7 @@ body[data-ds-dark-theme]{
 				flex: "none",
 				whiteSpace: "nowrap",
 				fontSize: "11px",
-				color: C$3.textDim
+				color: "var(--tdt-fg-2)"
 			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
 				value: draft.window,
 				options: windowOptions,
@@ -40288,13 +40277,13 @@ body[data-ds-dark-theme]{
 				hint: t("editorDepsHint"),
 				maxWidth: 320
 			}))), (0, react.createElement)("div", { style: { marginBottom: "10px" } }, draft.deps.length === 0 ? (0, react.createElement)("div", { style: {
-				border: `1px dashed ${C$3.borderL4}`,
-				borderRadius: C$3.radiusMd,
+				border: `1px dashed var(--tdt-border-heavy)`,
+				borderRadius: "var(--tdt-radius-md)",
 				padding: "16px 12px",
 				textAlign: "center",
-				background: C$3.layer1
+				background: "var(--tdt-surface-1)"
 			} }, (0, react.createElement)("div", { style: { fontSize: "13px" } }, t("editorDepEmpty")), (0, react.createElement)("div", { style: {
-				color: C$3.textDim,
+				color: "var(--tdt-fg-2)",
 				fontSize: "12px",
 				marginTop: "4px"
 			} }, t("editorDepEmptyHint"))) : (0, react.createElement)("div", { style: {
@@ -40310,7 +40299,7 @@ body[data-ds-dark-theme]{
 				}, (0, react.createElement)("span", { style: {
 					display: "inline-flex",
 					flex: "none",
-					color: C$3.textTertiary
+					color: "var(--tdt-fg-3)"
 				} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), (0, react.createElement)(MarqueeText, {
 					text: known?.label ?? dep.task,
 					style: {
@@ -40322,7 +40311,7 @@ body[data-ds-dark-theme]{
 					text: ws,
 					style: {
 						flex: "0 0 72px",
-						color: C$3.textDim,
+						color: "var(--tdt-fg-2)",
 						fontSize: "11px"
 					}
 				}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
@@ -40501,7 +40490,7 @@ body[data-ds-dark-theme]{
 				title: draft.enabled ? t("editorEnabledOn") : t("editorEnabledOff")
 			}), (0, react.createElement)("span", { style: {
 				fontSize: "12px",
-				color: "var(--dsw-alias-label-secondary,rgba(128,128,128,.95))"
+				color: "var(--tdt-fg-2,rgba(128,128,128,.95))"
 			} }, draft.enabled ? t("editorEnabledStateOn") : t("editorEnabledStateOff"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react.createElement)(FloatingToast, {
 				seq: enabledToast.seq,
 				tone: enabledToast.err ? "error" : "success",
@@ -40687,8 +40676,8 @@ body[data-ds-dark-theme]{
 						bottom: Math.max(12, window.innerHeight - rect.bottom),
 						width: "min(480px, calc(100vw - 24px))",
 						height: Math.min(660, Math.max(240, rect.top - 12)),
-						background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
-						border: `1px solid ${C$3.borderL2}`,
+						background: "var(--tdt-surface-2, #2a2e33)",
+						border: `1px solid var(--tdt-border)`,
 						borderRadius: "var(--tdt-radius-md)",
 						boxShadow: "var(--tdt-shadow-2)"
 					};
@@ -40735,7 +40724,7 @@ body[data-ds-dark-theme]{
 					justifyContent: "center",
 					padding: "24px",
 					textAlign: "center",
-					color: C$3.textDim,
+					color: "var(--tdt-fg-2)",
 					fontSize: "13px"
 				} }, t("editorPickerNoSession"));
 			})()), document.body) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
@@ -40862,25 +40851,9 @@ body[data-ds-dark-theme]{
 		}
 		//#endregion
 		//#region src/client/task-list.tsx
-		const C$1 = {
-			text: "var(--dsw-alias-label-primary, #1f2328)",
-			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
-			textFaint: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
-			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
-			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
-			layer3: "var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))",
-			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
-			borderStrong: "var(--dsw-alias-border-l3, rgba(128,128,128,0.5))",
-			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
-			danger: "var(--dsw-alias-state-error-primary, #c0392b)",
-			success: "var(--dsw-alias-state-success-primary, #2da44e)",
-			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
-			duration: "var(--ds-transition-duration, 0.15s)",
-			ease: "var(--ds-ease-in-out, ease)"
-		};
-		const transition$1 = `background ${C$1.duration} ${C$1.ease}, color ${C$1.duration} ${C$1.ease}, border-color ${C$1.duration} ${C$1.ease}`;
+		const transition$1 = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`;
 		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
-		const monoFont$1 = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		const monoFont$1 = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 		/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
 		const NO_TIME = "--";
 		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
@@ -40899,9 +40872,9 @@ body[data-ds-dark-theme]{
 			height: `${CONTROL_H}px`,
 			padding: "0 10px",
 			borderRadius: "6px",
-			border: `1px solid ${C$1.border}`,
-			background: C$1.layer1,
-			color: C$1.text,
+			border: `1px solid var(--tdt-border)`,
+			background: "var(--tdt-surface-1)",
+			color: "var(--tdt-fg)",
 			fontFamily: "inherit",
 			fontSize: "12px",
 			lineHeight: "18px",
@@ -41181,7 +41154,7 @@ body[data-ds-dark-theme]{
 				}
 				const frame = requestAnimationFrame(() => {
 					for (const [el] of moved) {
-						el.style.transition = `transform 260ms ${C$1.ease}`;
+						el.style.transition = `transform 260ms var(--tdt-ease)`;
 						el.style.transform = "";
 					}
 					window.setTimeout(() => {
@@ -41217,14 +41190,14 @@ body[data-ds-dark-theme]{
 				height: `${RAIL_H}px`,
 				flex: "none",
 				borderRadius: "3px",
-				background: C$1.success,
+				background: "var(--tdt-success)",
 				animation: "dsh-tdt-rail-pulse 900ms ease-in-out infinite"
 			} });
 		}
 		function StatusRail(props) {
 			const { row } = props;
 			if (row.running) return (0, react.createElement)(RunningRail, {});
-			const color = !row.enabled ? C$1.textFaint : row.lastStatus === "failed" || row.lastStatus === "skipped" ? C$1.danger : C$1.success;
+			const color = !row.enabled ? "var(--tdt-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--tdt-danger)" : "var(--tdt-success)";
 			const hint = !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : row.lastStatus === "skipped" ? "最近一次未执行（配置或前置不满足，详见执行记录）" : "计划运行中";
 			return (0, react.createElement)("span", {
 				title: hint,
@@ -41235,7 +41208,7 @@ body[data-ds-dark-theme]{
 					flex: "none",
 					borderRadius: "3px",
 					background: color,
-					transition: `background ${C$1.duration} ${C$1.ease}`
+					transition: `background var(--tdt-dur) var(--tdt-ease)`
 				}
 			});
 		}
@@ -41258,7 +41231,7 @@ body[data-ds-dark-theme]{
 			height: "20px",
 			borderRadius: "7px",
 			overflow: "hidden",
-			border: `1px solid ${C$1.border}`
+			border: `1px solid var(--tdt-border)`
 		};
 		/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
 		const pillIconCell = (bg, fg) => ({
@@ -41274,8 +41247,8 @@ body[data-ds-dark-theme]{
 			display: "inline-flex",
 			alignItems: "center",
 			padding: "0 8px",
-			background: C$1.layer1,
-			color: C$1.text,
+			background: "var(--tdt-surface-1)",
+			color: "var(--tdt-fg)",
 			fontSize: "11px",
 			lineHeight: "14px",
 			whiteSpace: "nowrap",
@@ -41287,12 +41260,12 @@ body[data-ds-dark-theme]{
 			const { row, t, tt } = props;
 			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
 			const colored = has && row.lastStatus !== null && row.lastStatus !== "unknown";
-			const bg = !has || row.lastStatus === "unknown" ? C$1.layer3 : row.lastStatus === "succeeded" ? C$1.success : C$1.danger;
+			const bg = !has || row.lastStatus === "unknown" ? "var(--tdt-surface-3)" : row.lastStatus === "succeeded" ? "var(--tdt-success)" : "var(--tdt-danger)";
 			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
-			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(bg, colored ? "#fff" : C$1.textDim) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
+			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(bg, colored ? "#fff" : "var(--tdt-fg-2)") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
 					if (!has) return NO_TIME;
@@ -41325,9 +41298,9 @@ body[data-ds-dark-theme]{
 			if (row.running) return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listRunning"),
 				side: "bottom"
-			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(C$1.success, "#fff") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)("span", { style: {
+			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell("var(--tdt-success)", "#fff") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)("span", { style: {
 				...pillTimeCell,
-				color: C$1.success
+				color: "var(--tdt-success)"
 			} }, (0, react.createElement)(RunningBlocks, {}))));
 			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
 			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
@@ -41335,7 +41308,7 @@ body[data-ds-dark-theme]{
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
-			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell(C$1.layer3, C$1.text) }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
+			}, (0, react.createElement)("div", { style: pillOuterStyle }, (0, react.createElement)("span", { style: pillIconCell("var(--tdt-surface-3)", "var(--tdt-fg)") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
 					if (row.nextSlotAt === null) return NO_TIME;
@@ -41344,7 +41317,7 @@ body[data-ds-dark-theme]{
 						if (-diff <= dueLoadingMs()) return (0, react.createElement)("span", { style: {
 							display: "inline-flex",
 							alignItems: "center",
-							color: C$1.success
+							color: "var(--tdt-success)"
 						} }, (0, react.createElement)(RunningBlocks, {}));
 						return (0, react.createElement)("span", { style: {
 							cursor: "default",
@@ -41363,52 +41336,52 @@ body[data-ds-dark-theme]{
 			padding: "12px 14px",
 			marginBottom: "10px",
 			borderRadius: "10px",
-			border: `1px solid ${C$1.border}`,
-			background: C$1.layer1,
-			color: C$1.text,
-			transition: `border-color ${C$1.duration} ${C$1.ease}, background ${C$1.duration} ${C$1.ease}`
+			border: `1px solid var(--tdt-border)`,
+			background: "var(--tdt-surface-1)",
+			color: "var(--tdt-fg)",
+			transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`
 		};
 		const titleStyle = {
 			fontSize: "14px",
 			fontWeight: 600,
-			color: C$1.text,
+			color: "var(--tdt-fg)",
 			lineHeight: "20px"
 		};
 		const metaStyle = {
 			fontSize: "12px",
-			color: C$1.textDim,
+			color: "var(--tdt-fg-2)",
 			lineHeight: "18px",
 			marginTop: "2px"
 		};
 		const faintStyle = {
 			fontSize: "11px",
-			color: C$1.textFaint,
+			color: "var(--tdt-fg-3)",
 			lineHeight: "16px",
 			marginTop: "2px"
 		};
 		const sectionLabelStyle = {
 			fontSize: "11px",
-			color: C$1.textFaint,
+			color: "var(--tdt-fg-3)",
 			marginTop: "12px",
 			marginBottom: "4px"
 		};
 		const sectionBodyStyle = {
 			fontSize: "12px",
-			color: C$1.text,
+			color: "var(--tdt-fg)",
 			lineHeight: "18px"
 		};
 		const infoLabelStyle = {
 			flex: "none",
 			width: "64px",
 			fontSize: "12px",
-			color: C$1.textDim,
+			color: "var(--tdt-fg-2)",
 			lineHeight: "20px"
 		};
 		const infoValueStyle = {
 			flex: "1 1 auto",
 			minWidth: 0,
 			fontSize: "12px",
-			color: C$1.text,
+			color: "var(--tdt-fg)",
 			lineHeight: "20px",
 			wordBreak: "break-word"
 		};
@@ -41420,12 +41393,11 @@ body[data-ds-dark-theme]{
 				alignItems: "flex-start"
 			} }, (0, react.createElement)("span", { style: infoLabelStyle }, props.label), (0, react.createElement)("span", { style: infoValueStyle }, props.value));
 		}
-		`${C$1.border}`, C$1.textDim;
 		/** 内容区统一**定高**（用户 2026-10-02 真机：max-height 会让矮内容显矮、切 tab 高度蹦）——每个任务展开一律同高，内容多就内部滚。 */
 		const PANEL_MAX_H = 360;
 		const panelWrapStyle = {
 			marginTop: "10px",
-			borderTop: `1px dashed ${C$1.border}`,
+			borderTop: `1px dashed var(--tdt-border)`,
 			paddingTop: "10px"
 		};
 		const panelScrollStyle = {
@@ -41435,7 +41407,7 @@ body[data-ds-dark-theme]{
 		const panelBarStyle = {
 			marginTop: "10px",
 			paddingTop: "10px",
-			borderTop: `1px dashed ${C$1.border}`,
+			borderTop: `1px dashed var(--tdt-border)`,
 			display: "flex",
 			alignItems: "center",
 			gap: "8px"
@@ -41447,9 +41419,9 @@ body[data-ds-dark-theme]{
 		};
 		const miniCellStyle = {
 			padding: "4px 8px",
-			borderBottom: `1px solid ${C$1.border}`,
+			borderBottom: `1px solid var(--tdt-border)`,
 			textAlign: "left",
-			color: C$1.text,
+			color: "var(--tdt-fg)",
 			whiteSpace: "nowrap",
 			fontSize: "12px"
 		};
@@ -41463,8 +41435,8 @@ body[data-ds-dark-theme]{
 			fontFamily: monoFont$1,
 			fontSize: "11px",
 			lineHeight: "18px",
-			background: C$1.layer1,
-			border: `1px solid ${C$1.border}`,
+			background: "var(--tdt-surface-1)",
+			border: `1px solid var(--tdt-border)`,
 			borderRadius: "8px",
 			padding: "8px 10px",
 			wordBreak: "break-all"
@@ -41482,12 +41454,12 @@ body[data-ds-dark-theme]{
 			width: "360px",
 			maxWidth: "calc(100vw - 48px)",
 			boxSizing: "border-box",
-			background: "var(--dsw-alias-bg-base, #fff)",
-			color: C$1.text,
-			border: `1px solid ${C$1.border}`,
+			background: "var(--tdt-surface-base, #fff)",
+			color: "var(--tdt-fg)",
+			border: `1px solid var(--tdt-border)`,
 			borderRadius: "12px",
 			padding: "18px",
-			boxShadow: "var(--dsw-shadow-lv3, 0 12px 32px rgba(0,0,0,0.4))"
+			boxShadow: "var(--tdt-shadow-2, 0 12px 32px rgba(0,0,0,0.4))"
 		};
 		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
 		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
@@ -41546,9 +41518,9 @@ body[data-ds-dark-theme]{
 			padding: 0,
 			borderRadius: "50%",
 			flex: "none",
-			border: `1px solid ${C$1.border}`,
-			background: C$1.layer1,
-			color: clickable ? C$1.brand : C$1.textDim,
+			border: `1px solid var(--tdt-border)`,
+			background: "var(--tdt-surface-1)",
+			color: clickable ? "var(--tdt-accent)" : "var(--tdt-fg-2)",
 			fontSize: "10px",
 			lineHeight: "16px",
 			cursor: clickable ? "pointer" : "default",
@@ -41582,21 +41554,21 @@ body[data-ds-dark-theme]{
 		const recHeadStyle = {
 			...miniCellStyle,
 			fontWeight: 600,
-			color: C$1.textDim,
-			background: "var(--dsw-alias-bg-base, #fff)"
+			color: "var(--tdt-fg-2)",
+			background: "var(--tdt-surface-base, #fff)"
 		};
 		/** 状态圆点（用户 2026-10-02 示意）：✓绿=成功 / ✕红=失败·未执行 / 转圈=执行中 / 空心=待执行·未知。 */
 		function StatusDot(props) {
 			const status = props.status;
 			if (status === "succeeded") return (0, react.createElement)("span", { style: {
 				...statusDotStyle,
-				background: C$1.success,
+				background: "var(--tdt-success)",
 				color: "#fff",
 				border: "none"
 			} }, "✓");
 			if (status === "failed" || status === "skipped") return (0, react.createElement)("span", { style: {
 				...statusDotStyle,
-				background: C$1.danger,
+				background: "var(--tdt-danger)",
 				color: "#fff",
 				border: "none"
 			} }, "✕");
@@ -41604,18 +41576,18 @@ body[data-ds-dark-theme]{
 				className: "dsh-tdt-rec-spin",
 				style: {
 					...statusDotStyle,
-					border: `2px solid ${C$1.brand}`,
+					border: `2px solid var(--tdt-accent)`,
 					borderTopColor: "transparent"
 				}
 			});
 			return (0, react.createElement)("span", { style: {
 				...statusDotStyle,
-				border: `2px solid ${C$1.borderStrong}`
+				border: `2px solid var(--tdt-border-strong)`
 			} });
 		}
 		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
-			color: C$1.danger,
+			color: "var(--tdt-danger)",
 			fontWeight: 600
 		} : void 0;
 		/**
@@ -41740,7 +41712,7 @@ body[data-ds-dark-theme]{
 				value: row.schedule.window
 			}), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? `（${t("editorAttachmentLink")}）` : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
 				...sectionBodyStyle,
-				color: C$1.textDim,
+				color: "var(--tdt-fg-2)",
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead));
@@ -41770,7 +41742,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "4px",
 				fontSize: "11px",
-				color: C$1.textFaint
+				color: "var(--tdt-fg-3)"
 			} }, t("cardFrom"), (0, react.createElement)(DateField, {
 				value: recFrom,
 				onChange: (next) => {
@@ -41785,7 +41757,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "4px",
 				fontSize: "11px",
-				color: C$1.textFaint
+				color: "var(--tdt-fg-3)"
 			} }, t("cardTo"), (0, react.createElement)(DateField, {
 				value: recTo,
 				onChange: (next) => {
@@ -41797,7 +41769,7 @@ body[data-ds-dark-theme]{
 				width: 120
 			})), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "11px",
-				color: C$1.danger
+				color: "var(--tdt-danger)"
 			} }, `${t("cardLoadFailed")}：${recError}`) : null), records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("table", { style: {
 				...miniTableStyle,
 				tableLayout: "fixed"
@@ -41820,7 +41792,7 @@ body[data-ds-dark-theme]{
 					key: instance.id,
 					style: {
 						cursor: "pointer",
-						background: open ? C$1.layer2 : "transparent"
+						background: open ? "var(--tdt-surface-2)" : "transparent"
 					},
 					onClick: () => {
 						setOpenInstance(open ? null : instance.id);
@@ -41829,12 +41801,12 @@ body[data-ds-dark-theme]{
 					display: "inline-flex",
 					alignItems: "center",
 					gap: "6px"
-				} }, (0, react.createElement)(StatusDot, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: C$1.success } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellWrapStyle }, (0, react.createElement)("span", { style: {
+				} }, (0, react.createElement)(StatusDot, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellWrapStyle }, (0, react.createElement)("span", { style: {
 					display: "inline-flex",
 					alignItems: "center",
 					flexWrap: "wrap",
 					gap: "4px"
-				} }, outputs.length === 0 ? (0, react.createElement)("span", { style: { color: C$1.textFaint } }, "—") : outputs.slice(0, 8).map((output, index) => (0, react.createElement)("button", {
+				} }, outputs.length === 0 ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : outputs.slice(0, 8).map((output, index) => (0, react.createElement)("button", {
 					key: output,
 					type: "button",
 					title: output,
@@ -41845,7 +41817,7 @@ body[data-ds-dark-theme]{
 					}
 				}, String(index + 1))), outputs.length > 8 ? (0, react.createElement)("span", { style: {
 					fontSize: "11px",
-					color: C$1.textFaint
+					color: "var(--tdt-fg-3)"
 				} }, `+${outputs.length - 8}`) : null, sid !== null && onOpenSession !== void 0 ? (0, react.createElement)("button", {
 					type: "button",
 					title: t("viewSession"),
@@ -41863,7 +41835,7 @@ body[data-ds-dark-theme]{
 					flexWrap: "wrap",
 					gap: "4px 16px",
 					fontSize: "11px",
-					color: C$1.textDim,
+					color: "var(--tdt-fg-2)",
 					marginBottom: "6px"
 				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$2, {
 					variant: "ghost",
@@ -41895,17 +41867,17 @@ body[data-ds-dark-theme]{
 					marginBottom: "4px"
 				} }, (0, react.createElement)("span", { style: {
 					fontSize: "11px",
-					color: C$1.textFaint
+					color: "var(--tdt-fg-3)"
 				} }, t("eventsOf")), eventsLoading ? (0, react.createElement)("span", { style: {
 					fontSize: "11px",
-					color: C$1.textFaint
+					color: "var(--tdt-fg-3)"
 				} }, t("loading")) : null), eventsError !== null ? (0, react.createElement)("div", { style: {
 					fontSize: "11px",
-					color: C$1.danger
+					color: "var(--tdt-danger)"
 				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react.createElement)("div", { style: {
 					fontSize: "11px",
-					color: C$1.textFaint
-				} }, t("cardEventsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: C$1.brand } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? "")))))) : null];
+					color: "var(--tdt-fg-3)"
+				} }, t("cardEventsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? "")))))) : null];
 			})))));
 			const renderLogs = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
 				value: logKeyword,
@@ -41918,7 +41890,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "4px",
 				fontSize: "11px",
-				color: C$1.textFaint
+				color: "var(--tdt-fg-3)"
 			} }, t("cardFrom"), (0, react.createElement)(DateField, {
 				value: logFrom,
 				onChange: (next) => {
@@ -41933,7 +41905,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "4px",
 				fontSize: "11px",
-				color: C$1.textFaint
+				color: "var(--tdt-fg-3)"
 			} }, t("cardTo"), (0, react.createElement)(DateField, {
 				value: logTo,
 				onChange: (next) => {
@@ -41948,7 +41920,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "4px",
 				fontSize: "11px",
-				color: C$1.textFaint
+				color: "var(--tdt-fg-3)"
 			} }, t("cardLogLimit"), (0, react.createElement)(SelectField, {
 				value: String(logLimit),
 				options: [
@@ -41969,11 +41941,11 @@ body[data-ds-dark-theme]{
 				width: 70
 			})), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "11px",
-				color: C$1.danger
-			} }, `${t("cardLoadFailed")}：${logError}`) : null), logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
-				color: row.level === "error" ? C$1.danger : row.level === "warn" ? C$1.brand : C$1.textFaint,
+				color: "var(--tdt-danger)"
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
+				color: row.level === "error" ? "var(--tdt-danger)" : row.level === "warn" ? "var(--tdt-accent)" : "var(--tdt-fg-3)",
 				fontWeight: row.level === "error" ? 600 : 400
-			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: C$1.brand } }, `${row.kind}: `), (0, react.createElement)("span", null, row.message))))));
+			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${row.kind}: `), (0, react.createElement)("span", null, row.message))))));
 			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
 			const renderConfirm = () => (0, react.createElement)("div", {
 				style: overlayStyle,
@@ -41991,7 +41963,7 @@ body[data-ds-dark-theme]{
 				marginBottom: "8px"
 			} }, t("cardDeleteTitle")), (0, react.createElement)("div", { style: {
 				fontSize: "12px",
-				color: C$1.textDim,
+				color: "var(--tdt-fg-2)",
 				lineHeight: "18px",
 				marginBottom: "14px"
 			} }, t("cardDeleteDesc")), (0, react.createElement)("div", { style: {
@@ -42381,7 +42353,7 @@ body[data-ds-dark-theme]{
 				};
 			}, []);
 			if (draft === null || saved === null) return (0, react.createElement)("div", { style: { padding: "4px 2px" } }, (0, react.createElement)("p", { style: {
-				color: "var(--dsw-alias-label-secondary,#888)",
+				color: "var(--tdt-fg-2,#888)",
 				fontSize: "13px",
 				margin: 0
 			} }, loadFailed ? t("settingsLoadFailed") : t("loading")));
@@ -42431,7 +42403,7 @@ body[data-ds-dark-theme]{
 			} }, (0, react.createElement)("h3", { style: {
 				fontSize: "13px",
 				fontWeight: 700,
-				color: "var(--dsw-alias-label-primary,#1a1a1a)",
+				color: "var(--tdt-fg,#1a1a1a)",
 				margin: "0",
 				letterSpacing: ".02em"
 			} }, t("settingsBasic")), infoRow(t("settingsTitleFormat"), t("title")), infoRow(t("settingsDesc"), t("description")), infoRow(t("settingsLang"), t("settingsLangValue"))), (0, react.createElement)("section", { style: {
@@ -42441,7 +42413,7 @@ body[data-ds-dark-theme]{
 			} }, (0, react.createElement)("h3", { style: {
 				fontSize: "13px",
 				fontWeight: 700,
-				color: "var(--dsw-alias-label-primary,#1a1a1a)",
+				color: "var(--tdt-fg,#1a1a1a)",
 				margin: "0",
 				letterSpacing: ".02em"
 			} }, t("settingsParams")), ...FIELDS.map((f) => (0, react.createElement)("div", { style: {
@@ -42451,7 +42423,7 @@ body[data-ds-dark-theme]{
 			} }, (0, react.createElement)("label", { style: {
 				fontSize: "13px",
 				fontWeight: 600,
-				color: "var(--dsw-alias-label-primary,#1a1a1a)"
+				color: "var(--tdt-fg,#1a1a1a)"
 			} }, t(f.labelKey)), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -42472,7 +42444,7 @@ body[data-ds-dark-theme]{
 				}
 			})), (0, react.createElement)("p", { style: {
 				fontSize: "12px",
-				color: "var(--dsw-alias-label-secondary,#888)",
+				color: "var(--tdt-fg-2,#888)",
 				lineHeight: 1.5,
 				margin: 0
 			} }, t(f.hintKey)))), (0, react.createElement)(Button$2, {
@@ -42500,15 +42472,15 @@ body[data-ds-dark-theme]{
 				gap: "4px",
 				padding: "10px 12px",
 				borderRadius: "8px",
-				background: "var(--dsw-alias-bg-layer-2,#f5f5f5)",
-				border: "1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.08))"
+				background: "var(--tdt-surface-2,#f5f5f5)",
+				border: "1px solid var(--tdt-border,rgba(0,0,0,.08))"
 			} }, (0, react.createElement)("span", { style: {
 				fontSize: "12px",
-				color: "var(--dsw-alias-label-secondary,#888)",
+				color: "var(--tdt-fg-2,#888)",
 				fontWeight: 600
 			} }, label), (0, react.createElement)("span", { style: {
 				fontSize: "13px",
-				color: "var(--dsw-alias-label-primary,#1a1a1a)",
+				color: "var(--tdt-fg,#1a1a1a)",
 				lineHeight: 1.5,
 				whiteSpace: "pre-wrap"
 			} }, value));
@@ -42523,34 +42495,15 @@ body[data-ds-dark-theme]{
 		const PANEL_ID = SETTINGS_NS;
 		/** 模块级 t 席位：`sidebar.panellist` 的 label 在渲染期由侧栏求值，拿不到组件 props 的 t。 */
 		let runtimeT = (key) => key;
-		const C = {
-			text: "var(--dsw-alias-label-primary, #1f2328)",
-			textDim: "var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))",
-			textFaint: "var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))",
-			layer1: "var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))",
-			layer2: "var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))",
-			layer3: "var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))",
-			mask: "var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))",
-			border: "var(--dsw-alias-border-l2, rgba(128,128,128,0.35))",
-			borderStrong: "var(--dsw-alias-border-l3, rgba(128,128,128,0.5))",
-			brand: "var(--dsw-alias-brand-primary, #2f6feb)",
-			danger: "var(--dsw-alias-state-error-primary, #c0392b)",
-			hover: "var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))",
-			activeRow: "var(--dsw-alias-interactive-bg-active, rgba(128,128,128,0.20))",
-			shadow: "var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))",
-			duration: "var(--ds-transition-duration, 0.15s)",
-			ease: "var(--ds-ease-in-out, ease)"
-		};
-		const monoFont = "var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
-		const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`;
-		C.text, C.layer1, `${C.border}`;
+		const monoFont = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`;
 		const hintStyle = {
-			color: C.textDim,
+			color: "var(--tdt-fg-2)",
 			fontSize: "12px",
 			margin: "4px 0 8px"
 		};
 		const errorStyle = {
-			color: C.danger,
+			color: "var(--tdt-danger)",
 			fontSize: "12px",
 			margin: "4px 0 0"
 		};
@@ -42565,28 +42518,28 @@ body[data-ds-dark-theme]{
 			justifyContent: "space-between",
 			gap: "12px",
 			padding: "12px 14px",
-			border: `1px solid ${C.border}`,
+			border: `1px solid var(--tdt-border)`,
 			borderRadius: "10px",
 			cursor: "pointer",
 			width: "100%",
 			boxSizing: "border-box",
 			background: "transparent",
 			textAlign: "left",
-			color: C.text,
+			color: "var(--tdt-fg)",
 			transition
 		};
 		const cardTitleStyle = {
 			fontSize: "14px",
 			fontWeight: 600,
-			color: C.text
+			color: "var(--tdt-fg)"
 		};
 		const cardDescStyle = {
 			fontSize: "12px",
-			color: C.textDim,
+			color: "var(--tdt-fg-2)",
 			marginTop: "2px"
 		};
 		const chevronStyle = {
-			color: C.textFaint,
+			color: "var(--tdt-fg-3)",
 			display: "flex",
 			alignItems: "center"
 		};
@@ -42597,7 +42550,7 @@ body[data-ds-dark-theme]{
 			boxSizing: "border-box",
 			overflow: "auto",
 			padding: "18px 22px",
-			color: C.text,
+			color: "var(--tdt-fg)",
 			background: "transparent"
 		};
 		/** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
@@ -42617,12 +42570,12 @@ body[data-ds-dark-theme]{
 		const panelTitleStyle = {
 			fontSize: "15px",
 			fontWeight: 600,
-			color: C.text
+			color: "var(--tdt-fg)"
 		};
 		const sectionTitleStyle = {
 			margin: "12px 0 4px",
 			fontSize: "13px",
-			color: C.text
+			color: "var(--tdt-fg)"
 		};
 		const preStyle = {
 			fontFamily: monoFont,
@@ -42633,8 +42586,8 @@ body[data-ds-dark-theme]{
 			wordBreak: "break-all",
 			maxHeight: "12em",
 			overflow: "auto",
-			background: C.layer2,
-			color: C.text,
+			background: "var(--tdt-surface-2)",
+			color: "var(--tdt-fg)",
 			padding: "8px",
 			borderRadius: "6px"
 		};
@@ -42646,7 +42599,7 @@ body[data-ds-dark-theme]{
 			margin: "4px 0"
 		};
 		const cellStyle = {
-			border: `1px solid ${C.border}`,
+			border: `1px solid var(--tdt-border)`,
 			padding: "2px 6px",
 			textAlign: "left",
 			verticalAlign: "top"
@@ -43311,7 +43264,7 @@ body[data-ds-dark-theme]{
 				}
 			}, `＋ ${t("editorNew")}`))))), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
 				...preStyle,
-				color: C.textFaint
+				color: "var(--tdt-fg-3)"
 			} }, describeDiag())) : tab === "config" ? (0, react.createElement)(TaskListView, {
 				t,
 				rows: overview.rows,
@@ -43356,13 +43309,13 @@ body[data-ds-dark-theme]{
 				return (0, react.createElement)(react.Fragment, { key: row.id }, (0, react.createElement)("tr", {
 					style: {
 						cursor: "pointer",
-						background: open ? C.activeRow : void 0
+						background: open ? "var(--tdt-active)" : void 0
 					},
 					onClick: () => {
 						setExpanded(open ? null : row.id);
 					}
 				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, (0, react.createElement)("span", { style: row.status === "skipped" || row.status === "failed" ? {
-					color: C.danger,
+					color: "var(--tdt-danger)",
 					fontWeight: 600
 				} : void 0 }, statusTextOf(row.status, t))), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : viewSession !== null ? (0, react.createElement)(Button$2, {
 					variant: "ghost",
@@ -43448,17 +43401,17 @@ body[data-ds-dark-theme]{
 					zIndex: 1020,
 					maxWidth: "90%",
 					boxSizing: "border-box",
-					background: "var(--dsw-alias-label-primary, rgba(40,40,40,.92))",
-					color: "var(--dsw-alias-label-primary-inverted, #fff)",
+					background: "var(--tdt-fg, rgba(40,40,40,.92))",
+					color: "var(--tdt-fg-inverse, #fff)",
 					border: "none",
-					borderRadius: "var(--dsw-radius-md, 8px)",
+					borderRadius: "var(--tdt-radius-md, 8px)",
 					padding: "8px 14px",
 					fontSize: "12px",
 					lineHeight: "1.6",
 					display: "flex",
 					alignItems: "center",
 					gap: "8px",
-					boxShadow: "var(--dsw-shadow-lv3, 0 8px 28px rgba(0,0,0,.3))"
+					boxShadow: "var(--tdt-shadow-2, 0 8px 28px rgba(0,0,0,.3))"
 				},
 				onClick: (event) => {
 					event.stopPropagation();
@@ -43468,7 +43421,7 @@ body[data-ds-dark-theme]{
 				width: "7px",
 				height: "7px",
 				borderRadius: "50%",
-				background: "var(--dsw-alias-label-primary-inverted, #fff)",
+				background: "var(--tdt-fg-inverse, #fff)",
 				opacity: .65
 			} }), (0, react.createElement)("span", null, viewErr), (0, react.createElement)(IconButton, {
 				variant: "plain",

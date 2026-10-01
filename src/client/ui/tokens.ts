@@ -35,6 +35,15 @@ body{
   --tdt-surface-raised:var(--dsw-alias-bg-layer-1,#fff);
   /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */
   --tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
+  /* 整页 / 编辑器底（bg-base） */
+  --tdt-surface-base:var(--dsw-alias-bg-base,#fff);
+  /* 自绘浮层 / 菜单卡的不透明底（= base；不要用半透明的 specific-menu） */
+  --tdt-surface-menu:var(--tdt-surface-base);
+  /* markdown 代码块面 / 字体（会话镜像里用到） */
+  --tdt-code-surface:var(--dsw-alias-markdown-code-block,rgba(128,128,128,.10));
+  --tdt-code-font:var(--dsw-font-markdown-code-block-small,12px/18px var(--ds-font-family-code,monospace));
+  /* 警告文字色（宿主 state-warn-label） */
+  --tdt-warning-label:var(--dsw-alias-state-warn-label,#f5a623);
   /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */
   --tdt-solid:var(--dsw-static-neutral-00,#fff);
   --tdt-on-solid:var(--dsw-alias-label-primary,#1f2328);

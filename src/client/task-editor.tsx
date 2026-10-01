@@ -34,7 +34,6 @@ import {
   IconPlanOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import {
-  C,
   calendarLabelsOf,
   DateField,
   MarqueeText,
@@ -702,7 +701,7 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
 // ─────────────────────── 布局小件 ───────────────────────
 
 /** 单行输入的度量全在 `dsh-tdt-ed-input` 类里（逐条照官方 Input.module.css，含 focus 描边与占位色）。 */
-const sectionLabelStyle: CSSProperties = { fontSize: '12px', fontWeight: 600, color: C.text, marginBottom: '6px' }
+const sectionLabelStyle: CSSProperties = { fontSize: '12px', fontWeight: 600, color: 'var(--tdt-fg)', marginBottom: '6px' }
 
 /**
  * 前置标签输入框：标签不另起一行，直接做成框的左半段（带底 + 分隔线），右半段是输入框。
@@ -883,7 +882,7 @@ function IntervalControls(props: {
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
     // 一行说完：每隔 [1] [小时] 执行一次（照参考图的写法，不再拆成标签列）。
     h('div', { className: 'dsh-tdt-ed-row' },
-      h('span', { style: { fontSize: '13px', color: C.text } }, t('editorIntervalEvery')),
+      h('span', { style: { fontSize: '13px', color: 'var(--tdt-fg)' } }, t('editorIntervalEvery')),
       h(NumberInput, {
         value: Number.parseInt(draft.intervalStep, 10) || 1,
         min: 1,
@@ -901,7 +900,7 @@ function IntervalControls(props: {
         ariaLabel: t('editorIntervalUnit'),
         width: 96,
       }),
-      h('span', { style: { fontSize: '13px', color: C.text } }, t('editorIntervalSuffix')),
+      h('span', { style: { fontSize: '13px', color: 'var(--tdt-fg)' } }, t('editorIntervalSuffix')),
     ),
     h(WeekdayPicker, {
       value: draft.weekdays,
@@ -954,18 +953,18 @@ function stableStringify(value: unknown): string {
  * 提供语法高亮 + 行号；预览态复用官方 MarkdownText（GFM + KaTeX，主题与宿主一致）。
  * 右侧版本历史（保存 / 回滚）保留；编辑 / 预览切换在顶部（复用任务编辑器 tab 样式）。
  */
-// CodeMirror 主题：背景 / 文字 / 行号全部走宿主 --dsw-alias-* token，明暗自适应；
+// CodeMirror 主题：背景 / 文字 / 行号全部走 `--tdt-*` token，明暗自适应；
 // 编辑器本身只负责「带语法高亮的纯文本」（gzip ~60KB，且仅在全屏编辑时才加载）。
 const promptEditorTheme = EditorView.theme({
-  '&': { backgroundColor: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, height: '100%', width: '100%' },
-  '.cm-editor': { height: '100%', width: '100%', backgroundColor: 'var(--dsw-alias-bg-base, #22252a)' },
+  '&': { backgroundColor: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', height: '100%', width: '100%' },
+  '.cm-editor': { height: '100%', width: '100%', backgroundColor: 'var(--tdt-surface-base, #22252a)' },
   // 软折行：长行自动换行，不出现横向滚动条（编辑器随列宽收缩也跟着重折）。
   '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '13px', lineHeight: '1.6', overflowX: 'hidden' },
   '.cm-content': { width: '100%' },
   '.cm-line': { padding: '0 4px' },
-  '.cm-gutters': { backgroundColor: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))', color: C.textDim, border: 'none' },
-  '.cm-activeLine': { backgroundColor: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))' },
-  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: C.text },
+  '.cm-gutters': { backgroundColor: 'var(--tdt-surface-1, rgba(128,128,128,0.08))', color: 'var(--tdt-fg-2)', border: 'none' },
+  '.cm-activeLine': { backgroundColor: 'var(--tdt-hover, rgba(128,128,128,0.16))' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--tdt-fg)' },
   '&.cm-focused': { outline: 'none' },
 }, { dark: true })
 
@@ -982,15 +981,15 @@ function ConfirmDiscard(props: {
     role: 'alertdialog',
     'aria-modal': true,
     'aria-label': props.t('editorDiscardTitle'),
-    style: { position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' },
+    style: { position: 'absolute', inset: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--tdt-mask, rgba(0,0,0,0.45))' },
     onClick: props.onStay,
   },
     h('div', {
-      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '22px 24px', color: C.text },
+      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--tdt-surface-2, #2a2e33)', borderRadius: 'var(--tdt-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '22px 24px', color: 'var(--tdt-fg)' },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
       h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px' } }, props.t('editorDiscardTitle')),
-      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: C.textDim, marginBottom: '20px' } }, props.t('editorDiscardDesc')),
+      h('div', { style: { fontSize: '14px', lineHeight: '22px', color: 'var(--tdt-fg-2)', marginBottom: '20px' } }, props.t('editorDiscardDesc')),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
         h(Button, { variant: 'outline', size: 'sm', onClick: props.onStay }, props.t('editorDiscardStay')),
         h(Button, { variant: 'primary', size: 'sm', onClick: props.onLeave }, props.t('editorDiscardLeave')),
@@ -1019,22 +1018,22 @@ function VersionConfirm(props: {
   return h('div', {
     role: 'alertdialog',
     'aria-modal': true,
-    style: { position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))' },
+    style: { position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--tdt-mask, rgba(0,0,0,0.45))' },
     onClick: props.onCancel,
   },
     h('div', {
-      style: { width: 'min(400px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '20px 24px 18px', color: C.text },
+      style: { width: 'min(400px, 100%)', boxSizing: 'border-box', background: 'var(--tdt-surface-2, #2a2e33)', borderRadius: 'var(--tdt-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '20px 24px 18px', color: 'var(--tdt-fg)' },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
       // 层级：标题 15/600（警告橙可选）→ 说明 13 次要色 → 圆点清单 13 主色、条目间留呼吸 → 勾选 → 按钮。
       h('div', { style: { fontSize: '15px', fontWeight: 600, lineHeight: '22px', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--tdt-warning)' } : {}) } }, props.title),
       props.desc !== ''
-        ? h('div', { style: { fontSize: '13px', lineHeight: '21px', color: C.textDim, marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
+        ? h('div', { style: { fontSize: '13px', lineHeight: '21px', color: 'var(--tdt-fg-2)', marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
         : null,
       props.bullets !== undefined && props.bullets.length > 0
-        ? h('ul', { style: { listStyle: 'none', margin: '0 0 18px', padding: '10px 12px', borderRadius: 'var(--dsw-radius-md,8px)', background: 'var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08))', display: 'flex', flexDirection: 'column', gap: '6px' } },
+        ? h('ul', { style: { listStyle: 'none', margin: '0 0 18px', padding: '10px 12px', borderRadius: 'var(--tdt-radius-md,8px)', background: 'var(--tdt-surface-1,rgba(128,128,128,.08))', display: 'flex', flexDirection: 'column', gap: '6px' } },
           ...props.bullets.map(b => h('li', { key: b, style: { fontSize: '13px', lineHeight: '20px', display: 'flex', gap: '8px' } },
-            h('span', { style: { flex: 'none', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--dsw-alias-label-tertiary,rgba(128,128,128,.8))', margin: '7px 0 0' } }),
+            h('span', { style: { flex: 'none', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--tdt-fg-3,rgba(128,128,128,.8))', margin: '7px 0 0' } }),
             h('span', null, b),
           )),
         )
@@ -1085,9 +1084,9 @@ function PromptEditorModal(props: {
   const versionTitle = editorMode === 'create' ? t('editorHistoryVersions') : t('editorVersions')
 
   return h('div', {
-    style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, overflow: 'hidden', position: 'relative' },
+    style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', overflow: 'hidden', position: 'relative' },
   },
-    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--tdt-border)` } },
       h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPromptEditorTitle')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
         h(Segmented, {
@@ -1137,13 +1136,13 @@ function PromptEditorModal(props: {
           ),
       showVersions
         // 面板缩窄（用户 2026-09-30：固定 280 太占地方）= 232px：够放日期 + hover 两个小钮，左栏多让 48px。
-        ? h('div', { style: { flex: '0 0 232px', borderLeft: `1px solid ${C.borderL4}`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
-            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid ${C.borderL4}`, fontSize: '13px', fontWeight: 600 } }, versionTitle),
+        ? h('div', { style: { flex: '0 0 232px', borderLeft: `1px solid var(--tdt-border-heavy)`, display: 'flex', flexDirection: 'column', minHeight: 0 } },
+            h('div', { style: { padding: '10px 12px', borderBottom: `1px solid var(--tdt-border-heavy)`, fontSize: '13px', fontWeight: 600 } }, versionTitle),
             editorMode === 'create'
-              ? h('div', { style: { padding: '16px 12px', fontSize: '12px', color: C.textDim, lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
+              ? h('div', { style: { padding: '16px 12px', fontSize: '12px', color: 'var(--tdt-fg-2)', lineHeight: '1.6' } }, t('editorNewTaskNoVersions'))
               : h('div', { style: { display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' } },
                 versions.length === 0
-                  ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: C.textDim } }, t('editorNoVersions'))
+                  ? h('p', { style: { padding: '0 12px', fontSize: '12px', color: 'var(--tdt-fg-2)' } }, t('editorNoVersions'))
                   : h('ul', { style: { listStyle: 'none', margin: 0, padding: '0 0 8px', overflow: 'auto' } },
                     versions.map(v => h('li', {
                       key: v.file,
@@ -1204,8 +1203,8 @@ function PromptEditorModal(props: {
  */
 function ConfigPreviewPanel(props: { t: T; json: string; onClose: () => void }): ReactNode {
   const { t, json, onClose } = props
-  return h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--dsw-alias-bg-base, #22252a)', color: C.text, overflow: 'hidden', position: 'relative' } },
-    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid ${C.borderL2}` } },
+  return h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, background: 'var(--tdt-surface-base, #22252a)', color: 'var(--tdt-fg)', overflow: 'hidden', position: 'relative' } },
+    h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '10px 14px', borderBottom: `1px solid var(--tdt-border)` } },
       h('span', { style: { fontSize: '14px', fontWeight: 600 } }, t('editorPreview')),
       h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
     ),
@@ -1617,10 +1616,10 @@ export function TaskEditorDrawer(props: {
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
     draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
           // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
-          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', background: 'var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))' } },
+          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } },
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
             h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '13px' } }, att.name),
-            h('span', { title: att.ref, style: { flex: 'none', fontSize: '11px', color: C.textDim, borderRadius: '4px', padding: '1px 6px', background: 'var(--dsw-alias-interactive-bg-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
+            h('span', { title: att.ref, style: { flex: 'none', fontSize: '11px', color: 'var(--tdt-fg-2)', borderRadius: '4px', padding: '1px 6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
             h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove') }, t('editorAttachmentRemove')),
           )),
         ),
@@ -1628,7 +1627,7 @@ export function TaskEditorDrawer(props: {
     // 隐藏 input 挂卡片层、始终在册。
     h('div', { style: { display: 'flex', gap: '10px', alignItems: 'stretch' } },
       h('div', {
-        style: { flex: '1 1 auto', border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '16px 12px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer', background: C.layer1 },
+        style: { flex: '1 1 auto', border: `1px dashed var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)', padding: '16px 12px', textAlign: 'center', cursor: uploading ? 'default' : 'pointer', background: 'var(--tdt-surface-1)' },
         onClick: () => { if (!uploading) fileInputRef.current?.click() },
         onDragOver: (event: { preventDefault(): void }) => { event.preventDefault() },
         onDrop: (event: { preventDefault(): void; dataTransfer?: { files?: FileList } }) => {
@@ -1636,8 +1635,8 @@ export function TaskEditorDrawer(props: {
           if (!uploading && event.dataTransfer?.files !== undefined) void uploadFiles(event.dataTransfer.files)
         },
       },
-        h('div', { style: { fontSize: '13px', color: C.text } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
-        uploading ? null : h('div', { style: { fontSize: '11px', color: C.textDim, marginTop: '4px' } }, t('editorDropZoneFormats')),
+        h('div', { style: { fontSize: '13px', color: 'var(--tdt-fg)' } }, uploading ? t('editorUploading') : t('editorDropZoneHint')),
+        uploading ? null : h('div', { style: { fontSize: '11px', color: 'var(--tdt-fg-2)', marginTop: '4px' } }, t('editorDropZoneFormats')),
       ),
       h('div', { style: { flex: 'none', display: 'flex' } },
         // 正方形虚线按钮（用户 2026-09-29：与投放区同语言——加号在上、文字在下）。
@@ -1654,8 +1653,8 @@ export function TaskEditorDrawer(props: {
           },
           style: {
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px',
-            width: '92px', padding: '8px', border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd,
-            background: C.layer1, cursor: 'pointer', color: C.text,
+            width: '92px', padding: '8px', border: `1px dashed var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)',
+            background: 'var(--tdt-surface-1)', cursor: 'pointer', color: 'var(--tdt-fg)',
           },
         },
           h(IconPlusOutlineRegular, { size: 20 }),
@@ -1722,19 +1721,19 @@ export function TaskEditorDrawer(props: {
       ),
     // 「预计执行」人话说明（用户 2026-09-30）：在「任务开始时间」上方画两条**虚线**，中间夹一句实时翻译。
     h('div', { style: { marginTop: '14px' } },
-      h('div', { style: { borderTop: `1px dashed ${C.borderL2}`, paddingTop: '10px', fontSize: '12px', lineHeight: '1.6', color: C.textDim } },
-        h('span', { style: { color: C.text, fontWeight: 600, marginRight: '4px' } }, t('editorSchedForecast') + '：'),
+      h('div', { style: { borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px', fontSize: '12px', lineHeight: '1.6', color: 'var(--tdt-fg-2)' } },
+        h('span', { style: { color: 'var(--tdt-fg)', fontWeight: 600, marginRight: '4px' } }, t('editorSchedForecast') + '：'),
         // 关键片段（时间 / 「每 N 分钟执行一次」）加粗提亮（用户 2026-09-30：方法要支持样式参数）。
-        renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: C.text } }),
+        renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: 'var(--tdt-fg)' } }),
       ),
-      h('div', { style: { borderTop: `1px dashed ${C.borderL2}`, marginTop: '10px' } }),
+      h('div', { style: { borderTop: `1px dashed var(--tdt-border)`, marginTop: '10px' } }),
     ),
     // 底部：左 = 任务开始时间（锚点，周期/间隔都有，带 ? 说明），右 = 允许延迟（次要，居右）。
     // 上间距与「预计执行」上边线离「星期」的间距对齐 = 14px（此前 CSS margin12+padding12=24 是两倍）。
     h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '8px', borderTop: 'none', marginTop: '14px', paddingTop: '0' } },
       showTaskStart
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
-            h('span', { style: { fontSize: '11px', color: C.text } }, t('editorTaskStart')),
+            h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg)' } }, t('editorTaskStart')),
             h(DateField, {
               value: draft.date,
               onChange: value => { patch({ date: value }) },
@@ -1759,7 +1758,7 @@ export function TaskEditorDrawer(props: {
         : null,
       h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto' } }),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-        h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: '11px', color: C.textDim } }, t('editorWindow')),
+        h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: '11px', color: 'var(--tdt-fg-2)' } }, t('editorWindow')),
         h(SelectField, {
           value: draft.window,
           options: windowOptions,
@@ -1818,11 +1817,11 @@ export function TaskEditorDrawer(props: {
     h('div', { style: { marginBottom: '10px' } },
       draft.deps.length === 0
         ? h('div', {
-            // 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 C.* 常量保证观感一致。
-            style: { border: `1px dashed ${C.borderL4}`, borderRadius: C.radiusMd, padding: '16px 12px', textAlign: 'center', background: C.layer1 },
+            // 空态 = 上传投放区（上方附件卡）同款虚线框，同一组 --tdt-* token 保证观感一致。
+            style: { border: `1px dashed var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)', padding: '16px 12px', textAlign: 'center', background: 'var(--tdt-surface-1)' },
           },
             h('div', { style: { fontSize: '13px' } }, t('editorDepEmpty')),
-            h('div', { style: { color: C.textDim, fontSize: '12px', marginTop: '4px' } }, t('editorDepEmptyHint')),
+            h('div', { style: { color: 'var(--tdt-fg-2)', fontSize: '12px', marginTop: '4px' } }, t('editorDepEmptyHint')),
           )
         : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
             draft.deps.filter(dep => dep.task !== currentTaskId).map((dep, index) => {
@@ -1830,11 +1829,11 @@ export function TaskEditorDrawer(props: {
               const ws = known?.workspace ?? ''
               return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
                 // 行首只留「有点任务」icon（官方 IconPlanOutlineRegular）——「前置任务：」文字按用户要求删除（太占地方）。
-                h('span', { style: { display: 'inline-flex', flex: 'none', color: C.textTertiary } }, h(IconPlanOutlineRegular, { size: 14 })),
+                h('span', { style: { display: 'inline-flex', flex: 'none', color: 'var(--tdt-fg-3)' } }, h(IconPlanOutlineRegular, { size: 14 })),
                 // 任务名吃剩余宽度：超长省略号，hover 跑马灯（MarqueeText，动画只在内层 span 上跑）。
                 h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: '13px' } }),
                 // 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
-                ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: C.textDim, fontSize: '11px' } }),
+                ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: 'var(--tdt-fg-2)', fontSize: '11px' } }),
                 // 「移除」宽度固定（flex none），不被任务名挤动。
                 h(Button, { variant: 'ghost', size: 'sm', style: { flex: 'none' }, onClick: () => { patch({ deps: draft.deps.filter(d => d.task !== dep.task) }) }, title: t('editorDepRemove'), 'aria-label': t('editorDepRemove') }, t('editorDepRemove')),
               )
@@ -2038,7 +2037,7 @@ export function TaskEditorDrawer(props: {
               label: t('editorEnabled'),
               title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
             }),
-            h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary,rgba(128,128,128,.95))' } },
+            h('span', { style: { fontSize: '12px', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
               draft.enabled ? t('editorEnabledStateOn') : t('editorEnabledStateOff')),
           ),
           h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
@@ -2231,8 +2230,8 @@ export function TaskEditorDrawer(props: {
               // （视口顶 − 12px 余量，封顶 660）——面板向上长，绝不顶出浏览器顶部。
               width: 'min(480px, calc(100vw - 24px))',
               height: Math.min(660, Math.max(240, rect.top - 12)),
-              background: 'var(--dsw-alias-bg-layer-2, #2a2e33)',
-              border: `1px solid ${C.borderL2}`,
+              background: 'var(--tdt-surface-2, #2a2e33)',
+              border: `1px solid var(--tdt-border)`,
               borderRadius: 'var(--tdt-radius-md)',
               boxShadow: 'var(--tdt-shadow-2)',
             }
@@ -2267,7 +2266,7 @@ export function TaskEditorDrawer(props: {
                 // 自带的 border-left（浮层已有外框）。
                 style: { flex: '1 1 auto', width: '100%', minWidth: 0, minHeight: 0, borderLeft: 'none' },
               })
-              : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: C.textDim, fontSize: '13px' } }, t('editorPickerNoSession'))
+              : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: 'var(--tdt-fg-2)', fontSize: '13px' } }, t('editorPickerNoSession'))
           })(),
         ), document.body)
       : null,

@@ -8,10 +8,10 @@
 // ⚠️ **官方没有日期 / 时间选择器**（读 @deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2 的
 // `lib/types/**` 与 `lib/icons/**`，无 calendar / datepicker 任何痕迹）⇒ 日历与时分列自绘，
 // 但几何与色值**逐条照官方**：
-//   · 输入框锚点 = 官方 `Input.module.css`（高 32 / `0.5px var(--dsw-alias-border-l4)` / bg-layer-1 /
-//     `var(--dsw-radius-md)` / 14px 字号 / 图标 16px 而 `--dsw-alias-label-tertiary`）
-//   · 浮层卡片 = 官方菜单卡（`var(--dsw-specific-menu)` 底 + `var(--dsw-elevation-prominent)` 影）
-//   · 行悬停 = `var(--dsw-alias-interactive-bg-hover)`（官方菜单行同款）
+//   · 输入框锚点 = 官方 `Input.module.css`（高 32 / `0.5px var(--tdt-border-heavy)` / bg-layer-1 /
+//     `var(--tdt-radius-md)` / 14px 字号 / 图标 16px 而 `--tdt-fg-3`）
+//   · 浮层卡片 = 官方菜单卡材质（走 `--tdt-surface-menu` 不透明底 + `--tdt-shadow-2` 影；官方 specific-menu 是半透明，不用）
+//   · 行悬停 = `var(--tdt-hover)`（官方菜单行同款）
 //
 // 版本事实：`Menu` / `Switch` / `Input` / `SegmentedControl` / `Pill` 在 **0.1.7-rc.1 与 rc.2 都在**
 // （`MenuSurface` 才只有 rc.2 有 ⇒ 本文件不用它，自绘浮层底）。
@@ -35,27 +35,6 @@ import { Button, IconButton, Segmented, type CalendarLabels, type SegmentedItem 
 
 // ─────────────────────── token（全部取宿主主题变量，明暗自适应） ───────────────────────
 
-export const C = {
-  text: 'var(--dsw-alias-label-primary, #1f2328)',
-  textDim: 'var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))',
-  textTertiary: 'var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))',
-  dimmed: 'var(--dsw-alias-label-dimmed, rgba(128,128,128,0.6))',
-  layer1: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.08))',
-  layer2: 'var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))',
-  hover: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))',
-  borderL2: 'var(--dsw-alias-border-l2, rgba(128,128,128,0.35))',
-  borderL4: 'var(--dsw-alias-border-l4, rgba(128,128,128,0.25))',
-  brand: 'var(--dsw-alias-brand-primary, #0f1115)',
-  brandFg: 'var(--dsw-alias-label-primary-foreground, #ffffff)',
-  business: 'var(--dsw-alias-state-business-primary, #4d6bfe)',
-  // ⚠️ 不能用 `--dsw-specific-menu`：它在主题里 = `var(--dsw-menu-surface-fill)`
-  // = `#f8f9fa94`（亮）/ `#43454a73`（暗），**是半透明的**——官方菜单卡自带毛玻璃底（backdrop-filter），
-  // 我们没有那层，照抄就是「把后面的透出来了」。自绘浮层一律用不透明的 `--dsw-alias-bg-base`。
-  menuFill: 'var(--dsw-alias-bg-base, #22252a)',
-  elevation: 'var(--tdt-shadow-2)',
-  radiusSm: 'var(--dsw-radius-sm, 6px)',
-  radiusMd: 'var(--dsw-radius-md, 8px)',
-} as const
 
 const transition = 'background 120ms ease, color 120ms ease, border-color 120ms ease'
 
@@ -71,9 +50,9 @@ export interface EditorOption {
 const fieldButtonStyle: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', height: '32px', boxSizing: 'border-box',
   minWidth: 0, maxWidth: '100%', padding: '0 8px',
-  border: `0.5px solid ${C.borderL4}`, borderRadius: C.radiusMd, background: C.layer1,
+  border: `0.5px solid var(--tdt-border-heavy)`, borderRadius: 'var(--tdt-radius-md)', background: 'var(--tdt-surface-1)',
   // 13px：与官方菜单行字号同档（官方 Input 是 14px，放在卡片底部一行里偏粗）。
-  color: C.text, font: 'inherit', fontSize: '13px', lineHeight: '20px', cursor: 'pointer',
+  color: 'var(--tdt-fg)', font: 'inherit', fontSize: '13px', lineHeight: '20px', cursor: 'pointer',
   transition,
 }
 
@@ -89,13 +68,13 @@ const fieldLabelStyle: CSSProperties = {
  */
 const layerStyle: CSSProperties = {
   position: 'fixed', zIndex: 1100, boxSizing: 'border-box', padding: '4px',
-  background: C.menuFill, boxShadow: C.elevation, borderRadius: C.radiusMd,
-  color: C.text, fontSize: '13px',
+  background: 'var(--tdt-surface-menu)', boxShadow: 'var(--tdt-shadow-2)', borderRadius: 'var(--tdt-radius-md)',
+  color: 'var(--tdt-fg)', fontSize: '13px',
 }
 
 /** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
 function IconSeat(props: { children: ReactNode }): ReactElement {
-  return h('span', { style: { display: 'inline-flex', width: '16px', height: '16px', alignItems: 'center', justifyContent: 'center', flex: 'none', color: C.textTertiary } }, props.children)
+  return h('span', { style: { display: 'inline-flex', width: '16px', height: '16px', alignItems: 'center', justifyContent: 'center', flex: 'none', color: 'var(--tdt-fg-3)' } }, props.children)
 }
 
 /**
@@ -168,7 +147,7 @@ export function SelectField(props: {
       ...(compact ? { height: '28px', gap: '4px', fontSize: '12px', lineHeight: '18px' } : null),
       width: props.width ?? (props.block === true ? '100%' : undefined),
       ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
-      background: hover && usable ? C.hover : C.layer1,
+      background: hover && usable ? 'var(--tdt-hover)' : 'var(--tdt-surface-1)',
       cursor: usable ? 'pointer' : 'not-allowed',
       opacity: usable ? 1 : 0.6,
     },
@@ -180,9 +159,9 @@ export function SelectField(props: {
       ? h(MarqueeText, {
         text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
         title: props.title ?? props.ariaLabel,
-        style: { ...fieldLabelStyle, color: current === undefined ? C.dimmed : C.text },
+        style: { ...fieldLabelStyle, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' },
       })
-      : h('span', { style: { ...fieldLabelStyle, color: current === undefined ? C.dimmed : C.text } },
+      : h('span', { style: { ...fieldLabelStyle, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' } },
         current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
     h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: iconSize })),
   )
@@ -263,7 +242,7 @@ export function WeekdayPicker(props: {
   return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
     props.label === undefined
       ? null
-      : h('span', { style: { flex: 'none', fontSize: '13px', color: C.text } }, props.label),
+      : h('span', { style: { flex: 'none', fontSize: '13px', color: 'var(--tdt-fg)' } }, props.label),
     // 多选；放在间隔卡里 ⇒ variant="inset"；星期多选做成「正方形 + 蓝选中」的特殊化变体
     // （用户 2026-10-01：原 WeekdayPicker 即蓝底方块，统一到 Segmented 后由 .dsh-tdt-seg--weekday 补回）。
     h(Segmented, {
@@ -278,7 +257,7 @@ export function WeekdayPicker(props: {
       onChange: (next: string[]) => { props.onChange(next.map(Number).sort((a, b) => a - b)) },
     }),
     props.value.length === 0
-      ? h('span', { style: { fontSize: '12px', color: C.dimmed } }, props.labels.empty)
+      ? h('span', { style: { fontSize: '12px', color: 'var(--tdt-fg-dim)' } }, props.labels.empty)
       : null,
   )
 }

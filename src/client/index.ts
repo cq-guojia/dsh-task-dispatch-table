@@ -138,56 +138,38 @@ function displayParam(t: Translate, value: unknown): string {
 }
 
 // ── 主题适配（决策 26 修订）────────────────────────────────────────────
-// 所有颜色一律取**宿主自己的主题变量**（`@deepseek-ai/dsh-client-ui-theme` 里的 `--dsw-alias-*`
+// 所有颜色一律取统一 token 层 `--tdt-*`（映射自宿主主题变量
 // 与 `--ds-*`）。宿主切「明色 / 暗色 / 跟随系统」时这些变量随之改变 ⇒ 插件自动跟着变，
 // 我们不需要自己判断当前是什么主题，也不写死任何颜色。括号里是变量缺失时的兜底值。
-const C = {
-  text: 'var(--dsw-alias-label-primary, #1f2328)',
-  textDim: 'var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))',
-  textFaint: 'var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))',
-  layer1: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))',
-  layer2: 'var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))',
-  layer3: 'var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))',
-  mask: 'var(--dsw-alias-bg-mask-1, rgba(0,0,0,0.45))',
-  border: 'var(--dsw-alias-border-l2, rgba(128,128,128,0.35))',
-  borderStrong: 'var(--dsw-alias-border-l3, rgba(128,128,128,0.5))',
-  brand: 'var(--dsw-alias-brand-primary, #2f6feb)',
-  danger: 'var(--dsw-alias-state-error-primary, #c0392b)',
-  hover: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))',
-  activeRow: 'var(--dsw-alias-interactive-bg-active, rgba(128,128,128,0.20))',
-  shadow: 'var(--dsw-shadow-lv3, 0 12px 40px rgba(0,0,0,0.32))',
-  duration: 'var(--ds-transition-duration, 0.15s)',
-  ease: 'var(--ds-ease-in-out, ease)',
-}
-const monoFont = 'var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
-const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`
+const monoFont = 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
+const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`
 
 const textareaStyle: Record<string, string | number> = {
   width: '100%', boxSizing: 'border-box', minHeight: '16em', resize: 'vertical',
   fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, padding: '8px',
-  color: C.text, background: C.layer1, border: `1px solid ${C.border}`, borderRadius: '8px',
+  color: 'var(--tdt-fg)', background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`, borderRadius: '8px',
 }
-const hintStyle: Record<string, string | number> = { color: C.textDim, fontSize: '12px', margin: '4px 0 8px' }
-const errorStyle: Record<string, string | number> = { color: C.danger, fontSize: '12px', margin: '4px 0 0' }
+const hintStyle: Record<string, string | number> = { color: 'var(--tdt-fg-2)', fontSize: '12px', margin: '4px 0 8px' }
+const errorStyle: Record<string, string | number> = { color: 'var(--tdt-danger)', fontSize: '12px', margin: '4px 0 0' }
 const rowStyle: Record<string, string | number> = { display: 'flex', gap: '8px', margin: '8px 0' }
 const dlStyle: Record<string, string | number> = { display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 16px', margin: '8px 0 0' }
 
 // ── 设置页卡片：只留一行「标题 + 描述 + 箭头」，点一下开面板（与宿主其它插件卡片同形）──
 const cardStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-  padding: '12px 14px', border: `1px solid ${C.border}`, borderRadius: '10px',
+  padding: '12px 14px', border: `1px solid var(--tdt-border)`, borderRadius: '10px',
   cursor: 'pointer', width: '100%', boxSizing: 'border-box', background: 'transparent',
-  textAlign: 'left', color: C.text, transition,
+  textAlign: 'left', color: 'var(--tdt-fg)', transition,
 }
-const cardTitleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: C.text }
-const cardDescStyle: Record<string, string | number> = { fontSize: '12px', color: C.textDim, marginTop: '2px' }
-const chevronStyle: Record<string, string | number> = { color: C.textFaint, display: 'flex', alignItems: 'center' }
+const cardTitleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: 'var(--tdt-fg)' }
+const cardDescStyle: Record<string, string | number> = { fontSize: '12px', color: 'var(--tdt-fg-2)', marginTop: '2px' }
+const chevronStyle: Record<string, string | number> = { color: 'var(--tdt-fg-3)', display: 'flex', alignItems: 'center' }
 
 // ── 面板（main 槽整页）样式 ──
 /** 主区整页容器：占满中栏、自己滚动（会话区被 main 槽整页替换，无需遮罩）。 */
 const pageStyle: Record<string, string | number> = {
   height: '100%', width: '100%', boxSizing: 'border-box', overflow: 'auto',
-  padding: '18px 22px', color: C.text, background: 'transparent',
+  padding: '18px 22px', color: 'var(--tdt-fg)', background: 'transparent',
 }
 /** 抬头的三块：标题在左，右依次是「刷新 · 分组标签 · 关闭」。 */
 const panelHeaderStyle: Record<string, string | number> = {
@@ -197,18 +179,18 @@ const panelHeaderStyle: Record<string, string | number> = {
   marginBottom: '40px',
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
-const panelTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: C.text }
-const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px', color: C.text }
+const panelTitleStyle: Record<string, string | number> = { fontSize: '15px', fontWeight: 600, color: 'var(--tdt-fg)' }
+const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: '13px', color: 'var(--tdt-fg)' }
 const preStyle: Record<string, string | number> = {
   fontFamily: monoFont, fontSize: '12px', lineHeight: 1.5, margin: '4px 0',
   whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: '12em', overflow: 'auto',
-  background: C.layer2, color: C.text, padding: '8px', borderRadius: '6px',
+  background: 'var(--tdt-surface-2)', color: 'var(--tdt-fg)', padding: '8px', borderRadius: '6px',
 }
 const tableStyle: Record<string, string | number> = {
   borderCollapse: 'collapse', width: '100%', fontFamily: monoFont, fontSize: '12px', margin: '4px 0',
 }
 const cellStyle: Record<string, string | number> = {
-  border: `1px solid ${C.border}`, padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
+  border: `1px solid var(--tdt-border)`, padding: '2px 6px', textAlign: 'left', verticalAlign: 'top',
 }
 const detailCellStyle: Record<string, string | number> = {
   ...cellStyle, whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxWidth: '480px',
@@ -984,7 +966,7 @@ function TaskPage(props: {
             h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
             hasRaw ? h('pre', { style: preStyle }, raw) : null,
             // 临时诊断行：数据通道断在哪一段，一眼可见（通道稳定后移除）。
-            h('pre', { style: { ...preStyle, color: C.textFaint } }, describeDiag()),
+            h('pre', { style: { ...preStyle, color: 'var(--tdt-fg-3)' } }, describeDiag()),
           )
         : tab === 'config'
           // 任务列表视图（2026-09-30 主界面重建）：卡片式，限宽居中，数据走 /tasks/overview。
@@ -1015,12 +997,12 @@ function TaskPage(props: {
                   : h('ul', { style: { listStyle: 'none', margin: 0, padding: 0 } },
                     taskRows.map(row => h('li', {
                       key: row.id,
-                      style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: `1px solid ${C.border}` },
+                      style: { display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: `1px solid var(--tdt-border)` },
                     },
                       h('span', { style: { fontSize: '13px', fontWeight: 500 } }, row.title === '' ? row.id : row.title),
-                      h('span', { style: { fontSize: '11px', color: C.textFaint } }, row.code ?? row.id),
+                      h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, row.code ?? row.id),
                       row.enabled === false
-                        ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('editorDisabledTag'))
+                        ? h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, t('editorDisabledTag'))
                         : null,
                       h('span', { style: { flex: '1 1 auto' } }),
                       h(Button, {
@@ -1174,7 +1156,7 @@ function TaskPage(props: {
                         : []
                       return h(Fragment, { key: row.id },
                         h('tr', {
-                          style: { cursor: 'pointer', background: open ? C.activeRow : undefined },
+                          style: { cursor: 'pointer', background: open ? 'var(--tdt-active)' : undefined },
                           onClick: () => { setExpanded(open ? null : row.id) },
                         },
                           h('td', { style: cellStyle }, titleOfTask(row.task_id)),
@@ -1185,7 +1167,7 @@ function TaskPage(props: {
                           h('td', { style: cellStyle },
                             h('span', {
                               style: row.status === 'skipped' || row.status === 'failed'
-                                ? { color: C.danger, fontWeight: 600 }
+                                ? { color: 'var(--tdt-danger)', fontWeight: 600 }
                                 : undefined,
                             }, statusTextOf(row.status, t))),
                           h('td', { style: cellStyle }, String(row.attempt)),
@@ -1305,16 +1287,16 @@ function TaskPage(props: {
         style: {
           position: 'fixed', left: '50%', bottom: '18px', transform: 'translateX(-50%)',
           zIndex: 1020, maxWidth: '90%', boxSizing: 'border-box',
-          background: 'var(--dsw-alias-label-primary, rgba(40,40,40,.92))',
-          color: 'var(--dsw-alias-label-primary-inverted, #fff)',
+          background: 'var(--tdt-fg, rgba(40,40,40,.92))',
+          color: 'var(--tdt-fg-inverse, #fff)',
           border: 'none',
-          borderRadius: 'var(--dsw-radius-md, 8px)', padding: '8px 14px', fontSize: '12px', lineHeight: '1.6',
+          borderRadius: 'var(--tdt-radius-md, 8px)', padding: '8px 14px', fontSize: '12px', lineHeight: '1.6',
           display: 'flex', alignItems: 'center', gap: '8px',
-          boxShadow: 'var(--dsw-shadow-lv3, 0 8px 28px rgba(0,0,0,.3))',
+          boxShadow: 'var(--tdt-shadow-2, 0 8px 28px rgba(0,0,0,.3))',
         },
         onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
       },
-        h('span', { style: { flex: 'none', width: '7px', height: '7px', borderRadius: '50%', background: 'var(--dsw-alias-label-primary-inverted, #fff)', opacity: .65 } }),
+        h('span', { style: { flex: 'none', width: '7px', height: '7px', borderRadius: '50%', background: 'var(--tdt-fg-inverse, #fff)', opacity: .65 } }),
         h('span', null, viewErr),
         h(IconButton, {
           variant: 'plain',

@@ -1279,7 +1279,7 @@ export function SessionViewModal(props: {
             officialCount === 0
               ? h('div', {
                   className: 'dsh-tdt-sv-sid',
-                  style: { color: 'var(--dsw-alias-state-warn-primary, #b7791f)' },
+                  style: { color: 'var(--tdt-warning, #b7791f)' },
                 }, '⚠ 官方样式未命中（当前为自绘回退）')
               : null,
           ),
@@ -1310,7 +1310,7 @@ export function SessionViewModal(props: {
     ),
     // 开分支确认框（用户拍板：必须先确认再 fork，防误点）——官方 primitives Modal + Button
     // （官方 RiskConfirmation 同源组合：outline 取消 / primary 确认；primary 底色走
-    // --dsw-alias-button-primary-fill，明暗主题自适应；失败留在框内提示、不关会话弹窗）。
+    // 官方 primary 按钮自带明暗自适应；失败留在框内提示、不关会话弹窗）。
     h(Modal, {
       open: forkTarget !== null,
       onClose: () => { if (!forking) setForkTarget(null) },
@@ -1328,7 +1328,7 @@ export function SessionViewModal(props: {
 
 /** 供执行记录页复用的链接文案样式（行内文字按钮，与主面板 linkStyle 同形）。 */
 export const sessionLinkStyle: Record<string, string | number> = {
-  color: 'var(--dsw-alias-brand-primary, #2f6feb)',
+  color: 'var(--tdt-accent, #2f6feb)',
   cursor: 'pointer',
   background: 'none',
   border: 'none',

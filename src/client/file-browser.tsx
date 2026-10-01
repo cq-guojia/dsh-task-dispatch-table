@@ -30,7 +30,6 @@ import {
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
-import { C } from './editor-fields'
 import {
   absolutePathOf,
   BytesPreview,
@@ -93,7 +92,7 @@ function crumbsMenuEntries(params: {
     title: ws,
     onClick: () => { if (!current) onPickWorkspace?.(ws) },
   },
-    h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: current ? C.text : C.textDim } },
+    h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: current ? 'var(--tdt-fg)' : 'var(--tdt-fg-2)' } },
       h(current ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 13 })),
     h('span', { className: 'dsh-tdt-sv-crumbs-menu-label', style: { fontWeight: current ? 600 : 400 } }, ws),
   )

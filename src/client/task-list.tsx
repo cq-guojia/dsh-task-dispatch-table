@@ -67,25 +67,9 @@ export interface TaskOverviewRow {
 }
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──
-const C = {
-  text: 'var(--dsw-alias-label-primary, #1f2328)',
-  textDim: 'var(--dsw-alias-label-secondary, rgba(128,128,128,0.95))',
-  textFaint: 'var(--dsw-alias-label-tertiary, rgba(128,128,128,0.8))',
-  layer1: 'var(--dsw-alias-bg-layer-1, rgba(128,128,128,0.10))',
-  layer2: 'var(--dsw-alias-bg-layer-2, rgba(128,128,128,0.14))',
-  layer3: 'var(--dsw-alias-bg-layer-3, rgba(128,128,128,0.20))',
-  border: 'var(--dsw-alias-border-l2, rgba(128,128,128,0.35))',
-  borderStrong: 'var(--dsw-alias-border-l3, rgba(128,128,128,0.5))',
-  brand: 'var(--dsw-alias-brand-primary, #2f6feb)',
-  danger: 'var(--dsw-alias-state-error-primary, #c0392b)',
-  success: 'var(--dsw-alias-state-success-primary, #2da44e)',
-  hover: 'var(--dsw-alias-interactive-bg-hover, rgba(128,128,128,0.16))',
-  duration: 'var(--ds-transition-duration, 0.15s)',
-  ease: 'var(--ds-ease-in-out, ease)',
-}
-const transition = `background ${C.duration} ${C.ease}, color ${C.duration} ${C.ease}, border-color ${C.duration} ${C.ease}`
+const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
-const monoFont = 'var(--ds-font-family-code, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
+const monoFont = 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
 /** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
 const NO_TIME = '--'
 /** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建 / 刷新全部同高（用户 2026-09-30 要求）。 */
@@ -99,7 +83,7 @@ const WS_WIDTH = 180
 const controlBoxStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
   height: `${CONTROL_H}px`, padding: '0 10px', borderRadius: '6px',
-  border: `1px solid ${C.border}`, background: C.layer1, color: C.text,
+  border: `1px solid var(--tdt-border)`, background: 'var(--tdt-surface-1)', color: 'var(--tdt-fg)',
   fontFamily: 'inherit', fontSize: '12px', lineHeight: '18px', cursor: 'pointer',
   transition,
 }
@@ -458,7 +442,7 @@ function useFlip(signature: string): (id: string) => (el: HTMLElement | null) =>
     }
     const frame = requestAnimationFrame(() => {
       for (const [el] of moved) {
-        el.style.transition = `transform 260ms ${C.ease}`
+        el.style.transition = `transform 260ms var(--tdt-ease)`
         el.style.transform = ''
       }
       window.setTimeout(() => { for (const [el] of moved) el.style.transition = '' }, 320)
@@ -498,7 +482,7 @@ function RunningRail() {
   return h('span', {
     style: {
       display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
-      borderRadius: '3px', background: C.success,
+      borderRadius: '3px', background: 'var(--tdt-success)',
       animation: 'dsh-tdt-rail-pulse 900ms ease-in-out infinite',
     },
   })
@@ -510,8 +494,8 @@ function StatusRail(props: { row: TaskOverviewRow }) {
   // `skipped` = 「未执行」（决策 54 补记的终态行：附件找不到 / 工作区不存在等任务级错误）——
   // 必须**和失败一样显眼**（用户：都是这个任务出错了），但提示要说清是「没执行」而不是「跑砸了」。
   const color = !row.enabled
-    ? C.textFaint
-    : row.lastStatus === 'failed' || row.lastStatus === 'skipped' ? C.danger : C.success
+    ? 'var(--tdt-fg-3)'
+    : row.lastStatus === 'failed' || row.lastStatus === 'skipped' ? 'var(--tdt-danger)' : 'var(--tdt-success)'
   const hint = !row.enabled
     ? '已关闭'
     : row.lastStatus === 'failed'
@@ -524,7 +508,7 @@ function StatusRail(props: { row: TaskOverviewRow }) {
     style: {
       display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
       borderRadius: '3px', background: color,
-      transition: `background ${C.duration} ${C.ease}`,
+      transition: `background var(--tdt-dur) var(--tdt-ease)`,
     },
   })
 }
@@ -543,7 +527,7 @@ function StatusRail(props: { row: TaskOverviewRow }) {
  */
 const pillOuterStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'stretch', flex: 'none', height: '20px',
-  borderRadius: '7px', overflow: 'hidden', border: `1px solid ${C.border}`,
+  borderRadius: '7px', overflow: 'hidden', border: `1px solid var(--tdt-border)`,
 }
 /** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
 const pillIconCell = (bg: string, fg: string): Record<string, string | number> => ({
@@ -551,7 +535,7 @@ const pillIconCell = (bg: string, fg: string): Record<string, string | number> =
 })
 /** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
 const pillTimeCell: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: C.layer1, color: C.text,
+  display: 'inline-flex', alignItems: 'center', padding: '0 8px', background: 'var(--tdt-surface-1)', color: 'var(--tdt-fg)',
   fontSize: '11px', lineHeight: '14px', whiteSpace: 'nowrap',
   fontVariantNumeric: 'tabular-nums', fontFamily: monoFont,
 }
@@ -566,14 +550,14 @@ function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   // `unknown`（重启收口）仍中性：它会被下一轮正常收掉。⇒ 只有 succeeded / unknown 不染红。
   const colored = has && row.lastStatus !== null && row.lastStatus !== 'unknown'
   const bg = !has || row.lastStatus === 'unknown'
-    ? C.layer3
-    : row.lastStatus === 'succeeded' ? C.success : C.danger
+    ? 'var(--tdt-surface-3)'
+    : row.lastStatus === 'succeeded' ? 'var(--tdt-success)' : 'var(--tdt-danger)'
   const title = has ? tt('listLastFullTitle', { when: formatFull(row.lastScheduledAt ?? '') }) : t('listNever')
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
       // ⚠️ 图标前景跟着底色走：白字只配「绿 / 红」实底；中性浅灰底（无状态 / skipped / unknown）
       // 必须用常态文字色，否则白图标压在浅灰上几乎看不见（2026-09-30 复核）。
-      h('span', { style: pillIconCell(bg, colored ? '#fff' : C.textDim) }, h(IconClockOutlineRegular, { size: 12 })),
+      h('span', { style: pillIconCell(bg, colored ? '#fff' : 'var(--tdt-fg-2)') }, h(IconClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): string => {
@@ -615,8 +599,8 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   if (row.running) {
     return h(Tooltip, { label: t('listRunning'), side: 'bottom' },
       h('div', { style: pillOuterStyle },
-        h('span', { style: pillIconCell(C.success, '#fff') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
-        h('span', { style: { ...pillTimeCell, color: C.success } }, h(RunningBlocks, {})),
+        h('span', { style: pillIconCell('var(--tdt-success)', '#fff') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+        h('span', { style: { ...pillTimeCell, color: 'var(--tdt-success)' } }, h(RunningBlocks, {})),
       ),
     )
   }
@@ -644,7 +628,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
             : tt('listNextFullTitle', { when: formatFull(row.nextSlotAt) })))
   return h(Tooltip, { label: title, side: 'bottom' },
     h('div', { style: pillOuterStyle },
-      h('span', { style: pillIconCell(C.layer3, C.text) }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+      h('span', { style: pillIconCell('var(--tdt-surface-3)', 'var(--tdt-fg)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): ReactNode => {
@@ -656,7 +640,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
             // ① 上界内 ⇒ 三个方块（正在等派发，视觉上就是「在跑」）——**与「运行中」同色**。
             //    2026-09-30 评审 P1：此前这里继承正文色（黑），跟运行中的绿对不上，看着像两回事。
             if (-diff <= dueLoadingMs()) {
-              return h('span', { style: { display: 'inline-flex', alignItems: 'center', color: C.success } }, h(RunningBlocks, {}))
+              return h('span', { style: { display: 'inline-flex', alignItems: 'center', color: 'var(--tdt-success)' } }, h(RunningBlocks, {}))
             }
             // ② 超上界仍未 `running` ⇒ **「延期」**：该槽已经过了但还没真正开始执行
             //    （上游没跑完 / 附件缺失 / 串行互斥）。**不能一直装成在跑**（决策 54 红线），
@@ -676,17 +660,17 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
 const cardStyle: Record<string, string | number> = {
   display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'left',
   padding: '12px 14px', marginBottom: '10px', borderRadius: '10px',
-  border: `1px solid ${C.border}`, background: C.layer1, color: C.text,
-  transition: `border-color ${C.duration} ${C.ease}, background ${C.duration} ${C.ease}`,
+  border: `1px solid var(--tdt-border)`, background: 'var(--tdt-surface-1)', color: 'var(--tdt-fg)',
+  transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`,
 }
-const titleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: C.text, lineHeight: '20px' }
-const metaStyle: Record<string, string | number> = { fontSize: '12px', color: C.textDim, lineHeight: '18px', marginTop: '2px' }
-const faintStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, lineHeight: '16px', marginTop: '2px' }
-const sectionLabelStyle: Record<string, string | number> = { fontSize: '11px', color: C.textFaint, marginTop: '12px', marginBottom: '4px' }
-const sectionBodyStyle: Record<string, string | number> = { fontSize: '12px', color: C.text, lineHeight: '18px' }
+const titleStyle: Record<string, string | number> = { fontSize: '14px', fontWeight: 600, color: 'var(--tdt-fg)', lineHeight: '20px' }
+const metaStyle: Record<string, string | number> = { fontSize: '12px', color: 'var(--tdt-fg-2)', lineHeight: '18px', marginTop: '2px' }
+const faintStyle: Record<string, string | number> = { fontSize: '11px', color: 'var(--tdt-fg-3)', lineHeight: '16px', marginTop: '2px' }
+const sectionLabelStyle: Record<string, string | number> = { fontSize: '11px', color: 'var(--tdt-fg-3)', marginTop: '12px', marginBottom: '4px' }
+const sectionBodyStyle: Record<string, string | number> = { fontSize: '12px', color: 'var(--tdt-fg)', lineHeight: '18px' }
 // 展开区的「标签 | 值」两栏（用户 2026-09-30：展开区太丑 ⇒ 从「一句 `·` 串联的长文本」改成逐字段成行）。
-const infoLabelStyle: Record<string, string | number> = { flex: 'none', width: '64px', fontSize: '12px', color: C.textDim, lineHeight: '20px' }
-const infoValueStyle: Record<string, string | number> = { flex: '1 1 auto', minWidth: 0, fontSize: '12px', color: C.text, lineHeight: '20px', wordBreak: 'break-word' }
+const infoLabelStyle: Record<string, string | number> = { flex: 'none', width: '64px', fontSize: '12px', color: 'var(--tdt-fg-2)', lineHeight: '20px' }
+const infoValueStyle: Record<string, string | number> = { flex: '1 1 auto', minWidth: 0, fontSize: '12px', color: 'var(--tdt-fg)', lineHeight: '20px', wordBreak: 'break-word' }
 /** 展开区一行信息：左标签（定宽淡色）+ 右值（自适应换行）。 */
 function InfoRow(props: { label: string; value: string }) {
   return h('div', { style: { display: 'flex', gap: '8px', alignItems: 'flex-start' } },
@@ -697,8 +681,8 @@ function InfoRow(props: { label: string; value: string }) {
 /** 图标按钮：与顶部一排同高（26px）。 */
 const iconBtnStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-  height: `${CONTROL_H}px`, minWidth: `${CONTROL_H}px`, padding: '0 6px', border: `1px solid ${C.border}`,
-  borderRadius: '6px', background: 'transparent', color: C.textDim, cursor: 'pointer',
+  height: `${CONTROL_H}px`, minWidth: `${CONTROL_H}px`, padding: '0 6px', border: `1px solid var(--tdt-border)`,
+  borderRadius: '6px', background: 'transparent', color: 'var(--tdt-fg-2)', cursor: 'pointer',
   fontFamily: 'inherit', fontSize: '12px', transition,
 }
 
@@ -707,26 +691,26 @@ const iconBtnStyle: Record<string, string | number> = {
 const PANEL_MAX_H = 360
 
 const panelWrapStyle: Record<string, string | number> = {
-  marginTop: '10px', borderTop: `1px dashed ${C.border}`, paddingTop: '10px',
+  marginTop: '10px', borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px',
 }
 const panelScrollStyle: Record<string, string | number> = {
   // **定高**（不是 max-height）：无论哪个任务、哪个滑块、有没有数据，展开高度都一模一样。
   height: `${PANEL_MAX_H}px`, overflowY: 'auto',
 }
 const panelBarStyle: Record<string, string | number> = {
-  marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed ${C.border}`,
+  marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed var(--tdt-border)`,
   display: 'flex', alignItems: 'center', gap: '8px',
 }
 const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: '12px' }
 const miniCellStyle: Record<string, string | number> = {
-  padding: '4px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'left',
-  color: C.text, whiteSpace: 'nowrap', fontSize: '12px',
+  padding: '4px 8px', borderBottom: `1px solid var(--tdt-border)`, textAlign: 'left',
+  color: 'var(--tdt-fg)', whiteSpace: 'nowrap', fontSize: '12px',
 }
 const miniCellWrapStyle: Record<string, string | number> = { ...miniCellStyle, whiteSpace: 'normal', wordBreak: 'break-word' }
 /** 日志 / 事件文本框：跟随宿主主题变量 + 等宽字体（用户 2026-10-01：颜色跟着环境风格走）。 */
 const logBoxStyle: Record<string, string | number> = {
   fontFamily: monoFont, fontSize: '11px', lineHeight: '18px',
-  background: C.layer1, border: `1px solid ${C.border}`, borderRadius: '8px',
+  background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`, borderRadius: '8px',
   padding: '8px 10px', wordBreak: 'break-all',
 }
 const overlayStyle: Record<string, string | number> = {
@@ -735,9 +719,9 @@ const overlayStyle: Record<string, string | number> = {
 }
 const dialogStyle: Record<string, string | number> = {
   width: '360px', maxWidth: 'calc(100vw - 48px)', boxSizing: 'border-box',
-  background: 'var(--dsw-alias-bg-base, #fff)', color: C.text,
-  border: `1px solid ${C.border}`, borderRadius: '12px', padding: '18px',
-  boxShadow: 'var(--dsw-shadow-lv3, 0 12px 32px rgba(0,0,0,0.4))',
+  background: 'var(--tdt-surface-base, #fff)', color: 'var(--tdt-fg)',
+  border: `1px solid var(--tdt-border)`, borderRadius: '12px', padding: '18px',
+  boxShadow: 'var(--tdt-shadow-2, 0 12px 32px rgba(0,0,0,0.4))',
 }
 
 /** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
@@ -786,8 +770,8 @@ const FILTER_BUCKETS: Readonly<Record<string, readonly string[]>> = {
 const chipStyleOf = (clickable: boolean): Record<string, string | number> => ({
   appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   width: '18px', height: '18px', padding: 0, borderRadius: '50%', flex: 'none',
-  border: `1px solid ${C.border}`, background: C.layer1,
-  color: clickable ? C.brand : C.textDim, fontSize: '10px', lineHeight: '16px',
+  border: `1px solid var(--tdt-border)`, background: 'var(--tdt-surface-1)',
+  color: clickable ? 'var(--tdt-accent)' : 'var(--tdt-fg-2)', fontSize: '10px', lineHeight: '16px',
   cursor: clickable ? 'pointer' : 'default', fontFamily: 'inherit', transition,
 })
 /** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
@@ -802,26 +786,26 @@ const statusDotStyle: Record<string, string | number> = {
 }
 /** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 const recHeadStyle: Record<string, string | number> = {
-  ...miniCellStyle, fontWeight: 600, color: C.textDim,
-  background: 'var(--dsw-alias-bg-base, #fff)',
+  ...miniCellStyle, fontWeight: 600, color: 'var(--tdt-fg-2)',
+  background: 'var(--tdt-surface-base, #fff)',
 }
 /** 状态圆点（用户 2026-10-02 示意）：✓绿=成功 / ✕红=失败·未执行 / 转圈=执行中 / 空心=待执行·未知。 */
 function StatusDot(props: { status: string }) {
   const status = props.status
   if (status === 'succeeded') {
-    return h('span', { style: { ...statusDotStyle, background: C.success, color: '#fff', border: 'none' } }, '✓')
+    return h('span', { style: { ...statusDotStyle, background: 'var(--tdt-success)', color: '#fff', border: 'none' } }, '✓')
   }
   if (status === 'failed' || status === 'skipped') {
-    return h('span', { style: { ...statusDotStyle, background: C.danger, color: '#fff', border: 'none' } }, '✕')
+    return h('span', { style: { ...statusDotStyle, background: 'var(--tdt-danger)', color: '#fff', border: 'none' } }, '✕')
   }
   if (status === 'running' || status === 'dispatched') {
-    return h('span', { className: 'dsh-tdt-rec-spin', style: { ...statusDotStyle, border: `2px solid ${C.brand}`, borderTopColor: 'transparent' } })
+    return h('span', { className: 'dsh-tdt-rec-spin', style: { ...statusDotStyle, border: `2px solid var(--tdt-accent)`, borderTopColor: 'transparent' } })
   }
-  return h('span', { style: { ...statusDotStyle, border: `2px solid ${C.borderStrong}` } })
+  return h('span', { style: { ...statusDotStyle, border: `2px solid var(--tdt-border-strong)` } })
 }
 /** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 const statusStyleOf = (status: string): Record<string, string | number> | undefined =>
-  status === 'failed' || status === 'skipped' ? { color: C.danger, fontWeight: 600 } : undefined
+  status === 'failed' || status === 'skipped' ? { color: 'var(--tdt-danger)', fontWeight: 600 } : undefined
 
 /**
  * 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
@@ -949,7 +933,7 @@ function TaskExpandPanel(props: {
         : row.depends.map(dep => `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`).join('、'),
     ),
     h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
-    h('div', { style: { ...sectionBodyStyle, color: C.textDim, whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
+    h('div', { style: { ...sectionBodyStyle, color: 'var(--tdt-fg-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
   )
 
   const renderRecords = (): ReturnType<typeof h> => h('div', null,
@@ -969,16 +953,16 @@ function TaskExpandPanel(props: {
         size: 'sm',
         width: 100,
       }),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--tdt-fg-3)' } },
         t('cardFrom'),
         h(DateField, { value: recFrom, onChange: (next: string) => { setRecFrom(next) }, placeholder: t('cardFrom'), ariaLabel: t('cardFrom'), labels: calendarLabels, width: 120 }),
       ),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--tdt-fg-3)' } },
         t('cardTo'),
         h(DateField, { value: recTo, onChange: (next: string) => { setRecTo(next) }, placeholder: t('cardTo'), ariaLabel: t('cardTo'), labels: calendarLabels, width: 120 }),
       ),
       recLoading ? h('span', { style: faintStyle }, t('loading')) : null,
-      recError !== null ? h('span', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${recError}`) : null,
+      recError !== null ? h('span', { style: { fontSize: '11px', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${recError}`) : null,
     ),
     records === null
       ? null
@@ -1004,7 +988,7 @@ function TaskExpandPanel(props: {
                   : Date.parse(instance.finished_at) - Date.parse(instance.scheduled_at)
                 const mainRow = h('tr', {
                   key: instance.id,
-                  style: { cursor: 'pointer', background: open ? C.layer2 : 'transparent' },
+                  style: { cursor: 'pointer', background: open ? 'var(--tdt-surface-2)' : 'transparent' },
                   onClick: () => { setOpenInstance(open ? null : instance.id) },
                 },
                   // ① 状态：明显 icon（绿勾=成功 / 红叉=失败·未执行 / 转圈=执行中 / 空心=待执行）+ 通用短名。
@@ -1012,7 +996,7 @@ function TaskExpandPanel(props: {
                     h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
                       h(StatusDot, { status: instance.status }),
                       h('span', {
-                        style: instance.status === 'succeeded' ? { color: C.success } : statusStyleOf(instance.status),
+                        style: instance.status === 'succeeded' ? { color: 'var(--tdt-success)' } : statusStyleOf(instance.status),
                       }, statusTextOf(instance.status, t)),
                     ),
                   ),
@@ -1021,7 +1005,7 @@ function TaskExpandPanel(props: {
                   h('td', { style: miniCellWrapStyle },
                     h('span', { style: { display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' } },
                       outputs.length === 0
-                        ? h('span', { style: { color: C.textFaint } }, '—')
+                        ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '—')
                         : outputs.slice(0, 8).map((output, index) => h('button', {
                           key: output, type: 'button', title: output,
                           style: chipStyleOf(canOpenFile),
@@ -1030,7 +1014,7 @@ function TaskExpandPanel(props: {
                             if (canOpenFile && sid !== null) onOpenFile(sid, output)
                           },
                         }, String(index + 1))),
-                      outputs.length > 8 ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, `+${outputs.length - 8}`) : null,
+                      outputs.length > 8 ? h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, `+${outputs.length - 8}`) : null,
                       sid !== null && onOpenSession !== undefined
                         ? h('button', {
                           type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
@@ -1050,7 +1034,7 @@ function TaskExpandPanel(props: {
                   ? h('tr', { key: `${instance.id}-detail` },
                     h('td', { colSpan: 4, style: miniCellWrapStyle },
                       // 详情小字段行：token 走 K/M 大众格式（用户 2026-10-02：不占一级空间）。
-                      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: '11px', color: C.textDim, marginBottom: '6px' } },
+                      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: '11px', color: 'var(--tdt-fg-2)', marginBottom: '6px' } },
                         h('span', null, `${t('colAttempt')}：${instance.attempt}`),
                         h('span', null, `${t('colSlot')}：${formatStamp(instance.scheduled_at)}`),
                         instance.dispatched_at === null ? null : h('span', null, `${t('colDispatchedAt')}：${formatStamp(instance.dispatched_at)}`),
@@ -1082,19 +1066,19 @@ function TaskExpandPanel(props: {
                         : null,
                       // 该次执行的事件时间线。
                       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } },
-                        h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('eventsOf')),
-                        eventsLoading ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('loading')) : null,
+                        h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, t('eventsOf')),
+                        eventsLoading ? h('span', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, t('loading')) : null,
                       ),
                       eventsError !== null
-                        ? h('div', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${eventsError}`)
+                        ? h('div', { style: { fontSize: '11px', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${eventsError}`)
                         : events === null
                           ? null
                           : events.length === 0
-                            ? h('div', { style: { fontSize: '11px', color: C.textFaint } }, t('cardEventsEmpty'))
+                            ? h('div', { style: { fontSize: '11px', color: 'var(--tdt-fg-3)' } }, t('cardEventsEmpty'))
                             : h('div', { style: logBoxStyle },
                               events.map(event => h('div', { key: event.seq },
-                                h('span', { style: { color: C.textFaint } }, `${formatStamp(event.ts)} `),
-                                h('span', { style: { color: C.brand } }, `${event.kind} `),
+                                h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(event.ts)} `),
+                                h('span', { style: { color: 'var(--tdt-accent)' } }, `${event.kind} `),
                                 h('span', null, event.detail ?? ''),
                               ))),
                     ),
@@ -1117,15 +1101,15 @@ function TaskExpandPanel(props: {
         size: 'sm',
         style: { width: '140px' },
       }),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--tdt-fg-3)' } },
         t('cardFrom'),
         h(DateField, { value: logFrom, onChange: (next: string) => { setLogFrom(next) }, placeholder: t('cardFrom'), ariaLabel: t('cardFrom'), labels: calendarLabels, width: 120 }),
       ),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--tdt-fg-3)' } },
         t('cardTo'),
         h(DateField, { value: logTo, onChange: (next: string) => { setLogTo(next) }, placeholder: t('cardTo'), ariaLabel: t('cardTo'), labels: calendarLabels, width: 120 }),
       ),
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--tdt-fg-3)' } },
         t('cardLogLimit'),
         h(SelectField, {
           value: String(logLimit),
@@ -1139,7 +1123,7 @@ function TaskExpandPanel(props: {
         }),
       ),
       logLoading ? h('span', { style: faintStyle }, t('loading')) : null,
-      logError !== null ? h('span', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${logError}`) : null,
+      logError !== null ? h('span', { style: { fontSize: '11px', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${logError}`) : null,
     ),
     logs === null
       ? null
@@ -1148,15 +1132,15 @@ function TaskExpandPanel(props: {
         : h('div', { style: panelScrollStyle },
           h('div', { style: logBoxStyle },
             logs.map(row => h('div', { key: row.seq },
-            h('span', { style: { color: C.textFaint } }, `${formatStamp(row.ts)} `),
+            h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(row.ts)} `),
             h('span', {
               style: {
-                color: row.level === 'error' ? C.danger : row.level === 'warn' ? C.brand : C.textFaint,
+                color: row.level === 'error' ? 'var(--tdt-danger)' : row.level === 'warn' ? 'var(--tdt-accent)' : 'var(--tdt-fg-3)',
                 fontWeight: row.level === 'error' ? 600 : 400,
               },
             }, `[${row.level}]`),
             ' ',
-            h('span', { style: { color: C.brand } }, `${row.kind}: `),
+            h('span', { style: { color: 'var(--tdt-accent)' } }, `${row.kind}: `),
             h('span', null, row.message),
           )))),
   )
@@ -1168,7 +1152,7 @@ function TaskExpandPanel(props: {
   },
     h('div', { style: dialogStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
       h('div', { style: { fontSize: '14px', fontWeight: 600, marginBottom: '8px' } }, t('cardDeleteTitle')),
-      h('div', { style: { fontSize: '12px', color: C.textDim, lineHeight: '18px', marginBottom: '14px' } }, t('cardDeleteDesc')),
+      h('div', { style: { fontSize: '12px', color: 'var(--tdt-fg-2)', lineHeight: '18px', marginBottom: '14px' } }, t('cardDeleteDesc')),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
         h(Button, {
           variant: 'outline', size: 'sm', disabled: deleting,

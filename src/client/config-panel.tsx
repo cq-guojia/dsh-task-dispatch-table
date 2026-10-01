@@ -95,7 +95,7 @@ export function ConfigPanel(props: ConfigPanelProps) {
 
   if (draft === null || saved === null) {
     return h('div', { style: { padding: '4px 2px' } },
-      h('p', { style: { color: 'var(--dsw-alias-label-secondary,#888)', fontSize: '13px', margin: 0 } },
+      h('p', { style: { color: 'var(--tdt-fg-2,#888)', fontSize: '13px', margin: 0 } },
         loadFailed ? t('settingsLoadFailed') : t('loading')),
     )
   }
@@ -138,16 +138,16 @@ export function ConfigPanel(props: ConfigPanelProps) {
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '22px', padding: '4px 2px', maxWidth: '640px' } },
     // —— 基础信息（只读展示；宿主已在上方渲染图标/名称/简介，这里补「标题写法 / 语言」说明）——
     h('section', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-      h('h3', { style: { fontSize: '13px', fontWeight: 700, color: 'var(--dsw-alias-label-primary,#1a1a1a)', margin: '0', letterSpacing: '.02em' } }, t('settingsBasic')),
+      h('h3', { style: { fontSize: '13px', fontWeight: 700, color: 'var(--tdt-fg,#1a1a1a)', margin: '0', letterSpacing: '.02em' } }, t('settingsBasic')),
       infoRow(t('settingsTitleFormat'), t('title')),
       infoRow(t('settingsDesc'), t('description')),
       infoRow(t('settingsLang'), t('settingsLangValue')),
     ),
     // —— 运行参数（可编辑，实时生效）——
     h('section', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
-      h('h3', { style: { fontSize: '13px', fontWeight: 700, color: 'var(--dsw-alias-label-primary,#1a1a1a)', margin: '0', letterSpacing: '.02em' } }, t('settingsParams')),
+      h('h3', { style: { fontSize: '13px', fontWeight: 700, color: 'var(--tdt-fg,#1a1a1a)', margin: '0', letterSpacing: '.02em' } }, t('settingsParams')),
       ...FIELDS.map((f) => h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
-        h('label', { style: { fontSize: '13px', fontWeight: 600, color: 'var(--dsw-alias-label-primary,#1a1a1a)' } }, t(f.labelKey)),
+        h('label', { style: { fontSize: '13px', fontWeight: 600, color: 'var(--tdt-fg,#1a1a1a)' } }, t(f.labelKey)),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
           h(NumberInput, {
             value: draft[f.key],
@@ -160,7 +160,7 @@ export function ConfigPanel(props: ConfigPanelProps) {
             onChange: (n: number) => { setDraft((prev: Record<FieldKey, number> | null) => (prev === null ? prev : { ...prev, [f.key]: n })) },
           }),
         ),
-        h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary,#888)', lineHeight: 1.5, margin: 0 } }, t(f.hintKey)),
+        h('p', { style: { fontSize: '12px', color: 'var(--tdt-fg-2,#888)', lineHeight: 1.5, margin: 0 } }, t(f.hintKey)),
       )),
       h(Button, {
         variant: 'primary',
@@ -180,10 +180,10 @@ function infoRow(label: string, value: string) {
   return h('div', {
     style: {
       display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px 12px', borderRadius: '8px',
-      background: 'var(--dsw-alias-bg-layer-2,#f5f5f5)', border: '1px solid var(--dsw-alias-border-l2,rgba(0,0,0,.08))',
+      background: 'var(--tdt-surface-2,#f5f5f5)', border: '1px solid var(--tdt-border,rgba(0,0,0,.08))',
     },
   },
-    h('span', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary,#888)', fontWeight: 600 } }, label),
-    h('span', { style: { fontSize: '13px', color: 'var(--dsw-alias-label-primary,#1a1a1a)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, value),
+    h('span', { style: { fontSize: '12px', color: 'var(--tdt-fg-2,#888)', fontWeight: 600 } }, label),
+    h('span', { style: { fontSize: '13px', color: 'var(--tdt-fg,#1a1a1a)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, value),
   )
 }
