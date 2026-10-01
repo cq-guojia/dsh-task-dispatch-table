@@ -48,6 +48,44 @@ window.__ModuleLoader__.load({
 			const base = `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
 			return opts?.seconds === true ? `${base}:${pad2$1(d.getSeconds())}` : base;
 		}
+		/** 短时刻（用户 2026-10-02：计划时刻本来就没有「秒」，月日时分各两位即可）：`MM-DD HH:mm`。 */
+		function formatShortStamp(iso) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return "—";
+			const d = new Date(ms);
+			return `${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+		}
+		/** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
+		function formatTokenCount(n) {
+			if (!Number.isFinite(n)) return "—";
+			const trim = (v) => Math.abs(v) >= 100 ? String(Math.round(v)) : v.toFixed(1).replace(/\.0$/, "");
+			if (Math.abs(n) >= 1e6) return `${trim(n / 1e6)}M`;
+			if (Math.abs(n) >= 1e3) return `${trim(n / 1e3)}K`;
+			return String(n);
+		}
+		/**
+		* 时长人话（用户 2026-10-02 示意「12 分钟 36 秒」）：秒 → 分秒 → 时分 → 天时。
+		* `tt` 走 locales（zh / en 各一套句式）；负数 / NaN ⇒ '—'（未回执没有时长）。
+		*/
+		function formatDuration(ms, tt) {
+			if (!Number.isFinite(ms) || ms < 0) return "—";
+			const totalSec = Math.round(ms / 1e3);
+			if (totalSec < 60) return tt("durSec", { n: String(totalSec) });
+			const totalMin = Math.floor(totalSec / 60);
+			if (totalMin < 60) return tt("durMinSec", {
+				m: String(totalMin),
+				s: String(totalSec % 60)
+			});
+			const totalHour = Math.floor(totalMin / 60);
+			if (totalHour < 24) return tt("durHourMin", {
+				h: String(totalHour),
+				m: String(totalMin % 60)
+			});
+			return tt("durDayHour", {
+				d: String(Math.floor(totalHour / 24)),
+				h: String(totalHour % 24)
+			});
+		}
 		//#endregion
 		//#region src/client/http.ts
 		const DEFAULT_TIMEOUT_MS = 8e3;
@@ -584,6 +622,13 @@ window.__ModuleLoader__.load({
 			statusFailed: "失败",
 			statusSkipped: "未执行",
 			statusUnknown: "未知",
+			colDuration: "时长",
+			colDispatchedAt: "派发于",
+			colFinishedAt: "结束于",
+			durSec: "{n} 秒",
+			durMinSec: "{m} 分 {s} 秒",
+			durHourMin: "{h} 小时 {m} 分",
+			durDayHour: "{d} 天 {h} 小时",
 			schedCustom: "{cron}",
 			settingsBasic: "基础信息",
 			settingsTitleFormat: "标题写法",
@@ -1116,6 +1161,13 @@ window.__ModuleLoader__.load({
 			statusFailed: "Failed",
 			statusSkipped: "Skipped",
 			statusUnknown: "Unknown",
+			colDuration: "Duration",
+			colDispatchedAt: "Dispatched",
+			colFinishedAt: "Finished",
+			durSec: "{n}s",
+			durMinSec: "{m}m {s}s",
+			durHourMin: "{h}h {m}m",
+			durDayHour: "{d}d {h}h",
 			schedCustom: "{cron}",
 			settingsBasic: "Basic info",
 			settingsTitleFormat: "Title format",
@@ -41089,8 +41141,109 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const idx = trimmed.lastIndexOf("/");
 			return (idx < 0 ? trimmed : trimmed.slice(idx + 1)) + (isDir ? "/" : "");
 		};
-		/** token 用量一格：in / out（三拆列，决策 32 修订；两列都空 = 未回执 ⇒ '—'）。 */
-		const tokensOf = (row) => row.token_in === null && row.token_out === null ? "—" : `${row.token_in ?? 0} / ${row.token_out ?? 0}`;
+		/** token 用量一格（展开详情用；K/M 大众格式，用户 2026-10-02）。 */
+		const tokensDetailOf = (row) => `${row.token_in === null ? "—" : formatTokenCount(row.token_in)} / ${row.token_out === null ? "—" : formatTokenCount(row.token_out)} / ${row.token_in_cache === null ? "—" : formatTokenCount(row.token_in_cache)}`;
+		/** 状态三档桶（用户 2026-10-02：过滤只给 执行中 / 失败 / 成功 三档，七态归桶；值传后端 statuses）。 */
+		const FILTER_BUCKETS = {
+			running: [
+				"pending",
+				"dispatched",
+				"running",
+				"unknown"
+			],
+			failed: ["failed", "skipped"],
+			succeeded: ["succeeded"]
+		};
+		/** 产出引用小圆点（用户示意 1/2/3）：可点开文件时亮色，否则弱化不可点。 */
+		const chipStyleOf = (clickable) => ({
+			appearance: "none",
+			display: "inline-flex",
+			alignItems: "center",
+			justifyContent: "center",
+			width: "18px",
+			height: "18px",
+			padding: 0,
+			borderRadius: "50%",
+			flex: "none",
+			border: `1px solid ${C$1.border}`,
+			background: C$1.layer1,
+			color: clickable ? C$1.brand : C$1.textDim,
+			fontSize: "10px",
+			lineHeight: "16px",
+			cursor: clickable ? "pointer" : "default",
+			fontFamily: "inherit",
+			transition: transition$1
+		});
+		/** 展开详情里的小链接（会话 / 产出文件名）。 */
+		const linkMiniStyle = {
+			appearance: "none",
+			background: "none",
+			border: "none",
+			padding: 0,
+			color: C$1.brand,
+			cursor: "pointer",
+			font: "inherit",
+			fontSize: "11px",
+			textAlign: "left"
+		};
+		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
+		const filterRowStyle = {
+			display: "flex",
+			alignItems: "center",
+			gap: "6px",
+			flexWrap: "wrap",
+			marginBottom: "6px"
+		};
+		/** 状态圆点外壳（成功绿勾 / 失败红叉 / 执行中转圈 / 待执行·未知空心，用户示意）。 */
+		const statusDotStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			justifyContent: "center",
+			flex: "none",
+			width: "16px",
+			height: "16px",
+			padding: 0,
+			borderRadius: "50%",
+			boxSizing: "border-box",
+			fontSize: "10px",
+			lineHeight: "14px",
+			fontWeight: 700
+		};
+		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
+		const recHeadStyle = {
+			...miniCellStyle,
+			fontWeight: 600,
+			color: C$1.textDim,
+			background: "var(--dsw-alias-bg-base, #fff)"
+		};
+		/** 状态圆点（用户 2026-10-02 示意）：✓绿=成功 / ✕红=失败·未执行 / 转圈=执行中 / 空心=待执行·未知。 */
+		function StatusDot(props) {
+			const status = props.status;
+			if (status === "succeeded") return (0, react.createElement)("span", { style: {
+				...statusDotStyle,
+				background: C$1.success,
+				color: "#fff",
+				border: "none"
+			} }, "✓");
+			if (status === "failed" || status === "skipped") return (0, react.createElement)("span", { style: {
+				...statusDotStyle,
+				background: C$1.danger,
+				color: "#fff",
+				border: "none"
+			} }, "✕");
+			if (status === "running" || status === "dispatched") return (0, react.createElement)("span", {
+				className: "dsh-tdt-rec-spin",
+				style: {
+					...statusDotStyle,
+					border: `2px solid ${C$1.brand}`,
+					borderTopColor: "transparent"
+				}
+			});
+			return (0, react.createElement)("span", { style: {
+				...statusDotStyle,
+				border: `2px solid ${C$1.borderStrong}`
+			} });
+		}
 		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
 			color: C$1.danger,
@@ -41102,7 +41255,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
 		*/
 		function TaskExpandPanel(props) {
-			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete } = props;
+			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props;
 			const [tab, setTab] = (0, react.useState)("info");
 			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const [recStatus, setRecStatus] = (0, react.useState)("all");
@@ -41131,7 +41284,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				setRecError(null);
 				fetchInstances({
 					taskId: row.id,
-					statuses: recStatus === "all" ? void 0 : [recStatus],
+					statuses: recStatus === "all" ? void 0 : FILTER_BUCKETS[recStatus],
 					from: dayStartIso(recFrom),
 					to: dayEndIso(recTo),
 					limit: 100
@@ -41222,23 +41375,21 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead));
-			const renderRecords = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "6px",
-				flexWrap: "wrap",
-				marginBottom: "8px"
-			} }, (0, react.createElement)("select", {
+			const renderRecords = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)("select", {
 				value: recStatus,
 				style: filterSelectStyle,
 				"aria-label": t("colStatus"),
 				onChange: (event) => {
 					setRecStatus(event.target.value);
 				}
-			}, (0, react.createElement)("option", { value: "all" }, tt("filterAll")), INSTANCE_STATUSES.map((status) => (0, react.createElement)("option", {
-				key: status,
-				value: status
-			}, statusTextOf(status, t)))), (0, react.createElement)("label", { style: {
+			}, (0, react.createElement)("option", { value: "all" }, tt("filterAll")), [
+				"running",
+				"failed",
+				"succeeded"
+			].map((bucketId) => (0, react.createElement)("option", {
+				key: bucketId,
+				value: bucketId
+			}, statusTextOf(bucketId, t)))), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px",
@@ -41271,20 +41422,24 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			})), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "11px",
 				color: C$1.danger
-			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react.createElement)("p", { style: faintStyle }, t("expandHint")), records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("table", { style: miniTableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
-				t("colSlot"),
-				t("colStatus"),
-				t("colAttempt"),
-				t("colSession"),
-				t("colOutputs"),
-				t("colTokens"),
-				t("colUpdated")
-			].map((name) => (0, react.createElement)("th", {
-				key: name,
-				style: miniCellStyle
-			}, name)))), (0, react.createElement)("tbody", null, records.flatMap((instance) => {
+			} }, `${t("cardLoadFailed")}：${recError}`) : null), records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("table", { style: {
+				...miniTableStyle,
+				tableLayout: "fixed"
+			} }, (0, react.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react.createElement)("tr", null, (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "96px"
+			} }, t("colStatus")), (0, react.createElement)("th", { style: recHeadStyle }, t("colOutputs")), (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "88px"
+			} }, t("colDuration")), (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "100px"
+			} }, t("colSlot")))), (0, react.createElement)("tbody", null, records.flatMap((instance) => {
 				const open = openInstance === instance.id;
 				const outputs = outputsOf(instance.outputs);
+				const sid = instance.session_id;
+				const canOpenFile = sid !== null && onOpenFile !== void 0;
+				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.scheduled_at);
 				return [(0, react.createElement)("tr", {
 					key: instance.id,
 					style: {
@@ -41294,10 +41449,68 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					onClick: () => {
 						setOpenInstance(open ? null : instance.id);
 					}
-				}, (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.scheduled_at)), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { style: statusStyleOf(instance.status) }, statusTextOf(instance.status, t))), (0, react.createElement)("td", { style: miniCellStyle }, String(instance.attempt)), (0, react.createElement)("td", { style: miniCellStyle }, instance.session_id === null ? "—" : instance.session_id.slice(0, 8)), (0, react.createElement)("td", { style: miniCellWrapStyle }, outputs.length === 0 ? "—" : (0, react.createElement)("span", { title: outputs.join("\n") }, outputs.map(outputNameOf).join("、"))), (0, react.createElement)("td", { style: miniCellStyle }, tokensOf(instance)), (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.updated_at))), open ? (0, react.createElement)("tr", { key: `${instance.id}-events` }, (0, react.createElement)("td", {
-					colSpan: 7,
+				}, (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px"
+				} }, (0, react.createElement)(StatusDot, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: C$1.success } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellWrapStyle }, (0, react.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					flexWrap: "wrap",
+					gap: "4px"
+				} }, outputs.length === 0 ? (0, react.createElement)("span", { style: { color: C$1.textFaint } }, "—") : outputs.slice(0, 8).map((output, index) => (0, react.createElement)("button", {
+					key: output,
+					type: "button",
+					title: output,
+					style: chipStyleOf(canOpenFile),
+					onClick: (event) => {
+						event.stopPropagation();
+						if (canOpenFile && sid !== null) onOpenFile(sid, output);
+					}
+				}, String(index + 1))), outputs.length > 8 ? (0, react.createElement)("span", { style: {
+					fontSize: "11px",
+					color: C$1.textFaint
+				} }, `+${outputs.length - 8}`) : null, sid !== null && onOpenSession !== void 0 ? (0, react.createElement)("button", {
+					type: "button",
+					title: t("viewSession"),
+					"aria-label": t("viewSession"),
+					style: chipStyleOf(true),
+					onClick: (event) => {
+						event.stopPropagation();
+						onOpenSession(sid, row.title);
+					}
+				}, "↗") : null)), (0, react.createElement)("td", { style: miniCellStyle }, formatDuration(durMs, tt)), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatShortStamp(instance.scheduled_at)))), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
+					colSpan: 4,
 					style: miniCellWrapStyle
 				}, (0, react.createElement)("div", { style: {
+					display: "flex",
+					flexWrap: "wrap",
+					gap: "4px 16px",
+					fontSize: "11px",
+					color: C$1.textDim,
+					marginBottom: "6px"
+				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)("button", {
+					type: "button",
+					style: linkMiniStyle,
+					onClick: (event) => {
+						event.stopPropagation();
+						onOpenSession(sid, row.title);
+					}
+				}, `↗ ${t("viewSession")}`) : (0, react.createElement)("span", null, `${t("colSession")}：${sid.slice(0, 8)}`) : null), outputs.length > 0 ? (0, react.createElement)("div", { style: { marginBottom: "6px" } }, outputs.map((output) => (0, react.createElement)("div", {
+					key: output,
+					style: {
+						fontSize: "12px",
+						lineHeight: "18px"
+					}
+				}, sid !== null && onOpenFile !== void 0 ? (0, react.createElement)("button", {
+					type: "button",
+					style: linkMiniStyle,
+					title: output,
+					onClick: (event) => {
+						event.stopPropagation();
+						onOpenFile(sid, output);
+					}
+				}, outputNameOf(output)) : (0, react.createElement)("span", { title: output }, outputNameOf(output))))) : null, (0, react.createElement)("div", { style: {
 					display: "flex",
 					justifyContent: "space-between",
 					alignItems: "center",
@@ -41315,14 +41528,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					fontSize: "11px",
 					color: C$1.textFaint
 				} }, t("cardEventsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: C$1.brand } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? "")))))) : null];
-			}))));
-			const renderLogs = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "6px",
-				flexWrap: "wrap",
-				marginBottom: "8px"
-			} }, (0, react.createElement)("input", {
+			})))));
+			const renderLogs = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)("input", {
 				type: "text",
 				value: logKeyword,
 				placeholder: t("cardKeyword"),
@@ -41385,10 +41592,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, String(n))))), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "11px",
 				color: C$1.danger
-			} }, `${t("cardLoadFailed")}：${logError}`) : null), logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
 				color: row.level === "error" ? C$1.danger : row.level === "warn" ? C$1.brand : C$1.textFaint,
 				fontWeight: row.level === "error" ? 600 : 400
-			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: C$1.brand } }, `${row.kind}: `), (0, react.createElement)("span", null, row.message)))));
+			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: C$1.brand } }, `${row.kind}: `), (0, react.createElement)("span", null, row.message))))));
 			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
 			const renderConfirm = () => (0, react.createElement)("div", {
 				style: overlayStyle,
@@ -41438,7 +41645,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					});
 				}
 			}, deleting ? t("loading") : t("cardDelete")))));
-			return (0, react.createElement)("div", { style: panelWrapStyle }, (0, react.createElement)("div", { style: panelScrollStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs()), (0, react.createElement)("div", { style: panelBarStyle }, (0, react.createElement)("div", { style: segTrackStyle }, [
+			return (0, react.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react.createElement)("div", { style: panelBarStyle }, (0, react.createElement)("div", { style: segTrackStyle }, [
 				"info",
 				"records",
 				"logs"
@@ -41472,7 +41679,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit"))), confirmDelete ? renderConfirm() : null);
 		}
 		function TaskCard(props) {
-			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onToggleEnabled, refOf } = props;
+			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf } = props;
 			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react.createElement)("div", {
@@ -41542,11 +41749,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				scheduleLine,
 				modelText,
 				onEdit,
-				onDelete
+				onDelete,
+				onOpenFile,
+				onOpenSession
 			}) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onDelete, onToggleEnabled } = props;
+			const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
@@ -41728,6 +41937,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				},
 				onEdit,
 				onDelete,
+				onOpenFile,
+				onOpenSession,
 				onToggleEnabled: (id, enabled) => {
 					setOptimistic((cur) => ({
 						...cur,
@@ -42866,6 +43077,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				ready: overview.ready,
 				onEdit: openEditor,
 				onDelete: deleteTask,
+				onOpenFile: canPreview ? openFile : void 0,
+				onOpenSession: viewSession !== null ? (sessionId, heading) => {
+					openView(sessionId, heading);
+				} : void 0,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,

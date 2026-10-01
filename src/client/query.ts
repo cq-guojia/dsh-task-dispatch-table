@@ -18,6 +18,7 @@ export interface InstanceRow {
   status: string
   attempt: number
   session_id: string | null
+  dispatched_at: string | null
   finished_at: string | null
   /** 决策 32③：完成瞬间写回的产出清单 JSON 字符串（`["a.md","b/"]`），无产出为 null。 */
   outputs: string | null

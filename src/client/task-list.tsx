@@ -13,7 +13,7 @@
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { formatDateTime, pad2 } from './format'
+import { formatDateTime, formatDuration, formatShortStamp, formatTokenCount, pad2 } from './format'
 import {
   IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular, IconEditOutlineRegular,
   IconSearchOutlineRegular,
@@ -795,9 +795,57 @@ const outputNameOf = (output: string): string => {
   const idx = trimmed.lastIndexOf('/')
   return (idx < 0 ? trimmed : trimmed.slice(idx + 1)) + (isDir ? '/' : '')
 }
-/** token 用量一格：in / out（三拆列，决策 32 修订；两列都空 = 未回执 ⇒ '—'）。 */
-const tokensOf = (row: { token_in: number | null; token_out: number | null }): string =>
-  row.token_in === null && row.token_out === null ? '—' : `${row.token_in ?? 0} / ${row.token_out ?? 0}`
+/** token 用量一格（展开详情用；K/M 大众格式，用户 2026-10-02）。 */
+const tokensDetailOf = (row: { token_in: number | null; token_out: number | null; token_in_cache: number | null }): string =>
+  `${row.token_in === null ? '—' : formatTokenCount(row.token_in)} / ${row.token_out === null ? '—' : formatTokenCount(row.token_out)} / ${row.token_in_cache === null ? '—' : formatTokenCount(row.token_in_cache)}`
+/** 状态三档桶（用户 2026-10-02：过滤只给 执行中 / 失败 / 成功 三档，七态归桶；值传后端 statuses）。 */
+const FILTER_BUCKETS: Readonly<Record<string, readonly string[]>> = {
+  running: ['pending', 'dispatched', 'running', 'unknown'],
+  failed: ['failed', 'skipped'],
+  succeeded: ['succeeded'],
+}
+/** 产出引用小圆点（用户示意 1/2/3）：可点开文件时亮色，否则弱化不可点。 */
+const chipStyleOf = (clickable: boolean): Record<string, string | number> => ({
+  appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: '18px', height: '18px', padding: 0, borderRadius: '50%', flex: 'none',
+  border: `1px solid ${C.border}`, background: C.layer1,
+  color: clickable ? C.brand : C.textDim, fontSize: '10px', lineHeight: '16px',
+  cursor: clickable ? 'pointer' : 'default', fontFamily: 'inherit', transition,
+})
+/** 展开详情里的小链接（会话 / 产出文件名）。 */
+const linkMiniStyle: Record<string, string | number> = {
+  appearance: 'none', background: 'none', border: 'none', padding: 0,
+  color: C.brand, cursor: 'pointer', font: 'inherit', fontSize: '11px', textAlign: 'left',
+}
+/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
+const filterRowStyle: Record<string, string | number> = {
+  display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px',
+}
+/** 状态圆点外壳（成功绿勾 / 失败红叉 / 执行中转圈 / 待执行·未知空心，用户示意）。 */
+const statusDotStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+  width: '16px', height: '16px', padding: 0, borderRadius: '50%', boxSizing: 'border-box',
+  fontSize: '10px', lineHeight: '14px', fontWeight: 700,
+}
+/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
+const recHeadStyle: Record<string, string | number> = {
+  ...miniCellStyle, fontWeight: 600, color: C.textDim,
+  background: 'var(--dsw-alias-bg-base, #fff)',
+}
+/** 状态圆点（用户 2026-10-02 示意）：✓绿=成功 / ✕红=失败·未执行 / 转圈=执行中 / 空心=待执行·未知。 */
+function StatusDot(props: { status: string }) {
+  const status = props.status
+  if (status === 'succeeded') {
+    return h('span', { style: { ...statusDotStyle, background: C.success, color: '#fff', border: 'none' } }, '✓')
+  }
+  if (status === 'failed' || status === 'skipped') {
+    return h('span', { style: { ...statusDotStyle, background: C.danger, color: '#fff', border: 'none' } }, '✕')
+  }
+  if (status === 'running' || status === 'dispatched') {
+    return h('span', { className: 'dsh-tdt-rec-spin', style: { ...statusDotStyle, border: `2px solid ${C.brand}`, borderTopColor: 'transparent' } })
+  }
+  return h('span', { style: { ...statusDotStyle, border: `2px solid ${C.borderStrong}` } })
+}
 /** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 const statusStyleOf = (status: string): Record<string, string | number> | undefined =>
   status === 'failed' || status === 'skipped' ? { color: C.danger, fontWeight: 600 } : undefined
@@ -815,8 +863,12 @@ function TaskExpandPanel(props: {
   modelText: string
   onEdit: (id: string) => void
   onDelete: (id: string) => Promise<string | null>
+  /** 产出文件点开（U11 预览面单一入口；undefined = 预览面不可用 ⇒ chips 降级不可点）。 */
+  onOpenFile?: (sessionId: string, path: string) => void
+  /** 会话弹窗（undefined = 会话面不可用 ⇒ 不出链接）。 */
+  onOpenSession?: (sessionId: string, heading: string) => void
 }) {
-  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete } = props
+  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
   // 日历文案**单源**（与任务编辑器同一份 DateField 文案，editor-fields.calendarLabelsOf）。
   const calendarLabels = useMemo(() => calendarLabelsOf(t), [t])
@@ -854,7 +906,8 @@ function TaskExpandPanel(props: {
     setRecError(null)
     fetchInstances({
       taskId: row.id,
-      statuses: recStatus === 'all' ? undefined : [recStatus],
+      // 三档桶（用户 2026-10-02）：执行中 = pending/dispatched/running/unknown；失败 = failed/skipped；成功 = succeeded。
+      statuses: recStatus === 'all' ? undefined : FILTER_BUCKETS[recStatus],
       from: dayStartIso(recFrom),
       to: dayEndIso(recTo),
       limit: 100,
@@ -927,13 +980,15 @@ function TaskExpandPanel(props: {
   )
 
   const renderRecords = (): ReturnType<typeof h> => h('div', null,
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' } },
+    // 过滤行在滚动区**外**（用户 2026-10-02：过滤框和表头不滚，只滚内容区）。
+    h('div', { style: filterRowStyle },
       h('select', {
         value: recStatus, style: filterSelectStyle, 'aria-label': t('colStatus'),
         onChange: (event: { target: { value: string } }) => { setRecStatus(event.target.value) },
       },
         h('option', { value: 'all' }, tt('filterAll')),
-        INSTANCE_STATUSES.map(status => h('option', { key: status, value: status }, statusTextOf(status, t))),
+        // 三档（用户拍板）：执行中 / 失败 / 成功 —— 名字复用状态短名单源，七态在查询层归桶。
+        ['running', 'failed', 'succeeded'].map(bucketId => h('option', { key: bucketId, value: bucketId }, statusTextOf(bucketId, t))),
       ),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardFrom'),
@@ -946,65 +1001,136 @@ function TaskExpandPanel(props: {
       recLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       recError !== null ? h('span', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${recError}`) : null,
     ),
-    h('p', { style: faintStyle }, t('expandHint')),
     records === null
       ? null
       : records.length === 0
         ? h('p', { style: faintStyle }, t('cardRecordsEmpty'))
-        : h('table', { style: miniTableStyle },
-          h('thead', null, h('tr', null,
-            [t('colSlot'), t('colStatus'), t('colAttempt'), t('colSession'), t('colOutputs'), t('colTokens'), t('colUpdated')]
-              .map(name => h('th', { key: name, style: miniCellStyle }, name)))),
-          h('tbody', null,
-            records.flatMap(instance => {
-              const open = openInstance === instance.id
-              const outputs = outputsOf(instance.outputs)
-              const mainRow = h('tr', {
-                key: instance.id,
-                style: { cursor: 'pointer', background: open ? C.layer2 : 'transparent' },
-                onClick: () => { setOpenInstance(open ? null : instance.id) },
-              },
-                h('td', { style: miniCellStyle }, formatStamp(instance.scheduled_at)),
-                h('td', { style: miniCellStyle }, h('span', { style: statusStyleOf(instance.status) }, statusTextOf(instance.status, t))),
-                h('td', { style: miniCellStyle }, String(instance.attempt)),
-                h('td', { style: miniCellStyle }, instance.session_id === null ? '—' : instance.session_id.slice(0, 8)),
-                h('td', { style: miniCellWrapStyle },
-                  outputs.length === 0
-                    ? '—'
-                    : h('span', { title: outputs.join('\n') }, outputs.map(outputNameOf).join('、'))),
-                h('td', { style: miniCellStyle }, tokensOf(instance)),
-                h('td', { style: miniCellStyle }, formatStamp(instance.updated_at)),
-              )
-              const eventRow = open
-                ? h('tr', { key: `${instance.id}-events` },
-                  h('td', { colSpan: 7, style: miniCellWrapStyle },
-                    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } },
-                      h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('eventsOf')),
-                      eventsLoading ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('loading')) : null,
+        : // 只有内容区滚（定高盒），表头 sticky 吸顶。
+        h('div', { style: panelScrollStyle },
+          h('table', { style: { ...miniTableStyle, tableLayout: 'fixed' } },
+            h('thead', { className: 'dsh-tdt-rec-head' }, h('tr', null,
+              h('th', { style: { ...recHeadStyle, width: '96px' } }, t('colStatus')),
+              h('th', { style: recHeadStyle }, t('colOutputs')),
+              h('th', { style: { ...recHeadStyle, width: '88px' } }, t('colDuration')),
+              h('th', { style: { ...recHeadStyle, width: '100px' } }, t('colSlot')),
+            )),
+            h('tbody', null,
+              records.flatMap(instance => {
+                const open = openInstance === instance.id
+                const outputs = outputsOf(instance.outputs)
+                const sid = instance.session_id
+                const canOpenFile = sid !== null && onOpenFile !== undefined
+                const durMs = instance.finished_at === null
+                  ? Number.NaN
+                  : Date.parse(instance.finished_at) - Date.parse(instance.scheduled_at)
+                const mainRow = h('tr', {
+                  key: instance.id,
+                  style: { cursor: 'pointer', background: open ? C.layer2 : 'transparent' },
+                  onClick: () => { setOpenInstance(open ? null : instance.id) },
+                },
+                  // ① 状态：明显 icon（绿勾=成功 / 红叉=失败·未执行 / 转圈=执行中 / 空心=待执行）+ 通用短名。
+                  h('td', { style: miniCellStyle },
+                    h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+                      h(StatusDot, { status: instance.status }),
+                      h('span', {
+                        style: instance.status === 'succeeded' ? { color: C.success } : statusStyleOf(instance.status),
+                      }, statusTextOf(instance.status, t)),
                     ),
-                    eventsError !== null
-                      ? h('div', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${eventsError}`)
-                      : events === null
-                        ? null
-                        : events.length === 0
-                          ? h('div', { style: { fontSize: '11px', color: C.textFaint } }, t('cardEventsEmpty'))
-                          : h('div', { style: logBoxStyle },
-                            events.map(event => h('div', { key: event.seq },
-                              h('span', { style: { color: C.textFaint } }, `${formatStamp(event.ts)} `),
-                              h('span', { style: { color: C.brand } }, `${event.kind} `),
-                              h('span', null, event.detail ?? ''),
-                            ))),
                   ),
+                  // ② 产出：引用式编号圆点（1/2/3，点了直接弹文件预览）；>8 收「+N」，全量在展开里逐条列。
+                  //    会话不显示 id —— 只留一个图标链接（用户 2026-10-02），点了弹会话弹窗。
+                  h('td', { style: miniCellWrapStyle },
+                    h('span', { style: { display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' } },
+                      outputs.length === 0
+                        ? h('span', { style: { color: C.textFaint } }, '—')
+                        : outputs.slice(0, 8).map((output, index) => h('button', {
+                          key: output, type: 'button', title: output,
+                          style: chipStyleOf(canOpenFile),
+                          onClick: (event: { stopPropagation(): void }) => {
+                            event.stopPropagation()
+                            if (canOpenFile && sid !== null) onOpenFile(sid, output)
+                          },
+                        }, String(index + 1))),
+                      outputs.length > 8 ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, `+${outputs.length - 8}`) : null,
+                      sid !== null && onOpenSession !== undefined
+                        ? h('button', {
+                          type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
+                          style: chipStyleOf(true),
+                          onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenSession(sid, row.title) },
+                        }, '↗')
+                        : null,
+                    ),
+                  ),
+                  // ③ 时长 = 结束 − 计划（在跑 / 未回执 ⇒ '—'，状态列的转圈已说明在跑）。
+                  h('td', { style: miniCellStyle }, formatDuration(durMs, tt)),
+                  // ④ 计划时刻：两位月日时分（计划本来就没有「秒」），完整时刻进 hover。
+                  h('td', { style: miniCellStyle },
+                    h('span', { title: formatStamp(instance.scheduled_at) }, formatShortStamp(instance.scheduled_at))),
                 )
-                : null
-              return [mainRow, eventRow]
-            }),
+                const detailRow = open
+                  ? h('tr', { key: `${instance.id}-detail` },
+                    h('td', { colSpan: 4, style: miniCellWrapStyle },
+                      // 详情小字段行：token 走 K/M 大众格式（用户 2026-10-02：不占一级空间）。
+                      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: '11px', color: C.textDim, marginBottom: '6px' } },
+                        h('span', null, `${t('colAttempt')}：${instance.attempt}`),
+                        h('span', null, `${t('colSlot')}：${formatStamp(instance.scheduled_at)}`),
+                        instance.dispatched_at === null ? null : h('span', null, `${t('colDispatchedAt')}：${formatStamp(instance.dispatched_at)}`),
+                        instance.finished_at === null ? null : h('span', null, `${t('colFinishedAt')}：${formatStamp(instance.finished_at)}`),
+                        h('span', null, `${t('colDuration')}：${formatDuration(durMs, tt)}`),
+                        (instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null)
+                          ? h('span', null, `${t('colTokens')}：${tokensDetailOf(instance)}`)
+                          : null,
+                        sid !== null
+                          ? (onOpenSession !== undefined
+                            ? h('button', {
+                              type: 'button', style: linkMiniStyle,
+                              onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenSession(sid, row.title) },
+                            }, `↗ ${t('viewSession')}`)
+                            : h('span', null, `${t('colSession')}：${sid.slice(0, 8)}`))
+                          : null,
+                      ),
+                      // 产出逐条（展开才列全；能点开就点开）。
+                      outputs.length > 0
+                        ? h('div', { style: { marginBottom: '6px' } },
+                          outputs.map(output => h('div', { key: output, style: { fontSize: '12px', lineHeight: '18px' } },
+                            sid !== null && onOpenFile !== undefined
+                              ? h('button', {
+                                type: 'button', style: linkMiniStyle, title: output,
+                                onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenFile(sid, output) },
+                              }, outputNameOf(output))
+                              : h('span', { title: output }, outputNameOf(output)),
+                          )))
+                        : null,
+                      // 该次执行的事件时间线。
+                      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } },
+                        h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('eventsOf')),
+                        eventsLoading ? h('span', { style: { fontSize: '11px', color: C.textFaint } }, t('loading')) : null,
+                      ),
+                      eventsError !== null
+                        ? h('div', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${eventsError}`)
+                        : events === null
+                          ? null
+                          : events.length === 0
+                            ? h('div', { style: { fontSize: '11px', color: C.textFaint } }, t('cardEventsEmpty'))
+                            : h('div', { style: logBoxStyle },
+                              events.map(event => h('div', { key: event.seq },
+                                h('span', { style: { color: C.textFaint } }, `${formatStamp(event.ts)} `),
+                                h('span', { style: { color: C.brand } }, `${event.kind} `),
+                                h('span', null, event.detail ?? ''),
+                              ))),
+                    ),
+                  )
+                  : null
+                return [mainRow, detailRow]
+              }),
+            ),
           ),
         ),
   )
 
   const renderLogs = (): ReturnType<typeof h> => h('div', null,
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' } },
+    // 过滤行在滚动区**外**（与执行记录面板同口径）。
+    h('div', { style: filterRowStyle },
       h('input', {
         type: 'text', value: logKeyword, placeholder: t('cardKeyword'),
         style: { ...filterInputStyle, width: '140px' },
@@ -1034,8 +1160,9 @@ function TaskExpandPanel(props: {
       ? null
       : logs.length === 0
         ? h('p', { style: faintStyle }, t('cardLogsEmpty'))
-        : h('div', { style: logBoxStyle },
-          logs.map(row => h('div', { key: row.seq },
+        : h('div', { style: panelScrollStyle },
+          h('div', { style: logBoxStyle },
+            logs.map(row => h('div', { key: row.seq },
             h('span', { style: { color: C.textFaint } }, `${formatStamp(row.ts)} `),
             h('span', {
               style: {
@@ -1046,7 +1173,7 @@ function TaskExpandPanel(props: {
             ' ',
             h('span', { style: { color: C.brand } }, `${row.kind}: `),
             h('span', null, row.message),
-          ))),
+          )))),
   )
 
   /** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
@@ -1075,10 +1202,8 @@ function TaskExpandPanel(props: {
   )
 
   return h('div', { style: panelWrapStyle },
-    // 内容区：三选一替换，统一最大高度滚动容器（切 tab 卡片高度稳定）。
-    h('div', { style: panelScrollStyle },
-      tab === 'info' ? renderInfo() : tab === 'records' ? renderRecords() : renderLogs(),
-    ),
+    // 内容区：三选一替换；**滚动只发生在各 tab 自己的内容盒里**（过滤行 / 表头固定，用户 2026-10-02）。
+    tab === 'info' ? renderInfo() : tab === 'records' ? renderRecords() : renderLogs(),
     // 底栏：左 = 三滑块；右 = 编辑任务 + 删除。
     h('div', { style: panelBarStyle },
       h('div', { style: segTrackStyle },
@@ -1111,10 +1236,12 @@ function TaskCard(props: {
   onEdit: (id: string) => void
   /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（由父级 Toast 展示）。 */
   onDelete: (id: string) => Promise<string | null>
+  onOpenFile?: (sessionId: string, path: string) => void
+  onOpenSession?: (sessionId: string, heading: string) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
   refOf: (el: HTMLElement | null) => void
 }) {
-  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onToggleEnabled, refOf } = props
+  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf } = props
   // 排期人话与编辑器「预计执行」**同一份实现**（`schedule-text.ts`，优先吃结构化 ui）⇒ 两处必然一致。
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
@@ -1160,7 +1287,7 @@ function TaskCard(props: {
       ),
     ),
     // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
-    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete }) : null,
+    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession }) : null,
   )
 }
 
@@ -1172,10 +1299,14 @@ export function TaskListView(props: {
   onEdit: (id: string) => void
   /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（父级 Toast 展示、列表靠 overview 刷新少一行）。 */
   onDelete: (id: string) => Promise<string | null>
+  /** 产出文件点开（U11 预览面；undefined = 不可用 ⇒ 产出降级纯文本）。 */
+  onOpenFile?: (sessionId: string, path: string) => void
+  /** 会话弹窗（undefined = 不可用 ⇒ 不出链接）。 */
+  onOpenSession?: (sessionId: string, heading: string) => void
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onDelete, onToggleEnabled } = props
+  const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
@@ -1318,6 +1449,8 @@ export function TaskListView(props: {
             onToggleOpen: () => { setOpenId(cur => (cur === row.id ? null : row.id)) },
             onEdit,
             onDelete,
+            onOpenFile,
+            onOpenSession,
             onToggleEnabled: (id: string, enabled: boolean): void => {
               setOptimistic(cur => ({ ...cur, [id]: enabled })) // 点了立刻变，不等请求往返
               // ⚠️ 失败必须**撤掉这条乐观值**（2026-09-30 专家团复核）：失败时服务端没变、也不会 bump rev

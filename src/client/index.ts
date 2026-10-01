@@ -1034,6 +1034,11 @@ function TaskPage(props: {
             ready: overview.ready,
             onEdit: openEditor,
             onDelete: deleteTask,
+            // 产出 / 会话入口走 U11 单一入口：预览面或会话面不可用时 undefined ⇒ 面板降级纯文本 / 不出链接。
+            onOpenFile: canPreview ? openFile : undefined,
+            onOpenSession: viewSession !== null
+              ? (sessionId: string, heading: string) => { void openView(sessionId, heading) }
+              : undefined,
             // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
             // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。
             onToggleEnabled: toggleTaskEnabled,
