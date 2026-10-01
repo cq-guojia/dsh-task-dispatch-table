@@ -148,7 +148,8 @@
 
 ## 五-C、第二轮微调（2026-10-02，用户首轮验收后）
 
-1. **窄一点**：`EDITOR_WIDTH_MIN` / `EDITOR_WIDTH_DEFAULT` 560 → **500**（CSS 兜底值同步）。旧口径「= 浮层时代弹窗宽度」退成历史由头，现在是「用户觉得 560 偏宽，收到 500」。
+1. **窄一点**：`EDITOR_WIDTH_MIN` / `EDITOR_WIDTH_DEFAULT` 560 → **500**（CSS 兜底值同步）→ 同日复看后又定 **530**（用户：560 偏宽、500 看过再收 530）。旧口径「= 浮层时代弹窗宽度」退成历史由头。
+1-B. **英文提示词精简**（同日）：附加文件投放区两行英文各砍一截（`locales.ts` 的 `editorDropZoneHint` / `editorDropZoneFormats`，只动 en，zh 不变）——原「Click or drop files here to upload — multiple or single files supported」/「Common text/code, image and document formats are supported, up to 20MB each」；现「Click or drop files to upload — single or multiple」/「Text/code, image and document formats, up to 20MB each」，信息量不变（可点击 / 可拖入、单个或多个、格式、单文件 20MB 上限）。
 2. **提示词下三下拉改定宽**（用户：「还挺跳……把它固定住宽」）
    - 原逻辑：`工作区` / `模型` 传 `maxWidth: 200` 让它们**按内容自适应**（只有超长才封顶），`权限` 才是定宽 120 ⇒ 换一个选项宽度就变一下，三个都长才开始互相挤 —— 观感一直在跳。
    - 现在：以权限为基准 **120**，工作区 / 模型 = **1.5 倍 = 180**，全部 `width` 定宽（`PROMPT_SELECT_BASE` / `PROMPT_SELECT_WIDE` 两个常量）；显示不下就省略号，工作区保留 hover 跑马灯；位置不够时整体等比收缩（CSS 收缩与选项长短无关，不会把跳动带回来）。

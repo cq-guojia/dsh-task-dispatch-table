@@ -932,16 +932,16 @@ function IntervalControls(props: {
 
 /** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 const EDITOR_WIDTH_KEY = 'dsh-tdt-editor-width'
-/** 最小宽度（用户 2026-10-02：560 偏宽，改 500 —— 仍是「浮层时代弹窗宽度」这个口径的收窄版）。 */
-const EDITOR_WIDTH_MIN = 500
-const EDITOR_WIDTH_DEFAULT = 500
+/** 最小宽度（用户 2026-10-02：560 偏宽 → 500 试过一轮 → 定 530）。 */
+const EDITOR_WIDTH_MIN = 530
+const EDITOR_WIDTH_DEFAULT = 530
 /** 主面板的最小宽度（≥1120 的列永远不被压到出横向滚动条）。与新一分栏同时开时也要保住。 */
 export const PAGE_MIN_WIDTH = 760
 
 /**
  * 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
  * 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
- * 下限保住 500，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
+ * 下限保住 530，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
  * @param value - 目标宽度。
  * @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
  */

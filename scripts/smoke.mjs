@@ -1665,7 +1665,7 @@ console.log('\n[14] runtime-index')
       !edJs.includes('.dsh-tdt-ed-overlay{') && !edJs.includes('dsh-tdt-ed-overlay'))
     check('面板改占布局的一列（sticky + 100vh + flex:0 0 auto，与预览 dock 同套）且宽度走 --dsh-tdt-editor-w',
       edJs.includes('.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;')
-      && edJs.includes('width:var(--dsh-tdt-editor-w,500px)'))
+      && edJs.includes('width:var(--dsh-tdt-editor-w,530px)'))
     check('「基本信息 / 执行记录」切换已删（id 与三处文案双语全无）',
       !edJs.includes('dsh-tdt-ed-tabs') && !edJs.includes('editorTabBasic') && !edJs.includes('editorTabRecords')
       && !edJs.includes('editorRecordsPending') && !edJs.includes('执行记录待接'))
@@ -1678,8 +1678,8 @@ console.log('\n[14] runtime-index')
     const closeIdx = edSrc.indexOf('IconCloseOutlineRegular', headIdx)
     check('启用开关回到头部右侧且**排在关闭 ✕ 之前**（headactions → 开关 → ✕ 的顺序成立）',
       headIdx > 0 && switchIdx > headIdx && closeIdx > switchIdx)
-    check('宽度下限 / 默认 = 500（用户 2026-10-02 收窄）且给主面板留够最小宽（两条分栏互相当预留）',
-      edSrc.includes('EDITOR_WIDTH_MIN = 500') && edSrc.includes('EDITOR_WIDTH_DEFAULT = 500')
+    check('宽度下限 / 默认 = 530（用户 2026-10-02 定）且给主面板留够最小宽（两条分栏互相当预留）',
+      edSrc.includes('EDITOR_WIDTH_MIN = 530') && edSrc.includes('EDITOR_WIDTH_DEFAULT = 530')
       && edSrc.includes('window.innerWidth - PAGE_MIN_WIDTH - reserved'))
     // 用户 2026-10-02：拖拽会顺手选中一片文字 ⇒ pointerdown preventDefault + 拖动期间全域禁选。
     check('拖拽调宽不再选中文字（两处 resizer 都做了 preventDefault + 拖动期间 user-select:none）',

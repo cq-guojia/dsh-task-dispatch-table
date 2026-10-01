@@ -1068,8 +1068,9 @@ export const en: Record<LocaleKey, string> = {
   editorPickWorkspaceFile: 'Pick workspace file',
   editorPickWorkspaceFileShort: 'Files',
   editorUploadFile: 'Upload file',
-  editorDropZoneHint: 'Click or drop files here to upload — multiple or single files supported',
-  editorDropZoneFormats: 'Common text/code, image and document formats are supported, up to 20MB each',
+  // 2026-10-02 精简（用户：英文偏长）：两行都比原来短一截，意思不变（可点击/拖入、单个或多个、格式与单文件上限）。
+  editorDropZoneHint: 'Click or drop files to upload — single or multiple',
+  editorDropZoneFormats: 'Text/code, image and document formats, up to 20MB each',
   editorUploading: 'Uploading…',
   editorUploadFailed: 'Upload failed',
   editorUploadErrType: 'Unsupported file type: only common text/code, image and document files are allowed',
