@@ -970,8 +970,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // U11 第三轮（页面级预览 dock）：一份预览面，弹窗与整页共用 + 拖拽调宽 + 崩溃不黑屏 + 记录行产出链接。
   check('预览面唯一且页面级（dock 形态 + 整页让位变量 --dsh-tdt-preview-w）',
     clientJs.includes('dsh-tdt-sv-preview-dock') && clientJs.includes('--dsh-tdt-preview-w'))
-  check('弹窗让位预览（overlay right 走同一变量，弹窗不遮盖预览面）',
-    clientJs.includes('right:var(--dsh-tdt-preview-w,0px)'))
+  // U21 起右侧可有两条 dock（预览 + 编辑），让位宽度改成两者之和。
+  check('弹窗让位右侧 dock（overlay right = 预览宽 + 编辑宽，弹窗不遮盖任何一条）',
+    clientJs.includes('right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px))'))
   check('预览栏可拖拽调宽（resizer + pointermove/up + 宽度持久化与夹取）',
     clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes('pointermove') && clientJs.includes('clampPreviewWidth'))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
@@ -1642,8 +1643,8 @@ console.log('\n[14] runtime-index')
     const p1bJs = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     check('第三档高度 lg 已进基础层（token + 皮肤规则）',
       p1bJs.includes('--tdt-control-h-lg:32px') && p1bJs.includes('dsh-tdt-seg--lg'))
-    check('编辑器头部/卡内分段已迁到统一 Segmented（basic/records · 编辑预览 · 排期 三处 id 在产物中）',
-      p1bJs.includes('dsh-tdt-ed-tabs') && p1bJs.includes('dsh-tdt-ed-prompt-mode') && p1bJs.includes('dsh-tdt-ed-schedule'))
+    check('编辑器卡内分段已迁到统一 Segmented（编辑预览 · 排期 两处 id 在产物中）',
+      p1bJs.includes('dsh-tdt-ed-prompt-mode') && p1bJs.includes('dsh-tdt-ed-schedule'))
     check('周几多选组件仍在且挂在间隔卡（multiple 模式走统一 Segmented，由类型与导入保证）',
       p1bJs.includes('dsh-tdt-ed-schedule-interval-panel') && p1bJs.includes('WeekdayPicker'))
     check('官方分段控件薄封装已删（编辑器不再用官方 SegmentedControl 作分段；死 CSS 也清掉）',
@@ -1652,6 +1653,31 @@ console.log('\n[14] runtime-index')
       p1bJs.includes('dsh-tdt-seg--weekday')
       && p1bJs.includes('.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-lg) - 6px)')
       && p1bJs.includes('background:var(--tdt-business);color:var(--tdt-fg-inverse)'))
+  }
+
+  // ── 17b. U21：新增 / 编辑任务改「占布局的分栏」+ 删执行记录切换 ──
+  console.log('\n[17b] U21（编辑/新建任务：分栏形态 + 去切换）')
+  {
+    const edJs = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('编辑/新建不再是浮层：全屏遮罩层 ed-overlay 已彻底消失（不再压暗主窗口）',
+      !edJs.includes('.dsh-tdt-ed-overlay{') && !edJs.includes('dsh-tdt-ed-overlay'))
+    check('面板改占布局的一列（sticky + 100vh + flex:0 0 auto，与预览 dock 同套）且宽度走 --dsh-tdt-editor-w',
+      edJs.includes('.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;')
+      && edJs.includes('width:var(--dsh-tdt-editor-w,560px)'))
+    check('「基本信息 / 执行记录」切换已删（id 与三处文案双语全无）',
+      !edJs.includes('dsh-tdt-ed-tabs') && !edJs.includes('editorTabBasic') && !edJs.includes('editorTabRecords')
+      && !edJs.includes('editorRecordsPending') && !edJs.includes('执行记录待接'))
+    check('会话弹窗让位两条分栏（right = 预览宽 + 编辑宽）',
+      edJs.includes('right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px))'))
+    // 开关位置 / 宽度守则看源码（产物里顺序不好断言），与 §19 同源。
+    const edSrc = readFileSync(join(process.cwd(), 'src', 'client', 'task-editor.tsx'), 'utf8')
+    const headIdx = edSrc.indexOf('dsh-tdt-ed-headactions')
+    const switchIdx = edSrc.indexOf('dsh-tdt-ed-enable', headIdx)
+    const closeIdx = edSrc.indexOf('IconCloseOutlineRegular', headIdx)
+    check('启用开关回到头部右侧且**排在关闭 ✕ 之前**（headactions → 开关 → ✕ 的顺序成立）',
+      headIdx > 0 && switchIdx > headIdx && closeIdx > switchIdx)
+    check('宽度下限保住 560（原弹窗宽度）且给主面板留够最小宽（两条分栏互相当预留）',
+      edSrc.includes('EDITOR_WIDTH_MIN = 560') && edSrc.includes('window.innerWidth - PAGE_MIN_WIDTH - reserved'))
   }
 
   // ── 18. UI 基础层 P2/P3/P4：按钮 / 输入 / 数字步进 / 开关 ──

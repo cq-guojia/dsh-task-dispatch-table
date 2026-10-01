@@ -24,7 +24,8 @@ import { openSessionView, SessionViewModal, type SessionViewTarget, type Session
 import { FileBrowser } from './file-browser'
 import { type WorkspaceFilesFace } from './file-preview'
 import {
-  definitionToDraft, draftToDefinitionJson, emptyTaskDraft, TaskEditorDrawer,
+  clampEditorWidth, definitionToDraft, draftToDefinitionJson, emptyTaskDraft, PAGE_MIN_WIDTH,
+  readEditorWidth, TaskEditorDrawer, writeEditorWidth,
   type EditorHistory, type EditorOption, type EditorTaskOption, type HistorySnapshot, type HistoryVersion,
   type TaskEditorDraft,
 } from './task-editor'
@@ -383,9 +384,15 @@ function readPreviewWidth(): number {
   }
 }
 
-/** 夹到允许区间（上限按当前视口算，故运行时求值）。 */
-function clampPreviewWidth(value: number): number {
-  const max = Math.max(PREVIEW_MIN, Math.floor(window.innerWidth * PREVIEW_MAX_RATIO))
+/**
+ * 夹到允许区间（上限按当前视口算，故运行时求值）。
+ * @param value - 目标宽度。
+ * @param reserved - 右侧**另一条**分栏（编辑分栏）已占的宽度：两条分栏同时开着时也要给主面板
+ *   留够最小宽度（用户 2026-10-01 Q3；不足时下限优先）。
+ */
+function clampPreviewWidth(value: number, reserved = 0): number {
+  const avail = Math.min(Math.floor(window.innerWidth * PREVIEW_MAX_RATIO), window.innerWidth - PAGE_MIN_WIDTH - reserved)
+  const max = Math.max(PREVIEW_MIN, Math.floor(avail))
   return Math.min(Math.max(Math.round(value), PREVIEW_MIN), max)
 }
 
@@ -488,10 +495,51 @@ function TaskPage(props: {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [taskFilter, setTaskFilter] = useState<string>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
+  // 新建 / 编辑任务分栏（U21：2026-10-01 起是「占布局的分栏」，不再是浮层弹窗）。
+  // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
+  const [editor, setEditor] = useState<{
+    mode: 'create' | 'edit'
+    id: string
+    draft: TaskEditorDraft
+    history: EditorHistory | null
+  } | null>(null)
+  const [editorSaving, setEditorSaving] = useState(false)
+  const [editorError, setEditorError] = useState<string | null>(null)
+  /** 编辑分栏宽度（真源在这里：另一个 dock 与全屏会话弹窗都要拿它算可用宽度）。 */
+  const [editorWidth, setEditorWidth] = useState<number>(() => readEditorWidth())
+
   // U11 页面级预览 dock（用户 2026-09-28 拍板）：**唯一一份**预览面，固定在屏幕最右侧并
   // 把整页（含会话弹窗）往左推；弹窗与整页共用它，关弹窗不影响它，它自己可完整收回。
   const [preview, setPreview] = useState<{ sessionId: string; path: string } | null>(null)
   const [previewWidth, setPreviewWidth] = useState<number>(() => readPreviewWidth())
+  // 两条分栏各自当前占掉的宽度（0 = 收起）：**互为对方的预留**，用来给主面板留够最小宽度
+  // （用户 2026-10-01 Q3：两条同时打开时也要保证主窗口，不只是单边）。
+  const previewTaken = preview === null ? 0 : previewWidth
+  const editorTaken = editor === null ? 0 : editorWidth
+  /** 编辑分栏宽度变化回调（拖拽松手）：落 state + 持久化。 */
+  const changeEditorWidth = useCallback((next: number): void => {
+    setEditorWidth(next)
+    writeEditorWidth(next)
+  }, [])
+  /**
+   * 两条分栏同开（或视口变化）时重新夹一遍宽度 ⇒ 主面板始终拿得到最小宽度 760
+   * （不足时按各自下限兜住，宁可主面板出横向滚动条也不许分栏被压塌）。
+   */
+  useEffect(() => {
+    const reClamp = (): void => {
+      setEditorWidth(cur => {
+        const next = clampEditorWidth(cur, previewTaken)
+        return next === cur ? cur : next
+      })
+      setPreviewWidth(cur => {
+        const next = clampPreviewWidth(cur, editorTaken)
+        return next === cur ? cur : next
+      })
+    }
+    reClamp()
+    window.addEventListener('resize', reClamp)
+    return () => { window.removeEventListener('resize', reClamp) }
+  }, [previewTaken, editorTaken])
   // 选择器工作区上下文：remote.workspaceFiles 是会话作用域的，需最近浏览过的会话 id 反查工作区（详见 task-editor）。
   const lastWorkspaceSessionId = useRef<string | null>(null)
   // U11 单一入口：整页（记录行产出物）与弹窗（文件链接 / 交付卡）全走它 ⇒ 预览面只有一份。
@@ -507,34 +555,25 @@ function TaskPage(props: {
     const startX = start.clientX
     const startWidth = previewWidth
     const onMove = (event: PointerEvent): void => {
-      const next = clampPreviewWidth(startWidth - (event.clientX - startX))
+      const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
       const root = document.getElementById('dsh-tdt-root')
       if (root !== null) root.style.setProperty('--dsh-tdt-preview-w', `${next}px`)
     }
     const onUp = (event: PointerEvent): void => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      const next = clampPreviewWidth(startWidth - (event.clientX - startX))
+      const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
       setPreviewWidth(next)
       try { window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next)) } catch { /* 隐私模式忽略 */ }
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
-  }, [previewWidth])
+  }, [previewWidth, editorTaken])
   // 新建 / 编辑任务弹窗：保存 / 删除 / 历史版本全部接线（2026-09-30）。
   // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
   // 主界面任务列表数据（2026-09-30）：一次请求出全部卡片数据，10 秒轮询 + rev 比对
   // ⇒ 服务端只读内存摘要、不查库（design/features/main-panel.md §四）。
   const overview = useTaskOverview()
-
-  const [editor, setEditor] = useState<{
-    mode: 'create' | 'edit'
-    id: string
-    draft: TaskEditorDraft
-    history: EditorHistory | null
-  } | null>(null)
-  const [editorSaving, setEditorSaving] = useState(false)
-  const [editorError, setEditorError] = useState<string | null>(null)
 
   /** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
   const loadHistory = async (id: string): Promise<void> => {
@@ -907,13 +946,16 @@ function TaskPage(props: {
   // UI 基础层（P0）：登记 token 层（--tdt-* 变量表）并注入唯一样式入口。
   // 阶段说明：此刻还没有任何规则消费 --tdt-*，所以**界面零变化**；逐期（P1→）把调用点搬上来。
   ensureUiBase()
-  // 根容器 = 横向分栏：内容区（整页 + 弹窗层）flex:1，预览 dock 占 --dsh-tdt-preview-w。
-  // dock 是布局成员而非浮层 ⇒ 整页被真正挤窄、滚动条不被遮盖（用户 2026-09-28 要求「分栏压过来，不是盖上去」）。
+  // 根容器 = 横向分栏：内容区（整页 + 会话弹窗层）flex:1，右侧两条 dock 各占一份宽度
+  // （预览 `--dsh-tdt-preview-w`、编辑 `--dsh-tdt-editor-w`，收起时各自为 0）。
+  // dock 是布局成员而非浮层 ⇒ 整页被真正挤窄、滚动条不被遮盖（用户 2026-09-28 要求「分栏压过来，不是盖上去」；
+  // 2026-10-01 U21 编辑弹窗也改成同一形态）。
   return h('div', {
     id: 'dsh-tdt-root',
     className: 'dsh-tdt-root',
     style: {
       ['--dsh-tdt-preview-w' as string]: `${previewW}px`,
+      ['--dsh-tdt-editor-w' as string]: `${editorTaken}px`,
       display: 'flex',
       alignItems: 'flex-start',
       minHeight: '100%',
@@ -1308,13 +1350,16 @@ function TaskPage(props: {
         }),
       )
       : null,
-    // 新建 / 编辑任务弹窗（右侧贴边的**浮层**，盖住整页与预览面，不推压页面）。
+    // 新建 / 编辑任务分栏（右侧**占布局的一列**：主窗口被推窄、不被遮盖；与预览 dock 可同时存在）。
     // 工作区 / 模型 = `GET /options` 的真实目录（P1）；前置任务 = 现有任务表（真数据）。
     editor !== null
       ? h(TaskEditorDrawer, {
         t,
         mode: editor.mode,
         draft: editor.draft,
+        width: editorWidth,
+        onWidthChange: changeEditorWidth,
+        reserved: previewTaken,
         onChange: (next: TaskEditorDraft) => { setEditor({ ...editor, draft: next }) },
         workspaces: editorOptions.workspaces,
         models: editorOptions.models,

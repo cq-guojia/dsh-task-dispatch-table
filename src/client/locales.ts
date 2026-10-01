@@ -91,7 +91,6 @@ export type LocaleKey =
   | 'deliverAll' | 'deliverCollapse' | 'deliverExpandAria' | 'deliverCollapseAria'
   // —— 任务表单弹窗（P0 只做界面与交互）：新建 / 编辑任务 ——
   | 'editorNew' | 'editorEdit' | 'editorClose' | 'editorCancel' | 'editorSave' | 'editorSavePending'
-  | 'editorTabBasic' | 'editorTabRecords' | 'editorRecordsPending'
   | 'editorEnabled' | 'editorEnabledOn' | 'editorEnabledOff'
   | 'editorTitle' | 'editorTitlePh' | 'editorCode' | 'editorCodePh'
   | 'editorPrompt' | 'editorPromptPh'
@@ -448,9 +447,6 @@ export const zh: Record<LocaleKey, string> = {
   editorCancel: '取消',
   editorSave: '保存',
   editorSavePending: '保存逻辑待接（P2）：本轮只做界面与交互',
-  editorTabBasic: '基本信息',
-  editorTabRecords: '执行记录',
-  editorRecordsPending: '执行记录待接（P2）',
   editorEnabled: '启用',
   editorEnabledOn: '任务已启用，到点会派发',
   editorEnabledOff: '任务已停用，定义保留但不派发',
@@ -1000,9 +996,6 @@ export const en: Record<LocaleKey, string> = {
   editorCancel: 'Cancel',
   editorSave: 'Save',
   editorSavePending: 'Save logic not wired yet (P2): this round is UI only',
-  editorTabBasic: 'Basic',
-  editorTabRecords: 'Run history',
-  editorRecordsPending: 'Run history pending (P2)',
   editorEnabled: 'Enabled',
   editorEnabledOn: 'Enabled — dispatches when due',
   editorEnabledOff: 'Disabled — kept but never dispatches',

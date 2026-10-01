@@ -12,16 +12,18 @@ import { applyStyle } from './ui/style'
 export const ED_STYLE_ID = 'dsh-task-dispatch-table-task-editor'
 
 export const TASK_EDITOR_CSS = `
-/* 遮罩：盖在整页之上（含 U11 预览 dock —— dock 是 z 1030 的占布局分栏，此处 1040 压住它）。 */
-.dsh-tdt-ed-overlay{position:fixed;inset:0;z-index:1040;display:flex;justify-content:flex-end;background:var(--tdt-mask,rgba(0,0,0,.45));}
-/* 面板：右侧贴边、上下顶满、**浮层**（页面本身不动、不被推窄）。 */
-.dsh-tdt-ed-panel{position:relative;display:flex;flex-direction:column;height:100%;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
+/* 分栏：**占布局的一列**（U21，2026-10-01）——与 U11 预览 dock（archive-session-css.ts 的
+   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，sticky + 100vh 让它在页面滚动时
+   保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
+   旧的遮罩层已废：用户要求「别盖住主窗口」。
+   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 560 = 浮层时代的弹窗宽度。 */
+.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,560px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。 */
 .dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;background:0 0;}
 .dsh-tdt-ed-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
-/* 头部左侧：启用开关 + 标题 一组（用户 2026-09-30：开关移到标题左边）。 */
+/* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
 .dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
@@ -91,7 +93,7 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
-/* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
+/* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。 */

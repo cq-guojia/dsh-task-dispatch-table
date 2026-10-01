@@ -367,9 +367,6 @@ window.__ModuleLoader__.load({
 			editorCancel: "取消",
 			editorSave: "保存",
 			editorSavePending: "保存逻辑待接（P2）：本轮只做界面与交互",
-			editorTabBasic: "基本信息",
-			editorTabRecords: "执行记录",
-			editorRecordsPending: "执行记录待接（P2）",
 			editorEnabled: "启用",
 			editorEnabledOn: "任务已启用，到点会派发",
 			editorEnabledOff: "任务已停用，定义保留但不派发",
@@ -906,9 +903,6 @@ window.__ModuleLoader__.load({
 			editorCancel: "Cancel",
 			editorSave: "Save",
 			editorSavePending: "Save logic not wired yet (P2): this round is UI only",
-			editorTabBasic: "Basic",
-			editorTabRecords: "Run history",
-			editorRecordsPending: "Run history pending (P2)",
 			editorEnabled: "Enabled",
 			editorEnabledOn: "Enabled — dispatches when due",
 			editorEnabledOff: "Disabled — kept but never dispatches",
@@ -2343,9 +2337,11 @@ body[data-ds-dark-theme]{
 		//#region src/client/archive-session-css.ts
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
-/* 弹窗让位预览 dock：右侧留出 --dsh-tdt-preview-w（缺省 0）⇒ 弹窗不被预览面遮盖，
+/* 弹窗让位右侧分栏：预览 dock（--dsh-tdt-preview-w）+ 编辑分栏（--dsh-tdt-editor-w，U21 起）
+   两条都算进来 ⇒ 右侧留出的宽度 = 两者之和（缺省各 0），弹窗不遮盖任何一条分栏；
+   两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
    与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
-.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:var(--dsh-tdt-preview-w,0px);z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--tdt-mask,rgba(0,0,0,.45));transition:right .12s var(--tdt-ease,ease);}
+.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--tdt-mask,rgba(0,0,0,.45));transition:right .12s var(--tdt-ease,ease);}
 /* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
    滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
@@ -6485,16 +6481,18 @@ body[data-ds-dark-theme]{
 		//#endregion
 		//#region src/client/task-editor-css.ts
 		const TASK_EDITOR_CSS = `
-/* 遮罩：盖在整页之上（含 U11 预览 dock —— dock 是 z 1030 的占布局分栏，此处 1040 压住它）。 */
-.dsh-tdt-ed-overlay{position:fixed;inset:0;z-index:1040;display:flex;justify-content:flex-end;background:var(--tdt-mask,rgba(0,0,0,.45));}
-/* 面板：右侧贴边、上下顶满、**浮层**（页面本身不动、不被推窄）。 */
-.dsh-tdt-ed-panel{position:relative;display:flex;flex-direction:column;height:100%;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
+/* 分栏：**占布局的一列**（U21，2026-10-01）——与 U11 预览 dock（archive-session-css.ts 的
+   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，sticky + 100vh 让它在页面滚动时
+   保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
+   旧的遮罩层已废：用户要求「别盖住主窗口」。
+   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 560 = 浮层时代的弹窗宽度。 */
+.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,560px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。 */
 .dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;background:0 0;}
 .dsh-tdt-ed-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
-/* 头部左侧：启用开关 + 标题 一组（用户 2026-09-30：开关移到标题左边）。 */
+/* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
 .dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
@@ -6564,7 +6562,7 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
-/* 关闭确认已改为拉栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
+/* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
 `;
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		function ensureTaskEditorStyle() {
@@ -39110,22 +39108,38 @@ body[data-ds-dark-theme]{
 				label: t("editorWeekdayLabel")
 			}));
 		}
-		/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
-		const WIDTH_KEY = "dsh-tdt-editor-width";
-		const WIDTH_DEFAULT = 560;
-		const WIDTH_MIN = 560;
-		function clampWidth(value) {
-			const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * .9));
-			return Math.min(Math.max(Math.round(value), WIDTH_MIN), max);
+		/** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
+		const EDITOR_WIDTH_KEY = "dsh-tdt-editor-width";
+		/** 最小宽度 = 浮层时代那个弹窗的宽度（用户 2026-10-01：保持现在的弹窗宽度作为最小宽度）。 */
+		const EDITOR_WIDTH_MIN = 560;
+		const EDITOR_WIDTH_DEFAULT = 560;
+		/**
+		* 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
+		* 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
+		* 下限保住 560，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
+		* @param value - 目标宽度。
+		* @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
+		*/
+		function clampEditorWidth(value, reserved = 0) {
+			const avail = window.innerWidth - 760 - reserved;
+			const max = Math.max(EDITOR_WIDTH_MIN, Math.min(Math.floor(window.innerWidth * .9), Math.floor(avail)));
+			return Math.min(Math.max(Math.round(value), EDITOR_WIDTH_MIN), max);
 		}
-		function readWidth() {
+		/** 读上次宽度（无效 / 越界一律回默认）。 */
+		function readEditorWidth(reserved = 0) {
 			try {
-				const raw = window.localStorage.getItem(WIDTH_KEY);
+				const raw = window.localStorage.getItem(EDITOR_WIDTH_KEY);
 				const value = raw === null ? NaN : Number(raw);
-				return Number.isFinite(value) ? clampWidth(value) : WIDTH_DEFAULT;
+				return Number.isFinite(value) ? clampEditorWidth(value, reserved) : EDITOR_WIDTH_DEFAULT;
 			} catch {
-				return WIDTH_DEFAULT;
+				return EDITOR_WIDTH_DEFAULT;
 			}
+		}
+		/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认 560）。 */
+		function writeEditorWidth(value) {
+			try {
+				window.localStorage.setItem(EDITOR_WIDTH_KEY, String(value));
+			} catch {}
 		}
 		/** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
 		const formatVersionTime = (iso) => formatDateTime(iso);
@@ -39177,10 +39191,10 @@ body[data-ds-dark-theme]{
 			},
 			"&.cm-focused": { outline: "none" }
 		}, { dark: true });
-		/** 关闭「新建任务」拉栏前的确认。
-		*  故意不用官方 Modal：其 className 只落到卡片 .dialog，无法抬升整层 .root(z1000)，
-		*  会被拉栏遮罩(z1040)压住、点不了。这里渲染在拉栏遮罩内（overlay 子层），
-		*  绝对定位盖住整个抽屉，天然在表单/编辑器之上，也随抽屉一起浮在宿主之上。 */
+		/** 关闭「新建 / 编辑任务」分栏前的确认。
+		*  故意不用官方 Modal：其 className 只落到卡片 .dialog，抬不到分栏这一层(z1040)，会被压住、点不了。
+		*  这里以**绝对定位**挂在分栏面板内（面板 = position:relative），盖住整条分栏，
+		*  天然在表单 / 全屏编辑器之上。（U21 撤掉全屏遮罩后，容器从遮罩改挂面板本体。） */
 		function ConfirmDiscard(props) {
 			return (0, react.createElement)("div", {
 				role: "alertdialog",
@@ -39573,9 +39587,7 @@ body[data-ds-dark-theme]{
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, currentTaskId } = props;
-			const [width, setWidth] = (0, react.useState)(readWidth);
-			const [tab, setTab] = (0, react.useState)("basic");
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, currentTaskId, width, onWidthChange, reserved } = props;
 			const [advancedOpen, setAdvancedOpen] = (0, react.useState)(false);
 			const [jsonOpen, setJsonOpen] = (0, react.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react.useState)(false);
@@ -39710,25 +39722,30 @@ body[data-ds-dark-theme]{
 					window.removeEventListener("keydown", onKey);
 				};
 			}, [requestClose, confirmDiscard]);
-			/** 左缘拖拽调宽：拖动期间只改本地 state，松手落 localStorage。 */
+			/**
+			* 左缘拖拽调宽（U21：与预览 dock 同一套手势）：拖动期间**只改 CSS 变量**
+			* `--dsh-tdt-editor-w`（不重渲染整页），松手才回调父 state + 落 localStorage。
+			*/
 			const startResize = (0, react.useCallback)((start) => {
 				const startX = start.clientX;
 				const startWidth = width;
+				const next = (clientX) => clampEditorWidth(startWidth + (startX - clientX), reserved);
 				const onMove = (event) => {
-					setWidth(clampWidth(startWidth + (startX - event.clientX)));
+					const root = document.getElementById("dsh-tdt-root");
+					if (root !== null) root.style.setProperty("--dsh-tdt-editor-w", `${next(event.clientX)}px`);
 				};
 				const onUp = (event) => {
 					window.removeEventListener("pointermove", onMove);
 					window.removeEventListener("pointerup", onUp);
-					const next = clampWidth(startWidth + (startX - event.clientX));
-					setWidth(next);
-					try {
-						window.localStorage.setItem(WIDTH_KEY, String(next));
-					} catch {}
+					onWidthChange(next(event.clientX));
 				};
 				window.addEventListener("pointermove", onMove);
 				window.addEventListener("pointerup", onUp);
-			}, [width]);
+			}, [
+				width,
+				reserved,
+				onWidthChange
+			]);
 			/** 周几的**单字**标签（方块上显示；`editorWeekdayShorts` 里以 `|` 分隔，两种语言各自给全）。 */
 			const weekdayShorts = (0, react.useMemo)(() => t("editorWeekdayShorts").split("|"), [t]);
 			const weekdayLabels = (0, react.useMemo)(() => ({
@@ -40388,7 +40405,7 @@ body[data-ds-dark-theme]{
 				size: "sm",
 				onClick: openPreviewPanel
 			}, t("editorPreview"))), (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorPreviewHint")))) : null));
-			const body = tab === "records" ? (0, react.createElement)("p", { className: "dsh-tdt-ed-hint" }, t("editorRecordsPending")) : (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)(PrefixedInput, {
+			const body = (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-ed-section" }, (0, react.createElement)(PrefixedInput, {
 				prefix: t("editorTitle"),
 				value: draft.title,
 				placeholder: t("editorTitlePh"),
@@ -40442,15 +40459,7 @@ body[data-ds-dark-theme]{
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0
-			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable dsh-tdt-switch" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
-				checked: draft.enabled,
-				onChange: handleToggleEnabled,
-				label: t("editorEnabled"),
-				title: draft.enabled ? t("editorEnabledOn") : t("editorEnabledOff")
-			}), (0, react.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2,rgba(128,128,128,.95))"
-			} }, draft.enabled ? t("editorEnabledStateOn") : t("editorEnabledStateOff"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react.createElement)(FloatingToast, {
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react.createElement)(FloatingToast, {
 				seq: enabledToast.seq,
 				tone: enabledToast.err ? "error" : "success",
 				below: true,
@@ -40458,23 +40467,15 @@ body[data-ds-dark-theme]{
 					setEnabledToast(null);
 				},
 				text: enabledToast.msg
-			}) : null, mode === "edit" ? (0, react.createElement)(Segmented, {
-				id: "dsh-tdt-ed-tabs",
-				value: tab,
-				size: "md",
-				variant: "default",
-				items: [{
-					value: "basic",
-					label: t("editorTabBasic")
-				}, {
-					value: "records",
-					label: t("editorTabRecords")
-				}],
-				onChange: (next) => {
-					setTab(next);
-				},
-				label: t("editorTabBasic")
-			}) : null, (0, react.createElement)(IconButton, {
+			}) : null, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable dsh-tdt-switch" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				checked: draft.enabled,
+				onChange: handleToggleEnabled,
+				label: t("editorEnabled"),
+				title: draft.enabled ? t("editorEnabledOn") : t("editorEnabledOff")
+			}), (0, react.createElement)("span", { style: {
+				fontSize: "var(--tdt-font-sm)",
+				color: "var(--tdt-fg-2,rgba(128,128,128,.95))"
+			} }, draft.enabled ? t("editorEnabledStateOn") : t("editorEnabledStateOff"))), (0, react.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 16 }),
@@ -40602,16 +40603,9 @@ body[data-ds-dark-theme]{
 					onSave?.(draft);
 				}
 			}) : null);
-			return (0, react.createElement)("div", {
-				className: "dsh-tdt-ed-overlay",
-				onPointerDown: (event) => {
-					if (event.target === event.currentTarget) requestClose();
-				}
-			}, (0, react.createElement)("div", {
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-panel",
-				style: { width: `${width}px` },
 				role: "dialog",
-				"aria-modal": true,
 				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
 			}, (0, react.createElement)("div", {
 				className: "dsh-tdt-ed-resizer",
@@ -40619,7 +40613,16 @@ body[data-ds-dark-theme]{
 				onPointerDown: (event) => {
 					startResize({ clientX: event.clientX });
 				}
-			}), panelInner), pickerOpen && pickerAnchorRef.current !== null ? (0, react_dom.createPortal)((0, react.createElement)("div", {
+			}), panelInner, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
+				t,
+				onStay: () => {
+					setConfirmDiscard(false);
+				},
+				onLeave: () => {
+					setConfirmDiscard(false);
+					onClose();
+				}
+			}) : null), pickerOpen && pickerAnchorRef.current !== null ? (0, react_dom.createPortal)((0, react.createElement)("div", {
 				ref: pickerPanelRef,
 				role: "dialog",
 				"aria-label": t("editorPickWorkspaceFile"),
@@ -40686,16 +40689,7 @@ body[data-ds-dark-theme]{
 					color: "var(--tdt-fg-2)",
 					fontSize: "var(--tdt-font-md)"
 				} }, t("editorPickerNoSession"));
-			})()), document.body) : null, confirmDiscard ? (0, react.createElement)(ConfirmDiscard, {
-				t,
-				onStay: () => {
-					setConfirmDiscard(false);
-				},
-				onLeave: () => {
-					setConfirmDiscard(false);
-					onClose();
-				}
-			}) : null);
+			})()), document.body) : null);
 		}
 		//#endregion
 		//#region src/client/query.ts
@@ -42700,10 +42694,15 @@ body[data-ds-dark-theme]{
 				return PREVIEW_DEFAULT;
 			}
 		}
-		/** 夹到允许区间（上限按当前视口算，故运行时求值）。 */
-		function clampPreviewWidth(value) {
-			const max = Math.max(PREVIEW_MIN, Math.floor(window.innerWidth * PREVIEW_MAX_RATIO));
-			return Math.min(Math.max(Math.round(value), PREVIEW_MIN), max);
+		/**
+		* 夹到允许区间（上限按当前视口算，故运行时求值）。
+		* @param value - 目标宽度。
+		* @param reserved - 右侧**另一条**分栏（编辑分栏）已占的宽度：两条分栏同时开着时也要给主面板
+		*   留够最小宽度（用户 2026-10-01 Q3；不足时下限优先）。
+		*/
+		function clampPreviewWidth(value, reserved = 0) {
+			const avail = Math.min(Math.floor(window.innerWidth * PREVIEW_MAX_RATIO), window.innerWidth - 760 - reserved);
+			return Math.min(Math.max(Math.round(value), PREVIEW_MIN), Math.max(PREVIEW_MIN, Math.floor(avail)));
 		}
 		/** 实例行的产出物（决策 32③写回的 outputs 列：JSON 数组，兼容逗号串）。 */
 		function parseOutputs(raw) {
@@ -42788,8 +42787,41 @@ body[data-ds-dark-theme]{
 			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
 			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
 			const [expanded, setExpanded] = (0, react.useState)(null);
+			const [editor, setEditor] = (0, react.useState)(null);
+			const [editorSaving, setEditorSaving] = (0, react.useState)(false);
+			const [editorError, setEditorError] = (0, react.useState)(null);
+			/** 编辑分栏宽度（真源在这里：另一个 dock 与全屏会话弹窗都要拿它算可用宽度）。 */
+			const [editorWidth, setEditorWidth] = (0, react.useState)(() => readEditorWidth());
 			const [preview, setPreview] = (0, react.useState)(null);
 			const [previewWidth, setPreviewWidth] = (0, react.useState)(() => readPreviewWidth());
+			const previewTaken = preview === null ? 0 : previewWidth;
+			const editorTaken = editor === null ? 0 : editorWidth;
+			/** 编辑分栏宽度变化回调（拖拽松手）：落 state + 持久化。 */
+			const changeEditorWidth = (0, react.useCallback)((next) => {
+				setEditorWidth(next);
+				writeEditorWidth(next);
+			}, []);
+			/**
+			* 两条分栏同开（或视口变化）时重新夹一遍宽度 ⇒ 主面板始终拿得到最小宽度 760
+			* （不足时按各自下限兜住，宁可主面板出横向滚动条也不许分栏被压塌）。
+			*/
+			(0, react.useEffect)(() => {
+				const reClamp = () => {
+					setEditorWidth((cur) => {
+						const next = clampEditorWidth(cur, previewTaken);
+						return next === cur ? cur : next;
+					});
+					setPreviewWidth((cur) => {
+						const next = clampPreviewWidth(cur, editorTaken);
+						return next === cur ? cur : next;
+					});
+				};
+				reClamp();
+				window.addEventListener("resize", reClamp);
+				return () => {
+					window.removeEventListener("resize", reClamp);
+				};
+			}, [previewTaken, editorTaken]);
 			const lastWorkspaceSessionId = (0, react.useRef)(null);
 			const canPreview = workspaceFiles !== null;
 			const openFile = (0, react.useCallback)((sessionId, path) => {
@@ -42808,14 +42840,14 @@ body[data-ds-dark-theme]{
 				const startX = start.clientX;
 				const startWidth = previewWidth;
 				const onMove = (event) => {
-					const next = clampPreviewWidth(startWidth - (event.clientX - startX));
+					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
 					const root = document.getElementById("dsh-tdt-root");
 					if (root !== null) root.style.setProperty("--dsh-tdt-preview-w", `${next}px`);
 				};
 				const onUp = (event) => {
 					window.removeEventListener("pointermove", onMove);
 					window.removeEventListener("pointerup", onUp);
-					const next = clampPreviewWidth(startWidth - (event.clientX - startX));
+					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
 					setPreviewWidth(next);
 					try {
 						window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next));
@@ -42823,11 +42855,8 @@ body[data-ds-dark-theme]{
 				};
 				window.addEventListener("pointermove", onMove);
 				window.addEventListener("pointerup", onUp);
-			}, [previewWidth]);
+			}, [previewWidth, editorTaken]);
 			const overview = useTaskOverview();
-			const [editor, setEditor] = (0, react.useState)(null);
-			const [editorSaving, setEditorSaving] = (0, react.useState)(false);
-			const [editorError, setEditorError] = (0, react.useState)(null);
 			/** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
 			const loadHistory = async (id) => {
 				try {
@@ -43158,6 +43187,7 @@ body[data-ds-dark-theme]{
 				className: "dsh-tdt-root",
 				style: {
 					["--dsh-tdt-preview-w"]: `${previewW}px`,
+					["--dsh-tdt-editor-w"]: `${editorTaken}px`,
 					display: "flex",
 					alignItems: "flex-start",
 					minHeight: "100%"
@@ -43389,6 +43419,9 @@ body[data-ds-dark-theme]{
 				t,
 				mode: editor.mode,
 				draft: editor.draft,
+				width: editorWidth,
+				onWidthChange: changeEditorWidth,
+				reserved: previewTaken,
 				onChange: (next) => {
 					setEditor({
 						...editor,

@@ -1,5 +1,12 @@
-// 浏览器侧：新建 / 编辑任务的**右侧贴边弹窗**（用户 2026-09-28 拍板形态：
-// 盖在页面上的浮层，不是把页面往左推的分栏——分栏是 U11 预览 dock 的行为）。
+// 浏览器侧：新建 / 编辑任务的**右侧分栏**（用户 2026-10-01 拍板形态，U21）：
+// 占布局的分栏（把主窗口往左推窄），不再是从右边浮出来盖住页面的浮层——
+// 与 U11 预览 dock 同一套形态（根容器的 flex 成员，`sticky + 100vh + flex:0 0 auto`）。
+//
+// 2026-10-01 U21：
+//   ① 头部「基本信息 / 执行记录」切换删除 ⇒ 编辑界面只管表单，不再展示执行记录
+//      （执行记录归主面板自己的 tab）。
+//   ② 「启用」开关从标题左边挪回头部**右侧、关闭 ✕ 的左边**（09-29 就是这个位置，
+//      09-30 挪到左边，本轮依用户要求复位；此后再动先看这里）。
 //
 // 2026-09-29 用户返工轮（本文件形状的全部来由）：
 //   ① 「启用」不再单占一行 ⇒ 移到头部右侧、关闭钮左边；选中色按用户要求改绿。
@@ -16,7 +23,7 @@
 // **不接保存逻辑**（P2）、**不接工作区/模型数据面**（P1，未接时下拉显示空态，不塞假数据）、
 // **不做版本历史**（P3）。
 
-import { createElement as h, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { formatDateTime, pad2 } from './format'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
@@ -923,24 +930,41 @@ function IntervalControls(props: {
 
 // ─────────────────────── 弹窗本体 ───────────────────────
 
-/** 宽度持久化（纯本地偏好；隐私模式也不崩）。 */
-const WIDTH_KEY = 'dsh-tdt-editor-width'
-const WIDTH_DEFAULT = 560
-const WIDTH_MIN = 560
+/** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
+const EDITOR_WIDTH_KEY = 'dsh-tdt-editor-width'
+/** 最小宽度 = 浮层时代那个弹窗的宽度（用户 2026-10-01：保持现在的弹窗宽度作为最小宽度）。 */
+const EDITOR_WIDTH_MIN = 560
+const EDITOR_WIDTH_DEFAULT = 560
+/** 主面板的最小宽度（≥1120 的列永远不被压到出横向滚动条）。与新一分栏同时开时也要保住。 */
+export const PAGE_MIN_WIDTH = 760
 
-function clampWidth(value: number): number {
-  const max = Math.max(WIDTH_MIN, Math.floor(window.innerWidth * 0.9))
-  return Math.min(Math.max(Math.round(value), WIDTH_MIN), max)
+/**
+ * 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
+ * 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
+ * 下限保住 560，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
+ * @param value - 目标宽度。
+ * @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
+ */
+export function clampEditorWidth(value: number, reserved = 0): number {
+  const avail = window.innerWidth - PAGE_MIN_WIDTH - reserved
+  const max = Math.max(EDITOR_WIDTH_MIN, Math.min(Math.floor(window.innerWidth * 0.9), Math.floor(avail)))
+  return Math.min(Math.max(Math.round(value), EDITOR_WIDTH_MIN), max)
 }
 
-function readWidth(): number {
+/** 读上次宽度（无效 / 越界一律回默认）。 */
+export function readEditorWidth(reserved = 0): number {
   try {
-    const raw = window.localStorage.getItem(WIDTH_KEY)
+    const raw = window.localStorage.getItem(EDITOR_WIDTH_KEY)
     const value = raw === null ? Number.NaN : Number(raw)
-    return Number.isFinite(value) ? clampWidth(value) : WIDTH_DEFAULT
+    return Number.isFinite(value) ? clampEditorWidth(value, reserved) : EDITOR_WIDTH_DEFAULT
   } catch {
-    return WIDTH_DEFAULT
+    return EDITOR_WIDTH_DEFAULT
   }
+}
+
+/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认 560）。 */
+export function writeEditorWidth(value: number): void {
+  try { window.localStorage.setItem(EDITOR_WIDTH_KEY, String(value)) } catch { /* 隐私模式忽略 */ }
 }
 
 /** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
@@ -978,10 +1002,10 @@ const promptEditorTheme = EditorView.theme({
   '&.cm-focused': { outline: 'none' },
 }, { dark: true })
 
-/** 关闭「新建任务」拉栏前的确认。
- *  故意不用官方 Modal：其 className 只落到卡片 .dialog，无法抬升整层 .root(z1000)，
- *  会被拉栏遮罩(z1040)压住、点不了。这里渲染在拉栏遮罩内（overlay 子层），
- *  绝对定位盖住整个抽屉，天然在表单/编辑器之上，也随抽屉一起浮在宿主之上。 */
+/** 关闭「新建 / 编辑任务」分栏前的确认。
+ *  故意不用官方 Modal：其 className 只落到卡片 .dialog，抬不到分栏这一层(z1040)，会被压住、点不了。
+ *  这里以**绝对定位**挂在分栏面板内（面板 = position:relative），盖住整条分栏，
+ *  天然在表单 / 全屏编辑器之上。（U21 撤掉全屏遮罩后，容器从遮罩改挂面板本体。） */
 function ConfirmDiscard(props: {
   t: T
   onStay: () => void
@@ -1274,14 +1298,21 @@ export function TaskEditorDrawer(props: {
    * 浏览某工作区必须有属于它的会话当锚点；没有锚点的工作区官方无浏览入口（不造假会话）。
    */
   workspaceAnchors?: Record<string, string>
+  /**
+   * 分栏宽度（受控，真源在 TaskPage）：侧栏是根容器的 flex 成员，宽度要能被 TaskPage
+   * 拿去给另一条侧栏（预览）与全屏会话弹窗算可用宽度，不能困在本组件里。
+   */
+  width: number
+  /** 宽度变化（拖拽**松手**时才回调，此时才落 state + localStorage）。 */
+  onWidthChange: (next: number) => void
+  /** 右侧**另一条**分栏（预览 dock）当前占掉的宽度；用于给主面板留够最小宽度（Q3）。 */
+  reserved: number
 }): ReactElement {
   const {
     t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors,
-    currentTaskId,
+    currentTaskId, width, onWidthChange, reserved,
   } = props
-  const [width, setWidth] = useState<number>(readWidth)
-  const [tab, setTab] = useState<'basic' | 'records'>('basic')
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
@@ -1425,21 +1456,26 @@ export function TaskEditorDrawer(props: {
     return () => { window.removeEventListener('keydown', onKey) }
   }, [requestClose, confirmDiscard])
 
-  /** 左缘拖拽调宽：拖动期间只改本地 state，松手落 localStorage。 */
+  /**
+   * 左缘拖拽调宽（U21：与预览 dock 同一套手势）：拖动期间**只改 CSS 变量**
+   * `--dsh-tdt-editor-w`（不重渲染整页），松手才回调父 state + 落 localStorage。
+   */
   const startResize = useCallback((start: { clientX: number }): void => {
     const startX = start.clientX
     const startWidth = width
-    const onMove = (event: PointerEvent): void => { setWidth(clampWidth(startWidth + (startX - event.clientX))) }
+    const next = (clientX: number): number => clampEditorWidth(startWidth + (startX - clientX), reserved)
+    const onMove = (event: PointerEvent): void => {
+      const root = document.getElementById('dsh-tdt-root')
+      if (root !== null) root.style.setProperty('--dsh-tdt-editor-w', `${next(event.clientX)}px`)
+    }
     const onUp = (event: PointerEvent): void => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      const next = clampWidth(startWidth + (startX - event.clientX))
-      setWidth(next)
-      try { window.localStorage.setItem(WIDTH_KEY, String(next)) } catch { /* 隐私模式忽略 */ }
+      onWidthChange(next(event.clientX))
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
-  }, [width])
+  }, [width, reserved, onWidthChange])
 
   /** 周几的**单字**标签（方块上显示；`editorWeekdayShorts` 里以 `|` 分隔，两种语言各自给全）。 */
   const weekdayShorts = useMemo(() => t('editorWeekdayShorts').split('|'), [t])
@@ -1977,9 +2013,9 @@ export function TaskEditorDrawer(props: {
     ),
   )
 
-  const body = tab === 'records'
-    ? h('p', { className: 'dsh-tdt-ed-hint' }, t('editorRecordsPending'))
-    : h('div', null,
+  // 正文恒为表单（U21：删掉「基本信息 / 执行记录」切换 ⇒ 编辑界面不展示执行记录，
+  // 执行记录归主面板自己的 tab；那条分支原本也只有一句占位文案）。
+  const body = h('div', null,
         // 任务名称 / 编号：标签**塞进框里**（左半段带底 + 分隔线），不再单独占一行。
         h('div', { className: 'dsh-tdt-ed-section' },
           h(PrefixedInput, {
@@ -2018,8 +2054,8 @@ export function TaskEditorDrawer(props: {
         advancedBlock,
       )
 
-  // 全屏编辑 = 把整个「新建任务」拉栏的内容换成编辑器（同样的边、同样的宽度、随左缘拖拽一起变宽）；
-  // 关闭编辑器即把后面的表单露出来。故编辑器与表单在拉栏内二选一，而不是再做一个居中弹窗。
+  // 全屏编辑 = 把整条分栏的内容换成编辑器（同样的边、同样的宽度、随左缘拖拽一起变宽）；
+  // 关闭编辑器即把后面的表单露出来。故编辑器与表单在分栏内二选一，而不是再做一个居中弹窗。
   const panelInner = editorOpen
     ? h(PromptEditorModal, {
       t,
@@ -2039,19 +2075,10 @@ export function TaskEditorDrawer(props: {
         onClose: () => { setPreviewOpen(false) },
       })
       : h('div', { style: { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0 } },
-      // 头部：左侧 = 启用开关（标题左边，**独立操作**：编辑态点击即写回+Toast，不走保存）+ 联动文字 + 标题。
+      // 头部：左 = 标题；右 = 启用开关（**独立操作**：编辑态点击即写回+Toast，不走保存）
+      //       → 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴关闭钮左边）。
       h('div', { className: 'dsh-tdt-ed-header' },
         h('div', { className: 'dsh-tdt-ed-headleft' },
-          h('span', { className: 'dsh-tdt-ed-enable dsh-tdt-switch' },
-            h(Switch, {
-              checked: draft.enabled,
-              onChange: handleToggleEnabled,
-              label: t('editorEnabled'),
-              title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
-            }),
-            h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
-              draft.enabled ? t('editorEnabledStateOn') : t('editorEnabledStateOff')),
-          ),
           h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
         ),
         h('div', { className: 'dsh-tdt-ed-headactions' },
@@ -2065,20 +2092,17 @@ export function TaskEditorDrawer(props: {
               text: enabledToast.msg,
             })
             : null,
-          mode === 'edit'
-            ? h(Segmented, {
-              id: 'dsh-tdt-ed-tabs',
-              value: tab,
-              size: 'md',
-              variant: 'default',
-              items: [
-                { value: 'basic', label: t('editorTabBasic') },
-                { value: 'records', label: t('editorTabRecords') },
-              ],
-              onChange: (next: string) => { setTab(next as 'basic' | 'records') },
-              label: t('editorTabBasic'),
-            })
-            : null,
+          // 启用开关 + 联动状态文字：**紧挨关闭钮左边**（U21）。
+          h('span', { className: 'dsh-tdt-ed-enable dsh-tdt-switch' },
+            h(Switch, {
+              checked: draft.enabled,
+              onChange: handleToggleEnabled,
+              label: t('editorEnabled'),
+              title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
+            }),
+            h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
+              draft.enabled ? t('editorEnabledStateOn') : t('editorEnabledStateOff')),
+          ),
           h(IconButton, {
             variant: 'plain',
             size: 'md',
@@ -2209,19 +2233,32 @@ export function TaskEditorDrawer(props: {
         : null,
     )
 
-  return h('div', {
-    className: 'dsh-tdt-ed-overlay',
-    onPointerDown: (event: { target: unknown; currentTarget: unknown }) => {
-      if (event.target === event.currentTarget) requestClose()
+  // U21：不再有遮罩层 —— 分栏是根容器（`#dsh-tdt-root`）的布局成员，主窗口被推窄而不是被盖住，
+  // 因此关闭路径只有 ✕ / Esc / 取消钮三条（原来那条「点遮罩空白关闭」随遮罩一起取消）。
+  return h(Fragment, null,
+    h('div', {
+      className: 'dsh-tdt-ed-panel',
+      // 非模态：主窗口此刻仍可见可点（这话原来写 aria-modal=true 就不成立了）。
+      role: 'dialog',
+      'aria-label': mode === 'create' ? t('editorNew') : t('editorEdit'),
     },
-  },
-    h('div', { className: 'dsh-tdt-ed-panel', style: { width: `${width}px` }, role: 'dialog', 'aria-modal': true, 'aria-label': mode === 'create' ? t('editorNew') : t('editorEdit') },
       h('div', {
         className: 'dsh-tdt-ed-resizer',
         title: t('previewResize'),
         onPointerDown: (event: { clientX: number }) => { startResize({ clientX: event.clientX }) },
       }),
       panelInner,
+      // 关闭确认（分栏内联层，绝对定位盖住整条分栏）：改过才出现；
+      // 「继续编辑」⇒ 留在原处，「放弃更改」⇒ 真正关分栏。
+      // 原来它挂在遮罩层里（遮罩是全屏 fixed，天然 covers-all）；撤遮罩后改挂面板自身
+      // —— 面板已是 position:relative，覆盖范围就是分栏本体。
+      confirmDiscard
+        ? h(ConfirmDiscard, {
+          t,
+          onStay: () => { setConfirmDiscard(false) },
+          onLeave: () => { setConfirmDiscard(false); onClose() },
+        })
+        : null,
     ),
     // 选择工作区文件：**锚定浮层**（用户 2026-09-29：不要全屏弹窗，像选日期那样在按钮旁出浮窗，
     // 且不用那么高）。portal 到 body 躲抽屉层叠；面板在方按钮**左侧**展开、**下缘与按钮下缘齐平**；
@@ -2281,15 +2318,6 @@ export function TaskEditorDrawer(props: {
               : h('div', { style: { flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center', color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-md)' } }, t('editorPickerNoSession'))
           })(),
         ), document.body)
-      : null,
-    // 关闭确认（拉栏内联层，盖在表单/编辑器之上、且随抽屉一起在宿主之上）：改过才出现；
-    // 点遮罩/离开 ⇒ 真正关抽屉，继续编辑 ⇒ 留在原处。
-    confirmDiscard
-      ? h(ConfirmDiscard, {
-        t,
-        onStay: () => { setConfirmDiscard(false) },
-        onLeave: () => { setConfirmDiscard(false); onClose() },
-      })
       : null,
   )
 }
