@@ -1177,12 +1177,13 @@ function TaskExpandPanel(props: {
       }),
       h('span', { style: { flex: '1 1 auto' } }),
       // 右下按钮区顺序（用户 2026-10-02）：删除在编辑**左边**。
+      // 高度跟同排三滑块一样走 md(28)（用户 2026-10-01：此前 sm=24 比滑块矮 4px）。
       h(Button, {
-        variant: 'outline', size: 'sm', className: 'dsh-tdt-btn--danger-ink',
+        variant: 'outline', size: 'md', className: 'dsh-tdt-btn--danger-ink',
         onClick: () => { setConfirmDelete(true) },
       }, t('cardDelete')),
       h(Button, {
-        variant: 'outline', size: 'sm', icon: h(IconEditOutlineRegular, { size: 14 }),
+        variant: 'outline', size: 'md', icon: h(IconEditOutlineRegular, { size: 14 }),
         onClick: () => { onEdit(row.id) },
       }, t('editorEdit')),
     ),

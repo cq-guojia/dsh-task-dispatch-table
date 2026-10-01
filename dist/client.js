@@ -41989,14 +41989,14 @@ body[data-ds-dark-theme]{
 				onChange: setTab
 			}), (0, react.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react.createElement)(Button$2, {
 				variant: "outline",
-				size: "sm",
+				size: "md",
 				className: "dsh-tdt-btn--danger-ink",
 				onClick: () => {
 					setConfirmDelete(true);
 				}
 			}, t("cardDelete")), (0, react.createElement)(Button$2, {
 				variant: "outline",
-				size: "sm",
+				size: "md",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
 				onClick: () => {
 					onEdit(row.id);
