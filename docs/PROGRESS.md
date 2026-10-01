@@ -13,7 +13,7 @@
 
 ### 1.1 UI 基础层统一（样式专项）—— 🚧 **进行中**（P0 地基 ✅ / P1a 分段控件 ✅ / P1b 分段归一 ✅）
 
-2026-10-01 用户发话推进：① 宿主源码核实 ✅（宿主 0.2.0-rc.2 解包五包）；② **P0 地基 ✅**（`ui/tokens.ts` + `ui/style.ts` + `ui/index.ts`，界面零变化）；③ **P1a 分段控件 ✅**（`ui/Segmented.tsx` + `ui/controls-css.ts`；主面板三 tab / 列表筛选 tabs / 卡片三面板三处自绘已收敛为共用组件）。**P1b ✅**（编辑器官方覆写 ×3 / 星期多选 / 预览两态 已迁统一 Segmented，仅版本开关按用户拍板保留单段 toggle，不纳入分段）。**下一步 = P2 按钮统一**（15+ 套内联样式收敛到 `Button.tsx` + `controls-css.ts`）。
+2026-10-01 用户发话推进：① 宿主源码核实 ✅（宿主 0.2.0-rc.2 解包五包）；② **P0 地基 ✅**（`ui/tokens.ts` + `ui/style.ts` + `ui/index.ts`，界面零变化）；③ **P1a 分段控件 ✅**（`ui/Segmented.tsx` + `ui/controls-css.ts`；主面板三 tab / 列表筛选 tabs / 卡片三面板三处自绘已收敛为共用组件）。**P1b ✅**（编辑器官方覆写 ×3 / 星期多选 / 预览两态 已迁统一 Segmented，仅版本开关按用户拍板保留单段 toggle，不纳入分段）。**P2 按钮/图标钮 ✅**（`ui/Button.tsx`：primary/outline/ghost/danger × sm/md + IconButton；主界面 / 编辑器 / 文件浏览器 / 文件预览 / 会话页 / 日历已迁，删 6+ 套样式常量）。**P3 输入 ✅**（`ui/Field.tsx`：Input / PrefixedInput / **NumberInput**；两处原生 `<input type=number>` 已重写为显式 ±，前缀输入与列表过滤迁入；两处原生 `<select>` 已收编到 `SelectField`）。**P4 部分 ✅**（开关 success 绿覆盖上提基础层 `.dsh-tdt-switch`；修 3 处死变量）。**下一步 = P4 日期/时间**（`DateField`/`TimeField` 搬 `ui/DateTime.tsx` 皮肤化）→ P5 容器/浮层 → P6 收尾。
 
 - 已起草（未拍板、未落码）：规范 [`design/ui-foundation.md`](design/ui-foundation.md)（分层 / token / 控件皮肤 / 交付 / 分期 / 验收 / 边界）、手册 [`design/ui-style-guide.md`](design/ui-style-guide.md)（决策树 / 唯一实现表 / 允许禁止 / 自检）。
 - 2026-10-01 已**去过程化**：原设计文档里的「要解决的问题 / 目标 / 待拍板 / 待核实 / 文档落位 / 下一步」全部移入 [worklog/ui-foundation.md](worklog/ui-foundation.md) §六，设计文档只留规范。
@@ -70,7 +70,7 @@
 
 > 文档体系整理已于 2026-10-01 结案（见 [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md)）。以下为在办事项。
 
-1. **UI 基础层统一（样式专项）** 🚧 进行中 —— 核实 ✅、P0 地基 ✅、P1a 分段控件三处 ✅、**P1b 分段归一 ✅**（全站分段控件统一到 `Segmented`：编辑器官方覆写 ×3 / 星期多选 / 预览两态 已迁，旧 `dsh-tdt-ed-histtoggle` 仅版本开关保留、`dsh-tdt-sv-seg` 已删；冒烟已钉）。**下一步 P2**：按钮统一（15+ 套内联样式收敛到 `Button.tsx` + `controls-css.ts`），之后 P3 输入下拉 / P4 开关日期时间浮层 / P5 收尾。
+1. **UI 基础层统一（样式专项）** 🚧 进行中 —— 核实 ✅、P0 地基 ✅、P1a 分段控件三处 ✅、**P1b 分段归一 ✅**（全站分段控件统一到 `Segmented`：编辑器官方覆写 ×3 / 星期多选 / 预览两态 已迁，旧 `dsh-tdt-ed-histtoggle` 仅版本开关保留、`dsh-tdt-sv-seg` 已删；冒烟已钉）。**P2 ✅**（`ui/Button.tsx`，全站按钮/图标钮迁移，冒烟 +3 断言）。**P3 ✅**（`ui/Field.tsx`：Input/PrefixedInput/NumberInput；原生 number / select 清零）。**P4 进行中**：开关覆盖已合并（`.dsh-tdt-switch`）、3 处死变量已修；**下一步 = 日期/时间搬 `ui/DateTime.tsx`**，之后 P5 容器浮层 / P6 收尾。
 2. **真机验证**（用户装 `dist/` 实测）：三面板 / 主界面 / 新增编辑 三条，清单见 §1.2 表。
 3. **小收尾（代码侧，属开发会话）**：源码两处注释与实现不符 —— `src/client/index.ts:205` 与 `src/client/task-list.tsx:1406` 仍写着抬头/右侧有「刷新」按钮（实际已移除），`manualAt` 为死代码。
 
