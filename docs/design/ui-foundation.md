@@ -186,7 +186,7 @@ body[data-ds-dark-theme]{
 ### 5.1 分段控件
 
 ```css
-/* 基础：结构 + 交互 + 两档高度，全部唯一（✅ P1 已落码，真实实现见 src/client/ui/controls-css.ts） */
+/* 基础：结构 + 交互 + 三档高度，全部唯一（✅ P1 已落码，真实实现见 src/client/ui/controls-css.ts） */
 .dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;
   border-radius:var(--tdt-radius-sm);background:var(--seg-track);border:1px solid var(--tdt-border);}
 .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;
@@ -194,6 +194,7 @@ body[data-ds-dark-theme]{
   color:var(--tdt-fg-2);background:transparent;cursor:pointer;}
 .dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--tdt-shadow-raised);color:var(--tdt-fg);font-weight:600;}
 .dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
+.dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-lg) - 6px);}
 
 /* 变体：**只覆盖两个颜色变量** —— 这正是用户说的「颜色重载」 */
 .dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);}
@@ -207,10 +208,10 @@ body[data-ds-dark-theme]{
 | 主面板「任务配置 / 执行记录 / 调试」（截图 1） | `index.ts` 自绘 30px 高 | ✅ P1：`<Segmented size="md" variant="default">` |
 | 任务列表「全部 / 已开启 / 已关闭 / 异常」（截图 2，带角标） | `task-list.tsx` 自绘 32px 高 | ✅ P1：`<Segmented size="md" variant="default" badge>` |
 | 卡片展开「基础信息 / 执行记录 / 日志」（截图 3） | `task-list.tsx` 自绘 28px（底色却与上面不同） | ✅ P1：`<Segmented size="md" variant="inset">` |
-| 编辑器「编辑 / 预览」「单次 / 周期 / 间隔」「基础信息 / 执行记录」 | 官方件 + `--seg` 覆写（指示器算式脆弱） | 同一个 `TdtSegmented`（不再覆写官方指示器） |
-| 星期选择（多选，官方不支持） | `editor-fields.tsx:606-658` 自绘 | `TdtSegmented multiple` |
-| 版本开关（单段） | `task-editor-css.ts:54-57` 自绘 | `TdtSegmented variant="raised"`（或 `TdtToggle`） |
-| 预览「渲染 / 源码」 | `archive-session-css.ts:237-241` 自绘 + 深色特判 | `TdtSegmented size="sm" variant="default"`（不再需要深色特判） |
+| 编辑器「编辑 / 预览」「单次 / 周期 / 间隔」「基础信息 / 执行记录」 | 官方件 + `--seg` 覆写（指示器算式脆弱） | ✅ P1b：同一个 `Segmented`（不再覆写官方指示器） |
+| 星期选择（多选，官方不支持） | `editor-fields.tsx` 自绘 | ✅ P1b：同一个 `Segmented multiple` |
+| 版本开关（单段） | `task-editor-css.ts:54-57` 自绘 | `Segmented`（版本开关当前仍是单段 toggle，保持现状，未纳入分段） |
+| 预览「渲染 / 源码」 | `archive-session-css.ts:237-241` 自绘 + 深色特判 | `Segmented size="sm" variant="default"`（不再需要深色特判；P1b 未做，留待后续） |
 
 ### 5.2 其它控件
 
