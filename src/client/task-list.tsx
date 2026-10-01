@@ -28,7 +28,7 @@ import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
 // 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { pinMsFor, sortRows } from '../task-sort.js'
-import { DateField, MarqueeText, calendarLabelsOf } from './editor-fields'
+import { DateField, MarqueeText, SelectField, calendarLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
 import { Button, IconButton, Input as TdtInput, Segmented } from './ui'
@@ -720,10 +720,6 @@ const panelBarStyle: Record<string, string | number> = {
   marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed ${C.border}`,
   display: 'flex', alignItems: 'center', gap: '8px',
 }
-const filterSelectStyle: Record<string, string | number> = {
-  height: `${CONTROL_H}px`, borderRadius: '6px', border: `1px solid ${C.border}`,
-  background: C.layer1, color: C.text, fontFamily: 'inherit', fontSize: '12px', padding: '0 6px',
-}
 const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: '12px' }
 const miniCellStyle: Record<string, string | number> = {
   padding: '4px 8px', borderBottom: `1px solid ${C.border}`, textAlign: 'left',
@@ -962,14 +958,20 @@ function TaskExpandPanel(props: {
   const renderRecords = (): ReturnType<typeof h> => h('div', null,
     // 过滤行在滚动区**外**（用户 2026-10-02：过滤框和表头不滚，只滚内容区）。
     h('div', { style: filterRowStyle },
-      h('select', {
-        value: recStatus, style: filterSelectStyle, 'aria-label': t('colStatus'),
-        onChange: (event: { target: { value: string } }) => { setRecStatus(event.target.value) },
-      },
-        h('option', { value: 'all' }, tt('filterAll')),
-        // 三档（用户拍板）：执行中 / 失败 / 成功 —— 名字复用状态短名单源，七态在查询层归桶。
-        ['running', 'failed', 'succeeded'].map(bucketId => h('option', { key: bucketId, value: bucketId }, statusTextOf(bucketId, t))),
-      ),
+      h(SelectField, {
+        value: recStatus,
+        options: [
+          { value: 'all', label: tt('filterAll') },
+          // 三档（用户拍板）：执行中 / 失败 / 成功 —— 名字复用状态短名单源，七态在查询层归桶。
+          ...['running', 'failed', 'succeeded'].map(bucketId => ({ value: bucketId, label: statusTextOf(bucketId, t) })),
+        ],
+        onChange: (next: string) => { setRecStatus(next) },
+        placeholder: tt('filterAll'),
+        emptyLabel: t('editorNoOptions'),
+        ariaLabel: t('colStatus'),
+        size: 'sm',
+        width: 100,
+      }),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardFrom'),
         h(DateField, { value: recFrom, onChange: (next: string) => { setRecFrom(next) }, placeholder: t('cardFrom'), ariaLabel: t('cardFrom'), labels: calendarLabels, width: 120 }),
@@ -1128,12 +1130,16 @@ function TaskExpandPanel(props: {
       ),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardLogLimit'),
-        h('select', {
-          value: String(logLimit), style: filterSelectStyle,
-          onChange: (event: { target: { value: string } }) => { setLogLimit(Number(event.target.value)) },
-        },
-          [50, 100, 200].map(n => h('option', { key: n, value: String(n) }, String(n))),
-        ),
+        h(SelectField, {
+          value: String(logLimit),
+          options: [50, 100, 200].map(n => ({ value: String(n), label: String(n) })),
+          onChange: (next: string) => { setLogLimit(Number(next)) },
+          placeholder: String(logLimit),
+          emptyLabel: t('editorNoOptions'),
+          ariaLabel: t('cardLogLimit'),
+          size: 'sm',
+          width: 70,
+        }),
       ),
       logLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       logError !== null ? h('span', { style: { fontSize: '11px', color: C.danger } }, `${t('cardLoadFailed')}：${logError}`) : null,

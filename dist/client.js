@@ -41513,16 +41513,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			alignItems: "center",
 			gap: "8px"
 		};
-		const filterSelectStyle = {
-			height: `${CONTROL_H}px`,
-			borderRadius: "6px",
-			border: `1px solid ${C$1.border}`,
-			background: C$1.layer1,
-			color: C$1.text,
-			fontFamily: "inherit",
-			fontSize: "12px",
-			padding: "0 6px"
-		};
 		const miniTableStyle = {
 			width: "100%",
 			borderCollapse: "collapse",
@@ -41827,21 +41817,28 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead));
-			const renderRecords = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)("select", {
+			const renderRecords = () => (0, react.createElement)("div", null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
-				style: filterSelectStyle,
-				"aria-label": t("colStatus"),
-				onChange: (event) => {
-					setRecStatus(event.target.value);
-				}
-			}, (0, react.createElement)("option", { value: "all" }, tt("filterAll")), [
-				"running",
-				"failed",
-				"succeeded"
-			].map((bucketId) => (0, react.createElement)("option", {
-				key: bucketId,
-				value: bucketId
-			}, statusTextOf(bucketId, t)))), (0, react.createElement)("label", { style: {
+				options: [{
+					value: "all",
+					label: tt("filterAll")
+				}, ...[
+					"running",
+					"failed",
+					"succeeded"
+				].map((bucketId) => ({
+					value: bucketId,
+					label: statusTextOf(bucketId, t)
+				}))],
+				onChange: (next) => {
+					setRecStatus(next);
+				},
+				placeholder: tt("filterAll"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("colStatus"),
+				size: "sm",
+				width: 100
+			}), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px",
@@ -42025,20 +42022,25 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				gap: "4px",
 				fontSize: "11px",
 				color: C$1.textFaint
-			} }, t("cardLogLimit"), (0, react.createElement)("select", {
+			} }, t("cardLogLimit"), (0, react.createElement)(SelectField, {
 				value: String(logLimit),
-				style: filterSelectStyle,
-				onChange: (event) => {
-					setLogLimit(Number(event.target.value));
-				}
-			}, [
-				50,
-				100,
-				200
-			].map((n) => (0, react.createElement)("option", {
-				key: n,
-				value: String(n)
-			}, String(n))))), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
+				options: [
+					50,
+					100,
+					200
+				].map((n) => ({
+					value: String(n),
+					label: String(n)
+				})),
+				onChange: (next) => {
+					setLogLimit(Number(next));
+				},
+				placeholder: String(logLimit),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("cardLogLimit"),
+				size: "sm",
+				width: 70
+			})), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "11px",
 				color: C$1.danger
 			} }, `${t("cardLoadFailed")}：${logError}`) : null), logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: panelScrollStyle }, (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: C$1.textFaint } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
