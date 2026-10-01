@@ -45,6 +45,15 @@ export const SEGMENTED_CSS = `
 .dsh-tdt-seg--block{display:flex;width:100%;}
 .dsh-tdt-seg--block .dsh-tdt-seg__item{flex:1 1 auto;justify-content:center;}
 
+/* weekday：星期多选方块（任务新增 / 编辑页）。基础插件的特殊化定制（用户 2026-10-01 明确要求：
+   原 WeekdayPicker 即「蓝底 + 近似方形」，统一到 Segmented 后由这一修饰类补回两处差异）：
+   - 每格做成正方形（宽 = 段高）；
+   - 选中态用品牌蓝（--tdt-business）、反白字，轨道用 hover 灰（与原自绘轨道一致）。
+   皮肤集中在此、不内联；调用点只挂 .dsh-tdt-seg--weekday 一个修饰类，符合「皮肤只在 controls-css」的规矩。 */
+.dsh-tdt-seg--weekday{--seg-track:var(--tdt-hover);}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-md) - 6px);padding:0;justify-content:center;}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item[aria-pressed='true']{background:var(--tdt-business);color:var(--tdt-fg-inverse);box-shadow:var(--tdt-shadow-raised);}
+
 @media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
 `
 

@@ -4522,6 +4522,15 @@ body[data-ds-dark-theme]{
 .dsh-tdt-seg--block{display:flex;width:100%;}
 .dsh-tdt-seg--block .dsh-tdt-seg__item{flex:1 1 auto;justify-content:center;}
 
+/* weekday：星期多选方块（任务新增 / 编辑页）。基础插件的特殊化定制（用户 2026-10-01 明确要求：
+   原 WeekdayPicker 即「蓝底 + 近似方形」，统一到 Segmented 后由这一修饰类补回两处差异）：
+   - 每格做成正方形（宽 = 段高）；
+   - 选中态用品牌蓝（--tdt-business）、反白字，轨道用 hover 灰（与原自绘轨道一致）。
+   皮肤集中在此、不内联；调用点只挂 .dsh-tdt-seg--weekday 一个修饰类，符合「皮肤只在 controls-css」的规矩。 */
+.dsh-tdt-seg--weekday{--seg-track:var(--tdt-hover);}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-md) - 6px);padding:0;justify-content:center;}
+.dsh-tdt-seg--weekday .dsh-tdt-seg__item[aria-pressed='true']{background:var(--tdt-business);color:var(--tdt-fg-inverse);box-shadow:var(--tdt-shadow-raised);}
+
 @media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
 `;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
@@ -5180,10 +5189,12 @@ body[data-ds-dark-theme]{
 			}, props.labels.confirm))), document.body) : null);
 		}
 		/**
-		* 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的统一分段控件**：
-		* 直接走 `Segmented`（multiple 模式），所以选中态、轨道、明暗、焦点环与全站完全一致，
-		* 不再自绘一套（2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
-		* 一个都不选 = 每天（间隔档语义）。
+		* 周几多选 = 全站统一分段控件 `Segmented`（multiple 模式），不再自绘一套
+		* （2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
+		* 唯二差异走「特殊化变体」`.dsh-tdt-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
+		*   - 每格正方形（宽 = 段高）；
+		*   - 选中态品牌蓝 + 反白字（原自绘即蓝底）。
+		* 皮肤集中在 `controls-css.ts`、不内联，调用点只挂一个修饰类。一个都不选 = 每天（间隔档语义）。
 		*/
 		function WeekdayPicker(props) {
 			const items = (0, react.useMemo)(() => props.labels.shorts.map((short, index) => ({
@@ -5205,7 +5216,7 @@ body[data-ds-dark-theme]{
 				items,
 				size: "md",
 				variant: "inset",
-				block: true,
+				className: "dsh-tdt-seg--weekday",
 				label: props.label,
 				disabled: props.disabled,
 				onChange: (next) => {

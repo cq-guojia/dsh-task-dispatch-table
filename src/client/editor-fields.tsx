@@ -573,10 +573,12 @@ export interface WeekdayLabels {
 }
 
 /**
- * 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的统一分段控件**：
- * 直接走 `Segmented`（multiple 模式），所以选中态、轨道、明暗、焦点环与全站完全一致，
- * 不再自绘一套（2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
- * 一个都不选 = 每天（间隔档语义）。
+ * 周几多选 = 全站统一分段控件 `Segmented`（multiple 模式），不再自绘一套
+ * （2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
+ * 唯二差异走「特殊化变体」`.dsh-tdt-seg--weekday`（用户 2026-10-01 明确要求，复刻原 WeekdayPicker 观感）：
+ *   - 每格正方形（宽 = 段高）；
+ *   - 选中态品牌蓝 + 反白字（原自绘即蓝底）。
+ * 皮肤集中在 `controls-css.ts`、不内联，调用点只挂一个修饰类。一个都不选 = 每天（间隔档语义）。
  */
 export function WeekdayPicker(props: {
   value: number[]
@@ -594,14 +596,15 @@ export function WeekdayPicker(props: {
     props.label === undefined
       ? null
       : h('span', { style: { flex: 'none', fontSize: '13px', color: C.text } }, props.label),
-    // 多选；放在间隔卡里 ⇒ variant="inset"；七段等分 ⇒ block。选中态 / 轨道 / 明暗全站一致。
+    // 多选；放在间隔卡里 ⇒ variant="inset"；星期多选做成「正方形 + 蓝选中」的特殊化变体
+    // （用户 2026-10-01：原 WeekdayPicker 即蓝底方块，统一到 Segmented 后由 .dsh-tdt-seg--weekday 补回）。
     h(Segmented, {
       multiple: true,
       value: props.value.map(String),
       items,
       size: 'md',
       variant: 'inset',
-      block: true,
+      className: 'dsh-tdt-seg--weekday',
       label: props.label,
       disabled: props.disabled,
       onChange: (next: string[]) => { props.onChange(next.map(Number).sort((a, b) => a - b)) },

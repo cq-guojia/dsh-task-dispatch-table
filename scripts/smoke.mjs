@@ -1630,6 +1630,10 @@ console.log('\n[14] runtime-index')
       p1bJs.includes('dsh-tdt-ed-schedule-interval-panel') && p1bJs.includes('WeekdayPicker'))
     check('官方分段控件薄封装已删（编辑器不再用官方 SegmentedControl 作分段；死 CSS 也清掉）',
       !p1bJs.includes('dsh-tdt-ed-seg{padding:3px}') && !p1bJs.includes(".dsh-tdt-ed-seg>span[aria-hidden"))
+    check('周几多选特殊化变体：正方形 + 蓝选中（用户 2026-10-01 定制，复刻原 WeekdayPicker 观感）',
+      p1bJs.includes('dsh-tdt-seg--weekday')
+      && p1bJs.includes('.dsh-tdt-seg--weekday .dsh-tdt-seg__item{width:calc(var(--tdt-control-h-md) - 6px)')
+      && p1bJs.includes('background:var(--tdt-business);color:var(--tdt-fg-inverse)'))
   }
 
   store.close()
