@@ -35,12 +35,12 @@ export function formatShortStamp(iso: string): string {
   return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
-/** 计划执行列（用户 2026-10-02 第四轮）：`YYMMDD HH:mm`（两位年 + 两位月日 + 时分）。 */
+/** 计划执行列（用户 2026-10-02：形如 `26-09-30 15:10`）：`YY-MM-DD HH:mm`（两位年 + 两位月日 + 时分）。 */
 export function formatPlanStamp(iso: string): string {
   const ms = Date.parse(iso)
   if (Number.isNaN(ms)) return '-'
   const d = new Date(ms)
-  return `${pad2(d.getFullYear() % 100)}${pad2(d.getMonth() + 1)}${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  return `${pad2(d.getFullYear() % 100)}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
 /** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */

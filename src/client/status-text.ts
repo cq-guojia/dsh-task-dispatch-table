@@ -24,7 +24,7 @@ const STATUS_LABEL_KEYS: Record<InstanceStatusName, LocaleKey> = {
   unknown: 'statusUnknown',
 }
 
-/** 状态 → 通用短名（zh：待执行 / 已派发 / 执行中 / 成功 / 失败 / 未执行 / 未知）。 */
+/** 状态 → 通用短名（zh 统一**两字**：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知，用户 2026-10-02）。 */
 export function statusTextOf(status: string, t: Translate): string {
   const key = (STATUS_LABEL_KEYS as Record<string, LocaleKey>)[status]
   // 认不出的状态（未来新增 / 脏数据）⇒ 原样显示真值，不编造名字。

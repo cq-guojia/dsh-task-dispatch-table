@@ -15,8 +15,9 @@
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { formatClock, formatDateTime, formatDuration, formatDurationHms, formatPlanStamp, formatTokenCount, pad2 } from './format'
 import {
-  FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
-  IconEditOutlineRegular, IconNewChatOutlineRegular, IconSearchOutlineRegular,
+  FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
+  IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconLoadingOutlineRegular,
+  IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
@@ -114,6 +115,15 @@ const TASK_LIST_CSS = [
   '.dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }',
   // 尊重「减少动效」偏好：不做动画，三个方块常亮。
   '@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }',
+  // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
+  '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
+  // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
+  '.dsh-tdt-rec-ic-ok { color: var(--tdt-success); }',
+  '.dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }',
+  '.dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }',
+  '@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }',
+  '.dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }',
+  '@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }',
 ].join('\n')
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。 */
@@ -698,7 +708,9 @@ const panelBarStyle: Record<string, string | number> = {
 }
 const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--tdt-font-sm)' }
 const miniCellStyle: Record<string, string | number> = {
-  padding: '4px 8px', borderBottom: `1px solid var(--tdt-border)`, textAlign: 'left',
+  // 行更松（用户 2026-10-02：「上下拉高一点、大气些」）；**不用实线分隔** ⇒ 去掉 borderBottom，
+  // 改行交错浅底（`.dsh-tdt-rec-alt`）。
+  padding: '9px 10px', textAlign: 'left',
   color: 'var(--tdt-fg)', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-sm)',
 }
 const miniCellWrapStyle: Record<string, string | number> = { ...miniCellStyle, whiteSpace: 'normal', wordBreak: 'break-word' }
@@ -763,30 +775,23 @@ const outputCellStyle: Record<string, string | number> = {
 const filterRowStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px',
 }
-/** 状态圆点外壳（成功绿勾 / 失败红叉 / 执行中转圈 / 待执行·未知空心，用户示意）。 */
-const statusDotStyle: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
-  width: '16px', height: '16px', padding: 0, borderRadius: '50%', boxSizing: 'border-box',
-  fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-xs)', fontWeight: 700,
-}
 /** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 const recHeadStyle: Record<string, string | number> = {
   ...miniCellStyle, fontWeight: 600, color: 'var(--tdt-fg-2)',
   background: 'var(--tdt-surface-base, #fff)',
+  // 表头下沿只留**极浅**一条（不是实线重色，用户 2026-10-02）。
+  borderBottom: `1px solid var(--tdt-border-faint)`,
 }
-/** 状态圆点（用户 2026-10-02 示意）：✓绿=成功 / ✕红=失败·未执行 / 转圈=执行中 / 空心=待执行·未知。 */
-function StatusDot(props: { status: string }) {
+/**
+ * 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
+ * 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
+ */
+function StatusIcon(props: { status: string }): ReturnType<typeof h> {
   const status = props.status
-  if (status === 'succeeded') {
-    return h('span', { style: { ...statusDotStyle, background: 'var(--tdt-success)', color: '#fff', border: 'none' } }, '✓')
-  }
-  if (status === 'failed' || status === 'skipped') {
-    return h('span', { style: { ...statusDotStyle, background: 'var(--tdt-danger)', color: '#fff', border: 'none' } }, '✕')
-  }
-  if (status === 'running' || status === 'dispatched') {
-    return h('span', { className: 'dsh-tdt-rec-spin', style: { ...statusDotStyle, border: `2px solid var(--tdt-accent)`, borderTopColor: 'transparent' } })
-  }
-  return h('span', { style: { ...statusDotStyle, border: `2px solid var(--tdt-border-strong)` } })
+  if (status === 'succeeded') return h(IconCheckCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-ok' })
+  if (status === 'failed' || status === 'skipped') return h(IconCloseCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-bad' })
+  if (status === 'running' || status === 'dispatched') return h(IconLoadingOutlineRegular, { size: 15, className: 'dsh-tdt-rec-ic-run' })
+  return h('span', { className: 'dsh-tdt-rec-ic-idle' })
 }
 /** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 const statusStyleOf = (status: string): Record<string, string | number> | undefined =>
@@ -968,15 +973,17 @@ function TaskExpandPanel(props: {
           ? h('p', { style: faintStyle }, t('cardRecordsEmpty'))
           : h('table', { style: { ...miniTableStyle, tableLayout: 'fixed' } },
             h('thead', { className: 'dsh-tdt-rec-head' }, h('tr', null,
-              h('th', { style: { ...recHeadStyle, width: '84px' } }, t('colStatus')),
-              h('th', { style: { ...recHeadStyle, width: '104px' } }, t('colPlanned')),
+              h('th', { style: { ...recHeadStyle, width: '78px' } }, t('colStatus')),
+              h('th', { style: { ...recHeadStyle, width: '112px' } }, t('colPlanned')),
               h('th', { style: { ...recHeadStyle, width: '84px' } }, t('colActualStart')),
-              h('th', { style: { ...recHeadStyle, width: '68px' } }, t('colDuration')),
+              h('th', { style: { ...recHeadStyle, width: '70px' } }, t('colDuration')),
               h('th', { style: recHeadStyle }, t('colOutputs')),
-              h('th', { style: { ...recHeadStyle, width: '56px' } }, t('colSession')),
+              // 新增：消耗 token 列（用户 2026-10-02：把 token 提上一级）。
+              h('th', { style: { ...recHeadStyle, width: '74px' } }, t('colTokens')),
+              h('th', { style: { ...recHeadStyle, width: '72px' } }, t('colSession')),
             )),
             h('tbody', null,
-              records.flatMap(instance => {
+              records.flatMap((instance, index) => {
                 const open = openInstance === instance.id
                 const outputs = outputsOf(instance.outputs)
                 const sid = instance.session_id
@@ -990,13 +997,15 @@ function TaskExpandPanel(props: {
                   : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at)
                 const mainRow = h('tr', {
                   key: instance.id,
-                  style: { cursor: 'pointer', background: open ? 'var(--tdt-surface-2)' : 'transparent' },
+                  // 斑马纹：奇数行浅底（`.dsh-tdt-rec-alt`）；展开行盖成第二层面。
+                  className: open ? undefined : (index % 2 === 1 ? 'dsh-tdt-rec-alt' : undefined),
+                  style: { cursor: 'pointer', ...(open ? { background: 'var(--tdt-surface-2)' } : {}) },
                   onClick: () => { setOpenInstance(open ? null : instance.id) },
                 },
                   // ① 状态图标 + 通用短名。
                   h('td', { style: miniCellStyle },
                     h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
-                      h(StatusDot, { status: instance.status }),
+                      h(StatusIcon, { status: instance.status }),
                       h('span', {
                         style: instance.status === 'succeeded' ? { color: 'var(--tdt-success)' } : statusStyleOf(instance.status),
                       }, statusTextOf(instance.status, t)),
@@ -1035,20 +1044,24 @@ function TaskExpandPanel(props: {
                           : null,
                       ),
                   ),
-                  // ⑥ 会话记录：会话图标（点击打开会话）。
+                  // ⑥ 消耗 token（用户 2026-10-02 提上一级）：总量 K/M 格式，hover 看输入/输出/缓存明细。
+                  h('td', { style: miniCellStyle },
+                    instance.token_in === null && instance.token_out === null
+                      ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '-')
+                      : h('span', { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
+                  // ⑦ 会话记录：小按钮「查看」（用户 2026-10-02：不要光秃秃一个图标）。
                   h('td', { style: miniCellStyle },
                     canOpenSession && openSession !== undefined && sid !== null
-                      ? h('button', {
-                        type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
-                        style: plainIconBtnStyle,
+                      ? h(Button, {
+                        variant: 'outline', size: 'sm',
                         onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title, outputs) },
-                      }, h(IconNewChatOutlineRegular, { size: 16 }))
+                      }, t('colView'))
                       : null,
                   ),
                 )
                 const detailRow = open
                   ? h('tr', { key: `${instance.id}-detail` },
-                    h('td', { colSpan: 6, style: miniCellWrapStyle },
+                    h('td', { colSpan: 7, style: miniCellWrapStyle },
                       // 详情小字段行：token 走 K/M 大众格式（用户 2026-10-02：不占一级空间）。
                       h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', marginBottom: '6px' } },
                         h('span', null, `${t('colAttempt')}：${instance.attempt}`),

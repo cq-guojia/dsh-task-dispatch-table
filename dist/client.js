@@ -48,12 +48,12 @@ window.__ModuleLoader__.load({
 			const base = `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 			return opts?.seconds === true ? `${base}:${pad2$3(d.getSeconds())}` : base;
 		}
-		/** 计划执行列（用户 2026-10-02 第四轮）：`YYMMDD HH:mm`（两位年 + 两位月日 + 时分）。 */
+		/** 计划执行列（用户 2026-10-02：形如 `26-09-30 15:10`）：`YY-MM-DD HH:mm`（两位年 + 两位月日 + 时分）。 */
 		function formatPlanStamp(iso) {
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "-";
 			const d = new Date(ms);
-			return `${pad2$3(d.getFullYear() % 100)}${pad2$3(d.getMonth() + 1)}${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			return `${pad2$3(d.getFullYear() % 100)}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 		}
 		/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
 		function formatClock(iso) {
@@ -632,18 +632,19 @@ window.__ModuleLoader__.load({
 			cardLoadFailed: "读取失败",
 			cardEventsEmpty: "（该次执行暂无事件）",
 			colTokens: "Token",
-			statusPending: "待执行",
-			statusDispatched: "已派发",
-			statusRunning: "执行中",
+			statusPending: "排队",
+			statusDispatched: "派发",
+			statusRunning: "运行",
 			statusSucceeded: "成功",
 			statusFailed: "失败",
-			statusSkipped: "未执行",
+			statusSkipped: "跳过",
 			statusUnknown: "未知",
 			colDuration: "时长",
 			colDispatchedAt: "派发于",
 			colFinishedAt: "结束于",
 			colPlanned: "计划执行",
 			colActualStart: "实际开始",
+			colView: "查看",
 			trPreset: "预设",
 			trClear: "清除",
 			trToday: "今天",
@@ -1190,6 +1191,7 @@ window.__ModuleLoader__.load({
 			colFinishedAt: "Finished",
 			colPlanned: "Scheduled",
 			colActualStart: "Started",
+			colView: "View",
 			trPreset: "Preset",
 			trClear: "Clear",
 			trToday: "Today",
@@ -41101,7 +41103,7 @@ body[data-ds-dark-theme]{
 			skipped: "statusSkipped",
 			unknown: "statusUnknown"
 		};
-		/** 状态 → 通用短名（zh：待执行 / 已派发 / 执行中 / 成功 / 失败 / 未执行 / 未知）。 */
+		/** 状态 → 通用短名（zh 统一**两字**：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知，用户 2026-10-02）。 */
 		function statusTextOf(status, t) {
 			const key = STATUS_LABEL_KEYS[status];
 			return key === void 0 ? status : t(key);
@@ -41189,7 +41191,14 @@ body[data-ds-dark-theme]{
 			".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
 			".dsh-tdt-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }",
 			".dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }",
-			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }"
+			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }",
+			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
+			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
+			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
+			".dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }",
+			"@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }",
+			".dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }",
+			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }"
 		].join("\n");
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		const ensureTaskListStyle = () => {
@@ -41717,8 +41726,7 @@ body[data-ds-dark-theme]{
 			fontSize: "var(--tdt-font-sm)"
 		};
 		const miniCellStyle = {
-			padding: "4px 8px",
-			borderBottom: `1px solid var(--tdt-border)`,
+			padding: "9px 10px",
 			textAlign: "left",
 			color: "var(--tdt-fg)",
 			whiteSpace: "nowrap",
@@ -41827,55 +41835,33 @@ body[data-ds-dark-theme]{
 			flexWrap: "wrap",
 			marginBottom: "6px"
 		};
-		/** 状态圆点外壳（成功绿勾 / 失败红叉 / 执行中转圈 / 待执行·未知空心，用户示意）。 */
-		const statusDotStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			justifyContent: "center",
-			flex: "none",
-			width: "16px",
-			height: "16px",
-			padding: 0,
-			borderRadius: "50%",
-			boxSizing: "border-box",
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-xs)",
-			fontWeight: 700
-		};
 		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 		const recHeadStyle = {
 			...miniCellStyle,
 			fontWeight: 600,
 			color: "var(--tdt-fg-2)",
-			background: "var(--tdt-surface-base, #fff)"
+			background: "var(--tdt-surface-base, #fff)",
+			borderBottom: `1px solid var(--tdt-border-faint)`
 		};
-		/** 状态圆点（用户 2026-10-02 示意）：✓绿=成功 / ✕红=失败·未执行 / 转圈=执行中 / 空心=待执行·未知。 */
-		function StatusDot(props) {
+		/**
+		* 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
+		* 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
+		*/
+		function StatusIcon(props) {
 			const status = props.status;
-			if (status === "succeeded") return (0, react.createElement)("span", { style: {
-				...statusDotStyle,
-				background: "var(--tdt-success)",
-				color: "#fff",
-				border: "none"
-			} }, "✓");
-			if (status === "failed" || status === "skipped") return (0, react.createElement)("span", { style: {
-				...statusDotStyle,
-				background: "var(--tdt-danger)",
-				color: "#fff",
-				border: "none"
-			} }, "✕");
-			if (status === "running" || status === "dispatched") return (0, react.createElement)("span", {
-				className: "dsh-tdt-rec-spin",
-				style: {
-					...statusDotStyle,
-					border: `2px solid var(--tdt-accent)`,
-					borderTopColor: "transparent"
-				}
+			if (status === "succeeded") return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckCircleFillRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-ok"
 			});
-			return (0, react.createElement)("span", { style: {
-				...statusDotStyle,
-				border: `2px solid var(--tdt-border-strong)`
-			} });
+			if (status === "failed" || status === "skipped") return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseCircleFillRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-bad"
+			});
+			if (status === "running" || status === "dispatched") return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconLoadingOutlineRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-run"
+			});
+			return (0, react.createElement)("span", { className: "dsh-tdt-rec-ic-idle" });
 		}
 		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
@@ -42064,20 +42050,23 @@ body[data-ds-dark-theme]{
 				tableLayout: "fixed"
 			} }, (0, react.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react.createElement)("tr", null, (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "84px"
+				width: "78px"
 			} }, t("colStatus")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "104px"
+				width: "112px"
 			} }, t("colPlanned")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
 				width: "84px"
 			} }, t("colActualStart")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "68px"
+				width: "70px"
 			} }, t("colDuration")), (0, react.createElement)("th", { style: recHeadStyle }, t("colOutputs")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "56px"
-			} }, t("colSession")))), (0, react.createElement)("tbody", null, records.flatMap((instance) => {
+				width: "74px"
+			} }, t("colTokens")), (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "72px"
+			} }, t("colSession")))), (0, react.createElement)("tbody", null, records.flatMap((instance, index) => {
 				const open = openInstance === instance.id;
 				const outputs = outputsOf(instance.outputs);
 				const sid = instance.session_id;
@@ -42088,9 +42077,10 @@ body[data-ds-dark-theme]{
 				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at);
 				return [(0, react.createElement)("tr", {
 					key: instance.id,
+					className: open ? void 0 : index % 2 === 1 ? "dsh-tdt-rec-alt" : void 0,
 					style: {
 						cursor: "pointer",
-						background: open ? "var(--tdt-surface-2)" : "transparent"
+						...open ? { background: "var(--tdt-surface-2)" } : {}
 					},
 					onClick: () => {
 						setOpenInstance(open ? null : instance.id);
@@ -42099,7 +42089,7 @@ body[data-ds-dark-theme]{
 					display: "inline-flex",
 					alignItems: "center",
 					gap: "6px"
-				} }, (0, react.createElement)(StatusDot, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react.createElement)("td", { style: miniCellStyle }, formatDurationHms(durMs)), (0, react.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react.createElement)("button", {
+				} }, (0, react.createElement)(StatusIcon, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react.createElement)("td", { style: miniCellStyle }, formatDurationHms(durMs)), (0, react.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react.createElement)("button", {
 					key: output,
 					type: "button",
 					title: output,
@@ -42127,17 +42117,15 @@ body[data-ds-dark-theme]{
 						event.stopPropagation();
 						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs);
 					}
-				}, "…") : null)), (0, react.createElement)("td", { style: miniCellStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)("button", {
-					type: "button",
-					title: t("viewSession"),
-					"aria-label": t("viewSession"),
-					style: plainIconBtnStyle,
+				}, "…") : null)), (0, react.createElement)("td", { style: miniCellStyle }, instance.token_in === null && instance.token_out === null ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react.createElement)("span", { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react.createElement)("td", { style: miniCellStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
+					variant: "outline",
+					size: "sm",
 					onClick: (event) => {
 						event.stopPropagation();
 						openSession(sid, row.title, outputs);
 					}
-				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconNewChatOutlineRegular, { size: 16 })) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
-					colSpan: 6,
+				}, t("colView")) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
+					colSpan: 7,
 					style: miniCellWrapStyle
 				}, (0, react.createElement)("div", { style: {
 					display: "flex",

@@ -150,6 +150,12 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconDeliverDocRegular: ComponentType<{ size?: number; className?: string }>
   /** 官方「新建对话 / 打开会话」图标（会话记录列入口用；0.2.0-rc.2 核实存在于 icons/index.d.ts）。 */
   export const IconNewChatOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  /** 官方圆勾（实心）——执行记录「成功」状态图标。 */
+  export const IconCheckCircleFillRegular: ComponentType<{ size?: number; className?: string }>
+  /** 官方圆叉（实心）——执行记录「失败 / 跳过」状态图标。 */
+  export const IconCloseCircleFillRegular: ComponentType<{ size?: number; className?: string }>
+  /** 官方加载转圈（1px）——执行记录「运行中」状态图标（配 CSS 旋转）。 */
+  export const IconLoadingOutlineRegular: ComponentType<{ size?: number; className?: string }>
   /** 取文件扩展名（无点 / 尾点返回空串；大小写保持）。 */
   export function fileExtension(path: string): string
   /** 按路径推语法高亮语言（官方 code/CodeBody 预览体同款入参来源）。 */

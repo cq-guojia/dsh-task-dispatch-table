@@ -160,7 +160,7 @@ export type LocaleKey =
   // —— 实例状态通用短名（status-text.ts 单源；zh：待执行/已派发/执行中/成功/失败/未执行/未知）——
   | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
   // —— 执行记录行（用户 2026-10-02 示意改版）：时长列 / 派发·结束时刻 / 时长句式 ——
-  | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt' | 'colPlanned' | 'colActualStart'
+  | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt' | 'colPlanned' | 'colActualStart' | 'colView'
   // —— 时间范围控件（ui/TimeRange，全站复用）：预设档 + 清除 ——
   | 'trPreset' | 'trClear' | 'trToday' | 'trYesterday' | 'trThisWeek' | 'trLastWeek' | 'trThisMonth' | 'trLastMonth'
   | 'durSec' | 'durMinSec' | 'durHourMin' | 'durDayHour'
@@ -567,7 +567,8 @@ export const zh: Record<LocaleKey, string> = {
   editorDisabledTag: '已停用',
   editorModeEdit: '编辑',
   editorModePreview: '预览',
-  editorTaskStart: '任务开始时间',
+  // 2026-10-02：窄分栏（520）下六个字排不下 ⇒ 去掉「任务」，只留「开始时间」（语义不变，问号气泡里有全称解释）。
+  editorTaskStart: '开始时间',
   editorTaskStartHint: '任务自该日起开始执行。可提前创建任务，至该日自动开跑；「每 N 周」亦自该日起算首周。',
   editorWeekdayLabel: '星期',
   editorWeekday1: '周一',
@@ -698,12 +699,12 @@ export const zh: Record<LocaleKey, string> = {
   cardEventsEmpty: '（该次执行暂无事件）',
   colTokens: 'Token',
   // 实例状态通用短名（status-text.ts 单源，别处不许再各写一份）。
-  statusPending: '待执行',
-  statusDispatched: '已派发',
-  statusRunning: '执行中',
+  statusPending: '排队',
+  statusDispatched: '派发',
+  statusRunning: '运行',
   statusSucceeded: '成功',
   statusFailed: '失败',
-  statusSkipped: '未执行',
+  statusSkipped: '跳过',
   statusUnknown: '未知',
   // 执行记录行（用户 2026-10-02 示意改版）。
   colDuration: '时长',
@@ -711,6 +712,7 @@ export const zh: Record<LocaleKey, string> = {
   colFinishedAt: '结束于',
   colPlanned: '计划执行',
   colActualStart: '实际开始',
+  colView: '查看',
   trPreset: '预设',
   trClear: '清除',
   trToday: '今天',
@@ -1271,6 +1273,7 @@ export const en: Record<LocaleKey, string> = {
   colFinishedAt: 'Finished',
   colPlanned: 'Scheduled',
   colActualStart: 'Started',
+  colView: 'View',
   trPreset: 'Preset',
   trClear: 'Clear',
   trToday: 'Today',

@@ -1575,10 +1575,13 @@ console.log('\n[14] runtime-index')
       return host.split('api/task-dispatch-table/config').length - 1 === 1
         && host.includes('路由注册失败')
     })())
-  check('三面板·状态短名走单源 statusTextOf（zh 词典与七态映射都在 bundle）',
+  check('三面板·状态短名走单源 statusTextOf（zh 词典与七态映射都在 bundle，两字短名）',
     (() => {
       const client = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
-      return client.includes('statusTextOf') && client.includes('statusPending') && client.includes('待执行')
+      // 2026-10-02 用户改两字短名：排队/派发/运行/成功/失败/跳过/未知。
+      // （「执行中」仍出现在源码注释里，反断言只针对词典旧值「待执行」。）
+      return client.includes('statusTextOf') && client.includes('statusPending') && client.includes('排队')
+        && client.includes('跳过') && !client.includes('待执行')
     })())
 
   // ── 15. UI 基础层 P0：token 层（--tdt-*）与唯一样式注入入口 ──
@@ -1665,7 +1668,7 @@ console.log('\n[14] runtime-index')
       !edJs.includes('.dsh-tdt-ed-overlay{') && !edJs.includes('dsh-tdt-ed-overlay'))
     check('面板改占布局的一列（sticky + 100vh + flex:0 0 auto，与预览 dock 同套）且宽度走 --dsh-tdt-editor-w',
       edJs.includes('.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;')
-      && edJs.includes('width:var(--dsh-tdt-editor-w,530px)'))
+      && edJs.includes('width:var(--dsh-tdt-editor-w,520px)'))
     check('「基本信息 / 执行记录」切换已删（id 与三处文案双语全无）',
       !edJs.includes('dsh-tdt-ed-tabs') && !edJs.includes('editorTabBasic') && !edJs.includes('editorTabRecords')
       && !edJs.includes('editorRecordsPending') && !edJs.includes('执行记录待接'))
@@ -1745,10 +1748,12 @@ console.log('\n[14] runtime-index')
       (tl.match(/panelBoxStyle/g) ?? []).length >= 4
       && (tl.match(/panelScrollFillStyle/g) ?? []).length >= 4
       && !tl.includes('PANEL_MAX_H'))
-    check('执行记录表格 6 列（状态 / 计划执行 / 实际开始 / 时长 / 产出物 / 会话）且产出走官方 FileTypeIcon',
+    check('执行记录表格 7 列（状态 / 计划 / 实际开始 / 时长 / 产出 / Token / 会话）+ 官方状态图标 + 斑马纹 + 查看小按钮',
       tl.includes("t('colPlanned')") && tl.includes("t('colActualStart')") && tl.includes("t('colSession')")
-      && tl.includes('FileTypeIcon') && tl.includes('IconNewChatOutlineRegular')
-      && !tl.includes('chipStyleOf'))
+      && tl.includes("t('colTokens')") && tl.includes("t('colView')")
+      && tl.includes('FileTypeIcon') && tl.includes('IconCheckCircleFillRegular') && tl.includes('IconCloseCircleFillRegular')
+      && tl.includes('dsh-tdt-rec-alt') && tl.includes('StatusIcon')
+      && !tl.includes('chipStyleOf') && !tl.includes('IconNewChatOutlineRegular'))
     check('时间范围控件：半开区间上界（次日 00:00 / 下一分钟 :00），不再用 .999 补丁',
       tr.includes('toParsed.d + 1') && tr.includes('toParsed.mm + 1') && !tr.includes('23:59:59.999')
       && uidx.includes('TimeRange') && uidx.includes('rangeToQuery'))
