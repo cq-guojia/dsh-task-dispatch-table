@@ -932,16 +932,16 @@ function IntervalControls(props: {
 
 /** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 const EDITOR_WIDTH_KEY = 'dsh-tdt-editor-width'
-/** 最小宽度（用户 2026-10-02：560 偏宽 → 500 试过一轮 → 定 530）。 */
-const EDITOR_WIDTH_MIN = 530
-const EDITOR_WIDTH_DEFAULT = 530
+/** 最小宽度（用户 2026-10-02：560 偏宽 → 试 500 → 试 530 → 定 520）。 */
+const EDITOR_WIDTH_MIN = 520
+const EDITOR_WIDTH_DEFAULT = 520
 /** 主面板的最小宽度（≥1120 的列永远不被压到出横向滚动条）。与新一分栏同时开时也要保住。 */
 export const PAGE_MIN_WIDTH = 760
 
 /**
  * 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
  * 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
- * 下限保住 530，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
+ * 下限保住 520，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
  * @param value - 目标宽度。
  * @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
  */
@@ -1807,15 +1807,16 @@ export function TaskEditorDrawer(props: {
       showTaskStart
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
             h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg)' } }, t('editorTaskStart')),
-            // 宽度比原值各收一丢丢（126→108 / 92→78）：省下的就是标签那一行的空间，
-            // 而两个框内的文字（`2026-09-30` / `18:50` + 图标）仍留有余量，不会被省略号吃掉。
+            // ⚠️ 日期 / 时刻**不给定宽**（2026-10-02 返工）：定宽就有可能被内容顶破，
+            // 框内文字走 `text-overflow:ellipsis` ⇒ 直接显示成「2026-09-3…」/「18:5…」，而日期必须完整可见。
+            // 现在 = **内容宽 + flex:none**：框宽恰好等于内容（`2026-09-30` / `18:50` + 图标），
+            // 天然不会被省略号吃掉，还比原来的定宽（126 / 92）省出十几像素给标签。
             h('span', { style: { flex: 'none', display: 'inline-flex' } }, h(DateField, {
               value: draft.date,
               onChange: value => { patch({ date: value }) },
               placeholder: t('editorDatePh'),
               ariaLabel: t('editorTaskStart'),
               labels: calendarLabels,
-              width: 108,
             })),
             // 间隔档要选时刻；周期档时刻由上方频率区决定，这里只选日期。
             draft.scheduleKind === 'interval'
@@ -1825,7 +1826,6 @@ export function TaskEditorDrawer(props: {
                 placeholder: t('editorTimePh'),
                 ariaLabel: t('editorTaskStart'),
                 labels: timeLabels,
-                width: 78,
               }))
               : null,
             h(HelpButton, { hint: t('editorTaskStartHint'), side: 'top', align: 'center' }),
@@ -1841,9 +1841,10 @@ export function TaskEditorDrawer(props: {
           placeholder: t('editorWindow'),
           emptyLabel: t('editorNoOptions'),
           ariaLabel: t('editorWindow'),
-          // 高度走默认 lg(=32)，与同排「任务开始时间」的日期 / 时间锚点同档（此前 sm=24 显矮）。
-          // 定宽 80：与三下拉同一条规矩（同排下拉定宽，别随选项文字跳），也是这一排里最省的一档。
-          width: 80,
+          // 高度走默认 lg(=32)，与同排「开始时间」的日期 / 时间锚点同档（此前 sm=24 显矮）。
+          // 定宽 96（同排下拉定宽那条规矩，不随选项文字跳）：按**最宽**那一档取值定（`30 分钟`
+          // ≈ 46 + 内边距/箭头 38 ≈ 84），留足余量 ⇒ 切到哪一档都不会被省略号吃掉。
+          width: 96,
           align: 'end',
         })),
         h(HelpButton, { hint: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 320 }),

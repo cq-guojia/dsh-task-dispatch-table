@@ -1681,15 +1681,21 @@ console.log('\n[14] runtime-index')
     const closeIdx = edSrc.indexOf('IconCloseOutlineRegular', headIdx)
     check('启用开关回到头部右侧且**排在关闭 ✕ 之前**（headactions → 开关 → ✕ 的顺序成立）',
       headIdx > 0 && switchIdx > headIdx && closeIdx > switchIdx)
-    check('宽度下限 / 默认 = 530（用户 2026-10-02 定）且给主面板留够最小宽（两条分栏互相当预留）',
-      edSrc.includes('EDITOR_WIDTH_MIN = 530') && edSrc.includes('EDITOR_WIDTH_DEFAULT = 530')
+    check('宽度下限 / 默认 = 520（用户 2026-10-02 定）且给主面板留够最小宽（两条分栏互相当预留）',
+      edSrc.includes('EDITOR_WIDTH_MIN = 520') && edSrc.includes('EDITOR_WIDTH_DEFAULT = 520')
       && edSrc.includes('window.innerWidth - PAGE_MIN_WIDTH - reserved'))
     // 用户 2026-10-02：最小宽（530）下排期底部行的中文标签被压成两行 ⇒ 标签 nowrap + 三控件 flex:none
     // 收窄（126→108 / 92→78，延迟下拉定宽 80）+ flexWrap 兜底，规则是「宁可换行，也不折标签 / 不切框内字」。
-    check('排期底部行窄宽不折标签、不切框内文字（标签 nowrap + 三控件 flex:none 定宽 + 换行兜底）',
-      edSrc.includes("flexWrap: 'wrap'") && edSrc.includes('width: 108') && edSrc.includes('width: 78')
-      && edSrc.includes('width: 80') && edSrc.includes("flex: 'none', whiteSpace: 'nowrap'")
-      && edSrc.includes("flex: 'none', display: 'inline-flex'"))
+    // 2026-10-02 返工：给日期 / 时刻定宽会被内容顶破 ⇒ 框内文字直接变「2026-09-3…」。
+    // 现规则：日期 / 时刻 = 内容宽 + flex:none（**天然切不掉**，且比原定宽 126/92 更省），
+    // 只有下拉才定宽（按最宽那一档定 96），标签缩短为「开始时间」。
+    check('排期底部行：日期 / 时刻走内容宽（不给定宽）+ flex:none，延迟下拉按最宽档定宽 96，标签 nowrap',
+      edSrc.includes("flexWrap: 'wrap'") && edSrc.includes('width: 96')
+      && edSrc.includes("flex: 'none', whiteSpace: 'nowrap'")
+      && edSrc.includes("flex: 'none', display: 'inline-flex'")
+      && !edSrc.includes('width: 108') && !edSrc.includes('width: 78'))
+    check('开始时间标签去掉「任务」两字（窄栏排得下，语义由 ？ 气泡补）',
+      readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8').includes("editorTaskStart: '开始时间'"))
     // 用户 2026-10-02：拖拽会顺手选中一片文字 ⇒ pointerdown preventDefault + 拖动期间全域禁选。
     check('拖拽调宽不再选中文字（两处 resizer 都做了 preventDefault + 拖动期间 user-select:none）',
       edSrc.includes('userSelect') && edSrc.includes("body.style.userSelect = 'none'")

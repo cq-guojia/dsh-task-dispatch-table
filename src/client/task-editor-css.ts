@@ -16,8 +16,8 @@ export const TASK_EDITOR_CSS = `
    .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，   sticky + 100vh 让它在页面滚动时
    保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
    旧的遮罩层已废：用户要求「别盖住主窗口」。
-   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 530（用户 2026-10-02 定）。 */
-.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,530px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
+   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。 */
+.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
    user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
    见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */

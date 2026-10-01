@@ -504,7 +504,7 @@ window.__ModuleLoader__.load({
 			editorDisabledTag: "已停用",
 			editorModeEdit: "编辑",
 			editorModePreview: "预览",
-			editorTaskStart: "任务开始时间",
+			editorTaskStart: "开始时间",
 			editorTaskStartHint: "任务自该日起开始执行。可提前创建任务，至该日自动开跑；「每 N 周」亦自该日起算首周。",
 			editorWeekdayLabel: "星期",
 			editorWeekday1: "周一",
@@ -6783,8 +6783,8 @@ body[data-ds-dark-theme]{
    .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，   sticky + 100vh 让它在页面滚动时
    保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
    旧的遮罩层已废：用户要求「别盖住主窗口」。
-   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 530（用户 2026-10-02 定）。 */
-.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,530px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
+   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。 */
+.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;z-index:1040;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
    user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
    见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
@@ -39410,13 +39410,13 @@ body[data-ds-dark-theme]{
 		}
 		/** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 		const EDITOR_WIDTH_KEY = "dsh-tdt-editor-width";
-		/** 最小宽度（用户 2026-10-02：560 偏宽 → 500 试过一轮 → 定 530）。 */
-		const EDITOR_WIDTH_MIN = 530;
-		const EDITOR_WIDTH_DEFAULT = 530;
+		/** 最小宽度（用户 2026-10-02：560 偏宽 → 试 500 → 试 530 → 定 520）。 */
+		const EDITOR_WIDTH_MIN = 520;
+		const EDITOR_WIDTH_DEFAULT = 520;
 		/**
 		* 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
 		* 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
-		* 下限保住 530，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
+		* 下限保住 520，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
 		* @param value - 目标宽度。
 		* @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
 		*/
@@ -40502,8 +40502,7 @@ body[data-ds-dark-theme]{
 				},
 				placeholder: t("editorDatePh"),
 				ariaLabel: t("editorTaskStart"),
-				labels: calendarLabels,
-				width: 108
+				labels: calendarLabels
 			})), draft.scheduleKind === "interval" ? (0, react.createElement)("span", { style: {
 				flex: "none",
 				display: "inline-flex"
@@ -40514,8 +40513,7 @@ body[data-ds-dark-theme]{
 				},
 				placeholder: t("editorTimePh"),
 				ariaLabel: t("editorTaskStart"),
-				labels: timeLabels,
-				width: 78
+				labels: timeLabels
 			})) : null, (0, react.createElement)(HelpButton, {
 				hint: t("editorTaskStartHint"),
 				side: "top",
@@ -40547,7 +40545,7 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorWindow"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWindow"),
-				width: 80,
+				width: 96,
 				align: "end"
 			})), (0, react.createElement)(HelpButton, {
 				hint: t("editorWindowHint"),
