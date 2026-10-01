@@ -1613,12 +1613,12 @@ console.log('\n[14] runtime-index')
       && p1Js.includes('--seg-thumb:var(--tdt-surface-raised)')
       && p1Js.includes('height:calc(var(--tdt-control-h-sm) - 6px)') && p1Js.includes('height:calc(var(--tdt-control-h-md) - 6px)')
       && p1Js.includes('background:var(--tdt-danger);color:var(--tdt-on-signal)'))
-    // 2026-10-01 用户拍板：有边 / 无边总高必须一致，边框不许额外撑高。default 用 padding:2px 抵掉 1px 边框，
-    // 与 inset 的 padding:3px 对齐 ⇒ 两者总高都 = --tdt-control-h-*。
-    check('有边 / 无边等高（default padding2 + 1px 边框 = inset padding3；总高都吃 --tdt-control-h-*）',
+    // 2026-10-01 用户拍板：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
+    // 统一几何 = 1px 边框 + 3px padding：default 真边框 + padding3；inset 无边框 + padding4 补回缺的 1px。
+    check('有边 / 无边等高（1px 边框 + 3px padding：default 真边框 + padding3；inset 无边框 + padding4）',
       p1Js.includes('.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;')
-      && p1Js.includes('border:1px solid var(--tdt-border);padding:2px;}')
-      && !p1Js.includes('.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px'))
+      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}')
+      && p1Js.includes('--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}'))
     check('三处就地自绘的旧实现已删（同一控件不再有第二/三份）',
       !p1Js.includes('segTrackStyle') && !p1Js.includes('segStyle') && !p1Js.includes('tabStyle')
       && !p1Js.includes('countBadge') && !p1Js.includes('segmentStyle') && !p1Js.includes('segmentedStyle'))

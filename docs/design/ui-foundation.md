@@ -202,10 +202,11 @@ body[data-ds-dark-theme]{
    2026-10-01 用户拍板：保留「纯黑面 / 灰底面」两套、不合并：
    - default（纯黑面）= 轨道第二层面 + 外描边；
    - inset（灰底面）= 抄「版本」开关观感（轨道交互灰 hover 底、无外描边），用户觉得比原灰底那套好看。
-   ⚠️ 高度对齐（2026-10-01 用户拍板）：有边框的 default 把 padding 收到 2px（2px padding + 1px 边框 = inset 的 3px padding），
-   两种外观总高都 = --tdt-control-h-*；以后 Button / Input 的有边 / 无边同此规则，边框不许额外撑高。 */
-.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);padding:2px;}
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;}
+   ⚠️ 高度对齐（2026-10-01 用户拍板）：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
+   两者都是「1px 边框 + 3px padding」的几何——default 真边框 1px + padding 3px；inset 无边框，padding 收 4px 补回缺的 1px。
+   段高算式 - 6px 不用动，两种外观总高一致；以后 Button / Input 的有边 / 无边同此规则。 */
+.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}
 ```
 
 对应到用户截图的三处（**同一份基础样式，只换 variant**）：

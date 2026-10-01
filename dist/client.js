@@ -4491,12 +4491,13 @@ body[data-ds-dark-theme]{
 /* 两套基础样式（2026-10-01 用户拍板：保留「纯黑面」与「灰底面」两套，不可合并）：
    - default = 纯黑面：轨道=第二层面 + 外描边，选中=亮片底；
    - inset = 灰底面：抄「版本」开关观感（轨道=交互灰 hover 底、无外描边、选中=亮片底），用户觉得比原灰底那套好看。
-   ⚠️ 高度对齐规则（2026-10-01 用户拍板）：有边框的 variant 必须在内部把 1px 边框吃掉——
-   default 的 padding 收到 2px（2px padding + 1px 边框 = inset 的 3px padding），两种外观总高都 = --tdt-control-h-*，
-   段高算式 - 6px 不用动；以后 Button / Input 的有边 / 无边同样按此规则，边框不许额外撑高。 */
+   ⚠️ 高度对齐规则（2026-10-01 用户拍板）：有边 / 无边总高必须一致，边框在内部补回，不许额外撑高。
+   落下形态 = 两者都是「1px 边框 + 3px padding」的几何——default 真边框 1px + padding 3px；
+   inset 无边框，所以 padding 收 4px 把缺的 1px 补回来。段高算式 - 6px 不用动，两种外观总高一致。
+   以后 Button / Input 的有边 / 无边同此规则。 */
 .dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;border-radius:var(--tdt-radius-md);background:var(--seg-track);}
-.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);padding:2px;}
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;}
+.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;padding:4px;}
 
 .dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
   height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);

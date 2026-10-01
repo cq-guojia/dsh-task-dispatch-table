@@ -85,7 +85,7 @@
 - **想要新的高度**：离散三档 `--tdt-control-h-sm`(24) / `-md`(28) / `-lg`(32)（lg=32 由用户 2026-10-01 拍板作为预估第三档）。
   需要再增一档 ⇒ 在 `tokens.ts` 加一条 `--tdt-control-h-xx`（一处，直绑宿主两主题变量），调用点用 `size="xx"` 选；**真不够用才允许在调用点本地覆盖 `--tdt-control-h-*` 这一个变量**，且须在本文档「已知例外」表记一条（组件 `style` 只许补布局、覆盖高度，不许另写结构）。
 - **想要新的外观（variant）**：在 `controls-css.ts` 里加一个 variant 类，且**只允许覆盖 token 变量**（颜色），结构/尺寸/交互规则不许重写。
-- **有边 / 无边必须等高**（2026-10-01 用户拍板）：带边框的 variant 必须在内部把 1px 边框吃掉（padding 相应减 1px，或改用 `box-sizing:border-box` + 固定 `height`），总高一律 = `--tdt-control-h-*`；边框不许额外撑高。`Segmented` 的 `default` 已按此把 padding 收到 2px，以后 `Button` / `Input` 的有边 / 无边同此规则。
+- **有边 / 无边必须等高**（2026-10-01 用户拍板）：边框必须在内部补回，不许额外撑高。统一几何 =「1px 边框 + 3px padding」——有边框的 variant 用真边框 + padding 3px；无边框的 variant 用 padding 4px 补回缺的 1px。`Segmented` 已按此落地（`default` 真边框 + 3px padding；`inset` 无边框 + 4px padding），以后 `Button` / `Input` 的有边 / 无边同此规则。
 - **想要新的控件**：按 §一 第三个分支，在 `ui/` 里建唯一实现，并在本手册 §二 表里加一行。
 - **想要新的 token**（颜色 / 圆角 / 字号 / 间距 / 层级）：加进 `ui/tokens.ts` **一处**（命名 `--tdt-*`，映射宿主 alias 并留兜底值），同时在 [`ui-foundation.md`](ui-foundation.md) §四 的表里登记；**不许在使用点直接写 `var(--dsw-*)`**。
 
