@@ -1,5 +1,9 @@
 # 依赖快照（决策 43）：写库瞬间冻结「命中了哪条上游实例 + 其产出」
 
+> **状态**：✅ 收口（真机验证通过）
+> **来源**：决策 43（依赖快照）
+> **配套**：过程见 [`worklog/dependency-snapshot.md`](../../worklog/dependency-snapshot.md)；判定语义见 [`state-machine.md`](state-machine.md)
+
 > 状态：✅ 方案定型（2026-09-28 用户拍板）并落码。
 > 关联：决策 33（依赖判定语义）、决策 41（两层循环解耦 + 派发快照）。
 > 问题排查记录见 [worklog/dependency-snapshot.md](../../worklog/dependency-snapshot.md)。

@@ -126,6 +126,16 @@
 
 **顺带发现的「注释与代码不符」**（未改代码，只记此处）：`src/client/index.ts:205` 注释写抬头含「刷新 · 关闭」（实际无）；`src/client/task-list.tsx:1406` 注释写右侧含「刷新」（实际无）。
 
+### 2.8 规范头 / 封卷 / 残留过程内容（收尾）
+
+| 动作 | 明细 |
+|---|---|
+| **补规范头**（7 个） | `architecture.md`、`features/` 下 6 个（archive-session-view / artifact-opening / creation-edit / dependency-snapshot / main-panel / state-machine）补 `状态 / 来源 / 配套` 三行；此后定型层文档一律带这三行 |
+| **补封卷标记**（8 个） | `worklog/` 下 `artifact-opening` / `deliverables-display` / `dependency-snapshot` / `file-preview-polish` / `file-browser-ui-tuning` / `loop-decoupling` / `editor-ux-round2` / `scheduler-redesign` 加「✅ 完成封卷」；**未完成的仍不封**（main-panel / task-editor-ui / task-expand-panels / attachments-upload / ui-foundation / docs-reorganization） |
+| **清过程内容** | `features/archive-session-view.md` §六「真机验证清单」→ 改为「验收」一行指向 worklog（定型层不记验证清单）；`features/artifact-opening.md`「动工前置条件（见 PROGRESS U11）」→ 改为完成态陈述；`features/creation-edit.md` §八标题「待确认」→「已拍定结论」 |
+
+**判定依据**：`docs/README.md` §三（每类必须写 / 不得写）+ §五（收尾即封卷）。
+
 ## 三、待用户拍板
 
 1. `design/decisions.md`（108 KB 历史堆积）怎么处理（规范已不列「决策」这一类）。

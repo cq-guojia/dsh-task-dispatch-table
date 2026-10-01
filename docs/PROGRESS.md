@@ -22,6 +22,7 @@
 - `design/decisions.md`（108 KB 历史堆积）**已删除**：有价值的约束力内容先补进 `data-model.md` / `architecture.md` / `dsh-capabilities.md` / `features/state-machine.md` / `features/main-panel.md` / `features/creation-edit.md`，引用全部清理（详见 [worklog/docs-reorganization.md](worklog/docs-reorganization.md) §2.4）。**遗留 9 处口径冲突待修**，见未决项 **U19**。
 - 两个 `creation-edit-*` **已合并**为 `design/features/creation-edit.md`（需求口径真源 + 历史提纲的补充议题附录），`features.md` 索引已更新。
 - 「环境前提（脱敏）」**已归根 `README.md`**（部署 / 使用需要知道的环境事实）。
+- **规范头与封卷补齐**：7 个定型文档缺的 `状态 / 来源 / 配套` 三行头已补；8 个**已完成**工作包补「✅ 完成封卷」标记（未完成的仍不封，如主界面 / 三面板 / 新增编辑）；定型层残留的过程内容（会话弹窗「真机验证清单」、「动工前置条件」、"待确认"标题）已清理。
 
 ### 1.2 UI 基础层统一（样式专项）—— ⏸ **挂起**
 
