@@ -1681,6 +1681,12 @@ console.log('\n[14] runtime-index')
     check('宽度下限 / 默认 = 530（用户 2026-10-02 定）且给主面板留够最小宽（两条分栏互相当预留）',
       edSrc.includes('EDITOR_WIDTH_MIN = 530') && edSrc.includes('EDITOR_WIDTH_DEFAULT = 530')
       && edSrc.includes('window.innerWidth - PAGE_MIN_WIDTH - reserved'))
+    // 用户 2026-10-02：最小宽（530）下排期底部行的中文标签被压成两行 ⇒ 标签 nowrap + 三控件 flex:none
+    // 收窄（126→108 / 92→78，延迟下拉定宽 80）+ flexWrap 兜底，规则是「宁可换行，也不折标签 / 不切框内字」。
+    check('排期底部行窄宽不折标签、不切框内文字（标签 nowrap + 三控件 flex:none 定宽 + 换行兜底）',
+      edSrc.includes("flexWrap: 'wrap'") && edSrc.includes('width: 108') && edSrc.includes('width: 78')
+      && edSrc.includes('width: 80') && edSrc.includes("flex: 'none', whiteSpace: 'nowrap'")
+      && edSrc.includes("flex: 'none', display: 'inline-flex'"))
     // 用户 2026-10-02：拖拽会顺手选中一片文字 ⇒ pointerdown preventDefault + 拖动期间全域禁选。
     check('拖拽调宽不再选中文字（两处 resizer 都做了 preventDefault + 拖动期间 user-select:none）',
       edSrc.includes('userSelect') && edSrc.includes("body.style.userSelect = 'none'")

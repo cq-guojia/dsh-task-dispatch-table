@@ -1799,36 +1799,42 @@ export function TaskEditorDrawer(props: {
     ),
     // 底部：左 = 任务开始时间（锚点，周期/间隔都有，带 ? 说明），右 = 允许延迟（次要，居右）。
     // 上间距与「预计执行」上边线离「星期」的间距对齐 = 14px（此前 CSS margin12+padding12=24 是两倍）。
-    h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', gap: '8px', borderTop: 'none', marginTop: '14px', paddingTop: '0' } },
+    // ⚠️ 窄分栏（最小 530）下的空间账（用户 2026-10-02：中文标签被压成两行）：
+    //   标签一律 `flex:none + nowrap`（标签**永不被压折行**），三个控件也 `flex:none` 只吃自己那份宽度
+    //   （谁都不许被挤到出省略号 —— 用户点名「不要影响那三个框的字的显示」）；
+    //   空间不够时靠 `flexWrap` 让右组（允许延迟）整组落到第二行，绝不切字。
+    h('div', { className: 'dsh-tdt-ed-schedfoot', style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', borderTop: 'none', marginTop: '14px', paddingTop: '0' } },
       showTaskStart
         ? h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } },
-            h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg)' } }, t('editorTaskStart')),
-            h(DateField, {
+            h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg)' } }, t('editorTaskStart')),
+            // 宽度比原值各收一丢丢（126→108 / 92→78）：省下的就是标签那一行的空间，
+            // 而两个框内的文字（`2026-09-30` / `18:50` + 图标）仍留有余量，不会被省略号吃掉。
+            h('span', { style: { flex: 'none', display: 'inline-flex' } }, h(DateField, {
               value: draft.date,
               onChange: value => { patch({ date: value }) },
               placeholder: t('editorDatePh'),
               ariaLabel: t('editorTaskStart'),
               labels: calendarLabels,
-              width: 126,
-            }),
+              width: 108,
+            })),
             // 间隔档要选时刻；周期档时刻由上方频率区决定，这里只选日期。
             draft.scheduleKind === 'interval'
-              ? h(TimeField, {
+              ? h('span', { style: { flex: 'none', display: 'inline-flex' } }, h(TimeField, {
                 value: draft.time,
                 onChange: value => { patch({ time: value }) },
                 placeholder: t('editorTimePh'),
                 ariaLabel: t('editorTaskStart'),
                 labels: timeLabels,
-                width: 92,
-              })
+                width: 78,
+              }))
               : null,
             h(HelpButton, { hint: t('editorTaskStartHint'), side: 'top', align: 'center' }),
           )
         : null,
-      h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto' } }),
+      h('span', { className: 'dsh-tdt-ed-spacer', style: { flex: '1 1 auto', minWidth: 0 } }),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px' } },
         h('span', { style: { flex: 'none', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)' } }, t('editorWindow')),
-        h(SelectField, {
+        h('span', { style: { flex: 'none', display: 'inline-flex' } }, h(SelectField, {
           value: draft.window,
           options: windowOptions,
           onChange: value => { patch({ window: value }) },
@@ -1836,8 +1842,10 @@ export function TaskEditorDrawer(props: {
           emptyLabel: t('editorNoOptions'),
           ariaLabel: t('editorWindow'),
           // 高度走默认 lg(=32)，与同排「任务开始时间」的日期 / 时间锚点同档（此前 sm=24 显矮）。
+          // 定宽 80：与三下拉同一条规矩（同排下拉定宽，别随选项文字跳），也是这一排里最省的一档。
+          width: 80,
           align: 'end',
-        }),
+        })),
         h(HelpButton, { hint: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 320 }),
       ),
     ),

@@ -159,6 +159,21 @@
    - 修法两道闸（两条 dock 的 `startResize` 都一样）：① `pointerdown` 里 `preventDefault()` 掐掉默认动作（连带后面的兼容 `mousedown`）；② 拖动期间把 `document.body.style.userSelect = 'none'`，`window pointerup` 时恢复原值，并 `window.getSelection()?.removeAllRanges()` 清掉遗留选区。拖拽条自身再补 `user-select:none`。
    - 能解决：两道闸都是标准行为，第二道（`user-select:none`）在浏览器行为有差异时也兜得住。
 
+## 五-D、第三轮小修（2026-10-02，530 宽实看后）
+
+**现象**：分栏定到 530 后，排期卡底部那一行的中文标签「任务开始时间」被压成两行（截图）。英文标签不参与（它本来就折行、字号小，用户明确不管）。
+
+**为什么是标签先挨刀**：那一行 = 左组（标签 + 日期框 126 + 时间框 92 + ？）+ 撑开的 spacer + 右组（标签「允许延迟」+ 延迟下拉 + ？）。空间一紧，flex 收缩先作用在**没有 `flex:none` 的那一项**——两个标签里只有左边那个没标 `nowrap`，于是它折行；而 `DateField` / `TimeField` / `SelectField` 的根都带 `min-width:0`，继续挤下去就会轮到**框内文字出省略号**（用户点名不许）。
+
+**修法**（三条一起，缺一不可）：
+1. 标签 `flex:'none' + whiteSpace:'nowrap'` —— 标签永不被压折行；
+2. 三个控件各收一丢丢并**包进 `flex:'none'` 的 span**：日期 126→108、时间 92→78、延迟下拉给显式定宽 80（原来按内容自适应，同属「同排下拉定宽」那条规矩）；收完仍留够框内文字 + 图标的余量（`2026-09-30` ≈ 66px + 38px 装饰 ≈ 104 < 108；`18:50` ≈ 35 + 38 ≈ 73 < 78）；
+3. 行容器 `flexWrap:'wrap'` + `gap:6px`（原 8px）：真放不下时右组（允许延迟）整组落第二行，**绝不切字**。
+
+**口径**已升格进 [`ui-style-guide.md`](../design/ui-style-guide.md) §五「窄栏里的一行：宁可换行，也不折标签 / 不切框内字」。
+
+---
+
 ## 六、做完后怎么验收
 
 1. `npm run build`（含 dist 入库）+ `npm run typecheck` + `npm run smoke`（改 tab 断言，见 §三.2）。

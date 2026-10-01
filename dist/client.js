@@ -40475,7 +40475,8 @@ body[data-ds-dark-theme]{
 				style: {
 					display: "flex",
 					alignItems: "center",
-					gap: "8px",
+					flexWrap: "wrap",
+					gap: "6px",
 					borderTop: "none",
 					marginTop: "14px",
 					paddingTop: "0"
@@ -40485,9 +40486,14 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "4px"
 			} }, (0, react.createElement)("span", { style: {
+				flex: "none",
+				whiteSpace: "nowrap",
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-fg)"
-			} }, t("editorTaskStart")), (0, react.createElement)(DateField, {
+			} }, t("editorTaskStart")), (0, react.createElement)("span", { style: {
+				flex: "none",
+				display: "inline-flex"
+			} }, (0, react.createElement)(DateField, {
 				value: draft.date,
 				onChange: (value) => {
 					patch({ date: value });
@@ -40495,8 +40501,11 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorDatePh"),
 				ariaLabel: t("editorTaskStart"),
 				labels: calendarLabels,
-				width: 126
-			}), draft.scheduleKind === "interval" ? (0, react.createElement)(TimeField, {
+				width: 108
+			})), draft.scheduleKind === "interval" ? (0, react.createElement)("span", { style: {
+				flex: "none",
+				display: "inline-flex"
+			} }, (0, react.createElement)(TimeField, {
 				value: draft.time,
 				onChange: (value) => {
 					patch({ time: value });
@@ -40504,14 +40513,17 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorTimePh"),
 				ariaLabel: t("editorTaskStart"),
 				labels: timeLabels,
-				width: 92
-			}) : null, (0, react.createElement)(HelpButton, {
+				width: 78
+			})) : null, (0, react.createElement)(HelpButton, {
 				hint: t("editorTaskStartHint"),
 				side: "top",
 				align: "center"
 			})) : null, (0, react.createElement)("span", {
 				className: "dsh-tdt-ed-spacer",
-				style: { flex: "1 1 auto" }
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0
+				}
 			}), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -40521,7 +40533,10 @@ body[data-ds-dark-theme]{
 				whiteSpace: "nowrap",
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-fg-2)"
-			} }, t("editorWindow")), (0, react.createElement)(SelectField, {
+			} }, t("editorWindow")), (0, react.createElement)("span", { style: {
+				flex: "none",
+				display: "inline-flex"
+			} }, (0, react.createElement)(SelectField, {
 				value: draft.window,
 				options: windowOptions,
 				onChange: (value) => {
@@ -40530,8 +40545,9 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorWindow"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWindow"),
+				width: 80,
 				align: "end"
-			}), (0, react.createElement)(HelpButton, {
+			})), (0, react.createElement)(HelpButton, {
 				hint: t("editorWindowHint"),
 				side: "top",
 				align: "end",
