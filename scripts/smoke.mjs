@@ -1657,6 +1657,8 @@ console.log('\n[14] runtime-index')
       && !p23Js.includes("type: 'number'") && !p23Js.includes('type: "number"'))
     check('开关 success 绿覆盖已上提基础层（.dsh-tdt-switch）',
       p23Js.includes(".dsh-tdt-switch button[role='switch'][aria-checked='true']"))
+    check('日期 / 时间皮肤进产物（dsh-tdt-dtf / cal__cell / time__opt）',
+      p23Js.includes('.dsh-tdt-dtf{') && p23Js.includes('.dsh-tdt-cal__cell{') && p23Js.includes('.dsh-tdt-time__opt{'))
   }
 
   store.close()

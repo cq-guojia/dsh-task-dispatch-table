@@ -150,6 +150,48 @@ export const FIELD_CSS = `
 @media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
 `
 
+/** 日期 / 时间的皮肤规则（P4）。 */
+export const DATETIME_CSS = `
+/* ── 日期 / 时间 P4 ───────────────────────────────────────────────────── */
+.dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
+.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--tdt-control-h-lg);
+  min-width:0;max-width:100%;padding:0 8px;border:1px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
+  background:var(--tdt-surface-1);color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);
+  cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-dtf:hover:not(:disabled){background:var(--tdt-hover);}
+.dsh-tdt-dtf:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}
+.dsh-tdt-dtf__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.dsh-tdt-dtf__label--ph{color:var(--tdt-fg-dim);}
+.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--tdt-fg-3);}
+
+.dsh-tdt-layer{position:fixed;z-index:var(--tdt-z-menu);box-sizing:border-box;padding:8px;background:var(--tdt-surface-1);
+  box-shadow:var(--tdt-shadow-2);border-radius:var(--tdt-radius-md);color:var(--tdt-fg);font-size:var(--tdt-font-md);}
+
+.dsh-tdt-cal__head{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px;}
+.dsh-tdt-cal__title{flex:1 1 auto;text-align:center;font-size:var(--tdt-font-md);font-weight:600;color:var(--tdt-fg);}
+.dsh-tdt-cal__grid{display:grid;grid-template-columns:repeat(7,32px);gap:2px;}
+.dsh-tdt-cal__weekday{height:24px;display:flex;align-items:center;justify-content:center;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
+.dsh-tdt-cal__cell{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;
+  border:1px solid transparent;border-radius:var(--tdt-radius-md);background:transparent;color:var(--tdt-fg);
+  font:inherit;font-size:var(--tdt-font-md);cursor:pointer;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-cal__cell--hover{background:var(--tdt-hover);}
+.dsh-tdt-cal__cell--out{color:var(--tdt-fg-dim);}
+.dsh-tdt-cal__cell--today{border-color:var(--tdt-business);}
+.dsh-tdt-cal__cell[aria-pressed='true']{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
+.dsh-tdt-cal__foot{margin-top:6px;padding-top:6px;border-top:1px solid var(--tdt-border);}
+
+.dsh-tdt-time__cols{display:flex;gap:4px;}
+.dsh-tdt-time__list{width:56px;max-height:196px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
+  font:inherit;font-size:var(--tdt-font-md);cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-time__opt[aria-selected='true']{background:var(--tdt-hover);color:var(--tdt-fg);font-weight:600;}
+.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--tdt-border);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-cal__cell,.dsh-tdt-time__opt{transition:none;}}
+`
+
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 export const CONTROLS_DOMAIN = 'controls'
 
@@ -157,5 +199,5 @@ export const CONTROLS_DOMAIN = 'controls'
  * 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
  */
 export function ensureControlsStyle(): void {
-  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS)
+  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS)
 }

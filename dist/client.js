@@ -34,7 +34,7 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		//#region src/client/format.ts
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
-		function pad2$1(value) {
+		function pad2$2(value) {
 			return String(value).padStart(2, "0");
 		}
 		/**
@@ -45,15 +45,15 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return opts?.fallback ?? iso;
 			const d = new Date(ms);
-			const base = `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
-			return opts?.seconds === true ? `${base}:${pad2$1(d.getSeconds())}` : base;
+			const base = `${d.getFullYear()}-${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())} ${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
+			return opts?.seconds === true ? `${base}:${pad2$2(d.getSeconds())}` : base;
 		}
 		/** 短时刻（用户 2026-10-02：计划时刻本来就没有「秒」，月日时分各两位即可）：`MM-DD HH:mm`。 */
 		function formatShortStamp(iso) {
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "—";
 			const d = new Date(ms);
-			return `${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			return `${pad2$2(d.getMonth() + 1)}-${pad2$2(d.getDate())} ${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
 		}
 		/** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
 		function formatTokenCount(n) {
@@ -1572,13 +1572,54 @@ body[data-ds-dark-theme]{
 
 @media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
 `;
+		/** 日期 / 时间的皮肤规则（P4）。 */
+		const DATETIME_CSS = `
+/* ── 日期 / 时间 P4 ───────────────────────────────────────────────────── */
+.dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
+.dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--tdt-control-h-lg);
+  min-width:0;max-width:100%;padding:0 8px;border:1px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
+  background:var(--tdt-surface-1);color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);
+  cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-dtf:hover:not(:disabled){background:var(--tdt-hover);}
+.dsh-tdt-dtf:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-dtf:disabled{cursor:not-allowed;opacity:.6;}
+.dsh-tdt-dtf__label{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.dsh-tdt-dtf__label--ph{color:var(--tdt-fg-dim);}
+.dsh-tdt-dtf__icon{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:none;color:var(--tdt-fg-3);}
+
+.dsh-tdt-layer{position:fixed;z-index:var(--tdt-z-menu);box-sizing:border-box;padding:8px;background:var(--tdt-surface-1);
+  box-shadow:var(--tdt-shadow-2);border-radius:var(--tdt-radius-md);color:var(--tdt-fg);font-size:var(--tdt-font-md);}
+
+.dsh-tdt-cal__head{display:flex;align-items:center;justify-content:space-between;gap:4px;margin-bottom:4px;}
+.dsh-tdt-cal__title{flex:1 1 auto;text-align:center;font-size:var(--tdt-font-md);font-weight:600;color:var(--tdt-fg);}
+.dsh-tdt-cal__grid{display:grid;grid-template-columns:repeat(7,32px);gap:2px;}
+.dsh-tdt-cal__weekday{height:24px;display:flex;align-items:center;justify-content:center;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
+.dsh-tdt-cal__cell{width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;
+  border:1px solid transparent;border-radius:var(--tdt-radius-md);background:transparent;color:var(--tdt-fg);
+  font:inherit;font-size:var(--tdt-font-md);cursor:pointer;
+  transition:background-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-cal__cell--hover{background:var(--tdt-hover);}
+.dsh-tdt-cal__cell--out{color:var(--tdt-fg-dim);}
+.dsh-tdt-cal__cell--today{border-color:var(--tdt-business);}
+.dsh-tdt-cal__cell[aria-pressed='true']{background:var(--tdt-accent);color:var(--tdt-fg-inverse);}
+.dsh-tdt-cal__foot{margin-top:6px;padding-top:6px;border-top:1px solid var(--tdt-border);}
+
+.dsh-tdt-time__cols{display:flex;gap:4px;}
+.dsh-tdt-time__list{width:56px;max-height:196px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;}
+.dsh-tdt-time__opt{padding:5px 0;border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg-2);
+  font:inherit;font-size:var(--tdt-font-md);cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-time__opt[aria-selected='true']{background:var(--tdt-hover);color:var(--tdt-fg);font-weight:600;}
+.dsh-tdt-time__foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px solid var(--tdt-border);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-dtf,.dsh-tdt-cal__cell,.dsh-tdt-time__opt{transition:none;}}
+`;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 		const CONTROLS_DOMAIN = "controls";
 		/**
 		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
 		*/
 		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS);
+			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS);
 		}
 		//#endregion
 		//#region src/client/ui/Segmented.tsx
@@ -1816,6 +1857,280 @@ body[data-ds-dark-theme]{
 					bump(1);
 				}
 			}));
+		}
+		//#endregion
+		//#region src/client/ui/DateTime.tsx
+		/**
+		* 日期 / 时间控件 —— **全站唯一实现**（L2 组件皮肤，P4）
+		*
+		* 官方 primitives 没有日期 / 时间选择器 ⇒ 自绘日历弹层与时分列；结构、皮肤、交互只此一份，
+		* 颜色 / 尺寸 / 圆角 / 影全走 `--tdt-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
+		* 浮层定位 / 点外关闭走官方 `useAnchoredPosition` + `useDismissOnOutsidePointer`。
+		*/
+		function pad2$1(n) {
+			return String(n).padStart(2, "0");
+		}
+		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
+		function parseIsoDate(value) {
+			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+			if (match === null) return null;
+			return {
+				y: Number(match[1]),
+				m: Number(match[2]),
+				d: Number(match[3])
+			};
+		}
+		function toIsoDate(y, m, d) {
+			return `${y}-${pad2$1(m)}-${pad2$1(d)}`;
+		}
+		/** 本地今天（真实时间，非占位）。 */
+		function todayIso$1() {
+			const now = /* @__PURE__ */ new Date();
+			return toIsoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+		}
+		function buildCells(y, m) {
+			const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
+			const start = new Date(y, m - 1, 1 - offset);
+			const today = todayIso$1();
+			const cells = [];
+			for (let i = 0; i < 42; i++) {
+				const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+				const iso = toIsoDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
+				cells.push({
+					iso,
+					day: date.getDate(),
+					inMonth: date.getMonth() + 1 === m && date.getFullYear() === y,
+					isToday: iso === today
+				});
+			}
+			return cells;
+		}
+		/** 自绘日历弹层（锚点 = 统一字段壳按钮）。 */
+		function DateField(props) {
+			ensureControlsStyle();
+			const [open, setOpen] = (0, react.useState)(false);
+			const [hoverIso, setHoverIso] = (0, react.useState)(null);
+			const rootRef = (0, react.useRef)(null);
+			const panelRef = (0, react.useRef)(null);
+			const parsed = parseIsoDate(props.value);
+			const [cursor, setCursor] = (0, react.useState)(() => {
+				if (parsed !== null) return {
+					y: parsed.y,
+					m: parsed.m
+				};
+				const now = /* @__PURE__ */ new Date();
+				return {
+					y: now.getFullYear(),
+					m: now.getMonth() + 1
+				};
+			});
+			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
+				open,
+				anchorRef: rootRef,
+				panelRef,
+				side: "bottom",
+				align: "start",
+				gap: 4,
+				margin: 12
+			});
+			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					event.preventDefault();
+					setOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open]);
+			/** 打开时把视图对到已选月（或本月）。 */
+			const openPanel = (0, react.useCallback)(() => {
+				const current = parseIsoDate(props.value);
+				if (current !== null) setCursor({
+					y: current.y,
+					m: current.m
+				});
+				setOpen(true);
+			}, [props.value]);
+			const cells = (0, react.useMemo)(() => buildCells(cursor.y, cursor.m), [cursor]);
+			const step = (months) => {
+				const next = new Date(cursor.y, cursor.m - 1 + months, 1);
+				setCursor({
+					y: next.getFullYear(),
+					m: next.getMonth() + 1
+				});
+			};
+			const navButton = (label, months, icon) => (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon,
+				label,
+				title: label,
+				onClick: () => {
+					step(months);
+				}
+			});
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-dtf",
+				ref: rootRef,
+				disabled: props.disabled,
+				"aria-haspopup": "dialog",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onClick: () => {
+					if (open) setOpen(false);
+					else openPanel();
+				},
+				style: { width: props.width }
+			}, (0, react.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value), (0, react.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
+			return (0, react.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react.createElement)("div", {
+				ref: panelRef,
+				role: "dialog",
+				"aria-label": props.ariaLabel,
+				className: "dsh-tdt-layer",
+				style: {
+					...pos ?? {},
+					visibility: pos === void 0 ? "hidden" : "visible"
+				}
+			}, (0, react.createElement)("div", { className: "dsh-tdt-cal__head" }, navButton(props.labels.prevYear, -12, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), navButton(props.labels.prevMonth, -1, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), (0, react.createElement)("span", { className: "dsh-tdt-cal__title" }, props.labels.monthTitle(cursor.y, cursor.m)), navButton(props.labels.nextMonth, 1, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), navButton(props.labels.nextYear, 12, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("div", { className: "dsh-tdt-cal__grid" }, props.labels.weekdays.map((name) => (0, react.createElement)("div", {
+				key: name,
+				className: "dsh-tdt-cal__weekday"
+			}, name)), cells.map((cell) => {
+				const selected = cell.iso === props.value;
+				const hovered = cell.iso === hoverIso && !selected;
+				return (0, react.createElement)("button", {
+					key: cell.iso,
+					type: "button",
+					"aria-label": cell.iso,
+					"aria-pressed": selected,
+					onPointerEnter: () => {
+						setHoverIso(cell.iso);
+					},
+					onPointerLeave: () => {
+						setHoverIso((current) => current === cell.iso ? null : current);
+					},
+					onClick: () => {
+						props.onChange(cell.iso);
+						setOpen(false);
+					},
+					className: `dsh-tdt-cal__cell${cell.inMonth ? "" : " dsh-tdt-cal__cell--out"}${cell.isToday && !selected ? " dsh-tdt-cal__cell--today" : ""}${hovered ? " dsh-tdt-cal__cell--hover" : ""}`
+				}, String(cell.day));
+			})), (0, react.createElement)("div", { className: "dsh-tdt-cal__foot" }, (0, react.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				style: { width: "100%" },
+				onClick: () => {
+					props.onChange(todayIso$1());
+					setOpen(false);
+				}
+			}, props.labels.today))), document.body) : null);
+		}
+		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$1(i));
+		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$1(i));
+		/** 时分列：`HH:mm`。 */
+		function TimeField(props) {
+			ensureControlsStyle();
+			const [open, setOpen] = (0, react.useState)(false);
+			const [draft, setDraft] = (0, react.useState)(props.value);
+			const selectedRef = (0, react.useRef)(null);
+			const rootRef = (0, react.useRef)(null);
+			const panelRef = (0, react.useRef)(null);
+			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
+				open,
+				anchorRef: rootRef,
+				panelRef,
+				side: "bottom",
+				align: "start",
+				gap: 4,
+				margin: 12
+			});
+			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				const onKeyDown = (event) => {
+					if (event.key !== "Escape") return;
+					event.preventDefault();
+					setOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open]);
+			(0, react.useEffect)(() => {
+				if (!open) return;
+				selectedRef.current?.scrollIntoView({ block: "center" });
+			}, [open]);
+			const parsed = /^(\d{2}):(\d{2})$/.exec(draft);
+			const hour = parsed === null ? "" : parsed[1];
+			const minute = parsed === null ? "" : parsed[2];
+			const column = (values, active, name, onPick, attachRef) => (0, react.createElement)("div", {
+				role: "listbox",
+				"aria-label": name,
+				className: "dsh-tdt-time__list"
+			}, values.map((item) => (0, react.createElement)("button", {
+				key: item,
+				type: "button",
+				role: "option",
+				"aria-selected": item === active,
+				ref: attachRef && item === active ? selectedRef : void 0,
+				className: "dsh-tdt-time__opt",
+				onClick: () => {
+					onPick(item);
+				}
+			}, item)));
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-dtf",
+				ref: rootRef,
+				disabled: props.disabled,
+				"aria-haspopup": "dialog",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: props.title,
+				onClick: () => {
+					if (open) {
+						setOpen(false);
+						return;
+					}
+					setDraft(props.value);
+					setOpen(true);
+				},
+				style: { width: props.width }
+			}, (0, react.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value));
+			return (0, react.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react.createElement)("div", {
+				ref: panelRef,
+				role: "dialog",
+				"aria-label": props.ariaLabel,
+				className: "dsh-tdt-layer",
+				style: {
+					...pos ?? {},
+					visibility: pos === void 0 ? "hidden" : "visible"
+				}
+			}, (0, react.createElement)("div", { className: "dsh-tdt-time__cols" }, column(HOURS, hour, props.labels.hour, (next) => {
+				setDraft(`${next}:${minute === "" ? "00" : minute}`);
+			}, true), column(MINUTES, minute, props.labels.minute, (next) => {
+				setDraft(`${hour === "" ? "00" : hour}:${next}`);
+			}, false)), (0, react.createElement)("div", { className: "dsh-tdt-time__foot" }, (0, react.createElement)(Button$2, {
+				variant: "ghost",
+				size: "sm",
+				onClick: () => {
+					const now = /* @__PURE__ */ new Date();
+					setDraft(`${pad2$1(now.getHours())}:${pad2$1(now.getMinutes())}`);
+				}
+			}, props.labels.now), (0, react.createElement)(Button$2, {
+				variant: "primary",
+				size: "sm",
+				onClick: () => {
+					props.onChange(draft);
+					setOpen(false);
+				}
+			}, props.labels.confirm))), document.body) : null);
 		}
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -4885,7 +5200,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			radiusSm: "var(--dsw-radius-sm, 6px)",
 			radiusMd: "var(--dsw-radius-md, 8px)"
 		};
-		const transition$2 = "background 120ms ease, color 120ms ease, border-color 120ms ease";
 		/** 锚点按钮：克隆官方 `Input` 的外观（下拉、日期、时分共用同一副壳）。 */
 		const fieldButtonStyle = {
 			display: "inline-flex",
@@ -4904,7 +5218,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			fontSize: "13px",
 			lineHeight: "20px",
 			cursor: "pointer",
-			transition: transition$2
+			transition: "background 120ms ease, color 120ms ease, border-color 120ms ease"
 		};
 		const fieldLabelStyle = {
 			flex: "1 1 auto",
@@ -4914,22 +5228,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			whiteSpace: "nowrap",
 			textAlign: "left"
 		};
-		/**
-		* 浮层卡片：官方菜单卡同款材质（底 + 影 + 圆角）。
-		* `position: fixed` 必须自带宽：`useAnchoredPosition` 只回 `{left, top}`（读官方实现确认），
-		* 定位三件套 = 本样式 + `pos` + `createPortal` 到 body（既躲弹窗内部滚动裁剪，也不受祖先 transform 影响）。
-		*/
-		const layerStyle = {
-			position: "fixed",
-			zIndex: 1100,
-			boxSizing: "border-box",
-			padding: "4px",
-			background: C$3.menuFill,
-			boxShadow: C$3.elevation,
-			borderRadius: C$3.radiusMd,
-			color: C$3.text,
-			fontSize: "13px"
-		};
+		C$3.menuFill, C$3.elevation, C$3.radiusMd, C$3.text;
 		/** 前置/后置图标位（16px，颜色走 label-tertiary，与官方 Input 的 icon 位一致）。 */
 		function IconSeat(props) {
 			return (0, react.createElement)("span", { style: {
@@ -5018,41 +5317,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}
 			});
 		}
-		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
-		function parseIsoDate(value) {
-			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-			if (match === null) return null;
-			return {
-				y: Number(match[1]),
-				m: Number(match[2]),
-				d: Number(match[3])
-			};
-		}
-		function toIsoDate(y, m, d) {
-			return `${y}-${pad2$1(m)}-${pad2$1(d)}`;
-		}
-		/** 本地今天（真实时间，非占位）。 */
-		function todayIso$1() {
-			const now = /* @__PURE__ */ new Date();
-			return toIsoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
-		}
-		function buildCells(y, m) {
-			const offset = (new Date(y, m - 1, 1).getDay() + 6) % 7;
-			const start = new Date(y, m - 1, 1 - offset);
-			const today = todayIso$1();
-			const cells = [];
-			for (let i = 0; i < 42; i++) {
-				const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-				const iso = toIsoDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-				cells.push({
-					iso,
-					day: date.getDate(),
-					inMonth: date.getMonth() + 1 === m && date.getFullYear() === y,
-					isToday: iso === today
-				});
-			}
-			return cells;
-		}
 		/**
 		* 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
 		* 不再各处各拼月标题与按钮文案——要做日历相关改动只改这里。
@@ -5067,340 +5331,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				nextYear: t("editorNextYear"),
 				monthTitle: (year, month) => tt("editorMonthTitle", {
 					y: String(year),
-					m: pad2$1(month)
+					m: pad2$2(month)
 				}),
 				weekdays: t("editorWeekdayShorts").split("|")
 			};
-		}
-		/** 自绘日历弹层（锚点 = 官方 Input 外观的按钮）。 */
-		function DateField(props) {
-			const [open, setOpen] = (0, react.useState)(false);
-			const [hoverIso, setHoverIso] = (0, react.useState)(null);
-			const rootRef = (0, react.useRef)(null);
-			const panelRef = (0, react.useRef)(null);
-			const parsed = parseIsoDate(props.value);
-			const [cursor, setCursor] = (0, react.useState)(() => {
-				if (parsed !== null) return {
-					y: parsed.y,
-					m: parsed.m
-				};
-				const now = /* @__PURE__ */ new Date();
-				return {
-					y: now.getFullYear(),
-					m: now.getMonth() + 1
-				};
-			});
-			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
-				open,
-				anchorRef: rootRef,
-				panelRef,
-				side: "bottom",
-				align: "start",
-				gap: 4,
-				margin: 12
-			});
-			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
-			(0, react.useEffect)(() => {
-				if (!open) return;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					event.preventDefault();
-					setOpen(false);
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => {
-					document.removeEventListener("keydown", onKeyDown);
-				};
-			}, [open]);
-			/** 打开时把视图对到已选月（或本月）。 */
-			const openPanel = (0, react.useCallback)(() => {
-				const current = parseIsoDate(props.value);
-				if (current !== null) setCursor({
-					y: current.y,
-					m: current.m
-				});
-				setOpen(true);
-			}, [props.value]);
-			const cells = (0, react.useMemo)(() => buildCells(cursor.y, cursor.m), [cursor]);
-			const step = (months) => {
-				const next = new Date(cursor.y, cursor.m - 1 + months, 1);
-				setCursor({
-					y: next.getFullYear(),
-					m: next.getMonth() + 1
-				});
-			};
-			const navButton = (label, months, icon) => (0, react.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon,
-				label,
-				title: label,
-				onClick: () => {
-					step(months);
-				}
-			});
-			const anchor = (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-field",
-				ref: rootRef,
-				disabled: props.disabled,
-				"aria-haspopup": "dialog",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onClick: () => {
-					if (open) setOpen(false);
-					else openPanel();
-				},
-				style: {
-					...fieldButtonStyle,
-					width: props.width,
-					cursor: props.disabled === true ? "not-allowed" : "pointer",
-					opacity: props.disabled === true ? .6 : 1
-				}
-			}, (0, react.createElement)("span", { style: {
-				...fieldLabelStyle,
-				color: props.value === "" ? C$3.dimmed : C$3.text
-			} }, props.value === "" ? props.placeholder : props.value), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
-			return (0, react.createElement)("span", { style: {
-				display: "inline-flex",
-				position: "relative",
-				minWidth: 0
-			} }, anchor, open ? (0, react_dom.createPortal)((0, react.createElement)("div", {
-				ref: panelRef,
-				role: "dialog",
-				"aria-label": props.ariaLabel,
-				style: {
-					...layerStyle,
-					...pos ?? {},
-					padding: "8px",
-					visibility: pos === void 0 ? "hidden" : "visible"
-				}
-			}, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				gap: "4px",
-				marginBottom: "4px"
-			} }, navButton(props.labels.prevYear, -12, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), navButton(props.labels.prevMonth, -1, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 })), (0, react.createElement)("span", { style: {
-				flex: "1 1 auto",
-				textAlign: "center",
-				fontSize: "13px",
-				fontWeight: 600,
-				color: C$3.text
-			} }, props.labels.monthTitle(cursor.y, cursor.m)), navButton(props.labels.nextMonth, 1, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), navButton(props.labels.nextYear, 12, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react.createElement)("div", { style: {
-				display: "grid",
-				gridTemplateColumns: "repeat(7, 32px)",
-				gap: "2px"
-			} }, props.labels.weekdays.map((name) => (0, react.createElement)("div", {
-				key: name,
-				style: {
-					height: "24px",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					fontSize: "12px",
-					color: C$3.textTertiary
-				}
-			}, name)), cells.map((cell) => {
-				const selected = cell.iso === props.value;
-				const hovered = cell.iso === hoverIso && !selected;
-				return (0, react.createElement)("button", {
-					key: cell.iso,
-					type: "button",
-					"aria-label": cell.iso,
-					"aria-pressed": selected,
-					onPointerEnter: () => {
-						setHoverIso(cell.iso);
-					},
-					onPointerLeave: () => {
-						setHoverIso((current) => current === cell.iso ? null : current);
-					},
-					onClick: () => {
-						props.onChange(cell.iso);
-						setOpen(false);
-					},
-					style: {
-						width: "32px",
-						height: "32px",
-						padding: 0,
-						font: "inherit",
-						fontSize: "13px",
-						cursor: "pointer",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						border: cell.isToday && !selected ? `1px solid ${C$3.business}` : "1px solid transparent",
-						borderRadius: C$3.radiusMd,
-						background: selected ? C$3.brand : hovered ? C$3.hover : "transparent",
-						color: selected ? C$3.brandFg : cell.inMonth ? C$3.text : C$3.dimmed,
-						transition: transition$2
-					}
-				}, String(cell.day));
-			})), (0, react.createElement)("div", { style: {
-				marginTop: "6px",
-				paddingTop: "6px",
-				borderTop: `1px solid ${C$3.borderL2}`
-			} }, (0, react.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				style: { width: "100%" },
-				onClick: () => {
-					props.onChange(todayIso$1());
-					setOpen(false);
-				}
-			}, props.labels.today))), document.body) : null);
-		}
-		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$1(i));
-		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$1(i));
-		/** 时分列：`HH:mm`。 */
-		function TimeField(props) {
-			const [open, setOpen] = (0, react.useState)(false);
-			const [hover, setHover] = (0, react.useState)(false);
-			const [draft, setDraft] = (0, react.useState)(props.value);
-			const selectedRef = (0, react.useRef)(null);
-			const rootRef = (0, react.useRef)(null);
-			const panelRef = (0, react.useRef)(null);
-			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
-				open,
-				anchorRef: rootRef,
-				panelRef,
-				side: "bottom",
-				align: "start",
-				gap: 4,
-				margin: 12
-			});
-			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
-			(0, react.useEffect)(() => {
-				if (!open) return;
-				const onKeyDown = (event) => {
-					if (event.key !== "Escape") return;
-					event.preventDefault();
-					setOpen(false);
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => {
-					document.removeEventListener("keydown", onKeyDown);
-				};
-			}, [open]);
-			(0, react.useEffect)(() => {
-				if (!open) return;
-				selectedRef.current?.scrollIntoView({ block: "center" });
-			}, [open]);
-			const parsed = /^(\d{2}):(\d{2})$/.exec(draft);
-			const hour = parsed === null ? "" : parsed[1];
-			const minute = parsed === null ? "" : parsed[2];
-			const column = (values, active, name, onPick, attachRef) => (0, react.createElement)("div", {
-				role: "listbox",
-				"aria-label": name,
-				style: {
-					width: "56px",
-					maxHeight: "196px",
-					overflowY: "auto",
-					display: "flex",
-					flexDirection: "column",
-					gap: "2px"
-				}
-			}, values.map((item) => (0, react.createElement)("button", {
-				key: item,
-				type: "button",
-				role: "option",
-				"aria-selected": item === active,
-				ref: attachRef && item === active ? selectedRef : void 0,
-				onClick: () => {
-					onPick(item);
-				},
-				style: {
-					padding: "5px 0",
-					border: "none",
-					borderRadius: C$3.radiusSm,
-					font: "inherit",
-					fontSize: "13px",
-					cursor: "pointer",
-					transition: transition$2,
-					background: item === active ? C$3.hover : "transparent",
-					color: item === active ? C$3.text : C$3.textDim,
-					fontWeight: item === active ? 600 : 400
-				}
-			}, item)));
-			const anchor = (0, react.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-ed-field",
-				ref: rootRef,
-				disabled: props.disabled,
-				"aria-haspopup": "dialog",
-				"aria-expanded": open,
-				"aria-label": props.ariaLabel,
-				title: props.title,
-				onPointerEnter: () => {
-					setHover(true);
-				},
-				onPointerLeave: () => {
-					setHover(false);
-				},
-				onClick: () => {
-					if (open) {
-						setOpen(false);
-						return;
-					}
-					setDraft(props.value);
-					setOpen(true);
-				},
-				style: {
-					...fieldButtonStyle,
-					width: props.width,
-					background: hover && props.disabled !== true ? C$3.hover : C$3.layer1,
-					cursor: props.disabled === true ? "not-allowed" : "pointer",
-					opacity: props.disabled === true ? .6 : 1
-				}
-			}, (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react.createElement)("span", { style: {
-				...fieldLabelStyle,
-				color: props.value === "" ? C$3.dimmed : C$3.text
-			} }, props.value === "" ? props.placeholder : props.value));
-			return (0, react.createElement)("span", { style: {
-				display: "inline-flex",
-				position: "relative",
-				minWidth: 0
-			} }, anchor, open ? (0, react_dom.createPortal)((0, react.createElement)("div", {
-				ref: panelRef,
-				role: "dialog",
-				"aria-label": props.ariaLabel,
-				style: {
-					...layerStyle,
-					...pos ?? {},
-					padding: "8px",
-					visibility: pos === void 0 ? "hidden" : "visible"
-				}
-			}, (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "4px"
-			} }, column(HOURS, hour, props.labels.hour, (next) => {
-				setDraft(`${next}:${minute === "" ? "00" : minute}`);
-			}, true), column(MINUTES, minute, props.labels.minute, (next) => {
-				setDraft(`${hour === "" ? "00" : hour}:${next}`);
-			}, false)), (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "space-between",
-				gap: "8px",
-				marginTop: "6px",
-				paddingTop: "6px",
-				borderTop: `1px solid ${C$3.borderL2}`
-			} }, (0, react.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				onClick: () => {
-					const now = /* @__PURE__ */ new Date();
-					setDraft(`${pad2$1(now.getHours())}:${pad2$1(now.getMinutes())}`);
-				}
-			}, props.labels.now), (0, react.createElement)(Button$2, {
-				variant: "primary",
-				size: "sm",
-				onClick: () => {
-					props.onChange(draft);
-					setOpen(false);
-				}
-			}, props.labels.confirm))), document.body) : null);
 		}
 		/**
 		* 周几多选 = 全站统一分段控件 `Segmented`（multiple 模式），不再自绘一套
@@ -6741,7 +6675,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			if (parts.length !== 5) return "09:00";
 			const [minute, hour] = parts;
 			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
-			return `${pad2$1(hour)}:${pad2$1(minute)}`;
+			return `${pad2$2(hour)}:${pad2$2(minute)}`;
 		}
 		/**
 		* cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
@@ -38673,7 +38607,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		/** 本地今天（真实时间）。 */
 		function todayIso() {
 			const now = /* @__PURE__ */ new Date();
-			return `${now.getFullYear()}-${pad2$1(now.getMonth() + 1)}-${pad2$1(now.getDate())}`;
+			return `${now.getFullYear()}-${pad2$2(now.getMonth() + 1)}-${pad2$2(now.getDate())}`;
 		}
 		/**
 		* 表单里的「日期 + 时刻」是否**已经过去**（缺值 / 解析不出也算过去 ⇒ 走智能默认）。
@@ -38694,8 +38628,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const target = new Date(now.getTime() + 36e5);
 			if (target.getMinutes() !== 0 || target.getSeconds() !== 0 || target.getMilliseconds() !== 0) target.setHours(target.getHours() + 1, 0, 0, 0);
 			return {
-				date: `${target.getFullYear()}-${pad2$1(target.getMonth() + 1)}-${pad2$1(target.getDate())}`,
-				time: `${pad2$1(target.getHours())}:${pad2$1(target.getMinutes())}`
+				date: `${target.getFullYear()}-${pad2$2(target.getMonth() + 1)}-${pad2$2(target.getDate())}`,
+				time: `${pad2$2(target.getHours())}:${pad2$2(target.getMinutes())}`
 			};
 		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
@@ -41178,7 +41112,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			const hours = Math.floor(total / 3600);
 			const minutes = Math.floor(total % 3600 / 60);
 			const seconds = total % 60;
-			return hours > 0 ? `${pad2$1(hours)}:${pad2$1(minutes)}:${pad2$1(seconds)}` : `${pad2$1(minutes)}:${pad2$1(seconds)}`;
+			return hours > 0 ? `${pad2$2(hours)}:${pad2$2(minutes)}:${pad2$2(seconds)}` : `${pad2$2(minutes)}:${pad2$2(seconds)}`;
 		}
 		const tickerListeners = /* @__PURE__ */ new Set();
 		let tickerTimer = null;
@@ -41226,13 +41160,13 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 		function clockOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			return `${pad2$2(d.getHours())}:${pad2$2(d.getMinutes())}`;
 		}
 		/** 「09 月 28 日」（本机时区；月 / 日补两位，用户 2026-09-30）。 */
 		function dateOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$1(d.getMonth() + 1)} 月 ${pad2$1(d.getDate())} 日`;
+			return `${pad2$2(d.getMonth() + 1)} 月 ${pad2$2(d.getDate())} 日`;
 		}
 		function useFlip(signature) {
 			const nodes = (0, react.useRef)(/* @__PURE__ */ new Map());
