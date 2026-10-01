@@ -94,9 +94,10 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-pfx--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。 */
-.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
-.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:var(--tdt-hover,rgba(128,128,128,.16));}
+/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
+.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
+/* 用户 2026-10-01：不要 hover 底色（问号只要一个图标 + 气泡），只做颜色提亮。 */
+.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:0 0;outline:none;}
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
    左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。

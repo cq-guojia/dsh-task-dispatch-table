@@ -143,7 +143,7 @@ export const FIELD_CSS = `
 .dsh-tdt-num--md{height:var(--tdt-control-h-md);}
 .dsh-tdt-num--lg{height:var(--tdt-control-h-lg);}
 .dsh-tdt-num--disabled{opacity:.5;}
-.dsh-tdt-num__input{width:44px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
+.dsh-tdt-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
   font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);text-align:center;outline:none;}
 .dsh-tdt-num__suffix{padding:0 6px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);white-space:nowrap;}
 .dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--tdt-fg-2);}

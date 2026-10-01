@@ -1575,7 +1575,7 @@ body[data-ds-dark-theme]{
 .dsh-tdt-num--md{height:var(--tdt-control-h-md);}
 .dsh-tdt-num--lg{height:var(--tdt-control-h-lg);}
 .dsh-tdt-num--disabled{opacity:.5;}
-.dsh-tdt-num__input{width:44px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
+.dsh-tdt-num__input{width:36px;height:100%;padding:0 2px;border:0;background:transparent;color:var(--tdt-fg);
   font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);text-align:center;outline:none;}
 .dsh-tdt-num__suffix{padding:0 6px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);white-space:nowrap;}
 .dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--tdt-fg-2);}
@@ -1880,7 +1880,7 @@ body[data-ds-dark-theme]{
 		*/
 		function NumberInput(props) {
 			ensureControlsStyle();
-			const { value, onChange, min = -Infinity, max = Infinity, step = 1, size = "lg", disabled, suffix, label, decreaseLabel = "减少", increaseLabel = "增加", className, style } = props;
+			const { value, onChange, min = -Infinity, max = Infinity, step = 1, size = "lg", inputWidth, disabled, suffix, label, decreaseLabel = "减少", increaseLabel = "增加", className, style } = props;
 			const [text, setText] = (0, react.useState)(String(value));
 			(0, react.useEffect)(() => {
 				setText(String(value));
@@ -1916,6 +1916,7 @@ body[data-ds-dark-theme]{
 				}
 			}), (0, react.createElement)("input", {
 				className: "dsh-tdt-num__input",
+				...inputWidth === void 0 ? {} : { style: { width: `${inputWidth}px` } },
 				value: text,
 				disabled,
 				inputMode: "numeric",
@@ -6576,9 +6577,10 @@ body[data-ds-dark-theme]{
 .dsh-tdt-ed-pfx--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
 /* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
 .dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。 */
-.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:50%;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
-.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:var(--tdt-hover,rgba(128,128,128,.16));}
+/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
+.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
+/* 用户 2026-10-01：不要 hover 底色（问号只要一个图标 + 气泡），只做颜色提亮。 */
+.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:0 0;outline:none;}
 /* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
    左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
@@ -38550,12 +38552,11 @@ body[data-ds-dark-theme]{
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })) : (0, react.createElement)(IconButton, {
-				variant: "plain",
-				size: "sm",
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }),
-				label: hint
-			});
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 })) : (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-help",
+				"aria-label": hint
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular, { size: 14 }));
 			const tip = {
 				label: hint,
 				side,
@@ -38937,7 +38938,8 @@ body[data-ds-dark-theme]{
 				placeholder: props.placeholder,
 				error: props.error,
 				"aria-label": props.prefix,
-				onChange: props.onChange
+				onChange: props.onChange,
+				style: { width: "100%" }
 			});
 		}
 		/** 周期档的子控件：内容行 = 频率 + 月/日 + 时间；星期恒定在下面一行。 */
@@ -39109,7 +39111,6 @@ body[data-ds-dark-theme]{
 				value: Number.parseInt(draft.intervalStep, 10) || 1,
 				min: 1,
 				step: 1,
-				size: "sm",
 				label: t("editorIntervalStep"),
 				onChange: (n) => {
 					patch({ intervalStep: String(n) });
@@ -39889,6 +39890,7 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorModelPh"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorModel"),
+				maxWidth: 220,
 				align: "end"
 			})));
 			const fileInputRef = (0, react.useRef)(null);
@@ -40220,7 +40222,6 @@ body[data-ds-dark-theme]{
 				placeholder: t("editorWindow"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWindow"),
-				size: "sm",
 				align: "end"
 			}), (0, react.createElement)(HelpButton, {
 				hint: t("editorWindowHint"),
@@ -40868,9 +40869,9 @@ body[data-ds-dark-theme]{
 		};
 		const TASK_LIST_CSS = [
 			"@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }",
-			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
+			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
 			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
-			`.dsh-tdt-tl-input input { height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
+			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
 			`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
 			".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
 			"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
@@ -41716,7 +41717,6 @@ body[data-ds-dark-theme]{
 				placeholder: tt("filterAll"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("colStatus"),
-				size: "sm",
 				width: 100
 			}), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
@@ -41864,7 +41864,6 @@ body[data-ds-dark-theme]{
 				value: logKeyword,
 				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),
-				size: "sm",
 				style: { width: "140px" }
 			}), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
@@ -41918,7 +41917,6 @@ body[data-ds-dark-theme]{
 				placeholder: String(logLimit),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("cardLogLimit"),
-				size: "sm",
 				width: 70
 			})), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
@@ -42414,6 +42412,7 @@ body[data-ds-dark-theme]{
 				min: f.minSec,
 				step: 1,
 				size: "sm",
+				inputWidth: 48,
 				suffix: t("settingsUnitSec"),
 				label: t(f.labelKey),
 				disabled: saving,

@@ -92,10 +92,12 @@ const controlBoxStyle: Record<string, string | number> = {
 const TASK_LIST_CSS = [
   // 状态条运行中：整条明暗脉动（竖条不适合旋转，脉动更显眼）。
   '@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }',
-  // 官方 Input 默认 32px 高、边框色 l4 ⇒ 压到与按钮同高、并统一成同一套观感。
-  `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
+  // 官方 Input 默认 32px 高 + 0.5px 边框 ⇒ 压到与按钮同高，并统一成同一套观感。
+  // ⚠️ 必须 box-sizing:border-box：官方那 0.5px 边框若加在 28 之外，搜索框外框会比「工作区下拉」高约 2px
+  //    （用户 2026-10-01 点名「搜索框比下拉高两个像素」的根因）。下拉侧本就 border-box（见 controlBoxStyle）。
+  `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
   `.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
-  `.dsh-tdt-tl-input input { height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
+  `.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
   // 工作区下拉：**定长**（切选项时宽度不动，不再左右晃），内容超长尾部省略号。
   // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
   `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
@@ -937,7 +939,7 @@ function TaskExpandPanel(props: {
         placeholder: tt('filterAll'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('colStatus'),
-        size: 'sm',
+        // 高度走默认 lg(=32)，与同排「从…到…」的 DateField 同档（用户 2026-10-01：此前 sm=24 与时间框差一截）。
         width: 100,
       }),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
@@ -1085,7 +1087,7 @@ function TaskExpandPanel(props: {
         value: logKeyword,
         onChange: setLogKeyword,
         placeholder: t('cardKeyword'),
-        size: 'sm',
+        // 高度走默认 lg(=32)，与同排时间框同档（用户 2026-10-01 口径：过滤行内控统一同高）。
         style: { width: '140px' },
       }),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
@@ -1105,7 +1107,7 @@ function TaskExpandPanel(props: {
           placeholder: String(logLimit),
           emptyLabel: t('editorNoOptions'),
           ariaLabel: t('cardLogLimit'),
-          size: 'sm',
+          // 高度走默认 lg(=32)，与同排时间框同档。
           width: 70,
         }),
       ),

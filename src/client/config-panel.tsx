@@ -154,6 +154,8 @@ export function ConfigPanel(props: ConfigPanelProps) {
             min: f.minSec,
             step: 1,
             size: 'sm',
+            // 秒数可能是 5~6 位（如 86400）⇒ 这里例外放宽数字区宽度，不套用 36px 的默认规格。
+            inputWidth: 48,
             suffix: t('settingsUnitSec'),
             label: t(f.labelKey),
             disabled: saving,

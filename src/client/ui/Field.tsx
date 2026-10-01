@@ -104,6 +104,8 @@ export interface NumberInputProps {
   step?: number
   /** 高度档（默认 sm）。 */
   size?: FieldSize
+  /** 内部数字输入区宽度（px；不传取 CSS 规格 36，够 3~4 位数）。 */
+  inputWidth?: number
   /** 禁用。 */
   disabled?: boolean
   /** 后缀（如「秒」「次」）。 */
@@ -129,7 +131,7 @@ export interface NumberInputProps {
 export function NumberInput(props: NumberInputProps): ReturnType<typeof h> {
   ensureControlsStyle()
   const {
-    value, onChange, min = -Infinity, max = Infinity, step = 1, size = 'lg',
+    value, onChange, min = -Infinity, max = Infinity, step = 1, size = 'lg', inputWidth,
     disabled, suffix, label, decreaseLabel = '减少', increaseLabel = '增加', className, style,
   } = props
   const [text, setText] = useState(String(value))
@@ -156,6 +158,7 @@ export function NumberInput(props: NumberInputProps): ReturnType<typeof h> {
     h(IconButton, { variant: 'plain', size, icon: '−', label: decreaseLabel, disabled, onClick: () => { bump(-1) } }),
     h('input', {
       className: 'dsh-tdt-num__input',
+      ...(inputWidth === undefined ? {} : { style: { width: `${inputWidth}px` } }),
       value: text,
       disabled,
       inputMode: 'numeric',

@@ -75,6 +75,9 @@ function HelpButton(props: {
   insideClickable?: boolean
 }) {
   const { hint, side = 'bottom', align, maxWidth = 300, insideClickable = false } = props
+  // ⚠️ 两分支都必须给官方 Tooltip 一个**真实 DOM 元素**当子节点：若传函数组件（如 IconButton），
+  //    Tooltip 挂不上 ref ⇒ 悬停不弹气泡（本仓库踩过两次的坑）。故非 insideClickable 也直接用原生 button，
+  //    并统一挂 .dsh-tdt-ed-help（尺寸 / 颜色一处定义），不再借 IconButton 的按钮壳。
   const anchor = insideClickable
     ? h('span', {
         className: 'dsh-tdt-ed-help',
@@ -82,7 +85,11 @@ function HelpButton(props: {
         'aria-label': hint,
         onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation() },
       }, h(IconQuestionOutlineRegular, { size: 14 }))
-    : h(IconButton, { variant: 'plain', size: 'sm', icon: h(IconQuestionOutlineRegular, { size: 14 }), label: hint })
+    : h('button', {
+        type: 'button',
+        className: 'dsh-tdt-ed-help',
+        'aria-label': hint,
+      }, h(IconQuestionOutlineRegular, { size: 14 }))
   const tip: { label: string; side: 'top' | 'bottom'; maxWidth: number; align?: 'center' | 'end' } =
     { label: hint, side, maxWidth }
   if (align !== undefined) tip.align = align
@@ -722,6 +729,9 @@ function PrefixedInput(props: {
     error: props.error,
     'aria-label': props.prefix,
     onChange: props.onChange,
+    // 撑满整行：PrefixedInput 根是 inline-flex（收缩盒），不指定宽度会缩到「前缀 + 默认 input 宽」，
+    // 比下面各张全宽卡片短一截（用户 2026-10-01 点名）。这一层是编辑器专用包装，无其它调用点。
+    style: { width: '100%' },
   })
 }
 
@@ -887,7 +897,7 @@ function IntervalControls(props: {
         value: Number.parseInt(draft.intervalStep, 10) || 1,
         min: 1,
         step: 1,
-        size: 'sm',
+        // 高度走默认 lg(=32)，与同排「小时 / 分钟」下拉同档（此前 sm=24 显矮）。
         label: t('editorIntervalStep'),
         onChange: (n: number) => { patch({ intervalStep: String(n) }) },
       }),
@@ -1546,6 +1556,8 @@ export function TaskEditorDrawer(props: {
         placeholder: t('editorModelPh'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorModel'),
+        // 超长模型名不再把整行撑爆：封顶 220px、超出尾部省略号（用户 2026-10-01；此前无上限，一选就拉长）。
+        maxWidth: 220,
         align: 'end',
       }),
     ),
@@ -1766,7 +1778,7 @@ export function TaskEditorDrawer(props: {
           placeholder: t('editorWindow'),
           emptyLabel: t('editorNoOptions'),
           ariaLabel: t('editorWindow'),
-          size: 'sm',
+          // 高度走默认 lg(=32)，与同排「任务开始时间」的日期 / 时间锚点同档（此前 sm=24 显矮）。
           align: 'end',
         }),
         h(HelpButton, { hint: t('editorWindowHint'), side: 'top', align: 'end', maxWidth: 320 }),
