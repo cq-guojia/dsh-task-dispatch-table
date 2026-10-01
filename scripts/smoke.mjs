@@ -1659,6 +1659,8 @@ console.log('\n[14] runtime-index')
       p23Js.includes(".dsh-tdt-switch button[role='switch'][aria-checked='true']"))
     check('日期 / 时间皮肤进产物（dsh-tdt-dtf / cal__cell / time__opt）',
       p23Js.includes('.dsh-tdt-dtf{') && p23Js.includes('.dsh-tdt-cal__cell{') && p23Js.includes('.dsh-tdt-time__opt{'))
+    check('业务文件明暗特判已清零（body[data-ds-dark-theme] 只剩 token 层）',
+      !p23Js.includes('body[data-ds-dark-theme] .dsh-tdt') && p23Js.includes('body[data-ds-dark-theme]{'))
   }
 
   store.close()

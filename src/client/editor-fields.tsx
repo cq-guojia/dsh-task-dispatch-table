@@ -52,7 +52,7 @@ export const C = {
   // = `#f8f9fa94`（亮）/ `#43454a73`（暗），**是半透明的**——官方菜单卡自带毛玻璃底（backdrop-filter），
   // 我们没有那层，照抄就是「把后面的透出来了」。自绘浮层一律用不透明的 `--dsw-alias-bg-base`。
   menuFill: 'var(--dsw-alias-bg-base, #22252a)',
-  elevation: 'var(--dsw-elevation-prominent, 0 8px 28px rgba(0,0,0,0.28))',
+  elevation: 'var(--tdt-shadow-2)',
   radiusSm: 'var(--dsw-radius-sm, 6px)',
   radiusMd: 'var(--dsw-radius-md, 8px)',
 } as const
