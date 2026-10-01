@@ -450,8 +450,8 @@ export function FilePreviewPanel(props: {
   onClose: () => void
   /** 页面级 dock 形态（固定右侧 + 推压整页）。 */
   dock?: boolean
-  /** 左缘拖拽条按下（调宽）；不传 = 不渲染拖拽条。 */
-  onResizeStart?: (event: { clientX: number; pointerId: number }) => void
+  /** 左缘拖拽条按下（调宽）；不传 = 不渲染拖拽条。preventDefault 用于掐掉拖选（由调用方决定）。 */
+  onResizeStart?: (event: { clientX: number; pointerId: number; preventDefault?: () => void }) => void
 }): ReturnType<typeof h> {
   const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props
   const { kind, ext, mime } = previewKind(path)
@@ -500,7 +500,7 @@ export function FilePreviewPanel(props: {
           role: 'separator',
           'aria-orientation': 'vertical',
           title: t('previewResize'),
-          onPointerDown: (event: { clientX: number; pointerId: number }) => { onResizeStart(event) },
+          onPointerDown: (event: { clientX: number; pointerId: number; preventDefault?: () => void }) => { onResizeStart(event) },
         }),
     h('div', { className: 'dsh-tdt-sv-preview-head' },
       h('span', { className: 'dsh-tdt-sv-preview-label' }, t('previewFileLabel')),

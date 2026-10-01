@@ -550,10 +550,21 @@ function TaskPage(props: {
     setPreview({ sessionId, path })
   }, [canPreview])
   const closePreview = useCallback((): void => { setPreview(null) }, [])
-  /** 拖拽调宽：指针移动期间只在 dock 上改 CSS 变量值，松手才落 state（避免每帧重渲染整页）。 */
-  const startResize = useCallback((start: { clientX: number }): void => {
+  /**
+   * 拖拽调宽：指针移动期间只在 dock 上改 CSS 变量值，松手才落 state（避免每帧重渲染整页）。
+   *
+   * 拖拽不再「顺手选中文字」（用户 2026-10-02，与编辑分栏同一处理）：pointerdown 的默认动作会
+   * 开一次文本选区 ⇒ ① preventDefault 掐掉默认动作；② 拖动期间 `body.user-select:none`，
+   * pointerup 恢复，并清掉已有选区。
+   */
+  const startResize = useCallback((start: { clientX: number; preventDefault?: () => void }): void => {
+    start.preventDefault?.()
     const startX = start.clientX
     const startWidth = previewWidth
+    const body = document.body
+    const prevUserSelect = body.style.userSelect
+    body.style.userSelect = 'none'
+    window.getSelection()?.removeAllRanges()
     const onMove = (event: PointerEvent): void => {
       const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
       const root = document.getElementById('dsh-tdt-root')
@@ -565,6 +576,7 @@ function TaskPage(props: {
       const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
       setPreviewWidth(next)
       try { window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next)) } catch { /* 隐私模式忽略 */ }
+      body.style.userSelect = prevUserSelect
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)

@@ -330,8 +330,8 @@ export function FileBrowser(props: {
   onClose: () => void
   /** 页面级 dock 形态（固定右侧 + 推压整页）。 */
   dock?: boolean
-  /** 左缘拖拽条按下（调宽）；不传 = 不渲染拖拽条。 */
-  onResizeStart?: (event: { clientX: number; pointerId: number }) => void
+  /** 左缘拖拽条按下（调宽）；不传 = 不渲染拖拽条。preventDefault 用于掐掉拖选（由调用方决定）。 */
+  onResizeStart?: (event: { clientX: number; pointerId: number; preventDefault?: () => void }) => void
   /** 选择器模式：点文件即回调 onPick（不进预览），用于「选择工作区文件」附件。 */
   picker?: boolean
   /** 选择器模式下的选文件回调（path 为**工作区相对**路径：任务定义 link 附件的 ref 口径）。 */
@@ -702,7 +702,7 @@ export function FileBrowser(props: {
         role: 'separator',
         'aria-orientation': 'vertical',
         title: t('previewResize'),
-        onPointerDown: (event: { clientX: number; pointerId: number }) => { onResizeStart(event) },
+        onPointerDown: (event: { clientX: number; pointerId: number; preventDefault?: () => void }) => { onResizeStart(event) },
       }),
     // 第一排（用户 2026-09-28 五验拍板顺序）：[▾ 选层] [面包屑…] [← 返回] [↑ 上一层] [✕ 关闭]。
     // 下拉菜单挂在 crumbbar（overflow 可见）下，不被面包屑区域裁剪。

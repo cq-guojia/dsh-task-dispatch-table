@@ -31,7 +31,7 @@
 | 分段控件（滑动块） | `ui/Segmented.tsx` | `h(Segmented<'a' \| 'b'>, { value: v, size: 'md', variant: 'inset', items: [{ value: 'a', label: '甲', badge: 3 }], onChange: setV })` | ✅ 全站唯一（主面板 / 列表筛选 / 卡片三面板 / 编辑器官方覆写 ×3 / 星期多选 / 版本开关 / 预览两态） |
 | 按钮 / 图标钮 | `ui/Button.tsx`（`Button` / `IconButton`） | `h(Button, { variant: 'outline', size: 'md' }, '重置')` | ✅ 全站唯一 |
 | 输入框 / 前缀框 / 数字框 | `ui/Field.tsx`（`Input` / `PrefixedInput` / `NumberInput`） | `h(Input, { value: v, onChange, size: 'lg', error: bad })` | ✅ 全站唯一（原生 `<input type=number>` 已清零） |
-| 下拉 | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ 全站唯一（原生 `<select>` 已收编） |
+| 下拉 | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ 全站唯一（原生 `<select>` 已收编）。⚠️ **同一排多个下拉一律定宽**：窄的热点会让宽度随选项文字变化、换选项就跳；写法见 §五「同排下拉定宽」 |
 | 开关 | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（皮肤在 `ui/controls-css.ts`） | `h('span', { className: 'dsh-tdt-switch' }, h(Switch, { checked, onChange }))` | ✅ 全站共用一个包装类（选中 success 绿只此一处） |
 | 日期 / 时间 | `ui/DateTime.tsx`（`DateField` / `TimeField`） | `h(DateField, { value: d, onChange, size: 'lg' })` | ✅ 全站唯一（自绘日历 + 时分列） |
 | 时间范围筛选 | `ui/TimeRange.tsx`（预设 + 起止一体） | `h(TimeRange, { value, onChange, labels, calendarLabels, timeLabels, precision: 'minute', size: 'md' })` | ✅ 全站唯一（执行记录 / 日志 / 未来总查询页共用；`size` **必传**、`precision` 选 `day`/`minute`；边界归一在 `ui/time-range.ts` 半开区间） |
@@ -94,7 +94,7 @@
 |---|---|---|---|
 | 1 | 省略号三件套 | `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` 全仓 **19 处**（会话 CSS 约 14 处） | 基础层加一个 `.dsh-tdt-ellipsis` |
 | 2 | 手搓图标钮 | `archive-session-css.ts` 的 `head-btn`(28×28) / `tree-toggle`(20×20) 仍自绘 | 收编 `ui/IconButton` |
-| 3 | 6px 拖拽条 | `task-editor-css.ts` 与 `archive-session-css.ts` 各写一遍（后者注释自称「同一套」） | 上提 `.dsh-tdt-resizer` |
+| 3 | 6px 拖拽条 | `task-editor-css.ts` 与 `archive-session-css.ts` 各写一遍（后者注释自称「同一套」）；**连 CSS 带逻辑两份**：两个 `startResize`（`task-editor.tsx` / `index.ts`）都各自实现了「拖动调宽」与「拖动禁选」（后者 2026-10-02 加） | 上提 `.dsh-tdt-resizer` + 一个 `startResizeLayoutWidth()`（含 preventDefault / `body.user-select` 恢复） |
 | 4 | 卡 / 浮层外壳 | 同构 **7 处**（`ed-card` / `ed-panel` / `sv-panel` / `sv-stats` / `layer` …） | 基础层加 Panel / Card 壳 |
 | 5 | 手搓中性 Toast | `index.ts` 自绘一个（关钮 + 圆点），与 `FloatingToast` 中性档重复 | `FloatingToast` 加 `closable` 变体后删自绘 |
 | 6 | 缺基础层件 | 无 `Textarea`（提示词框皮肤写在业务 CSS）、无 `Checkbox`（编辑器用裸 `<input type=checkbox>`） | 补进 `ui/` 后删业务皮肤 |
@@ -122,6 +122,9 @@
 - **有边 / 无边必须等高**（2026-10-01 拍板，同日修正 **+2**）：边框必须在内部补回，外框**严格 == token**。统一几何 = 段高 `token − 6px`（上下各 **2px padding + 1px 边框**）——有边框的 variant 用真边框 + padding **2px**；无边框的 variant padding 收 **3px** 补回缺的 1px。`Segmented` 已按此落地（`default` 真边框 + 2px；`inset` 无边框 + 3px，外框严格 24/28/32），`Button` / `Input` 的有边 / 无边同此规则。⚠️ 早期文档写的「3px / 4px」**已废**：那会让外框比 token 多 **+2px**（就是「滑轨比同排输入框高两像素」的根因）。
 - **想要新的控件**：按 §一 第三个分支，在 `ui/` 里建唯一实现，并在本手册 §二 表里加一行。
 - **想要新的 token**（颜色 / 圆角 / 字号 / 间距 / 层级）：加进 `ui/tokens.ts` **一处**（命名 `--tdt-*`，映射宿主 alias 并留兜底值），同时在 [`ui-foundation.md`](ui-foundation.md) §四 的表里登记；**不许在使用点直接写 `var(--dsw-*)`**。
+- **同排下拉定宽**（2026-10-02 拍板，来自「提示词下三下拉」）：一排里出现多个 `SelectField` 时**一律给 `width` 定宽**，以其中最短语义的那一个为基准、其余取倍数（如权限 120 ⇒ 工作区 / 模型 180 = 1.5×）。
+  理由：`SelectField` 不传宽度时按内容撑（`maxWidth` 只封顶）⇒ **换一个选项宽度就变一下**（先各自撑到上限、三个都长才开始互相挤），视觉一直在跳。
+  显示不下的部分走省略号（需要可读全名时用 `marquee: true`，hover 才跑马灯）；**空间确实不够时整体等比收缩**（CSS 收缩与选项长短无关，不会重新引入跳动）。
 
 ---
 

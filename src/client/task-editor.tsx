@@ -932,16 +932,16 @@ function IntervalControls(props: {
 
 /** 分栏宽度持久化（纯本地偏好；隐私模式也不崩）。 */
 const EDITOR_WIDTH_KEY = 'dsh-tdt-editor-width'
-/** 最小宽度 = 浮层时代那个弹窗的宽度（用户 2026-10-01：保持现在的弹窗宽度作为最小宽度）。 */
-const EDITOR_WIDTH_MIN = 560
-const EDITOR_WIDTH_DEFAULT = 560
+/** 最小宽度（用户 2026-10-02：560 偏宽，改 500 —— 仍是「浮层时代弹窗宽度」这个口径的收窄版）。 */
+const EDITOR_WIDTH_MIN = 500
+const EDITOR_WIDTH_DEFAULT = 500
 /** 主面板的最小宽度（≥1120 的列永远不被压到出横向滚动条）。与新一分栏同时开时也要保住。 */
 export const PAGE_MIN_WIDTH = 760
 
 /**
  * 夹到允许区间：**给主面板留够最小宽度**（用户 2026-10-01 Q3）——
  * 上限 = 视口 − 主面板最小宽 − 其它分栏已占的宽度（两个分栏同时开时也成立）；
- * 下限保住 560，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
+ * 下限保住 500，两头挤不动时下限优先（宁可主面板出滚动条也不许分栏被压塌）。
  * @param value - 目标宽度。
  * @param reserved - 右侧其它分栏（预览 dock）已经占掉的宽度，0 = 没有。
  */
@@ -962,10 +962,19 @@ export function readEditorWidth(reserved = 0): number {
   }
 }
 
-/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认 560）。 */
+/** 宽度写盘（隐私模式抛错就忽略；宽度是纯本地偏好，丢了回默认宽度）。 */
 export function writeEditorWidth(value: number): void {
   try { window.localStorage.setItem(EDITOR_WIDTH_KEY, String(value)) } catch { /* 隐私模式忽略 */ }
 }
+
+/**
+ * 提示词卡底部三下拉的**定宽**（用户 2026-10-02）：
+ * 以「权限」为基准 120px，工作区 / 模型 = 1.5 倍 = 180px。
+ * 不再按选项文字自适应宽度——那样换一个选项宽度就变一下（先各自撑到上限、三个都长才开始挤），
+ * 观感一直在跳；用户很清楚自己选的工作区和模型，显示不下就省略号（MarqueeText 悬停可读全名）。
+ */
+const PROMPT_SELECT_BASE = '120px'
+const PROMPT_SELECT_WIDE = '180px'
 
 /** 版本条目时间（tooltip / 行内）：`YYYY-MM-DD HH:mm`。 */
 const formatVersionTime = (iso: string): string => formatDateTime(iso)
@@ -1459,11 +1468,22 @@ export function TaskEditorDrawer(props: {
   /**
    * 左缘拖拽调宽（U21：与预览 dock 同一套手势）：拖动期间**只改 CSS 变量**
    * `--dsh-tdt-editor-w`（不重渲染整页），松手才回调父 state + 落 localStorage。
+   *
+   * 拖拽为什么会「选中文字」（用户 2026-10-02）：pointerdown 的默认动作会开一次**文本选区**，
+   * 指针扫过主窗口的文字时选区跟着扩 ⇒ 看着像在拖选。两道闸：
+   *   ① `preventDefault()`：掐掉 pointerdown 的默认动作（连带后面的兼容 mousedown），选区压根不起；
+   *   ② 拖动期间给 `document.body` 上 `user-select:none`（window pointerup 恢复）：即使有别处
+   *      已存在的选区，拖动过程中也不会再变，也不会刷出高亮。
    */
-  const startResize = useCallback((start: { clientX: number }): void => {
+  const startResize = useCallback((start: { clientX: number; preventDefault?: () => void }): void => {
+    start.preventDefault?.()
     const startX = start.clientX
     const startWidth = width
     const next = (clientX: number): number => clampEditorWidth(startWidth + (startX - clientX), reserved)
+    const body = document.body
+    const prevUserSelect = body.style.userSelect
+    body.style.userSelect = 'none'
+    window.getSelection()?.removeAllRanges()
     const onMove = (event: PointerEvent): void => {
       const root = document.getElementById('dsh-tdt-root')
       if (root !== null) root.style.setProperty('--dsh-tdt-editor-w', `${next(event.clientX)}px`)
@@ -1471,6 +1491,7 @@ export function TaskEditorDrawer(props: {
     const onUp = (event: PointerEvent): void => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      body.style.userSelect = prevUserSelect
       onWidthChange(next(event.clientX))
     }
     window.addEventListener('pointermove', onMove)
@@ -1558,6 +1579,9 @@ export function TaskEditorDrawer(props: {
     }),
     // 底部一行：左 = 工作区（真实工作区列表，P1 接）；工作区右侧 = 权限档位（决策 50）；
     // 右 = 模型（不填 = 默认模型）。
+    // 三框宽度**全部定宽**（用户 2026-10-02）：以权限框为基准 PROMPT_SELECT_BASE(120)，
+    // 工作区 / 模型 = 1.5 倍(180)。不再按内容自适应 —— 以前换选项宽度就跟着变（先撑到 cap、
+    // 三个都长才开始挤），观感一直在跳；用户很清楚自己选的工作区 / 模型，显示不下就省略号。
     h('div', { className: 'dsh-tdt-ed-card-foot' },
       h(SelectField, {
         value: draft.workspace,
@@ -1568,9 +1592,7 @@ export function TaskEditorDrawer(props: {
         ariaLabel: t('editorWorkspace'),
         error: problemsByField('workspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
-        // 超长工作区名不再把整行撑爆：**封顶 200px**，超出即省略号，hover 在图标右侧
-        // 自己的盒子里跑马灯（用户 2026-09-29；跑马灯不得压到文件夹图标下）。
-        maxWidth: 200,
+        width: PROMPT_SELECT_WIDE,
         marquee: true,
       }),
       // 权限：紧挨工作区（用户 2026-09-29：选完工作区就定权限，两者同一件事的前后脚）。
@@ -1582,7 +1604,7 @@ export function TaskEditorDrawer(props: {
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorPermission'),
         title: t('editorPermissionHint'),
-        width: '120px',
+        width: PROMPT_SELECT_BASE,
       }),
       h('span', { className: 'dsh-tdt-ed-spacer' }),
       h(SelectField, {
@@ -1592,8 +1614,7 @@ export function TaskEditorDrawer(props: {
         placeholder: t('editorModelPh'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorModel'),
-        // 超长模型名不再把整行撑爆：封顶 200px（与工作区同 cap）、超出尾部省略号（用户 2026-10-01）。
-        maxWidth: 200,
+        width: PROMPT_SELECT_WIDE,
         align: 'end',
       }),
     ),
@@ -2245,7 +2266,7 @@ export function TaskEditorDrawer(props: {
       h('div', {
         className: 'dsh-tdt-ed-resizer',
         title: t('previewResize'),
-        onPointerDown: (event: { clientX: number }) => { startResize({ clientX: event.clientX }) },
+        onPointerDown: (event: { clientX: number; preventDefault: () => void }) => { startResize(event) },
       }),
       panelInner,
       // 关闭确认（分栏内联层，绝对定位盖住整条分栏）：改过才出现；

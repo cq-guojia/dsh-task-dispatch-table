@@ -146,6 +146,18 @@
 
 ---
 
+## 五-C、第二轮微调（2026-10-02，用户首轮验收后）
+
+1. **窄一点**：`EDITOR_WIDTH_MIN` / `EDITOR_WIDTH_DEFAULT` 560 → **500**（CSS 兜底值同步）。旧口径「= 浮层时代弹窗宽度」退成历史由头，现在是「用户觉得 560 偏宽，收到 500」。
+2. **提示词下三下拉改定宽**（用户：「还挺跳……把它固定住宽」）
+   - 原逻辑：`工作区` / `模型` 传 `maxWidth: 200` 让它们**按内容自适应**（只有超长才封顶），`权限` 才是定宽 120 ⇒ 换一个选项宽度就变一下，三个都长才开始互相挤 —— 观感一直在跳。
+   - 现在：以权限为基准 **120**，工作区 / 模型 = **1.5 倍 = 180**，全部 `width` 定宽（`PROMPT_SELECT_BASE` / `PROMPT_SELECT_WIDE` 两个常量）；显示不下就省略号，工作区保留 hover 跑马灯；位置不够时整体等比收缩（CSS 收缩与选项长短无关，不会把跳动带回来）。
+   - 口径写进 [`ui-style-guide.md`](../design/ui-style-guide.md) §五「同排下拉定宽」。
+3. **拖拽不再顺手选中文字**（用户：「经常会发现有些文字被我给选中了」）
+   - 根因：`pointerdown` 的默认动作会开一次**文本选区**，指针随后扫过主窗口的文字 ⇒ 选区跟着扩，看着像在拖选。这是**真实的浏览器选区**，不是视觉错觉。
+   - 修法两道闸（两条 dock 的 `startResize` 都一样）：① `pointerdown` 里 `preventDefault()` 掐掉默认动作（连带后面的兼容 `mousedown`）；② 拖动期间把 `document.body.style.userSelect = 'none'`，`window pointerup` 时恢复原值，并 `window.getSelection()?.removeAllRanges()` 清掉遗留选区。拖拽条自身再补 `user-select:none`。
+   - 能解决：两道闸都是标准行为，第二道（`user-select:none`）在浏览器行为有差异时也兜得住。
+
 ## 六、做完后怎么验收
 
 1. `npm run build`（含 dist 入库）+ `npm run typecheck` + `npm run smoke`（改 tab 断言，见 §三.2）。
