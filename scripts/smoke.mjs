@@ -1618,6 +1618,20 @@ console.log('\n[14] runtime-index')
       p1Js.includes('dsh-tdt-sv-seg') && p1Js.includes('dsh-tdt-ed-histtoggle'))
   }
 
+  // ── 17. UI 基础层 P1b：编辑器分段控件也归一（删官方薄封装 + 周几多选走统一件）──
+  console.log('\n[17] UI 基础层 P1b（编辑器分段归一）')
+  {
+    const p1bJs = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('第三档高度 lg 已进基础层（token + 皮肤规则）',
+      p1bJs.includes('--tdt-control-h-lg:32px') && p1bJs.includes('dsh-tdt-seg--lg'))
+    check('编辑器头部/卡内分段已迁到统一 Segmented（basic/records · 编辑预览 · 排期 三处 id 在产物中）',
+      p1bJs.includes('dsh-tdt-ed-tabs') && p1bJs.includes('dsh-tdt-ed-prompt-mode') && p1bJs.includes('dsh-tdt-ed-schedule'))
+    check('周几多选组件仍在且挂在间隔卡（multiple 模式走统一 Segmented，由类型与导入保证）',
+      p1bJs.includes('dsh-tdt-ed-schedule-interval-panel') && p1bJs.includes('WeekdayPicker'))
+    check('官方分段控件薄封装已删（编辑器不再用官方 SegmentedControl 作分段；死 CSS 也清掉）',
+      !p1bJs.includes('dsh-tdt-ed-seg{padding:3px}') && !p1bJs.includes(".dsh-tdt-ed-seg>span[aria-hidden"))
+  }
+
   store.close()
   rmSync(dir, { recursive: true, force: true })
 }

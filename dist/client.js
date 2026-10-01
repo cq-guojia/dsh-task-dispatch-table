@@ -4243,6 +4243,357 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, forkErr !== null ? (0, react.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
 		}
 		//#endregion
+		//#region src/client/ui/tokens.ts
+		/**
+		* L1 语义 token 层（UI 基础层 · P0 地基）
+		*
+		* 这一份文件是**全站唯一的「宿主变量 → 插件语义名」翻译表**。规矩见
+		* docs/design/ui-style-guide.md：
+		*  - `--tdt-*` **只允许在本文件定义**；其它任何文件只能 `var(--tdt-*)` 消费，
+		*    不许再定义 `--tdt-*`，也不许直接写 `var(--dsw-*)`；
+		*  - 每个 token 都带兜底值 ⇒ 宿主升级换名时不炸（最坏退到兜底色，不会白屏）；
+		*  - **明暗差异只写在本文件**：能靠宿主 alias 表达的一律不写覆盖段（alias 自己随主题变），
+		*    只有 alias 表达不了的「固定中性面 / 反色面」才进 `body[data-ds-dark-theme]` 段。
+		*
+		* 宿主变量名 / 亮暗取值 / 哪个是真变量 —— 真源是
+		* docs/design/external/dsh-capabilities.md §主题与设计变量
+		* （2026-10-01 按宿主 0.2.0-rc.2 解包五个包逐条核实；兜底值取的就是宿主真值）。
+		*
+		* 挂载点选 `body`：插件界面（含 portal 到 body 的弹窗）全在 body 内，
+		* 定义在 body 上零调用点成本；名字统一带 `--tdt-` 前缀，不会与宿主变量打架。
+		*/
+		const UI_TOKENS_CSS = `
+/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */
+body{
+  --tdt-fg:var(--dsw-alias-label-primary,#1f2328);
+  --tdt-fg-2:var(--dsw-alias-label-secondary,#5c6370);
+  --tdt-fg-3:var(--dsw-alias-label-tertiary,#767d87);
+  --tdt-fg-4:var(--dsw-alias-label-caption,#9aa1ab);
+  --tdt-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);
+  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */
+  --tdt-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);
+
+  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */
+  --tdt-surface-1:var(--dsw-alias-bg-layer-1,#fff);
+  --tdt-surface-2:var(--dsw-alias-bg-layer-2,#fff);
+  --tdt-surface-3:var(--dsw-alias-bg-layer-3,#fff);
+  /* 「选中亮片」的底盘色（配 --tdt-shadow-raised 用） */
+  --tdt-surface-raised:var(--dsw-alias-bg-layer-1,#fff);
+  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */
+  --tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
+  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */
+  --tdt-solid:var(--dsw-static-neutral-00,#fff);
+  --tdt-on-solid:var(--dsw-alias-label-primary,#1f2328);
+  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */
+  --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
+  --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
+  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
+
+  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
+  --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
+  --tdt-border:var(--dsw-alias-border-l2,#0000001a);
+  --tdt-border-strong:var(--dsw-alias-border-l3,#0000001f);
+  --tdt-border-heavy:var(--dsw-alias-border-l4,#00000029);
+
+  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */
+  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */
+  --tdt-accent:var(--dsw-alias-brand-primary,#0f1115);
+  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */
+  --tdt-business:var(--dsw-alias-state-business-primary,#3b5bdb);
+  --tdt-success:var(--dsw-alias-state-success-primary,#22c55e);
+  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */
+  --tdt-warning:var(--dsw-alias-state-warn-primary,#f59e0b);
+  --tdt-danger:var(--dsw-alias-state-error-primary,#ec1313);
+  --tdt-link:var(--dsw-alias-link,#3b5bdb);
+  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
+     故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
+  --tdt-on-signal:#fff;
+
+  /* ── 交互底 / 遮罩 ────────────────────────────────────────────────── */
+  --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
+  --tdt-active:var(--dsw-alias-interactive-bg-active,#2631481a);
+  --tdt-mask:var(--dsw-alias-bg-mask-1,#0000003d);
+
+  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
+  --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
+  /* 亮片自带的浮起感（选中态用；与 --tdt-surface-raised 配对） */
+  --tdt-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
+  --tdt-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);
+  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */
+  --tdt-focus:var(--dsw-alias-state-business-primary,#3b5bdb);
+
+  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */
+  --tdt-radius-xs:var(--dsw-radius-xs,4px);
+  --tdt-radius-sm:var(--dsw-radius-sm,8px);
+  --tdt-radius-md:var(--dsw-radius-md,12px);
+  --tdt-radius-lg:var(--dsw-radius-lg,16px);
+  --tdt-radius-xl:var(--dsw-radius-xl,20px);
+  --tdt-radius-panel:var(--dsw-radius-panel,28px);
+
+  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */
+  --tdt-space-1:4px;
+  --tdt-space-2:8px;
+  --tdt-space-3:12px;
+  --tdt-space-4:16px;
+
+  /* ── 控件高度：离散三档（控件用 size="sm|md|lg" 选；调用点不许自定义高度，
+       真不够用才允许在调用点本地覆盖 --tdt-control-h-*，属例外而非常态）── */
+  --tdt-control-h-sm:24px;
+  --tdt-control-h-md:28px;
+  --tdt-control-h-lg:32px;
+
+  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */
+  --tdt-font-xs:var(--dsw-font-xxxs-11-font-size,11px);
+  --tdt-font-sm:var(--dsw-font-xxs-12-font-size,12px);
+  --tdt-font-md:var(--dsw-font-xs-13-font-size,13px);
+  --tdt-font-lg:var(--dsw-font-s-14-font-size,14px);
+  --tdt-font-xl:var(--dsw-font-base-16-font-size,16px);
+  --tdt-line-xs:var(--dsw-font-xxxs-11-line-height,14px);
+  --tdt-line-sm:var(--dsw-font-xxs-12-line-height,18px);
+  --tdt-line-md:var(--dsw-font-xs-13-line-height,20px);
+  --tdt-line-lg:var(--dsw-font-s-14-line-height,22px);
+  --tdt-line-xl:var(--dsw-font-base-16-line-height,24px);
+  --tdt-font-mono:var(--ds-font-family-code,monospace);
+
+  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */
+  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */
+  --tdt-z-dock:1030;
+  --tdt-z-drawer:1040;
+  --tdt-z-modal:1070;
+  --tdt-z-menu:1100;
+  --tdt-z-tip:1200;
+
+  /* ── 动效 ─────────────────────────────────────────────────────────── */
+  --tdt-dur:var(--ds-transition-duration,.2s);
+  --tdt-dur-fast:var(--ds-transition-duration-fast,.12s);
+  --tdt-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));
+}
+
+/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────
+   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，
+   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。
+   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */
+body[data-ds-dark-theme]{
+  --tdt-solid:var(--dsw-static-neutral-900,#0f0f0f);
+  --tdt-on-solid:var(--dsw-static-neutral-00,#fff);
+  --tdt-plate:var(--dsw-static-neutral-850,#212123);
+  --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
+  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
+}
+`;
+		//#endregion
+		//#region src/client/ui/style.ts
+		/**
+		* 统一样式注入器（UI 基础层 · P0 地基）
+		*
+		* 为什么必须运行时注入：客户端产物是 `window.__ModuleLoader__.load({ factory })` 的 CJS 闭包，
+		* `import './x.css'` 只会产出独立 css 资源、内核不会加载它（task-editor-css.ts / archive-session-css.ts /
+		* toast-css.ts 三处注释已结论）⇒ CSS 只能以字符串在运行时打进 `<style>`。
+		*
+		* 本模块把「各文件自己 createElement('style')」收成**唯一入口**：
+		*  - 全站只有**一个** `<style id="dsh-task-dispatch-table-ui">`；
+		*  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` …），
+		*    同一域重复登记 = 覆盖（后写胜），便于过渡期逐块搬；
+		*  - `tokens` 域恒排最前 —— 变量定义必须先于消费它的规则出现（同一条 style 内也讲先后）；
+		*  - 幂等：重复调用不重复插入；`registerStyle` 在标签已挂上时会立刻刷新内容。
+		*
+		* 三条硬规矩（docs/design/ui-style-guide.md）：
+		*  ① 不许再有第二处 `document.createElement('style')`；
+		*  ② 不许再出现第二套 style 标签 id；
+		*  ③ 域内的规则只能消费 `var(--tdt-*)`（颜色 / 尺寸 / 字号一律来自 token 层）。
+		*/
+		/** 全站唯一的样式标签 id（改名 = 大范围回归，不要动）。 */
+		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
+		/** 契约：域 → CSS 文本（插入顺序 = 首次登记顺序，`tokens` 恒最前）。 */
+		const domains = /* @__PURE__ */ new Map();
+		/** token 域固定名（`ui/index.ts` 的 ensureUiBase 用它登记变量表）。 */
+		const TOKENS_DOMAIN = "tokens";
+		/** 已挂载的 style 标签（缓存引用；被外部移除时 ensureUiStyles 会重新接管）。 */
+		let tag = null;
+		/** 内容是否落后于 domains（登记后置位，flush 后清除）。 */
+		let dirty = true;
+		/** 按「tokens 优先、其余按登记顺序」拼出整条 CSS。 */
+		function buildCss() {
+			const entries = [...domains.entries()];
+			entries.sort((a, b) => a[0] === "tokens" ? -1 : b[0] === "tokens" ? 1 : 0);
+			return entries.map(([, css]) => css).join("\n");
+		}
+		/** 把最新内容写进标签（唯一写点）。 */
+		function flush() {
+			if (tag === null) return;
+			tag.textContent = buildCss();
+			dirty = false;
+		}
+		/**
+		* 登记一个域的样式（纯登记，不强制挂载）。
+		*
+		* @param domain 域名（见本文件头部的清单）；同名重复登记 = 覆盖。
+		* @param css 该域的 CSS 文本。
+		*/
+		function registerStyle(domain, css) {
+			if (domains.get(domain) === css) return;
+			domains.set(domain, css);
+			dirty = true;
+			if (tag !== null && tag.isConnected) flush();
+		}
+		/**
+		* 确保样式已挂载且是最新（幂等；无 document / 无 head 的环境静默跳过）。
+		*/
+		function ensureUiStyles() {
+			if (typeof document === "undefined") return;
+			if (tag === null || !tag.isConnected) {
+				const found = document.getElementById(UI_STYLE_ID);
+				if (found !== null) tag = found;
+				else {
+					const head = document.head;
+					if (head === null) return;
+					const el = document.createElement("style");
+					el.id = UI_STYLE_ID;
+					head.appendChild(el);
+					tag = el;
+				}
+				dirty = true;
+			}
+			if (dirty) flush();
+		}
+		/**
+		* 过渡期便捷入口：登记 + 立刻确保挂载（老 `ensureXxxStyle()` 一行替换成这个）。
+		*
+		* @param domain 域名。
+		* @param css 该域的 CSS 文本。
+		*/
+		function applyStyle(domain, css) {
+			registerStyle(domain, css);
+			ensureUiStyles();
+		}
+		/**
+		* 入口 / 组件调用一次即可：登记 token 层并确保样式已注入（幂等）。
+		*
+		* 放在本文件（而不是 index.ts）是为了让 `ui/` 内的组件也能直接调用它而不产生循环依赖。
+		*/
+		function ensureUiBase() {
+			registerStyle(TOKENS_DOMAIN, UI_TOKENS_CSS);
+			ensureUiStyles();
+		}
+		//#endregion
+		//#region src/client/ui/controls-css.ts
+		/**
+		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
+		*
+		* 规矩（docs/design/ui-style-guide.md §三）：
+		*  - **只消费 `var(--tdt-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
+		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达（本文件的 `--seg-*`）；
+		*  - 高度只取 `--tdt-control-h-sm` / `-md` / `-lg` 三档（段高 = 控件总高 − 6px：上下 padding 2px×2 + 描边 1px×2；真不够用才在调用点本地覆盖 `--tdt-control-h-*`，属例外）。
+		*
+		* 分期：P1 只有分段控件（滑动块）；P2 按钮 / P3 输入下拉 / P4 开关日期时间会往本文件追加，
+		* 追加时保持「一段一控件、段头写清哪一期」的写法。
+		*/
+		/** 分段控件的皮肤规则（P1）。 */
+		const SEGMENTED_CSS = `
+/* ── 分段控件（滑动块）P1 ────────────────────────────────────────────────
+   结构一套 + 两个受控轴：size(sm|md|lg) × variant(default|inset)。
+   变体**只覆盖两个颜色变量**（--seg-track 轨道底 / --seg-thumb 选中块），
+   这正是「同一份样式、只重载颜色」的落地形态。 */
+.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:var(--tdt-radius-sm);border:1px solid var(--tdt-border);background:var(--seg-track);}
+
+/* default：轨道=第二层面（官方分段控件轨道用的就是 interactive-bg-hover 那类下沉底），选中块=亮片底 */
+.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);}
+/* inset：用在「已经有一层底」的容器里（卡片展开区）⇒ 轨道下沉到第一层面、选中块抬到第三层面 */
+.dsh-tdt-seg--inset{--seg-track:var(--tdt-surface-1);--seg-thumb:var(--tdt-surface-3);}
+
+.dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
+  height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);
+  background:transparent;color:var(--tdt-fg-2);font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
+  font-weight:400;white-space:nowrap;cursor:pointer;
+  transition:color var(--tdt-dur-fast) var(--tdt-ease),background-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
+.dsh-tdt-seg--lg .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-lg) - 6px);}
+.dsh-tdt-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--tdt-fg);}
+.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--tdt-shadow-raised);color:var(--tdt-fg);font-weight:600;}
+.dsh-tdt-seg__item:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
+.dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
+
+/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染 */
+.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;
+  border-radius:var(--tdt-radius-sm);background:var(--tdt-danger);color:var(--tdt-on-signal);
+  font-size:var(--tdt-font-xs);line-height:16px;font-weight:400;}
+
+/* block：撑满父宽（表单行用），各段等分 */
+.dsh-tdt-seg--block{display:flex;width:100%;}
+.dsh-tdt-seg--block .dsh-tdt-seg__item{flex:1 1 auto;justify-content:center;}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
+`;
+		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
+		const CONTROLS_DOMAIN = "controls";
+		/**
+		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
+		*/
+		function ensureControlsStyle() {
+			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS);
+		}
+		//#endregion
+		//#region src/client/ui/Segmented.tsx
+		/**
+		* 分段控件（滑动块）—— **全站唯一实现**（L2 组件皮肤，P1）
+		*
+		* 它是「同一份结构 + 两个受控轴」的样板：
+		*  - `size`：`sm`(24) / `md`(28) / `lg`(32) —— **离散三档**，调用点**不许**自己写高度
+		*    （真不够用才允许在调用点本地覆盖 `--tdt-control-h-*`，属例外而非常态）；
+		*  - `variant`：`default`（放在 Plain 表面上，轨道=第二层面）/ `inset`（放在已有一层底的容器里，
+		*    轨道=第一层面、选中块=第三层面）—— 变体只改两个颜色变量，结构 / 尺寸 / 交互规则零重复。
+		*
+		* 用法：
+		*   // 单选
+		*   h(Segmented<'a' | 'b'>, { value: v, size: 'md', items: [{ value: 'a', label: '甲' }], onChange: setV })
+		*   // 多选（如星期）
+		*   h(Segmented<'1' | '2'>, { multiple: true, value: vs, items: [...], onChange: setVs })
+		*
+		* ⚠️ 不许在任何使用点就地写分段样式；要多一档高度 / 多一个外观 ⇒ 走
+		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
+		*/
+		/**
+		* 渲染一个分段控件（单选 / 多选同体）。
+		*
+		* @param props 见 {@link SegmentedProps}。
+		* @returns 分段控件元素。
+		*/
+		function Segmented(props) {
+			ensureUiBase();
+			ensureControlsStyle();
+			const size = props.size ?? "sm";
+			const variant = props.variant ?? "default";
+			const multiple = props.multiple === true;
+			const value = props.value;
+			const onChange = props.onChange;
+			return (0, react.createElement)("div", {
+				role: "group",
+				"aria-label": props.label,
+				id: props.id,
+				className: `dsh-tdt-seg dsh-tdt-seg--${variant} dsh-tdt-seg--${size}${props.block === true ? " dsh-tdt-seg--block" : ""}${props.className !== void 0 ? " " + props.className : ""}`,
+				style: props.style
+			}, props.items.map((item) => {
+				const on = multiple ? value.includes(item.value) : value === item.value;
+				const disabled = item.disabled === true || props.disabled === true;
+				const handle = () => {
+					if (disabled) return;
+					if (multiple) {
+						const arr = value;
+						const next = arr.includes(item.value) ? arr.filter((v) => v !== item.value) : [...arr, item.value];
+						onChange(next);
+					} else onChange(item.value);
+				};
+				return (0, react.createElement)("button", {
+					key: item.value,
+					type: "button",
+					className: "dsh-tdt-seg__item",
+					"aria-pressed": on,
+					disabled,
+					onClick: handle
+				}, item.label, item.badge !== void 0 && item.badge > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-seg__badge" }, String(item.badge)) : null);
+			}));
+		}
+		//#endregion
 		//#region src/client/editor-fields.tsx
 		const C$3 = {
 			text: "var(--dsw-alias-label-primary, #1f2328)",
@@ -4393,21 +4744,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onClose: () => {
 					setOpen(false);
 				}
-			});
-		}
-		/** 官方分段控件（options ≥ 2 项）；不锁字面量类型，调用方自行窄化。 */
-		function Segmented$1(props) {
-			const options = props.options.map((option) => ({
-				value: option.value,
-				label: option.label
-			}));
-			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.SegmentedControl, {
-				id: props.id,
-				value: props.value,
-				options,
-				onChange: props.onChange,
-				label: props.label,
-				className: props.className
 			});
 		}
 		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
@@ -4844,21 +5180,16 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			}, props.labels.confirm))), document.body) : null);
 		}
 		/**
-		* 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的官方 SegmentedControl 外观**：
-		* 外层一圈 `interactive-bg-hover` 灰底轨道（包边），里面七枚等宽段，选中段是
-		* 「薄灰底（bg-layer-1）+ 柔和阴影 + 主色字」的浅胶囊（**不是实心蓝**，所以精致不刺眼）。
-		*
-		* 周几是多选，没法直接套官方 `SegmentedControl`（它只能单选），故照它的尺寸与样式
-		* 自绘：轨道 padding 4 / gap 2 / radius-md，段高 28 / radius-sm / 字 13 weight 500，
-		* 与顶部控件逐条对齐（2026-09-29 用户指定「改成那种」）。一个都不选 = 每天（间隔档语义）。
+		* 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的统一分段控件**：
+		* 直接走 `Segmented`（multiple 模式），所以选中态、轨道、明暗、焦点环与全站完全一致，
+		* 不再自绘一套（2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
+		* 一个都不选 = 每天（间隔档语义）。
 		*/
 		function WeekdayPicker(props) {
-			const [hover, setHover] = (0, react.useState)(null);
-			const selected = new Set(props.value);
-			const toggle = (day) => {
-				const next = selected.has(day) ? props.value.filter((item) => item !== day) : [...props.value, day];
-				props.onChange(next.slice().sort((a, b) => a - b));
-			};
+			const items = (0, react.useMemo)(() => props.labels.shorts.map((short, index) => ({
+				value: String(index + 1),
+				label: short
+			})), [props.labels.shorts]);
 			return (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -4868,56 +5199,19 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				flex: "none",
 				fontSize: "13px",
 				color: C$3.text
-			} }, props.label), (0, react.createElement)("div", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "3px",
-				padding: "6px",
-				borderRadius: C$3.radiusMd,
-				background: C$3.hover
-			} }, props.labels.shorts.map((short, index) => {
-				const day = index + 1;
-				const on = selected.has(day);
-				const name = props.labels.weekdays[index] ?? String(day);
-				return (0, react.createElement)("button", {
-					key: day,
-					type: "button",
-					className: "dsh-tdt-ed-field",
-					disabled: props.disabled,
-					"aria-pressed": on,
-					"aria-label": name,
-					title: name,
-					onClick: () => {
-						if (props.disabled !== true) toggle(day);
-					},
-					onPointerEnter: () => {
-						setHover(day);
-					},
-					onPointerLeave: () => {
-						setHover((current) => current === day ? null : current);
-					},
-					style: {
-						flex: "none",
-						minWidth: "26px",
-						height: "24px",
-						padding: "0 2px",
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						border: "0",
-						borderRadius: C$3.radiusSm,
-						background: on ? C$3.business : "transparent",
-						boxShadow: on ? "var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))" : "none",
-						color: on ? C$3.brandFg : C$3.textDim,
-						font: "inherit",
-						fontSize: "12px",
-						lineHeight: "18px",
-						fontWeight: on ? 600 : 400,
-						cursor: props.disabled === true ? "not-allowed" : "pointer",
-						transition: transition$2
-					}
-				}, short);
-			})), props.value.length === 0 ? (0, react.createElement)("span", { style: {
+			} }, props.label), (0, react.createElement)(Segmented, {
+				multiple: true,
+				value: props.value.map(String),
+				items,
+				size: "md",
+				variant: "inset",
+				block: true,
+				label: props.label,
+				disabled: props.disabled,
+				onChange: (next) => {
+					props.onChange(next.map(Number).sort((a, b) => a - b));
+				}
+			}), props.value.length === 0 ? (0, react.createElement)("span", { style: {
 				fontSize: "12px",
 				color: C$3.dimmed
 			} }, props.labels.empty) : null);
@@ -6124,13 +6418,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d6bfe);outline-offset:1px;}
 /* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满。 */
 .dsh-tdt-ed-selectwrap{width:100%;}
-/* 官方分段控件收小一号（官方 = 28px 高 / 13px 字）。官方类名是 CSS-module 哈希，
-   只能按「元素 + role」选中；指示器位置由 --dsh-segment-count/index 算出来（不测量 DOM），
-   所以容器 padding 一改，指示器的 top/left/height/width 算式必须同步改（gap 保持 2px，
-   位移公式 index*(100% + 2px) 才仍然成立）。 */
-.dsh-tdt-ed-seg{padding:3px;}
-.dsh-tdt-ed-seg>span[aria-hidden='true']{top:3px;left:3px;height:calc(100% - 6px);width:calc((100% - 6px - 2px*(var(--dsh-segment-count) - 1))/var(--dsh-segment-count));}
-.dsh-tdt-ed-seg>button[role='tab']{height:22px;padding:0 10px;font-size:12px;line-height:18px;}
 /* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
    省掉标签单独占的一行——弹窗竖向空间紧张。 */
 .dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:32px;box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}
@@ -38991,10 +39278,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				display: "flex",
 				alignItems: "center",
 				gap: "8px"
-			} }, (0, react.createElement)(Segmented$1, {
+			} }, (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-prompt-mode",
 				value: mode,
-				options: [{
+				size: "md",
+				variant: "default",
+				items: [{
 					value: "edit",
 					label: t("editorModeEdit")
 				}, {
@@ -39004,8 +39293,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (next) => {
 					setMode(next);
 				},
-				label: t("editorPromptEditorTitle"),
-				className: "dsh-tdt-ed-seg"
+				label: t("editorPromptEditorTitle")
 			}), (0, react.createElement)("button", {
 				type: "button",
 				className: `dsh-tdt-ed-histtoggle${showVersions ? " dsh-tdt-ed-histtoggle--on" : ""}`,
@@ -39670,10 +39958,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				alignItems: "center",
 				gap: "8px",
 				flex: "none"
-			} }, (0, react.createElement)(Segmented$1, {
+			} }, (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-schedule",
 				value: scheduleTab,
-				options: [
+				size: "md",
+				variant: "inset",
+				items: [
 					{
 						value: "once",
 						label: t("editorFreqOnce")
@@ -39709,8 +39999,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						periodFreq: draft.periodFreq === "once" ? "daily" : draft.periodFreq
 					});
 				},
-				label: t("editorSchedule"),
-				className: "dsh-tdt-ed-seg"
+				label: t("editorSchedule")
 			}))), draft.scheduleKind === "interval" ? (0, react.createElement)("div", {
 				id: "dsh-tdt-ed-schedule-interval-panel",
 				role: "tabpanel",
@@ -39967,10 +40256,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			})), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
 				size: 12,
 				className: advancedOpen ? "dsh-tdt-ed-advchevron-open" : "dsh-tdt-ed-advchevron"
-			})), advancedOpen ? (0, react.createElement)("div", { className: "dsh-tdt-ed-advbody" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-label" }, t("editorRetry")), (0, react.createElement)(Segmented$1, {
+			})), advancedOpen ? (0, react.createElement)("div", { className: "dsh-tdt-ed-advbody" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-advitem" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-row" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-label" }, t("editorRetry")), (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-retry",
 				value: draft.maxAttempts,
-				options: retryOptions,
+				size: "md",
+				variant: "inset",
+				items: retryOptions,
 				onChange: (value) => {
 					patch({ maxAttempts: value });
 				},
@@ -40068,10 +40359,12 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					setEnabledToast(null);
 				},
 				text: enabledToast.msg
-			}) : null, mode === "edit" ? (0, react.createElement)(Segmented$1, {
+			}) : null, mode === "edit" ? (0, react.createElement)(Segmented, {
 				id: "dsh-tdt-ed-tabs",
 				value: tab,
-				options: [{
+				size: "md",
+				variant: "default",
+				items: [{
 					value: "basic",
 					label: t("editorTabBasic")
 				}, {
@@ -40081,8 +40374,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (next) => {
 					setTab(next);
 				},
-				label: t("editorTabBasic"),
-				className: "dsh-tdt-ed-seg"
+				label: t("editorTabBasic")
 			}) : null, (0, react.createElement)("button", {
 				className: "dsh-tdt-ed-close",
 				type: "button",
@@ -40305,336 +40597,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					onClose();
 				}
 			}) : null);
-		}
-		//#endregion
-		//#region src/client/ui/tokens.ts
-		/**
-		* L1 语义 token 层（UI 基础层 · P0 地基）
-		*
-		* 这一份文件是**全站唯一的「宿主变量 → 插件语义名」翻译表**。规矩见
-		* docs/design/ui-style-guide.md：
-		*  - `--tdt-*` **只允许在本文件定义**；其它任何文件只能 `var(--tdt-*)` 消费，
-		*    不许再定义 `--tdt-*`，也不许直接写 `var(--dsw-*)`；
-		*  - 每个 token 都带兜底值 ⇒ 宿主升级换名时不炸（最坏退到兜底色，不会白屏）；
-		*  - **明暗差异只写在本文件**：能靠宿主 alias 表达的一律不写覆盖段（alias 自己随主题变），
-		*    只有 alias 表达不了的「固定中性面 / 反色面」才进 `body[data-ds-dark-theme]` 段。
-		*
-		* 宿主变量名 / 亮暗取值 / 哪个是真变量 —— 真源是
-		* docs/design/external/dsh-capabilities.md §主题与设计变量
-		* （2026-10-01 按宿主 0.2.0-rc.2 解包五个包逐条核实；兜底值取的就是宿主真值）。
-		*
-		* 挂载点选 `body`：插件界面（含 portal 到 body 的弹窗）全在 body 内，
-		* 定义在 body 上零调用点成本；名字统一带 `--tdt-` 前缀，不会与宿主变量打架。
-		*/
-		const UI_TOKENS_CSS = `
-/* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */
-body{
-  --tdt-fg:var(--dsw-alias-label-primary,#1f2328);
-  --tdt-fg-2:var(--dsw-alias-label-secondary,#5c6370);
-  --tdt-fg-3:var(--dsw-alias-label-tertiary,#767d87);
-  --tdt-fg-4:var(--dsw-alias-label-caption,#9aa1ab);
-  --tdt-fg-dim:var(--dsw-alias-label-dimmed,#b9bfc7);
-  /* 反色面上的字（实心钮 / 角标）：暗色下是 bluish-1000，故用 -foreground 而非 -inverted */
-  --tdt-fg-inverse:var(--dsw-alias-label-primary-foreground,#fff);
-
-  /* ── 面（宿主 bg-layer 三档 + 下沉轨道底）──────────────────────────── */
-  --tdt-surface-1:var(--dsw-alias-bg-layer-1,#fff);
-  --tdt-surface-2:var(--dsw-alias-bg-layer-2,#fff);
-  --tdt-surface-3:var(--dsw-alias-bg-layer-3,#fff);
-  /* 「选中亮片」的底盘色（配 --tdt-shadow-raised 用） */
-  --tdt-surface-raised:var(--dsw-alias-bg-layer-1,#fff);
-  /* 轨道 / 下沉底（官方分段控件轨道用的就是这条） */
-  --tdt-surface-sunken:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
-  /* 固定中性实面（自绘浮层、深色主题下必须自己变的那几个）——只有它需要暗色覆盖 */
-  --tdt-solid:var(--dsw-static-neutral-00,#fff);
-  --tdt-on-solid:var(--dsw-alias-label-primary,#1f2328);
-  /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */
-  --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
-  --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
-  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
-
-  /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
-  --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
-  --tdt-border:var(--dsw-alias-border-l2,#0000001a);
-  --tdt-border-strong:var(--dsw-alias-border-l3,#0000001f);
-  --tdt-border-heavy:var(--dsw-alias-border-l4,#00000029);
-
-  /* ── 品牌 / 语义色 ────────────────────────────────────────────────── */
-  /* 品牌「面」色：明色近黑、暗色近白（官方 Switch 选中态即此），**不是蓝色** */
-  --tdt-accent:var(--dsw-alias-brand-primary,#0f1115);
-  /* 蓝色：强调 / 选中 / 焦点，一律走这条 */
-  --tdt-business:var(--dsw-alias-state-business-primary,#3b5bdb);
-  --tdt-success:var(--dsw-alias-state-success-primary,#22c55e);
-  /* ⚠️ 是 state-warn（不是 state-warning，后者宿主无此定义） */
-  --tdt-warning:var(--dsw-alias-state-warn-primary,#f59e0b);
-  --tdt-danger:var(--dsw-alias-state-error-primary,#ec1313);
-  --tdt-link:var(--dsw-alias-link,#3b5bdb);
-  /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
-     故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
-  --tdt-on-signal:#fff;
-
-  /* ── 交互底 / 遮罩 ────────────────────────────────────────────────── */
-  --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
-  --tdt-active:var(--dsw-alias-interactive-bg-active,#2631481a);
-  --tdt-mask:var(--dsw-alias-bg-mask-1,#0000003d);
-
-  /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
-  --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
-  /* 亮片自带的浮起感（选中态用；与 --tdt-surface-raised 配对） */
-  --tdt-shadow-raised:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
-  --tdt-shadow-2:var(--dsw-shadow-lv3,0 12px 32px 0 #00000014);
-  /* 键盘焦点环。⚠️ 不用宿主 --dsw-focus-ring-color：它默认值是 transparent（兜底不生效、会隐身） */
-  --tdt-focus:var(--dsw-alias-state-business-primary,#3b5bdb);
-
-  /* ── 圆角（宿主真值 4 / 8 / 12 / 16 / 20 / 28）─────────────────────── */
-  --tdt-radius-xs:var(--dsw-radius-xs,4px);
-  --tdt-radius-sm:var(--dsw-radius-sm,8px);
-  --tdt-radius-md:var(--dsw-radius-md,12px);
-  --tdt-radius-lg:var(--dsw-radius-lg,16px);
-  --tdt-radius-xl:var(--dsw-radius-xl,20px);
-  --tdt-radius-panel:var(--dsw-radius-panel,28px);
-
-  /* ── 间距四拍（只许用这四档，不许出现 5 / 7 / 9px）────────────────── */
-  --tdt-space-1:4px;
-  --tdt-space-2:8px;
-  --tdt-space-3:12px;
-  --tdt-space-4:16px;
-
-  /* ── 控件高度：全站只此两档（控件用 size="sm|md" 选，调用点不许自定义高度）── */
-  --tdt-control-h-sm:24px;
-  --tdt-control-h-md:28px;
-
-  /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */
-  --tdt-font-xs:var(--dsw-font-xxxs-11-font-size,11px);
-  --tdt-font-sm:var(--dsw-font-xxs-12-font-size,12px);
-  --tdt-font-md:var(--dsw-font-xs-13-font-size,13px);
-  --tdt-font-lg:var(--dsw-font-s-14-font-size,14px);
-  --tdt-font-xl:var(--dsw-font-base-16-font-size,16px);
-  --tdt-line-xs:var(--dsw-font-xxxs-11-line-height,14px);
-  --tdt-line-sm:var(--dsw-font-xxs-12-line-height,18px);
-  --tdt-line-md:var(--dsw-font-xs-13-line-height,20px);
-  --tdt-line-lg:var(--dsw-font-s-14-line-height,22px);
-  --tdt-line-xl:var(--dsw-font-base-16-line-height,24px);
-  --tdt-font-mono:var(--ds-font-family-code,monospace);
-
-  /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */
-  /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */
-  --tdt-z-dock:1030;
-  --tdt-z-drawer:1040;
-  --tdt-z-modal:1070;
-  --tdt-z-menu:1100;
-  --tdt-z-tip:1200;
-
-  /* ── 动效 ─────────────────────────────────────────────────────────── */
-  --tdt-dur:var(--ds-transition-duration,.2s);
-  --tdt-dur-fast:var(--ds-transition-duration-fast,.12s);
-  --tdt-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));
-}
-
-/* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────
-   判据 = body[data-ds-dark-theme]（宿主 0.2.0-rc.2 源码核实：启动脚本 toggleAttribute 写入，
-   唯一明暗判据；插件禁止用 prefers-color-scheme —— 它跟的是系统、不是用户在宿主里的选择）。
-   下面只放 alias 表达不了的「固定中性面」；颜色若能靠 alias 自动跟随，一律不要写在这里。 */
-body[data-ds-dark-theme]{
-  --tdt-solid:var(--dsw-static-neutral-900,#0f0f0f);
-  --tdt-on-solid:var(--dsw-static-neutral-00,#fff);
-  --tdt-plate:var(--dsw-static-neutral-850,#212123);
-  --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
-  --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
-}
-`;
-		//#endregion
-		//#region src/client/ui/style.ts
-		/**
-		* 统一样式注入器（UI 基础层 · P0 地基）
-		*
-		* 为什么必须运行时注入：客户端产物是 `window.__ModuleLoader__.load({ factory })` 的 CJS 闭包，
-		* `import './x.css'` 只会产出独立 css 资源、内核不会加载它（task-editor-css.ts / archive-session-css.ts /
-		* toast-css.ts 三处注释已结论）⇒ CSS 只能以字符串在运行时打进 `<style>`。
-		*
-		* 本模块把「各文件自己 createElement('style')」收成**唯一入口**：
-		*  - 全站只有**一个** `<style id="dsh-task-dispatch-table-ui">`；
-		*  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` …），
-		*    同一域重复登记 = 覆盖（后写胜），便于过渡期逐块搬；
-		*  - `tokens` 域恒排最前 —— 变量定义必须先于消费它的规则出现（同一条 style 内也讲先后）；
-		*  - 幂等：重复调用不重复插入；`registerStyle` 在标签已挂上时会立刻刷新内容。
-		*
-		* 三条硬规矩（docs/design/ui-style-guide.md）：
-		*  ① 不许再有第二处 `document.createElement('style')`；
-		*  ② 不许再出现第二套 style 标签 id；
-		*  ③ 域内的规则只能消费 `var(--tdt-*)`（颜色 / 尺寸 / 字号一律来自 token 层）。
-		*/
-		/** 全站唯一的样式标签 id（改名 = 大范围回归，不要动）。 */
-		const UI_STYLE_ID = "dsh-task-dispatch-table-ui";
-		/** 契约：域 → CSS 文本（插入顺序 = 首次登记顺序，`tokens` 恒最前）。 */
-		const domains = /* @__PURE__ */ new Map();
-		/** token 域固定名（`ui/index.ts` 的 ensureUiBase 用它登记变量表）。 */
-		const TOKENS_DOMAIN = "tokens";
-		/** 已挂载的 style 标签（缓存引用；被外部移除时 ensureUiStyles 会重新接管）。 */
-		let tag = null;
-		/** 内容是否落后于 domains（登记后置位，flush 后清除）。 */
-		let dirty = true;
-		/** 按「tokens 优先、其余按登记顺序」拼出整条 CSS。 */
-		function buildCss() {
-			const entries = [...domains.entries()];
-			entries.sort((a, b) => a[0] === "tokens" ? -1 : b[0] === "tokens" ? 1 : 0);
-			return entries.map(([, css]) => css).join("\n");
-		}
-		/** 把最新内容写进标签（唯一写点）。 */
-		function flush() {
-			if (tag === null) return;
-			tag.textContent = buildCss();
-			dirty = false;
-		}
-		/**
-		* 登记一个域的样式（纯登记，不强制挂载）。
-		*
-		* @param domain 域名（见本文件头部的清单）；同名重复登记 = 覆盖。
-		* @param css 该域的 CSS 文本。
-		*/
-		function registerStyle(domain, css) {
-			if (domains.get(domain) === css) return;
-			domains.set(domain, css);
-			dirty = true;
-			if (tag !== null && tag.isConnected) flush();
-		}
-		/**
-		* 确保样式已挂载且是最新（幂等；无 document / 无 head 的环境静默跳过）。
-		*/
-		function ensureUiStyles() {
-			if (typeof document === "undefined") return;
-			if (tag === null || !tag.isConnected) {
-				const found = document.getElementById(UI_STYLE_ID);
-				if (found !== null) tag = found;
-				else {
-					const head = document.head;
-					if (head === null) return;
-					const el = document.createElement("style");
-					el.id = UI_STYLE_ID;
-					head.appendChild(el);
-					tag = el;
-				}
-				dirty = true;
-			}
-			if (dirty) flush();
-		}
-		/**
-		* 过渡期便捷入口：登记 + 立刻确保挂载（老 `ensureXxxStyle()` 一行替换成这个）。
-		*
-		* @param domain 域名。
-		* @param css 该域的 CSS 文本。
-		*/
-		function applyStyle(domain, css) {
-			registerStyle(domain, css);
-			ensureUiStyles();
-		}
-		/**
-		* 入口 / 组件调用一次即可：登记 token 层并确保样式已注入（幂等）。
-		*
-		* 放在本文件（而不是 index.ts）是为了让 `ui/` 内的组件也能直接调用它而不产生循环依赖。
-		*/
-		function ensureUiBase() {
-			registerStyle(TOKENS_DOMAIN, UI_TOKENS_CSS);
-			ensureUiStyles();
-		}
-		//#endregion
-		//#region src/client/ui/controls-css.ts
-		/**
-		* L2 组件皮肤：公用控件规则（一类控件**唯一实现**）
-		*
-		* 规矩（docs/design/ui-style-guide.md §三）：
-		*  - **只消费 `var(--tdt-*)`**，一个颜色 / 尺寸 / 圆角 / 字号字面量都不许出现；
-		*  - 结构、尺寸、交互规则只此一份；「外观差异」只允许靠**覆盖一两个变量**表达（本文件的 `--seg-*`）；
-		*  - 高度只取 `--tdt-control-h-sm` / `-md` 两档（段高 = 控件总高 − 6px：上下 padding 2px×2 + 描边 1px×2）。
-		*
-		* 分期：P1 只有分段控件（滑动块）；P2 按钮 / P3 输入下拉 / P4 开关日期时间会往本文件追加，
-		* 追加时保持「一段一控件、段头写清哪一期」的写法。
-		*/
-		/** 分段控件的皮肤规则（P1）。 */
-		const SEGMENTED_CSS = `
-/* ── 分段控件（滑动块）P1 ────────────────────────────────────────────────
-   结构一套 + 两个受控轴：size(sm|md) × variant(default|inset)。
-   变体**只覆盖两个颜色变量**（--seg-track 轨道底 / --seg-thumb 选中块），
-   这正是「同一份样式、只重载颜色」的落地形态。 */
-.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;border-radius:var(--tdt-radius-sm);border:1px solid var(--tdt-border);background:var(--seg-track);}
-
-/* default：轨道=第二层面（官方分段控件轨道用的就是 interactive-bg-hover 那类下沉底），选中块=亮片底 */
-.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);}
-/* inset：用在「已经有一层底」的容器里（卡片展开区）⇒ 轨道下沉到第一层面、选中块抬到第三层面 */
-.dsh-tdt-seg--inset{--seg-track:var(--tdt-surface-1);--seg-thumb:var(--tdt-surface-3);}
-
-.dsh-tdt-seg__item{appearance:none;display:inline-flex;align-items:center;gap:4px;box-sizing:border-box;
-  height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;border:0;border-radius:var(--tdt-radius-sm);
-  background:transparent;color:var(--tdt-fg-2);font-family:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
-  font-weight:400;white-space:nowrap;cursor:pointer;
-  transition:color var(--tdt-dur-fast) var(--tdt-ease),background-color var(--tdt-dur-fast) var(--tdt-ease),box-shadow var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-seg--md .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-md) - 6px);}
-.dsh-tdt-seg__item:hover:not([aria-pressed='true']):not(:disabled){color:var(--tdt-fg);}
-.dsh-tdt-seg__item[aria-pressed='true']{background:var(--seg-thumb);box-shadow:var(--tdt-shadow-raised);color:var(--tdt-fg);font-weight:600;}
-.dsh-tdt-seg__item:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
-.dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
-
-/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染 */
-.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;
-  border-radius:var(--tdt-radius-sm);background:var(--tdt-danger);color:var(--tdt-on-signal);
-  font-size:var(--tdt-font-xs);line-height:16px;font-weight:400;}
-
-/* block：撑满父宽（表单行用），各段等分 */
-.dsh-tdt-seg--block{display:flex;width:100%;}
-.dsh-tdt-seg--block .dsh-tdt-seg__item{flex:1 1 auto;justify-content:center;}
-
-@media (prefers-reduced-motion: reduce){.dsh-tdt-seg__item{transition:none;}}
-`;
-		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
-		const CONTROLS_DOMAIN = "controls";
-		/**
-		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
-		*/
-		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS);
-		}
-		//#endregion
-		//#region src/client/ui/Segmented.tsx
-		/**
-		* 分段控件（滑动块）—— **全站唯一实现**（L2 组件皮肤，P1）
-		*
-		* 它是「同一份结构 + 两个受控轴」的样板：
-		*  - `size`：`sm`(控件总高 24) / `md`(28) —— 全站只有这两档，调用点**不许**自己写高度；
-		*  - `variant`：`default`（轨道第二层面、选中亮片）/ `inset`（已有底色的容器里用，轨道第一层面、选中第三层面）
-		*    —— 变体只改两个颜色变量，结构 / 尺寸 / 交互规则零重复（见 `controls-css.ts`）。
-		*
-		* 用法：
-		*   h(Segmented<'a' | 'b'>, { value: v, size: 'md', items: [{ value: 'a', label: '甲' }], onChange: setV })
-		*
-		* ⚠️ 不许在任何使用点就地写分段样式；要多一档高度 / 多一个外观 ⇒ 走
-		* docs/design/ui-style-guide.md §五 的流程（改基础层，一处改全站生效）。
-		*/
-		/**
-		* 渲染一个分段控件。
-		*
-		* @param props 见 {@link SegmentedProps}。
-		* @returns 分段控件元素。
-		*/
-		function Segmented(props) {
-			ensureUiBase();
-			ensureControlsStyle();
-			const size = props.size ?? "sm";
-			const variant = props.variant ?? "default";
-			return (0, react.createElement)("div", {
-				role: "group",
-				"aria-label": props.label,
-				className: `dsh-tdt-seg dsh-tdt-seg--${variant} dsh-tdt-seg--${size}${props.block === true ? " dsh-tdt-seg--block" : ""}`,
-				style: props.style
-			}, props.items.map((item) => (0, react.createElement)("button", {
-				key: item.value,
-				type: "button",
-				className: "dsh-tdt-seg__item",
-				"aria-pressed": item.value === props.value,
-				disabled: item.disabled,
-				onClick: () => {
-					props.onChange(item.value);
-				}
-			}, item.label, item.badge !== void 0 && item.badge > 0 ? (0, react.createElement)("span", { className: "dsh-tdt-seg__badge" }, String(item.badge)) : null)));
 		}
 		//#endregion
 		//#region src/client/query.ts

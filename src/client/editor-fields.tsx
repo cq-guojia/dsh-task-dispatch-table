@@ -2,7 +2,7 @@
 //
 // 原则：**能直接用官方组件的一律用官方**——
 //   · 下拉 = 官方 `Menu`（选中项尾随对勾 = 官方默认 `selection: 'check'`，不是自绘）
-//   · 文本 = 官方 `Input` · 开关 = 官方 `Switch` · 分段 = 官方 `SegmentedControl`
+//   · 文本 = 官方 `Input` · 开关 = 官方 `Switch` · **分段 = 统一基础组件 `Segmented`（src/client/ui，全站唯一实现；本文件不再薄封装官方件）**
 //   · 浮层定位/点外关闭 = 官方 hook `useAnchoredPosition` + `useDismissOnOutsidePointer`
 //
 // ⚠️ **官方没有日期 / 时间选择器**（读 @deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2 的
@@ -27,12 +27,11 @@ import {
   IconChevronRightOutlineRegular,
   IconClockOutlineRegular,
   Menu,
-  SegmentedControl,
   useAnchoredPosition,
   useDismissOnOutsidePointer,
   type MenuEntry,
-  type SegmentedControlOption,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Segmented, type SegmentedItem } from './ui'
 
 // ─────────────────────── token（全部取宿主主题变量，明暗自适应） ───────────────────────
 
@@ -203,27 +202,6 @@ export function SelectField(props: {
   })
 }
 
-// ─────────────────────── 分段（官方 SegmentedControl 的薄封装） ───────────────────────
-
-/** 官方分段控件（options ≥ 2 项）；不锁字面量类型，调用方自行窄化。 */
-export function Segmented(props: {
-  id: string
-  value: string
-  options: readonly EditorOption[]
-  onChange: (next: string) => void
-  label: string
-  className?: string
-}): ReactElement {
-  const options: SegmentedControlOption<string>[] = props.options.map(option => ({ value: option.value, label: option.label }))
-  return h(SegmentedControl, {
-    id: props.id,
-    value: props.value,
-    options,
-    onChange: props.onChange,
-    label: props.label,
-    className: props.className,
-  }) as ReactElement
-}
 
 // ─────────────────────── 日期（自绘日历；官方无此件） ───────────────────────
 
@@ -595,13 +573,10 @@ export interface WeekdayLabels {
 }
 
 /**
- * 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的官方 SegmentedControl 外观**：
- * 外层一圈 `interactive-bg-hover` 灰底轨道（包边），里面七枚等宽段，选中段是
- * 「薄灰底（bg-layer-1）+ 柔和阴影 + 主色字」的浅胶囊（**不是实心蓝**，所以精致不刺眼）。
- *
- * 周几是多选，没法直接套官方 `SegmentedControl`（它只能单选），故照它的尺寸与样式
- * 自绘：轨道 padding 4 / gap 2 / radius-md，段高 28 / radius-sm / 字 13 weight 500，
- * 与顶部控件逐条对齐（2026-09-29 用户指定「改成那种」）。一个都不选 = 每天（间隔档语义）。
+ * 周几多选 = 与顶部「单次 / 周期 / 间隔」**同款的统一分段控件**：
+ * 直接走 `Segmented`（multiple 模式），所以选中态、轨道、明暗、焦点环与全站完全一致，
+ * 不再自绘一套（2026-10-01 P1b：统一基础样式，派生只覆盖轴、不另写结构）。
+ * 一个都不选 = 每天（间隔档语义）。
  */
 export function WeekdayPicker(props: {
   value: number[]
@@ -611,47 +586,26 @@ export function WeekdayPicker(props: {
   label?: string
   disabled?: boolean
 }): ReactElement {
-  const [hover, setHover] = useState<number | null>(null)
-  const selected = new Set(props.value)
-
-  const toggle = (day: number): void => {
-    const next = selected.has(day) ? props.value.filter(item => item !== day) : [...props.value, day]
-    props.onChange(next.slice().sort((a, b) => a - b))
-  }
-
+  const items = useMemo<SegmentedItem<string>[]>(
+    () => props.labels.shorts.map((short, index) => ({ value: String(index + 1), label: short })),
+    [props.labels.shorts],
+  )
   return h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' } },
     props.label === undefined
       ? null
       : h('span', { style: { flex: 'none', fontSize: '13px', color: C.text } }, props.label),
-    h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '6px', borderRadius: C.radiusMd, background: C.hover } },
-      props.labels.shorts.map((short, index) => {
-        const day = index + 1
-        const on = selected.has(day)
-        const name = props.labels.weekdays[index] ?? String(day)
-        return h('button', {
-          key: day,
-          type: 'button',
-          className: 'dsh-tdt-ed-field',
-          disabled: props.disabled,
-          'aria-pressed': on,
-          'aria-label': name,
-          title: name,
-          onClick: () => { if (props.disabled !== true) toggle(day) },
-          onPointerEnter: () => { setHover(day) },
-          onPointerLeave: () => { setHover(current => (current === day ? null : current)) },
-          style: {
-            flex: 'none', minWidth: '26px', height: '24px', padding: '0 2px',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            border: '0', borderRadius: C.radiusSm,
-            background: on ? C.business : 'transparent',
-            boxShadow: on ? 'var(--dsw-elevation-soft, 0 1px 2px rgba(0,0,0,0.18))' : 'none',
-            color: on ? C.brandFg : C.textDim,
-            font: 'inherit', fontSize: '12px', lineHeight: '18px', fontWeight: on ? 600 : 400,
-            cursor: props.disabled === true ? 'not-allowed' : 'pointer', transition,
-          },
-        }, short)
-      }),
-    ),
+    // 多选；放在间隔卡里 ⇒ variant="inset"；七段等分 ⇒ block。选中态 / 轨道 / 明暗全站一致。
+    h(Segmented, {
+      multiple: true,
+      value: props.value.map(String),
+      items,
+      size: 'md',
+      variant: 'inset',
+      block: true,
+      label: props.label,
+      disabled: props.disabled,
+      onChange: (next: string[]) => { props.onChange(next.map(Number).sort((a, b) => a - b)) },
+    }),
     props.value.length === 0
       ? h('span', { style: { fontSize: '12px', color: C.dimmed } }, props.labels.empty)
       : null,

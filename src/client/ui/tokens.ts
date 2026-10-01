@@ -90,9 +90,11 @@ body{
   --tdt-space-3:12px;
   --tdt-space-4:16px;
 
-  /* ── 控件高度：全站只此两档（控件用 size="sm|md" 选，调用点不许自定义高度）── */
+  /* ── 控件高度：离散三档（控件用 size="sm|md|lg" 选；调用点不许自定义高度，
+       真不够用才允许在调用点本地覆盖 --tdt-control-h-*，属例外而非常态）── */
   --tdt-control-h-sm:24px;
   --tdt-control-h-md:28px;
+  --tdt-control-h-lg:32px;
 
   /* ── 字号 / 行高：直绑宿主字号族（宿主真值 11 / 12 / 13 / 14 / 16）───── */
   --tdt-font-xs:var(--dsw-font-xxxs-11-font-size,11px);

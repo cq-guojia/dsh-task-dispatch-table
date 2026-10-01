@@ -97,13 +97,6 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-field:focus-visible{outline:2px solid var(--dsw-alias-state-business-primary,#4d6bfe);outline-offset:1px;}
 /* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满。 */
 .dsh-tdt-ed-selectwrap{width:100%;}
-/* 官方分段控件收小一号（官方 = 28px 高 / 13px 字）。官方类名是 CSS-module 哈希，
-   只能按「元素 + role」选中；指示器位置由 --dsh-segment-count/index 算出来（不测量 DOM），
-   所以容器 padding 一改，指示器的 top/left/height/width 算式必须同步改（gap 保持 2px，
-   位移公式 index*(100% + 2px) 才仍然成立）。 */
-.dsh-tdt-ed-seg{padding:3px;}
-.dsh-tdt-ed-seg>span[aria-hidden='true']{top:3px;left:3px;height:calc(100% - 6px);width:calc((100% - 6px - 2px*(var(--dsh-segment-count) - 1))/var(--dsh-segment-count));}
-.dsh-tdt-ed-seg>button[role='tab']{height:22px;padding:0 10px;font-size:12px;line-height:18px;}
 /* 前置标签输入框：把「任务名称」这类短标签塞进框里（左半段带底 + 分隔线），
    省掉标签单独占的一行——弹窗竖向空间紧张。 */
 .dsh-tdt-ed-pfx{display:flex;align-items:stretch;height:32px;box-sizing:border-box;border:.5px solid var(--dsw-alias-border-l4,rgba(128,128,128,.25));border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-layer-1,rgba(128,128,128,.08));overflow:hidden;transition:border-color .15s ease;}

@@ -39,7 +39,6 @@ import {
   DateField,
   MarqueeText,
   SelectField,
-  Segmented,
   TimeField,
   WeekdayPicker,
   type CalendarLabels,
@@ -47,6 +46,7 @@ import {
   type TimeLabels,
   type WeekdayLabels,
 } from './editor-fields'
+import { Segmented } from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
 import { renderSchedule, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
@@ -1097,13 +1097,14 @@ function PromptEditorModal(props: {
         h(Segmented, {
           id: 'dsh-tdt-ed-prompt-mode',
           value: mode,
-          options: [
+          size: 'md',
+          variant: 'default',
+          items: [
             { value: 'edit', label: t('editorModeEdit') },
             { value: 'preview', label: t('editorModePreview') },
           ],
           onChange: (next: string) => { setMode(next as 'edit' | 'preview') },
           label: t('editorPromptEditorTitle'),
-          className: 'dsh-tdt-ed-seg',
         }),
         h('button', {
           type: 'button',
@@ -1677,15 +1678,17 @@ export function TaskEditorDrawer(props: {
     h('div', { className: 'dsh-tdt-ed-card-head', style: { marginBottom: '12px' } },
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorSchedule')),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
-        h(Segmented, {
+        h(Segmented<string>, {
           id: 'dsh-tdt-ed-schedule',
           value: scheduleTab,
-        options: [
+          size: 'md',
+          variant: 'inset',
+        items: [
           { value: 'once', label: t('editorFreqOnce') },
           { value: 'periodic', label: t('editorSchedulePeriodic') },
           { value: 'interval', label: t('editorScheduleInterval') },
         ],
-        onChange: value => {
+        onChange: (value: string) => {
           // 智能默认（用户 2026-09-30）：切到「单次 / 间隔」时，若表单里那个时刻**已经过去**，就换成
           // 「现在 + 1 小时再取整点」（22:10 ⇒ 次日 00:00；8:50 ⇒ 10:00）—— 免得一进表单就是个过期时刻
           //（原先写死「今天 09:00」）。**已填的未来时刻不覆盖**；周期档（每天/每周…）不参与。
@@ -1700,7 +1703,6 @@ export function TaskEditorDrawer(props: {
           patch({ scheduleKind: 'periodic', periodFreq: draft.periodFreq === 'once' ? 'daily' : draft.periodFreq })
         },
         label: t('editorSchedule'),
-          className: 'dsh-tdt-ed-seg',
         }),
       ),
     ),
@@ -1916,7 +1918,9 @@ export function TaskEditorDrawer(props: {
                 h(Segmented, {
                   id: 'dsh-tdt-ed-retry',
                   value: draft.maxAttempts,
-                  options: retryOptions,
+                  size: 'md',
+                  variant: 'inset',
+                  items: retryOptions,
                   onChange: (value: string) => { patch({ maxAttempts: value }) },
                   label: t('editorRetry'),
                 }),
@@ -2053,13 +2057,14 @@ export function TaskEditorDrawer(props: {
             ? h(Segmented, {
               id: 'dsh-tdt-ed-tabs',
               value: tab,
-              options: [
+              size: 'md',
+              variant: 'default',
+              items: [
                 { value: 'basic', label: t('editorTabBasic') },
                 { value: 'records', label: t('editorTabRecords') },
               ],
               onChange: (next: string) => { setTab(next as 'basic' | 'records') },
               label: t('editorTabBasic'),
-              className: 'dsh-tdt-ed-seg',
             })
             : null,
           h('button', {
