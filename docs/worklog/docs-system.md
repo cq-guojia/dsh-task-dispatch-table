@@ -12,7 +12,7 @@
 
 **做法**：按**信息寿命**分三层 —— **现场层** `docs/PROGRESS.md`（短命、就地覆盖、恒定小）／**叙事层** `docs/worklog/<工作包名>.md`（一工作包一文件，做完标「✅ 完成封卷」、此后不再改）／**定型层** `docs/design/*.md`（长命，只留结论与理由）。
 
-**落地**：109KB → 11.5KB；16 段进展日志拆成 8 个 worklog 文件（零丢失）；决策 25 / 30 的过程叙事挪进对应 worklog，`decisions.md` 只留结论；DSH 能力事实清单升格 [`design/dsh-capabilities.md`](../design/dsh-capabilities.md)；`AGENTS.md` 改写文档维护规则。纯文档变更，未跑冒烟。
+**落地**：109KB → 11.5KB；16 段进展日志拆成 8 个 worklog 文件（零丢失）；决策 25 / 30 的过程叙事挪进对应 worklog，`decisions.md` 只留结论；DSH 能力事实清单升格 [`design/external/dsh-capabilities.md`](../design/external/dsh-capabilities.md)；`AGENTS.md` 改写文档维护规则。纯文档变更，未跑冒烟。
 
 ## 2026-09-25 (18) — 公用规则外提为 RULES.md 真源（六轮纠错定稿）
 

@@ -14,7 +14,7 @@ docs/
   PROGRESS.md            现场层·进行中
   PROGRESS-HISTORY.md    现场层·已结案
   worklog/               叙事层：一个工作包一个文件
-  design/                定型层
+  design/                定型层（专题文档 + features/ 功能文档 + external/ 外部事实）
   examples/              样例与模板（与代码零耦合）
 ```
 
@@ -41,7 +41,7 @@ docs/
 | 3 | **样式** | `design/ui-foundation.md`（方案）+ `design/ui-style-guide.md`（手册） | 固定 | 方案 = **抽象清单**：哪些样式因多处共用要抽出来、抽到哪、为什么；手册 = **使用规范**：写界面时哪些必须复用、哪些可以自己写、写在哪 |
 | 4 | **方法** | `design/code-conventions.md`；架构（分层 / 目录 / 职责）附 `design/architecture.md` | 固定 | 通用能力分几类、各抽象在哪、哪些必须复用、不满足需求时怎么提 |
 | 5 | **功能** | `design/features.md`（总索引）+ `design/features/<功能>.md` | `features/<功能>.md` | 有哪些功能、每个干什么、对应哪个页面 / 文件、该功能的业务规则（如状态机 `state-machine.md` 属调度功能） |
-| 6 | **外部事实** | `design/dsh-capabilities.md` / `design/session-view-ui-map.md` | 按主题 | 宿主（DSH）能提供什么，源码级核实结果；官方 UI 元素对照 |
+| 6 | **外部事实** | `design/external/dsh-capabilities.md` / `design/external/session-view-ui-map.md` | 按主题 | 宿主（DSH）能提供什么，源码级核实结果；官方 UI 元素对照 |
 | 7 | **对外** | 根 `README.md` | 固定 | 是什么、怎么装、怎么用 |
 
 **归类规则**：先问「这条信息会过期吗」定层，再按上表定类与落位。一层一类只有一个真源文件。
@@ -82,7 +82,7 @@ docs/
 | 历史（HISTORY） | 一行一条：时间 / 完成了什么 / 过程文档链接 | 过程、踩坑、注意事项（这些归 worklog） |
 | 叙事（worklog） | 需求原话、过程、定位、踩坑、证据（出处 `文件:行号`） | 结论性规矩（应升格到定型层） |
 | 定型（design/*） | 是什么、怎么做、边界（不做什么） | 进度、过程日志 |
-| 外部事实 | 结论 + **出处**（包版本 / `文件:行号`） | 猜测、未核实内容 |
+| 外部事实 | 头部必带「**类型 / 适用版本 / 来源**」——适用版本写清是哪个包哪个版本（宿主升级后据此复核）；正文每条结论带出处（包版本 / `文件:行号`） | 猜测、未核实内容；写成"我们的设计" |
 | 功能 | 功能名 / 干什么 / 对应页面与文件 / 状态 | 实现细节（归 worklog） |
 | 对外（根 README） | 是什么 / 怎么装 / 怎么用 | 内部设计 |
 

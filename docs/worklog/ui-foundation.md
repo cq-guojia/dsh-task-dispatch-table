@@ -211,7 +211,7 @@
 
 **与既有文档的边界**（防止两份副本）：
 
-- [`session-view-ui-map.md`](../design/session-view-ui-map.md) 管的是「**会话弹窗里镜像官方 UI**」——那是照抄宿主元素，属另一件事，继续照它做。
+- [`session-view-ui-map.md`](../design/external/session-view-ui-map.md) 管的是「**会话弹窗里镜像官方 UI**」——那是照抄宿主元素，属另一件事，继续照它做。
 - 本文管的是「**插件自有 UI**」——自有控件的皮肤、尺寸、token。两者在预览面板一处会碰面（预览顶栏分段控件）：结构归本文，镜像官方的行为细节归 ui-map。
 
 ---

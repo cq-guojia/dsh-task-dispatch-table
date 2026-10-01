@@ -181,7 +181,7 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 
 **待真机**：① 每轮回复操作行出现官方分支 icon（hover 有「在新对话中分支」Tooltip）② 点它出确认框 → 确认后跳到新分支会话，且内容**截断到那条消息为止**（后面的轮次不在）③ 头部按钮仍是全量对话 ④ 中间轮次分支的新会话标题同样递增 `(1)`。
 
-> **封板（2026-09-27）**：真机验证全部通过（确认框官方化 / 头部钮规格 / 尾部操作行恒常显 / 消息行分支截断）。U10 收口 → [PROGRESS.md](../PROGRESS.md) 未决项 U10 关闭、里程碑 17 ✅。本工作包后续增补（清单遗留照 [design/session-view-ui-map.md](../design/session-view-ui-map.md) 第十四节）另起会话再排。下一专题 = U11 产出物打开与展示方式（[design/features/artifact-opening.md](../design/features/artifact-opening.md)）。
+> **封板（2026-09-27）**：真机验证全部通过（确认框官方化 / 头部钮规格 / 尾部操作行恒常显 / 消息行分支截断）。U10 收口 → [PROGRESS.md](../PROGRESS.md) 未决项 U10 关闭、里程碑 17 ✅。本工作包后续增补（清单遗留照 [design/external/session-view-ui-map.md](../design/external/session-view-ui-map.md) 第十四节）另起会话再排。下一专题 = U11 产出物打开与展示方式（[design/features/artifact-opening.md](../design/features/artifact-opening.md)）。
 
 > **增补（2026-09-27）**：用户在真机上指着截图要求优先补「重试 / 轮次失败 / 限长」三件套的官方样式（清单 19），本会话即排——下面第十一轮。
 

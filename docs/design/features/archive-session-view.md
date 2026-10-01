@@ -2,10 +2,10 @@
 
 > **状态**：✅ 收口（真机验证通过）
 > **来源**：决策 34 / 35
-> **配套**：过程见 [`worklog/session-view.md`](../../worklog/session-view.md)；宿主能力见 [`dsh-capabilities.md`](../dsh-capabilities.md)
+> **配套**：过程见 [`worklog/session-view.md`](../../worklog/session-view.md)；宿主能力见 [`dsh-capabilities.md`](../external/dsh-capabilities.md)
 
 > **里程碑**：14 · **状态**：✅ 收口（设计定型 + 落码 + 真机验证通过；外观对齐官方并入里程碑 15，2026-09-29 结项） · **定型依据**：决策记录（已并入各专题文档） 决策 34（推翻决策 29）
-> **关联文档**：[`../worklog/session-view.md`](../../worklog/session-view.md)（决策 27→28→29→34 全过程叙事）、[`dsh-capabilities.md`](../dsh-capabilities.md)（归档语义 / 对话渲染分层，源码级事实）
+> **关联文档**：[`../worklog/session-view.md`](../../worklog/session-view.md)（决策 27→28→29→34 全过程叙事）、[`dsh-capabilities.md`](../external/dsh-capabilities.md)（归档语义 / 对话渲染分层，源码级事实）
 >
 > ⚠️ 本文件是**实施级**设计（决策 34 已拍板方案，此处落码前的定型与任务分解）。变更请以本文件为准，过程叙事回 worklog。
 

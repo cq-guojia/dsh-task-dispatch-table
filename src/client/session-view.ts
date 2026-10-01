@@ -14,7 +14,7 @@
 //    里程碑 15 起改用 keyed 流 ⇒ 折叠关系、触发行、尾部操作行与官方同构；
 //    `legacy.nodes` 只作 order 为空时的兜底（归档会话理论上不会走到）。
 //
-// ⛔ 已证伪的两条路（勿再尝试，详见 docs/design/session-view-ui-map.md §十二）：
+// ⛔ 已证伪的两条路（勿再尝试，详见 docs/design/external/session-view-ui-map.md §十二）：
 //    - 弹窗内渲染官方 ChatView：`ctx.slots.renderSlot` 只接受 key='root'（运行时强制）；
 //    - `retain(source:'mainView')` 切官方视图：会锁死宿主会话导航（真机事故，已回退）。
 //
@@ -22,7 +22,7 @@
 // （ChatView / ChatNodeSeat / MessageItem / GenericCommandCard / ReasoningRow / TurnProcessNodeView /
 //  TurnTriggerNodeView / TurnTailNodeView / MessageIconActions / TurnUsagePanel / StatDialog /
 //  message-chrome / Composer）——官方改哪个，diff 哪个文件。折叠判定照抄 ChatNodeSeat，
-// 见 ./mirror/ChatNodeSeat.tsx 顶部注释与 docs/design/session-view-ui-map.md §十七。
+// 见 ./mirror/ChatNodeSeat.tsx 顶部注释与 docs/design/external/session-view-ui-map.md §十七。
 
 import { Fragment, createElement as h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Button, IconBranchOutlineRegular, IconCloseOutlineRegular, Modal } from '@deepseek-ai/dsh-client-ui-primitives'

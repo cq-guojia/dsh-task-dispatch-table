@@ -86,6 +86,7 @@
   确实需要第三档 ⇒ 先说明「哪几个使用点需要、为什么现有两档不行」，改 `tokens.ts`（一处），并在本文档「已知例外」表记一条 —— **不许在使用点就地写高度**。
 - **想要新的外观（variant）**：在 `controls-css.ts` 里加一个 variant 类，且**只允许覆盖 token 变量**（颜色），结构/尺寸/交互规则不许重写。
 - **想要新的控件**：按 §一 第三个分支，在 `ui/` 里建唯一实现，并在本手册 §二 表里加一行。
+- **想要新的 token**（颜色 / 圆角 / 字号 / 间距 / 层级）：加进 `ui/tokens.ts` **一处**（命名 `--tdt-*`，映射宿主 alias 并留兜底值），同时在 [`ui-foundation.md`](ui-foundation.md) §四 的表里登记；**不许在使用点直接写 `var(--dsw-*)`**。
 
 ---
 
@@ -98,7 +99,8 @@
    - 同上文件里 `body[data-ds-dark-theme]` = **0**；
    - 同上文件里 `borderRadius:` / `fontSize:` 字面量 = **0**（token 变量不算）。
 4. 明色 + 暗色两个主题各走查一遍改动面。
-5. 回写 `PROGRESS.md`（现场）与 `worklog/<工作包>.md`（过程）。
+5. 按 [`ui-foundation.md`](ui-foundation.md) §十「通用细则」核对：层级有没有写裸 z-index、可交互元素有没有可见焦点环、动画在 `prefers-reduced-motion` 下是否降级、纯图标按钮有没有标签、内容可变的面板有没有固定最大高度、空/载/错三态是否齐。
+6. 回写 `PROGRESS.md`（现场）与 `worklog/<工作包>.md`（过程）。
 
 ---
 

@@ -3,7 +3,7 @@
 > 工作包：把「人改 JSON」升级为**交互式任务创建 / 编辑界面**。
 > 状态：✅ **形态已拍板 + P0/P0.5/P1 已落码并真机验证通过（2026-09-29 结项）**。
 > 拍板顺序：需求草案（09-28 上午，用户口述 + 三张参考图）→ 形态与范围拍板（09-28 下午）→ **P0 只做界面与前端交互，不接后端程序**。
-> 关联：[design/data-model.md](../design/data-model.md)（字段真源）、决策记录（已并入各专题文档）（决策 16「v1 零自建 UI」被本工作包部分修订）、[design/dsh-capabilities.md](../design/dsh-capabilities.md)（宿主接口事实）。
+> 关联：[design/data-model.md](../design/data-model.md)（字段真源）、决策记录（已并入各专题文档）（决策 16「v1 零自建 UI」被本工作包部分修订）、[design/external/dsh-capabilities.md](../design/external/dsh-capabilities.md)（宿主接口事实）。
 
 ---
 
@@ -86,7 +86,7 @@
 ### 硬约束（为什么不是推压）
 
 - 整页右侧已被**页面级预览 dock 长期占用**（U11，那是**占布局的分栏**，变量 `--dsh-tdt-preview-w`）。用户澄清：他要的「右侧拉篮」是**盖上去的浮层弹窗**，与预览 dock 那种推压分栏**不是一回事**，两者不冲突（弹窗在 overlay 层，dock 在其下）。
-- ~~官方 primitives 有 `Modal` + `Button`，但**没有表单控件**（`primitives.d.ts`）~~ ❌ **2026-09-29 纠正：结论错误**。真相 = 官方**有一整套表单件**（`Switch` / `Input` / `Checkbox` / `SegmentedControl` / `SegmentedTabs` / `Menu` / `Pill` / `Tag` / `Toast` / `ConfigField` / `SettingsForm`），我们那份 `primitives.d.ts` 只是「当前用得到的最小消费面」，**不是官方全景**；真正**没有**的只有**日期 / 时间选择器**。核实法：`npm pack @deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2` 读 `lib/types/**` + `lib/index.js` 导出清单（已沉淀进 [`design/dsh-capabilities.md`](../design/dsh-capabilities.md)「已关闭的源码核实项」）。⇒ **控件一律改用官方**（下拉 = 官方 `Menu` 带对勾、开关 = 官方 `Switch`、分段 = 官方 `SegmentedControl`、chip = 官方 `Pill`），只有日历与时分列自绘。**教训：判断「官方有没有某件」必须读包本体，不能拿本仓库自写的 `.d.ts` 当依据。**
+- ~~官方 primitives 有 `Modal` + `Button`，但**没有表单控件**（`primitives.d.ts`）~~ ❌ **2026-09-29 纠正：结论错误**。真相 = 官方**有一整套表单件**（`Switch` / `Input` / `Checkbox` / `SegmentedControl` / `SegmentedTabs` / `Menu` / `Pill` / `Tag` / `Toast` / `ConfigField` / `SettingsForm`），我们那份 `primitives.d.ts` 只是「当前用得到的最小消费面」，**不是官方全景**；真正**没有**的只有**日期 / 时间选择器**。核实法：`npm pack @deepseek-ai/dsh-client-ui-primitives@0.1.7-rc.2` 读 `lib/types/**` + `lib/index.js` 导出清单（已沉淀进 [`design/external/dsh-capabilities.md`](../design/external/dsh-capabilities.md)「已关闭的源码核实项」）。⇒ **控件一律改用官方**（下拉 = 官方 `Menu` 带对勾、开关 = 官方 `Switch`、分段 = 官方 `SegmentedControl`、chip = 官方 `Pill`），只有日历与时分列自绘。**教训：判断「官方有没有某件」必须读包本体，不能拿本仓库自写的 `.d.ts` 当依据。**
 
 ---
 
@@ -183,7 +183,7 @@ storages/dsh-task-dispatch-table/prompt-versions/<taskId>/
 **为什么不用 git**（用户问「官方包里有没有 git、没有能不能装」）：
 
 1. 官方包里**没有** git。
-2. **不该装**：插件跑在 DSH **容器**里，那容器非常精简——已核实**没有 `sqlite3` / `file`**（`docs/design/dsh-capabilities.md:19`）、**没有 curl**（`docs/PROGRESS.md:133`）；我们连 SQLite 都只能用 node 内置的 `node:sqlite`，就是因为容器里没工具。**容器里装什么是部署侧的事，插件决定不了，且容器重建即丢**。
+2. **不该装**：插件跑在 DSH **容器**里，那容器非常精简——已核实**没有 `sqlite3` / `file`**（`docs/design/external/dsh-capabilities.md:19`）、**没有 curl**（`docs/PROGRESS.md:133`）；我们连 SQLite 都只能用 node 内置的 `node:sqlite`，就是因为容器里没工具。**容器里装什么是部署侧的事，插件决定不了，且容器重建即丢**。
 3. 「容器里到底有没有 git」目前**无实测结论**（下次真机可顺带探测一次），但**不该押在它身上**。
 4. 真要 git 语义也有退路（把纯 JS git 库打进包里），但为存几版提示词引入一整个 git 太重。
 

@@ -111,6 +111,6 @@
 
 ## 六、关联
 
-- 会话弹窗现状：[session-view-ui-map.md](../session-view-ui-map.md)（§十五 数据缺口表——fileMentions 在遗留清单里，与本专题合并做）
+- 会话弹窗现状：[session-view-ui-map.md](../external/session-view-ui-map.md)（§十五 数据缺口表——fileMentions 在遗留清单里，与本专题合并做）
 - 产出物数据源：决策 19（回执 outputs，场景 2 届时复核）、决策 22（工作区 = cwd 根）
 - 弹窗渲染链：决策 36/37（mirror 组件树）、决策 38（U10，inject 边先例）

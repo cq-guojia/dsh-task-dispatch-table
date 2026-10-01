@@ -21,8 +21,8 @@
 | `design/features/state-machine.md` | 5 功能（调度） | `design/features/state-machine.md` | 移动 + 更新引用 |
 | `design/architecture.md` | 4 方法（架构） | 保持 | — |
 | `design/data-model.md` | 2 数据库 | 保持；「读写方法」部分将来归方法文档 | — |
-| `design/dsh-capabilities.md` | 6 外部事实 | 保持 | — |
-| `design/session-view-ui-map.md` | 6 外部事实 | 保持 | — |
+| `design/external/dsh-capabilities.md` | 6 外部事实 | 保持 | — |
+| `design/external/session-view-ui-map.md` | 6 外部事实 | 保持 | — |
 | `design/ui-foundation.md` / `ui-style-guide.md` | 3 样式 | 保持 | — |
 | `design/decisions.md`（108 KB） | 历史堆积，规范已不列此类 | 待用户定 | — |
 
