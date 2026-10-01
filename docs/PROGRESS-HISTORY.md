@@ -32,4 +32,4 @@
 | 09-29 | 仓库暂时结项 | 所有进行中工作包落码 + 真机验证通过 | — |
 | 09-30 | 编辑器 UX 第二轮（决策 52） | 错误人话化 / 统一浮层 / 预计执行 / 版本历史拆分，八轮真机反馈后结案 | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
 | 10-01 | 文档体系整理 | 立文档规范 `docs/README.md`；现场层拆 `PROGRESS.md`（进行中）+ `PROGRESS-HISTORY.md`（已结案一行一条）；`design/` 按七类落位（新增方法规范、功能总索引，8 个功能文档入 `features/`）；删除 `decisions.md`（内容先回补进专题文档）并回改 9 处口径冲突；两份 agent 规则文件重写为零交叉 | [worklog/docs-reorganization.md](worklog/docs-reorganization.md) |
-| 10-01 | 文档微调（外部事实归置 + 样式文档去过程化） | 新建 `design/external/` 专放宿主 / 官方侧事实，两份外部文档统一头部并写明**适用版本**；`ui-foundation.md` 移出六节过程内容（361→285 行）只留规范；补「通用细则」八条规则（层级 / 焦点 / 图标 / 动效 / 溢出 / 滚动 / 间距 / 三态） | [worklog/docs-refine.md](worklog/docs-refine.md) |
+| 10-01 | 文档微调（外部事实归置 + 样式文档去过程化） | 新建 `design/external/` 专放宿主 / 官方侧事实，两份外部文档统一头部并写明**适用版本**；`ui-foundation.md` 移出六节过程内容（361→285 行）只留规范；补「通用细则」八条规则（层级 / 焦点 / 图标 / 动效 / 溢出 / 滚动 / 间距 / 三态）；定型层残留过程措辞清理 + 体检；AGENTS 补「调研结论必须回写 + 每条标适用版本」两条规矩 | [worklog/docs-refine.md](worklog/docs-refine.md) |
