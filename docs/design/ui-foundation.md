@@ -189,8 +189,8 @@ body[data-ds-dark-theme]{
 
 ```css
 /* 基础：结构 + 交互 + 三档高度，全部唯一（✅ P1 已落码，真实实现见 src/client/ui/controls-css.ts） */
-.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:2px;
-  border-radius:var(--tdt-radius-sm);background:var(--seg-track);border:1px solid var(--tdt-border);}
+.dsh-tdt-seg{display:inline-flex;align-items:center;gap:2px;padding:3px;
+  border-radius:var(--tdt-radius-md);background:var(--seg-track);}
 .dsh-tdt-seg__item{height:calc(var(--tdt-control-h-sm) - 6px);padding:0 12px;
   border:0;border-radius:var(--tdt-radius-sm);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   color:var(--tdt-fg-2);background:transparent;cursor:pointer;}
@@ -201,8 +201,10 @@ body[data-ds-dark-theme]{
 /* 变体：**只覆盖两个颜色变量** —— 这正是用户说的「颜色重载」。
    2026-10-01 用户拍板：保留「纯黑面 / 灰底面」两套、不合并：
    - default（纯黑面）= 轨道第二层面 + 外描边；
-   - inset（灰底面）= 抄「版本」开关观感（轨道交互灰 hover 底、无外描边），用户觉得比原灰底那套好看。 */
-.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);}
+   - inset（灰底面）= 抄「版本」开关观感（轨道交互灰 hover 底、无外描边），用户觉得比原灰底那套好看。
+   ⚠️ 高度对齐（2026-10-01 用户拍板）：有边框的 default 把 padding 收到 2px（2px padding + 1px 边框 = inset 的 3px padding），
+   两种外观总高都 = --tdt-control-h-*；以后 Button / Input 的有边 / 无边同此规则，边框不许额外撑高。 */
+.dsh-tdt-seg--default{--seg-track:var(--tdt-surface-2);--seg-thumb:var(--tdt-surface-raised);border:1px solid var(--tdt-border);padding:2px;}
 .dsh-tdt-seg--inset{--seg-track:var(--tdt-hover);--seg-thumb:var(--tdt-surface-raised);border:0;}
 ```
 
