@@ -986,7 +986,7 @@ function ConfirmDiscard(props: {
     onClick: props.onStay,
   },
     h('div', {
-      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', padding: '22px 24px', color: C.text },
+      style: { width: 'min(380px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '22px 24px', color: C.text },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
       h('div', { style: { fontSize: '16px', fontWeight: 500, marginBottom: '8px' } }, props.t('editorDiscardTitle')),
@@ -1023,11 +1023,11 @@ function VersionConfirm(props: {
     onClick: props.onCancel,
   },
     h('div', {
-      style: { width: 'min(400px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))', padding: '20px 24px 18px', color: C.text },
+      style: { width: 'min(400px, 100%)', boxSizing: 'border-box', background: 'var(--dsw-alias-bg-layer-2, #2a2e33)', borderRadius: 'var(--dsw-radius-panel, 10px)', boxShadow: 'var(--tdt-shadow-2)', padding: '20px 24px 18px', color: C.text },
       onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
     },
       // 层级：标题 15/600（警告橙可选）→ 说明 13 次要色 → 圆点清单 13 主色、条目间留呼吸 → 勾选 → 按钮。
-      h('div', { style: { fontSize: '15px', fontWeight: 600, lineHeight: '22px', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--dsw-alias-state-warning-primary,#e6a23c)' } : {}) } }, props.title),
+      h('div', { style: { fontSize: '15px', fontWeight: 600, lineHeight: '22px', marginBottom: '10px', ...(props.warning === true ? { color: 'var(--tdt-warning)' } : {}) } }, props.title),
       props.desc !== ''
         ? h('div', { style: { fontSize: '13px', lineHeight: '21px', color: C.textDim, marginBottom: props.bullets !== undefined ? '8px' : '18px' } }, props.desc)
         : null,
@@ -1045,7 +1045,7 @@ function VersionConfirm(props: {
             type: 'checkbox',
             checked: props.checkbox?.checked === true,
             onChange: (event: { target: { checked: boolean } }) => { props.checkbox?.onToggle(event.target.checked) },
-            style: { flex: 'none', margin: '2px 0 0', accentColor: 'var(--dsw-alias-state-warning-primary,#e6a23c)', width: '14px', height: '14px', cursor: 'pointer' },
+            style: { flex: 'none', margin: '2px 0 0', accentColor: 'var(--tdt-warning)', width: '14px', height: '14px', cursor: 'pointer' },
           }),
           h('span', null, props.checkbox?.label),
         )
@@ -2031,7 +2031,7 @@ export function TaskEditorDrawer(props: {
       // 头部：左侧 = 启用开关（标题左边，**独立操作**：编辑态点击即写回+Toast，不走保存）+ 联动文字 + 标题。
       h('div', { className: 'dsh-tdt-ed-header' },
         h('div', { className: 'dsh-tdt-ed-headleft' },
-          h('span', { className: 'dsh-tdt-ed-enable' },
+          h('span', { className: 'dsh-tdt-ed-enable dsh-tdt-switch' },
             h(Switch, {
               checked: draft.enabled,
               onChange: handleToggleEnabled,
@@ -2233,8 +2233,8 @@ export function TaskEditorDrawer(props: {
               height: Math.min(660, Math.max(240, rect.top - 12)),
               background: 'var(--dsw-alias-bg-layer-2, #2a2e33)',
               border: `1px solid ${C.borderL2}`,
-              borderRadius: 'var(--dsh-radius-panel, 10px)',
-              boxShadow: 'var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))',
+              borderRadius: 'var(--tdt-radius-md)',
+              boxShadow: 'var(--tdt-shadow-2)',
             }
           })(),
         },

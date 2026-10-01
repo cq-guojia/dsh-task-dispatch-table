@@ -122,9 +122,6 @@ const ensureTaskListStyle = (): void => {
     // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
     `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
     '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
-    // 启用开关选中色 = 官方 success 绿（与编辑器头部开关 `.dsh-tdt-ed-enable` **逐值一致**，
-    // 用户 2026-09-30 要求两处统一）。选择器带包装类 + role ⇒ 特异性高于官方 `.switch[aria-checked=true]`。
-    ".dsh-tdt-tl-switchwrap button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}",
     // 运行中的活动指示（用户 2026-09-30）：三个小方块依次脉动，类似手机充电 / 加载中。
     // `currentColor` ⇒ 跟随所在格的文字色（这里被设成 success 绿）。
     '@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }',
@@ -1260,7 +1257,7 @@ function TaskCard(props: {
         h(NextPill, { row, t, tt }),
         // 开关与编辑器头部开关**统一**：包一层类名壳，交给 CSS 把选中态刷成官方 success 绿。
         // （官方 Switch 默认选中色是 brand-primary：亮色主题下近乎黑、暗色近乎白 ⇒ 两处看着不一样。）
-        h('span', { className: 'dsh-tdt-tl-switchwrap' },
+        h('span', { className: 'dsh-tdt-tl-switchwrap dsh-tdt-switch' },
           h(Switch, {
             checked: row.enabled,
             onChange: (next: boolean) => { onToggleEnabled(row.id, next) },

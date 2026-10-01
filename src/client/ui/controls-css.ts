@@ -143,6 +143,10 @@ export const FIELD_CSS = `
 .dsh-tdt-num__suffix{padding:0 6px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);white-space:nowrap;}
 .dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--tdt-fg-2);}
 
+/* 官方 Switch 包装统一：选中 = success 绿。
+   （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */
+.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--tdt-success);}
+
 @media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
 `
 

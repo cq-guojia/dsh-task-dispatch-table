@@ -1566,6 +1566,10 @@ body[data-ds-dark-theme]{
 .dsh-tdt-num__suffix{padding:0 6px;color:var(--tdt-fg-2);font-size:var(--tdt-font-sm);white-space:nowrap;}
 .dsh-tdt-num .dsh-tdt-iconbtn{border-radius:0;color:var(--tdt-fg-2);}
 
+/* 官方 Switch 包装统一：选中 = success 绿。
+   （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */
+.dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--tdt-success);}
+
 @media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
 `;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
@@ -6570,11 +6574,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
 .dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;}
-/* 选中色：官方 Switch 用 --dsw-alias-brand-primary（暗色主题下近白 #f9fafb / 亮色主题下近黑 #0f1115，
-   所以「打开变白」是官方 token 的正常表现、不是画错）。用户 2026-09-29 要求「打开显示为绿色」
-   ⇒ 局部改用官方**状态色** success（官方 Tag tone:'success' 的定义即「a healthy or enabled state」）。
-   选择器带上标签与 role，特异性高于官方 .switch[aria-checked=true]，与注入先后无关。 */
-.dsh-tdt-ed-enable button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}
+/* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
 /* 关闭钮：规格照官方 primitives Modal.close（28×28、radius-sm、hover 才出底）。 */
 .dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
 .dsh-tdt-ed-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}
@@ -38588,7 +38588,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 }
 /* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
 .dsh-tdt-toast--success{--tone:var(--dsw-alias-state-success-primary,#2f9e44);}
-.dsh-tdt-toast--warning{--tone:var(--dsw-alias-state-warning-primary,#e6a23c);}
+.dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
 .dsh-tdt-toast--neutral{
   --tone:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));
   background:var(--dsw-alias-label-primary,#1f2328);
@@ -39327,7 +39327,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					boxSizing: "border-box",
 					background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
 					borderRadius: "var(--dsw-radius-panel, 10px)",
-					boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
+					boxShadow: "var(--tdt-shadow-2)",
 					padding: "22px 24px",
 					color: C$3.text
 				},
@@ -39381,7 +39381,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					boxSizing: "border-box",
 					background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
 					borderRadius: "var(--dsw-radius-panel, 10px)",
-					boxShadow: "var(--dsh-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))",
+					boxShadow: "var(--tdt-shadow-2)",
 					padding: "20px 24px 18px",
 					color: C$3.text
 				},
@@ -39393,7 +39393,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				fontWeight: 600,
 				lineHeight: "22px",
 				marginBottom: "10px",
-				...props.warning === true ? { color: "var(--dsw-alias-state-warning-primary,#e6a23c)" } : {}
+				...props.warning === true ? { color: "var(--tdt-warning)" } : {}
 			} }, props.title), props.desc !== "" ? (0, react.createElement)("div", { style: {
 				fontSize: "13px",
 				lineHeight: "21px",
@@ -39440,7 +39440,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				style: {
 					flex: "none",
 					margin: "2px 0 0",
-					accentColor: "var(--dsw-alias-state-warning-primary,#e6a23c)",
+					accentColor: "var(--tdt-warning)",
 					width: "14px",
 					height: "14px",
 					cursor: "pointer"
@@ -40566,7 +40566,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0
-			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			} }, (0, react.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react.createElement)("span", { className: "dsh-tdt-ed-enable dsh-tdt-switch" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: draft.enabled,
 				onChange: handleToggleEnabled,
 				label: t("editorEnabled"),
@@ -40761,8 +40761,8 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 						height: Math.min(660, Math.max(240, rect.top - 12)),
 						background: "var(--dsw-alias-bg-layer-2, #2a2e33)",
 						border: `1px solid ${C$3.borderL2}`,
-						borderRadius: "var(--dsh-radius-panel, 10px)",
-						boxShadow: "var(--dsw-elevation-prominent, 0 12px 40px rgba(0,0,0,0.4))"
+						borderRadius: "var(--tdt-radius-md)",
+						boxShadow: "var(--tdt-shadow-2)"
 					};
 				})()
 			}, (() => {
@@ -40993,7 +40993,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				`.dsh-tdt-tl-input input { height: ${CONTROL_H}px; font-size: 12px; }`,
 				`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
 				".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
-				".dsh-tdt-tl-switchwrap button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}",
 				"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
 				".dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }",
 				".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
@@ -42172,7 +42171,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				row,
 				t,
 				tt
-			}), (0, react.createElement)("span", { className: "dsh-tdt-tl-switchwrap" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			}), (0, react.createElement)("span", { className: "dsh-tdt-tl-switchwrap dsh-tdt-switch" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: row.enabled,
 				onChange: (next) => {
 					onToggleEnabled(row.id, next);

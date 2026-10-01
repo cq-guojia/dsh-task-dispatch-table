@@ -24,11 +24,7 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
 /* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
 .dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--dsw-alias-label-primary,#1f2328);cursor:pointer;}
-/* 选中色：官方 Switch 用 --dsw-alias-brand-primary（暗色主题下近白 #f9fafb / 亮色主题下近黑 #0f1115，
-   所以「打开变白」是官方 token 的正常表现、不是画错）。用户 2026-09-29 要求「打开显示为绿色」
-   ⇒ 局部改用官方**状态色** success（官方 Tag tone:'success' 的定义即「a healthy or enabled state」）。
-   选择器带上标签与 role，特异性高于官方 .switch[aria-checked=true]，与注入先后无关。 */
-.dsh-tdt-ed-enable button[role='switch'][aria-checked='true']{background:var(--dsw-alias-state-success-primary,#22c55e);}
+/* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
 /* 关闭钮：规格照官方 primitives Modal.close（28×28、radius-sm、hover 才出底）。 */
 .dsh-tdt-ed-close{appearance:none;flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));cursor:pointer;transition:background .15s ease;}
 .dsh-tdt-ed-close:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.16));}

@@ -60,7 +60,7 @@ export const TOAST_CSS = `
 }
 /* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
 .dsh-tdt-toast--success{--tone:var(--dsw-alias-state-success-primary,#2f9e44);}
-.dsh-tdt-toast--warning{--tone:var(--dsw-alias-state-warning-primary,#e6a23c);}
+.dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
 .dsh-tdt-toast--neutral{
   --tone:var(--dsw-alias-label-secondary,rgba(128,128,128,.95));
   background:var(--dsw-alias-label-primary,#1f2328);
