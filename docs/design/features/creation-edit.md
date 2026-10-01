@@ -138,7 +138,7 @@
 | 项 | 口径 |
 |---|---|
 | 记到哪 | 未推进到执行那一步的诊断记 **`task_log`**（决策 32；kind 全集依源码 2026-10-01 核定：missed-slot / startup_missed / precondition / dep_blocked / dep_disabled / dep_missing / expired-once / stale-upstream / attachment-missing / stray_pending）；已派发实例的生命线记 `task_events` |
-| 保留期 | `task_log` 沿用 `logRetentionDays`（默认 **30 天**）；`task_events` + `task_instances` **新增清理，默认 90 天**（用户要回看上次跑的结果，比诊断日志留久） |
+| 保留期 | `task_log` 沿用 `logRetentionDays`（默认 **30 天**，默认清）；`task_events` + `task_instances` **默认不清**（`historyRetentionDays = 0`，源码 `src/config.ts`）—— 清理逻辑存在但只在配成 >0 时跑，且**保护每个任务最近一条终态记录**（早期设计的「90 天」已推翻） |
 | 去重 | `dep_blocked`（及同类阻塞）改成**只在结论变化时记一次**：卡住 ⇒ 一条；一直卡 ⇒ 不再记；放行了 ⇒ 再记一条。取代现状「5 分钟一条」（一天 288 条/任务，会淹掉日志） |
 | 展示 | 本轮不做（面板其余界面为测试界面，后续整体重建时一并处理） |
 

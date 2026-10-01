@@ -31,9 +31,10 @@
 ## 三、拍板结论（决策 39，用户逐轮收敛）
 
 - **渲染底层必须官方原生**（用户硬要求）：md = 官方 `MarkdownText`（弹窗在用）、代码高亮 = 官方 Shiki 积木（diff 面同款）、图片 = `readBytes`→blob URL、PDF = 浏览器原生 iframe、文本 = `read` 分页；不可内嵌类型 = 官方同款空态行 + 复制路径。数据一律 `remote.workspaceFiles` 真实取数。
-- **展示形式 = 分栏推压预览面**（用户提出，弃「弹窗摞弹窗」）：
-  - 会话弹窗内：右侧分栏展开，对话往左压（样式稿已验形态）；
-  - 任务列表整页：页面右侧滑出分栏，界面往左压。
+- **展示形式 = 分栏推压预览面**（用户提出，弃「弹窗摞弹窗」）。
+  ⚠️ 下面两种早期形态**已被 §四-C 取代**：现为**页面级唯一 dock**（占布局的分栏，推压整页；弹窗靠 `right: var(--dsh-tdt-preview-w)` 让位，弹窗内不再自带分栏）。
+  - ~~会话弹窗内：右侧分栏展开，对话往左压~~（已废）；
+  - ~~任务列表整页：页面右侧滑出分栏~~（已废）。
 - **统一入口**（用户硬要求）：所有文件链接只调 `openFile(path)` 一个方法，由它决定开哪个容器、怎么渲染；链接处零写死，改展示方式只改一处。未来任务产出物清单同走此入口。
 - **预览引擎只建一份**，弹窗 / 整页两个容器共用。
 
@@ -41,7 +42,7 @@
 
 1. ✅ **inject 接通**：package.json `dsh.client.inject` 补 `@deepseek-ai/dsh-api-workspace-files`；client 侧 `ctx.inject(['remote'])` 取 `remote.workspaceFiles`（真机 bundle 已挂载；探不到 = 功能整体降级不报错）。
 2. ✅ **统一入口 + 预览引擎**：`openFile(path)`（session-view.ts，setPreview 单状态）+ `src/client/file-preview.tsx` `FilePreviewPanel`（头部 = 文件名 + 路径 + 关闭；体 = 按扩展名分派：md=MarkdownText / 代码=CodeBlock(Shiki) / 图片·PDF=readBytes→blob / 文本=read 分页「加载更多」；错误态照官方 bareCode 四分支 + 复制路径）。
-3. ✅ **弹窗接线**：工具卡 diff 摘要路径 + 无 diff 工具 argsRaw `file_path`/`path`「文件」行（GenericCommandCard `onOpenFile`）+ markdown 正文 `fileMentions`（AssistantMarkdown → 官方 MarkdownText；词表 = collectFilePaths + makeFileMentions，归一化精确匹配优先、唯一 basename 兜底）→ `openFile`；弹窗内右侧分栏推压（`dsh-tdt-sv-split`）。
+3. ✅ **弹窗接线**：工具卡 diff 摘要路径 + 无 diff 工具 argsRaw `file_path`/`path`「文件」行（GenericCommandCard `onOpenFile`）+ markdown 正文 `fileMentions`（AssistantMarkdown → 官方 MarkdownText；词表 = collectFilePaths + makeFileMentions，归一化精确匹配优先、唯一 basename 兜底）→ `openFile`；统一走**页面级 dock**（见 §四-C）。
 4. ✅ **整页留接口**：TaskPageHost 已收 `filesRef` 并透传弹窗，`openFile` 入口就位，不落 UI（场景 2 暂缓）。
 5. ✅ **质量门**：冒烟 +10 断言（预览组件 / 分栏 / 单入口 / 词表 / 真实取数 / 错误码四分支 / 加载更多 / objectURL 生命周期 / inject 清单）共 **124 项全过**；typecheck + build 过（dist/client.js 190.21 kB 入库）。
 

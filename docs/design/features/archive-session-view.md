@@ -17,7 +17,7 @@
 
 决策 29 设想「复刻 slot 渲染引擎挂官方 ChatView」，T1 核实（2026-09-26，宿主 0.1.7-RC.2 实际产物）推翻关键前提：
 
-- `sessions.retain` 与 `uiSession.adapter.bindingSource` 在 shipped 包里**不存在**；
+- ✅ **`sessions.retain` 存在且必须调用**（以源码 `src/client/session-view.ts` 为准）：在 `sessions.binding(id)` **之前**先 `retain(id, { source })` 物化 scope，关闭时 `release()`；与归档无关。`uiSession.adapter.bindingSource` 在 shipped 包里不存在；
 - `entriesOf('conversation.view')` / `storeOf` / `scope('session')` 即使存在，ChatView 也**只渲染「当前会话」**、不接受任意归档 id；
 - ⇒ 挂载路径断，决策 29 不可行（决策 29 已撤销）。
 
@@ -32,7 +32,7 @@
 
 保留弹窗壳与数据闸门（决策 28），**内部自渲染消息/思考/工具卡 DOM，套用官方设计变量 + 抄来的布局值**：
 
-1. **数据链（决策 28 已验证，沿用）**：`sessions.binding(id)` → `uiConversation.binding(...).target('chat')` → 消费 `legacy.nodes`；`open()` 拉尾页 + `loadOlder()` 向前翻；只读、不续聊。
+1. **数据链（以源码 `src/client/session-view.ts` 为准）**：`sessions.retain(id)` → `sessions.binding(id)` → `uiConversation.binding(...).target('chat')` → 消费 **keyed 流 `order` + `nodes`**（官方 ChatView 真正渲染的那条流）；`legacy.nodes` 仅在 `order` 为空 / `nodes` 缺失时兜底。`open()` 拉尾页 + `loadOlder()` 向前翻；只读、不续聊。
 2. **样式靠官方变量**：新建 `src/client/archive-session.css`——在弹窗根容器重声明少量聊天专属布局 token（用 0.1.7-RC.2 核实的真值，带兜底），其余全部 `var(--dsw-alias-*)` 引用宿主全局配色（同决策 26 面板做法）。**不引入任何宿主内部符号**。
 3. **自渲染增强**（相对决策 28 的落差）：
    - **markdown 正文**：用自带轻量 markdown 渲染器（零/低依赖）把 assistant/user 文本渲染成富文本；
@@ -68,7 +68,7 @@
 
 ## 七、落码子任务分解
 
-1. **T1 核实导出形态**（已完成）：确认 `retain`/`bindingSource` 在 0.1.7-RC.2 不存在 ⇒ 决策 29 不可行；抽取宿主设计 token 真实值与类名机制（CSS-module 哈希、规则不落地）。
+1. **T1 核实导出形态**（已完成，结论已更正）：`bindingSource` 在 0.1.7-RC.2 不存在 ⇒ 决策 29（挂官方 ChatView）不可行；但 **`retain` 确实存在**（早前结论有误，已按源码更正），查看会话前必须先 retain。抽取宿主设计 token 真实值与类名机制（CSS-module 哈希、规则不落地）。
 2. **T2 写 `archive-session.css`**：弹窗根重声明布局 token（带兜底）+ 消息/思考/工具卡视觉规则，全部走 `--dsw-alias-*` 全局变量。
 3. **T3 引入 markdown 库**：加入客户端依赖，构建接入，封装 `renderMarkdown(text) -> html`。
 4. **T4 重构 `session-view.ts`**：`renderNode` 改用类名 + markdown + reasoning 折叠 + 工具卡美化；弹窗壳与数据闸门不变。

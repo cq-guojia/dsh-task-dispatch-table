@@ -61,7 +61,7 @@
 
 ## 会话列表治理策略（已定）
 
-派发时用 `ctx.sessionTitle.rename` 起规范名（如 `[TASK] 镜像升级日报 · 2026-09-20`），跑完 `archiveSession` 归档。
+派发时用 `ctx.sessionTitle.rename` 起规范名（如 `[TASK] 260928-1600 · 镜像升级日报；attempt>0 追加「 · 第N次」，源码 tasks.ts sessionTitleOf），跑完 `archiveSession` 归档。
 ⚠️ **人在调度器派发的会话里插话会干扰任务** ⇒ 自动任务会话应视为机器专用。
 **原则：会话列表不是任务日志，产物目录才是。**
 

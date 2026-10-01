@@ -108,6 +108,24 @@
 
 从 `PROGRESS.md` 末尾移到**根 `README.md`** 新增「环境前提（脱敏）」一节（宿主容器形态 / 网络 / 容器巡检入口 / 配置生效）—— 这是部署与使用需要知道的环境事实，不是进度。
 
+### 2.7 回改 9 处口径冲突（用户拍板：「以现在实现的为准」）
+
+逐条到源码核实现状后回改文档（证据见各条括号内）：
+
+| # | 冲突 | 源码现状（= 回改依据） | 改了哪些文档 |
+|---|---|---|---|
+| ① | `skipped` 进不进 `task_instances` | **进**。三类场景建行（均 `attempt=0` 永不重试）：任务级错误 / once 出窗（`expired-once`）/ 补记漏刻度（`missed-slot`，只补紧邻前一条）；`store.ts:16` `TERMINAL_STATUSES`、`store.ts:567` `ensureSkipped`、`scheduler.ts:258-276 / 290-329 / 440-468` | `data-model.md` 头注、`features/state-machine.md` §2 |
+| ② | 上游无记录放行还是阻塞 | **阻塞**（`latest === undefined` ⇒ `upstream-not-succeeded`）；`stale-upstream` 只是**放行后**的 warn，从不阻塞 —— `scheduler.ts:145-156, 482-484` | `features/state-machine.md` 依赖语义表 |
+| ③ | 派发会话命名格式 | `[TASK] YYMMDD-HHmm · <标题>`，`attempt>0` 追加「 · 第N次」—— `tasks.ts:142-145` `sessionTitleOf`、`reconcile.ts:478` | `architecture.md`、`dsh-capabilities.md` 的示例 |
+| ④ | 预览容器形态 | **页面级唯一 dock**（flex 布局成员、推压整页），弹窗靠 `right: var(--dsh-tdt-preview-w)` 让位 —— `index.ts:970-978, 1388-1399`、`archive-session-css.ts:17,22` | `features/artifact-opening.md` §二、§四（早期形态标"已废"） |
+| ⑤ | `sessions.retain` 是否存在 | **存在且必须调用**，在 `binding` 之前 —— `session-view.ts:250-261` | `features/archive-session-view.md` §二、§八 |
+| ⑥ | 弹窗数据源 | **keyed 流**（`order` + `nodes`），`legacy.nodes` 仅兜底 —— `session-view.ts:1171-1174` | 同上 §三 |
+| ⑦ | U10 分支是否实现 | **已实现**：头部按钮 + 消息行分支 icon，均走确认框 → `sessions.fork` → `openHostSession`；服务缺失则不渲染 —— `session-view.ts:1136-1165, 1286-1294` | `session-view-ui-map.md` 4 处 |
+| ⑧ | 执行记录保留期 | **默认不清**（`historyRetentionDays = 0`；`purgeHistory` 里 `days<=0` 直接返回；`logRetentionDays` 默认 30 才清）—— `config.ts:31-35,49`、`store.ts:632-634` | `features/creation-edit.md` §七 |
+| ⑨ | 主界面刷新按钮 | **已不存在**：抬头只有「← 返回会话 + 标题」/ 右侧分段控件 + 「＋ 新建任务」；列表顶部右侧只有搜索 + 工作区下拉。更新靠 10s 轮询 + `rev`；`manualAt` 是死代码 —— `index.ts:985-1017, 546`、`task-list.tsx:1415-1439` | `features/main-panel.md` §4.4 |
+
+**顺带发现的「注释与代码不符」**（未改代码，只记此处）：`src/client/index.ts:205` 注释写抬头含「刷新 · 关闭」（实际无）；`src/client/task-list.tsx:1406` 注释写右侧含「刷新」（实际无）。
+
 ## 三、待用户拍板
 
 1. `design/decisions.md`（108 KB 历史堆积）怎么处理（规范已不列「决策」这一类）。

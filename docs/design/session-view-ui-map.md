@@ -265,11 +265,11 @@ for (let i=0;i<lines.length;i++){
 | 工具行标题 | ✅（改） | 接官方 `tool.title.*` 本地化字典（读取/写入/编辑/运行命令/搜索文件内容/查找文件/读取图片/网页搜索/网页获取/代码；未收录走「工具调用」，摘要补 `name ·` 前缀，对齐官方截图） |
 | 八、过程行分隔线 | ✅ | mirror/TurnProcessNodeView：官方类（root/label/chevron）+ `data-open` 箭头旋转 + `.5px` 下边框 + `:not([data-open]) margin-bottom:8px` + `:disabled` |
 | 触发行（turn-trigger） | ✅（新） | mirror/TurnTriggerNodeView：官方 root/header/icon/title/time/chevron + kind→图标映射（`turnTriggerDetails`），点开展开注入原文 |
-| 尾部操作行（turn-tail） | ✅（新） | mirror/TurnTailNodeView + MessageIconActions：复制（Tooltip + 1s 复位 + `writeClipboard`）/ 分支（只读态 `data-unavailable`）/ `data-actions-reveal`（最后一轮 always、历史轮 hover）/ 结束时钟（官方 `clock.md` 文案） |
+| 尾部操作行（turn-tail） | ✅（新） | mirror/TurnTailNodeView + MessageIconActions：复制（Tooltip + 1s 复位 + `writeClipboard`）/ 分支（已接线 fork：消息行从该轮截断开分支）/ `data-actions-reveal`（最后一轮 always、历史轮 hover）/ 结束时钟（官方 `clock.md` 文案） |
 | 用量小标 | ✅（新） | mirror/TurnUsagePanel + StatDialog：`用量 91.5K tok` pill + 明细弹层（本轮用量/提供方·模型/缓存命中/未缓存输入/缓存读取/缓存写入/输出（其中推理 N））；定位复用 primitives `useAnchoredPosition` |
 | 弹窗尺寸 + 布局 | ✅（改） | panel `width:min(1120px,100vw-32px)`、`height:calc(100% - 80px)`、radius 12px（照宿主「左下角弹窗」卡片）；**内间距定尺（用户拍板，不算官方列宽）**：`--dsh-composer-side-clearance: 8px` ⇒ 会话区左右各 24px、`--dsh-chat-content-width: 100%` 不设列宽上限；标题下加 1px 横线；关闭钮 = 官方 `IconCloseOutlineRegular` 16px 裸图标 |
-| 对话框占位 | ❌ 移除 | 归档会话 = 留档不可改，**弹窗内不做续聊**（决策 37）；后续做「继续对话（开分支）」按钮（PROGRESS U10：确认框 → 关弹窗 → 跳新分支会话，依赖 `sessions.fork`） |
-| 分支 icon | ❌ 移除 | 官方分支 = 复制对话在新会话继续；只读弹窗无 fork 席位且与 U10 方案重合 ⇒ 尾部操作行不渲染分支 icon |
+| 对话框占位 | ❌ 移除 | 归档会话 = 留档不可改，**弹窗内不做续聊**（决策 37）；「继续对话（开分支）」**已实现**：头部按钮 + 消息行分支 icon，均走确认框 → `sessions.fork` → 关弹窗 → `openHostSession` 跳转；服务未就位时按钮不渲染 |
+| 分支 icon | ✅ 已实现 | 官方分支 = 复制对话在新会话继续；只读弹窗**已接 fork**（U10）：尾部操作行渲染分支 icon，点它从该轮 tail 截断开分支；头部按钮 = 全量分支 |
 | 操作行 👍👎 | ❌ | 官方走 slots（feedback 插件），弹窗无该插槽 |
 | 六-B、过程条目 | 🟡 | 重试行 ✅（官方 ModelRetryItem 照抄）、轮次失败行 ✅（官方 TurnErrorItem：StateDot(error)+红标题+灰原因+右侧 `<code>` 机器码，官方截图里的 SERVER 标签即 `turnErrorCode`）、限长行 ✅（官方 TurnMaxTokensItem：黄点+警示标题+提示语）、工具组行（已写入文件）❌、工具错误摘要红色 🟡、`+N -N` 差异统计 ❌（来源待核）、思考行 ✅ |
 | 文件 mention | ❌ | 正文行内文件下划线 = `MarkdownText` 的 `fileMentions`；用户气泡 chips = `projectUserText`——两者都只需传入解析器即可 |
@@ -289,7 +289,7 @@ for (let i=0;i<lines.length;i++){
 5. ✅ ~~过程组：连续工具调用 → 「过程 · N」~~ → **被 27/33 取代（keyed 折叠 + ChatGroupSeat 二级收折）**
 33. ✅ **过程分组（二级收折）**：mirror/process-groups.ts（官方算法移植：分组规则 / processActivity / processTitle）+ mirror/ChatGroupSeat.tsx（汇总行 + body 限高渐隐）；组内条目 = 三级各自展开
 34. ✅ 工具行标题接官方 `tool.title.*` 字典（generic 走「工具调用 · name · 摘要」）
-35. ✅ 弹窗内不做续聊：Composer 占位移除、分支 icon 移除（决策 37 → PROGRESS U10「开分支继续对话」按钮）
+35. ✅ 弹窗内不做续聊：Composer 占位移除、分支 icon **已恢复**（决策 38 ⑦：消息行分支按钮从该轮 tail 截断开分支）
 6. ✅ 工具卡补 `separator`（2×2px 分隔点，`margin:0 8px`）——mirror/GenericCommandCard collapsedContent
 7. ✅ 「过程」行官方样式（`TurnProcessNodeView.root`：高 33px + `.5px` 下边框 + `padding:0 0 8px` + `:not([data-open]){margin-bottom:8px}`）——mirror/TurnProcessNodeView
 8. ✅ 思考块改 `ReasoningRow` 结构（`data-expanded` + 折叠固定行高 24px，去掉 `<details>`）——mirror/ReasoningRow
