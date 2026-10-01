@@ -183,6 +183,8 @@ body[data-ds-dark-theme]{
 
 用户说的「基础 + 覆盖某两个颜色」在工程上就是：**结构一套 + 两个受控轴（size / variant）**。
 
+**派生总纲（全站统一逻辑）**：每个控件先有「一个基础实现」，所有样式差异（明暗、底色上下文、高度档位……）都从这一份基础之上**派生**得到——派生只覆盖变量、不另写结构。需要某个维度就派生那一维；若某控件在某维度上无需区分（例如不分明暗），就只留基础那一套，不强求每个控件都补齐所有维度。
+
 ### 5.1 分段控件
 
 ```css
@@ -227,7 +229,7 @@ body[data-ds-dark-theme]{
 
 ### 5.3 官方件策略（**优先用官方的，但观感只覆盖一次**）
 
-- **优先官方件**：`Switch` / `Input` / `Menu` / `SegmentedControl` / `Button` / `Tooltip` / `Modal` / `StateDot` —— 它们自带明暗自适应与可访问性，能用就用（官方 `SegmentedControl` 只支持单选 ⇒ 多选场景自绘）。
+- **优先官方件**：`Switch` / `Input` / `Menu` / `Button` / `Tooltip` / `Modal` / `StateDot` —— 它们自带明暗自适应与可访问性，能用就用。**分段（单选 / 多选 / 单段）统一用自研 `Segmented`**，不优先官方 `SegmentedControl`（官方仅支持单选、且指示器算式脆弱，已被自研件取代）。
 - **覆盖集中一处**：官方件的观感偏差（如「Switch 打开要绿」「Input 高度 32→26」）只在 `official-skins.ts` 写一次；选择器统一带 `role` / 标签提升特异性（现有两条注释已确立的做法：`task-editor-css.ts:30`、`task-list.tsx:124` —— 与注入顺序无关）。
 - **已知覆盖限制**（写进手册，避免再踩）：
   - `SegmentedControl` 指示器靠 `--dsh-segment-count/index` 算位置（**已核实：两个变量由官方组件 JS 内联写在 tablist 上**，官方基线 = padding 4px / gap 2px / 段高 28 / 字 13，出处 `@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.2` `lib/SegmentedControl.module.css`）⇒ 外部改 padding 必须同步改算式（本仓 `task-editor-css.ts:104-106` 正是这么覆写的）⇒ **新体系不再覆写官方指示器，改自绘统一体**。
