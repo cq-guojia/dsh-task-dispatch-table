@@ -1647,6 +1647,18 @@ console.log('\n[14] runtime-index')
       && p1bJs.includes('background:var(--tdt-business);color:var(--tdt-fg-inverse)'))
   }
 
+  // ── 18. UI 基础层 P2/P3/P4：按钮 / 输入 / 数字步进 / 开关 ──
+  {
+    const p23Js = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('按钮 / 图标钮皮肤进产物（dsh-tdt-btn / dsh-tdt-iconbtn）',
+      p23Js.includes('.dsh-tdt-btn{') && p23Js.includes('dsh-tdt-btn--primary') && p23Js.includes('.dsh-tdt-iconbtn{'))
+    check('输入类皮肤进产物（input / pfx / num）且原生 number 已清零',
+      p23Js.includes('.dsh-tdt-input{') && p23Js.includes('.dsh-tdt-pfx{') && p23Js.includes('.dsh-tdt-num{')
+      && !p23Js.includes("type: 'number'") && !p23Js.includes('type: "number"'))
+    check('开关 success 绿覆盖已上提基础层（.dsh-tdt-switch）',
+      p23Js.includes(".dsh-tdt-switch button[role='switch'][aria-checked='true']"))
+  }
+
   store.close()
   rmSync(dir, { recursive: true, force: true })
 }
