@@ -1008,8 +1008,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('editorPermFull') && clientJs.includes('权限：默认')
       && clientJs.includes('仅可查看')
       && clientJs.includes('工作区内修改') && clientJs.includes('完全权限') && /permission: ["']default["']/.test(clientJs))
-  check('工作区下拉封顶 + 跑马灯（不压文件夹图标）：SelectField 支持 maxWidth/marquee，工作区传 200px',
-    clientJs.includes('marquee: true') && /maxWidth:\s*200/.test(clientJs) && clientJs.includes('dsh-tdt-mq-in'))
+  // 2026-10-02：三下拉改**定宽**（工作区/模型 = 180 = 权限 120 的 1.5 倍），不再随选项自适应。
+  check('提示词下三下拉全部定宽（权限 120 基准，工作区 / 模型各 180；不再 maxWidth 自适应）',
+    clientJs.includes('180px') && clientJs.includes('120px') && !/maxWidth:\s*200/.test(clientJs)
+    && clientJs.includes('marquee: true') && clientJs.includes('dsh-tdt-mq-in'))
   check('前置任务「添加」按钮收窄到 72px（把宽度让给任务名）', /flex: ["']0 0 72px["']/.test(clientJs))
   check('多 Agent 协作开关（决策 49）：默认关 + 说明含「Agent Teams」与降级语义，配置预览 JSON 带 target.agentTeam',
     clientJs.includes('editorAgentTeam') && clientJs.includes('agentTeam: false')
@@ -1663,7 +1665,7 @@ console.log('\n[14] runtime-index')
       !edJs.includes('.dsh-tdt-ed-overlay{') && !edJs.includes('dsh-tdt-ed-overlay'))
     check('面板改占布局的一列（sticky + 100vh + flex:0 0 auto，与预览 dock 同套）且宽度走 --dsh-tdt-editor-w',
       edJs.includes('.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;')
-      && edJs.includes('width:var(--dsh-tdt-editor-w,560px)'))
+      && edJs.includes('width:var(--dsh-tdt-editor-w,500px)'))
     check('「基本信息 / 执行记录」切换已删（id 与三处文案双语全无）',
       !edJs.includes('dsh-tdt-ed-tabs') && !edJs.includes('editorTabBasic') && !edJs.includes('editorTabRecords')
       && !edJs.includes('editorRecordsPending') && !edJs.includes('执行记录待接'))
@@ -1676,8 +1678,15 @@ console.log('\n[14] runtime-index')
     const closeIdx = edSrc.indexOf('IconCloseOutlineRegular', headIdx)
     check('启用开关回到头部右侧且**排在关闭 ✕ 之前**（headactions → 开关 → ✕ 的顺序成立）',
       headIdx > 0 && switchIdx > headIdx && closeIdx > switchIdx)
-    check('宽度下限保住 560（原弹窗宽度）且给主面板留够最小宽（两条分栏互相当预留）',
-      edSrc.includes('EDITOR_WIDTH_MIN = 560') && edSrc.includes('window.innerWidth - PAGE_MIN_WIDTH - reserved'))
+    check('宽度下限 / 默认 = 500（用户 2026-10-02 收窄）且给主面板留够最小宽（两条分栏互相当预留）',
+      edSrc.includes('EDITOR_WIDTH_MIN = 500') && edSrc.includes('EDITOR_WIDTH_DEFAULT = 500')
+      && edSrc.includes('window.innerWidth - PAGE_MIN_WIDTH - reserved'))
+    // 用户 2026-10-02：拖拽会顺手选中一片文字 ⇒ pointerdown preventDefault + 拖动期间全域禁选。
+    check('拖拽调宽不再选中文字（两处 resizer 都做了 preventDefault + 拖动期间 user-select:none）',
+      edSrc.includes('userSelect') && edSrc.includes("body.style.userSelect = 'none'")
+      && edSrc.includes('removeAllRanges')
+      && readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8').includes("body.style.userSelect = 'none'")
+      && edJs.includes('.dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;user-select:none;'))
   }
 
   // ── 18. UI 基础层 P2/P3/P4：按钮 / 输入 / 数字步进 / 开关 ──
@@ -1715,6 +1724,38 @@ console.log('\n[14] runtime-index')
     check('业务文件宿主变量引用清零（--dsw- 只应出现在 ui/tokens.ts）', dswFiles === 0)
     check('C 常量表已删净（const C = { 为 0）', cTableFiles === 0)
     check('使用点不再自注入 <style>（统一走 ui/style.ts 的 applyStyle）', selfInjectFiles === 0)
+  }
+
+  // ── 20. 三面板第四轮 UX：定高 / 表格列重做 / 时间范围控件（半开区间）/ 状态过滤修复 ──
+  {
+    const tl = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
+    const q = readFileSync(join(process.cwd(), 'src', 'client', 'query.ts'), 'utf8')
+    const st = readFileSync(join(process.cwd(), 'src', 'store.ts'), 'utf8')
+    const tr = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'time-range.ts'), 'utf8')
+    const fmt = readFileSync(join(process.cwd(), 'src', 'client', 'format.ts'), 'utf8')
+    const uidx = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'index.ts'), 'utf8')
+    const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('三面板统一固定高度：panelBoxStyle 覆盖三个 tab（基础信息也纳入定高盒）',
+      (tl.match(/panelBoxStyle/g) ?? []).length >= 4
+      && (tl.match(/panelScrollFillStyle/g) ?? []).length >= 4
+      && !tl.includes('PANEL_MAX_H'))
+    check('执行记录表格 6 列（状态 / 计划执行 / 实际开始 / 时长 / 产出物 / 会话）且产出走官方 FileTypeIcon',
+      tl.includes("t('colPlanned')") && tl.includes("t('colActualStart')") && tl.includes("t('colSession')")
+      && tl.includes('FileTypeIcon') && tl.includes('IconNewChatOutlineRegular')
+      && !tl.includes('chipStyleOf'))
+    check('时间范围控件：半开区间上界（次日 00:00 / 下一分钟 :00），不再用 .999 补丁',
+      tr.includes('toParsed.d + 1') && tr.includes('toParsed.mm + 1') && !tr.includes('23:59:59.999')
+      && uidx.includes('TimeRange') && uidx.includes('rangeToQuery'))
+    check('新增格式 helper：计划执行 / 实际开始 / 时长（H:MM:SS·MM:SS）',
+      fmt.includes('export function formatPlanStamp')
+      && fmt.includes('export function formatClock')
+      && fmt.includes('export function formatDurationHms'))
+    check('状态过滤失效已修：客户端出口参数名对齐（status / level）',
+      q.includes('status: statuses') && q.includes('level: levels'))
+    check('半开区间服务端比较：scheduled_at < ? / ts < ?（不再 <=，边界归一单源）',
+      st.includes("'scheduled_at < ?'") && st.includes("'ts < ?'") && !st.includes("'scheduled_at <= ?'"))
+    check('时间范围 / 新列文案进产物（trPreset / colPlanned / colActualStart）',
+      dist.includes('trPreset') && dist.includes('colPlanned') && dist.includes('colActualStart'))
   }
 
   store.close()
