@@ -714,7 +714,7 @@ const logBoxStyle: Record<string, string | number> = {
   padding: '8px 10px', wordBreak: 'break-all',
 }
 const overlayStyle: Record<string, string | number> = {
-  position: 'fixed', inset: 0, zIndex: 1070, background: 'rgba(0,0,0,0.45)',
+  position: 'fixed', inset: 0, zIndex: 'var(--tdt-z-modal)', background: 'var(--tdt-mask)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
 const dialogStyle: Record<string, string | number> = {

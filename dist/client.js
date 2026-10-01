@@ -41444,8 +41444,8 @@ body[data-ds-dark-theme]{
 		const overlayStyle = {
 			position: "fixed",
 			inset: 0,
-			zIndex: 1070,
-			background: "rgba(0,0,0,0.45)",
+			zIndex: "var(--tdt-z-modal)",
+			background: "var(--tdt-mask)",
 			display: "flex",
 			alignItems: "center",
 			justifyContent: "center"
