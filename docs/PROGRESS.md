@@ -11,28 +11,14 @@
 
 ## 一、当前状态
 
-### 1.1 文档体系整理（🏗 进行中，2026-10-01）
-
-用户拍板：**先把文档整理好，再按文档要求做样式统一**。落地动作：
-
-- 立 [`docs/README.md`](README.md)（文档规范：目录三层 / 七类落位 / 命名 / 每类怎么写 / 生命周期 / 硬规则）。
-- 现场层拆为 `PROGRESS.md`（进行中）+ `PROGRESS-HISTORY.md`（已结案，一行一条）。
-- **按规范七类逐类整理已完成一轮**（1 进度 / 2 数据库 / 3 样式 / 4 方法 / 5 功能 / 6 外部事实），详见 [worklog/docs-reorganization.md](worklog/docs-reorganization.md) §2.3；全仓引用同步 58 处、断链校验 **0**。
-- 新增定型文档：**方法规范** [`design/code-conventions.md`](design/code-conventions.md)、**功能总索引** [`design/features.md`](design/features.md)；8 个功能文档迁入 `design/features/`。
-- `design/decisions.md`（108 KB 历史堆积）**已删除**：有价值的约束力内容先补进 `data-model.md` / `architecture.md` / `dsh-capabilities.md` / `features/state-machine.md` / `features/main-panel.md` / `features/creation-edit.md`，引用全部清理（详见 [worklog/docs-reorganization.md](worklog/docs-reorganization.md) §2.4）。**遗留 9 处口径冲突待修**，见未决项 **U19**。
-- 两个 `creation-edit-*` **已合并**为 `design/features/creation-edit.md`（需求口径真源 + 历史提纲的补充议题附录），`features.md` 索引已更新。
-- 「环境前提（脱敏）」**已归根 `README.md`**（部署 / 使用需要知道的环境事实）。
-- **规范头与封卷补齐**：7 个定型文档缺的 `状态 / 来源 / 配套` 三行头已补；8 个**已完成**工作包补「✅ 完成封卷」标记（未完成的仍不封，如主界面 / 三面板 / 新增编辑）；定型层残留的过程内容（会话弹窗「真机验证清单」、「动工前置条件」、"待确认"标题）已清理。
-- **两份 agent 规则文件重写（2026-10-01）**：`RULES.md`（跨项目）砍成骨架 —— 保留写操作闸门 / git / 协作规矩，**新增「接手入口」节**（三个固定文件：根 `README.md` → `docs/PROGRESS.md` → `docs/README.md`）+ 「文档槽位」（样式规范 / 方法规范 / 功能索引 / 数据库说明 / 外部事实）+ 分层骨架与标准动作；`AGENTS.md`（本项目）重写为「文档落点表 + 本项目约定 + 本项目文档体系」三段，**删掉过期的里程碑索引 / 决策记录指向**，新增「与文档冲突时以源码现状为准」。两份文件**零交叉**（AGENTS 只在程序注入块内出现公用规则文件名）。
-
-### 1.2 UI 基础层统一（样式专项）—— ⏸ **挂起**
+### 1.1 UI 基础层统一（样式专项）—— ⏸ **挂起**
 
 用户 2026-10-01 拍板：先放一放，作为**单独一个进行中的事项**，文档整理完再按文档要求开工。
 
 - 已起草（未拍板、未落码）：方案 [`design/ui-foundation.md`](design/ui-foundation.md)、手册 [`design/ui-style-guide.md`](design/ui-style-guide.md)。
 - 开工前 4 项源码核实见未决项 **U18**。
 
-### 1.3 落码完成、⏳ 真机验证待做（用户装 `dist/` 实测）
+### 1.2 落码完成、⏳ 真机验证待做（用户装 `dist/` 实测）
 
 | 事项 | 状态 | 真机验证清单 |
 |---|---|---|
@@ -77,9 +63,10 @@
 
 ## 三、下一步
 
-1. **文档体系整理**（进行中）：建方法文档 `design/code-conventions.md`（先盘现有通用模块，再定"哪些必须复用 / 不满足怎么提"）；建功能文档 `design/features.md` + `design/features/`（先盘出功能清单：有哪些功能、干什么、对应哪个页面）。
-2. 定 `design/decisions.md`（108 KB 历史堆积）的处理方式。
-3. 文档整理完后，按文档要求开工 **UI 基础层统一（U18）**：先做完 4 项源码核实，再 P0 建地基。
-4. **真机验证**（用户装 `dist/` 实测）：三面板 / 主界面 / 新增编辑 三条，清单见 §1.3 表。
+> 文档体系整理已于 2026-10-01 结案（见 [`PROGRESS-HISTORY.md`](PROGRESS-HISTORY.md)）。以下为在办事项。
+
+1. **UI 基础层统一（样式专项）** ⏸ 挂起中 —— 等用户发话开工：先完成 **U18** 的 4 项源码核实（需授权下载宿主主题包），再 P0 建地基（`ui/tokens.ts` + `ui/style.ts`），之后按 P1→P5 分期迁。
+2. **真机验证**（用户装 `dist/` 实测）：三面板 / 主界面 / 新增编辑 三条，清单见 §1.2 表。
+3. **小收尾（代码侧，属开发会话）**：源码两处注释与实现不符 —— `src/client/index.ts:205` 与 `src/client/task-list.tsx:1406` 仍写着抬头/右侧有「刷新」按钮（实际已移除），`manualAt` 为死代码。
 
 

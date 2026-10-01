@@ -31,3 +31,4 @@
 | 09-29 | UI 收口 + Agent 权限选择器（决策 50） | 文案收口 + 权限下拉四档，新增 UI 封档 | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 |
 | 09-29 | 仓库暂时结项 | 所有进行中工作包落码 + 真机验证通过 | — |
 | 09-30 | 编辑器 UX 第二轮（决策 52） | 错误人话化 / 统一浮层 / 预计执行 / 版本历史拆分，八轮真机反馈后结案 | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
+| 10-01 | 文档体系整理 | 立文档规范 `docs/README.md`；现场层拆 `PROGRESS.md`（进行中）+ `PROGRESS-HISTORY.md`（已结案一行一条）；`design/` 按七类落位（新增方法规范、功能总索引，8 个功能文档入 `features/`）；删除 `decisions.md`（内容先回补进专题文档）并回改 9 处口径冲突；两份 agent 规则文件重写为零交叉 | [worklog/docs-reorganization.md](worklog/docs-reorganization.md) |
