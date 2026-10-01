@@ -24,7 +24,7 @@
 | 09-26~09-29 | 会话弹窗外观对齐官方 | 自家弹窗挂官方 ChatView + 逐项照 ui-map 对齐，真机核验通过 | [worklog/session-view.md](worklog/session-view.md) |
 | 09-27 | 官方 keyed 流 + 三级收折 + 弹窗外壳 | 决策 36/37 落码 | [worklog/session-view.md](worklog/session-view.md) |
 | 09-27 | U10「继续对话（开分支）」 | 决策 38 含 ⑦，真机验证通过 | [worklog/session-view.md](worklog/session-view.md) |
-| 09-27~09-28 | U11 产出物打开 | 决策 39，统一 `openFile` + 页面级预览 dock，真机验证通过 | [worklog/artifact-opening.md](worklog/artifact-opening.md) |
+| 09-27~09-28 | U11 产出物打开 | 决策 39，统一 `openFile` + 页面级预览 dock，真机验证通过；收尾打磨（代码换行开关 / 面包屑 / 图标 Tooltip）见 [worklog/file-preview-polish.md](worklog/file-preview-polish.md) · 目录浏览器两轮调优见 [worklog/file-browser-ui-tuning.md](worklog/file-browser-ui-tuning.md) | [worklog/artifact-opening.md](worklog/artifact-opening.md) |
 | 09-28 | 代码块工具条对齐官方 | `code.toolbarLabels` 三处补传，收敛到 `md-labels.ts` | [worklog/code-block-toolbar.md](worklog/code-block-toolbar.md) |
 | 09-28~09-29 | 依赖快照（决策 43） | `resolvedDeps` 冻结上游实例 + 产出下传，真机验证通过 | [worklog/dependency-snapshot.md](worklog/dependency-snapshot.md) |
 | 09-29 | 前置任务卡交互（决策 47） | 工作区→任务两级选择，五轮真机迭代定稿 | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §十九 |

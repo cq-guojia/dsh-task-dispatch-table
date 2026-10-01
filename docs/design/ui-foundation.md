@@ -101,13 +101,13 @@
 | `--tdt-border` / `-strong` / `-faint` | `--dsw-alias-border-l2 / -l3 / -l1` | 描边三级 |
 | `--tdt-accent` | `--dsw-alias-brand-primary` | 品牌强调 |
 | `--tdt-success` / `--tdt-danger` | `--dsw-alias-state-success/error-primary` | 语义色 |
-| `--tdt-warning` | `--dsw-alias-state-warning-primary` ⚠️ **命名待核实** | 警告色（同义变量 `state-warn-primary` 并存，见 §4.5 疑点 ①） |
+| `--tdt-warning` | `--dsw-alias-state-warning-primary` ⚠️ **命名未核实** | 警告色（同义变量 `state-warn-primary` 并存，见 §4.5 疑点 ①） |
 | `--tdt-hover` / `--tdt-active` | `--dsw-alias-interactive-bg-hover / -active` | 交互底 |
 | `--tdt-mask` | `--dsw-alias-bg-mask-1` | 遮罩 |
 | `--tdt-shadow-1` / `-2` | `--dsw-elevation-soft` / `--dsw-shadow-lv3` | 浮层投影 |
-| `--tdt-focus` | `--dsw-focus-ring-color` ⚠️ **命名待核实** | 键盘焦点环（同义变量 `--dsw-alias-border-focus` 并存，见 §4.5 疑点 ②） |
+| `--tdt-focus` | `--dsw-focus-ring-color` ⚠️ **命名未核实** | 键盘焦点环（同义变量 `--dsw-alias-border-focus` 并存，见 §4.5 疑点 ②） |
 
-> ⚠️ **待核实（P0 前置，见 §十一）**：宿主题包 `@deepseek-ai/dsh-client-ui-theme` 的 alias **全表**尚未在本仓留下记录（本地 `node_modules/@deepseek-ai/` 只有 `cosmokit`/`schemastery`，宿主 UI 包不在本地）⇒ 需 `npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>` 读一遍，补齐上表并确认拼写。**这是动手前唯一必须先补的事实**。
+> ⚠️ **未核实**：宿主题包 `@deepseek-ai/dsh-client-ui-theme` 的 alias **全表**尚未在本仓留下记录（本地 `node_modules/@deepseek-ai/` 只有 `cosmokit`/`schemastery`，宿主 UI 包不在本地）⇒ 需 `npm pack @deepseek-ai/dsh-client-ui-theme@<宿主版本>` 读一遍，补齐上表并确认拼写。**开工前必须先补**（前置项见 [`../PROGRESS.md`](../PROGRESS.md) 未决项 U18）。
 > 在此之前，§4.5 给出的是**本仓实测正在用的变量全表**（可自证，能覆盖 90% 的 token 设计需求）。
 
 ### 4.3 几何 / 排版 / 动效 token
@@ -116,7 +116,7 @@
 |---|---|---|
 | `--tdt-radius-xs` / `-sm` / `-md` / `-lg` | 4 / 6 / 8 / 10px（绑 `--dsw-radius-sm/md/lg`） | 收敛现有 4/6/7/8/10/12 六种 |
 | `--tdt-font-1` / `-2` / `-3` / `-4` | **优先映射宿主排版 token**：`--dsw-font-xxs-12` / `--dsw-font-xs-13` / `--dsh-content-font-size-secondary` / `--dsw-font-markdown-code-block-small`（px 只作兜底） | 收敛现有 10~16px 七档；**宿主自带字号体系 ⇒ 不自己定 px 刻度**（见 §4.5） |
-| `--tdt-control-h-sm` / `-md` | **待拍板**：建议 24 / 28px | 全站只此两档高度 |
+| `--tdt-control-h-sm` / `-md` | **未定**（暂按 24 / 28px） | 全站只此两档高度 |
 | `--tdt-space-1` / `-2` / `-3` / `-4` | 4 / 8 / 12 / 16px | 间距四拍 |
 | `--tdt-dur` / `--tdt-ease` | `--ds-transition-duration` / `--ds-ease-in-out` | 动效 |
 
