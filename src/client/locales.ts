@@ -158,6 +158,8 @@ export type LocaleKey =
   | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword'
   | 'cardRecordsEmpty' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
   | 'colTokens'
+  // —— 实例状态通用短名（status-text.ts 单源；zh：待执行/已派发/执行中/成功/失败/未执行/未知）——
+  | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
   | 'schedCustom'
   // —— 插件设置页（plugins.bundle.config 详情页表单）——
   | 'settingsBasic' | 'settingsTitleFormat' | 'settingsDesc' | 'settingsLang' | 'settingsLangValue'
@@ -694,6 +696,14 @@ export const zh: Record<LocaleKey, string> = {
   cardLoadFailed: '读取失败',
   cardEventsEmpty: '（该次执行暂无事件）',
   colTokens: 'Token',
+  // 实例状态通用短名（status-text.ts 单源，别处不许再各写一份）。
+  statusPending: '待执行',
+  statusDispatched: '已派发',
+  statusRunning: '执行中',
+  statusSucceeded: '成功',
+  statusFailed: '失败',
+  statusSkipped: '未执行',
+  statusUnknown: '未知',
   // 排期文案的**唯一实现**在 `client/schedule-text.ts`（列表与编辑器共用，正文键走 editorSched*）；
   // 这里只剩「认不出的 cron 原样显示」一条（真实值，不编造）。
   schedCustom: '{cron}',
@@ -1230,6 +1240,14 @@ export const en: Record<LocaleKey, string> = {
   cardLoadFailed: 'Failed to load',
   cardEventsEmpty: '(no events for this run)',
   colTokens: 'Token',
+  // Instance status short labels (single source in status-text.ts).
+  statusPending: 'Pending',
+  statusDispatched: 'Dispatched',
+  statusRunning: 'Running',
+  statusSucceeded: 'Succeeded',
+  statusFailed: 'Failed',
+  statusSkipped: 'Skipped',
+  statusUnknown: 'Unknown',
   // The single schedule-text implementation lives in `client/schedule-text.ts`; only the
   // unrecognised-cron passthrough remains here.
   schedCustom: '{cron}',

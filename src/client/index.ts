@@ -31,6 +31,8 @@ import {
 import { ensureToastStyle, FloatingToast } from './toast-css'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
+// 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
+import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { ConfigPanel } from './config-panel'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
@@ -404,8 +406,6 @@ function scheduleSummary(row: DebugTaskRow): string {
   if (row.cron !== null && row.cron !== '') return `cron ${row.cron}${row.timezone === null ? '' : ` (${row.timezone})`}`
   return '—'
 }
-
-const STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'] as const
 
 /** 表单下拉的取值状态：P1 起由 `GET /options` 真取（工作区 / 模型都是宿主的真目录）。 */
 interface EditorOptions {
@@ -1179,7 +1179,7 @@ function TaskPage(props: {
                     onChange: (event: { target: { value: string } }) => { setStatusFilter(event.target.value) },
                   },
                     h('option', { value: 'all' }, t('filterAll')),
-                    STATUS_OPTIONS.map(status => h('option', { key: status, value: status }, status)),
+                    INSTANCE_STATUSES.map(status => h('option', { key: status, value: status }, statusTextOf(status, t))),
                   ),
                 ),
                 h('label', { style: { fontSize: '12px' } },
@@ -1222,7 +1222,7 @@ function TaskPage(props: {
                               style: row.status === 'skipped' || row.status === 'failed'
                                 ? { color: C.danger, fontWeight: 600 }
                                 : undefined,
-                            }, row.status)),
+                            }, statusTextOf(row.status, t))),
                           h('td', { style: cellStyle }, String(row.attempt)),
                           h('td', { style: cellStyle },
                             row.session_id === null ? '—'

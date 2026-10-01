@@ -577,6 +577,13 @@ window.__ModuleLoader__.load({
 			cardLoadFailed: "读取失败",
 			cardEventsEmpty: "（该次执行暂无事件）",
 			colTokens: "Token",
+			statusPending: "待执行",
+			statusDispatched: "已派发",
+			statusRunning: "执行中",
+			statusSucceeded: "成功",
+			statusFailed: "失败",
+			statusSkipped: "未执行",
+			statusUnknown: "未知",
 			schedCustom: "{cron}",
 			settingsBasic: "基础信息",
 			settingsTitleFormat: "标题写法",
@@ -1102,6 +1109,13 @@ window.__ModuleLoader__.load({
 			cardLoadFailed: "Failed to load",
 			cardEventsEmpty: "(no events for this run)",
 			colTokens: "Token",
+			statusPending: "Pending",
+			statusDispatched: "Dispatched",
+			statusRunning: "Running",
+			statusSucceeded: "Succeeded",
+			statusFailed: "Failed",
+			statusSkipped: "Skipped",
+			statusUnknown: "Unknown",
 			schedCustom: "{cron}",
 			settingsBasic: "Basic info",
 			settingsTitleFormat: "Title format",
@@ -40287,6 +40301,33 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			return body.events;
 		}
 		//#endregion
+		//#region src/client/status-text.ts
+		/** 七态全集（与 `src/store.ts` 的 `InstanceStatus` 同形；客户端不跨半侧引类型，此处本地声明）。 */
+		const INSTANCE_STATUSES = [
+			"pending",
+			"dispatched",
+			"running",
+			"succeeded",
+			"failed",
+			"skipped",
+			"unknown"
+		];
+		/** 状态 → 文案键（唯一映射表）。 */
+		const STATUS_LABEL_KEYS = {
+			pending: "statusPending",
+			dispatched: "statusDispatched",
+			running: "statusRunning",
+			succeeded: "statusSucceeded",
+			failed: "statusFailed",
+			skipped: "statusSkipped",
+			unknown: "statusUnknown"
+		};
+		/** 状态 → 通用短名（zh：待执行 / 已派发 / 执行中 / 成功 / 失败 / 未执行 / 未知）。 */
+		function statusTextOf(status, t) {
+			const key = STATUS_LABEL_KEYS[status];
+			return key === void 0 ? status : t(key);
+		}
+		//#endregion
 		//#region src/task-sort.ts
 		/** 分组：运行中 0 → 已启用 1 → 无刻度 2 → 已关闭 3。 */
 		const groupOf = (row) => {
@@ -41015,15 +41056,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 			padding: "18px",
 			boxShadow: "var(--dsw-shadow-lv3, 0 12px 32px rgba(0,0,0,0.4))"
 		};
-		const INSTANCE_STATUS_OPTIONS = [
-			"pending",
-			"dispatched",
-			"running",
-			"succeeded",
-			"failed",
-			"skipped",
-			"unknown"
-		];
 		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
 		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
 			seconds: true,
@@ -41203,10 +41235,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (event) => {
 					setRecStatus(event.target.value);
 				}
-			}, (0, react.createElement)("option", { value: "all" }, tt("filterAll")), INSTANCE_STATUS_OPTIONS.map((status) => (0, react.createElement)("option", {
+			}, (0, react.createElement)("option", { value: "all" }, tt("filterAll")), INSTANCE_STATUSES.map((status) => (0, react.createElement)("option", {
 				key: status,
 				value: status
-			}, status))), (0, react.createElement)("label", { style: {
+			}, statusTextOf(status, t)))), (0, react.createElement)("label", { style: {
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px",
@@ -41262,7 +41294,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 					onClick: () => {
 						setOpenInstance(open ? null : instance.id);
 					}
-				}, (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.scheduled_at)), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { style: statusStyleOf(instance.status) }, instance.status)), (0, react.createElement)("td", { style: miniCellStyle }, String(instance.attempt)), (0, react.createElement)("td", { style: miniCellStyle }, instance.session_id === null ? "—" : instance.session_id.slice(0, 8)), (0, react.createElement)("td", { style: miniCellWrapStyle }, outputs.length === 0 ? "—" : (0, react.createElement)("span", { title: outputs.join("\n") }, outputs.map(outputNameOf).join("、"))), (0, react.createElement)("td", { style: miniCellStyle }, tokensOf(instance)), (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.updated_at))), open ? (0, react.createElement)("tr", { key: `${instance.id}-events` }, (0, react.createElement)("td", {
+				}, (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.scheduled_at)), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { style: statusStyleOf(instance.status) }, statusTextOf(instance.status, t))), (0, react.createElement)("td", { style: miniCellStyle }, String(instance.attempt)), (0, react.createElement)("td", { style: miniCellStyle }, instance.session_id === null ? "—" : instance.session_id.slice(0, 8)), (0, react.createElement)("td", { style: miniCellWrapStyle }, outputs.length === 0 ? "—" : (0, react.createElement)("span", { title: outputs.join("\n") }, outputs.map(outputNameOf).join("、"))), (0, react.createElement)("td", { style: miniCellStyle }, tokensOf(instance)), (0, react.createElement)("td", { style: miniCellStyle }, formatStamp(instance.updated_at))), open ? (0, react.createElement)("tr", { key: `${instance.id}-events` }, (0, react.createElement)("td", {
 					colSpan: 7,
 					style: miniCellWrapStyle
 				}, (0, react.createElement)("div", { style: {
@@ -41422,22 +41454,22 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				type: "button",
 				style: {
 					...iconBtnStyle,
-					padding: "0 10px"
-				},
-				onClick: () => {
-					onEdit(row.id);
-				}
-			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit")), (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					...iconBtnStyle,
 					padding: "0 10px",
 					color: C$1.danger
 				},
 				onClick: () => {
 					setConfirmDelete(true);
 				}
-			}, t("cardDelete"))), confirmDelete ? renderConfirm() : null);
+			}, t("cardDelete")), (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					...iconBtnStyle,
+					padding: "0 10px"
+				},
+				onClick: () => {
+					onEdit(row.id);
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }), t("editorEdit"))), confirmDelete ? renderConfirm() : null);
 		}
 		function TaskCard(props) {
 			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onToggleEnabled, refOf } = props;
@@ -42286,15 +42318,6 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				return;
 			}
 		}
-		const STATUS_OPTIONS = [
-			"pending",
-			"dispatched",
-			"running",
-			"succeeded",
-			"failed",
-			"skipped",
-			"unknown"
-		];
 		const EMPTY_EDITOR_OPTIONS = {
 			workspaces: [],
 			models: [],
@@ -42849,10 +42872,10 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				onChange: (event) => {
 					setStatusFilter(event.target.value);
 				}
-			}, (0, react.createElement)("option", { value: "all" }, t("filterAll")), STATUS_OPTIONS.map((status) => (0, react.createElement)("option", {
+			}, (0, react.createElement)("option", { value: "all" }, t("filterAll")), INSTANCE_STATUSES.map((status) => (0, react.createElement)("option", {
 				key: status,
 				value: status
-			}, status)))), (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterTask")} `, (0, react.createElement)("select", {
+			}, statusTextOf(status, t))))), (0, react.createElement)("label", { style: { fontSize: "12px" } }, `${t("filterTask")} `, (0, react.createElement)("select", {
 				value: taskFilter,
 				onChange: (event) => {
 					setTaskFilter(event.target.value);
@@ -42885,7 +42908,7 @@ body[data-ds-dark-theme] .dsh-tdt-sv-deliv-icon{background:color-mix(in srgb,var
 				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, (0, react.createElement)("span", { style: row.status === "skipped" || row.status === "failed" ? {
 					color: C.danger,
 					fontWeight: 600
-				} : void 0 }, row.status)), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : viewSession !== null ? (0, react.createElement)("button", {
+				} : void 0 }, statusTextOf(row.status, t))), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : viewSession !== null ? (0, react.createElement)("button", {
 					type: "button",
 					style: linkStyle,
 					title: row.session_id,

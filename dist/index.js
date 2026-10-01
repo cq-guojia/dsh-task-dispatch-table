@@ -689,35 +689,14 @@ updateScopeConfig) => [
     },
     // —— 插件设置页（基础信息 + 计时参数）HTTP 通道 ——
     // 本插件配置刻意非 volatile，官方 configForms 不可用，故设置表单走自有 HTTP 通道读写。
-    {
-        kind: 'exact',
-        path: `${DISPATCH_API_PREFIX}/config`,
-        handler: (req, res) => {
-            if (req.method !== 'GET') {
-                writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
-                return;
-            }
-            if (!isTrustedDispatchRequest(req)) {
-                writeJson(res, 403, { ok: false, error: 'forbidden' });
-                return;
-            }
-            const config = getScopeConfig();
-            writeJson(res, 200, {
-                ok: true,
-                config: {
-                    tickMs: config.tickMs,
-                    dispatchGraceMs: config.dispatchGraceMs,
-                    leaseMs: config.leaseMs,
-                    unknownGraceMs: config.unknownGraceMs,
-                },
-            });
-        },
-    },
+    // ⚠️ **GET / POST 必须合在一条路由里**：宿主 webServer 对重复 (kind, path) 注册**直接 throw**
+    // （@deepseek-ai/dsh-host-webserver@0.2.0-rc.2 `lib/index.js` register：`duplicate exact route`），
+    // 拆两条会在第二条抛错、把注册循环打断 ⇒ 其后的路由全部注册不上（2026-10-02 真机三面板 404 根因）。
     {
         kind: 'exact',
         path: `${DISPATCH_API_PREFIX}/config`,
         handler: async (req, res) => {
-            if (req.method !== 'POST') {
+            if (req.method !== 'GET' && req.method !== 'POST') {
                 writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
                 return;
             }
@@ -725,6 +704,21 @@ updateScopeConfig) => [
                 writeJson(res, 403, { ok: false, error: 'forbidden' });
                 return;
             }
+            // GET = 读当前计时参数（设置页回填）。
+            if (req.method === 'GET') {
+                const config = getScopeConfig();
+                writeJson(res, 200, {
+                    ok: true,
+                    config: {
+                        tickMs: config.tickMs,
+                        dispatchGraceMs: config.dispatchGraceMs,
+                        leaseMs: config.leaseMs,
+                        unknownGraceMs: config.unknownGraceMs,
+                    },
+                });
+                return;
+            }
+            // POST = 写回（仅限计时字段，范围校验后经 scope.update 落盘并即时生效）。
             try {
                 const body = JSON.parse(await readDispatchBody(req));
                 const allowed = ['tickMs', 'dispatchGraceMs', 'leaseMs', 'unknownGraceMs'];
@@ -1011,8 +1005,16 @@ export function apply(ctx, config) {
         }
         for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry, () => ctx.get('llm'), (msg) => { ctx.logger.info(msg); }, 
         // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
-        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig))
-            webServer.register(route);
+        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig)) {
+            // 逐条容错：宿主对重复 (kind, path) 注册会 throw（dsh-host-webserver register），
+            // 一条坏路由绝不能把后面的路由全部拖死（2026-10-02 真机「部分接口 404」的放大器）。
+            try {
+                webServer.register(route);
+            }
+            catch (error) {
+                wctx.logger.warn(`[数据通道] 路由注册失败 ${route.path}：${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
         wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、GET /api/task-dispatch-table/tasks/instances、GET /api/task-dispatch-table/tasks/log、GET /api/task-dispatch-table/tasks/events、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled');
     });
     ctx.inject(['settings'], (sctx) => {

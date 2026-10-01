@@ -23,6 +23,8 @@ import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
 // 三面板数据通道（决策 55）：执行记录 / 日志 / 事件时间线，与未来总查询页共用同一套 fetch。
 import { fetchEvents, fetchInstances, fetchLogs, type EventRow, type InstanceRow, type LogRow } from './query'
+// 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
+import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
 // 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { pinMsFor, sortRows } from '../task-sort.js'
@@ -760,8 +762,6 @@ const dialogStyle: Record<string, string | number> = {
   boxShadow: 'var(--dsw-shadow-lv3, 0 12px 32px rgba(0,0,0,0.4))',
 }
 
-const INSTANCE_STATUS_OPTIONS = ['pending', 'dispatched', 'running', 'succeeded', 'failed', 'skipped', 'unknown'] as const
-
 /** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
 const formatStamp = (iso: string | null): string =>
   iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
@@ -933,7 +933,7 @@ function TaskExpandPanel(props: {
         onChange: (event: { target: { value: string } }) => { setRecStatus(event.target.value) },
       },
         h('option', { value: 'all' }, tt('filterAll')),
-        INSTANCE_STATUS_OPTIONS.map(status => h('option', { key: status, value: status }, status)),
+        INSTANCE_STATUSES.map(status => h('option', { key: status, value: status }, statusTextOf(status, t))),
       ),
       h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: C.textFaint } },
         t('cardFrom'),
@@ -965,7 +965,7 @@ function TaskExpandPanel(props: {
                 onClick: () => { setOpenInstance(open ? null : instance.id) },
               },
                 h('td', { style: miniCellStyle }, formatStamp(instance.scheduled_at)),
-                h('td', { style: miniCellStyle }, h('span', { style: statusStyleOf(instance.status) }, instance.status)),
+                h('td', { style: miniCellStyle }, h('span', { style: statusStyleOf(instance.status) }, statusTextOf(instance.status, t))),
                 h('td', { style: miniCellStyle }, String(instance.attempt)),
                 h('td', { style: miniCellStyle }, instance.session_id === null ? '—' : instance.session_id.slice(0, 8)),
                 h('td', { style: miniCellWrapStyle },
@@ -1088,14 +1088,15 @@ function TaskExpandPanel(props: {
         }, t(key === 'info' ? 'cardTabInfo' : key === 'records' ? 'cardTabRecords' : 'cardTabLogs'))),
       ),
       h('span', { style: { flex: '1 1 auto' } }),
-      h('button', {
-        type: 'button', style: { ...iconBtnStyle, padding: '0 10px' },
-        onClick: () => { onEdit(row.id) },
-      }, h(IconEditOutlineRegular, { size: 14 }), t('editorEdit')),
+      // 右下按钮区顺序（用户 2026-10-02）：删除在编辑**左边**。
       h('button', {
         type: 'button', style: { ...iconBtnStyle, padding: '0 10px', color: C.danger },
         onClick: () => { setConfirmDelete(true) },
       }, t('cardDelete')),
+      h('button', {
+        type: 'button', style: { ...iconBtnStyle, padding: '0 10px' },
+        onClick: () => { onEdit(row.id) },
+      }, h(IconEditOutlineRegular, { size: 14 }), t('editorEdit')),
     ),
     confirmDelete ? renderConfirm() : null,
   )

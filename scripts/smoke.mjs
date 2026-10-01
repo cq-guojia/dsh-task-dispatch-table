@@ -1554,6 +1554,20 @@ console.log('\n[14] runtime-index')
         && client.includes('cardTabInfo') && client.includes('cardTabRecords') && client.includes('cardTabLogs')
         && client.includes('cardDeleteDesc') && client.includes('cardRecordsEmpty') && client.includes('cardLogsEmpty')
     })())
+  // 2026-10-02 真机 404 根因回归钉：宿主 webServer 对重复 (kind, path) 注册 throw
+  // （dsh-host-webserver lib/index.js register）⇒ /config 的 GET+POST 必须合一条路由
+  // （重复注册会把循环打断、其后路由全部 404），且注册循环必须逐条容错。
+  check('三面板·404 根因回归：/config 只注册一条（GET/POST 合一），注册循环逐条容错',
+    (() => {
+      const host = readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8')
+      return host.split('api/task-dispatch-table/config').length - 1 === 1
+        && host.includes('路由注册失败')
+    })())
+  check('三面板·状态短名走单源 statusTextOf（zh 词典与七态映射都在 bundle）',
+    (() => {
+      const client = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+      return client.includes('statusTextOf') && client.includes('statusPending') && client.includes('待执行')
+    })())
 
   store.close()
   rmSync(dir, { recursive: true, force: true })
