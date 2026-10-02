@@ -710,8 +710,12 @@ export class TaskStore {
             params.push(...q.levels);
         }
         if (q.keyword !== undefined && q.keyword.trim() !== '') {
-            where.push('message LIKE ?');
-            params.push(`%${q.keyword.trim()}%`);
+            // ⚠️ 必须**同时匹配 kind**（用户 2026-10-03 揪出）：日志行显示成 `missed-slot: 上一刻度未执行…`，
+            // 前半的 `missed-slot` 是 **kind**、后半中文才是 message。只匹配 message 的话，
+            // 搜「上一刻」能搜到、搜「missed」却搜不到 —— 用户看到的就是「明明有这条却过滤不出来」。
+            where.push('(message LIKE ? OR kind LIKE ?)');
+            const kw = `%${q.keyword.trim()}%`;
+            params.push(kw, kw);
         }
         if (q.fromTs !== undefined) {
             where.push('ts >= ?');

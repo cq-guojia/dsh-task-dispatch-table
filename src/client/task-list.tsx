@@ -712,7 +712,13 @@ const panelBoxStyle: Record<string, string | number> = {
  * 动效沿用「任务执行中」那三个脉动方块（`.dsh-tdt-run-blocks`，现成资产，不新增）。
  */
 const busyPillStyle: Record<string, string | number> = {
-  position: 'absolute', right: '12px', bottom: '12px', zIndex: 2,
+  // 固定到**页面底部**、水平贴到内容容器（居中 `max-width: 1120px`）的右边缘内侧 ——
+  // 窗口不是全屏，不能贴视口最右（用户 2026-10-03：要「最大宽度的右下角」）。
+  // `fixed` ⇒ 不随页面滚动，也不占任何布局空间。
+  position: 'fixed',
+  right: 'calc(max(0px, (100vw - 1120px) / 2) + 16px)',
+  bottom: '16px',
+  zIndex: 'var(--tdt-z-dock)',
   display: 'inline-flex', alignItems: 'center', gap: '6px',
   padding: '5px 10px', borderRadius: 'var(--tdt-radius-md)',
   background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`,
@@ -789,7 +795,8 @@ const logAreaStyle: Record<string, string | number> = {
   ...panelScrollFillStyle,
   borderTop: `1px solid var(--tdt-border)`,
   background: 'var(--tdt-surface-1)',
-  padding: '10px 12px',
+  // 左右**不留 padding**（用户 2026-10-03）：让日志左边缘与上方过滤下拉框对齐。
+  padding: '10px 0',
   fontFamily: monoFont, fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
 }
 /** 日志行：行间距拉开一点（用户 2026-10-03）。 */
@@ -1381,7 +1388,16 @@ function TaskCard(props: {
 
   return h('div', { ref: refOf, style: cardStyle },
     // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+    // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
+    h('div', {
+      style: { display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' },
+      onClick: () => {
+        // 拖选文字时**不要**误展开（选区非空 ⇒ 用户在复制，不是要点开卡片）。
+        const sel = typeof window === 'undefined' ? null : window.getSelection()
+        if (sel !== null && sel.toString() !== '') return
+        onToggleOpen()
+      },
+    },
       h(StatusRail, { row }),
       h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
         // 标题 / 执行方式：**单行省略号 + hover 跑马灯**（窗口窄、文字长不再撑高卡片，用户 2026-09-30）。
@@ -1400,7 +1416,11 @@ function TaskCard(props: {
         h(NextPill, { row, t, tt }),
         // 开关与编辑器头部开关**统一**：挂 `dsh-tdt-switch` 交给 CSS 把选中态刷成官方 success 绿。
         // （官方 Switch 默认选中色是 brand-primary：亮色主题下近乎黑、暗色近乎白 ⇒ 两处看着不一样。）
-        h('span', { className: 'dsh-tdt-switch' },
+        // ⚠️ 开关**不许穿透**到「整卡展开」（用户 2026-10-03）：外层拦下冒泡，点它只切启用。
+        h('span', {
+          className: 'dsh-tdt-switch',
+          onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
+        },
           h(Switch, {
             checked: row.enabled,
             onChange: (next: boolean) => { onToggleEnabled(row.id, next) },
@@ -1408,16 +1428,19 @@ function TaskCard(props: {
             title: row.enabled ? t('listFilterEnabled') : t('listFilterDisabled'),
           }),
         ),
-        h(IconButton, {
-          variant: 'plain', size: 'sm', icon: h(IconChevronDownOutlineRegular, { size: 14 }),
-          // 这里**故意不挂 `title`**：此前复用了执行记录页的 `expandHint`（「点击任意一行展开该次执行的
-          // 事件时间线」），语义完全对不上——卡片展开的是**本任务的设置**，不是某次执行的事件时间线，
-          // 悬停冒出一句驴唇不对马嘴的提示（用户 2026-09-30 真机点名）。图标本身自明，只留无障碍名。
-          label: t('listExpandHint'),
-          onClick: onToggleOpen,
-          'aria-expanded': open,
-          style: { transform: open ? 'rotate(180deg)' : 'none' },
-        }),
+        // 箭头同样要拦：否则点箭头会先触发自己的 onClick、再冒泡到主行触发第二次 ⇒ 展开后立刻又收起。
+        h('span', { onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+          h(IconButton, {
+            variant: 'plain', size: 'sm', icon: h(IconChevronDownOutlineRegular, { size: 14 }),
+            // 这里**故意不挂 `title`**：此前复用了执行记录页的 `expandHint`（「点击任意一行展开该次执行的
+            // 事件时间线」），语义完全对不上——卡片展开的是**本任务的设置**，不是某次执行的事件时间线，
+            // 悬停冒出一句驴唇不对马嘴的提示（用户 2026-09-30 真机点名）。图标本身自明，只留无障碍名。
+            label: t('listExpandHint'),
+            onClick: onToggleOpen,
+            'aria-expanded': open,
+            style: { transform: open ? 'rotate(180deg)' : 'none' },
+          }),
+        ),
       ),
     ),
     // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──

@@ -1816,9 +1816,15 @@ console.log('\n[14] runtime-index')
     check('过滤行上下间距一致：下间距 10px = 上间距（面板外虚线 → 过滤行）',
       tl.includes("marginBottom: '10px',"))
     check('⏱ loading 保底停留 5 秒（**临时调试值**，验完要改回）', tl.includes('BUSY_HOLD_MS = 5000'))
-    check('忙碌指示：浮动不占位（absolute）+ 延迟 400ms 出现 + 沿用三个脉动方块',
+    check('loading 定位：fixed 到页面底部，水平贴内容容器（max-width 1120）右边缘',
+      tl.includes("position: 'fixed'") && tl.includes('(100vw - 1120px) / 2'))
+    check('日志关键字**同时匹配 message 与 kind**（否则搜 missed-slot 的 kind 搜不到）',
+      st.includes("(message LIKE ? OR kind LIKE ?)"))
+    check('任务卡片整行可点展开；开关 / 箭头拦下冒泡（不穿透、不双触发）',
+      tl.includes('cursor: \'pointer\' },') && tl.includes('event.stopPropagation()')
+      && (tl.match(/stopPropagation\(\)/g) ?? []).length >= 4)
+    check('忙碌指示：延迟 400ms 出现 + 沿用三个脉动方块 + 不吃鼠标事件',
       tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS = 400')
-      && tl.includes("position: 'absolute'") && tl.includes("position: 'relative'")
       && tl.includes('dsh-tdt-run-blocks') && tl.includes('pointerEvents:')
       // 过滤行里那个会占位的一闪文字已经移除。
       && !tl.includes("recLoading ? h('span'") && !tl.includes("logLoading ? h('span'"))

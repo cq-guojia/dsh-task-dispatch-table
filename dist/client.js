@@ -41740,10 +41740,10 @@ body[data-ds-dark-theme]{
 		* 动效沿用「任务执行中」那三个脉动方块（`.dsh-tdt-run-blocks`，现成资产，不新增）。
 		*/
 		const busyPillStyle = {
-			position: "absolute",
-			right: "12px",
-			bottom: "12px",
-			zIndex: 2,
+			position: "fixed",
+			right: "calc(max(0px, (100vw - 1120px) / 2) + 16px)",
+			bottom: "16px",
+			zIndex: "var(--tdt-z-dock)",
 			display: "inline-flex",
 			alignItems: "center",
 			gap: "6px",
@@ -41851,7 +41851,7 @@ body[data-ds-dark-theme]{
 			...panelScrollFillStyle,
 			borderTop: `1px solid var(--tdt-border)`,
 			background: "var(--tdt-surface-1)",
-			padding: "10px 12px",
+			padding: "10px 0",
 			fontFamily: monoFont$1,
 			fontSize: "var(--tdt-font-xs)",
 			lineHeight: "var(--tdt-line-sm)"
@@ -42436,11 +42436,19 @@ body[data-ds-dark-theme]{
 			return (0, react.createElement)("div", {
 				ref: refOf,
 				style: cardStyle$1
-			}, (0, react.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "12px"
-			} }, (0, react.createElement)(StatusRail, { row }), (0, react.createElement)("div", { style: {
+			}, (0, react.createElement)("div", {
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "12px",
+					cursor: "pointer"
+				},
+				onClick: () => {
+					const sel = typeof window === "undefined" ? null : window.getSelection();
+					if (sel !== null && sel.toString() !== "") return;
+					onToggleOpen();
+				}
+			}, (0, react.createElement)(StatusRail, { row }), (0, react.createElement)("div", { style: {
 				flex: "1 1 auto",
 				minWidth: 0
 			} }, (0, react.createElement)("div", { style: {
@@ -42476,14 +42484,21 @@ body[data-ds-dark-theme]{
 				row,
 				t,
 				tt
-			}), (0, react.createElement)("span", { className: "dsh-tdt-switch" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			}), (0, react.createElement)("span", {
+				className: "dsh-tdt-switch",
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: row.enabled,
 				onChange: (next) => {
 					onToggleEnabled(row.id, next);
 				},
 				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
 				title: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
-			})), (0, react.createElement)(IconButton, {
+			})), (0, react.createElement)("span", { onClick: (event) => {
+				event.stopPropagation();
+			} }, (0, react.createElement)(IconButton, {
 				variant: "plain",
 				size: "sm",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
@@ -42491,7 +42506,7 @@ body[data-ds-dark-theme]{
 				onClick: onToggleOpen,
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }
-			}))), open ? (0, react.createElement)(TaskExpandPanel, {
+			})))), open ? (0, react.createElement)(TaskExpandPanel, {
 				row,
 				t,
 				tt,

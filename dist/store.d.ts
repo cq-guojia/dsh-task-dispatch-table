@@ -137,7 +137,7 @@ export interface LogQuery {
     taskId?: string;
     taskIds?: readonly string[];
     levels?: readonly string[];
-    /** message 子串匹配（LIKE %kw%）。 */
+    /** **message 与 kind 都做**子串匹配（LIKE %kw%）；见 `listLogs` 处的说明。 */
     keyword?: string;
     fromTs?: string;
     toTs?: string;
