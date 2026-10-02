@@ -1811,6 +1811,9 @@ console.log('\n[14] runtime-index')
       // 黑框 `logBoxStyle` 只留给「日志」面板本体，展开区不再套框。
       && !tl.includes('eventsLoading'))
     check('两个时间框之间有分隔符 ～', trc.includes("'～'"))
+    check('展开区排布放宽：外圈 padding 翻倍 + 日志行间距 + 字色压暗一档',
+      tl.includes("padding: '18px 20px'") && tl.includes("marginBottom: '7px'")
+      && tl.includes("color: 'var(--tdt-fg-2)'") && !tl.includes("color: 'var(--tdt-accent)' }, `${event.kind}"))
     check('执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右',
       tl.includes("t('limitPrefix')") && tl.includes("t('limitSuffix')") && tl.includes('recLimit')
       && (tl.match(/limitRowStyle/g) ?? []).length >= 3)

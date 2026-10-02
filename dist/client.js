@@ -42212,6 +42212,7 @@ body[data-ds-dark-theme]{
 					colSpan: 8,
 					style: {
 						...miniCellWrapStyle,
+						padding: "18px 20px",
 						background: "var(--tdt-open-bg-soft)"
 					}
 				}, eventsError !== null ? (0, react.createElement)("div", { style: {
@@ -42220,7 +42221,13 @@ body[data-ds-dark-theme]{
 				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"
-				} }, t("cardEventsEmpty")) : events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? ""))))) : null];
+				} }, t("cardEventsEmpty")) : events.map((event) => (0, react.createElement)("div", {
+					key: event.seq,
+					style: {
+						marginBottom: "7px",
+						lineHeight: "var(--tdt-line-md)"
+					}
+				}, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
 			})))));
 			const renderLogs = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
 				value: logKeyword,

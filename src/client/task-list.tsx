@@ -1144,7 +1144,11 @@ function TaskExpandPanel(props: {
                   ? h('tr', { key: `${instance.id}-detail` },
                     // 展开内容区：**更淡一档的蓝**（`--tdt-open-bg-soft`）⇒ 与展开行本身区隔开，
                     // 且不是灰 / 不是纯黑纯白（用户 2026-10-02）。
-                    h('td', { colSpan: 8, style: { ...miniCellWrapStyle, background: 'var(--tdt-open-bg-soft)' } },
+                    // 展开区（用户 2026-10-02）：**外圈 padding 翻倍**（9/10 → 18/20），别再密密麻麻。
+                    h('td', {
+                      colSpan: 8,
+                      style: { ...miniCellWrapStyle, padding: '18px 20px', background: 'var(--tdt-open-bg-soft)' },
+                    },
                       // 展开区**直接铺执行日志**（用户 2026-10-02）：**不要标题、不要黑框**——
                       // 展开的日志本来就是给要看细节的人看的，套一层框 + 一个小标题纯属多余。
                       // 底色沿用 `--tdt-open-bg-soft`（淡蓝）就够了，用它把展开区区隔出来。
@@ -1154,10 +1158,13 @@ function TaskExpandPanel(props: {
                           ? null
                           : events.length === 0
                             ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('cardEventsEmpty'))
-                            : events.map(event => h('div', { key: event.seq },
+                            // 行间距拉开；字色整体**压暗一档**（日志是慢慢翻的，不要跟正文一样刺眼）。
+                            : events.map(event => h('div', {
+                              key: event.seq, style: { marginBottom: '7px', lineHeight: 'var(--tdt-line-md)' },
+                            },
                               h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(event.ts)} `),
-                              h('span', { style: { color: 'var(--tdt-accent)' } }, `${event.kind} `),
-                              h('span', null, event.detail ?? ''),
+                              h('span', { style: { color: 'var(--tdt-fg-2)' } }, `${event.kind} `),
+                              h('span', { style: { color: 'var(--tdt-fg-2)' } }, event.detail ?? ''),
                             )),
                     ),
                   )
