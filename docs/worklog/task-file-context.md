@@ -49,6 +49,27 @@
 - **不改提示词语序与内容**：A 只是在 `content` 里追加 file 块，文本段原样保留。
 - **上游任务名**：客户端按 `task` id 反查任务定义；查不到显示 id 短号（不做回退兼容分支）。
 
+## 四点五、⚠️ 事后更正：所有入口只传会话 id（2026-10-03，用户抓出）
+
+**现象**：同一个会话，从「任务列表卡片 → 执行记录 → 查看」进去**有**「接收」区；从老界面「执行记录 → 查看任务」进去**没有** —— 同一个会话两种渲染。
+
+**根因（我的错）**：`openView` 把 `outputs` / `snapshot` / `heading` 做成**调用方传参**，而进弹窗的入口有三处，我只给新的那处传了快照：
+
+| 入口 | 坐标 | 当时 |
+|---|---|---|
+| 任务列表卡片「查看」 | `task-list.tsx` → `index.ts` | ✅ 传了 snapshot |
+| 老界面执行记录「查看任务」/ 会话 id 链接 | `index.ts`（LEGACY 区） | ❌ 没传 ⇒ 无接收区 |
+| 接收区「查看该会话」 | `index.ts` | ❌ 没传 |
+
+**更正**：`openView` 现在**只吃会话 id**，快照 / 产出 / 标题全部自己按 id 取：
+- 新增按会话取数的通道：`store.InstanceQuery.sessionId`（`WHERE session_id = ?`）→ `GET /tasks/instances?sessionId=` → 客户端 `fetchInstanceBySession(sessionId)`（取首行，失败 ⇒ `null`，**照常开弹窗**，只少产出卡与接收区）。
+- 三处调用点统一成 `openView(sessionId)`；标题也统一成「任务名 · YYYY-MM-DD HH:mm」（此前各入口各写一套）。
+- **铁律**（已写进 `openView` 与 `task-list` 的 props 注释）：进弹窗**只传会话 id**，禁止再加 heading / outputs / snapshot 这类参数。
+
+**顺带修的真 bug**：换会话（点「查看该会话」）与关弹窗时，旧 `retain` 引用**没有 release**（原 `onClose` 只 dispose 当前那个，替换路径完全不 dispose）⇒ 连点几个会话会攒住物化 scope。现在收敛到唯一出口 `applyViewing()`：设新值前先 `prev.view.dispose()`。
+
+**冒烟**：+2 项（按 sessionId 精确命中 / 未知 sessionId 为空）⇒ **442/0**。
+
 ## 五、落码记录
 
 | # | 改动 | 坐标 |
