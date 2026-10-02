@@ -1330,6 +1330,6 @@ export const en: Record<LocaleKey, string> = {
   settingsLoadFailed: 'Failed to load current settings, please retry later',
   settingsUnitSec: 'sec',
   settingsResetDone: 'Reset to default',
-  loading: 'Loading…',
+  loading: 'Loading',
   invalidNumber: 'Please enter a valid integer number of seconds',
 }

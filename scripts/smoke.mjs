@@ -1858,23 +1858,25 @@ console.log('\n[14] runtime-index')
       tl.includes("marginBottom: '10px',"))
     check('⏱ loading 调试态：立即显示（BUSY_DELAY_MS=0）+ 保底停留 5 秒（验完都要改回）',
       tl.includes('BUSY_HOLD_MS = 5000') && tl.includes('BUSY_DELAY_MS = 0'))
-    check('任务卡片 hover 微高亮：淡蓝 --tdt-card-hover，底色走 CSS 不由 inline 盖住',
-      tl.includes('.dsh-tdt-card:hover { background: var(--tdt-card-hover); }')
-      && tl.includes("className: 'dsh-tdt-card'")
-      // 只查 cardStyle 这个对象：inline 背景优先级高于 CSS class ⇒ 会盖掉 :hover。
-      // （别的控件比如控制按钮确实有 `background: var(--tdt-surface-1), color: var(--tdt-fg)`，
-      //   那条是正经的，不能一概否定 ⇒ 必须收口到 cardStyle 块内。）
+    check('任务卡片 hover 只作用主行（dsh-tdt-card-row），展开区不会跟着变蓝',
+      tl.includes('.dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }')
+      && tl.includes("className: 'dsh-tdt-card-row'")
+      // 整卡 hover 已废除：否则展开后整页发蓝（用户 2026-10-03）。
+      && !tl.includes('.dsh-tdt-card:hover')
+      // 只查 cardStyle 这个对象：inline 背景优先级高于 CSS class，会盖掉 :hover；
+      // 且卡片本身不再统一 padding（padding 移到主行 / 展开区各自带，hover 才能边到边高亮）。
+      // （别的控件比如控制按钮确实有 `background: var(--tdt-surface-1), color: var(--tdt-fg)`，那条正经，故收口到 cardStyle 块内。）
       && (() => {
         const m = tl.match(/const cardStyle[\s\S]*?\n\}/)
         const block = m ? m[0] : ''
-        return !block.includes("background: 'var(--tdt-surface-1)'")
+        return !block.includes("background: 'var(--tdt-surface-1)'") && !block.includes('padding:')
       })())
     check('loading 定位：fixed 到页面底部，水平贴内容容器（max-width 1120）右边缘',
       tl.includes("position: 'fixed'") && tl.includes('(100vw - 1120px) / 2'))
     check('日志关键字**同时匹配 message 与 kind**（否则搜 missed-slot 的 kind 搜不到）',
       st.includes("(message LIKE ? OR kind LIKE ?)"))
     check('任务卡片整行可点展开；开关 / 箭头拦下冒泡（不穿透、不双触发）',
-      tl.includes('cursor: \'pointer\' },') && tl.includes('event.stopPropagation()')
+      tl.includes("className: 'dsh-tdt-card-row'") && tl.includes('event.stopPropagation()')
       && (tl.match(/stopPropagation\(\)/g) ?? []).length >= 4)
     check('忙碌指示：沿用三个脉动方块 + 不吃鼠标事件 + 过滤行不再插占位文字',
       tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS')

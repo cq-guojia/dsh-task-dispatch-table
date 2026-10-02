@@ -110,7 +110,10 @@ const TASK_LIST_CSS = [
   // 底色必须写在这里而不是 inline style —— inline 会盖掉下面的 `:hover`。
   // 高亮用**淡蓝** `--tdt-card-hover`：灰色高亮在卡片底色上几乎看不出来。
   '.dsh-tdt-card { background: var(--tdt-surface-1); }',
-  '.dsh-tdt-card:hover { background: var(--tdt-card-hover); }',
+  // hover 只作用在**主行**（`dsh-tdt-card-row`：标题 / 状态 / 开关 / 箭头那一溜基本信息）。
+  // 展开区是兄弟节点、不在这个 div 里 ⇒ 即便展开了，下面的设置 / 记录 / 日志也**不会**跟着变蓝
+  // （否则展开后整页发蓝，反而晃眼，用户 2026-10-03）。
+  '.dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }',
   // 行 hover 高亮（用户 2026-10-02：斑马纹之上再给一层鼠标反馈）。
   // 特异性 (0,2,0) > `.dsh-tdt-rec-alt` (0,1,0) ⇒ 能盖住斑马纹底色。
   '.dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }',
@@ -683,11 +686,11 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
 // ── 卡片 ───────────────────────────────────────────────────────────────
 const cardStyle: Record<string, string | number> = {
   display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'left',
-  padding: '12px 14px', marginBottom: '10px', borderRadius: 'var(--tdt-radius-sm)',
+  marginBottom: '10px', borderRadius: 'var(--tdt-radius-sm)',
   border: `1px solid var(--tdt-border)`, color: 'var(--tdt-fg)',
   transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`,
-  // ⚠️ **background 不放这里**：inline 背景的优先级高于 CSS class ⇒ `.dsh-tdt-card:hover` 会被盖掉。
-  // 底色与 hover 都走 CSS（见 TASK_LIST_CSS 里的 `.dsh-tdt-card`）。
+  // ⚠️ **background 不放这里**：inline 背景的优先级高于 CSS class，会盖掉 `.dsh-tdt-card-row:hover` 的高亮。
+  // 底色走 CSS（`.dsh-tdt-card`）；hover 高亮走 `.dsh-tdt-card-row:hover`（只作用主行，展开区不跟着蓝）。
 }
 const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-md)' }
 const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
@@ -779,7 +782,9 @@ const panelScrollFillStyle: Record<string, string | number> = {
   flex: '1 1 auto', minHeight: 0, overflowY: 'auto',
 }
 const panelWrapStyle: Record<string, string | number> = {
-  marginTop: '10px', borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px',
+  // 卡片不再统一留白后，展开区自己补左右 / 下内边距，否则内容贴边。
+  // 顶部间距交给主行的 12px 下内边距，这里不再留 marginTop（只留虚线 + 10px 上内边距）。
+  borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px', paddingLeft: '14px', paddingRight: '14px', paddingBottom: '12px',
 }
 const panelBarStyle: Record<string, string | number> = {
   // 表底**贴着**虚线（用户 2026-10-02）：去掉上外边距，只留虚线上方的内边距。
@@ -1408,8 +1413,11 @@ function TaskCard(props: {
   return h('div', { ref: refOf, className: 'dsh-tdt-card', style: cardStyle },
     // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
     // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
+    // 主行自带卡片的 padding（卡片本身不再统一留白）⇒ hover 高亮能**边到边**铺满这一溜任务基本信息；
+    // 展开区是它的兄弟节点、**不在**这个 div 里 ⇒ hover 蓝不会蔓延到下面的设置 / 记录 / 日志（用户 2026-10-03）。
     h('div', {
-      style: { display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' },
+      className: 'dsh-tdt-card-row',
+      style: { display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '12px 14px' },
       onClick: () => {
         // 拖选文字时**不要**误展开（选区非空 ⇒ 用户在复制，不是要点开卡片）。
         const sel = typeof window === 'undefined' ? null : window.getSelection()

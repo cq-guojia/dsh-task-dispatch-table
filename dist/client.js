@@ -1238,7 +1238,7 @@ window.__ModuleLoader__.load({
 			settingsLoadFailed: "Failed to load current settings, please retry later",
 			settingsUnitSec: "sec",
 			settingsResetDone: "Reset to default",
-			loading: "Loading…",
+			loading: "Loading",
 			invalidNumber: "Please enter a valid integer number of seconds"
 		};
 		//#endregion
@@ -41393,7 +41393,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
 			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
 			".dsh-tdt-card { background: var(--tdt-surface-1); }",
-			".dsh-tdt-card:hover { background: var(--tdt-card-hover); }",
+			".dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }",
 			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
 			".dsh-tdt-rec-out { background: var(--tdt-chip-bg); }",
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
@@ -41845,7 +41845,6 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			width: "100%",
 			boxSizing: "border-box",
 			textAlign: "left",
-			padding: "12px 14px",
 			marginBottom: "10px",
 			borderRadius: "var(--tdt-radius-sm)",
 			border: `1px solid var(--tdt-border)`,
@@ -41992,9 +41991,11 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			overflowY: "auto"
 		};
 		const panelWrapStyle = {
-			marginTop: "10px",
 			borderTop: `1px dashed var(--tdt-border)`,
-			paddingTop: "10px"
+			paddingTop: "10px",
+			paddingLeft: "14px",
+			paddingRight: "14px",
+			paddingBottom: "12px"
 		};
 		const panelBarStyle = {
 			paddingTop: "10px",
@@ -42621,11 +42622,13 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				className: "dsh-tdt-card",
 				style: cardStyle$1
 			}, (0, react.createElement)("div", {
+				className: "dsh-tdt-card-row",
 				style: {
 					display: "flex",
 					alignItems: "center",
 					gap: "12px",
-					cursor: "pointer"
+					cursor: "pointer",
+					padding: "12px 14px"
 				},
 				onClick: () => {
 					const sel = typeof window === "undefined" ? null : window.getSelection();
