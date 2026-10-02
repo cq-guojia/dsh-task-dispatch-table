@@ -1885,8 +1885,8 @@ console.log('\n[14] runtime-index')
         const block = m ? m[0] : ''
         return !block.includes("background: 'var(--tdt-surface-1)'") && !block.includes('padding:')
       })())
-    check('loading 定位：fixed 到页面底部，水平贴内容容器（max-width 1120）右边缘',
-      tl.includes("position: 'fixed'") && tl.includes('(100vw - 1120px) / 2'))
+    check('loading 定位：fixed 到页面底部，right 按 #dsh-tdt-main 内容盒右边缘动态量',
+      tl.includes("position: 'fixed'") && tl.includes("id: 'dsh-tdt-main'") && tl.includes('function useBusyRight'))
     check('日志关键字**同时匹配 message 与 kind**（否则搜 missed-slot 的 kind 搜不到）',
       st.includes("(message LIKE ? OR kind LIKE ?)"))
     check('任务卡片整行可点展开；开关 / 箭头拦下冒泡（不穿透、不双触发）',

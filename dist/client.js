@@ -753,7 +753,7 @@ window.__ModuleLoader__.load({
 			settingsLoadFailed: "读取当前设置失败，请稍后重试",
 			settingsUnitSec: "秒",
 			settingsResetDone: "已恢复默认",
-			loading: "加载中…",
+			loading: "加载中",
 			invalidNumber: "请输入有效的整数秒"
 		};
 		/** English copy. */
@@ -41939,7 +41939,6 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 		*/
 		const busyPillStyle = {
 			position: "fixed",
-			right: "calc(max(0px, (100vw - 1120px) / 2) + 16px)",
 			bottom: "16px",
 			zIndex: "var(--tdt-z-dock)",
 			display: "inline-flex",
@@ -41955,6 +41954,32 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			lineHeight: "var(--tdt-line-sm)",
 			pointerEvents: "none"
 		};
+		/** 主内容盒右边缘到视口右边缘的距离 + 固定内边距，用来把 loading 贴到「主窗口宽度」的右下角。 */
+		const BUSY_RIGHT_MARGIN_PX = 16;
+		function useBusyRight() {
+			const [right, setRight] = (0, react.useState)(`${BUSY_RIGHT_MARGIN_PX}px`);
+			(0, react.useEffect)(() => {
+				const update = () => {
+					const el = document.getElementById("dsh-tdt-main");
+					if (!el) return;
+					const rect = el.getBoundingClientRect();
+					const viewportW = document.documentElement.clientWidth;
+					setRight(`${Math.max(0, viewportW - rect.right + BUSY_RIGHT_MARGIN_PX)}px`);
+				};
+				update();
+				window.addEventListener("resize", update);
+				window.addEventListener("scroll", update, true);
+				const ro = new ResizeObserver(update);
+				const el = document.getElementById("dsh-tdt-main");
+				if (el) ro.observe(el);
+				return () => {
+					window.removeEventListener("resize", update);
+					window.removeEventListener("scroll", update, true);
+					ro.disconnect();
+				};
+			}, []);
+			return right;
+		}
 		/**
 		* ⚠️ **临时调试值**（用户 2026-10-03）：改成 **0 = 每次都立刻显示**（不再有 400ms 阈值），
 		* 这样无论查询多快都能看到它。验完必须改回 400。
@@ -41998,8 +42023,12 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 		}
 		/** 忙碌指示本体：三个脉动方块 + 文案。 */
 		function BusyPill(props) {
+			const right = useBusyRight();
 			return (0, react.createElement)("div", {
-				style: busyPillStyle,
+				style: {
+					...busyPillStyle,
+					right
+				},
 				role: "status",
 				"aria-live": "polite"
 			}, (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null)), (0, react.createElement)("span", null, props.label));
@@ -42790,12 +42819,15 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				width: "100%",
 				display: "flex",
 				justifyContent: "center"
-			} }, (0, react.createElement)("div", { style: {
-				width: "100%",
-				maxWidth: "1120px",
-				minWidth: "760px",
-				boxSizing: "border-box"
-			} }, (0, react.createElement)("div", { style: {
+			} }, (0, react.createElement)("div", {
+				id: "dsh-tdt-main",
+				style: {
+					width: "100%",
+					maxWidth: "1120px",
+					minWidth: "760px",
+					boxSizing: "border-box"
+				}
+			}, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "8px",

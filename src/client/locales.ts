@@ -760,7 +760,7 @@ export const zh: Record<LocaleKey, string> = {
   settingsLoadFailed: '读取当前设置失败，请稍后重试',
   settingsUnitSec: '秒',
   settingsResetDone: '已恢复默认',
-  loading: '加载中…',
+  loading: '加载中',
   invalidNumber: '请输入有效的整数秒',
 }
 

@@ -722,11 +722,10 @@ const panelBoxStyle: Record<string, string | number> = {
  * 动效沿用「任务执行中」那三个脉动方块（`.dsh-tdt-run-blocks`，现成资产，不新增）。
  */
 const busyPillStyle: Record<string, string | number> = {
-  // 固定到**页面底部**、水平贴到内容容器（居中 `max-width: 1120px`）的右边缘内侧 ——
+  // 固定到**页面底部**、水平贴到主内容容器（`#dsh-tdt-main`，居中 max-width: 1120px）的右边缘内侧 ——
   // 窗口不是全屏，不能贴视口最右（用户 2026-10-03：要「最大宽度的右下角」）。
-  // `fixed` ⇒ 不随页面滚动，也不占任何布局空间。
+  // `fixed` ⇒ 不随页面滚动，也不占任何布局空间；具体 `right` 由 JS 量出内容盒右边缘后动态给。
   position: 'fixed',
-  right: 'calc(max(0px, (100vw - 1120px) / 2) + 16px)',
   bottom: '16px',
   zIndex: 'var(--tdt-z-dock)',
   display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -736,6 +735,32 @@ const busyPillStyle: Record<string, string | number> = {
   color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
   // 纯提示，不吃鼠标事件（别挡住底下的内容）。
   pointerEvents: 'none',
+}
+/** 主内容盒右边缘到视口右边缘的距离 + 固定内边距，用来把 loading 贴到「主窗口宽度」的右下角。 */
+const BUSY_RIGHT_MARGIN_PX = 16
+function useBusyRight(): string {
+  const [right, setRight] = useState(`${BUSY_RIGHT_MARGIN_PX}px`)
+  useEffect(() => {
+    const update = (): void => {
+      const el = document.getElementById('dsh-tdt-main')
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const viewportW = document.documentElement.clientWidth
+      setRight(`${Math.max(0, viewportW - rect.right + BUSY_RIGHT_MARGIN_PX)}px`)
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    const ro = new ResizeObserver(update)
+    const el = document.getElementById('dsh-tdt-main')
+    if (el) ro.observe(el)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+      ro.disconnect()
+    }
+  }, [])
+  return right
 }
 /**
  * ⚠️ **临时调试值**（用户 2026-10-03）：改成 **0 = 每次都立刻显示**（不再有 400ms 阈值），
@@ -772,7 +797,8 @@ function useDelayedBusy(active: boolean): boolean {
 }
 /** 忙碌指示本体：三个脉动方块 + 文案。 */
 function BusyPill(props: { label: string }): ReturnType<typeof h> {
-  return h('div', { style: busyPillStyle, role: 'status', 'aria-live': 'polite' },
+  const right = useBusyRight()
+  return h('div', { style: { ...busyPillStyle, right }, role: 'status', 'aria-live': 'polite' },
     h('span', { className: 'dsh-tdt-run-blocks' }, h('i', null), h('i', null), h('i', null)),
     h('span', null, props.label),
   )
@@ -1567,7 +1593,8 @@ export function TaskListView(props: {
   ], [workspaces, t])
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
-    h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
+    // 主内容宽度锚点；浮动 loading 据此量右边缘，贴到「主窗口宽度」的右下角。
+    h('div', { id: 'dsh-tdt-main', style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
       // 顶部一排：左 = 分组按钮（全部 / 已开启 / 已关闭 / 异常）；右 = 搜索 → 工作区下拉。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' } },
         // 筛选 tabs 走 UI 基础层唯一实现（P1）：角标也由组件统一渲染（不再写死 #fff）
