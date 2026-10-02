@@ -154,7 +154,7 @@ export type LocaleKey =
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
   | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
-  | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword' | 'cardTime' | 'limitPrefix' | 'limitSuffix'
+  | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword' | 'limitPrefix' | 'limitSuffix'
   | 'cardRecordsEmpty' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
   | 'colTokens'
   // —— 实例状态通用短名（status-text.ts 单源；zh 统一两字：排队/派发/运行/成功/失败/跳过/未知）——
@@ -693,7 +693,6 @@ export const zh: Record<LocaleKey, string> = {
   cardTo: '到',
   cardKeyword: '关键字',
   cardLogLimit: '条数',
-  cardTime: '时间：',
   // 条数过滤定式：`显示 <N> 条`（用户 2026-10-02）。
   limitPrefix: '显示',
   limitSuffix: '条',
@@ -1257,11 +1256,10 @@ export const en: Record<LocaleKey, string> = {
   cardDeleteTitle: 'Delete task',
   cardDeleteDesc: 'Delete this task? Its definition, attachments and version history will be removed permanently (run records are kept for audit).',
   cardCancel: 'Cancel',
-  cardFrom: 'From',
-  cardTo: 'To',
+  cardFrom: 'Start',
+  cardTo: 'End',
   cardKeyword: 'Keyword',
   cardLogLimit: 'Rows',
-  cardTime: 'Time:',
   limitPrefix: 'Show',
   limitSuffix: 'rows',
   cardRecordsEmpty: '(no run records for this task yet)',

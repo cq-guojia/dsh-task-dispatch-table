@@ -19,13 +19,11 @@ export type TimePresetLabels = Record<TimePresetId, string>
 
 /** 控件文案（由调用方按语言组装）。 */
 export interface TimeRangeLabels {
-  /** 行首标签「时间：」（用户 2026-10-02 定式：`时间：<起> 到 <止> <范围>`）。 */
-  time: string
   /** 「全部」（清空两框的默认档）。 */
   all: string
   /** 「自定义」（用户手动改时间后自动落位）。 */
   custom: string
-  /** 「从」/「到」标签（两框之间的分隔用 `to`）。 */
+  /** 两框的**灰色占位**（用户 2026-10-02：不写「时间：」、也不要「到」字，靠占位区分哪端是哪端）。 */
   from: string
   to: string
   /** 各预设档名。 */
@@ -129,11 +127,10 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
     )
   }
 
-  // 定式（用户 2026-10-02）：`时间：<起始> 到 <结束> <范围>` —— 「范围」下拉在**最后**。
+  // 定式（用户 2026-10-02）：`<起始框> <结束框> <范围>` —— 不再写「时间：」和「到」，
+  // 两端各用**灰色占位**（起始时间 / 截止时间）自证身份；「范围」下拉在**最后**。
   return h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
-    h('span', { style: labelStyle }, labels.time),
     endFields('from'),
-    h('span', { style: labelStyle }, labels.to),
     endFields('to'),
     h(SelectField, {
       value: selection,

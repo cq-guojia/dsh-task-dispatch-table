@@ -48,12 +48,12 @@ window.__ModuleLoader__.load({
 			const base = `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 			return opts?.seconds === true ? `${base}:${pad2$3(d.getSeconds())}` : base;
 		}
-		/** 计划执行列（用户 2026-10-02：形如 `26-09-30 15:10`）：`YY-MM-DD HH:mm`（两位年 + 两位月日 + 时分）。 */
+		/** 计划执行列（用户 2026-10-02 改**四位年**：形如 `2026-09-30 15:10`）：`YYYY-MM-DD HH:mm`。 */
 		function formatPlanStamp(iso) {
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "-";
 			const d = new Date(ms);
-			return `${pad2$3(d.getFullYear() % 100)}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 		}
 		/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
 		function formatClock(iso) {
@@ -627,7 +627,6 @@ window.__ModuleLoader__.load({
 			cardTo: "到",
 			cardKeyword: "关键字",
 			cardLogLimit: "条数",
-			cardTime: "时间：",
 			limitPrefix: "显示",
 			limitSuffix: "条",
 			cardRecordsEmpty: "（该任务还没有执行记录）",
@@ -1175,11 +1174,10 @@ window.__ModuleLoader__.load({
 			cardDeleteTitle: "Delete task",
 			cardDeleteDesc: "Delete this task? Its definition, attachments and version history will be removed permanently (run records are kept for audit).",
 			cardCancel: "Cancel",
-			cardFrom: "From",
-			cardTo: "To",
+			cardFrom: "Start",
+			cardTo: "End",
 			cardKeyword: "Keyword",
 			cardLogLimit: "Rows",
-			cardTime: "Time:",
 			limitPrefix: "Show",
 			limitSuffix: "rows",
 			cardRecordsEmpty: "(no run records for this task yet)",
@@ -1291,10 +1289,12 @@ body{
   --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
   --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
-  /* 表头底：与卡片面拉开层次——浅色主题**偏深**（用户 2026-10-02）。 */
-  --tdt-head-bg:var(--tdt-plate);
-  /* 图标小底板（产出物）：浅色用淡灰，暗色用微亮（见暗色段覆盖）。 */
-  --tdt-chip-bg:var(--tdt-plate);
+  /* 表头底：浅色主题**偏深**，且必须**比斑马纹（--tdt-plate）再深一档**——
+     两者不能撞色（用户 2026-10-02：表头跟斑马纹一模一样）。 */
+  --tdt-head-bg:var(--dsw-static-neutral-100,#f5f5f5);
+  /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */
+  --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 7%,transparent);
+  --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 14%,transparent);
 
   /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
   --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
@@ -1386,9 +1386,11 @@ body[data-ds-dark-theme]{
   --tdt-plate:var(--dsw-static-neutral-850,#212123);
   --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
-  /* 暗色主题**反过来**：表头要比卡片面**亮**（用户：纯黑背景没法看）⇒ 走 surface-2。 */
+  /* 暗色主题**反过来**：表头要比卡片面**亮**、比斑马纹再**浅一档**（用户：纯黑背景没法看）。 */
   --tdt-head-bg:var(--tdt-surface-2);
-  --tdt-chip-bg:var(--tdt-icon-plate);
+  /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */
+  --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 8%,transparent);
+  --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 16%,transparent);
 }
 `;
 		//#endregion
@@ -2538,14 +2540,6 @@ body[data-ds-dark-theme]{
 		* - **起 / 止框定长**（用户 2026-10-02：填进内容就撑开、不停跳——宽度固定，不随值变）。
 		* - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
 		*/
-		const labelStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "4px",
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
-			flex: "none"
-		};
 		/** 本机今天（`YYYY-MM-DD`）—— 分钟档里只选了时刻、没选日期时补的默认日期。 */
 		function todayIso$1() {
 			const d = /* @__PURE__ */ new Date();
@@ -2642,7 +2636,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "6px",
 				flexWrap: "wrap"
-			} }, (0, react.createElement)("span", { style: labelStyle }, labels.time), endFields("from"), (0, react.createElement)("span", { style: labelStyle }, labels.to), endFields("to"), (0, react.createElement)(SelectField, {
+			} }, endFields("from"), endFields("to"), (0, react.createElement)(SelectField, {
 				value: selection,
 				options,
 				onChange: (next) => {
@@ -41231,7 +41225,7 @@ body[data-ds-dark-theme]{
 			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
 			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
 			".dsh-tdt-rec-out { background: var(--tdt-chip-bg); }",
-			".dsh-tdt-rec-out:hover { background: var(--tdt-plate-hover); }",
+			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
 			"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
 			".dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }",
 			".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
@@ -41862,8 +41856,8 @@ body[data-ds-dark-theme]{
 			display: "inline-flex",
 			alignItems: "center",
 			justifyContent: "center",
-			width: "22px",
-			height: "22px",
+			width: "28px",
+			height: "28px",
 			padding: 0,
 			border: "none",
 			color: "var(--tdt-fg-2)",
@@ -41888,12 +41882,6 @@ body[data-ds-dark-theme]{
 			flexWrap: "wrap",
 			marginBottom: "6px"
 		};
-		/** 过滤行里的字段名（「状态：」等）。 */
-		const filterLabelStyle = {
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
-			flex: "none"
-		};
 		/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
 		const limitRowStyle = {
 			display: "inline-flex",
@@ -41911,8 +41899,7 @@ body[data-ds-dark-theme]{
 			fontWeight: 600,
 			color: "var(--tdt-fg-2)",
 			background: "var(--tdt-head-bg)",
-			borderTop: `1px solid var(--tdt-border)`,
-			borderBottom: `1px solid var(--tdt-border)`
+			boxShadow: "inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)"
 		};
 		/**
 		* 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
@@ -41950,7 +41937,6 @@ body[data-ds-dark-theme]{
 			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const timeLabels = (0, react.useMemo)(() => timeLabelsOf(t), [t]);
 			const timeRangeLabels = (0, react.useMemo)(() => ({
-				time: t("cardTime"),
 				all: t("trAll"),
 				custom: t("trCustom"),
 				from: t("cardFrom"),
@@ -41964,7 +41950,7 @@ body[data-ds-dark-theme]{
 					lastMonth: t("trLastMonth")
 				}
 			}), [t]);
-			const [recStatus, setRecStatus] = (0, react.useState)("all");
+			const [recStatus, setRecStatus] = (0, react.useState)("");
 			const [recRange, setRecRange] = (0, react.useState)({
 				from: "",
 				to: ""
@@ -41996,7 +41982,7 @@ body[data-ds-dark-theme]{
 				const range = rangeToQuery(recRange, "day");
 				fetchInstances({
 					taskId: row.id,
-					statuses: recStatus === "all" ? void 0 : FILTER_BUCKETS[recStatus],
+					statuses: recStatus === "" || recStatus === "all" ? void 0 : FILTER_BUCKETS[recStatus],
 					from: range.fromTs,
 					to: range.toTs,
 					limit: recLimit
@@ -42087,7 +42073,7 @@ body[data-ds-dark-theme]{
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead)));
-			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)("span", { style: filterLabelStyle }, t("colStatus")), (0, react.createElement)(SelectField, {
+			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [
 					{
@@ -42110,7 +42096,7 @@ body[data-ds-dark-theme]{
 				onChange: (next) => {
 					setRecStatus(next);
 				},
-				placeholder: tt("filterAll"),
+				placeholder: t("colStatus"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("colStatus"),
 				size: "md",
@@ -42152,7 +42138,7 @@ body[data-ds-dark-theme]{
 				width: "76px"
 			} }, t("colStatus")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "116px"
+				width: "140px"
 			} }, t("colPlanned")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
 				width: "84px"

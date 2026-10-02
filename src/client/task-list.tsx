@@ -111,8 +111,10 @@ const TASK_LIST_CSS = [
   '.dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }',
   // 产出物图标小底板：圆角方形 + hover 变亮（表示可点）。
   // 底板**走 class**——inline background 会盖掉 :hover。
+  // hover 走 `--tdt-chip-bg-hover`：**两端都是「更明显」**（浅色更深、暗色更亮），
+  // 不能再用 plate-hover（暗色下反而更淡 ⇒ 鼠标移上去底板就消失了）。
   '.dsh-tdt-rec-out { background: var(--tdt-chip-bg); }',
-  '.dsh-tdt-rec-out:hover { background: var(--tdt-plate-hover); }',
+  '.dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }',
   // 运行中的活动指示（用户 2026-09-30）：三个小方块依次脉动，类似手机充电 / 加载中。
   // `currentColor` ⇒ 跟随所在格的文字色（这里被设成 success 绿）。
   '@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }',
@@ -784,7 +786,9 @@ const plainIconBtnStyle: Record<string, string | number> = {
  */
 const outputIconBtnStyle: Record<string, string | number> = {
   appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  width: '22px', height: '22px', padding: 0, border: 'none',
+  // 放大（用户 2026-10-02）：28×28 配 16px 图标 ⇒ 图标与底板边缘**每边留 6px**（原先 22×22 只有 3px，
+  // 间距正好翻倍）。列高稍增无妨。
+  width: '28px', height: '28px', padding: 0, border: 'none',
   color: 'var(--tdt-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit',
   borderRadius: 'var(--tdt-radius-sm)', transition,
 }
@@ -815,9 +819,10 @@ const recHeadStyle: Record<string, string | number> = {
   padding: '11px 10px',
   textAlign: 'center', fontWeight: 600, color: 'var(--tdt-fg-2)',
   background: 'var(--tdt-head-bg)',
-  // **上下都要有一条线**（原先只有下沿，且颜色太浅根本看不出来）。
-  borderTop: `1px solid var(--tdt-border)`,
-  borderBottom: `1px solid var(--tdt-border)`,
+  // **上下各一条线，且亮度一致**；⚠️ 必须走 **box-shadow**：
+  // `border-collapse: collapse` 下边框归**表格网格**所有 ⇒ sticky 表头滚动时边框会「滑走」
+  // （用户 2026-10-02 揪出）。box-shadow 属于 th 自身 ⇒ 跟着表头不动。
+  boxShadow: 'inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)',
 }
 /**
  * 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
@@ -859,7 +864,7 @@ function TaskExpandPanel(props: {
   const timeLabels = useMemo(() => timeLabelsOf(t), [t])
   // 时间范围控件文案（records / logs 共用一份）。
   const timeRangeLabels: TimeRangeLabels = useMemo(() => ({
-    time: t('cardTime'), all: t('trAll'), custom: t('trCustom'), from: t('cardFrom'), to: t('cardTo'),
+    all: t('trAll'), custom: t('trCustom'), from: t('cardFrom'), to: t('cardTo'),
     presets: {
       today: t('trToday'), yesterday: t('trYesterday'), thisWeek: t('trThisWeek'),
       lastWeek: t('trLastWeek'), thisMonth: t('trThisMonth'), lastMonth: t('trLastMonth'),
@@ -867,7 +872,8 @@ function TaskExpandPanel(props: {
   }), [t])
 
   // ── 执行记录面板 ──
-  const [recStatus, setRecStatus] = useState('all')
+  // 初始 **''（未选）** ⇒ 下拉显示灰色占位「状态」；「全部」与未选同义（都不过滤）。
+  const [recStatus, setRecStatus] = useState('')
   const [recRange, setRecRange] = useState<TimeRangeValue>({ from: '', to: '' })
   // 条数（用户 2026-10-02：执行记录也要有条数过滤，默认 100，别一次铺几百条）。
   const [recLimit, setRecLimit] = useState(100)
@@ -902,7 +908,7 @@ function TaskExpandPanel(props: {
     fetchInstances({
       taskId: row.id,
       // 三档桶（用户 2026-10-02）：执行中 = pending/dispatched/running/unknown；失败 = failed/skipped；成功 = succeeded。
-      statuses: recStatus === 'all' ? undefined : FILTER_BUCKETS[recStatus],
+      statuses: recStatus === '' || recStatus === 'all' ? undefined : FILTER_BUCKETS[recStatus],
       from: range.fromTs,
       to: range.toTs,
       limit: recLimit,
@@ -982,7 +988,8 @@ function TaskExpandPanel(props: {
   const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
     // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 时间范围控件（用户 2026-10-02 第四轮）。
     h('div', { style: filterRowStyle },
-      h('span', { style: filterLabelStyle }, t('colStatus')),
+      // 不再单写「状态：」二字（用户 2026-10-02）：**未选时占位就是灰色的「状态」**，
+      // 与选中「全部」同义（都不过滤）⇒ 靠 placeholder 自证身份。
       h(SelectField, {
         value: recStatus,
         options: [
@@ -994,7 +1001,7 @@ function TaskExpandPanel(props: {
           { value: 'running', label: t('filterRunning') },
         ],
         onChange: (next: string) => { setRecStatus(next) },
-        placeholder: tt('filterAll'),
+        placeholder: t('colStatus'),
         emptyLabel: t('editorNoOptions'),
         ariaLabel: t('colStatus'),
         // 收窄一档（用户 2026-10-02 第四轮）：md(28)，与时间范围控件同档。
@@ -1033,7 +1040,8 @@ function TaskExpandPanel(props: {
             h('thead', { className: 'dsh-tdt-rec-head' }, h('tr', null,
               // 前 7 列**一律定长**；第 8 列「备注」**不定长** ⇒ 拉伸 / 收缩时只动它（用户 2026-10-02）。
               h('th', { style: { ...recHeadStyle, width: '76px' } }, t('colStatus')),
-              h('th', { style: { ...recHeadStyle, width: '116px' } }, t('colPlanned')),
+              // 计划执行：年改**四位**（`2026-09-30 15:10`）⇒ 列宽相应放宽；备注是弹性列会自动让位。
+              h('th', { style: { ...recHeadStyle, width: '140px' } }, t('colPlanned')),
               h('th', { style: { ...recHeadStyle, width: '84px' } }, t('colActualStart')),
               h('th', { style: { ...recHeadStyle, width: '76px' } }, t('colDuration')),
               h('th', { style: { ...recHeadStyle, width: '96px' } }, t('colOutputs')),

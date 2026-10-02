@@ -1768,10 +1768,12 @@ console.log('\n[14] runtime-index')
       && (tl.match(/width: '\d+px'/g) ?? []).length >= 7)
     // 只锁定表头那一块（弹窗等处用 surface-base 是合理的，不在本断言范围）。
     const headBlock = /const recHeadStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? ''
-    check('表头：居中 + 加高 + **上下都有线** + 底色走 --tdt-head-bg（明暗两侧都与卡片面拉开层次）',
+    check('表头：居中 + 加高 + 上下各一条线（走 **box-shadow** ⇒ 跟着表头不随滚动滑走）',
       headBlock.includes("textAlign: 'center'") && headBlock.includes("background: 'var(--tdt-head-bg)'")
       && headBlock.includes("padding: '11px 10px'")
-      && headBlock.includes('borderTop:') && headBlock.includes('borderBottom:'))
+      && headBlock.includes('boxShadow:') && headBlock.includes('inset 0 1px 0 var(--tdt-border)')
+      && headBlock.includes('inset 0 -1px 0 var(--tdt-border)')
+      && !headBlock.includes('borderTop:') && !headBlock.includes('borderBottom:'))
     check('状态过滤下拉顺序 全部 / 成功 / 失败 / 运行中（下拉不必守两字）',
       tl.includes("value: 'succeeded'") && tl.includes("value: 'failed'") && tl.includes("value: 'running'")
       && tl.includes("t('filterRunning')"))
@@ -1786,10 +1788,15 @@ console.log('\n[14] runtime-index')
       && tr.includes('endOfDay(sun)') && tr.includes('endOfDay(last)'))
     check('结束框未选时刻 ⇒ 默认 23:59（起始仍 00:00）：否则选「10-2 作结束」当天数据全漏',
       trc.includes("which === 'to' ? '23:59' : '00:00'") && trc.includes('join(which,'))
-    check('时间控件定式 = 时间：<起> 到 <止> <范围>（范围下拉排在最后）',
-      trc.includes('labels.time') && trc.includes("endFields('from')") && trc.includes("endFields('to')")
-      && trc.indexOf('labels.time') < trc.indexOf("endFields('from')")
+    check('时间控件定式 = <起> <止> <范围>（不写「时间：」/「到」，靠灰色占位区分起止）',
+      !trc.includes('labels.time') && trc.includes("endFields('from')") && trc.includes("endFields('to')")
       && trc.indexOf("endFields('to')") < trc.lastIndexOf('h(SelectField'))
+    check('状态下拉不再单写「状态：」二字：未选时占位 = 灰色的「状态」',
+      tl.includes("placeholder: t('colStatus')") && tl.includes("useState('')"))
+    check('计划执行年份改**四位**（2026-09-30 15:10）',
+      fmt.includes('${d.getFullYear()}-') && !fmt.includes('getFullYear() % 100'))
+    check('产出物图标放大到 28×28（间距翻倍）+ 底板 hover 两端都更明显',
+      tl.includes("width: '28px'") && tl.includes('--tdt-chip-bg-hover'))
     check('查看在最后一列、备注在倒数第二列',
       tl.indexOf("t('colNote')") < tl.indexOf("t('colSession')") && tl.indexOf("t('colNote')") > 0)
     check('执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右',
