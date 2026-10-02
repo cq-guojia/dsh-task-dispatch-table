@@ -83,29 +83,6 @@ window.__ModuleLoader__.load({
 			if (Math.abs(n) >= 1e3) return `${trim(n / 1e3)}K`;
 			return String(n);
 		}
-		/**
-		* 时长人话（用户 2026-10-02 示意「12 分钟 36 秒」）：秒 → 分秒 → 时分 → 天时。
-		* `tt` 走 locales（zh / en 各一套句式）；负数 / NaN ⇒ '—'（未回执没有时长）。
-		*/
-		function formatDuration(ms, tt) {
-			if (!Number.isFinite(ms) || ms < 0) return "—";
-			const totalSec = Math.round(ms / 1e3);
-			if (totalSec < 60) return tt("durSec", { n: String(totalSec) });
-			const totalMin = Math.floor(totalSec / 60);
-			if (totalMin < 60) return tt("durMinSec", {
-				m: String(totalMin),
-				s: String(totalSec % 60)
-			});
-			const totalHour = Math.floor(totalMin / 60);
-			if (totalHour < 24) return tt("durHourMin", {
-				h: String(totalHour),
-				m: String(totalMin % 60)
-			});
-			return tt("durDayHour", {
-				d: String(Math.floor(totalHour / 24)),
-				h: String(totalHour % 24)
-			});
-		}
 		//#endregion
 		//#region src/client/http.ts
 		const DEFAULT_TIMEOUT_MS = 8e3;
@@ -623,8 +600,8 @@ window.__ModuleLoader__.load({
 			cardDeleteTitle: "删除任务",
 			cardDeleteDesc: "确定要删除这个任务吗？任务定义、附加文件与历史版本都会被移除，不可恢复（执行记录保留备查）。",
 			cardCancel: "取消",
-			cardFrom: "从",
-			cardTo: "到",
+			cardFrom: "起始时间",
+			cardTo: "截止时间",
 			cardKeyword: "关键字",
 			cardLogLimit: "条数",
 			limitPrefix: "显示",
@@ -642,8 +619,6 @@ window.__ModuleLoader__.load({
 			statusSkipped: "跳过",
 			statusUnknown: "未知",
 			colDuration: "时长",
-			colDispatchedAt: "派发于",
-			colFinishedAt: "结束于",
 			colPlanned: "计划执行",
 			colActualStart: "实际开始",
 			colView: "查看",
@@ -750,7 +725,7 @@ window.__ModuleLoader__.load({
 			listExpandHint: "Expand task details",
 			listDeferred: "Delayed",
 			listDeferredTitle: "Past its planned time but has not started. Usual causes: upstream task not finished / attachment missing / previous run still running.",
-			eventsOf: "Events of this run",
+			eventsOf: "Run log",
 			eventsEmpty: "(no events for this run, or it falls outside the latest-200 snapshot window)",
 			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.",
 			viewSession: "View session",
@@ -1193,8 +1168,6 @@ window.__ModuleLoader__.load({
 			statusSkipped: "Skipped",
 			statusUnknown: "Unknown",
 			colDuration: "Duration",
-			colDispatchedAt: "Dispatched",
-			colFinishedAt: "Finished",
 			colPlanned: "Scheduled",
 			colActualStart: "Started",
 			colView: "View",
@@ -1295,6 +1268,10 @@ body{
   /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 7%,transparent);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 14%,transparent);
+  /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」
+     （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */
+  --tdt-open-bg:rgba(37,99,235,.10);
+  --tdt-open-bg-soft:rgba(37,99,235,.05);
 
   /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
   --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
@@ -1391,6 +1368,9 @@ body[data-ds-dark-theme]{
   /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 8%,transparent);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 16%,transparent);
+  /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */
+  --tdt-open-bg:rgba(96,165,250,.18);
+  --tdt-open-bg-soft:rgba(96,165,250,.08);
 }
 `;
 		//#endregion
@@ -2540,6 +2520,14 @@ body[data-ds-dark-theme]{
 		* - **起 / 止框定长**（用户 2026-10-02：填进内容就撑开、不停跳——宽度固定，不随值变）。
 		* - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
 		*/
+		const labelStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "4px",
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-3)",
+			flex: "none"
+		};
 		/** 本机今天（`YYYY-MM-DD`）—— 分钟档里只选了时刻、没选日期时补的默认日期。 */
 		function todayIso$1() {
 			const d = /* @__PURE__ */ new Date();
@@ -2636,7 +2624,10 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "6px",
 				flexWrap: "wrap"
-			} }, endFields("from"), endFields("to"), (0, react.createElement)(SelectField, {
+			} }, endFields("from"), (0, react.createElement)("span", {
+				style: labelStyle,
+				"aria-hidden": "true"
+			}, "～"), endFields("to"), (0, react.createElement)(SelectField, {
 				value: selection,
 				options,
 				onChange: (next) => {
@@ -41827,13 +41818,6 @@ body[data-ds-dark-theme]{
 				return [];
 			}
 		};
-		/** 产出路径 → 展示名（目录保留尾部 `/`）。 */
-		const outputNameOf = (output) => {
-			const isDir = output.endsWith("/");
-			const trimmed = isDir ? output.slice(0, -1) : output;
-			const idx = trimmed.lastIndexOf("/");
-			return (idx < 0 ? trimmed : trimmed.slice(idx + 1)) + (isDir ? "/" : "");
-		};
 		/** token 用量一格（展开详情用；K/M 大众格式，用户 2026-10-02）。 */
 		const tokensDetailOf = (row) => `${row.token_in === null ? "—" : formatTokenCount(row.token_in)} / ${row.token_out === null ? "—" : formatTokenCount(row.token_out)} / ${row.token_in_cache === null ? "—" : formatTokenCount(row.token_in_cache)}`;
 		/** 状态三档桶（用户 2026-10-02：过滤只给 执行中 / 失败 / 成功 三档，七态归桶；值传后端 statuses）。 */
@@ -42147,11 +42131,11 @@ body[data-ds-dark-theme]{
 				width: "76px"
 			} }, t("colDuration")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "96px"
-			} }, t("colOutputs")), (0, react.createElement)("th", { style: {
-				...recHeadStyle,
 				width: "72px"
 			} }, t("colTokens")), (0, react.createElement)("th", { style: recHeadStyle }, t("colNote")), (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "96px"
+			} }, t("colOutputs")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
 				width: "68px"
 			} }, t("colSession")))), (0, react.createElement)("tbody", null, records.flatMap((instance, index) => {
@@ -42168,7 +42152,7 @@ body[data-ds-dark-theme]{
 					className: ["dsh-tdt-rec-row", open || index % 2 === 0 ? "" : "dsh-tdt-rec-alt"].join(" ").trim(),
 					style: {
 						cursor: "pointer",
-						...open ? { background: "var(--tdt-surface-2)" } : {}
+						...open ? { background: "var(--tdt-open-bg)" } : {}
 					},
 					onClick: () => {
 						setOpenInstance(open ? null : instance.id);
@@ -42178,7 +42162,19 @@ body[data-ds-dark-theme]{
 					alignItems: "center",
 					justifyContent: "center",
 					gap: "6px"
-				} }, (0, react.createElement)(StatusIcon, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellCenterStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react.createElement)("td", { style: miniCellCenterStyle }, (0, react.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react.createElement)("button", {
+				} }, (0, react.createElement)(StatusIcon, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellCenterStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react.createElement)("td", { style: miniCellCenterStyle }, (0, react.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react.createElement)("span", { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react.createElement)("td", { style: {
+					...miniCellStyle,
+					maxWidth: 0
+				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react.createElement)("span", {
+					title: instance.note,
+					style: {
+						display: "block",
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+						color: "var(--tdt-fg-3)"
+					}
+				}, instance.note)), (0, react.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react.createElement)("button", {
 					key: output,
 					type: "button",
 					title: output,
@@ -42209,19 +42205,7 @@ body[data-ds-dark-theme]{
 						event.stopPropagation();
 						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs);
 					}
-				}, "…") : null)), (0, react.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react.createElement)("span", { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react.createElement)("td", { style: {
-					...miniCellStyle,
-					maxWidth: 0
-				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react.createElement)("span", {
-					title: instance.note,
-					style: {
-						display: "block",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
-						color: "var(--tdt-danger)"
-					}
-				}, instance.note)), (0, react.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
+				}, "…") : null)), (0, react.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
 					variant: "outline",
 					size: "sm",
 					onClick: (event) => {
@@ -42230,38 +42214,11 @@ body[data-ds-dark-theme]{
 					}
 				}, t("colView")) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
 					colSpan: 8,
-					style: miniCellWrapStyle
-				}, (0, react.createElement)("div", { style: {
-					display: "flex",
-					flexWrap: "wrap",
-					gap: "4px 16px",
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-2)",
-					marginBottom: "6px"
-				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$2, {
-					variant: "ghost",
-					size: "sm",
-					className: "dsh-tdt-btn--link",
-					onClick: (event) => {
-						event.stopPropagation();
-						onOpenSession(sid, row.title, outputs);
-					}
-				}, `↗ ${t("viewSession")}`) : (0, react.createElement)("span", null, `${t("colSession")}：${sid.slice(0, 8)}`) : null), outputs.length > 0 ? (0, react.createElement)("div", { style: { marginBottom: "6px" } }, outputs.map((output) => (0, react.createElement)("div", {
-					key: output,
 					style: {
-						fontSize: "var(--tdt-font-sm)",
-						lineHeight: "var(--tdt-line-sm)"
+						...miniCellWrapStyle,
+						background: "var(--tdt-open-bg-soft)"
 					}
-				}, sid !== null && onOpenFile !== void 0 ? (0, react.createElement)(Button$2, {
-					variant: "ghost",
-					size: "sm",
-					className: "dsh-tdt-btn--link",
-					title: output,
-					onClick: (event) => {
-						event.stopPropagation();
-						onOpenFile(sid, output);
-					}
-				}, outputNameOf(output)) : (0, react.createElement)("span", { title: output }, outputNameOf(output))))) : null, (0, react.createElement)("div", { style: {
+				}, (0, react.createElement)("div", { style: {
 					display: "flex",
 					justifyContent: "space-between",
 					alignItems: "center",

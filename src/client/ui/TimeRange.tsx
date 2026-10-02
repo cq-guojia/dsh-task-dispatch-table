@@ -127,10 +127,12 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
     )
   }
 
-  // 定式（用户 2026-10-02）：`<起始框> <结束框> <范围>` —— 不再写「时间：」和「到」，
-  // 两端各用**灰色占位**（起始时间 / 截止时间）自证身份；「范围」下拉在**最后**。
+  // 定式（用户 2026-10-02）：`<起始框> ～ <结束框> <范围>` —— 不写「时间：」，
+  // 两端各用**灰色占位**（起始时间 / 截止时间）自证身份，中间用 `～` 连接；「范围」下拉在**最后**。
   return h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
     endFields('from'),
+    // 分隔符用 `～`：比 `-` 更像「区间」、比「到」字省地方，且不占语义。
+    h('span', { style: labelStyle, 'aria-hidden': 'true' }, '～'),
     endFields('to'),
     h(SelectField, {
       value: selection,

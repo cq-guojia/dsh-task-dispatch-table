@@ -160,7 +160,7 @@ export type LocaleKey =
   // —— 实例状态通用短名（status-text.ts 单源；zh 统一两字：排队/派发/运行/成功/失败/跳过/未知）——
   | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
   // —— 执行记录行（用户 2026-10-02 示意改版）：时长列 / 派发·结束时刻 / 时长句式 ——
-  | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt' | 'colPlanned' | 'colActualStart' | 'colView' | 'colNote' | 'filterRunning'
+  | 'colDuration' | 'colPlanned' | 'colActualStart' | 'colView' | 'colNote' | 'filterRunning'
   // —— 时间范围控件（ui/TimeRange，全站复用）：预设档 + 清除 ——
   | 'trAll' | 'trCustom' | 'trToday' | 'trYesterday' | 'trThisWeek' | 'trLastWeek' | 'trThisMonth' | 'trLastMonth'
   | 'durSec' | 'durMinSec' | 'durHourMin' | 'durDayHour'
@@ -689,8 +689,8 @@ export const zh: Record<LocaleKey, string> = {
   cardDeleteTitle: '删除任务',
   cardDeleteDesc: '确定要删除这个任务吗？任务定义、附加文件与历史版本都会被移除，不可恢复（执行记录保留备查）。',
   cardCancel: '取消',
-  cardFrom: '从',
-  cardTo: '到',
+  cardFrom: '起始时间',
+  cardTo: '截止时间',
   cardKeyword: '关键字',
   cardLogLimit: '条数',
   // 条数过滤定式：`显示 <N> 条`（用户 2026-10-02）。
@@ -711,8 +711,6 @@ export const zh: Record<LocaleKey, string> = {
   statusUnknown: '未知',
   // 执行记录行（用户 2026-10-02 示意改版）。
   colDuration: '时长',
-  colDispatchedAt: '派发于',
-  colFinishedAt: '结束于',
   colPlanned: '计划执行',
   colActualStart: '实际开始',
   colView: '查看',
@@ -824,7 +822,7 @@ export const en: Record<LocaleKey, string> = {
   listExpandHint: 'Expand task details',
   listDeferred: 'Delayed',
   listDeferredTitle: 'Past its planned time but has not started. Usual causes: upstream task not finished / attachment missing / previous run still running.',
-  eventsOf: 'Events of this run',
+  eventsOf: 'Run log',
   eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
   recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',
   viewSession: 'View session',
@@ -1277,8 +1275,6 @@ export const en: Record<LocaleKey, string> = {
   statusUnknown: 'Unknown',
   // Run record rows (user mock, 2026-10-02).
   colDuration: 'Duration',
-  colDispatchedAt: 'Dispatched',
-  colFinishedAt: 'Finished',
   colPlanned: 'Scheduled',
   colActualStart: 'Started',
   colView: 'View',

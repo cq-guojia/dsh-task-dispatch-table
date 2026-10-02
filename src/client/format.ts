@@ -74,20 +74,4 @@ export function formatTokenCount(n: number): string {
   return String(n)
 }
 
-/**
- * 时长人话（用户 2026-10-02 示意「12 分钟 36 秒」）：秒 → 分秒 → 时分 → 天时。
- * `tt` 走 locales（zh / en 各一套句式）；负数 / NaN ⇒ '—'（未回执没有时长）。
- */
-export function formatDuration(
-  ms: number,
-  tt: (key: LocaleKey, params?: Record<string, string>) => string,
-): string {
-  if (!Number.isFinite(ms) || ms < 0) return '—'
-  const totalSec = Math.round(ms / 1000)
-  if (totalSec < 60) return tt('durSec', { n: String(totalSec) })
-  const totalMin = Math.floor(totalSec / 60)
-  if (totalMin < 60) return tt('durMinSec', { m: String(totalMin), s: String(totalSec % 60) })
-  const totalHour = Math.floor(totalMin / 60)
-  if (totalHour < 24) return tt('durHourMin', { h: String(totalHour), m: String(totalMin % 60) })
-  return tt('durDayHour', { d: String(Math.floor(totalHour / 24)), h: String(totalHour % 24) })
-}
+

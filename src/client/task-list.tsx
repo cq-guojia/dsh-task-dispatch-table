@@ -13,7 +13,7 @@
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { formatClock, formatDateTime, formatDuration, formatDurationHms, formatPlanStamp, formatTokenCount, pad2 } from './format'
+import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, pad2 } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
   IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconLoadingOutlineRegular,
@@ -758,13 +758,7 @@ const outputsOf = (raw: string | null): string[] => {
     return []
   }
 }
-/** 产出路径 → 展示名（目录保留尾部 `/`）。 */
-const outputNameOf = (output: string): string => {
-  const isDir = output.endsWith('/')
-  const trimmed = isDir ? output.slice(0, -1) : output
-  const idx = trimmed.lastIndexOf('/')
-  return (idx < 0 ? trimmed : trimmed.slice(idx + 1)) + (isDir ? '/' : '')
-}
+
 /** token 用量一格（展开详情用；K/M 大众格式，用户 2026-10-02）。 */
 const tokensDetailOf = (row: { token_in: number | null; token_out: number | null; token_in_cache: number | null }): string =>
   `${row.token_in === null ? '—' : formatTokenCount(row.token_in)} / ${row.token_out === null ? '—' : formatTokenCount(row.token_out)} / ${row.token_in_cache === null ? '—' : formatTokenCount(row.token_in_cache)}`
@@ -1038,16 +1032,17 @@ function TaskExpandPanel(props: {
           ? h('p', { style: faintStyle }, t('cardRecordsEmpty'))
           : h('table', { style: { ...miniTableStyle, tableLayout: 'fixed' } },
             h('thead', { className: 'dsh-tdt-rec-head' }, h('tr', null,
-              // 前 7 列**一律定长**；第 8 列「备注」**不定长** ⇒ 拉伸 / 收缩时只动它（用户 2026-10-02）。
+              // 除「备注」外**一律定长**（备注是唯一弹性列，拉伸 / 收缩只动它）。
+              // 列序（用户 2026-10-02 二次调整）：**查看会话在最后、产出物在倒数第二**——
+              // 「用眼睛看的」在前（含备注），「要点的」排在后面挨在一起。
               h('th', { style: { ...recHeadStyle, width: '76px' } }, t('colStatus')),
               // 计划执行：年改**四位**（`2026-09-30 15:10`）⇒ 列宽相应放宽；备注是弹性列会自动让位。
               h('th', { style: { ...recHeadStyle, width: '140px' } }, t('colPlanned')),
               h('th', { style: { ...recHeadStyle, width: '84px' } }, t('colActualStart')),
               h('th', { style: { ...recHeadStyle, width: '76px' } }, t('colDuration')),
-              h('th', { style: { ...recHeadStyle, width: '96px' } }, t('colOutputs')),
               h('th', { style: { ...recHeadStyle, width: '72px' } }, t('colTokens')),
-              // 用户 2026-10-02：**查看在最后一列，备注在倒数第二列**。
               h('th', { style: recHeadStyle }, t('colNote')),
+              h('th', { style: { ...recHeadStyle, width: '96px' } }, t('colOutputs')),
               h('th', { style: { ...recHeadStyle, width: '68px' } }, t('colSession')),
             )),
             h('tbody', null,
@@ -1068,7 +1063,8 @@ function TaskExpandPanel(props: {
                   // 斑马纹：奇数行浅底（`.dsh-tdt-rec-alt`）；展开行盖成第二层面。
                   // 斑马纹 + hover 高亮（hover 由 `.dsh-tdt-rec-row:hover` 接管）。
                   className: ['dsh-tdt-rec-row', open || index % 2 === 0 ? '' : 'dsh-tdt-rec-alt'].join(' ').trim(),
-                  style: { cursor: 'pointer', ...(open ? { background: 'var(--tdt-surface-2)' } : {}) },
+                  // 展开态走**带透明度的蓝**（`--tdt-open-bg`）——不用灰色：灰跟斑马纹分不出来。
+                  style: { cursor: 'pointer', ...(open ? { background: 'var(--tdt-open-bg)' } : {}) },
                   onClick: () => { setOpenInstance(open ? null : instance.id) },
                 },
                   // ① 状态图标 + 通用短名（**居中**：状态已统一两字，按字宽算好间距）。
@@ -1088,8 +1084,28 @@ function TaskExpandPanel(props: {
                     h('span', { title: instance.dispatched_at === null ? undefined : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))),
                   // ④ 执行时长：H:MM:SS（有小时）/ MM:SS。
                   h('td', { style: miniCellCenterStyle }, formatDurationHms(durMs)),
-                  // ⑤ 产出物：官方文件类型图标 ≤3 个；>3 收「…」（点开会话看完整）；无产出 ⇒ 该格空。
-                  // **不居中**（与备注同为例外，用户 2026-10-02）。
+                  // ⑤ 消耗 token（用户 2026-10-02 提上一级）：总量 K/M 格式，hover 看输入/输出/缓存明细。
+                  h('td', { style: miniCellCenterStyle },
+                    instance.token_in === null && instance.token_out === null
+                      ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '-')
+                      : h('span', { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
+                  // ⑥ 备注：**错误 / 未执行的原因**（服务端 `attachNotes` 从最新原因事件推导）。
+                  // 全表**唯一弹性列**（不定长）：拉伸 / 收缩只动它；超长省略号，hover 看全文。
+                  // ⚠️ **不要红色**（用户 2026-10-02：不是要提醒他去看备注）——走最浅的灰 `--tdt-fg-3`，
+                  // 比正文更淡，深浅两主题都是「退后一层」的存在感。
+                  h('td', { style: { ...miniCellStyle, maxWidth: 0 } },
+                    instance.note === null || instance.note === undefined || instance.note === ''
+                      ? null
+                      : h('span', {
+                        title: instance.note,
+                        style: {
+                          display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          color: 'var(--tdt-fg-3)',
+                        },
+                      }, instance.note),
+                  ),
+                  // ⑦ 产出物（**倒数第二列**，紧挨「查看会话」）：官方文件类型图标 ≤3 个；
+                  // >3 收「…」（点开会话看完整）；无产出 ⇒ 该格空。**不居中**（图标从左到右排）。
                   h('td', { style: miniCellStyle },
                     outputs.length === 0
                       ? null
@@ -1115,24 +1131,6 @@ function TaskExpandPanel(props: {
                           : null,
                       ),
                   ),
-                  // ⑥ 消耗 token（用户 2026-10-02 提上一级）：总量 K/M 格式，hover 看输入/输出/缓存明细。
-                  h('td', { style: miniCellCenterStyle },
-                    instance.token_in === null && instance.token_out === null
-                      ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '-')
-                      : h('span', { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
-                  // ⑦ 备注：**错误 / 未执行的原因**（服务端 `attachNotes` 从最新原因事件推导）。
-                  // 全表**唯一弹性列**（不定长）：拉伸 / 收缩只动它；超长省略号，hover 看全文。
-                  h('td', { style: { ...miniCellStyle, maxWidth: 0 } },
-                    instance.note === null || instance.note === undefined || instance.note === ''
-                      ? null
-                      : h('span', {
-                        title: instance.note,
-                        style: {
-                          display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          color: 'var(--tdt-danger)',
-                        },
-                      }, instance.note),
-                  ),
                   // ⑧ 会话记录（**最后一列**）：小按钮「查看」（用户 2026-10-02：不要光秃秃一个图标）+ 定宽居中。
                   h('td', { style: miniCellCenterStyle },
                     canOpenSession && openSession !== undefined && sid !== null
@@ -1145,39 +1143,11 @@ function TaskExpandPanel(props: {
                 )
                 const detailRow = open
                   ? h('tr', { key: `${instance.id}-detail` },
-                    h('td', { colSpan: 8, style: miniCellWrapStyle },
-                      // 详情小字段行：token 走 K/M 大众格式（用户 2026-10-02：不占一级空间）。
-                      h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', marginBottom: '6px' } },
-                        h('span', null, `${t('colAttempt')}：${instance.attempt}`),
-                        h('span', null, `${t('colSlot')}：${formatStamp(instance.scheduled_at)}`),
-                        instance.dispatched_at === null ? null : h('span', null, `${t('colDispatchedAt')}：${formatStamp(instance.dispatched_at)}`),
-                        instance.finished_at === null ? null : h('span', null, `${t('colFinishedAt')}：${formatStamp(instance.finished_at)}`),
-                        h('span', null, `${t('colDuration')}：${formatDuration(durMs, tt)}`),
-                        (instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null)
-                          ? h('span', null, `${t('colTokens')}：${tokensDetailOf(instance)}`)
-                          : null,
-                        sid !== null
-                          ? (onOpenSession !== undefined
-                            ? h(Button, {
-                              variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link',
-                              onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenSession(sid, row.title, outputs) },
-                            }, `↗ ${t('viewSession')}`)
-                            : h('span', null, `${t('colSession')}：${sid.slice(0, 8)}`))
-                          : null,
-                      ),
-                      // 产出逐条（展开才列全；能点开就点开）。
-                      outputs.length > 0
-                        ? h('div', { style: { marginBottom: '6px' } },
-                          outputs.map(output => h('div', { key: output, style: { fontSize: 'var(--tdt-font-sm)', lineHeight: 'var(--tdt-line-sm)' } },
-                            sid !== null && onOpenFile !== undefined
-                              ? h(Button, {
-                                variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link', title: output,
-                                onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onOpenFile(sid, output) },
-                              }, outputNameOf(output))
-                              : h('span', { title: output }, outputNameOf(output)),
-                          )))
-                        : null,
-                      // 该次执行的事件时间线。
+                    // 展开内容区：**更淡一档的蓝**（`--tdt-open-bg-soft`）⇒ 与展开行本身区隔开，
+                    // 且不是灰 / 不是纯黑纯白（用户 2026-10-02）。
+                    h('td', { colSpan: 8, style: { ...miniCellWrapStyle, background: 'var(--tdt-open-bg-soft)' } },
+                      // 展开区**只放执行日志**（用户 2026-10-02）：下面那些小字段（第几次 / 计划时刻 /
+                      // 派发 / 结束 / 时长 / Token）在各列上已经展示得很清楚了，不再重复铺一遍。
                       h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } },
                         h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('eventsOf')),
                         eventsLoading ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('loading')) : null,

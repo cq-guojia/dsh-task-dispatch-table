@@ -57,6 +57,10 @@ body{
   /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 7%,transparent);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 14%,transparent);
+  /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」
+     （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */
+  --tdt-open-bg:rgba(37,99,235,.10);
+  --tdt-open-bg-soft:rgba(37,99,235,.05);
 
   /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
   --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
@@ -153,5 +157,8 @@ body[data-ds-dark-theme]{
   /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 8%,transparent);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 16%,transparent);
+  /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */
+  --tdt-open-bg:rgba(96,165,250,.18);
+  --tdt-open-bg-soft:rgba(96,165,250,.08);
 }
 `

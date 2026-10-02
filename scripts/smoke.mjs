@@ -1797,8 +1797,18 @@ console.log('\n[14] runtime-index')
       fmt.includes('${d.getFullYear()}-') && !fmt.includes('getFullYear() % 100'))
     check('产出物图标放大到 28×28（间距翻倍）+ 底板 hover 两端都更明显',
       tl.includes("width: '28px'") && tl.includes('--tdt-chip-bg-hover'))
-    check('查看在最后一列、备注在倒数第二列',
-      tl.indexOf("t('colNote')") < tl.indexOf("t('colSession')") && tl.indexOf("t('colNote')") > 0)
+    check('列序：查看会话在最后、产出物在倒数第二（「要点的」排在一起）',
+      tl.indexOf("t('colNote')") < tl.indexOf("t('colOutputs')")
+      && tl.indexOf("t('colOutputs')") < tl.indexOf("t('colSession')"))
+    check('备注**不用红色**：走最浅的灰 --tdt-fg-3（不是要提醒他去看）',
+      tl.includes("color: 'var(--tdt-fg-3)'") && !tl.includes("color: 'var(--tdt-danger)',\n"))
+    check('展开行 / 展开内容区走**带透明度的蓝**（--tdt-open-bg / -soft），不用灰色',
+      tl.includes('var(--tdt-open-bg)') && tl.includes('var(--tdt-open-bg-soft)')
+      && !tl.includes("open ? { background: 'var(--tdt-surface-2)' }"))
+    check('展开区只留执行日志：小字段（第几次 / 派发 / 结束等）已移除',
+      !tl.includes("t('colAttempt')") && !tl.includes("t('colDispatchedAt')")
+      && tl.includes("t('eventsOf')"))
+    check('两个时间框之间有分隔符 ～', trc.includes("'～'"))
     check('执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右',
       tl.includes("t('limitPrefix')") && tl.includes("t('limitSuffix')") && tl.includes('recLimit')
       && (tl.match(/limitRowStyle/g) ?? []).length >= 3)
