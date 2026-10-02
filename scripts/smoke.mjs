@@ -1750,6 +1750,7 @@ console.log('\n[14] runtime-index')
     const fmt = readFileSync(join(process.cwd(), 'src', 'client', 'format.ts'), 'utf8')
     const uidx = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'index.ts'), 'utf8')
     const cc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
+    const trc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
     const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     check('三面板统一固定高度：panelBoxStyle 覆盖三个 tab（基础信息也纳入定高盒）',
       (tl.match(/panelBoxStyle/g) ?? []).length >= 4
@@ -1782,6 +1783,8 @@ console.log('\n[14] runtime-index')
     check('预设档 = 整档（今天 / 本周 / 本月上界一律 23:59，不取「此刻」）',
       !tr.includes('ymdhm(now)') && tr.includes('endOfDay(start)')
       && tr.includes('endOfDay(sun)') && tr.includes('endOfDay(last)'))
+    check('结束框未选时刻 ⇒ 默认 23:59（起始仍 00:00）：否则选「10-2 作结束」当天数据全漏',
+      trc.includes("which === 'to' ? '23:59' : '00:00'") && trc.includes('join(which,'))
     check('新增格式 helper：计划执行 / 实际开始 / 时长（H:MM:SS·MM:SS）',
       fmt.includes('export function formatPlanStamp')
       && fmt.includes('export function formatClock')

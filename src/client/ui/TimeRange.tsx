@@ -85,10 +85,18 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
   const merge = (patch: Partial<TimeRangeValue>): void => { onChange({ ...value, ...patch }) }
   const dateOf = (v: string): string => (withTime ? v.slice(0, 10) : v)
   const timeOf = (v: string): string => (withTime && v.length >= 16 ? v.slice(11, 16) : '')
-  /** 日期 + 时刻 → 值串；日期空 ⇒ 值串为空（不产半截值）。 */
-  const join = (date: string, time: string): string => {
+  /**
+   * 日期 + 时刻 → 值串；日期空 ⇒ 值串为空（不产半截值）。
+   *
+   * ⚠️ 时刻为空时按**哪一端**给默认（用户 2026-10-02 揪出）：
+   * - 起始 = `00:00`（从这天开头算起，没毛病）；
+   * - **结束 = `23:59`** —— 若也默认 `00:00`，选「10-2 作结束」就只查到 10-2 的 00:00 那一刻，
+   *   10-2 当天数据**全漏**（用户原话：「我选 10 月 2 号，我的意思是要查 10 月 2 号的数据」）。
+   */
+  const join = (which: 'from' | 'to', date: string, time: string): string => {
     if (date === '') return ''
-    return withTime ? `${date} ${time === '' ? '00:00' : time}` : date
+    if (time !== '') return withTime ? `${date} ${time}` : date
+    return withTime ? `${date} ${which === 'to' ? '23:59' : '00:00'}` : date
   }
 
   const endFields = (which: 'from' | 'to'): ReactElement => {
@@ -100,7 +108,7 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
       // 定长（用户 2026-10-02）：宽度不随值变化——选了时分也不跳。
       h(DateField, {
         value: date,
-        onChange: (next: string) => { merge({ [which]: join(next, time) } as Partial<TimeRangeValue>) },
+        onChange: (next: string) => { merge({ [which]: join(which, next, time) } as Partial<TimeRangeValue>) },
         placeholder: which === 'from' ? labels.from : labels.to,
         ariaLabel: which === 'from' ? labels.from : labels.to,
         labels: calendarLabels, size, disabled: props.disabled, width: 124,
@@ -108,7 +116,7 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
       withTime
         ? h(TimeField, {
           value: time,
-          onChange: (next: string) => { merge({ [which]: join(date === '' ? todayIso() : date, next) } as Partial<TimeRangeValue>) },
+          onChange: (next: string) => { merge({ [which]: join(which, date === '' ? todayIso() : date, next) } as Partial<TimeRangeValue>) },
           placeholder: 'HH:mm',
           ariaLabel: which === 'from' ? labels.from : labels.to,
           labels: timeLabels, size, disabled: props.disabled, width: 88,
