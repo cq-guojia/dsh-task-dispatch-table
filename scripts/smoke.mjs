@@ -1763,6 +1763,9 @@ console.log('\n[14] runtime-index')
     check('时间范围控件：半开区间上界（次日 00:00 / 下一分钟 :00），不再用 .999 补丁',
       tr.includes('toParsed.d + 1') && tr.includes('toParsed.mm + 1') && !tr.includes('23:59:59.999')
       && uidx.includes('TimeRange') && uidx.includes('rangeToQuery'))
+    check('预设档 = 整档（今天 / 本周 / 本月上界一律 23:59，不取「此刻」）',
+      !tr.includes('ymdhm(now)') && tr.includes('endOfDay(start)')
+      && tr.includes('endOfDay(sun)') && tr.includes('endOfDay(last)'))
     check('新增格式 helper：计划执行 / 实际开始 / 时长（H:MM:SS·MM:SS）',
       fmt.includes('export function formatPlanStamp')
       && fmt.includes('export function formatClock')

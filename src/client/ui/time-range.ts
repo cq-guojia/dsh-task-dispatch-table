@@ -65,7 +65,15 @@ function parseValue(value: string): { y: number; m: number; d: number; hh: numbe
   }
 }
 
-/** 预设档 → 起止（本机时区、真实当前时间，非占位）。 */
+/**
+ * 预设档 → 起止（本机时区、真实当前时间，非占位）。
+ *
+ * ⚠️ 预设档一律是**整档**（用户 2026-10-02 拍板：「今天就是整个今天」）：
+ * - 今天 = 今天 `00:00` ~ 今天 `23:59`；**不是**「到此刻为止」；
+ * - 昨天 / 本周（周一 ~ 周日）/ 上周 / 本月（1 号 ~ 月末）/ 上月 同理，一律到该档**最后一天**的 `23:59`。
+ * 上界固定为 `23:59` ⇒ 值不随时间漂（原先取「此刻」会导致跨分钟后控件认不出档、把档名回显成「自定义」）。
+ * 配半开区间后实际含到次日 `00:00` 前一分钟，语义与「整档」一致。
+ */
 export function presetRange(id: TimePresetId, precision: TimePrecision, now: Date = new Date()): TimeRangeValue {
   const withTime = precision === 'minute'
   const fmt = (d: Date): string => (withTime ? ymdhm(d) : ymd(d))
@@ -73,7 +81,7 @@ export function presetRange(id: TimePresetId, precision: TimePrecision, now: Dat
   const start = startOfDay(now)
   switch (id) {
     case 'today':
-      return { from: fmt(start), to: withTime ? ymdhm(now) : ymd(now) }
+      return { from: fmt(start), to: withTime ? endOfDay(start) : ymd(start) }
     case 'yesterday': {
       const y = new Date(start)
       y.setDate(y.getDate() - 1)
@@ -81,7 +89,9 @@ export function presetRange(id: TimePresetId, precision: TimePrecision, now: Dat
     }
     case 'thisWeek': {
       const mon = startOfWeek(now)
-      return { from: fmt(mon), to: withTime ? ymdhm(now) : ymd(now) }
+      const sun = new Date(mon)
+      sun.setDate(sun.getDate() + 6)
+      return { from: fmt(mon), to: withTime ? endOfDay(sun) : ymd(sun) }
     }
     case 'lastWeek': {
       const mon = startOfWeek(now)
@@ -92,7 +102,9 @@ export function presetRange(id: TimePresetId, precision: TimePrecision, now: Dat
     }
     case 'thisMonth': {
       const first = new Date(now.getFullYear(), now.getMonth(), 1)
-      return { from: fmt(first), to: withTime ? ymdhm(now) : ymd(now) }
+      // 月末 = 下月第 0 天
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      return { from: fmt(first), to: withTime ? endOfDay(last) : ymd(last) }
     }
     case 'lastMonth': {
       const first = new Date(now.getFullYear(), now.getMonth() - 1, 1)
