@@ -37,6 +37,8 @@ export interface TaskInstance {
   /** 派发快照（决策 41）：落库时固化的执行所需字段 JSON；旧行 / 异常为 null。 */
   snapshot: string | null
   updated_at: string
+  /** 备注（非表列）：失败 / 跳过原因，由 task_events 最新原因事件推导（listInstancesByQuery 填充）。 */
+  note?: string | null
 }
 
 /** 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。 */
@@ -874,7 +876,41 @@ export class TaskStore {
       const last = rows[rows.length - 1]
       nextCursor = encodeCursor([last.scheduled_at, last.id])
     }
+    // 备注（用户 2026-10-02 第五轮）：失败 / 跳过的原因写在 task_events（本表无 message 列）——
+    // 对本页 failed/skipped 行各取「最新一条原因类事件」，从 detail JSON 里提 reason / note。
+    this.attachNotes(rows)
     return { rows, nextCursor }
+  }
+
+  /** 「原因类」事件 kind 白名单（写原因的只有这几类；receipt.note / *.reason）。 */
+  private static readonly NOTE_EVENT_KINDS = ['task-error', 'expired-once', 'missed-slot', 'receipt', 'no-receipt'] as const
+
+  /** detail JSON → 人话原因：receipt 取 note，其余取 reason；取不到回退原文。 */
+  private static noteOfEvent(kind: string, detail: string | null): string | null {
+    if (detail === null || detail === '') return null
+    try {
+      const parsed = JSON.parse(detail) as { reason?: unknown; note?: unknown }
+      const text = kind === 'receipt' ? parsed.note : parsed.reason
+      return typeof text === 'string' && text !== '' ? text : detail
+    } catch {
+      return detail
+    }
+  }
+
+  /** 给分页行就地填 note（只查 failed / skipped 行，一次 IN 查询取每实例最新原因事件）。 */
+  private attachNotes(rows: TaskInstance[]): void {
+    const wanted = rows.filter(row => row.status === 'failed' || row.status === 'skipped').map(row => row.id)
+    if (wanted.length === 0) return
+    const marks = wanted.map(() => '?').join(',')
+    const events = this.db
+      .prepare(`SELECT instance_id, kind, detail, MAX(seq) AS seq FROM task_events
+                WHERE kind IN ('task-error','expired-once','missed-slot','receipt','no-receipt') AND instance_id IN (${marks})
+                GROUP BY instance_id`)
+      .all(...wanted) as unknown as Array<{ instance_id: string; kind: string; detail: string | null }>
+    const byId = new Map(events.map(event => [event.instance_id, TaskStore.noteOfEvent(event.kind, event.detail)]))
+    for (const row of rows) {
+      if (row.status === 'failed' || row.status === 'skipped') row.note = byId.get(row.id) ?? null
+    }
   }
 
   /**

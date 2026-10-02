@@ -653,7 +653,42 @@ export class TaskStore {
             const last = rows[rows.length - 1];
             nextCursor = encodeCursor([last.scheduled_at, last.id]);
         }
+        // 备注（用户 2026-10-02 第五轮）：失败 / 跳过的原因写在 task_events（本表无 message 列）——
+        // 对本页 failed/skipped 行各取「最新一条原因类事件」，从 detail JSON 里提 reason / note。
+        this.attachNotes(rows);
         return { rows, nextCursor };
+    }
+    /** 「原因类」事件 kind 白名单（写原因的只有这几类；receipt.note / *.reason）。 */
+    static NOTE_EVENT_KINDS = ['task-error', 'expired-once', 'missed-slot', 'receipt', 'no-receipt'];
+    /** detail JSON → 人话原因：receipt 取 note，其余取 reason；取不到回退原文。 */
+    static noteOfEvent(kind, detail) {
+        if (detail === null || detail === '')
+            return null;
+        try {
+            const parsed = JSON.parse(detail);
+            const text = kind === 'receipt' ? parsed.note : parsed.reason;
+            return typeof text === 'string' && text !== '' ? text : detail;
+        }
+        catch {
+            return detail;
+        }
+    }
+    /** 给分页行就地填 note（只查 failed / skipped 行，一次 IN 查询取每实例最新原因事件）。 */
+    attachNotes(rows) {
+        const wanted = rows.filter(row => row.status === 'failed' || row.status === 'skipped').map(row => row.id);
+        if (wanted.length === 0)
+            return;
+        const marks = wanted.map(() => '?').join(',');
+        const events = this.db
+            .prepare(`SELECT instance_id, kind, detail, MAX(seq) AS seq FROM task_events
+                WHERE kind IN ('task-error','expired-once','missed-slot','receipt','no-receipt') AND instance_id IN (${marks})
+                GROUP BY instance_id`)
+            .all(...wanted);
+        const byId = new Map(events.map(event => [event.instance_id, TaskStore.noteOfEvent(event.kind, event.detail)]));
+        for (const row of rows) {
+            if (row.status === 'failed' || row.status === 'skipped')
+                row.note = byId.get(row.id) ?? null;
+        }
     }
     /**
      * 按任务 / 工作区 + 级别 / 关键字 / 时间过滤的诊断日志（任务卡片「日志」面板 + 未来总查询页共用）。

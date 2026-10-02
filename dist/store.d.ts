@@ -25,6 +25,8 @@ export interface TaskInstance {
     /** 派发快照（决策 41）：落库时固化的执行所需字段 JSON；旧行 / 异常为 null。 */
     snapshot: string | null;
     updated_at: string;
+    /** 备注（非表列）：失败 / 跳过原因，由 task_events 最新原因事件推导（listInstancesByQuery 填充）。 */
+    note?: string | null;
 }
 /** 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。 */
 export interface ResolvedDependency {
@@ -339,6 +341,12 @@ export declare class TaskStore {
      * （limit+1 弹出一行 ⇒ 有剩余才给 cursor，恰好取尽时不会多翻一页）。全部条件走占位绑定，无注入面。
      */
     listInstancesByQuery(q: InstanceQuery): InstancePage;
+    /** 「原因类」事件 kind 白名单（写原因的只有这几类；receipt.note / *.reason）。 */
+    private static readonly NOTE_EVENT_KINDS;
+    /** detail JSON → 人话原因：receipt 取 note，其余取 reason；取不到回退原文。 */
+    private static noteOfEvent;
+    /** 给分页行就地填 note（只查 failed / skipped 行，一次 IN 查询取每实例最新原因事件）。 */
+    private attachNotes;
     /**
      * 按任务 / 工作区 + 级别 / 关键字 / 时间过滤的诊断日志（任务卡片「日志」面板 + 未来总查询页共用）。
      * 排序 `ts DESC, seq DESC`；`cursor` 编码末行 `(ts, seq)`。`keyword` 走 `LIKE %kw%`（参数化，不拼 SQL）。

@@ -25,6 +25,8 @@ export interface InstanceRow {
   token_in: number | null
   token_out: number | null
   token_in_cache: number | null
+  /** 备注：失败 / 跳过原因（服务端由 task_events 最新原因事件推导；无 ⇒ null）。 */
+  note?: string | null
   updated_at: string
 }
 

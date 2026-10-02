@@ -645,8 +645,9 @@ window.__ModuleLoader__.load({
 			colPlanned: "计划执行",
 			colActualStart: "实际开始",
 			colView: "查看",
-			trPreset: "预设",
-			trClear: "清除",
+			colReason: "原因",
+			trAll: "全部",
+			trCustom: "自定义",
 			trToday: "今天",
 			trYesterday: "昨天",
 			trThisWeek: "本周",
@@ -1192,8 +1193,9 @@ window.__ModuleLoader__.load({
 			colPlanned: "Scheduled",
 			colActualStart: "Started",
 			colView: "View",
-			trPreset: "Preset",
-			trClear: "Clear",
+			colReason: "Reason",
+			trAll: "All",
+			trCustom: "Custom",
 			trToday: "Today",
 			trYesterday: "Yesterday",
 			trThisWeek: "This week",
@@ -2494,12 +2496,13 @@ body[data-ds-dark-theme]{
 		/**
 		* 时间范围筛选控件 —— **全站唯一实现**（执行记录 / 日志 / 未来总查询页复用）。
 		*
-		* 形态（用户 2026-10-02 第四轮）：把「预设档 + 开始框 + 结束框」**包成一件事**，调用方一行渲染。
-		* - `precision`：`day`（只到天）/ `minute`（日期 + 时:分，日志定位到分钟用）；
-		* - `size`：**必传**高度档（各使用处高度不一定一样，由调用方给）；
-		* - 边界归一（半开区间）在 `time-range.ts`，控件本身只产出展示值，不算边界。
-		*
-		* 颜色 / 尺寸 / 圆角全走 `--tdt-*`；官方件只有 `Menu`（预设下拉）与图标。
+		* 形态（用户 2026-10-02 第五轮定稿）：「下拉（全部 / 预设档 / 自定义）+ 开始框 + 结束框」一体。
+		* - 下拉**就是当前选择的真值**：选「全部」清空两框；选预设填入区间并停在档名上；
+		*   用户手动改框 ⇒ 自动落到「自定义」（该选项此时才出现）。
+		* - 下拉走基础层 `SelectField`（与全站下拉同款皮肤——不许自绘锚点）。
+		* - `precision`：`day`（只到天）/ `minute`（日期 + 时:分）；`size`：高度档必传。
+		* - **起 / 止框定长**（用户 2026-10-02：填进内容就撑开、不停跳——宽度固定，不随值变）。
+		* - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
 		*/
 		const labelStyle = {
 			display: "inline-flex",
@@ -2509,36 +2512,46 @@ body[data-ds-dark-theme]{
 			color: "var(--tdt-fg-3)",
 			flex: "none"
 		};
-		/** 预设下拉锚点按钮（与任务列表顶部下拉同款外壳；高度吃 `--tdt-control-h-*`）。 */
-		function anchorStyle(size) {
-			return {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "6px",
-				boxSizing: "border-box",
-				height: `var(--tdt-control-h-${size})`,
-				padding: "0 10px",
-				borderRadius: "var(--tdt-radius-sm)",
-				border: `1px solid var(--tdt-border)`,
-				background: "var(--tdt-surface-1)",
-				color: "var(--tdt-fg)",
-				fontFamily: "inherit",
-				fontSize: "var(--tdt-font-sm)",
-				cursor: "pointer"
-			};
-		}
 		/** 本机今天（`YYYY-MM-DD`）—— 分钟档里只选了时刻、没选日期时补的默认日期。 */
 		function todayIso$1() {
 			const d = /* @__PURE__ */ new Date();
 			return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+		}
+		/** 当前值命中的档位 id：空 ⇒ all；等于某预设区间 ⇒ 该档；否则 custom。 */
+		function selectionOf(value, presets, precision) {
+			if (value.from === "" && value.to === "") return "all";
+			for (const id of presets) {
+				const range = presetRange(id, precision);
+				if (range.from === value.from && range.to === value.to) return id;
+			}
+			return "custom";
 		}
 		function TimeRange(props) {
 			const { value, onChange, labels, calendarLabels, timeLabels } = props;
 			const precision = props.precision ?? "day";
 			const size = props.size ?? "md";
 			const presets = props.presets ?? ALL_TIME_PRESETS;
-			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
 			const withTime = precision === "minute";
+			const selection = selectionOf(value, presets, precision);
+			const options = (0, react.useMemo)(() => {
+				const list = [{
+					value: "all",
+					label: labels.all
+				}];
+				for (const id of presets) list.push({
+					value: id,
+					label: labels.presets[id]
+				});
+				if (selection === "custom") list.push({
+					value: "custom",
+					label: labels.custom
+				});
+				return list;
+			}, [
+				labels,
+				presets,
+				selection
+			]);
 			const merge = (patch) => {
 				onChange({
 					...value,
@@ -2565,7 +2578,8 @@ body[data-ds-dark-theme]{
 					ariaLabel: which === "from" ? labels.from : labels.to,
 					labels: calendarLabels,
 					size,
-					disabled: props.disabled
+					disabled: props.disabled,
+					width: 118
 				}), withTime ? (0, react.createElement)(TimeField, {
 					value: time,
 					onChange: (next) => {
@@ -2576,7 +2590,7 @@ body[data-ds-dark-theme]{
 					labels: timeLabels,
 					size,
 					disabled: props.disabled,
-					width: 84
+					width: 88
 				}) : null);
 			};
 			return (0, react.createElement)("div", { style: {
@@ -2584,40 +2598,27 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "6px",
 				flexWrap: "wrap"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open: menuOpen,
-				align: "start",
-				anchor: (0, react.createElement)("button", {
-					type: "button",
-					style: anchorStyle(size),
-					title: labels.preset,
-					"aria-label": labels.preset,
-					disabled: props.disabled,
-					onClick: () => {
-						setMenuOpen((open) => !open);
+			} }, (0, react.createElement)(SelectField, {
+				value: selection,
+				options,
+				onChange: (next) => {
+					if (next === "all") {
+						onChange({
+							from: "",
+							to: ""
+						});
+						return;
 					}
-				}, labels.preset, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })),
-				items: presets.map((id) => ({
-					id,
-					label: labels.presets[id]
-				})),
-				onSelect: (id) => {
-					onChange(presetRange(id, precision));
-					setMenuOpen(false);
+					if (next === "custom") return;
+					onChange(presetRange(next, precision));
 				},
-				onClose: () => {
-					setMenuOpen(false);
-				}
-			}), endFields("from"), endFields("to"), value.from !== "" || value.to !== "" ? (0, react.createElement)(Button$2, {
-				variant: "ghost",
+				placeholder: labels.all,
+				emptyLabel: labels.all,
+				ariaLabel: labels.all,
 				size,
-				onClick: () => {
-					onChange({
-						from: "",
-						to: ""
-					});
-				}
-			}, labels.clear) : null);
+				width: 96,
+				disabled: props.disabled
+			}), endFields("from"), endFields("to"));
 		}
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -41877,10 +41878,10 @@ body[data-ds-dark-theme]{
 			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const timeLabels = (0, react.useMemo)(() => timeLabelsOf(t), [t]);
 			const timeRangeLabels = (0, react.useMemo)(() => ({
-				preset: t("trPreset"),
+				all: t("trAll"),
+				custom: t("trCustom"),
 				from: t("cardFrom"),
 				to: t("cardTo"),
-				clear: t("trClear"),
 				presets: {
 					today: t("trToday"),
 					yesterday: t("trYesterday"),
@@ -42132,7 +42133,10 @@ body[data-ds-dark-theme]{
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-2)",
 					marginBottom: "6px"
-				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$2, {
+				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, (instance.status === "failed" || instance.status === "skipped") && instance.note !== null && instance.note !== void 0 && instance.note !== "" ? (0, react.createElement)("span", { style: {
+					color: "var(--tdt-danger)",
+					fontWeight: 600
+				} }, `${t("colReason")}：${instance.note}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$2, {
 					variant: "ghost",
 					size: "sm",
 					className: "dsh-tdt-btn--link",

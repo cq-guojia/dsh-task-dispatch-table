@@ -822,7 +822,7 @@ function TaskExpandPanel(props: {
   const timeLabels = useMemo(() => timeLabelsOf(t), [t])
   // 时间范围控件文案（records / logs 共用一份）。
   const timeRangeLabels: TimeRangeLabels = useMemo(() => ({
-    preset: t('trPreset'), from: t('cardFrom'), to: t('cardTo'), clear: t('trClear'),
+    all: t('trAll'), custom: t('trCustom'), from: t('cardFrom'), to: t('cardTo'),
     presets: {
       today: t('trToday'), yesterday: t('trYesterday'), thisWeek: t('trThisWeek'),
       lastWeek: t('trLastWeek'), thisMonth: t('trThisMonth'), lastMonth: t('trLastMonth'),
@@ -1071,6 +1071,10 @@ function TaskExpandPanel(props: {
                         h('span', null, `${t('colDuration')}：${formatDuration(durMs, tt)}`),
                         (instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null)
                           ? h('span', null, `${t('colTokens')}：${tokensDetailOf(instance)}`)
+                          : null,
+                        // 失败 / 跳过：服务端从最新原因事件推导的 note（决策：错就得让他在记录里看见）。
+                        (instance.status === 'failed' || instance.status === 'skipped') && instance.note !== null && instance.note !== undefined && instance.note !== ''
+                          ? h('span', { style: { color: 'var(--tdt-danger)', fontWeight: 600 } }, `${t('colReason')}：${instance.note}`)
                           : null,
                         sid !== null
                           ? (onOpenSession !== undefined

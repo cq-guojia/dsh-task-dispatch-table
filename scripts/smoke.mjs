@@ -1771,8 +1771,8 @@ console.log('\n[14] runtime-index')
       q.includes('status: statuses') && q.includes('level: levels'))
     check('半开区间服务端比较：scheduled_at < ? / ts < ?（不再 <=，边界归一单源）',
       st.includes("'scheduled_at < ?'") && st.includes("'ts < ?'") && !st.includes("'scheduled_at <= ?'"))
-    check('时间范围 / 新列文案进产物（trPreset / colPlanned / colActualStart）',
-      dist.includes('trPreset') && dist.includes('colPlanned') && dist.includes('colActualStart'))
+    check('时间范围 / 新列文案进产物（trAll / trCustom / colPlanned / colActualStart）',
+      dist.includes('trAll') && dist.includes('trCustom') && dist.includes('colPlanned') && dist.includes('colActualStart'))
   }
 
   store.close()
