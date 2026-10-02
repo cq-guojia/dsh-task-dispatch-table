@@ -1811,6 +1811,12 @@ console.log('\n[14] runtime-index')
       // 黑框 `logBoxStyle` 只留给「日志」面板本体，展开区不再套框。
       && !tl.includes('eventsLoading'))
     check('两个时间框之间有分隔符 ～', trc.includes("'～'"))
+    check('忙碌指示：浮动不占位（absolute）+ 延迟 400ms 出现 + 沿用三个脉动方块',
+      tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS = 400')
+      && tl.includes("position: 'absolute'") && tl.includes("position: 'relative'")
+      && tl.includes('dsh-tdt-run-blocks') && tl.includes('pointerEvents:')
+      // 过滤行里那个会占位的一闪文字已经移除。
+      && !tl.includes("recLoading ? h('span'") && !tl.includes("logLoading ? h('span'"))
     check('展开区排布放宽：外圈 padding 翻倍 + 日志行间距 + 字色压暗一档',
       tl.includes("padding: '18px 20px'") && tl.includes("marginBottom: '7px'")
       && tl.includes("color: 'var(--tdt-fg-2)'") && !tl.includes("color: 'var(--tdt-accent)' }, `${event.kind}"))

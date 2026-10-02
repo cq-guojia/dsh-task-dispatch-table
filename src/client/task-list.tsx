@@ -700,9 +700,47 @@ function InfoRow(props: { label: string; value: string }) {
 // ── 展开区三面板（决策 55，design/features/task-expand-panels.md §三）──────────────────
 /** 内容区**定高**（用户 2026-10-02：矮内容显矮、切 tab 高度蹦）——三个 tab 一律同高，内容多就内部滚。 */
 const PANEL_H = 360
-/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。 */
+/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
+ *  ⚠️ `position: relative` 是为了给「浮动忙碌指示」当定位上下文（它 absolute 到本盒右下角）。 */
 const panelBoxStyle: Record<string, string | number> = {
   height: `${PANEL_H}px`, display: 'flex', flexDirection: 'column', minHeight: 0,
+  position: 'relative',
+}
+/**
+ * 浮动忙碌指示（用户 2026-10-02 方案 A）：**绝对定位 ⇒ 不占任何布局空间**，浮在面板右下角，
+ * 不再像原来那样在过滤行里插一个「加载中」文字、把空间挤过去又挤回来。
+ * 动效沿用「任务执行中」那三个脉动方块（`.dsh-tdt-run-blocks`，现成资产，不新增）。
+ */
+const busyPillStyle: Record<string, string | number> = {
+  position: 'absolute', right: '12px', bottom: '12px', zIndex: 2,
+  display: 'inline-flex', alignItems: 'center', gap: '6px',
+  padding: '5px 10px', borderRadius: 'var(--tdt-radius-md)',
+  background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`,
+  boxShadow: 'var(--tdt-shadow-1, 0 2px 8px rgba(0,0,0,.12))',
+  color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
+  // 纯提示，不吃鼠标事件（别挡住底下的内容）。
+  pointerEvents: 'none',
+}
+const BUSY_DELAY_MS = 400
+/**
+ * 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
+ * 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
+ */
+function useDelayedBusy(active: boolean): boolean {
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    if (!active) { setShown(false); return }
+    const timer = setTimeout(() => { setShown(true) }, BUSY_DELAY_MS)
+    return () => { clearTimeout(timer) }
+  }, [active])
+  return shown
+}
+/** 忙碌指示本体：三个脉动方块 + 文案。 */
+function BusyPill(props: { label: string }): ReturnType<typeof h> {
+  return h('div', { style: busyPillStyle, role: 'status', 'aria-live': 'polite' },
+    h('span', { className: 'dsh-tdt-run-blocks' }, h('i', null), h('i', null), h('i', null)),
+    h('span', null, props.label),
+  )
 }
 /** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
 const panelScrollFillStyle: Record<string, string | number> = {
@@ -886,6 +924,10 @@ function TaskExpandPanel(props: {
   const [logLimit, setLogLimit] = useState(100)
   const [logs, setLogs] = useState<LogRow[] | null>(null)
   const [logLoading, setLogLoading] = useState(false)
+  // 忙碌指示**延迟 400ms** 才亮（本地查询多为毫秒级，别为看不见的一瞬闪一下）。
+  // ⚠️ hooks 必须在组件顶层调用（renderRecords / renderLogs 是条件渲染的函数，里面不能放 hooks）。
+  const recBusy = useDelayedBusy(recLoading)
+  const logBusy = useDelayedBusy(logLoading)
   const [logError, setLogError] = useState<string | null>(null)
 
   // ── 删除确认 ──
@@ -979,6 +1021,8 @@ function TaskExpandPanel(props: {
   )
 
   const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
+    // 浮动忙碌指示：absolute 到本盒右下角 ⇒ **不占布局空间**，不再把筛选行挤过去又挤回来。
+    recBusy ? h(BusyPill, { label: t('loading') }) : null,
     // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 时间范围控件（用户 2026-10-02 第四轮）。
     h('div', { style: filterRowStyle },
       // 不再单写「状态：」二字（用户 2026-10-02）：**未选时占位就是灰色的「状态」**，
@@ -1021,7 +1065,6 @@ function TaskExpandPanel(props: {
         }),
         t('limitSuffix'),
       ),
-      recLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       recError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${recError}`) : null,
     ),
     h('div', { style: panelScrollFillStyle },
@@ -1177,6 +1220,8 @@ function TaskExpandPanel(props: {
   )
 
   const renderLogs = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
+    // 同执行记录面板：浮动忙碌指示，不占布局空间。
+    logBusy ? h(BusyPill, { label: t('loading') }) : null,
     // 过滤行固定在定高盒外（与执行记录面板同口径）：关键字 + **分钟级**时间范围 + 条数。
     h('div', { style: filterRowStyle },
       h(TdtInput, {
@@ -1206,7 +1251,7 @@ function TaskExpandPanel(props: {
         }),
         t('limitSuffix'),
       ),
-      logLoading ? h('span', { style: faintStyle }, t('loading')) : null,
+
       logError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${logError}`) : null,
     ),
     h('div', { style: panelScrollFillStyle },

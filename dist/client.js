@@ -41725,13 +41725,67 @@ body[data-ds-dark-theme]{
 				alignItems: "flex-start"
 			} }, (0, react.createElement)("span", { style: infoLabelStyle }, props.label), (0, react.createElement)("span", { style: infoValueStyle }, props.value));
 		}
-		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。 */
+		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
+		*  ⚠️ `position: relative` 是为了给「浮动忙碌指示」当定位上下文（它 absolute 到本盒右下角）。 */
 		const panelBoxStyle = {
 			height: `360px`,
 			display: "flex",
 			flexDirection: "column",
-			minHeight: 0
+			minHeight: 0,
+			position: "relative"
 		};
+		/**
+		* 浮动忙碌指示（用户 2026-10-02 方案 A）：**绝对定位 ⇒ 不占任何布局空间**，浮在面板右下角，
+		* 不再像原来那样在过滤行里插一个「加载中」文字、把空间挤过去又挤回来。
+		* 动效沿用「任务执行中」那三个脉动方块（`.dsh-tdt-run-blocks`，现成资产，不新增）。
+		*/
+		const busyPillStyle = {
+			position: "absolute",
+			right: "12px",
+			bottom: "12px",
+			zIndex: 2,
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "6px",
+			padding: "5px 10px",
+			borderRadius: "var(--tdt-radius-md)",
+			background: "var(--tdt-surface-1)",
+			border: `1px solid var(--tdt-border)`,
+			boxShadow: "var(--tdt-shadow-1, 0 2px 8px rgba(0,0,0,.12))",
+			color: "var(--tdt-fg-2)",
+			fontSize: "var(--tdt-font-xs)",
+			lineHeight: "var(--tdt-line-sm)",
+			pointerEvents: "none"
+		};
+		const BUSY_DELAY_MS = 400;
+		/**
+		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
+		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
+		*/
+		function useDelayedBusy(active) {
+			const [shown, setShown] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				if (!active) {
+					setShown(false);
+					return;
+				}
+				const timer = setTimeout(() => {
+					setShown(true);
+				}, BUSY_DELAY_MS);
+				return () => {
+					clearTimeout(timer);
+				};
+			}, [active]);
+			return shown;
+		}
+		/** 忙碌指示本体：三个脉动方块 + 文案。 */
+		function BusyPill(props) {
+			return (0, react.createElement)("div", {
+				style: busyPillStyle,
+				role: "status",
+				"aria-live": "polite"
+			}, (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null)), (0, react.createElement)("span", null, props.label));
+		}
 		/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
 		const panelScrollFillStyle = {
 			flex: "1 1 auto",
@@ -41954,6 +42008,8 @@ body[data-ds-dark-theme]{
 			const [logLimit, setLogLimit] = (0, react.useState)(100);
 			const [logs, setLogs] = (0, react.useState)(null);
 			const [logLoading, setLogLoading] = (0, react.useState)(false);
+			const recBusy = useDelayedBusy(recLoading);
+			const logBusy = useDelayedBusy(logLoading);
 			const [logError, setLogError] = (0, react.useState)(null);
 			const [confirmDelete, setConfirmDelete] = (0, react.useState)(false);
 			const [deleting, setDeleting] = (0, react.useState)(false);
@@ -42053,7 +42109,7 @@ body[data-ds-dark-theme]{
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead)));
-			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
+			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react.createElement)(BusyPill, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [
 					{
@@ -42107,7 +42163,7 @@ body[data-ds-dark-theme]{
 				ariaLabel: t("cardLogLimit"),
 				size: "md",
 				width: 70
-			}), t("limitSuffix")), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
+			}), t("limitSuffix")), recError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
 			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("table", { style: {
@@ -42229,7 +42285,7 @@ body[data-ds-dark-theme]{
 					}
 				}, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
 			})))));
-			const renderLogs = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
+			const renderLogs = () => (0, react.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react.createElement)(BusyPill, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
 				value: logKeyword,
 				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),
@@ -42261,7 +42317,7 @@ body[data-ds-dark-theme]{
 				ariaLabel: t("cardLogLimit"),
 				size: "md",
 				width: 70
-			}), t("limitSuffix")), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
+			}), t("limitSuffix")), logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
 			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
