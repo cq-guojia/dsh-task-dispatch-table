@@ -1,0 +1,31 @@
+# 行尾统一 LF（用户 2026-10-02）
+#
+# 为什么要有这份文件：本仓库由 CodeBuddy / TraeCode / DSH 等多个 agent、多台机器共用
+# （见 AGENTS.md）。不同机器 / 编辑器的默认行尾不同，Windows 侧很容易把 CRLF 带进来；
+# 行尾不统一会让编辑工具出现「提示替换成功、内容实际没变」这类难以排查的问题，
+# 也会让 diff 满屏噪音（整文件被判为改动）。
+#
+# `text=auto eol=lf`：Git 自行判定文本文件，入库一律归一化成 LF，检出也写 LF。
+
+* text=auto eol=lf
+
+# 明确标记为文本的（避免 Git 误判成二进制而不做归一化）
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.css text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# 二进制：不做任何转换
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
