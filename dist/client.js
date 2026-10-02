@@ -2756,6 +2756,115 @@ body[data-ds-dark-theme]{
 			}));
 		}
 		//#endregion
+		//#region src/client/ui/loading-css.ts
+		/**
+		* Loading 指示器皮肤（UI 基础层 · P1）。
+		*
+		* 覆盖范围：
+		* - 浮动 Loading pill（`<Loading />`）
+		* - 运行中 / loading 三个脉动小方块（`.dsh-tdt-run-blocks`）
+		*
+		* 消费 token：`--tdt-*`（颜色 / 尺寸 / 层级全部来自 tokens.ts）。
+		*/
+		/** loading 样式域（由 `<Loading />` 渲染时登记）。 */
+		const LOADING_DOMAIN = "loading";
+		/** loading 相关全部 CSS。 */
+		const LOADING_CSS = `
+/* 运行中 / loading 的活动指示：三个小方块依次脉动。 */
+@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }
+.dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }
+.dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }
+.dsh-tdt-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }
+.dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }
+`;
+		/**
+		* 确保 loading 样式已登记并注入（幂等；组件渲染时调用一次即可）。
+		*/
+		function ensureLoadingStyle() {
+			applyStyle(LOADING_DOMAIN, LOADING_CSS);
+		}
+		//#endregion
+		//#region src/client/ui/Loading.tsx
+		/**
+		* 全局浮动 Loading 指示器（UI 基础层 · P1）。
+		*
+		* 用法：
+		*   <Loading label={t('loading')} />
+		*
+		* 行为：
+		* - fixed 定位在主内容容器右下角，**不占布局空间**；
+		* - 右侧贴齐主内容容器右边缘（`anchorId` 默认 `dsh-tdt-main`），底部留 16px；
+		* - 左侧三个小方块依次脉动，右侧显示文案；
+		* - 监听窗口 resize / scroll / 内容盒 resize，自动跟住内容宽度。
+		*
+		* 配套 also 导出 `<RunningBlocks />`：同样的三个脉动方块（无文案），
+		* 用于表格单元格里的「运行中」状态指示。
+		*
+		* 文档登记：docs/design/ui-foundation.md §二「唯一实现表」。
+		*/
+		const pillStyle = {
+			position: "fixed",
+			bottom: "16px",
+			zIndex: "var(--tdt-z-dock)",
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "6px",
+			padding: "5px 10px",
+			borderRadius: "var(--tdt-radius-md)",
+			background: "var(--tdt-surface-1)",
+			border: "1px solid var(--tdt-border)",
+			boxShadow: "var(--tdt-shadow-1, 0 2px 8px rgba(0,0,0,.12))",
+			color: "var(--tdt-fg-2)",
+			fontSize: "var(--tdt-font-xs)",
+			lineHeight: "var(--tdt-line-sm)",
+			pointerEvents: "none"
+		};
+		const RIGHT_MARGIN_PX = 0;
+		function useContentRight(anchorId) {
+			const [right, setRight] = (0, react.useState)(`${RIGHT_MARGIN_PX}px`);
+			(0, react.useEffect)(() => {
+				const update = () => {
+					const el = document.getElementById(anchorId);
+					if (!el) return;
+					const rect = el.getBoundingClientRect();
+					const viewportW = document.documentElement.clientWidth;
+					setRight(`${Math.max(0, viewportW - rect.right + RIGHT_MARGIN_PX)}px`);
+				};
+				update();
+				window.addEventListener("resize", update);
+				window.addEventListener("scroll", update, true);
+				const ro = new ResizeObserver(update);
+				const el = document.getElementById(anchorId);
+				if (el) ro.observe(el);
+				return () => {
+					window.removeEventListener("resize", update);
+					window.removeEventListener("scroll", update, true);
+					ro.disconnect();
+				};
+			}, [anchorId]);
+			return right;
+		}
+		/** 浮动 Loading pill：三个脉动方块 + 文案。 */
+		function Loading(props) {
+			ensureUiBase();
+			ensureLoadingStyle();
+			const right = useContentRight(props.anchorId ?? "dsh-tdt-main");
+			return (0, react.createElement)("div", {
+				style: {
+					...pillStyle,
+					right
+				},
+				role: "status",
+				"aria-live": "polite"
+			}, (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null)), (0, react.createElement)("span", null, props.label));
+		}
+		/** 运行中状态用的三个脉动方块（无文案），颜色跟随 `currentColor`。 */
+		function RunningBlocks() {
+			ensureLoadingStyle();
+			return (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null));
+		}
+		//#endregion
 		//#region src/client/archive-session-css.ts
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
 		const ARCHIVE_SESSION_CSS = `
@@ -41417,12 +41526,6 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
 			".dsh-tdt-rec-out { background: var(--tdt-chip-bg); }",
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
-			"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
-			".dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }",
-			".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
-			".dsh-tdt-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }",
-			".dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }",
-			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -41806,10 +41909,6 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				}
 			})));
 		}
-		/** 运行中的活动指示：三个小方块依次脉动（用户 2026-09-30：跑起来就别再跳倒计时，用动效表示「在跑」）。 */
-		function RunningBlocks() {
-			return (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null));
-		}
 		/**
 		* 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
 		* - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
@@ -41924,7 +42023,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			} }, (0, react.createElement)("span", { style: infoLabelStyle }, props.label), (0, react.createElement)("span", { style: infoValueStyle }, props.value));
 		}
 		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
-		*  ⚠️ `position: relative` 是为了给「浮动忙碌指示」当定位上下文（它 absolute 到本盒右下角）。 */
+		*  `position: relative` 保留为内部绝对定位子元素的上下文。 */
 		const panelBoxStyle = {
 			height: `360px`,
 			display: "flex",
@@ -41933,69 +42032,15 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			position: "relative"
 		};
 		/**
-		* 浮动忙碌指示（用户 2026-10-02 方案 A）：**绝对定位 ⇒ 不占任何布局空间**，浮在面板右下角，
-		* 不再像原来那样在过滤行里插一个「加载中」文字、把空间挤过去又挤回来。
-		* 动效沿用「任务执行中」那三个脉动方块（`.dsh-tdt-run-blocks`，现成资产，不新增）。
-		*/
-		const busyPillStyle = {
-			position: "fixed",
-			bottom: "16px",
-			zIndex: "var(--tdt-z-dock)",
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "6px",
-			padding: "5px 10px",
-			borderRadius: "var(--tdt-radius-md)",
-			background: "var(--tdt-surface-1)",
-			border: `1px solid var(--tdt-border)`,
-			boxShadow: "var(--tdt-shadow-1, 0 2px 8px rgba(0,0,0,.12))",
-			color: "var(--tdt-fg-2)",
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-sm)",
-			pointerEvents: "none"
-		};
-		/** 主内容盒右边缘到视口右边缘的距离 + 固定内边距，用来把 loading 贴到「主窗口宽度」的右下角。 */
-		const BUSY_RIGHT_MARGIN_PX = 16;
-		function useBusyRight() {
-			const [right, setRight] = (0, react.useState)(`${BUSY_RIGHT_MARGIN_PX}px`);
-			(0, react.useEffect)(() => {
-				const update = () => {
-					const el = document.getElementById("dsh-tdt-main");
-					if (!el) return;
-					const rect = el.getBoundingClientRect();
-					const viewportW = document.documentElement.clientWidth;
-					setRight(`${Math.max(0, viewportW - rect.right + BUSY_RIGHT_MARGIN_PX)}px`);
-				};
-				update();
-				window.addEventListener("resize", update);
-				window.addEventListener("scroll", update, true);
-				const ro = new ResizeObserver(update);
-				const el = document.getElementById("dsh-tdt-main");
-				if (el) ro.observe(el);
-				return () => {
-					window.removeEventListener("resize", update);
-					window.removeEventListener("scroll", update, true);
-					ro.disconnect();
-				};
-			}, []);
-			return right;
-		}
-		/**
-		* ⚠️ **临时调试值**（用户 2026-10-03）：改成 **0 = 每次都立刻显示**（不再有 400ms 阈值），
-		* 这样无论查询多快都能看到它。验完必须改回 400。
-		*/
-		const BUSY_DELAY_MS = 0;
-		/**
-		* ⚠️ **临时调试值**（用户 2026-10-03 要求）：亮起后**至少停留 5 秒**再消失，
-		* 用来肉眼确认「loading 到底在哪儿、到底有没有出现」。
-		* 验完必须改回 0（或删掉 hold 逻辑）——正常态应该是请求一返回就消失。
-		*/
-		const BUSY_HOLD_MS = 5e3;
-		/**
 		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
 		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
-		* 亮起后按 `BUSY_HOLD_MS` 保底停留（临时调试用）。
+		*
+		* ⚠️ 当前是临时调试值（用户 2026-10-03 验证 loading 位置）：
+		*   BUSY_DELAY_MS = 0（立刻显示）、BUSY_HOLD_MS = 5000（亮后至少停 5 秒）。
+		* 验完必须改回 400 / 0。
 		*/
+		const BUSY_DELAY_MS = 0;
+		const BUSY_HOLD_MS = 5e3;
 		function useDelayedBusy(active) {
 			const [shown, setShown] = (0, react.useState)(false);
 			const shownAtRef = (0, react.useRef)(0);
@@ -42020,18 +42065,6 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				};
 			}, [active, shown]);
 			return shown;
-		}
-		/** 忙碌指示本体：三个脉动方块 + 文案。 */
-		function BusyPill(props) {
-			const right = useBusyRight();
-			return (0, react.createElement)("div", {
-				style: {
-					...busyPillStyle,
-					right
-				},
-				role: "status",
-				"aria-live": "polite"
-			}, (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null)), (0, react.createElement)("span", null, props.label));
 		}
 		/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
 		const panelScrollFillStyle = {
@@ -42366,7 +42399,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead)));
-			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react.createElement)(BusyPill, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
+			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react.createElement)(Loading, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [
 					{
@@ -42542,7 +42575,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					}
 				}, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
 			})))));
-			const renderLogs = () => (0, react.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react.createElement)(BusyPill, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
+			const renderLogs = () => (0, react.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react.createElement)(Loading, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
 				value: logKeyword,
 				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),

@@ -69,9 +69,10 @@
 |---|---|---|
 | **公用 token（CSS 变量定义）** | `src/client/ui/tokens.ts` | 全站；只允许被 `var(--tdt-*)` 消费 |
 | **公用控件皮肤（CSS 规则）** | `src/client/ui/controls-css.ts` | 全站控件 |
+| **Loading 皮肤（CSS 规则）** | `src/client/ui/loading-css.ts` | `<Loading />` / `<RunningBlocks />` |
 | **官方件观感覆盖** | `src/client/ui/official-skins.ts` | 官方 `Switch`/`Input`/`Menu`/`SegmentedControl` |
 | **样式注入入口（唯一）** | `src/client/ui/style.ts` | 所有 `*-css.ts` 在此注册 |
-| **公用控件组件** | `src/client/ui/{Segmented,Button,Field,SwitchToggle,DateTime}.tsx` | L3 使用点 |
+| **公用控件组件** | `src/client/ui/{Segmented,Button,Field,SwitchToggle,DateTime,Loading}.tsx` | L3 使用点 |
 | **公用出口（唯一 import 面）** | `src/client/ui/index.ts` | L3 只 import 这个 |
 | **域私有样式** | `src/client/task-editor-css.ts` / `archive-session-css.ts` / `toast-css.ts`（过渡期保留，最终并入 `ui/`） | 各自页面 |
 | **技术方案（定型）** | `docs/design/ui-foundation.md`（本文） | 设计与评审 |
@@ -233,6 +234,7 @@ body[data-ds-dark-theme]{
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
 | Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
+| Loading（浮动加载 pill） | — | — | `ui/Loading.tsx` + `ui/loading-css.ts` ✅ |
 | 卡 / 浮层外壳 | — | — | ⏳ 未抽象（同构 7 处，见 [`ui-style-guide.md`](ui-style-guide.md) §三「待抽象」） |
 
 ### 5.3 官方件策略（**优先用官方的，但观感只覆盖一次**）

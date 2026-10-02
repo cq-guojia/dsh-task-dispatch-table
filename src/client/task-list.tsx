@@ -32,7 +32,7 @@ import { pinMsFor, sortRows } from '../task-sort.js'
 import { MarqueeText, SelectField, calendarLabelsOf, timeLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, IconButton, Input as TdtInput, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, IconButton, Input as TdtInput, Loading, RunningBlocks, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -123,15 +123,6 @@ const TASK_LIST_CSS = [
   // 不能再用 plate-hover（暗色下反而更淡 ⇒ 鼠标移上去底板就消失了）。
   '.dsh-tdt-rec-out { background: var(--tdt-chip-bg); }',
   '.dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }',
-  // 运行中的活动指示（用户 2026-09-30）：三个小方块依次脉动，类似手机充电 / 加载中。
-  // `currentColor` ⇒ 跟随所在格的文字色（这里被设成 success 绿）。
-  '@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }',
-  '.dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }',
-  '.dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }',
-  '.dsh-tdt-run-blocks > i:nth-child(2) { animation-delay: 0.15s; }',
-  '.dsh-tdt-run-blocks > i:nth-child(3) { animation-delay: 0.3s; }',
-  // 尊重「减少动效」偏好：不做动画，三个方块常亮。
-  '@media (prefers-reduced-motion: reduce) { .dsh-tdt-run-blocks > i { animation: none; opacity: 1; } }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -597,11 +588,6 @@ function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   )
 }
 
-/** 运行中的活动指示：三个小方块依次脉动（用户 2026-09-30：跑起来就别再跳倒计时，用动效表示「在跑」）。 */
-function RunningBlocks() {
-  return h('span', { className: 'dsh-tdt-run-blocks' }, h('i', null), h('i', null), h('i', null))
-}
-
 /**
  * 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
  * - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
@@ -711,73 +697,21 @@ function InfoRow(props: { label: string; value: string }) {
 /** 内容区**定高**（用户 2026-10-02：矮内容显矮、切 tab 高度蹦）——三个 tab 一律同高，内容多就内部滚。 */
 const PANEL_H = 360
 /** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
- *  ⚠️ `position: relative` 是为了给「浮动忙碌指示」当定位上下文（它 absolute 到本盒右下角）。 */
+ *  `position: relative` 保留为内部绝对定位子元素的上下文。 */
 const panelBoxStyle: Record<string, string | number> = {
   height: `${PANEL_H}px`, display: 'flex', flexDirection: 'column', minHeight: 0,
   position: 'relative',
 }
 /**
- * 浮动忙碌指示（用户 2026-10-02 方案 A）：**绝对定位 ⇒ 不占任何布局空间**，浮在面板右下角，
- * 不再像原来那样在过滤行里插一个「加载中」文字、把空间挤过去又挤回来。
- * 动效沿用「任务执行中」那三个脉动方块（`.dsh-tdt-run-blocks`，现成资产，不新增）。
- */
-const busyPillStyle: Record<string, string | number> = {
-  // 固定到**页面底部**、水平贴到主内容容器（`#dsh-tdt-main`，居中 max-width: 1120px）的右边缘内侧 ——
-  // 窗口不是全屏，不能贴视口最右（用户 2026-10-03：要「最大宽度的右下角」）。
-  // `fixed` ⇒ 不随页面滚动，也不占任何布局空间；具体 `right` 由 JS 量出内容盒右边缘后动态给。
-  position: 'fixed',
-  bottom: '16px',
-  zIndex: 'var(--tdt-z-dock)',
-  display: 'inline-flex', alignItems: 'center', gap: '6px',
-  padding: '5px 10px', borderRadius: 'var(--tdt-radius-md)',
-  background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`,
-  boxShadow: 'var(--tdt-shadow-1, 0 2px 8px rgba(0,0,0,.12))',
-  color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
-  // 纯提示，不吃鼠标事件（别挡住底下的内容）。
-  pointerEvents: 'none',
-}
-/** 主内容盒右边缘到视口右边缘的距离 + 固定内边距，用来把 loading 贴到「主窗口宽度」的右下角。 */
-const BUSY_RIGHT_MARGIN_PX = 16
-function useBusyRight(): string {
-  const [right, setRight] = useState(`${BUSY_RIGHT_MARGIN_PX}px`)
-  useEffect(() => {
-    const update = (): void => {
-      const el = document.getElementById('dsh-tdt-main')
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const viewportW = document.documentElement.clientWidth
-      setRight(`${Math.max(0, viewportW - rect.right + BUSY_RIGHT_MARGIN_PX)}px`)
-    }
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    const ro = new ResizeObserver(update)
-    const el = document.getElementById('dsh-tdt-main')
-    if (el) ro.observe(el)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-      ro.disconnect()
-    }
-  }, [])
-  return right
-}
-/**
- * ⚠️ **临时调试值**（用户 2026-10-03）：改成 **0 = 每次都立刻显示**（不再有 400ms 阈值），
- * 这样无论查询多快都能看到它。验完必须改回 400。
- */
-const BUSY_DELAY_MS = 0
-/**
- * ⚠️ **临时调试值**（用户 2026-10-03 要求）：亮起后**至少停留 5 秒**再消失，
- * 用来肉眼确认「loading 到底在哪儿、到底有没有出现」。
- * 验完必须改回 0（或删掉 hold 逻辑）——正常态应该是请求一返回就消失。
- */
-const BUSY_HOLD_MS = 5000
-/**
  * 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
  * 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
- * 亮起后按 `BUSY_HOLD_MS` 保底停留（临时调试用）。
+ *
+ * ⚠️ 当前是临时调试值（用户 2026-10-03 验证 loading 位置）：
+ *   BUSY_DELAY_MS = 0（立刻显示）、BUSY_HOLD_MS = 5000（亮后至少停 5 秒）。
+ * 验完必须改回 400 / 0。
  */
+const BUSY_DELAY_MS = 0
+const BUSY_HOLD_MS = 5000
 function useDelayedBusy(active: boolean): boolean {
   const [shown, setShown] = useState(false)
   const shownAtRef = useRef(0)
@@ -794,14 +728,6 @@ function useDelayedBusy(active: boolean): boolean {
     return () => { clearTimeout(timer) }
   }, [active, shown])
   return shown
-}
-/** 忙碌指示本体：三个脉动方块 + 文案。 */
-function BusyPill(props: { label: string }): ReturnType<typeof h> {
-  const right = useBusyRight()
-  return h('div', { style: { ...busyPillStyle, right }, role: 'status', 'aria-live': 'polite' },
-    h('span', { className: 'dsh-tdt-run-blocks' }, h('i', null), h('i', null), h('i', null)),
-    h('span', null, props.label),
-  )
 }
 /** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
 const panelScrollFillStyle: Record<string, string | number> = {
@@ -1100,8 +1026,8 @@ function TaskExpandPanel(props: {
   )
 
   const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
-    // 浮动忙碌指示：absolute 到本盒右下角 ⇒ **不占布局空间**，不再把筛选行挤过去又挤回来。
-    recBusy ? h(BusyPill, { label: t('loading') }) : null,
+    // 浮动忙碌指示：fixed 到主内容盒右下角 ⇒ **不占布局空间**，不再把筛选行挤过去又挤回来。
+    recBusy ? h(Loading, { label: t('loading') }) : null,
     // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 时间范围控件（用户 2026-10-02 第四轮）。
     h('div', { style: filterRowStyle },
       // 不再单写「状态：」二字（用户 2026-10-02）：**未选时占位就是灰色的「状态」**，
@@ -1304,8 +1230,8 @@ function TaskExpandPanel(props: {
   )
 
   const renderLogs = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
-    // 同执行记录面板：浮动忙碌指示，不占布局空间。
-    logBusy ? h(BusyPill, { label: t('loading') }) : null,
+    // 同执行记录面板：浮动忙碌指示，fixed 到主内容盒右下角。
+    logBusy ? h(Loading, { label: t('loading') }) : null,
     // 过滤行固定在定高盒外（与执行记录面板同口径）：关键字 + **分钟级**时间范围 + 条数。
     h('div', { style: filterRowStyle },
       h(TdtInput, {

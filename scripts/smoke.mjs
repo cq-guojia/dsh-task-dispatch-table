@@ -1806,6 +1806,7 @@ console.log('\n[14] runtime-index')
     const uidx = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'index.ts'), 'utf8')
     const cc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
     const trc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
+    const ld = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'Loading.tsx'), 'utf8')
     const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     check('三面板统一固定高度：panelBoxStyle 覆盖三个 tab（基础信息也纳入定高盒）',
       (tl.match(/panelBoxStyle/g) ?? []).length >= 4
@@ -1886,7 +1887,8 @@ console.log('\n[14] runtime-index')
         return !block.includes("background: 'var(--tdt-surface-1)'") && !block.includes('padding:')
       })())
     check('loading 定位：fixed 到页面底部，right 按 #dsh-tdt-main 内容盒右边缘动态量',
-      tl.includes("position: 'fixed'") && tl.includes("id: 'dsh-tdt-main'") && tl.includes('function useBusyRight'))
+      ld.includes("position: 'fixed'") && ld.includes('function useContentRight') && ld.includes('function Loading')
+      && tl.includes("id: 'dsh-tdt-main'") && tl.includes('Loading, RunningBlocks'))
     check('日志关键字**同时匹配 message 与 kind**（否则搜 missed-slot 的 kind 搜不到）',
       st.includes("(message LIKE ? OR kind LIKE ?)"))
     check('任务卡片整行可点展开；开关 / 箭头拦下冒泡（不穿透、不双触发）',
@@ -1894,7 +1896,8 @@ console.log('\n[14] runtime-index')
       && (tl.match(/stopPropagation\(\)/g) ?? []).length >= 4)
     check('忙碌指示：沿用三个脉动方块 + 不吃鼠标事件 + 过滤行不再插占位文字',
       tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS')
-      && tl.includes('dsh-tdt-run-blocks') && tl.includes('pointerEvents:')
+      && ld.includes('dsh-tdt-run-blocks') && ld.includes('pointerEvents:')
+      && tl.includes('h(Loading, { label:')
       // 过滤行里那个会占位的一闪文字已经移除。
       && !tl.includes("recLoading ? h('span'") && !tl.includes("logLoading ? h('span'"))
     check('展开区排布放宽：外圈 padding 翻倍 + 日志行间距 + 字色压暗一档',
