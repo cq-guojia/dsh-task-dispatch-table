@@ -40500,6 +40500,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			})), (0, react.createElement)("span", { style: {
 				flex: "1 1 auto",
 				minWidth: 0,
+				maxWidth: "200px",
 				overflow: "hidden",
 				textOverflow: "ellipsis",
 				whiteSpace: "nowrap",
@@ -40521,7 +40522,11 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
 				},
 				title: t("editorAttachmentRemove"),
-				"aria-label": t("editorAttachmentRemove")
+				"aria-label": t("editorAttachmentRemove"),
+				style: {
+					flex: "none",
+					whiteSpace: "nowrap"
+				}
 			}, t("editorAttachmentRemove"))))), (0, react.createElement)("div", { style: {
 				display: "flex",
 				gap: "10px",
