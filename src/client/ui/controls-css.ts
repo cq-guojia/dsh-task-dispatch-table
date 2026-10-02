@@ -164,8 +164,10 @@ export const FIELD_CSS = `
 export const DATETIME_CSS = `
 /* ── 日期 / 时间 P4 ───────────────────────────────────────────────────── */
 .dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
+/* ⚠️ 边框粗细 / 圆角必须与下拉锚点（dsh-tdt-ed-field 的 fieldButtonStyle）完全一致
+   （用户 2026-10-02 点名：同排的日期框与下拉框看着不是一套）⇒ 这里也是 0.5px + radius-md。 */
 .dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--tdt-control-h-lg);
-  min-width:0;max-width:100%;padding:0 8px;border:1px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
+  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
   background:var(--tdt-surface-1);color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);
   cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease);}
 /* 日期 / 时间锚点：三档高度（默认 lg=32）。base 已含 lg 高度作兜底，下面三档按 size 覆盖。 */

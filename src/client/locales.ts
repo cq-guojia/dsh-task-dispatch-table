@@ -160,7 +160,7 @@ export type LocaleKey =
   // —— 实例状态通用短名（status-text.ts 单源；zh 统一两字：排队/派发/运行/成功/失败/跳过/未知）——
   | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
   // —— 执行记录行（用户 2026-10-02 示意改版）：时长列 / 派发·结束时刻 / 时长句式 ——
-  | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt' | 'colPlanned' | 'colActualStart' | 'colView' | 'colReason'
+  | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt' | 'colPlanned' | 'colActualStart' | 'colView' | 'colNote' | 'filterRunning'
   // —— 时间范围控件（ui/TimeRange，全站复用）：预设档 + 清除 ——
   | 'trAll' | 'trCustom' | 'trToday' | 'trYesterday' | 'trThisWeek' | 'trLastWeek' | 'trThisMonth' | 'trLastMonth'
   | 'durSec' | 'durMinSec' | 'durHourMin' | 'durDayHour'
@@ -713,7 +713,9 @@ export const zh: Record<LocaleKey, string> = {
   colPlanned: '计划执行',
   colActualStart: '实际开始',
   colView: '查看',
-  colReason: '原因',
+  colNote: '备注',
+  // 过滤档「运行中」：下拉**不必**守表格的两字规矩（用户 2026-10-02：两字只为表格对齐好看）。
+  filterRunning: '运行中',
   trAll: '全部',
   trCustom: '自定义',
   trToday: '今天',
@@ -1275,7 +1277,8 @@ export const en: Record<LocaleKey, string> = {
   colPlanned: 'Scheduled',
   colActualStart: 'Started',
   colView: 'View',
-  colReason: 'Reason',
+  colNote: 'Note',
+  filterRunning: 'Running',
   trAll: 'All',
   trCustom: 'Custom',
   trToday: 'Today',

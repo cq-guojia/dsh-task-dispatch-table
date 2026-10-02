@@ -103,7 +103,7 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
         onChange: (next: string) => { merge({ [which]: join(next, time) } as Partial<TimeRangeValue>) },
         placeholder: which === 'from' ? labels.from : labels.to,
         ariaLabel: which === 'from' ? labels.from : labels.to,
-        labels: calendarLabels, size, disabled: props.disabled, width: 118,
+        labels: calendarLabels, size, disabled: props.disabled, width: 124,
       }),
       withTime
         ? h(TimeField, {

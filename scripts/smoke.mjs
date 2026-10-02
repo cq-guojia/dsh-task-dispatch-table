@@ -1749,17 +1749,33 @@ console.log('\n[14] runtime-index')
     const tr = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'time-range.ts'), 'utf8')
     const fmt = readFileSync(join(process.cwd(), 'src', 'client', 'format.ts'), 'utf8')
     const uidx = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'index.ts'), 'utf8')
+    const cc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
     const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     check('三面板统一固定高度：panelBoxStyle 覆盖三个 tab（基础信息也纳入定高盒）',
       (tl.match(/panelBoxStyle/g) ?? []).length >= 4
       && (tl.match(/panelScrollFillStyle/g) ?? []).length >= 4
       && !tl.includes('PANEL_MAX_H'))
-    check('执行记录表格 7 列（状态 / 计划 / 实际开始 / 时长 / 产出 / Token / 会话）+ 官方状态图标 + 斑马纹 + 查看小按钮',
+    check('执行记录表格 8 列（含新增「备注」弹性列）+ 官方状态图标 + 斑马纹 + 查看小按钮',
       tl.includes("t('colPlanned')") && tl.includes("t('colActualStart')") && tl.includes("t('colSession')")
-      && tl.includes("t('colTokens')") && tl.includes("t('colView')")
+      && tl.includes("t('colTokens')") && tl.includes("t('colView')") && tl.includes("t('colNote')")
       && tl.includes('FileTypeIcon') && tl.includes('IconCheckCircleFillRegular') && tl.includes('IconCloseCircleFillRegular')
       && tl.includes('dsh-tdt-rec-alt') && tl.includes('StatusIcon')
+      && tl.includes('colSpan: 8') && !tl.includes('colSpan: 7')
       && !tl.includes('chipStyleOf') && !tl.includes('IconNewChatOutlineRegular'))
+    check('备注列是唯一弹性列（其余 7 列定长）+ 除产出物 / 备注外内容居中',
+      tl.includes('miniCellCenterStyle') && tl.includes('maxWidth: 0')
+      && (tl.match(/width: '\d+px'/g) ?? []).length >= 7)
+    // 只锁定表头那一块（弹窗等处用 surface-base 是合理的，不在本断言范围）。
+    const headBlock = /const recHeadStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? ''
+    check('表头：标题居中 + 底色走 --tdt-plate（不再用纯白 / 纯黑的 surface-base）',
+      headBlock.includes("textAlign: 'center'") && headBlock.includes("background: 'var(--tdt-plate)'")
+      && !headBlock.includes('surface-base'))
+    check('状态过滤下拉顺序 全部 / 成功 / 失败 / 运行中（下拉不必守两字）',
+      tl.includes("value: 'succeeded'") && tl.includes("value: 'failed'") && tl.includes("value: 'running'")
+      && tl.includes("t('filterRunning')"))
+    check('日期 / 时间锚点边框与下拉一致（0.5px + radius-md，同排并放是一套）',
+      cc.includes('border:0.5px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md)'))
+    check('日志条数选择器居右（marginLeft:auto）', tl.includes("marginLeft: 'auto'"))
     check('时间范围控件：半开区间上界（次日 00:00 / 下一分钟 :00），不再用 .999 补丁',
       tr.includes('toParsed.d + 1') && tr.includes('toParsed.mm + 1') && !tr.includes('23:59:59.999')
       && uidx.includes('TimeRange') && uidx.includes('rangeToQuery'))

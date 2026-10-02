@@ -645,7 +645,8 @@ window.__ModuleLoader__.load({
 			colPlanned: "计划执行",
 			colActualStart: "实际开始",
 			colView: "查看",
-			colReason: "原因",
+			colNote: "备注",
+			filterRunning: "运行中",
 			trAll: "全部",
 			trCustom: "自定义",
 			trToday: "今天",
@@ -1193,7 +1194,8 @@ window.__ModuleLoader__.load({
 			colPlanned: "Scheduled",
 			colActualStart: "Started",
 			colView: "View",
-			colReason: "Reason",
+			colNote: "Note",
+			filterRunning: "Running",
 			trAll: "All",
 			trCustom: "Custom",
 			trToday: "Today",
@@ -1633,8 +1635,10 @@ body[data-ds-dark-theme]{
 		const DATETIME_CSS = `
 /* ── 日期 / 时间 P4 ───────────────────────────────────────────────────── */
 .dsh-tdt-dtf-wrap{display:inline-flex;position:relative;min-width:0;}
+/* ⚠️ 边框粗细 / 圆角必须与下拉锚点（dsh-tdt-ed-field 的 fieldButtonStyle）完全一致
+   （用户 2026-10-02 点名：同排的日期框与下拉框看着不是一套）⇒ 这里也是 0.5px + radius-md。 */
 .dsh-tdt-dtf{display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;height:var(--tdt-control-h-lg);
-  min-width:0;max-width:100%;padding:0 8px;border:1px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
+  min-width:0;max-width:100%;padding:0 8px;border:0.5px solid var(--tdt-border-heavy);border-radius:var(--tdt-radius-md);
   background:var(--tdt-surface-1);color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);
   cursor:pointer;transition:background-color var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease);}
 /* 日期 / 时间锚点：三档高度（默认 lg=32）。base 已含 lg 高度作兜底，下面三档按 size 覆盖。 */
@@ -2596,7 +2600,7 @@ body[data-ds-dark-theme]{
 					labels: calendarLabels,
 					size,
 					disabled: props.disabled,
-					width: 118
+					width: 124
 				}), withTime ? (0, react.createElement)(TimeField, {
 					value: time,
 					onChange: (next) => {
@@ -41201,7 +41205,7 @@ body[data-ds-dark-theme]{
 			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
 			`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
 			".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
-			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-surface-1); }",
+			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-plate); }",
 			"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
 			".dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }",
 			".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
@@ -41753,6 +41757,11 @@ body[data-ds-dark-theme]{
 			whiteSpace: "normal",
 			wordBreak: "break-word"
 		};
+		/** 居中格（用户 2026-10-02：除**产出物 / 备注**两列外，各列内容一律居中）。 */
+		const miniCellCenterStyle = {
+			...miniCellStyle,
+			textAlign: "center"
+		};
 		/** 日志 / 事件文本框：跟随宿主主题变量 + 等宽字体（用户 2026-10-01：颜色跟着环境风格走）。 */
 		const logBoxStyle = {
 			fontFamily: monoFont$1,
@@ -41854,9 +41863,10 @@ body[data-ds-dark-theme]{
 		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 		const recHeadStyle = {
 			...miniCellStyle,
+			textAlign: "center",
 			fontWeight: 600,
 			color: "var(--tdt-fg-2)",
-			background: "var(--tdt-surface-base, #fff)",
+			background: "var(--tdt-plate)",
 			borderBottom: `1px solid var(--tdt-border-faint)`
 		};
 		/**
@@ -42031,17 +42041,24 @@ body[data-ds-dark-theme]{
 			} }, row.promptHead)));
 			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
-				options: [{
-					value: "all",
-					label: tt("filterAll")
-				}, ...[
-					"running",
-					"failed",
-					"succeeded"
-				].map((bucketId) => ({
-					value: bucketId,
-					label: statusTextOf(bucketId, t)
-				}))],
+				options: [
+					{
+						value: "all",
+						label: tt("filterAll")
+					},
+					{
+						value: "succeeded",
+						label: statusTextOf("succeeded", t)
+					},
+					{
+						value: "failed",
+						label: statusTextOf("failed", t)
+					},
+					{
+						value: "running",
+						label: t("filterRunning")
+					}
+				],
 				onChange: (next) => {
 					setRecStatus(next);
 				},
@@ -42066,23 +42083,26 @@ body[data-ds-dark-theme]{
 				tableLayout: "fixed"
 			} }, (0, react.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react.createElement)("tr", null, (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "78px"
+				width: "76px"
 			} }, t("colStatus")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "112px"
+				width: "116px"
 			} }, t("colPlanned")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
 				width: "84px"
 			} }, t("colActualStart")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "70px"
-			} }, t("colDuration")), (0, react.createElement)("th", { style: recHeadStyle }, t("colOutputs")), (0, react.createElement)("th", { style: {
+				width: "76px"
+			} }, t("colDuration")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
-				width: "74px"
-			} }, t("colTokens")), (0, react.createElement)("th", { style: {
+				width: "96px"
+			} }, t("colOutputs")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
 				width: "72px"
-			} }, t("colSession")))), (0, react.createElement)("tbody", null, records.flatMap((instance, index) => {
+			} }, t("colTokens")), (0, react.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "68px"
+			} }, t("colSession")), (0, react.createElement)("th", { style: recHeadStyle }, t("colNote")))), (0, react.createElement)("tbody", null, records.flatMap((instance, index) => {
 				const open = openInstance === instance.id;
 				const outputs = outputsOf(instance.outputs);
 				const sid = instance.session_id;
@@ -42101,11 +42121,12 @@ body[data-ds-dark-theme]{
 					onClick: () => {
 						setOpenInstance(open ? null : instance.id);
 					}
-				}, (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { style: {
+				}, (0, react.createElement)("td", { style: miniCellCenterStyle }, (0, react.createElement)("span", { style: {
 					display: "inline-flex",
 					alignItems: "center",
+					justifyContent: "center",
 					gap: "6px"
-				} }, (0, react.createElement)(StatusIcon, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react.createElement)("td", { style: miniCellStyle }, (0, react.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react.createElement)("td", { style: miniCellStyle }, formatDurationHms(durMs)), (0, react.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react.createElement)("button", {
+				} }, (0, react.createElement)(StatusIcon, { status: instance.status }), (0, react.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react.createElement)("td", { style: miniCellCenterStyle }, (0, react.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react.createElement)("td", { style: miniCellCenterStyle }, (0, react.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react.createElement)("button", {
 					key: output,
 					type: "button",
 					title: output,
@@ -42133,15 +42154,27 @@ body[data-ds-dark-theme]{
 						event.stopPropagation();
 						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs);
 					}
-				}, "…") : null)), (0, react.createElement)("td", { style: miniCellStyle }, instance.token_in === null && instance.token_out === null ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react.createElement)("span", { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react.createElement)("td", { style: miniCellStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
+				}, "…") : null)), (0, react.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react.createElement)("span", { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
 					variant: "outline",
 					size: "sm",
 					onClick: (event) => {
 						event.stopPropagation();
 						openSession(sid, row.title, outputs);
 					}
-				}, t("colView")) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
-					colSpan: 7,
+				}, t("colView")) : null), (0, react.createElement)("td", { style: {
+					...miniCellStyle,
+					maxWidth: 0
+				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react.createElement)("span", {
+					title: instance.note,
+					style: {
+						display: "block",
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap",
+						color: "var(--tdt-danger)"
+					}
+				}, instance.note))), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
+					colSpan: 8,
 					style: miniCellWrapStyle
 				}, (0, react.createElement)("div", { style: {
 					display: "flex",
@@ -42150,10 +42183,7 @@ body[data-ds-dark-theme]{
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-2)",
 					marginBottom: "6px"
-				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, (instance.status === "failed" || instance.status === "skipped") && instance.note !== null && instance.note !== void 0 && instance.note !== "" ? (0, react.createElement)("span", { style: {
-					color: "var(--tdt-danger)",
-					fontWeight: 600
-				} }, `${t("colReason")}：${instance.note}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$2, {
+				} }, (0, react.createElement)("span", null, `${t("colAttempt")}：${instance.attempt}`), (0, react.createElement)("span", null, `${t("colSlot")}：${formatStamp(instance.scheduled_at)}`), instance.dispatched_at === null ? null : (0, react.createElement)("span", null, `${t("colDispatchedAt")}：${formatStamp(instance.dispatched_at)}`), instance.finished_at === null ? null : (0, react.createElement)("span", null, `${t("colFinishedAt")}：${formatStamp(instance.finished_at)}`), (0, react.createElement)("span", null, `${t("colDuration")}：${formatDuration(durMs, tt)}`), instance.token_in !== null || instance.token_out !== null || instance.token_in_cache !== null ? (0, react.createElement)("span", null, `${t("colTokens")}：${tokensDetailOf(instance)}`) : null, sid !== null ? onOpenSession !== void 0 ? (0, react.createElement)(Button$2, {
 					variant: "ghost",
 					size: "sm",
 					className: "dsh-tdt-btn--link",
@@ -42213,6 +42243,7 @@ body[data-ds-dark-theme]{
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "4px",
+				marginLeft: "auto",
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-fg-3)"
 			} }, t("cardLogLimit"), (0, react.createElement)(SelectField, {
