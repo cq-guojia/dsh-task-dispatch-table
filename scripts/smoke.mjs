@@ -19,7 +19,7 @@ import {
 import { TaskStore, parseInstanceSnapshot } from '../dist/store.js'
 import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
 import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
-import { buildMessage } from '../dist/dispatch.js'
+import { attachmentFileBlocks, buildMessage } from '../dist/dispatch.js'
 import { createRuntimeIndex } from '../dist/runtime-index.js'
 import { groupOf, pinMsFor, sortKeyOf, sortRows } from '../dist/task-sort.js'
 
@@ -1184,6 +1184,47 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       buildMessage({ ...snapNoDeps, permission: 'workspace' }, '/ws/down', '2026-09-26', false, [
         { name: 'nv.html', kind: 'upload', ref: 'attachments/nv.html', path: '/data/nv.html' },
       ]).content[0].text.includes('不受本条权限指令里「仅在目标工作区内」的限制'))
+  }
+  // 任务文件上下文（2026-10-03 拍板「附加文件走 A」）：随附文件除文本路径外，另发**官方 file 内容块**
+  // ⇒ 官方界面渲染成附件卡、fork 续聊带得走、当时那份内容被钉住。**任何一步失败都不阻塞派发**。
+  {
+    const attRoot = mkdtempSync(join(tmpdir(), 'dsh-tdt-att-'))
+    const fileA = join(attRoot, 'a.md')
+    writeFileSync(fileA, 'hello')
+    mkdirSync(join(attRoot, 'sub'))
+    const warnLogs = []
+    const logger = { warn: (line) => { warnLogs.push(String(line)) }, info: () => {}, error: () => {} }
+    const store = {
+      saveFile: async ({ data, name }) => ({ attachmentId: `sha256:${data.length}`, name: name ?? '', bytes: data.length }),
+    }
+    const one = [{ name: 'a.md', kind: 'upload', ref: 'attachments/a.md', path: fileA }]
+    // ① 宿主未暴露 ctx.attachments ⇒ 降级空数组 + 告警，不抛（旧行为不变）
+    const none = await attachmentFileBlocks({}, one, logger, 'i-1')
+    check('file 块：宿主无附件服务 ⇒ 降级为空（只给路径），不抛',
+      none.length === 0 && warnLogs.some(line => line.includes('attachment-store-unavailable')))
+    // ② 正常路径：拿到官方附件引用（引用里**没有路径**，只有 id / 名字 / 字节数）
+    const ok = await attachmentFileBlocks({ attachments: store }, one, logger, 'i-1')
+    check('file 块：正常注册 ⇒ { type:"file", attachment:{ attachmentId, name, bytes } }',
+      ok.length === 1 && ok[0].type === 'file' && ok[0].attachment.bytes === 5
+      && ok[0].attachment.name === 'a.md' && typeof ok[0].attachment.attachmentId === 'string')
+    // ③ 目录**不是**附件（官方附件 = 一段字节）⇒ 跳过；path 解析不出（null）⇒ 跳过
+    const skipped = await attachmentFileBlocks({ attachments: store }, [
+      { name: 'sub', kind: 'link', ref: 'sub/', path: join(attRoot, 'sub') },
+      { name: 'gone', kind: 'link', ref: 'gone.md', path: null },
+      { name: 'missing', kind: 'link', ref: 'no.md', path: join(attRoot, 'no.md') },
+    ], logger, 'i-1')
+    check('file 块：目录 / 路径为空 / 文件已不在盘 ⇒ 跳过，不进附件库', skipped.length === 0)
+    // ④ saveFile 抛错 ⇒ 该附件跳过（其余不受影响），派发照常
+    const boom = await attachmentFileBlocks({ attachments: { saveFile: async () => { throw new Error('backend down') } } }, one, logger, 'i-1')
+    check('file 块：saveFile 抛错 ⇒ 只跳过该附件并留痕，不阻塞派发',
+      boom.length === 0 && warnLogs.some(line => line.includes('attachment-block-failed')))
+    // ⑤ 消息结构：文本块在前、file 块在后（官方按 content 顺序渲染 ⇒ 气泡正文 + 下方附件卡）
+    const msgBlocks = buildMessage(snapNoDeps, '/ws/down', '2026-09-26', false, one, ok)
+    check('file 块：随派发消息发出，text 块在前、file 块在后',
+      msgBlocks.content.length === 1 + ok.length && msgBlocks.content[0].type === 'text'
+      && msgBlocks.content.slice(1).every(block => block.type === 'file'))
+    check('file 块：不带附件时消息仍是单文本块（旧行为不变）',
+      buildMessage(snapNoDeps, '/ws/down', '2026-09-26').content.length === 1)
   }
   // 决策 49：多 Agent 指令段只在 teamMode=true 时注入；缺省（老调用）消息不含团队段。
   const msgTeam = buildMessage({ ...snapWithDeps, agentTeam: true }, '/ws/down', '2026-09-29', true)

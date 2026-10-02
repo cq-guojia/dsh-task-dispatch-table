@@ -33,6 +33,9 @@ import { ensureToastStyle, FloatingToast } from './toast-css'
 import { Button, IconButton, Segmented, ensureUiBase } from './ui'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
+// 任务文件上下文·接收区（上游产出，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
+import { resolvedDepsOf } from '../deps.js'
+import type { UpstreamInputView } from './upstream-panel'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
 import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { ConfigPanel } from './config-panel'
@@ -798,7 +801,15 @@ function TaskPage(props: {
     return () => { alive = false }
   }, [t])
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
-  const [viewing, setViewing] = useState<{ sessionId: string; heading: string; view: SessionViewTarget; didUnarchive?: boolean; outputs?: string[] } | null>(null)
+  const [viewing, setViewing] = useState<{
+    sessionId: string
+    heading: string
+    view: SessionViewTarget
+    didUnarchive?: boolean
+    outputs?: string[]
+    /** 上游输入（接收区，2026-10-03）：实例快照 `resolvedDeps` + 任务名反查。 */
+    upstream?: UpstreamInputView[]
+  } | null>(null)
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
   const [viewErr, setViewErr] = useState<string | null>(null)
   // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
@@ -889,7 +900,16 @@ function TaskPage(props: {
     }).catch(() => { /* 回归档失败不阻断交互；该会话会留在列表里，用户可自行归档 */ })
   }
   /** 打开只读会话弹窗：retain 物化 scope 直开；失败才兜底反归档重试；不再静默无反应。 */
-  const openView = async (sessionId: string, heading: string, outputs?: string[]): Promise<void> => {
+  /**
+   * 上游依赖 → 接收区视图模型（2026-10-03）：任务名按 id 从任务列表反查，
+   * 查不到（任务已删）⇒ 显示**短 id**，绝不留空白、绝不编造名字。
+   */
+  const upstreamOf = (snapshot: string | null): UpstreamInputView[] => resolvedDepsOf(snapshot).map(dep => ({
+    ...dep,
+    taskTitle: overview.rows.find(row => row.id === dep.task)?.title || dep.task.slice(0, 8),
+  }))
+
+  const openView = async (sessionId: string, heading: string, outputs?: string[], snapshot?: string | null): Promise<void> => {
     if (viewSession === null) {
       setViewErr('查看会话不可用：sessions / uiConversation 注入未就位（见控制台）')
       return
@@ -915,7 +935,7 @@ function TaskPage(props: {
       setViewErr('会话无法打开：retain / 物化 scope 失败（原因见控制台 [task-dispatch:session-view] 日志）')
       return
     }
-    setViewing({ sessionId, heading, view: target, didUnarchive, outputs })
+    setViewing({ sessionId, heading, view: target, didUnarchive, outputs, upstream: upstreamOf(snapshot ?? null) })
   }
   const instances = (data?.instances ?? [])
     .filter(row => statusFilter === 'all' || row.status === statusFilter)
@@ -1033,7 +1053,7 @@ function TaskPage(props: {
             onOpenSession: viewSession !== null
               // 透传实例 outputs（task_instances.outputs 真值）：会话弹窗「交付文件卡」以它为权威源，
               // 不传则快照里没有 deliverables 的任务（老任务 / 宿主未重放）卡片会缺失。
-              ? (sessionId: string, heading: string, outputs?: string[]) => { void openView(sessionId, heading, outputs) }
+              ? (sessionId: string, heading: string, outputs?: string[], snapshot?: string | null) => { void openView(sessionId, heading, outputs, snapshot) }
               : undefined,
             // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
             // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。
@@ -1326,6 +1346,9 @@ function TaskPage(props: {
         workspaceFiles: workspaceFiles ?? undefined,
         // 弹窗内所有文件链接 → 页面级唯一预览面（预览与弹窗互不干扰）。
         onOpenFile: canPreview ? (path: string) => { openFile(viewing.sessionId, path) } : undefined,
+        // 接收区（2026-10-03）：上游依赖清单；「查看该会话」→ 直接换成本弹窗打开上游那一次。
+        upstream: viewing.upstream ?? [],
+        onOpenUpstreamSession: (sid: string, title: string) => { void openView(sid, title) },
         onClose: () => {
           const closed = viewing.sessionId
           const needArchive = viewing.didUnarchive === true

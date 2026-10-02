@@ -930,8 +930,11 @@ function TaskExpandPanel(props: {
   onDelete: (id: string) => Promise<string | null>
   /** 产出文件点开（U11 预览面单一入口；undefined = 预览面不可用 ⇒ chips 降级不可点）。 */
   onOpenFile?: (sessionId: string, path: string) => void
-  /** 会话弹窗（undefined = 会话面不可用 ⇒ 不出链接）。 */
-  onOpenSession?: (sessionId: string, heading: string, outputs?: string[]) => void
+  /**
+   * 会话弹窗（undefined = 会话面不可用 ⇒ 不出链接）。
+   * 末参 = 实例快照 JSON（决策 41）——弹窗「接收」区据此取上游依赖（决策 43），不传则该区不渲染。
+   */
+  onOpenSession?: (sessionId: string, heading: string, outputs?: string[], snapshot?: string | null) => void
 }) {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
@@ -1216,7 +1219,7 @@ function TaskExpandPanel(props: {
                             style: { ...outputIconBtnStyle, width: 'auto', padding: '0 6px', fontSize: 'var(--tdt-font-md)' },
                             onClick: (event: { stopPropagation(): void }) => {
                               event.stopPropagation()
-                              if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid, row.title, outputs)
+                              if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid, row.title, outputs, instance.snapshot ?? null)
                             },
                           }, '…')
                           : null,
@@ -1227,7 +1230,7 @@ function TaskExpandPanel(props: {
                     canOpenSession && openSession !== undefined && sid !== null
                       ? h(Button, {
                         variant: 'outline', size: 'sm',
-                        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title, outputs) },
+                        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title, outputs, instance.snapshot ?? null) },
                       }, t('colView'))
                       : null,
                   ),
@@ -1474,8 +1477,8 @@ export function TaskListView(props: {
   onDelete: (id: string) => Promise<string | null>
   /** 产出文件点开（U11 预览面；undefined = 不可用 ⇒ 产出降级纯文本）。 */
   onOpenFile?: (sessionId: string, path: string) => void
-  /** 会话弹窗（undefined = 不可用 ⇒ 不出链接）。 */
-  onOpenSession?: (sessionId: string, heading: string, outputs?: string[]) => void
+  /** 会话弹窗（undefined = 不可用 ⇒ 不出链接）。末参 = 实例快照 JSON（弹窗「接收」区用）。 */
+  onOpenSession?: (sessionId: string, heading: string, outputs?: string[], snapshot?: string | null) => void
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
 }): ReturnType<typeof h> {

@@ -315,6 +315,36 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
+/* ── 任务文件上下文·接收区（上游产出，2026-10-03） ──
+   官方没有「上游任务产出」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
+   输入文件可能十几个 ⇒ 一行一个小标签，不占产出卡那种大卡的位置。
+   容器挂在标题条与会话流之间（**不在任何轮次折叠里**）⇒ 与会话区隔开一条分隔线。 */
+.dsh-tdt-sv-ctx{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:10px 24px 12px;}
+/* 用户消息里的随附文件卡（官方 MessageItem attachmentRow / fileCard；2026-10-03）：
+   气泡**下方**一行，小卡 = 图标 + 文件名 + 大小。引用里没有路径 ⇒ 不可点开，也不伪装成可点。 */
+.dsh-tdt-sv-attrow{flex-wrap:wrap;gap:6px;min-width:0;justify-content:flex-end;display:flex;}
+.dsh-tdt-sv-attcard{box-sizing:border-box;border:.5px solid var(--tdt-border-faint,#0000000a);border-radius:var(--tdt-radius-md);background:var(--tdt-plate,rgba(128,128,128,.08));max-width:100%;height:44px;align-items:center;gap:8px;padding:6px 10px;display:flex;}
+.dsh-tdt-sv-attIcon{width:16px;height:16px;color:var(--tdt-link,#3b5bdb);flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-attBody{flex-direction:column;gap:1px;min-width:0;display:flex;}
+.dsh-tdt-sv-attName{color:var(--tdt-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);overflow:hidden;}
+.dsh-tdt-sv-attMeta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-up{flex-direction:column;gap:6px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-head{align-items:center;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-up-groups{flex-direction:column;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-group{flex-direction:column;gap:4px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-task{align-items:center;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-name{color:var(--tdt-fg);font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;flex:none;max-width:60%;}
+.dsh-tdt-sv-up-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
+.dsh-tdt-sv-up-link{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-up-link:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
+.dsh-tdt-sv-up-files{flex-wrap:wrap;gap:2px 6px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
+button.dsh-tdt-sv-up-file{cursor:pointer;}
+button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
+.dsh-tdt-sv-up-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-up-fileName{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
+.dsh-tdt-sv-up-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
 `
 
 /**

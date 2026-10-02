@@ -4,6 +4,8 @@ import { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
+import type { ResolvedDependency } from './deps.js'
+import { parseResolvedDeps } from './deps.js'
 
 /**
  * Agent 权限档位（决策 50）：`default` = 会话默认（沿用宿主新建会话的权限设置，不加约束）。
@@ -41,22 +43,11 @@ export interface TaskInstance {
   note?: string | null
 }
 
-/** 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。 */
-export interface ResolvedDependency {
-  /** 上游任务 id（depends_on.task 原值）。 */
-  task: string
-  semantics: 'same_period' | 'latest_success'
-  /** 判定通过那一刻命中的上游实例 id。 */
-  instanceId: string
-  /** 上游实例的计划时刻（ISO）。 */
-  scheduledAt: string
-  /** 上游实例的会话 id（无则 null）。 */
-  sessionId: string | null
-  /** 上游实例快照的工作区 path（产出相对路径的绝对化基准）；上游旧行无快照为 null。 */
-  workspacePath: string | null
-  /** 上游回执声明并校验过的产出（相对上游工作区；未声明为空数组）。 */
-  outputs: string[]
-}
+/**
+ * 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。
+ * 真源已上提到 `deps.ts`（零运行时依赖，客户端「接收」区共用同一份解析），此处只做转出。
+ */
+export type { ResolvedDependency } from './deps.js'
 
 /**
  * 派发快照（决策 41）：Loop A 落库时固化，Loop B（发动 / 重试 / 追问 / 回执裁决）**只读快照**，
@@ -114,32 +105,6 @@ function parseSnapshotAttachments(raw: unknown): SnapshotAttachment[] | undefine
       kind: a.kind,
       ref: a.ref,
       ...(typeof a.workspace === 'string' ? { workspace: a.workspace } : {}),
-    })
-  }
-  return out
-}
-
-/** 解析 resolvedDeps（决策 43）：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃。 */
-function parseResolvedDeps(raw: unknown): ResolvedDependency[] | undefined {
-  if (raw === undefined) return undefined
-  if (!Array.isArray(raw)) return undefined
-  const out: ResolvedDependency[] = []
-  for (const item of raw) {
-    if (typeof item !== 'object' || item === null) return undefined
-    const d = item as Partial<ResolvedDependency>
-    if (typeof d.task !== 'string' || typeof d.instanceId !== 'string' || typeof d.scheduledAt !== 'string'
-      || (d.semantics !== 'same_period' && d.semantics !== 'latest_success')
-      || (d.sessionId !== null && typeof d.sessionId !== 'string')
-      || (d.workspacePath !== null && typeof d.workspacePath !== 'string')
-      || !Array.isArray(d.outputs)) return undefined
-    out.push({
-      task: d.task,
-      semantics: d.semantics,
-      instanceId: d.instanceId,
-      scheduledAt: d.scheduledAt,
-      sessionId: d.sessionId ?? null,
-      workspacePath: d.workspacePath ?? null,
-      outputs: d.outputs.filter((x): x is string => typeof x === 'string'),
     })
   }
   return out

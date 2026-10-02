@@ -13,6 +13,24 @@ export function pad2(value: number | string): string {
 }
 
 /**
+ * 字节数 → 人话（`12 KB` / `3.4 MB`）。**单源**：官方附件卡的文件大小、以及任何要展示
+ * 体积的地方都走这里（此前无此需求，故没有第二份实现可收敛）。
+ * 0 与负数 ⇒ `—`（不显示「0 B」这种假精确）。
+ */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB', 'TB']
+  let value = bytes / 1024
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit++
+  }
+  return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`
+}
+
+/**
  * ISO → `YYYY-MM-DD HH:mm`（`seconds: true` 时补 `:ss`）。
  * 解析失败 ⇒ `fallback`（缺省返回**原串**，不编造时间；要占位符就显式传，如 `fallback: '—'`）。
  */

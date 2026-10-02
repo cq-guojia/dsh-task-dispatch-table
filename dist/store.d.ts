@@ -1,3 +1,4 @@
+import type { ResolvedDependency } from './deps.js';
 /**
  * Agent 权限档位（决策 50）：`default` = 会话默认（沿用宿主新建会话的权限设置，不加约束）。
  * ⚠️ 与 src/client/task-editor.tsx 的同名类型**两处各写一份**（client bundle 不引 host 模块），
@@ -28,22 +29,11 @@ export interface TaskInstance {
     /** 备注（非表列）：失败 / 跳过原因，由 task_events 最新原因事件推导（listInstancesByQuery 填充）。 */
     note?: string | null;
 }
-/** 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。 */
-export interface ResolvedDependency {
-    /** 上游任务 id（depends_on.task 原值）。 */
-    task: string;
-    semantics: 'same_period' | 'latest_success';
-    /** 判定通过那一刻命中的上游实例 id。 */
-    instanceId: string;
-    /** 上游实例的计划时刻（ISO）。 */
-    scheduledAt: string;
-    /** 上游实例的会话 id（无则 null）。 */
-    sessionId: string | null;
-    /** 上游实例快照的工作区 path（产出相对路径的绝对化基准）；上游旧行无快照为 null。 */
-    workspacePath: string | null;
-    /** 上游回执声明并校验过的产出（相对上游工作区；未声明为空数组）。 */
-    outputs: string[];
-}
+/**
+ * 一条已解析的上游依赖（决策 43）：Loop A 判定通过时固化，Loop B 只读不重判。
+ * 真源已上提到 `deps.ts`（零运行时依赖，客户端「接收」区共用同一份解析），此处只做转出。
+ */
+export type { ResolvedDependency } from './deps.js';
 /**
  * 派发快照（决策 41）：Loop A 落库时固化，Loop B（发动 / 重试 / 追问 / 回执裁决）**只读快照**，
  * 与任务设置彻底解耦——中途改任务定义对已落库实例零影响。

@@ -11,9 +11,10 @@
 //   TurnMaxTokensItem= 同行结构，StateDot(warning) + maxTokensTitle（警示色）+ 提示语。
 // 文案逐字抄官方词典（message.retry.* / message.turnError / message.maxTokens*，zh+en）。
 import { createElement as h, useEffect, useMemo, useState } from 'react'
-import { MarkdownText, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
+import { FileTypeIcon, MarkdownText, StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
 import { MD_LABELS } from '../md-labels'
+import { formatBytes } from '../format'
 import type { Translate } from '../locales'
 
 /** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。
@@ -32,13 +33,44 @@ export function AssistantMarkdown(props: {
   )
 }
 
-/** 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）。 */
-export function UserMessage(props: { text: string }): ReturnType<typeof h> {
+/** 用户消息里的官方附件（file 块）：`FileAttachmentRef` 只有 id / 名字 / 字节数，**没有路径**。 */
+export interface UserFileFace {
+  name: string
+  bytes: number
+}
+
+/**
+ * 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）
+ * + 气泡下方的 **attachmentRow / fileCard**（官方 MessageItem 的附件行，2026-10-03 接上）。
+ *
+ * 官方附件卡 = 图标 + 文件名 + 大小；**不可点开**——引用里没有路径，宿主也没给出
+ * 「按 attachmentId 打开」的公开面 ⇒ 如实降级为只读展示，不伪造打开行为。
+ */
+export function UserMessage(props: { text: string; files?: readonly UserFileFace[] }): ReturnType<typeof h> {
+  const { text, files } = props
+  const chips = files ?? []
   return h('div', { className: ocOr('MessageItem', 'userRow', '') },
     h('div', { className: ocOr('MessageItem', 'userStack', '') },
-      h('div', { className: ocOr('MessageItem', 'bubble', 'dsh-tdt-sv-user') },
-        h(MarkdownText, { text: props.text, labels: MD_LABELS }),
-      ),
+      text === ''
+        ? null
+        : h('div', { className: ocOr('MessageItem', 'bubble', 'dsh-tdt-sv-user') },
+            h(MarkdownText, { text, labels: MD_LABELS })),
+      chips.length === 0
+        ? null
+        : h('div', { className: ocOr('MessageItem', 'attachmentRow', 'dsh-tdt-sv-attrow') },
+            chips.map((file, index) => h('div', {
+              key: `${file.name}:${index}`,
+              className: ocOr('MessageItem', 'fileCard', 'dsh-tdt-sv-attcard'),
+              title: file.name,
+            },
+              h('span', { className: ocOr('MessageItem', 'fileIcon', 'dsh-tdt-sv-attIcon') },
+                h(FileTypeIcon, { path: file.name, size: 16 })),
+              h('span', { className: ocOr('MessageItem', 'fileContent', 'dsh-tdt-sv-attBody') },
+                h('span', { className: ocOr('MessageItem', 'fileName', 'dsh-tdt-sv-attName') }, file.name),
+                h('span', { className: ocOr('MessageItem', 'fileMeta', 'dsh-tdt-sv-attMeta') }, formatBytes(file.bytes)),
+              ),
+            )),
+          ),
     ),
   )
 }

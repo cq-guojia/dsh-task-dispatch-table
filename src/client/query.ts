@@ -22,6 +22,11 @@ export interface InstanceRow {
   finished_at: string | null
   /** 决策 32③：完成瞬间写回的产出清单 JSON 字符串（`["a.md","b/"]`），无产出为 null。 */
   outputs: string | null
+  /**
+   * 派发快照 JSON 字符串（决策 41）——服务端 `SELECT *` 已返回，此处只是**声明出来**。
+   * 会话弹窗「接收」区用它取 `resolvedDeps`（上游依赖，决策 43）；**只解析、不改**。
+   */
+  snapshot?: string | null
   token_in: number | null
   token_out: number | null
   token_in_cache: number | null

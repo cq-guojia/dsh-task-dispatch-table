@@ -1,4 +1,4 @@
-import type { HostContext, HostLogger, HostWorkspace, UserMessage } from './host.js';
+import type { HostContext, HostLogger, HostWorkspace, UserFileContent, UserMessage } from './host.js';
 import type { PluginConfig } from './config.js';
 import type { InstanceSnapshot, TaskStore } from './store.js';
 /**
@@ -46,18 +46,22 @@ export declare function resolveModelRoute(ctx: HostContext, logger: HostLogger, 
  * 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。
  * source.kind 用**生产者自有 kind**（0.1.7 v4 格式要求，`kind: 'plugin'` 已废弃被拒）。
  */
-export declare function userNotice(text: string, summary: string): UserMessage;
+export declare function userNotice(text: string, summary: string, files?: readonly UserFileContent[]): UserMessage;
 /**
  * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 +
  * 决策 49 团队段 + **随附文件段（决策 54）**）：短指令 prompt + 手册路径 + 上游依赖段 + **随附文件段** +
  * 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
  * prompt / manual / validStatuses / resolvedDeps / attachments 全部来自派发快照，与任务设置无关。
  *
- * ⚠️ 随附文件**只能给路径**（宿主 `UserMessage.content` 目前只声明 text 内容块）⇒ 这里把**绝对路径**
- * 逐条写清（「从哪一层开始」就是它），并显式声明「允许读取」，否则会与下面的权限指令（「仅工作区」）打架
- * ——upload 型附件落在**任务目录**（工作区之外），不开口子模型就等于看不见。
+ * 随附文件**两手都给**（2026-10-03 拍板）：
+ * ① **文本路径**——把**绝对路径**逐条写清（「从哪一层开始」就是它），并显式声明「允许读取」，否则
+ *    会与下面的权限指令（「仅工作区」）打架——upload 型附件落在**任务目录**（工作区之外），
+ *    不开口子模型就等于看不见；
+ * ② **官方 file 内容块**——把文件注册进宿主附件库（`ctx.attachments`），模型侧由宿主换成一句
+ *    「只读副本路径」（`projectFilesToText`），**不额外吃 token**；人的那一面则由官方渲染成
+ *    **附件卡**（图标 + 文件名 + 大小，可点开），且 fork 续聊带得走、当时那一份内容被钉住。
  */
-export declare function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string, teamMode?: boolean, attachments?: readonly DispatchAttachment[]): UserMessage;
+export declare function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string, teamMode?: boolean, attachments?: readonly DispatchAttachment[], fileBlocks?: readonly UserFileContent[]): UserMessage;
 /**
  * 派发消息里的随附文件条目（2026-09-30）：ref 已在 Loop B 解析成**绝对路径**。
  * `path === null` = 来源工作区解析不出 ⇒ 如实标注「工作区相对路径」，**绝不猜**。
@@ -69,6 +73,20 @@ export interface DispatchAttachment {
     ref: string;
     path: string | null;
 }
+/**
+ * 随附文件 → 官方 `file` 内容块（2026-10-03 拍板「附加文件走 A」）。
+ *
+ * 逐个把文件字节交给宿主附件服务 `ctx.attachments.saveFile`（内容寻址、不可变、
+ * **永不自动删除**），拿回持久引用后拼成 file 块随派发消息发出 ⇒ 官方界面渲染成
+ * **附件卡**（图标 + 文件名 + 大小，可点开）、fork 续聊带得走、当时那份内容被钉住。
+ *
+ * **降级不阻塞**：宿主没挂 `dsh-attachment-local`、文件不在盘上、是目录、超过上限、
+ * 或 saveFile 抛错 ⇒ 该附件**只留文本路径**（2026-10-03 前的行为），派发照常。
+ *
+ * ⚠️ 目录**不能**作为附件：官方附件 = 一段字节，`FileAttachmentRef` 里没有路径
+ * （`dsh-attachment` `lib/types/types.d.ts:34-41`）。
+ */
+export declare function attachmentFileBlocks(ctx: HostContext, attachments: readonly DispatchAttachment[], logger: HostLogger, instanceId: string): Promise<UserFileContent[]>;
 export interface DispatchInput {
     ctx: HostContext;
     /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
@@ -84,7 +102,7 @@ export interface DispatchInput {
     workspace: HostWorkspace;
     /**
      * 随附文件（2026-09-30）：ref 已由 Loop B 解析成**绝对路径**，随派发消息注入。
-     * （只能给路径：宿主 `UserMessage.content` 目前只声明 text 内容块，见 buildMessage 注释。）
+     * （2026-10-03 起两手都给：文本路径 + 官方 file 内容块，见 {@link attachmentFileBlocks}。）
      */
     attachments: readonly DispatchAttachment[];
     /** 插件配置（决策 22 漏斗第②层取 defaultProvider/defaultModel，发动时现算）。 */

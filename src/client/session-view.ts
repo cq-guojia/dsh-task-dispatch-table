@@ -42,6 +42,8 @@ import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
 import type { WorkspaceFilesFace } from './file-preview'
 import { interpolateTranslate, type Translate } from './locales'
+// 任务文件上下文·接收区（上游产出，2026-10-03）。
+import { UpstreamInputsPanel, type UpstreamInputView } from './upstream-panel'
 // 带超时的 fetch（共用叶子模块）：本文件原先那条请求是**全仓唯一没有超时**的。
 import { fetchWithTimeout } from './http'
 
@@ -110,10 +112,15 @@ export interface UiConversationFace {
 
 // ── ConversationNode 联合（官方 records.d.ts:249 的渲染字段复述）──
 
-/** 内容块（官方 ContentBlock 是 merge-extensible map，这里只复述 text 消费面）。 */
+/**
+ * 内容块（官方 ContentBlock 是 merge-extensible map）。
+ * `attachment` = 官方 `FileAttachmentRef`（2026-10-03 核实：只有 attachmentId / name / bytes，
+ * **没有路径**）⇒ 附件在 UI 上只能显示「图标 + 名字 + 大小」，点开走不了工作区路径。
+ */
 interface ContentBlockLike {
   type: string
   text?: string
+  attachment?: { attachmentId?: string; name?: string; bytes?: number }
 }
 
 /** assistant 内容块（官方 AssistantBlock，records.d.ts:26-43）。 */
@@ -573,6 +580,26 @@ function contentText(blocks: readonly ContentBlockLike[] | undefined): string {
   return parts.join('\n')
 }
 
+/**
+ * 提取内容块里的**官方 file 块**（2026-10-03）：随附文件以官方附件形式发进会话后，
+ * 会话快照的 user 节点 content 里就是它 ⇒ 弹窗里照样渲染成附件卡（与官方页一致）。
+ * 拿不到（宿主投影未透传）⇒ 空数组：附件卡不渲染，**绝不造一个假卡**。
+ */
+function contentFiles(blocks: readonly ContentBlockLike[] | undefined): readonly { name: string; bytes: number }[] {
+  if (blocks === undefined) return []
+  const out: { name: string; bytes: number }[] = []
+  for (const block of blocks) {
+    if (block === null || typeof block !== 'object' || block.type !== 'file') continue
+    const attachment = block.attachment
+    if (typeof attachment !== 'object' || attachment === null) continue
+    out.push({
+      name: typeof attachment.name === 'string' && attachment.name !== '' ? attachment.name : 'file',
+      bytes: typeof attachment.bytes === 'number' ? attachment.bytes : 0,
+    })
+  }
+  return out
+}
+
 /** legacy assistant 节点的纯文本（复制按钮用）。 */
 function assistantText(node: ConversationNodeLike): string {
   return (node.blocks ?? []).map(block => block.kind === 'text' ? block.text : '').join('')
@@ -737,9 +764,12 @@ function renderKeyedNode(
     }
     case 'user':
     case 'steering': {
-      const text = contentText(dataOf(node).content as readonly ContentBlockLike[] | undefined)
-      if (text === '') return null
-      return h(UserMessage, { text })
+      const blocks = dataOf(node).content as readonly ContentBlockLike[] | undefined
+      const text = contentText(blocks)
+      // 随附文件（官方 file 块）：没有文本但有附件时**照样渲染**（不能整条消失）。
+      const files = contentFiles(blocks)
+      if (text === '' && files.length === 0) return null
+      return h(UserMessage, { text, files })
     }
     case 'turn-error':
       return h(TurnErrorItemMirror, { node: dataOf(node) as TurnErrorFace, t })
@@ -819,8 +849,9 @@ function renderLegacyNode(node: ConversationNodeLike, t: Translate, fileOpen?: F
     case 'user':
     case 'steering': {
       const text = contentText(node.content)
-      if (text === '') return null
-      return h(UserMessage, { key: node.seq, text })
+      const files = contentFiles(node.content)
+      if (text === '' && files.length === 0) return null
+      return h(UserMessage, { key: node.seq, text, files })
     }
     case 'assistant': {
       const parts = assistantBlocks(node.blocks, t, fileOpen?.mentions)
@@ -1108,8 +1139,18 @@ export function SessionViewModal(props: {
    * 未传 = 预览能力未就位 ⇒ 弹窗内链接降级纯文本。
    */
   onOpenFile?: (path: string) => void
+  /**
+   * 接收区（2026-10-03）：上游任务这次给了哪些文件（实例快照 `resolvedDeps`）。
+   * 空数组 = 无上游依赖 ⇒ 整块不渲染。
+   */
+  upstream?: readonly UpstreamInputView[]
+  /** 打开上游那一次的会话（弹窗直接换成它）。 */
+  onOpenUpstreamSession?: (sessionId: string, title: string) => void
 }): ReturnType<typeof h> {
-  const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs } = props
+  const {
+    t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles,
+    onOpenFile, outputs, upstream, onOpenUpstreamSession,
+  } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
   const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
@@ -1303,6 +1344,19 @@ export function SessionViewModal(props: {
             }),
           ),
         ),
+        // 任务文件上下文·接收区（2026-10-03）：**在会话流之外**、标题条之下 ⇒ 不在任何轮次折叠里，
+        // 点与产出卡一眼分得开（用户 2026-10-02「不要放在折叠的那一段话里」）。
+        // 只在有上游依赖时渲染；随附文件走官方附件卡（在气泡里）、产出卡在会话末尾，都不在此重复。
+        upstream !== undefined && upstream.length > 0
+          ? h('div', { className: 'dsh-tdt-sv-ctx' },
+              h(UpstreamInputsPanel, {
+                items: upstream,
+                onOpenFile,
+                onOpenSession: onOpenUpstreamSession,
+                t,
+              }),
+            )
+          : null,
         // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
         // U11：预览面已上提到页面级 dock（弹窗不再自带分栏），此处只留会话区本身。
         h(ChatViewFrame, { children: body }),

@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { parseResolvedDeps } from './deps.js';
 export const PERMISSION_MODES = ['default', 'readOnly', 'workspace', 'full'];
 export const TERMINAL_STATUSES = ['succeeded', 'failed', 'skipped'];
 const NON_TERMINAL_STATUSES = ['pending', 'dispatched', 'running', 'unknown'];
@@ -25,35 +26,6 @@ function parseSnapshotAttachments(raw) {
             kind: a.kind,
             ref: a.ref,
             ...(typeof a.workspace === 'string' ? { workspace: a.workspace } : {}),
-        });
-    }
-    return out;
-}
-/** 解析 resolvedDeps（决策 43）：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃。 */
-function parseResolvedDeps(raw) {
-    if (raw === undefined)
-        return undefined;
-    if (!Array.isArray(raw))
-        return undefined;
-    const out = [];
-    for (const item of raw) {
-        if (typeof item !== 'object' || item === null)
-            return undefined;
-        const d = item;
-        if (typeof d.task !== 'string' || typeof d.instanceId !== 'string' || typeof d.scheduledAt !== 'string'
-            || (d.semantics !== 'same_period' && d.semantics !== 'latest_success')
-            || (d.sessionId !== null && typeof d.sessionId !== 'string')
-            || (d.workspacePath !== null && typeof d.workspacePath !== 'string')
-            || !Array.isArray(d.outputs))
-            return undefined;
-        out.push({
-            task: d.task,
-            semantics: d.semantics,
-            instanceId: d.instanceId,
-            scheduledAt: d.scheduledAt,
-            sessionId: d.sessionId ?? null,
-            workspacePath: d.workspacePath ?? null,
-            outputs: d.outputs.filter((x) => typeof x === 'string'),
         });
     }
     return out;

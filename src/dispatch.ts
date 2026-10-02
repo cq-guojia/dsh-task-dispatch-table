@@ -4,9 +4,11 @@
 // → 工作区 attachSession 归组 → agent.send 拼装消息。
 // 不要预建 ctx.sessions.create——会撞 store 的 'session "…" already exists'（真机教训 2026-09-23）。
 import { randomUUID } from 'node:crypto'
-import { resolve } from 'node:path'
+import { readFile, stat } from 'node:fs/promises'
+import { basename, resolve } from 'node:path'
 import type {
-  HostAgentDefaultModel, HostAgentPresets, HostContext, HostLogger, HostLlm, HostWorkspace, UserMessage,
+  HostAgentDefaultModel, HostAgentPresets, HostAttachments, HostContext, HostLogger, HostLlm,
+  HostWorkspace, UserFileContent, UserMessage,
 } from './host.js'
 import type { PluginConfig } from './config.js'
 import { receiptInstruction, registerReceiptTool } from './receipt.js'
@@ -208,11 +210,12 @@ async function resolveAgentComposition(
  * 插件→会话的用户消息（决策 19：追问层用，form=notice 走系统通知样式）。
  * source.kind 用**生产者自有 kind**（0.1.7 v4 格式要求，`kind: 'plugin'` 已废弃被拒）。
  */
-export function userNotice(text: string, summary: string): UserMessage {
+export function userNotice(text: string, summary: string, files: readonly UserFileContent[] = []): UserMessage {
   return {
     id: randomUUID(),
     role: 'user',
-    content: [{ type: 'text', text }],
+    // 文本块在前、文件块在后：官方按 content 顺序渲染（气泡正文 + 下方附件卡）。
+    content: [{ type: 'text', text }, ...files],
     source: {
       kind: 'task-dispatch-table',
       form: 'notice',
@@ -278,9 +281,13 @@ const WORKSPACE_PLACEHOLDER = '{{workspace}}'
  * 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
  * prompt / manual / validStatuses / resolvedDeps / attachments 全部来自派发快照，与任务设置无关。
  *
- * ⚠️ 随附文件**只能给路径**（宿主 `UserMessage.content` 目前只声明 text 内容块）⇒ 这里把**绝对路径**
- * 逐条写清（「从哪一层开始」就是它），并显式声明「允许读取」，否则会与下面的权限指令（「仅工作区」）打架
- * ——upload 型附件落在**任务目录**（工作区之外），不开口子模型就等于看不见。
+ * 随附文件**两手都给**（2026-10-03 拍板）：
+ * ① **文本路径**——把**绝对路径**逐条写清（「从哪一层开始」就是它），并显式声明「允许读取」，否则
+ *    会与下面的权限指令（「仅工作区」）打架——upload 型附件落在**任务目录**（工作区之外），
+ *    不开口子模型就等于看不见；
+ * ② **官方 file 内容块**——把文件注册进宿主附件库（`ctx.attachments`），模型侧由宿主换成一句
+ *    「只读副本路径」（`projectFilesToText`），**不额外吃 token**；人的那一面则由官方渲染成
+ *    **附件卡**（图标 + 文件名 + 大小，可点开），且 fork 续聊带得走、当时那一份内容被钉住。
  */
 export function buildMessage(
   snapshot: InstanceSnapshot,
@@ -288,6 +295,7 @@ export function buildMessage(
   logicalDate: string,
   teamMode = false,
   attachments: readonly DispatchAttachment[] = [],
+  fileBlocks: readonly UserFileContent[] = [],
 ): UserMessage {
   // 回执说明**只放一处、且放最末**（用户 2026-09-30 拍板，推翻先前的"放最前 + 首尾双写"）：
   // 真机证据 —— 模型**跳过了第 1 段**的回执要求（回了句问候就收工），而插件那条**只含回执要求**的
@@ -328,7 +336,7 @@ export function buildMessage(
     }
   }
   lines.push(receiptInstruction(snapshot.validStatuses))
-  return userNotice(lines.join('\n'), `[TASK] ${snapshot.title} · ${logicalDate}`)
+  return userNotice(lines.join('\n'), `[TASK] ${snapshot.title} · ${logicalDate}`, fileBlocks)
 }
 
 /**
@@ -356,6 +364,55 @@ function attachmentLines(list: readonly DispatchAttachment[]): string[] {
   return lines
 }
 
+/** 单个附件进宿主附件库的字节上限（防御：误挂大文件不至于把附件库撑爆；库**永不自动删除**）。 */
+const ATTACHMENT_BLOCK_MAX_BYTES = 8 * 1024 * 1024
+/** 一次派发最多注册多少个附件块（同上，防御性上限）。 */
+const ATTACHMENT_BLOCK_MAX_COUNT = 20
+
+/**
+ * 随附文件 → 官方 `file` 内容块（2026-10-03 拍板「附加文件走 A」）。
+ *
+ * 逐个把文件字节交给宿主附件服务 `ctx.attachments.saveFile`（内容寻址、不可变、
+ * **永不自动删除**），拿回持久引用后拼成 file 块随派发消息发出 ⇒ 官方界面渲染成
+ * **附件卡**（图标 + 文件名 + 大小，可点开）、fork 续聊带得走、当时那份内容被钉住。
+ *
+ * **降级不阻塞**：宿主没挂 `dsh-attachment-local`、文件不在盘上、是目录、超过上限、
+ * 或 saveFile 抛错 ⇒ 该附件**只留文本路径**（2026-10-03 前的行为），派发照常。
+ *
+ * ⚠️ 目录**不能**作为附件：官方附件 = 一段字节，`FileAttachmentRef` 里没有路径
+ * （`dsh-attachment` `lib/types/types.d.ts:34-41`）。
+ */
+export async function attachmentFileBlocks(
+  ctx: HostContext,
+  attachments: readonly DispatchAttachment[],
+  logger: HostLogger,
+  instanceId: string,
+): Promise<UserFileContent[]> {
+  const store = readCtxProp(ctx, 'attachments') as HostAttachments | undefined
+  if (store === undefined) {
+    logger.warn(`[dispatch] attachment-store-unavailable 实例 ${instanceId}：宿主未暴露 ctx.attachments（需 dsh-attachment-local），随附文件本次只给路径`)
+    return []
+  }
+  const blocks: UserFileContent[] = []
+  for (const item of attachments.slice(0, ATTACHMENT_BLOCK_MAX_COUNT)) {
+    if (item.path === null) continue
+    try {
+      const info = await stat(item.path)
+      if (!info.isFile()) continue
+      if (info.size > ATTACHMENT_BLOCK_MAX_BYTES) {
+        logger.warn(`[dispatch] attachment-too-large 实例 ${instanceId}：${item.name} 超过 ${ATTACHMENT_BLOCK_MAX_BYTES} 字节，本次只给路径`)
+        continue
+      }
+      const data = await readFile(item.path)
+      const ref = await store.saveFile({ data, name: item.name.trim() === '' ? basename(item.path) : item.name })
+      blocks.push({ type: 'file', attachment: ref })
+    } catch (error) {
+      logger.warn(`[dispatch] attachment-block-failed 实例 ${instanceId}：${item.name} 未注册进宿主附件库（${String(error)}），本次只给路径`)
+    }
+  }
+  return blocks
+}
+
 export interface DispatchInput {
   ctx: HostContext
   /** tee logger（显式传参——ctx 不可包装，见 host.ts HostLogger 注释）。 */
@@ -371,7 +428,7 @@ export interface DispatchInput {
   workspace: HostWorkspace
   /**
    * 随附文件（2026-09-30）：ref 已由 Loop B 解析成**绝对路径**，随派发消息注入。
-   * （只能给路径：宿主 `UserMessage.content` 目前只声明 text 内容块，见 buildMessage 注释。）
+   * （2026-10-03 起两手都给：文本路径 + 官方 file 内容块，见 {@link attachmentFileBlocks}。）
    */
   attachments: readonly DispatchAttachment[]
   /** 插件配置（决策 22 漏斗第②层取 defaultProvider/defaultModel，发动时现算）。 */
@@ -527,6 +584,18 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     }
   }
   // 会话列表治理：规范名在 reconciler.onCreated 改（决策 42 格式），跑完归档在 succeeded 对账后。
-  handle.agent.send(buildMessage(snapshot, workspace.path, logicalDate, teamMode, input.attachments), 'next-turn', true)
+  // 随附文件 → 官方 file 块（2026-10-03 拍板「附加文件走 A」）：注册不成功/宿主无附件服务
+  // 都不阻塞派发，退化成只给路径。放在 send 前——注册的是**当时那份字节**，会话里钉住版本。
+  const fileBlocks = input.attachments.length === 0
+    ? []
+    : await attachmentFileBlocks(ctx, input.attachments, logger, instanceId)
+  if (fileBlocks.length > 0) {
+    store.appendEvent(instanceId, 'dispatch', { attachmentBlocks: fileBlocks.length })
+  }
+  handle.agent.send(
+    buildMessage(snapshot, workspace.path, logicalDate, teamMode, input.attachments, fileBlocks),
+    'next-turn',
+    true,
+  )
   return { sessionId, handle }
 }

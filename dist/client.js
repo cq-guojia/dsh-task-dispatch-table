@@ -38,6 +38,28 @@ window.__ModuleLoader__.load({
 			return String(value).padStart(2, "0");
 		}
 		/**
+		* 字节数 → 人话（`12 KB` / `3.4 MB`）。**单源**：官方附件卡的文件大小、以及任何要展示
+		* 体积的地方都走这里（此前无此需求，故没有第二份实现可收敛）。
+		* 0 与负数 ⇒ `—`（不显示「0 B」这种假精确）。
+		*/
+		function formatBytes$1(bytes) {
+			if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+			if (bytes < 1024) return `${bytes} B`;
+			const units = [
+				"KB",
+				"MB",
+				"GB",
+				"TB"
+			];
+			let value = bytes / 1024;
+			let unit = 0;
+			while (value >= 1024 && unit < units.length - 1) {
+				value /= 1024;
+				unit++;
+			}
+			return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
+		}
+		/**
 		* ISO → `YYYY-MM-DD HH:mm`（`seconds: true` 时补 `:ss`）。
 		* 解析失败 ⇒ `fallback`（缺省返回**原串**，不编造时间；要占位符就显式传，如 `fallback: '—'`）。
 		*/
@@ -358,6 +380,11 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "收起",
 			deliverExpandAria: "展开全部 {count} 个交付文件",
 			deliverCollapseAria: "收起交付文件列表",
+			svUpstreamTitle: "接收 · 来自 {count} 个上游任务",
+			svUpstreamSession: "查看该会话",
+			svUpstreamNoOutputs: "未声明产出",
+			svUpstreamFileAria: "打开 {name}",
+			svUpstreamRelOnly: "（相对路径，基准工作区未知）",
 			editorNew: "新建任务",
 			editorEdit: "编辑任务",
 			editorClose: "关闭",
@@ -908,6 +935,11 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "Collapse",
 			deliverExpandAria: "Expand all {count} delivered files",
 			deliverCollapseAria: "Collapse the delivered-files list",
+			svUpstreamTitle: "Received · from {count} upstream task(s)",
+			svUpstreamSession: "Open that session",
+			svUpstreamNoOutputs: "No outputs declared",
+			svUpstreamFileAria: "Open {name}",
+			svUpstreamRelOnly: "(relative path — base workspace unknown)",
 			editorNew: "New task",
 			editorEdit: "Edit task",
 			editorClose: "Close",
@@ -2958,6 +2990,36 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
+/* ── 任务文件上下文·接收区（上游产出，2026-10-03） ──
+   官方没有「上游任务产出」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
+   输入文件可能十几个 ⇒ 一行一个小标签，不占产出卡那种大卡的位置。
+   容器挂在标题条与会话流之间（**不在任何轮次折叠里**）⇒ 与会话区隔开一条分隔线。 */
+.dsh-tdt-sv-ctx{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:10px 24px 12px;}
+/* 用户消息里的随附文件卡（官方 MessageItem attachmentRow / fileCard；2026-10-03）：
+   气泡**下方**一行，小卡 = 图标 + 文件名 + 大小。引用里没有路径 ⇒ 不可点开，也不伪装成可点。 */
+.dsh-tdt-sv-attrow{flex-wrap:wrap;gap:6px;min-width:0;justify-content:flex-end;display:flex;}
+.dsh-tdt-sv-attcard{box-sizing:border-box;border:.5px solid var(--tdt-border-faint,#0000000a);border-radius:var(--tdt-radius-md);background:var(--tdt-plate,rgba(128,128,128,.08));max-width:100%;height:44px;align-items:center;gap:8px;padding:6px 10px;display:flex;}
+.dsh-tdt-sv-attIcon{width:16px;height:16px;color:var(--tdt-link,#3b5bdb);flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-attBody{flex-direction:column;gap:1px;min-width:0;display:flex;}
+.dsh-tdt-sv-attName{color:var(--tdt-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);overflow:hidden;}
+.dsh-tdt-sv-attMeta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-up{flex-direction:column;gap:6px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-head{align-items:center;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-up-groups{flex-direction:column;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-group{flex-direction:column;gap:4px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-task{align-items:center;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-name{color:var(--tdt-fg);font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;flex:none;max-width:60%;}
+.dsh-tdt-sv-up-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
+.dsh-tdt-sv-up-link{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+.dsh-tdt-sv-up-link:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
+.dsh-tdt-sv-up-files{flex-wrap:wrap;gap:2px 6px;min-width:0;display:flex;}
+.dsh-tdt-sv-up-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
+button.dsh-tdt-sv-up-file{cursor:pointer;}
+button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
+.dsh-tdt-sv-up-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-up-fileName{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
+.dsh-tdt-sv-up-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
 `;
 		/**
 		* 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
@@ -4359,12 +4421,27 @@ body[data-ds-dark-theme]{
 				fileMentions: props.fileMentions
 			}));
 		}
-		/** 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）。 */
+		/**
+		* 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）
+		* + 气泡下方的 **attachmentRow / fileCard**（官方 MessageItem 的附件行，2026-10-03 接上）。
+		*
+		* 官方附件卡 = 图标 + 文件名 + 大小；**不可点开**——引用里没有路径，宿主也没给出
+		* 「按 attachmentId 打开」的公开面 ⇒ 如实降级为只读展示，不伪造打开行为。
+		*/
 		function UserMessage(props) {
-			return (0, react.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text: props.text,
+			const { text, files } = props;
+			const chips = files ?? [];
+			return (0, react.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, text === "" ? null : (0, react.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text,
 				labels: MD_LABELS
-			}))));
+			})), chips.length === 0 ? null : (0, react.createElement)("div", { className: ocOr("MessageItem", "attachmentRow", "dsh-tdt-sv-attrow") }, chips.map((file, index) => (0, react.createElement)("div", {
+				key: `${file.name}:${index}`,
+				className: ocOr("MessageItem", "fileCard", "dsh-tdt-sv-attcard"),
+				title: file.name
+			}, (0, react.createElement)("span", { className: ocOr("MessageItem", "fileIcon", "dsh-tdt-sv-attIcon") }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: file.name,
+				size: 16
+			})), (0, react.createElement)("span", { className: ocOr("MessageItem", "fileContent", "dsh-tdt-sv-attBody") }, (0, react.createElement)("span", { className: ocOr("MessageItem", "fileName", "dsh-tdt-sv-attName") }, file.name), (0, react.createElement)("span", { className: ocOr("MessageItem", "fileMeta", "dsh-tdt-sv-attMeta") }, formatBytes$1(file.bytes))))))));
 		}
 		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
 		function retrySeconds(milliseconds) {
@@ -4860,6 +4937,72 @@ body[data-ds-dark-theme]{
 			}, (0, react.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
 		}
 		//#endregion
+		//#region src/client/upstream-panel.tsx
+		/** 目录标记：上游产出按「尾斜杠」表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
+		function isDirPath(path) {
+			return path.endsWith("/");
+		}
+		/**
+		* 上游产出的相对路径 → 绝对路径（基准 = **上游**实例的工作区，不是当前会话的）。
+		* 无基准（上游旧行无快照）⇒ null：如实降级为「不可点」，绝不拿当前工作区去猜。
+		*/
+		function upstreamAbsPath(base, rel) {
+			if (base === null || base === "") return null;
+			const trimmed = rel.replace(/^\.\//, "");
+			return base.endsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
+		}
+		/** 文件名（去掉尾斜杠，目录显示最后一段）。 */
+		function displayName(path) {
+			const raw = path.replace(/\/+$/, "");
+			const cut = Math.max(raw.lastIndexOf("/"), raw.lastIndexOf("\\"));
+			return cut < 0 ? raw : raw.slice(cut + 1);
+		}
+		/**
+		* 接收区：按上游任务分组，每组 = 任务名 + 计划时刻（+ «查看该会话»）+ 文件行（图标 + 名字）。
+		* 输入文件可能很多（十几个），故用**一行一个小标签**，不用产出卡那种大卡（用户 2026-10-02）。
+		* 无上游依赖 ⇒ 整块不渲染（返回 null），不留空壳。
+		*/
+		function UpstreamInputsPanel(props) {
+			const { items, onOpenFile, onOpenSession, t } = props;
+			if (items.length === 0) return null;
+			return (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-up",
+				"data-upstream-inputs": true
+			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-up-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-up-title" }, t("svUpstreamTitle", { count: items.length }))), (0, react.createElement)("div", { className: "dsh-tdt-sv-up-groups" }, items.map((item) => (0, react.createElement)("div", {
+				key: `${item.task}:${item.instanceId}`,
+				className: "dsh-tdt-sv-up-group"
+			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-up-task" }, (0, react.createElement)("span", {
+				className: "dsh-tdt-sv-up-name",
+				title: item.task
+			}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-up-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt })), item.sessionId !== null && onOpenSession !== void 0 ? (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-up-link",
+				onClick: () => {
+					onOpenSession(item.sessionId, item.taskTitle);
+				}
+			}, t("svUpstreamSession")) : null), item.outputs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-up-none" }, t("svUpstreamNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-up-files" }, item.outputs.map((path) => {
+				const abs = upstreamAbsPath(item.workspacePath, path);
+				const name = displayName(path);
+				const label = abs === null ? `${name} ${t("svUpstreamRelOnly")}` : name;
+				const clickable = abs !== null && onOpenFile !== void 0;
+				return (0, react.createElement)(clickable ? "button" : "span", {
+					key: path,
+					className: "dsh-tdt-sv-up-file",
+					...clickable ? {
+						type: "button",
+						title: abs ?? path,
+						"aria-label": t("svUpstreamFileAria", { name }),
+						onClick: () => {
+							onOpenFile?.(abs);
+						}
+					} : { title: label }
+				}, (0, react.createElement)("span", { className: "dsh-tdt-sv-up-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: isDirPath(path) ? name : name,
+					size: 14
+				})), (0, react.createElement)("span", { className: "dsh-tdt-sv-up-fileName" }, label));
+			}))))));
+		}
+		//#endregion
 		//#region src/client/session-view.ts
 		/** 稳定的空序列（避免默认值每次新建数组）。 */
 		const EMPTY_ORDER = [];
@@ -5001,6 +5144,25 @@ body[data-ds-dark-theme]{
 				return "";
 			}).filter((part) => part !== "").join("\n");
 		}
+		/**
+		* 提取内容块里的**官方 file 块**（2026-10-03）：随附文件以官方附件形式发进会话后，
+		* 会话快照的 user 节点 content 里就是它 ⇒ 弹窗里照样渲染成附件卡（与官方页一致）。
+		* 拿不到（宿主投影未透传）⇒ 空数组：附件卡不渲染，**绝不造一个假卡**。
+		*/
+		function contentFiles(blocks) {
+			if (blocks === void 0) return [];
+			const out = [];
+			for (const block of blocks) {
+				if (block === null || typeof block !== "object" || block.type !== "file") continue;
+				const attachment = block.attachment;
+				if (typeof attachment !== "object" || attachment === null) continue;
+				out.push({
+					name: typeof attachment.name === "string" && attachment.name !== "" ? attachment.name : "file",
+					bytes: typeof attachment.bytes === "number" ? attachment.bytes : 0
+				});
+			}
+			return out;
+		}
 		/** legacy assistant 节点的纯文本（复制按钮用）。 */
 		function assistantText(node) {
 			return (node.blocks ?? []).map((block) => block.kind === "text" ? block.text : "").join("");
@@ -5133,9 +5295,14 @@ body[data-ds-dark-theme]{
 				}
 				case "user":
 				case "steering": {
-					const text = contentText(dataOf(node).content);
-					if (text === "") return null;
-					return (0, react.createElement)(UserMessage, { text });
+					const blocks = dataOf(node).content;
+					const text = contentText(blocks);
+					const files = contentFiles(blocks);
+					if (text === "" && files.length === 0) return null;
+					return (0, react.createElement)(UserMessage, {
+						text,
+						files
+					});
 				}
 				case "turn-error": return (0, react.createElement)(TurnErrorItemMirror, {
 					node: dataOf(node),
@@ -5209,10 +5376,12 @@ body[data-ds-dark-theme]{
 				case "user":
 				case "steering": {
 					const text = contentText(node.content);
-					if (text === "") return null;
+					const files = contentFiles(node.content);
+					if (text === "" && files.length === 0) return null;
 					return (0, react.createElement)(UserMessage, {
 						key: node.seq,
-						text
+						text,
+						files
 					});
 				}
 				case "assistant": {
@@ -5478,7 +5647,7 @@ body[data-ds-dark-theme]{
 		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
 		*/
 		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs } = props;
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, onOpenUpstreamSession } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			const subscribe = (0, react.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
@@ -5647,7 +5816,12 @@ body[data-ds-dark-theme]{
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
 				label: tt("debugClose"),
 				onClick: onClose
-			}))), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+			}))), upstream !== void 0 && upstream.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-ctx" }, (0, react.createElement)(UpstreamInputsPanel, {
+				items: upstream,
+				onOpenFile,
+				onOpenSession: onOpenUpstreamSession,
+				t
+			})) : null, (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: forkTarget !== null,
 				onClose: () => {
 					if (!forking) setForkTarget(null);
@@ -42288,14 +42462,14 @@ body[data-ds-dark-theme]{
 					},
 					onClick: (event) => {
 						event.stopPropagation();
-						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs);
+						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs, instance.snapshot ?? null);
 					}
 				}, "…") : null)), (0, react.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
 					variant: "outline",
 					size: "sm",
 					onClick: (event) => {
 						event.stopPropagation();
-						openSession(sid, row.title, outputs);
+						openSession(sid, row.title, outputs, instance.snapshot ?? null);
 					}
 				}, t("colView")) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
 					colSpan: 8,
@@ -42692,6 +42866,45 @@ body[data-ds-dark-theme]{
 				},
 				refOf: refOf(row.id)
 			})))));
+		}
+		//#endregion
+		//#region src/deps.ts
+		/** 解析 resolvedDeps：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃（不让坏数据进 UI）。 */
+		function parseResolvedDeps(raw) {
+			if (raw === void 0) return void 0;
+			if (!Array.isArray(raw)) return void 0;
+			const out = [];
+			for (const item of raw) {
+				if (typeof item !== "object" || item === null) return void 0;
+				const d = item;
+				if (typeof d.task !== "string" || typeof d.instanceId !== "string" || typeof d.scheduledAt !== "string" || d.semantics !== "same_period" && d.semantics !== "latest_success" || d.sessionId !== null && typeof d.sessionId !== "string" || d.workspacePath !== null && typeof d.workspacePath !== "string" || !Array.isArray(d.outputs)) return void 0;
+				out.push({
+					task: d.task,
+					semantics: d.semantics,
+					instanceId: d.instanceId,
+					scheduledAt: d.scheduledAt,
+					sessionId: d.sessionId ?? null,
+					workspacePath: d.workspacePath ?? null,
+					outputs: d.outputs.filter((x) => typeof x === "string")
+				});
+			}
+			return out;
+		}
+		/**
+		* 实例快照 JSON → 已解析的上游依赖清单（**客户端便捷入口**）。
+		* 与服务端 `parseInstanceSnapshot` 同一套校验，但**不强求整份快照合法**——
+		* 客户端只想看「接收了什么」，快照里别的字段缺了不该让这一块消失。
+		* 空 / 坏 JSON / 旧行（无 resolvedDeps）⇒ `[]`（调用方按「无上游」渲染，不显示该区）。
+		*/
+		function resolvedDepsOf(raw) {
+			if (raw === null || raw === "") return [];
+			try {
+				const value = JSON.parse(raw);
+				if (typeof value !== "object" || value === null) return [];
+				return parseResolvedDeps(value.resolvedDeps) ?? [];
+			} catch {
+				return [];
+			}
 		}
 		//#endregion
 		//#region src/client/config-panel.tsx
@@ -43623,7 +43836,15 @@ body[data-ds-dark-theme]{
 				}).catch(() => {});
 			};
 			/** 打开只读会话弹窗：retain 物化 scope 直开；失败才兜底反归档重试；不再静默无反应。 */
-			const openView = async (sessionId, heading, outputs) => {
+			/**
+			* 上游依赖 → 接收区视图模型（2026-10-03）：任务名按 id 从任务列表反查，
+			* 查不到（任务已删）⇒ 显示**短 id**，绝不留空白、绝不编造名字。
+			*/
+			const upstreamOf = (snapshot) => resolvedDepsOf(snapshot).map((dep) => ({
+				...dep,
+				taskTitle: overview.rows.find((row) => row.id === dep.task)?.title || dep.task.slice(0, 8)
+			}));
+			const openView = async (sessionId, heading, outputs, snapshot) => {
 				if (viewSession === null) {
 					setViewErr("查看会话不可用：sessions / uiConversation 注入未就位（见控制台）");
 					return;
@@ -43652,7 +43873,8 @@ body[data-ds-dark-theme]{
 					heading,
 					view: target,
 					didUnarchive,
-					outputs
+					outputs,
+					upstream: upstreamOf(snapshot ?? null)
 				});
 			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
@@ -43750,8 +43972,8 @@ body[data-ds-dark-theme]{
 				onEdit: openEditor,
 				onDelete: deleteTask,
 				onOpenFile: canPreview ? openFile : void 0,
-				onOpenSession: viewSession !== null ? (sessionId, heading, outputs) => {
-					openView(sessionId, heading, outputs);
+				onOpenSession: viewSession !== null ? (sessionId, heading, outputs, snapshot) => {
+					openView(sessionId, heading, outputs, snapshot);
 				} : void 0,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "var(--tdt-font-sm)" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
@@ -43862,6 +44084,10 @@ body[data-ds-dark-theme]{
 				onOpenFile: canPreview ? (path) => {
 					openFile(viewing.sessionId, path);
 				} : void 0,
+				upstream: viewing.upstream ?? [],
+				onOpenUpstreamSession: (sid, title) => {
+					openView(sid, title);
+				},
 				onClose: () => {
 					const closed = viewing.sessionId;
 					const needArchive = viewing.didUnarchive === true;

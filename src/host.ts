@@ -22,11 +22,47 @@ export interface HostSession {
  * schedule 插件（runtime.ts:119-121 `{ kind: 'schedule' }`）与 subagent 结算通知
  * （continuation-messages.ts:30-38 `{ kind, form: 'notice', summary }`）。
  */
+
+/** 文本块（`dsh-llm@0.2.0-rc.2` ContentBlockMap 的 `text`）。 */
+export interface UserTextContent {
+  readonly type: 'text'
+  readonly text: string
+}
+
+/**
+ * 官方附件引用（`dsh-attachment@0.2.0-rc.2` `lib/types/types.d.ts:34-41`）。
+ * ⚠️ **没有路径**：`attachmentId` 是内容寻址摘要（`never a filesystem path`），
+ * ⇒ 附件 = **字节副本**，不是链接；目录无法作为附件。
+ */
+export interface FileAttachmentRef {
+  readonly attachmentId: string
+  readonly name: string
+  readonly bytes: number
+}
+
+/** 文件块（`ContentBlockMap` 的 `file`）：附件由宿主附件服务持有，会话里只记引用。 */
+export interface UserFileContent {
+  readonly type: 'file'
+  readonly attachment: FileAttachmentRef
+}
+
 export interface UserMessage {
   readonly id: string
   readonly role: 'user'
-  readonly content: readonly { type: 'text'; text: string }[]
+  // content 是**内容块数组**（`dsh-llm` `lib/types/types.d.ts:114-128`），原生支持
+  // text / image / file / tool-call / …；插件只用到 text 与 file 两种。
+  readonly content: readonly (UserTextContent | UserFileContent)[]
   readonly source: { kind: 'task-dispatch-table'; form: 'notice'; summary: string }
+}
+
+/**
+ * 附件服务最小面（`ctx.attachments`，`dsh-attachment@0.2.0-rc.2` `lib/types/index.d.ts`）：
+ * `saveFile` 把文件**按字节原样**提交进宿主附件库（harness home，内容寻址、不可变、
+ * **永不自动删除**），返回持久引用。可选面 —— 宿主未挂载 `dsh-attachment-local` 时缺失，
+ * 派发降级为「只给路径」。
+ */
+export interface HostAttachments {
+  saveFile(input: { data: Uint8Array; name?: string }): Promise<FileAttachmentRef>
 }
 
 /**
@@ -248,6 +284,13 @@ export interface HostContext {
   goals?: HostGoals
   /** 可选：实验性 Agent Teams 服务（决策 49）；experimental profile 未启用 ⇒ undefined ⇒ 降级单 Agent。 */
   agentTeams?: HostAgentTeams
+  /**
+   * 可选：宿主附件服务 `ctx.attachments`（0.2.0-rc.2，需 `dsh-attachment-local` 已挂载）。
+   * 见 {@link HostAttachments}：用于把随附文件以**官方 file 内容块**发进会话
+   * ⇒ 官方界面渲染成附件卡、fork 续聊也带得走，且当时那一份内容被钉住。
+   * 缺失 ⇒ 降级为「只在消息文本里给绝对路径」（2026-10-03 前的行为）。
+   */
+  attachments?: HostAttachments
   workspaceRegistry: HostWorkspaceRegistry
   settings: HostSettings
   sessionTitle: HostSessionTitle
