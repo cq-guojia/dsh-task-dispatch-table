@@ -723,16 +723,31 @@ const busyPillStyle: Record<string, string | number> = {
 }
 const BUSY_DELAY_MS = 400
 /**
+ * ⚠️ **临时调试值**（用户 2026-10-03 要求）：亮起后**至少停留 5 秒**再消失，
+ * 用来肉眼确认「loading 到底在哪儿、到底有没有出现」。
+ * 验完必须改回 0（或删掉 hold 逻辑）——正常态应该是请求一返回就消失。
+ */
+const BUSY_HOLD_MS = 5000
+/**
  * 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
  * 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
+ * 亮起后按 `BUSY_HOLD_MS` 保底停留（临时调试用）。
  */
 function useDelayedBusy(active: boolean): boolean {
   const [shown, setShown] = useState(false)
+  const shownAtRef = useRef(0)
   useEffect(() => {
-    if (!active) { setShown(false); return }
-    const timer = setTimeout(() => { setShown(true) }, BUSY_DELAY_MS)
+    if (active) {
+      if (shown) return
+      const timer = setTimeout(() => { shownAtRef.current = Date.now(); setShown(true) }, BUSY_DELAY_MS)
+      return () => { clearTimeout(timer) }
+    }
+    if (!shown) return
+    // 已亮起 ⇒ 补足到保底时长再消失（保证肉眼看得见）。
+    const wait = Math.max(0, BUSY_HOLD_MS - (Date.now() - shownAtRef.current))
+    const timer = setTimeout(() => { setShown(false) }, wait)
     return () => { clearTimeout(timer) }
-  }, [active])
+  }, [active, shown])
   return shown
 }
 /** 忙碌指示本体：三个脉动方块 + 文案。 */
@@ -765,12 +780,20 @@ const miniCellStyle: Record<string, string | number> = {
 const miniCellWrapStyle: Record<string, string | number> = { ...miniCellStyle, whiteSpace: 'normal', wordBreak: 'break-word' }
 /** 居中格（用户 2026-10-02：除**产出物 / 备注**两列外，各列内容一律居中）。 */
 const miniCellCenterStyle: Record<string, string | number> = { ...miniCellStyle, textAlign: 'center' }
-/** 日志 / 事件文本框：跟随宿主主题变量 + 等宽字体（用户 2026-10-01：颜色跟着环境风格走）。 */
-const logBoxStyle: Record<string, string | number> = {
+/**
+ * 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
+ * 上沿一条线（与执行记录表头上沿线同色 `--tdt-border`），从这条线到下方虚线**整块铺底色**，
+ * 日志直接铺在里面。等宽字体跟环境风格走。
+ */
+const logAreaStyle: Record<string, string | number> = {
+  ...panelScrollFillStyle,
+  borderTop: `1px solid var(--tdt-border)`,
+  background: 'var(--tdt-surface-1)',
+  padding: '10px 12px',
   fontFamily: monoFont, fontSize: 'var(--tdt-font-xs)', lineHeight: 'var(--tdt-line-sm)',
-  background: 'var(--tdt-surface-1)', border: `1px solid var(--tdt-border)`, borderRadius: 'var(--tdt-radius-sm)',
-  padding: '8px 10px', wordBreak: 'break-all',
 }
+/** 日志行：行间距拉开一点（用户 2026-10-03）。 */
+const logRowStyle: Record<string, string | number> = { marginBottom: '6px', wordBreak: 'break-all' }
 const overlayStyle: Record<string, string | number> = {
   position: 'fixed', inset: 0, zIndex: 'var(--tdt-z-modal)', background: 'var(--tdt-mask)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -830,7 +853,10 @@ const outputCellStyle: Record<string, string | number> = {
 }
 /** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
 const filterRowStyle: Record<string, string | number> = {
-  display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px',
+  display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+  // 下间距必须 == 上间距（用户 2026-10-03）：上间距是「面板外虚线 → 过滤行」= `panelWrapStyle.paddingTop` 10px，
+  // 所以这里也用 10px —— 原来 6px，上下明显不一样。
+  marginBottom: '10px',
 }
 /** 过滤行里的字段名（「状态：」等）。 */
 const filterLabelStyle: Record<string, string | number> = {
@@ -1254,24 +1280,26 @@ function TaskExpandPanel(props: {
 
       logError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${logError}`) : null,
     ),
-    h('div', { style: panelScrollFillStyle },
+    // 日志整区（用户 2026-10-03）：**不套框** —— 上面一条线（与执行记录表头上沿线同色 `--tdt-border`），
+    // 从这条线一直到下方虚线，整块铺上日志原本的底色；日志直接铺在里面。
+    h('div', { style: logAreaStyle },
       logs === null
         ? null
         : logs.length === 0
           ? h('p', { style: faintStyle }, t('cardLogsEmpty'))
-          : h('div', { style: logBoxStyle },
-            logs.map(row => h('div', { key: row.seq },
-              h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(row.ts)} `),
-              h('span', {
-                style: {
-                  color: row.level === 'error' ? 'var(--tdt-danger)' : row.level === 'warn' ? 'var(--tdt-accent)' : 'var(--tdt-fg-3)',
-                  fontWeight: row.level === 'error' ? 600 : 400,
-                },
-              }, `[${row.level}]`),
-              ' ',
-              h('span', { style: { color: 'var(--tdt-accent)' } }, `${row.kind}: `),
-              h('span', null, row.message),
-            ))),
+          : logs.map(row => h('div', { key: row.seq, style: logRowStyle },
+            h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(row.ts)} `),
+            h('span', {
+              style: {
+                color: row.level === 'error' ? 'var(--tdt-danger)' : row.level === 'warn' ? 'var(--tdt-accent)' : 'var(--tdt-fg-3)',
+                fontWeight: row.level === 'error' ? 600 : 400,
+              },
+            }, `[${row.level}]`),
+            ' ',
+            // 事件类型与正文都压到 `--tdt-fg-2`：纯白在深底上太刺眼（用户 2026-10-03）。
+            h('span', { style: { color: 'var(--tdt-fg-2)' } }, `${row.kind}: `),
+            h('span', { style: { color: 'var(--tdt-fg-2)' } }, row.message),
+          )),
     ),
   )
 

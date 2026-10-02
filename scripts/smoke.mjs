@@ -1811,6 +1811,11 @@ console.log('\n[14] runtime-index')
       // 黑框 `logBoxStyle` 只留给「日志」面板本体，展开区不再套框。
       && !tl.includes('eventsLoading'))
     check('两个时间框之间有分隔符 ～', trc.includes("'～'"))
+    check('日志整区：不套框（logBoxStyle 已废）+ 上沿一条线 + 整块底色 logAreaStyle',
+      tl.includes('const logAreaStyle') && tl.includes('logRowStyle') && !tl.includes('const logBoxStyle'))
+    check('过滤行上下间距一致：下间距 10px = 上间距（面板外虚线 → 过滤行）',
+      tl.includes("marginBottom: '10px',"))
+    check('⏱ loading 保底停留 5 秒（**临时调试值**，验完要改回）', tl.includes('BUSY_HOLD_MS = 5000'))
     check('忙碌指示：浮动不占位（absolute）+ 延迟 400ms 出现 + 沿用三个脉动方块',
       tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS = 400')
       && tl.includes("position: 'absolute'") && tl.includes("position: 'relative'")

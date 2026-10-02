@@ -41759,23 +41759,39 @@ body[data-ds-dark-theme]{
 		};
 		const BUSY_DELAY_MS = 400;
 		/**
+		* ⚠️ **临时调试值**（用户 2026-10-03 要求）：亮起后**至少停留 5 秒**再消失，
+		* 用来肉眼确认「loading 到底在哪儿、到底有没有出现」。
+		* 验完必须改回 0（或删掉 hold 逻辑）——正常态应该是请求一返回就消失。
+		*/
+		const BUSY_HOLD_MS = 5e3;
+		/**
 		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
 		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
+		* 亮起后按 `BUSY_HOLD_MS` 保底停留（临时调试用）。
 		*/
 		function useDelayedBusy(active) {
 			const [shown, setShown] = (0, react.useState)(false);
+			const shownAtRef = (0, react.useRef)(0);
 			(0, react.useEffect)(() => {
-				if (!active) {
-					setShown(false);
-					return;
+				if (active) {
+					if (shown) return;
+					const timer = setTimeout(() => {
+						shownAtRef.current = Date.now();
+						setShown(true);
+					}, BUSY_DELAY_MS);
+					return () => {
+						clearTimeout(timer);
+					};
 				}
+				if (!shown) return;
+				const wait = Math.max(0, BUSY_HOLD_MS - (Date.now() - shownAtRef.current));
 				const timer = setTimeout(() => {
-					setShown(true);
-				}, BUSY_DELAY_MS);
+					setShown(false);
+				}, wait);
 				return () => {
 					clearTimeout(timer);
 				};
-			}, [active]);
+			}, [active, shown]);
 			return shown;
 		}
 		/** 忙碌指示本体：三个脉动方块 + 文案。 */
@@ -41826,15 +41842,23 @@ body[data-ds-dark-theme]{
 			...miniCellStyle,
 			textAlign: "center"
 		};
-		/** 日志 / 事件文本框：跟随宿主主题变量 + 等宽字体（用户 2026-10-01：颜色跟着环境风格走）。 */
-		const logBoxStyle = {
+		/**
+		* 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
+		* 上沿一条线（与执行记录表头上沿线同色 `--tdt-border`），从这条线到下方虚线**整块铺底色**，
+		* 日志直接铺在里面。等宽字体跟环境风格走。
+		*/
+		const logAreaStyle = {
+			...panelScrollFillStyle,
+			borderTop: `1px solid var(--tdt-border)`,
+			background: "var(--tdt-surface-1)",
+			padding: "10px 12px",
 			fontFamily: monoFont$1,
 			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-sm)",
-			background: "var(--tdt-surface-1)",
-			border: `1px solid var(--tdt-border)`,
-			borderRadius: "var(--tdt-radius-sm)",
-			padding: "8px 10px",
+			lineHeight: "var(--tdt-line-sm)"
+		};
+		/** 日志行：行间距拉开一点（用户 2026-10-03）。 */
+		const logRowStyle = {
+			marginBottom: "6px",
 			wordBreak: "break-all"
 		};
 		const overlayStyle = {
@@ -41918,7 +41942,7 @@ body[data-ds-dark-theme]{
 			alignItems: "center",
 			gap: "6px",
 			flexWrap: "wrap",
-			marginBottom: "6px"
+			marginBottom: "10px"
 		};
 		/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
 		const limitRowStyle = {
@@ -42320,10 +42344,13 @@ body[data-ds-dark-theme]{
 			}), t("limitSuffix")), logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react.createElement)("div", { style: logAreaStyle }, logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react.createElement)("div", {
+				key: row.seq,
+				style: logRowStyle
+			}, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {
 				color: row.level === "error" ? "var(--tdt-danger)" : row.level === "warn" ? "var(--tdt-accent)" : "var(--tdt-fg-3)",
 				fontWeight: row.level === "error" ? 600 : 400
-			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${row.kind}: `), (0, react.createElement)("span", null, row.message))))));
+			} }, `[${row.level}]`), " ", (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${row.kind}: `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, row.message)))));
 			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
 			const renderConfirm = () => (0, react.createElement)("div", {
 				style: overlayStyle,
