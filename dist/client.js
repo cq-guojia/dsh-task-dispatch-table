@@ -607,6 +607,7 @@ window.__ModuleLoader__.load({
 			limitPrefix: "显示",
 			limitSuffix: "条",
 			cardRecordsEmpty: "（该任务还没有执行记录）",
+			cardRecordsEmptyFiltered: "（没有符合筛选条件的数据）",
 			cardLogsEmpty: "（该任务还没有日志）",
 			cardLoadFailed: "读取失败",
 			cardEventsEmpty: "（该次执行暂无事件）",
@@ -1156,6 +1157,7 @@ window.__ModuleLoader__.load({
 			limitPrefix: "Show",
 			limitSuffix: "rows",
 			cardRecordsEmpty: "(no run records for this task yet)",
+			cardRecordsEmptyFiltered: "(no data matches the current filter)",
 			cardLogsEmpty: "(no logs for this task yet)",
 			cardLoadFailed: "Failed to load",
 			cardEventsEmpty: "(no events for this run)",
@@ -1272,6 +1274,7 @@ body{
      （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */
   --tdt-open-bg:rgba(37,99,235,.10);
   --tdt-open-bg-soft:rgba(37,99,235,.05);
+  --tdt-card-hover:rgba(37,99,235,.07);
 
   /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
   --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
@@ -1371,6 +1374,7 @@ body[data-ds-dark-theme]{
   /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */
   --tdt-open-bg:rgba(96,165,250,.18);
   --tdt-open-bg-soft:rgba(96,165,250,.08);
+  --tdt-card-hover:rgba(96,165,250,.13);
 }
 `;
 		//#endregion
@@ -41214,6 +41218,8 @@ body[data-ds-dark-theme]{
 			`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
 			".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
 			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
+			".dsh-tdt-card { background: var(--tdt-surface-1); }",
+			".dsh-tdt-card:hover { background: var(--tdt-card-hover); }",
 			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
 			".dsh-tdt-rec-out { background: var(--tdt-chip-bg); }",
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
@@ -41669,7 +41675,6 @@ body[data-ds-dark-theme]{
 			marginBottom: "10px",
 			borderRadius: "var(--tdt-radius-sm)",
 			border: `1px solid var(--tdt-border)`,
-			background: "var(--tdt-surface-1)",
 			color: "var(--tdt-fg)",
 			transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`
 		};
@@ -41757,7 +41762,11 @@ body[data-ds-dark-theme]{
 			lineHeight: "var(--tdt-line-sm)",
 			pointerEvents: "none"
 		};
-		const BUSY_DELAY_MS = 400;
+		/**
+		* ⚠️ **临时调试值**（用户 2026-10-03）：改成 **0 = 每次都立刻显示**（不再有 400ms 阈值），
+		* 这样无论查询多快都能看到它。验完必须改回 400。
+		*/
+		const BUSY_DELAY_MS = 0;
 		/**
 		* ⚠️ **临时调试值**（用户 2026-10-03 要求）：亮起后**至少停留 5 秒**再消失，
 		* 用来肉眼确认「loading 到底在哪儿、到底有没有出现」。
@@ -42190,7 +42199,7 @@ body[data-ds-dark-theme]{
 			}), t("limitSuffix")), recError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("table", { style: {
+			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react.createElement)("table", { style: {
 				...miniTableStyle,
 				tableLayout: "fixed"
 			} }, (0, react.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react.createElement)("tr", null, (0, react.createElement)("th", { style: {
@@ -42435,6 +42444,7 @@ body[data-ds-dark-theme]{
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react.createElement)("div", {
 				ref: refOf,
+				className: "dsh-tdt-card",
 				style: cardStyle$1
 			}, (0, react.createElement)("div", {
 				style: {

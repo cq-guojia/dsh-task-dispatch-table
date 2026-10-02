@@ -1564,7 +1564,7 @@ console.log('\n[14] runtime-index')
       const client = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
       return client.includes('fetchInstances') && client.includes('fetchLogs') && client.includes('fetchEvents')
         && client.includes('cardTabInfo') && client.includes('cardTabRecords') && client.includes('cardTabLogs')
-        && client.includes('cardDeleteDesc') && client.includes('cardRecordsEmpty') && client.includes('cardLogsEmpty')
+        && client.includes('cardDeleteDesc') && client.includes('cardRecordsEmpty') && client.includes('cardRecordsEmptyFiltered') && client.includes('cardLogsEmpty')
     })())
   // 2026-10-02 真机 404 根因回归钉：宿主 webServer 对重复 (kind, path) 注册 throw
   // （dsh-host-webserver lib/index.js register）⇒ /config 的 GET+POST 必须合一条路由
@@ -1815,7 +1815,19 @@ console.log('\n[14] runtime-index')
       tl.includes('const logAreaStyle') && tl.includes('logRowStyle') && !tl.includes('const logBoxStyle'))
     check('过滤行上下间距一致：下间距 10px = 上间距（面板外虚线 → 过滤行）',
       tl.includes("marginBottom: '10px',"))
-    check('⏱ loading 保底停留 5 秒（**临时调试值**，验完要改回）', tl.includes('BUSY_HOLD_MS = 5000'))
+    check('⏱ loading 调试态：立即显示（BUSY_DELAY_MS=0）+ 保底停留 5 秒（验完都要改回）',
+      tl.includes('BUSY_HOLD_MS = 5000') && tl.includes('BUSY_DELAY_MS = 0'))
+    check('任务卡片 hover 微高亮：淡蓝 --tdt-card-hover，底色走 CSS 不由 inline 盖住',
+      tl.includes('.dsh-tdt-card:hover { background: var(--tdt-card-hover); }')
+      && tl.includes("className: 'dsh-tdt-card'")
+      // 只查 cardStyle 这个对象：inline 背景优先级高于 CSS class ⇒ 会盖掉 :hover。
+      // （别的控件比如控制按钮确实有 `background: var(--tdt-surface-1), color: var(--tdt-fg)`，
+      //   那条是正经的，不能一概否定 ⇒ 必须收口到 cardStyle 块内。）
+      && (() => {
+        const m = tl.match(/const cardStyle[\s\S]*?\n\}/)
+        const block = m ? m[0] : ''
+        return !block.includes("background: 'var(--tdt-surface-1)'")
+      })())
     check('loading 定位：fixed 到页面底部，水平贴内容容器（max-width 1120）右边缘',
       tl.includes("position: 'fixed'") && tl.includes('(100vw - 1120px) / 2'))
     check('日志关键字**同时匹配 message 与 kind**（否则搜 missed-slot 的 kind 搜不到）',
@@ -1823,8 +1835,8 @@ console.log('\n[14] runtime-index')
     check('任务卡片整行可点展开；开关 / 箭头拦下冒泡（不穿透、不双触发）',
       tl.includes('cursor: \'pointer\' },') && tl.includes('event.stopPropagation()')
       && (tl.match(/stopPropagation\(\)/g) ?? []).length >= 4)
-    check('忙碌指示：延迟 400ms 出现 + 沿用三个脉动方块 + 不吃鼠标事件',
-      tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS = 400')
+    check('忙碌指示：沿用三个脉动方块 + 不吃鼠标事件 + 过滤行不再插占位文字',
+      tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS')
       && tl.includes('dsh-tdt-run-blocks') && tl.includes('pointerEvents:')
       // 过滤行里那个会占位的一闪文字已经移除。
       && !tl.includes("recLoading ? h('span'") && !tl.includes("logLoading ? h('span'"))

@@ -106,6 +106,11 @@ const TASK_LIST_CSS = [
   // 记录表头吸顶（内容区定高滚动、表头不动）：原注释声称由 `.dsh-tdt-rec-head th` 接管，
   // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--tdt-surface-1）免得滚动时透内容。
   '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }',
+  // 任务卡片：底色 + **hover 微高亮**（用户 2026-10-03）。
+  // 底色必须写在这里而不是 inline style —— inline 会盖掉下面的 `:hover`。
+  // 高亮用**淡蓝** `--tdt-card-hover`：灰色高亮在卡片底色上几乎看不出来。
+  '.dsh-tdt-card { background: var(--tdt-surface-1); }',
+  '.dsh-tdt-card:hover { background: var(--tdt-card-hover); }',
   // 行 hover 高亮（用户 2026-10-02：斑马纹之上再给一层鼠标反馈）。
   // 特异性 (0,2,0) > `.dsh-tdt-rec-alt` (0,1,0) ⇒ 能盖住斑马纹底色。
   '.dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }',
@@ -679,8 +684,10 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
 const cardStyle: Record<string, string | number> = {
   display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'left',
   padding: '12px 14px', marginBottom: '10px', borderRadius: 'var(--tdt-radius-sm)',
-  border: `1px solid var(--tdt-border)`, background: 'var(--tdt-surface-1)', color: 'var(--tdt-fg)',
+  border: `1px solid var(--tdt-border)`, color: 'var(--tdt-fg)',
   transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`,
+  // ⚠️ **background 不放这里**：inline 背景的优先级高于 CSS class ⇒ `.dsh-tdt-card:hover` 会被盖掉。
+  // 底色与 hover 都走 CSS（见 TASK_LIST_CSS 里的 `.dsh-tdt-card`）。
 }
 const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-md)' }
 const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
@@ -727,7 +734,11 @@ const busyPillStyle: Record<string, string | number> = {
   // 纯提示，不吃鼠标事件（别挡住底下的内容）。
   pointerEvents: 'none',
 }
-const BUSY_DELAY_MS = 400
+/**
+ * ⚠️ **临时调试值**（用户 2026-10-03）：改成 **0 = 每次都立刻显示**（不再有 400ms 阈值），
+ * 这样无论查询多快都能看到它。验完必须改回 400。
+ */
+const BUSY_DELAY_MS = 0
 /**
  * ⚠️ **临时调试值**（用户 2026-10-03 要求）：亮起后**至少停留 5 秒**再消失，
  * 用来肉眼确认「loading 到底在哪儿、到底有没有出现」。
@@ -1104,7 +1115,12 @@ function TaskExpandPanel(props: {
       records === null
         ? null
         : records.length === 0
-          ? h('p', { style: faintStyle }, t('cardRecordsEmpty'))
+          // 空结果有两种成因：① 该任务确实从没执行过；② 有筛选（状态 / 时间范围）但没命中。
+          // 后者不能说「还没有执行记录」（那会误导成「从没跑过」），改用中性「没有符合筛选条件的数据」。
+          ? h('p', { style: faintStyle },
+              ((recStatus !== '' && recStatus !== 'all') || recRange.from !== '' || recRange.to !== '')
+                ? t('cardRecordsEmptyFiltered')
+                : t('cardRecordsEmpty'))
           : h('table', { style: { ...miniTableStyle, tableLayout: 'fixed' } },
             h('thead', { className: 'dsh-tdt-rec-head' }, h('tr', null,
               // 除「备注」外**一律定长**（备注是唯一弹性列，拉伸 / 收缩只动它）。
@@ -1386,7 +1402,7 @@ function TaskCard(props: {
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
 
-  return h('div', { ref: refOf, style: cardStyle },
+  return h('div', { ref: refOf, className: 'dsh-tdt-card', style: cardStyle },
     // 主行：**垂直居中**（用户 2026-09-30：右侧开关 / 展开箭头要与卡片边界居中对齐）
     // **整行可点**展开 / 收起（用户 2026-10-03）：箭头保留，只是同一个动作的显式入口。
     h('div', {

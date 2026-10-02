@@ -155,7 +155,7 @@ export type LocaleKey =
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
   | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
   | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword' | 'limitPrefix' | 'limitSuffix'
-  | 'cardRecordsEmpty' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
+  | 'cardRecordsEmpty' | 'cardRecordsEmptyFiltered' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
   | 'colTokens'
   // —— 实例状态通用短名（status-text.ts 单源；zh 统一两字：排队/派发/运行/成功/失败/跳过/未知）——
   | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
@@ -697,6 +697,7 @@ export const zh: Record<LocaleKey, string> = {
   limitPrefix: '显示',
   limitSuffix: '条',
   cardRecordsEmpty: '（该任务还没有执行记录）',
+  cardRecordsEmptyFiltered: '（没有符合筛选条件的数据）',
   cardLogsEmpty: '（该任务还没有日志）',
   cardLoadFailed: '读取失败',
   cardEventsEmpty: '（该次执行暂无事件）',
@@ -1261,6 +1262,7 @@ export const en: Record<LocaleKey, string> = {
   limitPrefix: 'Show',
   limitSuffix: 'rows',
   cardRecordsEmpty: '(no run records for this task yet)',
+  cardRecordsEmptyFiltered: '(no data matches the current filter)',
   cardLogsEmpty: '(no logs for this task yet)',
   cardLoadFailed: 'Failed to load',
   cardEventsEmpty: '(no events for this run)',

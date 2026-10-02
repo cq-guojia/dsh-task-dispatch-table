@@ -61,6 +61,7 @@ body{
      （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */
   --tdt-open-bg:rgba(37,99,235,.10);
   --tdt-open-bg-soft:rgba(37,99,235,.05);
+  --tdt-card-hover:rgba(37,99,235,.07);
 
   /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
   --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
@@ -160,5 +161,6 @@ body[data-ds-dark-theme]{
   /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */
   --tdt-open-bg:rgba(96,165,250,.18);
   --tdt-open-bg-soft:rgba(96,165,250,.08);
+  --tdt-card-hover:rgba(96,165,250,.13);
 }
 `
