@@ -24,9 +24,15 @@ export interface InstanceRow {
   outputs: string | null
   /**
    * 派发快照 JSON 字符串（决策 41）——服务端 `SELECT *` 已返回，此处只是**声明出来**。
-   * 会话弹窗「接收」区用它取 `resolvedDeps`（上游依赖，决策 43）；**只解析、不改**。
+   * 会话弹窗顶部输入区用它取 `resolvedDeps`（上游依赖，决策 43）与 `attachments`；**只解析、不改**。
    */
   snapshot?: string | null
+  /**
+   * 附加文件的绝对路径（与快照 `attachments` **按序对应**；解析不出为 null）。
+   * 只在「按会话 id 取实例」时由服务端下发：upload 型落在插件数据目录、link 型的基准是
+   * 工作区 title ⇒ 客户端两样都算不出来，必须服务端给。
+   */
+  attachmentPaths?: readonly (string | null)[] | null
   token_in: number | null
   token_out: number | null
   token_in_cache: number | null

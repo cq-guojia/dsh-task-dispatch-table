@@ -42,8 +42,8 @@ import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
 import type { WorkspaceFilesFace } from './file-preview'
 import { interpolateTranslate, type Translate } from './locales'
-// 任务文件上下文·接收区（上游产出，2026-10-03）。
-import { UpstreamInputsPanel, type UpstreamInputView } from './upstream-panel'
+// 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03）。
+import { TaskFileContextPanel, type AttachedFileView, type UpstreamInputView } from './task-file-context'
 // 带超时的 fetch（共用叶子模块）：本文件原先那条请求是**全仓唯一没有超时**的。
 import { fetchWithTimeout } from './http'
 
@@ -1141,15 +1141,15 @@ export function SessionViewModal(props: {
   onOpenFile?: (path: string) => void
   /**
    * 接收区（2026-10-03）：上游任务这次给了哪些文件（实例快照 `resolvedDeps`）。
-   * 空数组 = 无上游依赖 ⇒ 整块不渲染。
+   * 空数组 = 无上游依赖 ⇒ 该组不渲染。
    */
   upstream?: readonly UpstreamInputView[]
-  /** 打开上游那一次的会话（弹窗直接换成它）；**只传会话 id**。 */
-  onOpenUpstreamSession?: (sessionId: string) => void
+  /** 随附区（2026-10-03）：本任务设置里加的文件（快照 `attachments` + 服务端解析的路径）。 */
+  attached?: readonly AttachedFileView[]
 }): ReturnType<typeof h> {
   const {
     t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles,
-    onOpenFile, outputs, upstream, onOpenUpstreamSession,
+    onOpenFile, outputs, upstream, attached,
   } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
@@ -1344,19 +1344,10 @@ export function SessionViewModal(props: {
             }),
           ),
         ),
-        // 任务文件上下文·接收区（2026-10-03）：**在会话流之外**、标题条之下 ⇒ 不在任何轮次折叠里，
-        // 点与产出卡一眼分得开（用户 2026-10-02「不要放在折叠的那一段话里」）。
-        // 只在有上游依赖时渲染；随附文件走官方附件卡（在气泡里）、产出卡在会话末尾，都不在此重复。
-        upstream !== undefined && upstream.length > 0
-          ? h('div', { className: 'dsh-tdt-sv-ctx' },
-              h(UpstreamInputsPanel, {
-                items: upstream,
-                onOpenFile,
-                onOpenSession: onOpenUpstreamSession,
-                t,
-              }),
-            )
-          : null,
+        // 任务文件上下文（2026-10-03）：**在会话流之外**、标题条之下 ⇒ 不在任何轮次折叠里
+        // （用户 2026-10-02「不要放在折叠的那一段话里」）。顶部 = 输入（接收 / 随附），
+        // 产出卡留在会话末尾（官方 DeliverablesTail 同位）。两组都空 ⇒ 整块不渲染。
+        h(TaskFileContextPanel, { upstream: upstream ?? [], attached: attached ?? [], onOpenFile, t }),
         // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
         // U11：预览面已上提到页面级 dock（弹窗不再自带分栏），此处只留会话区本身。
         h(ChatViewFrame, { children: body }),

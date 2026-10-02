@@ -1226,6 +1226,18 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     check('file 块：不带附件时消息仍是单文本块（旧行为不变）',
       buildMessage(snapNoDeps, '/ws/down', '2026-09-26').content.length === 1)
   }
+  // 顶部输入区（2026-10-03）产物证据：服务端下发的附件路径字段 + 客户端面板与文案键都在发布物里。
+  {
+    const server = readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8')
+    const client = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('顶部输入区：服务端解析附件绝对路径（upload 走任务目录 / link 走来源工作区）',
+      server.includes('attachmentPaths') && server.includes('attachmentAbsPath'))
+    check('顶部输入区：客户端面板与文案键进产物（接收 / 随附 / 折叠 / 来源标记）',
+      client.includes('dsh-tdt-sv-tfc') && client.includes('tfcReceived') && client.includes('tfcAttached')
+      && client.includes('tfcMore') && client.includes('tfcMoreTasks') && client.includes('tfcNoOutputs'))
+    check('顶部输入区：左右内边距与官方会话区同一条基线（16 + clearance）',
+      client.includes('padding:18px calc(var(--dsh-composer-side-clearance,16px) + 16px) 14px'))
+  }
   // 决策 49：多 Agent 指令段只在 teamMode=true 时注入；缺省（老调用）消息不含团队段。
   const msgTeam = buildMessage({ ...snapWithDeps, agentTeam: true }, '/ws/down', '2026-09-29', true)
   check('多 Agent 指令段：teamMode=true 注入 spawn_teammate / team_task_create 指引；缺省调用不注入',
@@ -1871,8 +1883,8 @@ console.log('\n[14] runtime-index')
       tl.includes('const logAreaStyle') && tl.includes('logRowStyle') && !tl.includes('const logBoxStyle'))
     check('过滤行上下间距一致：下间距 10px = 上间距（面板外虚线 → 过滤行）',
       tl.includes("marginBottom: '10px',"))
-    check('⏱ loading 调试态：立即显示（BUSY_DELAY_MS=0）+ 保底停留 5 秒（验完都要改回）',
-      tl.includes('BUSY_HOLD_MS = 5000') && tl.includes('BUSY_DELAY_MS = 0'))
+    check('loading 阈值已回归正式值：400ms 后才显 + 返回即消失（无保底停留）',
+      tl.includes('BUSY_DELAY_MS = 400') && tl.includes('BUSY_HOLD_MS = 0'))
     check('任务卡片 hover 只作用主行（dsh-tdt-card-row），展开区不会跟着变蓝',
       tl.includes('.dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }')
       && tl.includes("className: 'dsh-tdt-card-row'")

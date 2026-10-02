@@ -11,10 +11,10 @@ import {
   ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, setEnabledDefinitionInline, taskDefinitionSchema, titleOf,
   upsertDefinitionInline, validateDefinitionForSave,
 } from './tasks.js'
-import { TaskStore, type InstanceStatus } from './store.js'
+import { parseInstanceSnapshot, TaskStore, type InstanceStatus } from './store.js'
 import {
-  assetPaths, deleteSnapshot, deleteTaskAssets, deleteVersion, listSnapshots, listVersions, moveAttachmentsIn, purgeTmp,
-  readSnapshot, readVersion, removeAttachmentFiles, saveSnapshot, saveVersion,
+  assetPaths, attachmentAbsPath, deleteSnapshot, deleteTaskAssets, deleteVersion, listSnapshots, listVersions,
+  moveAttachmentsIn, purgeTmp, readSnapshot, readVersion, removeAttachmentFiles, saveSnapshot, saveVersion,
   type AssetPaths, type AttachmentRef,
 } from './task-assets.js'
 import * as fs from 'fs'
@@ -778,7 +778,29 @@ const makeDispatchRoutes = (
         cursor: queryOf(req, 'cursor') || undefined,
         limit,
       })
-      writeJson(res, 200, { ok: true, rows: page.rows, nextCursor: page.nextCursor })
+      // 会话弹窗场景（带 sessionId）：顺带把**附加文件的绝对路径**解析出来一起给（2026-10-03）。
+      // 为什么必须服务端给：upload 型落在插件数据目录（客户端根本不知道 statePath），
+      // link 型的基准是**工作区 title**（客户端没有 title → path 映射）⇒ 不给就点不开。
+      // 解析不出 ⇒ null（绝不猜路径）。只在带 sessionId 时做，列表场景零成本。
+      const rows = sessionId === undefined ? page.rows : page.rows.map(row => {
+        const snap = parseInstanceSnapshot(row.snapshot ?? null)
+        const assets = getAssets()
+        const registry = getRegistry()
+        return {
+          ...row,
+          attachmentPaths: (snap?.attachments ?? []).map(item => {
+            if (item.kind === 'upload') {
+              return assets === null ? null : attachmentAbsPath(assets, row.task_id, item.ref)
+            }
+            const fromTitle = item.workspace !== undefined && item.workspace !== '' && registry !== null
+              ? registry.list().find(workspace => workspace.title === item.workspace)?.path ?? null
+              : null
+            const base = fromTitle ?? snap?.workspacePath ?? null
+            return base === null ? null : path.join(base, item.ref)
+          }),
+        }
+      })
+      writeJson(res, 200, { ok: true, rows, nextCursor: page.nextCursor })
     },
   },
   {

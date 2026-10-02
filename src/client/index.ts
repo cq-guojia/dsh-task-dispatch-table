@@ -35,9 +35,9 @@ import { ensureToastStyle, FloatingToast } from './toast-css'
 import { Button, IconButton, Segmented, ensureUiBase } from './ui'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
-// 任务文件上下文·接收区（上游产出，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
+// 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
 import { resolvedDepsOf } from '../deps.js'
-import type { UpstreamInputView } from './upstream-panel'
+import { attachmentsOf, type AttachedFileView, type UpstreamInputView } from './task-file-context'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
 import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { ConfigPanel } from './config-panel'
@@ -809,8 +809,10 @@ function TaskPage(props: {
     view: SessionViewTarget
     didUnarchive?: boolean
     outputs?: string[]
-    /** 上游输入（接收区，2026-10-03）：实例快照 `resolvedDeps` + 任务名反查。 */
+    /** 接收区（2026-10-03）：实例快照 `resolvedDeps` + 任务名反查。 */
     upstream?: UpstreamInputView[]
+    /** 随附区（2026-10-03）：快照 `attachments` + 服务端解析好的绝对路径。 */
+    attached?: AttachedFileView[]
   }
   const [viewing, setViewing] = useState<ViewingState | null>(null)
   /** 当前 viewing 的镜像：换会话时要 release 旧引用（state 更新是异步的，拿不到即时旧值）。 */
@@ -973,6 +975,7 @@ function TaskPage(props: {
       didUnarchive,
       outputs: row === null ? undefined : parseOutputs(row.outputs),
       upstream: upstreamOf(row?.snapshot ?? null),
+      attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths),
     })
   }
   const instances = (data?.instances ?? [])
@@ -1386,8 +1389,7 @@ function TaskPage(props: {
         onOpenFile: canPreview ? (path: string) => { openFile(viewing.sessionId, path) } : undefined,
         // 接收区（2026-10-03）：上游依赖清单；「查看该会话」→ 直接换成本弹窗打开上游那一次。
         upstream: viewing.upstream ?? [],
-        // 上游会话同样只给会话 id（铁律）——点进去渲染与其它入口一字不差。
-        onOpenUpstreamSession: (sid: string) => { void openView(sid) },
+        attached: viewing.attached ?? [],
         onClose: () => {
           const closed = viewing.sessionId
           const needArchive = viewing.didUnarchive === true

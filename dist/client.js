@@ -450,11 +450,15 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "收起",
 			deliverExpandAria: "展开全部 {count} 个交付文件",
 			deliverCollapseAria: "收起交付文件列表",
-			svUpstreamTitle: "接收 · 来自 {count} 个上游任务",
-			svUpstreamSession: "查看该会话",
-			svUpstreamNoOutputs: "未声明产出",
-			svUpstreamFileAria: "打开 {name}",
-			svUpstreamRelOnly: "（相对路径，基准工作区未知）",
+			tfcReceived: "接收 · 来自 {count} 个上游任务",
+			tfcAttached: "随附 · {count} 个文件",
+			tfcNoOutputs: "未声明产出",
+			tfcRelOnly: "（相对路径，基准工作区未知）",
+			tfcMore: "全部 {count} 个文件",
+			tfcMoreTasks: "全部 {count} 个上游任务",
+			tfcCollapse: "收起",
+			tfcFromUpload: "上传",
+			tfcFromWorkspace: "工作区",
 			editorNew: "新建任务",
 			editorEdit: "编辑任务",
 			editorClose: "关闭",
@@ -1005,11 +1009,15 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "Collapse",
 			deliverExpandAria: "Expand all {count} delivered files",
 			deliverCollapseAria: "Collapse the delivered-files list",
-			svUpstreamTitle: "Received · from {count} upstream task(s)",
-			svUpstreamSession: "Open that session",
-			svUpstreamNoOutputs: "No outputs declared",
-			svUpstreamFileAria: "Open {name}",
-			svUpstreamRelOnly: "(relative path — base workspace unknown)",
+			tfcReceived: "Received · from {count} upstream task(s)",
+			tfcAttached: "Attached · {count} file(s)",
+			tfcNoOutputs: "No outputs declared",
+			tfcRelOnly: "(relative path — base workspace unknown)",
+			tfcMore: "All {count} files",
+			tfcMoreTasks: "All {count} upstream tasks",
+			tfcCollapse: "Collapse",
+			tfcFromUpload: "uploaded",
+			tfcFromWorkspace: "workspace",
 			editorNew: "New task",
 			editorEdit: "Edit task",
 			editorClose: "Close",
@@ -3169,11 +3177,32 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
-/* ── 任务文件上下文·接收区（上游产出，2026-10-03） ──
-   官方没有「上游任务产出」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
-   输入文件可能十几个 ⇒ 一行一个小标签，不占产出卡那种大卡的位置。
-   容器挂在标题条与会话流之间（**不在任何轮次折叠里**）⇒ 与会话区隔开一条分隔线。 */
-.dsh-tdt-sv-ctx{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:10px 24px 12px;}
+/* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
+   官方没有「上游产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
+   ① 左右内边距 = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**，
+      不再自己突出一块（用户 2026-10-03 点名）；纵向：上 18（与 frame 一致）、下 14。
+   ② 输入文件可能十几个 ⇒ **一行一个**（图标 + 文件名），不用产出卡那种大卡。
+   ③ 长名省略 + 悬停全文；一排放几个交给 flex-wrap，不写死列数。 */
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:18px calc(var(--dsh-composer-side-clearance,16px) + 16px) 14px;flex-direction:column;gap:14px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-group{flex-direction:column;gap:6px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);font-weight:500;line-height:var(--tdt-line-sm);white-space:nowrap;}
+.dsh-tdt-sv-tfc-tasks{flex-direction:column;gap:10px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
+.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
+.dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-files{flex-wrap:wrap;gap:2px 8px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:280px;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
+button.dsh-tdt-sv-tfc-file{cursor:pointer;}
+button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
+button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
+.dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
+.dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
+.dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
+.dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
 /* 用户消息里的随附文件卡（官方 MessageItem attachmentRow / fileCard；2026-10-03）：
    气泡**下方**一行，小卡 = 图标 + 文件名 + 大小。引用里没有路径 ⇒ 不可点开，也不伪装成可点。 */
 .dsh-tdt-sv-attrow{flex-wrap:wrap;gap:6px;min-width:0;justify-content:flex-end;display:flex;}
@@ -3182,23 +3211,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-attBody{flex-direction:column;gap:1px;min-width:0;display:flex;}
 .dsh-tdt-sv-attName{color:var(--tdt-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);overflow:hidden;}
 .dsh-tdt-sv-attMeta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
-.dsh-tdt-sv-up{flex-direction:column;gap:6px;min-width:0;display:flex;}
-.dsh-tdt-sv-up-head{align-items:center;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-up-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);}
-.dsh-tdt-sv-up-groups{flex-direction:column;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-up-group{flex-direction:column;gap:4px;min-width:0;display:flex;}
-.dsh-tdt-sv-up-task{align-items:center;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-up-name{color:var(--tdt-fg);font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;flex:none;max-width:60%;}
-.dsh-tdt-sv-up-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
-.dsh-tdt-sv-up-link{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
-.dsh-tdt-sv-up-link:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
-.dsh-tdt-sv-up-files{flex-wrap:wrap;gap:2px 6px;min-width:0;display:flex;}
-.dsh-tdt-sv-up-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
-button.dsh-tdt-sv-up-file{cursor:pointer;}
-button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
-.dsh-tdt-sv-up-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-.dsh-tdt-sv-up-fileName{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
-.dsh-tdt-sv-up-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
 `;
 		/**
 		* 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
@@ -5116,70 +5128,173 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			}, (0, react.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
 		}
 		//#endregion
-		//#region src/client/upstream-panel.tsx
-		/** 目录标记：上游产出按「尾斜杠」表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
+		//#region src/client/task-file-context.tsx
+		/** 目录标记：产出按**尾斜杠**表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
 		function isDirPath(path) {
 			return path.endsWith("/");
 		}
-		/**
-		* 上游产出的相对路径 → 绝对路径（基准 = **上游**实例的工作区，不是当前会话的）。
-		* 无基准（上游旧行无快照）⇒ null：如实降级为「不可点」，绝不拿当前工作区去猜。
-		*/
+		/** 相对路径 → 绝对路径（基准 = 上游工作区；无基准 ⇒ null，如实降级为不可点，不拿当前工作区猜）。 */
 		function upstreamAbsPath(base, rel) {
 			if (base === null || base === "") return null;
 			const trimmed = rel.replace(/^\.\//, "");
 			return base.endsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
 		}
-		/** 文件名（去掉尾斜杠，目录显示最后一段）。 */
+		/** 文件/目录的显示名（去掉尾斜杠取最后一段）。 */
 		function displayName(path) {
 			const raw = path.replace(/\/+$/, "");
 			const cut = Math.max(raw.lastIndexOf("/"), raw.lastIndexOf("\\"));
 			return cut < 0 ? raw : raw.slice(cut + 1);
 		}
+		/** 折叠阈值：超过就收起（与官方 Deliverables「>4 折叠」同思路，输入区给宽松些）。 */
+		const COLLAPSE_FILES = 6;
+		const COLLAPSE_TASKS = 3;
 		/**
-		* 接收区：按上游任务分组，每组 = 任务名 + 计划时刻（+ «查看该会话»）+ 文件行（图标 + 名字）。
-		* 输入文件可能很多（十几个），故用**一行一个小标签**，不用产出卡那种大卡（用户 2026-10-02）。
-		* 无上游依赖 ⇒ 整块不渲染（返回 null），不留空壳。
+		* 快照 → 随附文件视图（服务端已把绝对路径解析在 `paths` 里，按序配对）。
+		* 形状不对 / 解析失败 ⇒ 空数组（不渲染该组，绝不显示假文件）。
 		*/
-		function UpstreamInputsPanel(props) {
-			const { items, onOpenFile, onOpenSession, t } = props;
-			if (items.length === 0) return null;
-			return (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-up",
-				"data-upstream-inputs": true
-			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-up-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-up-title" }, t("svUpstreamTitle", { count: items.length }))), (0, react.createElement)("div", { className: "dsh-tdt-sv-up-groups" }, items.map((item) => (0, react.createElement)("div", {
-				key: `${item.task}:${item.instanceId}`,
-				className: "dsh-tdt-sv-up-group"
-			}, (0, react.createElement)("div", { className: "dsh-tdt-sv-up-task" }, (0, react.createElement)("span", {
-				className: "dsh-tdt-sv-up-name",
-				title: item.task
-			}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-up-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt })), item.sessionId !== null && onOpenSession !== void 0 ? (0, react.createElement)("button", {
+		function attachmentsOf(snapshot, paths) {
+			if (snapshot === null || snapshot === "") return [];
+			try {
+				const parsed = JSON.parse(snapshot);
+				if (typeof parsed !== "object" || parsed === null) return [];
+				const list = parsed.attachments;
+				if (!Array.isArray(list)) return [];
+				return list.flatMap((item, index) => {
+					if (typeof item !== "object" || item === null) return [];
+					const one = item;
+					if (typeof one.name !== "string" || one.name === "") return [];
+					return [{
+						name: one.name,
+						kind: one.kind === "upload" ? "upload" : "link",
+						path: paths?.[index] ?? null
+					}];
+				});
+			} catch {
+				return [];
+			}
+		}
+		/** 一个文件行：图标 + 名字（超长省略、悬停全文）；有路径才可点。 */
+		function FileChip(props) {
+			const { keyOf, iconPath, label, title, onClick } = props;
+			const clickable = onClick !== void 0;
+			return (0, react.createElement)(clickable ? "button" : "span", {
+				key: keyOf,
+				className: "dsh-tdt-sv-tfc-file",
+				...clickable ? {
+					type: "button",
+					title,
+					"aria-label": title,
+					onClick
+				} : { title }
+			}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: iconPath,
+				size: 14
+			})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-label" }, label));
+		}
+		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。 */
+		function FileLines(props) {
+			const { files, t } = props;
+			const [expanded, setExpanded] = (0, react.useState)(false);
+			if (files.length === 0) return null;
+			const collapsible = files.length > COLLAPSE_FILES;
+			const shown = collapsible && !expanded ? files.slice(0, COLLAPSE_FILES) : files;
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-lines" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file) => (0, react.createElement)(FileChip, file))), collapsible ? (0, react.createElement)("button", {
 				type: "button",
-				className: "dsh-tdt-sv-up-link",
+				className: "dsh-tdt-sv-tfc-more",
+				"aria-expanded": expanded,
 				onClick: () => {
-					onOpenSession(item.sessionId);
+					setExpanded((value) => !value);
 				}
-			}, t("svUpstreamSession")) : null), item.outputs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-up-none" }, t("svUpstreamNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-up-files" }, item.outputs.map((path) => {
-				const abs = upstreamAbsPath(item.workspacePath, path);
-				const name = displayName(path);
-				const label = abs === null ? `${name} ${t("svUpstreamRelOnly")}` : name;
-				const clickable = abs !== null && onOpenFile !== void 0;
-				return (0, react.createElement)(clickable ? "button" : "span", {
-					key: path,
-					className: "dsh-tdt-sv-up-file",
-					...clickable ? {
-						type: "button",
-						title: abs ?? path,
-						"aria-label": t("svUpstreamFileAria", { name }),
-						onClick: () => {
-							onOpenFile?.(abs);
-						}
-					} : { title: label }
-				}, (0, react.createElement)("span", { className: "dsh-tdt-sv-up-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-					path: isDirPath(path) ? name : name,
-					size: 14
-				})), (0, react.createElement)("span", { className: "dsh-tdt-sv-up-fileName" }, label));
-			}))))));
+			}, t(expanded ? "tfcCollapse" : "tfcMore", { count: files.length })) : null);
+		}
+		/** 一组：标题行 + 内容。 */
+		function Group(props) {
+			const { title, children } = props;
+			if (children === null) return null;
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-group" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-title" }, title)), children);
+		}
+		/** 接收区：按上游任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠。 */
+		function ReceivedGroup(props) {
+			const { items, onOpenFile, t } = props;
+			const [expanded, setExpanded] = (0, react.useState)(false);
+			if (items.length === 0) return null;
+			const collapsible = items.length > COLLAPSE_TASKS;
+			const shown = collapsible && !expanded ? items.slice(0, COLLAPSE_TASKS) : items;
+			return (0, react.createElement)(Group, {
+				title: t("tfcReceived", { count: items.length }),
+				children: (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-tasks" }, shown.map((item) => {
+					const files = item.outputs.map((path) => {
+						const abs = upstreamAbsPath(item.workspacePath, path);
+						const name = displayName(path);
+						return {
+							keyOf: path,
+							iconPath: isDirPath(path) ? `${name}/` : name,
+							label: abs === null ? `${name} ${t("tfcRelOnly")}` : name,
+							title: abs ?? path,
+							onClick: abs !== null && onOpenFile !== void 0 ? () => {
+								onOpenFile(abs);
+							} : void 0
+						};
+					});
+					return (0, react.createElement)("div", {
+						key: `${item.task}:${item.instanceId}`,
+						className: "dsh-tdt-sv-tfc-task"
+					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", {
+						className: "dsh-tdt-sv-tfc-name",
+						title: item.task
+					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), files.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)(FileLines, {
+						files,
+						t
+					}));
+				}), collapsible ? (0, react.createElement)("button", {
+					type: "button",
+					className: "dsh-tdt-sv-tfc-more",
+					"aria-expanded": expanded,
+					onClick: () => {
+						setExpanded((value) => !value);
+					}
+				}, t(expanded ? "tfcCollapse" : "tfcMoreTasks", { count: items.length })) : null)
+			});
+		}
+		/** 随附区：本任务设置里加的文件（来源标注「上传 / 工作区」）。 */
+		function AttachedGroup(props) {
+			const { files, onOpenFile, t } = props;
+			if (files.length === 0) return null;
+			return (0, react.createElement)(Group, {
+				title: t("tfcAttached", { count: files.length }),
+				children: (0, react.createElement)(FileLines, {
+					files: files.map((file) => ({
+						keyOf: `${file.name}:${file.kind}`,
+						iconPath: file.name,
+						label: `${file.name}（${file.kind === "upload" ? t("tfcFromUpload") : t("tfcFromWorkspace")}）`,
+						title: file.path ?? file.name,
+						onClick: file.path !== null && onOpenFile !== void 0 ? () => {
+							onOpenFile(file.path);
+						} : void 0
+					})),
+					t
+				})
+			});
+		}
+		/**
+		* 任务文件上下文（输入侧）：接收（上游） + 随附（本任务设置）。
+		* 两组都空 ⇒ 整块不渲染（返回 null），不留空壳。
+		*/
+		function TaskFileContextPanel(props) {
+			const { upstream, attached, onOpenFile, t } = props;
+			if (upstream.length === 0 && attached.length === 0) return null;
+			return (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-tfc",
+				"data-task-file-context": true
+			}, (0, react.createElement)(ReceivedGroup, {
+				items: upstream,
+				onOpenFile,
+				t
+			}), (0, react.createElement)(AttachedGroup, {
+				files: attached,
+				onOpenFile,
+				t
+			}));
 		}
 		//#endregion
 		//#region src/client/session-view.ts
@@ -5826,7 +5941,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
 		*/
 		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, onOpenUpstreamSession } = props;
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, attached } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			const subscribe = (0, react.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
@@ -5995,12 +6110,12 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
 				label: tt("debugClose"),
 				onClick: onClose
-			}))), upstream !== void 0 && upstream.length > 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-ctx" }, (0, react.createElement)(UpstreamInputsPanel, {
-				items: upstream,
+			}))), (0, react.createElement)(TaskFileContextPanel, {
+				upstream: upstream ?? [],
+				attached: attached ?? [],
 				onOpenFile,
-				onOpenSession: onOpenUpstreamSession,
 				t
-			})) : null, (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+			}), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: forkTarget !== null,
 				onClose: () => {
 					if (!forking) setForkTarget(null);
@@ -42034,13 +42149,10 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 		/**
 		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
 		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
-		*
-		* ⚠️ 当前是临时调试值（用户 2026-10-03 验证 loading 位置）：
-		*   BUSY_DELAY_MS = 0（立刻显示）、BUSY_HOLD_MS = 5000（亮后至少停 5 秒）。
-		* 验完必须改回 400 / 0。
+		* 亮起后请求一返回就立刻消失（`BUSY_HOLD_MS = 0`，无保底停留）。
 		*/
-		const BUSY_DELAY_MS = 0;
-		const BUSY_HOLD_MS = 5e3;
+		const BUSY_DELAY_MS = 400;
+		const BUSY_HOLD_MS = 0;
 		function useDelayedBusy(active) {
 			const [shown, setShown] = (0, react.useState)(false);
 			const shownAtRef = (0, react.useRef)(0);
@@ -43986,7 +44098,8 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					view: target,
 					didUnarchive,
 					outputs: row === null ? void 0 : parseOutputs(row.outputs),
-					upstream: upstreamOf(row?.snapshot ?? null)
+					upstream: upstreamOf(row?.snapshot ?? null),
+					attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths)
 				});
 			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
@@ -44197,9 +44310,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					openFile(viewing.sessionId, path);
 				} : void 0,
 				upstream: viewing.upstream ?? [],
-				onOpenUpstreamSession: (sid) => {
-					openView(sid);
-				},
+				attached: viewing.attached ?? [],
 				onClose: () => {
 					const closed = viewing.sessionId;
 					const needArchive = viewing.didUnarchive === true;

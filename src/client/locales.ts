@@ -89,8 +89,9 @@ export type LocaleKey =
   | 'deliverRowError' | 'deliverRowStopped'
   | 'deliverFileLabel' | 'deliverPreviewHint' | 'deliverPreviewCard'
   | 'deliverAll' | 'deliverCollapse' | 'deliverExpandAria' | 'deliverCollapseAria'
-  // 任务文件上下文·接收区（上游产出，2026-10-03）
-  | 'svUpstreamTitle' | 'svUpstreamSession' | 'svUpstreamNoOutputs' | 'svUpstreamFileAria' | 'svUpstreamRelOnly'
+  // 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03）
+  | 'tfcReceived' | 'tfcAttached' | 'tfcNoOutputs' | 'tfcRelOnly' | 'tfcMore' | 'tfcMoreTasks'
+  | 'tfcCollapse' | 'tfcFromUpload' | 'tfcFromWorkspace'
   // —— 任务表单弹窗（P0 只做界面与交互）：新建 / 编辑任务 ——
   | 'editorNew' | 'editorEdit' | 'editorClose' | 'editorCancel' | 'editorSave' | 'editorSavePending'
   | 'editorEnabled' | 'editorEnabledOn' | 'editorEnabledOff'
@@ -444,12 +445,16 @@ export const zh: Record<LocaleKey, string> = {
   deliverCollapse: '收起',
   deliverExpandAria: '展开全部 {count} 个交付文件',
   deliverCollapseAria: '收起交付文件列表',
-  // —— 任务文件上下文·接收区（上游产出，2026-10-03） ——
-  svUpstreamTitle: '接收 · 来自 {count} 个上游任务',
-  svUpstreamSession: '查看该会话',
-  svUpstreamNoOutputs: '未声明产出',
-  svUpstreamFileAria: '打开 {name}',
-  svUpstreamRelOnly: '（相对路径，基准工作区未知）',
+  // —— 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ——
+  tfcReceived: '接收 · 来自 {count} 个上游任务',
+  tfcAttached: '随附 · {count} 个文件',
+  tfcNoOutputs: '未声明产出',
+  tfcRelOnly: '（相对路径，基准工作区未知）',
+  tfcMore: '全部 {count} 个文件',
+  tfcMoreTasks: '全部 {count} 个上游任务',
+  tfcCollapse: '收起',
+  tfcFromUpload: '上传',
+  tfcFromWorkspace: '工作区',
   // —— 任务表单弹窗 ——
   editorNew: '新建任务',
   editorEdit: '编辑任务',
@@ -1016,12 +1021,16 @@ export const en: Record<LocaleKey, string> = {
   deliverCollapse: 'Collapse',
   deliverExpandAria: 'Expand all {count} delivered files',
   deliverCollapseAria: 'Collapse the delivered-files list',
-  // —— Task file context · received (upstream outputs, 2026-10-03) ——
-  svUpstreamTitle: 'Received · from {count} upstream task(s)',
-  svUpstreamSession: 'Open that session',
-  svUpstreamNoOutputs: 'No outputs declared',
-  svUpstreamFileAria: 'Open {name}',
-  svUpstreamRelOnly: '(relative path — base workspace unknown)',
+  // —— Task file context (top input area: received / attached, 2026-10-03) ——
+  tfcReceived: 'Received · from {count} upstream task(s)',
+  tfcAttached: 'Attached · {count} file(s)',
+  tfcNoOutputs: 'No outputs declared',
+  tfcRelOnly: '(relative path — base workspace unknown)',
+  tfcMore: 'All {count} files',
+  tfcMoreTasks: 'All {count} upstream tasks',
+  tfcCollapse: 'Collapse',
+  tfcFromUpload: 'uploaded',
+  tfcFromWorkspace: 'workspace',
   // —— 任务表单弹窗 ——
   editorNew: 'New task',
   editorEdit: 'Edit task',

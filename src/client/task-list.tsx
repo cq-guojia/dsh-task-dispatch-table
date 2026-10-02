@@ -705,13 +705,10 @@ const panelBoxStyle: Record<string, string | number> = {
 /**
  * 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
  * 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
- *
- * ⚠️ 当前是临时调试值（用户 2026-10-03 验证 loading 位置）：
- *   BUSY_DELAY_MS = 0（立刻显示）、BUSY_HOLD_MS = 5000（亮后至少停 5 秒）。
- * 验完必须改回 400 / 0。
+ * 亮起后请求一返回就立刻消失（`BUSY_HOLD_MS = 0`，无保底停留）。
  */
-const BUSY_DELAY_MS = 0
-const BUSY_HOLD_MS = 5000
+const BUSY_DELAY_MS = 400
+const BUSY_HOLD_MS = 0
 function useDelayedBusy(active: boolean): boolean {
   const [shown, setShown] = useState(false)
   const shownAtRef = useRef(0)
