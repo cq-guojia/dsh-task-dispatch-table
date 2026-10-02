@@ -105,7 +105,14 @@ const TASK_LIST_CSS = [
   '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
   // 记录表头吸顶（内容区定高滚动、表头不动）：原注释声称由 `.dsh-tdt-rec-head th` 接管，
   // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--tdt-surface-1）免得滚动时透内容。
-  '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-plate); }',
+  '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }',
+  // 行 hover 高亮（用户 2026-10-02：斑马纹之上再给一层鼠标反馈）。
+  // 特异性 (0,2,0) > `.dsh-tdt-rec-alt` (0,1,0) ⇒ 能盖住斑马纹底色。
+  '.dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }',
+  // 产出物图标小底板：圆角方形 + hover 变亮（表示可点）。
+  // 底板**走 class**——inline background 会盖掉 :hover。
+  '.dsh-tdt-rec-out { background: var(--tdt-chip-bg); }',
+  '.dsh-tdt-rec-out:hover { background: var(--tdt-plate-hover); }',
   // 运行中的活动指示（用户 2026-09-30）：三个小方块依次脉动，类似手机充电 / 加载中。
   // `currentColor` ⇒ 跟随所在格的文字色（这里被设成 success 绿）。
   '@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }',
@@ -703,7 +710,9 @@ const panelWrapStyle: Record<string, string | number> = {
   marginTop: '10px', borderTop: `1px dashed var(--tdt-border)`, paddingTop: '10px',
 }
 const panelBarStyle: Record<string, string | number> = {
-  marginTop: '10px', paddingTop: '10px', borderTop: `1px dashed var(--tdt-border)`,
+  // 表底**贴着**虚线（用户 2026-10-02）：去掉上外边距，只留虚线上方的内边距。
+  // 面板总高不变（`panelBoxStyle` 定高 + 内容区 flex:1 自动吃掉这 10px）。
+  paddingTop: '10px', borderTop: `1px dashed var(--tdt-border)`,
   display: 'flex', alignItems: 'center', gap: '8px',
 }
 const miniTableStyle: Record<string, string | number> = { width: '100%', borderCollapse: 'collapse', fontSize: 'var(--tdt-font-sm)' }
@@ -769,6 +778,16 @@ const plainIconBtnStyle: Record<string, string | number> = {
   width: '20px', height: '20px', padding: 0, border: 'none', background: 'transparent',
   color: 'var(--tdt-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit', transition,
 }
+/**
+ * 产出物图标钮（用户 2026-10-02：图标加**浅色圆角方形底板**，hover 变亮 ⇒ 明示可点）。
+ * ⚠️ **不写 background**：底板 / hover 走 `.dsh-tdt-rec-out`（inline 背景会盖掉 `:hover`）。
+ */
+const outputIconBtnStyle: Record<string, string | number> = {
+  appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: '22px', height: '22px', padding: 0, border: 'none',
+  color: 'var(--tdt-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit',
+  borderRadius: 'var(--tdt-radius-sm)', transition,
+}
 /** 产出物图标格（最多 3 个 +「…」更多）。 */
 const outputCellStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '2px', flexWrap: 'nowrap',
@@ -777,15 +796,28 @@ const outputCellStyle: Record<string, string | number> = {
 const filterRowStyle: Record<string, string | number> = {
   display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '6px',
 }
+/** 过滤行里的字段名（「状态：」等）。 */
+const filterLabelStyle: Record<string, string | number> = {
+  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', flex: 'none',
+}
+/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
+const limitRowStyle: Record<string, string | number> = {
+  display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto',
+  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)',
+}
 /** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 const recHeadStyle: Record<string, string | number> = {
   // 标题一律**居中**（用户 2026-10-02）。
-  // 底色走 `--tdt-plate`（浅 #fafafa / 暗 #212123）——**不用**「基础面」那个变量，
-  // 它在浅色主题是纯白、暗色主题是纯黑，用户点名「标题栏都不对」。
-  ...miniCellStyle, textAlign: 'center', fontWeight: 600, color: 'var(--tdt-fg-2)',
-  background: 'var(--tdt-plate)',
-  // 表头下沿只留**极浅**一条（不是实线重色，用户 2026-10-02）。
-  borderBottom: `1px solid var(--tdt-border-faint)`,
+  // 底色走 `--tdt-head-bg`：浅色主题**偏深**、暗色主题**偏亮**（两侧都与卡片面拉开层次，
+  // 不再出现「浅色纯白 / 暗色纯黑」）。明暗差异单点落在 ui/tokens.ts。
+  ...miniCellStyle,
+  // 表头**加高**（用户 2026-10-02：太薄了）。
+  padding: '11px 10px',
+  textAlign: 'center', fontWeight: 600, color: 'var(--tdt-fg-2)',
+  background: 'var(--tdt-head-bg)',
+  // **上下都要有一条线**（原先只有下沿，且颜色太浅根本看不出来）。
+  borderTop: `1px solid var(--tdt-border)`,
+  borderBottom: `1px solid var(--tdt-border)`,
 }
 /**
  * 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
@@ -827,7 +859,7 @@ function TaskExpandPanel(props: {
   const timeLabels = useMemo(() => timeLabelsOf(t), [t])
   // 时间范围控件文案（records / logs 共用一份）。
   const timeRangeLabels: TimeRangeLabels = useMemo(() => ({
-    all: t('trAll'), custom: t('trCustom'), from: t('cardFrom'), to: t('cardTo'),
+    time: t('cardTime'), all: t('trAll'), custom: t('trCustom'), from: t('cardFrom'), to: t('cardTo'),
     presets: {
       today: t('trToday'), yesterday: t('trYesterday'), thisWeek: t('trThisWeek'),
       lastWeek: t('trLastWeek'), thisMonth: t('trThisMonth'), lastMonth: t('trLastMonth'),
@@ -837,6 +869,8 @@ function TaskExpandPanel(props: {
   // ── 执行记录面板 ──
   const [recStatus, setRecStatus] = useState('all')
   const [recRange, setRecRange] = useState<TimeRangeValue>({ from: '', to: '' })
+  // 条数（用户 2026-10-02：执行记录也要有条数过滤，默认 100，别一次铺几百条）。
+  const [recLimit, setRecLimit] = useState(100)
   const [records, setRecords] = useState<InstanceRow[] | null>(null)
   const [recLoading, setRecLoading] = useState(false)
   const [recError, setRecError] = useState<string | null>(null)
@@ -871,7 +905,7 @@ function TaskExpandPanel(props: {
       statuses: recStatus === 'all' ? undefined : FILTER_BUCKETS[recStatus],
       from: range.fromTs,
       to: range.toTs,
-      limit: 100,
+      limit: recLimit,
     })
       .then(({ rows }) => {
         if (!alive) return
@@ -882,7 +916,7 @@ function TaskExpandPanel(props: {
       .catch((error: unknown) => { if (alive) setRecError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setRecLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id, recStatus, recRange])
+  }, [tab, row.id, recStatus, recRange, recLimit])
 
   // 点一行 ⇒ 取该次执行的事件时间线（seq 升序 = 旧→新）。
   useEffect(() => {
@@ -948,6 +982,7 @@ function TaskExpandPanel(props: {
   const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
     // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 时间范围控件（用户 2026-10-02 第四轮）。
     h('div', { style: filterRowStyle },
+      h('span', { style: filterLabelStyle }, t('colStatus')),
       h(SelectField, {
         value: recStatus,
         options: [
@@ -971,6 +1006,21 @@ function TaskExpandPanel(props: {
         labels: timeRangeLabels, calendarLabels, timeLabels,
         precision: 'day', size: 'md',
       }),
+      // 条数过滤：**统一放最右边**，定式 `显示 <N> 条`（用户 2026-10-02）。
+      h('label', { style: limitRowStyle },
+        t('limitPrefix'),
+        h(SelectField, {
+          value: String(recLimit),
+          options: [50, 100, 200].map(n => ({ value: String(n), label: String(n) })),
+          onChange: (next: string) => { setRecLimit(Number(next)) },
+          placeholder: String(recLimit),
+          emptyLabel: t('editorNoOptions'),
+          ariaLabel: t('cardLogLimit'),
+          size: 'md',
+          width: 70,
+        }),
+        t('limitSuffix'),
+      ),
       recLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       recError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${recError}`) : null,
     ),
@@ -988,8 +1038,9 @@ function TaskExpandPanel(props: {
               h('th', { style: { ...recHeadStyle, width: '76px' } }, t('colDuration')),
               h('th', { style: { ...recHeadStyle, width: '96px' } }, t('colOutputs')),
               h('th', { style: { ...recHeadStyle, width: '72px' } }, t('colTokens')),
-              h('th', { style: { ...recHeadStyle, width: '68px' } }, t('colSession')),
+              // 用户 2026-10-02：**查看在最后一列，备注在倒数第二列**。
               h('th', { style: recHeadStyle }, t('colNote')),
+              h('th', { style: { ...recHeadStyle, width: '68px' } }, t('colSession')),
             )),
             h('tbody', null,
               records.flatMap((instance, index) => {
@@ -1007,7 +1058,8 @@ function TaskExpandPanel(props: {
                 const mainRow = h('tr', {
                   key: instance.id,
                   // 斑马纹：奇数行浅底（`.dsh-tdt-rec-alt`）；展开行盖成第二层面。
-                  className: open ? undefined : (index % 2 === 1 ? 'dsh-tdt-rec-alt' : undefined),
+                  // 斑马纹 + hover 高亮（hover 由 `.dsh-tdt-rec-row:hover` 接管）。
+                  className: ['dsh-tdt-rec-row', open || index % 2 === 0 ? '' : 'dsh-tdt-rec-alt'].join(' ').trim(),
                   style: { cursor: 'pointer', ...(open ? { background: 'var(--tdt-surface-2)' } : {}) },
                   onClick: () => { setOpenInstance(open ? null : instance.id) },
                 },
@@ -1035,8 +1087,8 @@ function TaskExpandPanel(props: {
                       ? null
                       : h('span', { style: outputCellStyle },
                         outputs.slice(0, 3).map(output => h('button', {
-                          key: output, type: 'button', title: output,
-                          style: { ...plainIconBtnStyle, cursor: canOpenFile ? 'pointer' : 'default' },
+                          key: output, type: 'button', title: output, className: 'dsh-tdt-rec-out',
+                          style: { ...outputIconBtnStyle, cursor: canOpenFile ? 'pointer' : 'default' },
                           onClick: (event: { stopPropagation(): void }) => {
                             event.stopPropagation()
                             if (canOpenFile && openFile !== undefined && sid !== null) openFile(sid, output)
@@ -1045,7 +1097,8 @@ function TaskExpandPanel(props: {
                         outputs.length > 3
                           ? h('button', {
                             type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
-                            style: { ...plainIconBtnStyle, width: 'auto', fontSize: 'var(--tdt-font-md)' },
+                            className: 'dsh-tdt-rec-out',
+                            style: { ...outputIconBtnStyle, width: 'auto', padding: '0 6px', fontSize: 'var(--tdt-font-md)' },
                             onClick: (event: { stopPropagation(): void }) => {
                               event.stopPropagation()
                               if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid, row.title, outputs)
@@ -1059,16 +1112,7 @@ function TaskExpandPanel(props: {
                     instance.token_in === null && instance.token_out === null
                       ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '-')
                       : h('span', { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
-                  // ⑦ 会话记录：小按钮「查看」（用户 2026-10-02：不要光秃秃一个图标）+ 定宽居中。
-                  h('td', { style: miniCellCenterStyle },
-                    canOpenSession && openSession !== undefined && sid !== null
-                      ? h(Button, {
-                        variant: 'outline', size: 'sm',
-                        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title, outputs) },
-                      }, t('colView'))
-                      : null,
-                  ),
-                  // ⑧ 备注：**错误 / 未执行的原因**（服务端 `attachNotes` 从最新原因事件推导）。
+                  // ⑦ 备注：**错误 / 未执行的原因**（服务端 `attachNotes` 从最新原因事件推导）。
                   // 全表**唯一弹性列**（不定长）：拉伸 / 收缩只动它；超长省略号，hover 看全文。
                   h('td', { style: { ...miniCellStyle, maxWidth: 0 } },
                     instance.note === null || instance.note === undefined || instance.note === ''
@@ -1080,6 +1124,15 @@ function TaskExpandPanel(props: {
                           color: 'var(--tdt-danger)',
                         },
                       }, instance.note),
+                  ),
+                  // ⑧ 会话记录（**最后一列**）：小按钮「查看」（用户 2026-10-02：不要光秃秃一个图标）+ 定宽居中。
+                  h('td', { style: miniCellCenterStyle },
+                    canOpenSession && openSession !== undefined && sid !== null
+                      ? h(Button, {
+                        variant: 'outline', size: 'sm',
+                        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid, row.title, outputs) },
+                      }, t('colView'))
+                      : null,
                   ),
                 )
                 const detailRow = open
@@ -1158,9 +1211,9 @@ function TaskExpandPanel(props: {
         labels: timeRangeLabels, calendarLabels, timeLabels,
         precision: 'minute', size: 'md',
       }),
-      // 条数选择器**居右**（用户 2026-10-02）：默认 100 条，别把几百条一次全铺出来。
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } },
-        t('cardLogLimit'),
+      // 条数过滤：**居右**，定式 `显示 <N> 条`（与执行记录面板同一件、同一位置）。
+      h('label', { style: limitRowStyle },
+        t('limitPrefix'),
         h(SelectField, {
           value: String(logLimit),
           options: [50, 100, 200].map(n => ({ value: String(n), label: String(n) })),
@@ -1171,6 +1224,7 @@ function TaskExpandPanel(props: {
           size: 'md',
           width: 70,
         }),
+        t('limitSuffix'),
       ),
       logLoading ? h('span', { style: faintStyle }, t('loading')) : null,
       logError !== null ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${logError}`) : null,

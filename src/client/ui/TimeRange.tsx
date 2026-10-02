@@ -9,7 +9,7 @@
  * - **起 / 止框定长**（用户 2026-10-02：填进内容就撑开、不停跳——宽度固定，不随值变）。
  * - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
  */
-import { createElement as h, useMemo, type ReactElement } from 'react'
+import { createElement as h, Fragment, useMemo, type ReactElement } from 'react'
 import { DateField, TimeField, type CalendarLabels, type TimeLabels } from './DateTime'
 import { SelectField, type EditorOption } from './Field'
 import { ALL_TIME_PRESETS, presetRange, type TimePrecision, type TimePresetId, type TimeRangeValue } from './time-range'
@@ -19,11 +19,13 @@ export type TimePresetLabels = Record<TimePresetId, string>
 
 /** 控件文案（由调用方按语言组装）。 */
 export interface TimeRangeLabels {
+  /** 行首标签「时间：」（用户 2026-10-02 定式：`时间：<起> 到 <止> <范围>`）。 */
+  time: string
   /** 「全部」（清空两框的默认档）。 */
   all: string
   /** 「自定义」（用户手动改时间后自动落位）。 */
   custom: string
-  /** 「从」/「到」标签。 */
+  /** 「从」/「到」标签（两框之间的分隔用 `to`）。 */
   from: string
   to: string
   /** 各预设档名。 */
@@ -99,33 +101,40 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
     return withTime ? `${date} ${which === 'to' ? '23:59' : '00:00'}` : date
   }
 
+  /** 一端 = 日期框（+ 分钟档的时分框）；「时间：」「到」由外层排（用户 2026-10-02 定式）。 */
   const endFields = (which: 'from' | 'to'): ReactElement => {
     const raw = value[which]
     const date = dateOf(raw)
     const time = timeOf(raw)
-    return h('label', { style: labelStyle },
-      which === 'from' ? labels.from : labels.to,
+    const hint = which === 'from' ? labels.from : labels.to
+    return h(Fragment, null,
       // 定长（用户 2026-10-02）：宽度不随值变化——选了时分也不跳。
       h(DateField, {
         value: date,
         onChange: (next: string) => { merge({ [which]: join(which, next, time) } as Partial<TimeRangeValue>) },
-        placeholder: which === 'from' ? labels.from : labels.to,
-        ariaLabel: which === 'from' ? labels.from : labels.to,
+        placeholder: hint,
+        ariaLabel: hint,
         labels: calendarLabels, size, disabled: props.disabled, width: 124,
       }),
+      // ④ 有小时分钟就**跟在那两个框后面**。
       withTime
         ? h(TimeField, {
           value: time,
           onChange: (next: string) => { merge({ [which]: join(which, date === '' ? todayIso() : date, next) } as Partial<TimeRangeValue>) },
           placeholder: 'HH:mm',
-          ariaLabel: which === 'from' ? labels.from : labels.to,
+          ariaLabel: hint,
           labels: timeLabels, size, disabled: props.disabled, width: 88,
         })
         : null,
     )
   }
 
+  // 定式（用户 2026-10-02）：`时间：<起始> 到 <结束> <范围>` —— 「范围」下拉在**最后**。
   return h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
+    h('span', { style: labelStyle }, labels.time),
+    endFields('from'),
+    h('span', { style: labelStyle }, labels.to),
+    endFields('to'),
     h(SelectField, {
       value: selection,
       options,
@@ -141,7 +150,5 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
       width: 96,
       disabled: props.disabled,
     }),
-    endFields('from'),
-    endFields('to'),
   )
 }

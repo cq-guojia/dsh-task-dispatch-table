@@ -1768,9 +1768,10 @@ console.log('\n[14] runtime-index')
       && (tl.match(/width: '\d+px'/g) ?? []).length >= 7)
     // 只锁定表头那一块（弹窗等处用 surface-base 是合理的，不在本断言范围）。
     const headBlock = /const recHeadStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? ''
-    check('表头：标题居中 + 底色走 --tdt-plate（不再用纯白 / 纯黑的 surface-base）',
-      headBlock.includes("textAlign: 'center'") && headBlock.includes("background: 'var(--tdt-plate)'")
-      && !headBlock.includes('surface-base'))
+    check('表头：居中 + 加高 + **上下都有线** + 底色走 --tdt-head-bg（明暗两侧都与卡片面拉开层次）',
+      headBlock.includes("textAlign: 'center'") && headBlock.includes("background: 'var(--tdt-head-bg)'")
+      && headBlock.includes("padding: '11px 10px'")
+      && headBlock.includes('borderTop:') && headBlock.includes('borderBottom:'))
     check('状态过滤下拉顺序 全部 / 成功 / 失败 / 运行中（下拉不必守两字）',
       tl.includes("value: 'succeeded'") && tl.includes("value: 'failed'") && tl.includes("value: 'running'")
       && tl.includes("t('filterRunning')"))
@@ -1785,6 +1786,22 @@ console.log('\n[14] runtime-index')
       && tr.includes('endOfDay(sun)') && tr.includes('endOfDay(last)'))
     check('结束框未选时刻 ⇒ 默认 23:59（起始仍 00:00）：否则选「10-2 作结束」当天数据全漏',
       trc.includes("which === 'to' ? '23:59' : '00:00'") && trc.includes('join(which,'))
+    check('时间控件定式 = 时间：<起> 到 <止> <范围>（范围下拉排在最后）',
+      trc.includes('labels.time') && trc.includes("endFields('from')") && trc.includes("endFields('to')")
+      && trc.indexOf('labels.time') < trc.indexOf("endFields('from')")
+      && trc.indexOf("endFields('to')") < trc.lastIndexOf('h(SelectField'))
+    check('查看在最后一列、备注在倒数第二列',
+      tl.indexOf("t('colNote')") < tl.indexOf("t('colSession')") && tl.indexOf("t('colNote')") > 0)
+    check('执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右',
+      tl.includes("t('limitPrefix')") && tl.includes("t('limitSuffix')") && tl.includes('recLimit')
+      && (tl.match(/limitRowStyle/g) ?? []).length >= 3)
+    check('产出物图标有浅色圆角底板且 hover 变亮；行 hover 高亮',
+      tl.includes('.dsh-tdt-rec-out') && tl.includes('.dsh-tdt-rec-out:hover')
+      && tl.includes('.dsh-tdt-rec-row:hover') && tl.includes('dsh-tdt-rec-row'))
+    // 表底贴虚线：底栏去掉 marginTop（面板总高由 panelBoxStyle 定高保持不变）。
+    const barBlock = /const panelBarStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? ''
+    check('表底贴着虚线（底栏去掉 marginTop），面板高度不变',
+      barBlock.includes('borderTop:') && !barBlock.includes('marginTop'))
     check('新增格式 helper：计划执行 / 实际开始 / 时长（H:MM:SS·MM:SS）',
       fmt.includes('export function formatPlanStamp')
       && fmt.includes('export function formatClock')

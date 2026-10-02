@@ -627,6 +627,9 @@ window.__ModuleLoader__.load({
 			cardTo: "到",
 			cardKeyword: "关键字",
 			cardLogLimit: "条数",
+			cardTime: "时间：",
+			limitPrefix: "显示",
+			limitSuffix: "条",
 			cardRecordsEmpty: "（该任务还没有执行记录）",
 			cardLogsEmpty: "（该任务还没有日志）",
 			cardLoadFailed: "读取失败",
@@ -1176,6 +1179,9 @@ window.__ModuleLoader__.load({
 			cardTo: "To",
 			cardKeyword: "Keyword",
 			cardLogLimit: "Rows",
+			cardTime: "Time:",
+			limitPrefix: "Show",
+			limitSuffix: "rows",
 			cardRecordsEmpty: "(no run records for this task yet)",
 			cardLogsEmpty: "(no logs for this task yet)",
 			cardLoadFailed: "Failed to load",
@@ -1285,6 +1291,10 @@ body{
   --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
   --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
+  /* 表头底：与卡片面拉开层次——浅色主题**偏深**（用户 2026-10-02）。 */
+  --tdt-head-bg:var(--tdt-plate);
+  /* 图标小底板（产出物）：浅色用淡灰，暗色用微亮（见暗色段覆盖）。 */
+  --tdt-chip-bg:var(--tdt-plate);
 
   /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
   --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
@@ -1376,6 +1386,9 @@ body[data-ds-dark-theme]{
   --tdt-plate:var(--dsw-static-neutral-850,#212123);
   --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
+  /* 暗色主题**反过来**：表头要比卡片面**亮**（用户：纯黑背景没法看）⇒ 走 surface-2。 */
+  --tdt-head-bg:var(--tdt-surface-2);
+  --tdt-chip-bg:var(--tdt-icon-plate);
 }
 `;
 		//#endregion
@@ -2594,17 +2607,19 @@ body[data-ds-dark-theme]{
 				if (time !== "") return withTime ? `${date} ${time}` : date;
 				return withTime ? `${date} ${which === "to" ? "23:59" : "00:00"}` : date;
 			};
+			/** 一端 = 日期框（+ 分钟档的时分框）；「时间：」「到」由外层排（用户 2026-10-02 定式）。 */
 			const endFields = (which) => {
 				const raw = value[which];
 				const date = dateOf(raw);
 				const time = timeOf(raw);
-				return (0, react.createElement)("label", { style: labelStyle }, which === "from" ? labels.from : labels.to, (0, react.createElement)(DateField, {
+				const hint = which === "from" ? labels.from : labels.to;
+				return (0, react.createElement)(react.Fragment, null, (0, react.createElement)(DateField, {
 					value: date,
 					onChange: (next) => {
 						merge({ [which]: join(which, next, time) });
 					},
-					placeholder: which === "from" ? labels.from : labels.to,
-					ariaLabel: which === "from" ? labels.from : labels.to,
+					placeholder: hint,
+					ariaLabel: hint,
 					labels: calendarLabels,
 					size,
 					disabled: props.disabled,
@@ -2615,7 +2630,7 @@ body[data-ds-dark-theme]{
 						merge({ [which]: join(which, date === "" ? todayIso$1() : date, next) });
 					},
 					placeholder: "HH:mm",
-					ariaLabel: which === "from" ? labels.from : labels.to,
+					ariaLabel: hint,
 					labels: timeLabels,
 					size,
 					disabled: props.disabled,
@@ -2627,7 +2642,7 @@ body[data-ds-dark-theme]{
 				alignItems: "center",
 				gap: "6px",
 				flexWrap: "wrap"
-			} }, (0, react.createElement)(SelectField, {
+			} }, (0, react.createElement)("span", { style: labelStyle }, labels.time), endFields("from"), (0, react.createElement)("span", { style: labelStyle }, labels.to), endFields("to"), (0, react.createElement)(SelectField, {
 				value: selection,
 				options,
 				onChange: (next) => {
@@ -2647,7 +2662,7 @@ body[data-ds-dark-theme]{
 				size,
 				width: 96,
 				disabled: props.disabled
-			}), endFields("from"), endFields("to"));
+			}));
 		}
 		//#endregion
 		//#region src/client/archive-session-css.ts
@@ -41213,7 +41228,10 @@ body[data-ds-dark-theme]{
 			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
 			`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
 			".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
-			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-plate); }",
+			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
+			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
+			".dsh-tdt-rec-out { background: var(--tdt-chip-bg); }",
+			".dsh-tdt-rec-out:hover { background: var(--tdt-plate-hover); }",
 			"@keyframes dsh-tdt-run-block { 0%, 80%, 100% { opacity: 0.25; transform: scale(0.8) } 40% { opacity: 1; transform: scale(1) } }",
 			".dsh-tdt-run-blocks { display: inline-flex; align-items: center; gap: 3px; }",
 			".dsh-tdt-run-blocks > i { width: 5px; height: 5px; border-radius: 1px; background: currentColor; animation: dsh-tdt-run-block 1.2s ease-in-out infinite; }",
@@ -41741,7 +41759,6 @@ body[data-ds-dark-theme]{
 			paddingTop: "10px"
 		};
 		const panelBarStyle = {
-			marginTop: "10px",
 			paddingTop: "10px",
 			borderTop: `1px dashed var(--tdt-border)`,
 			display: "flex",
@@ -41836,21 +41853,24 @@ body[data-ds-dark-theme]{
 			failed: ["failed", "skipped"],
 			succeeded: ["succeeded"]
 		};
-		/** 产出物 / 会话列的裸图标按钮（无边框、无底色；用户 2026-10-02 第四轮：图标化）。 */
-		const plainIconBtnStyle = {
+		/**
+		* 产出物图标钮（用户 2026-10-02：图标加**浅色圆角方形底板**，hover 变亮 ⇒ 明示可点）。
+		* ⚠️ **不写 background**：底板 / hover 走 `.dsh-tdt-rec-out`（inline 背景会盖掉 `:hover`）。
+		*/
+		const outputIconBtnStyle = {
 			appearance: "none",
 			display: "inline-flex",
 			alignItems: "center",
 			justifyContent: "center",
-			width: "20px",
-			height: "20px",
+			width: "22px",
+			height: "22px",
 			padding: 0,
 			border: "none",
-			background: "transparent",
 			color: "var(--tdt-fg-2)",
 			cursor: "pointer",
 			lineHeight: 0,
 			fontFamily: "inherit",
+			borderRadius: "var(--tdt-radius-sm)",
 			transition: transition$1
 		};
 		/** 产出物图标格（最多 3 个 +「…」更多）。 */
@@ -41868,14 +41888,31 @@ body[data-ds-dark-theme]{
 			flexWrap: "wrap",
 			marginBottom: "6px"
 		};
+		/** 过滤行里的字段名（「状态：」等）。 */
+		const filterLabelStyle = {
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-3)",
+			flex: "none"
+		};
+		/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
+		const limitRowStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "4px",
+			marginLeft: "auto",
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-3)"
+		};
 		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
 		const recHeadStyle = {
 			...miniCellStyle,
+			padding: "11px 10px",
 			textAlign: "center",
 			fontWeight: 600,
 			color: "var(--tdt-fg-2)",
-			background: "var(--tdt-plate)",
-			borderBottom: `1px solid var(--tdt-border-faint)`
+			background: "var(--tdt-head-bg)",
+			borderTop: `1px solid var(--tdt-border)`,
+			borderBottom: `1px solid var(--tdt-border)`
 		};
 		/**
 		* 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
@@ -41913,6 +41950,7 @@ body[data-ds-dark-theme]{
 			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const timeLabels = (0, react.useMemo)(() => timeLabelsOf(t), [t]);
 			const timeRangeLabels = (0, react.useMemo)(() => ({
+				time: t("cardTime"),
 				all: t("trAll"),
 				custom: t("trCustom"),
 				from: t("cardFrom"),
@@ -41931,6 +41969,7 @@ body[data-ds-dark-theme]{
 				from: "",
 				to: ""
 			});
+			const [recLimit, setRecLimit] = (0, react.useState)(100);
 			const [records, setRecords] = (0, react.useState)(null);
 			const [recLoading, setRecLoading] = (0, react.useState)(false);
 			const [recError, setRecError] = (0, react.useState)(null);
@@ -41960,7 +41999,7 @@ body[data-ds-dark-theme]{
 					statuses: recStatus === "all" ? void 0 : FILTER_BUCKETS[recStatus],
 					from: range.fromTs,
 					to: range.toTs,
-					limit: 100
+					limit: recLimit
 				}).then(({ rows }) => {
 					if (!alive) return;
 					setRecords(rows);
@@ -41978,7 +42017,8 @@ body[data-ds-dark-theme]{
 				tab,
 				row.id,
 				recStatus,
-				recRange
+				recRange,
+				recLimit
 			]);
 			(0, react.useEffect)(() => {
 				if (openInstance === null) return;
@@ -42047,7 +42087,7 @@ body[data-ds-dark-theme]{
 				whiteSpace: "pre-wrap",
 				wordBreak: "break-word"
 			} }, row.promptHead)));
-			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
+			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)("span", { style: filterLabelStyle }, t("colStatus")), (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [
 					{
@@ -42083,7 +42123,25 @@ body[data-ds-dark-theme]{
 				timeLabels,
 				precision: "day",
 				size: "md"
-			}), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
+			}), (0, react.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react.createElement)(SelectField, {
+				value: String(recLimit),
+				options: [
+					50,
+					100,
+					200
+				].map((n) => ({
+					value: String(n),
+					label: String(n)
+				})),
+				onChange: (next) => {
+					setRecLimit(Number(next));
+				},
+				placeholder: String(recLimit),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("cardLogLimit"),
+				size: "md",
+				width: 70
+			}), t("limitSuffix")), recLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, recError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
 			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardRecordsEmpty")) : (0, react.createElement)("table", { style: {
@@ -42107,10 +42165,10 @@ body[data-ds-dark-theme]{
 			} }, t("colOutputs")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
 				width: "72px"
-			} }, t("colTokens")), (0, react.createElement)("th", { style: {
+			} }, t("colTokens")), (0, react.createElement)("th", { style: recHeadStyle }, t("colNote")), (0, react.createElement)("th", { style: {
 				...recHeadStyle,
 				width: "68px"
-			} }, t("colSession")), (0, react.createElement)("th", { style: recHeadStyle }, t("colNote")))), (0, react.createElement)("tbody", null, records.flatMap((instance, index) => {
+			} }, t("colSession")))), (0, react.createElement)("tbody", null, records.flatMap((instance, index) => {
 				const open = openInstance === instance.id;
 				const outputs = outputsOf(instance.outputs);
 				const sid = instance.session_id;
@@ -42121,7 +42179,7 @@ body[data-ds-dark-theme]{
 				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at);
 				return [(0, react.createElement)("tr", {
 					key: instance.id,
-					className: open ? void 0 : index % 2 === 1 ? "dsh-tdt-rec-alt" : void 0,
+					className: ["dsh-tdt-rec-row", open || index % 2 === 0 ? "" : "dsh-tdt-rec-alt"].join(" ").trim(),
 					style: {
 						cursor: "pointer",
 						...open ? { background: "var(--tdt-surface-2)" } : {}
@@ -42138,8 +42196,9 @@ body[data-ds-dark-theme]{
 					key: output,
 					type: "button",
 					title: output,
+					className: "dsh-tdt-rec-out",
 					style: {
-						...plainIconBtnStyle,
+						...outputIconBtnStyle,
 						cursor: canOpenFile ? "pointer" : "default"
 					},
 					onClick: (event) => {
@@ -42153,23 +42212,18 @@ body[data-ds-dark-theme]{
 					type: "button",
 					title: t("viewSession"),
 					"aria-label": t("viewSession"),
+					className: "dsh-tdt-rec-out",
 					style: {
-						...plainIconBtnStyle,
+						...outputIconBtnStyle,
 						width: "auto",
+						padding: "0 6px",
 						fontSize: "var(--tdt-font-md)"
 					},
 					onClick: (event) => {
 						event.stopPropagation();
 						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs);
 					}
-				}, "…") : null)), (0, react.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react.createElement)("span", { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
-					variant: "outline",
-					size: "sm",
-					onClick: (event) => {
-						event.stopPropagation();
-						openSession(sid, row.title, outputs);
-					}
-				}, t("colView")) : null), (0, react.createElement)("td", { style: {
+				}, "…") : null)), (0, react.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react.createElement)("span", { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react.createElement)("td", { style: {
 					...miniCellStyle,
 					maxWidth: 0
 				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react.createElement)("span", {
@@ -42181,7 +42235,14 @@ body[data-ds-dark-theme]{
 						whiteSpace: "nowrap",
 						color: "var(--tdt-danger)"
 					}
-				}, instance.note))), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
+				}, instance.note)), (0, react.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
+					variant: "outline",
+					size: "sm",
+					onClick: (event) => {
+						event.stopPropagation();
+						openSession(sid, row.title, outputs);
+					}
+				}, t("colView")) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
 					colSpan: 8,
 					style: miniCellWrapStyle
 				}, (0, react.createElement)("div", { style: {
@@ -42247,14 +42308,7 @@ body[data-ds-dark-theme]{
 				timeLabels,
 				precision: "minute",
 				size: "md"
-			}), (0, react.createElement)("label", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "4px",
-				marginLeft: "auto",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("cardLogLimit"), (0, react.createElement)(SelectField, {
+			}), (0, react.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react.createElement)(SelectField, {
 				value: String(logLimit),
 				options: [
 					50,
@@ -42272,7 +42326,7 @@ body[data-ds-dark-theme]{
 				ariaLabel: t("cardLogLimit"),
 				size: "md",
 				width: 70
-			})), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
+			}), t("limitSuffix")), logLoading ? (0, react.createElement)("span", { style: faintStyle }, t("loading")) : null, logError !== null ? (0, react.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
 			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react.createElement)("div", { style: panelScrollFillStyle }, logs === null ? null : logs.length === 0 ? (0, react.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, logs.map((row) => (0, react.createElement)("div", { key: row.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react.createElement)("span", { style: {

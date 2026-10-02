@@ -51,6 +51,10 @@ body{
   --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
   --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
+  /* 表头底：与卡片面拉开层次——浅色主题**偏深**（用户 2026-10-02）。 */
+  --tdt-head-bg:var(--tdt-plate);
+  /* 图标小底板（产出物）：浅色用淡灰，暗色用微亮（见暗色段覆盖）。 */
+  --tdt-chip-bg:var(--tdt-plate);
 
   /* ── 描边四档（宿主真值：l1 4% / l2 10% / l3 12% / l4 16%）────────── */
   --tdt-border-faint:var(--dsw-alias-border-l1,#0000000a);
@@ -142,5 +146,8 @@ body[data-ds-dark-theme]{
   --tdt-plate:var(--dsw-static-neutral-850,#212123);
   --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
+  /* 暗色主题**反过来**：表头要比卡片面**亮**（用户：纯黑背景没法看）⇒ 走 surface-2。 */
+  --tdt-head-bg:var(--tdt-surface-2);
+  --tdt-chip-bg:var(--tdt-icon-plate);
 }
 `
