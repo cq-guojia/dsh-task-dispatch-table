@@ -157,7 +157,7 @@ export type LocaleKey =
   | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword'
   | 'cardRecordsEmpty' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
   | 'colTokens'
-  // —— 实例状态通用短名（status-text.ts 单源；zh：待执行/已派发/执行中/成功/失败/未执行/未知）——
+  // —— 实例状态通用短名（status-text.ts 单源；zh 统一两字：排队/派发/运行/成功/失败/跳过/未知）——
   | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
   // —— 执行记录行（用户 2026-10-02 示意改版）：时长列 / 派发·结束时刻 / 时长句式 ——
   | 'colDuration' | 'colDispatchedAt' | 'colFinishedAt' | 'colPlanned' | 'colActualStart' | 'colView' | 'colReason'

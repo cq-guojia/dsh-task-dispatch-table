@@ -21,7 +21,7 @@
 
 | 事项 | 状态 | 真机验证清单 |
 |---|---|---|
-| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 **第四轮 UX 迭代已落码（定高 / 表格列重排 / 时间范围控件 / 状态过滤修复 / 滚动结构；typecheck·build 绿）** ⏳ 真机验证待做 | [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §三 · [worklog/expand-panels-round4.md](worklog/expand-panels-round4.md) |
+| 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 **第四轮 + 第五轮均已落码**（第四轮：定高 / 表格列重排 / 时间范围控件 / 状态过滤修复 / 滚动结构；**第五轮**：观感返工 = 行高加大·官方圆勾圆叉·状态两字·计划时刻 `26-09-30 15:10` 式·会话列改「查看」小按钮·斑马纹代实线·新增 Token 列；TimeRange 下拉化（全部/预设/自定义）；失败·跳过「原因」展示；预设档改**整档** `00:00~23:59`）⏳ **真机验证待做** | [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §三 · [worklog/expand-panels-round4.md](worklog/expand-panels-round4.md) |
 | UI 收口 + Agent 权限选择器 | ✅ 封卷（随主界面复验） | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 |
 | 编辑器 UX 第二轮 | ✅ 结案（随主界面复验） | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
 
@@ -72,8 +72,8 @@
 1. ~~**UI 基础层统一（样式专项）**~~ ✅ **已完成封卷（2026-10-01）** —— P0–P6 + 尺寸/圆角/字号归一 + 死代码清理，冒烟 390/0；结案行见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)，剩余「待抽象」登记为 **U20** 与 [`ui-style-guide.md`](design/ui-style-guide.md) §三。
 2. **真机验证**（用户装 `dist/` 实测）：剩 **任务展开三面板**（删除已验、展开三面板待迭代）；新增/编辑（U16）用户 10-01 简单验收、问题后续反馈；其余已验见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)。
 3. ✅ **代码侧小收尾（2026-10-01 完成）**：删 `manualAt` 死状态（全仓 `setManualAt` 从未调用）+ 同步 5 处过时「刷新」注释（实际坐标 `index.ts:174` / `index.ts:488-490` / `task-list.tsx:75` / `task-list.tsx:80` / `task-list.tsx:1353`；原记的 `index.ts:205` / `task-list.tsx:1406` 已漂移）。冒烟 390/0、build 绿。
-4. **任务展开三面板 · 第四轮 UX 迭代**（方案 = [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §三，**待用户拍板后开工**）：① 三 tab 统一定高（修基础信息未纳入定高盒）；② 执行记录列重排（状态图标 / 计划执行 / 实际开始 / 时长 MM:ss / 产出物文件图标 / 会话）+ **时间范围筛选控件**抽象；③ 修 **状态过滤失效**（客户端 `statuses` vs 服务端 `status`）；④ 表头 / 过滤固定、内容滚动；⑤ 表格观感对齐（官方 `FileTypeIcon` 等）。
-4. ✅ **U21 已落码（10-01 主体 + 10-02 微调）**：① 删 `dsh-tdt-ed-tabs` + `editorTabBasic/Records/RecordsPending` 三键双语；启用开关移入 `.dsh-tdt-ed-headactions` 且排在关闭 ✕ 之前。② 撤 `.dsh-tdt-ed-overlay` 遮罩、`.dsh-tdt-ed-panel` 改 dock 皮肤（`sticky/100vh/flex:0 0 auto` + `--dsh-tdt-editor-w`）、宽度真源上提 `TaskPage`、`ConfirmDiscard` 改挂 panel、`.dsh-tdt-sv-overlay` 的 `right` 改成「预览宽 + 编辑宽」。③ **10-02 微调**：宽度下限 / 默认 560 → 500 → **定 530**；提示词下三下拉改定宽（权限 120 / 工作区·模型 180）；两条 dock 拖拽补「禁选」；投放区英文提示词精简。typecheck + build 绿、冒烟全绿。
+4. ✅ **任务展开三面板 · 第四轮 UX 迭代已落码**（方案 = [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §三）：① 三 tab 统一定高（基础信息纳入定高盒）；② 执行记录列重排（状态 / 计划执行 / 实际开始 / 时长 / 产出物 / **Token** / 会话）+ **时间范围筛选控件**抽象；③ 修 **状态过滤失效**（客户端 `statuses` vs 服务端 `status`）；④ 表头 / 过滤固定、内容滚动；⑤ 官方 `FileTypeIcon`。**第五轮观感返工 + TimeRange 下拉化 + 失败/跳过「原因」+ 预设档整档**亦已落码（见 1.2）。⏳ **剩真机验证**：三面板定高不闪、表格 7 列观感、时间范围下拉选档、失败行「原因」。
+4. ✅ **U21 已落码（10-01 主体 + 10-02 微调）**：① 删 `dsh-tdt-ed-tabs` + `editorTabBasic/Records/RecordsPending` 三键双语；启用开关移入 `.dsh-tdt-ed-headactions` 且排在关闭 ✕ 之前。② 撤 `.dsh-tdt-ed-overlay` 遮罩、`.dsh-tdt-ed-panel` 改 dock 皮肤（`sticky/100vh/flex:0 0 auto` + `--dsh-tdt-editor-w`）、宽度真源上提 `TaskPage`、`ConfirmDiscard` 改挂 panel、`.dsh-tdt-sv-overlay` 的 `right` 改成「预览宽 + 编辑宽」。③ **10-02 微调**：宽度下限 / 默认 560 → 500 → 530 → **定 520**；提示词下三下拉改定宽（权限 120 / 工作区·模型 180）；两条 dock 拖拽补「禁选」；投放区英文提示词精简。typecheck + build 绿、冒烟全绿。
 5. ⏳ **下一步 = U21 真机验证**（用户装 `dist/`）：清单见 [worklog/editor-split-pane.md](worklog/editor-split-pane.md) §六 —— 重点「主窗口不再被遮盖而是被推窄」「默认 530、可拖可记」「拖拽不再选中文字」「三下拉不再随选项跳动」「关闭只剩 ✕/Esc/取消」「两条分栏同开仍保住主窗口」。
 
 
