@@ -1687,8 +1687,9 @@ export function TaskEditorDrawer(props: {
           // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
           draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-sm)', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } },
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
-            // 文件名限定最大宽度，别让长名字把后面的「移除」按钮挤变形（用户 2026-10-03）。
-            h('span', { style: { flex: '1 1 auto', minWidth: 0, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-md)' } }, att.name),
+            // 文件名占据左侧所有可用空间，把「上传/链接」标签和「移除」按钮顶到最右边；
+            // 自己保留 flex-shrink，容器窄时自动截断成省略号，不会挤变形按钮（用户 2026-10-03）。
+            h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-md)' } }, att.name),
             h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
             // 移除按钮也声明不收缩 / 不折行，确保不会被文件名挤到换行或压扁。
             h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove'), style: { flex: 'none', whiteSpace: 'nowrap' } }, t('editorAttachmentRemove')),

@@ -756,6 +756,9 @@ const makeDispatchRoutes = (
       const store = getStore()
       if (store === null) return writeJson(res, 503, { ok: false, error: 'store-not-ready' })
       const taskId = queryOf(req, 'taskId') || undefined
+      // 按会话 id 取（2026-10-03）：会话弹窗只拿得到会话 id ⇒ 自取实例行（快照 / 产出），
+      // 保证「从哪进都同一个渲染」；一个会话最多一条实例行。
+      const sessionId = queryOf(req, 'sessionId') || undefined
       const workspace = queryOf(req, 'workspace') || undefined
       const statusRaw = queryOf(req, 'status')
       // 逗号分隔多状态；非法值不拦——IN 子句参数化，查不到即为空，无注入面。
@@ -767,6 +770,7 @@ const makeDispatchRoutes = (
         : undefined
       const page = store.listInstancesByQuery({
         taskId,
+        sessionId,
         taskIds,
         statuses,
         fromTs: queryOf(req, 'from') || undefined,

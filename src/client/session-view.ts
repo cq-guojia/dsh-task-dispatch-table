@@ -1144,8 +1144,8 @@ export function SessionViewModal(props: {
    * 空数组 = 无上游依赖 ⇒ 整块不渲染。
    */
   upstream?: readonly UpstreamInputView[]
-  /** 打开上游那一次的会话（弹窗直接换成它）。 */
-  onOpenUpstreamSession?: (sessionId: string, title: string) => void
+  /** 打开上游那一次的会话（弹窗直接换成它）；**只传会话 id**。 */
+  onOpenUpstreamSession?: (sessionId: string) => void
 }): ReturnType<typeof h> {
   const {
     t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles,

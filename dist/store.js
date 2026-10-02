@@ -592,6 +592,10 @@ export class TaskStore {
             where.push('task_id = ?');
             params.push(q.taskId);
         }
+        if (q.sessionId !== undefined) {
+            where.push('session_id = ?');
+            params.push(q.sessionId);
+        }
         if (q.taskIds !== undefined && q.taskIds.length > 0) {
             where.push(`task_id IN (${q.taskIds.map(() => '?').join(',')})`);
             params.push(...q.taskIds);

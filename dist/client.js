@@ -122,6 +122,76 @@ window.__ModuleLoader__.load({
 			}
 		}
 		//#endregion
+		//#region src/client/query.ts
+		const PREFIX = "api/task-dispatch-table";
+		/** 查询参数 → query string（undefined / 空串跳过；数组逗号合并；cursor 走标准 URL 编码）。 */
+		function qsOf(params) {
+			const search = new URLSearchParams();
+			for (const [key, value] of Object.entries(params)) {
+				if (value === void 0 || value === "") continue;
+				if (Array.isArray(value)) {
+					if (value.length > 0) search.set(key, value.join(","));
+				} else search.set(key, String(value));
+			}
+			const text = search.toString();
+			return text === "" ? "" : `?${text}`;
+		}
+		/** 剥信封：`{ok:true,...}` 之外一律抛错（调用方显示错误态，不猜兜底值）。 */
+		async function unwrap(res, what) {
+			if (!res.ok) throw new Error(`${what}: HTTP ${res.status}`);
+			const body = await res.json();
+			if (body.ok !== true) throw new Error(`${what}: ok=false`);
+			return body;
+		}
+		/** 按任务 / 工作区检索执行记录（服务端 `store.listInstancesByQuery`，排序 scheduled_at DESC）。 */
+		async function fetchInstances(params) {
+			const { statuses, ...rest } = params;
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({
+				...rest,
+				status: statuses
+			})}`), "执行记录读取失败");
+			if (!Array.isArray(body.rows)) throw new Error("执行记录读取失败：rows 形状不符");
+			return {
+				rows: body.rows,
+				nextCursor: typeof body.nextCursor === "string" ? body.nextCursor : null
+			};
+		}
+		/**
+		* 按会话 id 取那一条实例行（2026-10-03）：**会话弹窗唯一的取数入口**。
+		* 一个会话最多一条实例行 ⇒ 取首行；查不到（非本插件派发的会话 / 行已清）/ 请求失败
+		* ⇒ `null`，调用方**照常打开弹窗**，只是少了产出卡与接收区（绝不因此挡住看会话）。
+		*/
+		async function fetchInstanceBySession(sessionId) {
+			try {
+				const { rows } = await fetchInstances({
+					sessionId,
+					limit: 1
+				});
+				return rows[0] ?? null;
+			} catch {
+				return null;
+			}
+		}
+		/** 按任务 / 工作区检索诊断日志（服务端 `store.listLogsByQuery`，排序 ts DESC）。 */
+		async function fetchLogs(params) {
+			const { levels, ...rest } = params;
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({
+				...rest,
+				level: levels
+			})}`), "日志读取失败");
+			if (!Array.isArray(body.rows)) throw new Error("日志读取失败：rows 形状不符");
+			return {
+				rows: body.rows,
+				nextCursor: typeof body.nextCursor === "string" ? body.nextCursor : null
+			};
+		}
+		/** 某次执行的事件时间线（服务端 `store.listEventsByInstance`，seq 升序 = 旧→新）。 */
+		async function fetchEvents(instanceId) {
+			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`), "事件读取失败");
+			if (!Array.isArray(body.events)) throw new Error("事件读取失败：events 形状不符");
+			return body.events;
+		}
+		//#endregion
 		//#region src/client/locales.ts
 		/** 把宿主给的无参 t 包成带占位符替换的 t（官方模板一律 `{name}`）。 */
 		function interpolateTranslate(base) {
@@ -444,7 +514,7 @@ window.__ModuleLoader__.load({
 			editorEveryNWeeks: "每 {n} 周",
 			editorAttachments: "附加文件",
 			editorAttachmentLink: "链接",
-			editorAttachmentUpload: "已上传",
+			editorAttachmentUpload: "上传",
 			editorAttachmentRemove: "移除",
 			editorAttachmentAdd: "添加文件",
 			editorPickWorkspaceFile: "选择工作区文件",
@@ -998,8 +1068,8 @@ window.__ModuleLoader__.load({
 			editorIntervalSuffix: "",
 			editorEveryNWeeks: "Every {n} weeks",
 			editorAttachments: "Attachments",
-			editorAttachmentLink: "Linked",
-			editorAttachmentUpload: "Uploaded",
+			editorAttachmentLink: "Link",
+			editorAttachmentUpload: "Upload",
 			editorAttachmentRemove: "Remove",
 			editorAttachmentAdd: "Add file",
 			editorPickWorkspaceFile: "Pick workspace file",
@@ -4978,7 +5048,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				type: "button",
 				className: "dsh-tdt-sv-up-link",
 				onClick: () => {
-					onOpenSession(item.sessionId, item.taskTitle);
+					onOpenSession(item.sessionId);
 				}
 			}, t("svUpstreamSession")) : null), item.outputs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-up-none" }, t("svUpstreamNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-up-files" }, item.outputs.map((path) => {
 				const abs = upstreamAbsPath(item.workspacePath, path);
@@ -40500,7 +40570,6 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 			})), (0, react.createElement)("span", { style: {
 				flex: "1 1 auto",
 				minWidth: 0,
-				maxWidth: "200px",
 				overflow: "hidden",
 				textOverflow: "ellipsis",
 				whiteSpace: "nowrap",
@@ -41237,60 +41306,6 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					fontSize: "var(--tdt-font-md)"
 				} }, t("editorPickerNoSession"));
 			})()), document.body) : null);
-		}
-		//#endregion
-		//#region src/client/query.ts
-		const PREFIX = "api/task-dispatch-table";
-		/** 查询参数 → query string（undefined / 空串跳过；数组逗号合并；cursor 走标准 URL 编码）。 */
-		function qsOf(params) {
-			const search = new URLSearchParams();
-			for (const [key, value] of Object.entries(params)) {
-				if (value === void 0 || value === "") continue;
-				if (Array.isArray(value)) {
-					if (value.length > 0) search.set(key, value.join(","));
-				} else search.set(key, String(value));
-			}
-			const text = search.toString();
-			return text === "" ? "" : `?${text}`;
-		}
-		/** 剥信封：`{ok:true,...}` 之外一律抛错（调用方显示错误态，不猜兜底值）。 */
-		async function unwrap(res, what) {
-			if (!res.ok) throw new Error(`${what}: HTTP ${res.status}`);
-			const body = await res.json();
-			if (body.ok !== true) throw new Error(`${what}: ok=false`);
-			return body;
-		}
-		/** 按任务 / 工作区检索执行记录（服务端 `store.listInstancesByQuery`，排序 scheduled_at DESC）。 */
-		async function fetchInstances(params) {
-			const { statuses, ...rest } = params;
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({
-				...rest,
-				status: statuses
-			})}`), "执行记录读取失败");
-			if (!Array.isArray(body.rows)) throw new Error("执行记录读取失败：rows 形状不符");
-			return {
-				rows: body.rows,
-				nextCursor: typeof body.nextCursor === "string" ? body.nextCursor : null
-			};
-		}
-		/** 按任务 / 工作区检索诊断日志（服务端 `store.listLogsByQuery`，排序 ts DESC）。 */
-		async function fetchLogs(params) {
-			const { levels, ...rest } = params;
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({
-				...rest,
-				level: levels
-			})}`), "日志读取失败");
-			if (!Array.isArray(body.rows)) throw new Error("日志读取失败：rows 形状不符");
-			return {
-				rows: body.rows,
-				nextCursor: typeof body.nextCursor === "string" ? body.nextCursor : null
-			};
-		}
-		/** 某次执行的事件时间线（服务端 `store.listEventsByInstance`，seq 升序 = 旧→新）。 */
-		async function fetchEvents(instanceId) {
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`), "事件读取失败");
-			if (!Array.isArray(body.events)) throw new Error("事件读取失败：events 形状不符");
-			return body.events;
 		}
 		//#endregion
 		//#region src/client/status-text.ts
@@ -42468,14 +42483,14 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					},
 					onClick: (event) => {
 						event.stopPropagation();
-						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid, row.title, outputs, instance.snapshot ?? null);
+						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid);
 					}
 				}, "…") : null)), (0, react.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react.createElement)(Button$2, {
 					variant: "outline",
 					size: "sm",
 					onClick: (event) => {
 						event.stopPropagation();
-						openSession(sid, row.title, outputs, instance.snapshot ?? null);
+						openSession(sid);
 					}
 				}, t("colView")) : null)), open ? (0, react.createElement)("tr", { key: `${instance.id}-detail` }, (0, react.createElement)("td", {
 					colSpan: 8,
@@ -43772,6 +43787,18 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				};
 			}, [t]);
 			const [viewing, setViewing] = (0, react.useState)(null);
+			/** 当前 viewing 的镜像：换会话时要 release 旧引用（state 更新是异步的，拿不到即时旧值）。 */
+			const viewingRef = (0, react.useRef)(null);
+			/**
+			* 打开 / 换 / 关会话弹窗的**唯一出口**：retain 契约要求引用用完 `release()`
+			* （`view.dispose()`），否则连点几个会话就会攒住一批物化 scope。
+			*/
+			const applyViewing = (next) => {
+				const prev = viewingRef.current;
+				viewingRef.current = next;
+				setViewing(next);
+				if (prev !== null && prev !== next) prev.view.dispose();
+			};
 			const [viewErr, setViewErr] = (0, react.useState)(null);
 			const [dbDump, setDbDump] = (0, react.useState)(null);
 			const [dbState, setDbState] = (0, react.useState)("idle");
@@ -43852,12 +43879,24 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				...dep,
 				taskTitle: overview.rows.find((row) => row.id === dep.task)?.title || dep.task.slice(0, 8)
 			}));
-			const openView = async (sessionId, heading, outputs, snapshot) => {
+			/**
+			* 打开只读会话弹窗（2026-10-03 起**只认会话 id**）。
+			*
+			* ⚠️ 铁律：进弹窗的入口有十几处，**一律只传会话 id** —— 快照 / 产出 / 标题全部在这里
+			* 按会话 id 自取（`fetchInstanceBySession`）⇒ 从哪进都是同一个渲染。
+			* 曾经的错法：由调用方把 `snapshot` / `outputs` 传进来，结果老界面的「查看任务」入口
+			* 没传 ⇒ 同一个会话两处长得不一样（用户 2026-10-03 抓出）。**不许再回退成传参**。
+			*
+			* @param fallbackHeading 仅当实例行取不到时兜底的标题（不是渲染内容的来源）。
+			*/
+			const openView = async (sessionId, fallbackHeading) => {
 				if (viewSession === null) {
 					setViewErr("查看会话不可用：sessions / uiConversation 注入未就位（见控制台）");
 					return;
 				}
 				setViewErr(null);
+				const row = await fetchInstanceBySession(sessionId);
+				const heading = row === null ? fallbackHeading ?? sessionId.slice(0, 8) : `${overview.rows.find((item) => item.id === row.task_id)?.title || row.task_id.slice(0, 8)} · ${formatPlanStamp(row.scheduled_at)}`;
 				let target = viewSession(sessionId);
 				let didUnarchive = false;
 				if (target === null) try {
@@ -43876,13 +43915,13 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					setViewErr("会话无法打开：retain / 物化 scope 失败（原因见控制台 [task-dispatch:session-view] 日志）");
 					return;
 				}
-				setViewing({
+				applyViewing({
 					sessionId,
 					heading,
 					view: target,
 					didUnarchive,
-					outputs,
-					upstream: upstreamOf(snapshot ?? null)
+					outputs: row === null ? void 0 : parseOutputs(row.outputs),
+					upstream: upstreamOf(row?.snapshot ?? null)
 				});
 			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
@@ -43980,8 +44019,8 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 				onEdit: openEditor,
 				onDelete: deleteTask,
 				onOpenFile: canPreview ? openFile : void 0,
-				onOpenSession: viewSession !== null ? (sessionId, heading, outputs, snapshot) => {
-					openView(sessionId, heading, outputs, snapshot);
+				onOpenSession: viewSession !== null ? (sessionId) => {
+					openView(sessionId);
 				} : void 0,
 				onToggleEnabled: toggleTaskEnabled
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "var(--tdt-font-sm)" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
@@ -44032,7 +44071,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					title: row.session_id,
 					onClick: (event) => {
 						event.stopPropagation();
-						openView(row.session_id, titleOfTask(row.task_id), parseOutputs(row.outputs));
+						openView(row.session_id);
 					}
 				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, (() => {
 					const outputs = parseOutputs(row.outputs);
@@ -44069,7 +44108,7 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					size: "sm",
 					className: "dsh-tdt-btn--link",
 					onClick: () => {
-						openView(row.session_id, titleOfTask(row.task_id), parseOutputs(row.outputs));
+						openView(row.session_id);
 					}
 				}, `↗ ${t("viewSession")}`) : null), events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("eventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
 					t("colSeq"),
@@ -44093,14 +44132,13 @@ button.dsh-tdt-sv-up-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16)
 					openFile(viewing.sessionId, path);
 				} : void 0,
 				upstream: viewing.upstream ?? [],
-				onOpenUpstreamSession: (sid, title) => {
-					openView(sid, title);
+				onOpenUpstreamSession: (sid) => {
+					openView(sid);
 				},
 				onClose: () => {
 					const closed = viewing.sessionId;
 					const needArchive = viewing.didUnarchive === true;
-					viewing.view.dispose();
-					setViewing(null);
+					applyViewing(null);
 					setViewErr(null);
 					if (needArchive) rearchive(closed);
 				}

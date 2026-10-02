@@ -49,8 +49,8 @@ export function UpstreamInputsPanel(props: {
   items: readonly UpstreamInputView[]
   /** 打开文件（U11 单一入口 `openFile`）；undefined ⇒ 文件行降级纯文本。 */
   onOpenFile?: (path: string) => void
-  /** 打开上游那次的会话（第二个参数 = 上游任务名，用作弹窗标题）；undefined ⇒ 不出链接。 */
-  onOpenSession?: (sessionId: string, title: string) => void
+  /** 打开上游那次的会话（**只传会话 id**：标题由弹窗自取）；undefined ⇒ 不出链接。 */
+  onOpenSession?: (sessionId: string) => void
   t: Translate
 }): ReturnType<typeof h> | null {
   const { items, onOpenFile, onOpenSession, t } = props
@@ -68,7 +68,7 @@ export function UpstreamInputsPanel(props: {
             ? h('button', {
                 type: 'button',
                 className: 'dsh-tdt-sv-up-link',
-                onClick: () => { onOpenSession(item.sessionId as string, item.taskTitle) },
+                onClick: () => { onOpenSession(item.sessionId as string) },
               }, t('svUpstreamSession'))
             : null,
         ),

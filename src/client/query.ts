@@ -56,6 +56,8 @@ export interface EventRow {
 
 export interface InstancesParams {
   taskId?: string
+  /** 按会话 id 取（会话弹窗用：进弹窗只带会话 id，快照 / 产出自己取）。 */
+  sessionId?: string
   workspace?: string
   statuses?: readonly string[]
   from?: string
@@ -107,6 +109,20 @@ export async function fetchInstances(params: InstancesParams): Promise<{ rows: I
   const body = await unwrap<{ rows?: unknown; nextCursor?: unknown }>(res, '执行记录读取失败')
   if (!Array.isArray(body.rows)) throw new Error('执行记录读取失败：rows 形状不符')
   return { rows: body.rows as InstanceRow[], nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null }
+}
+
+/**
+ * 按会话 id 取那一条实例行（2026-10-03）：**会话弹窗唯一的取数入口**。
+ * 一个会话最多一条实例行 ⇒ 取首行；查不到（非本插件派发的会话 / 行已清）/ 请求失败
+ * ⇒ `null`，调用方**照常打开弹窗**，只是少了产出卡与接收区（绝不因此挡住看会话）。
+ */
+export async function fetchInstanceBySession(sessionId: string): Promise<InstanceRow | null> {
+  try {
+    const { rows } = await fetchInstances({ sessionId, limit: 1 })
+    return rows[0] ?? null
+  } catch {
+    return null
+  }
 }
 
 /** 按任务 / 工作区检索诊断日志（服务端 `store.listLogsByQuery`，排序 ts DESC）。 */

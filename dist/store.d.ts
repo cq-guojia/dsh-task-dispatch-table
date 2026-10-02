@@ -108,6 +108,11 @@ export interface TableDump {
 }
 export interface InstanceQuery {
     taskId?: string;
+    /**
+     * 按会话 id 精确取（2026-10-03）：会话弹窗**只拿得到会话 id**（不再靠调用方传快照 / 产出）⇒
+     * 所有入口渲染必然一致。一个会话最多对应一条实例行，故配合 `limit: 1` 用。
+     */
+    sessionId?: string;
     /** 已解析的工作区任务集合（workspace 过滤由调用方解析，store 不持有任务定义）。 */
     taskIds?: readonly string[];
     statuses?: readonly InstanceStatus[];

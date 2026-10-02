@@ -1568,6 +1568,20 @@ console.log('\n[14] runtime-index')
     store.listInstancesByQuery({ taskId: 'panel-a', statuses: ['failed', 'skipped'] }).rows.length === 2)
   check('三面板·时间范围过滤（只 09-02 当天）',
     store.listInstancesByQuery({ taskId: 'panel-a', fromTs: '2026-09-02T00:00:00.000Z', toTs: '2026-09-02T23:59:59.999Z' }).rows.length === 1)
+  // 会话弹窗取数（2026-10-03）：**只认会话 id** —— 所有入口只传 sessionId，弹窗据此自取快照 / 产出
+  // ⇒ 从任务列表 / 老界面执行记录 / 接收区「查看该会话」进，渲染必须一致（用户抓出过两处不一致）。
+  {
+    // 独立任务 + 独立实例：不碰上面那些按条数断言的用例。
+    const idS = randomUUID()
+    const sessS = `sess-${idS}`
+    store.ensureInstance(idS, 'panel-sess', '2026-09-05', '2026-09-05T08:00:00.000Z', 'succeeded')
+    store.transition(idS, { status: 'succeeded', session_id: sessS })
+    check('会话弹窗取数：按 sessionId 精确命中那一条实例行',
+      store.listInstancesByQuery({ sessionId: sessS, limit: 1 }).rows.length === 1
+      && store.listInstancesByQuery({ sessionId: sessS, limit: 1 }).rows[0].id === idS)
+    check('会话弹窗取数：未知 sessionId ⇒ 空（调用方照常开弹窗，只少产出卡 / 接收区）',
+      store.listInstancesByQuery({ sessionId: 'no-such-session', limit: 1 }).rows.length === 0)
+  }
   check('三面板·不存在的任务 = 空态（空 rows + 无游标）',
     (() => {
       const p = store.listInstancesByQuery({ taskId: 'no-such-task' })

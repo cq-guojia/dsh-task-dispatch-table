@@ -16,7 +16,9 @@
 // 字段名复述。
 
 import { createElement as h, Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { formatDateTime } from './format'
+import { formatDateTime, formatPlanStamp } from './format'
+// 会话弹窗的唯一取数入口：按会话 id 取实例行（快照 / 产出）——**所有入口只传会话 id**。
+import { fetchInstanceBySession } from './query'
 // 带超时的 fetch：共用**叶子模块**（2026-09-30 收敛三份实现；session-view 也引它，故不能放在本文件里）。
 import { fetchWithTimeout } from './http'
 import { en, zh, type LocaleKey } from './locales'
@@ -801,7 +803,7 @@ function TaskPage(props: {
     return () => { alive = false }
   }, [t])
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
-  const [viewing, setViewing] = useState<{
+  type ViewingState = {
     sessionId: string
     heading: string
     view: SessionViewTarget
@@ -809,7 +811,20 @@ function TaskPage(props: {
     outputs?: string[]
     /** 上游输入（接收区，2026-10-03）：实例快照 `resolvedDeps` + 任务名反查。 */
     upstream?: UpstreamInputView[]
-  } | null>(null)
+  }
+  const [viewing, setViewing] = useState<ViewingState | null>(null)
+  /** 当前 viewing 的镜像：换会话时要 release 旧引用（state 更新是异步的，拿不到即时旧值）。 */
+  const viewingRef = useRef<ViewingState | null>(null)
+  /**
+   * 打开 / 换 / 关会话弹窗的**唯一出口**：retain 契约要求引用用完 `release()`
+   * （`view.dispose()`），否则连点几个会话就会攒住一批物化 scope。
+   */
+  const applyViewing = (next: ViewingState | null): void => {
+    const prev = viewingRef.current
+    viewingRef.current = next
+    setViewing(next)
+    if (prev !== null && prev !== next) prev.view.dispose()
+  }
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
   const [viewErr, setViewErr] = useState<string | null>(null)
   // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
@@ -909,12 +924,28 @@ function TaskPage(props: {
     taskTitle: overview.rows.find(row => row.id === dep.task)?.title || dep.task.slice(0, 8),
   }))
 
-  const openView = async (sessionId: string, heading: string, outputs?: string[], snapshot?: string | null): Promise<void> => {
+  /**
+   * 打开只读会话弹窗（2026-10-03 起**只认会话 id**）。
+   *
+   * ⚠️ 铁律：进弹窗的入口有十几处，**一律只传会话 id** —— 快照 / 产出 / 标题全部在这里
+   * 按会话 id 自取（`fetchInstanceBySession`）⇒ 从哪进都是同一个渲染。
+   * 曾经的错法：由调用方把 `snapshot` / `outputs` 传进来，结果老界面的「查看任务」入口
+   * 没传 ⇒ 同一个会话两处长得不一样（用户 2026-10-03 抓出）。**不许再回退成传参**。
+   *
+   * @param fallbackHeading 仅当实例行取不到时兜底的标题（不是渲染内容的来源）。
+   */
+  const openView = async (sessionId: string, fallbackHeading?: string): Promise<void> => {
     if (viewSession === null) {
       setViewErr('查看会话不可用：sessions / uiConversation 注入未就位（见控制台）')
       return
     }
     setViewErr(null)
+    // ① 一律按会话 id 自取那一条实例行（取不到 ⇒ null，照常开弹窗，只少产出卡与接收区）。
+    const row = await fetchInstanceBySession(sessionId)
+    // ② 标题也在这里统一（任务名 · 计划时刻），不由调用方各写一套。
+    const heading = row === null
+      ? (fallbackHeading ?? sessionId.slice(0, 8))
+      : `${overview.rows.find(item => item.id === row.task_id)?.title || row.task_id.slice(0, 8)} · ${formatPlanStamp(row.scheduled_at)}`
     let target = viewSession(sessionId)
     let didUnarchive = false
     if (target === null) {
@@ -935,7 +966,14 @@ function TaskPage(props: {
       setViewErr('会话无法打开：retain / 物化 scope 失败（原因见控制台 [task-dispatch:session-view] 日志）')
       return
     }
-    setViewing({ sessionId, heading, view: target, didUnarchive, outputs, upstream: upstreamOf(snapshot ?? null) })
+    applyViewing({
+      sessionId,
+      heading,
+      view: target,
+      didUnarchive,
+      outputs: row === null ? undefined : parseOutputs(row.outputs),
+      upstream: upstreamOf(row?.snapshot ?? null),
+    })
   }
   const instances = (data?.instances ?? [])
     .filter(row => statusFilter === 'all' || row.status === statusFilter)
@@ -1050,10 +1088,9 @@ function TaskPage(props: {
             onDelete: deleteTask,
             // 产出 / 会话入口走 U11 单一入口：预览面或会话面不可用时 undefined ⇒ 面板降级纯文本 / 不出链接。
             onOpenFile: canPreview ? openFile : undefined,
+            // 只给会话 id：弹窗自己按 id 取快照 / 产出（铁律见 openView 注释）。
             onOpenSession: viewSession !== null
-              // 透传实例 outputs（task_instances.outputs 真值）：会话弹窗「交付文件卡」以它为权威源，
-              // 不传则快照里没有 deliverables 的任务（老任务 / 宿主未重放）卡片会缺失。
-              ? (sessionId: string, heading: string, outputs?: string[], snapshot?: string | null) => { void openView(sessionId, heading, outputs, snapshot) }
+              ? (sessionId: string) => { void openView(sessionId) }
               : undefined,
             // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
             // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。
@@ -1257,7 +1294,8 @@ function TaskPage(props: {
                                   title: row.session_id,
                                   onClick: (event: { stopPropagation(): void }) => {
                                     event.stopPropagation()
-                                    openView(row.session_id as string, titleOfTask(row.task_id), parseOutputs((row as unknown as { outputs?: unknown }).outputs))
+                                    // 只给会话 id（铁律）：与任务列表入口同一渲染路径。
+                                    void openView(row.session_id as string)
                                   },
                                 }, row.session_id.slice(0, 8))
                                 : row.session_id.slice(0, 8),
@@ -1303,7 +1341,7 @@ function TaskPage(props: {
                                       variant: 'ghost',
                                       size: 'sm',
                                       className: 'dsh-tdt-btn--link',
-                                      onClick: () => { openView(row.session_id as string, titleOfTask(row.task_id), parseOutputs((row as unknown as { outputs?: unknown }).outputs)) },
+                                      onClick: () => { void openView(row.session_id as string) },
                                     }, `↗ ${t('viewSession')}`)
                                     : null,
                                 ),
@@ -1348,12 +1386,12 @@ function TaskPage(props: {
         onOpenFile: canPreview ? (path: string) => { openFile(viewing.sessionId, path) } : undefined,
         // 接收区（2026-10-03）：上游依赖清单；「查看该会话」→ 直接换成本弹窗打开上游那一次。
         upstream: viewing.upstream ?? [],
-        onOpenUpstreamSession: (sid: string, title: string) => { void openView(sid, title) },
+        // 上游会话同样只给会话 id（铁律）——点进去渲染与其它入口一字不差。
+        onOpenUpstreamSession: (sid: string) => { void openView(sid) },
         onClose: () => {
           const closed = viewing.sessionId
           const needArchive = viewing.didUnarchive === true
-          viewing.view.dispose()
-          setViewing(null)
+          applyViewing(null)   // 释放 retain 引用（唯一出口）
           setViewErr(null)
           if (needArchive) rearchive(closed)
         },
