@@ -876,7 +876,8 @@ function TaskExpandPanel(props: {
   const [recError, setRecError] = useState<string | null>(null)
   const [openInstance, setOpenInstance] = useState<string | null>(null)
   const [events, setEvents] = useState<EventRow[] | null>(null)
-  const [eventsLoading, setEventsLoading] = useState(false)
+  // 注：原先这里还有个「加载中」状态，只用在展开区的加载提示上；
+  // 展开区去掉标题后它**只写不读** ⇒ 按无死代码原则删除（错误态 `eventsError` 保留）。
   const [eventsError, setEventsError] = useState<string | null>(null)
 
   // ── 日志面板 ──
@@ -922,13 +923,11 @@ function TaskExpandPanel(props: {
   useEffect(() => {
     if (openInstance === null) return
     let alive = true
-    setEventsLoading(true)
     setEventsError(null)
     setEvents(null)
     fetchEvents(openInstance)
       .then(rows => { if (alive) setEvents(rows) })
       .catch((error: unknown) => { if (alive) setEventsError(error instanceof Error ? error.message : String(error)) })
-      .finally(() => { if (alive) setEventsLoading(false) })
     return () => { alive = false }
   }, [openInstance])
 
@@ -1146,24 +1145,20 @@ function TaskExpandPanel(props: {
                     // 展开内容区：**更淡一档的蓝**（`--tdt-open-bg-soft`）⇒ 与展开行本身区隔开，
                     // 且不是灰 / 不是纯黑纯白（用户 2026-10-02）。
                     h('td', { colSpan: 8, style: { ...miniCellWrapStyle, background: 'var(--tdt-open-bg-soft)' } },
-                      // 展开区**只放执行日志**（用户 2026-10-02）：下面那些小字段（第几次 / 计划时刻 /
-                      // 派发 / 结束 / 时长 / Token）在各列上已经展示得很清楚了，不再重复铺一遍。
-                      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' } },
-                        h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('eventsOf')),
-                        eventsLoading ? h('span', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('loading')) : null,
-                      ),
+                      // 展开区**直接铺执行日志**（用户 2026-10-02）：**不要标题、不要黑框**——
+                      // 展开的日志本来就是给要看细节的人看的，套一层框 + 一个小标题纯属多余。
+                      // 底色沿用 `--tdt-open-bg-soft`（淡蓝）就够了，用它把展开区区隔出来。
                       eventsError !== null
                         ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${eventsError}`)
                         : events === null
                           ? null
                           : events.length === 0
                             ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('cardEventsEmpty'))
-                            : h('div', { style: logBoxStyle },
-                              events.map(event => h('div', { key: event.seq },
-                                h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(event.ts)} `),
-                                h('span', { style: { color: 'var(--tdt-accent)' } }, `${event.kind} `),
-                                h('span', null, event.detail ?? ''),
-                              ))),
+                            : events.map(event => h('div', { key: event.seq },
+                              h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${formatStamp(event.ts)} `),
+                              h('span', { style: { color: 'var(--tdt-accent)' } }, `${event.kind} `),
+                              h('span', null, event.detail ?? ''),
+                            )),
                     ),
                   )
                   : null

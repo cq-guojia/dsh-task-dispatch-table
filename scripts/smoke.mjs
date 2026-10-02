@@ -1805,9 +1805,11 @@ console.log('\n[14] runtime-index')
     check('展开行 / 展开内容区走**带透明度的蓝**（--tdt-open-bg / -soft），不用灰色',
       tl.includes('var(--tdt-open-bg)') && tl.includes('var(--tdt-open-bg-soft)')
       && !tl.includes("open ? { background: 'var(--tdt-surface-2)' }"))
-    check('展开区只留执行日志：小字段（第几次 / 派发 / 结束等）已移除',
-      !tl.includes("t('colAttempt')") && !tl.includes("t('colDispatchedAt')")
-      && tl.includes("t('eventsOf')"))
+    check('展开区直接铺执行日志：**无标题、无黑框**（小字段亦已移除）',
+      !tl.includes("t('eventsOf')") && !tl.includes("t('colAttempt')")
+      && !tl.includes("t('colDispatchedAt')")
+      // 黑框 `logBoxStyle` 只留给「日志」面板本体，展开区不再套框。
+      && !tl.includes('eventsLoading'))
     check('两个时间框之间有分隔符 ～', trc.includes("'～'"))
     check('执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右',
       tl.includes("t('limitPrefix')") && tl.includes("t('limitSuffix')") && tl.includes('recLimit')

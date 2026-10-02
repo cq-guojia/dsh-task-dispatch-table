@@ -41945,7 +41945,6 @@ body[data-ds-dark-theme]{
 			const [recError, setRecError] = (0, react.useState)(null);
 			const [openInstance, setOpenInstance] = (0, react.useState)(null);
 			const [events, setEvents] = (0, react.useState)(null);
-			const [eventsLoading, setEventsLoading] = (0, react.useState)(false);
 			const [eventsError, setEventsError] = (0, react.useState)(null);
 			const [logKeyword, setLogKeyword] = (0, react.useState)("");
 			const [logRange, setLogRange] = (0, react.useState)({
@@ -41993,15 +41992,12 @@ body[data-ds-dark-theme]{
 			(0, react.useEffect)(() => {
 				if (openInstance === null) return;
 				let alive = true;
-				setEventsLoading(true);
 				setEventsError(null);
 				setEvents(null);
 				fetchEvents(openInstance).then((rows) => {
 					if (alive) setEvents(rows);
 				}).catch((error) => {
 					if (alive) setEventsError(error instanceof Error ? error.message : String(error));
-				}).finally(() => {
-					if (alive) setEventsLoading(false);
 				});
 				return () => {
 					alive = false;
@@ -42218,24 +42214,13 @@ body[data-ds-dark-theme]{
 						...miniCellWrapStyle,
 						background: "var(--tdt-open-bg-soft)"
 					}
-				}, (0, react.createElement)("div", { style: {
-					display: "flex",
-					justifyContent: "space-between",
-					alignItems: "center",
-					marginBottom: "4px"
-				} }, (0, react.createElement)("span", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
-				} }, t("eventsOf")), eventsLoading ? (0, react.createElement)("span", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
-				} }, t("loading")) : null), eventsError !== null ? (0, react.createElement)("div", { style: {
+				}, eventsError !== null ? (0, react.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-danger)"
 				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"
-				} }, t("cardEventsEmpty")) : (0, react.createElement)("div", { style: logBoxStyle }, events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? "")))))) : null];
+				} }, t("cardEventsEmpty")) : events.map((event) => (0, react.createElement)("div", { key: event.seq }, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-accent)" } }, `${event.kind} `), (0, react.createElement)("span", null, event.detail ?? ""))))) : null];
 			})))));
 			const renderLogs = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(Input$1, {
 				value: logKeyword,
