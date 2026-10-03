@@ -239,9 +239,18 @@ export const ARCHIVE_SESSION_CSS = `
 /* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
 .dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
 /* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
-   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条，滚动性能与官方一致。 */
+   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条。 */
 .dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
-.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
+/* 官方 CodeBody.module.css 逐条照抄（documentpreview:5027 的 Java6a_* 换成我们的类名）：
+   关键是那三个 --dsl-code-block-* 覆盖 —— 官方文档面板靠它们把 CodeBlock 的默认底色/折行/圆角
+   改成"无底色 + 不折行 + 无圆角"，**这就是官方源码态配色与默认 CodeBlock 不同的原因**。 */
+.dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code{--dsl-code-block-border-radius:0px;--dsl-code-block-line-white-space:pre;--dsl-code-block-background:transparent;flex-direction:column;flex:auto;min-width:0;height:100%;min-height:0;margin:0;display:flex;position:static;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]{flex:auto;min-width:0;min-height:0;display:block;position:relative;overflow:auto;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]::-webkit-scrollbar-track{margin:2px;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code pre{box-sizing:border-box;white-space:pre;word-break:normal;overflow-wrap:normal;min-width:100%;padding:16px;overflow:visible;}
+.dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code{--dsl-code-block-line-white-space:pre-wrap;}
+.dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code pre{white-space:pre-wrap;overflow-wrap:anywhere;}
 /* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
 .dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
@@ -252,8 +261,7 @@ export const ARCHIVE_SESSION_CSS = `
    ⇒ 作用域一律用 [data-code-preview]：官方 CodeBody（client.js:5042）与我方兜底 div
    都带这个属性，两条路都命中——此前把规则写在 .dsh-tdt-sv-preview-coderender 下，
    官方类命中时全是死规则（2026-09-29 源码排障结论）。 */
-.dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;}
-.dsh-tdt-sv-preview-code{min-width:0;max-width:100%;}
+.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
 /* 换行开关（源码事实，0.1.7-rc.2 三包对照，2026-09-29）：
    · primitives CodeBlock：换行钮只在 wrap === undefined 时渲染（lib/index.js:10689 的
      onWrap 分支 + :9285），点钮翻转 CodeBlock 根上的 data-code-wrap；

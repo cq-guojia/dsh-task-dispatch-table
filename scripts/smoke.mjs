@@ -1091,10 +1091,20 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     && /!truncated\s*&&\s*nextOffset\s*!==\s*null/.test(clientJs))
   check('源码态有语法高亮（官方 CodeBody = CodeBlock，真机截图为证；勿再误改纯文本）',
     /data-code-preview/.test(clientJs) && /lineNumbers:\s*true/.test(clientJs))
+  check('源码态渐进高亮：传 streaming（官方 :5048 传 !eof，只对追加内容重着色 ⇒ 流畅的关键）',
+    /streaming:\s*streamingCode/.test(clientJs) && clientJs.includes('setStreamingCode'))
+  check('源码态传 wrap 布尔 ⇒ 官方 omit 换行钮（与官方文档面板一致）',
+    /["']?data-wrap["']?:\s*wrap/.test(clientJs) && /\bwrap:\s*wrap[\s,]/.test(clientJs))
+  check('256K 按字节精确截断（sliceToBytes，不多带一整页；官方切在 512K 整）',
+    clientJs.includes('sliceToBytes') && /sliceToBytes\(merged,\s*maxBytes\)/.test(clientJs))
   check('截断横幅在顶部、警告色、滚动区之外（官方截图同款「文件过大，仅显示前 512KB」）',
     clientJs.includes('dsh-tdt-sv-truncated')
     && /\.dsh-tdt-sv-truncated\{[^}]*flex:none/.test(clientJs)
     && /\.dsh-tdt-sv-truncated\{[^}]*var\(--tdt-warning/.test(clientJs))
+  check('抄官方 CodeBody 的三个 --dsl-code-block-* 覆盖（配色/折行/圆角与官方一致）',
+    /--dsl-code-block-background:transparent/.test(clientJs)
+    && /--dsl-code-block-line-white-space:pre/.test(clientJs)
+    && /--dsl-code-block-border-radius:0px/.test(clientJs))
   check('源码态单滚动容器（body overflow:hidden，滚动只在 CodeBlock 内部，官方 :has 规则同款）',
     /\.dsh-tdt-sv-preview-body-code\{[^}]*overflow:hidden/.test(clientJs))
   check('HTML 默认进入预览（非源码），切换控件与 md 同构',

@@ -656,6 +656,23 @@ window.__ModuleLoader__.load({
 			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
 			editorDepDisabledTag: "（已停用）",
 			editorDepTaskEmpty: "该工作区暂无可选任务",
+			localeTag: "zh-CN",
+			recordsEmpty: "该时间范围内没有执行记录",
+			recordsEmptyFiltered: "当前过滤条件下没有执行记录",
+			recordsLoading: "执行记录加载中…",
+			recordsLoadMore: "加载更多",
+			recordsNoMore: "没有更多了",
+			recordsLimitHint: "已加载 2000 条，请缩小时间范围查看更早记录",
+			recordsLoadFail: "执行记录加载失败",
+			recordsRetry: "重试",
+			recordsDayCount: "{n} 条",
+			recordsTaskPh: "任务",
+			recordsTaskSearch: "搜索任务名或 ID",
+			recordsMore: "更多",
+			recordsCollapse: "收起",
+			recordsOutOfScope: "所选任务不在当前工作区",
+			recordsPlannedAt: "计划 {time}",
+			recordsStatusPh: "状态",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
 			editorRetry: "重试次数",
@@ -1245,6 +1262,23 @@ window.__ModuleLoader__.load({
 			editorDepEmptyHint: "Pick a workspace and a task below, then add",
 			editorDepDisabledTag: " (disabled)",
 			editorDepTaskEmpty: "No selectable task in this workspace",
+			localeTag: "en-US",
+			recordsEmpty: "No executions in this time range",
+			recordsEmptyFiltered: "No executions match the current filters",
+			recordsLoading: "Loading executions…",
+			recordsLoadMore: "Load more",
+			recordsNoMore: "No more",
+			recordsLimitHint: "Loaded 2000 — narrow the time range to see earlier records",
+			recordsLoadFail: "Failed to load executions",
+			recordsRetry: "Retry",
+			recordsDayCount: "{n} total",
+			recordsTaskPh: "Task",
+			recordsTaskSearch: "Search by name or ID",
+			recordsMore: "More",
+			recordsCollapse: "Collapse",
+			recordsOutOfScope: "The selected task is not in this workspace",
+			recordsPlannedAt: "Planned {time}",
+			recordsStatusPh: "Status",
 			editorAdvanced: "Advanced settings",
 			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
@@ -2072,6 +2106,7 @@ body[data-ds-dark-theme]{
 			ensureControlsStyle();
 			const { value, onChange, placeholder, size = "lg", error, disabled, type, className, style } = props;
 			return (0, react.createElement)("input", {
+				ref: props.inputRef,
 				type: type ?? "text",
 				value,
 				placeholder,
@@ -3178,9 +3213,18 @@ body[data-ds-dark-theme]{
 /* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
 .dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
 /* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
-   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条，滚动性能与官方一致。 */
+   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条。 */
 .dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
-.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
+/* 官方 CodeBody.module.css 逐条照抄（documentpreview:5027 的 Java6a_* 换成我们的类名）：
+   关键是那三个 --dsl-code-block-* 覆盖 —— 官方文档面板靠它们把 CodeBlock 的默认底色/折行/圆角
+   改成"无底色 + 不折行 + 无圆角"，**这就是官方源码态配色与默认 CodeBlock 不同的原因**。 */
+.dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code{--dsl-code-block-border-radius:0px;--dsl-code-block-line-white-space:pre;--dsl-code-block-background:transparent;flex-direction:column;flex:auto;min-width:0;height:100%;min-height:0;margin:0;display:flex;position:static;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]{flex:auto;min-width:0;min-height:0;display:block;position:relative;overflow:auto;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]::-webkit-scrollbar-track{margin:2px;}
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code pre{box-sizing:border-box;white-space:pre;word-break:normal;overflow-wrap:normal;min-width:100%;padding:16px;overflow:visible;}
+.dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code{--dsl-code-block-line-white-space:pre-wrap;}
+.dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code pre{white-space:pre-wrap;overflow-wrap:anywhere;}
 /* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
 .dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
@@ -3191,8 +3235,7 @@ body[data-ds-dark-theme]{
    ⇒ 作用域一律用 [data-code-preview]：官方 CodeBody（client.js:5042）与我方兜底 div
    都带这个属性，两条路都命中——此前把规则写在 .dsh-tdt-sv-preview-coderender 下，
    官方类命中时全是死规则（2026-09-29 源码排障结论）。 */
-.dsh-tdt-sv-preview-coderender{min-width:0;max-width:100%;}
-.dsh-tdt-sv-preview-code{min-width:0;max-width:100%;}
+.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
 /* 换行开关（源码事实，0.1.7-rc.2 三包对照，2026-09-29）：
    · primitives CodeBlock：换行钮只在 wrap === undefined 时渲染（lib/index.js:10689 的
      onWrap 分支 + :9285），点钮翻转 CodeBlock 根上的 data-code-wrap；
@@ -6585,6 +6628,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		function byteLengthOf(text) {
 			return new TextEncoder().encode(text).length;
 		}
+		/**
+		* 按**字节**上限精确截断（UTF-8 边界安全：不会切出半个多字节字符）。
+		* 官方是"切在 512K 整"，我们照做——此前整页追加会多带一整页（真机 2026-10-04 显示到 1 万行）。
+		*/
+		function sliceToBytes(text, maxBytes) {
+			const bytes = new TextEncoder().encode(text);
+			if (bytes.length <= maxBytes) return text;
+			const decoder = new TextDecoder("utf-8");
+			for (let cut = maxBytes; cut > maxBytes - 4 && cut > 0; cut--) try {
+				return decoder.decode(bytes.subarray(0, cut));
+			} catch {}
+			return text;
+		}
 		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
 		function formatBytes(n) {
 			if (n >= 1048576) {
@@ -6746,6 +6802,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
 			const [err, setErr] = (0, react.useState)(null);
 			const [truncated, setTruncated] = (0, react.useState)(false);
+			const [streamingCode, setStreamingCode] = (0, react.useState)(false);
+			const [wrap] = (0, react.useState)(true);
 			(0, react.useEffect)(() => {
 				let alive = true;
 				setText(null);
@@ -6753,6 +6811,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				setLoading(true);
 				setErr(null);
 				setTruncated(false);
+				setStreamingCode(false);
 				workspaceFiles.read(sessionId, path, {}).then(async (page) => {
 					if (!alive) return;
 					const parsed = textPageOf(page);
@@ -6774,6 +6833,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 					let merged = parsed.text;
 					let offset = parsed.eof ? null : parsed.offset + parsed.lines;
+					setText(merged);
+					setStreamingCode(offset !== null);
 					while (alive && offset !== null && byteLengthOf(merged) < maxBytes) {
 						let raw = null;
 						try {
@@ -6788,11 +6849,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						}
 						merged = `${merged}\n${next.text}`;
 						offset = next.eof ? null : next.offset + next.lines;
+						if (byteLengthOf(merged) > maxBytes) merged = sliceToBytes(merged, maxBytes);
+						setText(merged);
 					}
 					if (!alive) return;
 					setTruncated(offset !== null);
 					setText(merged);
 					setNextOffset(null);
+					setStreamingCode(false);
 					setLoading(false);
 				}).catch((error) => {
 					if (!alive) return;
@@ -6840,12 +6904,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const banner = truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-truncated" }, t("previewTruncated", { size: t("previewTruncatedSize") })) : null;
 			const body = (0, react.createElement)("div", { className: showSource && !markdown ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-body-code" : "dsh-tdt-sv-preview-body" }, showSource ? (0, react.createElement)("div", {
 				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
-				"data-code-preview": true
+				"data-code-preview": true,
+				"data-wrap": wrap
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
 				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
 				code: text,
 				lang: (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path),
 				lineNumbers: true,
+				streaming: streamingCode,
+				wrap,
 				copyLabel: t("copyLabel"),
 				copiedLabel: t("copiedLabel"),
 				toolbarLabels: {

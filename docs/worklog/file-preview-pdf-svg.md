@@ -253,3 +253,39 @@ CSP 原文、禁用清单、256K 常量、截断提示键全部落位。
 
 **又一次踩同一个坑**：CSS 注释里写了反引号（`.body:has(...)`）把模板字符串提前闭合 ——
 这正是我上一轮刚写进本文档的规矩。**教训要落实，不能只写进文档。**
+
+## 三-十四 三次返工收口：显示量 / 卡顿 / 配色（U30 续，2026-10-04，用户真机截图）
+
+**用户反馈三条**（附官方截图）：
+
+1. 我们**显示到 1 万行**，官方只显示前 512K（≈5000 行）；
+2. **卡得几乎拖不动**，官方很流畅；
+3. **配色和官方不一样**，怀疑「用的根本不是一个东西」；并指出官方**没有换行钮**。
+
+**逐条核实（官方源码）**：
+
+| 现象 | 真因 | 官方事实 |
+|---|---|---|
+| 显示 1 万行 | 我的循环**整页追加**到 ≥256K ⇒ 最后**多带一整页** | 官方是**按字节切在 512K 整**（`sliceToBytes` 同款语义） |
+| **卡死** | 冷启动把 500KB **一次性**着色；官方给 `CodeBlock` 传了 **`streaming: !content.eof`** | `documentpreview:5048`；`CodeBlock.d.ts`：streaming 时「**只对追加文本重新着色、已完成行与 DOM 保持不动**」（settle 后仍保留该树） |
+| 配色不同 | 我们只给了 `min-width/max-width`，**没抄官方那三个变量覆盖** | 官方 `CodeBody.module.css`（`:5027`）：`--dsl-code-block-background:transparent` + `--dsl-code-block-line-white-space:pre` + `--dsl-code-block-border-radius:0px`，外加 `pre{padding:16px}` 与 `[data-code-block-content]{overflow:auto}` 滚动口 |
+| 换行钮 | 官方传了 `wrap` 布尔 + toolbarLabels ⇒ 官方 **omit** 换行钮 | `CodeBlock.d.ts`：*"With toolbarLabels, use the owner's wrapping preference and omit the toolbar's local wrap action"* |
+
+**改动**：
+
+| 改动 | 要点 |
+|---|---|
+| 精确字节截断 | 新增 `sliceToBytes(text, maxBytes)`（UTF-8 边界安全）⇒ 严格 ≤256K，不再多带一整页 |
+| **渐进渲染** | 首屏先渲染第一页并 `streaming=true`，逐页追加（每页一次 setText），收尾 `streaming=false`；官方同款 |
+| 传 `wrap` 布尔 | 换行钮消失（与官方一致）；`data-wrap` 同步到容器 |
+| 抄官方 CSS | `archive-session-css.ts` 逐条照抄 `CodeBody.module.css`（三个变量 + `pre` padding + 滚动口 + `data-wrap` 规则），类名换成我们的 |
+
+**验证**：typecheck 绿 · 冒烟 **521/0**（+4 条）· build 过；抽查产物六项全落位
+（`streaming:streamingCode` / `data-wrap` / `wrap:wrap` / `sliceToBytes` / `--dsl-code-block-background` / 单滚动口）。
+
+**并发会话处理（重要，勿重复踩）**：本轮 build 被**另一会话的半成品**卡住
+（新建 `src/client/ui/TaskPicker.tsx` 从 `./Field` 导 `ensureControlsStyle`，而它实际在 `./controls-css`）。
+按本仓规矩**不擅自改别人正在写的文件** ⇒ ① 先确认我的文件自身零报错；
+② 备份其三个文件后**临时隔离**（把 TaskPicker 移出 / index.ts 还原）跑完 build+冒烟；
+③ **验证完原样恢复**（`diff -q` 校验一致）；④ 提交时**只暂存自己的文件**
+（`PROGRESS.md` 暂存区里也混有对方的 §1.7 改动，已 `restore --staged` 剔除）。

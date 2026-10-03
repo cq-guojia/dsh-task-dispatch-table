@@ -295,6 +295,23 @@ function byteLengthOf(text: string): number {
   return new TextEncoder().encode(text).length
 }
 
+/**
+ * 按**字节**上限精确截断（UTF-8 边界安全：不会切出半个多字节字符）。
+ * 官方是"切在 512K 整"，我们照做——此前整页追加会多带一整页（真机 2026-10-04 显示到 1 万行）。
+ */
+function sliceToBytes(text: string, maxBytes: number): string {
+  const bytes = new TextEncoder().encode(text)
+  if (bytes.length <= maxBytes) return text
+  const decoder = new TextDecoder('utf-8')
+  // 逐步回退到合法边界（最多 3 字节，UTF-8 单字符上限）。
+  for (let cut = maxBytes; cut > maxBytes - 4 && cut > 0; cut--) {
+    try {
+      return decoder.decode(bytes.subarray(0, cut))
+    } catch { /* 切在多字节字符中间 ⇒ 回退一字节 */ }
+  }
+  return text
+}
+
 /** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
 function formatBytes(n: number): string {
   if (n >= 1024 * 1024) {
@@ -473,6 +490,11 @@ export function TextPreview(props: {
   const [err, setErr] = useState<ErrView | null>(null)
   // 截断标记：有上限（HTML）且累计字节已达 ⇒ 顶部出横幅（官方位置/措辞），且不再有任何翻页按钮。
   const [truncated, setTruncated] = useState(false)
+  // 官方同款：源码是否仍在增长（还有后续页）。**streaming=true 时 CodeBlock 走增量着色**
+  // （只对追加内容重新着色、保留已完成行的 DOM）—— 这是官方流畅、我们卡死的分水岭。
+  const [streamingCode, setStreamingCode] = useState(false)
+  // 折行偏好（官方文档面板由宿主控制、不给换行钮；我们同样传布尔 + toolbarLabels）。
+  const [wrap] = useState(true)
   useEffect(() => {
     let alive = true
     setText(null)
@@ -480,6 +502,7 @@ export function TextPreview(props: {
     setLoading(true)
     setErr(null)
     setTruncated(false)
+    setStreamingCode(false)
     workspaceFiles.read(sessionId, path, {})
       .then(async (page) => {
         if (!alive) return
@@ -493,12 +516,13 @@ export function TextPreview(props: {
           setLoading(false)
           return
         }
-        // 有上限（HTML 源码态）：**静默自动翻页**直到累计达上限或 eof——官方「默认只显示前 512K」
-        // 就是一次给足、没有任何按钮（用户 2026-10-04：都截断了还要「加载更多」干什么）。
+        // 有上限（HTML 源码态）：照官方**渐进**——先渲染第一页并标记 streaming，之后逐页追加，
+        // 达到 256K 上限就**按字节精确截断**（官方是切在 512K 整，不是"多塞一整页"）。
         let merged = parsed.text
         let offset: number | null = parsed.eof ? null : parsed.offset + parsed.lines
+        setText(merged)
+        setStreamingCode(offset !== null)
         while (alive && offset !== null && byteLengthOf(merged) < maxBytes) {
-          // 逐页 await；页数有限（256K 上限 / 2MiB 页 ⇒ 通常一两页就到）。
           let raw: Awaited<ReturnType<WorkspaceFilesFace['read']>> | null = null
           try {
             raw = await workspaceFiles.read(sessionId, path, { offset })
@@ -508,11 +532,15 @@ export function TextPreview(props: {
           if (next === null || isFailed(next)) { setErr(next === null ? { key: 'previewBadPayload' } : errView(next.failed)); setLoading(false); return }
           merged = `${merged}\n${next.text}`
           offset = next.eof ? null : next.offset + next.lines
+          // 达到上限即**精确切到 maxBytes**（UTF-8 边界），不把最后一整页多带进来。
+          if (byteLengthOf(merged) > maxBytes) merged = sliceToBytes(merged, maxBytes)
+          setText(merged)
         }
         if (!alive) return
         setTruncated(offset !== null) // 还有剩余 ⇒ 是被上限截断的
         setText(merged)
         setNextOffset(null)
+        setStreamingCode(false) // 收尾：settle 后官方保留既有 DOM，不整体重着色
         setLoading(false)
       })
       .catch((error: unknown) => {
@@ -555,23 +583,26 @@ export function TextPreview(props: {
       : 'dsh-tdt-sv-preview-body',
   },
     showSource
-      // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
-      // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
-      // ⚠️ 官方源码态**有语法高亮**（真机截图为证）；此前误改纯文本是错认了 TextBody（那是
-      // 非代码文件的兜底渲染器）。卡顿的真根因 = 双滚动容器，已在 body-code 上收成单滚动。
+      // 官方 code/CodeBody（documentpreview lib/client.js:5034-5059）逐条对齐：
+      //   CodeBlock + lineNumbers + lang=languageForPath + toolbarLabels(复制/标题)
+      //   + **streaming: !eof**（增量着色，只对新增文本重算、保留已有 DOM ⇒ 流畅的关键）
+      //   + **wrap 传布尔**（传了 wrap + toolbarLabels ⇒ 官方 **omit** 换行钮，源码事实 CodeBlock.d.ts）
       ? h('div', {
           className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
           'data-code-preview': true,
+          'data-wrap': wrap,
         },
         h(CodeBlock, {
           className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
           code: text,
           lang: languageForPath(path),
           lineNumbers: true,
-          // ⚠️ 绝不能传 wrap（源码事实，primitives@0.1.7-rc.2 lib/index.js:10689 + :9285）：
-          // 官方 CodeBlock 的换行钮只在 wrap === undefined 时渲染（onWrap 有值才画；
-          // 传了 wrap ⇒ onWrap 为 undefined ⇒ 官方 **omit** 掉换行钮，按钮直接消失）。
-          // 不传 ⇒ 官方内部 localWrapped 默认 true（默认折行），点钮切不折行，全由官方管。
+          // ⚠️ streaming 必须传：官方靠它做**渐进高亮**（只重新着色追加内容、保留已完成行与 DOM）。
+          // 冷启动整块着色 500KB = 每次滚动都在重排 ⇒ 卡死（真机 2026-10-04）。
+          streaming: streamingCode,
+          // ⚠️ 传 wrap（布尔）而不是不传：不传时官方自己渲染「换行」钮；传了 + toolbarLabels
+          // ⇒ 官方 omit 该钮（与官方文档面板一致，用户 2026-10-04：不需要换行钮）。
+          wrap,
           copyLabel: t('copyLabel'),
           copiedLabel: t('copiedLabel'),
           toolbarLabels: {
