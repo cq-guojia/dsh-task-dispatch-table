@@ -1231,12 +1231,25 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     const server = readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8')
     const client = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
     check('顶部输入区：服务端解析附件绝对路径（upload 走任务目录 / link 走来源工作区）',
-      server.includes('attachmentPaths') && server.includes('attachmentAbsPath'))
+      server.includes('attachmentPaths') && server.includes('attachmentAbsPath')
+      && server.includes('isSafeAttachmentRef'))
+    check('顶部输入区：附件卡去重不让整条用户消息消失（hadFiles 判空）', client.includes('hadFiles'))
+    check('顶部输入区：文案走带占位符插值的 tt（宿主 t 不做 {count} 替换）',
+      client.includes('data-task-file-context') && !client.includes('svUpstream'))
     check('顶部输入区：客户端面板与文案键进产物（接收 / 随附 / 折叠 / 来源标记）',
       client.includes('dsh-tdt-sv-tfc') && client.includes('tfcReceived') && client.includes('tfcAttached')
       && client.includes('tfcMore') && client.includes('tfcMoreTasks') && client.includes('tfcNoOutputs'))
-    check('顶部输入区：左右内边距与官方会话区同一条基线（16 + clearance）',
-      client.includes('padding:18px calc(var(--dsh-composer-side-clearance,16px) + 16px) 14px'))
+    check('顶部输入区：左右内边距与官方会话区同一条基线、纵向四边等距（34/34/18）',
+      client.includes('padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px'))
+    check('顶部输入区：高度有上限且自己滚（多任务/多文件压不没会话区）',
+      client.includes('max-height:min(38vh,340px)') && client.includes('overflow-y:auto'))
+    check('顶部输入区：一行一个文件（不并排）+ 组间细线分隔',
+      client.includes('.dsh-tdt-sv-tfc-files{flex-direction:column')
+      && client.includes('.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top'))
+    check('顶部输入区：目录走官方文件夹图标（FileTypeIcon 按扩展名分类，尾斜杠拿不到 folder）',
+      client.includes('IconFolderCloseRegular'))
+    check('顶部输入区：跨区目录 / 未解析路径降级不可点（data-noclick 淡一档）',
+      client.includes('data-noclick') && client.includes('.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}'))
   }
   // 决策 49：多 Agent 指令段只在 teamMode=true 时注入；缺省（老调用）消息不含团队段。
   const msgTeam = buildMessage({ ...snapWithDeps, agentTeam: true }, '/ws/down', '2026-09-29', true)

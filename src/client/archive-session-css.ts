@@ -42,6 +42,10 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-frame{padding:18px 0;}
+/* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
+   ⚠️ 用 flex:1 1 auto 而不是 flex:1（后者 basis=0）：官方 ChatView.frame 是 flex:auto，
+   本仓与官方注入顺序不定 ⇒ 取 auto 这个共同值，两边顺序颠倒也不会改变布局。 */
+.dsh-tdt-sv-chat{flex:1 1 auto;min-height:0;}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
@@ -317,27 +321,39 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
    官方没有「上游产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
-   ① 左右内边距 = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**，
-      不再自己突出一块（用户 2026-10-03 点名）；纵向：上 18（与 frame 一致）、下 14。
-   ② 输入文件可能十几个 ⇒ **一行一个**（图标 + 文件名），不用产出卡那种大卡。
-   ③ 长名省略 + 悬停全文；一排放几个交给 flex-wrap，不写死列数。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:18px calc(var(--dsh-composer-side-clearance,16px) + 16px) 14px;flex-direction:column;gap:14px;min-width:0;display:flex;}
+   ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**，
+      不再自己突出一块（用户 2026-10-03 点名）；**上 34 / 下 18** = 与「分隔线 → 会话正文首行」
+      同距（四边等距 34 口径），纵向节拍接得上。
+   ② 输入文件可能十几个 ⇒ **一行一个**（flex-direction:column），不用产出卡那种大卡。
+   ③ 长名省略 + 悬停全文；chip 宽 min(280px,100%)，窄弹窗也不撑破。
+   ④ **高度有上限 + 自己滚** ⇒ 20 个上游任务也不会把会话区压没（否则被 panel overflow 裁掉）。
+   ⑤ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-group{flex-direction:column;gap:6px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
 .dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);font-weight:500;line-height:var(--tdt-line-sm);white-space:nowrap;}
+/* 组标题比内容**高一档**（12px/600/fg-2）⇒ 不靠颜色也分得出层级：标题 > 任务名 > 芯片 > 元信息。 */
+.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:600;line-height:var(--tdt-line-sm);white-space:nowrap;}
 .dsh-tdt-sv-tfc-tasks{flex-direction:column;gap:10px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
-.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
+.dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
+/* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
+.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
+.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-files{flex-wrap:wrap;gap:2px 8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:280px;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
+/* 一行一个文件（用户口径）：不 wrap、不并排。
+   ⚠️ align-items:flex-start 必须留着：column 容器默认 stretch ⇒ 芯片会被拉到 max-width 那么宽，
+   悬停/点击热区变成整条 280px（看着像一整行按钮），实际只该有内容那么宽。 */
+.dsh-tdt-sv-tfc-files{flex-direction:column;align-items:flex-start;gap:2px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:min(280px,100%);padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
 button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
+/* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
+.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
 .dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
+.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;flex:0 1 auto;}
+.dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
 .dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}

@@ -5,6 +5,7 @@ import type {
   HostContext, HostLlm, HostLogger, HostSettings, HostWorkspaceRegistry, SettingsScope, z_any,
 } from './host.js'
 import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './config.js'
+import { isSafeAttachmentRef } from './attachment-allowlist.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
 import {
@@ -781,22 +782,32 @@ const makeDispatchRoutes = (
       // 会话弹窗场景（带 sessionId）：顺带把**附加文件的绝对路径**解析出来一起给（2026-10-03）。
       // 为什么必须服务端给：upload 型落在插件数据目录（客户端根本不知道 statePath），
       // link 型的基准是**工作区 title**（客户端没有 title → path 映射）⇒ 不给就点不开。
-      // 解析不出 ⇒ null（绝不猜路径）。只在带 sessionId 时做，列表场景零成本。
+      //
+      // 三条硬规矩（专家团评审 2026-10-03）：
+      // ① **不猜路径**：`workspace` 非空却查不到该工作区 ⇒ null（**绝不**回退成任务工作区去拼，
+      //    那会拼出一个「存在但指向别的文件」的假路径）；`workspace` 为空才走快照 workspacePath。
+      // ② `ref` 必须过安全校验（同 schduler / reconcile / dispatch 三处口径）。
+      // ③ **按 ref 配对下发**（不是按序）：两端过滤规则不同时按序会整体错位、点开错文件。
       const rows = sessionId === undefined ? page.rows : page.rows.map(row => {
         const snap = parseInstanceSnapshot(row.snapshot ?? null)
         const assets = getAssets()
         const registry = getRegistry()
+        const workspaces = registry === null ? [] : registry.list()
         return {
           ...row,
           attachmentPaths: (snap?.attachments ?? []).map(item => {
+            if (!isSafeAttachmentRef(item.ref)) return { ref: item.ref, path: null }
             if (item.kind === 'upload') {
-              return assets === null ? null : attachmentAbsPath(assets, row.task_id, item.ref)
+              return { ref: item.ref, path: assets === null ? null : attachmentAbsPath(assets, row.task_id, item.ref) }
             }
-            const fromTitle = item.workspace !== undefined && item.workspace !== '' && registry !== null
-              ? registry.list().find(workspace => workspace.title === item.workspace)?.path ?? null
-              : null
-            const base = fromTitle ?? snap?.workspacePath ?? null
-            return base === null ? null : path.join(base, item.ref)
+            // link 型：基准 = 附件**来源**工作区（title 优先、id 兜底，与 dispatch.resolveWorkspace 同口径）
+            const source = item.workspace
+            const base = source === undefined || source === ''
+              ? snap?.workspacePath ?? null
+              : workspaces.find(workspace => workspace.title === source)?.path
+                ?? workspaces.find(workspace => workspace.id === source)?.path
+                ?? null
+            return { ref: item.ref, path: base === null ? null : path.join(base, item.ref) }
           }),
         }
       })

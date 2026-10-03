@@ -450,15 +450,18 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "收起",
 			deliverExpandAria: "展开全部 {count} 个交付文件",
 			deliverCollapseAria: "收起交付文件列表",
-			tfcReceived: "接收 · 来自 {count} 个上游任务",
+			tfcReceived: "接收 · {files} 个文件 · 来自 {tasks} 个上游任务",
 			tfcAttached: "随附 · {count} 个文件",
 			tfcNoOutputs: "未声明产出",
-			tfcRelOnly: "（相对路径，基准工作区未知）",
+			tfcRelOnly: "相对路径",
+			tfcCrossWorkspace: "跨工作区",
+			tfcNoPath: "路径未解析，不可打开",
 			tfcMore: "全部 {count} 个文件",
 			tfcMoreTasks: "全部 {count} 个上游任务",
 			tfcCollapse: "收起",
 			tfcFromUpload: "上传",
 			tfcFromWorkspace: "工作区",
+			tfcRestFiles: "还有 {count} 个",
 			editorNew: "新建任务",
 			editorEdit: "编辑任务",
 			editorClose: "关闭",
@@ -1009,15 +1012,18 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "Collapse",
 			deliverExpandAria: "Expand all {count} delivered files",
 			deliverCollapseAria: "Collapse the delivered-files list",
-			tfcReceived: "Received · from {count} upstream task(s)",
+			tfcReceived: "Received · {files} file(s) from {tasks} upstream task(s)",
 			tfcAttached: "Attached · {count} file(s)",
 			tfcNoOutputs: "No outputs declared",
-			tfcRelOnly: "(relative path — base workspace unknown)",
+			tfcRelOnly: "relative",
+			tfcCrossWorkspace: "other workspace",
+			tfcNoPath: "path unresolved — cannot open",
 			tfcMore: "All {count} files",
 			tfcMoreTasks: "All {count} upstream tasks",
 			tfcCollapse: "Collapse",
 			tfcFromUpload: "uploaded",
 			tfcFromWorkspace: "workspace",
+			tfcRestFiles: "{count} more",
 			editorNew: "New task",
 			editorEdit: "Edit task",
 			editorClose: "Close",
@@ -2904,6 +2910,10 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
 .dsh-tdt-sv-frame{padding:18px 0;}
+/* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
+   ⚠️ 用 flex:1 1 auto 而不是 flex:1（后者 basis=0）：官方 ChatView.frame 是 flex:auto，
+   本仓与官方注入顺序不定 ⇒ 取 auto 这个共同值，两边顺序颠倒也不会改变布局。 */
+.dsh-tdt-sv-chat{flex:1 1 auto;min-height:0;}
 .dsh-tdt-sv-heading{min-width:0;}
 .dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
@@ -3179,27 +3189,39 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
    官方没有「上游产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
-   ① 左右内边距 = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**，
-      不再自己突出一块（用户 2026-10-03 点名）；纵向：上 18（与 frame 一致）、下 14。
-   ② 输入文件可能十几个 ⇒ **一行一个**（图标 + 文件名），不用产出卡那种大卡。
-   ③ 长名省略 + 悬停全文；一排放几个交给 flex-wrap，不写死列数。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:18px calc(var(--dsh-composer-side-clearance,16px) + 16px) 14px;flex-direction:column;gap:14px;min-width:0;display:flex;}
+   ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**，
+      不再自己突出一块（用户 2026-10-03 点名）；**上 34 / 下 18** = 与「分隔线 → 会话正文首行」
+      同距（四边等距 34 口径），纵向节拍接得上。
+   ② 输入文件可能十几个 ⇒ **一行一个**（flex-direction:column），不用产出卡那种大卡。
+   ③ 长名省略 + 悬停全文；chip 宽 min(280px,100%)，窄弹窗也不撑破。
+   ④ **高度有上限 + 自己滚** ⇒ 20 个上游任务也不会把会话区压没（否则被 panel overflow 裁掉）。
+   ⑤ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-group{flex-direction:column;gap:6px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
 .dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);font-weight:500;line-height:var(--tdt-line-sm);white-space:nowrap;}
+/* 组标题比内容**高一档**（12px/600/fg-2）⇒ 不靠颜色也分得出层级：标题 > 任务名 > 芯片 > 元信息。 */
+.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:600;line-height:var(--tdt-line-sm);white-space:nowrap;}
 .dsh-tdt-sv-tfc-tasks{flex-direction:column;gap:10px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
-.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
+.dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
+/* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
+.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
+.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-files{flex-wrap:wrap;gap:2px 8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:280px;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
+/* 一行一个文件（用户口径）：不 wrap、不并排。
+   ⚠️ align-items:flex-start 必须留着：column 容器默认 stretch ⇒ 芯片会被拉到 max-width 那么宽，
+   悬停/点击热区变成整条 280px（看着像一整行按钮），实际只该有内容那么宽。 */
+.dsh-tdt-sv-tfc-files{flex-direction:column;align-items:flex-start;gap:2px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:min(280px,100%);padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
 button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
+/* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
+.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
 .dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
+.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;flex:0 1 auto;}
+.dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
 .dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
@@ -3738,7 +3760,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。
 		*  `dsh-tdt-sv-frame` = 本插件稳定钩子类：弹窗用它把会话区上下内边距补到 34px（官方 scroll 纵向是固定 16px）。 */
 		function ChatViewFrame(props) {
-			return (0, react.createElement)("div", { className: `${ocOr("ChatView", "frame", "dsh-tdt-sv-body")} dsh-tdt-sv-frame` }, (0, react.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "scroll", "") }, (0, react.createElement)("div", {
+			return (0, react.createElement)("div", { className: `${ocOr("ChatView", "frame", "dsh-tdt-sv-body")} dsh-tdt-sv-frame dsh-tdt-sv-chat` }, (0, react.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "scroll", "") }, (0, react.createElement)("div", {
 				className: ocOr("ChatView", "column", "dsh-tdt-sv-col"),
 				"data-chat-flow": ""
 			}, props.children))));
@@ -5129,6 +5151,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		//#endregion
 		//#region src/client/task-file-context.tsx
+		/**
+		* 实例快照 → 本任务工作区 path（判上游目录是否跨区用）。
+		* 与 `attachmentsOf` 同款：**不强求整份快照合法**，取不到 ⇒ null（调用方按「未知」处理）。
+		*/
+		function workspacePathOf(snapshot) {
+			if (snapshot === null || snapshot === "") return null;
+			try {
+				const parsed = JSON.parse(snapshot);
+				if (typeof parsed !== "object" || parsed === null) return null;
+				const path = parsed.workspacePath;
+				return typeof path === "string" && path !== "" ? path : null;
+			} catch {
+				return null;
+			}
+		}
 		/** 目录标记：产出按**尾斜杠**表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
 		function isDirPath(path) {
 			return path.endsWith("/");
@@ -5145,11 +5182,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const cut = Math.max(raw.lastIndexOf("/"), raw.lastIndexOf("\\"));
 			return cut < 0 ? raw : raw.slice(cut + 1);
 		}
-		/** 折叠阈值：超过就收起（与官方 Deliverables「>4 折叠」同思路，输入区给宽松些）。 */
-		const COLLAPSE_FILES = 6;
+		/** 工作区路径归一（补尾斜杠）后再比前缀 —— 否则 `/ws` 会把 `/ws-2` 误判成同区。 */
+		function inWorkspace(candidate, base) {
+			const norm = (value) => value.endsWith("/") ? value : `${value}/`;
+			return norm(candidate).startsWith(norm(base));
+		}
+		/** 折叠阈值：文件 >4 折叠（与官方 Deliverables 同思路）；上游任务 >3 折叠。 */
+		const COLLAPSE_FILES = 4;
 		const COLLAPSE_TASKS = 3;
+		/** 任务处于折叠态时，每个任务最多露几个文件（避免 20 个任务的默认高度失控）。 */
+		const COLLAPSED_TASK_FILES = 3;
 		/**
-		* 快照 → 随附文件视图（服务端已把绝对路径解析在 `paths` 里，按序配对）。
+		* 快照 → 随附文件视图（服务端按 **ref** 下发了绝对路径，这里按 ref 配对，不按序）。
 		* 形状不对 / 解析失败 ⇒ 空数组（不渲染该组，绝不显示假文件）。
 		*/
 		function attachmentsOf(snapshot, paths) {
@@ -5159,14 +5203,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (typeof parsed !== "object" || parsed === null) return [];
 				const list = parsed.attachments;
 				if (!Array.isArray(list)) return [];
-				return list.flatMap((item, index) => {
+				return list.flatMap((item) => {
 					if (typeof item !== "object" || item === null) return [];
 					const one = item;
 					if (typeof one.name !== "string" || one.name === "") return [];
+					if (typeof one.ref !== "string") return [];
+					const hit = paths?.find((entry) => entry.ref === one.ref);
 					return [{
 						name: one.name,
 						kind: one.kind === "upload" ? "upload" : "link",
-						path: paths?.[index] ?? null
+						path: hit === void 0 ? null : hit.path
 					}];
 				});
 			} catch {
@@ -5175,30 +5221,35 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		/** 一个文件行：图标 + 名字（超长省略、悬停全文）；有路径才可点。 */
 		function FileChip(props) {
-			const { keyOf, iconPath, label, title, onClick } = props;
-			const clickable = onClick !== void 0;
+			const { file } = props;
+			const clickable = file.onClick !== void 0;
 			return (0, react.createElement)(clickable ? "button" : "span", {
-				key: keyOf,
 				className: "dsh-tdt-sv-tfc-file",
 				...clickable ? {
 					type: "button",
-					title,
-					"aria-label": title,
-					onClick
-				} : { title }
-			}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: iconPath,
+					title: file.title,
+					"aria-label": file.title,
+					onClick: file.onClick
+				} : {
+					title: file.title,
+					"data-noclick": true
+				}
+			}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-icon" }, file.isDir ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: file.iconPath,
 				size: 14
-			})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-label" }, label));
+			})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-label" }, file.label), file.note === void 0 ? null : (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, file.note));
 		}
-		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。 */
+		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。每行一个文件，不并排。 */
 		function FileLines(props) {
 			const { files, t } = props;
 			const [expanded, setExpanded] = (0, react.useState)(false);
 			if (files.length === 0) return null;
 			const collapsible = files.length > COLLAPSE_FILES;
 			const shown = collapsible && !expanded ? files.slice(0, COLLAPSE_FILES) : files;
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-lines" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file) => (0, react.createElement)(FileChip, file))), collapsible ? (0, react.createElement)("button", {
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-lines" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file, index) => (0, react.createElement)(FileChip, {
+				key: `${file.key}#${index}`,
+				file
+			}))), collapsible ? (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-sv-tfc-more",
 				"aria-expanded": expanded,
@@ -5207,45 +5258,56 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 			}, t(expanded ? "tfcCollapse" : "tfcMore", { count: files.length })) : null);
 		}
-		/** 一组：标题行 + 内容。 */
+		/** 一组：标题行 + 内容（组间由 CSS 加细线分隔，不靠颜色、不靠左缩进）。 */
 		function Group(props) {
 			const { title, children } = props;
 			if (children === null) return null;
 			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-group" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-title" }, title)), children);
 		}
-		/** 接收区：按上游任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠。 */
+		/** 接收区：按上游任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠（有产出的排前面）。 */
 		function ReceivedGroup(props) {
-			const { items, onOpenFile, t } = props;
+			const { items, workspacePath, onOpenFile, t } = props;
 			const [expanded, setExpanded] = (0, react.useState)(false);
 			if (items.length === 0) return null;
-			const collapsible = items.length > COLLAPSE_TASKS;
-			const shown = collapsible && !expanded ? items.slice(0, COLLAPSE_TASKS) : items;
+			const ordered = items.slice().sort((a, b) => (a.outputs.length > 0 ? 0 : 1) - (b.outputs.length > 0 ? 0 : 1));
+			const collapsible = ordered.length > COLLAPSE_TASKS;
+			const shown = collapsible && !expanded ? ordered.slice(0, COLLAPSE_TASKS) : ordered;
+			const totalFiles = ordered.reduce((sum, item) => sum + item.outputs.length, 0);
 			return (0, react.createElement)(Group, {
-				title: t("tfcReceived", { count: items.length }),
+				title: t("tfcReceived", {
+					tasks: ordered.length,
+					files: totalFiles
+				}),
 				children: (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-tasks" }, shown.map((item) => {
-					const files = item.outputs.map((path) => {
+					const crossWorkspace = workspacePath === null || item.workspacePath === null || !inWorkspace(item.workspacePath, workspacePath);
+					const all = item.outputs.map((path) => {
 						const abs = upstreamAbsPath(item.workspacePath, path);
 						const name = displayName(path);
+						const dir = isDirPath(path);
+						const blocked = abs === null || dir && crossWorkspace;
 						return {
-							keyOf: path,
-							iconPath: isDirPath(path) ? `${name}/` : name,
-							label: abs === null ? `${name} ${t("tfcRelOnly")}` : name,
+							key: path,
+							iconPath: name,
+							isDir: dir,
+							label: name,
 							title: abs ?? path,
-							onClick: abs !== null && onOpenFile !== void 0 ? () => {
+							note: abs === null ? t("tfcRelOnly") : blocked ? t("tfcCrossWorkspace") : void 0,
+							onClick: !blocked && onOpenFile !== void 0 && abs !== null ? () => {
 								onOpenFile(abs);
 							} : void 0
 						};
 					});
+					const capped = !expanded && collapsible && all.length > COLLAPSED_TASK_FILES ? all.slice(0, COLLAPSED_TASK_FILES) : all;
 					return (0, react.createElement)("div", {
 						key: `${item.task}:${item.instanceId}`,
 						className: "dsh-tdt-sv-tfc-task"
 					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", {
 						className: "dsh-tdt-sv-tfc-name",
 						title: item.task
-					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), files.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)(FileLines, {
-						files,
-						t
-					}));
+					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-lines" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react.createElement)(FileChip, {
+						key: `${file.key}#${index}`,
+						file
+					}))), capped.length < all.length ? (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-none" }, t("tfcRestFiles", { count: all.length - capped.length })) : null));
 				}), collapsible ? (0, react.createElement)("button", {
 					type: "button",
 					className: "dsh-tdt-sv-tfc-more",
@@ -5253,7 +5315,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					onClick: () => {
 						setExpanded((value) => !value);
 					}
-				}, t(expanded ? "tfcCollapse" : "tfcMoreTasks", { count: items.length })) : null)
+				}, t(expanded ? "tfcCollapse" : "tfcMoreTasks", { count: ordered.length })) : null)
 			});
 		}
 		/** 随附区：本任务设置里加的文件（来源标注「上传 / 工作区」）。 */
@@ -5263,15 +5325,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return (0, react.createElement)(Group, {
 				title: t("tfcAttached", { count: files.length }),
 				children: (0, react.createElement)(FileLines, {
-					files: files.map((file) => ({
-						keyOf: `${file.name}:${file.kind}`,
-						iconPath: file.name,
-						label: `${file.name}（${file.kind === "upload" ? t("tfcFromUpload") : t("tfcFromWorkspace")}）`,
-						title: file.path ?? file.name,
-						onClick: file.path !== null && onOpenFile !== void 0 ? () => {
-							onOpenFile(file.path);
-						} : void 0
-					})),
+					files: files.map((file) => {
+						const abs = file.path;
+						return {
+							key: `${file.name}:${file.kind}`,
+							iconPath: file.name,
+							isDir: false,
+							label: file.name,
+							title: abs ?? `${file.name}（${t("tfcNoPath")}）`,
+							note: file.kind === "upload" ? t("tfcFromUpload") : t("tfcFromWorkspace"),
+							onClick: abs !== null && onOpenFile !== void 0 ? () => {
+								onOpenFile(abs);
+							} : void 0
+						};
+					}),
 					t
 				})
 			});
@@ -5281,13 +5348,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 两组都空 ⇒ 整块不渲染（返回 null），不留空壳。
 		*/
 		function TaskFileContextPanel(props) {
-			const { upstream, attached, onOpenFile, t } = props;
+			const { upstream, attached, workspacePath, onOpenFile, t } = props;
 			if (upstream.length === 0 && attached.length === 0) return null;
 			return (0, react.createElement)("div", {
 				className: "dsh-tdt-sv-tfc",
 				"data-task-file-context": true
 			}, (0, react.createElement)(ReceivedGroup, {
 				items: upstream,
+				workspacePath: workspacePath ?? null,
 				onOpenFile,
 				t
 			}), (0, react.createElement)(AttachedGroup, {
@@ -5443,19 +5511,33 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 会话快照的 user 节点 content 里就是它 ⇒ 弹窗里照样渲染成附件卡（与官方页一致）。
 		* 拿不到（宿主投影未透传）⇒ 空数组：附件卡不渲染，**绝不造一个假卡**。
 		*/
-		function contentFiles(blocks) {
-			if (blocks === void 0) return [];
+		/**
+		* @returns `files` = 去重后要画的附件；`hadFiles` = 该轮**原本**有没有 file 块
+		* （去重让位后可能为空 —— 调用方据此判断该轮要不要渲染，不能因为让位把整条消息吞掉）。
+		*/
+		function contentFiles(blocks, exclude) {
+			if (blocks === void 0) return {
+				files: [],
+				hadFiles: false
+			};
 			const out = [];
+			let hadFiles = false;
 			for (const block of blocks) {
 				if (block === null || typeof block !== "object" || block.type !== "file") continue;
 				const attachment = block.attachment;
 				if (typeof attachment !== "object" || attachment === null) continue;
+				hadFiles = true;
+				const name = typeof attachment.name === "string" && attachment.name !== "" ? attachment.name : "file";
+				if (exclude !== void 0 && exclude.has(name)) continue;
 				out.push({
-					name: typeof attachment.name === "string" && attachment.name !== "" ? attachment.name : "file",
+					name,
 					bytes: typeof attachment.bytes === "number" ? attachment.bytes : 0
 				});
 			}
-			return out;
+			return {
+				files: out,
+				hadFiles
+			};
 		}
 		/** legacy assistant 节点的纯文本（复制按钮用）。 */
 		function assistantText(node) {
@@ -5542,7 +5624,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* @param groupPart - 过程分组侧（'response' | 'reasoning'）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host) {
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -5591,8 +5673,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				case "steering": {
 					const blocks = dataOf(node).content;
 					const text = contentText(blocks);
-					const files = contentFiles(blocks);
-					if (text === "" && files.length === 0) return null;
+					const { files, hadFiles } = contentFiles(blocks, attachedNames);
+					if (text === "" && !hadFiles) return null;
 					return (0, react.createElement)(UserMessage, {
 						text,
 						files
@@ -5665,13 +5747,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
 		* 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
 		*/
-		function renderLegacyNode(node, t, fileOpen) {
+		function renderLegacyNode(node, t, fileOpen, attachedNames) {
 			switch (node.kind) {
 				case "user":
 				case "steering": {
 					const text = contentText(node.content);
-					const files = contentFiles(node.content);
-					if (text === "" && files.length === 0) return null;
+					const { files, hadFiles } = contentFiles(node.content, attachedNames);
+					if (text === "" && !hadFiles) return null;
 					return (0, react.createElement)(UserMessage, {
 						key: node.seq,
 						text,
@@ -5770,7 +5852,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return out;
 		}
 		/** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
-		function renderLegacyRows(nodes, t, fileOpen) {
+		function renderLegacyRows(nodes, t, fileOpen, attachedNames) {
 			const items = groupNodes(nodes);
 			const rows = [];
 			items.forEach((entry, index) => {
@@ -5781,11 +5863,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						className: "dsh-tdt-sv-notice"
 					}, `${t("sessionProcess")} · ${entry.nodes.length}`));
 					entry.nodes.forEach((node, i) => {
-						const rendered = renderLegacyNode(node, t, fileOpen);
+						const rendered = renderLegacyNode(node, t, fileOpen, attachedNames);
 						if (rendered !== null) parts.push((0, react.createElement)("div", { key: `p${i}` }, rendered));
 					});
 				} else {
-					const inner = renderLegacyNode(entry.node, t);
+					const inner = renderLegacyNode(entry.node, t, fileOpen, attachedNames);
 					if (inner !== null) parts.push(inner);
 					if (entry.node.kind === "assistant") {
 						const next = items[index + 1];
@@ -5941,8 +6023,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
 		*/
 		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, attached } = props;
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, attached, workspacePath } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
+			const attachedNames = (0, react.useMemo)(() => new Set((attached ?? []).filter((file) => file.path !== null).map((file) => file.name)), [attached]);
 			const subscribe = (0, react.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
 			const getSnapshot = (0, react.useMemo)(() => () => view.target.getSnapshot(), [view]);
 			const chat = (0, react.useSyncExternalStore)(subscribe, getSnapshot);
@@ -6041,13 +6124,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				store
 			]);
 			const host = usePresentedHost();
-			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host), [
+			const renderNode = (0, react.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames), [
 				tt,
 				onBranchAt,
 				fileOpen,
 				deliverFiles,
 				lastTailTurn,
-				host
+				host,
+				attachedNames
 			]);
 			const isTurnClosed = (0, react.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
@@ -6067,7 +6151,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				foldCompleted: true,
 				renderNode,
 				t: tt
-			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen)).filter((row) => row !== null && row !== void 0);
+			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen, attachedNames)).filter((row) => row !== null && row !== void 0);
 			const officialCount = officialModuleCount();
 			if (!officialWarned) {
 				officialWarned = true;
@@ -6113,8 +6197,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}))), (0, react.createElement)(TaskFileContextPanel, {
 				upstream: upstream ?? [],
 				attached: attached ?? [],
+				workspacePath: workspacePath ?? null,
 				onOpenFile,
-				t
+				t: tt
 			}), (0, react.createElement)(ChatViewFrame, { children: body }))), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
 				open: forkTarget !== null,
 				onClose: () => {
@@ -44064,16 +44149,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			* 曾经的错法：由调用方把 `snapshot` / `outputs` 传进来，结果老界面的「查看任务」入口
 			* 没传 ⇒ 同一个会话两处长得不一样（用户 2026-10-03 抓出）。**不许再回退成传参**。
 			*
-			* @param fallbackHeading 仅当实例行取不到时兜底的标题（不是渲染内容的来源）。
+			* 参数**只有** sessionId（专家团评审：连 fallbackHeading 都删掉，不给「再传点别的」留门）。
 			*/
-			const openView = async (sessionId, fallbackHeading) => {
+			const openView = async (sessionId) => {
 				if (viewSession === null) {
 					setViewErr("查看会话不可用：sessions / uiConversation 注入未就位（见控制台）");
 					return;
 				}
 				setViewErr(null);
 				const row = await fetchInstanceBySession(sessionId);
-				const heading = row === null ? fallbackHeading ?? sessionId.slice(0, 8) : `${overview.rows.find((item) => item.id === row.task_id)?.title || row.task_id.slice(0, 8)} · ${formatPlanStamp(row.scheduled_at)}`;
+				const heading = row === null ? sessionId.slice(0, 8) : `${overview.rows.find((item) => item.id === row.task_id)?.title || row.task_id.slice(0, 8)} · ${formatPlanStamp(row.scheduled_at)}`;
 				let target = viewSession(sessionId);
 				let didUnarchive = false;
 				if (target === null) try {
@@ -44099,7 +44184,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					didUnarchive,
 					outputs: row === null ? void 0 : parseOutputs(row.outputs),
 					upstream: upstreamOf(row?.snapshot ?? null),
-					attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths)
+					attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths),
+					workspacePath: workspacePathOf(row?.snapshot ?? null)
 				});
 			};
 			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
@@ -44311,6 +44397,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				} : void 0,
 				upstream: viewing.upstream ?? [],
 				attached: viewing.attached ?? [],
+				workspacePath: viewing.workspacePath ?? null,
 				onClose: () => {
 					const closed = viewing.sessionId;
 					const needArchive = viewing.didUnarchive === true;

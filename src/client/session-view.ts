@@ -585,19 +585,31 @@ function contentText(blocks: readonly ContentBlockLike[] | undefined): string {
  * 会话快照的 user 节点 content 里就是它 ⇒ 弹窗里照样渲染成附件卡（与官方页一致）。
  * 拿不到（宿主投影未透传）⇒ 空数组：附件卡不渲染，**绝不造一个假卡**。
  */
-function contentFiles(blocks: readonly ContentBlockLike[] | undefined): readonly { name: string; bytes: number }[] {
-  if (blocks === undefined) return []
+/**
+ * @returns `files` = 去重后要画的附件；`hadFiles` = 该轮**原本**有没有 file 块
+ * （去重让位后可能为空 —— 调用方据此判断该轮要不要渲染，不能因为让位把整条消息吞掉）。
+ */
+function contentFiles(
+  blocks: readonly ContentBlockLike[] | undefined,
+  /**
+   * 顶部「随附」区**已解析出路径**的文件名 ⇒ 这里让位，避免同一个文件同屏出现两次
+   * （顶部那份是真源：能点开、且覆盖官方卡做不到的目录 / 注册失败 / 超限三类）。
+   */
+  exclude?: ReadonlySet<string>,
+): { files: readonly { name: string; bytes: number }[]; hadFiles: boolean } {
+  if (blocks === undefined) return { files: [], hadFiles: false }
   const out: { name: string; bytes: number }[] = []
+  let hadFiles = false
   for (const block of blocks) {
     if (block === null || typeof block !== 'object' || block.type !== 'file') continue
     const attachment = block.attachment
     if (typeof attachment !== 'object' || attachment === null) continue
-    out.push({
-      name: typeof attachment.name === 'string' && attachment.name !== '' ? attachment.name : 'file',
-      bytes: typeof attachment.bytes === 'number' ? attachment.bytes : 0,
-    })
+    hadFiles = true
+    const name = typeof attachment.name === 'string' && attachment.name !== '' ? attachment.name : 'file'
+    if (exclude !== undefined && exclude.has(name)) continue
+    out.push({ name, bytes: typeof attachment.bytes === 'number' ? attachment.bytes : 0 })
   }
-  return out
+  return { files: out, hadFiles }
 }
 
 /** legacy assistant 节点的纯文本（复制按钮用）。 */
@@ -705,6 +717,8 @@ function renderKeyedNode(
   lastTailTurn?: number,
   /** 官方 /api/present.host 桌面可用性；用于渲染 "presented.unavailable" 提示。 */
   host?: PresentedHostFace | 'error' | null,
+  /** 顶部「随附」区已显示的文件名 ⇒ 气泡下方官方附件卡对同名**让位**（避免同屏重复）。 */
+  attachedNames?: ReadonlySet<string>,
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'turn-trigger':
@@ -766,9 +780,11 @@ function renderKeyedNode(
     case 'steering': {
       const blocks = dataOf(node).content as readonly ContentBlockLike[] | undefined
       const text = contentText(blocks)
-      // 随附文件（官方 file 块）：没有文本但有附件时**照样渲染**（不能整条消失）。
-      const files = contentFiles(blocks)
-      if (text === '' && files.length === 0) return null
+      // 随附文件（官方 file 块）：没有文本但有附件时**照样渲染**（不能整条消失）——
+      // 顶部「随附」区已解析出路径的同名文件会让位 ⇒ 判空必须用 `hadFiles`，不能用 `files.length`，
+      // 否则「只有附件的一轮」被去重吃空后整条消息消失（第二轮评审抓出）。
+      const { files, hadFiles } = contentFiles(blocks, attachedNames)
+      if (text === '' && !hadFiles) return null
       return h(UserMessage, { text, files })
     }
     case 'turn-error':
@@ -844,13 +860,18 @@ function assistantBlocks(
  * legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
  * 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
  */
-function renderLegacyNode(node: ConversationNodeLike, t: Translate, fileOpen?: FileOpenFace): ReturnType<typeof h> | null {
+function renderLegacyNode(
+  node: ConversationNodeLike,
+  t: Translate,
+  fileOpen?: FileOpenFace,
+  attachedNames?: ReadonlySet<string>,
+): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'user':
     case 'steering': {
       const text = contentText(node.content)
-      const files = contentFiles(node.content)
-      if (text === '' && files.length === 0) return null
+      const { files, hadFiles } = contentFiles(node.content, attachedNames)
+      if (text === '' && !hadFiles) return null
       return h(UserMessage, { key: node.seq, text, files })
     }
     case 'assistant': {
@@ -932,7 +953,12 @@ function groupNodes(list: readonly ConversationNodeLike[]): RenderItem[] {
 }
 
 /** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
-function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate, fileOpen?: FileOpenFace): ReturnType<typeof h>[] {
+function renderLegacyRows(
+  nodes: readonly ConversationNodeLike[],
+  t: Translate,
+  fileOpen?: FileOpenFace,
+  attachedNames?: ReadonlySet<string>,
+): ReturnType<typeof h>[] {
   const items = groupNodes(nodes)
   const rows: ReturnType<typeof h>[] = []
   items.forEach((entry, index) => {
@@ -941,11 +967,11 @@ function renderLegacyRows(nodes: readonly ConversationNodeLike[], t: Translate, 
       // legacy 兜底没有 turn 位置 ⇒ 拿不到官方「用时 N 秒」行，退回计数行。
       parts.push(h('div', { key: 'lead', className: 'dsh-tdt-sv-notice' }, `${t('sessionProcess')} · ${entry.nodes.length}`))
       entry.nodes.forEach((node, i) => {
-        const rendered = renderLegacyNode(node, t, fileOpen)
+        const rendered = renderLegacyNode(node, t, fileOpen, attachedNames)
         if (rendered !== null) parts.push(h('div', { key: `p${i}` }, rendered))
       })
     } else {
-      const inner = renderLegacyNode(entry.node, t)
+      const inner = renderLegacyNode(entry.node, t, fileOpen, attachedNames)
       if (inner !== null) parts.push(inner)
       if (entry.node.kind === 'assistant') {
         const next = items[index + 1]
@@ -1146,13 +1172,21 @@ export function SessionViewModal(props: {
   upstream?: readonly UpstreamInputView[]
   /** 随附区（2026-10-03）：本任务设置里加的文件（快照 `attachments` + 服务端解析的路径）。 */
   attached?: readonly AttachedFileView[]
+  /** 本实例的工作区 path（判上游目录是否跨区 ⇒ 跨区目录列不出来，降级不可点）。 */
+  workspacePath?: string | null
 }): ReturnType<typeof h> {
   const {
     t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles,
-    onOpenFile, outputs, upstream, attached,
+    onOpenFile, outputs, upstream, attached, workspacePath,
   } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
+  // 顶部「随附」区**已解析出路径**的文件名 ⇒ 气泡下方官方附件卡让位（避免同一文件同屏两次）。
+  // ⚠️ 只让「点得开」的那份：顶部没解析出路径（path=null）时仍由官方卡补位，否则两头都看不到。
+  const attachedNames = useMemo(
+    () => new Set((attached ?? []).filter(file => file.path !== null).map(file => file.name)),
+    [attached],
+  )
   const subscribe = useMemo(() => (onChange: () => void): (() => void) => view.target.subscribe(onChange), [view])
   const getSnapshot = useMemo(() => (): ChatViewFace | undefined => view.target.getSnapshot(), [view])
   const chat = useSyncExternalStore(subscribe, getSnapshot)
@@ -1253,8 +1287,10 @@ export function SessionViewModal(props: {
   // 桌面可用性：官方 Deliverables 组件的 "presented.unavailable" 提示同源（/api/present.host）。
   const host = usePresentedHost()
   const renderNode = useCallback<NodeRenderer>(
-    (node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host),
-    [tt, onBranchAt, fileOpen, deliverFiles, lastTailTurn, host],
+    (node, turnProcess, groupPart) => renderKeyedNode(
+      node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames,
+    ),
+    [tt, onBranchAt, fileOpen, deliverFiles, lastTailTurn, host, attachedNames],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>
@@ -1279,7 +1315,7 @@ export function SessionViewModal(props: {
         renderNode,
         t: tt,
       })
-    : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen)
+    : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen, attachedNames)
   const rendered = rows.filter((row): row is NonNullable<ReturnType<typeof h>> => row !== null && row !== undefined)
 
   const officialCount = officialModuleCount()
@@ -1347,7 +1383,15 @@ export function SessionViewModal(props: {
         // 任务文件上下文（2026-10-03）：**在会话流之外**、标题条之下 ⇒ 不在任何轮次折叠里
         // （用户 2026-10-02「不要放在折叠的那一段话里」）。顶部 = 输入（接收 / 随附），
         // 产出卡留在会话末尾（官方 DeliverablesTail 同位）。两组都空 ⇒ 整块不渲染。
-        h(TaskFileContextPanel, { upstream: upstream ?? [], attached: attached ?? [], onOpenFile, t }),
+        h(TaskFileContextPanel, {
+          upstream: upstream ?? [],
+          attached: attached ?? [],
+          workspacePath: workspacePath ?? null,
+          onOpenFile,
+          // ⚠️ 必须传 `tt`（带占位符插值的那个）：宿主 `t` 不做 {count} 替换，
+          // 传 t 会让「接收 · {files} 个文件」原样显示（第二轮评审抓出）。
+          t: tt,
+        }),
         // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
         // U11：预览面已上提到页面级 dock（弹窗不再自带分栏），此处只留会话区本身。
         h(ChatViewFrame, { children: body }),

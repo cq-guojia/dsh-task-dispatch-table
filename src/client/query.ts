@@ -28,11 +28,11 @@ export interface InstanceRow {
    */
   snapshot?: string | null
   /**
-   * 附加文件的绝对路径（与快照 `attachments` **按序对应**；解析不出为 null）。
+   * 附加文件的绝对路径，**按 ref 配对**（不是按序——两端过滤规则不同会整体错位）。
    * 只在「按会话 id 取实例」时由服务端下发：upload 型落在插件数据目录、link 型的基准是
-   * 工作区 title ⇒ 客户端两样都算不出来，必须服务端给。
+   * 工作区 title ⇒ 客户端两样都算不出来，必须服务端给。解析不出 ⇒ path 为 null（绝不猜）。
    */
-  attachmentPaths?: readonly (string | null)[] | null
+  attachmentPaths?: readonly { ref: string; path: string | null }[] | null
   token_in: number | null
   token_out: number | null
   token_in_cache: number | null

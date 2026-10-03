@@ -37,7 +37,9 @@ import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
 // 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
 import { resolvedDepsOf } from '../deps.js'
-import { attachmentsOf, type AttachedFileView, type UpstreamInputView } from './task-file-context'
+import {
+  attachmentsOf, workspacePathOf, type AttachedFileView, type UpstreamInputView,
+} from './task-file-context'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
 import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { ConfigPanel } from './config-panel'
@@ -813,6 +815,8 @@ function TaskPage(props: {
     upstream?: UpstreamInputView[]
     /** 随附区（2026-10-03）：快照 `attachments` + 服务端解析好的绝对路径。 */
     attached?: AttachedFileView[]
+    /** 本任务工作区 path（判跨区目录可否点开）。 */
+    workspacePath?: string | null
   }
   const [viewing, setViewing] = useState<ViewingState | null>(null)
   /** 当前 viewing 的镜像：换会话时要 release 旧引用（state 更新是异步的，拿不到即时旧值）。 */
@@ -934,9 +938,9 @@ function TaskPage(props: {
    * 曾经的错法：由调用方把 `snapshot` / `outputs` 传进来，结果老界面的「查看任务」入口
    * 没传 ⇒ 同一个会话两处长得不一样（用户 2026-10-03 抓出）。**不许再回退成传参**。
    *
-   * @param fallbackHeading 仅当实例行取不到时兜底的标题（不是渲染内容的来源）。
+   * 参数**只有** sessionId（专家团评审：连 fallbackHeading 都删掉，不给「再传点别的」留门）。
    */
-  const openView = async (sessionId: string, fallbackHeading?: string): Promise<void> => {
+  const openView = async (sessionId: string): Promise<void> => {
     if (viewSession === null) {
       setViewErr('查看会话不可用：sessions / uiConversation 注入未就位（见控制台）')
       return
@@ -946,7 +950,7 @@ function TaskPage(props: {
     const row = await fetchInstanceBySession(sessionId)
     // ② 标题也在这里统一（任务名 · 计划时刻），不由调用方各写一套。
     const heading = row === null
-      ? (fallbackHeading ?? sessionId.slice(0, 8))
+      ? sessionId.slice(0, 8)
       : `${overview.rows.find(item => item.id === row.task_id)?.title || row.task_id.slice(0, 8)} · ${formatPlanStamp(row.scheduled_at)}`
     let target = viewSession(sessionId)
     let didUnarchive = false
@@ -976,6 +980,8 @@ function TaskPage(props: {
       outputs: row === null ? undefined : parseOutputs(row.outputs),
       upstream: upstreamOf(row?.snapshot ?? null),
       attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths),
+      // 本任务工作区（判上游目录是否跨区 ⇒ 跨区目录列不出来，降级不可点）。
+      workspacePath: workspacePathOf(row?.snapshot ?? null),
     })
   }
   const instances = (data?.instances ?? [])
@@ -1390,6 +1396,7 @@ function TaskPage(props: {
         // 接收区（2026-10-03）：上游依赖清单；「查看该会话」→ 直接换成本弹窗打开上游那一次。
         upstream: viewing.upstream ?? [],
         attached: viewing.attached ?? [],
+        workspacePath: viewing.workspacePath ?? null,
         onClose: () => {
           const closed = viewing.sessionId
           const needArchive = viewing.didUnarchive === true

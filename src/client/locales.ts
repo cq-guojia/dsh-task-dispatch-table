@@ -90,8 +90,8 @@ export type LocaleKey =
   | 'deliverFileLabel' | 'deliverPreviewHint' | 'deliverPreviewCard'
   | 'deliverAll' | 'deliverCollapse' | 'deliverExpandAria' | 'deliverCollapseAria'
   // 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03）
-  | 'tfcReceived' | 'tfcAttached' | 'tfcNoOutputs' | 'tfcRelOnly' | 'tfcMore' | 'tfcMoreTasks'
-  | 'tfcCollapse' | 'tfcFromUpload' | 'tfcFromWorkspace'
+  | 'tfcReceived' | 'tfcAttached' | 'tfcNoOutputs' | 'tfcRelOnly' | 'tfcCrossWorkspace' | 'tfcNoPath'
+  | 'tfcMore' | 'tfcMoreTasks' | 'tfcCollapse' | 'tfcFromUpload' | 'tfcFromWorkspace' | 'tfcRestFiles'
   // —— 任务表单弹窗（P0 只做界面与交互）：新建 / 编辑任务 ——
   | 'editorNew' | 'editorEdit' | 'editorClose' | 'editorCancel' | 'editorSave' | 'editorSavePending'
   | 'editorEnabled' | 'editorEnabledOn' | 'editorEnabledOff'
@@ -446,15 +446,18 @@ export const zh: Record<LocaleKey, string> = {
   deliverExpandAria: '展开全部 {count} 个交付文件',
   deliverCollapseAria: '收起交付文件列表',
   // —— 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ——
-  tfcReceived: '接收 · 来自 {count} 个上游任务',
+  tfcReceived: '接收 · {files} 个文件 · 来自 {tasks} 个上游任务',
   tfcAttached: '随附 · {count} 个文件',
   tfcNoOutputs: '未声明产出',
-  tfcRelOnly: '（相对路径，基准工作区未知）',
+  tfcRelOnly: '相对路径',
+  tfcCrossWorkspace: '跨工作区',
+  tfcNoPath: '路径未解析，不可打开',
   tfcMore: '全部 {count} 个文件',
   tfcMoreTasks: '全部 {count} 个上游任务',
   tfcCollapse: '收起',
   tfcFromUpload: '上传',
   tfcFromWorkspace: '工作区',
+  tfcRestFiles: '还有 {count} 个',
   // —— 任务表单弹窗 ——
   editorNew: '新建任务',
   editorEdit: '编辑任务',
@@ -1022,15 +1025,18 @@ export const en: Record<LocaleKey, string> = {
   deliverExpandAria: 'Expand all {count} delivered files',
   deliverCollapseAria: 'Collapse the delivered-files list',
   // —— Task file context (top input area: received / attached, 2026-10-03) ——
-  tfcReceived: 'Received · from {count} upstream task(s)',
+  tfcReceived: 'Received · {files} file(s) from {tasks} upstream task(s)',
   tfcAttached: 'Attached · {count} file(s)',
   tfcNoOutputs: 'No outputs declared',
-  tfcRelOnly: '(relative path — base workspace unknown)',
+  tfcRelOnly: 'relative',
+  tfcCrossWorkspace: 'other workspace',
+  tfcNoPath: 'path unresolved — cannot open',
   tfcMore: 'All {count} files',
   tfcMoreTasks: 'All {count} upstream tasks',
   tfcCollapse: 'Collapse',
   tfcFromUpload: 'uploaded',
   tfcFromWorkspace: 'workspace',
+  tfcRestFiles: '{count} more',
   // —— 任务表单弹窗 ——
   editorNew: 'New task',
   editorEdit: 'Edit task',

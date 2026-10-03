@@ -70,6 +70,46 @@
 
 **冒烟**：+2 项（按 sessionId 精确命中 / 未知 sessionId 为空）⇒ **442/0**。
 
+## 四点八、专家团两轮评审 + 修正（2026-10-03，用户要求「做到完整做完再汇报」）
+
+用户点名的四个问题与对应处置：① 任务附件没显示 → **顶部补「随附」区**（快照 `attachments` 真源，不依赖宿主是否透传 file 块）；② 「查看该会话」没用 → **删掉**（点进去就回不来）；③ 间距左右上下都不对 → **按官方基线重排**；④ 长文件名/显示多长/一排几个没想过 → 补齐折叠与截断规则。
+
+### 排版口径（定稿）
+
+| 项 | 规则 |
+|---|---|
+| 左右 | `calc(var(--dsh-composer-side-clearance,16px) + 16px)` = **34px**，与官方 `ChatView.scroll` 同一条基线 |
+| 上下 | 上 **34**（与「分隔线 → 会话正文首行」同距）/ 下 **18** |
+| 高度 | `max-height:min(38vh,340px)` + **自己滚** ⇒ 20 个上游任务也压不没会话区（`.dsh-tdt-sv-chat{flex:1 1 auto;min-height:0}` 保底） |
+| 文件行 | **一行一个**（用户口径，`flex-direction:column` + `align-items:flex-start` 防止被拉成整行） |
+| 长名 | `max-width:min(280px,100%)` + 省略号 + 悬停全文；不可点的短标记走独立 span（不参与省略） |
+| 折叠 | 文件 >4 折叠；上游任务 >3 折叠；任务折叠态每任务只露 3 个文件 + 「还有 N 个」 |
+| 排序 | **有产出的上游排前面**（折叠态默认露 3 个，别全是空壳） |
+| 目录 | 官方 `IconFolderCloseRegular`（`FileTypeIcon` 按扩展名分类，尾斜杠只会拿到通用文件图标） |
+| 跨区目录 | **不可点**（工作区文件浏览以会话为锚、限该工作区 ⇒ 点了必报错），标「跨工作区」；**任一侧未知也按跨区处理** |
+| 两组区分 | 组标题 12/600/次级色 + 组间 .5px 细线（**不用左缩进/色条**，会把文字推离 34px 基线） |
+
+### 两轮评审抓出并已修的问题
+
+| # | 问题 | 后果 | 修法 |
+|---|---|---|---|
+| 1 | 输入区无高度上限 | 20 任务/30 文件撑爆弹窗、**被裁掉且无滚动条** | `max-height` + `overflow-y:auto` + 会话区保底类 |
+| 2 | 目录拿不到文件夹图标 | 显示成通用文件图标 | 目录分支走 `IconFolderCloseRegular` |
+| 3 | 同一随附文件**同屏显示两次**（顶部 chips + 气泡官方卡） | 一眼重复 | 顶部那份解析出路径时，气泡官方卡对同名**让位**；顶部没解析出路径时仍由官方卡补位 |
+| 4 | 服务端 link 型「`workspace` 非空却查不到工作区」回退到**本任务工作区** | 拼出**存在但指向别的文件**的假路径（编造） | 三分支：字段空才用快照 workspacePath；非空查不到 ⇒ `null`；`ref` 另过 `isSafeAttachmentRef` |
+| 5 | `attachmentPaths` 按**序**配对 | 两端过滤规则不同 ⇒ 整体错位、点开错文件 | 改按 **ref** 配对下发 |
+| 6 | 顶部面板传了宿主原始 `t` | **所有 `{count}` 占位符原样显示**（真 bug） | 改传 `tt`（`interpolateTranslate`） |
+| 7 | 去重后「只有附件的一轮」判空用 `files.length` | 整条用户消息**消失** | `contentFiles` 额外返回 `hadFiles`，判空改用它 |
+| 8 | 排序比较器不满足反对称 | 多个非空上游任务被 V8 二分插入排序**反序** | 只比较「是否为空」这一位 |
+| 9 | 跨区判定裸 `startsWith` + 未知时反而可点 | `/ws` 与 `/ws-2` 误判；未知时点了必报错 | 归一尾斜杠后比前缀；任一侧未知即按跨区 |
+| 10 | chip 固定 280px、column 容器默认 stretch | 热区变成整行 280px | `min(280px,100%)` + `align-items:flex-start` |
+| 11 | 三个纯内部 helper 导出、`as string` 强转、React key 用自定义 prop 冒充 | 死代码 / 卫生问题 | 降私有 / 提局部 const / 给真 `key` |
+
+### 已知遗留（未动，等真机观感）
+
+1. **官方类未命中时**会话区纵向是 16px（`frame` 的 `padding:18px` 被 `body` 覆盖）⇒ 顶部区按官方命中路径的 34px 排 ⇒ 回退态下两者差 18px。真机（官方命中）才是主路径。
+2. 经典滚动条平台右侧差一个滚动条槽（官方 `scroll` 无 `scrollbar-gutter`），左边界永远对齐。
+
 ## 五、落码记录
 
 | # | 改动 | 坐标 |
@@ -79,17 +119,19 @@
 | 3 | `buildMessage` 加 `fileBlocks` 参；消息结构 = **text 块在前 + file 块在后**（官方按 content 顺序渲染）；派发时落 `attachmentBlocks` 事件留痕 | `src/dispatch.ts` |
 | 4 | 抽中立模块 `src/deps.ts`（零运行时依赖）：`ResolvedDependency` + `parseResolvedDeps` + 客户端便捷入口 `resolvedDepsOf(snapshotJson)`。服务端 `store.ts` 改为从它 import 并转出类型，**不复制第二份校验** | `src/deps.ts`、`src/store.ts` |
 | 5 | 客户端 `InstanceRow` 声明 `snapshot`（服务端本就 `SELECT *`，只是前端没声明） | `src/client/query.ts` |
-| 6 | 新组件 `UpstreamInputsPanel`（接收区）：按上游任务分组，组头 = 任务名 + 计划时刻 + «查看该会话»，组内一行一个小标签（图标 + 文件名），可点 → `openFile`；目录靠尾斜杠识别；上游无产出 ⇒ 如实显示「未声明产出」；整块在**会话流之外**渲染 | `src/client/upstream-panel.tsx`、`src/client/session-view.ts`（`dsh-tdt-sv-ctx` 容器） |
+| 6 | 顶部输入区组件（**接收 + 随附**）：按上游任务分组（任务名 + 计划时刻），一行一个文件（图标 + 文件名），可点 → `openFile`；目录走官方文件夹图标；跨区目录 / 路径未解析 ⇒ 不可点并标注；两级折叠 + 高度上限 + 自己滚 | `src/client/task-file-context.tsx`、`src/client/archive-session-css.ts`（`.dsh-tdt-sv-tfc*`） |
 | 7 | 弹窗内用户消息**也渲染 file 块**：`contentFiles()` 提取 → `UserMessage` 新增 `files`，照官方 `attachmentRow / fileCard / fileIcon / fileName / fileMeta` 画小卡（图标 + 名字 + 大小）。⚠️ 引用里没有路径 ⇒ **不可点开**，不伪造打开行为 | `src/client/session-view.ts`、`src/client/mirror/MessageItem.tsx` |
 | 8 | `formatBytes()` 上提 `format.ts`（单源）；样式全部走 token + 官方类名，新增 CSS 落在 `archive-session-css.ts` | `src/client/format.ts`、`src/client/archive-session-css.ts` |
-| 9 | 文案双语 5 键（`svUpstreamTitle` / `svUpstreamSession` / `svUpstreamNoOutputs` / `svUpstreamFileAria` / `svUpstreamRelOnly`） | `src/client/locales.ts` |
-| 10 | 冒烟 +6 项（file 块四类降级 + 消息结构两条）⇒ **440/0** | `scripts/smoke.mjs` |
+| 9 | 文案双语 12 键（`tfc*`） | `src/client/locales.ts` |
+| 10 | 冒烟：file 块四类降级 + 消息结构 + 会话弹窗取数 + 顶部区产物指纹（padding / 高度上限 / 一行一个 / 目录图标 / 不可点标记 / hadFiles）⇒ **451/0** | `scripts/smoke.mjs` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 440/0 · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 451/0 · ⏳ **真机待验**。
 
-**真机必看的两点**（决定本轮成败）：
-1. 气泡里是否出现随附文件卡 —— 取决于宿主会话快照的 user 节点 **content 是否原样透传 file 块**（未透传 ⇒ 只有文本路径，附件卡不渲染；这是宿主侧事实，不是 bug）。
-2. 顶部「接收」区是否按上游任务分组显示；上游工作区与当前会话不同 ⇒ 点文件打开可能失败，走既有错误态。
+**真机必看的四条**（决定本轮成败）：
+1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上。
+2. **随附区**（本任务设置的附件）是否出现 —— 数据源是实例快照，不依赖宿主透传 file 块。
+3. 气泡下方是否还出现官方附件卡（顶部已显示同名文件时应**让位**，不重复显示）。
+4. 上游文件点击：同工作区应能打开；**跨工作区的目录应灰掉不可点**（标「跨工作区」）。
 
 ## 六、遗留（已登记进 PROGRESS 未决项）
 
