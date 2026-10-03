@@ -3230,10 +3230,9 @@ body[data-ds-dark-theme]{
    ③ **显示不全的文件名一律跑马灯**（用户「鼠标一上去都要跑马灯」）：走全站唯一实现
       MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
    ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
-      每块 = 任务名一行 + 产出物**同样横向排**；块前一条 **3px 浅色半透明竖线**，
-      跨「任务名 + 产出物」整块高度做分隔（不用框、不靠颜色块，跨两行才分得清谁是谁）；
-      任务名**前**另有一条 4px 短竖线（顶替原来那个「太大太丑」的任务图标，
-      用户 2026-10-03 要求「和字差不多高的竖线，宽 4px、带小圆角」）。
+      每块 = 任务名一行 + 产出物**同样横向排**；任务名**前**一条 **4px 短竖线**做标记
+      （顶替原来那个「太大太丑」的任务图标，用户 2026-10-03 要求「和字差不多高、宽 4px、带小圆角」）。
+      ⚠️ 曾经还有一条「块前横跨两行的 3px 浅灰竖线」——用户看过短竖线的效果后**决定去掉**（两条重复）。
    ④b **来源 / 状态标记改方括号前置**（用户 2026-10-03）：形状是 [链接]foo.md ——
       原来挂最右边、被 flex 撑开，越看越像按钮；现在紧贴文件名前面、无间距。
    ⑤ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
@@ -3248,10 +3247,11 @@ body[data-ds-dark-theme]{
 /* 前置任务块 —— 一排两个（窄容器降一列，见下方 @container）。 */
 .dsh-tdt-sv-tfc-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;min-width:0;}
 @container (width<=620px){.dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr);}}
-/* 任务块：左竖线横跨整块（任务名 + 产出物两行）做分隔 ⇒ 竖线用 ::before 绝对定位，
-   top/bottom 各留 2px 让它不贴边；padding-left 让文字离开竖线，不破坏面板左右 34px 基线。 */
-.dsh-tdt-sv-tfc-task{position:relative;flex-direction:column;gap:4px;min-width:0;padding-left:10px;display:flex;}
-.dsh-tdt-sv-tfc-task::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;background:var(--tdt-border,rgba(128,128,128,.35));border-radius:1.5px;opacity:.55;}
+/* 任务块：**已去掉块前那条横跨「任务名 + 产出物」两行的浅灰分隔竖线**
+   （用户 2026-10-03 看过 4px 短竖线后决定不要了——两条竖线重复）。
+   保留的只有任务名前的 4px 短竖线（.dsh-tdt-sv-tfc-taskbar）。
+   随之去掉 padding-left：任务名直接回到面板 34px 左基线，不再多缩进 10px。 */
+.dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
 /* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
 .dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
