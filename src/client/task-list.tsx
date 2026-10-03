@@ -132,9 +132,9 @@ const TASK_LIST_CSS = [
   // ⚠️ ① `border: 0` 必须先清掉**按钮默认边框**（否则会留一圈白框）；
   //    ② color 必须写在 class（inline 会盖掉 :hover，鼠标上去就不变色）。
   '.dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }',
+  // hover **只让文字变蓝**：放大镜和它的灰框都保持原样（用户 2026-10-03）。图标框自带固定色 ⇒ 不跟随文字变色。
   '.dsh-tdt-info-session:hover { color: var(--tdt-business); }',
-  '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); transition: background var(--tdt-dur) var(--tdt-ease); }',
-  '.dsh-tdt-info-session:hover .dsh-tdt-info-session-icon { background: var(--tdt-chip-bg-hover); }',
+  '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -1077,7 +1077,7 @@ function TaskExpandPanel(props: {
     // **灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。颜色 / 图标框都在 class 里（inline 会盖掉 :hover）。
     // 会话名由服务端按 `sessionTitleOf` 单源下发；缺名（旧行）退回会话 id，仍可点。
     const sessionName = instance.session_title ?? sid ?? ''
-    const sessionIcon = h('span', { className: 'dsh-tdt-info-session-icon' }, h(IconSearchOutlineRegular, { size: 12 }))
+    const sessionIcon = h('span', { className: 'dsh-tdt-info-session-icon' }, h(IconSearchOutlineRegular, { size: 10 }))
     const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
     const sessionLinkStyle: Record<string, string | number> = {
       display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
