@@ -32,6 +32,7 @@ import {
 import type { Translate } from './locales'
 import {
   absolutePathOf,
+  bareCode,
   BytesPreview,
   ErrBox,
   errView,
@@ -376,6 +377,20 @@ export function FileBrowser(props: {
   const [childCache, setChildCache] = useState<Record<string, ChildData>>({})
   // 工作区根补学完成信号（workspaceRoots 是模块级 Map 非响应式，学成后 bump 触发面包屑重算）。
   const [, setRootNonce] = useState(0)
+  // 当前目录在会话工作区之外（用户 2026-10-03）：官方 list 限工作区内，越界即报 outside-workspace。
+  // 依据 = list 的**真实错误码**，不靠 workspaceRoots 猜（根学不出来时会误判成"在区内"）。
+  // 命中时第一排整条退化为只读完整路径：▾ 选层 / 面包屑点选 / ← 返回 / ↑ 上一层 全不渲染
+  // （点在工作区外的目录必然失败 ⇒ 不给这种入口），只留 ✕ 关闭。
+  const [outside, setOutside] = useState(false)
+
+  /** 记一次 list 结果的"是否越界"（outside-workspace / not-found 均视为不可浏览）。 */
+  const noteOutside = (parsed: ReturnType<typeof listingOf>): void => {
+    if (parsed === null || parsed === undefined) return
+    if (!isFailed(parsed)) { setOutside(false); return }
+    const raw = (parsed.failed ?? {}) as { code?: unknown }
+    const code = typeof raw.code === 'string' ? bareCode(raw.code) : ''
+    if (code === 'outside-workspace' || code === 'not-found' || code === 'lookup-not-found') setOutside(true)
+  }
 
   const startMarquee = (): void => {
     const outer = titleRef.current
@@ -412,6 +427,7 @@ export function FileBrowser(props: {
     listDir(workspaceFiles, sessionId, targetDir)
       .then((result) => {
         const parsed = listingOf(result)
+        noteOutside(parsed)
         if (isFailed(parsed)) { setListErr(errView(parsed.failed)); setMode('error'); return }
         if (parsed === null) { setListErr({ key: 'previewBadPayload' }); setMode('error'); return }
         setListing(parsed.entries)
@@ -477,6 +493,7 @@ export function FileBrowser(props: {
         if (!alive) return
         const parsed = listingOf(result)
         if (!isFailed(parsed) && parsed !== null) {
+          setOutside(false)
           // 目录：直接展示树。dir 尽量取宿主绝对路径 ⇒ 面包屑从工作区根往下列。
           // 入口可能是工作区相对名（交付卡/产出列把回契声明原样传入，如 `20260928`），
           // 直接用入参面包屑只剩这一层（用户 2026-09-29 实测）。官方没有目录级绝对路径
@@ -516,6 +533,7 @@ export function FileBrowser(props: {
           .then((pres) => {
             if (!alive) return
             const pl = listingOf(pres)
+            noteOutside(pl)
             if (!isFailed(pl) && pl !== null) {
               setListing(pl.entries)
               setTruncated(pl.truncated)
@@ -660,6 +678,26 @@ export function FileBrowser(props: {
     : crumbsOf(dir)
   const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'
 
+  /**
+   * 工作区之外时的第一排：**只读完整路径**（用户 2026-10-03）。
+   * 不给任何会失败的入口：▾ 选层（下拉里全是点不动的层）、面包屑点选、← 返回、↑ 上一层
+   * 全部不渲染，只留 ✕ 关闭；路径过长省略号截断，hover **无任何交互**（不跑马灯 / 不给 title）。
+   */
+  const crumbbarPlain: ReactNode = h('nav', {
+    className: 'dsh-tdt-sv-crumbbar',
+    'aria-label': t('explorerCrumbsAria'),
+  },
+    h('span', { className: 'dsh-tdt-sv-crumbbar-plain' }, dir),
+    h('div', { className: 'dsh-tdt-sv-head-actions' },
+      tooled(t('previewClose'),
+        h(IconButton, {
+          variant: 'plain', size: 'md', icon: h(IconCloseOutlineRegular, { size: 14 }),
+          label: t('previewClose'),
+          onClick: onClose,
+        })),
+  )
+  )
+
   // —— 主体 ——
   let body: ReactNode
   if (viewing !== null) {
@@ -706,7 +744,8 @@ export function FileBrowser(props: {
       }),
     // 第一排（用户 2026-09-28 五验拍板顺序）：[▾ 选层] [面包屑…] [← 返回] [↑ 上一层] [✕ 关闭]。
     // 下拉菜单挂在 crumbbar（overflow 可见）下，不被面包屑区域裁剪。
-    h('nav', {
+    // ⚠️ 工作区之外（用户 2026-10-03）⇒ 整条换成只读完整路径（见 crumbbarPlain）。
+    outside ? crumbbarPlain : h('nav', {
       ref: barRef,
       className: 'dsh-tdt-sv-crumbbar',
       'aria-label': t('explorerCrumbsAria'),
@@ -784,7 +823,7 @@ export function FileBrowser(props: {
       ),
     ),
     // 第二排：文件名（跑马灯）+ 操作按钮——仅文件预览态显示；目录态整排隐藏
-    // （用户本轮 point1：没选文件时空着没意义，复制/刷新本就该随文件走）。
+    // （用户本轮 point1：没选文件时空着没意思，复制/刷新本就该随文件走）。
     viewing !== null
       ? h('div', { className: 'dsh-tdt-sv-titlebar' },
         h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },

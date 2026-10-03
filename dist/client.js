@@ -3193,6 +3193,9 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
+/* 工作区之外的只读完整路径（用户 2026-10-03）：无任何交互——不可点、无 hover 反馈、
+   不跑马灯、不给 title；过长省略号截断（想看全路径用第二排的「复制」）。 */
+.dsh-tdt-sv-crumbbar-plain{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;user-select:none;}
 .dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
 /* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
 .dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
@@ -6973,6 +6976,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [openDirs, setOpenDirs] = (0, react.useState)(/* @__PURE__ */ new Set());
 			const [childCache, setChildCache] = (0, react.useState)({});
 			const [, setRootNonce] = (0, react.useState)(0);
+			const [outside, setOutside] = (0, react.useState)(false);
+			/** 记一次 list 结果的"是否越界"（outside-workspace / not-found 均视为不可浏览）。 */
+			const noteOutside = (parsed) => {
+				if (parsed === null || parsed === void 0) return;
+				if (!isFailed(parsed)) {
+					setOutside(false);
+					return;
+				}
+				const raw = parsed.failed ?? {};
+				const code = typeof raw.code === "string" ? bareCode(raw.code) : "";
+				if (code === "outside-workspace" || code === "not-found" || code === "lookup-not-found") setOutside(true);
+			};
 			const startMarquee = () => {
 				const outer = titleRef.current;
 				const inner = titleInnerRef.current;
@@ -7005,6 +7020,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				setChildCache({});
 				listDir(workspaceFiles, sessionId, targetDir).then((result) => {
 					const parsed = listingOf(result);
+					noteOutside(parsed);
 					if (isFailed(parsed)) {
 						setListErr(errView(parsed.failed));
 						setMode("error");
@@ -7076,6 +7092,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (!alive) return;
 					const parsed = listingOf(result);
 					if (!isFailed(parsed) && parsed !== null) {
+						setOutside(false);
 						const absDir = await absolutizeDir(workspaceFiles, sessionId, path, parsed.path, parsed.entries);
 						if (!alive) return;
 						setDir(absDir);
@@ -7104,6 +7121,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					listDir(workspaceFiles, sessionId, parent).then((pres) => {
 						if (!alive) return;
 						const pl = listingOf(pres);
+						noteOutside(pl);
 						if (!isFailed(pl) && pl !== null) {
 							setListing(pl.entries);
 							setTruncated(pl.truncated);
@@ -7274,6 +7292,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				path: ""
 			}, ...crumbsOf(relativizeToRoot(dir, sessionId))] : crumbsOf(dir);
 			const isMdPreview = viewing !== null && previewKind(viewing).kind === "md";
+			/**
+			* 工作区之外时的第一排：**只读完整路径**（用户 2026-10-03）。
+			* 不给任何会失败的入口：▾ 选层（下拉里全是点不动的层）、面包屑点选、← 返回、↑ 上一层
+			* 全部不渲染，只留 ✕ 关闭；路径过长省略号截断，hover **无任何交互**（不跑马灯 / 不给 title）。
+			*/
+			const crumbbarPlain = (0, react.createElement)("nav", {
+				className: "dsh-tdt-sv-crumbbar",
+				"aria-label": t("explorerCrumbsAria")
+			}, (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbbar-plain" }, dir), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
+				label: t("previewClose"),
+				onClick: onClose
+			}))));
 			let body;
 			if (viewing !== null) body = (0, react.createElement)(FileBody, {
 				workspaceFiles,
@@ -7302,7 +7335,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onPointerDown: (event) => {
 					onResizeStart(event);
 				}
-			}), (0, react.createElement)("nav", {
+			}), outside ? crumbbarPlain : (0, react.createElement)("nav", {
 				ref: barRef,
 				className: "dsh-tdt-sv-crumbbar",
 				"aria-label": t("explorerCrumbsAria")
@@ -41857,6 +41890,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
 			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
+			".dsh-tdt-info-cfg > .dsh-tdt-info-field:last-child, .dsh-tdt-info-rec-fields > .dsh-tdt-info-field:last-child { border-bottom: 0; }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -42362,7 +42396,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		};
 		/** 纸表格一行：左标签（定宽淡色）+ 右值（自适应换行）。 */
 		function InfoField(props) {
-			return (0, react.createElement)("div", { style: infoGridRowStyle }, (0, react.createElement)("span", { style: infoGridLabelStyle }, props.label), (0, react.createElement)("div", { style: infoGridValueStyle }, props.children));
+			return (0, react.createElement)("div", {
+				className: "dsh-tdt-info-field",
+				style: infoGridRowStyle
+			}, (0, react.createElement)("span", { style: infoGridLabelStyle }, props.label), (0, react.createElement)("div", { style: infoGridValueStyle }, props.children));
 		}
 		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
 		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
@@ -42938,7 +42975,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					style: sessionLinkStyle,
 					title: sessionName
 				}, sessionIcon, sessionLabel);
-				return (0, react.createElement)("div", null, InfoField({
+				return (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-info-rec-fields" }, InfoField({
 					label: t("colStatus"),
 					children: (0, react.createElement)("span", { style: {
 						display: "inline-flex",
@@ -42968,7 +43005,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}), note === "" ? null : InfoField({
 					label: t("colNote"),
 					children: (0, react.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
-				}), outputs.length === 0 ? null : (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
+				})), outputs.length === 0 ? null : (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
 					marginBottom: "6px",
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"
@@ -43007,7 +43044,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					whiteSpace: "nowrap"
 				} }, baseNameOf(output)))))));
 			};
-			const renderInfo = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: infoWrapStyle }, (0, react.createElement)("div", { style: infoConfigStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), InfoField({
+			const renderInfo = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: infoWrapStyle }, (0, react.createElement)("div", {
+				className: "dsh-tdt-info-cfg",
+				style: infoConfigStyle
+			}, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), InfoField({
 				label: t("listFieldSchedule"),
 				children: scheduleLine
 			}), InfoField({

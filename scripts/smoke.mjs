@@ -1002,6 +1002,17 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     && !/workspaceFiles\.readBytes\([^,)]+,\s*[^,)]+\)/.test(clientJs))
   check('read 调用必带第三参 range（官方 read(scope, path, range, signal)）',
     !/workspaceFiles\.read\([^,)]+,\s*[^,)]+\)/.test(clientJs))
+  // U27（用户 2026-10-03）：工作区之外的文件，第一排整条退化为只读完整路径——点在工作区外的
+  // 目录必然报 outside-workspace，故 ▾ 选层 / 面包屑点选 / ← 返回 / ↑ 上一层 全不渲染，只留 ✕ 关闭；
+  // 路径过长省略号截断且无任何 hover 交互（不跑马灯、不给 title）。
+  check('工作区之外：第一排退化为只读完整路径（crumbbar-plain 分支存在）',
+    clientJs.includes('crumbbar-plain'))
+  check('工作区之外：判定依据是 list 的真实错误码 outside-workspace（不靠 workspaceRoots 猜）',
+    clientJs.includes('noteOutside') && clientJs.includes('outside-workspace'))
+  check('只读路径样式：无 hover 反馈 + 省略号截断 + 默认光标（不给 title/跑马灯）',
+    /\.dsh-tdt-sv-crumbbar-plain\{[^}]*overflow:hidden[^}]*text-overflow:ellipsis/.test(clientJs)
+    && /\.dsh-tdt-sv-crumbbar-plain\{[^}]*cursor:default/.test(clientJs)
+    && !/\.dsh-tdt-sv-crumbbar-plain\{[^}]*:hover/.test(clientJs))
   // U11 第二轮（交付文件官方化）：present 行 + 交付文件卡网格 + 词表收录 present 路径。
   check('present 工具走官方 PresentRow 镜像（data-tool=present + IconDeliverDocRegular，不经通用工具卡）',
     clientJs.includes('IconDeliverDocRegular') && /data-tool"?\s*[:=]\s*"?present/.test(clientJs))

@@ -146,6 +146,9 @@ const TASK_LIST_CSS = [
   // hover **只让文字变蓝**：放大镜和它的灰框都保持原样（用户 2026-10-03）。图标框自带固定色 ⇒ 不跟随文字变色。
   '.dsh-tdt-info-session:hover { color: var(--tdt-business); }',
   '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }',
+  // 基础信息左右两栏（用户 2026-10-03 反馈）：每个字段行原本都带一条底边缝，但最末一行紧贴下方「统一虚线」，
+  // 实缝与虚线挤在一起显得多余 ⇒ 去掉最末行的底边缝，字段之间的分隔线全部保留。
+  '.dsh-tdt-info-cfg > .dsh-tdt-info-field:last-child, .dsh-tdt-info-rec-fields > .dsh-tdt-info-field:last-child { border-bottom: 0; }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -720,7 +723,7 @@ const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--t
 const infoGridValueStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', minWidth: 0, wordBreak: 'break-word', lineHeight: 'var(--tdt-line-md)' }
 /** 纸表格一行：左标签（定宽淡色）+ 右值（自适应换行）。 */
 function InfoField(props: { label: string; children: ReactNode }): ReturnType<typeof h> {
-  return h('div', { style: infoGridRowStyle },
+  return h('div', { className: 'dsh-tdt-info-field', style: infoGridRowStyle },
     h('span', { style: infoGridLabelStyle }, props.label),
     h('div', { style: infoGridValueStyle }, props.children),
   )
@@ -1200,26 +1203,28 @@ function TaskExpandPanel(props: {
         }, sessionIcon, sessionLabel)
         : h('span', { style: sessionLinkStyle, title: sessionName }, sessionIcon, sessionLabel)
     return h('div', null,
-      InfoField({
-        label: t('colStatus'),
-        children: h('span', {
-          style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 500, color: infoStatusColorOf(instance.status) },
-        },
-          h(StatusIcon, { status: instance.status }),
-          statusTextOf(instance.status, t),
-        ),
-      }),
-      // 任务会话：紧跟在状态下面（用户 2026-10-03）。
-      InfoField({ label: t('infoSession'), children: sessionChip }),
-      // 时间四件套（用户 2026-10-03：空间够，计划 / 开始 / 结束 / 时长都放上）。
-      InfoField({ label: t('colPlanned'), children: timeOf(instance.scheduled_at) }),
-      InfoField({ label: t('colActualStart'), children: timeOf(instance.dispatched_at) }),
-      InfoField({ label: t('infoFinishedAt'), children: timeOf(instance.finished_at) }),
-      dur === null ? null : InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) }),
-      tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: tokensDetailOf(instance) }, tokens) }),
-      note === ''
-        ? null
-        : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--tdt-danger)' } }, note) }),
+      h('div', { className: 'dsh-tdt-info-rec-fields' },
+        InfoField({
+          label: t('colStatus'),
+          children: h('span', {
+            style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 500, color: infoStatusColorOf(instance.status) },
+          },
+            h(StatusIcon, { status: instance.status }),
+            statusTextOf(instance.status, t),
+          ),
+        }),
+        // 任务会话：紧跟在状态下面（用户 2026-10-03）。
+        InfoField({ label: t('infoSession'), children: sessionChip }),
+        // 时间四件套（用户 2026-10-03：空间够，计划 / 开始 / 结束 / 时长都放上）。
+        InfoField({ label: t('colPlanned'), children: timeOf(instance.scheduled_at) }),
+        InfoField({ label: t('colActualStart'), children: timeOf(instance.dispatched_at) }),
+        InfoField({ label: t('infoFinishedAt'), children: timeOf(instance.finished_at) }),
+        dur === null ? null : InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) }),
+        tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: tokensDetailOf(instance) }, tokens) }),
+        note === ''
+          ? null
+          : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--tdt-danger)' } }, note) }),
+      ),
       outputs.length === 0
         ? null
         : h('div', { style: { marginTop: '14px' } },
@@ -1248,7 +1253,7 @@ function TaskExpandPanel(props: {
     // 两栏：左配置（约 58%）+ 右最近执行（约 42%，**独立滚动**）；整块仍在同一个定高盒内 ⇒ 切 tab 高度不蹦。
     h('div', { style: infoWrapStyle },
       // 左栏：任务配置（纸表格：标签 + 值，逐行留白；不再显示提示词）。
-      h('div', { style: infoConfigStyle },
+      h('div', { className: 'dsh-tdt-info-cfg', style: infoConfigStyle },
         h('div', { style: infoGroupTitleStyle }, t('infoSectionConfig')),
         InfoField({ label: t('listFieldSchedule'), children: scheduleLine }),
         // 预计执行（用户 2026-10-03）：排期之下补一行，两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…），
