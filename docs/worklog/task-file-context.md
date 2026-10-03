@@ -183,6 +183,15 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 > ⚠️ 本条曾有过一次**改错的修复**（「逐条校验回执、任一条通过即成功」）——那会给空申报开后门，
 > 同日已撤回。完整经过与教训见 [receipt-verdict.md](receipt-verdict.md) §四。
 
+## 四点十一、第五轮：任务标记与来源标记（2026-10-03）
+
+| # | 用户意见 | 处置 |
+|---|---|---|
+| 1 | 「前置（任务）用的怎么是一个分支图标？而且这么大？……你前面加一个和那个字儿差不多的一个竖线也行，宽 4 个像素左右，高度跟那个字一样，可以有一点小圆角。现在这个图标太丑了」 | 任务名前的标记由**官方分支图标**（`IconBranchOutlineRegular`，14px）换成**一条 4px 短竖线**：`width:4px;height:1em;border-radius:2px` + `align-self:center`（高度跟文字走、在 baseline 行里居中）。⚠️ 块前那条 **3px 分隔竖线（跨「任务名 + 产出物」两行）保留不变** —— 那是上一轮用户明确要的，位置与用途都不同。 |
+| 2 | 「文件名和右边的『链接 / 上传』分得太开了，越看越像个按钮。用这个格式：`[链接]hindsight-20260926-….md`」「前面那个图标还是正常放，就是把链接和上传用一个中括号放到（文件名）前面」 | 来源 / 状态标记从**最右侧的独立 span** 移到**文件名正前方**并加方括号；用一个**无 gap** 的容器 `.dsh-tdt-sv-tfc-namewrap`（flex）把标记与文件名裹在一起 ⇒ 右括号与名字之间不留缝（用户给的形状就是 `[链接]foo.md`，中间没空格）。标记与文件名**同字号**，只靠颜色（`fg-3`）弱化。文件类型图标仍照常在最前面。 |
+
+冒烟 +2（5→4px 竖线指纹与旧类名清除 / 方括号前置容器）⇒ **483/0**。
+
 ## 五、落码记录
 
 | # | 改动 | 坐标 |
@@ -207,7 +216,7 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 | 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
 | 19 | **回执裁决三处口径修正**（用户 2026-10-03 拍板，全过程见 [receipt-verdict.md](receipt-verdict.md)）：① **去掉产物新鲜度闸** —— `checkReceipt` 只留 `existsSync`，移除 `mtime > dispatched_at` 比较与 `dispatchedAtMs` 参数、删 `statSync` import；② 提示词改**「以最后一次提交为准 + 再提交须带上先前的产出」**（工具描述 + 末段指令各一处）；③ 裁决改**等 `agent.whenIdle()`（会话真正空闲）** —— `turn/end` 只记信号不再裁决，sweep 的 `turn/end` 分支去掉 `continue`（防卡死实例永久挂 running）。⚠️ 同日**撤回**了先前「逐条校验、任一条通过即成功」的错误修复（`receiptsSince` 已删）。冒烟 ⇒ **482/0** | `src/reconcile.ts`、`src/receipt.ts`、`scripts/smoke.mjs` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 **482/0** · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 **483/0** · ⏳ **真机待验**。
 
 **真机必看的八条**（决定本轮成败）：
 1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上（上 34 / 下 16）。

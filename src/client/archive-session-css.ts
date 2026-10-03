@@ -335,7 +335,11 @@ export const ARCHIVE_SESSION_CSS = `
       MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
    ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
       每块 = 任务名一行 + 产出物**同样横向排**；块前一条 **3px 浅色半透明竖线**，
-      跨「任务名 + 产出物」整块高度做分隔（不用框、不靠颜色块，跨两行才分得清谁是谁）。
+      跨「任务名 + 产出物」整块高度做分隔（不用框、不靠颜色块，跨两行才分得清谁是谁）；
+      任务名**前**另有一条 4px 短竖线（顶替原来那个「太大太丑」的任务图标，
+      用户 2026-10-03 要求「和字差不多高的竖线，宽 4px、带小圆角」）。
+   ④b **来源 / 状态标记改方括号前置**（用户 2026-10-03）：形状是 [链接]foo.md ——
+      原来挂最右边、被 flex 撑开，越看越像按钮；现在紧贴文件名前面、无间距。
    ⑤ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
    ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
 /* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
@@ -373,9 +377,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层），
    这里只保证它作为 flex 子项能收缩（min-width:0 是 flex 省略号的前提）。 */
 .dsh-tdt-sv-tfc-label{min-width:0;flex:1 1 auto;}
-/* 前置任务块的任务图标：与下方文件图标同尺寸同色，形成「任务 → 它的产出」的一致节奏。 */
-.dsh-tdt-sv-tfc-taskicon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-.dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
+/* 前置任务块任务名前的标记：**一条 4px 竖线**（用户 2026-10-03：图标太大太丑，
+   换成「和字差不多高」的竖线，宽约 4px、带小圆角）。高度 1em 跟着文字走；
+   align-self:center 让它在 baseline 行里居中，不贴文字基线。 */
+.dsh-tdt-sv-tfc-taskbar{width:4px;height:1em;border-radius:2px;background:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;display:inline-block;align-self:center;}
+/* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**
+   （用户给的形状就是 [链接]foo.md，中间没有空格）。 */
+.dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
+/* 来源 / 状态标记：方括号**放在文件名前面**（用户 2026-10-03：原来挂最右边、
+   被 flex 撑开，越看越像按钮）。与文件名同字号，只靠颜色弱化。 */
+.dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
 .dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}

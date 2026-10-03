@@ -19,7 +19,7 @@
 // · 文件 >4 折叠、前置任务 >3 折叠，折叠态每任务只出前 3 个文件；有产出的任务**排前面**；
 // · 目录用官方文件夹图标；**跨工作区的目录不可点**（当前会话的工作区列不出它 ⇒ 点了必报错）。
 import { createElement as h, useState } from 'react'
-import { FileTypeIcon, IconBranchOutlineRegular, IconFolderCloseRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { FileTypeIcon, IconFolderCloseRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { MarqueeText } from './ui'
 import { formatDateTime } from './format'
 import type { ResolvedDependency } from '../deps.js'
@@ -146,8 +146,13 @@ function FileChip(props: { file: FileLine }): ReturnType<typeof h> {
       // 目录：官方 FileTypeIcon 按扩展名分类，尾斜杠 ⇒ 空扩展名 ⇒ 通用文件图标（不是文件夹）
       // ⇒ 目录单独用官方文件夹图标（与文件浏览器目录行同源）。
       file.isDir ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: file.iconPath, size: 14 })),
-    h(MarqueeText, { text: file.label, title: file.title, style: { minWidth: 0, flex: '1 1 auto' } }),
-    file.note === undefined ? null : h('span', { className: 'dsh-tdt-sv-tfc-note' }, file.note),
+    // 来源标记**紧贴文件名前面**、用方括号（用户 2026-10-03：`[链接]foo.md`）——
+    // 原来挂在最右边（正文与标记之间被 flex 撑开）⇒ 越看越像个按钮。与文件名同一 Flex 无间距容器，
+    // 保证 `]` 和文件名之间不留缝。
+    h('span', { className: 'dsh-tdt-sv-tfc-namewrap' },
+      file.note === undefined ? null : h('span', { className: 'dsh-tdt-sv-tfc-note' }, `[${file.note}]`),
+      h(MarqueeText, { text: file.label, title: file.title, style: { minWidth: 0, flex: '1 1 auto' } }),
+    ),
   )
 }
 
@@ -232,9 +237,9 @@ function ReceivedGroup(props: {
           : all
         return h('div', { key: `${item.task}:${item.instanceId}`, className: 'dsh-tdt-sv-tfc-task' },
           h('div', { className: 'dsh-tdt-sv-tfc-taskrow' },
-            // 任务图标：竖线右侧、任务名前面。用户 2026-10-03「前面也放一个任务的图标」——
-            // 竖线与任务名之间原本只有 10px 空档，左边空着一块、下面文件又有图标，看着不平衡。
-            h('span', { className: 'dsh-tdt-sv-tfc-taskicon' }, h(IconBranchOutlineRegular, { size: 14 })),
+            // 任务名前的标记：**一条 4px 竖线**（用户 2026-10-03：图标太大太丑，换成「和字差不多高」的竖线，
+            // 宽约 4px、带小圆角）。
+            h('span', { className: 'dsh-tdt-sv-tfc-taskbar' }),
             h('span', { className: 'dsh-tdt-sv-tfc-name', title: item.task }, item.taskTitle),
             h('span', { className: 'dsh-tdt-sv-tfc-meta' }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt })),
           ),

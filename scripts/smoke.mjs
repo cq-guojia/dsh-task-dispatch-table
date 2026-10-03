@@ -1302,8 +1302,11 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       client.includes('min-width:10ch;max-width:100%') && client.includes('flex:1 1 auto;display:flex'))
     check('顶部输入区：文件名跑马灯走全站唯一实现 MarqueeText（不自己造第二套）',
       client.includes('MarqueeText') && client.includes('dsh-tdt-sv-tfc-label{min-width:0;flex:1 1 auto;}'))
-    check('顶部输入区：前置任务块标题前有官方任务图标（左边不再空一块）',
-      client.includes('dsh-tdt-sv-tfc-taskicon') && client.includes('IconBranchOutlineRegular'))
+    check('顶部输入区：前置任务名前的标记 = 4px 短竖线（不是图标；用户 2026-10-03「图标太大太丑」）',
+      client.includes('dsh-tdt-sv-tfc-taskbar') && client.includes('width:4px;height:1em;border-radius:2px')
+      && !client.includes('dsh-tdt-sv-tfc-taskicon'))
+    check('顶部输入区：来源 / 状态标记方括号**前置**（[链接]foo.md），不再挂右侧像按钮',
+      client.includes('dsh-tdt-sv-tfc-namewrap') && client.includes('dsh-tdt-sv-tfc-note'))
     check('顶部输入区：前置任务一排两个（窄容器降一列，用容器宽度判据）',
       client.includes('grid-template-columns:repeat(2,minmax(0,1fr))')
       && client.includes('container-type:inline-size') && client.includes('@container (width<=620px)'))
