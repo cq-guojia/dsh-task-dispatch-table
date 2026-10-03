@@ -1314,6 +1314,10 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       !client.includes('.dsh-tdt-sv-tfc-task::before')
       && !client.includes('padding-left:10px')
       && client.includes('.dsh-tdt-sv-tfc-taskbar{width:4px;height:1em'))
+    check('顶部输入区：前置任务**序号徽标** = 浅灰圆角小方框 + 小号数字（按显示顺序 1、2、3…）',
+      client.includes('dsh-tdt-sv-tfc-seq') && client.includes('min-width:14px;height:14px')
+      && client.includes('border-radius:3px') && client.includes('font-size:9px')
+      && client.includes('String(index + 1)'))
     check('顶部输入区：组标题叫「任务附件」；来源标记与编辑处统一为「上传 / 链接」（不查引号形式，只查文案）',
       client.includes('任务附件 · {count} 个文件')
       && /tfcFromWorkspace:\s*["']链接["']/.test(client)

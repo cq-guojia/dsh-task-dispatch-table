@@ -3230,8 +3230,9 @@ body[data-ds-dark-theme]{
    ③ **显示不全的文件名一律跑马灯**（用户「鼠标一上去都要跑马灯」）：走全站唯一实现
       MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
    ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
-      每块 = 任务名一行 + 产出物**同样横向排**；任务名**前**一条 **4px 短竖线**做标记
-      （顶替原来那个「太大太丑」的任务图标，用户 2026-10-03 要求「和字差不多高、宽 4px、带小圆角」）。
+      每块 = 任务名一行 + 产出物**同样横向排**；任务名行**最前 = 序号徽标**
+      （浅灰圆角小方框 + 小号数字，按显示顺序 1、2、3…），其后一条 **4px 短竖线**做标记
+      （原为那个「太大太丑」的任务图标，用户要求「和字差不多高、宽 4px、带小圆角」）。
       ⚠️ 曾经还有一条「块前横跨两行的 3px 浅灰竖线」——用户看过短竖线的效果后**决定去掉**（两条重复）。
    ④b **来源 / 状态标记改方括号前置**（用户 2026-10-03）：形状是 [链接]foo.md ——
       原来挂最右边、被 flex 撑开，越看越像按钮；现在紧贴文件名前面、无间距。
@@ -3273,6 +3274,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层），
    这里只保证它作为 flex 子项能收缩（min-width:0 是 flex 省略号的前提）。 */
 .dsh-tdt-sv-tfc-label{min-width:0;flex:1 1 auto;}
+/* 前置任务序号徽标（用户 2026-10-03）：浅灰圆角**小方框** + 小号数字，位置 = 任务名行最前。
+   ⚠️ 选方框不选正圆：任务多于 9 个时编号是两位数，正圆会被撑变形（同「筛选角标」那条结论）。
+   框高 14px ≈ 那行文字的高度（「底色高度跟文字差不多高」）；字号压到 9px（「数字尽量小一点」）。
+   align-self:center 让它在 baseline 行里垂直居中，不在 baseline 上偏下。 */
+.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;min-width:14px;height:14px;padding:0 3px;border-radius:3px;background:var(--tdt-plate,rgba(128,128,128,.14));color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:9px;line-height:1;font-variant-numeric:tabular-nums;}
 /* 前置任务块任务名前的标记：**一条 4px 竖线**（用户 2026-10-03：图标太大太丑，
    换成「和字差不多高」的竖线，宽约 4px、带小圆角）。高度 1em 跟着文字走；
    align-self:center 让它在 baseline 行里居中，不贴文字基线。 */
@@ -5355,7 +5361,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					tasks: ordered.length,
 					files: totalFiles
 				}),
-				children: (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-tasks" }, shown.map((item) => {
+				children: (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-tasks" }, shown.map((item, index) => {
 					const crossWorkspace = workspacePath === null || item.workspacePath === null || !inWorkspace(item.workspacePath, workspacePath);
 					const all = item.outputs.map((path) => {
 						const abs = upstreamAbsPath(item.workspacePath, path);
@@ -5378,7 +5384,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return (0, react.createElement)("div", {
 						key: `${item.task}:${item.instanceId}`,
 						className: "dsh-tdt-sv-tfc-task"
-					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-taskbar" }), (0, react.createElement)("span", {
+					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-seq" }, String(index + 1)), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-taskbar" }), (0, react.createElement)("span", {
 						className: "dsh-tdt-sv-tfc-name",
 						title: item.task
 					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react.createElement)(FileChip, {

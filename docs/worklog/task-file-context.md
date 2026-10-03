@@ -190,8 +190,9 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 | 1 | 「前置（任务）用的怎么是一个分支图标？而且这么大？……你前面加一个和那个字儿差不多的一个竖线也行，宽 4 个像素左右，高度跟那个字一样，可以有一点小圆角。现在这个图标太丑了」 | 任务名前的标记由**官方分支图标**（`IconBranchOutlineRegular`，14px）换成**一条 4px 短竖线**：`width:4px;height:1em;border-radius:2px` + `align-self:center`（高度跟文字走、在 baseline 行里居中）。⚠️ 块前那条 3px 分隔竖线当时先保留，**随即被用户否掉**（见下一条）。 |
 | 2 | 「文件名和右边的『链接 / 上传』分得太开了，越看越像个按钮。用这个格式：`[链接]hindsight-20260926-….md`」「前面那个图标还是正常放，就是把链接和上传用一个中括号放到（文件名）前面」 | 来源 / 状态标记从**最右侧的独立 span** 移到**文件名正前方**并加方括号；用一个**无 gap** 的容器 `.dsh-tdt-sv-tfc-namewrap`（flex）把标记与文件名裹在一起 ⇒ 右括号与名字之间不留缝（用户给的形状就是 `[链接]foo.md`，中间没空格）。标记与文件名**同字号**，只靠颜色（`fg-3`）弱化。文件类型图标仍照常在最前面。 |
 | 3 | 「这个竖线（4px）可以没问题」+「你把前面**横跨标题和附件的、浅灰色的那个竖线去掉**，我看一眼效果，前面那个竖线可以不要了」 | 删掉 `.dsh-tdt-sv-tfc-task::before`（块前 3px 跨两行分隔竖线）**及随之无用的** `position:relative` / `padding-left:10px` ⇒ 任务名直接回到面板 **34px 左基线**（不再多缩进 10px）。**保留**任务名前的 4px 短竖线。两条竖线并存确实重复，用户看着嫌乱。 |
+| 4 | 「在前面加一个灰色的带圆角方框，里面写上这个前置任务的**编号**」+ 三条要求（按读进去的顺序 1、2、3 / 数字小一点 / 底色高度跟文字差不多）+ 「你看是用方框好还是用圆好？」 | 新增 `.dsh-tdt-sv-tfc-seq`：**浅灰圆角小方框**（`min-width:14px;height:14px;border-radius:3px`、底色 `--tdt-plate`）+ **9px 小号数字**，放在任务名行**最前**（4px 短竖线之前）。编号取 `shown.map((item, index) => …)` 的 `index + 1` —— `shown` 恒是 `ordered` 的前缀 ⇒ **折叠 / 展开都不会让已显示任务的编号跳变**（前 3 个始终 1、2、3，展开后接着 4、5…）。<br>**为什么答「方框」而非「圆」**：任务多于 9 个时编号是两位数，正圆会被撑成椭圆或被压扁（同「筛选角标」那条结论）⇒ 方框宽度自适应更稳。 |
 
-冒烟 +2（5→4px 竖线指纹与旧类名清除 / 方括号前置容器）⇒ **483/0**。
+冒烟 +3（4px 竖线指纹与旧类名清除 / 方括号前置容器 / 序号徽标）⇒ **484/0**。
 
 ## 五、落码记录
 
@@ -217,7 +218,7 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 | 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
 | 19 | **回执裁决三处口径修正**（用户 2026-10-03 拍板，全过程见 [receipt-verdict.md](receipt-verdict.md)）：① **去掉产物新鲜度闸** —— `checkReceipt` 只留 `existsSync`，移除 `mtime > dispatched_at` 比较与 `dispatchedAtMs` 参数、删 `statSync` import；② 提示词改**「以最后一次提交为准 + 再提交须带上先前的产出」**（工具描述 + 末段指令各一处）；③ 裁决改**等 `agent.whenIdle()`（会话真正空闲）** —— `turn/end` 只记信号不再裁决，sweep 的 `turn/end` 分支去掉 `continue`（防卡死实例永久挂 running）。⚠️ 同日**撤回**了先前「逐条校验、任一条通过即成功」的错误修复（`receiptsSince` 已删）。冒烟 ⇒ **482/0** | `src/reconcile.ts`、`src/receipt.ts`、`scripts/smoke.mjs` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 **483/0** · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 **484/0** · ⏳ **真机待验**。
 
 **真机必看的八条**（决定本轮成败）：
 1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上（上 34 / 下 16）。

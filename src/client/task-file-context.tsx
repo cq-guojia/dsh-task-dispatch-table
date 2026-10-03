@@ -208,7 +208,9 @@ function ReceivedGroup(props: {
   return h(Group, {
     title: t('tfcReceived', { tasks: ordered.length, files: totalFiles }),
     children: h('div', { className: 'dsh-tdt-sv-tfc-tasks' },
-      shown.map(item => {
+      // 序号取**显示顺序**的下标：`shown` 恒是 `ordered` 的前缀（slice）或全量 ⇒ 折叠 / 展开
+      // 都不会让已显示任务的编号跳变（前 3 个始终 1、2、3，展开后接着 4、5…）。
+      shown.map((item, index) => {
         // 跨工作区判定：**任一侧未知 ⇒ 当作跨区**（未知还去点 = 点了必报错，正是要拦的）；
         // 前缀比到分隔符边界（`/ws` 不得把 `/ws-2` 判成同区）。
         const crossWorkspace = workspacePath === null
@@ -237,6 +239,9 @@ function ReceivedGroup(props: {
           : all
         return h('div', { key: `${item.task}:${item.instanceId}`, className: 'dsh-tdt-sv-tfc-task' },
           h('div', { className: 'dsh-tdt-sv-tfc-taskrow' },
+            // 任务序号徽标（用户 2026-10-03）：灰色圆角小方框 + 小号数字，按显示顺序 1、2、3…
+            // ⚠️ 用方框不用正圆：任务多于 9 个时编号是两位数，正圆会被撑变形（同「筛选角标」结论）。
+            h('span', { className: 'dsh-tdt-sv-tfc-seq' }, String(index + 1)),
             // 任务名前的标记：**一条 4px 竖线**（用户 2026-10-03：图标太大太丑，换成「和字差不多高」的竖线，
             // 宽约 4px、带小圆角）。
             h('span', { className: 'dsh-tdt-sv-tfc-taskbar' }),
