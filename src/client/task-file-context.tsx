@@ -8,13 +8,15 @@
 // ⚠️ 只在我们自己的弹窗里可见；从弹窗 fork 出去到官方页，上游那部分仍是消息里的文本路径
 // （官方没有对应渲染面）——已知边界，不做伪原生兜底。
 //
-// 排版口径（2026-10-03 立，经专家团评审）：
+// 排版口径（2026-10-03 立，经专家团评审 + 用户两次点名后横向重排）：
 // · **左右 34px** = 官方 `ChatView.scroll`（16 + clearance）⇒ 与会话正文同一条左基线；
 //   **上 34 / 下 18**（同「四边等距 34」口径，与分隔线到会话正文首行的距离一致）；
-// · 输入文件**一行一个**（用户原话），不并排、不占产出卡那种大卡；
-// · 长名省略 + 悬停全文；chip 宽度 `min(280px,100%)`，不撑破窄弹窗；
-// · **高度有上限 + 自己滚**（`max-height:min(38vh,340px)`）⇒ 20 个上游任务也压不没会话区；
-// · 文件 >4 折叠、上游任务 >3 折叠，折叠态每任务只出前 3 个文件；有产出的任务**排前面**；
+// · 文件**横向排**（用户原话：「为什么要竖着一溜列？横向有这么宽」）：chip 宽**跟文件名走**，
+//   短名就短、长名就长，**最少 8 字、最多 20 字**（超出出省略号 + 悬停看全文），排满自动换行；
+// · **前置任务一排两个**：每块 = 任务名一行 + 产出物**同样横向排**；块前一条 3px 浅色半透明竖线，
+//   跨「任务名 + 产出物」整块高度做分隔（用户口径：「横跨这两行」「把相邻的任务隔开」）；
+// · **高度有上限 + 自己滚**（`max-height:min(38vh,340px)`）⇒ 前置任务再多也压不没会话区；
+// · 文件 >4 折叠、前置任务 >3 折叠，折叠态每任务只出前 3 个文件；有产出的任务**排前面**；
 // · 目录用官方文件夹图标；**跨工作区的目录不可点**（当前会话的工作区列不出它 ⇒ 点了必报错）。
 import { createElement as h, useState } from 'react'
 import { FileTypeIcon, IconFolderCloseRegular } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -76,7 +78,7 @@ function inWorkspace(candidate: string, base: string): boolean {
   return norm(candidate).startsWith(norm(base))
 }
 
-/** 折叠阈值：文件 >4 折叠（与官方 Deliverables 同思路）；上游任务 >3 折叠。 */
+/** 折叠阈值：文件 >4 折叠（与官方 Deliverables 同思路）；前置任务 >3 折叠。 */
 const COLLAPSE_FILES = 4
 const COLLAPSE_TASKS = 3
 /** 任务处于折叠态时，每个任务最多露几个文件（避免 20 个任务的默认高度失控）。 */
@@ -146,17 +148,16 @@ function FileChip(props: { file: FileLine }): ReturnType<typeof h> {
   )
 }
 
-/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。每行一个文件，不并排。 */
+/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。**横向排**（`flex-wrap`，排满换行）。 */
 function FileLines(props: { files: readonly FileLine[]; t: Translate }): ReturnType<typeof h> | null {
   const { files, t } = props
   const [expanded, setExpanded] = useState(false)
   if (files.length === 0) return null
   const collapsible = files.length > COLLAPSE_FILES
   const shown = collapsible && !expanded ? files.slice(0, COLLAPSE_FILES) : files
-  return h('div', { className: 'dsh-tdt-sv-tfc-lines' },
-    h('div', { className: 'dsh-tdt-sv-tfc-files' },
-      shown.map((file, index) => h(FileChip, { key: `${file.key}#${index}`, file })),
-    ),
+  return h('div', { className: 'dsh-tdt-sv-tfc-files' },
+    shown.map((file, index) => h(FileChip, { key: `${file.key}#${index}`, file })),
+    // 「全部 N 个」也排在**同一个横向流**里（末位），不另起一行。
     collapsible
       ? h('button', {
           type: 'button',
@@ -178,7 +179,7 @@ function Group(props: { title: string; children: ReturnType<typeof h> | null }):
   )
 }
 
-/** 接收区：按上游任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠（有产出的排前面）。 */
+/** 接收区：按前置任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠（有产出的排前面）。 */
 function ReceivedGroup(props: {
   items: readonly UpstreamInputView[]
   /** 当前会话所在工作区（跨区的目录/文件列不出来 ⇒ 降级不可点）。 */
@@ -233,9 +234,9 @@ function ReceivedGroup(props: {
           ),
           all.length === 0
             ? h('div', { className: 'dsh-tdt-sv-tfc-none' }, t('tfcNoOutputs'))
-            : h('div', { className: 'dsh-tdt-sv-tfc-lines' },
-                h('div', { className: 'dsh-tdt-sv-tfc-files' },
-                  capped.map((file, index) => h(FileChip, { key: `${file.key}#${index}`, file }))),
+            : h('div', { className: 'dsh-tdt-sv-tfc-files' },
+                capped.map((file, index) => h(FileChip, { key: `${file.key}#${index}`, file })),
+                // 折叠态的「还有 N 个」跟在末位（同一条横向流），不另起一行。
                 capped.length < all.length
                   ? h('span', { className: 'dsh-tdt-sv-tfc-none' }, t('tfcRestFiles', { count: all.length - capped.length }))
                   : null,

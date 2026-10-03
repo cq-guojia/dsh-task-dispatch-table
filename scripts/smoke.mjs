@@ -1247,13 +1247,39 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       client.includes('padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px'))
     check('顶部输入区：高度有上限且自己滚（多任务/多文件压不没会话区）',
       client.includes('max-height:min(38vh,340px)') && client.includes('overflow-y:auto'))
-    check('顶部输入区：一行一个文件（不并排）+ 组间细线分隔',
-      client.includes('.dsh-tdt-sv-tfc-files{flex-direction:column')
+    check('顶部输入区：文件**横向排**（用户 2026-10-03 二次点名「不能竖着一溜」）+ 组间细线分隔',
+      client.includes('.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap')
+      && !client.includes('.dsh-tdt-sv-tfc-files{flex-direction:column')
       && client.includes('.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top'))
+    check('顶部输入区：chip 宽跟文件名走（min 8 字 / max 20 字 + 省略号 + hover 全文）',
+      client.includes('min-width:8ch;max-width:20ch') && client.includes('text-overflow:ellipsis'))
+    check('顶部输入区：前置任务一排两个（窄容器降一列，用容器宽度判据）',
+      client.includes('grid-template-columns:repeat(2,minmax(0,1fr))')
+      && client.includes('container-type:inline-size') && client.includes('@container (width<=620px)'))
+    check('顶部输入区：任务块前 3px 浅色半透明竖线，横跨「任务名 + 产出物」整块',
+      client.includes('.dsh-tdt-sv-tfc-task::before') && client.includes('width:3px')
+      && client.includes('top:2px;bottom:2px'))
+    check('顶部输入区：两列降级不得靠视口宽度（弹窗会被分栏挤窄）',
+      !client.includes('@media') || !client.includes('dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr)}\n}'))
     check('顶部输入区：目录走官方文件夹图标（FileTypeIcon 按扩展名分类，尾斜杠拿不到 folder）',
       client.includes('IconFolderCloseRegular'))
     check('顶部输入区：跨区目录 / 未解析路径降级不可点（data-noclick 淡一档）',
       client.includes('data-noclick') && client.includes('.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}'))
+    // 会话区纵向间距：官方类命中与否必须一致（2026-10-03 修 18px 跳变）。
+    check('会话区纵向单一真源：frame 钩子独占上下 + scroll 钩子归零官方纵向（双类名压过 CSS module）',
+      client.includes('.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:16px;}')
+      && client.includes('.dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}'))
+    check('会话区：body 兜底类不再抢纵向 padding（曾盖掉 frame 补足 ⇒ 差 18px）',
+      !client.includes('.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px'))
+    check('卡片创建时间：挂标题行尾部（同一 faintStyle）+ 四位年 YYYY-MM-DD，第三行不再单起',
+      client.includes('listCreatedTag') && client.includes('formatYmd')
+      && !client.includes("dateOf(iso: string)"))
+    // 术语：界面一律叫「前置任务」（用户 2026-10-03）。⚠️ 只断言**产物里出现给用户看的文案**，
+    // 源码内部术语（resolvedDeps / upstream 字段 / BLOCK_KIND 的 key）沿用既有决策 43 的叫法，不动。
+    check('文案术语统一：界面叫「前置任务」不叫「上游任务」（顶部区 / 分区标题 / 延期原因 / 阻塞原因）',
+      client.includes('前置任务') && !client.includes('上游任务')
+      && client.includes('Preceding tasks') && !client.includes('Upstream tasks')
+      && !client.includes('upstream task'))
   }
   // 决策 49：多 Agent 指令段只在 teamMode=true 时注入；缺省（老调用）消息不含团队段。
   const msgTeam = buildMessage({ ...snapWithDeps, agentTeam: true }, '/ws/down', '2026-09-29', true)

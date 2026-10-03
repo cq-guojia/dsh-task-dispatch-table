@@ -53,6 +53,17 @@ export function formatShortStamp(iso: string): string {
   return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
+/**
+ * 四位年日期（用户 2026-10-03：卡片标题后的创建时间标签 `[2026-10-03 创建]`）：`YYYY-MM-DD`。
+ * 与 `formatShortStamp` 的差别就是**带年份**——创建时间要能跨年看，缺年份会认错。
+ */
+export function formatYmd(iso: string): string {
+  const ms = Date.parse(iso)
+  if (Number.isNaN(ms)) return '—'
+  const d = new Date(ms)
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
 /** 计划执行列（用户 2026-10-02 改**四位年**：形如 `2026-09-30 15:10`）：`YYYY-MM-DD HH:mm`。 */
 export function formatPlanStamp(iso: string): string {
   const ms = Date.parse(iso)

@@ -105,10 +105,53 @@
 | 10 | chip 固定 280px、column 容器默认 stretch | 热区变成整行 280px | `min(280px,100%)` + `align-items:flex-start` |
 | 11 | 三个纯内部 helper 导出、`as string` 强转、React key 用自定义 prop 冒充 | 死代码 / 卫生问题 | 降私有 / 提局部 const / 给真 `key` |
 
-### 已知遗留（未动，等真机观感）
+### 已知遗留（第二轮评审时留的，第三轮已清掉一条）
 
-1. **官方类未命中时**会话区纵向是 16px（`frame` 的 `padding:18px` 被 `body` 覆盖）⇒ 顶部区按官方命中路径的 34px 排 ⇒ 回退态下两者差 18px。真机（官方命中）才是主路径。
-2. 经典滚动条平台右侧差一个滚动条槽（官方 `scroll` 无 `scrollbar-gutter`），左边界永远对齐。
+1. ~~**官方类未命中时**会话区纵向差 18px~~ → ✅ **已修（见 §四点九·1）**：根因是 frame 元素同时挂两个写 padding 的类、body 在后覆盖；改成「scroll 钩子归零 + frame 钩子独占」单一真源，命中 / 未命中一致。
+2. **经典滚动条平台右侧差一个滚动条槽**（官方 `scroll` 无 `scrollbar-gutter`）：用户 2026-10-03 明确「**暂时先不弄，我发现了再说**」⇒ 保留登记，不动。左边界永远对齐，只影响观感。
+
+## 四点九、第三轮：用户两轮点名后的横向重排 + 术语统一（2026-10-03）
+
+用户看完第一版产物后的原话与处置：
+
+| # | 用户意见 | 处置 |
+|---|---|---|
+| 1 | 随附文件「为什么要竖着一溜列？横向有这么宽」「一排至少 3 个」 | **文件全部横向排**：`flex-wrap:wrap` 从左到右、排满换行 |
+| 2 | 「跟着文件名来：短就短、长就长。**最少 8 字**、**最多 20 字**，多了出点点点、移上去显示该点内容」 | 宽度上下限落在 **label** 上：`min-width:8ch`（不足留空）/ `max-width:20ch` + `text-overflow:ellipsis` + `title` 全文；chip 本身 `flex:0 0 auto`（短名就短） |
+| 3 | 「前置任务也类似」——一个任务名一行，下面产出物**也要这么排** | 任务块内产出物改用同一个横向 `.dsh-tdt-sv-tfc-files`（同一套 8～20 字宽规则） |
+| 4 | 「任务前面加一条**竖线**，横跨『任务名』和『产出物』两行」；线宽 **3–4px**、**浅色半透明** | `.dsh-tdt-sv-tfc-task::before`：`width:3px` + `background:var(--tdt-border)` + `opacity:.55` + `top/bottom:2px`（绝对定位 ⇒ 自动等块高，跨两行） |
+| 5 | 「考虑一下一排是不是可以放**两个**前置任务」 | `.dsh-tdt-sv-tfc-tasks` 改 `grid-template-columns:repeat(2,minmax(0,1fr))`；**降级判据用容器宽度**（`container-type:inline-size` + `@container (width<=620px)` 降一列）—— 弹窗会被预览 / 编辑分栏挤窄，只看视口会判错 |
+| 6 | 「所有文案里的『上游任务』都叫『**前置任务**』」 | 界面文案全改（中英双语 + `scheduler.ts` 三条阻塞原因 + 注释）。⚠️ **内部术语不动**：`resolvedDeps` / `upstream-*` 的 BLOCK_KIND key / `UpstreamInputView` 等沿用决策 43 的既有叫法，只改**用户看到的字** |
+| 7 | 卡片「创建于」那一行「新建它就会冒出来」很跳 | **删掉第三行**，改挂标题行尾部：`[2026-10-03 创建]`（与 `[编号]` 同一 `faintStyle` = 同一字号）；`dateOf`（`09 月 28 日`）随之删除，换 `formatYmd`（**四位年**，跨年不认错） |
+| 8 | 「18px 那个是不是应该调整？如果写得不规范就该调整」 | **已修**，见下 §四点九·1 |
+
+### 1. 18px 纵向跳变的根因与修法（用户判定"不规范"，从"不影响主路径"升级为"要改"）
+
+**根因**（`mirror/ChatView.tsx` 的 frame 元素挂了**两个都会写 padding 的类**）：
+
+```
+className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-tdt-sv-chat`
+                                   ↑ 官方命中时挂官方类        ↑ 我们的补足 18px
+
+· 官方命中：官方 frame + 我们的 .dsh-tdt-sv-frame{padding:18px 0} + 官方 scroll 的 16px ⇒ 上 34
+· 官方未命中：.dsh-tdt-sv-body{padding:16px …} 与 .dsh-tdt-sv-frame{padding:18px 0} 挂**同一元素**，
+  两者特异性都是 (0,1,0)，body 在 ARCHIVE_SESSION_CSS 里**排在后面** ⇒ 覆盖 ⇒ 上 16px ⇒ **差 18px**
+```
+
+**修法（纵向单一真源）**：
+
+| 钩子 | 规则 | 作用 |
+|---|---|---|
+| `.dsh-tdt-sv-scroll`（新增，挂在官方 scroll 元素上） | `padding-top:0;padding-bottom:0` | 把官方 scroll 自带的纵向 16px **归零**，纵向全交 frame |
+| `.dsh-tdt-sv-frame` | `padding-top:34px;padding-bottom:16px`（**长写**，不碰左右） | **独占**上下；命中时左右仍走官方 scroll 的 `16 + clearance` = 34 |
+| `.dsh-tdt-sv-body` | 只写 `padding-left/right` | 不再抢纵向（这正是覆盖的元凶） |
+
+两条钩子都用**双类名**（`.dsh-tdt-sv-frame.dsh-tdt-sv-frame`，特异性 0,2,0）压过官方 CSS module（0,1,0），**不再依赖注入顺序**。
+⇒ 命中 / 未命中两条路径纵向完全一致（上 34 / 下 16），18px 跳变从根上消除。
+
+### 2. 冒烟
+
+新增 8 项（横向排 / 8～20 字宽 / 两列网格 + 容器降级 / 3px 竖线 / 不用视口媒体查询 / frame+scroll 单一真源 / body 不抢纵向 / 创建时间挂标题行 + 无 `dateOf` / 术语统一）⇒ **459/0**。
 
 ## 五、落码记录
 
@@ -133,6 +176,6 @@
 3. 气泡下方是否还出现官方附件卡（顶部已显示同名文件时应**让位**，不重复显示）。
 4. 上游文件点击：同工作区应能打开；**跨工作区的目录应灰掉不可点**（标「跨工作区」）。
 
-## 六、遗留（已登记进 PROGRESS 未决项）
+## 六、遗留
 
-- **附件库清盘**：官方 `Attachments are never deleted`，没有回收机制 ⇒ 长期跑会堆积。用户拍板后置，本轮不做。
+- **附件库清盘**：官方 `Attachments are never deleted`，没有回收机制 ⇒ 长期跑会堆积。用户 2026-10-03 拍板**后置**，本轮不做，且明确「**不用提醒，我自己会知道什么时候处理**」⇒ 已从 [`PROGRESS.md`](../PROGRESS.md) 未决项表**移除**，只留本节存档。将来要做时：按会话谱系 / 任务维度清理无人引用的附件对象；官方目前无任何清理 API（README.md:133 记「no decision is recorded yet」）⇒ 只能自管引用账 + 调宿主未公开面，或等宿主提供。

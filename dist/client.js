@@ -70,6 +70,16 @@ window.__ModuleLoader__.load({
 			const base = `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 			return opts?.seconds === true ? `${base}:${pad2$3(d.getSeconds())}` : base;
 		}
+		/**
+		* 四位年日期（用户 2026-10-03：卡片标题后的创建时间标签 `[2026-10-03 创建]`）：`YYYY-MM-DD`。
+		* 与 `formatShortStamp` 的差别就是**带年份**——创建时间要能跨年看，缺年份会认错。
+		*/
+		function formatYmd(iso) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return "—";
+			const d = new Date(ms);
+			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
+		}
 		/** 计划执行列（用户 2026-10-02 改**四位年**：形如 `2026-09-30 15:10`）：`YYYY-MM-DD HH:mm`。 */
 		function formatPlanStamp(iso) {
 			const ms = Date.parse(iso);
@@ -450,14 +460,14 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "收起",
 			deliverExpandAria: "展开全部 {count} 个交付文件",
 			deliverCollapseAria: "收起交付文件列表",
-			tfcReceived: "接收 · {files} 个文件 · 来自 {tasks} 个上游任务",
+			tfcReceived: "接收 · {files} 个文件 · 来自 {tasks} 个前置任务",
 			tfcAttached: "随附 · {count} 个文件",
 			tfcNoOutputs: "未声明产出",
 			tfcRelOnly: "相对路径",
 			tfcCrossWorkspace: "跨工作区",
 			tfcNoPath: "路径未解析，不可打开",
 			tfcMore: "全部 {count} 个文件",
-			tfcMoreTasks: "全部 {count} 个上游任务",
+			tfcMoreTasks: "全部 {count} 个前置任务",
 			tfcCollapse: "收起",
 			tfcFromUpload: "上传",
 			tfcFromWorkspace: "工作区",
@@ -663,7 +673,7 @@ window.__ModuleLoader__.load({
 			listRunning: "运行中",
 			listNextNone: "无后续执行",
 			listNever: "尚未执行",
-			listCreatedPrefix: "创建于",
+			listCreatedTag: "{date} 创建",
 			relNow: "即将执行",
 			relMinutes: "{n} 分钟后",
 			relHours: "{n} 小时后",
@@ -835,7 +845,7 @@ window.__ModuleLoader__.load({
 			expandHint: "Click any row to expand the event timeline of that run",
 			listExpandHint: "Expand task details",
 			listDeferred: "Delayed",
-			listDeferredTitle: "Past its planned time but has not started. Usual causes: upstream task not finished / attachment missing / previous run still running.",
+			listDeferredTitle: "Past its planned time but has not started. Usual causes: preceding task not finished / attachment missing / previous run still running.",
 			eventsOf: "Run log",
 			eventsEmpty: "(no events for this run, or it falls outside the latest-200 snapshot window)",
 			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.",
@@ -1018,14 +1028,14 @@ window.__ModuleLoader__.load({
 			deliverCollapse: "Collapse",
 			deliverExpandAria: "Expand all {count} delivered files",
 			deliverCollapseAria: "Collapse the delivered-files list",
-			tfcReceived: "Received · {files} file(s) from {tasks} upstream task(s)",
+			tfcReceived: "Received · {files} file(s) from {tasks} preceding task(s)",
 			tfcAttached: "Attached · {count} file(s)",
 			tfcNoOutputs: "No outputs declared",
 			tfcRelOnly: "relative",
 			tfcCrossWorkspace: "other workspace",
 			tfcNoPath: "path unresolved — cannot open",
 			tfcMore: "All {count} files",
-			tfcMoreTasks: "All {count} upstream tasks",
+			tfcMoreTasks: "All {count} preceding tasks",
 			tfcCollapse: "Collapse",
 			tfcFromUpload: "uploaded",
 			tfcFromWorkspace: "workspace",
@@ -1231,7 +1241,7 @@ window.__ModuleLoader__.load({
 			listRunning: "Running",
 			listNextNone: "No further runs",
 			listNever: "Never run",
-			listCreatedPrefix: "Created",
+			listCreatedTag: "{date} created",
 			relNow: "due now",
 			relMinutes: "in {n} min",
 			relHours: "in {n} h",
@@ -1255,7 +1265,7 @@ window.__ModuleLoader__.load({
 			listEmptyFiltered: "No task matches the current filter.",
 			listSectionSchedule: "Execution settings",
 			listSectionAttachments: "Attachments",
-			listSectionDepends: "Upstream tasks",
+			listSectionDepends: "Preceding tasks",
 			listSectionPrompt: "Prompt",
 			listFieldWorkspace: "Workspace",
 			listFieldModel: "Model",
@@ -2912,16 +2922,20 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
-/* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --tdt-surface-base（官方 chat 页即此色）：
    官方 ReasoningRow 展开行是 sticky + background:var(--tdt-surface-base)（ReasoningRow.module.css），
    若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
-/* 内间距定尺（用户拍板：四边等距 34px）。纵向全在会话区上：官方 scroll 纵向固定 16px，
-   面板不再吃纵向 padding（否则只会加在标题栏外侧，标题分割线与首条消息之间仍是 16px——真机踩过），
-   由 .dsh-tdt-sv-frame 补 18px ⇒ 标题线下 16+18=34、底部 16+18=34；左右 = 16 + clearance(18px) = 34。 */
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
-.dsh-tdt-sv-frame{padding:18px 0;}
+/* 内间距定尺（用户拍板：四边等距 34px）。**纵向单一真源 = .dsh-tdt-sv-frame**：
+   官方 scroll 命中时自带纵向 16px，官方 frame 的纵向又不确定；不命中时官方 scroll 不存在，
+   .dsh-tdt-sv-body 又会盖掉 frame 的补足（同元素、body 在后面）。⇒ 统一收口（2026-10-03）：
+     · scroll 钩子把官方纵向 **归零**（双类名 0,2,0 压过 CSS module，不靠注入顺序）；
+     · frame 钩子**独占**上下（用长写，不碰左右 ⇒ 命中时左右仍走官方 scroll 的 16+clearance）。
+   ⇒ 命中 / 未命中两条路径纵向完全一致（34 / 16），消掉原先的 18px 跳变。左右始终 34px。 */
+.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:16px;}
+/* 官方 scroll 命中时纵向 16px 归零，纵向交 frame 独占（见上）。左右不动。 */
+.dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}
 /* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
    ⚠️ 用 flex:1 1 auto 而不是 flex:1（后者 basis=0）：官方 ChatView.frame 是 flex:auto，
    本仓与官方注入顺序不定 ⇒ 取 auto 这个共同值，两边顺序颠倒也不会改变布局。 */
@@ -2930,8 +2944,9 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
 .dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
-/* 会话区边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px；纵向由 frame 补足。 */
-.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px calc(var(--dsh-composer-side-clearance,16px) + 16px) 16px;}
+/* 会话区左右边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px。
+   **纵向不在这里**（官方类命中与否会打架，见上面 frame / scroll 两条钩子）⇒ 本类只写左右。 */
+.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding-left:calc(var(--dsh-composer-side-clearance,16px) + 16px);padding-right:calc(var(--dsh-composer-side-clearance,16px) + 16px);}
 .dsh-tdt-sv-col{width:100%;max-width:var(--dsh-chat-content-width,920px);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-chat-flow-gap,16px);}
 /* 官方 ChatView.column 的兄弟间距（:not([hidden]) 才占位；折叠掉的过程节点不留空档）。 */
 .dsh-tdt-sv-col>:not([hidden]):not(.dsh-tdt-sv-flowitem:empty)~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:var(--dsh-chat-flow-gap,16px);}
@@ -3200,39 +3215,52 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
-   官方没有「上游产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
-   ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**，
-      不再自己突出一块（用户 2026-10-03 点名）；**上 34 / 下 18** = 与「分隔线 → 会话正文首行」
-      同距（四边等距 34 口径），纵向节拍接得上。
-   ② 输入文件可能十几个 ⇒ **一行一个**（flex-direction:column），不用产出卡那种大卡。
-   ③ 长名省略 + 悬停全文；chip 宽 min(280px,100%)，窄弹窗也不撑破。
-   ④ **高度有上限 + 自己滚** ⇒ 20 个上游任务也不会把会话区压没（否则被 panel overflow 裁掉）。
+   官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
+   ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**；
+      **上 34 / 下 18** = 与「分隔线 → 会话正文首行」同距（四边等距 34 口径），纵向节拍接得上。
+   ② **横向排**（用户 2026-10-03 第二次点名：「不能竖着一溜列，太浪费空间」）：
+      flex-wrap:wrap 从左到右排、**排满自动换行**。chip 宽**跟文件名走**：
+      名字短就短、名字长就长，min-width:8ch 保底（不足留空）、max-width:20ch 封顶
+      （超出省略号 + 悬停 title 看全文）。⇒ 一行至少放得下 3 个。
+   ③ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
+      每块 = 任务名一行 + 产出物**同样横向排**；块前一条 **3px 浅色半透明竖线**，
+      跨「任务名 + 产出物」整块高度做分隔（不用框、不靠颜色块，跨两行才分得清谁是谁）。
+   ④ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
    ⑤ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-group{flex-direction:column;gap:6px;min-width:0;display:flex;}
+/* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
 .dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
 /* 组标题比内容**高一档**（12px/600/fg-2）⇒ 不靠颜色也分得出层级：标题 > 任务名 > 芯片 > 元信息。 */
 .dsh-tdt-sv-tfc-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:600;line-height:var(--tdt-line-sm);white-space:nowrap;}
-.dsh-tdt-sv-tfc-tasks{flex-direction:column;gap:10px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
+/* 前置任务块 —— 一排两个（窄容器降一列，见下方 @container）。 */
+.dsh-tdt-sv-tfc-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;min-width:0;}
+@container (width<=620px){.dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr);}}
+/* 任务块：左竖线横跨整块（任务名 + 产出物两行）做分隔 ⇒ 竖线用 ::before 绝对定位，
+   top/bottom 各留 2px 让它不贴边；padding-left 让文字离开竖线，不破坏面板左右 34px 基线。 */
+.dsh-tdt-sv-tfc-task{position:relative;flex-direction:column;gap:4px;min-width:0;padding-left:10px;display:flex;}
+.dsh-tdt-sv-tfc-task::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;background:var(--tdt-border,rgba(128,128,128,.35));border-radius:1.5px;opacity:.55;}
 .dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
 /* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
 .dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
 .dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
-/* 一行一个文件（用户口径）：不 wrap、不并排。
-   ⚠️ align-items:flex-start 必须留着：column 容器默认 stretch ⇒ 芯片会被拉到 max-width 那么宽，
-   悬停/点击热区变成整条 280px（看着像一整行按钮），实际只该有内容那么宽。 */
-.dsh-tdt-sv-tfc-files{flex-direction:column;align-items:flex-start;gap:2px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:min(280px,100%);padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:flex;text-align:left;}
+/* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
+   ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
+.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
+/* chip 宽度**跟文件名走**：flex:0 0 auto（不参与拉伸/收缩 ⇒ 短名就短），
+   宽度上下限落在 **label** 上：min 8ch（不足留空）/ max 20ch（超出省略号 + title 全文）。 */
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
 button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
 /* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
 .dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
 .dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;flex:0 1 auto;}
+/* 8～20 字宽：短名留空到 8 字、长名到 20 字截断（ch 按 0 字宽算，中文文件名实际更宽一点，
+   属可接受偏差；两端都有硬上限，不会出现「一个巨长名独占一行」）。 */
+.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;min-width:8ch;max-width:20ch;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
@@ -3770,9 +3798,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		//#endregion
 		//#region src/client/mirror/ChatView.tsx
 		/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。
-		*  `dsh-tdt-sv-frame` = 本插件稳定钩子类：弹窗用它把会话区上下内边距补到 34px（官方 scroll 纵向是固定 16px）。 */
+		*
+		*  `dsh-tdt-sv-frame` / `dsh-tdt-sv-scroll` = 本插件**稳定钩子类**（不参与 ocOr，官方类命中时也挂）：
+		* 会话区**纵向间距的唯一真源**。官方 scroll 自带纵向 16px、官方 frame 的纵向值又不确定，两者叠加
+		* 只能在「官方命中」这一条路径上凑对；官方类缺失时 `.dsh-tdt-sv-body` 的 padding 会**盖掉** frame
+		* 的补足（同一元素、body 在 CSS 里靠后 ⇒ 覆盖），纵向从 34px 塌成 16px、比顶部区少 18px。
+		* ⇒ 归一方案（2026-10-03）：**scroll 钩子把官方纵向 16px 归零，frame 钩子独自定 34/16**，
+		* 两条钩子都用双类名提高特异性压过官方 CSS module（0,2,0 > 0,1,0），不再依赖注入顺序。
+		*/
 		function ChatViewFrame(props) {
-			return (0, react.createElement)("div", { className: `${ocOr("ChatView", "frame", "dsh-tdt-sv-body")} dsh-tdt-sv-frame dsh-tdt-sv-chat` }, (0, react.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react.createElement)("div", { className: ocOr("ChatView", "scroll", "") }, (0, react.createElement)("div", {
+			return (0, react.createElement)("div", { className: `${ocOr("ChatView", "frame", "dsh-tdt-sv-body")} dsh-tdt-sv-frame dsh-tdt-sv-chat` }, (0, react.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react.createElement)("div", { className: `${ocOr("ChatView", "scroll", "")} dsh-tdt-sv-scroll` }, (0, react.createElement)("div", {
 				className: ocOr("ChatView", "column", "dsh-tdt-sv-col"),
 				"data-chat-flow": ""
 			}, props.children))));
@@ -5199,7 +5234,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const norm = (value) => value.endsWith("/") ? value : `${value}/`;
 			return norm(candidate).startsWith(norm(base));
 		}
-		/** 折叠阈值：文件 >4 折叠（与官方 Deliverables 同思路）；上游任务 >3 折叠。 */
+		/** 折叠阈值：文件 >4 折叠（与官方 Deliverables 同思路）；前置任务 >3 折叠。 */
 		const COLLAPSE_FILES = 4;
 		const COLLAPSE_TASKS = 3;
 		/** 任务处于折叠态时，每个任务最多露几个文件（避免 20 个任务的默认高度失控）。 */
@@ -5251,17 +5286,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				size: 14
 			})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-label" }, file.label), file.note === void 0 ? null : (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, file.note));
 		}
-		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。每行一个文件，不并排。 */
+		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。**横向排**（`flex-wrap`，排满换行）。 */
 		function FileLines(props) {
 			const { files, t } = props;
 			const [expanded, setExpanded] = (0, react.useState)(false);
 			if (files.length === 0) return null;
 			const collapsible = files.length > COLLAPSE_FILES;
 			const shown = collapsible && !expanded ? files.slice(0, COLLAPSE_FILES) : files;
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-lines" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file, index) => (0, react.createElement)(FileChip, {
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file, index) => (0, react.createElement)(FileChip, {
 				key: `${file.key}#${index}`,
 				file
-			}))), collapsible ? (0, react.createElement)("button", {
+			})), collapsible ? (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-sv-tfc-more",
 				"aria-expanded": expanded,
@@ -5276,7 +5311,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (children === null) return null;
 			return (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-group" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-head" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-title" }, title)), children);
 		}
-		/** 接收区：按上游任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠（有产出的排前面）。 */
+		/** 接收区：按前置任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠（有产出的排前面）。 */
 		function ReceivedGroup(props) {
 			const { items, workspacePath, onOpenFile, t } = props;
 			const [expanded, setExpanded] = (0, react.useState)(false);
@@ -5316,10 +5351,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", {
 						className: "dsh-tdt-sv-tfc-name",
 						title: item.task
-					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-lines" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react.createElement)(FileChip, {
+					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react.createElement)(FileChip, {
 						key: `${file.key}#${index}`,
 						file
-					}))), capped.length < all.length ? (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-none" }, t("tfcRestFiles", { count: all.length - capped.length })) : null));
+					})), capped.length < all.length ? (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-none" }, t("tfcRestFiles", { count: all.length - capped.length })) : null));
 				}), collapsible ? (0, react.createElement)("button", {
 					type: "button",
 					className: "dsh-tdt-sv-tfc-more",
@@ -41976,12 +42011,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (Number.isNaN(d.getTime())) return "—";
 			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 		}
-		/** 「09 月 28 日」（本机时区；月 / 日补两位，用户 2026-09-30）。 */
-		function dateOf(iso) {
-			const d = new Date(iso);
-			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$3(d.getMonth() + 1)} 月 ${pad2$3(d.getDate())} 日`;
-		}
 		function useFlip(signature) {
 			const nodes = (0, react.useRef)(/* @__PURE__ */ new Map());
 			const prevTop = (0, react.useRef)(/* @__PURE__ */ new Map());
@@ -42204,7 +42233,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			flex: "1 1 auto",
 			minHeight: 0,
 			display: "flex",
-			gap: "18px"
+			gap: "18px",
+			marginBottom: "10px"
 		};
 		const infoConfigStyle = {
 			flex: "1 1 58%",
@@ -43134,14 +43164,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				...faintStyle,
 				flex: "none",
 				display: "inline"
-			} }, `[${row.code}]`) : null, row.enabled ? null : (0, react.createElement)("span", { style: {
+			} }, `[${row.code}]`) : null, row.createdAt === null ? null : (0, react.createElement)("span", { style: {
+				...faintStyle,
+				flex: "none",
+				display: "inline"
+			} }, `[${t("listCreatedTag", { date: formatYmd(row.createdAt) })}]`), row.enabled ? null : (0, react.createElement)("span", { style: {
 				...faintStyle,
 				flex: "none",
 				display: "inline"
 			} }, t("listDisabledTag"))), (0, react.createElement)("div", { style: {
 				...metaStyle,
 				minWidth: 0
-			} }, (0, react.createElement)(MarqueeText, { text: scheduleLine })), row.createdAt === null ? null : (0, react.createElement)("div", { style: faintStyle }, `${t("listCreatedPrefix")} ${dateOf(row.createdAt)}`)), (0, react.createElement)("div", { style: {
+			} }, (0, react.createElement)(MarqueeText, { text: scheduleLine }))), (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "8px",

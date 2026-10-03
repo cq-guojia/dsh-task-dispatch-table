@@ -13,7 +13,7 @@
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, pad2 } from './format'
+import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatYmd, pad2 } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
   IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconLoadingOutlineRegular,
@@ -427,12 +427,6 @@ function clockOf(iso: string): string {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
-/** 「09 月 28 日」（本机时区；月 / 日补两位，用户 2026-09-30）。 */
-function dateOf(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return `${pad2(d.getMonth() + 1)} 月 ${pad2(d.getDate())} 日`
-}
 
 // ── 排序（时间轴：马上要跑的最上，关闭的沉底）──────────────────────────
 // 实现在 [`../task-sort.ts`](../task-sort.ts)：放 `src/` 是为了让冒烟能**真断言**（client 侧只能 grep 产物）。
@@ -683,7 +677,8 @@ const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-s
 const faintStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
 // 基础信息改版（用户 2026-10-03）：左「任务配置」+ 右「最近执行」两栏；纸表格风格，字段不再挤成一坨。
 // 右栏内容可能多（会话 / 产出物）⇒ **只滚右栏**，左栏在当前高度内基本放得下。
-const infoWrapStyle: Record<string, string | number> = { flex: '1 1 auto', minHeight: 0, display: 'flex', gap: '18px' }
+// `marginBottom: 10` 与面板顶部虚线下的 10px 间距对称 ⇒ 右栏滚动条上下离虚线一样远（用户 2026-10-03）。
+const infoWrapStyle: Record<string, string | number> = { flex: '1 1 auto', minHeight: 0, display: 'flex', gap: '18px', marginBottom: '10px' }
 const infoConfigStyle: Record<string, string | number> = { flex: '1 1 58%', minWidth: 0, overflowY: 'auto', paddingRight: '2px' }
 const infoRecentStyle: Record<string, string | number> = {
   flex: '0 1 42%', minWidth: '220px', overflowY: 'auto',
@@ -1527,14 +1522,20 @@ function TaskCard(props: {
       h(StatusRail, { row }),
       h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
         // 标题 / 执行方式：**单行省略号 + hover 跑马灯**（窗口窄、文字长不再撑高卡片，用户 2026-09-30）。
+        // 编号与创建时间都挂在**标题行尾部**（同一 faintStyle = 同一字号），不再另起第三行 ——
+        // 用户 2026-10-03：新建任务时第三行凭空冒出一个「创建于」行很跳，且白占一行高度。
         h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 } },
           h('div', { style: { ...titleStyle, flex: '0 1 auto', minWidth: 0 } }, h(MarqueeText, { text: row.title })),
           row.code !== null ? h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, `[${row.code}]`) : null,
+          // 创建时间**长显**（用户拍板不隐藏）：`[2026-10-03 创建]`；老定义没这字段就不渲染（不编造）。
+          row.createdAt === null
+            ? null
+            : h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } },
+                `[${t('listCreatedTag', { date: formatYmd(row.createdAt) })}]`),
           row.enabled ? null : h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, t('listDisabledTag')),
         ),
         // 执行方式是完整一句话（「每周一、周二，每 10 分钟执行一次」），放不下同样跑马灯。
         h('div', { style: { ...metaStyle, minWidth: 0 } }, h(MarqueeText, { text: scheduleLine })),
-        row.createdAt === null ? null : h('div', { style: faintStyle }, `${t('listCreatedPrefix')} ${dateOf(row.createdAt)}`),
       ),
       // 右：历史执行 / 下次执行两个**独立**小标签 → 启用拨片 → 展开箭头。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },

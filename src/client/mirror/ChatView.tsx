@@ -13,13 +13,20 @@ import { ChatNodeSeatMirror, type ChatNodeStoreFace, type NodeRenderer } from '.
 import type { ChatEntry, ProcessGroupSnapshot } from './process-groups'
 
 /** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。
- *  `dsh-tdt-sv-frame` = 本插件稳定钩子类：弹窗用它把会话区上下内边距补到 34px（官方 scroll 纵向是固定 16px）。 */
+ *
+ *  `dsh-tdt-sv-frame` / `dsh-tdt-sv-scroll` = 本插件**稳定钩子类**（不参与 ocOr，官方类命中时也挂）：
+ * 会话区**纵向间距的唯一真源**。官方 scroll 自带纵向 16px、官方 frame 的纵向值又不确定，两者叠加
+ * 只能在「官方命中」这一条路径上凑对；官方类缺失时 `.dsh-tdt-sv-body` 的 padding 会**盖掉** frame
+ * 的补足（同一元素、body 在 CSS 里靠后 ⇒ 覆盖），纵向从 34px 塌成 16px、比顶部区少 18px。
+ * ⇒ 归一方案（2026-10-03）：**scroll 钩子把官方纵向 16px 归零，frame 钩子独自定 34/16**，
+ * 两条钩子都用双类名提高特异性压过官方 CSS module（0,2,0 > 0,1,0），不再依赖注入顺序。
+ */
 export function ChatViewFrame(props: { children?: ReactNode }): ReturnType<typeof h> {
-  // `dsh-tdt-sv-chat` = 本仓稳定钩子类（**不参与 ocOr**）：官方 frame 命中时也保底
+  // `dsh-tdt-sv-chat` = 本仓稳定钩子类：**不参与 ocOr** —— 官方 frame 命中时也保底
   // `flex:1;min-height:0` ⇒ 顶部输入区（最高 340px）压不没会话区（第二轮评审建议）。
   return h('div', { className: `${ocOr('ChatView', 'frame', 'dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-tdt-sv-chat` },
     h('div', { className: ocOr('ChatView', 'root', '') },
-      h('div', { className: ocOr('ChatView', 'scroll', '') },
+      h('div', { className: `${ocOr('ChatView', 'scroll', '')} dsh-tdt-sv-scroll` },
         h('div', { className: ocOr('ChatView', 'column', 'dsh-tdt-sv-col'), 'data-chat-flow': '' }, props.children),
       ),
     ),

@@ -42,9 +42,9 @@ export interface DependencyVerdict {
 
 /** 阻塞原因 → task_log 的 kind 与文案（用户一眼能分清「没跑成」和「永远不会跑」）。 */
 const BLOCK_KIND: Record<string, { kind: string; message: string }> = {
-  'upstream-not-succeeded': { kind: 'dep_blocked', message: '被依赖卡住，等待上游成功（下轮再判）' },
-  'upstream-disabled': { kind: 'dep_disabled', message: '上游任务已停用，永远不会放行（除非启用上游或移除该前置）' },
-  'upstream-missing': { kind: 'dep_missing', message: '上游任务已不存在（被删除），永远不会放行（除非移除该前置）' },
+  'upstream-not-succeeded': { kind: 'dep_blocked', message: '被依赖卡住，等待前置任务成功（下轮再判）' },
+  'upstream-disabled': { kind: 'dep_disabled', message: '前置任务已停用，永远不会放行（除非启用前置任务或移除该依赖）' },
+  'upstream-missing': { kind: 'dep_missing', message: '前置任务已不存在（被删除），永远不会放行（除非移除该依赖）' },
 }
 
 // 串行互斥只认**真正在飞**的状态（决策 8：同任务不并发）。

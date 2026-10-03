@@ -32,16 +32,20 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
-/* 内间距定尺（用户拍板：不按官方内容列宽算）：官方 scroll = 16px + side-clearance ⇒ clearance 给 8px = 左右各 24px 定尺；内容列不设上限（100%）。 */
 /* 面板底色 = 官方会话面 --tdt-surface-base（官方 chat 页即此色）：
    官方 ReasoningRow 展开行是 sticky + background:var(--tdt-surface-base)（ReasoningRow.module.css），
    若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
-/* 内间距定尺（用户拍板：四边等距 34px）。纵向全在会话区上：官方 scroll 纵向固定 16px，
-   面板不再吃纵向 padding（否则只会加在标题栏外侧，标题分割线与首条消息之间仍是 16px——真机踩过），
-   由 .dsh-tdt-sv-frame 补 18px ⇒ 标题线下 16+18=34、底部 16+18=34；左右 = 16 + clearance(18px) = 34。 */
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
-.dsh-tdt-sv-frame{padding:18px 0;}
+/* 内间距定尺（用户拍板：四边等距 34px）。**纵向单一真源 = .dsh-tdt-sv-frame**：
+   官方 scroll 命中时自带纵向 16px，官方 frame 的纵向又不确定；不命中时官方 scroll 不存在，
+   .dsh-tdt-sv-body 又会盖掉 frame 的补足（同元素、body 在后面）。⇒ 统一收口（2026-10-03）：
+     · scroll 钩子把官方纵向 **归零**（双类名 0,2,0 压过 CSS module，不靠注入顺序）；
+     · frame 钩子**独占**上下（用长写，不碰左右 ⇒ 命中时左右仍走官方 scroll 的 16+clearance）。
+   ⇒ 命中 / 未命中两条路径纵向完全一致（34 / 16），消掉原先的 18px 跳变。左右始终 34px。 */
+.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:16px;}
+/* 官方 scroll 命中时纵向 16px 归零，纵向交 frame 独占（见上）。左右不动。 */
+.dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}
 /* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
    ⚠️ 用 flex:1 1 auto 而不是 flex:1（后者 basis=0）：官方 ChatView.frame 是 flex:auto，
    本仓与官方注入顺序不定 ⇒ 取 auto 这个共同值，两边顺序颠倒也不会改变布局。 */
@@ -50,8 +54,9 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
 .dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
-/* 会话区边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px；纵向由 frame 补足。 */
-.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px calc(var(--dsh-composer-side-clearance,16px) + 16px) 16px;}
+/* 会话区左右边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px。
+   **纵向不在这里**（官方类命中与否会打架，见上面 frame / scroll 两条钩子）⇒ 本类只写左右。 */
+.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding-left:calc(var(--dsh-composer-side-clearance,16px) + 16px);padding-right:calc(var(--dsh-composer-side-clearance,16px) + 16px);}
 .dsh-tdt-sv-col{width:100%;max-width:var(--dsh-chat-content-width,920px);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-chat-flow-gap,16px);}
 /* 官方 ChatView.column 的兄弟间距（:not([hidden]) 才占位；折叠掉的过程节点不留空档）。 */
 .dsh-tdt-sv-col>:not([hidden]):not(.dsh-tdt-sv-flowitem:empty)~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:var(--dsh-chat-flow-gap,16px);}
@@ -320,39 +325,52 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
-   官方没有「上游产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
-   ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**，
-      不再自己突出一块（用户 2026-10-03 点名）；**上 34 / 下 18** = 与「分隔线 → 会话正文首行」
-      同距（四边等距 34 口径），纵向节拍接得上。
-   ② 输入文件可能十几个 ⇒ **一行一个**（flex-direction:column），不用产出卡那种大卡。
-   ③ 长名省略 + 悬停全文；chip 宽 min(280px,100%)，窄弹窗也不撑破。
-   ④ **高度有上限 + 自己滚** ⇒ 20 个上游任务也不会把会话区压没（否则被 panel overflow 裁掉）。
+   官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
+   ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**；
+      **上 34 / 下 18** = 与「分隔线 → 会话正文首行」同距（四边等距 34 口径），纵向节拍接得上。
+   ② **横向排**（用户 2026-10-03 第二次点名：「不能竖着一溜列，太浪费空间」）：
+      flex-wrap:wrap 从左到右排、**排满自动换行**。chip 宽**跟文件名走**：
+      名字短就短、名字长就长，min-width:8ch 保底（不足留空）、max-width:20ch 封顶
+      （超出省略号 + 悬停 title 看全文）。⇒ 一行至少放得下 3 个。
+   ③ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
+      每块 = 任务名一行 + 产出物**同样横向排**；块前一条 **3px 浅色半透明竖线**，
+      跨「任务名 + 产出物」整块高度做分隔（不用框、不靠颜色块，跨两行才分得清谁是谁）。
+   ④ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
    ⑤ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-group{flex-direction:column;gap:6px;min-width:0;display:flex;}
+/* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
 .dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
 /* 组标题比内容**高一档**（12px/600/fg-2）⇒ 不靠颜色也分得出层级：标题 > 任务名 > 芯片 > 元信息。 */
 .dsh-tdt-sv-tfc-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:600;line-height:var(--tdt-line-sm);white-space:nowrap;}
-.dsh-tdt-sv-tfc-tasks{flex-direction:column;gap:10px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
+/* 前置任务块 —— 一排两个（窄容器降一列，见下方 @container）。 */
+.dsh-tdt-sv-tfc-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;min-width:0;}
+@container (width<=620px){.dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr);}}
+/* 任务块：左竖线横跨整块（任务名 + 产出物两行）做分隔 ⇒ 竖线用 ::before 绝对定位，
+   top/bottom 各留 2px 让它不贴边；padding-left 让文字离开竖线，不破坏面板左右 34px 基线。 */
+.dsh-tdt-sv-tfc-task{position:relative;flex-direction:column;gap:4px;min-width:0;padding-left:10px;display:flex;}
+.dsh-tdt-sv-tfc-task::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;background:var(--tdt-border,rgba(128,128,128,.35));border-radius:1.5px;opacity:.55;}
 .dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
 /* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
 .dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
 .dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
-/* 一行一个文件（用户口径）：不 wrap、不并排。
-   ⚠️ align-items:flex-start 必须留着：column 容器默认 stretch ⇒ 芯片会被拉到 max-width 那么宽，
-   悬停/点击热区变成整条 280px（看着像一整行按钮），实际只该有内容那么宽。 */
-.dsh-tdt-sv-tfc-files{flex-direction:column;align-items:flex-start;gap:2px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:min(280px,100%);padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:flex;text-align:left;}
+/* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
+   ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
+.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
+/* chip 宽度**跟文件名走**：flex:0 0 auto（不参与拉伸/收缩 ⇒ 短名就短），
+   宽度上下限落在 **label** 上：min 8ch（不足留空）/ max 20ch（超出省略号 + title 全文）。 */
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
 button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
 /* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
 .dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
 .dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;flex:0 1 auto;}
+/* 8～20 字宽：短名留空到 8 字、长名到 20 字截断（ch 按 0 字宽算，中文文件名实际更宽一点，
+   属可接受偏差；两端都有硬上限，不会出现「一个巨长名独占一行」）。 */
+.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;min-width:8ch;max-width:20ch;flex:0 1 auto;}
 .dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}

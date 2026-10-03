@@ -1166,8 +1166,8 @@ export function SessionViewModal(props: {
    */
   onOpenFile?: (path: string) => void
   /**
-   * 接收区（2026-10-03）：上游任务这次给了哪些文件（实例快照 `resolvedDeps`）。
-   * 空数组 = 无上游依赖 ⇒ 该组不渲染。
+   * 接收区（2026-10-03）：前置任务这次给了哪些文件（实例快照 `resolvedDeps`）。
+   * 空数组 = 无前置依赖 ⇒ 该组不渲染。
    */
   upstream?: readonly UpstreamInputView[]
   /** 随附区（2026-10-03）：本任务设置里加的文件（快照 `attachments` + 服务端解析的路径）。 */

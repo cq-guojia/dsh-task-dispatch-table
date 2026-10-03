@@ -145,7 +145,7 @@ export type LocaleKey =
   | 'listFilterAll' | 'listFilterEnabled' | 'listFilterDisabled' | 'listFilterAbnormal'
   | 'listFilterWorkspaceAll' | 'listSearchPlaceholder'
   | 'listRunning' | 'listNextNone' | 'listNever'
-  | 'listCreatedPrefix'
+  | 'listCreatedTag'
   | 'relNow' | 'relMinutes' | 'relHours' | 'relDays' | 'relPast'
   | 'relJustNow' | 'relMinutesAgo' | 'relHoursAgo' | 'relDaysAgo' | 'relWeeksAgo' | 'relMonthsAgo' | 'relYearsAgo'
   | 'relToday' | 'relTomorrow' | 'relWeeks' | 'relMonths' | 'relYears'
@@ -449,14 +449,14 @@ export const zh: Record<LocaleKey, string> = {
   deliverExpandAria: '展开全部 {count} 个交付文件',
   deliverCollapseAria: '收起交付文件列表',
   // —— 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ——
-  tfcReceived: '接收 · {files} 个文件 · 来自 {tasks} 个上游任务',
+  tfcReceived: '接收 · {files} 个文件 · 来自 {tasks} 个前置任务',
   tfcAttached: '随附 · {count} 个文件',
   tfcNoOutputs: '未声明产出',
   tfcRelOnly: '相对路径',
   tfcCrossWorkspace: '跨工作区',
   tfcNoPath: '路径未解析，不可打开',
   tfcMore: '全部 {count} 个文件',
-  tfcMoreTasks: '全部 {count} 个上游任务',
+  tfcMoreTasks: '全部 {count} 个前置任务',
   tfcCollapse: '收起',
   tfcFromUpload: '上传',
   tfcFromWorkspace: '工作区',
@@ -666,7 +666,7 @@ export const zh: Record<LocaleKey, string> = {
   listRunning: '运行中',
   listNextNone: '无后续执行',
   listNever: '尚未执行',
-  listCreatedPrefix: '创建于',
+  listCreatedTag: '{date} 创建',
   relNow: '即将执行',
   relMinutes: '{n} 分钟后',
   relHours: '{n} 小时后',
@@ -848,7 +848,7 @@ export const en: Record<LocaleKey, string> = {
   expandHint: 'Click any row to expand the event timeline of that run',
   listExpandHint: 'Expand task details',
   listDeferred: 'Delayed',
-  listDeferredTitle: 'Past its planned time but has not started. Usual causes: upstream task not finished / attachment missing / previous run still running.',
+  listDeferredTitle: 'Past its planned time but has not started. Usual causes: preceding task not finished / attachment missing / previous run still running.',
   eventsOf: 'Run log',
   eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
   recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',
@@ -1035,14 +1035,14 @@ export const en: Record<LocaleKey, string> = {
   deliverExpandAria: 'Expand all {count} delivered files',
   deliverCollapseAria: 'Collapse the delivered-files list',
   // —— Task file context (top input area: received / attached, 2026-10-03) ——
-  tfcReceived: 'Received · {files} file(s) from {tasks} upstream task(s)',
+  tfcReceived: 'Received · {files} file(s) from {tasks} preceding task(s)',
   tfcAttached: 'Attached · {count} file(s)',
   tfcNoOutputs: 'No outputs declared',
   tfcRelOnly: 'relative',
   tfcCrossWorkspace: 'other workspace',
   tfcNoPath: 'path unresolved — cannot open',
   tfcMore: 'All {count} files',
-  tfcMoreTasks: 'All {count} upstream tasks',
+  tfcMoreTasks: 'All {count} preceding tasks',
   tfcCollapse: 'Collapse',
   tfcFromUpload: 'uploaded',
   tfcFromWorkspace: 'workspace',
@@ -1252,7 +1252,7 @@ export const en: Record<LocaleKey, string> = {
   listRunning: 'Running',
   listNextNone: 'No further runs',
   listNever: 'Never run',
-  listCreatedPrefix: 'Created',
+  listCreatedTag: '{date} created',
   relNow: 'due now',
   relMinutes: 'in {n} min',
   relHours: 'in {n} h',
@@ -1276,7 +1276,7 @@ export const en: Record<LocaleKey, string> = {
   listEmptyFiltered: 'No task matches the current filter.',
   listSectionSchedule: 'Execution settings',
   listSectionAttachments: 'Attachments',
-  listSectionDepends: 'Upstream tasks',
+  listSectionDepends: 'Preceding tasks',
   listSectionPrompt: 'Prompt',
   listFieldWorkspace: 'Workspace',
   listFieldModel: 'Model',
