@@ -61,17 +61,21 @@
 
 ### 3. 裁决等会话真正空闲（`reconcile.ts`）
 
-```470:517:src/reconcile.ts
-  function noteRunSignal(sessionId: string, signal: string): TaskInstance | undefined { ... }
-
+```505:521:src/reconcile.ts
   function settleWhenIdle(sessionId: string): void {
     if (awaitingIdle.has(sessionId)) return
     const handle = handles.get(sessionId)
     if (handle === undefined) return
     awaitingIdle.add(sessionId)
     void handle.agent.whenIdle().then(
-      () => { awaitingIdle.delete(sessionId); settleBySessionId(sessionId, 'agent/idle') },
-      (error: unknown) => { awaitingIdle.delete(sessionId); logger.warn(...) },
+      () => {
+        awaitingIdle.delete(sessionId)
+        settleBySessionId(sessionId, 'agent/idle')
+      },
+      (error: unknown) => {
+        awaitingIdle.delete(sessionId)
+        logger.warn(`等待会话空闲失败（${sessionId}）：${String(error)}`)
+      },
     )
   }
 ```

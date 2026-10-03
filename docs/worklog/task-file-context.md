@@ -1,6 +1,6 @@
 # 任务文件上下文（会话里「接收 / 随附 / 产出」三面）
 
-> **状态**：🔵 落码完成（⏳ 真机验证待做）——2026-10-03 三轮评审 + 用户两轮点名定稿，冒烟 **459/0**
+> **状态**：🔵 落码完成（⏳ 真机验证待做）——2026-10-03 三轮评审 + 用户两轮点名定稿（本包自身当时冒烟 459/0；其后调度侧「回执裁决」改动另见 [`receipt-verdict.md`](receipt-verdict.md)，全仓冒烟 **482/0**）
 > **开工**：2026-10-03
 > **版本基线**（回滚用）：`package.json` version **0.0.1**，git HEAD **`4ecd310`**（2026-10-03）；开工时工作区另有 6 个上一轮未提交文件（`dist/client.js` / `dist/client.js.map` / `scripts/smoke.mjs` / `src/client/locales.ts` / `src/client/task-list.tsx` / `src/client/ui/tokens.ts`）⇒ **要回滚就回到 `4ecd310`，但要连同这批改动一起回退**。
 
@@ -205,9 +205,9 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 | 16 | **第四轮观感返工**：任务块加官方任务图标（`IconBranchOutlineRegular`）；文件名改走全站唯一实现 `MarqueeText`（跑马灯）；chip 改 `flex:1 1 auto` **平分容器** + `min-width:10ch`；组标题「随附」→「**任务附件**」；来源「工作区」→「**链接**」（与编辑处 `editorAttachmentLink` 统一） | `src/client/task-file-context.tsx`、`src/client/archive-session-css.ts`、`src/client/locales.ts` |
 | 17 | **创建时间人人有**：缺 `createdAt` 的老定义显示占位 `[创建时间未知]`（不整段消失、也不编造时间） | `src/client/task-list.tsx`、`src/client/locales.ts` |
 | 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
-| 19 | **回执裁决：去掉产物新鲜度闸**（用户拍板）——`checkReceipt` 只保留 `existsSync`，移除 `mtime > dispatched_at` 比较与 `dispatchedAtMs` 参数；`statSync` import 删除。⚠️ 同日**撤回**了先前那个「逐条校验、任一条通过即成功」的错误修复（`receiptsSince` 已删、`settleByReceipt` 恢复取 `latestReceipt`）。冒烟换成新口径 8 项（旧文件也通过 / 不存在才失败 / status 非法仍失败 / 目录算存在 / 空 outputs 通过 / 无回执 / 坏 JSON）⇒ **479/0** | `src/reconcile.ts`、`src/store.ts`、`src/dispatch.ts`、`scripts/smoke.mjs` |
+| 19 | **回执裁决三处口径修正**（用户 2026-10-03 拍板，全过程见 [receipt-verdict.md](receipt-verdict.md)）：① **去掉产物新鲜度闸** —— `checkReceipt` 只留 `existsSync`，移除 `mtime > dispatched_at` 比较与 `dispatchedAtMs` 参数、删 `statSync` import；② 提示词改**「以最后一次提交为准 + 再提交须带上先前的产出」**（工具描述 + 末段指令各一处）；③ 裁决改**等 `agent.whenIdle()`（会话真正空闲）** —— `turn/end` 只记信号不再裁决，sweep 的 `turn/end` 分支去掉 `continue`（防卡死实例永久挂 running）。⚠️ 同日**撤回**了先前「逐条校验、任一条通过即成功」的错误修复（`receiptsSince` 已删）。冒烟 ⇒ **482/0** | `src/reconcile.ts`、`src/receipt.ts`、`scripts/smoke.mjs` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 **467/0** · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 **482/0** · ⏳ **真机待验**。
 
 **真机必看的八条**（决定本轮成败）：
 1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上（上 34 / 下 16）。
