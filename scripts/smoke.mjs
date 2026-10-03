@@ -1305,9 +1305,9 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       /maxWidth:\s*["']40ch["']/.test(client) && /textOverflow:\s*["']ellipsis["']/.test(client))
     check('顶部输入区：文件名跑马灯走全站唯一实现 MarqueeText（不自己造第二套）',
       client.includes('MarqueeText') && client.includes('dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}'))
-    check('顶部输入区：前置任务标记 = **宽高相等的正方形序号块**（顶替 4px 竖线；竖线已删）',
-      client.includes('dsh-tdt-sv-tfc-seq') && client.includes('width:14px;height:14px;padding:0;border-radius:3px')
-      && client.includes('font-size:9px') && client.includes('String(index + 1)')
+    check('顶部输入区：前置任务标记 = **宽高相等的方块序号**，字号与基础信息「前置任务」行同源（var(--tdt-font-sm)）',
+      client.includes('dsh-tdt-sv-tfc-seq') && client.includes('width:16px;height:16px;padding:0;border-radius:4px')
+      && client.includes('font-size:var(--tdt-font-sm)') && client.includes('String(index + 1)')
       && !client.includes('dsh-tdt-sv-tfc-taskbar'))
     check('顶部输入区：序号块亮度 = chip-bg 底 + fg-2 字（比 plate/fg-3 亮一档、且非纯白）',
       /background:\s*var\(--tdt-chip-bg/.test(client) && /color:\s*var\(--tdt-fg-2/.test(client)

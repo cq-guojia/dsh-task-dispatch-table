@@ -3279,12 +3279,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    与主界面「基础信息 · 附加文件」同名（task-list.tsx）**同一口径**。
    ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
 .dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
-/* 前置任务序号徽标（用户 2026-10-03 三次点名定稿）：**顶替原来那条 4px 竖线**，
-   宽高**相等**（width=height=14px ⇒ 恒正方形，1～2 位数字都居中、不被内容撑长），9px 小号数字。
-   底色用 chip-bg（半透明中性、随明暗主题自适应）——比 plate **亮一档**，又**不是纯白**；
-   文字用 fg-2（非纯白、且比原先的 fg-3 **亮一点**）：「稍微亮一点点」。
+/* 前置任务序号徽标（用户 2026-10-03 四次点名定稿）：**顶替原来那条 4px 竖线**，
+   宽高**相等**的方块，字号**直接取 var(--tdt-font-sm)** —— 与主界面「基础信息」面板
+   底部「前置任务」那一行的正文**同一个字号变量**（用户原话：「大小太小了，样式参考主界面
+   任务列表展开的基础信息最下面那个前置任务，按那儿的样式大小就行」）。
+   方块 16px 容纳 12px 数字 + 一点余量；底色 chip-bg（非纯白、比 plate 亮一档），字色 fg-2。
    align-self:center 让它在 baseline 行里垂直居中，不贴文字基线。 */
-.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:14px;height:14px;padding:0;border-radius:3px;background:var(--tdt-chip-bg,rgba(128,128,128,.12));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:9px;line-height:1;font-variant-numeric:tabular-nums;}
+.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:16px;height:16px;padding:0;border-radius:4px;background:var(--tdt-chip-bg,rgba(128,128,128,.12));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);line-height:1;font-variant-numeric:tabular-nums;}
 /* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**
    （用户给的形状就是 [链接]foo.md，中间没有空格）。 */
 .dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
