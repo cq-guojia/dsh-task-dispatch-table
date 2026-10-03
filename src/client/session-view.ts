@@ -1380,21 +1380,29 @@ export function SessionViewModal(props: {
             }),
           ),
         ),
-        // 任务文件上下文（2026-10-03）：**在会话流之外**、标题条之下 ⇒ 不在任何轮次折叠里
-        // （用户 2026-10-02「不要放在折叠的那一段话里」）。顶部 = 输入（接收 / 随附），
-        // 产出卡留在会话末尾（官方 DeliverablesTail 同位）。两组都空 ⇒ 整块不渲染。
-        h(TaskFileContextPanel, {
-          upstream: upstream ?? [],
-          attached: attached ?? [],
-          workspacePath: workspacePath ?? null,
-          onOpenFile,
-          // ⚠️ 必须传 `tt`（带占位符插值的那个）：宿主 `t` 不做 {count} 替换，
-          // 传 t 会让「接收 · {files} 个文件」原样显示（第二轮评审抓出）。
-          t: tt,
-        }),
         // 会话区 = mirror/ChatView（frame > root > scroll > column > flowItem*，官方类优先）。
         // U11：预览面已上提到页面级 dock（弹窗不再自带分栏），此处只留会话区本身。
-        h(ChatViewFrame, { children: body }),
+        //
+        // ⚠️ **顶部输入区搬进了 ChatViewFrame 的 children**（column 内的**第一个**子项，
+        // 用户 2026-10-03：「上面那个还单独做了一个滚动条呀，不要单独的滚动条，上面就一直完整显示，
+        // 整个右边就一个滚动条，跟着往下面走就行」）：这样顶部区与后续会话内容**同处一个滚动容器**
+        // ⇒ 全弹窗只有**一个**滚动条；顶部区也不必再自带 max-height + overflow-y。
+        // 位置语义不变 —— 它仍在会话流的最上方、不在任何轮次折叠里（用户 2026-10-02
+        // 「不要放在折叠的那一段话里」），只是滚动归属变了。顶部 = 输入，产出卡仍在会话末尾同位。
+        h(ChatViewFrame, {
+          children: [
+            h(TaskFileContextPanel, {
+              upstream: upstream ?? [],
+              attached: attached ?? [],
+              workspacePath: workspacePath ?? null,
+              onOpenFile,
+              // ⚠️ 必须传 `tt`（带占位符插值的那个）：宿主 `t` 不做 {count} 替换，
+              // 传 t 会让「接收 · {files} 个文件」原样显示（第二轮评审抓出）。
+              t: tt,
+            }),
+            ...(Array.isArray(body) ? body : [body]),
+          ],
+        }),
       ),
     ),
     // 开分支确认框（用户拍板：必须先确认再 fork，防误点）——官方 primitives Modal + Button

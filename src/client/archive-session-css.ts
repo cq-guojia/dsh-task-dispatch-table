@@ -342,10 +342,16 @@ export const ARCHIVE_SESSION_CSS = `
       ⚠️ 历史上先后试过两种竖线：① 块前横跨两行的 3px 浅灰线、② 任务名前 4px 短线，**均已去掉**。
    ④b **来源 / 状态标记改方括号前置**（用户 2026-10-03）：形状是 [链接]foo.md ——
       原来挂最右边、被 flex 撑开，越看越像按钮；现在紧贴文件名前面、无间距。
-   ⑤ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
+   ⑤ **不再自带滚动**（用户 2026-10-03：「上面那个还单独做了一个滚动条呀……整个右边就一个滚动条，
+      跟着往下面走就行」）：顶部区已搬进 column 内、与会话内容**同一个滚动容器**，
+      原 max-height:min(38vh,340px) + overflow-y:auto 全部去掉 ⇒ 全弹窗只有右侧一个滚动条。
    ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
 /* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+/* 顶部输入区现在住在 column 里（与会话内容同一个滚动容器）⇒ column 的兄弟间距规则
+   会给「紧跟它之后的第一条消息」再加一道 margin-top，而它自己已有 padding-bottom ⇒ 多出一截。
+   这里把那一道抵消掉（写在 flow-item 间距规则之后，官方类命中与否都要生效）。 */
+.dsh-tdt-sv-col>.dsh-tdt-sv-tfc~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:0;}
 .dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
 .dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}

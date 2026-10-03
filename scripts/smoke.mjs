@@ -1292,8 +1292,12 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       && client.includes('tfcMore') && client.includes('tfcMoreTasks') && client.includes('tfcNoOutputs'))
     check('顶部输入区：左右内边距与官方会话区同一条基线、纵向四边等距（34/34/18）',
       client.includes('padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px'))
-    check('顶部输入区：高度有上限且自己滚（多任务/多文件压不没会话区）',
-      client.includes('max-height:min(38vh,340px)') && client.includes('overflow-y:auto'))
+    check('顶部输入区：**不自带滚动条**（已搬进 column 内与会话同滚，全弹窗只一个滚动条；用户 2026-10-03）',
+      !/\.dsh-tdt-sv-tfc\{[^}]*max-height/.test(client)
+      && !/\.dsh-tdt-sv-tfc\{[^}]*overflow-y/.test(client)
+      && /ChatViewFrame,\s*\{[\s\S]{0,400}TaskFileContextPanel/.test(client))
+    check('顶部输入区：抵消 column 兄弟间距（顶部区自带 padding-bottom，紧随的消息不再加 margin-top）',
+      client.includes('dsh-tdt-sv-tfc~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:0;}'))
     check('顶部输入区：文件**横向排**（用户 2026-10-03 二次点名「不能竖着一溜」）+ 组间细线分隔',
       client.includes('.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap')
       && !client.includes('.dsh-tdt-sv-tfc-files{flex-direction:column')

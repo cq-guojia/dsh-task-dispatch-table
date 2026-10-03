@@ -907,6 +907,26 @@ const statusStyleOf = (status: string): Record<string, string | number> | undefi
   status === 'failed' || status === 'skipped' ? { color: 'var(--tdt-danger)', fontWeight: 600 } : undefined
 
 /**
+ * 「允许延迟」：ISO 8601 时长（如 `PT4H`）→ 人话（如 `4 小时`）。
+ * 编辑器下拉本来就用这套人话（4 小时 / 30 分钟 / 1 天），基础信息面板此前却把裸 `PT4H` 亮给用户看，
+ * 用户看不懂（用户 2026-10-03 拍板：不能用看不懂的符号表示）。
+ * 解析不出（畸形值）⇒ 原样返回，不编造。
+ */
+function windowLabel(iso: string, t: Translate): string {
+  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso.trim())
+  if (m === null) return iso
+  const h = Number(m[1] ?? 0)
+  const min = Number(m[2] ?? 0)
+  const sec = Number(m[3] ?? 0)
+  if (h === 0 && min === 0 && sec === 0) return `0 ${t('unitMinutes')}`
+  // 24 小时整 ⇒ 规整为「1 天」（与编辑器下拉同口径）。
+  if (h > 0 && min === 0 && sec === 0 && h % 24 === 0) return `${h / 24} ${t('unitDays')}`
+  if (h === 0 && min > 0 && sec === 0) return `${min} ${t('unitMinutes')}`
+  if (h > 0 && min === 0 && sec === 0) return `${h} ${t('unitHours')}`
+  return iso
+}
+
+/**
  * 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
  * 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
  * 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
@@ -1000,8 +1020,16 @@ function TaskExpandPanel(props: {
     return () => { alive = false }
   }, [tab, row.id, runSig])
 
-  // 切到执行记录 / 筛选变化 ⇒ 重拉（alive 守卫防旧轮响应覆盖新轮；筛选变了顺手收起下钻行）。
+  // 筛选条件签名：用它判定「这次重拉是不是因为用户改了筛选」——只有这个才收起下钻行。
+  const filterSig = `${recStatus}|${recRange.from}|${recRange.to}|${recLimit}`
+  const prevFilterSig = useRef(filterSig)
+  // 切到执行记录 / 筛选变化 ⇒ 重拉。
+  // 早期实现「不论为何重拉都顺手把展开的下钻行清零」⇒ 自动重读（runSig 变，即任务跑完 / 状态翻转）时
+  // 也会把用户正展开看的下钻行合上，属无谓打扰（用户 2026-10-03 拍板：自动重读只刷新数据、别收起）。
+  // ⇒ **只在筛选条件真变了**时才收起下钻行；runSig 触发的自动重读只刷新列表、保留展开态。
   useEffect(() => {
+    const filterChanged = prevFilterSig.current !== filterSig
+    prevFilterSig.current = filterSig
     if (tab !== 'records') return
     let alive = true
     setRecLoading(true)
@@ -1019,13 +1047,15 @@ function TaskExpandPanel(props: {
       .then(({ rows }) => {
         if (!alive) return
         setRecords(rows)
-        setOpenInstance(null)
-        setEvents(null)
+        if (filterChanged) {
+          setOpenInstance(null)
+          setEvents(null)
+        }
       })
       .catch((error: unknown) => { if (alive) setRecError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setRecLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id, recStatus, recRange, recLimit, runSig])
+  }, [tab, row.id, recStatus, recRange, recLimit, runSig, filterSig])
 
   // 点一行 ⇒ 取该次执行的事件时间线（seq 升序 = 旧→新）。
   useEffect(() => {
@@ -1151,7 +1181,7 @@ function TaskExpandPanel(props: {
         InfoField({ label: t('listFieldWorkspace'), children: row.workspace }),
         InfoField({ label: t('listFieldModel'), children: modelText }),
         InfoField({ label: t('listFieldRetry'), children: String(row.retryMax) }),
-        InfoField({ label: t('listFieldWindow'), children: row.schedule.window }),
+        InfoField({ label: t('listFieldWindow'), children: windowLabel(row.schedule.window, t) }),
         InfoField({
           label: t('listSectionAttachments'),
           children: row.attachments.length === 0
@@ -1164,15 +1194,15 @@ function TaskExpandPanel(props: {
                 const anchor = item.anchorSessionId
                 const icon = h(FileTypeIcon, { path: item.name, size: 14 })
                 // 文件名**限宽**（用户 2026-10-03：这里原先**完全不限宽**，超长会把整行撑爆）。
-                // 只给上限、不设下限（短名就短着），超出出省略号 + hover 看全名；
+                // 只给上限、不设下限（短名就短着）；默认超长出省略号，hover 时跑马灯滚动看全名。
+                // 用 MarqueeText：文字只在我自己的裁剪盒里跑（外层 overflow:hidden），图标是隔壁 flex 项，
+                // 跑马灯永远不会压到前面的文件类型图标（用户 2026-10-03 重申：别盖住图标）。
                 // 宽度与**会话弹窗顶部区同名**（.dsh-tdt-sv-tfc-label）取同一口径 40ch。
-                const name = h('span', {
+                const name = h(MarqueeText, {
+                  text: item.name,
                   title: item.name,
-                  style: {
-                    maxWidth: '40ch', minWidth: 0, overflow: 'hidden',
-                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  },
-                }, item.name)
+                  style: { maxWidth: '40ch', minWidth: 0 },
+                })
                 return absPath !== undefined && anchor !== undefined && onOpenFile !== undefined
                   ? h('button', {
                     key: `${item.kind}:${item.name}`, type: 'button', title: absPath, className: 'dsh-tdt-info-out',
