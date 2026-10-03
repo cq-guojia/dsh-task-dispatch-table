@@ -749,6 +749,13 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('运行中状态条脉动（纯 CSS keyframes，零请求）', clientJs.includes('dsh-tdt-rail-pulse'))
   check('「异常」筛选（上次执行失败计数，0 不显示）', clientJs.includes('listFilterAbnormal'))
   check('拨片乐观更新（点了即变，不等轮询）', clientJs.includes('optimistic'))
+  // 2026-10-04 工作区候选真源统一（用户拍板「按最干净最规范的来」）：三处「选工作区」共一份真源，
+  // 任务列表顶部那个绕过基础层手搓的官方 Menu + 自绘锚点必须消失（全站只剩 SelectField 一个下拉实现）。
+  check('任务列表顶部工作区下拉已收编（SelectField，不再是手搓 Menu + 自绘锚点）',
+    clientJs.includes('dsh-tdt-ed-field') && !clientJs.includes('dsh-tdt-tl-ws'))
+  check('工作区候选走同一份「全部工作区」占位（listFilterWorkspaceAll 仍在）',
+    clientJs.includes('listFilterWorkspaceAll'))
+  check('前置任务第①级改取真源后仍有空态文案（editorDepTaskEmpty）', clientJs.includes('editorDepTaskEmpty'))
   check('刷新请求不被在途那轮吞掉（pendingRef 补跑）', clientJs.includes('pendingRef'))
   // 2026-09-30 真机返工：合并成一条太丑 ⇒ 恢复**两个独立小标签**；悬浮提示挂在真 DOM 上
   // （裸函数组件 ref 挂不上 ⇒ 官方 Tooltip 静默失效，正是用户「移上去没提示」的根因）。

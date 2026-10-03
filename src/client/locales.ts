@@ -139,6 +139,8 @@ export type LocaleKey =
   | 'unitMinutes' | 'unitHours' | 'unitDays'
   | 'editorDeps' | 'editorDepsHint' | 'editorDepAdd' | 'editorDepTask' | 'editorDepPickWsFirst'
   | 'editorDepTaskPh' | 'editorDepDisabledTag' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
+  // 2026-10-04：工作区候选改真源后，选到「没有任务的工作区」时的下一级空态（用户允许这种空态）
+  | 'editorDepTaskEmpty'
   | 'editorAdvanced' | 'editorAdvancedHelp' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
   | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorAgentTeam' | 'editorAgentTeamHint' | 'editorPreview' | 'editorPreviewHint'
   | 'editorPermission' | 'editorPermissionHint' | 'editorPermDefault' | 'editorPermReadOnly' | 'editorPermWorkspace' | 'editorPermFull'
@@ -654,6 +656,7 @@ export const zh: Record<LocaleKey, string> = {
   editorDepEmpty: '尚未配置前置任务',
   editorDepEmptyHint: '在下方选择工作区与任务后点「添加」',
   editorDepDisabledTag: '（已停用）',
+  editorDepTaskEmpty: '该工作区暂无可选任务',
   editorAdvanced: '高级设置',
   editorAdvancedHelp: '此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。',
   editorRetry: '重试次数',
@@ -1261,6 +1264,7 @@ export const en: Record<LocaleKey, string> = {
   editorDepEmpty: 'No prerequisites configured yet',
   editorDepEmptyHint: 'Pick a workspace and a task below, then add',
   editorDepDisabledTag: ' (disabled)',
+  editorDepTaskEmpty: 'No selectable task in this workspace',
   editorAdvanced: 'Advanced settings',
   editorAdvancedHelp: 'This is the advanced configuration area. Read each item\u2019s description before changing it; default values are recommended for routine tasks.',
   editorRetry: 'Retry attempts',

@@ -16,8 +16,8 @@ import { createElement as h, Fragment, useCallback, useEffect, useLayoutEffect, 
 import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatYmd, pad2 } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
-  IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconLoadingOutlineRegular,
-  IconPlayOutlineRegular, IconSearchOutlineRegular,
+  IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconFolderOpenOutlineRegular,
+  IconLoadingOutlineRegular, IconPlayOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
@@ -29,7 +29,7 @@ import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
 // 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { pinMsFor, sortRows } from '../task-sort.js'
-import { MarqueeText, SelectField, calendarLabelsOf, timeLabelsOf } from './editor-fields'
+import { MarqueeText, SelectField, calendarLabelsOf, timeLabelsOf, type EditorOption } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // 浮层结果提示（立即执行成功 / 被拒）：全站唯一实现，不许各处手写。
 import { FloatingToast, ensureToastStyle } from './toast-css'
@@ -85,36 +85,22 @@ const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-d
 const monoFont = 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
 /** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
 const NO_TIME = '--'
-/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。 */
+/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
+ *  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
 const CONTROL_H = 'var(--tdt-control-h-md)'
 /** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
 const WS_WIDTH = 180
-/**
- * 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉用它，
- * 保证「搜索 / 工作区」是**一样的高、一样的样式**。
- */
-const controlBoxStyle: Record<string, string | number> = {
-  display: 'inline-flex', alignItems: 'center', gap: '6px', boxSizing: 'border-box',
-  height: CONTROL_H, padding: '0 10px', borderRadius: 'var(--tdt-radius-sm)',
-  border: `1px solid var(--tdt-border)`, background: 'var(--tdt-surface-1)', color: 'var(--tdt-fg)',
-  fontFamily: 'inherit', fontSize: 'var(--tdt-font-sm)', lineHeight: 'var(--tdt-line-sm)', cursor: 'pointer',
-  transition,
-}
 
-// ── 顶部一排的样式注入（官方 Input 默认 32px 高，需压到与按钮同高；工作区按钮定长 + 省略号）──
+// ── 顶部一排的样式注入（官方 Input 默认 32px 高，需压到与按钮同高）──
 const TASK_LIST_CSS = [
   // 状态条运行中：整条明暗脉动（竖条不适合旋转，脉动更显眼）。
   '@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }',
   // 官方 Input 默认 32px 高 + 0.5px 边框 ⇒ 压到与按钮同高，并统一成同一套观感。
   // ⚠️ 必须 box-sizing:border-box：官方那 0.5px 边框若加在 28 之外，搜索框外框会比「工作区下拉」高约 2px
-  //    （用户 2026-10-01 点名「搜索框比下拉高两个像素」的根因）。下拉侧本就 border-box（见 controlBoxStyle）。
+  //    （用户 2026-10-01 点名「搜索框比下拉高两个像素」的根因）。下拉侧由基础层 `SelectField size="md"` 同高。
   `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
   `.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
   `.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
-  // 工作区下拉：**定长**（切选项时宽度不动，不再左右晃），内容超长尾部省略号。
-  // 展开后的列表项不受这条限制 ⇒ 可以显示完整长度。
-  `.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
-  '.dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }',
   // 记录表头吸顶（内容区定高滚动、表头不动）：原注释声称由 `.dsh-tdt-rec-head th` 接管，
   // 但迁移时这条规则丢了、表头实际不吸顶；这里补回，底色随卡片面（--tdt-surface-1）免得滚动时透内容。
   '.dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }',
@@ -1821,8 +1807,15 @@ export function TaskListView(props: {
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
   /** 即时拉 overview：任务跑完时左栏「下次预计执行」同步刷新（见 TaskExpandPanel）。 */
   refresh: () => void
+  /**
+   * 工作区筛选的**候选真源**（2026-10-04）：面板级唯一一份，来自 `GET /options`（宿主真实工作区），
+   * 由父级传入 —— **不许再从卡片数据反推**（反推会让「暂时没任务的工作区」凭空消失）。
+   * 空数组 = 取不到（degraded）⇒ 下拉显示「暂无可选」，不回退、不编造。
+   * `value` = 工作区 title（与宿主 `resolveWorkspace` 匹配口径一致）。
+   */
+  workspaces: readonly EditorOption[]
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props
+  const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
@@ -1831,7 +1824,6 @@ export function TaskListView(props: {
   ensureToastStyle()
   const [filter, setFilter] = useState<'all' | 'enabled' | 'disabled' | 'abnormal'>('all')
   const [workspace, setWorkspace] = useState<string>('')
-  const [menuOpen, setMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
   /** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
@@ -1850,7 +1842,8 @@ export function TaskListView(props: {
   // ⚠️ 这里**不放**每秒 setState：倒计时的时间流走 LiveText 的全局心跳（局部重渲染），
   // 列表本体只在数据真变时才动——这正是「每秒刷新会不会卡」的答案。
 
-  const workspaces = useMemo(() => [...new Set(rowsWithOptimistic.map(r => r.workspace))].sort(), [rowsWithOptimistic])
+  // ⚠️ 工作区候选**不再**从卡片数据反推（2026-10-04）：改用父级传入的真源 `props.workspaces`
+  // （`GET /options`，宿主真实工作区）⇒ 「暂时没有任务的工作区」也能选、也能筛。
   /**
    * 异常数 = 「最近一次**失败**」或「最近一次**未执行**」的任务数（全量统计，不受当前筛选影响）。
    * ⚠️ 2026-09-30 评审 P0：状态条已把 `skipped`（未执行）与 `failed` 一起标红，这里（与下面的异常筛选）
@@ -1893,10 +1886,12 @@ export function TaskListView(props: {
   const signature = visible.map(r => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join('|')
   const refOf = useFlip(signature)
 
-  const menuItems = useMemo(() => [
-    { id: '', label: t('listFilterWorkspaceAll') },
-    ...workspaces.map(name => ({ id: name, label: name })),
-  ], [workspaces, t])
+  // 工作区筛选候选：置顶「全部工作区」（`value: ''` = 不过滤）+ 真源里的每一个工作区。
+  // ⚠️ 真源由父级传入（`GET /options`），**不从卡片数据反推** ⇒ 暂时没任务的工作区也在列表里。
+  const workspaceOptions = useMemo<EditorOption[]>(
+    () => [{ value: '', label: t('listFilterWorkspaceAll') }, ...workspaces],
+    [workspaces, t],
+  )
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     // 主内容宽度锚点；浮动 loading 据此量右边缘，贴到「主窗口宽度」的右下角。
@@ -1924,20 +1919,21 @@ export function TaskListView(props: {
             placeholder: t('listSearchPlaceholder'),
             onChange: (event: { target: { value: string } }) => { setQuery(event.target.value) },
           }),
-          h(Menu, {
-            open: menuOpen,
-            // 与搜索框**同款同高**（controlBoxStyle），右侧带 chevron ⇒ 一眼看得出是下拉框。
-            anchor: h('button', {
-              type: 'button', className: 'dsh-tdt-tl-ws', style: controlBoxStyle,
-              onClick: () => { setMenuOpen(v => !v) },
-            },
-              h('span', { className: 'dsh-tdt-tl-ws-label' }, workspace === '' ? t('listFilterWorkspaceAll') : workspace),
-              h(IconChevronDownOutlineRegular, { size: 14 }),
-            ),
-            items: menuItems,
-            selectedId: workspace,
-            onSelect: (id: string) => { setWorkspace(id); setMenuOpen(false) },
-            onClose: () => { setMenuOpen(false) },
+          // 工作区下拉走 UI 基础层唯一实现（2026-10-04 收编）：此前这里是全站最后一个绕过基础层
+          // 手搓的官方 `Menu` + 自绘锚点（自管 `menuOpen`、自带 `.dsh-tdt-tl-ws` 样式）⇒ 已删。
+          // ⚠️ 观感有一处预期变化：选中态由「高亮」变「打勾」（`SelectField` 用 `selection:'check'`），
+          //    与编辑器两处「工作区」下拉完全一致。`size:'md'` = 28，与左侧搜索框同高；定宽 `WS_WIDTH` 不变。
+          h(SelectField, {
+            value: workspace,
+            options: workspaceOptions,
+            onChange: setWorkspace,
+            placeholder: t('listFilterWorkspaceAll'),
+            emptyLabel: t('editorNoOptions'),
+            ariaLabel: t('listFilterWorkspaceAll'),
+            icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
+            size: 'md',
+            width: WS_WIDTH,
+            marquee: true,
           }),
         ),
       ),

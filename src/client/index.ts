@@ -807,6 +807,11 @@ function TaskPage(props: {
     } catch { /* 删不掉就保持原样，不打断编辑 */ }
   }
   // 表单下拉数据面（P1）：宿主真实工作区 + 真实模型目录，进面板取一次（不轮询，目录稳定）。
+  //
+  // ⚠️ **工作区候选的唯一真源**（2026-10-04 用户拍板，见 docs/worklog/workspace-options-unification.md）：
+  // 三处「选工作区」（编辑器底部 / 编辑器「前置任务」第①级 / 任务列表顶部）**一律用这一份**，
+  // 不许再从任务表或卡片数据反推 —— 反推会让「暂时没有任务的工作区」凭空消失（用户以为它不存在）。
+  // 取不到（degraded）⇒ 空数组，下拉显示「暂无可选」，**不回退反推**（回退就是又造第二真源）。
   const [editorOptions, setEditorOptions] = useState<EditorOptions>(EMPTY_EDITOR_OPTIONS)
   useEffect(() => {
     let alive = true
@@ -1142,6 +1147,8 @@ function TaskPage(props: {
             onToggleEnabled: toggleTaskEnabled,
             // 立即执行（2026-10-03）：卡片确认框 → runTaskNow → 结果 Toast（成功绿 / 拒绝红）。
             onRunNow: runTaskNow,
+            // 工作区筛选候选 = **面板级唯一真源**（`/options`），列表不再从卡片数据反推（2026-10-04）。
+            workspaces: editorOptions.workspaces,
           })
           // ↓ 旧「任务配置」界面（JSON 逃生口 + 只读参数）：主界面重建后由常量关掉，暂不删——
           // 删了会牵出一串只服务于它的状态；等面板整体收尾（U6 调试债清理）时连状态一起清。

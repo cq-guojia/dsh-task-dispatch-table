@@ -31,7 +31,7 @@
 | 分段控件（滑动块） | `ui/Segmented.tsx` | `h(Segmented<'a' \| 'b'>, { value: v, size: 'md', variant: 'inset', items: [{ value: 'a', label: '甲', badge: 3 }], onChange: setV })` | ✅ 全站唯一（主面板 / 列表筛选 / 卡片三面板 / 编辑器官方覆写 ×3 / 星期多选 / 版本开关 / 预览两态） |
 | 按钮 / 图标钮 | `ui/Button.tsx`（`Button` / `IconButton`） | `h(Button, { variant: 'outline', size: 'md' }, '重置')` | ✅ 全站唯一 |
 | 输入框 / 前缀框 / 数字框 | `ui/Field.tsx`（`Input` / `PrefixedInput` / `NumberInput`） | `h(Input, { value: v, onChange, size: 'lg', error: bad })` | ✅ 全站唯一（原生 `<input type=number>` 已清零） |
-| 下拉 | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ 全站唯一（原生 `<select>` 已收编）。⚠️ **同一排多个下拉一律定宽**：窄的热点会让宽度随选项文字变化、换选项就跳；写法见 §五「同排下拉定宽」 |
+| 下拉 | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`） | `h(SelectField, { options, value: v, onChange, maxWidth: 200 })` | ✅ **全站唯一**（2026-10-04：任务列表顶部那个绕过基础层手搓的官方 `Menu` + 自绘锚点已收编，它是最后一处；过程 [`worklog/workspace-options-unification.md`](../../worklog/workspace-options-unification.md)）。⚠️ 例外仅剩**执行记录 tab 的两个原生 `<select>`**（最简测试界面，将随执行记录总查询页整体重写，见 [`features/execution-timeline.md`](features/execution-timeline.md)）。⚠️ **同一排多个下拉一律定宽**：窄的热点会让宽度随选项文字变化、换选项就跳；写法见 §五「同排下拉定宽」 |
 | **任务选择器（带搜索）** | `ui/TaskPicker.tsx`（⏳ **待建**，规格见 [`ui-foundation.md`](ui-foundation.md) §5.4） | `h(TaskPicker, { options: tasks, value, onChange, scope: workspace, recentLimit: 10, placeholder, searchPlaceholder })` | ⏳ 2026-10-03 立规格。**候选多（几十上百）或需要按名字/id 搜索的任务选择一律用它，不许用 `SelectField`，更不许原生 `<select>`**；未建成前也不许在使用点手搓 Input + Menu |
 | 开关 | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（皮肤在 `ui/controls-css.ts`） | `h('span', { className: 'dsh-tdt-switch' }, h(Switch, { checked, onChange }))` | ✅ 全站共用一个包装类（选中 success 绿只此一处） |
 | 日期 / 时间 | `ui/DateTime.tsx`（`DateField` / `TimeField`） | `h(DateField, { value: d, onChange, size: 'lg' })` | ✅ 全站唯一（自绘日历 + 时分列） |
@@ -101,7 +101,7 @@
 | 6 | 缺基础层件 | 无 `Textarea`（提示词框皮肤写在业务 CSS）、无 `Checkbox`（编辑器用裸 `<input type=checkbox>`） | 补进 `ui/` 后删业务皮肤 |
 | 7 | token 兜底字面量不统一 | `--tdt-fg` 兜底 `#1a1a1a` / `#1f2328` 两派；`--tdt-hover` 兜底 `rgba(128,128,128,.16)` / `rgba(127,127,127,.14)` | 兜底只在 `tokens.ts` 一处，调用点写 `var(--tdt-x)` 不带兜底 |
 | 8 | 实面反白字 | 下游仍有几处写死 `#fff` | 统一 `--tdt-on-signal` |
-| **9** | **任务选择器 + 下拉三份实现**（2026-10-03 登记，随执行记录总查询页一起做） | ① 执行记录 tab 的任务选择是**原生 `<select>`**（`index.ts:1294-1300`，无作用域、无搜索）；② 编辑器「前置任务」第②级用 `SelectField`（`task-editor.tsx:1939-1948`），作用域 `depWs` 是**内部** state；③ 工作区下拉**三份实现**：编辑器底部（`task-editor.tsx:1586-1597`，数据来自 `/options`）、编辑器「前置任务」第①级（`task-editor.tsx:1927-1936`，任务表反推）、任务列表顶部（`task-list.tsx:1927-1941`，**直接用官方 Menu**，卡片数据反推） | ① 建 `ui/TaskPicker.tsx`（规格 [`ui-foundation.md`](ui-foundation.md) §5.4），替换 ① 与 ②；② 工作区下拉统一到 `SelectField` + `/options` 真源（**另立工作包**，不在执行记录页顺手改）；③ 任务选项文案统一取 `[code] name` |
+| **9** | **任务选择器（带搜索）** —— 工作区候选真源与下拉实现已统一，剩余部分随执行记录总查询页做 | ✅ **2026-10-04 已完成**（[`worklog/workspace-options-unification.md`](../../worklog/workspace-options-unification.md)）：任务列表顶部手搓的官方 `Menu` 收编为 `SelectField`；三处「选工作区」候选**一律取 `GET /options` 真源**，不再从任务表 / 卡片数据反推。**剩余**：① 执行记录 tab 的任务选择是**原生 `<select>`**（`index.ts:1294-1300`，无作用域、无搜索）；② 编辑器「前置任务」第②级用 `SelectField`（`task-editor.tsx:1936-1945`），作用域 `depWs` 仍是**内部** state | 建 `ui/TaskPicker.tsx`（规格 [`ui-foundation.md`](ui-foundation.md) §5.4）后替换 ① 与 ②；任务选项文案统一取 `[code] name`（现在是两套：`index.ts:942-945` 的 `title（id）` vs `index.ts:930-941` 的 `[code] name`） |
 
 ---
 

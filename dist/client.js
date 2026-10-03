@@ -655,6 +655,7 @@ window.__ModuleLoader__.load({
 			editorDepEmpty: "尚未配置前置任务",
 			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
 			editorDepDisabledTag: "（已停用）",
+			editorDepTaskEmpty: "该工作区暂无可选任务",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
 			editorRetry: "重试次数",
@@ -1243,6 +1244,7 @@ window.__ModuleLoader__.load({
 			editorDepEmpty: "No prerequisites configured yet",
 			editorDepEmptyHint: "Pick a workspace and a task below, then add",
 			editorDepDisabledTag: " (disabled)",
+			editorDepTaskEmpty: "No selectable task in this workspace",
 			editorAdvanced: "Advanced settings",
 			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
@@ -41441,15 +41443,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				maxWidth: 320
 			}))));
 			const addedDepIds = new Set(draft.deps.map((dep) => dep.task));
-			const depWsOptions = [];
-			for (const task of tasks) {
-				if (task.workspace === "" || addedDepIds.has(task.id) || task.id === currentTaskId) continue;
-				if (!depWsOptions.some((option) => option.value === task.workspace)) depWsOptions.push({
-					value: task.workspace,
-					label: task.workspace
-				});
-			}
-			const [depWs, setDepWs] = (0, react.useState)(() => depWsOptions[0]?.value ?? workspaces[0]?.value ?? "");
+			const depWsOptions = workspaces;
+			const [depWs, setDepWs] = (0, react.useState)(() => workspaces[0]?.value ?? "");
 			const [depTaskId, setDepTaskId] = (0, react.useState)("");
 			const depTaskOptions = depWs === "" ? [] : tasks.filter((task) => task.workspace === depWs && !addedDepIds.has(task.id) && task.id !== currentTaskId).map((task) => ({
 				value: task.id,
@@ -41529,7 +41524,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setDepTaskId("");
 				},
 				placeholder: t("editorWorkspacePh"),
-				emptyLabel: t("editorDepEmpty"),
+				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
 				width: "100%"
@@ -41538,7 +41533,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				options: depTaskOptions,
 				onChange: setDepTaskId,
 				placeholder: depWs === "" ? t("editorDepPickWsFirst") : t("editorDepTaskPh"),
-				emptyLabel: t("editorNoOptions"),
+				emptyLabel: depWs === "" ? t("editorNoOptions") : t("editorDepTaskEmpty"),
 				ariaLabel: t("editorDepTask"),
 				disabled: depWs === "",
 				width: "100%"
@@ -41984,38 +41979,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const monoFont$1 = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
 		/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
 		const NO_TIME = "--";
-		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。 */
+		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
+		*  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
 		const CONTROL_H = "var(--tdt-control-h-md)";
 		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
 		const WS_WIDTH = 180;
-		/**
-		* 顶部控件的统一外壳（与官方 `Input` 同款观感）：工作区下拉用它，
-		* 保证「搜索 / 工作区」是**一样的高、一样的样式**。
-		*/
-		const controlBoxStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "6px",
-			boxSizing: "border-box",
-			height: CONTROL_H,
-			padding: "0 10px",
-			borderRadius: "var(--tdt-radius-sm)",
-			border: `1px solid var(--tdt-border)`,
-			background: "var(--tdt-surface-1)",
-			color: "var(--tdt-fg)",
-			fontFamily: "inherit",
-			fontSize: "var(--tdt-font-sm)",
-			lineHeight: "var(--tdt-line-sm)",
-			cursor: "pointer",
-			transition: transition$1
-		};
 		const TASK_LIST_CSS = [
 			"@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }",
 			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
 			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
-			`.dsh-tdt-tl-ws { width: ${WS_WIDTH}px; }`,
-			".dsh-tdt-tl-ws-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }",
 			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
 			".dsh-tdt-card { background: var(--tdt-surface-1); }",
 			".dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }",
@@ -43741,14 +43714,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props;
+			const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
 			ensureToastStyle();
 			const [filter, setFilter] = (0, react.useState)("all");
 			const [workspace, setWorkspace] = (0, react.useState)("");
-			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
 			const [query, setQuery] = (0, react.useState)("");
 			const [openId, setOpenId] = (0, react.useState)(null);
 			/** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
@@ -43763,7 +43735,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			(0, react.useEffect)(() => {
 				setOptimistic((cur) => Object.keys(cur).length === 0 ? cur : {});
 			}, [rows]);
-			const workspaces = (0, react.useMemo)(() => [...new Set(rowsWithOptimistic.map((r) => r.workspace))].sort(), [rowsWithOptimistic]);
 			/**
 			* 异常数 = 「最近一次**失败**」或「最近一次**未执行**」的任务数（全量统计，不受当前筛选影响）。
 			* ⚠️ 2026-09-30 评审 P0：状态条已把 `skipped`（未执行）与 `failed` 一起标红，这里（与下面的异常筛选）
@@ -43795,13 +43766,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				query
 			]);
 			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
-			const menuItems = (0, react.useMemo)(() => [{
-				id: "",
+			const workspaceOptions = (0, react.useMemo)(() => [{
+				value: "",
 				label: t("listFilterWorkspaceAll")
-			}, ...workspaces.map((name) => ({
-				id: name,
-				label: name
-			}))], [workspaces, t]);
+			}, ...workspaces], [workspaces, t]);
 			return (0, react.createElement)("div", { style: {
 				width: "100%",
 				display: "flex",
@@ -43856,25 +43824,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onChange: (event) => {
 					setQuery(event.target.value);
 				}
-			}), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-				open: menuOpen,
-				anchor: (0, react.createElement)("button", {
-					type: "button",
-					className: "dsh-tdt-tl-ws",
-					style: controlBoxStyle,
-					onClick: () => {
-						setMenuOpen((v) => !v);
-					}
-				}, (0, react.createElement)("span", { className: "dsh-tdt-tl-ws-label" }, workspace === "" ? t("listFilterWorkspaceAll") : workspace), (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 })),
-				items: menuItems,
-				selectedId: workspace,
-				onSelect: (id) => {
-					setWorkspace(id);
-					setMenuOpen(false);
-				},
-				onClose: () => {
-					setMenuOpen(false);
-				}
+			}), (0, react.createElement)(SelectField, {
+				value: workspace,
+				options: workspaceOptions,
+				onChange: setWorkspace,
+				placeholder: t("listFilterWorkspaceAll"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("listFilterWorkspaceAll"),
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
+				size: "md",
+				width: WS_WIDTH,
+				marquee: true
 			}))), visible.length === 0 ? (0, react.createElement)("p", { style: {
 				...metaStyle,
 				marginTop: "8px"
@@ -45081,7 +45041,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					openView(sessionId);
 				} : void 0,
 				onToggleEnabled: toggleTaskEnabled,
-				onRunNow: runTaskNow
+				onRunNow: runTaskNow,
+				workspaces: editorOptions.workspaces
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "var(--tdt-font-sm)" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,
 				onChange: (event) => {

@@ -1860,7 +1860,8 @@ export function TaskEditorDrawer(props: {
   //  - 布局：上 = 已选前置任务列表（空则显示上传投放区同款虚线占位框）；下 = 工作区→任务→添加；
   //  - 标题「添加前置任务」+「?」Tooltip：含义（强调『所有』）/ 判定方式（所有前置任务上一次
   //    执行必须成功，跳过不算失败）/ 执行时自动移交前置产出文件；
-  //  - 选择 = 先工作区后任务两级（工作区下拉只列确实有可选任务的工作区），点「添加」固定成一行，
+  //  - 选择 = 先工作区后任务两级（2026-10-04 起工作区候选 = **真源** `/options`，与另两处「选工作区」
+  //    完全一致；允许选到「没有任务的工作区」⇒ 下一级给空态文案，不再把空工作区藏起来），点「添加」固定成一行，
   //    行内「移除」可删；同一任务不能加两次（选项里直接排除已加的，按钮再拦一道）；
   //  - 支持跨工作区（每个前置任务可来自不同工作区）；加完工作区保留、任务清空，连着加第二个；
   //  - 三段式选择行（用户定稿）：左「工作区」定宽 112px（约 5~6 个字）居左，右「添加」
@@ -1868,14 +1869,11 @@ export function TaskEditorDrawer(props: {
   //  - 语义下拉删除（用户：选「同一天的」没有意义）——判定方式就是「上一次执行必须成功」，
   //    新增依赖固定写 `latest_success`；存量依赖的 semantics 原样保留（编辑无损往返）。
   const addedDepIds = new Set(draft.deps.map(dep => dep.task))
-  const depWsOptions: EditorOption[] = []
-  for (const task of tasks) {
-    if (task.workspace === '' || addedDepIds.has(task.id) || task.id === currentTaskId) continue
-    if (!depWsOptions.some(option => option.value === task.workspace)) depWsOptions.push({ value: task.workspace, label: task.workspace })
-  }
-  // 默认选中：第一个「还有可选任务」的工作区（列表本就按任务表顺序推导）；
-  // 全都加满了没有可选任务 ⇒ 退回第一个工作区（用户 2026-09-29）。
-  const [depWs, setDepWs] = useState(() => depWsOptions[0]?.value ?? workspaces[0]?.value ?? '')
+  // 工作区候选 = **真源**（`GET /options` 的宿主真实工作区，与编辑器底部、任务列表顶部同一份）。
+  // ⚠️ 2026-10-04 前这里是「从任务表反推只列有可选任务的工作区」⇒ 空工作区凭空消失（用户拍板修掉）。
+  const depWsOptions: EditorOption[] = workspaces
+  // 默认选中：真源里的第一个工作区；取不到（degraded ⇒ 空数组）就是未选，下拉显示「暂无可选」。
+  const [depWs, setDepWs] = useState(() => workspaces[0]?.value ?? '')
   const [depTaskId, setDepTaskId] = useState('')
   const depTaskOptions: EditorOption[] = depWs === ''
     ? []
@@ -1929,7 +1927,8 @@ export function TaskEditorDrawer(props: {
           options: depWsOptions,
           onChange: value => { setDepWs(value); setDepTaskId('') },
           placeholder: t('editorWorkspacePh'),
-          emptyLabel: t('editorDepEmpty'),
+          // 真源取不到（degraded ⇒ 空数组）⇒ 「暂无可选」，**不回退反推**（回退就是又造第二真源）。
+          emptyLabel: t('editorNoOptions'),
           ariaLabel: t('editorWorkspace'),
           icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
           width: '100%',
@@ -1941,7 +1940,8 @@ export function TaskEditorDrawer(props: {
           options: depTaskOptions,
           onChange: setDepTaskId,
           placeholder: depWs === '' ? t('editorDepPickWsFirst') : t('editorDepTaskPh'),
-          emptyLabel: t('editorNoOptions'),
+          // 选到「真源里有、但当前没有可选任务」的工作区 ⇒ 明说，而不是显示成「暂无可选」让人以为出错了。
+          emptyLabel: depWs === '' ? t('editorNoOptions') : t('editorDepTaskEmpty'),
           ariaLabel: t('editorDepTask'),
           disabled: depWs === '',
           width: '100%',

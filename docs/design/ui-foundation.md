@@ -282,10 +282,15 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 1. **`scope` 是受控入参，不是内部 state** —— 现有编辑器「前置任务」把工作区做成内部 `depWs`（`task-editor.tsx:1878`），导致外部（比如任务本身的工作区）改了它不知道；新控件必须由调用方持有作用域。
 2. **已选项掉出新作用域 ⇒ 显式提示，不静默清空**（静默清空会让用户以为自己没选过）。
 
-**已知待统一的口径冲突**（本控件不裁决，只暴露）：
+**✅ 已拍板的真源口径（2026-10-04，用户拍板「按最干净最规范的来」）**：
 
-- 工作区候选三处真源：编辑器底部走 `GET {prefix}/options`（`src/index.ts:639-693`）、任务列表顶部（`task-list.tsx:1927-1941`）与编辑器「前置任务」第①级（`task-editor.tsx:1927-1936`）都从任务表反推 ⇒ 见 [`ui-style-guide.md`](ui-style-guide.md) §三「待抽象」第 9 项。
-- 任务选项文案两套：`title（id）`（`index.ts:942-945`）vs `[code] name`（`index.ts:930-941`）⇒ 统一取 `[code] name`（后者注释明确「绝不把机器 id 当尾缀拖出来」），**搜索仍要能按 id 命中**。
+- **工作区候选的唯一真源 = `GET /options`**（`src/index.ts:641-643`）返回的宿主真实工作区，`value = title`。三处「选工作区」（编辑器底部 / 编辑器「前置任务」第①级 / 任务列表顶部）**共用面板级同一份**（`src/client/index.ts` 取一次、不轮询），**禁止再从任务表或卡片数据反推**——反推会让「暂时没有任务的工作区」凭空消失。
+- **取不到（degraded ⇒ 空数组）不回退**：下拉显示「暂无可选」。回退反推就等于又造第二真源。
+- **允许空态**：选到真源里有、但当前没有可选任务的工作区 ⇒ 下一级给空态文案（`editorDepTaskEmpty`），不隐藏该工作区。
+
+> 过程与三处坐标见 [`../worklog/workspace-options-unification.md`](../worklog/workspace-options-unification.md)；使用点规范见 [`ui-style-guide.md`](ui-style-guide.md) §二。
+
+**任务选项文案**（尚未统一，属于未决项 U30）：两套并存 —— `title（id）`（`index.ts:942-945`）与 `[code] name`（`index.ts:930-941`，注释明确「绝不把机器 id 当尾缀拖出来」）⇒ 统一取 `[code] name`，**搜索仍要能按 id 命中**。
 
 ---
 
