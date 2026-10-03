@@ -125,6 +125,7 @@ declare module '@deepseek-ai/dsh-client-ui-primitives' {
   export const IconAgentPresetOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconGlobeOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconAlarmClockOutlineRegular: ComponentType<{ size?: number; className?: string }>
+  export const IconPlayOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconQueueOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconCordisPluginOutlineRegular: ComponentType<{ size?: number; className?: string }>
   export const IconThinkOutlineRegular: ComponentType<{ size?: number; className?: string }>

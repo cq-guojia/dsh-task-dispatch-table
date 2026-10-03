@@ -47,4 +47,14 @@
 
 - `run_type` 目前**只写不读**（用户拍板：读取处与 UI 展示先不改）。
 - **手动重试**（从失败点重跑）未做 —— 见 [`../design/features/creation-edit.md`](../design/features/creation-edit.md) §十.5。
-- 真机验证待做。
+
+## 七、真机反馈两处修正（2026-10-03，用户装 `dist/` 实测后）
+
+用户真机点按后反馈两点，均已在 `src/client/task-list.tsx` + `src/client/primitives.d.ts` 落码：
+
+1. **图标错了**：原先用 `IconAlarmClockOutlineRegular`（闹钟），用户点名「闹钟不对，用播放三角」。改为官方 `IconPlayOutlineRegular`（`dsh-client-ui-primitives@0.2.0-rc.2` 实有），并在本地类型 shim `primitives.d.ts` 补导出。
+2. **记录不是立刻显示**：点了「立即执行」卡片马上变 loading（即 `runtime.markDispatched` 已置 running、记录已落库），但「执行记录」面板要等下一次 overview 轮询才刷新，等它显示时任务已经在跑了。修正：成功回调里 `setRunNonce(n => n + 1)`，把 `runNonce` 计入「执行记录」面板的拉取 effect 依赖（`[tab, row.id, recStatus, recRange, recLimit, runSig, runNonce, filterSig]`），**成功即立刻重拉**该面板，不等轮询。
+
+> 逻辑口径复核（用户原疑）：点击 ⇒ 服务端**立即**写一条 `dispatched` + 快照 + `run_type='manual'` 记录，并 `markDispatched`；发动仍交下一轮 Loop B（≤60s）。即「提前触发一次」——与用户理解一致，记录写入是即时的，之前的「延迟」纯属前端面板刷新时序。
+
+- 真机验证待做（仅剩：在跑时被拒提示、已停用任务仍可立即执行、确认框文案观感等回归，见 [`../PROGRESS.md`](../PROGRESS.md) §三.7）。

@@ -42708,6 +42708,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [deleting, setDeleting] = (0, react.useState)(false);
 			const [confirmRun, setConfirmRun] = (0, react.useState)(false);
 			const [runBusy, setRunBusy] = (0, react.useState)(false);
+			/**
+			* 立即执行成功后的「立刻重拉执行记录」信号（用户 2026-10-03 真机反馈：点了马上写记录，
+			* 但面板要等下一次轮询才显示 ⇒ 等它显示时任务都已经在跑了）。计数 +1 即触发下面那个 effect。
+			*/
+			const [runNonce, setRunNonce] = (0, react.useState)(0);
 			const [runToast, setRunToast] = (0, react.useState)(null);
 			const runSeq = (0, react.useRef)(0);
 			/** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
@@ -42765,6 +42770,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						tone,
 						seq: runSeq.current
 					});
+					if (outcome.ok) setRunNonce((n) => n + 1);
 				}).finally(() => {
 					setRunBusy(false);
 					setConfirmRun(false);
@@ -42839,6 +42845,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				recRange,
 				recLimit,
 				runSig,
+				runNonce,
 				filterSig
 			]);
 			(0, react.useEffect)(() => {
@@ -43446,7 +43453,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, t("cardDelete")), (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "md",
-				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 14 }),
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlayOutlineRegular, { size: 14 }),
 				onClick: () => {
 					setConfirmRun(true);
 				}

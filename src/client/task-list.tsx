@@ -17,7 +17,7 @@ import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, format
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
   IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconLoadingOutlineRegular,
-  IconSearchOutlineRegular,
+  IconPlayOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { interpolateTranslate, type Translate } from './locales'
@@ -1043,6 +1043,11 @@ function TaskExpandPanel(props: {
   // ── 立即执行（2026-10-03）：确认框 + 结果 Toast ──
   const [confirmRun, setConfirmRun] = useState(false)
   const [runBusy, setRunBusy] = useState(false)
+  /**
+   * 立即执行成功后的「立刻重拉执行记录」信号（用户 2026-10-03 真机反馈：点了马上写记录，
+   * 但面板要等下一次轮询才显示 ⇒ 等它显示时任务都已经在跑了）。计数 +1 即触发下面那个 effect。
+   */
+  const [runNonce, setRunNonce] = useState(0)
   const [runToast, setRunToast] = useState<{ text: string; tone: 'success' | 'error'; seq: number } | null>(null)
   const runSeq = useRef(0)
   /** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
@@ -1066,6 +1071,8 @@ function TaskExpandPanel(props: {
       const { text, tone } = runNowToast(outcome)
       runSeq.current += 1
       setRunToast({ text, tone, seq: runSeq.current })
+      // 成功 ⇒ 立刻重拉「执行记录」（不等轮询）：用户点了就要马上看见那条记录。
+      if (outcome.ok) setRunNonce(n => n + 1)
     }).finally(() => { setRunBusy(false); setConfirmRun(false) })
   }
 
@@ -1121,7 +1128,7 @@ function TaskExpandPanel(props: {
       .catch((error: unknown) => { if (alive) setRecError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setRecLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id, recStatus, recRange, recLimit, runSig, filterSig])
+  }, [tab, row.id, recStatus, recRange, recLimit, runSig, runNonce, filterSig])
 
   // 点一行 ⇒ 取该次执行的事件时间线（seq 升序 = 旧→新）。
   useEffect(() => {
@@ -1664,8 +1671,9 @@ function TaskExpandPanel(props: {
           onClick: () => { setConfirmDelete(true) },
         }, t('cardDelete')),
         // 立即执行（用户 2026-10-03）：插在删除与编辑**中间**；点了弹确认框，确认后提前触发一次调度。
+        // 图标用官方「播放三角」（IconPlayOutlineRegular）——用户点名闹钟不对（2026-10-03）。
         h(Button, {
-          variant: 'outline', size: 'md', icon: h(IconAlarmClockOutlineRegular, { size: 14 }),
+          variant: 'outline', size: 'md', icon: h(IconPlayOutlineRegular, { size: 14 }),
           onClick: () => { setConfirmRun(true) },
         }, t('cardRunNow')),
         h(Button, {

@@ -2124,9 +2124,13 @@ console.log('\n[14] runtime-index')
     const idxSrc = readFileSync(join(process.cwd(), 'src', 'index.ts'), 'utf8')
     check('接口层：新增 POST /tasks/run，业务性拒绝回 200 + ok:false（原因交前端 Toast）',
       idxSrc.includes('${DISPATCH_API_PREFIX}/tasks/run') && idxSrc.includes('scheduler.runNow(id)'))
-    check('前端：按钮组在删除与编辑之间插「立即执行」+ 确认框 + 结果 Toast',
+    check('前端：按钮组在删除与编辑之间插「立即执行」+ 确认框 + 结果 Toast + 播放三角图标 + 成功后立即重拉记录',
       tl.includes("t('cardRunNow')") && tl.includes("t('cardRunNowDesc')")
-      && tl.includes('renderRunConfirm') && tl.includes('FloatingToast'))
+      && tl.includes('renderRunConfirm') && tl.includes('FloatingToast')
+      && tl.includes('IconPlayOutlineRegular') && tl.includes('runNonce'))
+    const primSrc = readFileSync(join(process.cwd(), 'src', 'client', 'primitives.d.ts'), 'utf8')
+    check('图标：改用官方「播放三角」IconPlayOutlineRegular（用户点名闹钟不对，2026-10-03）',
+      primSrc.includes('IconPlayOutlineRegular'))
     const locSrc = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
     check('文案：确认框文案与中英双语键齐备',
       locSrc.includes("cardRunNowDesc: '你确定要立即执行此任务吗？'")
