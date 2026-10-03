@@ -3177,6 +3177,12 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 /* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
 .dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
+/* 源码态（有字节上限时）走**官方纯文本按行渲染**：等宽 + pre，不做语法高亮（官方 TextBody）。
+   ⚠️ 整条预览体只保留**一个**滚动容器（外层 body），内层不再自带滚动 ⇒ 不会出现两条滚动条。 */
+.dsh-tdt-sv-preview-plain{overflow:auto;}
+.dsh-tdt-sv-textdocument{box-sizing:border-box;min-width:100%;padding:8px;}
+.dsh-tdt-sv-textpage{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:1.6;white-space:pre;margin:0;}
+.dsh-tdt-sv-textline{padding:0 10px;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
 
@@ -6813,14 +6819,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				t
 			});
 			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
-			const language = (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path);
-			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, !markdown || sourceView ? (0, react.createElement)("div", {
+			const showSource = !markdown || sourceView;
+			const plain = maxBytes !== void 0;
+			return (0, react.createElement)("div", { className: plain ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-plain" : "dsh-tdt-sv-preview-body" }, showSource ? plain ? (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-textdocument",
+				"data-textpreview-plain": true
+			}, (0, react.createElement)("pre", { className: "dsh-tdt-sv-textpage" }, text.split("\n").map((line, index) => (0, react.createElement)("div", {
+				className: "dsh-tdt-sv-textline",
+				key: index
+			}, [line, "\n"])))) : (0, react.createElement)("div", {
 				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
 				"data-code-preview": true
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
 				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
 				code: text,
-				lang: language,
+				lang: (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path),
 				lineNumbers: true,
 				copyLabel: t("copyLabel"),
 				copiedLabel: t("copiedLabel"),
@@ -6832,12 +6845,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text,
 				labels: MD_LABELS
-			})), nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)(Button$2, {
+			})), truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-hint" }, t("previewTruncated", { size: t("previewTruncatedSize") }))) : nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				disabled: loadingMore,
 				onClick: loadMore
-			}, t("previewLoadMore"))) : null, truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-hint" }, t("previewTruncated", { size: t("previewTruncatedSize") }))) : null);
+			}, t("previewLoadMore"))) : null);
 		}
 		//#endregion
 		//#region src/client/file-browser.tsx

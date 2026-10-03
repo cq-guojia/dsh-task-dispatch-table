@@ -192,3 +192,33 @@ workspaceFiles.readBytes(sessionId, path)   // ❌ 少传 options
 
 **验证**：typecheck 绿 · 冒烟 **511/0**（+5 条）· build 过；**抽查产物**确认 `sandbox=""`、srcDoc、
 CSP 原文、禁用清单、256K 常量、截断提示键全部落位。
+
+## 三-十二 HTML 源码态真机返工：卡顿 / 双滚动条 / 加载更多（U30 续，2026-10-04）
+
+**用户真机反馈三条**（预览本身没问题，源码态问题大）：
+
+1. 只加载约 5000 行就**特别卡**；官方加载约 1 万行仍很流畅；
+2. 右边出现**两个滚动条**——一个很长基本不动，一个很细是正常的；
+3. 到底部是「加载更多」，**不需要**、且**被挡住一半没显示完**。
+
+**根因（三条同一个）**：我初版把源码塞进了官方 `CodeBlock`（Shiki 语法高亮）。
+**官方源码态根本不用它**——`TextBody`（`documentpreview:526-548`）是**纯文本按行 `<div>`**：
+`textDocument` → `<pre class=page>` → 每行一个 `<div class=line>`，等宽字体 + `white-space:pre`，
+**零高亮**（CSS 也只有 `.textDocument/.page/.line`，`documentpreview:491`）。
+
+- 卡顿：5000 行走 Shiki 高亮 ⇒ 极慢；官方纯文本 ⇒ 上万行无压力；
+- 双滚动条：`CodeBlock` 自带滚动容器 + 外层 `.dsh-tdt-sv-preview-body{overflow:auto}` ⇒ 两层各一条；
+- 「加载更多」：已截到 256K 就不该再翻页，按钮既无意义又遮挡提示。
+
+**修复（照官方 `TextBody`）**：
+
+| 改动 | 要点 |
+|---|---|
+| 源码态改纯文本按行渲染 | 有字节上限（HTML）时走 `data-textpreview-plain` + `<pre>` + 按行 `<div>`，**不做语法高亮** |
+| 单一滚动容器 | 仅外层 body 滚动（`.dsh-tdt-sv-preview-plain{overflow:auto}`），内层不再自带滚动 ⇒ 不再两条 |
+| 去掉「加载更多」 | 截到上限 ⇒ 直接末尾一行提示「因文件过大，仅显示前 256 KB 的内容」，不再渲染按钮 |
+
+**保留**：md / 普通文本的源码态仍走 `CodeBlock`（那些文件小，高亮有价值，且是既有行为，不动）。
+
+**验证**：typecheck 绿 · 冒烟 **514/0**（+3 条）· build 过；抽查产物确认纯文本容器、按行 div、
+截断提示分支均已落位。

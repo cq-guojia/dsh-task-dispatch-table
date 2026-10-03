@@ -530,44 +530,55 @@ export function TextPreview(props: {
   if (loading || text === null) {
     return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
   }
-  // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
-  // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
-  const language = languageForPath(path)
   const showSource = !markdown || sourceView
-  return h('div', { className: 'dsh-tdt-sv-preview-body' },
+  // ⚠️ 有字节上限的源码态（HTML）**必须走官方纯文本按行渲染**，不能塞 CodeBlock：
+  // 官方 `TextBody`（documentpreview lib/client.js:526-548）就是纯文本 div 按行、等宽 + white-space:pre，
+  // **不做语法高亮** ⇒ 上万行也流畅。此前用 CodeBlock(Shiki) 高亮 5000 行 ⇒ 极卡，
+  // 且 CodeBlock 自带滚动容器 + 外层 overflow:auto ⇒ **出现两条滚动条**（真机 2026-10-04）。
+  const plain = maxBytes !== undefined
+  return h('div', {
+    className: plain ? 'dsh-tdt-sv-preview-body dsh-tdt-sv-preview-plain' : 'dsh-tdt-sv-preview-body',
+  },
     showSource
-      ? h('div', {
-          className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
-          'data-code-preview': true,
-        },
-        h(CodeBlock, {
-          className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
-          code: text,
-          lang: language,
-          lineNumbers: true,
-          // ⚠️ 绝不能传 wrap（源码事实，primitives@0.1.7-rc.2 lib/index.js:10689 + :9285）：
-          // 官方 CodeBlock 的换行钮只在 wrap === undefined 时渲染（onWrap 有值才画；
-          // 传了 wrap ⇒ onWrap 为 undefined ⇒ 官方 **omit** 掉换行钮，按钮直接消失）。
-          // 不传 ⇒ 官方内部 localWrapped 默认 true（默认折行），点钮切不折行，全由官方管。
-          copyLabel: t('copyLabel'),
-          copiedLabel: t('copiedLabel'),
-          toolbarLabels: {
-            codeLabel: t('codeBlockLabel'),
-            wrapLabel: t('diffWrapLabel'),
-            unwrapLabel: t('diffUnwrapLabel'),
+      ? (plain
+        ? h('div', { className: 'dsh-tdt-sv-textdocument', 'data-textpreview-plain': true },
+            h('pre', { className: 'dsh-tdt-sv-textpage' },
+              text.split('\n').map((line, index) =>
+                h('div', { className: 'dsh-tdt-sv-textline', key: index }, [line, '\n']))))
+        // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
+        // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
+        : h('div', {
+            className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
+            'data-code-preview': true,
           },
-        }))
+          h(CodeBlock, {
+            className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
+            code: text,
+            lang: languageForPath(path),
+            lineNumbers: true,
+            // ⚠️ 绝不能传 wrap（源码事实，primitives@0.1.7-rc.2 lib/index.js:10689 + :9285）：
+            // 官方 CodeBlock 的换行钮只在 wrap === undefined 时渲染（onWrap 有值才画；
+            // 传了 wrap ⇒ onWrap 为 undefined ⇒ 官方 **omit** 掉换行钮，按钮直接消失）。
+            // 不传 ⇒ 官方内部 localWrapped 默认 true（默认折行），点钮切不折行，全由官方管。
+            copyLabel: t('copyLabel'),
+            copiedLabel: t('copiedLabel'),
+            toolbarLabels: {
+              codeLabel: t('codeBlockLabel'),
+              wrapLabel: t('diffWrapLabel'),
+              unwrapLabel: t('diffUnwrapLabel'),
+            },
+          })))
       : h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS })),
-    nextOffset !== null
-      ? h('div', { className: 'dsh-tdt-sv-older' },
-          h(Button, { variant: 'outline', size: 'sm', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
-      : null,
-    // (b) 超过上限：**不在显眼处提醒**，只在滚到底部（即不再有「加载更多」时）给一行提示。
+    // 截到上限 ⇒ **不再出「加载更多」**（用户 2026-10-04：已经这么卡了还加载什么更多），
+    // 直接在末尾给一行提示：「因文件过大，仅显示前 256 KB 的内容」。
     truncated
       ? h('div', { className: 'dsh-tdt-sv-older' },
           h('span', { className: 'dsh-tdt-sv-hint' },
             t('previewTruncated', { size: t('previewTruncatedSize') })))
-      : null,
+      : nextOffset !== null
+        ? h('div', { className: 'dsh-tdt-sv-older' },
+            h(Button, { variant: 'outline', size: 'sm', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
+        : null,
   )
 }
 
