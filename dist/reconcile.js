@@ -106,11 +106,23 @@ export function extractTokenUsage(event) {
         if (typeof holder !== 'object' || holder === null)
             continue;
         const u = holder;
-        const inOut = num(u.promptTokens) ?? num(u.inputTokens) ?? num(u.prompt_tokens);
         const outOut = num(u.completionTokens) ?? num(u.outputTokens) ?? num(u.completion_tokens);
         const cacheOut = num(u.cachedTokens) ?? num(u.cacheTokens) ?? num(u.cached_tokens)
+            // 官方 TurnTokenUsage 用 cacheReadTokens（缓存读取）；用户真机核对过的会话用量即此套字段名。
+            ?? num(u.cacheReadTokens)
             ?? num(u.promptTokensDetails?.cachedTokens)
             ?? num(u.prompt_tokens_details?.cached_tokens);
+        // 输入（prompt）：先按常见命名取；再兜官方 TurnTokenUsage 的
+        // `uncachedInputTokens + cacheReadTokens + cacheWriteTokens` 与 `totalTokens − outputTokens`（两者等价）。
+        const uncached = num(u.uncachedInputTokens);
+        const cacheRead = num(u.cacheReadTokens);
+        const cacheWrite = num(u.cacheWriteTokens);
+        const total = num(u.totalTokens);
+        const inOut = num(u.promptTokens) ?? num(u.inputTokens) ?? num(u.prompt_tokens)
+            ?? (uncached !== undefined || cacheRead !== undefined || cacheWrite !== undefined
+                ? (uncached ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0)
+                : undefined)
+            ?? (total !== undefined && outOut !== undefined ? Math.max(0, total - outOut) : undefined);
         // 三者任一有值才算取到（避免对空 usage 对象误报；只给总数无法归属则不记）
         if (inOut !== undefined || outOut !== undefined || cacheOut !== undefined) {
             return { in: inOut, out: outOut, cache: cacheOut };
@@ -228,7 +240,21 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
         }
         finishTerminal(instance, 'failed', overWindow ? `${reason}:over-window` : reason, detail);
     }
-    /** 回执收敛（state-machine §1 判定树，决策 19 版；决策 41：工作区与合法值读快照）。 */
+    /**
+     * 回执收敛（state-machine §1 判定树，决策 19 版；决策 41：工作区与合法值读快照）。
+     *
+     * ⚠️ **逐条校验全部回执，任一条通过即成功**（2026-10-03 真机事故修正）。
+     * 事故：一次执行里 agent 交 4 次回执（3 次 `outputs:[]` + 1 次 `outputs:["uuid.txt"]`），
+     * 而旧代码 `latestReceipt` 只取 `seq DESC LIMIT 1` ⇒ 只用最后那句裁决；那句声明的产物
+     * mtime 不晚于派发时刻（output-stale）⇒ **本该成功的执行被判 failed**，
+     * 且前面 3 次「已完成、无产出」的合法申报被无声顶掉。
+     *
+     * 语义对齐人话：回执是 agent 的**完成申报**，可以反复修正（先说没产出、后来说有产出）。
+     * 判据是「**有没有一份可信的完成申报**」，不是「最后一句话说了什么」。
+     * ⇒ **倒序**逐条校验，取**最后一条通过**的那条作为裁决依据（尊重 agent 最终的有效声明，
+     * 同时不让它最后一句出错就把前面做对的事全盘否掉）。全条都不可通过时，才拿**最后一条**
+     * 的 reason 去失败收敛（保留最有诊断价值的那条）。
+     */
     function settleByReceipt(instance) {
         const snap = snapOf(instance);
         if (snap === undefined) {
@@ -238,17 +264,41 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
             return;
         }
         const dispatchedAtMs = Date.parse(instance.dispatched_at ?? instance.updated_at);
-        const receipt = store.latestReceipt(instance.id, instance.dispatched_at ?? undefined);
-        const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, dispatchedAtMs, receipt);
-        if (verdict.ok) {
+        const receipts = store.receiptsSince(instance.id, instance.dispatched_at ?? undefined);
+        if (receipts.length === 0) {
+            // 理论上不该到这（调用方都先判过有回执）；如实按缺回执收敛，不静默放过。
+            retryOrFail(instance, 'receipt-missing');
+            return;
+        }
+        // 倒序：后交的申报优先（agent 的修正）。
+        for (let i = receipts.length - 1; i >= 0; i -= 1) {
+            const receipt = receipts[i];
+            const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, dispatchedAtMs, receipt);
+            if (!verdict.ok)
+                continue;
             const payload = verdict.detail;
             const outputsField = Array.isArray(payload?.outputs) ? JSON.stringify(payload.outputs) : null;
+            // 留痕：本次一共收到几条回执、按哪一条判的（真机排查「到底按哪句判的」要靠它）。
+            store.appendEvent(instance.id, 'receipt_check', {
+                reason: 'receipt-pass',
+                detail: { receipts: receipts.length, usedTs: receipt.ts, skipped: receipts.length - 1 - i },
+            });
             finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail, outputsField);
+            return;
         }
-        else {
-            store.appendEvent(instance.id, 'receipt_check', { reason: verdict.reason, detail: verdict.detail });
-            retryOrFail(instance, verdict.reason ?? 'receipt-failed', verdict.detail);
+        // 全部不可通过：取**最后一条**（agent 最终声明）的 reason 失败收敛 —— 诊断价值最高。
+        const last = receipts[receipts.length - 1];
+        const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, dispatchedAtMs, last);
+        if (verdict.ok) {
+            // 到不了这里（上面已逐条判过），保底按失败收敛，绝不静默放过。
+            retryOrFail(instance, 'receipt-failed');
+            return;
         }
+        store.appendEvent(instance.id, 'receipt_check', {
+            reason: verdict.reason,
+            detail: { receipts: receipts.length, rejectedAll: true, lastTs: last.ts, verdict: verdict.detail },
+        });
+        retryOrFail(instance, verdict.reason ?? 'receipt-failed', verdict.detail);
     }
     /** 追问（决策 19 第二层）：跑完信号后无回执，对原会话再推一轮、重发回执命令。 */
     function nudge(instance) {

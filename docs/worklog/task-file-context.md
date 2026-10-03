@@ -173,28 +173,47 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 
 **处置**：铁律「不许编造数据」禁止凭空补时间，但用户要求**每个任务都要有这一行** ⇒ 取两者交集：缺值时显示**明确占位** `[创建时间未知]`，不再整段消失、也不假造时间。将来若要真值，可选方案 = 用任务定义文件的 mtime 回填（但那是「最后修改」而非「创建」，语义有偏差），需用户拍板。
 
-### 2. 顺带查清：`output-stale` 失败的日志形态（用户问「为什么报失败」）
+### 2. 查清并修掉：`output-stale` 误判失败（用户「明显感觉是有点问题的」）
 
-用户贴的执行记录：回执**报了 4 次**（10:14:01/02/03 三次 `outputs:[]`，10:14:05 一次 `outputs:["uuid.txt"]`），最终 `failed` / `output-stale`。
+用户贴的执行记录：回执**报了 4 次**（10:14:01/02/03 三次 `outputs:[]`，10:14:05 一次 `outputs:["uuid.txt"]`），最终 `failed` / `output-stale`。用户困惑：**「文件明明在，为什么判失败」**。
 
-**判定链**（`reconcile.ts`）：
+**结论：任务是成功的，是插件的裁决逻辑把它判成了失败。** 两个独立缺陷叠加：
 
-```
-settle 只在两处触发：① settleBySessionId（收到 turn/end 等跑完信号）
-                    ② sweep 轮询
-回执到达时**没有跑完信号** ⇒ 不裁决（注释：agent 可能还没交命令）
-10:14:06 第二个 turn/end 到达 ⇒ settleByReceipt
-  → store.latestReceipt() 取**最新**那条 = 10:14:05 的 outputs:["uuid.txt"]
-  → checkReceipt: mtimeMs <= dispatchedAtMs ⇒ output-stale ⇒ retryOrFail ⇒ failed
-```
+#### 缺陷 A（真 bug，本次事故的直接原因）：多回执只看最后一条
 
-即：**前三条空产出回执从未被裁决过**，等真要裁决时已经换成了带 `uuid.txt` 的第 4 条；它的 mtime 不晚于派发时刻（10:13:00.171）⇒ 判 stale。
+`store.latestReceipt` = `ORDER BY seq DESC LIMIT 1` ⇒ 裁决**只认最后一句申报**。
+agent 交 4 次回执时，前面 3 次「完成、无产出」（`outputs=[]` ⇒ `checkReceipt` 直接通过）
+被第 4 条无声顶掉；而第 4 条声明的 `uuid.txt` 是**派发前就存在的旧文件**
+（`mtime <= dispatched_at` ⇒ `output-stale`）⇒ **本该成功的执行被判 failed**。
 
-**结论**：这不是新 bug，是 PROGRESS **U3 已知缺陷**的暴露——`checkReceipt` 三道闸只验「status 合法 / 文件存在 / `mtime > dispatched_at`」，**不验内容**。`uuid.txt` 存在但**不是本次运行写的**（本次没真正落盘或落在别处）⇒ 闸门正确拦下，UI 显示的却是「文件明明在」。
+人话：agent 反复修正自己的申报，插件却只听**最后一句**；最后一句错了，就把整件事判成失败。
 
-> ⚠️ 两次 `turn/end` 暴露的另一件事：**同一实例在 66 秒内交回执 4 次**，插件不拦重复回执（`settleBySessionId` 只看当前是否 running）。这会让「最后一次回执」成为唯一裁决依据，前面的正确回执被覆盖。属可改进项，**本轮未改**（改动判定树的时序风险高于收益），登记在此供后续拍板。
+**修法**（`store.ts` + `reconcile.ts`）：
 
+| # | 改动 | 语义 |
+|---|---|---|
+| 1 | 新增 `store.receiptsSince(id, afterIso)`（`ORDER BY seq ASC` 取**全部**） | 不再只取最后一条 |
+| 2 | `settleByReceipt` **倒序逐条校验**，取**最后一条通过**者为裁决依据 | 判据是「有没有一份可信的完成申报」；尊重 agent 最终的有效声明，又不让最后一句出错就把做对的事全盘否掉 |
+| 3 | 成功时留痕 `receipt_check / receipt-pass` 带 `{receipts, usedTs, skipped}` | 真机排查能直接看出「一共收到几条、按哪条判的」 |
+| 4 | 全条不通过时取**最后一条**的 reason 失败收敛 | 失败原因保留最有诊断价值的那条 |
+| 5 | `receipts.length === 0` 时如实 `receipt-missing` 收敛 | 不静默放过 |
 
+⚠️ **闸门没有被放松**：只有 stale 那一条时仍判失败（冒烟有反向断言）。本次修的是
+「多回执互相顶掉」，**不是**「放过旧产物」——`mtime > dispatched_at` 这道闸原样保留（属 U3，另议）。
+
+**冒烟 +4**：多回执全部取到且按序 / 判定差异成立（最后那条 stale 不过、前面空产出过）/
+倒序取最后一条通过者（本次修复点）/ 只有 stale 那条时仍失败（闸门未放松）⇒ **471/0**。
+
+#### 缺陷 B（设计问题，**本轮未改**）：裁决时机太被动
+
+`settle` 只在 ① `settleBySessionId`（收到 turn/end）② sweep 轮询（`tickMs` 默认 60s）两处触发。
+回执到达本身**不触发**裁决 ⇒ 回执 10:14:01 到了，插件一直等到 10:14:06 第二个 turn/end 才动，
+而那时拿到的已是第 4 条。sweep 里那个分支的条件是 `… && latestReceipt === undefined`，
+所以「已收到回执」的情况直接被 `continue` 掉了，**漏了「该裁决」这一步**。
+
+改法方向（待拍板）：有回执但仍未裁决时，sweep 直接 `settleByReceipt`（可配一个短宽限，
+给 agent 修正回执的时间）。⚠️ 本轮**不动**——改裁决时序会牵动「回执早到、agent 还在写产物」
+这类边界，风险高于当前收益；缺陷 A 修完后，本次事故的误判已消除。
 
 ## 五、落码记录
 
@@ -218,6 +237,7 @@ settle 只在两处触发：① settleBySessionId（收到 turn/end 等跑完信
 | 16 | **第四轮观感返工**：任务块加官方任务图标（`IconBranchOutlineRegular`）；文件名改走全站唯一实现 `MarqueeText`（跑马灯）；chip 改 `flex:1 1 auto` **平分容器** + `min-width:10ch`；组标题「随附」→「**任务附件**」；来源「工作区」→「**链接**」（与编辑处 `editorAttachmentLink` 统一） | `src/client/task-file-context.tsx`、`src/client/archive-session-css.ts`、`src/client/locales.ts` |
 | 17 | **创建时间人人有**：缺 `createdAt` 的老定义显示占位 `[创建时间未知]`（不整段消失、也不编造时间） | `src/client/task-list.tsx`、`src/client/locales.ts` |
 | 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
+| 19 | **回执裁决修正（缺陷 A）**：`store.receiptsSince()` 取全部回执（`seq ASC`）；`settleByReceipt` 倒序逐条校验、取**最后一条通过**者为依据；成功留痕 `receipt-pass {receipts,usedTs,skipped}`；全不过取最后一条 reason；空列表如实 `receipt-missing`。冒烟 +4（含「闸门未放松」反向断言）⇒ **471/0** | `src/store.ts`、`src/reconcile.ts`、`scripts/smoke.mjs` |
 
 **验证状态**：typecheck 绿 · build 绿 · 冒烟 **467/0** · ⏳ **真机待验**。
 

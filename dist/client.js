@@ -42851,10 +42851,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			})), (0, react.createElement)("div", { style: infoRecentStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react.createElement)("div", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("loading")) : renderLastRun(infoLast))));
+			} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react.createElement)(Loading, { label: t("loading") }) : renderLastRun(infoLast))));
 			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react.createElement)(Loading, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [

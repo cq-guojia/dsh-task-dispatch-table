@@ -17,7 +17,7 @@ import {
   purgeTmp, readSnapshot, readVersion, reconcileAttachments, saveSnapshot, saveVersion,
 } from '../dist/task-assets.js'
 import { TaskStore, parseInstanceSnapshot } from '../dist/store.js'
-import { createReconciler, extractTokenUsage } from '../dist/reconcile.js'
+import { createReconciler, checkReceipt, extractTokenUsage } from '../dist/reconcile.js'
 import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
 import { attachmentFileBlocks, buildMessage } from '../dist/dispatch.js'
 import { createRuntimeIndex } from '../dist/runtime-index.js'
@@ -392,6 +392,53 @@ try {
   )
   okScheduler.tick()
   check('重复 tick 不重复派发同一刻度', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
+  // ── 5b-2. 2026-10-03 真机事故回归：**多回执不得互相顶掉** ──
+  // 真机：一次执行里 agent 交 4 次回执（3 次 outputs:[] + 1 次 outputs:["uuid.txt"]），
+  // 而旧实现 `latestReceipt` = `seq DESC LIMIT 1` 只取最后一句；那句声明的产物 mtime 不晚于
+  // 派发时刻（output-stale）⇒ **本该成功的执行被判 failed**，前 3 次合法申报被无声顶掉。
+  // 修法 = `receiptsSince` 逐条校验、倒序取**最后一条通过**者为裁决依据。
+  {
+    const rsStore = new TaskStore(join(schedDir, 'multi-receipt.db'))
+    // 造一个「派发前就存在」的旧文件 ⇒ 它对本次派发必然 stale（mtime 早于 dispatched_at）
+    const staleFile = join(schedDir, 'uuid.txt')
+    writeFileSync(staleFile, 'old')
+    const dispAtMs = Date.now()
+    const dispAt = new Date(dispAtMs).toISOString()
+    const rId = 'r-task:2026-10-03T10:13:00.000Z'
+    rsStore.ensureInstance(rId, 'r-task', '2026-10-03', '2026-10-03T10:13:00.000Z', 'running', {
+      title: 'r', prompt: '', workspacePath: schedDir, validStatuses: ['ok'], maxAttempts: 1, window: 'PT2H',
+    })
+    rsStore.transition(rId, { status: 'running', dispatched_at: dispAt })
+    // 3 次「完成、无产出」+ 最后 1 次「产出那个旧文件」（stale）
+    for (let i = 0; i < 3; i += 1) rsStore.appendEvent(rId, 'receipt', { status: 'ok', outputs: [] })
+    rsStore.appendEvent(rId, 'receipt', { status: 'ok', outputs: ['uuid.txt'] })
+
+    const all = rsStore.receiptsSince(rId, dispAt)
+    check('多回执能全部取到、按发生顺序（旧实现只取最后一条）',
+      all.length === 4, `取到 ${all.length} 条（期望 4）`)
+
+    // 逐条判定：最后那条 stale 不通过；前面 outputs:[] 那条通过
+    const verdicts = all.map(r => checkReceipt(schedDir, ['ok'], dispAtMs, r))
+    const lastVerdict = verdicts[3]
+    const anyEarlierOk = verdicts.slice(0, 3).some(v => v.ok)
+    check('判定差异成立：最后那条 output-stale 不通过，但前面的空产出申报通过',
+      lastVerdict.ok === false && lastVerdict.reason === 'output-stale' && anyEarlierOk,
+      `最后=${lastVerdict.reason ?? 'ok'} / 前面有通过=${anyEarlierOk}`)
+    check('**裁决语义 = 倒序取最后一条通过者**（本次事故的修复点：任一条通过即成功）',
+      (() => {
+        let picked = null
+        for (let i = verdicts.length - 1; i >= 0; i -= 1) { if (verdicts[i].ok) { picked = i; break } }
+        return picked !== null && picked < 3 // 命中的是前面某条，而不是被最后一条顶掉
+      })(),
+      '应能回退到前面的合法回执')
+    // 反向：只有 stale 那一条时仍必须失败（别把闸门放得过松）。
+    // ⚠️ 不能用「更晚的 afterIso」来开窗——`appendEvent` 的 ts 只到毫秒，同毫秒内追加的行会被 `ts > ?` 滤掉。
+    const staleOnly = [{ ts: dispAt, detail: JSON.stringify({ status: 'ok', outputs: ['uuid.txt'] }) }]
+    check('闸门没被放松：只有 stale 那一条时仍判失败（不会一律放过）',
+      staleOnly.every(r => !checkReceipt(schedDir, ['ok'], dispAtMs, r).ok),
+      `不通过=${staleOnly.every(r => !checkReceipt(schedDir, ['ok'], dispAtMs, r).ok)}`)
+    rsStore.close()
+  }
   // 决策 41：派发快照随行固化——Loop B 发动 / 裁决只读快照，与任务设置解耦
   const snap0 = JSON.parse(dispatchedRows[0].snapshot ?? 'null')
   check(
@@ -2009,6 +2056,14 @@ console.log('\n[14] runtime-index')
       && sv.includes('anyAnchor'))
     check('附件行在拿到 path + 锚点会话时可点（走统一 openFile），缺则退回纯展示',
       tl.includes('onOpenFile(anchor, absPath)') && tl.includes('item.anchorSessionId'))
+    check('基础信息忙碌指示统一走右下角共用 Loading（不再另写「载入中」文字）',
+      tl.includes("? h(Loading, { label: t('loading') })")
+      // 基础信息右栏不再出现把 loading 文案直接当文字渲染的旧写法。
+      && !tl.includes("color: 'var(--tdt-fg-3)' } }, t('loading'))"))
+    const rec = readFileSync(join(process.cwd(), 'src', 'reconcile.ts'), 'utf8')
+    check('token 用量取数覆盖官方 TurnTokenUsage 字段名（uncachedInputTokens / cacheReadTokens / totalTokens）',
+      rec.includes('cacheReadTokens') && rec.includes('uncachedInputTokens') && rec.includes('totalTokens')
+      && rec.includes('cacheWriteTokens'))
   }
 
   store.close()

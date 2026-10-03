@@ -1163,7 +1163,8 @@ function TaskExpandPanel(props: {
         infoError !== null
           ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
           : infoLoading && !infoLoaded
-            ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('loading'))
+            // 忙碌指示**统一走右下角那个共用 Loading**（用户铁律：全站只有一个 loading，不在这里另写文字）。
+            ? h(Loading, { label: t('loading') })
             : renderLastRun(infoLast),
       ),
     ),
