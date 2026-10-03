@@ -828,9 +828,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   // 再于 2026-10-03 改版为「左配置 + 右最近执行」两栏纸表格。
   check('展开区为标签/值网格（InfoField + 纸表格网格）',
     clientJs.includes('InfoField') && clientJs.includes('infoGridRowStyle') && clientJs.includes('infoGridLabelStyle'))
-  check('基础信息改版：左配置 + 右最近执行（上次 / 最近成功 / 最近失败），且不再展示提示词',
-    clientJs.includes('infoSectionConfig') && clientJs.includes('infoSectionRecent')
-    && clientJs.includes('infoLastRun') && clientJs.includes('infoLastSuccess') && clientJs.includes('infoLastFailure')
+  check('基础信息改版：左配置 + 右「上次执行」（状态/完成时间/耗时/Token/备注），且不再展示提示词',
+    clientJs.includes('infoSectionConfig') && clientJs.includes('infoLastRun')
+    && clientJs.includes('infoNoRun') && clientJs.includes('infoFinishedAt')
     // 提示词从展开区移除（字段本身仍在数据类型里，但不再被渲染）。
     && !clientJs.includes('row.promptHead'))
   // 回归（2026-09-27）：ChatNodeSeat 必须把 groupPart 传给节点视图——漏传会把整步全画出来，
@@ -1979,6 +1979,16 @@ console.log('\n[14] runtime-index')
       st.includes("'scheduled_at < ?'") && st.includes("'ts < ?'") && !st.includes("'scheduled_at <= ?'"))
     check('时间范围 / 新列文案进产物（trAll / trCustom / colPlanned / colActualStart）',
       dist.includes('trAll') && dist.includes('trCustom') && dist.includes('colPlanned') && dist.includes('colActualStart'))
+  }
+
+  // ── 21. 基础信息改版追加（2026-10-03）：右栏定宽 + 产出物行 hover 底色 ──
+  {
+    const tl = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
+    const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    check('基础信息右栏定宽（窗口缩放只让左栏变）+ 产出物行 hover 有底色',
+      tl.includes("flex: 'none', width: '320px'")
+      && tl.includes('.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }')
+      && dist.includes('dsh-tdt-info-out:hover'))
   }
 
   store.close()

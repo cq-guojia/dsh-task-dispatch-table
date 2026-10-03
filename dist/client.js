@@ -708,11 +708,9 @@ window.__ModuleLoader__.load({
 			listNone: "（无）",
 			listDisabledTag: "（已停用）",
 			infoSectionConfig: "任务配置",
-			infoSectionRecent: "最近执行",
 			infoLastRun: "上次执行",
-			infoLastSuccess: "最近一次成功",
-			infoLastFailure: "最近一次失败",
 			infoNoRun: "还没有执行记录",
+			infoFinishedAt: "完成时间",
 			cardTabInfo: "基础信息",
 			cardTabRecords: "执行记录",
 			cardTabLogs: "日志",
@@ -1276,11 +1274,9 @@ window.__ModuleLoader__.load({
 			listNone: "(none)",
 			listDisabledTag: "(disabled)",
 			infoSectionConfig: "Task settings",
-			infoSectionRecent: "Recent runs",
 			infoLastRun: "Last run",
-			infoLastSuccess: "Last success",
-			infoLastFailure: "Last failure",
 			infoNoRun: "No runs yet",
+			infoFinishedAt: "Finished at",
 			cardTabInfo: "Basic info",
 			cardTabRecords: "Run records",
 			cardTabLogs: "Logs",
@@ -41773,6 +41769,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
 			".dsh-tdt-rec-out { background: var(--tdt-chip-bg); }",
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
+			".dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -42237,19 +42235,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			marginBottom: "10px"
 		};
 		const infoConfigStyle = {
-			flex: "1 1 58%",
+			flex: "1 1 auto",
 			minWidth: 0,
 			overflowY: "auto",
 			paddingRight: "2px"
 		};
 		const infoRecentStyle = {
-			flex: "0 1 42%",
-			minWidth: "220px",
+			flex: "none",
+			width: "320px",
 			overflowY: "auto",
 			borderLeft: "1px solid var(--tdt-border-faint)",
 			paddingLeft: "16px"
 		};
-		const infoGroupStyle = { marginBottom: "16px" };
 		const infoGroupTitleStyle = {
 			fontSize: "var(--tdt-font-xs)",
 			color: "var(--tdt-fg-3)",
@@ -42280,10 +42277,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/** 纸表格一行：左标签（定宽淡色）+ 右值（自适应换行）。 */
 		function InfoField(props) {
 			return (0, react.createElement)("div", { style: infoGridRowStyle }, (0, react.createElement)("span", { style: infoGridLabelStyle }, props.label), (0, react.createElement)("div", { style: infoGridValueStyle }, props.children));
-		}
-		/** 右栏一个小方块：标题 + 内容。 */
-		function InfoBlock(props) {
-			return (0, react.createElement)("div", { style: infoGroupStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, props.title), props.children ?? null);
 		}
 		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
 		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
@@ -42536,8 +42529,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props;
 			const [tab, setTab] = (0, react.useState)("info");
 			const [infoLast, setInfoLast] = (0, react.useState)(null);
-			const [infoSuccess, setInfoSuccess] = (0, react.useState)(null);
-			const [infoFailure, setInfoFailure] = (0, react.useState)(null);
 			const [infoLoading, setInfoLoading] = (0, react.useState)(false);
 			const [infoError, setInfoError] = (0, react.useState)(null);
 			const [infoLoaded, setInfoLoaded] = (0, react.useState)(false);
@@ -42587,32 +42578,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				let alive = true;
 				setInfoLoading(true);
 				setInfoError(null);
-				Promise.all([
-					fetchInstances({
-						taskId: row.id,
-						statuses: ["succeeded"],
-						limit: 1
-					}),
-					fetchInstances({
-						taskId: row.id,
-						statuses: ["failed", "skipped"],
-						limit: 1
-					}),
-					fetchInstances({
-						taskId: row.id,
-						statuses: [
-							"succeeded",
-							"failed",
-							"skipped",
-							"unknown"
-						],
-						limit: 1
-					})
-				]).then(([ok, bad, last]) => {
+				fetchInstances({
+					taskId: row.id,
+					statuses: [
+						"succeeded",
+						"failed",
+						"skipped",
+						"unknown"
+					],
+					limit: 1
+				}).then(({ rows }) => {
 					if (!alive) return;
-					setInfoSuccess(ok.rows[0] ?? null);
-					setInfoFailure(bad.rows[0] ?? null);
-					setInfoLast(last.rows[0] ?? null);
+					setInfoLast(rows[0] ?? null);
 					setInfoLoaded(true);
 				}).catch((error) => {
 					if (alive) setInfoError(error instanceof Error ? error.message : String(error));
@@ -42698,11 +42675,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				logRange,
 				logLimit
 			]);
-			const renderRunBlock = (title, instance) => {
-				if (instance === null) return (0, react.createElement)(InfoBlock, { title }, (0, react.createElement)("div", { style: {
+			const renderLastRun = (instance) => {
+				if (instance === null) return (0, react.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"
-				} }, t("listNone")));
+				} }, t("infoNoRun"));
 				const sid = instance.session_id;
 				const canOpenSession = sid !== null && onOpenSession !== void 0;
 				const canOpenFile = sid !== null && onOpenFile !== void 0;
@@ -42710,47 +42687,43 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const dur = durationMsOf(instance);
 				const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
 				const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
-				return (0, react.createElement)(InfoBlock, { title }, (0, react.createElement)("div", { style: {
-					display: "flex",
-					alignItems: "center",
-					gap: "6px",
-					flexWrap: "wrap"
-				} }, (0, react.createElement)(StatusIcon, { status: instance.status }), (0, react.createElement)("span", { style: {
-					fontSize: "var(--tdt-font-sm)",
-					fontWeight: 500,
-					color: infoStatusColorOf(instance.status)
-				} }, statusTextOf(instance.status, t)), (0, react.createElement)("span", { style: {
-					fontSize: "var(--tdt-font-sm)",
-					color: "var(--tdt-fg-2)"
-				} }, formatDateTime(instance.finished_at ?? instance.scheduled_at, {
-					seconds: true,
-					fallback: "—"
-				}))), dur !== null || tokens !== null ? (0, react.createElement)("div", { style: {
-					display: "flex",
-					gap: "10px",
-					flexWrap: "wrap",
-					marginTop: "4px",
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-2)"
-				} }, dur !== null ? (0, react.createElement)("span", null, `${t("colDuration")} ${formatDurationHms(dur)}`) : null, tokens !== null ? (0, react.createElement)("span", { title: tokensDetailOf(instance) }, `${t("colTokens")} ${tokens}`) : null) : null, note === "" ? null : (0, react.createElement)("div", { style: {
-					marginTop: "4px",
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-danger)",
-					wordBreak: "break-word"
-				} }, `${t("colNote")}：${note}`), canOpenSession ? (0, react.createElement)("div", { style: { marginTop: "6px" } }, (0, react.createElement)(Button$2, {
+				return (0, react.createElement)("div", null, InfoField({
+					label: t("colStatus"),
+					children: (0, react.createElement)("span", { style: {
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "6px",
+						fontWeight: 500,
+						color: infoStatusColorOf(instance.status)
+					} }, (0, react.createElement)(StatusIcon, { status: instance.status }), statusTextOf(instance.status, t))
+				}), InfoField({
+					label: t("infoFinishedAt"),
+					children: formatDateTime(instance.finished_at ?? instance.scheduled_at, {
+						seconds: true,
+						fallback: "—"
+					})
+				}), dur === null ? null : InfoField({
+					label: t("colDuration"),
+					children: formatDurationHms(dur)
+				}), tokens === null ? null : InfoField({
+					label: t("colTokens"),
+					children: (0, react.createElement)("span", { title: tokensDetailOf(instance) }, tokens)
+				}), note === "" ? null : InfoField({
+					label: t("colNote"),
+					children: (0, react.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
+				}), canOpenSession ? (0, react.createElement)("div", { style: { marginTop: "12px" } }, (0, react.createElement)(Button$2, {
 					variant: "outline",
 					size: "sm",
 					onClick: () => {
 						onOpenSession(sid);
 					}
-				}, t("viewSession"))) : null, outputs.length === 0 ? null : (0, react.createElement)("div", { style: { marginTop: "6px" } }, (0, react.createElement)("div", { style: {
-					marginBottom: "4px",
+				}, t("viewSession"))) : null, outputs.length === 0 ? null : (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
+					marginBottom: "6px",
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"
 				} }, t("colOutputs")), (0, react.createElement)("div", { style: {
 					display: "flex",
-					flexDirection: "column",
-					gap: "2px"
+					flexDirection: "column"
 				} }, outputs.map((output) => (0, react.createElement)("button", {
 					key: output,
 					type: "button",
@@ -42760,13 +42733,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						display: "flex",
 						alignItems: "center",
 						gap: "6px",
-						padding: "2px 0",
-						background: "none",
+						width: "100%",
+						boxSizing: "border-box",
+						padding: "4px 6px",
 						border: "none",
 						color: "var(--tdt-fg)",
 						font: "inherit",
 						fontSize: "var(--tdt-font-xs)",
 						textAlign: "left",
+						borderRadius: "var(--tdt-radius-xs)",
 						cursor: canOpenFile ? "pointer" : "default"
 					},
 					onClick: canOpenFile && onOpenFile !== void 0 && sid !== null ? () => {
@@ -42820,16 +42795,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					flexWrap: "wrap",
 					gap: "4px 12px"
 				} }, row.depends.map((dep) => (0, react.createElement)("span", { key: dep.id }, `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`)))
-			})), (0, react.createElement)("div", { style: infoRecentStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionRecent")), infoError !== null ? (0, react.createElement)("div", { style: {
+			})), (0, react.createElement)("div", { style: infoRecentStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react.createElement)("div", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"
 			} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react.createElement)("div", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-fg-3)"
-			} }, t("loading")) : infoLast === null && infoSuccess === null && infoFailure === null ? (0, react.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("infoNoRun")) : (0, react.createElement)("div", null, renderRunBlock(t("infoLastRun"), infoLast), renderRunBlock(t("infoLastSuccess"), infoSuccess), renderRunBlock(t("infoLastFailure"), infoFailure)))));
+			} }, t("loading")) : renderLastRun(infoLast))));
 			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react.createElement)(Loading, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [

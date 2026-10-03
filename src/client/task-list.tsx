@@ -123,6 +123,9 @@ const TASK_LIST_CSS = [
   // 不能再用 plate-hover（暗色下反而更淡 ⇒ 鼠标移上去底板就消失了）。
   '.dsh-tdt-rec-out { background: var(--tdt-chip-bg); }',
   '.dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }',
+  // 基础信息右栏「产出物」文件行：hover 给一层底色（用户 2026-10-03）。必须走 class——inline 会盖掉 :hover。
+  '.dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }',
+  '.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -675,16 +678,15 @@ const cardStyle: Record<string, string | number> = {
 const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-md)' }
 const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
 const faintStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
-// 基础信息改版（用户 2026-10-03）：左「任务配置」+ 右「最近执行」两栏；纸表格风格，字段不再挤成一坨。
-// 右栏内容可能多（会话 / 产出物）⇒ **只滚右栏**，左栏在当前高度内基本放得下。
+// 基础信息改版（用户 2026-10-03）：左「任务配置」+ 右「上次执行」两栏；纸表格风格，字段不再挤成一坨。
+// 右栏**定宽**（用户：窗口拖动时让左边变、右边别跟着变）；右栏内容可能多（产出物）⇒ **只滚右栏**。
 // `marginBottom: 10` 与面板顶部虚线下的 10px 间距对称 ⇒ 右栏滚动条上下离虚线一样远（用户 2026-10-03）。
 const infoWrapStyle: Record<string, string | number> = { flex: '1 1 auto', minHeight: 0, display: 'flex', gap: '18px', marginBottom: '10px' }
-const infoConfigStyle: Record<string, string | number> = { flex: '1 1 58%', minWidth: 0, overflowY: 'auto', paddingRight: '2px' }
+const infoConfigStyle: Record<string, string | number> = { flex: '1 1 auto', minWidth: 0, overflowY: 'auto', paddingRight: '2px' }
 const infoRecentStyle: Record<string, string | number> = {
-  flex: '0 1 42%', minWidth: '220px', overflowY: 'auto',
+  flex: 'none', width: '320px', overflowY: 'auto',
   borderLeft: '1px solid var(--tdt-border-faint)', paddingLeft: '16px',
 }
-const infoGroupStyle: Record<string, string | number> = { marginBottom: '16px' }
 const infoGroupTitleStyle: Record<string, string | number> = {
   fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', fontWeight: 600,
   marginBottom: '6px', letterSpacing: '0.02em',
@@ -700,13 +702,6 @@ function InfoField(props: { label: string; children: ReactNode }): ReturnType<ty
   return h('div', { style: infoGridRowStyle },
     h('span', { style: infoGridLabelStyle }, props.label),
     h('div', { style: infoGridValueStyle }, props.children),
-  )
-}
-/** 右栏一个小方块：标题 + 内容。 */
-function InfoBlock(props: { title: string; children?: ReactNode }): ReturnType<typeof h> {
-  return h('div', { style: infoGroupStyle },
-    h('div', { style: infoGroupTitleStyle }, props.title),
-    props.children ?? null,
   )
 }
 /** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
@@ -926,10 +921,8 @@ function TaskExpandPanel(props: {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
   // ── 基础信息面板（用户 2026-10-03 改版）──
-  // 右栏「最近执行」需要实例行的状态 / 时间 / 耗时 / Token / 会话 / 产出 ⇒ 打开时各取最近一条。
+  // 右栏只看「上次执行」一条 ⇒ 取最近一条终态实例（成功 / 失败 / 跳过 / 未知）。
   const [infoLast, setInfoLast] = useState<InstanceRow | null>(null)
-  const [infoSuccess, setInfoSuccess] = useState<InstanceRow | null>(null)
-  const [infoFailure, setInfoFailure] = useState<InstanceRow | null>(null)
   const [infoLoading, setInfoLoading] = useState(false)
   const [infoError, setInfoError] = useState<string | null>(null)
   const [infoLoaded, setInfoLoaded] = useState(false)
@@ -976,23 +969,16 @@ function TaskExpandPanel(props: {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  // 切到基础信息 ⇒ 取「上次执行 / 最近成功 / 最近失败」各一条（新→旧排序，limit 1 即最近）。
-  // 三条小查询分开取，保证「最近一次成功」哪怕在很久以前也能拿到（不靠最近 N 条里翻）。
+  // 切到基础信息 ⇒ 取「上次执行」一条（新→旧排序，limit 1 即最近的一条终态实例）。
   useEffect(() => {
     if (tab !== 'info') return
     let alive = true
     setInfoLoading(true)
     setInfoError(null)
-    Promise.all([
-      fetchInstances({ taskId: row.id, statuses: ['succeeded'], limit: 1 }),
-      fetchInstances({ taskId: row.id, statuses: ['failed', 'skipped'], limit: 1 }),
-      fetchInstances({ taskId: row.id, statuses: ['succeeded', 'failed', 'skipped', 'unknown'], limit: 1 }),
-    ])
-      .then(([ok, bad, last]) => {
+    fetchInstances({ taskId: row.id, statuses: ['succeeded', 'failed', 'skipped', 'unknown'], limit: 1 })
+      .then(({ rows }) => {
         if (!alive) return
-        setInfoSuccess(ok.rows[0] ?? null)
-        setInfoFailure(bad.rows[0] ?? null)
-        setInfoLast(last.rows[0] ?? null)
+        setInfoLast(rows[0] ?? null)
         setInfoLoaded(true)
       })
       .catch((error: unknown) => { if (alive) setInfoError(error instanceof Error ? error.message : String(error)) })
@@ -1060,10 +1046,11 @@ function TaskExpandPanel(props: {
     return () => { alive = false }
   }, [tab, row.id, logKeyword, logRange, logLimit])
 
-  // 右栏「最近执行」的一条：状态 + 时间 + 耗时 / Token + 备注 + 会话 / 产出物入口。
-  const renderRunBlock = (title: string, instance: InstanceRow | null): ReturnType<typeof h> => {
+  // 右栏「上次执行」：用与左栏同一套「标签—值」网格排布（状态 / 完成时间 / 耗时 / Token / 备注），
+  // 下面再挂「查看会话」与产出物列表（产出物行 hover 有底色，走 CSS class）。
+  const renderLastRun = (instance: InstanceRow | null): ReturnType<typeof h> => {
     if (instance === null) {
-      return h(InfoBlock, { title }, h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('listNone')))
+      return h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('infoNoRun'))
     }
     const sid = instance.session_id
     const canOpenSession = sid !== null && onOpenSession !== undefined
@@ -1074,37 +1061,42 @@ function TaskExpandPanel(props: {
       ? null
       : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
     const note = instance.note === null || instance.note === undefined ? '' : instance.note
-    return h(InfoBlock, { title },
-      h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
-        h(StatusIcon, { status: instance.status }),
-        h('span', { style: { fontSize: 'var(--tdt-font-sm)', fontWeight: 500, color: infoStatusColorOf(instance.status) } }, statusTextOf(instance.status, t)),
-        h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)' } }, formatDateTime(instance.finished_at ?? instance.scheduled_at, { seconds: true, fallback: '—' })),
-      ),
-      dur !== null || tokens !== null
-        ? h('div', { style: { display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)' } },
-          dur !== null ? h('span', null, `${t('colDuration')} ${formatDurationHms(dur)}`) : null,
-          tokens !== null ? h('span', { title: tokensDetailOf(instance) }, `${t('colTokens')} ${tokens}`) : null,
-        )
-        : null,
+    return h('div', null,
+      InfoField({
+        label: t('colStatus'),
+        children: h('span', {
+          style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 500, color: infoStatusColorOf(instance.status) },
+        },
+          h(StatusIcon, { status: instance.status }),
+          statusTextOf(instance.status, t),
+        ),
+      }),
+      InfoField({
+        label: t('infoFinishedAt'),
+        children: formatDateTime(instance.finished_at ?? instance.scheduled_at, { seconds: true, fallback: '—' }),
+      }),
+      dur === null ? null : InfoField({ label: t('colDuration'), children: formatDurationHms(dur) }),
+      tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: tokensDetailOf(instance) }, tokens) }),
       note === ''
         ? null
-        : h('div', { style: { marginTop: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)', wordBreak: 'break-word' } }, `${t('colNote')}：${note}`),
+        : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--tdt-danger)' } }, note) }),
       canOpenSession
-        ? h('div', { style: { marginTop: '6px' } },
+        ? h('div', { style: { marginTop: '12px' } },
           h(Button, { variant: 'outline', size: 'sm', onClick: () => { onOpenSession(sid) } }, t('viewSession')))
         : null,
       outputs.length === 0
         ? null
-        : h('div', { style: { marginTop: '6px' } },
-          h('div', { style: { marginBottom: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('colOutputs')),
-          h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } },
+        : h('div', { style: { marginTop: '14px' } },
+          h('div', { style: { marginBottom: '6px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('colOutputs')),
+          h('div', { style: { display: 'flex', flexDirection: 'column' } },
             outputs.map(output => h('button', {
               key: output, type: 'button', title: output,
               className: 'dsh-tdt-info-out',
               style: {
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0', background: 'none',
-                border: 'none', color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-xs)',
-                textAlign: 'left', cursor: canOpenFile ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', gap: '6px', width: '100%', boxSizing: 'border-box',
+                padding: '4px 6px', border: 'none', color: 'var(--tdt-fg)', font: 'inherit',
+                fontSize: 'var(--tdt-font-xs)', textAlign: 'left', borderRadius: 'var(--tdt-radius-xs)',
+                cursor: canOpenFile ? 'pointer' : 'default',
               },
               onClick: canOpenFile && onOpenFile !== undefined && sid !== null ? () => { onOpenFile(sid, output) } : undefined,
             },
@@ -1147,20 +1139,14 @@ function TaskExpandPanel(props: {
             ),
         }),
       ),
-      // 右栏：最近执行（上次执行 / 最近成功 / 最近失败），内容多只滚这一栏。
+      // 右栏：只看「上次执行」一条（用户 2026-10-03：别那么麻烦，成功显成功、失败显失败），内容多只滚这一栏。
       h('div', { style: infoRecentStyle },
-        h('div', { style: infoGroupTitleStyle }, t('infoSectionRecent')),
+        h('div', { style: infoGroupTitleStyle }, t('infoLastRun')),
         infoError !== null
           ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
           : infoLoading && !infoLoaded
             ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('loading'))
-            : infoLast === null && infoSuccess === null && infoFailure === null
-              ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('infoNoRun'))
-              : h('div', null,
-                renderRunBlock(t('infoLastRun'), infoLast),
-                renderRunBlock(t('infoLastSuccess'), infoSuccess),
-                renderRunBlock(t('infoLastFailure'), infoFailure),
-              ),
+            : renderLastRun(infoLast),
       ),
     ),
   )
