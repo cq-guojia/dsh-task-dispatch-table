@@ -1,6 +1,6 @@
 # 任务文件上下文（会话里「接收 / 随附 / 产出」三面）
 
-> **状态**：🔵 落码完成（⏳ 真机验证待做）——2026-10-03 三轮评审 + 用户两轮点名定稿（本包自身当时冒烟 459/0；其后调度侧「回执裁决」改动另见 [`receipt-verdict.md`](receipt-verdict.md)，全仓冒烟 **482/0**）
+> **状态**：✅ 完成封卷 ——2026-10-03 多轮评审 + 用户点名定稿，**用户已真机实测通过**（全仓冒烟 **488/0**；调度侧「回执裁决」改动另见 [`receipt-verdict.md`](receipt-verdict.md)）
 > **开工**：2026-10-03
 > **版本基线**（回滚用）：`package.json` version **0.0.1**，git HEAD **`4ecd310`**（2026-10-03）；开工时工作区另有 6 个上一轮未提交文件（`dist/client.js` / `dist/client.js.map` / `scripts/smoke.mjs` / `src/client/locales.ts` / `src/client/task-list.tsx` / `src/client/ui/tokens.ts`）⇒ **要回滚就回到 `4ecd310`，但要连同这批改动一起回退**。
 
@@ -232,10 +232,10 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 | 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
 | 19 | **回执裁决三处口径修正**（用户 2026-10-03 拍板，全过程见 [receipt-verdict.md](receipt-verdict.md)）：① **去掉产物新鲜度闸** —— `checkReceipt` 只留 `existsSync`，移除 `mtime > dispatched_at` 比较与 `dispatchedAtMs` 参数、删 `statSync` import；② 提示词改**「以最后一次提交为准 + 再提交须带上先前的产出」**（工具描述 + 末段指令各一处）；③ 裁决改**等 `agent.whenIdle()`（会话真正空闲）** —— `turn/end` 只记信号不再裁决，sweep 的 `turn/end` 分支去掉 `continue`（防卡死实例永久挂 running）。⚠️ 同日**撤回**了先前「逐条校验、任一条通过即成功」的错误修复（`receiptsSince` 已删）。冒烟 ⇒ **482/0** | `src/reconcile.ts`、`src/receipt.ts`、`scripts/smoke.mjs` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 **488/0** · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 **488/0** · ✅ **真机实测通过（用户 2026-10-03 装 dist/ 逐项核验，含滚动条留白收口）**。
 
 **真机必看的八条**（决定本轮成败）：
-1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上（上 34 / 下 16）。
+1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该由 frame 给 34px、tfc 不缩进）、上下留白是否对称（frame 17/17，见 §五·收尾）。
 2. **任务附件区**（本任务设置的附件）是否出现 —— 数据源是实例快照，不依赖宿主透传 file 块。
 3. 气泡下方是否还出现官方附件卡（顶部已显示同名文件时应**让位**，不重复显示）。
 4. **文件是否横向排 + 平分宽度**（不该再竖着一溜、也不该右边空一大块）。
@@ -244,6 +244,26 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 7. 前置任务文件点击：同工作区应能打开；**跨工作区的目录应灰掉不可点**（标「跨工作区」）。
 8. 卡片标题行尾部 `[2026-10-03 创建]`（老任务显示 `[创建时间未知]`）；筛选角标**多位数字也是正圆**。
 
+
+## 五·收尾：滚动条留白收口（2026-10-03 第六轮，用户真机实测后）
+
+把顶部输入区搬进同一滚动容器后（第五轮·12），会话区上下 / 左右的留白全部由 `frame`（`.dsh-tdt-sv-frame`，即滚动容器，同时挂 `dsh-tdt-sv-body` 的 `overflow:auto`）与顶部区块 `tfc`（`.dsh-tdt-sv-tfc`）承担。用户真机实测后给了最后两轮反馈，留白历经两次收敛：
+
+| # | 用户意见 | 处置 |
+|---|---|---|
+| 1 | 「滚动条上面为什么差这么多……上面的距离是下面的两倍」 | **上下对称**：`frame` 的 `padding-bottom` 由 16 → **34**（与 `padding-top` 齐平）；同时把 `tfc` 自身的 `padding-top` 由 34 → **0** —— 否则滚到顶时标题上方 = frame 34 + tfc 34 = 68px，而滚到底只有 frame 34px，正是用户看到的「两倍差」。 |
+| 2 | 「整个滚动条上下留的地方太多了，上下最多留现在的一半」「附件 / 前置任务那块左右又缩进去了，要和下面宽度一致」 | **上下减半**：`frame` 的 `padding-top/bottom` 由 34 → **17**（34/2）；**左右去缩进**：`tfc` 自身的左右 `padding` 由 34 → **0** —— `frame` 已经给会话正文 34px 左基线，`tfc` 再叠 34 会让顶部附件 / 前置任务区比下方多缩进 34px；去掉后顶部区与下方会话正文走同一条 `frame` 的 34px 左基线，宽度一致。 |
+
+**最终留白口径**（替换四点八 / 四点九·1 的旧值）：
+
+| 项 | 最终规则 |
+|---|---|
+| 左右 | `frame` 给 **34px**（= 官方 `ChatView.scroll` 基线）；`tfc` **不自带**左右 padding（0），否则双重缩进使顶部区比下方多缩一截 |
+| 上下 | `frame` **17 / 17**（用户要求"最多留现在的一半"：34 → 17）；`tfc` 自身 `padding` 上 0 / 下 18（顶部留白全交 `frame`） |
+
+**落码坐标**：`src/client/archive-session-css.ts`（`.dsh-tdt-sv-frame` 双类名独占上下 17/17、`.dsh-tdt-sv-tfc` 左右归 0 + 上 0 下 18）；`src/client/mirror/ChatView.tsx`（frame 钩子）。冒烟同步：frame 17/17 + tfc 左右 0 两项断言 ⇒ **488/0**。
+
+> ⚠️ 真机必看第 1 条（原"左右 34、上下 34/16"）以**本节奏为准**：左右 = frame 34（tfc 不自带）、上下 = frame 17/17。
 
 ## 六、遗留
 

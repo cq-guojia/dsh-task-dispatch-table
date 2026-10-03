@@ -1,6 +1,6 @@
 # 回执裁决口径与时机（三处拍板）
 
-> **状态**：✅ 已落码（冒烟 482/0），⏳ 真机验证待做
+> **状态**：✅ 完成封卷（用户 2026-10-03 拍板并落码，冒烟 482/0；调度侧口径已定型，见 state-machine.md §1）
 > **开工**：2026-10-03
 > **起因**：真机一次任务「文件明明在」却判 `failed / output-stale`，用户要求讲清原因并给出正确修法。
 > **定型**：[`../design/features/state-machine.md`](../design/features/state-machine.md) §1 判定树 · [`../design/data-model.md`](../design/data-model.md)「回执机制」· [`../design/external/dsh-capabilities.md`](../design/external/dsh-capabilities.md) §会话与派发（`whenIdle`）
