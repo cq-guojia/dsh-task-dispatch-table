@@ -238,12 +238,12 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 /* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
 .dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
-/* 源码态（有字节上限时）走**官方纯文本按行渲染**：等宽 + pre，不做语法高亮（官方 TextBody）。
-   ⚠️ 整条预览体只保留**一个**滚动容器（外层 body），内层不再自带滚动 ⇒ 不会出现两条滚动条。 */
-.dsh-tdt-sv-preview-plain{overflow:auto;}
-.dsh-tdt-sv-textdocument{box-sizing:border-box;min-width:100%;padding:8px;}
-.dsh-tdt-sv-textpage{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:1.6;white-space:pre;margin:0;}
-.dsh-tdt-sv-textline{padding:0 10px;}
+/* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
+   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条，滚动性能与官方一致。 */
+.dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
+.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
+/* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
+.dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
 

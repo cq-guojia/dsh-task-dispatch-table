@@ -1085,10 +1085,18 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('HTML 注入官方那条 CSP 且放在 head 首位（官方 :3844-3846）',
     /default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:;/.test(clientJs)
     && clientJs.includes('insertBefore'))
-  check('HTML 源码态截前 256K：上限常量 + 超限不再翻页 + 底部提示（≤256K 不提示）',
+  check('HTML 源码态截前 256K：静默自动翻页到上限，无「加载更多」按钮（官方一次给足 512K 同款）',
     clientJs.includes('SOURCE_MAX_BYTES')
-    && clientJs.includes('previewTruncated')
-    && /maxBytes:\s*isHtml\s*\?\s*SOURCE_MAX_BYTES/.test(clientJs))
+    && /maxBytes:\s*isHtml\s*\?\s*SOURCE_MAX_BYTES/.test(clientJs)
+    && /!truncated\s*&&\s*nextOffset\s*!==\s*null/.test(clientJs))
+  check('源码态有语法高亮（官方 CodeBody = CodeBlock，真机截图为证；勿再误改纯文本）',
+    /data-code-preview/.test(clientJs) && /lineNumbers:\s*true/.test(clientJs))
+  check('截断横幅在顶部、警告色、滚动区之外（官方截图同款「文件过大，仅显示前 512KB」）',
+    clientJs.includes('dsh-tdt-sv-truncated')
+    && /\.dsh-tdt-sv-truncated\{[^}]*flex:none/.test(clientJs)
+    && /\.dsh-tdt-sv-truncated\{[^}]*var\(--tdt-warning/.test(clientJs))
+  check('源码态单滚动容器（body overflow:hidden，滚动只在 CodeBlock 内部，官方 :has 规则同款）',
+    /\.dsh-tdt-sv-preview-body-code\{[^}]*overflow:hidden/.test(clientJs))
   check('HTML 默认进入预览（非源码），切换控件与 md 同构',
     /isHtml\s*&&\s*!sourceView/.test(clientJs) && /["']previewHtmlSwitchAria["']/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',

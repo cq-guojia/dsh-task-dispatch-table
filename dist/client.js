@@ -438,8 +438,8 @@ window.__ModuleLoader__.load({
 			previewHtmlSwitchAria: "HTML 视图切换",
 			previewHtmlFrame: "HTML 文档预览",
 			previewHtmlFailed: "无法预览这份 HTML 文档",
-			previewTruncated: "因文件过大，仅显示前 {size} 的内容。",
-			previewTruncatedSize: "256 KB",
+			previewTruncated: "文件过大，仅显示前 {size}",
+			previewTruncatedSize: "256KB",
 			explorerEmpty: "空目录",
 			explorerTruncated: "目录内容过多，仅显示部分条目。",
 			explorerCrumbsAria: "目录路径导航",
@@ -1027,8 +1027,8 @@ window.__ModuleLoader__.load({
 			previewHtmlSwitchAria: "HTML view switch",
 			previewHtmlFrame: "HTML document preview",
 			previewHtmlFailed: "This HTML document could not be previewed.",
-			previewTruncated: "Only the first {size} is shown because the file is too large.",
-			previewTruncatedSize: "256 KB",
+			previewTruncated: "File too large; showing only the first {size}.",
+			previewTruncatedSize: "256KB",
 			explorerEmpty: "Empty directory",
 			explorerTruncated: "The directory is too large; only some entries are shown.",
 			explorerCrumbsAria: "Directory path navigation",
@@ -3177,12 +3177,12 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
 /* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
 .dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
-/* 源码态（有字节上限时）走**官方纯文本按行渲染**：等宽 + pre，不做语法高亮（官方 TextBody）。
-   ⚠️ 整条预览体只保留**一个**滚动容器（外层 body），内层不再自带滚动 ⇒ 不会出现两条滚动条。 */
-.dsh-tdt-sv-preview-plain{overflow:auto;}
-.dsh-tdt-sv-textdocument{box-sizing:border-box;min-width:100%;padding:8px;}
-.dsh-tdt-sv-textpage{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:1.6;white-space:pre;margin:0;}
-.dsh-tdt-sv-textline{padding:0 10px;}
+/* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
+   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条，滚动性能与官方一致。 */
+.dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
+.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
+/* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
+.dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
 
@@ -6753,7 +6753,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				setLoading(true);
 				setErr(null);
 				setTruncated(false);
-				workspaceFiles.read(sessionId, path, {}).then((page) => {
+				workspaceFiles.read(sessionId, path, {}).then(async (page) => {
 					if (!alive) return;
 					const parsed = textPageOf(page);
 					if (isFailed(parsed)) {
@@ -6766,10 +6766,33 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						setLoading(false);
 						return;
 					}
-					setText(parsed.text);
-					const capped = maxBytes !== void 0 && byteLengthOf(parsed.text) >= maxBytes;
-					setTruncated(capped);
-					setNextOffset(capped || parsed.eof ? null : parsed.offset + parsed.lines);
+					if (maxBytes === void 0) {
+						setText(parsed.text);
+						setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+						setLoading(false);
+						return;
+					}
+					let merged = parsed.text;
+					let offset = parsed.eof ? null : parsed.offset + parsed.lines;
+					while (alive && offset !== null && byteLengthOf(merged) < maxBytes) {
+						let raw = null;
+						try {
+							raw = await workspaceFiles.read(sessionId, path, { offset });
+						} catch {}
+						if (!alive) return;
+						const next = raw === null ? null : textPageOf(raw);
+						if (next === null || isFailed(next)) {
+							setErr(next === null ? { key: "previewBadPayload" } : errView(next.failed));
+							setLoading(false);
+							return;
+						}
+						merged = `${merged}\n${next.text}`;
+						offset = next.eof ? null : next.offset + next.lines;
+					}
+					if (!alive) return;
+					setTruncated(offset !== null);
+					setText(merged);
+					setNextOffset(null);
 					setLoading(false);
 				}).catch((error) => {
 					if (!alive) return;
@@ -6800,14 +6823,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						setLoadingMore(false);
 						return;
 					}
-					setText((prev) => {
-						const merged = prev === null ? parsed.text : `${prev}\n${parsed.text}`;
-						if (maxBytes !== void 0 && byteLengthOf(merged) >= maxBytes) {
-							setTruncated(true);
-							setNextOffset(null);
-						} else setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
-						return merged;
-					});
+					setText((prev) => prev === null ? parsed.text : `${prev}\n${parsed.text}`);
+					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
 					setLoadingMore(false);
 				}).catch((error) => {
 					setErr(errView(error));
@@ -6820,14 +6837,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			});
 			if (loading || text === null) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
 			const showSource = !markdown || sourceView;
-			const plain = maxBytes !== void 0;
-			return (0, react.createElement)("div", { className: plain ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-plain" : "dsh-tdt-sv-preview-body" }, showSource ? plain ? (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-textdocument",
-				"data-textpreview-plain": true
-			}, (0, react.createElement)("pre", { className: "dsh-tdt-sv-textpage" }, text.split("\n").map((line, index) => (0, react.createElement)("div", {
-				className: "dsh-tdt-sv-textline",
-				key: index
-			}, [line, "\n"])))) : (0, react.createElement)("div", {
+			const banner = truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-truncated" }, t("previewTruncated", { size: t("previewTruncatedSize") })) : null;
+			const body = (0, react.createElement)("div", { className: showSource && !markdown ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-body-code" : "dsh-tdt-sv-preview-body" }, showSource ? (0, react.createElement)("div", {
 				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
 				"data-code-preview": true
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
@@ -6845,12 +6856,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			})) : (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-md" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
 				text,
 				labels: MD_LABELS
-			})), truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-hint" }, t("previewTruncated", { size: t("previewTruncatedSize") }))) : nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)(Button$2, {
+			})), !truncated && nextOffset !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				disabled: loadingMore,
 				onClick: loadMore
 			}, t("previewLoadMore"))) : null);
+			return (0, react.createElement)(react.Fragment, null, banner, body);
 		}
 		//#endregion
 		//#region src/client/file-browser.tsx

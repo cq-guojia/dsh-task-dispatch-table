@@ -16,7 +16,7 @@
 // range = 全量，上限 = 部署 maxFileBytes，docs 早前写的「32MiB」是部署值非协议常量）。
 // ⚠️ 两个方法的第三参都**必传**（全量也要传 `{}`）：远端按位置参数个数校验，少传即
 // `expected 3 business argument(s) plus an optional AbortSignal, got 2`（真机 2026-10-03）。
-import { Component, createElement as h, useEffect, useRef, useState } from 'react'
+import { Component, createElement as h, Fragment, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { Button, IconButton, MarqueeText, Segmented } from './ui'
 import {
@@ -471,7 +471,7 @@ export function TextPreview(props: {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [err, setErr] = useState<ErrView | null>(null)
-  // 累计字节数（按 UTF-8 实际字节算，与上限口径一致）；超限后置位，用于底部提示。
+  // 截断标记：有上限（HTML）且累计字节已达 ⇒ 顶部出横幅（官方位置/措辞），且不再有任何翻页按钮。
   const [truncated, setTruncated] = useState(false)
   useEffect(() => {
     let alive = true
@@ -481,16 +481,38 @@ export function TextPreview(props: {
     setErr(null)
     setTruncated(false)
     workspaceFiles.read(sessionId, path, {})
-      .then((page) => {
+      .then(async (page) => {
         if (!alive) return
         const parsed = textPageOf(page)
         if (isFailed(parsed)) { setErr(errView(parsed.failed)); setLoading(false); return }
         if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoading(false); return }
-        setText(parsed.text)
-        // 达上限即停：不出「加载更多」，并标记截断（底部给提示）。
-        const capped = maxBytes !== undefined && byteLengthOf(parsed.text) >= maxBytes
-        setTruncated(capped)
-        setNextOffset(capped || parsed.eof ? null : parsed.offset + parsed.lines)
+        // 无上限（md / 普通文本）：维持旧行为 —— 单页 + 「加载更多」按钮。
+        if (maxBytes === undefined) {
+          setText(parsed.text)
+          setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
+          setLoading(false)
+          return
+        }
+        // 有上限（HTML 源码态）：**静默自动翻页**直到累计达上限或 eof——官方「默认只显示前 512K」
+        // 就是一次给足、没有任何按钮（用户 2026-10-04：都截断了还要「加载更多」干什么）。
+        let merged = parsed.text
+        let offset: number | null = parsed.eof ? null : parsed.offset + parsed.lines
+        while (alive && offset !== null && byteLengthOf(merged) < maxBytes) {
+          // 逐页 await；页数有限（256K 上限 / 2MiB 页 ⇒ 通常一两页就到）。
+          let raw: Awaited<ReturnType<WorkspaceFilesFace['read']>> | null = null
+          try {
+            raw = await workspaceFiles.read(sessionId, path, { offset })
+          } catch { /* 落到下面的失败分支 */ }
+          if (!alive) return
+          const next = raw === null ? null : textPageOf(raw)
+          if (next === null || isFailed(next)) { setErr(next === null ? { key: 'previewBadPayload' } : errView(next.failed)); setLoading(false); return }
+          merged = `${merged}\n${next.text}`
+          offset = next.eof ? null : next.offset + next.lines
+        }
+        if (!alive) return
+        setTruncated(offset !== null) // 还有剩余 ⇒ 是被上限截断的
+        setText(merged)
+        setNextOffset(null)
         setLoading(false)
       })
       .catch((error: unknown) => {
@@ -509,16 +531,8 @@ export function TextPreview(props: {
         if (isFailed(parsed)) { setErr(errView(parsed.failed)); setLoadingMore(false); return }
         if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoadingMore(false); return }
         // 页间以 \n 拼接（官方页末行不带终止符）。
-        setText(prev => {
-          const merged = prev === null ? parsed.text : `${prev}\n${parsed.text}`
-          if (maxBytes !== undefined && byteLengthOf(merged) >= maxBytes) {
-            setTruncated(true)
-            setNextOffset(null)
-          } else {
-            setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
-          }
-          return merged
-        })
+        setText(prev => (prev === null ? parsed.text : `${prev}\n${parsed.text}`))
+        setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
         setLoadingMore(false)
       })
       .catch((error: unknown) => {
@@ -531,55 +545,49 @@ export function TextPreview(props: {
     return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
   }
   const showSource = !markdown || sourceView
-  // ⚠️ 有字节上限的源码态（HTML）**必须走官方纯文本按行渲染**，不能塞 CodeBlock：
-  // 官方 `TextBody`（documentpreview lib/client.js:526-548）就是纯文本 div 按行、等宽 + white-space:pre，
-  // **不做语法高亮** ⇒ 上万行也流畅。此前用 CodeBlock(Shiki) 高亮 5000 行 ⇒ 极卡，
-  // 且 CodeBlock 自带滚动容器 + 外层 overflow:auto ⇒ **出现两条滚动条**（真机 2026-10-04）。
-  const plain = maxBytes !== undefined
-  return h('div', {
-    className: plain ? 'dsh-tdt-sv-preview-body dsh-tdt-sv-preview-plain' : 'dsh-tdt-sv-preview-body',
+  // 截断横幅：**顶部**（官方位置，真机截图：橙字「文件过大，仅显示前 512KB」），在滚动区之外。
+  const banner = truncated
+    ? h('div', { className: 'dsh-tdt-sv-truncated' }, t('previewTruncated', { size: t('previewTruncatedSize') }))
+    : null
+  const body = h('div', {
+    className: showSource && !markdown
+      ? 'dsh-tdt-sv-preview-body dsh-tdt-sv-preview-body-code'
+      : 'dsh-tdt-sv-preview-body',
   },
     showSource
-      ? (plain
-        ? h('div', { className: 'dsh-tdt-sv-textdocument', 'data-textpreview-plain': true },
-            h('pre', { className: 'dsh-tdt-sv-textpage' },
-              text.split('\n').map((line, index) =>
-                h('div', { className: 'dsh-tdt-sv-textline', key: index }, [line, '\n']))))
-        // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
-        // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
-        : h('div', {
-            className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
-            'data-code-preview': true,
+      // 官方 code/CodeBody（sidebar-documentpreview lib/client.js:5033）同款参数：
+      // CodeBlock + lineNumbers: true + lang = languageForPath(path) + toolbar（复制 / 自动换行）。
+      // ⚠️ 官方源码态**有语法高亮**（真机截图为证）；此前误改纯文本是错认了 TextBody（那是
+      // 非代码文件的兜底渲染器）。卡顿的真根因 = 双滚动容器，已在 body-code 上收成单滚动。
+      ? h('div', {
+          className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
+          'data-code-preview': true,
+        },
+        h(CodeBlock, {
+          className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
+          code: text,
+          lang: languageForPath(path),
+          lineNumbers: true,
+          // ⚠️ 绝不能传 wrap（源码事实，primitives@0.1.7-rc.2 lib/index.js:10689 + :9285）：
+          // 官方 CodeBlock 的换行钮只在 wrap === undefined 时渲染（onWrap 有值才画；
+          // 传了 wrap ⇒ onWrap 为 undefined ⇒ 官方 **omit** 掉换行钮，按钮直接消失）。
+          // 不传 ⇒ 官方内部 localWrapped 默认 true（默认折行），点钮切不折行，全由官方管。
+          copyLabel: t('copyLabel'),
+          copiedLabel: t('copiedLabel'),
+          toolbarLabels: {
+            codeLabel: t('codeBlockLabel'),
+            wrapLabel: t('diffWrapLabel'),
+            unwrapLabel: t('diffUnwrapLabel'),
           },
-          h(CodeBlock, {
-            className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
-            code: text,
-            lang: languageForPath(path),
-            lineNumbers: true,
-            // ⚠️ 绝不能传 wrap（源码事实，primitives@0.1.7-rc.2 lib/index.js:10689 + :9285）：
-            // 官方 CodeBlock 的换行钮只在 wrap === undefined 时渲染（onWrap 有值才画；
-            // 传了 wrap ⇒ onWrap 为 undefined ⇒ 官方 **omit** 掉换行钮，按钮直接消失）。
-            // 不传 ⇒ 官方内部 localWrapped 默认 true（默认折行），点钮切不折行，全由官方管。
-            copyLabel: t('copyLabel'),
-            copiedLabel: t('copiedLabel'),
-            toolbarLabels: {
-              codeLabel: t('codeBlockLabel'),
-              wrapLabel: t('diffWrapLabel'),
-              unwrapLabel: t('diffUnwrapLabel'),
-            },
-          })))
+        }))
       : h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS })),
-    // 截到上限 ⇒ **不再出「加载更多」**（用户 2026-10-04：已经这么卡了还加载什么更多），
-    // 直接在末尾给一行提示：「因文件过大，仅显示前 256 KB 的内容」。
-    truncated
+    // 无上限的普通文本才保留「加载更多」；有上限的（HTML）永远不出按钮。
+    !truncated && nextOffset !== null
       ? h('div', { className: 'dsh-tdt-sv-older' },
-          h('span', { className: 'dsh-tdt-sv-hint' },
-            t('previewTruncated', { size: t('previewTruncatedSize') })))
-      : nextOffset !== null
-        ? h('div', { className: 'dsh-tdt-sv-older' },
-            h(Button, { variant: 'outline', size: 'sm', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
-        : null,
+          h(Button, { variant: 'outline', size: 'sm', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
+      : null,
   )
+  return h(Fragment, null, banner, body)
 }
 
 /**
