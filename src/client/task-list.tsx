@@ -127,11 +127,14 @@ const TASK_LIST_CSS = [
   // 基础信息右栏「产出物」文件行：hover 给一层底色（用户 2026-10-03）。必须走 class——inline 会盖掉 :hover。
   '.dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }',
   '.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }',
-  // 基础信息右栏「任务会话」（用户 2026-10-03 三次修订）：超链接样式——**常显虚线下划线** + hover 变蓝。
-  // ⚠️ ① `border: 0` 必须先清掉**按钮默认边框**（否则左/右/上会留一圈白框，用户点名「太丑」）；
-  //    ② color / border-bottom 必须写在 class（inline 会盖掉 :hover，鼠标上去就不变色）。
-  '.dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-bottom: 1px dashed var(--tdt-border-strong); border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }',
-  '.dsh-tdt-info-session:hover { color: var(--tdt-business); border-bottom-color: var(--tdt-business); }',
+  // 基础信息右栏「任务会话」（用户 2026-10-03 四次修订 · 定稿）：**不要虚线、不要边框 / 白框**；
+  // = 图标包一个**灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。
+  // ⚠️ ① `border: 0` 必须先清掉**按钮默认边框**（否则会留一圈白框）；
+  //    ② color 必须写在 class（inline 会盖掉 :hover，鼠标上去就不变色）。
+  '.dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }',
+  '.dsh-tdt-info-session:hover { color: var(--tdt-business); }',
+  '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); transition: background var(--tdt-dur) var(--tdt-ease); }',
+  '.dsh-tdt-info-session:hover .dsh-tdt-info-session-icon { background: var(--tdt-chip-bg-hover); }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -1070,15 +1073,15 @@ function TaskExpandPanel(props: {
       : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
     const note = instance.note === null || instance.note === undefined ? '' : instance.note
     const timeOf = (iso: string | null): string => iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
-    // 「任务会话」（用户 2026-10-03 二次修订）：不要边框 / 底色，做成**超链接**——虚线下划线 + hover 变色。
-    // 颜色 / 下划线都在 `.dsh-tdt-info-session` 里（inline 会盖掉 :hover）；这里只放布局。
+    // 「任务会话」（用户 2026-10-03 四次修订 · 定稿）：**无虚线、无边框**——小放大镜图标包一个
+    // **灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。颜色 / 图标框都在 class 里（inline 会盖掉 :hover）。
     // 会话名由服务端按 `sessionTitleOf` 单源下发；缺名（旧行）退回会话 id，仍可点。
     const sessionName = instance.session_title ?? sid ?? ''
-    const sessionIcon = h(IconSearchOutlineRegular, { size: 14 })
+    const sessionIcon = h('span', { className: 'dsh-tdt-info-session-icon' }, h(IconSearchOutlineRegular, { size: 12 }))
     const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
     const sessionLinkStyle: Record<string, string | number> = {
       display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
-      padding: '1px 0', font: 'inherit', fontSize: 'var(--tdt-font-sm)', textAlign: 'left',
+      padding: 0, font: 'inherit', fontSize: 'var(--tdt-font-sm)', textAlign: 'left',
       cursor: canOpenSession ? 'pointer' : 'default',
     }
     const sessionChip = sid === null || sessionName === ''
@@ -1088,10 +1091,7 @@ function TaskExpandPanel(props: {
           type: 'button', className: 'dsh-tdt-info-session', title: sessionName, style: sessionLinkStyle,
           onClick: () => { onOpenSession(sid) },
         }, sessionIcon, sessionLabel)
-        : h('span', {
-          className: 'dsh-tdt-info-session', title: sessionName,
-          style: { ...sessionLinkStyle, borderBottom: '1px dashed var(--tdt-border-strong)' },
-        }, sessionIcon, sessionLabel)
+        : h('span', { style: sessionLinkStyle, title: sessionName }, sessionIcon, sessionLabel)
     return h('div', null,
       InfoField({
         label: t('colStatus'),

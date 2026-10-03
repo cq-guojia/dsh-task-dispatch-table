@@ -41805,8 +41805,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
 			".dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }",
-			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-bottom: 1px dashed var(--tdt-border-strong); border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-session:hover { color: var(--tdt-business); border-bottom-color: var(--tdt-business); }",
+			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
+			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); transition: background var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-session:hover .dsh-tdt-info-session-icon { background: var(--tdt-chip-bg-hover); }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -42728,7 +42730,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					fallback: "—"
 				});
 				const sessionName = instance.session_title ?? sid ?? "";
-				const sessionIcon = (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 });
+				const sessionIcon = (0, react.createElement)("span", { className: "dsh-tdt-info-session-icon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 12 }));
 				const sessionLabel = (0, react.createElement)("span", { style: {
 					flex: "1 1 auto",
 					minWidth: 0
@@ -42739,7 +42741,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					gap: "6px",
 					maxWidth: "100%",
 					boxSizing: "border-box",
-					padding: "1px 0",
+					padding: 0,
 					font: "inherit",
 					fontSize: "var(--tdt-font-sm)",
 					textAlign: "left",
@@ -42754,12 +42756,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						onOpenSession(sid);
 					}
 				}, sessionIcon, sessionLabel) : (0, react.createElement)("span", {
-					className: "dsh-tdt-info-session",
-					title: sessionName,
-					style: {
-						...sessionLinkStyle,
-						borderBottom: "1px dashed var(--tdt-border-strong)"
-					}
+					style: sessionLinkStyle,
+					title: sessionName
 				}, sessionIcon, sessionLabel);
 				return (0, react.createElement)("div", null, InfoField({
 					label: t("colStatus"),
