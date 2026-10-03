@@ -215,16 +215,21 @@ settle 只在两处触发：① settleBySessionId（收到 turn/end 等跑完信
 | 13 | **前置任务一排两个** + **3px 浅色半透明竖线跨两行**：`.dsh-tdt-sv-tfc-tasks` → 两列 grid（`@container (width<=620px)` 降一列）；`.dsh-tdt-sv-tfc-task` 前缀 `padding-left:10px` + `::before` 3px 竖线 `top/bottom:2px` `opacity:.55`；产出物改用同一横向流 | `src/client/archive-session-css.ts`、`src/client/task-file-context.tsx` |
 | 14 | **卡片创建时间移到标题行尾部** `[YYYY-MM-DD 创建]`（与编号同一 `faintStyle`）；`dateOf` 删除、`formatYmd` 新增（四位年） | `src/client/task-list.tsx`、`src/client/format.ts` |
 | 15 | 界面文案「上游任务」→「前置任务」中英双语 + `scheduler.ts` 三条阻塞原因；内部术语（`resolvedDeps` / `upstream-*` key）不动 | `src/client/locales.ts`、`src/scheduler.ts` |
+| 16 | **第四轮观感返工**：任务块加官方任务图标（`IconBranchOutlineRegular`）；文件名改走全站唯一实现 `MarqueeText`（跑马灯）；chip 改 `flex:1 1 auto` **平分容器** + `min-width:10ch`；组标题「随附」→「**任务附件**」；来源「工作区」→「**链接**」（与编辑处 `editorAttachmentLink` 统一） | `src/client/task-file-context.tsx`、`src/client/archive-session-css.ts`、`src/client/locales.ts` |
+| 17 | **创建时间人人有**：缺 `createdAt` 的老定义显示占位 `[创建时间未知]`（不整段消失、也不编造时间） | `src/client/task-list.tsx`、`src/client/locales.ts` |
+| 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 459/0 · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 **467/0** · ⏳ **真机待验**。
 
-**真机必看的六条**（决定本轮成败）：
+**真机必看的八条**（决定本轮成败）：
 1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上（上 34 / 下 16）。
-2. **随附区**（本任务设置的附件）是否出现 —— 数据源是实例快照，不依赖宿主透传 file 块。
+2. **任务附件区**（本任务设置的附件）是否出现 —— 数据源是实例快照，不依赖宿主透传 file 块。
 3. 气泡下方是否还出现官方附件卡（顶部已显示同名文件时应**让位**，不重复显示）。
-4. **文件是否横向排**（不该再竖着一溜）、一排至少 3 个、chip 宽跟文件名走（短名短 / 长名 20 字封顶 + 悬停全文）。
-5. **前置任务一排两个**，块前竖线是否横跨「任务名 + 产出物」两行，浅色不抢眼。
-6. 前置任务文件点击：同工作区应能打开；**跨工作区的目录应灰掉不可点**（标「跨工作区」）。
+4. **文件是否横向排 + 平分宽度**（不该再竖着一溜、也不该右边空一大块）。
+5. **显示不全的文件名 hover 是否跑马灯**（前置任务产出 + 任务附件，两处都要）。
+6. **前置任务一排两个**，块前竖线是否横跨「任务名 + 产出物」两行、浅色不抢眼；任务名前**有任务图标**。
+7. 前置任务文件点击：同工作区应能打开；**跨工作区的目录应灰掉不可点**（标「跨工作区」）。
+8. 卡片标题行尾部 `[2026-10-03 创建]`（老任务显示 `[创建时间未知]`）；筛选角标**多位数字也是正圆**。
 
 
 ## 六、遗留
