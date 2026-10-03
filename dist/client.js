@@ -41794,7 +41794,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
 			".dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }",
-			".dsh-tdt-info-session { background: transparent; color: var(--tdt-fg); border-bottom: 1px dashed var(--tdt-border-strong); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-bottom: 1px dashed var(--tdt-border-strong); border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-session:hover { color: var(--tdt-business); border-bottom-color: var(--tdt-business); }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
@@ -42281,7 +42281,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		};
 		const infoGridRowStyle = {
 			display: "grid",
-			gridTemplateColumns: "78px 1fr",
+			gridTemplateColumns: "66px 1fr",
 			gap: "12px",
 			alignItems: "baseline",
 			padding: "6px 0",

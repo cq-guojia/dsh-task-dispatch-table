@@ -127,9 +127,10 @@ const TASK_LIST_CSS = [
   // 基础信息右栏「产出物」文件行：hover 给一层底色（用户 2026-10-03）。必须走 class——inline 会盖掉 :hover。
   '.dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }',
   '.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }',
-  // 基础信息右栏「任务会话」（用户 2026-10-03 二次修订）：**不要边框、不要底色**，做成超链接那种——
-  // 虚线下划线 + hover 变色（蓝）。⚠️ color / border-bottom 必须写在 class 里，inline 会盖掉 :hover。
-  '.dsh-tdt-info-session { background: transparent; color: var(--tdt-fg); border-bottom: 1px dashed var(--tdt-border-strong); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }',
+  // 基础信息右栏「任务会话」（用户 2026-10-03 三次修订）：超链接样式——**常显虚线下划线** + hover 变蓝。
+  // ⚠️ ① `border: 0` 必须先清掉**按钮默认边框**（否则左/右/上会留一圈白框，用户点名「太丑」）；
+  //    ② color / border-bottom 必须写在 class（inline 会盖掉 :hover，鼠标上去就不变色）。
+  '.dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-bottom: 1px dashed var(--tdt-border-strong); border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }',
   '.dsh-tdt-info-session:hover { color: var(--tdt-business); border-bottom-color: var(--tdt-business); }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
@@ -697,7 +698,8 @@ const infoGroupTitleStyle: Record<string, string | number> = {
   marginBottom: '6px', letterSpacing: '0.02em',
 }
 const infoGridRowStyle: Record<string, string | number> = {
-  display: 'grid', gridTemplateColumns: '78px 1fr', gap: '12px', alignItems: 'baseline',
+  // 标签列缩一个字（用户 2026-10-03：标签占太多、后面留白多）⇒ 78 → 66px，多出来的宽度留给值。
+  display: 'grid', gridTemplateColumns: '66px 1fr', gap: '12px', alignItems: 'baseline',
   padding: '6px 0', borderBottom: '1px solid var(--tdt-border-faint)',
 }
 const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', whiteSpace: 'nowrap' }

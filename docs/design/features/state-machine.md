@@ -52,11 +52,21 @@ Loop A 写行时把执行所需字段一并快照，Loop B 与回执 / 对账一
         │
         ├─ 会话还在跑（有活动/租约未到）──→ 继续等；租约超时则回收为 failed 并重试
         │
-        └─ 会话已结束 ──→ 查「回执」（task_events kind=receipt，取派发后的最新一条，决策 19）
+        └─ 会话**真正空闲**（`agent.whenIdle()`）──→ 查「回执」（kind=receipt，取派发后的最新一条，决策 19）
                             ├─ 回执存在 + status 合法 + outputs 里每个路径**存在** ──→ succeeded
                             ├─ 回执存在但不合法 / outputs 缺失 ──→ failed（走重试判定）
                             └─ 无回执 ──→ 宽限期后追问（对原会话重发回执命令，≤2 次）
                                             └─ 仍无回执 ──→ failed（走重试判定）
+
+> ⚠️ **2026-10-03 用户拍板：裁决要等「会话真正空闲」，不是 `turn/end`**。
+> `/goal` 模式下 agent 会自动**续跑多轮**（宿主 `dsh-agent-loop` 的 `kick()` 是
+> `while (await this.turn())`，0.2.0-rc.2 `lib/index.js:886`）⇒ `turn/end` 只是**一轮**结束，
+> 会话仍在执行，此时验收等于「人家还在干活就去收卷」（用户原话：「Session 正在进行的时候，
+> 你去验收个屁」）。正解 = **`agent.whenIdle()`**（宿主语义：*no active driver or maintenance
+> task remains*，`dsh-agent` runtime-types.d.ts）——它等 `kick()` 把所有轮次（含 goal 续跑）跑完、
+> phase 转 `idle` 才 resolve，**就是「会话没有在跑了」这个信号**。
+> `turn/end` 仍记信号（供 sweep 判「无回执该追问」），但**不再触发裁决**；
+> 收口兜底靠租约（`leaseExpired`）/ 失联（`running-stale`）——`turn/end` 分支**不得** `continue` 跳过它们。
 
 > ⚠️ **2026-10-03 用户拍板：去掉「outputs 新鲜度」闸**（原为「防旧产物冒充」，比 `mtime > dispatched_at`）。
 > 该闸会误伤「复用 / 检查已有文件」类任务（真机：任务是判断某文件是否存在、存在就不动它，

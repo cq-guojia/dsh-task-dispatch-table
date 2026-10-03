@@ -143,6 +143,8 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
     const tokenTotals = new Map();
     /** 发动在途去重（tick 1s 一次，发动是异步的——模型解析期间不能重复发动同一实例）。 */
     const launching = new Set();
+    /** 已挂上「等 agent 空闲（`whenIdle`）」的会话：同一会话只挂一个，多次 `turn/end` 共享同一份等待。 */
+    const awaitingIdle = new Set();
     /** 事件字段只打印一次（用于确认宿主把用量挂在哪，便于收紧取值逻辑）。 */
     let eventShapeLogged = false;
     const windowDeadline = (instance) => Date.parse(instance.scheduled_at) + durationMs(snapOf(instance)?.window ?? 'PT0S');
@@ -398,11 +400,11 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
             logger.warn(`发动异步余波异常（实例 ${instance.id}）: ${String(error)}`);
         });
     }
-    /** 跑完信号（turn/end 或 disposed）→ 查回执；有则立即裁决，无则等宽限期后由 sweep 追问（§决策 19）。 */
-    function settleBySessionId(sessionId, signal) {
+    /** 落一条「跑完信号」事件（补 running 兜底 + 写 session_event）；**不含裁决**，返回当前实例行供调用方接着判。 */
+    function noteRunSignal(sessionId, signal) {
         const instance = store.getBySession(sessionId);
         if (instance === undefined)
-            return;
+            return undefined;
         if (instance.status === 'dispatched') {
             // session/created 事件同步于 sessions.create 内发出，能进 dispatched 又收到跑完信号
             // 说明 created 对账被跳过（如插件重启恢复），先补 running 语义再判定。
@@ -410,8 +412,48 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
         }
         const current = store.get(instance.id);
         if (current === undefined || (current.status !== 'running' && current.status !== 'unknown'))
-            return;
+            return undefined;
         store.appendEvent(current.id, 'session_event', { type: signal });
+        return current;
+    }
+    /**
+     * 等 agent **真正空闲**（会话不再执行）之后再裁决 —— **用户 2026-10-03 拍板**。
+     *
+     * ⚠️ 为什么不能收到 `turn/end` 就裁：`turn/end` 只是**一轮**结束。开了 `/goal`
+     * （本插件默认 `goal: true`）时 agent 会**自动续跑下一轮** —— 宿主 `dsh-agent-loop`
+     * 的 `kick()` 就是 `while (await this.turn())`（0.2.0-rc.2 `lib/index.js:886`），
+     * 所有轮次（含 goal 续跑）跑完、phase 转 `idle` 才算真正结束。在轮次间隙验收
+     * = 「人家还在干活，你就去收卷」（用户原话：「Session 正在进行的时候，你去验收个屁」）。
+     *
+     * ✅ 正解 = `agent.whenIdle()`：宿主语义是「**没有任何活动中的 driver / maintenance 任务**」
+     * （`dsh-agent` `lib/types/runtime-types.d.ts`：*fulfillment after no active driver or
+     * maintenance task remains*），实现是等 `activityDone` 稳定不再被替换
+     * （`index.js:870` 的 do/while）；`kick()` 的 while 循环把全部轮次跑完才 resolve
+     * ⇒ **它就是「会话没有在跑了」这个信号**。
+     *
+     * 防重入：同一会话只挂一个等待（goal 续跑期间会有多次 `turn/end`，共享同一份 idle）。
+     * 拿不到 handle（如插件重启过）⇒ 不挂，交给 sweep 的租约兜底。
+     */
+    function settleWhenIdle(sessionId) {
+        if (awaitingIdle.has(sessionId))
+            return;
+        const handle = handles.get(sessionId);
+        if (handle === undefined)
+            return;
+        awaitingIdle.add(sessionId);
+        void handle.agent.whenIdle().then(() => {
+            awaitingIdle.delete(sessionId);
+            settleBySessionId(sessionId, 'agent/idle');
+        }, (error) => {
+            awaitingIdle.delete(sessionId);
+            logger.warn(`等待会话空闲失败（${sessionId}）：${String(error)}`);
+        });
+    }
+    /** 有回执就裁决（无回执交给 sweep 追究问）。`agent/idle` / `session/disposed` 走这里。 */
+    function settleBySessionId(sessionId, signal) {
+        const current = noteRunSignal(sessionId, signal);
+        if (current === undefined)
+            return;
         if (store.latestReceipt(current.id, current.dispatched_at ?? undefined) !== undefined) {
             settleByReceipt(current);
         }
@@ -460,7 +502,11 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
                 logger.info(`会话事件字段（确认 token 用量挂载位置用）：${Object.keys(event).join(', ')}`);
             }
             if (event.type === 'turn/end') {
-                settleBySessionId(session.id, 'turn/end');
+                // 只**记信号**（sweep 的追问判定以它为据），**不在这里裁决**：`turn/end` 只是**一轮**结束，
+                // 开了 `/goal` 时 agent 会立刻续跑下一轮，此刻会话仍在执行。真正的裁决等 agent 空闲
+                // （`settleWhenIdle` → `whenIdle()`），见该函数注释（用户 2026-10-03 拍板）。
+                noteRunSignal(session.id, 'turn/end');
+                settleWhenIdle(session.id);
                 return;
             }
             // 心跳语义（§4）：该会话任何事件即续租。
@@ -506,22 +552,29 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
                 const leaseExpired = instance.lease_until !== null && now > Date.parse(instance.lease_until);
                 // 决策 19：已收到跑完信号但无回执 → 宽限期后追问，追问 NUDGE_LIMIT 次仍无 → 失败收敛。
                 const signalType = parseEventType(store.latestEvent(instance.id, 'session_event')?.detail);
-                if (signalType === 'turn/end' || signalType === 'session/disposed') {
-                    const signalAtMs = Date.parse(store.latestEvent(instance.id, 'session_event')?.ts ?? instance.updated_at);
-                    // 追问的等待时长（用户 2026-09-30 拍板）：**会话这一轮真的结束（`turn/end`）之后 30 秒**
-                    // 还没回执就追问。不再借用 `dispatchGraceMs`（那是"等会话建立"的语义）：真机实测 60 秒宽限
-                    // + 一轮 tick 粒度 = 118 秒才追问。模型还在干活（没有 `turn/end`）时**绝不追问**，不打扰它。
-                    if (now > signalAtMs + 30_000
-                        && store.latestReceipt(instance.id, instance.dispatched_at ?? undefined) === undefined) {
-                        if (store.countEvents(instance.id, 'nudge') < NUDGE_LIMIT) {
-                            nudge(instance);
-                        }
-                        else {
-                            retryOrFail(instance, 'receipt-missing-after-nudge');
-                        }
-                    }
-                    continue; // 会话已跑完，租约不再适用
+                const signalAtMs = Date.parse(store.latestEvent(instance.id, 'session_event')?.ts ?? instance.updated_at);
+                // 追问的等待时长（用户 2026-09-30 拍板）：**会话这一轮真的结束（`turn/end`）之后 30 秒**
+                // 还没回执就追问。不再借用 `dispatchGraceMs`（那是"等会话建立"的语义）：真机实测 60 秒宽限
+                // + 一轮 tick 粒度 = 118 秒才追问。模型还在干活（没有 `turn/end`）时**绝不追问**，不打扰它。
+                const dueNudge = now > signalAtMs + 30_000
+                    && store.latestReceipt(instance.id, instance.dispatched_at ?? undefined) === undefined;
+                const nudgeOrFail = () => {
+                    if (store.countEvents(instance.id, 'nudge') < NUDGE_LIMIT)
+                        nudge(instance);
+                    else
+                        retryOrFail(instance, 'receipt-missing-after-nudge');
+                };
+                // ① 会话**真的不再执行**了（agent 空闲 / 会话销毁）⇒ 追问判定后即可收口，租约不再适用。
+                if (signalType === 'agent/idle' || signalType === 'session/disposed') {
+                    if (dueNudge)
+                        nudgeOrFail();
+                    continue;
                 }
+                // ② 仅仅「一轮结束」（`turn/end`）：goal 模式下 agent 可能**仍在续跑**（`turn/end` ≠ 会话结束）
+                //    ⇒ 照常追究问，但**不能 `continue`**：要让下面的租约 / 失联兜底仍然生效。
+                //    （改成「等空闲才裁决」后，旧版 turn/end 后的 `continue` 会把卡死实例永久挂在 running。）
+                if (signalType === 'turn/end' && dueNudge)
+                    nudgeOrFail();
                 if (leaseExpired) {
                     // 租约超时回收（§3）：会话可能仍在跑，不归档；走重试判定。
                     store.appendEvent(instance.id, 'session_event', { type: 'lease-expired' });

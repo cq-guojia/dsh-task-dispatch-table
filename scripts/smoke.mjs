@@ -423,6 +423,22 @@ try {
       checkReceipt(probeDir, ['ok'], { ts: '', detail: '{not json' }).reason === 'receipt-unreadable')
     rmSync(probeDir, { recursive: true, force: true })
   }
+  // ── 5b-3. 裁决时机（2026-10-03 用户拍板：等会话**真正空闲**，不是 turn/end） ──
+  // 起因：goal 模式下 agent 自动续跑多轮（宿主 kick 是 while (await this.turn())），
+  // `turn/end` 只是**一轮**结束 ⇒ 在轮次间隙验收等于「人家还在干活就去收卷」。
+  {
+    const reconcileJs = readFileSync(join(process.cwd(), 'dist', 'reconcile.js'), 'utf8')
+    check('裁决时机：turn/end 不再直接裁决，改挂 agent.whenIdle（会话真正空闲才验收）',
+      reconcileJs.includes('settleWhenIdle') && reconcileJs.includes('whenIdle')
+      && reconcileJs.includes('awaitingIdle') && reconcileJs.includes('agent/idle'))
+    check('裁决时机：sweep 里 turn/end 只追究问、**不再 continue** 跳过租约兜底（否则卡死实例永久挂 running）',
+      /signalType === ['"]turn\/end['"] && dueNudge/.test(reconcileJs)
+      && /signalType === ['"]agent\/idle['"] \|\| signalType === ['"]session\/disposed['"]/.test(reconcileJs))
+    const receiptJs = readFileSync(join(process.cwd(), 'dist', 'receipt.js'), 'utf8')
+    check('回执提示词：**以最后一次提交为准** + 再次提交须带上先前的产出（工具描述与末段指令各一处）',
+      receiptJs.includes('以最后一次提交为准') && receiptJs.includes('一并带上')
+      && (receiptJs.match(/以最后一次提交为准/g) ?? []).length >= 2)
+  }
   // 决策 41：派发快照随行固化——Loop B 发动 / 裁决只读快照，与任务设置解耦
   const snap0 = JSON.parse(dispatchedRows[0].snapshot ?? 'null')
   check(
@@ -2055,9 +2071,13 @@ console.log('\n[14] runtime-index')
       && tl.includes('session_title')
       && tl.includes('MarqueeText, { text: sessionName }')
       && tl.includes('IconSearchOutlineRegular')
-      // 超链接样式：class 里虚线下划线 + hover 变蓝（inline 会盖掉 :hover，故必须写在 class）。
+      // 超链接样式：class 里**常显**虚线下划线 + hover 变蓝（inline 会盖掉 :hover，故必须写在 class）。
       && tl.includes('border-bottom: 1px dashed var(--tdt-border-strong)')
+      // 按钮默认边框必须先清掉，否则左/右/上会留一圈白框（用户点名「太丑」）。
+      && tl.includes('border: 0; border-bottom: 1px dashed var(--tdt-border-strong)')
       && tl.includes('.dsh-tdt-info-session:hover { color: var(--tdt-business)')
+      // 标签列缩一个字：78 → 66px。
+      && tl.includes("gridTemplateColumns: '66px 1fr'")
       // 旧的独立按钮已删；执行时长标签也改了。
       && !tl.includes("}, t('viewSession')))")
       && tl.includes("t('infoDuration')"))
