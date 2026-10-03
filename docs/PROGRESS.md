@@ -22,7 +22,8 @@
 | 事项 | 状态 | 真机验证清单 |
 |---|---|---|
 | 任务展开三面板 + 快捷删除 + 统一查询抽象 | 🔵 **第四轮 + 第五轮均已落码**（第四轮：定高 / 表格列重排 / 时间范围控件 / 状态过滤修复 / 滚动结构；**第五轮**：观感返工 = 行高加大·官方圆勾圆叉·状态两字·计划时刻 `26-09-30 15:10` 式·会话列改「查看」小按钮·斑马纹代实线·新增 Token 列；TimeRange 下拉化（全部/预设/自定义）；失败·跳过「原因」展示；预设档改**整档** `00:00~23:59`）⏳ **真机验证待做** | [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §三 · [worklog/expand-panels-round4.md](worklog/expand-panels-round4.md) |
-| 展开面板·执行记录 / 日志 / Loading 验收 | 🟢 **2026-10-03 真机验收通过**：执行记录、日志两面板 UI 通过；浮动 `Loading` 抽出为共用组件（`ui/Loading.tsx`）——fix 到主内容盒右边缘齐平、底边 16px、右边 0、文案去省略号、阈值回归 400ms（瞬时查询不闪）；基础信息面板 UI 待明日调整（唯一剩余项） | [design/ui-foundation.md](design/ui-foundation.md) §二「唯一实现表」· `src/client/ui/Loading.tsx` |
+| 展开面板·执行记录 / 日志 / Loading 验收 | 🟢 **2026-10-03 真机验收通过**：执行记录、日志两面板 UI 通过；浮动 `Loading` 抽出为共用组件（`ui/Loading.tsx`）——fix 到主内容盒右边缘齐平、底边 16px、右边 0、文案去省略号、阈值回归 400ms（瞬时查询不闪） | [design/ui-foundation.md](design/ui-foundation.md) §二「唯一实现表」· `src/client/ui/Loading.tsx` |
+| 展开面板·基础信息改版 | 🔵 **2026-10-03 已落码（⏳ 真机验证待做）**：左「任务配置」+ 右「最近执行」两栏纸表格；左栏不再显示提示词、附件改图标 + 文件名；右栏独立滚动，含「上次执行 / 最近一次成功 / 最近一次失败」+ 会话/产出物入口。已知缺口：附件暂不可点开（列表接口未下发路径） | [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §3.1b |
 | UI 收口 + Agent 权限选择器 | ✅ 封卷（随主界面复验） | [worklog/task-editor-ui.md](worklog/task-editor-ui.md) §二十二 |
 | 编辑器 UX 第二轮 | ✅ 结案（随主界面复验） | [worklog/editor-ux-round2.md](worklog/editor-ux-round2.md) |
 

@@ -697,6 +697,12 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "允许延迟",
 			listNone: "（无）",
 			listDisabledTag: "（已停用）",
+			infoSectionConfig: "任务配置",
+			infoSectionRecent: "最近执行",
+			infoLastRun: "上次执行",
+			infoLastSuccess: "最近一次成功",
+			infoLastFailure: "最近一次失败",
+			infoNoRun: "还没有执行记录",
 			cardTabInfo: "基础信息",
 			cardTabRecords: "执行记录",
 			cardTabLogs: "日志",
@@ -1259,6 +1265,12 @@ window.__ModuleLoader__.load({
 			listFieldWindow: "Late window",
 			listNone: "(none)",
 			listDisabledTag: "(disabled)",
+			infoSectionConfig: "Task settings",
+			infoSectionRecent: "Recent runs",
+			infoLastRun: "Last run",
+			infoLastSuccess: "Last success",
+			infoLastFailure: "Last failure",
+			infoNoRun: "No runs yet",
 			cardTabInfo: "Basic info",
 			cardTabRecords: "Run records",
 			cardTabLogs: "Logs",
@@ -42188,40 +42200,74 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			lineHeight: "var(--tdt-line-sm)",
 			marginTop: "2px"
 		};
-		const sectionLabelStyle = {
+		const infoWrapStyle = {
+			flex: "1 1 auto",
+			minHeight: 0,
+			display: "flex",
+			gap: "18px"
+		};
+		const infoConfigStyle = {
+			flex: "1 1 58%",
+			minWidth: 0,
+			overflowY: "auto",
+			paddingRight: "2px"
+		};
+		const infoRecentStyle = {
+			flex: "0 1 42%",
+			minWidth: "220px",
+			overflowY: "auto",
+			borderLeft: "1px solid var(--tdt-border-faint)",
+			paddingLeft: "16px"
+		};
+		const infoGroupStyle = { marginBottom: "16px" };
+		const infoGroupTitleStyle = {
 			fontSize: "var(--tdt-font-xs)",
 			color: "var(--tdt-fg-3)",
-			marginTop: "12px",
-			marginBottom: "4px"
+			fontWeight: 600,
+			marginBottom: "6px",
+			letterSpacing: "0.02em"
 		};
-		const sectionBodyStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg)",
-			lineHeight: "var(--tdt-line-sm)"
+		const infoGridRowStyle = {
+			display: "grid",
+			gridTemplateColumns: "78px 1fr",
+			gap: "12px",
+			alignItems: "baseline",
+			padding: "6px 0",
+			borderBottom: "1px solid var(--tdt-border-faint)"
 		};
-		const infoLabelStyle = {
-			flex: "none",
-			width: "64px",
+		const infoGridLabelStyle = {
 			fontSize: "var(--tdt-font-sm)",
 			color: "var(--tdt-fg-2)",
-			lineHeight: "var(--tdt-line-md)"
+			whiteSpace: "nowrap"
 		};
-		const infoValueStyle = {
-			flex: "1 1 auto",
-			minWidth: 0,
+		const infoGridValueStyle = {
 			fontSize: "var(--tdt-font-sm)",
 			color: "var(--tdt-fg)",
-			lineHeight: "var(--tdt-line-md)",
-			wordBreak: "break-word"
+			minWidth: 0,
+			wordBreak: "break-word",
+			lineHeight: "var(--tdt-line-md)"
 		};
-		/** 展开区一行信息：左标签（定宽淡色）+ 右值（自适应换行）。 */
-		function InfoRow(props) {
-			return (0, react.createElement)("div", { style: {
-				display: "flex",
-				gap: "8px",
-				alignItems: "flex-start"
-			} }, (0, react.createElement)("span", { style: infoLabelStyle }, props.label), (0, react.createElement)("span", { style: infoValueStyle }, props.value));
+		/** 纸表格一行：左标签（定宽淡色）+ 右值（自适应换行）。 */
+		function InfoField(props) {
+			return (0, react.createElement)("div", { style: infoGridRowStyle }, (0, react.createElement)("span", { style: infoGridLabelStyle }, props.label), (0, react.createElement)("div", { style: infoGridValueStyle }, props.children));
 		}
+		/** 右栏一个小方块：标题 + 内容。 */
+		function InfoBlock(props) {
+			return (0, react.createElement)("div", { style: infoGroupStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, props.title), props.children ?? null);
+		}
+		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
+		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
+		/** 路径取末段（产出物 chip 显示用）。 */
+		const baseNameOf = (path) => {
+			const parts = path.split("/");
+			return parts[parts.length - 1] || path;
+		};
+		/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
+		const durationMsOf = (row) => {
+			if (row.dispatched_at === null || row.finished_at === null) return null;
+			const ms = new Date(row.finished_at).getTime() - new Date(row.dispatched_at).getTime();
+			return Number.isFinite(ms) && ms >= 0 ? ms : null;
+		};
 		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
 		*  `position: relative` 保留为内部绝对定位子元素的上下文。 */
 		const panelBoxStyle = {
@@ -42459,6 +42505,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		function TaskExpandPanel(props) {
 			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props;
 			const [tab, setTab] = (0, react.useState)("info");
+			const [infoLast, setInfoLast] = (0, react.useState)(null);
+			const [infoSuccess, setInfoSuccess] = (0, react.useState)(null);
+			const [infoFailure, setInfoFailure] = (0, react.useState)(null);
+			const [infoLoading, setInfoLoading] = (0, react.useState)(false);
+			const [infoError, setInfoError] = (0, react.useState)(null);
+			const [infoLoaded, setInfoLoaded] = (0, react.useState)(false);
 			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const timeLabels = (0, react.useMemo)(() => timeLabelsOf(t), [t]);
 			const timeRangeLabels = (0, react.useMemo)(() => ({
@@ -42500,6 +42552,47 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [logError, setLogError] = (0, react.useState)(null);
 			const [confirmDelete, setConfirmDelete] = (0, react.useState)(false);
 			const [deleting, setDeleting] = (0, react.useState)(false);
+			(0, react.useEffect)(() => {
+				if (tab !== "info") return;
+				let alive = true;
+				setInfoLoading(true);
+				setInfoError(null);
+				Promise.all([
+					fetchInstances({
+						taskId: row.id,
+						statuses: ["succeeded"],
+						limit: 1
+					}),
+					fetchInstances({
+						taskId: row.id,
+						statuses: ["failed", "skipped"],
+						limit: 1
+					}),
+					fetchInstances({
+						taskId: row.id,
+						statuses: [
+							"succeeded",
+							"failed",
+							"skipped",
+							"unknown"
+						],
+						limit: 1
+					})
+				]).then(([ok, bad, last]) => {
+					if (!alive) return;
+					setInfoSuccess(ok.rows[0] ?? null);
+					setInfoFailure(bad.rows[0] ?? null);
+					setInfoLast(last.rows[0] ?? null);
+					setInfoLoaded(true);
+				}).catch((error) => {
+					if (alive) setInfoError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setInfoLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [tab, row.id]);
 			(0, react.useEffect)(() => {
 				if (tab !== "records") return;
 				let alive = true;
@@ -42575,27 +42668,138 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				logRange,
 				logLimit
 			]);
-			const renderInfo = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: panelScrollFillStyle }, (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionSchedule")), InfoRow({
+			const renderRunBlock = (title, instance) => {
+				if (instance === null) return (0, react.createElement)(InfoBlock, { title }, (0, react.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-fg-3)"
+				} }, t("listNone")));
+				const sid = instance.session_id;
+				const canOpenSession = sid !== null && onOpenSession !== void 0;
+				const canOpenFile = sid !== null && onOpenFile !== void 0;
+				const outputs = outputsOf(instance.outputs);
+				const dur = durationMsOf(instance);
+				const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
+				const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
+				return (0, react.createElement)(InfoBlock, { title }, (0, react.createElement)("div", { style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "6px",
+					flexWrap: "wrap"
+				} }, (0, react.createElement)(StatusIcon, { status: instance.status }), (0, react.createElement)("span", { style: {
+					fontSize: "var(--tdt-font-sm)",
+					fontWeight: 500,
+					color: infoStatusColorOf(instance.status)
+				} }, statusTextOf(instance.status, t)), (0, react.createElement)("span", { style: {
+					fontSize: "var(--tdt-font-sm)",
+					color: "var(--tdt-fg-2)"
+				} }, formatDateTime(instance.finished_at ?? instance.scheduled_at, {
+					seconds: true,
+					fallback: "—"
+				}))), dur !== null || tokens !== null ? (0, react.createElement)("div", { style: {
+					display: "flex",
+					gap: "10px",
+					flexWrap: "wrap",
+					marginTop: "4px",
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-fg-2)"
+				} }, dur !== null ? (0, react.createElement)("span", null, `${t("colDuration")} ${formatDurationHms(dur)}`) : null, tokens !== null ? (0, react.createElement)("span", { title: tokensDetailOf(instance) }, `${t("colTokens")} ${tokens}`) : null) : null, note === "" ? null : (0, react.createElement)("div", { style: {
+					marginTop: "4px",
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-danger)",
+					wordBreak: "break-word"
+				} }, `${t("colNote")}：${note}`), canOpenSession ? (0, react.createElement)("div", { style: { marginTop: "6px" } }, (0, react.createElement)(Button$2, {
+					variant: "outline",
+					size: "sm",
+					onClick: () => {
+						onOpenSession(sid);
+					}
+				}, t("viewSession"))) : null, outputs.length === 0 ? null : (0, react.createElement)("div", { style: { marginTop: "6px" } }, (0, react.createElement)("div", { style: {
+					marginBottom: "4px",
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-fg-3)"
+				} }, t("colOutputs")), (0, react.createElement)("div", { style: {
+					display: "flex",
+					flexDirection: "column",
+					gap: "2px"
+				} }, outputs.map((output) => (0, react.createElement)("button", {
+					key: output,
+					type: "button",
+					title: output,
+					className: "dsh-tdt-info-out",
+					style: {
+						display: "flex",
+						alignItems: "center",
+						gap: "6px",
+						padding: "2px 0",
+						background: "none",
+						border: "none",
+						color: "var(--tdt-fg)",
+						font: "inherit",
+						fontSize: "var(--tdt-font-xs)",
+						textAlign: "left",
+						cursor: canOpenFile ? "pointer" : "default"
+					},
+					onClick: canOpenFile && onOpenFile !== void 0 && sid !== null ? () => {
+						onOpenFile(sid, output);
+					} : void 0
+				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: output,
+					size: 14
+				}), (0, react.createElement)("span", { style: {
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+					whiteSpace: "nowrap"
+				} }, baseNameOf(output)))))));
+			};
+			const renderInfo = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: infoWrapStyle }, (0, react.createElement)("div", { style: infoConfigStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), InfoField({
 				label: t("listFieldSchedule"),
-				value: scheduleLine
-			}), InfoRow({
+				children: scheduleLine
+			}), InfoField({
 				label: t("listFieldWorkspace"),
-				value: row.workspace
-			}), InfoRow({
+				children: row.workspace
+			}), InfoField({
 				label: t("listFieldModel"),
-				value: modelText
-			}), InfoRow({
+				children: modelText
+			}), InfoField({
 				label: t("listFieldRetry"),
-				value: String(row.retryMax)
-			}), InfoRow({
+				children: String(row.retryMax)
+			}), InfoField({
 				label: t("listFieldWindow"),
-				value: row.schedule.window
-			}), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionAttachments")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.attachments.length === 0 ? t("listNone") : row.attachments.map((item) => `${item.name}${item.kind === "link" ? `（${t("editorAttachmentLink")}）` : ""}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionDepends")), (0, react.createElement)("div", { style: sectionBodyStyle }, row.depends.length === 0 ? t("listNone") : row.depends.map((dep) => `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`).join("、")), (0, react.createElement)("div", { style: sectionLabelStyle }, t("listSectionPrompt")), (0, react.createElement)("div", { style: {
-				...sectionBodyStyle,
-				color: "var(--tdt-fg-2)",
-				whiteSpace: "pre-wrap",
-				wordBreak: "break-word"
-			} }, row.promptHead)));
+				children: row.schedule.window
+			}), InfoField({
+				label: t("listSectionAttachments"),
+				children: row.attachments.length === 0 ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react.createElement)("div", { style: {
+					display: "flex",
+					flexWrap: "wrap",
+					gap: "4px 12px"
+				} }, row.attachments.map((item) => (0, react.createElement)("span", {
+					key: `${item.kind}:${item.name}`,
+					style: {
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "4px"
+					}
+				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: item.name,
+					size: 14
+				}), (0, react.createElement)("span", null, item.name))))
+			}), InfoField({
+				label: t("listSectionDepends"),
+				children: row.depends.length === 0 ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react.createElement)("div", { style: {
+					display: "flex",
+					flexWrap: "wrap",
+					gap: "4px 12px"
+				} }, row.depends.map((dep) => (0, react.createElement)("span", { key: dep.id }, `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`)))
+			})), (0, react.createElement)("div", { style: infoRecentStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionRecent")), infoError !== null ? (0, react.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-danger)"
+			} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-fg-3)"
+			} }, t("loading")) : infoLast === null && infoSuccess === null && infoFailure === null ? (0, react.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-fg-3)"
+			} }, t("infoNoRun")) : (0, react.createElement)("div", null, renderRunBlock(t("infoLastRun"), infoLast), renderRunBlock(t("infoLastSuccess"), infoSuccess), renderRunBlock(t("infoLastFailure"), infoFailure)))));
 			const renderRecords = () => (0, react.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react.createElement)(Loading, { label: t("loading") }) : null, (0, react.createElement)("div", { style: filterRowStyle }, (0, react.createElement)(SelectField, {
 				value: recStatus,
 				options: [

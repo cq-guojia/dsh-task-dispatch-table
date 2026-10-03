@@ -681,17 +681,54 @@ const cardStyle: Record<string, string | number> = {
 const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-md)' }
 const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
 const faintStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
-const sectionLabelStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', marginTop: '12px', marginBottom: '4px' }
-const sectionBodyStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-sm)' }
-// 展开区的「标签 | 值」两栏（用户 2026-09-30：展开区太丑 ⇒ 从「一句 `·` 串联的长文本」改成逐字段成行）。
-const infoLabelStyle: Record<string, string | number> = { flex: 'none', width: '64px', fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-md)' }
-const infoValueStyle: Record<string, string | number> = { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-md)', wordBreak: 'break-word' }
-/** 展开区一行信息：左标签（定宽淡色）+ 右值（自适应换行）。 */
-function InfoRow(props: { label: string; value: string }) {
-  return h('div', { style: { display: 'flex', gap: '8px', alignItems: 'flex-start' } },
-    h('span', { style: infoLabelStyle }, props.label),
-    h('span', { style: infoValueStyle }, props.value),
+// 基础信息改版（用户 2026-10-03）：左「任务配置」+ 右「最近执行」两栏；纸表格风格，字段不再挤成一坨。
+// 右栏内容可能多（会话 / 产出物）⇒ **只滚右栏**，左栏在当前高度内基本放得下。
+const infoWrapStyle: Record<string, string | number> = { flex: '1 1 auto', minHeight: 0, display: 'flex', gap: '18px' }
+const infoConfigStyle: Record<string, string | number> = { flex: '1 1 58%', minWidth: 0, overflowY: 'auto', paddingRight: '2px' }
+const infoRecentStyle: Record<string, string | number> = {
+  flex: '0 1 42%', minWidth: '220px', overflowY: 'auto',
+  borderLeft: '1px solid var(--tdt-border-faint)', paddingLeft: '16px',
+}
+const infoGroupStyle: Record<string, string | number> = { marginBottom: '16px' }
+const infoGroupTitleStyle: Record<string, string | number> = {
+  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', fontWeight: 600,
+  marginBottom: '6px', letterSpacing: '0.02em',
+}
+const infoGridRowStyle: Record<string, string | number> = {
+  display: 'grid', gridTemplateColumns: '78px 1fr', gap: '12px', alignItems: 'baseline',
+  padding: '6px 0', borderBottom: '1px solid var(--tdt-border-faint)',
+}
+const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', whiteSpace: 'nowrap' }
+const infoGridValueStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', minWidth: 0, wordBreak: 'break-word', lineHeight: 'var(--tdt-line-md)' }
+/** 纸表格一行：左标签（定宽淡色）+ 右值（自适应换行）。 */
+function InfoField(props: { label: string; children: ReactNode }): ReturnType<typeof h> {
+  return h('div', { style: infoGridRowStyle },
+    h('span', { style: infoGridLabelStyle }, props.label),
+    h('div', { style: infoGridValueStyle }, props.children),
   )
+}
+/** 右栏一个小方块：标题 + 内容。 */
+function InfoBlock(props: { title: string; children?: ReactNode }): ReturnType<typeof h> {
+  return h('div', { style: infoGroupStyle },
+    h('div', { style: infoGroupTitleStyle }, props.title),
+    props.children ?? null,
+  )
+}
+/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
+const infoStatusColorOf = (status: string | null): string =>
+  status === 'succeeded' ? 'var(--tdt-success)'
+    : status === 'failed' || status === 'skipped' ? 'var(--tdt-danger)'
+      : 'var(--tdt-fg-2)'
+/** 路径取末段（产出物 chip 显示用）。 */
+const baseNameOf = (path: string): string => {
+  const parts = path.split('/')
+  return parts[parts.length - 1] || path
+}
+/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
+const durationMsOf = (row: InstanceRow): number | null => {
+  if (row.dispatched_at === null || row.finished_at === null) return null
+  const ms = new Date(row.finished_at).getTime() - new Date(row.dispatched_at).getTime()
+  return Number.isFinite(ms) && ms >= 0 ? ms : null
 }
 // ── 展开区三面板（决策 55，design/features/task-expand-panels.md §三）──────────────────
 /** 内容区**定高**（用户 2026-10-02：矮内容显矮、切 tab 高度蹦）——三个 tab 一律同高，内容多就内部滚。 */
@@ -893,6 +930,14 @@ function TaskExpandPanel(props: {
 }) {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
+  // ── 基础信息面板（用户 2026-10-03 改版）──
+  // 右栏「最近执行」需要实例行的状态 / 时间 / 耗时 / Token / 会话 / 产出 ⇒ 打开时各取最近一条。
+  const [infoLast, setInfoLast] = useState<InstanceRow | null>(null)
+  const [infoSuccess, setInfoSuccess] = useState<InstanceRow | null>(null)
+  const [infoFailure, setInfoFailure] = useState<InstanceRow | null>(null)
+  const [infoLoading, setInfoLoading] = useState(false)
+  const [infoError, setInfoError] = useState<string | null>(null)
+  const [infoLoaded, setInfoLoaded] = useState(false)
   // 日历 / 时分文案**单源**（与任务编辑器同一份：editor-fields.calendarLabelsOf / timeLabelsOf）。
   const calendarLabels = useMemo(() => calendarLabelsOf(t), [t])
   const timeLabels = useMemo(() => timeLabelsOf(t), [t])
@@ -935,6 +980,30 @@ function TaskExpandPanel(props: {
   // ── 删除确认 ──
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // 切到基础信息 ⇒ 取「上次执行 / 最近成功 / 最近失败」各一条（新→旧排序，limit 1 即最近）。
+  // 三条小查询分开取，保证「最近一次成功」哪怕在很久以前也能拿到（不靠最近 N 条里翻）。
+  useEffect(() => {
+    if (tab !== 'info') return
+    let alive = true
+    setInfoLoading(true)
+    setInfoError(null)
+    Promise.all([
+      fetchInstances({ taskId: row.id, statuses: ['succeeded'], limit: 1 }),
+      fetchInstances({ taskId: row.id, statuses: ['failed', 'skipped'], limit: 1 }),
+      fetchInstances({ taskId: row.id, statuses: ['succeeded', 'failed', 'skipped', 'unknown'], limit: 1 }),
+    ])
+      .then(([ok, bad, last]) => {
+        if (!alive) return
+        setInfoSuccess(ok.rows[0] ?? null)
+        setInfoFailure(bad.rows[0] ?? null)
+        setInfoLast(last.rows[0] ?? null)
+        setInfoLoaded(true)
+      })
+      .catch((error: unknown) => { if (alive) setInfoError(error instanceof Error ? error.message : String(error)) })
+      .finally(() => { if (alive) setInfoLoading(false) })
+    return () => { alive = false }
+  }, [tab, row.id])
 
   // 切到执行记录 / 筛选变化 ⇒ 重拉（alive 守卫防旧轮响应覆盖新轮；筛选变了顺手收起下钻行）。
   useEffect(() => {
@@ -996,29 +1065,108 @@ function TaskExpandPanel(props: {
     return () => { alive = false }
   }, [tab, row.id, logKeyword, logRange, logLimit])
 
+  // 右栏「最近执行」的一条：状态 + 时间 + 耗时 / Token + 备注 + 会话 / 产出物入口。
+  const renderRunBlock = (title: string, instance: InstanceRow | null): ReturnType<typeof h> => {
+    if (instance === null) {
+      return h(InfoBlock, { title }, h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('listNone')))
+    }
+    const sid = instance.session_id
+    const canOpenSession = sid !== null && onOpenSession !== undefined
+    const canOpenFile = sid !== null && onOpenFile !== undefined
+    const outputs = outputsOf(instance.outputs)
+    const dur = durationMsOf(instance)
+    const tokens = instance.token_in === null && instance.token_out === null
+      ? null
+      : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
+    const note = instance.note === null || instance.note === undefined ? '' : instance.note
+    return h(InfoBlock, { title },
+      h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
+        h(StatusIcon, { status: instance.status }),
+        h('span', { style: { fontSize: 'var(--tdt-font-sm)', fontWeight: 500, color: infoStatusColorOf(instance.status) } }, statusTextOf(instance.status, t)),
+        h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)' } }, formatDateTime(instance.finished_at ?? instance.scheduled_at, { seconds: true, fallback: '—' })),
+      ),
+      dur !== null || tokens !== null
+        ? h('div', { style: { display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)' } },
+          dur !== null ? h('span', null, `${t('colDuration')} ${formatDurationHms(dur)}`) : null,
+          tokens !== null ? h('span', { title: tokensDetailOf(instance) }, `${t('colTokens')} ${tokens}`) : null,
+        )
+        : null,
+      note === ''
+        ? null
+        : h('div', { style: { marginTop: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)', wordBreak: 'break-word' } }, `${t('colNote')}：${note}`),
+      canOpenSession
+        ? h('div', { style: { marginTop: '6px' } },
+          h(Button, { variant: 'outline', size: 'sm', onClick: () => { onOpenSession(sid) } }, t('viewSession')))
+        : null,
+      outputs.length === 0
+        ? null
+        : h('div', { style: { marginTop: '6px' } },
+          h('div', { style: { marginBottom: '4px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('colOutputs')),
+          h('div', { style: { display: 'flex', flexDirection: 'column', gap: '2px' } },
+            outputs.map(output => h('button', {
+              key: output, type: 'button', title: output,
+              className: 'dsh-tdt-info-out',
+              style: {
+                display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0', background: 'none',
+                border: 'none', color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-xs)',
+                textAlign: 'left', cursor: canOpenFile ? 'pointer' : 'default',
+              },
+              onClick: canOpenFile && onOpenFile !== undefined && sid !== null ? () => { onOpenFile(sid, output) } : undefined,
+            },
+              h(FileTypeIcon, { path: output, size: 14 }),
+              h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, baseNameOf(output)),
+            )),
+          ),
+        ),
+    )
+  }
+
   const renderInfo = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
-    // 基础信息也纳入**同一个定高盒**（用户 2026-10-02 第四轮：缺这一层会导致切 tab 高度蹦）。
-    h('div', { style: panelScrollFillStyle },
-      h('div', { style: sectionLabelStyle }, t('listSectionSchedule')),
-      InfoRow({ label: t('listFieldSchedule'), value: scheduleLine }),
-      InfoRow({ label: t('listFieldWorkspace'), value: row.workspace }),
-      InfoRow({ label: t('listFieldModel'), value: modelText }),
-      InfoRow({ label: t('listFieldRetry'), value: String(row.retryMax) }),
-      InfoRow({ label: t('listFieldWindow'), value: row.schedule.window }),
-      h('div', { style: sectionLabelStyle }, t('listSectionAttachments')),
-      h('div', { style: sectionBodyStyle },
-        row.attachments.length === 0
-          ? t('listNone')
-          : row.attachments.map(item => `${item.name}${item.kind === 'link' ? `（${t('editorAttachmentLink')}）` : ''}`).join('、'),
+    // 两栏：左配置（约 58%）+ 右最近执行（约 42%，**独立滚动**）；整块仍在同一个定高盒内 ⇒ 切 tab 高度不蹦。
+    h('div', { style: infoWrapStyle },
+      // 左栏：任务配置（纸表格：标签 + 值，逐行留白；不再显示提示词）。
+      h('div', { style: infoConfigStyle },
+        h('div', { style: infoGroupTitleStyle }, t('infoSectionConfig')),
+        InfoField({ label: t('listFieldSchedule'), children: scheduleLine }),
+        InfoField({ label: t('listFieldWorkspace'), children: row.workspace }),
+        InfoField({ label: t('listFieldModel'), children: modelText }),
+        InfoField({ label: t('listFieldRetry'), children: String(row.retryMax) }),
+        InfoField({ label: t('listFieldWindow'), children: row.schedule.window }),
+        InfoField({
+          label: t('listSectionAttachments'),
+          children: row.attachments.length === 0
+            ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
+            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 12px' } },
+              row.attachments.map(item => h('span', { key: `${item.kind}:${item.name}`, style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } },
+                h(FileTypeIcon, { path: item.name, size: 14 }),
+                h('span', null, item.name),
+              )),
+            ),
+        }),
+        InfoField({
+          label: t('listSectionDepends'),
+          children: row.depends.length === 0
+            ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
+            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 12px' } },
+              row.depends.map(dep => h('span', { key: dep.id }, `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`)),
+            ),
+        }),
       ),
-      h('div', { style: sectionLabelStyle }, t('listSectionDepends')),
-      h('div', { style: sectionBodyStyle },
-        row.depends.length === 0
-          ? t('listNone')
-          : row.depends.map(dep => `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`).join('、'),
+      // 右栏：最近执行（上次执行 / 最近成功 / 最近失败），内容多只滚这一栏。
+      h('div', { style: infoRecentStyle },
+        h('div', { style: infoGroupTitleStyle }, t('infoSectionRecent')),
+        infoError !== null
+          ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
+          : infoLoading && !infoLoaded
+            ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('loading'))
+            : infoLast === null && infoSuccess === null && infoFailure === null
+              ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('infoNoRun'))
+              : h('div', null,
+                renderRunBlock(t('infoLastRun'), infoLast),
+                renderRunBlock(t('infoLastSuccess'), infoSuccess),
+                renderRunBlock(t('infoLastFailure'), infoFailure),
+              ),
       ),
-      h('div', { style: sectionLabelStyle }, t('listSectionPrompt')),
-      h('div', { style: { ...sectionBodyStyle, color: 'var(--tdt-fg-2)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' } }, row.promptHead),
     ),
   )
 
