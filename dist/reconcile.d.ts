@@ -51,11 +51,21 @@ export interface ReconcilerDeps {
 }
 /**
  * 回执裁决（决策 19，替代旧契约文件三查）：
- * receipt 事件存在 + status ∈ validStatuses + outputs 逐一存在且 mtime 晚于本次派发。
- * outputs 验证沿用「防旧产物冒充」语义；status 必须如实（agent 自报不可信，决策 11）。
+ * receipt 事件存在 + status ∈ validStatuses + outputs 里的每个路径**确实存在**。
+ *
+ * ⚠️ **已去掉「mtime 新鲜度」闸**（用户 2026-10-03 拍板，原为「防旧产物冒充」）：
+ * 那道闸会误伤「复用 / 检查已有文件」类任务 —— 真机案例：任务是判断 `uuid.txt`
+ * 是否存在（存在就不动它），agent 如实回执 `outputs:["uuid.txt"]`，但文件本来就在、
+ * 没被改写 ⇒ mtime 早于派发时刻 ⇒ 被判 `output-stale` 失败，用户看到的却是「文件明明在」。
+ *
+ * 用户口径（原话）：「**只要他交出来的文件确实存在、格式是对的，就不用管**」；
+ * 「大模型是不是企图蒙混过关，你不用去管」——**任务做得怎么样是大模型的事，
+ * 插件只确认它确实执行了**。故只保留「存在性」一道闸，不再替模型判断产出新鲜度。
+ *
+ * status 仍必须如实 ∈ validStatuses（agent 自报不可信，决策 11）。
  * 决策 41：workspacePath / validStatuses 来自派发快照，与任务设置无关。
  */
-export declare function checkReceipt(workspacePath: string, validStatuses: readonly string[], dispatchedAtMs: number, receipt: {
+export declare function checkReceipt(workspacePath: string, validStatuses: readonly string[], receipt: {
     ts: string;
     detail: string | null;
 } | undefined): {

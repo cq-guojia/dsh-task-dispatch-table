@@ -373,8 +373,10 @@ export async function dispatchTask(input) {
     // 领取后先把会话身份落到实例行，再建 agent——session/created（factory announce）
     // 到达时实例必已带 session_id，对账可立即转 running。
     // ⚠️ dispatched_at 必须在此写入（原由 store.casClaim 负责，决策 31 懒建行后已不走 CAS）：
-    // 回执校验（reconcile.ts）用「产物 mtime > dispatched_at」判新鲜，sweep 也用它算派发宽限；
-    // 缺失会回退到 updated_at（最后一次状态变更，晚于产物写入）⇒ 每次都误判 output-stale。
+    // ① sweep 用它算「等 session/created」的派发宽限；② `latestReceipt` 用它做 afterIso，
+    // 防上一轮 attempt 的旧回执冒充本轮。缺失会退到 updated_at（最后一次状态变更，晚于回执）
+    // ⇒ 旧回执会被当成新回执。
+    // （2026-10-03：回执校验已不再用 mtime 比它判新鲜 —— 见 reconcile.ts checkReceipt。）
     store.transition(instanceId, {
         status: 'dispatched',
         session_id: sessionId,

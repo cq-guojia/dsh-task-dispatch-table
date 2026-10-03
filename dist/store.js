@@ -325,23 +325,6 @@ export class TaskStore {
                 ORDER BY seq DESC LIMIT 1`)
             .get(instanceId, afterIso ?? null, afterIso ?? null);
     }
-    /**
-     * 晚于某时刻的**全部**回执事件，按发生顺序（seq 升序）。
-     *
-     * 为什么要它（2026-10-03 真机事故）：agent 一次执行里可能**多次调用回执工具**
-     * （真机实测 66 秒内交了 4 次），而 `latestReceipt` 只取 `seq DESC LIMIT 1`
-     * ⇒ 裁决只看**最后一句**。若 agent 先交「无产出」（可通过）再交「产出了 X」
-     * （X 的 mtime 不够新 → 不可通过），后者会把前者顶掉 ⇒ **本该成功的执行被判失败**。
-     * 判据是「有没有一份可信的完成申报」，不是「最后一句话说了什么」⇒ 改为逐条校验、
-     * 任一条通过即成功（见 reconcile.ts settleByReceipt）。
-     */
-    receiptsSince(instanceId, afterIso) {
-        return this.db
-            .prepare(`SELECT ts, detail FROM task_events
-                WHERE instance_id = ? AND kind = 'receipt' AND (? IS NULL OR ts > ?)
-                ORDER BY seq ASC`)
-            .all(instanceId, afterIso ?? null, afterIso ?? null);
-    }
     /** 启动扫描（state-machine §3 机制 #5）：已派发而未定态的实例置 unknown。 */
     startupScan() {
         const result = this.db

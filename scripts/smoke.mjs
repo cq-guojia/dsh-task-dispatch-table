@@ -2,7 +2,7 @@
 //
 // 跑法：npm run smoke（先 npm run build，本脚本直接引 dist 产物，测的是真正要发布的代码）。
 // 刻意不引任何测试框架：零新增依赖，宿主环境装不了也照样能跑。
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -382,62 +382,46 @@ try {
   check('补记：只补紧邻一条「未执行」（不是不补、也不是刷屏）',
     okSkipped.length === 1 && schedStore.countEvents(okSkipped[0].id, 'missed-slot') === 1)
   // 让异步拉起（launchAsync）跑完，验证派发确实写了 dispatched_at：
-  // 回执校验「产物 mtime > dispatched_at」与 sweep 派发宽限都依赖它；缺失会回退 updated_at ⇒ 每次误判 output-stale
+  // sweep 派发宽限（等 session/created）与 `latestReceipt` 的 afterIso（防上一轮 attempt 的旧回执冒充）都依赖它。
   await new Promise((resolve) => setTimeout(resolve, 0))
   const dispatchedRows = schedStore.listByStatus(['dispatched'])
   check(
-    '派发行写了 dispatched_at（缺失会误判 output-stale）',
+    '派发行写了 dispatched_at（sweep 宽限与回执按次取新都依赖它）',
     dispatchedRows.length === 1 && dispatchedRows[0].dispatched_at !== null && !Number.isNaN(Date.parse(dispatchedRows[0].dispatched_at)),
     JSON.stringify(dispatchedRows.map(r => r.dispatched_at)),
   )
   okScheduler.tick()
   check('重复 tick 不重复派发同一刻度', schedStore.listByStatus(['dispatched']).length === 1, `实际 ${schedStore.listByStatus(['dispatched']).length}`)
-  // ── 5b-2. 2026-10-03 真机事故回归：**多回执不得互相顶掉** ──
-  // 真机：一次执行里 agent 交 4 次回执（3 次 outputs:[] + 1 次 outputs:["uuid.txt"]），
-  // 而旧实现 `latestReceipt` = `seq DESC LIMIT 1` 只取最后一句；那句声明的产物 mtime 不晚于
-  // 派发时刻（output-stale）⇒ **本该成功的执行被判 failed**，前 3 次合法申报被无声顶掉。
-  // 修法 = `receiptsSince` 逐条校验、倒序取**最后一条通过**者为裁决依据。
+  // ── 5b-2. 回执校验口径（2026-10-03 用户拍板：**只验产出存在，不验新鲜度**） ──
+  // 真机事故：任务是「判断 uuid.txt 是否存在，存在就别动它」，agent 如实回执该文件，
+  // 但文件本来就在、没被改写 ⇒ 旧「mtime > dispatched_at」闸判 output-stale 失败
+  // ⇒ 用户看到的却是「文件明明在，为什么失败」。用户口径：只要交出来的文件**确实存在、格式对**
+  // 就行；「是不是蒙混过关」不归插件判断 —— **任务做得好坏是大模型的事**。
   {
-    const rsStore = new TaskStore(join(schedDir, 'multi-receipt.db'))
-    // 造一个「派发前就存在」的旧文件 ⇒ 它对本次派发必然 stale（mtime 早于 dispatched_at）
-    const staleFile = join(schedDir, 'uuid.txt')
-    writeFileSync(staleFile, 'old')
-    const dispAtMs = Date.now()
-    const dispAt = new Date(dispAtMs).toISOString()
-    const rId = 'r-task:2026-10-03T10:13:00.000Z'
-    rsStore.ensureInstance(rId, 'r-task', '2026-10-03', '2026-10-03T10:13:00.000Z', 'running', {
-      title: 'r', prompt: '', workspacePath: schedDir, validStatuses: ['ok'], maxAttempts: 1, window: 'PT2H',
-    })
-    rsStore.transition(rId, { status: 'running', dispatched_at: dispAt })
-    // 3 次「完成、无产出」+ 最后 1 次「产出那个旧文件」（stale）
-    for (let i = 0; i < 3; i += 1) rsStore.appendEvent(rId, 'receipt', { status: 'ok', outputs: [] })
-    rsStore.appendEvent(rId, 'receipt', { status: 'ok', outputs: ['uuid.txt'] })
-
-    const all = rsStore.receiptsSince(rId, dispAt)
-    check('多回执能全部取到、按发生顺序（旧实现只取最后一条）',
-      all.length === 4, `取到 ${all.length} 条（期望 4）`)
-
-    // 逐条判定：最后那条 stale 不通过；前面 outputs:[] 那条通过
-    const verdicts = all.map(r => checkReceipt(schedDir, ['ok'], dispAtMs, r))
-    const lastVerdict = verdicts[3]
-    const anyEarlierOk = verdicts.slice(0, 3).some(v => v.ok)
-    check('判定差异成立：最后那条 output-stale 不通过，但前面的空产出申报通过',
-      lastVerdict.ok === false && lastVerdict.reason === 'output-stale' && anyEarlierOk,
-      `最后=${lastVerdict.reason ?? 'ok'} / 前面有通过=${anyEarlierOk}`)
-    check('**裁决语义 = 倒序取最后一条通过者**（本次事故的修复点：任一条通过即成功）',
-      (() => {
-        let picked = null
-        for (let i = verdicts.length - 1; i >= 0; i -= 1) { if (verdicts[i].ok) { picked = i; break } }
-        return picked !== null && picked < 3 // 命中的是前面某条，而不是被最后一条顶掉
-      })(),
-      '应能回退到前面的合法回执')
-    // 反向：只有 stale 那一条时仍必须失败（别把闸门放得过松）。
-    // ⚠️ 不能用「更晚的 afterIso」来开窗——`appendEvent` 的 ts 只到毫秒，同毫秒内追加的行会被 `ts > ?` 滤掉。
-    const staleOnly = [{ ts: dispAt, detail: JSON.stringify({ status: 'ok', outputs: ['uuid.txt'] }) }]
-    check('闸门没被放松：只有 stale 那一条时仍判失败（不会一律放过）',
-      staleOnly.every(r => !checkReceipt(schedDir, ['ok'], dispAtMs, r).ok),
-      `不通过=${staleOnly.every(r => !checkReceipt(schedDir, ['ok'], dispAtMs, r).ok)}`)
-    rsStore.close()
+    const probeDir = mkdtempSync(join(tmpdir(), 'dsh-tdt-receipt-'))
+    const oldFile = join(probeDir, 'uuid.txt')
+    writeFileSync(oldFile, 'created long ago')
+    // 把 mtime 压到一天前：模拟「本任务之前就存在、本次没被改写」的文件
+    const longAgo = new Date(Date.now() - 86_400_000)
+    utimesSync(oldFile, longAgo, longAgo)
+    const mk = (outputs, status = 'ok') => ({ ts: new Date().toISOString(), detail: JSON.stringify({ status, outputs }) })
+    check('回执校验：产出文件**存在即通过**（旧文件也算数，不再看 mtime）',
+      checkReceipt(probeDir, ['ok'], mk(['uuid.txt'])).ok === true)
+    check('回执校验：文件很旧（mtime 一天前）也通过 —— 本次修复点',
+      checkReceipt(probeDir, ['ok'], mk(['uuid.txt'])).ok === true)
+    check('回执校验：产出**不存在**才失败（output-missing）',
+      checkReceipt(probeDir, ['ok'], mk(['nope.txt'])).reason === 'output-missing')
+    check('回执校验：status 不在 validStatuses 仍判失败（agent 自报不可信，决策 11）',
+      checkReceipt(probeDir, ['ok'], mk([], 'failed')).reason === 'receipt-status-invalid')
+    check('回执校验：目录也算存在（回执允许报目录，与 deliverables 同语义）',
+      checkReceipt(probeDir, ['ok'], mk(['./'])).ok === true)
+    check('回执校验：空 outputs 通过（「确实执行了、没产出文件」是合法完成申报）',
+      checkReceipt(probeDir, ['ok'], mk([])).ok === true)
+    check('回执校验：无回执 ⇒ receipt-missing',
+      checkReceipt(probeDir, ['ok'], undefined).reason === 'receipt-missing')
+    check('回执校验：坏 JSON ⇒ receipt-unreadable（不静默放过）',
+      checkReceipt(probeDir, ['ok'], { ts: '', detail: '{not json' }).reason === 'receipt-unreadable')
+    rmSync(probeDir, { recursive: true, force: true })
   }
   // 决策 41：派发快照随行固化——Loop B 发动 / 裁决只读快照，与任务设置解耦
   const snap0 = JSON.parse(dispatchedRows[0].snapshot ?? 'null')

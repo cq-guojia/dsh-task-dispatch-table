@@ -6,7 +6,7 @@
 // 不读文件；跑完信号后无回执 → 宽限 → 追问×2 → 按失败收敛。
 // 唯一例外（决策 41 兼容口）：旧库实例无快照列值时，按 legacyTask 当场合成快照并固化（一次性
 // 兼容、带 warn）——兜底也不落库 ⇒ 无法发动 / 无法校验，如实按失败收敛，绝不静默。
-import { existsSync, statSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { HostContext, HostLogger, HostSession } from './host.js'
 import type { TaskDefinition } from './tasks.js'
@@ -102,14 +102,23 @@ interface ReceiptPayload {
 
 /**
  * 回执裁决（决策 19，替代旧契约文件三查）：
- * receipt 事件存在 + status ∈ validStatuses + outputs 逐一存在且 mtime 晚于本次派发。
- * outputs 验证沿用「防旧产物冒充」语义；status 必须如实（agent 自报不可信，决策 11）。
+ * receipt 事件存在 + status ∈ validStatuses + outputs 里的每个路径**确实存在**。
+ *
+ * ⚠️ **已去掉「mtime 新鲜度」闸**（用户 2026-10-03 拍板，原为「防旧产物冒充」）：
+ * 那道闸会误伤「复用 / 检查已有文件」类任务 —— 真机案例：任务是判断 `uuid.txt`
+ * 是否存在（存在就不动它），agent 如实回执 `outputs:["uuid.txt"]`，但文件本来就在、
+ * 没被改写 ⇒ mtime 早于派发时刻 ⇒ 被判 `output-stale` 失败，用户看到的却是「文件明明在」。
+ *
+ * 用户口径（原话）：「**只要他交出来的文件确实存在、格式是对的，就不用管**」；
+ * 「大模型是不是企图蒙混过关，你不用去管」——**任务做得怎么样是大模型的事，
+ * 插件只确认它确实执行了**。故只保留「存在性」一道闸，不再替模型判断产出新鲜度。
+ *
+ * status 仍必须如实 ∈ validStatuses（agent 自报不可信，决策 11）。
  * 决策 41：workspacePath / validStatuses 来自派发快照，与任务设置无关。
  */
 export function checkReceipt(
   workspacePath: string,
   validStatuses: readonly string[],
-  dispatchedAtMs: number,
   receipt: { ts: string; detail: string | null } | undefined,
 ): { ok: boolean; reason?: string; detail?: unknown } {
   if (receipt === undefined) return { ok: false, reason: 'receipt-missing' }
@@ -130,9 +139,6 @@ export function checkReceipt(
   for (const output of outputs) {
     const outputPath = resolve(workspacePath, output)
     if (!existsSync(outputPath)) return { ok: false, reason: 'output-missing', detail: { output } }
-    if (statSync(outputPath).mtimeMs <= dispatchedAtMs) {
-      return { ok: false, reason: 'output-stale', detail: { output, dispatchedAtMs } }
-    }
   }
   return { ok: true, detail: payload }
 }
@@ -309,17 +315,13 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
   /**
    * 回执收敛（state-machine §1 判定树，决策 19 版；决策 41：工作区与合法值读快照）。
    *
-   * ⚠️ **逐条校验全部回执，任一条通过即成功**（2026-10-03 真机事故修正）。
-   * 事故：一次执行里 agent 交 4 次回执（3 次 `outputs:[]` + 1 次 `outputs:["uuid.txt"]`），
-   * 而旧代码 `latestReceipt` 只取 `seq DESC LIMIT 1` ⇒ 只用最后那句裁决；那句声明的产物
-   * mtime 不晚于派发时刻（output-stale）⇒ **本该成功的执行被判 failed**，
-   * 且前面 3 次「已完成、无产出」的合法申报被无声顶掉。
+   * 取**最新一条**回执裁决（`latestReceipt` = `ORDER BY seq DESC LIMIT 1`）：
+   * agent 可能反复交回执（真机见过 66 秒内 4 次），**最后一次申报才是它的最终声明**，
+   * 也是本设计的前提 ——「agent 会撒谎」（once-dispatch.md），所以必须以它的最终声明去验产物。
    *
-   * 语义对齐人话：回执是 agent 的**完成申报**，可以反复修正（先说没产出、后来说有产出）。
-   * 判据是「**有没有一份可信的完成申报**」，不是「最后一句话说了什么」。
-   * ⇒ **倒序**逐条校验，取**最后一条通过**的那条作为裁决依据（尊重 agent 最终的有效声明，
-   * 同时不让它最后一句出错就把前面做对的事全盘否掉）。全条都不可通过时，才拿**最后一条**
-   * 的 reason 去失败收敛（保留最有诊断价值的那条）。
+   * ⚠️ 2026-10-03 曾把这里改成「逐条校验、任一条通过即成功」，**是错的、已撤回**：
+   * 因为 `outputs:[]`（空申报）在 `checkReceipt` 里天然放行 ⇒ 那个改法等于
+   * 「agent 先交一次『我没有产出』就能绕过全部产出校验」= 给没干活的 agent 开后门。
    */
   function settleByReceipt(instance: TaskInstance): void {
     const snap = snapOf(instance)
@@ -329,41 +331,16 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
       retryOrFail(instance, 'no-snapshot')
       return
     }
-    const dispatchedAtMs = Date.parse(instance.dispatched_at ?? instance.updated_at)
-    const receipts = store.receiptsSince(instance.id, instance.dispatched_at ?? undefined)
-    if (receipts.length === 0) {
-      // 理论上不该到这（调用方都先判过有回执）；如实按缺回执收敛，不静默放过。
-      retryOrFail(instance, 'receipt-missing')
-      return
-    }
-    // 倒序：后交的申报优先（agent 的修正）。
-    for (let i = receipts.length - 1; i >= 0; i -= 1) {
-      const receipt = receipts[i] as { ts: string; detail: string | null }
-      const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, dispatchedAtMs, receipt)
-      if (!verdict.ok) continue
+    const receipt = store.latestReceipt(instance.id, instance.dispatched_at ?? undefined)
+    const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, receipt)
+    if (verdict.ok) {
       const payload = verdict.detail as { outputs?: unknown }
       const outputsField = Array.isArray(payload?.outputs) ? JSON.stringify(payload.outputs) : null
-      // 留痕：本次一共收到几条回执、按哪一条判的（真机排查「到底按哪句判的」要靠它）。
-      store.appendEvent(instance.id, 'receipt_check', {
-        reason: 'receipt-pass',
-        detail: { receipts: receipts.length, usedTs: receipt.ts, skipped: receipts.length - 1 - i },
-      })
       finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail, outputsField)
-      return
+    } else {
+      store.appendEvent(instance.id, 'receipt_check', { reason: verdict.reason, detail: verdict.detail })
+      retryOrFail(instance, verdict.reason ?? 'receipt-failed', verdict.detail)
     }
-    // 全部不可通过：取**最后一条**（agent 最终声明）的 reason 失败收敛 —— 诊断价值最高。
-    const last = receipts[receipts.length - 1] as { ts: string; detail: string | null }
-    const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, dispatchedAtMs, last)
-    if (verdict.ok) {
-      // 到不了这里（上面已逐条判过），保底按失败收敛，绝不静默放过。
-      retryOrFail(instance, 'receipt-failed')
-      return
-    }
-    store.appendEvent(instance.id, 'receipt_check', {
-      reason: verdict.reason,
-      detail: { receipts: receipts.length, rejectedAll: true, lastTs: last.ts, verdict: verdict.detail },
-    })
-    retryOrFail(instance, verdict.reason ?? 'receipt-failed', verdict.detail)
   }
 
   /** 追问（决策 19 第二层）：跑完信号后无回执，对原会话再推一轮、重发回执命令。 */

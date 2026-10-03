@@ -173,47 +173,65 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 
 **处置**：铁律「不许编造数据」禁止凭空补时间，但用户要求**每个任务都要有这一行** ⇒ 取两者交集：缺值时显示**明确占位** `[创建时间未知]`，不再整段消失、也不假造时间。将来若要真值，可选方案 = 用任务定义文件的 mtime 回填（但那是「最后修改」而非「创建」，语义有偏差），需用户拍板。
 
-### 2. 查清并修掉：`output-stale` 误判失败（用户「明显感觉是有点问题的」）
+### 2. `output-stale` 失败：真因是**新鲜度闸与「复用已有文件」类任务不匹配**（含一次改错的自纠）
 
 用户贴的执行记录：回执**报了 4 次**（10:14:01/02/03 三次 `outputs:[]`，10:14:05 一次 `outputs:["uuid.txt"]`），最终 `failed` / `output-stale`。用户困惑：**「文件明明在，为什么判失败」**。
 
-**结论：任务是成功的，是插件的裁决逻辑把它判成了失败。** 两个独立缺陷叠加：
+**日志逐行（本地 UTC+8）**：
 
-#### 缺陷 A（真 bug，本次事故的直接原因）：多回执只看最后一条
+```
+10:13:00  领活 → 建会话 → 转 running → 正式派发（工作区 /workspace/Temp，goal 模式）
+10:13:03  第一轮 turn/end —— 这一轮结束，但**没交回执**
+10:14:00  过了 30 秒还没回执 ⇒ nudge（追问）
+10:14:01  回执：做完了，没有产出（outputs:[]）
+10:14:02  回执：同上
+10:14:03  回执：同上
+10:14:05  回执：改口「我产出了 uuid.txt」（outputs:["uuid.txt"]）
+10:14:06  第二轮 turn/end ⇒ 此刻才去验收
+10:14:06  receipt_check output-stale ⇒ 判失败
+```
 
-`store.latestReceipt` = `ORDER BY seq DESC LIMIT 1` ⇒ 裁决**只认最后一句申报**。
-agent 交 4 次回执时，前面 3 次「完成、无产出」（`outputs=[]` ⇒ `checkReceipt` 直接通过）
-被第 4 条无声顶掉；而第 4 条声明的 `uuid.txt` 是**派发前就存在的旧文件**
-（`mtime <= dispatched_at` ⇒ `output-stale`）⇒ **本该成功的执行被判 failed**。
+**真因（一句话）**：`uuid.txt` 是**派发前就存在的文件**（mtime 10:13:00.171 = 派发时刻，要求「晚于」），
+而任务是「判断它是否存在、存在就别动它」⇒ **本就不该被改写** ⇒ 新鲜度闸必然误伤。
 
-人话：agent 反复修正自己的申报，插件却只听**最后一句**；最后一句错了，就把整件事判成失败。
+**用户拍板**（原话）：「**只要他交出来的文件确实存在、格式是对的，就不用管**」；
+「大模型是不是企图蒙混过关，你不用去管」；「**任务执行得好不好是大模型的事**，
+你只要确定它确实执行了」。
 
-**修法**（`store.ts` + `reconcile.ts`）：
+**正确修法** = **去掉 `mtime > dispatched_at` 这道新鲜度闸**（`checkReceipt` 只留「存在性」）。
 
-| # | 改动 | 语义 |
+| # | 改动 | 坐标 |
 |---|---|---|
-| 1 | 新增 `store.receiptsSince(id, afterIso)`（`ORDER BY seq ASC` 取**全部**） | 不再只取最后一条 |
-| 2 | `settleByReceipt` **倒序逐条校验**，取**最后一条通过**者为裁决依据 | 判据是「有没有一份可信的完成申报」；尊重 agent 最终的有效声明，又不让最后一句出错就把做对的事全盘否掉 |
-| 3 | 成功时留痕 `receipt_check / receipt-pass` 带 `{receipts, usedTs, skipped}` | 真机排查能直接看出「一共收到几条、按哪条判的」 |
-| 4 | 全条不通过时取**最后一条**的 reason 失败收敛 | 失败原因保留最有诊断价值的那条 |
-| 5 | `receipts.length === 0` 时如实 `receipt-missing` 收敛 | 不静默放过 |
+| 1 | `checkReceipt` 去掉 mtime 比较，只保留 `existsSync`；同时移除已无用的 `dispatchedAtMs` 参数 | `src/reconcile.ts` |
+| 2 | `statSync` import 删除（不再使用） | `src/reconcile.ts` |
+| 3 | 冒烟换成新口径 8 项：**旧文件也通过** / 不存在才失败 / status 非法仍失败 / 目录也算存在 / 空 outputs 通过 / 无回执 / 坏 JSON | `scripts/smoke.mjs` |
 
-⚠️ **闸门没有被放松**：只有 stale 那一条时仍判失败（冒烟有反向断言）。本次修的是
-「多回执互相顶掉」，**不是**「放过旧产物」——`mtime > dispatched_at` 这道闸原样保留（属 U3，另议）。
+#### ⚠️ 自纠：本条 §此前写过一个**错误结论 + 错误修复**，同日撤回（务必别重蹈）
 
-**冒烟 +4**：多回执全部取到且按序 / 判定差异成立（最后那条 stale 不过、前面空产出过）/
-倒序取最后一条通过者（本次修复点）/ 只有 stale 那条时仍失败（闸门未放松）⇒ **471/0**。
+**当时的错误分析**：认定「多回执只看最后一条」是缺陷，理由是前面 3 条 `outputs:[]`（空申报）
+本可通过、却被第 4 条顶掉。据此改成「`receiptsSince` 取全部 + 倒序逐条校验、任一条通过即成功」。
 
-#### 缺陷 B（设计问题，**本轮未改**）：裁决时机太被动
+**为什么是错的**：`outputs:[]`（空申报）在 `checkReceipt` 里**天然放行**（不校验任何文件）
+⇒ 那个改法等于 **「agent 先交一次『我没有产出』就能绕过全部产出校验」**，
+是给没干活的 agent 开后门，比原问题严重得多。
 
-`settle` 只在 ① `settleBySessionId`（收到 turn/end）② sweep 轮询（`tickMs` 默认 60s）两处触发。
-回执到达本身**不触发**裁决 ⇒ 回执 10:14:01 到了，插件一直等到 10:14:06 第二个 turn/end 才动，
-而那时拿到的已是第 4 条。sweep 里那个分支的条件是 `… && latestReceipt === undefined`，
-所以「已收到回执」的情况直接被 `continue` 掉了，**漏了「该裁决」这一步**。
+**正确认识**：
+- 「取最新一条回执」**是设计意图**（agent 的**最终声明**才是权威；前提是「agent 会撒谎」，所以必须验产物），**不是缺陷**；
+- 「回执到达不触发裁决、要等 turn/end」是**时序现象**（见下），但**不是本次失败的原因**；
+- 本次失败**唯一的**直接原因就是新鲜度闸 —— 而它**按设计工作**，只是**语义选错了**（用户不要这道闸）。
 
-改法方向（待拍板）：有回执但仍未裁决时，sweep 直接 `settleByReceipt`（可配一个短宽限，
-给 agent 修正回执的时间）。⚠️ 本轮**不动**——改裁决时序会牵动「回执早到、agent 还在写产物」
-这类边界，风险高于当前收益；缺陷 A 修完后，本次事故的误判已消除。
+**已撤回**：删除 `store.receiptsSince`、恢复 `settleByReceipt` 取 `latestReceipt`（单条）、
+删除那组基于错误前提的冒烟断言。教训：**判定树是核心逻辑，改它之前先确认「原本是不是设计意图」**，
+不能把「我不理解的行为」直接当成 bug。
+
+#### 附：两个**确实存在**但本轮不动的东西
+
+1. **裁决时机被动**：`settle` 只在 ① `settleBySessionId`（turn/end）② sweep（`tickMs` 默认 60s）触发；
+   sweep 里 `… && latestReceipt === undefined` 把「已回执但未裁决」直接 `continue` 掉了。
+   真机表现：回执 10:14:01 到了，插件等 10:14:06 才动。已登记 **U24**（去掉新鲜度闸后影响已弱化）。
+2. **提示词与实现不一致**（**新增发现**）：回执工具描述写着「重复调用安全（**只认第一次**）」，
+   但实现是 `appendEvent` 每次都记、裁决取 `seq DESC LIMIT 1` = **认最后一次**。
+   真机 agent 交了 4 次 ⇒ 谁生效取决于这条口径。已登记 **U25**（待拍板统一，本轮不动）。
 
 ## 五、落码记录
 
@@ -237,7 +255,7 @@ agent 交 4 次回执时，前面 3 次「完成、无产出」（`outputs=[]` �
 | 16 | **第四轮观感返工**：任务块加官方任务图标（`IconBranchOutlineRegular`）；文件名改走全站唯一实现 `MarqueeText`（跑马灯）；chip 改 `flex:1 1 auto` **平分容器** + `min-width:10ch`；组标题「随附」→「**任务附件**」；来源「工作区」→「**链接**」（与编辑处 `editorAttachmentLink` 统一） | `src/client/task-file-context.tsx`、`src/client/archive-session-css.ts`、`src/client/locales.ts` |
 | 17 | **创建时间人人有**：缺 `createdAt` 的老定义显示占位 `[创建时间未知]`（不整段消失、也不编造时间） | `src/client/task-list.tsx`、`src/client/locales.ts` |
 | 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
-| 19 | **回执裁决修正（缺陷 A）**：`store.receiptsSince()` 取全部回执（`seq ASC`）；`settleByReceipt` 倒序逐条校验、取**最后一条通过**者为依据；成功留痕 `receipt-pass {receipts,usedTs,skipped}`；全不过取最后一条 reason；空列表如实 `receipt-missing`。冒烟 +4（含「闸门未放松」反向断言）⇒ **471/0** | `src/store.ts`、`src/reconcile.ts`、`scripts/smoke.mjs` |
+| 19 | **回执裁决：去掉产物新鲜度闸**（用户拍板）——`checkReceipt` 只保留 `existsSync`，移除 `mtime > dispatched_at` 比较与 `dispatchedAtMs` 参数；`statSync` import 删除。⚠️ 同日**撤回**了先前那个「逐条校验、任一条通过即成功」的错误修复（`receiptsSince` 已删、`settleByReceipt` 恢复取 `latestReceipt`）。冒烟换成新口径 8 项（旧文件也通过 / 不存在才失败 / status 非法仍失败 / 目录算存在 / 空 outputs 通过 / 无回执 / 坏 JSON）⇒ **479/0** | `src/reconcile.ts`、`src/store.ts`、`src/dispatch.ts`、`scripts/smoke.mjs` |
 
 **验证状态**：typecheck 绿 · build 绿 · 冒烟 **467/0** · ⏳ **真机待验**。
 
