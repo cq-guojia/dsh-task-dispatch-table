@@ -153,8 +153,10 @@ const TASK_LIST_CSS = [
   // 每格自带底边缝：label 与 value 相邻（**不用 column-gap**）⇒ 两条缝连成整行线；标签右侧留白当列间距。
   '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); }',
   '.dsh-tdt-info-label { padding-right: 12px; }',
-  // 末行（最后一组 label / value 两格）去掉底边缝，避开下方那条统一虚线（用户 2026-10-03）。
-  '.dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-fields > :nth-last-child(-n+2) { border-bottom: 0; }',
+  // 每栏**最底下那一条线**去掉（用户 2026-10-03 二次修订）：判据不是写死某一行（如 Token），而是由
+  // DOM 实际决定 —— 左栏最后一块就是字段区；右栏**有产出物时最后一块是产出物区** ⇒ 字段区末行
+  // 只有"它后面没别的块"（`:last-child`）时才去缝，否则会把 Token 的线也去掉、让字段区与产出物断线。
+  '.dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -1209,7 +1211,8 @@ function TaskExpandPanel(props: {
           onClick: () => { onOpenSession(sid) },
         }, sessionIcon, sessionLabel)
         : h('span', { style: sessionLinkStyle, title: sessionName }, sessionIcon, sessionLabel)
-    return h('div', null,
+    // 根容器包住「字段区 + 产出物区」两块 ⇒ CSS 才能按**整栏实际最后一块**判末行（用户 2026-10-03）。
+    return h('div', { className: 'dsh-tdt-info-rec-body' },
       h('div', { className: 'dsh-tdt-info-rec-fields' },
         InfoField({
           label: t('colStatus'),

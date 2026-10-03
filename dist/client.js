@@ -2947,7 +2947,8 @@ body[data-ds-dark-theme]{
    滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
-.dsh-tdt-sv-preview/* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
+.dsh-tdt-sv-preview{background:var(--tdt-surface-1,rgba(255,255,255,.04));}
+/* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
    ⇒ 向右拖（缩小）时指针走进 PDF 就卡死。拖动期间整片 iframe 让出指针事件。 */
 .dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
 .dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
@@ -41920,7 +41921,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
 			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); }",
 			".dsh-tdt-info-label { padding-right: 12px; }",
-			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-fields > :nth-last-child(-n+2) { border-bottom: 0; }",
+			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -43001,7 +43002,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					style: sessionLinkStyle,
 					title: sessionName
 				}, sessionIcon, sessionLabel);
-				return (0, react.createElement)("div", null, (0, react.createElement)("div", { className: "dsh-tdt-info-rec-fields" }, InfoField({
+				return (0, react.createElement)("div", { className: "dsh-tdt-info-rec-body" }, (0, react.createElement)("div", { className: "dsh-tdt-info-rec-fields" }, InfoField({
 					label: t("colStatus"),
 					children: (0, react.createElement)("span", { style: {
 						display: "inline-flex",
