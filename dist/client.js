@@ -3224,9 +3224,10 @@ body[data-ds-dark-theme]{
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
    ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**；
       **上 34 / 下 18** = 与「分隔线 → 会话正文首行」同距（四边等距 34 口径），纵向节拍接得上。
-   ② **横向排 + 平分宽度**（用户两次点名）：flex-wrap:wrap 从左到右、排满换行；
-      chip flex:1 1 auto **平分容器**（「右边还有距离为什么不显示满」），min-width:10ch 下限
-      ⇒ 一行至少放得下 3 个。
+   ② **横向排 + 按内容宽**（用户三次点名定稿）：flex-wrap:wrap 从左到右、排满换行；
+      chip flex:0 0 auto **跟内容走**（参照宿主「附加文件」列表的样子：每个文件名就那么宽、
+      不拖一条空白），**不设最小宽度**（「a.txt」就只显示 a.txt），只给 label 一个
+      max-width:40ch 上限 ⇒ 除非几百个字符，否则名字都完整显示。
    ③ **显示不全的文件名一律跑马灯**（用户「鼠标一上去都要跑马灯」）：走全站唯一实现
       MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
    ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
@@ -3261,19 +3262,23 @@ body[data-ds-dark-theme]{
 /* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
    ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
 .dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
-/* chip 宽度：**平分容器**（用户 2026-10-03「右边还有距离，为什么不显示满，应该是 50% 50%」）
-   ⇒ flex:1 1 auto 会 grow 平分；同时给 min-width 下限，「到了最小值就开始跑马灯」——
-   名字放不下时由 MarqueeText 省略 + hover 来回滚动，不再出现「右边空一大块」。 */
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:10ch;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:1 1 auto;display:flex;text-align:left;}
+/* chip 宽度**跟内容走**（用户 2026-10-03 二次点名，参照宿主「附加文件」列表的样子：
+   「4000_Essential_….pdf」就那么宽，不该每个后面都拖一条空白）。
+   ⇒ flex:0 0 auto（不 grow、不平分）；**不设最小宽度**（一个叫 a.txt 的就只显示 a.txt）；
+   唯一约束是 label 的 max-width（见下）：超长才出省略号。 */
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
 button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
 /* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
 .dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
 .dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层），
-   这里只保证它作为 flex 子项能收缩（min-width:0 是 flex 省略号的前提）。 */
-.dsh-tdt-sv-tfc-label{min-width:0;flex:1 1 auto;}
+/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层）。
+   这里给它**唯一的长度约束**：**无最小宽度**（用户 2026-10-03：「只有一个字 a.txt 就只显示 a.txt」），
+   **最大 40ch** —— 放宽到「只要不是几百个字符都让它显示」，超出才出省略号 + hover 来回滚动。
+   与主界面「基础信息 · 附加文件」同名（task-list.tsx）**同一口径**。
+   ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
+.dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
 /* 前置任务序号徽标（用户 2026-10-03）：浅灰圆角**小方框** + 小号数字，位置 = 任务名行最前。
    ⚠️ 选方框不选正圆：任务多于 9 个时编号是两位数，正圆会被撑变形（同「筛选角标」那条结论）。
    框高 14px ≈ 那行文字的高度（「底色高度跟文字差不多高」）；字号压到 9px（「数字尽量小一点」）。
@@ -5384,7 +5389,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return (0, react.createElement)("div", {
 						key: `${item.task}:${item.instanceId}`,
 						className: "dsh-tdt-sv-tfc-task"
-					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-seq" }, String(index + 1)), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-taskbar" }), (0, react.createElement)("span", {
+					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-taskbar" }), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-seq" }, String(index + 1)), (0, react.createElement)("span", {
 						className: "dsh-tdt-sv-tfc-name",
 						title: item.task
 					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react.createElement)(FileChip, {
@@ -42861,7 +42866,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						path: item.name,
 						size: 14
 					});
-					const name = (0, react.createElement)("span", null, item.name);
+					const name = (0, react.createElement)("span", {
+						title: item.name,
+						style: {
+							maxWidth: "40ch",
+							minWidth: 0,
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap"
+						}
+					}, item.name);
 					return absPath !== void 0 && anchor !== void 0 && onOpenFile !== void 0 ? (0, react.createElement)("button", {
 						key: `${item.kind}:${item.name}`,
 						type: "button",

@@ -1159,7 +1159,16 @@ function TaskExpandPanel(props: {
                 const absPath = item.path
                 const anchor = item.anchorSessionId
                 const icon = h(FileTypeIcon, { path: item.name, size: 14 })
-                const name = h('span', null, item.name)
+                // 文件名**限宽**（用户 2026-10-03：这里原先**完全不限宽**，超长会把整行撑爆）。
+                // 只给上限、不设下限（短名就短着），超出出省略号 + hover 看全名；
+                // 宽度与**会话弹窗顶部区同名**（.dsh-tdt-sv-tfc-label）取同一口径 40ch。
+                const name = h('span', {
+                  title: item.name,
+                  style: {
+                    maxWidth: '40ch', minWidth: 0, overflow: 'hidden',
+                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  },
+                }, item.name)
                 return absPath !== undefined && anchor !== undefined && onOpenFile !== undefined
                   ? h('button', {
                     key: `${item.kind}:${item.name}`, type: 'button', title: absPath, className: 'dsh-tdt-info-out',
