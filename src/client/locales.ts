@@ -160,6 +160,10 @@ export type LocaleKey =
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
   | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
+  // —— 立即执行（2026-10-03）：卡片按钮 + 确认框 + 结果 Toast ——
+  | 'cardRunNow' | 'cardRunNowTitle' | 'cardRunNowDesc' | 'cardRunNowOk'
+  | 'cardRunNowAlready' | 'cardRunNowBlocked' | 'cardRunNowDisabled' | 'cardRunNowMissingDep'
+  | 'cardRunNowWorkspace' | 'cardRunNowAttachment' | 'cardRunNowNotFound' | 'cardRunNowNotReady' | 'cardRunNowFailed'
   | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword' | 'limitPrefix' | 'limitSuffix'
   | 'cardRecordsEmpty' | 'cardRecordsEmptyFiltered' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
   | 'colTokens'
@@ -717,6 +721,20 @@ export const zh: Record<LocaleKey, string> = {
   cardDeleteTitle: '删除任务',
   cardDeleteDesc: '确定要删除这个任务吗？任务定义、附加文件与历史版本都会被移除，不可恢复（执行记录保留备查）。',
   cardCancel: '取消',
+  // —— 立即执行（2026-10-03）——
+  cardRunNow: '立即执行',
+  cardRunNowTitle: '立即执行任务',
+  cardRunNowDesc: '你确定要立即执行此任务吗？',
+  cardRunNowOk: '已提交执行，等待调度循环发动',
+  cardRunNowAlready: '该任务正在执行中，暂时不能再次执行',
+  cardRunNowBlocked: '前置任务未达标，本次未执行',
+  cardRunNowDisabled: '前置任务已停用，本次未执行',
+  cardRunNowMissingDep: '前置任务已不存在，本次未执行',
+  cardRunNowWorkspace: '工作区未找到：{name}',
+  cardRunNowAttachment: '附加文件不存在：{name}',
+  cardRunNowNotFound: '找不到该任务，请刷新后重试',
+  cardRunNowNotReady: '插件尚未就绪，请稍后再试',
+  cardRunNowFailed: '本次未能执行（{reason}）',
   cardFrom: '起始时间',
   cardTo: '截止时间',
   cardKeyword: '关键字',
@@ -1305,6 +1323,20 @@ export const en: Record<LocaleKey, string> = {
   cardDeleteTitle: 'Delete task',
   cardDeleteDesc: 'Delete this task? Its definition, attachments and version history will be removed permanently (run records are kept for audit).',
   cardCancel: 'Cancel',
+  // Run now (2026-10-03).
+  cardRunNow: 'Run now',
+  cardRunNowTitle: 'Run this task now',
+  cardRunNowDesc: 'Run this task immediately?',
+  cardRunNowOk: 'Submitted — waiting for the dispatch loop',
+  cardRunNowAlready: 'This task is already running; please wait',
+  cardRunNowBlocked: 'Upstream task not satisfied — not executed',
+  cardRunNowDisabled: 'Upstream task is disabled — not executed',
+  cardRunNowMissingDep: 'Upstream task no longer exists — not executed',
+  cardRunNowWorkspace: 'Workspace not found: {name}',
+  cardRunNowAttachment: 'Attachment missing: {name}',
+  cardRunNowNotFound: 'Task not found; please refresh',
+  cardRunNowNotReady: 'Plugin not ready yet; please retry',
+  cardRunNowFailed: 'Could not run ({reason})',
   cardFrom: 'Start',
   cardTo: 'End',
   cardKeyword: 'Keyword',

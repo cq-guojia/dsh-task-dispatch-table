@@ -235,7 +235,9 @@ getScopeConfig,
  * 写回插件配置（仅限计时类字段）。经 settings scope.update 合并进用户层并持久化，
  * scope.watch 即时生效（tickMs 重启 interval，其余字段 reconcile/scheduler 实时读 scope.get()）。
  */
-updateScopeConfig) => [
+updateScopeConfig, 
+/** 取调度器（「立即执行」用 runNow）；settings 未就绪时为 null ⇒ 路由回 503。 */
+getScheduler) => [
     {
         // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
         // 原始文件名经 x-filename 头（URL 编码）传入，避免二进制体里夹带名字；扩展名走白名单。
@@ -520,6 +522,40 @@ updateScopeConfig) => [
             catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message });
+            }
+        },
+    },
+    {
+        // 立即执行（2026-10-03 用户拍板）：POST { id } ⇒ **提前触发一次调度**。
+        // 语义与正常调度一致：串行 / 前置 / 工作区 / 附件任一不过 ⇒ **不建执行记录**，
+        // 只把原因回给前端（手动触发者看不到后台日志，必须让它知道「没执行成功 + 为什么」）。
+        // 全通过则写一条 dispatched + run_type='manual' 的记录，由下一轮 Loop B 发动。
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/tasks/run`,
+        handler: async (req, res) => {
+            if (req.method !== 'POST')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            const scheduler = getScheduler();
+            if (scheduler === null)
+                return writeJson(res, 503, { ok: false, error: 'not-ready' });
+            try {
+                const body = await readDispatchBody(req);
+                const parsed = JSON.parse(body);
+                const id = typeof parsed.id === 'string' ? parsed.id : '';
+                if (!isUuid(id))
+                    return writeJson(res, 400, { ok: false, error: 'id-required' });
+                const result = scheduler.runNow(id);
+                // 业务性拒绝（前置未达标 / 正在执行 / 工作区缺失…）**不是 HTTP 错误** ⇒ 一律 200 + ok:false，
+                // 前端按 error 码拼人话 Toast（用户拍板：要让手动触发者看到「没执行成功 + 原因」）。
+                if (!result.ok)
+                    return writeJson(res, 200, { ok: false, error: result.error, detail: result.detail });
+                return writeJson(res, 200, { ok: true, instanceId: result.instanceId });
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                return writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message });
             }
         },
     },
@@ -1043,6 +1079,11 @@ export function apply(ctx, config) {
     let attachmentsDirRef = null;
     /** settings inject 就绪后的任务文件资产根（tasks/ 与临时区都在 state.db 同目录）。 */
     let assetsRef = null;
+    /**
+     * settings inject 就绪后的调度器（「立即执行」路由要调 runNow）。
+     * webServer 注入早于 settings ⇒ 与 storeRef 同法：先声明、后赋值，路由闭包按请求时惰性取。
+     */
+    let schedulerRef = null;
     /** settings inject 就绪后的插件配置（清道夫天数等；无 register 面时沿用启动配置）。 */
     let configRef = initial;
     /** settings inject 就绪后捕获的官方/降级作用域，供设置页经 scope.update 写回配置。 */
@@ -1099,7 +1140,7 @@ export function apply(ctx, config) {
         }
         for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry, () => ctx.get('llm'), (msg) => { ctx.logger.info(msg); }, 
         // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
-        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig)) {
+        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig, () => schedulerRef)) {
             // 逐条容错：宿主对重复 (kind, path) 注册会 throw（dsh-host-webserver register），
             // 一条坏路由绝不能把后面的路由全部拖死（2026-10-02 真机「部分接口 404」的放大器）。
             try {
@@ -1109,7 +1150,7 @@ export function apply(ctx, config) {
                 wctx.logger.warn(`[数据通道] 路由注册失败 ${route.path}：${error instanceof Error ? error.message : String(error)}`);
             }
         }
-        wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、GET /api/task-dispatch-table/tasks/instances、GET /api/task-dispatch-table/tasks/log、GET /api/task-dispatch-table/tasks/events、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled');
+        wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、GET /api/task-dispatch-table/tasks/instances、GET /api/task-dispatch-table/tasks/log、GET /api/task-dispatch-table/tasks/events、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled、POST /api/task-dispatch-table/tasks/run');
     });
     ctx.inject(['settings'], (sctx) => {
         const settings = sctx.settings;
@@ -1247,6 +1288,7 @@ export function apply(ctx, config) {
             // 附加文件存在性校验（Loop A）：资产根随 statePath 定格，未就绪 ⇒ 跳过 upload 型校验。
             assets: () => assetsRef,
         });
+        schedulerRef = scheduler;
         // 启动扫描（机制 #5）：重启期间 disposed 事件可能全部丢失，已派发未定态实例置 unknown，
         // 随后按 unknown 流程自然收敛（§3）。pending 从未派发、无可丢事件，保持原状。
         const scanned = store.startupScan();

@@ -31,8 +31,19 @@ import { INSTANCE_STATUSES, statusTextOf } from './status-text'
 import { pinMsFor, sortRows } from '../task-sort.js'
 import { MarqueeText, SelectField, calendarLabelsOf, timeLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
+// 浮层结果提示（立即执行成功 / 被拒）：全站唯一实现，不许各处手写。
+import { FloatingToast, ensureToastStyle } from './toast-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
 import { applyStyle, Button, IconButton, Input as TdtInput, Loading, RunningBlocks, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
+
+/**
+ * 「立即执行」结果（与服务端 `scheduler.ts` 的 RunNowResult 对齐）：业务性拒绝走
+ * `ok:false` + 机器码 + 可选参数（工作区名 / 附件名），由卡片侧按 locale 拼人话 Toast
+ * （用户 2026-10-03：手动触发看不到后台日志，必须给出「没成功 + 为什么」）。
+ */
+export type RunNowOutcome =
+  | { ok: true }
+  | { ok: false; error: string; detail?: string }
 
 /** 与服务端 `runtime-index.ts` 的 TaskOverviewRow 同形（客户端本地声明，不跨半侧引类型）。 */
 export interface TaskOverviewRow {
@@ -953,6 +964,8 @@ function TaskExpandPanel(props: {
   modelText: string
   onEdit: (id: string) => void
   onDelete: (id: string) => Promise<string | null>
+  /** 立即执行（2026-10-03）：返回业务结果，卡片据此弹成功 / 拒绝 Toast。 */
+  onRunNow: (id: string) => Promise<RunNowOutcome>
   /** 产出文件点开（U11 预览面单一入口；undefined = 预览面不可用 ⇒ chips 降级不可点）。 */
   onOpenFile?: (sessionId: string, path: string) => void
   /**
@@ -964,7 +977,7 @@ function TaskExpandPanel(props: {
   /** 即时拉一次 overview（来自顶层 `useTaskOverview`）：任务跑完时让左栏「下次预计执行」同步刷新。 */
   refresh: () => void
 }) {
-  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession, refresh } = props
+  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, refresh } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
   // 运行态签名（用户 2026-10-03）：**页面开着、任务跑完了 ⇒ 打开着的面板要自动重读**，
   // 否则用户看到的一直是上一次执行留下的状态。签名只取「会变的运行态字段」⇒ 轮询没变化时不会触发重取；
@@ -1026,6 +1039,35 @@ function TaskExpandPanel(props: {
   // ── 删除确认 ──
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // ── 立即执行（2026-10-03）：确认框 + 结果 Toast ──
+  const [confirmRun, setConfirmRun] = useState(false)
+  const [runBusy, setRunBusy] = useState(false)
+  const [runToast, setRunToast] = useState<{ text: string; tone: 'success' | 'error'; seq: number } | null>(null)
+  const runSeq = useRef(0)
+  /** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
+  const runNowToast = (outcome: RunNowOutcome): { text: string; tone: 'success' | 'error' } => {
+    if (outcome.ok) return { text: t('cardRunNowOk'), tone: 'success' }
+    switch (outcome.error) {
+      case 'already-running': return { text: t('cardRunNowAlready'), tone: 'error' }
+      case 'upstream-not-succeeded': return { text: t('cardRunNowBlocked'), tone: 'error' }
+      case 'upstream-disabled': return { text: t('cardRunNowDisabled'), tone: 'error' }
+      case 'upstream-missing': return { text: t('cardRunNowMissingDep'), tone: 'error' }
+      case 'workspace-missing': return { text: tt('cardRunNowWorkspace', { name: outcome.detail ?? '' }), tone: 'error' }
+      case 'attachment-missing': return { text: tt('cardRunNowAttachment', { name: outcome.detail ?? '' }), tone: 'error' }
+      case 'task-not-found': return { text: t('cardRunNowNotFound'), tone: 'error' }
+      case 'not-ready': return { text: t('cardRunNowNotReady'), tone: 'error' }
+      default: return { text: tt('cardRunNowFailed', { reason: outcome.detail ?? outcome.error }), tone: 'error' }
+    }
+  }
+  const doRunNow = (): void => {
+    setRunBusy(true)
+    void onRunNow(row.id).then(outcome => {
+      const { text, tone } = runNowToast(outcome)
+      runSeq.current += 1
+      setRunToast({ text, tone, seq: runSeq.current })
+    }).finally(() => { setRunBusy(false); setConfirmRun(false) })
+  }
 
   // 切到基础信息 ⇒ 取「上次执行」一条（新→旧排序，limit 1 即最近的一条终态实例）。
   useEffect(() => {
@@ -1568,36 +1610,72 @@ function TaskExpandPanel(props: {
     ),
   )
 
+  /** 立即执行确认框（2026-10-03）：与删除确认同款自绘 overlay，文案「你确定要立即执行此任务吗？」。 */
+  const renderRunConfirm = (): ReturnType<typeof h> => h('div', {
+    style: overlayStyle,
+    onClick: () => { if (!runBusy) setConfirmRun(false) },
+  },
+    h('div', { style: dialogStyle, onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+      h('div', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, marginBottom: '8px' } }, t('cardRunNowTitle')),
+      h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginBottom: '14px' } }, t('cardRunNowDesc')),
+      h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
+        h(Button, {
+          variant: 'outline', size: 'sm', disabled: runBusy,
+          onClick: () => { setConfirmRun(false) },
+        }, t('cardCancel')),
+        h(Button, {
+          variant: 'primary', size: 'sm', disabled: runBusy,
+          onClick: () => { doRunNow() },
+        }, runBusy ? t('loading') : t('cardRunNow')),
+      ),
+    ),
+  )
+
   return h('div', { style: panelWrapStyle },
     // 内容区：三选一替换；**滚动只发生在各 tab 自己的内容盒里**（过滤行 / 表头固定，用户 2026-10-02）。
     tab === 'info' ? renderInfo() : tab === 'records' ? renderRecords() : renderLogs(),
-    // 底栏：左 = 三滑块；右 = 编辑任务 + 删除。
-    h('div', { style: panelBarStyle },
-      // 三面板滑块走 UI 基础层唯一实现：variant="inset" = 在卡片底色上（轨道下沉、选中抬到第三层面）
-      h(Segmented<'info' | 'records' | 'logs'>, {
-        value: tab,
-        size: 'md',
-        variant: 'inset',
-        items: [
-          { value: 'info', label: t('cardTabInfo') },
-          { value: 'records', label: t('cardTabRecords') },
-          { value: 'logs', label: t('cardTabLogs') },
-        ],
-        onChange: setTab,
-      }),
-      h('span', { style: { flex: '1 1 auto' } }),
-      // 右下按钮区顺序（用户 2026-10-02）：删除在编辑**左边**。
-      // 高度跟同排三滑块一样走 md(28)（用户 2026-10-01：此前 sm=24 比滑块矮 4px）。
-      h(Button, {
-        variant: 'outline', size: 'md', className: 'dsh-tdt-btn--danger-ink',
-        onClick: () => { setConfirmDelete(true) },
-      }, t('cardDelete')),
-      h(Button, {
-        variant: 'outline', size: 'md', icon: h(IconEditOutlineRegular, { size: 14 }),
-        onClick: () => { onEdit(row.id) },
-      }, t('editorEdit')),
+    // 底栏外包一层 position:relative ⇒ 立即执行的结果 Toast 浮在底栏上方（成功绿 / 拒绝红），2.8s 自退。
+    // 按钮顺序（用户 2026-10-03）：删除 → **立即执行** → 编辑。
+    h('div', { style: { position: 'relative' } },
+      runToast !== null
+        ? h(FloatingToast, {
+          seq: runToast.seq, tone: runToast.tone,
+          onDone: () => { setRunToast(null) },
+          text: runToast.text,
+        })
+        : null,
+      h('div', { style: panelBarStyle },
+        // 三面板滑块走 UI 基础层唯一实现：variant="inset" = 在卡片底色上（轨道下沉、选中抬到第三层面）
+        h(Segmented<'info' | 'records' | 'logs'>, {
+          value: tab,
+          size: 'md',
+          variant: 'inset',
+          items: [
+            { value: 'info', label: t('cardTabInfo') },
+            { value: 'records', label: t('cardTabRecords') },
+            { value: 'logs', label: t('cardTabLogs') },
+          ],
+          onChange: setTab,
+        }),
+        h('span', { style: { flex: '1 1 auto' } }),
+        // 高度跟同排三滑块一样走 md(28)（用户 2026-10-01：此前 sm=24 比滑块矮 4px）。
+        h(Button, {
+          variant: 'outline', size: 'md', className: 'dsh-tdt-btn--danger-ink',
+          onClick: () => { setConfirmDelete(true) },
+        }, t('cardDelete')),
+        // 立即执行（用户 2026-10-03）：插在删除与编辑**中间**；点了弹确认框，确认后提前触发一次调度。
+        h(Button, {
+          variant: 'outline', size: 'md', icon: h(IconAlarmClockOutlineRegular, { size: 14 }),
+          onClick: () => { setConfirmRun(true) },
+        }, t('cardRunNow')),
+        h(Button, {
+          variant: 'outline', size: 'md', icon: h(IconEditOutlineRegular, { size: 14 }),
+          onClick: () => { onEdit(row.id) },
+        }, t('editorEdit')),
+      ),
     ),
     confirmDelete ? renderConfirm() : null,
+    confirmRun ? renderRunConfirm() : null,
   )
 }
 
@@ -1610,6 +1688,8 @@ function TaskCard(props: {
   onEdit: (id: string) => void
   /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（由父级 Toast 展示）。 */
   onDelete: (id: string) => Promise<string | null>
+  /** 立即执行（2026-10-03）：透传给展开区按钮。 */
+  onRunNow: (id: string) => Promise<RunNowOutcome>
   onOpenFile?: (sessionId: string, path: string) => void
   /** 会话弹窗：**只传会话 id**（见 TaskExpandPanel 说明）。 */
   onOpenSession?: (sessionId: string) => void
@@ -1618,7 +1698,7 @@ function TaskCard(props: {
   /** 即时拉 overview：任务跑完时左栏「下次预计执行」同步刷新（见 TaskExpandPanel）。 */
   refresh: () => void
 }) {
-  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props
+  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props
   // 排期人话与编辑器「预计执行」**同一份实现**（`schedule-text.ts`，优先吃结构化 ui）⇒ 两处必然一致。
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
@@ -1693,7 +1773,7 @@ function TaskCard(props: {
       ),
     ),
     // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
-    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession, refresh }) : null,
+    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, refresh }) : null,
   )
 }
 
@@ -1705,6 +1785,8 @@ export function TaskListView(props: {
   onEdit: (id: string) => void
   /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（父级 Toast 展示、列表靠 overview 刷新少一行）。 */
   onDelete: (id: string) => Promise<string | null>
+  /** 立即执行（2026-10-03）：POST /tasks/run，结果由卡片弹 Toast。 */
+  onRunNow: (id: string) => Promise<RunNowOutcome>
   /** 产出文件点开（U11 预览面；undefined = 不可用 ⇒ 产出降级纯文本）。 */
   onOpenFile?: (sessionId: string, path: string) => void
   /** 会话弹窗（undefined = 不可用 ⇒ 不出链接）。**只传会话 id**（见 TaskExpandPanel 说明）。 */
@@ -1714,11 +1796,13 @@ export function TaskListView(props: {
   /** 即时拉 overview：任务跑完时左栏「下次预计执行」同步刷新（见 TaskExpandPanel）。 */
   refresh: () => void
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props
+  const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
   ensureTaskEditorStyle()
+  // 立即执行结果 Toast 样式（域 'domain:toast'，全站唯一实现；幂等）。
+  ensureToastStyle()
   const [filter, setFilter] = useState<'all' | 'enabled' | 'disabled' | 'abnormal'>('all')
   const [workspace, setWorkspace] = useState<string>('')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -1842,6 +1926,7 @@ export function TaskListView(props: {
             onToggleOpen: () => { setOpenId(cur => (cur === row.id ? null : row.id)) },
             onEdit,
             onDelete,
+            onRunNow,
             onOpenFile,
             onOpenSession,
             refresh,

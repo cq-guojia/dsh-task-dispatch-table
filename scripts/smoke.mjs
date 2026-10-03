@@ -2104,6 +2104,33 @@ console.log('\n[14] runtime-index')
     check('会话名由服务端按 sessionTitleOf 单源重建（快照标题优先，旧行回退当前任务标题）',
       sv.includes('sessionTitleOf(row.scheduled_at') && sv.includes('session_title')
       && qsrc.includes('session_title'))
+
+    // ── 立即执行（2026-10-03 用户拍板）：run_type 落库 + 路由 / 前端接线 ──
+    const rnStore = new TaskStore(join(root, 'run-now.db'))
+    rnStore.ensureInstance('rn-1', 'rn-task', '2026-10-03', '2026-10-03T01:00:00.000Z', 'dispatched', undefined, 'manual')
+    check('立即执行：手动触发的执行记录 run_type=manual 落库', rnStore.get('rn-1')?.run_type === 'manual')
+    rnStore.ensureInstance('rn-2', 'rn-task', '2026-10-03', '2026-10-03T02:00:00.000Z', 'dispatched')
+    check('自动调度：不传 run_type 时缺省 scheduled（旧调用零改动）', rnStore.get('rn-2')?.run_type === 'scheduled')
+    rnStore.close()
+    const storeSrc = readFileSync(join(process.cwd(), 'src', 'store.ts'), 'utf8')
+    check('存储层：task_instances 含 run_type 列且旧库自动补列迁移',
+      storeSrc.includes('run_type      TEXT') && storeSrc.includes('ADD COLUMN run_type TEXT'))
+    const schedSrc = readFileSync(join(process.cwd(), 'src', 'scheduler.ts'), 'utf8')
+    check('调度层：runNow 按 id 取全量定义（绕 enabled）+ 串行/前置/工作区/附件预条件 + 写 manual',
+      schedSrc.includes('runNow(taskId: string): RunNowResult')
+      && schedSrc.includes('loadTasks(logger, config(), true)')
+      && schedSrc.includes("'already-running'")
+      && schedSrc.includes("'manual'"))
+    const idxSrc = readFileSync(join(process.cwd(), 'src', 'index.ts'), 'utf8')
+    check('接口层：新增 POST /tasks/run，业务性拒绝回 200 + ok:false（原因交前端 Toast）',
+      idxSrc.includes('${DISPATCH_API_PREFIX}/tasks/run') && idxSrc.includes('scheduler.runNow(id)'))
+    check('前端：按钮组在删除与编辑之间插「立即执行」+ 确认框 + 结果 Toast',
+      tl.includes("t('cardRunNow')") && tl.includes("t('cardRunNowDesc')")
+      && tl.includes('renderRunConfirm') && tl.includes('FloatingToast'))
+    const locSrc = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
+    check('文案：确认框文案与中英双语键齐备',
+      locSrc.includes("cardRunNowDesc: '你确定要立即执行此任务吗？'")
+      && locSrc.includes("cardRunNowDesc: 'Run this task immediately?'"))
   }
 
   store.close()

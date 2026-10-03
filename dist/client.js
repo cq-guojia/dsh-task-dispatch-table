@@ -722,6 +722,19 @@ window.__ModuleLoader__.load({
 			cardDeleteTitle: "删除任务",
 			cardDeleteDesc: "确定要删除这个任务吗？任务定义、附加文件与历史版本都会被移除，不可恢复（执行记录保留备查）。",
 			cardCancel: "取消",
+			cardRunNow: "立即执行",
+			cardRunNowTitle: "立即执行任务",
+			cardRunNowDesc: "你确定要立即执行此任务吗？",
+			cardRunNowOk: "已提交执行，等待调度循环发动",
+			cardRunNowAlready: "该任务正在执行中，暂时不能再次执行",
+			cardRunNowBlocked: "前置任务未达标，本次未执行",
+			cardRunNowDisabled: "前置任务已停用，本次未执行",
+			cardRunNowMissingDep: "前置任务已不存在，本次未执行",
+			cardRunNowWorkspace: "工作区未找到：{name}",
+			cardRunNowAttachment: "附加文件不存在：{name}",
+			cardRunNowNotFound: "找不到该任务，请刷新后重试",
+			cardRunNowNotReady: "插件尚未就绪，请稍后再试",
+			cardRunNowFailed: "本次未能执行（{reason}）",
 			cardFrom: "起始时间",
 			cardTo: "截止时间",
 			cardKeyword: "关键字",
@@ -1292,6 +1305,19 @@ window.__ModuleLoader__.load({
 			cardDeleteTitle: "Delete task",
 			cardDeleteDesc: "Delete this task? Its definition, attachments and version history will be removed permanently (run records are kept for audit).",
 			cardCancel: "Cancel",
+			cardRunNow: "Run now",
+			cardRunNowTitle: "Run this task now",
+			cardRunNowDesc: "Run this task immediately?",
+			cardRunNowOk: "Submitted — waiting for the dispatch loop",
+			cardRunNowAlready: "This task is already running; please wait",
+			cardRunNowBlocked: "Upstream task not satisfied — not executed",
+			cardRunNowDisabled: "Upstream task is disabled — not executed",
+			cardRunNowMissingDep: "Upstream task no longer exists — not executed",
+			cardRunNowWorkspace: "Workspace not found: {name}",
+			cardRunNowAttachment: "Attachment missing: {name}",
+			cardRunNowNotFound: "Task not found; please refresh",
+			cardRunNowNotReady: "Plugin not ready yet; please retry",
+			cardRunNowFailed: "Could not run ({reason})",
 			cardFrom: "Start",
 			cardTo: "End",
 			cardKeyword: "Keyword",
@@ -42624,7 +42650,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
 		*/
 		function TaskExpandPanel(props) {
-			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession, refresh } = props;
+			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, refresh } = props;
 			const [tab, setTab] = (0, react.useState)("info");
 			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}`;
 			const firstRun = (0, react.useRef)(true);
@@ -42680,6 +42706,70 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [logError, setLogError] = (0, react.useState)(null);
 			const [confirmDelete, setConfirmDelete] = (0, react.useState)(false);
 			const [deleting, setDeleting] = (0, react.useState)(false);
+			const [confirmRun, setConfirmRun] = (0, react.useState)(false);
+			const [runBusy, setRunBusy] = (0, react.useState)(false);
+			const [runToast, setRunToast] = (0, react.useState)(null);
+			const runSeq = (0, react.useRef)(0);
+			/** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
+			const runNowToast = (outcome) => {
+				if (outcome.ok) return {
+					text: t("cardRunNowOk"),
+					tone: "success"
+				};
+				switch (outcome.error) {
+					case "already-running": return {
+						text: t("cardRunNowAlready"),
+						tone: "error"
+					};
+					case "upstream-not-succeeded": return {
+						text: t("cardRunNowBlocked"),
+						tone: "error"
+					};
+					case "upstream-disabled": return {
+						text: t("cardRunNowDisabled"),
+						tone: "error"
+					};
+					case "upstream-missing": return {
+						text: t("cardRunNowMissingDep"),
+						tone: "error"
+					};
+					case "workspace-missing": return {
+						text: tt("cardRunNowWorkspace", { name: outcome.detail ?? "" }),
+						tone: "error"
+					};
+					case "attachment-missing": return {
+						text: tt("cardRunNowAttachment", { name: outcome.detail ?? "" }),
+						tone: "error"
+					};
+					case "task-not-found": return {
+						text: t("cardRunNowNotFound"),
+						tone: "error"
+					};
+					case "not-ready": return {
+						text: t("cardRunNowNotReady"),
+						tone: "error"
+					};
+					default: return {
+						text: tt("cardRunNowFailed", { reason: outcome.detail ?? outcome.error }),
+						tone: "error"
+					};
+				}
+			};
+			const doRunNow = () => {
+				setRunBusy(true);
+				onRunNow(row.id).then((outcome) => {
+					const { text, tone } = runNowToast(outcome);
+					runSeq.current += 1;
+					setRunToast({
+						text,
+						tone,
+						seq: runSeq.current
+					});
+				}).finally(() => {
+					setRunBusy(false);
+					setConfirmRun(false);
+				});
+			};
 			(0, react.useEffect)(() => {
 				if (tab !== "info") return;
 				let alive = true;
@@ -43281,7 +43371,53 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					});
 				}
 			}, deleting ? t("loading") : t("cardDelete")))));
-			return (0, react.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react.createElement)("div", { style: panelBarStyle }, (0, react.createElement)(Segmented, {
+			/** 立即执行确认框（2026-10-03）：与删除确认同款自绘 overlay，文案「你确定要立即执行此任务吗？」。 */
+			const renderRunConfirm = () => (0, react.createElement)("div", {
+				style: overlayStyle,
+				onClick: () => {
+					if (!runBusy) setConfirmRun(false);
+				}
+			}, (0, react.createElement)("div", {
+				style: dialogStyle,
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-lg)",
+				fontWeight: 600,
+				marginBottom: "8px"
+			} }, t("cardRunNowTitle")), (0, react.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-sm)",
+				color: "var(--tdt-fg-2)",
+				lineHeight: "var(--tdt-line-sm)",
+				marginBottom: "14px"
+			} }, t("cardRunNowDesc")), (0, react.createElement)("div", { style: {
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: "8px"
+			} }, (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				disabled: runBusy,
+				onClick: () => {
+					setConfirmRun(false);
+				}
+			}, t("cardCancel")), (0, react.createElement)(Button$2, {
+				variant: "primary",
+				size: "sm",
+				disabled: runBusy,
+				onClick: () => {
+					doRunNow();
+				}
+			}, runBusy ? t("loading") : t("cardRunNow")))));
+			return (0, react.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react.createElement)("div", { style: { position: "relative" } }, runToast !== null ? (0, react.createElement)(FloatingToast, {
+				seq: runToast.seq,
+				tone: runToast.tone,
+				onDone: () => {
+					setRunToast(null);
+				},
+				text: runToast.text
+			}) : null, (0, react.createElement)("div", { style: panelBarStyle }, (0, react.createElement)(Segmented, {
 				value: tab,
 				size: "md",
 				variant: "inset",
@@ -43310,14 +43446,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, t("cardDelete")), (0, react.createElement)(Button$2, {
 				variant: "outline",
 				size: "md",
+				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 14 }),
+				onClick: () => {
+					setConfirmRun(true);
+				}
+			}, t("cardRunNow")), (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
 				onClick: () => {
 					onEdit(row.id);
 				}
-			}, t("editorEdit"))), confirmDelete ? renderConfirm() : null);
+			}, t("editorEdit")))), confirmDelete ? renderConfirm() : null, confirmRun ? renderRunConfirm() : null);
 		}
 		function TaskCard(props) {
-			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props;
+			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props;
 			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react.createElement)("div", {
@@ -43408,16 +43551,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				modelText,
 				onEdit,
 				onDelete,
+				onRunNow,
 				onOpenFile,
 				onOpenSession,
 				refresh
 			}) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props;
+			const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
+			ensureToastStyle();
 			const [filter, setFilter] = (0, react.useState)("all");
 			const [workspace, setWorkspace] = (0, react.useState)("");
 			const [menuOpen, setMenuOpen] = (0, react.useState)(false);
@@ -43561,6 +43706,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				onEdit,
 				onDelete,
+				onRunNow,
 				onOpenFile,
 				onOpenSession,
 				refresh,
@@ -44365,6 +44511,37 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return message;
 				}
 			};
+			/**
+			* 立即执行（2026-10-03 用户拍板）：POST /tasks/run { id } ⇒ **提前触发一次调度**。
+			* 返回 `{ ok:true }` 或业务性拒绝 `{ ok:false, error, detail }`——原因文案由卡片侧按 locale 拼
+			* （用户要求：手动触发看不到后台日志，必须弹 Toast 告诉「没执行成功 + 为什么」）。
+			* 成功即刷 overview，让卡片立刻进入「运行中」。
+			*/
+			const runTaskNow = async (id) => {
+				try {
+					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/run`, {
+						method: "POST",
+						headers: { "content-type": "application/json" },
+						body: JSON.stringify({ id })
+					});
+					const body = await res.json();
+					if (body.ok === true) {
+						overview.refresh();
+						return { ok: true };
+					}
+					return {
+						ok: false,
+						error: typeof body.error === "string" && body.error !== "" ? body.error : `HTTP ${res.status}`,
+						detail: typeof body.detail === "string" ? body.detail : void 0
+					};
+				} catch (error) {
+					return {
+						ok: false,
+						error: "network",
+						detail: error instanceof Error ? error.message : String(error)
+					};
+				}
+			};
 			/** 保存（新增 / 修改同一条链路）：POST /tasks { task }。 */
 			const saveEditor = async (draft) => {
 				if (editor === null) return;
@@ -44717,7 +44894,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onOpenSession: viewSession !== null ? (sessionId) => {
 					openView(sessionId);
 				} : void 0,
-				onToggleEnabled: toggleTaskEnabled
+				onToggleEnabled: toggleTaskEnabled,
+				onRunNow: runTaskNow
 			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "var(--tdt-font-sm)" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
 				value: statusFilter,
 				onChange: (event) => {

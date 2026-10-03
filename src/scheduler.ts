@@ -21,9 +21,25 @@ import type { RuntimeIndex } from './runtime-index.js'
 import { resolveWorkspace } from './dispatch.js'
 import type { PluginConfig } from './config.js'
 
+/**
+ * 「立即执行」（手动触发一次调度，2026-10-03 用户拍板）结果。
+ * `ok: false` 时：`error` = 机器码（前端翻人话），`detail` = 可选参数（工作区名 / 附件名等）。
+ * 语义与正常调度**完全一致**——前置未达标 / 工作区缺失 / 附件缺失都**不建执行记录**，
+ * 只是额外把原因回给前端（用户手动触发看不到后台日志）。
+ */
+export type RunNowResult =
+  | { ok: true; instanceId: string }
+  | { ok: false; error: string; detail?: string }
+
 export interface Scheduler {
   tick: () => void
   getTasks: () => Map<string, TaskDefinition>
+  /**
+   * 立即执行（2026-10-03）：按 id 取定义（**绕过 enabled**——用户拍板「不看开关」）、
+   * 逐项复用 Loop A 的预条件判定（串行互斥 → 前置 → 工作区 → 附件），全通过则写一条
+   * `dispatched` + `run_type='manual'` 的执行记录，等下一轮 Loop B 发动（＝提前触发一次）。
+   */
+  runNow: (taskId: string) => RunNowResult
   /** 启动诊断（决策 31）：报告自上次起到现在的「错过刻度」计数（不补跑、只记日志）。 */
   startupDiagnostics: () => void
 }
@@ -575,6 +591,59 @@ export function createScheduler(opts: {
 
     getTasks() {
       return taskMap
+    },
+
+    /**
+     * 立即执行（2026-10-03 用户拍板）——**提前触发一次调度**，不改动任何既有语义：
+     *
+     * - **绕过 enabled**：按 id 从全量定义（含停用）取，不看开关；也不看「上次是否失败」。
+     * - **预条件与 Loop A 逐项同口径**（顺序一致）：串行互斥 → 前置依赖 → 工作区 → 附件。
+     *   不过就**不建记录**（同正常调度），只是额外把原因回给前端（手动触发看不到日志）。
+     * - 落库形态与 `dispatchNewSlots` 一致：`dispatched` + 派发快照，**落库即止**；
+     *   发动交给下一轮 Loop B 的「发动②」（无会话的 dispatched 行）。
+     *   ⚠️ 不用 `pending`：Loop B 的 `pending` 分支是「重试回退」专用（窗口外会被删行 +
+     *   记 stray_pending），手动行用当前时刻当刻度、窗口可能为 0 ⇒ 会被误删。
+     * - 打 `run_type='manual'`，并记一条诊断日志 + 审计。
+     */
+    runNow(taskId: string): RunNowResult {
+      const allTasks = loadTasks(logger, config(), true)
+      const task = allTasks.find((t) => t.id === taskId)
+      if (task === undefined) return { ok: false, error: 'task-not-found' }
+      // 串行互斥（与 Loop A 同集）：同任务已有真正在飞实例 ⇒ 拒绝，防双跑（用户拍板）。
+      if (store.listByStatus(IN_FLIGHT_STATUSES).some((o) => o.task_id === task.id)) {
+        return { ok: false, error: 'already-running' }
+      }
+      const now = new Date()
+      const scheduledAtIso = now.toISOString()
+      const logicalDate = logicalDateOf(now, task.schedule.timezone)
+      // 先判前置（与 dispatchNewSlots 同顺序）：未达标 ⇒ 不建记录，只把原因回给前端。
+      const upstreams = new Map(allTasks.map((t) => [t.id, t]))
+      const depVerdict = judgeDependencies(store, task, logicalDate, scheduledAtIso, upstreams)
+      if (!depVerdict.ready) return { ok: false, error: depVerdict.reason ?? 'upstream-not-succeeded' }
+      let workspace: HostWorkspace
+      try {
+        workspace = resolveWorkspace(ctx, task.target.workspace)
+      } catch {
+        return { ok: false, error: 'workspace-missing', detail: task.target.workspace }
+      }
+      const missing = missingAttachments(ctx, task, workspace.path, assets === undefined ? null : assets())
+      if (missing.length > 0) return { ok: false, error: 'attachment-missing', detail: missing.join('、') }
+      // 全部预条件通过 ⇒ 与懒建行同形态落库（dispatched + 快照），打 manual 标记。
+      const id = randomUUID()
+      if (!store.ensureInstance(id, task.id, logicalDate, scheduledAtIso, 'dispatched', snapshotOf(task, workspace, depVerdict.resolved), 'manual')) {
+        return { ok: false, error: 'duplicate' }
+      }
+      for (const note of depVerdict.staleNotes) {
+        store.appendLog({ taskId: task.id, scheduledAt: scheduledAtIso, level: 'warn', kind: 'stale-upstream', message: note })
+      }
+      runtime?.markDispatched(task.id, scheduledAtIso)
+      store.appendLog({
+        taskId: task.id, scheduledAt: scheduledAtIso, level: 'info', kind: 'manual-run',
+        message: '用户手动「立即执行」，已写入执行记录，等待执行循环发动',
+      })
+      store.appendAudit({ taskId: task.id, action: 'task_run_now', detail: { scheduledAt: scheduledAtIso } })
+      logger.info(`手动「立即执行」已落库执行记录 ${id}（任务 ${task.id} · ${scheduledAtIso}），发动由执行循环接管`)
+      return { ok: true, instanceId: id }
     },
 
     startupDiagnostics() {

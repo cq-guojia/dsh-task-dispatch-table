@@ -34,7 +34,7 @@ import {
 import { ensureToastStyle, FloatingToast } from './toast-css'
 import { Button, IconButton, Segmented, ensureUiBase } from './ui'
 import { humanizeTaskError } from './task-editor'
-import { TaskListView, useTaskOverview, type TaskOverviewRow } from './task-list'
+import { TaskListView, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-list'
 // 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
 import { resolvedDepsOf } from '../deps.js'
 import {
@@ -679,6 +679,34 @@ function TaskPage(props: {
     }
   }
 
+  /**
+   * 立即执行（2026-10-03 用户拍板）：POST /tasks/run { id } ⇒ **提前触发一次调度**。
+   * 返回 `{ ok:true }` 或业务性拒绝 `{ ok:false, error, detail }`——原因文案由卡片侧按 locale 拼
+   * （用户要求：手动触发看不到后台日志，必须弹 Toast 告诉「没执行成功 + 为什么」）。
+   * 成功即刷 overview，让卡片立刻进入「运行中」。
+   */
+  const runTaskNow = async (id: string): Promise<RunNowOutcome> => {
+    try {
+      const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/tasks/run`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const body = await res.json() as { ok?: boolean; error?: unknown; detail?: unknown }
+      if (body.ok === true) {
+        overview.refresh()
+        return { ok: true }
+      }
+      return {
+        ok: false,
+        error: typeof body.error === 'string' && body.error !== '' ? body.error : `HTTP ${res.status}`,
+        detail: typeof body.detail === 'string' ? body.detail : undefined,
+      }
+    } catch (error) {
+      return { ok: false, error: 'network', detail: error instanceof Error ? error.message : String(error) }
+    }
+  }
+
   /** 保存（新增 / 修改同一条链路）：POST /tasks { task }。 */
   const saveEditor = async (draft: TaskEditorDraft): Promise<void> => {
     if (editor === null) return
@@ -1105,6 +1133,8 @@ function TaskPage(props: {
             // 拨片要**立刻生效**：卡片自己做乐观更新（点了即变）；成功由 toggleTaskEnabled
             // 内部统一刷新、失败由它返回错误文案（列表据此回滚乐观值）。
             onToggleEnabled: toggleTaskEnabled,
+            // 立即执行（2026-10-03）：卡片确认框 → runTaskNow → 结果 Toast（成功绿 / 拒绝红）。
+            onRunNow: runTaskNow,
           })
           // ↓ 旧「任务配置」界面（JSON 逃生口 + 只读参数）：主界面重建后由常量关掉，暂不删——
           // 删了会牵出一串只服务于它的状态；等面板整体收尾（U6 调试债清理）时连状态一起清。

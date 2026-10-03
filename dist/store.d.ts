@@ -8,6 +8,13 @@ export type PermissionMode = 'default' | 'readOnly' | 'workspace' | 'full';
 export declare const PERMISSION_MODES: readonly PermissionMode[];
 export declare const TERMINAL_STATUSES: readonly ["succeeded", "failed", "skipped"];
 export type InstanceStatus = 'pending' | 'dispatched' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'unknown';
+/**
+ * 执行记录的**触发来源**（2026-10-03 用户拍板新增，落地 U5 预留字段）：
+ * - `scheduled` = 按排期自动调度（Loop A 建行，缺省值）；
+ * - `manual` = 用户在卡片上点「立即执行」手动触发一次。
+ * 只落库记录，当前**没有任何读路径 / UI 展示消费它**（用户：读取的地方不用读、前端展示先不改）。
+ */
+export type InstanceRunType = 'scheduled' | 'manual';
 export interface TaskInstance {
     id: string;
     task_id: string;
@@ -15,6 +22,8 @@ export interface TaskInstance {
     scheduled_at: string;
     status: InstanceStatus;
     attempt: number;
+    /** 触发来源（2026-10-03）：'scheduled' 自动调度 / 'manual' 手动立即执行；旧行为 null。 */
+    run_type: InstanceRunType | null;
     session_id: string | null;
     lease_until: string | null;
     dispatched_at: string | null;
@@ -236,7 +245,9 @@ export declare class TaskStore {
      * 同一刻度重复 INSERT 一律 DO NOTHING ⇒ tick 幂等。状态由调用方给定（现仅 'dispatched'）。
      * `snapshot`（决策 41）：派发快照，Loop A 落库时一并固化；缺省（旧测试 / 手动 SQL）为 NULL。
      */
-    ensureInstance(id: string, taskId: string, logicalDate: string, scheduledAt: string, status: InstanceStatus, snapshot?: InstanceSnapshot): boolean;
+    ensureInstance(id: string, taskId: string, logicalDate: string, scheduledAt: string, status: InstanceStatus, snapshot?: InstanceSnapshot, 
+    /** 触发来源（2026-10-03）：缺省 'scheduled'（自动调度不传）；手动「立即执行」传 'manual'。 */
+    runType?: InstanceRunType): boolean;
     /**
      * 补记一条「未执行」记录（决策 54）：某个该跑的刻度**最终没跑**时，用它留一条痕迹
      * （用户：不能只在日志里，执行记录里必须看得见）。

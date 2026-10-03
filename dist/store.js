@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS task_instances (
   status        TEXT NOT NULL CHECK (status IN
                   ('pending','dispatched','running','succeeded','failed','skipped','unknown')),
   attempt       INTEGER NOT NULL DEFAULT 0,
+  -- 触发来源（2026-10-03）：'scheduled' 自动调度 / 'manual' 手动立即执行；旧库补列为 NULL。
+  run_type      TEXT,
   session_id    TEXT,
   lease_until   TEXT,
   dispatched_at TEXT,
@@ -212,6 +214,9 @@ export class TaskStore {
         // 决策 41：派发快照列。旧行为 NULL ⇒ 对账走 legacyTask 回退（读一次任务表当场补快照，不静默）。
         if (!cols.has('snapshot'))
             this.db.exec('ALTER TABLE task_instances ADD COLUMN snapshot TEXT');
+        // 2026-10-03：触发来源列（自动调度 / 手动「立即执行」）。旧库补列；旧行留 NULL（不回填、不猜）。
+        if (!cols.has('run_type'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN run_type TEXT');
     }
     close() {
         this.db.close();
@@ -339,12 +344,14 @@ export class TaskStore {
      * 同一刻度重复 INSERT 一律 DO NOTHING ⇒ tick 幂等。状态由调用方给定（现仅 'dispatched'）。
      * `snapshot`（决策 41）：派发快照，Loop A 落库时一并固化；缺省（旧测试 / 手动 SQL）为 NULL。
      */
-    ensureInstance(id, taskId, logicalDate, scheduledAt, status, snapshot) {
+    ensureInstance(id, taskId, logicalDate, scheduledAt, status, snapshot, 
+    /** 触发来源（2026-10-03）：缺省 'scheduled'（自动调度不传）；手动「立即执行」传 'manual'。 */
+    runType = 'scheduled') {
         const result = this.db
             .prepare(`INSERT OR IGNORE INTO task_instances
-                (id, task_id, logical_date, scheduled_at, status, attempt, snapshot, updated_at)
-                VALUES (?, ?, ?, ?, ?, 0, ?, ?)`)
-            .run(id, taskId, logicalDate, scheduledAt, status, snapshot === undefined ? null : JSON.stringify(snapshot), nowIso());
+                (id, task_id, logical_date, scheduled_at, status, attempt, snapshot, run_type, updated_at)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`)
+            .run(id, taskId, logicalDate, scheduledAt, status, snapshot === undefined ? null : JSON.stringify(snapshot), runType, nowIso());
         return Number(result.changes) > 0;
     }
     /**

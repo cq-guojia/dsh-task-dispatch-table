@@ -21,6 +21,14 @@ export type InstanceStatus =
   | 'pending' | 'dispatched' | 'running'
   | 'succeeded' | 'failed' | 'skipped' | 'unknown'
 
+/**
+ * 执行记录的**触发来源**（2026-10-03 用户拍板新增，落地 U5 预留字段）：
+ * - `scheduled` = 按排期自动调度（Loop A 建行，缺省值）；
+ * - `manual` = 用户在卡片上点「立即执行」手动触发一次。
+ * 只落库记录，当前**没有任何读路径 / UI 展示消费它**（用户：读取的地方不用读、前端展示先不改）。
+ */
+export type InstanceRunType = 'scheduled' | 'manual'
+
 export interface TaskInstance {
   id: string
   task_id: string
@@ -28,6 +36,8 @@ export interface TaskInstance {
   scheduled_at: string
   status: InstanceStatus
   attempt: number
+  /** 触发来源（2026-10-03）：'scheduled' 自动调度 / 'manual' 手动立即执行；旧行为 null。 */
+  run_type: InstanceRunType | null
   session_id: string | null
   lease_until: string | null
   dispatched_at: string | null
@@ -192,6 +202,8 @@ CREATE TABLE IF NOT EXISTS task_instances (
   status        TEXT NOT NULL CHECK (status IN
                   ('pending','dispatched','running','succeeded','failed','skipped','unknown')),
   attempt       INTEGER NOT NULL DEFAULT 0,
+  -- 触发来源（2026-10-03）：'scheduled' 自动调度 / 'manual' 手动立即执行；旧库补列为 NULL。
+  run_type      TEXT,
   session_id    TEXT,
   lease_until   TEXT,
   dispatched_at TEXT,
@@ -380,6 +392,8 @@ export class TaskStore {
     if (!cols.has('token_in_cache')) this.db.exec('ALTER TABLE task_instances ADD COLUMN token_in_cache INTEGER')
     // 决策 41：派发快照列。旧行为 NULL ⇒ 对账走 legacyTask 回退（读一次任务表当场补快照，不静默）。
     if (!cols.has('snapshot')) this.db.exec('ALTER TABLE task_instances ADD COLUMN snapshot TEXT')
+    // 2026-10-03：触发来源列（自动调度 / 手动「立即执行」）。旧库补列；旧行留 NULL（不回填、不猜）。
+    if (!cols.has('run_type')) this.db.exec('ALTER TABLE task_instances ADD COLUMN run_type TEXT')
   }
 
   close(): void {
@@ -514,12 +528,14 @@ export class TaskStore {
   ensureInstance(
     id: string, taskId: string, logicalDate: string, scheduledAt: string, status: InstanceStatus,
     snapshot?: InstanceSnapshot,
+    /** 触发来源（2026-10-03）：缺省 'scheduled'（自动调度不传）；手动「立即执行」传 'manual'。 */
+    runType: InstanceRunType = 'scheduled',
   ): boolean {
     const result = this.db
       .prepare(`INSERT OR IGNORE INTO task_instances
-                (id, task_id, logical_date, scheduled_at, status, attempt, snapshot, updated_at)
-                VALUES (?, ?, ?, ?, ?, 0, ?, ?)`)
-      .run(id, taskId, logicalDate, scheduledAt, status, snapshot === undefined ? null : JSON.stringify(snapshot), nowIso())
+                (id, task_id, logical_date, scheduled_at, status, attempt, snapshot, run_type, updated_at)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`)
+      .run(id, taskId, logicalDate, scheduledAt, status, snapshot === undefined ? null : JSON.stringify(snapshot), runType, nowIso())
     return Number(result.changes) > 0
   }
 

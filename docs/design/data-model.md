@@ -53,6 +53,7 @@ CREATE TABLE task_instances (
   status        TEXT NOT NULL CHECK (status IN
                   ('pending','dispatched','running','succeeded','failed','skipped','unknown')),
   attempt       INTEGER NOT NULL DEFAULT 0,  -- 重试在行内递增，不换行（决策 10）
+  run_type      TEXT,                   -- 2026-10-03：'scheduled' 自动调度 / 'manual' 手动「立即执行」；旧行 NULL
   session_id    TEXT,                    -- 派发会话 id（对账信源）
   lease_until   TEXT,                    -- running 租约到期时刻（机制 #2）
   dispatched_at TEXT,                    -- ★ 实际派发时刻（可能晚于 scheduled_at），**不进身份**
@@ -65,8 +66,9 @@ CREATE TABLE task_instances (
 );
 -- ★ 防重闸门（唯一索引而非表约束：旧库加索引即可升级，不必重建表）
 CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at);
-  -- 待确认（未拍板，见 PROGRESS 未决项 U5）：def_revision（跑的是哪版定义）/
-  --   def_snapshot（当时的配置快照 JSON）/ run_type（scheduled | manual | retry）
+  -- run_type（scheduled | manual）已于 2026-10-03 落地（用户拍板，见 features/creation-edit.md §十.5）；
+  -- 仍待确认（未拍板，见 PROGRESS 未决项 U5）：def_revision（跑的是哪版定义）/
+  --   def_snapshot（当时的配置快照 JSON）
 
 -- 执行日志表：append-only，对账与排障的证据链（**真实实例**的生命周期证据）
 CREATE TABLE task_events (
