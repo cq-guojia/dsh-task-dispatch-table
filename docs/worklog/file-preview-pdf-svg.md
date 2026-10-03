@@ -1,6 +1,6 @@
 # 文件预览：PDF / SVG 预览不出（根因排查与方案）
 
-> **状态**：🔵 **已落码**（2026-10-03 两项：U26 修 readBytes 参数、U27 工作区外只读路径；typecheck 绿 / 冒烟 **501/0** / build 过），⏳ **真机复验待做**
+> **状态**：🔵 **已落码**（2026-10-03 三项：U26 readBytes 参数、U27 工作区外只读路径+跑马灯、U28 拖拽禁 iframe 指针事件；typecheck 绿 / 冒烟 **504/0** / build 过），⏳ **真机复验待做**
 > **开工**：2026-10-03
 > **来源**：用户 2026-10-03 报「附件里的 PDF 和 SVG 点开都预览不了，但官方能预览」；并定取舍原则：**能用官方就用官方 → 官方做不到就抄官方样式但用浏览器底层能力 → 绝不引第三方包**
 > **配套**：结论真源 = [`../design/external/dsh-capabilities.md`](../design/external/dsh-capabilities.md) §文件预览的官方渲染能力；功能口径 = [`../design/features/artifact-opening.md`](../design/features/artifact-opening.md) §二-五；现场 = [`../PROGRESS.md`](../PROGRESS.md) U26
@@ -99,3 +99,24 @@ workspaceFiles.readBytes(sessionId, path)   // ❌ 少传 options
 
 - `artifact-opening.md` §二① 与 `file-preview.tsx:12-15` 头部注释都写着「`readBytes(...)` → 全量 ≤32MiB」，**漏了「第三参必传」** ⇒ 照着写代码就会踩。本次已更正该契约到 `dsh-capabilities.md`，但**落码时必须同步收紧本仓消费面**（第 2 条），否则接口声明与官方不一致的坑还在。
 - 顺带记录：官方封顶配置是 `maxFileBytes`（全量读）/ `maxBytes`（单页）/ `maxLines` / `maxEntries`（`Config`，`lib/types/index.d.ts:47-62`），**"32MiB" 是部署配的 `maxFileBytes` 值、不是协议常量** ⇒ 错误文案里的 limit 按实际配置显示，不要写死。
+
+## 三-九 拖拽调宽被 PDF iframe 吞事件（U28，2026-10-03 同一工作包追加）
+
+**现象（用户报）**：PDF 预览时**向左拖（放大）没问题**，**往回拖（缩小）就拖不动**；点别处强行释放 ⇒ **弹回最小的窗口**。
+
+**根因**：PDF 预览体是 `<iframe>`，是**独立文档**。拖拽监听挂在 `window`（父文档，`index.ts:588`），
+指针一旦进入 iframe，**父文档就收不到 `pointermove`/`pointerup`**。
+
+- 向左拖（放大）：指针往左**离开 dock**、留在父文档 ⇒ 正常；
+- 向右拖（缩小）：指针往右**走进 dock**——而 dock 里整个是那个 PDF iframe ⇒ **事件全丢，拖动卡死**；
+- 点别处强行释放：`onUp` 拿到的 `clientX` 已偏右很多 ⇒ `startWidth - (clientX - startX)` 算出很小/负数 ⇒
+  被 `clampPreviewWidth` 压到 `PREVIEW_MIN`（`index.ts:403`）⇒ **弹回最小宽度**。三个现象一条线全解释通。
+
+**修法**：拖动期间给 `#dsh-tdt-root` 挂 `dsh-tdt-resizing`，CSS 令 `iframe{pointer-events:none}`，松手撤销
+（`index.ts:579-594` + `archive-session-css.ts:28`）。**不用 `setPointerCapture`**——它只在同文档内重定向事件，
+**跨不了 iframe 这份独立文档**。
+
+⚠️ **同类风险（记下防复发）**：任何内嵌 iframe（PDF / HTML 预览等）在**全局拖动**期间都会吞事件。
+以后再加拖拽（分割条 / 面板调宽 / 抽屉），都要配这层「拖动期间禁 iframe 指针事件」。
+
+**质量门**：typecheck 绿 · 冒烟 **504/0**（+2 条：resizing 类存在 + 松手撤销）· build 过。

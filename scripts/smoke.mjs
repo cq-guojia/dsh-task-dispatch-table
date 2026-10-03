@@ -1050,6 +1050,13 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px))'))
   check('预览栏可拖拽调宽（resizer + pointermove/up + 宽度持久化与夹取）',
     clientJs.includes('dsh-tdt-sv-resizer') && clientJs.includes('pointermove') && clientJs.includes('clampPreviewWidth'))
+  // U28（真机 2026-10-03）：PDF 预览是 <iframe>（独立文档），指针进去后父文档收不到 pointermove
+  // ⇒ 向右拖（缩小）卡死；点别处强行释放时 clientX 偏右 ⇒ 宽度被夹到 PREVIEW_MIN ⇒ 弹回最小。
+  check('拖拽调宽期间禁用 iframe 指针事件（dsh-tdt-resizing，防 PDF iframe 吞事件）',
+    clientJs.includes('dsh-tdt-resizing')
+    && /\.dsh-tdt-root\.dsh-tdt-resizing iframe\{pointer-events:none/.test(clientJs))
+  check('拖拽结束撤销 resizing 标记（classList.remove，避免残留禁事件）',
+    /classList\.remove\(["']dsh-tdt-resizing["']\)/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
     clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
   check('远端返回防御解析（text/data 不符契约走错误态，不把 undefined 喂渲染器）',

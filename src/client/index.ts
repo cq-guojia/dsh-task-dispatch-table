@@ -572,6 +572,12 @@ function TaskPage(props: {
     const prevUserSelect = body.style.userSelect
     body.style.userSelect = 'none'
     window.getSelection()?.removeAllRanges()
+    // ⚠️ PDF 预览是 `<iframe>`（独立文档），指针一进 iframe 父文档的 `pointermove` 就收不到了
+    // ⇒ 向右拖（缩小，指针走进 dock 里的 PDF）时拖动卡死；再点别处强行释放时，onUp 拿到的
+    // clientX 已偏右很多 ⇒ 算出的宽度被压到 PREVIEW_MIN ⇒ 面板"弹回最小宽度"（真机 2026-10-03）。
+    // 对策：拖动期间给根挂 `dsh-tdt-resizing`，CSS 令 iframe `pointer-events:none`，松手撤销。
+    const rootEl = document.getElementById('dsh-tdt-root')
+    rootEl?.classList.add('dsh-tdt-resizing')
     const onMove = (event: PointerEvent): void => {
       const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
       const root = document.getElementById('dsh-tdt-root')
@@ -580,6 +586,7 @@ function TaskPage(props: {
     const onUp = (event: PointerEvent): void => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      rootEl?.classList.remove('dsh-tdt-resizing')
       const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
       setPreviewWidth(next)
       try { window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next)) } catch { /* 隐私模式忽略 */ }

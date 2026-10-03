@@ -2947,7 +2947,10 @@ body[data-ds-dark-theme]{
    滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
+.dsh-tdt-sv-preview/* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
+   ⇒ 向右拖（缩小）时指针走进 PDF 就卡死。拖动期间整片 iframe 让出指针事件。 */
+.dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
+.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
@@ -44478,6 +44481,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const prevUserSelect = body.style.userSelect;
 				body.style.userSelect = "none";
 				window.getSelection()?.removeAllRanges();
+				const rootEl = document.getElementById("dsh-tdt-root");
+				rootEl?.classList.add("dsh-tdt-resizing");
 				const onMove = (event) => {
 					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
 					const root = document.getElementById("dsh-tdt-root");
@@ -44486,6 +44491,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const onUp = (event) => {
 					window.removeEventListener("pointermove", onMove);
 					window.removeEventListener("pointerup", onUp);
+					rootEl?.classList.remove("dsh-tdt-resizing");
 					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
 					setPreviewWidth(next);
 					try {
