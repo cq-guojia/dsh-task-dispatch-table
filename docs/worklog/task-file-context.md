@@ -1,6 +1,6 @@
 # 任务文件上下文（会话里「接收 / 随附 / 产出」三面）
 
-> **状态**：🔵 落码中
+> **状态**：🔵 落码完成（⏳ 真机验证待做）——2026-10-03 三轮评审 + 用户两轮点名定稿，冒烟 **459/0**
 > **开工**：2026-10-03
 > **版本基线**（回滚用）：`package.json` version **0.0.1**，git HEAD **`4ecd310`**（2026-10-03）；开工时工作区另有 6 个上一轮未提交文件（`dist/client.js` / `dist/client.js.map` / `scripts/smoke.mjs` / `src/client/locales.ts` / `src/client/task-list.tsx` / `src/client/ui/tokens.ts`）⇒ **要回滚就回到 `4ecd310`，但要连同这批改动一起回退**。
 
@@ -165,16 +165,24 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 | 6 | 顶部输入区组件（**接收 + 随附**）：按上游任务分组（任务名 + 计划时刻），一行一个文件（图标 + 文件名），可点 → `openFile`；目录走官方文件夹图标；跨区目录 / 路径未解析 ⇒ 不可点并标注；两级折叠 + 高度上限 + 自己滚 | `src/client/task-file-context.tsx`、`src/client/archive-session-css.ts`（`.dsh-tdt-sv-tfc*`） |
 | 7 | 弹窗内用户消息**也渲染 file 块**：`contentFiles()` 提取 → `UserMessage` 新增 `files`，照官方 `attachmentRow / fileCard / fileIcon / fileName / fileMeta` 画小卡（图标 + 名字 + 大小）。⚠️ 引用里没有路径 ⇒ **不可点开**，不伪造打开行为 | `src/client/session-view.ts`、`src/client/mirror/MessageItem.tsx` |
 | 8 | `formatBytes()` 上提 `format.ts`（单源）；样式全部走 token + 官方类名，新增 CSS 落在 `archive-session-css.ts` | `src/client/format.ts`、`src/client/archive-session-css.ts` |
-| 9 | 文案双语 12 键（`tfc*`） | `src/client/locales.ts` |
-| 10 | 冒烟：file 块四类降级 + 消息结构 + 会话弹窗取数 + 顶部区产物指纹（padding / 高度上限 / 一行一个 / 目录图标 / 不可点标记 / hadFiles）⇒ **451/0** | `scripts/smoke.mjs` |
+| 9 | 文案双语 12 键（`tfc*`）；**术语统一「前置任务」**（顶部区 / 分区标题 / 延期原因 / 阻塞原因，中英双语） | `src/client/locales.ts` |
+| 10 | 冒烟：file 块四类降级 + 消息结构 + 会话弹窗取数 + 顶部区产物指纹（padding / 高度上限 / 横向排 / 8～20 字宽 / 两列 / 3px 竖线 / 目录图标 / 不可点标记 / hadFiles / 18px 跳变已修 / 创建时间挂标题行 / 术语）⇒ **459/0** | `scripts/smoke.mjs` |
+| 11 | **会话区纵向单一真源**（修 18px 跳变）：新增 `.dsh-tdt-sv-scroll` 钩子把官方纵向 16px 归零；`.dsh-tdt-sv-frame` 改双类名 + 长写独占上下（34/16）；`.dsh-tdt-sv-body` 只写左右 | `src/client/mirror/ChatView.tsx`、`src/client/archive-session-css.ts` |
+| 12 | **文件横向排**（用户二次点名）：`.dsh-tdt-sv-tfc-files` → `flex-direction:row;flex-wrap:wrap`；chip `flex:0 0 auto`；label `min-width:8ch;max-width:20ch` + 省略号 + hover 全文；折叠按钮排进同一横向流末位 | `src/client/archive-session-css.ts`、`src/client/task-file-context.tsx` |
+| 13 | **前置任务一排两个** + **3px 浅色半透明竖线跨两行**：`.dsh-tdt-sv-tfc-tasks` → 两列 grid（`@container (width<=620px)` 降一列）；`.dsh-tdt-sv-tfc-task` 前缀 `padding-left:10px` + `::before` 3px 竖线 `top/bottom:2px` `opacity:.55`；产出物改用同一横向流 | `src/client/archive-session-css.ts`、`src/client/task-file-context.tsx` |
+| 14 | **卡片创建时间移到标题行尾部** `[YYYY-MM-DD 创建]`（与编号同一 `faintStyle`）；`dateOf` 删除、`formatYmd` 新增（四位年） | `src/client/task-list.tsx`、`src/client/format.ts` |
+| 15 | 界面文案「上游任务」→「前置任务」中英双语 + `scheduler.ts` 三条阻塞原因；内部术语（`resolvedDeps` / `upstream-*` key）不动 | `src/client/locales.ts`、`src/scheduler.ts` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 451/0 · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 459/0 · ⏳ **真机待验**。
 
-**真机必看的四条**（决定本轮成败）：
-1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上。
+**真机必看的六条**（决定本轮成败）：
+1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上（上 34 / 下 16）。
 2. **随附区**（本任务设置的附件）是否出现 —— 数据源是实例快照，不依赖宿主透传 file 块。
 3. 气泡下方是否还出现官方附件卡（顶部已显示同名文件时应**让位**，不重复显示）。
-4. 上游文件点击：同工作区应能打开；**跨工作区的目录应灰掉不可点**（标「跨工作区」）。
+4. **文件是否横向排**（不该再竖着一溜）、一排至少 3 个、chip 宽跟文件名走（短名短 / 长名 20 字封顶 + 悬停全文）。
+5. **前置任务一排两个**，块前竖线是否横跨「任务名 + 产出物」两行，浅色不抢眼。
+6. 前置任务文件点击：同工作区应能打开；**跨工作区的目录应灰掉不可点**（标「跨工作区」）。
+
 
 ## 六、遗留
 
