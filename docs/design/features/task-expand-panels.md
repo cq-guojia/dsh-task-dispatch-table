@@ -68,6 +68,10 @@
   - **产出物文件清单**：每行「图标 + 文件名」，**hover 有底色**（`.dsh-tdt-info-out:hover`，走 CSS class——inline 会盖掉 `:hover`）；点开走统一 `openFile` 预览入口。
 - **数据**：切到该 tab 时按 `taskId` 用 `fetchInstances` 取最近一条终态实例（`statuses: succeeded/failed/skipped/unknown`，`limit: 1`），客户端派生。**会话名**由服务端在 `/tasks/instances` 出口按 `sessionTitleOf(scheduled_at, 快照标题 ?? 当前任务标题, attempt)` **单源重建**（与派发时 `sessionTitle.rename` 同一函数；旧行无快照回退当前标题）。
 - **执行记录 tab**：仍只负责查询（状态下拉 / 时间范围 / 条数），不承担「上次执行」展示。
+- **纸表格的「线」与行高**（2026-10-03 定稿，用户三轮真机反馈后收口；过程见 [`../../worklog/info-panel-line-alignment.md`](../../worklog/info-panel-line-alignment.md)）：
+  - **末行不要线**：每栏**最底下那条线**去掉（它紧贴下方那条统一虚线，再放一条实缝很怪）。判据**不写死某一行**——右栏根容器 `.dsh-tdt-info-rec-body` 包住「字段区 + 产出物区」，字段区只有在**身后没有别的块**（`:last-child`）时才去缝 ⇒ **有产出物时字段区末行（Token）的线保留**（它下面还有产出物，不是末尾）；无产出物时才去字段区末行的线。左栏最后一块本就是字段区，始终去末行线。
+  - **边框一律走 class**：底边缝写内联会盖掉 `:nth-last-child(-n+2)` 的覆盖（内联 > 非 `!important` 的 CSS），与 `.dsh-tdt-card` 底色同理。
+  - **标签与值行盒必须等高**：两格共用 `line-height: var(--tdt-line-md)`。否则 `align-items: stretch` 下矮的那格内容被顶对齐 ⇒ 看着「字贴上面那条线」。统一后：**单行在两条线之间上下居中**；值多行时（附加文件 / 前置任务）标签与值**第一行齐平**。
 - ⚠️ **已知缺口（已调研，§3.1c）**：附加文件目前列表接口只下发 `{name, kind}`（无 `ref` / 路径）⇒ 左栏只做到「图标 + 文件名」，**暂不可点开预览**。
 
 ### 3.1c 附加文件能否点开预览 —— 调研结论（2026-10-03）

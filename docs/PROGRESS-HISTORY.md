@@ -45,3 +45,4 @@
 | 10-03 | 回执「第几次生效」提示词与实现矛盾（U25） | 回执工具描述写「只认第一次」但实现取最新一条（`seq DESC LIMIT 1`）= 认最后一次；用户拍板以最后一次为准，提示词说明再次提交须整体覆盖并带上先前产出（不回带＝放弃）；工具描述 + 末段指令各加一处 | [worklog/receipt-verdict.md](worklog/receipt-verdict.md) |
 | 10-03 | 新增 / 编辑任务（U16）真机验收通过 | 用户装 `dist/` 实测通过（保存链路 / 版本 / 删除 / 审计 / 附件）；此前遗留小项（版本备注、审计 UI 消费面、`GET /tasks/history` query 透传）一并确认无问题 | [worklog/creation-edit-implementation.md](worklog/creation-edit-implementation.md) |
 | 10-03 | 新增 / 编辑弹窗改「布局分栏」（U21）真机验收通过 | 用户装 `dist/` 实测通过：主窗被推窄而非被盖、宽度默认/下限 520 可拖可记、拖拽不选中文字、提示词下三下拉不随选项跳动、关闭只剩 ✕/Esc/取消、两条分栏同开仍保住主窗口；口径见 [creation-edit.md](../design/features/creation-edit.md) §七-B | [worklog/editor-split-pane.md](worklog/editor-split-pane.md) |
+| 10-03 | 基础信息面板：末行线与行高对齐 | 左右两栏各自去掉最底下那条线（判据按整栏实际最后一块、**不写死行**：有产出物时字段区末行 Token 的线保留）；标签与值两格行高统一 ⇒ 单行上下居中、值多行时标签与值第一行齐平。冒烟 504/0，用户真机验收通过 | [worklog/info-panel-line-alignment.md](worklog/info-panel-line-alignment.md) |

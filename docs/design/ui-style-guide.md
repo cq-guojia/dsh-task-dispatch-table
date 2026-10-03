@@ -162,6 +162,9 @@
 | 宿主自带字号体系 | **成立且成族**：`--dsw-font-{xxxs-11,xxs-12,xs-13,s-14,base-16,m-18,l-20,xl-24}` + `-strong-` 变体 + 子 token ⇒ **字号一律映射宿主 token，不要自己定 px 刻度** | theme `lib/client.js`（capabilities §2） |
 | 「看着有、其实没有」的变量名 | 本仓已踩 5 处：`--dsw-alias-interactive-bg`、`--dsw-alias-border-focus`、`--dsw-alias-state-warning-primary`、`--dsh-elevation-prominent`、`--dsh-radius-panel` | [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §4 |
 | Tooltip 子元素必须是真 DOM | 裸函数组件（含 `IconButton`）ref 挂不上 ⇒ 提示静默失效（踩过两次）；故问号统一用原生 `span`/`button` 当 Tooltip 子节点 | 决策 53 同轮口径；`task-editor.tsx` `HelpButton` |
+| 用结构伪类收敛「末行」时，边框**必须走 class** | 内联样式优先级高于任何不含 `!important` 的 CSS ⇒ 写在 inline 的 `border-bottom` 会盖掉 `.x:last-child{border-bottom:0}`，表现为「改了没生效」（与 `.dsh-tdt-card` 底色同一个坑） | `task-list.tsx:157`；过程 [`worklog/info-panel-line-alignment.md`](../worklog/info-panel-line-alignment.md) §二 轮 1 |
+| 多列 grid（`align-items: stretch`）**两列行盒必须等高** | 格子高度由行内最高的那格决定 ⇒ 一列漏写 `line-height`（只继承宿主值）、与另一列的 `var(--tdt-line-md)` 不等高时，矮的那格内容被**顶对齐**，看着「字贴上边线」。统一行高后：单行 = 上下居中；值多行时标签与值**第一行齐平** | `task-list.tsx:152` / `:157`；过程同上 §2.1 |
+| 「去掉最后一行 / 第 N 行」的判据**不许写死容器** | 按容器 `:last-child` 判「末行」= 隐式写死了那一行：一旦末尾被插入别的块（如产出物区），被去掉的仍是旧末行。判据要抬到**整个栏**层级 | `task-list.tsx:162` / `:1218`；过程同上 §二 轮 2 |
 | 下拉超长会撑破整行 | `SelectField` 锚点**必须给 `maxWidth`**；且官方 `Menu` 把锚点包进一层 shrink-to-fit 的 `span`，要让**这层也能收缩**（父容器加 `> *{min-width:0}`）才会压宽度出省略号——否则封了顶照样顶破容器 | `ui/Field.tsx`；`task-editor-css.ts` 的 `.dsh-tdt-ed-card-foot > *` |
 
 ---
