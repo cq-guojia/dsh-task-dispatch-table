@@ -145,7 +145,7 @@ export type LocaleKey =
   | 'listFilterAll' | 'listFilterEnabled' | 'listFilterDisabled' | 'listFilterAbnormal'
   | 'listFilterWorkspaceAll' | 'listSearchPlaceholder'
   | 'listRunning' | 'listNextNone' | 'listNever'
-  | 'listCreatedTag'
+  | 'listCreatedTag' | 'listCreatedUnknown'
   | 'relNow' | 'relMinutes' | 'relHours' | 'relDays' | 'relPast'
   | 'relJustNow' | 'relMinutesAgo' | 'relHoursAgo' | 'relDaysAgo' | 'relWeeksAgo' | 'relMonthsAgo' | 'relYearsAgo'
   | 'relToday' | 'relTomorrow' | 'relWeeks' | 'relMonths' | 'relYears'
@@ -449,7 +449,7 @@ export const zh: Record<LocaleKey, string> = {
   deliverCollapseAria: '收起交付文件列表',
   // —— 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ——
   tfcReceived: '接收 · {files} 个文件 · 来自 {tasks} 个前置任务',
-  tfcAttached: '随附 · {count} 个文件',
+  tfcAttached: '任务附件 · {count} 个文件',
   tfcNoOutputs: '未声明产出',
   tfcRelOnly: '相对路径',
   tfcCrossWorkspace: '跨工作区',
@@ -458,7 +458,7 @@ export const zh: Record<LocaleKey, string> = {
   tfcMoreTasks: '全部 {count} 个前置任务',
   tfcCollapse: '收起',
   tfcFromUpload: '上传',
-  tfcFromWorkspace: '工作区',
+  tfcFromWorkspace: '链接',
   tfcRestFiles: '还有 {count} 个',
   // —— 任务表单弹窗 ——
   editorNew: '新建任务',
@@ -666,6 +666,7 @@ export const zh: Record<LocaleKey, string> = {
   listNextNone: '无后续执行',
   listNever: '尚未执行',
   listCreatedTag: '{date} 创建',
+  listCreatedUnknown: '创建时间未知',
   relNow: '即将执行',
   relMinutes: '{n} 分钟后',
   relHours: '{n} 小时后',
@@ -1042,7 +1043,7 @@ export const en: Record<LocaleKey, string> = {
   tfcMoreTasks: 'All {count} preceding tasks',
   tfcCollapse: 'Collapse',
   tfcFromUpload: 'uploaded',
-  tfcFromWorkspace: 'workspace',
+  tfcFromWorkspace: 'linked',
   tfcRestFiles: '{count} more',
   // —— 任务表单弹窗 ——
   editorNew: 'New task',
@@ -1250,6 +1251,7 @@ export const en: Record<LocaleKey, string> = {
   listNextNone: 'No further runs',
   listNever: 'Never run',
   listCreatedTag: '{date} created',
+  listCreatedUnknown: 'creation time unknown',
   relNow: 'due now',
   relMinutes: 'in {n} min',
   relHours: 'in {n} h',

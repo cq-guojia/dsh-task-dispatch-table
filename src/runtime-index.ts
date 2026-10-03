@@ -61,7 +61,11 @@ export interface TaskOverviewRow {
   }
   /** 提示词首段（展开区展示用，服务端截断，不传全文）。 */
   promptHead: string
-  attachments: Array<{ name: string; kind: 'link' | 'upload' }>
+  /**
+   * 附件展示行。`path` / `anchorSessionId` 由 HTTP 层（`attachmentsWithPaths`）补：
+   * 绝对路径 + 预览锚点会话；拿不到就不带（前端保持不可点）。
+   */
+  attachments: Array<{ name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string }>
   depends: Array<{ id: string; title: string; enabled: boolean }>
   running: boolean
   runningSince: string | null

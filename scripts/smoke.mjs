@@ -1251,14 +1251,22 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       client.includes('.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap')
       && !client.includes('.dsh-tdt-sv-tfc-files{flex-direction:column')
       && client.includes('.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top'))
-    check('顶部输入区：chip 宽跟文件名走（min 8 字 / max 20 字 + 省略号 + hover 全文）',
-      client.includes('min-width:8ch;max-width:20ch') && client.includes('text-overflow:ellipsis'))
+    check('顶部输入区：chip **平分容器宽度**（flex:1 1 auto）+ 10ch 下限，到下限转跑马灯',
+      client.includes('min-width:10ch;max-width:100%') && client.includes('flex:1 1 auto;display:flex'))
+    check('顶部输入区：文件名跑马灯走全站唯一实现 MarqueeText（不自己造第二套）',
+      client.includes('MarqueeText') && client.includes('dsh-tdt-sv-tfc-label{min-width:0;flex:1 1 auto;}'))
+    check('顶部输入区：前置任务块标题前有官方任务图标（左边不再空一块）',
+      client.includes('dsh-tdt-sv-tfc-taskicon') && client.includes('IconBranchOutlineRegular'))
     check('顶部输入区：前置任务一排两个（窄容器降一列，用容器宽度判据）',
       client.includes('grid-template-columns:repeat(2,minmax(0,1fr))')
       && client.includes('container-type:inline-size') && client.includes('@container (width<=620px)'))
     check('顶部输入区：任务块前 3px 浅色半透明竖线，横跨「任务名 + 产出物」整块',
       client.includes('.dsh-tdt-sv-tfc-task::before') && client.includes('width:3px')
       && client.includes('top:2px;bottom:2px'))
+    check('顶部输入区：组标题叫「任务附件」；来源标记与编辑处统一为「上传 / 链接」（不查引号形式，只查文案）',
+      client.includes('任务附件 · {count} 个文件')
+      && /tfcFromWorkspace:\s*["']链接["']/.test(client)
+      && /tfcFromUpload:\s*["']上传["']/.test(client))
     check('顶部输入区：两列降级不得靠视口宽度（弹窗会被分栏挤窄）',
       !client.includes('@media') || !client.includes('dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr)}\n}'))
     check('顶部输入区：目录走官方文件夹图标（FileTypeIcon 按扩展名分类，尾斜杠拿不到 folder）',
@@ -1274,6 +1282,11 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     check('卡片创建时间：挂标题行尾部（同一 faintStyle）+ 四位年 YYYY-MM-DD，第三行不再单起',
       client.includes('listCreatedTag') && client.includes('formatYmd')
       && !client.includes("dateOf(iso: string)"))
+    check('卡片创建时间：**每个任务都有这一行**（老定义缺 createdAt 显示占位，不整段消失、也不编造时间）',
+      client.includes('listCreatedUnknown') && client.includes('创建时间未知'))
+    check('筛选角标：**正圆**（固定 16×16 + border-radius 50%，多位数字不再撑成椭圆）',
+      client.includes('border-radius:50%;background:var(--tdt-danger)')
+      && !client.includes('min-width:16px;height:16px;padding:0 4px'))
     // 术语：界面一律叫「前置任务」（用户 2026-10-03）。⚠️ 只断言**产物里出现给用户看的文案**，
     // 源码内部术语（resolvedDeps / upstream 字段 / BLOCK_KIND 的 key）沿用既有决策 43 的叫法，不动。
     check('文案术语统一：界面叫「前置任务」不叫「上游任务」（顶部区 / 分区标题 / 延期原因 / 阻塞原因）',
@@ -1989,6 +2002,13 @@ console.log('\n[14] runtime-index')
       tl.includes("flex: 'none', width: '320px'")
       && tl.includes('.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }')
       && dist.includes('dsh-tdt-info-out:hover'))
+    const sv = readFileSync(join(process.cwd(), 'src', 'index.ts'), 'utf8')
+    check('附件可点开预览：overview 补绝对路径 + 锚点会话（upload 走 attachmentAbsPath，link 走工作区 path+ref）',
+      sv.includes('attachmentsWithPaths') && sv.includes('anchorSessionId')
+      && sv.includes('attachmentAbsPath(assets, task.id, item.ref)') && sv.includes('path.join(source.path, item.ref)')
+      && sv.includes('anyAnchor'))
+    check('附件行在拿到 path + 锚点会话时可点（走统一 openFile），缺则退回纯展示',
+      tl.includes('onOpenFile(anchor, absPath)') && tl.includes('item.anchorSessionId'))
   }
 
   store.close()

@@ -153,6 +153,49 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 
 新增 8 项（横向排 / 8～20 字宽 / 两列网格 + 容器降级 / 3px 竖线 / 不用视口媒体查询 / frame+scroll 单一真源 / body 不抢纵向 / 创建时间挂标题行 + 无 `dateOf` / 术语统一）⇒ **459/0**。
 
+## 四点十、第四轮：真机反馈后的观感返工（2026-10-03）
+
+用户在真机上过了两轮，这轮是纯观感 + 两个信息问题。
+
+| # | 用户意见 | 处置 |
+|---|---|---|
+| 1 | 前置任务块「左边空着一块，下面文件又有图标，看着不平衡」 | 任务名前加**官方任务图标**（`IconBranchOutlineRegular`，仓库已在 `MessageIconActions` / `TurnTriggerNodeView` 用过），14px 与下方文件图标同尺寸同色 |
+| 2 | 「显示不全的文件名，鼠标一上去都要跑马灯」（前置任务产出 + 随附**都要**） | 文件名改走**全站唯一实现** `MarqueeText`（`ui/MarqueeText.tsx`，P6 已建：省略号 + hover 来回滚动 + ResizeObserver 重测）。⚠️ 不自己造第二套——`file-preview` / `file-browser` 里各有一份手写跑马灯，属 U20「待上提」项，本轮先统一到基础件 |
+| 3 | 「右边还有距离为什么不显示满，应该是 50% 50%」 | chip 由 `flex:0 0 auto` 改 **`flex:1 1 auto`** ⇒ 平分容器；`min-width:10ch` 兜下限（「到了最小值就开始跑马灯」） |
+| 4 | 组标题别叫「随附」 | `tfcAttached` → **「任务附件 · N 个文件」** |
+| 5 | 来源标记与编辑处统一 | `tfcFromWorkspace`「工作区」→ **「链接」**（编辑处 `editorAttachmentLink` 本来就叫「链接」）；「上传」保持 |
+| 6 | 「每个任务都要有『什么时候创建』这个字」 | 见下 §四点十·1 |
+| 7 | 筛选角标「多位数给它撑开了，那不是圆的」 | `.dsh-tdt-seg__badge` 改**固定 16×16 + `border-radius:50%` + `padding:0`**，字号 12→**10px**、`tabular-nums`；不再用 `min-width` + 左右 padding（那正是变椭圆的原因） |
+
+### 1. 创建时间为什么「有些有有些没有」
+
+**根因**：`createdAt` **只有经 UI 表单保存的任务才有** —— `index.ts:425` 在 `!isUpdate`（新建）时才写入，编辑时从旧定义保留（`:435`）。老定义 / 手工写的 JSON **压根没这个字段** ⇒ 旧写法 `row.createdAt === null ? null : …` 让整行消失。
+
+**处置**：铁律「不许编造数据」禁止凭空补时间，但用户要求**每个任务都要有这一行** ⇒ 取两者交集：缺值时显示**明确占位** `[创建时间未知]`，不再整段消失、也不假造时间。将来若要真值，可选方案 = 用任务定义文件的 mtime 回填（但那是「最后修改」而非「创建」，语义有偏差），需用户拍板。
+
+### 2. 顺带查清：`output-stale` 失败的日志形态（用户问「为什么报失败」）
+
+用户贴的执行记录：回执**报了 4 次**（10:14:01/02/03 三次 `outputs:[]`，10:14:05 一次 `outputs:["uuid.txt"]`），最终 `failed` / `output-stale`。
+
+**判定链**（`reconcile.ts`）：
+
+```
+settle 只在两处触发：① settleBySessionId（收到 turn/end 等跑完信号）
+                    ② sweep 轮询
+回执到达时**没有跑完信号** ⇒ 不裁决（注释：agent 可能还没交命令）
+10:14:06 第二个 turn/end 到达 ⇒ settleByReceipt
+  → store.latestReceipt() 取**最新**那条 = 10:14:05 的 outputs:["uuid.txt"]
+  → checkReceipt: mtimeMs <= dispatchedAtMs ⇒ output-stale ⇒ retryOrFail ⇒ failed
+```
+
+即：**前三条空产出回执从未被裁决过**，等真要裁决时已经换成了带 `uuid.txt` 的第 4 条；它的 mtime 不晚于派发时刻（10:13:00.171）⇒ 判 stale。
+
+**结论**：这不是新 bug，是 PROGRESS **U3 已知缺陷**的暴露——`checkReceipt` 三道闸只验「status 合法 / 文件存在 / `mtime > dispatched_at`」，**不验内容**。`uuid.txt` 存在但**不是本次运行写的**（本次没真正落盘或落在别处）⇒ 闸门正确拦下，UI 显示的却是「文件明明在」。
+
+> ⚠️ 两次 `turn/end` 暴露的另一件事：**同一实例在 66 秒内交回执 4 次**，插件不拦重复回执（`settleBySessionId` 只看当前是否 running）。这会让「最后一次回执」成为唯一裁决依据，前面的正确回执被覆盖。属可改进项，**本轮未改**（改动判定树的时序风险高于收益），登记在此供后续拍板。
+
+
+
 ## 五、落码记录
 
 | # | 改动 | 坐标 |

@@ -26,7 +26,7 @@ import type { ReconcileOptions } from './reconcile.js'
 import { createScheduler } from './scheduler.js'
 import type { Scheduler } from './scheduler.js'
 import { createRuntimeIndex } from './runtime-index.js'
-import type { RuntimeIndex } from './runtime-index.js'
+import type { RuntimeIndex, TaskOverviewRow } from './runtime-index.js'
 
 export const name = 'dsh-task-dispatch-table'
 
@@ -193,6 +193,51 @@ function readDefinitionOf(raw: string, id: string): Record<string, unknown> | un
   } catch {
     return undefined
   }
+}
+
+/**
+ * 给「任务列表总览」里的附件补**绝对路径 + 预览锚点会话**（2026-10-03）。
+ *
+ * 背景：附件展示行本身只有 `{name, kind}`，前端点开预览需要绝对路径；而宿主
+ * `remote.workspaceFiles.read` 允许读**工作区外的绝对路径**（只要给一个有效会话当锚点，
+ * **不需要该会话属于目标文件所在工作区**）。故这里统一算出：
+ *   - upload 型 = `attachmentAbsPath(assets, taskId, ref)`（落在插件数据根，工作区之外）；
+ *   - link 型   = `<附件来源工作区 path>/<ref>`。
+ * 锚点 = 附件来源工作区的最近会话，兜底「任一有会话的工作区的最近会话」。
+ * 拿不到路径或锚点 ⇒ 该条只回 `{name, kind}`，前端保持不可点（绝不造假会话）。
+ */
+function attachmentsWithPaths(
+  rows: readonly TaskOverviewRow[],
+  tasks: readonly TaskDefinition[],
+  assets: AssetPaths | null,
+  registry: HostWorkspaceRegistry | null,
+): TaskOverviewRow[] {
+  if (registry === null) return [...rows]
+  const byId = new Map(tasks.map(task => [task.id, task]))
+  const workspaces = registry.list()
+  const byTitle = new Map(workspaces.map(workspace => [workspace.title, workspace]))
+  const anchorOf = (workspace: (typeof workspaces)[number] | undefined): string | undefined => {
+    const sessions = workspace?.sessionIds
+    return sessions !== undefined && sessions.length > 0 ? sessions[sessions.length - 1] : undefined
+  }
+  // 兜底锚点：只要**有任意一个会话**就能读已知绝对路径，不要求会话与文件同工作区。
+  const anyAnchor = workspaces.map(anchorOf).find(anchor => anchor !== undefined)
+  return rows.map(row => {
+    const task = byId.get(row.id)
+    const items = task?.attachments ?? []
+    if (task === undefined || items.length === 0) return row
+    const attachments = items.map(item => {
+      const source = item.kind === 'link' ? byTitle.get(item.workspace ?? '') : byTitle.get(task.target.workspace)
+      const anchorSessionId = anchorOf(source) ?? anyAnchor
+      const absPath = item.kind === 'upload'
+        ? (assets === null ? null : attachmentAbsPath(assets, task.id, item.ref))
+        : (source === undefined ? null : path.join(source.path, item.ref))
+      return anchorSessionId === undefined || absPath === null
+        ? { name: item.name, kind: item.kind }
+        : { name: item.name, kind: item.kind, path: absPath, anchorSessionId }
+    })
+    return { ...row, attachments }
+  })
 }
 
 /**
@@ -504,13 +549,18 @@ const makeDispatchRoutes = (
       if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
       if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
       const nowMs = Date.now()
-      const { rev, rows } = runtimeIndex.overview([...getTasks().values()], nowMs)
+      const tasks = [...getTasks().values()]
+      const { rev, rows } = runtimeIndex.overview(tasks, nowMs)
       const asked = queryOf(req, 'rev')
       if (asked !== '' && asked === String(rev)) return writeJson(res, 200, { ok: true, unchanged: true })
       // `now` / `tickMs` 供客户端做「到点钳位」（排序抖动，2026-09-30）：`now` = 服务端当前时间
       // （客户端时钟可能与宿主有时差，判定「上一版刻度是否已过去」以它为准）；`tickMs` = 巡检间隔
       // （钳位时长跟着它走，不写死）。两者都是**只读**展示/排序辅助，不参与调度。
-      writeJson(res, 200, { ok: true, rev, tasks: rows, now: nowMs, tickMs: getConfig()?.tickMs ?? 60_000 })
+      // 附件补绝对路径 + 预览锚点（2026-10-03）：见 `attachmentsWithPaths`，让基础信息左栏的附件可点开。
+      writeJson(res, 200, {
+        ok: true, rev, tasks: attachmentsWithPaths(rows, tasks, getAssets(), getRegistry()),
+        now: nowMs, tickMs: getConfig()?.tickMs ?? 60_000,
+      })
     },
   },
   {

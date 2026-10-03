@@ -328,15 +328,16 @@ export const ARCHIVE_SESSION_CSS = `
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
    ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**；
       **上 34 / 下 18** = 与「分隔线 → 会话正文首行」同距（四边等距 34 口径），纵向节拍接得上。
-   ② **横向排**（用户 2026-10-03 第二次点名：「不能竖着一溜列，太浪费空间」）：
-      flex-wrap:wrap 从左到右排、**排满自动换行**。chip 宽**跟文件名走**：
-      名字短就短、名字长就长，min-width:8ch 保底（不足留空）、max-width:20ch 封顶
-      （超出省略号 + 悬停 title 看全文）。⇒ 一行至少放得下 3 个。
-   ③ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
+   ② **横向排 + 平分宽度**（用户两次点名）：flex-wrap:wrap 从左到右、排满换行；
+      chip flex:1 1 auto **平分容器**（「右边还有距离为什么不显示满」），min-width:10ch 下限
+      ⇒ 一行至少放得下 3 个。
+   ③ **显示不全的文件名一律跑马灯**（用户「鼠标一上去都要跑马灯」）：走全站唯一实现
+      MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
+   ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
       每块 = 任务名一行 + 产出物**同样横向排**；块前一条 **3px 浅色半透明竖线**，
       跨「任务名 + 产出物」整块高度做分隔（不用框、不靠颜色块，跨两行才分得清谁是谁）。
-   ④ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
-   ⑤ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
+   ⑤ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
+   ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
 /* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
 .dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
 .dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
@@ -359,18 +360,21 @@ export const ARCHIVE_SESSION_CSS = `
 /* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
    ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
 .dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
-/* chip 宽度**跟文件名走**：flex:0 0 auto（不参与拉伸/收缩 ⇒ 短名就短），
-   宽度上下限落在 **label** 上：min 8ch（不足留空）/ max 20ch（超出省略号 + title 全文）。 */
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
+/* chip 宽度：**平分容器**（用户 2026-10-03「右边还有距离，为什么不显示满，应该是 50% 50%」）
+   ⇒ flex:1 1 auto 会 grow 平分；同时给 min-width 下限，「到了最小值就开始跑马灯」——
+   名字放不下时由 MarqueeText 省略 + hover 来回滚动，不再出现「右边空一大块」。 */
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:10ch;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:1 1 auto;display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
 button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
 /* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
 .dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
 .dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-/* 8～20 字宽：短名留空到 8 字、长名到 20 字截断（ch 按 0 字宽算，中文文件名实际更宽一点，
-   属可接受偏差；两端都有硬上限，不会出现「一个巨长名独占一行」）。 */
-.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;min-width:8ch;max-width:20ch;flex:0 1 auto;}
+/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层），
+   这里只保证它作为 flex 子项能收缩（min-width:0 是 flex 省略号的前提）。 */
+.dsh-tdt-sv-tfc-label{min-width:0;flex:1 1 auto;}
+/* 前置任务块的任务图标：与下方文件图标同尺寸同色，形成「任务 → 它的产出」的一致节奏。 */
+.dsh-tdt-sv-tfc-taskicon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
 .dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}

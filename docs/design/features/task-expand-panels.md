@@ -74,9 +74,11 @@
   - **link 型** = `<附件来源工作区 path>/<ref>`（`workspaceRegistry` 按附件 `workspace` title 解析出实体 `path`）。
 
 **待用户批准后要做的（改动清单）**：
-1. **服务端 overview**：`attachments` 由 `{name, kind}` 扩为 `{name, kind, path, anchorSessionId}`——`path` = 上面的绝对路径；`anchorSessionId` = link 型取**附件来源工作区**的锚点会话，upload 型取任务工作区锚点 / 任务最近一次执行的会话（read 本就允许工作区外绝对路径，任一有效会话即可）。
+1. **服务端 overview**：`attachments` 由 `{name, kind}` 扩为 `{name, kind, path, anchorSessionId}`——`path` = 上面的绝对路径；`anchorSessionId` = link 型取**附件来源工作区**的锚点会话，upload 型取**任一有会话的工作区**的锚点（read 本就允许工作区外绝对路径，**会话不需要与文件同工作区**）。
 2. **客户端**：左栏附件行改成可点按钮 → `openFile(anchorSessionId, absPath)`，走页面级唯一预览面。
-3. **边界**：任务从未执行、且拿不到任何锚点会话 ⇒ 该附件保持不可点（**不造假会话**）；预览面对绝对路径的根名 / 面包屑需单独处理。
+3. **边界**：一个可用的会话都拿不到 ⇒ 该附件保持不可点（**不造假会话**）；预览面对绝对路径的根名 / 面包屑需单独处理。
+
+**✅ 已落码（2026-10-03）**：服务端 `src/index.ts` `attachmentsWithPaths()`（overview 出口补 `path`+`anchorSessionId`，兜底 `anyAnchor`）；客户端附件行在有 `path`+锚点时走 `openFile`，否则退回纯展示。用户口径确认：**只要有一个会话当锚点就能读任何已知绝对路径，与会话是否属于该工作区无关**。
 
 ### 3.2 执行记录面板
 - 数据 = 该任务 `task_instances`，`scheduled_at DESC`，最新 **100 条**；**无翻页、无「加载更多」**。

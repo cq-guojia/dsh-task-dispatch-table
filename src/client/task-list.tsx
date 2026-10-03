@@ -55,7 +55,8 @@ export interface TaskOverviewRow {
     ui: Record<string, unknown> | null
   }
   promptHead: string
-  attachments: Array<{ name: string; kind: 'link' | 'upload' }>
+  /** `path` / `anchorSessionId` 由服务端 overview 补（见 src/index.ts `attachmentsWithPaths`）；缺 ⇒ 不可点。 */
+  attachments: Array<{ name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string }>
   depends: Array<{ id: string; title: string; enabled: boolean }>
   running: boolean
   runningSince: string | null
@@ -1123,11 +1124,26 @@ function TaskExpandPanel(props: {
           label: t('listSectionAttachments'),
           children: row.attachments.length === 0
             ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
-            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 12px' } },
-              row.attachments.map(item => h('span', { key: `${item.kind}:${item.name}`, style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } },
-                h(FileTypeIcon, { path: item.name, size: 14 }),
-                h('span', null, item.name),
-              )),
+            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '2px 10px' } },
+              row.attachments.map(item => {
+                // 服务端已给出绝对路径 + 预览锚点会话时，附件可点开预览（同一 openFile 入口）；
+                // 缺任一个（老版本 / 拿不到锚点）⇒ 退回纯展示，绝不造假。
+                const absPath = item.path
+                const anchor = item.anchorSessionId
+                const icon = h(FileTypeIcon, { path: item.name, size: 14 })
+                const name = h('span', null, item.name)
+                return absPath !== undefined && anchor !== undefined && onOpenFile !== undefined
+                  ? h('button', {
+                    key: `${item.kind}:${item.name}`, type: 'button', title: absPath, className: 'dsh-tdt-info-out',
+                    style: {
+                      display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px',
+                      border: 'none', color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-sm)',
+                      cursor: 'pointer', borderRadius: 'var(--tdt-radius-xs)', textAlign: 'left',
+                    },
+                    onClick: () => { onOpenFile(anchor, absPath) },
+                  }, icon, name)
+                  : h('span', { key: `${item.kind}:${item.name}`, style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } }, icon, name)
+              }),
             ),
         }),
         InfoField({
@@ -1513,11 +1529,14 @@ function TaskCard(props: {
         h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 } },
           h('div', { style: { ...titleStyle, flex: '0 1 auto', minWidth: 0 } }, h(MarqueeText, { text: row.title })),
           row.code !== null ? h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, `[${row.code}]`) : null,
-          // 创建时间**长显**（用户拍板不隐藏）：`[2026-10-03 创建]`；老定义没这字段就不渲染（不编造）。
-          row.createdAt === null
-            ? null
-            : h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } },
-                `[${t('listCreatedTag', { date: formatYmd(row.createdAt) })}]`),
+          // 创建时间**长显**（用户拍板不隐藏）：`[2026-10-03 创建]`。
+          // ⚠️ `createdAt` 只有**经 UI 表单保存**的任务才有（index.ts:425），老定义 / 手工写的 JSON 没有
+          // ⇒ 旧写法整段不渲染，用户看到「有的有、有的没有」。用户 2026-10-03 要求**每个任务都要有这一行**，
+          //    但铁律「不许编造数据」不许凭空补时间 ⇒ 缺值时显示明确的「创建时间未知」占位（不是空白、也不假时间）。
+          h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } },
+            row.createdAt === null
+              ? `[${t('listCreatedUnknown')}]`
+              : `[${t('listCreatedTag', { date: formatYmd(row.createdAt) })}]`),
           row.enabled ? null : h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, t('listDisabledTag')),
         ),
         // 执行方式是完整一句话（「每周一、周二，每 10 分钟执行一次」），放不下同样跑马灯。

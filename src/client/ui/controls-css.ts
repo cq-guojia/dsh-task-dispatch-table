@@ -40,10 +40,14 @@ export const SEGMENTED_CSS = `
 .dsh-tdt-seg__item:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
 .dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
 
-/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染 */
-.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;
-  border-radius:var(--tdt-radius-sm);background:var(--tdt-danger);color:var(--tdt-on-signal);
-  font-size:var(--tdt-font-xs);line-height:16px;font-weight:400;}
+/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染。
+   ⚠️ **必须是正圆**（用户 2026-10-03：「多位数给它撑开了，那不是圆的就没办法了」）：
+   固定 16×16 + border-radius:50% + padding:0 + overflow:hidden ⇒ 一位数 / 两位数都是同一个圆，
+   数字缩到 10px 塞得下；不再用 min-width + 左右 padding（那会让宽度随位数增长变椭圆）。 */
+.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:16px;height:16px;padding:0;overflow:hidden;
+  border-radius:50%;background:var(--tdt-danger);color:var(--tdt-on-signal);
+  font-size:10px;line-height:16px;font-weight:500;font-variant-numeric:tabular-nums;}
 
 /* block：撑满父宽（表单行用），各段等分 */
 .dsh-tdt-seg--block{display:flex;width:100%;}

@@ -461,7 +461,7 @@ window.__ModuleLoader__.load({
 			deliverExpandAria: "展开全部 {count} 个交付文件",
 			deliverCollapseAria: "收起交付文件列表",
 			tfcReceived: "接收 · {files} 个文件 · 来自 {tasks} 个前置任务",
-			tfcAttached: "随附 · {count} 个文件",
+			tfcAttached: "任务附件 · {count} 个文件",
 			tfcNoOutputs: "未声明产出",
 			tfcRelOnly: "相对路径",
 			tfcCrossWorkspace: "跨工作区",
@@ -470,7 +470,7 @@ window.__ModuleLoader__.load({
 			tfcMoreTasks: "全部 {count} 个前置任务",
 			tfcCollapse: "收起",
 			tfcFromUpload: "上传",
-			tfcFromWorkspace: "工作区",
+			tfcFromWorkspace: "链接",
 			tfcRestFiles: "还有 {count} 个",
 			editorNew: "新建任务",
 			editorEdit: "编辑任务",
@@ -674,6 +674,7 @@ window.__ModuleLoader__.load({
 			listNextNone: "无后续执行",
 			listNever: "尚未执行",
 			listCreatedTag: "{date} 创建",
+			listCreatedUnknown: "创建时间未知",
 			relNow: "即将执行",
 			relMinutes: "{n} 分钟后",
 			relHours: "{n} 小时后",
@@ -1036,7 +1037,7 @@ window.__ModuleLoader__.load({
 			tfcMoreTasks: "All {count} preceding tasks",
 			tfcCollapse: "Collapse",
 			tfcFromUpload: "uploaded",
-			tfcFromWorkspace: "workspace",
+			tfcFromWorkspace: "linked",
 			tfcRestFiles: "{count} more",
 			editorNew: "New task",
 			editorEdit: "Edit task",
@@ -1240,6 +1241,7 @@ window.__ModuleLoader__.load({
 			listNextNone: "No further runs",
 			listNever: "Never run",
 			listCreatedTag: "{date} created",
+			listCreatedUnknown: "creation time unknown",
 			relNow: "due now",
 			relMinutes: "in {n} min",
 			relHours: "in {n} h",
@@ -1647,10 +1649,14 @@ body[data-ds-dark-theme]{
 .dsh-tdt-seg__item:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
 .dsh-tdt-seg__item:disabled{cursor:default;opacity:.4;}
 
-/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染 */
-.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;
-  border-radius:var(--tdt-radius-sm);background:var(--tdt-danger);color:var(--tdt-on-signal);
-  font-size:var(--tdt-font-xs);line-height:16px;font-weight:400;}
+/* 段内角标（如「异常」的数量）：语义色实面 + 反白字，0 由组件侧不渲染。
+   ⚠️ **必须是正圆**（用户 2026-10-03：「多位数给它撑开了，那不是圆的就没办法了」）：
+   固定 16×16 + border-radius:50% + padding:0 + overflow:hidden ⇒ 一位数 / 两位数都是同一个圆，
+   数字缩到 10px 塞得下；不再用 min-width + 左右 padding（那会让宽度随位数增长变椭圆）。 */
+.dsh-tdt-seg__badge{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:16px;height:16px;padding:0;overflow:hidden;
+  border-radius:50%;background:var(--tdt-danger);color:var(--tdt-on-signal);
+  font-size:10px;line-height:16px;font-weight:500;font-variant-numeric:tabular-nums;}
 
 /* block：撑满父宽（表单行用），各段等分 */
 .dsh-tdt-seg--block{display:flex;width:100%;}
@@ -3214,15 +3220,16 @@ body[data-ds-dark-theme]{
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
    ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**；
       **上 34 / 下 18** = 与「分隔线 → 会话正文首行」同距（四边等距 34 口径），纵向节拍接得上。
-   ② **横向排**（用户 2026-10-03 第二次点名：「不能竖着一溜列，太浪费空间」）：
-      flex-wrap:wrap 从左到右排、**排满自动换行**。chip 宽**跟文件名走**：
-      名字短就短、名字长就长，min-width:8ch 保底（不足留空）、max-width:20ch 封顶
-      （超出省略号 + 悬停 title 看全文）。⇒ 一行至少放得下 3 个。
-   ③ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
+   ② **横向排 + 平分宽度**（用户两次点名）：flex-wrap:wrap 从左到右、排满换行；
+      chip flex:1 1 auto **平分容器**（「右边还有距离为什么不显示满」），min-width:10ch 下限
+      ⇒ 一行至少放得下 3 个。
+   ③ **显示不全的文件名一律跑马灯**（用户「鼠标一上去都要跑马灯」）：走全站唯一实现
+      MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
+   ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
       每块 = 任务名一行 + 产出物**同样横向排**；块前一条 **3px 浅色半透明竖线**，
       跨「任务名 + 产出物」整块高度做分隔（不用框、不靠颜色块，跨两行才分得清谁是谁）。
-   ④ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
-   ⑤ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
+   ⑤ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
+   ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
 /* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
 .dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex:0 1 auto;min-height:0;max-height:min(38vh,340px);overflow-y:auto;overscroll-behavior:contain;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
 .dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
@@ -3245,18 +3252,21 @@ body[data-ds-dark-theme]{
 /* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
    ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
 .dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
-/* chip 宽度**跟文件名走**：flex:0 0 auto（不参与拉伸/收缩 ⇒ 短名就短），
-   宽度上下限落在 **label** 上：min 8ch（不足留空）/ max 20ch（超出省略号 + title 全文）。 */
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
+/* chip 宽度：**平分容器**（用户 2026-10-03「右边还有距离，为什么不显示满，应该是 50% 50%」）
+   ⇒ flex:1 1 auto 会 grow 平分；同时给 min-width 下限，「到了最小值就开始跑马灯」——
+   名字放不下时由 MarqueeText 省略 + hover 来回滚动，不再出现「右边空一大块」。 */
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:10ch;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:1 1 auto;display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
 button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
 /* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
 .dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
 .dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-/* 8～20 字宽：短名留空到 8 字、长名到 20 字截断（ch 按 0 字宽算，中文文件名实际更宽一点，
-   属可接受偏差；两端都有硬上限，不会出现「一个巨长名独占一行」）。 */
-.dsh-tdt-sv-tfc-label{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;min-width:8ch;max-width:20ch;flex:0 1 auto;}
+/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层），
+   这里只保证它作为 flex 子项能收缩（min-width:0 是 flex 省略号的前提）。 */
+.dsh-tdt-sv-tfc-label{min-width:0;flex:1 1 auto;}
+/* 前置任务块的任务图标：与下方文件图标同尺寸同色，形成「任务 → 它的产出」的一致节奏。 */
+.dsh-tdt-sv-tfc-taskicon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
 .dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
 .dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
@@ -5262,7 +5272,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return [];
 			}
 		}
-		/** 一个文件行：图标 + 名字（超长省略、悬停全文）；有路径才可点。 */
+		/** 一个文件行：图标 + 名字 + 来源标记；有路径才可点。
+		*  文件名走全站唯一实现 `MarqueeText`：放不下出省略号、hover 来回滚动露出全名
+		*  （用户 2026-10-03：前置任务产出与随附文件**所有**显示不全的名字都要跑马灯）。 */
 		function FileChip(props) {
 			const { file } = props;
 			const clickable = file.onClick !== void 0;
@@ -5280,7 +5292,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-icon" }, file.isDir ? (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: file.iconPath,
 				size: 14
-			})), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-label" }, file.label), file.note === void 0 ? null : (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, file.note));
+			})), (0, react.createElement)(MarqueeText, {
+				text: file.label,
+				title: file.title,
+				style: {
+					minWidth: 0,
+					flex: "1 1 auto"
+				}
+			}), file.note === void 0 ? null : (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, file.note));
 		}
 		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。**横向排**（`flex-wrap`，排满换行）。 */
 		function FileLines(props) {
@@ -5344,7 +5363,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return (0, react.createElement)("div", {
 						key: `${item.task}:${item.instanceId}`,
 						className: "dsh-tdt-sv-tfc-task"
-					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", {
+					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-taskicon" }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, { size: 14 })), (0, react.createElement)("span", {
 						className: "dsh-tdt-sv-tfc-name",
 						title: item.task
 					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react.createElement)(FileChip, {
@@ -42776,18 +42795,45 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				children: row.attachments.length === 0 ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react.createElement)("div", { style: {
 					display: "flex",
 					flexWrap: "wrap",
-					gap: "4px 12px"
-				} }, row.attachments.map((item) => (0, react.createElement)("span", {
-					key: `${item.kind}:${item.name}`,
-					style: {
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "4px"
-					}
-				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-					path: item.name,
-					size: 14
-				}), (0, react.createElement)("span", null, item.name))))
+					gap: "2px 10px"
+				} }, row.attachments.map((item) => {
+					const absPath = item.path;
+					const anchor = item.anchorSessionId;
+					const icon = (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+						path: item.name,
+						size: 14
+					});
+					const name = (0, react.createElement)("span", null, item.name);
+					return absPath !== void 0 && anchor !== void 0 && onOpenFile !== void 0 ? (0, react.createElement)("button", {
+						key: `${item.kind}:${item.name}`,
+						type: "button",
+						title: absPath,
+						className: "dsh-tdt-info-out",
+						style: {
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "4px",
+							padding: "2px 6px",
+							border: "none",
+							color: "var(--tdt-fg)",
+							font: "inherit",
+							fontSize: "var(--tdt-font-sm)",
+							cursor: "pointer",
+							borderRadius: "var(--tdt-radius-xs)",
+							textAlign: "left"
+						},
+						onClick: () => {
+							onOpenFile(anchor, absPath);
+						}
+					}, icon, name) : (0, react.createElement)("span", {
+						key: `${item.kind}:${item.name}`,
+						style: {
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "4px"
+						}
+					}, icon, name);
+				}))
 			}), InfoField({
 				label: t("listSectionDepends"),
 				children: row.depends.length === 0 ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react.createElement)("div", { style: {
@@ -43136,11 +43182,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				...faintStyle,
 				flex: "none",
 				display: "inline"
-			} }, `[${row.code}]`) : null, row.createdAt === null ? null : (0, react.createElement)("span", { style: {
+			} }, `[${row.code}]`) : null, (0, react.createElement)("span", { style: {
 				...faintStyle,
 				flex: "none",
 				display: "inline"
-			} }, `[${t("listCreatedTag", { date: formatYmd(row.createdAt) })}]`), row.enabled ? null : (0, react.createElement)("span", { style: {
+			} }, row.createdAt === null ? `[${t("listCreatedUnknown")}]` : `[${t("listCreatedTag", { date: formatYmd(row.createdAt) })}]`), row.enabled ? null : (0, react.createElement)("span", { style: {
 				...faintStyle,
 				flex: "none",
 				display: "inline"
