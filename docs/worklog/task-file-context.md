@@ -206,7 +206,7 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 > 先去找**宿主同类列表**的既有样式照抄（这次就是官方「附加文件」列表），比凭感觉调 CSS 稳。
 
 
-冒烟 +6（两种竖线已删 / 正方形序号块 + 亮度 / chip 按内容宽 + 两处 40ch 限宽 / 附件阈值 10 / 序号不跳号 / 方括号前置容器）⇒ **487/0**。
+冒烟 +8（两种竖线已删 / 序号块正方形+字号同源+提亮 / chip 按内容宽 + 两处 40ch 限宽 / 附件阈值 10 / 序号不跳号 / 方括号前置容器 / **顶部区不再自带滚动** + 抵消多余间距）⇒ **488/0**。
 
 ## 五、落码记录
 
@@ -232,7 +232,7 @@ className = `${ocOr('ChatView','frame','dsh-tdt-sv-body')} dsh-tdt-sv-frame dsh-
 | 18 | **筛选角标正圆**：`.dsh-tdt-seg__badge` 固定 16×16 + `border-radius:50%` + `padding:0` + 字号 10px + `tabular-nums`（多位数字不再撑成椭圆） | `src/client/ui/controls-css.ts` |
 | 19 | **回执裁决三处口径修正**（用户 2026-10-03 拍板，全过程见 [receipt-verdict.md](receipt-verdict.md)）：① **去掉产物新鲜度闸** —— `checkReceipt` 只留 `existsSync`，移除 `mtime > dispatched_at` 比较与 `dispatchedAtMs` 参数、删 `statSync` import；② 提示词改**「以最后一次提交为准 + 再提交须带上先前的产出」**（工具描述 + 末段指令各一处）；③ 裁决改**等 `agent.whenIdle()`（会话真正空闲）** —— `turn/end` 只记信号不再裁决，sweep 的 `turn/end` 分支去掉 `continue`（防卡死实例永久挂 running）。⚠️ 同日**撤回**了先前「逐条校验、任一条通过即成功」的错误修复（`receiptsSince` 已删）。冒烟 ⇒ **482/0** | `src/reconcile.ts`、`src/receipt.ts`、`scripts/smoke.mjs` |
 
-**验证状态**：typecheck 绿 · build 绿 · 冒烟 **487/0** · ⏳ **真机待验**。
+**验证状态**：typecheck 绿 · build 绿 · 冒烟 **488/0** · ⏳ **真机待验**。
 
 **真机必看的八条**（决定本轮成败）：
 1. 顶部输入区与下方会话正文**左右是否同一条基线**（都该是 34px）、上下节拍是否接得上（上 34 / 下 16）。
