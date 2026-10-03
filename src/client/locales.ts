@@ -704,7 +704,7 @@ export const zh: Record<LocaleKey, string> = {
   infoSectionConfig: '任务配置',
   infoLastRun: '上次执行',
   infoNoRun: '还没有执行记录',
-  infoFinishedAt: '完成时间',
+  infoFinishedAt: '结束时间',
   // —— 任务卡片三面板（决策 55）——
   cardTabInfo: '基础信息',
   cardTabRecords: '执行记录',
@@ -1289,7 +1289,7 @@ export const en: Record<LocaleKey, string> = {
   infoSectionConfig: 'Task settings',
   infoLastRun: 'Last run',
   infoNoRun: 'No runs yet',
-  infoFinishedAt: 'Finished at',
+  infoFinishedAt: 'Ended at',
   // Task card three panels (decision 55).
   cardTabInfo: 'Basic info',
   cardTabRecords: 'Run records',

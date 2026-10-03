@@ -711,7 +711,7 @@ window.__ModuleLoader__.load({
 			infoSectionConfig: "任务配置",
 			infoLastRun: "上次执行",
 			infoNoRun: "还没有执行记录",
-			infoFinishedAt: "完成时间",
+			infoFinishedAt: "结束时间",
 			cardTabInfo: "基础信息",
 			cardTabRecords: "执行记录",
 			cardTabLogs: "日志",
@@ -1278,7 +1278,7 @@ window.__ModuleLoader__.load({
 			infoSectionConfig: "Task settings",
 			infoLastRun: "Last run",
 			infoNoRun: "No runs yet",
-			infoFinishedAt: "Finished at",
+			infoFinishedAt: "Ended at",
 			cardTabInfo: "Basic info",
 			cardTabRecords: "Run records",
 			cardTabLogs: "Logs",
@@ -42706,6 +42706,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const dur = durationMsOf(instance);
 				const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
 				const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
+				const timeOf = (iso) => iso === null ? "—" : formatDateTime(iso, {
+					seconds: true,
+					fallback: "—"
+				});
 				return (0, react.createElement)("div", null, InfoField({
 					label: t("colStatus"),
 					children: (0, react.createElement)("span", { style: {
@@ -42716,11 +42720,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						color: infoStatusColorOf(instance.status)
 					} }, (0, react.createElement)(StatusIcon, { status: instance.status }), statusTextOf(instance.status, t))
 				}), InfoField({
+					label: t("colPlanned"),
+					children: timeOf(instance.scheduled_at)
+				}), InfoField({
+					label: t("colActualStart"),
+					children: timeOf(instance.dispatched_at)
+				}), InfoField({
 					label: t("infoFinishedAt"),
-					children: formatDateTime(instance.finished_at ?? instance.scheduled_at, {
-						seconds: true,
-						fallback: "—"
-					})
+					children: timeOf(instance.finished_at)
 				}), dur === null ? null : InfoField({
 					label: t("colDuration"),
 					children: formatDurationHms(dur)

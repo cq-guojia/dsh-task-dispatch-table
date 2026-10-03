@@ -1047,7 +1047,8 @@ function TaskExpandPanel(props: {
     return () => { alive = false }
   }, [tab, row.id, logKeyword, logRange, logLimit])
 
-  // 右栏「上次执行」：用与左栏同一套「标签—值」网格排布（状态 / 完成时间 / 耗时 / Token / 备注），
+  // 右栏「上次执行」：用与左栏同一套「标签—值」网格排布
+  //（状态 / 计划执行 / 实际开始 / 结束时间 / 执行时长 / Token / 备注），
   // 下面再挂「查看会话」与产出物列表（产出物行 hover 有底色，走 CSS class）。
   const renderLastRun = (instance: InstanceRow | null): ReturnType<typeof h> => {
     if (instance === null) {
@@ -1062,6 +1063,7 @@ function TaskExpandPanel(props: {
       ? null
       : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
     const note = instance.note === null || instance.note === undefined ? '' : instance.note
+    const timeOf = (iso: string | null): string => iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
     return h('div', null,
       InfoField({
         label: t('colStatus'),
@@ -1072,10 +1074,10 @@ function TaskExpandPanel(props: {
           statusTextOf(instance.status, t),
         ),
       }),
-      InfoField({
-        label: t('infoFinishedAt'),
-        children: formatDateTime(instance.finished_at ?? instance.scheduled_at, { seconds: true, fallback: '—' }),
-      }),
+      // 时间四件套（用户 2026-10-03：空间够，计划 / 开始 / 结束 / 时长都放上）。
+      InfoField({ label: t('colPlanned'), children: timeOf(instance.scheduled_at) }),
+      InfoField({ label: t('colActualStart'), children: timeOf(instance.dispatched_at) }),
+      InfoField({ label: t('infoFinishedAt'), children: timeOf(instance.finished_at) }),
       dur === null ? null : InfoField({ label: t('colDuration'), children: formatDurationHms(dur) }),
       tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: tokensDetailOf(instance) }, tokens) }),
       note === ''
