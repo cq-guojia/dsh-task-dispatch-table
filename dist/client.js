@@ -435,6 +435,11 @@ window.__ModuleLoader__.load({
 			previewSource: "源码",
 			previewRender: "预览",
 			previewMdSwitchAria: "Markdown 视图切换",
+			previewHtmlSwitchAria: "HTML 视图切换",
+			previewHtmlFrame: "HTML 文档预览",
+			previewHtmlFailed: "无法预览这份 HTML 文档",
+			previewTruncated: "因文件过大，仅显示前 {size} 的内容。",
+			previewTruncatedSize: "256 KB",
 			explorerEmpty: "空目录",
 			explorerTruncated: "目录内容过多，仅显示部分条目。",
 			explorerCrumbsAria: "目录路径导航",
@@ -1018,6 +1023,11 @@ window.__ModuleLoader__.load({
 			previewSource: "Source",
 			previewRender: "Preview",
 			previewMdSwitchAria: "Markdown view switch",
+			previewHtmlSwitchAria: "HTML view switch",
+			previewHtmlFrame: "HTML document preview",
+			previewHtmlFailed: "This HTML document could not be previewed.",
+			previewTruncated: "Only the first {size} is shown because the file is too large.",
+			previewTruncatedSize: "256 KB",
 			explorerEmpty: "Empty directory",
 			explorerTruncated: "The directory is too large; only some entries are shown.",
 			explorerCrumbsAria: "Directory path navigation",
@@ -3163,6 +3173,8 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
+/* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
+.dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
 
@@ -6480,6 +6492,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			ico: "image/x-icon",
 			avif: "image/avif"
 		};
+		/** HTML 静态预览的取数档位（官方 `HtmlBody` 注册为 `loading: 'bytes-complete'`：一次取全量字节）。 */
+		const HTML_KINDS = ["html", "htm"];
+		/** 源码态读取上限（用户 2026-10-04 拍板 256K；官方走 `read` 分页、上限是部署 maxBytes，无此常量）。 */
+		const SOURCE_MAX_BYTES = 262144;
 		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
 		function previewKind(path) {
 			const base = path.slice(path.lastIndexOf("/") + 1);
@@ -6499,14 +6515,67 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				kind: "md",
 				ext
 			};
+			if (HTML_KINDS.some((kind) => kind === ext)) return {
+				kind: "html",
+				ext
+			};
 			return {
 				kind: "text",
 				ext
 			};
 		}
+		/**
+		* HTML 静态预览的**安全处理，逐条照抄官方**（`documentpreview` lib/client.js）：
+		* - 禁用标签（`:3827-3840`）：noscript / base / link / meta / iframe / frame / object / embed / set /
+		*   animate / animateMotion / animateTransform；
+		* - 禁用属性（`:3841`）：href / xlink:href；
+		* - head 第一项插入官方那条 CSP（`:3844-3846`）；
+		* - 外层 `sandbox=""`（`:4069`）——**不比官方多开一点、也不少关一点**。
+		* 官方用 DOMPurify 做第一层，本仓不引第三方包 ⇒ 用浏览器原生 DOMParser 做**等价的剔除**，
+		* 效果对齐官方清单；真正的兜底是 `sandbox=""`（禁脚本执行）+ CSP `default-src 'none'`（禁一切外链）。
+		*/
+		const HTML_FORBID_TAGS = [
+			"noscript",
+			"base",
+			"link",
+			"meta",
+			"iframe",
+			"frame",
+			"object",
+			"embed",
+			"set",
+			"animate",
+			"animatemotion",
+			"animatetransform"
+		];
+		const HTML_FORBID_ATTRS = ["href", "xlink:href"];
+		/** 官方 CSP 原文（`:3846`）。 */
+		const HTML_CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:";
+		/** 把 HTML 文本做成官方同款的静态预览文档；解析/解码失败返回 undefined（调用方出错误态）。 */
+		function buildStaticHtml(data) {
+			let source;
+			try {
+				source = new TextDecoder("utf-8", { fatal: true }).decode(data);
+			} catch {
+				return;
+			}
+			const parsed = new DOMParser().parseFromString(source, "text/html");
+			for (const tag of HTML_FORBID_TAGS) for (const element of Array.from(parsed.querySelectorAll(tag))) element.remove();
+			for (const element of Array.from(parsed.querySelectorAll("*"))) for (const attr of HTML_FORBID_ATTRS) element.removeAttribute(attr);
+			const policy = parsed.createElement("meta");
+			policy.setAttribute("http-equiv", "Content-Security-Policy");
+			policy.setAttribute("content", HTML_CSP);
+			const head = parsed.head ?? parsed.documentElement;
+			head.insertBefore(policy, head.firstChild);
+			return "<!doctype html>" + parsed.documentElement.outerHTML;
+		}
 		/** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
 		function bareCode(code) {
 			return code.includes("/") ? code.slice(code.lastIndexOf("/") + 1) : code;
+		}
+		/** 文本的 UTF-8 字节数（源码态上限按**字节**判，与官方 maxBytes 口径一致，不按字符数）。 */
+		function byteLengthOf(text) {
+			return new TextEncoder().encode(text).length;
 		}
 		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
 		function formatBytes(n) {
@@ -6602,22 +6671,80 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				alt: path
 			}));
 		}
+		/**
+		* HTML 静态预览（照官方 `BasicHtmlFrame`，`documentpreview` lib/client.js:4052-4073）：
+		* `readBytes` 取全量字节（官方 `loading: 'bytes-complete'`）→ 官方同款安全处理 →
+		* `<iframe srcDoc sandbox="" data-html-preview>`。frames 名按官方 `dsh-sidebar-html-<id>` 同款隔离。
+		*/
+		function HtmlPreview(props) {
+			const { workspaceFiles, sessionId, path, t, reloadNonce } = props;
+			const [doc, setDoc] = (0, react.useState)(void 0);
+			const [err, setErr] = (0, react.useState)(null);
+			(0, react.useEffect)(() => {
+				let alive = true;
+				setDoc(void 0);
+				setErr(null);
+				workspaceFiles.readBytes(sessionId, path, {}).then((page) => {
+					if (!alive) return;
+					const data = bytesOf(page);
+					if (isFailed(data)) {
+						setErr(errView(data.failed));
+						return;
+					}
+					if (data === null) {
+						setErr({ key: "previewBadPayload" });
+						return;
+					}
+					const built = buildStaticHtml(data);
+					if (built === void 0) {
+						setErr({ key: "previewHtmlFailed" });
+						return;
+					}
+					setDoc(built);
+				}).catch((error) => {
+					if (alive) setErr(errView(error));
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				workspaceFiles,
+				sessionId,
+				path,
+				reloadNonce
+			]);
+			if (err !== null) return (0, react.createElement)(ErrBox, {
+				err,
+				t
+			});
+			if (doc === void 0) return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			return (0, react.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react.createElement)("iframe", {
+				className: "dsh-tdt-sv-preview-html",
+				name: "dsh-sidebar-html-preview",
+				srcDoc: doc,
+				sandbox: "",
+				title: t("previewHtmlFrame"),
+				"data-html-preview": true
+			}));
+		}
 		/** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
 		* md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
 		* 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
 		function TextPreview(props) {
-			const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t } = props;
+			const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t, maxBytes } = props;
 			const [text, setText] = (0, react.useState)(null);
 			const [nextOffset, setNextOffset] = (0, react.useState)(null);
 			const [loading, setLoading] = (0, react.useState)(true);
 			const [loadingMore, setLoadingMore] = (0, react.useState)(false);
 			const [err, setErr] = (0, react.useState)(null);
+			const [truncated, setTruncated] = (0, react.useState)(false);
 			(0, react.useEffect)(() => {
 				let alive = true;
 				setText(null);
 				setNextOffset(null);
 				setLoading(true);
 				setErr(null);
+				setTruncated(false);
 				workspaceFiles.read(sessionId, path, {}).then((page) => {
 					if (!alive) return;
 					const parsed = textPageOf(page);
@@ -6632,7 +6759,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						return;
 					}
 					setText(parsed.text);
-					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+					const capped = maxBytes !== void 0 && byteLengthOf(parsed.text) >= maxBytes;
+					setTruncated(capped);
+					setNextOffset(capped || parsed.eof ? null : parsed.offset + parsed.lines);
 					setLoading(false);
 				}).catch((error) => {
 					if (!alive) return;
@@ -6663,8 +6792,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						setLoadingMore(false);
 						return;
 					}
-					setText((prev) => prev === null ? parsed.text : `${prev}\n${parsed.text}`);
-					setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+					setText((prev) => {
+						const merged = prev === null ? parsed.text : `${prev}\n${parsed.text}`;
+						if (maxBytes !== void 0 && byteLengthOf(merged) >= maxBytes) {
+							setTruncated(true);
+							setNextOffset(null);
+						} else setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines);
+						return merged;
+					});
 					setLoadingMore(false);
 				}).catch((error) => {
 					setErr(errView(error));
@@ -6700,7 +6835,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				size: "sm",
 				disabled: loadingMore,
 				onClick: loadMore
-			}, t("previewLoadMore"))) : null);
+			}, t("previewLoadMore"))) : null, truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-older" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-hint" }, t("previewTruncated", { size: t("previewTruncatedSize") }))) : null);
 		}
 		//#endregion
 		//#region src/client/file-browser.tsx
@@ -6931,6 +7066,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const { workspaceFiles, sessionId, path, sourceView, reloadNonce, t } = props;
 			const { kind, ext, mime } = previewKind(path);
 			const isMd = kind === "md";
+			const isHtml = kind === "html";
 			const fallback = (0, react.createElement)(ErrBox, {
 				err: { key: "previewRenderFailed" },
 				t
@@ -6945,6 +7081,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					mime: mime ?? "application/octet-stream",
 					t,
 					reloadNonce
+				}) : isHtml && !sourceView ? (0, react.createElement)(HtmlPreview, {
+					workspaceFiles,
+					sessionId,
+					path,
+					t,
+					reloadNonce
 				}) : (0, react.createElement)(TextPreview, {
 					workspaceFiles,
 					sessionId,
@@ -6953,7 +7095,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					markdown: isMd,
 					sourceView,
 					reloadNonce,
-					t
+					t,
+					maxBytes: isHtml ? SOURCE_MAX_BYTES : void 0
 				})
 			});
 		}
@@ -7275,7 +7418,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				label: rootLabel,
 				path: ""
 			}, ...crumbsOf(relativizeToRoot(dir, sessionId))] : crumbsOf(dir);
-			const isMdPreview = viewing !== null && previewKind(viewing).kind === "md";
+			const switchKind = viewing !== null ? previewKind(viewing).kind : null;
+			const isMdPreview = switchKind === "md";
+			const switchable = isMdPreview || switchKind === "html";
 			/**
 			* 工作区之外时的第一排：**只读完整路径**（用户 2026-10-03）。
 			* 不给任何会失败的入口：▾ 选层（下拉里全是点不动的层）、面包屑点选、← 返回、↑ 上一层
@@ -7413,10 +7558,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					flex: "1 1 auto",
 					minWidth: 0
 				}
-			}), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)(Segmented, {
+			}), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, switchable ? (0, react.createElement)(Segmented, {
 				size: "sm",
 				variant: "default",
-				label: t("previewMdSwitchAria"),
+				label: t(isMdPreview ? "previewMdSwitchAria" : "previewHtmlSwitchAria"),
 				value: sourceView ? "source" : "render",
 				items: [{
 					value: "render",

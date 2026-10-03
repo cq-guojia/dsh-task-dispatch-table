@@ -80,6 +80,9 @@ export type LocaleKey =
   | 'previewNotRegular' | 'previewOutsideWorkspace' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
   | 'previewSource' | 'previewRender' | 'previewMdSwitchAria'
+  // —— U30 HTML 预览（照官方：srcDoc + sandbox 静态预览；源码态截前 256K）——
+  | 'previewHtmlSwitchAria' | 'previewHtmlFrame' | 'previewHtmlFailed' | 'previewTruncated'
+  | 'previewTruncatedSize'
   | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' | 'explorerCrumbsMore'
   | 'explorerLevels' | 'explorerUp' | 'explorerBack' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
@@ -426,6 +429,11 @@ export const zh: Record<LocaleKey, string> = {
   previewSource: '源码',
   previewRender: '预览',
   previewMdSwitchAria: 'Markdown 视图切换',
+  previewHtmlSwitchAria: 'HTML 视图切换',
+  previewHtmlFrame: 'HTML 文档预览',
+  previewHtmlFailed: '无法预览这份 HTML 文档',
+  previewTruncated: '因文件过大，仅显示前 {size} 的内容。',
+  previewTruncatedSize: '256 KB',
   explorerEmpty: '空目录',
   explorerTruncated: '目录内容过多，仅显示部分条目。',
   explorerCrumbsAria: '目录路径导航',
@@ -1028,6 +1036,11 @@ export const en: Record<LocaleKey, string> = {
   previewSource: 'Source',
   previewRender: 'Preview',
   previewMdSwitchAria: 'Markdown view switch',
+  previewHtmlSwitchAria: 'HTML view switch',
+  previewHtmlFrame: 'HTML document preview',
+  previewHtmlFailed: 'This HTML document could not be previewed.',
+  previewTruncated: 'Only the first {size} is shown because the file is too large.',
+  previewTruncatedSize: '256 KB',
   explorerEmpty: 'Empty directory',
   explorerTruncated: 'The directory is too large; only some entries are shown.',
   explorerCrumbsAria: 'Directory path navigation',

@@ -231,6 +231,7 @@ body[data-ds-dark-theme]{
 | 图标钮 | `plain`（默认）/ `outline` / `danger` | sm / md / lg（默认 lg） | `ui/Button.tsx`（`IconButton`）✅ |
 | 输入框 / 前缀框 / 数字框 | 输入框 `error`（描红）；数字框显式 ±、`inputWidth` 可调宽度 | sm / md / lg（默认 lg） | `ui/Field.tsx` ✅ |
 | 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽、`marquee` 跑马灯） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`）✅ |
+| **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx`（⏳ 2026-10-03 定规格，**待建**；未建成前不许业务文件自己拼 Input + Menu） |
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
 | Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
@@ -246,6 +247,45 @@ body[data-ds-dark-theme]{
   - `Input`：`className` 落外层 `.wrap`、`style` 落内层 `<input>`（`primitives.d.ts:172`）。
   - `Modal`：`className` 只落 `.dialog`，抬不了整层 `.root`(z1000) ⇒ 编辑器故意不用官方 Modal（`task-editor.tsx:977-979`）。
   - 官方类名是 CSS-module 哈希，**不许写死**，只能按元素 + role 选（`official-classes.ts` 的 `ocOr` 二选一语义已有踩坑记录）。
+
+### 5.4 任务选择器（2026-10-03 立，**待建**）
+
+**为什么必须抽（用户原话）**：「任务一旦稍微多点，有个三四十条你就很难选了……应该直接做成一个搜索框的样子：默认显示最近的 10 条，然后提供『更多』选项；上方带一个搜索框可以过滤，支持搜任务的名字、任务的 ID……这个功能明确是需要抽象出来统一的，因为很多地方都要用。」
+
+它不是「又一个下拉」，而是**候选集会随外部作用域变化、且需要搜索**的一类选择控件；全仓目前**没有**任何 combobox / autocomplete / 命令面板（2026-10-03 全仓扫描结论；官方 primitives 也无）⇒ 新建，落在 `ui/TaskPicker.tsx`。
+
+**与 `SelectField` 的分工**（不许彼此越界）：
+
+| | `SelectField` | `TaskPicker` |
+|---|---|---|
+| 候选规模 | 少（十几个以内） | 多（几十上百，需要搜索） |
+| 搜索 | 无 | 有（按 `label` / `id`） |
+| 折叠 | 全列 | 默认最近 `recentLimit` 条 +「更多」展开全部 |
+| 作用域 | 无 | **受控入参 `scope`**（外部改 ⇒ 候选实时重算） |
+| 底层 | 官方 `Menu` | 官方 `Input` + 官方 `Menu`（复用，不自绘浮层） |
+
+**最小必要接口**（从实际调用点反推，见 [`../worklog/execution-timeline.md`](../worklog/execution-timeline.md) §四）：
+
+```ts
+value: string                       // 选中的任务 id；'' = 未选
+onChange(id: string): void          // 与 SelectField 同契约（传值，不传 event）
+options: readonly EditorTaskOption[]// 候选全量，复用现有 EditorTaskOption（带 workspace / enabled）
+scope?: string                      // 外部受控工作区；'' | undefined = 不限；变化 ⇒ 候选重算
+excludeIds?: readonly string[]      // 排除项（已选前置 + 当前任务自己）
+recentLimit?: number                // 默认 10
+placeholder / emptyLabel / ariaLabel / searchPlaceholder: string
+disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 'start' | 'end'
+```
+
+**两条硬规则**：
+
+1. **`scope` 是受控入参，不是内部 state** —— 现有编辑器「前置任务」把工作区做成内部 `depWs`（`task-editor.tsx:1878`），导致外部（比如任务本身的工作区）改了它不知道；新控件必须由调用方持有作用域。
+2. **已选项掉出新作用域 ⇒ 显式提示，不静默清空**（静默清空会让用户以为自己没选过）。
+
+**已知待统一的口径冲突**（本控件不裁决，只暴露）：
+
+- 工作区候选三处真源：编辑器底部走 `GET {prefix}/options`（`src/index.ts:639-693`）、任务列表顶部（`task-list.tsx:1927-1941`）与编辑器「前置任务」第①级（`task-editor.tsx:1927-1936`）都从任务表反推 ⇒ 见 [`ui-style-guide.md`](ui-style-guide.md) §三「待抽象」第 9 项。
+- 任务选项文案两套：`title（id）`（`index.ts:942-945`）vs `[code] name`（`index.ts:930-941`）⇒ 统一取 `[code] name`（后者注释明确「绝不把机器 id 当尾缀拖出来」），**搜索仍要能按 id 命中**。
 
 ---
 

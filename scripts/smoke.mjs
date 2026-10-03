@@ -1067,8 +1067,26 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     && /\.dsh-tdt-root\.dsh-tdt-resizing iframe\{pointer-events:none/.test(clientJs))
   check('拖拽结束撤销 resizing 标记（classList.remove，避免残留禁事件）',
     /classList\.remove\(["']dsh-tdt-resizing["']\)/.test(clientJs))
+  // U30 HTML 预览（照官方，逐条对齐 documentpreview lib/client.js）。
+  check('HTML 走静态预览：iframe srcDoc + sandbox="" + data-html-preview（官方 :4065-4072）',
+    clientJs.includes('data-html-preview')
+    && /sandbox:\s*""|sandbox:\s*''/.test(clientJs)
+    && clientJs.includes('srcDoc'))
+  check('HTML 安全处理照官方：禁用标签清单 + 禁用 href/xlink:href（官方 :3827-3841）',
+    clientJs.includes('noscript') && clientJs.includes('animatetransform')
+    && clientJs.includes('xlink:href') && clientJs.includes('HTML_FORBID_TAGS'))
+  check('HTML 注入官方那条 CSP 且放在 head 首位（官方 :3844-3846）',
+    /default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:;/.test(clientJs)
+    && clientJs.includes('insertBefore'))
+  check('HTML 源码态截前 256K：上限常量 + 超限不再翻页 + 底部提示（≤256K 不提示）',
+    clientJs.includes('SOURCE_MAX_BYTES')
+    && clientJs.includes('previewTruncated')
+    && /maxBytes:\s*isHtml\s*\?\s*SOURCE_MAX_BYTES/.test(clientJs))
+  check('HTML 默认进入预览（非源码），切换控件与 md 同构',
+    /isHtml\s*&&\s*!sourceView/.test(clientJs) && /["']previewHtmlSwitchAria["']/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
     clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
+
   check('远端返回防御解析（text/data 不符契约走错误态，不把 undefined 喂渲染器）',
     clientJs.includes('textPageOf') && clientJs.includes('bytesOf') && clientJs.includes('previewBadPayload'))
   check('执行记录行产出物可点（outputs 列 → 同一 openFile 入口）',

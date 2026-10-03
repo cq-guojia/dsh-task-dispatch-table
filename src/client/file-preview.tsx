@@ -227,20 +227,72 @@ const IMAGE_MIME: Readonly<Record<string, string>> = {
   avif: 'image/avif',
 }
 
+/** HTML 静态预览的取数档位（官方 `HtmlBody` 注册为 `loading: 'bytes-complete'`：一次取全量字节）。 */
+export const HTML_KINDS = ['html', 'htm'] as const
+
+/** 源码态读取上限（用户 2026-10-04 拍板 256K；官方走 `read` 分页、上限是部署 maxBytes，无此常量）。 */
+export const SOURCE_MAX_BYTES = 256 * 1024
+
 /** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
-export function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'text'; ext: string; mime?: string } {
+export function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'html' | 'text'; ext: string; mime?: string } {
   const base = path.slice(path.lastIndexOf('/') + 1)
   const dot = base.lastIndexOf('.')
   const ext = dot <= 0 ? '' : base.slice(dot + 1).toLowerCase()
   if (ext !== '' && IMAGE_MIME[ext] !== undefined) return { kind: 'image', ext, mime: IMAGE_MIME[ext] }
   if (ext === 'pdf') return { kind: 'pdf', ext, mime: 'application/pdf' }
   if (ext === 'md' || ext === 'markdown') return { kind: 'md', ext }
+  // HTML 与官方 `htmlBodyDefinition` 同款扩展名（documentpreview lib/client.js:4102）。
+  if (HTML_KINDS.some(kind => kind === ext)) return { kind: 'html', ext }
   return { kind: 'text', ext }
+}
+
+/**
+ * HTML 静态预览的**安全处理，逐条照抄官方**（`documentpreview` lib/client.js）：
+ * - 禁用标签（`:3827-3840`）：noscript / base / link / meta / iframe / frame / object / embed / set /
+ *   animate / animateMotion / animateTransform；
+ * - 禁用属性（`:3841`）：href / xlink:href；
+ * - head 第一项插入官方那条 CSP（`:3844-3846`）；
+ * - 外层 `sandbox=""`（`:4069`）——**不比官方多开一点、也不少关一点**。
+ * 官方用 DOMPurify 做第一层，本仓不引第三方包 ⇒ 用浏览器原生 DOMParser 做**等价的剔除**，
+ * 效果对齐官方清单；真正的兜底是 `sandbox=""`（禁脚本执行）+ CSP `default-src 'none'`（禁一切外链）。
+ */
+const HTML_FORBID_TAGS = ['noscript', 'base', 'link', 'meta', 'iframe', 'frame', 'object', 'embed', 'set', 'animate', 'animatemotion', 'animatetransform']
+const HTML_FORBID_ATTRS = ['href', 'xlink:href']
+/** 官方 CSP 原文（`:3846`）。 */
+const HTML_CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:"
+
+/** 把 HTML 文本做成官方同款的静态预览文档；解析/解码失败返回 undefined（调用方出错误态）。 */
+export function buildStaticHtml(data: Uint8Array): string | undefined {
+  let source: string
+  try {
+    source = new TextDecoder('utf-8', { fatal: true }).decode(data)
+  } catch {
+    return undefined
+  }
+  const parsed = new DOMParser().parseFromString(source, 'text/html')
+  for (const tag of HTML_FORBID_TAGS) {
+    for (const element of Array.from(parsed.querySelectorAll(tag))) element.remove()
+  }
+  for (const element of Array.from(parsed.querySelectorAll('*'))) {
+    for (const attr of HTML_FORBID_ATTRS) element.removeAttribute(attr)
+  }
+  // CSP 必须是 head 的第一项（官方 parsed.head 前置插入）。
+  const policy = parsed.createElement('meta')
+  policy.setAttribute('http-equiv', 'Content-Security-Policy')
+  policy.setAttribute('content', HTML_CSP)
+  const head = parsed.head ?? parsed.documentElement
+  head.insertBefore(policy, head.firstChild)
+  return '<!doctype html>' + parsed.documentElement.outerHTML
 }
 
 /** 官方错误码的裸段（wire 里带命名空间前缀，如 workspace-file/not-found、gateway/lookup-not-found）。 */
 export function bareCode(code: string): string {
   return code.includes('/') ? code.slice(code.lastIndexOf('/') + 1) : code
+}
+
+/** 文本的 UTF-8 字节数（源码态上限按**字节**判，与官方 maxBytes 口径一致，不按字符数）。 */
+function byteLengthOf(text: string): number {
+  return new TextEncoder().encode(text).length
 }
 
 /** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
@@ -345,6 +397,55 @@ export function BytesPreview(props: {
   )
 }
 
+/**
+ * HTML 静态预览（照官方 `BasicHtmlFrame`，`documentpreview` lib/client.js:4052-4073）：
+ * `readBytes` 取全量字节（官方 `loading: 'bytes-complete'`）→ 官方同款安全处理 →
+ * `<iframe srcDoc sandbox="" data-html-preview>`。frames 名按官方 `dsh-sidebar-html-<id>` 同款隔离。
+ */
+export function HtmlPreview(props: {
+  workspaceFiles: WorkspaceFilesFace
+  sessionId: string
+  path: string
+  t: Translate
+  /** 顶栏「刷新」自增，触发重读字节。 */
+  reloadNonce: number
+}): ReturnType<typeof h> {
+  const { workspaceFiles, sessionId, path, t, reloadNonce } = props
+  const [doc, setDoc] = useState<string | undefined>(undefined)
+  const [err, setErr] = useState<ErrView | null>(null)
+  useEffect(() => {
+    let alive = true
+    setDoc(undefined)
+    setErr(null)
+    workspaceFiles.readBytes(sessionId, path, {})
+      .then((page) => {
+        if (!alive) return
+        const data = bytesOf(page)
+        if (isFailed(data)) { setErr(errView(data.failed)); return }
+        if (data === null) { setErr({ key: 'previewBadPayload' }); return }
+        const built = buildStaticHtml(data)
+        if (built === undefined) { setErr({ key: 'previewHtmlFailed' }); return }
+        setDoc(built)
+      })
+      .catch((error: unknown) => { if (alive) setErr(errView(error)) })
+    return () => { alive = false }
+  }, [workspaceFiles, sessionId, path, reloadNonce])
+  if (err !== null) return h(ErrBox, { err, t })
+  if (doc === undefined) {
+    return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
+  }
+  return h('div', { className: 'dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill' },
+    h('iframe', {
+      className: 'dsh-tdt-sv-preview-html',
+      name: 'dsh-sidebar-html-preview',
+      srcDoc: doc,
+      sandbox: '',
+      title: t('previewHtmlFrame'),
+      'data-html-preview': true,
+    }),
+  )
+}
+
 /** markdown / 代码 / 文本：官方 read 分页（单页 5000 行 / 2MiB），!eof 时出「加载更多」。
  * md 两态（渲染 ⇄ 源码）由面板顶层持有 `sourceView` 并下传——切换控件在顶栏（见 FilePreviewPanel head），
  * 内容体只按 `showSource` 渲染，不再在内部 overlay 任何控件。 */
@@ -358,19 +459,27 @@ export function TextPreview(props: {
   /** 顶栏「刷新」自增，触发重读第一页。 */
   reloadNonce: number
   t: Translate
+  /**
+   * 源码态的**字节上限**：累计达到即停止翻页（不再出「加载更多」），底部给一行提示。
+   * 不传 = 不设限（旧行为）。用户 2026-10-04 拍板：HTML 源码态截前 256K。
+   */
+  maxBytes?: number
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t } = props
+  const { workspaceFiles, sessionId, path, ext, markdown, sourceView, reloadNonce, t, maxBytes } = props
   const [text, setText] = useState<string | null>(null)
   const [nextOffset, setNextOffset] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [err, setErr] = useState<ErrView | null>(null)
+  // 累计字节数（按 UTF-8 实际字节算，与上限口径一致）；超限后置位，用于底部提示。
+  const [truncated, setTruncated] = useState(false)
   useEffect(() => {
     let alive = true
     setText(null)
     setNextOffset(null)
     setLoading(true)
     setErr(null)
+    setTruncated(false)
     workspaceFiles.read(sessionId, path, {})
       .then((page) => {
         if (!alive) return
@@ -378,7 +487,10 @@ export function TextPreview(props: {
         if (isFailed(parsed)) { setErr(errView(parsed.failed)); setLoading(false); return }
         if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoading(false); return }
         setText(parsed.text)
-        setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
+        // 达上限即停：不出「加载更多」，并标记截断（底部给提示）。
+        const capped = maxBytes !== undefined && byteLengthOf(parsed.text) >= maxBytes
+        setTruncated(capped)
+        setNextOffset(capped || parsed.eof ? null : parsed.offset + parsed.lines)
         setLoading(false)
       })
       .catch((error: unknown) => {
@@ -397,8 +509,16 @@ export function TextPreview(props: {
         if (isFailed(parsed)) { setErr(errView(parsed.failed)); setLoadingMore(false); return }
         if (parsed === null) { setErr({ key: 'previewBadPayload' }); setLoadingMore(false); return }
         // 页间以 \n 拼接（官方页末行不带终止符）。
-        setText(prev => (prev === null ? parsed.text : `${prev}\n${parsed.text}`))
-        setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
+        setText(prev => {
+          const merged = prev === null ? parsed.text : `${prev}\n${parsed.text}`
+          if (maxBytes !== undefined && byteLengthOf(merged) >= maxBytes) {
+            setTruncated(true)
+            setNextOffset(null)
+          } else {
+            setNextOffset(parsed.eof ? null : parsed.offset + parsed.lines)
+          }
+          return merged
+        })
         setLoadingMore(false)
       })
       .catch((error: unknown) => {
@@ -442,6 +562,12 @@ export function TextPreview(props: {
       ? h('div', { className: 'dsh-tdt-sv-older' },
           h(Button, { variant: 'outline', size: 'sm', disabled: loadingMore, onClick: loadMore }, t('previewLoadMore')))
       : null,
+    // (b) 超过上限：**不在显眼处提醒**，只在滚到底部（即不再有「加载更多」时）给一行提示。
+    truncated
+      ? h('div', { className: 'dsh-tdt-sv-older' },
+          h('span', { className: 'dsh-tdt-sv-hint' },
+            t('previewTruncated', { size: t('previewTruncatedSize') })))
+      : null,
   )
 }
 
@@ -468,8 +594,11 @@ export function FilePreviewPanel(props: {
   const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props
   const { kind, ext, mime } = previewKind(path)
   const isMd = kind === 'md'
-  // md 两态（渲染 ⇄ 源码）由面板顶层持有，切换控件放在顶栏（不飘进内容区，见上方 head）。
+  const isHtml = kind === 'html'
+  // md / html 两态（渲染 ⇄ 源码）由面板顶层持有，切换控件放在顶栏（不飘进内容区，见上方 head）。
+  // 两者**默认都是预览**（md=渲染、html=HTML 渲染），与官方一致；HTML 的入口形态照 md 抄。
   const [sourceView, setSourceView] = useState(false)
+  const switchable = isMd || isHtml
   // 「刷新」自增：触发子预览重读（图片/PDF 重读字节、文本重读第一页）。
   const [reloadNonce, setReloadNonce] = useState(0)
   const [copied, setCopied] = useState(false)
@@ -501,11 +630,11 @@ export function FilePreviewPanel(props: {
         style: { flex: '1 1 auto', minWidth: 0 },
       }),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
-        isMd
+        switchable
           ? h(Segmented, {
               size: 'sm',
               variant: 'default',
-              label: t('previewMdSwitchAria'),
+              label: t(isMd ? 'previewMdSwitchAria' : 'previewHtmlSwitchAria'),
               value: sourceView ? 'source' : 'render',
               items: [
                 { value: 'render', label: t('previewRender') },
@@ -538,7 +667,14 @@ export function FilePreviewPanel(props: {
       fallback,
       children: (kind === 'image' || kind === 'pdf')
         ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t, reloadNonce })
-        : h(TextPreview, { workspaceFiles, sessionId, path, ext, markdown: isMd, sourceView, reloadNonce, t }),
+        : isHtml && !sourceView
+          // HTML 默认 = 静态预览（照官方 srcDoc + sandbox=""）；点「源码」才走文本态。
+          ? h(HtmlPreview, { workspaceFiles, sessionId, path, t, reloadNonce })
+          : h(TextPreview, {
+              workspaceFiles, sessionId, path, ext, markdown: isMd, sourceView, reloadNonce, t,
+              // HTML 源码态截前 256K（用户拍板）；md / 其余文本不设限（维持旧行为）。
+              maxBytes: isHtml ? SOURCE_MAX_BYTES : undefined,
+            }),
     }),
   )
 }

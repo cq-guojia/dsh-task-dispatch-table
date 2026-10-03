@@ -36,10 +36,12 @@ import {
   BytesPreview,
   ErrBox,
   errView,
+  HtmlPreview,
   isFailed,
   listingOf,
   PreviewBoundary,
   previewKind,
+  SOURCE_MAX_BYTES,
   TextPreview,
   type ErrView,
   type WorkspaceFilesFace,
@@ -310,12 +312,18 @@ function FileBody(props: {
   const { workspaceFiles, sessionId, path, sourceView, reloadNonce, t } = props
   const { kind, ext, mime } = previewKind(path)
   const isMd = kind === 'md'
+  const isHtml = kind === 'html'
   const fallback = h(ErrBox, { err: { key: 'previewRenderFailed' }, t })
   return h(PreviewBoundary, {
     fallback,
     children: (kind === 'image' || kind === 'pdf')
       ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t, reloadNonce })
-      : h(TextPreview, { workspaceFiles, sessionId, path, ext, markdown: isMd, sourceView, reloadNonce, t }),
+      : isHtml && !sourceView
+        ? h(HtmlPreview, { workspaceFiles, sessionId, path, t, reloadNonce })
+        : h(TextPreview, {
+            workspaceFiles, sessionId, path, ext, markdown: isMd, sourceView, reloadNonce, t,
+            maxBytes: isHtml ? SOURCE_MAX_BYTES : undefined,
+          }),
   })
 }
 
@@ -652,7 +660,11 @@ export function FileBrowser(props: {
   const crumbs = rootLabel !== ''
     ? [{ label: rootLabel, path: '' }, ...crumbsOf(relativizeToRoot(dir, sessionId))]
     : crumbsOf(dir)
-  const isMdPreview = viewing !== null && previewKind(viewing).kind === 'md'
+  // md / html 都出「渲染 ⇄ 源码」切换（HTML 入口形态照 md 抄；默认都是预览）。
+  const switchKind = viewing !== null ? previewKind(viewing).kind : null
+  const isMdPreview = switchKind === 'md'
+  const isHtmlPreview = switchKind === 'html'
+  const switchable = isMdPreview || isHtmlPreview
 
   /**
    * 工作区之外时的第一排：**只读完整路径**（用户 2026-10-03）。
@@ -817,11 +829,11 @@ export function FileBrowser(props: {
           style: { flex: '1 1 auto', minWidth: 0 },
         }),
         h('div', { className: 'dsh-tdt-sv-head-actions' },
-          isMdPreview
+          switchable
             ?             h(Segmented, {
               size: 'sm',
               variant: 'default',
-              label: t('previewMdSwitchAria'),
+              label: t(isMdPreview ? 'previewMdSwitchAria' : 'previewHtmlSwitchAria'),
               value: sourceView ? 'source' : 'render',
               items: [
                 { value: 'render', label: t('previewRender') },

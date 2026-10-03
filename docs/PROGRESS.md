@@ -46,6 +46,19 @@
 - 落库形态与 Loop A 一致：`dispatched` + 派发快照，**不打 `pending`**（`pending` 是重试回退专用、窗口外会被删行）；打 **`run_type='manual'`**（新列，2026-10-03 落地 U5 预留字段的一半；读路径 / UI 展示暂不消费，见 [data-model.md](design/data-model.md) §一）。
 - 代码：`scheduler.runNow()` + `POST /tasks/run`（业务性拒绝回 200 + `ok:false`）；前端 `task-list.tsx` 按钮 / 确认框 / Toast + 13 个中英文案键。typecheck / build 绿、**冒烟 495/0**。
 
+### 1.6 执行记录总查询页（时间轴）+ 任务选择器抽象 —— 📝 **规格待拍板**（2026-10-03 立，**未落码**）
+
+> 用户 2026-10-03 发起：主界面顶部一级 tab「执行记录」现在是「最低版本、最最简化的测试验证界面」（`src/client/index.ts:1279` 起的三元最后分支 = 两个原生 select + 原生表格），**重写成**全部任务的执行流水账时间轴。本轮按用户要求**先建文档、不动代码**。
+> 规格 = [`design/features/execution-timeline.md`](design/features/execution-timeline.md)；任务选择器 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4 + [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项；过程 = [`worklog/execution-timeline.md`](worklog/execution-timeline.md)。
+
+**四项已拍板**：① 不改顶部三 tab，只重写那一屏；② 点一条执行记录 = 打开会话（复用归档会话弹窗，只传 sessionId）；③ 过滤 = 时间（默认最近 3 天）+ 工作区 + 状态 + 任务，任务**不是普通下拉**而是带搜索的选择器（默认最近 10 条 +「更多」，按名字 / ID 实时过滤，**必须抽成共用控件**）；④ 分页 = **游标「加载更多」**（不做页码），首屏 50、**硬上限 2000** 后提示缩小范围。
+
+**形态**：天级大标签在最上面（朋友圈式），天下列当天各次执行的块；块 = 一次执行，成功/失败**不用图标**，只用块左缘 4px 色条（绿 / 红 / 黄 / 蓝脉动）；整体倒序。
+
+**服务端基本零改动**：`GET /tasks/instances`（`src/index.ts:828`）当初即按「未来总查询页共用（决策 55）」设计，`store.listInstancesByQuery`（`src/store.ts:820`）**游标分页已实现**，客户端 `fetchInstances`（`src/client/query.ts:112`）已带回 `nextCursor`。
+
+**待拍板**（落码前要敲定，见规格 §十一）：首屏 20 还是 50（倾向 50）/ 在跑色条蓝还是跟卡片状态灯的绿脉动（倾向蓝）/ 工作区候选三真源是否连带统一（倾向另立工作包）/ 天标签是否 sticky 吸顶（倾向做）。
+
 ---
 
 ## 二、未决项
@@ -80,8 +93,10 @@
 | ~~U25~~ | ~~回执「第几次生效」提示词与实现矛盾~~ → ✅ **2026-10-03 用户拍板并落码** | 回执工具描述写「只认第一次」，实现却是取最新一条（`seq DESC LIMIT 1`）= **认最后一次**。**用户拍板：以最后一次为准**，且提示词要说明「再次提交会**整体覆盖**，先前报过的产物必须**一并带上**（不回带＝放弃）」。**落码**：`receipt.ts` 工具描述 + 末段指令各加一处（追问重发的也是同一段 ⇒ 询问场景同口径）。冒烟 +1 | ✅ 已结案 |
 | U26 | **产出物预览：PDF / SVG 预览不出**（2026-10-03 用户报；**已落码**、⏳ 真机复验待做） | 真机报错 `client api: workspaceFiles/readBytes expected 3 business argument(s) … got 2` ⇒ **根因 = 取数参数传错，请求根本没发出去，与渲染无关**。我方手写的 `WorkspaceFilesFace` 把 `readBytes` 第三参声明成可选（`file-preview.tsx:171-174`），调用处 `:307` 只传 2 参；官方签名该参**必传**（读全量 = 传 `{}`，非不传）。**PDF/SVG 恰是仅有的两个走 `readBytes` 的类型**（`read` 文本类碰巧传了 3 参故正常）⇒ 现象与类型严格对应。⚠️ 另查出我方 `range?: [number, number]` 元组形状**与官方不符**（官方 = `{offset?,length?}`）。**已作废的推断**：webview 无 PDF viewer / SVG 尺寸问题——皆非 | **改法（已定，待请示后落码）**：①`readBytes(sessionId,path)` → 加 `{}`；②`WorkspaceFilesFace` 第三参改必填 + range 形状改 `{offset?,length?}`（对齐官方防再踩）；③冒烟补「必须带第三参」正/反断言。**渲染层不动**（PDF 仍原生 iframe、SVG 仍 `<img>`，与官方手法一致；官方 PDF 走 pdf.js 属内部依赖、**不引**）。官方事实 [external/dsh-capabilities.md](design/external/dsh-capabilities.md) §文件预览的官方渲染能力 · §`workspaceFiles` 四个方法的业务参数个数。过程 [worklog/file-preview-pdf-svg.md](worklog/file-preview-pdf-svg.md) |
 | U27 | **工作区之外的文件：第一排导航失效**（2026-10-03 用户报，**已落码**、⏳ 真机复验待做） | 附件落在宿主数据根（`~/.dsh/storages/...`，真机例 `attachments/`），**不属于任何工作区**。原先第一排照旧给全导航：▾ 选层下拉把 `root/.dsh/storings/.../attachments` 全列出来、面包屑逐段可点、← 返回 / ↑ 上一层齐全——**点任意一个必然报 `outside-workspace`**（官方 `list` 限工作区内），纯属给必然失败的入口。**已落码**：`list` 结果命中 `outside-workspace` / `not-found` / `lookup-not-found` ⇒ 第一排整条换成**只读完整路径**（`crumbbarPlain`）：▾ 选层、面包屑点选、← 返回、↑ 上一层**全部不渲染**，只留 ✕ 关闭；路径过长省略号截断 + **hover 跑马灯**（用户 2026-10-03 验收点正：「啪-啪-灯」= 跑马灯滚动声，我第一遍误读成"禁止交互"；复用 `marqueeOn/Off`，**不可点**）。判定依据 = list 的**真实错误码**，**不靠 `workspaceRoots` 猜**（根学不出来会误判成"在区内"） | ✅ 判定真源 = 官方错误码（`bareCode` 裸段）；typecheck 绿、**冒烟 501/0**、build 过。第二排的复制 / 刷新**保留**（刷新 = 重读文件内容，文件本身可读，与目录导航无关）。过程并入 [worklog/file-preview-pdf-svg.md](worklog/file-preview-pdf-svg.md) |
+| U30 | **任务选择器替换「前置任务」下拉的时机与范围**（2026-10-03 随执行记录总查询页登记） | 用户要求带搜索的任务选择器**必须抽象成共用控件**（「很多地方都要用」）。同批发现：工作区下拉有**三份实现**（编辑器底部走 `/options`、编辑器「前置任务」第①级与任务列表顶部都从任务表反推），任务选项文案也有两套（`title（id）` vs `[code] name`） | 建 `ui/TaskPicker.tsx`（规格 [`ui-foundation.md`](design/ui-foundation.md) §5.4）后替换：① 执行记录 tab 的原生任务 select；② 编辑器「前置任务」第②级（`task-editor.tsx:1939-1948`，顺带把第①级工作区从**内部 state 改受控入参**）。**工作区三真源统一另立工作包**（登记在 [`ui-style-guide.md`](design/ui-style-guide.md) §三「待抽象」第 9 项），不在执行记录页顺手改 |
 | U28 | **PDF 预览拖窄卡死 + 松手弹回最小宽度**（2026-10-03 用户报，**已落码**、⏳ 真机复验待做） | PDF 预览体是 `<iframe>`（**独立文档**），指针进去后**父文档的 `pointermove` 收不到**（监听挂在 `window`，`index.ts:588`）⇒ **向右拖（缩小，指针走进 dock 里的 PDF）就卡死**；此时点别处强行释放，`onUp` 拿到的 `clientX` 已偏右很多 ⇒ `clampPreviewWidth` 把宽度压到 `PREVIEW_MIN` ⇒ **弹回最小窗口**。向左拖（放大）正常，因为指针往左离开 dock、留在父文档 | **已落码**：拖动期间给 `#dsh-tdt-root` 挂 `dsh-tdt-resizing`，CSS 令 `iframe{pointer-events:none}`，松手撤销（`index.ts:579-594` + `archive-session-css.ts:28`）。typecheck 绿、**冒烟 504/0**、build 过。⚠️ 同类风险：任何内嵌 iframe（PDF 等）在**全局拖动**期间都会吞事件，以后加拖拽都要配这层屏蔽 |
 | U29 | **跑马灯：滚出黑块 + 尾部永不显示**（2026-10-03 用户报，**已落码**） | 根因 = 手写的三处跑马灯（预览头路径 / 第二排文件名 / 只读完整路径）内层带 `overflow:hidden` ⇒ 按 flex 规矩子元素最小宽度为 0，盒子被压到容器宽、**超出部分被内层自己裁掉**；滚距却按完整文本算 ⇒ 滚的永远是「开头半截」，**尾部从未显示**，盒子整体滑出后右侧一片黑。**共用组件 `MarqueeText` 没这个病**（hover 时 `max-width:none; overflow:visible`，盒子放开到全文宽、滚距精确=溢出量） | **已落码**：① 三处手写全部收编到 `ui/MarqueeText`（删 `marqueeOn/Off`、`start/stopMarquee` 与 6 个 ref）；② 给 MarqueeText 加 `className` 参数承载调用方字体/字色皮肤；③ 全局跑法改 **播放 1 次 + `forwards`**（跑完停在尾字，不再 `infinite alternate` 来回弹），鼠标移开自动复位；④ 清两条失效外层 CSS（`.dsh-tdt-sv-preview-title` / `-crumbbar-plain`）。typecheck 绿、**冒烟 506/0**、build 过（产物已抽查规则完整） |
+| U30 | **HTML 预览：现在只显示代码**（2026-10-04 用户报，**已落码**、⏳ 真机复验待做） | HTML/HTM 此前落到 `text` 分支 ⇒ 只能看代码。官方 HTML 走**静态预览**：`<iframe srcDoc sandbox="">`（`documentpreview:4065-4072`）+ DOMPurify 净化（`:3825-3842`）+ head 首位 CSP（`:3844-3846`） | **已落码（照官方逐条对齐，不多开不少关）**：① 官方三层全抄——禁用标签 `noscript/base/link/meta/iframe/frame/object/embed/set/animate*`、`href`+`xlink:href`、官方 CSP 原文、`sandbox=""`；② 官方 `loading:"bytes-complete"` ⇒ `readBytes` 取全量；③ 入口形态照 md：默认**预览**，点「源码」进文本态；④ 源码态**截前 256K**（≤256K 不提示，>256K 滚到底才给一行「因文件过大，仅显示前 256 KB 的内容」）。typecheck 绿、**冒烟 511/0**、build 过（产物已抽查三层+256K 全部落位） |
  | 真机报错 `client api: workspaceFiles/readBytes expected 3 business argument(s) … got 2` ⇒ **根因 = 取数参数传错，请求根本没发出去，与渲染无关**。我方手写的 `WorkspaceFilesFace` 把 `readBytes` 第三参声明成可选（`file-preview.tsx:171-174`），调用处 `:307` 只传 2 参；官方签名该参**必传**（读全量 = 传 `{}`，非不传）。**PDF/SVG 恰是仅有的两个走 `readBytes` 的类型**（`read` 文本类碰巧传了 3 参故正常）⇒ 现象与类型严格对应。⚠️ 另查出我方 `range?: [number, number]` 元组形状**与官方不符**（官方 = `{offset?,length?}`）。**已作废的推断**：webview 无 PDF viewer / SVG 尺寸问题——皆非 | **改法（已定，待请示后落码）**：①`readBytes(sessionId,path)` → 加 `{}`；②`WorkspaceFilesFace` 第三参改必填 + range 形状改 `{offset?,length?}`（对齐官方防再踩）；③冒烟补「必须带第三参」正/反断言。**渲染层不动**（PDF 仍原生 iframe、SVG 仍 `<img>`，与官方手法一致；官方 PDF 走 pdf.js 属内部依赖、**不引**）。官方事实 [external/dsh-capabilities.md](design/external/dsh-capabilities.md) §文件预览的官方渲染能力 · §`workspaceFiles` 四个方法的业务参数个数。过程 [worklog/file-preview-pdf-svg.md](worklog/file-preview-pdf-svg.md) |
 
 ---
@@ -98,8 +113,10 @@
 6. **U27 · 工作区之外的文件第一排导航失效**（2026-10-03 **已落码**，⏳ 真机复验待做）：判定 = list 报 `outside-workspace` / `not-found`；命中则第一排换成只读完整路径（▾ 选层 / 面包屑点选 / ← 返回 / ↑ 上一层全不渲染，只留 ✕ 关闭，路径过长省略号截断且 hover 无任何交互）。typecheck 绿、冒烟 **502/0**、build 过。**下一步 = 用户真机复验**：点开一个 `~/.dsh/storages/...` 下的附件，确认第一排只剩路径 + ✕ 关闭，且路径过长时 hover 跑马灯。
 7. **U28 · PDF 预览拖窄卡死**（2026-10-03 **已落码**，⏳ 真机复验待做）：根因 = PDF 的 `<iframe>` 吞掉父文档 `pointermove`。**下一步 = 用户真机复验**：拖住预览栏左缘，左右来回拖动应都跟手，松手停在松手处、不再弹回最小宽度。
 8. **U29 · 跑马灯收编**（2026-10-03 **已落码**）：三处手写全部改用全站唯一 `MarqueeText`，全局跑法统一为「跑一遍停在尾字」。**下一步 = 真机复验**：悬停长路径/长文件名，应滚到最后一个字停住（右侧不留黑块、尾部完整可见），鼠标移开复位成省略号。
-9. ~~**U21**~~ ✅ **2026-10-03 真机验收通过，整包封卷**（详见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）；~~**U16**~~ ✅ **2026-10-03 真机验收通过**。
+9. **U30 · HTML 预览**（2026-10-04 **已落码**，⏳ 真机复验待做）：HTML/HTM 现在默认渲染网页（官方同款 `srcDoc` + `sandbox=""` + CSP + 禁用清单），「源码」态截前 256K。**下一步 = 真机复验**：点开一个 .html 应直接看到渲染后的网页；点「源码」看前 256K，超限时滚到底部有一行提示。
+10. ~~**U21**~~ ✅ **2026-10-03 真机验收通过，整包封卷**（详见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）；~~**U16**~~ ✅ **2026-10-03 真机验收通过**。
 7. ⏳ **立即执行（§1.5）真机验证**：重点「按钮位于删除与编辑中间」「确认框文案」「成功 Toast」「任务在跑时被拒并提示」「前置未达标时被拒并提示原因」「已停用任务仍可立即执行」。
+8. ⏳ **执行记录总查询页（§1.6）**：文档已建（规格 / 任务选择器抽象 / 叙事），**等用户对规格拍板**（四项待拍板见 §1.6）⇒ 拍板后按序落码：① `ui/TaskPicker.tsx`（共用控件，先建）→ ② 时间轴视图替换 `src/client/index.ts:1279` 起的测试分支（游标「加载更多」+ 天分组 + 色条语义 + 点块开会话）→ ③ typecheck / build（`dist/` 入库）/ smoke → ④ 真机验收（重点：滚到底续拉不重不漏、跨页同一天不重复天标签、2000 上限提示、点块开会话、改工作区任务候选实时变）。
 
 
 

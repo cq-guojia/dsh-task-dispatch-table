@@ -150,3 +150,45 @@ workspaceFiles.readBytes(sessionId, path)   // ❌ 少传 options
 
 **验证**：typecheck 绿 · 冒烟 **506/0**（+2 条：无手写残留 / 跑法为 1+forwards）· build 过；
 **并按 U28 教训抽查产物** `dist/client.js`，确认六条相关 CSS 规则完整未被截断。
+
+## 三-十一 HTML 预览：从「只显示代码」到官方同款静态预览（U30，2026-10-04）
+
+**现象（用户报）**：我们自己构建的 HTML，点进去**全是代码**；官方点进去默认是**渲染后的网页**，
+且官方「点源码」只显示前一部分（用户印象里是 512K）。
+
+**核实结论（官方 `documentpreview@0.2.0-rc.2`）**：
+
+| 项 | 官方事实 | 出处 |
+|---|---|---|
+| 渲染形态 | `BasicHtmlFrame` = `<iframe srcDoc={html} sandbox="" data-html-preview>` | `lib/client.js:4052-4073` |
+| 净化（第一层） | DOMPurify 3.4.11（内联进包），`WHOLE_DOCUMENT:true`，禁标签 `noscript/base/link/meta/iframe/frame/object/embed/set/animate*`，禁属性 `href`/`xlink:href` | `:3825-3842`、版本 `:1707` |
+| CSP（第二层） | head **第一项**：`default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:` | `:3844-3846` |
+| 沙箱（第三层） | `sandbox=""`（全禁：脚本/表单/同源） | `:4069` |
+| 取数 | 注册 `loading:'bytes-complete'` ⇒ 一次取全量字节 | `:4105` |
+
+**两处更正（我此前的错误表述）**：
+
+1. ❌「官方源码视图默认 512K」——**错**。全文搜无 `512*1024`/`524288`。源码态走官方 `read` **按行分页**，
+   上限是**部署配置的 `maxBytes`**；512K 只是该部署的值，不是协议常量。
+2. ❌「预览态有大小限制」——**错**（用户当场点破）。官方 `documentpreview` 的 Config **只有 Office 缓存与 Excel 上限**，
+   HTML/PDF/MD/图片**无任何大小配置**。所谓限制是 `workspaceFiles.maxFileBytes`（全量读上限，部署值），
+   且官方注释写明 *"larger files are refused, **never truncated**"* ⇒ **超限即报错，官方也不显示半截预览**。
+
+**落码（用户拍板：跟官方一模一样，不多开一点、不少关一点）**：
+
+| 改动 | 要点 |
+|---|---|
+| `previewKind` 增 `html`/`htm` | 扩展名与官方 `htmlBodyDefinition` 同款（`:4102`） |
+| `buildStaticHtml()` | 官方三层逐条照抄：DOMParser 剔除官方那份禁用标签/属性（**不引 DOMPurify**，用浏览器原生做等价剔除）+ head 首位插官方 CSP 原文 |
+| `HtmlPreview` | `readBytes` 取全量（官方 `bytes-complete`）→ `<iframe srcDoc sandbox="" data-html-preview>` |
+| 入口形态照 md | 默认**预览**（HTML 渲染），点「源码」进文本态；`Segmented` 与 md 同一套，新增 `previewHtmlSwitchAria` |
+| 源码态截前 256K | `SOURCE_MAX_BYTES = 256*1024`；`TextPreview` 加可选 `maxBytes`，累计字节达上限即停翻页；≤256K 不提示，>256K 在**底部**（滚到底、无「加载更多」时）给一行「因文件过大，仅显示前 256 KB 的内容」 |
+| 超限行为 | 照官方：报 `previewTooLarge`，**不降级** |
+
+**关于「不引第三方包」与「跟官方一模一样」的取舍**：官方用 DOMPurify 做第一层，本仓不引第三方包 ⇒
+用浏览器原生 `DOMParser` 做**官方那份清单的等价剔除**（效力对齐官方清单，不多删也不少删）。
+真正的兜底是官方第二、三层——`sandbox=""` 禁脚本执行 + CSP `default-src 'none'` 禁一切外链加载——**完整照抄**，
+故即使清单边界有差异也执行不了脚本、发不出请求。
+
+**验证**：typecheck 绿 · 冒烟 **511/0**（+5 条）· build 过；**抽查产物**确认 `sandbox=""`、srcDoc、
+CSP 原文、禁用清单、256K 常量、截断提示键全部落位。
