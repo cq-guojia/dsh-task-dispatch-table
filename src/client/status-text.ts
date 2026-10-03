@@ -30,3 +30,38 @@ export function statusTextOf(status: string, t: Translate): string {
   // 认不出的状态（未来新增 / 脏数据）⇒ 原样显示真值，不编造名字。
   return key === undefined ? status : t(key)
 }
+
+/**
+ * **过滤桶**：界面上的「运行中 / 失败 / 成功」各对应哪些真实状态 —— 全站唯一一份。
+ *
+ * 为什么要单源（2026-10-04 评审）：卡片执行记录面板与执行记录总查询页各写了一份，
+ * 且**语义还不一样**（一个 `running` 含 pending/unknown，另一个只含 dispatched/running）⇒
+ * 同一个下拉档位在两页筛出不同结果。这里是唯一真源，两页都从这里取。
+ */
+export const INSTANCE_STATUS_BUCKETS: Readonly<Record<'running' | 'failed' | 'succeeded', readonly string[]>> = {
+  running: ['pending', 'dispatched', 'running', 'unknown'],
+  failed: ['failed', 'skipped'],
+  succeeded: ['succeeded'],
+}
+
+/** 桶 → 传给后端的 `status` 值（逗号分隔由调用方拼）；不认识的桶返回 undefined（不过滤，不猜）。 */
+export function statusesOfBucket(bucket: string): readonly string[] | undefined {
+  return (INSTANCE_STATUS_BUCKETS as Record<string, readonly string[]>)[bucket]
+}
+
+/** 是否「在跑」（已派发未定终态）—— 语义查询单源：色条脉动 / 图标 / 文案都用它，不许各写一份。 */
+export function isRunningStatus(status: string): boolean {
+  return status === 'dispatched' || status === 'running'
+}
+
+/**
+ * 状态 → 语义色调（**表现层只做「色调 → 自己的画法」**：时间轴映射成色条、卡片映射成图标）。
+ * 语义维（哪些状态算失败 / 算在跑）只在这里判一次。
+ */
+export function statusToneOf(status: string): 'ok' | 'bad' | 'warn' | 'busy' | 'neutral' {
+  if (status === 'succeeded') return 'ok'
+  if (status === 'failed') return 'bad'
+  if (status === 'skipped') return 'warn'
+  if (isRunningStatus(status)) return 'busy'
+  return 'neutral'
+}

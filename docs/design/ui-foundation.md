@@ -128,7 +128,7 @@
 | `--tdt-font-mono` | `--ds-font-family-code` | 等宽栈（代码 / 路径） |
 | `--tdt-control-h-sm` / `-md` / `-lg` | **24 / 28 / 32px**（`md` 与官方分段控件段高 28 一致；`lg=32` 为用户 2026-10-01 拍板的「32 标准行」，且为**全站默认档**） | 全站只此三档高度；任何控件的 `size` 都映射到这三档，不许各自翻译 |
 | `--tdt-space-1` / `-2` / `-3` / `-4` | 4 / 8 / 12 / 16px | 间距四拍 |
-| `--tdt-z-dock` / `-drawer` / `-modal` / `-menu` / `-tip` | 1030 / 1040 / 1070 / 1100 / 1200 | 层级阶梯（业务文件不许写裸 `z-index`）。现网散落值 2/6/10/20/30/31/1000/1020/1030/1040/1070/1100/1200 在分期迁移时逐点对齐到阶梯 |
+| `--tdt-z-sticky` / `-dock` / `-drawer` / `-modal` / `-menu` / `-tip` | 10 / 1030 / 1040 / 1070 / 1100 / 1200 | 层级阶梯（业务文件不许写裸 `z-index`）。`--tdt-z-sticky`（2026-10-04 加）是**内容层内部**的吸附位（天标签 / 表头这类「跟着滚但压住同层内容」的元素），必须低于下面所有浮层档。现网散落值 2/6/10/20/30/31/1000/1020/1030/1040/1070/1100/1200 在分期迁移时逐点对齐到阶梯 |
 | `--tdt-dur` / `-fast` / `--tdt-ease` | `--ds-transition-duration`(+`-fast`) / `--ds-ease-in-out` | 动效 |
 
 ### 4.4 明暗两段的写法
@@ -269,7 +269,8 @@ body[data-ds-dark-theme]{
 ```ts
 value: string                       // 选中的任务 id；'' = 未选
 onChange(id: string): void          // 与 SelectField 同契约（传值，不传 event）
-options: readonly EditorTaskOption[]// 候选全量，复用现有 EditorTaskOption（带 workspace / enabled）
+options: readonly TaskOption[]      // 候选全量（带 workspace / enabled）；[新] TaskOption 是 L2 的本地声明
+                                    //（与 L3 的 EditorTaskOption 同形，**刻意不反向 import 业务文件**）
 scope?: string                      // 外部受控工作区；'' | undefined = 不限；变化 ⇒ 候选重算
 excludeIds?: readonly string[]      // 排除项（已选前置 + 当前任务自己）
 recentLimit?: number                // 默认 10
@@ -290,7 +291,7 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 
 > 过程与三处坐标见 [`../worklog/workspace-options-unification.md`](../worklog/workspace-options-unification.md)；使用点规范见 [`ui-style-guide.md`](ui-style-guide.md) §二。
 
-**任务选项文案**（尚未统一，属于未决项 U30）：两套并存 —— `title（id）`（`index.ts:942-945`）与 `[code] name`（`index.ts:930-941`，注释明确「绝不把机器 id 当尾缀拖出来」）⇒ 统一取 `[code] name`，**搜索仍要能按 id 命中**。
+**任务选项文案**（✅ 执行记录页已按下面口径落地；剩余替换点见未决项 **U31**）：统一取 `[code] name`（编辑器 `editorTasks` 的口径，注释明确「绝不把机器 id 当尾缀拖出来」）；执行记录页由 `overview.rows` 组装同一口径，**搜索按 id 命中**由 `TaskPicker` 负责（`label` 或 `id` 命中皆可）。
 
 ---
 
@@ -298,7 +299,7 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 
 - **不改构建链**：client 产物是内核消费的 CJS 闭包，`import './x.css'` 不会被加载（`task-editor-css.ts:3-4` 等三处注释已结论），CSS 只能作为字符串运行时注入 `<style>`。引入 CSS 构建插件收益小、回归面大 ⇒ **维持现状**。
 - **改的是入口**（消除现有 4 条注入 / 5 处调用 / 2 套 id）：
-  - 单一 `style.ts`：`ensureUiStyles()` 幂等、单一 style 标签 id（`dsh-task-dispatch-table-ui`），按域注册（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast`）。
+  - 单一 `style.ts`：`ensureUiStyles()` 幂等、单一 style 标签 id（`dsh-task-dispatch-table-ui`），按域注册（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` / `domain:records` / `domain:taskpicker`）。
   - 删掉 `session-view.ts:553` 的**模块顶层**注入与 `task-list.tsx` 的局部注入/局部 id。
   - 过渡期允许老样式表暂时各留一条 `<style>`，但**统一由 `style.ts` 注册**，不再各处自己 `createElement`。
 
@@ -348,7 +349,7 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 
 | 项 | 规则 |
 |---|---|
-| **层级 z-index** | 只在 token 层集中定义（`--tdt-z-*`），**业务文件不许写裸数字**。档位（自下而上）：页面内容 → 页面级 dock → 抽屉遮罩 / 抽屉面板 → 弹窗 / 确认框 → 浮层菜单 → Toast。新增浮层先查是否已有档位，够用就不许新开 |
+| **层级 z-index** | 只在 token 层集中定义（`--tdt-z-*`），**业务文件不许写裸数字**。档位（自下而上）：内容层吸附（`--tdt-z-sticky`）→ 页面内容 → 页面级 dock → 抽屉遮罩 / 抽屉面板 → 弹窗 / 确认框 → 浮层菜单 → Toast。新增浮层先查是否已有档位，够用就不许新开 |
 | **焦点** | 所有可交互元素必须可键盘聚焦且有可见焦点环（用 `--tdt-focus`，走 `:focus-visible`）；**不许 `outline:none` 而不给替代** |
 | **图标** | 一律用官方 `Icon*` 组件；尺寸只取 **14 / 16 / 18 / 20** 四档；纯图标按钮**必须**有可读标签（官方 `Tooltip` + `aria-label`）—— ⚠️ Tooltip 的子元素必须是**真 DOM**（裸函数组件 ref 挂不上、提示静默失效） |
 | **动效** | 时长 / 缓动走 `--tdt-dur` / `--tdt-ease`；**必须尊重 `prefers-reduced-motion: reduce`**（关掉位移 / 脉动类动画） |

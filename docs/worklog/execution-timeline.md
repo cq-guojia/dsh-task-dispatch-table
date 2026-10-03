@@ -154,3 +154,56 @@
 ### 6.3 验证
 
 `npm run typecheck` 绿 → `npm run build`（`dist/` 入库）→ `npm run smoke` **530 项通过 / 0 失败**。
+
+---
+
+## 七、专家组评审与自主修复（2026-10-04，用户要求「改完请专家组评审，问题自己决策修掉」）
+
+三路只读评审（功能与数据正确性 / 抽象与规则合规 / 硬伤与边界），逐条核实后修复：
+
+### 7.1 真硬伤（必修，已修）
+
+| # | 问题（评审原话要点） | 根因 | 修法 |
+|---|---|---|---|
+| 1 | **满 2000 条后改任一过滤条件 ⇒ 白屏且不自恢复**（用户照提示操作即踩） | `load` 里有一条读**旧闭包** `rows.length` 的上限守卫 `nextCursor === null && rows.length >= HARD_LIMIT` ⇒ 重置后的首屏请求被自己的上限挡掉，既不取数也不置 loading/loaded | 上限**只拦续拉**（挪到 `loadMore`，用 `rowsCountRef` 读最新条数）；`load` 里彻底删掉该守卫 ⇒ 首屏永远允许取 |
+| 2 | **续拉失败无提示、无重试，且会形成自动重试风暴** | 错误 UI 只在 `rows.length === 0` 分支渲染；失败后 `cursor/done` 不变 ⇒ 观察者每次重建都对同一 cursor 重发 | 底部加独立错误态（红字 + `recordsRetry` 按钮）；`loadMore` 里 `error !== null` 即**暂停自动续拉**，等用户点重试 |
+| 3 | `IntersectionObserver` **每页重建 3~4 次**，且「新建即投递一次 entry」⇒ 小结果集连续自动拉多页 | `loadMore` 的 `useCallback` 依赖含分页状态 ⇒ 每次状态变更换引用 ⇒ effect 重建 IO | IO **只建一次**（callback ref + `loadMoreRef` 存最新逻辑），依赖 `[]`；去掉 `rootMargin`（规格：不做预取） |
+| 4 | **按「无任务的工作区」过滤会返回全表**（工作区筛选静默失效） | 服务端 `workspaceTaskIdsOf` 无命中返回 `[]`，store 把「空数组」当「不过滤」 | 服务端：命中 0 个任务时用恒假条件收口（`['__none__']`）；**instances 与 logs 两条路由同修** |
+| 5 | **工作区 + 任务同时给时以 taskId 为准** ⇒ 「工作区筛了 B、结果却是 A 的记录」 | 路由里 `taskId === undefined && workspace !== undefined` 才算工作区 | 服务端改**两者叠加（AND）**；客户端再补一道：改工作区时若已选任务不在新作用域 ⇒ **主动清空**（筛选语义，与 TaskPicker「掉出作用域显式提示」不冲突） |
+| 6 | **天分组 key 与排序 key 不同源** ⇒ 多时区任务混排出现同名天标签 / React 重复 key | 分组用服务端 `logical_date`（**任务时区**日），排序与时间范围用 `scheduled_at`（绝对时刻 / 本地日） | 分组改**本地日历日**（`dayKeyOf` 从 `scheduled_at` 推）⇒ 与排序、过滤、块内 `HH:mm` 全部同源；`InstanceRow` 不再声明 `logical_date`；天块 key 加序号 |
+| 7 | **空态文案恒为「当前过滤条件下没有」**（「该时间范围内没有」不可达） | `hasFilter` 把默认时间档也算作「有过滤」 | 改为「用户是否真动过过滤器」（时间档是否偏离默认档 / 工作区 / 状态 / 任务），两档文案各归其位 |
+| 8 | **续拉失败的错误态被吞**（与 #2 同源，独立记一条以便追溯） | 同上 | 同上 |
+
+### 7.2 抽象与规则（已修）
+
+| # | 问题 | 修法 |
+|---|---|---|
+| 9 | `TaskPicker` 锚点样式 / 标签样式 / size→高度翻译**各抄一份**（`SelectField` 同款逻辑出现第三份）⇒ 观感必然漂移（TaskPicker 少了 hover 泛底与 lineHeight） | `Field.tsx` 导出 `FIELD_ANCHOR_STYLE` / `FIELD_LABEL_STYLE` / `fieldMetricsOf(size)`，`SelectField` 与 `TaskPicker` **共用同一份**；TaskPicker 补 hover 泛底 |
+| 10 | TaskPicker 内层搜索框写死 `size:'md'`，`size="lg"` 时锚点 32 / 搜索框 28 | 传 `size`（档位只有一个翻译点） |
+| 11 | **状态桶两套定义且语义不同**（卡片面板 `running` 含 pending/unknown，时间轴只含 dispatched/running）⇒ 同一档位两页筛出不同结果 | 桶上提 `status-text.ts`（`INSTANCE_STATUS_BUCKETS` / `statusesOfBucket`），时间轴与卡片面板共用；`StatusIcon` 改走 `statusToneOf` |
+| 12 | 状态→色调语义散落（在跑判定出现 3 份） | 新增 `statusToneOf()` / `isRunningStatus()`，表现层只做「色调 → 自己的画法」（色条 / 图标） |
+| 13 | 内容列锚点 **id + 几何两份**（两 tab 各写一遍；`Loading` 的 `anchorId` 契约依赖它） | 上提 `PANEL_CONTENT_ID` / `PANEL_CONTENT_STYLE`（`ui/index.ts` 导出）⇒ 两个 tab 共用，`Loading` 锚点天然对齐 |
+| 14 | 手搓 `<button>`（错误重试） | 改基础层 `Button` |
+| 15 | 首屏加载只有一行文字，没复用基础层 `Loading` | 复用 `Loading`（右下角浮动指示）—— 规格原文「居中」按基础层唯一实现回改 |
+| 16 | 新增两份「省略号三件套」 | 落 `.dsh-tdt-ellipsis`（`ui/controls-css.ts`）并改用；待抽象 #1 同步更新为「收敛点已建，新点必须用它」 |
+| 17 | 裸 `z-index` / 间距 / 动效时长字面量 | 加 `--tdt-z-sticky`（内容层吸附档）并改用；间距全走 `--tdt-space-*`；动效走 `--tdt-dur*` / `--tdt-ease` |
+| 18 | `Intl` 不可用时硬编码中文日期 | 兜底返回 key 原串（`2026-04-30`），不硬编码任何语言 |
+| 19 | 文案插值用 `.replace('{n}', …)` 绕过单源 | 改走 `interpolateTranslate` 的 `tt(key, { n })` |
+| 20 | `recordsLoadMore` 成死键（无消费点） | 底部补「加载更多」按钮（同时是 IO 不可用的兜底），键被真实消费 |
+| 21 | `debugTasks` / `debugInstances` / `debugEvents` 三个孤儿文案键（旧屏删除后的遗漏） | 三处（`LocaleKey` + zh + en）一并删除 |
+| 22 | TP.名字用了两份内联省略号；`.dsh-tdt-rec-title` 死 CSS | 名字走 `.dsh-tdt-ellipsis`；标题类实际挂到 `MarqueeText` 的 `className` |
+| 23 | 行没 `memo` ⇒ 每次续拉把已挂的 1950 块全部重渲染 | 抽出 `RecordBlock`（`memo`）+ `titleById` / `openSession` 稳定引用 |
+
+### 7.3 冒烟断言重写（评审：原 6 条基本是「产物里有没有这个词」，两条早被本功能之外的代码满足 = 零覆盖）
+
+改成**读源码钉行为**：页大小/上限（含整除自检）、`setCursor(page.nextCursor)`、**上限只拦续拉**（正反两组）、失败暂停 + 重试、IO 只建一次、分组键同源（含反断言 `!row.logical_date`）、吸顶走 `--tdt-z-sticky`、色条走 `statusToneOf`（且源码内无状态图标）、records 分支先于 `data === undefined`、无轮询、复用基础层六件、状态桶单源（两个业务文件都引 `statusesOfBucket`）、旧测试屏文案键不再进包。共 **539 项 / 0 失败**。
+
+### 7.4 文档回写
+
+`ui-foundation`（§5.4 接口、§5.2 TaskPicker 行、§4.3 层级档位、§六 域清单）、`ui-style-guide`（§二 TaskPicker 行标落码、§三 待抽象 #1 与 #9、已知例外补两条）、`design/features/execution-timeline.md`（§4.1 分组口径、§4.2 次信息、§七 分页/失败、§九 空态、§十一 参数）、`design/external/dsh-capabilities.md`（**新回写**：`Menu` 的 `children` 渲染位置 / 键盘只处理 Escape·Tab·方向键 / `autoFocus` 抢焦点 / 点外关闭判定 / `footer` 类型，适用版本 0.2.0-rc.2）。
+
+### 7.5 已知未修（记入未决项，不在本包）
+
+- `TaskPicker` 浮层内**方向键 / Tab 的实机手感**（源码级已核实字母键不拦，键位游走行为需真机确认）。
+- 2000 块 × `MarqueeText`（每实例一个 `ResizeObserver`）的实机流畅度；真机若卡再考虑虚拟滚动。
+- 天标签吸附会盖住当天首行约 34px 高度内的点击（当前实现如此，真机看是否影响操作）。

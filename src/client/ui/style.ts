@@ -7,7 +7,8 @@
  *
  * 本模块把「各文件自己 createElement('style')」收成**唯一入口**：
  *  - 全站只有**一个** `<style id="dsh-task-dispatch-table-ui">`；
- *  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` …），
+ *  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` /
+ *    `domain:records`（执行记录时间轴）/ `domain:taskpicker`（任务选择器）…），
  *    同一域重复登记 = 覆盖（后写胜），便于过渡期逐块搬；
  *  - `tokens` 域恒排最前 —— 变量定义必须先于消费它的规则出现（同一条 style 内也讲先后）；
  *  - 幂等：重复调用不重复插入；`registerStyle` 在标签已挂上时会立刻刷新内容。

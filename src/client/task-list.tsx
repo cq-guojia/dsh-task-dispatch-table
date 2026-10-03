@@ -25,7 +25,7 @@ import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
 // 三面板数据通道（决策 55）：执行记录 / 日志 / 事件时间线，与未来总查询页共用同一套 fetch。
 import { fetchEvents, fetchInstances, fetchLogs, type EventRow, type InstanceRow, type LogRow } from './query'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
-import { INSTANCE_STATUSES, statusTextOf } from './status-text'
+import { INSTANCE_STATUSES, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
 // 「到点钳位」整套删除（决策 54：抖动由**服务端**冻结未处理刻度解决，客户端不再有任何本地派生排序状态）。
 import { pinMsFor, sortRows } from '../task-sort.js'
@@ -34,7 +34,7 @@ import { ensureTaskEditorStyle } from './task-editor-css'
 // 浮层结果提示（立即执行成功 / 被拒）：全站唯一实现，不许各处手写。
 import { FloatingToast, ensureToastStyle } from './toast-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, IconButton, Input as TdtInput, Loading, RunningBlocks, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, IconButton, Input as TdtInput, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RunningBlocks, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 /**
  * 「立即执行」结果（与服务端 `scheduler.ts` 的 RunNowResult 对齐）：业务性拒绝走
@@ -844,12 +844,10 @@ const outputsOf = (raw: string | null): string[] => {
 /** token 用量一格（展开详情用；K/M 大众格式，用户 2026-10-02）。 */
 const tokensDetailOf = (row: { token_in: number | null; token_out: number | null; token_in_cache: number | null }): string =>
   `${row.token_in === null ? '—' : formatTokenCount(row.token_in)} / ${row.token_out === null ? '—' : formatTokenCount(row.token_out)} / ${row.token_in_cache === null ? '—' : formatTokenCount(row.token_in_cache)}`
-/** 状态三档桶（用户 2026-10-02：过滤只给 执行中 / 失败 / 成功 三档，七态归桶；值传后端 statuses）。 */
-const FILTER_BUCKETS: Readonly<Record<string, readonly string[]>> = {
-  running: ['pending', 'dispatched', 'running', 'unknown'],
-  failed: ['failed', 'skipped'],
-  succeeded: ['succeeded'],
-}
+// 状态三档桶（用户 2026-10-02：过滤只给 执行中 / 失败 / 成功 三档，七态归桶；值传后端 statuses）。
+// ⚠️ 2026-10-04 评审：桶定义**上提到 `status-text.ts` 单源**（`statusesOfBucket`）—— 此前本页与
+// 执行记录总查询页各写一份，且 running 的成员还不一样（一个含 pending/unknown，一个不含）⇒ 同一个
+// 档位两页筛出不同结果。这里改成薄封装，只保留「值传后端」这一层。
 /** 产出物 / 会话列的裸图标按钮（无边框、无底色；用户 2026-10-02 第四轮：图标化）。 */
 const plainIconBtnStyle: Record<string, string | number> = {
   appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -1113,7 +1111,7 @@ function TaskExpandPanel(props: {
     fetchInstances({
       taskId: row.id,
       // 三档桶（用户 2026-10-02）：执行中 = pending/dispatched/running/unknown；失败 = failed/skipped；成功 = succeeded。
-      statuses: recStatus === '' || recStatus === 'all' ? undefined : FILTER_BUCKETS[recStatus],
+      statuses: recStatus === '' || recStatus === 'all' ? undefined : statusesOfBucket(recStatus),
       from: range.fromTs,
       to: range.toTs,
       limit: recLimit,
@@ -1895,7 +1893,7 @@ export function TaskListView(props: {
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     // 主内容宽度锚点；浮动 loading 据此量右边缘，贴到「主窗口宽度」的右下角。
-    h('div', { id: 'dsh-tdt-main', style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
+    h('div', { id: PANEL_CONTENT_ID, style: PANEL_CONTENT_STYLE },
       // 顶部一排：左 = 分组按钮（全部 / 已开启 / 已关闭 / 异常）；右 = 搜索 → 工作区下拉。
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' } },
         // 筛选 tabs 走 UI 基础层唯一实现（P1）：角标也由组件统一渲染（不再写死 #fff）

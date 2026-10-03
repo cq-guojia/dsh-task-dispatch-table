@@ -13,8 +13,7 @@ export type LocaleKey =
   | 'paramLeaseMs' | 'paramUnknownGraceMs' | 'paramTasksDir'
   | 'paramDefaultProvider' | 'paramDefaultModel'
   | 'debugClose' | 'debugEmpty' | 'debugRaw'
-  | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
-  | 'debugInstances'  | 'debugEvents'
+  | 'debugWarns' | 'debugNoWarns'
   | 'debugRefreshedAt'
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabDebug'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
@@ -231,11 +230,8 @@ export const zh: Record<LocaleKey, string> = {
   debugRefreshedAt: '手动刷新于',
   debugEmpty: '暂无快照：宿主完成一次调度（或派发 / 会话事件）后自动写入。若持续为空，说明宿主侧运行的还是旧版插件，请重装后重试。',
   debugRaw: '快照解析失败，原文如下：',
-  debugTasks: '已加载任务',
   debugWarns: '最近告警 / 错误（≤20 条）',
   debugNoWarns: '（无）',
-  debugInstances: '实例 task_instances',
-  debugEvents: '事件 task_events（最近 200 条，旧 → 新）',
   panelTitle: '定时任务调度器',
   backToConversation: '返回会话',
   tabConfig: '任务配置',
@@ -846,11 +842,8 @@ export const en: Record<LocaleKey, string> = {
   debugRefreshedAt: 'Manual refresh at',
   debugEmpty: 'No snapshot yet: the host writes one after each scheduling pass (or dispatch / session event). If it stays empty, the host is still running an old plugin build — reinstall and retry.',
   debugRaw: 'Failed to parse the snapshot; raw text below:',
-  debugTasks: 'Loaded tasks',
   debugWarns: 'Recent warnings / errors (≤20 entries)',
   debugNoWarns: '(none)',
-  debugInstances: 'Instances task_instances',
-  debugEvents: 'Events task_events (latest 200, oldest → newest)',
   panelTitle: 'Scheduled task dispatcher',
   backToConversation: 'Back to conversation',
   tabConfig: 'Configuration',

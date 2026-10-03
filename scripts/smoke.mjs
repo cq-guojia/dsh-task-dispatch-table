@@ -1124,23 +1124,56 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('会话弹窗产出物仍走同一 openFile 入口（parseOutputs 在、旧表格专用的 basenameOf 已摘除）',
     clientJs.includes('parseOutputs') && clientJs.includes('colOutputs') && !clientJs.includes('basenameOf'))
   // ── 执行记录总查询页（时间轴，2026-10-04 落码；规格 design/features/execution-timeline.md）──
-  check('执行记录时间轴已打进 bundle（RecordsTimelineView + 天分组 + 色条语义类）',
-    clientJs.includes('RecordsTimelineView') && clientJs.includes('dsh-tdt-rec-tl')
-    && clientJs.includes('dsh-tdt-rec-bar') && clientJs.includes('dsh-tdt-rec-day'))
-  check('时间轴走游标分页（nextCursor 消费 + 2000 条上限提示文案）',
-    clientJs.includes('nextCursor') && clientJs.includes('recordsLimitHint') && clientJs.includes('/tasks/instances'))
-  check('按服务端日历日分组（logical_date）+ 天标签吸顶 / 在跑脉动',
-    clientJs.includes('logical_date') && /\.dsh-tdt-rec-day\{[^}]*position:sticky/.test(clientJs)
-    && clientJs.includes('dsh-tdt-rec-bar--run') && clientJs.includes('prefers-reduced-motion'))
-  check('打点区块用 token 表达成败（success / danger / warning / business 四色齐备）',
-    ['var(--tdt-success)', 'var(--tdt-danger)', 'var(--tdt-warning)', 'var(--tdt-business)']
-      .every(token => clientJs.includes(token)))
-  check('任务选择器（带搜索）进产物（TaskPicker + 浮层搜索/更多行）',
-    clientJs.includes('TaskPicker') && clientJs.includes('dsh-tdt-tp-row')
-    && clientJs.includes('dsh-tdt-tp-more') && clientJs.includes('recordsTaskSearch'))
-  check('旧「最简测试屏」已摘除（原生筛选 + 事件小表 + 其专用文案键全不再进包）',
-    !clientJs.includes('filterStatus') && !clientJs.includes('filterTask')
-    && !clientJs.includes('recordsHint') && !clientJs.includes('expandHint') && !clientJs.includes('colAttempt'))
+  // ⚠️ 断言方式（2026-10-04 评审）：**读源码**钉行为，不用「产物里有没有某个词」——
+  //    后者会被本功能之外的代码满足（`nextCursor` / 四个色 token 在别处早就存在），等于零覆盖。
+  {
+    const tlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8')
+    const idxSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
+    check('执行记录时间轴进产物（RecordsTimelineView + 天分组/色条/竖轴/加载区类名）',
+      clientJs.includes('RecordsTimelineView') && ['dsh-tdt-rec-tl', 'dsh-tdt-rec-day', 'dsh-tdt-rec-axis',
+        'dsh-tdt-rec-bar', 'dsh-tdt-rec-foot'].every(c => clientJs.includes(c)))
+    check('时间轴走 HTTP 游标分页：读 nextCursor 并回写（且 page size / 上限对齐 50/2000）',
+      /setCursor\(page\.nextCursor\)/.test(tlSrc) && /cursor: nextCursor \?\? undefined/.test(tlSrc)
+      && /const PAGE_SIZE = 50/.test(tlSrc) && /const HARD_LIMIT = 2000/.test(tlSrc)
+      && /HARD_LIMIT % PAGE_SIZE/.test(tlSrc))
+    check('上限只拦「续拉」：首屏（nextCursor === null）不再被 2000 挡住 ⇒ 满额后改过滤不白屏',
+      /rowsCountRef\.current >= HARD_LIMIT/.test(tlSrc)
+      && !/nextCursor === null && rows\.length >= HARD_LIMIT/.test(tlSrc))
+    check('续拉失败有提示 + 重试，且失败即暂停自动续拉（防重试风暴）',
+      /if \(error !== null\) return/.test(tlSrc) && tlSrc.includes("t('recordsRetry')")
+      && /className: 'dsh-tdt-rec-err'/.test(tlSrc) && /void load\(cursor\)/.test(tlSrc))
+    check('IntersectionObserver 只建一次（最新逻辑走 ref，不随分页状态重建）',
+      /loadMoreRef\.current = loadMore/.test(tlSrc) && /io\.observe\(el\)/.test(tlSrc)
+      && /const observeSentinel = useCallback/.test(tlSrc))
+    check('按「scheduled_at 的本地日历日」分组（与服务端排序键 / 时间范围同源，不再用 task 时区的 logical_date）',
+      /function dayKeyOf/.test(tlSrc) && /row\.scheduled_at/.test(tlSrc)
+      && /d\.getFullYear\(\)/.test(tlSrc) && !tlSrc.includes('row.logical_date'))
+    check('天标签吸顶走 token 层级 + 尊重减弱动效',
+      /\.dsh-tdt-rec-day\{[^}]*position:sticky/.test(tlSrc)
+      && /z-index:var\(--tdt-z-sticky\)/.test(tlSrc) && tlSrc.includes('prefers-reduced-motion'))
+    check('不用图标表成败：色条走 statusToneOf 单源（status-text.ts），源码内无状态图标',
+      /statusToneOf\(/.test(tlSrc) && /barColorOf\(/.test(tlSrc)
+      && ["var(--tdt-success)", "var(--tdt-danger)", "var(--tdt-warning)", "var(--tdt-business)"].every(tk => tlSrc.includes(tk))
+      && !tlSrc.includes('StatusIcon') && !tlSrc.includes('IconCheckCircle'))
+    check('records 分支排在 data === undefined 门槛之前（HTTP 页不被调试快照挡住）',
+      /tab === 'records'\n\s*\? h\(RecordsTimelineView/.test(idxSrc)
+      && idxSrc.indexOf('h(RecordsTimelineView') < idxSrc.indexOf(': data === undefined'))
+    check('时间轴不轮询（历史账，不自动刷新）', !tlSrc.includes('setInterval') && !tlSrc.includes('POLL'))
+    check('时间轴复用基础层：Loading / Button / SelectField / TimeRange / TaskPicker / MarqueeText 全走 ui/',
+      /from '\.\/ui'/.test(tlSrc) && /h\(Loading,/.test(tlSrc) && /h\(Button,/.test(tlSrc)
+      && /h\(SelectField,/.test(tlSrc) && /h\(TimeRange,/.test(tlSrc) && /h\(TaskPicker,/.test(tlSrc))
+    check('任务选择器（带搜索 + 受控作用域 + 掉出作用域显式提示）进产物',
+      clientJs.includes('TaskPicker') && clientJs.includes('dsh-tdt-tp-row') && clientJs.includes('dsh-tdt-tp-more')
+      && /const candidates = useMemo/.test(readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TaskPicker.tsx'), 'utf8'))
+      && clientJs.includes('recordsTaskSearch'))
+    check('状态桶 / 在跑语义单源（status-text.ts），两页共用不再各写一份',
+      readFileSync(join(process.cwd(), 'src', 'client', 'status-text.ts'), 'utf8').includes('INSTANCE_STATUS_BUCKETS')
+      && tlSrc.includes('statusesOfBucket(')
+      && readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8').includes('statusesOfBucket('))
+    check('旧「最简测试屏」已摘除（原生筛选 + 事件小表 + 其专用文案键全不再进包）',
+      !clientJs.includes('filterStatus') && !clientJs.includes('filterTask')
+      && !clientJs.includes('recordsHint') && !clientJs.includes('expandHint') && !clientJs.includes('colAttempt'))
+  }
   check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
     clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))
   // 前置任务卡（2026-09-29 用户拍板的交互）：灰框卡 + ?说明 + 工作区→任务两级选择 + 添加/移除 + 判定说明。
@@ -2134,7 +2167,13 @@ console.log('\n[14] runtime-index')
       })())
     check('loading 定位：fixed 到页面底部，right 按 #dsh-tdt-main 内容盒右边缘动态量',
       ld.includes("position: 'fixed'") && ld.includes('function useContentRight') && ld.includes('function Loading')
-      && tl.includes("id: 'dsh-tdt-main'") && tl.includes('Loading, RunningBlocks'))
+      && tl.includes('Loading') && tl.includes('RunningBlocks'))
+    // 2026-10-04：内容列锚点（id + 几何）**上提基础层单源** —— 任务配置页与执行记录页共用同一个 id，
+    // `Loading` 的 anchorId 契约也指着它；两 tab 各写一份的旧写法已删（否则改一处即破对齐）。
+    check('内容列锚点单源（PANEL_CONTENT_ID / PANEL_CONTENT_STYLE 出自 ui，两个 tab 共用）',
+      readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'index.ts'), 'utf8').includes('PANEL_CONTENT_ID = \'dsh-tdt-main\'')
+      && tl.includes('PANEL_CONTENT_ID') && tl.includes('PANEL_CONTENT_STYLE')
+      && readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8').includes('PANEL_CONTENT_ID'))
     check('日志关键字**同时匹配 message 与 kind**（否则搜 missed-slot 的 kind 搜不到）',
       st.includes("(message LIKE ? OR kind LIKE ?)"))
     check('任务卡片整行可点展开；开关 / 箭头拦下冒泡（不穿透、不双触发）',

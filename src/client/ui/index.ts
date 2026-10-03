@@ -5,10 +5,23 @@
  * **只许 import 本文件导出的东西**，不许绕过它直接摸 `ui/` 里的具体文件 —— 否则「一类控件唯一实现」
  * 这条就守不住了。
  *
- * 分期进度：P0 = token 层 + 注入器 ✅；P1 = 分段控件（滑动块）✅；
- * P2 按钮/图标钮、P3 输入/下拉、P4 开关/日期时间/浮层 每搬一个就在本文件加一行导出，
- * 并在手册 §二「唯一实现表」里登记。
+ * 当前导出（2026-10-04）：token 表 + 注入器 + 分段控件 + 按钮/图标钮 + 输入类（Input / 前缀框 / 数字框）
+ * + 下拉（SelectField）+ 任务选择器（TaskPicker）+ 开关皮肤 + 日期/时间 + 时间范围 + 跑马灯 + Loading。
+ * 每加一个控件就在这里加一行导出，并在手册 §二「唯一实现表」里登记。
  */
+import type { CSSProperties } from 'react'
+
+/**
+ * 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
+ * 同时它是基础层 `Loading` 的锚点契约（`Loading` 默认 `anchorId = PANEL_CONTENT_ID`）——
+ * 所以**新页面也必须用同一个 id**，否则浮动 loading 找不到锚点、贴不到内容右缘。
+ */
+export const PANEL_CONTENT_ID = 'dsh-tdt-main'
+/** 内容列几何（居中限宽 760 / 1120）。 */
+export const PANEL_CONTENT_STYLE: CSSProperties = {
+  width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box',
+}
+
 export { UI_TOKENS_CSS } from './tokens'
 export { UI_STYLE_ID, TOKENS_DOMAIN, registerStyle, applyStyle, ensureUiStyles, ensureUiBase } from './style'
 export { CONTROLS_DOMAIN, SEGMENTED_CSS, BUTTON_CSS, FIELD_CSS, DATETIME_CSS, SELECT_CSS, ensureControlsStyle } from './controls-css'
@@ -34,6 +47,11 @@ export {
   type FieldSize,
 } from './Field'
 export { MarqueeText } from './MarqueeText'
+export {
+  FIELD_ANCHOR_STYLE,
+  FIELD_LABEL_STYLE,
+  fieldMetricsOf,
+} from './Field'
 export {
   TaskPicker,
   TASKPICKER_DOMAIN,

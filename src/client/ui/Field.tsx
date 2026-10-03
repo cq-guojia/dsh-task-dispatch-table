@@ -46,6 +46,8 @@ export interface InputProps {
   style?: CSSProperties
   /** 原生 input 的 ref（调用方需要主动聚焦时用，如任务选择器的搜索框）。 */
   inputRef?: RefObject<HTMLInputElement | null>
+  /** 键盘事件（如搜索框里 Enter 直接选中第一项）。 */
+  onKeyDown?: (event: { key: string; preventDefault(): void }) => void
 }
 
 /** 文本输入。 */
@@ -63,6 +65,7 @@ export function Input(props: InputProps): ReturnType<typeof h> {
     className: `dsh-tdt-input dsh-tdt-input${sizeClass(size)}${error === true ? ' dsh-tdt-input--error' : ''}${className !== undefined && className !== '' ? ' ' + className : ''}`,
     style,
     onChange: (event: { target: { value: string } }) => { onChange(event.target.value) },
+    onKeyDown: props.onKeyDown,
   } as never)
 }
 
@@ -182,16 +185,32 @@ export interface EditorOption {
   label: string
 }
 
-const fieldButtonStyle: CSSProperties = {
+/**
+ * 下拉锚点的统一样式（**全站唯一一份**）：`SelectField` 与 `TaskPicker` 共用 —— 两者是同一类锚点，
+ * 不许各抄一份（2026-10-04 评审：TaskPicker 曾抄第二/第三份，观感会持续漂移）。
+ */
+export const FIELD_ANCHOR_STYLE: CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '6px', height: 'var(--tdt-control-h-lg)', boxSizing: 'border-box',
-  minWidth: 0, maxWidth: '100%', padding: '0 8px',
+  minWidth: 0, maxWidth: '100%', padding: '0 var(--tdt-space-2)',
   border: '0.5px solid var(--tdt-border-heavy)', borderRadius: 'var(--tdt-radius-md)', background: 'var(--tdt-surface-1)',
   color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-md)', lineHeight: 'var(--tdt-line-md)', cursor: 'pointer',
-  transition: 'background 120ms ease, color 120ms ease, border-color 120ms ease',
+  transition: 'background var(--tdt-dur-fast) var(--tdt-ease), color var(--tdt-dur-fast) var(--tdt-ease), border-color var(--tdt-dur-fast) var(--tdt-ease)',
 }
 
-const fieldLabelStyle: CSSProperties = {
-  flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left',
+/** 下拉锚点里那行文字（省略号三件套收敛到 `.dsh-tdt-ellipsis`，见 ui-style-guide §三 待抽象 #1）。 */
+export const FIELD_LABEL_STYLE: CSSProperties = {
+  flex: '1 1 auto', minWidth: 0, textAlign: 'left',
+}
+
+/** 尺寸档 → 锚点几何（高度 / 字号 / 行高 / 图标 / 间距）。**翻译只此一处**，下拉类控件共用。 */
+export function fieldMetricsOf(size: FieldSize): { height: string; font: string; line: string; icon: number; gap: string } {
+  return {
+    height: size === 'sm' ? 'var(--tdt-control-h-sm)' : size === 'md' ? 'var(--tdt-control-h-md)' : 'var(--tdt-control-h-lg)',
+    font: size === 'sm' ? 'var(--tdt-font-sm)' : 'var(--tdt-font-md)',
+    line: size === 'sm' ? 'var(--tdt-line-sm)' : 'var(--tdt-line-md)',
+    icon: size === 'sm' ? 14 : 16,
+    gap: size === 'sm' ? 'var(--tdt-space-1)' : '6px',
+  }
 }
 
 function IconSeat(props: { children: ReactNode }): ReactElement {
@@ -242,11 +261,8 @@ export function SelectField(props: SelectFieldProps): ReactElement {
   const [open, setOpen] = useState(false)
   const [hover, setHover] = useState(false)
   const size = props.size ?? 'lg'
-  const sizeHeight = size === 'sm' ? 'var(--tdt-control-h-sm)' : size === 'md' ? 'var(--tdt-control-h-md)' : 'var(--tdt-control-h-lg)'
-  const iconSize = size === 'sm' ? 14 : 16
-  const sizeGap = size === 'sm' ? '4px' : '6px'
-  const sizeFont = size === 'sm' ? 'var(--tdt-font-sm)' : 'var(--tdt-font-md)'
-  const sizeLine = size === 'sm' ? 'var(--tdt-line-sm)' : 'var(--tdt-line-md)'
+  const metrics = fieldMetricsOf(size)
+  const iconSize = metrics.icon
   const usable = props.options.length > 0 && props.disabled !== true
   const current = props.options.find(option => option.value === props.value)
   const items: MenuEntry[] = useMemo(
@@ -266,8 +282,8 @@ export function SelectField(props: SelectFieldProps): ReactElement {
     onPointerLeave: () => { setHover(false) },
     onClick: () => { setOpen(!open) },
     style: {
-      ...fieldButtonStyle,
-      height: sizeHeight, gap: sizeGap, fontSize: sizeFont, lineHeight: sizeLine,
+      ...FIELD_ANCHOR_STYLE,
+      height: metrics.height, gap: metrics.gap, fontSize: metrics.font, lineHeight: metrics.line,
       width: props.width ?? (props.block === true ? '100%' : undefined),
       ...(props.maxWidth === undefined ? {} : { maxWidth: props.maxWidth }),
       background: hover && usable ? 'var(--tdt-hover)' : 'var(--tdt-surface-1)',
@@ -280,9 +296,10 @@ export function SelectField(props: SelectFieldProps): ReactElement {
       ? h(MarqueeText, {
         text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
         title: props.title ?? props.ariaLabel,
-        style: { ...fieldLabelStyle, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' },
+        className: 'dsh-tdt-ellipsis',
+        style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' },
       })
-      : h('span', { style: { ...fieldLabelStyle, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' } },
+      : h('span', { className: 'dsh-tdt-ellipsis', style: { ...FIELD_LABEL_STYLE, color: current === undefined ? 'var(--tdt-fg-dim)' : 'var(--tdt-fg)' } },
         current?.label ?? (usable ? props.placeholder : props.emptyLabel)),
     h(IconSeat, null, h(IconChevronDownOutlineRegular, { size: iconSize })),
   )

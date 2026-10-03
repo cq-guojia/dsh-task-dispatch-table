@@ -10,10 +10,12 @@
 //    user = 用户层稀疏覆盖、writable）；保存走 scope.set/unset —— 写入走
 //    remote.settings.mutate，以快照 revision 设栅，并发脱节时抛错。
 //
-// 纯净度：本文件不 import 任何 Node 侧模块，也不 import 宿主 @deepseek-ai/* 包的
-// 值——跨插件协作走 cordis 服务注入（locale/slots/settingsScope），类型全部本地
-// 结构化声明。客户端 bundle 不打包 src/config.ts（Node 侧），Config 语义在此以
-// 字段名复述。
+// 纯净度：本文件不 import 任何 Node 侧模块；跨插件协作走 cordis 服务注入
+// （locale/slots/settingsScope），宿主能力的类型全部本地结构化声明。客户端 bundle 不打包
+// src/config.ts（Node 侧），Config 语义在此以字段名复述。
+// ⚠️ **唯一的宿主值导入是 `Toast`**（保存成功提示，2026-10-04 评审登记）：官方 Toast 自带明暗自适应
+// 与淡入淡出，观感与本仓 `FloatingToast` 不同、且这里只需要「一次性轻提示」；已登记在
+// docs/design/ui-style-guide.md §三「已知例外」，除它以外本文件不许再引宿主值。
 
 import { createElement as h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { formatDateTime, formatPlanStamp } from './format'
@@ -41,9 +43,9 @@ import { resolvedDepsOf } from '../deps.js'
 import {
   attachmentsOf, workspacePathOf, type AttachedFileView, type UpstreamInputView,
 } from './task-file-context'
-// 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
-// ⚠️ 本文件不再引 `status-text`：状态名只由**执行记录时间轴**（records-timeline.tsx）与卡片三面板消费；
-// 旧测试版 records 屏（原生 select + 表格）已于 2026-10-04 被时间轴取代（见 worklog/execution-timeline.md）。
+// ⚠️ 本文件**不再引 `status-text`**（状态名 / 状态桶 / 在跑语义的唯一真源）：消费者只剩两个业务文件 ——
+// `records-timeline.tsx`（执行记录时间轴）与 `task-list.tsx`（卡片三面板）。旧测试版 records 屏
+// （原生 select + 表格）已于 2026-10-04 被时间轴取代（见 worklog/execution-timeline.md）。
 import { ConfigPanel } from './config-panel'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
@@ -284,11 +286,11 @@ interface DebugSnapshotData {
 }
 
 /**
- * 宿主写入的 ISO 时间串 → `YYYY-MM-DD HH:mm:ss`（本机时区，解析失败原样返回）。
+ * ISO 时间串 → `YYYY-MM-DD HH:mm:ss`（本机时区，解析失败原样返回）。
  * ⚠️ 不用 `toLocaleString`：它的补零与分隔符随语言 / 运行环境变（用户 2026-09-30 反馈出现过
  * 个位数分钟）⇒ 自己拼，**月 / 日 / 时 / 分 / 秒一律两位**。
+ * 现只有**调试页**在用（快照刷新时刻 / 下次执行时刻）；执行记录页改用按天分组的短时刻。
  */
-/** 执行记录时间戳：`YYYY-MM-DD HH:mm:ss`（显式拼、不用 toLocaleString）。 */
 const formatTime = (iso: string): string => formatDateTime(iso, { seconds: true })
 
 /** 任务行归一：旧版快照的 tasks 是 string[]（只有 id），兼容成明细行。 */
@@ -440,12 +442,17 @@ function rowPatchOf(definition: Record<string, unknown>): Partial<TaskOverviewRo
 }
 
 /**
- * 调度表整页（`main` 槽，双标签）：
- * - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
- * - **执行记录**：全部执行记录，支持按状态 / 按任务过滤，点一行展开该次执行的事件时间线。
+ * 调度表整页（`main` 槽，**三标签**：任务配置 / 执行记录 / 调试，见顶部 Segmented）：
+ * - **任务配置**：卡片式任务列表（`TaskListView`）+ 右侧占布局的新增/编辑分栏；
+ * - **执行记录**：全部任务的流水账时间轴（`RecordsTimelineView`）—— 走 `GET /tasks/instances` 的
+ *   **HTTP 游标分页**，**不吃调试快照**，点块打开归档会话弹窗（2026-10-04 起；此前的「原生 select +
+ *   表格 + 就地展开事件」测试屏已整段删除）；
+ * - **调试**：`GET /db` 的原始表快照 + 运行参数（与下面的任务表快照无关）。
  *
- * 数据来自 settings 快照的 debugSnapshot 字段（host 周期写入），经 useSyncExternalStore
- * 订阅自动刷新，无需手动重开。整页由布局服务的 `main` 槽承载：选中侧栏条目即替换会话区。
+ * ⚠️ 两条**不能混**的数据面：①「任务配置 / 调试」用的任务表来自 settings 快照的 `debugSnapshot`
+ * 字段（host 周期写入），经 useSyncExternalStore 订阅自动刷新；② 任务列表卡片走 `/tasks/overview`、
+ * 执行记录走 `/tasks/instances`、编辑器选项走 `/options` —— 都是 HTTP。整页由布局服务的 `main` 槽承载：
+ * 选中侧栏条目即替换会话区。
  */
 function TaskPage(props: {
   t: Translate

@@ -827,8 +827,10 @@ const makeDispatchRoutes = (
   {
     // 按任务 / 工作区检索执行记录（任务卡片「执行记录」面板 + 未来总查询页共用，决策 55）：
     //   GET /tasks/instances?taskId=&workspace=&status=a,b&from=&to=&cursor=&limit=
-    // workspace 过滤：`task_instances` 无工作区列 ⇒ 由 tasksInline 反查 task_id 集合（不碰表结构）；
-    // taskId 与 workspace 同时给时以 taskId 为准（单任务面板只用 taskId）。
+    // workspace 过滤：`task_instances` 无工作区列 ⇒ 由 tasksInline 反查 task_id 集合（不碰表结构）。
+    // ⚠️ taskId 与 workspace **同时给时两者叠加（AND）**，2026-10-04 评审修正：此前是「taskId 优先」，
+    // 结果在总查询页里会出现「工作区筛了 B、返回的却是 A 工作区那条任务」的记录（静默失效）。
+    // 该工作区下**没有任何任务**时 `taskIds` 为空数组 ⇒ 必须显式判成「查不到」（否则退化成不过滤，返回全表）。
     kind: 'exact',
     path: `${DISPATCH_API_PREFIX}/tasks/instances`,
     handler: (req, res) => {
@@ -846,9 +848,11 @@ const makeDispatchRoutes = (
       const statuses = statusRaw === '' ? undefined : (statusRaw.split(',').filter(s => s !== '') as InstanceStatus[])
       const limitRaw = queryOf(req, 'limit')
       const limit = limitRaw === '' || !Number.isFinite(Number(limitRaw)) ? undefined : Number(limitRaw)
-      const taskIds = taskId === undefined && workspace !== undefined
-        ? workspaceTaskIdsOf(runtimeRef.tasksInline, workspace)
-        : undefined
+      // 给了 workspace 就必须按它过滤：命中 0 个任务 ⇒ 用恒假条件收口（空数组不能被当成「不过滤」）。
+      const workspaceIds = workspace === undefined
+        ? undefined
+        : workspaceTaskIdsOf(runtimeRef.tasksInline, workspace)
+      const taskIds = workspaceIds === undefined || workspaceIds.length > 0 ? workspaceIds : ['__none__']
       const page = store.listInstancesByQuery({
         taskId,
         sessionId,
@@ -920,9 +924,11 @@ const makeDispatchRoutes = (
       const levels = levelRaw === '' ? undefined : levelRaw.split(',').filter(s => s !== '')
       const limitRaw = queryOf(req, 'limit')
       const limit = limitRaw === '' || !Number.isFinite(Number(limitRaw)) ? undefined : Number(limitRaw)
-      const taskIds = taskId === undefined && workspace !== undefined
-        ? workspaceTaskIdsOf(runtimeRef.tasksInline, workspace)
-        : undefined
+      // 给了 workspace 就必须按它过滤：命中 0 个任务 ⇒ 用恒假条件收口（空数组不能被当成「不过滤」）。
+      const workspaceIds = workspace === undefined
+        ? undefined
+        : workspaceTaskIdsOf(runtimeRef.tasksInline, workspace)
+      const taskIds = workspaceIds === undefined || workspaceIds.length > 0 ? workspaceIds : ['__none__']
       const page = store.listLogsByQuery({
         taskId,
         taskIds,

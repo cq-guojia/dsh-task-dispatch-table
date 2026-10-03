@@ -238,11 +238,8 @@ window.__ModuleLoader__.load({
 			debugRefreshedAt: "手动刷新于",
 			debugEmpty: "暂无快照：宿主完成一次调度（或派发 / 会话事件）后自动写入。若持续为空，说明宿主侧运行的还是旧版插件，请重装后重试。",
 			debugRaw: "快照解析失败，原文如下：",
-			debugTasks: "已加载任务",
 			debugWarns: "最近告警 / 错误（≤20 条）",
 			debugNoWarns: "（无）",
-			debugInstances: "实例 task_instances",
-			debugEvents: "事件 task_events（最近 200 条，旧 → 新）",
 			panelTitle: "定时任务调度器",
 			backToConversation: "返回会话",
 			tabConfig: "任务配置",
@@ -829,11 +826,8 @@ window.__ModuleLoader__.load({
 			debugRefreshedAt: "Manual refresh at",
 			debugEmpty: "No snapshot yet: the host writes one after each scheduling pass (or dispatch / session event). If it stays empty, the host is still running an old plugin build — reinstall and retry.",
 			debugRaw: "Failed to parse the snapshot; raw text below:",
-			debugTasks: "Loaded tasks",
 			debugWarns: "Recent warnings / errors (≤20 entries)",
 			debugNoWarns: "(none)",
-			debugInstances: "Instances task_instances",
-			debugEvents: "Events task_events (latest 200, oldest → newest)",
 			panelTitle: "Scheduled task dispatcher",
 			backToConversation: "Back to conversation",
 			tabConfig: "Configuration",
@@ -1528,6 +1522,9 @@ body{
 
   /* ── 层级阶梯（业务文件不许再写裸 z-index）───────────────────────── */
   /* 页面级预览分栏 → 抽屉（新建/编辑）→ 弹窗/确认框 → 浮层菜单 → 浮层提示 */
+  /* 内容层吸顶（天标签 / 表头这类「跟着滚但压住同层内容」的元素）：只压同层兄弟，
+     必须低于下面所有浮层档 —— 所以它不是「开新浮层档」，而是内容层内部的排序位。 */
+  --tdt-z-sticky:10;
   --tdt-z-dock:1030;
   --tdt-z-drawer:1040;
   --tdt-z-modal:1070;
@@ -1572,7 +1569,8 @@ body[data-ds-dark-theme]{
 		*
 		* 本模块把「各文件自己 createElement('style')」收成**唯一入口**：
 		*  - 全站只有**一个** `<style id="dsh-task-dispatch-table-ui">`；
-		*  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` …），
+		*  - 按「域」登记（`tokens` / `controls` / `official` / `domain:editor` / `domain:session-view` / `domain:toast` /
+		*    `domain:records`（执行记录时间轴）/ `domain:taskpicker`（任务选择器）…），
 		*    同一域重复登记 = 覆盖（后写胜），便于过渡期逐块搬；
 		*  - `tokens` 域恒排最前 —— 变量定义必须先于消费它的规则出现（同一条 style 内也讲先后）；
 		*  - 幂等：重复调用不重复插入；`registerStyle` 在标签已挂上时会立刻刷新内容。
@@ -1873,6 +1871,10 @@ body[data-ds-dark-theme]{
 /* 整行下拉：官方 Menu 的包装 span 是 inline-flex（shrink-to-fit），要连它一起撑满 */
 .dsh-tdt-ed-selectwrap{width:100%;}
 
+/* 省略号三件套（ui-style-guide §三「待抽象 #1」的收敛点）：**新代码一律挂这个类**，不再各写一遍。
+   ⚠️ 已有 19 处旧写法待逐步收编（2026-10-04 起新增的调用点不许再手写这三条属性）。 */
+.dsh-tdt-ellipsis{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
 /* 跑马灯文本（MarqueeText）：双层——外层只裁剪，内层才 transform 滚动；非 hover 内层自带省略号 */
 .dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
 .dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
@@ -2087,7 +2089,8 @@ body[data-ds-dark-theme]{
 				style,
 				onChange: (event) => {
 					onChange(event.target.value);
-				}
+				},
+				onKeyDown: props.onKeyDown
 			});
 		}
 		/** 前缀 + 文本输入。 */
@@ -2179,7 +2182,11 @@ body[data-ds-dark-theme]{
 				}
 			}));
 		}
-		const fieldButtonStyle = {
+		/**
+		* 下拉锚点的统一样式（**全站唯一一份**）：`SelectField` 与 `TaskPicker` 共用 —— 两者是同一类锚点，
+		* 不许各抄一份（2026-10-04 评审：TaskPicker 曾抄第二/第三份，观感会持续漂移）。
+		*/
+		const FIELD_ANCHOR_STYLE = {
 			display: "inline-flex",
 			alignItems: "center",
 			gap: "6px",
@@ -2187,7 +2194,7 @@ body[data-ds-dark-theme]{
 			boxSizing: "border-box",
 			minWidth: 0,
 			maxWidth: "100%",
-			padding: "0 8px",
+			padding: "0 var(--tdt-space-2)",
 			border: "0.5px solid var(--tdt-border-heavy)",
 			borderRadius: "var(--tdt-radius-md)",
 			background: "var(--tdt-surface-1)",
@@ -2196,16 +2203,24 @@ body[data-ds-dark-theme]{
 			fontSize: "var(--tdt-font-md)",
 			lineHeight: "var(--tdt-line-md)",
 			cursor: "pointer",
-			transition: "background 120ms ease, color 120ms ease, border-color 120ms ease"
+			transition: "background var(--tdt-dur-fast) var(--tdt-ease), color var(--tdt-dur-fast) var(--tdt-ease), border-color var(--tdt-dur-fast) var(--tdt-ease)"
 		};
-		const fieldLabelStyle = {
+		/** 下拉锚点里那行文字（省略号三件套收敛到 `.dsh-tdt-ellipsis`，见 ui-style-guide §三 待抽象 #1）。 */
+		const FIELD_LABEL_STYLE = {
 			flex: "1 1 auto",
 			minWidth: 0,
-			overflow: "hidden",
-			textOverflow: "ellipsis",
-			whiteSpace: "nowrap",
 			textAlign: "left"
 		};
+		/** 尺寸档 → 锚点几何（高度 / 字号 / 行高 / 图标 / 间距）。**翻译只此一处**，下拉类控件共用。 */
+		function fieldMetricsOf(size) {
+			return {
+				height: size === "sm" ? "var(--tdt-control-h-sm)" : size === "md" ? "var(--tdt-control-h-md)" : "var(--tdt-control-h-lg)",
+				font: size === "sm" ? "var(--tdt-font-sm)" : "var(--tdt-font-md)",
+				line: size === "sm" ? "var(--tdt-line-sm)" : "var(--tdt-line-md)",
+				icon: size === "sm" ? 14 : 16,
+				gap: size === "sm" ? "var(--tdt-space-1)" : "6px"
+			};
+		}
 		function IconSeat(props) {
 			return (0, react.createElement)("span", { style: {
 				display: "inline-flex",
@@ -2225,12 +2240,8 @@ body[data-ds-dark-theme]{
 			ensureControlsStyle();
 			const [open, setOpen] = (0, react.useState)(false);
 			const [hover, setHover] = (0, react.useState)(false);
-			const size = props.size ?? "lg";
-			const sizeHeight = size === "sm" ? "var(--tdt-control-h-sm)" : size === "md" ? "var(--tdt-control-h-md)" : "var(--tdt-control-h-lg)";
-			const iconSize = size === "sm" ? 14 : 16;
-			const sizeGap = size === "sm" ? "4px" : "6px";
-			const sizeFont = size === "sm" ? "var(--tdt-font-sm)" : "var(--tdt-font-md)";
-			const sizeLine = size === "sm" ? "var(--tdt-line-sm)" : "var(--tdt-line-md)";
+			const metrics = fieldMetricsOf(props.size ?? "lg");
+			const iconSize = metrics.icon;
 			const usable = props.options.length > 0 && props.disabled !== true;
 			const current = props.options.find((option) => option.value === props.value);
 			const items = (0, react.useMemo)(() => props.options.map((option) => ({
@@ -2255,11 +2266,11 @@ body[data-ds-dark-theme]{
 					setOpen(!open);
 				},
 				style: {
-					...fieldButtonStyle,
-					height: sizeHeight,
-					gap: sizeGap,
-					fontSize: sizeFont,
-					lineHeight: sizeLine,
+					...FIELD_ANCHOR_STYLE,
+					height: metrics.height,
+					gap: metrics.gap,
+					fontSize: metrics.font,
+					lineHeight: metrics.line,
 					width: props.width ?? (props.block === true ? "100%" : void 0),
 					...props.maxWidth === void 0 ? {} : { maxWidth: props.maxWidth },
 					background: hover && usable ? "var(--tdt-hover)" : "var(--tdt-surface-1)",
@@ -2269,14 +2280,18 @@ body[data-ds-dark-theme]{
 			}, props.icon === void 0 ? null : (0, react.createElement)(IconSeat, null, props.icon), props.marquee === true ? (0, react.createElement)(MarqueeText, {
 				text: current?.label ?? (usable ? props.placeholder : props.emptyLabel),
 				title: props.title ?? props.ariaLabel,
+				className: "dsh-tdt-ellipsis",
 				style: {
-					...fieldLabelStyle,
+					...FIELD_LABEL_STYLE,
 					color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
 				}
-			}) : (0, react.createElement)("span", { style: {
-				...fieldLabelStyle,
-				color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
-			} }, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
+			}) : (0, react.createElement)("span", {
+				className: "dsh-tdt-ellipsis",
+				style: {
+					...FIELD_LABEL_STYLE,
+					color: current === void 0 ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+				}
+			}, current?.label ?? (usable ? props.placeholder : props.emptyLabel)), (0, react.createElement)(IconSeat, null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
 			if (!usable) return anchor;
 			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
 				open,
@@ -2304,60 +2319,44 @@ body[data-ds-dark-theme]{
 		* 什么时候用它：**候选多（几十上百）或需要按名字 / id 搜索**的任务选择。
 		* 候选少（十几个以内）用 `SelectField` 就够，别用它（两者分工见 docs/design/ui-foundation.md §5.4）。
 		*
-		* 形态：锚点（与 `SelectField` 同款）点开浮层 ⇒ 顶部搜索框 + 候选列表 +「更多 / 收起」。
-		* 底层 = 官方 `Menu`（定位 / portal / 点外关闭 / Esc）+ 基础层 `Input`，**不自绘浮层**。
+		* 形态：锚点（与 `SelectField` 同款 —— 样式从 `Field.tsx` 导入**共用那一份**，不许再抄）点开浮层
+		* ⇒ 顶部搜索框 + 候选列表 +「更多 / 收起」。底层 = 官方 `Menu`（定位 / portal / 点外关闭 / Esc）
+		* + 基础层 `Input`，**不自绘浮层**。
 		*
 		* ⚠️ 两条硬规矩（用户 2026-10-03 拍板，见 docs/design/ui-foundation.md §5.4）：
 		*  ① `scope` 是**受控入参**，不是内部 state —— 外部改工作区 ⇒ 候选实时重算；
 		*  ② 已选项掉出作用域 ⇒ **显式提示**（`outOfScopeHint`），**不静默清空**（静默清空会让用户以为自己没选过）。
+		*     ⚠️ 执行记录页在**改工作区时主动清空**掉队任务（那是筛选语义，两码事，见 records-timeline.tsx 注释）。
 		*
-		* 源码级依据（2026-10-04 解包核实，宿主 0.2.0-rc.2 `lib/index.js:3927` 的 `Menu`）：
+		* 源码级依据（2026-10-04 解包核实，宿主 0.2.0-rc.2 `lib/index.js:3927` 的 `Menu`；已回写
+		* docs/design/external/dsh-capabilities.md §官方组件签名要点）：
 		*  - `children` 渲染进 MenuSurface 的 viewport（`:4246`），键盘只处理 Escape / Tab / 方向键（`:4093-4114`），
 		*    字母键不拦 ⇒ 搜索框能正常打字；方向键在浮层内游走属预期（等同于下拉的键盘操作）。
 		*  - `autoFocus` 会把焦点抢到浮层第一个按钮（`:4038-4044`）⇒ **不用它**，打开后自己聚焦搜索框。
 		*/
-		const anchorStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "6px",
-			boxSizing: "border-box",
-			minWidth: 0,
-			maxWidth: "100%",
-			padding: "0 8px",
-			border: "0.5px solid var(--tdt-border-heavy)",
-			borderRadius: "var(--tdt-radius-md)",
-			background: "var(--tdt-surface-1)",
-			color: "var(--tdt-fg)",
-			font: "inherit",
-			cursor: "pointer"
-		};
-		const labelWrapStyle = {
-			flex: "1 1 auto",
-			minWidth: 0,
-			overflow: "hidden",
-			textOverflow: "ellipsis",
-			whiteSpace: "nowrap",
-			textAlign: "left"
-		};
-		/** 任务选择器浮层的皮肤规则（只消费 `var(--tdt-*)`）。 */
+		/** 任务选择器浮层的皮肤规则（只消费 `var(--tdt-*)`，间距走 `--tdt-space-*`）。 */
 		const TASKPICKER_CSS = `
 /* ── 任务选择器（带搜索）────────────────────────────────────────────────
    结构：搜索行 + 列表 +「更多 / 收起」。浮层外壳由官方 Menu 提供，这里只管内容。
    ⚠️ 官方 MenuSurface 自带内边距与圆角 ⇒ 本面板不再套第二层壳，避免双层底。 */
-.dsh-tdt-tp{display:flex;flex-direction:column;gap:6px;min-width:220px;max-width:340px;}
-.dsh-tdt-tp-search{display:flex;align-items:center;gap:6px;padding:0 2px;color:var(--tdt-fg-3);}
+.dsh-tdt-tp{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:220px;max-width:340px;}
+.dsh-tdt-tp-search{display:flex;align-items:center;gap:var(--tdt-space-1);padding:0 var(--tdt-space-1);color:var(--tdt-fg-3);}
 .dsh-tdt-tp-search > span{display:inline-flex;flex:none;}
+/* 列表定高（内容区尺寸，属 ui-style-guide §三「已知例外」的内容区定高一类）。 */
 .dsh-tdt-tp-list{display:flex;flex-direction:column;max-height:264px;overflow-y:auto;}
-.dsh-tdt-tp-row{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;border-radius:var(--tdt-radius-sm);
-  background:transparent;color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-row{display:flex;align-items:center;gap:var(--tdt-space-2);width:100%;padding:6px var(--tdt-space-2);
+  border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg);font:inherit;
+  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);text-align:left;cursor:pointer;}
 .dsh-tdt-tp-row:hover{background:var(--tdt-hover);}
+/* 键盘可达性：与其它控件同款描边（不得只靠 hover 表达可交互）。 */
+.dsh-tdt-tp-row:focus-visible,.dsh-tdt-tp-more:focus-visible{outline:2px solid var(--tdt-business);outline-offset:-2px;}
 .dsh-tdt-tp-row--on{color:var(--tdt-business);}
-.dsh-tdt-tp-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-tp-name{flex:1 1 auto;min-width:0;}
 .dsh-tdt-tp-check{flex:none;display:inline-flex;width:14px;align-items:center;justify-content:center;}
-.dsh-tdt-tp-more{border:0;border-top:1px solid var(--tdt-border-faint);margin-top:2px;padding:6px 8px;background:transparent;
-  color:var(--tdt-business);font:inherit;font-size:var(--tdt-font-sm);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-more{border:0;border-top:1px solid var(--tdt-border-faint);margin-top:2px;padding:6px var(--tdt-space-2);
+  background:transparent;color:var(--tdt-business);font:inherit;font-size:var(--tdt-font-sm);text-align:left;cursor:pointer;}
 .dsh-tdt-tp-more:hover{background:var(--tdt-hover);}
-.dsh-tdt-tp-empty{padding:10px 8px;color:var(--tdt-fg-3);font-size:var(--tdt-font-sm);text-align:center;}
+.dsh-tdt-tp-empty{padding:var(--tdt-space-2);color:var(--tdt-fg-3);font-size:var(--tdt-font-sm);text-align:center;}
 `;
 		/** 皮肤域固定名（注入顺序在 controls 之后）。 */
 		const TASKPICKER_DOMAIN = "domain:taskpicker";
@@ -2370,13 +2369,13 @@ body[data-ds-dark-theme]{
 			ensureControlsStyle();
 			ensureTaskPickerStyle();
 			const size = props.size ?? "lg";
-			const sizeHeight = size === "sm" ? "var(--tdt-control-h-sm)" : size === "md" ? "var(--tdt-control-h-md)" : "var(--tdt-control-h-lg)";
-			const sizeFont = size === "sm" ? "var(--tdt-font-sm)" : "var(--tdt-font-md)";
-			const iconSize = size === "sm" ? 14 : 16;
+			const metrics = fieldMetricsOf(size);
 			const [open, setOpen] = (0, react.useState)(false);
+			const [hover, setHover] = (0, react.useState)(false);
 			const [keyword, setKeyword] = (0, react.useState)("");
 			const [showAll, setShowAll] = (0, react.useState)(false);
 			const searchRef = (0, react.useRef)(null);
+			const anchorRef = (0, react.useRef)(null);
 			const candidates = (0, react.useMemo)(() => {
 				const scope = props.scope ?? "";
 				const excludes = props.excludeIds ?? [];
@@ -2408,7 +2407,14 @@ body[data-ds-dark-theme]{
 					setShowAll(false);
 				}
 			}, [open]);
+			/** 选中一项：回调 + 关浮层 + **把焦点还给锚点**（否则焦点落在 body，键盘用户会掉队）。 */
+			const pick = (0, react.useCallback)((id) => {
+				props.onChange(id);
+				setOpen(false);
+				anchorRef.current?.focus();
+			}, [props]);
 			const anchor = (0, react.createElement)("button", {
+				ref: anchorRef,
 				type: "button",
 				className: "dsh-tdt-ed-field",
 				disabled: props.disabled === true,
@@ -2416,21 +2422,32 @@ body[data-ds-dark-theme]{
 				"aria-expanded": open,
 				"aria-label": props.ariaLabel,
 				title: outOfScope ? props.outOfScopeHint : void 0,
+				onPointerEnter: () => {
+					setHover(true);
+				},
+				onPointerLeave: () => {
+					setHover(false);
+				},
 				onClick: () => {
 					setOpen((v) => !v);
 				},
 				style: {
-					...anchorStyle,
-					height: sizeHeight,
-					fontSize: sizeFont,
+					...FIELD_ANCHOR_STYLE,
+					height: metrics.height,
+					gap: metrics.gap,
+					fontSize: metrics.font,
+					lineHeight: metrics.line,
 					width: props.width,
-					cursor: props.disabled === true ? "not-allowed" : "pointer"
+					background: hover && props.disabled !== true ? "var(--tdt-hover)" : "var(--tdt-surface-1)",
+					cursor: props.disabled === true ? "not-allowed" : "pointer",
+					opacity: props.disabled === true ? .6 : 1
 				}
 			}, (0, react.createElement)(MarqueeText, {
 				text: shownLabel,
 				title: props.ariaLabel,
+				className: "dsh-tdt-ellipsis",
 				style: {
-					...labelWrapStyle,
+					...FIELD_LABEL_STYLE,
 					color: current === void 0 || props.value === "" ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
 				}
 			}), outOfScope ? (0, react.createElement)("span", { style: {
@@ -2439,29 +2456,44 @@ body[data-ds-dark-theme]{
 				color: "var(--tdt-warning)"
 			} }, "!") : null, (0, react.createElement)("span", { style: {
 				display: "inline-flex",
-				width: `${iconSize}px`,
-				height: `${iconSize}px`,
+				width: `${metrics.icon}px`,
+				height: `${metrics.icon}px`,
 				alignItems: "center",
 				justifyContent: "center",
 				flex: "none",
 				color: "var(--tdt-fg-3)"
-			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: metrics.icon })));
 			const panel = (0, react.createElement)("div", { className: "dsh-tdt-tp" }, (0, react.createElement)("div", { className: "dsh-tdt-tp-search" }, (0, react.createElement)("span", null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 })), (0, react.createElement)(Input$1, {
 				value: keyword,
 				onChange: setKeyword,
 				placeholder: props.searchPlaceholder,
-				size: "md",
+				size,
 				"aria-label": props.searchPlaceholder,
-				inputRef: searchRef
+				inputRef: searchRef,
+				onKeyDown: (event) => {
+					if (event.key === "Enter") {
+						const first = visible[0];
+						if (first === void 0) return;
+						event.preventDefault();
+						pick(first.id);
+						return;
+					}
+					if (event.key !== "ArrowDown") return;
+					event.preventDefault();
+					(searchRef.current?.closest(".dsh-tdt-tp")?.querySelector(".dsh-tdt-tp-row"))?.focus();
+				}
 			})), (0, react.createElement)("div", { className: "dsh-tdt-tp-list" }, visible.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-tp-empty" }, props.emptyLabel) : visible.map((o) => (0, react.createElement)("button", {
 				type: "button",
 				key: o.id,
 				className: `dsh-tdt-tp-row${o.id === props.value ? " dsh-tdt-tp-row--on" : ""}`,
+				"aria-selected": o.id === props.value,
 				onClick: () => {
-					props.onChange(o.id);
-					setOpen(false);
+					pick(o.id);
 				}
-			}, (0, react.createElement)("span", { className: "dsh-tdt-tp-name" }, o.enabled === false ? `${o.label}${props.disabledTag ?? ""}` : o.label), o.id === props.value ? (0, react.createElement)("span", { className: "dsh-tdt-tp-check" }, "✓") : null))), !searching && (showAll || restCount > 0) ? (0, react.createElement)("button", {
+			}, (0, react.createElement)("span", { className: "dsh-tdt-tp-name dsh-tdt-ellipsis" }, o.enabled === false ? `${o.label}${props.disabledTag ?? ""}` : o.label), o.id === props.value ? (0, react.createElement)("span", {
+				className: "dsh-tdt-tp-check",
+				"aria-hidden": true
+			}, "✓") : null))), !searching && (showAll || restCount > 0) ? (0, react.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-tp-more",
 				onClick: () => {
@@ -3139,6 +3171,21 @@ body[data-ds-dark-theme]{
 			ensureLoadingStyle();
 			return (0, react.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react.createElement)("i", null), (0, react.createElement)("i", null), (0, react.createElement)("i", null));
 		}
+		//#endregion
+		//#region src/client/ui/index.ts
+		/**
+		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
+		* 同时它是基础层 `Loading` 的锚点契约（`Loading` 默认 `anchorId = PANEL_CONTENT_ID`）——
+		* 所以**新页面也必须用同一个 id**，否则浮动 loading 找不到锚点、贴不到内容右缘。
+		*/
+		const PANEL_CONTENT_ID = "dsh-tdt-main";
+		/** 内容列几何（居中限宽 760 / 1120）。 */
+		const PANEL_CONTENT_STYLE = {
+			width: "100%",
+			maxWidth: "1120px",
+			minWidth: "760px",
+			boxSizing: "border-box"
+		};
 		//#endregion
 		//#region src/client/archive-session-css.ts
 		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
@@ -42184,6 +42231,42 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const key = STATUS_LABEL_KEYS[status];
 			return key === void 0 ? status : t(key);
 		}
+		/**
+		* **过滤桶**：界面上的「运行中 / 失败 / 成功」各对应哪些真实状态 —— 全站唯一一份。
+		*
+		* 为什么要单源（2026-10-04 评审）：卡片执行记录面板与执行记录总查询页各写了一份，
+		* 且**语义还不一样**（一个 `running` 含 pending/unknown，另一个只含 dispatched/running）⇒
+		* 同一个下拉档位在两页筛出不同结果。这里是唯一真源，两页都从这里取。
+		*/
+		const INSTANCE_STATUS_BUCKETS = {
+			running: [
+				"pending",
+				"dispatched",
+				"running",
+				"unknown"
+			],
+			failed: ["failed", "skipped"],
+			succeeded: ["succeeded"]
+		};
+		/** 桶 → 传给后端的 `status` 值（逗号分隔由调用方拼）；不认识的桶返回 undefined（不过滤，不猜）。 */
+		function statusesOfBucket(bucket) {
+			return INSTANCE_STATUS_BUCKETS[bucket];
+		}
+		/** 是否「在跑」（已派发未定终态）—— 语义查询单源：色条脉动 / 图标 / 文案都用它，不许各写一份。 */
+		function isRunningStatus(status) {
+			return status === "dispatched" || status === "running";
+		}
+		/**
+		* 状态 → 语义色调（**表现层只做「色调 → 自己的画法」**：时间轴映射成色条、卡片映射成图标）。
+		* 语义维（哪些状态算失败 / 算在跑）只在这里判一次。
+		*/
+		function statusToneOf(status) {
+			if (status === "succeeded") return "ok";
+			if (status === "failed") return "bad";
+			if (status === "skipped") return "warn";
+			if (isRunningStatus(status)) return "busy";
+			return "neutral";
+		}
 		//#endregion
 		//#region src/client/records-timeline.tsx
 		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
@@ -42195,48 +42278,42 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    节奏靠「天标签 + 竖轴 + 左缘色条」建立；块本身不带底色，只有 hover 才泛蓝，
    免得一屏几十条时满屏色块发噪。 */
 .dsh-tdt-rec-tl{display:flex;flex-direction:column;}
-/* 天标签吸顶：长列表里始终知道自己在哪一天（用户 2026-10-04 同意）。 */
-.dsh-tdt-rec-day{position:sticky;top:0;z-index:1;padding:10px 0 6px;background:var(--tdt-surface-base);}
+/* 天标签吸顶：长列表里始终知道自己在哪一天（用户 2026-10-04 同意）。
+   ⚠️ 底色必须与宿主页面底色同源（content 容器背景是 transparent）⇒ 吸附时不留异色横带。 */
+.dsh-tdt-rec-day{position:sticky;top:0;z-index:var(--tdt-z-sticky);padding:var(--tdt-space-2) 0 var(--tdt-space-1);
+  background:var(--tdt-surface-base);}
 .dsh-tdt-rec-daylabel{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg);line-height:var(--tdt-line-md);}
-.dsh-tdt-rec-daycount{margin-left:8px;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-daycount{margin-left:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 /* 竖轴：贯穿当天所有块（极浅描边，只起「串起来」的作用）。 */
-.dsh-tdt-rec-axis{margin-left:6px;padding-left:16px;border-left:1px solid var(--tdt-border-faint);}
-.dsh-tdt-rec-block{position:relative;display:flex;align-items:baseline;gap:10px;width:100%;margin:0 0 4px;padding:7px 10px;
+.dsh-tdt-rec-axis{margin-left:6px;padding-left:var(--tdt-space-4);border-left:1px solid var(--tdt-border-faint);}
+.dsh-tdt-rec-block{position:relative;display:flex;align-items:baseline;gap:var(--tdt-space-2);width:100%;
+  margin:0 0 var(--tdt-space-1);padding:6px var(--tdt-space-2) 6px var(--tdt-space-3);
   border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg);font:inherit;text-align:left;
-  animation:dsh-tdt-rec-in 160ms ease;}
+  animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-rec-block--on{cursor:pointer;}
 .dsh-tdt-rec-block--on:hover{background:var(--tdt-card-hover);}
 /* 成败只靠这条色条表达（用户点名：不用图标）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:6px;bottom:6px;width:4px;border-radius:2px;background:var(--tdt-fg-3);}
-.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse 1.4s ease-in-out infinite;}
+.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
 @keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.dsh-tdt-rec-bar--run{animation:none}.dsh-tdt-rec-block{animation:none}}
 /* 时刻：等宽数字 ⇒ 一列对齐、不因字宽不同而左右蹦。 */
-.dsh-tdt-rec-time{flex:none;font-family:var(--tdt-font-mono,ui-monospace,monospace);font-variant-numeric:tabular-nums;
+.dsh-tdt-rec-time{flex:none;font-family:var(--tdt-font-mono);font-variant-numeric:tabular-nums;
   font-size:var(--tdt-font-md);color:var(--tdt-fg-2);}
-.dsh-tdt-rec-title{flex:1 1 auto;min-width:0;font-size:var(--tdt-font-md);}
+.dsh-tdt-rec-title{font-size:var(--tdt-font-md);}
 .dsh-tdt-rec-meta{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-foot{padding:12px 0 4px;text-align:center;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-foot{padding:var(--tdt-space-3) 0 var(--tdt-space-1);display:flex;align-items:center;
+  justify-content:center;gap:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-err{color:var(--tdt-danger);}
 `;
 		const RECORDS_DOMAIN = "domain:records";
 		const filterRowStyle$1 = {
 			display: "flex",
 			alignItems: "center",
-			gap: "8px",
+			gap: "var(--tdt-space-2)",
 			flexWrap: "wrap",
-			marginBottom: "10px"
-		};
-		const centerStyle = {
-			width: "100%",
-			display: "flex",
-			justifyContent: "center"
-		};
-		const mainStyle = {
-			width: "100%",
-			maxWidth: "1120px",
-			minWidth: "760px",
-			boxSizing: "border-box"
+			marginBottom: "var(--tdt-space-3)"
 		};
 		const emptyStyle = {
 			padding: "32px 0",
@@ -42258,55 +42335,93 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				to: ymdOf(now)
 			};
 		}
-		/** `HH:mm`（计划时刻本来就没有秒，与服务端刻度口径一致）。 */
+		/** `HH:mm`（计划时刻本来就没有秒，与服务端刻度口径一致）；非法值给占位。 */
 		function hmOf(iso) {
+			if (iso === null) return "--";
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "--";
 			const d = new Date(ms);
 			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 		}
-		/** 天标签：`2026 年 4 月 30 日` / `April 30, 2026`（按当前语言，走 `Intl`）。 */
+		/**
+		* 一行记录所属的「天」= `scheduled_at` 的**本地日历日**。
+		*
+		* ⚠️ 为什么不用服务端 `logical_date`（2026-10-04 评审）：那个是**任务时区**的日历日，而排序键与
+		* 时间范围过滤都是 `scheduled_at`（绝对时刻 / 本地日）⇒ 多时区任务混排时会出现
+		* 「04-30 / 05-01 / 04-30」这种非单调序列，把同一天劈成两个同名天标签。分组键与排序键同源才稳。
+		*/
+		function dayKeyOf(row) {
+			const ms = Date.parse(typeof row.scheduled_at === "string" ? row.scheduled_at : "");
+			if (Number.isNaN(ms)) return "unknown";
+			const d = new Date(ms);
+			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
+		}
+		/** 天标签文案：`2026 年 4 月 30 日` / `April 30, 2026`（按当前语言，走 Intl）。 */
 		function dayLabelOf(key, t) {
 			const parts = key.split("-");
 			const y = Number(parts[0]);
 			const m = Number(parts[1]);
-			const d = Number(parts[2]);
-			if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return key;
-			if (typeof Intl === "undefined") return `${y} 年 ${m} 月 ${d} 日`;
+			const day = Number(parts[2]);
+			if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(day)) return key;
+			if (typeof Intl === "undefined") return key;
 			return new Intl.DateTimeFormat(t("localeTag"), {
 				year: "numeric",
 				month: "long",
 				day: "numeric"
-			}).format(new Date(y, m - 1, d));
+			}).format(new Date(y, m - 1, day));
 		}
-		/** 状态 → 色条颜色（**只消费 token**；不用图标，见规格 §五）。 */
-		function barColorOf(status) {
-			if (status === "succeeded") return "var(--tdt-success)";
-			if (status === "failed") return "var(--tdt-danger)";
-			if (status === "skipped") return "var(--tdt-warning)";
-			if (status === "dispatched" || status === "running") return "var(--tdt-business)";
+		/** 语义色调 → 色条颜色（**只消费 token**；哪些状态算哪一档由 `status-text.ts` 判，这里只挑颜色）。 */
+		function barColorOf(tone) {
+			if (tone === "ok") return "var(--tdt-success)";
+			if (tone === "bad") return "var(--tdt-danger)";
+			if (tone === "warn") return "var(--tdt-warning)";
+			if (tone === "busy") return "var(--tdt-business)";
 			return "var(--tdt-fg-3)";
 		}
-		const isRunning = (status) => status === "dispatched" || status === "running";
-		/** 次信息：时长（`dispatched_at → finished_at`）；在跑则显示「运行中」。 */
+		/** 次信息：状态 · 时长（`dispatched_at → finished_at`）· token（有才显示）。 */
 		function metaOf(row, t) {
-			const statusText = statusTextOf(row.status, t);
-			if (isRunning(row.status)) return statusText;
-			if (row.dispatched_at === null || row.finished_at === null) return statusText;
-			const ms = Date.parse(row.finished_at) - Date.parse(row.dispatched_at);
-			if (!Number.isFinite(ms) || ms < 0) return statusText;
-			return `${statusText} · ${formatDurationHms(ms)}`;
+			const parts = [statusTextOf(row.status, t)];
+			if (!isRunningStatus(row.status) && row.dispatched_at !== null && row.finished_at !== null) {
+				const ms = Date.parse(row.finished_at) - Date.parse(row.dispatched_at);
+				if (Number.isFinite(ms) && ms >= 0) parts.push(formatDurationHms(ms));
+			}
+			const tokens = (row.token_in ?? 0) + (row.token_out ?? 0);
+			if (tokens > 0) parts.push(formatTokenCount(tokens));
+			return parts.join(" · ");
 		}
-		/** 一行记录所属的天（服务端 `logical_date` 优先；旧行没有就退回 `scheduled_at` 的日期段）。 */
-		function dayKeyOf(row) {
-			const logical = row.logical_date;
-			if (typeof logical === "string" && logical.length >= 10) return logical.slice(0, 10);
-			return row.scheduled_at.slice(0, 10);
-		}
+		/** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的 2000 块不重算）。 */
+		const RecordBlock = (0, react.memo)(function RecordBlock(props) {
+			const { row, label, t, tt, openSession } = props;
+			const tone = statusToneOf(row.status);
+			const planned = hmOf(row.scheduled_at);
+			const actual = hmOf(row.dispatched_at);
+			const late = row.dispatched_at !== null && row.dispatched_at !== row.scheduled_at ? tt("recordsPlannedAt", { time: planned }) : "";
+			const clickable = row.session_id !== null && row.session_id !== "";
+			const meta = late === "" ? metaOf(row, t) : `${metaOf(row, t)} · ${late}`;
+			return (0, react.createElement)(clickable ? "button" : "div", {
+				...clickable ? { type: "button" } : {},
+				className: `dsh-tdt-rec-block${clickable ? " dsh-tdt-rec-block--on" : ""}`,
+				onClick: clickable ? () => {
+					openSession(row.session_id);
+				} : void 0
+			}, (0, react.createElement)("span", {
+				className: `dsh-tdt-rec-bar${isRunningStatus(row.status) ? " dsh-tdt-rec-bar--run" : ""}`,
+				style: { background: barColorOf(tone) }
+			}), (0, react.createElement)("span", { className: "dsh-tdt-rec-time" }, row.dispatched_at === null ? planned : actual), (0, react.createElement)(MarqueeText, {
+				text: label,
+				title: label,
+				className: "dsh-tdt-rec-title",
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0
+				}
+			}), (0, react.createElement)("span", { className: "dsh-tdt-rec-meta" }, meta));
+		});
 		/** 执行记录总查询页（时间轴）。 */
 		function RecordsTimelineView(props) {
 			applyStyle(RECORDS_DOMAIN, RECORDS_CSS);
 			const { t, tasks, workspaces, onOpenSession } = props;
+			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			const [range, setRange] = (0, react.useState)(defaultRange);
 			const [workspace, setWorkspace] = (0, react.useState)("");
 			const [status, setStatus] = (0, react.useState)("");
@@ -42319,6 +42434,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [done, setDone] = (0, react.useState)(false);
 			const seqRef = (0, react.useRef)(0);
 			const inFlightRef = (0, react.useRef)(false);
+			const rowsCountRef = (0, react.useRef)(0);
+			rowsCountRef.current = rows.length;
+			/** 首次进入时的默认档（用来判「用户是否真的动过过滤器」⇒ 决定空态文案）。 */
+			const initialRangeRef = (0, react.useRef)(range);
 			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
 			const timeLabels = (0, react.useMemo)(() => timeLabelsOf(t), [t]);
 			const rangeLabels = (0, react.useMemo)(() => ({
@@ -42353,10 +42472,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					label: statusTextOf("failed", t)
 				},
 				{
-					value: "skipped",
-					label: statusTextOf("skipped", t)
-				},
-				{
 					value: "running",
 					label: statusTextOf("running", t)
 				}
@@ -42366,17 +42481,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const filterSig = `${range.from}|${range.to}|${workspace}|${status}|${taskId}`;
 			const load = (0, react.useCallback)(async (nextCursor) => {
 				if (inFlightRef.current) return;
-				if (nextCursor === null && rows.length >= HARD_LIMIT) return;
 				inFlightRef.current = true;
-				const seq = seqRef.current;
+				const seq = seqRef.current + 1;
+				seqRef.current = seq;
 				setLoading(true);
 				setError(null);
 				const q = rangeToQuery(range, "day");
-				const statuses = status === "" ? void 0 : status === "running" ? ["dispatched", "running"] : [status];
 				try {
 					const page = await fetchInstances({
 						workspace: workspace === "" ? void 0 : workspace,
-						statuses,
+						statuses: status === "" ? void 0 : statusesOfBucket(status),
 						taskId: taskId === "" ? void 0 : taskId,
 						from: q.fromTs,
 						to: q.toTs,
@@ -42394,15 +42508,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (seq === seqRef.current) {
 						setLoading(false);
 						setLoaded(true);
+						inFlightRef.current = false;
 					}
-					inFlightRef.current = false;
 				}
 			}, [
 				range,
 				workspace,
 				status,
-				taskId,
-				rows.length
+				taskId
 			]);
 			(0, react.useEffect)(() => {
 				seqRef.current += 1;
@@ -42410,32 +42523,41 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				setRows([]);
 				setCursor(null);
 				setDone(false);
+				setError(null);
 				setLoaded(false);
 				load(null);
+				return () => {
+					seqRef.current += 1;
+				};
 			}, [filterSig]);
 			const loadMore = (0, react.useCallback)(() => {
 				if (loading || done || cursor === null) return;
-				if (rows.length >= HARD_LIMIT) return;
+				if (error !== null) return;
+				if (rowsCountRef.current >= HARD_LIMIT) return;
 				load(cursor);
 			}, [
 				loading,
 				done,
 				cursor,
-				rows.length,
+				error,
 				load
 			]);
-			const sentinelRef = (0, react.useRef)(null);
-			(0, react.useEffect)(() => {
-				const el = sentinelRef.current;
+			(0, react.useRef)(null);
+			const loadMoreRef = (0, react.useRef)(loadMore);
+			loadMoreRef.current = loadMore;
+			const ioRef = (0, react.useRef)(null);
+			const observeSentinel = (0, react.useCallback)((el) => {
+				ioRef.current?.disconnect();
 				if (el === null || typeof IntersectionObserver === "undefined") return;
 				const io = new IntersectionObserver((entries) => {
-					if (entries[0]?.isIntersecting === true) loadMore();
-				}, { rootMargin: "240px" });
+					if (entries[0]?.isIntersecting === true) loadMoreRef.current();
+				});
 				io.observe(el);
-				return () => {
-					io.disconnect();
-				};
-			}, [loadMore]);
+				ioRef.current = io;
+			}, []);
+			(0, react.useEffect)(() => () => {
+				ioRef.current?.disconnect();
+			}, []);
 			const days = (0, react.useMemo)(() => {
 				const out = [];
 				for (const row of rows) {
@@ -42449,11 +42571,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 				return out;
 			}, [rows]);
+			const openSession = (0, react.useCallback)((sessionId) => {
+				onOpenSession?.(sessionId);
+			}, [onOpenSession]);
 			const atLimit = rows.length >= HARD_LIMIT;
-			const hasFilter = range.from !== "" || range.to !== "" || workspace !== "" || status !== "" || taskId !== "";
-			return (0, react.createElement)("div", { style: centerStyle }, (0, react.createElement)("div", {
-				id: "dsh-tdt-records",
-				style: mainStyle
+			/** 用户是否真的动过过滤器（决定空态文案：没动过 = 这段时间本来就没记录）。 */
+			const touched = range.from !== initialRangeRef.current.from || range.to !== initialRangeRef.current.to || workspace !== "" || status !== "" || taskId !== "";
+			const changeWorkspace = (0, react.useCallback)((next) => {
+				setWorkspace(next);
+				if (next === "" || taskId === "") return;
+				const current = tasks.find((o) => o.id === taskId);
+				if (current !== void 0 && current.workspace !== next) setTaskId("");
+			}, [taskId, tasks]);
+			const footerHint = error !== null ? null : atLimit && !done ? t("recordsLimitHint") : done && rows.length > 0 ? t("recordsNoMore") : loading ? t("recordsLoading") : null;
+			return (0, react.createElement)("div", { style: {
+				width: "100%",
+				display: "flex",
+				justifyContent: "center"
+			} }, (0, react.createElement)("div", {
+				id: PANEL_CONTENT_ID,
+				style: PANEL_CONTENT_STYLE
 			}, (0, react.createElement)("div", { style: filterRowStyle$1 }, (0, react.createElement)(TimeRange, {
 				value: range,
 				onChange: setRange,
@@ -42465,7 +42602,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}), (0, react.createElement)(SelectField, {
 				value: workspace,
 				options: workspaceOptions,
-				onChange: setWorkspace,
+				onChange: changeWorkspace,
 				placeholder: t("listFilterWorkspaceAll"),
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("listFilterWorkspaceAll"),
@@ -42494,47 +42631,27 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 200
-			})), error !== null && rows.length === 0 ? (0, react.createElement)("div", { style: emptyStyle }, `${t("recordsLoadFail")}：${error}`, (0, react.createElement)("button", {
-				type: "button",
-				style: {
-					marginLeft: "8px",
-					color: "var(--tdt-business)",
-					background: "transparent",
-					border: 0,
-					cursor: "pointer",
-					font: "inherit"
-				},
+			})), loading && !loaded ? (0, react.createElement)(Loading, { label: t("recordsLoading") }) : null, rows.length === 0 ? loaded && error === null ? (0, react.createElement)("div", { style: emptyStyle }, touched ? t("recordsEmptyFiltered") : t("recordsEmpty")) : null : (0, react.createElement)("div", { className: "dsh-tdt-rec-tl" }, days.map((day, dayIndex) => (0, react.createElement)("div", { key: `${day.key}#${dayIndex}` }, (0, react.createElement)("div", { className: "dsh-tdt-rec-day" }, (0, react.createElement)("span", { className: "dsh-tdt-rec-daylabel" }, dayLabelOf(day.key, t)), (0, react.createElement)("span", { className: "dsh-tdt-rec-daycount" }, tt("recordsDayCount", { n: day.items.length }))), (0, react.createElement)("div", { className: "dsh-tdt-rec-axis" }, day.items.map((row) => (0, react.createElement)(RecordBlock, {
+				key: row.id,
+				row,
+				label: titleById.get(row.task_id) ?? row.task_id,
+				t,
+				tt,
+				openSession
+			}))))), (0, react.createElement)("div", {
+				ref: observeSentinel,
+				style: { height: "1px" }
+			}), (0, react.createElement)("div", { className: "dsh-tdt-rec-foot" }, error !== null ? (0, react.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`) : null, error !== null ? (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
 				onClick: () => {
 					load(cursor);
 				}
-			}, t("recordsRetry"))) : loaded && rows.length === 0 ? (0, react.createElement)("div", { style: emptyStyle }, hasFilter ? t("recordsEmptyFiltered") : t("recordsEmpty")) : (0, react.createElement)("div", { className: "dsh-tdt-rec-tl" }, days.map((day) => (0, react.createElement)("div", { key: day.key }, (0, react.createElement)("div", { className: "dsh-tdt-rec-day" }, (0, react.createElement)("span", { className: "dsh-tdt-rec-daylabel" }, dayLabelOf(day.key, t)), (0, react.createElement)("span", { className: "dsh-tdt-rec-daycount" }, t("recordsDayCount").replace("{n}", String(day.items.length)))), (0, react.createElement)("div", { className: "dsh-tdt-rec-axis" }, day.items.map((row) => {
-				const clickable = onOpenSession !== void 0 && row.session_id !== null && row.session_id !== "";
-				const planned = hmOf(row.scheduled_at);
-				const actual = row.dispatched_at === null ? null : hmOf(row.dispatched_at);
-				const late = actual !== null && actual !== planned ? t("recordsPlannedAt").replace("{time}", planned) : "";
-				return (0, react.createElement)(clickable ? "button" : "div", {
-					key: row.id,
-					type: clickable ? "button" : void 0,
-					className: `dsh-tdt-rec-block${clickable ? " dsh-tdt-rec-block--on" : ""}`,
-					onClick: clickable ? () => {
-						onOpenSession?.(row.session_id);
-					} : void 0
-				}, (0, react.createElement)("span", {
-					className: `dsh-tdt-rec-bar${isRunning(row.status) ? " dsh-tdt-rec-bar--run" : ""}`,
-					style: { background: barColorOf(row.status) }
-				}), (0, react.createElement)("span", { className: "dsh-tdt-rec-time" }, actual ?? planned), (0, react.createElement)(MarqueeText, {
-					text: titleById.get(row.task_id) ?? row.task_id,
-					title: titleById.get(row.task_id) ?? row.task_id,
-					style: {
-						flex: "1 1 auto",
-						minWidth: 0,
-						fontSize: "var(--tdt-font-md)"
-					}
-				}), (0, react.createElement)("span", { className: "dsh-tdt-rec-meta" }, late === "" ? metaOf(row, t) : `${metaOf(row, t)} · ${late}`));
-			})))), (0, react.createElement)("div", {
-				ref: sentinelRef,
-				style: { height: "1px" }
-			}), (0, react.createElement)("div", { className: "dsh-tdt-rec-foot" }, loading ? t("recordsLoading") : atLimit ? t("recordsLimitHint") : done && rows.length > 0 ? t("recordsNoMore") : ""))));
+			}, t("recordsRetry")) : footerHint !== null ? (0, react.createElement)("span", null, footerHint) : (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				onClick: loadMore
+			}, t("recordsLoadMore"))))));
 		}
 		//#endregion
 		//#region src/task-sort.ts
@@ -43264,17 +43381,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		};
 		/** token 用量一格（展开详情用；K/M 大众格式，用户 2026-10-02）。 */
 		const tokensDetailOf = (row) => `${row.token_in === null ? "—" : formatTokenCount(row.token_in)} / ${row.token_out === null ? "—" : formatTokenCount(row.token_out)} / ${row.token_in_cache === null ? "—" : formatTokenCount(row.token_in_cache)}`;
-		/** 状态三档桶（用户 2026-10-02：过滤只给 执行中 / 失败 / 成功 三档，七态归桶；值传后端 statuses）。 */
-		const FILTER_BUCKETS = {
-			running: [
-				"pending",
-				"dispatched",
-				"running",
-				"unknown"
-			],
-			failed: ["failed", "skipped"],
-			succeeded: ["succeeded"]
-		};
 		/**
 		* 产出物图标钮（用户 2026-10-02：图标加**浅色圆角方形底板**，hover 变亮 ⇒ 明示可点）。
 		* ⚠️ **不写 background**：底板 / hover 走 `.dsh-tdt-rec-out`（inline 背景会盖掉 `:hover`）。
@@ -43567,7 +43673,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const range = rangeToQuery(recRange, "day");
 				fetchInstances({
 					taskId: row.id,
-					statuses: recStatus === "" || recStatus === "all" ? void 0 : FILTER_BUCKETS[recStatus],
+					statuses: recStatus === "" || recStatus === "all" ? void 0 : statusesOfBucket(recStatus),
 					from: range.fromTs,
 					to: range.toTs,
 					limit: recLimit
@@ -44377,13 +44483,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				display: "flex",
 				justifyContent: "center"
 			} }, (0, react.createElement)("div", {
-				id: "dsh-tdt-main",
-				style: {
-					width: "100%",
-					maxWidth: "1120px",
-					minWidth: "760px",
-					boxSizing: "border-box"
-				}
+				id: PANEL_CONTENT_ID,
+				style: PANEL_CONTENT_STYLE
 			}, (0, react.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -44916,11 +45017,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}
 		}
 		/**
-		* 宿主写入的 ISO 时间串 → `YYYY-MM-DD HH:mm:ss`（本机时区，解析失败原样返回）。
+		* ISO 时间串 → `YYYY-MM-DD HH:mm:ss`（本机时区，解析失败原样返回）。
 		* ⚠️ 不用 `toLocaleString`：它的补零与分隔符随语言 / 运行环境变（用户 2026-09-30 反馈出现过
 		* 个位数分钟）⇒ 自己拼，**月 / 日 / 时 / 分 / 秒一律两位**。
+		* 现只有**调试页**在用（快照刷新时刻 / 下次执行时刻）；执行记录页改用按天分组的短时刻。
 		*/
-		/** 执行记录时间戳：`YYYY-MM-DD HH:mm:ss`（显式拼、不用 toLocaleString）。 */
 		const formatTime = (iso) => formatDateTime(iso, { seconds: true });
 		/** 任务行归一：旧版快照的 tasks 是 string[]（只有 id），兼容成明细行。 */
 		function normalizeTaskRow(item) {
@@ -45047,12 +45148,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return patch;
 		}
 		/**
-		* 调度表整页（`main` 槽，双标签）：
-		* - **任务配置**：内嵌任务表 JSON 输入框（暂存 + 保存）+ 已解析任务列表（id / 名称 / 周期 / 下次执行）；
-		* - **执行记录**：全部执行记录，支持按状态 / 按任务过滤，点一行展开该次执行的事件时间线。
+		* 调度表整页（`main` 槽，**三标签**：任务配置 / 执行记录 / 调试，见顶部 Segmented）：
+		* - **任务配置**：卡片式任务列表（`TaskListView`）+ 右侧占布局的新增/编辑分栏；
+		* - **执行记录**：全部任务的流水账时间轴（`RecordsTimelineView`）—— 走 `GET /tasks/instances` 的
+		*   **HTTP 游标分页**，**不吃调试快照**，点块打开归档会话弹窗（2026-10-04 起；此前的「原生 select +
+		*   表格 + 就地展开事件」测试屏已整段删除）；
+		* - **调试**：`GET /db` 的原始表快照 + 运行参数（与下面的任务表快照无关）。
 		*
-		* 数据来自 settings 快照的 debugSnapshot 字段（host 周期写入），经 useSyncExternalStore
-		* 订阅自动刷新，无需手动重开。整页由布局服务的 `main` 槽承载：选中侧栏条目即替换会话区。
+		* ⚠️ 两条**不能混**的数据面：①「任务配置 / 调试」用的任务表来自 settings 快照的 `debugSnapshot`
+		* 字段（host 周期写入），经 useSyncExternalStore 订阅自动刷新；② 任务列表卡片走 `/tasks/overview`、
+		* 执行记录走 `/tasks/instances`、编辑器选项走 `/options` —— 都是 HTTP。整页由布局服务的 `main` 槽承载：
+		* 选中侧栏条目即替换会话区。
 		*/
 		function TaskPage(props) {
 			const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles } = props;

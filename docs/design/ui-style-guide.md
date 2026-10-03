@@ -86,6 +86,8 @@
 | 随字号缩放行高 | `archive-session-css.ts` `calc(Npx + var(--dsh-content-font-delta))` | 承担字号自适应，换 token 会丢掉缩放能力 |
 | 会话镜像官方样式 | `archive-session-css.ts` 的 `--dsh-content-*` / `--dsh-chat-*` | `ui-foundation.md` §九 边界（复刻官方会话面） |
 | 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`file-browser.tsx` 菜单项 / 面包屑 / 树 toggle；`task-list.tsx` chip；`mirror/*` 折叠头 | 语义非普通按钮，走各自专用类与计算属性 |
+| 任务选择器浮层的列表定高 | `ui/TaskPicker.tsx` `.dsh-tdt-tp-list{max-height:264px}`（内容区定高，与 `task-list.tsx:360` 同类） | 内容区尺寸，与控件档无关 |
+| **宿主值导入例外：官方 `Toast`** | `index.ts` 的保存成功提示（`import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'`） | 2026-10-04 评审登记：官件自带明暗自适应 + 淡入淡出，这里只要「一次性轻提示」，且与 `FloatingToast`（操作结果提示）分工不同。**除它之外业务文件不许再引宿主值**；若将来要收编，走 §三「待抽象 #5」同批做 |
 
 ### 待抽象（2026-10-01 审计登记，**未做**——显式记账，别当没看见）
 
@@ -93,7 +95,7 @@
 
 | # | 事项 | 现状 | 建议 |
 |---|---|---|---|
-| 1 | 省略号三件套 | `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` 全仓 **19 处**（会话 CSS 约 14 处） | 基础层加一个 `.dsh-tdt-ellipsis` |
+| 1 | 省略号三件套 | `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` 全仓约 19 处（会话 CSS 约 14 处） | ✅ **2026-10-04 已落 `.dsh-tdt-ellipsis`**（`ui/controls-css.ts`）；**新调用点必须用它**，旧的 19 处待逐步收编 |
 | 2 | 手搓图标钮 | `archive-session-css.ts` 的 `head-btn`(28×28) / `tree-toggle`(20×20) 仍自绘 | 收编 `ui/IconButton` |
 | 3 | 6px 拖拽条 | `task-editor-css.ts` 与 `archive-session-css.ts` 各写一遍（后者注释自称「同一套」）；**连 CSS 带逻辑两份**：两个 `startResize`（`task-editor.tsx` / `index.ts`）都各自实现了「拖动调宽」与「拖动禁选」（后者 2026-10-02 加） | 上提 `.dsh-tdt-resizer` + 一个 `startResizeLayoutWidth()`（含 preventDefault / `body.user-select` 恢复） |
 | 4 | 卡 / 浮层外壳 | 同构 **7 处**（`ed-card` / `ed-panel` / `sv-panel` / `sv-stats` / `layer` …） | 基础层加 Panel / Card 壳 |
