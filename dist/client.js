@@ -1860,7 +1860,10 @@ body[data-ds-dark-theme]{
 /* 跑马灯文本（MarqueeText）：双层——外层只裁剪，内层才 transform 滚动；非 hover 内层自带省略号 */
 .dsh-tdt-mq{display:block;overflow:hidden;white-space:nowrap;}
 .dsh-tdt-mq .dsh-tdt-mq-in{display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top;}
-.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s infinite alternate;}
+/* ⚠️ 跑法（用户 2026-10-03 拍板）：**跑一遍、停在尾字**（播放 1 次 + forwards），不来回弹、不无限跑。
+   滚距 = 精确溢出量 ⇒ 停下时最后一个字正好贴右缘，**不会跑进黑块**（黑块是旧手写版把
+   内层盒子裁了、按「半截文本」平移导致的）。鼠标移开 ⇒ :hover 失效 ⇒ 自动复位回省略号态。 */
+.dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s 1 forwards;}
 @keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 `;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
@@ -2025,7 +2028,7 @@ body[data-ds-dark-theme]{
 			const run = dist > 0;
 			return (0, react.createElement)("span", {
 				ref: outerRef,
-				className: run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq",
+				className: (run ? "dsh-tdt-mq dsh-tdt-mq-run" : "dsh-tdt-mq") + (props.className === void 0 ? "" : ` ${props.className}`),
 				title: props.title,
 				style: props.style
 			}, (0, react.createElement)("span", {
@@ -3150,8 +3153,8 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
 .dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 .dsh-tdt-sv-preview-label{flex:none;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* 路径：超长省略（CSS ellipsis），hover 时由 JS 改为向左跑马灯（见 file-preview.tsx startMarquee）。 */
-.dsh-tdt-sv-preview-title{flex:1;min-width:0;display:flex;overflow:hidden;}
+/* 路径 / 文件名：走全站唯一 MarqueeText（ui/MarqueeText.tsx），本类只提供**字体与字色皮肤**
+   （挂在 MarqueeText 外层、内层继承）；外层裁剪与滚动由 .dsh-tdt-mq 负责。 */
 .dsh-tdt-sv-preview-title-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
 /* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
 .dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
@@ -3196,9 +3199,9 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
-/* 工作区之外的只读完整路径（用户 2026-10-03）：无任何交互——不可点、无 hover 反馈、
-   不跑马灯、不给 title；过长省略号截断（想看全路径用第二排的「复制」）。 */
-.dsh-tdt-sv-crumbbar-plain{flex:1;min-width:0;display:flex;overflow:hidden;}
+/* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
+   MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
+   裁剪与滚动由 .dsh-tdt-mq 负责。 */
 .dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
 .dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
 /* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
@@ -6972,10 +6975,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const barRef = (0, react.useRef)(null);
 			const regionRef = (0, react.useRef)(null);
 			const measureRef = (0, react.useRef)(null);
-			const titleRef = (0, react.useRef)(null);
-			const titleInnerRef = (0, react.useRef)(null);
-			const plainRef = (0, react.useRef)(null);
-			const plainInnerRef = (0, react.useRef)(null);
 			const [sourceView, setSourceView] = (0, react.useState)(false);
 			const [reloadNonce, setReloadNonce] = (0, react.useState)(0);
 			const [copied, setCopied] = (0, react.useState)(false);
@@ -6993,34 +6992,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const raw = parsed.failed ?? {};
 				const code = typeof raw.code === "string" ? bareCode(raw.code) : "";
 				if (code === "outside-workspace" || code === "not-found" || code === "lookup-not-found") setOutside(true);
-			};
-			/**
-			* 跑马灯：hover 时放开内层宽度并向左滚到底，移出即复位（文件名 / 只读完整路径两处共用，
-			* 用户 2026-09-28「太长显示不下就 hover 跑马灯」；只读路径那处是 2026-10-03 追加）。
-			*/
-			const marqueeOn = (outer, inner) => {
-				if (outer === null || inner === null) return;
-				inner.style.maxWidth = "none";
-				inner.style.textOverflow = "clip";
-				const shift = inner.scrollWidth - outer.clientWidth;
-				if (shift > 0) {
-					inner.style.transition = "transform 3s linear";
-					inner.offsetWidth;
-					inner.style.transform = `translateX(${-shift}px)`;
-				}
-			};
-			const marqueeOff = (inner) => {
-				if (inner === null) return;
-				inner.style.transition = "none";
-				inner.style.transform = "translateX(0)";
-				inner.style.maxWidth = "";
-				inner.style.textOverflow = "";
-			};
-			const startMarquee = () => {
-				marqueeOn(titleRef.current, titleInnerRef.current);
-			};
-			const stopMarquee = () => {
-				marqueeOff(titleInnerRef.current);
 			};
 			/** 列举某目录并展示（清空 viewing；收起下拉）。 */
 			const fetchDir = (targetDir) => {
@@ -7314,20 +7285,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const crumbbarPlain = (0, react.createElement)("nav", {
 				className: "dsh-tdt-sv-crumbbar",
 				"aria-label": t("explorerCrumbsAria")
-			}, (0, react.createElement)("span", {
-				ref: plainRef,
-				className: "dsh-tdt-sv-crumbbar-plain",
+			}, (0, react.createElement)(MarqueeText, {
+				text: dir,
 				title: dir,
-				onMouseEnter: () => {
-					marqueeOn(plainRef.current, plainInnerRef.current);
-				},
-				onMouseLeave: () => {
-					marqueeOff(plainInnerRef.current);
+				className: "dsh-tdt-sv-crumbbar-plain-inner",
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0
 				}
-			}, (0, react.createElement)("span", {
-				ref: plainInnerRef,
-				className: "dsh-tdt-sv-crumbbar-plain-inner"
-			}, dir)), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react.createElement)(IconButton, {
+			}), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
@@ -7439,16 +7405,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
 				label: t("previewClose"),
 				onClick: onClose
-			})))), viewing !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react.createElement)("span", {
-				ref: titleRef,
-				className: "dsh-tdt-sv-preview-title",
-				onMouseEnter: startMarquee,
-				onMouseLeave: stopMarquee
-			}, (0, react.createElement)("span", {
-				ref: titleInnerRef,
+			})))), viewing !== null ? (0, react.createElement)("div", { className: "dsh-tdt-sv-titlebar" }, (0, react.createElement)(MarqueeText, {
+				text: viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1),
+				title: viewing,
 				className: "dsh-tdt-sv-preview-title-inner",
-				title: viewing
-			}, viewing.slice(Math.max(viewing.lastIndexOf("/"), viewing.lastIndexOf("\\")) + 1))), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)(Segmented, {
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0
+				}
+			}), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, isMdPreview ? (0, react.createElement)(Segmented, {
 				size: "sm",
 				variant: "default",
 				label: t("previewMdSwitchAria"),

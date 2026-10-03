@@ -120,3 +120,33 @@ workspaceFiles.readBytes(sessionId, path)   // ❌ 少传 options
 以后再加拖拽（分割条 / 面板调宽 / 抽屉），都要配这层「拖动期间禁 iframe 指针事件」。
 
 **质量门**：typecheck 绿 · 冒烟 **504/0**（+2 条：resizing 类存在 + 松手撤销）· build 过。
+
+## 三-十 跑马灯：滚出黑块 + 尾部永不显示，三处手写收编（U29，2026-10-03）
+
+**现象（用户报 + 截图）**：hover 跑马灯时右边跑出一大片黑；跑出来后**后面的内容没显示**。
+
+**根因**：手写的三处跑马灯（`file-preview.tsx` 预览头路径、`file-browser.tsx` 第二排文件名与只读完整路径）
+内层带 `overflow:hidden` ⇒ 按 flex 规矩 **`overflow:hidden` 的子元素最小宽度自动为 0** ⇒ 内层盒子被压到
+和容器一样宽，**超出部分被内层自己裁掉**。而滚距是按「完整文本宽 − 容器宽」算的 ⇒
+滚动时移动的是一个**只装着开头半截文本的盒子**：尾部从头到尾没进过画面，盒子整体滑出后右侧就是一片黑。
+（截图的等宽字体可确认是只读路径那处。）
+
+**共用组件 `MarqueeText` 没这个病**：hover 时 `max-width:none; overflow:visible` —— 盒子放开到全文宽，
+滚距精确等于溢出量，滚到头时尾字正好贴右缘。
+
+**处置（用户拍板：该抽象的抽象，统一解决；可加参数/重载，实在不行才在特有处覆盖）**：
+
+| 改动 | 位置 | 要点 |
+|---|---|---|
+| 三处手写收编 | `file-preview.tsx`、`file-browser.tsx` | 全部换 `MarqueeText`；删 `marqueeOn/Off`、`start/stopMarquee` 与 6 个 ref |
+| 加参数 | `ui/MarqueeText.tsx` | 新增 `className`（追加在外层，承载调用方字体/字色皮肤；内层继承） |
+| 全局跑法 | `ui/controls-css.ts` | `infinite alternate` → **播放 1 次 + `forwards`**（跑完停在尾字，不来回弹、不无限跑）；移开鼠标自动复位 |
+| 清死代码 | `archive-session-css.ts` | 删两条已无人引用的外层规则（`.dsh-tdt-sv-preview-title` / `.dsh-tdt-sv-crumbbar-plain`），`-inner` 保留作皮肤类 |
+
+**踩坑（复发，务必记牢）**：CSS 写在 **模板字符串**里 ⇒ **注释里不能出现反引号**。
+我在新注释里写了 `` `ui/MarqueeText.tsx` `` 和 `` `.dsh-tdt-mq` ``，直接把模板字符串提前闭合，
+报错却报在**几十行之后**（`Unterminated template literal` / `Variable declaration expected`），
+和 U28 那次「插进选择器中间」是同一类错。**规矩：往 CSS 模板里写注释只用中文引号或不用引号。**
+
+**验证**：typecheck 绿 · 冒烟 **506/0**（+2 条：无手写残留 / 跑法为 1+forwards）· build 过；
+**并按 U28 教训抽查产物** `dist/client.js`，确认六条相关 CSS 规则完整未被截断。

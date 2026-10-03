@@ -18,7 +18,7 @@
 // `expected 3 business argument(s) plus an optional AbortSignal, got 2`（真机 2026-10-03）。
 import { Component, createElement as h, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
-import { Button, IconButton, Segmented } from './ui'
+import { Button, IconButton, MarqueeText, Segmented } from './ui'
 import {
   CodeBlock,
   IconCheckOutlineRegular,
@@ -473,31 +473,6 @@ export function FilePreviewPanel(props: {
   // 「刷新」自增：触发子预览重读（图片/PDF 重读字节、文本重读第一页）。
   const [reloadNonce, setReloadNonce] = useState(0)
   const [copied, setCopied] = useState(false)
-  // 顶栏路径跑马灯：超长省略，hover 时向左滚动露出完整路径。
-  const titleRef = useRef<HTMLSpanElement>(null)
-  const titleInnerRef = useRef<HTMLSpanElement>(null)
-  const startMarquee = (): void => {
-    const outer = titleRef.current
-    const inner = titleInnerRef.current
-    if (outer === null || inner === null) return
-    inner.style.maxWidth = 'none'
-    inner.style.textOverflow = 'clip'
-    const shift = inner.scrollWidth - outer.clientWidth
-    if (shift > 0) {
-      inner.style.transition = 'transform 3s linear'
-      // 强制回流后再设 transform，确保 transition 生效。
-      void inner.offsetWidth
-      inner.style.transform = `translateX(${-shift}px)`
-    }
-  }
-  const stopMarquee = (): void => {
-    const inner = titleInnerRef.current
-    if (inner === null) return
-    inner.style.transition = 'none'
-    inner.style.transform = 'translateX(0)'
-    inner.style.maxWidth = ''
-    inner.style.textOverflow = ''
-  }
   const copyPath = (): void => {
     void writeClipboard(path).then(ok => { if (ok) { setCopied(true); window.setTimeout(() => setCopied(false), 1500) } })
   }
@@ -516,9 +491,15 @@ export function FilePreviewPanel(props: {
         }),
     h('div', { className: 'dsh-tdt-sv-preview-head' },
       h('span', { className: 'dsh-tdt-sv-preview-label' }, t('previewFileLabel')),
-      h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },
-        h('span', { ref: titleInnerRef, className: 'dsh-tdt-sv-preview-title-inner', title: path }, path),
-      ),
+      // 路径跑马灯：走全站唯一实现 MarqueeText（等宽皮肤由 `-inner` 类带出）。
+      // 旧手写版（内层 `overflow:hidden` 把盒子压到容器宽 ⇒ 滚的是"半截文本"，尾部永不显示、
+      // 盒子滑出后右侧一片黑）已废弃，2026-10-03 收编。
+      h(MarqueeText, {
+        text: path,
+        title: path,
+        className: 'dsh-tdt-sv-preview-title-inner',
+        style: { flex: '1 1 auto', minWidth: 0 },
+      }),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
         isMd
           ? h(Segmented, {

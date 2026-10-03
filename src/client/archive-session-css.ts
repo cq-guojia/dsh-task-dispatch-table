@@ -226,8 +226,8 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
 .dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 .dsh-tdt-sv-preview-label{flex:none;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* 路径：超长省略（CSS ellipsis），hover 时由 JS 改为向左跑马灯（见 file-preview.tsx startMarquee）。 */
-.dsh-tdt-sv-preview-title{flex:1;min-width:0;display:flex;overflow:hidden;}
+/* 路径 / 文件名：走全站唯一 MarqueeText（ui/MarqueeText.tsx），本类只提供**字体与字色皮肤**
+   （挂在 MarqueeText 外层、内层继承）；外层裁剪与滚动由 .dsh-tdt-mq 负责。 */
 .dsh-tdt-sv-preview-title-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
 /* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
 .dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
@@ -272,9 +272,9 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
-/* 工作区之外的只读完整路径（用户 2026-10-03）：无任何交互——不可点、无 hover 反馈、
-   不跑马灯、不给 title；过长省略号截断（想看全路径用第二排的「复制」）。 */
-.dsh-tdt-sv-crumbbar-plain{flex:1;min-width:0;display:flex;overflow:hidden;}
+/* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
+   MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
+   裁剪与滚动由 .dsh-tdt-mq 负责。 */
 .dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
 .dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
 /* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */

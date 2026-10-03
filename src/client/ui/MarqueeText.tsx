@@ -10,7 +10,16 @@
 import { createElement as h, useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from 'react'
 
 /** 跑马灯文本。 */
-export function MarqueeText(props: { text: string; style?: CSSProperties; title?: string }): ReactElement {
+export function MarqueeText(props: {
+  text: string
+  style?: CSSProperties
+  title?: string
+  /**
+   * 追加在外层上的类名（**在 `.dsh-tdt-mq` 之后**，用于调用方自带字体 / 字号 / 字色等皮肤）。
+   * 皮肤写在调用方自己的样式域里，本组件只管滚动；字体类挂外层即可（内层继承）。
+   */
+  className?: string
+}): ReactElement {
   const outerRef = useRef<HTMLSpanElement | null>(null)
   const innerRef = useRef<HTMLSpanElement | null>(null)
   const [dist, setDist] = useState(0)
@@ -32,7 +41,7 @@ export function MarqueeText(props: { text: string; style?: CSSProperties; title?
   const run = dist > 0
   return h('span', {
     ref: outerRef,
-    className: run ? 'dsh-tdt-mq dsh-tdt-mq-run' : 'dsh-tdt-mq',
+    className: (run ? 'dsh-tdt-mq dsh-tdt-mq-run' : 'dsh-tdt-mq') + (props.className === undefined ? '' : ` ${props.className}`),
     title: props.title,
     style: props.style,
   },

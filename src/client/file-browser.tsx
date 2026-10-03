@@ -13,7 +13,7 @@
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
 import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { Button, IconButton, Segmented } from './ui'
+import { Button, IconButton, MarqueeText, Segmented } from './ui'
 import {
   FileTypeIcon,
   IconCheckOutlineRegular,
@@ -365,12 +365,6 @@ export function FileBrowser(props: {
   const barRef = useRef<HTMLDivElement>(null)
   const regionRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
-  // 文件名跑马灯（同 FilePreviewPanel：超长省略，hover 时向左滚动露出全名）。
-  const titleRef = useRef<HTMLSpanElement>(null)
-  const titleInnerRef = useRef<HTMLSpanElement>(null)
-  // 只读完整路径（工作区之外）的跑马灯：独立 ref 一套，不与文件名那套互相干扰。
-  const plainRef = useRef<HTMLSpanElement>(null)
-  const plainInnerRef = useRef<HTMLSpanElement>(null)
   // 预览态：md 渲染⇄源码 + 刷新自增（触发 Bytes/Text 重读）。
   const [sourceView, setSourceView] = useState(false)
   const [reloadNonce, setReloadNonce] = useState(0)
@@ -395,30 +389,6 @@ export function FileBrowser(props: {
     if (code === 'outside-workspace' || code === 'not-found' || code === 'lookup-not-found') setOutside(true)
   }
 
-  /**
-   * 跑马灯：hover 时放开内层宽度并向左滚到底，移出即复位（文件名 / 只读完整路径两处共用，
-   * 用户 2026-09-28「太长显示不下就 hover 跑马灯」；只读路径那处是 2026-10-03 追加）。
-   */
-  const marqueeOn = (outer: HTMLSpanElement | null, inner: HTMLSpanElement | null): void => {
-    if (outer === null || inner === null) return
-    inner.style.maxWidth = 'none'
-    inner.style.textOverflow = 'clip'
-    const shift = inner.scrollWidth - outer.clientWidth
-    if (shift > 0) {
-      inner.style.transition = 'transform 3s linear'
-      void inner.offsetWidth // 强制回流后再设 transform，确保 transition 生效
-      inner.style.transform = `translateX(${-shift}px)`
-    }
-  }
-  const marqueeOff = (inner: HTMLSpanElement | null): void => {
-    if (inner === null) return
-    inner.style.transition = 'none'
-    inner.style.transform = 'translateX(0)'
-    inner.style.maxWidth = ''
-    inner.style.textOverflow = ''
-  }
-  const startMarquee = (): void => { marqueeOn(titleRef.current, titleInnerRef.current) }
-  const stopMarquee = (): void => { marqueeOff(titleInnerRef.current) }
 
   /** 列举某目录并展示（清空 viewing；收起下拉）。 */
   const fetchDir = (targetDir: string): void => {
@@ -694,14 +664,14 @@ export function FileBrowser(props: {
     className: 'dsh-tdt-sv-crumbbar',
     'aria-label': t('explorerCrumbsAria'),
   },
-    h('span', {
-      ref: plainRef,
-      className: 'dsh-tdt-sv-crumbbar-plain',
+    // 只读完整路径走全站唯一 MarqueeText（等宽 + 灰字皮肤由 `-inner` 类带出）。
+    // 旧手写版内层 overflow:hidden ⇒ 盒子被压到容器宽、滚的是「半截文本」（尾部永不显示 + 右侧黑块）。
+    h(MarqueeText, {
+      text: dir,
       title: dir,
-      onMouseEnter: () => { marqueeOn(plainRef.current, plainInnerRef.current) },
-      onMouseLeave: () => { marqueeOff(plainInnerRef.current) },
-    },
-      h('span', { ref: plainInnerRef, className: 'dsh-tdt-sv-crumbbar-plain-inner' }, dir)),
+      className: 'dsh-tdt-sv-crumbbar-plain-inner',
+      style: { flex: '1 1 auto', minWidth: 0 },
+    }),
     h('div', { className: 'dsh-tdt-sv-head-actions' },
       tooled(t('previewClose'),
         h(IconButton, {
@@ -836,13 +806,16 @@ export function FileBrowser(props: {
           })),
       ),
     ),
-    // 第二排：文件名（跑马灯）+ 操作按钮——仅文件预览态显示；目录态整排隐藏
     // （用户本轮 point1：没选文件时空着没意思，复制/刷新本就该随文件走）。
     viewing !== null
       ? h('div', { className: 'dsh-tdt-sv-titlebar' },
-        h('span', { ref: titleRef, className: 'dsh-tdt-sv-preview-title', onMouseEnter: startMarquee, onMouseLeave: stopMarquee },
-          h('span', { ref: titleInnerRef, className: 'dsh-tdt-sv-preview-title-inner', title: viewing },
-            viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1))),
+        // 文件名走全站唯一 MarqueeText（超长省略号，hover 跑一遍停在尾字）。
+        h(MarqueeText, {
+          text: viewing.slice(Math.max(viewing.lastIndexOf('/'), viewing.lastIndexOf('\\')) + 1),
+          title: viewing,
+          className: 'dsh-tdt-sv-preview-title-inner',
+          style: { flex: '1 1 auto', minWidth: 0 },
+        }),
         h('div', { className: 'dsh-tdt-sv-head-actions' },
           isMdPreview
             ?             h(Segmented, {

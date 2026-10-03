@@ -1011,11 +1011,19 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('crumbbar-plain'))
   check('工作区之外：判定依据是 list 的真实错误码 outside-workspace（不靠 workspaceRoots 猜）',
     clientJs.includes('noteOutside') && clientJs.includes('outside-workspace'))
-  check('只读路径：省略号截断 + hover 跑马灯（marqueeOn/Off 复用，不另写一套）',
-    /\.dsh-tdt-sv-crumbbar-plain\{[^}]*overflow:hidden/.test(clientJs)
-    && /\.dsh-tdt-sv-crumbbar-plain-inner\{[^}]*white-space:nowrap[^}]*text-overflow:ellipsis/.test(clientJs)
-    && clientJs.includes('marqueeOn') && clientJs.includes('marqueeOff')
-    && !/\.dsh-tdt-sv-crumbbar-plain\{[^}]*:hover/.test(clientJs))
+  check('只读路径：走全站唯一 MarqueeText（不再手写跑马灯）',
+    clientJs.includes('crumbbar-plain-inner')
+    && !/marqueeOn|marqueeOff|startMarquee|stopMarquee/.test(clientJs)
+    && /className:\s*"dsh-tdt-sv-crumbbar-plain-inner"/.test(clientJs))
+  // 跑马灯收编（用户 2026-10-03）：预览栈三处手写版（内层 overflow:hidden 把盒子压到容器宽
+  // ⇒ 滚的是「半截文本」、尾部永不显示、滑出后右侧一片黑）全部换成 ui/MarqueeText；
+  // 跑法统一 = 播放 1 次 + forwards（跑到尾字就停），不再 infinite alternate 来回弹。
+  check('跑马灯全站唯一实现：预览栈不再有手写版（marqueeOn/Off 已删）',
+    !/marqueeOn|marqueeOff|startMarquee|stopMarquee/.test(clientJs)
+    && clientJs.includes('dsh-tdt-mq'))
+  check('跑马灯跑法：跑一遍停在尾字（1 + forwards，非 infinite alternate）',
+    /\.dsh-tdt-mq-run:hover \.dsh-tdt-mq-in\{[^}]*animation:[^;}]*\b1\s+forwards/.test(clientJs)
+    && !/animation:[^;}]*infinite\s+alternate/.test(clientJs))
   check('只读路径不可点（无 button/role=button，仅 title + hover）',
     !/crumbbar-plain[^"]*"[^}]*onClick/.test(clientJs)
     && /\.dsh-tdt-sv-crumbbar-plain-inner\{[^}]*cursor:default/.test(clientJs))
