@@ -35,6 +35,14 @@ export {
 } from './Field'
 export { MarqueeText } from './MarqueeText'
 export {
+  TaskPicker,
+  TASKPICKER_DOMAIN,
+  TASKPICKER_CSS,
+  ensureTaskPickerStyle,
+  type TaskOption,
+  type TaskPickerProps,
+} from './TaskPicker'
+export {
   DateField,
   TimeField,
   type CalendarLabels,

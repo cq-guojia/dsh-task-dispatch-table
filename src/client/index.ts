@@ -15,7 +15,7 @@
 // 结构化声明。客户端 bundle 不打包 src/config.ts（Node 侧），Config 语义在此以
 // 字段名复述。
 
-import { createElement as h, Fragment, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { createElement as h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { formatDateTime, formatPlanStamp } from './format'
 // 会话弹窗的唯一取数入口：按会话 id 取实例行（快照 / 产出）——**所有入口只传会话 id**。
 import { fetchInstanceBySession } from './query'
@@ -32,7 +32,8 @@ import {
   type TaskEditorDraft,
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
-import { Button, IconButton, Segmented, ensureUiBase } from './ui'
+import { Button, IconButton, Segmented, ensureUiBase, type TaskOption } from './ui'
+import { RecordsTimelineView } from './records-timeline'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-list'
 // 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
@@ -41,7 +42,8 @@ import {
   attachmentsOf, workspacePathOf, type AttachedFileView, type UpstreamInputView,
 } from './task-file-context'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
-import { INSTANCE_STATUSES, statusTextOf } from './status-text'
+// ⚠️ 本文件不再引 `status-text`：状态名只由**执行记录时间轴**（records-timeline.tsx）与卡片三面板消费；
+// 旧测试版 records 屏（原生 select + 表格）已于 2026-10-04 被时间轴取代（见 worklog/execution-timeline.md）。
 import { ConfigPanel } from './config-panel'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
@@ -269,30 +271,15 @@ interface DebugTaskRow {
   next: string | null
 }
 
-interface DebugInstanceRow {
-  id: string
-  task_id: string
-  logical_date: string
-  scheduled_at: string
-  status: string
-  attempt: number
-  session_id: string | null
-  updated_at: string
-}
-
-interface DebugEventRow {
-  seq: number
-  instance_id: string
-  ts: string
-  kind: string
-  detail: string | null
-}
-
+/**
+ * 调试快照的客户端投影。
+ * ⚠️ 2026-10-04：`instances` / `events` 两个数组**已不再声明** —— 它们的唯一消费者是旧测试版「执行记录」屏
+ * （原生 select + 原生表格），该屏已被 HTTP 时间轴取代；调试页走独立的 `GET /db`（`dbDump`），不吃这两个字段。
+ * 宿主仍会在快照里下发它们（协议没动），客户端只当没看见。
+ */
 interface DebugSnapshotData {
   at: string
   tasks: DebugTaskRow[]
-  instances: DebugInstanceRow[]
-  events: DebugEventRow[]
   warns: string[]
 }
 
@@ -331,7 +318,7 @@ function parseDebugSnapshot(raw: unknown): DebugSnapshotData | undefined {
     const parsed: unknown = JSON.parse(raw)
     if (typeof parsed !== 'object' || parsed === null) return undefined
     const candidate = parsed as Partial<DebugSnapshotData>
-    if (!Array.isArray(candidate.instances) || !Array.isArray(candidate.events)) return undefined
+    // 只要求「是个对象」：`tasks` / `warns` 缺失都按空处理（旧版快照 / 宿主裁剪字段都不该让整页进错误态）。
     const tasks = Array.isArray(candidate.tasks) ? candidate.tasks.map(normalizeTaskRow) : []
     return { ...(parsed as DebugSnapshotData), tasks }
   } catch {
@@ -416,12 +403,6 @@ function parseOutputs(raw: unknown): string[] {
   return []
 }
 
-/** 路径末段（表格里只显示文件名，完整路径进 title）。 */
-function basenameOf(path: string): string {
-  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  return cut < 0 ? path : path.slice(cut + 1)
-}
-
 /**
  * 从**刚提交的任务定义**里取卡片可见字段做一次乐观补丁（用户 2026-09-30：改完要**立刻**看到，
  * 不等服务端那 ~1 秒的落盘 + 重拉）。
@@ -499,9 +480,6 @@ function TaskPage(props: {
   // JSON 不合法：持续态校验，浮层常驻 Toast（不自动消失）浮在保存行上方，不占版面、不挤压下方。
   const [invalidToast, setInvalidToast] = useState<{ on: boolean; key: number }>({ on: false, key: 0 })
   const invalidSeq = useRef(0)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [taskFilter, setTaskFilter] = useState<string>('all')
-  const [expanded, setExpanded] = useState<string | null>(null)
   // 新建 / 编辑任务分栏（U21：2026-10-01 起是「占布局的分栏」，不再是浮层弹窗）。
   // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
   const [editor, setEditor] = useState<{
@@ -958,10 +936,23 @@ function TaskPage(props: {
       enabled: row.enabled !== false,
     }
   })
-  const titleOfTask = (id: string): string => {
-    const row = taskRows.find(item => item.id === id)
-    return row === undefined ? id : `${row.title}（${row.id}）`
-  }
+  /**
+   * 执行记录总查询页的任务候选（2026-10-04）：走 **overview（HTTP）** 而不是调试快照 ——
+   * 任务目录本来就有独立的 HTTP 真源，不跟着快照的可达性起伏。
+   * 文案与 `editorTasks` 同口径（`[编号] 名称`），`TaskOption` 与 `EditorTaskOption` 同形。
+   */
+  const timelineTasks: TaskOption[] = useMemo(
+    () => overview.rows.map(row => {
+      const name = row.title === '' ? row.id : row.title
+      return {
+        id: row.id,
+        label: row.code ? `[${row.code}] ${name}` : name,
+        workspace: row.workspace,
+        enabled: row.enabled !== false,
+      }
+    }),
+    [overview.rows],
+  )
   /**
    * 归档会话查看：sessions.binding 只查已物化的 scope ⇒ openSessionView 内会先
    * sessions.retain(id, { source }) 物化（官方源码 client.js:3410 / 3472），通常无需反归档。
@@ -1038,12 +1029,6 @@ function TaskPage(props: {
       workspacePath: workspacePathOf(row?.snapshot ?? null),
     })
   }
-  const instances = (data?.instances ?? [])
-    .filter(row => statusFilter === 'all' || row.status === statusFilter)
-    .filter(row => taskFilter === 'all' || row.task_id === taskFilter)
-    .slice()
-    .sort((a, b) => (a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0))
-
   const hasRaw = raw.trim() !== ''
 
   /** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
@@ -1134,7 +1119,21 @@ function TaskPage(props: {
         ),
       ),
 
-      data === undefined
+      // ⚠️ 「执行记录」必须排在 `data === undefined` **之前**：新页走 `GET /tasks/instances`（HTTP + 游标分页），
+      // 不吃调试快照 —— 放在门槛之后的话，快照缺失 / 解析失败会把新页一起挡掉（2026-10-04）。
+      tab === 'records'
+        ? h(RecordsTimelineView, {
+          t,
+          // 任务候选 = `[编号] 名称`（与编辑器「前置任务」同一套文案口径），来源 = 面板 overview（HTTP）。
+          tasks: timelineTasks,
+          // 工作区候选 = 面板级唯一真源 `/options`（2026-10-04 拍板，见 worklog/workspace-options-unification.md）。
+          workspaces: editorOptions.workspaces,
+          // 只给会话 id：弹窗自己按 id 取快照 / 产出（铁律见 openView 注释）。
+          onOpenSession: viewSession !== null
+            ? (sessionId: string) => { void openView(sessionId) }
+            : undefined,
+        })
+        : data === undefined
         ? h('div', null,
             h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
             hasRaw ? h('pre', { style: preStyle }, raw) : null,
@@ -1297,145 +1296,10 @@ function TaskPage(props: {
                     )
                   : null,
               )
-          : h('div', null,
-              h('p', { style: hintStyle }, t('recordsHint')),
-              h('div', { style: rowStyle },
-                h('label', { style: { fontSize: 'var(--tdt-font-sm)' } },
-                  `${t('filterStatus')} `,
-                  h('select', {
-                    value: statusFilter,
-                    onChange: (event: { target: { value: string } }) => { setStatusFilter(event.target.value) },
-                  },
-                    h('option', { value: 'all' }, t('filterAll')),
-                    INSTANCE_STATUSES.map(status => h('option', { key: status, value: status }, statusTextOf(status, t))),
-                  ),
-                ),
-                h('label', { style: { fontSize: 'var(--tdt-font-sm)' } },
-                  `${t('filterTask')} `,
-                  h('select', {
-                    value: taskFilter,
-                    onChange: (event: { target: { value: string } }) => { setTaskFilter(event.target.value) },
-                  },
-                    h('option', { value: 'all' }, t('filterAll')),
-                    taskRows.map(row => h('option', { key: row.id, value: row.id }, `${row.title}（${row.id}）`)),
-                  ),
-                ),
-              ),
-              h('p', { style: hintStyle }, t('expandHint')),
-              instances.length === 0
-                ? h('p', { style: hintStyle }, t('debugInstancesEmpty'))
-                : h('table', { style: tableStyle },
-                    h('thead', null, h('tr', null,
-                      [t('colTask'), t('colSlot'), t('colStatus'), t('colAttempt'), t('colSession'), t('colOutputs'), t('colUpdated')]
-                        .map(name => h('th', { key: name, style: cellStyle }, name)))),
-                    h('tbody', null, instances.map(row => {
-                      const open = expanded === row.id
-                      const events = open
-                        ? (data.events ?? [])
-                            .filter(event => event.instance_id === row.id)
-                            .sort((a, b) => a.seq - b.seq)
-                        : []
-                      return h(Fragment, { key: row.id },
-                        h('tr', {
-                          style: { cursor: 'pointer', background: open ? 'var(--tdt-active)' : undefined },
-                          onClick: () => { setExpanded(open ? null : row.id) },
-                        },
-                          h('td', { style: cellStyle }, titleOfTask(row.task_id)),
-                          h('td', { style: cellStyle }, formatTime(row.scheduled_at)),
-                          // 状态列（2026-09-30 复核 P2）：`skipped`（**未执行**：附件找不到 / 工作区不存在 /
-                          // 被吃掉的槽补记）与 `failed` 一样**标红加粗**。此前原样打印灰字 —— 卡片上已经标红，
-                          // 点进执行记录反而白底黑字，用户会以为没事（用户要求：错就得让他在记录里看见）。
-                          h('td', { style: cellStyle },
-                            h('span', {
-                              style: row.status === 'skipped' || row.status === 'failed'
-                                ? { color: 'var(--tdt-danger)', fontWeight: 600 }
-                                : undefined,
-                            }, statusTextOf(row.status, t))),
-                          h('td', { style: cellStyle }, String(row.attempt)),
-                          h('td', { style: cellStyle },
-                            row.session_id === null ? '—'
-                              : viewSession !== null
-                                ? h(Button, {
-                                  variant: 'ghost',
-                                  size: 'sm',
-                                  className: 'dsh-tdt-btn--link',
-                                  title: row.session_id,
-                                  onClick: (event: { stopPropagation(): void }) => {
-                                    event.stopPropagation()
-                                    // 只给会话 id（铁律）：与任务列表入口同一渲染路径。
-                                    void openView(row.session_id as string)
-                                  },
-                                }, row.session_id.slice(0, 8))
-                                : row.session_id.slice(0, 8),
-                          ),
-                          h('td', { style: cellStyle },
-                            (() => {
-                              // 产出物（决策 32③：完成瞬间写回 task_instances.outputs，真值非模拟）。
-                              const outputs = parseOutputs((row as unknown as { outputs?: unknown }).outputs)
-                              if (outputs.length === 0) return '—'
-                              const sid = row.session_id
-                              if (sid === null || !canPreview) {
-                                return h('span', { title: outputs.join('\n') },
-                                  outputs.map(basenameOf).join('、'))
-                              }
-                              return h('span', { style: { display: 'inline-flex', flexWrap: 'wrap', gap: '6px' } },
-                                outputs.map(output => h(Button, {
-                                  key: output,
-                                  variant: 'ghost',
-                                  size: 'sm',
-                                  className: 'dsh-tdt-btn--link',
-                                  title: output,
-                                  onClick: (event: { stopPropagation(): void }) => {
-                                    event.stopPropagation()
-                                    openFile(sid, output)
-                                  },
-                                }, basenameOf(output))))
-                            })(),
-                          ),
-                          h('td', { style: cellStyle }, formatTime(row.updated_at)),
-                        ),
-                        open
-                          ? h('tr', null,
-                              h('td', { colSpan: 6, style: cellStyle },
-                                h('div', {
-                                  style: {
-                                    fontSize: 'var(--tdt-font-sm)', marginBottom: '4px',
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px',
-                                  },
-                                },
-                                  h('span', null, t('eventsOf')),
-                                  (viewSession !== null && row.session_id !== null)
-                                    ? h(Button, {
-                                      variant: 'ghost',
-                                      size: 'sm',
-                                      className: 'dsh-tdt-btn--link',
-                                      onClick: () => { void openView(row.session_id as string) },
-                                    }, `↗ ${t('viewSession')}`)
-                                    : null,
-                                ),
-                                events.length === 0
-                                  ? h('p', { style: hintStyle }, t('eventsEmpty'))
-                                  : h('table', { style: tableStyle },
-                                      h('thead', null, h('tr', null,
-                                        [t('colSeq'), t('colTs'), t('colKind'), t('colDetail')]
-                                          .map(name => h('th', { key: name, style: cellStyle }, name)))),
-                                      h('tbody', null, events.map(event => h('tr', { key: event.seq },
-                                        h('td', { style: cellStyle }, String(event.seq)),
-                                        h('td', { style: cellStyle }, formatTime(event.ts)),
-                                        h('td', { style: cellStyle }, event.kind),
-                                        h('td', { style: detailCellStyle }, event.detail ?? ''),
-                                      ))),
-                                    ),
-                              ),
-                            )
-                          : null,
-                      )
-                    })),
-                  ),
-            ),
+          : null,
     ),
-    // 只读会话弹窗（决策 28）：叠在整页之上（z-index 1010）。挂在独立子树
-    // （Fragment 兄弟节点），其遮罩点击不会冒泡出去、误关整页。
+    // 只读会话弹窗（决策 28）：叠在整页之上（z-index 1010）。挂在与整页并列的独立子树，
+    // 其遮罩点击不会冒泡出去、误关整页。
     viewing !== null
       ? h(SessionViewModal, {
         t,

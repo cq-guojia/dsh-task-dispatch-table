@@ -118,3 +118,39 @@
 | `docs/PROGRESS.md` | 现场 | 新增在办事项 + 未决项 |
 
 **下一步（待用户确认方案后）**：按规格落码 —— 时间轴视图组件 + 游标分页 + TaskPicker，跑 typecheck / build / smoke 后再请真机验收。
+
+---
+
+## 六、落码记录（2026-10-04）
+
+**新建**：
+
+| 文件 | 内容 |
+|---|---|
+| `src/client/records-timeline.tsx` | 时间轴视图：过滤行（TimeRange / 工作区 / 状态 / TaskPicker）+ 天分组 + 4px 色条块 + 游标「加载更多」+ 空态 / 错误重试 / 上限提示 |
+| `src/client/ui/TaskPicker.tsx` | 带搜索的任务选择器（搜索框 + 最近 10 条 +「更多」；`scope` 受控；已选项掉出作用域显式提示） |
+
+**改动**：`src/client/index.ts`（`records` 分支换成新视图 + 删旧测试屏与死代码）、`src/client/query.ts`（`InstanceRow` 加 `logical_date`）、`src/client/locales.ts`（+17 键 / −15 个旧屏专用键）、`src/client/ui/Field.tsx`（`Input` 加 `inputRef`）、`src/client/ui/index.ts`（导出 TaskPicker）、`scripts/smoke.mjs`（+6 项断言，含反向断言）。
+
+### 6.1 关键实现决定
+
+1. **`records` 分支提到 `data === undefined` 门槛之前**：新页走 HTTP，若留在门槛之后，调试快照缺失 / 解析失败会把新页一起挡掉（这是审查里发现的隐患，已按此实现）。
+2. **旧分支整段删除**（原生 select + 原生表格 + 就地展开 events）；随之删掉 `statusFilter` / `taskFilter` / `expanded` / `titleOfTask` / 派生 `instances` / `basenameOf` / `Fragment` import，以及客户端调试快照类型里的 `instances` / `events` 声明（**宿主协议未动**，只是客户端不再消费）。
+3. **任务候选来源改用 `overview.rows`（HTTP）**，不用调试快照的 `data.tasks` —— 任务目录本就有独立 HTTP 真源，不该跟着快照可达性起伏；文案与编辑器同一套 `[编号] 名称`。
+4. **天分组优先用服务端 `logical_date`**（`SELECT *` 已带回），旧行退回 `scheduled_at.slice(0,10)`；跨页追加时同一天并入已有天块（不另起同名天标签）。
+5. **天标签文案走 `Intl.DateTimeFormat(t('localeTag'))`** ⇒ 中文「2026年4月30日」/ 英文「April 30, 2026」，不写死语言。
+6. **官方 `Menu` 的 `children` 用法已读源码核实**（宿主 0.2.0-rc.2 `lib/index.js:3927` 起）：children 渲染进 MenuSurface 的 viewport；键盘只处理 Escape / Tab / 方向键，**字母键不拦** ⇒ 搜索框能正常打字；`autoFocus` 会抢焦点到列表第一个按钮 ⇒ **不用它**，打开后自己 `inputRef.focus()`。
+7. **在途去重用 ref**（`inFlightRef`）+ **请求序号作废旧响应**（`seqRef`）；过滤条件变化即 `seqRef++` 并重置列表，避免慢响应盖掉新结果。
+8. **失败不清空已有列表**（只给错误态 + 重试），符合「不猜兜底、不抹掉用户已看到的数据」。
+
+### 6.2 踩坑
+
+| 坑 | 现象 | 处置 |
+|---|---|---|
+| 并发写同一工作区 | 另一路 agent 同时改 `src/client/index.ts`，并一次覆写把刚建好的 `ui/TaskPicker.tsx` 与 `ui/index.ts` 导出**整个抹掉**；我按**行号**删旧 records 分支时行号已被它改过 ⇒ 删错位置、文件括号失衡（`TS1005 ',' expected` 报在函数收尾） | 改为：① 文件被覆写后**重建**（TaskPicker / 导出 / locales / query / Field 全部重做）；② 删除**不再按行号**，改用「括号配平定位」脚本（算到基线深度的那一行才是分支结尾）；③ 每次编辑后立刻 typecheck |
+| 冒烟断言跟着旧键走 | 旧断言要求 bundle 含 `basenameOf`（旧屏专用），删掉后必失败 | 改成「`parseOutputs` 在 + `basenameOf` 不在」，并补 6 项新断言（时间轴 / 游标分页 / 天分组 / 色条 token / TaskPicker / 旧屏已摘除） |
+| 四色 token 断言写法 | 首次写成 `"\'var(--tdt-success)\'"`（带引号）⇒ 产物里是双引号，断言失败 | 改成不含引号的子串匹配 |
+
+### 6.3 验证
+
+`npm run typecheck` 绿 → `npm run build`（`dist/` 入库）→ `npm run smoke` **530 项通过 / 0 失败**。

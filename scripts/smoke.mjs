@@ -1121,8 +1121,26 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
 
   check('远端返回防御解析（text/data 不符契约走错误态，不把 undefined 喂渲染器）',
     clientJs.includes('textPageOf') && clientJs.includes('bytesOf') && clientJs.includes('previewBadPayload'))
-  check('执行记录行产出物可点（outputs 列 → 同一 openFile 入口）',
-    clientJs.includes('parseOutputs') && clientJs.includes('basenameOf') && clientJs.includes('colOutputs'))
+  check('会话弹窗产出物仍走同一 openFile 入口（parseOutputs 在、旧表格专用的 basenameOf 已摘除）',
+    clientJs.includes('parseOutputs') && clientJs.includes('colOutputs') && !clientJs.includes('basenameOf'))
+  // ── 执行记录总查询页（时间轴，2026-10-04 落码；规格 design/features/execution-timeline.md）──
+  check('执行记录时间轴已打进 bundle（RecordsTimelineView + 天分组 + 色条语义类）',
+    clientJs.includes('RecordsTimelineView') && clientJs.includes('dsh-tdt-rec-tl')
+    && clientJs.includes('dsh-tdt-rec-bar') && clientJs.includes('dsh-tdt-rec-day'))
+  check('时间轴走游标分页（nextCursor 消费 + 2000 条上限提示文案）',
+    clientJs.includes('nextCursor') && clientJs.includes('recordsLimitHint') && clientJs.includes('/tasks/instances'))
+  check('按服务端日历日分组（logical_date）+ 天标签吸顶 / 在跑脉动',
+    clientJs.includes('logical_date') && /\.dsh-tdt-rec-day\{[^}]*position:sticky/.test(clientJs)
+    && clientJs.includes('dsh-tdt-rec-bar--run') && clientJs.includes('prefers-reduced-motion'))
+  check('打点区块用 token 表达成败（success / danger / warning / business 四色齐备）',
+    ['var(--tdt-success)', 'var(--tdt-danger)', 'var(--tdt-warning)', 'var(--tdt-business)']
+      .every(token => clientJs.includes(token)))
+  check('任务选择器（带搜索）进产物（TaskPicker + 浮层搜索/更多行）',
+    clientJs.includes('TaskPicker') && clientJs.includes('dsh-tdt-tp-row')
+    && clientJs.includes('dsh-tdt-tp-more') && clientJs.includes('recordsTaskSearch'))
+  check('旧「最简测试屏」已摘除（原生筛选 + 事件小表 + 其专用文案键全不再进包）',
+    !clientJs.includes('filterStatus') && !clientJs.includes('filterTask')
+    && !clientJs.includes('recordsHint') && !clientJs.includes('expandHint') && !clientJs.includes('colAttempt'))
   check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
     clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))
   // 前置任务卡（2026-09-29 用户拍板的交互）：灰框卡 + ?说明 + 工作区→任务两级选择 + 添加/移除 + 判定说明。
@@ -2006,6 +2024,8 @@ console.log('\n[14] runtime-index')
       'index.ts', 'task-list.tsx', 'task-editor.tsx', 'task-editor-css.ts', 'editor-fields.tsx',
       'file-browser.tsx', 'file-preview.tsx', 'config-panel.tsx', 'session-view.ts',
       'archive-session-css.ts', 'toast-css.ts',
+      // 2026-10-04：执行记录时间轴 + 任务选择器（同受「不许直引宿主变量 / 不许自注入 style」约束）
+      'records-timeline.tsx', 'ui/TaskPicker.tsx',
     ]
     let dswFiles = 0
     let cTableFiles = 0

@@ -242,7 +242,6 @@ window.__ModuleLoader__.load({
 			debugWarns: "最近告警 / 错误（≤20 条）",
 			debugNoWarns: "（无）",
 			debugInstances: "实例 task_instances",
-			debugInstancesEmpty: "（尚无实例）",
 			debugEvents: "事件 task_events（最近 200 条，旧 → 新）",
 			panelTitle: "定时任务调度器",
 			backToConversation: "返回会话",
@@ -256,31 +255,17 @@ window.__ModuleLoader__.load({
 			debugDbTruncated: "行数超出上限，仅显示最新一部分",
 			tasksParsedTitle: "已解析的任务（id 由系统生成，改名字不影响历史）",
 			tasksParsedEmpty: "（无任务：内嵌任务表为空且任务目录无合法定义）",
-			colTask: "任务",
 			colTitle: "名称",
 			colCode: "编号",
 			colId: "任务ID",
 			colSchedule: "周期",
 			colNext: "下次执行",
-			colSlot: "计划时刻",
 			colStatus: "状态",
-			colAttempt: "第几次",
 			colSession: "会话",
-			colUpdated: "更新于",
-			colSeq: "seq",
-			colTs: "时间",
-			colKind: "类型",
-			colDetail: "详情",
-			filterStatus: "状态筛选",
-			filterTask: "任务筛选",
 			filterAll: "全部",
-			expandHint: "点击任意一行展开该次执行的事件时间线",
 			listExpandHint: "展开任务详情",
 			listDeferred: "延期",
 			listDeferredTitle: "已过计划时刻但还没开始执行。常见原因：前置任务未完成 / 附加文件找不到 / 上一轮还在运行。",
-			eventsOf: "本次执行的事件",
-			eventsEmpty: "（该次执行暂无事件，或已超出最近 200 条的快照窗口）",
-			recordsHint: "一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。",
 			viewSession: "查看会话",
 			viewSessionHint: "在面板内只读查看本次执行的会话记录（含归档会话）；简化渲染、不可续聊。",
 			sessionViewerTitle: "会话记录（只读）",
@@ -656,6 +641,23 @@ window.__ModuleLoader__.load({
 			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
 			editorDepDisabledTag: "（已停用）",
 			editorDepTaskEmpty: "该工作区暂无可选任务",
+			localeTag: "zh-CN",
+			recordsEmpty: "该时间范围内没有执行记录",
+			recordsEmptyFiltered: "当前过滤条件下没有执行记录",
+			recordsLoading: "执行记录加载中…",
+			recordsLoadMore: "加载更多",
+			recordsNoMore: "没有更多了",
+			recordsLimitHint: "已加载 2000 条，请缩小时间范围查看更早记录",
+			recordsLoadFail: "执行记录加载失败",
+			recordsRetry: "重试",
+			recordsDayCount: "{n} 条",
+			recordsTaskPh: "任务",
+			recordsTaskSearch: "搜索任务名或 ID",
+			recordsMore: "更多",
+			recordsCollapse: "收起",
+			recordsOutOfScope: "所选任务不在当前工作区",
+			recordsPlannedAt: "计划 {time}",
+			recordsStatusPh: "状态",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
 			editorRetry: "重试次数",
@@ -831,7 +833,6 @@ window.__ModuleLoader__.load({
 			debugWarns: "Recent warnings / errors (≤20 entries)",
 			debugNoWarns: "(none)",
 			debugInstances: "Instances task_instances",
-			debugInstancesEmpty: "(no instances yet)",
 			debugEvents: "Events task_events (latest 200, oldest → newest)",
 			panelTitle: "Scheduled task dispatcher",
 			backToConversation: "Back to conversation",
@@ -845,31 +846,17 @@ window.__ModuleLoader__.load({
 			debugDbTruncated: "row count exceeds the cap, showing only the newest rows",
 			tasksParsedTitle: "Parsed tasks (ids are generated; renaming never breaks history)",
 			tasksParsedEmpty: "(no tasks: inline table empty and task dir has no valid definition)",
-			colTask: "Task",
 			colTitle: "Title",
 			colCode: "Code",
 			colId: "Task ID",
 			colSchedule: "Schedule",
 			colNext: "Next run",
-			colSlot: "Scheduled",
 			colStatus: "Status",
-			colAttempt: "Attempt",
 			colSession: "Session",
-			colUpdated: "Updated",
-			colSeq: "seq",
-			colTs: "Time",
-			colKind: "Kind",
-			colDetail: "Detail",
-			filterStatus: "Status filter",
-			filterTask: "Task filter",
 			filterAll: "All",
-			expandHint: "Click any row to expand the event timeline of that run",
 			listExpandHint: "Expand task details",
 			listDeferred: "Delayed",
 			listDeferredTitle: "Past its planned time but has not started. Usual causes: preceding task not finished / attachment missing / previous run still running.",
-			eventsOf: "Run log",
-			eventsEmpty: "(no events for this run, or it falls outside the latest-200 snapshot window)",
-			recordsHint: "One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.",
 			viewSession: "View session",
 			viewSessionHint: "Read this run's session transcript in a read-only panel (archived sessions included); simplified rendering, no follow-up replies.",
 			sessionViewerTitle: "Session transcript (read-only)",
@@ -1245,6 +1232,23 @@ window.__ModuleLoader__.load({
 			editorDepEmptyHint: "Pick a workspace and a task below, then add",
 			editorDepDisabledTag: " (disabled)",
 			editorDepTaskEmpty: "No selectable task in this workspace",
+			localeTag: "en-US",
+			recordsEmpty: "No executions in this time range",
+			recordsEmptyFiltered: "No executions match the current filters",
+			recordsLoading: "Loading executions…",
+			recordsLoadMore: "Load more",
+			recordsNoMore: "No more",
+			recordsLimitHint: "Loaded 2000 — narrow the time range to see earlier records",
+			recordsLoadFail: "Failed to load executions",
+			recordsRetry: "Retry",
+			recordsDayCount: "{n} total",
+			recordsTaskPh: "Task",
+			recordsTaskSearch: "Search by name or ID",
+			recordsMore: "More",
+			recordsCollapse: "Collapse",
+			recordsOutOfScope: "The selected task is not in this workspace",
+			recordsPlannedAt: "Planned {time}",
+			recordsStatusPh: "Status",
 			editorAdvanced: "Advanced settings",
 			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
@@ -2072,6 +2076,7 @@ body[data-ds-dark-theme]{
 			ensureControlsStyle();
 			const { value, onChange, placeholder, size = "lg", error, disabled, type, className, style } = props;
 			return (0, react.createElement)("input", {
+				ref: props.inputRef,
 				type: type ?? "text",
 				value,
 				placeholder,
@@ -2286,6 +2291,191 @@ body[data-ds-dark-theme]{
 					setOpen(false);
 					props.onChange(id);
 				},
+				onClose: () => {
+					setOpen(false);
+				}
+			});
+		}
+		//#endregion
+		//#region src/client/ui/TaskPicker.tsx
+		/**
+		* 任务选择器（带搜索） —— **全站唯一实现**（L2 组件皮肤）
+		*
+		* 什么时候用它：**候选多（几十上百）或需要按名字 / id 搜索**的任务选择。
+		* 候选少（十几个以内）用 `SelectField` 就够，别用它（两者分工见 docs/design/ui-foundation.md §5.4）。
+		*
+		* 形态：锚点（与 `SelectField` 同款）点开浮层 ⇒ 顶部搜索框 + 候选列表 +「更多 / 收起」。
+		* 底层 = 官方 `Menu`（定位 / portal / 点外关闭 / Esc）+ 基础层 `Input`，**不自绘浮层**。
+		*
+		* ⚠️ 两条硬规矩（用户 2026-10-03 拍板，见 docs/design/ui-foundation.md §5.4）：
+		*  ① `scope` 是**受控入参**，不是内部 state —— 外部改工作区 ⇒ 候选实时重算；
+		*  ② 已选项掉出作用域 ⇒ **显式提示**（`outOfScopeHint`），**不静默清空**（静默清空会让用户以为自己没选过）。
+		*
+		* 源码级依据（2026-10-04 解包核实，宿主 0.2.0-rc.2 `lib/index.js:3927` 的 `Menu`）：
+		*  - `children` 渲染进 MenuSurface 的 viewport（`:4246`），键盘只处理 Escape / Tab / 方向键（`:4093-4114`），
+		*    字母键不拦 ⇒ 搜索框能正常打字；方向键在浮层内游走属预期（等同于下拉的键盘操作）。
+		*  - `autoFocus` 会把焦点抢到浮层第一个按钮（`:4038-4044`）⇒ **不用它**，打开后自己聚焦搜索框。
+		*/
+		const anchorStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "6px",
+			boxSizing: "border-box",
+			minWidth: 0,
+			maxWidth: "100%",
+			padding: "0 8px",
+			border: "0.5px solid var(--tdt-border-heavy)",
+			borderRadius: "var(--tdt-radius-md)",
+			background: "var(--tdt-surface-1)",
+			color: "var(--tdt-fg)",
+			font: "inherit",
+			cursor: "pointer"
+		};
+		const labelWrapStyle = {
+			flex: "1 1 auto",
+			minWidth: 0,
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			whiteSpace: "nowrap",
+			textAlign: "left"
+		};
+		/** 任务选择器浮层的皮肤规则（只消费 `var(--tdt-*)`）。 */
+		const TASKPICKER_CSS = `
+/* ── 任务选择器（带搜索）────────────────────────────────────────────────
+   结构：搜索行 + 列表 +「更多 / 收起」。浮层外壳由官方 Menu 提供，这里只管内容。
+   ⚠️ 官方 MenuSurface 自带内边距与圆角 ⇒ 本面板不再套第二层壳，避免双层底。 */
+.dsh-tdt-tp{display:flex;flex-direction:column;gap:6px;min-width:220px;max-width:340px;}
+.dsh-tdt-tp-search{display:flex;align-items:center;gap:6px;padding:0 2px;color:var(--tdt-fg-3);}
+.dsh-tdt-tp-search > span{display:inline-flex;flex:none;}
+.dsh-tdt-tp-list{display:flex;flex-direction:column;max-height:264px;overflow-y:auto;}
+.dsh-tdt-tp-row{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;border-radius:var(--tdt-radius-sm);
+  background:transparent;color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-row:hover{background:var(--tdt-hover);}
+.dsh-tdt-tp-row--on{color:var(--tdt-business);}
+.dsh-tdt-tp-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-tp-check{flex:none;display:inline-flex;width:14px;align-items:center;justify-content:center;}
+.dsh-tdt-tp-more{border:0;border-top:1px solid var(--tdt-border-faint);margin-top:2px;padding:6px 8px;background:transparent;
+  color:var(--tdt-business);font:inherit;font-size:var(--tdt-font-sm);text-align:left;cursor:pointer;}
+.dsh-tdt-tp-more:hover{background:var(--tdt-hover);}
+.dsh-tdt-tp-empty{padding:10px 8px;color:var(--tdt-fg-3);font-size:var(--tdt-font-sm);text-align:center;}
+`;
+		/** 皮肤域固定名（注入顺序在 controls 之后）。 */
+		const TASKPICKER_DOMAIN = "domain:taskpicker";
+		/** 确保本控件皮肤已登记并注入（幂等）。 */
+		function ensureTaskPickerStyle() {
+			applyStyle(TASKPICKER_DOMAIN, TASKPICKER_CSS);
+		}
+		/** 带搜索的任务选择器。 */
+		function TaskPicker(props) {
+			ensureControlsStyle();
+			ensureTaskPickerStyle();
+			const size = props.size ?? "lg";
+			const sizeHeight = size === "sm" ? "var(--tdt-control-h-sm)" : size === "md" ? "var(--tdt-control-h-md)" : "var(--tdt-control-h-lg)";
+			const sizeFont = size === "sm" ? "var(--tdt-font-sm)" : "var(--tdt-font-md)";
+			const iconSize = size === "sm" ? 14 : 16;
+			const [open, setOpen] = (0, react.useState)(false);
+			const [keyword, setKeyword] = (0, react.useState)("");
+			const [showAll, setShowAll] = (0, react.useState)(false);
+			const searchRef = (0, react.useRef)(null);
+			const candidates = (0, react.useMemo)(() => {
+				const scope = props.scope ?? "";
+				const excludes = props.excludeIds ?? [];
+				return props.options.filter((o) => (scope === "" || o.workspace === scope) && !excludes.includes(o.id));
+			}, [
+				props.options,
+				props.scope,
+				props.excludeIds
+			]);
+			const kw = keyword.trim().toLowerCase();
+			const searching = kw !== "";
+			const matched = (0, react.useMemo)(() => searching ? candidates.filter((o) => o.label.toLowerCase().includes(kw) || o.id.toLowerCase().includes(kw)) : candidates, [
+				candidates,
+				searching,
+				kw
+			]);
+			const limit = props.recentLimit ?? 10;
+			const visible = searching || showAll ? matched : matched.slice(0, limit);
+			const restCount = matched.length - visible.length;
+			const current = props.options.find((o) => o.id === props.value);
+			const outOfScope = current !== void 0 && props.value !== "" && !candidates.some((o) => o.id === props.value);
+			const shownLabel = current === void 0 || props.value === "" ? props.placeholder : current.label;
+			(0, react.useEffect)(() => {
+				if (open) searchRef.current?.focus();
+			}, [open]);
+			(0, react.useEffect)(() => {
+				if (!open) {
+					setKeyword("");
+					setShowAll(false);
+				}
+			}, [open]);
+			const anchor = (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-ed-field",
+				disabled: props.disabled === true,
+				"aria-haspopup": "menu",
+				"aria-expanded": open,
+				"aria-label": props.ariaLabel,
+				title: outOfScope ? props.outOfScopeHint : void 0,
+				onClick: () => {
+					setOpen((v) => !v);
+				},
+				style: {
+					...anchorStyle,
+					height: sizeHeight,
+					fontSize: sizeFont,
+					width: props.width,
+					cursor: props.disabled === true ? "not-allowed" : "pointer"
+				}
+			}, (0, react.createElement)(MarqueeText, {
+				text: shownLabel,
+				title: props.ariaLabel,
+				style: {
+					...labelWrapStyle,
+					color: current === void 0 || props.value === "" ? "var(--tdt-fg-dim)" : "var(--tdt-fg)"
+				}
+			}), outOfScope ? (0, react.createElement)("span", { style: {
+				flex: "none",
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-warning)"
+			} }, "!") : null, (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				width: `${iconSize}px`,
+				height: `${iconSize}px`,
+				alignItems: "center",
+				justifyContent: "center",
+				flex: "none",
+				color: "var(--tdt-fg-3)"
+			} }, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: iconSize })));
+			const panel = (0, react.createElement)("div", { className: "dsh-tdt-tp" }, (0, react.createElement)("div", { className: "dsh-tdt-tp-search" }, (0, react.createElement)("span", null, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 })), (0, react.createElement)(Input$1, {
+				value: keyword,
+				onChange: setKeyword,
+				placeholder: props.searchPlaceholder,
+				size: "md",
+				"aria-label": props.searchPlaceholder,
+				inputRef: searchRef
+			})), (0, react.createElement)("div", { className: "dsh-tdt-tp-list" }, visible.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-tp-empty" }, props.emptyLabel) : visible.map((o) => (0, react.createElement)("button", {
+				type: "button",
+				key: o.id,
+				className: `dsh-tdt-tp-row${o.id === props.value ? " dsh-tdt-tp-row--on" : ""}`,
+				onClick: () => {
+					props.onChange(o.id);
+					setOpen(false);
+				}
+			}, (0, react.createElement)("span", { className: "dsh-tdt-tp-name" }, o.enabled === false ? `${o.label}${props.disabledTag ?? ""}` : o.label), o.id === props.value ? (0, react.createElement)("span", { className: "dsh-tdt-tp-check" }, "✓") : null))), !searching && (showAll || restCount > 0) ? (0, react.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-tp-more",
+				onClick: () => {
+					setShowAll((v) => !v);
+				}
+			}, showAll ? props.collapseLabel ?? "收起" : `${props.moreLabel ?? "更多"}（${matched.length}）`) : null);
+			if (props.disabled === true) return anchor;
+			return (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open,
+				anchor,
+				children: panel,
+				align: props.align ?? "start",
+				portal: true,
+				onSelect: () => {},
 				onClose: () => {
 					setOpen(false);
 				}
@@ -41979,16 +42169,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		//#endregion
 		//#region src/client/status-text.ts
-		/** 七态全集（与 `src/store.ts` 的 `InstanceStatus` 同形；客户端不跨半侧引类型，此处本地声明）。 */
-		const INSTANCE_STATUSES = [
-			"pending",
-			"dispatched",
-			"running",
-			"succeeded",
-			"failed",
-			"skipped",
-			"unknown"
-		];
 		/** 状态 → 文案键（唯一映射表）。 */
 		const STATUS_LABEL_KEYS = {
 			pending: "statusPending",
@@ -42003,6 +42183,358 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		function statusTextOf(status, t) {
 			const key = STATUS_LABEL_KEYS[status];
 			return key === void 0 ? status : t(key);
+		}
+		//#endregion
+		//#region src/client/records-timeline.tsx
+		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
+		const PAGE_SIZE = 50;
+		/** 硬上限：到此停止自动续拉并提示缩小范围（用户拍板「保底 2000 条」）。 */
+		const HARD_LIMIT = 2e3;
+		const RECORDS_CSS = `
+/* ── 执行记录时间轴 ──────────────────────────────────────────────────────
+   节奏靠「天标签 + 竖轴 + 左缘色条」建立；块本身不带底色，只有 hover 才泛蓝，
+   免得一屏几十条时满屏色块发噪。 */
+.dsh-tdt-rec-tl{display:flex;flex-direction:column;}
+/* 天标签吸顶：长列表里始终知道自己在哪一天（用户 2026-10-04 同意）。 */
+.dsh-tdt-rec-day{position:sticky;top:0;z-index:1;padding:10px 0 6px;background:var(--tdt-surface-base);}
+.dsh-tdt-rec-daylabel{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg);line-height:var(--tdt-line-md);}
+.dsh-tdt-rec-daycount{margin-left:8px;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+/* 竖轴：贯穿当天所有块（极浅描边，只起「串起来」的作用）。 */
+.dsh-tdt-rec-axis{margin-left:6px;padding-left:16px;border-left:1px solid var(--tdt-border-faint);}
+.dsh-tdt-rec-block{position:relative;display:flex;align-items:baseline;gap:10px;width:100%;margin:0 0 4px;padding:7px 10px;
+  border:0;border-radius:var(--tdt-radius-sm);background:transparent;color:var(--tdt-fg);font:inherit;text-align:left;
+  animation:dsh-tdt-rec-in 160ms ease;}
+.dsh-tdt-rec-block--on{cursor:pointer;}
+.dsh-tdt-rec-block--on:hover{background:var(--tdt-card-hover);}
+/* 成败只靠这条色条表达（用户点名：不用图标）。 */
+.dsh-tdt-rec-bar{position:absolute;left:0;top:6px;bottom:6px;width:4px;border-radius:2px;background:var(--tdt-fg-3);}
+.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse 1.4s ease-in-out infinite;}
+@keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.dsh-tdt-rec-bar--run{animation:none}.dsh-tdt-rec-block{animation:none}}
+/* 时刻：等宽数字 ⇒ 一列对齐、不因字宽不同而左右蹦。 */
+.dsh-tdt-rec-time{flex:none;font-family:var(--tdt-font-mono,ui-monospace,monospace);font-variant-numeric:tabular-nums;
+  font-size:var(--tdt-font-md);color:var(--tdt-fg-2);}
+.dsh-tdt-rec-title{flex:1 1 auto;min-width:0;font-size:var(--tdt-font-md);}
+.dsh-tdt-rec-meta{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-foot{padding:12px 0 4px;text-align:center;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+`;
+		const RECORDS_DOMAIN = "domain:records";
+		const filterRowStyle$1 = {
+			display: "flex",
+			alignItems: "center",
+			gap: "8px",
+			flexWrap: "wrap",
+			marginBottom: "10px"
+		};
+		const centerStyle = {
+			width: "100%",
+			display: "flex",
+			justifyContent: "center"
+		};
+		const mainStyle = {
+			width: "100%",
+			maxWidth: "1120px",
+			minWidth: "760px",
+			boxSizing: "border-box"
+		};
+		const emptyStyle = {
+			padding: "32px 0",
+			textAlign: "center",
+			fontSize: "var(--tdt-font-md)",
+			color: "var(--tdt-fg-3)"
+		};
+		/** `YYYY-MM-DD`（本地日历日，只用于拼默认时间档）。 */
+		function ymdOf(d) {
+			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
+		}
+		/** 默认时间档：最近 N 天（含今天）。 */
+		function defaultRange() {
+			const now = /* @__PURE__ */ new Date();
+			const from = new Date(now);
+			from.setDate(from.getDate() - 2);
+			return {
+				from: ymdOf(from),
+				to: ymdOf(now)
+			};
+		}
+		/** `HH:mm`（计划时刻本来就没有秒，与服务端刻度口径一致）。 */
+		function hmOf(iso) {
+			const ms = Date.parse(iso);
+			if (Number.isNaN(ms)) return "--";
+			const d = new Date(ms);
+			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+		}
+		/** 天标签：`2026 年 4 月 30 日` / `April 30, 2026`（按当前语言，走 `Intl`）。 */
+		function dayLabelOf(key, t) {
+			const parts = key.split("-");
+			const y = Number(parts[0]);
+			const m = Number(parts[1]);
+			const d = Number(parts[2]);
+			if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return key;
+			if (typeof Intl === "undefined") return `${y} 年 ${m} 月 ${d} 日`;
+			return new Intl.DateTimeFormat(t("localeTag"), {
+				year: "numeric",
+				month: "long",
+				day: "numeric"
+			}).format(new Date(y, m - 1, d));
+		}
+		/** 状态 → 色条颜色（**只消费 token**；不用图标，见规格 §五）。 */
+		function barColorOf(status) {
+			if (status === "succeeded") return "var(--tdt-success)";
+			if (status === "failed") return "var(--tdt-danger)";
+			if (status === "skipped") return "var(--tdt-warning)";
+			if (status === "dispatched" || status === "running") return "var(--tdt-business)";
+			return "var(--tdt-fg-3)";
+		}
+		const isRunning = (status) => status === "dispatched" || status === "running";
+		/** 次信息：时长（`dispatched_at → finished_at`）；在跑则显示「运行中」。 */
+		function metaOf(row, t) {
+			const statusText = statusTextOf(row.status, t);
+			if (isRunning(row.status)) return statusText;
+			if (row.dispatched_at === null || row.finished_at === null) return statusText;
+			const ms = Date.parse(row.finished_at) - Date.parse(row.dispatched_at);
+			if (!Number.isFinite(ms) || ms < 0) return statusText;
+			return `${statusText} · ${formatDurationHms(ms)}`;
+		}
+		/** 一行记录所属的天（服务端 `logical_date` 优先；旧行没有就退回 `scheduled_at` 的日期段）。 */
+		function dayKeyOf(row) {
+			const logical = row.logical_date;
+			if (typeof logical === "string" && logical.length >= 10) return logical.slice(0, 10);
+			return row.scheduled_at.slice(0, 10);
+		}
+		/** 执行记录总查询页（时间轴）。 */
+		function RecordsTimelineView(props) {
+			applyStyle(RECORDS_DOMAIN, RECORDS_CSS);
+			const { t, tasks, workspaces, onOpenSession } = props;
+			const [range, setRange] = (0, react.useState)(defaultRange);
+			const [workspace, setWorkspace] = (0, react.useState)("");
+			const [status, setStatus] = (0, react.useState)("");
+			const [taskId, setTaskId] = (0, react.useState)("");
+			const [rows, setRows] = (0, react.useState)([]);
+			const [cursor, setCursor] = (0, react.useState)(null);
+			const [loading, setLoading] = (0, react.useState)(false);
+			const [loaded, setLoaded] = (0, react.useState)(false);
+			const [error, setError] = (0, react.useState)(null);
+			const [done, setDone] = (0, react.useState)(false);
+			const seqRef = (0, react.useRef)(0);
+			const inFlightRef = (0, react.useRef)(false);
+			const calendarLabels = (0, react.useMemo)(() => calendarLabelsOf(t), [t]);
+			const timeLabels = (0, react.useMemo)(() => timeLabelsOf(t), [t]);
+			const rangeLabels = (0, react.useMemo)(() => ({
+				all: t("trAll"),
+				custom: t("trCustom"),
+				from: t("cardFrom"),
+				to: t("cardTo"),
+				presets: {
+					today: t("trToday"),
+					yesterday: t("trYesterday"),
+					thisWeek: t("trThisWeek"),
+					lastWeek: t("trLastWeek"),
+					thisMonth: t("trThisMonth"),
+					lastMonth: t("trLastMonth")
+				}
+			}), [t]);
+			const workspaceOptions = (0, react.useMemo)(() => [{
+				value: "",
+				label: t("listFilterWorkspaceAll")
+			}, ...workspaces], [workspaces, t]);
+			const statusOptions = (0, react.useMemo)(() => [
+				{
+					value: "",
+					label: t("filterAll")
+				},
+				{
+					value: "succeeded",
+					label: statusTextOf("succeeded", t)
+				},
+				{
+					value: "failed",
+					label: statusTextOf("failed", t)
+				},
+				{
+					value: "skipped",
+					label: statusTextOf("skipped", t)
+				},
+				{
+					value: "running",
+					label: statusTextOf("running", t)
+				}
+			], [t]);
+			const titleById = (0, react.useMemo)(() => new Map(tasks.map((o) => [o.id, o.label])), [tasks]);
+			/** 过滤签名：变一次就重取第一页（不保留旧结果拼接）。 */
+			const filterSig = `${range.from}|${range.to}|${workspace}|${status}|${taskId}`;
+			const load = (0, react.useCallback)(async (nextCursor) => {
+				if (inFlightRef.current) return;
+				if (nextCursor === null && rows.length >= HARD_LIMIT) return;
+				inFlightRef.current = true;
+				const seq = seqRef.current;
+				setLoading(true);
+				setError(null);
+				const q = rangeToQuery(range, "day");
+				const statuses = status === "" ? void 0 : status === "running" ? ["dispatched", "running"] : [status];
+				try {
+					const page = await fetchInstances({
+						workspace: workspace === "" ? void 0 : workspace,
+						statuses,
+						taskId: taskId === "" ? void 0 : taskId,
+						from: q.fromTs,
+						to: q.toTs,
+						limit: PAGE_SIZE,
+						cursor: nextCursor ?? void 0
+					});
+					if (seq !== seqRef.current) return;
+					setRows((prev) => nextCursor === null ? page.rows : [...prev, ...page.rows]);
+					setCursor(page.nextCursor);
+					setDone(page.nextCursor === null);
+				} catch (e) {
+					if (seq !== seqRef.current) return;
+					setError(e instanceof Error ? e.message : String(e));
+				} finally {
+					if (seq === seqRef.current) {
+						setLoading(false);
+						setLoaded(true);
+					}
+					inFlightRef.current = false;
+				}
+			}, [
+				range,
+				workspace,
+				status,
+				taskId,
+				rows.length
+			]);
+			(0, react.useEffect)(() => {
+				seqRef.current += 1;
+				inFlightRef.current = false;
+				setRows([]);
+				setCursor(null);
+				setDone(false);
+				setLoaded(false);
+				load(null);
+			}, [filterSig]);
+			const loadMore = (0, react.useCallback)(() => {
+				if (loading || done || cursor === null) return;
+				if (rows.length >= HARD_LIMIT) return;
+				load(cursor);
+			}, [
+				loading,
+				done,
+				cursor,
+				rows.length,
+				load
+			]);
+			const sentinelRef = (0, react.useRef)(null);
+			(0, react.useEffect)(() => {
+				const el = sentinelRef.current;
+				if (el === null || typeof IntersectionObserver === "undefined") return;
+				const io = new IntersectionObserver((entries) => {
+					if (entries[0]?.isIntersecting === true) loadMore();
+				}, { rootMargin: "240px" });
+				io.observe(el);
+				return () => {
+					io.disconnect();
+				};
+			}, [loadMore]);
+			const days = (0, react.useMemo)(() => {
+				const out = [];
+				for (const row of rows) {
+					const key = dayKeyOf(row);
+					const last = out[out.length - 1];
+					if (last !== void 0 && last.key === key) last.items.push(row);
+					else out.push({
+						key,
+						items: [row]
+					});
+				}
+				return out;
+			}, [rows]);
+			const atLimit = rows.length >= HARD_LIMIT;
+			const hasFilter = range.from !== "" || range.to !== "" || workspace !== "" || status !== "" || taskId !== "";
+			return (0, react.createElement)("div", { style: centerStyle }, (0, react.createElement)("div", {
+				id: "dsh-tdt-records",
+				style: mainStyle
+			}, (0, react.createElement)("div", { style: filterRowStyle$1 }, (0, react.createElement)(TimeRange, {
+				value: range,
+				onChange: setRange,
+				labels: rangeLabels,
+				calendarLabels,
+				timeLabels,
+				precision: "day",
+				size: "md"
+			}), (0, react.createElement)(SelectField, {
+				value: workspace,
+				options: workspaceOptions,
+				onChange: setWorkspace,
+				placeholder: t("listFilterWorkspaceAll"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("listFilterWorkspaceAll"),
+				size: "md",
+				width: 180
+			}), (0, react.createElement)(SelectField, {
+				value: status,
+				options: statusOptions,
+				onChange: setStatus,
+				placeholder: t("recordsStatusPh"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("recordsStatusPh"),
+				size: "md",
+				width: 96
+			}), (0, react.createElement)(TaskPicker, {
+				value: taskId,
+				onChange: setTaskId,
+				options: tasks,
+				scope: workspace,
+				placeholder: t("recordsTaskPh"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("recordsTaskPh"),
+				searchPlaceholder: t("recordsTaskSearch"),
+				moreLabel: t("recordsMore"),
+				collapseLabel: t("recordsCollapse"),
+				outOfScopeHint: t("recordsOutOfScope"),
+				size: "md",
+				width: 200
+			})), error !== null && rows.length === 0 ? (0, react.createElement)("div", { style: emptyStyle }, `${t("recordsLoadFail")}：${error}`, (0, react.createElement)("button", {
+				type: "button",
+				style: {
+					marginLeft: "8px",
+					color: "var(--tdt-business)",
+					background: "transparent",
+					border: 0,
+					cursor: "pointer",
+					font: "inherit"
+				},
+				onClick: () => {
+					load(cursor);
+				}
+			}, t("recordsRetry"))) : loaded && rows.length === 0 ? (0, react.createElement)("div", { style: emptyStyle }, hasFilter ? t("recordsEmptyFiltered") : t("recordsEmpty")) : (0, react.createElement)("div", { className: "dsh-tdt-rec-tl" }, days.map((day) => (0, react.createElement)("div", { key: day.key }, (0, react.createElement)("div", { className: "dsh-tdt-rec-day" }, (0, react.createElement)("span", { className: "dsh-tdt-rec-daylabel" }, dayLabelOf(day.key, t)), (0, react.createElement)("span", { className: "dsh-tdt-rec-daycount" }, t("recordsDayCount").replace("{n}", String(day.items.length)))), (0, react.createElement)("div", { className: "dsh-tdt-rec-axis" }, day.items.map((row) => {
+				const clickable = onOpenSession !== void 0 && row.session_id !== null && row.session_id !== "";
+				const planned = hmOf(row.scheduled_at);
+				const actual = row.dispatched_at === null ? null : hmOf(row.dispatched_at);
+				const late = actual !== null && actual !== planned ? t("recordsPlannedAt").replace("{time}", planned) : "";
+				return (0, react.createElement)(clickable ? "button" : "div", {
+					key: row.id,
+					type: clickable ? "button" : void 0,
+					className: `dsh-tdt-rec-block${clickable ? " dsh-tdt-rec-block--on" : ""}`,
+					onClick: clickable ? () => {
+						onOpenSession?.(row.session_id);
+					} : void 0
+				}, (0, react.createElement)("span", {
+					className: `dsh-tdt-rec-bar${isRunning(row.status) ? " dsh-tdt-rec-bar--run" : ""}`,
+					style: { background: barColorOf(row.status) }
+				}), (0, react.createElement)("span", { className: "dsh-tdt-rec-time" }, actual ?? planned), (0, react.createElement)(MarqueeText, {
+					text: titleById.get(row.task_id) ?? row.task_id,
+					title: titleById.get(row.task_id) ?? row.task_id,
+					style: {
+						flex: "1 1 auto",
+						minWidth: 0,
+						fontSize: "var(--tdt-font-md)"
+					}
+				}), (0, react.createElement)("span", { className: "dsh-tdt-rec-meta" }, late === "" ? metaOf(row, t) : `${metaOf(row, t)} · ${late}`));
+			})))), (0, react.createElement)("div", {
+				ref: sentinelRef,
+				style: { height: "1px" }
+			}), (0, react.createElement)("div", { className: "dsh-tdt-rec-foot" }, loading ? t("recordsLoading") : atLimit ? t("recordsLimitHint") : done && rows.length > 0 ? t("recordsNoMore") : ""))));
 		}
 		//#endregion
 		//#region src/task-sort.ts
@@ -44225,11 +44757,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			fontSize: "var(--tdt-font-sm)",
 			margin: "4px 0 0"
 		};
-		const rowStyle = {
-			display: "flex",
-			gap: "8px",
-			margin: "8px 0"
-		};
 		const cardStyle = {
 			display: "flex",
 			alignItems: "center",
@@ -44430,7 +44957,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const parsed = JSON.parse(raw);
 				if (typeof parsed !== "object" || parsed === null) return void 0;
 				const candidate = parsed;
-				if (!Array.isArray(candidate.instances) || !Array.isArray(candidate.events)) return void 0;
 				const tasks = Array.isArray(candidate.tasks) ? candidate.tasks.map(normalizeTaskRow) : [];
 				return {
 					...parsed,
@@ -44485,11 +45011,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}
 			if (Array.isArray(raw)) return raw.filter((item) => typeof item === "string" && item.trim() !== "");
 			return [];
-		}
-		/** 路径末段（表格里只显示文件名，完整路径进 title）。 */
-		function basenameOf(path) {
-			const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-			return cut < 0 ? path : path.slice(cut + 1);
 		}
 		/**
 		* 从**刚提交的任务定义**里取卡片可见字段做一次乐观补丁（用户 2026-09-30：改完要**立刻**看到，
@@ -44554,9 +45075,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				key: 0
 			});
 			const invalidSeq = (0, react.useRef)(0);
-			const [statusFilter, setStatusFilter] = (0, react.useState)("all");
-			const [taskFilter, setTaskFilter] = (0, react.useState)("all");
-			const [expanded, setExpanded] = (0, react.useState)(null);
 			const [editor, setEditor] = (0, react.useState)(null);
 			const [editorSaving, setEditorSaving] = (0, react.useState)(false);
 			const [editorError, setEditorError] = (0, react.useState)(null);
@@ -44942,9 +45460,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				});
 			}, [invalid]);
 			snapshot.status === "ready" && snapshot.writable;
-			const taskRows = data?.tasks ?? [];
 			/** 可选的前置任务 = 现有任务表（真数据，带所属工作区 ⇒ 表单里先选工作区再选任务）。 */
-			const editorTasks = taskRows.map((row) => {
+			const editorTasks = (data?.tasks ?? []).map((row) => {
 				const name = row.title === "" ? row.id : row.title;
 				const label = row.code ? `[${row.code}] ${name}` : name;
 				return {
@@ -44954,10 +45471,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					enabled: row.enabled !== false
 				};
 			});
-			const titleOfTask = (id) => {
-				const row = taskRows.find((item) => item.id === id);
-				return row === void 0 ? id : `${row.title}（${row.id}）`;
-			};
+			/**
+			* 执行记录总查询页的任务候选（2026-10-04）：走 **overview（HTTP）** 而不是调试快照 ——
+			* 任务目录本来就有独立的 HTTP 真源，不跟着快照的可达性起伏。
+			* 文案与 `editorTasks` 同口径（`[编号] 名称`），`TaskOption` 与 `EditorTaskOption` 同形。
+			*/
+			const timelineTasks = (0, react.useMemo)(() => overview.rows.map((row) => {
+				const name = row.title === "" ? row.id : row.title;
+				return {
+					id: row.id,
+					label: row.code ? `[${row.code}] ${name}` : name,
+					workspace: row.workspace,
+					enabled: row.enabled !== false
+				};
+			}), [overview.rows]);
 			/**
 			* 归档会话查看：sessions.binding 只查已物化的 scope ⇒ openSessionView 内会先
 			* sessions.retain(id, { source }) 物化（官方源码 client.js:3410 / 3472），通常无需反归档。
@@ -45026,7 +45553,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					workspacePath: workspacePathOf(row?.snapshot ?? null)
 				});
 			};
-			const instances = (data?.instances ?? []).filter((row) => statusFilter === "all" || row.status === statusFilter).filter((row) => taskFilter === "all" || row.task_id === taskFilter).slice().sort((a, b) => a.scheduled_at < b.scheduled_at ? 1 : a.scheduled_at > b.scheduled_at ? -1 : 0);
 			const hasRaw = raw.trim() !== "";
 			/** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
 			const renderDbTable = (dump) => (0, react.createElement)("div", {
@@ -45111,7 +45637,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						history: null
 					});
 				}
-			}, `＋ ${t("editorNew")}`))))), data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
+			}, `＋ ${t("editorNew")}`))))), tab === "records" ? (0, react.createElement)(RecordsTimelineView, {
+				t,
+				tasks: timelineTasks,
+				workspaces: editorOptions.workspaces,
+				onOpenSession: viewSession !== null ? (sessionId) => {
+					openView(sessionId);
+				} : void 0
+			}) : data === void 0 ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react.createElement)("pre", { style: preStyle }, raw) : null, (0, react.createElement)("pre", { style: {
 				...preStyle,
 				color: "var(--tdt-fg-3)"
 			} }, describeDiag())) : tab === "config" ? (0, react.createElement)(TaskListView, {
@@ -45128,103 +45661,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onToggleEnabled: toggleTaskEnabled,
 				onRunNow: runTaskNow,
 				workspaces: editorOptions.workspaces
-			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("recordsHint")), (0, react.createElement)("div", { style: rowStyle }, (0, react.createElement)("label", { style: { fontSize: "var(--tdt-font-sm)" } }, `${t("filterStatus")} `, (0, react.createElement)("select", {
-				value: statusFilter,
-				onChange: (event) => {
-					setStatusFilter(event.target.value);
-				}
-			}, (0, react.createElement)("option", { value: "all" }, t("filterAll")), INSTANCE_STATUSES.map((status) => (0, react.createElement)("option", {
-				key: status,
-				value: status
-			}, statusTextOf(status, t))))), (0, react.createElement)("label", { style: { fontSize: "var(--tdt-font-sm)" } }, `${t("filterTask")} `, (0, react.createElement)("select", {
-				value: taskFilter,
-				onChange: (event) => {
-					setTaskFilter(event.target.value);
-				}
-			}, (0, react.createElement)("option", { value: "all" }, t("filterAll")), taskRows.map((row) => (0, react.createElement)("option", {
-				key: row.id,
-				value: row.id
-			}, `${row.title}（${row.id}）`))))), (0, react.createElement)("p", { style: hintStyle }, t("expandHint")), instances.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("debugInstancesEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
-				t("colTask"),
-				t("colSlot"),
-				t("colStatus"),
-				t("colAttempt"),
-				t("colSession"),
-				t("colOutputs"),
-				t("colUpdated")
-			].map((name) => (0, react.createElement)("th", {
-				key: name,
-				style: cellStyle
-			}, name)))), (0, react.createElement)("tbody", null, instances.map((row) => {
-				const open = expanded === row.id;
-				const events = open ? (data.events ?? []).filter((event) => event.instance_id === row.id).sort((a, b) => a.seq - b.seq) : [];
-				return (0, react.createElement)(react.Fragment, { key: row.id }, (0, react.createElement)("tr", {
-					style: {
-						cursor: "pointer",
-						background: open ? "var(--tdt-active)" : void 0
-					},
-					onClick: () => {
-						setExpanded(open ? null : row.id);
-					}
-				}, (0, react.createElement)("td", { style: cellStyle }, titleOfTask(row.task_id)), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.scheduled_at)), (0, react.createElement)("td", { style: cellStyle }, (0, react.createElement)("span", { style: row.status === "skipped" || row.status === "failed" ? {
-					color: "var(--tdt-danger)",
-					fontWeight: 600
-				} : void 0 }, statusTextOf(row.status, t))), (0, react.createElement)("td", { style: cellStyle }, String(row.attempt)), (0, react.createElement)("td", { style: cellStyle }, row.session_id === null ? "—" : viewSession !== null ? (0, react.createElement)(Button$2, {
-					variant: "ghost",
-					size: "sm",
-					className: "dsh-tdt-btn--link",
-					title: row.session_id,
-					onClick: (event) => {
-						event.stopPropagation();
-						openView(row.session_id);
-					}
-				}, row.session_id.slice(0, 8)) : row.session_id.slice(0, 8)), (0, react.createElement)("td", { style: cellStyle }, (() => {
-					const outputs = parseOutputs(row.outputs);
-					if (outputs.length === 0) return "—";
-					const sid = row.session_id;
-					if (sid === null || !canPreview) return (0, react.createElement)("span", { title: outputs.join("\n") }, outputs.map(basenameOf).join("、"));
-					return (0, react.createElement)("span", { style: {
-						display: "inline-flex",
-						flexWrap: "wrap",
-						gap: "6px"
-					} }, outputs.map((output) => (0, react.createElement)(Button$2, {
-						key: output,
-						variant: "ghost",
-						size: "sm",
-						className: "dsh-tdt-btn--link",
-						title: output,
-						onClick: (event) => {
-							event.stopPropagation();
-							openFile(sid, output);
-						}
-					}, basenameOf(output))));
-				})()), (0, react.createElement)("td", { style: cellStyle }, formatTime(row.updated_at))), open ? (0, react.createElement)("tr", null, (0, react.createElement)("td", {
-					colSpan: 6,
-					style: cellStyle
-				}, (0, react.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-sm)",
-					marginBottom: "4px",
-					display: "flex",
-					justifyContent: "space-between",
-					alignItems: "center",
-					gap: "8px"
-				} }, (0, react.createElement)("span", null, t("eventsOf")), viewSession !== null && row.session_id !== null ? (0, react.createElement)(Button$2, {
-					variant: "ghost",
-					size: "sm",
-					className: "dsh-tdt-btn--link",
-					onClick: () => {
-						openView(row.session_id);
-					}
-				}, `↗ ${t("viewSession")}`) : null), events.length === 0 ? (0, react.createElement)("p", { style: hintStyle }, t("eventsEmpty")) : (0, react.createElement)("table", { style: tableStyle }, (0, react.createElement)("thead", null, (0, react.createElement)("tr", null, [
-					t("colSeq"),
-					t("colTs"),
-					t("colKind"),
-					t("colDetail")
-				].map((name) => (0, react.createElement)("th", {
-					key: name,
-					style: cellStyle
-				}, name)))), (0, react.createElement)("tbody", null, events.map((event) => (0, react.createElement)("tr", { key: event.seq }, (0, react.createElement)("td", { style: cellStyle }, String(event.seq)), (0, react.createElement)("td", { style: cellStyle }, formatTime(event.ts)), (0, react.createElement)("td", { style: cellStyle }, event.kind), (0, react.createElement)("td", { style: detailCellStyle }, event.detail ?? ""))))))) : null);
-			}))))), viewing !== null ? (0, react.createElement)(SessionViewModal, {
+			}) : tab === "debug" ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react.createElement)("div", null, (0, react.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : null), viewing !== null ? (0, react.createElement)(SessionViewModal, {
 				t,
 				heading: viewing.heading,
 				sessionId: viewing.sessionId,

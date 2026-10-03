@@ -8,7 +8,7 @@
  *
  * 高度一律吃 `--tdt-control-h-*`；有边 / 无边同高（边框在内部补回）。
  */
-import { createElement as h, useEffect, useMemo, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react'
+import { createElement as h, useEffect, useMemo, useState, type CSSProperties, type ReactElement, type ReactNode, type RefObject } from 'react'
 import { IconChevronDownOutlineRegular, Menu, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { IconButton } from './Button'
 import { ensureControlsStyle } from './controls-css'
@@ -44,6 +44,8 @@ export interface InputProps {
   className?: string
   /** 追加样式（只允许补布局）。 */
   style?: CSSProperties
+  /** 原生 input 的 ref（调用方需要主动聚焦时用，如任务选择器的搜索框）。 */
+  inputRef?: RefObject<HTMLInputElement | null>
 }
 
 /** 文本输入。 */
@@ -51,6 +53,7 @@ export function Input(props: InputProps): ReturnType<typeof h> {
   ensureControlsStyle()
   const { value, onChange, placeholder, size = 'lg', error, disabled, type, className, style } = props
   return h('input', {
+    ref: props.inputRef,
     type: type ?? 'text',
     value,
     placeholder,

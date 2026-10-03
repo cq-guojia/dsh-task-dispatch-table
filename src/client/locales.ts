@@ -14,16 +14,15 @@ export type LocaleKey =
   | 'paramDefaultProvider' | 'paramDefaultModel'
   | 'debugClose' | 'debugEmpty' | 'debugRaw'
   | 'debugTasks' | 'debugWarns' | 'debugNoWarns'
-  | 'debugInstances' | 'debugInstancesEmpty' | 'debugEvents'
+  | 'debugInstances'  | 'debugEvents'
   | 'debugRefreshedAt'
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabDebug'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
-  | 'colTask' | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext' | 'colSlot'
-  | 'colStatus' | 'colAttempt' | 'colSession' | 'colUpdated'
-  | 'colSeq' | 'colTs' | 'colKind' | 'colDetail'
-  | 'filterStatus' | 'filterTask' | 'filterAll'
-  | 'expandHint' | 'eventsOf' | 'eventsEmpty' | 'recordsHint' | 'listExpandHint' | 'listDeferred' | 'listDeferredTitle'
+  | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext'
+  | 'colStatus' | 'colSession'
+  | 'filterAll'
+  | 'listExpandHint' | 'listDeferred' | 'listDeferredTitle'
   | 'viewSession' | 'viewSessionHint'
   | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
   | 'sessionUnknownKind'
@@ -141,6 +140,10 @@ export type LocaleKey =
   | 'editorDepTaskPh' | 'editorDepDisabledTag' | 'editorDepRemove' | 'editorDepEmpty' | 'editorDepEmptyHint'
   // 2026-10-04：工作区候选改真源后，选到「没有任务的工作区」时的下一级空态（用户允许这种空态）
   | 'editorDepTaskEmpty'
+  // 执行记录总查询页（时间轴，2026-10-04 落码）：`localeTag` 供 `Intl` 按当前语言排版日期（天标签）。
+  | 'localeTag' | 'recordsEmpty' | 'recordsEmptyFiltered' | 'recordsLoading' | 'recordsLoadMore' | 'recordsNoMore'
+  | 'recordsLimitHint' | 'recordsLoadFail' | 'recordsRetry' | 'recordsDayCount' | 'recordsTaskPh'
+  | 'recordsTaskSearch' | 'recordsMore' | 'recordsCollapse' | 'recordsOutOfScope' | 'recordsPlannedAt' | 'recordsStatusPh'
   | 'editorAdvanced' | 'editorAdvancedHelp' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
   | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorAgentTeam' | 'editorAgentTeamHint' | 'editorPreview' | 'editorPreviewHint'
   | 'editorPermission' | 'editorPermissionHint' | 'editorPermDefault' | 'editorPermReadOnly' | 'editorPermWorkspace' | 'editorPermFull'
@@ -232,7 +235,6 @@ export const zh: Record<LocaleKey, string> = {
   debugWarns: '最近告警 / 错误（≤20 条）',
   debugNoWarns: '（无）',
   debugInstances: '实例 task_instances',
-  debugInstancesEmpty: '（尚无实例）',
   debugEvents: '事件 task_events（最近 200 条，旧 → 新）',
   panelTitle: '定时任务调度器',
   backToConversation: '返回会话',
@@ -246,25 +248,14 @@ export const zh: Record<LocaleKey, string> = {
   debugDbTruncated: '行数超出上限，仅显示最新一部分',
   tasksParsedTitle: '已解析的任务（id 由系统生成，改名字不影响历史）',
   tasksParsedEmpty: '（无任务：内嵌任务表为空且任务目录无合法定义）',
-  colTask: '任务',
   colTitle: '名称',
   colCode: '编号',
   colId: '任务ID',
   colSchedule: '周期',
   colNext: '下次执行',
-  colSlot: '计划时刻',
   colStatus: '状态',
-  colAttempt: '第几次',
   colSession: '会话',
-  colUpdated: '更新于',
-  colSeq: 'seq',
-  colTs: '时间',
-  colKind: '类型',
-  colDetail: '详情',
-  filterStatus: '状态筛选',
-  filterTask: '任务筛选',
   filterAll: '全部',
-  expandHint: '点击任意一行展开该次执行的事件时间线',
   // 主界面卡片右侧展开箭头的无障碍名（用户 2026-09-30：此前误用执行记录页的 `expandHint`，
   // 悬停冒出「展开该次执行的事件时间线」——与卡片实际展开的「任务设置」对不上，故另立一词）。
   listExpandHint: '展开任务详情',
@@ -272,9 +263,6 @@ export const zh: Record<LocaleKey, string> = {
   listDeferred: '延期',
   // 延期悬浮说明（暂时只讲事实；「具体是哪个原因」由服务端透出后接在后面）。
   listDeferredTitle: '已过计划时刻但还没开始执行。常见原因：前置任务未完成 / 附加文件找不到 / 上一轮还在运行。',
-  eventsOf: '本次执行的事件',
-  eventsEmpty: '（该次执行暂无事件，或已超出最近 200 条的快照窗口）',
-  recordsHint: '一次执行 = 一个计划刻度（决策 25）；同一任务同一刻度只可能有一条 ⇒ 不会重复执行。',
   viewSession: '查看会话',
   viewSessionHint: '在面板内只读查看本次执行的会话记录（含归档会话）；简化渲染、不可续聊。',
   sessionViewerTitle: '会话记录（只读）',
@@ -657,6 +645,24 @@ export const zh: Record<LocaleKey, string> = {
   editorDepEmptyHint: '在下方选择工作区与任务后点「添加」',
   editorDepDisabledTag: '（已停用）',
   editorDepTaskEmpty: '该工作区暂无可选任务',
+  // —— 执行记录总查询页（时间轴，2026-10-04）——
+  localeTag: 'zh-CN',
+  recordsEmpty: '该时间范围内没有执行记录',
+  recordsEmptyFiltered: '当前过滤条件下没有执行记录',
+  recordsLoading: '执行记录加载中…',
+  recordsLoadMore: '加载更多',
+  recordsNoMore: '没有更多了',
+  recordsLimitHint: '已加载 2000 条，请缩小时间范围查看更早记录',
+  recordsLoadFail: '执行记录加载失败',
+  recordsRetry: '重试',
+  recordsDayCount: '{n} 条',
+  recordsTaskPh: '任务',
+  recordsTaskSearch: '搜索任务名或 ID',
+  recordsMore: '更多',
+  recordsCollapse: '收起',
+  recordsOutOfScope: '所选任务不在当前工作区',
+  recordsPlannedAt: '计划 {time}',
+  recordsStatusPh: '状态',
   editorAdvanced: '高级设置',
   editorAdvancedHelp: '此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。',
   editorRetry: '重试次数',
@@ -844,7 +850,6 @@ export const en: Record<LocaleKey, string> = {
   debugWarns: 'Recent warnings / errors (≤20 entries)',
   debugNoWarns: '(none)',
   debugInstances: 'Instances task_instances',
-  debugInstancesEmpty: '(no instances yet)',
   debugEvents: 'Events task_events (latest 200, oldest → newest)',
   panelTitle: 'Scheduled task dispatcher',
   backToConversation: 'Back to conversation',
@@ -858,31 +863,17 @@ export const en: Record<LocaleKey, string> = {
   debugDbTruncated: 'row count exceeds the cap, showing only the newest rows',
   tasksParsedTitle: 'Parsed tasks (ids are generated; renaming never breaks history)',
   tasksParsedEmpty: '(no tasks: inline table empty and task dir has no valid definition)',
-  colTask: 'Task',
   colTitle: 'Title',
   colCode: 'Code',
   colId: 'Task ID',
   colSchedule: 'Schedule',
   colNext: 'Next run',
-  colSlot: 'Scheduled',
   colStatus: 'Status',
-  colAttempt: 'Attempt',
   colSession: 'Session',
-  colUpdated: 'Updated',
-  colSeq: 'seq',
-  colTs: 'Time',
-  colKind: 'Kind',
-  colDetail: 'Detail',
-  filterStatus: 'Status filter',
-  filterTask: 'Task filter',
   filterAll: 'All',
-  expandHint: 'Click any row to expand the event timeline of that run',
   listExpandHint: 'Expand task details',
   listDeferred: 'Delayed',
   listDeferredTitle: 'Past its planned time but has not started. Usual causes: preceding task not finished / attachment missing / previous run still running.',
-  eventsOf: 'Run log',
-  eventsEmpty: '(no events for this run, or it falls outside the latest-200 snapshot window)',
-  recordsHint: 'One run = one schedule slot (decision 25); a task can only have one row per slot ⇒ no duplicate runs.',
   viewSession: 'View session',
   viewSessionHint: 'Read this run\'s session transcript in a read-only panel (archived sessions included); simplified rendering, no follow-up replies.',
   sessionViewerTitle: 'Session transcript (read-only)',
@@ -1265,6 +1256,24 @@ export const en: Record<LocaleKey, string> = {
   editorDepEmptyHint: 'Pick a workspace and a task below, then add',
   editorDepDisabledTag: ' (disabled)',
   editorDepTaskEmpty: 'No selectable task in this workspace',
+  // —— Execution records (timeline, 2026-10-04) ——
+  localeTag: 'en-US',
+  recordsEmpty: 'No executions in this time range',
+  recordsEmptyFiltered: 'No executions match the current filters',
+  recordsLoading: 'Loading executions…',
+  recordsLoadMore: 'Load more',
+  recordsNoMore: 'No more',
+  recordsLimitHint: 'Loaded 2000 — narrow the time range to see earlier records',
+  recordsLoadFail: 'Failed to load executions',
+  recordsRetry: 'Retry',
+  recordsDayCount: '{n} total',
+  recordsTaskPh: 'Task',
+  recordsTaskSearch: 'Search by name or ID',
+  recordsMore: 'More',
+  recordsCollapse: 'Collapse',
+  recordsOutOfScope: 'The selected task is not in this workspace',
+  recordsPlannedAt: 'Planned {time}',
+  recordsStatusPh: 'Status',
   editorAdvanced: 'Advanced settings',
   editorAdvancedHelp: 'This is the advanced configuration area. Read each item\u2019s description before changing it; default values are recommended for routine tasks.',
   editorRetry: 'Retry attempts',

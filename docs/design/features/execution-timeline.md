@@ -1,6 +1,6 @@
 # 执行记录总查询页（时间轴）
 
-> **状态**：📝 待拍板（2026-10-03 立；本轮先定口径，落码待用户确认）
+> **状态**：🔵 **落码完成**（2026-10-04；typecheck / build / 冒烟 530-0 全绿），⏳ 真机验收待做
 > **来源**：用户 2026-10-03 口述需求（原话见 [`worklog/execution-timeline.md`](../../worklog/execution-timeline.md) §一）+ 同日四项拍板
 > **配套**：
 > - 过程与证据坐标 [`../../worklog/execution-timeline.md`](../../worklog/execution-timeline.md)
@@ -31,8 +31,12 @@
 
 ### 1.3 现状与改动面
 
-- 现有「执行记录」屏 = `src/client/index.ts:1279` 起的三元最后分支：**两个原生 select + 原生表格，数据来自调试快照、无分页**，是「最低版本测试界面」（用户原话）。本页即**重写这一屏**。
-- 服务端与取数层**基本零改动**：`GET /tasks/instances`（`src/index.ts:828`）当初即按「未来总查询页共用（决策 55）」设计；`store.listInstancesByQuery`（`src/store.ts:820`）**游标分页已实现**；客户端 `fetchInstances`（`src/client/query.ts:112`）已带回 `nextCursor`。
+- 现有「执行记录」屏 = `src/client/index.ts` 三元里那个**最简测试版**分支（两个原生 select + 原生表格，数据来自调试快照、无分页）。✅ **2026-10-04 已整段删除**，由本页取代。
+- 落码位置：视图 = `src/client/records-timeline.tsx`；`src/client/index.ts` 的 `tab === 'records'` 分支渲染它。
+  ⚠️ 该分支**排在最外层 `data === undefined` 门槛之前** —— 新页走 HTTP，不再吃调试快照，否则快照缺失会把新页一起挡掉。
+- 任务选择器 = `src/client/ui/TaskPicker.tsx`（全站唯一实现，见 [`../ui-foundation.md`](../ui-foundation.md) §5.4）。
+- 服务端与取数层**零改动**：`GET /tasks/instances`（`src/index.ts:828`）当初即按「未来总查询页共用（决策 55）」设计；`store.listInstancesByQuery`（`src/store.ts:820`）**游标分页已实现**；客户端 `fetchInstances`（`src/client/query.ts:112`）已带回 `nextCursor`。
+- 旧测试屏专用文案键（`recordsHint` / `filterStatus` / `filterTask` / `expandHint` / `debugInstancesEmpty` / `eventsOf` / `eventsEmpty` / `colSeq` / `colTs` / `colKind` / `colDetail` / `colTask` / `colSlot` / `colAttempt` / `colUpdated`）与 `basenameOf` 已一并删除；客户端调试快照类型也不再声明 `instances` / `events`（宿主协议未动）。
 
 ---
 
@@ -191,11 +195,12 @@
 
 ---
 
-## 十一、待拍板（落码前要敲定的）
+## 十一、已定的参数（落码照此实现）
 
-| # | 问题 | 我的倾向 |
+| # | 问题 | 结论 |
 |---|---|---|
-| 1 | 首屏条数 20 还是 50 | 50（用户说「具体再看」） |
-| 2 | 在跑的色条用蓝（business）还是与卡片状态灯一致用绿脉动 | 蓝（§五） |
-| ~~3~~ | ~~工作区候选统一到 `/options` 真源（§三.1）~~ | ✅ **2026-10-04 已拍板并落码**：三处全部统一到真源，任务列表顶部手搓下拉也收编为 `SelectField`（另立工作包 [`worklog/workspace-options-unification.md`](../../worklog/workspace-options-unification.md)） |
-| 4 | 天标签是否 sticky 吸顶 | 做（长列表里始终知道自己在哪一天）；真机看效果再撤 |
+| 1 | 首屏条数 | **50**（`PAGE_SIZE`；用户「20 或 50，具体再看」⇒ 取 50，真机看密度再调） |
+| 2 | 在跑的色条 | **蓝 `--tdt-business` + 缓慢脉动**（§五；不与「成功绿」混淆） |
+| 3 | ~~工作区候选统一到 `/options` 真源~~ | ✅ **2026-10-04 已拍板并落码**：三处全部统一到真源，任务列表顶部手搓下拉也收编为 `SelectField`（另立工作包 [`worklog/workspace-options-unification.md`](../../worklog/workspace-options-unification.md)） |
+| 4 | 天标签吸顶 | **做**（`position: sticky`；冒烟已钉住这条 CSS） |
+| 5 | 状态档位 | 全部 / 成功 / 失败 / **未执行(skipped)** / **运行中**（`dispatched` + `running` 合并 —— 在跑是一个语义）；文案一律经 `statusTextOf` 取名 |

@@ -46,29 +46,27 @@
 - 落库形态与 Loop A 一致：`dispatched` + 派发快照，**不打 `pending`**（`pending` 是重试回退专用、窗口外会被删行）；打 **`run_type='manual'`**（新列，2026-10-03 落地 U5 预留字段的一半；读路径 / UI 展示暂不消费，见 [data-model.md](design/data-model.md) §一）。
 - 代码：`scheduler.runNow()` + `POST /tasks/run`（业务性拒绝回 200 + `ok:false`）；前端 `task-list.tsx` 按钮 / 确认框 / Toast + 13 个中英文案键。typecheck / build 绿、**冒烟 495/0**。
 
-### 1.6 执行记录总查询页（时间轴）+ 任务选择器抽象 —— 📝 **规格待拍板**（2026-10-03 立，**未落码**）
+### 1.6 执行记录总查询页（时间轴）+ 任务选择器 —— 🔵 **落码完成**（2026-10-04），⏳ 真机验证待做
 
-> 用户 2026-10-03 发起：主界面顶部一级 tab「执行记录」现在是「最低版本、最最简化的测试验证界面」（`src/client/index.ts:1279` 起的三元最后分支 = 两个原生 select + 原生表格），**重写成**全部任务的执行流水账时间轴。本轮按用户要求**先建文档、不动代码**。
-> 规格 = [`design/features/execution-timeline.md`](design/features/execution-timeline.md)；任务选择器 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4 + [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项；过程 = [`worklog/execution-timeline.md`](worklog/execution-timeline.md)。
+> 用户 2026-10-03 发起：主界面顶部一级 tab「执行记录」原来是「最低版本、最最简化的测试验证界面」（两个原生 select + 原生表格），**已重写**为全部任务的执行流水账时间轴。
+> 规格 = [`design/features/execution-timeline.md`](design/features/execution-timeline.md)；任务选择器 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4 + [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项；过程 = [`worklog/execution-timeline.md`](worklog/execution-timeline.md) §六。
 
-**四项已拍板**：① 不改顶部三 tab，只重写那一屏；② 点一条执行记录 = 打开会话（复用归档会话弹窗，只传 sessionId）；③ 过滤 = 时间（默认最近 3 天）+ 工作区 + 状态 + 任务，任务**不是普通下拉**而是带搜索的选择器（默认最近 10 条 +「更多」，按名字 / ID 实时过滤，**必须抽成共用控件**）；④ 分页 = **游标「加载更多」**（不做页码），首屏 50、**硬上限 2000** 后提示缩小范围。
+**落码位置**：视图 = `src/client/records-timeline.tsx`（新）；共用控件 = `src/client/ui/TaskPicker.tsx`（新）；接线 = `src/client/index.ts` 的 `tab === 'records'` 分支（**排在最外层 `data === undefined` 门槛之前**，新页走 HTTP 不吃调试快照）。
 
-**形态**：天级大标签在最上面（朋友圈式），天下列当天各次执行的块；块 = 一次执行，成功/失败**不用图标**，只用块左缘 4px 色条（绿 / 红 / 黄 / 蓝脉动）；整体倒序。
+**已定参数**：首屏 **50** 条；默认时间档最近 **3 天**；**硬上限 2000** 后提示缩小范围；在跑色条用**蓝 + 缓慢脉动**；天标签 **sticky 吸顶**；状态档 = 全部 / 成功 / 失败 / 未执行 / 运行中（`dispatched`+`running` 合并）。
 
-**服务端基本零改动**：`GET /tasks/instances`（`src/index.ts:828`）当初即按「未来总查询页共用（决策 55）」设计，`store.listInstancesByQuery`（`src/store.ts:820`）**游标分页已实现**，客户端 `fetchInstances`（`src/client/query.ts:112`）已带回 `nextCursor`。
+**形态**：天级大标签在最上面（朋友圈式），天下列当天各次执行的块；块 = 一次执行，成功/失败**不用图标**，只用块左缘 4px 色条（绿 / 红 / 黄 / 蓝脉动）；整体倒序（服务端顺序，客户端不重排）；点块打开会话（只传 sessionId）。
 
-**待拍板**（落码前要敲定，见规格 §十一）：首屏 20 还是 50（倾向 50）/ 在跑色条蓝还是跟卡片状态灯的绿脉动（倾向蓝）/ 天标签是否 sticky 吸顶（倾向做）。（原第 3 条「工作区候选统一」✅ 已于 2026-10-04 拍板并落码，见 §1.7）
+**服务端零改动**：`GET /tasks/instances`（`src/index.ts:828`）当初即按「未来总查询页共用（决策 55）」设计，`store.listInstancesByQuery`（`src/store.ts:820`）**游标分页已实现**，客户端 `fetchInstances`（`src/client/query.ts:112`）已带回 `nextCursor`。
 
-### 1.7 工作区候选真源统一 + 顶部下拉收编 —— 🔵 **落码完成**（2026-10-04），⏳ 真机验证待做
+**已清死代码**：旧测试屏整段 + `statusFilter` / `taskFilter` / `expanded` / `titleOfTask` / `instances` 派生 / `basenameOf` / `Fragment` import + 15 个旧屏专用文案键 + 客户端调试快照的 `instances` / `events` 声明（宿主协议未动）。
 
-> 用户 2026-10-04 拍板：「按最干净、最规范的来……就统一到真源。你先把这个问题改了，我们再往下推进其他的。」
-> 过程 = [`worklog/workspace-options-unification.md`](worklog/workspace-options-unification.md)；口径真源 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4；使用规范 = [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项。
+typecheck / build（`dist/` 入库）/ 冒烟 **530/0** 全绿。
 
-- **真源**：三处「选工作区」（编辑器底部 / 编辑器「前置任务」第①级 / 任务列表顶部）候选**一律取 `GET /options`**（面板级一份，取一次、不轮询）；**取不到不回退反推**（回退 = 又造第二真源），显示「暂无可选」。
-- **收编**：任务列表顶部那个绕过基础层手搓的官方 `Menu` + 自绘锚点（全站最后一处）⇒ 换成 `SelectField`，删 `menuOpen` / `.dsh-tdt-tl-ws*` / `controlBoxStyle`；`Menu` 的 import 一并去掉。
-- **允许空态**（用户拍板）：选到「真源里有、但当前没有可选任务」的工作区 ⇒ 下一级显示「该工作区暂无可选任务」（新增 `editorDepTaskEmpty` 中英文案）。
-- ⚠️ **观感有一处预期变化**：顶部下拉的选中态由「高亮」变「打勾」（`SelectField` 用 `selection:'check'`），与编辑器两处完全一致 —— 真机验收要确认这是可接受的。
-- typecheck 绿。
+### ~~1.7 工作区候选真源统一 + 顶部下拉收编~~ —— ✅ **2026-10-04 真机验收通过，已结案**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）
+
+> 过程 = [`worklog/workspace-options-unification.md`](worklog/workspace-options-unification.md)（已封卷）；口径真源 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4；使用规范 = [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项。
+> 结论要点（供后人不重复排查）：三处「选工作区」候选一律取 `GET /options`，取不到显示「暂无可选」**不回退反推**；任务列表顶部手搓下拉已收编为 `SelectField`；允许「选到没有任务的工作区」的空态。收编后选中态为打勾（与编辑器一致，属预期变化）。
 
 ---
 
@@ -126,8 +124,8 @@
 9. **U30 · HTML 预览**（2026-10-04 **已落码**，⏳ 真机复验待做）：HTML/HTM 现在默认渲染网页（官方同款 `srcDoc` + `sandbox=""` + CSP + 禁用清单），「源码」态截前 256K。**下一步 = 真机复验**：点开一个 .html 应直接看到渲染后的网页；点「源码」看前 256K，超限时滚到底部有一行提示。
 10. ~~**U21**~~ ✅ **2026-10-03 真机验收通过，整包封卷**（详见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）；~~**U16**~~ ✅ **2026-10-03 真机验收通过**。
 7. ⏳ **立即执行（§1.5）真机验证**：重点「按钮位于删除与编辑中间」「确认框文案」「成功 Toast」「任务在跑时被拒并提示」「前置未达标时被拒并提示原因」「已停用任务仍可立即执行」。
-8. ⏳ **工作区候选真源统一（§1.7）真机验证**：三处「选工作区」（编辑器底部 / 编辑器「前置任务」第①级 / 任务列表顶部）下拉候选应**完全一致**，且**暂时没有任务的工作区也要出现在候选里**；任务列表顶部下拉收编后观感与编辑器一致（选中态为打勾，属预期变化）；在编辑器里选一个「没有任务的工作区」，下一级应显示「该工作区暂无可选任务」。
-9. ⏳ **执行记录总查询页（§1.6）**：文档已建（规格 / 任务选择器抽象 / 叙事），**等用户对规格拍板**（剩余三项待拍板见 §1.6）⇒ 拍板后按序落码：① `ui/TaskPicker.tsx`（共用控件，先建）→ ② 时间轴视图替换 `src/client/index.ts:1279` 起的测试分支（游标「加载更多」+ 天分组 + 色条语义 + 点块开会话）→ ③ typecheck / build（`dist/` 入库）/ smoke → ④ 真机验收（重点：滚到底续拉不重不漏、跨页同一天不重复天标签、2000 上限提示、点块开会话、改工作区任务候选实时变）。
+8. ✅ **工作区候选真源统一（§1.7）**：2026-10-04 真机验收四项全过，已结案（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）。
+9. ⏳ **执行记录总查询页（§1.6）真机验收**：已落码（timecheck / build / 冒烟 530/0）。重点验：① 切到「执行记录」tab 即见按天分组的流水账、越近越前；② 滚到底自动续拉、不重不漏，跨页同一天**不重复天标签**；③ 天标签滚动时吸顶；④ 色条语义（成功绿 / 失败红 / 未执行黄 / 在跑蓝脉动）；⑤ 点块打开会话（无会话的行不可点）；⑥ 过滤四维（时间默认最近 3 天 / 工作区 / 状态 / 任务搜索选择器）改任一即重置；⑦ 任务选择器：搜索按名字或 ID 都能命中、默认 10 条 +「更多」、改工作区后候选实时变；⑧ 加载满 2000 条给「缩小时间范围」提示。
 
 
 

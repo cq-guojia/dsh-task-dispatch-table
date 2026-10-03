@@ -231,7 +231,7 @@ body[data-ds-dark-theme]{
 | 图标钮 | `plain`（默认）/ `outline` / `danger` | sm / md / lg（默认 lg） | `ui/Button.tsx`（`IconButton`）✅ |
 | 输入框 / 前缀框 / 数字框 | 输入框 `error`（描红）；数字框显式 ±、`inputWidth` 可调宽度 | sm / md / lg（默认 lg） | `ui/Field.tsx` ✅ |
 | 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽、`marquee` 跑马灯） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`）✅ |
-| **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx`（⏳ 2026-10-03 定规格，**待建**；未建成前不许业务文件自己拼 Input + Menu） |
+| **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx` ✅ **2026-10-04 落码**（执行记录总查询页在用；不许业务文件自己拼 Input + Menu） |
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
 | Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
@@ -248,7 +248,7 @@ body[data-ds-dark-theme]{
   - `Modal`：`className` 只落 `.dialog`，抬不了整层 `.root`(z1000) ⇒ 编辑器故意不用官方 Modal（`task-editor.tsx:977-979`）。
   - 官方类名是 CSS-module 哈希，**不许写死**，只能按元素 + role 选（`official-classes.ts` 的 `ocOr` 二选一语义已有踩坑记录）。
 
-### 5.4 任务选择器（2026-10-03 立，**待建**）
+### 5.4 任务选择器（2026-10-03 立规格，✅ 2026-10-04 落码）
 
 **为什么必须抽（用户原话）**：「任务一旦稍微多点，有个三四十条你就很难选了……应该直接做成一个搜索框的样子：默认显示最近的 10 条，然后提供『更多』选项；上方带一个搜索框可以过滤，支持搜任务的名字、任务的 ID……这个功能明确是需要抽象出来统一的，因为很多地方都要用。」
 

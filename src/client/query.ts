@@ -15,6 +15,11 @@ export interface InstanceRow {
   id: string
   task_id: string
   scheduled_at: string
+  /**
+   * 计划时刻所在的**日历日**（服务端 `task_instances.logical_date`，`SELECT *` 已带回）。
+   * 时间轴按它做「天分组」——**不再用本地时区推一遍**，免得与服务端口径分叉。旧行不会有这列 ⇒ 可能 undefined。
+   */
+  logical_date?: string
   status: string
   attempt: number
   session_id: string | null
