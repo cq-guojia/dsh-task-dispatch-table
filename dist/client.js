@@ -41794,8 +41794,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
 			".dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }",
-			".dsh-tdt-info-session { background: var(--tdt-chip-bg); transition: background var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-session:hover { background: var(--tdt-chip-bg-hover); }",
+			".dsh-tdt-info-session { background: transparent; color: var(--tdt-fg); border-bottom: 1px dashed var(--tdt-border-strong); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-session:hover { color: var(--tdt-business); border-bottom-color: var(--tdt-business); }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -42722,16 +42722,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					flex: "1 1 auto",
 					minWidth: 0
 				} }, (0, react.createElement)(MarqueeText, { text: sessionName }));
-				const sessionChipStyle = {
+				const sessionLinkStyle = {
 					display: "inline-flex",
 					alignItems: "center",
 					gap: "6px",
 					maxWidth: "100%",
 					boxSizing: "border-box",
-					padding: "2px 8px",
-					border: "1px solid var(--tdt-border)",
-					borderRadius: "var(--tdt-radius-sm)",
-					color: "var(--tdt-fg)",
+					padding: "1px 0",
 					font: "inherit",
 					fontSize: "var(--tdt-font-sm)",
 					textAlign: "left",
@@ -42741,14 +42738,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					type: "button",
 					className: "dsh-tdt-info-session",
 					title: sessionName,
-					style: sessionChipStyle,
+					style: sessionLinkStyle,
 					onClick: () => {
 						onOpenSession(sid);
 					}
 				}, sessionIcon, sessionLabel) : (0, react.createElement)("span", {
 					className: "dsh-tdt-info-session",
 					title: sessionName,
-					style: sessionChipStyle
+					style: {
+						...sessionLinkStyle,
+						borderBottom: "1px dashed var(--tdt-border-strong)"
+					}
 				}, sessionIcon, sessionLabel);
 				return (0, react.createElement)("div", null, InfoField({
 					label: t("colStatus"),

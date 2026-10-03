@@ -127,9 +127,10 @@ const TASK_LIST_CSS = [
   // 基础信息右栏「产出物」文件行：hover 给一层底色（用户 2026-10-03）。必须走 class——inline 会盖掉 :hover。
   '.dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }',
   '.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }',
-  // 基础信息右栏「任务会话」chip（用户 2026-10-03）：图标 + 会话名包一层底框，hover 变色提示可点。
-  '.dsh-tdt-info-session { background: var(--tdt-chip-bg); transition: background var(--tdt-dur) var(--tdt-ease); }',
-  '.dsh-tdt-info-session:hover { background: var(--tdt-chip-bg-hover); }',
+  // 基础信息右栏「任务会话」（用户 2026-10-03 二次修订）：**不要边框、不要底色**，做成超链接那种——
+  // 虚线下划线 + hover 变色（蓝）。⚠️ color / border-bottom 必须写在 class 里，inline 会盖掉 :hover。
+  '.dsh-tdt-info-session { background: transparent; color: var(--tdt-fg); border-bottom: 1px dashed var(--tdt-border-strong); transition: color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease); }',
+  '.dsh-tdt-info-session:hover { color: var(--tdt-business); border-bottom-color: var(--tdt-business); }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -1067,25 +1068,28 @@ function TaskExpandPanel(props: {
       : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
     const note = instance.note === null || instance.note === undefined ? '' : instance.note
     const timeOf = (iso: string | null): string => iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
-    // 「任务会话」chip（用户 2026-10-03）：图标 + 会话名，底框包起来、hover 变色提示可点（点了开会话）。
+    // 「任务会话」（用户 2026-10-03 二次修订）：不要边框 / 底色，做成**超链接**——虚线下划线 + hover 变色。
+    // 颜色 / 下划线都在 `.dsh-tdt-info-session` 里（inline 会盖掉 :hover）；这里只放布局。
     // 会话名由服务端按 `sessionTitleOf` 单源下发；缺名（旧行）退回会话 id，仍可点。
     const sessionName = instance.session_title ?? sid ?? ''
     const sessionIcon = h(IconSearchOutlineRegular, { size: 14 })
     const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
-    const sessionChipStyle: Record<string, string | number> = {
+    const sessionLinkStyle: Record<string, string | number> = {
       display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
-      padding: '2px 8px', border: '1px solid var(--tdt-border)', borderRadius: 'var(--tdt-radius-sm)',
-      color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-sm)', textAlign: 'left',
+      padding: '1px 0', font: 'inherit', fontSize: 'var(--tdt-font-sm)', textAlign: 'left',
       cursor: canOpenSession ? 'pointer' : 'default',
     }
     const sessionChip = sid === null || sessionName === ''
       ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '—')
       : canOpenSession
         ? h('button', {
-          type: 'button', className: 'dsh-tdt-info-session', title: sessionName, style: sessionChipStyle,
+          type: 'button', className: 'dsh-tdt-info-session', title: sessionName, style: sessionLinkStyle,
           onClick: () => { onOpenSession(sid) },
         }, sessionIcon, sessionLabel)
-        : h('span', { className: 'dsh-tdt-info-session', title: sessionName, style: sessionChipStyle }, sessionIcon, sessionLabel)
+        : h('span', {
+          className: 'dsh-tdt-info-session', title: sessionName,
+          style: { ...sessionLinkStyle, borderBottom: '1px dashed var(--tdt-border-strong)' },
+        }, sessionIcon, sessionLabel)
     return h('div', null,
       InfoField({
         label: t('colStatus'),

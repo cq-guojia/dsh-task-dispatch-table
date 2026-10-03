@@ -2049,12 +2049,15 @@ console.log('\n[14] runtime-index')
       rec.includes('cacheReadTokens') && rec.includes('uncachedInputTokens') && rec.includes('totalTokens')
       && rec.includes('cacheWriteTokens'))
     const qsrc = readFileSync(join(process.cwd(), 'src', 'client', 'query.ts'), 'utf8')
-    check('基础信息「任务会话」：图标 + 会话名 + hover 底色的可点 chip，不再用独立「查看会话」按钮',
+    check('基础信息「任务会话」：图标 + 会话名的超链接样式（虚线下划线 + hover 变色），不再用独立「查看会话」按钮',
       tl.includes("t('infoSession')") && tl.includes('dsh-tdt-info-session')
       && tl.includes("children: sessionChip")
       && tl.includes('session_title')
       && tl.includes('MarqueeText, { text: sessionName }')
       && tl.includes('IconSearchOutlineRegular')
+      // 超链接样式：class 里虚线下划线 + hover 变蓝（inline 会盖掉 :hover，故必须写在 class）。
+      && tl.includes('border-bottom: 1px dashed var(--tdt-border-strong)')
+      && tl.includes('.dsh-tdt-info-session:hover { color: var(--tdt-business)')
       // 旧的独立按钮已删；执行时长标签也改了。
       && !tl.includes("}, t('viewSession')))")
       && tl.includes("t('infoDuration')"))
