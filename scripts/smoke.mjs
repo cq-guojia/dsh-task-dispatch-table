@@ -2065,9 +2065,10 @@ console.log('\n[14] runtime-index')
       // 基础信息右栏不再出现把 loading 文案直接当文字渲染的旧写法。
       && !tl.includes("color: 'var(--tdt-fg-3)' } }, t('loading'))"))
     const rec = readFileSync(join(process.cwd(), 'src', 'reconcile.ts'), 'utf8')
-    check('token 用量取数覆盖官方 TurnTokenUsage 字段名（uncachedInputTokens / cacheReadTokens / totalTokens）',
-      rec.includes('cacheReadTokens') && rec.includes('uncachedInputTokens') && rec.includes('totalTokens')
-      && rec.includes('cacheWriteTokens'))
+    check('token 取数按官方 TokenUsage 口径：inputTokens 是**未缓存**输入 ⇒ 计费输入 = inputTokens + cacheReadTokens + cacheWriteTokens',
+      rec.includes('num(u.inputTokens)') && rec.includes('num(u.cacheReadTokens)')
+      && rec.includes('num(u.cacheWriteTokens)') && rec.includes('num(u.totalTokens)')
+      && rec.includes('(uncached ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0)'))
     const qsrc = readFileSync(join(process.cwd(), 'src', 'client', 'query.ts'), 'utf8')
     check('基础信息「任务会话」：灰底小图标框 + 会话名（无虚线 / 无边框），hover 变蓝；不再用独立「查看会话」按钮',
       tl.includes("t('infoSession')") && tl.includes('dsh-tdt-info-session')

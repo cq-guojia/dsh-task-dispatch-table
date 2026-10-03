@@ -94,8 +94,19 @@ function num(v) {
 }
 /**
  * 从会话事件里取 token 用量分量（决策 32 修订）。
- * 宿主各版本把用量挂的位置与字段名不一 ⇒ 多位置 × 多字段名探测；
- * 取不到（事件不带 usage，或只给总数无法归属）返回 undefined（三列留 null，不阻塞链路）。
+ *
+ * **权威来源已核实**（宿主 `@deepseek-ai/dsh-session` `lib/types/types.d.ts`）：官方用量挂在
+ * `assistant/message` 事件的 `usage?: TokenUsage` 上（`@deepseek-ai/dsh-llm` `lib/types/types.d.ts:160`），
+ * 一次模型调用一条。**不需要我们自己推**——事件里带的就是官方算好的。
+ *
+ * ⚠️ 官方 `TokenUsage` 的计数是**互斥的**（原文：*Counts are DISJOINT*）：
+ *   - `inputTokens` = **未缓存**输入（不含缓存）；
+ *   - 缓存单列 `cacheReadTokens` / `cacheWriteTokens`；
+ *   - **计费输入 = inputTokens + cacheReadTokens + cacheWriteTokens**；
+ *   - `totalTokens` = 这一次调用的完整总量（prompt + output）。
+ * ⇒ 只取 `inputTokens` 会**漏掉缓存**（大头）⇒ 面板数远小于会话。这就是之前对不上的根因。
+ *
+ * 取不到（事件不带 usage）返回 undefined（三列留 null，不阻塞链路）。
  */
 export function extractTokenUsage(event) {
     if (typeof event !== 'object' || event === null)
@@ -114,25 +125,26 @@ export function extractTokenUsage(event) {
             continue;
         const u = holder;
         const outOut = num(u.completionTokens) ?? num(u.outputTokens) ?? num(u.completion_tokens);
-        const cacheOut = num(u.cachedTokens) ?? num(u.cacheTokens) ?? num(u.cached_tokens)
-            // 官方 TurnTokenUsage 用 cacheReadTokens（缓存读取）；用户真机核对过的会话用量即此套字段名。
-            ?? num(u.cacheReadTokens)
+        // 缓存读取（官方字段名 cacheReadTokens；沿用旧别名兜底）。
+        const cacheRead = num(u.cacheReadTokens) ?? num(u.cachedTokens) ?? num(u.cacheTokens) ?? num(u.cached_tokens)
             ?? num(u.promptTokensDetails?.cachedTokens)
             ?? num(u.prompt_tokens_details?.cached_tokens);
-        // 输入（prompt）：先按常见命名取；再兜官方 TurnTokenUsage 的
-        // `uncachedInputTokens + cacheReadTokens + cacheWriteTokens` 与 `totalTokens − outputTokens`（两者等价）。
-        const uncached = num(u.uncachedInputTokens);
-        const cacheRead = num(u.cacheReadTokens);
         const cacheWrite = num(u.cacheWriteTokens);
         const total = num(u.totalTokens);
-        const inOut = num(u.promptTokens) ?? num(u.inputTokens) ?? num(u.prompt_tokens)
+        // 输入（计费 prompt）：
+        //  ① `promptTokens` 这类命名通常**已含缓存** ⇒ 直接用；
+        //  ② 否则按官方口径：**未缓存 inputTokens + cacheRead + cacheWrite**（互斥相加）；
+        //  ③ 都没有 ⇒ 用 `totalTokens − outputTokens` 兜底。
+        const legacyPrompt = num(u.promptTokens) ?? num(u.prompt_tokens);
+        const uncached = num(u.inputTokens) ?? num(u.uncachedInputTokens);
+        const inOut = legacyPrompt
             ?? (uncached !== undefined || cacheRead !== undefined || cacheWrite !== undefined
                 ? (uncached ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0)
                 : undefined)
             ?? (total !== undefined && outOut !== undefined ? Math.max(0, total - outOut) : undefined);
         // 三者任一有值才算取到（避免对空 usage 对象误报；只给总数无法归属则不记）
-        if (inOut !== undefined || outOut !== undefined || cacheOut !== undefined) {
-            return { in: inOut, out: outOut, cache: cacheOut };
+        if (inOut !== undefined || outOut !== undefined || cacheRead !== undefined) {
+            return { in: inOut, out: outOut, cache: cacheRead };
         }
     }
     return undefined;
