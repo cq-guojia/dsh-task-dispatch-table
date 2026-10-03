@@ -151,7 +151,10 @@ const TASK_LIST_CSS = [
   // 溢出去压到值上（用户 2026-10-03 反馈）。InfoField 返回 Fragment，label / value 是直接子格。
   '.dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }',
   // 每格自带底边缝：label 与 value 相邻（**不用 column-gap**）⇒ 两条缝连成整行线；标签右侧留白当列间距。
-  '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); }',
+  // ⚠️ **行高必须两格同一个**（用户 2026-10-03 反馈「字全贴上面那条线」）：grid 是 `align-items: stretch`，
+  // 格子高度由行内最高的那格决定 ⇒ label 若继承宿主行高（与 value 的 `--tdt-line-md` 不等），矮的那格内容
+  // 会被顶对齐、看着贴上边线。统一成 `--tdt-line-md` 后：单行 = 上下居中；值多行时标签与值第一行齐平。
+  '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); line-height: var(--tdt-line-md); }',
   '.dsh-tdt-info-label { padding-right: 12px; }',
   // 每栏**最底下那一条线**去掉（用户 2026-10-03 二次修订）：判据不是写死某一行（如 Token），而是由
   // DOM 实际决定 —— 左栏最后一块就是字段区；右栏**有产出物时最后一块是产出物区** ⇒ 字段区末行
