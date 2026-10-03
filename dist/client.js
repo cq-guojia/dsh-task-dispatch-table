@@ -42624,9 +42624,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
 		*/
 		function TaskExpandPanel(props) {
-			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props;
+			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession, refresh } = props;
 			const [tab, setTab] = (0, react.useState)("info");
 			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}`;
+			const firstRun = (0, react.useRef)(true);
+			(0, react.useEffect)(() => {
+				if (firstRun.current) {
+					firstRun.current = false;
+					return;
+				}
+				refresh();
+			}, [runSig, refresh]);
 			const [infoLast, setInfoLast] = (0, react.useState)(null);
 			const [infoLoading, setInfoLoading] = (0, react.useState)(false);
 			const [infoError, setInfoError] = (0, react.useState)(null);
@@ -43309,7 +43317,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, t("editorEdit"))), confirmDelete ? renderConfirm() : null);
 		}
 		function TaskCard(props) {
-			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf } = props;
+			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props;
 			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react.createElement)("div", {
@@ -43401,11 +43409,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onEdit,
 				onDelete,
 				onOpenFile,
-				onOpenSession
+				onOpenSession,
+				refresh
 			}) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled } = props;
+			const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props;
 			const tt = (0, react.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskEditorStyle();
@@ -43554,6 +43563,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onDelete,
 				onOpenFile,
 				onOpenSession,
+				refresh,
 				onToggleEnabled: (id, enabled) => {
 					setOptimistic((cur) => ({
 						...cur,
@@ -44700,6 +44710,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				t,
 				rows: overview.rows,
 				ready: overview.ready,
+				refresh: overview.refresh,
 				onEdit: openEditor,
 				onDelete: deleteTask,
 				onOpenFile: canPreview ? openFile : void 0,

@@ -1089,10 +1089,11 @@ function TaskPage(props: {
           )
         : tab === 'config'
           // 任务列表视图（2026-09-30 主界面重建）：卡片式，限宽居中，数据走 /tasks/overview。
-          ? h(TaskListView, {
+          ?           h(TaskListView, {
             t,
             rows: overview.rows,
             ready: overview.ready,
+            refresh: overview.refresh,
             onEdit: openEditor,
             onDelete: deleteTask,
             // 产出 / 会话入口走 U11 单一入口：预览面或会话面不可用时 undefined ⇒ 面板降级纯文本 / 不出链接。

@@ -961,13 +961,23 @@ function TaskExpandPanel(props: {
    * 这样「从哪进」渲染都一样。禁止再加上 heading / outputs / snapshot 这类参数。
    */
   onOpenSession?: (sessionId: string) => void
+  /** 即时拉一次 overview（来自顶层 `useTaskOverview`）：任务跑完时让左栏「下次预计执行」同步刷新。 */
+  refresh: () => void
 }) {
-  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
+  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession, refresh } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
   // 运行态签名（用户 2026-10-03）：**页面开着、任务跑完了 ⇒ 打开着的面板要自动重读**，
   // 否则用户看到的一直是上一次执行留下的状态。签名只取「会变的运行态字段」⇒ 轮询没变化时不会触发重取；
   // 且三个 tab 各自只在**自己打开时**才取数 ⇒ 「刷新只刷打开的那部分」。
   const runSig = `${row.lastStatus ?? ''}|${row.lastFinishedAt ?? ''}|${row.running ? 1 : 0}`
+  // 任务跑完 / 状态翻转（runSig 变）⇒ 立即拉一次 overview，让**左栏「下次预计执行」(row.nextSlotAt)**
+  // 与卡片 NextPill/PastPill 同步即时刷新（不再等 10s 轮询）。右栏「上次执行」已有自己独立的 runSig 重拉，
+  // 此处专门补全左侧（用户 2026-10-03：任务执行完左侧也要跟着刷）。跳过挂载首跑，避免每次展开都白拉一次。
+  const firstRun = useRef(true)
+  useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return }
+    refresh()
+  }, [runSig, refresh])
   // ── 基础信息面板（用户 2026-10-03 改版）──
   // 右栏只看「上次执行」一条 ⇒ 取最近一条终态实例（成功 / 失败 / 跳过 / 未知）。
   const [infoLast, setInfoLast] = useState<InstanceRow | null>(null)
@@ -1605,8 +1615,10 @@ function TaskCard(props: {
   onOpenSession?: (sessionId: string) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
   refOf: (el: HTMLElement | null) => void
+  /** 即时拉 overview：任务跑完时左栏「下次预计执行」同步刷新（见 TaskExpandPanel）。 */
+  refresh: () => void
 }) {
-  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf } = props
+  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props
   // 排期人话与编辑器「预计执行」**同一份实现**（`schedule-text.ts`，优先吃结构化 ui）⇒ 两处必然一致。
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
@@ -1681,7 +1693,7 @@ function TaskCard(props: {
       ),
     ),
     // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
-    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession }) : null,
+    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession, refresh }) : null,
   )
 }
 
@@ -1699,8 +1711,10 @@ export function TaskListView(props: {
   onOpenSession?: (sessionId: string) => void
   /** 启用 / 停用：返回 null = 成功，否则返回人话错误（列表据此回滚乐观值）。 */
   onToggleEnabled: (id: string, enabled: boolean) => Promise<string | null>
+  /** 即时拉 overview：任务跑完时左栏「下次预计执行」同步刷新（见 TaskExpandPanel）。 */
+  refresh: () => void
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled } = props
+  const { t, rows, ready, onEdit, onDelete, onOpenFile, onOpenSession, onToggleEnabled, refresh } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
@@ -1830,6 +1844,7 @@ export function TaskListView(props: {
             onDelete,
             onOpenFile,
             onOpenSession,
+            refresh,
             onToggleEnabled: (id: string, enabled: boolean): void => {
               setOptimistic(cur => ({ ...cur, [id]: enabled })) // 点了立刻变，不等请求往返
               // ⚠️ 失败必须**撤掉这条乐观值**（2026-09-30 专家团复核）：失败时服务端没变、也不会 bump rev
