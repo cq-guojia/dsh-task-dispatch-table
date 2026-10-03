@@ -3232,9 +3232,10 @@ body[data-ds-dark-theme]{
       MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
    ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
       每块 = 任务名一行 + 产出物**同样横向排**；任务名行**最前 = 序号徽标**
-      （浅灰圆角小方框 + 小号数字，按显示顺序 1、2、3…），其后一条 **4px 短竖线**做标记
-      （原为那个「太大太丑」的任务图标，用户要求「和字差不多高、宽 4px、带小圆角」）。
-      ⚠️ 曾经还有一条「块前横跨两行的 3px 浅灰竖线」——用户看过短竖线的效果后**决定去掉**（两条重复）。
+      （**宽高相等的正方形**小方块 + 9px 数字，按显示顺序 1、2、3…）——
+      它已**顶替**原先那条 4px 竖线的作用（用户 2026-10-03：「序号前面的竖线不要了，
+      直接把序号变成竖线的样子，高度和宽度差不多」）。
+      ⚠️ 历史上先后试过两种竖线：① 块前横跨两行的 3px 浅灰线、② 任务名前 4px 短线，**均已去掉**。
    ④b **来源 / 状态标记改方括号前置**（用户 2026-10-03）：形状是 [链接]foo.md ——
       原来挂最右边、被 flex 撑开，越看越像按钮；现在紧贴文件名前面、无间距。
    ⑤ **高度有上限 + 自己滚** ⇒ 前置任务再多也不会把会话区压没（否则被 panel overflow 裁掉）。
@@ -3249,9 +3250,8 @@ body[data-ds-dark-theme]{
 /* 前置任务块 —— 一排两个（窄容器降一列，见下方 @container）。 */
 .dsh-tdt-sv-tfc-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;min-width:0;}
 @container (width<=620px){.dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr);}}
-/* 任务块：**已去掉块前那条横跨「任务名 + 产出物」两行的浅灰分隔竖线**
-   （用户 2026-10-03 看过 4px 短竖线后决定不要了——两条竖线重复）。
-   保留的只有任务名前的 4px 短竖线（.dsh-tdt-sv-tfc-taskbar）。
+/* 任务块：块前那条横跨「任务名 + 产出物」两行的浅灰竖线、以及任务名前的 4px 短竖线
+   **都已去掉**（用户 2026-10-03 逐轮否定 ⇒ 最终只留正方形序号徽标，见 .dsh-tdt-sv-tfc-seq）。
    随之去掉 padding-left：任务名直接回到面板 34px 左基线，不再多缩进 10px。 */
 .dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
 .dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
@@ -3279,15 +3279,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    与主界面「基础信息 · 附加文件」同名（task-list.tsx）**同一口径**。
    ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
 .dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
-/* 前置任务序号徽标（用户 2026-10-03）：浅灰圆角**小方框** + 小号数字，位置 = 任务名行最前。
-   ⚠️ 选方框不选正圆：任务多于 9 个时编号是两位数，正圆会被撑变形（同「筛选角标」那条结论）。
-   框高 14px ≈ 那行文字的高度（「底色高度跟文字差不多高」）；字号压到 9px（「数字尽量小一点」）。
-   align-self:center 让它在 baseline 行里垂直居中，不在 baseline 上偏下。 */
-.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;min-width:14px;height:14px;padding:0 3px;border-radius:3px;background:var(--tdt-plate,rgba(128,128,128,.14));color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:9px;line-height:1;font-variant-numeric:tabular-nums;}
-/* 前置任务块任务名前的标记：**一条 4px 竖线**（用户 2026-10-03：图标太大太丑，
-   换成「和字差不多高」的竖线，宽约 4px、带小圆角）。高度 1em 跟着文字走；
-   align-self:center 让它在 baseline 行里居中，不贴文字基线。 */
-.dsh-tdt-sv-tfc-taskbar{width:4px;height:1em;border-radius:2px;background:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;display:inline-block;align-self:center;}
+/* 前置任务序号徽标（用户 2026-10-03 三次点名定稿）：**顶替原来那条 4px 竖线**，
+   宽高**相等**（width=height=14px ⇒ 恒正方形，1～2 位数字都居中、不被内容撑长），9px 小号数字。
+   底色用 chip-bg（半透明中性、随明暗主题自适应）——比 plate **亮一档**，又**不是纯白**；
+   文字用 fg-2（非纯白、且比原先的 fg-3 **亮一点**）：「稍微亮一点点」。
+   align-self:center 让它在 baseline 行里垂直居中，不贴文字基线。 */
+.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:14px;height:14px;padding:0;border-radius:3px;background:var(--tdt-chip-bg,rgba(128,128,128,.12));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:9px;line-height:1;font-variant-numeric:tabular-nums;}
 /* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**
    （用户给的形状就是 [链接]foo.md，中间没有空格）。 */
 .dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
@@ -5266,8 +5263,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const norm = (value) => value.endsWith("/") ? value : `${value}/`;
 			return norm(candidate).startsWith(norm(base));
 		}
-		/** 折叠阈值：文件 >4 折叠（与官方 Deliverables 同思路）；前置任务 >3 折叠。 */
-		const COLLAPSE_FILES = 4;
+		/** 折叠阈值：附件 >10 才折叠（用户 2026-10-03：「10 个往上才收起，10 个以下都把它显示出来」）；前置任务 >3 折叠。 */
+		const COLLAPSE_FILES = 10;
 		const COLLAPSE_TASKS = 3;
 		/** 任务处于折叠态时，每个任务最多露几个文件（避免 20 个任务的默认高度失控）。 */
 		const COLLAPSED_TASK_FILES = 3;
@@ -5389,7 +5386,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return (0, react.createElement)("div", {
 						key: `${item.task}:${item.instanceId}`,
 						className: "dsh-tdt-sv-tfc-task"
-					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-taskbar" }), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-seq" }, String(index + 1)), (0, react.createElement)("span", {
+					}, (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-seq" }, String(index + 1)), (0, react.createElement)("span", {
 						className: "dsh-tdt-sv-tfc-name",
 						title: item.task
 					}, item.taskTitle), (0, react.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react.createElement)(FileChip, {

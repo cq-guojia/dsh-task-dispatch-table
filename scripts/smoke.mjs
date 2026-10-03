@@ -1305,22 +1305,26 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       /maxWidth:\s*["']40ch["']/.test(client) && /textOverflow:\s*["']ellipsis["']/.test(client))
     check('顶部输入区：文件名跑马灯走全站唯一实现 MarqueeText（不自己造第二套）',
       client.includes('MarqueeText') && client.includes('dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}'))
-    check('顶部输入区：前置任务名前的标记 = 4px 短竖线（不是图标；用户 2026-10-03「图标太大太丑」）',
-      client.includes('dsh-tdt-sv-tfc-taskbar') && client.includes('width:4px;height:1em;border-radius:2px')
-      && !client.includes('dsh-tdt-sv-tfc-taskicon'))
+    check('顶部输入区：前置任务标记 = **宽高相等的正方形序号块**（顶替 4px 竖线；竖线已删）',
+      client.includes('dsh-tdt-sv-tfc-seq') && client.includes('width:14px;height:14px;padding:0;border-radius:3px')
+      && client.includes('font-size:9px') && client.includes('String(index + 1)')
+      && !client.includes('dsh-tdt-sv-tfc-taskbar'))
+    check('顶部输入区：序号块亮度 = chip-bg 底 + fg-2 字（比 plate/fg-3 亮一档、且非纯白）',
+      /background:\s*var\(--tdt-chip-bg/.test(client) && /color:\s*var\(--tdt-fg-2/.test(client)
+      && !/\.dsh-tdt-sv-tfc-seq\{[^}]*--tdt-plate/.test(client))
+    check('顶部输入区：附件 >10 个才折叠（10 个以下全显示；用户 2026-10-03）',
+      client.includes('COLLAPSE_FILES = 10') || /const COLLAPSE_FILES = 10/.test(client))
     check('顶部输入区：来源 / 状态标记方括号**前置**（[链接]foo.md），不再挂右侧像按钮',
       client.includes('dsh-tdt-sv-tfc-namewrap') && client.includes('dsh-tdt-sv-tfc-note'))
     check('顶部输入区：前置任务一排两个（窄容器降一列，用容器宽度判据）',
       client.includes('grid-template-columns:repeat(2,minmax(0,1fr))')
       && client.includes('container-type:inline-size') && client.includes('@container (width<=620px)'))
-    check('顶部输入区：块前那条横跨两行的 3px 浅灰竖线**已去掉**（用户看过 4px 短竖线后决定不要）',
-      !client.includes('.dsh-tdt-sv-tfc-task::before')
+    check('顶部输入区：两种竖线**都已去掉**（块前 3px 跨两行线 + 任务名前 4px 短线），只留序号块',
+      !client.includes('dsh-tdt-sv-tfc-task::before')
       && !client.includes('padding-left:10px')
-      && client.includes('.dsh-tdt-sv-tfc-taskbar{width:4px;height:1em'))
-    check('顶部输入区：前置任务**序号徽标** = 浅灰圆角小方框 + 小号数字（按显示顺序 1、2、3…）',
-      client.includes('dsh-tdt-sv-tfc-seq') && client.includes('min-width:14px;height:14px')
-      && client.includes('border-radius:3px') && client.includes('font-size:9px')
-      && client.includes('String(index + 1)'))
+      && !client.includes('dsh-tdt-sv-tfc-taskbar'))
+    check('顶部输入区：前置任务序号按**显示顺序** 1、2、3…（折叠/展开不跳号）',
+      client.includes('dsh-tdt-sv-tfc-seq') && client.includes('String(index + 1)'))
     check('顶部输入区：组标题叫「任务附件」；来源标记与编辑处统一为「上传 / 链接」（不查引号形式，只查文案）',
       client.includes('任务附件 · {count} 个文件')
       && /tfcFromWorkspace:\s*["']链接["']/.test(client)
