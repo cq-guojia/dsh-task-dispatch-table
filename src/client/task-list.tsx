@@ -927,6 +927,20 @@ function windowLabel(iso: string, t: Translate): string {
 }
 
 /**
+ * 基础信息「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走全站通用
+ * `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
+ * 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
+ */
+function renderNextExec(next: string | null, t: Translate): ReactNode {
+  if (next === null) return h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
+  return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 } },
+    h(LiveText, { render: (nowMs: number) => relativeFuture(next, nowMs, t) }),
+    h('span', { style: { color: 'var(--tdt-fg-3)', flex: 'none' } }, '│'),
+    h('span', { style: { fontVariantNumeric: 'tabular-nums' } }, formatDateTime(next, { seconds: true, fallback: NO_TIME })),
+  )
+}
+
+/**
  * 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
  * 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
  * 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
@@ -1178,6 +1192,10 @@ function TaskExpandPanel(props: {
       h('div', { style: infoConfigStyle },
         h('div', { style: infoGroupTitleStyle }, t('infoSectionConfig')),
         InfoField({ label: t('listFieldSchedule'), children: scheduleLine }),
+        // 预计执行（用户 2026-10-03）：排期之下补一行，两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…），
+        // 右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间走全站通用 `relativeFuture`（与卡片「下次执行」同口径），
+        // 且用 LiveText 每秒自刷，避免写死成会过期的快照。无下次（停用 / 一次性已收尾）⇒ 显示「无」。
+        InfoField({ label: t('infoNextExec'), children: renderNextExec(row.nextSlotAt, t) }),
         InfoField({ label: t('listFieldWorkspace'), children: row.workspace }),
         InfoField({ label: t('listFieldModel'), children: modelText }),
         InfoField({ label: t('listFieldRetry'), children: String(row.retryMax) }),

@@ -709,6 +709,7 @@ window.__ModuleLoader__.load({
 			listNone: "（无）",
 			listDisabledTag: "（已停用）",
 			infoSectionConfig: "任务配置",
+			infoNextExec: "预计执行",
 			infoLastRun: "上次执行",
 			infoNoRun: "还没有执行记录",
 			infoFinishedAt: "结束时间",
@@ -1278,6 +1279,7 @@ window.__ModuleLoader__.load({
 			listNone: "(none)",
 			listDisabledTag: "(disabled)",
 			infoSectionConfig: "Task settings",
+			infoNextExec: "Next run",
 			infoLastRun: "Last run",
 			infoNoRun: "No runs yet",
 			infoFinishedAt: "Ended at",
@@ -42591,6 +42593,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return iso;
 		}
 		/**
+		* 基础信息「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走全站通用
+		* `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
+		* 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
+		*/
+		function renderNextExec(next, t) {
+			if (next === null) return (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone"));
+			return (0, react.createElement)("span", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "8px",
+				minWidth: 0
+			} }, (0, react.createElement)(LiveText, { render: (nowMs) => relativeFuture(next, nowMs, t) }), (0, react.createElement)("span", { style: {
+				color: "var(--tdt-fg-3)",
+				flex: "none"
+			} }, "│"), (0, react.createElement)("span", { style: { fontVariantNumeric: "tabular-nums" } }, formatDateTime(next, {
+				seconds: true,
+				fallback: NO_TIME
+			})));
+		}
+		/**
 		* 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
 		* 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
 		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
@@ -42877,6 +42899,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const renderInfo = () => (0, react.createElement)("div", { style: panelBoxStyle }, (0, react.createElement)("div", { style: infoWrapStyle }, (0, react.createElement)("div", { style: infoConfigStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), InfoField({
 				label: t("listFieldSchedule"),
 				children: scheduleLine
+			}), InfoField({
+				label: t("infoNextExec"),
+				children: renderNextExec(row.nextSlotAt, t)
 			}), InfoField({
 				label: t("listFieldWorkspace"),
 				children: row.workspace

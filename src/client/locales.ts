@@ -155,7 +155,7 @@ export type LocaleKey =
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
   | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
   // —— 基础信息改版（用户 2026-10-03）：左配置 + 右上次执行 ——
-  | 'infoSectionConfig' | 'infoLastRun' | 'infoNoRun' | 'infoFinishedAt'
+  | 'infoSectionConfig' | 'infoLastRun' | 'infoNoRun' | 'infoFinishedAt' | 'infoNextExec'
   | 'infoSession' | 'infoDuration'
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
@@ -703,6 +703,7 @@ export const zh: Record<LocaleKey, string> = {
   listDisabledTag: '（已停用）',
   // —— 基础信息改版（用户 2026-10-03）——
   infoSectionConfig: '任务配置',
+  infoNextExec: '预计执行',
   infoLastRun: '上次执行',
   infoNoRun: '还没有执行记录',
   infoFinishedAt: '结束时间',
@@ -1290,6 +1291,7 @@ export const en: Record<LocaleKey, string> = {
   listDisabledTag: '(disabled)',
   // Basic info revamp (user 2026-10-03).
   infoSectionConfig: 'Task settings',
+  infoNextExec: 'Next run',
   infoLastRun: 'Last run',
   infoNoRun: 'No runs yet',
   infoFinishedAt: 'Ended at',
