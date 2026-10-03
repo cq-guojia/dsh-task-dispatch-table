@@ -42,8 +42,10 @@ export const ARCHIVE_SESSION_CSS = `
    .dsh-tdt-sv-body 又会盖掉 frame 的补足（同元素、body 在后面）。⇒ 统一收口（2026-10-03）：
      · scroll 钩子把官方纵向 **归零**（双类名 0,2,0 压过 CSS module，不靠注入顺序）；
      · frame 钩子**独占**上下（用长写，不碰左右 ⇒ 命中时左右仍走官方 scroll 的 16+clearance）。
-   ⇒ 命中 / 未命中两条路径纵向完全一致（34 / 16），消掉原先的 18px 跳变。左右始终 34px。 */
-.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:16px;}
+   ⇒ 命中 / 未命中两条路径纵向完全一致（上 34 / 下 34，四边等距，消掉原先的上下不对称）；
+   左右始终 34px。⚠️ 上 / 下必须**相等**：否则滚动到顶 / 到底时一边空一大片、另一边一丢丢
+   （旧值 34/16 ⇒ 顶部留白约为底部两倍，看着像上面塌了一截）。 */
+.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:34px;}
 /* 官方 scroll 命中时纵向 16px 归零，纵向交 frame 独占（见上）。左右不动。 */
 .dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}
 /* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
@@ -327,7 +329,10 @@ export const ARCHIVE_SESSION_CSS = `
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
    ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**；
-      **上 34 / 下 18** = 与「分隔线 → 会话正文首行」同距（四边等距 34 口径），纵向节拍接得上。
+      **上 0 / 下 18**：顶部留白**全交给外层 frame 的 padding-top:34px**（滚动容器的顶部留白），
+      tfc 自己**不再叠一层 34**——否则滚到顶时标题上方 = frame 34 + tfc 34 = 68px，而滚到底只有
+      frame 34px，上下差出一倍（用户 2026-10-03 指出的「上面空一大片、下面是它两倍」正是此因）。
+      底部 = frame 34（与顶部对称）。
    ② **横向排 + 按内容宽**（用户三次点名定稿）：flex-wrap:wrap 从左到右、排满换行；
       chip flex:0 0 auto **跟内容走**（参照宿主「附加文件」列表的样子：每个文件名就那么宽、
       不拖一条空白），**不设最小宽度**（「a.txt」就只显示 a.txt），只给 label 一个
@@ -347,7 +352,7 @@ export const ARCHIVE_SESSION_CSS = `
       原 max-height:min(38vh,340px) + overflow-y:auto 全部去掉 ⇒ 全弹窗只有右侧一个滚动条。
    ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
 /* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:0 calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
 /* 顶部输入区现在住在 column 里（与会话内容同一个滚动容器）⇒ column 的兄弟间距规则
    会给「紧跟它之后的第一条消息」再加一道 margin-top，而它自己已有 padding-bottom ⇒ 多出一截。
    这里把那一道抵消掉（写在 flow-item 间距规则之后，官方类命中与否都要生效）。 */

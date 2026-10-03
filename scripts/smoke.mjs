@@ -1290,8 +1290,8 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     check('顶部输入区：客户端面板与文案键进产物（接收 / 随附 / 折叠 / 来源标记）',
       client.includes('dsh-tdt-sv-tfc') && client.includes('tfcReceived') && client.includes('tfcAttached')
       && client.includes('tfcMore') && client.includes('tfcMoreTasks') && client.includes('tfcNoOutputs'))
-    check('顶部输入区：左右内边距与官方会话区同一条基线、纵向四边等距（34/34/18）',
-      client.includes('padding:34px calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px'))
+    check('顶部输入区：左右 34px 同官方基线；自身上 padding 归 0（顶部留白全由 frame 的 34 提供，不与滚动容器叠加翻倍）、下 18',
+      client.includes('padding:0 calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px'))
     check('顶部输入区：**不自带滚动条**（已搬进 column 内与会话同滚，全弹窗只一个滚动条；用户 2026-10-03）',
       !/\.dsh-tdt-sv-tfc\{[^}]*max-height/.test(client)
       && !/\.dsh-tdt-sv-tfc\{[^}]*overflow-y/.test(client)
@@ -1340,8 +1340,8 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     check('顶部输入区：跨区目录 / 未解析路径降级不可点（data-noclick 淡一档）',
       client.includes('data-noclick') && client.includes('.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}'))
     // 会话区纵向间距：官方类命中与否必须一致（2026-10-03 修 18px 跳变）。
-    check('会话区纵向单一真源：frame 钩子独占上下 + scroll 钩子归零官方纵向（双类名压过 CSS module）',
-      client.includes('.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:16px;}')
+    check('会话区纵向单一真源：frame 钩子独占上下（34/34 对称）+ scroll 钩子归零官方纵向（双类名压过 CSS module）',
+      client.includes('.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:34px;}')
       && client.includes('.dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}'))
     check('会话区：body 兜底类不再抢纵向 padding（曾盖掉 frame 补足 ⇒ 差 18px）',
       !client.includes('.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding:16px'))
