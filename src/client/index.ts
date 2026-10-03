@@ -577,13 +577,27 @@ function TaskPage(props: {
     // clientX 已偏右很多 ⇒ 算出的宽度被压到 PREVIEW_MIN ⇒ 面板"弹回最小宽度"（真机 2026-10-03）。
     // 对策：拖动期间给根挂 `dsh-tdt-resizing`，CSS 令 iframe `pointer-events:none`，松手撤销。
     const rootEl = document.getElementById('dsh-tdt-root')
+    const dockEl = rootEl?.querySelector('.dsh-tdt-sv-preview-dock') as HTMLElement | null
     rootEl?.classList.add('dsh-tdt-resizing')
+    // ⚠️ 卡顿根因（真机 2026-10-04：拖拽分栏时"挪很久才动一下"）：原实现**每个 pointermove**
+    // 都改根上的 `--dsh-tdt-preview-w`，而该变量同时被 dock 宽度与弹窗 `right` 引用
+    // ⇒ 每帧触发**整页重排**；dock 内还坐着上万行高亮 DOM，重排代价极高。且 pointermove 无节流。
+    // 对策（照浏览器常规做法）：① 宽度**直接写 dock 的 style.width**，不经根变量 ⇒ 只重排 dock；
+    // ② rAF 节流，一帧最多写一次；③ 松手才落 state + 持久化。
+    let frame = 0
+    let lastX = startX
+    const applyWidth = (clientX: number): void => {
+      const next = clampPreviewWidth(startWidth - (clientX - startX), editorTaken)
+      if (dockEl !== null) dockEl.style.width = `${next}px`
+      else rootEl?.style.setProperty('--dsh-tdt-preview-w', `${next}px`)
+    }
     const onMove = (event: PointerEvent): void => {
-      const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
-      const root = document.getElementById('dsh-tdt-root')
-      if (root !== null) root.style.setProperty('--dsh-tdt-preview-w', `${next}px`)
+      lastX = event.clientX
+      if (frame !== 0) return
+      frame = requestAnimationFrame(() => { frame = 0; applyWidth(lastX) })
     }
     const onUp = (event: PointerEvent): void => {
+      if (frame !== 0) { cancelAnimationFrame(frame); frame = 0 }
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       rootEl?.classList.remove('dsh-tdt-resizing')

@@ -656,23 +656,6 @@ window.__ModuleLoader__.load({
 			editorDepEmptyHint: "在下方选择工作区与任务后点「添加」",
 			editorDepDisabledTag: "（已停用）",
 			editorDepTaskEmpty: "该工作区暂无可选任务",
-			localeTag: "zh-CN",
-			recordsEmpty: "该时间范围内没有执行记录",
-			recordsEmptyFiltered: "当前过滤条件下没有执行记录",
-			recordsLoading: "执行记录加载中…",
-			recordsLoadMore: "加载更多",
-			recordsNoMore: "没有更多了",
-			recordsLimitHint: "已加载 2000 条，请缩小时间范围查看更早记录",
-			recordsLoadFail: "执行记录加载失败",
-			recordsRetry: "重试",
-			recordsDayCount: "{n} 条",
-			recordsTaskPh: "任务",
-			recordsTaskSearch: "搜索任务名或 ID",
-			recordsMore: "更多",
-			recordsCollapse: "收起",
-			recordsOutOfScope: "所选任务不在当前工作区",
-			recordsPlannedAt: "计划 {time}",
-			recordsStatusPh: "状态",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
 			editorRetry: "重试次数",
@@ -1262,23 +1245,6 @@ window.__ModuleLoader__.load({
 			editorDepEmptyHint: "Pick a workspace and a task below, then add",
 			editorDepDisabledTag: " (disabled)",
 			editorDepTaskEmpty: "No selectable task in this workspace",
-			localeTag: "en-US",
-			recordsEmpty: "No executions in this time range",
-			recordsEmptyFiltered: "No executions match the current filters",
-			recordsLoading: "Loading executions…",
-			recordsLoadMore: "Load more",
-			recordsNoMore: "No more",
-			recordsLimitHint: "Loaded 2000 — narrow the time range to see earlier records",
-			recordsLoadFail: "Failed to load executions",
-			recordsRetry: "Retry",
-			recordsDayCount: "{n} total",
-			recordsTaskPh: "Task",
-			recordsTaskSearch: "Search by name or ID",
-			recordsMore: "More",
-			recordsCollapse: "Collapse",
-			recordsOutOfScope: "The selected task is not in this workspace",
-			recordsPlannedAt: "Planned {time}",
-			recordsStatusPh: "Status",
 			editorAdvanced: "Advanced settings",
 			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
@@ -2106,7 +2072,6 @@ body[data-ds-dark-theme]{
 			ensureControlsStyle();
 			const { value, onChange, placeholder, size = "lg", error, disabled, type, className, style } = props;
 			return (0, react.createElement)("input", {
-				ref: props.inputRef,
 				type: type ?? "text",
 				value,
 				placeholder,
@@ -3002,7 +2967,10 @@ body[data-ds-dark-theme]{
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
    （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;user-select:none;}
+/* z-index 5：必须高于预览体内容（官方 CodeBlock 的 .header 自带不透明背景
+   background: var(--dsl-code-block-background, …)，z-index:2 时它会盖住这条竖条，
+   真机 2026-10-04 表现为「浅灰竖条在 html 标题行处断开」）。 */
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:5;touch-action:none;user-select:none;}
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
@@ -3197,6 +3165,9 @@ body[data-ds-dark-theme]{
 /* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
    ⇒ 向右拖（缩小）时指针走进 PDF 就卡死（真机 2026-10-03）。拖动期间整片 iframe 让出指针事件。 */
 .dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
+/* 拖拽期把 dock 的布局/绘制**隔离**：改宽度不再牵动整页重排（dock 内常驻上万行高亮 DOM，
+   不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
+.dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
 .dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
 .dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 .dsh-tdt-sv-preview-label{flex:none;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
@@ -3223,6 +3194,13 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]{flex:auto;min-width:0;min-height:0;display:block;position:relative;overflow:auto;}
 .dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]::-webkit-scrollbar-track{margin:2px;}
 .dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code pre{box-sizing:border-box;white-space:pre;word-break:normal;overflow-wrap:normal;min-width:100%;padding:16px;overflow:visible;}
+/* 官方 CodeBody 的真实 CSS（documentpreview:5027）只覆盖 .code 下的滚动口与 pre，**没有覆盖 .header**；
+   而 primitives 的 .header 自带 background（走 --dsl-code-block-background 变量，见 CodeCard.module.css）。
+   官方靠 .renderer .code 这条链把变量**继承**给 header ⇒ 变透明。
+   我们用自有类名重写时漏了这条继承 ⇒ header 保留不透明底色（用户截图里那条 html 行），
+   且它盖住了 6px 拖拽条（真机 2026-10-04）⇒ 显式把同一变量声明到 header，行为与官方一致。
+   兜底用 transparent 而非官方那个宿主变量值（宿主变量在本仓业务文件里属禁用写法，见 ui-style-guide）。 */
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code [class*="header"]{background:var(--dsl-code-block-background,transparent);}
 .dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code{--dsl-code-block-line-white-space:pre-wrap;}
 .dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code pre{white-space:pre-wrap;overflow-wrap:anywhere;}
 /* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
@@ -44643,13 +44621,28 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				body.style.userSelect = "none";
 				window.getSelection()?.removeAllRanges();
 				const rootEl = document.getElementById("dsh-tdt-root");
+				const dockEl = rootEl?.querySelector(".dsh-tdt-sv-preview-dock");
 				rootEl?.classList.add("dsh-tdt-resizing");
+				let frame = 0;
+				let lastX = startX;
+				const applyWidth = (clientX) => {
+					const next = clampPreviewWidth(startWidth - (clientX - startX), editorTaken);
+					if (dockEl !== null) dockEl.style.width = `${next}px`;
+					else rootEl?.style.setProperty("--dsh-tdt-preview-w", `${next}px`);
+				};
 				const onMove = (event) => {
-					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
-					const root = document.getElementById("dsh-tdt-root");
-					if (root !== null) root.style.setProperty("--dsh-tdt-preview-w", `${next}px`);
+					lastX = event.clientX;
+					if (frame !== 0) return;
+					frame = requestAnimationFrame(() => {
+						frame = 0;
+						applyWidth(lastX);
+					});
 				};
 				const onUp = (event) => {
+					if (frame !== 0) {
+						cancelAnimationFrame(frame);
+						frame = 0;
+					}
 					window.removeEventListener("pointermove", onMove);
 					window.removeEventListener("pointerup", onUp);
 					rootEl?.classList.remove("dsh-tdt-resizing");

@@ -1109,6 +1109,13 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     /\.dsh-tdt-sv-preview-body-code\{[^}]*overflow:hidden/.test(clientJs))
   check('HTML 默认进入预览（非源码），切换控件与 md 同构',
     /isHtml\s*&&\s*!sourceView/.test(clientJs) && /["']previewHtmlSwitchAria["']/.test(clientJs))
+  check('拖拽调宽：rAF 节流 + 宽度直写 dock（避免每帧整页重排 ⇒ 拖拽卡死）',
+    clientJs.includes('requestAnimationFrame') && clientJs.includes('cancelAnimationFrame')
+    && /dockEl\.style\.width/.test(clientJs))
+  check('拖拽期 dock 布局/绘制隔离（contain + will-change，配合直写宽度）',
+    /\.dsh-tdt-resizing \.dsh-tdt-sv-preview-dock\{[^}]*contain:layout paint/.test(clientJs))
+  check('拖拽条 z-index 高于预览体内容（官方 .header 自带背景，z-index:2 会被盖住）',
+    /\.dsh-tdt-sv-resizer\{[^}]*z-index:5/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
     clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
 

@@ -289,3 +289,24 @@ CSP 原文、禁用清单、256K 常量、截断提示键全部落位。
 ② 备份其三个文件后**临时隔离**（把 TaskPicker 移出 / index.ts 还原）跑完 build+冒烟；
 ③ **验证完原样恢复**（`diff -q` 校验一致）；④ 提交时**只暂存自己的文件**
 （`PROGRESS.md` 暂存区里也混有对方的 §1.7 改动，已 `restore --staged` 剔除）。
+
+## 三-十五 拖拽卡顿 + 拖拽条竖条断裂（U30 续，2026-10-04，用户真机反馈）
+
+**用户反馈**：
+
+1. hover 拖拽条时那条浅灰竖条**在 html 标题行处断开**（应从上到下贯通）；
+2. **拖动分栏调整大小时特别卡**，"挪了很久才会动"；
+3. 追问「为什么要自己写颜色，用不了官方的吗？」以及那个 GitHub 侧边栏插件是不是官方实现。
+
+**核实与结论**：
+
+| 现象 | 真因（官方源码级） | 处置 |
+|---|---|---|
+| 竖条断裂 | 官方 primitives 的 `.header`（CodeCard.module.css）**自带不透明背景** `background: var(--dsl-code-block-background, var(--dsw-alias-markdown-code-block))`；我们 resizer `z-index:2` ⇒ 被后序兄弟节点盖住 | resizer `z-index:2 → 5`（高于预览体内容） |
+| **拖拽卡顿** | **我们自己写的拖拽实现的两个硬伤**（官方右栏**没有** resize 实现，此问题与官方无关）：① 每个 `pointermove` 都改根上的 `--dsh-tdt-preview-w`，而该变量同时被 dock 宽度与弹窗 `right` 引用 ⇒ **每帧整页重排**，而 dock 内常驻上万行高亮 DOM；② `pointermove` **无节流** | ① 宽度**直写 `dock.style.width`**，不经根变量 ⇒ 只重排 dock；② **rAF 节流**（一帧最多写一次）；③ 拖拽期 dock 加 `contain:layout paint; will-change:width` 隔离布局/绘制 |
+| 颜色为何不同 | `official-classes.ts` 靠**扫描官方注入的 `<style data-plugin-css>` 标签**取类名，但 `CodeBody.module.css` **只有官方自己渲染 `CodeBody` 时才注入**（`documentpreview:5020-5025`）⇒ 我们不渲染它，`ocOr` 永远拿不到 `Java6a_*` ⇒ **只能回退自有类名 + 手抄 CSS**。**不是"能用官方而没用"** | 已把官方那份 CSS 逐条抄到自有类名上（含三个 `--dsl-code-block-*` 变量、`pre` padding、滚动口、`data-wrap`） |
+| 换行钮 | 官方传 `wrap` 布尔 + `toolbarLabels` ⇒ 官方 **omit** 换行钮（`CodeBlock.d.ts`：*"With toolbarLabels, use the owner's wrapping preference and omit the toolbar's local wrap action"*） | 已照官方传 `wrap` 布尔（上一轮已落） |
+| 官方是不是编辑器 | **不是**。官方文档面板是**只读** `CodeBlock`（我们用的**同一个**官方组件），无编辑能力；截图里"像编辑框"是等宽 + 行号的观感 | 用户"不要编辑"的诉求，官方本就满足，照官方做即可 |
+
+⚠️ 本轮 build 被**另一并发会话的未完成代码**卡住（`index.ts` 的 `onOpenSession` 块有孤立 `})`，
+按规矩**未改其代码**；我的三个文件已单独 typecheck 零报错。

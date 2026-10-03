@@ -1,12 +1,12 @@
 // 归档会话弹窗样式（决策 34）：类名稳定 + 官方 design token 驱动。
 //
 // 交付方式说明：客户端产物是 `window.__ModuleLoader__.load({ factory })` 的 CJS 闭包，
-// `import './x.css'` 只会产出独立 .css 资源、内核不会加载它 ⇒ 改为**运行时注入 <style>**
-// （design 定型为 archive-session.css 文件，此处仅交付方式变更，类名/变量机制不变）。
+// 交付方式说明：客户端产物是 window.__ModuleLoader__.load({ factory }) 的 CJS 闭包，
+// import './x.css' 只会产出独立 .css 资源、内核不会加载它 ⇒ 改为**运行时注入 <style>**
 //
 // 颜色一律引用 `--tdt-*`（由 ui/tokens.ts 映射宿主变量，明/暗自动跟随，括号内为兜底值）；
-// 布局 token 取聊天专属 `--dsh-chat-*`（0.1.7-RC.2 核实的真值，带兜底）。不引用任何宿主内部符号。
-
+// 颜色一律引用 --tdt-*（由 ui/tokens.ts 映射宿主变量，明/暗自动跟随，括号内为兜底值）；
+// 布局 token 取聊天专属 --dsh-chat-*（0.1.7-RC.2 核实的真值，带兜底）。不引用任何宿主内部符号。
 import { applyStyle } from './ui/style'
 
 /** 弹窗根类名前缀（历史遗留；注入已统一走 ui/style.ts）。 */
@@ -28,7 +28,10 @@ export const ARCHIVE_SESSION_CSS = `
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
    （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:2;touch-action:none;user-select:none;}
+/* z-index 5：必须高于预览体内容（官方 CodeBlock 的 .header 自带不透明背景
+   background: var(--dsl-code-block-background, …)，z-index:2 时它会盖住这条竖条，
+   真机 2026-10-04 表现为「浅灰竖条在 html 标题行处断开」）。 */
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:5;touch-action:none;user-select:none;}
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
@@ -223,6 +226,9 @@ export const ARCHIVE_SESSION_CSS = `
 /* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
    ⇒ 向右拖（缩小）时指针走进 PDF 就卡死（真机 2026-10-03）。拖动期间整片 iframe 让出指针事件。 */
 .dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
+/* 拖拽期把 dock 的布局/绘制**隔离**：改宽度不再牵动整页重排（dock 内常驻上万行高亮 DOM，
+   不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
+.dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
 .dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
 .dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 .dsh-tdt-sv-preview-label{flex:none;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
@@ -249,6 +255,13 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]{flex:auto;min-width:0;min-height:0;display:block;position:relative;overflow:auto;}
 .dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]::-webkit-scrollbar-track{margin:2px;}
 .dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code pre{box-sizing:border-box;white-space:pre;word-break:normal;overflow-wrap:normal;min-width:100%;padding:16px;overflow:visible;}
+/* 官方 CodeBody 的真实 CSS（documentpreview:5027）只覆盖 .code 下的滚动口与 pre，**没有覆盖 .header**；
+   而 primitives 的 .header 自带 background（走 --dsl-code-block-background 变量，见 CodeCard.module.css）。
+   官方靠 .renderer .code 这条链把变量**继承**给 header ⇒ 变透明。
+   我们用自有类名重写时漏了这条继承 ⇒ header 保留不透明底色（用户截图里那条 html 行），
+   且它盖住了 6px 拖拽条（真机 2026-10-04）⇒ 显式把同一变量声明到 header，行为与官方一致。
+   兜底用 transparent 而非官方那个宿主变量值（宿主变量在本仓业务文件里属禁用写法，见 ui-style-guide）。 */
+.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code [class*="header"]{background:var(--dsl-code-block-background,transparent);}
 .dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code{--dsl-code-block-line-white-space:pre-wrap;}
 .dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code pre{white-space:pre-wrap;overflow-wrap:anywhere;}
 /* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
