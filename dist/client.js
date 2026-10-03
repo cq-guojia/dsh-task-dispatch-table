@@ -2935,15 +2935,16 @@ body[data-ds-dark-theme]{
    若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
 .dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
 .dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
-/* 内间距定尺（用户拍板：四边等距 34px）。**纵向单一真源 = .dsh-tdt-sv-frame**：
+/* 内间距定尺。**纵向单一真源 = .dsh-tdt-sv-frame**：
    官方 scroll 命中时自带纵向 16px，官方 frame 的纵向又不确定；不命中时官方 scroll 不存在，
    .dsh-tdt-sv-body 又会盖掉 frame 的补足（同元素、body 在后面）。⇒ 统一收口（2026-10-03）：
      · scroll 钩子把官方纵向 **归零**（双类名 0,2,0 压过 CSS module，不靠注入顺序）；
      · frame 钩子**独占**上下（用长写，不碰左右 ⇒ 命中时左右仍走官方 scroll 的 16+clearance）。
-   ⇒ 命中 / 未命中两条路径纵向完全一致（上 34 / 下 34，四边等距，消掉原先的上下不对称）；
-   左右始终 34px。⚠️ 上 / 下必须**相等**：否则滚动到顶 / 到底时一边空一大片、另一边一丢丢
-   （旧值 34/16 ⇒ 顶部留白约为底部两倍，看着像上面塌了一截）。 */
-.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:34px;padding-bottom:34px;}
+   ⇒ 命中 / 未命中两条路径纵向完全一致。
+   **上 / 下 = 17px**（用户 2026-10-03：原来上下各 34 太顶，要求「最多留现在的一半」⇒ 34/2 = 17）；
+   左右始终 34px，与下方会话正文**同一条左右基线**（顶部输入区不再自带左右 padding，避免双重缩进）。
+   ⚠️ 上 / 下必须**相等**：否则滚动到顶 / 到底时一边空一大片、另一边一丢丢。 */
+.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:17px;padding-bottom:17px;}
 /* 官方 scroll 命中时纵向 16px 归零，纵向交 frame 独占（见上）。左右不动。 */
 .dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}
 /* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
@@ -3226,11 +3227,11 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
-   ① **左右 34px** = 官方 ChatView.scroll（16 + clearance）⇒ 与下方会话正文**同一条左右基线**；
-      **上 0 / 下 18**：顶部留白**全交给外层 frame 的 padding-top:34px**（滚动容器的顶部留白），
-      tfc 自己**不再叠一层 34**——否则滚到顶时标题上方 = frame 34 + tfc 34 = 68px，而滚到底只有
-      frame 34px，上下差出一倍（用户 2026-10-03 指出的「上面空一大片、下面是它两倍」正是此因）。
-      底部 = frame 34（与顶部对称）。
+   ① **左右 0（tfc 不自带）**：左 / 右留白**全交给外层 frame 的 34px**（frame 给的左右留白同时作用于
+      顶部输入区与会话正文 ⇒ 两者天然同一条左右基线）。tfc 自己**不再写左右 padding**——否则会在
+      frame 34 之上再叠 34，导致顶部「附件 / 前置任务」区比下面的会话正文往里缩一截
+      （用户 2026-10-03 二次指出：「左右又缩进去了，要和下面宽度一致」正是此因）。
+      **上 0 / 下 18**：顶部 / 底部留白同样交给 frame（frame 上下 17 对称，见上方 frame 规则）。
    ② **横向排 + 按内容宽**（用户三次点名定稿）：flex-wrap:wrap 从左到右、排满换行；
       chip flex:0 0 auto **跟内容走**（参照宿主「附加文件」列表的样子：每个文件名就那么宽、
       不拖一条空白），**不设最小宽度**（「a.txt」就只显示 a.txt），只给 label 一个
@@ -3250,7 +3251,7 @@ body[data-ds-dark-theme]{
       原 max-height:min(38vh,340px) + overflow-y:auto 全部去掉 ⇒ 全弹窗只有右侧一个滚动条。
    ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
 /* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:0 calc(var(--dsh-composer-side-clearance,16px) + 16px) 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:0 0 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
 /* 顶部输入区现在住在 column 里（与会话内容同一个滚动容器）⇒ column 的兄弟间距规则
    会给「紧跟它之后的第一条消息」再加一道 margin-top，而它自己已有 padding-bottom ⇒ 多出一截。
    这里把那一道抵消掉（写在 flow-item 间距规则之后，官方类命中与否都要生效）。 */
