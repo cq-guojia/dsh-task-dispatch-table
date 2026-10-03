@@ -12,7 +12,7 @@
 //
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
-import { createElement as h, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createElement as h, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatYmd, pad2 } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
@@ -146,12 +146,15 @@ const TASK_LIST_CSS = [
   // hover **只让文字变蓝**：放大镜和它的灰框都保持原样（用户 2026-10-03）。图标框自带固定色 ⇒ 不跟随文字变色。
   '.dsh-tdt-info-session:hover { color: var(--tdt-business); }',
   '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }',
-  // 基础信息字段行的**底边缝**：必须走 class（内联会盖掉下面 `:last-child` 的 `border-bottom: 0`）。
-  '.dsh-tdt-info-field { border-bottom: 1px solid var(--tdt-border-faint); }',
-  // 基础信息左右两栏（用户 2026-10-03 反馈）：每个字段行都带一条底边缝，但最末一行紧贴下方「统一虚线」，
-  // 实缝与虚线挤在一起显得多余 ⇒ 去掉最末行的底边缝，字段之间的分隔线全部保留。
-  // 特异性 (0,3,0) > `.dsh-tdt-info-field` (0,1,0) ⇒ 能盖住上面那条基础规则。
-  '.dsh-tdt-info-cfg > .dsh-tdt-info-field:last-child, .dsh-tdt-info-rec-fields > .dsh-tdt-info-field:last-child { border-bottom: 0; }',
+  // 基础信息「标签—值」两栏：整栏**共用一个 grid** ⇒ 标签列按当前语言最长标签**自动定宽**
+  // （中文≈48px、英文≈95px），零留白且各行对齐。原固定 66px 在英文下被「Preceding tasks」撑爆、
+  // 溢出去压到值上（用户 2026-10-03 反馈）。InfoField 返回 Fragment，label / value 是直接子格。
+  '.dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }',
+  // 每格自带底边缝：label 与 value 相邻（**不用 column-gap**）⇒ 两条缝连成整行线；标签右侧留白当列间距。
+  '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); }',
+  '.dsh-tdt-info-label { padding-right: 12px; }',
+  // 末行（最后一组 label / value 两格）去掉底边缝，避开下方那条统一虚线（用户 2026-10-03）。
+  '.dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-fields > :nth-last-child(-n+2) { border-bottom: 0; }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -716,22 +719,20 @@ const infoRecentStyle: Record<string, string | number> = {
 const infoGroupTitleStyle: Record<string, string | number> = {
   fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', fontWeight: 600,
   marginBottom: '6px', letterSpacing: '0.02em',
+  // 左栏标题在共用 grid 里 ⇒ 横跨标签 / 值两列（右栏标题不在 grid 内，此属性对其无影响）。
+  gridColumn: '1 / -1',
 }
-const infoGridRowStyle: Record<string, string | number> = {
-  // 标签列缩一个字（用户 2026-10-03：标签占太多、后面留白多）⇒ 78 → 66px，多出来的宽度留给值。
-  display: 'grid', gridTemplateColumns: '66px 1fr', gap: '12px', alignItems: 'baseline',
-  // ⚠️ **底边缝不放这里**：内联样式优先级高于 CSS class，写在 inline 会盖掉 `.dsh-tdt-info-field`
-  // 里的 border-bottom（连下面 `:last-child` 去掉末行那条也一起失效 ⇒ 用户 2026-10-03 反馈「线还在」）。
-  // 底边缝一律走 class，与 `.dsh-tdt-card` 底色同理。
-  padding: '6px 0',
-}
+// 「标签—值」两格**不在这里定宽**：列宽由**整栏共用的 grid** 决定（见 TASK_LIST_CSS 里
+// `.dsh-tdt-info-cfg` / `.dsh-tdt-info-rec-fields`），标签列按当前语言的最长标签**自动定宽**
+// （中文≈48px、英文≈95px）⇒ 中英都不留白、也不溢出。底边缝与内边距一律走 class，
+// 因为 `:nth-last-child` 收敛末行那条线的前提是"边框来自 CSS"，内联会盖掉它。
 const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', whiteSpace: 'nowrap' }
 const infoGridValueStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', minWidth: 0, wordBreak: 'break-word', lineHeight: 'var(--tdt-line-md)' }
-/** 纸表格一行：左标签（定宽淡色）+ 右值（自适应换行）。 */
+/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
 function InfoField(props: { label: string; children: ReactNode }): ReturnType<typeof h> {
-  return h('div', { className: 'dsh-tdt-info-field', style: infoGridRowStyle },
-    h('span', { style: infoGridLabelStyle }, props.label),
-    h('div', { style: infoGridValueStyle }, props.children),
+  return h(Fragment, null,
+    h('span', { className: 'dsh-tdt-info-label', style: infoGridLabelStyle }, props.label),
+    h('div', { className: 'dsh-tdt-info-value', style: infoGridValueStyle }, props.children),
   )
 }
 /** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */

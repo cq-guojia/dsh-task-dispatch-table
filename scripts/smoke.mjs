@@ -873,8 +873,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('无下次执行占位符 = `--`（图标保留，不再 `--:--`）', !clientJs.includes('--:--') && clientJs.includes('const NO_TIME = "--"'))
   // 用户 2026-09-30 / 2026-10-03：展开区「太丑了」——从「一句 `·` 串联的长文本」改成逐字段成行，
   // 再于 2026-10-03 改版为「左配置 + 右最近执行」两栏纸表格。
-  check('展开区为标签/值网格（InfoField + 纸表格网格）',
-    clientJs.includes('InfoField') && clientJs.includes('infoGridRowStyle') && clientJs.includes('infoGridLabelStyle'))
+  check('展开区为标签/值网格（InfoField + 纸表格网格：整栏共用 grid、标签列 auto-fit）',
+    clientJs.includes('InfoField') && clientJs.includes('infoGridLabelStyle')
+    && clientJs.includes('dsh-tdt-info-label')
+    && clientJs.includes('grid-template-columns: max-content 1fr'))
   check('基础信息改版：左配置 + 右「上次执行」（状态/完成时间/耗时/Token/备注），且不再展示提示词',
     clientJs.includes('infoSectionConfig') && clientJs.includes('infoLastRun')
     && clientJs.includes('infoNoRun') && clientJs.includes('infoFinishedAt')
@@ -2127,8 +2129,8 @@ console.log('\n[14] runtime-index')
       && !tl.includes('border-bottom: 1px dashed var(--tdt-border-strong)')
       && tl.includes('.dsh-tdt-info-session:hover { color: var(--tdt-business)')
       && tl.includes('width: 18px; height: 18px')
-      // 标签列缩一个字：78 → 66px。
-      && tl.includes("gridTemplateColumns: '66px 1fr'")
+      // 标签列不再写死宽度：整栏共用 grid + `max-content` 自动定宽（中文窄、英文宽，都不留白不溢出）。
+      && tl.includes('grid-template-columns: max-content 1fr')
       // 旧的独立按钮已删；执行时长标签也改了。
       && !tl.includes("}, t('viewSession')))")
       && tl.includes("t('infoDuration')"))

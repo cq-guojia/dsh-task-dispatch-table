@@ -41917,8 +41917,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
 			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
-			".dsh-tdt-info-field { border-bottom: 1px solid var(--tdt-border-faint); }",
-			".dsh-tdt-info-cfg > .dsh-tdt-info-field:last-child, .dsh-tdt-info-rec-fields > .dsh-tdt-info-field:last-child { border-bottom: 0; }",
+			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
+			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); }",
+			".dsh-tdt-info-label { padding-right: 12px; }",
+			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-fields > :nth-last-child(-n+2) { border-bottom: 0; }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -42400,14 +42402,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			color: "var(--tdt-fg-3)",
 			fontWeight: 600,
 			marginBottom: "6px",
-			letterSpacing: "0.02em"
-		};
-		const infoGridRowStyle = {
-			display: "grid",
-			gridTemplateColumns: "66px 1fr",
-			gap: "12px",
-			alignItems: "baseline",
-			padding: "6px 0"
+			letterSpacing: "0.02em",
+			gridColumn: "1 / -1"
 		};
 		const infoGridLabelStyle = {
 			fontSize: "var(--tdt-font-sm)",
@@ -42421,12 +42417,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			wordBreak: "break-word",
 			lineHeight: "var(--tdt-line-md)"
 		};
-		/** 纸表格一行：左标签（定宽淡色）+ 右值（自适应换行）。 */
+		/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
 		function InfoField(props) {
-			return (0, react.createElement)("div", {
-				className: "dsh-tdt-info-field",
-				style: infoGridRowStyle
-			}, (0, react.createElement)("span", { style: infoGridLabelStyle }, props.label), (0, react.createElement)("div", { style: infoGridValueStyle }, props.children));
+			return (0, react.createElement)(react.Fragment, null, (0, react.createElement)("span", {
+				className: "dsh-tdt-info-label",
+				style: infoGridLabelStyle
+			}, props.label), (0, react.createElement)("div", {
+				className: "dsh-tdt-info-value",
+				style: infoGridValueStyle
+			}, props.children));
 		}
 		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
 		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
