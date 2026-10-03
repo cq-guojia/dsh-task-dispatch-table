@@ -57,10 +57,12 @@
 - **左栏（配置）**：执行方式 / 工作区 / 模型 / 失败重试 / 允许延迟 / 附加文件（**文件类型图标 + 文件名**）/ 前置任务；逐行留白、细分隔线，不再是「一坨」。
   - **不再显示提示词**（用户原话：展开区显示提示词没有意义）。未来会由大模型读附件 + 前置任务后生成 2~3 句「任务简介」替代，**本期不做**。
 - **右栏（只看「上次执行」一条，用户 2026-10-03 拍板简化）**：成功就显成功、失败就显失败；用与左栏同一套「标签—值」网格排布：
-  - 状态（官方图标 + 短名，绿 / 红 / 中性）、**时间四件套**：计划执行（`scheduled_at`）/ 实际开始（`dispatched_at`）/ 结束时间（`finished_at`）/ 执行时长（结束−开始）——均含秒（用户 2026-10-03：空间够，四个都放）、Token（hover 看输入/输出/缓存明细）、备注（失败 / 未执行原因）。
-  - **「查看会话」**入口（有 session 才出）。
+  - 状态（官方图标 + 短名，绿 / 红 / 中性）。
+  - **任务会话**（紧跟在状态下面，用户 2026-10-03）：可点 chip = 放大镜图标（`IconSearchOutlineRegular`）+ **会话名**，底框包起来、hover 变色（`.dsh-tdt-info-session`）；会话名过长走跑马灯（`MarqueeText`）；点开走统一 `onOpenSession`。**不再用独立的「查看会话」按钮**。
+  - **时间四件套**：计划执行（`scheduled_at`）/ 实际开始（`dispatched_at`）/ 结束时间（`finished_at`）/ **执行时长**（结束−开始，标签 `infoDuration`）——均含秒（用户 2026-10-03：空间够，四个都放）。
+  - Token（hover 看输入/输出/缓存明细）、备注（失败 / 未执行原因）。
   - **产出物文件清单**：每行「图标 + 文件名」，**hover 有底色**（`.dsh-tdt-info-out:hover`，走 CSS class——inline 会盖掉 `:hover`）；点开走统一 `openFile` 预览入口。
-- **数据**：切到该 tab 时按 `taskId` 用 `fetchInstances` 取最近一条终态实例（`statuses: succeeded/failed/skipped/unknown`，`limit: 1`），客户端派生；**不改服务端接口**。
+- **数据**：切到该 tab 时按 `taskId` 用 `fetchInstances` 取最近一条终态实例（`statuses: succeeded/failed/skipped/unknown`，`limit: 1`），客户端派生。**会话名**由服务端在 `/tasks/instances` 出口按 `sessionTitleOf(scheduled_at, 快照标题 ?? 当前任务标题, attempt)` **单源重建**（与派发时 `sessionTitle.rename` 同一函数；旧行无快照回退当前标题）。
 - **执行记录 tab**：仍只负责查询（状态下拉 / 时间范围 / 条数），不承担「上次执行」展示。
 - ⚠️ **已知缺口（已调研，§3.1c）**：附加文件目前列表接口只下发 `{name, kind}`（无 `ref` / 路径）⇒ 左栏只做到「图标 + 文件名」，**暂不可点开预览**。
 

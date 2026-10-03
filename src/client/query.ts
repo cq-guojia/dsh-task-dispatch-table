@@ -38,6 +38,8 @@ export interface InstanceRow {
   token_in_cache: number | null
   /** 备注：失败 / 跳过原因（服务端由 task_events 最新原因事件推导；无 ⇒ null）。 */
   note?: string | null
+  /** 派发会话名（服务端按 `sessionTitleOf` 单源重建；旧行 / 无标题 ⇒ null）。展示用。 */
+  session_title?: string | null
   updated_at: string
 }
 

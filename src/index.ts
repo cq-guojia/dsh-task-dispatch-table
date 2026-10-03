@@ -9,7 +9,7 @@ import { isSafeAttachmentRef } from './attachment-allowlist.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
 import {
-  ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, setEnabledDefinitionInline, taskDefinitionSchema, titleOf,
+  ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, sessionTitleOf, setEnabledDefinitionInline, taskDefinitionSchema, titleOf,
   upsertDefinitionInline, validateDefinitionForSave,
 } from './tasks.js'
 import { parseInstanceSnapshot, TaskStore, type InstanceStatus } from './store.js'
@@ -838,13 +838,22 @@ const makeDispatchRoutes = (
       //    那会拼出一个「存在但指向别的文件」的假路径）；`workspace` 为空才走快照 workspacePath。
       // ② `ref` 必须过安全校验（同 schduler / reconcile / dispatch 三处口径）。
       // ③ **按 ref 配对下发**（不是按序）：两端过滤规则不同时按序会整体错位、点开错文件。
-      const rows = sessionId === undefined ? page.rows : page.rows.map(row => {
+      const taskTitleById = new Map([...getTasks().values()].map(task => [task.id, titleOf(task)]))
+      const rows = page.rows.map(row => {
         const snap = parseInstanceSnapshot(row.snapshot ?? null)
+        // 会话名（决策 42）：与派发时 `sessionTitle.rename` 用同一份 `sessionTitleOf`（单源），
+        // 标题取派发快照（当时那份）；旧行无快照回退当前任务标题。
+        const name = snap?.title ?? taskTitleById.get(row.task_id) ?? ''
+        const enriched = {
+          ...row,
+          session_title: name === '' ? null : sessionTitleOf(row.scheduled_at, name, row.attempt),
+        }
+        if (sessionId === undefined) return enriched
         const assets = getAssets()
         const registry = getRegistry()
         const workspaces = registry === null ? [] : registry.list()
         return {
-          ...row,
+          ...enriched,
           attachmentPaths: (snap?.attachments ?? []).map(item => {
             if (!isSafeAttachmentRef(item.ref)) return { ref: item.ref, path: null }
             if (item.kind === 'upload') {

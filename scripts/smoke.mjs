@@ -2064,6 +2064,19 @@ console.log('\n[14] runtime-index')
     check('token 用量取数覆盖官方 TurnTokenUsage 字段名（uncachedInputTokens / cacheReadTokens / totalTokens）',
       rec.includes('cacheReadTokens') && rec.includes('uncachedInputTokens') && rec.includes('totalTokens')
       && rec.includes('cacheWriteTokens'))
+    const qsrc = readFileSync(join(process.cwd(), 'src', 'client', 'query.ts'), 'utf8')
+    check('基础信息「任务会话」：图标 + 会话名 + hover 底色的可点 chip，不再用独立「查看会话」按钮',
+      tl.includes("t('infoSession')") && tl.includes('dsh-tdt-info-session')
+      && tl.includes("children: sessionChip")
+      && tl.includes('session_title')
+      && tl.includes('MarqueeText, { text: sessionName }')
+      && tl.includes('IconSearchOutlineRegular')
+      // 旧的独立按钮已删；执行时长标签也改了。
+      && !tl.includes("}, t('viewSession')))")
+      && tl.includes("t('infoDuration')"))
+    check('会话名由服务端按 sessionTitleOf 单源重建（快照标题优先，旧行回退当前任务标题）',
+      sv.includes('sessionTitleOf(row.scheduled_at') && sv.includes('session_title')
+      && qsrc.includes('session_title'))
   }
 
   store.close()

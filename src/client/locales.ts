@@ -156,6 +156,7 @@ export type LocaleKey =
   | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
   // —— 基础信息改版（用户 2026-10-03）：左配置 + 右上次执行 ——
   | 'infoSectionConfig' | 'infoLastRun' | 'infoNoRun' | 'infoFinishedAt'
+  | 'infoSession' | 'infoDuration'
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
   | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
@@ -705,6 +706,8 @@ export const zh: Record<LocaleKey, string> = {
   infoLastRun: '上次执行',
   infoNoRun: '还没有执行记录',
   infoFinishedAt: '结束时间',
+  infoSession: '任务会话',
+  infoDuration: '执行时长',
   // —— 任务卡片三面板（决策 55）——
   cardTabInfo: '基础信息',
   cardTabRecords: '执行记录',
@@ -1290,6 +1293,8 @@ export const en: Record<LocaleKey, string> = {
   infoLastRun: 'Last run',
   infoNoRun: 'No runs yet',
   infoFinishedAt: 'Ended at',
+  infoSession: 'Session',
+  infoDuration: 'Duration',
   // Task card three panels (decision 55).
   cardTabInfo: 'Basic info',
   cardTabRecords: 'Run records',

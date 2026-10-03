@@ -712,6 +712,8 @@ window.__ModuleLoader__.load({
 			infoLastRun: "上次执行",
 			infoNoRun: "还没有执行记录",
 			infoFinishedAt: "结束时间",
+			infoSession: "任务会话",
+			infoDuration: "执行时长",
 			cardTabInfo: "基础信息",
 			cardTabRecords: "执行记录",
 			cardTabLogs: "日志",
@@ -1279,6 +1281,8 @@ window.__ModuleLoader__.load({
 			infoLastRun: "Last run",
 			infoNoRun: "No runs yet",
 			infoFinishedAt: "Ended at",
+			infoSession: "Session",
+			infoDuration: "Duration",
 			cardTabInfo: "Basic info",
 			cardTabRecords: "Run records",
 			cardTabLogs: "Logs",
@@ -41790,6 +41794,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }",
 			".dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }",
+			".dsh-tdt-info-session { background: var(--tdt-chip-bg); transition: background var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-session:hover { background: var(--tdt-chip-bg-hover); }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
 			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
@@ -42710,6 +42716,40 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					seconds: true,
 					fallback: "—"
 				});
+				const sessionName = instance.session_title ?? sid ?? "";
+				const sessionIcon = (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 });
+				const sessionLabel = (0, react.createElement)("span", { style: {
+					flex: "1 1 auto",
+					minWidth: 0
+				} }, (0, react.createElement)(MarqueeText, { text: sessionName }));
+				const sessionChipStyle = {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px",
+					maxWidth: "100%",
+					boxSizing: "border-box",
+					padding: "2px 8px",
+					border: "1px solid var(--tdt-border)",
+					borderRadius: "var(--tdt-radius-sm)",
+					color: "var(--tdt-fg)",
+					font: "inherit",
+					fontSize: "var(--tdt-font-sm)",
+					textAlign: "left",
+					cursor: canOpenSession ? "pointer" : "default"
+				};
+				const sessionChip = sid === null || sessionName === "" ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : canOpenSession ? (0, react.createElement)("button", {
+					type: "button",
+					className: "dsh-tdt-info-session",
+					title: sessionName,
+					style: sessionChipStyle,
+					onClick: () => {
+						onOpenSession(sid);
+					}
+				}, sessionIcon, sessionLabel) : (0, react.createElement)("span", {
+					className: "dsh-tdt-info-session",
+					title: sessionName,
+					style: sessionChipStyle
+				}, sessionIcon, sessionLabel);
 				return (0, react.createElement)("div", null, InfoField({
 					label: t("colStatus"),
 					children: (0, react.createElement)("span", { style: {
@@ -42720,6 +42760,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						color: infoStatusColorOf(instance.status)
 					} }, (0, react.createElement)(StatusIcon, { status: instance.status }), statusTextOf(instance.status, t))
 				}), InfoField({
+					label: t("infoSession"),
+					children: sessionChip
+				}), InfoField({
 					label: t("colPlanned"),
 					children: timeOf(instance.scheduled_at)
 				}), InfoField({
@@ -42729,7 +42772,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					label: t("infoFinishedAt"),
 					children: timeOf(instance.finished_at)
 				}), dur === null ? null : InfoField({
-					label: t("colDuration"),
+					label: t("infoDuration"),
 					children: formatDurationHms(dur)
 				}), tokens === null ? null : InfoField({
 					label: t("colTokens"),
@@ -42737,13 +42780,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}), note === "" ? null : InfoField({
 					label: t("colNote"),
 					children: (0, react.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
-				}), canOpenSession ? (0, react.createElement)("div", { style: { marginTop: "12px" } }, (0, react.createElement)(Button$2, {
-					variant: "outline",
-					size: "sm",
-					onClick: () => {
-						onOpenSession(sid);
-					}
-				}, t("viewSession"))) : null, outputs.length === 0 ? null : (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
+				}), outputs.length === 0 ? null : (0, react.createElement)("div", { style: { marginTop: "14px" } }, (0, react.createElement)("div", { style: {
 					marginBottom: "6px",
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"

@@ -127,6 +127,9 @@ const TASK_LIST_CSS = [
   // 基础信息右栏「产出物」文件行：hover 给一层底色（用户 2026-10-03）。必须走 class——inline 会盖掉 :hover。
   '.dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }',
   '.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }',
+  // 基础信息右栏「任务会话」chip（用户 2026-10-03）：图标 + 会话名包一层底框，hover 变色提示可点。
+  '.dsh-tdt-info-session { background: var(--tdt-chip-bg); transition: background var(--tdt-dur) var(--tdt-ease); }',
+  '.dsh-tdt-info-session:hover { background: var(--tdt-chip-bg-hover); }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
   // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
@@ -1064,6 +1067,25 @@ function TaskExpandPanel(props: {
       : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
     const note = instance.note === null || instance.note === undefined ? '' : instance.note
     const timeOf = (iso: string | null): string => iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
+    // 「任务会话」chip（用户 2026-10-03）：图标 + 会话名，底框包起来、hover 变色提示可点（点了开会话）。
+    // 会话名由服务端按 `sessionTitleOf` 单源下发；缺名（旧行）退回会话 id，仍可点。
+    const sessionName = instance.session_title ?? sid ?? ''
+    const sessionIcon = h(IconSearchOutlineRegular, { size: 14 })
+    const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
+    const sessionChipStyle: Record<string, string | number> = {
+      display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
+      padding: '2px 8px', border: '1px solid var(--tdt-border)', borderRadius: 'var(--tdt-radius-sm)',
+      color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-sm)', textAlign: 'left',
+      cursor: canOpenSession ? 'pointer' : 'default',
+    }
+    const sessionChip = sid === null || sessionName === ''
+      ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '—')
+      : canOpenSession
+        ? h('button', {
+          type: 'button', className: 'dsh-tdt-info-session', title: sessionName, style: sessionChipStyle,
+          onClick: () => { onOpenSession(sid) },
+        }, sessionIcon, sessionLabel)
+        : h('span', { className: 'dsh-tdt-info-session', title: sessionName, style: sessionChipStyle }, sessionIcon, sessionLabel)
     return h('div', null,
       InfoField({
         label: t('colStatus'),
@@ -1074,19 +1096,17 @@ function TaskExpandPanel(props: {
           statusTextOf(instance.status, t),
         ),
       }),
+      // 任务会话：紧跟在状态下面（用户 2026-10-03）。
+      InfoField({ label: t('infoSession'), children: sessionChip }),
       // 时间四件套（用户 2026-10-03：空间够，计划 / 开始 / 结束 / 时长都放上）。
       InfoField({ label: t('colPlanned'), children: timeOf(instance.scheduled_at) }),
       InfoField({ label: t('colActualStart'), children: timeOf(instance.dispatched_at) }),
       InfoField({ label: t('infoFinishedAt'), children: timeOf(instance.finished_at) }),
-      dur === null ? null : InfoField({ label: t('colDuration'), children: formatDurationHms(dur) }),
+      dur === null ? null : InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) }),
       tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: tokensDetailOf(instance) }, tokens) }),
       note === ''
         ? null
         : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--tdt-danger)' } }, note) }),
-      canOpenSession
-        ? h('div', { style: { marginTop: '12px' } },
-          h(Button, { variant: 'outline', size: 'sm', onClick: () => { onOpenSession(sid) } }, t('viewSession')))
-        : null,
       outputs.length === 0
         ? null
         : h('div', { style: { marginTop: '14px' } },
