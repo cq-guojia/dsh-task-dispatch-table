@@ -16,6 +16,8 @@
 
 ## 二、源码核实结果（2026-09-27，官方包 0.1.7-rc.2，实现本体）
 
+> ⚠️ **2026-10-03 复核（官方 0.2.0-rc.2）**：§二① 的「预览层」结论**成立且加强**（借不到官方组件），但「PDF = 浏览器原生 iframe」这条**已更正** ⇒ 见本节末「§二-五 复核更正」。完整事实清单见 [`../external/dsh-capabilities.md`](../external/dsh-capabilities.md) §文件预览的官方渲染能力。
+
 ### ① 官方「打开文件」四层能力
 
 | 层 | 包 | 事实 |
@@ -31,6 +33,18 @@
 2. **预览组件本体绑 sidebar 槽位运行时**（`documentpreview` `index.d.ts`）：「The type reaches the Sidebar through its public path only… **Every import from another client plugin is a type**」——`TextPreview` 的 props 全是 slot 运行时合成（tab 记录 / 每-tab store / 渲染槽），离开 sidebar 座位无法组装。
 
 另：右栏是布局层的一列，处于我方 z-1000 弹窗之下；**弹窗改整页也救不了**（整页同样顶替会话区）。⇒ 右栏路线对本插件**整体排除**，Q1「系统默认应用」随原生层一并排除。
+
+### ②-五 2026-10-03 复核更正（官方 0.2.0-rc.2）
+
+**结论：§二② 两条硬证据仍成立**（`documentpreview` 的 client 导出面复核后**仍全是 type**，借不到组件；seat 约束依旧）⇒ 右栏路线继续排除、页面级 dock 形态不动。但**「PDF = 浏览器原生 iframe」这条前提被官方事实推翻**：
+
+| 项 | 原记（§三） | **复核后（0.2.0-rc.2 源码）** |
+|---|---|---|
+| PDF 渲染 | 浏览器原生 iframe（当作已定方案） | **官方自己不用 iframe**：PDF 走独立懒加载分包 `lib/client.pdf.js`（**7.1 MB**）里的 **pdf.js**，逐页渲染到 canvas + 文本层；`pdfjs-dist` 是该分包内部依赖、不在 `package.json` `dependencies` ⇒ **第三方无法合法复用** |
+| SVG 渲染 | （未单列，随图片走） | 官方 `svg` 与位图**同一个 `<img>`** 渲染器（`IMAGE_EXTENSIONS` 含 `svg`，MIME `image/svg+xml`）⇒ **我方 `<img>` 手法与官方一致**，SVG 若不显示必是取数/尺寸侧问题，不是渲染器选型问题 |
+| 官方预览组件能否借 | 未核实 | **不能**：`lib/types/client/index.d.ts` 仅 `export type` + `declare module`；`ctx.documentPreviews` 注册表注册的是绑右栏 slot 的 keyed 组件 |
+
+⇒ 我方 PDF 的「浏览器原生 iframe」不等于「和官方一样能显示」：官方能显示是靠 pdf.js **不依赖浏览器 PDF viewer**。当前 iframe 在我方 webview 里预览不出 PDF/SVG，**根因待查**（见 [`../../PROGRESS.md`](../../PROGRESS.md) U26），并遵守用户 2026-10-03 定的取舍原则：**能用官方就用官方 → 官方做不到就抄官方样式但用浏览器底层能力 → 绝不引第三方包**（故 `pdfjs-dist` 不可引入，PDF 只能走「原生 iframe + 抄官方样式」或做官方同款降级）。
 
 ## 三、拍板结论（决策 39，用户逐轮收敛）
 

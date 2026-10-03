@@ -6549,7 +6549,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				let objectUrl = null;
 				setUrl(null);
 				setErr(null);
-				workspaceFiles.readBytes(sessionId, path).then((page) => {
+				workspaceFiles.readBytes(sessionId, path, {}).then((page) => {
 					if (!alive) return;
 					const data = bytesOf(page);
 					if (isFailed(data)) {

@@ -9,10 +9,13 @@
 // 数据一律 remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。
 // 单一入口：面板只认调用方 openFile(path) 传入的路径；未来任务列表整页同走此组件（本轮不落 UI）。
 //
-// 契约事实来源：@deepseek-ai/dsh-api-workspace-files@0.1.7-rc.2 lib/typert.remote-client.js
-// —— read(sessionId, path, {offset?, limit?}) → {offset, text, lines, eof, ...}（单页
+// 契约事实来源：@deepseek-ai/dsh-api-workspace-files@0.2.0-rc.2 lib/typert.remote-client.js
+// —— read(sessionId, path, range) → {offset, text, lines, eof, ...}（单页
 // 2MiB/5000 行，文本页 \n 连接、末行不带终止符，翻页 offset = 页 offset + lines）；
-// readBytes(sessionId, path, ...) → {offset, data: Uint8Array, eof, ...}（全量 ≤32MiB）。
+// readBytes(sessionId, path, options) → {offset, data: Uint8Array, eof, ...}（options 不带
+// range = 全量，上限 = 部署 maxFileBytes，docs 早前写的「32MiB」是部署值非协议常量）。
+// ⚠️ 两个方法的第三参都**必传**（全量也要传 `{}`）：远端按位置参数个数校验，少传即
+// `expected 3 business argument(s) plus an optional AbortSignal, got 2`（真机 2026-10-03）。
 import { Component, createElement as h, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { Button, IconButton, Segmented } from './ui'
@@ -152,11 +155,16 @@ export function listingOf(result: unknown): {
 
 /** @deepseek-ai/dsh-api-workspace-files 的消费面（官方 remote.workspaceFiles 命名空间的用到的子集）。 */
 export interface WorkspaceFilesFace {
-  /** 文本分页读：返回页文本与 eof；翻页 offset = 页 offset + lines。 */
+  /**
+   * 文本分页读：返回页文本与 eof；翻页 offset = 页 offset + lines。
+   * ⚠️ 第三参 `range` **必传**（官方 `read(scope, path, range, signal)`），读全量也要传 `{}`。
+   * 真机 2026-10-03：`readBytes` 曾因少传第三参被远端拒（`expected 3 business argument(s) … got 2`），
+   * 官方按**位置参数个数**校验，故两个方法一律不得省。出处见 docs/design/external/dsh-capabilities.md。
+   */
   read(
     sessionId: string,
     path: string,
-    opts?: { offset?: number; limit?: number },
+    range: { offset?: number; limit?: number },
     signal?: AbortSignal,
   ): Promise<{
     offset: number
@@ -167,11 +175,15 @@ export interface WorkspaceFilesFace {
     version?: number | string
     bytes?: number
   }>
-  /** 二进制读：不传 range = 全量（服务端上限 32MiB，超出抛 too-large）。 */
+  /**
+   * 二进制读：**不传 `range` 读全量**（受部署 `maxFileBytes` 封顶，超出抛 too-large）。
+   * ⚠️ 第三参 **必传**，全量也要传 `{}`（真机 2026-10-03 踩过，见上）。
+   * ⚠️ `range` 是 `{ offset?, length? }`，**不是** `[start, end]` 元组（官方 `WorkspaceByteRange`）。
+   */
   readBytes(
     sessionId: string,
     path: string,
-    opts?: { range?: [number, number] },
+    options: { range?: { offset?: number; length?: number } },
     signal?: AbortSignal,
   ): Promise<{ offset: number; data: Uint8Array; eof: boolean; bytes?: number }>
   /** 目录列举：返回直接子项（官方 list，目录 ≤2000 条，限工作区内）。list 一个文件会报 not-directory。 */
@@ -304,7 +316,7 @@ export function BytesPreview(props: {
     let objectUrl: string | null = null
     setUrl(null)
     setErr(null)
-    workspaceFiles.readBytes(sessionId, path)
+    workspaceFiles.readBytes(sessionId, path, {})
       .then((page) => {
         if (!alive) return
         const data = bytesOf(page)

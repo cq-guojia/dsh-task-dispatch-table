@@ -993,6 +993,15 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('dsh-tdt-sv-preview-md') && clientJs.includes('CodeBlock'))
   check('inject 清单声明 workspace-files 提供方（dsh-api-workspace-files）',
     injectList.includes('@deepseek-ai/dsh-api-workspace-files'), injectList.join(', '))
+  // U26（真机 2026-10-03：PDF/SVG 预览全失败）：根因 = readBytes 少传第三参，远端按位置参数
+  // 个数校验 ⇒ `expected 3 business argument(s) … got 2`，请求根本没发出去。官方签名
+  // readBytes(scope, path, options, signal) 的 options 必传，「不传 range 读全量」= 传 {}。
+  // 正向：readBytes 必须带第三参；反向：不得出现 2 参调用（这类错真机不报错、只静默失败）。
+  check('readBytes 调用必带第三参（官方 options 必传，读全量传 {}）',
+    /workspaceFiles\.readBytes\([^)]*,\s*[^,)]+,\s*\{/.test(clientJs)
+    && !/workspaceFiles\.readBytes\([^,)]+,\s*[^,)]+\)/.test(clientJs))
+  check('read 调用必带第三参 range（官方 read(scope, path, range, signal)）',
+    !/workspaceFiles\.read\([^,)]+,\s*[^,)]+\)/.test(clientJs))
   // U11 第二轮（交付文件官方化）：present 行 + 交付文件卡网格 + 词表收录 present 路径。
   check('present 工具走官方 PresentRow 镜像（data-tool=present + IconDeliverDocRegular，不经通用工具卡）',
     clientJs.includes('IconDeliverDocRegular') && /data-tool"?\s*[:=]\s*"?present/.test(clientJs))

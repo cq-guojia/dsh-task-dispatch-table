@@ -37,6 +37,41 @@
 | **注入上下文的官方口子 `agent.inject()`**（同轮核实） | `inject(message: UserMessage): void`（`dsh-agent@0.2.0-rc.2` `lib/types/runtime-types.d.ts:203-209`）：把上下文排进最近的 pre-step，**不唤醒 driver**（`followup` 唤醒、`steer` 在步边界生效）。官方注释列举的用途就是「文件变更通知 / 子目录 AGENTS.md / skill 内容 / cron 通知」——与本插件「告诉 agent 这些是输入文件」同类 |
 | **消息来源的呈现形态由 `source.form` 决定**（同轮核实） | `ContextForm` = **`instructions` / `catalog` / `snapshot` / `notice` / `relay` / `recall`**（`dsh-llm@0.2.0-rc.2` `lib/types/message.d.ts:46-92`），配 `ContextFormed` 判别联合（`notice` 必带 `summary`、`snapshot` 必带 `sections`）。源码注释明确：**词表是语义的，不是视觉的**——*"Colors, icons, ordering, and collapse defaults are the consumer's business"* ⇒ **插件不要自定义「输入 / 输出」配色**，颜色图标归 UI 侧 |
 
+## 文件预览的官方渲染能力（2026-10-03 源码核实，0.2.0-rc.2）
+
+> 核实方式：`npm pack` **`@deepseek-ai/dsh-client-ui-chat` / `-conversation` / `-renderer` / `-sidebar` / `-sidebar-documentpreview` @0.2.0-rc.2** 解包到**仓库外**临时目录，读 `lib/client.js` + `lib/types/**`（`documentpreview` 不随包发 `src/`，只能读 `lib/`）。
+> **本节只记官方事实**；我方取舍与未决项见 [`../features/artifact-opening.md`](../features/artifact-opening.md) 与 [`../../PROGRESS.md`](../../PROGRESS.md)。
+
+| 能力 | 事实 | 出处 |
+|---|---|---|
+| **官方「打开文件」不自研渲染，转交宿主右栏** | `openFile` 实 = `const url = fileAddressFor(sessionId, cwd, path); ctx.sidebarRight.openResource(url)`（无行号时省略 `{ params: { line } }`）⇒ **预览由宿主右侧栏的资源查看器渲染** | `dsh-client-ui-chat@0.2.0-rc.2` `lib/client.js:12423-12429` |
+| 文件资源地址格式 | `dsh-resource://file/session/<encodeSegment(sessionId)>/<encodePath(path)>`；`fileAddressFor` 先把**工作区绝对路径**按 `cwd` 归一为会话相对路径（剥掉 `cwd` 前缀），非绝对路径直接当相对路径 | 同上 `lib/client.js:56-61`（`sessionFileAddress`）、`:100-107`（`fileAddressFor`） |
+| `sidebarRight` 是**全局 cordis 服务** | 官方 chat 包以 `inject: ['sidebarRight']` 依赖它（**不是**顶层 `inject`，符合本仓硬约束）⇒ 第三方插件同样可 `ctx.inject(['sidebarRight'])` 取得 | 同上 `lib/client.js:12258-12269` |
+| ⚠️ **但右栏路线对本插件整体不可用（决策 39 已拍板排除）** | ① **seat 按会话挂载**：`openResource` 走「当前挂载 seat」，官方原文 *"a command arriving with no seat mounted has no session to act on and **fails loudly**"*，`mounted` 在「global panel 激活或无会话选中」时为 `undefined`（`dsh-client-ui-sidebar-right/lib/types/client/service.d.ts`）；我方整页面板/弹窗激活即顶替会话区 ⇒ 无 seat ⇒ 调用即报错。② 预览组件**绑 sidebar 槽位运行时**，离开座位组装不起来。③ 右栏在布局层，z 序低于我方 z-1000 弹窗 | 结论与证据另见 [`../features/artifact-opening.md`](../features/artifact-opening.md) §二② |
+| **官方预览组件的 client 导出面「全是 type」** | `dsh-client-ui-sidebar-documentpreview` 的 `lib/types/client/index.d.ts` 只有 `export type`（`TextPreviewProps` / `DocumentContent` / `DocumentPreviewProps` / `DocumentPreviewDefinition` …）+ 一个 `declare module` 扩展；源码注释重申 *"Every import from another client plugin is a type."* ⇒ **借不到任何官方预览组件**，当年判断至今成立 | `dsh-client-ui-sidebar-documentpreview@0.2.0-rc.2` `lib/types/client/index.d.ts` |
+| 官方按扩展名分派实现的方式 | `ctx.documentPreviews` 注册表（`DocumentPreviewRegistry.register`）注册的是**元数据 + keyed slot 组件**，slot 挂 `sidebar.right.pane.tab` 座位 ⇒ 仍是右栏路线。`loading` 档位 = `text-pages` / `bytes-complete` / `renderer` | 同上 `lib/types/client/document/registry.d.ts` |
+| **图片类：官方就是 `<img>` + blob，SVG 同理** | `IMAGE_EXTENSIONS = [png,jpg,jpeg,gif,webp,bmp,ico,**svg**]`；`IMAGE_MEDIA_TYPES` 逐扩展名给 MIME（`svg: "image/svg+xml"`）⇒ **SVG 与位图走同一个 `<img>` 渲染器**。⚠️ `BINARY_IMAGE_EXTENSIONS` **不含 svg**（注释：SVG 的 XML 源码值得当文本读）。注册 id = `…/documentpreview/image` | 同上 `lib/client.js:4817-4867` |
+| ⚠️ **更正：官方 SVG 不走沙箱 iframe** | 沙箱 iframe + 净化器（`USE_PROFILES.svg` / `ALLOWED_TAGS` / `SVG_NAMESPACE` / `svgDisallowed` 等）属于 **HTML 预览**（`extensions: ["html","htm"]`），**不是 SVG 预览** | 同上 `lib/client.js:4102`、`:4817-4845` |
+| **PDF：官方用 pdf.js 渲染到 canvas，不是浏览器原生 iframe** | 独立懒加载分包 `lib/client.pdf.js`（**7.1 MB**，`react.lazy(require.async)`，`lib/client.js:4881-4899`）；实现是 **`pdfjs-dist`** 内联进该分包（`getDocument` / `PDFDocumentLoadingTask` / `GlobalWorkerOptions.workerSrc` / `canvasContext` / 逐页文本层），worker 以 blob URL 起：`new Worker(url, { type: "module", name: "dsh-pdf" })`。`pdfjs-dist` **是该分包的内部依赖、不在 `dependencies`**（`dependencies` 仅 `@deepseek-ai/schemastery`）⇒ 第三方无法合法复用 | `dsh-client-ui-sidebar-documentpreview@0.2.0-rc.2` `lib/client.js:4962-4992`、`lib/client.pdf.js`（`pdfjs-dist` 字样 4 处、`getDocument` 7 处）、`package.json` |
+| 官方 PDF 面的样式（可抄） | `.body:has([data-pdf-preview]){background:var(--dsw-alias-bg-document-preview)}`；`[data-code-preview]` / `[data-pdf-preview]` 两个属性选择器即官方区分渲染器的标记 | 同上 `lib/client.js:491`（`TextPreview.module.css` 内嵌 CSS） |
+| 官方其余渲染器（备查） | 代码 = `CODE_HIGHLIGHT_EXTENSIONS` + 官方 CodeBlock（`lib/client.js:5086-5094`）；html（沙箱 iframe）；excel（`lib/client.excel.js` 7.1 MB）；office/pdf；均绑右栏 slot | 同上 |
+
+### ⚠️ `workspaceFiles` 四个方法的**业务参数个数**（2026-10-03 真机踩坑，务必照抄）
+
+远端客户端**按位置参数个数校验**（多传/少传即抛 `client api: workspaceFiles/<方法> expected N business argument(s) plus an optional AbortSignal, got M`）⇒ 第三参**必传**，哪怕是"读全量"也要传 `{}`。
+
+| 方法 | 业务参数 | 备注 |
+|---|---|---|
+| `read` | **3**：`scope, path, range: WorkspaceFileRange` | 读全量也要传 `{}` |
+| `readBytes` | **3**：`scope, path, options: WorkspaceByteReadOptions` | 读全量也要传 `{}`；`options.range` 才是不传时的全量语义 |
+| `list` | **2**：`scope, path` | 无第三参 |
+| `stat` | **2**：`scope, path` | 无第三参 |
+
+类型原文：`read(workspaceFileScope, path, range: WorkspaceFileRange, signal)` / `readBytes(workspaceFileScope, path, options: WorkspaceByteReadOptions, signal)`（**`range` / `options` 均非可选**）。⚠️ 由此推出 **`WorkspaceByteRange` 不是元组**：官方是 `{ offset?: number; length?: number }`（两个都可选），**没有** `[start, end]` 这种形状。
+
+出处：`@deepseek-ai/dsh-api-workspace-files@0.2.0-rc.2` `lib/types/index.d.ts:82`（`read`）、`:91`（`readBytes`）、`:99`（`stat`）、`:107`（`list`）；`lib/types/types.d.ts:56-66`（`WorkspaceByteRange` / `WorkspaceByteReadOptions`）。
+
+
 ## 平台与接入
 
 | 能力 | 事实 |
