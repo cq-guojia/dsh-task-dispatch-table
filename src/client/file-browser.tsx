@@ -368,6 +368,9 @@ export function FileBrowser(props: {
   // 文件名跑马灯（同 FilePreviewPanel：超长省略，hover 时向左滚动露出全名）。
   const titleRef = useRef<HTMLSpanElement>(null)
   const titleInnerRef = useRef<HTMLSpanElement>(null)
+  // 只读完整路径（工作区之外）的跑马灯：独立 ref 一套，不与文件名那套互相干扰。
+  const plainRef = useRef<HTMLSpanElement>(null)
+  const plainInnerRef = useRef<HTMLSpanElement>(null)
   // 预览态：md 渲染⇄源码 + 刷新自增（触发 Bytes/Text 重读）。
   const [sourceView, setSourceView] = useState(false)
   const [reloadNonce, setReloadNonce] = useState(0)
@@ -392,27 +395,30 @@ export function FileBrowser(props: {
     if (code === 'outside-workspace' || code === 'not-found' || code === 'lookup-not-found') setOutside(true)
   }
 
-  const startMarquee = (): void => {
-    const outer = titleRef.current
-    const inner = titleInnerRef.current
+  /**
+   * 跑马灯：hover 时放开内层宽度并向左滚到底，移出即复位（文件名 / 只读完整路径两处共用，
+   * 用户 2026-09-28「太长显示不下就 hover 跑马灯」；只读路径那处是 2026-10-03 追加）。
+   */
+  const marqueeOn = (outer: HTMLSpanElement | null, inner: HTMLSpanElement | null): void => {
     if (outer === null || inner === null) return
     inner.style.maxWidth = 'none'
     inner.style.textOverflow = 'clip'
     const shift = inner.scrollWidth - outer.clientWidth
     if (shift > 0) {
       inner.style.transition = 'transform 3s linear'
-      void inner.offsetWidth
+      void inner.offsetWidth // 强制回流后再设 transform，确保 transition 生效
       inner.style.transform = `translateX(${-shift}px)`
     }
   }
-  const stopMarquee = (): void => {
-    const inner = titleInnerRef.current
+  const marqueeOff = (inner: HTMLSpanElement | null): void => {
     if (inner === null) return
     inner.style.transition = 'none'
     inner.style.transform = 'translateX(0)'
     inner.style.maxWidth = ''
     inner.style.textOverflow = ''
   }
+  const startMarquee = (): void => { marqueeOn(titleRef.current, titleInnerRef.current) }
+  const stopMarquee = (): void => { marqueeOff(titleInnerRef.current) }
 
   /** 列举某目录并展示（清空 viewing；收起下拉）。 */
   const fetchDir = (targetDir: string): void => {
@@ -681,13 +687,21 @@ export function FileBrowser(props: {
   /**
    * 工作区之外时的第一排：**只读完整路径**（用户 2026-10-03）。
    * 不给任何会失败的入口：▾ 选层（下拉里全是点不动的层）、面包屑点选、← 返回、↑ 上一层
-   * 全部不渲染，只留 ✕ 关闭；路径过长省略号截断，hover **无任何交互**（不跑马灯 / 不给 title）。
+   * 全部不渲染，只留 ✕ 关闭；路径过长省略号截断，**hover 跑马灯**（同文件名那套，用户点名；
+   * 不可点、无 tooltip）。
    */
   const crumbbarPlain: ReactNode = h('nav', {
     className: 'dsh-tdt-sv-crumbbar',
     'aria-label': t('explorerCrumbsAria'),
   },
-    h('span', { className: 'dsh-tdt-sv-crumbbar-plain' }, dir),
+    h('span', {
+      ref: plainRef,
+      className: 'dsh-tdt-sv-crumbbar-plain',
+      title: dir,
+      onMouseEnter: () => { marqueeOn(plainRef.current, plainInnerRef.current) },
+      onMouseLeave: () => { marqueeOff(plainInnerRef.current) },
+    },
+      h('span', { ref: plainInnerRef, className: 'dsh-tdt-sv-crumbbar-plain-inner' }, dir)),
     h('div', { className: 'dsh-tdt-sv-head-actions' },
       tooled(t('previewClose'),
         h(IconButton, {

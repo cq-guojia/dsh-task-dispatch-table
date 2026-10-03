@@ -76,9 +76,11 @@ workspaceFiles.readBytes(sessionId, path)   // ❌ 少传 options
 
 **起因**：用户验收 PDF/SVG 恢复后发现——点开 `~/.dsh/storings/.../attachments` 里的附件，第一排照旧给全导航（▾ 选层下拉把 `root/.dsh/storings/…/attachments` 全列出、面包屑逐段可点、← 返回 / ↑ 上一层齐全），但**点任意一个必然报 `outside-workspace`**（官方 `list` 限工作区内）⇒ 纯属给必然失败的入口。
 
-**拍板（用户原话）**：「你在工作区以外，本来点了就没有用，那让他点干嘛呀？……直接列一个完整的目录，让他们看就行了。」并追加：**路径太长显示不下时，hover 完全无交互**（不跑马灯、不给 title、不可点、不做任何操作）。
+**拍板（用户原话）**：「你在工作区以外，本来点了就没有用，那让他点干嘛呀？……直接列一个完整的目录，让他们看就行了。」并追加：**路径太长显示不下时要跑马灯**（用户原话「鼠标移上去就-啪-啪-灯-」）。
 
-**落码**（`src/client/file-browser.tsx`）：
+⚠️ **我第一遍误读成「禁止任何 hover 交互」**，用户 2026-10-03 验收时点正：「显示不下，移动上去要跑马灯呀。」**「啪-啪-灯」是跑马灯滚动的声音，不是"不许动"。** 教训：用户用拟声词描述动效时，默认理解为"要有这个动效"，别按字面否定理解。
+
+**落码**（`src/client/file-browser.tsx` + `archive-session-css.ts`）：
 
 | 改动 | 位置 | 要点 |
 |---|---|---|
@@ -86,7 +88,8 @@ workspaceFiles.readBytes(sessionId, path)   // ❌ 少传 options
 | 三处 list 结果接判定 | `fetchDir` / 初次进入 / 文件预览态的父树列举 | 成功 ⇒ `setOutside(false)`；失败 ⇒ 按错误码置位 |
 | `crumbbarPlain` 常量 | 组件内 | 工作区之外时的第一排：只读完整路径 + ✕ 关闭。**▾ 选层、面包屑点选、← 返回、↑ 上一层全部不渲染** |
 | 三元接入 | 第一排原 `h('nav', …)` 位置 | `outside ? crumbbarPlain : h('nav', …)`，原 nav 结构零改动 |
-| 样式 `.dsh-tdt-sv-crumbbar-plain` | `archive-session-css.ts` | `overflow:hidden` + `text-overflow:ellipsis` + `cursor:default` + `user-select:none`，**无 `:hover` 规则** |
+| 样式 `.dsh-tdt-sv-crumbbar-plain` + `-inner` | `archive-session-css.ts` | 外层 `flex:1+overflow:hidden`、内层 `white-space:nowrap` + `text-overflow:ellipsis`（同 `preview-title` 结构）；`cursor:default`、**无 `:hover` 规则**（跑马灯由 JS 驱动，不是 hover 样式）|
+| 跑马灯 | `marqueeOn` / `marqueeOff`（**从原 `startMarquee`/`stopMarquee` 抽成共用**，两处调用，不另写一套） | 独立 `plainRef` / `plainInnerRef` 一套，不与文件名那套互相干扰；hover 向左滚到底、移出复位 |
 
 **保留项（有意）**：第二排的**复制 / 刷新**照旧——刷新是重读**文件内容**，文件本身可读，与目录导航无关；`✕ 关闭` 必须留（关掉预览的出口）。
 
@@ -94,8 +97,5 @@ workspaceFiles.readBytes(sessionId, path)   // ❌ 少传 options
 
 **质量门**：typecheck 绿 · 冒烟 **501/0**（新增 3 条：分支存在 / 判定用错误码 / 样式无 hover）· build 过。
 
-
 - `artifact-opening.md` §二① 与 `file-preview.tsx:12-15` 头部注释都写着「`readBytes(...)` → 全量 ≤32MiB」，**漏了「第三参必传」** ⇒ 照着写代码就会踩。本次已更正该契约到 `dsh-capabilities.md`，但**落码时必须同步收紧本仓消费面**（第 2 条），否则接口声明与官方不一致的坑还在。
 - 顺带记录：官方封顶配置是 `maxFileBytes`（全量读）/ `maxBytes`（单页）/ `maxLines` / `maxEntries`（`Config`，`lib/types/index.d.ts:47-62`），**"32MiB" 是部署配的 `maxFileBytes` 值、不是协议常量** ⇒ 错误文案里的 limit 按实际配置显示，不要写死。
-
-
