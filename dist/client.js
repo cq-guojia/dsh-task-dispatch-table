@@ -3195,7 +3195,8 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
 /* 工作区之外的只读完整路径（用户 2026-10-03）：无任何交互——不可点、无 hover 反馈、
    不跑马灯、不给 title；过长省略号截断（想看全路径用第二排的「复制」）。 */
-.dsh-tdt-sv-crumbbar-plain{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;user-select:none;}
+.dsh-tdt-sv-crumbbar-plain{flex:1;min-width:0;display:flex;overflow:hidden;}
+.dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
 .dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
 /* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
 .dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
@@ -6970,6 +6971,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const measureRef = (0, react.useRef)(null);
 			const titleRef = (0, react.useRef)(null);
 			const titleInnerRef = (0, react.useRef)(null);
+			const plainRef = (0, react.useRef)(null);
+			const plainInnerRef = (0, react.useRef)(null);
 			const [sourceView, setSourceView] = (0, react.useState)(false);
 			const [reloadNonce, setReloadNonce] = (0, react.useState)(0);
 			const [copied, setCopied] = (0, react.useState)(false);
@@ -6988,9 +6991,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const code = typeof raw.code === "string" ? bareCode(raw.code) : "";
 				if (code === "outside-workspace" || code === "not-found" || code === "lookup-not-found") setOutside(true);
 			};
-			const startMarquee = () => {
-				const outer = titleRef.current;
-				const inner = titleInnerRef.current;
+			/**
+			* 跑马灯：hover 时放开内层宽度并向左滚到底，移出即复位（文件名 / 只读完整路径两处共用，
+			* 用户 2026-09-28「太长显示不下就 hover 跑马灯」；只读路径那处是 2026-10-03 追加）。
+			*/
+			const marqueeOn = (outer, inner) => {
 				if (outer === null || inner === null) return;
 				inner.style.maxWidth = "none";
 				inner.style.textOverflow = "clip";
@@ -7001,13 +7006,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					inner.style.transform = `translateX(${-shift}px)`;
 				}
 			};
-			const stopMarquee = () => {
-				const inner = titleInnerRef.current;
+			const marqueeOff = (inner) => {
 				if (inner === null) return;
 				inner.style.transition = "none";
 				inner.style.transform = "translateX(0)";
 				inner.style.maxWidth = "";
 				inner.style.textOverflow = "";
+			};
+			const startMarquee = () => {
+				marqueeOn(titleRef.current, titleInnerRef.current);
+			};
+			const stopMarquee = () => {
+				marqueeOff(titleInnerRef.current);
 			};
 			/** 列举某目录并展示（清空 viewing；收起下拉）。 */
 			const fetchDir = (targetDir) => {
@@ -7295,12 +7305,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/**
 			* 工作区之外时的第一排：**只读完整路径**（用户 2026-10-03）。
 			* 不给任何会失败的入口：▾ 选层（下拉里全是点不动的层）、面包屑点选、← 返回、↑ 上一层
-			* 全部不渲染，只留 ✕ 关闭；路径过长省略号截断，hover **无任何交互**（不跑马灯 / 不给 title）。
+			* 全部不渲染，只留 ✕ 关闭；路径过长省略号截断，**hover 跑马灯**（同文件名那套，用户点名；
+			* 不可点、无 tooltip）。
 			*/
 			const crumbbarPlain = (0, react.createElement)("nav", {
 				className: "dsh-tdt-sv-crumbbar",
 				"aria-label": t("explorerCrumbsAria")
-			}, (0, react.createElement)("span", { className: "dsh-tdt-sv-crumbbar-plain" }, dir), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react.createElement)(IconButton, {
+			}, (0, react.createElement)("span", {
+				ref: plainRef,
+				className: "dsh-tdt-sv-crumbbar-plain",
+				title: dir,
+				onMouseEnter: () => {
+					marqueeOn(plainRef.current, plainInnerRef.current);
+				},
+				onMouseLeave: () => {
+					marqueeOff(plainInnerRef.current);
+				}
+			}, (0, react.createElement)("span", {
+				ref: plainInnerRef,
+				className: "dsh-tdt-sv-crumbbar-plain-inner"
+			}, dir)), (0, react.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
 				icon: (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
@@ -41890,6 +41914,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
 			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
+			".dsh-tdt-info-field { border-bottom: 1px solid var(--tdt-border-faint); }",
 			".dsh-tdt-info-cfg > .dsh-tdt-info-field:last-child, .dsh-tdt-info-rec-fields > .dsh-tdt-info-field:last-child { border-bottom: 0; }",
 			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
 			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
@@ -42379,8 +42404,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			gridTemplateColumns: "66px 1fr",
 			gap: "12px",
 			alignItems: "baseline",
-			padding: "6px 0",
-			borderBottom: "1px solid var(--tdt-border-faint)"
+			padding: "6px 0"
 		};
 		const infoGridLabelStyle = {
 			fontSize: "var(--tdt-font-sm)",

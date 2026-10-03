@@ -146,8 +146,11 @@ const TASK_LIST_CSS = [
   // hover **只让文字变蓝**：放大镜和它的灰框都保持原样（用户 2026-10-03）。图标框自带固定色 ⇒ 不跟随文字变色。
   '.dsh-tdt-info-session:hover { color: var(--tdt-business); }',
   '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }',
-  // 基础信息左右两栏（用户 2026-10-03 反馈）：每个字段行原本都带一条底边缝，但最末一行紧贴下方「统一虚线」，
+  // 基础信息字段行的**底边缝**：必须走 class（内联会盖掉下面 `:last-child` 的 `border-bottom: 0`）。
+  '.dsh-tdt-info-field { border-bottom: 1px solid var(--tdt-border-faint); }',
+  // 基础信息左右两栏（用户 2026-10-03 反馈）：每个字段行都带一条底边缝，但最末一行紧贴下方「统一虚线」，
   // 实缝与虚线挤在一起显得多余 ⇒ 去掉最末行的底边缝，字段之间的分隔线全部保留。
+  // 特异性 (0,3,0) > `.dsh-tdt-info-field` (0,1,0) ⇒ 能盖住上面那条基础规则。
   '.dsh-tdt-info-cfg > .dsh-tdt-info-field:last-child, .dsh-tdt-info-rec-fields > .dsh-tdt-info-field:last-child { border-bottom: 0; }',
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
@@ -717,7 +720,10 @@ const infoGroupTitleStyle: Record<string, string | number> = {
 const infoGridRowStyle: Record<string, string | number> = {
   // 标签列缩一个字（用户 2026-10-03：标签占太多、后面留白多）⇒ 78 → 66px，多出来的宽度留给值。
   display: 'grid', gridTemplateColumns: '66px 1fr', gap: '12px', alignItems: 'baseline',
-  padding: '6px 0', borderBottom: '1px solid var(--tdt-border-faint)',
+  // ⚠️ **底边缝不放这里**：内联样式优先级高于 CSS class，写在 inline 会盖掉 `.dsh-tdt-info-field`
+  // 里的 border-bottom（连下面 `:last-child` 去掉末行那条也一起失效 ⇒ 用户 2026-10-03 反馈「线还在」）。
+  // 底边缝一律走 class，与 `.dsh-tdt-card` 底色同理。
+  padding: '6px 0',
 }
 const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', whiteSpace: 'nowrap' }
 const infoGridValueStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', minWidth: 0, wordBreak: 'break-word', lineHeight: 'var(--tdt-line-md)' }
