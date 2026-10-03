@@ -42576,6 +42576,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		function TaskExpandPanel(props) {
 			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props;
 			const [tab, setTab] = (0, react.useState)("info");
+			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}`;
 			const [infoLast, setInfoLast] = (0, react.useState)(null);
 			const [infoLoading, setInfoLoading] = (0, react.useState)(false);
 			const [infoError, setInfoError] = (0, react.useState)(null);
@@ -42647,7 +42648,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return () => {
 					alive = false;
 				};
-			}, [tab, row.id]);
+			}, [
+				tab,
+				row.id,
+				runSig
+			]);
 			(0, react.useEffect)(() => {
 				if (tab !== "records") return;
 				let alive = true;
@@ -42678,7 +42683,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				row.id,
 				recStatus,
 				recRange,
-				recLimit
+				recLimit,
+				runSig
 			]);
 			(0, react.useEffect)(() => {
 				if (openInstance === null) return;
@@ -42721,7 +42727,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				row.id,
 				logKeyword,
 				logRange,
-				logLimit
+				logLimit,
+				runSig
 			]);
 			const renderLastRun = (instance) => {
 				if (instance === null) return (0, react.createElement)("div", { style: {
@@ -42910,9 +42917,39 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				label: t("listSectionDepends"),
 				children: row.depends.length === 0 ? (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react.createElement)("div", { style: {
 					display: "flex",
-					flexWrap: "wrap",
-					gap: "4px 12px"
-				} }, row.depends.map((dep) => (0, react.createElement)("span", { key: dep.id }, `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`)))
+					flexDirection: "column",
+					gap: "4px"
+				} }, row.depends.map((dep, index) => (0, react.createElement)("span", {
+					key: dep.id,
+					style: {
+						display: "inline-flex",
+						alignItems: "center",
+						gap: "6px",
+						minWidth: 0
+					}
+				}, (0, react.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					flex: "none",
+					minWidth: "18px",
+					height: "18px",
+					padding: "0 4px",
+					boxSizing: "border-box",
+					borderRadius: "var(--tdt-radius-xs)",
+					background: "var(--tdt-chip-bg)",
+					color: "var(--tdt-fg-2)",
+					fontSize: "var(--tdt-font-xs)",
+					fontVariantNumeric: "tabular-nums"
+				} }, String(index + 1)), (0, react.createElement)("span", {
+					style: {
+						minWidth: 0,
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+						whiteSpace: "nowrap"
+					},
+					title: dep.title
+				}, `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`))))
 			})), (0, react.createElement)("div", { style: infoRecentStyle }, (0, react.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react.createElement)("div", { style: {
 				fontSize: "var(--tdt-font-xs)",
 				color: "var(--tdt-danger)"

@@ -930,6 +930,10 @@ function TaskExpandPanel(props: {
 }) {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onOpenFile, onOpenSession } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
+  // 运行态签名（用户 2026-10-03）：**页面开着、任务跑完了 ⇒ 打开着的面板要自动重读**，
+  // 否则用户看到的一直是上一次执行留下的状态。签名只取「会变的运行态字段」⇒ 轮询没变化时不会触发重取；
+  // 且三个 tab 各自只在**自己打开时**才取数 ⇒ 「刷新只刷打开的那部分」。
+  const runSig = `${row.lastStatus ?? ''}|${row.lastFinishedAt ?? ''}|${row.running ? 1 : 0}`
   // ── 基础信息面板（用户 2026-10-03 改版）──
   // 右栏只看「上次执行」一条 ⇒ 取最近一条终态实例（成功 / 失败 / 跳过 / 未知）。
   const [infoLast, setInfoLast] = useState<InstanceRow | null>(null)
@@ -994,7 +998,7 @@ function TaskExpandPanel(props: {
       .catch((error: unknown) => { if (alive) setInfoError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setInfoLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id])
+  }, [tab, row.id, runSig])
 
   // 切到执行记录 / 筛选变化 ⇒ 重拉（alive 守卫防旧轮响应覆盖新轮；筛选变了顺手收起下钻行）。
   useEffect(() => {
@@ -1021,7 +1025,7 @@ function TaskExpandPanel(props: {
       .catch((error: unknown) => { if (alive) setRecError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setRecLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id, recStatus, recRange, recLimit])
+  }, [tab, row.id, recStatus, recRange, recLimit, runSig])
 
   // 点一行 ⇒ 取该次执行的事件时间线（seq 升序 = 旧→新）。
   useEffect(() => {
@@ -1054,7 +1058,7 @@ function TaskExpandPanel(props: {
       .catch((error: unknown) => { if (alive) setLogError(error instanceof Error ? error.message : String(error)) })
       .finally(() => { if (alive) setLogLoading(false) })
     return () => { alive = false }
-  }, [tab, row.id, logKeyword, logRange, logLimit])
+  }, [tab, row.id, logKeyword, logRange, logLimit, runSig])
 
   // 右栏「上次执行」：用与左栏同一套「标签—值」网格排布
   //（状态 / 计划执行 / 实际开始 / 结束时间 / 执行时长 / Token / 备注），
@@ -1187,8 +1191,23 @@ function TaskExpandPanel(props: {
           label: t('listSectionDepends'),
           children: row.depends.length === 0
             ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
-            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '4px 12px' } },
-              row.depends.map(dep => h('span', { key: dep.id }, `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`)),
+            // 每个前置任务前面带 **1、2、3 序号**（用户 2026-10-03：不然像两段莫名其妙的话摆在这儿）。
+            : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+              row.depends.map((dep, index) => h('span', {
+                key: dep.id, style: { display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0 },
+              },
+                h('span', {
+                  style: {
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                    minWidth: '18px', height: '18px', padding: '0 4px', boxSizing: 'border-box',
+                    borderRadius: 'var(--tdt-radius-xs)', background: 'var(--tdt-chip-bg)',
+                    color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)',
+                    fontVariantNumeric: 'tabular-nums',
+                  },
+                }, String(index + 1)),
+                h('span', { style: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: dep.title },
+                  `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`),
+              )),
             ),
         }),
       ),
