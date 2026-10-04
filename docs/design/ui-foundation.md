@@ -233,7 +233,8 @@ body[data-ds-dark-theme]{
 | 输入框 / 前缀框 / 数字框 | 输入框 `error`（描红）；数字框显式 ±、`inputWidth` 可调宽度 | sm / md / lg（默认 lg） | `ui/Field.tsx` ✅ |
 | 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽、`marquee` 跑马灯） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`）✅ |
 | **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx` ✅ **2026-10-04 落码**（执行记录总查询页在用；不许业务文件自己拼 Input + Menu） |
-| **产出物图标 chip** | 见 §5.5：28×28 浅底板上的官方文件类型图标（**只给图标**，名字走 `title`），hover 变亮表示可点 | —（固定 28，同 `sm` 行高观感） | `ui/controls-css.ts` 的 `.dsh-tdt-chip` ✅ **2026-10-04 收编**：卡片「执行记录」面板 + 执行记录总查询页共用；此前两页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，同一页面里谁后注册谁生效、互相污染 |
+| **产出物图标 chip** | 见 §5.5：28×28 上的官方文件类型图标（**只给图标**，名字走 `title`），**底板平时透明、hover 才浮出** | —（固定 28，同 `sm` 行高观感） | `ui/controls-css.ts` 的 `.dsh-tdt-chip` ✅ **2026-10-04 收编**：卡片「执行记录」面板 + 执行记录总查询页共用；此前两页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，同一页面里谁后注册谁生效、互相污染 |
+| **行式文件按钮** | 见 §5.6：一行一个文件 = 「官方文件类型图标（14px）+ 文件名（溢出省略号）」，**平时透明、hover 才出浅底** | `--block` / `--inline` | `ui/controls-css.ts` 的 `.dsh-tdt-filechip` ✅ **2026-10-04 收编**（原 `task-list.tsx` 的 `.dsh-tdt-info-out`）：卡片「上次执行」产出物清单 / 附件区 / 执行记录页展开区三处共用 |
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
 | Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
@@ -306,9 +307,23 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 | 落点 | `src/client/ui/controls-css.ts` 的 `BUTTON_CSS` 段（L2 控件皮肤层；与 `.dsh-tdt-btn` / `.dsh-tdt-iconbtn` 同层） |
 | 类名 | `.dsh-tdt-chip`（图标态）+ `.dsh-tdt-chip--label`（文字态：`…` / `+N`，按内容撑开） |
 | 尺寸 | `width/height = --tdt-control-h-md`（28），图标 `FileTypeIcon size 16`；`border-radius: --tdt-radius-sm` |
-| 底板 | `background: var(--tdt-chip-bg)`、hover `--tdt-chip-bg-hover`。⚠️ **必须走 class**：inline `background` 会盖掉 `:hover`（2026-10-03 踩过）；**不许**拿 `--tdt-plate-hover` 顶（暗色下更淡 ⇒ 底板 disappearance） |
-| 不可点 | `:disabled` 去掉底板 + 灰色 + `cursor:default`（无会话 / 预览面未就位时不给假入口） |
+| 底色 | **平时 `background: transparent`，`:hover` 才出 `--tdt-chip-bg-hover`**（2026-10-04 第四版按用户要求改：「那个带底色的框，鼠标移上去才有」）；`--tdt-chip-bg-hover` 比 `--tdt-chip-bg` 更明显，专给「只有图标、没有文字可读」的 chip 用；⚠️ **必须走 class**：inline `background` 会盖掉 `:hover`（2026-10-03 踩过） |
+| 不可点 | `:disabled` 保持透明 + 灰色 + `cursor:default`（无会话 / 预览面未就位时不给假入口） |
 | 收编原因 | 该皮肤原本在 `task-list.tsx`（`.dsh-tdt-rec-out`）与执行记录页（**同名不同皮**：一个带文件名 + `--tdt-plate`，一个 28×28 图标 + `--tdt-chip-bg`）各写一份，两份 CSS 都注入同一页面 ⇒ 后注册者覆盖前者、两页外观互相污染 |
+
+### 5.6 行式文件按钮（图标 + 文件名，2026-10-04 收编，**全站唯一实现**）
+
+用户 2026-10-04 点名：「这个产出物，你可以去参考那个……在任务配置里面点开一个任务，不是有附加文件吗？……本来它就有一个框，是鼠标移上去才显示的。」
+
+| 项 | 口径 |
+|---|---|
+| 落点 | 同 §5.5（`ui/controls-css.ts` 的 `BUTTON_CSS` 段） |
+| 类名 | `.dsh-tdt-filechip` + 形态修饰类 `--block`（撑满父宽、一项一行）/ `--inline`（内容宽、跟在文字后头） |
+| 底色 | **平时透明、`:hover` 才出 `--tdt-chip-bg`**（原 `.dsh-tdt-info-out` 的观感，用户 2026-10-03 定的） |
+| 尺寸 | 图标 `FileTypeIcon size 14`；`--block`：`gap 6px` / `padding 4px 6px` / `font-size --tdt-font-xs`；`--inline`：`gap 4px` / `padding 2px 6px` / `font-size --tdt-font-sm`；圆角 `--tdt-radius-xs` |
+| 不可点 | `:disabled` 保持透明 + 灰色（不预览就不可点，不给假入口） |
+| 收编原因 | 该皮肤原只写在 `task-list.tsx` 的 `TASK_LIST_CSS`（`.dsh-tdt-info-out`），执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过） |
+| 三处共用 | 卡片基础信息右栏「上次执行」产出物清单（`--block`）、附件区（`--inline`）、执行记录页展开区（`--block`） |
 
 ---
 

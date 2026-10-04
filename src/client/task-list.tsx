@@ -118,9 +118,9 @@ const TASK_LIST_CSS = [
   // ⚠️ 产出物图标底板**已上提基础层**（2026-10-04）：改用 `.dsh-tdt-chip`（`ui/controls-css.ts`）。
   // 原先这里与执行记录页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，两份 CSS 都注入同一页面
   // ⇒ 谁后注册谁生效、两页外观互相污染；现在是全站唯一实现。
-  // 基础信息右栏「产出物」文件行：hover 给一层底色（用户 2026-10-03）。必须走 class——inline 会盖掉 :hover。
-  '.dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }',
-  '.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }',
+  // 基础信息右栏「产出物」文件行 / 附件行：hover 给一层底色（用户 2026-10-03）。
+  // ⚠️ 2026-10-04 **已上提基础层**为 `.dsh-tdt-filechip`（`ui/controls-css.ts`，带 --block / --inline 两个形态类）
+  // —— 执行记录页展开区要用同一种观感，这里不再各写一份。
   // 基础信息右栏「任务会话」（用户 2026-10-03 四次修订 · 定稿）：**不要虚线、不要边框 / 白框**；
   // = 图标包一个**灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。
   // ⚠️ ① `border: 0` 必须先清掉**按钮默认边框**（否则会留一圈白框）；
@@ -1203,14 +1203,10 @@ function TaskExpandPanel(props: {
           h('div', { style: { display: 'flex', flexDirection: 'column' } },
             outputs.map(output => h('button', {
               key: output, type: 'button', title: output,
-              className: 'dsh-tdt-info-out',
-              style: {
-                display: 'flex', alignItems: 'center', gap: '6px', width: '100%', boxSizing: 'border-box',
-                padding: '4px 6px', border: 'none', color: 'var(--tdt-fg)', font: 'inherit',
-                fontSize: 'var(--tdt-font-xs)', textAlign: 'left', borderRadius: 'var(--tdt-radius-xs)',
-                cursor: canOpenFile ? 'pointer' : 'default',
-              },
-              onClick: canOpenFile && onOpenFile !== undefined && sid !== null ? () => { onOpenFile(sid, output) } : undefined,
+              // 行式文件按钮 = 基础层唯一实现（2026-10-04 收编；--block = 撑满父宽、一项一行）
+              className: 'dsh-tdt-filechip dsh-tdt-filechip--block',
+              disabled: !canOpenFile,
+              onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },
             },
               h(FileTypeIcon, { path: output, size: 14 }),
               h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, baseNameOf(output)),
@@ -1258,12 +1254,9 @@ function TaskExpandPanel(props: {
                 })
                 return absPath !== undefined && anchor !== undefined && onOpenFile !== undefined
                   ? h('button', {
-                    key: `${item.kind}:${item.name}`, type: 'button', title: absPath, className: 'dsh-tdt-info-out',
-                    style: {
-                      display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px',
-                      border: 'none', color: 'var(--tdt-fg)', font: 'inherit', fontSize: 'var(--tdt-font-sm)',
-                      cursor: 'pointer', borderRadius: 'var(--tdt-radius-xs)', textAlign: 'left',
-                    },
+                    // 行式文件按钮 = 基础层唯一实现（2026-10-04 收编；--inline = 内容宽、跟在文字后头）
+                    key: `${item.kind}:${item.name}`, type: 'button', title: absPath,
+                    className: 'dsh-tdt-filechip dsh-tdt-filechip--inline',
                     onClick: () => { onOpenFile(anchor, absPath) },
                   }, icon, name)
                   : h('span', { key: `${item.kind}:${item.name}`, style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } }, icon, name)

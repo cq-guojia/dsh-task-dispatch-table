@@ -1141,6 +1141,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     const idxSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
     const tkSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'tokens.ts'), 'utf8')
     const ctrlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
+    const locSrc = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
     check('执行记录流水账进产物（RecordsTimelineView + 日期行 / 块容器 / 色条 / 两行条目 / 加载区类名）',
       clientJs.includes('RecordsTimelineView') && ['dsh-tdt-rec-dayrow', 'dsh-tdt-rec-items', 'dsh-tdt-rec-bar',
         'dsh-tdt-rec-r1', 'dsh-tdt-rec-r2', 'dsh-tdt-rec-foot'].every(c => clientJs.includes(c)))
@@ -1200,7 +1201,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('展开区 = 产出物全量（图标 + 文件名，可点开预览）+ 该次执行的**事件流水**（懒取 + 缓存 + 序号作废）',
       /import \{[^}]*fetchEvents[^}]*\} from '\.\/query'/.test(tlSrc)
       && /fetchEvents\(id\)/.test(tlSrc) && /eventsCache/.test(tlSrc) && /eventsSeqRef\.current = seq/.test(tlSrc)
-      && /className: 'dsh-tdt-rec-file'/.test(tlSrc) && tlSrc.includes("t('cardEventsEmpty')"))
+      && /className: 'dsh-tdt-filechip dsh-tdt-filechip--block'/.test(tlSrc) && tlSrc.includes("t('cardEventsEmpty')")
+      && /className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) && tlSrc.includes("t('recEventsTitle')"))
     check('减弱动效仍被尊重（脉动 / 淡入在 prefers-reduced-motion 下关闭）', tlSrc.includes('prefers-reduced-motion'))
     check('不用图标表成败：色调走 statusToneOf 单源 + toneClassOf 映射（源码内无状态图标）',
       /statusToneOf\(/.test(tlSrc) && /toneClassOf\(/.test(tlSrc)
@@ -1236,6 +1238,36 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && ctrlSrc.includes('.dsh-tdt-chip{'))
     check('折叠态产出物**只给图标**（文件名只出现在展开区）',
       /className: 'dsh-tdt-rec-chiprow'/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-outname'))
+    check('第四轮：条目**删掉可见状态文字**（成败只由 5px 竖条 + 状态浅底表达），状态名改挂竖条悬停提示',
+      !tlSrc.includes('dsh-tdt-rec-state') && !tlSrc.includes('dsh-tdt-rec-statedot')
+      && /title: statusLabel/.test(tlSrc) && /const statusLabel = statusTextOf\(row\.status, t\)/.test(tlSrc))
+    check('第四轮：块内**左右两列**，右列单行控件组 = 产出物图标 → 查看会话按钮 → 展开箭头（箭头随展开翻转）',
+      /className: 'dsh-tdt-rec-right'/.test(tlSrc) && /className: 'dsh-tdt-rec-left'/.test(tlSrc)
+      && /IconChevronDownOutlineRegular/.test(tlSrc) && /dsh-tdt-rec-caret--open/.test(tlSrc)
+      && /\.dsh-tdt-rec-caret--open\{transform:rotate\(180deg\)/.test(tlSrc)
+      && !tlSrc.includes('dsh-tdt-btn--link') && /variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc))
+    check('第四轮：留白放大后的块内边距（上/下/右 12、左 16；5px 方角竖条不变）',
+      /\.dsh-tdt-rec-item\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-4\)/.test(tlSrc))
+    check('第四轮：信息行 = **固定单行 + 溢出省略**，三个字段各带官方近似图标，Token 从右下角迁到行尾',
+      /\.dsh-tdt-rec-r2\{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis/.test(tlSrc)
+      && /IconAlarmClockOutlineRegular/.test(tlSrc) && /IconClockOutlineRegular/.test(tlSrc) && /IconRefreshOutlineRegular/.test(tlSrc)
+      && /dsh-tdt-rec-field dsh-tdt-rec-num/.test(tlSrc) && /formatTokenDetail\(row\)/.test(tlSrc))
+    check('第四轮：时刻只到分钟，**跨天显式标注**（前一天 / 次日 / M 月 D 日）—— helper + 两个新文案键',
+      /function clockLabelOf\(/.test(tlSrc) && /crossDayFormatter/.test(tlSrc)
+      && /t\('recPrevDay'\)/.test(tlSrc) && /t\('recNextDay'\)/.test(tlSrc)
+      && /if \(diffDays === 1\) return/.test(tlSrc) && /if \(diffDays === -1\) return/.test(tlSrc)
+      && locSrc.includes("recPrevDay: '前一天'") && locSrc.includes("recNextDay: '次日'"))
+    check('第四轮：产出物 chip **平时透明、hover 才出底色**（28×28 与不可点态保留）',
+      /\.dsh-tdt-chip\{[^}]*background:transparent/.test(ctrlSrc)
+      && /\.dsh-tdt-chip:hover:not\(:disabled\)\{background:var\(--tdt-chip-bg-hover\)/.test(ctrlSrc))
+    check('第四轮：展开区产出物 = 行式清单（可点开预览）；**无产出不渲染那一行**；事件流水带「执行日志」小标题',
+      /className: 'dsh-tdt-rec-expouts'/.test(tlSrc) && /\.dsh-tdt-rec-expouts\{display:flex;flex-direction:column/.test(tlSrc)
+      && /className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) && /t\('recEventsTitle'\)/.test(tlSrc)
+      && !tlSrc.includes("t('outputsEmpty')") && !locSrc.includes('outputsEmpty'))
+    check('第四轮：行式文件按钮收编为基础层唯一实现（旧 `.dsh-tdt-info-out` 全仓已无规则定义）',
+      ctrlSrc.includes('.dsh-tdt-filechip{') && ctrlSrc.includes('.dsh-tdt-filechip--block') && ctrlSrc.includes('.dsh-tdt-filechip--inline')
+      && !/\.dsh-tdt-info-out\s*\{/.test(ctrlSrc)
+      && !/\.dsh-tdt-info-out\s*\{/.test(readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')))
   }
   check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
     clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))
@@ -2278,10 +2310,10 @@ console.log('\n[14] runtime-index')
   {
     const tl = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
     const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
-    check('基础信息右栏定宽（窗口缩放只让左栏变）+ 产出物行 hover 有底色',
+    check('基础信息右栏定宽（窗口缩放只让左栏变）+ 产出物行 hover 有底色（基础层 `.dsh-tdt-filechip`）',
       tl.includes("flex: 'none', width: '320px'")
-      && tl.includes('.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }')
-      && dist.includes('dsh-tdt-info-out:hover'))
+      && tl.includes('dsh-tdt-filechip--block') && tl.includes('dsh-tdt-filechip--inline')
+      && dist.includes('dsh-tdt-filechip:hover'))
     const sv = readFileSync(join(process.cwd(), 'src', 'index.ts'), 'utf8')
     check('附件可点开预览：overview 补绝对路径 + 锚点会话（upload 走 attachmentAbsPath，link 走工作区 path+ref）',
       sv.includes('attachmentsWithPaths') && sv.includes('anchorSessionId')

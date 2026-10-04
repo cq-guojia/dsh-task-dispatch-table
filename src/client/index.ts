@@ -44,7 +44,7 @@ import {
   attachmentsOf, workspacePathOf, type AttachedFileView, type UpstreamInputView,
 } from './task-file-context'
 // ⚠️ 本文件**不再引 `status-text`**（状态名 / 状态桶 / 在跑语义的唯一真源）：消费者只剩两个业务文件 ——
-// `records-timeline.tsx`（执行记录时间轴）与 `task-list.tsx`（卡片三面板）。旧测试版 records 屏
+// `records-timeline.tsx`（执行记录流水账）与 `task-list.tsx`（卡片三面板）。旧测试版 records 屏
 // （原生 select + 表格）已于 2026-10-04 被时间轴取代（见 worklog/execution-timeline.md）。
 import { ConfigPanel } from './config-panel'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'

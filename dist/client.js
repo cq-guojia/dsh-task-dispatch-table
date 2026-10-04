@@ -459,7 +459,6 @@ window.__ModuleLoader__.load({
 			explorerExpand: "展开目录",
 			explorerCollapse: "收起目录",
 			colOutputs: "产出",
-			outputsEmpty: "（无产出）",
 			deliverRowTitle: "交付文件",
 			deliverRowPreparing: "准备交付",
 			deliverRowRunning: "正在交付",
@@ -681,6 +680,9 @@ window.__ModuleLoader__.load({
 			recordsOutOfScope: "所选任务不在当前工作区",
 			recPlan: "计划",
 			recActual: "实际",
+			recPrevDay: "前一天",
+			recNextDay: "次日",
+			recEventsTitle: "执行日志",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
 			editorRetry: "重试次数",
@@ -1047,7 +1049,6 @@ window.__ModuleLoader__.load({
 			explorerExpand: "Expand directory",
 			explorerCollapse: "Collapse directory",
 			colOutputs: "Outputs",
-			outputsEmpty: "(no outputs)",
 			deliverRowTitle: "Deliver files",
 			deliverRowPreparing: "Preparing delivery",
 			deliverRowRunning: "Delivering",
@@ -1269,6 +1270,9 @@ window.__ModuleLoader__.load({
 			recordsOutOfScope: "The selected task is not in this workspace",
 			recPlan: "Plan",
 			recActual: "Actual",
+			recPrevDay: "prev day",
+			recNextDay: "next day",
+			recEventsTitle: "Run log",
 			editorAdvanced: "Advanced settings",
 			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
@@ -1810,16 +1814,36 @@ body[data-ds-dark-theme]{
    「.dsh-tdt-rec-out」，两份 CSS 都注入同一页面 ⇒ 谁后注册谁生效、互相污染；现已收成这一份。 */
 .dsh-tdt-chip{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
   width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);padding:0;border:none;border-radius:var(--tdt-radius-sm);
-  background:var(--tdt-chip-bg);color:var(--tdt-fg-2);font-family:inherit;line-height:0;cursor:pointer;
+  background:transparent;color:var(--tdt-fg-2);font-family:inherit;line-height:0;cursor:pointer;
   transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
+/* 底板**平时透明、鼠标移上去才浮出来**（用户 2026-10-04：「那个带底色的框，鼠标移上去才有」）。
+   只给图标、没有文字可读 ⇒ hover 用更明显的那档（浅色更深、暗色更亮，两端都是「更明显」）。 */
 .dsh-tdt-chip:hover:not(:disabled){background:var(--tdt-chip-bg-hover);}
 .dsh-tdt-chip:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
-/* 不可点（没有会话 / 预览面未就位）：去掉底板与手指，别给假入口 */
+/* 不可点（没有会话 / 预览面未就位）：没有底板、没有手指，别给假入口 */
 .dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--tdt-fg-3);}
 /* 文字型 chip（「…」 / 「+N」）：不固定方宽，按内容撑开 */
 .dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
 
-@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn,.dsh-tdt-chip{transition:none;}}
+/* ── 行式文件按钮（图标 + 文件名）P2：**全站唯一实现**（2026-10-04 收编）──────────
+   用途：「产出物 / 附件」那种**一行一个文件**的清单项（基础信息右栏产出物清单、附件区、
+   执行记录页的展开区）。平时透明、**鼠标移上去才出浅底**（沿用用户 2026-10-03 定的观感）。
+   两个形态修饰类：
+     --block   撑满父宽（清单里一项一行）
+     --inline  内容宽（跟在文字后头，如附件行）
+   收编原因：这份皮肤此前只写在 task-list.tsx 的 TASK_LIST_CSS 里（旧名 .dsh-tdt-info-out），
+   执行记录页展开区要用同一种观感 ⇒ 上提基础层，避免再出现「各写一份外观」（同名不同皮的坑刚踩过）。 */
+.dsh-tdt-filechip{appearance:none;-webkit-appearance:none;border:0;border-radius:var(--tdt-radius-xs);
+  background:transparent;color:var(--tdt-fg);font:inherit;text-align:left;cursor:pointer;min-width:0;
+  transition:background-color var(--tdt-dur) var(--tdt-ease);}
+.dsh-tdt-filechip:hover:not(:disabled){background:var(--tdt-chip-bg);}
+.dsh-tdt-filechip:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
+.dsh-tdt-filechip:disabled{cursor:default;background:transparent;color:var(--tdt-fg-3);}
+.dsh-tdt-filechip--block{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;
+  padding:4px 6px;font-size:var(--tdt-font-xs);}
+.dsh-tdt-filechip--inline{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;font-size:var(--tdt-font-sm);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn,.dsh-tdt-chip,.dsh-tdt-filechip{transition:none;}}
 `;
 		/** 输入 / 前缀输入 / 数字步进的皮肤规则（P3）。 */
 		const FIELD_CSS = `
@@ -42324,11 +42348,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/** 硬上限：到此停止自动续拉并提示缩小范围（用户拍板「保底 2000 条」）。 */
 		const HARD_LIMIT = 2e3;
 		const RECORDS_CSS = `
-/* ── 执行记录流水账（2026-10-04 第三版：**无容器**）───────────────────────
+/* ── 执行记录流水账（**无容器**）───────────────────────────────────────────
    没有外框、没有贯穿竖轴：整页铺在宿主面板底上，节奏靠「日期小字行 + 一条条自带底色的独立块」建立。 */
 .dsh-tdt-rec-group{margin-top:var(--tdt-space-2);}
-/* 日期小字行：时钟图标 + 日期 · 星期 · N 条（用户 2026-10-04：字要小一点；**不吸顶**——
-   撤掉灰底后底是透明的，吸顶必须给不透明底色，怕与宿主底色差出一條横带）。 */
+/* 日期小字行：时钟图标 + 日期 · 星期 · N 条（**不吸顶**——撤掉外框后底是透明的，
+   吸顶必须给不透明底色，怕与宿主底色差出一条横带）。 */
 .dsh-tdt-rec-dayrow{display:flex;align-items:center;gap:6px;flex:none;
   padding:var(--tdt-space-3) 0 var(--tdt-space-2);
   font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg-3);}
@@ -42337,15 +42361,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-daycount{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* 块之间 **4px**（用户指定；--tdt-space-1 正好 = 4px） */
 .dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
-/* 条目块：自带状态色浅底；底色由色调类给的局部变量驱动（见下）。 */
+/* 条目块：自带状态色浅底；底色由色调类给的局部变量驱动（见下）。
+   留白放大（用户 2026-10-04：「左边的间距、上面、下面、右边都大点」）：上/下/右 12、左 16。 */
 .dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:var(--tdt-space-1);
-  padding:var(--tdt-space-2) var(--tdt-space-2) var(--tdt-space-2) var(--tdt-space-3);
+  padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);
   background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
 /* 整块可点（切展开）⇒ 光标是手；hover / 展开态都叠一层**中性半透明** */
 .dsh-tdt-rec-item{cursor:pointer;}
 .dsh-tdt-rec-item:hover,.dsh-tdt-rec-item--open{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
-/* 语义色调 → 本域局部变量（「--rec-tone*」 是 CSS 局部变量，**不是** 「--tdt-*」 token ——
+/* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
    token 只在 tokens.ts 定义；块底那条「状态色浅底」的 token 就在那里）。 */
 .dsh-tdt-rec-tone--ok{--rec-tone:var(--tdt-success);--rec-tone-soft:var(--tdt-success-soft);}
 .dsh-tdt-rec-tone--bad{--rec-tone:var(--tdt-danger);--rec-tone-soft:var(--tdt-danger-soft);}
@@ -42353,39 +42378,47 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-tone--busy{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);}
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
 .dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
-/* 成败竖条（用户点名：**不用图标**）：5px 通高、**纯方角**、贴齐块左缘。 */
+/* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
+   状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--rec-tone,var(--tdt-fg-3));}
 .dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
-.dsh-tdt-rec-statedot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--rec-tone,var(--tdt-fg-3));}
-.dsh-tdt-rec-statedot--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
 @keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.dsh-tdt-rec-bar--run,.dsh-tdt-rec-statedot--run{animation:none}.dsh-tdt-rec-item{animation:none}}
-/* 第 1 行：名称在左，状态与入口在右。 */
+@media (prefers-reduced-motion: reduce){
+  .dsh-tdt-rec-bar--run{animation:none;}
+  .dsh-tdt-rec-item{animation:none;}
+  .dsh-tdt-rec-caret{transition:none;}
+}
+/* ── 块内两列：左列（标题 + 信息，可省略） / 右列（一排控件）──────────────── */
+.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;}
+.dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
+.dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
-.dsh-tdt-rec-state{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
-/* 第 2 行：meta 在左（可换行），Token 与产出物在右。 */
-.dsh-tdt-rec-r2{display:flex;align-items:center;gap:var(--tdt-space-2);flex-wrap:wrap;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
-.dsh-tdt-rec-meta{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
+/* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
+   最窄也要能放下「工作区 · 计划 · 实际 · 时长 · Token」的一部分，永不换行、永不横向滚动。 */
+.dsh-tdt-rec-r2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);min-width:0;}
+/* 信息行里的一段（「图标 + 标签 + 值」）；段与段之间的「·」由 ::before 自动补，不用手写分隔节点。 */
+.dsh-tdt-rec-field{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;}
+.dsh-tdt-rec-field+.dsh-tdt-rec-field::before{content:'·';margin:0 var(--tdt-space-1);color:var(--tdt-border-heavy);}
+.dsh-tdt-rec-field>svg{flex:none;color:var(--tdt-fg-3);}
 .dsh-tdt-rec-sep{color:var(--tdt-border-heavy);}
-.dsh-tdt-rec-spacer{flex:1 1 auto;}
 .dsh-tdt-rec-num{font-variant-numeric:tabular-nums;font-family:var(--tdt-font-mono);}
 .dsh-tdt-rec-chiprow{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;}
-/* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）。 */
+/* 展开箭头：纯装饰（整块可点即展开），展开时翻转；不给它单独的焦点 */
+.dsh-tdt-rec-caret{display:inline-flex;align-items:center;justify-content:center;width:20px;flex:none;
+  color:var(--tdt-fg-3);transition:transform var(--tdt-dur) var(--tdt-ease);}
+.dsh-tdt-rec-caret--open{transform:rotate(180deg);}
+/* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* ── 展开区（点块就地展开；手风琴，同时只开一条）───────────────────────── */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--tdt-space-2);
   margin-top:var(--tdt-space-2);padding-top:var(--tdt-space-2);border-top:1px solid var(--tdt-border-faint);}
-.dsh-tdt-rec-expouts{display:flex;align-items:center;gap:var(--tdt-space-1);flex-wrap:wrap;}
-/* 展开区里的产出物：**图标 + 文件名**（折叠态只给图标；这里给全量、可点开预览） */
-.dsh-tdt-rec-file{appearance:none;display:inline-flex;align-items:center;gap:6px;max-width:280px;
-  padding:2px var(--tdt-space-1);border:0;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
-  color:var(--tdt-fg-2);font:inherit;font-size:var(--tdt-font-sm);cursor:pointer;}
-.dsh-tdt-rec-file:hover:not(:disabled){background:var(--tdt-chip-bg-hover);}
-.dsh-tdt-rec-file:disabled{cursor:default;background:transparent;color:var(--tdt-fg-3);}
-.dsh-tdt-rec-file:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
-/* 事件流水：等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
+/* 产出物：**一行一个**（图标 + 文件名），底色 / 形状全走基础层「行式文件按钮」 */
+.dsh-tdt-rec-expouts{display:flex;flex-direction:column;gap:2px;min-width:0;}
+/* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
+.dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--tdt-font-xs);font-weight:500;color:var(--tdt-fg-3);}
 .dsh-tdt-rec-ev{font-family:var(--tdt-font-mono);font-size:var(--tdt-font-xs);
   line-height:var(--tdt-line-md);color:var(--tdt-fg-2);}
 .dsh-tdt-rec-evrow{margin-bottom:6px;word-break:break-all;}
@@ -42429,15 +42462,34 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				to: ymdOf(now)
 			};
 		}
-		/** `HH:mm`（非法值给占位）。 */
-		function hmOf(iso) {
-			if (iso === null) return "--";
+		/** 本地日历日的 key（`YYYY-MM-DD`）。 */
+		function ymdOfDate(d) {
+			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
+		}
+		/**
+		* 信息行里的「时刻」文案（用户 2026-10-04）。
+		*
+		* 列表已按天分组 ⇒ 时刻**默认只到分钟**（`HH:mm`，不重复年月日）。
+		* ⚠️ 但**跨天的时刻必须显式标注**，否则会被看成当天的时刻：
+		*   比本条所属的「天」早一天 ⇒ `前一天 23:50`；晚一天 ⇒ `次日 00:05`；
+		*   差 ≥2 天 ⇒ `10 月 28 日 23:50`（`Intl` 按当前语言排版，不硬编码）。
+		*/
+		function clockLabelOf(iso, dayKey, crossFormatter, prevDayLabel, nextDayLabel) {
+			if (iso === null || iso === "") return "";
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "--";
 			const d = new Date(ms);
-			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			const sameDay = ymdOfDate(d);
+			const hhmm = `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			if (sameDay === dayKey || dayKey === "unknown") return hhmm;
+			const base = dateOfDayKey(dayKey);
+			if (base === null) return hhmm;
+			const diffDays = Math.round((base.getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 864e5);
+			if (diffDays === 1) return `${prevDayLabel} ${hhmm}`;
+			if (diffDays === -1) return `${nextDayLabel} ${hhmm}`;
+			return crossFormatter === null ? hhmm : crossFormatter.format(d);
 		}
-		/** 路径末段（产出物 chip 上只显示文件名）。 */
+		/** 路径末段（产出物清单上只显示文件名）。 */
 		function baseNameOf$1(path) {
 			const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
 			return cut < 0 ? path : path.slice(cut + 1);
@@ -42446,13 +42498,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 一行记录所属的「天」= `scheduled_at` 的**本地日历日**。
 		*
 		* ⚠️ 不用服务端 `logical_date`（那是**任务时区**的日历日）：排序键与时间范围过滤都是 `scheduled_at`，
-		* 分组键与之同源才不会把同一天劈成两个同名天标签。
+		* 分组键与之同源才不会把同一天劈成两个同名日期行。
 		*/
 		function dayKeyOf(row) {
 			const ms = Date.parse(typeof row.scheduled_at === "string" ? row.scheduled_at : "");
 			if (Number.isNaN(ms)) return "unknown";
-			const d = new Date(ms);
-			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
+			return ymdOfDate(new Date(ms));
 		}
 		/** 天 key（`YYYY-MM-DD`）→ 本地 `Date`；认不出给 null（不猜）。 */
 		function dateOfDayKey(key) {
@@ -42474,7 +42525,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return date === null || formatter === null ? "" : formatter.format(date);
 		}
 		/**
-		* 语义色调 → 块的色调类名（色值本身全在 CSS 里读 `--tdt-*` / `--tdt-*-soft`，
+		* 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --tdt-* / --tdt-*-soft，
 		* 业务侧只做「哪一档」的映射；档位由 `status-text.ts` 的 `statusToneOf` 单源决定）。
 		*/
 		function toneClassOf(tone) {
@@ -42492,25 +42543,31 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (!Number.isFinite(from) || !Number.isFinite(to)) return "-";
 			return formatDurationHms(to - from);
 		}
-		/** 时间戳（`YYYY-MM-DD HH:mm:ss`，事件流水用；与卡片下钻同款）。 */
+		/** 时间戳（`YYYY-MM-DD HH:mm:ss`，事件流水与悬停提示用）。 */
 		const stampOf = (iso) => iso === null ? "—" : formatDateTime(iso, {
 			seconds: true,
 			fallback: "—"
 		});
 		/** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
 		const RecordItem = (0, react.memo)(function RecordItem(props) {
-			const { row, label, workspace, t, open, onToggle, openSession, openFile, events, eventsBusy, eventsError } = props;
+			const { row, label, workspace, t, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt } = props;
 			const tone = statusToneOf(row.status);
 			const running = isRunningStatus(row.status);
+			const statusLabel = statusTextOf(row.status, t);
 			const outputs = outputsOf(row.outputs);
 			const sid = row.session_id;
 			const canOpenSession = sid !== null && sid !== "";
 			const canOpenFile = canOpenSession && openFile !== void 0;
 			const tokens = (row.token_in ?? 0) + (row.token_out ?? 0);
 			const note = row.note ?? "";
-			const planned = hmOf(row.scheduled_at);
-			/** meta 里的一段（「标签 值」），值为空则整段不出。 */
-			const meta = (metaLabel, value, title) => value === "" || value === "-" ? null : (0, react.createElement)("span", { title }, `${metaLabel} ${value}`);
+			const dayKey = dayKeyOf(row);
+			const planned = clockLabelOf(row.scheduled_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
+			const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
+			/** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
+			const field = (icon, text, title) => text === "" ? null : (0, react.createElement)("span", {
+				className: "dsh-tdt-rec-field",
+				title
+			}, icon, text);
 			return (0, react.createElement)("div", {
 				className: `dsh-tdt-rec-item ${toneClassOf(tone)}${open ? " dsh-tdt-rec-item--open" : ""}`,
 				onClick: () => {
@@ -42527,8 +42584,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 			}, (0, react.createElement)("span", {
 				className: `dsh-tdt-rec-bar${running ? " dsh-tdt-rec-bar--run" : ""}`,
+				title: statusLabel,
 				"aria-hidden": true
-			}), (0, react.createElement)("div", { className: "dsh-tdt-rec-r1" }, (0, react.createElement)(MarqueeText, {
+			}), (0, react.createElement)("div", { className: "dsh-tdt-rec-main" }, (0, react.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react.createElement)("div", { className: "dsh-tdt-rec-r1" }, (0, react.createElement)(MarqueeText, {
 				text: label,
 				title: label,
 				className: "dsh-tdt-rec-title dsh-tdt-ellipsis",
@@ -42536,22 +42594,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					flex: "1 1 auto",
 					minWidth: 0
 				}
-			}), (0, react.createElement)("span", { className: "dsh-tdt-rec-state" }, (0, react.createElement)("span", {
-				className: `dsh-tdt-rec-statedot${running ? " dsh-tdt-rec-statedot--run" : ""}`,
-				"aria-hidden": true
-			}), statusTextOf(row.status, t)), canOpenSession ? (0, react.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				className: "dsh-tdt-btn--link",
-				title: t("viewSession"),
-				onClick: (event) => {
-					event.stopPropagation();
-					openSession(sid);
-				}
-			}, `↗ ${t("viewSession")}`) : null), (0, react.createElement)("div", { className: "dsh-tdt-rec-r2" }, (0, react.createElement)("span", { className: "dsh-tdt-rec-meta" }, workspace === "" ? null : (0, react.createElement)("span", null, workspace), workspace === "" ? null : (0, react.createElement)("span", { className: "dsh-tdt-rec-sep" }, "·"), meta(t("recPlan"), planned, formatPlanStamp(row.scheduled_at)), (0, react.createElement)("span", { className: "dsh-tdt-rec-sep" }, "·"), meta(t("recActual"), row.dispatched_at === null ? "" : hmOf(row.dispatched_at), row.dispatched_at === null ? void 0 : formatPlanStamp(row.dispatched_at)), (0, react.createElement)("span", { className: "dsh-tdt-rec-sep" }, "·"), meta(t("colDuration"), durationOf(row))), (0, react.createElement)("span", { className: "dsh-tdt-rec-spacer" }), tokens > 0 ? (0, react.createElement)("span", {
-				className: "dsh-tdt-rec-num",
+			})), (0, react.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace), field((0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 14 }), planned === "" ? "" : `${t("recPlan")} ${planned}`, formatPlanStamp(row.scheduled_at)), field(actual === "" ? null : (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 14 }), actual === "" ? "" : `${t("recActual")} ${actual}`, row.dispatched_at === null ? void 0 : stampOf(row.dispatched_at)), field((0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconRefreshOutlineRegular, { size: 14 }), `${t("colDuration")} ${durationOf(row)}`), tokens > 0 ? (0, react.createElement)("span", {
+				className: "dsh-tdt-rec-field dsh-tdt-rec-num",
 				title: formatTokenDetail(row)
-			}, formatTokenCount(tokens)) : null, outputs.length === 0 ? null : (0, react.createElement)("span", {
+			}, formatTokenCount(tokens)) : null)), (0, react.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react.createElement)("span", {
 				className: "dsh-tdt-rec-chiprow",
 				title: t("colOutputs")
 			}, outputs.slice(0, 3).map((path) => (0, react.createElement)("button", {
@@ -42575,7 +42621,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					event.stopPropagation();
 					onToggle(row.id);
 				}
-			}, `+${outputs.length - 3}`) : null)), note === "" ? null : (0, react.createElement)("div", {
+			}, `+${outputs.length - 3}`) : null), canOpenSession ? (0, react.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				title: t("viewSession"),
+				onClick: (event) => {
+					event.stopPropagation();
+					openSession(sid);
+				}
+			}, t("viewSession")) : null, (0, react.createElement)("span", {
+				className: `dsh-tdt-rec-caret${open ? " dsh-tdt-rec-caret--open" : ""}`,
+				"aria-hidden": true
+			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })))), note === "" ? null : (0, react.createElement)("div", {
 				className: "dsh-tdt-rec-note dsh-tdt-ellipsis",
 				title: note
 			}, `${t("colNote")}：${note}`), open ? (0, react.createElement)("div", {
@@ -42583,22 +42640,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: (event) => {
 					event.stopPropagation();
 				}
-			}, outputs.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("outputsEmpty")) : (0, react.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react.createElement)("button", {
+			}, outputs.length === 0 ? null : (0, react.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react.createElement)("button", {
 				key: path,
 				type: "button",
-				className: "dsh-tdt-rec-file",
 				title: path,
+				className: "dsh-tdt-filechip dsh-tdt-filechip--block",
 				disabled: !canOpenFile,
 				onClick: () => {
 					if (canOpenFile) openFile?.(sid, path);
 				}
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path,
-				size: 16
+				size: 14
 			}), (0, react.createElement)("span", {
 				className: "dsh-tdt-ellipsis",
 				style: { minWidth: 0 }
-			}, baseNameOf$1(path))))), eventsError !== null ? (0, react.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("recordsLoading")) : events === null ? null : events.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react.createElement)("div", { className: "dsh-tdt-rec-ev" }, events.map((event) => (0, react.createElement)("div", {
+			}, baseNameOf$1(path))))), eventsError !== null ? (0, react.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("recordsLoading")) : events === null ? null : events.length === 0 ? (0, react.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
 			}, (0, react.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
@@ -42654,6 +42711,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				day: "numeric"
 			}), [t]);
 			const weekdayFormatter = (0, react.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), { weekday: "long" }), [t]);
+			/** 跨天时刻的格式（差 ≥2 天时用：「10 月 28 日 23:50」，按语言排版）。 */
+			const crossDayFormatter = (0, react.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), {
+				month: "numeric",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit"
+			}), [t]);
 			const workspaceOptions = (0, react.useMemo)(() => [{
 				value: "",
 				label: t("listFilterWorkspaceAll")
@@ -42885,7 +42949,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				openFile: onOpenFile,
 				events: openId === row.id ? eventsCache.get(row.id) ?? null : null,
 				eventsBusy: openId === row.id && eventsBusy,
-				eventsError: openId === row.id ? eventsError : null
+				eventsError: openId === row.id ? eventsError : null,
+				crossFmt: crossDayFormatter
 			}))))), (0, react.createElement)("div", {
 				ref: observeSentinel,
 				style: { height: "1px" }
@@ -42959,8 +43024,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-card { background: var(--tdt-surface-1); }",
 			".dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }",
 			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
-			".dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }",
 			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
 			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
 			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
@@ -44046,25 +44109,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					key: output,
 					type: "button",
 					title: output,
-					className: "dsh-tdt-info-out",
-					style: {
-						display: "flex",
-						alignItems: "center",
-						gap: "6px",
-						width: "100%",
-						boxSizing: "border-box",
-						padding: "4px 6px",
-						border: "none",
-						color: "var(--tdt-fg)",
-						font: "inherit",
-						fontSize: "var(--tdt-font-xs)",
-						textAlign: "left",
-						borderRadius: "var(--tdt-radius-xs)",
-						cursor: canOpenFile ? "pointer" : "default"
-					},
-					onClick: canOpenFile && onOpenFile !== void 0 && sid !== null ? () => {
-						onOpenFile(sid, output);
-					} : void 0
+					className: "dsh-tdt-filechip dsh-tdt-filechip--block",
+					disabled: !canOpenFile,
+					onClick: () => {
+						if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
+					}
 				}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: output,
 					size: 14
@@ -44120,20 +44169,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						key: `${item.kind}:${item.name}`,
 						type: "button",
 						title: absPath,
-						className: "dsh-tdt-info-out",
-						style: {
-							display: "inline-flex",
-							alignItems: "center",
-							gap: "4px",
-							padding: "2px 6px",
-							border: "none",
-							color: "var(--tdt-fg)",
-							font: "inherit",
-							fontSize: "var(--tdt-font-sm)",
-							cursor: "pointer",
-							borderRadius: "var(--tdt-radius-xs)",
-							textAlign: "left"
-						},
+						className: "dsh-tdt-filechip dsh-tdt-filechip--inline",
 						onClick: () => {
 							onOpenFile(anchor, absPath);
 						}

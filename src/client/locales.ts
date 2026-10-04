@@ -84,7 +84,7 @@ export type LocaleKey =
   | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' | 'explorerCrumbsMore'
   | 'explorerLevels' | 'explorerUp' | 'explorerBack' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
-  | 'colOutputs' | 'outputsEmpty'
+  | 'colOutputs'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
   | 'deliverRowTitle' | 'deliverRowPreparing' | 'deliverRowRunning' | 'deliverRowOk'
   | 'deliverRowError' | 'deliverRowStopped'
@@ -143,6 +143,8 @@ export type LocaleKey =
   | 'localeTag' | 'recordsEmpty' | 'recordsEmptyFiltered' | 'recordsLoading' | 'recordsLoadMore' | 'recordsNoMore'
   | 'recordsLimitHint' | 'recordsLoadFail' | 'recordsRetry' | 'recordsDayCount' | 'recordsTaskPh'
   | 'recordsTaskSearch' | 'recordsMore' | 'recordsCollapse' | 'recordsOutOfScope' | 'recPlan' | 'recActual'
+  // 2026-10-04 第四轮：跨天时刻前缀（前一天 / 次日）+ 展开区「执行日志」小标题
+  | 'recPrevDay' | 'recNextDay' | 'recEventsTitle'
   | 'editorAdvanced' | 'editorAdvancedHelp' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
   | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorAgentTeam' | 'editorAgentTeamHint' | 'editorPreview' | 'editorPreviewHint'
   | 'editorPermission' | 'editorPermissionHint' | 'editorPermDefault' | 'editorPermReadOnly' | 'editorPermWorkspace' | 'editorPermFull'
@@ -431,7 +433,6 @@ export const zh: Record<LocaleKey, string> = {
   explorerExpand: '展开目录',
   explorerCollapse: '收起目录',
   colOutputs: '产出',
-  outputsEmpty: '（无产出）',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
   deliverRowTitle: '交付文件',
   deliverRowPreparing: '准备交付',
@@ -660,6 +661,9 @@ export const zh: Record<LocaleKey, string> = {
   // 条目第 2 行的紧凑标签（2026-10-04 版式返工；状态下拉已取消，其键一并删除）
   recPlan: '计划',
   recActual: '实际',
+  recPrevDay: '前一天',
+  recNextDay: '次日',
+  recEventsTitle: '执行日志',
   editorAdvanced: '高级设置',
   editorAdvancedHelp: '此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。',
   editorRetry: '重试次数',
@@ -1040,7 +1044,6 @@ export const en: Record<LocaleKey, string> = {
   explorerExpand: 'Expand directory',
   explorerCollapse: 'Collapse directory',
   colOutputs: 'Outputs',
-  outputsEmpty: '(no outputs)',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).
   deliverRowTitle: 'Deliver files',
   deliverRowPreparing: 'Preparing delivery',
@@ -1268,6 +1271,9 @@ export const en: Record<LocaleKey, string> = {
   recordsOutOfScope: 'The selected task is not in this workspace',
   recPlan: 'Plan',
   recActual: 'Actual',
+  recPrevDay: 'prev day',
+  recNextDay: 'next day',
+  recEventsTitle: 'Run log',
   editorAdvanced: 'Advanced settings',
   editorAdvancedHelp: 'This is the advanced configuration area. Read each item\u2019s description before changing it; default values are recommended for routine tasks.',
   editorRetry: 'Retry attempts',
