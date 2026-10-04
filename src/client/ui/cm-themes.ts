@@ -4,6 +4,11 @@
  *  - cmSurfaceTheme：透明底 + 13px + 等宽字体 + 行号槽用 --tdt-fg-3，随宿主滚动；
  *  - codeMirrorTheme(dark)：表面主题 + 选区/激活行微调 + one-dark/one-light 语法色。
  * 主矛盾是“不卡”，配色/字号顺带对齐到用户认可的 one-dark 13px 观感。
+ *
+ * ⚠️ 选区配色的硬约束（真机 2026-10-05 修）：CodeMirror 把选区画成**文字底下的一层背景**，
+ *    **不会**给选中文字重新上色 ⇒ 选区色必须自己保证与语法色有对比度。旧实现给暗色用
+ *    rgba(255,255,255,.22) 半透明白 ⇒ 选区发白、one-dark 的浅/白字压上去直接隐身。
+ *    现按官方 @codemirror/theme-one-dark 取**不透明实色**（暗 #3E4451 / 浅 #c8d3f0）。
  */
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { tags, type Tag } from '@lezer/highlight'
@@ -50,10 +55,21 @@ export const cmSurfaceTheme = EditorView.theme({
   },
 })
 
+/**
+ * 选区色：暗 #3E4451（官方 one-dark 原值，比深底更深的实色 ⇒ 浅字压上去仍清晰）、
+ * 浅 #c8d3f0（one-light 同族浅底 ⇒ 深字压上去仍清晰）。一律**不透明**：半透明会让
+ * 选区色随宿主面板深浅漂移，对比度不可控。
+ */
+const SELECTION_DARK = '#3E4451'
+const SELECTION_LIGHT = '#c8d3f0'
+
 function cmSurfaceTint(dark: boolean): ReturnType<typeof EditorView.theme> {
   return EditorView.theme({
-    '.cm-selectionBackground, .cm-focused .cm-selectionBackground, ::selection': {
-      backgroundColor: dark ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.12)',
+    // 选择器照抄官方 @codemirror/theme-one-dark（dist/index.js:41）：
+    // 聚焦态选区画在 .cm-selectionLayer 里，未聚焦走 .cm-selectionBackground，
+    // 浏览器原生取 .cm-content ::selection —— 三条都盖住，避免任一路径漏配。
+    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+      backgroundColor: dark ? SELECTION_DARK : SELECTION_LIGHT,
     },
   })
 }
@@ -75,7 +91,9 @@ const HIGHLIGHTS_DARK: HighlightRule[] = [
   { tag: [tags.string, tags.special(tags.string), tags.regexp], color: ONE_DARK.green },
   { tag: [tags.character, tags.special(tags.character)], color: ONE_DARK.orange },
   { tag: [tags.propertyName], color: ONE_DARK.yellow },
-  { tag: [tags.variableName], color: ONE_DARK.white },
+  // 变量名取 ivory(#abb2bf) 而非纯白：官方 one-dark 的正文色就是 ivory，纯白在深底上过曝、
+  // 且压在选区上对比度更差（旧值 #ffffff，真机 2026-10-05 一并调回官方原值）。
+  { tag: [tags.variableName], color: ONE_DARK.gray },
   { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.labelName], color: ONE_DARK.blue },
   { tag: [tags.className, tags.typeName, tags.namespace], color: ONE_DARK.yellow },
   { tag: [tags.definition(tags.typeName), tags.definition(tags.className), tags.definition(tags.namespace)], color: ONE_DARK.yellow },

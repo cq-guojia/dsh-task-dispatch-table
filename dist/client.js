@@ -49795,6 +49795,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*  - cmSurfaceTheme：透明底 + 13px + 等宽字体 + 行号槽用 --tdt-fg-3，随宿主滚动；
 		*  - codeMirrorTheme(dark)：表面主题 + 选区/激活行微调 + one-dark/one-light 语法色。
 		* 主矛盾是“不卡”，配色/字号顺带对齐到用户认可的 one-dark 13px 观感。
+		*
+		* ⚠️ 选区配色的硬约束（真机 2026-10-05 修）：CodeMirror 把选区画成**文字底下的一层背景**，
+		*    **不会**给选中文字重新上色 ⇒ 选区色必须自己保证与语法色有对比度。旧实现给暗色用
+		*    rgba(255,255,255,.22) 半透明白 ⇒ 选区发白、one-dark 的浅/白字压上去直接隐身。
+		*    现按官方 @codemirror/theme-one-dark 取**不透明实色**（暗 #3E4451 / 浅 #c8d3f0）。
 		*/
 		const ONE_DARK = {
 			black: "#282c34",
@@ -49844,8 +49849,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".cm-activeLine": { backgroundColor: "transparent" },
 			".cm-activeLineGutter": { backgroundColor: "transparent" }
 		});
+		/**
+		* 选区色：暗 #3E4451（官方 one-dark 原值，比深底更深的实色 ⇒ 浅字压上去仍清晰）、
+		* 浅 #c8d3f0（one-light 同族浅底 ⇒ 深字压上去仍清晰）。一律**不透明**：半透明会让
+		* 选区色随宿主面板深浅漂移，对比度不可控。
+		*/
+		const SELECTION_DARK = "#3E4451";
+		const SELECTION_LIGHT = "#c8d3f0";
 		function cmSurfaceTint(dark) {
-			return EditorView.theme({ ".cm-selectionBackground, .cm-focused .cm-selectionBackground, ::selection": { backgroundColor: dark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.12)" } });
+			return EditorView.theme({ "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: dark ? SELECTION_DARK : SELECTION_LIGHT } });
 		}
 		const HIGHLIGHTS_DARK = [
 			{
@@ -49907,7 +49919,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			},
 			{
 				tag: [tags$1.variableName],
-				color: ONE_DARK.white
+				color: ONE_DARK.gray
 			},
 			{
 				tag: [
@@ -50192,21 +50204,35 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*
 		* 外观：theme="none" 关掉 @uiw 默认 light 主题的白底，cmSurfaceTheme 透明底叠在宿主面板上；
 		* 默认 EditorView.lineWrapping（全换行，避免横向滚动条）；复制钮为右上角官方图标，hover 浮现。
+		*
+		* ⚠️ 明暗判据（真机 2026-10-05 修）：**只认宿主** body[data-ds-dark-theme]，
+		*    禁用 prefers-color-scheme —— 后者跟操作系统、不跟用户在宿主里的选择，两者不一致时会把
+		*    暗色语法色（浅/白字）套在宿主浅色面板上 ⇒ 白字白底隐形。判据真源见
+		*    docs/design/external/dsh-capabilities.md §主题与设计变量。
 		*/
-		function isDarkScheme() {
-			if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
-			return window.matchMedia("(prefers-color-scheme: dark)").matches;
+		/** 读宿主的暗色标记（唯一明暗判据 = body[data-ds-dark-theme]，宿主启动脚本 toggleAttribute 写入）。 */
+		function hostDark() {
+			if (typeof document === "undefined") return false;
+			const body = document.body;
+			return body === null ? false : body.hasAttribute("data-ds-dark-theme");
 		}
 		function CodeViewer(props) {
 			const { text, path, t, className, style, height = "100%" } = props;
 			const [copied, setCopied] = (0, react$1.useState)(false);
-			const [dark, setDark] = (0, react$1.useState)(isDarkScheme);
+			const [dark, setDark] = (0, react$1.useState)(hostDark);
 			(0, react$1.useEffect)(() => {
-				if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-				const mq = window.matchMedia("(prefers-color-scheme: dark)");
-				const onChange = () => setDark(mq.matches);
-				mq.addEventListener?.("change", onChange);
-				return () => mq.removeEventListener?.("change", onChange);
+				if (typeof document === "undefined" || typeof MutationObserver !== "function") return;
+				const body = document.body;
+				if (body === null) return;
+				const sync = () => {
+					setDark(body.hasAttribute("data-ds-dark-theme"));
+				};
+				sync();
+				const observer = new MutationObserver(sync);
+				observer.observe(body, { attributeFilter: ["data-ds-dark-theme"] });
+				return () => {
+					observer.disconnect();
+				};
 			}, []);
 			const language = (0, react$1.useMemo)(() => languageForPath(path), [path]);
 			const extensions = (0, react$1.useMemo)(() => [

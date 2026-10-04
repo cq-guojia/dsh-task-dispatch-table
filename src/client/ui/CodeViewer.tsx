@@ -11,6 +11,11 @@
  *
  * 外观：theme="none" 关掉 @uiw 默认 light 主题的白底，cmSurfaceTheme 透明底叠在宿主面板上；
  * 默认 EditorView.lineWrapping（全换行，避免横向滚动条）；复制钮为右上角官方图标，hover 浮现。
+ *
+ * ⚠️ 明暗判据（真机 2026-10-05 修）：**只认宿主** body[data-ds-dark-theme]，
+ *    禁用 prefers-color-scheme —— 后者跟操作系统、不跟用户在宿主里的选择，两者不一致时会把
+ *    暗色语法色（浅/白字）套在宿主浅色面板上 ⇒ 白字白底隐形。判据真源见
+ *    docs/design/external/dsh-capabilities.md §主题与设计变量。
  */
 import * as React from 'react'
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
@@ -26,9 +31,11 @@ import type { Translate } from '../locales'
 import { languageForPath } from './lang'
 import { codeMirrorTheme } from './cm-themes'
 
-function isDarkScheme(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
+/** 读宿主的暗色标记（唯一明暗判据 = body[data-ds-dark-theme]，宿主启动脚本 toggleAttribute 写入）。 */
+function hostDark(): boolean {
+  if (typeof document === 'undefined') return false
+  const body: HTMLElement | null = document.body
+  return body === null ? false : body.hasAttribute('data-ds-dark-theme')
 }
 
 export function CodeViewer(props: {
@@ -44,14 +51,19 @@ export function CodeViewer(props: {
 }): ReactElement {
   const { text, path, t, className, style, height = '100%' } = props
   const [copied, setCopied] = useState(false)
-  const [dark, setDark] = useState<boolean>(isDarkScheme)
+  const [dark, setDark] = useState<boolean>(hostDark)
 
+  // 用户切主题 = 宿主 toggleAttribute 写 body[data-ds-dark-theme] ⇒ 用 MutationObserver 跟。
+  // 挂载时先 sync 一次：插件挂载可能早于宿主写好该属性。
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    const onChange = (): void => setDark(mq.matches)
-    mq.addEventListener?.('change', onChange)
-    return () => mq.removeEventListener?.('change', onChange)
+    if (typeof document === 'undefined' || typeof MutationObserver !== 'function') return
+    const body: HTMLElement | null = document.body
+    if (body === null) return
+    const sync = (): void => { setDark(body.hasAttribute('data-ds-dark-theme')) }
+    sync()
+    const observer = new MutationObserver(sync)
+    observer.observe(body, { attributeFilter: ['data-ds-dark-theme'] })
+    return () => { observer.disconnect() }
   }, [])
 
   const language = useMemo(() => languageForPath(path), [path])

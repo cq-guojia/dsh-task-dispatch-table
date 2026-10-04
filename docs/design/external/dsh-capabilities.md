@@ -129,6 +129,7 @@
 | 主题 | 结论 |
 |---|---|
 | **源码态查看器渲染引擎 = 只读 CodeMirror 6（2026-10-04 定型，落地 `src/client/ui/CodeViewer.tsx`）** | 文件预览源码态（代码 / HTML 源 / 纯文本）、任务编辑器「配置预览」的任务定义 JSON、工具卡 `code` 变体的工具代码——**三处只读代码展示统一为 `CodeViewer`（只读 CodeMirror 6，`@uiw/react-codemirror`，仓库已声明、非新引包）**。官方 Shiki `CodeBlock` 把整篇 tokenize 成 `<pre>`+每 token `<span>` 的巨型 DOM ⇒ 5000 行 / 256K 文件首屏与拖拽卡死；CodeMirror 行级视图 + Lezer 增量高亮，宽度变化只重排可视区。只读但可选中复制：仅 `EditorState.readOnly` 挡输入，**不设 `EditorView.editable=false`**（否则会禁用鼠标选区、无法框选复制某一句）；默认 `EditorView.lineWrapping` 全换行（无换行/不换行切换）；主题 `theme="none"` 透明底叠宿主面板（移植 better-sidebar 的 one-dark / one-light + 13px）；右上角官方复制图标 hover 浮现。用户认可的「不卡、能选、能复制」查看器即 CodeMirror 6。 |
+| **只读代码查看器的主题契约（2026-10-05 修，真机反馈驱动）** | 两条硬约束，违反即出现「字隐形」：① **明暗判据只认宿主** `body[data-ds-dark-theme]`，**插件禁用 `prefers-color-scheme`**（它跟操作系统、不跟用户在宿主里的选择，两者不一致时会把暗色的浅/白字套在宿主浅色面板上 ⇒ 白字白底隐形）；跟随宿主切主题用 `MutationObserver`（宿主是 `toggleAttribute` 写该属性），挂载时先同步一次。② **选区必须是不透明实色**（暗 `#3E4451` / 浅 `#c8d3f0`，即官方 `@codemirror/theme-one-dark@6` `dist/index.js:7` 原值）——CodeMirror 的选区是**画在文字底下的一层背景**（`drawSelection` → `.cm-selectionLayer .cm-selectionBackground`），**不会**给选中文字重新上色；半透明会让选区色随宿主面板深浅漂移 ⇒ 浅色字压上去直接隐身。③ 暗色 `tags.variableName` 取官方 ivory `#abb2bf` 而非纯白 `#ffffff`（纯白在深底过曝、压在选区上对比度更差）。过程与证据见 [`../../worklog/code-viewer-theme-fix.md`](../../worklog/code-viewer-theme-fix.md)。 |
 
 ## 主题与设计变量（`@deepseek-ai/dsh-client-ui-theme` / `-primitives`）
 
