@@ -65,6 +65,9 @@ import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf, isSafeAttachmentRe
 import { FileBrowser } from './file-browser'
 import type { OfficeToPdfFace, WorkspaceFilesFace } from './file-preview'
 import { ensureToastStyle, FloatingToast } from './toast-css'
+// 查看档正文（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）：纵向单栏 = 基础信息 → 提示词 → 上次执行。
+// ⚠️ 它与本文件是「组件互相引用 + 类型单向依赖」：task-view 只 `import type` 本文件的草稿类型（编译期擦除）。
+import { TaskViewPanel } from './task-view'
 
 /**
  * 「?」说明钮（2026-09-30 抽象收敛：此前同样的 JSX 写了 5 份）。
@@ -1288,6 +1291,24 @@ export function TaskEditorDrawer(props: {
   onDeleteVersion?: ((file: string) => void) | undefined
   /** 启用开关实时写回（编辑态）：null = 成功，否则返回人话错误。新建态不接（统一保存时建）。 */
   onToggleEnabled?: ((enabled: boolean) => Promise<string | null>) | undefined
+  /**
+   * 打开时的**默认档**（2026-10-05）：卡片「编辑」与「＋ 新建任务」= `'edit'`；
+   * 从卡片展开区「前置任务」行点任务名进来 = `'view'`（只读人话视图）。
+   */
+  initialView?: 'view' | 'edit'
+  /**
+   * 脏状态上报（外部只**观察**、不重算）：用来判「有未保存的修改时要去查看另一个任务」。
+   * 脏判定真源仍在本组件（`initialDraftRef` + `stableStringify`），外部不得自己再算一份。
+   */
+  onDirtyChange?: (dirty: boolean) => void
+  /** 有待确认的「放弃修改、改看别的任务」请求（非 null ⇒ 本组件弹确认）；确认 / 取消回调由外部给。 */
+  pendingView?: { id: string } | null
+  onConfirmPendingView?: () => void
+  onCancelPendingView?: () => void
+  /** 查看档里点「任务会话」打开归档会话（不给 ⇒ 该行不可点）。 */
+  onOpenSession?: ((sessionId: string) => void) | undefined
+  /** 查看档里点产出物打开文件预览（不给 ⇒ 该行不可点）。 */
+  onOpenFile?: ((sessionId: string, path: string) => void) | undefined
   /** 工作区文件服务（选择工作区文件用；未就位为 null ⇒ 选择器不可用）。 */
   workspaceFiles?: WorkspaceFilesFace | null
   /** Office 预览服务（remote.officeToPdf；未就位为 null ⇒ Office 文件出「不可用」空态）。 */
@@ -1312,7 +1333,28 @@ export function TaskEditorDrawer(props: {
     t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors,
     officeToPdf, currentTaskId, width, onWidthChange, reserved,
+    initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView,
+    onOpenSession, onOpenFile,
   } = props
+  // ── 档位（用户 2026-10-05）────────────────────────────────────────────
+  // 查看 = 只读人话视图（基础信息 → 提示词 → 上次执行）；编辑 = 表单。
+  // 切档**不重挂载**（同一组件内换 body）⇒ 草稿与滚动位置都在，不丢用户改动。
+  const [viewTab, setViewTab] = useState<'view' | 'edit'>(initialView ?? 'edit')
+  // 换任务（外部把 editor state 换成另一个 id）⇒ 档位回到这次打开要求的默认档：
+  // 点 A 的「编辑」→ 编辑档；再去点 B 的前置任务名 → 查看档。同一个 id 内切档不受影响。
+  const openedTaskRef = useRef(currentTaskId ?? '')
+  useEffect(() => {
+    const id = currentTaskId ?? ''
+    if (openedTaskRef.current !== id) {
+      // 换了任务 ⇒ 回到「这次打开要求的档」（点 A 的「编辑」→ 编辑档；再去点 B 的前置任务名 → 查看档）。
+      openedTaskRef.current = id
+      setViewTab(initialView ?? 'edit')
+      return
+    }
+    // 同一个任务：只有**外部明确要求换档**时才跟随（如「再看一眼查看档」）；
+    // 用户在抽屉里手动切档不会被打断 —— `initialView` 的值没变，这个 effect 不会再跑。
+    if (initialView !== undefined) setViewTab(initialView)
+  }, [currentTaskId, initialView])
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
@@ -1410,6 +1452,9 @@ export function TaskEditorDrawer(props: {
   // 「改成 2 又改回 1」序列化结果与快照一致 ⇒ 不算改过。
   const initialDraftRef = useRef(draft)
   const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current)
+  // 脏状态上报（唯一用途：外部据此判「有未保存修改时，能不能直接切去看别的任务」）。
+  // ⚠️ 只上报、不接管：脏判定的真源就是上面这一行，外部不许自己再算一份。
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   // 全屏面板（提示词编辑 / 配置预览）滚动位置保持（用户 2026-09-29 bug）：面板打开 = 表单整体
   // 换挂载（同一容器二选一渲染），关闭重挂后 scrollTop 归零——打开前把滚动位置存下来，
@@ -2103,7 +2148,18 @@ export function TaskEditorDrawer(props: {
       //       → 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴关闭钮左边）。
       h('div', { className: 'dsh-tdt-ed-header' },
         h('div', { className: 'dsh-tdt-ed-headleft' },
-          h('div', { className: 'dsh-tdt-ed-title' }, mode === 'create' ? t('editorNew') : t('editorEdit')),
+          // 查看档标题 = **任务名**（还没起名就给「未命名任务」）；编辑档仍是「新建任务 / 编辑任务」。
+          h('div', { className: 'dsh-tdt-ed-title' },
+            viewTab === 'view'
+              ? (draft.title.trim() === '' ? t('editorViewUntitled') : draft.title)
+              : (mode === 'create' ? t('editorNew') : t('editorEdit'))),
+          // 来源标记（用户 2026-10-05）：一眼知道**看的是哪一份** —— 已保存的配置 / 正在改的草稿 / 新建还没保存。
+          viewTab === 'view'
+            ? h('span', { className: 'dsh-tdt-ed-viewtag' },
+              mode === 'create'
+                ? t('editorViewNewTag')
+                : (dirty ? t('editorViewDraftTag') : t('editorViewSavedTag')))
+            : null,
         ),
         h('div', { className: 'dsh-tdt-ed-headactions' },
           // 启用开关写回结果 Toast（共用组件：成功绿 / 失败红），浮在头部下方，2.5s 上飘淡出自退。
@@ -2117,16 +2173,19 @@ export function TaskEditorDrawer(props: {
             })
             : null,
           // 启用开关 + 联动状态文字：**紧挨关闭钮左边**（U21）。
-          h('span', { className: 'dsh-tdt-ed-enable dsh-tdt-switch' },
-            h(Switch, {
-              checked: draft.enabled,
-              onChange: handleToggleEnabled,
-              label: t('editorEnabled'),
-              title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
-            }),
-            h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
-              draft.enabled ? t('editorEnabledStateOn') : t('editorEnabledStateOff')),
-          ),
+          // ⚠️ 查看档是只读视图 ⇒ **不出现可写的开关**（启用状态改由基础信息的「状态」一行表达）。
+          viewTab === 'view'
+            ? null
+            : h('span', { className: 'dsh-tdt-ed-enable dsh-tdt-switch' },
+                h(Switch, {
+                  checked: draft.enabled,
+                  onChange: handleToggleEnabled,
+                  label: t('editorEnabled'),
+                  title: draft.enabled ? t('editorEnabledOn') : t('editorEnabledOff'),
+                }),
+                h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2,rgba(128,128,128,.95))' } },
+                  draft.enabled ? t('editorEnabledStateOn') : t('editorEnabledStateOff')),
+              ),
           h(IconButton, {
             variant: 'plain',
             size: 'md',
@@ -2136,88 +2195,119 @@ export function TaskEditorDrawer(props: {
           }),
         ),
       ),
-      h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef }, body),
+      // 正文：查看档 = 只读人话视图（自己取「上次执行」）；编辑档 = 表单（或其上的全屏子面板）。
+      h('div', { className: 'dsh-tdt-ed-body', ref: bodyRef },
+        viewTab === 'view'
+          ? h(TaskViewPanel, {
+            t,
+            draft,
+            // 任务 id 只在编辑态有 ⇒ 新建态给空串，查看档据此**不发**「上次执行」请求（任务还不存在）。
+            taskId: mode === 'edit' ? (currentTaskId ?? '') : '',
+            tasks,
+            onOpenSession,
+            onOpenFile,
+          })
+          : body),
       // 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
       // 提示全部收编共用 FloatingToast（浮在 footer 正上方、统一 2.8s 自退、不占版面）：
       //   校验问题 = 错误红（一次性，与描红解耦）/ 重置完成 = 中性灰 / 预览态不可保存 = 中性灰 / 保存失败 = 错误红。
       h('div', { className: 'dsh-tdt-ed-footer' },
-        mode === 'edit' && onDelete !== undefined
-          ? h(Button, {
-            variant: 'outline', size: 'sm', className: 'dsh-tdt-ed-danger',
-            onClick: () => { setConfirmDeleteTask(true) },
-          }, t('editorDeleteTask'))
-          : null,
-        // 「重置」只在**改过内容**时才出现（用户 2026-09-30）：直接复用关闭确认那份脏判定
-        // （`dirty` = 当前草稿 ≠ 打开时快照）；重置后草稿回到初始 ⇒ dirty 变 false ⇒ 按钮自己消失。
-        dirty
-          ? h(Button, {
-            variant: 'ghost', size: 'sm',
-            onClick: () => { setConfirmReset(true) },
-          }, t('editorReset'))
-          : null,
-        h('span', { style: { flex: '1 1 auto' } }),
-        problemsToast !== null
-          ? h(FloatingToast, {
-            seq: problemsToast.seq,
-            tone: 'error',
-            onDone: () => { setProblemsToast(null) },
-            text: problemsToast.text,
-          })
-          : null,
-        resetHint !== 0
-          ? h(FloatingToast, {
-            seq: resetHint,
-            tone: 'neutral',
-            onDone: () => { setResetHint(0) },
-            text: t('editorResetDone'),
-          })
-          : null,
-        saveErrToast !== null
-          ? h(FloatingToast, {
-            seq: saveErrToast.seq,
-            tone: 'error',
-            onDone: () => { setSaveErrToast(null) },
-            text: saveErrToast.msg,
-          })
-          : null,
-        pendingHint !== 0
-          ? h(FloatingToast, {
-            seq: pendingHint,
-            tone: 'neutral',
-            onDone: () => { setPendingHint(0) },
-            text: t('editorSavePending'),
-          })
-          : null,
-        h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
-        h(Button, {
-          variant: 'primary',
-          size: 'sm',
-          onClick: () => {
-            if (onSave === undefined) {
-              hintSeq.current += 1
-              setPendingHint(hintSeq.current)
-              return
-            }
-            // 保存前先本地查必填 / 排期冲突：问题字段描红（持续态）+ 一次性 Toast 列全部问题。
-            const problems = validateTaskDraft(draft)
-            if (problems.length > 0) {
-              setShowErrors(true)
-              problemsSeq.current += 1
-              // 一行一条（\n 换行，Toast 文字区 pre-line），每条以句号收尾——标点统一，不混分号。
-              setProblemsToast({ text: problems.map(p => p.message).join('\n'), seq: problemsSeq.current })
-              return
-            }
-            setShowErrors(false)
-            setProblemsToast(null)
-            // 「完全权限」= 高危档：保存前强制勾选确认（每次保存都确认，勾选不记忆）。
-            if (draft.permission === 'full') {
-              setFullPermAck(false)
-              setFullPermOpen(true)
-              return
-            }
-            onSave(draft)
-          },
-        }, t('editorSave')),
+        // 档位切换（用户 2026-10-05）：**恒显在最左**；切档只是换 body，不重开分栏、不丢草稿。
+        h(Segmented, {
+          id: 'dsh-tdt-ed-viewtab',
+          value: viewTab,
+          size: 'md',
+          variant: 'default',
+          items: [
+            { value: 'view', label: t('editorTabView') },
+            { value: 'edit', label: t('editorTabEdit') },
+          ],
+          onChange: (next: string) => { setViewTab(next as 'view' | 'edit') },
+          label: t('editorTabEdit'),
+        }),
+        // 查看档是只读 ⇒ 删除 / 重置 / 取消 / 保存**一律不渲染**，只留一个弹性占位把切换钮顶到最左
+        //（footer 是 `justify-content:flex-end`，没有占位的话这个仅剩的元素会被推到右边）。
+        viewTab === 'view'
+          ? h('span', { style: { flex: '1 1 auto' } })
+          : h(Fragment, null,
+            mode === 'edit' && onDelete !== undefined
+              ? h(Button, {
+                variant: 'outline', size: 'sm', className: 'dsh-tdt-ed-danger',
+                onClick: () => { setConfirmDeleteTask(true) },
+              }, t('editorDeleteTask'))
+              : null,
+            // 「重置」只在**改过内容**时才出现（用户 2026-09-30）：直接复用关闭确认那份脏判定
+            // （`dirty` = 当前草稿 ≠ 打开时快照）；重置后草稿回到初始 ⇒ dirty 变 false ⇒ 按钮自己消失。
+            dirty
+              ? h(Button, {
+                variant: 'ghost', size: 'sm',
+                onClick: () => { setConfirmReset(true) },
+              }, t('editorReset'))
+              : null,
+            h('span', { style: { flex: '1 1 auto' } }),
+            problemsToast !== null
+              ? h(FloatingToast, {
+                seq: problemsToast.seq,
+                tone: 'error',
+                onDone: () => { setProblemsToast(null) },
+                text: problemsToast.text,
+              })
+              : null,
+            resetHint !== 0
+              ? h(FloatingToast, {
+                seq: resetHint,
+                tone: 'neutral',
+                onDone: () => { setResetHint(0) },
+                text: t('editorResetDone'),
+              })
+              : null,
+            saveErrToast !== null
+              ? h(FloatingToast, {
+                seq: saveErrToast.seq,
+                tone: 'error',
+                onDone: () => { setSaveErrToast(null) },
+                text: saveErrToast.msg,
+              })
+              : null,
+            pendingHint !== 0
+              ? h(FloatingToast, {
+                seq: pendingHint,
+                tone: 'neutral',
+                onDone: () => { setPendingHint(0) },
+                text: t('editorSavePending'),
+              })
+              : null,
+            h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
+            h(Button, {
+              variant: 'primary',
+              size: 'sm',
+              onClick: () => {
+                if (onSave === undefined) {
+                  hintSeq.current += 1
+                  setPendingHint(hintSeq.current)
+                  return
+                }
+                // 保存前先本地查必填 / 排期冲突：问题字段描红（持续态）+ 一次性 Toast 列全部问题。
+                const problems = validateTaskDraft(draft)
+                if (problems.length > 0) {
+                  setShowErrors(true)
+                  problemsSeq.current += 1
+                  // 一行一条（\n 换行，Toast 文字区 pre-line），每条以句号收尾——标点统一，不混分号。
+                  setProblemsToast({ text: problems.map(p => p.message).join('\n'), seq: problemsSeq.current })
+                  return
+                }
+                setShowErrors(false)
+                setProblemsToast(null)
+                // 「完全权限」= 高危档：保存前强制勾选确认（每次保存都确认，勾选不记忆）。
+                if (draft.permission === 'full') {
+                  setFullPermAck(false)
+                  setFullPermOpen(true)
+                  return
+                }
+                onSave(draft)
+              },
+            }, t('editorSave')),
+          ),
       ),
       // 删除任务的严厉确认（用户 2026-09-30：措辞「所有的移除都是找不回来的，不可逆的」）。
       confirmDeleteTask
@@ -2253,6 +2343,18 @@ export function TaskEditorDrawer(props: {
           confirmLabel: t('editorSave'),
           onCancel: () => { setFullPermOpen(false) },
           onConfirm: () => { setFullPermOpen(false); onSave?.(draft) },
+        })
+        : null,
+      // 未保存时要去查看**另一个任务**：先确认、再切过去（用户 2026-10-05 拍板）。
+      // 走面板内联确认层（VersionConfirm 绝对定位挂在分栏面板内）⇒ 绝不会被遮罩压住点不了。
+      pendingView !== null && pendingView !== undefined
+        ? h(VersionConfirm, {
+          t,
+          title: t('editorViewSwitchTitle'),
+          desc: t('editorViewSwitchDesc'),
+          confirmLabel: t('editorTabView'),
+          onCancel: () => { onCancelPendingView?.() },
+          onConfirm: () => { onConfirmPendingView?.() },
         })
         : null,
     )

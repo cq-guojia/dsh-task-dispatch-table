@@ -99,6 +99,19 @@ export const TASK_EDITOR_CSS = `
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
 /* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
+/* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
+   纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
+   字段行 / 「上次执行」明细的皮肤**不在这里** —— 那是域 domain:task-info（与卡片展开区共用同一份）。 */
+.dsh-tdt-ed-view{display:flex;flex-direction:column;gap:18px;}
+.dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;}
+/* 块标题行：小标题 + 状态色块 + 状态文字（色块与文字色由内联 style 给，取 status-text.ts 单源）。 */
+.dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
+/* 提示词块：带边框的独立区块，**块内限高滚动**（长提示词不撑长整页，用户 2026-10-05 点名）。 */
+.dsh-tdt-ed-view-prompt{box-sizing:border-box;padding:10px 12px;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));max-height:260px;overflow:auto;}
+.dsh-tdt-ed-view-empty{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* 头部来源标记（查看档）：小圆角 chip，跟标题同一行、紧挨标题右侧。 */
+.dsh-tdt-ed-viewtag{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:var(--tdt-chip-bg,rgba(128,128,128,.16));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-xs);white-space:nowrap;}
 `
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。 */

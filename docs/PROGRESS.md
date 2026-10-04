@@ -49,6 +49,12 @@
 
 > ✅ **2026-10-04 真机验收通过**（交互分层「只头部可点、展开区可拖选复制」/ 自绘浅色实心正圆前置圈码 + 悬停官方气泡 / 展开态头部不常亮 / 第一排产出物·第二排前置两列 + 无边框「查看会话」/ Token 悬停三段明细 / 5px 方角竖条与状态浅底 —— 全部验过），**已结案移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)**。过程 = [`worklog/execution-timeline.md`](worklog/execution-timeline.md)（已封卷）。
 
+### 1.8 右侧栏「查看 / 编辑」两档 + 卡片前置任务名可点（2026-10-05 拍板 + 当日落码）—— 🔵 **已落码，⏳ 待真机验收**（冒烟 611/0）
+
+> **动机**（用户原话）：在任务执行列表里看到某个任务有前置任务，**只显示了名字**，想看清它到底是什么；而现有两条路都不好——进编辑档太繁琐抽象、跳去任务列表展开又**打断操作**且回来还得找。
+> **口径**：右侧分栏底栏**最左**加「查看 / 编辑」两档分段切换；查看档 = **只读人话视图**（纵向单栏流：基础信息 → 提示词 Markdown 限高滚动 → 上次执行带状态色块），底栏只留切换与 ✕（删除 / 重置 / 取消 / 保存全隐藏）。默认档：「＋ 新建」与卡片「编辑」→ **编辑**；**卡片展开区「前置任务」行点任务名 → 查看**（本期唯一入口，执行记录页与全站任务名不动）。编辑 A 未保存时切看任务 B ⇒ 先弹确认「放弃并查看 B？」。查看档里任务会话可点开会话、产出物可点开预览；**没有「跟进」块**（讨论期一度提出，用户最终否掉，就是「上次执行」一块）。
+> **规格** = [design/features/creation-edit.md](design/features/creation-edit.md) §七-C；入口 = [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §3.1b；共享展示层 = [design/code-conventions.md](design/code-conventions.md) §二；过程 = [worklog/task-viewer-mode.md](worklog/task-viewer-mode.md)。
+
 ### ~~1.7 工作区候选真源统一 + 顶部下拉收编~~ —— ✅ **2026-10-04 真机验收通过，已结案**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）
 
 > 过程 = [`worklog/workspace-options-unification.md`](worklog/workspace-options-unification.md)（已封卷）；口径真源 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4；使用规范 = [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项。
@@ -93,6 +99,7 @@
 3. **U34 Excel 预览路线**：待用户拍板「转 PDF」还是「可编辑表格」，拍板后落码。
 4. **U31 剩余 ②③**：编辑器「前置任务」第②级换 `TaskPicker` + 第①级工作区改受控入参；任务选项文案统一取 `[code] name`。
 5. **U20「待抽象」残留**：省略号三件套 / 6px 拖拽条 / 卡与浮层外壳 / `Textarea`·`Checkbox` 基础层件等，属中等以上改动，待排期。
+6. **§1.8 查看档真机验收**（已落码，冒烟 611/0）：① 底栏最左两档切换的观感与位置；② 查看档三块（基础信息标签—值 / 提示词 Markdown 限高滚动 / 上次执行的状态色块 + 明细）；③ 切档不丢草稿（编辑一半切查看再切回）；④ 卡片展开区「前置任务」行点任务名即进查看档；⑤ 编辑 A 未保存时点 B 的前置任务名 ⇒ 弹确认；⑥ 查看档里「任务会话 / 产出物」可点。**另需确认一项**：「预计执行」的具体时刻是否要进查看档（当前草稿态推不出服务端派生值，未放）。
 
 
 

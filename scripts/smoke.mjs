@@ -2368,16 +2368,21 @@ console.log('\n[14] runtime-index')
     const trc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
     const ld = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'Loading.tsx'), 'utf8')
     const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    // 基础信息展示层 2026-10-05 上提出 `task-list.tsx` ⇒ 断言改读新文件
+    // （不许为了让断言过而在原处留第二份实现）。
+    const ti = readFileSync(join(process.cwd(), 'src', 'client', 'task-info.tsx'), 'utf8')
     check('三面板统一固定高度：panelBoxStyle 覆盖三个 tab（基础信息也纳入定高盒）',
       (tl.match(/panelBoxStyle/g) ?? []).length >= 4
       // 基础信息改版（2026-10-03）：不再是单一滚动列，改成左配置 + 右最近执行两栏、只滚右栏。
-      && tl.includes('infoWrapStyle') && tl.includes('infoConfigStyle') && tl.includes('infoRecentStyle')
+      // 三个布局常量已上提共享层 ⇒ 卡片与右侧栏「查看档」共用同一份。
+      && ti.includes('infoWrapStyle') && ti.includes('infoConfigStyle') && ti.includes('infoRecentStyle')
       && !tl.includes('PANEL_MAX_H'))
     check('执行记录表格 8 列（含新增「备注」弹性列）+ 官方状态图标 + 斑马纹 + 查看小按钮',
       tl.includes("t('colPlanned')") && tl.includes("t('colActualStart')") && tl.includes("t('colSession')")
       && tl.includes("t('colTokens')") && tl.includes("t('colView')") && tl.includes("t('colNote')")
-      && tl.includes('FileTypeIcon') && tl.includes('IconCheckCircleFillRegular') && tl.includes('IconCloseCircleFillRegular')
-      && tl.includes('dsh-tdt-rec-alt') && tl.includes('StatusIcon')
+      && tl.includes('FileTypeIcon') && tl.includes('dsh-tdt-rec-alt') && tl.includes('StatusIcon')
+      // 状态图标的两个官方圆勾 / 圆叉图标已随 `StatusIcon` 上提共享层（卡片与右侧栏查看档共用）。
+      && ti.includes('IconCheckCircleFillRegular') && ti.includes('IconCloseCircleFillRegular')
       && tl.includes('colSpan: 8') && !tl.includes('colSpan: 7')
       && !tl.includes('chipStyleOf') && !tl.includes('IconNewChatOutlineRegular'))
     check('备注列是唯一弹性列（其余 7 列定长）+ 除产出物 / 备注外内容居中',
@@ -2497,9 +2502,11 @@ console.log('\n[14] runtime-index')
   {
     const tl = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
     const dist = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    // 基础信息展示层 2026-10-05 上提共享层 ⇒ 字段行 / 产出物行断言改读 `task-info.tsx`（与查看档同一份实现）。
+    const ti = readFileSync(join(process.cwd(), 'src', 'client', 'task-info.tsx'), 'utf8')
     check('基础信息右栏定宽（窗口缩放只让左栏变）+ 产出物行 hover 有底色（基础层 `.dsh-tdt-filechip`）',
-      tl.includes("flex: 'none', width: '320px'")
-      && tl.includes('dsh-tdt-filechip--block') && tl.includes('dsh-tdt-filechip--inline')
+      ti.includes("flex: 'none', width: '320px'")
+      && ti.includes('dsh-tdt-filechip--block') && ti.includes('dsh-tdt-filechip--inline')
       && dist.includes('dsh-tdt-filechip:hover'))
     const sv = readFileSync(join(process.cwd(), 'src', 'index.ts'), 'utf8')
     check('附件可点开预览：overview 补绝对路径 + 锚点会话（upload 走 attachmentAbsPath，link 走工作区 path+ref）',
@@ -2507,7 +2514,7 @@ console.log('\n[14] runtime-index')
       && sv.includes('attachmentAbsPath(assets, task.id, item.ref)') && sv.includes('path.join(source.path, item.ref)')
       && sv.includes('anyAnchor'))
     check('附件行在拿到 path + 锚点会话时可点（走统一 openFile），缺则退回纯展示',
-      tl.includes('onOpenFile(anchor, absPath)') && tl.includes('item.anchorSessionId'))
+      ti.includes('onOpenFile(anchor, absPath)') && ti.includes('item.anchorSessionId'))
     check('基础信息忙碌指示统一走右下角共用 Loading（不再另写「载入中」文字）',
       tl.includes("? h(Loading, { label: t('loading') })")
       // 基础信息右栏不再出现把 loading 文案直接当文字渲染的旧写法。
@@ -2518,22 +2525,25 @@ console.log('\n[14] runtime-index')
       && rec.includes('num(u.cacheWriteTokens)') && rec.includes('num(u.totalTokens)')
       && rec.includes('(uncached ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0)'))
     const qsrc = readFileSync(join(process.cwd(), 'src', 'client', 'query.ts'), 'utf8')
+    // 「任务会话」的渲染与皮肤 2026-10-05 上提共享层：TS 在 `task-info.tsx`、CSS 在 `task-info-css.ts`
+    // （卡片展开区与右侧栏查看档**同一份**；断言随之改读新文件，不许为过断言留第二份）。
+    const tic = readFileSync(join(process.cwd(), 'src', 'client', 'task-info-css.ts'), 'utf8')
     check('基础信息「任务会话」：灰底小图标框 + 会话名（无虚线 / 无边框），hover 变蓝；不再用独立「查看会话」按钮',
-      tl.includes("t('infoSession')") && tl.includes('dsh-tdt-info-session')
-      && tl.includes("children: sessionChip")
-      && tl.includes('session_title')
-      && tl.includes('MarqueeText, { text: sessionName }')
-      && tl.includes('IconSearchOutlineRegular')
+      ti.includes("t('infoSession')") && ti.includes('dsh-tdt-info-session')
+      && ti.includes("children: sessionChip")
+      && ti.includes('session_title')
+      && ti.includes('MarqueeText, { text: sessionName }')
+      && ti.includes('IconSearchOutlineRegular')
       // 无虚线 / 无边框；图标包一个灰色小标签框；hover 变蓝。
-      && tl.includes('dsh-tdt-info-session-icon') && tl.includes('background: var(--tdt-chip-bg)')
-      && !tl.includes('border-bottom: 1px dashed var(--tdt-border-strong)')
-      && tl.includes('.dsh-tdt-info-session:hover { color: var(--tdt-business)')
-      && tl.includes('width: 18px; height: 18px')
+      && ti.includes('dsh-tdt-info-session-icon') && tic.includes('background: var(--tdt-chip-bg)')
+      && !ti.includes('border-bottom: 1px dashed var(--tdt-border-strong)')
+      && tic.includes('.dsh-tdt-info-session:hover { color: var(--tdt-business)')
+      && tic.includes('width: 18px; height: 18px')
       // 标签列不再写死宽度：整栏共用 grid + `max-content` 自动定宽（中文窄、英文宽，都不留白不溢出）。
-      && tl.includes('grid-template-columns: max-content 1fr')
+      && tic.includes('grid-template-columns: max-content 1fr')
       // 旧的独立按钮已删；执行时长标签也改了。
-      && !tl.includes("}, t('viewSession')))")
-      && tl.includes("t('infoDuration')"))
+      && !ti.includes("}, t('viewSession')))")
+      && ti.includes("t('infoDuration')"))
     check('会话名由服务端按 sessionTitleOf 单源重建（快照标题优先，旧行回退当前任务标题）',
       sv.includes('sessionTitleOf(row.scheduled_at') && sv.includes('session_title')
       && qsrc.includes('session_title'))
@@ -2589,6 +2599,71 @@ console.log('\n[14] runtime-index')
     check('Office 预览：中英双语文案键齐备（不可用 / 转换失败）',
       locSrc11.includes('previewOfficeUnavailable:') && locSrc11.includes('previewOfficeFailed:')
       && locSrc11.includes('请在运行 DeepSeek Harness 的主机上启用文档预览服务'))
+  }
+
+  // ── 22. 右侧栏「查看 / 编辑」两档 + 查看档（2026-10-05 用户拍板；spec: design/features/creation-edit.md §七-C）──
+  {
+    const te = readFileSync(join(process.cwd(), 'src', 'client', 'task-editor.tsx'), 'utf8')
+    const tv = readFileSync(join(process.cwd(), 'src', 'client', 'task-view.tsx'), 'utf8')
+    const tec = readFileSync(join(process.cwd(), 'src', 'client', 'task-editor-css.ts'), 'utf8')
+    const tiS = readFileSync(join(process.cwd(), 'src', 'client', 'task-info.tsx'), 'utf8')
+    const ticS = readFileSync(join(process.cwd(), 'src', 'client', 'task-info-css.ts'), 'utf8')
+    const lvSrc = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
+    const ixSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
+    const lcSrc = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
+    const distV = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+
+    check('底栏最左恒显「查看 / 编辑」两档切换（Segmented；切档不重开分栏、不丢草稿）',
+      te.includes("id: 'dsh-tdt-ed-viewtab'")
+      && te.includes("{ value: 'view', label: t('editorTabView') }")
+      && te.includes("{ value: 'edit', label: t('editorTabEdit') }")
+      && te.includes('setViewTab(')
+      && /viewTab === 'view'[\s\S]{0,120}h\(TaskViewPanel/.test(te))
+
+    check('查看档只读：底部删除 / 重置 / 取消 / 保存不渲染（只留切换 + ✕）；头部隐藏可写的启用开关',
+      /viewTab === 'view'\s*\?\s*h\('span', \{ style: \{ flex: '1 1 auto' \} \}\)/.test(te)
+      && /viewTab === 'view'\s*\?\s*null\s*:\s*h\('span', \{ className: 'dsh-tdt-ed-enable/.test(te)
+      // 头部标题 = 任务名 + 来源标记：一眼知道「看的是哪一份」（已保存 / 草稿 / 新建未保存）。
+      && te.includes("t('editorViewUntitled')") && te.includes("t('editorViewSavedTag')")
+      && te.includes("t('editorViewDraftTag')") && te.includes("t('editorViewNewTag')"))
+
+    check('查看档三块齐全：基础信息（共享层）→ 提示词（Markdown + 块内限高滚动）→ 上次执行（状态色块 + 明细）',
+      tv.includes('taskInfoBaseFields({')
+      && tv.includes("t('editorViewPrompt')") && tv.includes('MarkdownText')
+      && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:260px')
+      && tv.includes('dsh-tdt-ed-view-badge') && tv.includes('lastRunFields({')
+      && tv.includes('hideStatus: true'))
+
+    check('查看档数据真实：提示词取自草稿（绝不碰 row.promptHead）；上次执行按 id 拉最近一条终态；新建态不发请求',
+      tv.includes('draft.prompt') && !tv.includes('row.promptHead')
+      && tv.includes('fetchInstances({ taskId, statuses: LAST_RUN_STATUSES, limit: 1 })')
+      && tv.includes("taskId === ''") && tv.includes("t('editorViewNoRunDraft')"))
+
+    check('未保存冲突：编辑别的任务且草稿脏 ⇒ 先弹确认（面板内联层 VersionConfirm，不引官方 Modal）',
+      te.includes("t('editorViewSwitchTitle')") && te.includes("t('editorViewSwitchDesc')")
+      && te.includes('pendingView !== null') && te.includes('VersionConfirm')
+      && ixSrc.includes('setPendingView({ id })') && ixSrc.includes('editorDirtyRef')
+      && ixSrc.includes('onDirtyChange'))
+
+    check('默认档映射：新建 / 卡片「编辑」= 编辑档；卡片前置任务名点进来 = 查看档；同任务只切档不重建草稿',
+      ixSrc.includes("view: 'edit'") && ixSrc.includes("view: 'view'")
+      && ixSrc.includes('const findDefinition = (id: string)')
+      && ixSrc.includes('onViewTask: openViewer')
+      && ixSrc.includes('setEditor({ ...editor, view:')
+      // 抽屉接线：查看档里「任务会话 / 产出物」可点（未就位时降级不可点）。
+      && ixSrc.includes('onOpenSession: viewSession !== null')
+      && ixSrc.includes('onOpenFile: canPreview ? openFile : undefined'))
+
+    check('入口：卡片展开区「前置任务」行任务名可点（hover 变蓝，与「任务会话」同款做法）',
+      tiS.includes("className: 'dsh-tdt-info-dep'") && tiS.includes('onViewTask(dep.id)')
+      && ticS.includes('.dsh-tdt-info-dep:hover { color: var(--tdt-business)')
+      && lvSrc.includes('onViewTask'))
+
+    check('查看档文案中英双语齐备且进产物',
+      lcSrc.includes('editorTabView:') && lcSrc.includes('editorTabEdit:')
+      && lcSrc.includes("editorTabView: 'View'") && lcSrc.includes("editorTabEdit: 'Edit'")
+      && lcSrc.includes('editorViewSwitchTitle:') && lcSrc.includes('infoViewTask:')
+      && distV.includes('editorTabView') && distV.includes('editorViewSwitchTitle'))
   }
 
   store.close()

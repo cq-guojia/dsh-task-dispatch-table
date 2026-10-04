@@ -755,6 +755,21 @@ window.__ModuleLoader__.load({
 			infoFinishedAt: "结束时间",
 			infoSession: "任务会话",
 			infoDuration: "执行时长",
+			editorTabView: "查看",
+			editorTabEdit: "编辑",
+			infoStateEnabled: "已启用",
+			infoStateDisabled: "已停用",
+			infoViewTask: "查看该任务",
+			editorViewSavedTag: "已保存的配置",
+			editorViewDraftTag: "正在编辑的草稿（未保存）",
+			editorViewNewTag: "新建，尚未保存",
+			editorViewUntitled: "未命名任务",
+			editorViewPrompt: "提示词",
+			editorViewPromptEmpty: "还没填提示词",
+			editorViewNoRunDraft: "任务尚未保存，没有执行记录",
+			editorViewNotFilled: "未填",
+			editorViewSwitchTitle: "放弃未保存的修改？",
+			editorViewSwitchDesc: "当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。",
 			cardTabInfo: "基础信息",
 			cardTabRecords: "执行记录",
 			cardTabLogs: "日志",
@@ -1351,6 +1366,21 @@ window.__ModuleLoader__.load({
 			infoFinishedAt: "Ended at",
 			infoSession: "Session",
 			infoDuration: "Duration",
+			editorTabView: "View",
+			editorTabEdit: "Edit",
+			infoStateEnabled: "Enabled",
+			infoStateDisabled: "Disabled",
+			infoViewTask: "View this task",
+			editorViewSavedTag: "Saved settings",
+			editorViewDraftTag: "Unsaved draft",
+			editorViewNewTag: "New, not saved yet",
+			editorViewUntitled: "Untitled task",
+			editorViewPrompt: "Prompt",
+			editorViewPromptEmpty: "No prompt yet",
+			editorViewNoRunDraft: "Not saved yet — no run history",
+			editorViewNotFilled: "Not set",
+			editorViewSwitchTitle: "Discard unsaved changes?",
+			editorViewSwitchDesc: "This task has unsaved edits. Continuing will discard them and open the task you want to view.",
 			cardTabInfo: "Basic info",
 			cardTabRecords: "Run records",
 			cardTabLogs: "Logs",
@@ -54166,6 +54196,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
 /* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
+/* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
+   纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
+   字段行 / 「上次执行」明细的皮肤**不在这里** —— 那是域 domain:task-info（与卡片展开区共用同一份）。 */
+.dsh-tdt-ed-view{display:flex;flex-direction:column;gap:18px;}
+.dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;}
+/* 块标题行：小标题 + 状态色块 + 状态文字（色块与文字色由内联 style 给，取 status-text.ts 单源）。 */
+.dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
+/* 提示词块：带边框的独立区块，**块内限高滚动**（长提示词不撑长整页，用户 2026-10-05 点名）。 */
+.dsh-tdt-ed-view-prompt{box-sizing:border-box;padding:10px 12px;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md,8px);background:var(--tdt-surface-1,rgba(128,128,128,.08));max-height:260px;overflow:auto;}
+.dsh-tdt-ed-view-empty{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* 头部来源标记（查看档）：小圆角 chip，跟标题同一行、紧挨标题右侧。 */
+.dsh-tdt-ed-viewtag{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:var(--tdt-chip-bg,rgba(128,128,128,.16));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-xs);white-space:nowrap;}
 `;
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		function ensureTaskEditorStyle() {
@@ -54655,6 +54698,500 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				className: cls,
 				onAnimationEnd: props.onDone
 			}, (0, react$1.createElement)("span", { className: "dsh-tdt-toast-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-toast-text" }, props.text));
+		}
+		//#endregion
+		//#region src/client/status-text.ts
+		/** 状态 → 文案键（唯一映射表）。 */
+		const STATUS_LABEL_KEYS = {
+			pending: "statusPending",
+			dispatched: "statusDispatched",
+			running: "statusRunning",
+			succeeded: "statusSucceeded",
+			failed: "statusFailed",
+			skipped: "statusSkipped",
+			unknown: "statusUnknown"
+		};
+		/** 状态 → 通用短名（zh 统一**两字**：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知，用户 2026-10-02）。 */
+		function statusTextOf(status, t) {
+			const key = STATUS_LABEL_KEYS[status];
+			return key === void 0 ? status : t(key);
+		}
+		/**
+		* **过滤桶**：界面上的「运行中 / 失败 / 成功」各对应哪些真实状态 —— 全站唯一一份。
+		*
+		* 为什么要单源（2026-10-04 评审）：卡片执行记录面板与执行记录总查询页各写了一份，
+		* 且**语义还不一样**（一个 `running` 含 pending/unknown，另一个只含 dispatched/running）⇒
+		* 同一个下拉档位在两页筛出不同结果。这里是唯一真源，两页都从这里取。
+		*/
+		const INSTANCE_STATUS_BUCKETS = {
+			running: [
+				"pending",
+				"dispatched",
+				"running",
+				"unknown"
+			],
+			failed: ["failed", "skipped"],
+			succeeded: ["succeeded"]
+		};
+		/** 桶 → 传给后端的 `status` 值（逗号分隔由调用方拼）；不认识的桶返回 undefined（不过滤，不猜）。 */
+		function statusesOfBucket(bucket) {
+			return INSTANCE_STATUS_BUCKETS[bucket];
+		}
+		/** 是否「在跑」（已派发未定终态）—— 语义查询单源：色条脉动 / 图标 / 文案都用它，不许各写一份。 */
+		function isRunningStatus(status) {
+			return status === "dispatched" || status === "running";
+		}
+		/**
+		* 状态 → 语义色调（**表现层只做「色调 → 自己的画法」**：时间轴映射成色条、卡片映射成图标）。
+		* 语义维（哪些状态算失败 / 算在跑）只在这里判一次。
+		*/
+		function statusToneOf(status) {
+			if (status === "succeeded") return "ok";
+			if (status === "failed") return "bad";
+			if (status === "skipped") return "warn";
+			if (isRunningStatus(status)) return "busy";
+			return "neutral";
+		}
+		//#endregion
+		//#region src/client/task-info.tsx
+		/** 「上次执行」只看最近一条**终态**实例；名单与卡片基础信息**完全一致**（单源，不许各处自创）。 */
+		const LAST_RUN_STATUSES = [
+			"succeeded",
+			"failed",
+			"skipped",
+			"unknown"
+		];
+		/** 两栏容器（左「任务配置」+ 右「上次执行」）：右栏可能内容多 ⇒ 只滚右栏。 */
+		const infoWrapStyle = {
+			flex: "1 1 auto",
+			minHeight: 0,
+			display: "flex",
+			gap: "18px",
+			marginBottom: "10px"
+		};
+		/** 左栏（配置）：撑满剩余宽度、自己滚。 */
+		const infoConfigStyle = {
+			flex: "1 1 auto",
+			minWidth: 0,
+			overflowY: "auto",
+			paddingRight: "2px"
+		};
+		/** 右栏（上次执行）：**定宽**（用户 2026-10-03：窗口拖动时让左边变、右边别跟着变）。 */
+		const infoRecentStyle = {
+			flex: "none",
+			width: "320px",
+			overflowY: "auto",
+			borderLeft: "1px solid var(--tdt-border-faint)",
+			paddingLeft: "16px"
+		};
+		/** 栏内小标题（「任务配置」/「上次执行」）；左栏标题在共用 grid 里 ⇒ 横跨标签 / 值两列。 */
+		const infoGroupTitleStyle = {
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-3)",
+			fontWeight: 600,
+			marginBottom: "6px",
+			letterSpacing: "0.02em",
+			gridColumn: "1 / -1"
+		};
+		const infoGridLabelStyle = {
+			fontSize: "var(--tdt-font-sm)",
+			color: "var(--tdt-fg-2)",
+			whiteSpace: "nowrap"
+		};
+		const infoGridValueStyle = {
+			fontSize: "var(--tdt-font-sm)",
+			color: "var(--tdt-fg)",
+			minWidth: 0,
+			wordBreak: "break-word",
+			lineHeight: "var(--tdt-line-md)"
+		};
+		/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
+		function InfoField(props) {
+			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
+				className: "dsh-tdt-info-label",
+				style: infoGridLabelStyle
+			}, props.label), (0, react$1.createElement)("div", {
+				className: "dsh-tdt-info-value",
+				style: infoGridValueStyle
+			}, props.children));
+		}
+		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
+		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
+		/** 路径取末段（产出物行显示用）。执行记录 tab 的产出物图标 tooltip 也用它（同一份，不许再抄）。 */
+		const baseNameOf$1 = (path) => {
+			const parts = path.split("/");
+			return parts[parts.length - 1] || path;
+		};
+		/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
+		const durationMsOf = (row) => {
+			if (row.dispatched_at === null || row.finished_at === null) return null;
+			const ms = new Date(row.finished_at).getTime() - new Date(row.dispatched_at).getTime();
+			return Number.isFinite(ms) && ms >= 0 ? ms : null;
+		};
+		/**
+		* 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
+		* 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
+		* 卡片展开区、执行记录 tab、右侧栏查看档三处共用（配色走 CSS 域 `domain:task-info`）。
+		*/
+		function StatusIcon(props) {
+			const status = props.status;
+			if (status === "succeeded") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckCircleFillRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-ok"
+			});
+			if (status === "failed" || status === "skipped") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseCircleFillRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-bad"
+			});
+			if (status === "running" || status === "dispatched") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconLoadingOutlineRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-run"
+			});
+			return (0, react$1.createElement)("span", { className: "dsh-tdt-rec-ic-idle" });
+		}
+		/**
+		* 「允许延迟」：ISO 8601 时长（如 `PT4H`）→ 人话（如 `4 小时`）。
+		* 编辑器下拉本来就用这套人话（4 小时 / 30 分钟 / 1 天），基础信息面板此前却把裸 `PT4H` 亮给用户看，
+		* 用户看不懂（用户 2026-10-03 拍板：不能用看不懂的符号表示）。
+		* 解析不出（畸形值）⇒ 原样返回，不编造。
+		*/
+		function windowLabel(iso, t) {
+			const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso.trim());
+			if (m === null) return iso;
+			const hh = Number(m[1] ?? 0);
+			const min = Number(m[2] ?? 0);
+			const sec = Number(m[3] ?? 0);
+			if (hh === 0 && min === 0 && sec === 0) return `0 ${t("unitMinutes")}`;
+			if (hh > 0 && min === 0 && sec === 0 && hh % 24 === 0) return `${hh / 24} ${t("unitDays")}`;
+			if (hh === 0 && min > 0 && sec === 0) return `${min} ${t("unitMinutes")}`;
+			if (hh > 0 && min === 0 && sec === 0) return `${hh} ${t("unitHours")}`;
+			return iso;
+		}
+		/** 基础信息块的全部字段行（不含栏标题与 grid 容器——那两样由调用方给）。 */
+		function taskInfoBaseFields(props) {
+			const { t, view, onOpenFile, onViewTask } = props;
+			return (0, react$1.createElement)(react$1.Fragment, null, view.enabled === void 0 ? null : InfoField({
+				label: t("colStatus"),
+				children: (0, react$1.createElement)("span", { style: {
+					fontWeight: 500,
+					color: view.enabled ? "var(--tdt-success)" : "var(--tdt-fg-3)"
+				} }, view.enabled ? t("infoStateEnabled") : t("infoStateDisabled"))
+			}), InfoField({
+				label: t("listFieldSchedule"),
+				children: view.scheduleLine
+			}), view.nextSlot === void 0 ? null : InfoField({
+				label: t("infoNextExec"),
+				children: view.nextSlot
+			}), InfoField({
+				label: t("listFieldWorkspace"),
+				children: view.workspace
+			}), InfoField({
+				label: t("listFieldModel"),
+				children: view.model
+			}), InfoField({
+				label: t("listFieldRetry"),
+				children: view.retry
+			}), InfoField({
+				label: t("listFieldWindow"),
+				children: windowLabel(view.window, t)
+			}), InfoField({
+				label: t("listSectionAttachments"),
+				children: view.attachments.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					flexWrap: "wrap",
+					gap: "2px 10px"
+				} }, view.attachments.map((item) => {
+					const absPath = item.path;
+					const anchor = item.anchorSessionId;
+					const key = item.key ?? item.name;
+					const icon = (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+						path: item.name,
+						size: 14
+					});
+					const name = (0, react$1.createElement)(MarqueeText, {
+						text: item.name,
+						title: item.name,
+						style: {
+							maxWidth: "40ch",
+							minWidth: 0
+						}
+					});
+					return absPath !== void 0 && absPath !== null && anchor !== void 0 && anchor !== null && onOpenFile !== void 0 ? (0, react$1.createElement)("button", {
+						key,
+						type: "button",
+						title: absPath,
+						className: "dsh-tdt-filechip dsh-tdt-filechip--inline",
+						onClick: () => {
+							onOpenFile(anchor, absPath);
+						}
+					}, icon, name) : (0, react$1.createElement)("span", {
+						key,
+						style: {
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "4px"
+						}
+					}, icon, name);
+				}))
+			}), InfoField({
+				label: t("listSectionDepends"),
+				children: view.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					flexDirection: "column",
+					gap: "4px"
+				} }, view.depends.map((dep, index) => {
+					const seq = (0, react$1.createElement)("span", { style: {
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flex: "none",
+						minWidth: "18px",
+						height: "18px",
+						padding: "0 4px",
+						boxSizing: "border-box",
+						borderRadius: "var(--tdt-radius-xs)",
+						background: "var(--tdt-chip-bg)",
+						color: "var(--tdt-fg-2)",
+						fontSize: "var(--tdt-font-xs)",
+						fontVariantNumeric: "tabular-nums"
+					} }, String(index + 1));
+					const label = `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`;
+					return onViewTask === void 0 ? (0, react$1.createElement)("span", {
+						key: dep.id,
+						style: {
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "6px",
+							minWidth: 0
+						}
+					}, seq, (0, react$1.createElement)("span", {
+						className: "dsh-tdt-ellipsis",
+						title: dep.title
+					}, label)) : (0, react$1.createElement)("button", {
+						key: dep.id,
+						type: "button",
+						className: "dsh-tdt-info-dep",
+						title: t("infoViewTask"),
+						onClick: () => {
+							onViewTask(dep.id);
+						}
+					}, seq, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, label));
+				}))
+			}));
+		}
+		/**
+		* 「上次执行」一条实例的**明细**：字段区（状态 / 任务会话 / 计划执行 / 实际开始 / 结束时间 / 执行时长 /
+		* Token / 备注）+ 产出物清单。返回的根节点是 `.dsh-tdt-info-rec-body`
+		* （末行去缝的判据挂在它身上：有产出物时字段区末行的线要保留）。
+		*/
+		function lastRunFields(props) {
+			const { t, instance, onOpenSession, onOpenFile, hideStatus = false } = props;
+			const sid = instance.session_id;
+			const canOpenSession = sid !== null && onOpenSession !== void 0;
+			const canOpenFile = sid !== null && onOpenFile !== void 0;
+			const outputs = outputsOf(instance.outputs);
+			const dur = durationMsOf(instance);
+			const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
+			const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
+			const timeOf = (iso) => iso === null ? "—" : formatDateTime(iso, {
+				seconds: true,
+				fallback: "—"
+			});
+			const sessionName = instance.session_title ?? sid ?? "";
+			const sessionIcon = (0, react$1.createElement)("span", { className: "dsh-tdt-info-session-icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 10 }));
+			const sessionLabel = (0, react$1.createElement)("span", { style: {
+				flex: "1 1 auto",
+				minWidth: 0
+			} }, (0, react$1.createElement)(MarqueeText, { text: sessionName }));
+			const sessionLinkStyle = {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "6px",
+				maxWidth: "100%",
+				boxSizing: "border-box",
+				padding: 0,
+				font: "inherit",
+				fontSize: "var(--tdt-font-sm)",
+				textAlign: "left",
+				cursor: canOpenSession ? "pointer" : "default"
+			};
+			const sessionChip = sid === null || sessionName === "" ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : canOpenSession ? (0, react$1.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-info-session",
+				title: sessionName,
+				style: sessionLinkStyle,
+				onClick: () => {
+					onOpenSession(sid);
+				}
+			}, sessionIcon, sessionLabel) : (0, react$1.createElement)("span", {
+				style: sessionLinkStyle,
+				title: sessionName
+			}, sessionIcon, sessionLabel);
+			return (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-fields" }, hideStatus ? null : InfoField({
+				label: t("colStatus"),
+				children: (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px",
+					fontWeight: 500,
+					color: infoStatusColorOf(instance.status)
+				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), statusTextOf(instance.status, t))
+			}), InfoField({
+				label: t("infoSession"),
+				children: sessionChip
+			}), InfoField({
+				label: t("colPlanned"),
+				children: timeOf(instance.scheduled_at)
+			}), InfoField({
+				label: t("colActualStart"),
+				children: timeOf(instance.dispatched_at)
+			}), InfoField({
+				label: t("infoFinishedAt"),
+				children: timeOf(instance.finished_at)
+			}), dur === null ? null : InfoField({
+				label: t("infoDuration"),
+				children: formatDurationHms(dur)
+			}), tokens === null ? null : InfoField({
+				label: t("colTokens"),
+				children: (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, tokens)
+			}), note === "" ? null : InfoField({
+				label: t("colNote"),
+				children: (0, react$1.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
+			})), outputs.length === 0 ? null : (0, react$1.createElement)("div", { style: { marginTop: "14px" } }, (0, react$1.createElement)("div", { style: {
+				marginBottom: "6px",
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-fg-3)"
+			} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column"
+			} }, outputs.map((output) => (0, react$1.createElement)("button", {
+				key: output,
+				type: "button",
+				title: output,
+				className: "dsh-tdt-filechip dsh-tdt-filechip--block",
+				disabled: !canOpenFile,
+				onClick: () => {
+					if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
+				}
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: output,
+				size: 14
+			}), (0, react$1.createElement)("span", { style: {
+				overflow: "hidden",
+				textOverflow: "ellipsis",
+				whiteSpace: "nowrap"
+			} }, baseNameOf$1(output)))))));
+		}
+		//#endregion
+		//#region src/client/task-info-css.ts
+		/** 本皮肤所属的样式域（`ui/style.ts` 的域清单里登记）。 */
+		const TASK_INFO_DOMAIN = "domain:task-info";
+		const TASK_INFO_CSS = [
+			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
+			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
+			".dsh-tdt-info-dep { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; padding: 0; font: inherit; font-size: var(--tdt-font-sm); color: var(--tdt-fg); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-width: 0; text-align: left; transition: color var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-dep:hover { color: var(--tdt-business); }",
+			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
+			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); line-height: var(--tdt-line-md); }",
+			".dsh-tdt-info-label { padding-right: 12px; }",
+			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
+			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
+			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
+			".dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }",
+			"@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }",
+			".dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }",
+			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }"
+		].join("\n");
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。卡片展开区与查看档渲染前都调用它。 */
+		function ensureTaskInfoStyle() {
+			applyStyle(TASK_INFO_DOMAIN, TASK_INFO_CSS);
+		}
+		//#endregion
+		//#region src/client/task-view.tsx
+		/** 查看档正文：只读、无输入控件、无保存动作（要改就切到编辑档）。 */
+		function TaskViewPanel(props) {
+			const { t, draft, taskId, tasks, onOpenSession, onOpenFile } = props;
+			ensureTaskInfoStyle();
+			const [last, setLast] = (0, react$1.useState)(null);
+			const [loaded, setLoaded] = (0, react$1.useState)(false);
+			const [error, setError] = (0, react$1.useState)(null);
+			(0, react$1.useEffect)(() => {
+				if (taskId === "") {
+					setLast(null);
+					setError(null);
+					setLoaded(true);
+					return;
+				}
+				let alive = true;
+				setLoaded(false);
+				setError(null);
+				setLast(null);
+				fetchInstances({
+					taskId,
+					statuses: LAST_RUN_STATUSES,
+					limit: 1
+				}).then(({ rows }) => {
+					if (!alive) return;
+					setLast(rows[0] ?? null);
+					setLoaded(true);
+				}).catch((err) => {
+					if (!alive) return;
+					setError(err instanceof Error ? err.message : String(err));
+					setLoaded(true);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [taskId]);
+			const taskById = (0, react$1.useMemo)(() => new Map(tasks.map((item) => [item.id, item])), [tasks]);
+			const view = {
+				enabled: draft.enabled,
+				scheduleLine: renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--tdt-fg)" } }),
+				workspace: draft.workspace.trim() === "" ? t("editorViewNotFilled") : draft.workspace,
+				model: draft.model.trim() === "" ? t("listFieldModelDefault") : draft.model,
+				retry: draft.maxAttempts.trim() === "" ? t("editorViewNotFilled") : draft.maxAttempts,
+				window: draft.window,
+				attachments: draft.attachments.map((item) => ({
+					name: item.name,
+					key: item.id
+				})),
+				depends: draft.deps.map((dep) => {
+					const option = taskById.get(dep.task);
+					return {
+						id: dep.task,
+						title: option === void 0 ? dep.task.slice(0, 8) : option.label,
+						enabled: option === void 0 ? true : option.enabled
+					};
+				})
+			};
+			return (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view" }, (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), (0, react$1.createElement)("div", { className: "dsh-tdt-info-cfg" }, taskInfoBaseFields({
+				t,
+				view,
+				onOpenFile
+			}))), (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("editorViewPrompt")), draft.prompt.trim() === "" ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-prompt dsh-tdt-ed-view-empty" }, t("editorViewPromptEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-prompt" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text: draft.prompt,
+				labels: MD_LABELS
+			}))), (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-head" }, (0, react$1.createElement)("span", { style: {
+				...infoGroupTitleStyle,
+				marginBottom: 0
+			} }, t("infoLastRun")), last === null ? null : (0, react$1.createElement)("span", {
+				className: "dsh-tdt-ed-view-badge",
+				style: { background: infoStatusColorOf(last.status) }
+			}), last === null ? null : (0, react$1.createElement)("span", { style: {
+				fontSize: "var(--tdt-font-sm)",
+				fontWeight: 600,
+				color: infoStatusColorOf(last.status)
+			} }, statusTextOf(last.status, t))), error !== null ? (0, react$1.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-danger)"
+			} }, `${t("cardLoadFailed")}：${error}`) : !loaded ? null : taskId === "" ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("editorViewNoRunDraft")) : last === null ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("infoNoRun")) : lastRunFields({
+				t,
+				instance: last,
+				onOpenSession,
+				onOpenFile,
+				hideStatus: true
+			})));
 		}
 		//#endregion
 		//#region src/client/task-editor.tsx
@@ -55740,7 +56277,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, onOpenSession, onOpenFile } = props;
+			const [viewTab, setViewTab] = (0, react$1.useState)(initialView ?? "edit");
+			const openedTaskRef = (0, react$1.useRef)(currentTaskId ?? "");
+			(0, react$1.useEffect)(() => {
+				const id = currentTaskId ?? "";
+				if (openedTaskRef.current !== id) {
+					openedTaskRef.current = id;
+					setViewTab(initialView ?? "edit");
+					return;
+				}
+				if (initialView !== void 0) setViewTab(initialView);
+			}, [currentTaskId, initialView]);
 			const [advancedOpen, setAdvancedOpen] = (0, react$1.useState)(false);
 			const [jsonOpen, setJsonOpen] = (0, react$1.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react$1.useState)(false);
@@ -55833,6 +56381,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [confirmDiscard, setConfirmDiscard] = (0, react$1.useState)(false);
 			const initialDraftRef = (0, react$1.useRef)(draft);
 			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);
+			(0, react$1.useEffect)(() => {
+				onDirtyChange?.(dirty);
+			}, [dirty, onDirtyChange]);
 			const bodyRef = (0, react$1.useRef)(null);
 			const savedScrollRef = (0, react$1.useRef)(0);
 			const openEditorPanel = (0, react$1.useCallback)(() => {
@@ -56635,7 +57186,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				flexDirection: "column",
 				flex: "1 1 auto",
 				minHeight: 0
-			} }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-title" }, mode === "create" ? t("editorNew") : t("editorEdit"))), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react$1.createElement)(FloatingToast, {
+			} }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-header" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headleft" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-title" }, viewTab === "view" ? draft.title.trim() === "" ? t("editorViewUntitled") : draft.title : mode === "create" ? t("editorNew") : t("editorEdit")), viewTab === "view" ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-viewtag" }, mode === "create" ? t("editorViewNewTag") : dirty ? t("editorViewDraftTag") : t("editorViewSavedTag")) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-headactions" }, enabledToast !== null ? (0, react$1.createElement)(FloatingToast, {
 				seq: enabledToast.seq,
 				tone: enabledToast.err ? "error" : "success",
 				below: true,
@@ -56643,7 +57194,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setEnabledToast(null);
 				},
 				text: enabledToast.msg
-			}) : null, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-enable dsh-tdt-switch" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+			}) : null, viewTab === "view" ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-ed-enable dsh-tdt-switch" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
 				checked: draft.enabled,
 				onChange: handleToggleEnabled,
 				label: t("editorEnabled"),
@@ -56660,7 +57211,30 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}))), (0, react$1.createElement)("div", {
 				className: "dsh-tdt-ed-body",
 				ref: bodyRef
-			}, body), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-footer" }, mode === "edit" && onDelete !== void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, viewTab === "view" ? (0, react$1.createElement)(TaskViewPanel, {
+				t,
+				draft,
+				taskId: mode === "edit" ? currentTaskId ?? "" : "",
+				tasks,
+				onOpenSession,
+				onOpenFile
+			}) : body), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-footer" }, (0, react$1.createElement)(Segmented, {
+				id: "dsh-tdt-ed-viewtab",
+				value: viewTab,
+				size: "md",
+				variant: "default",
+				items: [{
+					value: "view",
+					label: t("editorTabView")
+				}, {
+					value: "edit",
+					label: t("editorTabEdit")
+				}],
+				onChange: (next) => {
+					setViewTab(next);
+				},
+				label: t("editorTabEdit")
+			}), viewTab === "view" ? (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }) : (0, react$1.createElement)(react$1.Fragment, null, mode === "edit" && onDelete !== void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "outline",
 				size: "sm",
 				className: "dsh-tdt-ed-danger",
@@ -56733,7 +57307,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 					onSave(draft);
 				}
-			}, t("editorSave"))), confirmDeleteTask ? (0, react$1.createElement)(VersionConfirm, {
+			}, t("editorSave")))), confirmDeleteTask ? (0, react$1.createElement)(VersionConfirm, {
 				t,
 				title: t("editorDeleteTaskTitle"),
 				desc: t("editorDeleteTaskDesc"),
@@ -56777,6 +57351,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onConfirm: () => {
 					setFullPermOpen(false);
 					onSave?.(draft);
+				}
+			}) : null, pendingView !== null && pendingView !== void 0 ? (0, react$1.createElement)(VersionConfirm, {
+				t,
+				title: t("editorViewSwitchTitle"),
+				desc: t("editorViewSwitchDesc"),
+				confirmLabel: t("editorTabView"),
+				onCancel: () => {
+					onCancelPendingView?.();
+				},
+				onConfirm: () => {
+					onConfirmPendingView?.();
 				}
 			}) : null);
 			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
@@ -56906,59 +57491,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} catch {
 				return [];
 			}
-		}
-		//#endregion
-		//#region src/client/status-text.ts
-		/** 状态 → 文案键（唯一映射表）。 */
-		const STATUS_LABEL_KEYS = {
-			pending: "statusPending",
-			dispatched: "statusDispatched",
-			running: "statusRunning",
-			succeeded: "statusSucceeded",
-			failed: "statusFailed",
-			skipped: "statusSkipped",
-			unknown: "statusUnknown"
-		};
-		/** 状态 → 通用短名（zh 统一**两字**：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知，用户 2026-10-02）。 */
-		function statusTextOf(status, t) {
-			const key = STATUS_LABEL_KEYS[status];
-			return key === void 0 ? status : t(key);
-		}
-		/**
-		* **过滤桶**：界面上的「运行中 / 失败 / 成功」各对应哪些真实状态 —— 全站唯一一份。
-		*
-		* 为什么要单源（2026-10-04 评审）：卡片执行记录面板与执行记录总查询页各写了一份，
-		* 且**语义还不一样**（一个 `running` 含 pending/unknown，另一个只含 dispatched/running）⇒
-		* 同一个下拉档位在两页筛出不同结果。这里是唯一真源，两页都从这里取。
-		*/
-		const INSTANCE_STATUS_BUCKETS = {
-			running: [
-				"pending",
-				"dispatched",
-				"running",
-				"unknown"
-			],
-			failed: ["failed", "skipped"],
-			succeeded: ["succeeded"]
-		};
-		/** 桶 → 传给后端的 `status` 值（逗号分隔由调用方拼）；不认识的桶返回 undefined（不过滤，不猜）。 */
-		function statusesOfBucket(bucket) {
-			return INSTANCE_STATUS_BUCKETS[bucket];
-		}
-		/** 是否「在跑」（已派发未定终态）—— 语义查询单源：色条脉动 / 图标 / 文案都用它，不许各写一份。 */
-		function isRunningStatus(status) {
-			return status === "dispatched" || status === "running";
-		}
-		/**
-		* 状态 → 语义色调（**表现层只做「色调 → 自己的画法」**：时间轴映射成色条、卡片映射成图标）。
-		* 语义维（哪些状态算失败 / 算在跑）只在这里判一次。
-		*/
-		function statusToneOf(status) {
-			if (status === "succeeded") return "ok";
-			if (status === "failed") return "bad";
-			if (status === "skipped") return "warn";
-			if (isRunningStatus(status)) return "busy";
-			return "neutral";
 		}
 		//#endregion
 		//#region src/client/records-timeline.tsx
@@ -57192,7 +57724,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return crossFormatter === null ? hhmm : crossFormatter.format(d);
 		}
 		/** 路径末段（产出物清单上只显示文件名）。 */
-		function baseNameOf$1(path) {
+		function baseNameOf(path) {
 			const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
 			return cut < 0 ? path : path.slice(cut + 1);
 		}
@@ -57348,7 +57880,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				side: "top"
 			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null), note === "" ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				key: path,
-				label: baseNameOf$1(path),
+				label: baseNameOf(path),
 				side: "top"
 			}, (0, react$1.createElement)("button", {
 				type: "button",
@@ -57400,7 +57932,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				path,
 				size: 14
 			}), (0, react$1.createElement)(MarqueeText, {
-				text: baseNameOf$1(path),
+				text: baseNameOf(path),
 				title: path,
 				style: {
 					maxWidth: "40ch",
@@ -57425,7 +57957,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					title: t("colOutputs")
 				}, depOuts.slice(0, depOuts.length > DEP_OUT_MAX ? 4 : DEP_OUT_MAX).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					key: path,
-					label: baseNameOf$1(path),
+					label: baseNameOf(path),
 					side: "top"
 				}, (0, react$1.createElement)("button", {
 					type: "button",
@@ -57683,7 +58215,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const snapshot = row.snapshot;
 				if (typeof snapshot !== "string" || snapshot === "") return "";
 				const hit = /"workspacePath"\s*:\s*"([^"]+)"/.exec(snapshot);
-				return hit === null ? "" : baseNameOf$1(hit[1].replace(/\\"/g, "\""));
+				return hit === null ? "" : baseNameOf(hit[1].replace(/\\"/g, "\""));
 			}, [workspaceById]);
 			const footerHint = error !== null ? null : atLimit && !done ? t("recordsLimitHint") : done && rows.length > 0 ? t("recordsNoMore") : null;
 			return (0, react$1.createElement)("div", { style: {
@@ -57831,20 +58363,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			".dsh-tdt-card { background: var(--tdt-surface-1); }",
 			".dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }",
 			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
-			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
-			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
-			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
-			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); line-height: var(--tdt-line-md); }",
-			".dsh-tdt-info-label { padding-right: 12px; }",
-			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
-			".dsh-tdt-rec-alt { background: var(--tdt-plate); }",
-			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
-			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
-			".dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }",
-			"@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }",
-			".dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }",
-			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }"
+			".dsh-tdt-rec-alt { background: var(--tdt-plate); }"
 		].join("\n");
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		const ensureTaskListStyle = () => {
@@ -58294,69 +58813,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			lineHeight: "var(--tdt-line-sm)",
 			marginTop: "2px"
 		};
-		const infoWrapStyle = {
-			flex: "1 1 auto",
-			minHeight: 0,
-			display: "flex",
-			gap: "18px",
-			marginBottom: "10px"
-		};
-		const infoConfigStyle = {
-			flex: "1 1 auto",
-			minWidth: 0,
-			overflowY: "auto",
-			paddingRight: "2px"
-		};
-		const infoRecentStyle = {
-			flex: "none",
-			width: "320px",
-			overflowY: "auto",
-			borderLeft: "1px solid var(--tdt-border-faint)",
-			paddingLeft: "16px"
-		};
-		const infoGroupTitleStyle = {
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
-			fontWeight: 600,
-			marginBottom: "6px",
-			letterSpacing: "0.02em",
-			gridColumn: "1 / -1"
-		};
-		const infoGridLabelStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg-2)",
-			whiteSpace: "nowrap"
-		};
-		const infoGridValueStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg)",
-			minWidth: 0,
-			wordBreak: "break-word",
-			lineHeight: "var(--tdt-line-md)"
-		};
-		/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
-		function InfoField(props) {
-			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
-				className: "dsh-tdt-info-label",
-				style: infoGridLabelStyle
-			}, props.label), (0, react$1.createElement)("div", {
-				className: "dsh-tdt-info-value",
-				style: infoGridValueStyle
-			}, props.children));
-		}
-		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
-		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
-		/** 路径取末段（产出物 chip 显示用）。 */
-		const baseNameOf = (path) => {
-			const parts = path.split("/");
-			return parts[parts.length - 1] || path;
-		};
-		/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
-		const durationMsOf = (row) => {
-			if (row.dispatched_at === null || row.finished_at === null) return null;
-			const ms = new Date(row.finished_at).getTime() - new Date(row.dispatched_at).getTime();
-			return Number.isFinite(ms) && ms >= 0 ? ms : null;
-		};
 		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
 		*  `position: relative` 保留为内部绝对定位子元素的上下文。 */
 		const panelBoxStyle = {
@@ -58518,49 +58974,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			background: "var(--tdt-head-bg)",
 			boxShadow: "inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)"
 		};
-		/**
-		* 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
-		* 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
-		*/
-		function StatusIcon(props) {
-			const status = props.status;
-			if (status === "succeeded") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckCircleFillRegular, {
-				size: 15,
-				className: "dsh-tdt-rec-ic-ok"
-			});
-			if (status === "failed" || status === "skipped") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseCircleFillRegular, {
-				size: 15,
-				className: "dsh-tdt-rec-ic-bad"
-			});
-			if (status === "running" || status === "dispatched") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconLoadingOutlineRegular, {
-				size: 15,
-				className: "dsh-tdt-rec-ic-run"
-			});
-			return (0, react$1.createElement)("span", { className: "dsh-tdt-rec-ic-idle" });
-		}
 		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
 			color: "var(--tdt-danger)",
 			fontWeight: 600
 		} : void 0;
-		/**
-		* 「允许延迟」：ISO 8601 时长（如 `PT4H`）→ 人话（如 `4 小时`）。
-		* 编辑器下拉本来就用这套人话（4 小时 / 30 分钟 / 1 天），基础信息面板此前却把裸 `PT4H` 亮给用户看，
-		* 用户看不懂（用户 2026-10-03 拍板：不能用看不懂的符号表示）。
-		* 解析不出（畸形值）⇒ 原样返回，不编造。
-		*/
-		function windowLabel(iso, t) {
-			const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso.trim());
-			if (m === null) return iso;
-			const h = Number(m[1] ?? 0);
-			const min = Number(m[2] ?? 0);
-			const sec = Number(m[3] ?? 0);
-			if (h === 0 && min === 0 && sec === 0) return `0 ${t("unitMinutes")}`;
-			if (h > 0 && min === 0 && sec === 0 && h % 24 === 0) return `${h / 24} ${t("unitDays")}`;
-			if (h === 0 && min > 0 && sec === 0) return `${min} ${t("unitMinutes")}`;
-			if (h > 0 && min === 0 && sec === 0) return `${h} ${t("unitHours")}`;
-			return iso;
-		}
 		/**
 		* 基础信息「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走全站通用
 		* `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
@@ -58587,7 +59005,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
 		*/
 		function TaskExpandPanel(props) {
-			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, refresh } = props;
+			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props;
 			const [tab, setTab] = (0, react$1.useState)("info");
 			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}`;
 			const firstRun = (0, react$1.useRef)(true);
@@ -58720,12 +59138,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				setInfoError(null);
 				fetchInstances({
 					taskId: row.id,
-					statuses: [
-						"succeeded",
-						"failed",
-						"skipped",
-						"unknown"
-					],
+					statuses: LAST_RUN_STATUSES,
 					limit: 1
 				}).then(({ rows }) => {
 					if (!alive) return;
@@ -58829,207 +59242,47 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				logLimit,
 				runSig
 			]);
-			const renderLastRun = (instance) => {
-				if (instance === null) return (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
-				} }, t("infoNoRun"));
-				const sid = instance.session_id;
-				const canOpenSession = sid !== null && onOpenSession !== void 0;
-				const canOpenFile = sid !== null && onOpenFile !== void 0;
-				const outputs = outputsOf(instance.outputs);
-				const dur = durationMsOf(instance);
-				const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
-				const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
-				const timeOf = (iso) => iso === null ? "—" : formatDateTime(iso, {
-					seconds: true,
-					fallback: "—"
-				});
-				const sessionName = instance.session_title ?? sid ?? "";
-				const sessionIcon = (0, react$1.createElement)("span", { className: "dsh-tdt-info-session-icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 10 }));
-				const sessionLabel = (0, react$1.createElement)("span", { style: {
-					flex: "1 1 auto",
-					minWidth: 0
-				} }, (0, react$1.createElement)(MarqueeText, { text: sessionName }));
-				const sessionLinkStyle = {
-					display: "inline-flex",
-					alignItems: "center",
-					gap: "6px",
-					maxWidth: "100%",
-					boxSizing: "border-box",
-					padding: 0,
-					font: "inherit",
-					fontSize: "var(--tdt-font-sm)",
-					textAlign: "left",
-					cursor: canOpenSession ? "pointer" : "default"
+			const renderInfo = () => {
+				const view = {
+					scheduleLine,
+					nextSlot: renderNextExec(row.nextSlotAt, t),
+					workspace: row.workspace,
+					model: modelText,
+					retry: String(row.retryMax),
+					window: row.schedule.window,
+					attachments: row.attachments.map((item) => ({
+						name: item.name,
+						key: `${item.kind}:${item.name}`,
+						path: item.path ?? null,
+						anchorSessionId: item.anchorSessionId ?? null
+					})),
+					depends: row.depends.map((dep) => ({
+						id: dep.id,
+						title: dep.title,
+						enabled: dep.enabled
+					}))
 				};
-				const sessionChip = sid === null || sessionName === "" ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : canOpenSession ? (0, react$1.createElement)("button", {
-					type: "button",
-					className: "dsh-tdt-info-session",
-					title: sessionName,
-					style: sessionLinkStyle,
-					onClick: () => {
-						onOpenSession(sid);
-					}
-				}, sessionIcon, sessionLabel) : (0, react$1.createElement)("span", {
-					style: sessionLinkStyle,
-					title: sessionName
-				}, sessionIcon, sessionLabel);
-				return (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-fields" }, InfoField({
-					label: t("colStatus"),
-					children: (0, react$1.createElement)("span", { style: {
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "6px",
-						fontWeight: 500,
-						color: infoStatusColorOf(instance.status)
-					} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), statusTextOf(instance.status, t))
-				}), InfoField({
-					label: t("infoSession"),
-					children: sessionChip
-				}), InfoField({
-					label: t("colPlanned"),
-					children: timeOf(instance.scheduled_at)
-				}), InfoField({
-					label: t("colActualStart"),
-					children: timeOf(instance.dispatched_at)
-				}), InfoField({
-					label: t("infoFinishedAt"),
-					children: timeOf(instance.finished_at)
-				}), dur === null ? null : InfoField({
-					label: t("infoDuration"),
-					children: formatDurationHms(dur)
-				}), tokens === null ? null : InfoField({
-					label: t("colTokens"),
-					children: (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, tokens)
-				}), note === "" ? null : InfoField({
-					label: t("colNote"),
-					children: (0, react$1.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
-				})), outputs.length === 0 ? null : (0, react$1.createElement)("div", { style: { marginTop: "14px" } }, (0, react$1.createElement)("div", { style: {
-					marginBottom: "6px",
+				return (0, react$1.createElement)("div", { style: panelBoxStyle }, (0, react$1.createElement)("div", { style: infoWrapStyle }, (0, react$1.createElement)("div", {
+					className: "dsh-tdt-info-cfg",
+					style: infoConfigStyle
+				}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), taskInfoBaseFields({
+					t,
+					view,
+					onOpenFile,
+					onViewTask
+				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-danger)"
+				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, { label: t("loading") }) : infoLast === null ? (0, react$1.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"
-				} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
-					display: "flex",
-					flexDirection: "column"
-				} }, outputs.map((output) => (0, react$1.createElement)("button", {
-					key: output,
-					type: "button",
-					title: output,
-					className: "dsh-tdt-filechip dsh-tdt-filechip--block",
-					disabled: !canOpenFile,
-					onClick: () => {
-						if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
-					}
-				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-					path: output,
-					size: 14
-				}), (0, react$1.createElement)("span", { style: {
-					overflow: "hidden",
-					textOverflow: "ellipsis",
-					whiteSpace: "nowrap"
-				} }, baseNameOf(output)))))));
+				} }, t("infoNoRun")) : lastRunFields({
+					t,
+					instance: infoLast,
+					onOpenSession,
+					onOpenFile
+				}))));
 			};
-			const renderInfo = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, (0, react$1.createElement)("div", { style: infoWrapStyle }, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-info-cfg",
-				style: infoConfigStyle
-			}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), InfoField({
-				label: t("listFieldSchedule"),
-				children: scheduleLine
-			}), InfoField({
-				label: t("infoNextExec"),
-				children: renderNextExec(row.nextSlotAt, t)
-			}), InfoField({
-				label: t("listFieldWorkspace"),
-				children: row.workspace
-			}), InfoField({
-				label: t("listFieldModel"),
-				children: modelText
-			}), InfoField({
-				label: t("listFieldRetry"),
-				children: String(row.retryMax)
-			}), InfoField({
-				label: t("listFieldWindow"),
-				children: windowLabel(row.schedule.window, t)
-			}), InfoField({
-				label: t("listSectionAttachments"),
-				children: row.attachments.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
-					display: "flex",
-					flexWrap: "wrap",
-					gap: "2px 10px"
-				} }, row.attachments.map((item) => {
-					const absPath = item.path;
-					const anchor = item.anchorSessionId;
-					const icon = (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-						path: item.name,
-						size: 14
-					});
-					const name = (0, react$1.createElement)(MarqueeText, {
-						text: item.name,
-						title: item.name,
-						style: {
-							maxWidth: "40ch",
-							minWidth: 0
-						}
-					});
-					return absPath !== void 0 && anchor !== void 0 && onOpenFile !== void 0 ? (0, react$1.createElement)("button", {
-						key: `${item.kind}:${item.name}`,
-						type: "button",
-						title: absPath,
-						className: "dsh-tdt-filechip dsh-tdt-filechip--inline",
-						onClick: () => {
-							onOpenFile(anchor, absPath);
-						}
-					}, icon, name) : (0, react$1.createElement)("span", {
-						key: `${item.kind}:${item.name}`,
-						style: {
-							display: "inline-flex",
-							alignItems: "center",
-							gap: "4px"
-						}
-					}, icon, name);
-				}))
-			}), InfoField({
-				label: t("listSectionDepends"),
-				children: row.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
-					display: "flex",
-					flexDirection: "column",
-					gap: "4px"
-				} }, row.depends.map((dep, index) => (0, react$1.createElement)("span", {
-					key: dep.id,
-					style: {
-						display: "inline-flex",
-						alignItems: "center",
-						gap: "6px",
-						minWidth: 0
-					}
-				}, (0, react$1.createElement)("span", { style: {
-					display: "inline-flex",
-					alignItems: "center",
-					justifyContent: "center",
-					flex: "none",
-					minWidth: "18px",
-					height: "18px",
-					padding: "0 4px",
-					boxSizing: "border-box",
-					borderRadius: "var(--tdt-radius-xs)",
-					background: "var(--tdt-chip-bg)",
-					color: "var(--tdt-fg-2)",
-					fontSize: "var(--tdt-font-xs)",
-					fontVariantNumeric: "tabular-nums"
-				} }, String(index + 1)), (0, react$1.createElement)("span", {
-					style: {
-						minWidth: 0,
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap"
-					},
-					title: dep.title
-				}, `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`))))
-			})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, { label: t("loading") }) : renderLastRun(infoLast))));
 			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, { label: t("loading") }) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(SelectField, {
 				value: recStatus,
 				options: [
@@ -59149,7 +59402,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					key: output,
-					label: baseNameOf(output),
+					label: baseNameOf$1(output),
 					side: "top"
 				}, (0, react$1.createElement)("button", {
 					type: "button",
@@ -59372,7 +59625,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, t("editorEdit")))), confirmDelete ? renderConfirm() : null, confirmRun ? renderRunConfirm() : null);
 		}
 		function TaskCard(props) {
-			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props;
+			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh } = props;
 			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
 			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
 			return (0, react$1.createElement)("div", {
@@ -59466,13 +59719,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onRunNow,
 				onOpenFile,
 				onOpenSession,
+				onViewTask,
 				refresh
 			}) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props;
+			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props;
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
+			ensureTaskInfoStyle();
 			ensureTaskEditorStyle();
 			ensureToastStyle();
 			const [filter, setFilter] = (0, react$1.useState)("all");
@@ -59599,6 +59854,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setOpenId((cur) => cur === row.id ? null : row.id);
 				},
 				onEdit,
+				onViewTask,
 				onDelete,
 				onRunNow,
 				onOpenFile,
@@ -60315,15 +60571,30 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					});
 				} catch {}
 			};
-			/** 打开「编辑任务」：从 tasksInline 取**完整定义**反解成草稿（不是摘要行）。 */
-			const openEditor = (id) => {
-				let found = null;
+			/**
+			* 从 `tasksInline`（宿主 scope 段）取某个任务的**完整定义**（不是 overview 摘要行）。
+			* 未找到 / JSON 坏 ⇒ `null`（调用方给可见提示，**不编造空定义**）。
+			* 编辑与查看两个入口共用这一份，不许各写一遍解析。
+			*/
+			const findDefinition = (id) => {
 				try {
 					const arr = JSON.parse(effectiveInline.trim() === "" ? "[]" : effectiveInline);
-					if (Array.isArray(arr)) found = arr.find((item) => item !== null && typeof item === "object" && item.id === id) ?? null;
+					if (!Array.isArray(arr)) return null;
+					return arr.find((item) => item !== null && typeof item === "object" && item.id === id) ?? null;
 				} catch {
-					found = null;
+					return null;
 				}
+			};
+			/** 打开「编辑任务」（默认停在**编辑档**）：完整定义反解成草稿。 */
+			const openEditor = (id) => {
+				if (editor !== null && editor.id === id) {
+					setEditor({
+						...editor,
+						view: "edit"
+					});
+					return;
+				}
+				const found = findDefinition(id);
 				if (found === null) {
 					setViewErr("找不到该任务的定义，无法编辑（任务表可能刚被改动，请刷新后重试）");
 					return;
@@ -60333,9 +60604,56 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					mode: "edit",
 					id,
 					draft: definitionToDraft(found),
-					history: null
+					history: null,
+					view: "edit"
 				});
 				loadHistory(id);
+			};
+			/** 待确认的「放弃未保存修改、改去查看另一个任务」。 */
+			const [pendingView, setPendingView] = (0, react$1.useState)(null);
+			/** 抽屉上报的脏状态（**只存不算**：脏判定真源在抽屉内的 `initialDraftRef` 比对）。 */
+			const editorDirtyRef = (0, react$1.useRef)(false);
+			/** 真正进查看档（不检查未保存冲突）。 */
+			const openViewerNow = (id) => {
+				const found = findDefinition(id);
+				if (found === null) {
+					setViewErr("找不到该任务的定义，无法查看（任务表可能刚被改动，请刷新后重试）");
+					return;
+				}
+				setEditorError(null);
+				setEditor({
+					mode: "edit",
+					id,
+					draft: definitionToDraft(found),
+					history: null,
+					view: "view"
+				});
+				loadHistory(id);
+			};
+			/**
+			* 打开「查看档」：点任务卡片展开区「前置任务」行的任务名进来（本期唯一入口）。
+			* ⚠️ 正在编辑**另一个任务**且草稿有未保存修改 ⇒ 先弹确认（用户 2026-10-05 拍板），
+			* 确认后才切过去 —— **不静默丢弃**用户改了一半的内容。
+			*/
+			const openViewer = (id) => {
+				if (editor !== null && editor.id !== id && editorDirtyRef.current) {
+					setPendingView({ id });
+					return;
+				}
+				if (editor !== null && editor.id === id) {
+					setEditor({
+						...editor,
+						view: "view"
+					});
+					return;
+				}
+				openViewerNow(id);
+			};
+			/** 确认放弃修改、切去看目标任务。 */
+			const confirmPendingView = () => {
+				const target = pendingView;
+				setPendingView(null);
+				if (target !== null) openViewerNow(target.id);
 			};
 			/**
 			* 启用开关实时写回（编辑态专用，用户 2026-09-30）：POST /tasks/enabled { id, enabled }。
@@ -60759,7 +61077,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						mode: "create",
 						id: "",
 						draft: emptyTaskDraft(),
-						history: null
+						history: null,
+						view: "edit"
 					});
 				}
 			}, `＋ ${t("editorNew")}`))))), tab === "records" ? (0, react$1.createElement)(RecordsTimelineView, {
@@ -60786,6 +61105,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				} : void 0,
 				onToggleEnabled: toggleTaskEnabled,
 				onRunNow: runTaskNow,
+				onViewTask: openViewer,
 				workspaces: editorOptions.workspaces
 			}) : tab === "debug" ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react$1.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : null), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
 				t,
@@ -60884,6 +61204,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					deleteVersion(file);
 				},
 				onToggleEnabled: (enabled) => toggleTaskEnabled(editor.id, enabled),
+				initialView: editor.view,
+				onDirtyChange: (next) => {
+					editorDirtyRef.current = next;
+				},
+				pendingView,
+				onConfirmPendingView: confirmPendingView,
+				onCancelPendingView: () => {
+					setPendingView(null);
+				},
+				onOpenSession: viewSession !== null ? (sessionId) => {
+					openView(sessionId);
+				} : void 0,
+				onOpenFile: canPreview ? openFile : void 0,
 				workspaceFiles,
 				officeToPdf,
 				workspaceAnchors: editorOptions.workspaceAnchors

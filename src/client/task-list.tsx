@@ -15,11 +15,18 @@
 import { createElement as h, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, formatYmd, pad2 } from './format'
 import {
-  FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
-  IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconFolderOpenOutlineRegular,
-  IconLoadingOutlineRegular, IconPlayOutlineRegular, IconSearchOutlineRegular,
+  FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular,
+  IconClockOutlineRegular, IconEditOutlineRegular, IconFolderOpenOutlineRegular,
+  IconPlayOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+// 任务信息展示层（2026-10-05 上提为共享件）：基础信息纸表格 / 上次执行明细 / 状态图标 / 人话转换。
+// ⚠️ **与右侧栏「查看档」共用同一份实现** —— 要改字段怎么翻译、怎么渲染，去 `task-info.tsx`，不许在本文件再抄一份。
+import {
+  baseNameOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
+  LAST_RUN_STATUSES, lastRunFields, StatusIcon, taskInfoBaseFields, type TaskInfoBaseView,
+} from './task-info'
+import { ensureTaskInfoStyle } from './task-info-css'
 import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
 // 三面板数据通道（决策 55）：执行记录 / 日志 / 事件时间线，与未来总查询页共用同一套 fetch。
@@ -121,37 +128,11 @@ const TASK_LIST_CSS = [
   // 基础信息右栏「产出物」文件行 / 附件行：hover 给一层底色（用户 2026-10-03）。
   // ⚠️ 2026-10-04 **已上提基础层**为 `.dsh-tdt-filechip`（`ui/controls-css.ts`，带 --block / --inline 两个形态类）
   // —— 执行记录页展开区要用同一种观感，这里不再各写一份。
-  // 基础信息右栏「任务会话」（用户 2026-10-03 四次修订 · 定稿）：**不要虚线、不要边框 / 白框**；
-  // = 图标包一个**灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。
-  // ⚠️ ① `border: 0` 必须先清掉**按钮默认边框**（否则会留一圈白框）；
-  //    ② color 必须写在 class（inline 会盖掉 :hover，鼠标上去就不变色）。
-  '.dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }',
-  // hover **只让文字变蓝**：放大镜和它的灰框都保持原样（用户 2026-10-03）。图标框自带固定色 ⇒ 不跟随文字变色。
-  '.dsh-tdt-info-session:hover { color: var(--tdt-business); }',
-  '.dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }',
-  // 基础信息「标签—值」两栏：整栏**共用一个 grid** ⇒ 标签列按当前语言最长标签**自动定宽**
-  // （中文≈48px、英文≈95px），零留白且各行对齐。原固定 66px 在英文下被「Preceding tasks」撑爆、
-  // 溢出去压到值上（用户 2026-10-03 反馈）。InfoField 返回 Fragment，label / value 是直接子格。
-  '.dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }',
-  // 每格自带底边缝：label 与 value 相邻（**不用 column-gap**）⇒ 两条缝连成整行线；标签右侧留白当列间距。
-  // ⚠️ **行高必须两格同一个**（用户 2026-10-03 反馈「字全贴上面那条线」）：grid 是 `align-items: stretch`，
-  // 格子高度由行内最高的那格决定 ⇒ label 若继承宿主行高（与 value 的 `--tdt-line-md` 不等），矮的那格内容
-  // 会被顶对齐、看着贴上边线。统一成 `--tdt-line-md` 后：单行 = 上下居中；值多行时标签与值第一行齐平。
-  '.dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); line-height: var(--tdt-line-md); }',
-  '.dsh-tdt-info-label { padding-right: 12px; }',
-  // 每栏**最底下那一条线**去掉（用户 2026-10-03 二次修订）：判据不是写死某一行（如 Token），而是由
-  // DOM 实际决定 —— 左栏最后一块就是字段区；右栏**有产出物时最后一块是产出物区** ⇒ 字段区末行
-  // 只有"它后面没别的块"（`:last-child`）时才去缝，否则会把 Token 的线也去掉、让字段区与产出物断线。
-  '.dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }',
+  // ⚠️ 基础信息「标签—值」纸表格 / 「任务会话」/ 前置任务可点 / 状态图标配色 = **2026-10-05 已上提共享层**：
+  // 卡片展开区与右侧栏**查看档**共用同一份 ⇒ 规则迁至 `task-info-css.ts`（域 `domain:task-info`，
+  // 两处渲染前各调一次 `ensureTaskInfoStyle()`）。这里只留执行记录表格自己那一条。
   // 执行记录表格（用户 2026-10-02）：**不用实线分隔**，改行**交错浅底**（斑马纹，很浅的灰 `--tdt-plate`）。
   '.dsh-tdt-rec-alt { background: var(--tdt-plate); }',
-  // 状态图标配色（官方图标吃 currentColor）：圆勾绿 / 圆叉红 / 转圈主题色。
-  '.dsh-tdt-rec-ic-ok { color: var(--tdt-success); }',
-  '.dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }',
-  '.dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }',
-  '@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }',
-  '.dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }',
-  '@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }',
 ].join('\n')
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。 */
@@ -695,50 +676,9 @@ const cardStyle: Record<string, string | number> = {
 const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-md)' }
 const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
 const faintStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
-// 基础信息改版（用户 2026-10-03）：左「任务配置」+ 右「上次执行」两栏；纸表格风格，字段不再挤成一坨。
-// 右栏**定宽**（用户：窗口拖动时让左边变、右边别跟着变）；右栏内容可能多（产出物）⇒ **只滚右栏**。
-// `marginBottom: 10` 与面板顶部虚线下的 10px 间距对称 ⇒ 右栏滚动条上下离虚线一样远（用户 2026-10-03）。
-const infoWrapStyle: Record<string, string | number> = { flex: '1 1 auto', minHeight: 0, display: 'flex', gap: '18px', marginBottom: '10px' }
-const infoConfigStyle: Record<string, string | number> = { flex: '1 1 auto', minWidth: 0, overflowY: 'auto', paddingRight: '2px' }
-const infoRecentStyle: Record<string, string | number> = {
-  flex: 'none', width: '320px', overflowY: 'auto',
-  borderLeft: '1px solid var(--tdt-border-faint)', paddingLeft: '16px',
-}
-const infoGroupTitleStyle: Record<string, string | number> = {
-  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', fontWeight: 600,
-  marginBottom: '6px', letterSpacing: '0.02em',
-  // 左栏标题在共用 grid 里 ⇒ 横跨标签 / 值两列（右栏标题不在 grid 内，此属性对其无影响）。
-  gridColumn: '1 / -1',
-}
-// 「标签—值」两格**不在这里定宽**：列宽由**整栏共用的 grid** 决定（见 TASK_LIST_CSS 里
-// `.dsh-tdt-info-cfg` / `.dsh-tdt-info-rec-fields`），标签列按当前语言的最长标签**自动定宽**
-// （中文≈48px、英文≈95px）⇒ 中英都不留白、也不溢出。底边缝与内边距一律走 class，
-// 因为 `:nth-last-child` 收敛末行那条线的前提是"边框来自 CSS"，内联会盖掉它。
-const infoGridLabelStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', whiteSpace: 'nowrap' }
-const infoGridValueStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg)', minWidth: 0, wordBreak: 'break-word', lineHeight: 'var(--tdt-line-md)' }
-/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
-function InfoField(props: { label: string; children: ReactNode }): ReturnType<typeof h> {
-  return h(Fragment, null,
-    h('span', { className: 'dsh-tdt-info-label', style: infoGridLabelStyle }, props.label),
-    h('div', { className: 'dsh-tdt-info-value', style: infoGridValueStyle }, props.children),
-  )
-}
-/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
-const infoStatusColorOf = (status: string | null): string =>
-  status === 'succeeded' ? 'var(--tdt-success)'
-    : status === 'failed' || status === 'skipped' ? 'var(--tdt-danger)'
-      : 'var(--tdt-fg-2)'
-/** 路径取末段（产出物 chip 显示用）。 */
-const baseNameOf = (path: string): string => {
-  const parts = path.split('/')
-  return parts[parts.length - 1] || path
-}
-/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
-const durationMsOf = (row: InstanceRow): number | null => {
-  if (row.dispatched_at === null || row.finished_at === null) return null
-  const ms = new Date(row.finished_at).getTime() - new Date(row.dispatched_at).getTime()
-  return Number.isFinite(ms) && ms >= 0 ? ms : null
-}
+// 基础信息的布局常量（`infoWrapStyle` / `infoConfigStyle` / `infoRecentStyle` / `infoGroupTitleStyle`）
+// 与纸表格一行（`InfoField`）、状态→色（`infoStatusColorOf`）、`baseNameOf` / `durationMsOf`
+// 已于 2026-10-05 **上提共享层** ⇒ `task-info.tsx`（卡片展开区与右侧栏「查看档」共用同一份）。
 // ── 展开区三面板（决策 55，design/features/task-expand-panels.md §三）──────────────────
 /** 内容区**定高**（用户 2026-10-02：矮内容显矮、切 tab 高度蹦）——三个 tab 一律同高，内容多就内部滚。 */
 const PANEL_H = 360
@@ -875,40 +815,11 @@ const recHeadStyle: Record<string, string | number> = {
   // （用户 2026-10-02 揪出）。box-shadow 属于 th 自身 ⇒ 跟着表头不动。
   boxShadow: 'inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)',
 }
-/**
- * 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
- * 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
- */
-function StatusIcon(props: { status: string }): ReturnType<typeof h> {
-  const status = props.status
-  if (status === 'succeeded') return h(IconCheckCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-ok' })
-  if (status === 'failed' || status === 'skipped') return h(IconCloseCircleFillRegular, { size: 15, className: 'dsh-tdt-rec-ic-bad' })
-  if (status === 'running' || status === 'dispatched') return h(IconLoadingOutlineRegular, { size: 15, className: 'dsh-tdt-rec-ic-run' })
-  return h('span', { className: 'dsh-tdt-rec-ic-idle' })
-}
 /** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
 const statusStyleOf = (status: string): Record<string, string | number> | undefined =>
   status === 'failed' || status === 'skipped' ? { color: 'var(--tdt-danger)', fontWeight: 600 } : undefined
 
-/**
- * 「允许延迟」：ISO 8601 时长（如 `PT4H`）→ 人话（如 `4 小时`）。
- * 编辑器下拉本来就用这套人话（4 小时 / 30 分钟 / 1 天），基础信息面板此前却把裸 `PT4H` 亮给用户看，
- * 用户看不懂（用户 2026-10-03 拍板：不能用看不懂的符号表示）。
- * 解析不出（畸形值）⇒ 原样返回，不编造。
- */
-function windowLabel(iso: string, t: Translate): string {
-  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso.trim())
-  if (m === null) return iso
-  const h = Number(m[1] ?? 0)
-  const min = Number(m[2] ?? 0)
-  const sec = Number(m[3] ?? 0)
-  if (h === 0 && min === 0 && sec === 0) return `0 ${t('unitMinutes')}`
-  // 24 小时整 ⇒ 规整为「1 天」（与编辑器下拉同口径）。
-  if (h > 0 && min === 0 && sec === 0 && h % 24 === 0) return `${h / 24} ${t('unitDays')}`
-  if (h === 0 && min > 0 && sec === 0) return `${min} ${t('unitMinutes')}`
-  if (h > 0 && min === 0 && sec === 0) return `${h} ${t('unitHours')}`
-  return iso
-}
+// `windowLabel`（「允许延迟」ISO → 人话）已于 2026-10-05 上提 `task-info.tsx`（查看档也要用同一份）。
 
 /**
  * 基础信息「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走全站通用
@@ -947,10 +858,12 @@ function TaskExpandPanel(props: {
    * 这样「从哪进」渲染都一样。禁止再加上 heading / outputs / snapshot 这类参数。
    */
   onOpenSession?: (sessionId: string) => void
+  /** 点「前置任务」行的任务名 ⇒ 打开该任务的**查看档**（2026-10-05）；不给则名字是纯文本。 */
+  onViewTask?: (id: string) => void
   /** 即时拉一次 overview（来自顶层 `useTaskOverview`）：任务跑完时让左栏「下次预计执行」同步刷新。 */
   refresh: () => void
 }) {
-  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, refresh } = props
+  const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
   // 运行态签名（用户 2026-10-03）：**页面开着、任务跑完了 ⇒ 打开着的面板要自动重读**，
   // 否则用户看到的一直是上一次执行留下的状态。签名只取「会变的运行态字段」⇒ 轮询没变化时不会触发重取；
@@ -1055,7 +968,7 @@ function TaskExpandPanel(props: {
     let alive = true
     setInfoLoading(true)
     setInfoError(null)
-    fetchInstances({ taskId: row.id, statuses: ['succeeded', 'failed', 'skipped', 'unknown'], limit: 1 })
+    fetchInstances({ taskId: row.id, statuses: LAST_RUN_STATUSES, limit: 1 })
       .then(({ rows }) => {
         if (!alive) return
         setInfoLast(rows[0] ?? null)
@@ -1136,169 +1049,54 @@ function TaskExpandPanel(props: {
     return () => { alive = false }
   }, [tab, row.id, logKeyword, logRange, logLimit, runSig])
 
-  // 右栏「上次执行」：用与左栏同一套「标签—值」网格排布
-  //（状态 / 计划执行 / 实际开始 / 结束时间 / 执行时长 / Token / 备注），
-  // 下面再挂「查看会话」与产出物列表（产出物行 hover 有底色，走 CSS class）。
-  const renderLastRun = (instance: InstanceRow | null): ReturnType<typeof h> => {
-    if (instance === null) {
-      return h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('infoNoRun'))
+  // 右栏「上次执行」的明细（状态 / 计划执行 / 实际开始 / 结束时间 / 执行时长 / Token / 备注 + 产出物）
+  // 已于 2026-10-05 **上提共享层** ⇒ `task-info.tsx` 的 `lastRunFields()`（与右侧栏「查看档」共用同一份）。
+  // 空态 / 加载 / 失败三种外壳留在调用处（下面 `renderInfo`）。
+
+  const renderInfo = (): ReturnType<typeof h> => {
+    // 基础信息块的**视图模型**（2026-10-05）：把 overview 摘要行翻译成共享展示层认识的形状，
+    // 字段怎么翻译、怎么渲染全交给 `task-info.tsx`（与右侧栏「查看档」同一份实现，不许在本文件另铺一遍）。
+    const view: TaskInfoBaseView = {
+      scheduleLine,
+      // 预计执行：社交化相对时间（LiveText 每秒自刷）+ 具体时刻，见 `renderNextExec`。
+      nextSlot: renderNextExec(row.nextSlotAt, t),
+      workspace: row.workspace,
+      model: modelText,
+      retry: String(row.retryMax),
+      window: row.schedule.window,
+      attachments: row.attachments.map(item => ({
+        name: item.name,
+        // key 带来源前缀：同一文件名分属 link / upload 时也要能区分。
+        key: `${item.kind}:${item.name}`,
+        path: item.path ?? null,
+        anchorSessionId: item.anchorSessionId ?? null,
+      })),
+      depends: row.depends.map(dep => ({ id: dep.id, title: dep.title, enabled: dep.enabled })),
     }
-    const sid = instance.session_id
-    const canOpenSession = sid !== null && onOpenSession !== undefined
-    const canOpenFile = sid !== null && onOpenFile !== undefined
-    const outputs = outputsOf(instance.outputs)
-    const dur = durationMsOf(instance)
-    const tokens = instance.token_in === null && instance.token_out === null
-      ? null
-      : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0))
-    const note = instance.note === null || instance.note === undefined ? '' : instance.note
-    const timeOf = (iso: string | null): string => iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
-    // 「任务会话」（用户 2026-10-03 四次修订 · 定稿）：**无虚线、无边框**——小放大镜图标包一个
-    // **灰色小标签框**（提示可查看）+ 会话名，hover 整体变蓝。颜色 / 图标框都在 class 里（inline 会盖掉 :hover）。
-    // 会话名由服务端按 `sessionTitleOf` 单源下发；缺名（旧行）退回会话 id，仍可点。
-    const sessionName = instance.session_title ?? sid ?? ''
-    const sessionIcon = h('span', { className: 'dsh-tdt-info-session-icon' }, h(IconSearchOutlineRegular, { size: 10 }))
-    const sessionLabel = h('span', { style: { flex: '1 1 auto', minWidth: 0 } }, h(MarqueeText, { text: sessionName }))
-    const sessionLinkStyle: Record<string, string | number> = {
-      display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', boxSizing: 'border-box',
-      padding: 0, font: 'inherit', fontSize: 'var(--tdt-font-sm)', textAlign: 'left',
-      cursor: canOpenSession ? 'pointer' : 'default',
-    }
-    const sessionChip = sid === null || sessionName === ''
-      ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '—')
-      : canOpenSession
-        ? h('button', {
-          type: 'button', className: 'dsh-tdt-info-session', title: sessionName, style: sessionLinkStyle,
-          onClick: () => { onOpenSession(sid) },
-        }, sessionIcon, sessionLabel)
-        : h('span', { style: sessionLinkStyle, title: sessionName }, sessionIcon, sessionLabel)
-    // 根容器包住「字段区 + 产出物区」两块 ⇒ CSS 才能按**整栏实际最后一块**判末行（用户 2026-10-03）。
-    return h('div', { className: 'dsh-tdt-info-rec-body' },
-      h('div', { className: 'dsh-tdt-info-rec-fields' },
-        InfoField({
-          label: t('colStatus'),
-          children: h('span', {
-            style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 500, color: infoStatusColorOf(instance.status) },
-          },
-            h(StatusIcon, { status: instance.status }),
-            statusTextOf(instance.status, t),
-          ),
-        }),
-        // 任务会话：紧跟在状态下面（用户 2026-10-03）。
-        InfoField({ label: t('infoSession'), children: sessionChip }),
-        // 时间四件套（用户 2026-10-03：空间够，计划 / 开始 / 结束 / 时长都放上）。
-        InfoField({ label: t('colPlanned'), children: timeOf(instance.scheduled_at) }),
-        InfoField({ label: t('colActualStart'), children: timeOf(instance.dispatched_at) }),
-        InfoField({ label: t('infoFinishedAt'), children: timeOf(instance.finished_at) }),
-        dur === null ? null : InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) }),
-        tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: formatTokenDetail(instance) }, tokens) }),
-        note === ''
-          ? null
-          : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--tdt-danger)' } }, note) }),
-      ),
-      outputs.length === 0
-        ? null
-        : h('div', { style: { marginTop: '14px' } },
-          h('div', { style: { marginBottom: '6px', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('colOutputs')),
-          h('div', { style: { display: 'flex', flexDirection: 'column' } },
-            outputs.map(output => h('button', {
-              key: output, type: 'button', title: output,
-              // 行式文件按钮 = 基础层唯一实现（2026-10-04 收编；--block = 撑满父宽、一项一行）
-              className: 'dsh-tdt-filechip dsh-tdt-filechip--block',
-              disabled: !canOpenFile,
-              onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },
-            },
-              h(FileTypeIcon, { path: output, size: 14 }),
-              h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, baseNameOf(output)),
-            )),
-          ),
+    return h('div', { style: panelBoxStyle },
+      // 两栏：左配置（约 58%）+ 右最近执行（约 42%，**独立滚动**）；整块仍在同一个定高盒内 ⇒ 切 tab 高度不蹦。
+      h('div', { style: infoWrapStyle },
+        // 左栏：任务配置（纸表格：标签 + 值，逐行留白；不再显示提示词）。
+        h('div', { className: 'dsh-tdt-info-cfg', style: infoConfigStyle },
+          h('div', { style: infoGroupTitleStyle }, t('infoSectionConfig')),
+          // 前置任务名可点（2026-10-05）⇒ 右侧栏以查看档打开它（`onViewTask`，暂未接时为纯文本）。
+          taskInfoBaseFields({ t, view, onOpenFile, onViewTask }),
         ),
+        // 右栏：只看「上次执行」一条（用户 2026-10-03：别那么麻烦，成功显成功、失败显失败），内容多只滚这一栏。
+        h('div', { style: infoRecentStyle },
+          h('div', { style: infoGroupTitleStyle }, t('infoLastRun')),
+          infoError !== null
+            ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
+            : infoLoading && !infoLoaded
+              // 忙碌指示**统一走右下角那个共用 Loading**（用户铁律：全站只有一个 loading，不在这里另写文字）。
+              ? h(Loading, { label: t('loading') })
+              : infoLast === null
+                ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('infoNoRun'))
+                : lastRunFields({ t, instance: infoLast, onOpenSession, onOpenFile }),
+        ),
+      ),
     )
   }
-
-  const renderInfo = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
-    // 两栏：左配置（约 58%）+ 右最近执行（约 42%，**独立滚动**）；整块仍在同一个定高盒内 ⇒ 切 tab 高度不蹦。
-    h('div', { style: infoWrapStyle },
-      // 左栏：任务配置（纸表格：标签 + 值，逐行留白；不再显示提示词）。
-      h('div', { className: 'dsh-tdt-info-cfg', style: infoConfigStyle },
-        h('div', { style: infoGroupTitleStyle }, t('infoSectionConfig')),
-        InfoField({ label: t('listFieldSchedule'), children: scheduleLine }),
-        // 预计执行（用户 2026-10-03）：排期之下补一行，两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…），
-        // 右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间走全站通用 `relativeFuture`（与卡片「下次执行」同口径），
-        // 且用 LiveText 每秒自刷，避免写死成会过期的快照。无下次（停用 / 一次性已收尾）⇒ 显示「无」。
-        InfoField({ label: t('infoNextExec'), children: renderNextExec(row.nextSlotAt, t) }),
-        InfoField({ label: t('listFieldWorkspace'), children: row.workspace }),
-        InfoField({ label: t('listFieldModel'), children: modelText }),
-        InfoField({ label: t('listFieldRetry'), children: String(row.retryMax) }),
-        InfoField({ label: t('listFieldWindow'), children: windowLabel(row.schedule.window, t) }),
-        InfoField({
-          label: t('listSectionAttachments'),
-          children: row.attachments.length === 0
-            ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
-            : h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '2px 10px' } },
-              row.attachments.map(item => {
-                // 服务端已给出绝对路径 + 预览锚点会话时，附件可点开预览（同一 openFile 入口）；
-                // 缺任一个（老版本 / 拿不到锚点）⇒ 退回纯展示，绝不造假。
-                const absPath = item.path
-                const anchor = item.anchorSessionId
-                const icon = h(FileTypeIcon, { path: item.name, size: 14 })
-                // 文件名**限宽**（用户 2026-10-03：这里原先**完全不限宽**，超长会把整行撑爆）。
-                // 只给上限、不设下限（短名就短着）；默认超长出省略号，hover 时跑马灯滚动看全名。
-                // 用 MarqueeText：文字只在我自己的裁剪盒里跑（外层 overflow:hidden），图标是隔壁 flex 项，
-                // 跑马灯永远不会压到前面的文件类型图标（用户 2026-10-03 重申：别盖住图标）。
-                // 宽度与**会话弹窗顶部区同名**（.dsh-tdt-sv-tfc-label）取同一口径 40ch。
-                const name = h(MarqueeText, {
-                  text: item.name,
-                  title: item.name,
-                  style: { maxWidth: '40ch', minWidth: 0 },
-                })
-                return absPath !== undefined && anchor !== undefined && onOpenFile !== undefined
-                  ? h('button', {
-                    // 行式文件按钮 = 基础层唯一实现（2026-10-04 收编；--inline = 内容宽、跟在文字后头）
-                    key: `${item.kind}:${item.name}`, type: 'button', title: absPath,
-                    className: 'dsh-tdt-filechip dsh-tdt-filechip--inline',
-                    onClick: () => { onOpenFile(anchor, absPath) },
-                  }, icon, name)
-                  : h('span', { key: `${item.kind}:${item.name}`, style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } }, icon, name)
-              }),
-            ),
-        }),
-        InfoField({
-          label: t('listSectionDepends'),
-          children: row.depends.length === 0
-            ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
-            // 每个前置任务前面带 **1、2、3 序号**（用户 2026-10-03：不然像两段莫名其妙的话摆在这儿）。
-            : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
-              row.depends.map((dep, index) => h('span', {
-                key: dep.id, style: { display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0 },
-              },
-                h('span', {
-                  style: {
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
-                    minWidth: '18px', height: '18px', padding: '0 4px', boxSizing: 'border-box',
-                    borderRadius: 'var(--tdt-radius-xs)', background: 'var(--tdt-chip-bg)',
-                    color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)',
-                    fontVariantNumeric: 'tabular-nums',
-                  },
-                }, String(index + 1)),
-                h('span', { style: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: dep.title },
-                  `${dep.title}${dep.enabled ? '' : t('listDisabledTag')}`),
-              )),
-            ),
-        }),
-      ),
-      // 右栏：只看「上次执行」一条（用户 2026-10-03：别那么麻烦，成功显成功、失败显失败），内容多只滚这一栏。
-      h('div', { style: infoRecentStyle },
-        h('div', { style: infoGroupTitleStyle }, t('infoLastRun')),
-        infoError !== null
-          ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
-          : infoLoading && !infoLoaded
-            // 忙碌指示**统一走右下角那个共用 Loading**（用户铁律：全站只有一个 loading，不在这里另写文字）。
-            ? h(Loading, { label: t('loading') })
-            : renderLastRun(infoLast),
-      ),
-    ),
-  )
 
   const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
     // 浮动忙碌指示：fixed 到主内容盒右下角 ⇒ **不占布局空间**，不再把筛选行挤过去又挤回来。
@@ -1675,12 +1473,14 @@ function TaskCard(props: {
   onOpenFile?: (sessionId: string, path: string) => void
   /** 会话弹窗：**只传会话 id**（见 TaskExpandPanel 说明）。 */
   onOpenSession?: (sessionId: string) => void
+  /** 查看档入口（2026-10-05）：展开区「前置任务」行点任务名 ⇒ 右侧栏以查看档打开该任务。 */
+  onViewTask?: (id: string) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
   refOf: (el: HTMLElement | null) => void
   /** 即时拉 overview：任务跑完时左栏「下次预计执行」同步刷新（见 TaskExpandPanel）。 */
   refresh: () => void
 }) {
-  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refOf, refresh } = props
+  const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh } = props
   // 排期人话与编辑器「预计执行」**同一份实现**（`schedule-text.ts`，优先吃结构化 ui）⇒ 两处必然一致。
   const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t)
   const modelText = row.model === null ? tt('listFieldModelDefault') : row.model
@@ -1755,7 +1555,7 @@ function TaskCard(props: {
       ),
     ),
     // ── 展开区：三面板（决策 55，2026-10-01 拍板）——内容区三选一替换 + 左下三滑块 + 右下编辑/删除 ──
-    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, refresh }) : null,
+    open ? h(TaskExpandPanel, { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh }) : null,
   )
 }
 
@@ -1765,6 +1565,8 @@ export function TaskListView(props: {
   rows: readonly TaskOverviewRow[]
   ready: boolean
   onEdit: (id: string) => void
+  /** 查看档入口（2026-10-05）：展开区「前置任务」行点任务名 ⇒ 右侧栏以查看档打开该任务。 */
+  onViewTask?: (id: string) => void
   /** 删除任务（决策 55）：返回 null = 成功，否则返回人话错误（父级 Toast 展示、列表靠 overview 刷新少一行）。 */
   onDelete: (id: string) => Promise<string | null>
   /** 立即执行（2026-10-03）：POST /tasks/run，结果由卡片弹 Toast。 */
@@ -1785,9 +1587,12 @@ export function TaskListView(props: {
    */
   workspaces: readonly EditorOption[]
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props
+  const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
+  // 任务信息展示皮肤（域 'domain:task-info'）：基础信息纸表格 / 上次执行明细 / 状态图标配色
+  // —— 2026-10-05 上提共享层后，与右侧栏「查看档」共用同一份（两处都要注入）。
+  ensureTaskInfoStyle()
   // 跑马灯样式（.dsh-tdt-mq）在编辑器样式模块里注入；列表独立打开时也要有（幂等）。
   ensureTaskEditorStyle()
   // 立即执行结果 Toast 样式（域 'domain:toast'，全站唯一实现；幂等）。
@@ -1917,6 +1722,7 @@ export function TaskListView(props: {
             open: openId === row.id,
             onToggleOpen: () => { setOpenId(cur => (cur === row.id ? null : row.id)) },
             onEdit,
+            onViewTask,
             onDelete,
             onRunNow,
             onOpenFile,

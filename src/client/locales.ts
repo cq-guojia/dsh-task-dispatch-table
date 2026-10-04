@@ -171,6 +171,14 @@ export type LocaleKey =
   // —— 基础信息改版（用户 2026-10-03）：左配置 + 右上次执行 ——
   | 'infoSectionConfig' | 'infoLastRun' | 'infoNoRun' | 'infoFinishedAt' | 'infoNextExec'
   | 'infoSession' | 'infoDuration'
+  // —— 查看档（右侧栏「查看 / 编辑」两档，用户 2026-10-05）——
+  | 'editorTabView' | 'editorTabEdit'
+  // 基础信息字段（查看档与卡片基础信息共用一套渲染，新增两个状态词 + 前置任务可点的悬停提示）
+  | 'infoStateEnabled' | 'infoStateDisabled' | 'infoViewTask'
+  // 查看档自己的块与来源标记
+  | 'editorViewSavedTag' | 'editorViewDraftTag' | 'editorViewNewTag' | 'editorViewUntitled'
+  | 'editorViewPrompt' | 'editorViewPromptEmpty' | 'editorViewNoRunDraft' | 'editorViewNotFilled'
+  | 'editorViewSwitchTitle' | 'editorViewSwitchDesc'
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
   | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
@@ -743,6 +751,22 @@ export const zh: Record<LocaleKey, string> = {
   infoFinishedAt: '结束时间',
   infoSession: '任务会话',
   infoDuration: '执行时长',
+  // —— 查看档（右侧栏「查看 / 编辑」两档，用户 2026-10-05）——
+  editorTabView: '查看',
+  editorTabEdit: '编辑',
+  infoStateEnabled: '已启用',
+  infoStateDisabled: '已停用',
+  infoViewTask: '查看该任务',
+  editorViewSavedTag: '已保存的配置',
+  editorViewDraftTag: '正在编辑的草稿（未保存）',
+  editorViewNewTag: '新建，尚未保存',
+  editorViewUntitled: '未命名任务',
+  editorViewPrompt: '提示词',
+  editorViewPromptEmpty: '还没填提示词',
+  editorViewNoRunDraft: '任务尚未保存，没有执行记录',
+  editorViewNotFilled: '未填',
+  editorViewSwitchTitle: '放弃未保存的修改？',
+  editorViewSwitchDesc: '当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。',
   // —— 任务卡片三面板（决策 55）——
   cardTabInfo: '基础信息',
   cardTabRecords: '执行记录',
@@ -1359,6 +1383,22 @@ export const en: Record<LocaleKey, string> = {
   infoFinishedAt: 'Ended at',
   infoSession: 'Session',
   infoDuration: 'Duration',
+  // View mode (sidebar View/Edit switch, user 2026-10-05).
+  editorTabView: 'View',
+  editorTabEdit: 'Edit',
+  infoStateEnabled: 'Enabled',
+  infoStateDisabled: 'Disabled',
+  infoViewTask: 'View this task',
+  editorViewSavedTag: 'Saved settings',
+  editorViewDraftTag: 'Unsaved draft',
+  editorViewNewTag: 'New, not saved yet',
+  editorViewUntitled: 'Untitled task',
+  editorViewPrompt: 'Prompt',
+  editorViewPromptEmpty: 'No prompt yet',
+  editorViewNoRunDraft: 'Not saved yet — no run history',
+  editorViewNotFilled: 'Not set',
+  editorViewSwitchTitle: 'Discard unsaved changes?',
+  editorViewSwitchDesc: 'This task has unsaved edits. Continuing will discard them and open the task you want to view.',
   // Task card three panels (decision 55).
   cardTabInfo: 'Basic info',
   cardTabRecords: 'Run records',

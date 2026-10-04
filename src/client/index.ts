@@ -506,6 +506,11 @@ function TaskPage(props: {
     id: string
     draft: TaskEditorDraft
     history: EditorHistory | null
+    /**
+     * 打开时停在**哪一档**（用户 2026-10-05）：
+     * 「＋ 新建任务」与卡片「编辑」= `'edit'`；从卡片「前置任务」行点任务名进来 = `'view'`（只读人话视图）。
+     */
+    view: 'view' | 'edit'
   } | null>(null)
   const [editorSaving, setEditorSaving] = useState(false)
   const [editorError, setEditorError] = useState<string | null>(null)
@@ -629,24 +634,77 @@ function TaskPage(props: {
     } catch { /* 忽略：版本面板自有空态 */ }
   }
 
-  /** 打开「编辑任务」：从 tasksInline 取**完整定义**反解成草稿（不是摘要行）。 */
-  const openEditor = (id: string): void => {
-    let found: Record<string, unknown> | null = null
+  /**
+   * 从 `tasksInline`（宿主 scope 段）取某个任务的**完整定义**（不是 overview 摘要行）。
+   * 未找到 / JSON 坏 ⇒ `null`（调用方给可见提示，**不编造空定义**）。
+   * 编辑与查看两个入口共用这一份，不许各写一遍解析。
+   */
+  const findDefinition = (id: string): Record<string, unknown> | null => {
     try {
       const arr = JSON.parse(effectiveInline.trim() === '' ? '[]' : effectiveInline) as unknown
-      if (Array.isArray(arr)) {
-        found = arr.find((item): item is Record<string, unknown> => (
-          item !== null && typeof item === 'object' && (item as { id?: unknown }).id === id
-        )) ?? null
-      }
-    } catch { found = null }
+      if (!Array.isArray(arr)) return null
+      return arr.find((item): item is Record<string, unknown> => (
+        item !== null && typeof item === 'object' && (item as { id?: unknown }).id === id
+      )) ?? null
+    } catch { return null }
+  }
+
+  /** 打开「编辑任务」（默认停在**编辑档**）：完整定义反解成草稿。 */
+  const openEditor = (id: string): void => {
+    // 点的就是当前抽屉里这个任务 ⇒ **只切档**，不重建草稿（重建 = 静默丢弃用户改了一半的内容）。
+    if (editor !== null && editor.id === id) {
+      setEditor({ ...editor, view: 'edit' })
+      return
+    }
+    const found = findDefinition(id)
     if (found === null) {
       setViewErr('找不到该任务的定义，无法编辑（任务表可能刚被改动，请刷新后重试）')
       return
     }
     setEditorError(null)
-    setEditor({ mode: 'edit', id, draft: definitionToDraft(found), history: null })
+    setEditor({ mode: 'edit', id, draft: definitionToDraft(found), history: null, view: 'edit' })
     void loadHistory(id)
+  }
+
+  // ── 查看档入口（用户 2026-10-05）─────────────────────────────────────────
+  /** 待确认的「放弃未保存修改、改去查看另一个任务」。 */
+  const [pendingView, setPendingView] = useState<{ id: string } | null>(null)
+  /** 抽屉上报的脏状态（**只存不算**：脏判定真源在抽屉内的 `initialDraftRef` 比对）。 */
+  const editorDirtyRef = useRef(false)
+  /** 真正进查看档（不检查未保存冲突）。 */
+  const openViewerNow = (id: string): void => {
+    const found = findDefinition(id)
+    if (found === null) {
+      setViewErr('找不到该任务的定义，无法查看（任务表可能刚被改动，请刷新后重试）')
+      return
+    }
+    setEditorError(null)
+    setEditor({ mode: 'edit', id, draft: definitionToDraft(found), history: null, view: 'view' })
+    // 版本历史与编辑入口一样先拉：查看档里切到编辑档后，版本面板不该谎报「无版本」。
+    void loadHistory(id)
+  }
+  /**
+   * 打开「查看档」：点任务卡片展开区「前置任务」行的任务名进来（本期唯一入口）。
+   * ⚠️ 正在编辑**另一个任务**且草稿有未保存修改 ⇒ 先弹确认（用户 2026-10-05 拍板），
+   * 确认后才切过去 —— **不静默丢弃**用户改了一半的内容。
+   */
+  const openViewer = (id: string): void => {
+    if (editor !== null && editor.id !== id && editorDirtyRef.current) {
+      setPendingView({ id })
+      return
+    }
+    // 点的就是当前抽屉里这个任务 ⇒ **只切到查看档**，不重建草稿（保住未保存的修改）。
+    if (editor !== null && editor.id === id) {
+      setEditor({ ...editor, view: 'view' })
+      return
+    }
+    openViewerNow(id)
+  }
+  /** 确认放弃修改、切去看目标任务。 */
+  const confirmPendingView = (): void => {
+    const target = pendingView
+    setPendingView(null)
+    if (target !== null) openViewerNow(target.id)
   }
 
   /**
@@ -1134,7 +1192,7 @@ function TaskPage(props: {
             variant: 'outline',
             size: 'md',
             title: t('editorNew'),
-            onClick: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null }) },
+            onClick: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null, view: 'edit' }) },
           }, `＋ ${t('editorNew')}`),
             ),
           ),
@@ -1184,6 +1242,8 @@ function TaskPage(props: {
             onToggleEnabled: toggleTaskEnabled,
             // 立即执行（2026-10-03）：卡片确认框 → runTaskNow → 结果 Toast（成功绿 / 拒绝红）。
             onRunNow: runTaskNow,
+            // 查看档入口（2026-10-05）：卡片展开区「前置任务」行点任务名 ⇒ 右侧栏以**查看档**打开该任务。
+            onViewTask: openViewer,
             // 工作区筛选候选 = **面板级唯一真源**（`/options`），列表不再从卡片数据反推（2026-10-04）。
             workspaces: editorOptions.workspaces,
           })
@@ -1405,6 +1465,20 @@ function TaskPage(props: {
         onRestoreVersion: (file: string) => { void restoreVersion(file) },
         onDeleteVersion: (file: string) => { void deleteVersion(file) },
         onToggleEnabled: (enabled: boolean) => toggleTaskEnabled(editor.id, enabled),
+        // ── 查看 / 编辑两档（用户 2026-10-05）──────────────────────────────
+        // 打开时停哪一档由 state 决定（卡片「编辑」/「＋新建」= edit；前置任务名点进来 = view）。
+        initialView: editor.view,
+        // 脏状态由抽屉单向上报（真源在抽屉内），这里只存进 ref 供「未保存冲突」判定用。
+        onDirtyChange: (next: boolean) => { editorDirtyRef.current = next },
+        // 未保存时切看别的任务：抽屉内联确认层（绝不引官方 Modal）。
+        pendingView,
+        onConfirmPendingView: confirmPendingView,
+        onCancelPendingView: () => { setPendingView(null) },
+        // 查看档里「任务会话 / 产出物」可点：走 U11 单一入口，未就位时 undefined ⇒ 降级不可点。
+        onOpenSession: viewSession !== null
+          ? (sessionId: string) => { void openView(sessionId) }
+          : undefined,
+        onOpenFile: canPreview ? openFile : undefined,
         workspaceFiles,
         officeToPdf,
         workspaceAnchors: editorOptions.workspaceAnchors,
