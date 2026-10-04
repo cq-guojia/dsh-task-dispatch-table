@@ -573,11 +573,9 @@ function TaskPage(props: {
     // 对策：拖动期间给根挂 `dsh-tdt-resizing`，CSS 令 iframe `pointer-events:none`，松手撤销。
     const rootEl = document.getElementById('dsh-tdt-root')
     const dockEl = rootEl?.querySelector('.dsh-tdt-sv-preview-dock') as HTMLElement | null
-    // ⚠️ 拖拽期**冻结内容宽度**（真机 2026-10-04：拖动分栏时每帧都对 1 万行折行文本重新折行 ⇒
-    // 即便只重排 dock 也极卡）。冻结后改 dock 宽度只是「裁掉/露出」内容，文本不重新排版；松手恢复。
-    const contentEl = dockEl?.querySelector('.dsh-tdt-sv-preview-body') as HTMLElement | null
-    const frozenWidth = contentEl !== null ? contentEl.getBoundingClientRect().width : 0
-    if (contentEl !== null && frozenWidth > 0) contentEl.style.width = frozenWidth + 'px'
+    // 拖拽期**不再冻结内容宽度**：旧实现（2026-10-04）为绕开 Shiki 1 万行巨型 DOM 的每帧重折卡顿才冻结、
+    // 仅松手重排；现已全面改 CodeMirror 6（行级虚拟滚动只重排可视区），拖动实时折行本就很快，与官方一致，
+    // 故取消冻结，让代码/文档随分栏宽度实时重折行。
     rootEl?.classList.add('dsh-tdt-resizing')
     // ⚠️ 卡顿根因（真机 2026-10-04：拖拽分栏时"挪很久才动一下"）：原实现**每个 pointermove**
     // 都改根上的 `--dsh-tdt-preview-w`，而该变量同时被 dock 宽度与弹窗 `right` 引用
@@ -601,7 +599,6 @@ function TaskPage(props: {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       rootEl?.classList.remove('dsh-tdt-resizing')
-      if (contentEl !== null) contentEl.style.width = ''
       const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
       setPreviewWidth(next)
       try { window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next)) } catch { /* 隐私模式忽略 */ }

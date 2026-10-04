@@ -60037,9 +60037,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				window.getSelection()?.removeAllRanges();
 				const rootEl = document.getElementById("dsh-tdt-root");
 				const dockEl = rootEl?.querySelector(".dsh-tdt-sv-preview-dock");
-				const contentEl = dockEl?.querySelector(".dsh-tdt-sv-preview-body");
-				const frozenWidth = contentEl !== null ? contentEl.getBoundingClientRect().width : 0;
-				if (contentEl !== null && frozenWidth > 0) contentEl.style.width = frozenWidth + "px";
 				rootEl?.classList.add("dsh-tdt-resizing");
 				let frame = 0;
 				let lastX = startX;
@@ -60064,7 +60061,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					window.removeEventListener("pointermove", onMove);
 					window.removeEventListener("pointerup", onUp);
 					rootEl?.classList.remove("dsh-tdt-resizing");
-					if (contentEl !== null) contentEl.style.width = "";
 					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
 					setPreviewWidth(next);
 					try {

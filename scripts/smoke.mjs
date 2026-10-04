@@ -1119,9 +1119,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('拖拽条贯通覆盖（z-index:7 高于内容；不加沟槽——用户要遮住，不是让开）',
     /\.dsh-tdt-sv-resizer\{[^}]*z-index:7/.test(clientJs)
     && !/dsh-tdt-sv-preview-dock\{padding-left:6px/.test(clientJs))
-  check('拖拽期冻结内容宽度（1 万行折行文本不重新排版 ⇒ 拖拽不再卡）',
-    /frozenWidth/.test(clientJs) && /style\.width = frozenWidth/.test(clientJs)
-    && /style\.width = ['"]{2}|style\.width = ""/.test(clientJs))
+  check('拖拽调宽实时重折行（取消 Shiki 时代的内容宽度冻结；CodeMirror 虚拟滚动只重排可视区，拖动实时折行不卡）',
+    !/frozenWidth/.test(clientJs) && /requestAnimationFrame/.test(clientJs) && /dockEl\.style\.width/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
     clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
 
