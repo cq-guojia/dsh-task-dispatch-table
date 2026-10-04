@@ -1121,6 +1121,14 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     && !/dsh-tdt-sv-preview-dock\{padding-left:6px/.test(clientJs))
   check('拖拽调宽实时重折行（取消 Shiki 时代的内容宽度冻结；CodeMirror 虚拟滚动只重排可视区，拖动实时折行不卡）',
     !/frozenWidth/.test(clientJs) && /requestAnimationFrame/.test(clientJs) && /dockEl\.style\.width/.test(clientJs))
+  // 两条侧边栏是根 flex 的**布局成员**（不是浮层）：一旦带显式 z-index 就会压过宿主 portal 到 body
+  // 的弹窗（「系统设置」），宿主弹窗后挂载居上只在同层时成立 ⇒ 这里反向断言：不得带 z-index。
+  check('预览 dock 不带 z-index（布局成员，不压宿主 portal 弹窗；真机 2026-10-05 修「侧边栏盖住系统设置」）',
+    /\.dsh-tdt-sv-preview\.dsh-tdt-sv-preview-dock\{position:sticky[^}]*\}/.test(clientJs)
+    && !/\.dsh-tdt-sv-preview\.dsh-tdt-sv-preview-dock\{[^}]*z-index/.test(clientJs))
+  check('编辑抽屉不带 z-index（1040 系浮层时代遗留；同上，不压宿主 portal 弹窗）',
+    /\.dsh-tdt-ed-panel\{position:sticky[^}]*\}/.test(clientJs)
+    && !/\.dsh-tdt-ed-panel\{[^}]*z-index/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
     clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
 
