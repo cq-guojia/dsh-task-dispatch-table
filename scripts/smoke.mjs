@@ -1139,19 +1139,32 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   {
     const tlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8')
     const idxSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
-    check('执行记录时间轴进产物（RecordsTimelineView + 灰底区块/天节点/色条/两行条目/加载区类名）',
-      clientJs.includes('RecordsTimelineView') && ['dsh-tdt-rec-band', 'dsh-tdt-rec-day', 'dsh-tdt-rec-dot',
-        'dsh-tdt-rec-bar', 'dsh-tdt-rec-r1', 'dsh-tdt-rec-r2', 'dsh-tdt-rec-foot'].every(c => clientJs.includes(c)))
+    const tkSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'tokens.ts'), 'utf8')
+    const ctrlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
+    check('执行记录流水账进产物（RecordsTimelineView + 日期行 / 块容器 / 色条 / 两行条目 / 加载区类名）',
+      clientJs.includes('RecordsTimelineView') && ['dsh-tdt-rec-dayrow', 'dsh-tdt-rec-items', 'dsh-tdt-rec-bar',
+        'dsh-tdt-rec-r1', 'dsh-tdt-rec-r2', 'dsh-tdt-rec-foot'].every(c => clientJs.includes(c)))
     check('过滤行照任务列表：**左侧状态分段控件四档**（全部/成功/失败/进行中）+ 右侧时间/工作区/任务',
       /h\(Segmented<StatusBucket \| 'all'>,/.test(tlSrc)
       && /statusesOfBucket\(bucket\)/.test(tlSrc)
       && ['filterRightStyle', 'h(TimeRange,', 'h(SelectField,', 'h(TaskPicker,'].every(f => tlSrc.includes(f)))
-    check('主体改「灰底居中区块 + 竖轴从上贯穿到底」：轴画在区块伪元素上，空态/加载/失败态也在',
-      /\.dsh-tdt-rec-band\{[^}]*background:var\(--tdt-surface-sunken\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-band::before\{[^}]*top:0;bottom:0/.test(tlSrc))
-    check('天节点 = 竖轴上稍大的圆点 + 日期 + 当天条数（吸顶走 token 层级）',
-      /\.dsh-tdt-rec-dot\{[^}]*width:10px/.test(tlSrc) && tlSrc.includes('dsh-tdt-rec-daylabel')
-      && /\.dsh-tdt-rec-day\{[^}]*position:sticky/.test(tlSrc) && /z-index:var\(--tdt-z-sticky\)/.test(tlSrc))
+    check('第三版版式反向断言：**外框（灰底区块）已删**、**贯穿竖轴已删**（用户 2026-10-04：把框去了、时间轴也去了）',
+      !tlSrc.includes('dsh-tdt-rec-band') && !/\.dsh-tdt-rec-band::before/.test(tlSrc)
+      && !/::before\{[^}]*top:0;bottom:0/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-dot'))
+    check('日期 = 一行**小字**（时钟 icon + 日期 · 星期 · N 条），且**不吸顶**',
+      /\.dsh-tdt-rec-dayrow\{[^}]*font-size:var\(--tdt-font-md\)/.test(tlSrc)
+      && tlSrc.includes('IconClockOutlineRegular') && /weekdayFormatter/.test(tlSrc) && /weekdayOf\(/.test(tlSrc)
+      && /tt\('recordsDayCount'/.test(tlSrc)
+      && !/position:sticky/.test(tlSrc) && !tlSrc.includes('--tdt-z-sticky'))
+    check('块皮肤 = **状态色浅底**（色调类给局部变量）+ **5px 方角通高竖条**贴左缘 + 块间 **4px**',
+      /\.dsh-tdt-rec-item\{[^}]*background:var\(--rec-tone-soft,transparent\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-bar\{[^}]*left:0;top:0;bottom:0;width:5px/.test(tlSrc)
+      && !/\.dsh-tdt-rec-bar\{[^}]*border-radius/.test(tlSrc)
+      && /--rec-tone-soft:var\(--tdt-success-soft\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-items\{[^}]*gap:var\(--tdt-space-1\)/.test(tlSrc))
+    check('四个状态浅底 token 收在 tokens.ts 单点（8% 透明 color-mix），业务侧不写字面量色值',
+      ['success', 'warning', 'danger', 'business'].every(t =>
+        tkSrc.includes(`--tdt-${t}-soft:color-mix(in srgb,var(--tdt-${t}) 8%,transparent)`)))
     check('条目至少两行：第 1 行 名称 + 状态 + 查看会话；第 2 行 工作区/计划/实际/时长/Token + 产出物',
       tlSrc.includes("t('recPlan')") && tlSrc.includes("t('recActual')") && tlSrc.includes("t('colDuration')")
       && tlSrc.includes("t('viewSession')") && tlSrc.includes('dsh-tdt-rec-note')
@@ -1160,9 +1173,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /onOpenFile\?: \(sessionId: string, path: string\) => void/.test(tlSrc)
       && /disabled: !canOpenFile/.test(tlSrc)
       && idxSrc.includes('onOpenFile: canPreview ? openFile : undefined'))
-    check('不再用圆角卡片框：条目无卡片类，只有 hover 泛底 + 极浅分隔线',
-      /\.dsh-tdt-rec-item--on:hover\{background:var\(--tdt-hover\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid var\(--tdt-border-faint\)/.test(tlSrc))
+    check('无圆角卡片框：块靠状态浅底 + hover 叠中性层区分，不靠边框 / 分隔线',
+      /\.dsh-tdt-rec-item:hover,\.dsh-tdt-rec-item--open\{background-image:linear-gradient\(var\(--tdt-hover\)/.test(tlSrc)
+      && !/\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid/.test(tlSrc))
     check('时间轴走 HTTP 游标分页：读 nextCursor 并回写（且 page size / 上限对齐 50/2000）',
       /setCursor\(page\.nextCursor\)/.test(tlSrc) && /cursor: nextCursor \?\? undefined/.test(tlSrc)
       && /const PAGE_SIZE = 50/.test(tlSrc) && /const HARD_LIMIT = 2000/.test(tlSrc)
@@ -1179,12 +1192,19 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('按「scheduled_at 的本地日历日」分组（与服务端排序键 / 时间范围同源，不再用 task 时区的 logical_date）',
       /function dayKeyOf/.test(tlSrc) && /row\.scheduled_at/.test(tlSrc)
       && /d\.getFullYear\(\)/.test(tlSrc) && !tlSrc.includes('row.logical_date'))
-    check('天标签吸顶走 token 层级 + 尊重减弱动效',
-      /\.dsh-tdt-rec-day\{[^}]*position:sticky/.test(tlSrc)
-      && /z-index:var\(--tdt-z-sticky\)/.test(tlSrc) && tlSrc.includes('prefers-reduced-motion'))
-    check('不用图标表成败：色条走 statusToneOf 单源（status-text.ts），源码内无状态图标',
-      /statusToneOf\(/.test(tlSrc) && /toneColorOf\(/.test(tlSrc)
-      && ["var(--tdt-success)", "var(--tdt-danger)", "var(--tdt-warning)", "var(--tdt-business)"].every(tk => tlSrc.includes(tk))
+    check('点块 = **就地展开**（手风琴单开）；整块点击**不再**开会话，只有「查看会话」按钮开会话',
+      /const \[openId, setOpenId\] = useState<string \| null>\(null\)/.test(tlSrc)
+      && /setOpenId\(cur => \(cur === id \? null : id\)\)/.test(tlSrc)
+      && /'aria-expanded': open/.test(tlSrc)
+      && !tlSrc.includes('onClick: canOpenSession ? () => { openSession(sid as string) }'))
+    check('展开区 = 产出物全量（图标 + 文件名，可点开预览）+ 该次执行的**事件流水**（懒取 + 缓存 + 序号作废）',
+      /import \{[^}]*fetchEvents[^}]*\} from '\.\/query'/.test(tlSrc)
+      && /fetchEvents\(id\)/.test(tlSrc) && /eventsCache/.test(tlSrc) && /eventsSeqRef\.current = seq/.test(tlSrc)
+      && /className: 'dsh-tdt-rec-file'/.test(tlSrc) && tlSrc.includes("t('cardEventsEmpty')"))
+    check('减弱动效仍被尊重（脉动 / 淡入在 prefers-reduced-motion 下关闭）', tlSrc.includes('prefers-reduced-motion'))
+    check('不用图标表成败：色调走 statusToneOf 单源 + toneClassOf 映射（源码内无状态图标）',
+      /statusToneOf\(/.test(tlSrc) && /toneClassOf\(/.test(tlSrc)
+      && ['--tdt-success', '--tdt-danger', '--tdt-warning', '--tdt-business'].every(tk => tlSrc.includes(`var(${tk})`))
       && !tlSrc.includes('StatusIcon') && !tlSrc.includes('IconCheckCircle'))
     check('records 分支排在 data === undefined 门槛之前（HTTP 页不被调试快照挡住）',
       /tab === 'records'\n\s*\? h\(RecordsTimelineView/.test(idxSrc)
@@ -1207,6 +1227,15 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('版式返工的反向断言：状态下拉与其文案键已消失（状态改走顶部四档分段控件）',
       !tlSrc.includes('recordsStatusPh')
       && !readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8').includes('recordsStatusPh'))
+    check('产出物图标 chip = 基础层唯一实现（`.dsh-tdt-chip` 定义在 controls-css，两页共用）',
+      ctrlSrc.includes('.dsh-tdt-chip{') && ctrlSrc.includes('--tdt-chip-bg-hover')
+      && /className: 'dsh-tdt-chip'/.test(tlSrc) && /dsh-tdt-chip--label/.test(tlSrc))
+    check('收编后无同名冲突：全仓只有一份产出物 chip 皮肤（`.dsh-tdt-rec-out` 已不存在）',
+      !/\.dsh-tdt-rec-out\s*\{/.test(ctrlSrc) && !tlSrc.includes('dsh-tdt-rec-out')
+      && !/\.dsh-tdt-rec-out\s*\{/.test(readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8'))
+      && ctrlSrc.includes('.dsh-tdt-chip{'))
+    check('折叠态产出物**只给图标**（文件名只出现在展开区）',
+      /className: 'dsh-tdt-rec-chiprow'/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-outname'))
   }
   check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
     clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))
@@ -2164,8 +2193,9 @@ console.log('\n[14] runtime-index')
       tl.includes("placeholder: t('colStatus')") && tl.includes("useState('')"))
     check('计划执行年份改**四位**（2026-09-30 15:10）',
       fmt.includes('${d.getFullYear()}-') && !fmt.includes('getFullYear() % 100'))
-    check('产出物图标放大到 28×28（间距翻倍）+ 底板 hover 两端都更明显',
-      tl.includes("width: '28px'") && tl.includes('--tdt-chip-bg-hover'))
+    check('产出物图标 28×28 + 底板 hover 两端都更明显（现为基础层 `.dsh-tdt-chip`，全站一份）',
+      readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
+        .includes('width:var(--tdt-control-h-md);height:var(--tdt-control-h-md)'))
     check('列序：查看会话在最后、产出物在倒数第二（「要点的」排在一起）',
       tl.indexOf("t('colNote')") < tl.indexOf("t('colOutputs')")
       && tl.indexOf("t('colOutputs')") < tl.indexOf("t('colSession')"))
@@ -2225,8 +2255,8 @@ console.log('\n[14] runtime-index')
     check('执行记录 / 日志都有条数过滤：`显示 <N> 条`，统一居右',
       tl.includes("t('limitPrefix')") && tl.includes("t('limitSuffix')") && tl.includes('recLimit')
       && (tl.match(/limitRowStyle/g) ?? []).length >= 3)
-    check('产出物图标有浅色圆角底板且 hover 变亮；行 hover 高亮',
-      tl.includes('.dsh-tdt-rec-out') && tl.includes('.dsh-tdt-rec-out:hover')
+    check('产出物图标有浅色圆角底板且 hover 变亮（基础层 `.dsh-tdt-chip`）；行 hover 高亮',
+      readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8').includes('.dsh-tdt-chip{')
       && tl.includes('.dsh-tdt-rec-row:hover') && tl.includes('dsh-tdt-rec-row'))
     // 表底贴虚线：底栏去掉 marginTop（面板总高由 panelBoxStyle 定高保持不变）。
     const barBlock = /const panelBarStyle[\s\S]*?\n}/.exec(tl)?.[0] ?? ''

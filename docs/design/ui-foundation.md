@@ -110,6 +110,7 @@
 | `--tdt-accent` | `--dsw-alias-brand-primary` | 品牌**面**色。⚠️ 它的真值是**明色近黑 / 暗色近白**，不是蓝色 |
 | `--tdt-business` | `--dsw-alias-state-business-primary` | **蓝色强调 / 选中态**（deepseek-500 / 400）——界面上所有「蓝」都走这条 |
 | `--tdt-success` / `--tdt-danger` | `--dsw-alias-state-success/error-primary` | 语义色 |
+| `--tdt-success-soft` / `-warning-soft` / `-danger-soft` / `-business-soft` | `color-mix(in srgb, var(--tdt-<tone>) 8%, transparent)`（**不是宿主变量，我们现算**） | **状态色浅底**（2026-10-04 新增）：执行记录页每条流水账的块底。用 `color-mix` 现算而不写死 rgba ⇒ 状态色跟随宿主 alias，**暗色主题下自动成立**（深色底透出来、上面仍是状态色），不必在暗色段再覆盖一遍 |
 | `--tdt-warning` | `--dsw-alias-state-warn-primary` ✅ **已核实** | 警告色（amber-500，明暗同值）。**`state-warning-primary` 是死变量**，宿主无此定义 |
 | `--tdt-hover` / `--tdt-active` | `--dsw-alias-interactive-bg-hover / -active` | 交互底 |
 | `--tdt-mask` | `--dsw-alias-bg-mask-1` | 遮罩 |
@@ -232,6 +233,7 @@ body[data-ds-dark-theme]{
 | 输入框 / 前缀框 / 数字框 | 输入框 `error`（描红）；数字框显式 ±、`inputWidth` 可调宽度 | sm / md / lg（默认 lg） | `ui/Field.tsx` ✅ |
 | 下拉 | 只换锚点宽度 / 图标（`block` 整行、`maxWidth` 限宽、`marquee` 跑马灯） | sm / md / lg（默认 lg） | `ui/Field.tsx`（`SelectField`，包装官方 `Menu`）✅ |
 | **任务选择器（带搜索）** | 见 §5.4：在 `SelectField` 之上加**搜索框 + 最近 N 条/更多 + 外部作用域** | sm / md / lg（默认 lg） | `ui/TaskPicker.tsx` ✅ **2026-10-04 落码**（执行记录总查询页在用；不许业务文件自己拼 Input + Menu） |
+| **产出物图标 chip** | 见 §5.5：28×28 浅底板上的官方文件类型图标（**只给图标**，名字走 `title`），hover 变亮表示可点 | —（固定 28，同 `sm` 行高观感） | `ui/controls-css.ts` 的 `.dsh-tdt-chip` ✅ **2026-10-04 收编**：卡片「执行记录」面板 + 执行记录总查询页共用；此前两页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，同一页面里谁后注册谁生效、互相污染 |
 | 开关 | 选中 = success 绿（唯一） | 官方尺寸（**不纳入 token 档**） | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（`ui/controls-css.ts`）✅ |
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
 | Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
@@ -292,6 +294,21 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 > 过程与三处坐标见 [`../worklog/workspace-options-unification.md`](../worklog/workspace-options-unification.md)；使用点规范见 [`ui-style-guide.md`](ui-style-guide.md) §二。
 
 **任务选项文案**（✅ 执行记录页已按下面口径落地；剩余替换点见未决项 **U31**）：统一取 `[code] name`（编辑器 `editorTasks` 的口径，注释明确「绝不把机器 id 当尾缀拖出来」）；执行记录页由 `overview.rows` 组装同一口径，**搜索按 id 命中**由 `TaskPicker` 负责（`label` 或 `id` 命中皆可）。
+
+---
+
+### 5.5 产出物图标 chip（2026-10-04 收编，**全站唯一实现**）
+
+用户 2026-10-04 点名：「执行记录列表上不用把名字都显示出来，只显示一个带背景的图标就行 —— 参考『任务配置』里点开任务后『执行记录』面板里那种样式。」
+
+| 项 | 口径 |
+|---|---|
+| 落点 | `src/client/ui/controls-css.ts` 的 `BUTTON_CSS` 段（L2 控件皮肤层；与 `.dsh-tdt-btn` / `.dsh-tdt-iconbtn` 同层） |
+| 类名 | `.dsh-tdt-chip`（图标态）+ `.dsh-tdt-chip--label`（文字态：`…` / `+N`，按内容撑开） |
+| 尺寸 | `width/height = --tdt-control-h-md`（28），图标 `FileTypeIcon size 16`；`border-radius: --tdt-radius-sm` |
+| 底板 | `background: var(--tdt-chip-bg)`、hover `--tdt-chip-bg-hover`。⚠️ **必须走 class**：inline `background` 会盖掉 `:hover`（2026-10-03 踩过）；**不许**拿 `--tdt-plate-hover` 顶（暗色下更淡 ⇒ 底板 disappearance） |
+| 不可点 | `:disabled` 去掉底板 + 灰色 + `cursor:default`（无会话 / 预览面未就位时不给假入口） |
+| 收编原因 | 该皮肤原本在 `task-list.tsx`（`.dsh-tdt-rec-out`）与执行记录页（**同名不同皮**：一个带文件名 + `--tdt-plate`，一个 28×28 图标 + `--tdt-chip-bg`）各写一份，两份 CSS 都注入同一页面 ⇒ 后注册者覆盖前者、两页外观互相污染 |
 
 ---
 

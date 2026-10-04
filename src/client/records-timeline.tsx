@@ -1,29 +1,33 @@
-// records-timeline.tsx — 执行记录总查询页（时间轴）
+// records-timeline.tsx — 执行记录总查询页（流水账）
 //
-// 形态：查**全部任务**的执行流水账（`task_instances` 全表），按天分组的时间轴，整体倒序。
+// 形态：查**全部任务**的执行流水账（`task_instances` 全表），按天分组、整体倒序。
 // 规格 = docs/design/features/execution-timeline.md；过程 = docs/worklog/execution-timeline.md。
 //
-// ⚠️ 与「卡片展开区的单任务执行记录面板」是两个功能（时间轴 vs 表格、全量 vs 单任务），别混。
+// ⚠️ 与「卡片展开区的单任务执行记录面板」是两个功能（流水账 vs 表格、全量 vs 单任务），别混。
 //
-// 版式（2026-10-04 用户返工后定稿，「丑得可怕」那版已废）：
-//   ① 过滤行照任务列表：**左侧分段控件**四档（全部 / 成功 / 失败 / 进行中），右侧时间范围 + 工作区 + 任务；
-//   ② 主体 = **灰底区块**（`--tdt-surface-sunken`，居中限宽）——**不用圆角卡片把每条框起来**；
-//   ③ 灰底里一条**竖轴从上贯穿到底**（画在区块伪元素上 ⇒ 空态 / 加载 / 失败态也在，永不断）；
-//   ④ 天 = 竖轴上一个**稍大的圆点** + 「2026 年 10 月 30 日」+ 当天条数（吸顶）；
-//   ⑤ 每条流水账**两行**：第 1 行 名称 + 状态 + 查看会话；第 2 行 工作区 · 计划 · 实际 · 时长 · Token | 产出物；
-//      失败 / 未执行有原因时补第 3 行备注。
+// 版式（2026-10-04 第三版定稿，逐条按用户原话）：
+//   ① 过滤行照任务列表：**左侧分段控件**四档（全部 / 成功 / 失败 / 运行中），右侧时间范围 + 工作区 + 任务；
+//   ② **没有外框**（灰底大圆角区块已删）、**没有时间轴竖线**（贯穿轴与天节点圆点已删）——
+//      整页直接铺在宿主面板底上，节奏靠下面这一条条自带底色的**独立块**建立；
+//   ③ 日期 = 一行**小字**：时钟图标 + 「2026 年 10 月 30 日」· 星期几 ·「8 条」（不吸顶）；
+//   ④ 每条流水账 = 一个块：**左缘 5px 方角状态色竖条**（通高、贴左缘）+ **同色系很浅的透明底**
+//      （成功绿 / 失败红 / 未执行黄 / 运行中蓝；深浅主题都自动成立），块与块之间 **4px** 缝；
+//   ⑤ 折叠态**两行**：第 1 行 名称 + 状态 + 「查看会话」；第 2 行 工作区 · 计划 · 实际 · 时长 · Token
+//      ｜ 产出物（**只给图标**，超出给 `+N`）；失败 / 未执行有原因时补第 3 行备注；
+//   ⑥ 点块 = **就地展开**（手风琴，同时只开一条）：上面产出物全量（图标 + 文件名，可点开预览）、
+//      下面该次执行的**事件流水**（`fetchEvents(instanceId)`）；**只有点「查看会话」才开会话**。
 //
-// 取数：**只走 `GET /tasks/instances`**（`fetchInstances`），游标分页 + 服务端排序
-// （`scheduled_at DESC, id DESC`），客户端不二次排序。
-// 分页状态机的四条硬规矩（上一轮评审修的，重写版式时逐条保留）：
+// 取数：主列表只走 `GET /tasks/instances`（`fetchInstances`），游标分页 + 服务端排序
+// （`scheduled_at DESC, id DESC`），客户端不二次排序；展开区另走 `GET /tasks/events?instanceId=`。
+// 分页状态机的四条硬规矩（上一轮评审修的，改版式时逐条保留）：
 //   ① 2000 上限**只拦续拉**（首屏永远允许取）⇒ 满额后改过滤不会白屏；
 //   ② 续拉失败给提示 + 重试，并**暂停自动续拉**（否则哨兵把失败刷成重试风暴）；
 //   ③ `IntersectionObserver` **只建一次**（最新逻辑走 ref）；
 //   ④ 请求序号作废旧响应 + 失败不清空已有列表。
 import { createElement as h, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { FileTypeIcon } from '@deepseek-ai/dsh-client-ui-primitives'
-import { formatClock, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
-import { fetchInstances, outputsOf, type InstanceRow } from './query'
+import { FileTypeIcon, IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
+import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
   Button, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, TaskPicker, TimeRange,
@@ -45,34 +49,42 @@ if (HARD_LIMIT % PAGE_SIZE !== 0) console.warn('[tdt] HARD_LIMIT 必须是 PAGE_
 /** 状态分段控件四档（'' = 全部；其余走 `statusesOfBucket` 单源）。 */
 type StatusBucket = '' | 'succeeded' | 'failed' | 'running'
 
-// ── 样式（走基础层注入器，不自建 <style>；只消费 var(--tdt-*)，间距/时长/z 全走 token）──
+// ── 样式（走基础层注入器，不自建 <style>；只消费 var(--tdt-*)，间距/时长全走 token）──
 const RECORDS_CSS = `
-/* ── 执行记录时间轴 ──────────────────────────────────────────────────────
-   层级：过滤行（页面底） → 灰底区块（sunken，把内容居中收拢） → 竖轴 + 天节点 → 两行条目。 */
-.dsh-tdt-rec-band{position:relative;background:var(--tdt-surface-sunken);border-radius:var(--tdt-radius-lg);
-  padding:var(--tdt-space-3) var(--tdt-space-4) var(--tdt-space-4) var(--tdt-space-4);min-height:220px;}
-/* **贯穿竖轴**：画在区块上而不是「当天那一截」⇒ 与数据无关，空态 / 加载 / 失败态照样连着（用户点名要求）。
-   left:5px = 圆点圆心（圆点 10px 宽，从 0 起）。 */
-.dsh-tdt-rec-band::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:1px;background:var(--tdt-border-faint);}
-/* 天节点：吸顶；底色与灰底同源 ⇒ 吸附时不留异色横带。 */
-.dsh-tdt-rec-day{position:sticky;top:0;z-index:var(--tdt-z-sticky);display:flex;align-items:center;
-  gap:var(--tdt-space-2);padding:var(--tdt-space-2) 0 var(--tdt-space-1);background:var(--tdt-surface-sunken);}
-/* 稍大的圆点，压在竖轴上（相对行内容盒 -16px = 区块左内边距）。 */
-.dsh-tdt-rec-dot{position:absolute;left:calc(-1 * var(--tdt-space-4));top:50%;transform:translateY(-50%);
-  width:10px;height:10px;border-radius:50%;background:var(--tdt-business);}
-.dsh-tdt-rec-daylabel{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg);line-height:var(--tdt-line-md);}
-.dsh-tdt-rec-daycount{font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
-/* 条目：**无圆角卡片框**（用户点名不要）；靠 hover 泛底 + 极浅分隔线分隔。 */
+/* ── 执行记录流水账（2026-10-04 第三版：**无容器**）───────────────────────
+   没有外框、没有贯穿竖轴：整页铺在宿主面板底上，节奏靠「日期小字行 + 一条条自带底色的独立块」建立。 */
+.dsh-tdt-rec-group{margin-top:var(--tdt-space-2);}
+/* 日期小字行：时钟图标 + 日期 · 星期 · N 条（用户 2026-10-04：字要小一点；**不吸顶**——
+   撤掉灰底后底是透明的，吸顶必须给不透明底色，怕与宿主底色差出一條横带）。 */
+.dsh-tdt-rec-dayrow{display:flex;align-items:center;gap:6px;flex:none;
+  padding:var(--tdt-space-3) 0 var(--tdt-space-2);
+  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-dayrow>svg{flex:none;color:var(--tdt-fg-3);}
+.dsh-tdt-rec-daylabel{font-weight:500;color:var(--tdt-fg-2);}
+.dsh-tdt-rec-daycount{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
+/* 块之间 **4px**（用户指定；--tdt-space-1 正好 = 4px） */
+.dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+/* 条目块：自带状态色浅底；底色由色调类给的局部变量驱动（见下）。 */
 .dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:var(--tdt-space-1);
   padding:var(--tdt-space-2) var(--tdt-space-2) var(--tdt-space-2) var(--tdt-space-3);
-  border-bottom:1px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-sm);background:transparent;
-  color:var(--tdt-fg);font:inherit;text-align:left;animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-rec-item--on{cursor:pointer;}
-.dsh-tdt-rec-item--on:hover{background:var(--tdt-hover);}
-.dsh-tdt-rec-item--last{border-bottom:0;}
-/* 成败色条（用户点名：不用图标）：3px，颜色由内联 style 给 token 值。 */
-.dsh-tdt-rec-bar{position:absolute;left:0;top:var(--tdt-space-1);bottom:var(--tdt-space-1);width:3px;border-radius:2px;}
-.dsh-tdt-rec-bar--run,.dsh-tdt-rec-statedot--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
+  background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
+  animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
+/* 整块可点（切展开）⇒ 光标是手；hover / 展开态都叠一层**中性半透明** */
+.dsh-tdt-rec-item{cursor:pointer;}
+.dsh-tdt-rec-item:hover,.dsh-tdt-rec-item--open{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
+/* 语义色调 → 本域局部变量（「--rec-tone*」 是 CSS 局部变量，**不是** 「--tdt-*」 token ——
+   token 只在 tokens.ts 定义；块底那条「状态色浅底」的 token 就在那里）。 */
+.dsh-tdt-rec-tone--ok{--rec-tone:var(--tdt-success);--rec-tone-soft:var(--tdt-success-soft);}
+.dsh-tdt-rec-tone--bad{--rec-tone:var(--tdt-danger);--rec-tone-soft:var(--tdt-danger-soft);}
+.dsh-tdt-rec-tone--warn{--rec-tone:var(--tdt-warning);--rec-tone-soft:var(--tdt-warning-soft);}
+.dsh-tdt-rec-tone--busy{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);}
+/* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
+.dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
+/* 成败竖条（用户点名：**不用图标**）：5px 通高、**纯方角**、贴齐块左缘。 */
+.dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--rec-tone,var(--tdt-fg-3));}
+.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
+.dsh-tdt-rec-statedot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--rec-tone,var(--tdt-fg-3));}
+.dsh-tdt-rec-statedot--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
 @keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){.dsh-tdt-rec-bar--run,.dsh-tdt-rec-statedot--run{animation:none}.dsh-tdt-rec-item{animation:none}}
@@ -80,23 +92,31 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 .dsh-tdt-rec-state{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
-.dsh-tdt-rec-statedot{width:8px;height:8px;border-radius:50%;flex:none;}
-/* 第 2 行：meta 在左（可换行），产出物 / Token 在右。 */
+/* 第 2 行：meta 在左（可换行），Token 与产出物在右。 */
 .dsh-tdt-rec-r2{display:flex;align-items:center;gap:var(--tdt-space-2);flex-wrap:wrap;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 .dsh-tdt-rec-meta{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;}
 .dsh-tdt-rec-sep{color:var(--tdt-border-heavy);}
 .dsh-tdt-rec-spacer{flex:1 1 auto;}
 .dsh-tdt-rec-num{font-variant-numeric:tabular-nums;font-family:var(--tdt-font-mono);}
-/* 产出物：官方文件类型图标 + 文件名的小 chip（可点开预览；无会话 / 预览不可用时不可点）。 */
-.dsh-tdt-rec-outs{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.dsh-tdt-rec-out{display:inline-flex;align-items:center;gap:4px;max-width:160px;padding:2px var(--tdt-space-1);
-  border:0;border-radius:var(--tdt-radius-sm);background:var(--tdt-plate);color:var(--tdt-fg-2);font:inherit;
-  font-size:var(--tdt-font-sm);cursor:pointer;}
-.dsh-tdt-rec-out:disabled{cursor:default;color:var(--tdt-fg-3);}
-.dsh-tdt-rec-out:hover:not(:disabled){background:var(--tdt-plate-hover);}
-.dsh-tdt-rec-outname{min-width:0;}
+.dsh-tdt-rec-chiprow{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）。 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
+/* ── 展开区（点块就地展开；手风琴，同时只开一条）───────────────────────── */
+.dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--tdt-space-2);
+  margin-top:var(--tdt-space-2);padding-top:var(--tdt-space-2);border-top:1px solid var(--tdt-border-faint);}
+.dsh-tdt-rec-expouts{display:flex;align-items:center;gap:var(--tdt-space-1);flex-wrap:wrap;}
+/* 展开区里的产出物：**图标 + 文件名**（折叠态只给图标；这里给全量、可点开预览） */
+.dsh-tdt-rec-file{appearance:none;display:inline-flex;align-items:center;gap:6px;max-width:280px;
+  padding:2px var(--tdt-space-1);border:0;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
+  color:var(--tdt-fg-2);font:inherit;font-size:var(--tdt-font-sm);cursor:pointer;}
+.dsh-tdt-rec-file:hover:not(:disabled){background:var(--tdt-chip-bg-hover);}
+.dsh-tdt-rec-file:disabled{cursor:default;background:transparent;color:var(--tdt-fg-3);}
+.dsh-tdt-rec-file:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
+/* 事件流水：等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
+.dsh-tdt-rec-ev{font-family:var(--tdt-font-mono);font-size:var(--tdt-font-xs);
+  line-height:var(--tdt-line-md);color:var(--tdt-fg-2);}
+.dsh-tdt-rec-evrow{margin-bottom:6px;word-break:break-all;}
+.dsh-tdt-rec-evempty{font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-rec-foot{display:flex;align-items:center;justify-content:center;gap:var(--tdt-space-2);
   padding:var(--tdt-space-3) 0 var(--tdt-space-1);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-rec-err{color:var(--tdt-danger);}
@@ -154,24 +174,38 @@ function dayKeyOf(row: InstanceRow): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
-/** 天标签文案（`Intl` 按当前语言排版；认不出的 key 原样显示，不硬编码某种语言）。 */
-function dayLabelOf(key: string, formatter: Intl.DateTimeFormat | null): string {
+/** 天 key（`YYYY-MM-DD`）→ 本地 `Date`；认不出给 null（不猜）。 */
+function dateOfDayKey(key: string): Date | null {
   const parts = key.split('-')
   const y = Number(parts[0])
   const m = Number(parts[1])
-  const day = Number(parts[2])
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(day)) return key
-  if (formatter === null) return key
-  return formatter.format(new Date(y, m - 1, day))
+  const d = Number(parts[2])
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+  return new Date(y, m - 1, d)
 }
 
-/** 语义色调 → 色条 / 状态点颜色（**只消费 token**；哪些状态算哪一档由 `status-text.ts` 判）。 */
-function toneColorOf(tone: ReturnType<typeof statusToneOf>): string {
-  if (tone === 'ok') return 'var(--tdt-success)'
-  if (tone === 'bad') return 'var(--tdt-danger)'
-  if (tone === 'warn') return 'var(--tdt-warning)'
-  if (tone === 'busy') return 'var(--tdt-business)'
-  return 'var(--tdt-fg-3)'
+/** 日期文案（`Intl` 按当前语言排版；认不出的 key 原样显示，不硬编码某种语言）。 */
+function dayLabelOf(key: string, formatter: Intl.DateTimeFormat | null): string {
+  const date = dateOfDayKey(key)
+  return date === null || formatter === null ? key : formatter.format(date)
+}
+
+/** 星期文案（同日期的 key；取不到给空串 ⇒ 整段不显示）。 */
+function weekdayOf(key: string, formatter: Intl.DateTimeFormat | null): string {
+  const date = dateOfDayKey(key)
+  return date === null || formatter === null ? '' : formatter.format(date)
+}
+
+/**
+ * 语义色调 → 块的色调类名（色值本身全在 CSS 里读 `--tdt-*` / `--tdt-*-soft`，
+ * 业务侧只做「哪一档」的映射；档位由 `status-text.ts` 的 `statusToneOf` 单源决定）。
+ */
+function toneClassOf(tone: ReturnType<typeof statusToneOf>): string {
+  if (tone === 'ok') return 'dsh-tdt-rec-tone--ok'
+  if (tone === 'bad') return 'dsh-tdt-rec-tone--bad'
+  if (tone === 'warn') return 'dsh-tdt-rec-tone--warn'
+  if (tone === 'busy') return 'dsh-tdt-rec-tone--busy'
+  return 'dsh-tdt-rec-tone--mute'
 }
 
 /** 执行时长（与卡片面板同口径：`dispatched_at ?? scheduled_at` → `finished_at`）。 */
@@ -183,20 +217,29 @@ function durationOf(row: InstanceRow): string {
   return formatDurationHms(to - from)
 }
 
-/** 一个执行条目（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
+/** 时间戳（`YYYY-MM-DD HH:mm:ss`，事件流水用；与卡片下钻同款）。 */
+const stampOf = (iso: string | null): string =>
+  iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
+
+/** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
 const RecordItem = memo(function RecordItem(props: {
   row: InstanceRow
   label: string
   workspace: string
   t: Translate
-  last: boolean
+  /** 是否展开（手风琴：由父级按 `openId` 算好传进来）。 */
+  open: boolean
+  onToggle: (id: string) => void
   openSession: (sessionId: string) => void
   openFile?: (sessionId: string, path: string) => void
+  /** 展开区的事件流水（未展开 / 未取到 ⇒ null）。 */
+  events: readonly EventRow[] | null
+  eventsBusy: boolean
+  eventsError: string | null
 }): ReturnType<typeof h> {
-  const { row, label, workspace, t, last, openSession, openFile } = props
+  const { row, label, workspace, t, open, onToggle, openSession, openFile, events, eventsBusy, eventsError } = props
   const tone = statusToneOf(row.status)
   const running = isRunningStatus(row.status)
-  const color = toneColorOf(tone)
   const outputs = outputsOf(row.outputs)
   const sid = row.session_id
   const canOpenSession = sid !== null && sid !== ''
@@ -205,22 +248,31 @@ const RecordItem = memo(function RecordItem(props: {
   const note = row.note ?? ''
   const planned = hmOf(row.scheduled_at)
 
-  /** meta 里的一段（`标签 值`），值为空则整段不出。 */
-  const meta = (label: string, value: string, title?: string): ReturnType<typeof h> | null =>
-    value === '' || value === '-' ? null : h('span', { title }, `${label} ${value}`)
+  /** meta 里的一段（「标签 值」），值为空则整段不出。 */
+  const meta = (metaLabel: string, value: string, title?: string): ReturnType<typeof h> | null =>
+    value === '' || value === '-' ? null : h('span', { title }, `${metaLabel} ${value}`)
 
   return h('div', {
-    className: `dsh-tdt-rec-item${canOpenSession ? ' dsh-tdt-rec-item--on' : ''}${last ? ' dsh-tdt-rec-item--last' : ''}`,
-    onClick: canOpenSession ? () => { openSession(sid as string) } : undefined,
+    className: `dsh-tdt-rec-item ${toneClassOf(tone)}${open ? ' dsh-tdt-rec-item--open' : ''}`,
+    // 整块可点 = **切展开**（不再开会话；开会话只有下面那个「查看会话」按钮）。
+    onClick: () => { onToggle(row.id) },
+    // 无障碍：块是个可展开的按钮语义（键盘 Enter/Space 由 role 承担时行为由 onClick 处理）。
+    role: 'button',
+    tabIndex: 0,
+    'aria-expanded': open,
+    onKeyDown: (event: { key: string; preventDefault(): void }) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggle(row.id) }
+    },
   },
-    h('span', { className: `dsh-tdt-rec-bar${running ? ' dsh-tdt-rec-bar--run' : ''}`, style: { background: color } }),
+    h('span', { className: `dsh-tdt-rec-bar${running ? ' dsh-tdt-rec-bar--run' : ''}`, 'aria-hidden': true }),
     // ── 第 1 行：名称 | 状态 + 查看会话 ──
     h('div', { className: 'dsh-tdt-rec-r1' },
       h(MarqueeText, { text: label, title: label, className: 'dsh-tdt-rec-title dsh-tdt-ellipsis', style: { flex: '1 1 auto', minWidth: 0 } }),
       h('span', { className: 'dsh-tdt-rec-state' },
-        h('span', { className: `dsh-tdt-rec-statedot${running ? ' dsh-tdt-rec-statedot--run' : ''}`, style: { background: color } }),
+        h('span', { className: `dsh-tdt-rec-statedot${running ? ' dsh-tdt-rec-statedot--run' : ''}`, 'aria-hidden': true }),
         statusTextOf(row.status, t),
       ),
+      // 只有这个按钮开会话（没有会话就不出现 —— 不给假入口；块本身仍可展开）。
       canOpenSession
         ? h(Button, {
           variant: 'ghost',
@@ -231,7 +283,7 @@ const RecordItem = memo(function RecordItem(props: {
         }, `↗ ${t('viewSession')}`)
         : null,
     ),
-    // ── 第 2 行：工作区 · 计划 · 实际 · 时长 · Token ｜ 产出物 ──
+    // ── 第 2 行：工作区 · 计划 · 实际 · 时长 · Token ｜ 产出物（只给图标） ──
     h('div', { className: 'dsh-tdt-rec-r2' },
       h('span', { className: 'dsh-tdt-rec-meta' },
         // 所属工作区：任务表反查（任务已删则退回派发快照的 workspacePath 末段；都没有则整段不显示）。
@@ -247,33 +299,27 @@ const RecordItem = memo(function RecordItem(props: {
       tokens > 0
         ? h('span', { className: 'dsh-tdt-rec-num', title: formatTokenDetail(row) }, formatTokenCount(tokens))
         : null,
+      // 产出物（折叠态）：**只给带底板的图标**（用户 2026-10-04：列表上不用显示名字），超出给 `+N`（点开 = 展开）。
       outputs.length === 0
         ? null
-        : h('span', { className: 'dsh-tdt-rec-outs', title: t('colOutputs') },
+        : h('span', { className: 'dsh-tdt-rec-chiprow', title: t('colOutputs') },
           outputs.slice(0, 3).map(path => h('button', {
             key: path,
             type: 'button',
-            className: 'dsh-tdt-rec-out',
+            className: 'dsh-tdt-chip',
             title: path,
             disabled: !canOpenFile,
             onClick: (event: { stopPropagation(): void }) => {
               event.stopPropagation()
               if (canOpenFile) openFile?.(sid as string, path)
             },
-          },
-            h(FileTypeIcon, { path, size: 16 }),
-            h('span', { className: 'dsh-tdt-rec-outname dsh-tdt-ellipsis' }, baseNameOf(path)),
-          )),
+          }, h(FileTypeIcon, { path, size: 16 }))),
           outputs.length > 3
             ? h('button', {
               type: 'button',
-              className: 'dsh-tdt-rec-out',
-              title: t('viewSession'),
-              disabled: !canOpenSession,
-              onClick: (event: { stopPropagation(): void }) => {
-                event.stopPropagation()
-                if (canOpenSession) openSession(sid as string)
-              },
+              className: 'dsh-tdt-chip dsh-tdt-chip--label',
+              title: t('colOutputs'),
+              onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onToggle(row.id) },
             }, `+${outputs.length - 3}`)
             : null,
         ),
@@ -282,22 +328,58 @@ const RecordItem = memo(function RecordItem(props: {
     note === ''
       ? null
       : h('div', { className: 'dsh-tdt-rec-note dsh-tdt-ellipsis', title: note }, `${t('colNote')}：${note}`),
+    // ── 展开区：产出物全量（图标 + 文件名，可点开预览）+ 该次执行的事件流水 ──
+    open
+      ? h('div', { className: 'dsh-tdt-rec-exp', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+        outputs.length === 0
+          ? h('div', { className: 'dsh-tdt-rec-evempty' }, t('outputsEmpty'))
+          : h('div', { className: 'dsh-tdt-rec-expouts' },
+            outputs.map(path => h('button', {
+              key: path,
+              type: 'button',
+              className: 'dsh-tdt-rec-file',
+              title: path,
+              disabled: !canOpenFile,
+              onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
+            },
+              h(FileTypeIcon, { path, size: 16 }),
+              h('span', { className: 'dsh-tdt-ellipsis', style: { minWidth: 0 } }, baseNameOf(path)),
+            )),
+          ),
+        eventsError !== null
+          ? h('div', { className: 'dsh-tdt-rec-evempty dsh-tdt-rec-err' }, `${t('cardLoadFailed')}：${eventsError}`)
+          : eventsBusy
+            ? h('div', { className: 'dsh-tdt-rec-evempty' }, t('recordsLoading'))
+            : events === null
+              ? null
+              : events.length === 0
+                ? h('div', { className: 'dsh-tdt-rec-evempty' }, t('cardEventsEmpty'))
+                // 行间距拉开；字色整体压暗一档（与卡片下钻同口径）。
+                : h('div', { className: 'dsh-tdt-rec-ev' },
+                  events.map(event => h('div', { key: event.seq, className: 'dsh-tdt-rec-evrow' },
+                    h('span', { style: { color: 'var(--tdt-fg-3)' } }, `${stampOf(event.ts)} `),
+                    h('span', { style: { color: 'var(--tdt-fg-2)' } }, `${event.kind} `),
+                    h('span', { style: { color: 'var(--tdt-fg-2)' } }, event.detail ?? ''),
+                  )),
+                ),
+      )
+      : null,
   )
 })
 
 export interface RecordsTimelineProps {
   t: Translate
-  /** 任务候选（`[编号] 名称` 口径 + 所属工作区，由父级用 overview 组装）。 */
+  /** 任务候选（「[编号] 名称」 口径 + 所属工作区，由父级用 overview 组装）。 */
   tasks: readonly TaskOption[]
   /** 工作区候选真源（面板级唯一，来自 `GET /options`）；空数组 = 取不到 ⇒ 下拉「暂无可选」。 */
   workspaces: readonly EditorOption[]
   /** 打开归档会话弹窗：**只传会话 id**（快照 / 产出由弹窗自取）。 */
   onOpenSession?: (sessionId: string) => void
-  /** 打开产出物预览（`POST` 前先切文件面板）；不可用时不传 ⇒ 产出物 chip 降级为不可点。 */
+  /** 打开产出物预览（`POST` 前先切文件面板）；不可用时不传 ⇒ 产出物降级为不可点。 */
   onOpenFile?: (sessionId: string, path: string) => void
 }
 
-/** 执行记录总查询页（时间轴）。 */
+/** 执行记录总查询页（流水账）。 */
 export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typeof h> {
   applyStyle(RECORDS_DOMAIN, RECORDS_CSS)
   const { t, tasks, workspaces, onOpenSession, onOpenFile } = props
@@ -313,11 +395,19 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+  /** 手风琴：同时只展开一条（用户 2026-10-04 拍板）。 */
+  const [openId, setOpenId] = useState<string | null>(null)
+  /** 事件流水：按实例 id 缓存（反复开合不重复请求；实例的事件一次取完，不分页）。 */
+  const [eventsCache, setEventsCache] = useState<ReadonlyMap<string, readonly EventRow[]>>(() => new Map())
+  const [eventsBusy, setEventsBusy] = useState(false)
+  const [eventsError, setEventsError] = useState<string | null>(null)
 
   const seqRef = useRef(0)
   const inFlightRef = useRef(false)
   const rowsCountRef = useRef(0)
   rowsCountRef.current = rows.length
+  /** 事件请求序号：快速切块时作废旧响应，别把 A 的事件贴到 B 上。 */
+  const eventsSeqRef = useRef(0)
   /** 首次进入时的默认档（用来判「用户是否真的动过过滤器」⇒ 决定空态文案）。 */
   const initialRangeRef = useRef<TimeRangeValue>(range)
 
@@ -330,9 +420,13 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
       lastWeek: t('trLastWeek'), thisMonth: t('trThisMonth'), lastMonth: t('trLastMonth'),
     },
   }), [t])
-  // 天标签的日期格式器按语言记忆化（此前每次渲染、每天都新建一个 Intl 实例）。
+  // 日期行两个格式化器按语言记忆化（此前每次渲染、每天都新建 Intl 实例）。
   const dayFormatter = useMemo<Intl.DateTimeFormat | null>(
     () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { year: 'numeric', month: 'long', day: 'numeric' })),
+    [t],
+  )
+  const weekdayFormatter = useMemo<Intl.DateTimeFormat | null>(
+    () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { weekday: 'long' })),
     [t],
   )
 
@@ -388,7 +482,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     }
   }, [range, workspace, bucket, taskId])
 
-  // 过滤条件变化（含首次挂载）⇒ 作废在途请求 + 重置列表 + 取第一页。
+  // 过滤条件变化（含首次挂载）⇒ 作废在途请求 + 重置列表 + 取第一页 + 收起已展开的块。
   // ⚠️ 上限只拦「续拉」（见 loadMore）：首屏永远允许取 ⇒ 满 2000 条后改过滤不会白屏。
   useEffect(() => {
     seqRef.current += 1
@@ -398,10 +492,32 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     setDone(false)
     setError(null)
     setLoaded(false)
+    setOpenId(null)
+    setEventsError(null)
     void load(null)
     return () => { seqRef.current += 1 }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterSig])
+
+  // 展开的块 ⇒ 取该次执行的事件流水（**懒取** + 缓存命中不请求 + 序号作废旧响应）。
+  useEffect(() => {
+    if (openId === null || eventsCache.has(openId)) return
+    const id = openId
+    const seq = eventsSeqRef.current + 1
+    eventsSeqRef.current = seq
+    setEventsBusy(true)
+    setEventsError(null)
+    fetchEvents(id)
+      .then(list => {
+        if (seq !== eventsSeqRef.current) return
+        setEventsCache(prev => new Map(prev).set(id, list))
+      })
+      .catch((error: unknown) => {
+        if (seq !== eventsSeqRef.current) return
+        setEventsError(error instanceof Error ? error.message : String(error))
+      })
+      .finally(() => { if (seq === eventsSeqRef.current) setEventsBusy(false) })
+  }, [openId, eventsCache])
 
   const loadMore = useCallback((): void => {
     if (loading || done || cursor === null) return
@@ -425,7 +541,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   }, [])
   useEffect(() => () => { ioRef.current?.disconnect() }, [])
 
-  // 天分组：按取回顺序就地合并（同一天只有一个天标签，跨页追加亦然）。
+  // 天分组：按取回顺序就地合并（同一天只有一个日期行，跨页追加亦然）。
   const days = useMemo(() => {
     const out: Array<{ key: string; items: InstanceRow[] }> = []
     for (const row of rows) {
@@ -438,6 +554,11 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   }, [rows])
 
   const openSession = useCallback((sessionId: string): void => { onOpenSession?.(sessionId) }, [onOpenSession])
+  /** 点块 = 切展开（手风琴：点另一条时上一条自动收起）。 */
+  const toggleRow = useCallback((id: string): void => {
+    setOpenId(cur => (cur === id ? null : id))
+    setEventsError(null)
+  }, [])
   const atLimit = rows.length >= HARD_LIMIT
   const rangeChanged = range.from !== initialRangeRef.current.from || range.to !== initialRangeRef.current.to
   /** 用户是否真的动过过滤器（决定空态文案：没动过 = 这段时间本来就没记录）。 */
@@ -521,51 +642,59 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
       // 首屏取数：复用基础层 Loading（唯一实现；页面右下角浮动指示，锚在 PANEL_CONTENT_ID 上）。
       loading && !loaded ? h(Loading, { label: t('recordsLoading') }) : null,
 
-      // ── 灰底区块：贯穿竖轴画在这块上；空态 / 加载 / 失败态都在里面（轴永不断）──
-      h('div', { className: 'dsh-tdt-rec-band' },
-        rows.length === 0
-          ? (error !== null
-              ? h('div', { style: emptyStyle },
-                  h('span', { className: 'dsh-tdt-rec-err' }, `${t('recordsLoadFail')}：${error}`),
-                  h(Button, {
-                    variant: 'outline', size: 'sm',
-                    onClick: () => { void load(cursor) },
-                  }, t('recordsRetry')),
-                )
-              : loaded
-                ? h('div', { style: emptyStyle }, touched ? t('recordsEmptyFiltered') : t('recordsEmpty'))
-                : null)
-          : h('div', null,
-              days.map((day, dayIndex) => h('div', { key: `${day.key}#${dayIndex}` },
-                // 天节点：稍大的圆点压在竖轴上，点后跟日期 + 当天条数。
-                h('div', { className: 'dsh-tdt-rec-day' },
-                  h('span', { className: 'dsh-tdt-rec-dot' }),
-                  h('span', { className: 'dsh-tdt-rec-daylabel' }, dayLabelOf(day.key, dayFormatter)),
-                  h('span', { className: 'dsh-tdt-rec-daycount' }, tt('recordsDayCount', { n: day.items.length })),
-                ),
-                day.items.map((row, rowIndex) => h(RecordItem, {
+      // ── 流水账：**没有外框**，内容直接铺在页面底上（空态 / 加载 / 失败态同样不带框）──
+      rows.length === 0
+        ? (error !== null
+            ? h('div', { style: emptyStyle },
+                h('span', { className: 'dsh-tdt-rec-err' }, `${t('recordsLoadFail')}：${error}`),
+                h(Button, {
+                  variant: 'outline', size: 'sm',
+                  onClick: () => { void load(cursor) },
+                }, t('recordsRetry')),
+              )
+            : loaded
+              ? h('div', { style: emptyStyle }, touched ? t('recordsEmptyFiltered') : t('recordsEmpty'))
+              : null)
+        : h('div', null,
+            days.map(day => h('div', { key: day.key, className: 'dsh-tdt-rec-group' },
+              // 日期小字行：时钟图标 + 日期 · 星期 · N 条（不吸顶）。
+              h('div', { className: 'dsh-tdt-rec-dayrow' },
+                h(IconClockOutlineRegular, { size: 14 }),
+                h('span', { className: 'dsh-tdt-rec-daylabel' }, dayLabelOf(day.key, dayFormatter)),
+                h('span', { className: 'dsh-tdt-rec-sep' }, '·'),
+                h('span', { className: 'dsh-tdt-rec-daylabel' }, weekdayOf(day.key, weekdayFormatter)),
+                h('span', { className: 'dsh-tdt-rec-sep' }, '·'),
+                h('span', { className: 'dsh-tdt-rec-daycount' }, tt('recordsDayCount', { n: day.items.length })),
+              ),
+              // 块与块之间 4px（`.dsh-tdt-rec-items` 的 gap）。
+              h('div', { className: 'dsh-tdt-rec-items' },
+                day.items.map(row => h(RecordItem, {
                   key: row.id,
                   row,
                   label: titleById.get(row.task_id) ?? row.task_id,
                   workspace: workspaceOf(row),
                   t,
-                  last: dayIndex === days.length - 1 && rowIndex === day.items.length - 1,
+                  open: openId === row.id,
+                  onToggle: toggleRow,
                   openSession,
                   openFile: onOpenFile,
+                  events: openId === row.id ? eventsCache.get(row.id) ?? null : null,
+                  eventsBusy: openId === row.id && eventsBusy,
+                  eventsError: openId === row.id ? eventsError : null,
                 })),
-              )),
-              // ── 加载区：哨兵触发续拉；失败给提示 + 重试；到下给文案；还有下一页给手动兜底 ──
-              h('div', { ref: observeSentinel, style: { height: '1px' } }),
-              h('div', { className: 'dsh-tdt-rec-foot' },
-                error !== null ? h('span', { className: 'dsh-tdt-rec-err' }, `${t('recordsLoadFail')}：${error}`) : null,
-                error !== null
-                  ? h(Button, { variant: 'outline', size: 'sm', onClick: () => { void load(cursor) } }, t('recordsRetry'))
-                  : footerHint !== null
-                    ? h('span', null, footerHint)
-                    : h(Button, { variant: 'outline', size: 'sm', onClick: loadMore }, t('recordsLoadMore')),
               ),
+            )),
+            // ── 加载区：哨兵触发续拉；失败给提示 + 重试；到下给文案；还有下一页给手动兜底 ──
+            h('div', { ref: observeSentinel, style: { height: '1px' } }),
+            h('div', { className: 'dsh-tdt-rec-foot' },
+              error !== null ? h('span', { className: 'dsh-tdt-rec-err' }, `${t('recordsLoadFail')}：${error}`) : null,
+              error !== null
+                ? h(Button, { variant: 'outline', size: 'sm', onClick: () => { void load(cursor) } }, t('recordsRetry'))
+                : footerHint !== null
+                  ? h('span', null, footerHint)
+                  : h(Button, { variant: 'outline', size: 'sm', onClick: loadMore }, t('recordsLoadMore')),
             ),
-      ),
+          ),
     ),
   )
 }

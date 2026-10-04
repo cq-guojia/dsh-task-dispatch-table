@@ -115,12 +115,9 @@ const TASK_LIST_CSS = [
   // 行 hover 高亮（用户 2026-10-02：斑马纹之上再给一层鼠标反馈）。
   // 特异性 (0,2,0) > `.dsh-tdt-rec-alt` (0,1,0) ⇒ 能盖住斑马纹底色。
   '.dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }',
-  // 产出物图标小底板：圆角方形 + hover 变亮（表示可点）。
-  // 底板**走 class**——inline background 会盖掉 :hover。
-  // hover 走 `--tdt-chip-bg-hover`：**两端都是「更明显」**（浅色更深、暗色更亮），
-  // 不能再用 plate-hover（暗色下反而更淡 ⇒ 鼠标移上去底板就消失了）。
-  '.dsh-tdt-rec-out { background: var(--tdt-chip-bg); }',
-  '.dsh-tdt-rec-out:hover { background: var(--tdt-chip-bg-hover); }',
+  // ⚠️ 产出物图标底板**已上提基础层**（2026-10-04）：改用 `.dsh-tdt-chip`（`ui/controls-css.ts`）。
+  // 原先这里与执行记录页各写一份**同名不同皮**的 `.dsh-tdt-rec-out`，两份 CSS 都注入同一页面
+  // ⇒ 谁后注册谁生效、两页外观互相污染；现在是全站唯一实现。
   // 基础信息右栏「产出物」文件行：hover 给一层底色（用户 2026-10-03）。必须走 class——inline 会盖掉 :hover。
   '.dsh-tdt-info-out { background: transparent; transition: background var(--tdt-dur) var(--tdt-ease); }',
   '.dsh-tdt-info-out:hover { background: var(--tdt-chip-bg); }',
@@ -843,18 +840,6 @@ const plainIconBtnStyle: Record<string, string | number> = {
   width: '20px', height: '20px', padding: 0, border: 'none', background: 'transparent',
   color: 'var(--tdt-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit', transition,
 }
-/**
- * 产出物图标钮（用户 2026-10-02：图标加**浅色圆角方形底板**，hover 变亮 ⇒ 明示可点）。
- * ⚠️ **不写 background**：底板 / hover 走 `.dsh-tdt-rec-out`（inline 背景会盖掉 `:hover`）。
- */
-const outputIconBtnStyle: Record<string, string | number> = {
-  appearance: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  // 放大（用户 2026-10-02）：28×28 配 16px 图标 ⇒ 图标与底板边缘**每边留 6px**（原先 22×22 只有 3px，
-  // 间距正好翻倍）。列高稍增无妨。
-  width: '28px', height: '28px', padding: 0, border: 'none',
-  color: 'var(--tdt-fg-2)', cursor: 'pointer', lineHeight: 0, fontFamily: 'inherit',
-  borderRadius: 'var(--tdt-radius-sm)', transition,
-}
 /** 产出物图标格（最多 3 个 +「…」更多）。 */
 const outputCellStyle: Record<string, string | number> = {
   display: 'inline-flex', alignItems: 'center', gap: '2px', flexWrap: 'nowrap',
@@ -1455,13 +1440,14 @@ function TaskExpandPanel(props: {
                   ),
                   // ⑦ 产出物（**倒数第二列**，紧挨「查看会话」）：官方文件类型图标 ≤3 个；
                   // >3 收「…」（点开会话看完整）；无产出 ⇒ 该格空。**不居中**（图标从左到右排）。
+                  // 图标底板 = 基础层 `.dsh-tdt-chip`（**全站唯一实现**，2026-10-04 收编；执行记录总查询页共用同一份）。
                   h('td', { style: miniCellStyle },
                     outputs.length === 0
                       ? null
                       : h('span', { style: outputCellStyle },
                         outputs.slice(0, 3).map(output => h('button', {
-                          key: output, type: 'button', title: output, className: 'dsh-tdt-rec-out',
-                          style: { ...outputIconBtnStyle, cursor: canOpenFile ? 'pointer' : 'default' },
+                          key: output, type: 'button', title: output, className: 'dsh-tdt-chip',
+                          style: { cursor: canOpenFile ? 'pointer' : 'default' },
                           onClick: (event: { stopPropagation(): void }) => {
                             event.stopPropagation()
                             if (canOpenFile && openFile !== undefined && sid !== null) openFile(sid, output)
@@ -1470,8 +1456,7 @@ function TaskExpandPanel(props: {
                         outputs.length > 3
                           ? h('button', {
                             type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
-                            className: 'dsh-tdt-rec-out',
-                            style: { ...outputIconBtnStyle, width: 'auto', padding: '0 6px', fontSize: 'var(--tdt-font-md)' },
+                            className: 'dsh-tdt-chip dsh-tdt-chip--label',
                             onClick: (event: { stopPropagation(): void }) => {
                               event.stopPropagation()
                               if (canOpenSession && openSession !== undefined && sid !== null) openSession(sid)

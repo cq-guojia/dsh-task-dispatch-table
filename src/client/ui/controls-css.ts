@@ -112,7 +112,25 @@ export const BUTTON_CSS = `
 .dsh-tdt-iconbtn:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:2px;}
 .dsh-tdt-iconbtn:disabled{cursor:default;opacity:.4;}
 
-@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn{transition:none;}}
+/* ── 产出物「图标 chip」P2：28×28 方角小底板 + 官方文件类型图标 ──────────────
+   用途：产出物列表里**只给图标**的小按钮（卡片「执行记录」面板、执行记录总查询页、展开区都挂它）。
+   ⚠️ 底板**必须走 class**——inline background 会盖掉 :hover（用户 2026-10-03 踩过）。
+   hover 用 「--tdt-chip-bg-hover」：浅色更深、暗色更亮（两端都是「更明显」）；不许拿
+   「--tdt-plate-hover」 顶——暗色下反而更淡，鼠标移上去底板就消失了。
+   ✅ **全站唯一实现**（2026-10-04 收编）：此前卡片面板与执行记录页各写一份**同名不同皮**的
+   「.dsh-tdt-rec-out」，两份 CSS 都注入同一页面 ⇒ 谁后注册谁生效、互相污染；现已收成这一份。 */
+.dsh-tdt-chip{appearance:none;-webkit-appearance:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+  width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);padding:0;border:none;border-radius:var(--tdt-radius-sm);
+  background:var(--tdt-chip-bg);color:var(--tdt-fg-2);font-family:inherit;line-height:0;cursor:pointer;
+  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
+.dsh-tdt-chip:hover:not(:disabled){background:var(--tdt-chip-bg-hover);}
+.dsh-tdt-chip:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
+/* 不可点（没有会话 / 预览面未就位）：去掉底板与手指，别给假入口 */
+.dsh-tdt-chip:disabled{cursor:default;background:transparent;color:var(--tdt-fg-3);}
+/* 文字型 chip（「…」 / 「+N」）：不固定方宽，按内容撑开 */
+.dsh-tdt-chip--label{width:auto;padding:0 6px;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-btn,.dsh-tdt-iconbtn,.dsh-tdt-chip{transition:none;}}
 `
 
 /** 输入 / 前缀输入 / 数字步进的皮肤规则（P3）。 */

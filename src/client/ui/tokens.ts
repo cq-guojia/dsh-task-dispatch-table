@@ -82,6 +82,15 @@ body{
   /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
      故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
   --tdt-on-signal:#fff;
+  /* 语义色**浅底**（8% 透明）：状态色系的「一块底色」——执行记录页每条流水账的块底就是它
+     （用户 2026-10-04：正常态给同色系很浅的透明底、失败用红底透出来）。
+     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，**暗色主题下自动成立**
+     （深色底透出来、上面仍是状态色），不必在 dark 段再覆盖一遍。
+     命名收在 tokens.ts 单点（本仓硬规矩：业务文件不许自造 --tdt-*）。 */
+  --tdt-success-soft:color-mix(in srgb,var(--tdt-success) 8%,transparent);
+  --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 8%,transparent);
+  --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 8%,transparent);
+  --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 8%,transparent);
 
   /* ── 交互底 / 遮罩 ────────────────────────────────────────────────── */
   --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
