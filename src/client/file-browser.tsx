@@ -13,7 +13,7 @@
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
 import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { Button, IconButton, Loading, MarqueeText, Segmented } from './ui'
+import { Button, IconButton, MarqueeText, Segmented } from './ui'
 import {
   FileTypeIcon,
   IconCheckOutlineRegular,
@@ -641,8 +641,9 @@ export function FileBrowser(props: {
         ),
         isOpen
           ? h('div', { className: 'dsh-tdt-sv-tree-children' },
+              // 硬性规定：**不新建 / 不改造 Loading**，也**不写加载文案** ⇒ 还在拉就**空着**（用户 2026-10-05）。
               cached === undefined || cached.status === 'loading'
-                ? h(Loading, { label: t('previewLoading') })
+                ? null
                 : cached.status === 'error'
                   ? h('div', { className: 'dsh-tdt-sv-tree-err' }, t(cached.error.key, cached.error.params))
                   : h(Fragment, null,
@@ -729,8 +730,8 @@ export function FileBrowser(props: {
           : null,
       )
   } else {
-    body = h('div', { className: 'dsh-tdt-sv-preview-body' },
-      h(Loading, { label: t('previewLoading') }))
+    // 同上：不动 Loading、不写加载文案 ⇒ 空着。
+    body = h('div', { className: 'dsh-tdt-sv-preview-body' })
   }
 
   return h('aside', {

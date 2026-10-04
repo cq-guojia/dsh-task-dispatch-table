@@ -1446,11 +1446,12 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       (tlSrc10.match(/label: baseNameOf\(path\)/g) ?? []).length === 2
       && /label: baseNameOf\(output\)/.test(tlListSrc)
       && /h\(Tooltip, \{[\s\S]{0,120}label: baseNameOf/.test(tlSrc10))
-    check('第十轮·硬性规定：加载**只复用页面右下角统一那一个 Loading**，任何地方都不显示加载文案',
-      /h\(Loading, \{ label: t\('recordsLoading'\), anchorId: PANEL_CONTENT_ID \}\)/.test(tlSrc10)
+    check('第十一轮·**纠正第十轮**：不许新建 / 改造 Loading —— 原样复用已有的那一个，加载处一律**空着**，不写任何加载文案',
+      !/h\(Loading/.test(prevSrc) && !/h\(Loading/.test(browserSrc)
+      && !/h\(Loading, \{ label: t\('recordsLoading'\), anchorId: PANEL_CONTENT_ID \}\)/.test(tlSrc10)
       && !/dsh-tdt-rec-evempty' \}, t\('recordsLoading'\)/.test(tlSrc10)
-      && /h\(Loading, \{ label: t\('previewLoading'\) \}\)/.test(prevSrc)
-      && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(prevSrc) && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(browserSrc))
+      && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(prevSrc) && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(browserSrc)
+      && /eventsBusy[\s\S]{0,260}\? null/.test(tlSrc10))
     check('第十轮·硬性规定：悬停提示一律**官方 Tooltip**，不再用原生 title（状态名 / 标题 / 信息行；备注不弹）',
       /h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc10)
       && /h\(Tooltip, \{ label, side: 'top' \}/.test(tlSrc10)
@@ -1467,10 +1468,16 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && tlSrc10.includes("dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}")
       && tlSrc10.indexOf('dsh-tdt-rec-tag') < tlSrc10.indexOf("}, t('viewSession'))")
       && !/recTag(Failed|Skipped|Running|Unknown)/.test(tlSrc10) && !/recTag(Failed|Skipped|Running|Unknown)/.test(locSrc10))
-    check('第十轮：状态标签**宽度自适应**（去掉 min-width 定死），padding 上下 1px / 左右 2px（左右 = 上下两倍）',
-      /\.dsh-tdt-rec-tag\{[^}]*padding:1px 2px;[^}]*line-height:var\(--tdt-line-sm\)/.test(tlSrc10)
-      && !/\.dsh-tdt-rec-tag\{[^}]*min-width/.test(tlSrc10)
-      && !/\.dsh-tdt-rec-tag\{[^}]*padding:0;/.test(tlSrc10))
+    check('第十一轮：状态标签 = **状态色实底 + 反色字**（背景吃 --rec-tone、字走 --tdt-on-signal），字号小一号、padding 上下 3 / 左右 6',
+      /\.dsh-tdt-rec-tag\{[^}]*padding:3px 6px;/.test(tlSrc10)
+      && /\.dsh-tdt-rec-tag\{[^}]*background:var\(--rec-tone,var\(--tdt-fg-3\)\);color:var\(--tdt-on-signal\)/.test(tlSrc10)
+      && /\.dsh-tdt-rec-tag\{[^}]*font-size:var\(--tdt-font-xs\)/.test(tlSrc10)
+      && !/\.dsh-tdt-rec-tag--(bad|warn|busy|neutral)\{/.test(tlSrc10)
+      && !/\.dsh-tdt-rec-tag\{[^}]*min-width/.test(tlSrc10))
+    check('第十一轮：执行记录页过滤行的分段控件与「任务配置」页**同一皮肤**（走默认变体：有外描边；不再 inset）',
+      tlSrc10.includes("h(Segmented<StatusBucket | 'all'>") && !/variant: 'inset'/.test(tlSrc10)
+      && /h\(Segmented<'all' \| 'enabled' \| 'disabled' \| 'abnormal'>[\s\S]{0,220}items:/.test(tlListSrc)
+      && !/h\(Segmented<'all' \| 'enabled' \| 'disabled' \| 'abnormal'>[\s\S]{0,220}variant:/.test(tlListSrc))
     check('第十轮：备注**不再挂气泡**（备注已在下方那行显示 ⇒ 悬停不再弹），标签也不再弹备注',
       !/h\(Tooltip, \{ label: note, side: 'top' \}/.test(tlSrc10)
       && !/statusTag\.tone === 'bad' \|\| note === ''/.test(tlSrc10)

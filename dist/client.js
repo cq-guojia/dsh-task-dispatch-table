@@ -52971,7 +52971,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				err,
 				t
 			});
-			if (url === null) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
+			if (url === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
 			if (kind === "pdf") return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
 				className: "dsh-tdt-sv-preview-pdf",
 				src: url,
@@ -53031,7 +53031,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				err,
 				t
 			});
-			if (url === null) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
+			if (url === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
 			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
 				className: "dsh-tdt-sv-preview-pdf",
 				src: url,
@@ -53084,7 +53084,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				err,
 				t
 			});
-			if (doc === void 0) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
+			if (doc === void 0) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
 			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
 				className: "dsh-tdt-sv-preview-html",
 				name: "dsh-sidebar-html-preview",
@@ -53197,7 +53197,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				err,
 				t
 			});
-			if (loading || text === null) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
+			if (loading || text === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
 			const showSource = !markdown || sourceView;
 			const banner = truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-truncated" }, t("previewTruncated", { size: t("previewTruncatedSize") })) : null;
 			const body = (0, react$1.createElement)("div", { className: showSource && !markdown ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-body-code" : "dsh-tdt-sv-preview-body" }, showSource ? (0, react$1.createElement)("div", {
@@ -53796,7 +53796,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							event.stopPropagation();
 							toggleDir(childPath);
 						}
-					}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react$1.createElement)(Loading, { label: t("previewLoading") }) : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
+					}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? null : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
 				});
 			};
 			const rootAbs = workspaceRoots.get(sessionId);
@@ -53848,7 +53848,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: goBack
 			}, t("explorerBack"))) : null);
 			else if (listing !== null) body = listing.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
-			else body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)(Loading, { label: t("previewLoading") }));
+			else body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
 			return (0, react$1.createElement)("aside", {
 				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
 				"data-preview-dock": dock === true ? true : void 0,
@@ -57005,16 +57005,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
-/* 状态标签（**仅非成功态**出）：不画描边；中性浅底 + 状态色字 ⇒ 压在状态色块底上也看得清。
-   ⚠️ 宽度**自适应**（用户 2026-10-05：不要 min-width 定死，字多就长、字少就短）：
-   padding 上下各 1px、左右各 2px（**左右 = 上下的两倍**）；高度靠 padding 撑（上下各 +1）。 */
+/* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
+   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --tdt-on-signal，一眼就是个带色的牌子。
+   ⚠️ 宽度**自适应**（不写 min-width，字多就长、字少就短）：padding **上下 3px / 左右 6px**（左右 = 上下两倍）；
+   字号比信息行再小一号（--tdt-font-xs）。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  height:auto;padding:1px 2px;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
-  font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;}
-.dsh-tdt-rec-tag--bad{color:var(--tdt-danger);}
-.dsh-tdt-rec-tag--warn{color:var(--tdt-warning);}
-.dsh-tdt-rec-tag--busy{color:var(--tdt-business);}
-.dsh-tdt-rec-tag--neutral{color:var(--tdt-fg-3);}
+  height:auto;padding:3px 6px;border-radius:var(--tdt-radius-sm);
+  background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
+  font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
@@ -57418,10 +57416,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						openSession(depSid);
 					}
 				}, t("viewSession")) : null));
-			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react$1.createElement)(Loading, {
-				label: t("recordsLoading"),
-				anchorId: PANEL_CONTENT_ID
-			}) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
+			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? null : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
 			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
@@ -57662,7 +57657,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Segmented, {
 				value: bucket === "" ? "all" : bucket,
 				size: "md",
-				variant: "inset",
 				label: t("colStatus"),
 				items: statusItems,
 				onChange: (next) => {

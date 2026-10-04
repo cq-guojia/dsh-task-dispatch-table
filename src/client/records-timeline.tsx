@@ -136,16 +136,14 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
-/* 状态标签（**仅非成功态**出）：不画描边；中性浅底 + 状态色字 ⇒ 压在状态色块底上也看得清。
-   ⚠️ 宽度**自适应**（用户 2026-10-05：不要 min-width 定死，字多就长、字少就短）：
-   padding 上下各 1px、左右各 2px（**左右 = 上下的两倍**）；高度靠 padding 撑（上下各 +1）。 */
+/* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
+   字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --tdt-on-signal，一眼就是个带色的牌子。
+   ⚠️ 宽度**自适应**（不写 min-width，字多就长、字少就短）：padding **上下 3px / 左右 6px**（左右 = 上下两倍）；
+   字号比信息行再小一号（--tdt-font-xs）。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  height:auto;padding:1px 2px;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
-  font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;}
-.dsh-tdt-rec-tag--bad{color:var(--tdt-danger);}
-.dsh-tdt-rec-tag--warn{color:var(--tdt-warning);}
-.dsh-tdt-rec-tag--busy{color:var(--tdt-business);}
-.dsh-tdt-rec-tag--neutral{color:var(--tdt-fg-3);}
+  height:auto;padding:3px 6px;border-radius:var(--tdt-radius-sm);
+  background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
+  font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
@@ -685,8 +683,8 @@ const RecordItem = memo(function RecordItem(props: {
         eventsError !== null
           ? h('div', { className: 'dsh-tdt-rec-evempty dsh-tdt-rec-err' }, `${t('cardLoadFailed')}：${eventsError}`)
           : eventsBusy
-            // 硬性规定：加载**只复用页面右下角统一那一个 Loading**，此处不显示任何「加载中」文案（空着即可）。
-            ? h(Loading, { label: t('recordsLoading'), anchorId: PANEL_CONTENT_ID })
+            // 硬性规定：**不新建 / 不改造 Loading**，也**不写「加载中」文案** ⇒ 还在拉就**空着**（用户 2026-10-05）。
+            ? null
             : events === null
               ? null
               : events.length === 0
@@ -944,10 +942,11 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     h('div', { id: PANEL_CONTENT_ID, style: PANEL_CONTENT_STYLE },
       // ── 过滤行：左 = 状态四档分段控件；右 = 时间范围 · 工作区 · 任务 ──
       h('div', { style: filterRowStyle },
+        // ⚠️ variant 走**默认档**（与「任务配置」页那排分组按钮同一皮肤：轨道第二层面 + 外描边）——
+        //    用户 2026-10-05：执行记录的这排与任务配置页样式不一致（那边有白边）⇒ 统一成同一变体。
         h(Segmented<StatusBucket | 'all'>, {
           value: bucket === '' ? 'all' : bucket,
           size: 'md',
-          variant: 'inset',
           label: t('colStatus'),
           items: statusItems,
           onChange: (next: StatusBucket | 'all') => { setBucket(next === 'all' ? '' : next) },
