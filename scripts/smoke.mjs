@@ -1169,9 +1169,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /onOpenFile\?: \(sessionId: string, path: string\) => void/.test(tlSrc)
       && /disabled: !canOpenFile/.test(tlSrc)
       && idxSrc.includes('onOpenFile: canPreview ? openFile : undefined'))
-    check('三层交互（照任务卡片）：容器不可点、**头部可点**（hover 叠中性层 / 展开常亮）、展开区不可点',
+    check('三层交互（照任务卡片）：容器不可点、**头部可点**（只有 hover 变色）、展开区不可点（第七轮反向：展开常亮与 --open 类已删）',
       /\.dsh-tdt-rec-head:hover\{background-image:linear-gradient\(var\(--tdt-hover\),var\(--tdt-hover\)\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-item--open \.dsh-tdt-rec-head\{background-image:linear-gradient\(var\(--tdt-hover\)/.test(tlSrc)
+      && !/dsh-tdt-rec-item--open/.test(tlSrc)
       && !/\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid/.test(tlSrc))
     check('时间轴走 HTTP 游标分页：读 nextCursor 并回写（且 page size / 上限对齐 50/2000）',
       /setCursor\(page\.nextCursor\)/.test(tlSrc) && /cursor: nextCursor \?\? undefined/.test(tlSrc)
@@ -1250,23 +1250,46 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /const deps = resolvedDepsOf\(snapshot\)/.test(tlSrc)
       && /snapshot: row\.snapshot \?\? null/.test(tlSrc)
       && !/depends/.test(tlSrc))
-    check('第六轮：折叠态名字后是**前置圈码**（常量表 + circledOf），悬停用原生 title 写清第几个叫什么',
-      /const CIRCLED = \['①', '②', '③'/.test(tlSrc) && /const circledOf = \(n: number\)/.test(tlSrc)
+    check('第七轮：折叠态前置圈码 = **自绘描边圆徽标**（反向：Unicode 圈码字符表 CIRCLED 与 circledOf 已删）',
+      !/const CIRCLED = /.test(tlSrc) && !/circledOf\(/.test(tlSrc)
+      && /const MAX_DEPMARKS = 20/.test(tlSrc) && /deps\.slice\(0, MAX_DEPMARKS\)/.test(tlSrc)
       && /className: 'dsh-tdt-rec-depmarks'/.test(tlSrc)
-      && /title: tt\('recordsDepTip', \{ n: String\(index \+ 1\), task: depTitleOf\(dep\.task\) \}\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-depmark\{font-size:var\(--tdt-font-sm\)/.test(tlSrc))
-    check('第六轮：展开区**第二排**前置清单 = 一排两个（grid 两列），每格两行且能点开那次上游的会话',
+      && /\.dsh-tdt-rec-depmark\{display:inline-flex;align-items:center;justify-content:center;flex:none;/.test(tlSrc)
+      && /min-width:18px;height:18px;padding:0 3px;border-radius:999px;border:1px solid var\(--tdt-border\)/.test(tlSrc)
+      && /title: tt\('recordsDepTip', \{ n: String\(index \+ 1\), task: depTitleOf\(dep\.task\) \}\)/.test(tlSrc))
+    check('第七轮：圈码悬停浮出底色（用户「鼠标移上去不用点，它要变个色」），提示仍是**原生 title**（不自绘浮层）',
+      /\.dsh-tdt-rec-depmark:hover\{background:var\(--tdt-chip-bg-hover\);border-color:var\(--tdt-border-heavy\);color:var\(--tdt-fg-2\);\}/.test(tlSrc)
+      && !/dsh-tdt-rec-tip/.test(tlSrc))
+    // 前置格那一段的**局部切片**：反断「按钮不再是描边款」必须只看这一段，
+    // 否则会误伤头部右列那个仍是 outline 的「查看会话」按钮。
+    const depArea = /deps\.map\(\(dep, index\)[\s\S]*?\n\s*eventsError !== null/.exec(tlSrc)?.[0] ?? ''
+    check('第七轮：展开区**第二排**前置清单 = 一排两个，每格「左列两行 + 右列按钮」两列网格（格子本身仍不可点）',
       /className: 'dsh-tdt-rec-depsec'/.test(tlSrc)
       && /\.dsh-tdt-rec-depgrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(tlSrc)
-      && /tt\('recordsDepFrom',/.test(tlSrc)
+      && /\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;align-items:center;/.test(tlSrc)
+      && /className: 'dsh-tdt-rec-depmid'/.test(tlSrc)
       && /dep\.sessionId === null \|\| dep\.sessionId === ''/.test(tlSrc)
       && /openSession\(dep\.sessionId as string\)/.test(tlSrc)
       && /t\('listSectionDepends'\)/.test(tlSrc))
+    check('第七轮：前置格时间改**书面表达 + 全量长格式**「执行于 2026-10-03 23:50:12」（反向：不再走跨天口语措辞）',
+      /tt\('recordsDepFrom', \{ time: stampOf\(dep\.scheduledAt\) \}\)/.test(tlSrc)
+      && !/time: clockLabelOf\(dep\.scheduledAt/.test(tlSrc)
+      && locSrc.includes("recordsDepFrom: '执行于 {time}'") && !locSrc.includes('本次取自'))
+    check('第七轮：查看会话改**无边框链接型**小按钮（ghost + dsh-tdt-btn--link）并落右列靠右居中',
+      /variant: 'ghost',[\s\S]*?className: 'dsh-tdt-btn--link',/.test(depArea)
+      && !/variant: 'outline'/.test(depArea)
+      && /\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto/.test(tlSrc))
+    check('第七轮：前置格留白与圆角放大到约 1.5~2 倍（走 token 档位，反向：内部再无 2px 裸值间距）',
+      /\.dsh-tdt-rec-dep\{[^}]*padding:var\(--tdt-space-2\) var\(--tdt-space-3\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-dep\{[^}]*border-radius:var\(--tdt-radius-sm\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-depgrid\{[^}]*gap:var\(--tdt-space-2\) var\(--tdt-space-3\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-depsec\{[^}]*gap:var\(--tdt-space-2\)/.test(tlSrc)
+      && !/\.dsh-tdt-rec-dep\{[^}]*gap:2px/.test(tlSrc))
     check('第六轮：Token 悬停写详细 —— 总数 + **带标签**的三段明细（输入 / 输出 / 缓存）',
       /tt\('recTokenDetail', \{/.test(tlSrc)
       && /input: tokenPart\(row\.token_in\), output: tokenPart\(row\.token_out\), cache: tokenPart\(row\.token_in_cache\)/.test(tlSrc)
       && locSrc.includes("recordsDepTip: '前置任务 {n}：{task}'")
-      && locSrc.includes("recordsDepFrom: '本次取自 {time} 的那次执行'")
+      && locSrc.includes("recordsDepFrom: '执行于 {time}'")
       && locSrc.includes("recTokenDetail: '输入 {input} / 输出 {output} / 缓存 {cache}'"))
     check('第五轮：备注行归入左列（源序在左列与右列之间）⇒ 出现第三行时右列控件仍相对整条居中',
       /dsh-tdt-rec-left[\s\S]*dsh-tdt-rec-note[\s\S]*dsh-tdt-rec-right/.test(tlSrc))
@@ -1291,7 +1314,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /className: 'dsh-tdt-rec-right'/.test(tlSrc) && /className: 'dsh-tdt-rec-left'/.test(tlSrc)
       && /IconChevronDownOutlineRegular/.test(tlSrc) && /h\(IconButton, \{/.test(tlSrc)
       && /transform: open \? 'rotate\(180deg\)' : 'none'/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-caret')
-      && !tlSrc.includes('dsh-tdt-btn--link') && /variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc))
+      // ⚠️ 2026-10-04 第七轮：这一行**不能再要求「全仓没有 dsh-tdt-btn--link」**——
+      // 前置格里那个「查看会话」已按用户要求改成链接款；这里只钉**条目右列**这个仍是描边款。
+      && /variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc))
     check('第四轮 / 第六轮：留白落在**头部**上（上/下/右 12、左 16；容器无 padding ⇒ hover 高亮顶到块边）',
       /\.dsh-tdt-rec-main\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-4\)/.test(tlSrc)
       && !/\.dsh-tdt-rec-item\{[^}]*padding:/.test(tlSrc))

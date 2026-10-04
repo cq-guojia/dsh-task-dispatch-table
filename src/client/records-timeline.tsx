@@ -20,7 +20,7 @@
 //      → 「查看会话」按钮 → 展开箭头（**基础层 IconButton**，与任务配置卡片的箭头同一份实现）；
 //      **成败不用图标也再无状态文字**：底色 + 竖条即表达，状态名挂在竖条的悬停提示上；
 //      前置 = 名字后的**圈码**（本次执行实际用到的上游，悬停显示「前置任务 N：名」）+ 展开区**第二排**清单
-//      （一排两个：圈码 + 任务名 /「本次取自哪次执行」+ 查看会话）；
+//      （一排两个：圈码 + 任务名 /「执行于 <全量时刻>」+ 查看会话）；
 //   ⑦ 点头部 = **就地展开**（手风琴单开）：产出物清单**与「任务配置 → 附件区」同款**（行内并排、
 //      限宽 40ch、超长跑马灯，可点开预览；无产出则不占行）
 //      + 该次执行的**事件流水**（`fetchEvents(instanceId)`，左上角小标题「执行日志」）；
@@ -63,15 +63,16 @@ if (HARD_LIMIT % PAGE_SIZE !== 0) console.warn('[tdt] HARD_LIMIT 必须是 PAGE_
 type StatusBucket = '' | 'succeeded' | 'failed' | 'running'
 
 /**
- * 前置任务的**圈码**（用户 2026-10-04：「放在整个名字后面，比如用圈起来的数字 1、2、3」）。
- * 全仓此前没有 UI 圈码先例（Unicode ①-⑳ 只出现在注释里）⇒ 就地定义这一张表；
- * 超过表的长度（20 个前置）就补一个 `+N`（前置多到这个程度是配置问题，不值得为它加宽版面）。
+ * 折叠态前置标记的**上限**：最多画 20 枚，超出的收成 `+N`（前置多到这个程度是配置问题，
+ * 不值得为它加宽版面）。
+ *
+ * ⚠️ 2026-10-04 返工：此前用的是 Unicode 圈码字符表 `CIRCLED`（①-⑳），用户当场否掉
+ * ——「不要用文字形式的圈数字，我不知道你用的是什么文字」。字符圈码的外形由**字体**决定
+ * （不同平台的大小 / 基线 / 粗细都不一样，且本质是「文字」而不是「图形」），所以改成
+ * **自绘描边圆徽标**：元素里只放普通阿拉伯数字，圆交给 CSS（`.dsh-tdt-rec-depmark`）——
+ * 一位数是正圆、两位数自动撑成胶囊，尺寸完全可控。⇒ 常量表与 `circledOf` 一并删除。
  */
-const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
-  '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳']
-
-/** 第 n 个前置（1 起）的圈码；超出表长退化成阿拉伯数字（调用方另有 `+N`）。 */
-const circledOf = (n: number): string => CIRCLED[n - 1] ?? String(n)
+const MAX_DEPMARKS = 20
 
 // ── 样式（走基础层注入器，不自建 <style>；只消费 var(--tdt-*)，间距/时长全走 token）──
 const RECORDS_CSS = `
@@ -115,12 +116,13 @@ const RECORDS_CSS = `
 }
 /* ── 头部 = 块内两列（左列：标题 + 信息 + 备注 ／ 右列：一排控件）且是**唯一可点区域** ──
    留白放大（用户 2026-10-04：「左边的间距、上面、下面、右边都大点」）：上/下/右 12、左 16；
-   hover / 展开态叠一层**中性半透明**（不盖掉块底的状态色浅底）。 */
+   **只有鼠标悬停**才叠一层中性半透明（不盖掉块底的状态色浅底）。
+   ⚠️ 2026-10-04 第七轮：删掉「展开态常亮」——用户原话「如果我鼠标不移到这一块，它是不变色的，
+   还是没展开时的颜色呀。只是鼠标移到这一块，它才换一个颜色」；展开与否**不再影响**头部底色。 */
 .dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;
   padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);}
 .dsh-tdt-rec-head{cursor:pointer;}
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
-.dsh-tdt-rec-item--open .dsh-tdt-rec-head{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
@@ -141,8 +143,16 @@ const RECORDS_CSS = `
 /* 展开箭头**不再自绘**：用基础层 IconButton（与任务配置卡片的箭头同一份实现，
    hover 底色 / 尺寸 / 翻转都一致）—— 2026-10-04 第五轮收编。 */
 /* 折叠态：名字后面的**前置圈码**（有几个 = 本次执行实际用到了几个上游） */
-.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:2px;flex:none;}
-.dsh-tdt-rec-depmark{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
+.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:var(--tdt-space-1);flex:none;}
+/* 前置圈码 = **自绘描边圆徽标**（2026-10-04 返工，替代 Unicode ①②③ 字符）：
+   圆与尺寸全由样式给（不靠字体）——一位数是正圆、两位数自动撑成胶囊；
+   悬停浮出浅底 + 边框加深（用户：「鼠标移上去不用点，它要变个色」）；
+   内容提示仍是**原生 title**（上一轮定的「绝不自绘浮层」不动）。 */
+.dsh-tdt-rec-depmark{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  min-width:18px;height:18px;padding:0 3px;border-radius:999px;border:1px solid var(--tdt-border);
+  color:var(--tdt-fg-3);font-size:var(--tdt-font-xs);line-height:1;font-variant-numeric:tabular-nums;
+  transition:background-color var(--tdt-dur) var(--tdt-ease),border-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
+.dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);border-color:var(--tdt-border-heavy);color:var(--tdt-fg-2);}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
@@ -156,13 +166,19 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
 .dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--tdt-font-xs);font-weight:500;color:var(--tdt-fg-3);}
-/* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格两行 —— 圈码 + 任务名 /
-   「本次取自 15:10 的那次执行」+「查看会话」。格子本身不可点（只有里面那个按钮可点）。 */
-.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;}
-.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--tdt-space-1) var(--tdt-space-2);}
-.dsh-tdt-rec-dep{display:flex;flex-direction:column;gap:2px;min-width:0;
-  padding:var(--tdt-space-1) var(--tdt-space-2);border-radius:var(--tdt-radius-xs);background:var(--tdt-chip-bg);}
-.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-1);min-width:0;
+/* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格「左列两行 + 右列按钮」——
+   左列：圈码 + 任务名 ／「执行于 2026-10-03 23:50:12」；右列：「查看会话」链接型小按钮（靠右 + 上下居中）。
+   格子本身不可点（只有里面那个按钮可点）。
+   ⚠️ 2026-10-04 第七轮三处返工：① 时间改**书面表达 + 全量长格式**（用户否掉「本次取自…」那种说法）；
+   ② 按钮从信息行里挪出来落右列（无边框链接型）——顺带治好「两行中间被 24px 按钮撑高」的挤；
+   ③ 留白与圆角整体放大到约 1.5~2 倍（用户：「看着就是贴边，很挤」「完全看不出来圆角」）。 */
+.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--tdt-space-2);min-width:0;}
+.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--tdt-space-2) var(--tdt-space-3);}
+.dsh-tdt-rec-dep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+  column-gap:var(--tdt-space-3);min-width:0;
+  padding:var(--tdt-space-2) var(--tdt-space-3);border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);}
+.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;}
+.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
   font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
 .dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
   font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
@@ -371,7 +387,8 @@ const RecordItem = memo(function RecordItem(props: {
   return h('div', {
     // ⚠️ **容器不挂任何交互**（照任务卡片：容器不挂 onClick → 头部挂 → 展开区是兄弟节点）：
     //    光标 / 点击 / 键盘都只在下面的「头部」上 ⇒ 展开出来的内容既不是手指、也不会误触展开，可安心拖选复制。
-    className: `dsh-tdt-rec-item ${toneClassOf(tone)}${open ? ' dsh-tdt-rec-item--open' : ''}`,
+    //    展开与否只驱动「展开区是否渲染」与箭头上的 aria-expanded，**不再改块的外观**（第七轮去掉常亮）。
+    className: `dsh-tdt-rec-item ${toneClassOf(tone)}`,
   },
     // ── 头部（**唯一可点区域**）：左缘竖条 + 标题 + 信息 + 备注 + 右列控件 ──
     h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
@@ -396,14 +413,14 @@ const RecordItem = memo(function RecordItem(props: {
           deps.length === 0
             ? null
             : h('span', { className: 'dsh-tdt-rec-depmarks' },
-              deps.slice(0, CIRCLED.length).map((dep, index) => h('span', {
+              deps.slice(0, MAX_DEPMARKS).map((dep, index) => h('span', {
                 key: `${dep.task}#${dep.instanceId}`,
                 className: 'dsh-tdt-rec-depmark',
                 title: tt('recordsDepTip', { n: String(index + 1), task: depTitleOf(dep.task) }),
-              }, circledOf(index + 1))),
-              deps.length > CIRCLED.length
+              }, String(index + 1))),
+              deps.length > MAX_DEPMARKS
                 ? h('span', { className: 'dsh-tdt-rec-depmark', title: t('listSectionDepends') },
-                  `+${deps.length - CIRCLED.length}`)
+                  `+${deps.length - MAX_DEPMARKS}`)
                 : null,
             ),
         ),
@@ -516,26 +533,32 @@ const RecordItem = memo(function RecordItem(props: {
                 key: `${dep.task}#${dep.instanceId}`,
                 className: 'dsh-tdt-rec-dep',
               },
-                h('div', { className: 'dsh-tdt-rec-depname' },
-                  h('span', { className: 'dsh-tdt-rec-depmark' }, circledOf(index + 1)),
-                  h('span', { className: 'dsh-tdt-ellipsis', title: depTitleOf(dep.task) }, depTitleOf(dep.task)),
+                h('div', { className: 'dsh-tdt-rec-depmid' },
+                  h('div', { className: 'dsh-tdt-rec-depname' },
+                    h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)),
+                    h('span', { className: 'dsh-tdt-ellipsis', title: depTitleOf(dep.task) }, depTitleOf(dep.task)),
+                  ),
+                  h('div', { className: 'dsh-tdt-rec-depmeta' },
+                    // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
+                    // 「本次取自前一天…」那种口语说法，「哪一天、几点几分几秒，全都给显示出来」）。
+                    // 单行省略、悬停看全量；stampOf = formatDateTime(iso, { seconds: true })。
+                    h('span', { className: 'dsh-tdt-ellipsis', title: stampOf(dep.scheduledAt) },
+                      tt('recordsDepFrom', { time: stampOf(dep.scheduledAt) })),
+                  ),
                 ),
-                h('div', { className: 'dsh-tdt-rec-depmeta' },
-                  // 「本次取自 <那天那个点> 的那次执行」—— 时刻口径复用跨天 helper（前一天 / 次日 也会标出来）。
-                  h('span', { className: 'dsh-tdt-ellipsis', title: stampOf(dep.scheduledAt) },
-                    tt('recordsDepFrom', {
-                      time: clockLabelOf(dep.scheduledAt, dayKey, crossFmt, t('recPrevDay'), t('recNextDay')),
-                    })),
-                  // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。
-                  dep.sessionId === null || dep.sessionId === ''
-                    ? null
-                    : h(Button, {
-                      variant: 'outline',
-                      size: 'sm',
-                      title: t('viewSession'),
-                      onClick: () => { openSession(dep.sessionId as string) },
-                    }, t('viewSession')),
-                ),
+                // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。有会话才落右列：
+                // 靠右 + 上下居中，且不再把左列那两行撑高。
+                // 外观走基础层官方配方「链接型文字钮」（ghost + dsh-tdt-btn--link：无边框、链接色、
+                // hover 下划线）—— 用户 2026-10-04：「不要边框，不要黑、不要灰」。
+                dep.sessionId === null || dep.sessionId === ''
+                  ? null
+                  : h(Button, {
+                    variant: 'ghost',
+                    size: 'sm',
+                    className: 'dsh-tdt-btn--link',
+                    title: t('viewSession'),
+                    onClick: () => { openSession(dep.sessionId as string) },
+                  }, t('viewSession')),
               )),
             ),
           ),
