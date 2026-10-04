@@ -28,9 +28,8 @@ export const ARCHIVE_SESSION_CSS = `
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
    （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-/* z-index 5：必须高于预览体内容（官方 CodeBlock 的 .header 自带不透明背景
-   background: var(--dsl-code-block-background, …)，z-index:2 时它会盖住这条竖条，
-   真机 2026-10-04 表现为「浅灰竖条在 html 标题行处断开」）。 */
+/* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
+   z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
 .dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:7;touch-action:none;user-select:none;}
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
@@ -245,7 +244,7 @@ export const ARCHIVE_SESSION_CSS = `
 /* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
 .dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
 /* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
-   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条。 */
+   唯一滚动容器 = CodeViewer 内部 cm-scroller ⇒ 不再出现两条滚动条。 */
 .dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
 /* 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
    拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
@@ -253,8 +252,8 @@ export const ARCHIVE_SESSION_CSS = `
 /* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
 /* 容器相对定位，供复制钮绝对定位于右上角。 */
 .dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
-/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方 CodeBlock 复制钮行为）；仅图标、无中文文案；
-   点击复制全文，复制后短暂切勾选图标 + “已复制”提示（title/aria-label 承载本地化文案）。 */
+/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方复制钮交互：仅图标、无中文文案、点击复制全文、
+   复制后短暂切勾选图标 + "已复制"提示，title/aria-label 承载本地化文案）。 */
 .dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
 .dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
 .dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg,#1f2328);}

@@ -31,8 +31,18 @@ function isDarkScheme(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-export function CodeViewer(props: { text: string; path: string; t: Translate }): ReactElement {
-  const { text, path, t } = props
+export function CodeViewer(props: {
+  text: string
+  path: string
+  t: Translate
+  /** 可选：透传调用方样式类名（如 ocOr('ToolRow','codeBody',...)），保留既有皮肤与高度上下文 */
+  className?: string
+  /** 可选：透传根 div 行内样式 */
+  style?: React.CSSProperties
+  /** 可选：编辑器高度，默认 "100%"（填满父容器）；无确定高度上下文（如工具卡代码）传 "auto" 随内容撑高 */
+  height?: string
+}): ReactElement {
+  const { text, path, t, className, style, height = '100%' } = props
   const [copied, setCopied] = useState(false)
   const [dark, setDark] = useState<boolean>(isDarkScheme)
 
@@ -62,7 +72,7 @@ export function CodeViewer(props: { text: string; path: string; t: Translate }):
   }
 
   return (
-    <div className="dsh-tdt-sv-cmviewer">
+    <div className={`dsh-tdt-sv-cmviewer${className ? ` ${className}` : ''}`} style={style}>
       <button
         type="button"
         className="dsh-tdt-sv-cm-copy"
@@ -78,7 +88,7 @@ export function CodeViewer(props: { text: string; path: string; t: Translate }):
         theme="none"
         extensions={extensions}
         readOnly
-        height="100%"
+        height={height}
         style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden' }}
         basicSetup={{
           lineNumbers: true,

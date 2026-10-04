@@ -11,7 +11,6 @@
 import { Fragment, createElement as h, useMemo, useState } from 'react'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 import {
-  CodeBlock,
   DiffBlock,
   DisclosureRow,
   IconApiOutlineRegular,
@@ -27,6 +26,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ocOr } from '../official-classes'
 import type { LocaleKey, Translate } from '../locales'
+import { CodeViewer } from '../ui/CodeViewer'
 
 type ToolState = 'preparing' | 'running' | 'ok' | 'error' | 'stopped'
 type Variant = 'bash' | 'read' | 'search' | 'write' | 'edit' | 'code' | 'others'
@@ -535,13 +535,13 @@ export function GenericCommandCard(props: {
           : h(Fragment, null,
               variant === 'code' && bodyText !== null
                 ? h('div', { className: ocOr('ToolRow', 'bodyScroll', 'dsh-tdt-sv-tool-block') },
-                    h(CodeBlock, {
-                      code: bodyText,
-                      lang: 'typescript',
-                      copyLabel: t('copyLabel'),
-                      copiedLabel: t('copiedLabel'),
-                      toolbarLabels: codeToolbarLabels(t),
+                    h(CodeViewer, {
+                      text: bodyText,
+                      path: 'tool-code.ts',
+                      t,
                       className: ocOr('ToolRow', 'codeBody', 'dsh-tdt-sv-tool-block'),
+                      height: 'auto',
+                      style: { height: 'auto' },
                     }))
                 : null,
               (cardBody !== null || outputText !== null) && h('div', { className: ocOr('ToolRow', 'ioCard', 'dsh-tdt-sv-io-card') },

@@ -3290,9 +3290,8 @@ body[data-ds-dark-theme]{
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
    （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-/* z-index 5：必须高于预览体内容（官方 CodeBlock 的 .header 自带不透明背景
-   background: var(--dsl-code-block-background, …)，z-index:2 时它会盖住这条竖条，
-   真机 2026-10-04 表现为「浅灰竖条在 html 标题行处断开」）。 */
+/* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
+   z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
 .dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:7;touch-action:none;user-select:none;}
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
@@ -3507,7 +3506,7 @@ body[data-ds-dark-theme]{
 /* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
 .dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
 /* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
-   唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条。 */
+   唯一滚动容器 = CodeViewer 内部 cm-scroller ⇒ 不再出现两条滚动条。 */
 .dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
 /* 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
    拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
@@ -3515,8 +3514,8 @@ body[data-ds-dark-theme]{
 /* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
 /* 容器相对定位，供复制钮绝对定位于右上角。 */
 .dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
-/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方 CodeBlock 复制钮行为）；仅图标、无中文文案；
-   点击复制全文，复制后短暂切勾选图标 + “已复制”提示（title/aria-label 承载本地化文案）。 */
+/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方复制钮交互：仅图标、无中文文案、点击复制全文、
+   复制后短暂切勾选图标 + "已复制"提示，title/aria-label 承载本地化文案）。 */
 .dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
 .dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
 .dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg,#1f2328);}
@@ -4309,2400 +4308,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				type: "button",
 				onClick: props.onClick
 			}, props.label));
-		}
-		//#endregion
-		//#region src/client/mirror/GenericCommandCard.tsx
-		/** 官方 TOOL_VARIANTS（tool client.js:83-100，cordis_* 一并保留）。 */
-		const TOOL_VARIANTS = {
-			bash: "bash",
-			pwsh: "bash",
-			read: "read",
-			read_image: "read",
-			web_fetch: "read",
-			web_search: "search",
-			grep: "search",
-			glob: "search",
-			write: "write",
-			edit: "edit",
-			run_code: "code",
-			cordis_package_inspect: "read",
-			cordis_runtime_inspect: "read",
-			cordis_run: "others",
-			cordis_stop: "others",
-			cordis_undefine: "others"
-		};
-		const classifyTool = (name) => TOOL_VARIANTS[name] ?? "others";
-		/** 官方 VARIANT_TITLE_KEYS + TOOL_TITLE_KEYS（tool client.js:65-149；本仓库键名前缀 toolTitle）。 */
-		const VARIANT_TITLE_KEYS = {
-			search: "toolTitleSearch",
-			read: "toolTitleRead",
-			bash: "toolTitleBash",
-			write: "toolTitleWrite",
-			edit: "toolTitleEdit",
-			code: "toolTitleCode",
-			others: "toolTitleGeneric"
-		};
-		const TOOL_TITLE_KEYS = {
-			pwsh: "toolTitleBash",
-			read_image: "toolTitleReadImage",
-			grep: "toolTitleGrep",
-			glob: "toolTitleGlob",
-			web_search: "toolTitleWebSearch",
-			web_fetch: "toolTitleWebFetch"
-		};
-		const toolTitleKey = (name) => TOOL_TITLE_KEYS[name] ?? VARIANT_TITLE_KEYS[classifyTool(name)];
-		/** 官方 VARIANT_ICONS（tool client.js:1749-1757，size 14）。 */
-		const VARIANT_ICONS = {
-			search: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
-			read: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
-			bash: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, { size: 14 }),
-			write: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-			edit: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-			code: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
-			others: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
-		};
-		/** 官方 SUMMARY_KEYS（tool client.js:204-220）：摘要取参键偏好。 */
-		const SUMMARY_KEYS = {
-			bash: ["description", "command"],
-			read: [
-				"path",
-				"file_path",
-				"url"
-			],
-			search: [
-				"query",
-				"pattern",
-				"url"
-			],
-			write: ["path", "file_path"],
-			edit: ["path", "file_path"],
-			code: ["description"],
-			others: []
-		};
-		/** 官方 FILE_PATH_VARIANTS（tool client.js:237-241）：摘要可开预览的文件型变体。 */
-		const FILE_PATH_VARIANTS = /* @__PURE__ */ new Set([
-			"read",
-			"write",
-			"edit"
-		]);
-		const firstLine$1 = (text) => {
-			const nl = text.indexOf("\n");
-			return nl === -1 ? text : text.slice(0, nl);
-		};
-		/** 官方 parseArgs（tool client.js:186-192）。 */
-		const parseArgs = (raw) => {
-			try {
-				return JSON.parse(raw);
-			} catch {
-				return;
-			}
-		};
-		const pickString = (args, keys) => {
-			for (const key of keys) {
-				const value = args[key];
-				if (typeof value === "string" && value !== "") return value;
-			}
-		};
-		/** 官方 deriveSummary（tool client.js:221-233）。 */
-		function deriveSummary(variant, argsRaw) {
-			const parsed = parseArgs(argsRaw);
-			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return firstLine$1(argsRaw);
-			const args = parsed;
-			if (variant === "search" && Array.isArray(args.queries)) {
-				const queries = args.queries.filter((query) => typeof query === "string" && query !== "");
-				if (queries.length > 0) return queries.map(firstLine$1).join(", ");
-			}
-			const picked = pickString(args, SUMMARY_KEYS[variant]);
-			if (picked !== void 0) return firstLine$1(picked);
-			for (const value of Object.values(args)) if (typeof value === "string" && value !== "") return firstLine$1(value);
-			return firstLine$1(argsRaw);
-		}
-		/** 官方 deriveFilePath（tool client.js:242-248）：read/write/edit 的路径取参。 */
-		function deriveFilePath(variant, argsRaw) {
-			if (!FILE_PATH_VARIANTS.has(variant)) return void 0;
-			const parsed = parseArgs(argsRaw);
-			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return void 0;
-			const picked = pickString(parsed, ["path", "file_path"]);
-			return picked === void 0 ? void 0 : firstLine$1(picked);
-		}
-		/** 官方 formatToolBody（tool client.js:255-264）：通用展开体的输入正文。 */
-		function formatToolBody(variant, argsRaw) {
-			if (argsRaw === "") return null;
-			const parsed = parseArgs(argsRaw);
-			if (parsed === void 0) return argsRaw;
-			if (variant === "code" && typeof parsed === "object" && parsed !== null) {
-				const code = parsed.code;
-				if (typeof code === "string" && code !== "") return code;
-			}
-			return JSON.stringify(parsed, null, 2);
-		}
-		/** 官方 validEscalationFields（tool client.js:347-353）。 */
-		function validEscalationFields(args) {
-			const permission = args.sandbox_permissions;
-			const justification = args.justification;
-			if (permission === void 0 && justification === void 0) return true;
-			if (permission !== "workspace-write" && permission !== "danger-full-access") return false;
-			return typeof justification === "string" && justification.trim() !== "";
-		}
-		/** 官方 intendedDiff（tool client.js:460-517）：write/edit/str_replace_editor 的参数侧意图 diff。 */
-		function intendedDiff(name, argsRaw) {
-			const parsed = parseArgs(argsRaw);
-			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-			const args = parsed;
-			if (name === "str_replace_editor") {
-				const { command, path, file_text: fileText, old_str: oldText, new_str: newText } = args;
-				if (typeof path !== "string" || path.trim() === "") return null;
-				if (command === "create") {
-					if (fileText !== void 0 && typeof fileText !== "string") return null;
-					return {
-						tool: name,
-						diff: {
-							path,
-							oldText: null,
-							newText: typeof fileText === "string" ? fileText : ""
-						}
-					};
-				}
-				if (command === "str_replace") {
-					if (oldText !== void 0 && typeof oldText !== "string") return null;
-					if (newText !== void 0 && typeof newText !== "string") return null;
-					return {
-						tool: name,
-						diff: {
-							path,
-							oldText: typeof oldText === "string" ? oldText : null,
-							newText: typeof newText === "string" ? newText : ""
-						}
-					};
-				}
-				return null;
-			}
-			const { file_path: path } = args;
-			if (typeof path !== "string" || path.trim() === "") return null;
-			if (!validEscalationFields(args)) return null;
-			if (name === "write") {
-				const { content } = args;
-				return typeof content === "string" ? {
-					tool: name,
-					diff: {
-						path,
-						oldText: null,
-						newText: content
-					}
-				} : null;
-			}
-			if (name !== "edit") return null;
-			const { old_string: oldText, new_string: newText, replace_all: replaceAll } = args;
-			if (typeof oldText !== "string" || typeof newText !== "string") return null;
-			if (replaceAll !== void 0 && typeof replaceAll !== "boolean") return null;
-			return {
-				tool: name,
-				diff: {
-					path,
-					oldText: oldText || null,
-					newText
-				}
-			};
-		}
-		/** 官方 narrowDiffs（tool client.js:443-459）。 */
-		function narrowDiffs(diffs) {
-			if (!Array.isArray(diffs) || diffs.length === 0) return null;
-			const out = [];
-			for (const hunk of diffs) {
-				if (typeof hunk !== "object" || hunk === null || Array.isArray(hunk)) return null;
-				const { path, oldText, newText } = hunk;
-				if (typeof path !== "string") return null;
-				if (oldText !== null && typeof oldText !== "string") return null;
-				if (typeof newText !== "string") return null;
-				out.push({
-					path,
-					oldText,
-					newText
-				});
-			}
-			return out;
-		}
-		/** 官方 appliedDiffs（tool client.js:518-524）。 */
-		function appliedDiffs(meta) {
-			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return null;
-			const diffs = meta.diffs;
-			if (!Array.isArray(diffs)) return null;
-			if (diffs.length === 0) return "empty";
-			return narrowDiffs(diffs);
-		}
-		/** 官方 diffCardModel（tool client.js:534-544；keyed 流里只有根调用，parentCallId 分支略）。 */
-		function diffCardModel(name, argsRaw, meta, isError, settled) {
-			const intended = intendedDiff(name, argsRaw);
-			if (intended === null) return null;
-			if (!settled) return [intended.diff];
-			if (name === "str_replace_editor") return null;
-			if (isError) return null;
-			const applied = appliedDiffs(meta);
-			if (applied === null || applied === "empty") return name === "write" ? [intended.diff] : null;
-			return applied;
-		}
-		const positiveInteger = (value) => typeof value === "number" && Number.isInteger(value) && value >= 1;
-		/** 官方 readMeta（tool client.js:369-395）：宿主写入的读取窗口 meta 收窄。 */
-		function readMeta(meta) {
-			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return null;
-			const { path, offset, lines, totalLines, lang } = meta;
-			if (typeof path !== "string" || typeof offset !== "number" || !Number.isInteger(offset) || offset < 1) return null;
-			if (typeof totalLines !== "number" || !Number.isInteger(totalLines) || totalLines < 0 || !Array.isArray(lines)) return null;
-			if (lang !== void 0 && typeof lang !== "string") return null;
-			const narrowed = [];
-			let previous = offset - 1;
-			for (const line of lines) {
-				if (typeof line !== "object" || line === null || Array.isArray(line)) return null;
-				const { number, text } = line;
-				if (typeof number !== "number" || !Number.isInteger(number) || number < 1 || number <= previous) return null;
-				if (number > totalLines || typeof text !== "string") return null;
-				previous = number;
-				narrowed.push({
-					number,
-					text
-				});
-			}
-			return {
-				label: path,
-				lines: narrowed,
-				totalLines,
-				...lang === void 0 ? {} : { lang }
-			};
-		}
-		/** 官方 readCardModel（tool client.js:421-435）：read + 合法参数 + meta + 结果 envelope。 */
-		function readCardModel(name, argsRaw, output, meta, isError, settled) {
-			if (!settled || isError || name !== "read") return null;
-			const parsed = parseArgs(argsRaw);
-			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-			const { file_path: path, offset, limit } = parsed;
-			if (typeof path !== "string" || path.trim() === "") return null;
-			if (offset !== void 0 && !positiveInteger(offset)) return null;
-			if (limit !== void 0 && !positiveInteger(limit)) return null;
-			const face = readMeta(meta);
-			if (face === null) return null;
-			if (/^<path>[^\n]*<\/path>\n<type>file<\/type>\n<content>\n([\s\S]*)\n<\/content>$/u.exec(output)?.[1] === void 0) return null;
-			return face;
-		}
-		/** 官方 shellCall（tool client.js:831-855）：无 description = persistent（结算走 generic）。 */
-		function shellCall(name, args) {
-			if (name !== "bash" && name !== "pwsh") return null;
-			const { command, description, timeoutMs, workdir, run_in_background: background } = args;
-			if (typeof command !== "string" || command.trim() === "") return null;
-			if (timeoutMs !== void 0 && (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs) || timeoutMs <= 0)) return null;
-			if (workdir !== void 0 && typeof workdir !== "string") return null;
-			if (background !== void 0 && typeof background !== "boolean") return null;
-			if (!validEscalationFields(args)) return null;
-			if (description === void 0) return {
-				command,
-				description: "",
-				workdir: void 0,
-				persistent: true,
-				background: false
-			};
-			if (typeof description !== "string" || description.trim() === "") return null;
-			return {
-				command,
-				description,
-				workdir,
-				persistent: false,
-				background: background === true
-			};
-		}
-		/** 官方 terminalSendCall（tool client.js:884-896）。 */
-		function terminalSendCall(name, args) {
-			if (name !== "terminal_send") return null;
-			const { sessionId, text, run_in_background: background } = args;
-			if (typeof sessionId !== "string" || sessionId === "" || typeof text !== "string") return null;
-			if (background !== void 0 && typeof background !== "boolean") return null;
-			return {
-				text,
-				sessionId,
-				background: background === true
-			};
-		}
-		/** 官方 parseExitStatus（tool client.js:903-918）：结果尾部退出码 / 信号标记剥离。 */
-		function parseExitStatus(text) {
-			const signal = /\n\[killed by signal: ([^\]\n]+)\]$/.exec(text);
-			if (signal?.[1] !== void 0) return {
-				output: text.slice(0, signal.index),
-				signal: signal[1]
-			};
-			const exit = /\n\[exit code: (\d+)\]$/.exec(text);
-			if (exit?.[1] !== void 0) return {
-				output: text.slice(0, exit.index),
-				exitCode: Number(exit[1])
-			};
-			return {
-				output: text,
-				exitCode: 0
-			};
-		}
-		/**
-		* 官方 spill notice 识别（spill-policy notice.ts，tool client.js:660-703）：
-		* 结尾 `)` + 「\n\n( Full formatted result stored at: 」段。超长输出被 spill 化的
-		* bash 结果走 generic（官方 isSpilledShellCall 同向；此处放宽为字面匹配，宁滥勿漏）。
-		*/
-		function hasSpillNotice(text) {
-			if (!text.endsWith(")")) return false;
-			return text.includes("\n\n( Full formatted result stored at: ");
-		}
-		/** 官方 resolveTerminalCwd + normalizeSegments（tool client.js:776-798）的显示用简化版：
-		*  弹窗侧拿不到会话 cwd ⇒ 绝对路径原样、相对路径弹出 `.`/`..` 段。 */
-		function normalizeSegments(path) {
-			if (!/(?:^|[/\\])\.\.?(?:[/\\]|$)/.test(path)) return path;
-			const out = [];
-			for (const segment of path.split(/[/\\]+/)) {
-				if (segment === "" || segment === ".") continue;
-				if (segment === "..") {
-					out.pop();
-					continue;
-				}
-				out.push(segment);
-			}
-			return out.join("/");
-		}
-		/** 官方 terminalCardModel（tool client.js:929-968）：running 半截返回 running 卡。 */
-		function terminalCardModel(name, argsRaw, output, isError, settled) {
-			const parsed = parseArgs(argsRaw);
-			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-			const args = parsed;
-			const shell = shellCall(name, args);
-			const send = shell === null ? terminalSendCall(name, args) : null;
-			if (shell === null && send === null) return null;
-			if (shell !== null && shell.background || send !== null && send.background) return null;
-			if (!settled) return shell !== null ? {
-				command: shell.command,
-				cwd: shell.workdir === void 0 ? void 0 : normalizeSegments(shell.workdir),
-				running: true
-			} : {
-				command: send.text,
-				running: true,
-				sessionId: send.sessionId
-			};
-			if (isError || shell !== null && shell.persistent || hasSpillNotice(output)) return null;
-			if (send !== null) return {
-				command: send.text,
-				running: false,
-				sessionId: send.sessionId
-			};
-			const shellCmd = shell;
-			const status = parseExitStatus(output);
-			return {
-				command: shellCmd.command,
-				cwd: shellCmd.workdir === void 0 ? void 0 : normalizeSegments(shellCmd.workdir),
-				output: status.output,
-				exitCode: status.exitCode,
-				signal: status.signal,
-				running: false
-			};
-		}
-		/** 词典：代码工具栏（官方 codeToolbarLabels，tool client.js:1098-1104）。 */
-		const codeToolbarLabels = (t) => ({
-			codeLabel: t("codeBlockLabel"),
-			wrapLabel: t("diffWrapLabel"),
-			unwrapLabel: t("diffUnwrapLabel")
-		});
-		/** 官方 diffBlockLabels（tool client.js:1125-1135）。 */
-		const diffLabels = (t) => ({
-			...codeToolbarLabels(t),
-			copy: t("copyLabel"),
-			copied: t("copiedLabel"),
-			collapseAria: t("diffCollapseAria"),
-			expandAria: (count) => t("diffExpandAria", { count }),
-			collapse: t("collapseLabel"),
-			expand: (count) => t("diffExpandRest", { count })
-		});
-		/** 官方 readBlockLabels（tool client.js:1141-1155）。 */
-		const readLabels = (t) => ({
-			...codeToolbarLabels(t),
-			window: (shown, total) => t("readWindow", {
-				shown,
-				total
-			}),
-			copy: t("copyLabel"),
-			copied: t("copiedLabel"),
-			collapseAria: t("readCollapseAria"),
-			expandAria: (count) => t("readExpandAria", { count }),
-			collapse: t("collapseLabel"),
-			expand: (count) => t("readExpandRest", { count })
-		});
-		/** 官方 terminalBlockLabels（tool client.js:708-737 的键面）。 */
-		const terminalLabels = (t) => ({
-			signal: (signal) => t("terminalSignal", { signal }),
-			exitCode: (code) => t("terminalExitCode", { code }),
-			noExitCode: t("terminalNoExitCode"),
-			running: t("terminalRunning"),
-			failed: t("terminalFailed"),
-			done: t("terminalDone"),
-			copy: t("copyLabel"),
-			copied: t("copiedLabel"),
-			noOutput: t("terminalNoOutput"),
-			collapseAria: t("terminalCollapseAria"),
-			collapse: t("collapseLabel"),
-			expandAria: (hidden) => t("terminalExpandAria", { n: hidden }),
-			expand: (hidden) => t("terminalExpandRest", { n: hidden })
-		});
-		/** 摘要链接（官方 fileLink）：点击只跟随、不折叠行。 */
-		const stopLinkClick = (event) => {
-			event.stopPropagation();
-		};
-		/**
-		* 工具调用 / 命令卡（官方 GenericToolCard + ToolRow 镜像）。
-		* 折叠行 = 图标 + 标题 [+ 分隔点 + 摘要（文件路径链接化）+ 后缀]；展开体按官方分发链。
-		*/
-		function GenericCommandCard(props) {
-			const { name, argsRaw, output, isError, meta, settled = true, phase, interrupted, onOpenFile, t } = props;
-			const [expanded, setExpanded] = (0, react$1.useState)(false);
-			const variant = classifyTool(name);
-			const titleKey = toolTitleKey(name);
-			const state = !settled ? phase === "preparing" ? "preparing" : "running" : interrupted ? "stopped" : isError ? "error" : "ok";
-			const terminalFace = (0, react$1.useMemo)(() => terminalCardModel(name, argsRaw, output, isError, settled), [
-				name,
-				argsRaw,
-				output,
-				isError,
-				settled
-			]);
-			const read = (0, react$1.useMemo)(() => readCardModel(name, argsRaw, output, meta, isError, settled), [
-				name,
-				argsRaw,
-				output,
-				meta,
-				isError,
-				settled
-			]);
-			const diffs = (0, react$1.useMemo)(() => diffCardModel(name, argsRaw, meta, isError, settled), [
-				name,
-				argsRaw,
-				meta,
-				isError,
-				settled
-			]);
-			const terminal = (0, react$1.useMemo)(() => {
-				if (terminalFace === null) return null;
-				return terminalFace.sessionId !== void 0 ? {
-					...terminalFace,
-					command: terminalFace.command === "" ? t("terminalSendInput") : terminalFace.command,
-					description: t("terminalSession", { sessionId: terminalFace.sessionId })
-				} : terminalFace;
-			}, [terminalFace, t]);
-			const failedTerminal = terminal !== null && terminal.running !== true && (terminal.exitCode !== void 0 && terminal.exitCode !== 0 || terminal.signal !== void 0);
-			const rowState = state === "ok" && failedTerminal ? "error" : state;
-			const running = rowState === "running" || rowState === "preparing";
-			const generic = titleKey === "toolTitleGeneric";
-			const base = argsRaw === "" ? "" : deriveSummary(variant, argsRaw);
-			const plainSummary = [generic ? name : "", base].filter(Boolean).join(" · ");
-			const errorSummary = rowState === "error" && output !== "" ? firstLine$1(output) : null;
-			const summaryText = (rowState === "error" ? errorSummary ?? terminal?.description ?? plainSummary : null) ?? terminal?.description ?? plainSummary;
-			const totals = diffs === null ? null : (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
-			const diffStat = totals === null ? null : `+${totals.added} -${totals.removed}`;
-			const settledWithCue = rowState === "error" || rowState === "stopped";
-			const suffix = settledWithCue ? null : diffStat;
-			const filePath = argsRaw === "" ? void 0 : deriveFilePath(variant, argsRaw);
-			const openFile = filePath !== void 0 && onOpenFile !== void 0 && !settledWithCue ? () => {
-				onOpenFile(filePath);
-			} : void 0;
-			const inputRaw = argsRaw === "" ? null : argsRaw;
-			const outputText = output === "" ? null : output;
-			const card = terminal !== null ? "terminal" : diffs !== null ? "diff" : read !== null ? "read" : null;
-			const bodyText = expanded && card === null && inputRaw !== null ? formatToolBody(variant, inputRaw) : null;
-			const cardBody = variant === "code" ? null : bodyText;
-			const expandable = rowState !== "preparing" && (inputRaw !== null || outputText !== null || card !== null);
-			const open = expanded && expandable;
-			const blockLabels = (0, react$1.useMemo)(() => ({
-				diff: diffLabels(t),
-				read: readLabels(t),
-				terminal: terminalLabels(t)
-			}), [t]);
-			const statusText = rowState === "preparing" ? t("rowPreparing") : rowState === "running" ? t("rowRunning") : rowState === "error" ? t("rowFailed") : rowState === "stopped" ? t("rowStopped") : null;
-			const summaryClassName = `${ocOr("ToolRow", "summary", "dsh-tdt-sv-tool-summary")}${rowState === "error" ? ` ${ocOr("ToolRow", "errorSummary", "dsh-tdt-sv-tool-errmark")}` : ""}${rowState === "stopped" ? ` ${ocOr("ToolRow", "stoppedSummary", "dsh-tdt-sv-tool-stopmark")}` : ""}`;
-			const collapsedContent = summaryText === "" ? void 0 : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
-				className: ocOr("ToolRow", "sep", "dsh-tdt-sv-tool-sep"),
-				"aria-hidden": true
-			}), openFile !== void 0 ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("ToolRow", "fileLink", "dsh-tdt-sv-tool-filelink"),
-				onClick: (event) => {
-					stopLinkClick(event);
-					openFile();
-				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { active: running }, summaryText)) : (0, react$1.createElement)("span", { className: summaryClassName }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { active: running }, summaryText)), suffix !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
-				className: `${ocOr("ToolRow", "summarySuffix", "dsh-tdt-sv-tool-suffix")} ${ocOr("ToolRow", "diffStat", "dsh-tdt-sv-tool-diffstat")}`,
-				active: running
-			}, suffix) : null);
-			const expandedContent = open ? (0, react$1.createElement)("div", { className: ocOr("ToolRow", "bodyWrap", "dsh-tdt-sv-tool-bodywrap") }, terminal !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TerminalBlock, {
-				command: terminal.command,
-				cwd: terminal.cwd,
-				output: terminal.output,
-				exitCode: terminal.exitCode,
-				signal: terminal.signal,
-				running: terminal.running,
-				maxLines: Infinity,
-				labels: blockLabels.terminal,
-				className: ocOr("ToolRow", "terminalBody", "dsh-tdt-sv-tool-terminal")
-			}) : diffs !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DiffBlock, {
-				diffs,
-				labels: blockLabels.diff,
-				maxLines: 9,
-				className: ocOr("ToolRow", "diffBody", "dsh-tdt-sv-tool-block")
-			}) : read !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.ReadBlock, {
-				label: read.label,
-				lines: read.lines,
-				totalLines: read.totalLines,
-				lang: read.lang,
-				labels: blockLabels.read,
-				maxLines: 8,
-				className: ocOr("ToolRow", "readBody", "dsh-tdt-sv-tool-block")
-			}) : (0, react$1.createElement)(react$1.Fragment, null, variant === "code" && bodyText !== null ? (0, react$1.createElement)("div", { className: ocOr("ToolRow", "bodyScroll", "dsh-tdt-sv-tool-block") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
-				code: bodyText,
-				lang: "typescript",
-				copyLabel: t("copyLabel"),
-				copiedLabel: t("copiedLabel"),
-				toolbarLabels: codeToolbarLabels(t),
-				className: ocOr("ToolRow", "codeBody", "dsh-tdt-sv-tool-block")
-			})) : null, (cardBody !== null || outputText !== null) && (0, react$1.createElement)("div", { className: ocOr("ToolRow", "ioCard", "dsh-tdt-sv-io-card") }, cardBody !== null && (0, react$1.createElement)("div", { className: ocOr("ToolRow", "ioSection", "dsh-tdt-sv-io-section") }, (0, react$1.createElement)("span", { className: ocOr("ToolRow", "ioLabel", "dsh-tdt-sv-io-label") }, t("toolInputLabel")), (0, react$1.createElement)("span", { className: ocOr("ToolRow", "ioText", "dsh-tdt-sv-io-text") }, cardBody)), cardBody !== null && outputText !== null && (0, react$1.createElement)("span", {
-				className: ocOr("ToolRow", "ioDivider", "dsh-tdt-sv-io-divider"),
-				"aria-hidden": true
-			}), outputText !== null && (0, react$1.createElement)("div", { className: ocOr("ToolRow", "ioSection", "dsh-tdt-sv-io-section") }, (0, react$1.createElement)("span", { className: ocOr("ToolRow", "ioLabel", "dsh-tdt-sv-io-label") }, t("toolOutputLabel")), (0, react$1.createElement)("span", {
-				className: ocOr("ToolRow", "ioText", "dsh-tdt-sv-io-text"),
-				"data-error": rowState === "error" || void 0
-			}, outputText))))) : void 0;
-			return (0, react$1.createElement)("div", {
-				className: ocOr("ToolRow", "root", "dsh-tdt-sv-tool"),
-				"data-variant": variant,
-				"data-tool": name,
-				"data-state": rowState
-			}, statusText !== null ? (0, react$1.createElement)("span", { className: ocOr("ToolRow", "visuallyHidden", "dsh-tdt-sv-visuallyhidden") }, statusText) : null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
-				rowClassName: ocOr("ToolRow", "row", "dsh-tdt-sv-tool-row"),
-				leadingClassName: ocOr("ToolRow", "leading", "dsh-tdt-sv-tool-leading"),
-				titleClassName: ocOr("ToolRow", "title", "dsh-tdt-sv-tool-title"),
-				chevronClassName: ocOr("ToolRow", "chevron", "dsh-tdt-sv-tool-chevron"),
-				icon: VARIANT_ICONS[variant],
-				title: t(titleKey),
-				running,
-				open,
-				expandable,
-				expandOnRowClick: true,
-				keepContentWhenOpen: true,
-				onToggle: () => {
-					setExpanded((value) => !value);
-				},
-				collapsedContent,
-				children: expandedContent
-			}));
-		}
-		//#endregion
-		//#region src/client/mirror/message-chrome.ts
-		/** 两位补零（官方 message-chrome pad2）。 */
-		function pad2(n) {
-			return String(n).padStart(2, "0");
-		}
-		/**
-		* 官方 formatRunDuration：整秒；≥1 分带零补秒；≥1 小时带零补分秒。
-		*/
-		function formatRunDuration(ms, t) {
-			const total = Math.max(0, Math.floor(ms / 1e3));
-			const hours = Math.floor(total / 3600);
-			const minutes = Math.floor(total / 60) % 60;
-			const seconds = total % 60;
-			if (hours > 0) return t("durationHours", {
-				hours,
-				minutes: pad2(minutes),
-				seconds: pad2(seconds)
-			});
-			return minutes > 0 ? t("durationMinutes", {
-				minutes,
-				seconds: pad2(seconds)
-			}) : t("durationSeconds", { seconds });
-		}
-		/** 官方 formatLiveRunDuration：秒不补零、分钟自 60 秒起。 */
-		function formatLiveRunDuration(ms, t) {
-			const totalSeconds = Math.max(0, Math.floor(ms / 1e3));
-			const hours = Math.floor(totalSeconds / 3600);
-			const minutes = Math.floor(totalSeconds / 60) % 60;
-			const seconds = String(totalSeconds % 60);
-			if (hours > 0) return t("durationHours", {
-				hours,
-				minutes: pad2(minutes),
-				seconds
-			});
-			return minutes > 0 ? t("durationMinutes", {
-				minutes,
-				seconds
-			}) : t("durationSeconds", { seconds });
-		}
-		/**
-		* 官方 formatMessageClock：同日 → `HH:mm`；同年 → `{m}月{d}日 HH:mm`；跨年 → `{y}年{m}月{d}日 HH:mm`。
-		*/
-		function formatMessageClock(time, t, now = Date.now()) {
-			const d = new Date(time);
-			const n = new Date(now);
-			const clock = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-			if (d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()) return clock;
-			const params = {
-				y: d.getFullYear(),
-				m: d.getMonth() + 1,
-				d: d.getDate()
-			};
-			return `${d.getFullYear() === n.getFullYear() ? t("clockDate", params) : t("clockDateYear", params)} ${clock}`;
-		}
-		/** 官方 formatTokens：517 / 12.2K / 517K / 1.2M。 */
-		function formatTokens(value, t) {
-			const scaled = (candidate) => candidate >= 100 ? String(Math.round(candidate)) : String(Math.round(candidate * 10) / 10);
-			if (value < 1e3) return String(value);
-			if (value < 1e6) return t("numberThousand", { value: scaled(value / 1e3) });
-			return t("numberMillion", { value: scaled(value / 1e6) });
-		}
-		/** 官方 formatCompactCount：紧凑 token 数 + 「 tok」。 */
-		function formatCompactCount(value, t) {
-			return t("turnUsageCount", { count: formatTokens(value, t) });
-		}
-		/** 官方 formatExactTokens：按本地千分位分组（number.groupSeparator）。 */
-		function formatExactTokens(value, t) {
-			const digits = String(value);
-			const groups = [];
-			for (let end = digits.length; end > 0; end -= 3) groups.unshift(digits.slice(Math.max(0, end - 3), end));
-			return groups.join(t("numberGroupSeparator"));
-		}
-		/** 官方 formatExactCount：精确计数 + 「 tok」。 */
-		function formatExactCount(value, t) {
-			return t("turnUsageCount", { count: formatExactTokens(value, t) });
-		}
-		/** 官方 roundedPercentUnits（message-chrome.ts:1024）：按精确比例取整，正半数向上。 */
-		function roundedPercentUnits(cacheReadTokens, denominator, decimalPlaces) {
-			const scale = (decimalPlaces === 0 ? 1 : 10) * 100;
-			const doubledScale = scale * 2;
-			const denominatorQuotient = Math.floor(denominator / doubledScale);
-			const denominatorRemainder = denominator % doubledScale;
-			let lower = 0;
-			let upper = scale;
-			while (lower < upper) {
-				const candidate = Math.floor((lower + upper + 1) / 2);
-				const factor = candidate * 2 - 1;
-				if (cacheReadTokens >= factor * denominatorQuotient + Math.ceil(factor * denominatorRemainder / doubledScale)) lower = candidate;
-				else upper = candidate - 1;
-			}
-			return lower;
-		}
-		/** 官方 displayPercentUnits。 */
-		function displayPercentUnits(units, decimalPlaces) {
-			if (decimalPlaces === 0) return String(units);
-			const whole = Math.floor(units / 10);
-			const tenths = units % 10;
-			return tenths === 0 ? String(whole) : `${whole}.${tenths}`;
-		}
-		/**
-		* 官方 formatCacheHitPercent：缓存命中率；部分命中不四舍五入成 100%（自动加精度）。
-		* @returns 百分比文本；无输入时 null。
-		*/
-		function formatCacheHitPercent(cacheReadTokens, promptTokens, decimalPlaces = 0) {
-			if (promptTokens === 0) return null;
-			const missedInputTokens = promptTokens - cacheReadTokens;
-			if (missedInputTokens === 0) return "100";
-			const roundedUnits = roundedPercentUnits(cacheReadTokens, promptTokens, decimalPlaces);
-			if (roundedUnits < (decimalPlaces === 0 ? 100 : 1e3)) return displayPercentUnits(roundedUnits, decimalPlaces);
-			let distinguishingPlaces = 1;
-			let scaledDoubleGap = missedInputTokens * 200;
-			const denominatorTens = Math.floor(promptTokens / 10);
-			while (scaledDoubleGap <= denominatorTens) {
-				scaledDoubleGap *= 10;
-				distinguishingPlaces += 1;
-			}
-			const denominatorOnes = promptTokens % 10;
-			let roundedLoss = 5;
-			for (let loss = 1; loss < 5; loss += 1) {
-				const factor = loss * 2 + 1;
-				const threshold = factor * denominatorTens + Math.floor(factor * denominatorOnes / 10);
-				if (scaledDoubleGap <= threshold) {
-					roundedLoss = loss;
-					break;
-				}
-			}
-			return `99.${"9".repeat(distinguishingPlaces - 1)}${10 - roundedLoss}`;
-		}
-		//#endregion
-		//#region src/client/mirror/MessageIconActions.tsx
-		/** 官方「已复制」复位时间。 */
-		const COPIED_RESET_MS = 1e3;
-		/** 消息操作行（复制 / 分支 / 用量 / 时钟）。 */
-		function MessageIconActionsMirror(props) {
-			const { text, time, clock, onBranch, branchUnavailable = false, className, extraActions, usageAction, t } = props;
-			const [copied, setCopied] = (0, react$1.useState)(false);
-			const [pending, setPending] = (0, react$1.useState)(false);
-			const timerRef = (0, react$1.useRef)(void 0);
-			(0, react$1.useEffect)(() => () => {
-				if (timerRef.current !== void 0) clearTimeout(timerRef.current);
-			}, []);
-			const copyLabel = copied ? t("copiedLabel") : t("copyLabel");
-			const onCopy = () => {
-				if (copied || pending) return;
-				setPending(true);
-				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(text).then((ok) => {
-					setPending(false);
-					if (!ok) return;
-					setCopied(true);
-					timerRef.current = setTimeout(() => {
-						setCopied(false);
-					}, COPIED_RESET_MS);
-				});
-			};
-			const clockEl = time === void 0 ? null : (0, react$1.createElement)("time", {
-				className: ocOr("MessageIconActions", "clock", "dsh-tdt-sv-clock"),
-				dateTime: new Date(time).toISOString()
-			}, formatMessageClock(time, t));
-			const reasonId = "dsh-tdt-branch-unavailable";
-			return (0, react$1.createElement)("div", {
-				className: `${ocOr("MessageIconActions", "actions", "dsh-tdt-sv-actions")}${className === void 0 ? "" : ` ${className}`}`,
-				"data-clock": clock
-			}, clock === "start" ? clockEl : null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: copyLabel,
-				side: "bottom"
-			}, (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("MessageIconActions", "action", "dsh-tdt-sv-action"),
-				"aria-label": copyLabel,
-				onClick: onCopy
-			}, copied ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, null) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, null))), extraActions, onBranch === void 0 ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: branchUnavailable ? t("branchUnavailableLabel") : t("branchLabel"),
-				side: "bottom"
-			}, (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("MessageIconActions", "action", "dsh-tdt-sv-action"),
-				"aria-label": t("branchLabel"),
-				"aria-disabled": branchUnavailable || void 0,
-				"aria-describedby": branchUnavailable ? reasonId : void 0,
-				"data-unavailable": branchUnavailable || void 0,
-				onClick: branchUnavailable ? void 0 : onBranch
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, null))), onBranch === void 0 || !branchUnavailable ? null : (0, react$1.createElement)("span", {
-				id: reasonId,
-				className: ocOr("accessibility", "visuallyHidden", "dsh-tdt-sv-visuallyhidden")
-			}, t("branchUnavailableLabel")), clock === "end" ? (0, react$1.createElement)("span", { className: ocOr("MessageIconActions", "endInfo", "dsh-tdt-sv-endinfo") }, usageAction, clockEl) : usageAction);
-		}
-		//#endregion
-		//#region src/client/md-labels.ts
-		/** markdown 文档外壳文案（代码块工具条 + 复制 + 脚注）。 */
-		const MD_LABELS = {
-			code: {
-				copyLabel: zh.copyLabel,
-				copiedLabel: zh.copiedLabel,
-				toolbarLabels: {
-					codeLabel: zh.codeBlockLabel,
-					wrapLabel: zh.diffWrapLabel,
-					unwrapLabel: zh.diffUnwrapLabel
-				}
-			},
-			footnotes: "脚注"
-		};
-		//#endregion
-		//#region src/client/mirror/MessageItem.tsx
-		/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。
-		* U11：fileMentions 词表就位时行内 code 文件引用渲成可点链接（官方语义：resolve 不出保持惰性 code）。 */
-		function AssistantMarkdown(props) {
-			if (props.text.trim() === "") return (0, react$1.createElement)("span", null);
-			return (0, react$1.createElement)("div", { className: ocOr("AssistantMarkdown", "root", "dsh-tdt-sv-md") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text: props.text,
-				labels: MD_LABELS,
-				fileMentions: props.fileMentions
-			}));
-		}
-		/**
-		* 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）
-		* + 气泡下方的 **attachmentRow / fileCard**（官方 MessageItem 的附件行，2026-10-03 接上）。
-		*
-		* 官方附件卡 = 图标 + 文件名 + 大小；**不可点开**——引用里没有路径，宿主也没给出
-		* 「按 attachmentId 打开」的公开面 ⇒ 如实降级为只读展示，不伪造打开行为。
-		*/
-		function UserMessage(props) {
-			const { text, files } = props;
-			const chips = files ?? [];
-			return (0, react$1.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react$1.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, text === "" ? null : (0, react$1.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text,
-				labels: MD_LABELS
-			})), chips.length === 0 ? null : (0, react$1.createElement)("div", { className: ocOr("MessageItem", "attachmentRow", "dsh-tdt-sv-attrow") }, chips.map((file, index) => (0, react$1.createElement)("div", {
-				key: `${file.name}:${index}`,
-				className: ocOr("MessageItem", "fileCard", "dsh-tdt-sv-attcard"),
-				title: file.name
-			}, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileIcon", "dsh-tdt-sv-attIcon") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: file.name,
-				size: 16
-			})), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileContent", "dsh-tdt-sv-attBody") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileName", "dsh-tdt-sv-attName") }, file.name), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileMeta", "dsh-tdt-sv-attMeta") }, formatBytes$1(file.bytes))))))));
-		}
-		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
-		function retrySeconds(milliseconds) {
-			return Math.max(1, Math.ceil(milliseconds / 1e3));
-		}
-		/**
-		* 官方 failureMessage（lib/client.js:1219）：已知机器码走本地化文案，其余原样展示。
-		* 官方判定顺序逐字：ACCOUNT_SIGNED_OUT / ACCOUNT_SIGN_IN_REQUIRED / QUOTA|ACCOUNT_QUOTA / AUTH。
-		*/
-		function failureMessage(message, code, t) {
-			if (code === "ACCOUNT_SIGNED_OUT") return t("failureAccountSignedOut");
-			if (code === "ACCOUNT_SIGN_IN_REQUIRED") return t("failureAccountSignInRequired");
-			if (code === "QUOTA" || code === "ACCOUNT_QUOTA") return t("failureQuota");
-			return code === "AUTH" ? t("failureAuth") : message ?? "";
-		}
-		/**
-		* 重试行（官方 ModelRetryItem）：折叠 = 「已重试模型请求 (5/5) · 9s ⌄」摘要；
-		* 展开 = 重试延迟 / 失败原因 两行。active（等待重试）时官方走 250ms 倒计时 + 渐隐 shimmer。
-		*/
-		function ModelRetryItemMirror(props) {
-			const { active, t } = props;
-			const node = props.node;
-			const delayMs = typeof node.delayMs === "number" ? node.delayMs : 0;
-			const maximum = node.mode === "normal" && typeof node.maxRetries === "number" ? node.maxRetries : "∞";
-			const deadline = (0, react$1.useMemo)(() => Date.now() + delayMs, [delayMs, node.retryState]);
-			const scheduledSeconds = retrySeconds(delayMs);
-			const [countdown, setCountdown] = (0, react$1.useState)(() => ({
-				deadline,
-				seconds: retrySeconds(deadline - Date.now())
-			}));
-			const remainingSeconds = countdown.deadline === deadline ? countdown.seconds : retrySeconds(deadline - Date.now());
-			(0, react$1.useEffect)(() => {
-				if (!active) return;
-				const updateCountdown = () => {
-					const next = retrySeconds(deadline - Date.now());
-					setCountdown((current) => current.deadline === deadline && current.seconds === next ? current : {
-						deadline,
-						seconds: next
-					});
-					return next;
-				};
-				if (updateCountdown() === 1) return;
-				const timer = window.setInterval(() => {
-					if (updateCountdown() === 1) window.clearInterval(timer);
-				}, 250);
-				return () => {
-					window.clearInterval(timer);
-				};
-			}, [active, deadline]);
-			const label = active ? t("retryActive") : node.retryState === "cancelled" ? t("retryCancelled") : node.retryState === "started" ? t("retryStarted") : t("retryScheduled");
-			const seconds = active ? remainingSeconds : scheduledSeconds;
-			const failure = node.failure;
-			return (0, react$1.createElement)("details", {
-				className: ocOr("MessageItem", "retryRow", "dsh-tdt-sv-retry"),
-				"data-active": active || void 0
-			}, (0, react$1.createElement)("summary", { className: ocOr("MessageItem", "retrySummary", "dsh-tdt-sv-retry-summary") }, (0, react$1.createElement)("span", {
-				className: ocOr("MessageItem", "retryText", "dsh-tdt-sv-retry-text"),
-				role: "status"
-			}, t("retryStatus", {
-				label,
-				retry: node.retry ?? 0,
-				maximum,
-				seconds
-			}))), (0, react$1.createElement)("div", { className: ocOr("MessageItem", "retryDetails", "dsh-tdt-sv-retry-details") }, (0, react$1.createElement)("div", null, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "retryDetailLabel", "dsh-tdt-sv-retry-label") }, t("retryDelay")), t("durationMilliseconds", { milliseconds: Math.round(delayMs) })), (0, react$1.createElement)("div", null, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "retryDetailLabel", "dsh-tdt-sv-retry-label") }, t("retryFailure")), failureMessage(failure?.message, failure?.code, t))));
-		}
-		/** 轮次失败行（官方 TurnErrorItem）：红点 + 红标题「本轮运行失败」+ 灰原因 + 右侧机器码标签。 */
-		function TurnErrorItemMirror(props) {
-			const { node, t } = props;
-			return (0, react$1.createElement)("div", {
-				className: ocOr("MessageItem", "turnErrorRow", "dsh-tdt-sv-turnerr"),
-				role: "status"
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
-				state: "error",
-				className: ocOr("MessageItem", "turnErrorDot", "dsh-tdt-sv-turnerr-dot")
-			}), (0, react$1.createElement)("div", { className: ocOr("MessageItem", "turnErrorCopy", "dsh-tdt-sv-turnerr-copy") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "turnErrorTitle", "dsh-tdt-sv-turnerr-title") }, node.code === "ACCOUNT_SIGNED_OUT" ? t("accountStopped") : t("turnErrorTitle")), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "turnErrorMessage", "dsh-tdt-sv-turnerr-msg") }, failureMessage(node.message, node.code, t))), node.code !== void 0 && node.code !== "" ? (0, react$1.createElement)("code", { className: ocOr("MessageItem", "turnErrorCode", "dsh-tdt-sv-turnerr-code") }, node.code) : null);
-		}
-		/** 限长行（官方 TurnMaxTokensItem）：黄点 + 警示标题 + 截断提示。 */
-		function TurnMaxTokensItemMirror(props) {
-			const { t } = props;
-			return (0, react$1.createElement)("div", {
-				className: ocOr("MessageItem", "turnErrorRow", "dsh-tdt-sv-turnerr"),
-				role: "status"
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
-				state: "warning",
-				className: ocOr("MessageItem", "turnErrorDot", "dsh-tdt-sv-turnerr-dot")
-			}), (0, react$1.createElement)("div", { className: ocOr("MessageItem", "turnErrorCopy", "dsh-tdt-sv-turnerr-copy") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "maxTokensTitle", "dsh-tdt-sv-turnerr-warn") }, t("maxTokensTitle")), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "turnErrorMessage", "dsh-tdt-sv-turnerr-msg") }, t("maxTokensHint"))));
-		}
-		//#endregion
-		//#region src/client/mirror/ReasoningRow.tsx
-		/** 官方 firstLine（lib/client.js:5687）：首行。 */
-		function firstLine(text) {
-			const newline = text.indexOf("\n");
-			return newline === -1 ? text : text.slice(0, newline);
-		}
-		/** 思考行：折叠 = 「思考 · 首行预览 ⌄」；展开 = thinkBody 全文（MarkdownText compact）。 */
-		function ReasoningRowMirror(props) {
-			const { text, running = false, preview = true, t } = props;
-			const [open, setOpen] = (0, react$1.useState)(false);
-			if (text.trim() === "") return null;
-			const summary = firstLine(text).replaceAll("**", "");
-			return (0, react$1.createElement)("div", {
-				className: ocOr("ReasoningRow", "root", "dsh-tdt-sv-reasoning"),
-				"data-variant": "think",
-				"data-state": running ? "running" : "ok",
-				"data-expanded": open || void 0,
-				"data-preview": preview && summary !== "" || void 0
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 }),
-				title: t("thinkLabel"),
-				open,
-				expandable: true,
-				expandOnRowClick: true,
-				onToggle: () => {
-					setOpen((value) => !value);
-				},
-				rowClassName: ocOr("ReasoningRow", "row", "dsh-tdt-sv-reasoning-row"),
-				leadingClassName: ocOr("ReasoningRow", "leading", "dsh-tdt-sv-reasoning-leading"),
-				titleClassName: ocOr("ReasoningRow", "title", "dsh-tdt-sv-reasoning-title"),
-				chevronClassName: ocOr("ReasoningRow", "chevron", "dsh-tdt-sv-reasoning-chevron"),
-				collapsedContent: (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
-					className: ocOr("ReasoningRow", "separator", "dsh-tdt-sv-reasoning-sep"),
-					"aria-hidden": true
-				}), (0, react$1.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, (0, react$1.createElement)("span", { className: ocOr("ReasoningRow", "summaryText", "dsh-tdt-sv-reasoning-preview-text") }, summary))),
-				children: open ? (0, react$1.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-					text,
-					labels: MD_LABELS,
-					variant: "compact"
-				})) : void 0
-			}));
-		}
-		//#endregion
-		//#region src/client/mirror/TurnProcessNodeView.tsx
-		/** 官方 LIVE_RUN_CLOCK_INTERVAL_MS（lib/client.js:979）。 */
-		const LIVE_RUN_CLOCK_INTERVAL_MS = 1e3;
-		/** Turn 过程行：折叠时只有 label + 箭头；点开由外层 seat 把过程节点放出来。 */
-		function TurnProcessNodeViewMirror(props) {
-			const { turn, turnProcess, t } = props;
-			const open = !turnProcess.foldable || turnProcess.open;
-			const [now, setNow] = (0, react$1.useState)(() => Date.now());
-			const ticking = turn?.status === "open" && turn.start !== void 0;
-			(0, react$1.useEffect)(() => {
-				if (!ticking) return;
-				setNow(Date.now());
-				const timer = setInterval(() => {
-					setNow(Date.now());
-				}, LIVE_RUN_CLOCK_INTERVAL_MS);
-				return () => {
-					clearInterval(timer);
-				};
-			}, [ticking]);
-			if (turn === void 0 || turn.start === void 0 && turn.status !== "closed") return null;
-			const canCollapse = turnProcess.foldable && turnProcess.hasContent && !turnProcess.alwaysOpen;
-			const running = turn.status === "open";
-			const reason = turn.end?.data?.reason?.kind;
-			const elapsedMs = turn.start === void 0 ? void 0 : Math.max(1e3, (turn.end?.time ?? now) - turn.start.time);
-			const duration = elapsedMs === void 0 ? void 0 : running ? formatLiveRunDuration(elapsedMs, t) : formatRunDuration(elapsedMs, t);
-			const label = running ? duration === void 0 ? t("chatDeepDiving") : t("turnProcessDeepDiving", { duration }) : reason === "aborted" ? t("turnStopped") : reason === "error" ? t("turnProcessFailed") : duration === void 0 ? t("turnProcessWorked") : t("turnProcessTook", { duration });
-			const announcement = running ? t("chatDeepDiving") : reason === "aborted" ? t("turnStopped") : reason === "error" ? t("turnProcessFailed") : t("turnProcessWorked");
-			const spec = turnProcess.spec;
-			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
-				className: ocOr("accessibility", "visuallyHidden", "dsh-tdt-sv-visuallyhidden"),
-				role: "status",
-				"aria-live": "polite",
-				"aria-atomic": "true"
-			}, announcement), (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("TurnProcessNodeView", "root", "dsh-tdt-sv-process"),
-				"data-open": open || void 0,
-				"data-turn-process": spec?.turn,
-				"data-turn-process-messages": spec?.messageCount,
-				"data-turn-process-tool-calls": spec?.toolCallCount,
-				"data-turn-process-subagents": spec?.subagentCount,
-				disabled: !canCollapse,
-				"aria-expanded": turnProcess.hasContent ? open : void 0,
-				onClick: () => {
-					turnProcess.setOpen(!open);
-				}
-			}, (0, react$1.createElement)("span", { className: ocOr("TurnProcessNodeView", "label", "dsh-tdt-sv-process-label") }, label), canCollapse ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: ocOr("TurnProcessNodeView", "chevron", "dsh-tdt-sv-process-chevron") }) : null));
-		}
-		//#endregion
-		//#region src/client/mirror/StatDialog.tsx
-		const PANEL_MARGIN = 12;
-		const PANEL_GAP = 8;
-		/** 官方 useStatDialog：把弹层挂在触发器上方（side: 'top'），点外 / Esc 关闭。 */
-		function useStatDialog(controlled) {
-			const [ownOpen, setOwnOpen] = (0, react$1.useState)(false);
-			const open = controlled?.open ?? ownOpen;
-			const setOpen = controlled?.setOpen ?? setOwnOpen;
-			const rootRef = (0, react$1.useRef)(null);
-			const panelRef = (0, react$1.useRef)(null);
-			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
-				open,
-				anchorRef: rootRef,
-				panelRef,
-				side: "top",
-				gap: PANEL_GAP,
-				margin: PANEL_MARGIN
-			});
-			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
-			(0, react$1.useEffect)(() => {
-				if (!open) return;
-				const onKeyDown = (event) => {
-					if (event.key === "Escape") setOpen(false);
-				};
-				document.addEventListener("keydown", onKeyDown);
-				return () => {
-					document.removeEventListener("keydown", onKeyDown);
-				};
-			}, [open, setOpen]);
-			return {
-				open,
-				setOpen,
-				rootRef,
-				panelRef,
-				pos
-			};
-		}
-		//#endregion
-		//#region src/client/mirror/TurnUsagePanel.tsx
-		/** 本轮用量 pill + 明细弹层。 */
-		function TurnUsagePanelMirror(props) {
-			const { usage, t } = props;
-			const { open, setOpen, rootRef, panelRef, pos } = useStatDialog();
-			const cacheHit = usage.cacheReadTokens === void 0 ? null : formatCacheHitPercent(usage.cacheReadTokens, usage.totalTokens - usage.outputTokens, 1);
-			const total = formatCompactCount(usage.totalTokens, t);
-			const routes = usage.routes?.map((route) => `${route.provider}/${route.model}`).join(", ") ?? "";
-			return (0, react$1.createElement)("span", {
-				ref: rootRef,
-				className: ocOr("TurnUsagePanel", "root", "dsh-tdt-sv-usage")
-			}, (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("TurnUsagePanel", "trigger", "dsh-tdt-sv-usage-trigger"),
-				"aria-haspopup": "dialog",
-				"aria-expanded": open,
-				onClick: () => {
-					setOpen(!open);
-				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, null), (0, react$1.createElement)("span", { className: ocOr("TurnUsagePanel", "label", "dsh-tdt-sv-usage-label") }, t("turnUsageConsumed", { total }))), open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
-				ref: panelRef,
-				className: ocOr("statDialog", "panel", "dsh-tdt-sv-stats"),
-				role: "dialog",
-				"aria-label": t("turnUsageTitle"),
-				style: pos
-			}, (0, react$1.createElement)("div", { className: ocOr("statDialog", "title", "dsh-tdt-sv-stats-title") }, (0, react$1.createElement)("span", { className: ocOr("statDialog", "titleLabel", "dsh-tdt-sv-stats-titlelabel") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, null), t("turnUsageTitle")), (0, react$1.createElement)("span", { className: ocOr("statDialog", "titleValue", "dsh-tdt-sv-stats-titlevalue") }, formatExactCount(usage.totalTokens, t))), (0, react$1.createElement)("div", {
-				className: ocOr("statDialog", "titleRule", "dsh-tdt-sv-stats-rule"),
-				"aria-hidden": true
-			}), (0, react$1.createElement)("dl", {
-				className: ocOr("statDialog", "details", "dsh-tdt-sv-stats-details"),
-				"data-turn-usage-details": true
-			}, routes === "" ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageModel")), (0, react$1.createElement)("dd", { className: ocOr("statDialog", "route", "dsh-tdt-sv-stats-route") }, routes)), cacheHit === null ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheHit")), (0, react$1.createElement)("dd", null, `${cacheHit}%`)), (0, react$1.createElement)("dt", null, t("turnUsageInput")), (0, react$1.createElement)("dd", null, formatExactCount(usage.uncachedInputTokens, t)), usage.cacheReadTokens === void 0 ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheRead")), (0, react$1.createElement)("dd", null, formatExactCount(usage.cacheReadTokens, t))), usage.cacheWriteTokens === void 0 ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheWrite")), (0, react$1.createElement)("dd", null, formatExactCount(usage.cacheWriteTokens, t))), (0, react$1.createElement)("dt", null, t("turnUsageOutput")), (0, react$1.createElement)("dd", null, formatExactCount(usage.outputTokens, t), usage.reasoningTokens === void 0 ? null : (0, react$1.createElement)("span", { className: ocOr("statDialog", "reasoning", "dsh-tdt-sv-stats-reasoning") }, t("turnUsageReasoning", { tokens: formatExactCount(usage.reasoningTokens, t) }))))), document.body) : null);
-		}
-		//#endregion
-		//#region src/client/mirror/TurnTailNodeView.tsx
-		/** 官方 assistantText：只取 text 块。 */
-		function assistantText$1(blocks) {
-			return blocks.flatMap((block) => block.kind === "text" ? [block.text ?? ""] : []).join("");
-		}
-		/** Turn 尾部操作行：复制 / 分支 / 用量 / 结束时钟。 */
-		function TurnTailNodeViewMirror(props) {
-			const { data, onBranchAt, tailSlot, t } = props;
-			const closing = data.closing;
-			if (closing === null || closing === void 0) return null;
-			const text = assistantText$1(closing.blocks);
-			return (0, react$1.createElement)("div", {
-				className: ocOr("TurnTailNodeView", "root", "dsh-tdt-sv-tail"),
-				"data-turn-tail": data.turn,
-				"data-actions-reveal": "always"
-			}, tailSlot === void 0 || tailSlot === null ? null : tailSlot, (0, react$1.createElement)(MessageIconActionsMirror, {
-				text,
-				time: closing.time,
-				clock: "end",
-				onBranch: onBranchAt === void 0 ? void 0 : () => {
-					onBranchAt(data.seq);
-				},
-				className: ocOr("TurnTailNodeView", "actions", "dsh-tdt-sv-tail-actions"),
-				usageAction: data.tokenUsage === void 0 ? void 0 : (0, react$1.createElement)(TurnUsagePanelMirror, {
-					usage: data.tokenUsage,
-					t
-				}),
-				t
-			}));
-		}
-		//#endregion
-		//#region src/client/mirror/TurnTriggerNodeView.tsx
-		/** 官方 TRIGGER_ICONS（lib/client.js:6634）。 */
-		const TRIGGER_ICONS = {
-			request: _deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular,
-			goal: _deepseek_ai_dsh_client_ui_primitives.IconGoalOutlineRegular,
-			agent: _deepseek_ai_dsh_client_ui_primitives.IconPaperPlaneOutlineRegular,
-			team: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
-			subagent: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
-			github: _deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular,
-			webhook: _deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular,
-			schedule: _deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular,
-			job: _deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular,
-			plugin: _deepseek_ai_dsh_client_ui_primitives.IconCordisPluginOutlineRegular
-		};
-		/** 官方 turnTriggerDetails：source.kind → 标题与图标家族（默认 request）。 */
-		function turnTriggerDetails(source) {
-			const record = (value) => typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
-			const src = record(source);
-			switch (typeof src.kind === "string" ? src.kind : "") {
-				case "goal": return {
-					title: "triggerGoal",
-					icon: "goal"
-				};
-				case "agent-message": return {
-					title: "triggerAgent",
-					icon: "agent"
-				};
-				case "team-message": return {
-					title: "triggerTeam",
-					icon: "team"
-				};
-				case "subagent-settled": return {
-					title: "triggerSubagent",
-					icon: "subagent"
-				};
-				case "webhook": return src.provider === "github" ? {
-					title: "triggerGithub",
-					icon: "github"
-				} : {
-					title: "triggerWebhook",
-					icon: "webhook"
-				};
-				case "schedule": return {
-					title: "triggerSchedule",
-					icon: "schedule"
-				};
-				case "tool-jobs": return {
-					title: "triggerJob",
-					icon: "job"
-				};
-				case "cordis-host-runner": return {
-					title: "triggerPlugin",
-					icon: "plugin"
-				};
-				default: return {
-					title: "triggerRequest",
-					icon: "request"
-				};
-			}
-		}
-		/** 触发行：折叠时只有「图标 + 标题 + 时间 + 箭头」，点开展示注入原文。 */
-		function TurnTriggerNodeViewMirror(props) {
-			const { data, t } = props;
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const details = turnTriggerDetails(data?.source);
-			const TriggerIcon = TRIGGER_ICONS[details.icon] ?? _deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular;
-			const time = typeof data?.time === "number" ? data.time : void 0;
-			const content = triggerContent(data?.content);
-			return (0, react$1.createElement)("section", {
-				className: ocOr("TurnTriggerNodeView", "root", "dsh-tdt-sv-trigger"),
-				"data-turn-trigger": true
-			}, (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("TurnTriggerNodeView", "header", "dsh-tdt-sv-trigger-header"),
-				"aria-expanded": open,
-				onClick: () => {
-					setOpen((value) => !value);
-				}
-			}, (0, react$1.createElement)("span", {
-				className: ocOr("TurnTriggerNodeView", "icon", "dsh-tdt-sv-trigger-icon"),
-				"aria-hidden": true
-			}, (0, react$1.createElement)(TriggerIcon, { size: 14 })), (0, react$1.createElement)("span", { className: ocOr("TurnTriggerNodeView", "title", "dsh-tdt-sv-trigger-title") }, t(details.title)), time === void 0 ? null : (0, react$1.createElement)("time", {
-				className: ocOr("TurnTriggerNodeView", "time", "dsh-tdt-sv-trigger-time"),
-				dateTime: new Date(time).toISOString()
-			}, formatMessageClock(time, t)), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
-				size: 12,
-				className: open ? ocOr("TurnTriggerNodeView", "openChevron", "dsh-tdt-sv-trigger-chevron-open") : ocOr("TurnTriggerNodeView", "chevron", "dsh-tdt-sv-trigger-chevron")
-			})), open ? (0, react$1.createElement)("div", { className: ocOr("TurnTriggerNodeView", "body", "dsh-tdt-sv-trigger-body") }, (0, react$1.createElement)("p", { className: ocOr("TurnTriggerNodeView", "explanation", "dsh-tdt-sv-trigger-explanation") }, t("triggerExplanation")), (0, react$1.createElement)("div", { className: ocOr("TurnTriggerNodeView", "content", "dsh-tdt-sv-trigger-content") }, content === "" ? t("sessionEmpty") : content)) : null);
-		}
-		/** 注入原文：content 块的 text 拼接（官方 NoticeBody 的文本消费面）。 */
-		function triggerContent(content) {
-			if (!Array.isArray(content)) return "";
-			return content.map((block) => {
-				const b = block;
-				if (b !== null && typeof b === "object" && b.type === "text" && typeof b.text === "string") return b.text;
-				return "";
-			}).filter((part) => part !== "").join("\n");
-		}
-		//#endregion
-		//#region src/client/mirror/Deliverables.tsx
-		const basename = (path) => path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
-		/** 官方 fileNames（PresentRow.tsx）：argsRaw.files[].path 逗号连接；解析不出回原样。 */
-		function fileNames(raw) {
-			let args;
-			try {
-				args = JSON.parse(raw);
-			} catch {
-				return raw;
-			}
-			if (typeof args !== "object" || args === null || !("files" in args) || !Array.isArray(args.files)) return raw;
-			return args.files.flatMap((file) => typeof file === "object" && file !== null && "path" in file && typeof file.path === "string" ? [file.path] : []).join(", ");
-		}
-		/** 官方 PresentRow：present 工具调用的状态行（折叠 = 状态词 + 路径；展开 = 结果原文）。 */
-		function PresentRowMirror(props) {
-			const { block, t } = props;
-			const b = block ?? {};
-			const settled = typeof b.kind === "string";
-			const state = !settled ? b.phase === "preparing" ? "preparing" : "running" : b.error?.code === "interrupted" ? "stopped" : b.isError ? "error" : "ok";
-			const argsRaw = (settled ? b.call?.argsRaw : b.argsRaw) ?? "";
-			const details = settled ? (b.content ?? []).map((item) => item.type === "text" ? item.text ?? "" : JSON.stringify(item)).join("\n") || (b.error ? `${b.error.name ?? ""}: ${b.error.code ?? ""}` : "") : "";
-			const [expanded, setExpanded] = (0, react$1.useState)(false);
-			const statusKey = state === "preparing" ? "deliverRowPreparing" : state === "running" ? "deliverRowRunning" : state === "error" ? "deliverRowError" : state === "stopped" ? "deliverRowStopped" : "deliverRowOk";
-			return (0, react$1.createElement)("div", {
-				className: ocOr("ToolRow", "root", "dsh-tdt-sv-tool"),
-				"data-tool": "present",
-				"data-state": state
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDeliverDocRegular, { size: 14 }),
-				title: t("deliverRowTitle"),
-				open: expanded && details !== "",
-				expandable: details !== "",
-				expandOnRowClick: true,
-				keepContentWhenOpen: true,
-				onToggle: () => {
-					setExpanded((value) => !value);
-				},
-				running: state === "running" || state === "preparing",
-				rowClassName: ocOr("ToolRow", "row", "dsh-tdt-sv-tool-row"),
-				leadingClassName: ocOr("ToolRow", "leading", "dsh-tdt-sv-tool-leading"),
-				titleClassName: ocOr("ToolRow", "title", "dsh-tdt-sv-tool-title"),
-				chevronClassName: ocOr("ToolRow", "chevron", "dsh-tdt-sv-tool-chevron"),
-				collapsedContent: (0, react$1.createElement)("span", { className: ocOr("PresentRow", "summary", "dsh-tdt-sv-deliv-rowsummary") }, (0, react$1.createElement)("span", null, t(statusKey)), (0, react$1.createElement)("span", { className: ocOr("PresentRow", "paths", "dsh-tdt-sv-deliv-rowpaths") }, fileNames(argsRaw))),
-				children: details !== "" && expanded ? (0, react$1.createElement)("pre", { className: ocOr("PresentRow", "output", "dsh-tdt-sv-deliv-rowoutput") }, details) : null
-			}));
-		}
-		/** 官方 COLLAPSED_PRESENTED_COUNT（Deliverables.tsx）：超过 4 张折叠。 */
-		const COLLAPSED_DELIVERED_COUNT = 4;
-		/** 官方 cardDescription：简介去尾部括注后为空则回退扩展名大写（再退「文件」）。 */
-		function cardDescription(description, fallback) {
-			const trimmed = description?.replace(/\s*(?:\([^()]*\)|（[^（）]*）)\s*$/u, "").trim();
-			return trimmed === void 0 || trimmed === "" ? fallback : trimmed;
-		}
-		/** 官方 PresentedFileCard：整卡可点 → onPreview（官方 = 右栏预览，本弹窗 = openFile 分栏）。 */
-		function DeliveredFileCard(props) {
-			const { file, onPreview, t } = props;
-			const name = basename(file.path);
-			const metadata = (0, _deepseek_ai_dsh_client_ui_primitives.fileExtension)(name).toUpperCase() || t("deliverFileLabel");
-			return (0, react$1.createElement)("div", {
-				className: ocOr("Deliverables", "file", "dsh-tdt-sv-deliv-file"),
-				"data-presented-file": true
-			}, onPreview !== void 0 ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("Deliverables", "cardPreview", "dsh-tdt-sv-deliv-cardpreview"),
-				title: file.path,
-				"aria-label": t("deliverPreviewCard", { name: file.path }),
-				onClick: (event) => {
-					event.stopPropagation();
-					onPreview();
-				}
-			}) : null, (0, react$1.createElement)("span", { className: ocOr("Deliverables", "fileIcon", "dsh-tdt-sv-deliv-icon") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: file.path,
-				size: 20
-			})), (0, react$1.createElement)("div", { className: ocOr("Deliverables", "fileBody", "dsh-tdt-sv-deliv-body") }, (0, react$1.createElement)("div", { className: ocOr("Deliverables", "details", "dsh-tdt-sv-deliv-details") }, (0, react$1.createElement)("span", { className: ocOr("Deliverables", "fileName", "dsh-tdt-sv-deliv-name") }, name), (0, react$1.createElement)("span", {
-				className: ocOr("Deliverables", "description", "dsh-tdt-sv-deliv-desc"),
-				"data-presented-description": true
-			}, (0, react$1.createElement)("span", { className: ocOr("Deliverables", "secondaryText", "dsh-tdt-sv-deliv-secondary") }, cardDescription(file.description, metadata)), onPreview !== void 0 ? (0, react$1.createElement)("span", { className: ocOr("Deliverables", "previewHint", "dsh-tdt-sv-deliv-hint") }, t("deliverPreviewHint")) : null))));
-		}
-		/**
-		* 官方 DeliverablesTail 的 presented 网格（改动文件卡 ChangedFiles 依赖 Host git 摘要路由，
-		* 本弹窗无该通道 ⇒ 不渲染，与官方「summary 未就绪时不画」同态）。
-		*/
-		function DeliverablesGridMirror(props) {
-			const { files, onOpen, t } = props;
-			const [expanded, setExpanded] = (0, react$1.useState)(false);
-			if (files.length === 0) return null;
-			const collapsible = files.length > COLLAPSED_DELIVERED_COUNT;
-			const shown = collapsible && !expanded ? files.slice(0, COLLAPSED_DELIVERED_COUNT) : files;
-			return (0, react$1.createElement)("div", {
-				className: ocOr("Deliverables", "root", "dsh-tdt-sv-deliv"),
-				"data-presented-files-grid": true
-			}, (0, react$1.createElement)("div", {
-				className: ocOr("Deliverables", "presented", "dsh-tdt-sv-deliv-grid"),
-				"data-presented-files-row": true,
-				"data-single": files.length === 1 ? true : void 0
-			}, shown.map((file, index) => (0, react$1.createElement)(DeliveredFileCard, {
-				key: `${file.path}:${index}`,
-				file,
-				onPreview: onOpen === void 0 ? void 0 : () => {
-					onOpen(file.path);
-				},
-				t
-			}))), collapsible ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("Deliverables", "toggle", "dsh-tdt-sv-deliv-toggle"),
-				"aria-expanded": expanded,
-				"aria-label": t(expanded ? "deliverCollapseAria" : "deliverExpandAria", { count: files.length }),
-				onClick: () => {
-					setExpanded((value) => !value);
-				}
-			}, (0, react$1.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
-		}
-		//#endregion
-		//#region src/client/task-file-context.tsx
-		/**
-		* 实例快照 → 本任务工作区 path（判上游目录是否跨区用）。
-		* 与 `attachmentsOf` 同款：**不强求整份快照合法**，取不到 ⇒ null（调用方按「未知」处理）。
-		*/
-		function workspacePathOf(snapshot) {
-			if (snapshot === null || snapshot === "") return null;
-			try {
-				const parsed = JSON.parse(snapshot);
-				if (typeof parsed !== "object" || parsed === null) return null;
-				const path = parsed.workspacePath;
-				return typeof path === "string" && path !== "" ? path : null;
-			} catch {
-				return null;
-			}
-		}
-		/** 目录标记：产出按**尾斜杠**表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
-		function isDirPath(path) {
-			return path.endsWith("/");
-		}
-		/** 相对路径 → 绝对路径（基准 = 上游工作区；无基准 ⇒ null，如实降级为不可点，不拿当前工作区猜）。 */
-		function upstreamAbsPath(base, rel) {
-			if (base === null || base === "") return null;
-			const trimmed = rel.replace(/^\.\//, "");
-			return base.endsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
-		}
-		/** 文件/目录的显示名（去掉尾斜杠取最后一段）。 */
-		function displayName(path) {
-			const raw = path.replace(/\/+$/, "");
-			const cut = Math.max(raw.lastIndexOf("/"), raw.lastIndexOf("\\"));
-			return cut < 0 ? raw : raw.slice(cut + 1);
-		}
-		/** 工作区路径归一（补尾斜杠）后再比前缀 —— 否则 `/ws` 会把 `/ws-2` 误判成同区。 */
-		function inWorkspace(candidate, base) {
-			const norm = (value) => value.endsWith("/") ? value : `${value}/`;
-			return norm(candidate).startsWith(norm(base));
-		}
-		/** 折叠阈值：附件 >10 才折叠（用户 2026-10-03：「10 个往上才收起，10 个以下都把它显示出来」）；前置任务 >3 折叠。 */
-		const COLLAPSE_FILES = 10;
-		const COLLAPSE_TASKS = 3;
-		/** 任务处于折叠态时，每个任务最多露几个文件（避免 20 个任务的默认高度失控）。 */
-		const COLLAPSED_TASK_FILES = 3;
-		/**
-		* 快照 → 随附文件视图（服务端按 **ref** 下发了绝对路径，这里按 ref 配对，不按序）。
-		* 形状不对 / 解析失败 ⇒ 空数组（不渲染该组，绝不显示假文件）。
-		*/
-		function attachmentsOf(snapshot, paths) {
-			if (snapshot === null || snapshot === "") return [];
-			try {
-				const parsed = JSON.parse(snapshot);
-				if (typeof parsed !== "object" || parsed === null) return [];
-				const list = parsed.attachments;
-				if (!Array.isArray(list)) return [];
-				return list.flatMap((item) => {
-					if (typeof item !== "object" || item === null) return [];
-					const one = item;
-					if (typeof one.name !== "string" || one.name === "") return [];
-					if (typeof one.ref !== "string") return [];
-					const hit = paths?.find((entry) => entry.ref === one.ref);
-					return [{
-						name: one.name,
-						kind: one.kind === "upload" ? "upload" : "link",
-						path: hit === void 0 ? null : hit.path
-					}];
-				});
-			} catch {
-				return [];
-			}
-		}
-		/** 一个文件行：图标 + 名字 + 来源标记；有路径才可点。
-		*  文件名走全站唯一实现 `MarqueeText`：放不下出省略号、hover 来回滚动露出全名
-		*  （用户 2026-10-03：前置任务产出与随附文件**所有**显示不全的名字都要跑马灯）。 */
-		function FileChip(props) {
-			const { file } = props;
-			const clickable = file.onClick !== void 0;
-			return (0, react$1.createElement)(clickable ? "button" : "span", {
-				className: "dsh-tdt-sv-tfc-file",
-				...clickable ? {
-					type: "button",
-					title: file.title,
-					"aria-label": file.title,
-					onClick: file.onClick
-				} : {
-					title: file.title,
-					"data-noclick": true
-				}
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-icon" }, file.isDir ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: file.iconPath,
-				size: 14
-			})), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-namewrap" }, file.note === void 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, `[${file.note}]`), (0, react$1.createElement)(MarqueeText, {
-				text: file.label,
-				title: file.title,
-				style: {
-					minWidth: 0,
-					flex: "1 1 auto"
-				}
-			})));
-		}
-		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。**横向排**（`flex-wrap`，排满换行）。 */
-		function FileLines(props) {
-			const { files, t } = props;
-			const [expanded, setExpanded] = (0, react$1.useState)(false);
-			if (files.length === 0) return null;
-			const collapsible = files.length > COLLAPSE_FILES;
-			const shown = collapsible && !expanded ? files.slice(0, COLLAPSE_FILES) : files;
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file, index) => (0, react$1.createElement)(FileChip, {
-				key: `${file.key}#${index}`,
-				file
-			})), collapsible ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-tfc-more",
-				"aria-expanded": expanded,
-				onClick: () => {
-					setExpanded((value) => !value);
-				}
-			}, t(expanded ? "tfcCollapse" : "tfcMore", { count: files.length })) : null);
-		}
-		/** 一组：标题行 + 内容（组间由 CSS 加细线分隔，不靠颜色、不靠左缩进）。 */
-		function Group(props) {
-			const { title, children } = props;
-			if (children === null) return null;
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-group" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-title" }, title)), children);
-		}
-		/** 接收区：按前置任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠（有产出的排前面）。 */
-		function ReceivedGroup(props) {
-			const { items, workspacePath, onOpenFile, t } = props;
-			const [expanded, setExpanded] = (0, react$1.useState)(false);
-			if (items.length === 0) return null;
-			const ordered = items.slice().sort((a, b) => (a.outputs.length > 0 ? 0 : 1) - (b.outputs.length > 0 ? 0 : 1));
-			const collapsible = ordered.length > COLLAPSE_TASKS;
-			const shown = collapsible && !expanded ? ordered.slice(0, COLLAPSE_TASKS) : ordered;
-			const totalFiles = ordered.reduce((sum, item) => sum + item.outputs.length, 0);
-			return (0, react$1.createElement)(Group, {
-				title: t("tfcReceived", {
-					tasks: ordered.length,
-					files: totalFiles
-				}),
-				children: (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-tasks" }, shown.map((item, index) => {
-					const crossWorkspace = workspacePath === null || item.workspacePath === null || !inWorkspace(item.workspacePath, workspacePath);
-					const all = item.outputs.map((path) => {
-						const abs = upstreamAbsPath(item.workspacePath, path);
-						const name = displayName(path);
-						const dir = isDirPath(path);
-						const blocked = abs === null || dir && crossWorkspace;
-						return {
-							key: path,
-							iconPath: name,
-							isDir: dir,
-							label: name,
-							title: abs ?? path,
-							note: abs === null ? t("tfcRelOnly") : blocked ? t("tfcCrossWorkspace") : void 0,
-							onClick: !blocked && onOpenFile !== void 0 && abs !== null ? () => {
-								onOpenFile(abs);
-							} : void 0
-						};
-					});
-					const capped = !expanded && collapsible && all.length > COLLAPSED_TASK_FILES ? all.slice(0, COLLAPSED_TASK_FILES) : all;
-					return (0, react$1.createElement)("div", {
-						key: `${item.task}:${item.instanceId}`,
-						className: "dsh-tdt-sv-tfc-task"
-					}, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-seq" }, String(index + 1)), (0, react$1.createElement)("span", {
-						className: "dsh-tdt-sv-tfc-name",
-						title: item.task
-					}, item.taskTitle), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react$1.createElement)(FileChip, {
-						key: `${file.key}#${index}`,
-						file
-					})), capped.length < all.length ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-none" }, t("tfcRestFiles", { count: all.length - capped.length })) : null));
-				}), collapsible ? (0, react$1.createElement)("button", {
-					type: "button",
-					className: "dsh-tdt-sv-tfc-more",
-					"aria-expanded": expanded,
-					onClick: () => {
-						setExpanded((value) => !value);
-					}
-				}, t(expanded ? "tfcCollapse" : "tfcMoreTasks", { count: ordered.length })) : null)
-			});
-		}
-		/** 随附区：本任务设置里加的文件（来源标注「上传 / 工作区」）。 */
-		function AttachedGroup(props) {
-			const { files, onOpenFile, t } = props;
-			if (files.length === 0) return null;
-			return (0, react$1.createElement)(Group, {
-				title: t("tfcAttached", { count: files.length }),
-				children: (0, react$1.createElement)(FileLines, {
-					files: files.map((file) => {
-						const abs = file.path;
-						return {
-							key: `${file.name}:${file.kind}`,
-							iconPath: file.name,
-							isDir: false,
-							label: file.name,
-							title: abs ?? `${file.name}（${t("tfcNoPath")}）`,
-							note: file.kind === "upload" ? t("tfcFromUpload") : t("tfcFromWorkspace"),
-							onClick: abs !== null && onOpenFile !== void 0 ? () => {
-								onOpenFile(abs);
-							} : void 0
-						};
-					}),
-					t
-				})
-			});
-		}
-		/**
-		* 任务文件上下文（输入侧）：接收（上游） + 随附（本任务设置）。
-		* 两组都空 ⇒ 整块不渲染（返回 null），不留空壳。
-		*/
-		function TaskFileContextPanel(props) {
-			const { upstream, attached, workspacePath, onOpenFile, t } = props;
-			if (upstream.length === 0 && attached.length === 0) return null;
-			return (0, react$1.createElement)("div", {
-				className: "dsh-tdt-sv-tfc",
-				"data-task-file-context": true
-			}, (0, react$1.createElement)(ReceivedGroup, {
-				items: upstream,
-				workspacePath: workspacePath ?? null,
-				onOpenFile,
-				t
-			}), (0, react$1.createElement)(AttachedGroup, {
-				files: attached,
-				onOpenFile,
-				t
-			}));
-		}
-		//#endregion
-		//#region src/client/session-view.ts
-		/** 稳定的空序列（避免默认值每次新建数组）。 */
-		const EMPTY_ORDER = [];
-		/** 调用官方 /api/present.host（与官方 readHost 同源），并按官方 isPresentedHost 契约做字段校验。 */
-		function usePresentedHost() {
-			const [host, setHost] = (0, react$1.useState)(null);
-			(0, react$1.useEffect)(() => {
-				let cancelled = false;
-				fetchWithTimeout("/api/present.host", { cache: "no-store" }).then(async (res) => {
-					if (!res.ok) {
-						if (!cancelled) setHost("error");
-						return;
-					}
-					const value = await res.json();
-					if (typeof value !== "object" || value === null || Array.isArray(value)) {
-						if (!cancelled) setHost("error");
-						return;
-					}
-					const h = value;
-					const fileManager = h.fileManager ?? null;
-					if (typeof h.name !== "string" || typeof h.available !== "boolean" || !(fileManager === null || fileManager === "finder" || fileManager === "explorer" || fileManager === "directory")) {
-						if (!cancelled) setHost("error");
-						return;
-					}
-					if (!cancelled) setHost({
-						name: h.name,
-						available: h.available,
-						fileManager
-					});
-				}).catch(() => {
-					if (!cancelled) setHost("error");
-				});
-				return () => {
-					cancelled = true;
-				};
-			}, []);
-			return host;
-		}
-		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
-		let officialWarned = false;
-		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
-		function openSessionView(sessions, uiConversation, id) {
-			const log = (level, msg, extra) => {
-				if (level === "warn") console.warn(`[task-dispatch:session-view] ${msg}`, extra ?? "");
-				else console.info(`[task-dispatch:session-view] ${msg}`);
-			};
-			let retainedRef = null;
-			const releaseRef = () => {
-				try {
-					retainedRef?.release();
-				} catch (err) {
-					log("warn", `sessions.retain 引用释放失败（${id}）`, err);
-				}
-				retainedRef = null;
-			};
-			let binding;
-			try {
-				const S0 = sessions;
-				const retainFn = S0.retain;
-				if (typeof retainFn === "function") try {
-					retainedRef = retainFn.call(S0, id, { source: "dsh-task-dispatch-table" });
-					log("info", `sessions.retain(${id}, { source }) 成功：scope 已物化`);
-				} catch (err) {
-					log("warn", `sessions.retain(${id}) 抛错（未知会话？）`, err);
-				}
-				else log("warn", `sessions 无 retain 方法；自身键=[${Object.keys(S0).join(",")}]`);
-				const found = sessions.binding(id);
-				if (found === void 0 || found === null) {
-					const S0d = sessions;
-					log("warn", `sessions.binding(${id}) 为空（会话未就位）。sessions 方法全清单=[${(() => {
-						const out = /* @__PURE__ */ new Set();
-						let cur = S0d;
-						while (cur && (typeof cur === "object" || typeof cur === "function")) {
-							for (const k of Object.getOwnPropertyNames(cur)) if (typeof cur[k] === "function" && k !== "constructor") out.add(k);
-							cur = Object.getPrototypeOf(cur);
-						}
-						return [...out];
-					})().join(",")}]；自身键=[${Object.keys(S0d).join(",")}]`);
-					releaseRef();
-					return null;
-				}
-				binding = found;
-			} catch (err) {
-				log("warn", `openSessionView 返回 null：sessions.binding(${id}) 抛错`, err);
-				releaseRef();
-				return null;
-			}
-			const session = binding.session;
-			try {
-				const opened = session.open?.();
-				if (opened !== void 0 && typeof opened.catch === "function") opened.catch((err) => log("warn", `session.open(${id}) 失败（仅影响历史加载，不阻断弹窗）`, err));
-			} catch (err) {
-				log("warn", `session.open(${id}) 抛错`, err);
-			}
-			let conversation;
-			try {
-				conversation = uiConversation.binding(binding);
-			} catch (err) {
-				log("warn", "openSessionView 返回 null：uiConversation.binding 抛错（binding 已取得，断点在 uiConversation 装配）", err);
-				return null;
-			}
-			let target;
-			try {
-				target = conversation.target("chat");
-			} catch (err) {
-				log("warn", "openSessionView 返回 null：conversation.target('chat') 抛错", err);
-				return null;
-			}
-			log("info", `openSessionView 成功建立 target（${id}）；首屏 nodes 待订阅回填`);
-			return {
-				target,
-				session,
-				dispose: releaseRef,
-				loadOlder() {
-					try {
-						const page = session.loadOlder?.();
-						if (page !== void 0 && typeof page.catch === "function") page.catch((err) => log("warn", `session.loadOlder(${id}) 失败`, err));
-					} catch (err) {
-						log("warn", `session.loadOlder(${id}) 抛错`, err);
-					}
-				}
-			};
-		}
-		ensureArchiveSessionStyle();
-		/** JSON 安全序列化（循环引用 / 特殊值不抛）。 */
-		function safeJson(value) {
-			try {
-				return JSON.stringify(value, null, 2) ?? String(value);
-			} catch {
-				return String(value);
-			}
-		}
-		/** 提取内容块的可读文本：text 拼接、图片占位（官方 ContentBlock 是 merge-extensible map）。 */
-		function contentText(blocks) {
-			if (blocks === void 0) return "";
-			return blocks.map((block) => {
-				if (block !== null && typeof block === "object" && block.type === "text" && typeof block.text === "string") return block.text;
-				if (block !== null && typeof block === "object" && block.type === "image") return "[图片]";
-				return "";
-			}).filter((part) => part !== "").join("\n");
-		}
-		/**
-		* 提取内容块里的**官方 file 块**（2026-10-03）：随附文件以官方附件形式发进会话后，
-		* 会话快照的 user 节点 content 里就是它 ⇒ 弹窗里照样渲染成附件卡（与官方页一致）。
-		* 拿不到（宿主投影未透传）⇒ 空数组：附件卡不渲染，**绝不造一个假卡**。
-		*/
-		/**
-		* @returns `files` = 去重后要画的附件；`hadFiles` = 该轮**原本**有没有 file 块
-		* （去重让位后可能为空 —— 调用方据此判断该轮要不要渲染，不能因为让位把整条消息吞掉）。
-		*/
-		function contentFiles(blocks, exclude) {
-			if (blocks === void 0) return {
-				files: [],
-				hadFiles: false
-			};
-			const out = [];
-			let hadFiles = false;
-			for (const block of blocks) {
-				if (block === null || typeof block !== "object" || block.type !== "file") continue;
-				const attachment = block.attachment;
-				if (typeof attachment !== "object" || attachment === null) continue;
-				hadFiles = true;
-				const name = typeof attachment.name === "string" && attachment.name !== "" ? attachment.name : "file";
-				if (exclude !== void 0 && exclude.has(name)) continue;
-				out.push({
-					name,
-					bytes: typeof attachment.bytes === "number" ? attachment.bytes : 0
-				});
-			}
-			return {
-				files: out,
-				hadFiles
-			};
-		}
-		/** legacy assistant 节点的纯文本（复制按钮用）。 */
-		function assistantText(node) {
-			return (node.blocks ?? []).map((block) => block.kind === "text" ? block.text : "").join("");
-		}
-		/** keyed 节点的 data（官方 ChatNodeDataMap[kind]）。 */
-		function dataOf(node) {
-			return node.data ?? {};
-		}
-		/** 节点位置 → turn 位置（官方 node.location 收窄，ChatNodeSeat.tsx:1660 的反向）。 */
-		function turnLocationOf(node) {
-			const location = node.location;
-			return location?.kind === "turn" || location?.kind === "step" ? location.turn : void 0;
-		}
-		/** 官方 AssistantChatData.blocks（ui-chat contract/chat-nodes.d.ts:22）。 */
-		function blocksOf(value) {
-			return Array.isArray(value) ? value : void 0;
-		}
-		/**
-		* 官方 ToolCallBlock（uic contract/records.d.ts:140）→ 工具卡 props。
-		* running 半截（phase: preparing/start）只有 name/argsRaw；settled（kind: tool-result）带输出与错误。
-		*/
-		function toolCallCard(node, t, onOpenFile) {
-			const root = dataOf(node).root;
-			if (root === void 0 || root === null) return null;
-			const settled = root.kind === "tool-result";
-			const call = settled ? root.call : root;
-			const error = root.error;
-			return {
-				name: typeof call?.name === "string" ? call.name : "tool",
-				argsRaw: typeof call?.argsRaw === "string" ? call.argsRaw : "",
-				output: settled ? contentText(root.content) : "",
-				isError: root.isError === true,
-				errorName: error?.name,
-				meta: root.meta,
-				settled,
-				phase: settled ? void 0 : root.phase === "preparing" ? "preparing" : "start",
-				interrupted: error?.code === "interrupted",
-				onOpenFile,
-				t
-			};
-		}
-		/** 官方 Tool / ToolResult block 是否为 present 调用（交付文件行专属渲染；running 名在顶层，结算名在 call 里）。 */
-		function isPresentRoot(root) {
-			if (typeof root !== "object" || root === null) return false;
-			const r = root;
-			if (r.name === "present") return true;
-			return r.kind === "tool-result" && r.call !== null && typeof r.call === "object" && r.call.name === "present";
-		}
-		/** 官方 present 调用参数里的 files（deliverables/presented 事件同源数据）。 */
-		function presentFiles(root) {
-			if (typeof root !== "object" || root === null) return [];
-			const r = root;
-			const settled = r.kind === "tool-result";
-			if (r.isError === true) return [];
-			const raw = settled ? r.call?.argsRaw : r.argsRaw;
-			if (typeof raw !== "string") return [];
-			try {
-				const files = JSON.parse(raw)?.files;
-				if (!Array.isArray(files)) return [];
-				const out = [];
-				for (const file of files) {
-					if (typeof file !== "object" || file === null) continue;
-					const path = file.path;
-					if (typeof path !== "string" || path.trim() === "") continue;
-					const description = file.description;
-					out.push(typeof description === "string" && description.trim() !== "" ? {
-						path,
-						description
-					} : { path });
-				}
-				return out;
-			} catch {
-				return [];
-			}
-		}
-		/**
-		* keyed 节点 → 视图（等价于官方 slot "conversation.chat.node" 的按 kind 分发）。
-		* @param node - keyed ChatNode。
-		* @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
-		* @param t - 翻译席位（已包占位符替换）。
-		* @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
-		* @param fileOpen - U11 文件打开上下文（undefined = workspaceFiles 未就位，链接全部降级为纯文本）。
-		* @param groupPart - 过程分组侧（'response' | 'reasoning'）。
-		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
-		*/
-		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames) {
-			switch (node.kind) {
-				case "turn-trigger": return (0, react$1.createElement)(TurnTriggerNodeViewMirror, {
-					data: node.data,
-					t
-				});
-				case "turn-process": return turnProcess === void 0 ? null : (0, react$1.createElement)(TurnProcessNodeViewMirror, {
-					turn: turnLocationOf(node),
-					turnProcess,
-					t
-				});
-				case "turn-tail": {
-					const data = node.data;
-					const turn = data?.turn ?? turnLocationOf(node)?.turn;
-					const tailSlot = deliverFiles !== void 0 && deliverFiles.length > 0 && turn !== void 0 && lastTailTurn !== void 0 && turn === lastTailTurn ? (0, react$1.createElement)(react$1.Fragment, null, host !== void 0 && host !== null && host !== "error" && !host.available ? (0, react$1.createElement)("span", {
-						className: ocOr("Deliverables", "hostStatus", "dsh-tdt-sv-host-status"),
-						"data-host-unavailable": true
-					}, t("presented.unavailable")) : null, (0, react$1.createElement)(DeliverablesGridMirror, {
-						files: deliverFiles,
-						onOpen: fileOpen?.open,
-						t
-					})) : null;
-					return data === void 0 || data.closing === null || data.closing === void 0 ? null : (0, react$1.createElement)(TurnTailNodeViewMirror, {
-						data,
-						onBranchAt,
-						tailSlot,
-						t
-					});
-				}
-				case "assistant-step": {
-					const blocks = blocksOf(dataOf(node).blocks) ?? [];
-					const contentBlocks = blocks.filter((block) => block.kind !== "tool-call");
-					if (blocks.length > 0 && contentBlocks.length === 0) return null;
-					const parts = assistantBlocks(groupPart === "reasoning" ? contentBlocks.filter((block) => block.kind === "reasoning") : groupPart === "response" ? contentBlocks.filter((block) => block.kind !== "reasoning") : contentBlocks, t, fileOpen?.mentions);
-					return parts.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
-				}
-				case "tool-call": {
-					const root = dataOf(node).root;
-					if (isPresentRoot(root)) return (0, react$1.createElement)(PresentRowMirror, {
-						block: root,
-						t
-					});
-					const card = toolCallCard(node, t, fileOpen?.open);
-					return card === null ? null : (0, react$1.createElement)(GenericCommandCard, card);
-				}
-				case "user":
-				case "steering": {
-					const blocks = dataOf(node).content;
-					const text = contentText(blocks);
-					const { files, hadFiles } = contentFiles(blocks, attachedNames);
-					if (text === "" && !hadFiles) return null;
-					return (0, react$1.createElement)(UserMessage, {
-						text,
-						files
-					});
-				}
-				case "turn-error": return (0, react$1.createElement)(TurnErrorItemMirror, {
-					node: dataOf(node),
-					t
-				});
-				case "turn-max-tokens": return (0, react$1.createElement)(TurnMaxTokensItemMirror, { t });
-				case "model-retry": {
-					const data = dataOf(node);
-					const attempts = Array.isArray(data.attempts) ? data.attempts : [];
-					const current = typeof data.current === "object" && data.current !== null ? data.current : attempts[attempts.length - 1];
-					if (current === void 0) return null;
-					return (0, react$1.createElement)(ModelRetryItemMirror, {
-						node: current,
-						active: current.retryState === "scheduled",
-						t
-					});
-				}
-				case "context":
-				case "compaction":
-				case "manual-compaction":
-				case "unknown": return null;
-				default: return (0, react$1.createElement)("details", { className: "dsh-tdt-sv-tool" }, (0, react$1.createElement)("summary", { className: "dsh-tdt-sv-notice" }, `${t("sessionUnknownKind")} ${node.kind}`), (0, react$1.createElement)("pre", null, safeJson(node.data)));
-			}
-		}
-		/**
-		* assistant 内容块 → 子元素数组（官方块渲染器 lib/client.js:5826-5870 的同构）：
-		* text → 官方 MarkdownText、reasoning → 官方 ReasoningRow（标题「思考」）、image 占位；
-		* tool-call 块一律跳过（官方 case "tool-call": break——由独立工具节点渲染，重复画 = ×2）；
-		* 未知块折叠原文。
-		*/
-		function assistantBlocks(blocks, t, fileMentions) {
-			if (blocks === void 0) return [];
-			const parts = [];
-			blocks.forEach((block, index) => {
-				switch (block.kind) {
-					case "text":
-						if (block.text.trim() !== "") parts.push((0, react$1.createElement)(AssistantMarkdown, {
-							key: `t${index}`,
-							text: block.text,
-							fileMentions
-						}));
-						break;
-					case "reasoning":
-						if (block.text.trim() !== "") parts.push((0, react$1.createElement)(ReasoningRowMirror, {
-							key: `r${index}`,
-							text: block.text,
-							t
-						}));
-						break;
-					case "image":
-						parts.push((0, react$1.createElement)("div", {
-							key: `i${index}`,
-							className: "dsh-tdt-sv-image"
-						}, "[图片]"));
-						break;
-					case "tool-call": break;
-					default: parts.push((0, react$1.createElement)("details", {
-						key: `o${index}`,
-						className: "dsh-tdt-sv-tool"
-					}, (0, react$1.createElement)("summary", null, t("sessionUnknownKind")), (0, react$1.createElement)("pre", null, safeJson(block.block))));
-				}
-			});
-			return parts;
-		}
-		/**
-		* legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
-		* 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
-		*/
-		function renderLegacyNode(node, t, fileOpen, attachedNames) {
-			switch (node.kind) {
-				case "user":
-				case "steering": {
-					const text = contentText(node.content);
-					const { files, hadFiles } = contentFiles(node.content, attachedNames);
-					if (text === "" && !hadFiles) return null;
-					return (0, react$1.createElement)(UserMessage, {
-						key: node.seq,
-						text,
-						files
-					});
-				}
-				case "assistant": {
-					const parts = assistantBlocks(node.blocks, t, fileOpen?.mentions);
-					return parts.length === 0 ? null : (0, react$1.createElement)("div", {
-						key: node.seq,
-						className: "dsh-tdt-sv-assistant"
-					}, parts);
-				}
-				case "tool-result":
-					if (node.call?.name === "present") return (0, react$1.createElement)(PresentRowMirror, {
-						key: node.seq,
-						block: node,
-						t
-					});
-					return (0, react$1.createElement)(GenericCommandCard, {
-						key: node.seq,
-						name: node.call?.name ?? "tool",
-						argsRaw: node.call?.argsRaw ?? "",
-						output: contentText(node.content),
-						isError: node.isError === true,
-						errorName: node.error?.name,
-						meta: node.meta,
-						settled: true,
-						interrupted: node.error?.code === "interrupted",
-						onOpenFile: fileOpen?.open,
-						t
-					});
-				case "command": return (0, react$1.createElement)(GenericCommandCard, {
-					key: node.seq,
-					name: `/${node.name ?? "?"}`,
-					argsRaw: node.args ?? "",
-					output: node.outcome?.text ?? "",
-					isError: node.outcome?.kind === "error",
-					t
-				});
-				case "turn-error": return (0, react$1.createElement)(TurnErrorItemMirror, {
-					key: node.seq,
-					node,
-					t
-				});
-				case "turn-max-tokens": return (0, react$1.createElement)(TurnMaxTokensItemMirror, {
-					key: node.seq,
-					t
-				});
-				case "model-retry": return (0, react$1.createElement)(ModelRetryItemMirror, {
-					key: node.seq,
-					node,
-					active: node.retryState === "scheduled",
-					t
-				});
-				case "context":
-				case "compaction":
-				case "unknown": return null;
-				default: return (0, react$1.createElement)("details", {
-					key: node.seq,
-					className: "dsh-tdt-sv-tool"
-				}, (0, react$1.createElement)("summary", { className: "dsh-tdt-sv-notice" }, `${t("sessionUnknownKind")} ${node.kind}`), (0, react$1.createElement)("pre", null, safeJson(node)));
-			}
-		}
-		/**
-		* 把连续的 tool-result / command 收成一个「过程」组——官方就是把工具调用折进
-		* turn 的过程块（默认收起），页面才不会变成一列流水账。单个工具不再包组，避免多一层。
-		*/
-		function groupNodes(list) {
-			const out = [];
-			let run = [];
-			const flush = () => {
-				if (run.length === 0) return;
-				if (run.length >= 2) out.push({
-					kind: "process",
-					nodes: run
-				});
-				else out.push({
-					kind: "node",
-					node: run[0]
-				});
-				run = [];
-			};
-			for (const node of list) {
-				if (node.kind === "tool-result" || node.kind === "command") {
-					run.push(node);
-					continue;
-				}
-				flush();
-				out.push({
-					kind: "node",
-					node
-				});
-			}
-			flush();
-			return out;
-		}
-		/** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
-		function renderLegacyRows(nodes, t, fileOpen, attachedNames) {
-			const items = groupNodes(nodes);
-			const rows = [];
-			items.forEach((entry, index) => {
-				const parts = [];
-				if (entry.kind === "process") {
-					parts.push((0, react$1.createElement)("div", {
-						key: "lead",
-						className: "dsh-tdt-sv-notice"
-					}, `${t("sessionProcess")} · ${entry.nodes.length}`));
-					entry.nodes.forEach((node, i) => {
-						const rendered = renderLegacyNode(node, t, fileOpen, attachedNames);
-						if (rendered !== null) parts.push((0, react$1.createElement)("div", { key: `p${i}` }, rendered));
-					});
-				} else {
-					const inner = renderLegacyNode(entry.node, t, fileOpen, attachedNames);
-					if (inner !== null) parts.push(inner);
-					if (entry.node.kind === "assistant") {
-						const next = items[index + 1];
-						if (next === void 0 || !(next.kind === "node" && next.node.kind === "assistant")) parts.push((0, react$1.createElement)(MessageIconActionsMirror, {
-							key: "act",
-							text: assistantText(entry.node),
-							clock: "end",
-							t
-						}));
-					}
-				}
-				if (parts.length === 0) return;
-				rows.push((0, react$1.createElement)("div", {
-					key: `lg${index}`,
-					className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem")
-				}, parts));
-			});
-			return rows;
-		}
-		/** 路径归一：去 './' 前缀（词表键与 resolve 两侧同规则）。 */
-		function normalizeFilePath(p) {
-			let s = p.trim();
-			while (s.startsWith("./")) s = s.slice(2);
-			return s;
-		}
-		/**
-		* 取某 turn 的交付文件清单（官方 `DeliverablesTail` 同源数据）。
-		* ⚠️ 官方 `turn.data` 是 **Map**（见 @deepseek-ai/dsh-client-ui-deliverables `owner.turn.data.get('deliverables')`），
-		* 不是普通对象——对象式 `data.deliverables` 访问对 Map 必为 undefined（此前交付卡在弹窗里永不渲染的根因）。
-		* 这里兼容 Map 与纯对象两种形态。
-		*/
-		function turnDeliverablesPresented(face) {
-			const data = face?.data;
-			const presented = (data instanceof Map ? data.get("deliverables") : data?.deliverables)?.presented;
-			return Array.isArray(presented) ? presented : [];
-		}
-		/**
-		* 从 keyed 节点流收集真实文件词表（禁模拟：全部来自工具调用参数 / meta.diffs）：
-		* tool-call 节点 argsRaw 的 file_path/path 字段（read/grep/glob/write/edit…）与
-		* tool-fs 写入 meta.diffs[].path。会话级词表 = 官方 per-turn chatFileMentions 的简化偏差
-		* （决策 39：resolve 命中才渲链接，解析不出保持惰性 code，永不猜）。
-		*/
-		function collectFilePaths(order, store, turns) {
-			if (store === void 0) return [];
-			const out = /* @__PURE__ */ new Set();
-			if (turns !== null && turns !== void 0) {
-				const map = turns;
-				for (const [, face] of map) {
-					const presented = turnDeliverablesPresented(face);
-					for (const file of presented) {
-						const path = typeof file?.path === "string" ? file.path : void 0;
-						if (path !== void 0 && path.trim() !== "") out.add(normalizeFilePath(path));
-					}
-				}
-			}
-			for (const key of order) {
-				const node = store.get(key);
-				if (node === void 0 || node.kind !== "tool-call") continue;
-				const root = node.data?.root;
-				if (root === void 0 || root === null || typeof root !== "object") continue;
-				if (isPresentRoot(root)) {
-					for (const file of presentFiles(root)) out.add(normalizeFilePath(file.path));
-					continue;
-				}
-				const call = root.kind === "tool-result" ? root.call : root;
-				if (call === null || typeof call !== "object") continue;
-				const raw = typeof call.argsRaw === "string" ? call.argsRaw.trim() : "";
-				if (raw.startsWith("{")) try {
-					const parsed = JSON.parse(raw);
-					for (const field of ["file_path", "path"]) {
-						const value = parsed[field];
-						if (typeof value === "string" && value.trim() !== "") out.add(normalizeFilePath(value));
-					}
-				} catch {}
-				const meta = root.meta;
-				if (typeof meta === "object" && meta !== null) {
-					const diffs = meta.diffs;
-					if (Array.isArray(diffs)) for (const diff of diffs) {
-						const p = diff?.path;
-						if (typeof p === "string" && p.trim() !== "") out.add(normalizeFilePath(p));
-					}
-				}
-			}
-			return [...out];
-		}
-		/**
-		* 每轮交付文件（官方 DeliverablesTail 同源数据）：读会话 turn 级 `deliverables.presented`，
-		* 由 `deliverables/presented` 事件经引擎填充——无论事件来自 present 工具还是本插件代写（U12
-		* 决策 40 演进：插件作唯一写入方，禁止 LLM 调 present），同源覆盖。按 turn 归组、按路径去重
-		* （后者覆盖前者，与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
-		*/
-		function collectPresentedByTurn(turns) {
-			const out = /* @__PURE__ */ new Map();
-			if (turns === null || turns === void 0) return out;
-			const map = turns;
-			for (const [key, face] of map) {
-				const turn = typeof key === "number" ? key : Number(key);
-				if (!Number.isInteger(turn) || turn < 1) continue;
-				const presented = turnDeliverablesPresented(face);
-				if (presented.length === 0) continue;
-				const files = [];
-				for (const file of presented) {
-					const path = typeof file?.path === "string" ? file.path : void 0;
-					if (path === void 0 || path.trim() === "") continue;
-					const description = typeof file?.description === "string" && file.description.trim() !== "" ? file.description : void 0;
-					files.push(description === void 0 ? { path } : {
-						path,
-						description
-					});
-				}
-				if (files.length > 0) out.set(turn, files);
-			}
-			return out;
-		}
-		/**
-		* 构建 fileMentions：归一化精确匹配优先、唯一 basename 兜底（官方 fileMentions 语义：
-		* 词表外一律 undefined ⇒ MarkdownText 保持惰性 code，renderer never guesses）。
-		*/
-		function makeFileMentions(paths, open) {
-			const exact = /* @__PURE__ */ new Map();
-			const byBase = /* @__PURE__ */ new Map();
-			for (const p of paths) {
-				exact.set(p, p);
-				const base = p.includes("/") ? p.slice(p.lastIndexOf("/") + 1) : p;
-				const bucket = byBase.get(base);
-				if (bucket === void 0) byBase.set(base, [p]);
-				else bucket.push(p);
-			}
-			return { resolve(value) {
-				const norm = normalizeFilePath(value);
-				const hit = exact.get(norm) ?? (() => {
-					const base = norm.includes("/") ? norm.slice(norm.lastIndexOf("/") + 1) : norm;
-					const bucket = byBase.get(base);
-					return bucket !== void 0 && bucket.length === 1 ? bucket[0] : void 0;
-				})();
-				if (hit === void 0) return void 0;
-				return {
-					label: value,
-					title: hit,
-					open: () => {
-						open(hit);
-					}
-				};
-			} };
-		}
-		/**
-		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
-		* U10「继续对话（开分支）」：头部按钮 → 确认框 → `sessions.fork`（官方 ISessions 契约，
-		* 不带 atSeq = 最新已完成 turn 前缀，increaseTitle 让子会话标题递增 (1)）→ 先关弹窗
-		* （release 源会话）→ `uiWorkspace.openSession(childId)`（官方导航服务：内部自己
-		* retain('mainView') + selection.set + selectPanel(null)，我们只调服务、不碰保留值）。
-		* @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
-		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
-		*/
-		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, attached, workspacePath } = props;
-			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
-			const attachedNames = (0, react$1.useMemo)(() => new Set((attached ?? []).filter((file) => file.path !== null).map((file) => file.name)), [attached]);
-			const subscribe = (0, react$1.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
-			const getSnapshot = (0, react$1.useMemo)(() => () => view.target.getSnapshot(), [view]);
-			const chat = (0, react$1.useSyncExternalStore)(subscribe, getSnapshot);
-			const sessionSub = (0, react$1.useMemo)(() => (onChange) => view.session.subscribe(onChange), [view]);
-			const sessionGet = (0, react$1.useMemo)(() => () => view.session.getSnapshot(), [view]);
-			const sessionSnap = (0, react$1.useSyncExternalStore)(sessionSub, sessionGet);
-			const [openTurns, setOpenTurns] = (0, react$1.useState)(() => /* @__PURE__ */ new Map());
-			const onSetOpen = (0, react$1.useCallback)((turn, answerStep, open) => {
-				setOpenTurns((prev) => {
-					const next = new Map(prev);
-					if (open) next.set(turn, answerStep);
-					else next.delete(turn);
-					return next;
-				});
-			}, []);
-			const canFork = forkSession !== void 0 && openHostSession !== void 0;
-			const [forkTarget, setForkTarget] = (0, react$1.useState)(null);
-			const [forking, setForking] = (0, react$1.useState)(false);
-			const [forkErr, setForkErr] = (0, react$1.useState)(null);
-			const aliveRef = (0, react$1.useRef)(true);
-			(0, react$1.useEffect)(() => () => {
-				aliveRef.current = false;
-			}, []);
-			const onForkAccept = (0, react$1.useCallback)(() => {
-				if (forking || forkSession === void 0 || openHostSession === void 0) return;
-				setForking(true);
-				setForkErr(null);
-				(async () => {
-					try {
-						const child = await forkSession(sessionId, forkTarget?.atSeq);
-						if (!aliveRef.current) return;
-						onClose();
-						openHostSession(child);
-					} catch (error) {
-						if (!aliveRef.current) return;
-						setForkErr(error instanceof Error ? error.message : String(error));
-					} finally {
-						setForking(false);
-					}
-				})();
-			}, [
-				forking,
-				forkSession,
-				openHostSession,
-				sessionId,
-				forkTarget,
-				onClose
-			]);
-			const onBranchAt = (0, react$1.useCallback)((seq) => {
-				setForkErr(null);
-				setForkTarget({ atSeq: seq });
-			}, []);
-			const openFile = (0, react$1.useCallback)((path) => {
-				onOpenFile?.(path);
-			}, [onOpenFile]);
-			const order = chat?.order ?? EMPTY_ORDER;
-			const store = chat?.nodes;
-			const keyed = order.length > 0 && store !== void 0;
-			const turns = chat?.timeline?.turns;
-			const fileOpen = (0, react$1.useMemo)(() => {
-				if (workspaceFiles === void 0 || onOpenFile === void 0) return void 0;
-				return {
-					open: openFile,
-					mentions: makeFileMentions(collectFilePaths(order, store, turns), openFile)
-				};
-			}, [
-				workspaceFiles,
-				onOpenFile,
-				openFile,
-				order,
-				store
-			]);
-			const deliveredByTurn = (0, react$1.useMemo)(() => collectPresentedByTurn(turns), [turns]);
-			const deliverFiles = (0, react$1.useMemo)(() => {
-				const byPath = /* @__PURE__ */ new Map();
-				const add = (file) => {
-					const key = file.path.trim();
-					if (key === "" || byPath.has(key)) return;
-					byPath.set(key, file);
-				};
-				for (const path of outputs ?? []) add({ path });
-				for (const files of deliveredByTurn.values()) for (const file of files) add(file);
-				return [...byPath.values()];
-			}, [outputs, deliveredByTurn]);
-			const lastTailTurn = (0, react$1.useMemo)(() => {
-				if (!keyed || store === void 0) return void 0;
-				for (let i = order.length - 1; i >= 0; i--) {
-					const node = store.get(order[i]);
-					if (node?.kind !== "turn-tail") continue;
-					const turn = node.data?.turn ?? turnLocationOf(node)?.turn;
-					if (typeof turn === "number") return turn;
-				}
-			}, [
-				keyed,
-				order,
-				store
-			]);
-			const host = usePresentedHost();
-			const renderNode = (0, react$1.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames), [
-				tt,
-				onBranchAt,
-				fileOpen,
-				deliverFiles,
-				lastTailTurn,
-				host,
-				attachedNames
-			]);
-			const isTurnClosed = (0, react$1.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
-			const groupedView = (0, react$1.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
-				keyed,
-				order,
-				store,
-				isTurnClosed
-			]);
-			const rendered = (keyed ? ChatNodeListMirror({
-				order,
-				store,
-				entries: groupedView?.entries,
-				groups: groupedView?.groups,
-				turns,
-				openState: openTurns,
-				onSetOpen,
-				foldCompleted: true,
-				renderNode,
-				t: tt
-			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen, attachedNames)).filter((row) => row !== null && row !== void 0);
-			const officialCount = officialModuleCount();
-			if (!officialWarned) {
-				officialWarned = true;
-				console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass("ChatView", "frame")} flowItem=${officialClass("ChatView", "flowItem")} trigger=${officialClass("TurnTriggerNodeView", "root")} turnProcess=${officialClass("TurnProcessNodeView", "root")} tail=${officialClass("TurnTailNodeView", "root")}`);
-				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
-			}
-			const openState = sessionSnap?.openState;
-			const showLoadOlder = sessionSnap?.hasMore !== false;
-			const body = rendered.length === 0 ? (0, react$1.createElement)(ChatHint, { text: openState === "error" ? tt("sessionLoadFailed") : openState === "loading" || openState === "cold" ? tt("sessionLoading") : tt("sessionEmpty") }) : [showLoadOlder ? (0, react$1.createElement)(ChatOlderButton, {
-				key: "older",
-				label: tt("sessionLoadOlder"),
-				onClick: () => {
-					view.loadOlder();
-				}
-			}) : null, ...rendered];
-			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-sv-overlay",
-				onClick: onClose
-			}, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-sv-panel",
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-title" }, `${tt("sessionViewerTitle")} · ${heading}`), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialCount === 0 ? (0, react$1.createElement)("div", {
-				className: "dsh-tdt-sv-sid",
-				style: { color: "var(--tdt-warning, #b7791f)" }
-			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-headerbtns" }, canFork ? (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				disabled: forking,
-				title: tt("continueBranch"),
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, { size: 14 }),
-				onClick: () => {
-					setForkErr(null);
-					setForkTarget({});
-				}
-			}, tt("continueBranch")) : null, (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
-				label: tt("debugClose"),
-				onClick: onClose
-			}))), (0, react$1.createElement)(ChatViewFrame, { children: [(0, react$1.createElement)(TaskFileContextPanel, {
-				upstream: upstream ?? [],
-				attached: attached ?? [],
-				workspacePath: workspacePath ?? null,
-				onOpenFile,
-				t: tt
-			}), ...Array.isArray(body) ? body : [body]] }))), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
-				open: forkTarget !== null,
-				onClose: () => {
-					if (!forking) setForkTarget(null);
-				},
-				title: tt("forkConfirmTitle"),
-				closeLabel: tt("debugClose"),
-				description: tt("forkConfirmText"),
-				className: "dsh-tdt-sv-forkmodal",
-				footer: [(0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-					key: "cancel",
-					variant: "outline",
-					disabled: forking,
-					onClick: () => {
-						setForkTarget(null);
-					}
-				}, tt("forkCancel")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-					key: "accept",
-					variant: "primary",
-					disabled: forking,
-					onClick: onForkAccept
-				}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))]
-			}, forkErr !== null ? (0, react$1.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
 		}
 		//#endregion
 		//#region node_modules/@babel/runtime/helpers/extends.js
@@ -52563,7 +50168,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return window.matchMedia("(prefers-color-scheme: dark)").matches;
 		}
 		function CodeViewer(props) {
-			const { text, path, t } = props;
+			const { text, path, t, className, style, height = "100%" } = props;
 			const [copied, setCopied] = (0, react$1.useState)(false);
 			const [dark, setDark] = (0, react$1.useState)(isDarkScheme);
 			(0, react$1.useEffect)(() => {
@@ -52588,7 +50193,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				});
 			};
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: "dsh-tdt-sv-cmviewer",
+				className: `dsh-tdt-sv-cmviewer${className ? ` ${className}` : ""}`,
+				style,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 					type: "button",
 					className: "dsh-tdt-sv-cm-copy",
@@ -52602,7 +50208,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					theme: "none",
 					extensions,
 					readOnly: true,
-					height: "100%",
+					height,
 					style: {
 						flex: "1 1 auto",
 						minHeight: 0,
@@ -52621,6 +50227,2400 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 				})]
 			});
+		}
+		//#endregion
+		//#region src/client/mirror/GenericCommandCard.tsx
+		/** 官方 TOOL_VARIANTS（tool client.js:83-100，cordis_* 一并保留）。 */
+		const TOOL_VARIANTS = {
+			bash: "bash",
+			pwsh: "bash",
+			read: "read",
+			read_image: "read",
+			web_fetch: "read",
+			web_search: "search",
+			grep: "search",
+			glob: "search",
+			write: "write",
+			edit: "edit",
+			run_code: "code",
+			cordis_package_inspect: "read",
+			cordis_runtime_inspect: "read",
+			cordis_run: "others",
+			cordis_stop: "others",
+			cordis_undefine: "others"
+		};
+		const classifyTool = (name) => TOOL_VARIANTS[name] ?? "others";
+		/** 官方 VARIANT_TITLE_KEYS + TOOL_TITLE_KEYS（tool client.js:65-149；本仓库键名前缀 toolTitle）。 */
+		const VARIANT_TITLE_KEYS = {
+			search: "toolTitleSearch",
+			read: "toolTitleRead",
+			bash: "toolTitleBash",
+			write: "toolTitleWrite",
+			edit: "toolTitleEdit",
+			code: "toolTitleCode",
+			others: "toolTitleGeneric"
+		};
+		const TOOL_TITLE_KEYS = {
+			pwsh: "toolTitleBash",
+			read_image: "toolTitleReadImage",
+			grep: "toolTitleGrep",
+			glob: "toolTitleGlob",
+			web_search: "toolTitleWebSearch",
+			web_fetch: "toolTitleWebFetch"
+		};
+		const toolTitleKey = (name) => TOOL_TITLE_KEYS[name] ?? VARIANT_TITLE_KEYS[classifyTool(name)];
+		/** 官方 VARIANT_ICONS（tool client.js:1749-1757，size 14）。 */
+		const VARIANT_ICONS = {
+			search: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+			read: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular, { size: 14 }),
+			bash: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular, { size: 14 }),
+			write: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+			edit: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+			code: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 14 }),
+			others: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular, { size: 14 })
+		};
+		/** 官方 SUMMARY_KEYS（tool client.js:204-220）：摘要取参键偏好。 */
+		const SUMMARY_KEYS = {
+			bash: ["description", "command"],
+			read: [
+				"path",
+				"file_path",
+				"url"
+			],
+			search: [
+				"query",
+				"pattern",
+				"url"
+			],
+			write: ["path", "file_path"],
+			edit: ["path", "file_path"],
+			code: ["description"],
+			others: []
+		};
+		/** 官方 FILE_PATH_VARIANTS（tool client.js:237-241）：摘要可开预览的文件型变体。 */
+		const FILE_PATH_VARIANTS = /* @__PURE__ */ new Set([
+			"read",
+			"write",
+			"edit"
+		]);
+		const firstLine$1 = (text) => {
+			const nl = text.indexOf("\n");
+			return nl === -1 ? text : text.slice(0, nl);
+		};
+		/** 官方 parseArgs（tool client.js:186-192）。 */
+		const parseArgs = (raw) => {
+			try {
+				return JSON.parse(raw);
+			} catch {
+				return;
+			}
+		};
+		const pickString = (args, keys) => {
+			for (const key of keys) {
+				const value = args[key];
+				if (typeof value === "string" && value !== "") return value;
+			}
+		};
+		/** 官方 deriveSummary（tool client.js:221-233）。 */
+		function deriveSummary(variant, argsRaw) {
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return firstLine$1(argsRaw);
+			const args = parsed;
+			if (variant === "search" && Array.isArray(args.queries)) {
+				const queries = args.queries.filter((query) => typeof query === "string" && query !== "");
+				if (queries.length > 0) return queries.map(firstLine$1).join(", ");
+			}
+			const picked = pickString(args, SUMMARY_KEYS[variant]);
+			if (picked !== void 0) return firstLine$1(picked);
+			for (const value of Object.values(args)) if (typeof value === "string" && value !== "") return firstLine$1(value);
+			return firstLine$1(argsRaw);
+		}
+		/** 官方 deriveFilePath（tool client.js:242-248）：read/write/edit 的路径取参。 */
+		function deriveFilePath(variant, argsRaw) {
+			if (!FILE_PATH_VARIANTS.has(variant)) return void 0;
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return void 0;
+			const picked = pickString(parsed, ["path", "file_path"]);
+			return picked === void 0 ? void 0 : firstLine$1(picked);
+		}
+		/** 官方 formatToolBody（tool client.js:255-264）：通用展开体的输入正文。 */
+		function formatToolBody(variant, argsRaw) {
+			if (argsRaw === "") return null;
+			const parsed = parseArgs(argsRaw);
+			if (parsed === void 0) return argsRaw;
+			if (variant === "code" && typeof parsed === "object" && parsed !== null) {
+				const code = parsed.code;
+				if (typeof code === "string" && code !== "") return code;
+			}
+			return JSON.stringify(parsed, null, 2);
+		}
+		/** 官方 validEscalationFields（tool client.js:347-353）。 */
+		function validEscalationFields(args) {
+			const permission = args.sandbox_permissions;
+			const justification = args.justification;
+			if (permission === void 0 && justification === void 0) return true;
+			if (permission !== "workspace-write" && permission !== "danger-full-access") return false;
+			return typeof justification === "string" && justification.trim() !== "";
+		}
+		/** 官方 intendedDiff（tool client.js:460-517）：write/edit/str_replace_editor 的参数侧意图 diff。 */
+		function intendedDiff(name, argsRaw) {
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+			const args = parsed;
+			if (name === "str_replace_editor") {
+				const { command, path, file_text: fileText, old_str: oldText, new_str: newText } = args;
+				if (typeof path !== "string" || path.trim() === "") return null;
+				if (command === "create") {
+					if (fileText !== void 0 && typeof fileText !== "string") return null;
+					return {
+						tool: name,
+						diff: {
+							path,
+							oldText: null,
+							newText: typeof fileText === "string" ? fileText : ""
+						}
+					};
+				}
+				if (command === "str_replace") {
+					if (oldText !== void 0 && typeof oldText !== "string") return null;
+					if (newText !== void 0 && typeof newText !== "string") return null;
+					return {
+						tool: name,
+						diff: {
+							path,
+							oldText: typeof oldText === "string" ? oldText : null,
+							newText: typeof newText === "string" ? newText : ""
+						}
+					};
+				}
+				return null;
+			}
+			const { file_path: path } = args;
+			if (typeof path !== "string" || path.trim() === "") return null;
+			if (!validEscalationFields(args)) return null;
+			if (name === "write") {
+				const { content } = args;
+				return typeof content === "string" ? {
+					tool: name,
+					diff: {
+						path,
+						oldText: null,
+						newText: content
+					}
+				} : null;
+			}
+			if (name !== "edit") return null;
+			const { old_string: oldText, new_string: newText, replace_all: replaceAll } = args;
+			if (typeof oldText !== "string" || typeof newText !== "string") return null;
+			if (replaceAll !== void 0 && typeof replaceAll !== "boolean") return null;
+			return {
+				tool: name,
+				diff: {
+					path,
+					oldText: oldText || null,
+					newText
+				}
+			};
+		}
+		/** 官方 narrowDiffs（tool client.js:443-459）。 */
+		function narrowDiffs(diffs) {
+			if (!Array.isArray(diffs) || diffs.length === 0) return null;
+			const out = [];
+			for (const hunk of diffs) {
+				if (typeof hunk !== "object" || hunk === null || Array.isArray(hunk)) return null;
+				const { path, oldText, newText } = hunk;
+				if (typeof path !== "string") return null;
+				if (oldText !== null && typeof oldText !== "string") return null;
+				if (typeof newText !== "string") return null;
+				out.push({
+					path,
+					oldText,
+					newText
+				});
+			}
+			return out;
+		}
+		/** 官方 appliedDiffs（tool client.js:518-524）。 */
+		function appliedDiffs(meta) {
+			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return null;
+			const diffs = meta.diffs;
+			if (!Array.isArray(diffs)) return null;
+			if (diffs.length === 0) return "empty";
+			return narrowDiffs(diffs);
+		}
+		/** 官方 diffCardModel（tool client.js:534-544；keyed 流里只有根调用，parentCallId 分支略）。 */
+		function diffCardModel(name, argsRaw, meta, isError, settled) {
+			const intended = intendedDiff(name, argsRaw);
+			if (intended === null) return null;
+			if (!settled) return [intended.diff];
+			if (name === "str_replace_editor") return null;
+			if (isError) return null;
+			const applied = appliedDiffs(meta);
+			if (applied === null || applied === "empty") return name === "write" ? [intended.diff] : null;
+			return applied;
+		}
+		const positiveInteger = (value) => typeof value === "number" && Number.isInteger(value) && value >= 1;
+		/** 官方 readMeta（tool client.js:369-395）：宿主写入的读取窗口 meta 收窄。 */
+		function readMeta(meta) {
+			if (typeof meta !== "object" || meta === null || Array.isArray(meta)) return null;
+			const { path, offset, lines, totalLines, lang } = meta;
+			if (typeof path !== "string" || typeof offset !== "number" || !Number.isInteger(offset) || offset < 1) return null;
+			if (typeof totalLines !== "number" || !Number.isInteger(totalLines) || totalLines < 0 || !Array.isArray(lines)) return null;
+			if (lang !== void 0 && typeof lang !== "string") return null;
+			const narrowed = [];
+			let previous = offset - 1;
+			for (const line of lines) {
+				if (typeof line !== "object" || line === null || Array.isArray(line)) return null;
+				const { number, text } = line;
+				if (typeof number !== "number" || !Number.isInteger(number) || number < 1 || number <= previous) return null;
+				if (number > totalLines || typeof text !== "string") return null;
+				previous = number;
+				narrowed.push({
+					number,
+					text
+				});
+			}
+			return {
+				label: path,
+				lines: narrowed,
+				totalLines,
+				...lang === void 0 ? {} : { lang }
+			};
+		}
+		/** 官方 readCardModel（tool client.js:421-435）：read + 合法参数 + meta + 结果 envelope。 */
+		function readCardModel(name, argsRaw, output, meta, isError, settled) {
+			if (!settled || isError || name !== "read") return null;
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+			const { file_path: path, offset, limit } = parsed;
+			if (typeof path !== "string" || path.trim() === "") return null;
+			if (offset !== void 0 && !positiveInteger(offset)) return null;
+			if (limit !== void 0 && !positiveInteger(limit)) return null;
+			const face = readMeta(meta);
+			if (face === null) return null;
+			if (/^<path>[^\n]*<\/path>\n<type>file<\/type>\n<content>\n([\s\S]*)\n<\/content>$/u.exec(output)?.[1] === void 0) return null;
+			return face;
+		}
+		/** 官方 shellCall（tool client.js:831-855）：无 description = persistent（结算走 generic）。 */
+		function shellCall(name, args) {
+			if (name !== "bash" && name !== "pwsh") return null;
+			const { command, description, timeoutMs, workdir, run_in_background: background } = args;
+			if (typeof command !== "string" || command.trim() === "") return null;
+			if (timeoutMs !== void 0 && (typeof timeoutMs !== "number" || !Number.isFinite(timeoutMs) || timeoutMs <= 0)) return null;
+			if (workdir !== void 0 && typeof workdir !== "string") return null;
+			if (background !== void 0 && typeof background !== "boolean") return null;
+			if (!validEscalationFields(args)) return null;
+			if (description === void 0) return {
+				command,
+				description: "",
+				workdir: void 0,
+				persistent: true,
+				background: false
+			};
+			if (typeof description !== "string" || description.trim() === "") return null;
+			return {
+				command,
+				description,
+				workdir,
+				persistent: false,
+				background: background === true
+			};
+		}
+		/** 官方 terminalSendCall（tool client.js:884-896）。 */
+		function terminalSendCall(name, args) {
+			if (name !== "terminal_send") return null;
+			const { sessionId, text, run_in_background: background } = args;
+			if (typeof sessionId !== "string" || sessionId === "" || typeof text !== "string") return null;
+			if (background !== void 0 && typeof background !== "boolean") return null;
+			return {
+				text,
+				sessionId,
+				background: background === true
+			};
+		}
+		/** 官方 parseExitStatus（tool client.js:903-918）：结果尾部退出码 / 信号标记剥离。 */
+		function parseExitStatus(text) {
+			const signal = /\n\[killed by signal: ([^\]\n]+)\]$/.exec(text);
+			if (signal?.[1] !== void 0) return {
+				output: text.slice(0, signal.index),
+				signal: signal[1]
+			};
+			const exit = /\n\[exit code: (\d+)\]$/.exec(text);
+			if (exit?.[1] !== void 0) return {
+				output: text.slice(0, exit.index),
+				exitCode: Number(exit[1])
+			};
+			return {
+				output: text,
+				exitCode: 0
+			};
+		}
+		/**
+		* 官方 spill notice 识别（spill-policy notice.ts，tool client.js:660-703）：
+		* 结尾 `)` + 「\n\n( Full formatted result stored at: 」段。超长输出被 spill 化的
+		* bash 结果走 generic（官方 isSpilledShellCall 同向；此处放宽为字面匹配，宁滥勿漏）。
+		*/
+		function hasSpillNotice(text) {
+			if (!text.endsWith(")")) return false;
+			return text.includes("\n\n( Full formatted result stored at: ");
+		}
+		/** 官方 resolveTerminalCwd + normalizeSegments（tool client.js:776-798）的显示用简化版：
+		*  弹窗侧拿不到会话 cwd ⇒ 绝对路径原样、相对路径弹出 `.`/`..` 段。 */
+		function normalizeSegments(path) {
+			if (!/(?:^|[/\\])\.\.?(?:[/\\]|$)/.test(path)) return path;
+			const out = [];
+			for (const segment of path.split(/[/\\]+/)) {
+				if (segment === "" || segment === ".") continue;
+				if (segment === "..") {
+					out.pop();
+					continue;
+				}
+				out.push(segment);
+			}
+			return out.join("/");
+		}
+		/** 官方 terminalCardModel（tool client.js:929-968）：running 半截返回 running 卡。 */
+		function terminalCardModel(name, argsRaw, output, isError, settled) {
+			const parsed = parseArgs(argsRaw);
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+			const args = parsed;
+			const shell = shellCall(name, args);
+			const send = shell === null ? terminalSendCall(name, args) : null;
+			if (shell === null && send === null) return null;
+			if (shell !== null && shell.background || send !== null && send.background) return null;
+			if (!settled) return shell !== null ? {
+				command: shell.command,
+				cwd: shell.workdir === void 0 ? void 0 : normalizeSegments(shell.workdir),
+				running: true
+			} : {
+				command: send.text,
+				running: true,
+				sessionId: send.sessionId
+			};
+			if (isError || shell !== null && shell.persistent || hasSpillNotice(output)) return null;
+			if (send !== null) return {
+				command: send.text,
+				running: false,
+				sessionId: send.sessionId
+			};
+			const shellCmd = shell;
+			const status = parseExitStatus(output);
+			return {
+				command: shellCmd.command,
+				cwd: shellCmd.workdir === void 0 ? void 0 : normalizeSegments(shellCmd.workdir),
+				output: status.output,
+				exitCode: status.exitCode,
+				signal: status.signal,
+				running: false
+			};
+		}
+		/** 词典：代码工具栏（官方 codeToolbarLabels，tool client.js:1098-1104）。 */
+		const codeToolbarLabels = (t) => ({
+			codeLabel: t("codeBlockLabel"),
+			wrapLabel: t("diffWrapLabel"),
+			unwrapLabel: t("diffUnwrapLabel")
+		});
+		/** 官方 diffBlockLabels（tool client.js:1125-1135）。 */
+		const diffLabels = (t) => ({
+			...codeToolbarLabels(t),
+			copy: t("copyLabel"),
+			copied: t("copiedLabel"),
+			collapseAria: t("diffCollapseAria"),
+			expandAria: (count) => t("diffExpandAria", { count }),
+			collapse: t("collapseLabel"),
+			expand: (count) => t("diffExpandRest", { count })
+		});
+		/** 官方 readBlockLabels（tool client.js:1141-1155）。 */
+		const readLabels = (t) => ({
+			...codeToolbarLabels(t),
+			window: (shown, total) => t("readWindow", {
+				shown,
+				total
+			}),
+			copy: t("copyLabel"),
+			copied: t("copiedLabel"),
+			collapseAria: t("readCollapseAria"),
+			expandAria: (count) => t("readExpandAria", { count }),
+			collapse: t("collapseLabel"),
+			expand: (count) => t("readExpandRest", { count })
+		});
+		/** 官方 terminalBlockLabels（tool client.js:708-737 的键面）。 */
+		const terminalLabels = (t) => ({
+			signal: (signal) => t("terminalSignal", { signal }),
+			exitCode: (code) => t("terminalExitCode", { code }),
+			noExitCode: t("terminalNoExitCode"),
+			running: t("terminalRunning"),
+			failed: t("terminalFailed"),
+			done: t("terminalDone"),
+			copy: t("copyLabel"),
+			copied: t("copiedLabel"),
+			noOutput: t("terminalNoOutput"),
+			collapseAria: t("terminalCollapseAria"),
+			collapse: t("collapseLabel"),
+			expandAria: (hidden) => t("terminalExpandAria", { n: hidden }),
+			expand: (hidden) => t("terminalExpandRest", { n: hidden })
+		});
+		/** 摘要链接（官方 fileLink）：点击只跟随、不折叠行。 */
+		const stopLinkClick = (event) => {
+			event.stopPropagation();
+		};
+		/**
+		* 工具调用 / 命令卡（官方 GenericToolCard + ToolRow 镜像）。
+		* 折叠行 = 图标 + 标题 [+ 分隔点 + 摘要（文件路径链接化）+ 后缀]；展开体按官方分发链。
+		*/
+		function GenericCommandCard(props) {
+			const { name, argsRaw, output, isError, meta, settled = true, phase, interrupted, onOpenFile, t } = props;
+			const [expanded, setExpanded] = (0, react$1.useState)(false);
+			const variant = classifyTool(name);
+			const titleKey = toolTitleKey(name);
+			const state = !settled ? phase === "preparing" ? "preparing" : "running" : interrupted ? "stopped" : isError ? "error" : "ok";
+			const terminalFace = (0, react$1.useMemo)(() => terminalCardModel(name, argsRaw, output, isError, settled), [
+				name,
+				argsRaw,
+				output,
+				isError,
+				settled
+			]);
+			const read = (0, react$1.useMemo)(() => readCardModel(name, argsRaw, output, meta, isError, settled), [
+				name,
+				argsRaw,
+				output,
+				meta,
+				isError,
+				settled
+			]);
+			const diffs = (0, react$1.useMemo)(() => diffCardModel(name, argsRaw, meta, isError, settled), [
+				name,
+				argsRaw,
+				meta,
+				isError,
+				settled
+			]);
+			const terminal = (0, react$1.useMemo)(() => {
+				if (terminalFace === null) return null;
+				return terminalFace.sessionId !== void 0 ? {
+					...terminalFace,
+					command: terminalFace.command === "" ? t("terminalSendInput") : terminalFace.command,
+					description: t("terminalSession", { sessionId: terminalFace.sessionId })
+				} : terminalFace;
+			}, [terminalFace, t]);
+			const failedTerminal = terminal !== null && terminal.running !== true && (terminal.exitCode !== void 0 && terminal.exitCode !== 0 || terminal.signal !== void 0);
+			const rowState = state === "ok" && failedTerminal ? "error" : state;
+			const running = rowState === "running" || rowState === "preparing";
+			const generic = titleKey === "toolTitleGeneric";
+			const base = argsRaw === "" ? "" : deriveSummary(variant, argsRaw);
+			const plainSummary = [generic ? name : "", base].filter(Boolean).join(" · ");
+			const errorSummary = rowState === "error" && output !== "" ? firstLine$1(output) : null;
+			const summaryText = (rowState === "error" ? errorSummary ?? terminal?.description ?? plainSummary : null) ?? terminal?.description ?? plainSummary;
+			const totals = diffs === null ? null : (0, _deepseek_ai_dsh_client_ui_primitives.diffTotals)(diffs);
+			const diffStat = totals === null ? null : `+${totals.added} -${totals.removed}`;
+			const settledWithCue = rowState === "error" || rowState === "stopped";
+			const suffix = settledWithCue ? null : diffStat;
+			const filePath = argsRaw === "" ? void 0 : deriveFilePath(variant, argsRaw);
+			const openFile = filePath !== void 0 && onOpenFile !== void 0 && !settledWithCue ? () => {
+				onOpenFile(filePath);
+			} : void 0;
+			const inputRaw = argsRaw === "" ? null : argsRaw;
+			const outputText = output === "" ? null : output;
+			const card = terminal !== null ? "terminal" : diffs !== null ? "diff" : read !== null ? "read" : null;
+			const bodyText = expanded && card === null && inputRaw !== null ? formatToolBody(variant, inputRaw) : null;
+			const cardBody = variant === "code" ? null : bodyText;
+			const expandable = rowState !== "preparing" && (inputRaw !== null || outputText !== null || card !== null);
+			const open = expanded && expandable;
+			const blockLabels = (0, react$1.useMemo)(() => ({
+				diff: diffLabels(t),
+				read: readLabels(t),
+				terminal: terminalLabels(t)
+			}), [t]);
+			const statusText = rowState === "preparing" ? t("rowPreparing") : rowState === "running" ? t("rowRunning") : rowState === "error" ? t("rowFailed") : rowState === "stopped" ? t("rowStopped") : null;
+			const summaryClassName = `${ocOr("ToolRow", "summary", "dsh-tdt-sv-tool-summary")}${rowState === "error" ? ` ${ocOr("ToolRow", "errorSummary", "dsh-tdt-sv-tool-errmark")}` : ""}${rowState === "stopped" ? ` ${ocOr("ToolRow", "stoppedSummary", "dsh-tdt-sv-tool-stopmark")}` : ""}`;
+			const collapsedContent = summaryText === "" ? void 0 : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
+				className: ocOr("ToolRow", "sep", "dsh-tdt-sv-tool-sep"),
+				"aria-hidden": true
+			}), openFile !== void 0 ? (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("ToolRow", "fileLink", "dsh-tdt-sv-tool-filelink"),
+				onClick: (event) => {
+					stopLinkClick(event);
+					openFile();
+				}
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { active: running }, summaryText)) : (0, react$1.createElement)("span", { className: summaryClassName }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, { active: running }, summaryText)), suffix !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TextShimmer, {
+				className: `${ocOr("ToolRow", "summarySuffix", "dsh-tdt-sv-tool-suffix")} ${ocOr("ToolRow", "diffStat", "dsh-tdt-sv-tool-diffstat")}`,
+				active: running
+			}, suffix) : null);
+			const expandedContent = open ? (0, react$1.createElement)("div", { className: ocOr("ToolRow", "bodyWrap", "dsh-tdt-sv-tool-bodywrap") }, terminal !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.TerminalBlock, {
+				command: terminal.command,
+				cwd: terminal.cwd,
+				output: terminal.output,
+				exitCode: terminal.exitCode,
+				signal: terminal.signal,
+				running: terminal.running,
+				maxLines: Infinity,
+				labels: blockLabels.terminal,
+				className: ocOr("ToolRow", "terminalBody", "dsh-tdt-sv-tool-terminal")
+			}) : diffs !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DiffBlock, {
+				diffs,
+				labels: blockLabels.diff,
+				maxLines: 9,
+				className: ocOr("ToolRow", "diffBody", "dsh-tdt-sv-tool-block")
+			}) : read !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.ReadBlock, {
+				label: read.label,
+				lines: read.lines,
+				totalLines: read.totalLines,
+				lang: read.lang,
+				labels: blockLabels.read,
+				maxLines: 8,
+				className: ocOr("ToolRow", "readBody", "dsh-tdt-sv-tool-block")
+			}) : (0, react$1.createElement)(react$1.Fragment, null, variant === "code" && bodyText !== null ? (0, react$1.createElement)("div", { className: ocOr("ToolRow", "bodyScroll", "dsh-tdt-sv-tool-block") }, (0, react$1.createElement)(CodeViewer, {
+				text: bodyText,
+				path: "tool-code.ts",
+				t,
+				className: ocOr("ToolRow", "codeBody", "dsh-tdt-sv-tool-block"),
+				height: "auto",
+				style: { height: "auto" }
+			})) : null, (cardBody !== null || outputText !== null) && (0, react$1.createElement)("div", { className: ocOr("ToolRow", "ioCard", "dsh-tdt-sv-io-card") }, cardBody !== null && (0, react$1.createElement)("div", { className: ocOr("ToolRow", "ioSection", "dsh-tdt-sv-io-section") }, (0, react$1.createElement)("span", { className: ocOr("ToolRow", "ioLabel", "dsh-tdt-sv-io-label") }, t("toolInputLabel")), (0, react$1.createElement)("span", { className: ocOr("ToolRow", "ioText", "dsh-tdt-sv-io-text") }, cardBody)), cardBody !== null && outputText !== null && (0, react$1.createElement)("span", {
+				className: ocOr("ToolRow", "ioDivider", "dsh-tdt-sv-io-divider"),
+				"aria-hidden": true
+			}), outputText !== null && (0, react$1.createElement)("div", { className: ocOr("ToolRow", "ioSection", "dsh-tdt-sv-io-section") }, (0, react$1.createElement)("span", { className: ocOr("ToolRow", "ioLabel", "dsh-tdt-sv-io-label") }, t("toolOutputLabel")), (0, react$1.createElement)("span", {
+				className: ocOr("ToolRow", "ioText", "dsh-tdt-sv-io-text"),
+				"data-error": rowState === "error" || void 0
+			}, outputText))))) : void 0;
+			return (0, react$1.createElement)("div", {
+				className: ocOr("ToolRow", "root", "dsh-tdt-sv-tool"),
+				"data-variant": variant,
+				"data-tool": name,
+				"data-state": rowState
+			}, statusText !== null ? (0, react$1.createElement)("span", { className: ocOr("ToolRow", "visuallyHidden", "dsh-tdt-sv-visuallyhidden") }, statusText) : null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				rowClassName: ocOr("ToolRow", "row", "dsh-tdt-sv-tool-row"),
+				leadingClassName: ocOr("ToolRow", "leading", "dsh-tdt-sv-tool-leading"),
+				titleClassName: ocOr("ToolRow", "title", "dsh-tdt-sv-tool-title"),
+				chevronClassName: ocOr("ToolRow", "chevron", "dsh-tdt-sv-tool-chevron"),
+				icon: VARIANT_ICONS[variant],
+				title: t(titleKey),
+				running,
+				open,
+				expandable,
+				expandOnRowClick: true,
+				keepContentWhenOpen: true,
+				onToggle: () => {
+					setExpanded((value) => !value);
+				},
+				collapsedContent,
+				children: expandedContent
+			}));
+		}
+		//#endregion
+		//#region src/client/mirror/message-chrome.ts
+		/** 两位补零（官方 message-chrome pad2）。 */
+		function pad2(n) {
+			return String(n).padStart(2, "0");
+		}
+		/**
+		* 官方 formatRunDuration：整秒；≥1 分带零补秒；≥1 小时带零补分秒。
+		*/
+		function formatRunDuration(ms, t) {
+			const total = Math.max(0, Math.floor(ms / 1e3));
+			const hours = Math.floor(total / 3600);
+			const minutes = Math.floor(total / 60) % 60;
+			const seconds = total % 60;
+			if (hours > 0) return t("durationHours", {
+				hours,
+				minutes: pad2(minutes),
+				seconds: pad2(seconds)
+			});
+			return minutes > 0 ? t("durationMinutes", {
+				minutes,
+				seconds: pad2(seconds)
+			}) : t("durationSeconds", { seconds });
+		}
+		/** 官方 formatLiveRunDuration：秒不补零、分钟自 60 秒起。 */
+		function formatLiveRunDuration(ms, t) {
+			const totalSeconds = Math.max(0, Math.floor(ms / 1e3));
+			const hours = Math.floor(totalSeconds / 3600);
+			const minutes = Math.floor(totalSeconds / 60) % 60;
+			const seconds = String(totalSeconds % 60);
+			if (hours > 0) return t("durationHours", {
+				hours,
+				minutes: pad2(minutes),
+				seconds
+			});
+			return minutes > 0 ? t("durationMinutes", {
+				minutes,
+				seconds
+			}) : t("durationSeconds", { seconds });
+		}
+		/**
+		* 官方 formatMessageClock：同日 → `HH:mm`；同年 → `{m}月{d}日 HH:mm`；跨年 → `{y}年{m}月{d}日 HH:mm`。
+		*/
+		function formatMessageClock(time, t, now = Date.now()) {
+			const d = new Date(time);
+			const n = new Date(now);
+			const clock = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+			if (d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()) return clock;
+			const params = {
+				y: d.getFullYear(),
+				m: d.getMonth() + 1,
+				d: d.getDate()
+			};
+			return `${d.getFullYear() === n.getFullYear() ? t("clockDate", params) : t("clockDateYear", params)} ${clock}`;
+		}
+		/** 官方 formatTokens：517 / 12.2K / 517K / 1.2M。 */
+		function formatTokens(value, t) {
+			const scaled = (candidate) => candidate >= 100 ? String(Math.round(candidate)) : String(Math.round(candidate * 10) / 10);
+			if (value < 1e3) return String(value);
+			if (value < 1e6) return t("numberThousand", { value: scaled(value / 1e3) });
+			return t("numberMillion", { value: scaled(value / 1e6) });
+		}
+		/** 官方 formatCompactCount：紧凑 token 数 + 「 tok」。 */
+		function formatCompactCount(value, t) {
+			return t("turnUsageCount", { count: formatTokens(value, t) });
+		}
+		/** 官方 formatExactTokens：按本地千分位分组（number.groupSeparator）。 */
+		function formatExactTokens(value, t) {
+			const digits = String(value);
+			const groups = [];
+			for (let end = digits.length; end > 0; end -= 3) groups.unshift(digits.slice(Math.max(0, end - 3), end));
+			return groups.join(t("numberGroupSeparator"));
+		}
+		/** 官方 formatExactCount：精确计数 + 「 tok」。 */
+		function formatExactCount(value, t) {
+			return t("turnUsageCount", { count: formatExactTokens(value, t) });
+		}
+		/** 官方 roundedPercentUnits（message-chrome.ts:1024）：按精确比例取整，正半数向上。 */
+		function roundedPercentUnits(cacheReadTokens, denominator, decimalPlaces) {
+			const scale = (decimalPlaces === 0 ? 1 : 10) * 100;
+			const doubledScale = scale * 2;
+			const denominatorQuotient = Math.floor(denominator / doubledScale);
+			const denominatorRemainder = denominator % doubledScale;
+			let lower = 0;
+			let upper = scale;
+			while (lower < upper) {
+				const candidate = Math.floor((lower + upper + 1) / 2);
+				const factor = candidate * 2 - 1;
+				if (cacheReadTokens >= factor * denominatorQuotient + Math.ceil(factor * denominatorRemainder / doubledScale)) lower = candidate;
+				else upper = candidate - 1;
+			}
+			return lower;
+		}
+		/** 官方 displayPercentUnits。 */
+		function displayPercentUnits(units, decimalPlaces) {
+			if (decimalPlaces === 0) return String(units);
+			const whole = Math.floor(units / 10);
+			const tenths = units % 10;
+			return tenths === 0 ? String(whole) : `${whole}.${tenths}`;
+		}
+		/**
+		* 官方 formatCacheHitPercent：缓存命中率；部分命中不四舍五入成 100%（自动加精度）。
+		* @returns 百分比文本；无输入时 null。
+		*/
+		function formatCacheHitPercent(cacheReadTokens, promptTokens, decimalPlaces = 0) {
+			if (promptTokens === 0) return null;
+			const missedInputTokens = promptTokens - cacheReadTokens;
+			if (missedInputTokens === 0) return "100";
+			const roundedUnits = roundedPercentUnits(cacheReadTokens, promptTokens, decimalPlaces);
+			if (roundedUnits < (decimalPlaces === 0 ? 100 : 1e3)) return displayPercentUnits(roundedUnits, decimalPlaces);
+			let distinguishingPlaces = 1;
+			let scaledDoubleGap = missedInputTokens * 200;
+			const denominatorTens = Math.floor(promptTokens / 10);
+			while (scaledDoubleGap <= denominatorTens) {
+				scaledDoubleGap *= 10;
+				distinguishingPlaces += 1;
+			}
+			const denominatorOnes = promptTokens % 10;
+			let roundedLoss = 5;
+			for (let loss = 1; loss < 5; loss += 1) {
+				const factor = loss * 2 + 1;
+				const threshold = factor * denominatorTens + Math.floor(factor * denominatorOnes / 10);
+				if (scaledDoubleGap <= threshold) {
+					roundedLoss = loss;
+					break;
+				}
+			}
+			return `99.${"9".repeat(distinguishingPlaces - 1)}${10 - roundedLoss}`;
+		}
+		//#endregion
+		//#region src/client/mirror/MessageIconActions.tsx
+		/** 官方「已复制」复位时间。 */
+		const COPIED_RESET_MS = 1e3;
+		/** 消息操作行（复制 / 分支 / 用量 / 时钟）。 */
+		function MessageIconActionsMirror(props) {
+			const { text, time, clock, onBranch, branchUnavailable = false, className, extraActions, usageAction, t } = props;
+			const [copied, setCopied] = (0, react$1.useState)(false);
+			const [pending, setPending] = (0, react$1.useState)(false);
+			const timerRef = (0, react$1.useRef)(void 0);
+			(0, react$1.useEffect)(() => () => {
+				if (timerRef.current !== void 0) clearTimeout(timerRef.current);
+			}, []);
+			const copyLabel = copied ? t("copiedLabel") : t("copyLabel");
+			const onCopy = () => {
+				if (copied || pending) return;
+				setPending(true);
+				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(text).then((ok) => {
+					setPending(false);
+					if (!ok) return;
+					setCopied(true);
+					timerRef.current = setTimeout(() => {
+						setCopied(false);
+					}, COPIED_RESET_MS);
+				});
+			};
+			const clockEl = time === void 0 ? null : (0, react$1.createElement)("time", {
+				className: ocOr("MessageIconActions", "clock", "dsh-tdt-sv-clock"),
+				dateTime: new Date(time).toISOString()
+			}, formatMessageClock(time, t));
+			const reasonId = "dsh-tdt-branch-unavailable";
+			return (0, react$1.createElement)("div", {
+				className: `${ocOr("MessageIconActions", "actions", "dsh-tdt-sv-actions")}${className === void 0 ? "" : ` ${className}`}`,
+				"data-clock": clock
+			}, clock === "start" ? clockEl : null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: copyLabel,
+				side: "bottom"
+			}, (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("MessageIconActions", "action", "dsh-tdt-sv-action"),
+				"aria-label": copyLabel,
+				onClick: onCopy
+			}, copied ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, null) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, null))), extraActions, onBranch === void 0 ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: branchUnavailable ? t("branchUnavailableLabel") : t("branchLabel"),
+				side: "bottom"
+			}, (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("MessageIconActions", "action", "dsh-tdt-sv-action"),
+				"aria-label": t("branchLabel"),
+				"aria-disabled": branchUnavailable || void 0,
+				"aria-describedby": branchUnavailable ? reasonId : void 0,
+				"data-unavailable": branchUnavailable || void 0,
+				onClick: branchUnavailable ? void 0 : onBranch
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, null))), onBranch === void 0 || !branchUnavailable ? null : (0, react$1.createElement)("span", {
+				id: reasonId,
+				className: ocOr("accessibility", "visuallyHidden", "dsh-tdt-sv-visuallyhidden")
+			}, t("branchUnavailableLabel")), clock === "end" ? (0, react$1.createElement)("span", { className: ocOr("MessageIconActions", "endInfo", "dsh-tdt-sv-endinfo") }, usageAction, clockEl) : usageAction);
+		}
+		//#endregion
+		//#region src/client/md-labels.ts
+		/** markdown 文档外壳文案（代码块工具条 + 复制 + 脚注）。 */
+		const MD_LABELS = {
+			code: {
+				copyLabel: zh.copyLabel,
+				copiedLabel: zh.copiedLabel,
+				toolbarLabels: {
+					codeLabel: zh.codeBlockLabel,
+					wrapLabel: zh.diffWrapLabel,
+					unwrapLabel: zh.diffUnwrapLabel
+				}
+			},
+			footnotes: "脚注"
+		};
+		//#endregion
+		//#region src/client/mirror/MessageItem.tsx
+		/** 助手正文：官方 MarkdownText 渲染 + 官方 AssistantMarkdown.root 类（fallback 自绘）。
+		* U11：fileMentions 词表就位时行内 code 文件引用渲成可点链接（官方语义：resolve 不出保持惰性 code）。 */
+		function AssistantMarkdown(props) {
+			if (props.text.trim() === "") return (0, react$1.createElement)("span", null);
+			return (0, react$1.createElement)("div", { className: ocOr("AssistantMarkdown", "root", "dsh-tdt-sv-md") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text: props.text,
+				labels: MD_LABELS,
+				fileMentions: props.fileMentions
+			}));
+		}
+		/**
+		* 用户消息：官方 MessageItem userRow > userStack > bubble（右对齐气泡）
+		* + 气泡下方的 **attachmentRow / fileCard**（官方 MessageItem 的附件行，2026-10-03 接上）。
+		*
+		* 官方附件卡 = 图标 + 文件名 + 大小；**不可点开**——引用里没有路径，宿主也没给出
+		* 「按 attachmentId 打开」的公开面 ⇒ 如实降级为只读展示，不伪造打开行为。
+		*/
+		function UserMessage(props) {
+			const { text, files } = props;
+			const chips = files ?? [];
+			return (0, react$1.createElement)("div", { className: ocOr("MessageItem", "userRow", "") }, (0, react$1.createElement)("div", { className: ocOr("MessageItem", "userStack", "") }, text === "" ? null : (0, react$1.createElement)("div", { className: ocOr("MessageItem", "bubble", "dsh-tdt-sv-user") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text,
+				labels: MD_LABELS
+			})), chips.length === 0 ? null : (0, react$1.createElement)("div", { className: ocOr("MessageItem", "attachmentRow", "dsh-tdt-sv-attrow") }, chips.map((file, index) => (0, react$1.createElement)("div", {
+				key: `${file.name}:${index}`,
+				className: ocOr("MessageItem", "fileCard", "dsh-tdt-sv-attcard"),
+				title: file.name
+			}, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileIcon", "dsh-tdt-sv-attIcon") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: file.name,
+				size: 16
+			})), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileContent", "dsh-tdt-sv-attBody") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileName", "dsh-tdt-sv-attName") }, file.name), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileMeta", "dsh-tdt-sv-attMeta") }, formatBytes$1(file.bytes))))))));
+		}
+		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
+		function retrySeconds(milliseconds) {
+			return Math.max(1, Math.ceil(milliseconds / 1e3));
+		}
+		/**
+		* 官方 failureMessage（lib/client.js:1219）：已知机器码走本地化文案，其余原样展示。
+		* 官方判定顺序逐字：ACCOUNT_SIGNED_OUT / ACCOUNT_SIGN_IN_REQUIRED / QUOTA|ACCOUNT_QUOTA / AUTH。
+		*/
+		function failureMessage(message, code, t) {
+			if (code === "ACCOUNT_SIGNED_OUT") return t("failureAccountSignedOut");
+			if (code === "ACCOUNT_SIGN_IN_REQUIRED") return t("failureAccountSignInRequired");
+			if (code === "QUOTA" || code === "ACCOUNT_QUOTA") return t("failureQuota");
+			return code === "AUTH" ? t("failureAuth") : message ?? "";
+		}
+		/**
+		* 重试行（官方 ModelRetryItem）：折叠 = 「已重试模型请求 (5/5) · 9s ⌄」摘要；
+		* 展开 = 重试延迟 / 失败原因 两行。active（等待重试）时官方走 250ms 倒计时 + 渐隐 shimmer。
+		*/
+		function ModelRetryItemMirror(props) {
+			const { active, t } = props;
+			const node = props.node;
+			const delayMs = typeof node.delayMs === "number" ? node.delayMs : 0;
+			const maximum = node.mode === "normal" && typeof node.maxRetries === "number" ? node.maxRetries : "∞";
+			const deadline = (0, react$1.useMemo)(() => Date.now() + delayMs, [delayMs, node.retryState]);
+			const scheduledSeconds = retrySeconds(delayMs);
+			const [countdown, setCountdown] = (0, react$1.useState)(() => ({
+				deadline,
+				seconds: retrySeconds(deadline - Date.now())
+			}));
+			const remainingSeconds = countdown.deadline === deadline ? countdown.seconds : retrySeconds(deadline - Date.now());
+			(0, react$1.useEffect)(() => {
+				if (!active) return;
+				const updateCountdown = () => {
+					const next = retrySeconds(deadline - Date.now());
+					setCountdown((current) => current.deadline === deadline && current.seconds === next ? current : {
+						deadline,
+						seconds: next
+					});
+					return next;
+				};
+				if (updateCountdown() === 1) return;
+				const timer = window.setInterval(() => {
+					if (updateCountdown() === 1) window.clearInterval(timer);
+				}, 250);
+				return () => {
+					window.clearInterval(timer);
+				};
+			}, [active, deadline]);
+			const label = active ? t("retryActive") : node.retryState === "cancelled" ? t("retryCancelled") : node.retryState === "started" ? t("retryStarted") : t("retryScheduled");
+			const seconds = active ? remainingSeconds : scheduledSeconds;
+			const failure = node.failure;
+			return (0, react$1.createElement)("details", {
+				className: ocOr("MessageItem", "retryRow", "dsh-tdt-sv-retry"),
+				"data-active": active || void 0
+			}, (0, react$1.createElement)("summary", { className: ocOr("MessageItem", "retrySummary", "dsh-tdt-sv-retry-summary") }, (0, react$1.createElement)("span", {
+				className: ocOr("MessageItem", "retryText", "dsh-tdt-sv-retry-text"),
+				role: "status"
+			}, t("retryStatus", {
+				label,
+				retry: node.retry ?? 0,
+				maximum,
+				seconds
+			}))), (0, react$1.createElement)("div", { className: ocOr("MessageItem", "retryDetails", "dsh-tdt-sv-retry-details") }, (0, react$1.createElement)("div", null, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "retryDetailLabel", "dsh-tdt-sv-retry-label") }, t("retryDelay")), t("durationMilliseconds", { milliseconds: Math.round(delayMs) })), (0, react$1.createElement)("div", null, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "retryDetailLabel", "dsh-tdt-sv-retry-label") }, t("retryFailure")), failureMessage(failure?.message, failure?.code, t))));
+		}
+		/** 轮次失败行（官方 TurnErrorItem）：红点 + 红标题「本轮运行失败」+ 灰原因 + 右侧机器码标签。 */
+		function TurnErrorItemMirror(props) {
+			const { node, t } = props;
+			return (0, react$1.createElement)("div", {
+				className: ocOr("MessageItem", "turnErrorRow", "dsh-tdt-sv-turnerr"),
+				role: "status"
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+				state: "error",
+				className: ocOr("MessageItem", "turnErrorDot", "dsh-tdt-sv-turnerr-dot")
+			}), (0, react$1.createElement)("div", { className: ocOr("MessageItem", "turnErrorCopy", "dsh-tdt-sv-turnerr-copy") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "turnErrorTitle", "dsh-tdt-sv-turnerr-title") }, node.code === "ACCOUNT_SIGNED_OUT" ? t("accountStopped") : t("turnErrorTitle")), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "turnErrorMessage", "dsh-tdt-sv-turnerr-msg") }, failureMessage(node.message, node.code, t))), node.code !== void 0 && node.code !== "" ? (0, react$1.createElement)("code", { className: ocOr("MessageItem", "turnErrorCode", "dsh-tdt-sv-turnerr-code") }, node.code) : null);
+		}
+		/** 限长行（官方 TurnMaxTokensItem）：黄点 + 警示标题 + 截断提示。 */
+		function TurnMaxTokensItemMirror(props) {
+			const { t } = props;
+			return (0, react$1.createElement)("div", {
+				className: ocOr("MessageItem", "turnErrorRow", "dsh-tdt-sv-turnerr"),
+				role: "status"
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.StateDot, {
+				state: "warning",
+				className: ocOr("MessageItem", "turnErrorDot", "dsh-tdt-sv-turnerr-dot")
+			}), (0, react$1.createElement)("div", { className: ocOr("MessageItem", "turnErrorCopy", "dsh-tdt-sv-turnerr-copy") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "maxTokensTitle", "dsh-tdt-sv-turnerr-warn") }, t("maxTokensTitle")), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "turnErrorMessage", "dsh-tdt-sv-turnerr-msg") }, t("maxTokensHint"))));
+		}
+		//#endregion
+		//#region src/client/mirror/ReasoningRow.tsx
+		/** 官方 firstLine（lib/client.js:5687）：首行。 */
+		function firstLine(text) {
+			const newline = text.indexOf("\n");
+			return newline === -1 ? text : text.slice(0, newline);
+		}
+		/** 思考行：折叠 = 「思考 · 首行预览 ⌄」；展开 = thinkBody 全文（MarkdownText compact）。 */
+		function ReasoningRowMirror(props) {
+			const { text, running = false, preview = true, t } = props;
+			const [open, setOpen] = (0, react$1.useState)(false);
+			if (text.trim() === "") return null;
+			const summary = firstLine(text).replaceAll("**", "");
+			return (0, react$1.createElement)("div", {
+				className: ocOr("ReasoningRow", "root", "dsh-tdt-sv-reasoning"),
+				"data-variant": "think",
+				"data-state": running ? "running" : "ok",
+				"data-expanded": open || void 0,
+				"data-preview": preview && summary !== "" || void 0
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 }),
+				title: t("thinkLabel"),
+				open,
+				expandable: true,
+				expandOnRowClick: true,
+				onToggle: () => {
+					setOpen((value) => !value);
+				},
+				rowClassName: ocOr("ReasoningRow", "row", "dsh-tdt-sv-reasoning-row"),
+				leadingClassName: ocOr("ReasoningRow", "leading", "dsh-tdt-sv-reasoning-leading"),
+				titleClassName: ocOr("ReasoningRow", "title", "dsh-tdt-sv-reasoning-title"),
+				chevronClassName: ocOr("ReasoningRow", "chevron", "dsh-tdt-sv-reasoning-chevron"),
+				collapsedContent: (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
+					className: ocOr("ReasoningRow", "separator", "dsh-tdt-sv-reasoning-sep"),
+					"aria-hidden": true
+				}), (0, react$1.createElement)("span", { className: ocOr("ReasoningRow", "summary", "dsh-tdt-sv-reasoning-preview") }, (0, react$1.createElement)("span", { className: ocOr("ReasoningRow", "summaryText", "dsh-tdt-sv-reasoning-preview-text") }, summary))),
+				children: open ? (0, react$1.createElement)("div", { className: ocOr("ReasoningRow", "thinkBody", "dsh-tdt-sv-reasoning-body") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+					text,
+					labels: MD_LABELS,
+					variant: "compact"
+				})) : void 0
+			}));
+		}
+		//#endregion
+		//#region src/client/mirror/TurnProcessNodeView.tsx
+		/** 官方 LIVE_RUN_CLOCK_INTERVAL_MS（lib/client.js:979）。 */
+		const LIVE_RUN_CLOCK_INTERVAL_MS = 1e3;
+		/** Turn 过程行：折叠时只有 label + 箭头；点开由外层 seat 把过程节点放出来。 */
+		function TurnProcessNodeViewMirror(props) {
+			const { turn, turnProcess, t } = props;
+			const open = !turnProcess.foldable || turnProcess.open;
+			const [now, setNow] = (0, react$1.useState)(() => Date.now());
+			const ticking = turn?.status === "open" && turn.start !== void 0;
+			(0, react$1.useEffect)(() => {
+				if (!ticking) return;
+				setNow(Date.now());
+				const timer = setInterval(() => {
+					setNow(Date.now());
+				}, LIVE_RUN_CLOCK_INTERVAL_MS);
+				return () => {
+					clearInterval(timer);
+				};
+			}, [ticking]);
+			if (turn === void 0 || turn.start === void 0 && turn.status !== "closed") return null;
+			const canCollapse = turnProcess.foldable && turnProcess.hasContent && !turnProcess.alwaysOpen;
+			const running = turn.status === "open";
+			const reason = turn.end?.data?.reason?.kind;
+			const elapsedMs = turn.start === void 0 ? void 0 : Math.max(1e3, (turn.end?.time ?? now) - turn.start.time);
+			const duration = elapsedMs === void 0 ? void 0 : running ? formatLiveRunDuration(elapsedMs, t) : formatRunDuration(elapsedMs, t);
+			const label = running ? duration === void 0 ? t("chatDeepDiving") : t("turnProcessDeepDiving", { duration }) : reason === "aborted" ? t("turnStopped") : reason === "error" ? t("turnProcessFailed") : duration === void 0 ? t("turnProcessWorked") : t("turnProcessTook", { duration });
+			const announcement = running ? t("chatDeepDiving") : reason === "aborted" ? t("turnStopped") : reason === "error" ? t("turnProcessFailed") : t("turnProcessWorked");
+			const spec = turnProcess.spec;
+			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
+				className: ocOr("accessibility", "visuallyHidden", "dsh-tdt-sv-visuallyhidden"),
+				role: "status",
+				"aria-live": "polite",
+				"aria-atomic": "true"
+			}, announcement), (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("TurnProcessNodeView", "root", "dsh-tdt-sv-process"),
+				"data-open": open || void 0,
+				"data-turn-process": spec?.turn,
+				"data-turn-process-messages": spec?.messageCount,
+				"data-turn-process-tool-calls": spec?.toolCallCount,
+				"data-turn-process-subagents": spec?.subagentCount,
+				disabled: !canCollapse,
+				"aria-expanded": turnProcess.hasContent ? open : void 0,
+				onClick: () => {
+					turnProcess.setOpen(!open);
+				}
+			}, (0, react$1.createElement)("span", { className: ocOr("TurnProcessNodeView", "label", "dsh-tdt-sv-process-label") }, label), canCollapse ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: ocOr("TurnProcessNodeView", "chevron", "dsh-tdt-sv-process-chevron") }) : null));
+		}
+		//#endregion
+		//#region src/client/mirror/StatDialog.tsx
+		const PANEL_MARGIN = 12;
+		const PANEL_GAP = 8;
+		/** 官方 useStatDialog：把弹层挂在触发器上方（side: 'top'），点外 / Esc 关闭。 */
+		function useStatDialog(controlled) {
+			const [ownOpen, setOwnOpen] = (0, react$1.useState)(false);
+			const open = controlled?.open ?? ownOpen;
+			const setOpen = controlled?.setOpen ?? setOwnOpen;
+			const rootRef = (0, react$1.useRef)(null);
+			const panelRef = (0, react$1.useRef)(null);
+			const pos = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
+				open,
+				anchorRef: rootRef,
+				panelRef,
+				side: "top",
+				gap: PANEL_GAP,
+				margin: PANEL_MARGIN
+			});
+			(0, _deepseek_ai_dsh_client_ui_primitives.useDismissOnOutsidePointer)(rootRef, open, setOpen, panelRef);
+			(0, react$1.useEffect)(() => {
+				if (!open) return;
+				const onKeyDown = (event) => {
+					if (event.key === "Escape") setOpen(false);
+				};
+				document.addEventListener("keydown", onKeyDown);
+				return () => {
+					document.removeEventListener("keydown", onKeyDown);
+				};
+			}, [open, setOpen]);
+			return {
+				open,
+				setOpen,
+				rootRef,
+				panelRef,
+				pos
+			};
+		}
+		//#endregion
+		//#region src/client/mirror/TurnUsagePanel.tsx
+		/** 本轮用量 pill + 明细弹层。 */
+		function TurnUsagePanelMirror(props) {
+			const { usage, t } = props;
+			const { open, setOpen, rootRef, panelRef, pos } = useStatDialog();
+			const cacheHit = usage.cacheReadTokens === void 0 ? null : formatCacheHitPercent(usage.cacheReadTokens, usage.totalTokens - usage.outputTokens, 1);
+			const total = formatCompactCount(usage.totalTokens, t);
+			const routes = usage.routes?.map((route) => `${route.provider}/${route.model}`).join(", ") ?? "";
+			return (0, react$1.createElement)("span", {
+				ref: rootRef,
+				className: ocOr("TurnUsagePanel", "root", "dsh-tdt-sv-usage")
+			}, (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("TurnUsagePanel", "trigger", "dsh-tdt-sv-usage-trigger"),
+				"aria-haspopup": "dialog",
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen(!open);
+				}
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, null), (0, react$1.createElement)("span", { className: ocOr("TurnUsagePanel", "label", "dsh-tdt-sv-usage-label") }, t("turnUsageConsumed", { total }))), open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
+				ref: panelRef,
+				className: ocOr("statDialog", "panel", "dsh-tdt-sv-stats"),
+				role: "dialog",
+				"aria-label": t("turnUsageTitle"),
+				style: pos
+			}, (0, react$1.createElement)("div", { className: ocOr("statDialog", "title", "dsh-tdt-sv-stats-title") }, (0, react$1.createElement)("span", { className: ocOr("statDialog", "titleLabel", "dsh-tdt-sv-stats-titlelabel") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDatabaseOutlineRegular, null), t("turnUsageTitle")), (0, react$1.createElement)("span", { className: ocOr("statDialog", "titleValue", "dsh-tdt-sv-stats-titlevalue") }, formatExactCount(usage.totalTokens, t))), (0, react$1.createElement)("div", {
+				className: ocOr("statDialog", "titleRule", "dsh-tdt-sv-stats-rule"),
+				"aria-hidden": true
+			}), (0, react$1.createElement)("dl", {
+				className: ocOr("statDialog", "details", "dsh-tdt-sv-stats-details"),
+				"data-turn-usage-details": true
+			}, routes === "" ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageModel")), (0, react$1.createElement)("dd", { className: ocOr("statDialog", "route", "dsh-tdt-sv-stats-route") }, routes)), cacheHit === null ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheHit")), (0, react$1.createElement)("dd", null, `${cacheHit}%`)), (0, react$1.createElement)("dt", null, t("turnUsageInput")), (0, react$1.createElement)("dd", null, formatExactCount(usage.uncachedInputTokens, t)), usage.cacheReadTokens === void 0 ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheRead")), (0, react$1.createElement)("dd", null, formatExactCount(usage.cacheReadTokens, t))), usage.cacheWriteTokens === void 0 ? null : (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("dt", null, t("turnUsageCacheWrite")), (0, react$1.createElement)("dd", null, formatExactCount(usage.cacheWriteTokens, t))), (0, react$1.createElement)("dt", null, t("turnUsageOutput")), (0, react$1.createElement)("dd", null, formatExactCount(usage.outputTokens, t), usage.reasoningTokens === void 0 ? null : (0, react$1.createElement)("span", { className: ocOr("statDialog", "reasoning", "dsh-tdt-sv-stats-reasoning") }, t("turnUsageReasoning", { tokens: formatExactCount(usage.reasoningTokens, t) }))))), document.body) : null);
+		}
+		//#endregion
+		//#region src/client/mirror/TurnTailNodeView.tsx
+		/** 官方 assistantText：只取 text 块。 */
+		function assistantText$1(blocks) {
+			return blocks.flatMap((block) => block.kind === "text" ? [block.text ?? ""] : []).join("");
+		}
+		/** Turn 尾部操作行：复制 / 分支 / 用量 / 结束时钟。 */
+		function TurnTailNodeViewMirror(props) {
+			const { data, onBranchAt, tailSlot, t } = props;
+			const closing = data.closing;
+			if (closing === null || closing === void 0) return null;
+			const text = assistantText$1(closing.blocks);
+			return (0, react$1.createElement)("div", {
+				className: ocOr("TurnTailNodeView", "root", "dsh-tdt-sv-tail"),
+				"data-turn-tail": data.turn,
+				"data-actions-reveal": "always"
+			}, tailSlot === void 0 || tailSlot === null ? null : tailSlot, (0, react$1.createElement)(MessageIconActionsMirror, {
+				text,
+				time: closing.time,
+				clock: "end",
+				onBranch: onBranchAt === void 0 ? void 0 : () => {
+					onBranchAt(data.seq);
+				},
+				className: ocOr("TurnTailNodeView", "actions", "dsh-tdt-sv-tail-actions"),
+				usageAction: data.tokenUsage === void 0 ? void 0 : (0, react$1.createElement)(TurnUsagePanelMirror, {
+					usage: data.tokenUsage,
+					t
+				}),
+				t
+			}));
+		}
+		//#endregion
+		//#region src/client/mirror/TurnTriggerNodeView.tsx
+		/** 官方 TRIGGER_ICONS（lib/client.js:6634）。 */
+		const TRIGGER_ICONS = {
+			request: _deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular,
+			goal: _deepseek_ai_dsh_client_ui_primitives.IconGoalOutlineRegular,
+			agent: _deepseek_ai_dsh_client_ui_primitives.IconPaperPlaneOutlineRegular,
+			team: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
+			subagent: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
+			github: _deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular,
+			webhook: _deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular,
+			schedule: _deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular,
+			job: _deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular,
+			plugin: _deepseek_ai_dsh_client_ui_primitives.IconCordisPluginOutlineRegular
+		};
+		/** 官方 turnTriggerDetails：source.kind → 标题与图标家族（默认 request）。 */
+		function turnTriggerDetails(source) {
+			const record = (value) => typeof value === "object" && value !== null && !Array.isArray(value) ? value : {};
+			const src = record(source);
+			switch (typeof src.kind === "string" ? src.kind : "") {
+				case "goal": return {
+					title: "triggerGoal",
+					icon: "goal"
+				};
+				case "agent-message": return {
+					title: "triggerAgent",
+					icon: "agent"
+				};
+				case "team-message": return {
+					title: "triggerTeam",
+					icon: "team"
+				};
+				case "subagent-settled": return {
+					title: "triggerSubagent",
+					icon: "subagent"
+				};
+				case "webhook": return src.provider === "github" ? {
+					title: "triggerGithub",
+					icon: "github"
+				} : {
+					title: "triggerWebhook",
+					icon: "webhook"
+				};
+				case "schedule": return {
+					title: "triggerSchedule",
+					icon: "schedule"
+				};
+				case "tool-jobs": return {
+					title: "triggerJob",
+					icon: "job"
+				};
+				case "cordis-host-runner": return {
+					title: "triggerPlugin",
+					icon: "plugin"
+				};
+				default: return {
+					title: "triggerRequest",
+					icon: "request"
+				};
+			}
+		}
+		/** 触发行：折叠时只有「图标 + 标题 + 时间 + 箭头」，点开展示注入原文。 */
+		function TurnTriggerNodeViewMirror(props) {
+			const { data, t } = props;
+			const [open, setOpen] = (0, react$1.useState)(false);
+			const details = turnTriggerDetails(data?.source);
+			const TriggerIcon = TRIGGER_ICONS[details.icon] ?? _deepseek_ai_dsh_client_ui_primitives.IconContextInjectionOutlineRegular;
+			const time = typeof data?.time === "number" ? data.time : void 0;
+			const content = triggerContent(data?.content);
+			return (0, react$1.createElement)("section", {
+				className: ocOr("TurnTriggerNodeView", "root", "dsh-tdt-sv-trigger"),
+				"data-turn-trigger": true
+			}, (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("TurnTriggerNodeView", "header", "dsh-tdt-sv-trigger-header"),
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen((value) => !value);
+				}
+			}, (0, react$1.createElement)("span", {
+				className: ocOr("TurnTriggerNodeView", "icon", "dsh-tdt-sv-trigger-icon"),
+				"aria-hidden": true
+			}, (0, react$1.createElement)(TriggerIcon, { size: 14 })), (0, react$1.createElement)("span", { className: ocOr("TurnTriggerNodeView", "title", "dsh-tdt-sv-trigger-title") }, t(details.title)), time === void 0 ? null : (0, react$1.createElement)("time", {
+				className: ocOr("TurnTriggerNodeView", "time", "dsh-tdt-sv-trigger-time"),
+				dateTime: new Date(time).toISOString()
+			}, formatMessageClock(time, t)), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {
+				size: 12,
+				className: open ? ocOr("TurnTriggerNodeView", "openChevron", "dsh-tdt-sv-trigger-chevron-open") : ocOr("TurnTriggerNodeView", "chevron", "dsh-tdt-sv-trigger-chevron")
+			})), open ? (0, react$1.createElement)("div", { className: ocOr("TurnTriggerNodeView", "body", "dsh-tdt-sv-trigger-body") }, (0, react$1.createElement)("p", { className: ocOr("TurnTriggerNodeView", "explanation", "dsh-tdt-sv-trigger-explanation") }, t("triggerExplanation")), (0, react$1.createElement)("div", { className: ocOr("TurnTriggerNodeView", "content", "dsh-tdt-sv-trigger-content") }, content === "" ? t("sessionEmpty") : content)) : null);
+		}
+		/** 注入原文：content 块的 text 拼接（官方 NoticeBody 的文本消费面）。 */
+		function triggerContent(content) {
+			if (!Array.isArray(content)) return "";
+			return content.map((block) => {
+				const b = block;
+				if (b !== null && typeof b === "object" && b.type === "text" && typeof b.text === "string") return b.text;
+				return "";
+			}).filter((part) => part !== "").join("\n");
+		}
+		//#endregion
+		//#region src/client/mirror/Deliverables.tsx
+		const basename = (path) => path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
+		/** 官方 fileNames（PresentRow.tsx）：argsRaw.files[].path 逗号连接；解析不出回原样。 */
+		function fileNames(raw) {
+			let args;
+			try {
+				args = JSON.parse(raw);
+			} catch {
+				return raw;
+			}
+			if (typeof args !== "object" || args === null || !("files" in args) || !Array.isArray(args.files)) return raw;
+			return args.files.flatMap((file) => typeof file === "object" && file !== null && "path" in file && typeof file.path === "string" ? [file.path] : []).join(", ");
+		}
+		/** 官方 PresentRow：present 工具调用的状态行（折叠 = 状态词 + 路径；展开 = 结果原文）。 */
+		function PresentRowMirror(props) {
+			const { block, t } = props;
+			const b = block ?? {};
+			const settled = typeof b.kind === "string";
+			const state = !settled ? b.phase === "preparing" ? "preparing" : "running" : b.error?.code === "interrupted" ? "stopped" : b.isError ? "error" : "ok";
+			const argsRaw = (settled ? b.call?.argsRaw : b.argsRaw) ?? "";
+			const details = settled ? (b.content ?? []).map((item) => item.type === "text" ? item.text ?? "" : JSON.stringify(item)).join("\n") || (b.error ? `${b.error.name ?? ""}: ${b.error.code ?? ""}` : "") : "";
+			const [expanded, setExpanded] = (0, react$1.useState)(false);
+			const statusKey = state === "preparing" ? "deliverRowPreparing" : state === "running" ? "deliverRowRunning" : state === "error" ? "deliverRowError" : state === "stopped" ? "deliverRowStopped" : "deliverRowOk";
+			return (0, react$1.createElement)("div", {
+				className: ocOr("ToolRow", "root", "dsh-tdt-sv-tool"),
+				"data-tool": "present",
+				"data-state": state
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.DisclosureRow, {
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconDeliverDocRegular, { size: 14 }),
+				title: t("deliverRowTitle"),
+				open: expanded && details !== "",
+				expandable: details !== "",
+				expandOnRowClick: true,
+				keepContentWhenOpen: true,
+				onToggle: () => {
+					setExpanded((value) => !value);
+				},
+				running: state === "running" || state === "preparing",
+				rowClassName: ocOr("ToolRow", "row", "dsh-tdt-sv-tool-row"),
+				leadingClassName: ocOr("ToolRow", "leading", "dsh-tdt-sv-tool-leading"),
+				titleClassName: ocOr("ToolRow", "title", "dsh-tdt-sv-tool-title"),
+				chevronClassName: ocOr("ToolRow", "chevron", "dsh-tdt-sv-tool-chevron"),
+				collapsedContent: (0, react$1.createElement)("span", { className: ocOr("PresentRow", "summary", "dsh-tdt-sv-deliv-rowsummary") }, (0, react$1.createElement)("span", null, t(statusKey)), (0, react$1.createElement)("span", { className: ocOr("PresentRow", "paths", "dsh-tdt-sv-deliv-rowpaths") }, fileNames(argsRaw))),
+				children: details !== "" && expanded ? (0, react$1.createElement)("pre", { className: ocOr("PresentRow", "output", "dsh-tdt-sv-deliv-rowoutput") }, details) : null
+			}));
+		}
+		/** 官方 COLLAPSED_PRESENTED_COUNT（Deliverables.tsx）：超过 4 张折叠。 */
+		const COLLAPSED_DELIVERED_COUNT = 4;
+		/** 官方 cardDescription：简介去尾部括注后为空则回退扩展名大写（再退「文件」）。 */
+		function cardDescription(description, fallback) {
+			const trimmed = description?.replace(/\s*(?:\([^()]*\)|（[^（）]*）)\s*$/u, "").trim();
+			return trimmed === void 0 || trimmed === "" ? fallback : trimmed;
+		}
+		/** 官方 PresentedFileCard：整卡可点 → onPreview（官方 = 右栏预览，本弹窗 = openFile 分栏）。 */
+		function DeliveredFileCard(props) {
+			const { file, onPreview, t } = props;
+			const name = basename(file.path);
+			const metadata = (0, _deepseek_ai_dsh_client_ui_primitives.fileExtension)(name).toUpperCase() || t("deliverFileLabel");
+			return (0, react$1.createElement)("div", {
+				className: ocOr("Deliverables", "file", "dsh-tdt-sv-deliv-file"),
+				"data-presented-file": true
+			}, onPreview !== void 0 ? (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("Deliverables", "cardPreview", "dsh-tdt-sv-deliv-cardpreview"),
+				title: file.path,
+				"aria-label": t("deliverPreviewCard", { name: file.path }),
+				onClick: (event) => {
+					event.stopPropagation();
+					onPreview();
+				}
+			}) : null, (0, react$1.createElement)("span", { className: ocOr("Deliverables", "fileIcon", "dsh-tdt-sv-deliv-icon") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: file.path,
+				size: 20
+			})), (0, react$1.createElement)("div", { className: ocOr("Deliverables", "fileBody", "dsh-tdt-sv-deliv-body") }, (0, react$1.createElement)("div", { className: ocOr("Deliverables", "details", "dsh-tdt-sv-deliv-details") }, (0, react$1.createElement)("span", { className: ocOr("Deliverables", "fileName", "dsh-tdt-sv-deliv-name") }, name), (0, react$1.createElement)("span", {
+				className: ocOr("Deliverables", "description", "dsh-tdt-sv-deliv-desc"),
+				"data-presented-description": true
+			}, (0, react$1.createElement)("span", { className: ocOr("Deliverables", "secondaryText", "dsh-tdt-sv-deliv-secondary") }, cardDescription(file.description, metadata)), onPreview !== void 0 ? (0, react$1.createElement)("span", { className: ocOr("Deliverables", "previewHint", "dsh-tdt-sv-deliv-hint") }, t("deliverPreviewHint")) : null))));
+		}
+		/**
+		* 官方 DeliverablesTail 的 presented 网格（改动文件卡 ChangedFiles 依赖 Host git 摘要路由，
+		* 本弹窗无该通道 ⇒ 不渲染，与官方「summary 未就绪时不画」同态）。
+		*/
+		function DeliverablesGridMirror(props) {
+			const { files, onOpen, t } = props;
+			const [expanded, setExpanded] = (0, react$1.useState)(false);
+			if (files.length === 0) return null;
+			const collapsible = files.length > COLLAPSED_DELIVERED_COUNT;
+			const shown = collapsible && !expanded ? files.slice(0, COLLAPSED_DELIVERED_COUNT) : files;
+			return (0, react$1.createElement)("div", {
+				className: ocOr("Deliverables", "root", "dsh-tdt-sv-deliv"),
+				"data-presented-files-grid": true
+			}, (0, react$1.createElement)("div", {
+				className: ocOr("Deliverables", "presented", "dsh-tdt-sv-deliv-grid"),
+				"data-presented-files-row": true,
+				"data-single": files.length === 1 ? true : void 0
+			}, shown.map((file, index) => (0, react$1.createElement)(DeliveredFileCard, {
+				key: `${file.path}:${index}`,
+				file,
+				onPreview: onOpen === void 0 ? void 0 : () => {
+					onOpen(file.path);
+				},
+				t
+			}))), collapsible ? (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("Deliverables", "toggle", "dsh-tdt-sv-deliv-toggle"),
+				"aria-expanded": expanded,
+				"aria-label": t(expanded ? "deliverCollapseAria" : "deliverExpandAria", { count: files.length }),
+				onClick: () => {
+					setExpanded((value) => !value);
+				}
+			}, (0, react$1.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
+		}
+		//#endregion
+		//#region src/client/task-file-context.tsx
+		/**
+		* 实例快照 → 本任务工作区 path（判上游目录是否跨区用）。
+		* 与 `attachmentsOf` 同款：**不强求整份快照合法**，取不到 ⇒ null（调用方按「未知」处理）。
+		*/
+		function workspacePathOf(snapshot) {
+			if (snapshot === null || snapshot === "") return null;
+			try {
+				const parsed = JSON.parse(snapshot);
+				if (typeof parsed !== "object" || parsed === null) return null;
+				const path = parsed.workspacePath;
+				return typeof path === "string" && path !== "" ? path : null;
+			} catch {
+				return null;
+			}
+		}
+		/** 目录标记：产出按**尾斜杠**表示目录（回执归一 `receipt.ts` normalizeOutputs 的约定）。 */
+		function isDirPath(path) {
+			return path.endsWith("/");
+		}
+		/** 相对路径 → 绝对路径（基准 = 上游工作区；无基准 ⇒ null，如实降级为不可点，不拿当前工作区猜）。 */
+		function upstreamAbsPath(base, rel) {
+			if (base === null || base === "") return null;
+			const trimmed = rel.replace(/^\.\//, "");
+			return base.endsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
+		}
+		/** 文件/目录的显示名（去掉尾斜杠取最后一段）。 */
+		function displayName(path) {
+			const raw = path.replace(/\/+$/, "");
+			const cut = Math.max(raw.lastIndexOf("/"), raw.lastIndexOf("\\"));
+			return cut < 0 ? raw : raw.slice(cut + 1);
+		}
+		/** 工作区路径归一（补尾斜杠）后再比前缀 —— 否则 `/ws` 会把 `/ws-2` 误判成同区。 */
+		function inWorkspace(candidate, base) {
+			const norm = (value) => value.endsWith("/") ? value : `${value}/`;
+			return norm(candidate).startsWith(norm(base));
+		}
+		/** 折叠阈值：附件 >10 才折叠（用户 2026-10-03：「10 个往上才收起，10 个以下都把它显示出来」）；前置任务 >3 折叠。 */
+		const COLLAPSE_FILES = 10;
+		const COLLAPSE_TASKS = 3;
+		/** 任务处于折叠态时，每个任务最多露几个文件（避免 20 个任务的默认高度失控）。 */
+		const COLLAPSED_TASK_FILES = 3;
+		/**
+		* 快照 → 随附文件视图（服务端按 **ref** 下发了绝对路径，这里按 ref 配对，不按序）。
+		* 形状不对 / 解析失败 ⇒ 空数组（不渲染该组，绝不显示假文件）。
+		*/
+		function attachmentsOf(snapshot, paths) {
+			if (snapshot === null || snapshot === "") return [];
+			try {
+				const parsed = JSON.parse(snapshot);
+				if (typeof parsed !== "object" || parsed === null) return [];
+				const list = parsed.attachments;
+				if (!Array.isArray(list)) return [];
+				return list.flatMap((item) => {
+					if (typeof item !== "object" || item === null) return [];
+					const one = item;
+					if (typeof one.name !== "string" || one.name === "") return [];
+					if (typeof one.ref !== "string") return [];
+					const hit = paths?.find((entry) => entry.ref === one.ref);
+					return [{
+						name: one.name,
+						kind: one.kind === "upload" ? "upload" : "link",
+						path: hit === void 0 ? null : hit.path
+					}];
+				});
+			} catch {
+				return [];
+			}
+		}
+		/** 一个文件行：图标 + 名字 + 来源标记；有路径才可点。
+		*  文件名走全站唯一实现 `MarqueeText`：放不下出省略号、hover 来回滚动露出全名
+		*  （用户 2026-10-03：前置任务产出与随附文件**所有**显示不全的名字都要跑马灯）。 */
+		function FileChip(props) {
+			const { file } = props;
+			const clickable = file.onClick !== void 0;
+			return (0, react$1.createElement)(clickable ? "button" : "span", {
+				className: "dsh-tdt-sv-tfc-file",
+				...clickable ? {
+					type: "button",
+					title: file.title,
+					"aria-label": file.title,
+					onClick: file.onClick
+				} : {
+					title: file.title,
+					"data-noclick": true
+				}
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-icon" }, file.isDir ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: file.iconPath,
+				size: 14
+			})), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-namewrap" }, file.note === void 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-note" }, `[${file.note}]`), (0, react$1.createElement)(MarqueeText, {
+				text: file.label,
+				title: file.title,
+				style: {
+					minWidth: 0,
+					flex: "1 1 auto"
+				}
+			})));
+		}
+		/** 文件行列表（含 >N 折叠；空 ⇒ 不渲染）。**横向排**（`flex-wrap`，排满换行）。 */
+		function FileLines(props) {
+			const { files, t } = props;
+			const [expanded, setExpanded] = (0, react$1.useState)(false);
+			if (files.length === 0) return null;
+			const collapsible = files.length > COLLAPSE_FILES;
+			const shown = collapsible && !expanded ? files.slice(0, COLLAPSE_FILES) : files;
+			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, shown.map((file, index) => (0, react$1.createElement)(FileChip, {
+				key: `${file.key}#${index}`,
+				file
+			})), collapsible ? (0, react$1.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-sv-tfc-more",
+				"aria-expanded": expanded,
+				onClick: () => {
+					setExpanded((value) => !value);
+				}
+			}, t(expanded ? "tfcCollapse" : "tfcMore", { count: files.length })) : null);
+		}
+		/** 一组：标题行 + 内容（组间由 CSS 加细线分隔，不靠颜色、不靠左缩进）。 */
+		function Group(props) {
+			const { title, children } = props;
+			if (children === null) return null;
+			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-group" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-title" }, title)), children);
+		}
+		/** 接收区：按前置任务分组，组头 = 任务名 + 计划时刻；任务多 ⇒ 折叠（有产出的排前面）。 */
+		function ReceivedGroup(props) {
+			const { items, workspacePath, onOpenFile, t } = props;
+			const [expanded, setExpanded] = (0, react$1.useState)(false);
+			if (items.length === 0) return null;
+			const ordered = items.slice().sort((a, b) => (a.outputs.length > 0 ? 0 : 1) - (b.outputs.length > 0 ? 0 : 1));
+			const collapsible = ordered.length > COLLAPSE_TASKS;
+			const shown = collapsible && !expanded ? ordered.slice(0, COLLAPSE_TASKS) : ordered;
+			const totalFiles = ordered.reduce((sum, item) => sum + item.outputs.length, 0);
+			return (0, react$1.createElement)(Group, {
+				title: t("tfcReceived", {
+					tasks: ordered.length,
+					files: totalFiles
+				}),
+				children: (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-tasks" }, shown.map((item, index) => {
+					const crossWorkspace = workspacePath === null || item.workspacePath === null || !inWorkspace(item.workspacePath, workspacePath);
+					const all = item.outputs.map((path) => {
+						const abs = upstreamAbsPath(item.workspacePath, path);
+						const name = displayName(path);
+						const dir = isDirPath(path);
+						const blocked = abs === null || dir && crossWorkspace;
+						return {
+							key: path,
+							iconPath: name,
+							isDir: dir,
+							label: name,
+							title: abs ?? path,
+							note: abs === null ? t("tfcRelOnly") : blocked ? t("tfcCrossWorkspace") : void 0,
+							onClick: !blocked && onOpenFile !== void 0 && abs !== null ? () => {
+								onOpenFile(abs);
+							} : void 0
+						};
+					});
+					const capped = !expanded && collapsible && all.length > COLLAPSED_TASK_FILES ? all.slice(0, COLLAPSED_TASK_FILES) : all;
+					return (0, react$1.createElement)("div", {
+						key: `${item.task}:${item.instanceId}`,
+						className: "dsh-tdt-sv-tfc-task"
+					}, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-taskrow" }, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-seq" }, String(index + 1)), (0, react$1.createElement)("span", {
+						className: "dsh-tdt-sv-tfc-name",
+						title: item.task
+					}, item.taskTitle), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-meta" }, formatDateTime(item.scheduledAt, { fallback: item.scheduledAt }))), all.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-none" }, t("tfcNoOutputs")) : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tfc-files" }, capped.map((file, index) => (0, react$1.createElement)(FileChip, {
+						key: `${file.key}#${index}`,
+						file
+					})), capped.length < all.length ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tfc-none" }, t("tfcRestFiles", { count: all.length - capped.length })) : null));
+				}), collapsible ? (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dsh-tdt-sv-tfc-more",
+					"aria-expanded": expanded,
+					onClick: () => {
+						setExpanded((value) => !value);
+					}
+				}, t(expanded ? "tfcCollapse" : "tfcMoreTasks", { count: ordered.length })) : null)
+			});
+		}
+		/** 随附区：本任务设置里加的文件（来源标注「上传 / 工作区」）。 */
+		function AttachedGroup(props) {
+			const { files, onOpenFile, t } = props;
+			if (files.length === 0) return null;
+			return (0, react$1.createElement)(Group, {
+				title: t("tfcAttached", { count: files.length }),
+				children: (0, react$1.createElement)(FileLines, {
+					files: files.map((file) => {
+						const abs = file.path;
+						return {
+							key: `${file.name}:${file.kind}`,
+							iconPath: file.name,
+							isDir: false,
+							label: file.name,
+							title: abs ?? `${file.name}（${t("tfcNoPath")}）`,
+							note: file.kind === "upload" ? t("tfcFromUpload") : t("tfcFromWorkspace"),
+							onClick: abs !== null && onOpenFile !== void 0 ? () => {
+								onOpenFile(abs);
+							} : void 0
+						};
+					}),
+					t
+				})
+			});
+		}
+		/**
+		* 任务文件上下文（输入侧）：接收（上游） + 随附（本任务设置）。
+		* 两组都空 ⇒ 整块不渲染（返回 null），不留空壳。
+		*/
+		function TaskFileContextPanel(props) {
+			const { upstream, attached, workspacePath, onOpenFile, t } = props;
+			if (upstream.length === 0 && attached.length === 0) return null;
+			return (0, react$1.createElement)("div", {
+				className: "dsh-tdt-sv-tfc",
+				"data-task-file-context": true
+			}, (0, react$1.createElement)(ReceivedGroup, {
+				items: upstream,
+				workspacePath: workspacePath ?? null,
+				onOpenFile,
+				t
+			}), (0, react$1.createElement)(AttachedGroup, {
+				files: attached,
+				onOpenFile,
+				t
+			}));
+		}
+		//#endregion
+		//#region src/client/session-view.ts
+		/** 稳定的空序列（避免默认值每次新建数组）。 */
+		const EMPTY_ORDER = [];
+		/** 调用官方 /api/present.host（与官方 readHost 同源），并按官方 isPresentedHost 契约做字段校验。 */
+		function usePresentedHost() {
+			const [host, setHost] = (0, react$1.useState)(null);
+			(0, react$1.useEffect)(() => {
+				let cancelled = false;
+				fetchWithTimeout("/api/present.host", { cache: "no-store" }).then(async (res) => {
+					if (!res.ok) {
+						if (!cancelled) setHost("error");
+						return;
+					}
+					const value = await res.json();
+					if (typeof value !== "object" || value === null || Array.isArray(value)) {
+						if (!cancelled) setHost("error");
+						return;
+					}
+					const h = value;
+					const fileManager = h.fileManager ?? null;
+					if (typeof h.name !== "string" || typeof h.available !== "boolean" || !(fileManager === null || fileManager === "finder" || fileManager === "explorer" || fileManager === "directory")) {
+						if (!cancelled) setHost("error");
+						return;
+					}
+					if (!cancelled) setHost({
+						name: h.name,
+						available: h.available,
+						fileManager
+					});
+				}).catch(() => {
+					if (!cancelled) setHost("error");
+				});
+				return () => {
+					cancelled = true;
+				};
+			}, []);
+			return host;
+		}
+		/** 官方样式缺失告警只打一次（避免每次渲染刷屏）。 */
+		let officialWarned = false;
+		/** 打开只读视图：物化 binding → 探测拉尾页 → 建 chat target。会话不可解析时返回 null。 */
+		function openSessionView(sessions, uiConversation, id) {
+			const log = (level, msg, extra) => {
+				if (level === "warn") console.warn(`[task-dispatch:session-view] ${msg}`, extra ?? "");
+				else console.info(`[task-dispatch:session-view] ${msg}`);
+			};
+			let retainedRef = null;
+			const releaseRef = () => {
+				try {
+					retainedRef?.release();
+				} catch (err) {
+					log("warn", `sessions.retain 引用释放失败（${id}）`, err);
+				}
+				retainedRef = null;
+			};
+			let binding;
+			try {
+				const S0 = sessions;
+				const retainFn = S0.retain;
+				if (typeof retainFn === "function") try {
+					retainedRef = retainFn.call(S0, id, { source: "dsh-task-dispatch-table" });
+					log("info", `sessions.retain(${id}, { source }) 成功：scope 已物化`);
+				} catch (err) {
+					log("warn", `sessions.retain(${id}) 抛错（未知会话？）`, err);
+				}
+				else log("warn", `sessions 无 retain 方法；自身键=[${Object.keys(S0).join(",")}]`);
+				const found = sessions.binding(id);
+				if (found === void 0 || found === null) {
+					const S0d = sessions;
+					log("warn", `sessions.binding(${id}) 为空（会话未就位）。sessions 方法全清单=[${(() => {
+						const out = /* @__PURE__ */ new Set();
+						let cur = S0d;
+						while (cur && (typeof cur === "object" || typeof cur === "function")) {
+							for (const k of Object.getOwnPropertyNames(cur)) if (typeof cur[k] === "function" && k !== "constructor") out.add(k);
+							cur = Object.getPrototypeOf(cur);
+						}
+						return [...out];
+					})().join(",")}]；自身键=[${Object.keys(S0d).join(",")}]`);
+					releaseRef();
+					return null;
+				}
+				binding = found;
+			} catch (err) {
+				log("warn", `openSessionView 返回 null：sessions.binding(${id}) 抛错`, err);
+				releaseRef();
+				return null;
+			}
+			const session = binding.session;
+			try {
+				const opened = session.open?.();
+				if (opened !== void 0 && typeof opened.catch === "function") opened.catch((err) => log("warn", `session.open(${id}) 失败（仅影响历史加载，不阻断弹窗）`, err));
+			} catch (err) {
+				log("warn", `session.open(${id}) 抛错`, err);
+			}
+			let conversation;
+			try {
+				conversation = uiConversation.binding(binding);
+			} catch (err) {
+				log("warn", "openSessionView 返回 null：uiConversation.binding 抛错（binding 已取得，断点在 uiConversation 装配）", err);
+				return null;
+			}
+			let target;
+			try {
+				target = conversation.target("chat");
+			} catch (err) {
+				log("warn", "openSessionView 返回 null：conversation.target('chat') 抛错", err);
+				return null;
+			}
+			log("info", `openSessionView 成功建立 target（${id}）；首屏 nodes 待订阅回填`);
+			return {
+				target,
+				session,
+				dispose: releaseRef,
+				loadOlder() {
+					try {
+						const page = session.loadOlder?.();
+						if (page !== void 0 && typeof page.catch === "function") page.catch((err) => log("warn", `session.loadOlder(${id}) 失败`, err));
+					} catch (err) {
+						log("warn", `session.loadOlder(${id}) 抛错`, err);
+					}
+				}
+			};
+		}
+		ensureArchiveSessionStyle();
+		/** JSON 安全序列化（循环引用 / 特殊值不抛）。 */
+		function safeJson(value) {
+			try {
+				return JSON.stringify(value, null, 2) ?? String(value);
+			} catch {
+				return String(value);
+			}
+		}
+		/** 提取内容块的可读文本：text 拼接、图片占位（官方 ContentBlock 是 merge-extensible map）。 */
+		function contentText(blocks) {
+			if (blocks === void 0) return "";
+			return blocks.map((block) => {
+				if (block !== null && typeof block === "object" && block.type === "text" && typeof block.text === "string") return block.text;
+				if (block !== null && typeof block === "object" && block.type === "image") return "[图片]";
+				return "";
+			}).filter((part) => part !== "").join("\n");
+		}
+		/**
+		* 提取内容块里的**官方 file 块**（2026-10-03）：随附文件以官方附件形式发进会话后，
+		* 会话快照的 user 节点 content 里就是它 ⇒ 弹窗里照样渲染成附件卡（与官方页一致）。
+		* 拿不到（宿主投影未透传）⇒ 空数组：附件卡不渲染，**绝不造一个假卡**。
+		*/
+		/**
+		* @returns `files` = 去重后要画的附件；`hadFiles` = 该轮**原本**有没有 file 块
+		* （去重让位后可能为空 —— 调用方据此判断该轮要不要渲染，不能因为让位把整条消息吞掉）。
+		*/
+		function contentFiles(blocks, exclude) {
+			if (blocks === void 0) return {
+				files: [],
+				hadFiles: false
+			};
+			const out = [];
+			let hadFiles = false;
+			for (const block of blocks) {
+				if (block === null || typeof block !== "object" || block.type !== "file") continue;
+				const attachment = block.attachment;
+				if (typeof attachment !== "object" || attachment === null) continue;
+				hadFiles = true;
+				const name = typeof attachment.name === "string" && attachment.name !== "" ? attachment.name : "file";
+				if (exclude !== void 0 && exclude.has(name)) continue;
+				out.push({
+					name,
+					bytes: typeof attachment.bytes === "number" ? attachment.bytes : 0
+				});
+			}
+			return {
+				files: out,
+				hadFiles
+			};
+		}
+		/** legacy assistant 节点的纯文本（复制按钮用）。 */
+		function assistantText(node) {
+			return (node.blocks ?? []).map((block) => block.kind === "text" ? block.text : "").join("");
+		}
+		/** keyed 节点的 data（官方 ChatNodeDataMap[kind]）。 */
+		function dataOf(node) {
+			return node.data ?? {};
+		}
+		/** 节点位置 → turn 位置（官方 node.location 收窄，ChatNodeSeat.tsx:1660 的反向）。 */
+		function turnLocationOf(node) {
+			const location = node.location;
+			return location?.kind === "turn" || location?.kind === "step" ? location.turn : void 0;
+		}
+		/** 官方 AssistantChatData.blocks（ui-chat contract/chat-nodes.d.ts:22）。 */
+		function blocksOf(value) {
+			return Array.isArray(value) ? value : void 0;
+		}
+		/**
+		* 官方 ToolCallBlock（uic contract/records.d.ts:140）→ 工具卡 props。
+		* running 半截（phase: preparing/start）只有 name/argsRaw；settled（kind: tool-result）带输出与错误。
+		*/
+		function toolCallCard(node, t, onOpenFile) {
+			const root = dataOf(node).root;
+			if (root === void 0 || root === null) return null;
+			const settled = root.kind === "tool-result";
+			const call = settled ? root.call : root;
+			const error = root.error;
+			return {
+				name: typeof call?.name === "string" ? call.name : "tool",
+				argsRaw: typeof call?.argsRaw === "string" ? call.argsRaw : "",
+				output: settled ? contentText(root.content) : "",
+				isError: root.isError === true,
+				errorName: error?.name,
+				meta: root.meta,
+				settled,
+				phase: settled ? void 0 : root.phase === "preparing" ? "preparing" : "start",
+				interrupted: error?.code === "interrupted",
+				onOpenFile,
+				t
+			};
+		}
+		/** 官方 Tool / ToolResult block 是否为 present 调用（交付文件行专属渲染；running 名在顶层，结算名在 call 里）。 */
+		function isPresentRoot(root) {
+			if (typeof root !== "object" || root === null) return false;
+			const r = root;
+			if (r.name === "present") return true;
+			return r.kind === "tool-result" && r.call !== null && typeof r.call === "object" && r.call.name === "present";
+		}
+		/** 官方 present 调用参数里的 files（deliverables/presented 事件同源数据）。 */
+		function presentFiles(root) {
+			if (typeof root !== "object" || root === null) return [];
+			const r = root;
+			const settled = r.kind === "tool-result";
+			if (r.isError === true) return [];
+			const raw = settled ? r.call?.argsRaw : r.argsRaw;
+			if (typeof raw !== "string") return [];
+			try {
+				const files = JSON.parse(raw)?.files;
+				if (!Array.isArray(files)) return [];
+				const out = [];
+				for (const file of files) {
+					if (typeof file !== "object" || file === null) continue;
+					const path = file.path;
+					if (typeof path !== "string" || path.trim() === "") continue;
+					const description = file.description;
+					out.push(typeof description === "string" && description.trim() !== "" ? {
+						path,
+						description
+					} : { path });
+				}
+				return out;
+			} catch {
+				return [];
+			}
+		}
+		/**
+		* keyed 节点 → 视图（等价于官方 slot "conversation.chat.node" 的按 kind 分发）。
+		* @param node - keyed ChatNode。
+		* @param turnProcess - seat 下发的过程席位（turn-process / 折叠答案节点要用）。
+		* @param t - 翻译席位（已包占位符替换）。
+		* @param onBranchAt - 消息行分支按钮（以该轮 tail seq 开分支；undefined = 不渲染按钮）。
+		* @param fileOpen - U11 文件打开上下文（undefined = workspaceFiles 未就位，链接全部降级为纯文本）。
+		* @param groupPart - 过程分组侧（'response' | 'reasoning'）。
+		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
+		*/
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames) {
+			switch (node.kind) {
+				case "turn-trigger": return (0, react$1.createElement)(TurnTriggerNodeViewMirror, {
+					data: node.data,
+					t
+				});
+				case "turn-process": return turnProcess === void 0 ? null : (0, react$1.createElement)(TurnProcessNodeViewMirror, {
+					turn: turnLocationOf(node),
+					turnProcess,
+					t
+				});
+				case "turn-tail": {
+					const data = node.data;
+					const turn = data?.turn ?? turnLocationOf(node)?.turn;
+					const tailSlot = deliverFiles !== void 0 && deliverFiles.length > 0 && turn !== void 0 && lastTailTurn !== void 0 && turn === lastTailTurn ? (0, react$1.createElement)(react$1.Fragment, null, host !== void 0 && host !== null && host !== "error" && !host.available ? (0, react$1.createElement)("span", {
+						className: ocOr("Deliverables", "hostStatus", "dsh-tdt-sv-host-status"),
+						"data-host-unavailable": true
+					}, t("presented.unavailable")) : null, (0, react$1.createElement)(DeliverablesGridMirror, {
+						files: deliverFiles,
+						onOpen: fileOpen?.open,
+						t
+					})) : null;
+					return data === void 0 || data.closing === null || data.closing === void 0 ? null : (0, react$1.createElement)(TurnTailNodeViewMirror, {
+						data,
+						onBranchAt,
+						tailSlot,
+						t
+					});
+				}
+				case "assistant-step": {
+					const blocks = blocksOf(dataOf(node).blocks) ?? [];
+					const contentBlocks = blocks.filter((block) => block.kind !== "tool-call");
+					if (blocks.length > 0 && contentBlocks.length === 0) return null;
+					const parts = assistantBlocks(groupPart === "reasoning" ? contentBlocks.filter((block) => block.kind === "reasoning") : groupPart === "response" ? contentBlocks.filter((block) => block.kind !== "reasoning") : contentBlocks, t, fileOpen?.mentions);
+					return parts.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-assistant" }, parts);
+				}
+				case "tool-call": {
+					const root = dataOf(node).root;
+					if (isPresentRoot(root)) return (0, react$1.createElement)(PresentRowMirror, {
+						block: root,
+						t
+					});
+					const card = toolCallCard(node, t, fileOpen?.open);
+					return card === null ? null : (0, react$1.createElement)(GenericCommandCard, card);
+				}
+				case "user":
+				case "steering": {
+					const blocks = dataOf(node).content;
+					const text = contentText(blocks);
+					const { files, hadFiles } = contentFiles(blocks, attachedNames);
+					if (text === "" && !hadFiles) return null;
+					return (0, react$1.createElement)(UserMessage, {
+						text,
+						files
+					});
+				}
+				case "turn-error": return (0, react$1.createElement)(TurnErrorItemMirror, {
+					node: dataOf(node),
+					t
+				});
+				case "turn-max-tokens": return (0, react$1.createElement)(TurnMaxTokensItemMirror, { t });
+				case "model-retry": {
+					const data = dataOf(node);
+					const attempts = Array.isArray(data.attempts) ? data.attempts : [];
+					const current = typeof data.current === "object" && data.current !== null ? data.current : attempts[attempts.length - 1];
+					if (current === void 0) return null;
+					return (0, react$1.createElement)(ModelRetryItemMirror, {
+						node: current,
+						active: current.retryState === "scheduled",
+						t
+					});
+				}
+				case "context":
+				case "compaction":
+				case "manual-compaction":
+				case "unknown": return null;
+				default: return (0, react$1.createElement)("details", { className: "dsh-tdt-sv-tool" }, (0, react$1.createElement)("summary", { className: "dsh-tdt-sv-notice" }, `${t("sessionUnknownKind")} ${node.kind}`), (0, react$1.createElement)("pre", null, safeJson(node.data)));
+			}
+		}
+		/**
+		* assistant 内容块 → 子元素数组（官方块渲染器 lib/client.js:5826-5870 的同构）：
+		* text → 官方 MarkdownText、reasoning → 官方 ReasoningRow（标题「思考」）、image 占位；
+		* tool-call 块一律跳过（官方 case "tool-call": break——由独立工具节点渲染，重复画 = ×2）；
+		* 未知块折叠原文。
+		*/
+		function assistantBlocks(blocks, t, fileMentions) {
+			if (blocks === void 0) return [];
+			const parts = [];
+			blocks.forEach((block, index) => {
+				switch (block.kind) {
+					case "text":
+						if (block.text.trim() !== "") parts.push((0, react$1.createElement)(AssistantMarkdown, {
+							key: `t${index}`,
+							text: block.text,
+							fileMentions
+						}));
+						break;
+					case "reasoning":
+						if (block.text.trim() !== "") parts.push((0, react$1.createElement)(ReasoningRowMirror, {
+							key: `r${index}`,
+							text: block.text,
+							t
+						}));
+						break;
+					case "image":
+						parts.push((0, react$1.createElement)("div", {
+							key: `i${index}`,
+							className: "dsh-tdt-sv-image"
+						}, "[图片]"));
+						break;
+					case "tool-call": break;
+					default: parts.push((0, react$1.createElement)("details", {
+						key: `o${index}`,
+						className: "dsh-tdt-sv-tool"
+					}, (0, react$1.createElement)("summary", null, t("sessionUnknownKind")), (0, react$1.createElement)("pre", null, safeJson(block.block))));
+				}
+			});
+			return parts;
+		}
+		/**
+		* legacy 兜底渲染：官方兼容投影（老 kind 名）的单个节点；返回 null = 按决策 28 过滤的噪音 kind。
+		* 仅在 keyed `order` 缺失时使用（正常路径见 renderKeyedNode）。
+		*/
+		function renderLegacyNode(node, t, fileOpen, attachedNames) {
+			switch (node.kind) {
+				case "user":
+				case "steering": {
+					const text = contentText(node.content);
+					const { files, hadFiles } = contentFiles(node.content, attachedNames);
+					if (text === "" && !hadFiles) return null;
+					return (0, react$1.createElement)(UserMessage, {
+						key: node.seq,
+						text,
+						files
+					});
+				}
+				case "assistant": {
+					const parts = assistantBlocks(node.blocks, t, fileOpen?.mentions);
+					return parts.length === 0 ? null : (0, react$1.createElement)("div", {
+						key: node.seq,
+						className: "dsh-tdt-sv-assistant"
+					}, parts);
+				}
+				case "tool-result":
+					if (node.call?.name === "present") return (0, react$1.createElement)(PresentRowMirror, {
+						key: node.seq,
+						block: node,
+						t
+					});
+					return (0, react$1.createElement)(GenericCommandCard, {
+						key: node.seq,
+						name: node.call?.name ?? "tool",
+						argsRaw: node.call?.argsRaw ?? "",
+						output: contentText(node.content),
+						isError: node.isError === true,
+						errorName: node.error?.name,
+						meta: node.meta,
+						settled: true,
+						interrupted: node.error?.code === "interrupted",
+						onOpenFile: fileOpen?.open,
+						t
+					});
+				case "command": return (0, react$1.createElement)(GenericCommandCard, {
+					key: node.seq,
+					name: `/${node.name ?? "?"}`,
+					argsRaw: node.args ?? "",
+					output: node.outcome?.text ?? "",
+					isError: node.outcome?.kind === "error",
+					t
+				});
+				case "turn-error": return (0, react$1.createElement)(TurnErrorItemMirror, {
+					key: node.seq,
+					node,
+					t
+				});
+				case "turn-max-tokens": return (0, react$1.createElement)(TurnMaxTokensItemMirror, {
+					key: node.seq,
+					t
+				});
+				case "model-retry": return (0, react$1.createElement)(ModelRetryItemMirror, {
+					key: node.seq,
+					node,
+					active: node.retryState === "scheduled",
+					t
+				});
+				case "context":
+				case "compaction":
+				case "unknown": return null;
+				default: return (0, react$1.createElement)("details", {
+					key: node.seq,
+					className: "dsh-tdt-sv-tool"
+				}, (0, react$1.createElement)("summary", { className: "dsh-tdt-sv-notice" }, `${t("sessionUnknownKind")} ${node.kind}`), (0, react$1.createElement)("pre", null, safeJson(node)));
+			}
+		}
+		/**
+		* 把连续的 tool-result / command 收成一个「过程」组——官方就是把工具调用折进
+		* turn 的过程块（默认收起），页面才不会变成一列流水账。单个工具不再包组，避免多一层。
+		*/
+		function groupNodes(list) {
+			const out = [];
+			let run = [];
+			const flush = () => {
+				if (run.length === 0) return;
+				if (run.length >= 2) out.push({
+					kind: "process",
+					nodes: run
+				});
+				else out.push({
+					kind: "node",
+					node: run[0]
+				});
+				run = [];
+			};
+			for (const node of list) {
+				if (node.kind === "tool-result" || node.kind === "command") {
+					run.push(node);
+					continue;
+				}
+				flush();
+				out.push({
+					kind: "node",
+					node
+				});
+			}
+			flush();
+			return out;
+		}
+		/** legacy 兜底整流的渲染（keyed order 缺失时才会走到）。 */
+		function renderLegacyRows(nodes, t, fileOpen, attachedNames) {
+			const items = groupNodes(nodes);
+			const rows = [];
+			items.forEach((entry, index) => {
+				const parts = [];
+				if (entry.kind === "process") {
+					parts.push((0, react$1.createElement)("div", {
+						key: "lead",
+						className: "dsh-tdt-sv-notice"
+					}, `${t("sessionProcess")} · ${entry.nodes.length}`));
+					entry.nodes.forEach((node, i) => {
+						const rendered = renderLegacyNode(node, t, fileOpen, attachedNames);
+						if (rendered !== null) parts.push((0, react$1.createElement)("div", { key: `p${i}` }, rendered));
+					});
+				} else {
+					const inner = renderLegacyNode(entry.node, t, fileOpen, attachedNames);
+					if (inner !== null) parts.push(inner);
+					if (entry.node.kind === "assistant") {
+						const next = items[index + 1];
+						if (next === void 0 || !(next.kind === "node" && next.node.kind === "assistant")) parts.push((0, react$1.createElement)(MessageIconActionsMirror, {
+							key: "act",
+							text: assistantText(entry.node),
+							clock: "end",
+							t
+						}));
+					}
+				}
+				if (parts.length === 0) return;
+				rows.push((0, react$1.createElement)("div", {
+					key: `lg${index}`,
+					className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem")
+				}, parts));
+			});
+			return rows;
+		}
+		/** 路径归一：去 './' 前缀（词表键与 resolve 两侧同规则）。 */
+		function normalizeFilePath(p) {
+			let s = p.trim();
+			while (s.startsWith("./")) s = s.slice(2);
+			return s;
+		}
+		/**
+		* 取某 turn 的交付文件清单（官方 `DeliverablesTail` 同源数据）。
+		* ⚠️ 官方 `turn.data` 是 **Map**（见 @deepseek-ai/dsh-client-ui-deliverables `owner.turn.data.get('deliverables')`），
+		* 不是普通对象——对象式 `data.deliverables` 访问对 Map 必为 undefined（此前交付卡在弹窗里永不渲染的根因）。
+		* 这里兼容 Map 与纯对象两种形态。
+		*/
+		function turnDeliverablesPresented(face) {
+			const data = face?.data;
+			const presented = (data instanceof Map ? data.get("deliverables") : data?.deliverables)?.presented;
+			return Array.isArray(presented) ? presented : [];
+		}
+		/**
+		* 从 keyed 节点流收集真实文件词表（禁模拟：全部来自工具调用参数 / meta.diffs）：
+		* tool-call 节点 argsRaw 的 file_path/path 字段（read/grep/glob/write/edit…）与
+		* tool-fs 写入 meta.diffs[].path。会话级词表 = 官方 per-turn chatFileMentions 的简化偏差
+		* （决策 39：resolve 命中才渲链接，解析不出保持惰性 code，永不猜）。
+		*/
+		function collectFilePaths(order, store, turns) {
+			if (store === void 0) return [];
+			const out = /* @__PURE__ */ new Set();
+			if (turns !== null && turns !== void 0) {
+				const map = turns;
+				for (const [, face] of map) {
+					const presented = turnDeliverablesPresented(face);
+					for (const file of presented) {
+						const path = typeof file?.path === "string" ? file.path : void 0;
+						if (path !== void 0 && path.trim() !== "") out.add(normalizeFilePath(path));
+					}
+				}
+			}
+			for (const key of order) {
+				const node = store.get(key);
+				if (node === void 0 || node.kind !== "tool-call") continue;
+				const root = node.data?.root;
+				if (root === void 0 || root === null || typeof root !== "object") continue;
+				if (isPresentRoot(root)) {
+					for (const file of presentFiles(root)) out.add(normalizeFilePath(file.path));
+					continue;
+				}
+				const call = root.kind === "tool-result" ? root.call : root;
+				if (call === null || typeof call !== "object") continue;
+				const raw = typeof call.argsRaw === "string" ? call.argsRaw.trim() : "";
+				if (raw.startsWith("{")) try {
+					const parsed = JSON.parse(raw);
+					for (const field of ["file_path", "path"]) {
+						const value = parsed[field];
+						if (typeof value === "string" && value.trim() !== "") out.add(normalizeFilePath(value));
+					}
+				} catch {}
+				const meta = root.meta;
+				if (typeof meta === "object" && meta !== null) {
+					const diffs = meta.diffs;
+					if (Array.isArray(diffs)) for (const diff of diffs) {
+						const p = diff?.path;
+						if (typeof p === "string" && p.trim() !== "") out.add(normalizeFilePath(p));
+					}
+				}
+			}
+			return [...out];
+		}
+		/**
+		* 每轮交付文件（官方 DeliverablesTail 同源数据）：读会话 turn 级 `deliverables.presented`，
+		* 由 `deliverables/presented` 事件经引擎填充——无论事件来自 present 工具还是本插件代写（U12
+		* 决策 40 演进：插件作唯一写入方，禁止 LLM 调 present），同源覆盖。按 turn 归组、按路径去重
+		* （后者覆盖前者，与官方 presentedForClosing 的 map 语义一致）。纯客户端推导，零额外请求。
+		*/
+		function collectPresentedByTurn(turns) {
+			const out = /* @__PURE__ */ new Map();
+			if (turns === null || turns === void 0) return out;
+			const map = turns;
+			for (const [key, face] of map) {
+				const turn = typeof key === "number" ? key : Number(key);
+				if (!Number.isInteger(turn) || turn < 1) continue;
+				const presented = turnDeliverablesPresented(face);
+				if (presented.length === 0) continue;
+				const files = [];
+				for (const file of presented) {
+					const path = typeof file?.path === "string" ? file.path : void 0;
+					if (path === void 0 || path.trim() === "") continue;
+					const description = typeof file?.description === "string" && file.description.trim() !== "" ? file.description : void 0;
+					files.push(description === void 0 ? { path } : {
+						path,
+						description
+					});
+				}
+				if (files.length > 0) out.set(turn, files);
+			}
+			return out;
+		}
+		/**
+		* 构建 fileMentions：归一化精确匹配优先、唯一 basename 兜底（官方 fileMentions 语义：
+		* 词表外一律 undefined ⇒ MarkdownText 保持惰性 code，renderer never guesses）。
+		*/
+		function makeFileMentions(paths, open) {
+			const exact = /* @__PURE__ */ new Map();
+			const byBase = /* @__PURE__ */ new Map();
+			for (const p of paths) {
+				exact.set(p, p);
+				const base = p.includes("/") ? p.slice(p.lastIndexOf("/") + 1) : p;
+				const bucket = byBase.get(base);
+				if (bucket === void 0) byBase.set(base, [p]);
+				else bucket.push(p);
+			}
+			return { resolve(value) {
+				const norm = normalizeFilePath(value);
+				const hit = exact.get(norm) ?? (() => {
+					const base = norm.includes("/") ? norm.slice(norm.lastIndexOf("/") + 1) : norm;
+					const bucket = byBase.get(base);
+					return bucket !== void 0 && bucket.length === 1 ? bucket[0] : void 0;
+				})();
+				if (hit === void 0) return void 0;
+				return {
+					label: value,
+					title: hit,
+					open: () => {
+						open(hit);
+					}
+				};
+			} };
+		}
+		/**
+		* 面板内只读会话弹窗（决策 28 数据链 + 决策 34 渲染）：只读、不可续聊。
+		* U10「继续对话（开分支）」：头部按钮 → 确认框 → `sessions.fork`（官方 ISessions 契约，
+		* 不带 atSeq = 最新已完成 turn 前缀，increaseTitle 让子会话标题递增 (1)）→ 先关弹窗
+		* （release 源会话）→ `uiWorkspace.openSession(childId)`（官方导航服务：内部自己
+		* retain('mainView') + selection.set + selectPanel(null)，我们只调服务、不碰保留值）。
+		* @param props - viewSessionId 指向的执行会话；数据经 openSessionView 建好传入。
+		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
+		*/
+		function SessionViewModal(props) {
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, attached, workspacePath } = props;
+			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
+			const attachedNames = (0, react$1.useMemo)(() => new Set((attached ?? []).filter((file) => file.path !== null).map((file) => file.name)), [attached]);
+			const subscribe = (0, react$1.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
+			const getSnapshot = (0, react$1.useMemo)(() => () => view.target.getSnapshot(), [view]);
+			const chat = (0, react$1.useSyncExternalStore)(subscribe, getSnapshot);
+			const sessionSub = (0, react$1.useMemo)(() => (onChange) => view.session.subscribe(onChange), [view]);
+			const sessionGet = (0, react$1.useMemo)(() => () => view.session.getSnapshot(), [view]);
+			const sessionSnap = (0, react$1.useSyncExternalStore)(sessionSub, sessionGet);
+			const [openTurns, setOpenTurns] = (0, react$1.useState)(() => /* @__PURE__ */ new Map());
+			const onSetOpen = (0, react$1.useCallback)((turn, answerStep, open) => {
+				setOpenTurns((prev) => {
+					const next = new Map(prev);
+					if (open) next.set(turn, answerStep);
+					else next.delete(turn);
+					return next;
+				});
+			}, []);
+			const canFork = forkSession !== void 0 && openHostSession !== void 0;
+			const [forkTarget, setForkTarget] = (0, react$1.useState)(null);
+			const [forking, setForking] = (0, react$1.useState)(false);
+			const [forkErr, setForkErr] = (0, react$1.useState)(null);
+			const aliveRef = (0, react$1.useRef)(true);
+			(0, react$1.useEffect)(() => () => {
+				aliveRef.current = false;
+			}, []);
+			const onForkAccept = (0, react$1.useCallback)(() => {
+				if (forking || forkSession === void 0 || openHostSession === void 0) return;
+				setForking(true);
+				setForkErr(null);
+				(async () => {
+					try {
+						const child = await forkSession(sessionId, forkTarget?.atSeq);
+						if (!aliveRef.current) return;
+						onClose();
+						openHostSession(child);
+					} catch (error) {
+						if (!aliveRef.current) return;
+						setForkErr(error instanceof Error ? error.message : String(error));
+					} finally {
+						setForking(false);
+					}
+				})();
+			}, [
+				forking,
+				forkSession,
+				openHostSession,
+				sessionId,
+				forkTarget,
+				onClose
+			]);
+			const onBranchAt = (0, react$1.useCallback)((seq) => {
+				setForkErr(null);
+				setForkTarget({ atSeq: seq });
+			}, []);
+			const openFile = (0, react$1.useCallback)((path) => {
+				onOpenFile?.(path);
+			}, [onOpenFile]);
+			const order = chat?.order ?? EMPTY_ORDER;
+			const store = chat?.nodes;
+			const keyed = order.length > 0 && store !== void 0;
+			const turns = chat?.timeline?.turns;
+			const fileOpen = (0, react$1.useMemo)(() => {
+				if (workspaceFiles === void 0 || onOpenFile === void 0) return void 0;
+				return {
+					open: openFile,
+					mentions: makeFileMentions(collectFilePaths(order, store, turns), openFile)
+				};
+			}, [
+				workspaceFiles,
+				onOpenFile,
+				openFile,
+				order,
+				store
+			]);
+			const deliveredByTurn = (0, react$1.useMemo)(() => collectPresentedByTurn(turns), [turns]);
+			const deliverFiles = (0, react$1.useMemo)(() => {
+				const byPath = /* @__PURE__ */ new Map();
+				const add = (file) => {
+					const key = file.path.trim();
+					if (key === "" || byPath.has(key)) return;
+					byPath.set(key, file);
+				};
+				for (const path of outputs ?? []) add({ path });
+				for (const files of deliveredByTurn.values()) for (const file of files) add(file);
+				return [...byPath.values()];
+			}, [outputs, deliveredByTurn]);
+			const lastTailTurn = (0, react$1.useMemo)(() => {
+				if (!keyed || store === void 0) return void 0;
+				for (let i = order.length - 1; i >= 0; i--) {
+					const node = store.get(order[i]);
+					if (node?.kind !== "turn-tail") continue;
+					const turn = node.data?.turn ?? turnLocationOf(node)?.turn;
+					if (typeof turn === "number") return turn;
+				}
+			}, [
+				keyed,
+				order,
+				store
+			]);
+			const host = usePresentedHost();
+			const renderNode = (0, react$1.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames), [
+				tt,
+				onBranchAt,
+				fileOpen,
+				deliverFiles,
+				lastTailTurn,
+				host,
+				attachedNames
+			]);
+			const isTurnClosed = (0, react$1.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
+			const groupedView = (0, react$1.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
+				keyed,
+				order,
+				store,
+				isTurnClosed
+			]);
+			const rendered = (keyed ? ChatNodeListMirror({
+				order,
+				store,
+				entries: groupedView?.entries,
+				groups: groupedView?.groups,
+				turns,
+				openState: openTurns,
+				onSetOpen,
+				foldCompleted: true,
+				renderNode,
+				t: tt
+			}) : renderLegacyRows(chat?.legacy?.nodes ?? [], tt, fileOpen, attachedNames)).filter((row) => row !== null && row !== void 0);
+			const officialCount = officialModuleCount();
+			if (!officialWarned) {
+				officialWarned = true;
+				console.info(`[task-dispatch:session-view] 官方 ui-chat 模块数=${officialCount}；类名样例 frame=${officialClass("ChatView", "frame")} flowItem=${officialClass("ChatView", "flowItem")} trigger=${officialClass("TurnTriggerNodeView", "root")} turnProcess=${officialClass("TurnProcessNodeView", "root")} tail=${officialClass("TurnTailNodeView", "root")}`);
+				if (officialCount === 0) console.warn("[task-dispatch:session-view] 未发现官方 ui-chat 样式模块 ⇒ 弹窗观感退回自绘样式（功能不受影响）");
+			}
+			const openState = sessionSnap?.openState;
+			const showLoadOlder = sessionSnap?.hasMore !== false;
+			const body = rendered.length === 0 ? (0, react$1.createElement)(ChatHint, { text: openState === "error" ? tt("sessionLoadFailed") : openState === "loading" || openState === "cold" ? tt("sessionLoading") : tt("sessionEmpty") }) : [showLoadOlder ? (0, react$1.createElement)(ChatOlderButton, {
+				key: "older",
+				label: tt("sessionLoadOlder"),
+				onClick: () => {
+					view.loadOlder();
+				}
+			}) : null, ...rendered];
+			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
+				className: "dsh-tdt-sv-overlay",
+				onClick: onClose
+			}, (0, react$1.createElement)("div", {
+				className: "dsh-tdt-sv-panel",
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-header" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-heading" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-title" }, `${tt("sessionViewerTitle")} · ${heading}`), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-sid" }, sessionId), officialCount === 0 ? (0, react$1.createElement)("div", {
+				className: "dsh-tdt-sv-sid",
+				style: { color: "var(--tdt-warning, #b7791f)" }
+			}, "⚠ 官方样式未命中（当前为自绘回退）") : null), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-headerbtns" }, canFork ? (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				disabled: forking,
+				title: tt("continueBranch"),
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconBranchOutlineRegular, { size: 14 }),
+				onClick: () => {
+					setForkErr(null);
+					setForkTarget({});
+				}
+			}, tt("continueBranch")) : null, (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
+				label: tt("debugClose"),
+				onClick: onClose
+			}))), (0, react$1.createElement)(ChatViewFrame, { children: [(0, react$1.createElement)(TaskFileContextPanel, {
+				upstream: upstream ?? [],
+				attached: attached ?? [],
+				workspacePath: workspacePath ?? null,
+				onOpenFile,
+				t: tt
+			}), ...Array.isArray(body) ? body : [body]] }))), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Modal, {
+				open: forkTarget !== null,
+				onClose: () => {
+					if (!forking) setForkTarget(null);
+				},
+				title: tt("forkConfirmTitle"),
+				closeLabel: tt("debugClose"),
+				description: tt("forkConfirmText"),
+				className: "dsh-tdt-sv-forkmodal",
+				footer: [(0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					key: "cancel",
+					variant: "outline",
+					disabled: forking,
+					onClick: () => {
+						setForkTarget(null);
+					}
+				}, tt("forkCancel")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					key: "accept",
+					variant: "primary",
+					disabled: forking,
+					onClick: onForkAccept
+				}, forking ? tt("forkWorking") : tt("forkConfirmAccept"))]
+			}, forkErr !== null ? (0, react$1.createElement)("p", { className: "dsh-tdt-sv-forkerr" }, tt("forkFailed", { error: forkErr })) : null));
 		}
 		//#endregion
 		//#region src/client/file-preview.tsx
@@ -55554,8 +55554,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		/**
 		* 配置预览面板（用户 2026-09-29 定稿）：与「编辑提示词」一样大的右侧面板，覆盖拉篮区域；
-		* 只读展示当前配置生成的任务定义 JSON——官方 CodeBlock（Shiki：行号 + 语法着色 + 自带复制），
-		* 面板按钮只有「关闭」（复制由 CodeBlock 工具条承担），不允许修改。
+		* 只读展示当前配置生成的任务定义 JSON——用 CodeViewer（只读 CodeMirror 6：行号 + 语法着色 + 右上角官方复制图标），
+		* 面板按钮只有「关闭」（复制由 CodeViewer 复制钮承担），不允许修改。
 		*/
 		function ConfigPreviewPanel(props) {
 			const { t, json, onClose } = props;
@@ -55585,19 +55585,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, t("editorClose"))), (0, react$1.createElement)("div", { style: {
 				flex: "1 1 auto",
 				minWidth: 0,
-				overflow: "auto",
-				padding: "14px 18px"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
-				code: json,
-				lang: "json",
-				lineNumbers: true,
-				copyLabel: t("copyLabel"),
-				copiedLabel: t("copiedLabel"),
-				toolbarLabels: {
-					codeLabel: t("codeBlockLabel"),
-					wrapLabel: t("diffWrapLabel"),
-					unwrapLabel: t("diffUnwrapLabel")
-				}
+				minHeight: 0,
+				overflow: "hidden"
+			} }, (0, react$1.createElement)(CodeViewer, {
+				text: json,
+				path: "task-definition.json",
+				t
 			})));
 		}
 		/**

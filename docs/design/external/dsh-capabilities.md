@@ -112,7 +112,7 @@
 
 | 主题 | 结论 |
 |---|---|
-| **源码态查看器渲染引擎 = 只读 CodeMirror 6（2026-10-04 定型，落地 `src/client/ui/CodeViewer.tsx`）** | 文件预览源码态（代码 / HTML 源 / 纯文本）曾用官方 Shiki `CodeBlock`，整篇 tokenize 成 `<pre>`+每 token `<span>` 的巨型 DOM ⇒ 5000 行 / 256K 文件首屏与拖拽卡死；**已改为只读 CodeMirror 6**（`@uiw/react-codemirror`，仓库已声明、非新引包）。行级视图 + Lezer 增量高亮，宽度变化只重排可视区。严格只读（`EditorState.readOnly` + `EditorView.editable=false`，无脏点/保存）；行号 / 复制 / 换行开关保留；主题移植 better-sidebar 的 one-dark / one-light + 13px。用户认可的「能编辑、一点都不卡」查看器即 CodeMirror 6。**注意**：本仓 `src/client/mirror` 当时并未真正用 CodeMirror，基础件是另一会话做编辑器功能时加进 `package.json` 的，本次只是复用。 |
+| **源码态查看器渲染引擎 = 只读 CodeMirror 6（2026-10-04 定型，落地 `src/client/ui/CodeViewer.tsx`）** | 文件预览源码态（代码 / HTML 源 / 纯文本）、任务编辑器「配置预览」的任务定义 JSON、工具卡 `code` 变体的工具代码——**三处只读代码展示统一为 `CodeViewer`（只读 CodeMirror 6，`@uiw/react-codemirror`，仓库已声明、非新引包）**。官方 Shiki `CodeBlock` 把整篇 tokenize 成 `<pre>`+每 token `<span>` 的巨型 DOM ⇒ 5000 行 / 256K 文件首屏与拖拽卡死；CodeMirror 行级视图 + Lezer 增量高亮，宽度变化只重排可视区。只读但可选中复制：仅 `EditorState.readOnly` 挡输入，**不设 `EditorView.editable=false`**（否则会禁用鼠标选区、无法框选复制某一句）；默认 `EditorView.lineWrapping` 全换行（无换行/不换行切换）；主题 `theme="none"` 透明底叠宿主面板（移植 better-sidebar 的 one-dark / one-light + 13px）；右上角官方复制图标 hover 浮现。用户认可的「不卡、能选、能复制」查看器即 CodeMirror 6。 |
 
 ## 主题与设计变量（`@deepseek-ai/dsh-client-ui-theme` / `-primitives`）
 

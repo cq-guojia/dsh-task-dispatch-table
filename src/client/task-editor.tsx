@@ -35,11 +35,11 @@ import {
   IconPlusOutlineRegular,
   IconQuestionOutlineRegular,
   MarkdownText,
-  CodeBlock,
   Switch,
   Tooltip,
   IconPlanOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { CodeViewer } from './ui/CodeViewer'
 import {
   calendarLabelsOf,
   DateField,
@@ -1241,8 +1241,8 @@ function PromptEditorModal(props: {
 
 /**
  * 配置预览面板（用户 2026-09-29 定稿）：与「编辑提示词」一样大的右侧面板，覆盖拉篮区域；
- * 只读展示当前配置生成的任务定义 JSON——官方 CodeBlock（Shiki：行号 + 语法着色 + 自带复制），
- * 面板按钮只有「关闭」（复制由 CodeBlock 工具条承担），不允许修改。
+ * 只读展示当前配置生成的任务定义 JSON——用 CodeViewer（只读 CodeMirror 6：行号 + 语法着色 + 右上角官方复制图标），
+ * 面板按钮只有「关闭」（复制由 CodeViewer 复制钮承担），不允许修改。
  */
 function ConfigPreviewPanel(props: { t: T; json: string; onClose: () => void }): ReactNode {
   const { t, json, onClose } = props
@@ -1251,19 +1251,8 @@ function ConfigPreviewPanel(props: { t: T; json: string; onClose: () => void }):
       h('span', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 600 } }, t('editorPreview')),
       h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
     ),
-    h('div', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'auto', padding: '14px 18px' } },
-      h(CodeBlock, {
-        code: json,
-        lang: 'json',
-        lineNumbers: true,
-        copyLabel: t('copyLabel'),
-        copiedLabel: t('copiedLabel'),
-        toolbarLabels: {
-          codeLabel: t('codeBlockLabel'),
-          wrapLabel: t('diffWrapLabel'),
-          unwrapLabel: t('diffUnwrapLabel'),
-        },
-      }),
+    h('div', { style: { flex: '1 1 auto', minWidth: 0, minHeight: 0, overflow: 'hidden' } },
+      h(CodeViewer, { text: json, path: 'task-definition.json', t }),
     ),
   )
 }

@@ -9,7 +9,7 @@
 // 面包屑超宽时折叠为当前层名（行首▾点开**下拉菜单**列出全部层级、带缩进/树形连接符供选层回跳）；
 // 不超长时**还原完整路径**（溢出判定用与可见态同构的隐藏测量条 + ResizeObserver，确保精确还原）。
 //
-// 渲染底层全官方（md=MarkdownText / 代码=CodeBlock / 图片·PDF=readBytes→blob），数据一律
+// 渲染底层以官方为主（md=MarkdownText / 图片·PDF=readBytes→blob），代码源码态复用 file-preview 的 CodeViewer（只读 CodeMirror 6）；数据一律
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
 import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'

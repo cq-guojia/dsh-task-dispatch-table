@@ -2,7 +2,7 @@
 //
 // 渲染底层全官方（拍板红线：不许自研预览器）：
 //   · markdown   → 官方 MarkdownText；
-//   · 代码 / 文本 → 官方 CodeBlock（primitives Shiki 积木，diff 面同源；lang = 扩展名）；
+//   · 代码 / 文本 → CodeViewer（只读 CodeMirror 6，ui/CodeViewer.tsx；行级视图 + Lezer 增量高亮，根除官方 Shiki CodeBlock 整篇 DOM 重排卡顿；lang = 扩展名）；
 //   · 图片        → readBytes → Blob → objectURL（卸载时 revoke）；
 //   · PDF        → readBytes 全量（服务端上限 32MiB）→ 浏览器 iframe 原生渲染；
 //   · 不可内嵌    → 空态 + 复制路径；错误态按官方 RemoteError.code 分支（不按消息文本）。
@@ -490,12 +490,8 @@ export function TextPreview(props: {
   // 截断标记：有上限（HTML）且累计字节已达 ⇒ 顶部出横幅（官方位置/措辞），且不再有任何翻页按钮。
   const [truncated, setTruncated] = useState(false)
   // 源码态改用只读 CodeMirror 6（ui/CodeViewer.tsx），流式渲染与整篇高亮卡顿问题已根除，无 streaming 概念。
-  // 折行偏好（官方文档面板由宿主控制、不给换行钮；我们同样传布尔 + toolbarLabels）。
-  // 折行：⚠️ **不传** `wrap`（用户 2026-10-04 明确「把换行不换行给我留着」）。
-  // 官方 CodeBlock 的换行钮**只在 `wrap === undefined` 时渲染**；传了布尔 + toolbarLabels
-  // ⇒ 官方 omit 该钮（`CodeBlock.d.ts`：*"With toolbarLabels, use the owner's wrapping
-  // preference and omit the toolbar's local wrap action"*）。
-  // 官方文档面板传了布尔、所以它没有；**我们要留给用户** ⇒ 不传。
+  // 折行：CodeViewer 默认开启 EditorView.lineWrapping（全换行，避免横向滚动条；
+  // 用户 2026-10-04 明确「进来就全部换行，不要换行/不换行切换」），故不提供换行钮。
   useEffect(() => {
     let alive = true
     setText(null)
@@ -582,7 +578,7 @@ export function TextPreview(props: {
   },
     showSource
       // 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
-      // 拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；换行钮由 CodeViewer 自带。
+      // 拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；默认全换行（lineWrapping）。
       ? h('div', {
           className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
           'data-code-preview': true,

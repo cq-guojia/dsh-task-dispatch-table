@@ -1352,7 +1352,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /enabled\s*===\s*false/.test(clientJs))
   check('高级区：重试四档 Segmented + /goal 开关（默认开）+ 配置预览按钮直呼「配置预览」已打进 bundle，成功状态清单 UI 已移除',
     clientJs.includes('editorRetryFive') && clientJs.includes('editorGoal') && /t\(["']editorPreview["']\)/.test(clientJs)
-      && clientJs.includes('lang: "json"') && !clientJs.includes('editorValidStatuses'))
+      && /["']task-definition\.json["']/.test(clientJs) && !clientJs.includes('editorValidStatuses'))
   check('高级区第二轮：灰条收折头（无内层黑框）+「?」说明 + 官方 chevron 展开图标 + 虚线分隔两拍排版',
     clientJs.includes('dsh-tdt-ed-advhead') && clientJs.includes('editorAdvancedHelp')
       && clientJs.includes('dsh-tdt-ed-advchevron-open') && clientJs.includes('dsh-tdt-ed-advitem')
