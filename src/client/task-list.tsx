@@ -13,7 +13,7 @@
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatYmd, pad2 } from './format'
+import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, formatYmd, pad2 } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconCheckCircleFillRegular, IconChevronDownOutlineRegular,
   IconClockOutlineRegular, IconCloseCircleFillRegular, IconEditOutlineRegular, IconFolderOpenOutlineRegular,
@@ -23,7 +23,7 @@ import {
 import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
 // 三面板数据通道（决策 55）：执行记录 / 日志 / 事件时间线，与未来总查询页共用同一套 fetch。
-import { fetchEvents, fetchInstances, fetchLogs, type EventRow, type InstanceRow, type LogRow } from './query'
+import { fetchEvents, fetchInstances, fetchLogs, outputsOf, type EventRow, type InstanceRow, type LogRow } from './query'
 // 状态通用短名单源（用户 2026-10-02：状态名别各处各写一份）。
 import { INSTANCE_STATUSES, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 // `pinMsFor` 现在只用来算「到点未派发」的 loading 上界（`dueLoadingMs`）；`justCrossedSlot` 随
@@ -830,20 +830,9 @@ const dialogStyle: Record<string, string | number> = {
 const formatStamp = (iso: string | null): string =>
   iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
 
-/** 回执产出清单（决策 32③ 真值 JSON）→ 字符串数组；形状不符返回空（不猜）。 */
-const outputsOf = (raw: string | null): string[] => {
-  if (raw === null || raw === '') return []
-  try {
-    const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
-  } catch {
-    return []
-  }
-}
-
-/** token 用量一格（展开详情用；K/M 大众格式，用户 2026-10-02）。 */
-const tokensDetailOf = (row: { token_in: number | null; token_out: number | null; token_in_cache: number | null }): string =>
-  `${row.token_in === null ? '—' : formatTokenCount(row.token_in)} / ${row.token_out === null ? '—' : formatTokenCount(row.token_out)} / ${row.token_in_cache === null ? '—' : formatTokenCount(row.token_in_cache)}`
+// ⚠️ 2026-10-04：`outputsOf`（回执产出清单解析）与 token 明细串**已上提**——
+// 前者到 `query.ts`（`outputsOf`，与实例行同处）、后者到 `format.ts`（`formatTokenDetail`），
+// 因为执行记录总查询页要用同一份口径，两处各写一份就是违规（本仓：一类东西一个实现）。
 // 状态三档桶（用户 2026-10-02：过滤只给 执行中 / 失败 / 成功 三档，七态归桶；值传后端 statuses）。
 // ⚠️ 2026-10-04 评审：桶定义**上提到 `status-text.ts` 单源**（`statusesOfBucket`）—— 此前本页与
 // 执行记录总查询页各写一份，且 running 的成员还不一样（一个含 pending/unknown，一个不含）⇒ 同一个
@@ -1217,7 +1206,7 @@ function TaskExpandPanel(props: {
         InfoField({ label: t('colActualStart'), children: timeOf(instance.dispatched_at) }),
         InfoField({ label: t('infoFinishedAt'), children: timeOf(instance.finished_at) }),
         dur === null ? null : InfoField({ label: t('infoDuration'), children: formatDurationHms(dur) }),
-        tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: tokensDetailOf(instance) }, tokens) }),
+        tokens === null ? null : InfoField({ label: t('colTokens'), children: h('span', { title: formatTokenDetail(instance) }, tokens) }),
         note === ''
           ? null
           : InfoField({ label: t('colNote'), children: h('span', { style: { color: 'var(--tdt-danger)' } }, note) }),
@@ -1448,7 +1437,7 @@ function TaskExpandPanel(props: {
                   h('td', { style: miniCellCenterStyle },
                     instance.token_in === null && instance.token_out === null
                       ? h('span', { style: { color: 'var(--tdt-fg-3)' } }, '-')
-                      : h('span', { title: tokensDetailOf(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
+                      : h('span', { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))),
                   // ⑥ 备注：**错误 / 未执行的原因**（服务端 `attachNotes` 从最新原因事件推导）。
                   // 全表**唯一弹性列**（不定长）：拉伸 / 收缩只动它；超长省略号，hover 看全文。
                   // ⚠️ **不要红色**（用户 2026-10-02：不是要提醒他去看备注）——走最浅的灰 `--tdt-fg-3`，

@@ -16,8 +16,10 @@ export interface InstanceRow {
   task_id: string
   scheduled_at: string
   /**
-   * 计划时刻所在的**日历日**（服务端 `task_instances.logical_date`，`SELECT *` 已带回）。
-   * 时间轴按它做「天分组」——**不再用本地时区推一遍**，免得与服务端口径分叉。旧行不会有这列 ⇒ 可能 undefined。
+   * 计划时刻所在的日历日（服务端 `task_instances.logical_date`，`SELECT *` 已带回）——
+   * ⚠️ **注意它是「任务时区」的日历日**（服务端按任务 `timezone` 推），而列表的排序键与时间范围过滤
+   * 都是 `scheduled_at`（绝对时刻 / 浏览器本地日）⇒ **执行记录时间轴不拿它分组**（拿它会出现同名天标签），
+   * 这里只作声明备查。旧行没有这列 ⇒ 可能 undefined。
    */
   logical_date?: string
   status: string
@@ -57,6 +59,23 @@ export interface LogRow {
   level: string
   kind: string
   message: string
+}
+
+/**
+ * 解析实例的产出清单（`task_instances.outputs` 是 JSON 字符串数组，决策 32③）。
+ * 形状不对的条目丢弃、解析失败返回空数组 —— **不猜兜底值**。
+ *
+ * ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里：卡片「执行记录」面板与**执行记录总查询页**都要用，
+ * 同一解析写两遍就是违规（本仓规矩：一类东西一个实现）。
+ */
+export function outputsOf(raw: string | null | undefined): string[] {
+  if (raw === null || raw === undefined || raw === '') return []
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 /** 一条实例事件（task_events 行，执行记录下钻用；seq 升序 = 旧→新）。 */

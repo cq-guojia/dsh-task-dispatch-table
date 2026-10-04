@@ -142,7 +142,7 @@ export type LocaleKey =
   // 执行记录总查询页（时间轴，2026-10-04 落码）：`localeTag` 供 `Intl` 按当前语言排版日期（天标签）。
   | 'localeTag' | 'recordsEmpty' | 'recordsEmptyFiltered' | 'recordsLoading' | 'recordsLoadMore' | 'recordsNoMore'
   | 'recordsLimitHint' | 'recordsLoadFail' | 'recordsRetry' | 'recordsDayCount' | 'recordsTaskPh'
-  | 'recordsTaskSearch' | 'recordsMore' | 'recordsCollapse' | 'recordsOutOfScope' | 'recordsPlannedAt' | 'recordsStatusPh'
+  | 'recordsTaskSearch' | 'recordsMore' | 'recordsCollapse' | 'recordsOutOfScope' | 'recPlan' | 'recActual'
   | 'editorAdvanced' | 'editorAdvancedHelp' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
   | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorAgentTeam' | 'editorAgentTeamHint' | 'editorPreview' | 'editorPreviewHint'
   | 'editorPermission' | 'editorPermissionHint' | 'editorPermDefault' | 'editorPermReadOnly' | 'editorPermWorkspace' | 'editorPermFull'
@@ -657,8 +657,9 @@ export const zh: Record<LocaleKey, string> = {
   recordsMore: '更多',
   recordsCollapse: '收起',
   recordsOutOfScope: '所选任务不在当前工作区',
-  recordsPlannedAt: '计划 {time}',
-  recordsStatusPh: '状态',
+  // 条目第 2 行的紧凑标签（2026-10-04 版式返工；状态下拉已取消，其键一并删除）
+  recPlan: '计划',
+  recActual: '实际',
   editorAdvanced: '高级设置',
   editorAdvancedHelp: '此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。',
   editorRetry: '重试次数',
@@ -1265,8 +1266,8 @@ export const en: Record<LocaleKey, string> = {
   recordsMore: 'More',
   recordsCollapse: 'Collapse',
   recordsOutOfScope: 'The selected task is not in this workspace',
-  recordsPlannedAt: 'Planned {time}',
-  recordsStatusPh: 'Status',
+  recPlan: 'Plan',
+  recActual: 'Actual',
   editorAdvanced: 'Advanced settings',
   editorAdvancedHelp: 'This is the advanced configuration area. Read each item\u2019s description before changing it; default values are recommended for routine tasks.',
   editorRetry: 'Retry attempts',

@@ -1139,9 +1139,30 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   {
     const tlSrc = readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8')
     const idxSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
-    check('执行记录时间轴进产物（RecordsTimelineView + 天分组/色条/竖轴/加载区类名）',
-      clientJs.includes('RecordsTimelineView') && ['dsh-tdt-rec-tl', 'dsh-tdt-rec-day', 'dsh-tdt-rec-axis',
-        'dsh-tdt-rec-bar', 'dsh-tdt-rec-foot'].every(c => clientJs.includes(c)))
+    check('执行记录时间轴进产物（RecordsTimelineView + 灰底区块/天节点/色条/两行条目/加载区类名）',
+      clientJs.includes('RecordsTimelineView') && ['dsh-tdt-rec-band', 'dsh-tdt-rec-day', 'dsh-tdt-rec-dot',
+        'dsh-tdt-rec-bar', 'dsh-tdt-rec-r1', 'dsh-tdt-rec-r2', 'dsh-tdt-rec-foot'].every(c => clientJs.includes(c)))
+    check('过滤行照任务列表：**左侧状态分段控件四档**（全部/成功/失败/进行中）+ 右侧时间/工作区/任务',
+      /h\(Segmented<StatusBucket \| 'all'>,/.test(tlSrc)
+      && /statusesOfBucket\(bucket\)/.test(tlSrc)
+      && ['filterRightStyle', 'h(TimeRange,', 'h(SelectField,', 'h(TaskPicker,'].every(f => tlSrc.includes(f)))
+    check('主体改「灰底居中区块 + 竖轴从上贯穿到底」：轴画在区块伪元素上，空态/加载/失败态也在',
+      /\.dsh-tdt-rec-band\{[^}]*background:var\(--tdt-surface-sunken\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-band::before\{[^}]*top:0;bottom:0/.test(tlSrc))
+    check('天节点 = 竖轴上稍大的圆点 + 日期 + 当天条数（吸顶走 token 层级）',
+      /\.dsh-tdt-rec-dot\{[^}]*width:10px/.test(tlSrc) && tlSrc.includes('dsh-tdt-rec-daylabel')
+      && /\.dsh-tdt-rec-day\{[^}]*position:sticky/.test(tlSrc) && /z-index:var\(--tdt-z-sticky\)/.test(tlSrc))
+    check('条目至少两行：第 1 行 名称 + 状态 + 查看会话；第 2 行 工作区/计划/实际/时长/Token + 产出物',
+      tlSrc.includes("t('recPlan')") && tlSrc.includes("t('recActual')") && tlSrc.includes("t('colDuration')")
+      && tlSrc.includes("t('viewSession')") && tlSrc.includes('dsh-tdt-rec-note')
+      && /outputsOf\(row\.outputs\)/.test(tlSrc) && tlSrc.includes('FileTypeIcon'))
+    check('产出物 chip 可点开预览（onOpenFile 透传；不可用时降级不可点）',
+      /onOpenFile\?: \(sessionId: string, path: string\) => void/.test(tlSrc)
+      && /disabled: !canOpenFile/.test(tlSrc)
+      && idxSrc.includes('onOpenFile: canPreview ? openFile : undefined'))
+    check('不再用圆角卡片框：条目无卡片类，只有 hover 泛底 + 极浅分隔线',
+      /\.dsh-tdt-rec-item--on:hover\{background:var\(--tdt-hover\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid var\(--tdt-border-faint\)/.test(tlSrc))
     check('时间轴走 HTTP 游标分页：读 nextCursor 并回写（且 page size / 上限对齐 50/2000）',
       /setCursor\(page\.nextCursor\)/.test(tlSrc) && /cursor: nextCursor \?\? undefined/.test(tlSrc)
       && /const PAGE_SIZE = 50/.test(tlSrc) && /const HARD_LIMIT = 2000/.test(tlSrc)
@@ -1162,7 +1183,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /\.dsh-tdt-rec-day\{[^}]*position:sticky/.test(tlSrc)
       && /z-index:var\(--tdt-z-sticky\)/.test(tlSrc) && tlSrc.includes('prefers-reduced-motion'))
     check('不用图标表成败：色条走 statusToneOf 单源（status-text.ts），源码内无状态图标',
-      /statusToneOf\(/.test(tlSrc) && /barColorOf\(/.test(tlSrc)
+      /statusToneOf\(/.test(tlSrc) && /toneColorOf\(/.test(tlSrc)
       && ["var(--tdt-success)", "var(--tdt-danger)", "var(--tdt-warning)", "var(--tdt-business)"].every(tk => tlSrc.includes(tk))
       && !tlSrc.includes('StatusIcon') && !tlSrc.includes('IconCheckCircle'))
     check('records 分支排在 data === undefined 门槛之前（HTTP 页不被调试快照挡住）',
@@ -1183,6 +1204,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('旧「最简测试屏」已摘除（原生筛选 + 事件小表 + 其专用文案键全不再进包）',
       !clientJs.includes('filterStatus') && !clientJs.includes('filterTask')
       && !clientJs.includes('recordsHint') && !clientJs.includes('expandHint') && !clientJs.includes('colAttempt'))
+    check('版式返工的反向断言：状态下拉与其文案键已消失（状态改走顶部四档分段控件）',
+      !tlSrc.includes('recordsStatusPh')
+      && !readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8').includes('recordsStatusPh'))
   }
   check('弹窗内链接走上提后的唯一入口（onOpenFile 透传，弹窗不再自带分栏）',
     clientJs.includes('onOpenFile') && !clientJs.includes('dsh-tdt-sv-chatpane'))

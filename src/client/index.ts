@@ -445,8 +445,10 @@ function rowPatchOf(definition: Record<string, unknown>): Partial<TaskOverviewRo
  * 调度表整页（`main` 槽，**三标签**：任务配置 / 执行记录 / 调试，见顶部 Segmented）：
  * - **任务配置**：卡片式任务列表（`TaskListView`）+ 右侧占布局的新增/编辑分栏；
  * - **执行记录**：全部任务的流水账时间轴（`RecordsTimelineView`）—— 走 `GET /tasks/instances` 的
- *   **HTTP 游标分页**，**不吃调试快照**，点块打开归档会话弹窗（2026-10-04 起；此前的「原生 select +
- *   表格 + 就地展开事件」测试屏已整段删除）；
+ *   **HTTP 游标分页**，**不吃调试快照**。版式为「左状态分段控件 + 右时间/工作区/任务」的过滤行，
+ *   下面是**灰底区块 + 一条从头贯穿到底的竖轴**，天节点带日期、每条流水账两行（名称/状态/查看会话 +
+ *   工作区·计划·实际·时长·Token/产出物）并支持产出物点开预览（2026-10-04 版式返工；此前的
+ *   「原生 select + 表格 + 就地展开事件」测试屏已整段删除）；
  * - **调试**：`GET /db` 的原始表快照 + 运行参数（与下面的任务表快照无关）。
  *
  * ⚠️ 两条**不能混**的数据面：①「任务配置 / 调试」用的任务表来自 settings 快照的 `debugSnapshot`
@@ -1145,6 +1147,8 @@ function TaskPage(props: {
           onOpenSession: viewSession !== null
             ? (sessionId: string) => { void openView(sessionId) }
             : undefined,
+          // 产出物 chip 点开 = 页面级预览 dock（与卡片面板同一入口）；预览面没就位 ⇒ 不传，chip 降级不可点。
+          onOpenFile: canPreview ? openFile : undefined,
         })
         : data === undefined
         ? h('div', null,

@@ -103,4 +103,15 @@ export function formatTokenCount(n: number): string {
   return String(n)
 }
 
+/**
+ * token 明细：`输入 / 输出 / 缓存`（缺失档给 `—`）—— 挂在总量标签的 `title` 上，悬停看明细。
+ *
+ * ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里（改名 `formatTokenDetail`）：卡片「执行记录」面板与
+ * **执行记录总查询页**共用一份，避免同一串格式两处各写。
+ */
+export function formatTokenDetail(row: { token_in: number | null; token_out: number | null; token_in_cache: number | null }): string {
+  const part = (v: number | null): string => (v === null ? '—' : formatTokenCount(v))
+  return `${part(row.token_in)} / ${part(row.token_out)} / ${part(row.token_in_cache)}`
+}
+
 
