@@ -103,7 +103,8 @@ const RECORDS_CSS = `
    ⚠️ 三层结构照任务卡片（用户 2026-10-04：「参考前面配置任务的展开」）：
      容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
    容器**无 padding、无 cursor**：留白落在头部（这样 hover 高亮正好顶到块边，与卡片主行同观感）。 */
-.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:var(--tdt-space-1);
+/* ⚠️ gap 必须是 0：展开时头部的高亮区要**紧贴**下面那条分隔线（用户 2026-10-05：中间别留距离）。 */
+.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;
   background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
 /* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
@@ -403,8 +404,17 @@ const RecordItem = memo(function RecordItem(props: {
   }
 
   /** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
+  /**
+   * 信息行里的一段（可带图标）；值空则整段不出。
+   * 悬停提示走**官方 Tooltip**（用户 2026-10-05：原生 title 太慢，一律改用官方件）——
+   * 这里的 `span` 是真 DOM，Tooltip 挂得上 ref。
+   */
   const field = (icon: ReturnType<typeof h> | null, text: string, title?: string): ReturnType<typeof h> | null =>
-    text === '' ? null : h('span', { className: 'dsh-tdt-rec-field', title }, icon, text)
+    text === '' ? null
+      : title === undefined
+        ? h('span', { className: 'dsh-tdt-rec-field' }, icon, text)
+        : h(Tooltip, { label: title, side: 'top' },
+          h('span', { className: 'dsh-tdt-rec-field' }, icon, text))
 
   return h('div', {
     // ⚠️ **容器不挂任何交互**（照任务卡片：容器不挂 onClick → 头部挂 → 展开区是兄弟节点）：
@@ -416,20 +426,22 @@ const RecordItem = memo(function RecordItem(props: {
     h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
       // 5px 方角通高竖条：成败的**唯一**图形表达；状态名放在它的悬停提示里（不再写可见文字）。
       // 收进头部 ⇒ 这条 5px 也能点开（绝对定位仍相对块根，位置不变）——与卡片把状态条放进主行同理。
-      h('span', {
-        className: `dsh-tdt-rec-bar${running ? ' dsh-tdt-rec-bar--run' : ''}`,
-        title: statusLabel,
-        'aria-hidden': true,
-      }),
+      // 状态名挂**官方 Tooltip**（原生 title 太慢）；锚点就是这条真 DOM 的 span。
+      h(Tooltip, { label: statusLabel, side: 'top' },
+        h('span', {
+          className: `dsh-tdt-rec-bar${running ? ' dsh-tdt-rec-bar--run' : ''}`,
+          'aria-hidden': true,
+        })),
       // ── 左列：标题 + 下面那排信息 ──
       h('div', { className: 'dsh-tdt-rec-left' },
         h('div', { className: 'dsh-tdt-rec-r1' },
           // 标题**不撑满**（`0 1 auto`）：后面的前置圈码要紧跟名字，而不是被推到行尾。
-          h(MarqueeText, {
-            text: label, title: label,
-            className: 'dsh-tdt-rec-title dsh-tdt-ellipsis',
-            style: { flex: '0 1 auto', minWidth: 0 },
-          }),
+          h(Tooltip, { label, side: 'top' },
+            h('span', { style: { flex: '0 1 auto', minWidth: 0, display: 'flex' } },
+              h(MarqueeText, {
+                text: label,
+                className: 'dsh-tdt-rec-title dsh-tdt-ellipsis',
+              }))),
           // 前置圈码（用户 2026-10-04）：**本次执行实际用到的**上游有几个就画几个，一个都没有就什么都不画；
           // 提示走**官方 Tooltip**（2026-10-04 第八轮换掉原生 title —— 用户嫌原生提示慢）。
           //   ⚠️ 官方 Tooltip 的 children 必须是**真 DOM**（它给子元素挂 ref，裸组件会静默失效）——
@@ -474,29 +486,32 @@ const RecordItem = memo(function RecordItem(props: {
         //    否则一出现第三行，右列那排按钮就会看着偏上（用户 2026-10-04 点名）。
         note === ''
           ? null
-          : h('div', { className: 'dsh-tdt-rec-note dsh-tdt-ellipsis', title: note }, `${t('colNote')}：${note}`),
+          : h(Tooltip, { label: note, side: 'top' },
+            h('div', { className: 'dsh-tdt-rec-note dsh-tdt-ellipsis' }, `${t('colNote')}：${note}`)),
       ),
       // ── 右列：一排控件（产出物图标 → 查看会话按钮 → 展开箭头）──
       h('div', { className: 'dsh-tdt-rec-right' },
         outputs.length === 0
           ? null
-          : h('span', { className: 'dsh-tdt-rec-chiprow', title: t('colOutputs') },
-            outputs.slice(0, 3).map(path => h('button', {
+          : h('span', { className: 'dsh-tdt-rec-chiprow' },
+            // 硬性规定：只给图标、没有文件名的位置 ⇒ 悬停**必须**显示文件名（含后缀），走官方 Tooltip。
+            outputs.slice(0, 3).map(path => h(Tooltip, {
               key: path,
+              label: baseNameOf(path),
+              side: 'top',
+            }, h('button', {
               type: 'button',
               className: 'dsh-tdt-chip',
-              title: path,
               disabled: !canOpenFile,
               onClick: (event: { stopPropagation(): void }) => {
                 event.stopPropagation()
                 if (canOpenFile) openFile?.(sid as string, path)
               },
-            }, h(FileTypeIcon, { path, size: 16 }))),
+            }, h(FileTypeIcon, { path, size: 16 })))),
             outputs.length > 3
               ? h('button', {
                 type: 'button',
                 className: 'dsh-tdt-chip dsh-tdt-chip--label',
-                title: t('colOutputs'),
                 onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); onToggle(row.id) },
               }, `+${outputs.length - 3}`)
               : null,
@@ -506,7 +521,6 @@ const RecordItem = memo(function RecordItem(props: {
           ? h(Button, {
             variant: 'outline',
             size: 'sm',
-            title: t('viewSession'),
             onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid as string) },
           }, t('viewSession'))
           : null,
@@ -570,14 +584,16 @@ const RecordItem = memo(function RecordItem(props: {
                   h('div', { className: 'dsh-tdt-rec-depmid' },
                     h('div', { className: 'dsh-tdt-rec-depname' },
                       h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)),
-                      h('span', { className: 'dsh-tdt-ellipsis', title: depTitleOf(dep.task) }, depTitleOf(dep.task)),
+                      h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
+                        h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task))),
                     ),
                     h('div', { className: 'dsh-tdt-rec-depmeta' },
                       // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
                       // 「本次取自前一天…」那种口语说法，「哪一天、几点几分几秒，全都给显示出来」）。
                       // 单行省略、悬停看全量；stampOf = formatDateTime(iso, { seconds: true })。
-                      h('span', { className: 'dsh-tdt-ellipsis', title: stampOf(dep.scheduledAt) },
-                        tt('recordsDepFrom', { time: stampOf(dep.scheduledAt) })),
+                      h(Tooltip, { label: stampOf(dep.scheduledAt), side: 'top' },
+                        h('span', { className: 'dsh-tdt-ellipsis' },
+                          tt('recordsDepFrom', { time: stampOf(dep.scheduledAt) }))),
                     ),
                   ),
                   // ── 右列（**整列不折行**，用户 2026-10-04：拉伸时别把内容压成折行）──
@@ -586,29 +602,31 @@ const RecordItem = memo(function RecordItem(props: {
                     depOuts.length === 0
                       ? null
                       : h('span', { className: 'dsh-tdt-rec-chiprow', title: t('colOutputs') },
-                        depOuts.slice(0, DEP_OUT_MAX).map(path => h('button', {
+                        // ≤上限全显；**超出就少显示一个、末位换成「…」**（用户 2026-10-05：点它进那次上游的会话看全量）。
+                        depOuts.slice(0, depOuts.length > DEP_OUT_MAX ? DEP_OUT_MAX - 1 : DEP_OUT_MAX).map(path => h(Tooltip, {
                           key: path,
+                          label: baseNameOf(path),
+                          side: 'top',
+                        }, h('button', {
                           type: 'button',
                           className: 'dsh-tdt-chip',
-                          title: path,
                           disabled: !depCanOpen,
                           onClick: (event: { stopPropagation(): void }) => {
                             event.stopPropagation()
                             if (depCanOpen) openFile?.(depSid as string, path)
                           },
-                        }, h(FileTypeIcon, { path, size: 16 }))),
+                        }, h(FileTypeIcon, { path, size: 16 })))),
                         depOuts.length > DEP_OUT_MAX
                           ? h('button', {
                             type: 'button',
                             className: 'dsh-tdt-chip dsh-tdt-chip--label',
-                            title: t('viewSession'),
                             'aria-label': t('viewSession'),
                             disabled: !depHasSid,
                             onClick: (event: { stopPropagation(): void }) => {
                               event.stopPropagation()
                               if (depHasSid) openSession(depSid as string)
                             },
-                          }, `+${depOuts.length - DEP_OUT_MAX}`)
+                          }, '…')
                           : null,
                       ),
                     // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。有会话才落右列：
@@ -620,7 +638,6 @@ const RecordItem = memo(function RecordItem(props: {
                         variant: 'ghost',
                         size: 'sm',
                         className: 'dsh-tdt-btn--link',
-                        title: t('viewSession'),
                         onClick: () => { openSession(depSid as string) },
                       }, t('viewSession'))
                       : null,
@@ -632,7 +649,8 @@ const RecordItem = memo(function RecordItem(props: {
         eventsError !== null
           ? h('div', { className: 'dsh-tdt-rec-evempty dsh-tdt-rec-err' }, `${t('cardLoadFailed')}：${eventsError}`)
           : eventsBusy
-            ? h('div', { className: 'dsh-tdt-rec-evempty' }, t('recordsLoading'))
+            // 硬性规定：加载**只复用页面右下角统一那一个 Loading**，此处不显示任何「加载中」文案（空着即可）。
+            ? h(Loading, { label: t('recordsLoading'), anchorId: PANEL_CONTENT_ID })
             : events === null
               ? null
               : events.length === 0

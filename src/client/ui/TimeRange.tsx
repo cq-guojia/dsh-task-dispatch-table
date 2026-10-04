@@ -10,7 +10,7 @@
  * - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
  */
 import { createElement as h, Fragment, useMemo, type ReactElement } from 'react'
-import { DateField, TimeField, type CalendarLabels, type TimeLabels } from './DateTime'
+import { DateField, TimeField, fieldWidthOf, type CalendarLabels, type TimeLabels } from './DateTime'
 import { SelectField, type EditorOption } from './Field'
 import { ALL_TIME_PRESETS, presetRange, type TimePrecision, type TimePresetId, type TimeRangeValue } from './time-range'
 
@@ -128,6 +128,13 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
     )
   }
 
+  // 下拉**定宽**：按「全部 + 全部预设 + 自定义」里最长的一个算 ⇒ 选到「自定义」时也不会变宽
+  // （用户 2026-10-05：宽度定死，不要左右跳；预设档文案已统一成两个字）。
+  const selectWidth = useMemo(
+    () => Math.max(...[labels.all, labels.custom, ...Object.values(labels.presets)].map(text => fieldWidthOf(text, size))),
+    [labels, size],
+  )
+
   // 定式（用户 2026-10-02）：`<起始框> ～ <结束框> <范围>` —— 不写「时间：」，
   // 两端各用**灰色占位**（起始时间 / 截止时间）自证身份，中间用 `～` 连接；「范围」下拉在**最后**。
   return h('div', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' } },
@@ -147,6 +154,7 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
       emptyLabel: labels.all,
       ariaLabel: labels.all,
       size,
+      width: selectWidth,
       disabled: props.disabled,
     }),
   )

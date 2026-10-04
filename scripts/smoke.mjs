@@ -1266,7 +1266,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /from '@deepseek-ai\/dsh-client-ui-primitives'/.test(tlSrc)
       && /h\(Tooltip, \{[\s\S]{0,200}label: tt\('recordsDepTip', \{ n: String\(index \+ 1\), task: depTitleOf\(dep\.task\) \}\),[\s\S]{0,40}side: 'top',/.test(tlSrc)
       && !/title: tt\('recordsDepTip'/.test(tlSrc)
-      && !/Tooltip/.test(depArea))
+      && /h\('span', \{ className: 'dsh-tdt-rec-depmark' \}, String\(index \+ 1\)\),/.test(tlSrc)
+      && !/h\(Tooltip,[\s\S]{0,80}dsh-tdt-rec-depmark/.test(depArea))
     check('第八轮：圈码悬停**只加深底色**（浅底实心圆不描边），溢出项「+N」走胶囊档并同挂官方气泡',
       /\.dsh-tdt-rec-depmark:hover\{background:var\(--tdt-chip-bg-hover\);color:var\(--tdt-fg\);\}/.test(tlSrc)
       && /\.dsh-tdt-rec-depmark--more\{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;\}/.test(tlSrc)
@@ -1283,6 +1284,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /t\('listSectionDepends'\)/.test(tlSrc))
     // 时间范围控件（基础层）：宽度不许写死 ⇒ 走默认（inline-flex 刚好包住内容）
     const trSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
+    const tlListSrc = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
+    const prevSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-preview.tsx'), 'utf8')
+    const browserSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-browser.tsx'), 'utf8')
+    const dtSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'DateTime.tsx'), 'utf8')
     check('第九轮：时间范围控件**不写死宽度**（下拉 / 日期框 / 时分框都走基础层默认 ⇒ 刚好把字显示完）',
       !/width:\s*124/.test(trSrc) && !/width:\s*88/.test(trSrc) && !/width:\s*96/.test(trSrc)
       && /labels: calendarLabels, size, disabled: props\.disabled,/.test(trSrc)
@@ -1295,7 +1300,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && ((tkSrc.match(/\) 8%,transparent\);/g)) ?? []).length >= 4)
     check('第九轮：展开区前置格有**产出物图标**（在「查看会话」左边，上限 DEP_OUT_MAX = 5，右列不折行）',
       /const DEP_OUT_MAX = 5/.test(tlSrc)
-      && /depOuts\.slice\(0, DEP_OUT_MAX\)/.test(tlSrc)
+      && /depOuts\.slice\(0, depOuts\.length > DEP_OUT_MAX \? DEP_OUT_MAX - 1 : DEP_OUT_MAX\)/.test(tlSrc)
+      && /\}, '…'\)/.test(tlSrc) && /label: baseNameOf\(path\)/.test(tlSrc)
       && /className: 'dsh-tdt-rec-depright'/.test(tlSrc)
       && /\.dsh-tdt-rec-depright\{[^}]*white-space:nowrap/.test(tlSrc)
       && /disabled: !depCanOpen/.test(tlSrc)
@@ -1338,7 +1344,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && locSrc.includes("recTokenHint: 'token 消耗'"))
     check('第四轮：条目**删掉可见状态文字**（成败只由 5px 竖条 + 状态浅底表达），状态名改挂竖条悬停提示',
       !tlSrc.includes('dsh-tdt-rec-state') && !tlSrc.includes('dsh-tdt-rec-statedot')
-      && /title: statusLabel/.test(tlSrc) && /const statusLabel = statusTextOf\(row\.status, t\)/.test(tlSrc))
+      && /h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc) && !/title: statusLabel/.test(tlSrc))
     check('第四轮 / 第五轮：块内**左右两列**，右列单行控件组 = 产出物图标 → 查看会话按钮 → 展开箭头（基础层 IconButton，随展开翻转）',
       /className: 'dsh-tdt-rec-right'/.test(tlSrc) && /className: 'dsh-tdt-rec-left'/.test(tlSrc)
       && /IconChevronDownOutlineRegular/.test(tlSrc) && /h\(IconButton, \{/.test(tlSrc)
@@ -1428,6 +1434,36 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
 } finally {
   rmSync(root, { recursive: true, force: true })
 }
+    // 第十轮（2026-10-05）：三条**硬性规定**
+    const tlSrc10 = readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8')
+    const tlListSrc = readFileSync(join(process.cwd(), 'src', 'client', 'task-list.tsx'), 'utf8')
+    const prevSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-preview.tsx'), 'utf8')
+    const browserSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-browser.tsx'), 'utf8')
+    const dtSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'DateTime.tsx'), 'utf8')
+    const trSrc10 = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
+    const locSrc10 = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
+    check('第十轮·硬性规定：只给图标、没有文件名的地方 ⇒ 悬停必须显示**文件名（含后缀）**，走官方 Tooltip',
+      (tlSrc10.match(/label: baseNameOf\(path\)/g) ?? []).length === 2
+      && /label: baseNameOf\(output\)/.test(tlListSrc)
+      && /h\(Tooltip, \{[\s\S]{0,120}label: baseNameOf/.test(tlSrc10))
+    check('第十轮·硬性规定：加载**只复用页面右下角统一那一个 Loading**，任何地方都不显示加载文案',
+      /h\(Loading, \{ label: t\('recordsLoading'\), anchorId: PANEL_CONTENT_ID \}\)/.test(tlSrc10)
+      && !/dsh-tdt-rec-evempty' \}, t\('recordsLoading'\)/.test(tlSrc10)
+      && /h\(Loading, \{ label: t\('previewLoading'\) \}\)/.test(prevSrc)
+      && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(prevSrc) && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(browserSrc))
+    check('第十轮·硬性规定：悬停提示一律**官方 Tooltip**，不再用原生 title（状态名 / 备注 / 标题 / 信息行）',
+      /h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc10)
+      && /h\(Tooltip, \{ label: note, side: 'top' \}/.test(tlSrc10)
+      && /h\(Tooltip, \{ label, side: 'top' \}/.test(tlSrc10)
+      && /h\(Tooltip, \{ label: title, side: 'top' \}/.test(tlSrc10)
+      && !/title: statusLabel/.test(tlSrc10) && !/title: note'/.test(tlSrc10))
+    check('第十轮：时间控件**定死宽度**（日期框按 0000-00-00、时分框按 00:00、预设下拉按最长标签）',
+      dtSrc.includes('width: props.width ?? dateWidthOf(size)') && dtSrc.includes('width: props.width ?? timeWidthOf(size)')
+      && dtSrc.includes("fieldWidthOf('0000-00-00', size)") && dtSrc.includes("fieldWidthOf('00:00', size)")
+      && trSrc10.includes('width: selectWidth,') && trSrc10.includes('Math.max(...[labels.all, labels.custom')
+      && locSrc10.includes("trLastMonth: '上月'"))
+    check('第十轮：展开时头部高亮**紧贴**分隔线（容器 gap 归零，不留距离）',
+      /\.dsh-tdt-rec-item\{[^}]*gap:0;/.test(tlSrc10))
 
 // ── 9. 依赖判定（决策 33：上游最近一条必须 succeeded）──
 console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
@@ -2478,10 +2514,10 @@ console.log('\n[14] runtime-index')
     const primSrc = readFileSync(join(process.cwd(), 'src', 'client', 'primitives.d.ts'), 'utf8')
     check('图标：改用官方「播放三角」IconPlayOutlineRegular（用户点名闹钟不对，2026-10-03）',
       primSrc.includes('IconPlayOutlineRegular'))
-    const locSrc = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
+    const locSrc10 = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
     check('文案：确认框文案与中英双语键齐备',
-      locSrc.includes("cardRunNowDesc: '你确定要立即执行此任务吗？'")
-      && locSrc.includes("cardRunNowDesc: 'Run this task immediately?'"))
+      locSrc10.includes("cardRunNowDesc: '你确定要立即执行此任务吗？'")
+      && locSrc10.includes("cardRunNowDesc: 'Run this task immediately?'"))
   }
 
   store.close()

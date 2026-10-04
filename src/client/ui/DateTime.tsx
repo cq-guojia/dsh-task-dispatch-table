@@ -86,6 +86,24 @@ function buildCells(y: number, m: number): CalendarCell[] {
   return cells
 }
 
+/**
+ * 「定死」的字段宽度（用户 2026-10-05：宽度按**最宽的内容**定死，不随值跳动）。
+ * 估算：CJK / 全角按 1 字 = 1em，其余按 0.56em；再加控件固定留白（内边距 + 图标 + gap）。
+ * ⇒ 大多数调用点直接用默认即可；确需加宽 / 收窄的，自己在调用点传 `width` 覆盖。
+ */
+export function fieldWidthOf(text: string, size: 'sm' | 'md' | 'lg'): number {
+  const fontPx = size === 'sm' ? 12 : 13
+  const extra = size === 'sm' ? 34 : 38
+  let w = 0
+  for (const ch of text) w += /[⺀-鿿＀-￯]/.test(ch) ? fontPx : fontPx * 0.56
+  return Math.ceil(w + extra)
+}
+
+/** 日期框定宽 = 刚好放下 `0000-00-00`（0 / 9 是最宽的数字）。 */
+export const dateWidthOf = (size: 'sm' | 'md' | 'lg'): number => fieldWidthOf('0000-00-00', size)
+/** 时分框定宽 = 刚好放下 `00:00`。 */
+export const timeWidthOf = (size: 'sm' | 'md' | 'lg'): number => fieldWidthOf('00:00', size)
+
 /** 自绘日历弹层（锚点 = 统一字段壳按钮）。 */
 export function DateField(props: {
   value: string
@@ -155,7 +173,7 @@ export function DateField(props: {
     'aria-label': props.ariaLabel,
     title: props.title,
     onClick: () => { if (open) setOpen(false); else openPanel() },
-    style: { width: props.width },
+    style: { width: props.width ?? dateWidthOf(size) },
   },
     h('span', { className: `dsh-tdt-dtf__label${props.value === '' ? ' dsh-tdt-dtf__label--ph' : ''}` },
       props.value === '' ? props.placeholder : props.value),
@@ -284,7 +302,7 @@ export function TimeField(props: {
       setDraft(props.value)
       setOpen(true)
     },
-    style: { width: props.width } as CSSProperties,
+    style: { width: props.width ?? timeWidthOf(size) } as CSSProperties,
   },
     h('span', { className: 'dsh-tdt-dtf__icon' }, h(IconClockOutlineRegular, { size: 16 })),
     h('span', { className: `dsh-tdt-dtf__label${props.value === '' ? ' dsh-tdt-dtf__label--ph' : ''}` },

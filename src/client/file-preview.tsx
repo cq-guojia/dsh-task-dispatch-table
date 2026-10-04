@@ -18,7 +18,7 @@
 // `expected 3 business argument(s) plus an optional AbortSignal, got 2`（真机 2026-10-03）。
 import { Component, createElement as h, Fragment, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
-import { Button, IconButton, MarqueeText, Segmented } from './ui'
+import { Button, IconButton, Loading, MarqueeText, Segmented } from './ui'
 import {
   IconCheckOutlineRegular,
   IconCloseOutlineRegular,
@@ -401,7 +401,8 @@ export function BytesPreview(props: {
   }, [workspaceFiles, sessionId, path, mime, reloadNonce])
   if (err !== null) return h(ErrBox, { err, t })
   if (url === null) {
-    return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
+    // 硬性规定：加载**只复用页面右下角统一那一个 Loading**，此处不显示任何加载文案（空着即可）。
+    return h(Loading, { label: t('previewLoading') })
   }
   if (kind === 'pdf') {
     return h('div', { className: 'dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill' },
@@ -448,7 +449,8 @@ export function HtmlPreview(props: {
   }, [workspaceFiles, sessionId, path, reloadNonce])
   if (err !== null) return h(ErrBox, { err, t })
   if (doc === undefined) {
-    return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
+    // 硬性规定：加载**只复用页面右下角统一那一个 Loading**，此处不显示任何加载文案（空着即可）。
+    return h(Loading, { label: t('previewLoading') })
   }
   return h('div', { className: 'dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill' },
     h('iframe', {
@@ -564,7 +566,8 @@ export function TextPreview(props: {
   }
   if (err !== null) return h(ErrBox, { err, t })
   if (loading || text === null) {
-    return h('div', { className: 'dsh-tdt-sv-preview-body' }, h('div', { className: 'dsh-tdt-sv-hint' }, t('previewLoading')))
+    // 硬性规定：加载**只复用页面右下角统一那一个 Loading**，此处不显示任何加载文案（空着即可）。
+    return h(Loading, { label: t('previewLoading') })
   }
   const showSource = !markdown || sourceView
   // 截断横幅：**顶部**（官方位置，真机截图：橙字「文件过大，仅显示前 512KB」），在滚动区之外。

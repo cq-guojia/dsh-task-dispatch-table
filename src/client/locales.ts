@@ -797,7 +797,7 @@ export const zh: Record<LocaleKey, string> = {
   trThisWeek: '本周',
   trLastWeek: '上周',
   trThisMonth: '本月',
-  trLastMonth: '上个月',
+  trLastMonth: '上月',
   durSec: '{n} 秒',
   durMinSec: '{m} 分 {s} 秒',
   durHourMin: '{h} 小时 {m} 分',

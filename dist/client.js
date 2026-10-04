@@ -805,7 +805,7 @@ window.__ModuleLoader__.load({
 			trThisWeek: "本周",
 			trLastWeek: "上周",
 			trThisMonth: "本月",
-			trLastMonth: "上个月",
+			trLastMonth: "上月",
 			durSec: "{n} 秒",
 			durMinSec: "{m} 分 {s} 秒",
 			durHourMin: "{h} 小时 {m} 分",
@@ -2653,6 +2653,22 @@ body[data-ds-dark-theme]{
 			}
 			return cells;
 		}
+		/**
+		* 「定死」的字段宽度（用户 2026-10-05：宽度按**最宽的内容**定死，不随值跳动）。
+		* 估算：CJK / 全角按 1 字 = 1em，其余按 0.56em；再加控件固定留白（内边距 + 图标 + gap）。
+		* ⇒ 大多数调用点直接用默认即可；确需加宽 / 收窄的，自己在调用点传 `width` 覆盖。
+		*/
+		function fieldWidthOf(text, size) {
+			const fontPx = size === "sm" ? 12 : 13;
+			const extra = size === "sm" ? 34 : 38;
+			let w = 0;
+			for (const ch of text) w += /[⺀-鿿＀-￯]/.test(ch) ? fontPx : fontPx * .56;
+			return Math.ceil(w + extra);
+		}
+		/** 日期框定宽 = 刚好放下 `0000-00-00`（0 / 9 是最宽的数字）。 */
+		const dateWidthOf = (size) => fieldWidthOf("0000-00-00", size);
+		/** 时分框定宽 = 刚好放下 `00:00`。 */
+		const timeWidthOf = (size) => fieldWidthOf("00:00", size);
 		/** 自绘日历弹层（锚点 = 统一字段壳按钮）。 */
 		function DateField(props) {
 			ensureControlsStyle();
@@ -2735,7 +2751,7 @@ body[data-ds-dark-theme]{
 					if (open) setOpen(false);
 					else openPanel();
 				},
-				style: { width: props.width }
+				style: { width: props.width ?? dateWidthOf(size) }
 			}, (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value), (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
 			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
 				ref: panelRef,
@@ -2851,7 +2867,7 @@ body[data-ds-dark-theme]{
 					setDraft(props.value);
 					setOpen(true);
 				},
-				style: { width: props.width }
+				style: { width: props.width ?? timeWidthOf(size) }
 			}, (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value));
 			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
 				ref: panelRef,
@@ -3123,6 +3139,11 @@ body[data-ds-dark-theme]{
 					disabled: props.disabled
 				}) : null);
 			};
+			const selectWidth = (0, react$1.useMemo)(() => Math.max(...[
+				labels.all,
+				labels.custom,
+				...Object.values(labels.presets)
+			].map((text) => fieldWidthOf(text, size))), [labels, size]);
 			return (0, react$1.createElement)("div", { style: {
 				display: "inline-flex",
 				alignItems: "center",
@@ -3149,6 +3170,7 @@ body[data-ds-dark-theme]{
 				emptyLabel: labels.all,
 				ariaLabel: labels.all,
 				size,
+				width: selectWidth,
 				disabled: props.disabled
 			}));
 		}
@@ -52926,7 +52948,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				err,
 				t
 			});
-			if (url === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			if (url === null) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
 			if (kind === "pdf") return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
 				className: "dsh-tdt-sv-preview-pdf",
 				src: url,
@@ -52984,7 +53006,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				err,
 				t
 			});
-			if (doc === void 0) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			if (doc === void 0) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
 			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
 				className: "dsh-tdt-sv-preview-html",
 				name: "dsh-sidebar-html-preview",
@@ -53097,7 +53119,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				err,
 				t
 			});
-			if (loading || text === null) return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			if (loading || text === null) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
 			const showSource = !markdown || sourceView;
 			const banner = truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-truncated" }, t("previewTruncated", { size: t("previewTruncatedSize") })) : null;
 			const body = (0, react$1.createElement)("div", { className: showSource && !markdown ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-body-code" : "dsh-tdt-sv-preview-body" }, showSource ? (0, react$1.createElement)("div", {
@@ -53690,7 +53712,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							event.stopPropagation();
 							toggleDir(childPath);
 						}
-					}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-loading" }, t("previewLoading")) : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
+					}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }))), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name)), isOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? (0, react$1.createElement)(Loading, { label: t("previewLoading") }) : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
 				});
 			};
 			const rootAbs = workspaceRoots.get(sessionId);
@@ -53741,7 +53763,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: goBack
 			}, t("explorerBack"))) : null);
 			else if (listing !== null) body = listing.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
-			else body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("previewLoading")));
+			else body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)(Loading, { label: t("previewLoading") }));
 			return (0, react$1.createElement)("aside", {
 				className: dock === true ? "dsh-tdt-sv-preview dsh-tdt-sv-preview-dock" : "dsh-tdt-sv-preview",
 				"data-preview-dock": dock === true ? true : void 0,
@@ -56864,7 +56886,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    ⚠️ 三层结构照任务卡片（用户 2026-10-04：「参考前面配置任务的展开」）：
      容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
    容器**无 padding、无 cursor**：留白落在头部（这样 hover 高亮正好顶到块边，与卡片主行同观感）。 */
-.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:var(--tdt-space-1);
+/* ⚠️ gap 必须是 0：展开时头部的高亮区要**紧贴**下面那条分隔线（用户 2026-10-05：中间别留距离）。 */
+.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;
   background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
 /* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
@@ -57124,26 +57147,35 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onToggle(row.id);
 			};
 			/** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
-			const field = (icon, text, title) => text === "" ? null : (0, react$1.createElement)("span", {
-				className: "dsh-tdt-rec-field",
-				title
-			}, icon, text);
+			/**
+			* 信息行里的一段（可带图标）；值空则整段不出。
+			* 悬停提示走**官方 Tooltip**（用户 2026-10-05：原生 title 太慢，一律改用官方件）——
+			* 这里的 `span` 是真 DOM，Tooltip 挂得上 ref。
+			*/
+			const field = (icon, text, title) => text === "" ? null : title === void 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field" }, icon, text) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
+				side: "top"
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field" }, icon, text));
 			return (0, react$1.createElement)("div", { className: `dsh-tdt-rec-item ${toneClassOf(tone)}` }, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-rec-main dsh-tdt-rec-head",
 				onClick: onHeadClick
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: statusLabel,
+				side: "top"
 			}, (0, react$1.createElement)("span", {
 				className: `dsh-tdt-rec-bar${running ? " dsh-tdt-rec-bar--run" : ""}`,
-				title: statusLabel,
 				"aria-hidden": true
-			}), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r1" }, (0, react$1.createElement)(MarqueeText, {
+			})), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r1" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label,
+				side: "top"
+			}, (0, react$1.createElement)("span", { style: {
+				flex: "0 1 auto",
+				minWidth: 0,
+				display: "flex"
+			} }, (0, react$1.createElement)(MarqueeText, {
 				text: label,
-				title: label,
-				className: "dsh-tdt-rec-title dsh-tdt-ellipsis",
-				style: {
-					flex: "0 1 auto",
-					minWidth: 0
-				}
-			}), deps.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmarks" }, deps.slice(0, MAX_DEPMARKS).map((dep, index) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				className: "dsh-tdt-rec-title dsh-tdt-ellipsis"
+			}))), deps.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmarks" }, deps.slice(0, MAX_DEPMARKS).map((dep, index) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				key: `${dep.task}#${dep.instanceId}`,
 				label: tt("recordsDepTip", {
 					n: String(index + 1),
@@ -57160,17 +57192,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					output: tokenPart(row.token_out),
 					cache: tokenPart(row.token_in_cache)
 				})}`
-			}, formatTokenCount(tokens)) : null), note === "" ? null : (0, react$1.createElement)("div", {
-				className: "dsh-tdt-rec-note dsh-tdt-ellipsis",
-				title: note
-			}, `${t("colNote")}：${note}`)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", {
-				className: "dsh-tdt-rec-chiprow",
-				title: t("colOutputs")
-			}, outputs.slice(0, 3).map((path) => (0, react$1.createElement)("button", {
+			}, formatTokenCount(tokens)) : null), note === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: note,
+				side: "top"
+			}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				key: path,
+				label: baseNameOf$1(path),
+				side: "top"
+			}, (0, react$1.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-chip",
-				title: path,
 				disabled: !canOpenFile,
 				onClick: (event) => {
 					event.stopPropagation();
@@ -57179,10 +57210,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path,
 				size: 16
-			}))), outputs.length > 3 ? (0, react$1.createElement)("button", {
+			})))), outputs.length > 3 ? (0, react$1.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-chip dsh-tdt-chip--label",
-				title: t("colOutputs"),
 				onClick: (event) => {
 					event.stopPropagation();
 					onToggle(row.id);
@@ -57190,7 +57220,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, `+${outputs.length - 3}`) : null), canOpenSession ? (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
-				title: t("viewSession"),
 				onClick: (event) => {
 					event.stopPropagation();
 					openSession(sid);
@@ -57234,20 +57263,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return (0, react$1.createElement)("div", {
 					key: `${dep.task}#${dep.instanceId}`,
 					className: "dsh-tdt-rec-dep"
-				}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmid" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depname" }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)), (0, react$1.createElement)("span", {
-					className: "dsh-tdt-ellipsis",
-					title: depTitleOf(dep.task)
-				}, depTitleOf(dep.task))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)("span", {
-					className: "dsh-tdt-ellipsis",
-					title: stampOf(dep.scheduledAt)
-				}, tt("recordsDepFrom", { time: stampOf(dep.scheduledAt) })))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depright" }, depOuts.length === 0 ? null : (0, react$1.createElement)("span", {
+				}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmid" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depname" }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: depTitleOf(dep.task),
+					side: "top"
+				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, depTitleOf(dep.task)))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: stampOf(dep.scheduledAt),
+					side: "top"
+				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, tt("recordsDepFrom", { time: stampOf(dep.scheduledAt) }))))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depright" }, depOuts.length === 0 ? null : (0, react$1.createElement)("span", {
 					className: "dsh-tdt-rec-chiprow",
 					title: t("colOutputs")
-				}, depOuts.slice(0, DEP_OUT_MAX).map((path) => (0, react$1.createElement)("button", {
+				}, depOuts.slice(0, depOuts.length > DEP_OUT_MAX ? 4 : DEP_OUT_MAX).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					key: path,
+					label: baseNameOf$1(path),
+					side: "top"
+				}, (0, react$1.createElement)("button", {
 					type: "button",
 					className: "dsh-tdt-chip",
-					title: path,
 					disabled: !depCanOpen,
 					onClick: (event) => {
 						event.stopPropagation();
@@ -57256,26 +57287,27 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 16
-				}))), depOuts.length > DEP_OUT_MAX ? (0, react$1.createElement)("button", {
+				})))), depOuts.length > DEP_OUT_MAX ? (0, react$1.createElement)("button", {
 					type: "button",
 					className: "dsh-tdt-chip dsh-tdt-chip--label",
-					title: t("viewSession"),
 					"aria-label": t("viewSession"),
 					disabled: !depHasSid,
 					onClick: (event) => {
 						event.stopPropagation();
 						if (depHasSid) openSession(depSid);
 					}
-				}, `+${depOuts.length - DEP_OUT_MAX}`) : null), depHasSid ? (0, react$1.createElement)(Button$2, {
+				}, "…") : null), depHasSid ? (0, react$1.createElement)(Button$2, {
 					variant: "ghost",
 					size: "sm",
 					className: "dsh-tdt-btn--link",
-					title: t("viewSession"),
 					onClick: () => {
 						openSession(depSid);
 					}
 				}, t("viewSession")) : null));
-			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("recordsLoading")) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
+			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react$1.createElement)(Loading, {
+				label: t("recordsLoading"),
+				anchorId: PANEL_CONTENT_ID
+			}) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
 			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
@@ -58968,10 +59000,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						whiteSpace: "nowrap",
 						color: "var(--tdt-fg-3)"
 					}
-				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)("button", {
+				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					key: output,
+					label: baseNameOf(output),
+					side: "top"
+				}, (0, react$1.createElement)("button", {
 					type: "button",
-					title: output,
 					className: "dsh-tdt-chip",
 					style: { cursor: canOpenFile ? "pointer" : "default" },
 					onClick: (event) => {
@@ -58981,9 +59015,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: output,
 					size: 16
-				}))), outputs.length > 3 ? (0, react$1.createElement)("button", {
+				})))), outputs.length > 3 ? (0, react$1.createElement)("button", {
 					type: "button",
-					title: t("viewSession"),
 					"aria-label": t("viewSession"),
 					className: "dsh-tdt-chip dsh-tdt-chip--label",
 					onClick: (event) => {

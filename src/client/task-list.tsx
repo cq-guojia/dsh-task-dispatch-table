@@ -1438,17 +1438,22 @@ function TaskExpandPanel(props: {
                     outputs.length === 0
                       ? null
                       : h('span', { style: outputCellStyle },
-                        outputs.slice(0, 3).map(output => h('button', {
-                          key: output, type: 'button', title: output, className: 'dsh-tdt-chip',
+                        // 硬性规定：只给图标、没有文件名 ⇒ 悬停**必须**显示文件名（含后缀），走官方 Tooltip。
+                        outputs.slice(0, 3).map(output => h(Tooltip, {
+                          key: output,
+                          label: baseNameOf(output),
+                          side: 'top',
+                        }, h('button', {
+                          type: 'button', className: 'dsh-tdt-chip',
                           style: { cursor: canOpenFile ? 'pointer' : 'default' },
                           onClick: (event: { stopPropagation(): void }) => {
                             event.stopPropagation()
                             if (canOpenFile && openFile !== undefined && sid !== null) openFile(sid, output)
                           },
-                        }, h(FileTypeIcon, { path: output, size: 16 }))),
+                        }, h(FileTypeIcon, { path: output, size: 16 })))),
                         outputs.length > 3
                           ? h('button', {
-                            type: 'button', title: t('viewSession'), 'aria-label': t('viewSession'),
+                            type: 'button', 'aria-label': t('viewSession'),
                             className: 'dsh-tdt-chip dsh-tdt-chip--label',
                             onClick: (event: { stopPropagation(): void }) => {
                               event.stopPropagation()
