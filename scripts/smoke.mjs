@@ -1154,7 +1154,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && !/position:sticky/.test(tlSrc) && !tlSrc.includes('--tdt-z-sticky'))
     check('块皮肤 = **状态色浅底**（色调类给局部变量）+ **5px 方角通高竖条**贴左缘 + 块间 **4px**',
       /\.dsh-tdt-rec-item\{[^}]*background:var\(--rec-tone-soft,transparent\)/.test(tlSrc)
-      && /\.dsh-tdt-rec-bar\{[^}]*left:0;top:0;bottom:0;width:5px/.test(tlSrc)
+      && /\.dsh-tdt-rec-bar\{[^}]*left:0;top:0;bottom:0;width:var\(--rec-bar-w,5px\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-item\{[^}]*--rec-bar-w:5px/.test(tlSrc)
       && !/\.dsh-tdt-rec-bar\{[^}]*border-radius/.test(tlSrc)
       && /--rec-tone-soft:var\(--tdt-success-soft\)/.test(tlSrc)
       && /\.dsh-tdt-rec-items\{[^}]*gap:var\(--tdt-space-1\)/.test(tlSrc))
@@ -1352,8 +1353,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       // ⚠️ 2026-10-04 第七轮：这一行**不能再要求「全仓没有 dsh-tdt-btn--link」**——
       // 前置格里那个「查看会话」已按用户要求改成链接款；这里只钉**条目右列**这个仍是描边款。
       && /variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc))
-    check('第四轮 / 第六轮：留白落在**头部**上（上/下/右 12、左 16；容器无 padding ⇒ hover 高亮顶到块边）',
-      /\.dsh-tdt-rec-main\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-4\)/.test(tlSrc)
+    check('第四轮 / 第六轮：留白落在**头部**上（上/下/右 12、左 = 16 + 竖条宽；容器无 padding ⇒ hover 高亮顶到块边）',
+      /\.dsh-tdt-rec-main\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) calc\(var\(--tdt-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc)
       && !/\.dsh-tdt-rec-item\{[^}]*padding:/.test(tlSrc))
     check('第四轮：信息行 = **固定单行 + 溢出省略**，三个字段各带官方近似图标，Token 从右下角迁到行尾',
       /\.dsh-tdt-rec-r2\{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis/.test(tlSrc)
@@ -1475,18 +1476,24 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /\.dsh-tdt-rec-tag\{[^}]*font-size:var\(--tdt-font-xs\)/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag--(bad|warn|busy|neutral)\{/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag\{[^}]*min-width/.test(tlSrc10))
-    check('第十一轮：状态标签的**高度 / 圆角与「查看会话」按钮逐像素对齐**（同吃 --tdt-control-h-sm 与 --tdt-radius-md）',
-      /\.dsh-tdt-rec-tag\{[^}]*height:var\(--tdt-control-h-sm\)/.test(tlSrc10)
+    check('第十一轮：状态标签**高度比「查看会话」按钮矮 2px**（同令牌 --tdt-control-h-sm，减 2）、圆角同档 --tdt-radius-md',
+      /\.dsh-tdt-rec-tag\{[^}]*height:calc\(var\(--tdt-control-h-sm\) - 2px\)/.test(tlSrc10)
       && /\.dsh-tdt-rec-tag\{[^}]*border-radius:var\(--tdt-radius-md\)/.test(tlSrc10)
+      && !/\.dsh-tdt-rec-tag\{[^}]*height:var\(--tdt-control-h-sm\);/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag\{[^}]*height:auto/.test(tlSrc10)
       && !/\.dsh-tdt-rec-tag\{[^}]*border-radius:var\(--tdt-radius-sm\)/.test(tlSrc10)
       && /\.dsh-tdt-btn\{[^}]*border-radius:var\(--tdt-radius-md\)/.test(ctrlSrc)
       && /\.dsh-tdt-btn--sm\{[^}]*height:var\(--tdt-control-h-sm\)/.test(ctrlSrc)
       && tlSrc10.indexOf("}, t('viewSession'))") > 0)
+    check('第十一轮：条目左内边距**从竖条右缘起算**（竖条宽度 --rec-bar-w 计入 padding-left）',
+      /\.dsh-tdt-rec-item\{[^}]*--rec-bar-w:5px/.test(tlSrc10)
+      && /\.dsh-tdt-rec-bar\{[^}]*width:var\(--rec-bar-w,5px\)/.test(tlSrc10)
+      && /\.dsh-tdt-rec-main\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) calc\(var\(--tdt-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc10)
+      && /\.dsh-tdt-rec-exp\{[^}]*calc\(var\(--tdt-space-4\) \+ var\(--rec-bar-w,5px\)\)/.test(tlSrc10))
     check('第十一轮：执行记录页过滤行的分段控件与「任务配置」页**同一皮肤**（走默认变体：有外描边；不再 inset）',
       tlSrc10.includes("h(Segmented<StatusBucket | 'all'>") && !/variant: 'inset'/.test(tlSrc10)
-      && /h\(Segmented<'all' \| 'enabled' \| 'disabled' \| 'abnormal'>[\s\S]{0,220}items:/.test(tlListSrc)
-      && !/h\(Segmented<'all' \| 'enabled' \| 'disabled' \| 'abnormal'>[\s\S]{0,220}variant:/.test(tlListSrc))
+      && tlListSrc.includes("h(Segmented<'all' | 'enabled' | 'disabled' | 'abnormal'>")
+      && !tlListSrc.slice(tlListSrc.indexOf("h(Segmented<'all' | 'enabled' | 'disabled' | 'abnormal'>"), 320).includes('variant:'))
     check('第十轮：备注**不再挂气泡**（备注已在下方那行显示 ⇒ 悬停不再弹），标签也不再弹备注',
       !/h\(Tooltip, \{ label: note, side: 'top' \}/.test(tlSrc10)
       && !/statusTag\.tone === 'bad' \|\| note === ''/.test(tlSrc10)

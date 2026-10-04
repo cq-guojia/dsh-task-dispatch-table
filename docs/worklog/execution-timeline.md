@@ -714,3 +714,14 @@ typecheck / build 绿、冒烟 **592/0**（断言同步改钉：短名 / 自适�
 3. **过滤行分段控件**：与「任务配置」页那排分组按钮**统一皮肤** ⇒ 变体从 `inset` 改回**默认档**（有外描边）。
 
 typecheck / build 绿、冒烟 **598/0**（新增 / 改写 4 条断言：不许新建 Loading、标签实底反色字、分段控件同皮肤）。
+
+### 17.7 后续更正（2026-10-05 同一天第三轮：左竖条内边距 + 标签矮 2px）
+
+1. **左竖条宽度计入左边距**（用户：「每一条记录最左边那根线，左边的内间距要从竖条**右缘**起算」）。
+   抽 `--rec-bar-w:5px` 单源：`.dsh-tdt-rec-item{--rec-bar-w:5px}`、`.dsh-tdt-rec-bar{width:var(--rec-bar-w,5px)}`，
+   头部 `.dsh-tdt-rec-main` 与展开区 `.dsh-tdt-rec-exp` 的左 padding 都改成
+   `calc(var(--tdt-space-4) + var(--rec-bar-w,5px))`（16 + 5 = 21px）—— 内容不再压在竖条上、也不离左边太近。
+2. **标签总高减 2px**（用户：「不要和按钮一模一样，总高度减 2」）。由固定 `height:var(--tdt-control-h-sm)`（24px）
+   改为 `height:calc(var(--tdt-control-h-sm) - 2px)`（22px）；padding / 圆角 / 字号**其他不变**。
+
+typecheck / build 绿、冒烟 **600/0**（新增 / 改写断言：左竖条 + 标签矮 2px）。
