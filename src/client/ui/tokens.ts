@@ -82,10 +82,11 @@ body{
   /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
      故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
   --tdt-on-signal:#fff;
-  /* 语义色**浅底**（8% 透明）：状态色系的「一块底色」——执行记录页每条流水账的块底就是它
+  /* 语义色**浅底**：状态色系的「一块底色」——执行记录页每条流水账的块底就是它
      （用户 2026-10-04：正常态给同色系很浅的透明底、失败用红底透出来）。
-     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，**暗色主题下自动成立**
-     （深色底透出来、上面仍是状态色），不必在 dark 段再覆盖一遍。
+     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，主题一换自动成立。
+     ⚠️ **深色下要更淡**：用户 2026-10-04「深色风格的绿色和红色好像都有点深」⇒ dark 段
+     把这四条压到 5%（更贴近面板底、存在感更弱）；浅色段维持 8%。两端各自给值，不共用一条曲线。
      命名收在 tokens.ts 单点（本仓硬规矩：业务文件不许自造 --tdt-*）。 */
   --tdt-success-soft:color-mix(in srgb,var(--tdt-success) 8%,transparent);
   --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 8%,transparent);
@@ -174,5 +175,11 @@ body[data-ds-dark-theme]{
   --tdt-open-bg:rgba(96,165,250,.18);
   --tdt-open-bg-soft:rgba(96,165,250,.08);
   --tdt-card-hover:rgba(96,165,250,.13);
+  /* 语义色**浅底**（深色版）：用户嫌深色的绿 / 红「有点深」⇒ 压到 **5%**（浅色段是 8%），
+     更贴近面板底色、存在感更弱；块底与状态色竖条仍同源（竖条是实色，不受这条影响）。 */
+  --tdt-success-soft:color-mix(in srgb,var(--tdt-success) 5%,transparent);
+  --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 5%,transparent);
+  --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 5%,transparent);
+  --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 5%,transparent);
 }
 `

@@ -106,13 +106,14 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
     const time = timeOf(raw)
     const hint = which === 'from' ? labels.from : labels.to
     return h(Fragment, null,
-      // 定长（用户 2026-10-02）：宽度不随值变化——选了时分也不跳。
+      // 宽度**不写死**：走基础层字段壳的默认（inline-flex ⇒ 刚好包住内容）。
+      // （用户 2026-10-04：时间控件别留多余长度，默认就该「刚好把这几个字显示完，不要长也不要短」。）
       h(DateField, {
         value: date,
         onChange: (next: string) => { merge({ [which]: join(which, next, time) } as Partial<TimeRangeValue>) },
         placeholder: hint,
         ariaLabel: hint,
-        labels: calendarLabels, size, disabled: props.disabled, width: 124,
+        labels: calendarLabels, size, disabled: props.disabled,
       }),
       // ④ 有小时分钟就**跟在那两个框后面**。
       withTime
@@ -121,7 +122,7 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
           onChange: (next: string) => { merge({ [which]: join(which, date === '' ? todayIso() : date, next) } as Partial<TimeRangeValue>) },
           placeholder: 'HH:mm',
           ariaLabel: hint,
-          labels: timeLabels, size, disabled: props.disabled, width: 88,
+          labels: timeLabels, size, disabled: props.disabled,
         })
         : null,
     )
@@ -146,7 +147,6 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
       emptyLabel: labels.all,
       ariaLabel: labels.all,
       size,
-      width: 96,
       disabled: props.disabled,
     }),
   )

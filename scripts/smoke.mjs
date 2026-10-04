@@ -1253,12 +1253,12 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     // 折叠态 / 展开区那两段的**局部切片**（反断用）：只看这一段，免得误伤别处同名写法
     // （例如头部右列那个仍是 outline 的「查看会话」按钮）。
     const depArea = /deps\.map\(\(dep, index\)[\s\S]*?\n\s*eventsError !== null/.exec(tlSrc)?.[0] ?? ''
-    check('第八轮：折叠态前置圈码 = **浅色实心正圆**（固定宽高 + 50% 圆角；反向：无 min-width / 无横向 padding / 无描边）',
+    check('第八/九轮：折叠态前置圈码 = **浅色实心正圆**（20×20 + 50% 圆角 + min/宽高/aspect-ratio 三道兜底；反向：无横向 padding / 无描边）',
       /const MAX_DEPMARKS = 20/.test(tlSrc) && /deps\.slice\(0, MAX_DEPMARKS\)/.test(tlSrc)
       && /className: 'dsh-tdt-rec-depmarks'/.test(tlSrc)
       && /\.dsh-tdt-rec-depmark\{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;/.test(tlSrc)
-      && /width:18px;height:18px;padding:0;border:none;border-radius:50%;background:var\(--tdt-chip-bg\)/.test(tlSrc)
-      && !/\.dsh-tdt-rec-depmark\{[^}]*min-width:/.test(tlSrc)
+      && /width:20px;height:20px;min-width:20px;min-height:20px;aspect-ratio:1\/1;padding:0;border:none;border-radius:50%;/.test(tlSrc)
+      && /min-width:20px;min-height:20px;aspect-ratio:1\/1/.test(tlSrc)
       && !/\.dsh-tdt-rec-depmark\{[^}]*padding:0 3px/.test(tlSrc)
       && !/\.dsh-tdt-rec-depmark\{[^}]*border:1px solid/.test(tlSrc))
     check('第八轮：圈码提示改**官方 Tooltip**（与新增窗口问号同一件；反向：折叠态不再挂原生 title、展开区那枚不挂）',
@@ -1269,7 +1269,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && !/Tooltip/.test(depArea))
     check('第八轮：圈码悬停**只加深底色**（浅底实心圆不描边），溢出项「+N」走胶囊档并同挂官方气泡',
       /\.dsh-tdt-rec-depmark:hover\{background:var\(--tdt-chip-bg-hover\);color:var\(--tdt-fg\);\}/.test(tlSrc)
-      && /\.dsh-tdt-rec-depmark--more\{width:auto;padding:0 6px;border-radius:999px;\}/.test(tlSrc)
+      && /\.dsh-tdt-rec-depmark--more\{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;\}/.test(tlSrc)
       && /dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more/.test(tlSrc)
       && /h\(Tooltip, \{ label: t\('listSectionDepends'\), side: 'top' \},/.test(tlSrc)
       && !/dsh-tdt-rec-tip/.test(tlSrc))
@@ -1278,9 +1278,28 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /\.dsh-tdt-rec-depgrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(tlSrc)
       && /\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;align-items:center;/.test(tlSrc)
       && /className: 'dsh-tdt-rec-depmid'/.test(tlSrc)
-      && /dep\.sessionId === null \|\| dep\.sessionId === ''/.test(tlSrc)
-      && /openSession\(dep\.sessionId as string\)/.test(tlSrc)
+      && /const depHasSid = depSid !== null && depSid !== ''/.test(tlSrc)
+      && /openSession\(depSid as string\)/.test(tlSrc)
       && /t\('listSectionDepends'\)/.test(tlSrc))
+    // 时间范围控件（基础层）：宽度不许写死 ⇒ 走默认（inline-flex 刚好包住内容）
+    const trSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TimeRange.tsx'), 'utf8')
+    check('第九轮：时间范围控件**不写死宽度**（下拉 / 日期框 / 时分框都走基础层默认 ⇒ 刚好把字显示完）',
+      !/width:\s*124/.test(trSrc) && !/width:\s*88/.test(trSrc) && !/width:\s*96/.test(trSrc)
+      && /labels: calendarLabels, size, disabled: props\.disabled,/.test(trSrc)
+      && /labels: timeLabels, size, disabled: props\.disabled,/.test(trSrc))
+    check('第九轮：加载**只用页面右下角统一的那一个 Loading**（反向：页脚不再自己显示加载文案）',
+      /loading \? h\(Loading, \{ label: t\('recordsLoading'\) \}\) : null,/.test(tlSrc)
+      && !/footerHint[\s\S]{0,240}t\('recordsLoading'\)/.test(tlSrc))
+    check('第九轮：深色主题下状态浅底压到 **5%**（浅色仍是 8% ⇒ 两端各自给值）',
+      ((tkSrc.match(/--tdt-(?:success|warning|danger|business)-soft:color-mix\(in srgb,var\(--tdt-(?:success|warning|danger|business)\) 5%,transparent\)/g)) ?? []).length === 4
+      && ((tkSrc.match(/\) 8%,transparent\);/g)) ?? []).length >= 4)
+    check('第九轮：展开区前置格有**产出物图标**（在「查看会话」左边，上限 DEP_OUT_MAX = 5，右列不折行）',
+      /const DEP_OUT_MAX = 5/.test(tlSrc)
+      && /depOuts\.slice\(0, DEP_OUT_MAX\)/.test(tlSrc)
+      && /className: 'dsh-tdt-rec-depright'/.test(tlSrc)
+      && /\.dsh-tdt-rec-depright\{[^}]*white-space:nowrap/.test(tlSrc)
+      && /disabled: !depCanOpen/.test(tlSrc)
+      && /className: 'dsh-tdt-chip dsh-tdt-chip--label'/.test(tlSrc))
     check('第七轮：前置格时间改**书面表达 + 全量长格式**「执行于 2026-10-03 23:50:12」（反向：不再走跨天口语措辞）',
       /tt\('recordsDepFrom', \{ time: stampOf\(dep\.scheduledAt\) \}\)/.test(tlSrc)
       && !/time: clockLabelOf\(dep\.scheduledAt/.test(tlSrc)

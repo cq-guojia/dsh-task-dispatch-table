@@ -70,11 +70,19 @@ type StatusBucket = '' | 'succeeded' | 'failed' | 'running'
  * ——「不要用文字形式的圈数字，我不知道你用的是什么文字」。字符圈码的外形由**字体**决定
  * （不同平台的大小 / 基线 / 粗细都不一样，且本质是「文字」而不是「图形」），所以改成
  * **自绘圆徽标**：元素里只放普通阿拉伯数字，圆交给 CSS（`.dsh-tdt-rec-depmark`）——
- * 固定 18×18 + `border-radius:50%` + 浅色实心 + 无描边 ⇒ **几位都是正圆**（2026-10-04 第八轮定稿）。
+ * 固定 **20×20**（`min-width`/`min-height`/`aspect-ratio` 三道兜底，谁也别想把它拉扁）+ `border-radius:50%`
+ * + 浅色实心 + 无描边 ⇒ **几位都是正圆**（2026-10-04 第八轮定稿；放大到 20 是用户要求：
+ * 「还是椭圆，圆不圆一眼能看出」，实测 20px 圆配 11px 两位数字尚余 5px）。
  * ⚠️ 第七轮那版用 `min-width` + 横向 padding + `999px` 圆角，两位数字会被**撑成胶囊**，已废弃。
  * ⇒ 常量表与 `circledOf` 一并删除。
  */
 const MAX_DEPMARKS = 20
+
+/**
+ * 展开区前置格里**产出物图标**的上限（用户 2026-10-04：「任务执行列表里产出基本上最多还是 5 个左右，
+ * 你看一下这儿最多能排到多少个，排出来我看一眼」）⇒ 定 **5** 个 + 超出收 `+N`（点 `+N` 进那次上游的会话看全量）。
+ */
+const DEP_OUT_MAX = 5
 
 // ── 样式（走基础层注入器，不自建 <style>；只消费 var(--tdt-*)，间距/时长全走 token）──
 const RECORDS_CSS = `
@@ -151,16 +159,19 @@ const RECORDS_CSS = `
       两位数字会把圆**撑成胶囊**（用户 2026-10-04：「一定要是个圆的」「你要确定两位能显示成圆的」
       「现在这个太丑了」）。现在固定 width 与 height 相等 + border-radius:50% ⇒ 几位都是正圆。
    📏 尺寸依据（**实测**，非估计）：用容器里最宽的常见 UI 字体 DejaVu Sans 渲染，11px 下两位数字
-      宽 15px，18px 圆尚余 3px；宿主界面字体（本插件**未引入任何外部字体**，文字继承宿主）比它更窄。
+      宽 15px，**20px 圆尚余 5px**；宿主界面字体（本插件**未引入任何外部字体**，文字继承宿主）比它更窄。
+      另加 min-width / min-height / aspect-ratio 三道兜底 ⇒ 不论父级怎么排，它都是正圆。
    🎨 底色走 --tdt-chip-bg（暗色主题自动换成白色 8%，与产出物 chip 同源）；悬停**只加深底色**、
       不再动描边（用户明确「不要描边，就要浅色实心圆」）。提示走官方 Tooltip（见折叠态渲染处）。 */
 .dsh-tdt-rec-depmark{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  width:18px;height:18px;padding:0;border:none;border-radius:50%;background:var(--tdt-chip-bg);
+  width:20px;height:20px;min-width:20px;min-height:20px;aspect-ratio:1/1;padding:0;border:none;border-radius:50%;
+  background:var(--tdt-chip-bg);
   color:var(--tdt-fg-2);font-size:var(--tdt-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
   transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
 .dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);color:var(--tdt-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
-.dsh-tdt-rec-depmark--more{width:auto;padding:0 6px;border-radius:999px;}
+/* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
+.dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
@@ -185,7 +196,10 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-dep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
   column-gap:var(--tdt-space-3);min-width:0;
   padding:var(--tdt-space-2) var(--tdt-space-3);border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);}
-.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;}
+.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;overflow:hidden;}
+/* 前置格**右列**：产出物图标 → 查看会话。**整列不折行**（用户 2026-10-04：页面拉伸时不要把内容
+   压成折行）⇒ 挤的时候先让左列的名字 / 时间省略，右列控件始终完整可见。 */
+.dsh-tdt-rec-depright{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;white-space:nowrap;}
 .dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
   font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
 .dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
@@ -540,37 +554,79 @@ const RecordItem = memo(function RecordItem(props: {
           : h('div', { className: 'dsh-tdt-rec-depsec' },
             h('div', { className: 'dsh-tdt-rec-evtitle' }, t('listSectionDepends')),
             h('div', { className: 'dsh-tdt-rec-depgrid' },
-              deps.map((dep, index) => h('div', {
-                key: `${dep.task}#${dep.instanceId}`,
-                className: 'dsh-tdt-rec-dep',
-              },
-                h('div', { className: 'dsh-tdt-rec-depmid' },
-                  h('div', { className: 'dsh-tdt-rec-depname' },
-                    h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)),
-                    h('span', { className: 'dsh-tdt-ellipsis', title: depTitleOf(dep.task) }, depTitleOf(dep.task)),
+              deps.map((dep, index) => {
+                // 上游那次的**产出物**：图标排在「查看会话」**左边**，一点就打开预览
+                // （用户 2026-10-04：「产出物的图标要排在方便查看的位置，最好是能一点就打开」）。
+                // 上限 `DEP_OUT_MAX`（参考「任务列表里产出通常 5 个左右」）；超出收 `+N`（点它进会话看全量）。
+                // ⚠️ 快照解析器给的就是**数组**（不是 JSON 串），别再走 outputsOf 解析一遍。
+                const depOuts = Array.isArray(dep.outputs) ? dep.outputs : []
+                const depSid = dep.sessionId
+                const depHasSid = depSid !== null && depSid !== ''
+                const depCanOpen = openFile !== undefined && depHasSid
+                return h('div', {
+                  key: `${dep.task}#${dep.instanceId}`,
+                  className: 'dsh-tdt-rec-dep',
+                },
+                  h('div', { className: 'dsh-tdt-rec-depmid' },
+                    h('div', { className: 'dsh-tdt-rec-depname' },
+                      h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)),
+                      h('span', { className: 'dsh-tdt-ellipsis', title: depTitleOf(dep.task) }, depTitleOf(dep.task)),
+                    ),
+                    h('div', { className: 'dsh-tdt-rec-depmeta' },
+                      // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
+                      // 「本次取自前一天…」那种口语说法，「哪一天、几点几分几秒，全都给显示出来」）。
+                      // 单行省略、悬停看全量；stampOf = formatDateTime(iso, { seconds: true })。
+                      h('span', { className: 'dsh-tdt-ellipsis', title: stampOf(dep.scheduledAt) },
+                        tt('recordsDepFrom', { time: stampOf(dep.scheduledAt) })),
+                    ),
                   ),
-                  h('div', { className: 'dsh-tdt-rec-depmeta' },
-                    // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
-                    // 「本次取自前一天…」那种口语说法，「哪一天、几点几分几秒，全都给显示出来」）。
-                    // 单行省略、悬停看全量；stampOf = formatDateTime(iso, { seconds: true })。
-                    h('span', { className: 'dsh-tdt-ellipsis', title: stampOf(dep.scheduledAt) },
-                      tt('recordsDepFrom', { time: stampOf(dep.scheduledAt) })),
+                  // ── 右列（**整列不折行**，用户 2026-10-04：拉伸时别把内容压成折行）──
+                  //    顺序：产出物图标 → 查看会话。
+                  h('div', { className: 'dsh-tdt-rec-depright' },
+                    depOuts.length === 0
+                      ? null
+                      : h('span', { className: 'dsh-tdt-rec-chiprow', title: t('colOutputs') },
+                        depOuts.slice(0, DEP_OUT_MAX).map(path => h('button', {
+                          key: path,
+                          type: 'button',
+                          className: 'dsh-tdt-chip',
+                          title: path,
+                          disabled: !depCanOpen,
+                          onClick: (event: { stopPropagation(): void }) => {
+                            event.stopPropagation()
+                            if (depCanOpen) openFile?.(depSid as string, path)
+                          },
+                        }, h(FileTypeIcon, { path, size: 16 }))),
+                        depOuts.length > DEP_OUT_MAX
+                          ? h('button', {
+                            type: 'button',
+                            className: 'dsh-tdt-chip dsh-tdt-chip--label',
+                            title: t('viewSession'),
+                            'aria-label': t('viewSession'),
+                            disabled: !depHasSid,
+                            onClick: (event: { stopPropagation(): void }) => {
+                              event.stopPropagation()
+                              if (depHasSid) openSession(depSid as string)
+                            },
+                          }, `+${depOuts.length - DEP_OUT_MAX}`)
+                          : null,
+                      ),
+                    // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。有会话才落右列：
+                    // 靠右 + 上下居中，且不再把左列那两行撑高。
+                    // 外观走基础层官方配方「链接型文字钮」（ghost + dsh-tdt-btn--link：无边框、链接色、
+                    // hover 下划线）—— 用户 2026-10-04：「不要边框，不要黑、不要灰」。
+                    depHasSid
+                      ? h(Button, {
+                        variant: 'ghost',
+                        size: 'sm',
+                        className: 'dsh-tdt-btn--link',
+                        title: t('viewSession'),
+                        onClick: () => { openSession(depSid as string) },
+                      }, t('viewSession'))
+                      : null,
                   ),
-                ),
-                // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。有会话才落右列：
-                // 靠右 + 上下居中，且不再把左列那两行撑高。
-                // 外观走基础层官方配方「链接型文字钮」（ghost + dsh-tdt-btn--link：无边框、链接色、
-                // hover 下划线）—— 用户 2026-10-04：「不要边框，不要黑、不要灰」。
-                dep.sessionId === null || dep.sessionId === ''
-                  ? null
-                  : h(Button, {
-                    variant: 'ghost',
-                    size: 'sm',
-                    className: 'dsh-tdt-btn--link',
-                    title: t('viewSession'),
-                    onClick: () => { openSession(dep.sessionId as string) },
-                  }, t('viewSession')),
-              )),
+                )
+              }),
             ),
           ),
         eventsError !== null
@@ -828,9 +884,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
       ? t('recordsLimitHint')
       : done && rows.length > 0
         ? t('recordsNoMore')
-        : loading
-          ? t('recordsLoading')
-          : null
+        : null
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     h('div', { id: PANEL_CONTENT_ID, style: PANEL_CONTENT_STYLE },
@@ -878,8 +932,10 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
         ),
       ),
 
-      // 首屏取数：复用基础层 Loading（唯一实现；页面右下角浮动指示，锚在 PANEL_CONTENT_ID 上）。
-      loading && !loaded ? h(Loading, { label: t('recordsLoading') }) : null,
+      // 加载（**首屏 + 下拉续拉**）一律走**页面右下角统一的那一个** Loading
+      // （用户 2026-10-04：没有我的特殊认可，不许在任何其他地方再建 Loading 点）
+      // ⇒ 页脚不再自己显示「加载中」；「已加载完 / 到上限」这类**结果提示**照旧在页脚显示。
+      loading ? h(Loading, { label: t('recordsLoading') }) : null,
 
       // ── 流水账：**没有外框**，内容直接铺在页面底上（空态 / 加载 / 失败态同样不带框）──
       rows.length === 0

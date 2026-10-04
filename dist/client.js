@@ -1512,10 +1512,11 @@ body{
   /* 语义色**实面**上的字（角标 / 实心提示）：宿主红绿黄三色都是中调 ⇒ 白字两个主题都可读，
      故这是一条与主题无关的常量；不要拿 --tdt-fg-inverse 顶——它在暗色下是近黑，压在红底上看不清。 */
   --tdt-on-signal:#fff;
-  /* 语义色**浅底**（8% 透明）：状态色系的「一块底色」——执行记录页每条流水账的块底就是它
+  /* 语义色**浅底**：状态色系的「一块底色」——执行记录页每条流水账的块底就是它
      （用户 2026-10-04：正常态给同色系很浅的透明底、失败用红底透出来）。
-     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，**暗色主题下自动成立**
-     （深色底透出来、上面仍是状态色），不必在 dark 段再覆盖一遍。
+     用 「color-mix」 现算而不写死 rgba：状态色本身跟随宿主 alias，主题一换自动成立。
+     ⚠️ **深色下要更淡**：用户 2026-10-04「深色风格的绿色和红色好像都有点深」⇒ dark 段
+     把这四条压到 5%（更贴近面板底、存在感更弱）；浅色段维持 8%。两端各自给值，不共用一条曲线。
      命名收在 tokens.ts 单点（本仓硬规矩：业务文件不许自造 --tdt-*）。 */
   --tdt-success-soft:color-mix(in srgb,var(--tdt-success) 8%,transparent);
   --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 8%,transparent);
@@ -1604,6 +1605,12 @@ body[data-ds-dark-theme]{
   --tdt-open-bg:rgba(96,165,250,.18);
   --tdt-open-bg-soft:rgba(96,165,250,.08);
   --tdt-card-hover:rgba(96,165,250,.13);
+  /* 语义色**浅底**（深色版）：用户嫌深色的绿 / 红「有点深」⇒ 压到 **5%**（浅色段是 8%），
+     更贴近面板底色、存在感更弱；块底与状态色竖条仍同源（竖条是实色，不受这条影响）。 */
+  --tdt-success-soft:color-mix(in srgb,var(--tdt-success) 5%,transparent);
+  --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 5%,transparent);
+  --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 5%,transparent);
+  --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 5%,transparent);
 }
 `;
 		//#endregion
@@ -3103,8 +3110,7 @@ body[data-ds-dark-theme]{
 					ariaLabel: hint,
 					labels: calendarLabels,
 					size,
-					disabled: props.disabled,
-					width: 124
+					disabled: props.disabled
 				}), withTime ? (0, react$1.createElement)(TimeField, {
 					value: time,
 					onChange: (next) => {
@@ -3114,8 +3120,7 @@ body[data-ds-dark-theme]{
 					ariaLabel: hint,
 					labels: timeLabels,
 					size,
-					disabled: props.disabled,
-					width: 88
+					disabled: props.disabled
 				}) : null);
 			};
 			return (0, react$1.createElement)("div", { style: {
@@ -3144,7 +3149,6 @@ body[data-ds-dark-theme]{
 				emptyLabel: labels.all,
 				ariaLabel: labels.all,
 				size,
-				width: 96,
 				disabled: props.disabled
 			}));
 		}
@@ -56830,11 +56834,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* ——「不要用文字形式的圈数字，我不知道你用的是什么文字」。字符圈码的外形由**字体**决定
 		* （不同平台的大小 / 基线 / 粗细都不一样，且本质是「文字」而不是「图形」），所以改成
 		* **自绘圆徽标**：元素里只放普通阿拉伯数字，圆交给 CSS（`.dsh-tdt-rec-depmark`）——
-		* 固定 18×18 + `border-radius:50%` + 浅色实心 + 无描边 ⇒ **几位都是正圆**（2026-10-04 第八轮定稿）。
+		* 固定 **20×20**（`min-width`/`min-height`/`aspect-ratio` 三道兜底，谁也别想把它拉扁）+ `border-radius:50%`
+		* + 浅色实心 + 无描边 ⇒ **几位都是正圆**（2026-10-04 第八轮定稿；放大到 20 是用户要求：
+		* 「还是椭圆，圆不圆一眼能看出」，实测 20px 圆配 11px 两位数字尚余 5px）。
 		* ⚠️ 第七轮那版用 `min-width` + 横向 padding + `999px` 圆角，两位数字会被**撑成胶囊**，已废弃。
 		* ⇒ 常量表与 `circledOf` 一并删除。
 		*/
 		const MAX_DEPMARKS = 20;
+		/**
+		* 展开区前置格里**产出物图标**的上限（用户 2026-10-04：「任务执行列表里产出基本上最多还是 5 个左右，
+		* 你看一下这儿最多能排到多少个，排出来我看一眼」）⇒ 定 **5** 个 + 超出收 `+N`（点 `+N` 进那次上游的会话看全量）。
+		*/
+		const DEP_OUT_MAX = 5;
 		const RECORDS_CSS = `
 /* ── 执行记录流水账（**无容器**）───────────────────────────────────────────
    没有外框、没有贯穿竖轴：整页铺在宿主面板底上，节奏靠「日期小字行 + 一条条自带底色的独立块」建立。 */
@@ -56909,16 +56920,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
       两位数字会把圆**撑成胶囊**（用户 2026-10-04：「一定要是个圆的」「你要确定两位能显示成圆的」
       「现在这个太丑了」）。现在固定 width 与 height 相等 + border-radius:50% ⇒ 几位都是正圆。
    📏 尺寸依据（**实测**，非估计）：用容器里最宽的常见 UI 字体 DejaVu Sans 渲染，11px 下两位数字
-      宽 15px，18px 圆尚余 3px；宿主界面字体（本插件**未引入任何外部字体**，文字继承宿主）比它更窄。
+      宽 15px，**20px 圆尚余 5px**；宿主界面字体（本插件**未引入任何外部字体**，文字继承宿主）比它更窄。
+      另加 min-width / min-height / aspect-ratio 三道兜底 ⇒ 不论父级怎么排，它都是正圆。
    🎨 底色走 --tdt-chip-bg（暗色主题自动换成白色 8%，与产出物 chip 同源）；悬停**只加深底色**、
       不再动描边（用户明确「不要描边，就要浅色实心圆」）。提示走官方 Tooltip（见折叠态渲染处）。 */
 .dsh-tdt-rec-depmark{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  width:18px;height:18px;padding:0;border:none;border-radius:50%;background:var(--tdt-chip-bg);
+  width:20px;height:20px;min-width:20px;min-height:20px;aspect-ratio:1/1;padding:0;border:none;border-radius:50%;
+  background:var(--tdt-chip-bg);
   color:var(--tdt-fg-2);font-size:var(--tdt-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
   transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
 .dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);color:var(--tdt-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
-.dsh-tdt-rec-depmark--more{width:auto;padding:0 6px;border-radius:999px;}
+/* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
+.dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
@@ -56943,7 +56957,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-dep{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
   column-gap:var(--tdt-space-3);min-width:0;
   padding:var(--tdt-space-2) var(--tdt-space-3);border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);}
-.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;}
+.dsh-tdt-rec-depmid{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;overflow:hidden;}
+/* 前置格**右列**：产出物图标 → 查看会话。**整列不折行**（用户 2026-10-04：页面拉伸时不要把内容
+   压成折行）⇒ 挤的时候先让左列的名字 / 时间省略，右列控件始终完整可见。 */
+.dsh-tdt-rec-depright{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;white-space:nowrap;}
 .dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
   font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
 .dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
@@ -57209,24 +57226,56 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					maxWidth: "40ch",
 					minWidth: 0
 				}
-			})))), deps.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depsec" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("listSectionDepends")), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depgrid" }, deps.map((dep, index) => (0, react$1.createElement)("div", {
-				key: `${dep.task}#${dep.instanceId}`,
-				className: "dsh-tdt-rec-dep"
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmid" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depname" }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)), (0, react$1.createElement)("span", {
-				className: "dsh-tdt-ellipsis",
-				title: depTitleOf(dep.task)
-			}, depTitleOf(dep.task))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)("span", {
-				className: "dsh-tdt-ellipsis",
-				title: stampOf(dep.scheduledAt)
-			}, tt("recordsDepFrom", { time: stampOf(dep.scheduledAt) })))), dep.sessionId === null || dep.sessionId === "" ? null : (0, react$1.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				className: "dsh-tdt-btn--link",
-				title: t("viewSession"),
-				onClick: () => {
-					openSession(dep.sessionId);
-				}
-			}, t("viewSession")))))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("recordsLoading")) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
+			})))), deps.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depsec" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("listSectionDepends")), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depgrid" }, deps.map((dep, index) => {
+				const depOuts = Array.isArray(dep.outputs) ? dep.outputs : [];
+				const depSid = dep.sessionId;
+				const depHasSid = depSid !== null && depSid !== "";
+				const depCanOpen = openFile !== void 0 && depHasSid;
+				return (0, react$1.createElement)("div", {
+					key: `${dep.task}#${dep.instanceId}`,
+					className: "dsh-tdt-rec-dep"
+				}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmid" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depname" }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)), (0, react$1.createElement)("span", {
+					className: "dsh-tdt-ellipsis",
+					title: depTitleOf(dep.task)
+				}, depTitleOf(dep.task))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)("span", {
+					className: "dsh-tdt-ellipsis",
+					title: stampOf(dep.scheduledAt)
+				}, tt("recordsDepFrom", { time: stampOf(dep.scheduledAt) })))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depright" }, depOuts.length === 0 ? null : (0, react$1.createElement)("span", {
+					className: "dsh-tdt-rec-chiprow",
+					title: t("colOutputs")
+				}, depOuts.slice(0, DEP_OUT_MAX).map((path) => (0, react$1.createElement)("button", {
+					key: path,
+					type: "button",
+					className: "dsh-tdt-chip",
+					title: path,
+					disabled: !depCanOpen,
+					onClick: (event) => {
+						event.stopPropagation();
+						if (depCanOpen) openFile?.(depSid, path);
+					}
+				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path,
+					size: 16
+				}))), depOuts.length > DEP_OUT_MAX ? (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dsh-tdt-chip dsh-tdt-chip--label",
+					title: t("viewSession"),
+					"aria-label": t("viewSession"),
+					disabled: !depHasSid,
+					onClick: (event) => {
+						event.stopPropagation();
+						if (depHasSid) openSession(depSid);
+					}
+				}, `+${depOuts.length - DEP_OUT_MAX}`) : null), depHasSid ? (0, react$1.createElement)(Button$2, {
+					variant: "ghost",
+					size: "sm",
+					className: "dsh-tdt-btn--link",
+					title: t("viewSession"),
+					onClick: () => {
+						openSession(depSid);
+					}
+				}, t("viewSession")) : null));
+			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("recordsLoading")) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
 			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
@@ -57456,7 +57505,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const hit = /"workspacePath"\s*:\s*"([^"]+)"/.exec(snapshot);
 				return hit === null ? "" : baseNameOf$1(hit[1].replace(/\\"/g, "\""));
 			}, [workspaceById]);
-			const footerHint = error !== null ? null : atLimit && !done ? t("recordsLimitHint") : done && rows.length > 0 ? t("recordsNoMore") : loading ? t("recordsLoading") : null;
+			const footerHint = error !== null ? null : atLimit && !done ? t("recordsLimitHint") : done && rows.length > 0 ? t("recordsNoMore") : null;
 			return (0, react$1.createElement)("div", { style: {
 				width: "100%",
 				display: "flex",
@@ -57504,7 +57553,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 200
-			}))), loading && !loaded ? (0, react$1.createElement)(Loading, { label: t("recordsLoading") }) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, { label: t("recordsLoading") }) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
