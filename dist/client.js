@@ -42574,7 +42574,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				{
 					value: "running",
-					label: statusTextOf("running", t)
+					label: t("filterRunning")
 				}
 			], [t]);
 			const titleById = (0, react.useMemo)(() => new Map(tasks.map((o) => [o.id, o.label])), [tasks]);

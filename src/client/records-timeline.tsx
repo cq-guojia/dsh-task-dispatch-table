@@ -345,7 +345,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     { value: 'all' as const, label: t('filterAll') },
     { value: 'succeeded' as const, label: statusTextOf('succeeded', t) },
     { value: 'failed' as const, label: statusTextOf('failed', t) },
-    { value: 'running' as const, label: statusTextOf('running', t) },
+    { value: 'running' as const, label: t('filterRunning') },
   ]), [t])
 
   const titleById = useMemo(() => new Map(tasks.map(o => [o.id, o.label])), [tasks])
