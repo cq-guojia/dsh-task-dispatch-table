@@ -3507,10 +3507,14 @@ body[data-ds-dark-theme]{
    拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
 .dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
 /* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
-.dsh-tdt-sv-cmviewer{display:flex;flex-direction:column;height:100%;min-height:0;}
-.dsh-tdt-sv-cm-bar{display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:4px;padding:4px 8px;flex:none;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-.dsh-tdt-sv-cm-btn{appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));background:transparent;color:var(--tdt-fg-2,#57606a);font-size:12px;line-height:18px;padding:1px 8px;border-radius:4px;cursor:pointer;}
-.dsh-tdt-sv-cm-btn:hover{color:var(--tdt-fg,#1f2328);border-color:var(--tdt-fg-3,rgba(128,128,128,.4));}
+/* 容器相对定位，供复制钮绝对定位于右上角。 */
+.dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
+/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方 CodeBlock 复制钮行为）；仅图标、无中文文案；
+   点击复制全文，复制后短暂切勾选图标 + “已复制”提示（title/aria-label 承载本地化文案）。 */
+.dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
+.dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
+.dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-cm-copy svg{width:16px;height:16px;}
 .dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
 .dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
 .dsh-tdt-sv-cm-editor .cm-scroller{overflow:auto;}
@@ -52541,9 +52545,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* <span> 的巨型 DOM，拖动改宽会触发整棵子树重排，5000 行大文件首屏与拖拽都卡。CodeMirror
 		* 是行级视图 + Lezer 增量高亮，宽度变化只重排可视区，天然不为整篇买单。
 		*
-		* 严格只读：readOnly + editable=false，无脏点/保存/Ctrl+S，仅渲染。风格对齐
-		* DSH-better-sidebar 的 TextEditor，但去掉其可编辑部分。功能面与原源码态一致：行号、
-		* 复制、换行开关、256K 截断横幅（由父级透传）、单滚动容器、HTML 默认预览/点源码切换。
+		* 只读但可选中：仅用 <CodeMirror readOnly>（= EditorState.readOnly，挡住一切输入），
+		* 不设置 EditorView.editable=false —— 后者会把内容设为不可编辑并连带禁用鼠标选区，
+		* 导致用户无法框选复制某一句。保留 editable 后选区/复制正常，输入仍被 readOnly 拦下。
+		*
+		* 外观：theme="none" 关掉 @uiw 默认 light 主题的白底，cmSurfaceTheme 透明底叠在宿主面板上；
+		* 默认 EditorView.lineWrapping（全换行，避免横向滚动条）；复制钮为右上角官方图标，hover 浮现。
 		*/
 		function isDarkScheme() {
 			if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
@@ -52551,7 +52558,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		function CodeViewer(props) {
 			const { text, path, t } = props;
-			const [wrap, setWrap] = (0, react$1.useState)(false);
 			const [copied, setCopied] = (0, react$1.useState)(false);
 			const [dark, setDark] = (0, react$1.useState)(isDarkScheme);
 			(0, react$1.useEffect)(() => {
@@ -52562,18 +52568,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return () => mq.removeEventListener?.("change", onChange);
 			}, []);
 			const language = (0, react$1.useMemo)(() => languageForPath(path), [path]);
-			const extensions = (0, react$1.useMemo)(() => {
-				return [
-					...codeMirrorTheme(dark),
-					EditorView.editable.of(false),
-					...language !== null ? [language] : [],
-					...wrap ? [EditorView.lineWrapping] : []
-				];
-			}, [
-				dark,
-				language,
-				wrap
-			]);
+			const extensions = (0, react$1.useMemo)(() => [
+				...codeMirrorTheme(dark),
+				EditorView.lineWrapping,
+				...language !== null ? [language] : []
+			], [dark, language]);
 			const copy = () => {
 				(0, _deepseek_ai_dsh_client_ui_primitives.writeClipboard)(text).then((ok) => {
 					if (ok) {
@@ -52584,26 +52583,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			};
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "dsh-tdt-sv-cmviewer",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: "dsh-tdt-sv-cm-bar",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: "dsh-tdt-sv-cm-btn",
-						onClick: copy,
-						title: t("copyLabel"),
-						children: copied ? t("copiedLabel") : t("copyLabel")
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: "dsh-tdt-sv-cm-btn",
-						onClick: () => {
-							setWrap((w) => !w);
-						},
-						title: wrap ? t("diffUnwrapLabel") : t("diffWrapLabel"),
-						children: wrap ? t("diffUnwrapLabel") : t("diffWrapLabel")
-					})]
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					type: "button",
+					className: "dsh-tdt-sv-cm-copy",
+					onClick: copy,
+					title: copied ? t("copiedLabel") : t("copyLabel"),
+					"aria-label": copied ? t("copiedLabel") : t("copyLabel"),
+					children: copied ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, {}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCopyOutlineRegular, {})
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ReactCodeMirror, {
 					value: text,
 					className: "dsh-tdt-sv-cm-editor",
+					theme: "none",
 					extensions,
 					readOnly: true,
 					height: "100%",

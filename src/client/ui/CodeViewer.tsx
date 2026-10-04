@@ -5,16 +5,23 @@
  * <span> 的巨型 DOM，拖动改宽会触发整棵子树重排，5000 行大文件首屏与拖拽都卡。CodeMirror
  * 是行级视图 + Lezer 增量高亮，宽度变化只重排可视区，天然不为整篇买单。
  *
- * 严格只读：readOnly + editable=false，无脏点/保存/Ctrl+S，仅渲染。风格对齐
- * DSH-better-sidebar 的 TextEditor，但去掉其可编辑部分。功能面与原源码态一致：行号、
- * 复制、换行开关、256K 截断横幅（由父级透传）、单滚动容器、HTML 默认预览/点源码切换。
+ * 只读但可选中：仅用 <CodeMirror readOnly>（= EditorState.readOnly，挡住一切输入），
+ * 不设置 EditorView.editable=false —— 后者会把内容设为不可编辑并连带禁用鼠标选区，
+ * 导致用户无法框选复制某一句。保留 editable 后选区/复制正常，输入仍被 readOnly 拦下。
+ *
+ * 外观：theme="none" 关掉 @uiw 默认 light 主题的白底，cmSurfaceTheme 透明底叠在宿主面板上；
+ * 默认 EditorView.lineWrapping（全换行，避免横向滚动条）；复制钮为右上角官方图标，hover 浮现。
  */
 import * as React from 'react'
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { type Extension } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
-import { writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  IconCheckOutlineRegular,
+  IconCopyOutlineRegular,
+  writeClipboard,
+} from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from '../locales'
 import { languageForPath } from './lang'
 import { codeMirrorTheme } from './cm-themes'
@@ -26,7 +33,6 @@ function isDarkScheme(): boolean {
 
 export function CodeViewer(props: { text: string; path: string; t: Translate }): ReactElement {
   const { text, path, t } = props
-  const [wrap, setWrap] = useState(false)
   const [copied, setCopied] = useState(false)
   const [dark, setDark] = useState<boolean>(isDarkScheme)
 
@@ -40,15 +46,11 @@ export function CodeViewer(props: { text: string; path: string; t: Translate }):
 
   const language = useMemo(() => languageForPath(path), [path])
 
-  const extensions = useMemo<Extension[]>(() => {
-    const exts: Extension[] = [
-      ...codeMirrorTheme(dark),
-      EditorView.editable.of(false), // 严格只读
-      ...(language !== null ? [language] : []),
-      ...(wrap ? [EditorView.lineWrapping] : []),
-    ]
-    return exts
-  }, [dark, language, wrap])
+  const extensions = useMemo<Extension[]>(() => [
+    ...codeMirrorTheme(dark),
+    EditorView.lineWrapping, // 默认全换行，避免横向滚动条（用户要求）
+    ...(language !== null ? [language] : []),
+  ], [dark, language])
 
   const copy = (): void => {
     void writeClipboard(text).then((ok: boolean) => {
@@ -61,22 +63,19 @@ export function CodeViewer(props: { text: string; path: string; t: Translate }):
 
   return (
     <div className="dsh-tdt-sv-cmviewer">
-      <div className="dsh-tdt-sv-cm-bar">
-        <button type="button" className="dsh-tdt-sv-cm-btn" onClick={copy} title={t('copyLabel')}>
-          {copied ? t('copiedLabel') : t('copyLabel')}
-        </button>
-        <button
-          type="button"
-          className="dsh-tdt-sv-cm-btn"
-          onClick={() => { setWrap((w) => !w) }}
-          title={wrap ? t('diffUnwrapLabel') : t('diffWrapLabel')}
-        >
-          {wrap ? t('diffUnwrapLabel') : t('diffWrapLabel')}
-        </button>
-      </div>
+      <button
+        type="button"
+        className="dsh-tdt-sv-cm-copy"
+        onClick={copy}
+        title={copied ? t('copiedLabel') : t('copyLabel')}
+        aria-label={copied ? t('copiedLabel') : t('copyLabel')}
+      >
+        {copied ? <IconCheckOutlineRegular /> : <IconCopyOutlineRegular />}
+      </button>
       <CodeMirror
         value={text}
         className="dsh-tdt-sv-cm-editor"
+        theme="none"
         extensions={extensions}
         readOnly
         height="100%"

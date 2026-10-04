@@ -251,10 +251,14 @@ export const ARCHIVE_SESSION_CSS = `
    拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
 .dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
 /* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
-.dsh-tdt-sv-cmviewer{display:flex;flex-direction:column;height:100%;min-height:0;}
-.dsh-tdt-sv-cm-bar{display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:4px;padding:4px 8px;flex:none;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-.dsh-tdt-sv-cm-btn{appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));background:transparent;color:var(--tdt-fg-2,#57606a);font-size:12px;line-height:18px;padding:1px 8px;border-radius:4px;cursor:pointer;}
-.dsh-tdt-sv-cm-btn:hover{color:var(--tdt-fg,#1f2328);border-color:var(--tdt-fg-3,rgba(128,128,128,.4));}
+/* 容器相对定位，供复制钮绝对定位于右上角。 */
+.dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
+/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方 CodeBlock 复制钮行为）；仅图标、无中文文案；
+   点击复制全文，复制后短暂切勾选图标 + “已复制”提示（title/aria-label 承载本地化文案）。 */
+.dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
+.dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
+.dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-cm-copy svg{width:16px;height:16px;}
 .dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
 .dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
 .dsh-tdt-sv-cm-editor .cm-scroller{overflow:auto;}

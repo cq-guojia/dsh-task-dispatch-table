@@ -1091,7 +1091,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     && /!truncated\s*&&\s*nextOffset\s*!==\s*null/.test(clientJs))
   check('源码态有语法高亮（只读 CodeMirror，data-code-preview 容器 + CodeViewer）',
     /data-code-preview/.test(clientJs) && clientJs.includes('dsh-tdt-sv-cmviewer'))
-  check('源码态为只读 CodeMirror（editable=false，无 streaming 概念，根除整篇 shiki 卡顿）',
+  check('源码态为只读 CodeMirror（readOnly 挡输入、未用 editable=false，选区/复制正常，替换 Shiki 根除整篇重排卡顿）',
     clientJs.includes('dsh-tdt-sv-cmviewer') && clientJs.includes('cm-editor'))
   check('256K 按字节精确截断（sliceToBytes，不多带一整页；官方切在 512K 整）',
     clientJs.includes('sliceToBytes') && /sliceToBytes\(merged,\s*maxBytes\)/.test(clientJs))
@@ -1114,8 +1114,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     /\.dsh-tdt-sv-resizer\{[^}]*z-index:7/.test(clientJs))
   check('源码态不再依赖 streaming（CodeMirror 行级视图天然流式，无需 streaming 分叉）',
     !clientJs.includes('setStreamingCode') && clientJs.includes('dsh-tdt-sv-cmviewer'))
-  check('源码态保留换行钮（CodeViewer 自带换行/复制工具条，diffWrapLabel 仍存在）',
-    clientJs.includes('diffWrapLabel') && clientJs.includes('dsh-tdt-sv-cm-bar'))
+  check('源码态默认全换行 + 右上角图标复制钮（无换行切换；lineWrapping 常驻，复制钮 dsh-tdt-sv-cm-copy hover 浮现）',
+    clientJs.includes('lineWrapping') && clientJs.includes('dsh-tdt-sv-cm-copy') && !clientJs.includes('dsh-tdt-sv-cm-bar'))
   check('拖拽条贯通覆盖（z-index:7 高于内容；不加沟槽——用户要遮住，不是让开）',
     /\.dsh-tdt-sv-resizer\{[^}]*z-index:7/.test(clientJs)
     && !/dsh-tdt-sv-preview-dock\{padding-left:6px/.test(clientJs))
