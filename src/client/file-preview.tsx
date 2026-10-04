@@ -494,7 +494,11 @@ export function TextPreview(props: {
   // （只对追加内容重新着色、保留已完成行的 DOM）—— 这是官方流畅、我们卡死的分水岭。
   const [streamingCode, setStreamingCode] = useState(false)
   // 折行偏好（官方文档面板由宿主控制、不给换行钮；我们同样传布尔 + toolbarLabels）。
-  const [wrap] = useState(true)
+  // 折行：⚠️ **不传** `wrap`（用户 2026-10-04 明确「把换行不换行给我留着」）。
+  // 官方 CodeBlock 的换行钮**只在 `wrap === undefined` 时渲染**；传了布尔 + toolbarLabels
+  // ⇒ 官方 omit 该钮（`CodeBlock.d.ts`：*"With toolbarLabels, use the owner's wrapping
+  // preference and omit the toolbar's local wrap action"*）。
+  // 官方文档面板传了布尔、所以它没有；**我们要留给用户** ⇒ 不传。
   useEffect(() => {
     let alive = true
     setText(null)
@@ -540,7 +544,16 @@ export function TextPreview(props: {
         setTruncated(offset !== null) // 还有剩余 ⇒ 是被上限截断的
         setText(merged)
         setNextOffset(null)
-        setStreamingCode(false) // 收尾：settle 后官方保留既有 DOM，不整体重着色
+        // ⚠️ **不要**在这里 settle 成 streaming=false（真机 2026-10-04：卡得几乎拖不动）。
+        // 官方 CodeBlock 的全文高亮门槛（primitives lib/index.js）：
+        //   html = useMemo(() => highlighting && streaming !== true && streamedBody === void 0
+        //                   ? highlightToHtml(trimmed, lang) : void 0, …)
+        // ⇒ **只要 streaming 为 true，就永远走增量着色，不对全文跑 shiki**；一旦置 false，
+        // 就会对整份（截断后仍 256K）重跑一次全文高亮 ⇒ 主线程冻结。
+        // 官方传 `streaming: !content.eof`，而**被字节上限截断时 eof 永远为 false** ⇒
+        // 官方全程 streaming=true、从不跑全文高亮 ⇒ 这才是它"渲得更多却不卡"的真因。
+        // 我们同样保持 true（截断 = 还有剩余 = 永远不到 eof），与官方完全一致。
+        setStreamingCode(true)
         setLoading(false)
       })
       .catch((error: unknown) => {
@@ -586,23 +599,19 @@ export function TextPreview(props: {
       // 官方 code/CodeBody（documentpreview lib/client.js:5034-5059）逐条对齐：
       //   CodeBlock + lineNumbers + lang=languageForPath + toolbarLabels(复制/标题)
       //   + **streaming: !eof**（增量着色，只对新增文本重算、保留已有 DOM ⇒ 流畅的关键）
-      //   + **wrap 传布尔**（传了 wrap + toolbarLabels ⇒ 官方 **omit** 换行钮，源码事实 CodeBlock.d.ts）
+      //   + **故意不传 wrap**（不传时官方 CodeBlock 才渲染「换行/不换行」钮；用户 2026-10-04 要求留着）
       ? h('div', {
           className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
           'data-code-preview': true,
-          'data-wrap': wrap,
         },
         h(CodeBlock, {
           className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
           code: text,
           lang: languageForPath(path),
           lineNumbers: true,
-          // ⚠️ streaming 必须传：官方靠它做**渐进高亮**（只重新着色追加内容、保留已完成行与 DOM）。
-          // 冷启动整块着色 500KB = 每次滚动都在重排 ⇒ 卡死（真机 2026-10-04）。
+          // ⚠️ streaming 必须传且**保持 true**（卡死根因，真机 2026-10-04）：官方靠它走**增量着色**；
+          // 一旦为 false 就会对整份 256K 重跑一次全文 shiki ⇒ 主线程冻结。官方传 !eof，截断时 eof 恒 false。
           streaming: streamingCode,
-          // ⚠️ 传 wrap（布尔）而不是不传：不传时官方自己渲染「换行」钮；传了 + toolbarLabels
-          // ⇒ 官方 omit 该钮（与官方文档面板一致，用户 2026-10-04：不需要换行钮）。
-          wrap,
           copyLabel: t('copyLabel'),
           copiedLabel: t('copiedLabel'),
           toolbarLabels: {

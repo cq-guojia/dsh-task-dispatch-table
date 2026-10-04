@@ -1093,8 +1093,6 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     /data-code-preview/.test(clientJs) && /lineNumbers:\s*true/.test(clientJs))
   check('源码态渐进高亮：传 streaming（官方 :5048 传 !eof，只对追加内容重着色 ⇒ 流畅的关键）',
     /streaming:\s*streamingCode/.test(clientJs) && clientJs.includes('setStreamingCode'))
-  check('源码态传 wrap 布尔 ⇒ 官方 omit 换行钮（与官方文档面板一致）',
-    /["']?data-wrap["']?:\s*wrap/.test(clientJs) && /\bwrap:\s*wrap[\s,]/.test(clientJs))
   check('256K 按字节精确截断（sliceToBytes，不多带一整页；官方切在 512K 整）',
     clientJs.includes('sliceToBytes') && /sliceToBytes\(merged,\s*maxBytes\)/.test(clientJs))
   check('截断横幅在顶部、警告色、滚动区之外（官方截图同款「文件过大，仅显示前 512KB」）',
@@ -1116,6 +1114,14 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     /\.dsh-tdt-resizing \.dsh-tdt-sv-preview-dock\{[^}]*contain:layout paint/.test(clientJs))
   check('拖拽条 z-index 高于预览体内容（官方 .header 自带背景，z-index:2 会被盖住）',
     /\.dsh-tdt-sv-resizer\{[^}]*z-index:5/.test(clientJs))
+  check('源码态保持 streaming=true（官方：streaming 为 true 才走增量着色；置 false 会对全文重跑 shiki ⇒ 卡死）',
+    /streaming:\s*streamingCode/.test(clientJs)
+    && /setStreamingCode\(true\)/.test(clientJs))
+  check('源码态保留换行钮（故意不传 wrap prop；传布尔会让官方 omit 该钮）',
+    !/streaming:\s*streamingCode,[\s\S]{0,80}\bwrap,/.test(clientJs)
+    && clientJs.includes('diffWrapLabel'))
+  check('拖拽条留 6px 沟槽（内容不再从条下穿过 ⇒ 不再切断代码框标题）',
+    /\.dsh-tdt-sv-preview\.dsh-tdt-sv-preview-dock\{[^}]*padding-left:6px/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
     clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
 

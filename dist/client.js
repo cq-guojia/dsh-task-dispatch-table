@@ -3199,7 +3199,10 @@ body[data-ds-dark-theme]{
    滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
    sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
    弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
+/* ⚠️ padding-left:6px = 给左缘 6px 拖拽条留「沟槽」（真机 2026-10-04：hover 时那条浅灰竖条
+   会盖住所有代码框的标题行——官方 header 在滚动口内、随内容横向滚动，会从条下穿过而看起来"被切断"；
+   MD 源码看不到是因为它没有 header。留沟槽后内容永远不与条重叠，所有类型一致。 */
+.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{padding-left:6px;position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;z-index:1030;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
 /* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
    高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
    **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
@@ -7018,7 +7021,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [err, setErr] = (0, react.useState)(null);
 			const [truncated, setTruncated] = (0, react.useState)(false);
 			const [streamingCode, setStreamingCode] = (0, react.useState)(false);
-			const [wrap] = (0, react.useState)(true);
 			(0, react.useEffect)(() => {
 				let alive = true;
 				setText(null);
@@ -7071,7 +7073,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setTruncated(offset !== null);
 					setText(merged);
 					setNextOffset(null);
-					setStreamingCode(false);
+					setStreamingCode(true);
 					setLoading(false);
 				}).catch((error) => {
 					if (!alive) return;
@@ -7119,15 +7121,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const banner = truncated ? (0, react.createElement)("div", { className: "dsh-tdt-sv-truncated" }, t("previewTruncated", { size: t("previewTruncatedSize") })) : null;
 			const body = (0, react.createElement)("div", { className: showSource && !markdown ? "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-body-code" : "dsh-tdt-sv-preview-body" }, showSource ? (0, react.createElement)("div", {
 				className: ocOr("CodeBody", "renderer", "dsh-tdt-sv-preview-coderender"),
-				"data-code-preview": true,
-				"data-wrap": wrap
+				"data-code-preview": true
 			}, (0, react.createElement)(_deepseek_ai_dsh_client_ui_primitives.CodeBlock, {
 				className: ocOr("CodeBody", "code", "dsh-tdt-sv-preview-code"),
 				code: text,
 				lang: (0, _deepseek_ai_dsh_client_ui_primitives.languageForPath)(path),
 				lineNumbers: true,
 				streaming: streamingCode,
-				wrap,
 				copyLabel: t("copyLabel"),
 				copiedLabel: t("copiedLabel"),
 				toolbarLabels: {

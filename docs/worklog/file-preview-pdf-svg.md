@@ -310,3 +310,36 @@ CSP 原文、禁用清单、256K 常量、截断提示键全部落位。
 
 ⚠️ 本轮 build 被**另一并发会话的未完成代码**卡住（`index.ts` 的 `onOpenSession` 块有孤立 `})`，
 按规矩**未改其代码**；我的三个文件已单独 typecheck 零报错。
+
+## 三-十六 渲染卡死的**真根因** + 换行钮恢复 + 拖拽条沟槽（U30 续，2026-10-04）
+
+**用户反馈**：① 大 HTML 渲染/拖动卡得几乎挪不动（其他小文件不卡 ⇒ 怀疑渲染器）；② hover 拖拽条那条灰竖条**挡住所有代码框的标题**（MD 不挡）；③ **换行钮被我不该删地删了，要求留着**。
+
+### ① 卡死真根因（本轮查到，前几轮都猜错了）
+
+官方 `CodeBlock`（primitives `lib/index.js`）内部原文：
+
+```js
+const highlighting = useViewportHighlighting(rootRef, lang)
+const streamedBody = useMemo(() => { … })                    // 增量会话
+const html = useMemo(() => highlighting && streaming !== true && streamedBody === void 0
+  ? highlightToHtml(trimmed, lang) : void 0, …)               // ← 全文高亮的唯一入口
+```
+
+⇒ **只有 `streaming === false` 才会对全文跑一次 `highlightToHtml`（shiki）**；`streaming` 为 true 时永远走增量着色。
+
+官方 `CodeBody` 传 `streaming: !content.eof`（`documentpreview:5048`）。**被字节上限截断时 `eof` 永远为 false** ⇒ 官方全程 `streaming=true`、**从不跑全文高亮** ⇒ 这才是"官方渲得更多（512K ≈ 1 万行）却丝滑"的真因。
+
+**我上一轮自作主张"收尾 settle"把 `streaming` 置 false** ⇒ 等于对整份 256K 重跑一次全文 shiki ⇒ 主线程冻结。文件小无所谓 ⇒ 只有大 HTML 卡。**已改为始终保持 `true`**（截断即"还有剩余"= 永不到 eof，与官方一致）。
+
+⚠️ 顺带更正自己一条错判：此前断言"primitives 里没有 CodeMirror / 虚拟化"是**基于一个不存在的文件 grep**（primitives 无 `lib/client.js`，真实实现是 `lib/index.js`）。重查后：该包**确实无 CodeMirror**，`viewport` 字样是 overlay 边距（`overlay-top-margin`）与代码无关；`CodeBlock` 用 **shiki 全量高亮**（无虚拟化）⇒ 卡顿**不是**"官方用了虚拟编辑器"，而是上面那条 streaming 门槛。
+
+### ② 拖拽条挡住代码框标题
+
+官方 header 在**滚动口内**（随内容横向滚动），resizer 固定在 dock 左缘 ⇒ 内容从条下穿过、看起来被"切断"；MD 源码没有 header ⇒ 看不出。⇒ 给 dock 加 `padding-left:6px` **留沟槽**，内容永不与条重叠（所有类型一致）。
+
+### ③ 换行钮恢复（我误读用户指令）
+
+`CodeBlock.d.ts`：换行钮**只在 `wrap === undefined` 时渲染**；传布尔 + toolbarLabels ⇒ 官方 omit。官方文档面板传了布尔所以它没有；**用户要留着** ⇒ 我们**不传** `wrap`。
+
+**验证**：typecheck 绿 · build 过 · 冒烟 **541/0**（新增 3 条：保持 streaming=true / 保留换行钮 / 6px 沟槽）· 产物抽查五项全落位。
