@@ -1,6 +1,6 @@
 # 执行记录总查询页（流水账）
 
-> **状态**：🔵 **落码完成**（2026-10-04 第六轮；typecheck / build 绿、冒烟 **574/0**），⏳ 真机验收待做
+> **状态**：✅ **完成封卷**（2026-10-04 落码至第八轮；typecheck / build 绿、冒烟 **579/0**；**同日真机验收通过**）
 > **来源**：用户 2026-10-03 口述需求（原话见 [`worklog/execution-timeline.md`](../../worklog/execution-timeline.md) §一）+ 同日四项拍板
 > **配套**：
 > - 过程与证据坐标 [`../../worklog/execution-timeline.md`](../../worklog/execution-timeline.md)

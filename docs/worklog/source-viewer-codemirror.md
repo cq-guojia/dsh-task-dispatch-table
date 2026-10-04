@@ -1,5 +1,6 @@
 # 源码态查看器改用只读 CodeMirror 6（全局收口）
 
+> **状态**：✅ **完成封卷**（2026-10-04 落码 + 同日真机复验通过；此后不再修改）
 > 日期：2026-10-04 ｜ 关联：`design/external/dsh-capabilities.md` 决策表「源码态查看器渲染引擎」｜ 归档索引：`PROGRESS-HISTORY.md`
 
 ## 一、背景：为什么换掉官方 Shiki CodeBlock

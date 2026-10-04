@@ -1,6 +1,6 @@
 # 执行记录总查询页（时间轴）
 
-> **状态**：🔵 进行中（2026-10-03 开工；本轮只建文档，未落码）
+> **状态**：✅ **完成封卷**（2026-10-04 落码 + 三版定稿 + 第四~八轮细磨 + **同日真机验收通过**；此后不再修改）
 > **来源**：用户 2026-10-03 口述需求 + 同日四项拍板
 > **配套**：定型规格 [`design/features/execution-timeline.md`](../design/features/execution-timeline.md)；任务选择器抽象 [`design/ui-foundation.md`](../design/ui-foundation.md) + [`design/ui-style-guide.md`](../design/ui-style-guide.md)
 >

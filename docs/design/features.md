@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | **任务列表主面板** | 卡片列表（状态条 / 标题 / 执行方式 / 上次·下次 / 创建于；右侧 开关·编辑·展开）+ 顶部筛选 tabs·工作区下拉·搜索 | `src/client/task-list.tsx`（main 槽整页） | 🔵 落码（冒烟 299，真机待验） | [features/main-panel.md](features/main-panel.md) |
 | **任务展开三面板** | 卡片展开：基础信息 / 执行记录 / 日志；右下「编辑任务」「删除」 | `task-list.tsx` 展开区 + `query.ts` | 🔵 落码（冒烟 364/0，真机待验） | [features/task-expand-panels.md](features/task-expand-panels.md) |
-| **执行记录总查询页（流水账）** | 顶部一级 tab「执行记录」整屏：**全部任务**的执行流水账，按天分组（日期小字行 + 一条条自带状态色浅底的独立块，倒序）、游标「加载更多」、时间 / 工作区 / 状态 / 任务四维过滤；**点块就地展开**（手风琴）产出物全量与事件流水，只有「查看会话」按钮才开会话 | `src/client/records-timeline.tsx`；`src/client/index.ts` 的 `records` 分支 | 🔵 **落码完成**（2026-10-04 三版定稿；冒烟 556/0），⏳ 真机验收待做 | [features/execution-timeline.md](features/execution-timeline.md)（⚠️ 与「任务展开三面板」里的**单任务**执行记录是两个功能，区别见该文 §一.2） |
+| **执行记录总查询页（流水账）** | 顶部一级 tab「执行记录」整屏：**全部任务**的执行流水账，按天分组（日期小字行 + 一条条自带状态色浅底的独立块，倒序）、游标「加载更多」、时间 / 工作区 / 状态 / 任务四维过滤；**点块就地展开**（手风琴）产出物全量与事件流水，只有「查看会话」按钮才开会话 | `src/client/records-timeline.tsx`；`src/client/index.ts` 的 `records` 分支 | ✅ **完成封卷**（2026-10-04 三版定稿 + 第四~八轮细磨；冒烟 579/0；**同日真机验收通过**） | [features/execution-timeline.md](features/execution-timeline.md)（⚠️ 与「任务展开三面板」里的**单任务**执行记录是两个功能，区别见该文 §一.2） |
 | **新增 / 编辑任务** | 右侧**占布局的分栏**表单（2026-10-01 起，原为浮层抽屉）：基础 / 排期 / 提示词（含版本）/ 高级 / 附加文件 / 前置任务；保存 · 删除 · 启用开关（在头部右侧、关闭 ✕ 左边） | `task-editor.tsx` + `editor-fields.tsx` | 🔵 落码（冒烟 397，真机待验） | [features/creation-edit.md](features/creation-edit.md) §七-B |
 | **插件配置页** | 宿主设置页里的插件配置（默认 provider / model 等） | `config-panel.tsx` | ✅ 落码 | — |
 | **查看会话（归档会话弹窗）** | 执行记录点开会话内容；头部「继续对话（开分支）」 | `session-view.ts` + `mirror/` | ✅ 真机验证通过 | [features/archive-session-view.md](features/archive-session-view.md) |

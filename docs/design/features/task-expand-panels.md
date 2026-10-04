@@ -1,6 +1,6 @@
 # 任务展开三面板（基础资料 / 执行记录 / 日志）
 
-> **状态**：🔵 **已落码**（2026-10-01，决策 55；typecheck + build 绿，冒烟 **364/0**）⏳ 真机验证待做
+> **状态**：✅ **已落码 + 真机验收通过**（2026-10-01 落码，2026-10-03 真机验收通过；第四 / 五轮迭代见 [`../../worklog/expand-panels-round4.md`](../../worklog/expand-panels-round4.md)）
 > **来源**：用户口述需求 + 2026-10-01 三轮确认
 > **配套工作包**：[`worklog/task-expand-panels.md`](../../worklog/task-expand-panels.md)
 

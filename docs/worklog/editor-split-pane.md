@@ -1,6 +1,6 @@
 # 工作包：新增 / 编辑弹窗改「布局分栏」（删执行记录 tab + 启用开关回右）
 
-> **状态**：🔵 **进行中**（2026-10-01 立项 + 现状核实，落码未开始）
+> **状态**：✅ **完成封卷**（2026-10-01 立项 + 落码 + 10-02 微调，**2026-10-03 真机验收通过**；此后不再修改）
 > **来源**：用户 2026-10-01 口述需求（两处改动，见 §一）
 > **配套**：需求口径 [`design/features/creation-edit.md`](../design/features/creation-edit.md) · 分栏形态参照 [`design/features/artifact-opening.md`](../design/features/artifact-opening.md) §四-C（页面级唯一 dock）· 样式手册 [`design/ui-style-guide.md`](../design/ui-style-guide.md) · 代码真源 `src/client/task-editor.tsx` / `task-editor-css.ts` / `index.ts`
 

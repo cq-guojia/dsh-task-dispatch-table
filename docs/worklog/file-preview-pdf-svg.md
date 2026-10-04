@@ -1,6 +1,6 @@
 # 文件预览：PDF / SVG 预览不出（根因排查与方案）
 
-> **状态**：🔵 **已落码**（2026-10-03 三项：U26 readBytes 参数、U27 工作区外只读路径+跑马灯、U28 拖拽禁 iframe 指针事件；typecheck 绿 / 冒烟 **504/0** / build 过），⏳ **真机复验待做**
+> **状态**：✅ **完成封卷**（U26 readBytes 参数 / U27 工作区外只读路径+跑马灯 / U28 拖拽禁 iframe 指针事件 / U29 跑马灯收编 / U30 HTML 预览 —— 五项全于 **2026-10-04 真机复验通过**；typecheck 绿 / 冒烟 504→517 / build 过；此后不再修改）
 > **开工**：2026-10-03
 > **来源**：用户 2026-10-03 报「附件里的 PDF 和 SVG 点开都预览不了，但官方能预览」；并定取舍原则：**能用官方就用官方 → 官方做不到就抄官方样式但用浏览器底层能力 → 绝不引第三方包**
 > **配套**：结论真源 = [`../design/external/dsh-capabilities.md`](../design/external/dsh-capabilities.md) §文件预览的官方渲染能力；功能口径 = [`../design/features/artifact-opening.md`](../design/features/artifact-opening.md) §二-五；现场 = [`../PROGRESS.md`](../PROGRESS.md) U26

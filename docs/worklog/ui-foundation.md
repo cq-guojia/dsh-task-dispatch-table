@@ -1,6 +1,6 @@
 # 工作包：UI 基础层统一（design token + 组件皮肤）
 
-> **状态**：🚧 **进行中**（2026-10-01 起）· 当前阶段 = **方案已起草 + 宿主源码核实已完成**（2026-10-01 解包 0.2.0-rc.2 五包，见 §七）；**仍未改任何源码**（用户明确「你先不要动」）
+> **状态**：✅ **完成封卷**（2026-10-01 专项封卷：P0–P6 + 尺寸/圆角/字号归一 + 死代码清理；此后不再修改）。遗留「待抽象」另立 **U20**，见 [`../PROGRESS.md`](../PROGRESS.md) 与 [`../design/ui-style-guide.md`](../design/ui-style-guide.md) §三
 > **来源**：用户 2026-10-01 口述需求（三张分段控件截图 + 口述「滑动块 / button / 下拉 / input / 日期时间 / switch 全是这样」）
 > **产出文档**：[`design/ui-foundation.md`](../design/ui-foundation.md)（技术方案）· [`design/ui-style-guide.md`](../design/ui-style-guide.md)（开发手册）
 
