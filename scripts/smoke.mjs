@@ -2537,6 +2537,27 @@ console.log('\n[14] runtime-index')
     check('文案：确认框文案与中英双语键齐备',
       locSrc10.includes("cardRunNowDesc: '你确定要立即执行此任务吗？'")
       && locSrc10.includes("cardRunNowDesc: 'Run this task immediately?'"))
+
+    // ── Office 预览（2026-10-05）：官方 remote.officeToPdf 转 PDF ⇒ 复用既有 PDF 渲染，零 npm 依赖 ──
+    const fpSrc = readFileSync(join(process.cwd(), 'src', 'client', 'file-preview.tsx'), 'utf8')
+    check('Office 预览：previewKind 认 doc/docx/ppt/pptx ⇒ office（Excel 的 xls/xlsx 本轮不纳入，留给后续讨论）',
+      /OFFICE_KINDS = \['doc', 'docx', 'ppt', 'pptx'\]/.test(fpSrc)
+      && !/OFFICE_KINDS = \[[^\]]*xlsx/.test(fpSrc)
+      && fpSrc.includes("kind === 'office'"))
+    check('Office 预览：服务面本地声明（OfficeToPdfFace），零 npm 依赖 + priority 仅 foreground/background',
+      fpSrc.includes('export interface OfficeToPdfFace')
+      && fpSrc.includes("priority: 'foreground' | 'background'"))
+    check('Office 预览：转换产物走既有 PDF iframe 渲染（OfficePreview + 同款 pdf class）',
+      fpSrc.includes('export function OfficePreview') && fpSrc.includes("className: 'dsh-tdt-sv-preview-pdf'"))
+    check('Office 预览：服务未就位 ⇒ 「Office 预览不可用」，不误报成「二进制不支持」',
+      fpSrc.includes("setErr({ key: 'previewOfficeUnavailable' })"))
+    const cliIdxSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
+    check('Office 预览：dotted 注入 remote.officeToPdf（只注 remote 会永久探测失败，2026-09-28 同款根因）',
+      cliIdxSrc.includes("ctx.inject(['remote', 'remote.officeToPdf']"))
+    const locSrc11 = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
+    check('Office 预览：中英双语文案键齐备（不可用 / 转换失败）',
+      locSrc11.includes('previewOfficeUnavailable:') && locSrc11.includes('previewOfficeFailed:')
+      && locSrc11.includes('请在运行 DeepSeek Harness 的主机上启用文档预览服务'))
   }
 
   store.close()

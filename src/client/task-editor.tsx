@@ -63,7 +63,7 @@ import { MD_LABELS } from './md-labels'
 import { createPortal } from 'react-dom'
 import { ALLOWED_ATTACHMENT_EXT, ATTACHMENT_MAX_BYTES, extOf, isSafeAttachmentRef } from '../attachment-allowlist.js'
 import { FileBrowser } from './file-browser'
-import type { WorkspaceFilesFace } from './file-preview'
+import type { OfficeToPdfFace, WorkspaceFilesFace } from './file-preview'
 import { ensureToastStyle, FloatingToast } from './toast-css'
 
 /**
@@ -1290,6 +1290,8 @@ export function TaskEditorDrawer(props: {
   onToggleEnabled?: ((enabled: boolean) => Promise<string | null>) | undefined
   /** 工作区文件服务（选择工作区文件用；未就位为 null ⇒ 选择器不可用）。 */
   workspaceFiles?: WorkspaceFilesFace | null
+  /** Office 预览服务（remote.officeToPdf；未就位为 null ⇒ Office 文件出「不可用」空态）。 */
+  officeToPdf?: OfficeToPdfFace | null
   /**
    * 工作区 title → 锚点会话 id（GET /options 下发：该工作区最近一个会话，官方 entity.sessionIds 末位）。
    * remote.workspaceFiles 的 list 以 sessionId 解析工作区根（0.2.0-rc.1 仍如此，源码已核实）⇒
@@ -1309,7 +1311,7 @@ export function TaskEditorDrawer(props: {
   const {
     t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors,
-    currentTaskId, width, onWidthChange, reserved,
+    officeToPdf, currentTaskId, width, onWidthChange, reserved,
   } = props
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [jsonOpen, setJsonOpen] = useState(false)
@@ -2316,6 +2318,7 @@ export function TaskEditorDrawer(props: {
               ? h(FileBrowser, {
                 key: `${pickerWs}:${anchorSessionId}`,
                 workspaceFiles,
+                officeToPdf,
                 sessionId: anchorSessionId,
                 path: '',
                 rootName: pickerWs,

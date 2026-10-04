@@ -77,6 +77,7 @@ export type LocaleKey =
   | 'previewCopyPath' | 'previewRefresh' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
   | 'previewNotRegular' | 'previewOutsideWorkspace' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
+  | 'previewOfficeUnavailable' | 'previewOfficeFailed'
   | 'previewSource' | 'previewRender' | 'previewMdSwitchAria'
   // —— U30 HTML 预览（照官方：srcDoc + sandbox 静态预览；源码态截前 256K）——
   | 'previewHtmlSwitchAria' | 'previewHtmlFrame' | 'previewHtmlFailed' | 'previewTruncated'
@@ -415,6 +416,9 @@ export const zh: Record<LocaleKey, string> = {
   previewOutsideWorkspace: '该路径在会话工作区之外（常见于指向外部的符号链接），官方接口不允许浏览。',
   previewError: '读取失败：{code}',
   previewUnknownBinary: '二进制文件，暂不支持预览。可复制路径后在工作区中打开。',
+  // Office 预览走官方 remote.officeToPdf（宿主侧 dsh-office-to-pdf 转换）；宿主未启用即此提示（与官方同款文案）。
+  previewOfficeUnavailable: '读取失败：Office 预览不可用。请在运行 DeepSeek Harness 的主机上启用文档预览服务。',
+  previewOfficeFailed: 'Office 文件转换失败，无法预览。可复制路径后在工作区中打开。',
   previewBadPayload: '读取结果不符合官方契约（已记控制台日志），未渲染内容。',
   previewRenderFailed: '预览渲染失败（错误已记录，面板其余部分不受影响）。',
   previewResize: '拖动调整预览栏宽度',
@@ -1030,6 +1034,8 @@ export const en: Record<LocaleKey, string> = {
   previewOutsideWorkspace: 'This path resolves outside the session workspace (often a symlink pointing outward); the official API refuses to browse it.',
   previewError: 'Failed to read: {code}',
   previewUnknownBinary: 'Binary file; preview is not supported. Copy the path to open it in the workspace.',
+  previewOfficeUnavailable: 'Failed to read: Office preview is unavailable. Enable the document preview service on the host running DeepSeek Harness.',
+  previewOfficeFailed: 'Office conversion failed; cannot preview. Copy the path to open it in the workspace.',
   previewBadPayload: 'Read result does not match the official contract (logged to the console); nothing rendered.',
   previewRenderFailed: 'Preview rendering failed (logged); the rest of the panel is unaffected.',
   previewResize: 'Drag to resize the preview pane',

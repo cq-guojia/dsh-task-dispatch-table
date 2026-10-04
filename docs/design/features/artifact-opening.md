@@ -53,6 +53,7 @@
   ⚠️ 下面两种早期形态**已被 §四-C 取代**：现为**页面级唯一 dock**（占布局的分栏，推压整页；弹窗靠 `right: var(--dsh-tdt-preview-w)` 让位，弹窗内不再自带分栏）。
   - ~~会话弹窗内：右侧分栏展开，对话往左压~~（已废）；
   - ~~任务列表整页：页面右侧滑出分栏~~（已废）。
+- **Office（doc/docx/ppt/pptx）= 官方 `remote.officeToPdf` 转 PDF 后再走既有 PDF iframe**（2026-10-05 落码）：官方把 Office 在**主机侧**转成 PDF（`render(scopeId, path, 'foreground')`），转换产物字节在信封 payload 的 `data`，我方复用既有 PDF 渲染壳 ⇒ **零 npm 依赖**（服务面 `OfficeToPdfFace` 本地声明，dotted 注入 `remote.officeToPdf`）。⚠️ 官方 `OfficeExtension` **含 `xls`/`xlsx`**，但用户拍板「Excel 向后讨论」⇒ 本轮**不纳入**（见 [`../../PROGRESS.md`](../../PROGRESS.md) U33 / U34）。宿主未启用该服务时呈现「Office 预览不可用」（与官方提示逐字一致）。
 - **统一入口**（用户硬要求）：所有文件链接只调 `openFile(path)` 一个方法，由它决定开哪个容器、怎么渲染；链接处零写死，改展示方式只改一处。未来任务产出物清单同走此入口。
 - **预览引擎只建一份**，弹窗 / 整页两个容器共用。
 

@@ -26,7 +26,7 @@ import { fetchWithTimeout } from './http'
 import { en, zh, type LocaleKey } from './locales'
 import { openSessionView, SessionViewModal, type SessionViewTarget, type SessionsFace, type UiConversationFace } from './session-view'
 import { FileBrowser } from './file-browser'
-import { type WorkspaceFilesFace } from './file-preview'
+import { type OfficeToPdfFace, type WorkspaceFilesFace } from './file-preview'
 import {
   clampEditorWidth, definitionToDraft, draftToDefinitionJson, emptyTaskDraft, PAGE_MIN_WIDTH,
   readEditorWidth, TaskEditorDrawer, writeEditorWidth,
@@ -477,8 +477,10 @@ function TaskPage(props: {
   openHostSession: ((id: string) => void) | null
   /** U11 产出物预览：remote.workspaceFiles 服务（未就位为 null ⇒ 不渲染预览面、链接降级纯文本）。 */
   workspaceFiles: WorkspaceFilesFace | null
+  /** Office 预览：官方 remote.officeToPdf 服务（未就位为 null ⇒ Office 文件出「不可用」空态）。 */
+  officeToPdf: OfficeToPdfFace | null
 }) {
-  const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles } = props
+  const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles, officeToPdf } = props
   // 面板自己订阅 scope：保存后即时反映生效值，也拿到 writable 状态。
   const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
@@ -1335,6 +1337,7 @@ function TaskPage(props: {
         forkSession: forkSession ?? undefined,
         openHostSession: openHostSession ?? undefined,
         // U11：产出物预览（remote.workspaceFiles 未就位时 undefined ⇒ 链接降级纯文本）。
+        // （弹窗内的 Office 链接不在此渲染——点链接走 onOpenFile 开页面级预览面，Office 预览在那里生效。）
         workspaceFiles: workspaceFiles ?? undefined,
         // 弹窗内所有文件链接 → 页面级唯一预览面（预览与弹窗互不干扰）。
         onOpenFile: canPreview ? (path: string) => { openFile(viewing.sessionId, path) } : undefined,
@@ -1403,6 +1406,7 @@ function TaskPage(props: {
         onDeleteVersion: (file: string) => { void deleteVersion(file) },
         onToggleEnabled: (enabled: boolean) => toggleTaskEnabled(editor.id, enabled),
         workspaceFiles,
+        officeToPdf,
         workspaceAnchors: editorOptions.workspaceAnchors,
       })
       : null,
@@ -1412,6 +1416,7 @@ function TaskPage(props: {
       ? h(FileBrowser, {
           key: `${preview.sessionId}:${preview.path}`,
           workspaceFiles,
+          officeToPdf,
           sessionId: preview.sessionId,
           path: preview.path,
           t,
@@ -1660,9 +1665,11 @@ function TaskPageHost(props: {
   openRef: () => ((id: string) => void) | null
   /** U11：remote.workspaceFiles 服务未就位时为 null。 */
   filesRef: () => WorkspaceFilesFace | null
+  /** Office 预览：remote.officeToPdf 服务未就位时为 null。 */
+  officeRef: () => OfficeToPdfFace | null
   onBack: () => void
 }) {
-  const { t, viewRef, forkRef, openRef, filesRef, onBack } = props
+  const { t, viewRef, forkRef, openRef, filesRef, officeRef, onBack } = props
   const scope = useSyncExternalStore(subscribeScope, getScopeValue)
   if (scope === null) {
     return h('div', { style: pageStyle },
@@ -1678,7 +1685,7 @@ function TaskPageHost(props: {
       h('p', { style: hintStyle }, t('unavailable')),
     )
   }
-  return h(TaskPage, { t, scope, onBack, viewSession: viewRef(), forkSession: forkRef(), openHostSession: openRef(), workspaceFiles: filesRef() })
+  return h(TaskPage, { t, scope, onBack, viewSession: viewRef(), forkSession: forkRef(), openHostSession: openRef(), workspaceFiles: filesRef(), officeToPdf: officeRef() })
 }
 
 // ─────────────────────────── 插件主体 ───────────────────────────
@@ -1754,6 +1761,23 @@ export function apply(ctx: ClientContext): void {
     } else {
       // 真机排障锚点：链接全部降级纯文本时先看这行（连同 remote 自身的键清单）。
       console.warn(`[task-dispatch:client] remote.workspaceFiles 未就位：文件预览降级（remote 键=[${remote === undefined ? 'remote 服务缺席' : Object.keys(remote).join(',')}]）`)
+    }
+  })
+  // Office 预览（doc/docx/ppt/pptx）：remote.officeToPdf —— 官方把 Office 转成 PDF，我方再走既有 PDF 渲染。
+  // 与 workspaceFiles 同款 dotted 注入（'remote' + 'remote.officeToPdf'）：只注 'remote' 会在命名空间
+  // 刚挂上时就触发，此刻 officeToPdf 还没挂 ⇒ 探测永久失败（2026-09-28 真机同款根因）。
+  // ⚠️ 宿主没装文档预览服务（dsh-office-to-pdf）时该服务根本不存在 ⇒ 回调不触发 ⇒ 保持 null
+  // ⇒ Office 文件呈现「Office 预览不可用」（与官方提示同款），**不会**崩、也不会误报成「二进制不支持」。
+  let officeToPdf: OfficeToPdfFace | null = null
+  ctx.inject(['remote', 'remote.officeToPdf'], (sub) => {
+    const rec = sub as unknown as Record<string, unknown>
+    const remote = rec.remote as Record<string, unknown> | undefined
+    const otp = rec['remote.officeToPdf'] ?? remote?.officeToPdf
+    if (otp !== null && otp !== undefined && typeof (otp as OfficeToPdfFace).render === 'function') {
+      officeToPdf = otp as OfficeToPdfFace
+      console.info('[task-dispatch:client] remote.officeToPdf 已就位：Office（doc/docx/ppt/pptx）预览启用')
+    } else {
+      console.info('[task-dispatch:client] remote.officeToPdf 未就位：Office 文件显示「预览不可用」（宿主未启用文档预览服务）')
     }
   })
   // 布局服务（ctx.layout）：主面板切换——选中整页 / 返回会话。
@@ -1855,6 +1879,7 @@ export function apply(ctx: ClientContext): void {
           forkRef: () => forkSession,
           openRef: () => openHostSession,
           filesRef: () => workspaceFiles,
+          officeRef: () => officeToPdf,
           onBack: () => { selectPanel(null) },
         }),
       ),

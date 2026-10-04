@@ -39,11 +39,13 @@ import {
   HtmlPreview,
   isFailed,
   listingOf,
+  OfficePreview,
   PreviewBoundary,
   previewKind,
   SOURCE_MAX_BYTES,
   TextPreview,
   type ErrView,
+  type OfficeToPdfFace,
   type WorkspaceFilesFace,
 } from './file-preview'
 
@@ -303,13 +305,15 @@ type ChildData =
 /** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
 function FileBody(props: {
   workspaceFiles: WorkspaceFilesFace
+  /** 官方 `remote.officeToPdf`（Office 转 PDF）；未就位为 null ⇒ Office 文件出「不可用」空态。 */
+  officeToPdf?: OfficeToPdfFace | null
   sessionId: string
   path: string
   sourceView: boolean
   reloadNonce: number
   t: Translate
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, sourceView, reloadNonce, t } = props
+  const { workspaceFiles, officeToPdf, sessionId, path, sourceView, reloadNonce, t } = props
   const { kind, ext, mime } = previewKind(path)
   const isMd = kind === 'md'
   const isHtml = kind === 'html'
@@ -318,7 +322,9 @@ function FileBody(props: {
     fallback,
     children: (kind === 'image' || kind === 'pdf')
       ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t, reloadNonce })
-      : isHtml && !sourceView
+      : kind === 'office'
+        ? h(OfficePreview, { officeToPdf: officeToPdf ?? null, sessionId, path, t, reloadNonce })
+        : isHtml && !sourceView
         ? h(HtmlPreview, { workspaceFiles, sessionId, path, t, reloadNonce })
         : h(TextPreview, {
             workspaceFiles, sessionId, path, ext, markdown: isMd, sourceView, reloadNonce, t,
@@ -333,6 +339,8 @@ function FileBody(props: {
  */
 export function FileBrowser(props: {
   workspaceFiles: WorkspaceFilesFace
+  /** 官方 `remote.officeToPdf`（Office 转 PDF）；未就位为 null ⇒ Office 文件出「不可用」空态。 */
+  officeToPdf?: OfficeToPdfFace | null
   sessionId: string
   path: string
   t: Translate
@@ -357,7 +365,7 @@ export function FileBrowser(props: {
   /** 外部容器样式（嵌入弹层时撑满高度用）。 */
   style?: CSSProperties
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props
+  const { workspaceFiles, officeToPdf, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props
   // mode：加载/目录树/文件预览/列举错误。viewing 非空 ⇒ 在 dir 树内预览文件。
   const [mode, setMode] = useState<'loading' | 'dir' | 'file' | 'error'>('loading')
   const [dir, setDir] = useState<string>('')
@@ -697,7 +705,7 @@ export function FileBrowser(props: {
   // —— 主体 ——
   let body: ReactNode
   if (viewing !== null) {
-    body = h(FileBody, { workspaceFiles, sessionId, path: viewing, sourceView, reloadNonce, t })
+    body = h(FileBody, { workspaceFiles, officeToPdf, sessionId, path: viewing, sourceView, reloadNonce, t })
   } else if (mode === 'error' && listErr !== null) {
     // 列举失败（如 outside-workspace）：错误文案 + 「返回」按钮回上一次位置（用户 2026-09-28 四验：
     // 停在报错页没有任何办法回去，必须在报错下面给一个返回）。

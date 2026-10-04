@@ -152,6 +152,29 @@ export function listingOf(result: unknown): {
   }
 }
 
+/**
+ * 官方 `remote.officeToPdf` 的消费面（**本地结构化声明，零 npm 依赖**——与下面 `WorkspaceFilesFace` 同款做法；
+ * 本仓惯例见 src/client/index.ts 顶部「宿主能力的类型全部本地结构化声明」）。
+ *
+ * 契约来源（@deepseek-ai/dsh-office-to-pdf@0.2.0-rc.2，逐字核实）：
+ * - 服务名 = cordis dotted 键 `remote.officeToPdf`（底层 Typert key `officeToPdf/render`）；
+ * - `lib/typert.remote-client.d.ts`：`render(workspaceFileScopeId, path, priority, signal?)`
+ *   ⇒ `Promise<RemoteResult<RenderedDocumentBytes>>`；
+ * - `OfficeToPdfPriority = 'foreground' | 'background'`（前台预览取 `foreground`）；
+ * - `RenderedDocumentBytes extends WorkspaceFileBytes` ⇒ PDF 字节在信封 payload 的 **`data: Uint8Array`**
+ *   （与 `readBytes` 同字段名 ⇒ 可复用 `bytesOf` 解析）。
+ * ⚠️ 运行时服务由**宿主**提供（宿主装了 `@deepseek-ai/dsh-office-to-pdf` 才有）；未装 ⇒ dotted inject
+ *   回调不触发 ⇒ 保持 null ⇒ Office 文件呈现「Office 预览不可用」（与官方提示同款）。
+ */
+export interface OfficeToPdfFace {
+  render(
+    sessionId: string,
+    path: string,
+    priority: 'foreground' | 'background',
+    signal?: AbortSignal,
+  ): Promise<unknown>
+}
+
 /** @deepseek-ai/dsh-api-workspace-files 的消费面（官方 remote.workspaceFiles 命名空间的用到的子集）。 */
 export interface WorkspaceFilesFace {
   /**
@@ -232,8 +255,15 @@ export const HTML_KINDS = ['html', 'htm'] as const
 /** 源码态读取上限（用户 2026-10-04 拍板 256K；官方走 `read` 分页、上限是部署 maxBytes，无此常量）。 */
 export const SOURCE_MAX_BYTES = 256 * 1024
 
+/**
+ * Office 预览扩展名（官方 `remote.officeToPdf` 转 PDF 后再渲染）。
+ * ⚠️ 官方 `OfficeExtension` 还含 `xls` / `xlsx`，但用户 2026-10-05 拍板「Excel 向后讨论」⇒ 本轮**不纳入**，
+ * 表格文件维持原「暂不支持预览」提示（避免与「Excel 走可编辑表格引擎」的路线混为一谈）。
+ */
+export const OFFICE_KINDS = ['doc', 'docx', 'ppt', 'pptx'] as const
+
 /** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
-export function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'html' | 'text'; ext: string; mime?: string } {
+export function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'html' | 'office' | 'text'; ext: string; mime?: string } {
   const base = path.slice(path.lastIndexOf('/') + 1)
   const dot = base.lastIndexOf('.')
   const ext = dot <= 0 ? '' : base.slice(dot + 1).toLowerCase()
@@ -242,6 +272,8 @@ export function previewKind(path: string): { kind: 'image' | 'pdf' | 'md' | 'htm
   if (ext === 'md' || ext === 'markdown') return { kind: 'md', ext }
   // HTML 与官方 `htmlBodyDefinition` 同款扩展名（documentpreview lib/client.js:4102）。
   if (HTML_KINDS.some(kind => kind === ext)) return { kind: 'html', ext }
+  // Office：官方 `remote.officeToPdf.render` 转 PDF ⇒ 与 pdf 同款 iframe 渲染（mime 即转换产物）。
+  if (OFFICE_KINDS.some(kind => kind === ext)) return { kind: 'office', ext, mime: 'application/pdf' }
   return { kind: 'text', ext }
 }
 
@@ -347,6 +379,16 @@ export function errView(error: unknown): ErrView {
     case 'outside-workspace':
       // 官方 list 限定工作区内；常见于指向外部的符号链接（如 workspace→宿主目录），官方同样拒绝。
       return { key: 'previewOutsideWorkspace' }
+    case 'invocation-unavailable':
+    case 'service-unavailable':
+      // 官方 gateway 侧「服务未启用」：Office 预览依赖宿主启用文档预览服务（dsh-office-to-pdf + libreoffice-kit）。
+      return { key: 'previewOfficeUnavailable' }
+    case 'failed':
+      // 官方 `document-render/failed`：details.reason ∈ OfficeToPdfErrorCode；
+      // 其中 `unavailable` = 宿主未启用文档预览服务（用户真机 2026-10-05 见到的就是这句）。
+      return details !== null && details.reason === 'unavailable'
+        ? { key: 'previewOfficeUnavailable' }
+        : { key: 'previewOfficeFailed' }
     default:
       return {
         key: 'previewError',
@@ -411,6 +453,57 @@ export function BytesPreview(props: {
   }
   return h('div', { className: 'dsh-tdt-sv-preview-body' },
     h('img', { className: 'dsh-tdt-sv-preview-img', src: url, alt: path }),
+  )
+}
+
+/**
+ * Office（doc / docx / ppt / pptx）：官方 `remote.officeToPdf.render` 转 PDF → Blob → objectURL →
+ * **与 PDF 同款 iframe 原生渲染**。转换本身是官方能力，我方只做取数与渲染壳（零 npm 依赖）。
+ * 服务未就位（宿主未启用文档预览服务）⇒ 不发起请求，直接出「Office 预览不可用」（与官方提示同款）。
+ */
+export function OfficePreview(props: {
+  /** 官方 `remote.officeToPdf` 服务（未就位为 null ⇒ 出「不可用」空态）。 */
+  officeToPdf: OfficeToPdfFace | null
+  sessionId: string
+  path: string
+  t: Translate
+  /** 顶栏「刷新」自增，触发重新转换。 */
+  reloadNonce: number
+}): ReturnType<typeof h> {
+  const { officeToPdf, sessionId, path, t, reloadNonce } = props
+  const [url, setUrl] = useState<string | null>(null)
+  const [err, setErr] = useState<ErrView | null>(null)
+  useEffect(() => {
+    let alive = true
+    let objectUrl: string | null = null
+    setUrl(null)
+    setErr(null)
+    // 服务未就位 ⇒ 不发起请求（dotted inject 没触发，说明宿主没装文档预览服务，等也等不来）。
+    if (officeToPdf === null) { setErr({ key: 'previewOfficeUnavailable' }); return }
+    // priority = 'foreground'：前台预览优先（官方 OfficeToPdfPriority 仅这两档）。
+    officeToPdf.render(sessionId, path, 'foreground')
+      .then((page) => {
+        if (!alive) return
+        // 转换产物 RenderedDocumentBytes extends WorkspaceFileBytes ⇒ 字节在信封 payload 的 data，复用 bytesOf。
+        const data = bytesOf(page)
+        if (isFailed(data)) { setErr(errView(data.failed)); return }
+        if (data === null) { setErr({ key: 'previewBadPayload' }); return }
+        objectUrl = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: 'application/pdf' }))
+        setUrl(objectUrl)
+      })
+      .catch((error: unknown) => { if (alive) setErr(errView(error)) })
+    return () => {
+      alive = false
+      if (objectUrl !== null) URL.revokeObjectURL(objectUrl)
+    }
+  }, [officeToPdf, sessionId, path, reloadNonce])
+  if (err !== null) return h(ErrBox, { err, t })
+  if (url === null) {
+    // 硬性规定：加载**只复用页面右下角统一那一个 Loading**，此处不显示任何加载文案（空着即可）。
+    return h(Loading, { label: t('previewLoading') })
+  }
+  return h('div', { className: 'dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill' },
+    h('iframe', { className: 'dsh-tdt-sv-preview-pdf', src: url, title: path }),
   )
 }
 
@@ -608,6 +701,8 @@ export function TextPreview(props: {
  */
 export function FilePreviewPanel(props: {
   workspaceFiles: WorkspaceFilesFace
+  /** 官方 `remote.officeToPdf`（Office 转 PDF）；未就位为 null ⇒ Office 文件出「不可用」空态。 */
+  officeToPdf?: OfficeToPdfFace | null
   sessionId: string
   path: string
   t: Translate
@@ -617,7 +712,7 @@ export function FilePreviewPanel(props: {
   /** 左缘拖拽条按下（调宽）；不传 = 不渲染拖拽条。preventDefault 用于掐掉拖选（由调用方决定）。 */
   onResizeStart?: (event: { clientX: number; pointerId: number; preventDefault?: () => void }) => void
 }): ReturnType<typeof h> {
-  const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart } = props
+  const { workspaceFiles, officeToPdf, sessionId, path, t, onClose, dock, onResizeStart } = props
   const { kind, ext, mime } = previewKind(path)
   const isMd = kind === 'md'
   const isHtml = kind === 'html'
@@ -693,7 +788,9 @@ export function FilePreviewPanel(props: {
       fallback,
       children: (kind === 'image' || kind === 'pdf')
         ? h(BytesPreview, { workspaceFiles, sessionId, path, kind, mime: mime ?? 'application/octet-stream', t, reloadNonce })
-        : isHtml && !sourceView
+        : kind === 'office'
+          ? h(OfficePreview, { officeToPdf: officeToPdf ?? null, sessionId, path, t, reloadNonce })
+          : isHtml && !sourceView
           // HTML 默认 = 静态预览（照官方 srcDoc + sandbox=""）；点「源码」才走文本态。
           ? h(HtmlPreview, { workspaceFiles, sessionId, path, t, reloadNonce })
           : h(TextPreview, {

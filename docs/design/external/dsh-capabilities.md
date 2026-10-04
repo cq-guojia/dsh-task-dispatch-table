@@ -59,6 +59,22 @@
 | ⚠️ **官方没有「预览态大小限制」，也没有 512K 常量** | `documentpreview` 的 Config **只有** Office 缓存与 Excel 上限（无 HTML/PDF/MD/图片大小配置）；全量读上限是 **`workspaceFiles` 的 `maxFileBytes`**（部署值，"larger files are refused, **never truncated**"）⇒ 超限即 `too-large` 报错、**官方也不显示半截预览**。源码态走 `read` 分页，上限是部署 `maxBytes`（**不是写死的 512K**） | `dsh-client-ui-sidebar-documentpreview` `lib/types/config.d.ts`；`dsh-api-workspace-files` `lib/types/index.d.ts:56-57` |
 | 官方其余渲染器（备查） | 代码 = `CODE_HIGHLIGHT_EXTENSIONS` + 官方 CodeBlock（`lib/client.js:5086-5094`）；excel（`lib/client.excel.js` 7.1 MB）；office/pdf；均绑右栏 slot | 同上 |
 
+### Office 预览：官方 `remote.officeToPdf`（2026-10-05 源码核实，0.2.0-rc.2）
+
+> 本节逐条来自 unpkg 解包的 `@deepseek-ai/dsh-office-to-pdf@0.2.0-rc.2` / `@deepseek-ai/dsh-api-workspace-files@0.2.0-rc.2` 类型产物，**不凭记忆**。
+
+| 能力 | 事实 | 出处 |
+|---|---|---|
+| **Office 预览是「主机侧转换」，不是纯前端** | `documentpreview` 的 office 注册 `extensions: ['doc','docx','ppt','pptx']`，`ctx.inject(['remote','remote.officeToPdf','remote.workspaceFiles'])` 后调 `remote.officeToPdf.render(...)`；`read` 初值 `unavailable` ⇒ 抛「Office 预览不可用。请在运行 DeepSeek Harness 的主机上启用文档预览服务。」 | `dsh-client-ui-sidebar-documentpreview@0.2.0-rc.2` `lib/client.js`（office 注册块） |
+| 服务名与调用签名 | cordis dotted 键 = **`remote.officeToPdf`**（底层 Typert key `officeToPdf/render`）；`render(workspaceFileScopeId: SessionId, path: string, priority: OfficeToPdfPriority, signal?: AbortSignal) => Promise<RemoteResult<RemoteDecoded<RenderedDocumentBytes>>>` | `@deepseek-ai/dsh-office-to-pdf` `lib/typert.remote-client.d.ts` |
+| `priority` 取值 | `OfficeToPdfPriority = 'foreground' \| 'background'`（前台预览取 `foreground`） | 同包 `lib/types/types.d.ts:8` |
+| ⚠️ **`OfficeExtension` 含表格** | `'doc' \| 'docx' \| 'xls' \| 'xlsx' \| 'ppt' \| 'pptx'` ⇒ **xls/xlsx 也能经此转成 PDF 预览**（与「Excel 走可编辑表格引擎」是**两条不同的路**） | 同包 `lib/types/types.d.ts:6` |
+| 转换产物形状 | `RenderedDocumentBytes extends WorkspaceFileBytes`（+ `missingFonts` / `generation`）⇒ PDF 字节在信封 payload 的 **`data: Uint8Array`**（与 `readBytes` 同字段名） | 同包 `lib/types/types.d.ts:42-45`；`dsh-api-workspace-files` `lib/types/types.d.ts:74-81` |
+| 错误码 | `document-render/failed` + `details.reason ∈ OfficeToPdfErrorCode`（`input-too-large`/`unsupported-format`/`unavailable`/`busy`/`timeout`/…）；`reason === 'unavailable'` = 宿主未启用服务。网关侧 `invocation-unavailable` / `service-unavailable` 同义 | 同包 `lib/types/types.d.ts:40,46-53` |
+| 引擎与 ⚠️ **linux-x64 缺口（host 侧风险，非前端能解）** | 转换由 host 插件 `@deepseek-ai/dsh-office-to-pdf` 完成，引擎 `@deepseek-ai/libreoffice-kit`；其 README 明示「不查找系统 LibreOffice、不运行时下载」，`optionalDependencies` **只有** `wasm / win32-x64 / win32-arm64 / darwin-x64 / darwin-arm64`，**没有 linux-x64 原生包** ⇒ 即便宿主启用服务，Linux 主机仍可能转不了（只能靠 wasm 兜底） | `@deepseek-ai/dsh-office-to-pdf@0.2.0-rc.2` `package.json`（dependencies）；`@deepseek-ai/libreoffice-kit` README / optionalDependencies |
+| **类型来源 ≠ 运行时依赖（可零 npm 依赖接入）** | 该包的 `./remote` 导出 = `lib/typert.remote-client.d.ts`（只 `declare module` 扩展 `TypertRemoteMap`）；`documentpreview` 只在 **devDependencies** 引它 ⇒ **构建期类型**、运行时服务由**宿主**提供 ⇒ 第三方插件**不必 npm install**，本地声明服务面 + dotted inject 即可（本仓惯例：`src/client/index.ts` 顶部「宿主能力的类型全部本地结构化声明」） | 两包 `package.json`（exports / devDependencies） |
+| ⚠️ 借不到官方 **Excel 表格引擎**（与上面 Office 路线无关） | 官方 Excel 是纯前端：懒加载分包 `lib/client.excel.js`（7.06 MB）用 `@fortune-sheet/react` + SheetJS，Worker(`name:"dsh-excel"`) 解析。该引擎在**官方私有分包**内、导出面全是 `type`、且只绑右栏 seat ⇒ 第三方零成本复用**不可行**；要同款必须自己 `npm install` 并打进自有 bundle（增体量 ~1~2 MB，破本仓「绝不引第三方包」原则） | `dsh-client-ui-sidebar-documentpreview@0.2.0-rc.2` `lib/client.excel.js`、`package.json`（devDependencies 含 `@fortune-sheet/*`、`xlsx`） |
+
 ### ⚠️ `workspaceFiles` 四个方法的**业务参数个数**（2026-10-03 真机踩坑，务必照抄）
 
 远端客户端**按位置参数个数校验**（多传/少传即抛 `client api: workspaceFiles/<方法> expected N business argument(s) plus an optional AbortSignal, got M`）⇒ 第三参**必传**，哪怕是"读全量"也要传 `{}`。

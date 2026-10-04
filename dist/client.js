@@ -438,6 +438,8 @@ window.__ModuleLoader__.load({
 			previewOutsideWorkspace: "该路径在会话工作区之外（常见于指向外部的符号链接），官方接口不允许浏览。",
 			previewError: "读取失败：{code}",
 			previewUnknownBinary: "二进制文件，暂不支持预览。可复制路径后在工作区中打开。",
+			previewOfficeUnavailable: "读取失败：Office 预览不可用。请在运行 DeepSeek Harness 的主机上启用文档预览服务。",
+			previewOfficeFailed: "Office 文件转换失败，无法预览。可复制路径后在工作区中打开。",
 			previewBadPayload: "读取结果不符合官方契约（已记控制台日志），未渲染内容。",
 			previewRenderFailed: "预览渲染失败（错误已记录，面板其余部分不受影响）。",
 			previewResize: "拖动调整预览栏宽度",
@@ -1032,6 +1034,8 @@ window.__ModuleLoader__.load({
 			previewOutsideWorkspace: "This path resolves outside the session workspace (often a symlink pointing outward); the official API refuses to browse it.",
 			previewError: "Failed to read: {code}",
 			previewUnknownBinary: "Binary file; preview is not supported. Copy the path to open it in the workspace.",
+			previewOfficeUnavailable: "Failed to read: Office preview is unavailable. Enable the document preview service on the host running DeepSeek Harness.",
+			previewOfficeFailed: "Office conversion failed; cannot preview. Copy the path to open it in the workspace.",
 			previewBadPayload: "Read result does not match the official contract (logged to the console); nothing rendered.",
 			previewRenderFailed: "Preview rendering failed (logged); the rest of the panel is unaffected.",
 			previewResize: "Drag to resize the preview pane",
@@ -52772,6 +52776,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const HTML_KINDS = ["html", "htm"];
 		/** 源码态读取上限（用户 2026-10-04 拍板 256K；官方走 `read` 分页、上限是部署 maxBytes，无此常量）。 */
 		const SOURCE_MAX_BYTES = 262144;
+		/**
+		* Office 预览扩展名（官方 `remote.officeToPdf` 转 PDF 后再渲染）。
+		* ⚠️ 官方 `OfficeExtension` 还含 `xls` / `xlsx`，但用户 2026-10-05 拍板「Excel 向后讨论」⇒ 本轮**不纳入**，
+		* 表格文件维持原「暂不支持预览」提示（避免与「Excel 走可编辑表格引擎」的路线混为一谈）。
+		*/
+		const OFFICE_KINDS = [
+			"doc",
+			"docx",
+			"ppt",
+			"pptx"
+		];
 		/** 预览类型分发（拍板：按扩展名定渲染器，未知二进制由 read 抛 not-text 后落空态）。 */
 		function previewKind(path) {
 			const base = path.slice(path.lastIndexOf("/") + 1);
@@ -52794,6 +52809,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (HTML_KINDS.some((kind) => kind === ext)) return {
 				kind: "html",
 				ext
+			};
+			if (OFFICE_KINDS.some((kind) => kind === ext)) return {
+				kind: "office",
+				ext,
+				mime: "application/pdf"
 			};
 			return {
 				kind: "text",
@@ -52896,6 +52916,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				case "not-text": return { key: "previewUnknownBinary" };
 				case "not-regular-file": return details !== null && details.kind === "directory" ? { key: "previewDirectory" } : { key: "previewNotRegular" };
 				case "outside-workspace": return { key: "previewOutsideWorkspace" };
+				case "invocation-unavailable":
+				case "service-unavailable": return { key: "previewOfficeUnavailable" };
+				case "failed": return details !== null && details.reason === "unavailable" ? { key: "previewOfficeUnavailable" } : { key: "previewOfficeFailed" };
 				default: return {
 					key: "previewError",
 					params: { code: code !== "" ? code : typeof e.message === "string" ? e.message : String(error) }
@@ -52958,6 +52981,61 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				className: "dsh-tdt-sv-preview-img",
 				src: url,
 				alt: path
+			}));
+		}
+		/**
+		* Office（doc / docx / ppt / pptx）：官方 `remote.officeToPdf.render` 转 PDF → Blob → objectURL →
+		* **与 PDF 同款 iframe 原生渲染**。转换本身是官方能力，我方只做取数与渲染壳（零 npm 依赖）。
+		* 服务未就位（宿主未启用文档预览服务）⇒ 不发起请求，直接出「Office 预览不可用」（与官方提示同款）。
+		*/
+		function OfficePreview(props) {
+			const { officeToPdf, sessionId, path, t, reloadNonce } = props;
+			const [url, setUrl] = (0, react$1.useState)(null);
+			const [err, setErr] = (0, react$1.useState)(null);
+			(0, react$1.useEffect)(() => {
+				let alive = true;
+				let objectUrl = null;
+				setUrl(null);
+				setErr(null);
+				if (officeToPdf === null) {
+					setErr({ key: "previewOfficeUnavailable" });
+					return;
+				}
+				officeToPdf.render(sessionId, path, "foreground").then((page) => {
+					if (!alive) return;
+					const data = bytesOf(page);
+					if (isFailed(data)) {
+						setErr(errView(data.failed));
+						return;
+					}
+					if (data === null) {
+						setErr({ key: "previewBadPayload" });
+						return;
+					}
+					objectUrl = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+					setUrl(objectUrl);
+				}).catch((error) => {
+					if (alive) setErr(errView(error));
+				});
+				return () => {
+					alive = false;
+					if (objectUrl !== null) URL.revokeObjectURL(objectUrl);
+				};
+			}, [
+				officeToPdf,
+				sessionId,
+				path,
+				reloadNonce
+			]);
+			if (err !== null) return (0, react$1.createElement)(ErrBox, {
+				err,
+				t
+			});
+			if (url === null) return (0, react$1.createElement)(Loading, { label: t("previewLoading") });
+			return (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body dsh-tdt-sv-preview-fill" }, (0, react$1.createElement)("iframe", {
+				className: "dsh-tdt-sv-preview-pdf",
+				src: url,
+				title: path
 			}));
 		}
 		/**
@@ -53366,7 +53444,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		/** 单个文件预览体（复用 file-preview 的官方渲染组件，外裹错误边界）。 */
 		function FileBody(props) {
-			const { workspaceFiles, sessionId, path, sourceView, reloadNonce, t } = props;
+			const { workspaceFiles, officeToPdf, sessionId, path, sourceView, reloadNonce, t } = props;
 			const { kind, ext, mime } = previewKind(path);
 			const isMd = kind === "md";
 			const isHtml = kind === "html";
@@ -53382,6 +53460,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					path,
 					kind,
 					mime: mime ?? "application/octet-stream",
+					t,
+					reloadNonce
+				}) : kind === "office" ? (0, react$1.createElement)(OfficePreview, {
+					officeToPdf: officeToPdf ?? null,
+					sessionId,
+					path,
 					t,
 					reloadNonce
 				}) : isHtml && !sourceView ? (0, react$1.createElement)(HtmlPreview, {
@@ -53408,7 +53492,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* list(path) 成功 ⇒ 目录树；not-directory ⇒ 文件预览（dir = 父目录，面包屑保留可返回）。
 		*/
 		function FileBrowser(props) {
-			const { workspaceFiles, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props;
+			const { workspaceFiles, officeToPdf, sessionId, path, t, onClose, dock, onResizeStart, picker, onPick, rootName, workspaces, onSelectWorkspace, style } = props;
 			const [mode, setMode] = (0, react$1.useState)("loading");
 			const [dir, setDir] = (0, react$1.useState)("");
 			const [listing, setListing] = (0, react$1.useState)(null);
@@ -53751,6 +53835,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			let body;
 			if (viewing !== null) body = (0, react$1.createElement)(FileBody, {
 				workspaceFiles,
+				officeToPdf,
 				sessionId,
 				path: viewing,
 				sourceView,
@@ -55623,7 +55708,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, currentTaskId, width, onWidthChange, reserved } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved } = props;
 			const [advancedOpen, setAdvancedOpen] = (0, react$1.useState)(false);
 			const [jsonOpen, setJsonOpen] = (0, react$1.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react$1.useState)(false);
@@ -56708,6 +56793,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return workspaceFiles !== null && workspaceFiles !== void 0 && anchorSessionId !== "" ? (0, react$1.createElement)(FileBrowser, {
 					key: `${pickerWs}:${anchorSessionId}`,
 					workspaceFiles,
+					officeToPdf,
 					sessionId: anchorSessionId,
 					path: "",
 					rootName: pickerWs,
@@ -60061,7 +60147,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 选中侧栏条目即替换会话区。
 		*/
 		function TaskPage(props) {
-			const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles } = props;
+			const { t, scope, onBack, viewSession, forkSession, openHostSession, workspaceFiles, officeToPdf } = props;
 			const subscribe = (0, react$1.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react$1.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react$1.useSyncExternalStore)(subscribe, getSnapshot);
@@ -60766,10 +60852,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				onToggleEnabled: (enabled) => toggleTaskEnabled(editor.id, enabled),
 				workspaceFiles,
+				officeToPdf,
 				workspaceAnchors: editorOptions.workspaceAnchors
 			}) : null, preview !== null && workspaceFiles !== null ? (0, react$1.createElement)(FileBrowser, {
 				key: `${preview.sessionId}:${preview.path}`,
 				workspaceFiles,
+				officeToPdf,
 				sessionId: preview.sessionId,
 				path: preview.path,
 				t,
@@ -61018,7 +61106,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* @param props - t 席位、会话视图工厂、返回会话回调。
 		*/
 		function TaskPageHost(props) {
-			const { t, viewRef, forkRef, openRef, filesRef, onBack } = props;
+			const { t, viewRef, forkRef, openRef, filesRef, officeRef, onBack } = props;
 			const scope = (0, react$1.useSyncExternalStore)(subscribeScope, getScopeValue);
 			if (scope === null) return (0, react$1.createElement)("div", { style: pageStyle }, (0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)(Button$2, {
 				variant: "outline",
@@ -61033,7 +61121,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				viewSession: viewRef(),
 				forkSession: forkRef(),
 				openHostSession: openRef(),
-				workspaceFiles: filesRef()
+				workspaceFiles: filesRef(),
+				officeToPdf: officeRef()
 			});
 		}
 		/**
@@ -61085,6 +61174,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					workspaceFiles = wf;
 					console.info("[task-dispatch:client] remote.workspaceFiles 已就位：文件预览与文件链接启用");
 				} else console.warn(`[task-dispatch:client] remote.workspaceFiles 未就位：文件预览降级（remote 键=[${remote === void 0 ? "remote 服务缺席" : Object.keys(remote).join(",")}]）`);
+			});
+			let officeToPdf = null;
+			ctx.inject(["remote", "remote.officeToPdf"], (sub) => {
+				const rec = sub;
+				const remote = rec.remote;
+				const otp = rec["remote.officeToPdf"] ?? remote?.officeToPdf;
+				if (otp !== null && otp !== void 0 && typeof otp.render === "function") {
+					officeToPdf = otp;
+					console.info("[task-dispatch:client] remote.officeToPdf 已就位：Office（doc/docx/ppt/pptx）预览启用");
+				} else console.info("[task-dispatch:client] remote.officeToPdf 未就位：Office 文件显示「预览不可用」（宿主未启用文档预览服务）");
 			});
 			let selectPanel = () => {};
 			ctx.inject(["layout"], (sub) => {
@@ -61159,6 +61258,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					forkRef: () => forkSession,
 					openRef: () => openHostSession,
 					filesRef: () => workspaceFiles,
+					officeRef: () => officeToPdf,
 					onBack: () => {
 						selectPanel(null);
 					}
