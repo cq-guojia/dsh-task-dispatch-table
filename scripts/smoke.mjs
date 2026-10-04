@@ -762,7 +762,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('上次 / 下次恢复成两个独立小标签（PastPill + NextPill，不再合并）',
     clientJs.includes('function PastPill') && clientJs.includes('function NextPill') && !clientJs.includes('RunPills'))
   check('悬浮提示挂在真 DOM 上（Tooltip 子元素是真 <div>，不再是裸 LiveText）',
-    /side: "bottom"\s*\},\s*\(0, react\.createElement\)\("div", \{ style: pillOuterStyle \}/.test(clientJs))
+    /side: "bottom"\s*\},\s*\(0, [\w$]+\.createElement\)\("div", \{ style: pillOuterStyle \}/.test(clientJs))
   // 运行中不再跳倒计时（用户 2026-09-30）：NextPill 见 row.running 即改显「三个小方块脉动」活动指示；
   // 上一轮的「补跑时间」显示已撤（用户：根本不用判断补跑时间）。
   check('运行中改显活动指示（dsh-tdt-run-blocks + 动画），补跑时间显示已撤',
@@ -1197,7 +1197,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('展开区 = 产出物全量（图标 + 文件名，可点开预览）+ 该次执行的**事件流水**（懒取 + 缓存 + 序号作废）',
       /import \{[^}]*fetchEvents[^}]*\} from '\.\/query'/.test(tlSrc)
       && /fetchEvents\(id\)/.test(tlSrc) && /eventsCache/.test(tlSrc) && /eventsSeqRef\.current = seq/.test(tlSrc)
-      && /className: 'dsh-tdt-filechip dsh-tdt-filechip--block'/.test(tlSrc) && tlSrc.includes("t('cardEventsEmpty')")
+      && /className: 'dsh-tdt-filechip dsh-tdt-filechip--inline'/.test(tlSrc) && tlSrc.includes("t('cardEventsEmpty')")
       && /className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) && tlSrc.includes("t('recEventsTitle')"))
     check('减弱动效仍被尊重（脉动 / 淡入在 prefers-reduced-motion 下关闭）', tlSrc.includes('prefers-reduced-motion'))
     check('不用图标表成败：色调走 statusToneOf 单源 + toneClassOf 映射（源码内无状态图标）',
@@ -1234,19 +1234,35 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && ctrlSrc.includes('.dsh-tdt-chip{'))
     check('折叠态产出物**只给图标**（文件名只出现在展开区）',
       /className: 'dsh-tdt-rec-chiprow'/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-outname'))
+    check('第五轮：备注行归入左列（源序在左列与右列之间）⇒ 出现第三行时右列控件仍相对整条居中',
+      /dsh-tdt-rec-left[\s\S]*dsh-tdt-rec-note[\s\S]*dsh-tdt-rec-right/.test(tlSrc))
+    check('第五轮：小图标统一 12px（三枚字段图标 + 日期行小时钟），时长图标换官方 IconQueue（反向：不再出现刷新图标）',
+      (tlSrc.match(/size: 12 \}/g) ?? []).length >= 4
+      && /IconQueueOutlineRegular/.test(tlSrc) && !/IconRefreshOutlineRegular/.test(tlSrc)
+      && /\.dsh-tdt-rec-field>svg\{flex:none;width:var\(--tdt-font-sm\);height:var\(--tdt-font-sm\)/.test(tlSrc))
+    check('第五轮：展开区产出物 = 附件区同款（行内 + 40ch 跑马灯，不占整行；反向：时间轴不再用 --block）',
+      /className: 'dsh-tdt-filechip dsh-tdt-filechip--inline'/.test(tlSrc)
+      && /\.dsh-tdt-rec-expouts\{display:flex;flex-wrap:wrap;gap:2px 10px/.test(tlSrc)
+      && /h\(MarqueeText, \{ text: baseNameOf\(path\), title: path, style: \{ maxWidth: '40ch', minWidth: 0 \} \}/.test(tlSrc)
+      && !tlSrc.includes('dsh-tdt-filechip--block'))
+    check('第五轮：信息行五段都带「标签 + 完整值」的悬停提示（工作区 / 计划执行 / 实际开始 / 时长 / token 消耗）',
+      /t\('listFieldWorkspace'\)\}：/.test(tlSrc) && /t\('colPlanned'\)\}：/.test(tlSrc)
+      && /t\('colActualStart'\)\}：/.test(tlSrc) && /t\('colDuration'\)\}：/.test(tlSrc)
+      && /t\('recTokenHint'\)\}：/.test(tlSrc) && tlSrc.includes('durationHint')
+      && locSrc.includes("recTokenHint: 'token 消耗'"))
     check('第四轮：条目**删掉可见状态文字**（成败只由 5px 竖条 + 状态浅底表达），状态名改挂竖条悬停提示',
       !tlSrc.includes('dsh-tdt-rec-state') && !tlSrc.includes('dsh-tdt-rec-statedot')
       && /title: statusLabel/.test(tlSrc) && /const statusLabel = statusTextOf\(row\.status, t\)/.test(tlSrc))
-    check('第四轮：块内**左右两列**，右列单行控件组 = 产出物图标 → 查看会话按钮 → 展开箭头（箭头随展开翻转）',
+    check('第四轮 / 第五轮：块内**左右两列**，右列单行控件组 = 产出物图标 → 查看会话按钮 → 展开箭头（基础层 IconButton，随展开翻转）',
       /className: 'dsh-tdt-rec-right'/.test(tlSrc) && /className: 'dsh-tdt-rec-left'/.test(tlSrc)
-      && /IconChevronDownOutlineRegular/.test(tlSrc) && /dsh-tdt-rec-caret--open/.test(tlSrc)
-      && /\.dsh-tdt-rec-caret--open\{transform:rotate\(180deg\)/.test(tlSrc)
+      && /IconChevronDownOutlineRegular/.test(tlSrc) && /h\(IconButton, \{/.test(tlSrc)
+      && /transform: open \? 'rotate\(180deg\)' : 'none'/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-caret')
       && !tlSrc.includes('dsh-tdt-btn--link') && /variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc))
     check('第四轮：留白放大后的块内边距（上/下/右 12、左 16；5px 方角竖条不变）',
       /\.dsh-tdt-rec-item\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-4\)/.test(tlSrc))
     check('第四轮：信息行 = **固定单行 + 溢出省略**，三个字段各带官方近似图标，Token 从右下角迁到行尾',
       /\.dsh-tdt-rec-r2\{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis/.test(tlSrc)
-      && /IconAlarmClockOutlineRegular/.test(tlSrc) && /IconClockOutlineRegular/.test(tlSrc) && /IconRefreshOutlineRegular/.test(tlSrc)
+      && /IconAlarmClockOutlineRegular/.test(tlSrc) && /IconClockOutlineRegular/.test(tlSrc) && /IconQueueOutlineRegular/.test(tlSrc)
       && /dsh-tdt-rec-field dsh-tdt-rec-num/.test(tlSrc) && /formatTokenDetail\(row\)/.test(tlSrc))
     check('第四轮：时刻只到分钟，**跨天显式标注**（前一天 / 次日 / M 月 D 日）—— helper + 两个新文案键',
       /function clockLabelOf\(/.test(tlSrc) && /crossDayFormatter/.test(tlSrc)
@@ -1257,7 +1273,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /\.dsh-tdt-chip\{[^}]*background:transparent/.test(ctrlSrc)
       && /\.dsh-tdt-chip:hover:not\(:disabled\)\{background:var\(--tdt-chip-bg-hover\)/.test(ctrlSrc))
     check('第四轮：展开区产出物 = 行式清单（可点开预览）；**无产出不渲染那一行**；事件流水带「执行日志」小标题',
-      /className: 'dsh-tdt-rec-expouts'/.test(tlSrc) && /\.dsh-tdt-rec-expouts\{display:flex;flex-direction:column/.test(tlSrc)
+      /className: 'dsh-tdt-rec-expouts'/.test(tlSrc) && /\.dsh-tdt-rec-expouts\{display:flex;flex-wrap:wrap;gap:2px 10px/.test(tlSrc)
       && /className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) && /t\('recEventsTitle'\)/.test(tlSrc)
       && !tlSrc.includes("t('outputsEmpty')") && !locSrc.includes('outputsEmpty'))
     check('第四轮：行式文件按钮收编为基础层唯一实现（旧 `.dsh-tdt-info-out` 全仓已无规则定义）',

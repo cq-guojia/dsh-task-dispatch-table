@@ -15,9 +15,10 @@
 //      （三个字段各带小图标；时间只到分钟，**跨天的时刻显式标注**前一天 / 次日 / M 月 D 日）；
 //      失败 / 未执行有原因时补一行备注（跨整块）；
 //   ⑥ 右列（用户 2026-10-04：「右边不要放两行，就几个按钮」）＝ 产出物图标（**只给图标**，≤3 + `+N`）
-//      → 「查看会话」按钮 → 展开箭头；
+//      → 「查看会话」按钮 → 展开箭头（**基础层 IconButton**，与任务配置卡片的箭头同一份实现）；
 //      **成败不用图标也再无状态文字**：底色 + 竖条即表达，状态名挂在竖条的悬停提示上；
-//   ⑦ 点块 = **就地展开**（手风琴单开）：产出物**行式清单**（图标 + 文件名，可点开预览；无产出则不占行）
+//   ⑦ 点块 = **就地展开**（手风琴单开）：产出物清单**与「任务配置 → 附件区」同款**（行内并排、
+//      限宽 40ch、超长跑马灯，可点开预览；无产出则不占行）
 //      + 该次执行的**事件流水**（`fetchEvents(instanceId)`，左上角小标题「执行日志」）；
 //      **只有点「查看会话」才开会话**。
 //
@@ -31,13 +32,13 @@
 import { createElement as h, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
-  IconRefreshOutlineRegular,
+  IconQueueOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
-  Button, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, TaskPicker, TimeRange,
+  Button, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, TaskPicker, TimeRange,
   applyStyle, rangeToQuery,
 } from './ui'
 import type { EditorOption, TaskOption, TimeRangeLabels, TimeRangeValue } from './ui'
@@ -97,7 +98,6 @@ const RECORDS_CSS = `
 @media (prefers-reduced-motion: reduce){
   .dsh-tdt-rec-bar--run{animation:none;}
   .dsh-tdt-rec-item{animation:none;}
-  .dsh-tdt-rec-caret{transition:none;}
 }
 /* ── 块内两列：左列（标题 + 信息，可省略） / 右列（一排控件）──────────────── */
 .dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;}
@@ -112,21 +112,22 @@ const RECORDS_CSS = `
 /* 信息行里的一段（「图标 + 标签 + 值」）；段与段之间的「·」由 ::before 自动补，不用手写分隔节点。 */
 .dsh-tdt-rec-field{display:inline-flex;align-items:center;gap:4px;vertical-align:middle;}
 .dsh-tdt-rec-field+.dsh-tdt-rec-field::before{content:'·';margin:0 var(--tdt-space-1);color:var(--tdt-border-heavy);}
-.dsh-tdt-rec-field>svg{flex:none;color:var(--tdt-fg-3);}
+/* 字段小图标**统一 12px**（= --tdt-font-sm；用户 2026-10-04：几个图标一大一小、都缩小一号）
+   —— 这里再兜一道：将来漏传 size 也不会又变大。 */
+.dsh-tdt-rec-field>svg{flex:none;width:var(--tdt-font-sm);height:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 .dsh-tdt-rec-sep{color:var(--tdt-border-heavy);}
 .dsh-tdt-rec-num{font-variant-numeric:tabular-nums;font-family:var(--tdt-font-mono);}
 .dsh-tdt-rec-chiprow{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;}
-/* 展开箭头：纯装饰（整块可点即展开），展开时翻转；不给它单独的焦点 */
-.dsh-tdt-rec-caret{display:inline-flex;align-items:center;justify-content:center;width:20px;flex:none;
-  color:var(--tdt-fg-3);transition:transform var(--tdt-dur) var(--tdt-ease);}
-.dsh-tdt-rec-caret--open{transform:rotate(180deg);}
+/* 展开箭头**不再自绘**：用基础层 IconButton（与任务配置卡片的箭头同一份实现，
+   hover 底色 / 尺寸 / 翻转都一致）—— 2026-10-04 第五轮收编。 */
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* ── 展开区（点块就地展开；手风琴，同时只开一条）───────────────────────── */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--tdt-space-2);
   margin-top:var(--tdt-space-2);padding-top:var(--tdt-space-2);border-top:1px solid var(--tdt-border-faint);}
-/* 产出物：**一行一个**（图标 + 文件名），底色 / 形状全走基础层「行式文件按钮」 */
-.dsh-tdt-rec-expouts{display:flex;flex-direction:column;gap:2px;min-width:0;}
+/* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
+   —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
+.dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
 .dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--tdt-font-xs);font-weight:500;color:var(--tdt-fg-3);}
 .dsh-tdt-rec-ev{font-family:var(--tdt-font-mono);font-size:var(--tdt-font-xs);
@@ -302,6 +303,10 @@ const RecordItem = memo(function RecordItem(props: {
   const dayKey = dayKeyOf(row)
   // 时刻：默认只到分钟；跨天时由 `clockLabelOf` 显式标注（早一天 / 晚一天 / 具体日期）。
   const planned = clockLabelOf(row.scheduled_at, dayKey, crossFmt, t('recPrevDay'), t('recNextDay'))
+  /** 时长的悬停提示：带起止时刻（有终态才给区间），比只显示「时长 03:00」有用得多。 */
+  const durationHint = row.finished_at === null
+    ? `${t('colDuration')}：${durationOf(row)}`
+    : `${t('colDuration')}：${durationOf(row)}（${stampOf(row.dispatched_at ?? row.scheduled_at)} → ${stampOf(row.finished_at)}）`
   const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t('recPrevDay'), t('recNextDay'))
 
   /** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
@@ -337,15 +342,25 @@ const RecordItem = memo(function RecordItem(props: {
           }),
         ),
         // 信息行：工作区 · 🕰计划 · 🕐实际 · ⟳时长 · Token（单行、溢出省略；Token 从右下角迁到这里）
+        // ⚠️ 每段都挂**带标签的完整值**的悬停提示（用户 2026-10-04：光看「32K」「15:10」不知道是什么）。
         h('div', { className: 'dsh-tdt-rec-r2' },
-          field(null, workspace),
-          field(h(IconAlarmClockOutlineRegular, { size: 14 }), planned === '' ? '' : `${t('recPlan')} ${planned}`, formatPlanStamp(row.scheduled_at)),
-          field(actual === '' ? null : h(IconClockOutlineRegular, { size: 14 }), actual === '' ? '' : `${t('recActual')} ${actual}`, row.dispatched_at === null ? undefined : stampOf(row.dispatched_at)),
-          field(h(IconRefreshOutlineRegular, { size: 14 }), `${t('colDuration')} ${durationOf(row)}`),
+          field(null, workspace, workspace === '' ? undefined : `${t('listFieldWorkspace')}：${workspace}`),
+          field(h(IconAlarmClockOutlineRegular, { size: 12 }), planned === '' ? '' : `${t('recPlan')} ${planned}`,
+            `${t('colPlanned')}：${formatPlanStamp(row.scheduled_at)}`),
+          field(actual === '' ? null : h(IconClockOutlineRegular, { size: 12 }), actual === '' ? '' : `${t('recActual')} ${actual}`,
+            row.dispatched_at === null ? undefined : `${t('colActualStart')}：${stampOf(row.dispatched_at)}`),
+          field(h(IconQueueOutlineRegular, { size: 12 }), `${t('colDuration')} ${durationOf(row)}`, durationHint),
           tokens > 0
-            ? h('span', { className: 'dsh-tdt-rec-field dsh-tdt-rec-num', title: formatTokenDetail(row) }, formatTokenCount(tokens))
+            ? h('span', { className: 'dsh-tdt-rec-field dsh-tdt-rec-num', title: `${t('recTokenHint')}：${formatTokenCount(tokens)}\n${formatTokenDetail(row)}` },
+              formatTokenCount(tokens))
             : null,
         ),
+        // ── 第 3 行：失败 / 未执行的原因（用户：执行错了就是要看备注）──
+        // ⚠️ 放在**左列**里（不是块下）：右列控件相对「标题 + 信息 + 备注」整体居中，
+        //    否则一出现第三行，右列那排按钮就会看着偏上（用户 2026-10-04 点名）。
+        note === ''
+          ? null
+          : h('div', { className: 'dsh-tdt-rec-note dsh-tdt-ellipsis', title: note }, `${t('colNote')}：${note}`),
       ),
       // ── 右列：一排控件（产出物图标 → 查看会话按钮 → 展开箭头）──
       h('div', { className: 'dsh-tdt-rec-right' },
@@ -381,17 +396,24 @@ const RecordItem = memo(function RecordItem(props: {
             onClick: (event: { stopPropagation(): void }) => { event.stopPropagation(); openSession(sid as string) },
           }, t('viewSession'))
           : null,
-        h('span', {
-          className: `dsh-tdt-rec-caret${open ? ' dsh-tdt-rec-caret--open' : ''}`,
-          'aria-hidden': true,
-        }, h(IconChevronDownOutlineRegular, { size: 16 })),
+        // 展开箭头 = **与任务卡片头部逐字一致**的写法（用户 2026-10-04：抄任务配置那套，
+        // 连鼠标移上去都要一样）：基础层 IconButton（plain + sm = 24×24，hover 走 --tdt-hover）
+        // + chevron + aria-expanded + 展开翻转。外面包一层 span 拦冒泡（否则会先触发自己的 onClick
+        // 再冒泡到整块 ⇒ 展开后立刻又收起）。故意**不挂 title**：图标自明，只留无障碍名（与卡片同理）。
+        h('span', { onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+          h(IconButton, {
+            variant: 'plain',
+            size: 'sm',
+            icon: h(IconChevronDownOutlineRegular, { size: 14 }),
+            label: t('listExpandHint'),
+            onClick: () => { onToggle(row.id) },
+            'aria-expanded': open,
+            style: { transform: open ? 'rotate(180deg)' : 'none' },
+          }),
+        ),
       ),
     ),
-    // ── 第 3 行：失败 / 未执行的原因（用户：执行错了就是要看备注）──
-    note === ''
-      ? null
-      : h('div', { className: 'dsh-tdt-rec-note dsh-tdt-ellipsis', title: note }, `${t('colNote')}：${note}`),
-    // ── 展开区：产出物行式清单（无产出则不占行）+ 该次执行的事件流水（带小标题）──
+    // ── 展开区：产出物清单（无产出则不占行）+ 该次执行的事件流水（带小标题）──
     open
       ? h('div', { className: 'dsh-tdt-rec-exp', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
         outputs.length === 0
@@ -401,13 +423,14 @@ const RecordItem = memo(function RecordItem(props: {
               key: path,
               type: 'button',
               title: path,
-              // 行式文件按钮 = 基础层唯一实现（--block：撑满父宽、一项一行）
-              className: 'dsh-tdt-filechip dsh-tdt-filechip--block',
+              // 与附件区同款：行内（--inline，不占整行）+ 行式文件按钮基础层唯一实现
+              className: 'dsh-tdt-filechip dsh-tdt-filechip--inline',
               disabled: !canOpenFile,
               onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
             },
               h(FileTypeIcon, { path, size: 14 }),
-              h('span', { className: 'dsh-tdt-ellipsis', style: { minWidth: 0 } }, baseNameOf(path)),
+              // 文件名**限宽 40ch + 超长跑马灯**（与卡片附件区同一口径；用户：设个最大宽度，超过了就跑马灯）
+              h(MarqueeText, { text: baseNameOf(path), title: path, style: { maxWidth: '40ch', minWidth: 0 } }),
             )),
           ),
         eventsError !== null
@@ -730,7 +753,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
             days.map(day => h('div', { key: day.key, className: 'dsh-tdt-rec-group' },
               // 日期小字行：时钟图标 + 日期 · 星期 · N 条（不吸顶）。
               h('div', { className: 'dsh-tdt-rec-dayrow' },
-                h(IconClockOutlineRegular, { size: 14 }),
+                h(IconClockOutlineRegular, { size: 12 }),
                 h('span', { className: 'dsh-tdt-rec-daylabel' }, dayLabelOf(day.key, dayFormatter)),
                 h('span', { className: 'dsh-tdt-rec-sep' }, '·'),
                 h('span', { className: 'dsh-tdt-rec-daylabel' }, weekdayOf(day.key, weekdayFormatter)),
