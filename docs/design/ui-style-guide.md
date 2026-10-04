@@ -67,6 +67,7 @@
 | 自己写 `body[data-ds-dark-theme]` | ✅ 已清零（明暗差异只在 token 层一处） |
 | 再抄一份 `C` 常量表 | ✅ 已删净（3 份 `C` 表全清，冒烟钉住） |
 | 同类小图标一大一小 / 自绘既有控件 | ✅ 已收口（2026-10-04）：**同类字段小图标统一 12px**（`--tdt-font-sm`），别再各写 14/16；展开箭头这类「全站都有的一枚控件」一律用基础层既有件（`IconButton`），不许页面自己画 `span` |
+| 内容区挂 `cursor:pointer` / `onClick` | ✅ 已收口（2026-10-04，执行记录页）：**可点区域只放头部**（容器与展开区不挂点击、不给手指），否则展开出来的日志 / 备注没法拖选复制；带点击的头部还要加「有选中文字就不展开」的守卫 |
 | 自己 `createElement('style')` 注入 | ✅ 已清零（统一走 `ui/style.ts` 的 `applyStyle`） |
 | 覆写官方件的观感（在使用点） | ✅ 「Switch 变绿」已合并到 `ui/controls-css.ts` 一处（`.dsh-tdt-switch`） |
 | 写死官方 CSS-module 类名 | 哈希会变；只能按元素 + role 选（`official-classes.ts`） |

@@ -147,6 +147,8 @@ export type LocaleKey =
   | 'recPrevDay' | 'recNextDay' | 'recEventsTitle'
   // 2026-10-04 第五轮：信息行 Token 段的悬停提示（「32K」得说清是什么）
   | 'recTokenHint'
+  // 2026-10-04 第六轮：前置圈码悬停 / 前置取自哪次执行 / token 三段明细标签
+  | 'recordsDepTip' | 'recordsDepFrom' | 'recTokenDetail'
   | 'editorAdvanced' | 'editorAdvancedHelp' | 'editorRetry' | 'editorRetryOnce' | 'editorRetryTwice' | 'editorRetryThrice' | 'editorRetryFive'
   | 'editorRetryHint' | 'editorGoal' | 'editorGoalHint' | 'editorAgentTeam' | 'editorAgentTeamHint' | 'editorPreview' | 'editorPreviewHint'
   | 'editorPermission' | 'editorPermissionHint' | 'editorPermDefault' | 'editorPermReadOnly' | 'editorPermWorkspace' | 'editorPermFull'
@@ -667,6 +669,9 @@ export const zh: Record<LocaleKey, string> = {
   recNextDay: '次日',
   recEventsTitle: '执行日志',
   recTokenHint: 'token 消耗',
+  recordsDepTip: '前置任务 {n}：{task}',
+  recordsDepFrom: '本次取自 {time} 的那次执行',
+  recTokenDetail: '输入 {input} / 输出 {output} / 缓存 {cache}',
   editorAdvanced: '高级设置',
   editorAdvancedHelp: '此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。',
   editorRetry: '重试次数',
@@ -1278,6 +1283,9 @@ export const en: Record<LocaleKey, string> = {
   recNextDay: 'next day',
   recEventsTitle: 'Run log',
   recTokenHint: 'Token usage',
+  recordsDepTip: 'Prerequisite {n}: {task}',
+  recordsDepFrom: 'taken from the run at {time}',
+  recTokenDetail: 'input {input} / output {output} / cache {cache}',
   editorAdvanced: 'Advanced settings',
   editorAdvancedHelp: 'This is the advanced configuration area. Read each item\u2019s description before changing it; default values are recommended for routine tasks.',
   editorRetry: 'Retry attempts',

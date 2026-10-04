@@ -685,6 +685,9 @@ window.__ModuleLoader__.load({
 			recNextDay: "次日",
 			recEventsTitle: "执行日志",
 			recTokenHint: "token 消耗",
+			recordsDepTip: "前置任务 {n}：{task}",
+			recordsDepFrom: "本次取自 {time} 的那次执行",
+			recTokenDetail: "输入 {input} / 输出 {output} / 缓存 {cache}",
 			editorAdvanced: "高级设置",
 			editorAdvancedHelp: "此区域为高级配置区域，修改前请仔细阅读各项说明。常规任务建议使用默认值。",
 			editorRetry: "重试次数",
@@ -1276,6 +1279,9 @@ window.__ModuleLoader__.load({
 			recNextDay: "next day",
 			recEventsTitle: "Run log",
 			recTokenHint: "Token usage",
+			recordsDepTip: "Prerequisite {n}: {task}",
+			recordsDepFrom: "taken from the run at {time}",
+			recTokenDetail: "input {input} / output {output} / cache {cache}",
 			editorAdvanced: "Advanced settings",
 			editorAdvancedHelp: "This is the advanced configuration area. Read each item’s description before changing it; default values are recommended for routine tasks.",
 			editorRetry: "Retry attempts",
@@ -56726,6 +56732,45 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			})()), document.body) : null);
 		}
 		//#endregion
+		//#region src/deps.ts
+		/** 解析 resolvedDeps：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃（不让坏数据进 UI）。 */
+		function parseResolvedDeps(raw) {
+			if (raw === void 0) return void 0;
+			if (!Array.isArray(raw)) return void 0;
+			const out = [];
+			for (const item of raw) {
+				if (typeof item !== "object" || item === null) return void 0;
+				const d = item;
+				if (typeof d.task !== "string" || typeof d.instanceId !== "string" || typeof d.scheduledAt !== "string" || d.semantics !== "same_period" && d.semantics !== "latest_success" || d.sessionId !== null && typeof d.sessionId !== "string" || d.workspacePath !== null && typeof d.workspacePath !== "string" || !Array.isArray(d.outputs)) return void 0;
+				out.push({
+					task: d.task,
+					semantics: d.semantics,
+					instanceId: d.instanceId,
+					scheduledAt: d.scheduledAt,
+					sessionId: d.sessionId ?? null,
+					workspacePath: d.workspacePath ?? null,
+					outputs: d.outputs.filter((x) => typeof x === "string")
+				});
+			}
+			return out;
+		}
+		/**
+		* 实例快照 JSON → 已解析的上游依赖清单（**客户端便捷入口**）。
+		* 与服务端 `parseInstanceSnapshot` 同一套校验，但**不强求整份快照合法**——
+		* 客户端只想看「接收了什么」，快照里别的字段缺了不该让这一块消失。
+		* 空 / 坏 JSON / 旧行（无 resolvedDeps）⇒ `[]`（调用方按「无上游」渲染，不显示该区）。
+		*/
+		function resolvedDepsOf(raw) {
+			if (raw === null || raw === "") return [];
+			try {
+				const value = JSON.parse(raw);
+				if (typeof value !== "object" || value === null) return [];
+				return parseResolvedDeps(value.resolvedDeps) ?? [];
+			} catch {
+				return [];
+			}
+		}
+		//#endregion
 		//#region src/client/status-text.ts
 		/** 状态 → 文案键（唯一映射表）。 */
 		const STATUS_LABEL_KEYS = {
@@ -56784,6 +56829,35 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const PAGE_SIZE = 50;
 		/** 硬上限：到此停止自动续拉并提示缩小范围（用户拍板「保底 2000 条」）。 */
 		const HARD_LIMIT = 2e3;
+		/**
+		* 前置任务的**圈码**（用户 2026-10-04：「放在整个名字后面，比如用圈起来的数字 1、2、3」）。
+		* 全仓此前没有 UI 圈码先例（Unicode ①-⑳ 只出现在注释里）⇒ 就地定义这一张表；
+		* 超过表的长度（20 个前置）就补一个 `+N`（前置多到这个程度是配置问题，不值得为它加宽版面）。
+		*/
+		const CIRCLED = [
+			"①",
+			"②",
+			"③",
+			"④",
+			"⑤",
+			"⑥",
+			"⑦",
+			"⑧",
+			"⑨",
+			"⑩",
+			"⑪",
+			"⑫",
+			"⑬",
+			"⑭",
+			"⑮",
+			"⑯",
+			"⑰",
+			"⑱",
+			"⑲",
+			"⑳"
+		];
+		/** 第 n 个前置（1 起）的圈码；超出表长退化成阿拉伯数字（调用方另有 `+N`）。 */
+		const circledOf = (n) => CIRCLED[n - 1] ?? String(n);
 		const RECORDS_CSS = `
 /* ── 执行记录流水账（**无容器**）───────────────────────────────────────────
    没有外框、没有贯穿竖轴：整页铺在宿主面板底上，节奏靠「日期小字行 + 一条条自带底色的独立块」建立。 */
@@ -56798,15 +56872,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-daycount{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* 块之间 **4px**（用户指定；--tdt-space-1 正好 = 4px） */
 .dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
-/* 条目块：自带状态色浅底；底色由色调类给的局部变量驱动（见下）。
-   留白放大（用户 2026-10-04：「左边的间距、上面、下面、右边都大点」）：上/下/右 12、左 16。 */
+/* 条目块 = **容器**（自带状态色浅底；底色由色调类给的局部变量驱动，见下）。
+   ⚠️ 三层结构照任务卡片（用户 2026-10-04：「参考前面配置任务的展开」）：
+     容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
+   容器**无 padding、无 cursor**：留白落在头部（这样 hover 高亮正好顶到块边，与卡片主行同观感）。 */
 .dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:var(--tdt-space-1);
-  padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);
   background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
-/* 整块可点（切展开）⇒ 光标是手；hover / 展开态都叠一层**中性半透明** */
-.dsh-tdt-rec-item{cursor:pointer;}
-.dsh-tdt-rec-item:hover,.dsh-tdt-rec-item--open{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 /* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
    token 只在 tokens.ts 定义；块底那条「状态色浅底」的 token 就在那里）。 */
 .dsh-tdt-rec-tone--ok{--rec-tone:var(--tdt-success);--rec-tone-soft:var(--tdt-success-soft);}
@@ -56825,8 +56897,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   .dsh-tdt-rec-bar--run{animation:none;}
   .dsh-tdt-rec-item{animation:none;}
 }
-/* ── 块内两列：左列（标题 + 信息，可省略） / 右列（一排控件）──────────────── */
-.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;}
+/* ── 头部 = 块内两列（左列：标题 + 信息 + 备注 ／ 右列：一排控件）且是**唯一可点区域** ──
+   留白放大（用户 2026-10-04：「左边的间距、上面、下面、右边都大点」）：上/下/右 12、左 16；
+   hover / 展开态叠一层**中性半透明**（不盖掉块底的状态色浅底）。 */
+.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;
+  padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);}
+.dsh-tdt-rec-head{cursor:pointer;}
+.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
+.dsh-tdt-rec-item--open .dsh-tdt-rec-head{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
@@ -56846,16 +56924,32 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-chiprow{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;}
 /* 展开箭头**不再自绘**：用基础层 IconButton（与任务配置卡片的箭头同一份实现，
    hover 底色 / 尺寸 / 翻转都一致）—— 2026-10-04 第五轮收编。 */
+/* 折叠态：名字后面的**前置圈码**（有几个 = 本次执行实际用到了几个上游） */
+.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:2px;flex:none;}
+.dsh-tdt-rec-depmark{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
-/* ── 展开区（点块就地展开；手风琴，同时只开一条）───────────────────────── */
+/* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
+   ⚠️ **不可点、无 cursor**：展开出来的内容（产出物 / 前置 / 日志）要能直接拖选复制
+      （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--tdt-space-2);
-  margin-top:var(--tdt-space-2);padding-top:var(--tdt-space-2);border-top:1px solid var(--tdt-border-faint);}
+  padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);
+  border-top:1px solid var(--tdt-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
 .dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
 .dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--tdt-font-xs);font-weight:500;color:var(--tdt-fg-3);}
+/* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格两行 —— 圈码 + 任务名 /
+   「本次取自 15:10 的那次执行」+「查看会话」。格子本身不可点（只有里面那个按钮可点）。 */
+.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;}
+.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--tdt-space-1) var(--tdt-space-2);}
+.dsh-tdt-rec-dep{display:flex;flex-direction:column;gap:2px;min-width:0;
+  padding:var(--tdt-space-1) var(--tdt-space-2);border-radius:var(--tdt-radius-xs);background:var(--tdt-chip-bg);}
+.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-1);min-width:0;
+  font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
+.dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
+  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-rec-ev{font-family:var(--tdt-font-mono);font-size:var(--tdt-font-xs);
   line-height:var(--tdt-line-md);color:var(--tdt-fg-2);}
 .dsh-tdt-rec-evrow{margin-bottom:6px;word-break:break-all;}
@@ -56987,7 +57081,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		});
 		/** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
 		const RecordItem = (0, react$1.memo)(function RecordItem(props) {
-			const { row, label, workspace, t, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt } = props;
+			const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt } = props;
 			const tone = statusToneOf(row.status);
 			const running = isRunningStatus(row.status);
 			const statusLabel = statusTextOf(row.status, t);
@@ -57002,40 +57096,55 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/** 时长的悬停提示：带起止时刻（有终态才给区间），比只显示「时长 03:00」有用得多。 */
 			const durationHint = row.finished_at === null ? `${t("colDuration")}：${durationOf(row)}` : `${t("colDuration")}：${durationOf(row)}（${stampOf(row.dispatched_at ?? row.scheduled_at)} → ${stampOf(row.finished_at)}）`;
 			const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
+			const deps = resolvedDepsOf(snapshot);
+			/** token 三段之一：null 给占位（不编造 0）。 */
+			const tokenPart = (v) => v === null ? "—" : formatTokenCount(v);
+			/**
+			* 头部点击 = 切展开。
+			* ⚠️ 照抄任务卡片那条守卫：**有选中文字就不展开**（用户正在拖选复制，不是要点开）。
+			*/
+			const onHeadClick = () => {
+				const sel = typeof window === "undefined" ? null : window.getSelection();
+				if (sel !== null && sel.toString() !== "") return;
+				onToggle(row.id);
+			};
 			/** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
 			const field = (icon, text, title) => text === "" ? null : (0, react$1.createElement)("span", {
 				className: "dsh-tdt-rec-field",
 				title
 			}, icon, text);
-			return (0, react$1.createElement)("div", {
-				className: `dsh-tdt-rec-item ${toneClassOf(tone)}${open ? " dsh-tdt-rec-item--open" : ""}`,
-				onClick: () => {
-					onToggle(row.id);
-				},
-				role: "button",
-				tabIndex: 0,
-				"aria-expanded": open,
-				onKeyDown: (event) => {
-					if (event.key === "Enter" || event.key === " ") {
-						event.preventDefault();
-						onToggle(row.id);
-					}
-				}
+			return (0, react$1.createElement)("div", { className: `dsh-tdt-rec-item ${toneClassOf(tone)}${open ? " dsh-tdt-rec-item--open" : ""}` }, (0, react$1.createElement)("div", {
+				className: "dsh-tdt-rec-main dsh-tdt-rec-head",
+				onClick: onHeadClick
 			}, (0, react$1.createElement)("span", {
 				className: `dsh-tdt-rec-bar${running ? " dsh-tdt-rec-bar--run" : ""}`,
 				title: statusLabel,
 				"aria-hidden": true
-			}), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-main" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r1" }, (0, react$1.createElement)(MarqueeText, {
+			}), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r1" }, (0, react$1.createElement)(MarqueeText, {
 				text: label,
 				title: label,
 				className: "dsh-tdt-rec-title dsh-tdt-ellipsis",
 				style: {
-					flex: "1 1 auto",
+					flex: "0 1 auto",
 					minWidth: 0
 				}
-			})), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), planned === "" ? "" : `${t("recPlan")} ${planned}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actual === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 }), actual === "" ? "" : `${t("recActual")} ${actual}`, row.dispatched_at === null ? void 0 : `${t("colActualStart")}：${stampOf(row.dispatched_at)}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), `${t("colDuration")} ${durationOf(row)}`, durationHint), tokens > 0 ? (0, react$1.createElement)("span", {
+			}), deps.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmarks" }, deps.slice(0, CIRCLED.length).map((dep, index) => (0, react$1.createElement)("span", {
+				key: `${dep.task}#${dep.instanceId}`,
+				className: "dsh-tdt-rec-depmark",
+				title: tt("recordsDepTip", {
+					n: String(index + 1),
+					task: depTitleOf(dep.task)
+				})
+			}, circledOf(index + 1))), deps.length > CIRCLED.length ? (0, react$1.createElement)("span", {
+				className: "dsh-tdt-rec-depmark",
+				title: t("listSectionDepends")
+			}, `+${deps.length - CIRCLED.length}`) : null)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), planned === "" ? "" : `${t("recPlan")} ${planned}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actual === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 }), actual === "" ? "" : `${t("recActual")} ${actual}`, row.dispatched_at === null ? void 0 : `${t("colActualStart")}：${stampOf(row.dispatched_at)}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), `${t("colDuration")} ${durationOf(row)}`, durationHint), tokens > 0 ? (0, react$1.createElement)("span", {
 				className: "dsh-tdt-rec-field dsh-tdt-rec-num",
-				title: `${t("recTokenHint")}：${formatTokenCount(tokens)}\n${formatTokenDetail(row)}`
+				title: `${t("recTokenHint")}：${formatTokenCount(tokens)}\n${tt("recTokenDetail", {
+					input: tokenPart(row.token_in),
+					output: tokenPart(row.token_out),
+					cache: tokenPart(row.token_in_cache)
+				})}`
 			}, formatTokenCount(tokens)) : null), note === "" ? null : (0, react$1.createElement)("div", {
 				className: "dsh-tdt-rec-note dsh-tdt-ellipsis",
 				title: note
@@ -57083,12 +57192,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }
-			})))), open ? (0, react$1.createElement)("div", {
-				className: "dsh-tdt-rec-exp",
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)("button", {
+			})))), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)("button", {
 				key: path,
 				type: "button",
 				title: path,
@@ -57107,7 +57211,23 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					maxWidth: "40ch",
 					minWidth: 0
 				}
-			})))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("recordsLoading")) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
+			})))), deps.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depsec" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("listSectionDepends")), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depgrid" }, deps.map((dep, index) => (0, react$1.createElement)("div", {
+				key: `${dep.task}#${dep.instanceId}`,
+				className: "dsh-tdt-rec-dep"
+			}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depname" }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, circledOf(index + 1)), (0, react$1.createElement)("span", {
+				className: "dsh-tdt-ellipsis",
+				title: depTitleOf(dep.task)
+			}, depTitleOf(dep.task))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)("span", {
+				className: "dsh-tdt-ellipsis",
+				title: stampOf(dep.scheduledAt)
+			}, tt("recordsDepFrom", { time: clockLabelOf(dep.scheduledAt, dayKey, crossFmt, t("recPrevDay"), t("recNextDay")) })), dep.sessionId === null || dep.sessionId === "" ? null : (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				title: t("viewSession"),
+				onClick: () => {
+					openSession(dep.sessionId);
+				}
+			}, t("viewSession"))))))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("recordsLoading")) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
 			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
@@ -57193,6 +57313,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 			], [t]);
 			const titleById = (0, react$1.useMemo)(() => new Map(tasks.map((o) => [o.id, o.label])), [tasks]);
+			/**
+			* 任务 id → 任务名（查不到退短 id 8 位，**绝不编造**）—— 前置圈码与前置清单用。
+			* 与父级 `upstreamOf`（index.ts）同口径；`useCallback` 保证 memo 条目不被无谓重渲。
+			*/
+			const depTitleOf = (0, react$1.useCallback)((taskId) => titleById.get(taskId) ?? taskId.slice(0, 8), [titleById]);
 			/** 工作区反查：优先任务表（当前归属），任务已删退回派发快照的 `workspacePath` 末段（当次执行当时的值）。 */
 			const workspaceById = (0, react$1.useMemo)(() => new Map(tasks.map((o) => [o.id, o.workspace])), [tasks]);
 			const filterSig = `${range.from}|${range.to}|${workspace}|${bucket}|${taskId}`;
@@ -57395,6 +57520,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				label: titleById.get(row.task_id) ?? row.task_id,
 				workspace: workspaceOf(row),
 				t,
+				tt,
+				snapshot: row.snapshot ?? null,
+				depTitleOf,
 				open: openId === row.id,
 				onToggle: toggleRow,
 				openSession,
@@ -59267,45 +59395,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			})))));
 		}
 		//#endregion
-		//#region src/deps.ts
-		/** 解析 resolvedDeps：字段缺失（旧行）⇒ undefined；任一条形状不对 ⇒ 整组丢弃（不让坏数据进 UI）。 */
-		function parseResolvedDeps(raw) {
-			if (raw === void 0) return void 0;
-			if (!Array.isArray(raw)) return void 0;
-			const out = [];
-			for (const item of raw) {
-				if (typeof item !== "object" || item === null) return void 0;
-				const d = item;
-				if (typeof d.task !== "string" || typeof d.instanceId !== "string" || typeof d.scheduledAt !== "string" || d.semantics !== "same_period" && d.semantics !== "latest_success" || d.sessionId !== null && typeof d.sessionId !== "string" || d.workspacePath !== null && typeof d.workspacePath !== "string" || !Array.isArray(d.outputs)) return void 0;
-				out.push({
-					task: d.task,
-					semantics: d.semantics,
-					instanceId: d.instanceId,
-					scheduledAt: d.scheduledAt,
-					sessionId: d.sessionId ?? null,
-					workspacePath: d.workspacePath ?? null,
-					outputs: d.outputs.filter((x) => typeof x === "string")
-				});
-			}
-			return out;
-		}
-		/**
-		* 实例快照 JSON → 已解析的上游依赖清单（**客户端便捷入口**）。
-		* 与服务端 `parseInstanceSnapshot` 同一套校验，但**不强求整份快照合法**——
-		* 客户端只想看「接收了什么」，快照里别的字段缺了不该让这一块消失。
-		* 空 / 坏 JSON / 旧行（无 resolvedDeps）⇒ `[]`（调用方按「无上游」渲染，不显示该区）。
-		*/
-		function resolvedDepsOf(raw) {
-			if (raw === null || raw === "") return [];
-			try {
-				const value = JSON.parse(raw);
-				if (typeof value !== "object" || value === null) return [];
-				return parseResolvedDeps(value.resolvedDeps) ?? [];
-			} catch {
-				return [];
-			}
-		}
-		//#endregion
 		//#region src/client/config-panel.tsx
 		const FIELDS = [
 			{
@@ -59846,12 +59935,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*   **HTTP 游标分页**，**不吃调试快照**。版式为「左状态分段控件 + 右时间/工作区/任务」的过滤行，
 		*   下面**没有外框、没有时间轴竖线**，只有一条条自带状态色浅底的独立块（左缘 5px 方角竖条表成败、
 		*   块间 4px；**成败不再写状态文字**，状态名挂 5px 竖条的悬停提示），日期是一行小字（时钟图标 + 日期 · 星期 · N 条，不吸顶）。
-		*   块内**左右两列**：左列 = 标题 + 单行信息（工作区 · 计划 · 实际 · 时长 · Token，各带 12px 图标与「标签：完整值」的
-		*   悬停提示、跨天时刻显式标注）+ 有原因时的备注行；右列 = 一排控件（产出物图标 →「查看会话」按钮 → 展开箭头，
-		*   箭头与任务配置卡片**共用基础层 `IconButton`**）。**点块 = 就地展开**（手风琴单开）该次执行的产出物清单
-		*   （与卡片「附件区」同款：行内并排 + 40ch 跑马灯）与事件流水（带「执行日志」小标题），
+		*   块内**左右两列**：左列 = 标题（后面跟**前置圈码** ①②③，悬停显示「前置任务 N：名」）+ 单行信息
+		*   （工作区 · 计划 · 实际 · 时长 · Token，各带 12px 图标与「标签：完整值」的悬停提示、跨天时刻显式标注）
+		*   + 有原因时的备注行；右列 = 一排控件（产出物图标 →「查看会话」按钮 → 展开箭头，箭头与任务配置卡片
+		*   **共用基础层 `IconButton`**）。**三层结构照任务卡片**：容器不可点 → **头部可点**（含「有选中文字就不展开」
+		*   的复制守卫）→ 展开区不可点（内容可直接拖选复制）。**点头部 = 就地展开**（手风琴单开）：第一排产出物
+		*   （与卡片「附件区」同款：行内并排 + 40ch 跑马灯）→ 第二排前置任务（一排两个：圈码 + 任务名 /
+		*   「本次取自哪次执行」+ 查看会话；取自实例快照的 `resolvedDeps`）→ 事件流水（带「执行日志」小标题）；
 		*   **只有点「查看会话」才开会话弹窗**
-		*   （2026-10-04 第五轮修整；此前的「原生 select + 表格 + 就地展开事件」测试屏已整段删除）；
+		*   （2026-10-04 第六轮；此前的「原生 select + 表格 + 就地展开事件」测试屏已整段删除）；
 		* - **调试**：`GET /db` 的原始表快照 + 运行参数（与下面的任务表快照无关）。
 		*
 		* ⚠️ 两条**不能混**的数据面：①「任务配置 / 调试」用的任务表来自 settings 快照的 `debugSnapshot`

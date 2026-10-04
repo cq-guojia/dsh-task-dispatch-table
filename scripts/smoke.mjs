@@ -1170,8 +1170,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /onOpenFile\?: \(sessionId: string, path: string\) => void/.test(tlSrc)
       && /disabled: !canOpenFile/.test(tlSrc)
       && idxSrc.includes('onOpenFile: canPreview ? openFile : undefined'))
-    check('无圆角卡片框：块靠状态浅底 + hover 叠中性层区分，不靠边框 / 分隔线',
-      /\.dsh-tdt-rec-item:hover,\.dsh-tdt-rec-item--open\{background-image:linear-gradient\(var\(--tdt-hover\)/.test(tlSrc)
+    check('三层交互（照任务卡片）：容器不可点、**头部可点**（hover 叠中性层 / 展开常亮）、展开区不可点',
+      /\.dsh-tdt-rec-head:hover\{background-image:linear-gradient\(var\(--tdt-hover\),var\(--tdt-hover\)\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-item--open \.dsh-tdt-rec-head\{background-image:linear-gradient\(var\(--tdt-hover\)/.test(tlSrc)
       && !/\.dsh-tdt-rec-item\{[^}]*border-bottom:1px solid/.test(tlSrc))
     check('时间轴走 HTTP 游标分页：读 nextCursor 并回写（且 page size / 上限对齐 50/2000）',
       /setCursor\(page\.nextCursor\)/.test(tlSrc) && /cursor: nextCursor \?\? undefined/.test(tlSrc)
@@ -1234,6 +1235,40 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && ctrlSrc.includes('.dsh-tdt-chip{'))
     check('折叠态产出物**只给图标**（文件名只出现在展开区）',
       /className: 'dsh-tdt-rec-chiprow'/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-outname'))
+    check('第六轮：**容器不挂交互**（块根无 onClick / 无 cursor），点击与光标只在头部（含「有选中文字就不展开」守卫）',
+      /className: \`dsh-tdt-rec-item \$\{toneClassOf\(tone\)\}/.test(tlSrc)
+      && !/\.dsh-tdt-rec-item\{[^}]*cursor:pointer/.test(tlSrc)
+      && /className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick/.test(tlSrc)
+      && /const sel = typeof window === 'undefined' \? null : window\.getSelection\(\)/.test(tlSrc)
+      && /if \(sel !== null && sel\.toString\(\) !== ''\) return/.test(tlSrc)
+      && /\.dsh-tdt-rec-head\{cursor:pointer;\}/.test(tlSrc))
+    check('第六轮：展开区**不可点、无 cursor**（内容可直接拖选复制），且不再需要拦冒泡',
+      /h\('div', \{ className: 'dsh-tdt-rec-exp' \}/.test(tlSrc)
+      && !/className: 'dsh-tdt-rec-exp', onClick/.test(tlSrc)
+      && !/\.dsh-tdt-rec-exp\{[^}]*cursor/.test(tlSrc))
+    check('第六轮：前置任务取自**实例快照的 resolvedDeps**（不读任务配置侧的 depends）',
+      /import \{ resolvedDepsOf \} from '\.\.\/deps\.js'/.test(tlSrc)
+      && /const deps = resolvedDepsOf\(snapshot\)/.test(tlSrc)
+      && /snapshot: row\.snapshot \?\? null/.test(tlSrc)
+      && !/depends/.test(tlSrc))
+    check('第六轮：折叠态名字后是**前置圈码**（常量表 + circledOf），悬停用原生 title 写清第几个叫什么',
+      /const CIRCLED = \['①', '②', '③'/.test(tlSrc) && /const circledOf = \(n: number\)/.test(tlSrc)
+      && /className: 'dsh-tdt-rec-depmarks'/.test(tlSrc)
+      && /title: tt\('recordsDepTip', \{ n: String\(index \+ 1\), task: depTitleOf\(dep\.task\) \}\)/.test(tlSrc)
+      && /\.dsh-tdt-rec-depmark\{font-size:var\(--tdt-font-sm\)/.test(tlSrc))
+    check('第六轮：展开区**第二排**前置清单 = 一排两个（grid 两列），每格两行且能点开那次上游的会话',
+      /className: 'dsh-tdt-rec-depsec'/.test(tlSrc)
+      && /\.dsh-tdt-rec-depgrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(tlSrc)
+      && /tt\('recordsDepFrom',/.test(tlSrc)
+      && /dep\.sessionId === null \|\| dep\.sessionId === ''/.test(tlSrc)
+      && /openSession\(dep\.sessionId as string\)/.test(tlSrc)
+      && /t\('listSectionDepends'\)/.test(tlSrc))
+    check('第六轮：Token 悬停写详细 —— 总数 + **带标签**的三段明细（输入 / 输出 / 缓存）',
+      /tt\('recTokenDetail', \{/.test(tlSrc)
+      && /input: tokenPart\(row\.token_in\), output: tokenPart\(row\.token_out\), cache: tokenPart\(row\.token_in_cache\)/.test(tlSrc)
+      && locSrc.includes("recordsDepTip: '前置任务 {n}：{task}'")
+      && locSrc.includes("recordsDepFrom: '本次取自 {time} 的那次执行'")
+      && locSrc.includes("recTokenDetail: '输入 {input} / 输出 {output} / 缓存 {cache}'"))
     check('第五轮：备注行归入左列（源序在左列与右列之间）⇒ 出现第三行时右列控件仍相对整条居中',
       /dsh-tdt-rec-left[\s\S]*dsh-tdt-rec-note[\s\S]*dsh-tdt-rec-right/.test(tlSrc))
     check('第五轮：小图标统一 12px（三枚字段图标 + 日期行小时钟），时长图标换官方 IconQueue（反向：不再出现刷新图标）',
@@ -1258,12 +1293,13 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /IconChevronDownOutlineRegular/.test(tlSrc) && /h\(IconButton, \{/.test(tlSrc)
       && /transform: open \? 'rotate\(180deg\)' : 'none'/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-caret')
       && !tlSrc.includes('dsh-tdt-btn--link') && /variant: 'outline',[\s\S]{0,160}t\('viewSession'\)/.test(tlSrc))
-    check('第四轮：留白放大后的块内边距（上/下/右 12、左 16；5px 方角竖条不变）',
-      /\.dsh-tdt-rec-item\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-4\)/.test(tlSrc))
+    check('第四轮 / 第六轮：留白落在**头部**上（上/下/右 12、左 16；容器无 padding ⇒ hover 高亮顶到块边）',
+      /\.dsh-tdt-rec-main\{[^}]*padding:var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-3\) var\(--tdt-space-4\)/.test(tlSrc)
+      && !/\.dsh-tdt-rec-item\{[^}]*padding:/.test(tlSrc))
     check('第四轮：信息行 = **固定单行 + 溢出省略**，三个字段各带官方近似图标，Token 从右下角迁到行尾',
       /\.dsh-tdt-rec-r2\{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis/.test(tlSrc)
       && /IconAlarmClockOutlineRegular/.test(tlSrc) && /IconClockOutlineRegular/.test(tlSrc) && /IconQueueOutlineRegular/.test(tlSrc)
-      && /dsh-tdt-rec-field dsh-tdt-rec-num/.test(tlSrc) && /formatTokenDetail\(row\)/.test(tlSrc))
+      && /dsh-tdt-rec-field dsh-tdt-rec-num/.test(tlSrc) && /tt\('recTokenDetail'/.test(tlSrc) && /const tokenPart = \(v: number \| null\)/.test(tlSrc))
     check('第四轮：时刻只到分钟，**跨天显式标注**（前一天 / 次日 / M 月 D 日）—— helper + 两个新文案键',
       /function clockLabelOf\(/.test(tlSrc) && /crossDayFormatter/.test(tlSrc)
       && /t\('recPrevDay'\)/.test(tlSrc) && /t\('recNextDay'\)/.test(tlSrc)

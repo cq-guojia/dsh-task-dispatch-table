@@ -10,14 +10,18 @@
 //   ② **没有外框**、**没有竖轴**：整页铺在宿主面板底上，靠一条条自带底色的**独立块**建立节奏（块间 4px）；
 //   ③ 日期 = 一行**小字**：时钟图标 + 「2026 年 10 月 30 日」· 星期几 ·「8 条」（不吸顶）；
 //   ④ 块 = 左缘 **5px 方角状态色竖条**（通高、贴左缘）+ **同色系很浅的透明底**，留白放宽
-//      （上/下/右 12、左 16）；**块内左右两列**：左列标题 + 下面那排信息，右列一排控件；
+//      （上/下/右 12、左 16，落在**头部**上）；**三层结构照任务卡片**：容器不可点 →
+//      **头部可点**（hover 变色 + 手指 + 「有选中文字就不展开」的复制守卫）→ 展开区不可点（内容可复制）；
+//      **块内左右两列**：左列标题（紧跟前置圈码）+ 下面那排信息，右列一排控件；
 //   ⑤ 左列：第 1 行名称；第 2 行信息**单行 + 溢出省略**：工作区 · 🕰计划 · 🕐实际 · ⟳时长 · Token
 //      （三个字段各带小图标；时间只到分钟，**跨天的时刻显式标注**前一天 / 次日 / M 月 D 日）；
 //      失败 / 未执行有原因时补一行备注（跨整块）；
 //   ⑥ 右列（用户 2026-10-04：「右边不要放两行，就几个按钮」）＝ 产出物图标（**只给图标**，≤3 + `+N`）
 //      → 「查看会话」按钮 → 展开箭头（**基础层 IconButton**，与任务配置卡片的箭头同一份实现）；
 //      **成败不用图标也再无状态文字**：底色 + 竖条即表达，状态名挂在竖条的悬停提示上；
-//   ⑦ 点块 = **就地展开**（手风琴单开）：产出物清单**与「任务配置 → 附件区」同款**（行内并排、
+//      前置 = 名字后的**圈码**（本次执行实际用到的上游，悬停显示「前置任务 N：名」）+ 展开区**第二排**清单
+//      （一排两个：圈码 + 任务名 /「本次取自哪次执行」+ 查看会话）；
+//   ⑦ 点头部 = **就地展开**（手风琴单开）：产出物清单**与「任务配置 → 附件区」同款**（行内并排、
 //      限宽 40ch、超长跑马灯，可点开预览；无产出则不占行）
 //      + 该次执行的**事件流水**（`fetchEvents(instanceId)`，左上角小标题「执行日志」）；
 //      **只有点「查看会话」才开会话**。
@@ -35,6 +39,7 @@ import {
   IconQueueOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
+import { resolvedDepsOf } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
@@ -57,6 +62,17 @@ if (HARD_LIMIT % PAGE_SIZE !== 0) console.warn('[tdt] HARD_LIMIT 必须是 PAGE_
 /** 状态分段控件四档（'' = 全部；其余走 `statusesOfBucket` 单源）。 */
 type StatusBucket = '' | 'succeeded' | 'failed' | 'running'
 
+/**
+ * 前置任务的**圈码**（用户 2026-10-04：「放在整个名字后面，比如用圈起来的数字 1、2、3」）。
+ * 全仓此前没有 UI 圈码先例（Unicode ①-⑳ 只出现在注释里）⇒ 就地定义这一张表；
+ * 超过表的长度（20 个前置）就补一个 `+N`（前置多到这个程度是配置问题，不值得为它加宽版面）。
+ */
+const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩',
+  '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳']
+
+/** 第 n 个前置（1 起）的圈码；超出表长退化成阿拉伯数字（调用方另有 `+N`）。 */
+const circledOf = (n: number): string => CIRCLED[n - 1] ?? String(n)
+
 // ── 样式（走基础层注入器，不自建 <style>；只消费 var(--tdt-*)，间距/时长全走 token）──
 const RECORDS_CSS = `
 /* ── 执行记录流水账（**无容器**）───────────────────────────────────────────
@@ -72,15 +88,13 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-daycount{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* 块之间 **4px**（用户指定；--tdt-space-1 正好 = 4px） */
 .dsh-tdt-rec-items{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
-/* 条目块：自带状态色浅底；底色由色调类给的局部变量驱动（见下）。
-   留白放大（用户 2026-10-04：「左边的间距、上面、下面、右边都大点」）：上/下/右 12、左 16。 */
+/* 条目块 = **容器**（自带状态色浅底；底色由色调类给的局部变量驱动，见下）。
+   ⚠️ 三层结构照任务卡片（用户 2026-10-04：「参考前面配置任务的展开」）：
+     容器（**不可点**）→ 头部「.dsh-tdt-rec-head」（可点）→ 展开区（不可点，内容可复制）。
+   容器**无 padding、无 cursor**：留白落在头部（这样 hover 高亮正好顶到块边，与卡片主行同观感）。 */
 .dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:var(--tdt-space-1);
-  padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);
   background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
-/* 整块可点（切展开）⇒ 光标是手；hover / 展开态都叠一层**中性半透明** */
-.dsh-tdt-rec-item{cursor:pointer;}
-.dsh-tdt-rec-item:hover,.dsh-tdt-rec-item--open{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 /* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
    token 只在 tokens.ts 定义；块底那条「状态色浅底」的 token 就在那里）。 */
 .dsh-tdt-rec-tone--ok{--rec-tone:var(--tdt-success);--rec-tone-soft:var(--tdt-success-soft);}
@@ -99,8 +113,14 @@ const RECORDS_CSS = `
   .dsh-tdt-rec-bar--run{animation:none;}
   .dsh-tdt-rec-item{animation:none;}
 }
-/* ── 块内两列：左列（标题 + 信息，可省略） / 右列（一排控件）──────────────── */
-.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;}
+/* ── 头部 = 块内两列（左列：标题 + 信息 + 备注 ／ 右列：一排控件）且是**唯一可点区域** ──
+   留白放大（用户 2026-10-04：「左边的间距、上面、下面、右边都大点」）：上/下/右 12、左 16；
+   hover / 展开态叠一层**中性半透明**（不盖掉块底的状态色浅底）。 */
+.dsh-tdt-rec-main{display:flex;align-items:center;gap:var(--tdt-space-3);min-width:0;
+  padding:var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);}
+.dsh-tdt-rec-head{cursor:pointer;}
+.dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
+.dsh-tdt-rec-item--open .dsh-tdt-rec-head{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
@@ -120,16 +140,32 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-chiprow{display:inline-flex;align-items:center;gap:2px;flex-wrap:nowrap;}
 /* 展开箭头**不再自绘**：用基础层 IconButton（与任务配置卡片的箭头同一份实现，
    hover 底色 / 尺寸 / 翻转都一致）—— 2026-10-04 第五轮收编。 */
+/* 折叠态：名字后面的**前置圈码**（有几个 = 本次执行实际用到了几个上游） */
+.dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:2px;flex:none;}
+.dsh-tdt-rec-depmark{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
-/* ── 展开区（点块就地展开；手风琴，同时只开一条）───────────────────────── */
+/* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
+   ⚠️ **不可点、无 cursor**：展开出来的内容（产出物 / 前置 / 日志）要能直接拖选复制
+      （用户 2026-10-04：整块可点的时代下面那块也是手指，内容不好复制）。 */
 .dsh-tdt-rec-exp{display:flex;flex-direction:column;gap:var(--tdt-space-2);
-  margin-top:var(--tdt-space-2);padding-top:var(--tdt-space-2);border-top:1px solid var(--tdt-border-faint);}
+  padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3) var(--tdt-space-4);
+  border-top:1px solid var(--tdt-border-faint);}
 /* 产出物：**与「任务配置 → 附件区」一模一样的排布**（用户 2026-10-04：不占整行、限宽跑马灯）
    —— wrap 行内并排，底色 / 形状走基础层「行式文件按钮」的 --inline 形态。 */
 .dsh-tdt-rec-expouts{display:flex;flex-wrap:wrap;gap:2px 10px;min-width:0;}
 /* 事件流水：小标题 + 等宽小字逐行铺（与卡片「执行记录」下钻同口径：时间 / 事件 / 明细）。 */
 .dsh-tdt-rec-evtitle{margin-bottom:6px;font-size:var(--tdt-font-xs);font-weight:500;color:var(--tdt-fg-3);}
+/* 前置任务（展开区**第二排**）：**一排两个**（用户 2026-10-04），每格两行 —— 圈码 + 任务名 /
+   「本次取自 15:10 的那次执行」+「查看会话」。格子本身不可点（只有里面那个按钮可点）。 */
+.dsh-tdt-rec-depsec{display:flex;flex-direction:column;gap:var(--tdt-space-1);min-width:0;}
+.dsh-tdt-rec-depgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--tdt-space-1) var(--tdt-space-2);}
+.dsh-tdt-rec-dep{display:flex;flex-direction:column;gap:2px;min-width:0;
+  padding:var(--tdt-space-1) var(--tdt-space-2);border-radius:var(--tdt-radius-xs);background:var(--tdt-chip-bg);}
+.dsh-tdt-rec-depname{display:flex;align-items:center;gap:var(--tdt-space-1);min-width:0;
+  font-size:var(--tdt-font-sm);color:var(--tdt-fg-2);}
+.dsh-tdt-rec-depmeta{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;
+  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-rec-ev{font-family:var(--tdt-font-mono);font-size:var(--tdt-font-xs);
   line-height:var(--tdt-line-md);color:var(--tdt-fg-2);}
 .dsh-tdt-rec-evrow{margin-bottom:6px;word-break:break-all;}
@@ -289,8 +325,14 @@ const RecordItem = memo(function RecordItem(props: {
   eventsError: string | null
   /** 跨天时刻的「M 月 D 日 HH:mm」格式器（按语言记忆化，父级传入）。 */
   crossFmt: Intl.DateTimeFormat | null
+  /** 带插值的文案（前置圈码 / 前置取自 / token 明细用；父级 `interpolateTranslate` 得到）。 */
+  tt: ReturnType<typeof interpolateTranslate>
+  /** 实例快照（JSON 字符串）：本次执行**实际用到的前置**就从这里解析（`resolvedDeps`），零额外请求。 */
+  snapshot: string | null
+  /** 任务 id → 任务名（查不到退短 id；父级用 overview 建的反查，与别处同口径）。 */
+  depTitleOf: (taskId: string) => string
 }): ReturnType<typeof h> {
-  const { row, label, workspace, t, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt } = props
+  const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt } = props
   const tone = statusToneOf(row.status)
   const running = isRunningStatus(row.status)
   const statusLabel = statusTextOf(row.status, t)
@@ -308,38 +350,62 @@ const RecordItem = memo(function RecordItem(props: {
     ? `${t('colDuration')}：${durationOf(row)}`
     : `${t('colDuration')}：${durationOf(row)}（${stampOf(row.dispatched_at ?? row.scheduled_at)} → ${stampOf(row.finished_at)}）`
   const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t('recPrevDay'), t('recNextDay'))
+  // 本次执行**实际用到的**前置（快照里的 resolvedDeps；空 / 坏 JSON / 旧行 ⇒ []，不猜、更不读任务配置）。
+  const deps = resolvedDepsOf(snapshot)
+  /** token 三段之一：null 给占位（不编造 0）。 */
+  const tokenPart = (v: number | null): string => (v === null ? '—' : formatTokenCount(v))
+  /**
+   * 头部点击 = 切展开。
+   * ⚠️ 照抄任务卡片那条守卫：**有选中文字就不展开**（用户正在拖选复制，不是要点开）。
+   */
+  const onHeadClick = (): void => {
+    const sel = typeof window === 'undefined' ? null : window.getSelection()
+    if (sel !== null && sel.toString() !== '') return
+    onToggle(row.id)
+  }
 
   /** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
   const field = (icon: ReturnType<typeof h> | null, text: string, title?: string): ReturnType<typeof h> | null =>
     text === '' ? null : h('span', { className: 'dsh-tdt-rec-field', title }, icon, text)
 
   return h('div', {
+    // ⚠️ **容器不挂任何交互**（照任务卡片：容器不挂 onClick → 头部挂 → 展开区是兄弟节点）：
+    //    光标 / 点击 / 键盘都只在下面的「头部」上 ⇒ 展开出来的内容既不是手指、也不会误触展开，可安心拖选复制。
     className: `dsh-tdt-rec-item ${toneClassOf(tone)}${open ? ' dsh-tdt-rec-item--open' : ''}`,
-    // 整块可点 = **切展开**（不再开会话；开会话只有右列那个「查看会话」按钮）。
-    onClick: () => { onToggle(row.id) },
-    // 无障碍：块是可展开的（键盘 Enter/Space 同样切换）。
-    role: 'button',
-    tabIndex: 0,
-    'aria-expanded': open,
-    onKeyDown: (event: { key: string; preventDefault(): void }) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggle(row.id) }
-    },
   },
-    // 5px 方角通高竖条：成败的**唯一**图形表达；状态名放在它的悬停提示里（不再写可见文字）。
-    h('span', {
-      className: `dsh-tdt-rec-bar${running ? ' dsh-tdt-rec-bar--run' : ''}`,
-      title: statusLabel,
-      'aria-hidden': true,
-    }),
-    h('div', { className: 'dsh-tdt-rec-main' },
+    // ── 头部（**唯一可点区域**）：左缘竖条 + 标题 + 信息 + 备注 + 右列控件 ──
+    h('div', { className: 'dsh-tdt-rec-main dsh-tdt-rec-head', onClick: onHeadClick },
+      // 5px 方角通高竖条：成败的**唯一**图形表达；状态名放在它的悬停提示里（不再写可见文字）。
+      // 收进头部 ⇒ 这条 5px 也能点开（绝对定位仍相对块根，位置不变）——与卡片把状态条放进主行同理。
+      h('span', {
+        className: `dsh-tdt-rec-bar${running ? ' dsh-tdt-rec-bar--run' : ''}`,
+        title: statusLabel,
+        'aria-hidden': true,
+      }),
       // ── 左列：标题 + 下面那排信息 ──
       h('div', { className: 'dsh-tdt-rec-left' },
         h('div', { className: 'dsh-tdt-rec-r1' },
+          // 标题**不撑满**（`0 1 auto`）：后面的前置圈码要紧跟名字，而不是被推到行尾。
           h(MarqueeText, {
             text: label, title: label,
             className: 'dsh-tdt-rec-title dsh-tdt-ellipsis',
-            style: { flex: '1 1 auto', minWidth: 0 },
+            style: { flex: '0 1 auto', minWidth: 0 },
           }),
+          // 前置圈码（用户 2026-10-04）：**本次执行实际用到的**上游有几个就画几个，一个都没有就什么都不画；
+          // 悬停用**原生 title**（不许自绘浮层）说明是第几个、叫什么。
+          deps.length === 0
+            ? null
+            : h('span', { className: 'dsh-tdt-rec-depmarks' },
+              deps.slice(0, CIRCLED.length).map((dep, index) => h('span', {
+                key: `${dep.task}#${dep.instanceId}`,
+                className: 'dsh-tdt-rec-depmark',
+                title: tt('recordsDepTip', { n: String(index + 1), task: depTitleOf(dep.task) }),
+              }, circledOf(index + 1))),
+              deps.length > CIRCLED.length
+                ? h('span', { className: 'dsh-tdt-rec-depmark', title: t('listSectionDepends') },
+                  `+${deps.length - CIRCLED.length}`)
+                : null,
+            ),
         ),
         // 信息行：工作区 · 🕰计划 · 🕐实际 · ⟳时长 · Token（单行、溢出省略；Token 从右下角迁到这里）
         // ⚠️ 每段都挂**带标签的完整值**的悬停提示（用户 2026-10-04：光看「32K」「15:10」不知道是什么）。
@@ -350,9 +416,15 @@ const RecordItem = memo(function RecordItem(props: {
           field(actual === '' ? null : h(IconClockOutlineRegular, { size: 12 }), actual === '' ? '' : `${t('recActual')} ${actual}`,
             row.dispatched_at === null ? undefined : `${t('colActualStart')}：${stampOf(row.dispatched_at)}`),
           field(h(IconQueueOutlineRegular, { size: 12 }), `${t('colDuration')} ${durationOf(row)}`, durationHint),
+          // 悬停写详细（用户 2026-10-04：「这 3 个栏谁知道分别是什么呢？你也要有个标题」）：
+          // 总数 + **带标签**的三段明细（输入 / 输出 / 缓存），仍走**原生 title**（多行）。
           tokens > 0
-            ? h('span', { className: 'dsh-tdt-rec-field dsh-tdt-rec-num', title: `${t('recTokenHint')}：${formatTokenCount(tokens)}\n${formatTokenDetail(row)}` },
-              formatTokenCount(tokens))
+            ? h('span', {
+              className: 'dsh-tdt-rec-field dsh-tdt-rec-num',
+              title: `${t('recTokenHint')}：${formatTokenCount(tokens)}\n${tt('recTokenDetail', {
+                input: tokenPart(row.token_in), output: tokenPart(row.token_out), cache: tokenPart(row.token_in_cache),
+              })}`,
+            }, formatTokenCount(tokens))
             : null,
         ),
         // ── 第 3 行：失败 / 未执行的原因（用户：执行错了就是要看备注）──
@@ -413,9 +485,10 @@ const RecordItem = memo(function RecordItem(props: {
         ),
       ),
     ),
-    // ── 展开区：产出物清单（无产出则不占行）+ 该次执行的事件流水（带小标题）──
+    // ── 展开区（**不可点、无 cursor**：内容要能直接拖选复制）：第一排产出物 → 第二排前置任务 →
+    //    再往下是该次执行的事件流水。父级已不可点 ⇒ 不再需要拦冒泡。 ──
     open
-      ? h('div', { className: 'dsh-tdt-rec-exp', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+      ? h('div', { className: 'dsh-tdt-rec-exp' },
         outputs.length === 0
           ? null
           : h('div', { className: 'dsh-tdt-rec-expouts' },
@@ -432,6 +505,39 @@ const RecordItem = memo(function RecordItem(props: {
               // 文件名**限宽 40ch + 超长跑马灯**（与卡片附件区同一口径；用户：设个最大宽度，超过了就跑马灯）
               h(MarqueeText, { text: baseNameOf(path), title: path, style: { maxWidth: '40ch', minWidth: 0 } }),
             )),
+          ),
+        // ── 第二排：前置任务（用户 2026-10-04：**一排显示两个**；每格两行，能点开那次上游的会话）──
+        deps.length === 0
+          ? null
+          : h('div', { className: 'dsh-tdt-rec-depsec' },
+            h('div', { className: 'dsh-tdt-rec-evtitle' }, t('listSectionDepends')),
+            h('div', { className: 'dsh-tdt-rec-depgrid' },
+              deps.map((dep, index) => h('div', {
+                key: `${dep.task}#${dep.instanceId}`,
+                className: 'dsh-tdt-rec-dep',
+              },
+                h('div', { className: 'dsh-tdt-rec-depname' },
+                  h('span', { className: 'dsh-tdt-rec-depmark' }, circledOf(index + 1)),
+                  h('span', { className: 'dsh-tdt-ellipsis', title: depTitleOf(dep.task) }, depTitleOf(dep.task)),
+                ),
+                h('div', { className: 'dsh-tdt-rec-depmeta' },
+                  // 「本次取自 <那天那个点> 的那次执行」—— 时刻口径复用跨天 helper（前一天 / 次日 也会标出来）。
+                  h('span', { className: 'dsh-tdt-ellipsis', title: stampOf(dep.scheduledAt) },
+                    tt('recordsDepFrom', {
+                      time: clockLabelOf(dep.scheduledAt, dayKey, crossFmt, t('recPrevDay'), t('recNextDay')),
+                    })),
+                  // 上游那次没有会话 ⇒ **不出按钮**（不给假入口）。
+                  dep.sessionId === null || dep.sessionId === ''
+                    ? null
+                    : h(Button, {
+                      variant: 'outline',
+                      size: 'sm',
+                      title: t('viewSession'),
+                      onClick: () => { openSession(dep.sessionId as string) },
+                    }, t('viewSession')),
+                ),
+              )),
+            ),
           ),
         eventsError !== null
           ? h('div', { className: 'dsh-tdt-rec-evempty dsh-tdt-rec-err' }, `${t('cardLoadFailed')}：${eventsError}`)
@@ -537,6 +643,11 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   ]), [t])
 
   const titleById = useMemo(() => new Map(tasks.map(o => [o.id, o.label])), [tasks])
+  /**
+   * 任务 id → 任务名（查不到退短 id 8 位，**绝不编造**）—— 前置圈码与前置清单用。
+   * 与父级 `upstreamOf`（index.ts）同口径；`useCallback` 保证 memo 条目不被无谓重渲。
+   */
+  const depTitleOf = useCallback((taskId: string): string => titleById.get(taskId) ?? taskId.slice(0, 8), [titleById])
   /** 工作区反查：优先任务表（当前归属），任务已删退回派发快照的 `workspacePath` 末段（当次执行当时的值）。 */
   const workspaceById = useMemo(() => new Map(tasks.map(o => [o.id, o.workspace])), [tasks])
   const filterSig = `${range.from}|${range.to}|${workspace}|${bucket}|${taskId}`
@@ -768,6 +879,10 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
                   label: titleById.get(row.task_id) ?? row.task_id,
                   workspace: workspaceOf(row),
                   t,
+                  tt,
+                  // 前置清单来自实例快照（JSON 字符串）；原样传，条目内用 resolvedDepsOf 解析（零请求）。
+                  snapshot: row.snapshot ?? null,
+                  depTitleOf,
                   open: openId === row.id,
                   onToggle: toggleRow,
                   openSession,
