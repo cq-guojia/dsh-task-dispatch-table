@@ -1451,9 +1451,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && !/dsh-tdt-rec-evempty' \}, t\('recordsLoading'\)/.test(tlSrc10)
       && /h\(Loading, \{ label: t\('previewLoading'\) \}\)/.test(prevSrc)
       && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(prevSrc) && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(browserSrc))
-    check('第十轮·硬性规定：悬停提示一律**官方 Tooltip**，不再用原生 title（状态名 / 备注 / 标题 / 信息行）',
+    check('第十轮·硬性规定：悬停提示一律**官方 Tooltip**，不再用原生 title（状态名 / 标题 / 信息行；备注不弹）',
       /h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc10)
-      && /h\(Tooltip, \{ label: note, side: 'top' \}/.test(tlSrc10)
       && /h\(Tooltip, \{ label, side: 'top' \}/.test(tlSrc10)
       && /h\(Tooltip, \{ label: title, side: 'top' \}/.test(tlSrc10)
       && !/title: statusLabel/.test(tlSrc10) && !/title: note'/.test(tlSrc10))
@@ -1462,22 +1461,25 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /const fieldInnerStyle: CSSProperties/.test(tlSrc10)
       && !/h\(Tooltip, \{[\s\S]{0,120}className: 'dsh-tdt-rec-field'/.test(tlSrc10)
       && /dsh-tdt-rec-field\+[^\n]{0,4}dsh-tdt-rec-field::before\{content:'·'/.test(tlSrc10))
-    check('第十轮：非成功态有**状态标签**（执行失败 / 未执行 / 执行中 / 未知状态），排在「查看会话」前面、与它同宽同高',
-      tlSrc10.includes("row.status === 'succeeded' ? null")
-      && tlSrc10.includes("row.status === 'failed' ? { text: t('recTagFailed'), tone: 'bad' }")
-      && tlSrc10.includes("row.status === 'skipped' ? { text: t('recTagSkipped'), tone: 'warn' }")
+    check('第十轮：非成功态有**状态标签**，文案走通用**两字短名** statusTextOf（不再另起长名），排在「查看会话」前面',
+      tlSrc10.includes("row.status === 'succeeded'")
+      && /text: statusTextOf\(row\.status, t\)/.test(tlSrc10)
       && tlSrc10.includes("dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}")
       && tlSrc10.indexOf('dsh-tdt-rec-tag') < tlSrc10.indexOf("}, t('viewSession'))")
-      && /\.dsh-tdt-rec-tag\{[^}]*min-width:4em;padding:0;[^}]*line-height:var\(--tdt-line-sm\)/.test(tlSrc10)
-      && locSrc10.includes("recTagFailed: '执行失败'") && locSrc10.includes("recTagSkipped: '未执行'")
-      && locSrc10.includes("recTagRunning: '执行中'") && locSrc10.includes("recTagUnknown: '未知状态'"))
-    check('第十轮：状态标签的悬停备注 —— 红**不弹**（备注已在下方显示），黄 / 蓝 / 灰弹备注且走官方 Tooltip',
-      tlSrc10.includes("statusTag.tone === 'bad' || note === ''")
-      && /h\(Tooltip, \{ label: note, side: 'top' \},[\s\S]{0,160}dsh-tdt-rec-tag/.test(tlSrc10))
-    check('第十轮：时间控件**定死宽度**（日期框按 0000-00-00、时分框按 00:00、预设下拉按最长标签）',
+      && !/recTag(Failed|Skipped|Running|Unknown)/.test(tlSrc10) && !/recTag(Failed|Skipped|Running|Unknown)/.test(locSrc10))
+    check('第十轮：状态标签**宽度自适应**（去掉 min-width 定死），padding 上下 1px / 左右 2px（左右 = 上下两倍）',
+      /\.dsh-tdt-rec-tag\{[^}]*padding:1px 2px;[^}]*line-height:var\(--tdt-line-sm\)/.test(tlSrc10)
+      && !/\.dsh-tdt-rec-tag\{[^}]*min-width/.test(tlSrc10)
+      && !/\.dsh-tdt-rec-tag\{[^}]*padding:0;/.test(tlSrc10))
+    check('第十轮：备注**不再挂气泡**（备注已在下方那行显示 ⇒ 悬停不再弹），标签也不再弹备注',
+      !/h\(Tooltip, \{ label: note, side: 'top' \}/.test(tlSrc10)
+      && !/statusTag\.tone === 'bad' \|\| note === ''/.test(tlSrc10)
+      && /: h\('div', \{ className: 'dsh-tdt-rec-note dsh-tdt-ellipsis' \}/.test(tlSrc10))
+    check('第十轮：时间控件**定死宽度**（md 下 日期 118 / 时分 82 / 预设 88）',
       dtSrc.includes('width: props.width ?? dateWidthOf(size)') && dtSrc.includes('width: props.width ?? timeWidthOf(size)')
-      && dtSrc.includes("fieldWidthOf('0000-00-00', size)") && dtSrc.includes("fieldWidthOf('00:00', size)")
+      && dtSrc.includes("fieldWidthOf('0000-00-00', size) + 7") && dtSrc.includes("fieldWidthOf('00:00', size) + 7")
       && trSrc10.includes('width: selectWidth,') && trSrc10.includes('Math.max(...[labels.all, labels.custom')
+      && /\) \+ 11,/.test(trSrc10)
       && locSrc10.includes("trLastMonth: '上月'"))
     check('第十轮：展开时头部高亮**紧贴**分隔线（容器 gap 归零，不留距离）',
       /\.dsh-tdt-rec-item\{[^}]*gap:0;/.test(tlSrc10))

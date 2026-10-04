@@ -131,7 +131,7 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
   // 下拉**定宽**：按「全部 + 全部预设 + 自定义」里最长的一个算 ⇒ 选到「自定义」时也不会变宽
   // （用户 2026-10-05：宽度定死，不要左右跳；预设档文案已统一成两个字）。
   const selectWidth = useMemo(
-    () => Math.max(...[labels.all, labels.custom, ...Object.values(labels.presets)].map(text => fieldWidthOf(text, size))) + 15,
+    () => Math.max(...[labels.all, labels.custom, ...Object.values(labels.presets)].map(text => fieldWidthOf(text, size))) + 11,
     [labels, size],
   )
 

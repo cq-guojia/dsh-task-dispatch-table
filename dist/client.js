@@ -792,10 +792,6 @@ window.__ModuleLoader__.load({
 			statusFailed: "失败",
 			statusSkipped: "跳过",
 			statusUnknown: "未知",
-			recTagFailed: "执行失败",
-			recTagSkipped: "未执行",
-			recTagRunning: "执行中",
-			recTagUnknown: "未知状态",
 			colDuration: "时长",
 			colPlanned: "计划执行",
 			colActualStart: "实际开始",
@@ -1390,10 +1386,6 @@ window.__ModuleLoader__.load({
 			statusFailed: "Failed",
 			statusSkipped: "Skipped",
 			statusUnknown: "Unknown",
-			recTagFailed: "Failed",
-			recTagSkipped: "Not run",
-			recTagRunning: "Running",
-			recTagUnknown: "Unknown state",
 			colDuration: "Duration",
 			colPlanned: "Scheduled",
 			colActualStart: "Started",
@@ -2673,10 +2665,10 @@ body[data-ds-dark-theme]{
 			for (const ch of text) w += /[⺀-鿿＀-￯]/.test(ch) ? fontPx : fontPx * .56;
 			return Math.ceil(w + extra);
 		}
-		/** 日期框定宽 = 刚好放下 `0000-00-00`（0 / 9 是最宽的数字）。 */
-		const dateWidthOf = (size) => fieldWidthOf("0000-00-00", size) + 15;
-		/** 时分框定宽 = 刚好放下 `00:00`。 */
-		const timeWidthOf = (size) => fieldWidthOf("00:00", size) + 10;
+		/** 日期框定宽 = 刚好放下 `0000-00-00`（0 / 9 是最宽的数字）+ 左右留白（用户 2026-10-05：md 下 118）。 */
+		const dateWidthOf = (size) => fieldWidthOf("0000-00-00", size) + 7;
+		/** 时分框定宽 = 刚好放下 `00:00` + 左右留白（用户 2026-10-05：md 下 82）。 */
+		const timeWidthOf = (size) => fieldWidthOf("00:00", size) + 7;
 		/** 自绘日历弹层（锚点 = 统一字段壳按钮）。 */
 		function DateField(props) {
 			ensureControlsStyle();
@@ -3151,7 +3143,7 @@ body[data-ds-dark-theme]{
 				labels.all,
 				labels.custom,
 				...Object.values(labels.presets)
-			].map((text) => fieldWidthOf(text, size))) + 15, [labels, size]);
+			].map((text) => fieldWidthOf(text, size))) + 11, [labels, size]);
 			return (0, react$1.createElement)("div", { style: {
 				display: "inline-flex",
 				alignItems: "center",
@@ -56927,10 +56919,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
-/* 状态标签（**仅非成功态**出）：与右列「查看会话」按钮**同宽同高** —— 同样的字号 / 行高，
-   最小宽度 = 4 个字（与「查看会话」同宽），不画描边；中性浅底 + 状态色字 ⇒ 压在状态色块底上也看得清。 */
+/* 状态标签（**仅非成功态**出）：不画描边；中性浅底 + 状态色字 ⇒ 压在状态色块底上也看得清。
+   ⚠️ 宽度**自适应**（用户 2026-10-05：不要 min-width 定死，字多就长、字少就短）：
+   padding 上下各 1px、左右各 2px（**左右 = 上下的两倍**）；高度靠 padding 撑（上下各 +1）。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  height:auto;min-width:4em;padding:0;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
+  height:auto;padding:1px 2px;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
   font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;}
 .dsh-tdt-rec-tag--bad{color:var(--tdt-danger);}
 .dsh-tdt-rec-tag--warn{color:var(--tdt-warning);}
@@ -57141,21 +57134,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const running = isRunningStatus(row.status);
 			/**
 			* 状态标签（**仅非成功态**才出：绿 = 正常，大家都知道 ⇒ 不标签，用户 2026-10-05）。
-			* ⚠️ 这里是给用户看的**长名**（执行失败 / 未执行 / 执行中 / 未知状态）；紧凑位置那套**两字短名**
-			*    仍由 `statusTextOf` 单源提供（排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知），两者用途不同，不是重复映射。
+			* ⚠️ 文案**直接用通用两字短名**（`statusTextOf` 单源：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知）——
+			*    用户 2026-10-05 纠正：不要另起一套长名（执行失败 / 未执行 / 执行中 / 未知状态），全站就认这一套短名。
+			*    只有**色调**按这里分档（红 / 黄 / 蓝 / 灰），名字本身不再分叉。
 			*/
-			const statusTag = row.status === "succeeded" ? null : row.status === "failed" ? {
-				text: t("recTagFailed"),
-				tone: "bad"
-			} : row.status === "skipped" ? {
-				text: t("recTagSkipped"),
-				tone: "warn"
-			} : running ? {
-				text: t("recTagRunning"),
-				tone: "busy"
-			} : {
-				text: t("recTagUnknown"),
-				tone: "neutral"
+			const statusTag = row.status === "succeeded" ? null : {
+				text: statusTextOf(row.status, t),
+				tone: row.status === "failed" ? "bad" : row.status === "skipped" ? "warn" : running ? "busy" : "neutral"
 			};
 			const statusLabel = statusTextOf(row.status, t);
 			const outputs = outputsOf(row.outputs);
@@ -57238,10 +57223,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					cache: tokenPart(row.token_in_cache)
 				})}`,
 				side: "top"
-			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null), note === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: note,
-				side: "top"
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null), note === "" ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				key: path,
 				label: baseNameOf$1(path),
 				side: "top"
@@ -57263,10 +57245,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					event.stopPropagation();
 					onToggle(row.id);
 				}
-			}, `+${outputs.length - 3}`) : null), statusTag === null ? null : statusTag.tone === "bad" || note === "" ? (0, react$1.createElement)("span", { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: note,
-				side: "top"
-			}, (0, react$1.createElement)("span", { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text)), canOpenSession ? (0, react$1.createElement)(Button$2, {
+			}, `+${outputs.length - 3}`) : null), statusTag === null ? null : (0, react$1.createElement)("span", { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text), canOpenSession ? (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: (event) => {

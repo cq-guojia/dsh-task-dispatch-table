@@ -136,10 +136,11 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
-/* 状态标签（**仅非成功态**出）：与右列「查看会话」按钮**同宽同高** —— 同样的字号 / 行高，
-   最小宽度 = 4 个字（与「查看会话」同宽），不画描边；中性浅底 + 状态色字 ⇒ 压在状态色块底上也看得清。 */
+/* 状态标签（**仅非成功态**出）：不画描边；中性浅底 + 状态色字 ⇒ 压在状态色块底上也看得清。
+   ⚠️ 宽度**自适应**（用户 2026-10-05：不要 min-width 定死，字多就长、字少就短）：
+   padding 上下各 1px、左右各 2px（**左右 = 上下的两倍**）；高度靠 padding 撑（上下各 +1）。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  height:auto;min-width:4em;padding:0;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
+  height:auto;padding:1px 2px;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
   font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;}
 .dsh-tdt-rec-tag--bad{color:var(--tdt-danger);}
 .dsh-tdt-rec-tag--warn{color:var(--tdt-warning);}
@@ -385,15 +386,17 @@ const RecordItem = memo(function RecordItem(props: {
   const running = isRunningStatus(row.status)
   /**
    * 状态标签（**仅非成功态**才出：绿 = 正常，大家都知道 ⇒ 不标签，用户 2026-10-05）。
-   * ⚠️ 这里是给用户看的**长名**（执行失败 / 未执行 / 执行中 / 未知状态）；紧凑位置那套**两字短名**
-   *    仍由 `statusTextOf` 单源提供（排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知），两者用途不同，不是重复映射。
+   * ⚠️ 文案**直接用通用两字短名**（`statusTextOf` 单源：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知）——
+   *    用户 2026-10-05 纠正：不要另起一套长名（执行失败 / 未执行 / 执行中 / 未知状态），全站就认这一套短名。
+   *    只有**色调**按这里分档（红 / 黄 / 蓝 / 灰），名字本身不再分叉。
    */
   const statusTag: { text: string; tone: 'bad' | 'warn' | 'busy' | 'neutral' } | null =
-    row.status === 'succeeded' ? null
-      : row.status === 'failed' ? { text: t('recTagFailed'), tone: 'bad' }
-        : row.status === 'skipped' ? { text: t('recTagSkipped'), tone: 'warn' }
-          : running ? { text: t('recTagRunning'), tone: 'busy' }
-            : { text: t('recTagUnknown'), tone: 'neutral' }
+    row.status === 'succeeded'
+      ? null
+      : {
+        text: statusTextOf(row.status, t),
+        tone: row.status === 'failed' ? 'bad' : row.status === 'skipped' ? 'warn' : running ? 'busy' : 'neutral',
+      }
   const statusLabel = statusTextOf(row.status, t)
   const outputs = outputsOf(row.outputs)
   const sid = row.session_id
@@ -512,10 +515,10 @@ const RecordItem = memo(function RecordItem(props: {
         // ── 第 3 行：失败 / 未执行的原因（用户：执行错了就是要看备注）──
         // ⚠️ 放在**左列**里（不是块下）：右列控件相对「标题 + 信息 + 备注」整体居中，
         //    否则一出现第三行，右列那排按钮就会看着偏上（用户 2026-10-04 点名）。
+        // ⚠️ **不挂气泡**（用户 2026-10-05）：备注本身就显示出来了，悬停再弹一份是重复。
         note === ''
           ? null
-          : h(Tooltip, { label: note, side: 'top' },
-            h('div', { className: 'dsh-tdt-rec-note dsh-tdt-ellipsis' }, `${t('colNote')}：${note}`)),
+          : h('div', { className: 'dsh-tdt-rec-note dsh-tdt-ellipsis' }, `${t('colNote')}：${note}`),
       ),
       // ── 右列：一排控件（产出物图标 → 查看会话按钮 → 展开箭头）──
       h('div', { className: 'dsh-tdt-rec-right' },
@@ -546,13 +549,10 @@ const RecordItem = memo(function RecordItem(props: {
           ),
         // 只有这个按钮开会话（没有会话就不出现 —— 不给假入口；块本身仍可展开）。
         // 状态标签：红 / 黄 / 蓝 / 灰才出，排在「查看会话」**前面**。
-        // 悬停显示备注（走官方 Tooltip）；**红色例外** —— 它的备注已经显示在下面那行，不再重复弹。
+        // ⚠️ **不挂备注气泡**（用户 2026-10-05）：有备注的那些，备注已经显示在下面那行 ⇒ 悬停再弹纯属重复。
         statusTag === null
           ? null
-          : statusTag.tone === 'bad' || note === ''
-            ? h('span', { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text)
-            : h(Tooltip, { label: note, side: 'top' },
-              h('span', { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text)),
+          : h('span', { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text),
         canOpenSession
           ? h(Button, {
             variant: 'outline',
