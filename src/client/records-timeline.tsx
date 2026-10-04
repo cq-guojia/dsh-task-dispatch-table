@@ -136,6 +136,15 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-head:hover{background-image:linear-gradient(var(--tdt-hover),var(--tdt-hover));}
 .dsh-tdt-rec-left{display:flex;flex-direction:column;gap:var(--tdt-space-1);flex:1 1 auto;min-width:0;}
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
+/* 状态标签（**仅非成功态**出）：与右列「查看会话」按钮**同宽同高** —— 同样的字号 / 行高，
+   最小宽度 = 4 个字（与「查看会话」同宽），不画描边；中性浅底 + 状态色字 ⇒ 压在状态色块底上也看得清。 */
+.dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  height:auto;min-width:4em;padding:0;border-radius:var(--tdt-radius-sm);background:var(--tdt-chip-bg);
+  font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;}
+.dsh-tdt-rec-tag--bad{color:var(--tdt-danger);}
+.dsh-tdt-rec-tag--warn{color:var(--tdt-warning);}
+.dsh-tdt-rec-tag--busy{color:var(--tdt-business);}
+.dsh-tdt-rec-tag--neutral{color:var(--tdt-fg-3);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
@@ -374,6 +383,17 @@ const RecordItem = memo(function RecordItem(props: {
   const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt } = props
   const tone = statusToneOf(row.status)
   const running = isRunningStatus(row.status)
+  /**
+   * 状态标签（**仅非成功态**才出：绿 = 正常，大家都知道 ⇒ 不标签，用户 2026-10-05）。
+   * ⚠️ 这里是给用户看的**长名**（执行失败 / 未执行 / 执行中 / 未知状态）；紧凑位置那套**两字短名**
+   *    仍由 `statusTextOf` 单源提供（排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知），两者用途不同，不是重复映射。
+   */
+  const statusTag: { text: string; tone: 'bad' | 'warn' | 'busy' | 'neutral' } | null =
+    row.status === 'succeeded' ? null
+      : row.status === 'failed' ? { text: t('recTagFailed'), tone: 'bad' }
+        : row.status === 'skipped' ? { text: t('recTagSkipped'), tone: 'warn' }
+          : running ? { text: t('recTagRunning'), tone: 'busy' }
+            : { text: t('recTagUnknown'), tone: 'neutral' }
   const statusLabel = statusTextOf(row.status, t)
   const outputs = outputsOf(row.outputs)
   const sid = row.session_id
@@ -525,6 +545,14 @@ const RecordItem = memo(function RecordItem(props: {
               : null,
           ),
         // 只有这个按钮开会话（没有会话就不出现 —— 不给假入口；块本身仍可展开）。
+        // 状态标签：红 / 黄 / 蓝 / 灰才出，排在「查看会话」**前面**。
+        // 悬停显示备注（走官方 Tooltip）；**红色例外** —— 它的备注已经显示在下面那行，不再重复弹。
+        statusTag === null
+          ? null
+          : statusTag.tone === 'bad' || note === ''
+            ? h('span', { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text)
+            : h(Tooltip, { label: note, side: 'top' },
+              h('span', { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text)),
         canOpenSession
           ? h(Button, {
             variant: 'outline',

@@ -182,6 +182,7 @@ export type LocaleKey =
   | 'colTokens'
   // —— 实例状态通用短名（status-text.ts 单源；zh 统一两字：排队/派发/运行/成功/失败/跳过/未知）——
   | 'statusPending' | 'statusDispatched' | 'statusRunning' | 'statusSucceeded' | 'statusFailed' | 'statusSkipped' | 'statusUnknown'
+  | 'recTagFailed' | 'recTagSkipped' | 'recTagRunning' | 'recTagUnknown'
   // —— 执行记录行（用户 2026-10-02 示意改版）：时长列 / 派发·结束时刻 / 时长句式 ——
   | 'colDuration' | 'colPlanned' | 'colActualStart' | 'colView' | 'colNote' | 'filterRunning'
   // —— 时间范围控件（ui/TimeRange，全站复用）：预设档 + 清除 ——
@@ -782,6 +783,11 @@ export const zh: Record<LocaleKey, string> = {
   statusFailed: '失败',
   statusSkipped: '跳过',
   statusUnknown: '未知',
+  /* 执行记录页**状态标签**用的长名（给普通用户看全因；紧凑位置仍用上面那套两字短名） */
+  recTagFailed: '执行失败',
+  recTagSkipped: '未执行',
+  recTagRunning: '执行中',
+  recTagUnknown: '未知状态',
   // 执行记录行（用户 2026-10-02 示意改版）。
   colDuration: '时长',
   colPlanned: '计划执行',
@@ -1395,6 +1401,10 @@ export const en: Record<LocaleKey, string> = {
   statusFailed: 'Failed',
   statusSkipped: 'Skipped',
   statusUnknown: 'Unknown',
+  recTagFailed: 'Failed',
+  recTagSkipped: 'Not run',
+  recTagRunning: 'Running',
+  recTagUnknown: 'Unknown state',
   // Run record rows (user mock, 2026-10-02).
   colDuration: 'Duration',
   colPlanned: 'Scheduled',

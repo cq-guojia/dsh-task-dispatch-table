@@ -1462,6 +1462,18 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /const fieldInnerStyle: CSSProperties/.test(tlSrc10)
       && !/h\(Tooltip, \{[\s\S]{0,120}className: 'dsh-tdt-rec-field'/.test(tlSrc10)
       && /dsh-tdt-rec-field\+[^\n]{0,4}dsh-tdt-rec-field::before\{content:'·'/.test(tlSrc10))
+    check('第十轮：非成功态有**状态标签**（执行失败 / 未执行 / 执行中 / 未知状态），排在「查看会话」前面、与它同宽同高',
+      tlSrc10.includes("row.status === 'succeeded' ? null")
+      && tlSrc10.includes("row.status === 'failed' ? { text: t('recTagFailed'), tone: 'bad' }")
+      && tlSrc10.includes("row.status === 'skipped' ? { text: t('recTagSkipped'), tone: 'warn' }")
+      && tlSrc10.includes("dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}")
+      && tlSrc10.indexOf('dsh-tdt-rec-tag') < tlSrc10.indexOf("}, t('viewSession'))")
+      && /\.dsh-tdt-rec-tag\{[^}]*min-width:4em;padding:0;[^}]*line-height:var\(--tdt-line-sm\)/.test(tlSrc10)
+      && locSrc10.includes("recTagFailed: '执行失败'") && locSrc10.includes("recTagSkipped: '未执行'")
+      && locSrc10.includes("recTagRunning: '执行中'") && locSrc10.includes("recTagUnknown: '未知状态'"))
+    check('第十轮：状态标签的悬停备注 —— 红**不弹**（备注已在下方显示），黄 / 蓝 / 灰弹备注且走官方 Tooltip',
+      tlSrc10.includes("statusTag.tone === 'bad' || note === ''")
+      && /h\(Tooltip, \{ label: note, side: 'top' \},[\s\S]{0,160}dsh-tdt-rec-tag/.test(tlSrc10))
     check('第十轮：时间控件**定死宽度**（日期框按 0000-00-00、时分框按 00:00、预设下拉按最长标签）',
       dtSrc.includes('width: props.width ?? dateWidthOf(size)') && dtSrc.includes('width: props.width ?? timeWidthOf(size)')
       && dtSrc.includes("fieldWidthOf('0000-00-00', size)") && dtSrc.includes("fieldWidthOf('00:00', size)")
