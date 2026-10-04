@@ -57007,10 +57007,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-right{display:flex;align-items:center;gap:var(--tdt-space-2);flex:none;}
 /* 状态标签（**仅非成功态**出）：**状态色实底 + 反色字**（用户 2026-10-05：「背景应该是相应的红/黄/蓝/灰，
    字是一个反色」）⇒ 底色吃本条的状态色 --rec-tone，字走实面反色 --tdt-on-signal，一眼就是个带色的牌子。
-   ⚠️ 宽度**自适应**（不写 min-width，字多就长、字少就短）：padding **上下 3px / 左右 6px**（左右 = 上下两倍）；
-   字号比信息行再小一号（--tdt-font-xs）。 */
+   ⚠️ 高度 / 圆角**与右列「查看会话」按钮逐像素对齐**（用户 2026-10-05：含边框在内一模一样）——
+     高度直接吃按钮那档 height:var(--tdt-control-h-sm)（24px，border-box ⇒ 含边框就是 24），
+     圆角吃按钮那档 border-radius:var(--tdt-radius-md)（按钮是 --md，不是 --sm）。
+   ⚠️ 宽度仍**自适应**（不写 min-width，字多就长、字少就短）：padding 上下 3px / 左右 8px。 */
 .dsh-tdt-rec-tag{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
-  height:auto;padding:3px 6px;border-radius:var(--tdt-radius-sm);
+  height:var(--tdt-control-h-sm);padding:3px 8px;border-radius:var(--tdt-radius-md);
   background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
   font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
