@@ -1120,8 +1120,12 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('源码态保留换行钮（故意不传 wrap prop；传布尔会让官方 omit 该钮）',
     !/streaming:\s*streamingCode,[\s\S]{0,80}\bwrap,/.test(clientJs)
     && clientJs.includes('diffWrapLabel'))
-  check('拖拽条留 6px 沟槽（内容不再从条下穿过 ⇒ 不再切断代码框标题）',
-    /\.dsh-tdt-sv-preview\.dsh-tdt-sv-preview-dock\{[^}]*padding-left:6px/.test(clientJs))
+  check('拖拽条贯通覆盖（z-index:5 高于内容；不加沟槽——用户要遮住，不是让开）',
+    /\.dsh-tdt-sv-resizer\{[^}]*z-index:5/.test(clientJs)
+    && !/dsh-tdt-sv-preview-dock\{padding-left:6px/.test(clientJs))
+  check('拖拽期冻结内容宽度（1 万行折行文本不重新排版 ⇒ 拖拽不再卡）',
+    /frozenWidth/.test(clientJs) && /style\.width = frozenWidth/.test(clientJs)
+    && /style\.width = ['"]{2}|style\.width = ""/.test(clientJs))
   check('预览渲染崩溃拦在预览体内（PreviewBoundary 错误边界，不再黑屏整页）',
     clientJs.includes('PreviewBoundary') && clientJs.includes('componentDidCatch'))
 

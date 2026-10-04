@@ -343,3 +343,18 @@ const html = useMemo(() => highlighting && streaming !== true && streamedBody ==
 `CodeBlock.d.ts`：换行钮**只在 `wrap === undefined` 时渲染**；传布尔 + toolbarLabels ⇒ 官方 omit。官方文档面板传了布尔所以它没有；**用户要留着** ⇒ 我们**不传** `wrap`。
 
 **验证**：typecheck 绿 · build 过 · 冒烟 **541/0**（新增 3 条：保持 streaming=true / 保留换行钮 / 6px 沟槽）· 产物抽查五项全落位。
+
+## 三-十七 拖拽条「遮住」而非「让开」 + 拖拽期冻结内容宽度（U30 续，2026-10-04）
+
+**用户反馈**：① 上一轮的 6px 沟槽是我**理解反了**——用户要的是竖条**从上到下贯通、该遮就遮**（"断了"才是原抱怨），不是让内容躲开；② 拖动分栏仍卡（略好于最初，但仍不可用）。
+
+**处置**：
+
+| 改动 | 要点 |
+|---|---|
+| **撤销 6px 沟槽** | dock 恢复无 padding-left；竖条连续性由 `z-index:5`（上轮已落）保证 ⇒ 该遮就遮、从上到下贯通 |
+| **拖拽期冻结内容宽度**（本次关键） | 卡顿元凶 = 拖动改宽时，dock 内 **1 万行 `pre-wrap` 折行文本每帧重新折行**（滚动不卡是因为滚动不改宽度、不重排版）。对策：pointerdown 时把 `.dsh-tdt-sv-preview-body` 的宽度**冻结为当前 px** ⇒ 拖拽期间改 dock 宽度只是「裁掉/露出」内容，**文本完全不重新排版**；pointerup 恢复（清 inline width）⇒ 内容按新宽度排一次 |
+
+**关于第三方仓库（如实）**：`github.com/omdsh-dev/DSH-better-sidebar` 尝试 `git clone` ×3、`web_fetch` ×1 均**失败**（本环境到 GitHub 不通；clone 报「目录已存在」但 `ls` 为空，疑被环境拦截）⇒ **未能读到其实现，不做任何编造**。若需要对照，请用户提供其源码或截图关键段落。
+
+**验证**：typecheck 绿 · build 过 · 冒烟 **542/0**（断言更新：撤沟槽 + 冻结宽度两条替换旧沟槽条）· 产物抽查（`frozenWidth`、`style.width = frozenWidth`、无 `padding-left:6px`、`z-index:5`、`setStreamingCode(true)`）全落位。
