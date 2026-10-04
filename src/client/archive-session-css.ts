@@ -31,7 +31,7 @@ export const ARCHIVE_SESSION_CSS = `
 /* z-index 5：必须高于预览体内容（官方 CodeBlock 的 .header 自带不透明背景
    background: var(--dsl-code-block-background, …)，z-index:2 时它会盖住这条竖条，
    真机 2026-10-04 表现为「浅灰竖条在 html 标题行处断开」）。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:5;touch-action:none;user-select:none;}
+.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:7;touch-action:none;user-select:none;}
 .dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
@@ -247,48 +247,24 @@ export const ARCHIVE_SESSION_CSS = `
 /* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
    唯一滚动容器 = CodeBlock 内部 scrollport ⇒ 不再出现两条滚动条。 */
 .dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
-/* 官方 CodeBody.module.css 逐条照抄（documentpreview:5027 的 Java6a_* 换成我们的类名）：
-   关键是那三个 --dsl-code-block-* 覆盖 —— 官方文档面板靠它们把 CodeBlock 的默认底色/折行/圆角
-   改成"无底色 + 不折行 + 无圆角"，**这就是官方源码态配色与默认 CodeBlock 不同的原因**。 */
+/* 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
+   拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
 .dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
-.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code{--dsl-code-block-border-radius:0px;--dsl-code-block-line-white-space:pre;--dsl-code-block-background:transparent;flex-direction:column;flex:auto;min-width:0;height:100%;min-height:0;margin:0;display:flex;position:static;}
-.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]{flex:auto;min-width:0;min-height:0;display:block;position:relative;overflow:auto;}
-.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code>[data-code-block-content]::-webkit-scrollbar-track{margin:2px;}
-.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code pre{box-sizing:border-box;white-space:pre;word-break:normal;overflow-wrap:normal;min-width:100%;padding:16px;overflow:visible;}
-/* 官方 CodeBody 的真实 CSS（documentpreview:5027）只覆盖 .code 下的滚动口与 pre，**没有覆盖 .header**；
-   而 primitives 的 .header 自带 background（走 --dsl-code-block-background 变量，见 CodeCard.module.css）。
-   官方靠 .renderer .code 这条链把变量**继承**给 header ⇒ 变透明。
-   我们用自有类名重写时漏了这条继承 ⇒ header 保留不透明底色（用户截图里那条 html 行），
-   且它盖住了 6px 拖拽条（真机 2026-10-04）⇒ 显式把同一变量声明到 header，行为与官方一致。
-   兜底用 transparent 而非官方那个宿主变量值（宿主变量在本仓业务文件里属禁用写法，见 ui-style-guide）。 */
-.dsh-tdt-sv-preview-coderender .dsh-tdt-sv-preview-code [class*="header"]{background:var(--dsl-code-block-background,transparent);}
-.dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code{--dsl-code-block-line-white-space:pre-wrap;}
-.dsh-tdt-sv-preview-coderender[data-wrap=true] .dsh-tdt-sv-preview-code pre{white-space:pre-wrap;overflow-wrap:anywhere;}
+/* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
+.dsh-tdt-sv-cmviewer{display:flex;flex-direction:column;height:100%;min-height:0;}
+.dsh-tdt-sv-cm-bar{display:flex;flex-direction:row;justify-content:flex-end;align-items:center;gap:4px;padding:4px 8px;flex:none;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
+.dsh-tdt-sv-cm-btn{appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));background:transparent;color:var(--tdt-fg-2,#57606a);font-size:12px;line-height:18px;padding:1px 8px;border-radius:4px;cursor:pointer;}
+.dsh-tdt-sv-cm-btn:hover{color:var(--tdt-fg,#1f2328);border-color:var(--tdt-fg-3,rgba(128,128,128,.4));}
+.dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
+.dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
+.dsh-tdt-sv-cm-editor .cm-scroller{overflow:auto;}
 /* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
 .dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
 .dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
 .dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
 
-/* 官方 CodeBody 外壳（renderer / code）缺失时的兜底：代码面按容器宽度布局。
-   ⚠️ ocOr 语义 = 官方类命中时我方兜底类**不挂**（officialClass ?? fallback，两者只取其一）
-   ⇒ 作用域一律用 [data-code-preview]：官方 CodeBody（client.js:5042）与我方兜底 div
-   都带这个属性，两条路都命中——此前把规则写在 .dsh-tdt-sv-preview-coderender 下，
-   官方类命中时全是死规则（2026-09-29 源码排障结论）。 */
+/* CodeMirror 外壳缺失兜底：代码面按容器宽度布局（ocOr 语义见上方说明）。 */
 .dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
-/* 换行开关（源码事实，0.1.7-rc.2 三包对照，2026-09-29）：
-   · primitives CodeBlock：换行钮只在 wrap === undefined 时渲染（lib/index.js:10689 的
-     onWrap 分支 + :9285），点钮翻转 CodeBlock 根上的 data-code-wrap；
-     但 primitives 自己**没有任何 CSS 消费 CodeBlock 的 data-code-wrap**（换行规则只在
-     DiffBlock/ReadBlock 模块里）。
-   · ui-sidebar-documentpreview CodeBody.module.css：对 .code pre **强制 white-space:pre
-     （默认不折行）**，只有 .renderer[data-wrap=true] 才放开为 pre-wrap——而 data-wrap 是
-     官方预览面板持有状态后下传的（register({wrap:true}) + CodeBody 的 data-wrap 属性），
-     我方从不设 ⇒ 官方这条 pre 恒生效 ⇒ 点工具条换行钮永远不折行（两轮没修好的真根因）。
-   ⇒ 修法 = 用 [data-code-preview] + CodeBlock 自身的 [data-code-wrap='true'] 复刻官方
-     [data-wrap=true] 的同款放开规则；特异性 (0,3,·) 压过官方 (0,2,·)。换行关 = 官方默认
-     （pre 不折行 + content overflow:auto ⇒ 横向滚动条；用户 2026-09-29 认可关态有滚动条）。 */
-[data-code-preview] [data-code-wrap='true'] [data-code-block-content]{--dsl-code-block-line-white-space:pre-wrap;overflow-x:hidden;}
-[data-code-preview] [data-code-wrap='true'] [data-code-block-content] pre{white-space:pre-wrap;overflow-wrap:anywhere;}
 /* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
 /* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */

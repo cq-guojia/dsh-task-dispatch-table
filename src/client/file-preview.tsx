@@ -20,16 +20,15 @@ import { Component, createElement as h, Fragment, useEffect, useRef, useState } 
 import type { ErrorInfo, ReactNode } from 'react'
 import { Button, IconButton, MarqueeText, Segmented } from './ui'
 import {
-  CodeBlock,
   IconCheckOutlineRegular,
   IconCloseOutlineRegular,
   IconCopyOutlineRegular,
   IconRefreshOutlineRegular,
   MarkdownText,
   Tooltip,
-  languageForPath,
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { CodeViewer } from './ui/CodeViewer'
 import type { LocaleKey, Translate } from './locales'
 import { MD_LABELS } from './md-labels'
 import { ocOr } from './official-classes'
@@ -490,9 +489,7 @@ export function TextPreview(props: {
   const [err, setErr] = useState<ErrView | null>(null)
   // 截断标记：有上限（HTML）且累计字节已达 ⇒ 顶部出横幅（官方位置/措辞），且不再有任何翻页按钮。
   const [truncated, setTruncated] = useState(false)
-  // 官方同款：源码是否仍在增长（还有后续页）。**streaming=true 时 CodeBlock 走增量着色**
-  // （只对追加内容重新着色、保留已完成行的 DOM）—— 这是官方流畅、我们卡死的分水岭。
-  const [streamingCode, setStreamingCode] = useState(false)
+  // 源码态改用只读 CodeMirror 6（ui/CodeViewer.tsx），流式渲染与整篇高亮卡顿问题已根除，无 streaming 概念。
   // 折行偏好（官方文档面板由宿主控制、不给换行钮；我们同样传布尔 + toolbarLabels）。
   // 折行：⚠️ **不传** `wrap`（用户 2026-10-04 明确「把换行不换行给我留着」）。
   // 官方 CodeBlock 的换行钮**只在 `wrap === undefined` 时渲染**；传了布尔 + toolbarLabels
@@ -506,7 +503,6 @@ export function TextPreview(props: {
     setLoading(true)
     setErr(null)
     setTruncated(false)
-    setStreamingCode(false)
     workspaceFiles.read(sessionId, path, {})
       .then(async (page) => {
         if (!alive) return
@@ -525,7 +521,6 @@ export function TextPreview(props: {
         let merged = parsed.text
         let offset: number | null = parsed.eof ? null : parsed.offset + parsed.lines
         setText(merged)
-        setStreamingCode(offset !== null)
         while (alive && offset !== null && byteLengthOf(merged) < maxBytes) {
           let raw: Awaited<ReturnType<WorkspaceFilesFace['read']>> | null = null
           try {
@@ -544,16 +539,6 @@ export function TextPreview(props: {
         setTruncated(offset !== null) // 还有剩余 ⇒ 是被上限截断的
         setText(merged)
         setNextOffset(null)
-        // ⚠️ **不要**在这里 settle 成 streaming=false（真机 2026-10-04：卡得几乎拖不动）。
-        // 官方 CodeBlock 的全文高亮门槛（primitives lib/index.js）：
-        //   html = useMemo(() => highlighting && streaming !== true && streamedBody === void 0
-        //                   ? highlightToHtml(trimmed, lang) : void 0, …)
-        // ⇒ **只要 streaming 为 true，就永远走增量着色，不对全文跑 shiki**；一旦置 false，
-        // 就会对整份（截断后仍 256K）重跑一次全文高亮 ⇒ 主线程冻结。
-        // 官方传 `streaming: !content.eof`，而**被字节上限截断时 eof 永远为 false** ⇒
-        // 官方全程 streaming=true、从不跑全文高亮 ⇒ 这才是它"渲得更多却不卡"的真因。
-        // 我们同样保持 true（截断 = 还有剩余 = 永远不到 eof），与官方完全一致。
-        setStreamingCode(true)
         setLoading(false)
       })
       .catch((error: unknown) => {
@@ -596,30 +581,13 @@ export function TextPreview(props: {
       : 'dsh-tdt-sv-preview-body',
   },
     showSource
-      // 官方 code/CodeBody（documentpreview lib/client.js:5034-5059）逐条对齐：
-      //   CodeBlock + lineNumbers + lang=languageForPath + toolbarLabels(复制/标题)
-      //   + **streaming: !eof**（增量着色，只对新增文本重算、保留已有 DOM ⇒ 流畅的关键）
-      //   + **故意不传 wrap**（不传时官方 CodeBlock 才渲染「换行/不换行」钮；用户 2026-10-04 要求留着）
+      // 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
+      // 拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；换行钮由 CodeViewer 自带。
       ? h('div', {
           className: ocOr('CodeBody', 'renderer', 'dsh-tdt-sv-preview-coderender'),
           'data-code-preview': true,
         },
-        h(CodeBlock, {
-          className: ocOr('CodeBody', 'code', 'dsh-tdt-sv-preview-code'),
-          code: text,
-          lang: languageForPath(path),
-          lineNumbers: true,
-          // ⚠️ streaming 必须传且**保持 true**（卡死根因，真机 2026-10-04）：官方靠它走**增量着色**；
-          // 一旦为 false 就会对整份 256K 重跑一次全文 shiki ⇒ 主线程冻结。官方传 !eof，截断时 eof 恒 false。
-          streaming: streamingCode,
-          copyLabel: t('copyLabel'),
-          copiedLabel: t('copiedLabel'),
-          toolbarLabels: {
-            codeLabel: t('codeBlockLabel'),
-            wrapLabel: t('diffWrapLabel'),
-            unwrapLabel: t('diffUnwrapLabel'),
-          },
-        }))
+        h(CodeViewer, { text, path, t }))
       : h('div', { className: 'dsh-tdt-sv-preview-md' }, h(MarkdownText, { text, labels: MD_LABELS })),
     // 无上限的普通文本才保留「加载更多」；有上限的（HTML）永远不出按钮。
     !truncated && nextOffset !== null

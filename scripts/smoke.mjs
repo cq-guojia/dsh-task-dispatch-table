@@ -970,8 +970,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('dsh-tdt-sv-preview-dock') && clientJs.includes('position:sticky'))
   check('远端 {ok:false,error} 信封被识别（失败走官方错误码文案，不再当成空内容）',
     clientJs.includes('unwrapEnvelope') && clientJs.includes('ok === false'))
-  check('文本渲染照官方 CodeBody（CodeBlock + lineNumbers + languageForPath）',
-    clientJs.includes('languageForPath') && clientJs.includes('lineNumbers'))
+  check('文本源码态用只读 CodeMirror（languageForPath + CodeViewer，行级视图根除 Shiki 卡顿）',
+    clientJs.includes('languageForPath') && clientJs.includes('dsh-tdt-sv-cmviewer'))
   check('md 两态：渲染视图 ⇄ 源码 已迁统一 Segmented（顶栏按钮组，不飘进内容区；旧自绘 sv-seg / 浮层 mdbar·mdwrap 已删）',
     clientJs.includes('previewSource') && clientJs.includes('previewRender')
       && !clientJs.includes('dsh-tdt-sv-seg') && !clientJs.includes('dsh-tdt-sv-seg-btn')
@@ -998,8 +998,8 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('previewLoadMore') && clientJs.includes('eof'))
   check('图片/PDF 走 readBytes → objectURL（卸载 revoke）',
     clientJs.includes('createObjectURL') && clientJs.includes('revokeObjectURL'))
-  check('md 预览用官方 MarkdownText、代码用官方 CodeBlock（非自研渲染器）',
-    clientJs.includes('dsh-tdt-sv-preview-md') && clientJs.includes('CodeBlock'))
+  check('md 预览用官方 MarkdownText、源码态用只读 CodeMirror（非 Shiki CodeBlock 自研渲染器）',
+    clientJs.includes('dsh-tdt-sv-preview-md') && clientJs.includes('dsh-tdt-sv-cmviewer') && clientJs.includes('cm-editor'))
   check('inject 清单声明 workspace-files 提供方（dsh-api-workspace-files）',
     injectList.includes('@deepseek-ai/dsh-api-workspace-files'), injectList.join(', '))
   // U26（真机 2026-10-03：PDF/SVG 预览全失败）：根因 = readBytes 少传第三参，远端按位置参数
@@ -1089,20 +1089,18 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('SOURCE_MAX_BYTES')
     && /maxBytes:\s*isHtml\s*\?\s*SOURCE_MAX_BYTES/.test(clientJs)
     && /!truncated\s*&&\s*nextOffset\s*!==\s*null/.test(clientJs))
-  check('源码态有语法高亮（官方 CodeBody = CodeBlock，真机截图为证；勿再误改纯文本）',
-    /data-code-preview/.test(clientJs) && /lineNumbers:\s*true/.test(clientJs))
-  check('源码态渐进高亮：传 streaming（官方 :5048 传 !eof，只对追加内容重着色 ⇒ 流畅的关键）',
-    /streaming:\s*streamingCode/.test(clientJs) && clientJs.includes('setStreamingCode'))
+  check('源码态有语法高亮（只读 CodeMirror，data-code-preview 容器 + CodeViewer）',
+    /data-code-preview/.test(clientJs) && clientJs.includes('dsh-tdt-sv-cmviewer'))
+  check('源码态为只读 CodeMirror（editable=false，无 streaming 概念，根除整篇 shiki 卡顿）',
+    clientJs.includes('dsh-tdt-sv-cmviewer') && clientJs.includes('cm-editor'))
   check('256K 按字节精确截断（sliceToBytes，不多带一整页；官方切在 512K 整）',
     clientJs.includes('sliceToBytes') && /sliceToBytes\(merged,\s*maxBytes\)/.test(clientJs))
   check('截断横幅在顶部、警告色、滚动区之外（官方截图同款「文件过大，仅显示前 512KB」）',
     clientJs.includes('dsh-tdt-sv-truncated')
     && /\.dsh-tdt-sv-truncated\{[^}]*flex:none/.test(clientJs)
     && /\.dsh-tdt-sv-truncated\{[^}]*var\(--tdt-warning/.test(clientJs))
-  check('抄官方 CodeBody 的三个 --dsl-code-block-* 覆盖（配色/折行/圆角与官方一致）',
-    /--dsl-code-block-background:transparent/.test(clientJs)
-    && /--dsl-code-block-line-white-space:pre/.test(clientJs)
-    && /--dsl-code-block-border-radius:0px/.test(clientJs))
+  check('源码态配色走 CodeMirror 主题（one-dark/one-light + 13px 透明底，非 Shiki 默认米白底小字）',
+    clientJs.includes('codeMirrorTheme') && clientJs.includes('dsh-tdt-sv-cm-editor'))
   check('源码态单滚动容器（body overflow:hidden，滚动只在 CodeBlock 内部，官方 :has 规则同款）',
     /\.dsh-tdt-sv-preview-body-code\{[^}]*overflow:hidden/.test(clientJs))
   check('HTML 默认进入预览（非源码），切换控件与 md 同构',
@@ -1112,16 +1110,14 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     && /dockEl\.style\.width/.test(clientJs))
   check('拖拽期 dock 布局/绘制隔离（contain + will-change，配合直写宽度）',
     /\.dsh-tdt-resizing \.dsh-tdt-sv-preview-dock\{[^}]*contain:layout paint/.test(clientJs))
-  check('拖拽条 z-index 高于预览体内容（官方 .header 自带背景，z-index:2 会被盖住）',
-    /\.dsh-tdt-sv-resizer\{[^}]*z-index:5/.test(clientJs))
-  check('源码态保持 streaming=true（官方：streaming 为 true 才走增量着色；置 false 会对全文重跑 shiki ⇒ 卡死）',
-    /streaming:\s*streamingCode/.test(clientJs)
-    && /setStreamingCode\(true\)/.test(clientJs))
-  check('源码态保留换行钮（故意不传 wrap prop；传布尔会让官方 omit 该钮）',
-    !/streaming:\s*streamingCode,[\s\S]{0,80}\bwrap,/.test(clientJs)
-    && clientJs.includes('diffWrapLabel'))
-  check('拖拽条贯通覆盖（z-index:5 高于内容；不加沟槽——用户要遮住，不是让开）',
-    /\.dsh-tdt-sv-resizer\{[^}]*z-index:5/.test(clientJs)
+  check('拖拽条 z-index 高于预览体内容（提到 7，盖住代码工具条，修复灰竖条断裂）',
+    /\.dsh-tdt-sv-resizer\{[^}]*z-index:7/.test(clientJs))
+  check('源码态不再依赖 streaming（CodeMirror 行级视图天然流式，无需 streaming 分叉）',
+    !clientJs.includes('setStreamingCode') && clientJs.includes('dsh-tdt-sv-cmviewer'))
+  check('源码态保留换行钮（CodeViewer 自带换行/复制工具条，diffWrapLabel 仍存在）',
+    clientJs.includes('diffWrapLabel') && clientJs.includes('dsh-tdt-sv-cm-bar'))
+  check('拖拽条贯通覆盖（z-index:7 高于内容；不加沟槽——用户要遮住，不是让开）',
+    /\.dsh-tdt-sv-resizer\{[^}]*z-index:7/.test(clientJs)
     && !/dsh-tdt-sv-preview-dock\{padding-left:6px/.test(clientJs))
   check('拖拽期冻结内容宽度（1 万行折行文本不重新排版 ⇒ 拖拽不再卡）',
     /frozenWidth/.test(clientJs) && /style\.width = frozenWidth/.test(clientJs)
