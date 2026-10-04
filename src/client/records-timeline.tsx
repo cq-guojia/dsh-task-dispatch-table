@@ -36,7 +36,7 @@
 import { createElement as h, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
-  IconQueueOutlineRegular,
+  IconQueueOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
 import { resolvedDepsOf } from '../deps.js'
@@ -69,8 +69,10 @@ type StatusBucket = '' | 'succeeded' | 'failed' | 'running'
  * ⚠️ 2026-10-04 返工：此前用的是 Unicode 圈码字符表 `CIRCLED`（①-⑳），用户当场否掉
  * ——「不要用文字形式的圈数字，我不知道你用的是什么文字」。字符圈码的外形由**字体**决定
  * （不同平台的大小 / 基线 / 粗细都不一样，且本质是「文字」而不是「图形」），所以改成
- * **自绘描边圆徽标**：元素里只放普通阿拉伯数字，圆交给 CSS（`.dsh-tdt-rec-depmark`）——
- * 一位数是正圆、两位数自动撑成胶囊，尺寸完全可控。⇒ 常量表与 `circledOf` 一并删除。
+ * **自绘圆徽标**：元素里只放普通阿拉伯数字，圆交给 CSS（`.dsh-tdt-rec-depmark`）——
+ * 固定 18×18 + `border-radius:50%` + 浅色实心 + 无描边 ⇒ **几位都是正圆**（2026-10-04 第八轮定稿）。
+ * ⚠️ 第七轮那版用 `min-width` + 横向 padding + `999px` 圆角，两位数字会被**撑成胶囊**，已废弃。
+ * ⇒ 常量表与 `circledOf` 一并删除。
  */
 const MAX_DEPMARKS = 20
 
@@ -144,15 +146,21 @@ const RECORDS_CSS = `
    hover 底色 / 尺寸 / 翻转都一致）—— 2026-10-04 第五轮收编。 */
 /* 折叠态：名字后面的**前置圈码**（有几个 = 本次执行实际用到了几个上游） */
 .dsh-tdt-rec-depmarks{display:inline-flex;align-items:center;gap:var(--tdt-space-1);flex:none;}
-/* 前置圈码 = **自绘描边圆徽标**（2026-10-04 返工，替代 Unicode ①②③ 字符）：
-   圆与尺寸全由样式给（不靠字体）——一位数是正圆、两位数自动撑成胶囊；
-   悬停浮出浅底 + 边框加深（用户：「鼠标移上去不用点，它要变个色」）；
-   内容提示仍是**原生 title**（上一轮定的「绝不自绘浮层」不动）。 */
-.dsh-tdt-rec-depmark{display:inline-flex;align-items:center;justify-content:center;flex:none;
-  min-width:18px;height:18px;padding:0 3px;border-radius:999px;border:1px solid var(--tdt-border);
-  color:var(--tdt-fg-3);font-size:var(--tdt-font-xs);line-height:1;font-variant-numeric:tabular-nums;
-  transition:background-color var(--tdt-dur) var(--tdt-ease),border-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
-.dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);border-color:var(--tdt-border-heavy);color:var(--tdt-fg-2);}
+/* 前置圈码 = **自绘正圆徽标**（2026-10-04 第八轮定稿：浅色实心、无描边、**固定正圆**）。
+   ⚠️ 复盘：上一版写成 min-width:18px + padding:0 3px + border-radius:999px ⇒ 一位数恰好是圆，
+      两位数字会把圆**撑成胶囊**（用户 2026-10-04：「一定要是个圆的」「你要确定两位能显示成圆的」
+      「现在这个太丑了」）。现在固定 width 与 height 相等 + border-radius:50% ⇒ 几位都是正圆。
+   📏 尺寸依据（**实测**，非估计）：用容器里最宽的常见 UI 字体 DejaVu Sans 渲染，11px 下两位数字
+      宽 15px，18px 圆尚余 3px；宿主界面字体（本插件**未引入任何外部字体**，文字继承宿主）比它更窄。
+   🎨 底色走 --tdt-chip-bg（暗色主题自动换成白色 8%，与产出物 chip 同源）；悬停**只加深底色**、
+      不再动描边（用户明确「不要描边，就要浅色实心圆」）。提示走官方 Tooltip（见折叠态渲染处）。 */
+.dsh-tdt-rec-depmark{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:18px;height:18px;padding:0;border:none;border-radius:50%;background:var(--tdt-chip-bg);
+  color:var(--tdt-fg-2);font-size:var(--tdt-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
+  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
+.dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);color:var(--tdt-fg);}
+/* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
+.dsh-tdt-rec-depmark--more{width:auto;padding:0 6px;border-radius:999px;}
 /* 第 3 行：失败 / 未执行的原因（灰、单行省略，hover 看全文）—— 跨整块宽度 */
 .dsh-tdt-rec-note{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3);}
 /* ── 展开区（点头部就地展开；手风琴，同时只开一条）───────────────────────
@@ -409,18 +417,21 @@ const RecordItem = memo(function RecordItem(props: {
             style: { flex: '0 1 auto', minWidth: 0 },
           }),
           // 前置圈码（用户 2026-10-04）：**本次执行实际用到的**上游有几个就画几个，一个都没有就什么都不画；
-          // 悬停用**原生 title**（不许自绘浮层）说明是第几个、叫什么。
+          // 提示走**官方 Tooltip**（2026-10-04 第八轮换掉原生 title —— 用户嫌原生提示慢）。
+          //   ⚠️ 官方 Tooltip 的 children 必须是**真 DOM**（它给子元素挂 ref，裸组件会静默失效）——
+          //      这里的 span 正好合适。`side: 'top'`：气泡往标题行上方弹，不压住下一行。
           deps.length === 0
             ? null
             : h('span', { className: 'dsh-tdt-rec-depmarks' },
-              deps.slice(0, MAX_DEPMARKS).map((dep, index) => h('span', {
+              deps.slice(0, MAX_DEPMARKS).map((dep, index) => h(Tooltip, {
                 key: `${dep.task}#${dep.instanceId}`,
-                className: 'dsh-tdt-rec-depmark',
-                title: tt('recordsDepTip', { n: String(index + 1), task: depTitleOf(dep.task) }),
-              }, String(index + 1))),
+                label: tt('recordsDepTip', { n: String(index + 1), task: depTitleOf(dep.task) }),
+                side: 'top',
+              }, h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)))),
               deps.length > MAX_DEPMARKS
-                ? h('span', { className: 'dsh-tdt-rec-depmark', title: t('listSectionDepends') },
-                  `+${deps.length - MAX_DEPMARKS}`)
+                ? h(Tooltip, { label: t('listSectionDepends'), side: 'top' },
+                  h('span', { className: 'dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more' },
+                    `+${deps.length - MAX_DEPMARKS}`))
                 : null,
             ),
         ),

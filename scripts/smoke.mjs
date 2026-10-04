@@ -1250,19 +1250,29 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /const deps = resolvedDepsOf\(snapshot\)/.test(tlSrc)
       && /snapshot: row\.snapshot \?\? null/.test(tlSrc)
       && !/depends/.test(tlSrc))
-    check('第七轮：折叠态前置圈码 = **自绘描边圆徽标**（反向：Unicode 圈码字符表 CIRCLED 与 circledOf 已删）',
-      !/const CIRCLED = /.test(tlSrc) && !/circledOf\(/.test(tlSrc)
-      && /const MAX_DEPMARKS = 20/.test(tlSrc) && /deps\.slice\(0, MAX_DEPMARKS\)/.test(tlSrc)
-      && /className: 'dsh-tdt-rec-depmarks'/.test(tlSrc)
-      && /\.dsh-tdt-rec-depmark\{display:inline-flex;align-items:center;justify-content:center;flex:none;/.test(tlSrc)
-      && /min-width:18px;height:18px;padding:0 3px;border-radius:999px;border:1px solid var\(--tdt-border\)/.test(tlSrc)
-      && /title: tt\('recordsDepTip', \{ n: String\(index \+ 1\), task: depTitleOf\(dep\.task\) \}\)/.test(tlSrc))
-    check('第七轮：圈码悬停浮出底色（用户「鼠标移上去不用点，它要变个色」），提示仍是**原生 title**（不自绘浮层）',
-      /\.dsh-tdt-rec-depmark:hover\{background:var\(--tdt-chip-bg-hover\);border-color:var\(--tdt-border-heavy\);color:var\(--tdt-fg-2\);\}/.test(tlSrc)
-      && !/dsh-tdt-rec-tip/.test(tlSrc))
-    // 前置格那一段的**局部切片**：反断「按钮不再是描边款」必须只看这一段，
-    // 否则会误伤头部右列那个仍是 outline 的「查看会话」按钮。
+    // 折叠态 / 展开区那两段的**局部切片**（反断用）：只看这一段，免得误伤别处同名写法
+    // （例如头部右列那个仍是 outline 的「查看会话」按钮）。
     const depArea = /deps\.map\(\(dep, index\)[\s\S]*?\n\s*eventsError !== null/.exec(tlSrc)?.[0] ?? ''
+    check('第八轮：折叠态前置圈码 = **浅色实心正圆**（固定宽高 + 50% 圆角；反向：无 min-width / 无横向 padding / 无描边）',
+      /const MAX_DEPMARKS = 20/.test(tlSrc) && /deps\.slice\(0, MAX_DEPMARKS\)/.test(tlSrc)
+      && /className: 'dsh-tdt-rec-depmarks'/.test(tlSrc)
+      && /\.dsh-tdt-rec-depmark\{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;flex:none;/.test(tlSrc)
+      && /width:18px;height:18px;padding:0;border:none;border-radius:50%;background:var\(--tdt-chip-bg\)/.test(tlSrc)
+      && !/\.dsh-tdt-rec-depmark\{[^}]*min-width:/.test(tlSrc)
+      && !/\.dsh-tdt-rec-depmark\{[^}]*padding:0 3px/.test(tlSrc)
+      && !/\.dsh-tdt-rec-depmark\{[^}]*border:1px solid/.test(tlSrc))
+    check('第八轮：圈码提示改**官方 Tooltip**（与新增窗口问号同一件；反向：折叠态不再挂原生 title、展开区那枚不挂）',
+      /import \{[\s\S]{0,200}Tooltip,/.test(tlSrc)
+      && /from '@deepseek-ai\/dsh-client-ui-primitives'/.test(tlSrc)
+      && /h\(Tooltip, \{[\s\S]{0,200}label: tt\('recordsDepTip', \{ n: String\(index \+ 1\), task: depTitleOf\(dep\.task\) \}\),[\s\S]{0,40}side: 'top',/.test(tlSrc)
+      && !/title: tt\('recordsDepTip'/.test(tlSrc)
+      && !/Tooltip/.test(depArea))
+    check('第八轮：圈码悬停**只加深底色**（浅底实心圆不描边），溢出项「+N」走胶囊档并同挂官方气泡',
+      /\.dsh-tdt-rec-depmark:hover\{background:var\(--tdt-chip-bg-hover\);color:var\(--tdt-fg\);\}/.test(tlSrc)
+      && /\.dsh-tdt-rec-depmark--more\{width:auto;padding:0 6px;border-radius:999px;\}/.test(tlSrc)
+      && /dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more/.test(tlSrc)
+      && /h\(Tooltip, \{ label: t\('listSectionDepends'\), side: 'top' \},/.test(tlSrc)
+      && !/dsh-tdt-rec-tip/.test(tlSrc))
     check('第七轮：展开区**第二排**前置清单 = 一排两个，每格「左列两行 + 右列按钮」两列网格（格子本身仍不可点）',
       /className: 'dsh-tdt-rec-depsec'/.test(tlSrc)
       && /\.dsh-tdt-rec-depgrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(tlSrc)
