@@ -1457,6 +1457,11 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /h\(Tooltip, \{ label, side: 'top' \}/.test(tlSrc10)
       && /h\(Tooltip, \{ label: title, side: 'top' \}/.test(tlSrc10)
       && !/title: statusLabel/.test(tlSrc10) && !/title: note'/.test(tlSrc10))
+    check('第十轮：信息行的官方 Tooltip 必须套在**内层**（外层 span 留给相邻兄弟选择器 ⇒ 段间「·」不被挤掉、宽度不乱跳）',
+      tlSrc10.includes("h('span', { className: 'dsh-tdt-rec-field' },")
+      && /const fieldInnerStyle: CSSProperties/.test(tlSrc10)
+      && !/h\(Tooltip, \{[\s\S]{0,120}className: 'dsh-tdt-rec-field'/.test(tlSrc10)
+      && /dsh-tdt-rec-field\+[^\n]{0,4}dsh-tdt-rec-field::before\{content:'·'/.test(tlSrc10))
     check('第十轮：时间控件**定死宽度**（日期框按 0000-00-00、时分框按 00:00、预设下拉按最长标签）',
       dtSrc.includes('width: props.width ?? dateWidthOf(size)') && dtSrc.includes('width: props.width ?? timeWidthOf(size)')
       && dtSrc.includes("fieldWidthOf('0000-00-00', size)") && dtSrc.includes("fieldWidthOf('00:00', size)")

@@ -404,17 +404,23 @@ const RecordItem = memo(function RecordItem(props: {
   }
 
   /** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
+  /** 信息行里一段的**内层**（图标 + 文字；外层留给分隔符用）。 */
+  const fieldInnerStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 }
+
   /**
    * 信息行里的一段（可带图标）；值空则整段不出。
    * 悬停提示走**官方 Tooltip**（用户 2026-10-05：原生 title 太慢，一律改用官方件）——
    * 这里的 `span` 是真 DOM，Tooltip 挂得上 ref。
    */
-  const field = (icon: ReturnType<typeof h> | null, text: string, title?: string): ReturnType<typeof h> | null =>
-    text === '' ? null
-      : title === undefined
-        ? h('span', { className: 'dsh-tdt-rec-field' }, icon, text)
-        : h(Tooltip, { label: title, side: 'top' },
-          h('span', { className: 'dsh-tdt-rec-field' }, icon, text))
+  const field = (icon: ReturnType<typeof h> | null, text: string, title?: string): ReturnType<typeof h> | null => {
+    if (text === '') return null
+    // ⚠️ 外层 span 必须保持**相邻兄弟**——段间的「·」走 `.dsh-tdt-rec-field + .dsh-tdt-rec-field::before`；
+    //    官方 Tooltip 会插一层包装元素，若套在外层就会把「·」挤掉、整行宽度来回跳（用户 2026-10-05 反馈）。
+    //    ⇒ Tooltip 只能套在**里面**，外层 span 原样留着。
+    const inner = h('span', { style: fieldInnerStyle }, icon, text)
+    return h('span', { className: 'dsh-tdt-rec-field' },
+      title === undefined ? inner : h(Tooltip, { label: title, side: 'top' }, inner))
+  }
 
   return h('div', {
     // ⚠️ **容器不挂任何交互**（照任务卡片：容器不挂 onClick → 头部挂 → 展开区是兄弟节点）：
@@ -473,12 +479,14 @@ const RecordItem = memo(function RecordItem(props: {
           // 悬停写详细（用户 2026-10-04：「这 3 个栏谁知道分别是什么呢？你也要有个标题」）：
           // 总数 + **带标签**的三段明细（输入 / 输出 / 缓存），仍走**原生 title**（多行）。
           tokens > 0
-            ? h('span', {
-              className: 'dsh-tdt-rec-field dsh-tdt-rec-num',
-              title: `${t('recTokenHint')}：${formatTokenCount(tokens)}\n${tt('recTokenDetail', {
-                input: tokenPart(row.token_in), output: tokenPart(row.token_out), cache: tokenPart(row.token_in_cache),
-              })}`,
-            }, formatTokenCount(tokens))
+            ? h('span', { className: 'dsh-tdt-rec-field dsh-tdt-rec-num' },
+              // 悬停写详细（总数 + 带标签的三段明细），走**官方 Tooltip**（原生 title 太慢、用户反馈「没反应」）。
+              h(Tooltip, {
+                label: `${t('recTokenHint')}：${formatTokenCount(tokens)}\n${tt('recTokenDetail', {
+                  input: tokenPart(row.token_in), output: tokenPart(row.token_out), cache: tokenPart(row.token_in_cache),
+                })}`,
+                side: 'top',
+              }, h('span', { style: fieldInnerStyle }, formatTokenCount(tokens))))
             : null,
         ),
         // ── 第 3 行：失败 / 未执行的原因（用户：执行错了就是要看备注）──

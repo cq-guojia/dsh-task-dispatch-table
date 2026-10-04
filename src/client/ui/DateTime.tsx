@@ -100,9 +100,9 @@ export function fieldWidthOf(text: string, size: 'sm' | 'md' | 'lg'): number {
 }
 
 /** 日期框定宽 = 刚好放下 `0000-00-00`（0 / 9 是最宽的数字）。 */
-export const dateWidthOf = (size: 'sm' | 'md' | 'lg'): number => fieldWidthOf('0000-00-00', size)
+export const dateWidthOf = (size: 'sm' | 'md' | 'lg'): number => fieldWidthOf('0000-00-00', size) + 15
 /** 时分框定宽 = 刚好放下 `00:00`。 */
-export const timeWidthOf = (size: 'sm' | 'md' | 'lg'): number => fieldWidthOf('00:00', size)
+export const timeWidthOf = (size: 'sm' | 'md' | 'lg'): number => fieldWidthOf('00:00', size) + 10
 
 /** 自绘日历弹层（锚点 = 统一字段壳按钮）。 */
 export function DateField(props: {

@@ -2666,9 +2666,9 @@ body[data-ds-dark-theme]{
 			return Math.ceil(w + extra);
 		}
 		/** 日期框定宽 = 刚好放下 `0000-00-00`（0 / 9 是最宽的数字）。 */
-		const dateWidthOf = (size) => fieldWidthOf("0000-00-00", size);
+		const dateWidthOf = (size) => fieldWidthOf("0000-00-00", size) + 15;
 		/** 时分框定宽 = 刚好放下 `00:00`。 */
-		const timeWidthOf = (size) => fieldWidthOf("00:00", size);
+		const timeWidthOf = (size) => fieldWidthOf("00:00", size) + 10;
 		/** 自绘日历弹层（锚点 = 统一字段壳按钮）。 */
 		function DateField(props) {
 			ensureControlsStyle();
@@ -3143,7 +3143,7 @@ body[data-ds-dark-theme]{
 				labels.all,
 				labels.custom,
 				...Object.values(labels.presets)
-			].map((text) => fieldWidthOf(text, size))), [labels, size]);
+			].map((text) => fieldWidthOf(text, size))) + 15, [labels, size]);
 			return (0, react$1.createElement)("div", { style: {
 				display: "inline-flex",
 				alignItems: "center",
@@ -57147,15 +57147,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onToggle(row.id);
 			};
 			/** 信息行里的一段（可带图标）；值空则整段不出（不占位）。 */
+			/** 信息行里一段的**内层**（图标 + 文字；外层留给分隔符用）。 */
+			const fieldInnerStyle = {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				minWidth: 0
+			};
 			/**
 			* 信息行里的一段（可带图标）；值空则整段不出。
 			* 悬停提示走**官方 Tooltip**（用户 2026-10-05：原生 title 太慢，一律改用官方件）——
 			* 这里的 `span` 是真 DOM，Tooltip 挂得上 ref。
 			*/
-			const field = (icon, text, title) => text === "" ? null : title === void 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field" }, icon, text) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: title,
-				side: "top"
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field" }, icon, text));
+			const field = (icon, text, title) => {
+				if (text === "") return null;
+				const inner = (0, react$1.createElement)("span", { style: fieldInnerStyle }, icon, text);
+				return (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field" }, title === void 0 ? inner : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					label: title,
+					side: "top"
+				}, inner));
+			};
 			return (0, react$1.createElement)("div", { className: `dsh-tdt-rec-item ${toneClassOf(tone)}` }, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-rec-main dsh-tdt-rec-head",
 				onClick: onHeadClick
@@ -57185,14 +57196,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)))), deps.length > MAX_DEPMARKS ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listSectionDepends"),
 				side: "top"
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more" }, `+${deps.length - MAX_DEPMARKS}`)) : null)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), planned === "" ? "" : `${t("recPlan")} ${planned}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actual === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 }), actual === "" ? "" : `${t("recActual")} ${actual}`, row.dispatched_at === null ? void 0 : `${t("colActualStart")}：${stampOf(row.dispatched_at)}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), `${t("colDuration")} ${durationOf(row)}`, durationHint), tokens > 0 ? (0, react$1.createElement)("span", {
-				className: "dsh-tdt-rec-field dsh-tdt-rec-num",
-				title: `${t("recTokenHint")}：${formatTokenCount(tokens)}\n${tt("recTokenDetail", {
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more" }, `+${deps.length - MAX_DEPMARKS}`)) : null)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), planned === "" ? "" : `${t("recPlan")} ${planned}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actual === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 }), actual === "" ? "" : `${t("recActual")} ${actual}`, row.dispatched_at === null ? void 0 : `${t("colActualStart")}：${stampOf(row.dispatched_at)}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), `${t("colDuration")} ${durationOf(row)}`, durationHint), tokens > 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field dsh-tdt-rec-num" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: `${t("recTokenHint")}：${formatTokenCount(tokens)}\n${tt("recTokenDetail", {
 					input: tokenPart(row.token_in),
 					output: tokenPart(row.token_out),
 					cache: tokenPart(row.token_in_cache)
-				})}`
-			}, formatTokenCount(tokens)) : null), note === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				})}`,
+				side: "top"
+			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null), note === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: note,
 				side: "top"
 			}, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
