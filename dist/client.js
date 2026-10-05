@@ -1623,6 +1623,10 @@ body{
   --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
   --tdt-active:var(--dsw-alias-interactive-bg-active,#2631481a);
   --tdt-mask:var(--dsw-alias-bg-mask-1,#0000003d);
+  /* 「选中面」（2026-10-06，任务日程页首创）= 当前底色**朝更深掺 12% 文字色**：
+     浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
+     语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
+  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
@@ -1707,6 +1711,10 @@ body[data-ds-dark-theme]{
   --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 5%,transparent);
   --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 5%,transparent);
   --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 5%,transparent);
+  /* 「选中面」（深色版）：掺 **12% 背景色**（--tdt-surface-base）⇒ 比常态底色**暗一档**、
+     但远不到背景的黑（用户 2026-10-06：深色下选中要比本月日期深，又不能像背景一样黑；
+     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅）。 */
+  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-surface-base));
 }
 `;
 		//#endregion
@@ -69133,16 +69141,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:var(--tdt-space-2);
   padding-bottom:var(--tdt-space-1);border-bottom:1px solid var(--tdt-border-faint);}
 .dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
-/* 「选中 / 展开」的底色：**在常态底色上掺 12% 文字色** —— 同一条公式在两套主题下都成立：
-   浅色主题 ⇒ 比白底**深一档**；深色主题 ⇒ 比背景**亮一档**（不会「像背景一样黑」）。
-   ⚠️ 不用 --tdt-plate / surface-2：它们与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);
-  --cal-sel-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));}
+/* 「选中 / 展开」的底色走 **token 层的 --tdt-selected-bg**（主题特判只许在 token 层）：
+   浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
+   ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
+   别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
    下面空间是够的（104 - 12 - 6 = 86px，够 1 行日期 + 3 行标签的 80px）⇒ 所有格子统一留白、对齐一致。 */
-.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:12px 6px 6px;
+.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:6px;
   overflow:hidden;background:var(--tdt-surface-1);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
   transition:background var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
@@ -69153,10 +69161,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    （surface-1）。⚠️ 底色**不许叠淡蓝**：那层半透明蓝压在格内的状态色标签上 ⇒ 深色主题下发灰、
    浅色主题下发暗，把原本的绿色/红色全带脏了（用户 2026-10-06）。「选中」只由那条线表达。
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
-   ⚠️ 底色走 --cal-sel-bg（在常态底色上掺 12% 文字色 ⇒ 深/浅主题都明显区别于常态）。
+   ⚠️ 底色走 token 层的 --tdt-selected-bg（见 ui/tokens.ts；深浅主题各有定义）。
    **不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--cal-sel-bg);outline:0;}
-.dsh-tdt-cal-cell--sel:hover{background:var(--cal-sel-bg);}
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-selected-bg);outline:0;}
+.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-selected-bg);}
 /* 线在格子**底部**（不是顶部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）、蓝色 --tdt-business。 */
 .dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;bottom:4px;height:4px;
   border-radius:999px;background:var(--tdt-business);}
@@ -69193,8 +69201,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    并且在**选中日那一列断开**（把当前日期空开）⇒ 与上面那一行的线成一对，像从那一格拉出来。
    断口位置：列宽 = (100% - 6px)/7（6 个 1px 间隙），用 --cal-col（选中列序号，0 起）算。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-/* 拉开区与选中格**同色**（--cal-sel-bg）⇒ 视觉上是一体的「展开区域」。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--cal-sel-bg);border:0;border-radius:0;
+/* 拉开区与选中格**同色**（--tdt-selected-bg）⇒ 视觉上是一体的「展开区域」。 */
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-selected-bg);border:0;border-radius:0;
   --cal-col-w:calc((100% - 6px) / 7);
   --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);

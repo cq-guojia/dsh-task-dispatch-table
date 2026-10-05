@@ -97,6 +97,10 @@ body{
   --tdt-hover:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06));
   --tdt-active:var(--dsw-alias-interactive-bg-active,#2631481a);
   --tdt-mask:var(--dsw-alias-bg-mask-1,#0000003d);
+  /* 「选中面」（2026-10-06，任务日程页首创）= 当前底色**朝更深掺 12% 文字色**：
+     浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
+     语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
+  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
@@ -181,5 +185,9 @@ body[data-ds-dark-theme]{
   --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 5%,transparent);
   --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 5%,transparent);
   --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 5%,transparent);
+  /* 「选中面」（深色版）：掺 **12% 背景色**（--tdt-surface-base）⇒ 比常态底色**暗一档**、
+     但远不到背景的黑（用户 2026-10-06：深色下选中要比本月日期深，又不能像背景一样黑；
+     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅）。 */
+  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-surface-base));
 }
 `
