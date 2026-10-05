@@ -675,6 +675,20 @@ function TaskPage(props: {
     setEditor({ mode: 'edit', id, draft: definitionToDraft(found), history: null, view: 'edit' })
     void loadHistory(id)
   }
+  /** 打开「新建任务」（创建模式）：空草稿；复用 openCreate 的未保存拦截。 */
+  const openCreateNow = (): void => {
+    setEditorError(null)
+    setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null, view: 'edit' })
+  }
+  /** 打开「新建任务」：拦截标准不是入口、是「草稿脏」——正在编辑且没保存 ⇒ 先弹三选确认；否则直接开。 */
+  const openCreate = (): void => {
+    if (editor !== null && editorDirtyRef.current) {
+      // '' 标记「新建目标」；confirmPendingEdit 据此走 openCreateNow，否则走 openEditorNow。
+      setPendingEdit({ id: '' })
+      return
+    }
+    openCreateNow()
+  }
 
   // ── 查看档入口（用户 2026-10-05）─────────────────────────────────────────
   /** 待确认的「放弃未保存修改、改去查看另一个任务」。 */
@@ -719,11 +733,14 @@ function TaskPage(props: {
   // ── 编辑态切去编辑**另一个任务**：未保存冲突确认（与 pendingView 同思路，给三选）──
   /** 待确认的「放弃未保存修改、改去编辑另一个任务」。 */
   const [pendingEdit, setPendingEdit] = useState<{ id: string } | null>(null)
-  /** 确认放弃修改、切去编辑目标任务（旧编辑被丢弃、新任务重新反解）。 */
+  /** 确认放弃修改、切去编辑目标任务 / 新建任务（二者都先丢弃未保存草稿、再开）。 */
   const confirmPendingEdit = (): void => {
     const target = pendingEdit
     setPendingEdit(null)
-    if (target !== null) openEditorNow(target.id)
+    if (target === null) return
+    // '' = 新建目标；其余为「切去编辑另一个任务」。
+    if (target.id === '') openCreateNow()
+    else openEditorNow(target.id)
   }
 
   /**
@@ -1221,7 +1238,7 @@ function TaskPage(props: {
             variant: 'outline',
             size: 'md',
             title: t('editorNew'),
-            onClick: () => { setEditorError(null); setEditor({ mode: 'create', id: '', draft: emptyTaskDraft(), history: null, view: 'edit' }) },
+            onClick: () => { openCreate() },
           }, `＋ ${t('editorNew')}`),
             ),
           ),

@@ -2724,6 +2724,13 @@ console.log('\n[14] runtime-index')
       && lcSrc.includes("editorEditSwitchOverwrite: 'Overwrite'")
       && distV.includes('editorEditSwitchOverwrite'))
 
+    check('未保存拦截覆盖「＋ 新建任务」入口：openCreate 在脏时也走 pendingEdit（空串标记新建目标），confirmPendingEdit 据 id 分流 openCreateNow / openEditorNow',
+      ixSrc.includes('const openCreate = (') && ixSrc.includes('onClick: () => { openCreate() }')
+      && ixSrc.includes('openCreateNow')
+      && /if \(editor !== null && editorDirtyRef\.current\)/.test(ixSrc)
+      && ixSrc.includes("setPendingEdit({ id: '' })")
+      && ixSrc.includes("if (target.id === '") && ixSrc.includes('openCreateNow()'))
+
     check('r13 附件可点：查看档按 kind+name 配对 overview 的服务端解析（绝对路径 + 锚点），配不上保持纯展示',
       tv.includes('resolvedByKey.get(`${item.kind}:${item.name}`)')
       && tv.includes('resolvedAttachments')

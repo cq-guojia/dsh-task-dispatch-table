@@ -69625,6 +69625,25 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				});
 				loadHistory(id);
 			};
+			/** 打开「新建任务」（创建模式）：空草稿；复用 openCreate 的未保存拦截。 */
+			const openCreateNow = () => {
+				setEditorError(null);
+				setEditor({
+					mode: "create",
+					id: "",
+					draft: emptyTaskDraft(),
+					history: null,
+					view: "edit"
+				});
+			};
+			/** 打开「新建任务」：拦截标准不是入口、是「草稿脏」——正在编辑且没保存 ⇒ 先弹三选确认；否则直接开。 */
+			const openCreate = () => {
+				if (editor !== null && editorDirtyRef.current) {
+					setPendingEdit({ id: "" });
+					return;
+				}
+				openCreateNow();
+			};
 			/** 待确认的「放弃未保存修改、改去查看另一个任务」。 */
 			const [pendingView, setPendingView] = (0, react$1.useState)(null);
 			/** 抽屉上报的脏状态（**只存不算**：脏判定真源在抽屉内的 `initialDraftRef` 比对）。 */
@@ -69673,11 +69692,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			};
 			/** 待确认的「放弃未保存修改、改去编辑另一个任务」。 */
 			const [pendingEdit, setPendingEdit] = (0, react$1.useState)(null);
-			/** 确认放弃修改、切去编辑目标任务（旧编辑被丢弃、新任务重新反解）。 */
+			/** 确认放弃修改、切去编辑目标任务 / 新建任务（二者都先丢弃未保存草稿、再开）。 */
 			const confirmPendingEdit = () => {
 				const target = pendingEdit;
 				setPendingEdit(null);
-				if (target !== null) openEditorNow(target.id);
+				if (target === null) return;
+				if (target.id === "") openCreateNow();
+				else openEditorNow(target.id);
 			};
 			/**
 			* 启用开关实时写回（编辑态专用，用户 2026-09-30）：POST /tasks/enabled { id, enabled }。
@@ -70100,14 +70121,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				size: "md",
 				title: t("editorNew"),
 				onClick: () => {
-					setEditorError(null);
-					setEditor({
-						mode: "create",
-						id: "",
-						draft: emptyTaskDraft(),
-						history: null,
-						view: "edit"
-					});
+					openCreate();
 				}
 			}, `＋ ${t("editorNew")}`))))), tab === "records" ? (0, react$1.createElement)(RecordsTimelineView, {
 				t,
