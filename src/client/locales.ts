@@ -178,7 +178,7 @@ export type LocaleKey =
   // 查看档自己的块与来源标记（r12：标记从头部挪到「任务配置」块标题旁，文案精简正式）
   | 'editorViewDraftTag' | 'editorViewNewTag' | 'editorViewUntitled'
   | 'editorViewPrompt' | 'editorViewPromptEmpty' | 'editorViewNoRunDraft' | 'editorViewNotFilled'
-  | 'editorViewSourceCode' | 'editorViewExpandAll' | 'editorViewCollapse'
+  | 'editorViewSourceCode' | 'editorViewExpand' | 'editorViewExpandAll' | 'editorViewCollapse'
   | 'editorViewSwitchTitle' | 'editorViewSwitchDesc'
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
@@ -766,6 +766,7 @@ export const zh: Record<LocaleKey, string> = {
   editorViewNoRunDraft: '任务尚未保存，没有执行记录',
   editorViewNotFilled: '未填',
   editorViewSourceCode: '源码',
+  editorViewExpand: '展开',
   editorViewExpandAll: '查看全部',
   editorViewCollapse: '收起',
   editorViewSwitchTitle: '放弃未保存的修改？',
@@ -1400,6 +1401,7 @@ export const en: Record<LocaleKey, string> = {
   editorViewNoRunDraft: 'Not saved yet — no run history',
   editorViewNotFilled: 'Not set',
   editorViewSourceCode: 'Source',
+  editorViewExpand: 'Expand',
   editorViewExpandAll: 'Show all',
   editorViewCollapse: 'Collapse',
   editorViewSwitchTitle: 'Discard unsaved changes?',

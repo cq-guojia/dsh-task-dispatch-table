@@ -2658,15 +2658,18 @@ console.log('\n[14] runtime-index')
       && tv.includes('dsh-tdt-ed-view-badge') && tv.includes('lastRunFields({')
       && tv.includes('hideStatus: true'))
 
-    check('提示词区（r13 续）：竖线分块 + 约 5 行截断 + 就地「源码 / 预览」分段 + 文字「展开 / 收起」按钮（短提示不显示）+ 极淡文档底（无全屏、无底部查看全部）',
+    check('提示词区（r13 续）：标题前短竖线标（非整块长线）+ 约 5 行截断 + 就地「源码 / 预览」分段 + 文字「展开 / 收起」按钮（带方向小箭头）+ 极淡文档底（无全屏、无底部查看全部）',
       tv.includes("t('editorViewSourceCode')") && tv.includes("t('editorModePreview')")
-      && tv.includes("t('editorViewExpandAll')") && tv.includes("t('editorViewCollapse')")
+      && tv.includes("t('editorViewExpand')") && tv.includes("t('editorViewCollapse')")
+      && tv.includes('IconChevronDownOutlineRegular')
       && tv.includes('CodeViewer') && !tv.includes('onOpenPromptFullscreen')
       && tv.includes("variant: 'outline', size: 'sm'")           // 展开/收起 = 文字钮（与源码/预览同高同右）
       && !tv.includes('dsh-tdt-ed-view-more')                      // 底部「查看全部」已移除
-      && tec.includes('.dsh-tdt-ed-view-block::before') && tec.includes('width:3px') && tec.includes('var(--tdt-business)')
+      && tec.includes('.dsh-tdt-ed-view-tag::before') && tec.includes('width:3px') && tec.includes('var(--tdt-business)')
+      && !tec.includes('.dsh-tdt-ed-view-block::before')          // 整块长线已移除（用户 2026-10-05 修正）
       && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:100px')
       && tec.includes('.dsh-tdt-ed-view-prompt--open{max-height:none;}')
+      && tec.includes('.dsh-tdt-ed-view-expchevron')
       && tec.includes('.dsh-tdt-ed-view-promptbox{') && tec.includes('color-mix(in srgb,var(--tdt-fg) 3%')
       && !tec.includes('.dsh-tdt-ed-view-more')
       && !lcSrc.includes('editorViewFullscreen'))

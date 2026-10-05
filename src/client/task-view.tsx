@@ -14,7 +14,7 @@
 // 本文件只负责：查数据、组装视图模型、排版面。
 import { createElement as h, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  IconClockOutlineRegular, IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
+  IconChevronDownOutlineRegular, IconClockOutlineRegular, IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 import { MD_LABELS } from './md-labels'
@@ -206,11 +206,17 @@ export function TaskViewPanel(props: {
               onChange: (next: string) => { setPromptMode(next as 'preview' | 'source') },
               label: t('editorViewPrompt'),
             }),
-            // 展开 / 收起：文字钮（与源码/预览同高同右排）；短提示不显示。
+            // 展开 / 收起：文字钮 + 小箭头（箭头方向即展开/收起指向，与高级设置收折头同款）；短提示不显示。
             isShort ? null : h(Button, {
               variant: 'outline', size: 'sm',
               onClick: () => { setPromptOpen(v => !v) },
-            }, promptOpen ? t('editorViewCollapse') : t('editorViewExpandAll')),
+            }, h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px' } },
+              promptOpen ? t('editorViewCollapse') : t('editorViewExpand'),
+              h(IconChevronDownOutlineRegular, {
+                size: 12,
+                className: promptOpen ? 'dsh-tdt-ed-view-expchevron dsh-tdt-ed-view-expchevron-open' : 'dsh-tdt-ed-view-expchevron',
+              }),
+            )),
           )
           : null,
       ),

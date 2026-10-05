@@ -103,18 +103,22 @@ export const TASK_EDITOR_CSS = `
    纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
    字段行 / 「上次执行」明细的皮肤**不在这里** —— 那是域 domain:task-info（与卡片展开区共用同一份）。 */
 .dsh-tdt-ed-view{display:flex;flex-direction:column;gap:18px;}
-/* 块标题行：左 = 标签（图标 + 文字），右 = 草稿标记 / 状态 / 源码·预览·展开 操作组；两端对齐。 */
-.dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;justify-content:space-between;}
-/* 块标题 = **标签**（图标 + 文字）；竖线已承担视觉分隔，这里去掉灰底（用户 2026-10-05：灰框太丑）只留文字。 */
+/* 块标题行：默认左对齐（标签 + 内联状态/标记都在左），只有提示词的操作组靠右（margin-left:auto）。 */
+.dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+/* 块标题 = **标签**（图标 + 文字）；竖线已承担视觉分隔，这里去掉灰底只留文字。 */
 .dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent;color:var(--tdt-fg);font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
-/* 每个区块左侧 **3px 竖线**（品牌色，方角）：用户 2026-10-05 要求——替代丑灰框，icon 跟在竖线后。 */
-.dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;position:relative;padding-left:14px;}
-.dsh-tdt-ed-view-block::before{content:'';position:absolute;left:0;top:1px;bottom:1px;width:3px;background:var(--tdt-business);border-radius:0;}
+/* 标题前的短竖线标（品牌色，方角）：只修饰 icon，不包整块（用户 2026-10-05 修正：整块长线太丑）。 */
+.dsh-tdt-ed-view-tag::before{content:'';flex:none;width:3px;height:14px;background:var(--tdt-business);border-radius:0;}
+.dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;}
 .dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
 /* 草稿标记 chip（r13：灰色不明显 ⇒ **警告色**——红太强，用 warning 橙：橙字 + 极浅橙底）。 */
 .dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--tdt-warning,#b7791f);font-size:var(--tdt-font-xs);white-space:nowrap;}
-/* 提示词操作组（源码 / 预览 + 展开 / 收起）：整组靠右、不折行。 */
-.dsh-tdt-ed-view-head-actions{display:flex;align-items:center;gap:6px;flex:none;}
+/* 提示词操作组（源码 / 预览 + 展开 / 收起）：整组靠右、不折行（仅此一组 margin-left:auto，
+   其余块的标题 / 状态 / 「修改没保存」保持居左，2026-10-05 修正 space-between 把它们挤到最右）。 */
+.dsh-tdt-ed-view-head-actions{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto;}
+/* 展开 / 收起 小箭头：复用 chevron-down，收起态翻转 180°（与高级设置收折头同款）。 */
+.dsh-tdt-ed-view-expchevron{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.8));transition:transform .15s ease;}
+.dsh-tdt-ed-view-expchevron-open{transform:rotate(180deg);}
 /* 提示词文档区：极淡底（明暗自适应，约 3% 前景色混合）、无左 / 右框、无圆角，包住整段文档。 */
 .dsh-tdt-ed-view-promptbox{background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);padding:8px 10px;margin-top:8px;}
 /* 提示词默认**约 5 行**截断（用户 2026-10-05）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
