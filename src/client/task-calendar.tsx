@@ -60,9 +60,11 @@ const CALENDAR_CSS = `
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
 .dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
 .dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
-/* 拉开的那一天 = **蓝色底**（--tdt-open-bg 是基础层既有的「展开中」蓝），**不要任何白边**。 */
-.dsh-tdt-cal-cell--sel{background:var(--tdt-open-bg);}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-open-bg);}
+/* 拉开的那一天 = **正常底色 + 离边 3px 的亮蓝内框线**（用户 2026-10-06：整块蓝底太丑；
+   「加一条线，但是这条线不是贴着的，而是离外边有三四个像素的内间距的感觉」）。
+   outline 不占布局、负 offset 向内缩 ⇒ 正好做出「内缩描边」，格子尺寸一点不变。 */
+.dsh-tdt-cal-cell--sel{background:var(--tdt-surface-1);outline:1px solid var(--tdt-business);outline-offset:-3px;}
+.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-surface-1);}
 .dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
@@ -92,12 +94,12 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:color-mix(in srgb,var(--tdt-business) 24%,transparent);}
 .dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
 /* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条。
-   ⚠️ 用户 2026-10-06：它**不要圆角、不要任何边**，就是一块**蓝色底**的方块 —— 与上面选中的
-   那一格**同色同宽**，视觉上就是「从那一格拉出来的」。
-   margin-top:-1px 吃掉网格那 1px 的行间距 ⇒ 与上面严丝合缝地连成一片。
+   ⚠️ 用户 2026-10-06（r5）：整块蓝底太丑 ⇒ **底色恢复正常**，改成「离边 4px 的亮蓝内框线」
+   表示「展开的是这一块」（与选中格同一套语言）。outline 不占布局 ⇒ 内框线不挤内容。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-.dsh-tdt-cal-panel{grid-column:1/-1;margin-top:-1px;background:var(--tdt-open-bg);border:0;border-radius:0;
-  padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3);
+.dsh-tdt-cal-panel{grid-column:1/-1;background:var(--tdt-surface-1);border:0;border-radius:0;
+  outline:1px solid var(--tdt-business);outline-offset:-4px;
+  padding:var(--tdt-space-3) var(--tdt-space-4);
   overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
 /* 图例色块（与格内标签同款：3px 竖线 + 同深度的底，**无圆角**） */
@@ -107,12 +109,15 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
   font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
 .dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
-/* 拉开区里的**计划**条目（没有执行记录 ⇒ 不可展开） */
-.dsh-tdt-cal-row{display:flex;align-items:center;gap:var(--tdt-space-2);padding:7px 10px;
+/* 拉开区里的**计划**条目（没有执行记录 ⇒ 不可展开）：虚线框一行，内容可折行 */
+.dsh-tdt-cal-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--tdt-space-1) var(--tdt-space-2);padding:7px 10px;
   border-radius:0;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   background:var(--cal-soft,transparent);}
 .dsh-tdt-cal-row--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
 .dsh-tdt-cal-time{font-variant-numeric:tabular-nums;}
+/* 拉开区里可点的名字（任务名 / 前置任务名）：链接色 + hover 下划线，与执行记录页「任务名可点」同观感 */
+.dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--tdt-business);cursor:pointer;text-align:left;}
+.dsh-tdt-cal-link:hover{text-decoration:underline;}
 /* 拉开区里的小字标注（「计划」/ 条数）—— 与格内标签类重名会互相打架，故单独命名 */
 .dsh-tdt-cal-mini{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
@@ -277,6 +282,11 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   const workspaceOf = useCallback((id: string): string => {
     return rowsRef.current.find(item => item.id === id)?.workspace ?? ''
   }, [])
+  /** 可点的任务名（点 ⇒ 右侧栏查看档；没给 onViewTask ⇒ 降级纯文本）。 */
+  const nameNode = useCallback((id: string, name: string): ReturnType<typeof h> =>
+    onViewTask !== undefined
+      ? h('button', { key: id, type: 'button', className: 'dsh-tdt-cal-link', title: name, onClick: () => { onViewTask(id) } }, name)
+      : h('span', { key: id }, name), [onViewTask])
 
   // 按本地日分桶（与执行记录页同一抉择：用 `scheduled_at` 的本地日，不用 `logical_date`）。
   const byDay = useMemo(() => {
@@ -382,10 +392,19 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   /** 拉开区里的一条（已发生 = 执行记录那套可展开的块；计划 = 一行虚线，没有记录可展开）。 */
   const panelItemNode = (item: CalItem): ReturnType<typeof h> => {
     if (item.kind === 'plan') {
+      // 计划条目没有实例快照 ⇒ 前置取**任务定义**的 depends（谁必须先成功），名字可点进查看档。
+      const deps = rowsRef.current.find(row => row.id === item.entry.taskId)?.depends ?? []
       return h('div', { key: `p:${item.entry.taskId}:${item.at}`, className: 'dsh-tdt-cal-row dsh-tdt-cal-row--plan' },
-        h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-dot--plan' }),
         h('span', { className: 'dsh-tdt-cal-time' }, hhmmOf(item.at)),
-        h('span', null, item.entry.title),
+        nameNode(item.entry.taskId, item.entry.title),
+        h('span', { className: 'dsh-tdt-cal-mini' }, workspaceOf(item.entry.taskId)),
+        deps.length > 0
+          ? h('span', { className: 'dsh-tdt-cal-mini' }, `${t('calDepsLabel')}：`,
+              deps.flatMap((dep, index) => [
+                index > 0 ? h('span', { key: `s:${dep.id}` }, '、') : null,
+                nameNode(dep.id, dep.title),
+              ]))
+          : null,
         h('span', { className: 'dsh-tdt-cal-mini' }, t('calPlanTag')),
       )
     }
