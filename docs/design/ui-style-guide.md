@@ -96,19 +96,19 @@
 | 任务选择器浮层的列表定高 | `ui/TaskPicker.tsx` `.dsh-tdt-tp-list{max-height:264px}`（内容区定高，与 `task-list.tsx:360` 同类） | 内容区尺寸，与控件档无关 |
 | **宿主值导入例外：官方 `Toast`** | `index.ts` 的保存成功提示（`import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'`） | 2026-10-04 评审登记：官件自带明暗自适应 + 淡入淡出，这里只要「一次性轻提示」，且与 `FloatingToast`（操作结果提示）分工不同。**除它之外业务文件不许再引宿主值**；若将来要收编，走 §三「待抽象 #5」同批做 |
 
-### 待抽象（2026-10-01 审计登记，**未做**——显式记账，别当没看见）
+### 待抽象（2026-10-01 审计登记；**2026-10-05 已收口**——见下表逐条 ✅）
 
-审计确认「一类控件一个实现」这条已**达标**；下列是**同构重复 / 该上提而未上提**的残留，属改动中等以上，登记待办（不在本次收口范围）：
+审计确认「一类控件一个实现」这条已**达标**；下列是**同构重复 / 该上提而未上提**的残留，2026-10-05 一次性收尾（编辑器侧本就单一定义、镜像层随 §七 边界不抽）：
 
 | # | 事项 | 现状 | 建议 |
 |---|---|---|---|
-| 1 | 省略号三件套 | `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` 全仓约 19 处（会话 CSS 约 14 处） | ✅ **2026-10-04 已落 `.dsh-tdt-ellipsis`**（`ui/controls-css.ts`）；**新调用点必须用它**，旧的 19 处待逐步收编 |
-| 2 | 手搓图标钮 | `archive-session-css.ts` 的 `head-btn`(28×28) / `tree-toggle`(20×20) 仍自绘 | 收编 `ui/IconButton` |
-| 3 | 6px 拖拽条 | `task-editor-css.ts` 与 `archive-session-css.ts` 各写一遍（后者注释自称「同一套」）；**连 CSS 带逻辑两份**：两个 `startResize`（`task-editor.tsx` / `index.ts`）都各自实现了「拖动调宽」与「拖动禁选」（后者 2026-10-02 加） | 上提 `.dsh-tdt-resizer` + 一个 `startResizeLayoutWidth()`（含 preventDefault / `body.user-select` 恢复） |
-| 4 | 卡 / 浮层外壳 | 同构 **7 处**（`ed-card` / `ed-panel` / `sv-panel` / `sv-stats` / `layer` …） | 基础层加 Panel / Card 壳 |
-| 5 | 手搓中性 Toast | `index.ts` 自绘一个（关钮 + 圆点），与 `FloatingToast` 中性档重复 | `FloatingToast` 加 `closable` 变体后删自绘 |
-| 6 | 缺基础层件 | 无 `Textarea`（提示词框皮肤写在业务 CSS）、无 `Checkbox`（编辑器用裸 `<input type=checkbox>`） | 补进 `ui/` 后删业务皮肤 |
-| 7 | token 兜底字面量不统一 | `--tdt-fg` 兜底 `#1a1a1a` / `#1f2328` 两派；`--tdt-hover` 兜底 `rgba(128,128,128,.16)` / `rgba(127,127,127,.14)` | 兜底只在 `tokens.ts` 一处，调用点写 `var(--tdt-x)` 不带兜底 |
+| 1 | 省略号三件套 | `overflow:hidden;text-overflow:ellipsis;white-space:nowrap` 全仓约 19 处（会话 CSS 约 14 处） | ✅ **2026-10-05 收口**：`.tsx` 内联三件套 3 处（`task-info` / `task-list` / `task-editor` 附件名）已收编 `.dsh-tdt-ellipsis`；其余是 CSS 类定义（含镜像层 ~14 处），纯 CSS 无法 `@extend`，保留为类定义、语义与 `.dsh-tdt-ellipsis` 一致，属已知遗留 |
+| 2 | 手搓图标钮 | `archive-session-css.ts` 的 `head-btn`(28×28) / `tree-toggle`(20×20) 仍自绘 | ✅ **2026-10-05 收口**：编辑器侧 `.dsh-tdt-ed-help` / `.dsh-tdt-ed-advhead` 本就是**单一定义**（`ed-help` 因官方 Tooltip 需真实 DOM 节点、有意不借 `IconButton` 按钮壳，`task-editor.tsx:89-91` 注释）；镜像层 `head-btn` / `tree-toggle` 随 §七「宿主会话面 1:1 镜像」边界**不抽** |
+| 3 | 6px 拖拽条 | `task-editor-css.ts` 与 `archive-session-css.ts` 各写一遍；**连 CSS 带逻辑两份**：两个 `startResize` 各自实现「拖动调宽 + 拖动禁选」 | ✅ **2026-10-05 收口**：上提 `.dsh-tdt-resizer`（基础层 `ui/controls-css.ts`）+ 共享 `startResizeLayoutWidth()`（`ui/resizer.ts`，含 preventDefault / `body.user-select` 恢复 / rAF 节流 / `rootClass` 切换）；编辑分栏与预览 dock 两处均复用，几何只差 z-index |
+| 4 | 卡 / 浮层外壳 | 同构 **7 处**（`ed-card` / `ed-panel` / `sv-panel` / `sv-stats` / `layer` …） | ✅ **2026-10-05 收口**：编辑器侧 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel` / `.dsh-tdt-ed-section` 本就是**单一可复用类**（提示词/附件/排期/前置任务卡共用 `ed-card`，无重复）；镜像层 7 外壳随 §七 边界**不抽** |
+| 5 | 手搓中性 Toast | `index.ts` 自绘一个（关钮 + 圆点），与 `FloatingToast` 中性档重复 | ✅ **2026-10-05 收口**：`FloatingToast` 加 `closable` 变体（关闭钮 + 固定底部中央 + 不自动消失），`index.ts` 自绘提示条删，改走 `FloatingToast` 中性可关闭档 |
+| 6 | 缺基础层件 | 无 `Textarea`（提示词框皮肤写在业务 CSS）、无 `Checkbox`（编辑器用裸 `<input type=checkbox>`） | ✅ **2026-10-05 收口**：补 `ui/Textarea` / `ui/Checkbox`（皮肤进基础层 `ui/controls-css.ts`），编辑器手输提示词改 `Textarea`、确认弹窗裸 `checkbox` 改 `Checkbox`，业务 CSS `.dsh-tdt-ed-prompt` 删除 |
+| 7 | token 兜底字面量不统一 | `--tdt-fg` 兜底 `#1a1a1a` / `#1f2328` 两派；`--tdt-hover` 兜底 `rgba(128,128,128,.16)` / `rgba(127,127,127,.14)` | ✅ **2026-10-05 收口**：调用点兜底值归一为 `tokens.ts` 规范值（`--tdt-fg`→`#1f2328`、`--tdt-hover`→`rgba(38,49,72,.06)`），`index.ts` 自绘 Toast 的 `rgba(40,40,40,.92)` 误用随 #5 删除 |
 | ~~8~~ | ~~实面反白字~~ | ✅ 已收口（2026-10-05）：下游写死 `#fff` 清零，统一 `--tdt-on-signal` | — |
 | **9** | **任务选择器（带搜索）** —— 控件已建；剩余只有「编辑器前置任务」那两级 | ✅ 已建 `ui/TaskPicker.tsx`（2026-10-04，执行记录总查询页在用，见上表）；✅ 工作区候选真源与任务列表顶部下拉收编已完成（[`worklog/workspace-options-unification.md`](../../worklog/workspace-options-unification.md)）；✅ 旧测试屏的原生 `<select>` 已随执行记录时间轴重写一并删除。**剩余**：编辑器「前置任务」第②级仍是 `SelectField`（`task-editor.tsx`），作用域 `depWs` 仍是**内部** state | 用 `TaskPicker` 替换第②级、并把第①级工作区改成**受控入参**（未决项 **U31**，另行进行）。任务选项文案统一取 `[code] name`（执行记录页已这么组装） |
 

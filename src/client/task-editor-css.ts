@@ -24,8 +24,8 @@ export const TASK_EDITOR_CSS = `
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
    user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
    见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
-.dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;user-select:none;background:0 0;}
-.dsh-tdt-ed-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+/* 左缘拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index。 */
+.dsh-tdt-ed-resizer{z-index:2;}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
 /* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
@@ -66,10 +66,7 @@ export const TASK_EDITOR_CSS = `
    官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
-.dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:1.6;resize:vertical;}
-.dsh-tdt-ed-prompt::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-.dsh-tdt-ed-prompt--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
+/* 提示词大输入框皮肤已上提基础层 .dsh-tdt-textarea（ui/controls-css.ts，U20 #6，2026-10-05）；此处不再自写。 */
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
@@ -93,7 +90,7 @@ export const TASK_EDITOR_CSS = `
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
    官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
-.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(127,127,127,.14));}
+.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}

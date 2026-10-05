@@ -988,10 +988,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('顶栏按钮组（复制 / 刷新 / 关闭，图标钮无中文）',
     clientJs.includes('dsh-tdt-sv-head-btn') && clientJs.includes('previewRefresh')
       && clientJs.includes('previewCopyPath') && clientJs.includes('IconRefreshOutlineRegular'))
-  check('拖拽条高亮 = 6px 浅色半透明带（与任务抽屉 .dsh-tdt-ed-resizer 同款，2026-09-29 改版；不再变纯白线）',
-    clientJs.includes('dsh-tdt-sv-resizer')
-      && clientJs.includes('dsh-tdt-sv-resizer:hover{background:var(--tdt-hover')
-      && clientJs.includes('dsh-tdt-sv-resizer:active{background:var(--tdt-hover')
+  check('拖拽条高亮 = 6px 浅色半透明带（上提基础层 .dsh-tdt-resizer，编辑分栏 / 预览 dock 共用，2026-10-05）',
+    clientJs.includes('dsh-tdt-resizer')
+      && clientJs.includes('.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--tdt-hover')
       && !clientJs.includes('.dsh-tdt-sv-preview-dock:has(')
       && !clientJs.includes('border-left-color:rgba(255,255,255,1)'))
   check('统一 openFile 单一入口（工具卡 onOpenFile 与 md 行内 fileMentions 共用）',
@@ -1080,8 +1079,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('拖拽调宽期间禁用 iframe 指针事件（dsh-tdt-resizing，防 PDF iframe 吞事件）',
     clientJs.includes('dsh-tdt-resizing')
     && /\.dsh-tdt-root\.dsh-tdt-resizing iframe\{pointer-events:none/.test(clientJs))
-  check('拖拽结束撤销 resizing 标记（classList.remove，避免残留禁事件）',
-    /classList\.remove\(["']dsh-tdt-resizing["']\)/.test(clientJs))
+  check('拖拽结束撤销 resizing 标记（helper 内 classList.remove(rootClass)，避免残留禁事件）',
+    clientJs.includes('dsh-tdt-resizing')
+      && /classList\.remove\([a-zA-Z$]+\.rootClass\)/.test(clientJs))
   // U30 HTML 预览（照官方，逐条对齐 documentpreview lib/client.js）。
   check('HTML 走静态预览：iframe srcDoc + sandbox="" + data-html-preview（官方 :4065-4072）',
     clientJs.includes('data-html-preview')
@@ -2342,11 +2342,14 @@ console.log('\n[14] runtime-index')
     check('开始时间标签去掉「任务」两字（窄栏排得下，语义由 ？ 气泡补）',
       readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8').includes("editorTaskStart: '开始时间'"))
     // 用户 2026-10-02：拖拽会顺手选中一片文字 ⇒ pointerdown preventDefault + 拖动期间全域禁选。
-    check('拖拽调宽不再选中文字（两处 resizer 都做了 preventDefault + 拖动期间 user-select:none）',
-      edSrc.includes('userSelect') && edSrc.includes("body.style.userSelect = 'none'")
-      && edSrc.includes('removeAllRanges')
-      && readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8').includes("body.style.userSelect = 'none'")
-      && edJs.includes('.dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;user-select:none;'))
+    check('拖拽调宽不再选中文字 + 基础 resizer 几何上提（共享 helper + .dsh-tdt-resizer 在 ui/controls-css，2026-10-05）',
+      (() => {
+        const res = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'resizer.ts'), 'utf8')
+        const css = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'controls-css.ts'), 'utf8')
+        return res.includes('userSelect') && res.includes("body.style.userSelect = 'none'") && res.includes('removeAllRanges')
+          && edJs.includes('.dsh-tdt-ed-resizer{z-index:2')
+          && css.includes('.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize')
+      })())
   }
 
   // ── 18. UI 基础层 P2/P3/P4：按钮 / 输入 / 数字步进 / 开关 ──

@@ -34,7 +34,7 @@ import {
   type TaskEditorDraft,
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
-import { Button, IconButton, Segmented, ensureUiBase, type TaskOption } from './ui'
+import { Button, IconButton, Segmented, ensureUiBase, startResizeLayoutWidth, type TaskOption } from './ui'
 import { RecordsTimelineView } from './records-timeline'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-list'
@@ -567,52 +567,27 @@ function TaskPage(props: {
    * pointerup 恢复，并清掉已有选区。
    */
   const startResize = useCallback((start: { clientX: number; preventDefault?: () => void }): void => {
-    start.preventDefault?.()
     const startX = start.clientX
     const startWidth = previewWidth
-    const body = document.body
-    const prevUserSelect = body.style.userSelect
-    body.style.userSelect = 'none'
-    window.getSelection()?.removeAllRanges()
-    // ⚠️ PDF 预览是 `<iframe>`（独立文档），指针一进 iframe 父文档的 `pointermove` 就收不到了
-    // ⇒ 向右拖（缩小，指针走进 dock 里的 PDF）时拖动卡死；再点别处强行释放时，onUp 拿到的
-    // clientX 已偏右很多 ⇒ 算出的宽度被压到 PREVIEW_MIN ⇒ 面板"弹回最小宽度"（真机 2026-10-03）。
-    // 对策：拖动期间给根挂 `dsh-tdt-resizing`，CSS 令 iframe `pointer-events:none`，松手撤销。
-    const rootEl = document.getElementById('dsh-tdt-root')
-    const dockEl = rootEl?.querySelector('.dsh-tdt-sv-preview-dock') as HTMLElement | null
-    // 拖拽期**不再冻结内容宽度**：旧实现（2026-10-04）为绕开 Shiki 1 万行巨型 DOM 的每帧重折卡顿才冻结、
-    // 仅松手重排；现已全面改 CodeMirror 6（行级虚拟滚动只重排可视区），拖动实时折行本就很快，与官方一致，
-    // 故取消冻结，让代码/文档随分栏宽度实时重折行。
-    rootEl?.classList.add('dsh-tdt-resizing')
-    // ⚠️ 卡顿根因（真机 2026-10-04：拖拽分栏时"挪很久才动一下"）：原实现**每个 pointermove**
-    // 都改根上的 `--dsh-tdt-preview-w`，而该变量同时被 dock 宽度与弹窗 `right` 引用
-    // ⇒ 每帧触发**整页重排**；dock 内还坐着上万行高亮 DOM，重排代价极高。且 pointermove 无节流。
-    // 对策（照浏览器常规做法）：① 宽度**直接写 dock 的 style.width**，不经根变量 ⇒ 只重排 dock；
-    // ② rAF 节流，一帧最多写一次；③ 松手才落 state + 持久化。
-    let frame = 0
-    let lastX = startX
-    const applyWidth = (clientX: number): void => {
-      const next = clampPreviewWidth(startWidth - (clientX - startX), editorTaken)
-      if (dockEl !== null) dockEl.style.width = `${next}px`
-      else rootEl?.style.setProperty('--dsh-tdt-preview-w', `${next}px`)
-    }
-    const onMove = (event: PointerEvent): void => {
-      lastX = event.clientX
-      if (frame !== 0) return
-      frame = requestAnimationFrame(() => { frame = 0; applyWidth(lastX) })
-    }
-    const onUp = (event: PointerEvent): void => {
-      if (frame !== 0) { cancelAnimationFrame(frame); frame = 0 }
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      rootEl?.classList.remove('dsh-tdt-resizing')
-      const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken)
-      setPreviewWidth(next)
-      try { window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next)) } catch { /* 隐私模式忽略 */ }
-      body.style.userSelect = prevUserSelect
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
+    startResizeLayoutWidth({
+      startEvent: start,
+      compute: (clientX) => clampPreviewWidth(startWidth - (clientX - startX), editorTaken),
+      onMove: (w) => {
+        // 宽度直接写 dock 的 style.width（不经根变量 ⇒ 只重排 dock，避免每帧整页重排，真机 2026-10-04）；
+        // 退化情形（dock 取不到）才回退根变量。PDF 预览是 iframe，拖动期给根挂 `dsh-tdt-resizing`
+        // 令 iframe pointer-events:none，否则指针进 iframe 父文档收不到 pointermove 会卡死（2026-10-03）。
+        const rootEl = document.getElementById('dsh-tdt-root')
+        const dockEl = rootEl?.querySelector('.dsh-tdt-sv-preview-dock') as HTMLElement | null
+        if (dockEl !== null) dockEl.style.width = `${w}px`
+        else rootEl?.style.setProperty('--dsh-tdt-preview-w', `${w}px`)
+      },
+      onCommit: (w) => {
+        setPreviewWidth(w)
+        try { window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(w)) } catch { /* 隐私模式忽略 */ }
+      },
+      rootClass: 'dsh-tdt-resizing',
+      rafThrottle: true,
+    })
   }, [previewWidth, editorTaken])
   // 新建 / 编辑任务弹窗：保存 / 删除 / 历史版本全部接线（2026-09-30）。
   // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
@@ -1467,33 +1442,17 @@ function TaskPage(props: {
         },
       })
       : null,
-    // 查看会话失败提示条（固定底部中央，可读可关）。外观与共用 Toast 的中性档统一
-    // （反色实面 + 圆点）；保留手动关闭——操作类失败要给用户时间读，不自动消失。
+    // 查看会话失败提示条（固定底部中央，可读可关）：收编为共用 FloatingToast 的中性可关闭档
+    // （U20 #5，2026-10-05）——反色实面 + 圆点 + 关闭钮，不自动消失，给用户时间读。
     viewErr !== null
-      ? h('div', {
-        style: {
-          position: 'fixed', left: '50%', bottom: '18px', transform: 'translateX(-50%)',
-          zIndex: 1020, maxWidth: '90%', boxSizing: 'border-box',
-          background: 'var(--tdt-fg, rgba(40,40,40,.92))',
-          color: 'var(--tdt-fg-inverse, #fff)',
-          border: 'none',
-          borderRadius: 'var(--tdt-radius-md, 8px)', padding: '8px 14px', fontSize: 'var(--tdt-font-sm)', lineHeight: '1.6',
-          display: 'flex', alignItems: 'center', gap: '8px',
-          boxShadow: 'var(--tdt-shadow-2, 0 8px 28px rgba(0,0,0,.3))',
-        },
-        onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() },
-      },
-        h('span', { style: { flex: 'none', width: '7px', height: '7px', borderRadius: '50%', background: 'var(--tdt-fg-inverse, #fff)', opacity: .65 } }),
-        h('span', null, viewErr),
-        h(IconButton, {
-          variant: 'plain',
-          size: 'sm',
-          icon: '✕',
-          label: t('debugClose'),
-          style: { color: 'inherit' },
-          onClick: () => { setViewErr(null) },
-        }),
-      )
+      ? h(FloatingToast, {
+          seq: 'view-err',
+          tone: 'neutral',
+          closable: true,
+          text: viewErr,
+          closeLabel: t('debugClose'),
+          onDone: () => { setViewErr(null) },
+        })
       : null,
     // 新建 / 编辑任务分栏（右侧**占布局的一列**：主窗口被推窄、不被遮盖；与预览 dock 可同时存在）。
     // 工作区 / 模型 = `GET /options` 的真实目录（P1）；前置任务 = 现有任务表（真数据）。

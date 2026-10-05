@@ -199,6 +199,17 @@ export const FIELD_CSS = `
    （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */
 .dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--tdt-success);}
 
+/* 多行文本输入（提示词等，P3）：卡内无边框（视觉重心在整张卡上），占位色走 dimmed；校验不通过描红盒。
+   （从 task-editor-css 的 .dsh-tdt-ed-prompt 上提而来；业务文件不再自写 textarea 皮肤。） */
+.dsh-tdt-textarea{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-lg);line-height:1.6;resize:vertical;}
+.dsh-tdt-textarea::placeholder{color:var(--tdt-fg-dim);}
+.dsh-tdt-textarea--error{box-shadow:0 0 0 1px var(--tdt-danger);}
+
+/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
+   具体 z-index 由 .dsh-tdt-ed-resizer / .dsh-tdt-sv-resizer 各自补。 */
+.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
+.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--tdt-hover,rgba(38,49,72,.06));}
+
 @media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
 `
 

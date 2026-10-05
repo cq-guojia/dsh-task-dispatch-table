@@ -733,7 +733,7 @@ export function FilePreviewPanel(props: {
   },
     onResizeStart === undefined ? null
       : h('div', {
-          className: 'dsh-tdt-sv-resizer',
+          className: 'dsh-tdt-resizer dsh-tdt-sv-resizer',
           role: 'separator',
           'aria-orientation': 'vertical',
           title: t('previewResize'),

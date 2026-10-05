@@ -332,7 +332,7 @@ export function lastRunFields(props: {
             onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },
           },
             h(FileTypeIcon, { path: output, size: 14 }),
-            h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, baseNameOf(output)),
+            h('span', { className: 'dsh-tdt-ellipsis' }, baseNameOf(output)),
           )),
         ),
       ),

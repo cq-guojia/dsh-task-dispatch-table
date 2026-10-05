@@ -1955,6 +1955,17 @@ body[data-ds-dark-theme]{
    （合并原先 task-editor-css / task-list 两处就地覆盖；选择器带包装类 + role，特异性高于官方。） */
 .dsh-tdt-switch button[role='switch'][aria-checked='true']{background:var(--tdt-success);}
 
+/* 多行文本输入（提示词等，P3）：卡内无边框（视觉重心在整张卡上），占位色走 dimmed；校验不通过描红盒。
+   （从 task-editor-css 的 .dsh-tdt-ed-prompt 上提而来；业务文件不再自写 textarea 皮肤。） */
+.dsh-tdt-textarea{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg);font:inherit;font-size:var(--tdt-font-lg);line-height:1.6;resize:vertical;}
+.dsh-tdt-textarea::placeholder{color:var(--tdt-fg-dim);}
+.dsh-tdt-textarea--error{box-shadow:0 0 0 1px var(--tdt-danger);}
+
+/* 拖拽分隔条（编辑分栏 / 预览 dock 共用，U20 #3）：6px 命中区，col-resize，不画线，hover/按下浮出浅带。
+   具体 z-index 由 .dsh-tdt-ed-resizer / .dsh-tdt-sv-resizer 各自补。 */
+.dsh-tdt-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;background:0 0;touch-action:none;user-select:none;}
+.dsh-tdt-resizer:hover,.dsh-tdt-resizer:active{background:var(--tdt-hover,rgba(38,49,72,.06));}
+
 @media (prefers-reduced-motion: reduce){.dsh-tdt-input,.dsh-tdt-pfx{transition:none;}}
 `;
 		/** 日期 / 时间的皮肤规则（P4）。 */
@@ -3348,6 +3359,81 @@ body[data-ds-dark-theme]{
 			return (0, react$1.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null));
 		}
 		//#endregion
+		//#region src/client/ui/Textarea.tsx
+		/**
+		* 多行文本输入（P3 输入类家族唯一实现；皮肤见 controls-css.ts 的 `.dsh-tdt-textarea`）。
+		*
+		* 以前提示词框是 `task-editor.tsx` 里手写的 `<textarea>` + 业务 CSS `.dsh-tdt-ed-prompt`；
+		* 现上提为基础层件（U20 #6，2026-10-05），业务文件只 `import { Textarea }`。
+		*/
+		/** 多行文本输入。 */
+		function Textarea(props) {
+			ensureControlsStyle();
+			const { value, onChange, placeholder, error, disabled, id, rows, spellCheck, className, style } = props;
+			return (0, react$1.createElement)("textarea", {
+				id,
+				rows,
+				value,
+				placeholder,
+				disabled,
+				spellCheck: spellCheck === true,
+				"aria-label": props["aria-label"],
+				className: `dsh-tdt-textarea${error === true ? " dsh-tdt-textarea--error" : ""}${className !== void 0 && className !== "" ? " " + className : ""}`,
+				style,
+				onChange: (event) => {
+					onChange(event.target.value);
+				}
+			});
+		}
+		//#endregion
+		//#region src/client/ui/Checkbox.tsx
+		/**
+		* 勾选框（P3 输入类家族唯一实现；U20 #6，2026-10-05）。
+		*
+		* 以前确认弹窗里是裸 `<input type="checkbox">` + 业务内联样式，现上提为基础层件。
+		* 标记色默认随业务色；高危确认可传 `accentColor`（如 `var(--tdt-warning)`）染橙。
+		*/
+		//#endregion
+		//#region src/client/ui/resizer.ts
+		/** 开始一次拖拽调宽（监听 window 的 pointermove / pointerup，松手自动清理）。 */
+		function startResizeLayoutWidth(opts) {
+			opts.startEvent.preventDefault?.();
+			opts.startEvent.clientX;
+			const body = document.body;
+			const prevUserSelect = body.style.userSelect;
+			body.style.userSelect = "none";
+			window.getSelection()?.removeAllRanges();
+			const rootEl = document.getElementById("dsh-tdt-root");
+			if (opts.rootClass !== void 0) rootEl?.classList.add(opts.rootClass);
+			let frame = 0;
+			let pendingX = 0;
+			const emit = (clientX) => {
+				const w = opts.compute(clientX);
+				opts.onMove(w);
+				return w;
+			};
+			const onMove = (event) => {
+				if (opts.rafThrottle === true) {
+					pendingX = event.clientX;
+					if (frame !== 0) return;
+					frame = requestAnimationFrame(() => {
+						frame = 0;
+						emit(pendingX);
+					});
+				} else emit(event.clientX);
+			};
+			const onUp = (event) => {
+				window.removeEventListener("pointermove", onMove);
+				window.removeEventListener("pointerup", onUp);
+				if (frame !== 0) cancelAnimationFrame(frame);
+				body.style.userSelect = prevUserSelect;
+				if (opts.rootClass !== void 0) rootEl?.classList.remove(opts.rootClass);
+				opts.onCommit(opts.compute(event.clientX));
+			};
+			window.addEventListener("pointermove", onMove);
+			window.addEventListener("pointerup", onUp);
+		}
+		//#endregion
 		//#region src/client/ui/index.ts
 		/**
 		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
@@ -3385,9 +3471,8 @@ body[data-ds-dark-theme]{
    （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
 /* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
    z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
-.dsh-tdt-sv-resizer{position:absolute;top:0;left:0;bottom:0;width:6px;cursor:col-resize;background:0 0;z-index:7;touch-action:none;user-select:none;}
-.dsh-tdt-sv-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
-.dsh-tdt-sv-resizer:active{background:var(--tdt-hover,rgba(128,128,128,.16));}
+/* 拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index:7（高于 CodeViewer 复制钮，真机 2026-10-04）。 */
+.dsh-tdt-sv-resizer{z-index:7;}
 /* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
 /* 面板底色 = 官方会话面 --tdt-surface-base（官方 chat 页即此色）：
    官方 ReasoningRow 展开行是 sticky + background:var(--tdt-surface-base)（ReasoningRow.module.css），
@@ -3497,7 +3582,7 @@ body[data-ds-dark-theme]{
 /* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
 .dsh-tdt-sv-process:disabled{cursor:default;}
 .dsh-tdt-sv-trigger{align-self:stretch;background:var(--tdt-code-surface,rgba(128,128,128,.10));border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-xl,12px);transition:background .1s;}
-.dsh-tdt-sv-trigger:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-trigger:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-trigger-header{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:0 0;border:none;cursor:pointer;color:inherit;font:inherit;text-align:left;}
 .dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;}
 .dsh-tdt-sv-trigger-title{font-size:var(--tdt-font-md,13px);color:var(--tdt-fg,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3592,7 +3677,7 @@ body[data-ds-dark-theme]{
 /* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
 .dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
 .dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-head-btn:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-head-btn:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
 .dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
 .dsh-tdt-sv-preview-pdf{flex:1;border:none;}
@@ -3611,7 +3696,7 @@ body[data-ds-dark-theme]{
    复制后短暂切勾选图标 + "已复制"提示，title/aria-label 承载本地化文案）。 */
 .dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
 .dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
-.dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-cm-copy svg{width:16px;height:16px;}
 .dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
 .dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
@@ -3631,7 +3716,7 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
 .dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
 .dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
-.dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
@@ -3644,14 +3729,14 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
 .dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--tdt-surface-1);border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
 .dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;border-radius:var(--tdt-radius-sm);color:var(--tdt-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 /* 第二排：文件名（跑马灯）+ 操作按钮。 */
 .dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
 .dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
 .dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;user-select:none;}
-.dsh-tdt-sv-tree-row:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-tree-row:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-tree-row:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
 .dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
 .dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3663,7 +3748,7 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
 .dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--tdt-dur,.15s) var(--tdt-ease,ease),background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-tree-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-tree-toggle:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
 /* 内联展开子层：左缩进 + 淡竖线引导层级。 */
 .dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--tdt-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
@@ -3693,7 +3778,7 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-deliv-hint,.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-secondary{display:none;}
 .dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-hint{display:inline;}
 .dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
-.dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+.dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
 /* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
    官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
@@ -3752,7 +3837,7 @@ body[data-ds-dark-theme]{
    唯一约束是 label 的 max-width（见下）：超长才出省略号。 */
 .dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
 button.dsh-tdt-sv-tfc-file{cursor:pointer;}
-button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg);}
+button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
 button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
 /* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
 .dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
@@ -3777,7 +3862,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    被 flex 撑开，越看越像按钮）。与文件名同字号，只靠颜色弱化。 */
 .dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
 .dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
-.dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(128,128,128,.16));color:var(--tdt-fg-2);}
+.dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg-2);}
 .dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
 /* 用户消息里的随附文件卡（官方 MessageItem attachmentRow / fileCard；2026-10-03）：
    气泡**下方**一行，小卡 = 图标 + 文件名 + 大小。引用里没有路径 ⇒ 不可点开，也不伪装成可点。 */
@@ -53962,7 +54047,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				"data-preview-dock": dock === true ? true : void 0,
 				style: style ?? void 0
 			}, onResizeStart === void 0 ? null : (0, react$1.createElement)("div", {
-				className: "dsh-tdt-sv-resizer",
+				className: "dsh-tdt-resizer dsh-tdt-sv-resizer",
 				role: "separator",
 				"aria-orientation": "vertical",
 				title: t("previewResize"),
@@ -54523,11 +54608,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: output,
 				size: 14
-			}), (0, react$1.createElement)("span", { style: {
-				overflow: "hidden",
-				textOverflow: "ellipsis",
-				whiteSpace: "nowrap"
-			} }, baseNameOf$1(output)))))));
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf$1(output)))))));
 		}
 		const sameCalendarDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 		function relativePast(iso, nowMs, tt) {
@@ -63809,8 +63890,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
    user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
    见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
-.dsh-tdt-ed-resizer{position:absolute;top:0;bottom:0;left:0;width:6px;cursor:col-resize;z-index:2;touch-action:none;user-select:none;background:0 0;}
-.dsh-tdt-ed-resizer:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
+/* 左缘拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index。 */
+.dsh-tdt-ed-resizer{z-index:2;}
 .dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
 .dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
 /* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
@@ -63851,10 +63932,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
    配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
 .dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 提示词大输入框：卡内无边框（视觉重心在整张卡上），占位色走 dimmed。 */
-.dsh-tdt-ed-prompt{display:block;width:100%;box-sizing:border-box;min-height:132px;padding:2px;border:none;outline:none;background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-lg);line-height:1.6;resize:vertical;}
-.dsh-tdt-ed-prompt::placeholder{color:var(--tdt-fg-dim,rgba(128,128,128,.6));}
-.dsh-tdt-ed-prompt--error{border-color:var(--tdt-danger,#e5484d)!important;box-shadow:0 0 0 1px var(--tdt-danger,#e5484d);}
+/* 提示词大输入框皮肤已上提基础层 .dsh-tdt-textarea（ui/controls-css.ts，U20 #6，2026-10-05）；此处不再自写。 */
 .dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .dsh-tdt-ed-spacer{flex:1 1 auto;}
 /* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
@@ -63878,7 +63956,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
    官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
-.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(127,127,127,.14));}
+.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
@@ -63979,6 +64057,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 }
 .dsh-tdt-toast--neutral::before{background:var(--tdt-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
 .dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
+/* 可关闭型（操作类失败）：固定底部中央、不自动消失、可点（关闭钮）。中性档即反色实面，观感与旧自绘一致。 */
+.dsh-tdt-toast--closable{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:max-content;max-width:min(90%,520px);pointer-events:auto;z-index:1020;animation:none;opacity:1;}
 /* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
 .dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
 `;
@@ -63992,6 +64072,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				"dsh-tdt-toast",
 				props.below === true ? "dsh-tdt-toast--below" : "",
 				props.sticky === true ? "dsh-tdt-toast--sticky" : "",
+				props.closable === true ? "dsh-tdt-toast--closable" : "",
 				tone === "success" ? "dsh-tdt-toast--success" : "",
 				tone === "warning" ? "dsh-tdt-toast--warning" : "",
 				tone === "neutral" ? "dsh-tdt-toast--neutral" : ""
@@ -64000,7 +64081,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				key: props.seq,
 				className: cls,
 				onAnimationEnd: props.onDone
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-toast-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-toast-text" }, props.text));
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-toast-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-toast-text" }, props.text), props.closable === true ? (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: "✕",
+				label: props.closeLabel ?? "关闭",
+				style: {
+					color: "inherit",
+					flex: "none",
+					marginLeft: "8px"
+				},
+				onClick: () => {
+					props.onDone();
+				}
+			}) : null);
 		}
 		//#endregion
 		//#region src/client/task-list.tsx
@@ -64945,11 +65039,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					maxWidth: 0
 				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react$1.createElement)("span", {
 					title: instance.note,
+					className: "dsh-tdt-ellipsis",
 					style: {
 						display: "block",
-						overflow: "hidden",
-						textOverflow: "ellipsis",
-						whiteSpace: "nowrap",
 						color: "var(--tdt-fg-3)"
 					}
 				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
@@ -67011,14 +67103,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				title: t("editorOpenEditor"),
 				"aria-label": t("editorOpenEditor"),
 				onClick: openEditorPanel
-			}, t("editorOpenEditor"))), (0, react$1.createElement)("textarea", {
+			}, t("editorOpenEditor"))), (0, react$1.createElement)(Textarea, {
 				id: "dsh-tdt-ed-source-inline-panel",
-				className: `dsh-tdt-ed-prompt${problemsByField("prompt") ? " dsh-tdt-ed-prompt--error" : ""}`,
 				value: draft.prompt,
 				placeholder: t("editorPromptPh"),
 				spellCheck: false,
-				onChange: (event) => {
-					patch({ prompt: event.target.value });
+				error: problemsByField("prompt") !== void 0,
+				onChange: (value) => {
+					patch({ prompt: value });
 				}
 			}), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-card-foot" }, (0, react$1.createElement)(SelectField, {
 				value: draft.workspace,
@@ -67133,7 +67225,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					gap: "8px",
 					padding: "6px 10px",
 					borderRadius: "var(--tdt-radius-sm)",
-					background: "var(--tdt-hover, rgba(127, 127, 127, 0.14))"
+					background: "var(--tdt-hover,rgba(38,49,72,.06))"
 				}
 			}, (0, react$1.createElement)("span", { style: {
 				flex: "none",
@@ -67142,14 +67234,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: att.name,
 				size: 16
-			})), (0, react$1.createElement)("span", { style: {
-				flex: "1 1 auto",
-				minWidth: 0,
-				overflow: "hidden",
-				textOverflow: "ellipsis",
-				whiteSpace: "nowrap",
-				fontSize: "var(--tdt-font-md)"
-			} }, att.name), (0, react$1.createElement)("span", {
+			})), (0, react$1.createElement)("span", {
+				className: "dsh-tdt-ellipsis",
+				style: {
+					flex: "1 1 auto",
+					minWidth: 0,
+					fontSize: "var(--tdt-font-md)"
+				}
+			}, att.name), (0, react$1.createElement)("span", {
 				title: att.ref,
 				style: {
 					flex: "none",
@@ -67157,7 +67249,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					color: "var(--tdt-fg-2)",
 					borderRadius: "var(--tdt-radius-xs)",
 					padding: "1px 6px",
-					background: "var(--tdt-hover, rgba(127, 127, 127, 0.14))"
+					background: "var(--tdt-hover,rgba(38,49,72,.06))"
 				}
 			}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (() => {
 				const hit = resolvedAttachments?.find((r) => r.name === att.name && r.kind === att.kind && r.path !== void 0 && r.anchorSessionId !== void 0);
@@ -67873,7 +67965,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				role: "dialog",
 				"aria-label": mode === "create" ? t("editorNew") : t("editorEdit")
 			}, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-ed-resizer",
+				className: "dsh-tdt-resizer dsh-tdt-ed-resizer",
 				title: t("previewResize"),
 				onPointerDown: (event) => {
 					startResize(event);
@@ -69012,7 +69104,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("h3", { style: {
 				fontSize: "var(--tdt-font-md)",
 				fontWeight: 700,
-				color: "var(--tdt-fg,#1a1a1a)",
+				color: "var(--tdt-fg,#1f2328)",
 				margin: "0",
 				letterSpacing: ".02em"
 			} }, t("settingsBasic")), infoRow(t("settingsTitleFormat"), t("title")), infoRow(t("settingsDesc"), t("description")), infoRow(t("settingsLang"), t("settingsLangValue"))), (0, react$1.createElement)("section", { style: {
@@ -69022,7 +69114,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("h3", { style: {
 				fontSize: "var(--tdt-font-md)",
 				fontWeight: 700,
-				color: "var(--tdt-fg,#1a1a1a)",
+				color: "var(--tdt-fg,#1f2328)",
 				margin: "0",
 				letterSpacing: ".02em"
 			} }, t("settingsParams")), ...FIELDS.map((f) => (0, react$1.createElement)("div", { style: {
@@ -69032,7 +69124,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("label", { style: {
 				fontSize: "var(--tdt-font-md)",
 				fontWeight: 600,
-				color: "var(--tdt-fg,#1a1a1a)"
+				color: "var(--tdt-fg,#1f2328)"
 			} }, t(f.labelKey)), (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
@@ -69090,7 +69182,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				fontWeight: 600
 			} }, label), (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-md)",
-				color: "var(--tdt-fg,#1a1a1a)",
+				color: "var(--tdt-fg,#1f2328)",
 				lineHeight: 1.5,
 				whiteSpace: "pre-wrap"
 			} }, value));
@@ -69506,48 +69598,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			* pointerup 恢复，并清掉已有选区。
 			*/
 			const startResize = (0, react$1.useCallback)((start) => {
-				start.preventDefault?.();
 				const startX = start.clientX;
 				const startWidth = previewWidth;
-				const body = document.body;
-				const prevUserSelect = body.style.userSelect;
-				body.style.userSelect = "none";
-				window.getSelection()?.removeAllRanges();
-				const rootEl = document.getElementById("dsh-tdt-root");
-				const dockEl = rootEl?.querySelector(".dsh-tdt-sv-preview-dock");
-				rootEl?.classList.add("dsh-tdt-resizing");
-				let frame = 0;
-				let lastX = startX;
-				const applyWidth = (clientX) => {
-					const next = clampPreviewWidth(startWidth - (clientX - startX), editorTaken);
-					if (dockEl !== null) dockEl.style.width = `${next}px`;
-					else rootEl?.style.setProperty("--dsh-tdt-preview-w", `${next}px`);
-				};
-				const onMove = (event) => {
-					lastX = event.clientX;
-					if (frame !== 0) return;
-					frame = requestAnimationFrame(() => {
-						frame = 0;
-						applyWidth(lastX);
-					});
-				};
-				const onUp = (event) => {
-					if (frame !== 0) {
-						cancelAnimationFrame(frame);
-						frame = 0;
-					}
-					window.removeEventListener("pointermove", onMove);
-					window.removeEventListener("pointerup", onUp);
-					rootEl?.classList.remove("dsh-tdt-resizing");
-					const next = clampPreviewWidth(startWidth - (event.clientX - startX), editorTaken);
-					setPreviewWidth(next);
-					try {
-						window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(next));
-					} catch {}
-					body.style.userSelect = prevUserSelect;
-				};
-				window.addEventListener("pointermove", onMove);
-				window.addEventListener("pointerup", onUp);
+				startResizeLayoutWidth({
+					startEvent: start,
+					compute: (clientX) => clampPreviewWidth(startWidth - (clientX - startX), editorTaken),
+					onMove: (w) => {
+						const rootEl = document.getElementById("dsh-tdt-root");
+						const dockEl = rootEl?.querySelector(".dsh-tdt-sv-preview-dock");
+						if (dockEl !== null) dockEl.style.width = `${w}px`;
+						else rootEl?.style.setProperty("--dsh-tdt-preview-w", `${w}px`);
+					},
+					onCommit: (w) => {
+						setPreviewWidth(w);
+						try {
+							window.localStorage.setItem(PREVIEW_WIDTH_KEY, String(w));
+						} catch {}
+					},
+					rootClass: "dsh-tdt-resizing",
+					rafThrottle: true
+				});
 			}, [previewWidth, editorTaken]);
 			const overview = useTaskOverview();
 			/** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
@@ -70162,47 +70232,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setViewErr(null);
 					if (needArchive) rearchive(closed);
 				}
-			}) : null, viewErr !== null ? (0, react$1.createElement)("div", {
-				style: {
-					position: "fixed",
-					left: "50%",
-					bottom: "18px",
-					transform: "translateX(-50%)",
-					zIndex: 1020,
-					maxWidth: "90%",
-					boxSizing: "border-box",
-					background: "var(--tdt-fg, rgba(40,40,40,.92))",
-					color: "var(--tdt-fg-inverse, #fff)",
-					border: "none",
-					borderRadius: "var(--tdt-radius-md, 8px)",
-					padding: "8px 14px",
-					fontSize: "var(--tdt-font-sm)",
-					lineHeight: "1.6",
-					display: "flex",
-					alignItems: "center",
-					gap: "8px",
-					boxShadow: "var(--tdt-shadow-2, 0 8px 28px rgba(0,0,0,.3))"
-				},
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("span", { style: {
-				flex: "none",
-				width: "7px",
-				height: "7px",
-				borderRadius: "50%",
-				background: "var(--tdt-fg-inverse, #fff)",
-				opacity: .65
-			} }), (0, react$1.createElement)("span", null, viewErr), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "sm",
-				icon: "✕",
-				label: t("debugClose"),
-				style: { color: "inherit" },
-				onClick: () => {
+			}) : null, viewErr !== null ? (0, react$1.createElement)(FloatingToast, {
+				seq: "view-err",
+				tone: "neutral",
+				closable: true,
+				text: viewErr,
+				closeLabel: t("debugClose"),
+				onDone: () => {
 					setViewErr(null);
 				}
-			})) : null, editor !== null ? (0, react$1.createElement)(TaskEditorDrawer, {
+			}) : null, editor !== null ? (0, react$1.createElement)(TaskEditorDrawer, {
 				key: editor.id,
 				t,
 				overview,

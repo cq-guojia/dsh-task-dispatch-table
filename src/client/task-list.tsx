@@ -1123,12 +1123,10 @@ function TaskExpandPanel(props: {
                   h('td', { style: { ...miniCellStyle, maxWidth: 0 } },
                     instance.note === null || instance.note === undefined || instance.note === ''
                       ? null
-                      : h('span', {
+                      :                       h('span', {
                         title: instance.note,
-                        style: {
-                          display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          color: 'var(--tdt-fg-3)',
-                        },
+                        className: 'dsh-tdt-ellipsis',
+                        style: { display: 'block', color: 'var(--tdt-fg-3)' },
                       }, instance.note),
                   ),
                   // ⑦ 产出物（**倒数第二列**，紧挨「查看会话」）：官方文件类型图标 ≤3 个；

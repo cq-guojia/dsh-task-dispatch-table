@@ -5,8 +5,8 @@
  * **只许 import 本文件导出的东西**，不许绕过它直接摸 `ui/` 里的具体文件 —— 否则「一类控件唯一实现」
  * 这条就守不住了。
  *
- * 当前导出（2026-10-04）：token 表 + 注入器 + 分段控件 + 按钮/图标钮 + 输入类（Input / 前缀框 / 数字框）
- * + 下拉（SelectField）+ 任务选择器（TaskPicker）+ 开关皮肤 + 日期/时间 + 时间范围 + 跑马灯 + Loading。
+ * 当前导出（2026-10-05）：token 表 + 注入器 + 分段控件 + 按钮/图标钮 + 输入类（Input / 前缀框 / 数字框
+ * / 多行文本 Textarea / 勾选框 Checkbox）+ 下拉（SelectField）+ 任务选择器（TaskPicker）+ 开关皮肤 + 日期/时间 + 时间范围 + 跑马灯 + Loading。
  * 每加一个控件就在这里加一行导出，并在手册 §二「唯一实现表」里登记。
  */
 import type { CSSProperties } from 'react'
@@ -78,3 +78,6 @@ export {
 } from './time-range'
 export { Loading, RunningBlocks, type LoadingProps } from './Loading'
 export { LOADING_DOMAIN, LOADING_CSS, ensureLoadingStyle } from './loading-css'
+export { Textarea, type TextareaProps } from './Textarea'
+export { Checkbox, type CheckboxProps } from './Checkbox'
+export { startResizeLayoutWidth, type ResizeOptions } from './resizer'

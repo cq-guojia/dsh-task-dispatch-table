@@ -138,16 +138,16 @@ export function ConfigPanel(props: ConfigPanelProps) {
   return h('div', { style: { display: 'flex', flexDirection: 'column', gap: '22px', padding: '4px 2px', maxWidth: '640px' } },
     // —— 基础信息（只读展示；宿主已在上方渲染图标/名称/简介，这里补「标题写法 / 语言」说明）——
     h('section', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-      h('h3', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 700, color: 'var(--tdt-fg,#1a1a1a)', margin: '0', letterSpacing: '.02em' } }, t('settingsBasic')),
+      h('h3', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 700, color: 'var(--tdt-fg,#1f2328)', margin: '0', letterSpacing: '.02em' } }, t('settingsBasic')),
       infoRow(t('settingsTitleFormat'), t('title')),
       infoRow(t('settingsDesc'), t('description')),
       infoRow(t('settingsLang'), t('settingsLangValue')),
     ),
     // —— 运行参数（可编辑，实时生效）——
     h('section', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
-      h('h3', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 700, color: 'var(--tdt-fg,#1a1a1a)', margin: '0', letterSpacing: '.02em' } }, t('settingsParams')),
+      h('h3', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 700, color: 'var(--tdt-fg,#1f2328)', margin: '0', letterSpacing: '.02em' } }, t('settingsParams')),
       ...FIELDS.map((f) => h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
-        h('label', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600, color: 'var(--tdt-fg,#1a1a1a)' } }, t(f.labelKey)),
+        h('label', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600, color: 'var(--tdt-fg,#1f2328)' } }, t(f.labelKey)),
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
           h(NumberInput, {
             value: draft[f.key],
@@ -186,6 +186,6 @@ function infoRow(label: string, value: string) {
     },
   },
     h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2,#888)', fontWeight: 600 } }, label),
-    h('span', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg,#1a1a1a)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, value),
+    h('span', { style: { fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg,#1f2328)', lineHeight: 1.5, whiteSpace: 'pre-wrap' } }, value),
   )
 }

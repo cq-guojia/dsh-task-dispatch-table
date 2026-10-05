@@ -53,7 +53,7 @@ import {
   type TimeLabels,
   type WeekdayLabels,
 } from './editor-fields'
-import { Button as TdtButton, IconButton, NumberInput, PrefixedInput as TdtPrefixedInput, Segmented } from './ui'
+import { Button as TdtButton, Checkbox, IconButton, NumberInput, PrefixedInput as TdtPrefixedInput, Segmented, startResizeLayoutWidth, Textarea } from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
 import { renderSchedule, scheduleCron, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
@@ -1597,13 +1597,13 @@ export function TaskEditorDrawer(props: {
       h('div', { className: 'dsh-tdt-ed-label' }, t('editorPrompt')),
       h(Button, { variant: 'ghost', size: 'sm', title: t('editorOpenEditor'), 'aria-label': t('editorOpenEditor'), onClick: openEditorPanel }, t('editorOpenEditor')),
     ),
-    h('textarea', {
+    h(Textarea, {
       id: 'dsh-tdt-ed-source-inline-panel',
-      className: `dsh-tdt-ed-prompt${problemsByField('prompt') ? ' dsh-tdt-ed-prompt--error' : ''}`,
       value: draft.prompt,
       placeholder: t('editorPromptPh'),
       spellCheck: false,
-      onChange: (event: { target: { value: string } }) => { patch({ prompt: event.target.value }) },
+      error: problemsByField('prompt') !== undefined,
+      onChange: (value: string) => { patch({ prompt: value }) },
     }),
     // 底部一行：左 = 工作区（真实工作区列表，P1 接）；工作区右侧 = 权限档位（决策 50）；
     // 右 = 模型（不填 = 默认模型）。
@@ -1713,12 +1713,12 @@ export function TaskEditorDrawer(props: {
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
     draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
           // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
-          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-sm)', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } },
+          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-sm)', background: 'var(--tdt-hover,rgba(38,49,72,.06))' } },
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
             // 文件名占据左侧所有可用空间，把「上传/链接」标签和「移除」按钮顶到最右边；
             // 自己保留 flex-shrink，容器窄时自动截断成省略号，不会挤变形按钮（用户 2026-10-03）。
-            h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-md)' } }, att.name),
-            h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
+            h('span', { className: 'dsh-tdt-ellipsis', style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } }, att.name),
+            h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover,rgba(38,49,72,.06))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
             // 查看：与 overview 解析结果按「同名 + 同 kind」配对，配对上有绝对路径和锚点会话 ⇒ 点开侧边栏预览。
             // 未保存 / 配对不上（上传后还没跑出锚点会话）的附件不显示，避免给假入口（用户 2026-10-05）。
             (() => {
@@ -2394,7 +2394,7 @@ export function TaskEditorDrawer(props: {
       'aria-label': mode === 'create' ? t('editorNew') : t('editorEdit'),
     },
       h('div', {
-        className: 'dsh-tdt-ed-resizer',
+        className: 'dsh-tdt-resizer dsh-tdt-ed-resizer',
         title: t('previewResize'),
         onPointerDown: (event: { clientX: number; preventDefault: () => void }) => { startResize(event) },
       }),
