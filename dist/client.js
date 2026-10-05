@@ -3088,6 +3088,11 @@ body[data-ds-dark-theme]{
 		* - **起 / 止框定长**（用户 2026-10-02：填进内容就撑开、不停跳——宽度固定，不随值变）。
 		* - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
 		*/
+		/** 本控件固定宽度（覆盖 MD 基类默认）：用户 2026-10-05 收窄。
+		* 日期 113 / 时分 80 / 预制 83；均 ≥ 内容最小宽，只收掉多余留白，不切 md/sm。 */
+		const DATE_FIELD_W = 113;
+		const TIME_FIELD_W = 80;
+		const PRESET_W = 83;
 		const labelStyle = {
 			display: "inline-flex",
 			alignItems: "center",
@@ -3172,7 +3177,8 @@ body[data-ds-dark-theme]{
 					ariaLabel: hint,
 					labels: calendarLabels,
 					size,
-					disabled: props.disabled
+					disabled: props.disabled,
+					width: DATE_FIELD_W
 				}), withTime ? (0, react$1.createElement)(TimeField, {
 					value: time,
 					onChange: (next) => {
@@ -3182,14 +3188,10 @@ body[data-ds-dark-theme]{
 					ariaLabel: hint,
 					labels: timeLabels,
 					size,
-					disabled: props.disabled
+					disabled: props.disabled,
+					width: TIME_FIELD_W
 				}) : null);
 			};
-			const selectWidth = (0, react$1.useMemo)(() => Math.max(...[
-				labels.all,
-				labels.custom,
-				...Object.values(labels.presets)
-			].map((text) => fieldWidthOf(text, size))) + 11, [labels, size]);
 			return (0, react$1.createElement)("div", { style: {
 				display: "inline-flex",
 				alignItems: "center",
@@ -3216,7 +3218,7 @@ body[data-ds-dark-theme]{
 				emptyLabel: labels.all,
 				ariaLabel: labels.all,
 				size,
-				width: selectWidth,
+				width: PRESET_W,
 				disabled: props.disabled
 			}));
 		}

@@ -10,9 +10,15 @@
  * - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
  */
 import { createElement as h, Fragment, useMemo, type ReactElement } from 'react'
-import { DateField, TimeField, fieldWidthOf, type CalendarLabels, type TimeLabels } from './DateTime'
+import { DateField, TimeField, type CalendarLabels, type TimeLabels } from './DateTime'
 import { SelectField, type EditorOption } from './Field'
 import { ALL_TIME_PRESETS, presetRange, type TimePrecision, type TimePresetId, type TimeRangeValue } from './time-range'
+
+/** 本控件固定宽度（覆盖 MD 基类默认）：用户 2026-10-05 收窄。
+ * 日期 113 / 时分 80 / 预制 83；均 ≥ 内容最小宽，只收掉多余留白，不切 md/sm。 */
+const DATE_FIELD_W = 113
+const TIME_FIELD_W = 80
+const PRESET_W = 83
 
 /** 各预设档的显示名（由调用方按语言给）。 */
 export type TimePresetLabels = Record<TimePresetId, string>
@@ -106,34 +112,26 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
     const time = timeOf(raw)
     const hint = which === 'from' ? labels.from : labels.to
     return h(Fragment, null,
-      // 宽度**不写死**：走基础层字段壳的默认（inline-flex ⇒ 刚好包住内容）。
-      // （用户 2026-10-04：时间控件别留多余长度，默认就该「刚好把这几个字显示完，不要长也不要短」。）
+      // 固定宽（覆盖 MD 基类默认）：日期框定长 113，刚好放 `0000-00-00` 不抖动。
       h(DateField, {
         value: date,
         onChange: (next: string) => { merge({ [which]: join(which, next, time) } as Partial<TimeRangeValue>) },
         placeholder: hint,
         ariaLabel: hint,
-        labels: calendarLabels, size, disabled: props.disabled,
+        labels: calendarLabels, size, disabled: props.disabled, width: DATE_FIELD_W,
       }),
-      // ④ 有小时分钟就**跟在那两个框后面**。
+      // ④ 有小时分钟就**跟在那两个框后面**，定长 80（刚好放 `00:00`）。
       withTime
         ? h(TimeField, {
           value: time,
           onChange: (next: string) => { merge({ [which]: join(which, date === '' ? todayIso() : date, next) } as Partial<TimeRangeValue>) },
           placeholder: 'HH:mm',
           ariaLabel: hint,
-          labels: timeLabels, size, disabled: props.disabled,
+          labels: timeLabels, size, disabled: props.disabled, width: TIME_FIELD_W,
         })
         : null,
     )
   }
-
-  // 下拉**定宽**：按「全部 + 全部预设 + 自定义」里最长的一个算 ⇒ 选到「自定义」时也不会变宽
-  // （用户 2026-10-05：宽度定死，不要左右跳；预设档文案已统一成两个字）。
-  const selectWidth = useMemo(
-    () => Math.max(...[labels.all, labels.custom, ...Object.values(labels.presets)].map(text => fieldWidthOf(text, size))) + 11,
-    [labels, size],
-  )
 
   // 定式（用户 2026-10-02）：`<起始框> ～ <结束框> <范围>` —— 不写「时间：」，
   // 两端各用**灰色占位**（起始时间 / 截止时间）自证身份，中间用 `～` 连接；「范围」下拉在**最后**。
@@ -154,7 +152,7 @@ export function TimeRange(props: TimeRangeProps): ReactElement {
       emptyLabel: labels.all,
       ariaLabel: labels.all,
       size,
-      width: selectWidth,
+      width: PRESET_W,
       disabled: props.disabled,
     }),
   )

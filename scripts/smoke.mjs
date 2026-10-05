@@ -1520,11 +1520,11 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       !/h\(Tooltip, \{ label: note, side: 'top' \}/.test(tlSrc10)
       && !/statusTag\.tone === 'bad' \|\| note === ''/.test(tlSrc10)
       && /: h\('div', \{ className: 'dsh-tdt-rec-note dsh-tdt-ellipsis' \}/.test(tlSrc10))
-    check('第十轮：时间控件**定死宽度**（md 下 日期 118 / 时分 82 / 预设 88）',
+    check('第十轮：时间控件**定死宽度**（覆盖 MD 基类默认：日期 113 / 时分 80 / 预制 83）',
       dtSrc.includes('width: props.width ?? dateWidthOf(size)') && dtSrc.includes('width: props.width ?? timeWidthOf(size)')
       && dtSrc.includes("fieldWidthOf('0000-00-00', size) + 7") && dtSrc.includes("fieldWidthOf('00:00', size) + 7")
-      && trSrc10.includes('width: selectWidth,') && trSrc10.includes('Math.max(...[labels.all, labels.custom')
-      && /\) \+ 11,/.test(trSrc10)
+      && trSrc10.includes('const DATE_FIELD_W = 113') && trSrc10.includes('const TIME_FIELD_W = 80') && trSrc10.includes('const PRESET_W = 83')
+      && trSrc10.includes('width: DATE_FIELD_W,') && trSrc10.includes('width: TIME_FIELD_W,') && trSrc10.includes('width: PRESET_W,')
       && locSrc10.includes("trLastMonth: '上月'"))
     check('第十轮：展开时头部高亮**紧贴**分隔线（容器 gap 归零，不留距离）',
       /\.dsh-tdt-rec-item\{[^}]*gap:0;/.test(tlSrc10))
