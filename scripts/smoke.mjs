@@ -2837,10 +2837,13 @@ console.log('\n[14] runtime-index')
     check('日程：每分钟档整月不截断（23760 条，证明分片有效）', countOf(perMinute) === 23760, `实际 ${countOf(perMinute)}`)
 
     // 月区间 = 半开 [月首, 次月首)（与执行记录页同一条规矩）。
-    const range = monthRangeOf(2026, 9)
-    const query = monthRangeQuery(2026, 9)
-    check('日程：月区间半开 [月首 00:00, 次月首 00:00)',
-      range.from.getTime() === new Date(2026, 9, 1).getTime() && range.to.getTime() === new Date(2026, 10, 1).getTime())
+    // ⚠️ month **1-based**（与 `buildMonthCells` / 日历页 `cursor.m` 同口径）—— 2026-10-05 真机 bug：
+    // 此处曾按 0-based 写 ⇒ 页面显示 10 月却查了 11 月，整页读不出任何记录。下面这条断言就是守它的。
+    const range = monthRangeOf(2026, 10)
+    const query = monthRangeQuery(2026, 10)
+    check('日程：月区间半开 [月首 00:00, 次月首 00:00)，且 month 为 1-based（传 10 = 十月）',
+      range.from.getTime() === new Date(2026, 9, 1).getTime() && range.to.getTime() === new Date(2026, 10, 1).getTime()
+      && range.from.getMonth() === 9)
     check('日程：查询串可回解成同一区间',
       Date.parse(query.fromTs) === range.from.getTime() && Date.parse(query.toTs) === range.to.getTime())
 

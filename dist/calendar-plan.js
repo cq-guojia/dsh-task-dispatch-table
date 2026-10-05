@@ -34,10 +34,13 @@ function toScheduleNext(task) {
  * 上界取次月首（`day` 精度）而不是「月末 23:59:59.999」——与执行记录页同一条半开区间规矩
  * （`client/ui/time-range.ts` 的 `rangeToQuery` + `store.ts` 的 `scheduled_at < toTs`）。
  *
- * @param month 0-based（0 = 一月，与 `Date` 同口径）。
+ * @param month **1-based（1 = 一月）** —— 与 `buildMonthCells` / `monthTitle` 同口径，
+ *   与 `Date` 的 0-based 差一。⚠️ 2026-10-05 真机 bug：此处原按 0-based 写，而调用方（日历页
+ *   `cursor.m`）是 1-based ⇒ 显示 10 月却查了 11 月的区间，整页一条记录都读不出来。
+ *   **日历里所有「月份」参数一律 1-based**，别再混。
  */
 export function monthRangeOf(year, month) {
-    return { from: new Date(year, month, 1, 0, 0, 0, 0), to: new Date(year, month + 1, 1, 0, 0, 0, 0) };
+    return { from: new Date(year, month - 1, 1, 0, 0, 0, 0), to: new Date(year, month, 1, 0, 0, 0, 0) };
 }
 /** 月区间 → 服务端查询串（ISO；与 `rangeToQuery` 同口径的 `.toISOString()`）。 */
 export function monthRangeQuery(year, month) {
