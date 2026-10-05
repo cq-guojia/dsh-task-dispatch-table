@@ -3089,10 +3089,10 @@ body[data-ds-dark-theme]{
 		* - 边界归一（半开区间）在 `time-range.ts`，控件只产出展示值。
 		*/
 		/** 本控件固定宽度（覆盖 MD 基类默认）：用户 2026-10-05 收窄。
-		* 日期 113 / 时分 80 / 预制 83；均 ≥ 内容最小宽，只收掉多余留白，不切 md/sm。 */
-		const DATE_FIELD_W = 113;
+		* 日期 115 / 时分 80 / 预制 80；均 ≥ 内容最小宽，只收掉多余留白，不切 md/sm。 */
+		const DATE_FIELD_W = 115;
 		const TIME_FIELD_W = 80;
-		const PRESET_W = 83;
+		const PRESET_W = 80;
 		const labelStyle = {
 			display: "inline-flex",
 			alignItems: "center",
