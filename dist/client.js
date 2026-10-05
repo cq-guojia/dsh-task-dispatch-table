@@ -69143,17 +69143,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
 .dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
 .dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
-/* 选中格：底色**保持正常**，不加任何框 —— 「激活」由下面那两条横线表达（用户 2026-10-06）。 */
-.dsh-tdt-cal-cell--sel{background:var(--tdt-surface-1);outline:0;}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-surface-1);}
-/* 选中日所在那一行的**上方**那条线：逐格画（格子是 grid 的直接子项，没有整行容器可画），
-   每格一条 5px 亮蓝横线、离边 4px（用户：线高至少 5、内间距至少 4）⇒ 拼起来就是整行一条线。 */
-.dsh-tdt-cal-cell--weektop{position:relative;}
-.dsh-tdt-cal-cell--weektop::before{content:'';position:absolute;left:4px;right:4px;top:4px;height:5px;
+/* 选中格（**点开的那一块**）= 顶部一条 5px 亮蓝横线（离边 4px）+ **底色微微变化**
+   （--tdt-open-bg-soft：比 -open-bg 更淡的蓝，与蓝线呼应；用户 2026-10-06：完全没变化很奇怪）。
+   其余格子**保持原样**：不加线、底色不变。
+   ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。 */
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-open-bg-soft);outline:0;}
+.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-open-bg-soft);}
+.dsh-tdt-cal-cell--sel::before{content:'';position:absolute;left:4px;right:4px;top:4px;height:5px;
   background:var(--tdt-business);}
-/* 「把当前日期的那一块空开」：选中格与补位格都不画线 ⇒ 线到那儿就断了。 */
-.dsh-tdt-cal-cell--weektop.dsh-tdt-cal-cell--sel::before,
-.dsh-tdt-cal-cell--weektop.dsh-tdt-cal-cell--out::before{display:none;}
 .dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
@@ -69187,7 +69184,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    并且在**选中日那一列断开**（把当前日期空开）⇒ 与上面那一行的线成一对，像从那一格拉出来。
    断口位置：列宽 = (100% - 6px)/7（6 个 1px 间隙），用 --cal-col（选中列序号，0 起）算。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-surface-1);border:0;border-radius:0;
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-open-bg-soft);border:0;border-radius:0;
   --cal-col-w:calc((100% - 6px) / 7);
   --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
