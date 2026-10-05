@@ -276,6 +276,9 @@ options: readonly TaskOption[]      // 候选全量（带 workspace / enabled）
                                     //（与 L3 的 EditorTaskOption 同形，**刻意不反向 import 业务文件**）
 scope?: string                      // 外部受控工作区；'' | undefined = 不限；变化 ⇒ 候选重算
 excludeIds?: readonly string[]      // 排除项（已选前置 + 当前任务自己）
+allOption?: { value: string; label: string }
+                                    // [2026-10-05] 顶部常驻「全部」哨兵（value 通常 ''）：不受作用域与搜索过滤，
+                                    // 选中 ⇒ onChange(allOption.value)；执行记录页用它把任务过滤清回「查所有任务」
 recentLimit?: number                // 默认 10
 placeholder / emptyLabel / ariaLabel / searchPlaceholder: string
 disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 'start' | 'end'
@@ -385,7 +388,7 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 | **焦点** | 所有可交互元素必须可键盘聚焦且有可见焦点环（用 `--tdt-focus`，走 `:focus-visible`）；**不许 `outline:none` 而不给替代** |
 | **图标** | 一律用官方 `Icon*` 组件；尺寸只取 **14 / 16 / 18 / 20** 四档；纯图标按钮**必须**有可读标签（官方 `Tooltip` + `aria-label`）—— ⚠️ Tooltip 的子元素必须是**真 DOM**（裸函数组件 ref 挂不上、提示静默失效）。**图标 / 徽标这类「只有形状没有文字」的元素，悬停提示用官方 `Tooltip`，不用原生 `title`**（原生提示延迟约 1 秒，用户 2026-10-04 明确「太慢」；执行记录页折叠态的圈码即按此从原生 `title` 改成官方 `Tooltip`）。⚠️ **一律用官方 `Tooltip`，不许用原生 `title`**（含被省略号截断的任务名 / 备注 / 完整时刻 —— 用户 2026-10-05：原生提示延迟约 1 秒，太慢） |
 | **加载指示** | **全站只有页面右下角那一个**（基础层 `Loading`，锚在 `PANEL_CONTENT_ID`）：首屏 / 下拉续拉都走它；任何页面、子面板**不许另建**加载点，也**不许显示任何加载文案**（「加载中」「Loading」这类字都不要）—— 还在加载就让它**空着**（用户 2026-10-05 定为硬性规定）。「已加载完 / 到上限」这类**结果提示**不算加载点，可就地显示 |
-| **字段宽度** | 调用点**不许写死** `width`：下拉 / 日期框 / 时分框都走基础层默认（`inline-flex` ⇒ **刚好把内容显示完**，「不要长也不要短」）；确需定长就在基础层一处定（用户 2026-10-04） |
+| **字段宽度** | 调用点**不许写死** `width`：下拉 / 日期框 / 时分框都走基础层默认（`inline-flex` ⇒ **刚好把内容显示完**，「不要长也不要短」）；确需定长就在基础层一处定（用户 2026-10-04）。⚠️ **唯一例外（2026-10-05 用户拍板）**：执行记录页的 `TimeRange` 三框在**控件内**用固定常量覆盖 MD 默认（日期 115 / 时分 80 / 预制 80，均 ≥ 内容最小宽不截字）—— 本控件「不许跳」压过「不许写死」，**不得照抄到别处，也不得当 bug 改回**（过程见 [`../worklog/execution-timeline.md`](../worklog/execution-timeline.md) §18.1） |
 | **文件显示（硬性规定）** | 任何**只显示图标、没显示文件名**的地方（附件 / 产出物 / 交付物 …），悬停**必须**把**文件名（含后缀）**显示出来，提示走官方 `Tooltip`；打不开时图标也不可点（不给假入口）（用户 2026-10-05 定为硬性规定） |
 | **动效** | 时长 / 缓动走 `--tdt-dur` / `--tdt-ease`；**必须尊重 `prefers-reduced-motion: reduce`**（关掉位移 / 脉动类动画） |
 | **文本溢出** | 单行溢出用 `text-overflow:ellipsis`（配 `min-width:0`）；确实需要看全的用跑马灯（`MarqueeText`，**只在自己盒子里滚，不许盖住同行图标**） |
