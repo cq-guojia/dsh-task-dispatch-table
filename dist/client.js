@@ -69192,11 +69192,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
   overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
-/* 左段：从左边（离边 4px）到选中列的左沿（再让开 5px）；右段：从选中列右沿（+5px）到右边。 */
+/* 左段：从面板左边（内缩 4px）起，**正好停在选中格的左边缘**；右段：**正好从选中格的右边缘**起，
+   到面板右边（内缩 4px）。⚠️ 断口两端**不许再留间距** —— 用户 2026-10-06：端点要**正对**上面
+   点开那一格的左右两边（只有最外两侧才是 4px 内间距）。 */
 .dsh-tdt-cal-panel::before,.dsh-tdt-cal-panel::after{content:'';position:absolute;top:4px;height:5px;
   background:var(--tdt-business);}
-.dsh-tdt-cal-panel::before{left:4px;width:calc(var(--cal-cut) - 5px);}
-.dsh-tdt-cal-panel::after{left:calc(var(--cal-cut) + var(--cal-col-w) + 5px);right:4px;}
+.dsh-tdt-cal-panel::before{left:4px;width:calc(var(--cal-cut) - 4px);}
+.dsh-tdt-cal-panel::after{left:calc(var(--cal-cut) + var(--cal-col-w));right:4px;}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
 /* 图例色块（与格内标签同款：3px 竖线 + 同深度的底，**无圆角**） */
 .dsh-tdt-cal-swatch{flex:none;width:16px;height:12px;border-radius:0;overflow:hidden;
@@ -69568,7 +69570,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return (0, react$1.createElement)("button", {
 						key: cell.iso,
 						type: "button",
-						className: `dsh-tdt-cal-cell${cell.iso === selected ? " dsh-tdt-cal-cell--sel" : ""}${cut >= 0 ? " dsh-tdt-cal-cell--weektop" : ""}`,
+						className: `dsh-tdt-cal-cell${cell.iso === selected ? " dsh-tdt-cal-cell--sel" : ""}`,
 						onClick: () => {
 							setSelected(cell.iso === selected ? "" : cell.iso);
 							setOpenId(null);
