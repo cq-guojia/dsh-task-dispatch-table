@@ -774,6 +774,10 @@ window.__ModuleLoader__.load({
 			editorViewCollapse: "收起",
 			editorViewSwitchTitle: "放弃未保存的修改？",
 			editorViewSwitchDesc: "当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。",
+			editorEditSwitchTitle: "编辑内容尚未保存",
+			editorEditSwitchDesc: "你正在编辑的任务有未保存的修改。直接覆盖会丢弃这些修改并打开新任务的编辑器；继续编辑可保留当前内容。",
+			editorEditSwitchKeep: "继续编辑",
+			editorEditSwitchOverwrite: "直接覆盖",
 			cardTabInfo: "基础信息",
 			cardTabRecords: "执行记录",
 			cardTabLogs: "日志",
@@ -1389,6 +1393,10 @@ window.__ModuleLoader__.load({
 			editorViewCollapse: "Collapse",
 			editorViewSwitchTitle: "Discard unsaved changes?",
 			editorViewSwitchDesc: "This task has unsaved edits. Continuing will discard them and open the task you want to view.",
+			editorEditSwitchTitle: "Unsaved edits",
+			editorEditSwitchDesc: "The task you are editing has unsaved changes. Overwriting discards them and opens the new task’s editor; keep editing to preserve your changes.",
+			editorEditSwitchKeep: "Keep editing",
+			editorEditSwitchOverwrite: "Overwrite",
 			cardTabInfo: "Basic info",
 			cardTabRecords: "Run records",
 			cardTabLogs: "Logs",
@@ -66483,10 +66491,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				justifyContent: "flex-end",
 				gap: "8px"
 			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "outline",
+				variant: "ghost",
 				size: "sm",
 				onClick: props.onCancel
-			}, props.t("editorCancel")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, props.t("editorCancel")), props.middleLabel !== void 0 && props.onMiddle !== void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				variant: "outline",
+				size: "sm",
+				onClick: props.onMiddle
+			}, props.middleLabel) : null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "primary",
 				size: "sm",
 				disabled: needAck && !acked,
@@ -66724,7 +66736,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
 			const [viewTab, setViewTab] = (0, react$1.useState)(initialView ?? "edit");
 			const openedTaskRef = (0, react$1.useRef)(currentTaskId ?? "");
 			(0, react$1.useEffect)(() => {
@@ -67858,6 +67870,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onConfirm: () => {
 					onConfirmPendingView?.();
 				}
+			}) : null, pendingEdit !== null && pendingEdit !== void 0 ? (0, react$1.createElement)(VersionConfirm, {
+				t,
+				title: t("editorEditSwitchTitle"),
+				desc: t("editorEditSwitchDesc"),
+				middleLabel: t("editorEditSwitchKeep"),
+				confirmLabel: t("editorEditSwitchOverwrite"),
+				onCancel: () => {
+					onCancelPendingEdit?.();
+				},
+				onMiddle: () => {
+					onCancelPendingEdit?.();
+				},
+				onConfirm: () => {
+					onConfirmPendingEdit?.();
+				}
 			}) : null);
 			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-ed-panel",
@@ -68120,7 +68147,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-dep--click{cursor:pointer;}
 /* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --tdt-hover）；框内任务名 hover **不变色**
    （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
-.dsh-tdt-rec-dep--click:hover{background:var(--tdt-hover);}
+.dsh-tdt-rec-dep--click:hover{background:var(--tdt-chip-bg-hover);}
 .dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--tdt-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
@@ -69575,6 +69602,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					});
 					return;
 				}
+				if (editor !== null && editorDirtyRef.current) {
+					setPendingEdit({ id });
+					return;
+				}
+				openEditorNow(id);
+			};
+			/** 真正打开编辑（不检查未保存冲突）：完整定义反解成草稿。 */
+			const openEditorNow = (id) => {
 				const found = findDefinition(id);
 				if (found === null) {
 					setViewErr("找不到该任务的定义，无法编辑（任务表可能刚被改动，请刷新后重试）");
@@ -69635,6 +69670,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const target = pendingView;
 				setPendingView(null);
 				if (target !== null) openViewerNow(target.id);
+			};
+			/** 待确认的「放弃未保存修改、改去编辑另一个任务」。 */
+			const [pendingEdit, setPendingEdit] = (0, react$1.useState)(null);
+			/** 确认放弃修改、切去编辑目标任务（旧编辑被丢弃、新任务重新反解）。 */
+			const confirmPendingEdit = () => {
+				const target = pendingEdit;
+				setPendingEdit(null);
+				if (target !== null) openEditorNow(target.id);
 			};
 			/**
 			* 启用开关实时写回（编辑态专用，用户 2026-09-30）：POST /tasks/enabled { id, enabled }。
@@ -70160,6 +70203,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setViewErr(null);
 				}
 			})) : null, editor !== null ? (0, react$1.createElement)(TaskEditorDrawer, {
+				key: editor.id,
 				t,
 				overview,
 				mode: editor.mode,
@@ -70204,6 +70248,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onConfirmPendingView: confirmPendingView,
 				onCancelPendingView: () => {
 					setPendingView(null);
+				},
+				pendingEdit,
+				onConfirmPendingEdit: confirmPendingEdit,
+				onCancelPendingEdit: () => {
+					setPendingEdit(null);
 				},
 				onOpenSession: viewSession !== null ? (sessionId) => {
 					openView(sessionId);

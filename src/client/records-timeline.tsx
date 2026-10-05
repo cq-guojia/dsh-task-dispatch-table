@@ -194,7 +194,7 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-dep--click{cursor:pointer;}
 /* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --tdt-hover）；框内任务名 hover **不变色**
    （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
-.dsh-tdt-rec-dep--click:hover{background:var(--tdt-hover);}
+.dsh-tdt-rec-dep--click:hover{background:var(--tdt-chip-bg-hover);}
 .dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--tdt-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */

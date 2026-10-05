@@ -656,6 +656,16 @@ function TaskPage(props: {
       setEditor({ ...editor, view: 'edit' })
       return
     }
+    // 正在编辑**另一个任务**且草稿有未保存修改 ⇒ 先弹确认（用户 2026-10-05 修正：此前会静默覆盖、编辑全废）。
+    // 确认「直接覆盖」才丢弃并打开新任务；「取消 / 继续编辑」留在当前。
+    if (editor !== null && editorDirtyRef.current) {
+      setPendingEdit({ id })
+      return
+    }
+    openEditorNow(id)
+  }
+  /** 真正打开编辑（不检查未保存冲突）：完整定义反解成草稿。 */
+  const openEditorNow = (id: string): void => {
     const found = findDefinition(id)
     if (found === null) {
       setViewErr('找不到该任务的定义，无法编辑（任务表可能刚被改动，请刷新后重试）')
@@ -705,6 +715,15 @@ function TaskPage(props: {
     const target = pendingView
     setPendingView(null)
     if (target !== null) openViewerNow(target.id)
+  }
+  // ── 编辑态切去编辑**另一个任务**：未保存冲突确认（与 pendingView 同思路，给三选）──
+  /** 待确认的「放弃未保存修改、改去编辑另一个任务」。 */
+  const [pendingEdit, setPendingEdit] = useState<{ id: string } | null>(null)
+  /** 确认放弃修改、切去编辑目标任务（旧编辑被丢弃、新任务重新反解）。 */
+  const confirmPendingEdit = (): void => {
+    const target = pendingEdit
+    setPendingEdit(null)
+    if (target !== null) openEditorNow(target.id)
   }
 
   /**
@@ -1462,7 +1481,7 @@ function TaskPage(props: {
     // 新建 / 编辑任务分栏（右侧**占布局的一列**：主窗口被推窄、不被遮盖；与预览 dock 可同时存在）。
     // 工作区 / 模型 = `GET /options` 的真实目录（P1）；前置任务 = 现有任务表（真数据）。
     editor !== null
-      ? h(TaskEditorDrawer, {
+      ? h(TaskEditorDrawer, { key: editor.id,
         t,
         overview,
         mode: editor.mode,
@@ -1494,6 +1513,10 @@ function TaskPage(props: {
         pendingView,
         onConfirmPendingView: confirmPendingView,
         onCancelPendingView: () => { setPendingView(null) },
+        // 未保存时切去编辑另一个任务：同一套抽屉内联确认层（三选）。
+        pendingEdit,
+        onConfirmPendingEdit: confirmPendingEdit,
+        onCancelPendingEdit: () => { setPendingEdit(null) },
         // 查看档里「任务会话 / 产出物」可点：走 U11 单一入口，未就位时 undefined ⇒ 降级不可点。
         onOpenSession: viewSession !== null
           ? (sessionId: string) => { void openView(sessionId) }

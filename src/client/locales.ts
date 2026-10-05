@@ -179,7 +179,7 @@ export type LocaleKey =
   | 'editorViewDraftTag' | 'editorViewNewTag' | 'editorViewUntitled'
   | 'editorViewPrompt' | 'editorViewPromptEmpty' | 'editorViewNoRunDraft' | 'editorViewNotFilled'
   | 'editorViewSourceCode' | 'editorViewExpand' | 'editorViewExpandAll' | 'editorViewCollapse'
-  | 'editorViewSwitchTitle' | 'editorViewSwitchDesc'
+  | 'editorViewSwitchTitle' | 'editorViewSwitchDesc' | 'editorEditSwitchTitle' | 'editorEditSwitchDesc' | 'editorEditSwitchKeep' | 'editorEditSwitchOverwrite'
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
   | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
@@ -772,6 +772,10 @@ export const zh: Record<LocaleKey, string> = {
   editorViewCollapse: '收起',
   editorViewSwitchTitle: '放弃未保存的修改？',
   editorViewSwitchDesc: '当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。',
+  editorEditSwitchTitle: '编辑内容尚未保存',
+  editorEditSwitchDesc: '你正在编辑的任务有未保存的修改。直接覆盖会丢弃这些修改并打开新任务的编辑器；继续编辑可保留当前内容。',
+  editorEditSwitchKeep: '继续编辑',
+  editorEditSwitchOverwrite: '直接覆盖',
   // —— 任务卡片三面板（决策 55）——
   cardTabInfo: '基础信息',
   cardTabRecords: '执行记录',
@@ -1408,6 +1412,10 @@ export const en: Record<LocaleKey, string> = {
   editorViewCollapse: 'Collapse',
   editorViewSwitchTitle: 'Discard unsaved changes?',
   editorViewSwitchDesc: 'This task has unsaved edits. Continuing will discard them and open the task you want to view.',
+  editorEditSwitchTitle: 'Unsaved edits',
+  editorEditSwitchDesc: 'The task you are editing has unsaved changes. Overwriting discards them and opens the new task’s editor; keep editing to preserve your changes.',
+  editorEditSwitchKeep: 'Keep editing',
+  editorEditSwitchOverwrite: 'Overwrite',
   // Task card three panels (decision 55).
   cardTabInfo: 'Basic info',
   cardTabRecords: 'Run records',

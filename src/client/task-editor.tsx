@@ -998,6 +998,9 @@ function VersionConfirm(props: {
   /** 结构化圆点清单（用户 2026-09-30：正文别糊成一坨——说明是说明、条目是条目，层级拉开）。 */
   bullets?: readonly string[]
   confirmLabel?: string
+  /** 可选中钮（三选确认：取消 / 中 / 确认）。编辑切任务冲突确认用它放「继续编辑」。 */
+  middleLabel?: string
+  onMiddle?: () => void
   /** 标题染警告橙（高危确认，如「完全权限」保存确认）。 */
   warning?: boolean
   /** 勾选确认：提供时确认钮在勾选前置灰（用户 2026-09-30：完全权限保存前须打勾）。 */
@@ -1042,7 +1045,10 @@ function VersionConfirm(props: {
         )
         : null,
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px' } },
-        h(Button, { variant: 'outline', size: 'sm', onClick: props.onCancel }, props.t('editorCancel')),
+        h(Button, { variant: 'ghost', size: 'sm', onClick: props.onCancel }, props.t('editorCancel')),
+        props.middleLabel !== undefined && props.onMiddle !== undefined
+          ? h(Button, { variant: 'outline', size: 'sm', onClick: props.onMiddle }, props.middleLabel)
+          : null,
         h(Button, { variant: 'primary', size: 'sm', disabled: needAck && !acked, onClick: props.onConfirm }, props.confirmLabel ?? props.t('editorConfirm')),
       ),
     ),
@@ -1264,6 +1270,10 @@ export function TaskEditorDrawer(props: {
   pendingView?: { id: string } | null
   onConfirmPendingView?: () => void
   onCancelPendingView?: () => void
+  /** 有待确认的「放弃修改、改去编辑另一个任务」请求（非 null ⇒ 本组件弹三选确认）。 */
+  pendingEdit?: { id: string } | null
+  onConfirmPendingEdit?: () => void
+  onCancelPendingEdit?: () => void
   /** 查看档里点「任务会话」打开归档会话（不给 ⇒ 该行不可点）。 */
   onOpenSession?: ((sessionId: string) => void) | undefined
   /** 查看档里点产出物打开文件预览（不给 ⇒ 该行不可点）。 */
@@ -1299,7 +1309,7 @@ export function TaskEditorDrawer(props: {
     t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors,
     officeToPdf, currentTaskId, width, onWidthChange, reserved,
-    initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView,
+    initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit,
     onOpenSession, onOpenFile, onViewTask, resolvedAttachments,
   } = props
   // ── 档位（用户 2026-10-05）────────────────────────────────────────────
@@ -2356,6 +2366,19 @@ export function TaskEditorDrawer(props: {
           confirmLabel: t('editorTabView'),
           onCancel: () => { onCancelPendingView?.() },
           onConfirm: () => { onConfirmPendingView?.() },
+        })
+        : null,
+      // 未保存时要去编辑**另一个任务**：三选确认（取消 / 继续编辑 / 直接覆盖）——用户 2026-10-05 修正静默覆盖。
+      pendingEdit !== null && pendingEdit !== undefined
+        ? h(VersionConfirm, {
+          t,
+          title: t('editorEditSwitchTitle'),
+          desc: t('editorEditSwitchDesc'),
+          middleLabel: t('editorEditSwitchKeep'),
+          confirmLabel: t('editorEditSwitchOverwrite'),
+          onCancel: () => { onCancelPendingEdit?.() },
+          onMiddle: () => { onCancelPendingEdit?.() },
+          onConfirm: () => { onConfirmPendingEdit?.() },
         })
         : null,
       // r13：查看档「全屏查看」已按用户要求撤掉（改为提示词块内就地「源码 / 预览 + 展开 / 收起」）。

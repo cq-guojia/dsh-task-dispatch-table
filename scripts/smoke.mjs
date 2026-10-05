@@ -2702,6 +2702,28 @@ console.log('\n[14] runtime-index')
     check('r13 修 bug：换任务（如从 A 的前置任务切看 B）时重置脏判定基线 ⇒ 关闭不再误弹「未保存」',
       te.includes('initialDraftRef.current = draft'))
 
+    check('未保存冲突（编辑态切去编辑另一个任务）：草稿脏 ⇒ 先弹三选确认（取消 / 继续编辑 / 直接覆盖），不静默覆盖',
+      te.includes("t('editorEditSwitchTitle')") && te.includes("t('editorEditSwitchDesc')")
+      && te.includes("t('editorEditSwitchKeep')") && te.includes("t('editorEditSwitchOverwrite')")
+      && te.includes('pendingEdit !== null') && te.includes('VersionConfirm')
+      && te.includes('middleLabel: t(') && te.includes('onMiddle:')
+      && ixSrc.includes('setPendingEdit({ id })') && ixSrc.includes('openEditorNow(')
+      && ixSrc.includes('editorDirtyRef.current') && ixSrc.includes('confirmPendingEdit'))
+
+    check('编辑切任务：openEditor 在脏时改走 pendingEdit（不重建草稿、不丢修改），未脏直接 openEditorNow；抽屉按 editor.id 重挂重置脏基线',
+      ixSrc.includes('const openEditor = (id: string)')
+      && /if \(editor !== null && editorDirtyRef\.current\)/.test(ixSrc)
+      && ixSrc.includes('setPendingEdit({ id })')
+      && ixSrc.includes('openEditorNow(id)')
+      && ixSrc.includes("key: editor.id"))
+
+    check('编辑切任务冲突文案中英双语齐备且进产物',
+      lcSrc.includes("editorEditSwitchTitle: '编辑内容尚未保存'")
+      && lcSrc.includes("editorEditSwitchOverwrite: '直接覆盖'")
+      && lcSrc.includes("editorEditSwitchKeep: '继续编辑'")
+      && lcSrc.includes("editorEditSwitchOverwrite: 'Overwrite'")
+      && distV.includes('editorEditSwitchOverwrite'))
+
     check('r13 附件可点：查看档按 kind+name 配对 overview 的服务端解析（绝对路径 + 锚点），配不上保持纯展示',
       tv.includes('resolvedByKey.get(`${item.kind}:${item.name}`)')
       && tv.includes('resolvedAttachments')
