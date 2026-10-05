@@ -2326,6 +2326,10 @@ console.log('\n[14] runtime-index')
     const closeIdx = edSrc.indexOf('IconCloseOutlineRegular', headIdx)
     check('启用开关回到头部右侧且**排在关闭 ✕ 之前**（headactions → 开关 → ✕ 的顺序成立）',
       headIdx > 0 && switchIdx > headIdx && closeIdx > switchIdx)
+    // 2026-10-05 回归：提示词 Textarea 的 error 必须直接用 `problemsByField('prompt')` 布尔值，
+    // 不能写 `!== undefined`（该函数返回 boolean，恒真 ⇒ 新建任务一进来提示词就红框）。
+    check('提示词 Textarea 错误态不误写 `problemsByField(\'prompt\') !== undefined`（新任务即红框回归）',
+      !edSrc.includes("problemsByField('prompt') !== undefined"))
     check('宽度下限 / 默认 = 520（用户 2026-10-02 定）且给主面板留够最小宽（两条分栏互相当预留）',
       edSrc.includes('EDITOR_WIDTH_MIN = 520') && edSrc.includes('EDITOR_WIDTH_DEFAULT = 520')
       && edSrc.includes('window.innerWidth - PAGE_MIN_WIDTH - reserved'))

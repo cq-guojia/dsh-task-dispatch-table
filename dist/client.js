@@ -67108,7 +67108,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				value: draft.prompt,
 				placeholder: t("editorPromptPh"),
 				spellCheck: false,
-				error: problemsByField("prompt") !== void 0,
+				error: problemsByField("prompt"),
 				onChange: (value) => {
 					patch({ prompt: value });
 				}

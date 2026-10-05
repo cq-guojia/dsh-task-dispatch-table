@@ -1602,7 +1602,7 @@ export function TaskEditorDrawer(props: {
       value: draft.prompt,
       placeholder: t('editorPromptPh'),
       spellCheck: false,
-      error: problemsByField('prompt') !== undefined,
+      error: problemsByField('prompt'),
       onChange: (value: string) => { patch({ prompt: value }) },
     }),
     // 底部一行：左 = 工作区（真实工作区列表，P1 接）；工作区右侧 = 权限档位（决策 50）；
