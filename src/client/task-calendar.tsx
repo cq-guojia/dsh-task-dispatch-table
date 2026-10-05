@@ -60,16 +60,15 @@ const CALENDAR_CSS = `
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
 .dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
 .dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
-/* 选中格（**点开的那一块**）= 顶部一条 5px 亮蓝横线（离边 4px）+ **底色微微变化**
-   （--tdt-open-bg-soft：比 -open-bg 更淡的蓝，与蓝线呼应；用户 2026-10-06：完全没变化很奇怪）。
-   其余格子**保持原样**：不加线、底色不变。
+/* 选中格（**点开的那一块**）= 顶部一条 4px 蓝胶囊线（离边 4px）；**底色与其它格子完全相同**
+   （surface-1）。⚠️ 底色**不许叠淡蓝**：那层半透明蓝压在格内的状态色标签上 ⇒ 深色主题下发灰、
+   浅色主题下发暗，把原本的绿色/红色全带脏了（用户 2026-10-06）。「选中」只由那条线表达。
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-open-bg-soft);outline:0;}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-open-bg-soft);}
-/* 线：**高 4px**、两端**全圆**（半径取大值 ⇒ 左右各一个半圆，成胶囊形）；
-   颜色走**中性灰 --tdt-fg-4**（用户 2026-10-06：蓝线太显，格子里本就有状态色透出来，再说蓝就怪）。 */
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-surface-1);outline:0;}
+.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-surface-1);}
+/* 线：**高 4px**、两端**全圆**（半径取大值 ⇒ 左右各一个半圆，成胶囊形）、**蓝色 --tdt-business**。 */
 .dsh-tdt-cal-cell--sel::before{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
-  border-radius:999px;background:var(--tdt-fg-4);}
+  border-radius:999px;background:var(--tdt-business);}
 .dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
@@ -103,7 +102,7 @@ const CALENDAR_CSS = `
    并且在**选中日那一列断开**（把当前日期空开）⇒ 与上面那一行的线成一对，像从那一格拉出来。
    断口位置：列宽 = (100% - 6px)/7（6 个 1px 间隙），用 --cal-col（选中列序号，0 起）算。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-open-bg-soft);border:0;border-radius:0;
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-surface-1);border:0;border-radius:0;
   --cal-col-w:calc((100% - 6px) / 7);
   --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
@@ -112,7 +111,7 @@ const CALENDAR_CSS = `
    到面板右边（内缩 4px）。⚠️ 断口两端**不许再留间距** —— 用户 2026-10-06：端点要**正对**上面
    点开那一格的左右两边（只有最外两侧才是 4px 内间距）。 */
 .dsh-tdt-cal-panel::before,.dsh-tdt-cal-panel::after{content:'';position:absolute;top:4px;height:4px;
-  border-radius:999px;background:var(--tdt-fg-4);}
+  border-radius:999px;background:var(--tdt-business);}
 .dsh-tdt-cal-panel::before{left:4px;width:calc(var(--cal-cut) - 4px);}
 .dsh-tdt-cal-panel::after{left:calc(var(--cal-cut) + var(--cal-col-w));right:4px;}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
