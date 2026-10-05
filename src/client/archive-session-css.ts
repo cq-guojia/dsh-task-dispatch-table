@@ -294,8 +294,6 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;border-radius:var(--tdt-radius-sm);color:var(--tdt-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* 报错页「返回」按钮（四验：停在报错页没有任何办法回去）。 */
-.dsh-tdt-sv-err-actions{margin-top:12px;}
 /* 第二排：文件名（跑马灯）+ 操作按钮。 */
 .dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */

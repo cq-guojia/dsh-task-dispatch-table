@@ -3,7 +3,7 @@
 // 入口与 FilePreviewPanel 同源：调用方 openFile(path) 传入的路径。本组件先 list(path) 探明是
 // 目录还是文件——list 成功 ⇒ 目录（渲染树）；报 not-directory ⇒ 文件（预览，dir 取其父目录）。
 //
-// 头部两排：第一排 = 面包屑（目录路径，独占一排）+ 导航钮（选层▾/返回/上一层/刷新/关闭）；
+// 头部两排：第一排 = 面包屑（目录路径，独占一排）+ 导航钮（选层▾/刷新/关闭）；
 // 第二排 = 文件名（跑马灯）+ 操作按钮（md 切段 / 复制 / 刷新）——**仅文件预览态显示**，
 // 目录态整排隐藏（用户 2026-09-28 本轮：没选文件时空着没意义）。目录态刷新改放第一排。
 // 面包屑超宽时折叠为当前层名（行首▾点开**下拉菜单**列出全部层级、带缩进/树形连接符供选层回跳）；
@@ -13,16 +13,14 @@
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
 import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { Button, IconButton, MarqueeText, Segmented } from './ui'
+import { IconButton, MarqueeText, Segmented } from './ui'
 import {
   FileTypeIcon,
   IconCheckOutlineRegular,
   IconChevronDownOutlineRegular,
   IconFolderCloseRegular,
   IconFolderOpenOutlineRegular,
-  IconChevronLeftOutlineRegular,
   IconChevronRightOutlineRegular,
-  IconChevronUpOutlineRegular,
   IconCloseOutlineRegular,
   IconCopyOutlineRegular,
   IconRefreshOutlineRegular,
@@ -376,8 +374,6 @@ export function FileBrowser(props: {
   // 面包屑折叠（超宽时只显示当前层名；行首文件夹图标常驻，点开下拉选层）。
   const [crumbsOverflow, setCrumbsOverflow] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  // 导航历史栈：loadDir 压栈，「返回」弹栈回上一次位置（报错页的返回按钮同源）。
-  const [history, setHistory] = useState<string[]>([])
   const barRef = useRef<HTMLDivElement>(null)
   const regionRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
@@ -431,18 +427,9 @@ export function FileBrowser(props: {
 
   /** 进入某目录：当前目录压栈（供「返回」回跳）。 */
   const loadDir = (targetDir: string): void => {
-    // 点到当前目录本身 = 刷新本层（重列），不压历史栈；否则「返回」会一直绕回自己（用户 2026-09-28）。
+    // 点到当前目录本身 = 刷新本层（重列），避免无意义重列（用户 2026-09-28）。
     if (targetDir === dir) { fetchDir(targetDir); return }
-    setHistory(prev => [...prev, dir])
     fetchDir(targetDir)
-  }
-
-  /** 返回上一次位置（历史栈弹栈；报错页的返回按钮同源）。 */
-  const goBack = (): void => {
-    if (history.length === 0) return
-    const target = history[history.length - 1]
-    setHistory(history.slice(0, -1))
-    fetchDir(target)
   }
 
   // 初次进入（openFile(path)；dock 以 `${sessionId}:${path}` 作 key 重挂载，故每次换新路径都会重跑）。
@@ -708,16 +695,12 @@ export function FileBrowser(props: {
   if (viewing !== null) {
     body = h(FileBody, { workspaceFiles, officeToPdf, sessionId, path: viewing, sourceView, reloadNonce, t })
   } else if (mode === 'error' && listErr !== null) {
-    // 列举失败（如 outside-workspace）：错误文案 + 「返回」按钮回上一次位置（用户 2026-09-28 四验：
-    // 停在报错页没有任何办法回去，必须在报错下面给一个返回）。
+    // 列举失败（如 outside-workspace）：只给错误文案；关闭预览（✕）即退出——
+    // 导航已改由面包屑点选 + ▾ 选层承担（2026-10-05 移除历史栈「返回」）。
     body = h('div', { className: 'dsh-tdt-sv-preview-body' },
       h('div', { className: 'dsh-tdt-sv-preview-err' },
         h('span', null, t(listErr.key, listErr.params)),
       ),
-      history.length > 0
-        ? h('div', { className: 'dsh-tdt-sv-err-actions' },
-          h(Button, { variant: 'outline', size: 'sm', onClick: goBack }, t('explorerBack')))
-        : null,
     )
   } else if (listing !== null) {
     body = listing.length === 0
@@ -747,7 +730,7 @@ export function FileBrowser(props: {
         title: t('previewResize'),
         onPointerDown: (event: { clientX: number; pointerId: number; preventDefault?: () => void }) => { onResizeStart(event) },
       }),
-    // 第一排（用户 2026-09-28 五验拍板顺序）：[▾ 选层] [面包屑…] [← 返回] [↑ 上一层] [✕ 关闭]。
+    // 第一排（用户 2026-09-28 五验拍板顺序）：[▾ 选层] [面包屑…] [✕ 关闭]。
     // 下拉菜单挂在 crumbbar（overflow 可见）下，不被面包屑区域裁剪。
     // ⚠️ 工作区之外（用户 2026-10-03）⇒ 整条换成只读完整路径（见 crumbbarPlain）。
     outside ? crumbbarPlain : h('nav', {
@@ -805,20 +788,6 @@ export function FileBrowser(props: {
           )),
       ),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
-        tooled(t('explorerBack'),
-          h(IconButton, {
-            variant: 'plain', size: 'md', icon: h(IconChevronLeftOutlineRegular, { size: 14 }),
-            label: t('explorerBack'),
-            disabled: history.length === 0,
-            onClick: goBack,
-          })),
-        tooled(t('explorerUp'),
-          h(IconButton, {
-            variant: 'plain', size: 'md', icon: h(IconChevronUpOutlineRegular, { size: 14 }),
-            label: t('explorerUp'),
-            disabled: dir === '',
-            onClick: () => { const p = dirnameOf(dir); if (p !== dir) loadDir(p) },
-          })),
         tooled(t('previewClose'),
           h(IconButton, {
             variant: 'plain', size: 'md', icon: h(IconCloseOutlineRegular, { size: 14 }),

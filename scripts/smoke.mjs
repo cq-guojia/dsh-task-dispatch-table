@@ -1472,6 +1472,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && !/dsh-tdt-rec-evempty' \}, t\('recordsLoading'\)/.test(tlSrc10)
       && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(prevSrc) && !/dsh-tdt-sv-hint' \}, t\('previewLoading'\)/.test(browserSrc)
       && /eventsBusy[\s\S]{0,260}\? null/.test(tlSrc10))
+    check('文件预览框历史栈「返回 / 上一层」导航钮已移除（用户 2026-10-05：面包屑点选 + ▾ 选层已覆盖导航，历史栈是「回到找不到的区域」的临时绕过，不再需要）：browserSrc 不再含 goBack / history 栈 / explorerBack / explorerUp / 两个 chevron 图标',
+      !browserSrc.includes('goBack') && !browserSrc.includes('const [history, setHistory]')
+      && !browserSrc.includes("t('explorerBack')") && !browserSrc.includes("t('explorerUp')")
+      && !browserSrc.includes('IconChevronLeftOutlineRegular') && !browserSrc.includes('IconChevronUpOutlineRegular'))
     check('第十轮·硬性规定：悬停提示一律**官方 Tooltip**，不再用原生 title（状态名 / 标题 / 信息行；备注不弹）',
       /h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc10)
       && /h\(Tooltip, \{ label, side: 'top' \}/.test(tlSrc10)

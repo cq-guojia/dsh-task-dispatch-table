@@ -83,7 +83,7 @@ export type LocaleKey =
   | 'previewHtmlSwitchAria' | 'previewHtmlFrame' | 'previewHtmlFailed' | 'previewTruncated'
   | 'previewTruncatedSize'
   | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' | 'explorerCrumbsMore'
-  | 'explorerLevels' | 'explorerUp' | 'explorerBack' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse'
+  | 'explorerLevels' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
@@ -444,8 +444,6 @@ export const zh: Record<LocaleKey, string> = {
   explorerCrumbsAria: '目录路径导航',
   explorerCrumbsMore: '展开完整路径',
   explorerLevels: '选择目录层级',
-  explorerUp: '返回上一层',
-  explorerBack: '返回',
   explorerRootName: '（工作区根目录）',
   explorerExpand: '展开目录',
   explorerCollapse: '收起目录',
@@ -1085,8 +1083,6 @@ export const en: Record<LocaleKey, string> = {
   explorerCrumbsAria: 'Directory path navigation',
   explorerCrumbsMore: 'Show full path',
   explorerLevels: 'Choose a directory level',
-  explorerUp: 'Up one level',
-  explorerBack: 'Back',
   explorerRootName: '(workspace root)',
   explorerExpand: 'Expand directory',
   explorerCollapse: 'Collapse directory',

@@ -456,8 +456,6 @@ window.__ModuleLoader__.load({
 			explorerCrumbsAria: "目录路径导航",
 			explorerCrumbsMore: "展开完整路径",
 			explorerLevels: "选择目录层级",
-			explorerUp: "返回上一层",
-			explorerBack: "返回",
 			explorerRootName: "（工作区根目录）",
 			explorerExpand: "展开目录",
 			explorerCollapse: "收起目录",
@@ -1075,8 +1073,6 @@ window.__ModuleLoader__.load({
 			explorerCrumbsAria: "Directory path navigation",
 			explorerCrumbsMore: "Show full path",
 			explorerLevels: "Choose a directory level",
-			explorerUp: "Up one level",
-			explorerBack: "Back",
 			explorerRootName: "(workspace root)",
 			explorerExpand: "Expand directory",
 			explorerCollapse: "Collapse directory",
@@ -3632,8 +3628,6 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;border-radius:var(--tdt-radius-sm);color:var(--tdt-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(128,128,128,.16));}
 .dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* 报错页「返回」按钮（四验：停在报错页没有任何办法回去）。 */
-.dsh-tdt-sv-err-actions{margin-top:12px;}
 /* 第二排：文件名（跑马灯）+ 操作按钮。 */
 .dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
 /* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
@@ -53610,7 +53604,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [listErr, setListErr] = (0, react$1.useState)(null);
 			const [crumbsOverflow, setCrumbsOverflow] = (0, react$1.useState)(false);
 			const [menuOpen, setMenuOpen] = (0, react$1.useState)(false);
-			const [history, setHistory] = (0, react$1.useState)([]);
 			const barRef = (0, react$1.useRef)(null);
 			const regionRef = (0, react$1.useRef)(null);
 			const measureRef = (0, react$1.useRef)(null);
@@ -53668,15 +53661,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					fetchDir(targetDir);
 					return;
 				}
-				setHistory((prev) => [...prev, dir]);
 				fetchDir(targetDir);
-			};
-			/** 返回上一次位置（历史栈弹栈；报错页的返回按钮同源）。 */
-			const goBack = () => {
-				if (history.length === 0) return;
-				const target = history[history.length - 1];
-				setHistory(history.slice(0, -1));
-				fetchDir(target);
 			};
 			(0, react$1.useEffect)(() => {
 				let alive = true;
@@ -53951,11 +53936,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				reloadNonce,
 				t
 			});
-			else if (mode === "error" && listErr !== null) body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react$1.createElement)("span", null, t(listErr.key, listErr.params))), history.length > 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-err-actions" }, (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				onClick: goBack
-			}, t("explorerBack"))) : null);
+			else if (mode === "error" && listErr !== null) body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-err" }, (0, react$1.createElement)("span", null, t(listErr.key, listErr.params))));
 			else if (listing !== null) body = listing.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-sv-hint" }, t("explorerEmpty"))) : (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree" }, renderTree(listing, dir), truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null);
 			else body = (0, react$1.createElement)("div", { className: "dsh-tdt-sv-preview-body" });
 			return (0, react$1.createElement)("aside", {
@@ -54024,24 +54005,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: () => {
 					loadDir(crumb.path);
 				}
-			}, crumb.label)))), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("explorerBack"), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 14 }),
-				label: t("explorerBack"),
-				disabled: history.length === 0,
-				onClick: goBack
-			})), tooled(t("explorerUp"), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 14 }),
-				label: t("explorerUp"),
-				disabled: dir === "",
-				onClick: () => {
-					const p = dirnameOf(dir);
-					if (p !== dir) loadDir(p);
-				}
-			})), tooled(t("previewClose"), (0, react$1.createElement)(IconButton, {
+			}, crumb.label)))), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-head-actions" }, tooled(t("previewClose"), (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutlineRegular, { size: 14 }),
