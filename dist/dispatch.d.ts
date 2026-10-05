@@ -49,7 +49,8 @@ export declare function resolveModelRoute(ctx: HostContext, logger: HostLogger, 
 export declare function userNotice(text: string, summary: string, files?: readonly UserFileContent[]): UserMessage;
 /**
  * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 +
- * 决策 49 团队段 + **随附文件段（决策 54）**）：短指令 prompt + 手册路径 + 上游依赖段 + **随附文件段** +
+ * 决策 49 团队段 + **随附文件段（决策 54）** + **执行时间段（U4，2026-10-05）**）：短指令 prompt +
+ * 手册路径 + 执行时间（原定 / 实际派发，给了 times 才注入）+ 上游依赖段 + **随附文件段** +
  * 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
  * prompt / manual / validStatuses / resolvedDeps / attachments 全部来自派发快照，与任务设置无关。
  *
@@ -61,7 +62,12 @@ export declare function userNotice(text: string, summary: string, files?: readon
  *    「只读副本路径」（`projectFilesToText`），**不额外吃 token**；人的那一面则由官方渲染成
  *    **附件卡**（图标 + 文件名 + 大小，可点开），且 fork 续聊带得走、当时那一份内容被钉住。
  */
-export declare function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string, teamMode?: boolean, attachments?: readonly DispatchAttachment[], fileBlocks?: readonly UserFileContent[]): UserMessage;
+export declare function buildMessage(snapshot: InstanceSnapshot, workspacePath: string, logicalDate: string, teamMode?: boolean, attachments?: readonly DispatchAttachment[], fileBlocks?: readonly UserFileContent[], 
+/** 执行时间两条（用户 2026-10-05 拍板，U4 收口）：不给 ⇒ 不注入该段（旧调用 / 冒烟旧行为不变）。 */
+times?: {
+    scheduledAt: string;
+    dispatchedAt: string;
+}): UserMessage;
 /**
  * 派发消息里的随附文件条目（2026-09-30）：ref 已在 Loop B 解析成**绝对路径**。
  * `path === null` = 来源工作区解析不出 ⇒ 如实标注「工作区相对路径」，**绝不猜**。

@@ -1641,6 +1641,19 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
   delete snapNoDeps.resolvedDeps
   const msgNoDep = buildMessage(snapNoDeps, '/ws/down', '2026-09-26')
   check('无依赖任务的消息不含上游依赖段（旧行为不变）', !msgNoDep.content[0].text.includes('上游依赖'))
+  // 执行时间段（用户 2026-10-05 拍板，U4 收口）：原定时刻 + 实际派发时刻（ISO / UTC 精确到秒）原样下发；
+  // 只给事实不给语义 —— 日期的业务口径（日报算哪天）仍归任务提示词。旧调用不传 times ⇒ 不带该段。
+  {
+    const msgTime = buildMessage(snapNoDeps, '/ws/down', '2026-09-26', false, [], [], {
+      scheduledAt: '2026-09-26T04:00:00.000Z', dispatchedAt: '2026-09-26T04:00:07.123Z',
+    })
+    const timeText = msgTime.content[0].text
+    check('执行时间段：原定 + 实际派发时刻进消息，且声明「当前时间以实际派发为准」',
+      timeText.includes('执行时间：原定 2026-09-26T04:00:00.000Z')
+      && timeText.includes('实际派发 2026-09-26T04:00:07.123Z')
+      && timeText.includes('当前时间以实际派发为准'))
+    check('执行时间段：旧调用（不传 times）不带该段（旧行为不变）', !msgNoDep.content[0].text.includes('执行时间：'))
+  }
   // 用户 2026-09-30：回执说明必须**压过任务指令**（真机上「不要做任何其他操作」被理解成连回执也跳过），
   // 且要**置顶**（不首尾各放）。文案里用通用说法，不举具体那句误写的任务指令。
   // 2026-09-30 拍板（**推翻**旧结构"置顶 + 不首尾各放"）：回执段**只在最末出现一处** ——

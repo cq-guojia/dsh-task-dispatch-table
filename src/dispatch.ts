@@ -277,7 +277,8 @@ const WORKSPACE_PLACEHOLDER = '{{workspace}}'
 
 /**
  * 派发消息拼装（决策 12 模板 + 决策 24 回执工具 + 决策 41 快照化 + 决策 43 依赖冻结段 +
- * 决策 49 团队段 + **随附文件段（决策 54）**）：短指令 prompt + 手册路径 + 上游依赖段 + **随附文件段** +
+ * 决策 49 团队段 + **随附文件段（决策 54）** + **执行时间段（U4，2026-10-05）**）：短指令 prompt +
+ * 手册路径 + 执行时间（原定 / 实际派发，给了 times 才注入）+ 上游依赖段 + **随附文件段** +
  * 团队执行段（仅 agentTeam 且宿主具备时）+ 回执调用说明。
  * prompt / manual / validStatuses / resolvedDeps / attachments 全部来自派发快照，与任务设置无关。
  *
@@ -296,6 +297,8 @@ export function buildMessage(
   teamMode = false,
   attachments: readonly DispatchAttachment[] = [],
   fileBlocks: readonly UserFileContent[] = [],
+  /** 执行时间两条（用户 2026-10-05 拍板，U4 收口）：不给 ⇒ 不注入该段（旧调用 / 冒烟旧行为不变）。 */
+  times?: { scheduledAt: string; dispatchedAt: string },
 ): UserMessage {
   // 回执说明**只放一处、且放最末**（用户 2026-09-30 拍板，推翻先前的"放最前 + 首尾双写"）：
   // 真机证据 —— 模型**跳过了第 1 段**的回执要求（回了句问候就收工），而插件那条**只含回执要求**的
@@ -307,6 +310,13 @@ export function buildMessage(
     '',
     `任务实例：${snapshot.title} · ${logicalDate}（目标工作区：${workspacePath}）`,
   ]
+  // 执行时间两条（用户 2026-10-05 拍板，U4 收口）：模型对「现在几点」未必可靠（真机 once8 产出
+  // 文件日期差过一天）⇒ 把**原定时刻**与**实际派发时刻**原样下发（ISO 8601 / UTC，精确到秒），
+  // 模型要处理自己处理。只给**事实**：日期的业务语义（如「日报算调度那天还是自然天」）仍由任务
+  // 提示词自定，插件不越权（用户 2026-10-05：这个插件解决不了）。
+  if (times !== undefined) {
+    lines.push(`执行时间：原定 ${times.scheduledAt} · 实际派发 ${times.dispatchedAt}（ISO 8601，UTC；你的当前时间以实际派发为准）`)
+  }
   if (snapshot.manual !== null && snapshot.manual.trim() !== '') {
     lines.push(`任务手册：先读工作区内 ${snapshot.manual}，再按手册执行。`)
   }
@@ -595,7 +605,10 @@ export async function dispatchTask(input: DispatchInput): Promise<{ sessionId: s
     store.appendEvent(instanceId, 'dispatch', { attachmentBlocks: fileBlocks.length })
   }
   handle.agent.send(
-    buildMessage(snapshot, workspace.path, logicalDate, teamMode, input.attachments, fileBlocks),
+    buildMessage(snapshot, workspace.path, logicalDate, teamMode, input.attachments, fileBlocks, {
+      scheduledAt: input.scheduledAt,
+      dispatchedAt: new Date().toISOString(),
+    }),
     'next-turn',
     true,
   )
