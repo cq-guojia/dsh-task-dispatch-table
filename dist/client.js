@@ -69136,7 +69136,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
-.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:6px;
+/* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
+   下面空间是够的（104 - 12 - 6 = 86px，够 1 行日期 + 3 行标签的 80px）⇒ 所有格子统一留白、对齐一致。 */
+.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:12px 6px 6px;
   overflow:hidden;background:var(--tdt-surface-1);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
   transition:background var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
@@ -69146,9 +69148,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 选中格（**点开的那一块**）= 顶部一条 4px 蓝胶囊线（离边 4px）；**底色与其它格子完全相同**
    （surface-1）。⚠️ 底色**不许叠淡蓝**：那层半透明蓝压在格内的状态色标签上 ⇒ 深色主题下发灰、
    浅色主题下发暗，把原本的绿色/红色全带脏了（用户 2026-10-06）。「选中」只由那条线表达。
-   ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-surface-1);outline:0;}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-surface-1);}
+   ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
+   ⚠️ 底色用 --tdt-plate（**中性**、比底色深一档，且随主题自动翻转：亮色下比白略深、暗色下比背景略亮
+   ⇒ 不会「像背景一样黑」）。**不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-plate);outline:0;}
+.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-plate);}
 /* 线：**高 4px**、两端**全圆**（半径取大值 ⇒ 左右各一个半圆，成胶囊形）、**蓝色 --tdt-business**。 */
 .dsh-tdt-cal-cell--sel::before{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
   border-radius:999px;background:var(--tdt-business);}
@@ -69185,7 +69189,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    并且在**选中日那一列断开**（把当前日期空开）⇒ 与上面那一行的线成一对，像从那一格拉出来。
    断口位置：列宽 = (100% - 6px)/7（6 个 1px 间隙），用 --cal-col（选中列序号，0 起）算。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-surface-1);border:0;border-radius:0;
+/* 拉开区与选中格**同色**（--tdt-plate）⇒ 视觉上是一体的「展开区域」。 */
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-plate);border:0;border-radius:0;
   --cal-col-w:calc((100% - 6px) / 7);
   --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
