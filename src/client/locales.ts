@@ -110,7 +110,7 @@ export type LocaleKey =
   | 'editorMonth' | 'editorMonthOption' | 'editorDayOfMonth' | 'editorDayOption'
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorEveryNWeeks'
-  | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentAdd'
+  | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentView' | 'editorAttachmentAdd'
   | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick'
   | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
@@ -540,6 +540,7 @@ export const zh: Record<LocaleKey, string> = {
   editorAttachmentLink: '链接',
   editorAttachmentUpload: '上传',
   editorAttachmentRemove: '移除',
+  editorAttachmentView: '查看',
   editorAttachmentAdd: '添加文件',
   editorPickWorkspaceFile: '选择工作区文件',
   editorPickWorkspaceFileShort: '工作区文件',
@@ -1176,6 +1177,7 @@ export const en: Record<LocaleKey, string> = {
   editorAttachmentLink: 'Link',
   editorAttachmentUpload: 'Upload',
   editorAttachmentRemove: 'Remove',
+  editorAttachmentView: 'View',
   editorAttachmentAdd: 'Add file',
   editorPickWorkspaceFile: 'Pick workspace file',
   editorPickWorkspaceFileShort: 'Files',

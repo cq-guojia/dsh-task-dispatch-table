@@ -548,6 +548,7 @@ window.__ModuleLoader__.load({
 			editorAttachmentLink: "链接",
 			editorAttachmentUpload: "上传",
 			editorAttachmentRemove: "移除",
+			editorAttachmentView: "查看",
 			editorAttachmentAdd: "添加文件",
 			editorPickWorkspaceFile: "选择工作区文件",
 			editorPickWorkspaceFileShort: "工作区文件",
@@ -1162,6 +1163,7 @@ window.__ModuleLoader__.load({
 			editorAttachmentLink: "Link",
 			editorAttachmentUpload: "Upload",
 			editorAttachmentRemove: "Remove",
+			editorAttachmentView: "View",
 			editorAttachmentAdd: "Add file",
 			editorPickWorkspaceFile: "Pick workspace file",
 			editorPickWorkspaceFileShort: "Files",
@@ -67163,7 +67165,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					padding: "1px 6px",
 					background: "var(--tdt-hover, rgba(127, 127, 127, 0.14))"
 				}
-			}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+			}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (() => {
+				const hit = resolvedAttachments?.find((r) => r.name === att.name && r.kind === att.kind && r.path !== void 0 && r.anchorSessionId !== void 0);
+				return hit === void 0 || onOpenFile === void 0 ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					variant: "ghost",
+					size: "sm",
+					style: {
+						flex: "none",
+						whiteSpace: "nowrap"
+					},
+					title: t("editorAttachmentView"),
+					"aria-label": t("editorAttachmentView"),
+					onClick: () => {
+						onOpenFile(hit.anchorSessionId, hit.path);
+					}
+				}, t("editorAttachmentView"));
+			})(), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 				variant: "ghost",
 				size: "sm",
 				onClick: () => {
@@ -68095,10 +68112,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   color:var(--tdt-fg-2);font-size:var(--tdt-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
   transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
 .dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);color:var(--tdt-fg);}
-/* 折叠态前置圈码可点（开任务查看档）：清掉按钮默认外壳 + 手指（用户 2026-10-05）。 */
-.dsh-tdt-rec-depmark--btn{appearance:none;-webkit-appearance:none;cursor:pointer;font:inherit;}
+/* 折叠态前置圈码可点（开任务查看档）：清掉按钮默认外壳 + 手指（用户 2026-10-05）。
+   ⚠️ 只继承 font-family、**不要 font:inherit**：font:inherit 会把数字字号拉成父级头部字号，
+   使折叠态圈码比展开态（同款 class、固定 11px）数字大一圈——用户 2026-10-05 指出两处「1、2」大小不一致。 */
+.dsh-tdt-rec-depmark--btn{appearance:none;-webkit-appearance:none;cursor:pointer;font-family:inherit;}
 /* 展开态前置格整块可点：手指提示（只有接了 onViewTask 才挂这个类）。 */
 .dsh-tdt-rec-dep--click{cursor:pointer;}
+/* 展开前置格：整框 hover 给背景反馈（与执行块头部同档 --tdt-hover）；框内任务名 hover **不变色**
+   （整框已给反馈，名字再变蓝是多余——用户 2026-10-05；只在此作用域关掉 .dsh-tdt-info-dep 的 hover 蓝）。 */
+.dsh-tdt-rec-dep--click:hover{background:var(--tdt-hover);}
+.dsh-tdt-rec-dep .dsh-tdt-info-dep:hover{color:var(--tdt-fg);}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
 .dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}

@@ -1709,6 +1709,18 @@ export function TaskEditorDrawer(props: {
             // 自己保留 flex-shrink，容器窄时自动截断成省略号，不会挤变形按钮（用户 2026-10-03）。
             h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--tdt-font-md)' } }, att.name),
             h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover, rgba(127, 127, 127, 0.14))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
+            // 查看：与 overview 解析结果按「同名 + 同 kind」配对，配对上有绝对路径和锚点会话 ⇒ 点开侧边栏预览。
+            // 未保存 / 配对不上（上传后还没跑出锚点会话）的附件不显示，避免给假入口（用户 2026-10-05）。
+            (() => {
+              const hit = resolvedAttachments?.find(r => r.name === att.name && r.kind === att.kind && r.path !== undefined && r.anchorSessionId !== undefined)
+              return hit === undefined || onOpenFile === undefined
+                ? null
+                : h(Button, {
+                  variant: 'ghost', size: 'sm', style: { flex: 'none', whiteSpace: 'nowrap' },
+                  title: t('editorAttachmentView'), 'aria-label': t('editorAttachmentView'),
+                  onClick: () => { onOpenFile(hit.anchorSessionId as string, hit.path as string) },
+                }, t('editorAttachmentView'))
+            })(),
             // 移除按钮也声明不收缩 / 不折行，确保不会被文件名挤到换行或压扁。
             h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove'), style: { flex: 'none', whiteSpace: 'nowrap' } }, t('editorAttachmentRemove')),
           )),
