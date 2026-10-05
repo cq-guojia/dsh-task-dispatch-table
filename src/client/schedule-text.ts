@@ -350,3 +350,76 @@ export function renderSchedule(
     ? h('strong', { key: index, style: { fontWeight: 600, ...opts.emphasisStyle } }, seg.text)
     : h('span', { key: index }, seg.text)))
 }
+
+// ── 草稿 → cron（2026-10-05 从 task-editor.tsx 迁入）──────────────────────
+// 放这里与「排期 → 人话」做邻居：一个模块管「草稿/定义的排期怎么表达」，不散在编辑器里。
+// 消费方：编辑器保存（draftToDefinitionJson）与查看档「预计下次执行」（喂 schedule-next 纯核）。
+
+/** 每月档的月份口径 → cron 月份位。 */
+const MONTH_MODE_CRON: Record<string, string> = {
+  every: '*',
+  odd: '1,3,5,7,9,11',
+  even: '2,4,6,8,10,12',
+}
+
+/** ISO 序号（1..7）→ cron 星期位（0..6）。 */
+function cronDow(day: number): number {
+  return day === 7 ? 0 : day
+}
+
+/** `scheduleCron` 只读草稿的这些字段（`TaskEditorDraft` 天然形状兼容，不反向依赖编辑器）。 */
+export interface ScheduleCronDraft {
+  scheduleKind: 'interval' | 'periodic'
+  periodFreq: 'once' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+  weekdays: number[]
+  monthDay: string
+  monthMode: string
+  quarterMonth: string
+  yearMonth: string
+  intervalUnit: 'minute' | 'hour'
+  intervalStep: string
+  time: string
+}
+
+/** 草稿 → 排期的 cron 形态；表达不了的组合返回 null（由调用方给出可见提示，不编假值）。 */
+export function scheduleCron(draft: ScheduleCronDraft): string | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(draft.time)
+  const hour = match === null ? 9 : Number(match[1])
+  const minute = match === null ? 0 : Number(match[2])
+  const days = draft.weekdays.slice().sort((a, b) => a - b).map(cronDow).join(',')
+
+  if (draft.scheduleKind === 'interval') {
+    const step = Number.parseInt(draft.intervalStep, 10)
+    if (!Number.isFinite(step) || step <= 0) return null
+    const dow = days === '' ? '*' : days
+    // ⚠️ 必须按 intervalUnit 出**正确形态**（2026-09-30 专家团复核发现的硬伤）：
+    //    此前两种单位都出 `*/N * * * *` ⇒ 选「每 2 小时」实际按**每 2 分钟**跑（文案却写「每 2 小时」）。
+    //    分钟档 = `*/N * * * <dow>`；小时档 = `0 */N * * <dow>`（分钟固定 0，与「每 N 小时」一致）。
+    return draft.intervalUnit === 'hour'
+      ? `0 */${step} * * ${dow}`
+      : `*/${step} * * * ${dow}`
+  }
+
+  switch (draft.periodFreq) {
+    case 'once':
+      return null // 单次走 `schedule.once`，没有 cron。
+    case 'daily':
+      return `${minute} ${hour} * * *`
+    case 'weekly':
+      return days === '' ? null : `${minute} ${hour} * * ${days}`
+    case 'monthly':
+      // 单数月 / 双数月 = 隔月执行，cron 的月份位写得出（1,3,5… / 2,4,6…）。
+      return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`
+    case 'quarterly': {
+      // 「每季度第 N 个月」= N, N+3, N+6, N+9（起月本身就要跑）——
+      // 旧写法漏掉起月（选第 1 个月 ⇒ 4,7,10，1 月永不执行，评审 P1#5）。
+      const start = Number.isFinite(Number.parseInt(draft.quarterMonth, 10))
+        ? Number.parseInt(draft.quarterMonth, 10)
+        : 1
+      const months = [0, 1, 2, 3].map(offset => start + offset * 3).join(',')
+      return `${minute} ${hour} ${draft.monthDay} ${months} *`
+    }
+    case 'yearly':
+      return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`
+  }
+}

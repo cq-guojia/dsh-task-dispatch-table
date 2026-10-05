@@ -49,6 +49,8 @@ import {
 import type { EditorOption, TaskOption, TimeRangeLabels, TimeRangeValue } from './ui'
 import { calendarLabelsOf, timeLabelsOf } from './editor-fields'
 import { interpolateTranslate, type Translate } from './locales'
+// 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
+import { ensureTaskInfoStyle } from './task-info-css'
 
 /** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
 const PAGE_SIZE = 50
@@ -385,8 +387,10 @@ const RecordItem = memo(function RecordItem(props: {
   snapshot: string | null
   /** 任务 id → 任务名（查不到退短 id；父级用 overview 建的反查，与别处同口径）。 */
   depTitleOf: (taskId: string) => string
+  /** 点任务名 ⇒ 右侧栏以**查看档**打开该任务（r12：全站任务名可点；不给 ⇒ 名字纯文本）。 */
+  onViewTask?: (taskId: string) => void
 }): ReturnType<typeof h> {
-  const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt } = props
+  const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask } = props
   const tone = statusToneOf(row.status)
   const running = isRunningStatus(row.status)
   /**
@@ -470,12 +474,30 @@ const RecordItem = memo(function RecordItem(props: {
       h('div', { className: 'dsh-tdt-rec-left' },
         h('div', { className: 'dsh-tdt-rec-r1' },
           // 标题**不撑满**（`0 1 auto`）：后面的前置圈码要紧跟名字，而不是被推到行尾。
-          h(Tooltip, { label, side: 'top' },
-            h('span', { style: { flex: '0 1 auto', minWidth: 0, display: 'flex' } },
-              h(MarqueeText, {
-                text: label,
-                className: 'dsh-tdt-rec-title dsh-tdt-ellipsis',
-              }))),
+          // 任务名可点（r12 用户：全站任务名都连到查看档）——头部点击=就地展开的既有行为不变，
+          // 点名字掐掉冒泡改开查看档；未接 onViewTask 时保持纯文本。
+          onViewTask === undefined
+            ? h(Tooltip, { label, side: 'top' },
+              h('span', { style: { flex: '0 1 auto', minWidth: 0, display: 'flex' } },
+                h(MarqueeText, {
+                  text: label,
+                  className: 'dsh-tdt-rec-title dsh-tdt-ellipsis',
+                })))
+            : h(Tooltip, { label, side: 'top' },
+              h('span', { style: { flex: '0 1 auto', minWidth: 0, display: 'flex' } },
+                h('button', {
+                  type: 'button',
+                  className: 'dsh-tdt-info-dep',
+                  style: { minWidth: 0 },
+                  onClick: (event: { stopPropagation: () => void }) => {
+                    event.stopPropagation()
+                    onViewTask(row.task_id)
+                  },
+                },
+                  h(MarqueeText, {
+                    text: label,
+                    className: 'dsh-tdt-rec-title dsh-tdt-ellipsis',
+                  })))),
           // 前置圈码（用户 2026-10-04）：**本次执行实际用到的**上游有几个就画几个，一个都没有就什么都不画；
           // 提示走**官方 Tooltip**（2026-10-04 第八轮换掉原生 title —— 用户嫌原生提示慢）。
           //   ⚠️ 官方 Tooltip 的 children 必须是**真 DOM**（它给子元素挂 ref，裸组件会静默失效）——
@@ -625,8 +647,20 @@ const RecordItem = memo(function RecordItem(props: {
                   h('div', { className: 'dsh-tdt-rec-depmid' },
                     h('div', { className: 'dsh-tdt-rec-depname' },
                       h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)),
-                      h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
-                        h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task))),
+                      // 任务名可点（r12）⇒ 右侧栏以查看档打开这个前置任务；未接回调时保持纯文本。
+                      onViewTask === undefined
+                        ? h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
+                          h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))
+                        : h(Tooltip, { label: depTitleOf(dep.task), side: 'top' },
+                          h('button', {
+                            type: 'button',
+                            className: 'dsh-tdt-info-dep',
+                            style: { minWidth: 0, fontSize: 'inherit' },
+                            onClick: (event: { stopPropagation(): void }) => {
+                              event.stopPropagation()
+                              onViewTask(dep.task)
+                            },
+                          }, h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))),
                     ),
                     h('div', { className: 'dsh-tdt-rec-depmeta' },
                       // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
@@ -720,12 +754,16 @@ export interface RecordsTimelineProps {
   onOpenSession?: (sessionId: string) => void
   /** 打开产出物预览（`POST` 前先切文件面板）；不可用时不传 ⇒ 产出物降级为不可点。 */
   onOpenFile?: (sessionId: string, path: string) => void
+  /** 点任务名 ⇒ 右侧栏以查看档打开该任务（r12：全站任务名可点）；不给 ⇒ 名字纯文本。 */
+  onViewTask?: (taskId: string) => void
 }
 
 /** 执行记录总查询页（流水账）。 */
 export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typeof h> {
   applyStyle(RECORDS_DOMAIN, RECORDS_CSS)
-  const { t, tasks, workspaces, onOpenSession, onOpenFile } = props
+  // 任务名可点（r12）要用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info ⇒ 这里也注入（幂等）。
+  ensureTaskInfoStyle()
+  const { t, tasks, workspaces, onOpenSession, onOpenFile, onViewTask } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
 
   const [range, setRange] = useState<TimeRangeValue>(defaultRange)
@@ -1037,6 +1075,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
                   onToggle: toggleRow,
                   openSession,
                   openFile: onOpenFile,
+                  onViewTask,
                   events: openId === row.id ? eventsCache.get(row.id) ?? null : null,
                   eventsBusy: openId === row.id && eventsBusy,
                   eventsError: openId === row.id ? eventsError : null,

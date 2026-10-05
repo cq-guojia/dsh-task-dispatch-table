@@ -920,6 +920,10 @@ function TaskPage(props: {
   type ViewingState = {
     sessionId: string
     heading: string
+    /** r12：标题里的任务名可点开查看档 ⇒ 任务名 / 余串 / 任务 id 拆开传（拿不到 = 纯文本降级）。 */
+    headingTask?: string
+    headingRest?: string
+    taskId?: string
     view: SessionViewTarget
     didUnarchive?: boolean
     outputs?: string[]
@@ -1074,9 +1078,11 @@ function TaskPage(props: {
     // ① 一律按会话 id 自取那一条实例行（取不到 ⇒ null，照常开弹窗，只少产出卡与接收区）。
     const row = await fetchInstanceBySession(sessionId)
     // ② 标题也在这里统一（任务名 · 计划时刻），不由调用方各写一套。
+    // r12：任务名要能点开该任务的查看档 ⇒ 任务名与余串**分开传**（row 取不到 = 整串纯文本降级）。
+    const headingRow = row === null ? undefined : overview.rows.find(item => item.id === row.task_id)
     const heading = row === null
       ? sessionId.slice(0, 8)
-      : `${overview.rows.find(item => item.id === row.task_id)?.title || row.task_id.slice(0, 8)} · ${formatPlanStamp(row.scheduled_at)}`
+      : `${headingRow?.title || row.task_id.slice(0, 8)} · ${formatPlanStamp(row.scheduled_at)}`
     let target = viewSession(sessionId)
     let didUnarchive = false
     if (target === null) {
@@ -1100,6 +1106,10 @@ function TaskPage(props: {
     applyViewing({
       sessionId,
       heading,
+      // r12：标题任务名可点（查看档）。
+      taskId: row?.task_id,
+      headingTask: row === null ? undefined : (headingRow?.title ?? row.task_id.slice(0, 8)),
+      headingRest: row === null ? undefined : ` · ${formatPlanStamp(row.scheduled_at)}`,
       view: target,
       didUnarchive,
       outputs: row === null ? undefined : parseOutputs(row.outputs),
@@ -1214,6 +1224,8 @@ function TaskPage(props: {
             : undefined,
           // 产出物 chip 点开 = 页面级预览 dock（与卡片面板同一入口）；预览面没就位 ⇒ 不传，chip 降级不可点。
           onOpenFile: canPreview ? openFile : undefined,
+          // 任务名可点（r12）：点记录的任务名 / 前置任务名 ⇒ 右侧栏以查看档打开该任务。
+          onViewTask: openViewer,
         })
         : data === undefined
         ? h('div', null,
@@ -1388,6 +1400,11 @@ function TaskPage(props: {
       ? h(SessionViewModal, {
         t,
         heading: viewing.heading,
+        // r12：标题任务名可点 ⇒ 查看档（弹窗标题的任务名那一段变按钮）。
+        taskId: viewing.taskId,
+        headingTask: viewing.headingTask,
+        headingRest: viewing.headingRest,
+        onOpenTask: openViewer,
         sessionId: viewing.sessionId,
         view: viewing.view,
         // 交付文件（决策 41/42 派发快照同源）：以实例 outputs 权威渲染弹窗「交付文件」区块，
@@ -1479,6 +1496,8 @@ function TaskPage(props: {
           ? (sessionId: string) => { void openView(sessionId) }
           : undefined,
         onOpenFile: canPreview ? openFile : undefined,
+        // 查看档里点前置任务名 ⇒ 打开那个任务的查看档（r12：与卡片展开区口径一致）。
+        onViewTask: openViewer,
         workspaceFiles,
         officeToPdf,
         workspaceAnchors: editorOptions.workspaceAnchors,

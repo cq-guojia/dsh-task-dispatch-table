@@ -175,9 +175,10 @@ export type LocaleKey =
   | 'editorTabView' | 'editorTabEdit'
   // 基础信息字段（查看档与卡片基础信息共用一套渲染，新增两个状态词 + 前置任务可点的悬停提示）
   | 'infoStateEnabled' | 'infoStateDisabled' | 'infoViewTask'
-  // 查看档自己的块与来源标记
-  | 'editorViewSavedTag' | 'editorViewDraftTag' | 'editorViewNewTag' | 'editorViewUntitled'
+  // 查看档自己的块与来源标记（r12：标记从头部挪到「任务配置」块标题旁，文案精简正式）
+  | 'editorViewDraftTag' | 'editorViewNewTag' | 'editorViewUntitled'
   | 'editorViewPrompt' | 'editorViewPromptEmpty' | 'editorViewNoRunDraft' | 'editorViewNotFilled'
+  | 'editorViewFullscreen' | 'editorViewSourceCode'
   | 'editorViewSwitchTitle' | 'editorViewSwitchDesc'
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
@@ -757,14 +758,15 @@ export const zh: Record<LocaleKey, string> = {
   infoStateEnabled: '已启用',
   infoStateDisabled: '已停用',
   infoViewTask: '查看该任务',
-  editorViewSavedTag: '已保存的配置',
-  editorViewDraftTag: '正在编辑的草稿（未保存）',
+  editorViewDraftTag: '编辑的草稿未保存',
   editorViewNewTag: '新建，尚未保存',
   editorViewUntitled: '未命名任务',
   editorViewPrompt: '提示词',
   editorViewPromptEmpty: '还没填提示词',
   editorViewNoRunDraft: '任务尚未保存，没有执行记录',
   editorViewNotFilled: '未填',
+  editorViewFullscreen: '全屏查看',
+  editorViewSourceCode: '源码',
   editorViewSwitchTitle: '放弃未保存的修改？',
   editorViewSwitchDesc: '当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。',
   // —— 任务卡片三面板（决策 55）——
@@ -1389,14 +1391,15 @@ export const en: Record<LocaleKey, string> = {
   infoStateEnabled: 'Enabled',
   infoStateDisabled: 'Disabled',
   infoViewTask: 'View this task',
-  editorViewSavedTag: 'Saved settings',
-  editorViewDraftTag: 'Unsaved draft',
-  editorViewNewTag: 'New, not saved yet',
+  editorViewDraftTag: 'Draft edits not saved',
+  editorViewNewTag: 'New, not saved',
   editorViewUntitled: 'Untitled task',
   editorViewPrompt: 'Prompt',
   editorViewPromptEmpty: 'No prompt yet',
   editorViewNoRunDraft: 'Not saved yet — no run history',
   editorViewNotFilled: 'Not set',
+  editorViewFullscreen: 'Full screen',
+  editorViewSourceCode: 'Source',
   editorViewSwitchTitle: 'Discard unsaved changes?',
   editorViewSwitchDesc: 'This task has unsaved edits. Continuing will discard them and open the task you want to view.',
   // Task card three panels (decision 55).

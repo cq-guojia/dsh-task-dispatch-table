@@ -136,3 +136,29 @@
 - 共享展示层：`src/client/task-info.tsx`（`InfoField` / `taskInfoBaseFields` / `lastRunFields` / `LAST_RUN_STATUSES`）+ `task-info-css.ts`（域 `domain:task-info`）。
 - 入口与冲突流：`src/client/index.ts` 的 `findDefinition` / `openEditor` / `openViewerNow` / `openViewer` / `confirmPendingView` / `pendingView` / `editorDirtyRef`。
 - 前置任务行可点：`src/client/task-info.tsx` 的 `.dsh-tdt-info-dep` 按钮 + `src/client/task-info-css.ts` 的 `:hover` 变蓝。
+
+## 六、r12 真机反馈修正（2026-10-05 同日，冒烟 611 → 613）
+
+用户真机看完第一版给出 6 条修正，全部落码：
+
+| # | 反馈 | 处置 |
+|---|---|---|
+| 1 | 底栏「删除 / 取消 / 保存」圆角与切换控件不一致，「肯定有人没按规则自己写」 | **排查结论：没人自写**——四钮是官方 `Button`（圆角来自宿主注入 CSS，插件侧查不到值），与基础层 `.dsh-tdt-seg`/`.dsh-tdt-btn`（radius-md=12px）**两套体系并存**才是根因。修法 = footer 四钮换基础层 `TdtButton`（`.dsh-tdt-ed-danger` 红字红边覆盖保留）；全站 borderRadius 审计结论登记 `ui-style-guide.md` §二（存量官方 Button 混用点登记待收编） |
+| 2 | 草稿未保存标记别放任务名旁（名字可能很长），挂「任务配置」标题旁，文案精简正式 | 头部 viewtag 移除；chip 挂查看档「任务配置」标题旁；文案改「编辑的草稿未保存 / 新建，尚未保存」（en: Draft edits not saved / New, not saved） |
+| 3 | 排期下面要有「预计下次执行」，跟原来逻辑一样 | 见下面「纯核抽取」 |
+| 4 | 三块重排：任务配置 → 上次执行 → 提示词（最下）；标题前加小图标 | `task-view.tsx` 重排 + 三枚官方图标（Plan / Clock / Think）+ `.dsh-tdt-ed-view-head/-ic/-title` |
+| 5 | 提示词默认几行不框 +「全屏查看」= 只读 MD 全屏（源码 / 预览） | 默认 max-height 120px 不框；`PromptEditorModal` 加 `readonly` 参数（默认预览态、CodeMirror `editable:false`、隐藏版本开关 / 版本面板 / 确认框） |
+| 6 | 全站任务名都连到查看档 | 卡片标题、执行记录标题、记录前置名、编辑器已选前置行、会话弹窗标题任务名段（掐冒泡保既有交互）+ 查看档内前置名补链；**下拉候选不连**（点击=选中，冲突，登记待用户定） |
+
+### 纯核抽取（本轮最大的一处动土）
+
+「预计下次执行」要**实时反映草稿**，而 cron→next 此前只有服务端能算（`tasks.ts` 带 node:fs/zod）。抽出 `src/schedule-next.ts`（零 node 依赖，唯一外部依赖 cron-parser，client bundle 由 tsdown 内联；chrome99 的 Intl 时区可用）：`logicalDateOf` / `intervalSpecOf` / `anchoredIntervalSlots` / `scheduledSlotsFor` / `filterSlotsBySchedule` / `wallClockToAbsolute` / `nextSlotAfter` / `onceScheduledAt` / `tzOffsetMs` 原样迁出，`tasks.ts` import + re-export ⇒ `runtime-index` / `scheduler` / `index` 调用面**零改动**，服务端冒烟全绿。配套搬迁：`scheduleCron`（草稿→cron）从 `task-editor.tsx` 迁 `schedule-text.ts`（**消除 task-view ↔ task-editor 运行时循环**）；`renderNextExec` / `LiveText` / 秒级心跳 / 相对时间表达从 `task-list.tsx` 上提 `task-info.tsx`（卡片与查看档共用）。
+
+### r12 踩坑
+
+| # | 坑 | 处置 |
+|---|---|---|
+| 1 | `ScheduleCronDraft.scheduleKind` 写成 `'interval' \| 'period'`，实际编辑器是 `'periodic'` | typecheck 抓到，照编辑器 `ScheduleKind` 改 `'interval' \| 'periodic'` |
+| 2 | 想让 task-view 直接 import task-editor 的 `scheduleCron` ⇒ 组件互相引用构成**运行时循环** | 纯函数迁去 `schedule-text.ts`（无环归宿），编辑器与查看档都从那里取 |
+| 3 | cron-parser 内联进 client bundle 后自带 `toLocaleString(` ⇒ 冒烟「不再用 toLocaleString」的 **bundle 级反断言**误伤 | 反断言改读**我们自己的源文件**（format.ts / task-info.tsx），bundle 级不再适用 |
+| 4 | `everyNWeeks` schema 可空 ⇒ 纯核的最小类型写 `number \| null` 并判空，不能照抄旧代码的 `=== undefined` 单判 | `schedule-next.ts` 的 `filterSlotsBySchedule` 同时判 null / undefined |

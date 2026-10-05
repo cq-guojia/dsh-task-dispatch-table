@@ -23,8 +23,9 @@ import {
 // 任务信息展示层（2026-10-05 上提为共享件）：基础信息纸表格 / 上次执行明细 / 状态图标 / 人话转换。
 // ⚠️ **与右侧栏「查看档」共用同一份实现** —— 要改字段怎么翻译、怎么渲染，去 `task-info.tsx`，不许在本文件再抄一份。
 import {
-  baseNameOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
-  LAST_RUN_STATUSES, lastRunFields, StatusIcon, taskInfoBaseFields, type TaskInfoBaseView,
+  baseNameOf, clockOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
+  LAST_RUN_STATUSES, lastRunFields, LiveText, NO_TIME, relativeFuture, relativePast,
+  renderNextExec, StatusIcon, sameCalendarDay, taskInfoBaseFields, type TaskInfoBaseView,
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
 import { interpolateTranslate, type Translate } from './locales'
@@ -90,8 +91,8 @@ export interface TaskOverviewRow {
 const transition = `background var(--tdt-dur) var(--tdt-ease), color var(--tdt-dur) var(--tdt-ease), border-color var(--tdt-dur) var(--tdt-ease)`
 /** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
 const monoFont = 'var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)'
-/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
-const NO_TIME = '--'
+// `NO_TIME` 占位与「时间社交化表达 / 秒级心跳 / LiveText / renderNextExec」已于 2026-10-05
+// 上提共享层 ⇒ `task-info.tsx`（卡片与右侧栏查看档共用同一份）。
 /** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
  *  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
 const CONTROL_H = 'var(--tdt-control-h-md)'
@@ -316,46 +317,7 @@ export function useTaskOverview(): {
 /** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
 const formatFull = (iso: string): string => formatDateTime(iso, { fallback: '—' })
 
-const sameCalendarDay = (a: Date, b: Date): boolean =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-
-function relativePast(iso: string, nowMs: number, tt: Translate): string {
-  const diff = nowMs - Date.parse(iso)
-  if (!(diff >= 0)) return tt('relNow')
-  if (diff < 60_000) return tt('relJustNow')
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 60) return tt('relMinutesAgo', { n: minutes })
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return tt('relHoursAgo', { n: hours })
-  const days = Math.floor(hours / 24)
-  if (days < 7) return tt('relDaysAgo', { n: days })
-  if (days < 30) return tt('relWeeksAgo', { n: Math.floor(days / 7) })
-  const months = Math.floor(days / 30)
-  if (months < 12) return tt('relMonthsAgo', { n: months })
-  return tt('relYearsAgo', { n: Math.floor(days / 365) })
-}
-
-function relativeFuture(iso: string, nowMs: number, tt: Translate): string {
-  const target = Date.parse(iso)
-  // 解析失败（畸形 ISO）⇒ 占位符，别渲染出「NaN 年后」（2026-09-30 专家团复核）。
-  if (!Number.isFinite(target)) return NO_TIME
-  const diff = target - nowMs
-  if (diff <= 0) return tt('relPast')
-  if (diff < 60_000) return tt('relNow')
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 60) return tt('relMinutes', { n: minutes })
-  const date = new Date(target)
-  const now = new Date(nowMs)
-  const tomorrow = new Date(now.getTime() + 24 * 3600_000)
-  if (sameCalendarDay(date, now)) return tt('relToday', { time: clockOf(iso) })
-  if (sameCalendarDay(date, tomorrow)) return tt('relTomorrow', { time: clockOf(iso) })
-  const days = Math.ceil(diff / 86_400_000)
-  if (days < 7) return tt('relDays', { n: days })
-  if (days < 30) return tt('relWeeks', { n: Math.floor(days / 7) })
-  const months = Math.floor(days / 30)
-  if (months < 12) return tt('relMonths', { n: months })
-  return tt('relYears', { n: Math.floor(days / 365) })
-}
+// `sameCalendarDay` / `relativePast` / `relativeFuture` 已上提共享层 ⇒ `task-info.tsx`。
 
 /**
  * 24 小时内的秒级倒计时（用户 2026-09-30 定的分级）：
@@ -376,57 +338,7 @@ function countdownText(iso: string, nowMs: number, tt: Translate): string {
   return hours > 0 ? `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}` : `${pad2(minutes)}:${pad2(seconds)}`
 }
 
-// ── 全局秒级心跳（单 timer + 局部订阅）────────────────────────────────
-// ⚠️ 性能关键（用户 2026-09-30 反馈「延迟太严重」）：**不能**在列表顶层每秒 setState
-// （那会整列表重渲染）。正确做法 = 全模块只有一个 interval，需要动的文本（倒计时）
-// 各自订阅，每秒只重渲染那一小块。
-const tickerListeners = new Set<() => void>()
-let tickerTimer: number | null = null
-/**
- * `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
- * 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
- * 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
- */
-const onVisibilityChange = (): void => { for (const l of [...tickerListeners]) l() }
-let visibilityBound = false
-function subscribeTicker(cb: () => void): () => void {
-  tickerListeners.add(cb)
-  if (tickerTimer === null) {
-    tickerTimer = window.setInterval(() => { for (const l of [...tickerListeners]) l() }, 1000)
-    // 标签页被浏览器节流（后台 / 休眠）后回来 ⇒ 立刻对一次表，倒计时自动追上。
-    if (!visibilityBound && typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', onVisibilityChange)
-      visibilityBound = true
-    }
-  }
-  return () => {
-    tickerListeners.delete(cb)
-    if (tickerListeners.size === 0 && tickerTimer !== null) {
-      window.clearInterval(tickerTimer)
-      tickerTimer = null
-    }
-  }
-}
-
-/**
- * 每秒自刷新的一小块内容：只有它自己重渲染（render 永远取最新闭包，ref 转发）。
- * 2026-09-30（决策 54）：`render` 由「只能返回字符串」放宽为**可返回节点** —— 「到点未派发」
- * 时要在这里就地换成三个方块的活动指示（文案换不出来，只能给节点）。
- */
-function LiveText(props: { render: (nowMs: number) => ReactNode; style?: Record<string, string | number> }) {
-  const [, force] = useState(0)
-  const renderRef = useRef(props.render)
-  renderRef.current = props.render
-  useEffect(() => subscribeTicker(() => force(v => v + 1)), [])
-  return h('span', { style: props.style }, renderRef.current(Date.now()))
-}
-
-/** HH:mm（本机时区）。 */
-function clockOf(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-}
+// 全局秒级心跳（subscribeTicker）/ `LiveText` / `clockOf` 已上提共享层 ⇒ `task-info.tsx`。
 
 
 // ── 排序（时间轴：马上要跑的最上，关闭的沉底）──────────────────────────
@@ -821,19 +733,7 @@ const statusStyleOf = (status: string): Record<string, string | number> | undefi
 
 // `windowLabel`（「允许延迟」ISO → 人话）已于 2026-10-05 上提 `task-info.tsx`（查看档也要用同一份）。
 
-/**
- * 基础信息「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走全站通用
- * `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
- * 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
- */
-function renderNextExec(next: string | null, t: Translate): ReactNode {
-  if (next === null) return h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
-  return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 } },
-    h(LiveText, { render: (nowMs: number) => relativeFuture(next, nowMs, t) }),
-    h('span', { style: { color: 'var(--tdt-fg-3)', flex: 'none' } }, '│'),
-    h('span', { style: { fontVariantNumeric: 'tabular-nums' } }, formatDateTime(next, { seconds: true, fallback: NO_TIME })),
-  )
-}
+// `renderNextExec`（「预计执行」行：相对时间自刷 + 具体时刻）已上提共享层 ⇒ `task-info.tsx`。
 
 /**
  * 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
@@ -1506,7 +1406,20 @@ function TaskCard(props: {
         // 编号与创建时间都挂在**标题行尾部**（同一 faintStyle = 同一字号），不再另起第三行 ——
         // 用户 2026-10-03：新建任务时第三行凭空冒出一个「创建于」行很跳，且白占一行高度。
         h('div', { style: { display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 } },
-          h('div', { style: { ...titleStyle, flex: '0 1 auto', minWidth: 0 } }, h(MarqueeText, { text: row.title })),
+          // 任务名可点（r12 用户：全站任务名都连到查看档）——整行点击=展开卡片的既有行为不变，
+          // 点名字时掐掉冒泡、改为打开该任务的查看档；未接 onViewTask 时保持纯文本（不装可点）。
+          onViewTask === undefined
+            ? h('div', { style: { ...titleStyle, flex: '0 1 auto', minWidth: 0 } }, h(MarqueeText, { text: row.title }))
+            : h('button', {
+              type: 'button',
+              className: 'dsh-tdt-info-dep',
+              title: t('infoViewTask'),
+              style: { ...titleStyle, flex: '0 1 auto', minWidth: 0, textAlign: 'left' },
+              onClick: (event: { stopPropagation: () => void }) => {
+                event.stopPropagation()
+                onViewTask(row.id)
+              },
+            }, h(MarqueeText, { text: row.title })),
           row.code !== null ? h('span', { style: { ...faintStyle, flex: 'none', display: 'inline' } }, `[${row.code}]`) : null,
           // 创建时间**长显**（用户拍板不隐藏）：`[2026-10-03 创建]`。
           // ⚠️ `createdAt` 只有**经 UI 表单保存**的任务才有（index.ts:425），老定义 / 手工写的 JSON 没有

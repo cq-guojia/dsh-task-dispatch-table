@@ -870,14 +870,22 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
   check('保存后乐观补行（patchRow + rowPatchOf）',
     clientJs.includes('patchRow') && clientJs.includes('rowPatchOf'))
   // 时间显示一律两位（用户 2026-09-30：「都把它补成两位」）——补零收敛到共用 pad2，时间戳显式拼秒。
-  check('时间显示一律两位（共用 pad2 + formatDateTime 拼秒，不再用 toLocaleString）',
-    clientJs.includes('function pad2') && clientJs.includes('function formatDateTime') && !clientJs.includes('toLocaleString('))
-  // 展示名与图标（用户 2026-09-30 拍板：名字用「定时任务调度器」，图标用 assets/icon-scheduler.svg）。
-  check('面板 / 侧栏展示名 = 定时任务调度器', clientJs.includes('定时任务调度器'))
-  check('侧栏图标 = 用户指定的调度器图标（方括号 + 红 S 方块，内联进 bundle）',
-    clientJs.includes('M19 16 H9 V112 H19') && clientJs.includes('#E03E3E'))
-  check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
-  check('无下次执行占位符 = `--`（图标保留，不再 `--:--`）', !clientJs.includes('--:--') && clientJs.includes('const NO_TIME = "--"'))
+  // （r12 起 bundle 内联了 cron-parser，它自己用 toLocaleString ⇒ 断言改读**我们自己的源文件**。）
+  {
+    const fmtSrc = readFileSync(join(process.cwd(), 'src', 'client', 'format.ts'), 'utf8')
+    const tiSrc = readFileSync(join(process.cwd(), 'src', 'client', 'task-info.tsx'), 'utf8')
+    check('时间显示一律两位（共用 pad2 + formatDateTime 拼秒，不再用 toLocaleString）',
+      fmtSrc.includes('function pad2') && fmtSrc.includes('function formatDateTime')
+      && !fmtSrc.includes('toLocaleString(') && !tiSrc.includes('toLocaleString('))
+    // 展示名与图标（用户 2026-09-30 拍板：名字用「定时任务调度器」，图标用 assets/icon-scheduler.svg）。
+    check('面板 / 侧栏展示名 = 定时任务调度器', clientJs.includes('定时任务调度器'))
+    check('侧栏图标 = 用户指定的调度器图标（方括号 + 红 S 方块，内联进 bundle）',
+      clientJs.includes('M19 16 H9 V112 H19') && clientJs.includes('#E03E3E'))
+    check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
+    // NO_TIME 占位 2026-10-05 上提共享层 ⇒ 断言改读 task-info.tsx。
+    check('无下次执行占位符 = `--`（图标保留，不再 `--:--`）',
+      !clientJs.includes('--:--') && tiSrc.includes("export const NO_TIME = '--'"))
+  }
   // 用户 2026-09-30 / 2026-10-03：展开区「太丑了」——从「一句 `·` 串联的长文本」改成逐字段成行，
   // 再于 2026-10-03 改版为「左配置 + 右最近执行」两栏纸表格。
   check('展开区为标签/值网格（InfoField + 纸表格网格：整栏共用 grid、标签列 auto-fit）',
@@ -2612,6 +2620,8 @@ console.log('\n[14] runtime-index')
     const ixSrc = readFileSync(join(process.cwd(), 'src', 'client', 'index.ts'), 'utf8')
     const lcSrc = readFileSync(join(process.cwd(), 'src', 'client', 'locales.ts'), 'utf8')
     const distV = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+    const rt = readFileSync(join(process.cwd(), 'src', 'client', 'records-timeline.tsx'), 'utf8')
+    const sv = readFileSync(join(process.cwd(), 'src', 'client', 'session-view.ts'), 'utf8')
 
     check('底栏最左恒显「查看 / 编辑」两档切换（Segmented；切档不重开分栏、不丢草稿）',
       te.includes("id: 'dsh-tdt-ed-viewtab'")
@@ -2623,16 +2633,34 @@ console.log('\n[14] runtime-index')
     check('查看档只读：底部删除 / 重置 / 取消 / 保存不渲染（只留切换 + ✕）；头部隐藏可写的启用开关',
       /viewTab === 'view'\s*\?\s*h\('span', \{ style: \{ flex: '1 1 auto' \} \}\)/.test(te)
       && /viewTab === 'view'\s*\?\s*null\s*:\s*h\('span', \{ className: 'dsh-tdt-ed-enable/.test(te)
-      // 头部标题 = 任务名 + 来源标记：一眼知道「看的是哪一份」（已保存 / 草稿 / 新建未保存）。
-      && te.includes("t('editorViewUntitled')") && te.includes("t('editorViewSavedTag')")
-      && te.includes("t('editorViewDraftTag')") && te.includes("t('editorViewNewTag')"))
+      // 头部标题 = 任务名；草稿标记 r12 挪进查看档正文（「任务配置」标题旁，文案精简正式），头部不再挂。
+      && te.includes("t('editorViewUntitled')")
+      && tv.includes("t('editorViewDraftTag')") && tv.includes("t('editorViewNewTag')")
+      && !te.includes('editorViewSavedTag') && !te.includes('dsh-tdt-ed-viewtag'))
 
-    check('查看档三块齐全：基础信息（共享层）→ 提示词（Markdown + 块内限高滚动）→ 上次执行（状态色块 + 明细）',
+    check('查看档三块（r12 顺序：任务配置 → 上次执行 → 提示词最下）+ 块标题小图标 + 提示词约 5 行不框',
       tv.includes('taskInfoBaseFields({')
       && tv.includes("t('editorViewPrompt')") && tv.includes('MarkdownText')
-      && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:260px')
+      && tv.includes('IconPlanOutlineRegular') && tv.includes('IconClockOutlineRegular') && tv.includes('IconThinkOutlineRegular')
+      && tv.includes("t('editorViewFullscreen')")
+      && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:120px')
+      && !tec.includes('dsh-tdt-ed-view-prompt{box-sizing:border-box;padding')
       && tv.includes('dsh-tdt-ed-view-badge') && tv.includes('lastRunFields({')
       && tv.includes('hideStatus: true'))
+
+    check('查看档「预计执行」：与服务端同一份纯核实时推算（scheduleCron / nextSlotAfter），改排期立刻反映',
+      tv.includes('nextSlotAfter({ schedule }, new Date())')
+      && tv.includes("from './schedule-text'")
+      && tv.includes('renderNextExec(nextExecIso, t)')
+      // 纯核真源：schedule-next.ts 被服务端 re-export（调用面零改动）。
+      && readFileSync(join(process.cwd(), 'src', 'tasks.ts'), 'utf8').includes("} from './schedule-next.js'")
+      && readFileSync(join(process.cwd(), 'src', 'schedule-next.ts'), 'utf8').includes('export function nextSlotAfter'))
+
+    check('r12 全站任务名接查看档：卡片标题 / 记录标题 / 记录前置名 / 已选前置行 / 弹窗标题（掐冒泡保既有交互）',
+      lvSrc.includes('onViewTask(row.id)') && tv.includes('onViewTask')
+      && rt.includes('onViewTask(dep.task)') && rt.includes('onViewTask(row.task_id)')
+      && sv.includes('onOpenTask(taskId)') && ixSrc.includes('onOpenTask: openViewer')
+      && ixSrc.includes('onViewTask: openViewer'))
 
     check('查看档数据真实：提示词取自草稿（绝不碰 row.promptHead）；上次执行按 id 拉最近一条终态；新建态不发请求',
       tv.includes('draft.prompt') && !tv.includes('row.promptHead')

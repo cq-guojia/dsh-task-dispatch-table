@@ -28,6 +28,8 @@ import { Fragment, createElement as h, useCallback, useEffect, useMemo, useRef, 
 import { Button, IconBranchOutlineRegular, IconCloseOutlineRegular, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { Button as TdtButton, IconButton } from './ui'
 import { ensureArchiveSessionStyle } from './archive-session-css'
+// 标题任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
+import { ensureTaskInfoStyle } from './task-info-css'
 import { ChatHint, ChatNodeListMirror, ChatOlderButton, ChatViewFrame, type TurnsFace } from './mirror/ChatView'
 import { GenericCommandCard } from './mirror/GenericCommandCard'
 import { MessageIconActionsMirror } from './mirror/MessageIconActions'
@@ -559,6 +561,7 @@ export function openSessionView(
 
 // 样式表注入（幂等；无 document 环境静默跳过）。规则定义见 ./archive-session-css。
 ensureArchiveSessionStyle()
+ensureTaskInfoStyle()
 
 /** JSON 安全序列化（循环引用 / 特殊值不抛）。 */
 function safeJson(value: unknown): string {
@@ -1144,6 +1147,14 @@ export function SessionViewModal(props: {
   t: Translate
   /** 弹窗标题（执行记录里该行的任务名 · 刻度）。 */
   heading: string
+  /** 任务名（heading 的第一段）；与 `taskId` / `onOpenTask` 同给 ⇒ 标题里任务名可点开查看档（r12）。 */
+  headingTask?: string
+  /** heading 里任务名之后的余串（「 · 计划时刻」）。 */
+  headingRest?: string
+  /** 标题任务名对应的任务 id（查看档入口用）。 */
+  taskId?: string
+  /** 点标题里的任务名 ⇒ 右侧栏以查看档打开该任务。 */
+  onOpenTask?: (taskId: string) => void
   sessionId: string
   view: SessionViewTarget
   onClose: () => void
@@ -1177,7 +1188,7 @@ export function SessionViewModal(props: {
 }): ReturnType<typeof h> {
   const {
     t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles,
-    onOpenFile, outputs, upstream, attached, workspacePath,
+    onOpenFile, outputs, upstream, attached, workspacePath, headingTask, headingRest, taskId, onOpenTask,
   } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
@@ -1350,7 +1361,19 @@ export function SessionViewModal(props: {
       h('div', { className: 'dsh-tdt-sv-panel', onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
         h('div', { className: 'dsh-tdt-sv-header' },
           h('div', { className: 'dsh-tdt-sv-heading' },
-            h('div', { className: 'dsh-tdt-sv-title' }, `${tt('sessionViewerTitle')} · ${heading}`),
+            h('div', { className: 'dsh-tdt-sv-title' },
+              tt('sessionViewerTitle'),
+              ' · ',
+              // 任务名可点（r12 用户：全站任务名都连查看档）——拆开渲染 ⇒ 只有任务名那一段是按钮
+              //（hover 变蓝），时刻仍是纯文本；降级（拿不到任务 / 回调未就位）= 整串纯文本。
+              taskId !== undefined && onOpenTask !== undefined && headingTask !== undefined
+                ? h('button', {
+                  type: 'button', className: 'dsh-tdt-info-dep', title: t('infoViewTask'),
+                  style: { fontSize: 'inherit' },
+                  onClick: () => { onOpenTask(taskId) },
+                }, headingTask)
+                : headingTask ?? heading,
+              headingTask !== undefined ? headingRest : ''),
             h('div', { className: 'dsh-tdt-sv-sid' }, sessionId),
             // 可见探针：官方样式未命中时直接显示（省得翻控制台）。命中则不显示。
             officialCount === 0

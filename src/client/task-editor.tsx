@@ -55,7 +55,7 @@ import {
 import { Button as TdtButton, IconButton, NumberInput, PrefixedInput as TdtPrefixedInput, Segmented } from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
-import { renderSchedule, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
+import { renderSchedule, scheduleCron, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { EditorView } from '@codemirror/view'
@@ -346,63 +346,8 @@ export function emptyTaskDraft(): TaskEditorDraft {
   }
 }
 
-// ─────────────────────── 排期 → cron 只读预览（P2 才落真映射） ───────────────────────
-
-
-/** 每月档的月份口径 → cron 月份位。 */
-const MONTH_MODE_CRON: Record<MonthMode, string> = {
-  every: '*',
-  odd: '1,3,5,7,9,11',
-  even: '2,4,6,8,10,12',
-}
-
-/** ISO 序号（1..7）→ cron 星期位（0..6）。 */
-function cronDow(day: number): number {
-  return day === 7 ? 0 : day
-}
-
-/** 草稿 → 排期的 cron 形态；表达不了的组合返回 null（由调用方给出可见提示，不编假值）。 */
-function scheduleCron(draft: TaskEditorDraft): string | null {
-  const match = /^(\d{2}):(\d{2})$/.exec(draft.time)
-  const hour = match === null ? 9 : Number(match[1])
-  const minute = match === null ? 0 : Number(match[2])
-  const days = draft.weekdays.slice().sort((a, b) => a - b).map(cronDow).join(',')
-
-  if (draft.scheduleKind === 'interval') {
-    const step = Number.parseInt(draft.intervalStep, 10)
-    if (!Number.isFinite(step) || step <= 0) return null
-    const dow = days === '' ? '*' : days
-    // ⚠️ 必须按 intervalUnit 出**正确形态**（2026-09-30 专家团复核发现的硬伤）：
-    //    此前两种单位都出 `*/N * * * *` ⇒ 选「每 2 小时」实际按**每 2 分钟**跑（文案却写「每 2 小时」）。
-    //    分钟档 = `*/N * * * <dow>`；小时档 = `0 */N * * <dow>`（分钟固定 0，与「每 N 小时」一致）。
-    return draft.intervalUnit === 'hour'
-      ? `0 */${step} * * ${dow}`
-      : `*/${step} * * * ${dow}`
-  }
-
-  switch (draft.periodFreq) {
-    case 'once':
-      return null // 单次走 `schedule.once`，没有 cron。
-    case 'daily':
-      return `${minute} ${hour} * * *`
-    case 'weekly':
-      return days === '' ? null : `${minute} ${hour} * * ${days}`
-    case 'monthly':
-      // 单数月 / 双数月 = 隔月执行，cron 的月份位写得出（1,3,5… / 2,4,6…）。
-      return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`
-    case 'quarterly': {
-      // 「每季度第 N 个月」= N, N+3, N+6, N+9（起月本身就要跑）——
-      // 旧写法漏掉起月（选第 1 个月 ⇒ 4,7,10，1 月永不执行，评审 P1#5）。
-      const start = Number.isFinite(Number.parseInt(draft.quarterMonth, 10))
-        ? Number.parseInt(draft.quarterMonth, 10)
-        : 1
-      const months = [0, 1, 2, 3].map(offset => start + offset * 3).join(',')
-      return `${minute} ${hour} ${draft.monthDay} ${months} *`
-    }
-    case 'yearly':
-      return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`
-  }
-}
+// `scheduleCron`（草稿 → cron）已于 2026-10-05 迁至 [`./schedule-text.ts`](./schedule-text.ts)
+//（与「排期 → 人话」同模块；查看档「预计下次执行」也从那里取，避免 task-view ↔ task-editor 运行时循环）。
 
 /** 结构化排期（双写的 `schedule.ui`）：表单控件的原样留档，供下次编辑反解。 */
 function structuredOf(draft: TaskEditorDraft): Record<string, unknown> {
@@ -1116,11 +1061,16 @@ function PromptEditorModal(props: {
   onRestoreVersion: (file: string) => void
   /** 删除某个版本（用户自己删；系统从不自动删）。 */
   onDeleteVersion: (file: string) => void
+  /**
+   * 只读查看（r12 查看档「全屏查看」）：源码 / 预览两态、**默认预览**，无编辑、无保存、无版本面板
+   * —— 等同展示一个 MD 文件。不给或 false = 编辑器本体（原行为）。
+   */
+  readonly?: boolean
 }): ReactNode {
-  const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onDeleteVersion } = props
+  const { t, mode: editorMode, value, history, onChange, onClose, onRestoreVersion, onDeleteVersion, readonly } = props
   // 编辑器扩展固定引用：markdown 高亮 + 软折行（长行自动换行，宽度失控/横向滚动的根源在此）。
   const cmExtensions = useMemo(() => [markdown(), EditorView.lineWrapping], [])
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit')
+  const [mode, setMode] = useState<'edit' | 'preview'>(readonly === true ? 'preview' : 'edit')
   const [showVersions, setShowVersions] = useState(false)
   const versions = history?.versions ?? []
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -1148,17 +1098,19 @@ function PromptEditorModal(props: {
           label: t('editorPromptEditorTitle'),
         }),
         // 版本开关（2026-10-01：并入统一 Segmented——multiple 单段做 on/off，根 id 保留 dsh-tdt-ed-histtoggle
-        // 供冒烟/锚点使用；样式走灰底变体 inset，即「版本」观感本身）
-        h(Segmented, {
-          id: 'dsh-tdt-ed-histtoggle',
-          size: 'md',
-          variant: 'inset',
-          multiple: true,
-          value: showVersions ? ['on'] : [],
-          items: [{ value: 'on', label: t('editorVersionToggle') }],
-          onChange: (next: string[]) => { setShowVersions(next.includes('on')) },
-          label: versionTitle,
-        }),
+        // 供冒烟/锚点使用；样式走灰底变体 inset，即「版本」观感本身）。只读查看（r12）不出现。
+        readonly === true
+          ? null
+          : h(Segmented, {
+            id: 'dsh-tdt-ed-histtoggle',
+            size: 'md',
+            variant: 'inset',
+            multiple: true,
+            value: showVersions ? ['on'] : [],
+            items: [{ value: 'on', label: t('editorVersionToggle') }],
+            onChange: (next: string[]) => { setShowVersions(next.includes('on')) },
+            label: versionTitle,
+          }),
         h(Button, { variant: 'ghost', size: 'sm', onClick: onClose }, t('editorClose')),
       ),
     ),
@@ -1172,9 +1124,11 @@ function PromptEditorModal(props: {
               extensions: cmExtensions,
               theme: promptEditorTheme,
               height: '100%',
+              // 只读查看（r12 查看档「全屏查看」的源码态）：同编辑器观感，但不可改、不聚焦。
+              editable: readonly !== true,
               basicSetup: { lineNumbers: true, foldGutter: false, highlightActiveLine: true, autocompletion: false, searchKeymap: false },
-              // 每次切回编辑（CodeMirror 重新挂载）即聚焦，免去手动点一下。
-              onCreateEditor: (view: EditorView) => { view.focus() },
+              // 每次切回编辑（CodeMirror 重新挂载）即聚焦，免去手动点一下（只读态不聚焦）。
+              onCreateEditor: readonly === true ? undefined : (view: EditorView) => { view.focus() },
             } as never),
           )
         : h('div', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'auto', padding: '14px 18px' } },
@@ -1309,6 +1263,8 @@ export function TaskEditorDrawer(props: {
   onOpenSession?: ((sessionId: string) => void) | undefined
   /** 查看档里点产出物打开文件预览（不给 ⇒ 该行不可点）。 */
   onOpenFile?: ((sessionId: string, path: string) => void) | undefined
+  /** 查看档里点前置任务名 ⇒ 打开那个任务的查看档（r12：与卡片口径一致）。 */
+  onViewTask?: ((id: string) => void) | undefined
   /** 工作区文件服务（选择工作区文件用；未就位为 null ⇒ 选择器不可用）。 */
   workspaceFiles?: WorkspaceFilesFace | null
   /** Office 预览服务（remote.officeToPdf；未就位为 null ⇒ Office 文件出「不可用」空态）。 */
@@ -1334,7 +1290,7 @@ export function TaskEditorDrawer(props: {
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors,
     officeToPdf, currentTaskId, width, onWidthChange, reserved,
     initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView,
-    onOpenSession, onOpenFile,
+    onOpenSession, onOpenFile, onViewTask,
   } = props
   // ── 档位（用户 2026-10-05）────────────────────────────────────────────
   // 查看 = 只读人话视图（基础信息 → 提示词 → 上次执行）；编辑 = 表单。
@@ -1359,6 +1315,8 @@ export function TaskEditorDrawer(props: {
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+  // 查看档的「全屏查看」（r12）：只读提示词全屏（源码 / 预览两态），盖在分栏面板上、随 ✕ 收回。
+  const [promptViewOpen, setPromptViewOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(0) // >0 = Toast seq（「预览态不可保存」中性提示）
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -1945,8 +1903,15 @@ export function TaskEditorDrawer(props: {
               return h('div', { key: index, className: 'dsh-tdt-ed-depitem' },
                 // 行首只留「有点任务」icon（官方 IconPlanOutlineRegular）——「前置任务：」文字按用户要求删除（太占地方）。
                 h('span', { style: { display: 'inline-flex', flex: 'none', color: 'var(--tdt-fg-3)' } }, h(IconPlanOutlineRegular, { size: 14 })),
-                // 任务名吃剩余宽度：超长省略号，hover 跑马灯（MarqueeText，动画只在内层 span 上跑）。
-                h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } }),
+                // 任务名可点（r12：全站任务名都连查看档）⇒ 打开那个前置任务的查看档
+                //（内部走「未保存冲突」确认流）。未接回调时保持纯文本。
+                onViewTask === undefined
+                  ? h(MarqueeText, { text: known?.label ?? dep.task, style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } })
+                  : h('button', {
+                    type: 'button', className: 'dsh-tdt-info-dep', title: t('infoViewTask'),
+                    style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)', textAlign: 'left' },
+                    onClick: () => { onViewTask(dep.task) },
+                  }, h(MarqueeText, { text: known?.label ?? dep.task })),
                 // 工作区固定宽（72px）+ 省略号 + 跑马灯（跨工作区时分得清是哪个区的任务）。
                 ws === '' ? null : h(MarqueeText, { text: ws, style: { flex: '0 0 72px', color: 'var(--tdt-fg-2)', fontSize: 'var(--tdt-font-xs)' } }),
                 // 「移除」宽度固定（flex none），不被任务名挤动。
@@ -2149,17 +2114,11 @@ export function TaskEditorDrawer(props: {
       h('div', { className: 'dsh-tdt-ed-header' },
         h('div', { className: 'dsh-tdt-ed-headleft' },
           // 查看档标题 = **任务名**（还没起名就给「未命名任务」）；编辑档仍是「新建任务 / 编辑任务」。
+          // （r12 用户反馈：草稿未保存标记**不放头部**——任务名可能很长，改挂查看档正文「任务配置」标题旁。）
           h('div', { className: 'dsh-tdt-ed-title' },
             viewTab === 'view'
               ? (draft.title.trim() === '' ? t('editorViewUntitled') : draft.title)
               : (mode === 'create' ? t('editorNew') : t('editorEdit'))),
-          // 来源标记（用户 2026-10-05）：一眼知道**看的是哪一份** —— 已保存的配置 / 正在改的草稿 / 新建还没保存。
-          viewTab === 'view'
-            ? h('span', { className: 'dsh-tdt-ed-viewtag' },
-              mode === 'create'
-                ? t('editorViewNewTag')
-                : (dirty ? t('editorViewDraftTag') : t('editorViewSavedTag')))
-            : null,
         ),
         h('div', { className: 'dsh-tdt-ed-headactions' },
           // 启用开关写回结果 Toast（共用组件：成功绿 / 失败红），浮在头部下方，2.5s 上飘淡出自退。
@@ -2201,11 +2160,15 @@ export function TaskEditorDrawer(props: {
           ? h(TaskViewPanel, {
             t,
             draft,
+            mode,
+            dirty,
             // 任务 id 只在编辑态有 ⇒ 新建态给空串，查看档据此**不发**「上次执行」请求（任务还不存在）。
             taskId: mode === 'edit' ? (currentTaskId ?? '') : '',
             tasks,
             onOpenSession,
             onOpenFile,
+            onViewTask,
+            onOpenPromptFullscreen: () => { setPromptViewOpen(true) },
           })
           : body),
       // 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
@@ -2231,7 +2194,9 @@ export function TaskEditorDrawer(props: {
           ? h('span', { style: { flex: '1 1 auto' } })
           : h(Fragment, null,
             mode === 'edit' && onDelete !== undefined
-              ? h(Button, {
+              // 底栏按钮统一**基础层**（用户 2026-10-05：圆角要与左边的档位切换同属一套——
+              // 官方 Button 的圆角由宿主 CSS 决定、与 .dsh-tdt-seg 的 radius-md 天生不一致）。
+              ? h(TdtButton, {
                 variant: 'outline', size: 'sm', className: 'dsh-tdt-ed-danger',
                 onClick: () => { setConfirmDeleteTask(true) },
               }, t('editorDeleteTask'))
@@ -2239,7 +2204,7 @@ export function TaskEditorDrawer(props: {
             // 「重置」只在**改过内容**时才出现（用户 2026-09-30）：直接复用关闭确认那份脏判定
             // （`dirty` = 当前草稿 ≠ 打开时快照）；重置后草稿回到初始 ⇒ dirty 变 false ⇒ 按钮自己消失。
             dirty
-              ? h(Button, {
+              ? h(TdtButton, {
                 variant: 'ghost', size: 'sm',
                 onClick: () => { setConfirmReset(true) },
               }, t('editorReset'))
@@ -2277,8 +2242,8 @@ export function TaskEditorDrawer(props: {
                 text: t('editorSavePending'),
               })
               : null,
-            h(Button, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
-            h(Button, {
+            h(TdtButton, { variant: 'outline', size: 'sm', onClick: requestClose }, t('editorCancel')),
+            h(TdtButton, {
               variant: 'primary',
               size: 'sm',
               onClick: () => {
@@ -2355,6 +2320,21 @@ export function TaskEditorDrawer(props: {
           confirmLabel: t('editorTabView'),
           onCancel: () => { onCancelPendingView?.() },
           onConfirm: () => { onConfirmPendingView?.() },
+        })
+        : null,
+      // 查看档「全屏查看」（r12 用户拍板）：只读提示词全屏 —— 源码 / 预览两态、默认预览，
+      // 无编辑、无保存、无版本面板（等同展示一个 MD 文件）。
+      promptViewOpen
+        ? h(PromptEditorModal, {
+          t,
+          mode,
+          readonly: true,
+          value: draft.prompt,
+          history: null,
+          onChange: () => {},
+          onClose: () => { setPromptViewOpen(false) },
+          onRestoreVersion: () => {},
+          onDeleteVersion: () => {},
         })
         : null,
     )
