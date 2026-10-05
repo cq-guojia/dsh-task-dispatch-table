@@ -69143,11 +69143,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
 .dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
 .dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
-/* 拉开的那一天 = **正常底色 + 离边 3px 的亮蓝内框线**（用户 2026-10-06：整块蓝底太丑；
-   「加一条线，但是这条线不是贴着的，而是离外边有三四个像素的内间距的感觉」）。
-   outline 不占布局、负 offset 向内缩 ⇒ 正好做出「内缩描边」，格子尺寸一点不变。 */
-.dsh-tdt-cal-cell--sel{background:var(--tdt-surface-1);outline:1px solid var(--tdt-business);outline-offset:-3px;}
+/* 选中格：底色**保持正常**，不加任何框 —— 「激活」由下面那两条横线表达（用户 2026-10-06）。 */
+.dsh-tdt-cal-cell--sel{background:var(--tdt-surface-1);outline:0;}
 .dsh-tdt-cal-cell--sel:hover{background:var(--tdt-surface-1);}
+/* 选中日所在那一行的**上方**那条线：逐格画（格子是 grid 的直接子项，没有整行容器可画），
+   每格一条 5px 亮蓝横线、离边 4px（用户：线高至少 5、内间距至少 4）⇒ 拼起来就是整行一条线。 */
+.dsh-tdt-cal-cell--weektop{position:relative;}
+.dsh-tdt-cal-cell--weektop::before{content:'';position:absolute;left:4px;right:4px;top:4px;height:5px;
+  background:var(--tdt-business);}
+/* 「把当前日期的那一块空开」：选中格与补位格都不画线 ⇒ 线到那儿就断了。 */
+.dsh-tdt-cal-cell--weektop.dsh-tdt-cal-cell--sel::before,
+.dsh-tdt-cal-cell--weektop.dsh-tdt-cal-cell--out::before{display:none;}
 .dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
@@ -69177,13 +69183,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:color-mix(in srgb,var(--tdt-business) 24%,transparent);}
 .dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
 /* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条。
-   ⚠️ 用户 2026-10-06（r5）：整块蓝底太丑 ⇒ **底色恢复正常**，改成「离边 4px 的亮蓝内框线」
-   表示「展开的是这一块」（与选中格同一套语言）。outline 不占布局 ⇒ 内框线不挤内容。
+   ⚠️ 用户 2026-10-06（r6）：**不是整圈框**，只有**顶部一条 5px 亮蓝横线**（离边 4px），
+   并且在**选中日那一列断开**（把当前日期空开）⇒ 与上面那一行的线成一对，像从那一格拉出来。
+   断口位置：列宽 = (100% - 6px)/7（6 个 1px 间隙），用 --cal-col（选中列序号，0 起）算。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-.dsh-tdt-cal-panel{grid-column:1/-1;background:var(--tdt-surface-1);border:0;border-radius:0;
-  outline:1px solid var(--tdt-business);outline-offset:-4px;
-  padding:var(--tdt-space-3) var(--tdt-space-4);
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-surface-1);border:0;border-radius:0;
+  --cal-col-w:calc((100% - 6px) / 7);
+  --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
+  padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
   overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
+/* 左段：从左边（离边 4px）到选中列的左沿（再让开 5px）；右段：从选中列右沿（+5px）到右边。 */
+.dsh-tdt-cal-panel::before,.dsh-tdt-cal-panel::after{content:'';position:absolute;top:4px;height:5px;
+  background:var(--tdt-business);}
+.dsh-tdt-cal-panel::before{left:4px;width:calc(var(--cal-cut) - 5px);}
+.dsh-tdt-cal-panel::after{left:calc(var(--cal-cut) + var(--cal-col-w) + 5px);right:4px;}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
 /* 图例色块（与格内标签同款：3px 竖线 + 同深度的底，**无圆角**） */
 .dsh-tdt-cal-swatch{flex:none;width:16px;height:12px;border-radius:0;overflow:hidden;
@@ -69543,33 +69556,40 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: () => {
 					load();
 				}
-			}, t("calRetry"))) : null, truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, t("calTruncated")) : null, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-head" }, calLabels.weekdays.map((name) => (0, react$1.createElement)("div", { key: name }, name))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-grid" }, weeks.map((week) => (0, react$1.createElement)(react$1.Fragment, { key: week[0]?.iso ?? "" }, week.map((cell) => {
-				if (!cell.inMonth) return (0, react$1.createElement)("div", {
-					key: cell.iso,
-					className: "dsh-tdt-cal-cell dsh-tdt-cal-cell--out"
-				}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-num dsh-tdt-cal-num--out" }, String(cell.day)));
-				const items = byDay.get(cell.iso) ?? [];
-				return (0, react$1.createElement)("button", {
-					key: cell.iso,
-					type: "button",
-					className: `dsh-tdt-cal-cell${cell.iso === selected ? " dsh-tdt-cal-cell--sel" : ""}`,
-					onClick: () => {
-						setSelected(cell.iso === selected ? "" : cell.iso);
-						setOpenId(null);
-					}
-				}, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)("div", {
-					key: item.row.id,
-					className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
-					title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`
-				}, (0, react$1.createElement)("span", null, hhmmOf(item.at))) : (0, react$1.createElement)("div", {
-					key: `p:${item.entry.taskId}:${item.at}`,
-					className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--plan",
-					title: `${hhmmOf(item.at)} ${item.entry.title} · ${t("calPlanHint")}`
-				}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))), items.length > 8 ? (0, react$1.createElement)("div", {
-					className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more",
-					title: tt("calCellMore", { n: items.length - 8 })
-				}, (0, react$1.createElement)("span", null, `…${items.length - 8}`)) : null));
-			}), week.some((cell) => cell.iso === selected) ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null)))));
+			}, t("calRetry"))) : null, truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, t("calTruncated")) : null, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-head" }, calLabels.weekdays.map((name) => (0, react$1.createElement)("div", { key: name }, name))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-grid" }, weeks.map((week) => {
+				/** 选中日在这一周里的列序号（-1 = 不在这一周）⇒ 决定展开面板顶部那条线的断口。 */
+				const cut = week.findIndex((cell) => cell.iso === selected);
+				return (0, react$1.createElement)(react$1.Fragment, { key: week[0]?.iso ?? "" }, week.map((cell) => {
+					if (!cell.inMonth) return (0, react$1.createElement)("div", {
+						key: cell.iso,
+						className: "dsh-tdt-cal-cell dsh-tdt-cal-cell--out"
+					}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-num dsh-tdt-cal-num--out" }, String(cell.day)));
+					const items = byDay.get(cell.iso) ?? [];
+					return (0, react$1.createElement)("button", {
+						key: cell.iso,
+						type: "button",
+						className: `dsh-tdt-cal-cell${cell.iso === selected ? " dsh-tdt-cal-cell--sel" : ""}${cut >= 0 ? " dsh-tdt-cal-cell--weektop" : ""}`,
+						onClick: () => {
+							setSelected(cell.iso === selected ? "" : cell.iso);
+							setOpenId(null);
+						}
+					}, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)("div", {
+						key: item.row.id,
+						className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
+						title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`
+					}, (0, react$1.createElement)("span", null, hhmmOf(item.at))) : (0, react$1.createElement)("div", {
+						key: `p:${item.entry.taskId}:${item.at}`,
+						className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--plan",
+						title: `${hhmmOf(item.at)} ${item.entry.title} · ${t("calPlanHint")}`
+					}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))), items.length > 8 ? (0, react$1.createElement)("div", {
+						className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more",
+						title: tt("calCellMore", { n: items.length - 8 })
+					}, (0, react$1.createElement)("span", null, `…${items.length - 8}`)) : null));
+				}), cut >= 0 ? (0, react$1.createElement)("div", {
+					className: "dsh-tdt-cal-panel",
+					style: { "--cal-col": String(cut) }
+				}, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
+			}))));
 		}
 		//#endregion
 		//#region src/client/config-panel.tsx
