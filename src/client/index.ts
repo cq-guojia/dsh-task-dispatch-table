@@ -1238,6 +1238,11 @@ function TaskPage(props: {
           onOpenSession: viewSession !== null
             ? (sessionId: string) => { void openView(sessionId) }
             : undefined,
+          // 拉开区里执行块的产出物 chip 点开 = 页面级预览 dock（与执行记录页同一入口）；
+          // 预览面没就位 ⇒ 不传，chip 降级不可点。
+          onOpenFile: canPreview ? openFile : undefined,
+          // 拉开区里点任务名 ⇒ 右侧栏以查看档打开该任务（与执行记录页同款）。
+          onViewTask: openViewer,
         })
         : tab === 'records'
         ? h(RecordsTimelineView, {

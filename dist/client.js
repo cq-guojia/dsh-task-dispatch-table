@@ -64664,7 +64664,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			flexWrap: "nowrap"
 		};
 		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
-		const filterRowStyle$2 = {
+		const filterRowStyle$1 = {
 			display: "flex",
 			alignItems: "center",
 			gap: "6px",
@@ -64979,7 +64979,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					onOpenFile
 				}))));
 			};
-			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, { label: t("loading") }) : null, (0, react$1.createElement)("div", { style: filterRowStyle$2 }, (0, react$1.createElement)(SelectField, {
+			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, { label: t("loading") }) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(SelectField, {
 				value: recStatus,
 				options: [
 					{
@@ -65145,7 +65145,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 				}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
 			})))));
-			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, { label: t("loading") }) : null, (0, react$1.createElement)("div", { style: filterRowStyle$2 }, (0, react$1.createElement)(Input$1, {
+			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, { label: t("loading") }) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Input$1, {
 				value: logKeyword,
 				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),
@@ -68318,14 +68318,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-err{color:var(--tdt-danger);}
 `;
 		const RECORDS_DOMAIN = "domain:records";
-		const filterRowStyle$1 = {
+		const filterRowStyle = {
 			display: "flex",
 			alignItems: "center",
 			gap: "var(--tdt-space-2)",
 			flexWrap: "wrap",
 			marginBottom: "var(--tdt-space-3)"
 		};
-		const filterRightStyle$1 = {
+		const filterRightStyle = {
 			display: "flex",
 			alignItems: "center",
 			gap: "var(--tdt-space-2)",
@@ -68695,10 +68695,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				className: "dsh-tdt-rec-evrow"
 			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
 		});
-		/** 执行记录总查询页（流水账）。 */
-		function RecordsTimelineView(props) {
+		/**
+		* 执行记录条目块的样式注入（**幂等**，2026-10-06）：本域 `.dsh-tdt-rec-*` + 条目块依赖的共享域
+		* `task-info`（任务名可点的皮肤）。复用 `RecordItem` 的页面**调这一个就够**，不要自己再拼一遍。
+		*/
+		function ensureRecordsStyle() {
 			applyStyle(RECORDS_DOMAIN, RECORDS_CSS);
 			ensureTaskInfoStyle();
+		}
+		/** 执行记录总查询页（流水账）。 */
+		function RecordsTimelineView(props) {
+			ensureRecordsStyle();
 			const { t, tasks, workspaces, onOpenSession, onOpenFile, onViewTask } = props;
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			const [range, setRange] = (0, react$1.useState)(defaultRange);
@@ -68929,7 +68936,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("div", {
 				id: PANEL_CONTENT_ID,
 				style: PANEL_CONTENT_STYLE
-			}, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Segmented, {
+			}, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Segmented, {
 				value: bucket === "" ? "all" : bucket,
 				size: "md",
 				label: t("colStatus"),
@@ -68937,7 +68944,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onChange: (next) => {
 					setBucket(next === "all" ? "" : next);
 				}
-			}), (0, react$1.createElement)("div", { style: filterRightStyle$1 }, (0, react$1.createElement)(TimeRange, {
+			}), (0, react$1.createElement)("div", { style: filterRightStyle }, (0, react$1.createElement)(TimeRange, {
 				value: range,
 				onChange: setRange,
 				labels: rangeLabels,
@@ -69108,21 +69115,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		//#endregion
 		//#region src/client/task-calendar.tsx
-		/** 单格最多列几条（再多就收成 `+N`，格子高度不跟着条目数涨）。 */
-		const MAX_CELL_ITEMS = 3;
 		const CALENDAR_CSS = `
-/* 月份导航行 */
+/* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
 .dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);}
-.dsh-tdt-cal-legend{display:flex;align-items:center;gap:var(--tdt-space-3);margin-left:auto;
-  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
+.dsh-tdt-cal-legend{display:flex;align-items:center;gap:var(--tdt-space-3);
+  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);white-space:nowrap;}
 .dsh-tdt-cal-legend>span{display:flex;align-items:center;gap:4px;}
 /* 网格：1px 间隙 + 底色当线（不画外框，与执行记录页「无外框」同基调） */
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:var(--tdt-space-1);}
 .dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
   background:var(--tdt-border-faint);border:1px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);overflow:hidden;}
-.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:2px;min-height:88px;padding:6px;
+.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:2px;min-height:80px;padding:6px;
   background:var(--tdt-surface-1);border:0;font:inherit;text-align:left;cursor:pointer;
   transition:background var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
@@ -69134,48 +69140,35 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
 .dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
-/* 条目（格内 / 清单内同一套皮肤） */
+/* 格内条目：**只一个时刻**（一个时刻 = 一次任务），一条一行、不截断、不折叠 */
 .dsh-tdt-cal-item{display:flex;align-items:center;gap:5px;min-width:0;
   font-size:var(--tdt-font-xs);line-height:var(--tdt-line-xs);color:var(--tdt-fg-2);}
-.dsh-tdt-cal-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-cal-time{color:var(--tdt-fg-3);font-variant-numeric:tabular-nums;}
+.dsh-tdt-cal-time{color:var(--tdt-fg-2);font-variant-numeric:tabular-nums;}
 .dsh-tdt-cal-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--cal-tone,var(--tdt-fg-4));}
 /* 计划 = **虚线空心**（与「已发生」的实心点一眼分得开） */
 .dsh-tdt-cal-dot--plan{background:transparent;border:1px dashed var(--tdt-fg-4);}
-.dsh-tdt-cal-more{font-size:var(--tdt-font-xs);line-height:var(--tdt-line-xs);color:var(--tdt-fg-3);}
 /* 语义色调 → 本域局部变量（token 只在 ui/tokens.ts 定义，这里只做映射） */
 .dsh-tdt-cal-t--ok{--cal-tone:var(--tdt-success);--cal-soft:var(--tdt-success-soft);}
 .dsh-tdt-cal-t--bad{--cal-tone:var(--tdt-danger);--cal-soft:var(--tdt-danger-soft);}
 .dsh-tdt-cal-t--warn{--cal-tone:var(--tdt-warning);--cal-soft:var(--tdt-warning-soft);}
 .dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:var(--tdt-business-soft);}
 .dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
-/* 选中日清单 */
-.dsh-tdt-cal-list{margin-top:var(--tdt-space-3);display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+/* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条 */
+.dsh-tdt-cal-panel{grid-column:1/-1;background:var(--tdt-surface-1);padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3);}
+.dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
+  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
+.dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+/* 拉开区里的**计划**条目（没有执行记录 ⇒ 不可展开） */
 .dsh-tdt-cal-row{display:flex;align-items:center;gap:var(--tdt-space-2);padding:7px 10px;
   border-radius:var(--tdt-radius-sm);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   background:var(--cal-soft,transparent);}
 .dsh-tdt-cal-row--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
-.dsh-tdt-cal-note{flex:1 1 100%;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-tag{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
-.dsh-tdt-cal-empty{padding:28px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
 `;
 		const CALENDAR_DOMAIN = "domain:calendar";
-		const filterRowStyle = {
-			display: "flex",
-			alignItems: "center",
-			gap: "var(--tdt-space-2)",
-			flexWrap: "wrap",
-			marginBottom: "var(--tdt-space-3)"
-		};
-		const filterRightStyle = {
-			display: "flex",
-			alignItems: "center",
-			gap: "var(--tdt-space-2)",
-			marginLeft: "auto",
-			flexWrap: "wrap"
-		};
-		/** `HH:mm`（格子与清单只到分钟：计划时刻本来就没有秒的意义）。 */
+		/** `HH:mm`（格子只到分钟：计划时刻本来就没有秒的意义）。 */
 		function hhmmOf(iso) {
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "--";
@@ -69184,32 +69177,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		/** 月键 `YYYY-MM`（选中日是否还落在新月内，用它比）。 */
 		const monthKeyOf = (y, m) => `${y}-${pad2$3(m)}`;
-		/** 一条条目的画法（格子与清单共用 ⇒ 两态的观感只有一份定义）。 */
-		function itemNode(item, t, onOpenSession) {
-			const time = hhmmOf(item.at);
-			if (item.kind === "plan") return (0, react$1.createElement)("div", {
-				key: `p:${item.entry.taskId}:${item.at}`,
-				className: "dsh-tdt-cal-item",
-				title: `${t("calPlanHint")}（${time}）`
-			}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, time), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-name" }, item.entry.title), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-tag" }, t("calPlanTag")));
-			const tone = statusToneOf(item.row.status);
-			const sid = item.row.session_id;
-			return (0, react$1.createElement)("div", {
-				key: item.row.id,
-				className: `dsh-tdt-cal-row dsh-tdt-cal-t--${tone}`
-			}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, time), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-name" }, item.name), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-tag" }, statusTextOf(item.row.status, t)), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), item.row.note ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-note" }, item.row.note) : null, sid !== null && onOpenSession !== void 0 ? (0, react$1.createElement)(Button$2, {
-				variant: "ghost",
-				size: "sm",
-				className: "dsh-tdt-btn--link",
-				onClick: () => {
-					onOpenSession(sid);
-				}
-			}, t("viewSession")) : null);
-		}
 		/** 任务日程页（月历）。 */
 		function TaskCalendarView(props) {
 			applyStyle(CALENDAR_DOMAIN, CALENDAR_CSS);
-			const { t, rows, tasks, workspaces, onOpenSession } = props;
+			ensureRecordsStyle();
+			const { t, rows, tasks, workspaces, onOpenSession, onOpenFile, onViewTask } = props;
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			const calLabels = (0, react$1.useMemo)(() => calendarLabelsOf(t), [t]);
 			const today = (0, react$1.useMemo)(() => logicalDateOf(/* @__PURE__ */ new Date(), void 0), []);
@@ -69220,9 +69192,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					m: now.getMonth() + 1
 				};
 			});
+			/** 拉开的那一天（手风琴：'' = 没拉开）。 */
 			const [selected, setSelected] = (0, react$1.useState)(today);
 			const [workspace, setWorkspace] = (0, react$1.useState)("");
-			const [bucket, setBucket] = (0, react$1.useState)("");
 			const [taskId, setTaskId] = (0, react$1.useState)("");
 			const [instances, setInstances] = (0, react$1.useState)([]);
 			const [loading, setLoading] = (0, react$1.useState)(false);
@@ -69231,7 +69203,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [truncated, setTruncated] = (0, react$1.useState)(false);
 			/** 「现在」的时刻（计划只算 >= now 的刻度）：每次取数成功后跟着刷新一次。 */
 			const [now, setNow] = (0, react$1.useState)(() => Date.now());
+			/** 拉开区里**再展开**的那条执行（手风琴第二层：前置 / 产出 / 事件流水）。 */
+			const [openId, setOpenId] = (0, react$1.useState)(null);
+			const [eventsCache, setEventsCache] = (0, react$1.useState)(() => /* @__PURE__ */ new Map());
+			const [eventsBusy, setEventsBusy] = (0, react$1.useState)(false);
+			const [eventsError, setEventsError] = (0, react$1.useState)(null);
+			/** 实例 id → 派发快照（轻量行没有 ⇒ 展开那条时按会话 id 补一次全量行）。 */
+			const [snapshots, setSnapshots] = (0, react$1.useState)(() => /* @__PURE__ */ new Map());
 			const seqRef = (0, react$1.useRef)(0);
+			const eventsSeqRef = (0, react$1.useRef)(0);
+			const instancesRef = (0, react$1.useRef)(instances);
+			instancesRef.current = instances;
+			const eventsRef = (0, react$1.useRef)(eventsCache);
+			eventsRef.current = eventsCache;
+			const snapshotsRef = (0, react$1.useRef)(snapshots);
+			snapshotsRef.current = snapshots;
 			/**
 			* 定义行的**排期指纹**：overview 是 10 秒轮询的，每次都换出新的数组引用；
 			* 计划重算（几十个任务 × 5 次 cron 解析）不该被轮询白白带起来 ⇒ 指纹不变就不重算。
@@ -69241,6 +69227,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			rowsRef.current = rows;
 			const { y, m } = cursor;
 			const cells = (0, react$1.useMemo)(() => buildMonthCells(y, m), [y, m]);
+			/** 按周切片：拉开区要插在「选中日所在的那一行」下面 ⇒ 必须按周分块渲染。 */
+			const weeks = (0, react$1.useMemo)(() => {
+				const out = [];
+				for (let i = 0; i < cells.length; i += 7) out.push(cells.slice(i, i + 7));
+				return out;
+			}, [cells]);
 			const load = (0, react$1.useCallback)(() => {
 				const seq = seqRef.current + 1;
 				seqRef.current = seq;
@@ -69249,7 +69241,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const q = monthRangeQuery(y, m);
 				fetchInstancesLite({
 					workspace: workspace === "" ? void 0 : workspace,
-					statuses: bucket === "" ? void 0 : statusesOfBucket(bucket),
 					taskId: taskId === "" ? void 0 : taskId,
 					from: q.fromTs,
 					to: q.toTs
@@ -69270,7 +69261,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				y,
 				m,
 				workspace,
-				bucket,
 				taskId
 			]);
 			(0, react$1.useEffect)(() => {
@@ -69297,6 +69287,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (row === void 0) return id;
 				return row.title === "" ? id : row.title;
 			}, []);
+			/** 任务所属工作区（任务定义为准；查不到给空串，不猜）。 */
+			const workspaceOf = (0, react$1.useCallback)((id) => {
+				return rowsRef.current.find((item) => item.id === id)?.workspace ?? "";
+			}, []);
 			const byDay = (0, react$1.useMemo)(() => {
 				const out = /* @__PURE__ */ new Map();
 				for (const row of instances) {
@@ -69311,7 +69305,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (list === void 0) out.set(day, [item]);
 					else list.push(item);
 				}
-				if (bucket === "") for (const [day, entries] of planByDay) {
+				for (const [day, entries] of planByDay) {
 					const list = out.get(day) ?? [];
 					for (const entry of entries) list.push({
 						kind: "plan",
@@ -69325,35 +69319,52 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, [
 				instances,
 				planByDay,
-				bucket,
 				nameOf
 			]);
+			/** 展开某条执行 ⇒ 取事件流水 + 补它的派发快照（前置 / 产出就靠快照，零额外请求以外的请求）。 */
+			const loadDetail = (0, react$1.useCallback)((id) => {
+				const row = instancesRef.current.find((item) => item.id === id);
+				if (row === void 0) return;
+				if (!eventsRef.current.has(id)) {
+					const seq = eventsSeqRef.current + 1;
+					eventsSeqRef.current = seq;
+					setEventsBusy(true);
+					setEventsError(null);
+					fetchEvents(id).then((list) => {
+						if (seq === eventsSeqRef.current) setEventsCache((prev) => new Map(prev).set(id, list));
+					}).catch((e) => {
+						if (seq === eventsSeqRef.current) setEventsError(e instanceof Error ? e.message : String(e));
+					}).finally(() => {
+						if (seq === eventsSeqRef.current) setEventsBusy(false);
+					});
+				}
+				const sid = row.session_id;
+				if (sid !== null && sid !== "" && !snapshotsRef.current.has(id)) fetchInstanceBySession(sid).then((full) => {
+					setSnapshots((prev) => new Map(prev).set(id, full?.snapshot ?? null));
+				});
+			}, []);
+			const toggleItem = (0, react$1.useCallback)((id) => {
+				setOpenId((cur) => {
+					const next = cur === id ? null : id;
+					if (next !== null) loadDetail(next);
+					return next;
+				});
+			}, [loadDetail]);
 			const workspaceOptions = (0, react$1.useMemo)(() => [{
 				value: "",
 				label: t("listFilterWorkspaceAll")
 			}, ...workspaces], [workspaces, t]);
-			const statusItems = (0, react$1.useMemo)(() => [
-				{
-					value: "all",
-					label: t("filterAll")
-				},
-				{
-					value: "succeeded",
-					label: statusTextOf("succeeded", t)
-				},
-				{
-					value: "failed",
-					label: statusTextOf("failed", t)
-				},
-				{
-					value: "running",
-					label: t("filterRunning")
-				}
-			], [t]);
 			const dayFormatter = (0, react$1.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), {
 				month: "long",
 				day: "numeric",
 				weekday: "long"
+			}), [t]);
+			/** 跨天时刻（前置任务的「执行于」用）：`M 月 D 日 HH:mm`，与执行记录页同款。 */
+			const crossFmt = (0, react$1.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), {
+				month: "numeric",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit"
 			}), [t]);
 			const stepMonth = (0, react$1.useCallback)((delta) => {
 				setCursor((cur) => {
@@ -69362,17 +69373,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						y: d.getFullYear(),
 						m: d.getMonth() + 1
 					};
-					setSelected((sel) => sel.slice(0, 7) === monthKeyOf(next.y, next.m) ? sel : `${monthKeyOf(next.y, next.m)}-01`);
+					setSelected((sel) => sel.slice(0, 7) === monthKeyOf(next.y, next.m) ? sel : "");
 					return next;
 				});
+				setOpenId(null);
 			}, []);
 			const goToday = (0, react$1.useCallback)(() => {
-				const now = /* @__PURE__ */ new Date();
+				const now2 = /* @__PURE__ */ new Date();
 				setCursor({
-					y: now.getFullYear(),
-					m: now.getMonth() + 1
+					y: now2.getFullYear(),
+					m: now2.getMonth() + 1
 				});
 				setSelected(today);
+				setOpenId(null);
 			}, [today]);
 			const changeWorkspace = (0, react$1.useCallback)((next) => {
 				setWorkspace(next);
@@ -69382,12 +69395,40 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return hit !== void 0 && hit.workspace !== next ? "" : cur;
 				});
 			}, [tasks]);
-			const dayItems = byDay.get(selected) ?? [];
 			const monthCount = (0, react$1.useMemo)(() => {
 				let n = 0;
 				for (const list of byDay.values()) n += list.length;
 				return n;
 			}, [byDay]);
+			const dayItems = byDay.get(selected) ?? [];
+			/** 拉开区里的一条（已发生 = 执行记录那套可展开的块；计划 = 一行虚线，没有记录可展开）。 */
+			const panelItemNode = (item) => {
+				if (item.kind === "plan") return (0, react$1.createElement)("div", {
+					key: `p:${item.entry.taskId}:${item.at}`,
+					className: "dsh-tdt-cal-row dsh-tdt-cal-row--plan"
+				}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at)), (0, react$1.createElement)("span", null, item.entry.title), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-tag" }, t("calPlanTag")));
+				return (0, react$1.createElement)(RecordItem, {
+					key: item.row.id,
+					row: item.row,
+					label: item.name,
+					workspace: workspaceOf(item.row.task_id),
+					t,
+					tt,
+					snapshot: snapshots.get(item.row.id) ?? null,
+					depTitleOf: nameOf,
+					open: openId === item.row.id,
+					onToggle: toggleItem,
+					openSession: (sid) => {
+						onOpenSession?.(sid);
+					},
+					openFile: onOpenFile,
+					onViewTask,
+					events: openId === item.row.id ? eventsCache.get(item.row.id) ?? null : null,
+					eventsBusy: openId === item.row.id && eventsBusy,
+					eventsError: openId === item.row.id ? eventsError : null,
+					crossFmt
+				});
+			};
 			return (0, react$1.createElement)("div", { style: {
 				width: "100%",
 				display: "flex",
@@ -69395,15 +69436,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("div", {
 				id: PANEL_CONTENT_ID,
 				style: PANEL_CONTENT_STYLE
-			}, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Segmented, {
-				value: bucket === "" ? "all" : bucket,
+			}, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-nav" }, (0, react$1.createElement)(IconButton, {
+				variant: "plain",
 				size: "md",
-				label: t("colStatus"),
-				items: statusItems,
-				onChange: (next) => {
-					setBucket(next === "all" ? "" : next);
+				label: calLabels.prevMonth,
+				title: calLabels.prevMonth,
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 }),
+				onClick: () => {
+					stepMonth(-1);
 				}
-			}), (0, react$1.createElement)("div", { style: filterRightStyle }, (0, react$1.createElement)(SelectField, {
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-title" }, calLabels.monthTitle(y, m)), (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				label: calLabels.nextMonth,
+				title: calLabels.nextMonth,
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }),
+				onClick: () => {
+					stepMonth(1);
+				}
+			}), (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				onClick: goToday
+			}, calLabels.today), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-right" }, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-legend" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-t--ok" }), t("calLegendDone")), (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), t("calLegendPlan")), (0, react$1.createElement)("span", null, tt("recordsDayCount", { n: monthCount }))), (0, react$1.createElement)(SelectField, {
 				value: workspace,
 				options: workspaceOptions,
 				onChange: changeWorkspace,
@@ -69430,58 +69485,36 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 150
-			}))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-nav" }, (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				label: calLabels.prevMonth,
-				title: calLabels.prevMonth,
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 }),
-				onClick: () => {
-					stepMonth(-1);
-				}
-			}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-title" }, calLabels.monthTitle(y, m)), (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "md",
-				label: calLabels.nextMonth,
-				title: calLabels.nextMonth,
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }),
-				onClick: () => {
-					stepMonth(1);
-				}
-			}), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				onClick: goToday
-			}, calLabels.today), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-legend" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-t--ok" }), t("calLegendDone")), (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), t("calLegendPlan")), (0, react$1.createElement)("span", null, tt("recordsDayCount", { n: monthCount })))), loading ? (0, react$1.createElement)(Loading, { label: t("calLoading") }) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, { label: t("calLoading") }) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
 					load();
 				}
-			}, t("calRetry"))) : null, truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, t("calTruncated")) : null, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-head" }, calLabels.weekdays.map((name) => (0, react$1.createElement)("div", { key: name }, name))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-grid" }, cells.map((cell) => {
+			}, t("calRetry"))) : null, truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, t("calTruncated")) : null, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-head" }, calLabels.weekdays.map((name) => (0, react$1.createElement)("div", { key: name }, name))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-grid" }, weeks.map((week) => (0, react$1.createElement)(react$1.Fragment, { key: week[0]?.iso ?? "" }, week.map((cell) => {
 				if (!cell.inMonth) return (0, react$1.createElement)("div", {
 					key: cell.iso,
 					className: "dsh-tdt-cal-cell dsh-tdt-cal-cell--out"
 				}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-num dsh-tdt-cal-num--out" }, String(cell.day)));
 				const items = byDay.get(cell.iso) ?? [];
-				const shown = items.slice(0, MAX_CELL_ITEMS);
 				return (0, react$1.createElement)("button", {
 					key: cell.iso,
 					type: "button",
 					className: `dsh-tdt-cal-cell${cell.iso === selected ? " dsh-tdt-cal-cell--sel" : ""}`,
 					onClick: () => {
-						setSelected(cell.iso);
+						setSelected(cell.iso === selected ? "" : cell.iso);
+						setOpenId(null);
 					}
-				}, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), shown.map((item, index) => item.kind === "done" ? (0, react$1.createElement)("div", {
-					key: `${item.row.id}:${index}`,
+				}, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), items.map((item) => item.kind === "done" ? (0, react$1.createElement)("div", {
+					key: item.row.id,
 					className: `dsh-tdt-cal-item dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
 					title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`
-				}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-name" }, item.name)) : (0, react$1.createElement)("div", {
+				}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at))) : (0, react$1.createElement)("div", {
 					key: `p:${item.entry.taskId}:${item.at}`,
 					className: "dsh-tdt-cal-item",
-					title: `${t("calPlanHint")}（${hhmmOf(item.at)}）`
-				}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-name" }, item.entry.title))), items.length > shown.length ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-more" }, `+${items.length - shown.length}`) : null);
-			})), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-list" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-title" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : dayItems.map((item) => itemNode(item, t, onOpenSession)))));
+					title: `${hhmmOf(item.at)} ${item.entry.title} · ${t("calPlanHint")}`
+				}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at)))));
+			}), week.some((cell) => cell.iso === selected) ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-tag" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null)))));
 		}
 		//#endregion
 		//#region src/client/config-panel.tsx
@@ -70709,7 +70742,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				workspaces: editorOptions.workspaces,
 				onOpenSession: viewSession !== null ? (sessionId) => {
 					openView(sessionId);
-				} : void 0
+				} : void 0,
+				onOpenFile: canPreview ? openFile : void 0,
+				onViewTask: openViewer
 			}) : tab === "records" ? (0, react$1.createElement)(RecordsTimelineView, {
 				t,
 				tasks: timelineTasks,

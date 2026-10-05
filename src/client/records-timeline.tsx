@@ -374,8 +374,14 @@ function durationOf(row: InstanceRow): string {
 const stampOf = (iso: string | null): string =>
   iso === null ? '—' : formatDateTime(iso, { seconds: true, fallback: '—' })
 
-/** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
-const RecordItem = memo(function RecordItem(props: {
+/**
+ * 执行记录**条目块的唯一实现**（2026-10-06 提为导出：「任务日程」日历页拉开某天时用的就是它）。
+ *
+ * ⚠️ 别在别处再写一份执行条目的渲染 —— 状态色调 / 状态短名 / 产出物 / 前置圈码 / 事件流水
+ * 这套东西只有这里一份。用它的页面**必须先调 `ensureRecordsStyle()`** 注入本域样式
+ * （`.dsh-tdt-rec-*`，幂等），否则块没有皮肤。
+ */
+export interface RecordItemProps {
   row: InstanceRow
   label: string
   workspace: string
@@ -399,7 +405,10 @@ const RecordItem = memo(function RecordItem(props: {
   depTitleOf: (taskId: string) => string
   /** 点任务名 ⇒ 右侧栏以**查看档**打开该任务（r12：全站任务名可点；不给 ⇒ 名字纯文本）。 */
   onViewTask?: (taskId: string) => void
-}): ReturnType<typeof h> {
+}
+
+/** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
+export const RecordItem = memo(function RecordItem(props: RecordItemProps): ReturnType<typeof h> {
   const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask } = props
   const tone = statusToneOf(row.status)
   const running = isRunningStatus(row.status)
@@ -789,11 +798,18 @@ export interface RecordsTimelineProps {
   onViewTask?: (taskId: string) => void
 }
 
+/**
+ * 执行记录条目块的样式注入（**幂等**，2026-10-06）：本域 `.dsh-tdt-rec-*` + 条目块依赖的共享域
+ * `task-info`（任务名可点的皮肤）。复用 `RecordItem` 的页面**调这一个就够**，不要自己再拼一遍。
+ */
+export function ensureRecordsStyle(): void {
+  applyStyle(RECORDS_DOMAIN, RECORDS_CSS)
+  ensureTaskInfoStyle()
+}
+
 /** 执行记录总查询页（流水账）。 */
 export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typeof h> {
-  applyStyle(RECORDS_DOMAIN, RECORDS_CSS)
-  // 任务名可点（r12）要用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info ⇒ 这里也注入（幂等）。
-  ensureTaskInfoStyle()
+  ensureRecordsStyle()
   const { t, tasks, workspaces, onOpenSession, onOpenFile, onViewTask } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
 

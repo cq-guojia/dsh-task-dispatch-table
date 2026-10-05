@@ -1,26 +1,31 @@
-// task-calendar.tsx — 任务日程页（月历视图，2026-10-05）
+// task-calendar.tsx — 任务日程页（月历视图，2026-10-05 首版 / 2026-10-06 交互改造）
 //
 // 形态：**一个自然月一页**的日历，格子里同时填两种东西 ——
 //   ① **已发生**：`task_instances` 的真实行（成功 / 失败 / 跳过 / 运行中 / 未知，状态色**实心**小点）；
 //   ② **计划**：按**当前任务定义**现算的未来刻度（**虚线空心**点，见 `calendar-plan.ts`）。
-// 点某一天 ⇒ 下方清单列出当天全部条目（不发起请求：整月行已在内存）。
+// 格子里**只给时刻**（一个时刻 = 一次任务，用户 2026-10-06：名字都不需要），有多少列多少（不收 `+N`）；
+// 悬停给出这条是什么。点某天 ⇒ **那一天所在的那一周像手风琴一样拉开**，当天全部执行信息铺在拉开区里
+// （有多少条显示多少条，不设内部滚动条）；拉开区里的执行块 = 执行记录页那**同一套** `RecordItem`
+// （能再展开 ⇒ 前置任务 / 产出 / 事件流水）。
 //
 // ⚠️ 两态必须分得清：未来**没有实例行**（决策 31 懒建行：到点才 INSERT，不预建）⇒ ② 是
 // 「按现在的配置推算出来的计划」，任务改配置 / 停用后会跟着变 —— 真实计算、不是模拟数据
 // （AGENTS.md 第五条：正常功能一律真实取数，禁止模拟）。悬停与图例都要如实说明这一点。
 //
-// 取数：历史走 `GET /tasks/instances?light=1`（`fetchInstancesLite`，一次取满整月、不含 snapshot 大列）；
-// 未来走浏览器内的 `planEntriesByDay`（与服务端同一份纯核，不许另写 cron 解析）。
-// 状态名 / 色调 / 过滤桶一律走 `status-text.ts` 单源；月历网格走 UI 基础层的 `buildMonthCells`。
-import { createElement as h, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+// 取数：整月历史走 `GET /tasks/instances?light=1`（`fetchInstancesLite`，一次取满、不含 snapshot 大列）；
+// 未来走浏览器内的 `planEntriesByDay`（与服务端同一份纯核，不许另写 cron 解析）；
+// 拉开区里某条要展开时，按会话 id 补拉**全量行**拿 `snapshot`（前置 / 产出就靠它）+ `fetchEvents` 取事件。
+import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pad2 } from './format'
-import { fetchInstancesLite, type InstanceRow } from './query'
-import { statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
+import { fetchEvents, fetchInstanceBySession, fetchInstancesLite, type EventRow, type InstanceRow } from './query'
+import { statusTextOf, statusToneOf } from './status-text'
 import { monthRangeOf, monthRangeQuery, planEntriesByDay, type CalendarPlanEntry, type CalendarTask } from '../calendar-plan.js'
 import { logicalDateOf } from '../schedule-next.js'
+// 执行块**唯一实现**从执行记录页复用（不许再写一份条目渲染）+ 它的样式注入（幂等）。
+import { RecordItem, ensureRecordsStyle } from './records-timeline'
 import {
-  Button, IconButton, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, TaskPicker,
+  Button, IconButton, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, SelectField, TaskPicker,
   applyStyle, buildMonthCells,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
@@ -30,23 +35,21 @@ import { calendarLabelsOf } from './editor-fields'
 import { interpolateTranslate, type Translate } from './locales'
 import type { TaskOverviewRow } from './task-list'
 
-/** 单格最多列几条（再多就收成 `+N`，格子高度不跟着条目数涨）。 */
-const MAX_CELL_ITEMS = 3
-
 // ── 样式（走基础层注入器；只消费 var(--tdt-*)，不自建 <style>、不硬编码色值）──
 const CALENDAR_CSS = `
-/* 月份导航行 */
+/* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
 .dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);}
-.dsh-tdt-cal-legend{display:flex;align-items:center;gap:var(--tdt-space-3);margin-left:auto;
-  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
+.dsh-tdt-cal-legend{display:flex;align-items:center;gap:var(--tdt-space-3);
+  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);white-space:nowrap;}
 .dsh-tdt-cal-legend>span{display:flex;align-items:center;gap:4px;}
 /* 网格：1px 间隙 + 底色当线（不画外框，与执行记录页「无外框」同基调） */
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:var(--tdt-space-1);}
 .dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
   background:var(--tdt-border-faint);border:1px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);overflow:hidden;}
-.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:2px;min-height:88px;padding:6px;
+.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:2px;min-height:80px;padding:6px;
   background:var(--tdt-surface-1);border:0;font:inherit;text-align:left;cursor:pointer;
   transition:background var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
@@ -58,50 +61,41 @@ const CALENDAR_CSS = `
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
 .dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
-/* 条目（格内 / 清单内同一套皮肤） */
+/* 格内条目：**只一个时刻**（一个时刻 = 一次任务），一条一行、不截断、不折叠 */
 .dsh-tdt-cal-item{display:flex;align-items:center;gap:5px;min-width:0;
   font-size:var(--tdt-font-xs);line-height:var(--tdt-line-xs);color:var(--tdt-fg-2);}
-.dsh-tdt-cal-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-cal-time{color:var(--tdt-fg-3);font-variant-numeric:tabular-nums;}
+.dsh-tdt-cal-time{color:var(--tdt-fg-2);font-variant-numeric:tabular-nums;}
 .dsh-tdt-cal-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--cal-tone,var(--tdt-fg-4));}
 /* 计划 = **虚线空心**（与「已发生」的实心点一眼分得开） */
 .dsh-tdt-cal-dot--plan{background:transparent;border:1px dashed var(--tdt-fg-4);}
-.dsh-tdt-cal-more{font-size:var(--tdt-font-xs);line-height:var(--tdt-line-xs);color:var(--tdt-fg-3);}
 /* 语义色调 → 本域局部变量（token 只在 ui/tokens.ts 定义，这里只做映射） */
 .dsh-tdt-cal-t--ok{--cal-tone:var(--tdt-success);--cal-soft:var(--tdt-success-soft);}
 .dsh-tdt-cal-t--bad{--cal-tone:var(--tdt-danger);--cal-soft:var(--tdt-danger-soft);}
 .dsh-tdt-cal-t--warn{--cal-tone:var(--tdt-warning);--cal-soft:var(--tdt-warning-soft);}
 .dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:var(--tdt-business-soft);}
 .dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
-/* 选中日清单 */
-.dsh-tdt-cal-list{margin-top:var(--tdt-space-3);display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+/* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条 */
+.dsh-tdt-cal-panel{grid-column:1/-1;background:var(--tdt-surface-1);padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3);}
+.dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
+  font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
+.dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
+/* 拉开区里的**计划**条目（没有执行记录 ⇒ 不可展开） */
 .dsh-tdt-cal-row{display:flex;align-items:center;gap:var(--tdt-space-2);padding:7px 10px;
   border-radius:var(--tdt-radius-sm);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   background:var(--cal-soft,transparent);}
 .dsh-tdt-cal-row--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
-.dsh-tdt-cal-note{flex:1 1 100%;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-tag{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
-.dsh-tdt-cal-empty{padding:28px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
+.dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
 `
 const CALENDAR_DOMAIN = 'domain:calendar'
 
-const filterRowStyle: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)', flexWrap: 'wrap', marginBottom: 'var(--tdt-space-3)',
-}
-const filterRightStyle: CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)', marginLeft: 'auto', flexWrap: 'wrap',
-}
-
-/** 状态分段档（'' = 全部；其余走 `status-text.ts` 的桶单源，与执行记录页同一份）。 */
-type StatusBucket = '' | 'succeeded' | 'failed' | 'running'
-
-/** 格内 / 清单内的统一条目：已发生（真实行）与计划（现算）两种。 */
+/** 格内 / 拉开区的统一条目：已发生（真实行）与计划（现算）两种。 */
 type CalItem =
   | { kind: 'done'; at: string; row: InstanceRow; name: string }
   | { kind: 'plan'; at: string; entry: CalendarPlanEntry }
 
-/** `HH:mm`（格子与清单只到分钟：计划时刻本来就没有秒的意义）。 */
+/** `HH:mm`（格子只到分钟：计划时刻本来就没有秒的意义）。 */
 function hhmmOf(iso: string): string {
   const ms = Date.parse(iso)
   if (Number.isNaN(ms)) return NO_TIME
@@ -111,37 +105,6 @@ function hhmmOf(iso: string): string {
 
 /** 月键 `YYYY-MM`（选中日是否还落在新月内，用它比）。 */
 const monthKeyOf = (y: number, m: number): string => `${y}-${pad2(m)}`
-
-/** 一条条目的画法（格子与清单共用 ⇒ 两态的观感只有一份定义）。 */
-function itemNode(item: CalItem, t: Translate, onOpenSession?: (sessionId: string) => void): ReturnType<typeof h> {
-  const time = hhmmOf(item.at)
-  if (item.kind === 'plan') {
-    return h('div', {
-      key: `p:${item.entry.taskId}:${item.at}`,
-      className: 'dsh-tdt-cal-item',
-      title: `${t('calPlanHint')}（${time}）`,
-    },
-      h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-dot--plan' }),
-      h('span', { className: 'dsh-tdt-cal-time' }, time),
-      h('span', { className: 'dsh-tdt-cal-name' }, item.entry.title),
-      h('span', { className: 'dsh-tdt-cal-tag' }, t('calPlanTag')),
-    )
-  }
-  const tone = statusToneOf(item.row.status)
-  const sid = item.row.session_id
-  return h('div', { key: item.row.id, className: `dsh-tdt-cal-row dsh-tdt-cal-t--${tone}` },
-    h('i', { className: 'dsh-tdt-cal-dot' }),
-    h('span', { className: 'dsh-tdt-cal-time' }, time),
-    h('span', { className: 'dsh-tdt-cal-name' }, item.name),
-    h('span', { className: 'dsh-tdt-cal-tag' }, statusTextOf(item.row.status, t)),
-    h('span', { style: { flex: '1 1 auto' } }),
-    // 失败 / 跳过原因（服务端由 task_events 推导，轻量行同样带回）
-    item.row.note ? h('span', { className: 'dsh-tdt-cal-note' }, item.row.note) : null,
-    sid !== null && onOpenSession !== undefined
-      ? h(Button, { variant: 'ghost', size: 'sm', className: 'dsh-tdt-btn--link', onClick: () => { onOpenSession(sid) } }, t('viewSession'))
-      : null,
-  )
-}
 
 export interface TaskCalendarProps {
   t: Translate
@@ -153,12 +116,18 @@ export interface TaskCalendarProps {
   workspaces: readonly EditorOption[]
   /** 打开归档会话弹窗：**只传会话 id**。 */
   onOpenSession?: (sessionId: string) => void
+  /** 打开产出物预览（预览面没就位 ⇒ 不传，产出物降级不可点）。 */
+  onOpenFile?: (sessionId: string, path: string) => void
+  /** 点任务名 ⇒ 右侧栏以查看档打开该任务；不给 ⇒ 名字纯文本。 */
+  onViewTask?: (taskId: string) => void
 }
 
 /** 任务日程页（月历）。 */
 export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h> {
   applyStyle(CALENDAR_DOMAIN, CALENDAR_CSS)
-  const { t, rows, tasks, workspaces, onOpenSession } = props
+  // 拉开区里的执行块复用执行记录页那一份 ⇒ 它的样式域（`.dsh-tdt-rec-*` + task-info 皮肤）也要注入。
+  ensureRecordsStyle()
+  const { t, rows, tasks, workspaces, onOpenSession, onOpenFile, onViewTask } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   const calLabels = useMemo(() => calendarLabelsOf(t), [t])
 
@@ -167,9 +136,9 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     const now = new Date()
     return { y: now.getFullYear(), m: now.getMonth() + 1 }
   })
+  /** 拉开的那一天（手风琴：'' = 没拉开）。 */
   const [selected, setSelected] = useState(today)
   const [workspace, setWorkspace] = useState('')
-  const [bucket, setBucket] = useState<StatusBucket>('')
   const [taskId, setTaskId] = useState('')
   const [instances, setInstances] = useState<readonly InstanceRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -179,7 +148,23 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   /** 「现在」的时刻（计划只算 >= now 的刻度）：每次取数成功后跟着刷新一次。 */
   const [now, setNow] = useState(() => Date.now())
 
+  /** 拉开区里**再展开**的那条执行（手风琴第二层：前置 / 产出 / 事件流水）。 */
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [eventsCache, setEventsCache] = useState<ReadonlyMap<string, readonly EventRow[]>>(() => new Map())
+  const [eventsBusy, setEventsBusy] = useState(false)
+  const [eventsError, setEventsError] = useState<string | null>(null)
+  /** 实例 id → 派发快照（轻量行没有 ⇒ 展开那条时按会话 id 补一次全量行）。 */
+  const [snapshots, setSnapshots] = useState<ReadonlyMap<string, string | null>>(() => new Map())
+
   const seqRef = useRef(0)
+  const eventsSeqRef = useRef(0)
+  const instancesRef = useRef(instances)
+  instancesRef.current = instances
+  const eventsRef = useRef(eventsCache)
+  eventsRef.current = eventsCache
+  const snapshotsRef = useRef(snapshots)
+  snapshotsRef.current = snapshots
+
   /**
    * 定义行的**排期指纹**：overview 是 10 秒轮询的，每次都换出新的数组引用；
    * 计划重算（几十个任务 × 5 次 cron 解析）不该被轮询白白带起来 ⇒ 指纹不变就不重算。
@@ -193,6 +178,12 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
 
   const { y, m } = cursor
   const cells = useMemo(() => buildMonthCells(y, m), [y, m])
+  /** 按周切片：拉开区要插在「选中日所在的那一行」下面 ⇒ 必须按周分块渲染。 */
+  const weeks = useMemo(() => {
+    const out: Array<Array<ReturnType<typeof buildMonthCells>[number]>> = []
+    for (let i = 0; i < cells.length; i += 7) out.push(cells.slice(i, i + 7))
+    return out
+  }, [cells])
 
   // 历史：整月一次取满（轻量行，不含 snapshot）⇒ 点某天不再发起请求。
   const load = useCallback((): void => {
@@ -203,7 +194,6 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     const q = monthRangeQuery(y, m)
     fetchInstancesLite({
       workspace: workspace === '' ? undefined : workspace,
-      statuses: bucket === '' ? undefined : statusesOfBucket(bucket),
       taskId: taskId === '' ? undefined : taskId,
       from: q.fromTs,
       to: q.toTs,
@@ -223,7 +213,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
         setLoading(false)
         setLoaded(true)
       })
-  }, [y, m, workspace, bucket, taskId])
+  }, [y, m, workspace, taskId])
 
   useEffect(() => { void load(); return () => { seqRef.current += 1 } }, [load])
 
@@ -247,6 +237,10 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     if (row === undefined) return id
     return row.title === '' ? id : row.title
   }, [])
+  /** 任务所属工作区（任务定义为准；查不到给空串，不猜）。 */
+  const workspaceOf = useCallback((id: string): string => {
+    return rowsRef.current.find(item => item.id === id)?.workspace ?? ''
+  }, [])
 
   // 按本地日分桶（与执行记录页同一抉择：用 `scheduled_at` 的本地日，不用 `logical_date`）。
   const byDay = useMemo(() => {
@@ -258,30 +252,61 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       if (list === undefined) out.set(day, [item])
       else list.push(item)
     }
-    // 计划**没有状态**：一旦选了具体状态档就不并入（不把没状态的东西混进状态筛选结果里）。
-    if (bucket === '') {
-      for (const [day, entries] of planByDay) {
-        const list = out.get(day) ?? []
-        for (const entry of entries) list.push({ kind: 'plan', at: entry.scheduledAt, entry })
-        out.set(day, list)
-      }
+    for (const [day, entries] of planByDay) {
+      const list = out.get(day) ?? []
+      for (const entry of entries) list.push({ kind: 'plan', at: entry.scheduledAt, entry })
+      out.set(day, list)
     }
     for (const list of out.values()) list.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0))
     return out
-  }, [instances, planByDay, bucket, nameOf])
+  }, [instances, planByDay, nameOf])
+
+  /** 展开某条执行 ⇒ 取事件流水 + 补它的派发快照（前置 / 产出就靠快照，零额外请求以外的请求）。 */
+  const loadDetail = useCallback((id: string): void => {
+    const row = instancesRef.current.find(item => item.id === id)
+    if (row === undefined) return
+    if (!eventsRef.current.has(id)) {
+      const seq = eventsSeqRef.current + 1
+      eventsSeqRef.current = seq
+      setEventsBusy(true)
+      setEventsError(null)
+      fetchEvents(id)
+        .then(list => { if (seq === eventsSeqRef.current) setEventsCache(prev => new Map(prev).set(id, list)) })
+        .catch((e: unknown) => {
+          if (seq === eventsSeqRef.current) setEventsError(e instanceof Error ? e.message : String(e))
+        })
+        .finally(() => { if (seq === eventsSeqRef.current) setEventsBusy(false) })
+    }
+    // 轻量行没有 snapshot ⇒ 按会话 id 补一次全量行（会话弹窗就走这条，契约现成）。
+    // 没有会话 id = 压根没派发（如 skipped）⇒ 本来就没有前置 / 产出，不补、也不假装有。
+    const sid = row.session_id
+    if (sid !== null && sid !== '' && !snapshotsRef.current.has(id)) {
+      fetchInstanceBySession(sid).then(full => {
+        setSnapshots(prev => new Map(prev).set(id, full?.snapshot ?? null))
+      })
+    }
+  }, [])
+
+  const toggleItem = useCallback((id: string): void => {
+    setOpenId(cur => {
+      const next = cur === id ? null : id
+      if (next !== null) loadDetail(next)
+      return next
+    })
+  }, [loadDetail])
 
   const workspaceOptions = useMemo<EditorOption[]>(
     () => [{ value: '', label: t('listFilterWorkspaceAll') }, ...workspaces],
     [workspaces, t],
   )
-  const statusItems = useMemo(() => ([
-    { value: 'all' as const, label: t('filterAll') },
-    { value: 'succeeded' as const, label: statusTextOf('succeeded', t) },
-    { value: 'failed' as const, label: statusTextOf('failed', t) },
-    { value: 'running' as const, label: t('filterRunning') },
-  ]), [t])
   const dayFormatter = useMemo<Intl.DateTimeFormat | null>(
     () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { month: 'long', day: 'numeric', weekday: 'long' })),
+    [t],
+  )
+  /** 跨天时刻（前置任务的「执行于」用）：`M 月 D 日 HH:mm`，与执行记录页同款。 */
+  const crossFmt = useMemo<Intl.DateTimeFormat | null>(
+    () => (typeof Intl === 'undefined' ? null
+      : new Intl.DateTimeFormat(t('localeTag'), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })),
     [t],
   )
 
@@ -289,15 +314,17 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     setCursor(cur => {
       const d = new Date(cur.y, cur.m - 1 + delta, 1)
       const next = { y: d.getFullYear(), m: d.getMonth() + 1 }
-      // 选中日跟随：还在新月内就保持，否则落在新月 1 号。
-      setSelected(sel => (sel.slice(0, 7) === monthKeyOf(next.y, next.m) ? sel : `${monthKeyOf(next.y, next.m)}-01`))
+      // 拉开的那天跟随：还在新月内就保持，否则收起（不拉一个看不见的日期）。
+      setSelected(sel => (sel.slice(0, 7) === monthKeyOf(next.y, next.m) ? sel : ''))
       return next
     })
+    setOpenId(null)
   }, [])
   const goToday = useCallback((): void => {
-    const now = new Date()
-    setCursor({ y: now.getFullYear(), m: now.getMonth() + 1 })
+    const now2 = new Date()
+    setCursor({ y: now2.getFullYear(), m: now2.getMonth() + 1 })
     setSelected(today)
+    setOpenId(null)
   }, [today])
   const changeWorkspace = useCallback((next: string): void => {
     setWorkspace(next)
@@ -309,25 +336,66 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     })
   }, [tasks])
 
-  const dayItems = byDay.get(selected) ?? []
   const monthCount = useMemo(() => {
     let n = 0
     for (const list of byDay.values()) n += list.length
     return n
   }, [byDay])
+  const dayItems = byDay.get(selected) ?? []
+
+  /** 拉开区里的一条（已发生 = 执行记录那套可展开的块；计划 = 一行虚线，没有记录可展开）。 */
+  const panelItemNode = (item: CalItem): ReturnType<typeof h> => {
+    if (item.kind === 'plan') {
+      return h('div', { key: `p:${item.entry.taskId}:${item.at}`, className: 'dsh-tdt-cal-row dsh-tdt-cal-row--plan' },
+        h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-dot--plan' }),
+        h('span', { className: 'dsh-tdt-cal-time' }, hhmmOf(item.at)),
+        h('span', null, item.entry.title),
+        h('span', { className: 'dsh-tdt-cal-tag' }, t('calPlanTag')),
+      )
+    }
+    return h(RecordItem, {
+      key: item.row.id,
+      row: item.row,
+      label: item.name,
+      workspace: workspaceOf(item.row.task_id),
+      t,
+      tt,
+      snapshot: snapshots.get(item.row.id) ?? null,
+      depTitleOf: nameOf,
+      open: openId === item.row.id,
+      onToggle: toggleItem,
+      openSession: (sid: string) => { onOpenSession?.(sid) },
+      openFile: onOpenFile,
+      onViewTask,
+      events: openId === item.row.id ? eventsCache.get(item.row.id) ?? null : null,
+      eventsBusy: openId === item.row.id && eventsBusy,
+      eventsError: openId === item.row.id ? eventsError : null,
+      crossFmt,
+    })
+  }
 
   return h('div', { style: { width: '100%', display: 'flex', justifyContent: 'center' } },
     h('div', { id: PANEL_CONTENT_ID, style: PANEL_CONTENT_STYLE },
-      // ── 过滤行（与执行记录页同款：左 = 状态四档；右 = 工作区 + 任务）──
-      h('div', { style: filterRowStyle },
-        h(Segmented<StatusBucket | 'all'>, {
-          value: bucket === '' ? 'all' : bucket,
-          size: 'md',
-          label: t('colStatus'),
-          items: statusItems,
-          onChange: (next: StatusBucket | 'all') => { setBucket(next === 'all' ? '' : next) },
+      // ── 一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（与月份同一行、居右）──
+      h('div', { className: 'dsh-tdt-cal-nav' },
+        h(IconButton, {
+          variant: 'plain', size: 'md', label: calLabels.prevMonth, title: calLabels.prevMonth,
+          icon: h(IconChevronLeftOutlineRegular, { size: 16 }),
+          onClick: () => { stepMonth(-1) },
         }),
-        h('div', { style: filterRightStyle },
+        h('span', { className: 'dsh-tdt-cal-title' }, calLabels.monthTitle(y, m)),
+        h(IconButton, {
+          variant: 'plain', size: 'md', label: calLabels.nextMonth, title: calLabels.nextMonth,
+          icon: h(IconChevronRightOutlineRegular, { size: 16 }),
+          onClick: () => { stepMonth(1) },
+        }),
+        h(Button, { variant: 'outline', size: 'sm', onClick: goToday }, calLabels.today),
+        h('div', { className: 'dsh-tdt-cal-right' },
+          h('span', { className: 'dsh-tdt-cal-legend' },
+            h('span', null, h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-t--ok' }), t('calLegendDone')),
+            h('span', null, h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-dot--plan' }), t('calLegendPlan')),
+            h('span', null, tt('recordsDayCount', { n: monthCount })),
+          ),
           h(SelectField, {
             value: workspace,
             options: workspaceOptions,
@@ -357,33 +425,6 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
         ),
       ),
 
-      // ── 月份导航（日期维度只有这一处：上月 / 标题 / 下月 + 今天 + 两态图例）──
-      h('div', { className: 'dsh-tdt-cal-nav' },
-        h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.prevMonth, title: calLabels.prevMonth,
-          icon: h(IconChevronLeftOutlineRegular, { size: 16 }),
-          onClick: () => { stepMonth(-1) },
-        }),
-        h('span', { className: 'dsh-tdt-cal-title' }, calLabels.monthTitle(y, m)),
-        h(IconButton, {
-          variant: 'plain', size: 'md', label: calLabels.nextMonth, title: calLabels.nextMonth,
-          icon: h(IconChevronRightOutlineRegular, { size: 16 }),
-          onClick: () => { stepMonth(1) },
-        }),
-        h(Button, { variant: 'outline', size: 'sm', onClick: goToday }, calLabels.today),
-        h('span', { className: 'dsh-tdt-cal-legend' },
-          h('span', null,
-            h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-t--ok' }),
-            t('calLegendDone'),
-          ),
-          h('span', null,
-            h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-dot--plan' }),
-            t('calLegendPlan'),
-          ),
-          h('span', null, tt('recordsDayCount', { n: monthCount })),
-        ),
-      ),
-
       // 加载走页面右下角统一的那个 Loading（与执行记录页同一条规矩）。
       loading ? h(Loading, { label: t('calLoading') }) : null,
       error !== null
@@ -394,61 +435,63 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
         : null,
       truncated ? h('div', { className: 'dsh-tdt-cal-hint' }, t('calTruncated')) : null,
 
-      // ── 月历网格 ──
+      // ── 月历网格（按周分块：选中日所在那周的下面插拉开区）──
       h('div', { className: 'dsh-tdt-cal-head' },
         calLabels.weekdays.map(name => h('div', { key: name }, name)),
       ),
       h('div', { className: 'dsh-tdt-cal-grid' },
-        cells.map(cell => {
-          // 补位格（相邻月）：淡化、不可点、**不放数据**（那不是本月的日程）。
-          if (!cell.inMonth) {
-            return h('div', { key: cell.iso, className: 'dsh-tdt-cal-cell dsh-tdt-cal-cell--out' },
-              h('span', { className: 'dsh-tdt-cal-num dsh-tdt-cal-num--out' }, String(cell.day)),
-            )
-          }
-          const items = byDay.get(cell.iso) ?? []
-          const shown = items.slice(0, MAX_CELL_ITEMS)
-          return h('button', {
-            key: cell.iso,
-            type: 'button',
-            className: `dsh-tdt-cal-cell${cell.iso === selected ? ' dsh-tdt-cal-cell--sel' : ''}`,
-            onClick: () => { setSelected(cell.iso) },
-          },
-            h('span', {
-              className: `dsh-tdt-cal-num${cell.isToday ? ' dsh-tdt-cal-num--today' : ''}`,
-            }, String(cell.day)),
-            shown.map((item, index) => item.kind === 'done'
-              ? h('div', {
-                key: `${item.row.id}:${index}`,
-                className: `dsh-tdt-cal-item dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
-                title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`,
-              },
-                h('i', { className: 'dsh-tdt-cal-dot' }),
-                h('span', { className: 'dsh-tdt-cal-time' }, hhmmOf(item.at)),
-                h('span', { className: 'dsh-tdt-cal-name' }, item.name),
+        weeks.map(week => h(Fragment, { key: week[0]?.iso ?? '' },
+          week.map(cell => {
+            // 补位格（相邻月）：淡化、不可点、**不放数据**（那不是本月的日程）。
+            if (!cell.inMonth) {
+              return h('div', { key: cell.iso, className: 'dsh-tdt-cal-cell dsh-tdt-cal-cell--out' },
+                h('span', { className: 'dsh-tdt-cal-num dsh-tdt-cal-num--out' }, String(cell.day)),
               )
-              : h('div', {
-                key: `p:${item.entry.taskId}:${item.at}`,
-                className: 'dsh-tdt-cal-item',
-                title: `${t('calPlanHint')}（${hhmmOf(item.at)}）`,
+            }
+            const items = byDay.get(cell.iso) ?? []
+            return h('button', {
+              key: cell.iso,
+              type: 'button',
+              className: `dsh-tdt-cal-cell${cell.iso === selected ? ' dsh-tdt-cal-cell--sel' : ''}`,
+              // 点格子 = 拉开 / 收起这一天（手风琴：同一天再点即收起）。
+              onClick: () => {
+                setSelected(cell.iso === selected ? '' : cell.iso)
+                setOpenId(null)
               },
-                h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-dot--plan' }),
-                h('span', { className: 'dsh-tdt-cal-time' }, hhmmOf(item.at)),
-                h('span', { className: 'dsh-tdt-cal-name' }, item.entry.title),
-              )),
-            items.length > shown.length ? h('span', { className: 'dsh-tdt-cal-more' }, `+${items.length - shown.length}`) : null,
-          )
-        }),
-      ),
-
-      // ── 选中日清单（本地过滤，不发起请求）──
-      h('div', { className: 'dsh-tdt-cal-list' },
-        h('div', { className: 'dsh-tdt-cal-title' },
-          dayFormatter === null ? selected : dayFormatter.format(new Date(`${selected}T00:00:00`)),
-        ),
-        dayItems.length === 0
-          ? h('div', { className: 'dsh-tdt-cal-empty' }, loaded ? t('calDayEmpty') : t('calEmpty'))
-          : dayItems.map(item => itemNode(item, t, onOpenSession)),
+            },
+              h('span', { className: `dsh-tdt-cal-num${cell.isToday ? ' dsh-tdt-cal-num--today' : ''}` }, String(cell.day)),
+              // 有多少列多少（不收 `+N`）：一个时刻 = 一次任务，名字留给悬停说明。
+              items.map(item => item.kind === 'done'
+                ? h('div', {
+                  key: item.row.id,
+                  className: `dsh-tdt-cal-item dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
+                  title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`,
+                },
+                  h('i', { className: 'dsh-tdt-cal-dot' }),
+                  h('span', { className: 'dsh-tdt-cal-time' }, hhmmOf(item.at)),
+                )
+                : h('div', {
+                  key: `p:${item.entry.taskId}:${item.at}`,
+                  className: 'dsh-tdt-cal-item',
+                  title: `${hhmmOf(item.at)} ${item.entry.title} · ${t('calPlanHint')}`,
+                },
+                  h('i', { className: 'dsh-tdt-cal-dot dsh-tdt-cal-dot--plan' }),
+                  h('span', { className: 'dsh-tdt-cal-time' }, hhmmOf(item.at)),
+                )),
+            )
+          }),
+          week.some(cell => cell.iso === selected)
+            ? h('div', { className: 'dsh-tdt-cal-panel' },
+                h('div', { className: 'dsh-tdt-cal-panel-head' },
+                  dayFormatter === null ? selected : dayFormatter.format(new Date(`${selected}T00:00:00`)),
+                  h('span', { className: 'dsh-tdt-cal-tag' }, tt('recordsDayCount', { n: dayItems.length })),
+                ),
+                dayItems.length === 0
+                  ? h('div', { className: 'dsh-tdt-cal-empty' }, loaded ? t('calDayEmpty') : t('calEmpty'))
+                  : h('div', { className: 'dsh-tdt-cal-panel-list' }, dayItems.map(panelItemNode)),
+              )
+            : null,
+        )),
       ),
     ),
   )
