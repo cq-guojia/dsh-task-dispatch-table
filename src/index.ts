@@ -826,7 +826,9 @@ const makeDispatchRoutes = (
   },
   {
     // 按任务 / 工作区检索执行记录（任务卡片「执行记录」面板 + 未来总查询页共用，决策 55）：
-    //   GET /tasks/instances?taskId=&workspace=&status=a,b&from=&to=&cursor=&limit=
+    //   GET /tasks/instances?taskId=&workspace=&status=a,b&from=&to=&cursor=&limit=&light=1
+    //   `light=1` = 轻量模式（任务日程日历页用）：行不含 `snapshot`、不做会话名富化、不分页、
+    //   上限 3000，触及上限回 `truncated: true`（页面据此提示收窄过滤）。
     // workspace 过滤：`task_instances` 无工作区列 ⇒ 由 tasksInline 反查 task_id 集合（不碰表结构）。
     // ⚠️ taskId 与 workspace **同时给时两者叠加（AND）**，2026-10-04 评审修正：此前是「taskId 优先」，
     // 结果在总查询页里会出现「工作区筛了 B、返回的却是 A 工作区那条任务」的记录（静默失效）。
@@ -853,6 +855,20 @@ const makeDispatchRoutes = (
         ? undefined
         : workspaceTaskIdsOf(runtimeRef.tasksInline, workspace)
       const taskIds = workspaceIds === undefined || workspaceIds.length > 0 ? workspaceIds : ['__none__']
+      // 轻量模式（「任务日程」日历页按月取数用，2026-10-05）：**同一套过滤条件**，只换掉行的内容与上限。
+      //   ① 行不含 `snapshot`（派发快照，单行 1.5–4 KB；日历一次取满整月，带上它是数 MB 的白给开销）；
+      //   ② 不做 `session_title` 富化（那要逐行 JSON.parse(snapshot)，几千行即几千次 parse；
+      //      日历上的任务名由客户端从任务定义本地映射）；
+      //   ③ 上限放宽到 3000、不分页，触及上限回 `truncated: true` ⇒ 页面提示收窄过滤，不静默丢。
+      if (queryOf(req, 'light') === '1') {
+        const lite = store.listInstancesLite({
+          taskId, sessionId, taskIds, statuses,
+          fromTs: queryOf(req, 'from') || undefined,
+          toTs: queryOf(req, 'to') || undefined,
+          limit,
+        })
+        return writeJson(res, 200, { ok: true, rows: lite.rows, truncated: lite.truncated })
+      }
       const page = store.listInstancesByQuery({
         taskId,
         sessionId,

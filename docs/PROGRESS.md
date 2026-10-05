@@ -49,6 +49,13 @@
 
 
 
+### 1.8 任务日程（月历视图）—— 🔵 **落码待真机**（2026-10-05 首版）
+
+> 顶部导航由三段扩为**四段**（任务配置 / 执行记录 / **任务日程** / 调试）；一页一个自然月的日历，格子里填两态：**已发生**（`task_instances` 真实行，状态色实心点）与**计划**（按当前**启用**任务的定义现算的未来刻度，虚线空心点 + 悬停说明「尚未产生执行记录」）；点某天 ⇒ 下方列当天全部条目（不发起请求）；过滤 = 工作区 + 任务 + 状态，日期维度改为**月份翻页**（不限过去 / 未来月）。
+> 服务端只加一处：`GET /tasks/instances?light=1`（`store.listInstancesLite` —— 同一套过滤条件、**剔除 snapshot 大列**、上限 3000、不分页、触及上限回 `truncated`；既有 500 上限与游标语义未动）。未来刻度走新增纯核 `src/calendar-plan.ts`（浏览器与服务端同一份，**按自然周分片**调 `scheduledSlotsFor` 以避开单次 cap 截断）。typecheck / build 绿，**冒烟 639/0**（+13 条断言）。
+> ⏳ **真机待验**：四段导航观感、未来月的计划格子、格内 3 条 + `+N`、清单里的失败原因。
+> 规格 = [design/features/task-calendar.md](design/features/task-calendar.md)；过程 = [worklog/task-calendar.md](worklog/task-calendar.md)。
+
 ### ~~1.7 工作区候选真源统一 + 顶部下拉收编~~ —— ✅ **2026-10-04 真机验收通过，已结案**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）
 
 > 过程 = [`worklog/workspace-options-unification.md`](worklog/workspace-options-unification.md)（已封卷）；口径真源 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4；使用规范 = [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项。
@@ -76,6 +83,8 @@
 1. **U33 Office 预览真机验收**：宿主启用文档预览服务后，确认 doc/docx/ppt/pptx 能渲染出 PDF。
 2. **U34 Excel 预览路线**：待用户拍板「转 PDF」还是「可编辑表格」，拍板后落码。
 3. **U31 剩余 ②③**：编辑器「前置任务」第②级换 `TaskPicker` + 第①级工作区改受控入参；任务选项文案统一取 `[code] name`。
+4. **任务日程（§1.8）真机验收**：四段导航是否挤、未来月计划格子是否符合预期、格内 3 条 + `+N`、清单里的失败原因。
+5. **（用户已排期，未开工）重构调试界面**：完全重构现在的调试页（本质是看数据库，共没几张表）；可附带一个查库功能，但不是必须。
 
 
 

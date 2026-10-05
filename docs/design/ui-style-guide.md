@@ -39,6 +39,7 @@
 | 开关 | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（皮肤在 `ui/controls-css.ts`） | `h('span', { className: 'dsh-tdt-switch' }, h(Switch, { checked, onChange }))` | ✅ 全站共用一个包装类（选中 success 绿只此一处） |
 | 日期 / 时间 | `ui/DateTime.tsx`（`DateField` / `TimeField`） | `h(DateField, { value: d, onChange, size: 'lg' })` | ✅ 全站唯一（自绘日历 + 时分列） |
 | 时间范围筛选 | `ui/TimeRange.tsx`（预设 + 起止一体） | `h(TimeRange, { value, onChange, labels, calendarLabels, timeLabels, precision: 'minute', size: 'md' })` | ✅ 全站唯一（执行记录 / 日志 / 未来总查询页共用；`size` **必传**、`precision` 选 `day`/`minute`；边界归一在 `ui/time-range.ts` 半开区间） |
+| **月历网格（7 列 × 6 行）** | `ui/DateTime.tsx` 的 `buildMonthCells`（2026-10-05 由私有函数上提为导出） | `const cells = buildMonthCells(y, m)`（`m` 为 **1-based**；返回 `{ iso, day, inMonth, isToday }[]`，固定 42 格） | ✅ **2026-10-05 落码**：日期框的自绘日历与「任务日程」页**共用同一份**（此前只有前者在用，后者不许再写一套网格算法）。⚠️ **格子内容 / 选中日清单的版式是页面私有**（`task-calendar.tsx` 的样式域 `domain:calendar`）⇒ **不进本表**（它不是通用控件）；周表头与月份标题走 `calendarLabelsOf` 单源 |
 | Toast | `toast-css.ts`（`FloatingToast`，含 `closable` 可关闭变体） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一（先前 `index.ts` 自绘中性提示条已收编为 `closable` 变体，U20 #5，2026-10-05） |
 | 卡 / 浮层外壳 | 编辑器侧 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel` 本就单一可复用类（提示词/附件/排期/前置任务卡共用 `ed-card`）；镜像层 `.dsh-tdt-sv-*` 外壳随 §七 边界不抽 | — | ✅ **2026-10-05 收口**（编辑器侧已唯一；镜像层刻意 1:1 宿主会话面，见 §三 #4） |
 

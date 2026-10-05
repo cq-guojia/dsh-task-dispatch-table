@@ -293,6 +293,20 @@ export interface InstancePage {
   nextCursor: string | null
 }
 
+/**
+ * 轻量执行记录行（「任务日程」日历页按月取数用，2026-10-05）= 实例行**剔除 `snapshot` 列**。
+ *
+ * 为什么剔除：snapshot 是派发快照（提示词 / 附件 / 依赖的 JSON，单行 1.5–4 KB），
+ * 日历要一次取满整月（几百到上千行），带着它就是数 MB 的白给开销；日历只要状态 / 时刻 / 产出 / 原因。
+ */
+export type LiteTaskInstance = Omit<TaskInstance, 'snapshot'>
+
+export interface LiteInstancePage {
+  rows: LiteTaskInstance[]
+  /** 触及上限被截断（调用方必须提示用户收窄过滤，**不静默丢**）。 */
+  truncated: boolean
+}
+
 export interface LogQuery {
   taskId?: string
   taskIds?: readonly string[]
@@ -823,6 +837,49 @@ export class TaskStore {
    * （limit+1 弹出一行 ⇒ 有剩余才给 cursor，恰好取尽时不会多翻一页）。全部条件走占位绑定，无注入面。
    */
   listInstancesByQuery(q: InstanceQuery): InstancePage {
+    const { where, params } = this.instanceWhere(q)
+    const limit = Math.max(1, Math.min(q.limit ?? 100, 500))
+    const sql = `SELECT * FROM task_instances${where === '' ? '' : ` WHERE ${where}`} ORDER BY scheduled_at DESC, id DESC LIMIT ?`
+    const rows = this.db.prepare(sql).all(...params, limit + 1) as unknown as TaskInstance[]
+    let nextCursor: string | null = null
+    if (rows.length > limit) {
+      rows.pop()
+      const last = rows[rows.length - 1]
+      nextCursor = encodeCursor([last.scheduled_at, last.id])
+    }
+    // 备注（用户 2026-10-02 第五轮）：失败 / 跳过的原因写在 task_events（本表无 message 列）——
+    // 对本页 failed/skipped 行各取「最新一条原因类事件」，从 detail JSON 里提 reason / note。
+    this.attachNotes(rows)
+    return { rows, nextCursor }
+  }
+
+  /**
+   * 轻量版执行记录（「任务日程」日历页按月取数用，2026-10-05）。
+   *
+   * 与 `listInstancesByQuery` **同一套过滤条件**（都走 `instanceWhere`），区别只有两点：
+   *   ① 列清单剔除 `snapshot`（见 `LiteTaskInstance`）—— 日历一次取满整月，不带几 KB 的大列；
+   *   ② **不分页**，上限 3000，触及即 `truncated: true`（由页面提示收窄过滤，**不静默丢**）。
+   * ⚠️ 既有 `listInstancesByQuery` 的 500 上限与游标语义**一个字都没改**（记录页游标分页依赖它）。
+   */
+  listInstancesLite(q: InstanceQuery): LiteInstancePage {
+    const { where, params } = this.instanceWhere(q)
+    const limit = Math.max(1, Math.min(q.limit ?? TaskStore.LITE_INSTANCE_LIMIT, TaskStore.LITE_INSTANCE_LIMIT))
+    const sql = `SELECT ${TaskStore.LITE_INSTANCE_COLUMNS} FROM task_instances${where === '' ? '' : ` WHERE ${where}`} ORDER BY scheduled_at DESC, id DESC LIMIT ?`
+    const rows = this.db.prepare(sql).all(...params, limit + 1) as unknown as LiteTaskInstance[]
+    let truncated = false
+    if (rows.length > limit) {
+      rows.pop()
+      truncated = true
+    }
+    this.attachNotes(rows)
+    return { rows, truncated }
+  }
+
+  /**
+   * 执行记录过滤条件的**唯一构造**（全量查询与轻量查询共用 ⇒ SQL 条件不写第二遍）。
+   * 全部条件走占位绑定，无注入面。
+   */
+  private instanceWhere(q: InstanceQuery): { where: string; params: Array<string | number> } {
     const where: string[] = []
     const params: Array<string | number> = []
     if (q.taskId !== undefined) {
@@ -857,20 +914,15 @@ export class TaskStore {
       where.push('(scheduled_at, id) < (?, ?)')
       params.push(String(cursor[0]), String(cursor[1]))
     }
-    const limit = Math.max(1, Math.min(q.limit ?? 100, 500))
-    const sql = `SELECT * FROM task_instances${where.length > 0 ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY scheduled_at DESC, id DESC LIMIT ?`
-    const rows = this.db.prepare(sql).all(...params, limit + 1) as unknown as TaskInstance[]
-    let nextCursor: string | null = null
-    if (rows.length > limit) {
-      rows.pop()
-      const last = rows[rows.length - 1]
-      nextCursor = encodeCursor([last.scheduled_at, last.id])
-    }
-    // 备注（用户 2026-10-02 第五轮）：失败 / 跳过的原因写在 task_events（本表无 message 列）——
-    // 对本页 failed/skipped 行各取「最新一条原因类事件」，从 detail JSON 里提 reason / note。
-    this.attachNotes(rows)
-    return { rows, nextCursor }
+    return { where: where.join(' AND '), params }
   }
+
+  /** 轻量查询的**显式列清单**：与 `SELECT *` 的唯一差别是剔除 `snapshot`（见 `LiteTaskInstance`）。 */
+  private static readonly LITE_INSTANCE_COLUMNS =
+    'id, task_id, logical_date, scheduled_at, status, attempt, run_type, session_id, lease_until,'
+    + ' dispatched_at, finished_at, outputs, token_in, token_out, token_in_cache, updated_at'
+  /** 轻量查询上限：比全量查询的 500 宽（轻量行约 200 B），够日历一次取满一个月的正常量级。 */
+  private static readonly LITE_INSTANCE_LIMIT = 3000
 
   /** 「原因类」事件 kind 白名单（写原因的只有这几类；receipt.note / *.reason）。 */
   private static readonly NOTE_EVENT_KINDS = ['task-error', 'expired-once', 'missed-slot', 'receipt', 'no-receipt'] as const
@@ -887,8 +939,11 @@ export class TaskStore {
     }
   }
 
-  /** 给分页行就地填 note（只查 failed / skipped 行，一次 IN 查询取每实例最新原因事件）。 */
-  private attachNotes(rows: TaskInstance[]): void {
+  /**
+   * 给分页行就地填 note（只查 failed / skipped 行，一次 IN 查询取每实例最新原因事件）。
+   * 入参放宽成最小结构 ⇒ 全量行与轻量行（`LiteTaskInstance`，无 snapshot）都能走这一份实现。
+   */
+  private attachNotes(rows: Array<{ id: string; status: InstanceStatus; note?: string | null }>): void {
     const wanted = rows.filter(row => row.status === 'failed' || row.status === 'skipped').map(row => row.id)
     if (wanted.length === 0) return
     const marks = wanted.map(() => '?').join(',')

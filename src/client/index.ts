@@ -36,6 +36,7 @@ import {
 import { ensureToastStyle, FloatingToast } from './toast-css'
 import { Button, IconButton, Segmented, ensureUiBase, startResizeLayoutWidth, type TaskOption } from './ui'
 import { RecordsTimelineView } from './records-timeline'
+import { TaskCalendarView } from './task-calendar'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-list'
 // 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
@@ -486,7 +487,7 @@ function TaskPage(props: {
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
   const snapshot = useSyncExternalStore(subscribe, getSnapshot)
 
-  const [tab, setTab] = useState<'config' | 'records' | 'debug'>('config')
+  const [tab, setTab] = useState<'config' | 'records' | 'calendar' | 'debug'>('config')
   const [draft, setDraft] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
@@ -1197,12 +1198,13 @@ function TaskPage(props: {
             ),
             h('div', { style: headerRightStyle },
               // 分段控件走 UI 基础层唯一实现（P1）：以前这里是一份就地自绘的样式（已删）
-              h(Segmented<'config' | 'records' | 'debug'>, {
+              h(Segmented<'config' | 'records' | 'calendar' | 'debug'>, {
                 value: tab,
                 size: 'md',
                 items: [
                   { value: 'config', label: t('tabConfig') },
                   { value: 'records', label: t('tabRecords') },
+                  { value: 'calendar', label: t('tabCalendar') },
                   { value: 'debug', label: t('tabDebug') },
                 ],
                 onChange: setTab,
@@ -1222,7 +1224,22 @@ function TaskPage(props: {
 
       // ⚠️ 「执行记录」必须排在 `data === undefined` **之前**：新页走 `GET /tasks/instances`（HTTP + 游标分页），
       // 不吃调试快照 —— 放在门槛之后的话，快照缺失 / 解析失败会把新页一起挡掉（2026-10-04）。
-      tab === 'records'
+      // 「任务日程」同理（它走 `/tasks/overview` + `/tasks/instances?light=1`，两条都是 HTTP）⇒ 一样排在门槛之前。
+      tab === 'calendar'
+        ? h(TaskCalendarView, {
+          t,
+          // 任务定义行（含排期）：未来计划由它在浏览器内现算，任务名也由它映射。
+          rows: overview.rows,
+          // 任务选择器候选 = `[编号] 名称`（与编辑器「前置任务」同一套文案口径），来源 = 面板 overview。
+          tasks: timelineTasks,
+          // 工作区候选 = 面板级唯一真源 `/options`（2026-10-04 拍板）。
+          workspaces: editorOptions.workspaces,
+          // 只给会话 id：弹窗自己按 id 取快照 / 产出（铁律见 openView 注释）。
+          onOpenSession: viewSession !== null
+            ? (sessionId: string) => { void openView(sessionId) }
+            : undefined,
+        })
+        : tab === 'records'
         ? h(RecordsTimelineView, {
           t,
           // 任务候选 = `[编号] 名称`（与编辑器「前置任务」同一套文案口径），来源 = 面板 overview（HTTP）。

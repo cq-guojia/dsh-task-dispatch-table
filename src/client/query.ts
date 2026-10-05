@@ -144,6 +144,25 @@ export async function fetchInstances(params: InstancesParams): Promise<{ rows: I
 }
 
 /**
+ * 按月取**整月**执行记录（「任务日程」日历页用，2026-10-05）。
+ *
+ * 与 `fetchInstances` 走**同一条路由**，只多带 `light=1`：行不含 `snapshot` 大列（派发快照，
+ * 单行 1.5–4 KB；日历要一次拿满一个月，带上它是数 MB 的白给开销），上限放宽到 3000 且**不分页**
+ * ⇒ 一次请求出整月，点某天不再发起请求。任务名由日历从任务定义本地映射，不走会话名富化。
+ *
+ * `truncated: true` = 触及上限被截断，调用方必须提示用户收窄过滤（**不静默丢**）。
+ */
+export async function fetchInstancesLite(
+  params: Omit<InstancesParams, 'cursor' | 'sessionId'>,
+): Promise<{ rows: InstanceRow[]; truncated: boolean }> {
+  const { statuses, ...rest } = params
+  const res = await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({ ...rest, status: statuses, light: '1' })}`)
+  const body = await unwrap<{ rows?: unknown; truncated?: unknown }>(res, '日程记录读取失败')
+  if (!Array.isArray(body.rows)) throw new Error('日程记录读取失败：rows 形状不符')
+  return { rows: body.rows as InstanceRow[], truncated: body.truncated === true }
+}
+
+/**
  * 按会话 id 取那一条实例行（2026-10-03）：**会话弹窗唯一的取数入口**。
  * 一个会话最多一条实例行 ⇒ 取首行；查不到（非本插件派发的会话 / 行已清）/ 请求失败
  * ⇒ `null`，调用方**照常打开弹窗**，只是少了产出卡与接收区（绝不因此挡住看会话）。

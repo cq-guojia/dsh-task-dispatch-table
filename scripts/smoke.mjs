@@ -22,6 +22,7 @@ import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
 import { attachmentFileBlocks, buildMessage } from '../dist/dispatch.js'
 import { createRuntimeIndex } from '../dist/runtime-index.js'
 import { groupOf, pinMsFor, sortKeyOf, sortRows } from '../dist/task-sort.js'
+import { planEntriesByDay, monthRangeOf, monthRangeQuery } from '../dist/calendar-plan.js'
 
 let passed = 0
 const failures = []
@@ -2784,6 +2785,74 @@ console.log('\n[14] runtime-index')
       && lcSrc.includes("editorTabView: 'View'") && lcSrc.includes("editorTabEdit: 'Edit'")
       && lcSrc.includes('editorViewSwitchTitle:') && lcSrc.includes('infoViewTask:')
       && distV.includes('editorTabView') && distV.includes('editorViewSwitchTitle'))
+  }
+
+  // ── 18. 任务日程（日历页，2026-10-05）：计划现算的口径 + 轻量取数 ──
+  console.log('\n[18] 任务日程：计划刻度按天分桶 + 轻量取数')
+  {
+    // 排期一律 UTC，区间与 now 也用 UTC ⇒ 断言只数刻度个数，不受跑测试的机器时区影响。
+    const mk = (id, enabled, schedule) => ({
+      id, title: id.toUpperCase(), enabled,
+      schedule: { cron: null, once: null, timezone: 'UTC', start: null, everyNWeeks: null, ...schedule },
+    })
+    const from = new Date('2026-10-01T00:00:00Z')
+    const to = new Date('2026-11-01T00:00:00Z')
+    const now = new Date('2026-10-15T12:00:00Z')
+    const countOf = (map) => [...map.values()].reduce((n, list) => n + list.length, 0)
+
+    // ① 计划只算启用任务（用户 2026-10-05 拍板）；② 不回填过去（只列 >= now 的刻度）。
+    const mixed = planEntriesByDay([
+      mk('on', true, { cron: '0 9 * * *' }),
+      mk('off', false, { cron: '0 9 * * *' }),
+    ], from, to, now)
+    check('日程：计划只算启用任务（停用任务不出格子）',
+      [...mixed.values()].flat().every(entry => entry.taskId === 'on'))
+    // 10-16 .. 10-31 共 16 天（10-15 当天 09:00 已过 ⇒ 不算）。
+    check('日程：不回填过去 —— 只列 >= now 的刻度（16 条）', countOf(mixed) === 16, `实际 ${countOf(mixed)}`)
+
+    // 同一天多条：按时刻升序（格子与清单都按时间排）。
+    const two = planEntriesByDay([
+      mk('early', true, { cron: '0 9 * * *' }),
+      mk('late', true, { cron: '0 18 * * *' }),
+    ], from, to, now)
+    check('日程：同一天多条按时刻升序', [...two.values()].every(
+      list => list.every((entry, i) => i === 0 || list[i - 1].scheduledAt <= entry.scheduledAt),
+    ))
+
+    // 一次性任务：出窗即作废（决策 18 / 拍板 A）⇒ 过期的 once 不算计划，未来的照常出格。
+    check('日程：一次性任务已过期 ⇒ 不算计划',
+      countOf(planEntriesByDay([mk('o1', true, { once: '2026-10-01T09:00' })], from, to, now)) === 0)
+    check('日程：一次性任务在未来 ⇒ 按它那天出格',
+      countOf(planEntriesByDay([mk('o2', true, { once: '2026-10-20T09:00' })], from, to, now)) === 1)
+
+    // 「每 N 周」+ start 锚点（10-05 是周一 ⇒ 月内周一 = 5/12/19/26；now 之后剩 19/26 ⇒ 隔周档只剩 1 条）。
+    const weekly = planEntriesByDay([mk('w1', true, { cron: '0 9 * * 1' })], from, to, now)
+    const biweek = planEntriesByDay([mk('w2', true, { cron: '0 9 * * 1', start: '2026-10-05T09:00', everyNWeeks: 2 })], from, to, now)
+    check('日程：每周档 after now 剩 2 条', countOf(weekly) === 2, `实际 ${countOf(weekly)}`)
+    check('日程：每 N 周 + start 锚点过滤生效（隔周档 1 条）', countOf(biweek) === 1, `实际 ${countOf(biweek)}`)
+
+    // 高频 cron 必须**不**被 cap 截断（这是「按周分片」存在的唯一理由：整月一次算会被 cap 砍掉）。
+    // 10-15 12:00 → 11-01 00:00 = 23760 分钟 ⇒ 每分钟档应有 23760 个刻度。
+    const perMinute = planEntriesByDay([mk('mm', true, { cron: '* * * * *' })], from, to, now)
+    check('日程：每分钟档整月不截断（23760 条，证明分片有效）', countOf(perMinute) === 23760, `实际 ${countOf(perMinute)}`)
+
+    // 月区间 = 半开 [月首, 次月首)（与执行记录页同一条规矩）。
+    const range = monthRangeOf(2026, 9)
+    const query = monthRangeQuery(2026, 9)
+    check('日程：月区间半开 [月首 00:00, 次月首 00:00)',
+      range.from.getTime() === new Date(2026, 9, 1).getTime() && range.to.getTime() === new Date(2026, 10, 1).getTime())
+    check('日程：查询串可回解成同一区间',
+      Date.parse(query.fromTs) === range.from.getTime() && Date.parse(query.toTs) === range.to.getTime())
+
+    // 轻量取数（日历按月一次取满）：行不含 snapshot 大列，条数与全量一致，触及上限给 truncated。
+    const full = store.listInstancesByQuery({ limit: 500 })
+    const lite = store.listInstancesLite({ limit: 3000 })
+    check('日程：轻量查询条数与全量一致（上限内不漏）',
+      lite.rows.length === Math.min(full.rows.length, 3000), `全量 ${full.rows.length} / 轻量 ${lite.rows.length}`)
+    check('日程：轻量行不含 snapshot 大列', lite.rows.every(row => !('snapshot' in row)))
+    const lite2 = store.listInstancesLite({ limit: 2 })
+    check('日程：轻量查询触及上限回 truncated（不静默丢）',
+      lite2.rows.length <= 2 && (full.rows.length <= 2 || lite2.truncated))
   }
 
   store.close()

@@ -63,6 +63,8 @@ export {
 export {
   DateField,
   TimeField,
+  buildMonthCells,
+  type CalendarCell,
   type CalendarLabels,
   type TimeLabels,
 } from './DateTime'

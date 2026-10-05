@@ -64,14 +64,23 @@ function todayIso(): string {
 }
 
 /** 日历单元格（含相邻月的补位）。 */
-interface CalendarCell {
+export interface CalendarCell {
+  /** `YYYY-MM-DD`（本地日）。 */
   iso: string
+  /** 月内日号（补位格也给真实号，供显示）。 */
   day: number
+  /** 是否属于当前显示月（补位格 false ⇒ 调用方淡化且不填数据）。 */
   inMonth: boolean
   isToday: boolean
 }
 
-function buildCells(y: number, m: number): CalendarCell[] {
+/**
+ * 月历网格的**唯一实现**（2026-10-05 提为导出：日期框的自绘日历与「任务日程」页共用同一份，
+ * 不许两处各写一套网格算法）。
+ * 固定 6 行 × 7 列（42 格）：行数据月不同在 5/6 行之间跳动会让下方内容上下抖。
+ * @param m 1-based（与 `Date.getMonth()` 差一，与展示口径一致）。
+ */
+export function buildMonthCells(y: number, m: number): CalendarCell[] {
   const first = new Date(y, m - 1, 1)
   // 周一起排：官方参考图与国际惯例都是「一二三四五六日」。
   const offset = (first.getDay() + 6) % 7
@@ -152,7 +161,7 @@ export function DateField(props: {
     setOpen(true)
   }, [props.value])
 
-  const cells = useMemo(() => buildCells(cursor.y, cursor.m), [cursor])
+  const cells = useMemo(() => buildMonthCells(cursor.y, cursor.m), [cursor])
 
   const step = (months: number): void => {
     const next = new Date(cursor.y, cursor.m - 1 + months, 1)

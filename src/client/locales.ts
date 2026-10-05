@@ -15,7 +15,10 @@ export type LocaleKey =
   | 'debugClose' | 'debugEmpty' | 'debugRaw'
   | 'debugWarns' | 'debugNoWarns'
   | 'debugRefreshedAt'
-  | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabDebug'
+  | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabCalendar' | 'tabDebug'
+  // —— 任务日程（日历页，2026-10-05）：月份导航 / 两态图例 / 计划说明 / 截断与错误 ——
+  | 'calLoading' | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
+  | 'calTruncated' | 'calPlanHint' | 'calPlanTag' | 'calLegendDone' | 'calLegendPlan'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
   | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext'
@@ -252,7 +255,18 @@ export const zh: Record<LocaleKey, string> = {
   backToConversation: '返回会话',
   tabConfig: '任务配置',
   tabRecords: '执行记录',
+  tabCalendar: '任务日程',
   tabDebug: '调试',
+  calLoading: '日程加载中…',
+  calLoadFail: '日程读取失败',
+  calRetry: '重试',
+  calEmpty: '这个月没有执行记录，也没有计划任务',
+  calDayEmpty: '这一天没有执行记录，也没有计划任务',
+  calTruncated: '该月记录超过上限（3000 条），只显示了其中一部分；请用上方过滤缩小范围。',
+  calPlanHint: '按当前任务配置推算的计划，尚未产生执行记录（改配置或停用任务后它会变）',
+  calPlanTag: '计划',
+  calLegendDone: '已执行',
+  calLegendPlan: '计划',
   debugDbHint: '状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。',
   debugDbLoading: '状态库读取中…',
   debugDbFail: '状态库读取失败（未就绪或请求被拒），稍后点刷新重试。',
@@ -897,7 +911,18 @@ export const en: Record<LocaleKey, string> = {
   backToConversation: 'Back to conversation',
   tabConfig: 'Configuration',
   tabRecords: 'Run records',
+  tabCalendar: 'Schedule',
   tabDebug: 'Debug',
+  calLoading: 'Loading schedule…',
+  calLoadFail: 'Failed to load the schedule',
+  calRetry: 'Retry',
+  calEmpty: 'No run records and no planned runs in this month',
+  calDayEmpty: 'No run records and no planned runs on this day',
+  calTruncated: 'This month exceeds the 3000-row limit and is truncated; narrow the filters above.',
+  calPlanHint: 'Planned from the current task config — no run record yet (it changes if you edit or disable the task)',
+  calPlanTag: 'Planned',
+  calLegendDone: 'Executed',
+  calLegendPlan: 'Planned',
   debugDbHint: 'Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.',
   debugDbLoading: 'Loading state.db…',
   debugDbFail: 'Failed to read state.db (not ready or request rejected); retry with the refresh button.',
