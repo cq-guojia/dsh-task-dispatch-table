@@ -162,3 +162,17 @@
 | 2 | 想让 task-view 直接 import task-editor 的 `scheduleCron` ⇒ 组件互相引用构成**运行时循环** | 纯函数迁去 `schedule-text.ts`（无环归宿），编辑器与查看档都从那里取 |
 | 3 | cron-parser 内联进 client bundle 后自带 `toLocaleString(` ⇒ 冒烟「不再用 toLocaleString」的 **bundle 级反断言**误伤 | 反断言改读**我们自己的源文件**（format.ts / task-info.tsx），bundle 级不再适用 |
 | 4 | `everyNWeeks` schema 可空 ⇒ 纯核的最小类型写 `number \| null` 并判空，不能照抄旧代码的 `=== undefined` 单判 | `schedule-next.ts` 的 `filterSlotsBySchedule` 同时判 null / undefined |
+
+## 七、r13 真机反馈修正（同日第三轮，冒烟 613 → 616）
+
+| # | 反馈 | 处置 |
+|---|---|---|
+| 1 | 卡片任务名 hover 不变色 | 根因：`titleStyle` 的 **inline `color`** 压死 `:hover`（class 永远赢不了 inline）。去掉 inline color，hover 变蓝生效；「点名字=查看、点其余=展开」分工保留 |
+| 2 | 查看档附件 / 交付物不能点 | 附件：按 kind+name 配对 overview 的服务端解析（绝对路径 + 锚点）后可点；编辑中新增的（未解析）仍纯展示。产出物链路本就通（`onOpenFile` → U11 dock），待用户复验 |
+| 3 | **bug**：查看档切到别的任务后点关闭 → 误弹「未保存」 | 根因：`initialDraftRef` 只在**挂载**时初始化，抽屉换任务不重挂载 ⇒ 基线还是旧任务 ⇒ dirty 恒 true。修：换任务时重置基线（`initialDraftRef.current = draft`） |
+| 4 | 三块标题不明显的提示作用 | 标题改**标签**（浅底 chip：图标 + 文字，`.dsh-tdt-ed-view-tag`） |
+| 5 | 提示词撤掉全屏；默认 3 排 +「查看全部」；右侧两组按钮 = 源码/预览 + 展开/收起（三角） | 就地切换：源码 = 只读 `CodeViewer`、预览 = `MarkdownText`（都重用现成实现）；展开/收起一个三角钮与「查看全部」同一切换；展开后靠右侧栏自己的滚动条。全屏入口与渲染已删（`PromptEditorModal` 的 readonly 参数保留备用） |
+| 6 | 草稿标记文案加括号 + 别用灰色 | 「编辑的草稿（未保存）」；chip 改**警告色**（橙字浅橙底，红太强） |
+| 7 | **bug**：停用任务查看档仍显示「预计执行」+「这类判断别各处各写」 | 抽统一入口 `nextSlotForDraft`（schedule-text.ts）：**停用⇒无**、once/cron 分流、推不出⇒null 单源；查看档改走它。「允许延迟」（`windowLabel`）与排期文案本就单源，向用户说明 |
+
+**r13 踩坑**：同文件并行两次编辑**又一次**互相覆盖（openedTaskRef 修复被删全屏的编辑冲掉，冒烟断言抓到）——本会话第二次踩同一坑，铁律再确认：**同一文件的编辑必须逐个串行**。

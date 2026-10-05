@@ -1265,6 +1265,11 @@ export function TaskEditorDrawer(props: {
   onOpenFile?: ((sessionId: string, path: string) => void) | undefined
   /** 查看档里点前置任务名 ⇒ 打开那个任务的查看档（r12：与卡片口径一致）。 */
   onViewTask?: ((id: string) => void) | undefined
+  /**
+   * 该任务在 overview 里的**附件解析结果**（服务端补好的绝对路径 + 预览锚点会话；`GET /tasks/overview`）。
+   * 透传给查看档 ⇒ 附件按 kind+name 配对后可点开预览（r13；不给/配不上 ⇒ 纯展示，不装可点）。
+   */
+  resolvedAttachments?: readonly { name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string }[]
   /** 工作区文件服务（选择工作区文件用；未就位为 null ⇒ 选择器不可用）。 */
   workspaceFiles?: WorkspaceFilesFace | null
   /** Office 预览服务（remote.officeToPdf；未就位为 null ⇒ Office 文件出「不可用」空态）。 */
@@ -1290,7 +1295,7 @@ export function TaskEditorDrawer(props: {
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors,
     officeToPdf, currentTaskId, width, onWidthChange, reserved,
     initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView,
-    onOpenSession, onOpenFile, onViewTask,
+    onOpenSession, onOpenFile, onViewTask, resolvedAttachments,
   } = props
   // ── 档位（用户 2026-10-05）────────────────────────────────────────────
   // 查看 = 只读人话视图（基础信息 → 提示词 → 上次执行）；编辑 = 表单。
@@ -1304,6 +1309,9 @@ export function TaskEditorDrawer(props: {
     if (openedTaskRef.current !== id) {
       // 换了任务 ⇒ 回到「这次打开要求的档」（点 A 的「编辑」→ 编辑档；再去点 B 的前置任务名 → 查看档）。
       openedTaskRef.current = id
+      // ⚠️ 脏判定基线必须跟着换成新任务的打开快照（r13 修 bug）：`initialDraftRef` 只在**挂载**时初始化，
+      // 抽屉不重挂载 ⇒ 换任务后 draft 已是新任务的、基线还是旧任务的 ⇒ dirty 恒 true、关闭必弹「未保存」。
+      initialDraftRef.current = draft
       setViewTab(initialView ?? 'edit')
       return
     }
@@ -1315,8 +1323,6 @@ export function TaskEditorDrawer(props: {
   const [jsonOpen, setJsonOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
-  // 查看档的「全屏查看」（r12）：只读提示词全屏（源码 / 预览两态），盖在分栏面板上、随 ✕ 收回。
-  const [promptViewOpen, setPromptViewOpen] = useState(false)
   const [pendingHint, setPendingHint] = useState(0) // >0 = Toast seq（「预览态不可保存」中性提示）
   const [confirmDeleteTask, setConfirmDeleteTask] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -2165,10 +2171,10 @@ export function TaskEditorDrawer(props: {
             // 任务 id 只在编辑态有 ⇒ 新建态给空串，查看档据此**不发**「上次执行」请求（任务还不存在）。
             taskId: mode === 'edit' ? (currentTaskId ?? '') : '',
             tasks,
+            resolvedAttachments,
             onOpenSession,
             onOpenFile,
             onViewTask,
-            onOpenPromptFullscreen: () => { setPromptViewOpen(true) },
           })
           : body),
       // 底部：删除任务（红，仅编辑态）· 重置 · 取消 · 保存。
@@ -2322,21 +2328,7 @@ export function TaskEditorDrawer(props: {
           onConfirm: () => { onConfirmPendingView?.() },
         })
         : null,
-      // 查看档「全屏查看」（r12 用户拍板）：只读提示词全屏 —— 源码 / 预览两态、默认预览，
-      // 无编辑、无保存、无版本面板（等同展示一个 MD 文件）。
-      promptViewOpen
-        ? h(PromptEditorModal, {
-          t,
-          mode,
-          readonly: true,
-          value: draft.prompt,
-          history: null,
-          onChange: () => {},
-          onClose: () => { setPromptViewOpen(false) },
-          onRestoreVersion: () => {},
-          onDeleteVersion: () => {},
-        })
-        : null,
+      // r13：查看档「全屏查看」已按用户要求撤掉（改为提示词块内就地「源码 / 预览 + 展开 / 收起」）。
     )
 
   // U21：不再有遮罩层 —— 分栏是根容器（`#dsh-tdt-root`）的布局成员，主窗口被推窄而不是被盖住，

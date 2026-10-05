@@ -423,3 +423,30 @@ export function scheduleCron(draft: ScheduleCronDraft): string | null {
       return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`
   }
 }
+
+// ── 草稿 → 下一次执行时刻（r13 抽出的**统一入口**）────────────────────────
+// 用户点名：这类「怎么算、什么时候算无」的判断**不许各处各写**（此前查看档漏了「停用 ⇒ 不执行」，
+// 与卡片对不上）。现在：停用判断、once/cron 分流、cron 推不出的兜底全部只在这一份。
+import { nextSlotAfter } from '../schedule-next.js'
+
+/** `nextSlotForDraft` 只吃草稿的这些字段（`TaskEditorDraft` 天然形状兼容）。 */
+export type NextSlotDraft = ScheduleCronDraft & { enabled: boolean; date: string }
+
+/**
+ * 草稿 → 下一次执行时刻的 ISO 串（推不出 / 停用 ⇒ `null`，调用方显示「无」，**不编造**）。
+ * ① **停用 ⇒ 不执行**（与卡片「预计执行」、服务端 `computeNext` 同口径）；
+ * ② once 任务给 `schedule.once`；周期任务给 cron（`scheduleCron` 推不出 ⇒ null）；
+ * ③ 时区缺省 = 本地（宿主与浏览器同机，与服务端缺省口径一致）。
+ */
+export function nextSlotForDraft(draft: NextSlotDraft, now: Date = new Date()): string | null {
+  if (!draft.enabled) return null
+  const start = draft.date !== '' && draft.time !== '' ? `${draft.date}T${draft.time}` : undefined
+  const schedule = draft.periodFreq === 'once'
+    ? { once: start, timezone: undefined, start }
+    : (() => {
+      const cron = scheduleCron(draft)
+      return cron === null ? {} : { cron, timezone: undefined, start }
+    })()
+  const next = nextSlotAfter({ schedule }, now)
+  return next === undefined ? null : next.toISOString()
+}

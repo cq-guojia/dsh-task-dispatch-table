@@ -163,12 +163,19 @@ export function taskInfoBaseFields(props: {
 }): ReactNode {
   const { t, view, onOpenFile, onViewTask } = props
   return h(Fragment, null,
-    // 状态（仅查看档）：只读视图里没有可写的启用开关 ⇒ 用一行文字表达。
+    // 状态（仅查看档）：只读视图里没有可写的启用开关 ⇒ 用「色点 + 文字」表达
+    //（r13 用户拍板：要有标签的提示作用，形式与「上次执行」的状态色块同款 —— 绿点=正常）。
     view.enabled === undefined
       ? null
       : InfoField({
         label: t('colStatus'),
-        children: h('span', { style: { fontWeight: 500, color: view.enabled ? 'var(--tdt-success)' : 'var(--tdt-fg-3)' } },
+        children: h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 500 } },
+          h('span', {
+            style: {
+              flex: 'none', width: '8px', height: '8px', borderRadius: '2px',
+              background: view.enabled ? 'var(--tdt-success)' : 'var(--tdt-fg-3)',
+            },
+          }),
           view.enabled ? t('infoStateEnabled') : t('infoStateDisabled')),
       }),
     InfoField({ label: t('listFieldSchedule'), children: view.scheduleLine }),

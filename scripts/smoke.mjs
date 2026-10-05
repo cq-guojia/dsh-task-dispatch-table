@@ -2638,19 +2638,28 @@ console.log('\n[14] runtime-index')
       && tv.includes("t('editorViewDraftTag')") && tv.includes("t('editorViewNewTag')")
       && !te.includes('editorViewSavedTag') && !te.includes('dsh-tdt-ed-viewtag'))
 
-    check('查看档三块（r12 顺序：任务配置 → 上次执行 → 提示词最下）+ 块标题小图标 + 提示词约 5 行不框',
+    check('查看档三块（r12 顺序：任务配置 → 上次执行 → 提示词最下）+ 块标题标签化 + 状态行色点',
       tv.includes('taskInfoBaseFields({')
       && tv.includes("t('editorViewPrompt')") && tv.includes('MarkdownText')
       && tv.includes('IconPlanOutlineRegular') && tv.includes('IconClockOutlineRegular') && tv.includes('IconThinkOutlineRegular')
-      && tv.includes("t('editorViewFullscreen')")
-      && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:120px')
-      && !tec.includes('dsh-tdt-ed-view-prompt{box-sizing:border-box;padding')
+      // r13：块标题 = 标签（浅底 chip）；状态行 = 色点 + 文字（task-info 共享层）；草稿 chip 走警告色。
+      && tv.includes('dsh-tdt-ed-view-tag') && tec.includes('.dsh-tdt-ed-view-tag{')
+      && tiS.includes("view.enabled ? 'var(--tdt-success)' : 'var(--tdt-fg-3)'")
+      && tec.includes('color:var(--tdt-warning')
       && tv.includes('dsh-tdt-ed-view-badge') && tv.includes('lastRunFields({')
       && tv.includes('hideStatus: true'))
 
-    check('查看档「预计执行」：与服务端同一份纯核实时推算（scheduleCron / nextSlotAfter），改排期立刻反映',
-      tv.includes('nextSlotAfter({ schedule }, new Date())')
-      && tv.includes("from './schedule-text'")
+    check('r13 提示词区：默认约 3 行 + 就地「源码 / 预览」与「展开 / 收起」两组按钮 +「查看全部」（无全屏）',
+      tv.includes("t('editorViewSourceCode')") && tv.includes("t('editorModePreview')")
+      && tv.includes("t('editorViewExpandAll')") && tv.includes("t('editorViewCollapse')")
+      && tv.includes('CodeViewer') && !tv.includes('onOpenPromptFullscreen')
+      && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:63px')
+      && tec.includes('.dsh-tdt-ed-view-prompt--open{max-height:none;}')
+      && !lcSrc.includes('editorViewFullscreen'))
+
+    check('查看档「预计执行」走统一入口 nextSlotForDraft（停用⇒无 / once / cron 分流单源），与服务端同一份纯核',
+      tv.includes('nextSlotForDraft(draft)')
+      && readFileSync(join(process.cwd(), 'src', 'client', 'schedule-text.ts'), 'utf8').includes('if (!draft.enabled) return null')
       && tv.includes('renderNextExec(nextExecIso, t)')
       // 纯核真源：schedule-next.ts 被服务端 re-export（调用面零改动）。
       && readFileSync(join(process.cwd(), 'src', 'tasks.ts'), 'utf8').includes("} from './schedule-next.js'")
@@ -2672,6 +2681,14 @@ console.log('\n[14] runtime-index')
       && te.includes('pendingView !== null') && te.includes('VersionConfirm')
       && ixSrc.includes('setPendingView({ id })') && ixSrc.includes('editorDirtyRef')
       && ixSrc.includes('onDirtyChange'))
+
+    check('r13 修 bug：换任务（如从 A 的前置任务切看 B）时重置脏判定基线 ⇒ 关闭不再误弹「未保存」',
+      te.includes('initialDraftRef.current = draft'))
+
+    check('r13 附件可点：查看档按 kind+name 配对 overview 的服务端解析（绝对路径 + 锚点），配不上保持纯展示',
+      tv.includes('resolvedByKey.get(`${item.kind}:${item.name}`)')
+      && tv.includes('resolvedAttachments')
+      && ixSrc.includes('overview.rows.find(item => item.id === editor.id)?.attachments'))
 
     check('默认档映射：新建 / 卡片「编辑」= 编辑档；卡片前置任务名点进来 = 查看档；同任务只切档不重建草稿',
       ixSrc.includes("view: 'edit'") && ixSrc.includes("view: 'view'")

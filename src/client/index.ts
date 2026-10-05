@@ -1498,6 +1498,10 @@ function TaskPage(props: {
         onOpenFile: canPreview ? openFile : undefined,
         // 查看档里点前置任务名 ⇒ 打开那个任务的查看档（r12：与卡片展开区口径一致）。
         onViewTask: openViewer,
+        // r13：附件可点 ⇒ 传该任务在 overview 里的服务端解析结果（绝对路径 + 锚点会话，按 kind+name 配对）。
+        resolvedAttachments: editor.mode === 'edit'
+          ? overview.rows.find(item => item.id === editor.id)?.attachments
+          : undefined,
         workspaceFiles,
         officeToPdf,
         workspaceAnchors: editorOptions.workspaceAnchors,

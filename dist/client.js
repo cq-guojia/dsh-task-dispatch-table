@@ -757,18 +757,19 @@ window.__ModuleLoader__.load({
 			infoDuration: "执行时长",
 			editorTabView: "查看",
 			editorTabEdit: "编辑",
-			infoStateEnabled: "已启用",
+			infoStateEnabled: "正常",
 			infoStateDisabled: "已停用",
 			infoViewTask: "查看该任务",
-			editorViewDraftTag: "编辑的草稿未保存",
+			editorViewDraftTag: "编辑的草稿（未保存）",
 			editorViewNewTag: "新建，尚未保存",
 			editorViewUntitled: "未命名任务",
 			editorViewPrompt: "提示词",
 			editorViewPromptEmpty: "还没填提示词",
 			editorViewNoRunDraft: "任务尚未保存，没有执行记录",
 			editorViewNotFilled: "未填",
-			editorViewFullscreen: "全屏查看",
 			editorViewSourceCode: "源码",
+			editorViewExpandAll: "查看全部",
+			editorViewCollapse: "收起",
 			editorViewSwitchTitle: "放弃未保存的修改？",
 			editorViewSwitchDesc: "当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。",
 			cardTabInfo: "基础信息",
@@ -1369,18 +1370,19 @@ window.__ModuleLoader__.load({
 			infoDuration: "Duration",
 			editorTabView: "View",
 			editorTabEdit: "Edit",
-			infoStateEnabled: "Enabled",
+			infoStateEnabled: "Active",
 			infoStateDisabled: "Disabled",
 			infoViewTask: "View this task",
-			editorViewDraftTag: "Draft edits not saved",
+			editorViewDraftTag: "Draft edits (unsaved)",
 			editorViewNewTag: "New, not saved",
 			editorViewUntitled: "Untitled task",
 			editorViewPrompt: "Prompt",
 			editorViewPromptEmpty: "No prompt yet",
 			editorViewNoRunDraft: "Not saved yet — no run history",
 			editorViewNotFilled: "Not set",
-			editorViewFullscreen: "Full screen",
 			editorViewSourceCode: "Source",
+			editorViewExpandAll: "Show all",
+			editorViewCollapse: "Collapse",
 			editorViewSwitchTitle: "Discard unsaved changes?",
 			editorViewSwitchDesc: "This task has unsaved edits. Continuing will discard them and open the task you want to view.",
 			cardTabInfo: "Basic info",
@@ -54240,546 +54242,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 块标题行（r12 用户反馈「这一片全是文字，很难看」）：小图标 + 标题 +（可选）草稿标记 chip /
    状态色块与状态文字。图标与标题统一淡灰小字，与卡片「任务配置」小标题同口径。 */
 .dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.dsh-tdt-ed-view-ic{flex:none;display:inline-flex;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-ed-view-title{font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* 块标题 = **标签**（r13 用户：纯文字没提示作用 ⇒ 浅底 chip：图标 + 文字，比灰字醒目但不抢戏）。 */
+.dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-chip-bg,rgba(128,128,128,.14));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
 .dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
-/* 草稿标记 chip（r12：从头部挪到「任务配置」标题旁，文案精简正式）。 */
-.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:var(--tdt-chip-bg,rgba(128,128,128,.16));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-xs);white-space:nowrap;}
-/* 「全屏查看」入口（r12）：标题行**最右**的链接型小字钮（hover 变蓝）。 */
-.dsh-tdt-ed-view-more{appearance:none;-webkit-appearance:none;border:0;border-radius:0;background:transparent;padding:0;font:inherit;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;margin-left:auto;transition:color var(--tdt-dur) var(--tdt-ease);}
+/* 草稿标记 chip（r13：灰色不明显 ⇒ **警告色**——红太强，用 warning 橙：橙字 + 极浅橙底）。 */
+.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--tdt-warning,#b7791f);font-size:var(--tdt-font-xs);white-space:nowrap;}
+/* 「查看全部 / 收起」：内容下方的链接型小字钮（hover 变蓝）。 */
+.dsh-tdt-ed-view-more{appearance:none;-webkit-appearance:none;align-self:flex-start;border:0;border-radius:0;background:transparent;padding:0;font:inherit;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;margin-top:6px;transition:color var(--tdt-dur) var(--tdt-ease);}
 .dsh-tdt-ed-view-more:hover{color:var(--tdt-business,#4d6bfe);}
-/* 提示词默认态（r12 用户拍板）：**不框边框**、约 5 行截断（看全文走「全屏查看」），Markdown 渲染。 */
-.dsh-tdt-ed-view-prompt{min-width:0;max-height:120px;overflow:hidden;}
+/* 提示词默认**约 3 行**截断（r13）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
+.dsh-tdt-ed-view-prompt{min-width:0;max-height:63px;overflow:hidden;}
+.dsh-tdt-ed-view-prompt--open{max-height:none;}
 .dsh-tdt-ed-view-empty{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 `;
 		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
 		function ensureTaskEditorStyle() {
 			applyStyle("domain:editor", TASK_EDITOR_CSS);
-		}
-		//#endregion
-		//#region src/client/schedule-text.ts
-		const WEEKDAY_KEYS$1 = [
-			"editorWeekday1",
-			"editorWeekday2",
-			"editorWeekday3",
-			"editorWeekday4",
-			"editorWeekday5",
-			"editorWeekday6",
-			"editorWeekday7"
-		];
-		const fmt = (template, vars) => Object.entries(vars).reduce((acc, [key, value]) => acc.replace(`{${key}}`, value), template);
-		/** 周几串：全选 = 「每天」；未选 = 空串（由调用方补「还没选生效日」）。 */
-		function weekdayText(t, days) {
-			if (days.length === 0) return "";
-			if (days.length >= 7) return t("editorSchedEveryday");
-			return [...days].sort((a, b) => a - b).map((day) => t(WEEKDAY_KEYS$1[day - 1])).join("、");
-		}
-		const EMPTY_SPEC = {
-			kind: "custom",
-			freq: "daily",
-			weekdays: [],
-			weekStep: 1,
-			monthDay: "1",
-			monthMode: "every",
-			quarterMonth: "1",
-			yearMonth: "1",
-			intervalUnit: "minute",
-			intervalStep: 0,
-			time: "09:00",
-			date: "",
-			cron: ""
-		};
-		/** 表单草稿 → spec（编辑器用）。 */
-		function scheduleSpecFromDraft(draft) {
-			const step = Number.parseInt(draft.intervalStep, 10);
-			const wstep = Number.parseInt(draft.weekStep, 10);
-			return {
-				kind: draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic",
-				freq: draft.periodFreq === "once" ? "daily" : draft.periodFreq,
-				weekdays: [...draft.weekdays],
-				weekStep: Number.isFinite(wstep) && wstep > 0 ? wstep : 1,
-				monthDay: draft.monthDay,
-				monthMode: draft.monthMode,
-				quarterMonth: draft.quarterMonth,
-				yearMonth: draft.yearMonth,
-				intervalUnit: draft.intervalUnit,
-				intervalStep: Number.isFinite(step) && step > 0 ? step : 0,
-				time: /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : "09:00",
-				date: draft.date,
-				cron: ""
-			};
-		}
-		/** cron 的「分 时」两位 → `HH:mm`（间隔档分钟位是「星号 + 斜杠 + N」，取不到就给默认，反正间隔档不用它）。 */
-		function timeFromCron(cron) {
-			const parts = cron.trim().split(/\s+/);
-			if (parts.length !== 5) return "09:00";
-			const [minute, hour] = parts;
-			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
-			return `${pad2$3(hour)}:${pad2$3(minute)}`;
-		}
-		/**
-		* cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
-		* ⚠️ **只认「纯数字逗号列表」**（如 `1,2,5`）；`1-5` / `MON-FRI` / 步长写法 这类返回 `null`，
-		* 由调用方**整体降级 custom**——绝不静默滤空（2026-09-30 专家团复核：此前 `0 9 * * 1-5` 被滤成空数组，
-		* 文案反而说「还没选生效日」，与「周一到周五都跑」的事实相反）。
-		*/
-		const weekdaysFromDow = (dow) => {
-			if (dow === "" || dow === "*") return [];
-			if (!/^\d+(,\d+)*$/.test(dow)) return null;
-			return dow.split(",").map(Number).map((n) => n === 0 ? 7 : n);
-		};
-		/**
-		* 老任务（没有结构化 `ui`）：从 cron 反解出 spec。认得几个常见形态，认不出走 `custom`（原样显示）。
-		*
-		* **cron → 结构化的唯一实现**（2026-09-30 抽象收敛）：此前列表文案（这里）与编辑器表单反解
-		* （`task-editor.scheduleFromCron`）各写一份、严格度还不一致 ⇒ 同一个 cron 两处说法不一样，
-		* 修 bug 还得两边分别修。现在编辑器也只调这里。
-		*/
-		function scheduleSpecFromCron(cron, everyNWeeks) {
-			const base = {
-				...EMPTY_SPEC,
-				cron
-			};
-			const parts = cron.trim().split(/\s+/);
-			if (parts.length !== 5) return base;
-			const [minute, hour, dom, months, dow] = parts;
-			const minuteStep = /^\*\/(\d+)$/.exec(minute);
-			const hourStep = /^\*\/(\d+)$/.exec(hour);
-			const time = timeFromCron(cron);
-			const wd = weekdaysFromDow(dow);
-			if (wd === null) return base;
-			if (dom === "*" && months === "*") {
-				const everyDay = wd.length === 0 ? [
-					1,
-					2,
-					3,
-					4,
-					5,
-					6,
-					7
-				] : wd;
-				if (hour === "*" && (minute === "*" || minuteStep !== null)) return {
-					...base,
-					kind: "interval",
-					intervalUnit: "minute",
-					intervalStep: minuteStep === null ? 1 : Number(minuteStep[1]),
-					time,
-					weekdays: everyDay
-				};
-				if (hourStep !== null && /^\d+$/.test(minute)) return {
-					...base,
-					kind: "interval",
-					intervalUnit: "hour",
-					intervalStep: Number(hourStep[1]),
-					time,
-					weekdays: everyDay
-				};
-				if (hour === "*" && minute === "0") return {
-					...base,
-					kind: "interval",
-					intervalUnit: "hour",
-					intervalStep: 1,
-					time,
-					weekdays: everyDay
-				};
-				if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return base;
-				if (dow === "*") return {
-					...base,
-					kind: "periodic",
-					freq: "daily",
-					time
-				};
-				return {
-					...base,
-					kind: "periodic",
-					freq: "weekly",
-					time,
-					weekdays: wd,
-					weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1
-				};
-			}
-			if (dom !== "*" && dow === "*") {
-				const monthList = months === "*" ? null : months.split(",").map(Number).filter(Number.isInteger);
-				if (monthList !== null && monthList.length === 12) return {
-					...base,
-					kind: "periodic",
-					freq: "monthly",
-					time,
-					monthDay: dom,
-					monthMode: "every"
-				};
-				if (monthList !== null && monthList.length === 6 && monthList.every((m) => m % 2 === 1)) return {
-					...base,
-					kind: "periodic",
-					freq: "monthly",
-					time,
-					monthDay: dom,
-					monthMode: "odd"
-				};
-				if (monthList !== null && monthList.length === 6 && monthList.every((m) => m % 2 === 0)) return {
-					...base,
-					kind: "periodic",
-					freq: "monthly",
-					time,
-					monthDay: dom,
-					monthMode: "even"
-				};
-				if (monthList !== null && monthList.length > 1) {
-					const sorted = [...monthList].sort((a, b) => a - b);
-					if (sorted.every((m, i) => i === 0 || m - sorted[i - 1] === 3) && sorted.length === 4) return {
-						...base,
-						kind: "periodic",
-						freq: "quarterly",
-						time,
-						monthDay: dom,
-						quarterMonth: String(sorted[0])
-					};
-					return base;
-				}
-				if (monthList !== null && monthList.length === 1) return {
-					...base,
-					kind: "periodic",
-					freq: "yearly",
-					time,
-					monthDay: dom,
-					yearMonth: String(monthList[0])
-				};
-				return {
-					...base,
-					kind: "periodic",
-					freq: "monthly",
-					time,
-					monthDay: dom,
-					monthMode: "every"
-				};
-			}
-			return base;
-		}
-		/** 任务定义 `schedule` → spec（列表用）。优先结构化 `ui`，没有则从 cron 反解。 */
-		function scheduleSpecFromSchedule(sched) {
-			if (sched.once !== null && sched.once !== "") return {
-				...EMPTY_SPEC,
-				kind: "once",
-				date: sched.once.slice(0, 10),
-				time: sched.once.length >= 16 ? sched.once.slice(11, 16) : "00:00"
-			};
-			const cron = sched.cron ?? "";
-			const ui = sched.ui ?? null;
-			if (ui !== null && typeof ui === "object") {
-				const days = Array.isArray(ui.weekdays) ? ui.weekdays.filter((d) => typeof d === "number" && d >= 1 && d <= 7) : [];
-				const kindNum = (v, fallback) => {
-					const n = typeof v === "string" ? Number.parseInt(v, 10) : typeof v === "number" ? v : NaN;
-					return Number.isFinite(n) && n > 0 ? n : fallback;
-				};
-				const stepNum = (v) => {
-					const n = typeof v === "string" ? Number.parseInt(v, 10) : typeof v === "number" ? v : NaN;
-					return Number.isFinite(n) && n > 0 ? n : 0;
-				};
-				const str = (v, fallback) => typeof v === "string" && v !== "" ? v : fallback;
-				const uiKind = ui.scheduleKind === "interval" ? "interval" : "periodic";
-				const uiFreq = ui.periodFreq;
-				return {
-					kind: uiKind,
-					freq: uiKind === "interval" ? "daily" : uiFreq === "daily" || uiFreq === "weekly" || uiFreq === "monthly" || uiFreq === "quarterly" || uiFreq === "yearly" ? uiFreq : "daily",
-					weekdays: days,
-					weekStep: kindNum(ui.weekStep, sched.everyNWeeks ?? 1),
-					monthDay: str(ui.monthDay, "1"),
-					monthMode: str(ui.monthMode, "every"),
-					quarterMonth: str(ui.quarterMonth, "1"),
-					yearMonth: str(ui.yearMonth, "1"),
-					intervalUnit: ui.intervalUnit === "hour" ? "hour" : "minute",
-					intervalStep: stepNum(ui.intervalStep),
-					time: timeFromCron(cron),
-					date: "",
-					cron
-				};
-			}
-			return scheduleSpecFromCron(cron, sched.everyNWeeks);
-		}
-		/** 时间嵌在句子中间（每天 **09:00** 执行）：拆成「前 / 时间 / 后」三段，时间标 emphasis。 */
-		const withTime = (spec, head, tail) => [
-			{ text: head },
-			{
-				text: spec.time,
-				emphasis: true
-			},
-			{ text: tail }
-		];
-		/**
-		* spec → 文案片段（**唯一**的文案生成处）。`emphasis` 标出「关键片段」，
-		* 调用方可用 `renderSchedule` 给它们加粗 / 加色 / 加间距（用户 2026-09-30 要求的样式参数）。
-		*/
-		function scheduleSegments(spec, t) {
-			if (spec.kind === "custom") return [{ text: spec.cron === "" ? "—" : fmt(t("schedCustom"), { cron: spec.cron }) }];
-			if (spec.kind === "once") return [{ text: `${spec.date} ${spec.time} ${t("editorSchedOnce")}` }];
-			if (spec.kind === "interval") {
-				if (spec.intervalStep <= 0) return [{ text: t("editorSchedInvalidStep") }];
-				const per = spec.intervalUnit === "minute" ? fmt(t("editorSchedIntervalMin"), { n: String(spec.intervalStep) }) : spec.intervalStep === 1 ? t("editorSchedHourlyOnce") : fmt(t("editorSchedIntervalHour"), { n: String(spec.intervalStep) });
-				if (spec.weekdays.length === 0 || spec.weekdays.length >= 7) return [{
-					text: per,
-					emphasis: true
-				}];
-				return [{ text: weekdayText(t, spec.weekdays) }, {
-					text: per,
-					emphasis: true
-				}];
-			}
-			switch (spec.freq) {
-				case "daily": return withTime(spec, `${t("editorSchedDaily")} `, ` ${t("editorSchedRun")}`);
-				case "weekly": {
-					const wd = weekdayText(t, spec.weekdays);
-					const everyN = spec.weekStep > 1;
-					if (wd === "") {
-						const head = `${everyN ? fmt(t("editorSchedEveryNWeek"), { n: String(spec.weekStep) }) : t("editorSchedWeekly")} `;
-						return [...withTime(spec, head, ` ${t("editorSchedRun")}`), { text: t("editorSchedNoDaySuffix") }];
-					}
-					const dayText = everyN ? wd : [...spec.weekdays].sort((a, b) => a - b).map((d) => `${t("editorSchedWeeklyDayPrefix")}${t(WEEKDAY_KEYS$1[d - 1]).replace(/^周/, "")}`).join("、");
-					const head = `${everyN ? fmt(t("editorSchedEveryNWeek"), { n: String(spec.weekStep) }) : ""}${dayText} `;
-					return withTime(spec, head, ` ${t("editorSchedRun")}`);
-				}
-				case "monthly": return withTime(spec, `${t(`editorMonthMode_${spec.monthMode}`)}${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
-				case "quarterly": return withTime(spec, `${fmt(t("editorSchedQuarterly"), { n: spec.quarterMonth })} ${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
-				case "yearly": return withTime(spec, `${t("editorMonthMode_every")}${spec.yearMonth} 月 ${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
-			}
-		}
-		/** spec → 纯文本（任务列表跑马灯等只收字符串的地方用）。 */
-		function scheduleText(spec, t) {
-			return scheduleSegments(spec, t).map((seg) => seg.text).join("");
-		}
-		/**
-		* spec → React 节点：默认等价 `scheduleText`；传了 `emphasisStyle` 则把关键片段包一层。
-		* 这就是用户要的「方法支持样式参数」——加粗 / 换色 / 加间距都从这里出，不必各写一份。
-		*/
-		function renderSchedule(spec, t, opts) {
-			const segments = scheduleSegments(spec, t);
-			if (opts?.emphasisStyle === void 0) return scheduleText(spec, t);
-			return segments.map((seg, index) => seg.emphasis === true ? (0, react$1.createElement)("strong", {
-				key: index,
-				style: {
-					fontWeight: 600,
-					...opts.emphasisStyle
-				}
-			}, seg.text) : (0, react$1.createElement)("span", { key: index }, seg.text));
-		}
-		/** 每月档的月份口径 → cron 月份位。 */
-		const MONTH_MODE_CRON = {
-			every: "*",
-			odd: "1,3,5,7,9,11",
-			even: "2,4,6,8,10,12"
-		};
-		/** ISO 序号（1..7）→ cron 星期位（0..6）。 */
-		function cronDow(day) {
-			return day === 7 ? 0 : day;
-		}
-		/** 草稿 → 排期的 cron 形态；表达不了的组合返回 null（由调用方给出可见提示，不编假值）。 */
-		function scheduleCron(draft) {
-			const match = /^(\d{2}):(\d{2})$/.exec(draft.time);
-			const hour = match === null ? 9 : Number(match[1]);
-			const minute = match === null ? 0 : Number(match[2]);
-			const days = draft.weekdays.slice().sort((a, b) => a - b).map(cronDow).join(",");
-			if (draft.scheduleKind === "interval") {
-				const step = Number.parseInt(draft.intervalStep, 10);
-				if (!Number.isFinite(step) || step <= 0) return null;
-				const dow = days === "" ? "*" : days;
-				return draft.intervalUnit === "hour" ? `0 */${step} * * ${dow}` : `*/${step} * * * ${dow}`;
-			}
-			switch (draft.periodFreq) {
-				case "once": return null;
-				case "daily": return `${minute} ${hour} * * *`;
-				case "weekly": return days === "" ? null : `${minute} ${hour} * * ${days}`;
-				case "monthly": return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`;
-				case "quarterly": {
-					const start = Number.isFinite(Number.parseInt(draft.quarterMonth, 10)) ? Number.parseInt(draft.quarterMonth, 10) : 1;
-					const months = [
-						0,
-						1,
-						2,
-						3
-					].map((offset) => start + offset * 3).join(",");
-					return `${minute} ${hour} ${draft.monthDay} ${months} *`;
-				}
-				case "yearly": return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`;
-			}
-		}
-		//#endregion
-		//#region src/attachment-allowlist.ts
-		/**
-		* 附件上传的**共享约束**：体积上限 + 扩展名白名单 + 扩展名解析。
-		*
-		* 宿主路由（src/index.ts，服务端 415/413 拦截）与浏览器端预检（src/client/task-editor.tsx，
-		* 发包前当场拒）**必须用同一份**——两处各写一份必然漂移（白名单改了这边忘了那边）。
-		* 客户端打包（tsdown alwaysBundle）会把本模块内联进 client.js，宿主侧 tsc 直编，均无碍。
-		*/
-		/** 附件上传：体积上限（字节，20MB）。 */
-		const ATTACHMENT_MAX_BYTES = 20971520;
-		/** 附件上传：允许的常见扩展名（文本/代码/图片/文档）。命中白名单才收。 */
-		const ALLOWED_ATTACHMENT_EXT = /* @__PURE__ */ new Set([
-			"txt",
-			"md",
-			"markdown",
-			"json",
-			"jsonc",
-			"yaml",
-			"yml",
-			"csv",
-			"ts",
-			"tsx",
-			"js",
-			"jsx",
-			"mjs",
-			"cjs",
-			"py",
-			"sh",
-			"bash",
-			"zsh",
-			"toml",
-			"ini",
-			"cfg",
-			"log",
-			"xml",
-			"html",
-			"css",
-			"scss",
-			"sql",
-			"go",
-			"rs",
-			"java",
-			"c",
-			"cpp",
-			"h",
-			"hpp",
-			"rb",
-			"php",
-			"pl",
-			"r",
-			"scala",
-			"kt",
-			"swift",
-			"dockerfile",
-			"gitignore",
-			"env",
-			"png",
-			"jpg",
-			"jpeg",
-			"gif",
-			"webp",
-			"bmp",
-			"svg",
-			"ico",
-			"avif",
-			"pdf",
-			"doc",
-			"docx",
-			"xls",
-			"xlsx",
-			"ppt",
-			"pptx",
-			"odt",
-			"rtf"
-		]);
-		/** 取文件名扩展名（小写，无点返回 ''）。 */
-		const extOf = (name) => {
-			const base = name.slice(Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\")) + 1);
-			const dot = base.lastIndexOf(".");
-			return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
-		};
-		/**
-		* 附件 `ref` 是否**安全**（可以拼进路径）：非空、不含 `..`（相对路径上跳）、
-		* 不以 `/` 或 `\` 开头（绝对路径）、不含 `\`（Windows 分隔符）。
-		*
-		* **唯一实现**（2026-09-30 抽象收敛）：此前同一规则写了 **4 份**且各有出入——
-		* 宿主 zod（`tasks.ts`：拒绝 `..`/绝对/反斜杠）、客户端保存前校验（`task-editor`：多查了开头 `\`）、
-		* 真删前防御（`task-assets.removeAttachmentFiles`：没查开头 `\`）、上传定位
-		* （`task-assets.locateUploaded`：连反斜杠都没查）。各写一份必然漂移——
-		* 「选工作区文件报 422 附件 ref 非法」那类 bug 的温床就在这。
-		*/
-		const isSafeAttachmentRef = (ref) => ref !== "" && !ref.includes("..") && !ref.startsWith("/") && !ref.startsWith("\\") && !ref.includes("\\");
-		//#endregion
-		//#region src/client/toast-css.ts
-		const TOAST_CSS = `
-/* 悬浮提示 Toast（全站唯一实现）：绝对定位在锚点上方（父容器需 position:relative），不占版面。
-   形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
-   语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
-.dsh-tdt-toast{
-  --tone:var(--tdt-danger,#e5484d);
-  position:absolute;
-  left:50%;
-  bottom:calc(100% + 8px);
-  transform:translate(-50%,10px);
-  z-index:6;
-  pointer-events:none;
-  width:max-content;
-  max-width:min(520px,calc(100% - 24px));
-  box-sizing:border-box;
-  margin:0;
-  padding:8px 14px;
-  border-radius:var(--tdt-radius-md,8px);
-  border:1px solid var(--tone);
-  /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
-  background:var(--tdt-surface-1,rgba(128,128,128,.15));
-  background:color-mix(in srgb,var(--tone) 10%,var(--tdt-surface-1,#fff));
-  color:var(--tdt-fg,#1f2328);
-  font-size:var(--tdt-font-sm);
-  line-height:1.6;
-  display:flex;
-  align-items:flex-start;
-  text-align:left;
-  box-shadow:0 4px 16px rgba(0,0,0,.18);
-  opacity:0;
-  animation:dsh-tdt-toast 2.8s ease forwards;
-}
-/* 圆点 = 独立 flex 元素，**左上对齐**（多行文字时不飘）；文字区 white-space:pre-line 支持 \n 换行。 */
-.dsh-tdt-toast-dot{
-  flex:none;
-  width:7px;height:7px;border-radius:50%;
-  background:var(--tone);
-  margin:6px 8px 0 0;
-}
-.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--tdt-fg-inverse,#fff);opacity:.65;}
-.dsh-tdt-toast-text{
-  flex:1 1 auto;min-width:0;
-  white-space:pre-line;
-  text-align:left;
-}
-@keyframes dsh-tdt-toast{
-  0%{opacity:0;transform:translate(-50%,10px);}
-  8%{opacity:1;transform:translate(-50%,0);}
-  82%{opacity:1;transform:translate(-50%,0);}
-  100%{opacity:0;transform:translate(-50%,-16px);}
-}
-/* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
-.dsh-tdt-toast--success{--tone:var(--tdt-success,#2f9e44);}
-.dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
-.dsh-tdt-toast--neutral{
-  --tone:var(--tdt-fg-2,rgba(128,128,128,.95));
-  background:var(--tdt-fg,#1f2328);
-  color:var(--tdt-fg-inverse,#fff);
-  border-color:transparent;
-}
-.dsh-tdt-toast--neutral::before{background:var(--tdt-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
-.dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
-/* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
-.dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
-`;
-		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
-		function ensureToastStyle() {
-			applyStyle("domain:toast", TOAST_CSS);
-		}
-		function FloatingToast(props) {
-			const tone = props.tone ?? "error";
-			const cls = [
-				"dsh-tdt-toast",
-				props.below === true ? "dsh-tdt-toast--below" : "",
-				props.sticky === true ? "dsh-tdt-toast--sticky" : "",
-				tone === "success" ? "dsh-tdt-toast--success" : "",
-				tone === "warning" ? "dsh-tdt-toast--warning" : "",
-				tone === "neutral" ? "dsh-tdt-toast--neutral" : ""
-			].filter(Boolean).join(" ");
-			return (0, react$1.createElement)("div", {
-				key: props.seq,
-				className: cls,
-				onAnimationEnd: props.onDone
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-toast-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-toast-text" }, props.text));
 		}
 		//#endregion
 		//#region node_modules/cron-parser/dist/fields/types.js
@@ -63537,6 +63015,554 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return t;
 		}
 		//#endregion
+		//#region src/client/schedule-text.ts
+		const WEEKDAY_KEYS$1 = [
+			"editorWeekday1",
+			"editorWeekday2",
+			"editorWeekday3",
+			"editorWeekday4",
+			"editorWeekday5",
+			"editorWeekday6",
+			"editorWeekday7"
+		];
+		const fmt = (template, vars) => Object.entries(vars).reduce((acc, [key, value]) => acc.replace(`{${key}}`, value), template);
+		/** 周几串：全选 = 「每天」；未选 = 空串（由调用方补「还没选生效日」）。 */
+		function weekdayText(t, days) {
+			if (days.length === 0) return "";
+			if (days.length >= 7) return t("editorSchedEveryday");
+			return [...days].sort((a, b) => a - b).map((day) => t(WEEKDAY_KEYS$1[day - 1])).join("、");
+		}
+		const EMPTY_SPEC = {
+			kind: "custom",
+			freq: "daily",
+			weekdays: [],
+			weekStep: 1,
+			monthDay: "1",
+			monthMode: "every",
+			quarterMonth: "1",
+			yearMonth: "1",
+			intervalUnit: "minute",
+			intervalStep: 0,
+			time: "09:00",
+			date: "",
+			cron: ""
+		};
+		/** 表单草稿 → spec（编辑器用）。 */
+		function scheduleSpecFromDraft(draft) {
+			const step = Number.parseInt(draft.intervalStep, 10);
+			const wstep = Number.parseInt(draft.weekStep, 10);
+			return {
+				kind: draft.scheduleKind === "interval" ? "interval" : draft.periodFreq === "once" ? "once" : "periodic",
+				freq: draft.periodFreq === "once" ? "daily" : draft.periodFreq,
+				weekdays: [...draft.weekdays],
+				weekStep: Number.isFinite(wstep) && wstep > 0 ? wstep : 1,
+				monthDay: draft.monthDay,
+				monthMode: draft.monthMode,
+				quarterMonth: draft.quarterMonth,
+				yearMonth: draft.yearMonth,
+				intervalUnit: draft.intervalUnit,
+				intervalStep: Number.isFinite(step) && step > 0 ? step : 0,
+				time: /^\d{2}:\d{2}$/.test(draft.time) ? draft.time : "09:00",
+				date: draft.date,
+				cron: ""
+			};
+		}
+		/** cron 的「分 时」两位 → `HH:mm`（间隔档分钟位是「星号 + 斜杠 + N」，取不到就给默认，反正间隔档不用它）。 */
+		function timeFromCron(cron) {
+			const parts = cron.trim().split(/\s+/);
+			if (parts.length !== 5) return "09:00";
+			const [minute, hour] = parts;
+			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
+			return `${pad2$3(hour)}:${pad2$3(minute)}`;
+		}
+		/**
+		* cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
+		* ⚠️ **只认「纯数字逗号列表」**（如 `1,2,5`）；`1-5` / `MON-FRI` / 步长写法 这类返回 `null`，
+		* 由调用方**整体降级 custom**——绝不静默滤空（2026-09-30 专家团复核：此前 `0 9 * * 1-5` 被滤成空数组，
+		* 文案反而说「还没选生效日」，与「周一到周五都跑」的事实相反）。
+		*/
+		const weekdaysFromDow = (dow) => {
+			if (dow === "" || dow === "*") return [];
+			if (!/^\d+(,\d+)*$/.test(dow)) return null;
+			return dow.split(",").map(Number).map((n) => n === 0 ? 7 : n);
+		};
+		/**
+		* 老任务（没有结构化 `ui`）：从 cron 反解出 spec。认得几个常见形态，认不出走 `custom`（原样显示）。
+		*
+		* **cron → 结构化的唯一实现**（2026-09-30 抽象收敛）：此前列表文案（这里）与编辑器表单反解
+		* （`task-editor.scheduleFromCron`）各写一份、严格度还不一致 ⇒ 同一个 cron 两处说法不一样，
+		* 修 bug 还得两边分别修。现在编辑器也只调这里。
+		*/
+		function scheduleSpecFromCron(cron, everyNWeeks) {
+			const base = {
+				...EMPTY_SPEC,
+				cron
+			};
+			const parts = cron.trim().split(/\s+/);
+			if (parts.length !== 5) return base;
+			const [minute, hour, dom, months, dow] = parts;
+			const minuteStep = /^\*\/(\d+)$/.exec(minute);
+			const hourStep = /^\*\/(\d+)$/.exec(hour);
+			const time = timeFromCron(cron);
+			const wd = weekdaysFromDow(dow);
+			if (wd === null) return base;
+			if (dom === "*" && months === "*") {
+				const everyDay = wd.length === 0 ? [
+					1,
+					2,
+					3,
+					4,
+					5,
+					6,
+					7
+				] : wd;
+				if (hour === "*" && (minute === "*" || minuteStep !== null)) return {
+					...base,
+					kind: "interval",
+					intervalUnit: "minute",
+					intervalStep: minuteStep === null ? 1 : Number(minuteStep[1]),
+					time,
+					weekdays: everyDay
+				};
+				if (hourStep !== null && /^\d+$/.test(minute)) return {
+					...base,
+					kind: "interval",
+					intervalUnit: "hour",
+					intervalStep: Number(hourStep[1]),
+					time,
+					weekdays: everyDay
+				};
+				if (hour === "*" && minute === "0") return {
+					...base,
+					kind: "interval",
+					intervalUnit: "hour",
+					intervalStep: 1,
+					time,
+					weekdays: everyDay
+				};
+				if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return base;
+				if (dow === "*") return {
+					...base,
+					kind: "periodic",
+					freq: "daily",
+					time
+				};
+				return {
+					...base,
+					kind: "periodic",
+					freq: "weekly",
+					time,
+					weekdays: wd,
+					weekStep: everyNWeeks !== null && everyNWeeks > 1 ? everyNWeeks : 1
+				};
+			}
+			if (dom !== "*" && dow === "*") {
+				const monthList = months === "*" ? null : months.split(",").map(Number).filter(Number.isInteger);
+				if (monthList !== null && monthList.length === 12) return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "every"
+				};
+				if (monthList !== null && monthList.length === 6 && monthList.every((m) => m % 2 === 1)) return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "odd"
+				};
+				if (monthList !== null && monthList.length === 6 && monthList.every((m) => m % 2 === 0)) return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "even"
+				};
+				if (monthList !== null && monthList.length > 1) {
+					const sorted = [...monthList].sort((a, b) => a - b);
+					if (sorted.every((m, i) => i === 0 || m - sorted[i - 1] === 3) && sorted.length === 4) return {
+						...base,
+						kind: "periodic",
+						freq: "quarterly",
+						time,
+						monthDay: dom,
+						quarterMonth: String(sorted[0])
+					};
+					return base;
+				}
+				if (monthList !== null && monthList.length === 1) return {
+					...base,
+					kind: "periodic",
+					freq: "yearly",
+					time,
+					monthDay: dom,
+					yearMonth: String(monthList[0])
+				};
+				return {
+					...base,
+					kind: "periodic",
+					freq: "monthly",
+					time,
+					monthDay: dom,
+					monthMode: "every"
+				};
+			}
+			return base;
+		}
+		/** 任务定义 `schedule` → spec（列表用）。优先结构化 `ui`，没有则从 cron 反解。 */
+		function scheduleSpecFromSchedule(sched) {
+			if (sched.once !== null && sched.once !== "") return {
+				...EMPTY_SPEC,
+				kind: "once",
+				date: sched.once.slice(0, 10),
+				time: sched.once.length >= 16 ? sched.once.slice(11, 16) : "00:00"
+			};
+			const cron = sched.cron ?? "";
+			const ui = sched.ui ?? null;
+			if (ui !== null && typeof ui === "object") {
+				const days = Array.isArray(ui.weekdays) ? ui.weekdays.filter((d) => typeof d === "number" && d >= 1 && d <= 7) : [];
+				const kindNum = (v, fallback) => {
+					const n = typeof v === "string" ? Number.parseInt(v, 10) : typeof v === "number" ? v : NaN;
+					return Number.isFinite(n) && n > 0 ? n : fallback;
+				};
+				const stepNum = (v) => {
+					const n = typeof v === "string" ? Number.parseInt(v, 10) : typeof v === "number" ? v : NaN;
+					return Number.isFinite(n) && n > 0 ? n : 0;
+				};
+				const str = (v, fallback) => typeof v === "string" && v !== "" ? v : fallback;
+				const uiKind = ui.scheduleKind === "interval" ? "interval" : "periodic";
+				const uiFreq = ui.periodFreq;
+				return {
+					kind: uiKind,
+					freq: uiKind === "interval" ? "daily" : uiFreq === "daily" || uiFreq === "weekly" || uiFreq === "monthly" || uiFreq === "quarterly" || uiFreq === "yearly" ? uiFreq : "daily",
+					weekdays: days,
+					weekStep: kindNum(ui.weekStep, sched.everyNWeeks ?? 1),
+					monthDay: str(ui.monthDay, "1"),
+					monthMode: str(ui.monthMode, "every"),
+					quarterMonth: str(ui.quarterMonth, "1"),
+					yearMonth: str(ui.yearMonth, "1"),
+					intervalUnit: ui.intervalUnit === "hour" ? "hour" : "minute",
+					intervalStep: stepNum(ui.intervalStep),
+					time: timeFromCron(cron),
+					date: "",
+					cron
+				};
+			}
+			return scheduleSpecFromCron(cron, sched.everyNWeeks);
+		}
+		/** 时间嵌在句子中间（每天 **09:00** 执行）：拆成「前 / 时间 / 后」三段，时间标 emphasis。 */
+		const withTime = (spec, head, tail) => [
+			{ text: head },
+			{
+				text: spec.time,
+				emphasis: true
+			},
+			{ text: tail }
+		];
+		/**
+		* spec → 文案片段（**唯一**的文案生成处）。`emphasis` 标出「关键片段」，
+		* 调用方可用 `renderSchedule` 给它们加粗 / 加色 / 加间距（用户 2026-09-30 要求的样式参数）。
+		*/
+		function scheduleSegments(spec, t) {
+			if (spec.kind === "custom") return [{ text: spec.cron === "" ? "—" : fmt(t("schedCustom"), { cron: spec.cron }) }];
+			if (spec.kind === "once") return [{ text: `${spec.date} ${spec.time} ${t("editorSchedOnce")}` }];
+			if (spec.kind === "interval") {
+				if (spec.intervalStep <= 0) return [{ text: t("editorSchedInvalidStep") }];
+				const per = spec.intervalUnit === "minute" ? fmt(t("editorSchedIntervalMin"), { n: String(spec.intervalStep) }) : spec.intervalStep === 1 ? t("editorSchedHourlyOnce") : fmt(t("editorSchedIntervalHour"), { n: String(spec.intervalStep) });
+				if (spec.weekdays.length === 0 || spec.weekdays.length >= 7) return [{
+					text: per,
+					emphasis: true
+				}];
+				return [{ text: weekdayText(t, spec.weekdays) }, {
+					text: per,
+					emphasis: true
+				}];
+			}
+			switch (spec.freq) {
+				case "daily": return withTime(spec, `${t("editorSchedDaily")} `, ` ${t("editorSchedRun")}`);
+				case "weekly": {
+					const wd = weekdayText(t, spec.weekdays);
+					const everyN = spec.weekStep > 1;
+					if (wd === "") {
+						const head = `${everyN ? fmt(t("editorSchedEveryNWeek"), { n: String(spec.weekStep) }) : t("editorSchedWeekly")} `;
+						return [...withTime(spec, head, ` ${t("editorSchedRun")}`), { text: t("editorSchedNoDaySuffix") }];
+					}
+					const dayText = everyN ? wd : [...spec.weekdays].sort((a, b) => a - b).map((d) => `${t("editorSchedWeeklyDayPrefix")}${t(WEEKDAY_KEYS$1[d - 1]).replace(/^周/, "")}`).join("、");
+					const head = `${everyN ? fmt(t("editorSchedEveryNWeek"), { n: String(spec.weekStep) }) : ""}${dayText} `;
+					return withTime(spec, head, ` ${t("editorSchedRun")}`);
+				}
+				case "monthly": return withTime(spec, `${t(`editorMonthMode_${spec.monthMode}`)}${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
+				case "quarterly": return withTime(spec, `${fmt(t("editorSchedQuarterly"), { n: spec.quarterMonth })} ${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
+				case "yearly": return withTime(spec, `${t("editorMonthMode_every")}${spec.yearMonth} 月 ${spec.monthDay} 日 `, ` ${t("editorSchedRun")}`);
+			}
+		}
+		/** spec → 纯文本（任务列表跑马灯等只收字符串的地方用）。 */
+		function scheduleText(spec, t) {
+			return scheduleSegments(spec, t).map((seg) => seg.text).join("");
+		}
+		/**
+		* spec → React 节点：默认等价 `scheduleText`；传了 `emphasisStyle` 则把关键片段包一层。
+		* 这就是用户要的「方法支持样式参数」——加粗 / 换色 / 加间距都从这里出，不必各写一份。
+		*/
+		function renderSchedule(spec, t, opts) {
+			const segments = scheduleSegments(spec, t);
+			if (opts?.emphasisStyle === void 0) return scheduleText(spec, t);
+			return segments.map((seg, index) => seg.emphasis === true ? (0, react$1.createElement)("strong", {
+				key: index,
+				style: {
+					fontWeight: 600,
+					...opts.emphasisStyle
+				}
+			}, seg.text) : (0, react$1.createElement)("span", { key: index }, seg.text));
+		}
+		/** 每月档的月份口径 → cron 月份位。 */
+		const MONTH_MODE_CRON = {
+			every: "*",
+			odd: "1,3,5,7,9,11",
+			even: "2,4,6,8,10,12"
+		};
+		/** ISO 序号（1..7）→ cron 星期位（0..6）。 */
+		function cronDow(day) {
+			return day === 7 ? 0 : day;
+		}
+		/** 草稿 → 排期的 cron 形态；表达不了的组合返回 null（由调用方给出可见提示，不编假值）。 */
+		function scheduleCron(draft) {
+			const match = /^(\d{2}):(\d{2})$/.exec(draft.time);
+			const hour = match === null ? 9 : Number(match[1]);
+			const minute = match === null ? 0 : Number(match[2]);
+			const days = draft.weekdays.slice().sort((a, b) => a - b).map(cronDow).join(",");
+			if (draft.scheduleKind === "interval") {
+				const step = Number.parseInt(draft.intervalStep, 10);
+				if (!Number.isFinite(step) || step <= 0) return null;
+				const dow = days === "" ? "*" : days;
+				return draft.intervalUnit === "hour" ? `0 */${step} * * ${dow}` : `*/${step} * * * ${dow}`;
+			}
+			switch (draft.periodFreq) {
+				case "once": return null;
+				case "daily": return `${minute} ${hour} * * *`;
+				case "weekly": return days === "" ? null : `${minute} ${hour} * * ${days}`;
+				case "monthly": return `${minute} ${hour} ${draft.monthDay} ${MONTH_MODE_CRON[draft.monthMode]} *`;
+				case "quarterly": {
+					const start = Number.isFinite(Number.parseInt(draft.quarterMonth, 10)) ? Number.parseInt(draft.quarterMonth, 10) : 1;
+					const months = [
+						0,
+						1,
+						2,
+						3
+					].map((offset) => start + offset * 3).join(",");
+					return `${minute} ${hour} ${draft.monthDay} ${months} *`;
+				}
+				case "yearly": return `${minute} ${hour} ${draft.monthDay} ${draft.yearMonth} *`;
+			}
+		}
+		/**
+		* 草稿 → 下一次执行时刻的 ISO 串（推不出 / 停用 ⇒ `null`，调用方显示「无」，**不编造**）。
+		* ① **停用 ⇒ 不执行**（与卡片「预计执行」、服务端 `computeNext` 同口径）；
+		* ② once 任务给 `schedule.once`；周期任务给 cron（`scheduleCron` 推不出 ⇒ null）；
+		* ③ 时区缺省 = 本地（宿主与浏览器同机，与服务端缺省口径一致）。
+		*/
+		function nextSlotForDraft(draft, now = /* @__PURE__ */ new Date()) {
+			if (!draft.enabled) return null;
+			const start = draft.date !== "" && draft.time !== "" ? `${draft.date}T${draft.time}` : void 0;
+			const next = nextSlotAfter({ schedule: draft.periodFreq === "once" ? {
+				once: start,
+				timezone: void 0,
+				start
+			} : (() => {
+				const cron = scheduleCron(draft);
+				return cron === null ? {} : {
+					cron,
+					timezone: void 0,
+					start
+				};
+			})() }, now);
+			return next === void 0 ? null : next.toISOString();
+		}
+		//#endregion
+		//#region src/attachment-allowlist.ts
+		/**
+		* 附件上传的**共享约束**：体积上限 + 扩展名白名单 + 扩展名解析。
+		*
+		* 宿主路由（src/index.ts，服务端 415/413 拦截）与浏览器端预检（src/client/task-editor.tsx，
+		* 发包前当场拒）**必须用同一份**——两处各写一份必然漂移（白名单改了这边忘了那边）。
+		* 客户端打包（tsdown alwaysBundle）会把本模块内联进 client.js，宿主侧 tsc 直编，均无碍。
+		*/
+		/** 附件上传：体积上限（字节，20MB）。 */
+		const ATTACHMENT_MAX_BYTES = 20971520;
+		/** 附件上传：允许的常见扩展名（文本/代码/图片/文档）。命中白名单才收。 */
+		const ALLOWED_ATTACHMENT_EXT = /* @__PURE__ */ new Set([
+			"txt",
+			"md",
+			"markdown",
+			"json",
+			"jsonc",
+			"yaml",
+			"yml",
+			"csv",
+			"ts",
+			"tsx",
+			"js",
+			"jsx",
+			"mjs",
+			"cjs",
+			"py",
+			"sh",
+			"bash",
+			"zsh",
+			"toml",
+			"ini",
+			"cfg",
+			"log",
+			"xml",
+			"html",
+			"css",
+			"scss",
+			"sql",
+			"go",
+			"rs",
+			"java",
+			"c",
+			"cpp",
+			"h",
+			"hpp",
+			"rb",
+			"php",
+			"pl",
+			"r",
+			"scala",
+			"kt",
+			"swift",
+			"dockerfile",
+			"gitignore",
+			"env",
+			"png",
+			"jpg",
+			"jpeg",
+			"gif",
+			"webp",
+			"bmp",
+			"svg",
+			"ico",
+			"avif",
+			"pdf",
+			"doc",
+			"docx",
+			"xls",
+			"xlsx",
+			"ppt",
+			"pptx",
+			"odt",
+			"rtf"
+		]);
+		/** 取文件名扩展名（小写，无点返回 ''）。 */
+		const extOf = (name) => {
+			const base = name.slice(Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\")) + 1);
+			const dot = base.lastIndexOf(".");
+			return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
+		};
+		/**
+		* 附件 `ref` 是否**安全**（可以拼进路径）：非空、不含 `..`（相对路径上跳）、
+		* 不以 `/` 或 `\` 开头（绝对路径）、不含 `\`（Windows 分隔符）。
+		*
+		* **唯一实现**（2026-09-30 抽象收敛）：此前同一规则写了 **4 份**且各有出入——
+		* 宿主 zod（`tasks.ts`：拒绝 `..`/绝对/反斜杠）、客户端保存前校验（`task-editor`：多查了开头 `\`）、
+		* 真删前防御（`task-assets.removeAttachmentFiles`：没查开头 `\`）、上传定位
+		* （`task-assets.locateUploaded`：连反斜杠都没查）。各写一份必然漂移——
+		* 「选工作区文件报 422 附件 ref 非法」那类 bug 的温床就在这。
+		*/
+		const isSafeAttachmentRef = (ref) => ref !== "" && !ref.includes("..") && !ref.startsWith("/") && !ref.startsWith("\\") && !ref.includes("\\");
+		//#endregion
+		//#region src/client/toast-css.ts
+		const TOAST_CSS = `
+/* 悬浮提示 Toast（全站唯一实现）：绝对定位在锚点上方（父容器需 position:relative），不占版面。
+   形态（用户 2026-09-30 定稿）：居中 + 最大宽 520px 超出折行；淡色底 + 同色系深一点的描边 +
+   语义色圆点 + 深色正文字；统一 2.8s 时间线（0~8% 淡入归位 → ≈2.5s 稳定 → 上飘淡出）。 */
+.dsh-tdt-toast{
+  --tone:var(--tdt-danger,#e5484d);
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translate(-50%,10px);
+  z-index:6;
+  pointer-events:none;
+  width:max-content;
+  max-width:min(520px,calc(100% - 24px));
+  box-sizing:border-box;
+  margin:0;
+  padding:8px 14px;
+  border-radius:var(--tdt-radius-md,8px);
+  border:1px solid var(--tone);
+  /* 不透明淡色底（用户：怕后面的字挡着，不玩透明度）——color-mix 不可用时回退各档写死的淡色。 */
+  background:var(--tdt-surface-1,rgba(128,128,128,.15));
+  background:color-mix(in srgb,var(--tone) 10%,var(--tdt-surface-1,#fff));
+  color:var(--tdt-fg,#1f2328);
+  font-size:var(--tdt-font-sm);
+  line-height:1.6;
+  display:flex;
+  align-items:flex-start;
+  text-align:left;
+  box-shadow:0 4px 16px rgba(0,0,0,.18);
+  opacity:0;
+  animation:dsh-tdt-toast 2.8s ease forwards;
+}
+/* 圆点 = 独立 flex 元素，**左上对齐**（多行文字时不飘）；文字区 white-space:pre-line 支持 \n 换行。 */
+.dsh-tdt-toast-dot{
+  flex:none;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--tone);
+  margin:6px 8px 0 0;
+}
+.dsh-tdt-toast--neutral .dsh-tdt-toast-dot{background:var(--tdt-fg-inverse,#fff);opacity:.65;}
+.dsh-tdt-toast-text{
+  flex:1 1 auto;min-width:0;
+  white-space:pre-line;
+  text-align:left;
+}
+@keyframes dsh-tdt-toast{
+  0%{opacity:0;transform:translate(-50%,10px);}
+  8%{opacity:1;transform:translate(-50%,0);}
+  82%{opacity:1;transform:translate(-50%,0);}
+  100%{opacity:0;transform:translate(-50%,-16px);}
+}
+/* 四档语义色：错误红（默认）/ 成功绿 / 警告橙 / 中性 = 反色实面（深色主题浅白灰、浅色主题近黑灰）。 */
+.dsh-tdt-toast--success{--tone:var(--tdt-success,#2f9e44);}
+.dsh-tdt-toast--warning{--tone:var(--tdt-warning,#e6a23c);}
+.dsh-tdt-toast--neutral{
+  --tone:var(--tdt-fg-2,rgba(128,128,128,.95));
+  background:var(--tdt-fg,#1f2328);
+  color:var(--tdt-fg-inverse,#fff);
+  border-color:transparent;
+}
+.dsh-tdt-toast--neutral::before{background:var(--tdt-fg-inverse,#fff);opacity:.65;}/* 常驻型（不自动消失）：用于持续态校验（如 JSON 不合法），同样浮在上方、不占版面，但不上飘淡出。 */
+.dsh-tdt-toast--sticky{animation:none;opacity:1;transform:translate(-50%,0);}
+/* 下方浮出型（编辑器头部「启用开关」写回结果用）：锚在 header 正下方，同一条 2.8s 动画时间线。 */
+.dsh-tdt-toast--below{bottom:auto;top:calc(100% + 8px);}
+`;
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
+		function ensureToastStyle() {
+			applyStyle("domain:toast", TOAST_CSS);
+		}
+		function FloatingToast(props) {
+			const tone = props.tone ?? "error";
+			const cls = [
+				"dsh-tdt-toast",
+				props.below === true ? "dsh-tdt-toast--below" : "",
+				props.sticky === true ? "dsh-tdt-toast--sticky" : "",
+				tone === "success" ? "dsh-tdt-toast--success" : "",
+				tone === "warning" ? "dsh-tdt-toast--warning" : "",
+				tone === "neutral" ? "dsh-tdt-toast--neutral" : ""
+			].filter(Boolean).join(" ");
+			return (0, react$1.createElement)("div", {
+				key: props.seq,
+				className: cls,
+				onAnimationEnd: props.onDone
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-toast-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-toast-text" }, props.text));
+		}
+		//#endregion
 		//#region src/client/status-text.ts
 		/** 状态 → 文案键（唯一映射表）。 */
 		const STATUS_LABEL_KEYS = {
@@ -63710,9 +63736,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return (0, react$1.createElement)(react$1.Fragment, null, view.enabled === void 0 ? null : InfoField({
 				label: t("colStatus"),
 				children: (0, react$1.createElement)("span", { style: {
-					fontWeight: 500,
-					color: view.enabled ? "var(--tdt-success)" : "var(--tdt-fg-3)"
-				} }, view.enabled ? t("infoStateEnabled") : t("infoStateDisabled"))
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px",
+					fontWeight: 500
+				} }, (0, react$1.createElement)("span", { style: {
+					flex: "none",
+					width: "8px",
+					height: "8px",
+					borderRadius: "2px",
+					background: view.enabled ? "var(--tdt-success)" : "var(--tdt-fg-3)"
+				} }), view.enabled ? t("infoStateEnabled") : t("infoStateDisabled"))
 			}), InfoField({
 				label: t("listFieldSchedule"),
 				children: view.scheduleLine
@@ -64030,7 +64064,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 块标题带小图标（r12 用户反馈：不然一片全是文字）。
 		*/
 		function TaskViewPanel(props) {
-			const { t, draft, mode, dirty, taskId, tasks, onOpenSession, onOpenFile, onViewTask, onOpenPromptFullscreen } = props;
+			const { t, draft, mode, dirty, taskId, tasks, resolvedAttachments, onOpenSession, onOpenFile, onViewTask } = props;
 			ensureTaskInfoStyle();
 			const [last, setLast] = (0, react$1.useState)(null);
 			const [loaded, setLoaded] = (0, react$1.useState)(false);
@@ -64063,23 +64097,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					alive = false;
 				};
 			}, [taskId]);
-			const nextExecIso = (0, react$1.useMemo)(() => {
-				const start = draft.date !== "" && draft.time !== "" ? `${draft.date}T${draft.time}` : void 0;
-				const next = nextSlotAfter({ schedule: draft.periodFreq === "once" ? {
-					once: start,
-					timezone: void 0,
-					start
-				} : (() => {
-					const cron = scheduleCron(draft);
-					return cron === null ? {} : {
-						cron,
-						timezone: void 0,
-						start
-					};
-				})() }, /* @__PURE__ */ new Date());
-				return next === void 0 ? null : next.toISOString();
-			}, [draft]);
+			const nextExecIso = (0, react$1.useMemo)(() => nextSlotForDraft(draft), [draft]);
 			const taskById = (0, react$1.useMemo)(() => new Map(tasks.map((item) => [item.id, item])), [tasks]);
+			const resolvedByKey = (0, react$1.useMemo)(() => new Map((resolvedAttachments ?? []).map((item) => [`${item.kind}:${item.name}`, item])), [resolvedAttachments]);
 			const view = {
 				enabled: draft.enabled,
 				scheduleLine: renderSchedule(scheduleSpecFromDraft(draft), t, { emphasisStyle: { color: "var(--tdt-fg)" } }),
@@ -64088,10 +64108,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				model: draft.model.trim() === "" ? t("listFieldModelDefault") : draft.model,
 				retry: draft.maxAttempts.trim() === "" ? t("editorViewNotFilled") : draft.maxAttempts,
 				window: draft.window,
-				attachments: draft.attachments.map((item) => ({
-					name: item.name,
-					key: item.id
-				})),
+				attachments: draft.attachments.map((item) => {
+					const resolved = resolvedByKey.get(`${item.kind}:${item.name}`);
+					return {
+						name: item.name,
+						key: item.id,
+						path: resolved?.path ?? null,
+						anchorSessionId: resolved?.anchorSessionId ?? null
+					};
+				}),
 				depends: draft.deps.map((dep) => {
 					const option = taskById.get(dep.task);
 					return {
@@ -64101,13 +64126,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					};
 				})
 			};
+			const [promptMode, setPromptMode] = (0, react$1.useState)("preview");
+			const [promptOpen, setPromptOpen] = (0, react$1.useState)(false);
+			const hasPrompt = draft.prompt.trim() !== "";
 			const draftChip = mode === "create" || dirty ? (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-chip" }, mode === "create" ? t("editorViewNewTag") : t("editorViewDraftTag")) : null;
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view" }, (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-ic" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 14 })), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-title" }, t("infoSectionConfig")), draftChip), (0, react$1.createElement)("div", { className: "dsh-tdt-info-cfg" }, taskInfoBaseFields({
+			return (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view" }, (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-tag" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular, { size: 12 }), t("infoSectionConfig")), draftChip), (0, react$1.createElement)("div", { className: "dsh-tdt-info-cfg" }, taskInfoBaseFields({
 				t,
 				view,
 				onOpenFile,
 				onViewTask
-			}))), (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-ic" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 14 })), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-title" }, t("infoLastRun")), last === null ? null : (0, react$1.createElement)("span", {
+			}))), (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-tag" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 }), t("infoLastRun")), last === null ? null : (0, react$1.createElement)("span", {
 				className: "dsh-tdt-ed-view-badge",
 				style: { background: infoStatusColorOf(last.status) }
 			}), last === null ? null : (0, react$1.createElement)("span", { style: {
@@ -64123,16 +64151,43 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onOpenSession,
 				onOpenFile,
 				hideStatus: true
-			})), (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-ic" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 14 })), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-title" }, t("editorViewPrompt")), draft.prompt.trim() === "" ? null : (0, react$1.createElement)("button", {
+			})), (0, react$1.createElement)("section", { className: "dsh-tdt-ed-view-block" }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-head" }, (0, react$1.createElement)("span", { className: "dsh-tdt-ed-view-tag" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular, { size: 12 }), t("editorViewPrompt")), hasPrompt ? (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)(Segmented, {
+				id: "dsh-tdt-ed-view-promptmode",
+				value: promptMode,
+				size: "sm",
+				items: [{
+					value: "source",
+					label: t("editorViewSourceCode")
+				}, {
+					value: "preview",
+					label: t("editorModePreview")
+				}],
+				onChange: (next) => {
+					setPromptMode(next);
+				},
+				label: t("editorViewPrompt")
+			}), (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: (0, react$1.createElement)(promptOpen ? _deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
+				label: promptOpen ? t("editorViewCollapse") : t("editorViewExpandAll"),
+				onClick: () => {
+					setPromptOpen((v) => !v);
+				}
+			})) : null), hasPrompt ? (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", { className: `dsh-tdt-ed-view-prompt${promptOpen ? " dsh-tdt-ed-view-prompt--open" : ""}` }, promptMode === "source" ? (0, react$1.createElement)(CodeViewer, {
+				text: draft.prompt,
+				path: "prompt.md",
+				t
+			}) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
+				text: draft.prompt,
+				labels: MD_LABELS
+			})), (0, react$1.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-ed-view-more",
 				onClick: () => {
-					onOpenPromptFullscreen?.();
+					setPromptOpen((v) => !v);
 				}
-			}, t("editorViewFullscreen"))), draft.prompt.trim() === "" ? (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("editorViewPromptEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-prompt" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.MarkdownText, {
-				text: draft.prompt,
-				labels: MD_LABELS
-			}))));
+			}, promptOpen ? t("editorViewCollapse") : t("editorViewExpandAll"))) : (0, react$1.createElement)("div", { className: "dsh-tdt-ed-view-empty" }, t("editorViewPromptEmpty"))));
 		}
 		//#endregion
 		//#region src/client/task-editor.tsx
@@ -65179,13 +65234,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, onOpenSession, onOpenFile, onViewTask } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
 			const [viewTab, setViewTab] = (0, react$1.useState)(initialView ?? "edit");
 			const openedTaskRef = (0, react$1.useRef)(currentTaskId ?? "");
 			(0, react$1.useEffect)(() => {
 				const id = currentTaskId ?? "";
 				if (openedTaskRef.current !== id) {
 					openedTaskRef.current = id;
+					initialDraftRef.current = draft;
 					setViewTab(initialView ?? "edit");
 					return;
 				}
@@ -65195,7 +65251,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [jsonOpen, setJsonOpen] = (0, react$1.useState)(false);
 			const [editorOpen, setEditorOpen] = (0, react$1.useState)(false);
 			const [previewOpen, setPreviewOpen] = (0, react$1.useState)(false);
-			const [promptViewOpen, setPromptViewOpen] = (0, react$1.useState)(false);
 			const [pendingHint, setPendingHint] = (0, react$1.useState)(0);
 			const [confirmDeleteTask, setConfirmDeleteTask] = (0, react$1.useState)(false);
 			const [confirmReset, setConfirmReset] = (0, react$1.useState)(false);
@@ -66134,12 +66189,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				dirty,
 				taskId: mode === "edit" ? currentTaskId ?? "" : "",
 				tasks,
+				resolvedAttachments,
 				onOpenSession,
 				onOpenFile,
-				onViewTask,
-				onOpenPromptFullscreen: () => {
-					setPromptViewOpen(true);
-				}
+				onViewTask
 			}) : body), (0, react$1.createElement)("div", { className: "dsh-tdt-ed-footer" }, (0, react$1.createElement)(Segmented, {
 				id: "dsh-tdt-ed-viewtab",
 				value: viewTab,
@@ -66285,18 +66338,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onConfirm: () => {
 					onConfirmPendingView?.();
 				}
-			}) : null, promptViewOpen ? (0, react$1.createElement)(PromptEditorModal, {
-				t,
-				mode,
-				readonly: true,
-				value: draft.prompt,
-				history: null,
-				onChange: () => {},
-				onClose: () => {
-					setPromptViewOpen(false);
-				},
-				onRestoreVersion: () => {},
-				onDeleteVersion: () => {}
 			}) : null);
 			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-ed-panel",
@@ -67680,7 +67721,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const titleStyle = {
 			fontSize: "var(--tdt-font-lg)",
 			fontWeight: 600,
-			color: "var(--tdt-fg)",
 			lineHeight: "var(--tdt-line-md)"
 		};
 		const metaStyle = {
@@ -70103,6 +70143,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				} : void 0,
 				onOpenFile: canPreview ? openFile : void 0,
 				onViewTask: openViewer,
+				resolvedAttachments: editor.mode === "edit" ? overview.rows.find((item) => item.id === editor.id)?.attachments : void 0,
 				workspaceFiles,
 				officeToPdf,
 				workspaceAnchors: editorOptions.workspaceAnchors

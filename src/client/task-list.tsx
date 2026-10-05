@@ -585,7 +585,9 @@ const cardStyle: Record<string, string | number> = {
   // ⚠️ **background 不放这里**：inline 背景的优先级高于 CSS class，会盖掉 `.dsh-tdt-card-row:hover` 的高亮。
   // 底色走 CSS（`.dsh-tdt-card`）；hover 高亮走 `.dsh-tdt-card-row:hover`（只作用主行，展开区不跟着蓝）。
 }
-const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)', lineHeight: 'var(--tdt-line-md)' }
+// ⚠️ 不带 `color`（r13 修）：标题可点后走 `.dsh-tdt-info-dep` 的 hover 变蓝——inline color 会把 :hover 压死
+//（鼠标移上去不变色的根因）；纯文本分支继承根色（--tdt-fg），观感不变。
+const titleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, lineHeight: 'var(--tdt-line-md)' }
 const metaStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
 const faintStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)', lineHeight: 'var(--tdt-line-sm)', marginTop: '2px' }
 // 基础信息的布局常量（`infoWrapStyle` / `infoConfigStyle` / `infoRecentStyle` / `infoGroupTitleStyle`）

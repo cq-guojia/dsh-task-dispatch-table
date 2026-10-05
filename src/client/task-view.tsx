@@ -12,15 +12,15 @@
 //
 // ⚠️ 字段怎么翻译、怎么渲染**不在这里** —— 全在 `task-info.tsx`（卡片展开区「基础信息」与这里共用同一份）。
 // 本文件只负责：查数据、组装视图模型、排版面。
-import { createElement as h, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createElement as h, Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  IconClockOutlineRegular, IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
+  IconChevronDownOutlineRegular, IconChevronUpOutlineRegular, IconClockOutlineRegular,
+  IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 import { MD_LABELS } from './md-labels'
-import { nextSlotAfter } from '../schedule-next.js'
 import { renderNextExec } from './task-info'
-import { renderSchedule, scheduleCron, scheduleSpecFromDraft } from './schedule-text'
+import { nextSlotForDraft, renderSchedule, scheduleSpecFromDraft } from './schedule-text'
 import { fetchInstances, type InstanceRow } from './query'
 import { statusTextOf } from './status-text'
 import {
@@ -28,11 +28,10 @@ import {
   type TaskInfoBaseView,
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
+import { CodeViewer } from './ui/CodeViewer'
+import { IconButton, Segmented } from './ui'
 // ⚠️ 只引**类型**（`import type` 会被编译擦除）：本文件与 `task-editor.tsx` 是「组件互相引用 + 类型单向依赖」，
 // 类型导入不构成运行时循环。草稿形状的真源仍在 task-editor.tsx，不在这里复制一份。
-// `scheduleCron` 是值导入：它只依赖本文件同目录模块，不构成循环（task-editor → task-view → task-editor
-// 的环仅存在于「类型 + 这个纯函数」层面，tsdown/rollup 按拓扑处理无问题——纯函数在 task-editor 模块
-// 顶层定义、无副作用）。
 import type { EditorMode, EditorTaskOption, TaskEditorDraft } from './task-editor'
 
 /**
@@ -57,10 +56,13 @@ export function TaskViewPanel(props: {
   onOpenFile?: ((sessionId: string, path: string) => void) | undefined
   /** 点前置任务名 → 右侧栏以查看档打开那个任务（r12：查看档内也保持这个口径）。 */
   onViewTask?: ((id: string) => void) | undefined
-  /** 点「全屏查看」⇒ 抽屉打开只读全屏提示词（源码 / 预览两态）。 */
-  onOpenPromptFullscreen?: (() => void) | undefined
+  /**
+   * 该任务在 overview 里的**附件解析结果**（服务端补好的绝对路径 + 预览锚点会话）。
+   * 按 kind+name 与草稿附件配对 ⇒ 查看档里附件可点开预览（r13）；配不上（新建 / 编辑中新增）保持纯展示。
+   */
+  resolvedAttachments?: readonly { name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string }[]
 }): ReactNode {
-  const { t, draft, mode, dirty, taskId, tasks, onOpenSession, onOpenFile, onViewTask, onOpenPromptFullscreen } = props
+  const { t, draft, mode, dirty, taskId, tasks, resolvedAttachments, onOpenSession, onOpenFile, onViewTask } = props
   ensureTaskInfoStyle()
 
   // ── 上次执行（真实取数：最近一条终态实例）──────────────────────────────
@@ -93,24 +95,18 @@ export function TaskViewPanel(props: {
     return () => { alive = false }
   }, [taskId])
 
-  // ── 预计下次执行（基于当前草稿实时推算，与服务端同一份纯核）──────────────
-  // once 任务给 `schedule.once`；周期任务给 cron（`scheduleCron` 推不出 = 排期没填完整 ⇒ 显示「无」，
-  // 不编造）。时区不给 = 按本地时区解释（宿主与浏览器同机，与服务端缺省口径一致）。
-  const nextExecIso = useMemo((): string | null => {
-    const start = draft.date !== '' && draft.time !== '' ? `${draft.date}T${draft.time}` : undefined
-    const schedule = draft.periodFreq === 'once'
-      ? { once: start, timezone: undefined, start }
-      : (() => {
-        const cron = scheduleCron(draft)
-        return cron === null ? {} : { cron, timezone: undefined, start }
-      })()
-    const next = nextSlotAfter({ schedule }, new Date())
-    return next === undefined ? null : next.toISOString()
-  }, [draft])
+  // ── 预计执行（r13 **统一入口** `nextSlotForDraft`：停用⇒无、once/cron 分流、推不出⇒null
+  // 全在 schedule-text 那一份，与卡片「预计执行」同口径 —— 用户点名这类判断不许各处各写）。
+  const nextExecIso = useMemo(() => nextSlotForDraft(draft), [draft])
 
   // ── 基础信息视图模型（草稿 → 共享展示层认识的形状）──────────────────────
   // 前置任务名：任务表反查，查不到退 **8 位短 id**（与执行记录页 `depTitleOf` 同口径，绝不编造）。
   const taskById = useMemo(() => new Map(tasks.map(item => [item.id, item])), [tasks])
+  // 附件解析结果按 kind+name 配对（r13：已存在任务的服务端绝对路径 + 锚点 ⇒ 附件可点开预览）。
+  const resolvedByKey = useMemo(
+    () => new Map((resolvedAttachments ?? []).map(item => [`${item.kind}:${item.name}`, item])),
+    [resolvedAttachments],
+  )
   const view: TaskInfoBaseView = {
     // 查看档没有可写的启用开关 ⇒ 用基础信息里的「状态」一行表达（切换前的卡片则不给这个字段）。
     enabled: draft.enabled,
@@ -123,9 +119,17 @@ export function TaskViewPanel(props: {
     model: draft.model.trim() === '' ? t('listFieldModelDefault') : draft.model,
     retry: draft.maxAttempts.trim() === '' ? t('editorViewNotFilled') : draft.maxAttempts,
     window: draft.window,
-    // 附加文件：草稿里只有 `name` / `ref`，没有服务端解析的绝对路径与锚点会话
-    // ⇒ 一律**纯展示、不可点**（拿不到就别装成可点；产出物那边有真路径，仍可点）。
-    attachments: draft.attachments.map(item => ({ name: item.name, key: item.id })),
+    // 附加文件（r13 改为可点）：已存在任务的服务端解析（绝对路径 + 锚点会话）按 kind+name 配上
+    // ⇒ 可点开预览；配不上（新建 / 编辑中新增，服务端还没解析）⇒ 纯展示，**不装可点**。
+    attachments: draft.attachments.map(item => {
+      const resolved = resolvedByKey.get(`${item.kind}:${item.name}`)
+      return {
+        name: item.name,
+        key: item.id,
+        path: resolved?.path ?? null,
+        anchorSessionId: resolved?.anchorSessionId ?? null,
+      }
+    }),
     depends: draft.deps.map(dep => {
       const option = taskById.get(dep.task)
       return {
@@ -137,6 +141,11 @@ export function TaskViewPanel(props: {
     }),
   }
 
+  // ── 提示词区的两组按钮（r13 用户拍板）：源码 / 预览 + 展开 / 收起 ──────────
+  // 都**就地生效**，不做全屏（r13 明确否掉）；源码态重用只读 CodeViewer、预览态重用 MarkdownText。
+  const [promptMode, setPromptMode] = useState<'preview' | 'source'>('preview')
+  const [promptOpen, setPromptOpen] = useState(false)
+  const hasPrompt = draft.prompt.trim() !== ''
   // 草稿标记（r12 用户拍板：不放头部任务名旁——名字可能很长；挂「任务配置」标题旁，文案精简正式）。
   const draftChip = mode === 'create' || dirty
     ? h('span', { className: 'dsh-tdt-ed-view-chip' }, mode === 'create' ? t('editorViewNewTag') : t('editorViewDraftTag'))
@@ -146,17 +155,18 @@ export function TaskViewPanel(props: {
     // ① 任务配置（标签—值纸表格；与卡片展开区同一份渲染）
     h('section', { className: 'dsh-tdt-ed-view-block' },
       h('div', { className: 'dsh-tdt-ed-view-head' },
-        h('span', { className: 'dsh-tdt-ed-view-ic' }, h(IconPlanOutlineRegular, { size: 14 })),
-        h('span', { className: 'dsh-tdt-ed-view-title' }, t('infoSectionConfig')),
+        // 块标题 = **标签**（浅底 chip：图标 + 文字；r13 用户：纯文字没提示作用）。
+        h('span', { className: 'dsh-tdt-ed-view-tag' },
+          h(IconPlanOutlineRegular, { size: 12 }), t('infoSectionConfig')),
         draftChip,
       ),
       h('div', { className: 'dsh-tdt-info-cfg' }, taskInfoBaseFields({ t, view, onOpenFile, onViewTask })),
     ),
-    // ② 上次执行（块标题 = 图标 + 状态色块 + 状态文字 ⇒ 一眼看出成败；明细复用共享层的 `lastRunFields`）
+    // ② 上次执行（状态色块 + 状态文字 ⇒ 一眼看出成败；明细复用共享层的 `lastRunFields`）
     h('section', { className: 'dsh-tdt-ed-view-block' },
       h('div', { className: 'dsh-tdt-ed-view-head' },
-        h('span', { className: 'dsh-tdt-ed-view-ic' }, h(IconClockOutlineRegular, { size: 14 })),
-        h('span', { className: 'dsh-tdt-ed-view-title' }, t('infoLastRun')),
+        h('span', { className: 'dsh-tdt-ed-view-tag' },
+          h(IconClockOutlineRegular, { size: 12 }), t('infoLastRun')),
         last === null ? null : h('span', { className: 'dsh-tdt-ed-view-badge', style: { background: infoStatusColorOf(last.status) } }),
         last === null ? null : h('span', {
           style: { fontSize: 'var(--tdt-font-sm)', fontWeight: 600, color: infoStatusColorOf(last.status) },
@@ -174,22 +184,50 @@ export function TaskViewPanel(props: {
               // 状态已由上面的色块表达 ⇒ 明细里不再重复一行（同一实现加参数）。
               : lastRunFields({ t, instance: last, onOpenSession, onOpenFile, hideStatus: true }),
     ),
-    // ③ 提示词（最下；默认约 5 行截断 +「全屏查看」⇒ 只读全屏，源码 / 预览两态）
+    // ③ 提示词（最下；默认约 3 行截断；右侧两组按钮 = 源码/预览 + 展开/收起，全部**就地生效**，不做全屏）
     h('section', { className: 'dsh-tdt-ed-view-block' },
       h('div', { className: 'dsh-tdt-ed-view-head' },
-        h('span', { className: 'dsh-tdt-ed-view-ic' }, h(IconThinkOutlineRegular, { size: 14 })),
-        h('span', { className: 'dsh-tdt-ed-view-title' }, t('editorViewPrompt')),
-        draft.prompt.trim() === ''
-          ? null
-          : h('button', {
-            type: 'button', className: 'dsh-tdt-ed-view-more',
-            onClick: () => { onOpenPromptFullscreen?.() },
-          }, t('editorViewFullscreen')),
+        h('span', { className: 'dsh-tdt-ed-view-tag' },
+          h(IconThinkOutlineRegular, { size: 12 }), t('editorViewPrompt')),
+        hasPrompt
+          ? h(Fragment, null,
+            // 第一组：源码 / 预览（重用基础层 `Segmented`；源码 = 只读代码视图，**不可编辑**）。
+            h(Segmented, {
+              id: 'dsh-tdt-ed-view-promptmode',
+              value: promptMode,
+              size: 'sm',
+              items: [
+                { value: 'source', label: t('editorViewSourceCode') },
+                { value: 'preview', label: t('editorModePreview') },
+              ],
+              onChange: (next: string) => { setPromptMode(next as 'preview' | 'source') },
+              label: t('editorViewPrompt'),
+            }),
+            // 第二组：展开 / 收起（一个三角钮：向下 = 展开，向上 = 收起；与下方「查看全部」同一切换）。
+            h(IconButton, {
+              variant: 'plain', size: 'sm',
+              icon: h(promptOpen ? IconChevronUpOutlineRegular : IconChevronDownOutlineRegular, { size: 14 }),
+              label: promptOpen ? t('editorViewCollapse') : t('editorViewExpandAll'),
+              onClick: () => { setPromptOpen(v => !v) },
+            }),
+          )
+          : null,
       ),
-      draft.prompt.trim() === ''
-        ? h('div', { className: 'dsh-tdt-ed-view-empty' }, t('editorViewPromptEmpty'))
-        // 默认**约 5 行**截断（不框边框；r12 用户：不用框起来，默认显示几排即可，多了走全屏）。
-        : h('div', { className: 'dsh-tdt-ed-view-prompt' }, h(MarkdownText, { text: draft.prompt, labels: MD_LABELS })),
+      hasPrompt
+        ? h(Fragment, null,
+          h('div', { className: `dsh-tdt-ed-view-prompt${promptOpen ? ' dsh-tdt-ed-view-prompt--open' : ''}` },
+            promptMode === 'source'
+              // 源码态重用只读 CodeViewer（行号 + 着色 + 复制钮）。
+              ? h(CodeViewer, { text: draft.prompt, path: 'prompt.md', t })
+              : h(MarkdownText, { text: draft.prompt, labels: MD_LABELS })),
+          // 「查看全部 / 收起」：内容下方的文字入口，与右侧三角同一切换；展开后靠右侧栏自己的滚动条往下拉。
+          h('button', {
+            type: 'button', className: 'dsh-tdt-ed-view-more',
+            onClick: () => { setPromptOpen(v => !v) },
+          }, promptOpen ? t('editorViewCollapse') : t('editorViewExpandAll')),
+        )
+        // 默认**约 3 行**截断（不框边框；r13 用户：只显示前三排，看全部点「查看全部」）。
+        : h('div', { className: 'dsh-tdt-ed-view-empty' }, t('editorViewPromptEmpty')),
     ),
   )
 }

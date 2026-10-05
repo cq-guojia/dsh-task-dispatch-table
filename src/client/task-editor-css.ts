@@ -107,16 +107,17 @@ export const TASK_EDITOR_CSS = `
 /* 块标题行（r12 用户反馈「这一片全是文字，很难看」）：小图标 + 标题 +（可选）草稿标记 chip /
    状态色块与状态文字。图标与标题统一淡灰小字，与卡片「任务配置」小标题同口径。 */
 .dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.dsh-tdt-ed-view-ic{flex:none;display:inline-flex;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-ed-view-title{font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* 块标题 = **标签**（r13 用户：纯文字没提示作用 ⇒ 浅底 chip：图标 + 文字，比灰字醒目但不抢戏）。 */
+.dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-chip-bg,rgba(128,128,128,.14));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
 .dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
-/* 草稿标记 chip（r12：从头部挪到「任务配置」标题旁，文案精简正式）。 */
-.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:var(--tdt-chip-bg,rgba(128,128,128,.16));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-xs);white-space:nowrap;}
-/* 「全屏查看」入口（r12）：标题行**最右**的链接型小字钮（hover 变蓝）。 */
-.dsh-tdt-ed-view-more{appearance:none;-webkit-appearance:none;border:0;border-radius:0;background:transparent;padding:0;font:inherit;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;margin-left:auto;transition:color var(--tdt-dur) var(--tdt-ease);}
+/* 草稿标记 chip（r13：灰色不明显 ⇒ **警告色**——红太强，用 warning 橙：橙字 + 极浅橙底）。 */
+.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--tdt-warning,#b7791f);font-size:var(--tdt-font-xs);white-space:nowrap;}
+/* 「查看全部 / 收起」：内容下方的链接型小字钮（hover 变蓝）。 */
+.dsh-tdt-ed-view-more{appearance:none;-webkit-appearance:none;align-self:flex-start;border:0;border-radius:0;background:transparent;padding:0;font:inherit;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;margin-top:6px;transition:color var(--tdt-dur) var(--tdt-ease);}
 .dsh-tdt-ed-view-more:hover{color:var(--tdt-business,#4d6bfe);}
-/* 提示词默认态（r12 用户拍板）：**不框边框**、约 5 行截断（看全文走「全屏查看」），Markdown 渲染。 */
-.dsh-tdt-ed-view-prompt{min-width:0;max-height:120px;overflow:hidden;}
+/* 提示词默认**约 3 行**截断（r13）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
+.dsh-tdt-ed-view-prompt{min-width:0;max-height:63px;overflow:hidden;}
+.dsh-tdt-ed-view-prompt--open{max-height:none;}
 .dsh-tdt-ed-view-empty{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
 `
 
