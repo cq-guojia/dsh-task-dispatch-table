@@ -12,10 +12,9 @@
 //
 // ⚠️ 字段怎么翻译、怎么渲染**不在这里** —— 全在 `task-info.tsx`（卡片展开区「基础信息」与这里共用同一份）。
 // 本文件只负责：查数据、组装视图模型、排版面。
-import { createElement as h, Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createElement as h, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  IconChevronDownOutlineRegular, IconChevronUpOutlineRegular, IconClockOutlineRegular,
-  IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
+  IconClockOutlineRegular, IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 import { MD_LABELS } from './md-labels'
@@ -29,7 +28,7 @@ import {
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
 import { CodeViewer } from './ui/CodeViewer'
-import { IconButton, Segmented } from './ui'
+import { Button, Segmented } from './ui'
 // ⚠️ 只引**类型**（`import type` 会被编译擦除）：本文件与 `task-editor.tsx` 是「组件互相引用 + 类型单向依赖」，
 // 类型导入不构成运行时循环。草稿形状的真源仍在 task-editor.tsx，不在这里复制一份。
 import type { EditorMode, EditorTaskOption, TaskEditorDraft } from './task-editor'
@@ -141,11 +140,14 @@ export function TaskViewPanel(props: {
     }),
   }
 
-  // ── 提示词区的两组按钮（r13 用户拍板）：源码 / 预览 + 展开 / 收起 ──────────
-  // 都**就地生效**，不做全屏（r13 明确否掉）；源码态重用只读 CodeViewer、预览态重用 MarkdownText。
+  // ── 提示词区（r13 用户拍板：源码 / 预览 + 展开 / 收起，全部就地生效，不做全屏）──
+  // 源码态重用只读 CodeViewer、预览态重用 MarkdownText。
   const [promptMode, setPromptMode] = useState<'preview' | 'source'>('preview')
   const [promptOpen, setPromptOpen] = useState(false)
   const hasPrompt = draft.prompt.trim() !== ''
+  // 短提示（≤ 阈值字）直接整段显示、不截断、也不给展开钮（用户 2026-10-05：短到不用展开）。
+  const PROMPT_SHORT_MAX = 100
+  const isShort = hasPrompt && draft.prompt.length <= PROMPT_SHORT_MAX
   // 草稿标记（r12 用户拍板：不放头部任务名旁——名字可能很长；挂「任务配置」标题旁，文案精简正式）。
   const draftChip = mode === 'create' || dirty
     ? h('span', { className: 'dsh-tdt-ed-view-chip' }, mode === 'create' ? t('editorViewNewTag') : t('editorViewDraftTag'))
@@ -184,14 +186,15 @@ export function TaskViewPanel(props: {
               // 状态已由上面的色块表达 ⇒ 明细里不再重复一行（同一实现加参数）。
               : lastRunFields({ t, instance: last, onOpenSession, onOpenFile, hideStatus: true }),
     ),
-    // ③ 提示词（最下；默认约 3 行截断；右侧两组按钮 = 源码/预览 + 展开/收起，全部**就地生效**，不做全屏）
+    // ③ 提示词（最下；约 5 行截断；右侧操作组 = 源码/预览 + 展开/收起，全部**就地生效**，不做全屏）。
+    //   短提示（≤ PROMPT_SHORT_MAX 字）直接整段显示、不截断、也不给展开钮（用户 2026-10-05：短到不用展开）。
     h('section', { className: 'dsh-tdt-ed-view-block' },
       h('div', { className: 'dsh-tdt-ed-view-head' },
         h('span', { className: 'dsh-tdt-ed-view-tag' },
           h(IconThinkOutlineRegular, { size: 12 }), t('editorViewPrompt')),
         hasPrompt
-          ? h(Fragment, null,
-            // 第一组：源码 / 预览（重用基础层 `Segmented`；源码 = 只读代码视图，**不可编辑**）。
+          ? h('span', { className: 'dsh-tdt-ed-view-head-actions' },
+            // 源码 / 预览（重用基础层 `Segmented`；源码 = 只读代码视图，不可编辑）。
             h(Segmented, {
               id: 'dsh-tdt-ed-view-promptmode',
               value: promptMode,
@@ -203,30 +206,21 @@ export function TaskViewPanel(props: {
               onChange: (next: string) => { setPromptMode(next as 'preview' | 'source') },
               label: t('editorViewPrompt'),
             }),
-            // 第二组：展开 / 收起（一个三角钮：向下 = 展开，向上 = 收起；与下方「查看全部」同一切换）。
-            h(IconButton, {
-              variant: 'plain', size: 'sm',
-              icon: h(promptOpen ? IconChevronUpOutlineRegular : IconChevronDownOutlineRegular, { size: 14 }),
-              label: promptOpen ? t('editorViewCollapse') : t('editorViewExpandAll'),
+            // 展开 / 收起：文字钮（与源码/预览同高同右排）；短提示不显示。
+            isShort ? null : h(Button, {
+              variant: 'outline', size: 'sm',
               onClick: () => { setPromptOpen(v => !v) },
-            }),
+            }, promptOpen ? t('editorViewCollapse') : t('editorViewExpandAll')),
           )
           : null,
       ),
+      // 文档区：极淡底包住整段（源码 / 预览 都是一份文档 / 代码），与上方标签拉开距离（r13 续）。
       hasPrompt
-        ? h(Fragment, null,
-          h('div', { className: `dsh-tdt-ed-view-prompt${promptOpen ? ' dsh-tdt-ed-view-prompt--open' : ''}` },
+        ? h('div', { className: 'dsh-tdt-ed-view-promptbox' },
+          h('div', { className: `dsh-tdt-ed-view-prompt${promptOpen || isShort ? ' dsh-tdt-ed-view-prompt--open' : ''}` },
             promptMode === 'source'
-              // 源码态重用只读 CodeViewer（行号 + 着色 + 复制钮）。
               ? h(CodeViewer, { text: draft.prompt, path: 'prompt.md', t })
-              : h(MarkdownText, { text: draft.prompt, labels: MD_LABELS })),
-          // 「查看全部 / 收起」：内容下方的文字入口，与右侧三角同一切换；展开后靠右侧栏自己的滚动条往下拉。
-          h('button', {
-            type: 'button', className: 'dsh-tdt-ed-view-more',
-            onClick: () => { setPromptOpen(v => !v) },
-          }, promptOpen ? t('editorViewCollapse') : t('editorViewExpandAll')),
-        )
-        // 默认**约 3 行**截断（不框边框；r13 用户：只显示前三排，看全部点「查看全部」）。
+              : h(MarkdownText, { text: draft.prompt, labels: MD_LABELS })))
         : h('div', { className: 'dsh-tdt-ed-view-empty' }, t('editorViewPromptEmpty')),
     ),
   )

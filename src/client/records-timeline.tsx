@@ -186,6 +186,10 @@ const RECORDS_CSS = `
   color:var(--tdt-fg-2);font-size:var(--tdt-font-xs);line-height:1;font-weight:500;font-variant-numeric:tabular-nums;
   transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
 .dsh-tdt-rec-depmark:hover{background:var(--tdt-chip-bg-hover);color:var(--tdt-fg);}
+/* 折叠态前置圈码可点（开任务查看档）：清掉按钮默认外壳 + 手指（用户 2026-10-05）。 */
+.dsh-tdt-rec-depmark--btn{appearance:none;-webkit-appearance:none;cursor:pointer;font:inherit;}
+/* 展开态前置格整块可点：手指提示（只有接了 onViewTask 才挂这个类）。 */
+.dsh-tdt-rec-dep--click{cursor:pointer;}
 /* 溢出项「+N」表达的是**还有几个**而不是第几个 ⇒ 3 个字符塞不进圆，单独一档保持胶囊（形状不参与「正圆」约定）。 */
 /* 溢出项：把正圆的兜底解除（它是标签不是序号 ⇒ 内容多长就多长）。 */
 .dsh-tdt-rec-depmark--more{width:auto;min-width:0;aspect-ratio:auto;padding:0 6px;border-radius:999px;}
@@ -505,11 +509,24 @@ const RecordItem = memo(function RecordItem(props: {
           deps.length === 0
             ? null
             : h('span', { className: 'dsh-tdt-rec-depmarks' },
-              deps.slice(0, MAX_DEPMARKS).map((dep, index) => h(Tooltip, {
-                key: `${dep.task}#${dep.instanceId}`,
-                label: tt('recordsDepTip', { n: String(index + 1), task: depTitleOf(dep.task) }),
-                side: 'top',
-              }, h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1)))),
+              deps.slice(0, MAX_DEPMARKS).map((dep, index) => {
+                // 折叠态前置圈码也直接可点（与展开态同一口径：除「查看会话」外整块开任务查看档）。
+                const mark = onViewTask === undefined
+                  ? h('span', { className: 'dsh-tdt-rec-depmark' }, String(index + 1))
+                  : h('button', {
+                    type: 'button',
+                    className: 'dsh-tdt-rec-depmark dsh-tdt-rec-depmark--btn',
+                    onClick: (event: { stopPropagation: () => void }) => {
+                      event.stopPropagation()
+                      onViewTask(dep.task)
+                    },
+                  }, String(index + 1))
+                return h(Tooltip, {
+                  key: `${dep.task}#${dep.instanceId}`,
+                  label: tt('recordsDepTip', { n: String(index + 1), task: depTitleOf(dep.task) }),
+                  side: 'top',
+                }, mark)
+              }),
               deps.length > MAX_DEPMARKS
                 ? h(Tooltip, { label: t('listSectionDepends'), side: 'top' },
                   h('span', { className: 'dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more' },
@@ -642,7 +659,12 @@ const RecordItem = memo(function RecordItem(props: {
                 const depCanOpen = openFile !== undefined && depHasSid
                 return h('div', {
                   key: `${dep.task}#${dep.instanceId}`,
-                  className: 'dsh-tdt-rec-dep',
+                  className: `dsh-tdt-rec-dep${onViewTask !== undefined ? ' dsh-tdt-rec-dep--click' : ''}`,
+                  // 整格可点开该前置任务的查看档（用户 2026-10-05）；「查看会话」与产出物图标各自 stopPropagation 抢回自己的动作。
+                  onClick: onViewTask === undefined ? undefined : (event: { stopPropagation: () => void }) => {
+                    event.stopPropagation()
+                    onViewTask(dep.task)
+                  },
                 },
                   h('div', { className: 'dsh-tdt-rec-depmid' },
                     h('div', { className: 'dsh-tdt-rec-depname' },
@@ -713,7 +735,10 @@ const RecordItem = memo(function RecordItem(props: {
                         variant: 'ghost',
                         size: 'sm',
                         className: 'dsh-tdt-btn--link',
-                        onClick: () => { openSession(depSid as string) },
+                        onClick: (event: { stopPropagation: () => void }) => {
+                          event.stopPropagation()
+                          openSession(depSid as string)
+                        },
                       }, t('viewSession'))
                       : null,
                   ),

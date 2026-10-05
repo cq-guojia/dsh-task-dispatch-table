@@ -1283,7 +1283,7 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /from '@deepseek-ai\/dsh-client-ui-primitives'/.test(tlSrc)
       && /h\(Tooltip, \{[\s\S]{0,200}label: tt\('recordsDepTip', \{ n: String\(index \+ 1\), task: depTitleOf\(dep\.task\) \}\),[\s\S]{0,40}side: 'top',/.test(tlSrc)
       && !/title: tt\('recordsDepTip'/.test(tlSrc)
-      && /h\('span', \{ className: 'dsh-tdt-rec-depmark' \}, String\(index \+ 1\)\),/.test(tlSrc)
+      && /h\('button', \{[\s\S]{0,300}dsh-tdt-rec-depmark--btn'[\s\S]{0,200}onViewTask\(dep\.task\)/.test(tlSrc)
       && !/h\(Tooltip,[\s\S]{0,80}dsh-tdt-rec-depmark/.test(depArea))
     check('第八轮：圈码悬停**只加深底色**（浅底实心圆不描边），溢出项「+N」走胶囊档并同挂官方气泡',
       /\.dsh-tdt-rec-depmark:hover\{background:var\(--tdt-chip-bg-hover\);color:var\(--tdt-fg\);\}/.test(tlSrc)
@@ -1291,8 +1291,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more/.test(tlSrc)
       && /h\(Tooltip, \{ label: t\('listSectionDepends'\), side: 'top' \},/.test(tlSrc)
       && !/dsh-tdt-rec-tip/.test(tlSrc))
-    check('第七轮：展开区**第二排**前置清单 = 一排两个，每格「左列两行 + 右列按钮」两列网格（格子本身仍不可点）',
+    check('第七轮：展开区**第二排**前置清单 = 一排两个，每格「左列两行 + 右列按钮」两列网格（整格可点开任务查看档：onViewTask 时挂 --click + onClick stopPropagation；查看会话 / 产出物图标各自抢回动作）',
       /className: 'dsh-tdt-rec-depsec'/.test(tlSrc)
+      && /className: `dsh-tdt-rec-dep\$\{onViewTask !== undefined \? ' dsh-tdt-rec-dep--click' : ''\}`,/.test(tlSrc)
+      && /onClick: onViewTask === undefined \? undefined : \(event: \{ stopPropagation: \(\) => void \}\) => \{[\s\S]{0,120}onViewTask\(dep\.task\)/.test(tlSrc)
       && /\.dsh-tdt-rec-depgrid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/.test(tlSrc)
       && /\.dsh-tdt-rec-dep\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;align-items:center;/.test(tlSrc)
       && /className: 'dsh-tdt-rec-depmid'/.test(tlSrc)
@@ -2638,6 +2640,13 @@ console.log('\n[14] runtime-index')
       && tv.includes("t('editorViewDraftTag')") && tv.includes("t('editorViewNewTag')")
       && !te.includes('editorViewSavedTag') && !te.includes('dsh-tdt-ed-viewtag'))
 
+    check('左列表拨片 → 右抽屉联动（2026-10-05）：抽屉订阅共享 store 的 enabled，store 与脏基线不一致时才把草稿 + 基线一并同步（不误标脏、不冲掉自己拨的乐观值）；调用点传 overview + syncTaskId',
+      te.includes('overview.rows.find(r => r.id === syncTaskId)')
+      && te.includes('initialDraftRef.current.enabled')
+      && te.includes('patch({ enabled: row.enabled })')
+      && ixSrc.includes('syncTaskId: editor.id')
+      && ixSrc.includes('overview,'))
+
     check('查看档三块（r12 顺序：任务配置 → 上次执行 → 提示词最下）+ 块标题标签化 + 状态行色点',
       tv.includes('taskInfoBaseFields({')
       && tv.includes("t('editorViewPrompt')") && tv.includes('MarkdownText')
@@ -2649,12 +2658,17 @@ console.log('\n[14] runtime-index')
       && tv.includes('dsh-tdt-ed-view-badge') && tv.includes('lastRunFields({')
       && tv.includes('hideStatus: true'))
 
-    check('r13 提示词区：默认约 3 行 + 就地「源码 / 预览」与「展开 / 收起」两组按钮 +「查看全部」（无全屏）',
+    check('提示词区（r13 续）：竖线分块 + 约 5 行截断 + 就地「源码 / 预览」分段 + 文字「展开 / 收起」按钮（短提示不显示）+ 极淡文档底（无全屏、无底部查看全部）',
       tv.includes("t('editorViewSourceCode')") && tv.includes("t('editorModePreview')")
       && tv.includes("t('editorViewExpandAll')") && tv.includes("t('editorViewCollapse')")
       && tv.includes('CodeViewer') && !tv.includes('onOpenPromptFullscreen')
-      && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:63px')
+      && tv.includes("variant: 'outline', size: 'sm'")           // 展开/收起 = 文字钮（与源码/预览同高同右）
+      && !tv.includes('dsh-tdt-ed-view-more')                      // 底部「查看全部」已移除
+      && tec.includes('.dsh-tdt-ed-view-block::before') && tec.includes('width:3px') && tec.includes('var(--tdt-business)')
+      && tec.includes('.dsh-tdt-ed-view-prompt{') && tec.includes('max-height:100px')
       && tec.includes('.dsh-tdt-ed-view-prompt--open{max-height:none;}')
+      && tec.includes('.dsh-tdt-ed-view-promptbox{') && tec.includes('color-mix(in srgb,var(--tdt-fg) 3%')
+      && !tec.includes('.dsh-tdt-ed-view-more')
       && !lcSrc.includes('editorViewFullscreen'))
 
     check('查看档「预计执行」走统一入口 nextSlotForDraft（停用⇒无 / once / cron 分流单源），与服务端同一份纯核',

@@ -25,6 +25,7 @@
 
 import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { formatDateTime, pad2 } from './format'
+import { type TaskOverviewRow } from './task-list'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
   Button,
@@ -1245,6 +1246,10 @@ export function TaskEditorDrawer(props: {
   onDeleteVersion?: ((file: string) => void) | undefined
   /** 启用开关实时写回（编辑态）：null = 成功，否则返回人话错误。新建态不接（统一保存时建）。 */
   onToggleEnabled?: ((enabled: boolean) => Promise<string | null>) | undefined
+  /** 共享任务列表 store（只读其 `rows`）：左列表拨片 → 右抽屉联动用（2026-10-05）。 */
+  overview?: { readonly rows: readonly TaskOverviewRow[] }
+  /** 本抽屉对应任务 id（从 overview.rows 定位该行）；左列表拨片靠它把 enabled 同步进草稿。 */
+  syncTaskId?: string
   /**
    * 打开时的**默认档**（2026-10-05）：卡片「编辑」与「＋ 新建任务」= `'edit'`；
    * 从卡片展开区「前置任务」行点任务名进来 = `'view'`（只读人话视图）。
@@ -1292,7 +1297,7 @@ export function TaskEditorDrawer(props: {
 }): ReactElement {
   const {
     t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
-    history, onRestoreVersion, onDeleteVersion, onToggleEnabled, workspaceFiles, workspaceAnchors,
+    history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors,
     officeToPdf, currentTaskId, width, onWidthChange, reserved,
     initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView,
     onOpenSession, onOpenFile, onViewTask, resolvedAttachments,
@@ -1444,6 +1449,19 @@ export function TaskEditorDrawer(props: {
   const patch = useCallback((part: Partial<TaskEditorDraft>): void => {
     onChange({ ...draft, ...part })
   }, [draft, onChange])
+
+  // 左列表拨片 → 右抽屉联动（用户 2026-10-05）：抽屉只读共享 store 的 enabled，左拨片成功后 bump
+  // 该 store（overview.refresh），这里把草稿与脏基线一并对齐 ⇒ 右立刻跟上、且不会误标「未保存」。
+  // 守卫只比对「store 与脏基线」：抽屉自己拨片时基线已先更新（handleToggleEnabled 成功分支），
+  // 故不会把用户刚拨的乐观值冲掉；只有外部（左列表）造成的 store 变化才落下来。
+  useEffect(() => {
+    if (overview === undefined || syncTaskId === undefined) return
+    const row = overview.rows.find(r => r.id === syncTaskId)
+    if (row === undefined) return
+    if (row.enabled === initialDraftRef.current.enabled) return
+    patch({ enabled: row.enabled })
+    initialDraftRef.current = { ...initialDraftRef.current, enabled: row.enabled }
+  }, [overview?.rows, syncTaskId, patch])
 
   /** 统一关闭入口：改过 ⇒ 先弹官方 Modal 确认；没改过 ⇒ 直接关。 */
   const requestClose = useCallback((): void => {

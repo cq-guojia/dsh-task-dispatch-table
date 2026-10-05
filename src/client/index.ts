@@ -1464,6 +1464,7 @@ function TaskPage(props: {
     editor !== null
       ? h(TaskEditorDrawer, {
         t,
+        overview,
         mode: editor.mode,
         draft: editor.draft,
         width: editorWidth,
@@ -1474,6 +1475,8 @@ function TaskPage(props: {
         models: editorOptions.models,
         tasks: editorTasks,
         currentTaskId: editor.mode === 'edit' ? editor.id : undefined,
+        // 左列表拨片 → 右抽屉联动（2026-10-05）：把本任务 id 交给抽屉，让它从共享 store 取 enabled 同步。
+        syncTaskId: editor.id,
         onClose: () => { setEditor(null) },
         onSave: (draft: TaskEditorDraft) => { void saveEditor(draft) },
         onDelete: editor.mode === 'edit' ? () => { void deleteEditorTask() } : undefined,
