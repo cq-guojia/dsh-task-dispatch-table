@@ -39,8 +39,8 @@
 | 开关 | 官方 `Switch` + 包装类 `.dsh-tdt-switch`（皮肤在 `ui/controls-css.ts`） | `h('span', { className: 'dsh-tdt-switch' }, h(Switch, { checked, onChange }))` | ✅ 全站共用一个包装类（选中 success 绿只此一处） |
 | 日期 / 时间 | `ui/DateTime.tsx`（`DateField` / `TimeField`） | `h(DateField, { value: d, onChange, size: 'lg' })` | ✅ 全站唯一（自绘日历 + 时分列） |
 | 时间范围筛选 | `ui/TimeRange.tsx`（预设 + 起止一体） | `h(TimeRange, { value, onChange, labels, calendarLabels, timeLabels, precision: 'minute', size: 'md' })` | ✅ 全站唯一（执行记录 / 日志 / 未来总查询页共用；`size` **必传**、`precision` 选 `day`/`minute`；边界归一在 `ui/time-range.ts` 半开区间） |
-| Toast | `toast-css.ts`（`FloatingToast`） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一；⚠️ `index.ts` 仍有一处手搓中性 Toast（见 §三「待抽象」） |
-| 卡 / 浮层外壳 | 暂无（散在各业务 CSS：`task-editor-css` 的 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel`、`archive-session-css` 的 `.dsh-tdt-sv-panel`） | — | ⏳ **未抽象**（同构 7 处，见 §三「待抽象」） |
+| Toast | `toast-css.ts`（`FloatingToast`，含 `closable` 可关闭变体） | `h(FloatingToast, { tone: 'error', … })` | ✅ 唯一（先前 `index.ts` 自绘中性提示条已收编为 `closable` 变体，U20 #5，2026-10-05） |
+| 卡 / 浮层外壳 | 编辑器侧 `.dsh-tdt-ed-card` / `.dsh-tdt-ed-panel` 本就单一可复用类（提示词/附件/排期/前置任务卡共用 `ed-card`）；镜像层 `.dsh-tdt-sv-*` 外壳随 §七 边界不抽 | — | ✅ **2026-10-05 收口**（编辑器侧已唯一；镜像层刻意 1:1 宿主会话面，见 §三 #4） |
 
 > 表外的控件一旦被写第二遍，就是本手册要拦住的事。
 
@@ -72,7 +72,7 @@
 | 自己 `createElement('style')` 注入 | ✅ 已清零（统一走 `ui/style.ts` 的 `applyStyle`） |
 | 覆写官方件的观感（在使用点） | ✅ 「Switch 变绿」已合并到 `ui/controls-css.ts` 一处（`.dsh-tdt-switch`） |
 | 写死官方 CSS-module 类名 | 哈希会变；只能按元素 + role 选（`official-classes.ts`） |
-| 硬编码 `#fff` / `rgba(…)` | ✅ 已收口（2026-10-05）：语义色**实面上的反白字**统一走 `--tdt-on-signal`（RunPill 两处收编）；`var(…, #fff)` 内的**兜底**字面量属另一项（见「待抽象」第 7 项），不在此列 |
+| 硬编码 `#fff` / `rgba(…)` | ✅ 已收口（2026-10-05）：语义色**实面上的反白字**统一走 `--tdt-on-signal`（RunPill 两处收编）；`var(…, #fff)` 内的**兜底**字面量属 U20 #7 token 兜底（已于 2026-10-05 收口，见 §三），不在此列 |
 | 混用**同义宿主变量** | 已裁决：`state-warn-primary` 真 / `state-warning-primary` 死；`focus-ring-color` 真但默认 `transparent` / `border-focus` 死 ⇒ 一律由 token 层定一个名，见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 |
 | 注释与代码不一致 | 🟡 仍偶有（改代码必须同步注释；2026-10-01 修掉一批指向已删类的旧注释） |
 | **只给文件图标、不显示文件名** | ✅ 已收口（2026-10-05，用户点名的**硬性规定**）：全站任何显示文件的位置（附件 / 产出物），只要**没把文件名显示出来**，就必须挂**官方 `Tooltip`** 在悬停时显示**文件名（含后缀）**；已覆盖执行记录页头部 chiprow、展开区产出、任务列表产出格 |
@@ -94,7 +94,7 @@
 | 会话镜像官方样式 | `archive-session-css.ts` 的 `--dsh-content-*` / `--dsh-chat-*` | `ui-foundation.md` §九 边界（复刻官方会话面） |
 | 折叠头 / 菜单项 / 面包屑 / chip / 投放区壳 / 浮层触发壳 | `task-editor.tsx` 高级折叠头 / 投放区；`file-browser.tsx` 菜单项 / 面包屑 / 树 toggle；`task-list.tsx` chip；`mirror/*` 折叠头 | 语义非普通按钮，走各自专用类与计算属性 |
 | 任务选择器浮层的列表定高 | `ui/TaskPicker.tsx` `.dsh-tdt-tp-list{max-height:264px}`（内容区定高，与 `task-list.tsx:360` 同类） | 内容区尺寸，与控件档无关 |
-| **宿主值导入例外：官方 `Toast`** | `index.ts` 的保存成功提示（`import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'`） | 2026-10-04 评审登记：官件自带明暗自适应 + 淡入淡出，这里只要「一次性轻提示」，且与 `FloatingToast`（操作结果提示）分工不同。**除它之外业务文件不许再引宿主值**；若将来要收编，走 §三「待抽象 #5」同批做 |
+| **宿主值导入例外：官方 `Toast`** | `index.ts` 的保存成功提示（`import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'`） | 2026-10-04 评审登记：官件自带明暗自适应 + 淡入淡出，这里只要「一次性轻提示」，且与 `FloatingToast`（操作结果提示）分工不同。**除它之外业务文件不许再引宿主值**；若将来要收编，随 `FloatingToast` 收编一并处理 |
 
 ### 待抽象（2026-10-01 审计登记；**2026-10-05 已收口**——见下表逐条 ✅）
 

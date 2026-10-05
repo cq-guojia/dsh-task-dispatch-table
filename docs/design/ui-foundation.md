@@ -46,10 +46,14 @@
 | `Field.tsx` | `Input` / `Select`（包装官方件）/ `PrefixedInput` |
 | `SwitchToggle.tsx` | 官方 `Switch` 的统一包装（含「打开 = success 绿」这一处覆盖） |
 | `DateTime.tsx` | `DateField` / `TimeField`（官方**没有**日期时间件 ⇒ 自绘，走同一套 token） |
+| `Textarea.tsx` | 多行文本输入（提示词框等；皮肤进 `controls-css.ts`，无边框卡内态 + 校验描红） |
+| `Checkbox.tsx` | 勾选框（包装官方 `Checkbox` primitive，统一外观 + `label` / `accentColor`） |
+| `resizer.ts` | 拖拽分隔条宽度调节共享逻辑 `startResizeLayoutWidth`（preventDefault / 拖动禁选 / rAF 节流 / `rootClass` 切换） |
 | `index.ts` | 对 L3 的**唯一出口**：非本文件导出的东西，L3 不许 import |
 
 > ✅ **P0 已落码（2026-10-01）**：`ui/tokens.ts`（token 表）、`ui/style.ts`（统一注入器）、`ui/index.ts`（唯一出口 + `ensureUiBase()`）已建；`client/index.ts` 在渲染入口调一次 `ensureUiBase()`（幂等）。
 > ✅ **P1a 已落码（2026-10-01）**：`ui/Segmented.tsx` + `ui/controls-css.ts` 已建，分段控件三处自绘调用点（主面板 / 列表筛选 / 卡片三面板）已改调共用组件。**其余控件皮肤（表里 Button / Field / SwitchToggle / DateTime / official-skins）尚未建，P2 起逐个加。** 落码记录见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §八 §九。
+> ✅ **U20 待抽象收口（2026-10-05）**：基础层补 `ui/Textarea.tsx` / `ui/Checkbox.tsx`（皮肤进 `controls-css.ts`）+ `ui/resizer.ts`（`startResizeLayoutWidth`）；`FloatingToast`（`toast-css.ts`）加 `closable` 变体。详见 [`ui-style-guide.md`](ui-style-guide.md) §三 与 [PROGRESS-HISTORY.md](../PROGRESS-HISTORY.md)。
 
 ### 3.1 公用 CSS 放哪
 
@@ -72,7 +76,7 @@
 | **Loading 皮肤（CSS 规则）** | `src/client/ui/loading-css.ts` | `<Loading />` / `<RunningBlocks />` |
 | **官方件观感覆盖** | `src/client/ui/official-skins.ts` | 官方 `Switch`/`Input`/`Menu`/`SegmentedControl` |
 | **样式注入入口（唯一）** | `src/client/ui/style.ts` | 所有 `*-css.ts` 在此注册 |
-| **公用控件组件** | `src/client/ui/{Segmented,Button,Field,SwitchToggle,DateTime,Loading}.tsx` | L3 使用点 |
+| **公用控件组件** | `src/client/ui/{Segmented,Button,Field,SwitchToggle,DateTime,Loading,Textarea,Checkbox}.tsx` + `resizer.ts`（拖拽调宽逻辑） | L3 使用点 |
 | **公用出口（唯一 import 面）** | `src/client/ui/index.ts` | L3 只 import 这个 |
 | **域私有样式** | `src/client/task-editor-css.ts` / `archive-session-css.ts` / `toast-css.ts`（过渡期保留，最终并入 `ui/`） | 各自页面 |
 | **技术方案（定型）** | `docs/design/ui-foundation.md`（本文） | 设计与评审 |
@@ -239,7 +243,7 @@ body[data-ds-dark-theme]{
 | 日期 / 时间 | `calendar` / `time` | sm / md / lg（默认 lg） | `ui/DateTime.tsx`（官方无此件，自绘）✅ |
 | Toast | 四档语义色（success / warning / neutral / error） | — | `toast-css.ts`（`FloatingToast`）✅ |
 | Loading（浮动加载 pill） | — | — | `ui/Loading.tsx` + `ui/loading-css.ts` ✅ |
-| 卡 / 浮层外壳 | — | — | ⏳ 未抽象（同构 7 处，见 [`ui-style-guide.md`](ui-style-guide.md) §三「待抽象」） |
+| 卡 / 浮层外壳 | — | — | ✅ 编辑器侧 `.dsh-tdt-ed-card`/`.dsh-tdt-ed-panel` 本就单一可复用类；镜像层随 §七 边界不抽（U20 #4，2026-10-05；见 [`ui-style-guide.md`](ui-style-guide.md) §三） |
 
 ### 5.3 官方件策略（**优先用官方的，但观感只覆盖一次**）
 
@@ -348,7 +352,7 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 | **P1a 分段控件·三处自绘** ✅ | 3 处自绘 → 1 个 `Segmented` | 主面板三 tab / 列表筛选 tabs（带角标）/ 卡片三面板 | ✅ 已落码（2026-10-01，冒烟 376/0；4 项正/反断言见 worklog §九） |
 | **P1b 分段控件·其余 4 类** ✅ | 编辑器官方覆写 ×3 + 星期多选 + 版本开关 + 预览两态 → 同一个 `Segmented` | `Segmented` 增补 `multiple`（星期）与「版本开关并入（multiple 单段）」；统一皮肤抄「版本」观感、去外描边 | ✅ 已落码（2026-10-01，冒烟通过）；反断言：旧类名 `dsh-tdt-ed-histtoggle-seg` / `dsh-tdt-sv-seg` 消失；明暗双主题一致 |
 | **P2 按钮 + 图标钮** | 15+ 套 → 3 variant × 2 size | `Button` / `IconButton` | 各页面按钮外观归一 |
-| **P3 输入 + 下拉** | 3 套 CSS + 3 处原生 + 官方 2 处 → 1 套 | `Field`（Input / Select / PrefixedInput） | 高度只剩两档 |
+| **P3 输入 + 下拉** | 3 套 CSS + 3 处原生 + 官方 2 处 → 1 套 | `Field`（Input / Select / PrefixedInput）+ `Textarea` + `Checkbox`（经 U20 #6 上提，2026-10-05） | 高度只剩两档 |
 | **P4 开关 + 日期时间 + 浮层** | 开关 2 处重复覆盖合并；日期时间全内联转皮肤；卡/浮层/Toast 归一 | `SwitchToggle` / `DateTime` / 容器皮肤 | 明暗特判只剩 token 层 |
 | **P5 收尾** | 删 3 份 `C` 表 → 0；内联数值字面量清零；注释与代码对齐（现状清单见 [`../worklog/ui-foundation.md`](../worklog/ui-foundation.md) §六） | 干净的基础层 | 冒烟反例断言全绿 + `npm run typecheck` |
 
