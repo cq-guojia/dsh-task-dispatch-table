@@ -50,7 +50,11 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:var(--tdt-space-2);
   padding-bottom:var(--tdt-space-1);border-bottom:1px solid var(--tdt-border-faint);}
 .dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);}
+/* 「选中 / 展开」的底色：**在常态底色上掺 12% 文字色** —— 同一条公式在两套主题下都成立：
+   浅色主题 ⇒ 比白底**深一档**；深色主题 ⇒ 比背景**亮一档**（不会「像背景一样黑」）。
+   ⚠️ 不用 --tdt-plate / surface-2：它们与常态底色太接近，用户「完全没感觉到变化」。 */
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);
+  --cal-sel-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
@@ -66,12 +70,12 @@ const CALENDAR_CSS = `
    （surface-1）。⚠️ 底色**不许叠淡蓝**：那层半透明蓝压在格内的状态色标签上 ⇒ 深色主题下发灰、
    浅色主题下发暗，把原本的绿色/红色全带脏了（用户 2026-10-06）。「选中」只由那条线表达。
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
-   ⚠️ 底色用 --tdt-plate（**中性**、比底色深一档，且随主题自动翻转：亮色下比白略深、暗色下比背景略亮
-   ⇒ 不会「像背景一样黑」）。**不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-plate);outline:0;}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-plate);}
-/* 线：**高 4px**、两端**全圆**（半径取大值 ⇒ 左右各一个半圆，成胶囊形）、**蓝色 --tdt-business**。 */
-.dsh-tdt-cal-cell--sel::before{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
+   ⚠️ 底色走 --cal-sel-bg（在常态底色上掺 12% 文字色 ⇒ 深/浅主题都明显区别于常态）。
+   **不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--cal-sel-bg);outline:0;}
+.dsh-tdt-cal-cell--sel:hover{background:var(--cal-sel-bg);}
+/* 线在格子**底部**（不是顶部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）、蓝色 --tdt-business。 */
+.dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;bottom:4px;height:4px;
   border-radius:999px;background:var(--tdt-business);}
 .dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
@@ -106,8 +110,8 @@ const CALENDAR_CSS = `
    并且在**选中日那一列断开**（把当前日期空开）⇒ 与上面那一行的线成一对，像从那一格拉出来。
    断口位置：列宽 = (100% - 6px)/7（6 个 1px 间隙），用 --cal-col（选中列序号，0 起）算。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-/* 拉开区与选中格**同色**（--tdt-plate）⇒ 视觉上是一体的「展开区域」。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-plate);border:0;border-radius:0;
+/* 拉开区与选中格**同色**（--cal-sel-bg）⇒ 视觉上是一体的「展开区域」。 */
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--cal-sel-bg);border:0;border-radius:0;
   --cal-col-w:calc((100% - 6px) / 7);
   --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
