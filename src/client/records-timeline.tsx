@@ -1041,7 +1041,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
             emptyLabel: t('editorNoOptions'),
             ariaLabel: t('listFilterWorkspaceAll'),
             size: 'md',
-            width: 180,
+            width: 120,
           }),
           h(TaskPicker, {
             value: taskId,
@@ -1056,7 +1056,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
             collapseLabel: t('recordsCollapse'),
             outOfScopeHint: t('recordsOutOfScope'),
             size: 'md',
-            width: 200,
+            width: 150,
           }),
         ),
       ),

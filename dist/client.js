@@ -68795,7 +68795,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("listFilterWorkspaceAll"),
 				size: "md",
-				width: 180
+				width: 120
 			}), (0, react$1.createElement)(TaskPicker, {
 				value: taskId,
 				onChange: setTaskId,
@@ -68809,7 +68809,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				collapseLabel: t("recordsCollapse"),
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
-				width: 200
+				width: 150
 			}))), loading ? (0, react$1.createElement)(Loading, { label: t("recordsLoading") }) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
