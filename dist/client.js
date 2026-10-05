@@ -305,6 +305,7 @@ window.__ModuleLoader__.load({
 			calPlanTag: "计划",
 			calLegendDone: "已执行",
 			calLegendPlan: "计划",
+			calCellMore: "还有 {n} 条，点开看全部",
 			debugDbHint: "状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。",
 			debugDbLoading: "状态库读取中…",
 			debugDbFail: "状态库读取失败（未就绪或请求被拒），稍后点刷新重试。",
@@ -934,6 +935,7 @@ window.__ModuleLoader__.load({
 			calPlanTag: "Planned",
 			calLegendDone: "Executed",
 			calLegendPlan: "Planned",
+			calCellMore: "{n} more — click to open",
 			debugDbHint: "Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.",
 			debugDbLoading: "Loading state.db…",
 			debugDbFail: "Failed to read state.db (not ready or request rejected); retry with the refresh button.",
@@ -69123,38 +69125,65 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-legend{display:flex;align-items:center;gap:var(--tdt-space-3);
   font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);white-space:nowrap;}
 .dsh-tdt-cal-legend>span{display:flex;align-items:center;gap:4px;}
-/* 网格：1px 间隙 + 底色当线（不画外框，与执行记录页「无外框」同基调） */
-.dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:var(--tdt-space-1);}
+/* 网格：**每格一张独立卡片**（1px 描边 + 微圆角 + 6px 间隔）—— 用户 2026-10-06：
+   「每一格一定要有线」，连片网格在暗色下糊成一片。参考主流日历（Google / Apple / Notion 月视图）
+   的做法：格子自带边框与留白，靠卡片本身建立节奏，而不是靠一条条切分线。 */
+.dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:var(--tdt-space-2);
+  padding-bottom:var(--tdt-space-1);border-bottom:1px solid var(--tdt-border-faint);}
 .dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
-  background:var(--tdt-border-faint);border:1px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);overflow:hidden;}
-.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:2px;min-height:80px;padding:6px;
-  background:var(--tdt-surface-1);border:0;font:inherit;text-align:left;cursor:pointer;
-  transition:background var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:start;}
+/* ⚠️ 格子**定宽定高**（用户 2026-10-06）：高度不随当天条目数变化 ⇒ 整月永远是整齐的方阵。 */
+.dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;height:104px;padding:6px;overflow:hidden;
+  background:var(--tdt-surface-1);border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);
+  font:inherit;text-align:left;cursor:pointer;
+  transition:background var(--tdt-dur-fast) var(--tdt-ease),border-color var(--tdt-dur-fast) var(--tdt-ease);}
+.dsh-tdt-cal-cell:hover{background:var(--tdt-hover);border-color:var(--tdt-border-strong);}
 /* 补位格（相邻月）：淡化、**不放数据**、不可点 */
-.dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
-.dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
-.dsh-tdt-cal-cell--sel{box-shadow:inset 0 0 0 2px var(--tdt-accent);}
-.dsh-tdt-cal-num{align-self:flex-start;min-width:20px;padding:0 4px;border-radius:999px;text-align:center;
+.dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);border-color:var(--tdt-border-faint);cursor:default;}
+.dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);border-color:var(--tdt-border-faint);}
+/* 拉开的那一天：底色与别处**不同**（--tdt-open-bg 是基础层既有的「展开中」底色），
+   一眼看出「正在看的是这一天」—— 不用白底也不用描白边。 */
+.dsh-tdt-cal-cell--sel{background:var(--tdt-open-bg);border-color:var(--tdt-accent);}
+.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-open-bg);border-color:var(--tdt-accent);}
+.dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
 .dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
-/* 格内条目：**只一个时刻**（一个时刻 = 一次任务），一条一行、不截断、不折叠 */
-.dsh-tdt-cal-item{display:flex;align-items:center;gap:5px;min-width:0;
-  font-size:var(--tdt-font-xs);line-height:var(--tdt-line-xs);color:var(--tdt-fg-2);}
-.dsh-tdt-cal-time{color:var(--tdt-fg-2);font-variant-numeric:tabular-nums;}
-.dsh-tdt-cal-dot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--cal-tone,var(--tdt-fg-4));}
-/* 计划 = **虚线空心**（与「已发生」的实心点一眼分得开） */
-.dsh-tdt-cal-dot--plan{background:transparent;border:1px dashed var(--tdt-fg-4);}
+/* 格内条目 = **方形小标签**（用户 2026-10-06：不要圆点）：标签前 3px 状态色竖线 + 同色系浅底 + 时刻。
+   时刻位数固定 ⇒ 标签宽度固定；**一行 3 个**、共 3 行（第 9 个位子留给「…N」）。 */
+.dsh-tdt-cal-tags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;overflow:hidden;}
+.dsh-tdt-cal-tag{display:flex;align-items:stretch;min-width:0;height:18px;border-radius:2px;overflow:hidden;
+  background:var(--cal-soft,transparent);}
+.dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--tdt-fg-4));}
+.dsh-tdt-cal-tag>span{flex:1 1 auto;min-width:0;padding:0 3px;overflow:hidden;
+  font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
+/* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开） */
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
+.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px dashed var(--tdt-fg-4);}
+.dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
+/* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
+.dsh-tdt-cal-tag--more{background:var(--tdt-chip-bg);}
+.dsh-tdt-cal-tag--more::before{background:var(--tdt-fg-4);}
+.dsh-tdt-cal-tag--more>span{color:var(--tdt-fg-3);text-align:center;}
 /* 语义色调 → 本域局部变量（token 只在 ui/tokens.ts 定义，这里只做映射） */
 .dsh-tdt-cal-t--ok{--cal-tone:var(--tdt-success);--cal-soft:var(--tdt-success-soft);}
 .dsh-tdt-cal-t--bad{--cal-tone:var(--tdt-danger);--cal-soft:var(--tdt-danger-soft);}
 .dsh-tdt-cal-t--warn{--cal-tone:var(--tdt-warning);--cal-soft:var(--tdt-warning-soft);}
 .dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:var(--tdt-business-soft);}
 .dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
-/* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条 */
-.dsh-tdt-cal-panel{grid-column:1/-1;background:var(--tdt-surface-1);padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3);}
+/* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条。
+   ⚠️ 拉开要有**很短的展开动画**（用户 2026-10-06：不能「啪」一下直接弹出来）。
+   max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
+.dsh-tdt-cal-panel{grid-column:1/-1;background:var(--tdt-surface-1);border:1px solid var(--tdt-border);
+  /* 顶边描品牌色 = 从「选中的那一格」拉出来的那条线，与上面那格的强调色接得上。 */
+  border-top:2px solid var(--tdt-accent);
+  border-radius:var(--tdt-radius-sm);padding:var(--tdt-space-2) var(--tdt-space-3) var(--tdt-space-3);
+  overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
+@keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
+/* 图例色块（与格内标签同款：3px 竖线 + 浅底） */
+.dsh-tdt-cal-swatch{flex:none;width:16px;height:12px;border-radius:2px;overflow:hidden;
+  background:var(--cal-soft,transparent);border-left:3px solid var(--cal-tone,var(--tdt-fg-4));}
+.dsh-tdt-cal-swatch--plan{background:transparent;border:1px dashed var(--tdt-border-strong);border-left-width:2px;}
 .dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
   font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
 .dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
@@ -69163,6 +69192,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   border-radius:var(--tdt-radius-sm);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   background:var(--cal-soft,transparent);}
 .dsh-tdt-cal-row--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
+.dsh-tdt-cal-time{font-variant-numeric:tabular-nums;}
 .dsh-tdt-cal-tag{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
 .dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
 .dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
@@ -69458,7 +69488,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				variant: "outline",
 				size: "sm",
 				onClick: goToday
-			}, calLabels.today), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-right" }, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-legend" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-t--ok" }), t("calLegendDone")), (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), t("calLegendPlan")), (0, react$1.createElement)("span", null, tt("recordsDayCount", { n: monthCount }))), (0, react$1.createElement)(SelectField, {
+			}, calLabels.today), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-right" }, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-legend" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-swatch dsh-tdt-cal-t--ok" }), t("calLegendDone")), (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-swatch dsh-tdt-cal-swatch--plan" }), t("calLegendPlan")), (0, react$1.createElement)("span", null, tt("recordsDayCount", { n: monthCount }))), (0, react$1.createElement)(SelectField, {
 				value: workspace,
 				options: workspaceOptions,
 				onChange: changeWorkspace,
@@ -69505,15 +69535,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						setSelected(cell.iso === selected ? "" : cell.iso);
 						setOpenId(null);
 					}
-				}, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), items.map((item) => item.kind === "done" ? (0, react$1.createElement)("div", {
+				}, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)("div", {
 					key: item.row.id,
-					className: `dsh-tdt-cal-item dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
+					className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
 					title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`
-				}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at))) : (0, react$1.createElement)("div", {
+				}, (0, react$1.createElement)("span", null, hhmmOf(item.at))) : (0, react$1.createElement)("div", {
 					key: `p:${item.entry.taskId}:${item.at}`,
-					className: "dsh-tdt-cal-item",
+					className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--plan",
 					title: `${hhmmOf(item.at)} ${item.entry.title} · ${t("calPlanHint")}`
-				}, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-dot dsh-tdt-cal-dot--plan" }), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at)))));
+				}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))), items.length > 8 ? (0, react$1.createElement)("div", {
+					className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more",
+					title: tt("calCellMore", { n: items.length - 8 })
+				}, (0, react$1.createElement)("span", null, `…${items.length - 8}`)) : null));
 			}), week.some((cell) => cell.iso === selected) ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-tag" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null)))));
 		}
 		//#endregion

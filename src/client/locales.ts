@@ -18,7 +18,7 @@ export type LocaleKey =
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabCalendar' | 'tabDebug'
   // —— 任务日程（日历页，2026-10-05）：月份导航 / 两态图例 / 计划说明 / 截断与错误 ——
   | 'calLoading' | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
-  | 'calTruncated' | 'calPlanHint' | 'calPlanTag' | 'calLegendDone' | 'calLegendPlan'
+  | 'calTruncated' | 'calPlanHint' | 'calPlanTag' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
   | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext'
@@ -267,6 +267,7 @@ export const zh: Record<LocaleKey, string> = {
   calPlanTag: '计划',
   calLegendDone: '已执行',
   calLegendPlan: '计划',
+  calCellMore: '还有 {n} 条，点开看全部',
   debugDbHint: '状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。',
   debugDbLoading: '状态库读取中…',
   debugDbFail: '状态库读取失败（未就绪或请求被拒），稍后点刷新重试。',
@@ -923,6 +924,7 @@ export const en: Record<LocaleKey, string> = {
   calPlanTag: 'Planned',
   calLegendDone: 'Executed',
   calLegendPlan: 'Planned',
+  calCellMore: '{n} more — click to open',
   debugDbHint: 'Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.',
   debugDbLoading: 'Loading state.db…',
   debugDbFail: 'Failed to read state.db (not ready or request rejected); retry with the refresh button.',
