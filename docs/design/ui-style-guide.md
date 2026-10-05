@@ -72,7 +72,7 @@
 | 自己 `createElement('style')` 注入 | ✅ 已清零（统一走 `ui/style.ts` 的 `applyStyle`） |
 | 覆写官方件的观感（在使用点） | ✅ 「Switch 变绿」已合并到 `ui/controls-css.ts` 一处（`.dsh-tdt-switch`） |
 | 写死官方 CSS-module 类名 | 哈希会变；只能按元素 + role 选（`official-classes.ts`） |
-| 硬编码 `#fff` / `rgba(…)` | 🟡 语义色**实面上的反白字**下游仍有几处直接写 `#fff`（见「待抽象」），应统一走 `--tdt-on-signal` |
+| 硬编码 `#fff` / `rgba(…)` | ✅ 已收口（2026-10-05）：语义色**实面上的反白字**统一走 `--tdt-on-signal`（RunPill 两处收编）；`var(…, #fff)` 内的**兜底**字面量属另一项（见「待抽象」第 7 项），不在此列 |
 | 混用**同义宿主变量** | 已裁决：`state-warn-primary` 真 / `state-warning-primary` 死；`focus-ring-color` 真但默认 `transparent` / `border-focus` 死 ⇒ 一律由 token 层定一个名，见 [`external/dsh-capabilities.md`](external/dsh-capabilities.md) §3 |
 | 注释与代码不一致 | 🟡 仍偶有（改代码必须同步注释；2026-10-01 修掉一批指向已删类的旧注释） |
 | **只给文件图标、不显示文件名** | ✅ 已收口（2026-10-05，用户点名的**硬性规定**）：全站任何显示文件的位置（附件 / 产出物），只要**没把文件名显示出来**，就必须挂**官方 `Tooltip`** 在悬停时显示**文件名（含后缀）**；已覆盖执行记录页头部 chiprow、展开区产出、任务列表产出格 |
@@ -109,7 +109,7 @@
 | 5 | 手搓中性 Toast | `index.ts` 自绘一个（关钮 + 圆点），与 `FloatingToast` 中性档重复 | `FloatingToast` 加 `closable` 变体后删自绘 |
 | 6 | 缺基础层件 | 无 `Textarea`（提示词框皮肤写在业务 CSS）、无 `Checkbox`（编辑器用裸 `<input type=checkbox>`） | 补进 `ui/` 后删业务皮肤 |
 | 7 | token 兜底字面量不统一 | `--tdt-fg` 兜底 `#1a1a1a` / `#1f2328` 两派；`--tdt-hover` 兜底 `rgba(128,128,128,.16)` / `rgba(127,127,127,.14)` | 兜底只在 `tokens.ts` 一处，调用点写 `var(--tdt-x)` 不带兜底 |
-| 8 | 实面反白字 | 下游仍有几处写死 `#fff` | 统一 `--tdt-on-signal` |
+| ~~8~~ | ~~实面反白字~~ | ✅ 已收口（2026-10-05）：下游写死 `#fff` 清零，统一 `--tdt-on-signal` | — |
 | **9** | **任务选择器（带搜索）** —— 控件已建；剩余只有「编辑器前置任务」那两级 | ✅ 已建 `ui/TaskPicker.tsx`（2026-10-04，执行记录总查询页在用，见上表）；✅ 工作区候选真源与任务列表顶部下拉收编已完成（[`worklog/workspace-options-unification.md`](../../worklog/workspace-options-unification.md)）；✅ 旧测试屏的原生 `<select>` 已随执行记录时间轴重写一并删除。**剩余**：编辑器「前置任务」第②级仍是 `SelectField`（`task-editor.tsx`），作用域 `depWs` 仍是**内部** state | 用 `TaskPicker` 替换第②级、并把第①级工作区改成**受控入参**（未决项 **U31**，另行进行）。任务选项文案统一取 `[code] name`（执行记录页已这么组装） |
 
 ---

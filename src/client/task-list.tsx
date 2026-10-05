@@ -482,7 +482,7 @@ function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
     h('div', { style: pillOuterStyle },
       // ⚠️ 图标前景跟着底色走：白字只配「绿 / 红」实底；中性浅灰底（无状态 / skipped / unknown）
       // 必须用常态文字色，否则白图标压在浅灰上几乎看不见（2026-09-30 复核）。
-      h('span', { style: pillIconCell(bg, colored ? '#fff' : 'var(--tdt-fg-2)') }, h(IconClockOutlineRegular, { size: 12 })),
+      h('span', { style: pillIconCell(bg, colored ? 'var(--tdt-on-signal)' : 'var(--tdt-fg-2)') }, h(IconClockOutlineRegular, { size: 12 })),
       h(LiveText, {
         style: pillTimeCell,
         render: (nowMs: number): string => {
@@ -519,7 +519,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   if (row.running) {
     return h(Tooltip, { label: t('listRunning'), side: 'bottom' },
       h('div', { style: pillOuterStyle },
-        h('span', { style: pillIconCell('var(--tdt-success)', '#fff') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+        h('span', { style: pillIconCell('var(--tdt-success)', 'var(--tdt-on-signal)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
         h('span', { style: { ...pillTimeCell, color: 'var(--tdt-success)' } }, h(RunningBlocks, {})),
       ),
     )

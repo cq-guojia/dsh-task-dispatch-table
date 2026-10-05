@@ -64298,7 +64298,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: title,
 				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "#fff" : "var(--tdt-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "var(--tdt-on-signal)" : "var(--tdt-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
 				style: pillTimeCell,
 				render: (nowMs) => {
 					if (!has) return "--";
@@ -64327,7 +64327,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listRunning"),
 				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-success)", "#fff") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-success)", "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
 				...pillTimeCell,
 				color: "var(--tdt-success)"
 			} }, (0, react$1.createElement)(RunningBlocks, {}))));
