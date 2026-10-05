@@ -65,6 +65,9 @@ export interface TaskPickerProps {
   moreLabel?: string
   /** 「收起」按钮文案（默认「收起」）。 */
   collapseLabel?: string
+  /** 顶部「全部 / 清空」哨兵项（value 通常为 ''）；传入即在列表顶部**常驻**一行，
+   *   不受作用域与搜索过滤，选中 ⇒ onChange(allOption.value)（执行记录页用它把任务过滤清回「查所有任务」）。 */
+  allOption?: { value: string; label: string }
   disabled?: boolean
   /** 高度档（sm 24 / md 28 / lg 32，默认 lg）。 */
   size?: FieldSize
@@ -188,6 +191,32 @@ export function TaskPicker(props: TaskPickerProps): ReturnType<typeof h> {
       h(IconChevronDownOutlineRegular, { size: metrics.icon })),
   )
 
+  // 顶部「全部 / 清空」哨兵项：常驻、**不受作用域与搜索过滤**（选中 ⇒ 查所有任务）。
+  const allOpt = props.allOption
+  const allRow = allOpt === undefined ? null
+    : h('button', {
+      type: 'button',
+      key: '__all__',
+      className: `dsh-tdt-tp-row${props.value === allOpt.value ? ' dsh-tdt-tp-row--on' : ''}`,
+      'aria-selected': props.value === allOpt.value,
+      onClick: () => { pick(allOpt.value) },
+    },
+      h('span', { className: 'dsh-tdt-tp-name dsh-tdt-ellipsis' }, allOpt.label),
+      props.value === allOpt.value ? h('span', { className: 'dsh-tdt-tp-check', 'aria-hidden': true }, '✓') : null,
+    )
+  const restNodes = visible.length === 0
+    ? h('div', { className: 'dsh-tdt-tp-empty' }, props.emptyLabel)
+    : visible.map(o => h('button', {
+      type: 'button',
+      key: o.id,
+      className: `dsh-tdt-tp-row${o.id === props.value ? ' dsh-tdt-tp-row--on' : ''}`,
+      'aria-selected': o.id === props.value,
+      onClick: () => { pick(o.id) },
+    },
+      h('span', { className: 'dsh-tdt-tp-name dsh-tdt-ellipsis' }, o.enabled === false ? `${o.label}${props.disabledTag ?? ''}` : o.label),
+      o.id === props.value ? h('span', { className: 'dsh-tdt-tp-check', 'aria-hidden': true }, '✓') : null,
+    ))
+
   const panel = h('div', { className: 'dsh-tdt-tp' },
     h('div', { className: 'dsh-tdt-tp-search' },
       h('span', null, h(IconSearchOutlineRegular, { size: 14 })),
@@ -215,20 +244,7 @@ export function TaskPicker(props: TaskPickerProps): ReturnType<typeof h> {
         },
       }),
     ),
-    h('div', { className: 'dsh-tdt-tp-list' },
-      visible.length === 0
-        ? h('div', { className: 'dsh-tdt-tp-empty' }, props.emptyLabel)
-        : visible.map(o => h('button', {
-          type: 'button',
-          key: o.id,
-          className: `dsh-tdt-tp-row${o.id === props.value ? ' dsh-tdt-tp-row--on' : ''}`,
-          'aria-selected': o.id === props.value,
-          onClick: () => { pick(o.id) },
-        },
-          h('span', { className: 'dsh-tdt-tp-name dsh-tdt-ellipsis' }, o.enabled === false ? `${o.label}${props.disabledTag ?? ''}` : o.label),
-          o.id === props.value ? h('span', { className: 'dsh-tdt-tp-check', 'aria-hidden': true }, '✓') : null,
-        )),
-    ),
+    h('div', { className: 'dsh-tdt-tp-list' }, allRow === null ? restNodes : [allRow, restNodes]),
     !searching && (showAll || restCount > 0)
       ? h('button', {
         type: 'button',

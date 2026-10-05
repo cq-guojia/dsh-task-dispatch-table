@@ -1046,6 +1046,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
           h(TaskPicker, {
             value: taskId,
             onChange: setTaskId,
+            allOption: { value: '', label: t('listFilterTaskAll') },
             options: tasks,
             scope: workspace,
             placeholder: t('recordsTaskPh'),

@@ -1228,10 +1228,15 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('时间轴复用基础层：Loading / Button / SelectField / TimeRange / TaskPicker / MarqueeText 全走 ui/',
       /from '\.\/ui'/.test(tlSrc) && /h\(Loading,/.test(tlSrc) && /h\(Button,/.test(tlSrc)
       && /h\(SelectField,/.test(tlSrc) && /h\(TimeRange,/.test(tlSrc) && /h\(TaskPicker,/.test(tlSrc))
+    const tpSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TaskPicker.tsx'), 'utf8')
     check('任务选择器（带搜索 + 受控作用域 + 掉出作用域显式提示）进产物',
       clientJs.includes('TaskPicker') && clientJs.includes('dsh-tdt-tp-row') && clientJs.includes('dsh-tdt-tp-more')
-      && /const candidates = useMemo/.test(readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TaskPicker.tsx'), 'utf8'))
+      && /const candidates = useMemo/.test(tpSrc)
       && clientJs.includes('recordsTaskSearch'))
+    check('任务过滤框可清空回「全部任务」（TaskPicker allOption 哨兵项：常驻顶部、不受作用域/搜索过滤、选中 ⇒ 查所有任务）',
+      tlSrc.includes("allOption: { value: ''") && tlSrc.includes("label: t('listFilterTaskAll')")
+      && tpSrc.includes('const allRow = allOpt') && tpSrc.includes('props.value === allOpt.value')
+      && clientJs.includes('listFilterTaskAll'))
     check('状态桶 / 在跑语义单源（status-text.ts），两页共用不再各写一份',
       readFileSync(join(process.cwd(), 'src', 'client', 'status-text.ts'), 'utf8').includes('INSTANCE_STATUS_BUCKETS')
       && tlSrc.includes('statusesOfBucket(')

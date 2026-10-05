@@ -708,6 +708,7 @@ window.__ModuleLoader__.load({
 			listFilterDisabled: "已关闭",
 			listFilterAbnormal: "异常",
 			listFilterWorkspaceAll: "全部工作区",
+			listFilterTaskAll: "全部任务",
 			listSearchPlaceholder: "搜索任务名称或编号",
 			listRunning: "运行中",
 			listNextNone: "无后续执行",
@@ -1325,6 +1326,7 @@ window.__ModuleLoader__.load({
 			listFilterDisabled: "Disabled",
 			listFilterAbnormal: "Abnormal",
 			listFilterWorkspaceAll: "All workspaces",
+			listFilterTaskAll: "All tasks",
 			listSearchPlaceholder: "Search by name or code",
 			listRunning: "Running",
 			listNextNone: "No further runs",
@@ -2602,6 +2604,31 @@ body[data-ds-dark-theme]{
 				flex: "none",
 				color: "var(--tdt-fg-3)"
 			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: metrics.icon })));
+			const allOpt = props.allOption;
+			const allRow = allOpt === void 0 ? null : (0, react$1.createElement)("button", {
+				type: "button",
+				key: "__all__",
+				className: `dsh-tdt-tp-row${props.value === allOpt.value ? " dsh-tdt-tp-row--on" : ""}`,
+				"aria-selected": props.value === allOpt.value,
+				onClick: () => {
+					pick(allOpt.value);
+				}
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-tp-name dsh-tdt-ellipsis" }, allOpt.label), props.value === allOpt.value ? (0, react$1.createElement)("span", {
+				className: "dsh-tdt-tp-check",
+				"aria-hidden": true
+			}, "✓") : null);
+			const restNodes = visible.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-tp-empty" }, props.emptyLabel) : visible.map((o) => (0, react$1.createElement)("button", {
+				type: "button",
+				key: o.id,
+				className: `dsh-tdt-tp-row${o.id === props.value ? " dsh-tdt-tp-row--on" : ""}`,
+				"aria-selected": o.id === props.value,
+				onClick: () => {
+					pick(o.id);
+				}
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-tp-name dsh-tdt-ellipsis" }, o.enabled === false ? `${o.label}${props.disabledTag ?? ""}` : o.label), o.id === props.value ? (0, react$1.createElement)("span", {
+				className: "dsh-tdt-tp-check",
+				"aria-hidden": true
+			}, "✓") : null));
 			const panel = (0, react$1.createElement)("div", { className: "dsh-tdt-tp" }, (0, react$1.createElement)("div", { className: "dsh-tdt-tp-search" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 })), (0, react$1.createElement)(Input$1, {
 				value: keyword,
 				onChange: setKeyword,
@@ -2621,18 +2648,7 @@ body[data-ds-dark-theme]{
 					event.preventDefault();
 					(searchRef.current?.closest(".dsh-tdt-tp")?.querySelector(".dsh-tdt-tp-row"))?.focus();
 				}
-			})), (0, react$1.createElement)("div", { className: "dsh-tdt-tp-list" }, visible.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-tp-empty" }, props.emptyLabel) : visible.map((o) => (0, react$1.createElement)("button", {
-				type: "button",
-				key: o.id,
-				className: `dsh-tdt-tp-row${o.id === props.value ? " dsh-tdt-tp-row--on" : ""}`,
-				"aria-selected": o.id === props.value,
-				onClick: () => {
-					pick(o.id);
-				}
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-tp-name dsh-tdt-ellipsis" }, o.enabled === false ? `${o.label}${props.disabledTag ?? ""}` : o.label), o.id === props.value ? (0, react$1.createElement)("span", {
-				className: "dsh-tdt-tp-check",
-				"aria-hidden": true
-			}, "✓") : null))), !searching && (showAll || restCount > 0) ? (0, react$1.createElement)("button", {
+			})), (0, react$1.createElement)("div", { className: "dsh-tdt-tp-list" }, allRow === null ? restNodes : [allRow, restNodes]), !searching && (showAll || restCount > 0) ? (0, react$1.createElement)("button", {
 				type: "button",
 				className: "dsh-tdt-tp-more",
 				onClick: () => {
@@ -68799,6 +68815,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}), (0, react$1.createElement)(TaskPicker, {
 				value: taskId,
 				onChange: setTaskId,
+				allOption: {
+					value: "",
+					label: t("listFilterTaskAll")
+				},
 				options: tasks,
 				scope: workspace,
 				placeholder: t("recordsTaskPh"),

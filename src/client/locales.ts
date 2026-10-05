@@ -157,7 +157,7 @@ export type LocaleKey =
   | 'editorModeEdit' | 'editorModePreview'
   // —— 主界面任务列表（2026-09-30：卡片式任务视图）——
   | 'listFilterAll' | 'listFilterEnabled' | 'listFilterDisabled' | 'listFilterAbnormal'
-  | 'listFilterWorkspaceAll' | 'listSearchPlaceholder'
+  | 'listFilterWorkspaceAll' | 'listFilterTaskAll' | 'listSearchPlaceholder'
   | 'listRunning' | 'listNextNone' | 'listNever'
   | 'listCreatedTag' | 'listCreatedUnknown'
   | 'relNow' | 'relMinutes' | 'relHours' | 'relDays' | 'relPast'
@@ -704,6 +704,7 @@ export const zh: Record<LocaleKey, string> = {
   listFilterDisabled: '已关闭',
   listFilterAbnormal: '异常',
   listFilterWorkspaceAll: '全部工作区',
+  listFilterTaskAll: '全部任务',
   listSearchPlaceholder: '搜索任务名称或编号',
   listRunning: '运行中',
   listNextNone: '无后续执行',
@@ -1342,6 +1343,7 @@ export const en: Record<LocaleKey, string> = {
   listFilterDisabled: 'Disabled',
   listFilterAbnormal: 'Abnormal',
   listFilterWorkspaceAll: 'All workspaces',
+  listFilterTaskAll: 'All tasks',
   listSearchPlaceholder: 'Search by name or code',
   listRunning: 'Running',
   listNextNone: 'No further runs',
