@@ -884,9 +884,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('侧栏图标 = 用户指定的调度器图标（方括号 + 红 S 方块，内联进 bundle）',
       clientJs.includes('M19 16 H9 V112 H19') && clientJs.includes('#E03E3E'))
     check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
-    // NO_TIME 占位 2026-10-05 上提共享层 ⇒ 断言改读 task-info.tsx。
+    // NO_TIME 占位 2026-10-05 上提共享层；2026-10-06 再归位到 time-text.ts（disposition §三 A3）。
     check('无下次执行占位符 = `--`（图标保留，不再 `--:--`）',
-      !clientJs.includes('--:--') && tiSrc.includes("export const NO_TIME = '--'"))
+      !clientJs.includes('--:--')
+      && readFileSync(join(process.cwd(), 'src', 'client', 'time-text.ts'), 'utf8').includes("export const NO_TIME = '--'"))
   }
   // 用户 2026-09-30 / 2026-10-03：展开区「太丑了」——从「一句 `·` 串联的长文本」改成逐字段成行，
   // 再于 2026-10-03 改版为「左配置 + 右最近执行」两栏纸表格。

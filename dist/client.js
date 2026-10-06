@@ -54972,7 +54972,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (diff < 864e5) return countdownText(iso, nowMs, t);
 			return relativeFuture(iso, nowMs, t);
 		}
-		/** HH:mm（本机时区）。 */
+		/** HH:mm（本机时区）。**全仓唯一**的 HH:mm 实现——别处不许再写一份（design/client-refresh-disposition.md §三 M2）。 */
 		function clockOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";

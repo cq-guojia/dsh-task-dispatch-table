@@ -33,7 +33,7 @@ import {
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
 // 无时刻的占位走**共享层单源**（`NO_TIME`，与基础信息面板同一份），不在这里另写一份 `--:--`。
-import { NO_TIME } from './task-info'
+import { NO_TIME } from './time-text'
 import { calendarLabelsOf } from './editor-fields'
 import { interpolateTranslate, type Translate } from './locales'
 import type { TaskOverviewRow } from './task-list'

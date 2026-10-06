@@ -23,10 +23,11 @@ import {
 // 任务信息展示层（2026-10-05 上提为共享件）：基础信息纸表格 / 上次执行明细 / 状态图标 / 人话转换。
 // ⚠️ **与右侧栏「查看档」共用同一份实现** —— 要改字段怎么翻译、怎么渲染，去 `task-info.tsx`，不许在本文件再抄一份。
 import {
-  baseNameOf, clockOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
-  LAST_RUN_STATUSES, lastRunFields, NO_TIME, nextExecLabel, relativePast,
-  renderNextExec, StatusIcon, sameCalendarDay, taskInfoBaseFields, type TaskInfoBaseView,
+  baseNameOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
+  LAST_RUN_STATUSES, lastRunFields, StatusIcon, taskInfoBaseFields, type TaskInfoBaseView,
 } from './task-info'
+// 时间文案层（2026-10-06 从 task-info.tsx 归位到独立模块；唯一实现，别处不许再写一份）。
+import { clockOf, NO_TIME, nextExecLabel, relativePast, renderNextExec, sameCalendarDay } from './time-text'
 import { ensureTaskInfoStyle } from './task-info-css'
 import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'

@@ -53,7 +53,7 @@ import { ensureRunningStyle, RUN_PULSE_CLASS } from './ui/running'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
 import { ensureTaskInfoStyle } from './task-info-css'
-import { renderNextExec } from './task-info'
+import { renderNextExec } from './time-text'
 
 /** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
 const PAGE_SIZE = 50

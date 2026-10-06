@@ -18,7 +18,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 import { MD_LABELS } from './md-labels'
-import { renderNextExec } from './task-info'
+import { renderNextExec } from './time-text'
 import { nextSlotForDraft, renderSchedule, scheduleSpecFromDraft } from './schedule-text'
 import { fetchInstances, type InstanceRow } from './query'
 import { statusTextOf } from './status-text'

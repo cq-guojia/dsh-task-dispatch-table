@@ -12,10 +12,7 @@
 // 两个视图模型构造函数需要的行类型由调用方在**自己的文件里**组装（避免反向依赖），
 // 视图模型只声明它真正要用的最小字段。
 import { createElement as h, Fragment, type ReactNode } from 'react'
-// 全局秒级心跳 / `LiveText` 已归位基础层（design/client-refresh-disposition.md §三 A1/A2）——
-// 共享程序不再寄居本面板文件；本文件只留「任务信息展示层」本身。
-import { LiveText } from './ui'
-import { formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail, pad2 } from './format'
+import { formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail } from './format'
 import {
   FileTypeIcon, IconCheckCircleFillRegular, IconCloseCircleFillRegular,
   IconLoadingOutlineRegular, IconSearchOutlineRegular,
@@ -342,108 +339,6 @@ export function lastRunFields(props: {
   )
 }
 
-// ── 时间「社交化」表达 + 全局秒级心跳 +「预计执行」行（2026-10-05 从 task-list.tsx 上提）──
-// 卡片「下次执行 / 上次执行」与右侧栏「查看档」的「预计执行」共用同一份实现（不许两处各写一份）。
-// 过去：刚刚 → N 分钟前 → N 小时前 → N 天前 → N 周前 → N 个月前 → N 年前；
-// 未来：即将执行 → N 分钟后 → 今天/明天 HH:mm → N 天后 → N 周后 → N 个月后 → N 年后。
 
-/** 没有这个时刻时的占位（停用任务没有下次执行；从未执行过没有上次）——图标保留，只占位时间。 */
-export const NO_TIME = '--'
-
-export const sameCalendarDay = (a: Date, b: Date): boolean =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-
-export function relativePast(iso: string, nowMs: number, tt: Translate): string {
-  const diff = nowMs - Date.parse(iso)
-  if (!(diff >= 0)) return tt('relNow')
-  if (diff < 60_000) return tt('relJustNow')
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 60) return tt('relMinutesAgo', { n: minutes })
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return tt('relHoursAgo', { n: hours })
-  const days = Math.floor(hours / 24)
-  if (days < 7) return tt('relDaysAgo', { n: days })
-  if (days < 30) return tt('relWeeksAgo', { n: Math.floor(days / 7) })
-  const months = Math.floor(days / 30)
-  if (months < 12) return tt('relMonthsAgo', { n: months })
-  return tt('relYearsAgo', { n: Math.floor(days / 365) })
-}
-
-export function relativeFuture(iso: string, nowMs: number, tt: Translate): string {
-  const target = Date.parse(iso)
-  // 解析失败（畸形 ISO）⇒ 占位符，别渲染出「NaN 年后」（2026-09-30 专家团复核）。
-  if (!Number.isFinite(target)) return NO_TIME
-  const diff = target - nowMs
-  if (diff <= 0) return tt('relPast')
-  if (diff < 60_000) return tt('relNow')
-  const minutes = Math.floor(diff / 60_000)
-  if (minutes < 60) return tt('relMinutes', { n: minutes })
-  const date = new Date(target)
-  const now = new Date(nowMs)
-  const tomorrow = new Date(now.getTime() + 24 * 3600_000)
-  if (sameCalendarDay(date, now)) return tt('relToday', { time: clockOf(iso) })
-  if (sameCalendarDay(date, tomorrow)) return tt('relTomorrow', { time: clockOf(iso) })
-  const days = Math.ceil(diff / 86_400_000)
-  if (days < 7) return tt('relDays', { n: days })
-  if (days < 30) return tt('relWeeks', { n: Math.floor(days / 7) })
-  const months = Math.floor(days / 30)
-  if (months < 12) return tt('relMonths', { n: months })
-  return tt('relYears', { n: Math.floor(days / 365) })
-}
-
-/**
- * 24 小时内的秒级倒计时（用户 2026-09-30 定的分级，与任务列表「下次执行」同款）：
- * - 小时为 0 ⇒ 不显示小时（几分几秒 显示 `5:09`）；
- * - 只剩秒 ⇒ 仍要显示分位（`0:09`）；
- * - 超过 24 小时交给 `relativeFuture`（明天 / 三天后 / N 周后）。
- * 每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。
- */
-export function countdownText(iso: string, nowMs: number, tt: Translate): string {
-  const diff = Date.parse(iso) - nowMs
-  if (Number.isNaN(diff)) return NO_TIME
-  if (diff <= 0) return tt('relNow')
-  const total = Math.floor(diff / 1000)
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  const seconds = total % 60
-  // 数字一律两位（用户 2026-09-30：「都把它补成两位」）⇒ `05:09` / `01:05:09`，位数恒定不跳。
-  return hours > 0 ? `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}` : `${pad2(minutes)}:${pad2(seconds)}`
-}
-
-/**
- * 「预计执行 / 下次执行」的**统一文案**：把时间传进去，由本函数按「现在」算出该显示什么——
- * 已到点 ⇒ 「即将执行」；24 小时内 ⇒ 秒级倒计时（countdownText）；超过 24 小时 ⇒ 社交化相对时间（relativeFuture）。
- * 所有倒计时展示位（任务卡片「下次执行」、查看档「预计执行」、日历「计划」）都吃这一份，逻辑不再各处各写。
- */
-export function nextExecLabel(iso: string, nowMs: number, t: Translate): string {
-  const target = Date.parse(iso)
-  if (!Number.isFinite(target)) return NO_TIME
-  const diff = target - nowMs
-  if (diff <= 0) return t('relNow')
-  if (diff < 24 * 3600_000) return countdownText(iso, nowMs, t)
-  return relativeFuture(iso, nowMs, t)
-}
-
-/** HH:mm（本机时区）。 */
-export function clockOf(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '—'
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-}
-
-// 全局秒级心跳与 `LiveText` **已归位基础层**：见 `./ui/ticker`（心跳本体）与 `./ui/LiveText`（渲染壳）。
-// 本文件不再自建任何秒级定时器。
-
-/**
- * 「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走
- * `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
- * 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
- */
-export function renderNextExec(next: string | null, t: Translate): ReactNode {
-  if (next === null) return h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
-  return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 } },
-    h(LiveText, { render: (nowMs: number) => nextExecLabel(next, nowMs, t) }),
-    h('span', { style: { color: 'var(--tdt-fg-3)', flex: 'none' } }, '│'),
-    h('span', { style: { fontVariantNumeric: 'tabular-nums' } }, formatDateTime(next, { seconds: true, fallback: NO_TIME })),
-  )
-}
+// ── 时间文案层（NO_TIME / relativePast / clockOf / nextExecLabel / renderNextExec …）已归位到
+// ./time-text.ts（2026-10-06，design/client-refresh-disposition.md §三 A3）；本文件不再持有它们。
