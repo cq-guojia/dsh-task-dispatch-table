@@ -121,8 +121,9 @@ const RECORDS_CSS = `
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
 .dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
 /* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。
-   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--tdt-business），不要调暗、更不要灰。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-business);}
+   用户 2026-10-06：虚线与竖条都走**同一支正蓝**（--tdt-business），不要调暗、更不要灰。
+   用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条（--rec-bar-w），虚线从它右边起到最右；蓝色调淡一点。 */
+.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:color-mix(in srgb,var(--tdt-business) 50%,transparent);border-left:0;}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
@@ -155,7 +156,7 @@ const RECORDS_CSS = `
   background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
   font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
 /* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
-.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed var(--tdt-business);}
+.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 /* 预计执行（未执行）名字后的括号说明：小、灰、不换行（与块内次要文字同档）。 */

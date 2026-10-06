@@ -101,8 +101,9 @@ const CALENDAR_CSS = `
   display:flex;align-items:center;justify-content:center;
   font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
 /* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开）；左侧竖线**实心**、整体走蓝
-   （用户 2026-10-06：虚线与竖线都是蓝色、不要灰——与执行记录「预计执行」块同一支蓝）。 */
-.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-business);}
+   （用户 2026-10-06：虚线与竖线都是蓝色、不要灰——与执行记录「预计执行」块同一支蓝）。
+   用户 2026-10-06 续：虚线**只包上/右/下**，左边不包——左缘是那条实心蓝竖条，虚线从它右边起到最右；蓝色调淡一点。 */
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);border-left:0;}
 .dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--tdt-business);}
 .dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
 /* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
