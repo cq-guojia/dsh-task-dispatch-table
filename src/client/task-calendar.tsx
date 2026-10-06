@@ -44,9 +44,7 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
 .dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);}
 .dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
-.dsh-tdt-cal-legend{display:flex;align-items:center;gap:var(--tdt-space-3);
-  font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);white-space:nowrap;}
-.dsh-tdt-cal-legend>span{display:flex;align-items:center;gap:4px;}
+
 /* 网格（用户 2026-10-06 定死的三条）：① 格子是**纯粹的正方形**、**不要圆角**；
    ② 格子之间只留 **1px 间隔**（容器底色从缝里透出来当分隔线）；③ 格子**不描边**，
    只靠底色区分（本月 / 相邻月 / 选中）。 */
@@ -57,7 +55,7 @@ const CALENDAR_CSS = `
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
    别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);border:1px solid var(--tdt-border);}
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:var(--tdt-border-faint);border:2px solid var(--tdt-border-faint);}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
@@ -95,10 +93,11 @@ const CALENDAR_CSS = `
   background:var(--cal-soft,transparent);}
 .dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--tdt-fg-4));}
 .dsh-tdt-cal-tag>span{flex:1 1 auto;min-width:0;padding:0 2px;overflow:hidden;text-align:center;
+  display:flex;align-items:center;justify-content:center;
   font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
-/* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开） */
-.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-business);}
-.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px dashed var(--tdt-business);}
+/* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开）；左侧竖线改**实心**、整体走淡灰（不再刺眼的蓝）。 */
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-border-heavy);}
+.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--tdt-border-heavy);}
 .dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
 /* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
 .dsh-tdt-cal-tag--more{background:var(--tdt-chip-bg);}
@@ -116,14 +115,11 @@ const CALENDAR_CSS = `
 /* 拉开区与选中格**同色**（--tdt-selected-bg，深色主题下无限接近页面背景、只略深一点点）⇒ 视觉一体；
    margin-top:-1px 吃掉与上一行（选中格所在周）之间的那 1px 网格间隙，不让一道亮线横在中间。 */
 .dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-selected-bg);border:0;border-radius:0;
-  margin-top:-1px;
+  margin-top:-2px;
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
   overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
-/* 图例色块（与格内标签同款：3px 竖线 + 同深度的底，**无圆角**） */
-.dsh-tdt-cal-swatch{flex:none;width:16px;height:12px;border-radius:0;overflow:hidden;
-  background:var(--cal-soft,transparent);border-left:3px solid var(--cal-tone,var(--tdt-fg-4));}
-.dsh-tdt-cal-swatch--plan{background:transparent;border:1px dashed var(--tdt-business);border-left-width:2px;}
+
 .dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
   font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
 .dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
@@ -519,10 +515,6 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
         }),
         h(Button, { variant: 'outline', size: 'sm', onClick: goToday }, calLabels.today),
         h('div', { className: 'dsh-tdt-cal-right' },
-          h('span', { className: 'dsh-tdt-cal-legend' },
-            h('span', null, h('i', { className: 'dsh-tdt-cal-swatch dsh-tdt-cal-t--ok' }), t('calLegendDone')),
-            h('span', null, h('i', { className: 'dsh-tdt-cal-swatch dsh-tdt-cal-swatch--plan' }), t('calLegendPlan')),
-          ),
           h(SelectField, {
             value: workspace,
             options: workspaceOptions,

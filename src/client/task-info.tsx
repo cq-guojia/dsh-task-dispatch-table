@@ -388,6 +388,39 @@ export function relativeFuture(iso: string, nowMs: number, tt: Translate): strin
   return tt('relYears', { n: Math.floor(days / 365) })
 }
 
+/**
+ * 24 小时内的秒级倒计时（用户 2026-09-30 定的分级，与任务列表「下次执行」同款）：
+ * - 小时为 0 ⇒ 不显示小时（几分几秒 显示 `5:09`）；
+ * - 只剩秒 ⇒ 仍要显示分位（`0:09`）；
+ * - 超过 24 小时交给 `relativeFuture`（明天 / 三天后 / N 周后）。
+ * 每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。
+ */
+export function countdownText(iso: string, nowMs: number, tt: Translate): string {
+  const diff = Date.parse(iso) - nowMs
+  if (Number.isNaN(diff)) return NO_TIME
+  if (diff <= 0) return tt('relNow')
+  const total = Math.floor(diff / 1000)
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const seconds = total % 60
+  // 数字一律两位（用户 2026-09-30：「都把它补成两位」）⇒ `05:09` / `01:05:09`，位数恒定不跳。
+  return hours > 0 ? `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}` : `${pad2(minutes)}:${pad2(seconds)}`
+}
+
+/**
+ * 「预计执行 / 下次执行」的**统一文案**：把时间传进去，由本函数按「现在」算出该显示什么——
+ * 已到点 ⇒ 「即将执行」；24 小时内 ⇒ 秒级倒计时（countdownText）；超过 24 小时 ⇒ 社交化相对时间（relativeFuture）。
+ * 所有倒计时展示位（任务卡片「下次执行」、查看档「预计执行」、日历「计划」）都吃这一份，逻辑不再各处各写。
+ */
+export function nextExecLabel(iso: string, nowMs: number, t: Translate): string {
+  const target = Date.parse(iso)
+  if (!Number.isFinite(target)) return NO_TIME
+  const diff = target - nowMs
+  if (diff <= 0) return t('relNow')
+  if (diff < 24 * 3600_000) return countdownText(iso, nowMs, t)
+  return relativeFuture(iso, nowMs, t)
+}
+
 /** HH:mm（本机时区）。 */
 export function clockOf(iso: string): string {
   const d = new Date(iso)
@@ -448,7 +481,7 @@ export function LiveText(props: { render: (nowMs: number) => ReactNode; style?: 
 export function renderNextExec(next: string | null, t: Translate): ReactNode {
   if (next === null) return h('span', { style: { color: 'var(--tdt-fg-3)' } }, t('listNone'))
   return h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '8px', minWidth: 0 } },
-    h(LiveText, { render: (nowMs: number) => relativeFuture(next, nowMs, t) }),
+    h(LiveText, { render: (nowMs: number) => nextExecLabel(next, nowMs, t) }),
     h('span', { style: { color: 'var(--tdt-fg-3)', flex: 'none' } }, '│'),
     h('span', { style: { fontVariantNumeric: 'tabular-nums' } }, formatDateTime(next, { seconds: true, fallback: NO_TIME })),
   )

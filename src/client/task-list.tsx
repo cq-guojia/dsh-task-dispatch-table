@@ -24,7 +24,7 @@ import {
 // ⚠️ **与右侧栏「查看档」共用同一份实现** —— 要改字段怎么翻译、怎么渲染，去 `task-info.tsx`，不许在本文件再抄一份。
 import {
   baseNameOf, clockOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
-  LAST_RUN_STATUSES, lastRunFields, LiveText, NO_TIME, relativeFuture, relativePast,
+  LAST_RUN_STATUSES, lastRunFields, LiveText, NO_TIME, nextExecLabel, relativePast,
   renderNextExec, StatusIcon, sameCalendarDay, taskInfoBaseFields, type TaskInfoBaseView,
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
@@ -320,24 +320,7 @@ const formatFull = (iso: string): string => formatDateTime(iso, { fallback: '—
 
 // `sameCalendarDay` / `relativePast` / `relativeFuture` 已上提共享层 ⇒ `task-info.tsx`。
 
-/**
- * 24 小时内的秒级倒计时（用户 2026-09-30 定的分级）：
- * - 小时为 0 ⇒ 不显示小时（几分几秒 显示 `5:09`）；
- * - 只剩秒 ⇒ 仍要显示分位（`0:09`）；
- * - 超过 24 小时由调用方走 `relativeFuture`（明天 / 三天后 / N 周后）。
- * 每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。
- */
-function countdownText(iso: string, nowMs: number, tt: Translate): string {
-  const diff = Date.parse(iso) - nowMs
-  if (Number.isNaN(diff)) return NO_TIME // 畸形 ISO ⇒ 占位符，别渲染出 NaN:NaN
-  if (diff <= 0) return tt('relNow')
-  const total = Math.floor(diff / 1000)
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total % 3600) / 60)
-  const seconds = total % 60
-  // 数字一律两位（用户 2026-09-30：「都把它补成两位」）⇒ `05:09` / `01:05:09`，位数恒定不跳。
-  return hours > 0 ? `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}` : `${pad2(minutes)}:${pad2(seconds)}`
-}
+
 
 // 全局秒级心跳（subscribeTicker）/ `LiveText` / `clockOf` 已上提共享层 ⇒ `task-info.tsx`。
 
@@ -569,9 +552,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
             //    也**不再显示「即将执行」**那句（用户 2026-09-30 点名去掉）。
             return h('span', { style: { cursor: 'default', opacity: 0.85 } }, tt('listDeferred'))
           }
-          return diff < 24 * 3600_000
-            ? countdownText(row.nextSlotAt, nowMs, tt)
-            : relativeFuture(row.nextSlotAt, nowMs, tt)
+          return nextExecLabel(row.nextSlotAt, nowMs, tt)
         },
       }),
     ),
