@@ -39,7 +39,7 @@ import {
   IconQueueOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
-import { resolvedDepsOf } from '../deps.js'
+import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
@@ -48,7 +48,7 @@ import {
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
 import { useInstancesRunningPoll } from './instances-poll'
-import { ensureRunningStyle } from './ui/running'
+import { ensureRunningStyle, RUN_PULSE_CLASS } from './ui/running'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
 import { ensureTaskInfoStyle } from './task-info-css'
@@ -107,7 +107,8 @@ const RECORDS_CSS = `
 /* ⚠️ gap 必须是 0：展开时头部的高亮区要**紧贴**下面那条分隔线（用户 2026-10-05：中间别留距离）。 */
 /* ⚠️ --rec-bar-w：左缘竖条的**唯一宽度源**。条子占的是块内的真实宽度 ⇒ 内容的左内边距要把它**加进去**
    （用户 2026-10-05：左边距应该从竖条的**右边缘**开始算，不是从块的左边缘）⇒ 见 .dsh-tdt-rec-main / -exp。 */
-.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;
+.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;box-sizing:border-box;
+  border:1px solid transparent;
   background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
 /* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
@@ -118,14 +119,14 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-tone--busy{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);}
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
 .dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
+/* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。 */
+.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-border-strong);}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
-.dsh-tdt-rec-bar--run{animation:dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
-/* keyframe 统一在 ui/running.ts（dsh-tdt-run-pulse），此处不再各定义一份。 */
+/* 运行中脉动走统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）：条子直接挂 RUN_PULSE_CLASS，不再另写一份动画。 */
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
-  .dsh-tdt-rec-bar--run{animation:none;}
   .dsh-tdt-rec-item{animation:none;}
 }
 /* ── 头部 = 块内两列（左列：标题 + 信息 + 备注 ／ 右列：一排控件）且是**唯一可点区域** ──
@@ -151,6 +152,8 @@ const RECORDS_CSS = `
   height:calc(var(--tdt-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--tdt-radius-md);
   background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
   font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
+/* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
+.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed var(--tdt-business);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
@@ -339,11 +342,12 @@ function weekdayOf(key: string, formatter: Intl.DateTimeFormat | null): string {
  * 语义色调 → 块的色调类名（色值本身全在 CSS 里读 --tdt-* / --tdt-*-soft，
  * 业务侧只做「哪一档」的映射；档位由 `status-text.ts` 的 `statusToneOf` 单源决定）。
  */
-function toneClassOf(tone: ReturnType<typeof statusToneOf>): string {
+function toneClassOf(tone: 'ok' | 'bad' | 'warn' | 'busy' | 'neutral' | 'planned'): string {
   if (tone === 'ok') return 'dsh-tdt-rec-tone--ok'
   if (tone === 'bad') return 'dsh-tdt-rec-tone--bad'
   if (tone === 'warn') return 'dsh-tdt-rec-tone--warn'
   if (tone === 'busy') return 'dsh-tdt-rec-tone--busy'
+  if (tone === 'planned') return 'dsh-tdt-rec-tone--planned'
   return 'dsh-tdt-rec-tone--mute'
 }
 
@@ -391,13 +395,23 @@ export interface RecordItemProps {
   depTitleOf: (taskId: string) => string
   /** 点任务名 ⇒ 右侧栏以**查看档**打开该任务（r12：全站任务名可点；不给 ⇒ 名字纯文本）。 */
   onViewTask?: (taskId: string) => void
+  /**
+   * 是否为「预计执行」（按当前任务配置推算、尚未产生实例）。与已发生**共用同一块渲染**（不另写一份块），
+   * 仅在此模式下：虚线皮肤 + 状态标签写「预计执行」；实际执行 / 时长 / Token 没有真值 ⇒ 占位（未执行 / -- / --）；
+   * 前置取 `plannedDeps`（任务定义的 depends_on），不读快照。
+   */
+  planned?: boolean
+  /** 预计执行模式下的前置清单（来自任务定义 depends_on，已映射成 ResolvedDependency）。非预计模式忽略。 */
+  plannedDeps?: ResolvedDependency[]
 }
 
 /** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
 export const RecordItem = memo(function RecordItem(props: RecordItemProps): ReturnType<typeof h> {
-  const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask } = props
-  const tone = statusToneOf(row.status)
-  const running = isRunningStatus(row.status)
+  const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask, planned, plannedDeps } = props
+  const isPlanned = planned === true
+  // 「预计执行」是独立语义档（不在 status 七态里）⇒ 直接定档，不走 statusToneOf / isRunningStatus。
+  const tone: 'ok' | 'bad' | 'warn' | 'busy' | 'neutral' | 'planned' = isPlanned ? 'planned' : statusToneOf(row.status)
+  const running = !isPlanned && isRunningStatus(row.status)
   ensureRunningStyle()
   /**
    * 状态标签（**仅非成功态**才出：绿 = 正常，大家都知道 ⇒ 不标签，用户 2026-10-05）。
@@ -405,14 +419,16 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
    *    用户 2026-10-05 纠正：不要另起一套长名（执行失败 / 未执行 / 执行中 / 未知状态），全站就认这一套短名。
    *    只有**色调**按这里分档（红 / 黄 / 蓝 / 灰），名字本身不再分叉。
    */
-  const statusTag: { text: string; tone: 'bad' | 'warn' | 'busy' | 'neutral' } | null =
-    row.status === 'succeeded'
-      ? null
-      : {
-        text: statusTextOf(row.status, t),
-        tone: row.status === 'failed' ? 'bad' : row.status === 'skipped' ? 'warn' : running ? 'busy' : 'neutral',
-      }
-  const statusLabel = statusTextOf(row.status, t)
+  const statusTag: { text: string; tone: 'bad' | 'warn' | 'busy' | 'neutral' | 'planned' } | null =
+    isPlanned
+      ? { text: t('calPlanTag'), tone: 'planned' }
+      : (row.status === 'succeeded'
+        ? null
+        : {
+          text: statusTextOf(row.status, t),
+          tone: row.status === 'failed' ? 'bad' : row.status === 'skipped' ? 'warn' : running ? 'busy' : 'neutral',
+        })
+  const statusLabel = isPlanned ? t('calPlanTag') : statusTextOf(row.status, t)
   const outputs = outputsOf(row.outputs)
   const sid = row.session_id
   const canOpenSession = sid !== null && sid !== ''
@@ -421,14 +437,15 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
   const note = row.note ?? ''
   const dayKey = dayKeyOf(row)
   // 时刻：默认只到分钟；跨天时由 `clockLabelOf` 显式标注（早一天 / 晚一天 / 具体日期）。
-  const planned = clockLabelOf(row.scheduled_at, dayKey, crossFmt, t('recPrevDay'), t('recNextDay'))
+  const plannedText = clockLabelOf(row.scheduled_at, dayKey, crossFmt, t('recPrevDay'), t('recNextDay'))
   /** 时长的悬停提示：带起止时刻（有终态才给区间），比只显示「时长 03:00」有用得多。 */
   const durationHint = row.finished_at === null
     ? `${t('colDuration')}：${durationOf(row)}`
     : `${t('colDuration')}：${durationOf(row)}（${stampOf(row.dispatched_at ?? row.scheduled_at)} → ${stampOf(row.finished_at)}）`
   const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t('recPrevDay'), t('recNextDay'))
   // 本次执行**实际用到的**前置（快照里的 resolvedDeps；空 / 坏 JSON / 旧行 ⇒ []，不猜、更不读任务配置）。
-  const deps = resolvedDepsOf(snapshot)
+  // 预计执行模式：前置来自任务定义的 depends_on（plannedDeps），不读快照。
+  const deps = isPlanned ? (plannedDeps ?? []) : resolvedDepsOf(snapshot)
   /** token 三段之一：null 给占位（不编造 0）。 */
   const tokenPart = (v: number | null): string => (v === null ? '—' : formatTokenCount(v))
   /**
@@ -460,6 +477,23 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
       title === undefined ? inner : h(Tooltip, { label: title, side: 'top' }, inner))
   }
 
+  // 「预计执行」模式：实际执行 / 时长 / Token 没有真值 ⇒ 占位（未执行 / -- / --），其余字段照常。
+  const actualText = isPlanned ? `${t('recActual')} ${t('calNotExecuted')}` : (actual === '' ? '' : `${t('recActual')} ${actual}`)
+  const actualIcon = isPlanned ? null : (actual === '' ? null : h(IconClockOutlineRegular, { size: 12 }))
+  const actualTitle = isPlanned ? undefined : (row.dispatched_at === null ? undefined : `${t('colActualStart')}：${stampOf(row.dispatched_at)}`)
+  const durationText = isPlanned ? `${t('colDuration')} --` : `${t('colDuration')} ${durationOf(row)}`
+  const tokenNode = isPlanned
+    ? field(null, '--', `${t('recTokenHint')}：--`)
+    : (tokens > 0
+      ? h('span', { className: 'dsh-tdt-rec-field dsh-tdt-rec-num' },
+        h(Tooltip, {
+          label: `${t('recTokenHint')}：${formatTokenCount(tokens)}\n${tt('recTokenDetail', {
+            input: tokenPart(row.token_in), output: tokenPart(row.token_out), cache: tokenPart(row.token_in_cache),
+          })}`,
+          side: 'top',
+        }, h('span', { style: fieldInnerStyle }, formatTokenCount(tokens))))
+      : null)
+
   return h('div', {
     // ⚠️ **容器不挂任何交互**（照任务卡片：容器不挂 onClick → 头部挂 → 展开区是兄弟节点）：
     //    光标 / 点击 / 键盘都只在下面的「头部」上 ⇒ 展开出来的内容既不是手指、也不会误触展开，可安心拖选复制。
@@ -473,7 +507,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
       // 状态名挂**官方 Tooltip**（原生 title 太慢）；锚点就是这条真 DOM 的 span。
       h(Tooltip, { label: statusLabel, side: 'top' },
         h('span', {
-          className: `dsh-tdt-rec-bar${running ? ' dsh-tdt-rec-bar--run' : ''}`,
+          className: `dsh-tdt-rec-bar${running ? ' ' + RUN_PULSE_CLASS : ''}`,
           'aria-hidden': true,
         })),
       // ── 左列：标题 + 下面那排信息 ──
@@ -540,23 +574,11 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         // ⚠️ 每段都挂**带标签的完整值**的悬停提示（用户 2026-10-04：光看「32K」「15:10」不知道是什么）。
         h('div', { className: 'dsh-tdt-rec-r2' },
           field(null, workspace, workspace === '' ? undefined : `${t('listFieldWorkspace')}：${workspace}`),
-          field(h(IconAlarmClockOutlineRegular, { size: 12 }), planned === '' ? '' : `${t('recPlan')} ${planned}`,
+          field(h(IconAlarmClockOutlineRegular, { size: 12 }), plannedText === '' ? '' : `${t('recPlan')} ${plannedText}`,
             `${t('colPlanned')}：${formatPlanStamp(row.scheduled_at)}`),
-          field(actual === '' ? null : h(IconClockOutlineRegular, { size: 12 }), actual === '' ? '' : `${t('recActual')} ${actual}`,
-            row.dispatched_at === null ? undefined : `${t('colActualStart')}：${stampOf(row.dispatched_at)}`),
-          field(h(IconQueueOutlineRegular, { size: 12 }), `${t('colDuration')} ${durationOf(row)}`, durationHint),
-          // 悬停写详细（用户 2026-10-04：「这 3 个栏谁知道分别是什么呢？你也要有个标题」）：
-          // 总数 + **带标签**的三段明细（输入 / 输出 / 缓存），仍走**原生 title**（多行）。
-          tokens > 0
-            ? h('span', { className: 'dsh-tdt-rec-field dsh-tdt-rec-num' },
-              // 悬停写详细（总数 + 带标签的三段明细），走**官方 Tooltip**（原生 title 太慢、用户反馈「没反应」）。
-              h(Tooltip, {
-                label: `${t('recTokenHint')}：${formatTokenCount(tokens)}\n${tt('recTokenDetail', {
-                  input: tokenPart(row.token_in), output: tokenPart(row.token_out), cache: tokenPart(row.token_in_cache),
-                })}`,
-                side: 'top',
-              }, h('span', { style: fieldInnerStyle }, formatTokenCount(tokens))))
-            : null,
+          field(actualIcon, actualText, actualTitle),
+          field(h(IconQueueOutlineRegular, { size: 12 }), durationText, durationHint),
+          tokenNode,
         ),
         // ── 第 3 行：失败 / 未执行的原因（用户：执行错了就是要看备注）──
         // ⚠️ 放在**左列**里（不是块下）：右列控件相对「标题 + 信息 + 备注」整体居中，

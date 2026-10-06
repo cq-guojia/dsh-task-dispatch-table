@@ -1276,11 +1276,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /h\('div', \{ className: 'dsh-tdt-rec-exp' \}/.test(tlSrc)
       && !/className: 'dsh-tdt-rec-exp', onClick/.test(tlSrc)
       && !/\.dsh-tdt-rec-exp\{[^}]*cursor/.test(tlSrc))
-    check('第六轮：前置任务取自**实例快照的 resolvedDeps**（不读任务配置侧的 depends）',
-      /import \{ resolvedDepsOf \} from '\.\.\/deps\.js'/.test(tlSrc)
-      && /const deps = resolvedDepsOf\(snapshot\)/.test(tlSrc)
-      && /snapshot: row\.snapshot \?\? null/.test(tlSrc)
-      && !/depends/.test(tlSrc))
+    check('第六轮：前置任务（已执行）取自**实例快照的 resolvedDeps**（不读任务配置侧的 depends）；预计执行模式才退化为任务配置 depends',
+      /import \{ resolvedDepsOf, type ResolvedDependency \} from '\.\.\/deps\.js'/.test(tlSrc)
+      && /const deps = isPlanned \? \(plannedDeps \?\? \[\]\) : resolvedDepsOf\(snapshot\)/.test(tlSrc)
+      && /snapshot: row\.snapshot \?\? null/.test(tlSrc))
     // 折叠态 / 展开区那两段的**局部切片**（反断用）：只看这一段，免得误伤别处同名写法
     // （例如头部右列那个仍是 outline 的「查看会话」按钮）。
     const depArea = /deps\.map\(\(dep, index\)[\s\S]*?\n\s*eventsError !== null/.exec(tlSrc)?.[0] ?? ''
@@ -1375,6 +1374,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /t\('colActualStart'\)\}：/.test(tlSrc) && /t\('colDuration'\)\}：/.test(tlSrc)
       && /t\('recTokenHint'\)\}：/.test(tlSrc) && tlSrc.includes('durationHint')
       && locSrc.includes("recTokenHint: 'token 消耗'"))
+    check('预计执行（虚线块）：与已执行共用同一 RecordItem，仅换虚线皮肤 + 占位字段（实际执行/时长/Token = 未执行/--/--）',
+      tlSrc.includes('dsh-tdt-rec-tone--planned') && tlSrc.includes('dsh-tdt-rec-tag--planned')
+      && tlSrc.includes('plannedDeps') && tlSrc.includes("t('calNotExecuted')")
+      && clientJs.includes('预计执行') && clientJs.includes('planned: true'))
     check('第四轮：条目**删掉可见状态文字**（成败只由 5px 竖条 + 状态浅底表达），状态名改挂竖条悬停提示',
       !tlSrc.includes('dsh-tdt-rec-state') && !tlSrc.includes('dsh-tdt-rec-statedot')
       && /h\(Tooltip, \{ label: statusLabel, side: 'top' \}/.test(tlSrc) && !/title: statusLabel/.test(tlSrc))

@@ -19,6 +19,7 @@ import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, 
 import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pad2 } from './format'
 import { fetchEvents, fetchInstanceBySession, fetchInstancesLite, type EventRow, type InstanceRow } from './query'
+import { type ResolvedDependency } from '../deps.js'
 import { isRunningStatus, statusTextOf, statusToneOf } from './status-text'
 import { useInstancesRunningPoll } from './instances-poll'
 import { monthRangeOf, monthRangeQuery, planEntriesByDay, type CalendarPlanEntry, type CalendarTask } from '../calendar-plan.js'
@@ -129,7 +130,7 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--tdt-space-1) var(--tdt-space-2);padding:7px 10px;
   border-radius:0;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   background:var(--cal-soft,transparent);}
-.dsh-tdt-cal-row--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
+
 .dsh-tdt-cal-time{font-variant-numeric:tabular-nums;}
 /* 拉开区里可点的名字（任务名 / 前置任务名）：链接色 + hover 下划线，与执行记录页「任务名可点」同观感 */
 .dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--tdt-business);cursor:pointer;text-align:left;}
@@ -427,21 +428,47 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   /** 拉开区里的一条（已发生 = 执行记录那套可展开的块；计划 = 一行虚线，没有记录可展开）。 */
   const panelItemNode = (item: CalItem): ReturnType<typeof h> => {
     if (item.kind === 'plan') {
-      // 计划条目没有实例快照 ⇒ 前置取**任务定义**的 depends（谁必须先成功），名字可点进查看档。
-      const deps = rowsRef.current.find(row => row.id === item.entry.taskId)?.depends ?? []
-      return h('div', { key: `p:${item.entry.taskId}:${item.at}`, className: 'dsh-tdt-cal-row dsh-tdt-cal-row--plan' },
-        h('span', { className: 'dsh-tdt-cal-time' }, hhmmOf(item.at)),
-        nameNode(item.entry.taskId, item.entry.title),
-        h('span', { className: 'dsh-tdt-cal-mini' }, workspaceOf(item.entry.taskId)),
-        deps.length > 0
-          ? h('span', { className: 'dsh-tdt-cal-mini' }, `${t('calDepsLabel')}：`,
-              deps.flatMap((dep, index) => [
-                index > 0 ? h('span', { key: `s:${dep.id}` }, '、') : null,
-                nameNode(dep.id, dep.title),
-              ]))
-          : null,
-        h('span', { className: 'dsh-tdt-cal-mini' }, t('calPlanTag')),
-      )
+      // 「预计执行」= 按当前配置推算、尚未产生实例 ⇒ 复用与「已执行」**同一个** RecordItem 块（虚线皮肤 + 占位字段），
+      // 不另写一份块渲染（用户 2026-10-06：用同一个东西）。前置取任务定义的 depends_on。
+      const planId = `plan:${item.entry.taskId}:${item.at}`
+      const deps = (rowsRef.current.find(row => row.id === item.entry.taskId)?.depends ?? []) as ReadonlyArray<{ id: string }>
+      const plannedDeps: ResolvedDependency[] = deps.map(d => ({
+        task: d.id, semantics: 'latest_success', instanceId: '', scheduledAt: '', sessionId: null, workspacePath: null, outputs: [],
+      }))
+      return h(RecordItem, {
+        key: planId,
+        row: {
+          id: planId,
+          task_id: item.entry.taskId,
+          scheduled_at: item.entry.scheduledAt,
+          status: 'pending',
+          attempt: 0,
+          session_id: null,
+          dispatched_at: null,
+          finished_at: null,
+          outputs: null,
+          snapshot: null,
+          token_in: null, token_out: null, token_in_cache: null,
+          updated_at: item.entry.scheduledAt,
+        },
+        label: item.entry.title,
+        workspace: workspaceOf(item.entry.taskId),
+        t,
+        tt,
+        snapshot: null,
+        depTitleOf: nameOf,
+        planned: true,
+        plannedDeps,
+        open: openId === planId,
+        onToggle: toggleItem,
+        openSession: (sid: string) => { onOpenSession?.(sid) },
+        openFile: onOpenFile,
+        onViewTask,
+        events: null,
+        eventsBusy: false,
+        eventsError: null,
+        crossFmt,
+      })
     }
     return h(RecordItem, {
       key: item.row.id,

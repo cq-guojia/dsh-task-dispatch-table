@@ -18,7 +18,7 @@ export type LocaleKey =
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabCalendar' | 'tabDebug'
   // —— 任务日程（日历页，2026-10-05）：月份导航 / 两态图例 / 计划说明 / 截断与错误 ——
   | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
-  | 'calTruncated' | 'calPlanHint' | 'calPlanTag' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel' | 'calToday'
+  | 'calTruncated' | 'calPlanHint' | 'calPlanTag' | 'calNotExecuted' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel' | 'calToday'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
   | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext'
@@ -263,9 +263,10 @@ export const zh: Record<LocaleKey, string> = {
   calDayEmpty: '这一天没有执行记录，也没有计划任务',
   calTruncated: '该月记录超过上限（3000 条），只显示了其中一部分；请用上方过滤缩小范围。',
   calPlanHint: '按当前任务配置推算的计划，尚未产生执行记录（改配置或停用任务后它会变）',
-  calPlanTag: '计划',
+  calPlanTag: '预计执行',
+  calNotExecuted: '未执行',
   calLegendDone: '已执行',
-  calLegendPlan: '计划',
+  calLegendPlan: '预计执行',
   calToday: '今日',
   calCellMore: '还有 {n} 条，点开看全部',
   calDepsLabel: '前置',
@@ -919,9 +920,10 @@ export const en: Record<LocaleKey, string> = {
   calDayEmpty: 'No run records and no planned runs on this day',
   calTruncated: 'This month exceeds the 3000-row limit and is truncated; narrow the filters above.',
   calPlanHint: 'Planned from the current task config — no run record yet (it changes if you edit or disable the task)',
-  calPlanTag: 'Planned',
+  calPlanTag: 'Expected',
+  calNotExecuted: 'Not executed',
   calLegendDone: 'Executed',
-  calLegendPlan: 'Planned',
+  calLegendPlan: 'Expected',
   calToday: 'Today',
   calCellMore: '{n} more — click to open',
   calDepsLabel: 'Deps',

@@ -301,9 +301,10 @@ window.__ModuleLoader__.load({
 			calDayEmpty: "这一天没有执行记录，也没有计划任务",
 			calTruncated: "该月记录超过上限（3000 条），只显示了其中一部分；请用上方过滤缩小范围。",
 			calPlanHint: "按当前任务配置推算的计划，尚未产生执行记录（改配置或停用任务后它会变）",
-			calPlanTag: "计划",
+			calPlanTag: "预计执行",
+			calNotExecuted: "未执行",
 			calLegendDone: "已执行",
-			calLegendPlan: "计划",
+			calLegendPlan: "预计执行",
 			calToday: "今日",
 			calCellMore: "还有 {n} 条，点开看全部",
 			calDepsLabel: "前置",
@@ -930,9 +931,10 @@ window.__ModuleLoader__.load({
 			calDayEmpty: "No run records and no planned runs on this day",
 			calTruncated: "This month exceeds the 3000-row limit and is truncated; narrow the filters above.",
 			calPlanHint: "Planned from the current task config — no run record yet (it changes if you edit or disable the task)",
-			calPlanTag: "Planned",
+			calPlanTag: "Expected",
+			calNotExecuted: "Not executed",
 			calLegendDone: "Executed",
-			calLegendPlan: "Planned",
+			calLegendPlan: "Expected",
 			calToday: "Today",
 			calCellMore: "{n} more — click to open",
 			calDepsLabel: "Deps",
@@ -68395,7 +68397,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* ⚠️ gap 必须是 0：展开时头部的高亮区要**紧贴**下面那条分隔线（用户 2026-10-05：中间别留距离）。 */
 /* ⚠️ --rec-bar-w：左缘竖条的**唯一宽度源**。条子占的是块内的真实宽度 ⇒ 内容的左内边距要把它**加进去**
    （用户 2026-10-05：左边距应该从竖条的**右边缘**开始算，不是从块的左边缘）⇒ 见 .dsh-tdt-rec-main / -exp。 */
-.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;
+.dsh-tdt-rec-item{position:relative;display:flex;flex-direction:column;gap:0;--rec-bar-w:5px;box-sizing:border-box;
+  border:1px solid transparent;
   background:var(--rec-tone-soft,transparent);color:var(--tdt-fg);font:inherit;text-align:left;
   animation:dsh-tdt-rec-in var(--tdt-dur-fast) var(--tdt-ease);}
 /* 语义色调 → 本域局部变量（「--rec-tone*」是 CSS 局部变量，**不是** --tdt-* token ——
@@ -68406,14 +68409,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-tone--busy{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);}
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
 .dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
+/* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。 */
+.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-border-strong);}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
-.dsh-tdt-rec-bar--run{animation:dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
-/* keyframe 统一在 ui/running.ts（dsh-tdt-run-pulse），此处不再各定义一份。 */
+/* 运行中脉动走统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse）：条子直接挂 RUN_PULSE_CLASS，不再另写一份动画。 */
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
-  .dsh-tdt-rec-bar--run{animation:none;}
   .dsh-tdt-rec-item{animation:none;}
 }
 /* ── 头部 = 块内两列（左列：标题 + 信息 + 备注 ／ 右列：一排控件）且是**唯一可点区域** ──
@@ -68439,6 +68442,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
   height:calc(var(--tdt-control-h-sm) - 2px);padding:3px 8px;border-radius:var(--tdt-radius-md);
   background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
   font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
+/* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
+.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed var(--tdt-business);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
@@ -68619,6 +68624,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (tone === "bad") return "dsh-tdt-rec-tone--bad";
 			if (tone === "warn") return "dsh-tdt-rec-tone--warn";
 			if (tone === "busy") return "dsh-tdt-rec-tone--busy";
+			if (tone === "planned") return "dsh-tdt-rec-tone--planned";
 			return "dsh-tdt-rec-tone--mute";
 		}
 		/** 执行时长（与卡片面板同口径：`dispatched_at ?? scheduled_at` → `finished_at`）。 */
@@ -68636,9 +68642,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		});
 		/** 一个执行块（**memo**：续拉时只有新增行需要 render，已挂的块不重算）。 */
 		const RecordItem = (0, react$1.memo)(function RecordItem(props) {
-			const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask } = props;
-			const tone = statusToneOf(row.status);
-			const running = isRunningStatus(row.status);
+			const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask, planned, plannedDeps } = props;
+			const isPlanned = planned === true;
+			const tone = isPlanned ? "planned" : statusToneOf(row.status);
+			const running = !isPlanned && isRunningStatus(row.status);
 			ensureRunningStyle();
 			/**
 			* 状态标签（**仅非成功态**才出：绿 = 正常，大家都知道 ⇒ 不标签，用户 2026-10-05）。
@@ -68646,11 +68653,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			*    用户 2026-10-05 纠正：不要另起一套长名（执行失败 / 未执行 / 执行中 / 未知状态），全站就认这一套短名。
 			*    只有**色调**按这里分档（红 / 黄 / 蓝 / 灰），名字本身不再分叉。
 			*/
-			const statusTag = row.status === "succeeded" ? null : {
+			const statusTag = isPlanned ? {
+				text: t("calPlanTag"),
+				tone: "planned"
+			} : row.status === "succeeded" ? null : {
 				text: statusTextOf(row.status, t),
 				tone: row.status === "failed" ? "bad" : row.status === "skipped" ? "warn" : running ? "busy" : "neutral"
 			};
-			const statusLabel = statusTextOf(row.status, t);
+			const statusLabel = isPlanned ? t("calPlanTag") : statusTextOf(row.status, t);
 			const outputs = outputsOf(row.outputs);
 			const sid = row.session_id;
 			const canOpenSession = sid !== null && sid !== "";
@@ -68658,11 +68668,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const tokens = (row.token_in ?? 0) + (row.token_out ?? 0);
 			const note = row.note ?? "";
 			const dayKey = dayKeyOf(row);
-			const planned = clockLabelOf(row.scheduled_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
+			const plannedText = clockLabelOf(row.scheduled_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
 			/** 时长的悬停提示：带起止时刻（有终态才给区间），比只显示「时长 03:00」有用得多。 */
 			const durationHint = row.finished_at === null ? `${t("colDuration")}：${durationOf(row)}` : `${t("colDuration")}：${durationOf(row)}（${stampOf(row.dispatched_at ?? row.scheduled_at)} → ${stampOf(row.finished_at)}）`;
 			const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
-			const deps = resolvedDepsOf(snapshot);
+			const deps = isPlanned ? plannedDeps ?? [] : resolvedDepsOf(snapshot);
 			/** token 三段之一：null 给占位（不编造 0）。 */
 			const tokenPart = (v) => v === null ? "—" : formatTokenCount(v);
 			/**
@@ -68695,6 +68705,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					side: "top"
 				}, inner));
 			};
+			const actualText = isPlanned ? `${t("recActual")} ${t("calNotExecuted")}` : actual === "" ? "" : `${t("recActual")} ${actual}`;
+			const actualIcon = isPlanned ? null : actual === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 });
+			const actualTitle = isPlanned ? void 0 : row.dispatched_at === null ? void 0 : `${t("colActualStart")}：${stampOf(row.dispatched_at)}`;
+			const durationText = isPlanned ? `${t("colDuration")} --` : `${t("colDuration")} ${durationOf(row)}`;
+			const tokenNode = isPlanned ? field(null, "--", `${t("recTokenHint")}：--`) : tokens > 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field dsh-tdt-rec-num" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: `${t("recTokenHint")}：${formatTokenCount(tokens)}\n${tt("recTokenDetail", {
+					input: tokenPart(row.token_in),
+					output: tokenPart(row.token_out),
+					cache: tokenPart(row.token_in_cache)
+				})}`,
+				side: "top"
+			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null;
 			return (0, react$1.createElement)("div", { className: `dsh-tdt-rec-item ${toneClassOf(tone)}` }, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-rec-main dsh-tdt-rec-head",
 				onClick: onHeadClick
@@ -68702,7 +68724,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				label: statusLabel,
 				side: "top"
 			}, (0, react$1.createElement)("span", {
-				className: `dsh-tdt-rec-bar${running ? " dsh-tdt-rec-bar--run" : ""}`,
+				className: `dsh-tdt-rec-bar${running ? " " + RUN_PULSE_CLASS : ""}`,
 				"aria-hidden": true
 			})), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-left" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r1" }, onViewTask === void 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label,
@@ -68752,14 +68774,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}), deps.length > MAX_DEPMARKS ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listSectionDepends"),
 				side: "top"
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more" }, `+${deps.length - MAX_DEPMARKS}`)) : null)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), planned === "" ? "" : `${t("recPlan")} ${planned}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actual === "" ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 }), actual === "" ? "" : `${t("recActual")} ${actual}`, row.dispatched_at === null ? void 0 : `${t("colActualStart")}：${stampOf(row.dispatched_at)}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), `${t("colDuration")} ${durationOf(row)}`, durationHint), tokens > 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-field dsh-tdt-rec-num" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: `${t("recTokenHint")}：${formatTokenCount(tokens)}\n${tt("recTokenDetail", {
-					input: tokenPart(row.token_in),
-					output: tokenPart(row.token_out),
-					cache: tokenPart(row.token_in_cache)
-				})}`,
-				side: "top"
-			}, (0, react$1.createElement)("span", { style: fieldInnerStyle }, formatTokenCount(tokens)))) : null), note === "" ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more" }, `+${deps.length - MAX_DEPMARKS}`)) : null)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), plannedText === "" ? "" : `${t("recPlan")} ${plannedText}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actualIcon, actualText, actualTitle), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), durationText, durationHint), tokenNode), note === "" ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				key: path,
 				label: baseNameOf(path),
 				side: "top"
@@ -69376,7 +69391,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-row{display:flex;align-items:center;flex-wrap:wrap;gap:var(--tdt-space-1) var(--tdt-space-2);padding:7px 10px;
   border-radius:0;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);
   background:var(--cal-soft,transparent);}
-.dsh-tdt-cal-row--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
+
 .dsh-tdt-cal-time{font-variant-numeric:tabular-nums;}
 /* 拉开区里可点的名字（任务名 / 前置任务名）：链接色 + hover 下划线，与执行记录页「任务名可点」同观感 */
 .dsh-tdt-cal-link{border:0;background:none;padding:0;font:inherit;color:var(--tdt-business);cursor:pointer;text-align:left;}
@@ -69513,8 +69528,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const workspaceOf = (0, react$1.useCallback)((id) => {
 				return rowsRef.current.find((item) => item.id === id)?.workspace ?? "";
 			}, []);
-			/** 可点的任务名（点 ⇒ 右侧栏查看档；没给 onViewTask ⇒ 降级纯文本）。 */
-			const nameNode = (0, react$1.useCallback)((id, name) => onViewTask !== void 0 ? (0, react$1.createElement)("button", {
+			(0, react$1.useCallback)((id, name) => onViewTask !== void 0 ? (0, react$1.createElement)("button", {
 				key: id,
 				type: "button",
 				className: "dsh-tdt-cal-link",
@@ -69647,11 +69661,54 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/** 拉开区里的一条（已发生 = 执行记录那套可展开的块；计划 = 一行虚线，没有记录可展开）。 */
 			const panelItemNode = (item) => {
 				if (item.kind === "plan") {
-					const deps = rowsRef.current.find((row) => row.id === item.entry.taskId)?.depends ?? [];
-					return (0, react$1.createElement)("div", {
-						key: `p:${item.entry.taskId}:${item.at}`,
-						className: "dsh-tdt-cal-row dsh-tdt-cal-row--plan"
-					}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-time" }, hhmmOf(item.at)), nameNode(item.entry.taskId, item.entry.title), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, workspaceOf(item.entry.taskId)), deps.length > 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, `${t("calDepsLabel")}：`, deps.flatMap((dep, index) => [index > 0 ? (0, react$1.createElement)("span", { key: `s:${dep.id}` }, "、") : null, nameNode(dep.id, dep.title)])) : null, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, t("calPlanTag")));
+					const planId = `plan:${item.entry.taskId}:${item.at}`;
+					const plannedDeps = (rowsRef.current.find((row) => row.id === item.entry.taskId)?.depends ?? []).map((d) => ({
+						task: d.id,
+						semantics: "latest_success",
+						instanceId: "",
+						scheduledAt: "",
+						sessionId: null,
+						workspacePath: null,
+						outputs: []
+					}));
+					return (0, react$1.createElement)(RecordItem, {
+						key: planId,
+						row: {
+							id: planId,
+							task_id: item.entry.taskId,
+							scheduled_at: item.entry.scheduledAt,
+							status: "pending",
+							attempt: 0,
+							session_id: null,
+							dispatched_at: null,
+							finished_at: null,
+							outputs: null,
+							snapshot: null,
+							token_in: null,
+							token_out: null,
+							token_in_cache: null,
+							updated_at: item.entry.scheduledAt
+						},
+						label: item.entry.title,
+						workspace: workspaceOf(item.entry.taskId),
+						t,
+						tt,
+						snapshot: null,
+						depTitleOf: nameOf,
+						planned: true,
+						plannedDeps,
+						open: openId === planId,
+						onToggle: toggleItem,
+						openSession: (sid) => {
+							onOpenSession?.(sid);
+						},
+						openFile: onOpenFile,
+						onViewTask,
+						events: null,
+						eventsBusy: false,
+						eventsError: null,
+						crossFmt
+					});
 				}
 				return (0, react$1.createElement)(RecordItem, {
 					key: item.row.id,
