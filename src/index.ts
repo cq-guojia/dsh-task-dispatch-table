@@ -285,6 +285,27 @@ function attachmentsWithPaths(
  * @param runtimeRef - 宿主运行时数据 store（apply 内共用同一份）。
  * @param persistTasksInline - 任务表保存回调（写回 config profile）。
  */
+/**
+ * 整批 `tasksInline` 的**最小结构校验**：必须是「对象数组」（空串 = 清空，允许）。
+ *
+ * ⚠️ 2026-10-07 审计：身份闸门 `ensureIdsInInlineJson` 注释写着「非法 JSON / 非数组原样返回
+ * （error=null）—— 那是既有校验的职责」，**但整批这条保存路径上并没有那道既有校验** ⇒ 非法 JSON /
+ * 非数组 / 元素不是对象时会被**直接落盘成权威任务表**，运行时 `parseInlineTasks` 逐项解析失败
+ * ⇒ **任务表整批消失，而且已持久化，每次启动都复现**（唯一会持久化丢数据的路径）。
+ * 这里只补**形状**校验；逐字段合法性仍交给运行时逐条 warn 跳过（决策 30：运行时只认不修）。
+ */
+function checkTasksInlineShape(raw: string): string | null {
+  const text = raw.trim()
+  if (text === '') return null
+  let data: unknown
+  try { data = JSON.parse(text) } catch { return 'invalid-json' }
+  if (!Array.isArray(data)) return 'not-an-array'
+  for (const item of data) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) return 'item-not-an-object'
+  }
+  return null
+}
+
 const makeDispatchRoutes = (
   runtimeRef: { tasksInline: string; debugSnapshot: string },
   persistTasksInline: (json: string) => Promise<void>,
@@ -431,6 +452,10 @@ const makeDispatchRoutes = (
 
         // ── 整批（配置页 JSON 编辑，身份闸门不变）──
         if (typeof parsed.tasksInline === 'string') {
+          // ⚠️ 先过**形状**闸门（见 checkTasksInlineShape）：非法 JSON / 非数组 / 元素非对象一律 422 拒收。
+          // 它们此前会「保存成功」并落盘 ⇒ 运行时整表解析失败 ⇒ 任务表消失且**已持久化**（2026-10-07 审计）。
+          const shape = checkTasksInlineShape(parsed.tasksInline)
+          if (shape !== null) return writeJson(res, 422, { ok: false, error: shape })
           const { json, changed, assigned, error } = ensureIdsInInlineJson(parsed.tasksInline, existingUuidIds(runtimeRef.tasksInline))
           if (error !== null) return writeJson(res, 422, { ok: false, error })
           runtimeRef.tasksInline = json
@@ -1045,6 +1070,8 @@ const makeDispatchRoutes = (
       if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
       // 连接数兜底（见 SSE_MAX_CONNECTIONS）：超限直接 503，客户端会按统一重连策略稍后重试。
       if (streams.size >= SSE_MAX_CONNECTIONS) {
+        // 留痕（2026-10-07 可观测性审计：SSE 整条生命周期原先一处日志都没有）。
+        log(`[事件推送] 连接数已达上限 ${SSE_MAX_CONNECTIONS}，拒绝新连接`)
         return writeJson(res, 503, { ok: false, error: 'too-many-streams' })
       }
       const write = res.write
@@ -1057,14 +1084,14 @@ const makeDispatchRoutes = (
         'x-accel-buffering': 'no',
       })
       const unsubscribe = bus.subscribe((event) => {
-        try { write.call(res, `data: ${JSON.stringify(event)}\n\n`) } catch { cleanup() }
+        try { write.call(res, `data: ${JSON.stringify(event)}\n\n`) } catch { onWriteFailed() }
       })
       // ⚠️ 心跳必须是**真实 data 帧**，不能是 SSE 注释（`: ping`）：注释帧浏览器直接吞掉、前端
       // `onmessage` 根本看不到，于是「`readyState` 是 OPEN 但其实已经半死」永远发现不了
       // （2026-10-06 审计 🟡）。类型用 `HEARTBEAT_TYPE`（不在事件目录里）⇒ 前端 `byType` 查不到、
       // 直接丢弃，不会当成业务事件。
       const heartbeat = setInterval(() => {
-        try { write.call(res, `data: ${JSON.stringify({ type: HEARTBEAT_TYPE })}\n\n`) } catch { cleanup() }
+        try { write.call(res, `data: ${JSON.stringify({ type: HEARTBEAT_TYPE })}\n\n`) } catch { onWriteFailed() }
       }, SSE_HEARTBEAT_MS)
       /** 幂等清理（`cleanup` 可被 close / 写失败 / dispose 三路重入）。 */
       let cleaned = false
@@ -1079,6 +1106,15 @@ const makeDispatchRoutes = (
         // —— 宿主行为一变就留下一堆「心跳已停的哑连接」。
         try { (res as { end?: () => unknown }).end?.() } catch { /* 已断开时 end 会抛，忽略 */ }
       }
+      /**
+       * 写出失败专用清理：**多留一条痕**（2026-10-07 可观测性审计 —— SSE 整条生命周期原先零日志，
+       * 「页面悄悄不刷新」时开发者手里没有任何信号）。对端正常断开走 `cleanup`，不打日志（那是应有之义）。
+       */
+      function onWriteFailed(): void {
+        const already = cleaned
+        cleanup()
+        if (!already) log(`[事件推送] 写出失败，已回收该连接（当前 ${streams.size} 条）`)
+      }
       streams.add(cleanup)
       // ⚠️ **只绑 `res` 的 `close`**（2026-10-06 审计实证）：Node ≥16 下 `req` 的 `close` 语义是
       // 「请求消息读完」而不是「连接断开」——GET 无 body，**一旦有中间件消费过请求流
@@ -1087,7 +1123,7 @@ const makeDispatchRoutes = (
       // SSE 断连的唯一可靠信号是 `res` 的 `close`。
       const on = (res as { on?: (event: string, handler: () => void) => unknown }).on
       if (typeof on === 'function') on.call(res, 'close', cleanup)
-      try { write.call(res, ': connected\n\n') } catch { cleanup() }
+      try { write.call(res, ': connected\n\n') } catch { onWriteFailed() }
     },
   },
 ]

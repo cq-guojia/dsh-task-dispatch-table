@@ -77,9 +77,11 @@ export const dueLoadingMs = (): number => pinMsFor(currentTickMs, POLL_MS)
 
 /**
  * **排序调试日志**（用户 2026-09-30：不要截图 —— 把"一切会影响排序的状态变化"打到浏览器 console，
- * 复制 `[tdt-sort]` 开头的行给我即可）。只打**变化**，不打每次心跳；不用了把 `DEBUG_SORT` 改成 false。
+ * 复制 `[tdt-sort]` 开头的行给我即可）。只打**变化**，不打每次心跳。
+ * ⚠️ 2026-10-07 审计：它此前是 **true（默认开着）** —— 真机运行时会持续往 console 刷快照/顺序变化，
+ * 排障时反而淹没真信号。默认**关**；要用时手动打开（改这一行）。
  */
-const DEBUG_SORT = true
+const DEBUG_SORT = false
 /** 一行概括"影响排序/显示的那几个字段"，用于 diff 出「谁因为什么变了」。 */
 const sortFactsOf = (rows: readonly TaskOverviewRow[]): string => rows
   .map(r => `${r.id.slice(0, 8)} run=${r.running ? 1 : 0} en=${r.enabled ? 1 : 0} next=${r.nextSlotAt ?? '-'} last=${r.lastStatus ?? '-'}@${r.lastScheduledAt ?? '-'}`)

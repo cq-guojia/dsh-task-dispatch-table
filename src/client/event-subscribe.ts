@@ -38,6 +38,24 @@ let unhealthySince = 0
 let lastSeenAt = 0
 /** 「本环境没有 EventSource」只告警一次（降级会让所有页面失去刷新通道，必须留痕又不能刷屏）。 */
 let warnedNoEventSource = false
+/** 已重建过几次连接（含看门狗主动重建）——**排查手册的关键数字**（2026-10-07 可观测性审计）。 */
+let reconnects = 0
+
+/**
+ * 推送通道自述（**调试页显示用**）：一眼看出「通道是不是活着」。
+ * 2026-10-07 可观测性审计的结论是：这套推送坏了，用户与开发者**都没有信号**（页面只是悄悄不刷新）。
+ * 这里把三个关键量暴露出来：连接状态 / 距最后一次收帧多久 / 重建过几次。
+ * 用语言中性的 ASCII（这是开发者面向的调试面，不进 `t()` 席位）。
+ */
+export function describeEventChannel(): string {
+  if (typeof EventSource === 'undefined') return 'SSE unavailable (no EventSource)'
+  if (source === null) return 'SSE idle (未连接)'
+  const state = source.readyState === EventSource.OPEN
+    ? 'OPEN'
+    : source.readyState === EventSource.CONNECTING ? 'CONNECTING' : 'CLOSED'
+  const seen = lastSeenAt === 0 ? 'never' : `-${Math.round((Date.now() - lastSeenAt) / 1000)}s`
+  return `SSE ${state} · last-frame ${seen} · reconnects ${reconnects} · streams ${byType.size}types`
+}
 
 /** 广播「（重）连成功」——各页据此重读一次当前值。 */
 function dispatchResync(): void {
@@ -47,6 +65,7 @@ function dispatchResync(): void {
 }
 
 function openSource(): void {
+  if (source !== null) reconnects += 1 // 重建（不是首次）——排查手册要看这个数
   let es: EventSource
   try {
     es = new EventSource(EVENTS_URL)
@@ -64,7 +83,11 @@ function openSource(): void {
     const handlers = byType.get(event.type)
     if (handlers === undefined) return
     for (const handler of [...handlers]) {
-      try { handler(event) } catch { /* 单个订阅者出错不影响其它 */ }
+      try { handler(event) } catch (error) {
+        // ⚠️ 2026-10-07 可观测性审计：这里原先是**静默** catch ⇒ 某一页的 handler 崩了，
+        // 那一页就**永久停止更新**，而 console 里一个字都没有（最难查的一类失效）。留痕。
+        console.error(`[tdt] 事件订阅回调抛异常（该页可能停止更新），type=${event.type}：`, error)
+      }
     }
   }
   es.onopen = () => { unhealthySince = 0; dispatchResync() }

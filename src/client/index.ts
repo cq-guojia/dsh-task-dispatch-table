@@ -45,7 +45,7 @@ import { TaskListView } from './task-list'
 // 取数层（2026-10-06 从 task-list.tsx 归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import { useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 // 事件推送（design/event-push.md）：后端变更即时广播、前端订阅按需刷新（替代轮询的增量通道）。
-import { useEvents, useResync } from './event-subscribe'
+import { describeEventChannel, useEvents, useResync } from './event-subscribe'
 import { EventType, RUN_EVENT_TYPES } from '../event-catalog.js'
 // 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
 import { resolvedDepsOf } from '../deps.js'
@@ -1482,6 +1482,9 @@ function TaskPage(props: {
                 dbDump !== null
                   ? h('div', null,
                       h('p', { style: hintStyle }, `${t('debugRefreshedAt')} ${formatTime(dbDump.at)}`),
+                      // 推送通道自述（2026-10-07 可观测性审计）：用户说「页面不刷新」时，**先看这一行**
+                      // —— 连接状态 / 距最后一次收帧多久 / 重建过几次。此前这类信息**在界面上完全不存在**。
+                      h('pre', { style: { ...preStyle, color: 'var(--tdt-fg-3)' } }, describeEventChannel()),
                       dbDump.tables.map(dump => renderDbTable(dump)),
                     )
                   : null,
@@ -1688,10 +1691,15 @@ interface ChannelDiag {
   note: string
 }
 let channelDiag: ChannelDiag = { entry: '(未绑定)', status: '(无)', keys: '(无)', snapshotLen: 0, note: '作用域尚未就位' }
-/** @returns 诊断信息的可读文本。 */
+/**
+ * @returns 诊断信息的可读文本。
+ * ⚠️ 2026-10-07 可观测性审计：原来只描述 **HTTP 取数**这一段，而「页面不刷新」绝大多数是**推送链**坏了
+ * ⇒ 必须把推送通道的状态一并印出来（否则这条诊断行对真问题毫无帮助）。
+ */
 function describeDiag(): string {
   return `[数据通道诊断] entry=${channelDiag.entry} status=${channelDiag.status} `
     + `snapshotLen=${channelDiag.snapshotLen} keys=${channelDiag.keys} note=${channelDiag.note}`
+    + `\n${describeEventChannel()}`
 }
 
 /**

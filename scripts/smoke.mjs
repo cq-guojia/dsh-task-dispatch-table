@@ -3056,6 +3056,23 @@ console.log('\n[14] runtime-index')
     check('【安全】SSE 连接数有上限（长连接无上限可被本机打满句柄）',
       idxSrc20.includes('const SSE_MAX_CONNECTIONS = 32')
       && idxSrc20.includes("error: 'too-many-streams'"))
+
+    // ── 23. 第七轮（六方向）修复守卫：数据安全 + 可观测性 ──
+    console.log('\n[23] 第七轮修复守卫（数据安全 / 可观测性）')
+    check('【数据安全】整批 tasksInline 过**形状**闸门（非法 JSON / 非数组不再落盘成权威表）',
+      idxSrc20.includes('function checkTasksInlineShape(')
+      && idxSrc20.includes('const shape = checkTasksInlineShape(parsed.tasksInline)')
+      && idxSrc20.includes("if (shape !== null) return writeJson(res, 422, { ok: false, error: shape })"))
+    check('【噪声】排序调试日志默认**关**（此前 true ⇒ 真机 console 持续刷、淹没真信号）',
+      S('client/task-overview.ts').includes('const DEBUG_SORT = false'))
+    check('【可观测】推送通道自述（连接状态 / 最后收帧 / 重连次数）导出并上屏',
+      S('client/event-subscribe.ts').includes('export function describeEventChannel()')
+      && S('client/index.ts').includes('describeEventChannel()'))
+    check('【可观测】订阅回调抛错留痕（否则某页停更、console 一片空白）',
+      S('client/event-subscribe.ts').includes('事件订阅回调抛异常'))
+    check('【可观测】SSE 写出失败 / 超限拒绝都留痕（此前整条生命周期零日志）',
+      idxSrc20.includes('function onWriteFailed()')
+      && idxSrc20.includes('连接数已达上限'))
     check('日历计划指纹含 title / workspace（否则改名后计划格显示旧名）',
       /\$\{row\.id\}\|\$\{row\.enabled\}\|\$\{row\.title\}\|\$\{row\.workspace\}/.test(S('client/task-calendar.tsx')))
     check('拨片守卫有寿命（确认快照不来时不会永久锁死左→右同步）',

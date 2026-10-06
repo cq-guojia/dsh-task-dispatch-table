@@ -54531,18 +54531,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 超过它还没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥）⇒ **不能一直装成在跑**。
 		*/
 		const dueLoadingMs = () => pinMsFor(currentTickMs, POLL_MS);
-		/** 一行概括"影响排序/显示的那几个字段"，用于 diff 出「谁因为什么变了」。 */
-		const sortFactsOf = (rows) => rows.map((r) => `${r.id.slice(0, 8)} run=${r.running ? 1 : 0} en=${r.enabled ? 1 : 0} next=${r.nextSlotAt ?? "-"} last=${r.lastStatus ?? "-"}@${r.lastScheduledAt ?? "-"}`).join(" | ");
-		/** 上一次打印过的快照 / 面板顺序（模块级即可：调试用，面板单实例）。 */
-		let lastFacts = "";
-		let lastOrder = "";
-		/** 面板顺序一变就打印（组件算出 `visible` 后调它）。调试状态**收在这里**，不散在页面里。 */
-		function debugLogOrder(rows) {
-			const order = rows.map((r) => r.id.slice(0, 8)).join(" > ");
-			if (order === lastOrder) return;
-			console.log(`[tdt-sort] 面板顺序变化\n  before: ${lastOrder === "" ? "(空)" : lastOrder}\n  after:  ${order}\n  键: ${rows.map((r) => `${r.id.slice(0, 8)}[run=${r.running ? 1 : 0} next=${r.nextSlotAt ?? "-"}]`).join(" ")}`);
-			lastOrder = order;
-		}
 		/**
 		* 主界面数据：一次请求出全部卡片数据；`rev` 未变 ⇒ 服务端回 `unchanged`，本地状态不动。
 		*
@@ -54595,13 +54583,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						revRef.current = String(body.rev ?? "");
 						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
 						setRows(nextRows);
-						{
-							const facts = sortFactsOf(nextRows);
-							if (facts !== lastFacts) {
-								console.log(`[tdt-sort] 快照变化 rev=${String(body.rev ?? "")}\n  before: ${lastFacts === "" ? "(空)" : lastFacts}\n  after:  ${facts}`);
-								lastFacts = facts;
-							}
-						}
 						setReady(true);
 					} catch {} finally {
 						window.clearTimeout(abortTimer);
@@ -64655,6 +64636,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		let lastSeenAt = 0;
 		/** 「本环境没有 EventSource」只告警一次（降级会让所有页面失去刷新通道，必须留痕又不能刷屏）。 */
 		let warnedNoEventSource = false;
+		/** 已重建过几次连接（含看门狗主动重建）——**排查手册的关键数字**（2026-10-07 可观测性审计）。 */
+		let reconnects = 0;
+		/**
+		* 推送通道自述（**调试页显示用**）：一眼看出「通道是不是活着」。
+		* 2026-10-07 可观测性审计的结论是：这套推送坏了，用户与开发者**都没有信号**（页面只是悄悄不刷新）。
+		* 这里把三个关键量暴露出来：连接状态 / 距最后一次收帧多久 / 重建过几次。
+		* 用语言中性的 ASCII（这是开发者面向的调试面，不进 `t()` 席位）。
+		*/
+		function describeEventChannel() {
+			if (typeof EventSource === "undefined") return "SSE unavailable (no EventSource)";
+			if (source === null) return "SSE idle (未连接)";
+			return `SSE ${source.readyState === EventSource.OPEN ? "OPEN" : source.readyState === EventSource.CONNECTING ? "CONNECTING" : "CLOSED"} · last-frame ${lastSeenAt === 0 ? "never" : `-${Math.round((Date.now() - lastSeenAt) / 1e3)}s`} · reconnects ${reconnects} · streams ${byType.size}types`;
+		}
 		/** 广播「（重）连成功」——各页据此重读一次当前值。 */
 		function dispatchResync() {
 			for (const handler of [...resyncHandlers]) try {
@@ -64662,6 +64656,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} catch {}
 		}
 		function openSource() {
+			if (source !== null) reconnects += 1;
 			let es;
 			try {
 				es = new EventSource(EVENTS_URL);
@@ -64682,7 +64677,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (handlers === void 0) return;
 				for (const handler of [...handlers]) try {
 					handler(event);
-				} catch {}
+				} catch (error) {
+					console.error(`[tdt] 事件订阅回调抛异常（该页可能停止更新），type=${event.type}：`, error);
+				}
 			};
 			es.onopen = () => {
 				unhealthySince = 0;
@@ -70076,7 +70073,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const abnormalCount = (0, react$1.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed" || row.lastStatus === "skipped").length, [rowsWithOptimistic]);
 			const visible = (0, react$1.useMemo)(() => {
 				const q = query.trim().toLowerCase();
-				const sorted = sortRows(rowsWithOptimistic.filter((row) => {
+				return sortRows(rowsWithOptimistic.filter((row) => {
 					if (filter === "enabled" && !row.enabled) return false;
 					if (filter === "disabled" && row.enabled) return false;
 					if (filter === "abnormal" && row.lastStatus !== "failed" && row.lastStatus !== "skipped") return false;
@@ -70084,8 +70081,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (q === "") return true;
 					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
 				}));
-				debugLogOrder(sorted);
-				return sorted;
 			}, [
 				rowsWithOptimistic,
 				filter,
@@ -71523,7 +71518,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onRunNow: runTaskNow,
 				onViewTask: openViewer,
 				workspaces: editorOptions.workspaces
-			}) : tab === "debug" ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react$1.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbDump !== null ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : null, (0, react$1.createElement)(BackToTop, null)), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
+			}) : tab === "debug" ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react$1.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbDump !== null ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), (0, react$1.createElement)("pre", { style: {
+				...preStyle,
+				color: "var(--tdt-fg-3)"
+			} }, describeEventChannel()), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : null, (0, react$1.createElement)(BackToTop, null)), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
 				t,
 				heading: viewing.heading,
 				taskId: viewing.taskId,
@@ -71700,9 +71698,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			snapshotLen: 0,
 			note: "作用域尚未就位"
 		};
-		/** @returns 诊断信息的可读文本。 */
+		/**
+		* @returns 诊断信息的可读文本。
+		* ⚠️ 2026-10-07 可观测性审计：原来只描述 **HTTP 取数**这一段，而「页面不刷新」绝大多数是**推送链**坏了
+		* ⇒ 必须把推送通道的状态一并印出来（否则这条诊断行对真问题毫无帮助）。
+		*/
 		function describeDiag() {
-			return `[数据通道诊断] entry=${channelDiag.entry} status=${channelDiag.status} snapshotLen=${channelDiag.snapshotLen} keys=${channelDiag.keys} note=${channelDiag.note}`;
+			return `[数据通道诊断] entry=${channelDiag.entry} status=${channelDiag.status} snapshotLen=${channelDiag.snapshotLen} keys=${channelDiag.keys} note=${channelDiag.note}\n${describeEventChannel()}`;
 		}
 		/**
 		* rc.1 起设置表单按 **profile entry id** 寻址，而本插件在不同部署下的行 id 可能是聚合行 id

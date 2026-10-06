@@ -303,3 +303,19 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 - **多标签页「整份覆盖」可能丢更新**（未修，登记）：① 编辑器保存是**全量定义覆盖**（`enabled` 不在保留清单里）⇒ A 标签页拨的开关会被 B 标签页较早打开的表单**静默覆盖**；② `POST /tasks {tasksInline}` 是整批文本覆盖（该 UI 目前是关闭的遗留视图，风险潜伏）。要修需引入乐观锁（保存时带上「我基于哪一版」）。
 - **时钟**：服务端下发 `now` 供客户端做「以服务端为准」的判定，但**客户端目前未消费它**（全部用本地时钟）⇒ 两端时钟有差时，「下次执行」的相对显示可能与服务端判定不一致。登记为已知限制。
 - **`renewLease` / 常规 `appendLog` / 每 tick 的 `purgeLog`+`purgeHistory`** 均**有意不发**事件（理由见 §六：界面不展示 / 只改日志 / 删的都是过期旧行）。
+- **`tasksInline` 整批保存**：已补**形状闸门**（非法 JSON / 非数组 / 元素非对象一律 422）—— 它此前是**唯一会持久化丢数据的路径**（保存成功后整表无人能解析 ⇒ 任务全消失且每次启动复现）。逐字段合法性仍交给运行时逐条 warn 跳过（决策 30：运行时只认不修）。
+
+**兼容性与产物（2026-10-07 审计）**
+
+- **JS 语法/API**：全仓 client 未使用任何超出 **chrome99** 的 API（`Array.at` / `findLast` / `Object.hasOwn` / `structuredClone` / `AbortSignal.any` 均未用或刻意避开，后者有注释点名）。`tsconfig.client.json` 的类型层**不拦**新 API（唯一防线是注释 + review）—— 新增 API 前先查 chrome99 支持表。
+- **CSS 未做降级**（样式是 TS 模板字符串、**不经过任何 CSS 工具链**）：`color-mix()`（Chrome 111）在 `ui/tokens.ts` 里是**直接定义且无回退** ⇒ 在 111 之前的浏览器上那些 token **静默失效**（底色/选中底变透明，不破布局）；`@container`（105）、`mask-image`（120）同理。**唯一正确范例在 `toast-css.ts`**（先写 `background: var(--tdt-surface-1, rgba(...))` 再写 `color-mix`）—— 要补降级就照它写。当前实际客户端为新版 Chrome，故登记不改。
+- **版本偏移（重要）**：SSE 的两个新契约要求**两端同时升级**。
+  - **新前端 + 旧后端**（旧后端只发注释帧 `: ping`）⇒ 客户端的静默超时看门狗会把**健康**连接判为「半死」、**每 75–80s 白重建一次**（每次还触发一次全页补读，含 `/db` 转储）。旧前端 + 新后端则无害（未知 `sys.ping` 被 `byType` 丢弃）。⇒ **升级时前后端一起换，别单端灰度。**
+  - `dist/client.js` 与 `dist/client.js.map` 都入库（后者 4.87MB，无 `sourcesContent`）；产物**未 minify**、保留中文注释 ⇒ 「只改注释也会改产物」，别把它误判成没 build（有 `[21]` 产物一致性守卫兜底）。
+- **`/options` 的 `degraded` 客户端从不读取**：服务端专门下发 `degraded: {workspaces, models}`（注释写着「UI 上不撒谎」），前端只取 `workspaces/models` ⇒ 模型/工作区下拉的「暂无可选」**无法区分**「宿主没接上 llm」与「宿主真的没配」。登记为未落地的承诺。
+
+**i18n 与可观测性（2026-10-07 审计）**
+
+- **可观测性已补**（本轮）：调试页现在印一行**推送通道自述** —— `SSE OPEN · last-frame -12s · reconnects 3`（连接状态 / 距最后一次收帧多久 / 重建过几次），并挂进「数据通道诊断」行；**订阅回调抛异常**与**SSE 写出失败 / 超限拒绝**都会留痕（此前整条推送链「不报错、不重试计数、不记日志」，用户说「页面不刷新」时基本无从下手）。**排查第一步：看调试页那一行。**
+- **默认开着的调试日志已关**：`task-overview.ts` 的 `DEBUG_SORT` 原为 `true` ⇒ 真机 console 持续刷排序快照。需要时手动打开。
+- **i18n 遗留（登记，非功能问题）**：① `task-list.tsx` 的 `StatusRail` 悬浮提示、调试页的「N 行」、`task-editor.tsx` 的 `validateTaskDraft` 校验文案是**硬编码中文**（英文界面仍是中文）；② `locales.ts` 有约 **30 个死键**（定义未引用）；③ `schedule-text.ts` 用 `` t(`editorMonthMode_${spec.monthMode}` as LocaleKey) `` 拼**动态 key**，而该值来自存储的 `schedule.ui.monthMode`、**未收窄** ⇒ 脏数据（如 `"foo"`）会在计划行渲染出 `editorMonthMode_foo` 字面量（编辑器那条路径已经收窄到三档，列表这条没有 —— **修法就是照编辑器收窄**）。
