@@ -59,8 +59,8 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
   background:var(--tdt-border);padding:1px 1px 0;}
 .dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);
-  /* 表头字：加粗 + 提亮（用户 2026-10-06：比格内浅灰字更醒目；续：再加重一档）。 */
-  font-weight:700;color:var(--tdt-fg);
+  /* 表头字：加粗 + 提亮（用户 2026-10-06：比格内浅灰字更醒目；续：700 偏粗，回调到 650）。 */
+  font-weight:650;color:var(--tdt-fg);
   /* 表头底：比本月格更深的蓝（business 14% vs 格 8%），和下面可选块形成对比（用户 2026-10-06）。 */
   background:color-mix(in srgb,var(--tdt-business) 14%,var(--tdt-surface-1));padding:8px 0;}
 /* 「选中 / 展开」的底色走 **token 层的 --tdt-selected-bg**（主题特判只许在 token 层）：
