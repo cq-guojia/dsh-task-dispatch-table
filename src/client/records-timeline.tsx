@@ -119,7 +119,7 @@ const RECORDS_CSS = `
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
-.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
+.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
 @keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
@@ -858,12 +858,12 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   const workspaceById = useMemo(() => new Map(tasks.map(o => [o.id, o.workspace])), [tasks])
   const filterSig = `${workspace}|${bucket}|${taskId}`
 
-  const load = useCallback(async (nextCursor: string | null): Promise<void> => {
+  const load = useCallback(async (nextCursor: string | null, silent = false): Promise<void> => {
     if (inFlightRef.current) return
     inFlightRef.current = true
     const seq = seqRef.current + 1
     seqRef.current = seq
-    setLoading(true)
+    if (!silent) setLoading(true)
     setError(null)
     try {
       const page = await fetchInstances({
@@ -926,6 +926,17 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
       })
       .finally(() => { if (seq === eventsSeqRef.current) setEventsBusy(false) })
   }, [openId, eventsCache])
+
+  // 运行状态轮询（修复：任务跑完若不切换 / 刷新页面，状态一直卡在「运行中」）。
+  // 列表里**只要还有任一条在跑**，就每 5 秒静默重载第一页（在跑的实例都在最近、落在第一页）；
+  // 跑完即停轮询。只刷首屏、不碰已展开的块、不闪 Loading（`silent`）。
+  const hasRunning = rows.some(r => isRunningStatus(r.status))
+  useEffect(() => {
+    if (!hasRunning) return
+    const timer = window.setInterval(() => { void load(null, true) }, 5_000)
+    return () => window.clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasRunning, load])
 
   const loadMore = useCallback((): void => {
     if (loading || done || cursor === null) return

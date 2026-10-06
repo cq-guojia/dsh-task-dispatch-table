@@ -1684,6 +1684,9 @@ body{
   --tdt-dur:var(--ds-transition-duration,.2s);
   --tdt-dur-fast:var(--ds-transition-duration-fast,.12s);
   --tdt-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));
+  /* 运行中状态的脉动时长（2026-10-06 统一前后两端：任务配置里的绿呼吸 → 蓝、放慢；
+     执行记录里的蓝闪 → 放慢一点。两者用同一个值，动画形状本就一致）。 */
+  --tdt-dur-run:500ms;
 }
 
 /* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────
@@ -64377,7 +64380,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		const RAIL_W = 6;
 		const RAIL_H = 36;
-		/** 运行中：整条**绿色**明暗脉动（用户 2026-09-30：执行中是正常状态，不能灰/白闪）。 */
+		/** 运行中：整条**蓝色**明暗脉动（2026-10-06：与「执行记录」页运行态统一成蓝色，呼吸感也改为接近闪烁、放慢）。 */
 		function RunningRail() {
 			return (0, react$1.createElement)("span", { style: {
 				display: "inline-block",
@@ -64385,8 +64388,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				height: `${RAIL_H}px`,
 				flex: "none",
 				borderRadius: "var(--tdt-radius-xs)",
-				background: "var(--tdt-success)",
-				animation: "dsh-tdt-rail-pulse 900ms ease-in-out infinite"
+				background: "var(--tdt-business)",
+				animation: "dsh-tdt-rail-pulse var(--tdt-dur-run) ease-in-out infinite"
 			} });
 		}
 		function StatusRail(props) {
@@ -64489,9 +64492,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listRunning"),
 				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-success)", "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-business)", "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
 				...pillTimeCell,
-				color: "var(--tdt-success)"
+				color: "var(--tdt-business)"
 			} }, (0, react$1.createElement)(RunningBlocks, {}))));
 			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
 			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
@@ -64508,7 +64511,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						if (-diff <= dueLoadingMs()) return (0, react$1.createElement)("span", { style: {
 							display: "inline-flex",
 							alignItems: "center",
-							color: "var(--tdt-success)"
+							color: "var(--tdt-business)"
 						} }, (0, react$1.createElement)(RunningBlocks, {}));
 						return (0, react$1.createElement)("span", { style: {
 							cursor: "default",
@@ -68213,7 +68216,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
-.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur) var(--tdt-ease) infinite;}
+.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
 @keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
@@ -68773,12 +68776,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/** 工作区反查：优先任务表（当前归属），任务已删退回派发快照的 `workspacePath` 末段（当次执行当时的值）。 */
 			const workspaceById = (0, react$1.useMemo)(() => new Map(tasks.map((o) => [o.id, o.workspace])), [tasks]);
 			const filterSig = `${workspace}|${bucket}|${taskId}`;
-			const load = (0, react$1.useCallback)(async (nextCursor) => {
+			const load = (0, react$1.useCallback)(async (nextCursor, silent = false) => {
 				if (inFlightRef.current) return;
 				inFlightRef.current = true;
 				const seq = seqRef.current + 1;
 				seqRef.current = seq;
-				setLoading(true);
+				if (!silent) setLoading(true);
 				setError(null);
 				try {
 					const page = await fetchInstances({
@@ -68839,6 +68842,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (seq === eventsSeqRef.current) setEventsBusy(false);
 				});
 			}, [openId, eventsCache]);
+			const hasRunning = rows.some((r) => isRunningStatus(r.status));
+			(0, react$1.useEffect)(() => {
+				if (!hasRunning) return;
+				const timer = window.setInterval(() => {
+					load(null, true);
+				}, 5e3);
+				return () => window.clearInterval(timer);
+			}, [hasRunning, load]);
 			const loadMore = (0, react$1.useCallback)(() => {
 				if (loading || done || cursor === null) return;
 				if (error !== null) return;

@@ -162,6 +162,9 @@ body{
   --tdt-dur:var(--ds-transition-duration,.2s);
   --tdt-dur-fast:var(--ds-transition-duration-fast,.12s);
   --tdt-ease:var(--ds-ease-in-out,cubic-bezier(.4,0,.2,1));
+  /* 运行中状态的脉动时长（2026-10-06 统一前后两端：任务配置里的绿呼吸 → 蓝、放慢；
+     执行记录里的蓝闪 → 放慢一点。两者用同一个值，动画形状本就一致）。 */
+  --tdt-dur-run:500ms;
 }
 
 /* ── 明暗差异的**唯一**落点 ──────────────────────────────────────────────

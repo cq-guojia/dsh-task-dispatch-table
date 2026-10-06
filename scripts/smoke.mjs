@@ -1226,7 +1226,15 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('records 分支排在 data === undefined 门槛之前（HTTP 页不被调试快照挡住）',
       /tab === 'records'\n\s*\? h\(RecordsTimelineView/.test(idxSrc)
       && idxSrc.indexOf('h(RecordsTimelineView') < idxSrc.indexOf(': data === undefined'))
-    check('时间轴不轮询（历史账，不自动刷新）', !tlSrc.includes('setInterval') && !tlSrc.includes('POLL'))
+    // 2026-10-06 变更：原「时间轴不轮询（历史账，不自动刷新）」已改为 bug——跑完若不切换 / 刷新页面，
+    // 状态一直卡在「运行中」。现改为「仅在有运行中的实例时」每 5 秒静默重载首屏（跑完即停），
+    // 既修复卡死、又不无脑全量轮询。
+    check('时间轴仅在运行中实例存在时轮询刷新（跑完即停，不再卡在「运行中」）',
+      tlSrc.includes('setInterval')
+      && tlSrc.includes('hasRunning')
+      && tlSrc.includes('if (!hasRunning) return')
+      && /load\(null, true\)/.test(tlSrc)
+      && tlSrc.includes('5_000'))
     check('时间轴复用基础层：Loading / Button / SelectField / TaskPicker / MarqueeText 全走 ui/（2026-10-06：时间范围控件已移除）',
       /from '\.\/ui'/.test(tlSrc) && /h\(Loading,/.test(tlSrc) && /h\(Button,/.test(tlSrc)
       && /h\(SelectField,/.test(tlSrc) && /h\(TaskPicker,/.test(tlSrc))
