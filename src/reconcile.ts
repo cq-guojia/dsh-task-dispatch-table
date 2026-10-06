@@ -19,6 +19,7 @@ import { receiptInstruction } from './receipt.js'
 import type { InstanceSnapshot, TaskInstance, TaskStore } from './store.js'
 import { parseInstanceSnapshot } from './store.js'
 import type { RuntimeIndex } from './runtime-index.js'
+import { EventType, type PushEvent } from './event-catalog.js'
 import type { PluginConfig } from './config.js'
 import { join } from 'node:path'
 import { attachmentAbsPath, type AssetPaths } from './task-assets.js'
@@ -91,6 +92,8 @@ export interface ReconcilerDeps {
   options: ReconcileOptions
   /** 主界面运行态内存索引（2026-09-30）；未装配则跳过（不影响对账）。 */
   runtime?: RuntimeIndex
+  /** 事件广播（design/event-push.md）：实例行在 DB 层的变化也通知前端；未装配则跳过。 */
+  emit?: (event: PushEvent) => void
 }
 
 interface ReceiptPayload {
@@ -215,7 +218,7 @@ export function extractTokenUsage(event: unknown): TokenUsage | undefined {
   return undefined
 }
 
-export function createReconciler({ ctx, logger, store, options, runtime }: ReconcilerDeps): Reconciler {
+export function createReconciler({ ctx, logger, store, options, runtime, emit }: ReconcilerDeps): Reconciler {
   const handles = new Map<string, AgentHandle>()
   /** token 用量分量累计（决策 32 修订）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
   const tokenTotals = new Map<string, TokenUsage>()
@@ -289,6 +292,14 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
     if (!store.inFlightByTask().has(taskId)) runtime.clearRunning(taskId)
   }
 
+  /**
+   * 实例行在 **DB 层**的变化（不经 `RuntimeIndex` 的那些：重试退回 / unknown 复活 / 转 running /
+   * redispatch）也通知前端重读——`RuntimeIndex` 包裹层覆盖不到它们（design/event-push.md §六）。
+   */
+  const notifyRow = (instance: { id: string; task_id: string }): void => {
+    emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId: instance.task_id, instanceId: instance.id } })
+  }
+
   function finishTerminal(instance: TaskInstance, status: 'succeeded' | 'failed', reason: string, detail?: unknown, outputs?: string | null): void {
     const tk = tokenTotals.get(instance.id)
     if (tokenTotals.has(instance.id)) tokenTotals.delete(instance.id)
@@ -321,6 +332,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
         finished_at: null,
         detail: `retry:${reason}`,
       })
+      notifyRow(instance)
       return
     }
     finishTerminal(instance, 'failed', overWindow ? `${reason}:over-window` : reason, detail)
@@ -387,6 +399,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
   function markActivity(instance: TaskInstance): void {
     if (instance.status === 'unknown') {
       store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'unknown-revived' })
+      notifyRow(instance)
       return
     }
     if (instance.status === 'running') store.renewLease(instance.id, options.leaseMs)
@@ -489,6 +502,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
       // session/created 事件同步于 sessions.create 内发出，能进 dispatched 又收到跑完信号
       // 说明 created 对账被跳过（如插件重启恢复），先补 running 语义再判定。
       store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: signal })
+      notifyRow(instance)
     }
     const current = store.get(instance.id)
     if (current === undefined || (current.status !== 'running' && current.status !== 'unknown')) return undefined
@@ -550,6 +564,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
       const instance = store.getBySession(session.id)
       if (instance === undefined || instance.status !== 'dispatched') return
       store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'session/created' })
+      notifyRow(instance)
       const snap = snapOf(instance)
       if (snap === undefined) {
         logger.warn(`实例 ${instance.id} 无快照，会话保持默认名（决策 42 改名跳过）`)
@@ -616,6 +631,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }: Recon
           continue
         }
         store.transition(instance.id, { status: 'dispatched', detail: 'redispatch' })
+        notifyRow(instance)
         launchAsyncFire(store.get(instance.id) ?? instance)
       }
       // 发动②：无会话的 dispatched 行（Loop A 新落库 / create-failed 撤回的）——发动之。

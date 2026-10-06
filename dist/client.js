@@ -68370,6 +68370,102 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, [hasRunning, ms]);
 		}
 		//#endregion
+		//#region src/client/event-subscribe.ts
+		/** 与 `src/client/index.ts` 的 `DISPATCH_API_PREFIX` 同口径（相对路径；不 import index 以免成环）。 */
+		const EVENTS_URL = "api/task-dispatch-table/events";
+		const byType = /* @__PURE__ */ new Map();
+		const resyncHandlers = /* @__PURE__ */ new Set();
+		let source = null;
+		/** 懒建单例连接（首个订阅者出现时才连；无订阅者时不连、不空转）。 */
+		function ensureSource() {
+			if (source !== null || typeof EventSource === "undefined") return;
+			const es = new EventSource(EVENTS_URL);
+			es.onmessage = (msg) => {
+				let event;
+				try {
+					event = JSON.parse(msg.data);
+				} catch {
+					return;
+				}
+				const handlers = byType.get(event.type);
+				if (handlers === void 0) return;
+				for (const handler of [...handlers]) try {
+					handler(event);
+				} catch {}
+			};
+			es.onopen = () => {
+				for (const handler of [...resyncHandlers]) try {
+					handler();
+				} catch {}
+			};
+			source = es;
+		}
+		/** 订阅一组事件类型；`handler` 每次渲染都换也不会反复重建订阅（内部走 ref）。 */
+		function useEvents(types, handler) {
+			const ref = (0, react$1.useRef)(handler);
+			ref.current = handler;
+			const key = types.join(",");
+			(0, react$1.useEffect)(() => {
+				ensureSource();
+				const stable = (event) => ref.current(event);
+				const sets = [];
+				for (const type of types) {
+					let set = byType.get(type);
+					if (set === void 0) {
+						set = /* @__PURE__ */ new Set();
+						byType.set(type, set);
+					}
+					set.add(stable);
+					sets.push(set);
+				}
+				return () => {
+					for (const set of sets) set.delete(stable);
+				};
+			}, [key]);
+		}
+		/** 订阅「重连成功」——各页据此补读一次当前值（断线期间可能漏过事件）。 */
+		function useResync(handler) {
+			const ref = (0, react$1.useRef)(handler);
+			ref.current = handler;
+			(0, react$1.useEffect)(() => {
+				ensureSource();
+				const stable = () => ref.current();
+				resyncHandlers.add(stable);
+				return () => {
+					resyncHandlers.delete(stable);
+				};
+			}, []);
+		}
+		//#endregion
+		//#region src/event-catalog.ts
+		/** 事件类型目录（前后端唯一真源；新增类型只在这里加）。 */
+		const EventType = {
+			/** 任务定义增删改（含开关 / 整批替换 / 版本删除 / 附件文件变更；这些写路径都汇聚到 onDefinitionsChanged）。 */
+			TASKS_CHANGED: "tasks.changed",
+			/** 实例进入 dispatched / running（自动调度或「立即执行」）。 */
+			TASK_RUN_STARTED: "task.run.started",
+			/** 实例成功终态。 */
+			TASK_RUN_SUCCEEDED: "task.run.succeeded",
+			/** 实例失败终态（含判死 / 租约回收 / 回执缺失收敛）。 */
+			TASK_RUN_FAILED: "task.run.failed",
+			/** 跳过 / 错过刻度 / 过期（「未执行」的原因类）。 */
+			TASK_RUN_SKIPPED: "task.run.skipped",
+			/** 其余实例行变化（重试退回 / unknown 复活 / 转 running / redispatch / 删行 / 阻塞原因变化）。 */
+			TASK_RUN_CHANGED: "task.run.changed",
+			/** 插件配置变更。 */
+			CONFIG_CHANGED: "config.changed",
+			/** 无参：强制前端重读一次当前值（后端升级 / 索引重建等）。 */
+			FORCE_REFRESH: "force.refresh"
+		};
+		/** 「实例运行态」这一族事件（订阅方通常一并关心）。 */
+		const RUN_EVENT_TYPES = [
+			EventType.TASK_RUN_STARTED,
+			EventType.TASK_RUN_SUCCEEDED,
+			EventType.TASK_RUN_FAILED,
+			EventType.TASK_RUN_SKIPPED,
+			EventType.TASK_RUN_CHANGED
+		];
+		//#endregion
 		//#region src/client/records-timeline.tsx
 		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
 		const PAGE_SIZE = 50;
@@ -69081,6 +69177,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			useInstancesRunningPoll(rows.some((r) => isRunningStatus(r.status)), () => {
 				load(null, true);
 			});
+			/**
+			* 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例（或该任务）
+			* 在当前列表里才静默重载首屏，离屏忽略。与上面 5s 轮询并存（本轮保留轮询不动）。
+			*/
+			useEvents(RUN_EVENT_TYPES, (event) => {
+				const instanceId = event.payload?.instanceId;
+				const taskId = event.payload?.taskId;
+				if (rows.some((r) => typeof instanceId === "string" && r.id === instanceId || typeof taskId === "string" && r.task_id === taskId)) load(null, true);
+			});
+			useResync(() => {
+				load(null, true);
+			});
 			const loadMore = (0, react$1.useCallback)(() => {
 				if (loading || done || cursor === null) return;
 				if (error !== null) return;
@@ -69551,6 +69659,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				};
 			}, [load]);
 			useInstancesRunningPoll(instances.some((r) => isRunningStatus(r.status)), () => {
+				load();
+			});
+			/**
+			* 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例已在当月网格里、
+			* 或该任务在当前筛选内（新派发的实例还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。
+			* 与上面 5s 轮询并存（本轮保留轮询不动）。
+			*/
+			useEvents(RUN_EVENT_TYPES, (event) => {
+				const instanceId = event.payload?.instanceId;
+				const taskId = event.payload?.taskId;
+				if (instances.some((r) => typeof instanceId === "string" && r.id === instanceId || typeof taskId === "string" && r.task_id === taskId) || typeof taskId === "string" && rowsRef.current.some((row) => row.id === taskId)) load();
+			});
+			useResync(() => {
 				load();
 			});
 			const planByDay = (0, react$1.useMemo)(() => {
@@ -70576,6 +70697,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				});
 			}, [previewWidth, editorTaken]);
 			const overview = useTaskOverview();
+			/**
+			* 事件推送接入（design/event-push.md §七）：主列表订阅「定义 / 配置 / 强制刷新」与「运行态」事件。
+			* 全局类事件 ⇒ 直接重读；运行态事件按**在屏判定**——该任务不在当前列表里就忽略（用户下拉时自会读到最新）。
+			* `refresh()` 带 `rev` 增量：服务端未变即回 `unchanged`，重读很轻。**现有 10s 轮询保留不动**。
+			*/
+			useEvents([
+				EventType.TASKS_CHANGED,
+				EventType.CONFIG_CHANGED,
+				EventType.FORCE_REFRESH
+			], () => {
+				overview.refresh();
+			});
+			useEvents(RUN_EVENT_TYPES, (event) => {
+				const taskId = event.payload?.taskId;
+				if (typeof taskId === "string" && !overview.rows.some((row) => row.id === taskId)) return;
+				overview.refresh();
+			});
+			useResync(() => {
+				overview.refresh();
+			});
 			/** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
 			const loadHistory = async (id) => {
 				try {

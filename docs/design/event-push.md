@@ -1,0 +1,231 @@
+# 事件推送机制（SSE 事件总线）
+
+> **状态**：🔵 落码（2026-10-06 起）
+> **来源**：用户 2026-10-06 拍板「别老用轮询，要一套事件推送」；设计要求（事件模型 / 合并位置 / 断线语义）由用户逐条确认，见 [`../worklog/event-push.md`](../worklog/event-push.md)。
+> **配套**：现状（轮询）见 [`client-refresh.md`](client-refresh.md)（**已被本篇取代**，保留作降级记录）；宿主流式能力见 [`external/host-webserver-streaming.md`](external/host-webserver-streaming.md)；客户端取数层见 [`code-conventions.md`](code-conventions.md)。
+
+> **这是什么**：本插件前后端之间的**单向事件推送总线**——后端一发生任务相关变更就广播一个「失效信号」，已打开的前端页面订阅后按需刷新自己。
+> **怎么用**：改后端变更点 → 在注入面 emit 一个事件；改前端页面 → `useEvent(type, handler)` 订阅、按「相关？在屏？」决定刷不刷。**不要把事件写进数据库**，也不要新增 npm 包。
+
+---
+
+## 一、事实前提（先读源码、勿猜）
+
+1. **宿主（DSH）不把实例状态推给客户端**：服务端 `reconcile` 靠 `ctx.on('session/event', …)` 得知终态再写库（`src/index.ts:1300-1302`），这一步发生在服务端，浏览器感知不到 ⇒ **「后端 → 前端」这条通道必须我们自己建**。
+2. **宿主没有通知中心 / 前端事件总线**：DSH 只给了服务端订阅（`ctx.on`）与客户端 `Toast` 组件（本地弹窗，非推送）。频道、事件类型、载荷全由我们定义。
+3. **推送通道 = SSE**：`text/event-stream` 是普通 HTTP 响应（Node 原生支持写出），前端用浏览器原生 `EventSource` ⇒ **零新增 npm 依赖**。
+4. **同源闸门已就位**：现有路由用 `isTrustedDispatchRequest`（`src/index.ts:84-94`，认 `Origin`/`Host` 同源，无 `Origin` 时放行回环）⇒ SSE 端点直接复用；`EventSource` 不能带自定义请求头，但该闸门不需要自定义头。
+
+> ⚠️ 前提 3/4 的**宿主侧**（`dsh-host-webserver` 是否支持流式响应、是否缓冲、是否超时回收）必须**先读源码核实**再落码，见 [`external/host-webserver-streaming.md`](external/host-webserver-streaming.md) 与 §八。
+
+---
+
+## 二、事件模型
+
+```
+{ type: 固定常量, payload?: 任意业务对象 }
+```
+
+- **`type` 固定**：取值来自 §三的事件目录（共享常量，谁都不许随手造新码）。
+- **`payload` 任意**：可为空、可为 ID、可为 JSON；由各业务自定义，前端按 `type` 自行解。
+- **可无 payload**：如 `FORCE_REFRESH`（后端升级后强制前端重读）。
+- **事件是「失效信号」，不承载数据、不写库**：数据本来就在 `task_definitions` / `task_instances` 里（变更时已落库），事件只负责说「某某变了，去重读」。
+  - ⚠️ **不得把推送事件写进 `task_events`**：那张表是**日志**（审计/诊断），不是推送通道，两者无关。
+  - ⚠️ **不得新增持久化**：本机制不做历史、不做已读未读（那是「站内信通知」，另一个需求）。
+
+---
+
+## 三、事件目录（`src/event-catalog.ts`，前后端共用）
+
+纯常量、无 Node 依赖（要能被 tsdown 内联进单文件客户端产物 `dist/client.js`）。
+
+```ts
+export const EventType = {
+  TASKS_CHANGED:    'tasks.changed',      // 任务定义增删改（含开关 / 整批 / 版本删除 / 附件文件变更）
+  TASK_RUN_STARTED: 'task.run.started',   // 实例进入 dispatched/running（自动调度或「立即执行」）
+  TASK_RUN_SUCCEEDED: 'task.run.succeeded',// 实例成功终态
+  TASK_RUN_FAILED:  'task.run.failed',    // 实例失败终态（含判死 / 租约回收 / 回执缺失）
+  TASK_RUN_SKIPPED: 'task.run.skipped',   // 跳过 / 错过刻度 / 过期 / 阻塞（未执行的原因类）
+  TASK_RUN_CHANGED: 'task.run.changed',   // 其余实例行变化（重试退回、unknown、删除、附件缺失）
+  CONFIG_CHANGED:   'config.changed',     // 插件配置变更
+  FORCE_REFRESH:    'force.refresh',      // 无参：强制前端重读
+} as const
+export type EventTypeValue = typeof EventType[keyof typeof EventType]
+
+export interface PushEvent { type: EventTypeValue; payload?: Record<string, unknown> }
+```
+
+**payload 约定**：
+
+| type | payload | 说明 |
+|---|---|---|
+| `TASKS_CHANGED` | `{ ids?: string[], mode: 'create'\|'update'\|'delete'\|'batch' }` | `ids` 缺省 = 影响面未知，订阅方按「全量重读」处理 |
+| `TASK_RUN_STARTED` / `SUCCEEDED` / `FAILED` / `SKIPPED` / `CHANGED` | `{ taskId?: string, instanceId?: string }` | 一律给到能定位的 id；缺省按「全量重读」处理 |
+| `CONFIG_CHANGED` | `{}` | 目前无参 |
+| `FORCE_REFRESH` | 无 | 强制各页重读一次当前值 |
+
+> 事件只带「哪些 id 变了」，**不带变更后的值**——值由订阅方重读拿（真源唯一）。
+
+---
+
+## 四、后端：广播器（唯一出口 + 中间层合并）
+
+**文件**：`src/event-bus.ts`（进程内，无持久化）。
+
+```ts
+export interface EventBus {
+  emit(event: PushEvent): void                            // 变更点唯一调用口（不写库）
+  subscribe(send: (event: PushEvent) => void): () => void // 每个 SSE 连接订阅；返回退订
+}
+export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number }): EventBus
+```
+
+**合并（debounce）放中间层**——只在广播器这一个出口做，**不在前端各页分散写**：
+
+- **key = `type` + 身份**（payload 里的 `taskId`/`instanceId`/`ids` 归一成字符串；无身份则只按 `type`）。
+- 同 key 在窗口内来 N 次 → **只发最后 1 次**（事件不带数据，合并零信息损失）。
+- **窗口** `windowMs` 是可调常量（默认 200ms；20ms/500ms 皆可，改一处全局生效）。
+- **最大等待** `maxWaitMs`：同一 key 持续不断来（如每 50ms）时，「等静默才发」会被无限推迟 ⇒ 到点必发一次。
+- 无订阅者时：合并后直接丢弃（无人听，无需缓冲）。
+
+**清理**：广播器的 flush 定时器与订阅集合在插件 `dispose` 时清理（复用现有 `sctx.on('dispose', …)`，`src/index.ts:1366`）。
+
+---
+
+## 五、后端：SSE 端点
+
+在既有 `makeDispatchRoutes(...)` 内新增一条 `exact` 路由：`GET /api/task-dispatch-table/events`。
+
+- **闸门**：复用 `isTrustedDispatchRequest`（`src/index.ts:84-94`）。
+- **建连**：写响应头 `content-type: text/event-stream; charset=utf-8`、`cache-control: no-store`、`connection: keep-alive`（并 `flushHeaders`）。
+- **订阅**：`res.write` 前 `bus.subscribe(send)`；`req`/`res` 的 `close`/`error` 事件里 `unsubscribe()`。
+- **写出**：每条事件 `data: <JSON.stringify(event)>\n\n`。
+- **心跳**：定时写注释行 `: ping\n\n`（如 15–25s 一次），保活穿代理、及时发现死连接。
+- **响应契约扩展**：现有 `DispatchWebResponse`（`src/index.ts:64-68`）**只声明 `writeHead`/`end`**，SSE 需补 `write`（可选方法，先核实宿主真身支持分块，见 §八）。
+- **注入时序**：`webServer` 注册**早于** `settings inject`（`src/index.ts:1064-1067` 注释）⇒ 路由侧只传 `getBroadcaster` **惰性 getter**，广播器实体在 settings inject 内创建（照 `getScheduler` 模式）。
+
+---
+
+## 六、后端：变更点接入（全量盘点 → 事件映射）
+
+**注入面（首选，不碰 `store` 数据层）**：
+
+1. **`RuntimeIndex`（内存派生索引，`src/runtime-index.ts`）**——所有运行态变更必经其方法：`markDispatched` / `markTerminal` / `markBlocked` / `clearRunning` / `markDefinitionsChanged` / `rebuild`。在 `src/index.ts` 注入给 scheduler/reconciler 的 runtime 对象上**包一层 emit**，即可覆盖绝大多数运行态变化，且完全不侵入持久层。
+2. **`onDefinitionsChanged`（`src/index.ts:269-273` 声明 / `:1143` 注入 / `:1355-1358` 实体）**——定义变更的唯一同步点（注释明写「新增写路径时只在这里加一处」）⇒ 在此 emit `TASKS_CHANGED`。
+3. **路由内直发**——不经过上面两者的（如附件上传、历史版本删除）在各自 handler 内 emit。
+4. **`scope.watch`（`src/index.ts:1322-1328`）**——配置变更（含外部改配置）⇒ emit `CONFIG_CHANGED`。
+
+> ⚠️ **不在 `store` 内 emit**（`transition`/`transaction`）：会把广播器焊进数据层，且 `transaction` 内 emit 与回滚语义冲突（`src/store.ts:787` / `:429`）。
+
+**全量映射表**（触发位置为核实落点）：
+
+| 变更点 | 事件类型 | payload | 触发位置 |
+|---|---|---|---|
+| 任务删除 | `TASKS_CHANGED` | 无 ids（全刷） | 落库成功 → `onDefinitionsChanged` |
+| 任务整批替换 | `TASKS_CHANGED` | 无 ids | 同上 |
+| 任务新增/编辑保存 | `TASKS_CHANGED` | 无 ids | 同上 |
+| 开关实时写回 | `TASKS_CHANGED` | 无 ids | 同上 |
+| 版本/快照删除 | `TASKS_CHANGED` | 无 ids | 同上 |
+| 附件搬移/移除/整删 | `TASKS_CHANGED` | 无 ids | 随定义保存/删除一起发（同一条）；**单独上传不发**（文件还没被任何任务引用，没有页面需要刷） |
+| 派发（自动）/ 立即执行 | `TASK_RUN_STARTED` | `{taskId}` | `src/scheduler.ts` `markDispatched`（经 RuntimeIndex 包裹层） |
+| 成功终态 | `TASK_RUN_SUCCEEDED` | `{taskId}` | `src/reconcile.ts` `markTerminal('succeeded')` |
+| 失败终态 / 判死 / 租约回收 | `TASK_RUN_FAILED` | `{taskId}` | `src/reconcile.ts` `markTerminal('failed')` |
+| 跳过 / 错过刻度 / 过期 | `TASK_RUN_SKIPPED` | `{taskId}` | `src/scheduler.ts` `markTerminal('skipped')` |
+| 依赖阻塞 / 放行、开关清原因 | `TASK_RUN_CHANGED` | `{taskId}` | `src/scheduler.ts` `markBlocked`（经 RuntimeIndex 包裹层） |
+| 实例删除（窗口外 pending / 附件缺失） | `TASK_RUN_CHANGED` | `{taskId}` | `src/reconcile.ts` `syncRunningAfterDrop` → `clearRunning`（仅当该任务已无在飞实例） |
+| 重试退回 pending | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `retryOrFail` → `notifyRow` |
+| unknown 复活 / 转 running / redispatch | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `markActivity` / `noteRunSignal` / `onCreated` / `sweep` → `notifyRow` |
+| 配置变更 | `CONFIG_CHANGED` | `{}` | `src/index.ts` `scope.watch`（`/config` 写回也经它触发） |
+| 启动扫描 / 索引重建 / 启动诊断 / 历史清理 | **不发** | — | 都跑在客户端连接之前（无订阅者）；要强刷时用 `FORCE_REFRESH` |
+| 归档 / 反归档会话 | **不发** | — | 只影响会话弹窗可读性，列表数据不变 |
+
+**实际注入面（落码现状，共四处）**：
+
+1. `RuntimeIndex` 包裹层（`src/index.ts`）—— `markDispatched` / `markTerminal` / `markBlocked` / `clearRunning` 外再 emit；覆盖主界面卡片要刷的全部运行态。
+2. `resyncTaskMap`（定义变更唯一同步点）—— emit `TASKS_CHANGED`（定义类改动无 ids 粒度，订阅方按全量重读处理；`rev` 增量会挡掉未变的重传）。
+3. `scope.watch` —— emit `CONFIG_CHANGED`。
+4. `createReconciler` 的 `emit` 注入 + 局部 `notifyRow` —— 只覆盖**不经 RuntimeIndex** 的实例行变化（重试退回 / unknown 复活 / 转 running / redispatch）。
+
+> **租约续租（`renewLease`，`src/store.ts:810`）不推送**：每 tick × 每 running 实例的高频心跳，推它只会刷屏，且界面不展示租约。
+
+---
+
+## 七、前端：订阅封装与页面消费模型
+
+**封装文件**：`src/client/event-subscribe.ts`（单例，全页共享**一条** `EventSource`）。
+
+```ts
+// 对外
+export function useEvents(types: readonly EventTypeValue[], handler: (e: PushEvent) => void): void
+export function useResync(handler: () => void): void   // 重连成功时触发一次（各页补读当前值）
+```
+
+- **单例连接**：URL = `api/task-dispatch-table/events`（相对路径，与 `src/client/index.ts` 的 `DISPATCH_API_PREFIX` 同源口径）；模块级只建一条，多个 `useEvents` 只是注册回调。
+- **重连自愈**：`EventSource` 断线由**浏览器自动重连**；`onopen` 回调里通知所有 `useResync` 订阅者 ⇒ 各页**重读一次当前值**（补的是「当前真相」，**不追历史事件**）。
+- **退订**：`useEvents` 卸载时摘回调；无回调时不断开连接（连接随页面生命周期）。
+
+**页面消费模型**（每个页面自己定「什么事件算相关、要不要刷」）：
+
+```
+收到事件 → ① 与本页相关吗？——不相关：丢弃
+          ② 相关 → 该对象在屏吗？
+             (a) 在屏  → 立即刷新 / 重读该条
+             (b) 不在屏 → 什么都不做（用户下拉/翻到时正常读库即最新）
+```
+
+- **相关判定**由 type 决定（如执行记录页只关心 `TASK_RUN_*`（`RUN_EVENT_TYPES`），不看 `CONFIG_CHANGED`）。
+- **在屏判定**复用各页已持有的 id 集合，**不要新写取数逻辑**；只复用各页已有的 `load()` / `refresh()`。
+- **`/tasks/overview?rev=` 已有增量协议**（`src/index.ts`）：`TASKS_CHANGED` 后直接调 `refresh()` 即可，`rev` 相同会自动回 `unchanged`，无需前端自己比对。
+
+**已接入的页面（落码现状）**：
+
+| 页面 | 订阅 | 刷新动作 | 在屏判定 |
+|---|---|---|---|
+| 主列表（`src/client/index.ts` 的 `useTaskOverview`） | `TASKS_CHANGED` / `CONFIG_CHANGED` / `FORCE_REFRESH` + `RUN_EVENT_TYPES` + `useResync` | `overview.refresh()` | 运行态事件：`payload.taskId` 不在 `overview.rows` 里则忽略；全局类事件直接刷 |
+| 执行记录页（`records-timeline.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load(null, true)`（静默首屏） | `payload.instanceId` 在 `rows` 里，或 `payload.taskId` 在 `rows.task_id` 里；否则忽略 |
+| 任务日程页（`task-calendar.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load()`（当月） | 实例已在当月 `instances` 里，或 `taskId` 在当前筛选内（新派发实例还没进网格也得让它出现） |
+| 卡片展开面板（`task-list.tsx`） | **不单独订阅** | 由主列表 `refresh()` 驱动 | `runSig`（`lastStatus\|lastFinishedAt\|running`）变化 ⇒ 打开中的 info/records/logs 自动重取 |
+
+**特殊情形**：`TASK_RUN_*` 在「右上角飘提示 / 通知」类场景下**不看在屏、一律响应**（那是「察觉」，不是「刷新某行」）——但该功能**本轮不做**（见 §九）。
+
+---
+
+## 八、实施步骤（一步一步）
+
+**第 0 步（硬前提）· 核实宿主流式能力**：读 `@deepseek-ai/dsh-host-webserver`（版本线见 `external/dsh-capabilities.md` 表头）`lib/index.js`，确认响应对象是否即 Node `http.ServerResponse`（支持 `write` / `flushHeaders`）、是否对响应缓冲、是否设连接超时或主动回收。**结论回写 [`external/host-webserver-streaming.md`](external/host-webserver-streaming.md)**；若宿主不支持流式，本方案中止并回报（不得靠运行时试探）。
+
+**第 1 步 · 事件目录**：新增 `src/event-catalog.ts`（§三）。
+
+**第 2 步 · 广播器**：新增 `src/event-bus.ts`（§四）。
+
+**第 3 步 · SSE 端点**：`src/index.ts` 扩展 `DispatchWebResponse` 增 `write`；加 `/events` 路由（闸门 / 心跳 / 订阅 / 退订）；创建广播器并注入。
+
+**第 4 步 · 变更点接线**：按 §六 映射表，在 `RuntimeIndex` 包装层、`onDefinitionsChanged`、路由直发点、`scope.watch` 四处 emit。
+
+**第 5 步 · 前端订阅封装**：新增 `src/client/event-subscribe.ts`（§七）。
+
+**第 6 步 · 页面接入**：主列表（`index.ts` 的 `useTaskOverview`）、执行记录（`records-timeline.tsx`）、日程（`task-calendar.tsx`）订阅相关 type，按 §七模型处理；**卡片面板无需单独订阅**（主列表刷新经 `runSig` 自动驱动其重取）；**保留现有轮询不动**。
+
+**第 7 步 · 构建与验收**：`npm run build`（产物入 `dist/`）→ `npm run smoke` → `npm run typecheck` → 提交（含 dist）。
+
+---
+
+## 九、能与不能（边界）
+
+**能做**：
+- 自定义事件类型目录；后端内存 emit（不写库）；SSE 单端点广播；前端全局订阅 + 按事件筛选 + 在屏判定；中间层合并（窗口 + 最大等待）；重连补读一次；全量变更点接入。
+
+**不能做 / 不碰**：
+- ❌ 不把推送事件写进 `task_events`（那是日志）。
+- ❌ 不做历史 / 已读未读（站内信通知是另一回事）。
+- ❌ 不在前端各页分散写 debounce（合并只在广播器出口）。
+- ❌ 不新增 npm 依赖（Node 原生 + 浏览器原生 `EventSource`）。
+- ❌ **本轮不删除、不替换任何现有轮询**（见尾注）。
+- ❌ 不改宿主接口；不靠运行时试探猜宿主 API（先读源码）。
+- ⚠️ **部署侧注意**：反向代理（nginx 等）会缓冲 SSE ⇒ 需在代理关缓冲（如 `X-Accel-Buffering: no` / `proxy_buffering off`），否则前端收不到实时推送。
+
+---
+
+## 十、尾注：老轮询的处理（本轮不做，后续单独立项）
+
+现有的轮询（`src/client/instances-poll.ts` 的 5s 共享 hook、`task-list.tsx:274` 的 10s overview 轮询、`task-info.tsx:447` 1s ticker、设置页 `/snapshot` 2s 轮询）**本轮一律保留不动**。待本机制在真机稳定后，再单独立项决定：哪些轮询**降级为「SSE 不可用/断线时」的兜底**、哪些**直接删除**、间隔如何复核。决策前**不删任何轮询**。

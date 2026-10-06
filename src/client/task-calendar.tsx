@@ -22,6 +22,8 @@ import { fetchEvents, fetchInstanceBySession, fetchInstancesLite, type EventRow,
 import { type ResolvedDependency } from '../deps.js'
 import { isRunningStatus, statusTextOf, statusToneOf } from './status-text'
 import { useInstancesRunningPoll } from './instances-poll'
+import { useEvents, useResync } from './event-subscribe'
+import { RUN_EVENT_TYPES } from '../event-catalog.js'
 import { monthRangeOf, monthRangeQuery, planEntriesByDay, type CalendarPlanEntry, type CalendarTask } from '../calendar-plan.js'
 import { logicalDateOf } from '../schedule-next.js'
 // 执行块**唯一实现**从执行记录页复用（不许再写一份条目渲染）+ 它的样式注入（幂等）。
@@ -300,6 +302,21 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   // 跑完即停 ⇒ 任务跑完、日历开着也能跟着更新（不再卡在「运行中」）。
   const hasRunning = instances.some(r => isRunningStatus(r.status))
   useInstancesRunningPoll(hasRunning, () => { void load() })
+
+  /**
+   * 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例已在当月网格里、
+   * 或该任务在当前筛选内（新派发的实例还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。
+   * 与上面 5s 轮询并存（本轮保留轮询不动）。
+   */
+  useEvents(RUN_EVENT_TYPES, (event) => {
+    const instanceId = event.payload?.instanceId
+    const taskId = event.payload?.taskId
+    const onScreen = instances.some(r =>
+      (typeof instanceId === 'string' && r.id === instanceId) || (typeof taskId === 'string' && r.task_id === taskId))
+      || (typeof taskId === 'string' && rowsRef.current.some(row => row.id === taskId))
+    if (onScreen) void load()
+  })
+  useResync(() => { void load() })
 
   // 未来计划（浏览器内现算，无请求）：只算启用任务，且跟着工作区 / 任务过滤一起收窄。
   const planByDay = useMemo(() => {

@@ -3,6 +3,7 @@ import type { TaskDefinition } from './tasks.js';
 import type { AgentHandle } from './dispatch.js';
 import type { InstanceSnapshot, TaskInstance, TaskStore } from './store.js';
 import type { RuntimeIndex } from './runtime-index.js';
+import { type PushEvent } from './event-catalog.js';
 import type { PluginConfig } from './config.js';
 import { type AssetPaths } from './task-assets.js';
 /**
@@ -48,6 +49,8 @@ export interface ReconcilerDeps {
     options: ReconcileOptions;
     /** 主界面运行态内存索引（2026-09-30）；未装配则跳过（不影响对账）。 */
     runtime?: RuntimeIndex;
+    /** 事件广播（design/event-push.md）：实例行在 DB 层的变化也通知前端；未装配则跳过。 */
+    emit?: (event: PushEvent) => void;
 }
 /**
  * 回执裁决（决策 19，替代旧契约文件三查）：
@@ -99,4 +102,4 @@ export interface TokenUsage {
  * 取不到（事件不带 usage）返回 undefined（三列留 null，不阻塞链路）。
  */
 export declare function extractTokenUsage(event: unknown): TokenUsage | undefined;
-export declare function createReconciler({ ctx, logger, store, options, runtime }: ReconcilerDeps): Reconciler;
+export declare function createReconciler({ ctx, logger, store, options, runtime, emit }: ReconcilerDeps): Reconciler;

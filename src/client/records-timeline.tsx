@@ -48,6 +48,8 @@ import {
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
 import { useInstancesRunningPoll } from './instances-poll'
+import { useEvents, useResync } from './event-subscribe'
+import { RUN_EVENT_TYPES } from '../event-catalog.js'
 import { ensureRunningStyle, RUN_PULSE_CLASS } from './ui/running'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
@@ -981,6 +983,19 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   // 日程页共用同一份，不再各写一段 setInterval。
   const hasRunning = rows.some(r => isRunningStatus(r.status))
   useInstancesRunningPoll(hasRunning, () => { void load(null, true) })
+
+  /**
+   * 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例（或该任务）
+   * 在当前列表里才静默重载首屏，离屏忽略。与上面 5s 轮询并存（本轮保留轮询不动）。
+   */
+  useEvents(RUN_EVENT_TYPES, (event) => {
+    const instanceId = event.payload?.instanceId
+    const taskId = event.payload?.taskId
+    const onScreen = rows.some(r =>
+      (typeof instanceId === 'string' && r.id === instanceId) || (typeof taskId === 'string' && r.task_id === taskId))
+    if (onScreen) void load(null, true)
+  })
+  useResync(() => { void load(null, true) })
 
   const loadMore = useCallback((): void => {
     if (loading || done || cursor === null) return

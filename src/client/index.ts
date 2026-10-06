@@ -39,6 +39,9 @@ import { RecordsTimelineView } from './records-timeline'
 import { TaskCalendarView } from './task-calendar'
 import { humanizeTaskError } from './task-editor'
 import { TaskListView, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-list'
+// 事件推送（design/event-push.md）：后端变更即时广播、前端订阅按需刷新（替代轮询的增量通道）。
+import { useEvents, useResync } from './event-subscribe'
+import { EventType, RUN_EVENT_TYPES } from '../event-catalog.js'
 // 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
 import { resolvedDepsOf } from '../deps.js'
 import {
@@ -595,6 +598,19 @@ function TaskPage(props: {
   // 主界面任务列表数据（2026-09-30）：一次请求出全部卡片数据，10 秒轮询 + rev 比对
   // ⇒ 服务端只读内存摘要、不查库（design/features/main-panel.md §四）。
   const overview = useTaskOverview()
+  /**
+   * 事件推送接入（design/event-push.md §七）：主列表订阅「定义 / 配置 / 强制刷新」与「运行态」事件。
+   * 全局类事件 ⇒ 直接重读；运行态事件按**在屏判定**——该任务不在当前列表里就忽略（用户下拉时自会读到最新）。
+   * `refresh()` 带 `rev` 增量：服务端未变即回 `unchanged`，重读很轻。**现有 10s 轮询保留不动**。
+   */
+  useEvents([EventType.TASKS_CHANGED, EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { overview.refresh() })
+  useEvents(RUN_EVENT_TYPES, (event) => {
+    const taskId = event.payload?.taskId
+    if (typeof taskId === 'string' && !overview.rows.some(row => row.id === taskId)) return
+    overview.refresh()
+  })
+  // 重连成功 ⇒ 补读一次当前值（断线期间可能漏过事件）。
+  useResync(() => { overview.refresh() })
 
   /** 拉取某任务的历史（版本 + 快照）。拉不到就保持空 ⇒ 面板显示「暂无版本」。 */
   const loadHistory = async (id: string): Promise<void> => {

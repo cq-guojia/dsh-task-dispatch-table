@@ -12,6 +12,7 @@ import { displayNameOf, durationMs, sessionTitleOf } from './tasks.js';
 import { dispatchTask, resolveWorkspace, resolveWorkspaceByPath, userNotice, DispatchPreconditionError, } from './dispatch.js';
 import { receiptInstruction } from './receipt.js';
 import { parseInstanceSnapshot } from './store.js';
+import { EventType } from './event-catalog.js';
 import { join } from 'node:path';
 import { attachmentAbsPath } from './task-assets.js';
 /**
@@ -149,7 +150,7 @@ export function extractTokenUsage(event) {
     }
     return undefined;
 }
-export function createReconciler({ ctx, logger, store, options, runtime }) {
+export function createReconciler({ ctx, logger, store, options, runtime, emit }) {
     const handles = new Map();
     /** token 用量分量累计（决策 32 修订）：按 instance.id 累计，跨重试仍归同一实例；完成写回后清除。 */
     const tokenTotals = new Map();
@@ -223,6 +224,13 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
         if (!store.inFlightByTask().has(taskId))
             runtime.clearRunning(taskId);
     }
+    /**
+     * 实例行在 **DB 层**的变化（不经 `RuntimeIndex` 的那些：重试退回 / unknown 复活 / 转 running /
+     * redispatch）也通知前端重读——`RuntimeIndex` 包裹层覆盖不到它们（design/event-push.md §六）。
+     */
+    const notifyRow = (instance) => {
+        emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId: instance.task_id, instanceId: instance.id } });
+    };
     function finishTerminal(instance, status, reason, detail, outputs) {
         const tk = tokenTotals.get(instance.id);
         if (tokenTotals.has(instance.id))
@@ -257,6 +265,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
                 finished_at: null,
                 detail: `retry:${reason}`,
             });
+            notifyRow(instance);
             return;
         }
         finishTerminal(instance, 'failed', overWindow ? `${reason}:over-window` : reason, detail);
@@ -315,6 +324,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
     function markActivity(instance) {
         if (instance.status === 'unknown') {
             store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'unknown-revived' });
+            notifyRow(instance);
             return;
         }
         if (instance.status === 'running')
@@ -421,6 +431,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
             // session/created 事件同步于 sessions.create 内发出，能进 dispatched 又收到跑完信号
             // 说明 created 对账被跳过（如插件重启恢复），先补 running 语义再判定。
             store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: signal });
+            notifyRow(instance);
         }
         const current = store.get(instance.id);
         if (current === undefined || (current.status !== 'running' && current.status !== 'unknown'))
@@ -480,6 +491,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
             if (instance === undefined || instance.status !== 'dispatched')
                 return;
             store.transition(instance.id, { status: 'running', lease_until: leaseUntil(), detail: 'session/created' });
+            notifyRow(instance);
             const snap = snapOf(instance);
             if (snap === undefined) {
                 logger.warn(`实例 ${instance.id} 无快照，会话保持默认名（决策 42 改名跳过）`);
@@ -546,6 +558,7 @@ export function createReconciler({ ctx, logger, store, options, runtime }) {
                     continue;
                 }
                 store.transition(instance.id, { status: 'dispatched', detail: 'redispatch' });
+                notifyRow(instance);
                 launchAsyncFire(store.get(instance.id) ?? instance);
             }
             // 发动②：无会话的 dispatched 行（Loop A 新落库 / create-failed 撤回的）——发动之。

@@ -9,6 +9,8 @@ import { randomBytes } from 'crypto';
 import { createReconciler } from './reconcile.js';
 import { createScheduler } from './scheduler.js';
 import { createRuntimeIndex } from './runtime-index.js';
+import { createEventBus } from './event-bus.js';
+import { EventType, runEventTypeOf } from './event-catalog.js';
 export const name = 'dsh-task-dispatch-table';
 /** 宿主服务依赖：以源码实际服务名为准（决策 15 / PROGRESS「已核实的 DSH 能力」）。
  * ⚠️ settings 不在此列：settings 服务以「带 register 面」或「惰性形态」两种组合入场，
@@ -23,6 +25,8 @@ const DEBUG_WARN_LIMIT = 20;
 const DEBUG_WRITE_MIN_INTERVAL_MS = 2_000;
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
+/** SSE 心跳间隔（毫秒）：保活穿代理 + 及时发现对端已断。 */
+const SSE_HEARTBEAT_MS = 20_000;
 /** settings 命名空间（与浏览器半侧的 SETTINGS_NS 同名，两侧按它配对）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table';
 const DISPATCH_API_PREFIX = '/api/task-dispatch-table';
@@ -237,7 +241,9 @@ getScopeConfig,
  */
 updateScopeConfig, 
 /** 取调度器（「立即执行」用 runNow）；settings 未就绪时为 null ⇒ 路由回 503。 */
-getScheduler) => [
+getScheduler, 
+/** 事件广播器（SSE 端点 `/events` 的订阅源）。 */
+bus) => [
     {
         // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
         // 原始文件名经 x-filename 头（URL 编码）传入，避免二进制体里夹带名字；扩展名走白名单。
@@ -1008,6 +1014,61 @@ getScheduler) => [
             writeJson(res, 200, { ok: true, events: store.listEventsByInstance(instanceId) });
         },
     },
+    {
+        // 事件推送（SSE）：后端变更即时广播、前端 EventSource 订阅（design/event-push.md）。
+        // 宿主 handler 持有响应生命周期（dsh-host-webserver@0.2.0-rc.2 明支持 SSE，gzip 中间件亦跳过
+        // text/event-stream）；同源闸门与其它路由一致——EventSource 不能带自定义头，但本闸门不需要。
+        kind: 'exact',
+        path: `${DISPATCH_API_PREFIX}/events`,
+        handler: (req, res) => {
+            if (req.method !== 'GET')
+                return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
+            if (!isTrustedDispatchRequest(req))
+                return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            const write = res.write;
+            if (typeof write !== 'function')
+                return writeJson(res, 501, { ok: false, error: 'streaming-unsupported' });
+            res.writeHead(200, {
+                'content-type': 'text/event-stream; charset=utf-8',
+                'cache-control': 'no-store',
+                connection: 'keep-alive',
+                // 穿反向代理（nginx 等）时禁缓冲；对不认它的代理无副作用。
+                'x-accel-buffering': 'no',
+            });
+            const unsubscribe = bus.subscribe((event) => {
+                try {
+                    write.call(res, `data: ${JSON.stringify(event)}\n\n`);
+                }
+                catch {
+                    cleanup();
+                }
+            });
+            const heartbeat = setInterval(() => {
+                try {
+                    write.call(res, ': ping\n\n');
+                }
+                catch {
+                    cleanup();
+                }
+            }, SSE_HEARTBEAT_MS);
+            // 幂等清理：clearInterval / Set.delete 均可重入；req / res 任一 close 都触发。
+            function cleanup() {
+                clearInterval(heartbeat);
+                unsubscribe();
+            }
+            for (const target of [req, res]) {
+                const on = target.on;
+                if (typeof on === 'function')
+                    on.call(target, 'close', cleanup);
+            }
+            try {
+                write.call(res, ': connected\n\n');
+            }
+            catch {
+                cleanup();
+            }
+        },
+    },
 ];
 /**
  * 无 `register` 面时的等价作用域（dsh 0.1.7-rc.1 起把注册改成「注册项 Config 自动投影」）。
@@ -1085,7 +1146,36 @@ export function apply(ctx, config) {
      * 卡片「运行中 / 上次执行 / 下次执行」的读源。**派生态、不入数据库**——
      * 状态库就绪后建一次索引（一条聚合 SQL），之后由 Loop A 落库 / Loop B 收口事件增量维护。
      */
-    const runtimeIndex = createRuntimeIndex();
+    /**
+     * 事件广播器（唯一出口 + 中间层合并）：各变更点 emit 失效信号，SSE 端点订阅广播。
+     * 纯进程内、无宿主依赖 ⇒ 提前创建，路由与各变更点共用同一份。
+     */
+    const eventBus = createEventBus();
+    const innerRuntimeIndex = createRuntimeIndex();
+    /**
+     * 运行态内存索引外面**包一层事件发射**（design/event-push.md §六「首选注入面」）：
+     * 派发 / 终态 / 阻塞 / 清在飞 都必经这几个方法 ⇒ 一处包裹即覆盖主界面卡片要刷的全部运行态变化。
+     * 定义类变更走 `resyncTaskMap`（见下）、配置走 `scope.watch`，不在此重复发。
+     */
+    const runtimeIndex = {
+        ...innerRuntimeIndex,
+        markDispatched(taskId, scheduledAt) {
+            innerRuntimeIndex.markDispatched(taskId, scheduledAt);
+            eventBus.emit({ type: EventType.TASK_RUN_STARTED, payload: { taskId } });
+        },
+        markTerminal(taskId, status, scheduledAt, finishedAt) {
+            innerRuntimeIndex.markTerminal(taskId, status, scheduledAt, finishedAt);
+            eventBus.emit({ type: runEventTypeOf(status), payload: { taskId } });
+        },
+        markBlocked(taskId, reason) {
+            innerRuntimeIndex.markBlocked(taskId, reason);
+            eventBus.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } });
+        },
+        clearRunning(taskId) {
+            innerRuntimeIndex.clearRunning(taskId);
+            eventBus.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } });
+        },
+    };
     /** 当前任务定义（含停用）：overview 路由组装卡片用；随 tick 同步。 */
     let panelTaskMap = new Map();
     /**
@@ -1162,7 +1252,7 @@ export function apply(ctx, config) {
         }
         for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry, () => ctx.get('llm'), (msg) => { ctx.logger.info(msg); }, 
         // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
-        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig, () => schedulerRef)) {
+        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig, () => schedulerRef, eventBus)) {
             // 逐条容错：宿主对重复 (kind, path) 注册会 throw（dsh-host-webserver register），
             // 一条坏路由绝不能把后面的路由全部拖死（2026-10-02 真机「部分接口 404」的放大器）。
             try {
@@ -1302,7 +1392,12 @@ export function apply(ctx, config) {
             // 附加文件兜底校验（Loop B 发动前）：资产根随 statePath 定格。
             assets: () => assetsRef,
         };
-        const reconciler = createReconciler({ ctx: sctx, logger: teeLogger, store, options: reconcileOptions, runtime: runtimeIndex });
+        const reconciler = createReconciler({
+            ctx: sctx, logger: teeLogger, store, options: reconcileOptions, runtime: runtimeIndex,
+            // 实例行在 DB 层的变化（不经 RuntimeIndex 的那些：重试退回 / unknown 复活 / 转 running / redispatch）
+            // 也要广播给前端（design/event-push.md §六）。
+            emit: (event) => eventBus.emit(event),
+        });
         const scheduler = createScheduler({
             ctx: sctx, logger: teeLogger, store, reconciler, runtime: runtimeIndex,
             // tasksInline 以 runtime 内存值为准（用户经 remote 服务改后即时生效，无需等 settings 落盘）。
@@ -1340,6 +1435,8 @@ export function apply(ctx, config) {
         scope.watch((next, prev) => {
             // 配置 live 变更 ⇒ 同步给路由层（清道夫天数等）。
             configRef = { ...next, tasksInline: runtime.tasksInline };
+            // 配置变了 ⇒ 通知前端重读（设置页 / 依赖计时参数展示的页面）。
+            eventBus.emit({ type: EventType.CONFIG_CHANGED });
             if (next.tickMs === prev.tickMs)
                 return;
             stopInterval();
@@ -1375,6 +1472,8 @@ export function apply(ctx, config) {
         resyncTaskMap = () => {
             safeTick();
             runtimeIndex.markDefinitionsChanged([...taskMap.values()]);
+            // 定义变更的唯一同步点 ⇒ 在此广播（所有写路径都汇聚到这里，见上方注释）。
+            eventBus.emit({ type: EventType.TASKS_CHANGED });
         };
         safeTick();
         // 主界面运行态**启动初始化一次**：一条聚合 SQL 取每任务最近执行 + 在飞行扫描 + 逐任务算下一刻度。
@@ -1385,6 +1484,7 @@ export function apply(ctx, config) {
         sctx.on('dispose', () => {
             stopInterval();
             stopSweeper();
+            eventBus.dispose();
             store.close();
         });
     });

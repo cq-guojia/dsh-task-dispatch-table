@@ -2875,6 +2875,48 @@ console.log('\n[14] runtime-index')
       lite2.rows.length <= 2 && (full.rows.length <= 2 || lite2.truncated))
   }
 
+  // ── 19. 事件推送：广播器合并 + 事件目录映射（design/event-push.md）──
+  console.log('\n[19] 事件推送：广播器合并 / 事件目录')
+  {
+    const { createEventBus } = await import('../dist/event-bus.js')
+    const { EventType, runEventTypeOf, RUN_EVENT_TYPES } = await import('../dist/event-catalog.js')
+
+    const values = Object.values(EventType)
+    check('事件目录：类型值唯一', new Set(values).size === values.length)
+    check('事件目录：实例状态 → 事件类型映射',
+      runEventTypeOf('succeeded') === EventType.TASK_RUN_SUCCEEDED
+      && runEventTypeOf('failed') === EventType.TASK_RUN_FAILED
+      && runEventTypeOf('skipped') === EventType.TASK_RUN_SKIPPED
+      && runEventTypeOf('running') === EventType.TASK_RUN_STARTED
+      && runEventTypeOf('unknown') === EventType.TASK_RUN_CHANGED)
+    check('事件目录：RUN_EVENT_TYPES 覆盖全部运行态事件',
+      RUN_EVENT_TYPES.length === 5 && RUN_EVENT_TYPES.every(t => values.includes(t)))
+
+    const bus = createEventBus({ windowMs: 30, maxWaitMs: 200 })
+    const got = []
+    bus.subscribe(event => got.push(event))
+    bus.emit({ type: EventType.TASK_RUN_STARTED, payload: { taskId: 't1' } })
+    bus.emit({ type: EventType.TASK_RUN_STARTED, payload: { taskId: 't1' } })    // 同 key ⇒ 被合并
+    bus.emit({ type: EventType.TASK_RUN_SUCCEEDED, payload: { taskId: 't1' } })  // 不同 type ⇒ 另一 key
+    bus.emit({ type: EventType.TASK_RUN_STARTED, payload: { taskId: 't2' } })    // 不同身份 ⇒ 另一 key
+    bus.emit({ type: EventType.TASKS_CHANGED, payload: { mode: 'create' } })
+    bus.emit({ type: EventType.TASKS_CHANGED, payload: { mode: 'update' } })     // 同 key ⇒ 只留最后一条
+    await new Promise(resolve => setTimeout(resolve, 80))
+    check('广播器：同 type+身份 合并成一条、不同 key 各一条（4 条）', got.length === 4, `实际 ${got.length}`)
+    check('广播器：同 key 合并保留最后一条（tasks.changed ⇒ mode=update，仅 1 条）',
+      got.filter(e => e.type === EventType.TASKS_CHANGED).length === 1
+      && got.find(e => e.type === EventType.TASKS_CHANGED)?.payload?.mode === 'update')
+
+    const before = got.length
+    bus.emit({ type: EventType.FORCE_REFRESH })
+    await new Promise(resolve => setTimeout(resolve, 60))
+    check('广播器：无参事件（FORCE_REFRESH）也能送达', got.length === before + 1, `实际 +${got.length - before}`)
+    bus.dispose()
+    bus.emit({ type: EventType.FORCE_REFRESH })
+    await new Promise(resolve => setTimeout(resolve, 40))
+    check('广播器：dispose 后不再广播', got.length === before + 1)
+  }
+
   store.close()
   rmSync(dir, { recursive: true, force: true })
 }
