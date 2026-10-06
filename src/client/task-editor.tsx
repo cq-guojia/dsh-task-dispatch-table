@@ -1721,7 +1721,7 @@ export function TaskEditorDrawer(props: {
             const canView = hit !== undefined && onOpenFile !== undefined
             return h('div', {
               key: att.id,
-              style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-sm)', background: 'var(--tdt-hover,rgba(38,49,72,.06))', cursor: canView ? 'pointer' : undefined },
+              className: `dsh-tdt-ed-attrow${canView ? ' dsh-tdt-ed-attrow--view' : ''}`,
               title: canView ? t('editorAttachmentView') : undefined,
               onClick: canView ? () => { onOpenFile?.(hit!.anchorSessionId as string, hit!.path as string) } : undefined,
             },

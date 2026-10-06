@@ -64222,6 +64222,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
    这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
 .dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
+/* 附件行（用户 2026-10-06）：背景 / 圆角放这里而不是内联——内联 background 会压过 :hover。
+   整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --tdt-chip-bg-hover）。 */
+.dsh-tdt-ed-attrow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-ed-attrow--view{cursor:pointer;}
+.dsh-tdt-ed-attrow--view:hover{background:var(--tdt-chip-bg-hover,rgba(38,49,72,.12));}
 .dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
 .dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
 .dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
@@ -67486,15 +67491,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const canView = hit !== void 0 && onOpenFile !== void 0;
 				return (0, react$1.createElement)("div", {
 					key: att.id,
-					style: {
-						display: "flex",
-						alignItems: "center",
-						gap: "8px",
-						padding: "6px 10px",
-						borderRadius: "var(--tdt-radius-sm)",
-						background: "var(--tdt-hover,rgba(38,49,72,.06))",
-						cursor: canView ? "pointer" : void 0
-					},
+					className: `dsh-tdt-ed-attrow${canView ? " dsh-tdt-ed-attrow--view" : ""}`,
 					title: canView ? t("editorAttachmentView") : void 0,
 					onClick: canView ? () => {
 						onOpenFile?.(hit.anchorSessionId, hit.path);
