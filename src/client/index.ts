@@ -1004,6 +1004,8 @@ function TaskPage(props: {
   const [dbDump, setDbDump] = useState<{ at: string; tables: DbTableDump[] } | null>(null)
   const [dbState, setDbState] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
   const [dbNonce, setDbNonce] = useState(0)
+  /** 已为哪个 tab 取过一次转储：切换过去要**立即**取；此后事件驱动的重取走防抖（转储 1–3MB）。 */
+  const dbLoadedForRef = useRef<string | null>(null)
   /**
    * 事件推送（2026-10-07 补缺口）：这一页转储的是 `task_instances` / `task_events` / `task_log` 的**原始行**
    * —— 正是运行态真源，但取数只在「切到该页」时跑一次，父级的事件订阅够不到它 ⇒ 页面开着也看不到新行。
@@ -1017,18 +1019,26 @@ function TaskPage(props: {
   useEffect(() => {
     if (tab !== 'debug') return
     let alive = true
-    setDbState('loading')
-    fetchWithTimeout(`${DISPATCH_API_PREFIX}/db`)
-      .then(res => res.json() as Promise<{ ok?: boolean; at?: string; tables?: DbTableDump[] }>)
-      .then(body => {
-        if (!alive) return
-        if (body.ok === true && Array.isArray(body.tables)) {
-          setDbDump({ at: typeof body.at === 'string' ? body.at : '', tables: body.tables })
-          setDbState('ok')
-        } else setDbState('fail')
-      })
-      .catch(() => { if (alive) setDbState('fail') })
-    return () => { alive = false }
+    const first = dbLoadedForRef.current !== tab
+    dbLoadedForRef.current = tab
+    // ⚠️ 事件连发时**合并成一次**（2026-10-07 审计：这条订阅曾让调试页在停驻期间「每个运行态事件都重拉
+    // 1–3MB 转储」，对照原行为「只在切页时取一次」是明确回退）。切到该页仍立即取（`first`），
+    // 之后的重取走 800ms 防抖；同一批 flush 的多条事件会被 React 批处理 + 这里的定时器合并掉。
+    const timer = window.setTimeout(() => {
+      fetchWithTimeout(`${DISPATCH_API_PREFIX}/db`)
+        .then(res => res.json() as Promise<{ ok?: boolean; at?: string; tables?: DbTableDump[] }>)
+        .then(body => {
+          if (!alive) return
+          if (body.ok === true && Array.isArray(body.tables)) {
+            setDbDump({ at: typeof body.at === 'string' ? body.at : '', tables: body.tables })
+            setDbState('ok')
+          } else setDbState('fail')
+        })
+        .catch(() => { if (alive) setDbState('fail') })
+    }, first ? 0 : 800)
+    // 已有转储时**不进 loading**：否则整块转储被卸载 → 滚动位置弹回顶部（数据没变却闪一下）。
+    setDbState(s => (s === 'ok' ? s : 'loading'))
+    return () => { alive = false; window.clearTimeout(timer) }
   }, [tab, dbNonce])
 
   const section = (snapshot.value ?? {}) as Record<string, unknown>
@@ -1467,7 +1477,9 @@ function TaskPage(props: {
                 h('p', { style: hintStyle }, t('debugDbHint')),
                 dbState === 'loading' ? h('p', { style: hintStyle }, t('debugDbLoading')) : null,
                 dbState === 'fail' ? h('p', { style: errorStyle }, t('debugDbFail')) : null,
-                dbState === 'ok' && dbDump !== null
+                // ⚠️ 判据是「**有没有拿到过转储**」而不是「这次成功没有」（2026-10-07 审计 🟡）：
+                // 刷新失败时保留上一次的转储可见（时间戳会告诉用户它有多旧），别让正在看的内容消失。
+                dbDump !== null
                   ? h('div', null,
                       h('p', { style: hintStyle }, `${t('debugRefreshedAt')} ${formatTime(dbDump.at)}`),
                       dbDump.tables.map(dump => renderDbTable(dump)),

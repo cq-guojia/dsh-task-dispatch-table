@@ -12,7 +12,7 @@
 //
 // ⚠️ 字段怎么翻译、怎么渲染**不在这里** —— 全在 `task-info.tsx`（卡片展开区「基础信息」与这里共用同一份）。
 // 本文件只负责：查数据、组装视图模型、排版面。
-import { createElement as h, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createElement as h, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   IconChevronDownOutlineRegular, IconClockOutlineRegular, IconPlanOutlineRegular, IconThinkOutlineRegular, MarkdownText,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -76,6 +76,8 @@ export function TaskViewPanel(props: {
    * 只认 `payload.taskId === 本档任务`（在屏判定），别的任务跑不动这一档。
    */
   const [reloadNonce, setReloadNonce] = useState(0)
+  /** 当前展示的「上次执行」属于哪个任务：**换任务**才清空，事件刷新保留旧值（见下方 effect）。 */
+  const shownTaskRef = useRef<string | null>(null)
   useEvents(RUN_EVENT_TYPES, (event) => {
     if (event.payload?.taskId !== taskId) return
     setReloadNonce(n => n + 1)
@@ -90,9 +92,15 @@ export function TaskViewPanel(props: {
       return
     }
     let alive = true
-    setLoaded(false)
+    // ⚠️ 只有**换了任务**才清空（2026-10-07 审计 🟡）：事件驱动的重取如果也清空，用户正在读的
+    // 「上次执行」会**先闪成空白再出现**（与「全站只有一个 loading」的口径也冲突）。
+    // 保留旧值直到新值回来；失败时给错误提示（不保留可能已经过时的旧值）。
+    if (shownTaskRef.current !== taskId) {
+      shownTaskRef.current = taskId
+      setLoaded(false)
+      setLast(null)
+    }
     setError(null)
-    setLast(null)
     fetchInstances({ taskId, statuses: LAST_RUN_STATUSES, limit: 1 })
       .then(({ rows }) => {
         if (!alive) return

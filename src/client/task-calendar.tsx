@@ -237,6 +237,10 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   const [snapshots, setSnapshots] = useState<ReadonlyMap<string, string | null>>(() => new Map())
 
   const seqRef = useRef(0)
+  /** 整月取数是否有请求在途（2026-10-07 审计 🟡：防同一批事件并发 N 个整月请求）。 */
+  const inFlightRef = useRef(false)
+  /** 在途期间到达的自动刷新（事件 / 重连补读）：本轮结束补跑一次，不静默丢。 */
+  const pendingRef = useRef(false)
   const eventsSeqRef = useRef(0)
   const instancesRef = useRef(instances)
   instancesRef.current = instances
@@ -269,10 +273,19 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   }, [cells])
 
   // 历史：整月一次取满（轻量行，不含 snapshot）⇒ 点某天不再发起请求。
-  const load = useCallback((): void => {
+  /**
+   * `silent = true` 供**自动刷新**（事件推送 / 重连补读）用：不置 loading。
+   * ⚠️ 2026-10-07 审计 🟡：原先自动刷新与手动刷新共用一个「置 loading」的路径 ⇒ 每次事件右下角都闪
+   * 一次脉动方块（与执行记录页的 `silent` 口径也不一致）。
+   * ⚠️ 同时在途守卫：同一批 flush 里 N 条事件会通知 N 次 ⇒ 没有守卫就会**并发 N 个整月请求**，
+   * 而 `seqRef` 只保留最后一个响应 ⇒ 其余全白做（原来有在跑才 5s 轮询，并发度恒为 1）。
+   */
+  const load = useCallback((silent = false): void => {
+    if (inFlightRef.current) { if (silent) pendingRef.current = true; return }
+    inFlightRef.current = true
     const seq = seqRef.current + 1
     seqRef.current = seq
-    setLoading(true)
+    if (!silent) setLoading(true)
     setError(null)
     const q = monthRangeQuery(y, m)
     fetchInstancesLite({
@@ -293,12 +306,22 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       })
       .finally(() => {
         if (seq !== seqRef.current) return
-        setLoading(false)
+        if (!silent) setLoading(false)
         setLoaded(true)
+        inFlightRef.current = false
+        // 补跑被在途那轮吞掉的自动刷新（不静默丢）。
+        if (pendingRef.current) { pendingRef.current = false; load(true) }
       })
   }, [y, m, workspace, taskId])
 
-  useEffect(() => { void load(); return () => { seqRef.current += 1 } }, [load])
+  useEffect(() => {
+    // 换月 / 换筛选 / 首次挂载：作废在途请求并**允许新一轮**（镜像执行记录页的做法）。
+    seqRef.current += 1
+    inFlightRef.current = false
+    pendingRef.current = false
+    void load()
+    return () => { seqRef.current += 1 }
+  }, [load])
 
   /**
    * 刷新由**事件推送**驱动（design/client-refresh-disposition.md §二 P1）：原来的「有在跑才 5s 轮询」
@@ -318,9 +341,9 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     const matchesFilter = typeof evTaskId === 'string'
       && (taskId === '' || taskId === evTaskId)
       && rowsRef.current.some(row => row.id === evTaskId && (workspace === '' || row.workspace === workspace))
-    if (onGrid || matchesFilter) void load()
+    if (onGrid || matchesFilter) void load(true)
   })
-  useResync(() => { void load() })
+  useResync(() => { void load(true) })
 
   // 未来计划（浏览器内现算，无请求）：只算启用任务，且跟着工作区 / 任务过滤一起收窄。
   const planByDay = useMemo(() => {

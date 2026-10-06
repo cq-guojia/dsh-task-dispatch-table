@@ -161,19 +161,22 @@ export function useTaskOverview(): {
         const res = await fetch(`${API_PREFIX}/tasks/overview${query}`, { cache: 'no-store', signal: controller.signal })
         if (!res.ok) return
         const body = await res.json() as {
-          ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown; now?: unknown; tickMs?: unknown
+          ok?: boolean; unchanged?: boolean; rev?: number | string; tasks?: unknown; now?: unknown; tickMs?: unknown
         }
         // ⚠️ 令牌判别（2026-09-30 复核 P1）：看门狗放行后**旧轮仍在飞**，abort 只能缩小窗口——
         // 旧轮若在 abort 生效前拿到响应，会把**旧数据**盖到新一轮上（短暂回退）。⇒ 认领数据也要验令牌。
         if (!alive || genRef.current !== myGen || body.ok !== true) return
-        // 内容没变：不重渲染、不重排、不播动画（`rev` 相同 ⇒ 行数据与上一份逐字节相同）。
-        if (body.unchanged === true) return
-        revRef.current = String(body.rev ?? '')
-        const nextRows = Array.isArray(body.tasks) ? body.tasks as TaskOverviewRow[] : []
+        // ⚠️ `tickMs` 必须在 `unchanged` 早退**之前**吃下（2026-10-07 审计 🟡）：这个字段**不进 rev**
+        // （改巡检间隔不会 bump），而 `unchanged` 响应里也照样回它 ⇒ 放在早退之后再读就**永远**更新不到，
+        // `dueLoadingMs()` 会一直按旧间隔判定，卡片「延期」翻得比真机早/晚。
         // 只取「巡检间隔」用于「到点未派发」的 loading 上界（见 `dueLoadingMs`）。
         // ⚠️ 到点排序抖动现在由**服务端闸门**解决（冻结未处理刻度 ⇒ 排序键不随读变化），
         // 客户端**不再有任何本地派生排序状态**（原「到点钳位」整套已删，决策 54）。
         if (typeof body.tickMs === 'number' && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs
+        // 内容没变：不重渲染、不重排、不播动画（`rev` 相同 ⇒ 行数据与上一份逐字节相同）。
+        if (body.unchanged === true) return
+        revRef.current = String(body.rev ?? '')
+        const nextRows = Array.isArray(body.tasks) ? body.tasks as TaskOverviewRow[] : []
         setRows(nextRows)
         // 排序调试（见文件顶部 `DEBUG_SORT`）：服务端下发的**快照变化**全打出来 ——
         // 影响排序/显示的字段都在 `sortFactsOf` 里，谁变了、变成什么，一眼可见。

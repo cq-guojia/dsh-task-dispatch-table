@@ -28,6 +28,13 @@ const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
 /** SSE 心跳间隔（毫秒）：保活穿代理 + 及时发现对端已断。 */
 const SSE_HEARTBEAT_MS = 20_000;
 /**
+ * 单实例最多同时挂多少条推送连接。
+ * 长连接**没有上限**时，本机任意进程（或任意能过闸门的页面）都能靠循环建连打满句柄 / 内存
+ * （2026-10-07 安全审计 🟡）。这里给一个宽松上限兜底：正常使用（几个浏览器标签页）远够不着，
+ * 超了直接 503 —— 客户端会按统一重连策略稍后重试，不会把页面打死。
+ */
+const SSE_MAX_CONNECTIONS = 32;
+/**
  * 关掉登记表里的所有推送连接（插件 dispose 时调用）。
  * 宿主 dispose 会 `closeAllConnections()` 从而触发各 `res` 的 `close` ⇒ 通常自清；这里仍**显式兜一层**，
  * 免得宿主行为一变就悬挂心跳定时器（宿主文档亦建议主动清理）。
@@ -259,7 +266,12 @@ getScheduler,
 /** 事件广播器（SSE 端点 `/events` 的订阅源）。 */
 bus, 
 /** 打开的推送连接登记表（**apply 实例作用域**：路由登记、dispose 统一关闭）。 */
-streams) => [
+streams, 
+/**
+ * 取「附件解析版本」（惰性 getter）：并进 overview 响应的 rev，让「附件刚开始可点」这种
+ * **不进内容 rev** 的变化也能被客户端看到（见 apply 内 `attachRev` 的注释）。
+ */
+getAttachRev) => [
     {
         // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
         // 原始文件名经 x-filename 头（URL 编码）传入，避免二进制体里夹带名字；扩展名走白名单。
@@ -600,16 +612,24 @@ streams) => [
             const nowMs = Date.now();
             const tasks = [...getTasks().values()];
             const { rev, rows } = runtimeIndex.overview(tasks, nowMs);
+            const tickMs = getConfig()?.tickMs ?? 60_000;
             const asked = queryOf(req, 'rev');
-            if (asked !== '' && asked === String(rev))
-                return writeJson(res, 200, { ok: true, unchanged: true });
+            // ⚠️ 响应的 `rev` 是**复合版本** `<内容 rev>.<附件解析 rev>`（2026-10-07 审计 🔴）：
+            // 附件行的 `path` / 锚点是 HTTP 层补的、不进内容 rev ⇒ 只用内容 rev 会漏掉「附件刚开始可点」
+            // 这类变化，客户端永远收到 unchanged。客户端把 rev 当**不透明字符串**原样带回，故协议无需改。
+            const version = `${rev}.${getAttachRev()}`;
+            // `unchanged` 里**也回** `now` / `tickMs`（2026-10-07 审计 🟡）：这两个字段不进 rev
+            // （改巡检间隔不会 bump），若早退时不回，客户端就永远拿不到新值。
+            if (asked !== '' && asked === version) {
+                return writeJson(res, 200, { ok: true, unchanged: true, rev: version, now: nowMs, tickMs });
+            }
             // `now` / `tickMs` 供客户端做「到点钳位」（排序抖动，2026-09-30）：`now` = 服务端当前时间
             // （客户端时钟可能与宿主有时差，判定「上一版刻度是否已过去」以它为准）；`tickMs` = 巡检间隔
             // （钳位时长跟着它走，不写死）。两者都是**只读**展示/排序辅助，不参与调度。
             // 附件补绝对路径 + 预览锚点（2026-10-03）：见 `attachmentsWithPaths`，让基础信息左栏的附件可点开。
             writeJson(res, 200, {
-                ok: true, rev, tasks: attachmentsWithPaths(rows, tasks, getAssets(), getRegistry()),
-                now: nowMs, tickMs: getConfig()?.tickMs ?? 60_000,
+                ok: true, rev: version, tasks: attachmentsWithPaths(rows, tasks, getAssets(), getRegistry()),
+                now: nowMs, tickMs,
             });
         },
     },
@@ -1044,6 +1064,10 @@ streams) => [
                 return writeJson(res, 405, { ok: false, error: 'method-not-allowed' });
             if (!isTrustedDispatchRequest(req))
                 return writeJson(res, 403, { ok: false, error: 'forbidden' });
+            // 连接数兜底（见 SSE_MAX_CONNECTIONS）：超限直接 503，客户端会按统一重连策略稍后重试。
+            if (streams.size >= SSE_MAX_CONNECTIONS) {
+                return writeJson(res, 503, { ok: false, error: 'too-many-streams' });
+            }
             const write = res.write;
             if (typeof write !== 'function')
                 return writeJson(res, 501, { ok: false, error: 'streaming-unsupported' });
@@ -1223,6 +1247,15 @@ export function apply(ctx, config) {
      * ⚠️ 与 `eventBus` 同生命周期：放模块级会让两个 apply 实例互相关掉对方的连接（2026-10-06 审计）。
      */
     const activeStreams = new Set();
+    /**
+     * 「附件解析版本」：overview 行里的附件 `path` / `anchorSessionId` 是**在 HTTP 层补的**
+     * （`attachmentsWithPaths`），**不进 `runtimeIndex` 的内容 rev** ⇒ 它一变（工作区新增 / 关闭会话导致
+     * 预览锚点变化、或 assets / registry 刚就绪）就会出现「行内容变了、rev 没变」⇒ 客户端**永远**收到
+     * `unchanged` ⇒ **附件永久不可点**（2026-10-07 审计 🔴；插件刚加载那一瞬最易命中）。
+     * 故给它独立计数，并**并进响应 rev** —— 客户端把 rev 当不透明字符串原样带回，协议无需改。
+     */
+    let attachRev = 0;
+    const bumpAttachRev = () => { attachRev += 1; };
     const innerRuntimeIndex = createRuntimeIndex();
     /**
      * 运行态内存索引外面**包一层事件发射**（design/event-push.md §六「首选注入面」）：
@@ -1330,7 +1363,7 @@ export function apply(ctx, config) {
         }
         for (const route of makeDispatchRoutes(runtime, persistTasksInline, () => storeRef, () => ctx.workspaceRegistry, () => ctx.get('llm'), (msg) => { ctx.logger.info(msg); }, 
         // 惰性取附件目录：settings inject 在 webServer 之后就绪，届时才定得出 statePath。
-        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig, () => schedulerRef, eventBus, activeStreams)) {
+        () => attachmentsDirRef, () => assetsRef, () => configRef, runtimeIndex, () => panelTaskMap, () => { resyncTaskMap?.(); }, () => configRef, updateScopeConfig, () => schedulerRef, eventBus, activeStreams, () => attachRev)) {
             // 逐条容错：宿主对重复 (kind, path) 注册会 throw（dsh-host-webserver register），
             // 一条坏路由绝不能把后面的路由全部拖死（2026-10-02 真机「部分接口 404」的放大器）。
             try {
@@ -1363,6 +1396,9 @@ export function apply(ctx, config) {
         attachmentsDirRef = path.join(path.dirname(resolveStatePath(scope.get().statePath)), 'task-attachments-tmp');
         // 任务文件资产根（tasks/<uuid>/ + 上传临时区）随 statePath 定格。
         assetsRef = assetPaths(resolveStatePath(scope.get().statePath));
+        // assets 就绪这一瞬也要 bump：此前 overview 请求拿到的是「附件无绝对路径」的行（附件不可点），
+        // 而这件事不进内容 rev ⇒ 不 bump 的话客户端会永远停在不可点的旧行（2026-10-07 审计 🔴）。
+        bumpAttachRev();
         // 任务表恢复（主通道 = 状态库 meta）：state.db 在宿主数据根（挂载卷），容器重建 /
         // 插件重装都不丢。meta 无行（从未保存过）⇒ 沿用 entry config 初始值（兼容旧部署）。
         const savedInline = store.getMeta('tasksInline');
@@ -1489,9 +1525,11 @@ export function apply(ctx, config) {
         const scanned = store.startupScan();
         if (scanned > 0)
             teeLogger.info(`启动扫描：${scanned} 个已派发实例置 unknown`);
-        sctx.on('session/created', session => { reconciler.onCreated(session); updateSnapshot(); });
+        // ⚠️ created / disposed 还要 `bumpAttachRev()`：工作区的会话列表变了 ⇒ 附件预览锚点
+        //    （`anchorOf` 取该工作区**最后一个**会话）可能换人 ⇒ 行内容变了但内容 rev 不变（2026-10-07 审计 🔴）。
+        sctx.on('session/created', session => { reconciler.onCreated(session); bumpAttachRev(); updateSnapshot(); });
         sctx.on('session/event', (session, event) => { reconciler.onEvent(session, event); updateSnapshot(); });
-        sctx.on('session/disposed', session => { reconciler.onDisposed(session); updateSnapshot(); });
+        sctx.on('session/disposed', session => { reconciler.onDisposed(session); bumpAttachRev(); updateSnapshot(); });
         // 决策 30 修订（用户 2026-09-25 拍板「运行时只认不修」）：tick 不再补写任务 id——
         // id 只在保存闸门（POST /tasks → ensureIdsInInlineJson）生成并固化；运行时遇到
         // 无 id / 非 UUID 的条目由 parseInlineTasks warn 跳过，不做任何兜底或写回。

@@ -54590,10 +54590,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						if (!res.ok) return;
 						const body = await res.json();
 						if (!alive || genRef.current !== myGen || body.ok !== true) return;
+						if (typeof body.tickMs === "number" && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs;
 						if (body.unchanged === true) return;
 						revRef.current = String(body.rev ?? "");
 						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
-						if (typeof body.tickMs === "number" && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs;
 						setRows(nextRows);
 						{
 							const facts = sortFactsOf(nextRows);
@@ -64810,6 +64810,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			* 只认 `payload.taskId === 本档任务`（在屏判定），别的任务跑不动这一档。
 			*/
 			const [reloadNonce, setReloadNonce] = (0, react$1.useState)(0);
+			/** 当前展示的「上次执行」属于哪个任务：**换任务**才清空，事件刷新保留旧值（见下方 effect）。 */
+			const shownTaskRef = (0, react$1.useRef)(null);
 			useEvents(RUN_EVENT_TYPES, (event) => {
 				if (event.payload?.taskId !== taskId) return;
 				setReloadNonce((n) => n + 1);
@@ -64825,9 +64827,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return;
 				}
 				let alive = true;
-				setLoaded(false);
+				if (shownTaskRef.current !== taskId) {
+					shownTaskRef.current = taskId;
+					setLoaded(false);
+					setLast(null);
+				}
 				setError(null);
-				setLast(null);
 				fetchInstances({
 					taskId,
 					statuses: LAST_RUN_STATUSES,
@@ -68404,6 +68409,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/** 实例 id → 派发快照（轻量行没有 ⇒ 展开那条时按会话 id 补一次全量行）。 */
 			const [snapshots, setSnapshots] = (0, react$1.useState)(() => /* @__PURE__ */ new Map());
 			const seqRef = (0, react$1.useRef)(0);
+			/** 整月取数是否有请求在途（2026-10-07 审计 🟡：防同一批事件并发 N 个整月请求）。 */
+			const inFlightRef = (0, react$1.useRef)(false);
+			/** 在途期间到达的自动刷新（事件 / 重连补读）：本轮结束补跑一次，不静默丢。 */
+			const pendingRef = (0, react$1.useRef)(false);
 			const eventsSeqRef = (0, react$1.useRef)(0);
 			const instancesRef = (0, react$1.useRef)(instances);
 			instancesRef.current = instances;
@@ -68429,10 +68438,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				for (let i = 0; i < cells.length; i += 7) out.push(cells.slice(i, i + 7));
 				return out;
 			}, [cells]);
-			const load = (0, react$1.useCallback)(() => {
+			/**
+			* `silent = true` 供**自动刷新**（事件推送 / 重连补读）用：不置 loading。
+			* ⚠️ 2026-10-07 审计 🟡：原先自动刷新与手动刷新共用一个「置 loading」的路径 ⇒ 每次事件右下角都闪
+			* 一次脉动方块（与执行记录页的 `silent` 口径也不一致）。
+			* ⚠️ 同时在途守卫：同一批 flush 里 N 条事件会通知 N 次 ⇒ 没有守卫就会**并发 N 个整月请求**，
+			* 而 `seqRef` 只保留最后一个响应 ⇒ 其余全白做（原来有在跑才 5s 轮询，并发度恒为 1）。
+			*/
+			const load = (0, react$1.useCallback)((silent = false) => {
+				if (inFlightRef.current) {
+					if (silent) pendingRef.current = true;
+					return;
+				}
+				inFlightRef.current = true;
 				const seq = seqRef.current + 1;
 				seqRef.current = seq;
-				setLoading(true);
+				if (!silent) setLoading(true);
 				setError(null);
 				const q = monthRangeQuery(y, m);
 				fetchInstancesLite({
@@ -68450,8 +68471,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setError(e instanceof Error ? e.message : String(e));
 				}).finally(() => {
 					if (seq !== seqRef.current) return;
-					setLoading(false);
+					if (!silent) setLoading(false);
 					setLoaded(true);
+					inFlightRef.current = false;
+					if (pendingRef.current) {
+						pendingRef.current = false;
+						load(true);
+					}
 				});
 			}, [
 				y,
@@ -68460,6 +68486,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				taskId
 			]);
 			(0, react$1.useEffect)(() => {
+				seqRef.current += 1;
+				inFlightRef.current = false;
+				pendingRef.current = false;
 				load();
 				return () => {
 					seqRef.current += 1;
@@ -68475,10 +68504,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const evTaskId = event.payload?.taskId;
 				const onGrid = instances.some((r) => typeof evInstanceId === "string" && r.id === evInstanceId || typeof evTaskId === "string" && r.task_id === evTaskId);
 				const matchesFilter = typeof evTaskId === "string" && (taskId === "" || taskId === evTaskId) && rowsRef.current.some((row) => row.id === evTaskId && (workspace === "" || row.workspace === workspace));
-				if (onGrid || matchesFilter) load();
+				if (onGrid || matchesFilter) load(true);
 			});
 			useResync(() => {
-				load();
+				load(true);
 			});
 			const planByDay = (0, react$1.useMemo)(() => {
 				const picked = rowsRef.current.filter((row) => row.enabled !== false && (workspace === "" || row.workspace === workspace) && (taskId === "" || row.id === taskId));
@@ -71217,6 +71246,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [dbDump, setDbDump] = (0, react$1.useState)(null);
 			const [dbState, setDbState] = (0, react$1.useState)("idle");
 			const [dbNonce, setDbNonce] = (0, react$1.useState)(0);
+			/** 已为哪个 tab 取过一次转储：切换过去要**立即**取；此后事件驱动的重取走防抖（转储 1–3MB）。 */
+			const dbLoadedForRef = (0, react$1.useRef)(null);
 			/**
 			* 事件推送（2026-10-07 补缺口）：这一页转储的是 `task_instances` / `task_events` / `task_log` 的**原始行**
 			* —— 正是运行态真源，但取数只在「切到该页」时跑一次，父级的事件订阅够不到它 ⇒ 页面开着也看不到新行。
@@ -71234,21 +71265,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			(0, react$1.useEffect)(() => {
 				if (tab !== "debug") return;
 				let alive = true;
-				setDbState("loading");
-				fetchWithTimeout(`${DISPATCH_API_PREFIX}/db`).then((res) => res.json()).then((body) => {
-					if (!alive) return;
-					if (body.ok === true && Array.isArray(body.tables)) {
-						setDbDump({
-							at: typeof body.at === "string" ? body.at : "",
-							tables: body.tables
-						});
-						setDbState("ok");
-					} else setDbState("fail");
-				}).catch(() => {
-					if (alive) setDbState("fail");
-				});
+				const first = dbLoadedForRef.current !== tab;
+				dbLoadedForRef.current = tab;
+				const timer = window.setTimeout(() => {
+					fetchWithTimeout(`${DISPATCH_API_PREFIX}/db`).then((res) => res.json()).then((body) => {
+						if (!alive) return;
+						if (body.ok === true && Array.isArray(body.tables)) {
+							setDbDump({
+								at: typeof body.at === "string" ? body.at : "",
+								tables: body.tables
+							});
+							setDbState("ok");
+						} else setDbState("fail");
+					}).catch(() => {
+						if (alive) setDbState("fail");
+					});
+				}, first ? 0 : 800);
+				setDbState((s) => s === "ok" ? s : "loading");
 				return () => {
 					alive = false;
+					window.clearTimeout(timer);
 				};
 			}, [tab, dbNonce]);
 			const section = snapshot.value ?? {};
@@ -71487,7 +71523,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onRunNow: runTaskNow,
 				onViewTask: openViewer,
 				workspaces: editorOptions.workspaces
-			}) : tab === "debug" ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react$1.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbState === "ok" && dbDump !== null ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : null, (0, react$1.createElement)(BackToTop, null)), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
+			}) : tab === "debug" ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react$1.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbDump !== null ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : null, (0, react$1.createElement)(BackToTop, null)), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
 				t,
 				heading: viewing.heading,
 				taskId: viewing.taskId,

@@ -9,6 +9,10 @@ function scheduleKeyOf(task) {
         s.timezone ?? '',
         s.start ?? '',
         s.everyNWeeks === undefined ? '' : String(s.everyNWeeks),
+        // ⚠️ `window`（允许延迟）**必须在这里**（2026-10-07 审计 🟡）：它是「该冻还是该前移」与候选槽
+        // 搜索的核心输入，改了它 nextSlotAt 就得重算。原先漏了它 ⇒ `overviewKey` 会 bump（界面拿到新行）
+        // 但 `nextSlotAt` 仍按**旧 window** 算出来 ⇒ 卡片「下次执行」与调度器实际判定分叉，直到刻度过期才自愈。
+        s.window ?? '',
     ].join('|');
 }
 /**

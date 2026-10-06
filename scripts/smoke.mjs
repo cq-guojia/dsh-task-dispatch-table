@@ -3021,7 +3021,41 @@ console.log('\n[14] runtime-index')
     check('记录页对新任务首跑有兜底（任务级判定，不再只看已加载行）',
       S('client/records-timeline.tsx').includes('if (onLoadedRow || mayAppear) void load(null, true)'))
     check('日历页在屏判定按当前筛选收窄（原来恒真 ⇒ 任何任务都整月重拉）',
-      S('client/task-calendar.tsx').includes('if (onGrid || matchesFilter) void load()'))
+      S('client/task-calendar.tsx').includes('if (onGrid || matchesFilter) void load(true)'))
+
+    // ── 22. 第六轮（多方向）修复的守卫 ──
+    console.log('\n[22] 第六轮修复守卫（新鲜度 / 放大 / 副作用 / 安全）')
+    check('【新鲜度】`window` 进了排期指纹（否则改「允许延迟」后 nextSlotAt 不重算 ⇒ 卡片与调度分叉）',
+      /s\.window \?\? ''/.test(S('runtime-index.ts')))
+    check('【新鲜度】overview 的 rev 是**复合版本**（内容 rev + 附件解析 rev）',
+      idxSrc20.includes('const version = `${rev}.${getAttachRev()}`')
+      && idxSrc20.includes('getAttachRev: () => number'))
+    check('【新鲜度】附件解析版本会在「会话增删」与「assets 就绪」时 bump',
+      idxSrc20.includes('reconciler.onCreated(session); bumpAttachRev()')
+      && idxSrc20.includes('reconciler.onDisposed(session); bumpAttachRev()')
+      && idxSrc20.includes('bumpAttachRev()') )
+    check('【新鲜度】`unchanged` 也回 now / tickMs（这两字段不进 rev，早退不回就永远拿不到）',
+      /unchanged: true, rev: version, now: nowMs, tickMs/.test(idxSrc20))
+    check('【新鲜度】客户端在 `unchanged` 早退**之前**吃下 tickMs（改巡检间隔后前端口径能跟上）',
+      (() => {
+        const src = S('client/task-overview.ts')
+        const read = src.indexOf('currentTickMs = body.tickMs')
+        const early = src.indexOf('if (body.unchanged === true) return')
+        return read > 0 && early > 0 && read < early
+      })())
+    check('【放大】日历页的自动刷新走 silent（不闪 Loading）+ 有在途守卫（防同批并发整月请求）',
+      S('client/task-calendar.tsx').includes('const load = useCallback((silent = false): void => {')
+      && S('client/task-calendar.tsx').includes('const inFlightRef = useRef(false)'))
+    check('【放大】调试页转储的重取有防抖（原先每个运行态事件都重拉 1–3MB，是明确回退）',
+      S('client/index.ts').includes('dbLoadedForRef.current !== tab')
+      && S('client/index.ts').includes('first ? 0 : 800'))
+    check('【副作用】调试页刷新失败**保留**上一次转储（别让正在看的内容消失）',
+      S('client/index.ts').includes('dbDump !== null'))
+    check('【副作用】查看档只有**换任务**才清空（事件刷新保留旧值，不闪空白）',
+      S('client/task-view.tsx').includes('if (shownTaskRef.current !== taskId)'))
+    check('【安全】SSE 连接数有上限（长连接无上限可被本机打满句柄）',
+      idxSrc20.includes('const SSE_MAX_CONNECTIONS = 32')
+      && idxSrc20.includes("error: 'too-many-streams'"))
     check('日历计划指纹含 title / workspace（否则改名后计划格显示旧名）',
       /\$\{row\.id\}\|\$\{row\.enabled\}\|\$\{row\.title\}\|\$\{row\.workspace\}/.test(S('client/task-calendar.tsx')))
     check('拨片守卫有寿命（确认快照不来时不会永久锁死左→右同步）',
