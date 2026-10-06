@@ -457,6 +457,11 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
   // 本次执行**实际用到的**前置（快照里的 resolvedDeps；空 / 坏 JSON / 旧行 ⇒ []，不猜、更不读任务配置）。
   // 预计执行模式：前置来自任务定义的 depends_on（plannedDeps），不读快照。
   const deps = isPlanned ? (plannedDeps ?? []) : resolvedDepsOf(snapshot)
+  const hasOutputs = outputs.length > 0
+  const hasDeps = deps.length > 0
+  // 是否值得显示「展开」箭头：已执行块总能拉日志 ⇒ 永远可展开；预计执行块**只有「有前置」才值得**展开
+  // （无产出、无前置、无实例 ⇒ 展开后什么都没有，不画空框、也不让箭头空转 —— 用户 2026-10-06）。
+  const hasExpand = hasOutputs || hasDeps || !isPlanned
   /** token 三段之一：null 给占位（不编造 0）。 */
   const tokenPart = (v: number | null): string => (v === null ? '—' : formatTokenCount(v))
   /**
@@ -644,22 +649,27 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         // 连鼠标移上去都要一样）：基础层 IconButton（plain + sm = 24×24，hover 走 --tdt-hover）
         // + chevron + aria-expanded + 展开翻转。外面包一层 span 拦冒泡（否则会先触发自己的 onClick
         // 再冒泡到整块 ⇒ 展开后立刻又收起）。故意**不挂 title**：图标自明，只留无障碍名（与卡片同理）。
-        h('span', { onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
-          h(IconButton, {
-            variant: 'plain',
-            size: 'sm',
-            icon: h(IconChevronDownOutlineRegular, { size: 14 }),
-            label: t('listExpandHint'),
-            onClick: () => { onToggle(row.id) },
-            'aria-expanded': open,
-            style: { transform: open ? 'rotate(180deg)' : 'none' },
-          }),
-        ),
+        // ⚠️ 预计执行且无前置（也没有产出/日志）⇒ **不画箭头**（展开后是空框、毫无意义 —— 用户 2026-10-06）。
+        hasExpand
+          ? h('span', { onClick: (event: { stopPropagation(): void }) => { event.stopPropagation() } },
+            h(IconButton, {
+              variant: 'plain',
+              size: 'sm',
+              icon: h(IconChevronDownOutlineRegular, { size: 14 }),
+              label: t('listExpandHint'),
+              onClick: () => { onToggle(row.id) },
+              'aria-expanded': open,
+              style: { transform: open ? 'rotate(180deg)' : 'none' },
+            }),
+          )
+          : null,
       ),
     ),
     // ── 展开区（**不可点、无 cursor**：内容要能直接拖选复制）：第一排产出物 → 第二排前置任务 →
     //    再往下是该次执行的事件流水。父级已不可点 ⇒ 不再需要拦冒泡。 ──
-    open
+    // ⚠️ 只有当**确有内容**（有产出 / 有前置 / 日志非空 / 拉取出错）时才渲染展开区本身——
+    //    否则连那条分隔线 + 内边距都不要画，免得空点一下只露一个空框（用户 2026-10-06）。
+    (open && (hasOutputs || hasDeps || eventsError !== null || (events !== null && events.length > 0)))
       ? h('div', { className: 'dsh-tdt-rec-exp' },
         outputs.length === 0
           ? null
@@ -789,8 +799,9 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
             ? null
             : events === null
               ? null
+              // 日志为空 ⇒ 不画空框（用户 2026-10-06：点了展开下面什么都没有，就不要露一个空框）。
               : events.length === 0
-                ? h('div', { className: 'dsh-tdt-rec-evempty' }, t('cardEventsEmpty'))
+                ? null
                 // 有事件才出小标题（空态不占标题行）；行间距拉开、字色压暗一档（与卡片下钻同口径）。
                 : h('div', { className: 'dsh-tdt-rec-ev' },
                   h('div', { className: 'dsh-tdt-rec-evtitle' }, t('recEventsTitle')),

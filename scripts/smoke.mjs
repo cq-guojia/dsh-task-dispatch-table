@@ -1213,10 +1213,12 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       && /setOpenId\(cur => \(cur === id \? null : id\)\)/.test(tlSrc)
       && /'aria-expanded': open/.test(tlSrc)
       && !tlSrc.includes('onClick: canOpenSession ? () => { openSession(sid as string) }'))
-    check('展开区 = 产出物全量（图标 + 文件名，可点开预览）+ 该次执行的**事件流水**（懒取 + 缓存 + 序号作废）',
+    check('展开区 = 产出物全量（图标 + 文件名，可点开预览）+ 该次执行的**事件流水**（懒取 + 缓存 + 序号作废）；日志为空**不画空框**（2026-10-06）',
       /import \{[^}]*fetchEvents[^}]*\} from '\.\/query'/.test(tlSrc)
       && /fetchEvents\(id\)/.test(tlSrc) && /eventsCache/.test(tlSrc) && /eventsSeqRef\.current = seq/.test(tlSrc)
-      && /className: 'dsh-tdt-filechip dsh-tdt-filechip--inline'/.test(tlSrc) && tlSrc.includes("t('cardEventsEmpty')")
+      && /className: 'dsh-tdt-filechip dsh-tdt-filechip--inline'/.test(tlSrc)
+      && /events\.length === 0\s*\? null/.test(tlSrc)
+      && !/\.dsh-tdt-rec-evempty' \}, t\('cardEventsEmpty'\)/.test(tlSrc)
       && /className: 'dsh-tdt-rec-evtitle'/.test(tlSrc) && tlSrc.includes("t('recEventsTitle')"))
     check('减弱动效仍被尊重（脉动 / 淡入在 prefers-reduced-motion 下关闭）', tlSrc.includes('prefers-reduced-motion'))
     check('不用图标表成败：色调走 statusToneOf 单源 + toneClassOf 映射（源码内无状态图标）',

@@ -58,8 +58,11 @@ const CALENDAR_CSS = `
    表头格底色与本月格一致（淡蓝），整表上下一个颜色。 */
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
   background:var(--tdt-border);padding:1px 1px 0;}
-.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);
-  background:var(--tdt-cal-cell-bg);padding:8px 0;}
+.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);
+  /* 表头字：加粗 + 提亮（用户 2026-10-06：比格内浅灰字更醒目）。 */
+  font-weight:600;color:var(--tdt-fg);
+  /* 表头底：比本月格更深的蓝（business 14% vs 格 8%），和下面可选块形成对比（用户 2026-10-06）。 */
+  background:color-mix(in srgb,var(--tdt-business) 14%,var(--tdt-surface-1));padding:8px 0;}
 /* 「选中 / 展开」的底色走 **token 层的 --tdt-selected-bg**（主题特判只许在 token 层）：
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；

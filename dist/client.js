@@ -68692,6 +68692,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const durationHint = row.finished_at === null ? `${t("colDuration")}：${durationOf(row)}` : `${t("colDuration")}：${durationOf(row)}（${stampOf(row.dispatched_at ?? row.scheduled_at)} → ${stampOf(row.finished_at)}）`;
 			const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
 			const deps = isPlanned ? plannedDeps ?? [] : resolvedDepsOf(snapshot);
+			const hasOutputs = outputs.length > 0;
+			const hasDeps = deps.length > 0;
+			const hasExpand = hasOutputs || hasDeps || !isPlanned;
 			/** token 三段之一：null 给占位（不编造 0）。 */
 			const tokenPart = (v) => v === null ? "—" : formatTokenCount(v);
 			/**
@@ -68822,7 +68825,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					event.stopPropagation();
 					openSession(sid);
 				}
-			}, t("viewSession")) : null, (0, react$1.createElement)("span", { onClick: (event) => {
+			}, t("viewSession")) : null, hasExpand ? (0, react$1.createElement)("span", { onClick: (event) => {
 				event.stopPropagation();
 			} }, (0, react$1.createElement)(IconButton, {
 				variant: "plain",
@@ -68834,7 +68837,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }
-			})))), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)("button", {
+			})) : null)), open && (hasOutputs || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)("button", {
 				key: path,
 				type: "button",
 				title: path,
@@ -68921,7 +68924,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						openSession(depSid);
 					}
 				}, t("viewSession")) : null));
-			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? null : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty" }, t("cardEventsEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
+			}))), eventsError !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evempty dsh-tdt-rec-err" }, `${t("cardLoadFailed")}：${eventsError}`) : eventsBusy ? null : events === null ? null : events.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-ev" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("recEventsTitle")), events.map((event) => (0, react$1.createElement)("div", {
 				key: event.seq,
 				className: "dsh-tdt-rec-evrow"
 			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${stampOf(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null);
@@ -69337,8 +69340,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    表头格底色与本月格一致（淡蓝），整表上下一个颜色。 */
 .dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
   background:var(--tdt-border);padding:1px 1px 0;}
-.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);
-  background:var(--tdt-cal-cell-bg);padding:8px 0;}
+.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);
+  /* 表头字：加粗 + 提亮（用户 2026-10-06：比格内浅灰字更醒目）。 */
+  font-weight:600;color:var(--tdt-fg);
+  /* 表头底：比本月格更深的蓝（business 14% vs 格 8%），和下面可选块形成对比（用户 2026-10-06）。 */
+  background:color-mix(in srgb,var(--tdt-business) 14%,var(--tdt-surface-1));padding:8px 0;}
 /* 「选中 / 展开」的底色走 **token 层的 --tdt-selected-bg**（主题特判只许在 token 层）：
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
