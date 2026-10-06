@@ -101,8 +101,14 @@ body{
      浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
      语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
-  /* 任务日程页本月格的默认底（2026-10-06）：浅色下就是卡片面本身，不单独调 */
-  --tdt-cal-cell-bg:var(--tdt-surface-1);
+  /* 任务日程页本月格默认底（2026-10-06 → 续）：浅色下给**极淡蓝**（business 5% 透白底），
+     一眼看出「这是本月、还没点开」；相邻月补位格仍走 --tdt-surface-2（更灰），不受影响。
+     深色段维持 #23262e（用户：深色 UI 已差不多，不动）。 */
+  --tdt-cal-cell-bg:color-mix(in srgb,var(--tdt-business) 5%,var(--tdt-surface-1));
+  /* 任务日程页「点开某天」展开的面板底（2026-10-06 续）：浅色下**无限接近白、只带一丁点灰**
+     （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；
+     深色段沿用原 selected-bg 暗值，保持不动。 */
+  --tdt-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);
   /* 任务日程页本月格 hover 底（浅色段）：沿用通用交互底 */
   --tdt-cal-cell-hover:var(--tdt-hover);
 
@@ -202,5 +208,7 @@ body[data-ds-dark-theme]{
   /* 任务日程页本月格 hover 底（深色段，2026-10-06）：原先走 --tdt-hover（宿主浅色叠加）在深底上显得
      「灰发亮」，不好看 ⇒ 换成更贴底的蓝调微亮（与 open-bg-soft 同族），hover 时不刺眼、又有反馈。 */
   --tdt-cal-cell-hover:rgba(96,165,250,.12);
+  /* 任务日程页展开面板底（深色段，2026-10-06 续）：与原 selected-bg 暗值一致，深色 UI 不动 */
+  --tdt-cal-panel-bg:color-mix(in srgb,var(--tdt-surface-1) 60%,var(--tdt-surface-base));
 }
 `

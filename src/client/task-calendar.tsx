@@ -121,7 +121,7 @@ const CALENDAR_CSS = `
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
 /* 拉开区与选中格**同色**（--tdt-selected-bg，深色主题下无限接近页面背景、只略深一点点）⇒ 视觉一体；
    margin-top:-1px 吃掉与上一行（选中格所在周）之间的那 1px 网格间隙，不让一道亮线横在中间。 */
-.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-selected-bg);border:0;border-radius:0;
+.dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-cal-panel-bg);border:0;border-radius:0;
   margin-top:-2px;
   /* 下内边距 = 左内边距（用户 2026-10-06：拉开区底部留白要跟左右一模一样，都是 16px）。 */
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-4);
