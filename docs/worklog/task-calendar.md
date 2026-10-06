@@ -250,3 +250,25 @@
 - `npm run typecheck` 绿；`npm run build` 绿（dist 已随提交）。
 - `npm run smoke` = **639 项通过 / 0 失败**（基线 616 + 新增 13 条日程断言 + 既有调整）。
 - ⏳ **真机待验**：第四段 tab 的观感（四段是否挤）、未来月的计划格子是否符合预期、格内 3 条与 `+N` 的观感、失败原因在清单里是否显示。
+
+---
+
+## 二十、r14：「预计执行」虚线块 = 与已执行共用同一 RecordItem；运行样式 / 轮询收敛单源（2026-10-06）
+
+**需求原话**：「我不希望以后我再说一个东西，你去改两遍。不是保持统一，是用同一个东西……新增一种"预计执行"的样式……整体排版跟"执行成功 / 失败"没有任何区别（前置 1、2 / 工作空间 / 计划时间照常；实际执行 = 未执行、时长 / Token = --；展开照常有，展开后看前置）。」
+
+**做了什么**：
+
+1. **运行态视觉收敛单源**：执行记录状态条原来还有一份自己的 `.dsh-tdt-rec-bar--run` 动画规则 ⇒ 删掉，改为直接挂共享 `RUN_PULSE_CLASS`（`ui/running.ts`）——与任务配置竖条、NextPill 用**同一个 class + 同一个 keyframe**，改一处全局生效。
+2. **`RecordItem` 增加 `planned` 模式**（不另写第二份块）：虚线蓝边（`.dsh-tdt-rec-tone--planned`；边框位用基础块 1px 透明边预留，不挤动别的块的排版）+ 状态标签「预计执行」（`.dsh-tdt-rec-tag--planned`，虚线描边透明底）；前置 1、2 / 工作空间 / 计划时间照常；实际执行 = 「未执行」（新文案 `calNotExecuted`）、时长 = 「--」、Token = 「--」；可展开看前置（来自任务定义 `depends_on`，日历侧映射成 `ResolvedDependency[]` 经 `plannedDeps` 传入，不读快照）。
+3. **日程拉开区的计划条目**：从「一行虚线行」改为复用上述 `RecordItem`（`planned: true`）；单行专属 CSS `.dsh-tdt-cal-row--plan` 删除。
+4. **文案**：`calPlanTag` / `calLegendPlan` 「计划」→「预计执行」（中英），新增 `calNotExecuted`（未执行 / Not executed）。
+5. **轮询刷新机制记档**：`docs/design/client-refresh.md`（现状 = 轮询：任务配置 10s rev 比对；执行记录 / 日程「有在跑才 5s 静默重载」，单源 `src/client/instances-poll.ts`；推送 SSE/WS 待评审，用户拍板「空了再来」）。
+6. **定型层回写**：运行态视觉单源规矩入 `design/ui-foundation.md` §十；预计执行块规格入 `design/features/task-calendar.md` §二 / §三。
+
+**踩坑**：
+
+- `planned` 入参与 `RecordItem` 内既有的局部变量 `planned`（计划时刻文案）**重名** ⇒ TS2451 重复声明、且 `planned === ''` 比较连带报错；局部改名 `plannedText` 解决。
+- 冒烟两条既有断言被误伤：import 正则精确匹配 `{ resolvedDepsOf }`（现在多了 `type ResolvedDependency`）；`!/depends/` 反断被 `plannedDeps` 合法命中 ⇒ 断言改为按新结构正匹配（「快照路径仍走 `resolvedDepsOf(snapshot)`」的断言保留，语义不变：已执行的前置只认快照）。
+
+**验收**：`typecheck` / `build` 绿；冒烟 **641 / 0**（新增 1 条预计执行断言）；commit `7655f21`。⏳ 真机待验：预计执行块观感 + 展开看前置。

@@ -54,8 +54,9 @@
 > 顶部导航由三段扩为**四段**（任务配置 / 执行记录 / **任务日程** / 调试）；一页一个自然月的日历，格子里填两态：**已发生**（`task_instances` 真实行，状态色实心点）与**计划**（按当前**启用**任务的定义现算的未来刻度，虚线空心点 + 悬停说明「尚未产生执行记录」）；点某天 ⇒ 下方列当天全部条目（不发起请求）；过滤 = 工作区 + 任务 + 状态，日期维度改为**月份翻页**（不限过去 / 未来月）。
 > 服务端只加一处：`GET /tasks/instances?light=1`（`store.listInstancesLite` —— 同一套过滤条件、**剔除 snapshot 大列**、上限 3000、不分页、触及上限回 `truncated`；既有 500 上限与游标语义未动）。未来刻度走新增纯核 `src/calendar-plan.ts`（浏览器与服务端同一份，**按自然周分片**调 `scheduledSlotsFor` 以避开单次 cap 截断）。typecheck / build 绿，**冒烟 639/0**（+13 条断言）。
 > **2026-10-06 r3/r4 视觉改造（已落码）**：格子改**纯正方形**（无圆角、1px 间隔、不描边，本月格与补位格等高）；格内条目改**方形小标签**（3px 状态色竖线 + 24% 同色底 + 居中的时刻，一行 3 个 × 3 行，第 9 位放 `…N`）；选中与拉开区统一**蓝色底、无圆角无边**并连成一片；拉开有 180ms 展开动画。
+> **2026-10-06 r14（已落码）**：拉开区的计划条目从"一行虚线行"改为**与已执行共用同一个 `RecordItem`** 的「预计执行」虚线蓝块（`planned` 模式：前置 1、2 / 工作空间 / 计划时间照常，实际执行 = 未执行、时长 / Token = --，可展开看前置）；运行态视觉收敛**单源** `src/client/ui/running.ts`（任务配置竖条 / 记录状态条 / NextPill 同一个脉动类）；客户端轮询单源 `src/client/instances-poll.ts`（机制记档 `design/client-refresh.md`，**推送方案待评审**，见未决项 U35）。冒烟 **641/0**。
 > **2026-10-06 r2 交互改造（已落码）**：格内**只给时刻**、有多少列多少（删 `+N`），名字进悬停；点某天 ⇒ **那一天所在的那一周手风琴拉开**，当天全部执行信息铺在拉开区（复用执行记录页的 `RecordItem`，可再展开出前置 / 产出 / 事件流水，不设内部滚动条）；**去掉状态分段过滤**；月份导航与「已执行 / 计划 / N 条 + 工作区 + 任务」合为一行（后者居右）。
-> ⏳ **真机待验**：四段导航观感、行内拉开的观感与高度、展开某条的前置 / 产出是否出得来、未来月的计划格子。
+> ⏳ **真机待验**：四段导航观感、行内拉开的观感与高度、展开某条的前置 / 产出是否出得来、未来月的计划格子、**「预计执行」虚线块**（排版与成败块一致 / 实际执行=未执行 / 时长 Token=-- / 可展开看前置）。
 > 规格 = [design/features/task-calendar.md](design/features/task-calendar.md)；过程 = [worklog/task-calendar.md](worklog/task-calendar.md)。
 
 ### ~~1.7 工作区候选真源统一 + 顶部下拉收编~~ —— ✅ **2026-10-04 真机验收通过，已结案**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）
@@ -75,6 +76,7 @@
 | U31 | **任务选择器替换「前置任务」下拉的时机与范围**（2026-10-03 随执行记录总查询页登记；2026-10-04 更新） | 用户要求带搜索的任务选择器**必须抽象成共用控件**（「很多地方都要用」）。✅ **其中「工作区候选真源统一」已于 2026-10-04 单独完成**（三处一律取 `/options`，任务列表顶部手搓下拉收编为 `SelectField`，见 §1.7）。✅ **① 已完成（2026-10-04）**：执行记录过滤行的任务选择已换 `TaskPicker`（`records-timeline.tsx:863`），原生 `<select>` 不再用。**剩余**：② 编辑器「前置任务」第②级（`task-editor.tsx:1929-1937`）仍是 `SelectField`、作用域 `depWs`（`:1865`）仍是**内部** state；③ 任务选项文案两套（`title（id）` vs `[code] name`） | ② 换 `TaskPicker` 并把第①级工作区从内部 state 改**受控入参**；③ 统一取 `[code] name` |
 | U33 | **Office 预览（doc/docx/ppt/pptx）接入官方 `remote.officeToPdf`**（2026-10-05 用户报 + 已落码；⏳ **真机验收待做**，取决于宿主是否启用文档预览服务） | 用户报：本插件预览面里 `.xlsx` / `.ppt` 都显示「二进制文件，暂不支持预览…」，而原生工作区里 PPT 报「Office 预览不可用…」、Excel 却能渲染。**核实结论（两条完全不同的路）**：Office = **主机侧转换**（官方 `ctx.inject(['remote','remote.officeToPdf',…])` → `render()` 转 PDF 再渲染）；Excel = **纯前端**（官方私有分包 `client.excel.js` 的 `@fortune-sheet` + SheetJS，**借不到**：导出面全 type / 引擎在私有分包 / 只绑右栏 seat，且每插件独立打包不共享）。**Office 路线反而零 npm 依赖**（`dsh-office-to-pdf` 的 `./remote` 只做 `declare module` 类型扩展，`documentpreview` 也只放 devDependencies ⇒ 运行时服务由宿主提供）⇒ 按本仓惯例**本地声明服务面 + dotted inject** 即可 | **已落码**：① `previewKind` 加 `office` 分支（`OFFICE_KINDS = doc/docx/ppt/pptx`，**刻意不含 xls/xlsx**——Excel 待用户定）；② `OfficeToPdfFace` 本地声明（零 npm 依赖，契约出处写进注释）；③ `OfficePreview`：`render(sessionId,path,'foreground')` → `bytesOf` 取 `data` → Blob → objectURL → **复用既有 PDF 的 iframe**；④ `ctx.inject(['remote','remote.officeToPdf'])`（**dotted**，只注 `remote` 会永久探测失败——2026-09-28 同款根因）经 `officeRef` 下发；⑤ `errView` 加 `invocation-unavailable`/`service-unavailable`/`failed+reason==='unavailable'` → 「Office 预览不可用」（与官方逐字一致）；⑥ 中英文案齐备。typecheck 绿、**冒烟 598/0**（+6 断言）、build 过。过程 [worklog/office-preview-officetopdf.md](worklog/office-preview-officetopdf.md)。⏳ **真机**：宿主未启用服务时**预期就是**「Office 预览不可用」（与官方一致，非 bug），启用后应看到渲染后的 PDF；验收清单见该 worklog §四 |
 | U34 | **Excel 预览路线待用户定**（2026-10-05 用户拍板「向后讨论」，本轮未动） | 官方 `OfficeExtension` **含 `xls` / `xlsx`** ⇒ 表格**也能**经 `officeToPdf` 转 PDF 预览。故 Excel 有两条路：① **转 PDF**（零 npm 依赖、复用 U33 同一条链路，但**不可编辑**、只是页面图像）；② **可编辑表格**（自引 `@fortune-sheet` + `xlsx`，增体量 ~1~2 MB，**破本仓「绝不引第三方包」原则**，且官方那份在私有分包里借不到） | 待用户定路线后落码。⚠️ 另记一处**宿主侧**风险（前端无解）：引擎 `@deepseek-ai/libreoffice-kit` 的 `optionalDependencies` **没有 linux-x64 原生包**（仅 wasm / win32-x64 / win32-arm64 / darwin-x64 / darwin-arm64）⇒ 宿主启用服务 ≠ Linux 主机一定能转；真机若在 Linux 上报「不可用」，先查宿主服务再查该原生包 |
+| U35 | **状态刷新：现在是轮询，要不要升级为推送（SSE / WS）**（2026-10-06 用户提出「这难道不应该是一个通知机制吗」，随后拍板「空了再来」） | 宿主**不会**把实例状态变化推给客户端（服务端 reconcile 写库，客户端感知不到）⇒ 现状 = 客户端轮询：任务配置 10s（rev 比对）+ 执行记录 / 日程「有在跑才 5s 静默重载」，轮询逻辑单源 `src/client/instances-poll.ts`、运行态视觉单源 `src/client/ui/running.ts`。机制全貌记档 [design/client-refresh.md](design/client-refresh.md) | 评审是否上服务端推送（SSE / WS）：上了 ⇒ 「收到通知即更新」、各视图去掉轮询；不上 ⇒ 维持轮询并复核各视图间隔 |
 
 ---
 
@@ -85,7 +87,7 @@
 1. **U33 Office 预览真机验收**：宿主启用文档预览服务后，确认 doc/docx/ppt/pptx 能渲染出 PDF。
 2. **U34 Excel 预览路线**：待用户拍板「转 PDF」还是「可编辑表格」，拍板后落码。
 3. **U31 剩余 ②③**：编辑器「前置任务」第②级换 `TaskPicker` + 第①级工作区改受控入参；任务选项文案统一取 `[code] name`。
-4. **任务日程（§1.8）真机验收**：四段导航是否挤、未来月计划格子是否符合预期、格内 3 条 + `+N`、清单里的失败原因。
+4. **任务日程（§1.8）真机验收**：四段导航是否挤、未来月计划格子是否符合预期、格内 3 条 + `+N`、清单里的失败原因、**「预计执行」虚线块**（排版与成败块一致、实际执行=未执行、时长/Token=--、可展开看前置）。
 5. **任务日程：日期右上角标农历（初一 / 十五等）** —— ⏸️ **用户 2026-10-06 拍板暂缓**：先把日程样式调好再说。⚠️ 开工前必读：农历**算不出来，只能内置数据表**（本仓不引第三方包 ⇒ 不引 lunar 库）；表是 200 多个常量，必须**用已知锚点做冒烟断言校验**（如春节：2024-02-10 / 2025-01-29 / 2026-02-17 均为正月初一），**锚点对不上就不许提交** —— 算错就等于界面上显示假日期，直接违反「禁止模拟数据」的硬规矩。显示范围暂定只标农历日名（不标节日 / 节气）。
 6. **（用户已排期，未开工）重构调试界面**：完全重构现在的调试页（本质是看数据库，共没几张表）；可附带一个查库功能，但不是必须。
 

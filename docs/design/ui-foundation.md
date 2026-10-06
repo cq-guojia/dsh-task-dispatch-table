@@ -395,6 +395,7 @@ disabled?: boolean; size?: 'sm' | 'md' | 'lg'; width?: number | string; align?: 
 | **字段宽度** | 调用点**不许写死** `width`：下拉 / 日期框 / 时分框都走基础层默认（`inline-flex` ⇒ **刚好把内容显示完**，「不要长也不要短」）；确需定长就在基础层一处定（用户 2026-10-04）。⚠️ 旧「执行记录页 `TimeRange` 三框定宽例外」已于 **2026-10-06 失效**——执行记录页时间过滤已整体移除，仅 `task-calendar` 仍用 `TimeRange` 且一律走基础层默认宽，**不得照抄旧定宽到别处**（过程见 [`../worklog/execution-timeline.md`](../worklog/execution-timeline.md) §18.1） |
 | **文件显示（硬性规定）** | 任何**只显示图标、没显示文件名**的地方（附件 / 产出物 / 交付物 …），悬停**必须**把**文件名（含后缀）**显示出来，提示走官方 `Tooltip`；打不开时图标也不可点（不给假入口）（用户 2026-10-05 定为硬性规定） |
 | **动效** | 时长 / 缓动走 `--tdt-dur` / `--tdt-ease`；**必须尊重 `prefers-reduced-motion: reduce`**（关掉位移 / 脉动类动画） |
+| **运行态视觉（单源）** | 「运行中」的颜色与脉动**只有一份实现**：`src/client/ui/running.ts`（`RUNNING_TONE` 蓝 + `RUN_PULSE_CLASS` + keyframe `dsh-tdt-run-pulse`）——任务配置竖条 / 执行记录状态条 / NextPill 全部引用它，改一处即全局生效；**业务层不许再写自己的脉动 keyframe 或另配运行色**（2026-10-06 用户拍板「不是保持统一，是用同一个东西」）。客户端数据轮询同样单源 = `src/client/instances-poll.ts`（机制全貌见 [client-refresh.md](client-refresh.md)） |
 | **文本溢出** | 单行溢出用 `text-overflow:ellipsis`（配 `min-width:0`）；确实需要看全的用跑马灯（`MarqueeText`，**只在自己盒子里滚，不许盖住同行图标**） |
 | **滚动容器** | 内容长度会变的面板给**固定最大高度 + 内部滚动**（如卡片展开区 360px），避免切换 tab 时卡片高度跳动 |
 | **间距** | 只取 `--tdt-space-1..4`（4 / 8 / 12 / 16px）；**不许出现 5 / 7 / 9px 这类** |
