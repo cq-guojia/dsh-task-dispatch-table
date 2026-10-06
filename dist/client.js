@@ -304,6 +304,7 @@ window.__ModuleLoader__.load({
 			calPlanTag: "计划",
 			calLegendDone: "已执行",
 			calLegendPlan: "计划",
+			calToday: "今日",
 			calCellMore: "还有 {n} 条，点开看全部",
 			calDepsLabel: "前置",
 			debugDbHint: "状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。",
@@ -932,6 +933,7 @@ window.__ModuleLoader__.load({
 			calPlanTag: "Planned",
 			calLegendDone: "Executed",
 			calLegendPlan: "Planned",
+			calToday: "Today",
 			calCellMore: "{n} more — click to open",
 			calDepsLabel: "Deps",
 			debugDbHint: "Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.",
@@ -69118,15 +69120,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
    ⚠️ 底色走 token 层的 --tdt-selected-bg（见 ui/tokens.ts；深浅主题各有定义）。
    **不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-selected-bg);outline:0;}
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-selected-bg);outline:0;padding-top:12px;}
 .dsh-tdt-cal-cell--sel:hover{background:var(--tdt-selected-bg);}
-/* 线在格子**底部**（不是顶部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
+/* 线在格子**顶部**（不是底部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
    稍亮的品牌蓝（--tdt-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
-.dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;bottom:4px;height:4px;
+.dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
   border-radius:999px;background:var(--tdt-business);}
-.dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
-  font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
-.dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
+/* 日期数字：左对齐、去掉 5px 内缩与胶囊框（用户 2026-10-06：左边距要和顶间距一致，之前太长） */
+.dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;}
+.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
+.dsh-tdt-cal-num--today{color:var(--tdt-business);font-weight:600;}
+.dsh-tdt-cal-today{color:var(--tdt-business);font-weight:600;font-size:var(--tdt-font-xs);}
 .dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
 /* 格内条目 = **方形小标签**（用户 2026-10-06：不要圆点、**不要任何圆角**）：
    标签前 3px 状态色竖线 + 同色系底 + 时刻；时刻位数固定 ⇒ 标签宽度固定；
@@ -69368,6 +69372,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setSnapshots((prev) => new Map(prev).set(id, full?.snapshot ?? null));
 				});
 			}, []);
+			/** 只补派发快照（前置 / 产出靠它），不拉事件 —— 给日历展开区在**默认就展开**前置用，免去点一下才出。 */
+			const loadSnapshotOf = (0, react$1.useCallback)((id) => {
+				const row = instancesRef.current.find((item) => item.id === id);
+				if (row === void 0) return;
+				const sid = row.session_id;
+				if (sid !== null && sid !== "" && !snapshotsRef.current.has(id)) fetchInstanceBySession(sid).then((full) => {
+					setSnapshots((prev) => new Map(prev).set(id, full?.snapshot ?? null));
+				});
+			}, []);
 			const toggleItem = (0, react$1.useCallback)((id) => {
 				setOpenId((cur) => {
 					const next = cur === id ? null : id;
@@ -69420,12 +69433,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					return hit !== void 0 && hit.workspace !== next ? "" : cur;
 				});
 			}, [tasks]);
-			const monthCount = (0, react$1.useMemo)(() => {
-				let n = 0;
-				for (const list of byDay.values()) n += list.length;
-				return n;
-			}, [byDay]);
 			const dayItems = byDay.get(selected) ?? [];
+			(0, react$1.useEffect)(() => {
+				for (const item of dayItems) if (item.kind === "done") loadSnapshotOf(item.row.id);
+			}, [
+				selected,
+				dayItems,
+				loadSnapshotOf
+			]);
 			/** 拉开区里的一条（已发生 = 执行记录那套可展开的块；计划 = 一行虚线，没有记录可展开）。 */
 			const panelItemNode = (item) => {
 				if (item.kind === "plan") {
@@ -69444,7 +69459,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					tt,
 					snapshot: snapshots.get(item.row.id) ?? null,
 					depTitleOf: nameOf,
-					open: openId === item.row.id,
+					open: true,
 					onToggle: toggleItem,
 					openSession: (sid) => {
 						onOpenSession?.(sid);
@@ -69486,7 +69501,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				variant: "outline",
 				size: "sm",
 				onClick: goToday
-			}, calLabels.today), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-right" }, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-legend" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-swatch dsh-tdt-cal-t--ok" }), t("calLegendDone")), (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-swatch dsh-tdt-cal-swatch--plan" }), t("calLegendPlan")), (0, react$1.createElement)("span", null, tt("recordsDayCount", { n: monthCount }))), (0, react$1.createElement)(SelectField, {
+			}, calLabels.today), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-right" }, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-legend" }, (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-swatch dsh-tdt-cal-t--ok" }), t("calLegendDone")), (0, react$1.createElement)("span", null, (0, react$1.createElement)("i", { className: "dsh-tdt-cal-swatch dsh-tdt-cal-swatch--plan" }), t("calLegendPlan"))), (0, react$1.createElement)(SelectField, {
 				value: workspace,
 				options: workspaceOptions,
 				onChange: changeWorkspace,
@@ -69535,18 +69550,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							setSelected(cell.iso === selected ? "" : cell.iso);
 							setOpenId(null);
 						}
-					}, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)("div", {
+					}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-daterow" }, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), cell.isToday ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-today" }, ` · ${t("calToday")}`) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { label: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}` }, (0, react$1.createElement)("div", {
 						key: item.row.id,
-						className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
-						title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`
-					}, (0, react$1.createElement)("span", null, hhmmOf(item.at))) : (0, react$1.createElement)("div", {
+						className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`
+					}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { label: `${hhmmOf(item.at)} ${item.entry.title} · ${t("calPlanHint")}` }, (0, react$1.createElement)("div", {
 						key: `p:${item.entry.taskId}:${item.at}`,
-						className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--plan",
-						title: `${hhmmOf(item.at)} ${item.entry.title} · ${t("calPlanHint")}`
-					}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))), items.length > 8 ? (0, react$1.createElement)("div", {
-						className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more",
-						title: tt("calCellMore", { n: items.length - 8 })
-					}, (0, react$1.createElement)("span", null, `…${items.length - 8}`)) : null));
+						className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--plan"
+					}, (0, react$1.createElement)("span", null, hhmmOf(item.at))))), items.length > 8 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { label: tt("calCellMore", { n: items.length - 8 }) }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more" }, (0, react$1.createElement)("span", null, `…${items.length - 8}`))) : null));
 				}), hasSel ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
 			}))));
 		}

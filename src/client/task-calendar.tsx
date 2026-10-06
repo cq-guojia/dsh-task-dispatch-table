@@ -16,7 +16,7 @@
 // 未来走浏览器内的 `planEntriesByDay`（与服务端同一份纯核，不许另写 cron 解析）；
 // 拉开区里某条要展开时，按会话 id 补拉**全量行**拿 `snapshot`（前置 / 产出就靠它）+ `fetchEvents` 取事件。
 import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pad2 } from './format'
 import { fetchEvents, fetchInstanceBySession, fetchInstancesLite, type EventRow, type InstanceRow } from './query'
 import { statusTextOf, statusToneOf } from './status-text'
@@ -72,15 +72,17 @@ const CALENDAR_CSS = `
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
    ⚠️ 底色走 token 层的 --tdt-selected-bg（见 ui/tokens.ts；深浅主题各有定义）。
    **不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-selected-bg);outline:0;}
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-selected-bg);outline:0;padding-top:12px;}
 .dsh-tdt-cal-cell--sel:hover{background:var(--tdt-selected-bg);}
-/* 线在格子**底部**（不是顶部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
+/* 线在格子**顶部**（不是底部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
    稍亮的品牌蓝（--tdt-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
-.dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;bottom:4px;height:4px;
+.dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
   border-radius:999px;background:var(--tdt-business);}
-.dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
-  font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
-.dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
+/* 日期数字：左对齐、去掉 5px 内缩与胶囊框（用户 2026-10-06：左边距要和顶间距一致，之前太长） */
+.dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;}
+.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
+.dsh-tdt-cal-num--today{color:var(--tdt-business);font-weight:600;}
+.dsh-tdt-cal-today{color:var(--tdt-business);font-weight:600;font-size:var(--tdt-font-xs);}
 .dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
 /* 格内条目 = **方形小标签**（用户 2026-10-06：不要圆点、**不要任何圆角**）：
    标签前 3px 状态色竖线 + 同色系底 + 时刻；时刻位数固定 ⇒ 标签宽度固定；
@@ -346,6 +348,18 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     }
   }, [])
 
+  /** 只补派发快照（前置 / 产出靠它），不拉事件 —— 给日历展开区在**默认就展开**前置用，免去点一下才出。 */
+  const loadSnapshotOf = useCallback((id: string): void => {
+    const row = instancesRef.current.find(item => item.id === id)
+    if (row === undefined) return
+    const sid = row.session_id
+    if (sid !== null && sid !== '' && !snapshotsRef.current.has(id)) {
+      fetchInstanceBySession(sid).then(full => {
+        setSnapshots(prev => new Map(prev).set(id, full?.snapshot ?? null))
+      })
+    }
+  }, [])
+
   const toggleItem = useCallback((id: string): void => {
     setOpenId(cur => {
       const next = cur === id ? null : id
@@ -395,12 +409,14 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     })
   }, [tasks])
 
-  const monthCount = useMemo(() => {
-    let n = 0
-    for (const list of byDay.values()) n += list.length
-    return n
-  }, [byDay])
   const dayItems = byDay.get(selected) ?? []
+
+  // 选中某天时，把当天已发生条目的快照**预先**拉好 ⇒ 前置任务在展开区里**默认就显示**，不用再点一下。
+  useEffect(() => {
+    for (const item of dayItems) {
+      if (item.kind === 'done') loadSnapshotOf(item.row.id)
+    }
+  }, [selected, dayItems, loadSnapshotOf])
 
   /** 拉开区里的一条（已发生 = 执行记录那套可展开的块；计划 = 一行虚线，没有记录可展开）。 */
   const panelItemNode = (item: CalItem): ReturnType<typeof h> => {
@@ -430,7 +446,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       tt,
       snapshot: snapshots.get(item.row.id) ?? null,
       depTitleOf: nameOf,
-      open: openId === item.row.id,
+      open: true,
       onToggle: toggleItem,
       openSession: (sid: string) => { onOpenSession?.(sid) },
       openFile: onOpenFile,
@@ -462,7 +478,6 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
           h('span', { className: 'dsh-tdt-cal-legend' },
             h('span', null, h('i', { className: 'dsh-tdt-cal-swatch dsh-tdt-cal-t--ok' }), t('calLegendDone')),
             h('span', null, h('i', { className: 'dsh-tdt-cal-swatch dsh-tdt-cal-swatch--plan' }), t('calLegendPlan')),
-            h('span', null, tt('recordsDayCount', { n: monthCount })),
           ),
           h(SelectField, {
             value: workspace,
@@ -530,25 +545,32 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
                 setOpenId(null)
               },
             },
-              h('span', { className: `dsh-tdt-cal-num${cell.isToday ? ' dsh-tdt-cal-num--today' : ''}` }, String(cell.day)),
+              h('span', { className: 'dsh-tdt-cal-daterow' },
+                h('span', { className: `dsh-tdt-cal-num${cell.isToday ? ' dsh-tdt-cal-num--today' : ''}` }, String(cell.day)),
+                cell.isToday ? h('span', { className: 'dsh-tdt-cal-today' }, ` · ${t('calToday')}`) : null,
+              ),
               // 方形小标签：3 列 × 3 行 = 9 个位子，前 8 位放时刻，第 9 位放「还有 N 条」。
+              // 悬停提示走 DSH 原生 Tooltip（用户 2026-10-06：原生 title 反应太慢），不是手搓。
               h('div', { className: 'dsh-tdt-cal-tags' },
                 items.slice(0, CELL_CAP - 1).map(item => item.kind === 'done'
-                  ? h('div', {
+                  ? h(Tooltip, {
+                    label: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`,
+                  }, h('div', {
                     key: item.row.id,
                     className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
-                    title: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`,
-                  }, h('span', null, hhmmOf(item.at)))
-                  : h('div', {
+                  }, h('span', null, hhmmOf(item.at))))
+                  : h(Tooltip, {
+                    label: `${hhmmOf(item.at)} ${item.entry.title} · ${t('calPlanHint')}`,
+                  }, h('div', {
                     key: `p:${item.entry.taskId}:${item.at}`,
                     className: 'dsh-tdt-cal-tag dsh-tdt-cal-tag--plan',
-                    title: `${hhmmOf(item.at)} ${item.entry.title} · ${t('calPlanHint')}`,
-                  }, h('span', null, hhmmOf(item.at)))),
+                  }, h('span', null, hhmmOf(item.at))))),
                 items.length > CELL_CAP - 1
-                  ? h('div', {
+                  ? h(Tooltip, {
+                    label: tt('calCellMore', { n: items.length - (CELL_CAP - 1) }),
+                  }, h('div', {
                     className: 'dsh-tdt-cal-tag dsh-tdt-cal-tag--more',
-                    title: tt('calCellMore', { n: items.length - (CELL_CAP - 1) }),
-                  }, h('span', null, `…${items.length - (CELL_CAP - 1)}`))
+                  }, h('span', null, `…${items.length - (CELL_CAP - 1)}`)))
                   : null,
               ),
             )
