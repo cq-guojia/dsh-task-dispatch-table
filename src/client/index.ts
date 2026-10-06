@@ -37,7 +37,8 @@ import { ensureToastStyle, FloatingToast } from './toast-css'
 import { Button, IconButton, Segmented, BackToTop, ensureUiBase, startResizeLayoutWidth, type TaskOption } from './ui'
 import { RecordsTimelineView } from './records-timeline'
 import { TaskCalendarView } from './task-calendar'
-import { humanizeTaskError } from './task-editor'
+// 错误码 → 人话（2026-10-06 从 task-editor.tsx 归位：纯文案工具不该寄居编辑器页，disposition §四 W3）。
+import { humanizeTaskError } from './error-text'
 import { TaskListView } from './task-list'
 // 取数层（2026-10-06 从 task-list.tsx 归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import { useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-overview'

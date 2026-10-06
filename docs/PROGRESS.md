@@ -68,8 +68,9 @@
 ### 1.10 轮询 → 事件驱动 处置 —— 🔵 **进行中**（2026-10-06 开工）
 
 > 处置清单（真源）= [design/client-refresh-disposition.md](design/client-refresh-disposition.md)：R1 该用通知的全换通知 / R2 重连保底**统一一份**（不给每条轮询各做）/ R3 断 **>30s** 自动重连、数据脏了页面自读**不回补**。
-> ✅ **批次一已落码**：① 统一重连 —— `event-subscribe.ts` 浏览器重连 + **30s 看门狗** + 连上即补读；② **三条数据轮询退场** —— 实例 5s（`instances-poll.ts` 已删、两页改事件驱动）、overview 10s（主列表改 `TASKS_CHANGED`/`TASK_RUN_*`）、设置页快照 2s（收窄为**有订阅者才轮**）。typecheck 绿、冒烟 **649/0**、build 过。
-> ⬜ 待办：批次二（归位与合并：`task-info.tsx` 拆共享层 / `useTaskOverview` 出页面 / NextPill 合并到全局心跳 / 取数通道与 URL 前缀统一 等）；批次三（死代码 `markdown.ts`）。
+> ✅ **批次一已落码**：① 统一重连 —— `event-subscribe.ts` 浏览器重连 + **30s 看门狗** + 连上即补读；② **三条数据轮询退场** —— 实例 5s（`instances-poll.ts` 已删、两页改事件驱动）、overview 10s（主列表改 `TASKS_CHANGED`/`TASK_RUN_*`）、设置页快照 2s（收窄为**有订阅者才轮**）。
+> ✅ **批次二/三已落码**：心跳与 `LiveText` 归位 `ui/`（`NextPill` 并回全局心跳）、时间文案层归位 `time-text.ts`、列表取数层归位 `task-overview.ts`、`humanizeTaskError` 归位 `error-text.ts`；死代码 `markdown.ts` / `formatShortStamp` / `marked` 依赖已删。
+> ⬜ 待办（剩余）：M3–M7 格式收编、M8/M9 取数通道与 URL 前缀统一、W4/W5（样式注入器 / 设置页通道归位）、W6/W7（barrel 收尾）。**真机验收由用户最后一次性做。**
 
 ---
 

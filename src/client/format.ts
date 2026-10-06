@@ -45,14 +45,6 @@ export function formatDateTime(
   return opts?.seconds === true ? `${base}:${pad2(d.getSeconds())}` : base
 }
 
-/** 短时刻（用户 2026-10-02：计划时刻本来就没有「秒」，月日时分各两位即可）：`MM-DD HH:mm`。 */
-export function formatShortStamp(iso: string): string {
-  const ms = Date.parse(iso)
-  if (Number.isNaN(ms)) return '—'
-  const d = new Date(ms)
-  return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
-}
-
 /**
  * 四位年日期（用户 2026-10-03：卡片标题后的创建时间标签 `[2026-10-03 创建]`）：`YYYY-MM-DD`。
  * 与 `formatShortStamp` 的差别就是**带年份**——创建时间要能跨年看，缺年份会认错。

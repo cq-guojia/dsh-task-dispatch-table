@@ -64965,19 +64965,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			});
 			return problems;
 		}
-		/**
-		* 把宿主返回的机器码错误翻成人话（保底用：客户端校验已拦掉绝大多数必填问题，这里只兜底漏网的）。
-		* 命中已知 zod 片段就翻译，否则原样返回（前缀「任务定义不合法（…）」尽量保留上下文）。
-		*/
-		function humanizeTaskError(raw) {
-			if (raw.includes("target.workspace") && raw.toLowerCase().includes("too small")) return "工作区不能为空，请先选择工作区";
-			if (raw.includes("target.prompt") && raw.toLowerCase().includes("too small")) return "提示词不能为空，请先填写提示词";
-			if (raw.includes("title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
-			if (raw.includes("ISO 8601") || raw.includes("schedule.window")) return "「允许延迟」的时长不合法——请从下拉里重选一个（如 4 小时）。";
-			if (raw.includes("schedule.cron")) return "执行排期不合法——请重新选一次执行频率。";
-			if (raw.includes("附件 ref 非法") || raw.includes("attachments") && raw.includes("ref")) return "附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。";
-			return raw;
-		}
 		/** 附件 / 草稿条目的本地 id（反解时补上定义里缺失的 id）。 */
 		function newAttachmentId() {
 			return typeof crypto !== "undefined" && crypto.randomUUID !== void 0 ? crypto.randomUUID() : `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -68793,6 +68780,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					className: "dsh-tdt-cal-clock"
 				}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-date" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-weekday" }, weekdayFormatter === null ? "" : weekdayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
 			}))));
+		}
+		//#endregion
+		//#region src/client/error-text.ts
+		/**
+		* 把宿主返回的机器码错误翻成人话（保底用：客户端校验已拦掉绝大多数必填问题，这里只兜底漏网的）。
+		* 命中已知 zod 片段就翻译，否则原样返回（前缀「任务定义不合法（…）」尽量保留上下文）。
+		*/
+		function humanizeTaskError(raw) {
+			if (raw.includes("target.workspace") && raw.toLowerCase().includes("too small")) return "工作区不能为空，请先选择工作区";
+			if (raw.includes("target.prompt") && raw.toLowerCase().includes("too small")) return "提示词不能为空，请先填写提示词";
+			if (raw.includes("title") && raw.toLowerCase().includes("too small")) return "任务名称不能为空";
+			if (raw.includes("ISO 8601") || raw.includes("schedule.window")) return "「允许延迟」的时长不合法——请从下拉里重选一个（如 4 小时）。";
+			if (raw.includes("schedule.cron")) return "执行排期不合法——请重新选一次执行频率。";
+			if (raw.includes("附件 ref 非法") || raw.includes("attachments") && raw.includes("ref")) return "附加文件的引用路径不合法——必须是工作区内的相对路径。请删掉那个附件、重新选择一次。";
+			return raw;
 		}
 		//#endregion
 		//#region src/client/task-list.tsx

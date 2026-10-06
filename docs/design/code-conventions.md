@@ -20,9 +20,13 @@
 |---|---|---|---|
 | 网络 | `http.ts` | **带超时的 fetch**（默认 8s） | 原先三份各写一遍、其中一份还没超时 ⇒ 挂起一次即永久停摆；`session-view` 与 `index` 都要用，抽成**叶子模块**避免反向依赖 |
 | 数据查询 | `query.ts` | 执行记录 / 日志 / 事件查询（过滤 + 游标分页） | 卡片三面板与未来的**总查询页**共用一套接口（小面板传 `limit`、总页面传 `cursor`），绝不允许两处各写 fetch |
-| 时间格式化 | `format.ts` | `pad2` / `formatDateTime` / `formatShortStamp` / 大数计数格式 | `padStart` 曾散在 6 处、时间串手拼 3 份且口径不一（有无秒、失败回退不同） |
+| 时间格式化 | `format.ts` | `pad2` / `formatDateTime` / 大数计数格式 | `padStart` 曾散在 6 处、时间串手拼 3 份且口径不一（有无秒、失败回退不同） |
 | 排期文案 | `schedule-text.ts` | 排期 → 人话的**唯一**实现（`ScheduleSpec` → 文案，支持样式参数） | 列表（`cronToHuman`）与编辑器（`describeSchedule`）曾各写一份 ⇒ 同一排期两处文案不一样 |
 | 状态文案 | `status-text.ts` | 实例七态 → 通用短名（走 `t()`，跟随宿主语言） | 禁止就地打印原始 `status` 串或另写映射 |
+| **时间文案** | `time-text.ts` | 相对时间 / 倒计时 / `HH:mm`（`clockOf`）/ 「预计执行」整行 | 2026-10-06 从 `task-info.tsx`（面板）归位：原来 4 个页面反向 import 一个页面；见 [client-refresh-disposition.md](client-refresh-disposition.md) §三 A3 |
+| **错误文案** | `error-text.ts` | 服务端机器码错误 → 人话（`humanizeTaskError`） | 2026-10-06 从 `task-editor.tsx`（编辑器页）归位：宿主页反向 import 一个页面（§四 W3） |
+| **列表取数** | `task-overview.ts` | 主界面清单数据（`useTaskOverview`：`rev` 增量 + 看门狗 + 乐观 patch）+ 行类型 | 2026-10-06 从 `task-list.tsx`（页面）归位：页面只该有视图（§四 W2） |
+| **全局心跳** | `ui/ticker.ts` + `ui/LiveText.tsx` | 全站**唯一** 1s 心跳（`subscribeTicker` / `useNowMs`）与每秒自刷文本壳 | 2026-10-06 从 `task-info.tsx` 归位；**不许再自建 `setInterval(…,1000)`**（§三 A1/A2/M1） |
 | 官方适配 | `official-classes.ts` | 运行时解析官方 CSS-module 真实类名 | 哈希每次构建都可能变，**写死必在某次宿主升级后集体失效** |
 | 官方文案 | `md-labels.ts` | markdown labels（代码块工具条三条文案） | 是官方 `CodeBlock` 的**分叉开关**；且必须引用稳定（换身份会丢流式渲染缓存） |
 | 提示反馈 | `toast-css.ts`（`FloatingToast`） | 浮层 Toast 唯一实现（四档语义色、2.8s 时间线） | 四处手写已收敛为一处 |
