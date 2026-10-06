@@ -188,7 +188,7 @@ export type LocaleKey =
   | 'cardDelete' | 'cardDeleteTitle' | 'cardDeleteDesc' | 'cardCancel'
   // —— 立即执行（2026-10-03）：卡片按钮 + 确认框 + 结果 Toast ——
   | 'cardRunNow' | 'cardRunNowTitle' | 'cardRunNowDesc' | 'cardRunNowOk'
-  | 'cardRunNowAlready' | 'cardRunNowBlocked' | 'cardRunNowDisabled' | 'cardRunNowMissingDep'
+  | 'cardRunNowAlready' | 'cardRunNowBlocked' | 'cardRunNowMissingDep'
   | 'cardRunNowWorkspace' | 'cardRunNowAttachment' | 'cardRunNowNotFound' | 'cardRunNowNotReady' | 'cardRunNowFailed'
   | 'cardFrom' | 'cardTo' | 'cardLogLimit' | 'cardKeyword' | 'limitPrefix' | 'limitSuffix'
   | 'cardRecordsEmpty' | 'cardRecordsEmptyFiltered' | 'cardLogsEmpty' | 'cardLoadFailed' | 'cardEventsEmpty'
@@ -806,7 +806,6 @@ export const zh: Record<LocaleKey, string> = {
   cardRunNowOk: '已提交执行，等待调度循环发动',
   cardRunNowAlready: '该任务正在执行中，暂时不能再次执行',
   cardRunNowBlocked: '前置任务未达标，本次未执行',
-  cardRunNowDisabled: '前置任务已停用，本次未执行',
   cardRunNowMissingDep: '前置任务已不存在，本次未执行',
   cardRunNowWorkspace: '工作区未找到：{name}',
   cardRunNowAttachment: '附加文件不存在：{name}',
@@ -1458,7 +1457,6 @@ export const en: Record<LocaleKey, string> = {
   cardRunNowOk: 'Submitted — waiting for the dispatch loop',
   cardRunNowAlready: 'This task is already running; please wait',
   cardRunNowBlocked: 'Upstream task not satisfied — not executed',
-  cardRunNowDisabled: 'Upstream task is disabled — not executed',
   cardRunNowMissingDep: 'Upstream task no longer exists — not executed',
   cardRunNowWorkspace: 'Workspace not found: {name}',
   cardRunNowAttachment: 'Attachment missing: {name}',

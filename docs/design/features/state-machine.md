@@ -147,7 +147,7 @@ Loop A 写行时把执行所需字段一并快照，Loop B 与回执 / 对账一
 | 层 | 机制 | 覆盖场景 |
 |---|---|---|
 | 到点派发 | **懒建行**：每 tick 只判「现在这一刻该不该跑」——取最晚满足 `scheduled_at <= now <= scheduled_at + window` 且 `(task_id, scheduled_at)` 无实例行的刻度；依赖 / 工作区 / 模型任一不过 ⇒ **不建行**、只记 `task_log`；过了 ⇒ 直接以 `dispatched` 落库并派发 | 正常派发（含分钟级 cron） |
-| 诊断 | `task_log` 表（独立、可清：`logRetentionDays` 默认 30 天）：错过刻度（`missed-slot` / `startup_missed`）、依赖卡顿（`dep_blocked` / `dep_disabled` / `dep_missing`）、预条件失败（`precondition` / `attachment-missing`）、一次性过期（`expired-once`）、复用旧产出（`stale-upstream`）、残留 pending（`stray_pending`） | 排障，不进任务记录表 |
+| 诊断 | `task_log` 表（独立、可清：`logRetentionDays` 默认 30 天）：错过刻度（`missed-slot` / `startup_missed`）、依赖卡顿（`dep_blocked` / `dep_missing`；~~`dep_disabled`~~ 2026-10-06 废除——上游停用不再阻塞）、预条件失败（`precondition` / `attachment-missing`）、一次性过期（`expired-once`）、复用旧产出（`stale-upstream`）、残留 pending（`stray_pending`） | 排障，不进任务记录表 |
 | 手动 | 标准 SQL 重置 | 单实例补跑 |
 
 手动重置标准语句：
@@ -280,4 +280,4 @@ DSH 会话是**持久化**的（日志落盘），`session/disposed` 只是把�
 
 - **补记 `skipped` 的粒度**：每个漏掉的刻度**各一条**（8h/10min = 48 条是预期），不是每阻塞段一条；主键必须用被漏那一槽自己的时刻（否则撞唯一约束 ⇒ 任务永久不再执行）。
 - **补跑语义**：停用再启用只补窗口内**最晚那一槽**（`dueSlot` 只取 max）+ 同任务串行互斥 ⇒ 任何时刻至多补一次；`window` 不是「窗口内全补」。
-- **上游判定的现行口径**：上游最近一条非 succeeded（**含无记录**）⇒ **阻塞**；是 succeeded 但早于下游上次执行 ⇒ 放行 + `stale-upstream` warn（旧「无记录即复用」口径已被取代，以源码 `src/scheduler.ts` 为准）。
+- **上游判定的现行口径**：上游最近一条非 succeeded（**含无记录**）⇒ **阻塞**；是 succeeded 但早于下游上次执行 ⇒ 放行 + `stale-upstream` warn（旧「无记录即复用」口径已被取代，以源码 `src/scheduler.ts` 为准）。**2026-10-06 更正：判定完全不看上游 `enabled`**——上游停用只要最近一次执行成功照样放行（用户拍板：一次性上游跑完即关停是正常用法，脏数据由用户自行判断）。

@@ -89,7 +89,7 @@ CREATE TABLE task_log (
   task_id      TEXT,                     -- 可能为空（如启动汇总）
   scheduled_at TEXT,                     -- 错过的刻度，可能为空
   level        TEXT NOT NULL,            -- info | warn | error
-  kind         TEXT NOT NULL,            -- dep_blocked | dep_disabled | dep_missing | expired-once | missed-slot | stale-upstream | precondition | attachment-missing | startup_missed | stray_pending（2026-10-01 依 scheduler/reconcile 实际写入更正）
+  kind         TEXT NOT NULL,            -- dep_blocked | dep_missing | expired-once | missed-slot | stale-upstream | precondition | attachment-missing | startup_missed | stray_pending（2026-10-01 依 scheduler/reconcile 实际写入更正；dep_disabled 于 2026-10-06 废除）
   message      TEXT NOT NULL
 );
 
@@ -292,7 +292,7 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 
 | kind | 何时记 |
 |---|---|
-| `dep_disabled` | Loop A 判定发现上游 `enabled=false`（warn）——与「上游还没成功」的 `dep_blocked` 分开 |
+| ~~`dep_disabled`~~ | **2026-10-06 废除**：上游停用不再阻塞下游（判定只看上游最近一次执行是否成功，不看 `enabled`），此 kind 不再写入 |
 | `attachment-missing` | 附件在执行期校验时不在（Loop A 记一次、Loop B 记一次） |
 
 **去重改「结论变化才记」**：进程内 Map 记 `taskId → 上次结论签名（kind+原因）`，签名变了才写一条；一直卡住不重复写（取代现状「5 分钟一条」）。重启后 Map 清空 ⇒ 每个卡住的任务各补记一条，可接受。

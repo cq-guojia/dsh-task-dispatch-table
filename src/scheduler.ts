@@ -52,14 +52,15 @@ export interface DependencyVerdict {
   ready: boolean
   staleNotes: string[]
   resolved: ResolvedDependency[]
-  /** 阻塞原因（2026-09-30）：放行时无；用于把日志分成 dep_blocked / dep_disabled / dep_missing。 */
-  reason?: 'upstream-not-succeeded' | 'upstream-disabled' | 'upstream-missing'
+  /** 阻塞原因：放行时无；用于把日志分成 dep_blocked / dep_missing。
+   *  2026-10-06 用户拍板：上游**停用不再阻塞**——判定只看上游最近一次执行是否成功，
+   *  不看 enabled（上游跑完一次就被关停的「一次性上游」是正常用法）。 */
+  reason?: 'upstream-not-succeeded' | 'upstream-missing'
 }
 
 /** 阻塞原因 → task_log 的 kind 与文案（用户一眼能分清「没跑成」和「永远不会跑」）。 */
 const BLOCK_KIND: Record<string, { kind: string; message: string }> = {
   'upstream-not-succeeded': { kind: 'dep_blocked', message: '被依赖卡住，等待前置任务成功（下轮再判）' },
-  'upstream-disabled': { kind: 'dep_disabled', message: '前置任务已停用，永远不会放行（除非启用前置任务或移除该依赖）' },
   'upstream-missing': { kind: 'dep_missing', message: '前置任务已不存在（被删除），永远不会放行（除非移除该依赖）' },
 }
 
@@ -129,8 +130,8 @@ export function judgeDependencies(
   logicalDate: string,
   scheduledAt: string,
   /**
-   * 上游任务定义表（可选）：给了就能区分「上游还没成功 / 上游停用 / 上游已删除」三种阻塞，
-   * 日志里不再混成一句 dep_blocked（2026-09-30 评审 P4）。
+   * 上游任务定义表（可选）：给了就能区分「上游还没成功 / 上游已删除」两种阻塞，
+   * 日志里不再混成一句 dep_blocked（2026-09-30 评审 P4；2026-10-06 起**不看 enabled**）。
    */
   upstreams?: ReadonlyMap<string, TaskDefinition>,
 ): DependencyVerdict {
@@ -142,11 +143,11 @@ export function judgeDependencies(
   const lastRun = store.getLatestInstance(task.id)
   const lastRunMs = lastRun === undefined ? undefined : Date.parse(lastRun.scheduled_at)
   for (const dep of deps) {
-    // 阻塞原因先按「上游定义还在不在 / 开没开」定性，再看实例状态。
+    // 阻塞原因先按「上游定义还在不在」定性（2026-10-06 起**不看 enabled**：停用的上游
+    // 只要最近一次执行成功就放行），再看实例状态。
     if (upstreams !== undefined) {
       const upstreamDef = upstreams.get(dep.task)
       if (upstreamDef === undefined) return { ready: false, staleNotes, resolved: [], reason: 'upstream-missing' }
-      if (upstreamDef.enabled === false) return { ready: false, staleNotes, resolved: [], reason: 'upstream-disabled' }
     }
     if (dep.semantics === 'same_period') {
       // 同周期：同 logical_date 取最新一条，必须 succeeded（决策 33 #2）

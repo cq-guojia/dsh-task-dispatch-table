@@ -825,7 +825,6 @@ window.__ModuleLoader__.load({
 			cardRunNowOk: "已提交执行，等待调度循环发动",
 			cardRunNowAlready: "该任务正在执行中，暂时不能再次执行",
 			cardRunNowBlocked: "前置任务未达标，本次未执行",
-			cardRunNowDisabled: "前置任务已停用，本次未执行",
 			cardRunNowMissingDep: "前置任务已不存在，本次未执行",
 			cardRunNowWorkspace: "工作区未找到：{name}",
 			cardRunNowAttachment: "附加文件不存在：{name}",
@@ -1456,7 +1455,6 @@ window.__ModuleLoader__.load({
 			cardRunNowOk: "Submitted — waiting for the dispatch loop",
 			cardRunNowAlready: "This task is already running; please wait",
 			cardRunNowBlocked: "Upstream task not satisfied — not executed",
-			cardRunNowDisabled: "Upstream task is disabled — not executed",
 			cardRunNowMissingDep: "Upstream task no longer exists — not executed",
 			cardRunNowWorkspace: "Workspace not found: {name}",
 			cardRunNowAttachment: "Attachment missing: {name}",
@@ -64801,10 +64799,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					};
 					case "upstream-not-succeeded": return {
 						text: t("cardRunNowBlocked"),
-						tone: "error"
-					};
-					case "upstream-disabled": return {
-						text: t("cardRunNowDisabled"),
 						tone: "error"
 					};
 					case "upstream-missing": return {

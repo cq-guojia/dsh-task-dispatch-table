@@ -844,7 +844,6 @@ function TaskExpandPanel(props: {
     switch (outcome.error) {
       case 'already-running': return { text: t('cardRunNowAlready'), tone: 'error' }
       case 'upstream-not-succeeded': return { text: t('cardRunNowBlocked'), tone: 'error' }
-      case 'upstream-disabled': return { text: t('cardRunNowDisabled'), tone: 'error' }
       case 'upstream-missing': return { text: t('cardRunNowMissingDep'), tone: 'error' }
       case 'workspace-missing': return { text: tt('cardRunNowWorkspace', { name: outcome.detail ?? '' }), tone: 'error' }
       case 'attachment-missing': return { text: tt('cardRunNowAttachment', { name: outcome.detail ?? '' }), tone: 'error' }

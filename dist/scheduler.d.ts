@@ -38,13 +38,15 @@ export interface DependencyVerdict {
     ready: boolean;
     staleNotes: string[];
     resolved: ResolvedDependency[];
-    /** 阻塞原因（2026-09-30）：放行时无；用于把日志分成 dep_blocked / dep_disabled / dep_missing。 */
-    reason?: 'upstream-not-succeeded' | 'upstream-disabled' | 'upstream-missing';
+    /** 阻塞原因：放行时无；用于把日志分成 dep_blocked / dep_missing。
+     *  2026-10-06 用户拍板：上游**停用不再阻塞**——判定只看上游最近一次执行是否成功，
+     *  不看 enabled（上游跑完一次就被关停的「一次性上游」是正常用法）。 */
+    reason?: 'upstream-not-succeeded' | 'upstream-missing';
 }
 export declare function judgeDependencies(store: TaskStore, task: TaskDefinition, logicalDate: string, scheduledAt: string, 
 /**
- * 上游任务定义表（可选）：给了就能区分「上游还没成功 / 上游停用 / 上游已删除」三种阻塞，
- * 日志里不再混成一句 dep_blocked（2026-09-30 评审 P4）。
+ * 上游任务定义表（可选）：给了就能区分「上游还没成功 / 上游已删除」两种阻塞，
+ * 日志里不再混成一句 dep_blocked（2026-09-30 评审 P4；2026-10-06 起**不看 enabled**）。
  */
 upstreams?: ReadonlyMap<string, TaskDefinition>): DependencyVerdict;
 /**
