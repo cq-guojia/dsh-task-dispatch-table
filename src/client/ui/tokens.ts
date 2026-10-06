@@ -112,8 +112,9 @@ body{
   --tdt-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);
   /* 任务日程页本月格 hover 底（浅色段，2026-10-06 续3）：不再走灰色通用交互底——
      鼠标移上去应是「更亮一点点的蓝」（与深色段同语义：hover = 提亮的蓝，不是灰下去）。
-     business 16% 透白底，比未选中格的 8% 更亮一档。 */
-  --tdt-cal-cell-hover:color-mix(in srgb,var(--tdt-business) 16%,var(--tdt-surface-1));
+     浓度**介于**表头蓝（14%）与未选中格蓝（8%）之间、略偏表头一侧：business 12% 透白底
+     （比表头浅一点、比未选中格深一点）。 */
+  --tdt-cal-cell-hover:color-mix(in srgb,var(--tdt-business) 12%,var(--tdt-surface-1));
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);

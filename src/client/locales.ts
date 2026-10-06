@@ -18,7 +18,7 @@ export type LocaleKey =
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabCalendar' | 'tabDebug'
   // —— 任务日程（日历页，2026-10-05）：月份导航 / 两态图例 / 计划说明 / 截断与错误 ——
   | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
-  | 'calTruncated' | 'calPlanTag' | 'calNotExecuted' | 'calPlanHint' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel' | 'calToday'
+  | 'calTruncated' | 'calPlanTag' | 'calNotExecuted' | 'calPlanHint' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel' | 'calToday' | 'calWeekdays'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
   | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext'
@@ -631,6 +631,7 @@ export const zh: Record<LocaleKey, string> = {
   editorWeekday7: '周日',
   editorWeekdayShorts: '一|二|三|四|五|六|日',
   editorWeekdayEmpty: '不选 = 每天',
+  calWeekdays: '星期一|星期二|星期三|星期四|星期五|星期六|星期日',
   editorToday: '今天',
   editorPrevMonth: '上个月',
   editorNextMonth: '下个月',
@@ -1283,6 +1284,7 @@ export const en: Record<LocaleKey, string> = {
   editorWeekday7: 'Sun',
   editorWeekdayShorts: 'Mo|Tu|We|Th|Fr|Sa|Su',
   editorWeekdayEmpty: 'None = every day',
+  calWeekdays: 'Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday',
   editorToday: 'Today',
   editorPrevMonth: 'Previous month',
   editorNextMonth: 'Next month',

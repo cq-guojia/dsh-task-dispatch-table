@@ -599,7 +599,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
 
       // ── 月历网格（按周分块：选中日所在那周的下面插拉开区）──
       h('div', { className: 'dsh-tdt-cal-head' },
-        calLabels.weekdays.map(name => h('div', { key: name }, name)),
+        t('calWeekdays').split('|').map(name => h('div', { key: name }, name)),
       ),
       h('div', { className: 'dsh-tdt-cal-grid' },
         weeks.map(week => {

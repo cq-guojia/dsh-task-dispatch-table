@@ -657,6 +657,7 @@ window.__ModuleLoader__.load({
 			editorWeekday7: "周日",
 			editorWeekdayShorts: "一|二|三|四|五|六|日",
 			editorWeekdayEmpty: "不选 = 每天",
+			calWeekdays: "星期一|星期二|星期三|星期四|星期五|星期六|星期日",
 			editorToday: "今天",
 			editorPrevMonth: "上个月",
 			editorNextMonth: "下个月",
@@ -1287,6 +1288,7 @@ window.__ModuleLoader__.load({
 			editorWeekday7: "Sun",
 			editorWeekdayShorts: "Mo|Tu|We|Th|Fr|Sa|Su",
 			editorWeekdayEmpty: "None = every day",
+			calWeekdays: "Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday",
 			editorToday: "Today",
 			editorPrevMonth: "Previous month",
 			editorNextMonth: "Next month",
@@ -1636,8 +1638,9 @@ body{
   --tdt-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);
   /* 任务日程页本月格 hover 底（浅色段，2026-10-06 续3）：不再走灰色通用交互底——
      鼠标移上去应是「更亮一点点的蓝」（与深色段同语义：hover = 提亮的蓝，不是灰下去）。
-     business 16% 透白底，比未选中格的 8% 更亮一档。 */
-  --tdt-cal-cell-hover:color-mix(in srgb,var(--tdt-business) 16%,var(--tdt-surface-1));
+     浓度**介于**表头蓝（14%）与未选中格蓝（8%）之间、略偏表头一侧：business 12% 透白底
+     （比表头浅一点、比未选中格深一点）。 */
+  --tdt-cal-cell-hover:color-mix(in srgb,var(--tdt-business) 12%,var(--tdt-surface-1));
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
@@ -69879,7 +69882,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: () => {
 					load();
 				}
-			}, t("calRetry"))) : null, truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, t("calTruncated")) : null, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-head" }, calLabels.weekdays.map((name) => (0, react$1.createElement)("div", { key: name }, name))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-grid" }, weeks.map((week) => {
+			}, t("calRetry"))) : null, truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, t("calTruncated")) : null, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-head" }, t("calWeekdays").split("|").map((name) => (0, react$1.createElement)("div", { key: name }, name))), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-grid" }, weeks.map((week) => {
 				const hasSel = week.some((cell) => cell.iso === selected);
 				return (0, react$1.createElement)(react$1.Fragment, { key: week[0]?.iso ?? "" }, week.map((cell) => {
 					if (!cell.inMonth) return (0, react$1.createElement)("div", {
