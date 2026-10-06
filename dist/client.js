@@ -67127,11 +67127,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [fullPermAck, setFullPermAck] = (0, react$1.useState)(false);
 			const [enabledToast, setEnabledToast] = (0, react$1.useState)(null);
 			const enabledSeq = (0, react$1.useRef)(0);
+			/**
+			* 本抽屉刚拨出的开关**目标值**（等待服务端快照确认）。
+			*
+			* ⚠️ 存在意义（2026-10-06 真机「开关来回晃两次才停」的根因）：拨片期间，`overview.rows` 可能落下一份
+			* **比这次拨动更旧的快照**（轮询 / 事件推送都会触发重拉，每次都换出新的 `rows` 数组）——若下面的同步
+			* effect 照单全收，就会把用户刚拨的开关拨回去，下一份快照又拨回来，看起来就是「来回晃」。
+			* 故**拨片未被确认前，只认与目标值一致的快照，其余一律忽略**。
+			*/
+			const pendingToggleRef = (0, react$1.useRef)(null);
 			const handleToggleEnabled = (next) => {
 				patch({ enabled: next });
 				if (mode !== "edit" || currentTaskId === void 0 || currentTaskId === "" || onToggleEnabled === void 0) return;
+				pendingToggleRef.current = next;
 				onToggleEnabled(next).then((error) => {
 					if (error !== null) {
+						pendingToggleRef.current = null;
 						patch({ enabled: !next });
 						enabledSeq.current += 1;
 						setEnabledToast({
@@ -67141,6 +67152,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						});
 						return;
 					}
+					const current = overview?.rows.find((r) => r.id === syncTaskId);
+					if (current !== void 0 && current.enabled === next) pendingToggleRef.current = null;
 					initialDraftRef.current = {
 						...initialDraftRef.current,
 						enabled: next
@@ -67219,6 +67232,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (overview === void 0 || syncTaskId === void 0) return;
 				const row = overview.rows.find((r) => r.id === syncTaskId);
 				if (row === void 0) return;
+				if (pendingToggleRef.current !== null) {
+					if (row.enabled !== pendingToggleRef.current) return;
+					pendingToggleRef.current = null;
+				}
 				if (row.enabled === initialDraftRef.current.enabled) return;
 				patch({ enabled: row.enabled });
 				initialDraftRef.current = {

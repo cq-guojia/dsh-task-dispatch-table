@@ -1370,16 +1370,30 @@ export function TaskEditorDrawer(props: {
   // 新建态只改草稿（统一保存时建）。写回成功后同步脏判定基线 ⇒ 关弹窗不会被误问「放弃更改」。
   const [enabledToast, setEnabledToast] = useState<{ msg: string; err: boolean; seq: number } | null>(null)
   const enabledSeq = useRef(0)
+  /**
+   * 本抽屉刚拨出的开关**目标值**（等待服务端快照确认）。
+   *
+   * ⚠️ 存在意义（2026-10-06 真机「开关来回晃两次才停」的根因）：拨片期间，`overview.rows` 可能落下一份
+   * **比这次拨动更旧的快照**（轮询 / 事件推送都会触发重拉，每次都换出新的 `rows` 数组）——若下面的同步
+   * effect 照单全收，就会把用户刚拨的开关拨回去，下一份快照又拨回来，看起来就是「来回晃」。
+   * 故**拨片未被确认前，只认与目标值一致的快照，其余一律忽略**。
+   */
+  const pendingToggleRef = useRef<boolean | null>(null)
   const handleToggleEnabled = (next: boolean): void => {
     patch({ enabled: next })
     if (mode !== 'edit' || currentTaskId === undefined || currentTaskId === '' || onToggleEnabled === undefined) return
+    pendingToggleRef.current = next
     void onToggleEnabled(next).then(error => {
       if (error !== null) {
+        pendingToggleRef.current = null
         patch({ enabled: !next }) // 写回失败：开关回弹，草稿与真值保持一致
         enabledSeq.current += 1
         setEnabledToast({ msg: error, err: true, seq: enabledSeq.current })
         return
       }
+      // 服务端若本来就等于该值 ⇒ 不会 bump rev、也就不会有「确认快照」来解锁守卫 ⇒ 这里主动放行。
+      const current = overview?.rows.find(r => r.id === syncTaskId)
+      if (current !== undefined && current.enabled === next) pendingToggleRef.current = null
       initialDraftRef.current = { ...initialDraftRef.current, enabled: next }
       enabledSeq.current += 1
       setEnabledToast({ msg: next ? t('editorToggleOn') : t('editorToggleOff'), err: false, seq: enabledSeq.current })
@@ -1468,6 +1482,12 @@ export function TaskEditorDrawer(props: {
     if (overview === undefined || syncTaskId === undefined) return
     const row = overview.rows.find(r => r.id === syncTaskId)
     if (row === undefined) return
+    // 本抽屉刚拨过、还没被服务端快照确认 ⇒ 只认「已反映目标值」的那一份，挡掉期间更旧的快照
+    // （否则开关会被拨回去，见 pendingToggleRef 注释）。
+    if (pendingToggleRef.current !== null) {
+      if (row.enabled !== pendingToggleRef.current) return
+      pendingToggleRef.current = null
+    }
     if (row.enabled === initialDraftRef.current.enabled) return
     patch({ enabled: row.enabled })
     initialDraftRef.current = { ...initialDraftRef.current, enabled: row.enabled }
