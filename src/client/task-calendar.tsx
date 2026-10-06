@@ -34,6 +34,7 @@ import type { EditorOption, TaskOption } from './ui'
 // 无时刻的占位走**共享层单源**（`NO_TIME`，与基础信息面板同一份），不在这里另写一份 `--:--`。
 import { NO_TIME } from './task-info'
 import { calendarLabelsOf } from './editor-fields'
+import { DateField } from './ui/DateTime'
 import { interpolateTranslate, type Translate } from './locales'
 import type { TaskOverviewRow } from './task-list'
 import { IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -42,7 +43,7 @@ import { IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 const CALENDAR_CSS = `
 /* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
-.dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);}
+
 .dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
 
 /* 网格（用户 2026-10-06 定死的三条）：① 格子是**纯粹的正方形**、**不要圆角**；
@@ -507,7 +508,19 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
           icon: h(IconChevronLeftOutlineRegular, { size: 16 }),
           onClick: () => { stepMonth(-1) },
         }),
-        h('span', { className: 'dsh-tdt-cal-title' }, calLabels.monthTitle(y, m)),
+        h(DateField, {
+          // 现有控件即可「选年月日」：用户点开后在弹层里直接翻到目标年/月、点任一天即跳到那个月。
+          value: `${y}-${pad2(m)}-01`,
+          onChange: (iso: string) => {
+            const mm = /^(\d{4})-(\d{2})-\d{2}$/.exec(iso)
+            if (mm !== null) setCursor({ y: Number(mm[1]), m: Number(mm[2]) })
+          },
+          placeholder: calLabels.monthTitle(y, m),
+          ariaLabel: calLabels.monthTitle(y, m),
+          labels: calLabels,
+          size: 'md',
+          width: 'auto',
+        }),
         h(IconButton, {
           variant: 'plain', size: 'md', label: calLabels.nextMonth, title: calLabels.nextMonth,
           icon: h(IconChevronRightOutlineRegular, { size: 16 }),

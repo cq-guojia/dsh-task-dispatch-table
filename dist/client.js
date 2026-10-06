@@ -2896,7 +2896,7 @@ body[data-ds-dark-theme]{
 					else openPanel();
 				},
 				style: { width: props.width ?? dateWidthOf(size) }
-			}, (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value), (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
+			}, (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.labelFormatter !== void 0 ? props.labelFormatter(props.value) : props.value), (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
 			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
 				ref: panelRef,
 				role: "dialog",
@@ -69316,7 +69316,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const CALENDAR_CSS = `
 /* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
-.dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);}
+
 .dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
 
 /* 网格（用户 2026-10-06 定死的三条）：① 格子是**纯粹的正方形**、**不要圆角**；
@@ -69763,7 +69763,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: () => {
 					stepMonth(-1);
 				}
-			}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-title" }, calLabels.monthTitle(y, m)), (0, react$1.createElement)(IconButton, {
+			}), (0, react$1.createElement)(DateField, {
+				value: `${y}-${pad2$3(m)}-01`,
+				onChange: (iso) => {
+					const mm = /^(\d{4})-(\d{2})-\d{2}$/.exec(iso);
+					if (mm !== null) setCursor({
+						y: Number(mm[1]),
+						m: Number(mm[2])
+					});
+				},
+				placeholder: calLabels.monthTitle(y, m),
+				ariaLabel: calLabels.monthTitle(y, m),
+				labels: calLabels,
+				size: "md",
+				width: "auto"
+			}), (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
 				label: calLabels.nextMonth,
