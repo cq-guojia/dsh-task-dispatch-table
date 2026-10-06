@@ -121,7 +121,7 @@ const RECORDS_CSS = `
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
 .dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
 /* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-business);}
+.dsh-tdt-rec-tone--planned{--rec-planned:color-mix(in srgb,var(--tdt-business) 70%,#000);--rec-tone:var(--rec-planned);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--rec-planned);}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
@@ -154,7 +154,7 @@ const RECORDS_CSS = `
   background:var(--rec-tone,var(--tdt-fg-3));color:var(--tdt-on-signal);
   font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;}
 /* 「预计执行」标签：虚线描边、透明底（与「实底反色」的成败标签一眼区分；同色系蓝 = 预期）。 */
-.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed var(--tdt-business);}
+.dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-fg-3);border:1px dashed var(--rec-planned);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
@@ -433,11 +433,10 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
   // 「预计执行」→「计划：」+ 倒计时：复用任务配置列表「下次预计执行时间」同一套（relativeFuture 每秒自刷 + 具体时刻），icon 同款。
   const plannedTagNode = isPlanned
     ? h('span', { className: 'dsh-tdt-rec-tag dsh-tdt-rec-tag--planned' },
-        h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 } },
-          h(IconAlarmClockOutlineRegular, { size: 12 }),
-          t('calPlanTag'),
-          renderNextExec(row.scheduled_at, t),
-        ))
+      h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 } },
+        h(IconAlarmClockOutlineRegular, { size: 12 }),
+        renderNextExec(row.scheduled_at, t),
+      ))
     : null
   const outputs = outputsOf(row.outputs)
   const sid = row.session_id
@@ -493,7 +492,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
   const actualTitle = isPlanned ? undefined : (row.dispatched_at === null ? undefined : `${t('colActualStart')}：${stampOf(row.dispatched_at)}`)
   const durationText = isPlanned ? `${t('colDuration')} --` : `${t('colDuration')} ${durationOf(row)}`
   const tokenNode = isPlanned
-    ? field(null, '--', `${t('recTokenHint')}：--`)
+    ? null
     : (tokens > 0
       ? h('span', { className: 'dsh-tdt-rec-field dsh-tdt-rec-num' },
         h(Tooltip, {
@@ -584,7 +583,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         // ⚠️ 每段都挂**带标签的完整值**的悬停提示（用户 2026-10-04：光看「32K」「15:10」不知道是什么）。
         h('div', { className: 'dsh-tdt-rec-r2' },
           field(null, workspace, workspace === '' ? undefined : `${t('listFieldWorkspace')}：${workspace}`),
-          isPlanned ? null : field(h(IconAlarmClockOutlineRegular, { size: 12 }), plannedText === '' ? '' : `${t('recPlan')} ${plannedText}`,
+          field(h(IconAlarmClockOutlineRegular, { size: 12 }), plannedText === '' ? '' : `${t('recPlan')} ${plannedText}`,
             `${t('colPlanned')}：${formatPlanStamp(row.scheduled_at)}`),
           field(actualIcon, actualText, actualTitle),
           field(h(IconQueueOutlineRegular, { size: 12 }), durationText, durationHint),
