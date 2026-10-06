@@ -64505,12 +64505,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 				};
 				poll();
-				const timer = window.setInterval(() => {
-					poll();
-				}, POLL_MS);
 				return () => {
 					alive = false;
-					window.clearInterval(timer);
 					for (const c of inflight) c.abort();
 					inflight.clear();
 					busyRef.current = false;
@@ -68367,35 +68363,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}
 		}
 		//#endregion
-		//#region src/client/instances-poll.ts
-		/**
-		* 只要 `hasRunning` 为真（列表里还有在跑的实例），就每 `ms` 毫秒静默调一次 `reload`；全部跑完即停。
-		* 各视图把「自己的 reload」传进来即可（执行记录刷首屏、日程刷当月）。
-		*
-		* `reload` 存进 ref：即便调用方每次渲染都给新函数，轮询 interval 也不会反复重建，
-		* 否则在频繁重渲的页面上计时器会不断被重置、永远不触发。
-		*
-		* @param reload 静默刷新回调（不应切 Loading、不应惊扰已展开的内容）。
-		*/
-		function useInstancesRunningPoll(hasRunning, reload, ms = 5e3) {
-			const reloadRef = (0, react$1.useRef)(reload);
-			reloadRef.current = reload;
-			(0, react$1.useEffect)(() => {
-				if (!hasRunning) return;
-				const id = window.setInterval(() => reloadRef.current(), ms);
-				return () => window.clearInterval(id);
-			}, [hasRunning, ms]);
-		}
-		//#endregion
 		//#region src/client/event-subscribe.ts
 		/** 与 `src/client/index.ts` 的 `DISPATCH_API_PREFIX` 同口径（相对路径；不 import index 以免成环）。 */
 		const EVENTS_URL = "api/task-dispatch-table/events";
+		/** 看门狗巡检间隔。 */
+		const WATCHDOG_MS = 5e3;
+		/** 连续未连上的容忍上限：超过它主动重建连接。 */
+		const RECONNECT_AFTER_MS = 3e4;
 		const byType = /* @__PURE__ */ new Map();
 		const resyncHandlers = /* @__PURE__ */ new Set();
 		let source = null;
-		/** 懒建单例连接（首个订阅者出现时才连；无订阅者时不连、不空转）。 */
-		function ensureSource() {
-			if (source !== null || typeof EventSource === "undefined") return;
+		let watchdog = null;
+		/** 本轮「未连上」的起始时刻（0 = 当前处于 OPEN）。 */
+		let unhealthySince = 0;
+		/** 广播「（重）连成功」——各页据此重读一次当前值。 */
+		function dispatchResync() {
+			for (const handler of [...resyncHandlers]) try {
+				handler();
+			} catch {}
+		}
+		function openSource() {
 			const es = new EventSource(EVENTS_URL);
 			es.onmessage = (msg) => {
 				let event;
@@ -68411,11 +68398,36 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				} catch {}
 			};
 			es.onopen = () => {
-				for (const handler of [...resyncHandlers]) try {
-					handler();
-				} catch {}
+				unhealthySince = 0;
+				dispatchResync();
 			};
 			source = es;
+		}
+		/** 看门狗：连不上超过阈值 ⇒ 主动重建（浏览器一直重试却连不上时的唯一出路）。 */
+		function startWatchdog() {
+			if (watchdog !== null) return;
+			watchdog = window.setInterval(() => {
+				if (source !== null && source.readyState === EventSource.OPEN) {
+					unhealthySince = 0;
+					return;
+				}
+				if (unhealthySince === 0) {
+					unhealthySince = Date.now();
+					return;
+				}
+				if (Date.now() - unhealthySince < RECONNECT_AFTER_MS) return;
+				source?.close();
+				openSource();
+				unhealthySince = 0;
+			}, WATCHDOG_MS);
+		}
+		/** 懒建单例连接（首个订阅者出现时才连；**建了就不主动关**——「只要页面在，就有重连机制」）。 */
+		function ensureSource() {
+			if (typeof EventSource === "undefined") return;
+			startWatchdog();
+			if (source !== null) return;
+			unhealthySince = 0;
+			openSource();
 		}
 		/** 订阅一组事件类型；`handler` 每次渲染都换也不会反复重建订阅（内部走 ref）。 */
 		function useEvents(types, handler) {
@@ -68440,7 +68452,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				};
 			}, [key]);
 		}
-		/** 订阅「重连成功」——各页据此补读一次当前值（断线期间可能漏过事件）。 */
+		/** 订阅「（重）连成功」——各页据此补读一次当前值（断线期间可能漏过事件）。 */
 		function useResync(handler) {
 			const ref = (0, react$1.useRef)(handler);
 			ref.current = handler;
@@ -69191,12 +69203,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (seq === eventsSeqRef.current) setEventsBusy(false);
 				});
 			}, [openId, eventsCache]);
-			useInstancesRunningPoll(rows.some((r) => isRunningStatus(r.status)), () => {
-				load(null, true);
-			});
 			/**
-			* 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例（或该任务）
-			* 在当前列表里才静默重载首屏，离屏忽略。与上面 5s 轮询并存（本轮保留轮询不动）。
+			* 刷新由**事件推送**驱动（design/client-refresh-disposition.md §二 P1）：原来的「有在跑才 5s 轮询」
+			* 已删除。订阅运行态事件，**在屏判定**——该实例（或该任务）在当前列表里才静默重载首屏，离屏忽略。
+			* （断线兜底见 event-subscribe.ts 的统一重连：连不上 >30s 自动重建，连上即补读一次。）
 			*/
 			useEvents(RUN_EVENT_TYPES, (event) => {
 				const instanceId = event.payload?.instanceId;
@@ -69675,13 +69685,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					seqRef.current += 1;
 				};
 			}, [load]);
-			useInstancesRunningPoll(instances.some((r) => isRunningStatus(r.status)), () => {
-				load();
-			});
 			/**
-			* 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例已在当月网格里、
-			* 或该任务在当前筛选内（新派发的实例还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。
-			* 与上面 5s 轮询并存（本轮保留轮询不动）。
+			* 刷新由**事件推送**驱动（design/client-refresh-disposition.md §二 P1）：原来的「有在跑才 5s 轮询」
+			* 已删除。订阅运行态事件，**在屏判定**——该实例已在当月网格里、或该任务在当前筛选内（新派发的实例
+			* 还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。（断线兜底见 event-subscribe.ts 的统一重连。）
 			*/
 			useEvents(RUN_EVENT_TYPES, (event) => {
 				const instanceId = event.payload?.instanceId;
@@ -71639,10 +71646,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					busy = false;
 				}
 			};
-			poll();
-			setInterval(() => {
+			let timer = null;
+			const startPolling = () => {
+				if (timer !== null) return;
 				poll();
-			}, 2e3);
+				timer = window.setInterval(() => {
+					poll();
+				}, 2e3);
+			};
+			const stopPolling = () => {
+				if (timer === null) return;
+				window.clearInterval(timer);
+				timer = null;
+			};
 			return {
 				getSnapshot: () => lastMapped ?? {
 					status: "loading",
@@ -71653,8 +71669,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				subscribe: (listener) => {
 					listeners.add(listener);
+					startPolling();
 					return () => {
 						listeners.delete(listener);
+						if (listeners.size === 0) stopPolling();
 					};
 				},
 				set: async (field, value) => {

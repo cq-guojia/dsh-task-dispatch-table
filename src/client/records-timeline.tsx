@@ -47,7 +47,6 @@ import {
   applyStyle,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
-import { useInstancesRunningPoll } from './instances-poll'
 import { useEvents, useResync } from './event-subscribe'
 import { RUN_EVENT_TYPES } from '../event-catalog.js'
 import { ensureRunningStyle, RUN_PULSE_CLASS } from './ui/running'
@@ -977,16 +976,10 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
       .finally(() => { if (seq === eventsSeqRef.current) setEventsBusy(false) })
   }, [openId, eventsCache])
 
-  // 运行状态轮询（修复：任务跑完若不切换 / 刷新页面，状态一直卡在「运行中」）。
-  // 列表里**只要还有任一条在跑**，就每 5 秒静默重载第一页（在跑的实例都在最近、落在第一页）；跑完即停。
-  // 只刷首屏、不碰已展开的块、不闪 Loading（`silent`）。轮询逻辑抽成统一 hook（见 instances-poll.ts），
-  // 日程页共用同一份，不再各写一段 setInterval。
-  const hasRunning = rows.some(r => isRunningStatus(r.status))
-  useInstancesRunningPoll(hasRunning, () => { void load(null, true) })
-
   /**
-   * 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例（或该任务）
-   * 在当前列表里才静默重载首屏，离屏忽略。与上面 5s 轮询并存（本轮保留轮询不动）。
+   * 刷新由**事件推送**驱动（design/client-refresh-disposition.md §二 P1）：原来的「有在跑才 5s 轮询」
+   * 已删除。订阅运行态事件，**在屏判定**——该实例（或该任务）在当前列表里才静默重载首屏，离屏忽略。
+   * （断线兜底见 event-subscribe.ts 的统一重连：连不上 >30s 自动重建，连上即补读一次。）
    */
   useEvents(RUN_EVENT_TYPES, (event) => {
     const instanceId = event.payload?.instanceId

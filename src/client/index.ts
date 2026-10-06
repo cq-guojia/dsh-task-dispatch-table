@@ -1760,14 +1760,29 @@ function httpScope(): SettingsScope {
       busy = false
     }
   }
-  void poll()
-  const timer = setInterval(() => { void poll() }, 2000)
+  // ⚠️ 这里**原来是 2s 常开轮询**（全页常驻、且从不清理）——已收窄（design/client-refresh-disposition.md
+  // §二 P3）：**只在有订阅者（设置页 / 调试页真的打开）时才轮询**，最后一个订阅者走了就停。
+  let timer: number | null = null
+  const startPolling = (): void => {
+    if (timer !== null) return
+    void poll()
+    timer = window.setInterval(() => { void poll() }, 2000)
+  }
+  const stopPolling = (): void => {
+    if (timer === null) return
+    window.clearInterval(timer)
+    timer = null
+  }
   return {
     getSnapshot: () =>
       lastMapped ?? { status: 'loading', value: undefined, base: undefined, user: undefined, writable: false },
     subscribe: (listener) => {
       listeners.add(listener)
-      return () => { listeners.delete(listener) }
+      startPolling()
+      return () => {
+        listeners.delete(listener)
+        if (listeners.size === 0) stopPolling()
+      }
     },
     set: async (field, value) => {
       if (field !== 'tasksInline') return

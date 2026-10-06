@@ -1228,14 +1228,18 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('records 分支排在 data === undefined 门槛之前（HTTP 页不被调试快照挡住）',
       /tab === 'records'\n\s*\? h\(RecordsTimelineView/.test(idxSrc)
       && idxSrc.indexOf('h(RecordsTimelineView') < idxSrc.indexOf(': data === undefined'))
-    // 2026-10-06 变更：原「时间轴不轮询（历史账，不自动刷新）」已改为 bug——跑完若不切换 / 刷新页面，
-    // 状态一直卡在「运行中」。现改为「仅在有运行中的实例时」静默重载（跑完即停），且轮询逻辑抽成
-    // 单一 hook（instances-poll.ts），执行记录与日程共用，不再各写一段 setInterval。
-    const pollSrc = readFileSync(join(process.cwd(), 'src', 'client', 'instances-poll.ts'), 'utf8')
-    check('运行态轮询抽成单一 hook（日程 / 执行记录共用，不再各写 setInterval）',
-      pollSrc.includes('useInstancesRunningPoll') && pollSrc.includes('setInterval') && pollSrc.includes('hasRunning'))
-    check('执行记录页接入统一轮询（跑完即停，不再卡在「运行中」）',
-      tlSrc.includes('useInstancesRunningPoll') && /load\(null, true\)/.test(tlSrc))
+    // 2026-10-06 变更（design/client-refresh-disposition.md §二 P1 / §一 R2）：原「有在跑才 5s 轮询」
+    // 已**删除** —— 改由事件推送驱动刷新；断线兜底统一在 event-subscribe.ts（浏览器重连 + 30s 看门狗）。
+    check('实例视图不再自建轮询（instances-poll.ts 已删、两页不再引用）',
+      !existsSync(join(process.cwd(), 'src', 'client', 'instances-poll.ts'))
+      && !tlSrc.includes('useInstancesRunningPoll')
+      && !readFileSync(join(process.cwd(), 'src', 'client', 'task-calendar.tsx'), 'utf8').includes('useInstancesRunningPoll'))
+    check('执行记录页改由运行态事件驱动刷新（在屏判定）',
+      tlSrc.includes('RUN_EVENT_TYPES') && /load\(null, true\)/.test(tlSrc))
+    const subSrc = readFileSync(join(process.cwd(), 'src', 'client', 'event-subscribe.ts'), 'utf8')
+    check('统一重连保底：浏览器重连 + 30s 看门狗 + 连上即补读（R2）',
+      subSrc.includes('RECONNECT_AFTER_MS') && subSrc.includes('dispatchResync')
+      && subSrc.includes('EventSource.OPEN') && subSrc.includes('openSource'))
     check('时间轴复用基础层：Loading / Button / SelectField / TaskPicker / MarqueeText 全走 ui/（2026-10-06：时间范围控件已移除）',
       /from '\.\/ui'/.test(tlSrc) && /h\(Loading,/.test(tlSrc) && /h\(Button,/.test(tlSrc)
       && /h\(SelectField,/.test(tlSrc) && /h\(TaskPicker,/.test(tlSrc))

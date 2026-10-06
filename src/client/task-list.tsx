@@ -271,10 +271,11 @@ export function useTaskOverview(): {
       }
     }
     void poll()
-    const timer = window.setInterval(() => { void poll() }, POLL_MS)
+    // ⚠️ 这里**原来是 10s 常开轮询**（design/client-refresh-disposition.md §二 P2）——已删除：
+    // 刷新改由事件推送驱动（`TASKS_CHANGED` / `TASK_RUN_*` ⇒ `refresh()`）；本 effect 只在挂载与
+    // `refresh()` 时各跑一次 `poll()`。断线兜底见 event-subscribe.ts 的统一重连（R2）。
     return () => {
       alive = false
-      window.clearInterval(timer)
       for (const c of inflight) c.abort()
       inflight.clear()
       // 换轮 / 卸载：把 busy 位交还给**下一轮** —— 否则新一轮会因「上一轮还在飞」而空转到看门狗超时（30s）。

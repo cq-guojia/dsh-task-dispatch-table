@@ -20,8 +20,7 @@ import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, Tooltip 
 import { pad2 } from './format'
 import { fetchEvents, fetchInstanceBySession, fetchInstancesLite, type EventRow, type InstanceRow } from './query'
 import { type ResolvedDependency } from '../deps.js'
-import { isRunningStatus, statusTextOf, statusToneOf } from './status-text'
-import { useInstancesRunningPoll } from './instances-poll'
+import { statusTextOf, statusToneOf } from './status-text'
 import { useEvents, useResync } from './event-subscribe'
 import { RUN_EVENT_TYPES } from '../event-catalog.js'
 import { monthRangeOf, monthRangeQuery, planEntriesByDay, type CalendarPlanEntry, type CalendarTask } from '../calendar-plan.js'
@@ -298,15 +297,10 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
 
   useEffect(() => { void load(); return () => { seqRef.current += 1 } }, [load])
 
-  // 运行状态轮询（与执行记录页共用同一 hook）：当天还有在跑的实例时，每 5 秒静默刷新当月，
-  // 跑完即停 ⇒ 任务跑完、日历开着也能跟着更新（不再卡在「运行中」）。
-  const hasRunning = instances.some(r => isRunningStatus(r.status))
-  useInstancesRunningPoll(hasRunning, () => { void load() })
-
   /**
-   * 事件推送接入（design/event-push.md §七）：订阅运行态事件，**在屏判定**——该实例已在当月网格里、
-   * 或该任务在当前筛选内（新派发的实例还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。
-   * 与上面 5s 轮询并存（本轮保留轮询不动）。
+   * 刷新由**事件推送**驱动（design/client-refresh-disposition.md §二 P1）：原来的「有在跑才 5s 轮询」
+   * 已删除。订阅运行态事件，**在屏判定**——该实例已在当月网格里、或该任务在当前筛选内（新派发的实例
+   * 还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。（断线兜底见 event-subscribe.ts 的统一重连。）
    */
   useEvents(RUN_EVENT_TYPES, (event) => {
     const instanceId = event.payload?.instanceId

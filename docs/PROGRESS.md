@@ -63,7 +63,13 @@
 > 用户拍板：别再老用轮询，建一套「后端发事件、前端订阅」的推送总线。定型文档 = [design/event-push.md](design/event-push.md)；过程 = [worklog/event-push.md](worklog/event-push.md)。
 > ✅ **基建已落码（2026-10-06）**：事件目录 + 广播器（按 type+身份 合并/窗口）+ SSE 端点 `/events` + 全量变更点接线 + 前端单例订阅 + 主列表/执行记录/日程接入。typecheck 绿、冒烟 **648/0**（+7 条事件推送断言）、build 过（`dist/` 已更新）。
 > ⏳ **待真机验收**：装 `dist/` 后确认「任务跑完 / 改开关 ⇒ 开着的那页即时更新」；反向代理场景需关 SSE 缓冲（见文档 §九）。
-> 本轮范围：**只建机制**；**未替换、未删除任何现有轮询**（轮询处置见文档 §十尾注，后续单独立项）。
+> 本轮范围：**只建机制**；轮询处置见 §1.10（2026-10-06 已开工）。
+
+### 1.10 轮询 → 事件驱动 处置 —— 🔵 **进行中**（2026-10-06 开工）
+
+> 处置清单（真源）= [design/client-refresh-disposition.md](design/client-refresh-disposition.md)：R1 该用通知的全换通知 / R2 重连保底**统一一份**（不给每条轮询各做）/ R3 断 **>30s** 自动重连、数据脏了页面自读**不回补**。
+> ✅ **批次一已落码**：① 统一重连 —— `event-subscribe.ts` 浏览器重连 + **30s 看门狗** + 连上即补读；② **三条数据轮询退场** —— 实例 5s（`instances-poll.ts` 已删、两页改事件驱动）、overview 10s（主列表改 `TASKS_CHANGED`/`TASK_RUN_*`）、设置页快照 2s（收窄为**有订阅者才轮**）。typecheck 绿、冒烟 **649/0**、build 过。
+> ⬜ 待办：批次二（归位与合并：`task-info.tsx` 拆共享层 / `useTaskOverview` 出页面 / NextPill 合并到全局心跳 / 取数通道与 URL 前缀统一 等）；批次三（死代码 `markdown.ts`）。
 
 ---
 
