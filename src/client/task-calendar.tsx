@@ -36,6 +36,7 @@ import { NO_TIME } from './task-info'
 import { calendarLabelsOf } from './editor-fields'
 import { interpolateTranslate, type Translate } from './locales'
 import type { TaskOverviewRow } from './task-list'
+import { IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 
 // ── 样式（走基础层注入器；只消费 var(--tdt-*)，不自建 <style>、不硬编码色值）──
 const CALENDAR_CSS = `
@@ -137,6 +138,11 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-link:hover{text-decoration:underline;}
 /* 拉开区里的小字标注（「计划」/ 条数）—— 与格内标签类重名会互相打架，故单独命名 */
 .dsh-tdt-cal-mini{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+/* 面板头里的日期小字行：时钟图标 + 日期 · 星期 · N 条（与执行记录页同款）。 */
+.dsh-tdt-cal-clock{flex:none;color:var(--tdt-fg-3);}
+.dsh-tdt-cal-sep{color:var(--tdt-border-heavy);}
+.dsh-tdt-cal-date{font-weight:500;color:var(--tdt-fg-2);}
+.dsh-tdt-cal-weekday{color:var(--tdt-fg-2);}
 .dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
 .dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
 `
@@ -380,7 +386,12 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     [workspaces, t],
   )
   const dayFormatter = useMemo<Intl.DateTimeFormat | null>(
-    () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { month: 'long', day: 'numeric', weekday: 'long' })),
+    () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { month: 'long', day: 'numeric' })),
+    [t],
+  )
+  // 星期单独成段（与执行记录页同一套「日期 · 星期 · N 条」），不再跟日期 glued 在一起。
+  const weekdayFormatter = useMemo<Intl.DateTimeFormat | null>(
+    () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { weekday: 'long' })),
     [t],
   )
   /** 跨天时刻（前置任务的「执行于」用）：`M 月 D 日 HH:mm`，与执行记录页同款。 */
@@ -614,7 +625,11 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
           hasSel
             ? h('div', { className: 'dsh-tdt-cal-panel' },
                 h('div', { className: 'dsh-tdt-cal-panel-head' },
-                  dayFormatter === null ? selected : dayFormatter.format(new Date(`${selected}T00:00:00`)),
+                  h(IconClockOutlineRegular, { size: 12, className: 'dsh-tdt-cal-clock' }),
+                  h('span', { className: 'dsh-tdt-cal-date' }, dayFormatter === null ? selected : dayFormatter.format(new Date(`${selected}T00:00:00`))),
+                  h('span', { className: 'dsh-tdt-cal-sep' }, '·'),
+                  h('span', { className: 'dsh-tdt-cal-weekday' }, weekdayFormatter === null ? '' : weekdayFormatter.format(new Date(`${selected}T00:00:00`))),
+                  h('span', { className: 'dsh-tdt-cal-sep' }, '·'),
                   h('span', { className: 'dsh-tdt-cal-mini' }, tt('recordsDayCount', { n: dayItems.length })),
                 ),
                 dayItems.length === 0

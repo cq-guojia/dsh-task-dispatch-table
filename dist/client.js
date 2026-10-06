@@ -69399,6 +69399,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-link:hover{text-decoration:underline;}
 /* 拉开区里的小字标注（「计划」/ 条数）—— 与格内标签类重名会互相打架，故单独命名 */
 .dsh-tdt-cal-mini{flex:none;font-size:var(--tdt-font-xs);color:var(--tdt-fg-3);}
+/* 面板头里的日期小字行：时钟图标 + 日期 · 星期 · N 条（与执行记录页同款）。 */
+.dsh-tdt-cal-clock{flex:none;color:var(--tdt-fg-3);}
+.dsh-tdt-cal-sep{color:var(--tdt-border-heavy);}
+.dsh-tdt-cal-date{font-weight:500;color:var(--tdt-fg-2);}
+.dsh-tdt-cal-weekday{color:var(--tdt-fg-2);}
 .dsh-tdt-cal-hint{margin-top:var(--tdt-space-2);font-size:var(--tdt-font-xs);color:var(--tdt-danger);}
 .dsh-tdt-cal-empty{padding:20px 0;text-align:center;font-size:var(--tdt-font-md);color:var(--tdt-fg-3);}
 `;
@@ -69612,9 +69617,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, ...workspaces], [workspaces, t]);
 			const dayFormatter = (0, react$1.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), {
 				month: "long",
-				day: "numeric",
-				weekday: "long"
+				day: "numeric"
 			}), [t]);
+			const weekdayFormatter = (0, react$1.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), { weekday: "long" }), [t]);
 			/** 跨天时刻（前置任务的「执行于」用）：`M 月 D 日 HH:mm`，与执行记录页同款。 */
 			const crossFmt = (0, react$1.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), {
 				month: "numeric",
@@ -69827,7 +69832,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						side: "top",
 						label: tt("calCellMore", { n: items.length - 8 })
 					}, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more" }, (0, react$1.createElement)("span", null, `…${items.length - 8}`))) : null));
-				}), hasSel ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
+				}), hasSel ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, {
+					size: 12,
+					className: "dsh-tdt-cal-clock"
+				}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-date" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-weekday" }, weekdayFormatter === null ? "" : weekdayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
 			}))));
 		}
 		//#endregion
