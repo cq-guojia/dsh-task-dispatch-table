@@ -246,11 +246,14 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
   snapshotsRef.current = snapshots
 
   /**
-   * 定义行的**排期指纹**：overview 是 10 秒轮询的，每次都换出新的数组引用；
-   * 计划重算（几十个任务 × 5 次 cron 解析）不该被轮询白白带起来 ⇒ 指纹不变就不重算。
+   * 定义行的**排期指纹**：overview 每次刷新都会换出新的数组引用；计划重算
+   * （几十个任务 × 5 次 cron 解析）不该被白白带起来 ⇒ 指纹不变就不重算。
+   * ⚠️ 指纹**必须包含计划条目真正用到的字段**（`title` / `workspace` / `enabled`）：
+   * 2026-10-06 审计 🟡 —— 原来只有排期字段，改名 / 改工作区后排期没动 ⇒ 指纹不变 ⇒
+   * 计划格里一直显示**旧名字 / 旧归属**，直到下一次重新取数或换月。
    */
   const scheduleSig = useMemo(
-    () => rows.map(row => `${row.id}|${row.enabled}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.timezone}`).join(';'),
+    () => rows.map(row => `${row.id}|${row.enabled}|${row.title}|${row.workspace}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.timezone}`).join(';'),
     [rows],
   )
   const rowsRef = useRef(rows)
@@ -303,12 +306,19 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
    * 还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。（断线兜底见 event-subscribe.ts 的统一重连。）
    */
   useEvents(RUN_EVENT_TYPES, (event) => {
-    const instanceId = event.payload?.instanceId
-    const taskId = event.payload?.taskId
-    const onScreen = instances.some(r =>
-      (typeof instanceId === 'string' && r.id === instanceId) || (typeof taskId === 'string' && r.task_id === taskId))
-      || (typeof taskId === 'string' && rowsRef.current.some(row => row.id === taskId))
-    if (onScreen) void load()
+    const evInstanceId = event.payload?.instanceId
+    const evTaskId = event.payload?.taskId
+    // ① 这条实例已经在**当月网格**里 ⇒ 要刷（状态变了）。
+    const onGrid = instances.some(r =>
+      (typeof evInstanceId === 'string' && r.id === evInstanceId)
+      || (typeof evTaskId === 'string' && r.task_id === evTaskId))
+    // ② 还没进网格的（典型：新派发的第一行）⇒ 只在该任务**落在当前筛选内**时才刷。
+    // ⚠️ 2026-10-06 审计 🟡：原来第二支只判「该任务存在」（`rowsRef` 是全量表、没按筛选收窄）⇒ 判定**恒真**，
+    // 别的工作区 / 别的月份的任务每次派发或收口都会触发整月重拉（轻量行也带 1.5–4KB snapshot ⇒ 数 MB）。
+    const matchesFilter = typeof evTaskId === 'string'
+      && (taskId === '' || taskId === evTaskId)
+      && rowsRef.current.some(row => row.id === evTaskId && (workspace === '' || row.workspace === workspace))
+    if (onGrid || matchesFilter) void load()
   })
   useResync(() => { void load() })
 
@@ -322,7 +332,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
     ))
     const { from, to } = monthRangeOf(y, m)
     return planEntriesByDay(picked, from, to, new Date(now))
-    // ⚠️ 依赖排期指纹而不是 rows：避免 10 秒轮询把 cron 解析重跑一遍（见 scheduleSig）。
+    // ⚠️ 依赖排期指纹而不是 rows：避免每次数据刷新都把 cron 解析重跑一遍（见 scheduleSig）。
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheduleSig, y, m, workspace, taskId, now])
 

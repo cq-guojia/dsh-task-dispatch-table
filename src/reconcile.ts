@@ -289,7 +289,13 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
    */
   function syncRunningAfterDrop(taskId: string): void {
     if (runtime === undefined) return
-    if (!store.inFlightByTask().has(taskId)) runtime.clearRunning(taskId)
+    if (store.inFlightByTask().has(taskId)) {
+      // 该任务**还有别的在飞实例** ⇒ 不该清 running；但**这一行已经从库里没了**（调用方刚 deleteInstance），
+      // 记录页 / 日历要少一行 ⇒ 仍必须通知（2026-10-06 审计：这条路径原来完全静默，删行前端看不见）。
+      emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } })
+      return
+    }
+    runtime.clearRunning(taskId)
   }
 
   /**

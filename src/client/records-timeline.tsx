@@ -859,6 +859,8 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
 
   const seqRef = useRef(0)
   const inFlightRef = useRef(false)
+  /** 在途期间到达的「静默重载首屏」请求（事件 / 重连补读）：本轮结束立刻补跑一次，**不能丢**。 */
+  const pendingReloadRef = useRef(false)
   const rowsCountRef = useRef(0)
   rowsCountRef.current = rows.length
   /** 事件请求序号：快速切块时作废旧响应，别把 A 的事件贴到 B 上。 */
@@ -903,7 +905,13 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   const filterSig = `${workspace}|${bucket}|${taskId}`
 
   const load = useCallback(async (nextCursor: string | null, silent = false): Promise<void> => {
-    if (inFlightRef.current) return
+    if (inFlightRef.current) {
+      // ⚠️ 在途时**不能静默丢弃**刷新请求（2026-10-06 审计 🔴）：事件恰好撞上一次在途请求
+      // （用户下拉续拉 / 首屏未回）时，那一行就永远停在旧状态 —— 本页的 5s 轮询已删，没有自愈路径。
+      // 记下待办，等本轮结束立刻补跑一次（与主列表 `pendingRef` 同一套思路）。
+      if (silent && nextCursor === null) pendingReloadRef.current = true
+      return
+    }
     inFlightRef.current = true
     const seq = seqRef.current + 1
     seqRef.current = seq
@@ -930,6 +938,11 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
         setLoading(false)
         setLoaded(true)
         inFlightRef.current = false
+        // 补跑被在途那轮吞掉的「静默重载首屏」（事件 / 重连补读）。
+        if (pendingReloadRef.current) {
+          pendingReloadRef.current = false
+          void load(null, true)
+        }
       }
     }
   }, [workspace, bucket, taskId])
@@ -939,6 +952,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   useEffect(() => {
     seqRef.current += 1
     inFlightRef.current = false
+    pendingReloadRef.current = false // 换筛选后本 effect 自己取首页 ⇒ 旧的补跑待办作废
     setRows([])
     setCursor(null)
     setDone(false)
@@ -977,11 +991,19 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
    * （断线兜底见 event-subscribe.ts 的统一重连：连不上 >30s 自动重建，连上即补读一次。）
    */
   useEvents(RUN_EVENT_TYPES, (event) => {
-    const instanceId = event.payload?.instanceId
-    const taskId = event.payload?.taskId
-    const onScreen = rows.some(r =>
-      (typeof instanceId === 'string' && r.id === instanceId) || (typeof taskId === 'string' && r.task_id === taskId))
-    if (onScreen) void load(null, true)
+    const evInstanceId = event.payload?.instanceId
+    const evTaskId = event.payload?.taskId
+    // ① 该实例（或该任务的某一行）**已在列表里** ⇒ 静默重载首屏（状态 / 产出 / 时长可能都变了）。
+    const onLoadedRow = rows.some(r =>
+      (typeof evInstanceId === 'string' && r.id === evInstanceId)
+      || (typeof evTaskId === 'string' && r.task_id === evTaskId))
+    // ② 还没进列表的（典型：某任务**这次是第一行**）⇒ 只要它能落在**当前筛选内**就刷。
+    // ⚠️ 2026-10-06 审计 🔴：少了这一条，新任务首跑 / 当前已加载页里没有该任务行时，事件全被忽略，
+    // 而 5s 轮询已删 ⇒ 页面开着也永远看不到这次执行（日历页有 overview 兜底，本页原来没有）。
+    const mayAppear = typeof evTaskId === 'string'
+      && (taskId === '' || taskId === evTaskId)
+      && (workspace === '' || workspaceById.get(evTaskId) === workspace)
+    if (onLoadedRow || mayAppear) void load(null, true)
   })
   useResync(() => { void load(null, true) })
 

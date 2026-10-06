@@ -10,7 +10,7 @@ import { createReconciler } from './reconcile.js';
 import { createScheduler } from './scheduler.js';
 import { createRuntimeIndex } from './runtime-index.js';
 import { createEventBus } from './event-bus.js';
-import { EventType, runEventTypeOf } from './event-catalog.js';
+import { EventType, HEARTBEAT_TYPE, runEventTypeOf } from './event-catalog.js';
 export const name = 'dsh-task-dispatch-table';
 /** 宿主服务依赖：以源码实际服务名为准（决策 15 / PROGRESS「已核实的 DSH 能力」）。
  * ⚠️ settings 不在此列：settings 服务以「带 register 面」或「惰性形态」两种组合入场，
@@ -27,6 +27,22 @@ const DEBUG_WRITE_MIN_INTERVAL_MS = 2_000;
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
 /** SSE 心跳间隔（毫秒）：保活穿代理 + 及时发现对端已断。 */
 const SSE_HEARTBEAT_MS = 20_000;
+/**
+ * 当前打开的推送连接（每连接一个幂等清理函数）。
+ * 宿主 dispose 会 `closeAllConnections()` 从而触发各 `res` 的 `close` ⇒ 通常自清；这里仍**显式兜一层**，
+ * 免得宿主行为一变就悬挂心跳定时器（2026-10-06 审计；宿主文档亦建议主动清理）。
+ */
+const activeStreamCleanups = new Set();
+/** 关掉所有推送连接（插件 dispose 时调用）。 */
+function closeAllEventStreams() {
+    for (const cleanup of [...activeStreamCleanups]) {
+        try {
+            cleanup();
+        }
+        catch { /* 单条清理出错不影响其余 */ }
+    }
+    activeStreamCleanups.clear();
+}
 /** settings 命名空间（与浏览器半侧的 SETTINGS_NS 同名，两侧按它配对）。 */
 const SETTINGS_NS = 'dsh-task-dispatch-table';
 const DISPATCH_API_PREFIX = '/api/task-dispatch-table';
@@ -836,6 +852,12 @@ bus) => [
                     writeJson(res, 503, { ok: false, error: 'update-failed' });
                     return;
                 }
+                // 配置变更广播：正常路径由 `scope.watch` 发；但**降级作用域**（无 register 面）的 `watch` 是空实现
+                // ⇒ 这里再发一次兜底。
+                // ⚠️ 正常路径会「发两次」（本路由 + `scope.watch`）——**这依赖广播器的合并窗口吸收**：
+                // `CONFIG_CHANGED` 无 payload ⇒ 合并 key 退化为纯 type ⇒ 两条落同一窗口、只出一条。
+                // 若将来给它加上可区分的 payload、或把窗口调小到可能跨窗，这里就会真双发（2026-10-06 复核）。
+                bus.emit({ type: EventType.CONFIG_CHANGED });
                 const config = getScopeConfig();
                 writeJson(res, 200, {
                     ok: true,
@@ -1043,24 +1065,37 @@ bus) => [
                     cleanup();
                 }
             });
+            // ⚠️ 心跳必须是**真实 data 帧**，不能是 SSE 注释（`: ping`）：注释帧浏览器直接吞掉、前端
+            // `onmessage` 根本看不到，于是「`readyState` 是 OPEN 但其实已经半死」永远发现不了
+            // （2026-10-06 审计 🟡）。类型用 `HEARTBEAT_TYPE`（不在事件目录里）⇒ 前端 `byType` 查不到、
+            // 直接丢弃，不会当成业务事件。
             const heartbeat = setInterval(() => {
                 try {
-                    write.call(res, ': ping\n\n');
+                    write.call(res, `data: ${JSON.stringify({ type: HEARTBEAT_TYPE })}\n\n`);
                 }
                 catch {
                     cleanup();
                 }
             }, SSE_HEARTBEAT_MS);
-            // 幂等清理：clearInterval / Set.delete 均可重入；req / res 任一 close 都触发。
+            /** 幂等清理（`cleanup` 可被 close / 写失败 / dispose 三路重入）。 */
+            let cleaned = false;
             function cleanup() {
+                if (cleaned)
+                    return;
+                cleaned = true;
                 clearInterval(heartbeat);
                 unsubscribe();
+                activeStreamCleanups.delete(cleanup);
             }
-            for (const target of [req, res]) {
-                const on = target.on;
-                if (typeof on === 'function')
-                    on.call(target, 'close', cleanup);
-            }
+            activeStreamCleanups.add(cleanup);
+            // ⚠️ **只绑 `res` 的 `close`**（2026-10-06 审计实证）：Node ≥16 下 `req` 的 `close` 语义是
+            // 「请求消息读完」而不是「连接断开」——GET 无 body，**一旦有中间件消费过请求流
+            // （`req.resume()` / 读 body），它会在建连瞬间触发** ⇒ 当场退订，客户端再也收不到任何事件。
+            // 实证：`req.resume()` 变体下 `CLEANUP via req.close` 立即打印、客户端连接被终止。
+            // SSE 断连的唯一可靠信号是 `res` 的 `close`。
+            const on = res.on;
+            if (typeof on === 'function')
+                on.call(res, 'close', cleanup);
             try {
                 write.call(res, ': connected\n\n');
             }
@@ -1168,12 +1203,18 @@ export function apply(ctx, config) {
             eventBus.emit({ type: runEventTypeOf(status), payload: { taskId } });
         },
         markBlocked(taskId, reason) {
-            innerRuntimeIndex.markBlocked(taskId, reason);
-            eventBus.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } });
+            // ⚠️ 内层是**边沿触发**（值没变就早退）⇒ **只有真变了才广播**。若无条件发，Scheduler 每个 tick
+            // 对每个任务都调它 ⇒ 每 tick 每任务一条无谓事件（2026-10-06 审计实证，等于把轮询倒过来）。
+            const changed = innerRuntimeIndex.markBlocked(taskId, reason);
+            if (changed)
+                eventBus.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } });
+            return changed;
         },
         clearRunning(taskId) {
-            innerRuntimeIndex.clearRunning(taskId);
-            eventBus.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } });
+            const changed = innerRuntimeIndex.clearRunning(taskId);
+            if (changed)
+                eventBus.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } });
+            return changed;
         },
     };
     /** 当前任务定义（含停用）：overview 路由组装卡片用；随 tick 同步。 */
@@ -1484,6 +1525,7 @@ export function apply(ctx, config) {
         sctx.on('dispose', () => {
             stopInterval();
             stopSweeper();
+            closeAllEventStreams();
             eventBus.dispose();
             store.close();
         });

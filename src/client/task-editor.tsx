@@ -26,6 +26,8 @@
 import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { formatDateTime, pad2 } from './format'
 import { type TaskOverviewRow } from './task-overview'
+// API 前缀唯一真源（M9；附件上传原先硬编码了一份、还多了个前导 `/`）。
+import { API_PREFIX } from './query'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
   Button,
@@ -1344,10 +1346,19 @@ export function TaskEditorDrawer(props: {
    * 故**拨片未被确认前，只认与目标值一致的快照，其余一律忽略**。
    */
   const pendingToggleRef = useRef<boolean | null>(null)
+  /**
+   * `pendingToggleRef` 的**失效兜底时刻**（2026-10-06 审计 🟡）：万一「确认快照」永远不来
+   * （服务端 no-op、或刷新链路整个断掉），守卫不能把「左列表 → 右抽屉」的 enabled 同步**永久锁死**
+   * ⇒ 超过这个时刻就放弃守卫、恢复照单全收。3s 是合并窗口（200ms）的十几倍，远大于任何竞态窗口。
+   */
+  const pendingUntilRef = useRef(0)
+  /** 拨片守卫的最长寿命（毫秒）。 */
+  const TOGGLE_GUARD_MS = 3_000
   const handleToggleEnabled = (next: boolean): void => {
     patch({ enabled: next })
     if (mode !== 'edit' || currentTaskId === undefined || currentTaskId === '' || onToggleEnabled === undefined) return
     pendingToggleRef.current = next
+    pendingUntilRef.current = Date.now() + TOGGLE_GUARD_MS
     void onToggleEnabled(next).then(error => {
       if (error !== null) {
         pendingToggleRef.current = null
@@ -1448,9 +1459,11 @@ export function TaskEditorDrawer(props: {
     const row = overview.rows.find(r => r.id === syncTaskId)
     if (row === undefined) return
     // 本抽屉刚拨过、还没被服务端快照确认 ⇒ 只认「已反映目标值」的那一份，挡掉期间更旧的快照
-    // （否则开关会被拨回去，见 pendingToggleRef 注释）。
+    // （否则开关会被拨回去，见 pendingToggleRef 注释）。**但守卫有寿命**：超时即放弃，
+    // 免得确认快照永远不来时把「左列表 → 右抽屉」的同步永久锁死（见 pendingUntilRef 注释）。
     if (pendingToggleRef.current !== null) {
-      if (row.enabled !== pendingToggleRef.current) return
+      const expired = Date.now() > pendingUntilRef.current
+      if (!expired && row.enabled !== pendingToggleRef.current) return
       pendingToggleRef.current = null
     }
     if (row.enabled === initialDraftRef.current.enabled) return
@@ -1671,7 +1684,7 @@ export function TaskEditorDrawer(props: {
       const controller = new AbortController()
       const abortTimer = window.setTimeout(() => controller.abort(), 90_000)
       try {
-        const res = await fetch('/api/task-dispatch-table/attachment', {
+        const res = await fetch(`${API_PREFIX}/attachment`, {
           method: 'POST',
           headers: { 'x-filename': encodeURIComponent(file.name), 'content-type': 'application/octet-stream' },
           body: file,

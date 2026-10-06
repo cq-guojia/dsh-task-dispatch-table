@@ -6,7 +6,7 @@
 // 用 CSS 而不是内联样式的只有两类：**伪类**（:hover / :focus-within / ::placeholder）
 // 与整页外壳骨架；控件内部的度量仍在 editor-fields.tsx 里内联（照官方 Input 逐条抄）。
 
-import { applyStyle } from './ui/style'
+import { applyStyle } from './ui'
 
 /** 样式标签 id（历史遗留；注入已统一走 ui/style.ts）。 */
 export const ED_STYLE_ID = 'dsh-task-dispatch-table-task-editor'

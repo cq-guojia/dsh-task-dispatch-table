@@ -212,10 +212,11 @@ export function createRuntimeIndex() {
         clearRunning(taskId) {
             const entry = entries.get(taskId);
             if (entry === undefined || !entry.running)
-                return;
+                return false;
             entry.running = false;
             entry.runningSince = null;
             rev++;
+            return true;
         },
         /**
          * 记录 / 清除「这一槽被什么挡住」（决策 54 · P3b）：Loop A 判阻塞时写人话原因，放行时传 `null` 清。
@@ -226,9 +227,10 @@ export function createRuntimeIndex() {
             const entry = entryOf(taskId);
             const next = reason === null || reason === '' ? null : reason;
             if ((entry.blockedReason ?? null) === next)
-                return;
+                return false;
             entry.blockedReason = next;
             rev++;
+            return true;
         },
         markDefinitionsChanged(tasks) {
             const nowMs = Date.now();

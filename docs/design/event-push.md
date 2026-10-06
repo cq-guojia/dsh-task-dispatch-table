@@ -55,14 +55,15 @@ export type EventTypeValue = typeof EventType[keyof typeof EventType]
 export interface PushEvent { type: EventTypeValue; payload?: Record<string, unknown> }
 ```
 
-**payload 约定**：
+**payload 约定**（2026-10-06 专家团审计后**与实现逐条校准**，此前文档比实现更「丰盛」）：
 
 | type | payload | 说明 |
 |---|---|---|
-| `TASKS_CHANGED` | `{ ids?: string[], mode: 'create'\|'update'\|'delete'\|'batch' }` | `ids` 缺省 = 影响面未知，订阅方按「全量重读」处理 |
-| `TASK_RUN_STARTED` / `SUCCEEDED` / `FAILED` / `SKIPPED` / `CHANGED` | `{ taskId?: string, instanceId?: string }` | 一律给到能定位的 id；缺省按「全量重读」处理 |
-| `CONFIG_CHANGED` | `{}` | 目前无参 |
-| `FORCE_REFRESH` | 无 | 强制各页重读一次当前值 |
+| `TASKS_CHANGED` | **无**（现实现不带） | 定义类变更**不区分粒度**，订阅方一律按「全量重读」处理。代价可忽略：`/tasks/overview?rev=` 自带增量协议，未变则回 `unchanged`。将来真需要精细化再加 `{ids, mode}` |
+| `TASK_RUN_STARTED` / `SUCCEEDED` / `FAILED` / `SKIPPED` / `CHANGED` | `{ taskId }`（个别来源另带 `instanceId`） | **主路径只给 `taskId`**（`markDispatched` / `markTerminal` / `markBlocked` / `clearRunning` 都只有任务级身份）⇒ 各页**在屏判定按任务级做**。`instanceId` 仅 `reconcile` 的 `notifyRow` 会带，属补充信息、订阅方**不可依赖** |
+| `CONFIG_CHANGED` | 无 | 目前无参 |
+| `FORCE_REFRESH` | 无 | 需要强刷时用；**后端目前没有发送点**（预留码；启动/重建都跑在客户端连上之前，本来也没有订阅者） |
+| `sys.ping`（`HEARTBEAT_TYPE`） | 无 | **不是业务事件**，只作连接保活，见 §五 |
 
 > 事件只带「哪些 id 变了」，**不带变更后的值**——值由订阅方重读拿（真源唯一）。
 
@@ -82,10 +83,12 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 
 **合并（debounce）放中间层**——只在广播器这一个出口做，**不在前端各页分散写**：
 
-- **key = `type` + 身份**（payload 里的 `taskId`/`instanceId`/`ids` 归一成字符串；无身份则只按 `type`）。
+- **key = `type` + 身份**：身份按 `payload.taskId` → `instanceId` → `id` → `ids.join(',')` 的优先序取第一个命中的；都没有则只按 `type`。
+  - ⚠️ **优先取 `taskId`**（2026-10-06 审计）：同一任务的不同实例在同一窗口内会被**合并成一条**、且只保留**最后一条**的 payload。因为主路径本来只带 `taskId`、各页也按任务级判定，这不影响正确性 —— 但**不要**在事件里塞「必须逐实例保真」的信息。
 - 同 key 在窗口内来 N 次 → **只发最后 1 次**（事件不带数据，合并零信息损失）。
 - **窗口** `windowMs` 是可调常量（默认 200ms；20ms/500ms 皆可，改一处全局生效）。
-- **最大等待** `maxWaitMs`：同一 key 持续不断来（如每 50ms）时，「等静默才发」会被无限推迟 ⇒ 到点必发一次。
+- **窗口语义 = 「从该 key 首个事件起算」的固定窗口**（**不是**「等静默才发」的 debounce）：定时器**不被后续事件重置** ⇒ 持续高频也会每 `windowMs` 必发一次，**本来就不存在「被无限推迟」的问题**。
+- 因此 `maxWaitMs` 只在 `windowMs > maxWaitMs` 时才起封顶作用（默认 200 < 1000 ⇒ **实际不生效**）；保留它是为了将来把窗口调大时仍有一个上限。
 - 无订阅者时：合并后直接丢弃（无人听，无需缓冲）。
 
 **清理**：广播器的 flush 定时器与订阅集合在插件 `dispose` 时清理（复用现有 `sctx.on('dispose', …)`，`src/index.ts:1366`）。
@@ -98,9 +101,13 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 
 - **闸门**：复用 `isTrustedDispatchRequest`（`src/index.ts:84-94`）。
 - **建连**：写响应头 `content-type: text/event-stream; charset=utf-8`、`cache-control: no-store`、`connection: keep-alive`（并 `flushHeaders`）。
-- **订阅**：`res.write` 前 `bus.subscribe(send)`；`req`/`res` 的 `close`/`error` 事件里 `unsubscribe()`。
+- **订阅**：`res.write` 前 `bus.subscribe(send)`；**只在 `res` 的 `close` 上退订**（`cleanup` 幂等，可被 close / 写失败 / dispose 三路重入）。
+  - ⚠️ **绝不能同时挂 `req` 的 `close`**（2026-10-06 审计实证）：Node ≥16 下 `req` 的 `close` 语义是「请求消息读完」而不是「连接断开」——GET 无 body，**一旦有中间件消费过请求流（`req.resume()` / 读 body），它会在建连瞬间触发**，当场退订、客户端再也收不到任何事件（实证：该变体下 `CLEANUP via req.close` 立即打印、客户端连接被终止）。SSE 断连的唯一可靠信号是 `res` 的 `close`。
 - **写出**：每条事件 `data: <JSON.stringify(event)>\n\n`。
-- **心跳**：定时写注释行 `: ping\n\n`（如 15–25s 一次），保活穿代理、及时发现死连接。
+- **心跳**：每 `SSE_HEARTBEAT_MS`（20s）写一条**真实 data 帧** `data: {"type":"sys.ping"}\n\n`，保活穿代理。
+  - ⚠️ **不能用 SSE 注释帧（`: ping`）**：注释帧浏览器直接吞掉、前端 `onmessage` 根本看不到 ⇒ 客户端**无法判断「这条连接是否还活着」**，「`readyState` 是 OPEN 但已经半死」（反向代理静默丢流 / 无 FIN 的黑洞）永远发现不了、永不重建。
+  - `sys.ping` 由 `HEARTBEAT_TYPE` 定义、**不在业务事件目录里** ⇒ 前端 `byType` 查不到、直接丢弃，不会被当成业务事件派发。
+- **插件 dispose**：`closeAllEventStreams()` 主动清掉所有在开连接的心跳定时器（不只依赖宿主 `closeAllConnections()` 触发 `res` 的 `close`）。
 - **响应契约扩展**：现有 `DispatchWebResponse`（`src/index.ts:64-68`）**只声明 `writeHead`/`end`**，SSE 需补 `write`（可选方法，先核实宿主真身支持分块，见 §八）。
 - **注入时序**：`webServer` 注册**早于** `settings inject`（`src/index.ts:1064-1067` 注释）⇒ 路由侧只传 `getBroadcaster` **惰性 getter**，广播器实体在 settings inject 内创建（照 `getScheduler` 模式）。
 
@@ -125,17 +132,17 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 | 任务整批替换 | `TASKS_CHANGED` | 无 ids | 同上 |
 | 任务新增/编辑保存 | `TASKS_CHANGED` | 无 ids | 同上 |
 | 开关实时写回 | `TASKS_CHANGED` | 无 ids | 同上 |
-| 版本/快照删除 | `TASKS_CHANGED` | 无 ids | 同上 |
+| 版本 / 快照删除 | **不发** | — | 该路由只删**磁盘文件**、不动任务定义（`src/index.ts` `DELETE .../versions\|snapshots`）⇒ 页面数据不变。⚠️ 2026-10-06 审计校正：原文错误地写成会发 `TASKS_CHANGED` |
 | 附件搬移/移除/整删 | `TASKS_CHANGED` | 无 ids | 随定义保存/删除一起发（同一条）；**单独上传不发**（文件还没被任何任务引用，没有页面需要刷） |
 | 派发（自动）/ 立即执行 | `TASK_RUN_STARTED` | `{taskId}` | `src/scheduler.ts` `markDispatched`（经 RuntimeIndex 包裹层） |
 | 成功终态 | `TASK_RUN_SUCCEEDED` | `{taskId}` | `src/reconcile.ts` `markTerminal('succeeded')` |
 | 失败终态 / 判死 / 租约回收 | `TASK_RUN_FAILED` | `{taskId}` | `src/reconcile.ts` `markTerminal('failed')` |
 | 跳过 / 错过刻度 / 过期 | `TASK_RUN_SKIPPED` | `{taskId}` | `src/scheduler.ts` `markTerminal('skipped')` |
 | 依赖阻塞 / 放行、开关清原因 | `TASK_RUN_CHANGED` | `{taskId}` | `src/scheduler.ts` `markBlocked`（经 RuntimeIndex 包裹层） |
-| 实例删除（窗口外 pending / 附件缺失） | `TASK_RUN_CHANGED` | `{taskId}` | `src/reconcile.ts` `syncRunningAfterDrop` → `clearRunning`（仅当该任务已无在飞实例） |
+| 实例删除（窗口外 pending / 附件缺失） | `TASK_RUN_CHANGED` | `{taskId}` | `src/reconcile.ts` `syncRunningAfterDrop`：**该任务已无在飞** ⇒ `clearRunning`（边沿，真变了才发）；**仍有别的在飞** ⇒ 也**直发一条**（那一行确实从库里没了，记录页/日历要少一行）——2026-10-06 审计补 |
 | 重试退回 pending | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `retryOrFail` → `notifyRow` |
 | unknown 复活 / 转 running / redispatch | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `markActivity` / `noteRunSignal` / `onCreated` / `sweep` → `notifyRow` |
-| 配置变更 | `CONFIG_CHANGED` | `{}` | `src/index.ts` `scope.watch`（`/config` 写回也经它触发） |
+| 配置变更 | `CONFIG_CHANGED` | 无 | `src/index.ts` `scope.watch`（正常路径）；**降级作用域**（无 register 面）的 `watch` 是空实现 ⇒ `/config` 路由自己**再发一次**兜底。无 payload ⇒ 合并 key 退化为纯 `type` ⇒ 两条被合并成一条（2026-10-06 审计补） |
 | 启动扫描 / 索引重建 / 启动诊断 / 历史清理 | **不发** | — | 都跑在客户端连接之前（无订阅者）；要强刷时用 `FORCE_REFRESH` |
 | 归档 / 反归档会话 | **不发** | — | 只影响会话弹窗可读性，列表数据不变 |
 
@@ -182,8 +189,8 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 | 页面 | 订阅 | 刷新动作 | 在屏判定 |
 |---|---|---|---|
 | 主列表（`src/client/index.ts` 的 `useTaskOverview`） | `TASKS_CHANGED` / `CONFIG_CHANGED` / `FORCE_REFRESH` + `RUN_EVENT_TYPES` + `useResync` | `overview.refresh()` | 运行态事件：`payload.taskId` 不在 `overview.rows` 里则忽略；全局类事件直接刷 |
-| 执行记录页（`records-timeline.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load(null, true)`（静默首屏） | `payload.instanceId` 在 `rows` 里，或 `payload.taskId` 在 `rows.task_id` 里；否则忽略 |
-| 任务日程页（`task-calendar.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load()`（当月） | 实例已在当月 `instances` 里，或 `taskId` 在当前筛选内（新派发实例还没进网格也得让它出现） |
+| 执行记录页（`records-timeline.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load(null, true)`（静默首屏；**在途时记待办、本轮结束补跑**，不丢刷新） | ① 该实例 / 该任务的某行**已在已加载列表里** ⇒ 刷；② 否则该任务**落在当前筛选内**（`taskId` + `workspace`）⇒ 也刷（典型：某任务**这次是第一行**）；否则忽略。⚠️ 少了 ② 就是「新任务首跑永不出现」（2026-10-06 审计 🔴） |
+| 任务日程页（`task-calendar.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load()`（当月） | ① 该实例已在**当月网格**里 ⇒ 刷；② 否则该任务**落在当前筛选内**（`taskId` + `workspace` 双重收窄）⇒ 刷（新派发实例还没进网格也得让它出现）；否则忽略。⚠️ 原来 ② 只判「任务存在」（全量任务表、未收窄）⇒ **判定恒真**，任何任务都触发整月重拉（2026-10-06 审计 🟡） |
 | 卡片展开面板（`task-list.tsx`） | **不单独订阅** | 由主列表 `refresh()` 驱动 | `runSig`（`lastStatus\|lastFinishedAt\|running`）变化 ⇒ 打开中的 info/records/logs 自动重取 |
 
 **特殊情形**：`TASK_RUN_*` 在「右上角飘提示 / 通知」类场景下**不看在屏、一律响应**（那是「察觉」，不是「刷新某行」）——但该功能**本轮不做**（见 §九）。

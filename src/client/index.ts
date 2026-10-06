@@ -600,13 +600,15 @@ function TaskPage(props: {
   }, [previewWidth, editorTaken])
   // 新建 / 编辑任务弹窗：保存 / 删除 / 历史版本全部接线（2026-09-30）。
   // `id` = 编辑态的任务 UUID（新建为空串）；`history` = 服务端真历史（不在 draft 里，免得脏判定误判）。
-  // 主界面任务列表数据（2026-09-30）：一次请求出全部卡片数据，10 秒轮询 + rev 比对
+  // 主界面任务列表数据（2026-09-30）：一次请求出全部卡片数据，`rev` 比对
   // ⇒ 服务端只读内存摘要、不查库（design/features/main-panel.md §四）。
   const overview = useTaskOverview()
   /**
    * 事件推送接入（design/event-push.md §七）：主列表订阅「定义 / 配置 / 强制刷新」与「运行态」事件。
    * 全局类事件 ⇒ 直接重读；运行态事件按**在屏判定**——该任务不在当前列表里就忽略（用户下拉时自会读到最新）。
-   * `refresh()` 带 `rev` 增量：服务端未变即回 `unchanged`，重读很轻。**现有 10s 轮询保留不动**。
+   * `refresh()` 带 `rev` 增量：服务端未变即回 `unchanged`，重读很轻。
+   * ⚠️ **原 10s 常开轮询已删**（design/client-refresh-disposition.md §二 P2）：刷新只由事件驱动
+   * （+ 重连补读 + 各写路径主动 `refresh()`）。
    */
   useEvents([EventType.TASKS_CHANGED, EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { overview.refresh() })
   useEvents(RUN_EVENT_TYPES, (event) => {
@@ -849,7 +851,7 @@ function TaskPage(props: {
       // ① 先乐观补该行 ⇒ 改标题 / 排期**立刻**可见（用户 2026-09-30：不等那一秒）。
       if (typeof body.id === 'string' && body.id !== '') overview.patchRow(body.id, rowPatchOf(definition))
       // ② 再立刻重拉一次，用服务端真值（含提示词首段 / 下次执行时刻）覆盖那份乐观值
-      //    （改动已 bump rev；不 refresh 就要等 10 秒轮询）。
+      //    （改动已 bump rev；不 refresh 就只剩事件推送那条路）。
       overview.refresh()
       // 附件失效要说出来（文件被清道夫清掉 / 手删了），否则用户不知道自己存的是个空引用。
       if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join('、')}`)
@@ -1724,6 +1726,15 @@ function configFormScope(form: ConfigForm): SettingsScope {
 /** ⚠️ 前缀**唯一真源在 `query.ts`**（M9）：此前本文件与 query/event-subscribe/config-panel 各写一份。 */
 const DISPATCH_API_PREFIX = API_PREFIX
 
+/**
+ * `httpScope` 尚未取到快照时的**稳定**回退值。
+ * ⚠️ 必须是**同一个引用**：每次新建对象会让 `useSyncExternalStore` 次次判定「变了」⇒ 在「首取未回」
+ * 或「持续取数失败」的窗口里反复重渲染（React #185 告警）。2026-10-06 审计 🟡。
+ */
+const LOADING_SNAPSHOT: ScopeSnapshot = {
+  status: 'loading', value: undefined, base: undefined, user: undefined, writable: false,
+}
+
 function httpScope(): SettingsScope {
   let lastDebug = ''
   let lastInline = ''
@@ -1781,8 +1792,7 @@ function httpScope(): SettingsScope {
     timer = null
   }
   return {
-    getSnapshot: () =>
-      lastMapped ?? { status: 'loading', value: undefined, base: undefined, user: undefined, writable: false },
+    getSnapshot: () => lastMapped ?? LOADING_SNAPSHOT,
     subscribe: (listener) => {
       listeners.add(listener)
       startPolling()

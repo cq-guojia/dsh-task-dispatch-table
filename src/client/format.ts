@@ -30,10 +30,17 @@ export function formatBytes(bytes: number): string {
   return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`
 }
 
-/** 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。 */
+/**
+ * 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。
+ * ⚠️ **必须先剔尾斜杠**（2026-10-06 审计 🔴）：本仓「目录」用尾斜杠表达（产出示例 `["a.md","b/"]`，
+ * 见 `query.ts` / `task-file-context.tsx` 的 displayName）；不剔的话 `baseNameOf('b/')` 返回**空串**
+ * ⇒ 目录产出物在卡片/记录页渲染成**空标签、空 Tooltip**。
+ */
 export function baseNameOf(path: string): string {
-  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  return cut < 0 ? path : path.slice(cut + 1)
+  const trimmed = path.replace(/[\\/]+$/, '')
+  if (trimmed === '') return path
+  const cut = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+  return cut < 0 ? trimmed : trimmed.slice(cut + 1)
 }
 
 /**

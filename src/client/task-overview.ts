@@ -8,6 +8,8 @@
 // （原 10s 常开轮询已删，design/client-refresh-disposition.md §二 P2）。
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { pinMsFor } from '../task-sort.js'
+// API 前缀唯一真源（M9；本模块原先硬编码了一份字面量）。
+import { API_PREFIX } from './query'
 
 /**
  * 「立即执行」结果（与服务端 `scheduler.ts` 的 RunNowResult 对齐）：业务性拒绝走
@@ -156,7 +158,7 @@ export function useTaskOverview(): {
       const abortTimer = window.setTimeout(() => controller.abort(), 8_000)
       try {
         const query = revRef.current === '' ? '' : `?rev=${encodeURIComponent(revRef.current)}`
-        const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, { cache: 'no-store', signal: controller.signal })
+        const res = await fetch(`${API_PREFIX}/tasks/overview${query}`, { cache: 'no-store', signal: controller.signal })
         if (!res.ok) return
         const body = await res.json() as {
           ok?: boolean; unchanged?: boolean; rev?: number; tasks?: unknown; now?: unknown; tickMs?: unknown

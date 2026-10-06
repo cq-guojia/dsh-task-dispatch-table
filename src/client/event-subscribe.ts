@@ -18,6 +18,12 @@ const EVENTS_URL = `${API_PREFIX}/events`
 const WATCHDOG_MS = 5_000
 /** 连续未连上的容忍上限：超过它主动重建连接。 */
 const RECONNECT_AFTER_MS = 30_000
+/**
+ * 「连上了但收不到东西」的容忍上限（毫秒）：服务端每 20s 必发一条心跳 `sys.ping`（**真实 data 帧**，
+ * 客户端 `onmessage` 见得到）⇒ 超过 3 倍心跳仍一无所获，判定为**半死连接**（反向代理静默丢流、
+ * 或没有 FIN 的黑洞），主动重建。这是 `readyState` 判据覆盖不到的那一半（2026-10-06 审计 🟡）。
+ */
+const SILENT_AFTER_MS = 75_000
 
 type EventHandler = (event: PushEvent) => void
 type ResyncHandler = () => void
@@ -28,6 +34,10 @@ let source: EventSource | null = null
 let watchdog: number | null = null
 /** 本轮「未连上」的起始时刻（0 = 当前处于 OPEN）。 */
 let unhealthySince = 0
+/** 最后一次**收到任何帧**的时刻（含心跳）——半死连接的唯一可观测判据。 */
+let lastSeenAt = 0
+/** 「本环境没有 EventSource」只告警一次（降级会让所有页面失去刷新通道，必须留痕又不能刷屏）。 */
+let warnedNoEventSource = false
 
 /** 广播「（重）连成功」——各页据此重读一次当前值。 */
 function dispatchResync(): void {
@@ -37,8 +47,18 @@ function dispatchResync(): void {
 }
 
 function openSource(): void {
-  const es = new EventSource(EVENTS_URL)
+  let es: EventSource
+  try {
+    es = new EventSource(EVENTS_URL)
+  } catch (error) {
+    // 构造失败（URL / 安全策略）不能把调用方的 effect 一起炸掉（那样整棵子树会被 React 卸载）；
+    // 保持 source 为 null ⇒ 看门狗按「未连上」继续重试。
+    console.warn('[tdt] EventSource 建立失败，稍后重试：', error)
+    return
+  }
+  lastSeenAt = Date.now()
   es.onmessage = (msg: MessageEvent) => {
+    lastSeenAt = Date.now() // 收到任何帧（含心跳）即证明这条连接是活的
     let event: PushEvent
     try { event = JSON.parse(msg.data as string) as PushEvent } catch { return }
     const handlers = byType.get(event.type)
@@ -56,7 +76,17 @@ function openSource(): void {
 function startWatchdog(): void {
   if (watchdog !== null) return
   watchdog = window.setInterval(() => {
-    if (source !== null && source.readyState === EventSource.OPEN) { unhealthySince = 0; return }
+    if (source !== null && source.readyState === EventSource.OPEN) {
+      // `OPEN` 还不够：服务端每 20s 必发一条心跳 ⇒ 太久一条都没收到就是**半死**，主动重建。
+      if (Date.now() - lastSeenAt > SILENT_AFTER_MS) {
+        source.close()
+        openSource()
+        unhealthySince = 0
+        return
+      }
+      unhealthySince = 0
+      return
+    }
     if (unhealthySince === 0) { unhealthySince = Date.now(); return }
     if (Date.now() - unhealthySince < RECONNECT_AFTER_MS) return
     source?.close()
@@ -67,7 +97,14 @@ function startWatchdog(): void {
 
 /** 懒建单例连接（首个订阅者出现时才连；**建了就不主动关**——「只要页面在，就有重连机制」）。 */
 function ensureSource(): void {
-  if (typeof EventSource === 'undefined') return
+  if (typeof EventSource === 'undefined') {
+    // **不静默**：这条降级会让所有页面失去刷新通道（轮询已按设计不再兜底）⇒ 必须留痕便于排查。
+    if (!warnedNoEventSource) {
+      warnedNoEventSource = true
+      console.warn('[tdt] 本环境没有 EventSource：事件推送不可用，页面只在打开时取一次数据。')
+    }
+    return
+  }
   startWatchdog()
   if (source !== null) return
   unhealthySince = 0

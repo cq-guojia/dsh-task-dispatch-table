@@ -4,7 +4,7 @@
 // 交付方式与 task-editor-css.ts / archive-session-css.ts 同源：client 产物是内核消费的
 // CJS 闭包，`import './x.css'` 不会被加载 ⇒ 运行时注入 <style>。
 
-import { applyStyle } from './ui/style'
+import { applyStyle } from './ui'
 
 /** 样式标签 id（历史遗留；注入已统一走 ui/style.ts）。 */
 export const TOAST_STYLE_ID = 'dsh-task-dispatch-table-toast'
@@ -86,7 +86,7 @@ export function ensureToastStyle(): void {
 
 import { createElement as h } from 'react'
 import type { ReactElement } from 'react'
-import { IconButton } from './ui/Button'
+import { IconButton } from './ui'
 
 /** 语义色四档（用户 2026-09-30 定稿）：成功绿 / 错误红 / 警告橙 / 中性反色面。 */
 export type ToastTone = 'success' | 'error' | 'warning' | 'neutral'

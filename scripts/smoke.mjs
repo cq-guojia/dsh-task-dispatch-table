@@ -2923,6 +2923,89 @@ console.log('\n[14] runtime-index')
     check('广播器：dispose 后不再广播', got.length === before + 1)
   }
 
+  // ── 20. 事件推送接线 / 轮询处置契约（2026-10-06 专家团审计后补）──
+  // 这些是**源码级接线断言**：证明「机制真的接上了、轮询真的没了、单源真的唯一」。
+  // ⚠️ 不要退回「文件不存在就算过 / 不含某字符串就算过」那种空断言 —— 它们抓不到回归。
+  console.log('\n[20] 事件推送接线 / 轮询处置契约')
+  {
+    const S = (p) => readFileSync(join(process.cwd(), 'src', p), 'utf8')
+    const idxSrc20 = S('index.ts')
+
+    check('SSE 清理只绑 res.close（req.close 在请求流被消费时会建连即触发 ⇒ 当场退订）',
+      !idxSrc20.includes('for (const target of [req, res])')
+      && /on\.call\(res, 'close', cleanup\)/.test(idxSrc20))
+    check('SSE 心跳是**真实 data 帧**（注释帧前端看不见 ⇒ 半死连接永远发现不了）',
+      idxSrc20.includes('JSON.stringify({ type: HEARTBEAT_TYPE })')
+      && !idxSrc20.includes("write.call(res, ': ping"))
+    check('插件 dispose 主动关掉所有推送连接（不只依赖宿主 closeAllConnections）',
+      /const activeStreamCleanups/.test(idxSrc20) && idxSrc20.includes('closeAllEventStreams()'))
+    check('运行态索引包裹层「真的变了才广播」（否则每 tick 每任务一条无谓事件）',
+      /if \(changed\) eventBus\.emit/.test(idxSrc20)
+      && S('runtime-index.ts').includes('=== next) return false'))
+    check('删行路径（任务仍有别的在飞实例）也广播',
+      S('reconcile.ts').includes('emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } })'))
+    check('配置写回路由自己兜底发 CONFIG_CHANGED（降级作用域的 watch 是空实现）',
+      /bus\.emit\(\{ type: EventType\.CONFIG_CHANGED \}\)/.test(idxSrc20))
+    const { EventType: ET20, HEARTBEAT_TYPE: HB20 } = await import('../dist/event-catalog.js')
+    check('心跳类型不在业务事件目录里（前端 byType 查不到 ⇒ 直接丢弃）',
+      HB20 === 'sys.ping' && !Object.values(ET20).includes(HB20))
+
+    const tlSrc20 = S('client/task-overview.ts')
+    check('取数层已出页面，且**不再含任何轮询定时器**',
+      tlSrc20.includes('useTaskOverview') && !tlSrc20.includes('setInterval'))
+    check('全局心跳单源（ui/ticker.ts：subscribeTicker + useNowMs）',
+      S('client/ui/ticker.ts').includes('export function subscribeTicker')
+      && S('client/ui/ticker.ts').includes('export function useNowMs'))
+    check('每秒自刷文本壳在基础层（ui/LiveText.tsx）',
+      S('client/ui/LiveText.tsx').includes('export function LiveText'))
+    check('barrel 已登记心跳 / 文本壳 / 运行态 / 代码查看器',
+      /subscribeTicker, useNowMs \} from '\.\/ticker'/.test(S('client/ui/index.ts'))
+      && S('client/ui/index.ts').includes("from './LiveText'")
+      && S('client/ui/index.ts').includes("from './running'")
+      && S('client/ui/index.ts').includes("from './CodeViewer'"))
+    check('时间文案层 / 错误文案层已出页面',
+      S('client/time-text.ts').includes('export function nextExecLabel')
+      && S('client/time-text.ts').includes('export function clockOf')
+      && S('client/error-text.ts').includes('export function humanizeTaskError'))
+    check('baseNameOf 单源且**剔尾斜杠**（否则目录产出渲染成空标签）',
+      /const trimmed = path\.replace\(/.test(S('client/format.ts'))
+      && S('client/format.ts').includes('export function baseNameOf'))
+    check('API 前缀唯一真源：只有 query.ts 还留着字面量',
+      S('client/query.ts').includes("export const API_PREFIX = 'api/task-dispatch-table'")
+      && ['client/task-overview.ts', 'client/task-editor.tsx', 'client/event-subscribe.ts', 'client/config-panel.tsx', 'client/index.ts']
+        .every(p => !S(p).includes("'api/task-dispatch-table")))
+    check('连接半死可自愈：看门狗带静默超时判据 + 客户端记录「最后收到帧的时刻」',
+      S('client/event-subscribe.ts').includes('Date.now() - lastSeenAt > SILENT_AFTER_MS')
+      && S('client/event-subscribe.ts').includes('lastSeenAt = Date.now()'))
+    // ⚠️ 断言**行为片段**而不是标识符存在：只查标识符的话，代码删掉只留一句注释也能过。
+    check('记录页在途请求不吞刷新（记待办 + 本轮结束后补跑）',
+      S('client/records-timeline.tsx').includes('pendingReloadRef.current = true')
+      && S('client/records-timeline.tsx').includes('void load(null, true)'))
+    check('记录页对新任务首跑有兜底（任务级判定，不再只看已加载行）',
+      S('client/records-timeline.tsx').includes('if (onLoadedRow || mayAppear) void load(null, true)'))
+    check('日历页在屏判定按当前筛选收窄（原来恒真 ⇒ 任何任务都整月重拉）',
+      S('client/task-calendar.tsx').includes('if (onGrid || matchesFilter) void load()'))
+    check('日历计划指纹含 title / workspace（否则改名后计划格显示旧名）',
+      /\$\{row\.id\}\|\$\{row\.enabled\}\|\$\{row\.title\}\|\$\{row\.workspace\}/.test(S('client/task-calendar.tsx')))
+    check('拨片守卫有寿命（确认快照不来时不会永久锁死左→右同步）',
+      S('client/task-editor.tsx').includes('pendingUntilRef.current = Date.now() +')
+      && S('client/task-editor.tsx').includes('const expired = Date.now() > pendingUntilRef.current'))
+    check('设置页快照回退值是稳定引用（避免 useSyncExternalStore 反复重渲）',
+      S('client/index.ts').includes('getSnapshot: () => lastMapped ?? LOADING_SNAPSHOT'))
+    check('死代码已删且替代品在：markdown / instances-poll / formatShortStamp',
+      !existsSync(join(process.cwd(), 'src', 'client', 'markdown.ts'))
+      && !existsSync(join(process.cwd(), 'src', 'client', 'instances-poll.ts'))
+      && !/export function formatShortStamp/.test(S('client/format.ts'))
+      && S('client/format.ts').includes('export function formatBytes'))
+    check('NextPill 的悬浮文案走**同一条**全局心跳（不再自建 1s interval）',
+      S('client/task-list.tsx').includes('const nowMs = useNowMs()')
+      && !S('client/task-list.tsx').includes('setNowMs'))
+    check('baseNameOf 的消费方都从 format.ts 引（不再从 task-info 引）',
+      /import \{[^}]*baseNameOf[^}]*\} from '\.\/format'/.test(S('client/task-list.tsx'))
+      && /import \{[^}]*baseNameOf[^}]*\} from '\.\/format'/.test(S('client/records-timeline.tsx'))
+      && !S('client/task-info.tsx').includes('export const baseNameOf'))
+  }
+
   store.close()
   rmSync(dir, { recursive: true, force: true })
 }

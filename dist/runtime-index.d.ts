@@ -78,10 +78,14 @@ export interface RuntimeIndex {
     markDispatched(taskId: string, scheduledAt: string): void;
     /** Loop B 实例进终态（reconcile.ts）。 */
     markTerminal(taskId: string, status: InstanceStatus, scheduledAt: string, finishedAt: string): void;
-    /** 记录 / 清除「这一槽被什么挡住」（决策 54 · P3b：延期悬浮说明用；只展示，不参与调度）。 */
-    markBlocked(taskId: string, reason: string | null): void;
-    /** 实例行被删（窗口外 pending / 附件缺失）⇒ 该任务不再算在飞。 */
-    clearRunning(taskId: string): void;
+    /**
+     * 记录 / 清除「这一槽被什么挡住」（决策 54 · P3b：延期悬浮说明用；只展示，不参与调度）。
+     * **返回「是否真的变了」**（边沿）——调用方据此决定要不要广播；若不给这个信号，事件层只能
+     * 无条件发，每个 tick 每任务都会发一条无谓事件（2026-10-06 审计实证）。
+     */
+    markBlocked(taskId: string, reason: string | null): boolean;
+    /** 实例行被删（窗口外 pending / 附件缺失）⇒ 该任务不再算在飞。**返回「是否真的变了」**。 */
+    clearRunning(taskId: string): boolean;
     /**
      * **定义被改动的统一入口**（2026-09-30 抽象统一）：任何写路径改完任务定义后调它一次即可——
      * 重算展示指纹与下一刻度、按需 bump rev。调用方**不需要**再各自去碰内存条目。

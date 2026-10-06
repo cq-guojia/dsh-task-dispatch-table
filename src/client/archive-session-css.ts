@@ -7,7 +7,7 @@
 // 颜色一律引用 `--tdt-*`（由 ui/tokens.ts 映射宿主变量，明/暗自动跟随，括号内为兜底值）；
 // 颜色一律引用 --tdt-*（由 ui/tokens.ts 映射宿主变量，明/暗自动跟随，括号内为兜底值）；
 // 布局 token 取聊天专属 --dsh-chat-*（0.1.7-RC.2 核实的真值，带兜底）。不引用任何宿主内部符号。
-import { applyStyle } from './ui/style'
+import { applyStyle } from './ui'
 
 /** 弹窗根类名前缀（历史遗留；注入已统一走 ui/style.ts）。 */
 export const SV_STYLE_ID = 'dsh-task-dispatch-table-archive-session'

@@ -35,6 +35,16 @@ export const RUN_EVENT_TYPES = [
     EventType.TASK_RUN_CHANGED,
 ];
 /**
+ * 连接心跳的事件类型（**不属于业务事件目录**，故意不在 `EventType` 里）：
+ * 服务端每 `SSE_HEARTBEAT_MS` 发一条，客户端只用它判断「这条连接还是活的」——这是「`readyState` 是
+ * OPEN 但已经半死」唯一可观测的判据（反向代理静默丢流 / 无 FIN 的黑洞）。
+ * ⚠️ 必须是**真实 data 帧**：SSE 注释帧（`: ping`）浏览器直接吞掉，前端 `onmessage` 根本看不到。
+ * 前端 `byType` 里没有它的订阅者 ⇒ 收到后直接丢弃，不会当成业务事件（2026-10-06 审计）。
+ */
+export const HEARTBEAT_TYPE = 'sys.ping';
+/** 与心跳相关的**非**业务类型集合（订阅方一律忽略；留一处便于将来扩充）。 */
+export const NON_BUSINESS_TYPES = [HEARTBEAT_TYPE];
+/**
  * 实例状态 → 事件类型（`RuntimeIndex.markTerminal` / `markDispatched` 的映射）。
  * 只按「类型」订阅的前端拿它区分成功 / 失败 / 跳过 / 其它；状态细节交给重读。
  */

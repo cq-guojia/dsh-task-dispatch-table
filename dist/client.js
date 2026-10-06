@@ -60,10 +60,17 @@ window.__ModuleLoader__.load({
 			}
 			return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 		}
-		/** 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。 */
+		/**
+		* 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。
+		* ⚠️ **必须先剔尾斜杠**（2026-10-06 审计 🔴）：本仓「目录」用尾斜杠表达（产出示例 `["a.md","b/"]`，
+		* 见 `query.ts` / `task-file-context.tsx` 的 displayName）；不剔的话 `baseNameOf('b/')` 返回**空串**
+		* ⇒ 目录产出物在卡片/记录页渲染成**空标签、空 Tooltip**。
+		*/
 		function baseNameOf(path) {
-			const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-			return cut < 0 ? path : path.slice(cut + 1);
+			const trimmed = path.replace(/[\\/]+$/, "");
+			if (trimmed === "") return path;
+			const cut = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+			return cut < 0 ? trimmed : trimmed.slice(cut + 1);
 		}
 		/**
 		* ISO → `YYYY-MM-DD HH:mm`（`seconds: true` 时补 `:ss`）。
@@ -54576,7 +54583,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					const abortTimer = window.setTimeout(() => controller.abort(), 8e3);
 					try {
 						const query = revRef.current === "" ? "" : `?rev=${encodeURIComponent(revRef.current)}`;
-						const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, {
+						const res = await fetch(`${API_PREFIX}/tasks/overview${query}`, {
 							cache: "no-store",
 							signal: controller.signal
 						});
@@ -65844,10 +65851,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			* 故**拨片未被确认前，只认与目标值一致的快照，其余一律忽略**。
 			*/
 			const pendingToggleRef = (0, react$1.useRef)(null);
+			/**
+			* `pendingToggleRef` 的**失效兜底时刻**（2026-10-06 审计 🟡）：万一「确认快照」永远不来
+			* （服务端 no-op、或刷新链路整个断掉），守卫不能把「左列表 → 右抽屉」的 enabled 同步**永久锁死**
+			* ⇒ 超过这个时刻就放弃守卫、恢复照单全收。3s 是合并窗口（200ms）的十几倍，远大于任何竞态窗口。
+			*/
+			const pendingUntilRef = (0, react$1.useRef)(0);
+			/** 拨片守卫的最长寿命（毫秒）。 */
+			const TOGGLE_GUARD_MS = 3e3;
 			const handleToggleEnabled = (next) => {
 				patch({ enabled: next });
 				if (mode !== "edit" || currentTaskId === void 0 || currentTaskId === "" || onToggleEnabled === void 0) return;
 				pendingToggleRef.current = next;
+				pendingUntilRef.current = Date.now() + TOGGLE_GUARD_MS;
 				onToggleEnabled(next).then((error) => {
 					if (error !== null) {
 						pendingToggleRef.current = null;
@@ -65941,7 +65957,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const row = overview.rows.find((r) => r.id === syncTaskId);
 				if (row === void 0) return;
 				if (pendingToggleRef.current !== null) {
-					if (row.enabled !== pendingToggleRef.current) return;
+					if (!(Date.now() > pendingUntilRef.current) && row.enabled !== pendingToggleRef.current) return;
 					pendingToggleRef.current = null;
 				}
 				if (row.enabled === initialDraftRef.current.enabled) return;
@@ -66175,7 +66191,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					const controller = new AbortController();
 					const abortTimer = window.setTimeout(() => controller.abort(), 9e4);
 					try {
-						const data = await (await fetch("/api/task-dispatch-table/attachment", {
+						const data = await (await fetch(`${API_PREFIX}/attachment`, {
 							method: "POST",
 							headers: {
 								"x-filename": encodeURIComponent(file.name),
@@ -67082,12 +67098,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const WATCHDOG_MS = 5e3;
 		/** 连续未连上的容忍上限：超过它主动重建连接。 */
 		const RECONNECT_AFTER_MS = 3e4;
+		/**
+		* 「连上了但收不到东西」的容忍上限（毫秒）：服务端每 20s 必发一条心跳 `sys.ping`（**真实 data 帧**，
+		* 客户端 `onmessage` 见得到）⇒ 超过 3 倍心跳仍一无所获，判定为**半死连接**（反向代理静默丢流、
+		* 或没有 FIN 的黑洞），主动重建。这是 `readyState` 判据覆盖不到的那一半（2026-10-06 审计 🟡）。
+		*/
+		const SILENT_AFTER_MS = 75e3;
 		const byType = /* @__PURE__ */ new Map();
 		const resyncHandlers = /* @__PURE__ */ new Set();
 		let source = null;
 		let watchdog = null;
 		/** 本轮「未连上」的起始时刻（0 = 当前处于 OPEN）。 */
 		let unhealthySince = 0;
+		/** 最后一次**收到任何帧**的时刻（含心跳）——半死连接的唯一可观测判据。 */
+		let lastSeenAt = 0;
+		/** 「本环境没有 EventSource」只告警一次（降级会让所有页面失去刷新通道，必须留痕又不能刷屏）。 */
+		let warnedNoEventSource = false;
 		/** 广播「（重）连成功」——各页据此重读一次当前值。 */
 		function dispatchResync() {
 			for (const handler of [...resyncHandlers]) try {
@@ -67095,8 +67121,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} catch {}
 		}
 		function openSource() {
-			const es = new EventSource(EVENTS_URL);
+			let es;
+			try {
+				es = new EventSource(EVENTS_URL);
+			} catch (error) {
+				console.warn("[tdt] EventSource 建立失败，稍后重试：", error);
+				return;
+			}
+			lastSeenAt = Date.now();
 			es.onmessage = (msg) => {
+				lastSeenAt = Date.now();
 				let event;
 				try {
 					event = JSON.parse(msg.data);
@@ -67120,6 +67154,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (watchdog !== null) return;
 			watchdog = window.setInterval(() => {
 				if (source !== null && source.readyState === EventSource.OPEN) {
+					if (Date.now() - lastSeenAt > SILENT_AFTER_MS) {
+						source.close();
+						openSource();
+						unhealthySince = 0;
+						return;
+					}
 					unhealthySince = 0;
 					return;
 				}
@@ -67135,7 +67175,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		/** 懒建单例连接（首个订阅者出现时才连；**建了就不主动关**——「只要页面在，就有重连机制」）。 */
 		function ensureSource() {
-			if (typeof EventSource === "undefined") return;
+			if (typeof EventSource === "undefined") {
+				if (!warnedNoEventSource) {
+					warnedNoEventSource = true;
+					console.warn("[tdt] 本环境没有 EventSource：事件推送不可用，页面只在打开时取一次数据。");
+				}
+				return;
+			}
 			startWatchdog();
 			if (source !== null) return;
 			unhealthySince = 0;
@@ -67796,6 +67842,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [eventsError, setEventsError] = (0, react$1.useState)(null);
 			const seqRef = (0, react$1.useRef)(0);
 			const inFlightRef = (0, react$1.useRef)(false);
+			/** 在途期间到达的「静默重载首屏」请求（事件 / 重连补读）：本轮结束立刻补跑一次，**不能丢**。 */
+			const pendingReloadRef = (0, react$1.useRef)(false);
 			const rowsCountRef = (0, react$1.useRef)(0);
 			rowsCountRef.current = rows.length;
 			/** 事件请求序号：快速切块时作废旧响应，别把 A 的事件贴到 B 上。 */
@@ -67845,7 +67893,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const workspaceById = (0, react$1.useMemo)(() => new Map(tasks.map((o) => [o.id, o.workspace])), [tasks]);
 			const filterSig = `${workspace}|${bucket}|${taskId}`;
 			const load = (0, react$1.useCallback)(async (nextCursor, silent = false) => {
-				if (inFlightRef.current) return;
+				if (inFlightRef.current) {
+					if (silent && nextCursor === null) pendingReloadRef.current = true;
+					return;
+				}
 				inFlightRef.current = true;
 				const seq = seqRef.current + 1;
 				seqRef.current = seq;
@@ -67871,6 +67922,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						setLoading(false);
 						setLoaded(true);
 						inFlightRef.current = false;
+						if (pendingReloadRef.current) {
+							pendingReloadRef.current = false;
+							load(null, true);
+						}
 					}
 				}
 			}, [
@@ -67881,6 +67936,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			(0, react$1.useEffect)(() => {
 				seqRef.current += 1;
 				inFlightRef.current = false;
+				pendingReloadRef.current = false;
 				setRows([]);
 				setCursor(null);
 				setDone(false);
@@ -67916,9 +67972,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			* （断线兜底见 event-subscribe.ts 的统一重连：连不上 >30s 自动重建，连上即补读一次。）
 			*/
 			useEvents(RUN_EVENT_TYPES, (event) => {
-				const instanceId = event.payload?.instanceId;
-				const taskId = event.payload?.taskId;
-				if (rows.some((r) => typeof instanceId === "string" && r.id === instanceId || typeof taskId === "string" && r.task_id === taskId)) load(null, true);
+				const evInstanceId = event.payload?.instanceId;
+				const evTaskId = event.payload?.taskId;
+				const onLoadedRow = rows.some((r) => typeof evInstanceId === "string" && r.id === evInstanceId || typeof evTaskId === "string" && r.task_id === evTaskId);
+				const mayAppear = typeof evTaskId === "string" && (taskId === "" || taskId === evTaskId) && (workspace === "" || workspaceById.get(evTaskId) === workspace);
+				if (onLoadedRow || mayAppear) load(null, true);
 			});
 			useResync(() => {
 				load(null, true);
@@ -68342,10 +68400,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const snapshotsRef = (0, react$1.useRef)(snapshots);
 			snapshotsRef.current = snapshots;
 			/**
-			* 定义行的**排期指纹**：overview 是 10 秒轮询的，每次都换出新的数组引用；
-			* 计划重算（几十个任务 × 5 次 cron 解析）不该被轮询白白带起来 ⇒ 指纹不变就不重算。
+			* 定义行的**排期指纹**：overview 每次刷新都会换出新的数组引用；计划重算
+			* （几十个任务 × 5 次 cron 解析）不该被白白带起来 ⇒ 指纹不变就不重算。
+			* ⚠️ 指纹**必须包含计划条目真正用到的字段**（`title` / `workspace` / `enabled`）：
+			* 2026-10-06 审计 🟡 —— 原来只有排期字段，改名 / 改工作区后排期没动 ⇒ 指纹不变 ⇒
+			* 计划格里一直显示**旧名字 / 旧归属**，直到下一次重新取数或换月。
 			*/
-			const scheduleSig = (0, react$1.useMemo)(() => rows.map((row) => `${row.id}|${row.enabled}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.timezone}`).join(";"), [rows]);
+			const scheduleSig = (0, react$1.useMemo)(() => rows.map((row) => `${row.id}|${row.enabled}|${row.title}|${row.workspace}|${row.schedule.cron}|${row.schedule.once}|${row.schedule.start}|${row.schedule.everyNWeeks}|${row.schedule.timezone}`).join(";"), [rows]);
 			const rowsRef = (0, react$1.useRef)(rows);
 			rowsRef.current = rows;
 			const { y, m } = cursor;
@@ -68398,9 +68459,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			* 还没进网格，也得让它出现）⇒ 静默刷新当月；否则忽略。（断线兜底见 event-subscribe.ts 的统一重连。）
 			*/
 			useEvents(RUN_EVENT_TYPES, (event) => {
-				const instanceId = event.payload?.instanceId;
-				const taskId = event.payload?.taskId;
-				if (instances.some((r) => typeof instanceId === "string" && r.id === instanceId || typeof taskId === "string" && r.task_id === taskId) || typeof taskId === "string" && rowsRef.current.some((row) => row.id === taskId)) load();
+				const evInstanceId = event.payload?.instanceId;
+				const evTaskId = event.payload?.taskId;
+				const onGrid = instances.some((r) => typeof evInstanceId === "string" && r.id === evInstanceId || typeof evTaskId === "string" && r.task_id === evTaskId);
+				const matchesFilter = typeof evTaskId === "string" && (taskId === "" || taskId === evTaskId) && rowsRef.current.some((row) => row.id === evTaskId && (workspace === "" || row.workspace === workspace));
+				if (onGrid || matchesFilter) load();
 			});
 			useResync(() => {
 				load();
@@ -70734,7 +70797,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/**
 			* 事件推送接入（design/event-push.md §七）：主列表订阅「定义 / 配置 / 强制刷新」与「运行态」事件。
 			* 全局类事件 ⇒ 直接重读；运行态事件按**在屏判定**——该任务不在当前列表里就忽略（用户下拉时自会读到最新）。
-			* `refresh()` 带 `rev` 增量：服务端未变即回 `unchanged`，重读很轻。**现有 10s 轮询保留不动**。
+			* `refresh()` 带 `rev` 增量：服务端未变即回 `unchanged`，重读很轻。
+			* ⚠️ **原 10s 常开轮询已删**（design/client-refresh-disposition.md §二 P2）：刷新只由事件驱动
+			* （+ 重连补读 + 各写路径主动 `refresh()`）。
 			*/
 			useEvents([
 				EventType.TASKS_CHANGED,
@@ -71602,6 +71667,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*/
 		/** ⚠️ 前缀**唯一真源在 `query.ts`**（M9）：此前本文件与 query/event-subscribe/config-panel 各写一份。 */
 		const DISPATCH_API_PREFIX = API_PREFIX;
+		/**
+		* `httpScope` 尚未取到快照时的**稳定**回退值。
+		* ⚠️ 必须是**同一个引用**：每次新建对象会让 `useSyncExternalStore` 次次判定「变了」⇒ 在「首取未回」
+		* 或「持续取数失败」的窗口里反复重渲染（React #185 告警）。2026-10-06 审计 🟡。
+		*/
+		const LOADING_SNAPSHOT = {
+			status: "loading",
+			value: void 0,
+			base: void 0,
+			user: void 0,
+			writable: false
+		};
 		function httpScope() {
 			let lastDebug = "";
 			let lastInline = "";
@@ -71672,13 +71749,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				timer = null;
 			};
 			return {
-				getSnapshot: () => lastMapped ?? {
-					status: "loading",
-					value: void 0,
-					base: void 0,
-					user: void 0,
-					writable: false
-				},
+				getSnapshot: () => lastMapped ?? LOADING_SNAPSHOT,
 				subscribe: (listener) => {
 					listeners.add(listener);
 					startPolling();
