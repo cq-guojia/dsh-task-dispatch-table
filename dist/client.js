@@ -295,7 +295,6 @@ window.__ModuleLoader__.load({
 			tabRecords: "执行记录",
 			tabCalendar: "任务日程",
 			tabDebug: "调试",
-			calLoading: "日程加载中…",
 			calLoadFail: "日程读取失败",
 			calRetry: "重试",
 			calEmpty: "这个月没有执行记录，也没有计划任务",
@@ -703,10 +702,9 @@ window.__ModuleLoader__.load({
 			localeTag: "zh-CN",
 			recordsEmpty: "该时间范围内没有执行记录",
 			recordsEmptyFiltered: "当前过滤条件下没有执行记录",
-			recordsLoading: "执行记录加载中…",
 			recordsLoadMore: "加载更多",
 			recordsNoMore: "没有更多了",
-			recordsLimitHint: "已加载 2000 条，请缩小时间范围查看更早记录",
+			recordsLimitHint: "已加载 2000 条（已达上限）",
 			recordsLoadFail: "执行记录加载失败",
 			recordsRetry: "重试",
 			recordsDayCount: "{n} 条",
@@ -925,7 +923,6 @@ window.__ModuleLoader__.load({
 			tabRecords: "Run records",
 			tabCalendar: "Schedule",
 			tabDebug: "Debug",
-			calLoading: "Loading schedule…",
 			calLoadFail: "Failed to load the schedule",
 			calRetry: "Retry",
 			calEmpty: "No run records and no planned runs in this month",
@@ -1333,10 +1330,9 @@ window.__ModuleLoader__.load({
 			localeTag: "en-US",
 			recordsEmpty: "No executions in this time range",
 			recordsEmptyFiltered: "No executions match the current filters",
-			recordsLoading: "Loading executions…",
 			recordsLoadMore: "Load more",
 			recordsNoMore: "No more",
-			recordsLimitHint: "Loaded 2000 — narrow the time range to see earlier records",
+			recordsLimitHint: "Loaded 2000 (hard limit reached)",
 			recordsLoadFail: "Failed to load executions",
 			recordsRetry: "Retry",
 			recordsDayCount: "{n} total",
@@ -3354,12 +3350,12 @@ body[data-ds-dark-theme]{
 		* 全局浮动 Loading 指示器（UI 基础层 · P1）。
 		*
 		* 用法：
-		*   <Loading label={t('loading')} />
+		*   <Loading />
 		*
 		* 行为：
 		* - fixed 定位在主内容容器右下角，**不占布局空间**；
 		* - 右侧贴齐主内容容器右边缘（`anchorId` 默认 `dsh-tdt-main`），底部留 16px；
-		* - 左侧三个小方块依次脉动，右侧显示文案；
+		* - **三个小方块依次脉动，无任何文案**（基础抽象统一外观，禁止加字；用户 2026-10-06）；
 		* - 监听窗口 resize / scroll / 内容盒 resize，自动跟住内容宽度。
 		*
 		* 配套 also 导出 `<RunningBlocks />`：同样的三个脉动方块（无文案），
@@ -3409,7 +3405,7 @@ body[data-ds-dark-theme]{
 			}, [anchorId]);
 			return right;
 		}
-		/** 浮动 Loading pill：三个脉动方块 + 文案。 */
+		/** 浮动 Loading pill：三个脉动方块（无文案；基础抽象统一外观）。 */
 		function Loading(props) {
 			ensureUiBase();
 			ensureLoadingStyle();
@@ -3421,7 +3417,7 @@ body[data-ds-dark-theme]{
 				},
 				role: "status",
 				"aria-live": "polite"
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null)), (0, react$1.createElement)("span", null, props.label));
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-run-blocks" }, (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null), (0, react$1.createElement)("i", null)));
 		}
 		/** 运行中状态用的三个脉动方块（无文案），颜色跟随 `currentColor`。 */
 		function RunningBlocks() {
@@ -64985,7 +64981,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-danger)"
-				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, { label: t("loading") }) : infoLast === null ? (0, react$1.createElement)("div", { style: {
+				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, {}) : infoLast === null ? (0, react$1.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-xs)",
 					color: "var(--tdt-fg-3)"
 				} }, t("infoNoRun")) : lastRunFields({
@@ -64995,7 +64991,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					onOpenFile
 				}))));
 			};
-			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, { label: t("loading") }) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(SelectField, {
+			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(SelectField, {
 				value: recStatus,
 				options: [
 					{
@@ -65161,7 +65157,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 				}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
 			})))));
-			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, { label: t("loading") }) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Input$1, {
+			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Input$1, {
 				value: logKeyword,
 				onChange: setLogKeyword,
 				placeholder: t("cardKeyword"),
@@ -68354,20 +68350,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			fontSize: "var(--tdt-font-md)",
 			color: "var(--tdt-fg-3)"
 		};
-		/** `YYYY-MM-DD`（本地日历日，只用于拼默认时间档）。 */
-		function ymdOf(d) {
-			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
-		}
-		/** 默认时间档：最近 N 天（含今天）。 */
-		function defaultRange() {
-			const now = /* @__PURE__ */ new Date();
-			const from = new Date(now);
-			from.setDate(from.getDate() - 2);
-			return {
-				from: ymdOf(from),
-				to: ymdOf(now)
-			};
-		}
 		/** 本地日历日的 key（`YYYY-MM-DD`）。 */
 		function ymdOfDate(d) {
 			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
@@ -68724,7 +68706,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			ensureRecordsStyle();
 			const { t, tasks, workspaces, onOpenSession, onOpenFile, onViewTask } = props;
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
-			const [range, setRange] = (0, react$1.useState)(defaultRange);
 			const [workspace, setWorkspace] = (0, react$1.useState)("");
 			const [bucket, setBucket] = (0, react$1.useState)("");
 			const [taskId, setTaskId] = (0, react$1.useState)("");
@@ -68746,24 +68727,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			rowsCountRef.current = rows.length;
 			/** 事件请求序号：快速切块时作废旧响应，别把 A 的事件贴到 B 上。 */
 			const eventsSeqRef = (0, react$1.useRef)(0);
-			/** 首次进入时的默认档（用来判「用户是否真的动过过滤器」⇒ 决定空态文案）。 */
-			const initialRangeRef = (0, react$1.useRef)(range);
-			const calendarLabels = (0, react$1.useMemo)(() => calendarLabelsOf(t), [t]);
-			const timeLabels = (0, react$1.useMemo)(() => timeLabelsOf(t), [t]);
-			const rangeLabels = (0, react$1.useMemo)(() => ({
-				all: t("trAll"),
-				custom: t("trCustom"),
-				from: t("cardFrom"),
-				to: t("cardTo"),
-				presets: {
-					today: t("trToday"),
-					yesterday: t("trYesterday"),
-					thisWeek: t("trThisWeek"),
-					lastWeek: t("trLastWeek"),
-					thisMonth: t("trThisMonth"),
-					lastMonth: t("trLastMonth")
-				}
-			}), [t]);
 			const dayFormatter = (0, react$1.useMemo)(() => typeof Intl === "undefined" ? null : new Intl.DateTimeFormat(t("localeTag"), {
 				year: "numeric",
 				month: "long",
@@ -68807,7 +68770,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const depTitleOf = (0, react$1.useCallback)((taskId) => titleById.get(taskId) ?? taskId.slice(0, 8), [titleById]);
 			/** 工作区反查：优先任务表（当前归属），任务已删退回派发快照的 `workspacePath` 末段（当次执行当时的值）。 */
 			const workspaceById = (0, react$1.useMemo)(() => new Map(tasks.map((o) => [o.id, o.workspace])), [tasks]);
-			const filterSig = `${range.from}|${range.to}|${workspace}|${bucket}|${taskId}`;
+			const filterSig = `${workspace}|${bucket}|${taskId}`;
 			const load = (0, react$1.useCallback)(async (nextCursor) => {
 				if (inFlightRef.current) return;
 				inFlightRef.current = true;
@@ -68815,14 +68778,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				seqRef.current = seq;
 				setLoading(true);
 				setError(null);
-				const q = rangeToQuery(range, "day");
 				try {
 					const page = await fetchInstances({
 						workspace: workspace === "" ? void 0 : workspace,
 						statuses: bucket === "" ? void 0 : statusesOfBucket(bucket),
 						taskId: taskId === "" ? void 0 : taskId,
-						from: q.fromTs,
-						to: q.toTs,
 						limit: PAGE_SIZE,
 						cursor: nextCursor ?? void 0
 					});
@@ -68841,7 +68801,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 				}
 			}, [
-				range,
 				workspace,
 				bucket,
 				taskId
@@ -68927,8 +68886,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				setEventsError(null);
 			}, []);
 			const atLimit = rows.length >= HARD_LIMIT;
-			/** 用户是否真的动过过滤器（决定空态文案：没动过 = 这段时间本来就没记录）。 */
-			const touched = range.from !== initialRangeRef.current.from || range.to !== initialRangeRef.current.to || workspace !== "" || bucket !== "" || taskId !== "";
+			/** 用户是否真的动过过滤器（决定空态文案：没动过 = 本来就没有记录）。 */
+			const touched = workspace !== "" || bucket !== "" || taskId !== "";
 			const changeWorkspace = (0, react$1.useCallback)((next) => {
 				setWorkspace(next);
 				if (next === "" || taskId === "") return;
@@ -68960,15 +68919,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onChange: (next) => {
 					setBucket(next === "all" ? "" : next);
 				}
-			}), (0, react$1.createElement)("div", { style: filterRightStyle }, (0, react$1.createElement)(TimeRange, {
-				value: range,
-				onChange: setRange,
-				labels: rangeLabels,
-				calendarLabels,
-				timeLabels,
-				precision: "day",
-				size: "md"
-			}), (0, react$1.createElement)(SelectField, {
+			}), (0, react$1.createElement)("div", { style: filterRightStyle }, (0, react$1.createElement)(SelectField, {
 				value: workspace,
 				options: workspaceOptions,
 				onChange: changeWorkspace,
@@ -68995,7 +68946,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 150
-			}))), loading ? (0, react$1.createElement)(Loading, { label: t("recordsLoading") }) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, {}) : null, rows.length === 0 ? error !== null ? (0, react$1.createElement)("div", { style: emptyStyle }, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-err" }, `${t("recordsLoadFail")}：${error}`), (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {
@@ -69562,7 +69513,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				outOfScopeHint: t("recordsOutOfScope"),
 				size: "md",
 				width: 150
-			}))), loading ? (0, react$1.createElement)(Loading, { label: t("calLoading") }) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$2, {
+			}))), loading ? (0, react$1.createElement)(Loading, {}) : null, error !== null ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-hint" }, `${t("calLoadFail")}：${error}`, (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: () => {

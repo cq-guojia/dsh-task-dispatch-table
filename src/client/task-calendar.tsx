@@ -494,7 +494,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       ),
 
       // 加载走页面右下角统一的那个 Loading（与执行记录页同一条规矩）。
-      loading ? h(Loading, { label: t('calLoading') }) : null,
+      loading ? h(Loading, {}) : null,
       error !== null
         ? h('div', { className: 'dsh-tdt-cal-hint' },
             `${t('calLoadFail')}：${error}`,

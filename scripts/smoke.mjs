@@ -1157,10 +1157,11 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('执行记录流水账进产物（RecordsTimelineView + 日期行 / 块容器 / 色条 / 两行条目 / 加载区类名）',
       clientJs.includes('RecordsTimelineView') && ['dsh-tdt-rec-dayrow', 'dsh-tdt-rec-items', 'dsh-tdt-rec-bar',
         'dsh-tdt-rec-r1', 'dsh-tdt-rec-r2', 'dsh-tdt-rec-foot'].every(c => clientJs.includes(c)))
-    check('过滤行照任务列表：**左侧状态分段控件四档**（全部/成功/失败/进行中）+ 右侧时间/工作区/任务',
+    check('过滤行照任务列表：**左侧状态分段控件四档**（全部/成功/失败/进行中）+ 右侧工作区/任务（2026-10-06：时间范围控件已移除，默认拉全量）',
       /h\(Segmented<StatusBucket \| 'all'>,/.test(tlSrc)
       && /statusesOfBucket\(bucket\)/.test(tlSrc)
-      && ['filterRightStyle', 'h(TimeRange,', 'h(SelectField,', 'h(TaskPicker,'].every(f => tlSrc.includes(f)))
+      && ['filterRightStyle', 'h(SelectField,', 'h(TaskPicker,'].every(f => tlSrc.includes(f))
+      && !tlSrc.includes('h(TimeRange,'))
     check('第三版版式反向断言：**外框（灰底区块）已删**、**贯穿竖轴已删**（用户 2026-10-04：把框去了、时间轴也去了）',
       !tlSrc.includes('dsh-tdt-rec-band') && !/\.dsh-tdt-rec-band::before/.test(tlSrc)
       && !/::before\{[^}]*top:0;bottom:0/.test(tlSrc) && !tlSrc.includes('dsh-tdt-rec-dot'))
@@ -1226,9 +1227,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       /tab === 'records'\n\s*\? h\(RecordsTimelineView/.test(idxSrc)
       && idxSrc.indexOf('h(RecordsTimelineView') < idxSrc.indexOf(': data === undefined'))
     check('时间轴不轮询（历史账，不自动刷新）', !tlSrc.includes('setInterval') && !tlSrc.includes('POLL'))
-    check('时间轴复用基础层：Loading / Button / SelectField / TimeRange / TaskPicker / MarqueeText 全走 ui/',
+    check('时间轴复用基础层：Loading / Button / SelectField / TaskPicker / MarqueeText 全走 ui/（2026-10-06：时间范围控件已移除）',
       /from '\.\/ui'/.test(tlSrc) && /h\(Loading,/.test(tlSrc) && /h\(Button,/.test(tlSrc)
-      && /h\(SelectField,/.test(tlSrc) && /h\(TimeRange,/.test(tlSrc) && /h\(TaskPicker,/.test(tlSrc))
+      && /h\(SelectField,/.test(tlSrc) && /h\(TaskPicker,/.test(tlSrc))
     const tpSrc = readFileSync(join(process.cwd(), 'src', 'client', 'ui', 'TaskPicker.tsx'), 'utf8')
     check('任务选择器（带搜索 + 受控作用域 + 掉出作用域显式提示）进产物',
       clientJs.includes('TaskPicker') && clientJs.includes('dsh-tdt-tp-row') && clientJs.includes('dsh-tdt-tp-more')
@@ -1317,9 +1318,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       !/width:\s*124/.test(trSrc) && !/width:\s*88/.test(trSrc) && !/width:\s*96/.test(trSrc)
       && /labels: calendarLabels, size, disabled: props\.disabled,/.test(trSrc)
       && /labels: timeLabels, size, disabled: props\.disabled,/.test(trSrc))
-    check('第九轮：加载**只用页面右下角统一的那一个 Loading**（反向：页脚不再自己显示加载文案）',
-      /loading \? h\(Loading, \{ label: t\('recordsLoading'\) \}\) : null,/.test(tlSrc)
-      && !/footerHint[\s\S]{0,240}t\('recordsLoading'\)/.test(tlSrc))
+    check('第九轮：加载**只用页面右下角统一的那一个 Loading**（2026-10-06：无文案；反向：页脚不再自己显示加载文案）',
+      /loading \? h\(Loading, \{\} ?\) : null,/.test(tlSrc)
+      && !tlSrc.includes("t('recordsLoading')"))
     check('第九轮：深色主题下状态浅底压到 **5%**（浅色仍是 8% ⇒ 两端各自给值）',
       ((tkSrc.match(/--tdt-(?:success|warning|danger|business)-soft:color-mix\(in srgb,var\(--tdt-(?:success|warning|danger|business)\) 5%,transparent\)/g)) ?? []).length === 4
       && ((tkSrc.match(/\) 8%,transparent\);/g)) ?? []).length >= 4)
@@ -2507,10 +2508,12 @@ console.log('\n[14] runtime-index')
     check('任务卡片整行可点展开；开关 / 箭头拦下冒泡（不穿透、不双触发）',
       tl.includes("className: 'dsh-tdt-card-row'") && tl.includes('event.stopPropagation()')
       && (tl.match(/stopPropagation\(\)/g) ?? []).length >= 4)
-    check('忙碌指示：沿用三个脉动方块 + 不吃鼠标事件 + 过滤行不再插占位文字',
+    check('忙碌指示：沿用三个脉动方块 + 不吃鼠标事件 + Loading 无文案（2026-10-06：去掉 label）',
       tl.includes('useDelayedBusy') && tl.includes('BUSY_DELAY_MS')
       && ld.includes('dsh-tdt-run-blocks') && ld.includes('pointerEvents:')
-      && tl.includes('h(Loading, { label:')
+      && tl.includes('h(Loading, {})')
+      // 不再有任何带文字的 Loading。
+      && !tl.includes('h(Loading, { label:')
       // 过滤行里那个会占位的一闪文字已经移除。
       && !tl.includes("recLoading ? h('span'") && !tl.includes("logLoading ? h('span'"))
     check('展开区排布放宽：外圈 padding 翻倍 + 日志行间距 + 字色压暗一档',
@@ -2555,8 +2558,10 @@ console.log('\n[14] runtime-index')
       && sv.includes('anyAnchor'))
     check('附件行在拿到 path + 锚点会话时可点（走统一 openFile），缺则退回纯展示',
       ti.includes('onOpenFile(anchor, absPath)') && ti.includes('item.anchorSessionId'))
-    check('基础信息忙碌指示统一走右下角共用 Loading（不再另写「载入中」文字）',
-      tl.includes("? h(Loading, { label: t('loading') })")
+    check('基础信息忙碌指示统一走右下角共用 Loading（2026-10-06：无文案，不再另写「载入中」文字）',
+      tl.includes('h(Loading, {})')
+      // 不再有任何带文字的 Loading。
+      && !tl.includes("h(Loading, { label: t('loading') })")
       // 基础信息右栏不再出现把 loading 文案直接当文字渲染的旧写法。
       && !tl.includes("color: 'var(--tdt-fg-3)' } }, t('loading'))"))
     const rec = readFileSync(join(process.cwd(), 'src', 'reconcile.ts'), 'utf8')

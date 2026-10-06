@@ -17,7 +17,7 @@ export type LocaleKey =
   | 'debugRefreshedAt'
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabCalendar' | 'tabDebug'
   // —— 任务日程（日历页，2026-10-05）：月份导航 / 两态图例 / 计划说明 / 截断与错误 ——
-  | 'calLoading' | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
+  | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
   | 'calTruncated' | 'calPlanHint' | 'calPlanTag' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
@@ -144,7 +144,7 @@ export type LocaleKey =
   // 2026-10-04：工作区候选改真源后，选到「没有任务的工作区」时的下一级空态（用户允许这种空态）
   | 'editorDepTaskEmpty'
   // 执行记录总查询页（时间轴，2026-10-04 落码）：`localeTag` 供 `Intl` 按当前语言排版日期（天标签）。
-  | 'localeTag' | 'recordsEmpty' | 'recordsEmptyFiltered' | 'recordsLoading' | 'recordsLoadMore' | 'recordsNoMore'
+  | 'localeTag' | 'recordsEmpty' | 'recordsEmptyFiltered' | 'recordsLoadMore' | 'recordsNoMore'
   | 'recordsLimitHint' | 'recordsLoadFail' | 'recordsRetry' | 'recordsDayCount' | 'recordsTaskPh'
   | 'recordsTaskSearch' | 'recordsMore' | 'recordsCollapse' | 'recordsOutOfScope' | 'recPlan' | 'recActual'
   // 2026-10-04 第四轮：跨天时刻前缀（前一天 / 次日）+ 展开区「执行日志」小标题
@@ -257,7 +257,6 @@ export const zh: Record<LocaleKey, string> = {
   tabRecords: '执行记录',
   tabCalendar: '任务日程',
   tabDebug: '调试',
-  calLoading: '日程加载中…',
   calLoadFail: '日程读取失败',
   calRetry: '重试',
   calEmpty: '这个月没有执行记录，也没有计划任务',
@@ -678,10 +677,9 @@ export const zh: Record<LocaleKey, string> = {
   localeTag: 'zh-CN',
   recordsEmpty: '该时间范围内没有执行记录',
   recordsEmptyFiltered: '当前过滤条件下没有执行记录',
-  recordsLoading: '执行记录加载中…',
   recordsLoadMore: '加载更多',
   recordsNoMore: '没有更多了',
-  recordsLimitHint: '已加载 2000 条，请缩小时间范围查看更早记录',
+  recordsLimitHint: '已加载 2000 条（已达上限）',
   recordsLoadFail: '执行记录加载失败',
   recordsRetry: '重试',
   recordsDayCount: '{n} 条',
@@ -914,7 +912,6 @@ export const en: Record<LocaleKey, string> = {
   tabRecords: 'Run records',
   tabCalendar: 'Schedule',
   tabDebug: 'Debug',
-  calLoading: 'Loading schedule…',
   calLoadFail: 'Failed to load the schedule',
   calRetry: 'Retry',
   calEmpty: 'No run records and no planned runs in this month',
@@ -1330,10 +1327,9 @@ export const en: Record<LocaleKey, string> = {
   localeTag: 'en-US',
   recordsEmpty: 'No executions in this time range',
   recordsEmptyFiltered: 'No executions match the current filters',
-  recordsLoading: 'Loading executions…',
   recordsLoadMore: 'Load more',
   recordsNoMore: 'No more',
-  recordsLimitHint: 'Loaded 2000 — narrow the time range to see earlier records',
+  recordsLimitHint: 'Loaded 2000 (hard limit reached)',
   recordsLoadFail: 'Failed to load executions',
   recordsRetry: 'Retry',
   recordsDayCount: '{n} total',

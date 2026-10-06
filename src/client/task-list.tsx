@@ -990,7 +990,7 @@ function TaskExpandPanel(props: {
             ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-danger)' } }, `${t('cardLoadFailed')}：${infoError}`)
             : infoLoading && !infoLoaded
               // 忙碌指示**统一走右下角那个共用 Loading**（用户铁律：全站只有一个 loading，不在这里另写文字）。
-              ? h(Loading, { label: t('loading') })
+              ? h(Loading, {})
               : infoLast === null
                 ? h('div', { style: { fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)' } }, t('infoNoRun'))
                 : lastRunFields({ t, instance: infoLast, onOpenSession, onOpenFile }),
@@ -1001,8 +1001,8 @@ function TaskExpandPanel(props: {
 
   const renderRecords = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
     // 浮动忙碌指示：fixed 到主内容盒右下角 ⇒ **不占布局空间**，不再把筛选行挤过去又挤回来。
-    recBusy ? h(Loading, { label: t('loading') }) : null,
-    // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 时间范围控件（用户 2026-10-02 第四轮）。
+    recBusy ? h(Loading, {}) : null,
+    // 过滤行固定在定高盒外（不随内容滚）：状态三档 + 工作区。
     h('div', { style: filterRowStyle },
       // 不再单写「状态：」二字（用户 2026-10-02）：**未选时占位就是灰色的「状态」**，
       // 与选中「全部」同义（都不过滤）⇒ 靠 placeholder 自证身份。
@@ -1208,8 +1208,8 @@ function TaskExpandPanel(props: {
 
   const renderLogs = (): ReturnType<typeof h> => h('div', { style: panelBoxStyle },
     // 同执行记录面板：浮动忙碌指示，fixed 到主内容盒右下角。
-    logBusy ? h(Loading, { label: t('loading') }) : null,
-    // 过滤行固定在定高盒外（与执行记录面板同口径）：关键字 + **分钟级**时间范围 + 条数。
+    logBusy ? h(Loading, {}) : null,
+    // 过滤行固定在定高盒外（与执行记录面板同口径）：关键字 + 条数。
     h('div', { style: filterRowStyle },
       h(TdtInput, {
         value: logKeyword,

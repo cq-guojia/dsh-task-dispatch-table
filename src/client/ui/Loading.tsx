@@ -2,12 +2,12 @@
  * 全局浮动 Loading 指示器（UI 基础层 · P1）。
  *
  * 用法：
- *   <Loading label={t('loading')} />
+ *   <Loading />
  *
  * 行为：
  * - fixed 定位在主内容容器右下角，**不占布局空间**；
  * - 右侧贴齐主内容容器右边缘（`anchorId` 默认 `dsh-tdt-main`），底部留 16px；
- * - 左侧三个小方块依次脉动，右侧显示文案；
+ * - **三个小方块依次脉动，无任何文案**（基础抽象统一外观，禁止加字；用户 2026-10-06）；
  * - 监听窗口 resize / scroll / 内容盒 resize，自动跟住内容宽度。
  *
  * 配套 also 导出 `<RunningBlocks />`：同样的三个脉动方块（无文案），
@@ -60,20 +60,17 @@ function useContentRight(anchorId: string): string {
 }
 
 export interface LoadingProps {
-  /** 右侧文案（如 "加载中"）。 */
-  label: string
   /** 主内容容器 id，loading 贴到它的右下角；默认 `dsh-tdt-main`。 */
   anchorId?: string
 }
 
-/** 浮动 Loading pill：三个脉动方块 + 文案。 */
+/** 浮动 Loading pill：三个脉动方块（无文案；基础抽象统一外观）。 */
 export function Loading(props: LoadingProps): ReturnType<typeof h> {
   ensureUiBase()
   ensureLoadingStyle()
   const right = useContentRight(props.anchorId ?? 'dsh-tdt-main')
   return h('div', { style: { ...pillStyle, right }, role: 'status', 'aria-live': 'polite' },
     h('span', { className: 'dsh-tdt-run-blocks' }, h('i', null), h('i', null), h('i', null)),
-    h('span', null, props.label),
   )
 }
 

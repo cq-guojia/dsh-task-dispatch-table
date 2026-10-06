@@ -43,11 +43,10 @@ import { resolvedDepsOf } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
-  Button, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, TaskPicker, TimeRange,
-  applyStyle, rangeToQuery,
+  Button, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, TaskPicker,
+  applyStyle,
 } from './ui'
-import type { EditorOption, TaskOption, TimeRangeLabels, TimeRangeValue } from './ui'
-import { calendarLabelsOf, timeLabelsOf } from './editor-fields'
+import type { EditorOption, TaskOption } from './ui'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
 import { ensureTaskInfoStyle } from './task-info-css'
@@ -56,8 +55,6 @@ import { ensureTaskInfoStyle } from './task-info-css'
 const PAGE_SIZE = 50
 /** 硬上限：到此停止自动续拉并提示缩小范围（用户拍板「保底 2000 条」）。 */
 const HARD_LIMIT = 2000
-/** 默认时间档：最近 3 天（含今天）。 */
-const DEFAULT_DAYS = 3
 // 不变量自检：上限必须是页大小的整数倍，否则「续拉会越过上限」或「永远到不了上限」。
 if (HARD_LIMIT % PAGE_SIZE !== 0) console.warn('[tdt] HARD_LIMIT 必须是 PAGE_SIZE 的整数倍')
 
@@ -250,19 +247,6 @@ const filterRightStyle: CSSProperties = {
 }
 const emptyStyle: CSSProperties = {
   padding: '40px 0', textAlign: 'center', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg-3)',
-}
-
-/** `YYYY-MM-DD`（本地日历日，只用于拼默认时间档）。 */
-function ymdOf(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
-
-/** 默认时间档：最近 N 天（含今天）。 */
-function defaultRange(): TimeRangeValue {
-  const now = new Date()
-  const from = new Date(now)
-  from.setDate(from.getDate() - (DEFAULT_DAYS - 1))
-  return { from: ymdOf(from), to: ymdOf(now) }
 }
 
 /** 本地日历日的 key（`YYYY-MM-DD`）。 */
@@ -813,7 +797,6 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   const { t, tasks, workspaces, onOpenSession, onOpenFile, onViewTask } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
 
-  const [range, setRange] = useState<TimeRangeValue>(defaultRange)
   const [workspace, setWorkspace] = useState('')
   const [bucket, setBucket] = useState<StatusBucket>('')
   const [taskId, setTaskId] = useState('')
@@ -836,18 +819,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   rowsCountRef.current = rows.length
   /** 事件请求序号：快速切块时作废旧响应，别把 A 的事件贴到 B 上。 */
   const eventsSeqRef = useRef(0)
-  /** 首次进入时的默认档（用来判「用户是否真的动过过滤器」⇒ 决定空态文案）。 */
-  const initialRangeRef = useRef<TimeRangeValue>(range)
 
-  const calendarLabels = useMemo(() => calendarLabelsOf(t), [t])
-  const timeLabels = useMemo(() => timeLabelsOf(t), [t])
-  const rangeLabels = useMemo<TimeRangeLabels>(() => ({
-    all: t('trAll'), custom: t('trCustom'), from: t('cardFrom'), to: t('cardTo'),
-    presets: {
-      today: t('trToday'), yesterday: t('trYesterday'), thisWeek: t('trThisWeek'),
-      lastWeek: t('trLastWeek'), thisMonth: t('trThisMonth'), lastMonth: t('trLastMonth'),
-    },
-  }), [t])
   // 日期行两个格式化器按语言记忆化（此前每次渲染、每天都新建 Intl 实例）。
   const dayFormatter = useMemo<Intl.DateTimeFormat | null>(
     () => (typeof Intl === 'undefined' ? null : new Intl.DateTimeFormat(t('localeTag'), { year: 'numeric', month: 'long', day: 'numeric' })),
@@ -884,7 +856,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   const depTitleOf = useCallback((taskId: string): string => titleById.get(taskId) ?? taskId.slice(0, 8), [titleById])
   /** 工作区反查：优先任务表（当前归属），任务已删退回派发快照的 `workspacePath` 末段（当次执行当时的值）。 */
   const workspaceById = useMemo(() => new Map(tasks.map(o => [o.id, o.workspace])), [tasks])
-  const filterSig = `${range.from}|${range.to}|${workspace}|${bucket}|${taskId}`
+  const filterSig = `${workspace}|${bucket}|${taskId}`
 
   const load = useCallback(async (nextCursor: string | null): Promise<void> => {
     if (inFlightRef.current) return
@@ -893,14 +865,11 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     seqRef.current = seq
     setLoading(true)
     setError(null)
-    const q = rangeToQuery(range, 'day')
     try {
       const page = await fetchInstances({
         workspace: workspace === '' ? undefined : workspace,
         statuses: bucket === '' ? undefined : statusesOfBucket(bucket),
         taskId: taskId === '' ? undefined : taskId,
-        from: q.fromTs,
-        to: q.toTs,
         limit: PAGE_SIZE,
         cursor: nextCursor ?? undefined,
       })
@@ -919,7 +888,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
         inFlightRef.current = false
       }
     }
-  }, [range, workspace, bucket, taskId])
+  }, [workspace, bucket, taskId])
 
   // 过滤条件变化（含首次挂载）⇒ 作废在途请求 + 重置列表 + 取第一页 + 收起已展开的块。
   // ⚠️ 上限只拦「续拉」（见 loadMore）：首屏永远允许取 ⇒ 满 2000 条后改过滤不会白屏。
@@ -999,9 +968,8 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
     setEventsError(null)
   }, [])
   const atLimit = rows.length >= HARD_LIMIT
-  const rangeChanged = range.from !== initialRangeRef.current.from || range.to !== initialRangeRef.current.to
-  /** 用户是否真的动过过滤器（决定空态文案：没动过 = 这段时间本来就没记录）。 */
-  const touched = rangeChanged || workspace !== '' || bucket !== '' || taskId !== ''
+  /** 用户是否真的动过过滤器（决定空态文案：没动过 = 本来就没有记录）。 */
+  const touched = workspace !== '' || bucket !== '' || taskId !== ''
 
   const changeWorkspace = useCallback((next: string): void => {
     setWorkspace(next)
@@ -1044,11 +1012,6 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
           onChange: (next: StatusBucket | 'all') => { setBucket(next === 'all' ? '' : next) },
         }),
         h('div', { style: filterRightStyle },
-          h(TimeRange, {
-            value: range, onChange: setRange,
-            labels: rangeLabels, calendarLabels, timeLabels,
-            precision: 'day', size: 'md',
-          }),
           h(SelectField, {
             value: workspace,
             options: workspaceOptions,
@@ -1081,7 +1044,7 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
       // 加载（**首屏 + 下拉续拉**）一律走**页面右下角统一的那一个** Loading
       // （用户 2026-10-04：没有我的特殊认可，不许在任何其他地方再建 Loading 点）
       // ⇒ 页脚不再自己显示「加载中」；「已加载完 / 到上限」这类**结果提示**照旧在页脚显示。
-      loading ? h(Loading, { label: t('recordsLoading') }) : null,
+      loading ? h(Loading, {}) : null,
 
       // ── 流水账：**没有外框**，内容直接铺在页面底上（空态 / 加载 / 失败态同样不带框）──
       rows.length === 0
