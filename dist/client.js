@@ -69321,8 +69321,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const CALENDAR_CSS = `
 /* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
-/* 月份标题：纯文本（无框、不可点）；左右单箭头走月、双箭头走年，不再用日期选择器弹层。 */
-.dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);}
+/* 月份标题：纯文本（无框、不可点）；左右单箭头走月、双箭头走年，不再用日期选择器弹层。
+   固定宽度 + 居中（用户 2026-10-06：年 4 位 + 月 2 位，内容定长，但数字字形不等宽会带着箭头晃；
+   定宽盒 + 文字居中 ⇒ 左右箭头不再跳动）。 */
+.dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);
+  flex:none;width:6em;text-align:center;white-space:nowrap;font-variant-numeric:tabular-nums;}
 
 .dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
 
@@ -69784,7 +69787,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					alignItems: "center"
 				} }, (0, react$1.createElement)("span", { style: { display: "inline-flex" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 15 })), (0, react$1.createElement)("span", { style: {
 					display: "inline-flex",
-					marginLeft: -7
+					marginLeft: -9
 				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 15 }))),
 				onClick: () => {
 					stepYear(-1);
@@ -69817,7 +69820,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					alignItems: "center"
 				} }, (0, react$1.createElement)("span", { style: { display: "inline-flex" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 15 })), (0, react$1.createElement)("span", { style: {
 					display: "inline-flex",
-					marginLeft: -7
+					marginLeft: -9
 				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 15 }))),
 				onClick: () => {
 					stepYear(1);
