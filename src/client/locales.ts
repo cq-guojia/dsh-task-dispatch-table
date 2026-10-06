@@ -18,7 +18,7 @@ export type LocaleKey =
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabCalendar' | 'tabDebug'
   // —— 任务日程（日历页，2026-10-05）：月份导航 / 两态图例 / 计划说明 / 截断与错误 ——
   | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
-  | 'calTruncated' | 'calPlanTag' | 'calNotExecuted' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel' | 'calToday'
+  | 'calTruncated' | 'calPlanTag' | 'calNotExecuted' | 'calPlanHint' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel' | 'calToday'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
   | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext'
@@ -264,6 +264,7 @@ export const zh: Record<LocaleKey, string> = {
   calTruncated: '该月记录超过上限（3000 条），只显示了其中一部分；请用上方过滤缩小范围。',
   calPlanTag: '计划：',
   calNotExecuted: '未执行',
+  calPlanHint: '此任务尚未执行，时间为预计执行时间',
   calLegendDone: '已执行',
   calLegendPlan: '预计执行',
   calToday: '今天',
@@ -920,6 +921,7 @@ export const en: Record<LocaleKey, string> = {
   calTruncated: 'This month exceeds the 3000-row limit and is truncated; narrow the filters above.',
   calPlanTag: 'Plan:',
   calNotExecuted: 'Not executed',
+  calPlanHint: 'This task has not run yet; times shown are estimated',
   calLegendDone: 'Executed',
   calLegendPlan: 'Expected',
   calToday: 'Today',

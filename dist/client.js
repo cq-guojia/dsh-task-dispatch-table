@@ -302,6 +302,7 @@ window.__ModuleLoader__.load({
 			calTruncated: "该月记录超过上限（3000 条），只显示了其中一部分；请用上方过滤缩小范围。",
 			calPlanTag: "计划：",
 			calNotExecuted: "未执行",
+			calPlanHint: "此任务尚未执行，时间为预计执行时间",
 			calLegendDone: "已执行",
 			calLegendPlan: "预计执行",
 			calToday: "今天",
@@ -931,6 +932,7 @@ window.__ModuleLoader__.load({
 			calTruncated: "This month exceeds the 3000-row limit and is truncated; narrow the filters above.",
 			calPlanTag: "Plan:",
 			calNotExecuted: "Not executed",
+			calPlanHint: "This task has not run yet; times shown are estimated",
 			calLegendDone: "Executed",
 			calLegendPlan: "Expected",
 			calToday: "Today",
@@ -2896,7 +2898,7 @@ body[data-ds-dark-theme]{
 					else openPanel();
 				},
 				style: { width: props.width ?? dateWidthOf(size) }
-			}, (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.labelFormatter !== void 0 ? props.labelFormatter(props.value) : props.value), (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
+			}, (0, react$1.createElement)("span", { className: `dsh-tdt-dtf__label${props.value === "" ? " dsh-tdt-dtf__label--ph" : ""}` }, props.value === "" ? props.placeholder : props.value), (0, react$1.createElement)("span", { className: "dsh-tdt-dtf__icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })));
 			return (0, react$1.createElement)("span", { className: "dsh-tdt-dtf-wrap" }, anchor, open ? (0, react_dom.createPortal)((0, react$1.createElement)("div", {
 				ref: panelRef,
 				role: "dialog",
@@ -68457,6 +68459,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-fg-3);border:1px dashed var(--rec-planned);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
+/* 预计执行（未执行）名字后的括号说明：小、灰、不换行（与块内次要文字同档）。 */
+.dsh-tdt-rec-planhint{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);font-weight:400;flex:none;white-space:nowrap;}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
    最窄也要能放下「工作区 · 计划 · 实际 · 时长 · Token」的一部分，永不换行、永不横向滚动。 */
 .dsh-tdt-rec-r2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -68768,7 +68772,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)(MarqueeText, {
 				text: label,
 				className: "dsh-tdt-rec-title dsh-tdt-ellipsis"
-			})))), deps.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmarks" }, deps.slice(0, MAX_DEPMARKS).map((dep, index) => {
+			})))), isPlanned ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-planhint" }, `（${t("calPlanHint")}）`) : null, deps.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmarks" }, deps.slice(0, MAX_DEPMARKS).map((dep, index) => {
 				const mark = onViewTask === void 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)) : (0, react$1.createElement)("button", {
 					type: "button",
 					className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--btn",
@@ -69316,6 +69320,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const CALENDAR_CSS = `
 /* 顶部一行：左 = 月份导航；右 = 图例计数 + 工作区 + 任务（**同一行、居右**，用户 2026-10-06） */
 .dsh-tdt-cal-nav{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-3);}
+/* 月份标题：纯文本（无框、不可点）；左右单箭头走月、双箭头走年，不再用日期选择器弹层。 */
+.dsh-tdt-cal-title{font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);font-weight:600;color:var(--tdt-fg);}
 
 .dsh-tdt-cal-right{display:flex;align-items:center;gap:var(--tdt-space-2);margin-left:auto;}
 
@@ -69648,6 +69654,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				});
 				setOpenId(null);
 			}, []);
+			const stepYear = (0, react$1.useCallback)((delta) => {
+				setCursor((cur) => {
+					const next = {
+						y: cur.y + delta,
+						m: cur.m
+					};
+					setSelected((sel) => sel.slice(0, 7) === monthKeyOf(next.y, next.m) ? sel : "");
+					return next;
+				});
+				setOpenId(null);
+			}, []);
 			const goToday = (0, react$1.useCallback)(() => {
 				const now2 = /* @__PURE__ */ new Date();
 				setCursor({
@@ -69757,27 +69774,28 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-nav" }, (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
+				label: calLabels.prevYear,
+				title: calLabels.prevYear,
+				icon: (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center"
+				} }, (0, react$1.createElement)("span", { style: { display: "inline-flex" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 15 })), (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					marginLeft: -7
+				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 15 }))),
+				onClick: () => {
+					stepYear(-1);
+				}
+			}), (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
 				label: calLabels.prevMonth,
 				title: calLabels.prevMonth,
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronLeftOutlineRegular, { size: 16 }),
 				onClick: () => {
 					stepMonth(-1);
 				}
-			}), (0, react$1.createElement)(DateField, {
-				value: `${y}-${pad2$3(m)}-01`,
-				onChange: (iso) => {
-					const mm = /^(\d{4})-(\d{2})-\d{2}$/.exec(iso);
-					if (mm !== null) setCursor({
-						y: Number(mm[1]),
-						m: Number(mm[2])
-					});
-				},
-				placeholder: calLabels.monthTitle(y, m),
-				ariaLabel: calLabels.monthTitle(y, m),
-				labels: calLabels,
-				size: "md",
-				width: "auto"
-			}), (0, react$1.createElement)(IconButton, {
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-title" }, calLabels.monthTitle(y, m)), (0, react$1.createElement)(IconButton, {
 				variant: "plain",
 				size: "md",
 				label: calLabels.nextMonth,
@@ -69785,6 +69803,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 }),
 				onClick: () => {
 					stepMonth(1);
+				}
+			}), (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "md",
+				label: calLabels.nextYear,
+				title: calLabels.nextYear,
+				icon: (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center"
+				} }, (0, react$1.createElement)("span", { style: { display: "inline-flex" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 15 })), (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					marginLeft: -7
+				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 15 }))),
+				onClick: () => {
+					stepYear(1);
 				}
 			}), (0, react$1.createElement)(Button$2, {
 				variant: "outline",

@@ -122,8 +122,6 @@ export function DateField(props: {
   labels: CalendarLabels
   disabled?: boolean
   title?: string
-  /** 自定义锚点展示文案（默认直接显示 `value`）；例如只显示「年-月」而不显示具体日。 */
-  labelFormatter?: (value: string) => string
   width?: number | string
   /** 高度档（sm 24 / md 28 / lg 32，默认 lg = 32 标准行）。 */
   size?: 'sm' | 'md' | 'lg'
@@ -187,7 +185,7 @@ export function DateField(props: {
     style: { width: props.width ?? dateWidthOf(size) },
   },
     h('span', { className: `dsh-tdt-dtf__label${props.value === '' ? ' dsh-tdt-dtf__label--ph' : ''}` },
-      props.value === '' ? props.placeholder : (props.labelFormatter !== undefined ? props.labelFormatter(props.value) : props.value)),
+      props.value === '' ? props.placeholder : props.value),
     h('span', { className: 'dsh-tdt-dtf__icon' }, h(IconChevronDownOutlineRegular, { size: 16 })),
   )
 
