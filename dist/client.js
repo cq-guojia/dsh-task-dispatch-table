@@ -67480,68 +67480,63 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				flexDirection: "column",
 				gap: "6px",
 				marginBottom: "10px"
-			} }, draft.attachments.map((att) => (0, react$1.createElement)("div", {
-				key: att.id,
-				style: {
-					display: "flex",
-					alignItems: "center",
-					gap: "8px",
-					padding: "6px 10px",
-					borderRadius: "var(--tdt-radius-sm)",
-					background: "var(--tdt-hover,rgba(38,49,72,.06))"
-				}
-			}, (0, react$1.createElement)("span", { style: {
-				flex: "none",
-				display: "flex",
-				alignItems: "center"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: att.name,
-				size: 16
-			})), (0, react$1.createElement)("span", {
-				className: "dsh-tdt-ellipsis",
-				style: {
-					flex: "1 1 auto",
-					minWidth: 0,
-					fontSize: "var(--tdt-font-md)"
-				}
-			}, att.name), (0, react$1.createElement)("span", {
-				title: att.ref,
-				style: {
-					flex: "none",
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-2)",
-					borderRadius: "var(--tdt-radius-xs)",
-					padding: "1px 6px",
-					background: "var(--tdt-hover,rgba(38,49,72,.06))"
-				}
-			}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (() => {
+			} }, draft.attachments.map((att) => {
 				const hit = resolvedAttachments?.find((r) => r.name === att.name && r.kind === att.kind && r.path !== void 0 && r.anchorSessionId !== void 0);
-				return hit === void 0 || onOpenFile === void 0 ? null : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				const canView = hit !== void 0 && onOpenFile !== void 0;
+				return (0, react$1.createElement)("div", {
+					key: att.id,
+					style: {
+						display: "flex",
+						alignItems: "center",
+						gap: "8px",
+						padding: "6px 10px",
+						borderRadius: "var(--tdt-radius-sm)",
+						background: "var(--tdt-hover,rgba(38,49,72,.06))",
+						cursor: canView ? "pointer" : void 0
+					},
+					title: canView ? t("editorAttachmentView") : void 0,
+					onClick: canView ? () => {
+						onOpenFile?.(hit.anchorSessionId, hit.path);
+					} : void 0
+				}, (0, react$1.createElement)("span", { style: {
+					flex: "none",
+					display: "flex",
+					alignItems: "center"
+				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: att.name,
+					size: 16
+				})), (0, react$1.createElement)("span", {
+					className: "dsh-tdt-ellipsis",
+					style: {
+						flex: "1 1 auto",
+						minWidth: 0,
+						fontSize: "var(--tdt-font-md)"
+					}
+				}, att.name), (0, react$1.createElement)("span", {
+					title: att.ref,
+					style: {
+						flex: "none",
+						fontSize: "var(--tdt-font-xs)",
+						color: "var(--tdt-fg-2)",
+						borderRadius: "var(--tdt-radius-xs)",
+						padding: "1px 6px",
+						background: "var(--tdt-hover,rgba(38,49,72,.06))"
+					}
+				}, att.kind === "link" ? t("editorAttachmentLink") : t("editorAttachmentUpload")), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 					variant: "ghost",
 					size: "sm",
+					onClick: (event) => {
+						event.stopPropagation();
+						patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
+					},
+					title: t("editorAttachmentRemove"),
+					"aria-label": t("editorAttachmentRemove"),
 					style: {
 						flex: "none",
 						whiteSpace: "nowrap"
-					},
-					title: t("editorAttachmentView"),
-					"aria-label": t("editorAttachmentView"),
-					onClick: () => {
-						onOpenFile(hit.anchorSessionId, hit.path);
 					}
-				}, t("editorAttachmentView"));
-			})(), (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-				variant: "ghost",
-				size: "sm",
-				onClick: () => {
-					patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
-				},
-				title: t("editorAttachmentRemove"),
-				"aria-label": t("editorAttachmentRemove"),
-				style: {
-					flex: "none",
-					whiteSpace: "nowrap"
-				}
-			}, t("editorAttachmentRemove"))))), (0, react$1.createElement)("div", { style: {
+				}, t("editorAttachmentRemove")));
+			})), (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				gap: "10px",
 				alignItems: "stretch"

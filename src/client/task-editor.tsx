@@ -1713,27 +1713,28 @@ export function TaskEditorDrawer(props: {
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
     draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
           // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
-          draft.attachments.map(att => h('div', { key: att.id, style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-sm)', background: 'var(--tdt-hover,rgba(38,49,72,.06))' } },
+          // 整行可点开预览（用户 2026-10-06：去掉「查看」按钮，点整行即查看）：与 overview 解析结果按
+          // 「同名 + 同 kind」配对，配对上有绝对路径和锚点会话 ⇒ 点行打开侧边栏预览；
+          // 未保存 / 配对不上（上传后还没跑出锚点会话）的附件不可点，避免给假入口（用户 2026-10-05）。
+          draft.attachments.map(att => {
+            const hit = resolvedAttachments?.find(r => r.name === att.name && r.kind === att.kind && r.path !== undefined && r.anchorSessionId !== undefined)
+            const canView = hit !== undefined && onOpenFile !== undefined
+            return h('div', {
+              key: att.id,
+              style: { display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-sm)', background: 'var(--tdt-hover,rgba(38,49,72,.06))', cursor: canView ? 'pointer' : undefined },
+              title: canView ? t('editorAttachmentView') : undefined,
+              onClick: canView ? () => { onOpenFile?.(hit!.anchorSessionId as string, hit!.path as string) } : undefined,
+            },
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
             // 文件名占据左侧所有可用空间，把「上传/链接」标签和「移除」按钮顶到最右边；
             // 自己保留 flex-shrink，容器窄时自动截断成省略号，不会挤变形按钮（用户 2026-10-03）。
             h('span', { className: 'dsh-tdt-ellipsis', style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } }, att.name),
             h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover,rgba(38,49,72,.06))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
-            // 查看：与 overview 解析结果按「同名 + 同 kind」配对，配对上有绝对路径和锚点会话 ⇒ 点开侧边栏预览。
-            // 未保存 / 配对不上（上传后还没跑出锚点会话）的附件不显示，避免给假入口（用户 2026-10-05）。
-            (() => {
-              const hit = resolvedAttachments?.find(r => r.name === att.name && r.kind === att.kind && r.path !== undefined && r.anchorSessionId !== undefined)
-              return hit === undefined || onOpenFile === undefined
-                ? null
-                : h(Button, {
-                  variant: 'ghost', size: 'sm', style: { flex: 'none', whiteSpace: 'nowrap' },
-                  title: t('editorAttachmentView'), 'aria-label': t('editorAttachmentView'),
-                  onClick: () => { onOpenFile(hit.anchorSessionId as string, hit.path as string) },
-                }, t('editorAttachmentView'))
-            })(),
-            // 移除按钮也声明不收缩 / 不折行，确保不会被文件名挤到换行或压扁。
-            h(Button, { variant: 'ghost', size: 'sm', onClick: () => { patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove'), style: { flex: 'none', whiteSpace: 'nowrap' } }, t('editorAttachmentRemove')),
-          )),
+            // 移除按钮保留（用户 2026-10-06），声明不收缩 / 不折行，确保不会被文件名挤到换行或压扁；
+            // 点击要拦冒泡，否则会先删附件又触发整行的「查看」。
+            h(Button, { variant: 'ghost', size: 'sm', onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove'), style: { flex: 'none', whiteSpace: 'nowrap' } }, t('editorAttachmentRemove')),
+            )
+          }),
         ),
     // 一行两块（用户 2026-09-29）：左边大块 = 点击/拖拽上传；右边 = 小号「选择工作区文件」按钮。
     // 隐藏 input 挂卡片层、始终在册。
