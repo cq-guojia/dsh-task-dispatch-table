@@ -19,7 +19,8 @@ import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, 
 import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pad2 } from './format'
 import { fetchEvents, fetchInstanceBySession, fetchInstancesLite, type EventRow, type InstanceRow } from './query'
-import { statusTextOf, statusToneOf } from './status-text'
+import { isRunningStatus, statusTextOf, statusToneOf } from './status-text'
+import { useInstancesRunningPoll } from './instances-poll'
 import { monthRangeOf, monthRangeQuery, planEntriesByDay, type CalendarPlanEntry, type CalendarTask } from '../calendar-plan.js'
 import { logicalDateOf } from '../schedule-next.js'
 // 执行块**唯一实现**从执行记录页复用（不许再写一份条目渲染）+ 它的样式注入（幂等）。
@@ -273,6 +274,11 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
 
   useEffect(() => { void load(); return () => { seqRef.current += 1 } }, [load])
 
+  // 运行状态轮询（与执行记录页共用同一 hook）：当天还有在跑的实例时，每 5 秒静默刷新当月，
+  // 跑完即停 ⇒ 任务跑完、日历开着也能跟着更新（不再卡在「运行中」）。
+  const hasRunning = instances.some(r => isRunningStatus(r.status))
+  useInstancesRunningPoll(hasRunning, () => { void load() })
+
   // 未来计划（浏览器内现算，无请求）：只算启用任务，且跟着工作区 / 任务过滤一起收窄。
   const planByDay = useMemo(() => {
     const source = rowsRef.current
@@ -446,7 +452,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       tt,
       snapshot: snapshots.get(item.row.id) ?? null,
       depTitleOf: nameOf,
-      open: true,
+      open: openId === item.row.id,
       onToggle: toggleItem,
       openSession: (sid: string) => { onOpenSession?.(sid) },
       openFile: onOpenFile,

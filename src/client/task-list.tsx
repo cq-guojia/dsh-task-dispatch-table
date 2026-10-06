@@ -43,6 +43,7 @@ import { ensureTaskEditorStyle } from './task-editor-css'
 import { FloatingToast, ensureToastStyle } from './toast-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
 import { applyStyle, Button, IconButton, Input as TdtInput, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RunningBlocks, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { ensureRunningStyle, RUNNING_TONE, RUN_PULSE_CLASS } from './ui/running'
 
 /**
  * 「立即执行」结果（与服务端 `scheduler.ts` 的 RunNowResult 对齐）：业务性拒绝走
@@ -101,8 +102,8 @@ const WS_WIDTH = 180
 
 // ── 顶部一排的样式注入（官方 Input 默认 32px 高，需压到与按钮同高）──
 const TASK_LIST_CSS = [
-  // 状态条运行中：整条明暗脉动（竖条不适合旋转，脉动更显眼）。
-  '@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }',
+  // 状态条运行中脉动改走统一 keyframe（ui/running.ts 的 dsh-tdt-run-pulse），此处不再各定义一份。
+
   // 官方 Input 默认 32px 高 + 0.5px 边框 ⇒ 压到与按钮同高，并统一成同一套观感。
   // ⚠️ 必须 box-sizing:border-box：官方那 0.5px 边框若加在 28 之外，搜索框外框会比「工作区下拉」高约 2px
   //    （用户 2026-10-01 点名「搜索框比下拉高两个像素」的根因）。下拉侧由基础层 `SelectField size="md"` 同高。
@@ -402,13 +403,14 @@ function useFlip(signature: string): (id: string) => (el: HTMLElement | null) =>
 const RAIL_W = 6
 const RAIL_H = 36
 
-/** 运行中：整条**蓝色**明暗脉动（2026-10-06：与「执行记录」页运行态统一成蓝色，呼吸感也改为接近闪烁、放慢）。 */
+/** 运行中：整条**蓝色**明暗脉动（颜色 / 脉动形状全在 `ui/running.ts` 一处定，前后两端统一）。 */
 function RunningRail() {
+  ensureRunningStyle()
   return h('span', {
+    className: `${RUN_PULSE_CLASS} dsh-tdt-rail`,
     style: {
       display: 'inline-block', width: `${RAIL_W}px`, height: `${RAIL_H}px`, flex: 'none',
-      borderRadius: 'var(--tdt-radius-xs)', background: 'var(--tdt-business)',
-      animation: 'dsh-tdt-rail-pulse var(--tdt-dur-run) ease-in-out infinite',
+      borderRadius: 'var(--tdt-radius-xs)', background: RUNNING_TONE,
     },
   })
 }
@@ -519,8 +521,8 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
   if (row.running) {
     return h(Tooltip, { label: t('listRunning'), side: 'bottom' },
       h('div', { style: pillOuterStyle },
-        h('span', { style: pillIconCell('var(--tdt-business)', 'var(--tdt-on-signal)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
-        h('span', { style: { ...pillTimeCell, color: 'var(--tdt-business)' } }, h(RunningBlocks, {})),
+        h('span', { style: pillIconCell(RUNNING_TONE, 'var(--tdt-on-signal)') }, h(IconAlarmClockOutlineRegular, { size: 12 })),
+        h('span', { style: { ...pillTimeCell, color: RUNNING_TONE } }, h(RunningBlocks, {})),
       ),
     )
   }
@@ -560,7 +562,7 @@ function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
             // ① 上界内 ⇒ 三个方块（正在等派发，视觉上就是「在跑」）——**与「运行中」同色（蓝）**。
             //    2026-09-30 评审 P1：此前这里继承正文色（黑），跟运行中的蓝对不上，看着像两回事。
             if (-diff <= dueLoadingMs()) {
-              return h('span', { style: { display: 'inline-flex', alignItems: 'center', color: 'var(--tdt-business)' } }, h(RunningBlocks, {}))
+              return h('span', { style: { display: 'inline-flex', alignItems: 'center', color: RUNNING_TONE } }, h(RunningBlocks, {}))
             }
             // ② 超上界仍未 `running` ⇒ **「延期」**：该槽已经过了但还没真正开始执行
             //    （上游没跑完 / 附件缺失 / 串行互斥）。**不能一直装成在跑**（决策 54 红线），

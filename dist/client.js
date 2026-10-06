@@ -64321,6 +64321,24 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}) : null);
 		}
 		//#endregion
+		//#region src/client/ui/running.ts
+		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
+		const RUNNING_TONE = "var(--tdt-business)";
+		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
+		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
+		const RUNNING_CSS = `
+@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite; }
+@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
+`;
+		let ensured = false;
+		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
+		const ensureRunningStyle = () => {
+			if (ensured) return;
+			ensured = true;
+			applyStyle("domain:running", RUNNING_CSS);
+		};
+		//#endregion
 		//#region src/client/task-list.tsx
 		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
 		const monoFont$1 = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
@@ -64330,7 +64348,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
 		const WS_WIDTH = 180;
 		const TASK_LIST_CSS = [
-			"@keyframes dsh-tdt-rail-pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.35 } }",
 			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
 			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
 			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
@@ -64533,17 +64550,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		const RAIL_W = 6;
 		const RAIL_H = 36;
-		/** 运行中：整条**蓝色**明暗脉动（2026-10-06：与「执行记录」页运行态统一成蓝色，呼吸感也改为接近闪烁、放慢）。 */
+		/** 运行中：整条**蓝色**明暗脉动（颜色 / 脉动形状全在 `ui/running.ts` 一处定，前后两端统一）。 */
 		function RunningRail() {
-			return (0, react$1.createElement)("span", { style: {
-				display: "inline-block",
-				width: `${RAIL_W}px`,
-				height: `${RAIL_H}px`,
-				flex: "none",
-				borderRadius: "var(--tdt-radius-xs)",
-				background: "var(--tdt-business)",
-				animation: "dsh-tdt-rail-pulse var(--tdt-dur-run) ease-in-out infinite"
-			} });
+			ensureRunningStyle();
+			return (0, react$1.createElement)("span", {
+				className: `${RUN_PULSE_CLASS} dsh-tdt-rail`,
+				style: {
+					display: "inline-block",
+					width: `${RAIL_W}px`,
+					height: `${RAIL_H}px`,
+					flex: "none",
+					borderRadius: "var(--tdt-radius-xs)",
+					background: RUNNING_TONE
+				}
+			});
 		}
 		function StatusRail(props) {
 			const { row } = props;
@@ -64645,9 +64665,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listRunning"),
 				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-business)", "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(RUNNING_TONE, "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
 				...pillTimeCell,
-				color: "var(--tdt-business)"
+				color: RUNNING_TONE
 			} }, (0, react$1.createElement)(RunningBlocks, {}))));
 			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
 			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
@@ -64664,7 +64684,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						if (-diff <= dueLoadingMs()) return (0, react$1.createElement)("span", { style: {
 							display: "inline-flex",
 							alignItems: "center",
-							color: "var(--tdt-business)"
+							color: RUNNING_TONE
 						} }, (0, react$1.createElement)(RunningBlocks, {}));
 						return (0, react$1.createElement)("span", { style: {
 							cursor: "default",
@@ -68309,6 +68329,26 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}
 		}
 		//#endregion
+		//#region src/client/instances-poll.ts
+		/**
+		* 只要 `hasRunning` 为真（列表里还有在跑的实例），就每 `ms` 毫秒静默调一次 `reload`；全部跑完即停。
+		* 各视图把「自己的 reload」传进来即可（执行记录刷首屏、日程刷当月）。
+		*
+		* `reload` 存进 ref：即便调用方每次渲染都给新函数，轮询 interval 也不会反复重建，
+		* 否则在频繁重渲的页面上计时器会不断被重置、永远不触发。
+		*
+		* @param reload 静默刷新回调（不应切 Loading、不应惊扰已展开的内容）。
+		*/
+		function useInstancesRunningPoll(hasRunning, reload, ms = 5e3) {
+			const reloadRef = (0, react$1.useRef)(reload);
+			reloadRef.current = reload;
+			(0, react$1.useEffect)(() => {
+				if (!hasRunning) return;
+				const id = window.setInterval(() => reloadRef.current(), ms);
+				return () => window.clearInterval(id);
+			}, [hasRunning, ms]);
+		}
+		//#endregion
 		//#region src/client/records-timeline.tsx
 		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
 		const PAGE_SIZE = 50;
@@ -68369,8 +68409,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
-.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
-@keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.dsh-tdt-rec-bar--run{animation:dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
+/* keyframe 统一在 ui/running.ts（dsh-tdt-run-pulse），此处不再各定义一份。 */
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
   .dsh-tdt-rec-bar--run{animation:none;}
@@ -68599,6 +68639,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask } = props;
 			const tone = statusToneOf(row.status);
 			const running = isRunningStatus(row.status);
+			ensureRunningStyle();
 			/**
 			* 状态标签（**仅非成功态**才出：绿 = 正常，大家都知道 ⇒ 不标签，用户 2026-10-05）。
 			* ⚠️ 文案**直接用通用两字短名**（`statusTextOf` 单源：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知）——
@@ -68995,14 +69036,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (seq === eventsSeqRef.current) setEventsBusy(false);
 				});
 			}, [openId, eventsCache]);
-			const hasRunning = rows.some((r) => isRunningStatus(r.status));
-			(0, react$1.useEffect)(() => {
-				if (!hasRunning) return;
-				const timer = window.setInterval(() => {
-					load(null, true);
-				}, 5e3);
-				return () => window.clearInterval(timer);
-			}, [hasRunning, load]);
+			useInstancesRunningPoll(rows.some((r) => isRunningStatus(r.status)), () => {
+				load(null, true);
+			});
 			const loadMore = (0, react$1.useCallback)(() => {
 				if (loading || done || cursor === null) return;
 				if (error !== null) return;
@@ -69452,6 +69488,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					seqRef.current += 1;
 				};
 			}, [load]);
+			useInstancesRunningPoll(instances.some((r) => isRunningStatus(r.status)), () => {
+				load();
+			});
 			const planByDay = (0, react$1.useMemo)(() => {
 				const picked = rowsRef.current.filter((row) => row.enabled !== false && (workspace === "" || row.workspace === workspace) && (taskId === "" || row.id === taskId));
 				const { from, to } = monthRangeOf(y, m);
@@ -69623,7 +69662,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					tt,
 					snapshot: snapshots.get(item.row.id) ?? null,
 					depTitleOf: nameOf,
-					open: true,
+					open: openId === item.row.id,
 					onToggle: toggleItem,
 					openSession: (sid) => {
 						onOpenSession?.(sid);

@@ -47,6 +47,8 @@ import {
   applyStyle,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
+import { useInstancesRunningPoll } from './instances-poll'
+import { ensureRunningStyle } from './ui/running'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
 import { ensureTaskInfoStyle } from './task-info-css'
@@ -119,8 +121,8 @@ const RECORDS_CSS = `
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
-.dsh-tdt-rec-bar--run{animation:dsh-tdt-rec-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
-@keyframes dsh-tdt-rec-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.dsh-tdt-rec-bar--run{animation:dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite;}
+/* keyframe 统一在 ui/running.ts（dsh-tdt-run-pulse），此处不再各定义一份。 */
 @keyframes dsh-tdt-rec-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion: reduce){
   .dsh-tdt-rec-bar--run{animation:none;}
@@ -396,6 +398,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
   const { row, label, workspace, t, tt, snapshot, depTitleOf, open, onToggle, openSession, openFile, events, eventsBusy, eventsError, crossFmt, onViewTask } = props
   const tone = statusToneOf(row.status)
   const running = isRunningStatus(row.status)
+  ensureRunningStyle()
   /**
    * 状态标签（**仅非成功态**才出：绿 = 正常，大家都知道 ⇒ 不标签，用户 2026-10-05）。
    * ⚠️ 文案**直接用通用两字短名**（`statusTextOf` 单源：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知）——
@@ -928,15 +931,11 @@ export function RecordsTimelineView(props: RecordsTimelineProps): ReturnType<typ
   }, [openId, eventsCache])
 
   // 运行状态轮询（修复：任务跑完若不切换 / 刷新页面，状态一直卡在「运行中」）。
-  // 列表里**只要还有任一条在跑**，就每 5 秒静默重载第一页（在跑的实例都在最近、落在第一页）；
-  // 跑完即停轮询。只刷首屏、不碰已展开的块、不闪 Loading（`silent`）。
+  // 列表里**只要还有任一条在跑**，就每 5 秒静默重载第一页（在跑的实例都在最近、落在第一页）；跑完即停。
+  // 只刷首屏、不碰已展开的块、不闪 Loading（`silent`）。轮询逻辑抽成统一 hook（见 instances-poll.ts），
+  // 日程页共用同一份，不再各写一段 setInterval。
   const hasRunning = rows.some(r => isRunningStatus(r.status))
-  useEffect(() => {
-    if (!hasRunning) return
-    const timer = window.setInterval(() => { void load(null, true) }, 5_000)
-    return () => window.clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasRunning, load])
+  useInstancesRunningPoll(hasRunning, () => { void load(null, true) })
 
   const loadMore = useCallback((): void => {
     if (loading || done || cursor === null) return
