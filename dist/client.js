@@ -1629,6 +1629,8 @@ body{
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
   /* 任务日程页本月格的默认底（2026-10-06）：浅色下就是卡片面本身，不单独调 */
   --tdt-cal-cell-bg:var(--tdt-surface-1);
+  /* 任务日程页本月格 hover 底（浅色段）：沿用通用交互底 */
+  --tdt-cal-cell-hover:var(--tdt-hover);
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
@@ -1720,6 +1722,9 @@ body[data-ds-dark-theme]{
   /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），
      比原来的卡片面更沉、更偏蓝灰；选中格仍走 --tdt-selected-bg（更暗一档），层级不变。 */
   --tdt-cal-cell-bg:#23262e;
+  /* 任务日程页本月格 hover 底（深色段，2026-10-06）：原先走 --tdt-hover（宿主浅色叠加）在深底上显得
+     「灰发亮」，不好看 ⇒ 换成更贴底的蓝调微亮（与 open-bg-soft 同族），hover 时不刺眼、又有反馈。 */
+  --tdt-cal-cell-hover:rgba(96,165,250,.12);
 }
 `;
 		//#endregion
@@ -69158,7 +69163,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:6px;
   overflow:hidden;background:var(--tdt-cal-cell-bg);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
   transition:background var(--tdt-dur-fast) var(--tdt-ease);}
-.dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
+.dsh-tdt-cal-cell:hover{background:var(--tdt-cal-cell-hover);}
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
 .dsh-tdt-cal-cell--out{background:var(--tdt-surface-2);cursor:default;}
 .dsh-tdt-cal-cell--out:hover{background:var(--tdt-surface-2);}
@@ -69216,8 +69221,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 左段：从面板左边（内缩 4px）起，**正好停在选中格的左边缘**；右段：**正好从选中格的右边缘**起，
    到面板右边（内缩 4px）。⚠️ 断口两端**不许再留间距** —— 用户 2026-10-06：端点要**正对**上面
    点开那一格的左右两边（只有最外两侧才是 4px 内间距）。 */
+/* ⏸ 2026-10-06：用户要求先隐藏这两条线看看效果，暂设 display:none（规则保留，便于恢复）。
 .dsh-tdt-cal-panel::before,.dsh-tdt-cal-panel::after{content:'';position:absolute;top:4px;height:4px;
-  border-radius:999px;background:var(--tdt-fg-3);}
+  border-radius:999px;background:var(--tdt-fg-3);} */
+.dsh-tdt-cal-panel::before,.dsh-tdt-cal-panel::after{display:none;}
 .dsh-tdt-cal-panel::before{left:4px;width:calc(var(--cal-cut) - 4px);}
 .dsh-tdt-cal-panel::after{left:calc(var(--cal-cut) + var(--cal-col-w));right:4px;}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}

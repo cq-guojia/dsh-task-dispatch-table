@@ -103,6 +103,8 @@ body{
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
   /* 任务日程页本月格的默认底（2026-10-06）：浅色下就是卡片面本身，不单独调 */
   --tdt-cal-cell-bg:var(--tdt-surface-1);
+  /* 任务日程页本月格 hover 底（浅色段）：沿用通用交互底 */
+  --tdt-cal-cell-hover:var(--tdt-hover);
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
@@ -194,5 +196,8 @@ body[data-ds-dark-theme]{
   /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），
      比原来的卡片面更沉、更偏蓝灰；选中格仍走 --tdt-selected-bg（更暗一档），层级不变。 */
   --tdt-cal-cell-bg:#23262e;
+  /* 任务日程页本月格 hover 底（深色段，2026-10-06）：原先走 --tdt-hover（宿主浅色叠加）在深底上显得
+     「灰发亮」，不好看 ⇒ 换成更贴底的蓝调微亮（与 open-bg-soft 同族），hover 时不刺眼、又有反馈。 */
+  --tdt-cal-cell-hover:rgba(96,165,250,.12);
 }
 `
