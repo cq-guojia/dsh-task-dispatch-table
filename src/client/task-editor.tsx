@@ -25,7 +25,7 @@
 
 import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { formatDateTime, pad2 } from './format'
-import { type TaskOverviewRow } from './task-list'
+import { type TaskOverviewRow } from './task-overview'
 import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import {
   Button,

@@ -38,7 +38,9 @@ import { Button, IconButton, Segmented, BackToTop, ensureUiBase, startResizeLayo
 import { RecordsTimelineView } from './records-timeline'
 import { TaskCalendarView } from './task-calendar'
 import { humanizeTaskError } from './task-editor'
-import { TaskListView, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-list'
+import { TaskListView } from './task-list'
+// 取数层（2026-10-06 从 task-list.tsx 归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
+import { useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 // 事件推送（design/event-push.md）：后端变更即时广播、前端订阅按需刷新（替代轮询的增量通道）。
 import { useEvents, useResync } from './event-subscribe'
 import { EventType, RUN_EVENT_TYPES } from '../event-catalog.js'

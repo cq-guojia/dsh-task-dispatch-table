@@ -54448,6 +54448,176 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			})))) : null, body);
 		}
 		//#endregion
+		//#region src/task-sort.ts
+		/** 分组：运行中 0 → 已启用 1 → 无刻度 2 → 已关闭 3。 */
+		const groupOf = (row) => {
+			if (row.running) return 0;
+			if (!row.enabled) return 3;
+			return row.nextSlotAt === null ? 2 : 1;
+		};
+		/**
+		* 组 1 的组内键：**按下次执行升序**。
+		* ⚠️ 决策 54：原来的「到点钳位哨兵 -1」（把刚跨过刻度的卡强插到组内最前）**已整删** ——
+		* 服务端会**冻结**「已到点但还没处理」的刻度，于是这类行的 `nextSlotAt` 本身就是**过去时刻**，
+		* 在这里**自然排最前**，不需要任何哨兵。
+		*/
+		const sortKeyOf = (row) => {
+			if (row.nextSlotAt === null) return Number.POSITIVE_INFINITY;
+			return Date.parse(row.nextSlotAt);
+		};
+		/** 排序（时间轴：马上要跑的最上，关闭的沉底）。 */
+		function sortRows(rows) {
+			return [...rows].sort((a, b) => {
+				const ga = groupOf(a);
+				const gb = groupOf(b);
+				if (ga !== gb) return ga - gb;
+				if (ga === 1) return sortKeyOf(a) - sortKeyOf(b);
+				const ta = Date.parse(a.lastScheduledAt ?? a.runningSince ?? "") || 0;
+				return (Date.parse(b.lastScheduledAt ?? b.runningSince ?? "") || 0) - ta;
+			});
+		}
+		/**
+		* **派发延迟预算**（毫秒）= 巡检间隔 + 2×轮询，夹在 30s ~ 10min。
+		* 2026-09-30（决策 54）：它原本是「到点钳位」的时长；钳位已删，本函数保留为**同一口径的唯一出处** ——
+		* 客户端「到点未派发」的 loading 上界（`client/task-list.tsx` 的 `dueLoadingMs`）与它同源，
+		* 免得将来两处各写一个魔数悄悄漂移（执行后评审点过这一条）。
+		*/
+		function pinMsFor(tickMs, pollMs) {
+			return Math.min(6e5, Math.max(3e4, (Number.isFinite(tickMs) && tickMs > 0 ? tickMs : 6e4) + 2 * pollMs));
+		}
+		//#endregion
+		//#region src/client/task-overview.ts
+		/**
+		* 原轮询间隔（**已不再轮询**，只作为「派发延迟」公式的输入保留）。
+		* 见 `dueLoadingMs`：`pinMsFor` 的公式要用它算「到点未派发」的 loading 上界。
+		*/
+		const POLL_MS = 1e4;
+		/**
+		* 服务端下发的巡检间隔（**显示用**；初始 = 默认值，每次取数回来后更新）。
+		* ⚠️ 只用于算「到点未派发」的 loading 上界，**不参与任何调度判定**。
+		*/
+		let currentTickMs = 6e4;
+		/**
+		* 「到点未派发」的 loading 上界（决策 54「时长分档」，执行后评审要求）：与**派发延迟同口径**——
+		* 复用 `pinMsFor` 的公式（巡检间隔 + 2×轮询；默认 60s + 20s = 80s，夹在 30s~10min），
+		* 而不是另写一个魔数（此前写死 90s，与那套公式并存 ⇒ 迟早漂移；且运维调大巡检间隔时会在
+		* 正常派发之前就退出 loading）。
+		* 超过它还没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥）⇒ **不能一直装成在跑**。
+		*/
+		const dueLoadingMs = () => pinMsFor(currentTickMs, POLL_MS);
+		/** 一行概括"影响排序/显示的那几个字段"，用于 diff 出「谁因为什么变了」。 */
+		const sortFactsOf = (rows) => rows.map((r) => `${r.id.slice(0, 8)} run=${r.running ? 1 : 0} en=${r.enabled ? 1 : 0} next=${r.nextSlotAt ?? "-"} last=${r.lastStatus ?? "-"}@${r.lastScheduledAt ?? "-"}`).join(" | ");
+		/** 上一次打印过的快照 / 面板顺序（模块级即可：调试用，面板单实例）。 */
+		let lastFacts = "";
+		let lastOrder = "";
+		/** 面板顺序一变就打印（组件算出 `visible` 后调它）。调试状态**收在这里**，不散在页面里。 */
+		function debugLogOrder(rows) {
+			const order = rows.map((r) => r.id.slice(0, 8)).join(" > ");
+			if (order === lastOrder) return;
+			console.log(`[tdt-sort] 面板顺序变化\n  before: ${lastOrder === "" ? "(空)" : lastOrder}\n  after:  ${order}\n  键: ${rows.map((r) => `${r.id.slice(0, 8)}[run=${r.running ? 1 : 0} next=${r.nextSlotAt ?? "-"}]`).join(" ")}`);
+			lastOrder = order;
+		}
+		/**
+		* 主界面数据：一次请求出全部卡片数据；`rev` 未变 ⇒ 服务端回 `unchanged`，本地状态不动。
+		*
+		* ⚠️ 2026-09-30（决策 54）：原来的「到点钳位」**整套已删**（那套客户端本地派生排序状态一旦轮询卡住
+		* 就永不解开，正是真机「卡片 5 分钟不动」的根源）。排序抖动改由**服务端**解决 ——
+		* `runtime-index.overview` 冻结「已到点但还没处理」的刻度 ⇒ 排序键不随读变化。
+		*/
+		function useTaskOverview() {
+			const [rows, setRows] = (0, react$1.useState)([]);
+			const [ready, setReady] = (0, react$1.useState)(false);
+			const revRef = (0, react$1.useRef)("");
+			const busyRef = (0, react$1.useRef)(false);
+			/** 本轮请求的开始时刻（看门狗用；0 = 空闲）。 */
+			const busySinceRef = (0, react$1.useRef)(0);
+			/** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
+			const pendingRef = (0, react$1.useRef)(false);
+			/**
+			* 轮次令牌（2026-09-30 评审 P1）：看门狗会**强制放行**并把新一轮发出去，而**旧那轮仍在飞**；
+			* 旧轮稍后 settle 时的 `finally` 若不加判别，就会把**新一轮**的 busy 位清掉 ⇒ 第三轮趁虚而入、
+			* 后台被节流时请求层层叠加。所有「收口动作」（清 busy / 补跑）只在**令牌仍是自己的**时候做。
+			*/
+			const genRef = (0, react$1.useRef)(0);
+			const [tick, setTick] = (0, react$1.useState)(0);
+			(0, react$1.useEffect)(() => {
+				let alive = true;
+				/** 本 effect 内**在飞**的请求（换轮 / 卸载时统一 abort，不留悬空连接）。 */
+				const inflight = /* @__PURE__ */ new Set();
+				const poll = async () => {
+					if (busyRef.current) {
+						if (busySinceRef.current !== 0 && Date.now() - busySinceRef.current < 3 * POLL_MS) return;
+						busyRef.current = false;
+					}
+					const myGen = ++genRef.current;
+					busyRef.current = true;
+					busySinceRef.current = Date.now();
+					const controller = new AbortController();
+					inflight.add(controller);
+					const abortTimer = window.setTimeout(() => controller.abort(), 8e3);
+					try {
+						const query = revRef.current === "" ? "" : `?rev=${encodeURIComponent(revRef.current)}`;
+						const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, {
+							cache: "no-store",
+							signal: controller.signal
+						});
+						if (!res.ok) return;
+						const body = await res.json();
+						if (!alive || genRef.current !== myGen || body.ok !== true) return;
+						if (body.unchanged === true) return;
+						revRef.current = String(body.rev ?? "");
+						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
+						if (typeof body.tickMs === "number" && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs;
+						setRows(nextRows);
+						{
+							const facts = sortFactsOf(nextRows);
+							if (facts !== lastFacts) {
+								console.log(`[tdt-sort] 快照变化 rev=${String(body.rev ?? "")}\n  before: ${lastFacts === "" ? "(空)" : lastFacts}\n  after:  ${facts}`);
+								lastFacts = facts;
+							}
+						}
+						setReady(true);
+					} catch {} finally {
+						window.clearTimeout(abortTimer);
+						inflight.delete(controller);
+						if (genRef.current === myGen) {
+							busyRef.current = false;
+							busySinceRef.current = 0;
+							if (pendingRef.current) {
+								pendingRef.current = false;
+								if (alive) setTick((v) => v + 1);
+							}
+						}
+					}
+				};
+				poll();
+				return () => {
+					alive = false;
+					for (const c of inflight) c.abort();
+					inflight.clear();
+					busyRef.current = false;
+					busySinceRef.current = 0;
+				};
+			}, [tick]);
+			return {
+				rows,
+				ready,
+				refresh: (0, react$1.useCallback)(() => {
+					if (busyRef.current) {
+						pendingRef.current = true;
+						return;
+					}
+					setTick((v) => v + 1);
+				}, []),
+				patchRow: (0, react$1.useCallback)((id, patch) => {
+					setRows((list) => list.map((row) => row.id === id ? {
+						...row,
+						...patch
+					} : row));
+				}, [])
+			};
+		}
+		//#endregion
 		//#region src/client/editor-fields.tsx
 		/**
 		* 日历文案**单源**（决策 55）：`DateField` 的所有调用方（任务编辑器 / 任务卡片三面板）共用这一份，
@@ -54520,483 +54690,127 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, props.labels.empty) : null);
 		}
 		//#endregion
-		//#region src/client/status-text.ts
-		/** 状态 → 文案键（唯一映射表）。 */
-		const STATUS_LABEL_KEYS = {
-			pending: "statusPending",
-			dispatched: "statusDispatched",
-			running: "statusRunning",
-			succeeded: "statusSucceeded",
-			failed: "statusFailed",
-			skipped: "statusSkipped",
-			unknown: "statusUnknown"
-		};
-		/** 状态 → 通用短名（zh 统一**两字**：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知，用户 2026-10-02）。 */
-		function statusTextOf(status, t) {
-			const key = STATUS_LABEL_KEYS[status];
-			return key === void 0 ? status : t(key);
-		}
-		/**
-		* **过滤桶**：界面上的「运行中 / 失败 / 成功」各对应哪些真实状态 —— 全站唯一一份。
-		*
-		* 为什么要单源（2026-10-04 评审）：卡片执行记录面板与执行记录总查询页各写了一份，
-		* 且**语义还不一样**（一个 `running` 含 pending/unknown，另一个只含 dispatched/running）⇒
-		* 同一个下拉档位在两页筛出不同结果。这里是唯一真源，两页都从这里取。
-		*/
-		const INSTANCE_STATUS_BUCKETS = {
-			running: [
-				"pending",
-				"dispatched",
-				"running",
-				"unknown"
-			],
-			failed: ["failed", "skipped"],
-			succeeded: ["succeeded"]
-		};
-		/** 桶 → 传给后端的 `status` 值（逗号分隔由调用方拼）；不认识的桶返回 undefined（不过滤，不猜）。 */
-		function statusesOfBucket(bucket) {
-			return INSTANCE_STATUS_BUCKETS[bucket];
-		}
-		/** 是否「在跑」（已派发未定终态）—— 语义查询单源：色条脉动 / 图标 / 文案都用它，不许各写一份。 */
-		function isRunningStatus(status) {
-			return status === "dispatched" || status === "running";
-		}
-		/**
-		* 状态 → 语义色调（**表现层只做「色调 → 自己的画法」**：时间轴映射成色条、卡片映射成图标）。
-		* 语义维（哪些状态算失败 / 算在跑）只在这里判一次。
-		*/
-		function statusToneOf(status) {
-			if (status === "succeeded") return "ok";
-			if (status === "failed") return "bad";
-			if (status === "skipped") return "warn";
-			if (isRunningStatus(status)) return "busy";
-			return "neutral";
-		}
-		//#endregion
-		//#region src/client/task-info.tsx
-		/** 「上次执行」只看最近一条**终态**实例；名单与卡片基础信息**完全一致**（单源，不许各处自创）。 */
-		const LAST_RUN_STATUSES = [
-			"succeeded",
-			"failed",
-			"skipped",
-			"unknown"
-		];
-		/** 两栏容器（左「任务配置」+ 右「上次执行」）：右栏可能内容多 ⇒ 只滚右栏。 */
-		const infoWrapStyle = {
-			flex: "1 1 auto",
-			minHeight: 0,
-			display: "flex",
-			gap: "18px",
-			marginBottom: "10px"
-		};
-		/** 左栏（配置）：撑满剩余宽度、自己滚。 */
-		const infoConfigStyle = {
-			flex: "1 1 auto",
-			minWidth: 0,
-			overflowY: "auto",
-			paddingRight: "2px"
-		};
-		/** 右栏（上次执行）：**定宽**（用户 2026-10-03：窗口拖动时让左边变、右边别跟着变）。 */
-		const infoRecentStyle = {
-			flex: "none",
-			width: "320px",
-			overflowY: "auto",
-			borderLeft: "1px solid var(--tdt-border-faint)",
-			paddingLeft: "16px"
-		};
-		/** 栏内小标题（「任务配置」/「上次执行」）；左栏标题在共用 grid 里 ⇒ 横跨标签 / 值两列。 */
-		const infoGroupTitleStyle = {
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
-			fontWeight: 600,
-			marginBottom: "6px",
-			letterSpacing: "0.02em",
-			gridColumn: "1 / -1"
-		};
-		const infoGridLabelStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg-2)",
-			whiteSpace: "nowrap"
-		};
-		const infoGridValueStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg)",
-			minWidth: 0,
-			wordBreak: "break-word",
-			lineHeight: "var(--tdt-line-md)"
-		};
-		/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
-		function InfoField(props) {
-			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
-				className: "dsh-tdt-info-label",
-				style: infoGridLabelStyle
-			}, props.label), (0, react$1.createElement)("div", {
-				className: "dsh-tdt-info-value",
-				style: infoGridValueStyle
-			}, props.children));
-		}
-		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
-		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
-		/** 路径取末段（产出物行显示用）。执行记录 tab 的产出物图标 tooltip 也用它（同一份，不许再抄）。 */
-		const baseNameOf$1 = (path) => {
-			const parts = path.split("/");
-			return parts[parts.length - 1] || path;
-		};
-		/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
-		const durationMsOf = (row) => {
-			if (row.dispatched_at === null || row.finished_at === null) return null;
-			const ms = new Date(row.finished_at).getTime() - new Date(row.dispatched_at).getTime();
-			return Number.isFinite(ms) && ms >= 0 ? ms : null;
-		};
-		/**
-		* 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
-		* 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
-		* 卡片展开区、执行记录 tab、右侧栏查看档三处共用（配色走 CSS 域 `domain:task-info`）。
-		*/
-		function StatusIcon(props) {
-			const status = props.status;
-			if (status === "succeeded") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckCircleFillRegular, {
-				size: 15,
-				className: "dsh-tdt-rec-ic-ok"
-			});
-			if (status === "failed" || status === "skipped") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseCircleFillRegular, {
-				size: 15,
-				className: "dsh-tdt-rec-ic-bad"
-			});
-			if (status === "running" || status === "dispatched") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconLoadingOutlineRegular, {
-				size: 15,
-				className: "dsh-tdt-rec-ic-run"
-			});
-			return (0, react$1.createElement)("span", { className: "dsh-tdt-rec-ic-idle" });
-		}
-		/**
-		* 「允许延迟」：ISO 8601 时长（如 `PT4H`）→ 人话（如 `4 小时`）。
-		* 编辑器下拉本来就用这套人话（4 小时 / 30 分钟 / 1 天），基础信息面板此前却把裸 `PT4H` 亮给用户看，
-		* 用户看不懂（用户 2026-10-03 拍板：不能用看不懂的符号表示）。
-		* 解析不出（畸形值）⇒ 原样返回，不编造。
-		*/
-		function windowLabel(iso, t) {
-			const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso.trim());
-			if (m === null) return iso;
-			const hh = Number(m[1] ?? 0);
-			const min = Number(m[2] ?? 0);
-			const sec = Number(m[3] ?? 0);
-			if (hh === 0 && min === 0 && sec === 0) return `0 ${t("unitMinutes")}`;
-			if (hh > 0 && min === 0 && sec === 0 && hh % 24 === 0) return `${hh / 24} ${t("unitDays")}`;
-			if (hh === 0 && min > 0 && sec === 0) return `${min} ${t("unitMinutes")}`;
-			if (hh > 0 && min === 0 && sec === 0) return `${hh} ${t("unitHours")}`;
-			return iso;
-		}
-		/** 基础信息块的全部字段行（不含栏标题与 grid 容器——那两样由调用方给）。 */
-		function taskInfoBaseFields(props) {
-			const { t, view, onOpenFile, onViewTask } = props;
-			return (0, react$1.createElement)(react$1.Fragment, null, view.enabled === void 0 ? null : InfoField({
-				label: t("colStatus"),
-				children: (0, react$1.createElement)("span", { style: {
-					display: "inline-flex",
-					alignItems: "center",
-					gap: "6px",
-					fontWeight: 500
-				} }, (0, react$1.createElement)("span", { style: {
-					flex: "none",
-					width: "8px",
-					height: "8px",
-					borderRadius: "2px",
-					background: view.enabled ? "var(--tdt-success)" : "var(--tdt-fg-3)"
-				} }), view.enabled ? t("infoStateEnabled") : t("infoStateDisabled"))
-			}), InfoField({
-				label: t("listFieldSchedule"),
-				children: view.scheduleLine
-			}), view.nextSlot === void 0 ? null : InfoField({
-				label: t("infoNextExec"),
-				children: view.nextSlot
-			}), InfoField({
-				label: t("listFieldWorkspace"),
-				children: view.workspace
-			}), InfoField({
-				label: t("listFieldModel"),
-				children: view.model
-			}), InfoField({
-				label: t("listFieldRetry"),
-				children: view.retry
-			}), InfoField({
-				label: t("listFieldWindow"),
-				children: windowLabel(view.window, t)
-			}), InfoField({
-				label: t("listSectionAttachments"),
-				children: view.attachments.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
-					display: "flex",
-					flexWrap: "wrap",
-					gap: "2px 10px"
-				} }, view.attachments.map((item) => {
-					const absPath = item.path;
-					const anchor = item.anchorSessionId;
-					const key = item.key ?? item.name;
-					const icon = (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-						path: item.name,
-						size: 14
-					});
-					const name = (0, react$1.createElement)(MarqueeText, {
-						text: item.name,
-						title: item.name,
-						style: {
-							maxWidth: "40ch",
-							minWidth: 0
-						}
-					});
-					return absPath !== void 0 && absPath !== null && anchor !== void 0 && anchor !== null && onOpenFile !== void 0 ? (0, react$1.createElement)("button", {
-						key,
-						type: "button",
-						title: absPath,
-						className: "dsh-tdt-filechip dsh-tdt-filechip--inline",
-						onClick: () => {
-							onOpenFile(anchor, absPath);
-						}
-					}, icon, name) : (0, react$1.createElement)("span", {
-						key,
-						style: {
-							display: "inline-flex",
-							alignItems: "center",
-							gap: "4px"
-						}
-					}, icon, name);
-				}))
-			}), InfoField({
-				label: t("listSectionDepends"),
-				children: view.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
-					display: "flex",
-					flexDirection: "column",
-					gap: "4px"
-				} }, view.depends.map((dep, index) => {
-					const seq = (0, react$1.createElement)("span", { style: {
-						display: "inline-flex",
-						alignItems: "center",
-						justifyContent: "center",
-						flex: "none",
-						minWidth: "18px",
-						height: "18px",
-						padding: "0 4px",
-						boxSizing: "border-box",
-						borderRadius: "var(--tdt-radius-xs)",
-						background: "var(--tdt-chip-bg)",
-						color: "var(--tdt-fg-2)",
-						fontSize: "var(--tdt-font-xs)",
-						fontVariantNumeric: "tabular-nums"
-					} }, String(index + 1));
-					const label = `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`;
-					return onViewTask === void 0 ? (0, react$1.createElement)("span", {
-						key: dep.id,
-						style: {
-							display: "inline-flex",
-							alignItems: "center",
-							gap: "6px",
-							minWidth: 0
-						}
-					}, seq, (0, react$1.createElement)("span", {
-						className: "dsh-tdt-ellipsis",
-						title: dep.title
-					}, label)) : (0, react$1.createElement)("button", {
-						key: dep.id,
-						type: "button",
-						className: "dsh-tdt-info-dep",
-						title: t("infoViewTask"),
-						onClick: () => {
-							onViewTask(dep.id);
-						}
-					}, seq, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, label));
-				}))
-			}));
-		}
-		/**
-		* 「上次执行」一条实例的**明细**：字段区（状态 / 任务会话 / 计划执行 / 实际开始 / 结束时间 / 执行时长 /
-		* Token / 备注）+ 产出物清单。返回的根节点是 `.dsh-tdt-info-rec-body`
-		* （末行去缝的判据挂在它身上：有产出物时字段区末行的线要保留）。
-		*/
-		function lastRunFields(props) {
-			const { t, instance, onOpenSession, onOpenFile, hideStatus = false } = props;
-			const sid = instance.session_id;
-			const canOpenSession = sid !== null && onOpenSession !== void 0;
-			const canOpenFile = sid !== null && onOpenFile !== void 0;
-			const outputs = outputsOf(instance.outputs);
-			const dur = durationMsOf(instance);
-			const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
-			const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
-			const timeOf = (iso) => iso === null ? "—" : formatDateTime(iso, {
-				seconds: true,
-				fallback: "—"
-			});
-			const sessionName = instance.session_title ?? sid ?? "";
-			const sessionIcon = (0, react$1.createElement)("span", { className: "dsh-tdt-info-session-icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 10 }));
-			const sessionLabel = (0, react$1.createElement)("span", { style: {
-				flex: "1 1 auto",
-				minWidth: 0
-			} }, (0, react$1.createElement)(MarqueeText, { text: sessionName }));
-			const sessionLinkStyle = {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "6px",
-				maxWidth: "100%",
-				boxSizing: "border-box",
-				padding: 0,
-				font: "inherit",
-				fontSize: "var(--tdt-font-sm)",
-				textAlign: "left",
-				cursor: canOpenSession ? "pointer" : "default"
-			};
-			const sessionChip = sid === null || sessionName === "" ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : canOpenSession ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-info-session",
-				title: sessionName,
-				style: sessionLinkStyle,
-				onClick: () => {
-					onOpenSession(sid);
-				}
-			}, sessionIcon, sessionLabel) : (0, react$1.createElement)("span", {
-				style: sessionLinkStyle,
-				title: sessionName
-			}, sessionIcon, sessionLabel);
-			return (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-fields" }, hideStatus ? null : InfoField({
-				label: t("colStatus"),
-				children: (0, react$1.createElement)("span", { style: {
-					display: "inline-flex",
-					alignItems: "center",
-					gap: "6px",
-					fontWeight: 500,
-					color: infoStatusColorOf(instance.status)
-				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), statusTextOf(instance.status, t))
-			}), InfoField({
-				label: t("infoSession"),
-				children: sessionChip
-			}), InfoField({
-				label: t("colPlanned"),
-				children: timeOf(instance.scheduled_at)
-			}), InfoField({
-				label: t("colActualStart"),
-				children: timeOf(instance.dispatched_at)
-			}), InfoField({
-				label: t("infoFinishedAt"),
-				children: timeOf(instance.finished_at)
-			}), dur === null ? null : InfoField({
-				label: t("infoDuration"),
-				children: formatDurationHms(dur)
-			}), tokens === null ? null : InfoField({
-				label: t("colTokens"),
-				children: (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, tokens)
-			}), note === "" ? null : InfoField({
-				label: t("colNote"),
-				children: (0, react$1.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
-			})), outputs.length === 0 ? null : (0, react$1.createElement)("div", { style: { marginTop: "14px" } }, (0, react$1.createElement)("div", { style: {
-				marginBottom: "6px",
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-fg-3)"
-			} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				flexDirection: "column"
-			} }, outputs.map((output) => (0, react$1.createElement)("button", {
-				key: output,
-				type: "button",
-				title: output,
-				className: "dsh-tdt-filechip dsh-tdt-filechip--block",
-				disabled: !canOpenFile,
-				onClick: () => {
-					if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
-				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-				path: output,
-				size: 14
-			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf$1(output)))))));
-		}
-		const sameCalendarDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-		function relativePast(iso, nowMs, tt) {
-			const diff = nowMs - Date.parse(iso);
-			if (!(diff >= 0)) return tt("relNow");
-			if (diff < 6e4) return tt("relJustNow");
-			const minutes = Math.floor(diff / 6e4);
-			if (minutes < 60) return tt("relMinutesAgo", { n: minutes });
-			const hours = Math.floor(minutes / 60);
-			if (hours < 24) return tt("relHoursAgo", { n: hours });
-			const days = Math.floor(hours / 24);
-			if (days < 7) return tt("relDaysAgo", { n: days });
-			if (days < 30) return tt("relWeeksAgo", { n: Math.floor(days / 7) });
-			const months = Math.floor(days / 30);
-			if (months < 12) return tt("relMonthsAgo", { n: months });
-			return tt("relYearsAgo", { n: Math.floor(days / 365) });
-		}
-		function relativeFuture(iso, nowMs, tt) {
-			const target = Date.parse(iso);
-			if (!Number.isFinite(target)) return "--";
-			const diff = target - nowMs;
-			if (diff <= 0) return tt("relPast");
-			if (diff < 6e4) return tt("relNow");
-			const minutes = Math.floor(diff / 6e4);
-			if (minutes < 60) return tt("relMinutes", { n: minutes });
-			const date = new Date(target);
-			const now = new Date(nowMs);
-			const tomorrow = new Date(now.getTime() + 864e5);
-			if (sameCalendarDay(date, now)) return tt("relToday", { time: clockOf(iso) });
-			if (sameCalendarDay(date, tomorrow)) return tt("relTomorrow", { time: clockOf(iso) });
-			const days = Math.ceil(diff / 864e5);
-			if (days < 7) return tt("relDays", { n: days });
-			if (days < 30) return tt("relWeeks", { n: Math.floor(days / 7) });
-			const months = Math.floor(days / 30);
-			if (months < 12) return tt("relMonths", { n: months });
-			return tt("relYears", { n: Math.floor(days / 365) });
-		}
-		/**
-		* 24 小时内的秒级倒计时（用户 2026-09-30 定的分级，与任务列表「下次执行」同款）：
-		* - 小时为 0 ⇒ 不显示小时（几分几秒 显示 `5:09`）；
-		* - 只剩秒 ⇒ 仍要显示分位（`0:09`）；
-		* - 超过 24 小时交给 `relativeFuture`（明天 / 三天后 / N 周后）。
-		* 每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。
-		*/
-		function countdownText(iso, nowMs, tt) {
-			const diff = Date.parse(iso) - nowMs;
-			if (Number.isNaN(diff)) return "--";
-			if (diff <= 0) return tt("relNow");
-			const total = Math.floor(diff / 1e3);
-			const hours = Math.floor(total / 3600);
-			const minutes = Math.floor(total % 3600 / 60);
-			const seconds = total % 60;
-			return hours > 0 ? `${pad2$3(hours)}:${pad2$3(minutes)}:${pad2$3(seconds)}` : `${pad2$3(minutes)}:${pad2$3(seconds)}`;
-		}
-		/**
-		* 「预计执行 / 下次执行」的**统一文案**：把时间传进去，由本函数按「现在」算出该显示什么——
-		* 已到点 ⇒ 「即将执行」；24 小时内 ⇒ 秒级倒计时（countdownText）；超过 24 小时 ⇒ 社交化相对时间（relativeFuture）。
-		* 所有倒计时展示位（任务卡片「下次执行」、查看档「预计执行」、日历「计划」）都吃这一份，逻辑不再各处各写。
-		*/
-		function nextExecLabel(iso, nowMs, t) {
-			const target = Date.parse(iso);
-			if (!Number.isFinite(target)) return "--";
-			const diff = target - nowMs;
-			if (diff <= 0) return t("relNow");
-			if (diff < 864e5) return countdownText(iso, nowMs, t);
-			return relativeFuture(iso, nowMs, t);
-		}
-		/** HH:mm（本机时区）。**全仓唯一**的 HH:mm 实现——别处不许再写一份（design/client-refresh-disposition.md §三 M2）。 */
-		function clockOf(iso) {
-			const d = new Date(iso);
-			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
-		}
-		/**
-		* 「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走
-		* `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
-		* 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
-		*/
-		function renderNextExec(next, t) {
-			if (next === null) return (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone"));
-			return (0, react$1.createElement)("span", { style: {
-				display: "inline-flex",
-				alignItems: "center",
-				gap: "8px",
-				minWidth: 0
-			} }, (0, react$1.createElement)(LiveText, { render: (nowMs) => nextExecLabel(next, nowMs, t) }), (0, react$1.createElement)("span", { style: {
-				color: "var(--tdt-fg-3)",
-				flex: "none"
-			} }, "│"), (0, react$1.createElement)("span", { style: { fontVariantNumeric: "tabular-nums" } }, formatDateTime(next, {
-				seconds: true,
-				fallback: "--"
-			})));
+		//#region src/client/task-editor-css.ts
+		const TASK_EDITOR_CSS = `
+/* 分栏：**占布局的一列**（U21，2026-10-01）——与 U11 预览 dock（archive-session-css.ts 的
+   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，   sticky + 100vh 让它在页面滚动时
+   保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
+   旧的遮罩层已废：用户要求「别盖住主窗口」。
+   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。
+   ⚠️ **本条不设 z-index**：1040 是它还是「浮层 + 遮罩」那代的遗留值（见 worklog/editor-split-pane.md），
+   改成布局成员后一直没清 ⇒ 会无条件压过宿主 portal 到 body 的弹窗（「系统设置」等）。
+   真机 2026-10-05 去掉，交回 DOM 顺序裁决。 */
+.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
+/* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
+   user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
+   见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
+/* 左缘拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index。 */
+.dsh-tdt-ed-resizer{z-index:2;}
+.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
+.dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
+/* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
+.dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
+.dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
+/* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
+.dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:var(--tdt-font-md);color:var(--tdt-fg,#1f2328);cursor:pointer;}
+/* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
+.dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
+.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
+.dsh-tdt-ed-label{font-size:var(--tdt-font-sm);font-weight:600;color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-ed-hint{margin:4px 0 0;font-size:var(--tdt-font-sm);line-height:1.5;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+/* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
+.dsh-tdt-ed-danger{color:var(--tdt-danger,#e5484d)!important;border-color:var(--tdt-danger,#e5484d)!important;}
+.dsh-tdt-ed-danger:hover{background:var(--tdt-hover,rgba(128,128,128,.16))!important;}
+.dsh-tdt-ed-section{margin-bottom:16px;}
+.dsh-tdt-ed-section:last-child{margin-bottom:0;}
+/* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
+.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-surface-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
+.dsh-tdt-ed-card:focus-within{border-color:var(--tdt-business,#4d6bfe);}
+/* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
+.dsh-tdt-ed-card--error{border-color:var(--tdt-danger,#e5484d);background:var(--tdt-danger,rgba(229,72,77,.08));}
+/* 历史版本开关（2026-10-01：已并入统一分段控件 Segmented，根 id=dsh-tdt-ed-histtoggle、multiple 单段做 on/off；
+   样式完全走 controls-css.ts 的 .dsh-tdt-seg，这里不再留任何皮肤——旧 .dsh-tdt-ed-histtoggle* 规则已删。 */
+/* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
+   右侧 = 固定宽高槽：常态时间小字、hover 换「使用（药丸）/ 移除（小字）」——槽位尺寸恒定，
+   hover 出按钮**绝不撑高行高**（此前按钮把行撑大上下蹦，用户点名）。 */
+.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px dashed var(--tdt-border-strong,rgba(128,128,128,.35));}
+.dsh-tdt-ed-ver:last-child{border-bottom:none;}
+.dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:var(--tdt-font-xs);color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-ed-ver-note{display:block;font-size:var(--tdt-font-xs);color:var(--tdt-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
+.dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
+.dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
+.dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
+/* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
+   官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
+   配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
+.dsh-tdt-ed-card-foot > *{min-width:0;}
+/* 提示词大输入框皮肤已上提基础层 .dsh-tdt-textarea（ui/controls-css.ts，U20 #6，2026-10-05）；此处不再自写。 */
+.dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.dsh-tdt-ed-spacer{flex:1 1 auto;}
+/* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
+.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--tdt-radius-md,8px);background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-md);cursor:pointer;text-align:left;}
+/* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
+.dsh-tdt-ed-advchevron{flex:none;color:var(--tdt-fg-2,rgba(128,128,128,.95));transition:transform .15s ease;}
+.dsh-tdt-ed-advchevron-open{transform:rotate(180deg);}
+/* 展开体：每项「控件行 + 说明行」两拍，项与项之间虚线分隔（用户 2026-09-29：别全挤成文字）。 */
+.dsh-tdt-ed-advbody{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+.dsh-tdt-ed-advitem{padding-top:12px;}
+.dsh-tdt-ed-advitem:first-child{padding-top:0;}
+.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--tdt-border-strong,rgba(128,128,128,.5));}
+/* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
+.dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
+/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
+.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
+/* 用户 2026-10-01：不要 hover 底色（问号只要一个图标 + 气泡），只做颜色提亮。 */
+.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:0 0;outline:none;}
+/* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
+   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
+   中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
+   官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
+   这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
+.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
+/* 附件行（用户 2026-10-06）：背景 / 圆角放这里而不是内联——内联 background 会压过 :hover。
+   整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --tdt-chip-bg-hover）。 */
+.dsh-tdt-ed-attrow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-ed-attrow--view{cursor:pointer;}
+.dsh-tdt-ed-attrow--view:hover{background:var(--tdt-chip-bg-hover,rgba(38,49,72,.12));}
+.dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
+.dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
+.dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
+.dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
+/* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
+/* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
+   纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
+   字段行 / 「上次执行」明细的皮肤**不在这里** —— 那是域 domain:task-info（与卡片展开区共用同一份）。 */
+.dsh-tdt-ed-view{display:flex;flex-direction:column;gap:18px;}
+/* 块标题行：默认左对齐（标签 + 内联状态/标记都在左），只有提示词的操作组靠右（margin-left:auto）。 */
+.dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+/* 块标题 = **标签**（图标 + 文字）；竖线已承担视觉分隔，这里去掉灰底只留文字。 */
+.dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent;color:var(--tdt-fg);font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
+/* 标题前的短竖线标（品牌色，方角）：只修饰 icon，不包整块（用户 2026-10-05 修正：整块长线太丑）。 */
+.dsh-tdt-ed-view-tag::before{content:'';flex:none;width:3px;height:14px;background:var(--tdt-business);border-radius:0;}
+.dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;}
+.dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
+/* 草稿标记 chip（r13：灰色不明显 ⇒ **警告色**——红太强，用 warning 橙：橙字 + 极浅橙底）。 */
+.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--tdt-warning,#b7791f);font-size:var(--tdt-font-xs);white-space:nowrap;}
+/* 提示词操作组（源码 / 预览 + 展开 / 收起）：整组靠右、不折行（仅此一组 margin-left:auto，
+   其余块的标题 / 状态 / 「修改没保存」保持居左，2026-10-05 修正 space-between 把它们挤到最右）。 */
+.dsh-tdt-ed-view-head-actions{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto;}
+/* 展开 / 收起 小箭头：复用 chevron-down，收起态翻转 180°（与高级设置收折头同款）。 */
+.dsh-tdt-ed-view-expchevron{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.8));transition:transform .15s ease;}
+.dsh-tdt-ed-view-expchevron-open{transform:rotate(180deg);}
+/* 提示词文档区：极淡底（明暗自适应，约 3% 前景色混合）、无左 / 右框、无圆角，包住整段文档。 */
+.dsh-tdt-ed-view-promptbox{background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);padding:8px 10px;margin-top:8px;}
+/* 提示词默认**约 5 行**截断（用户 2026-10-05）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
+.dsh-tdt-ed-view-prompt{min-width:0;max-height:100px;overflow:hidden;}
+.dsh-tdt-ed-view-prompt--open{max-height:none;}
+.dsh-tdt-ed-view-empty{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+`;
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
+		function ensureTaskEditorStyle() {
+			applyStyle("domain:editor", TASK_EDITOR_CSS);
 		}
 		//#endregion
 		//#region node_modules/cron-parser/dist/fields/types.js
@@ -64122,166 +63936,98 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			return next === void 0 ? null : next.toISOString();
 		}
 		//#endregion
-		//#region src/task-sort.ts
-		/** 分组：运行中 0 → 已启用 1 → 无刻度 2 → 已关闭 3。 */
-		const groupOf = (row) => {
-			if (row.running) return 0;
-			if (!row.enabled) return 3;
-			return row.nextSlotAt === null ? 2 : 1;
+		//#region src/attachment-allowlist.ts
+		/**
+		* 附件上传的**共享约束**：体积上限 + 扩展名白名单 + 扩展名解析。
+		*
+		* 宿主路由（src/index.ts，服务端 415/413 拦截）与浏览器端预检（src/client/task-editor.tsx，
+		* 发包前当场拒）**必须用同一份**——两处各写一份必然漂移（白名单改了这边忘了那边）。
+		* 客户端打包（tsdown alwaysBundle）会把本模块内联进 client.js，宿主侧 tsc 直编，均无碍。
+		*/
+		/** 附件上传：体积上限（字节，20MB）。 */
+		const ATTACHMENT_MAX_BYTES = 20971520;
+		/** 附件上传：允许的常见扩展名（文本/代码/图片/文档）。命中白名单才收。 */
+		const ALLOWED_ATTACHMENT_EXT = /* @__PURE__ */ new Set([
+			"txt",
+			"md",
+			"markdown",
+			"json",
+			"jsonc",
+			"yaml",
+			"yml",
+			"csv",
+			"ts",
+			"tsx",
+			"js",
+			"jsx",
+			"mjs",
+			"cjs",
+			"py",
+			"sh",
+			"bash",
+			"zsh",
+			"toml",
+			"ini",
+			"cfg",
+			"log",
+			"xml",
+			"html",
+			"css",
+			"scss",
+			"sql",
+			"go",
+			"rs",
+			"java",
+			"c",
+			"cpp",
+			"h",
+			"hpp",
+			"rb",
+			"php",
+			"pl",
+			"r",
+			"scala",
+			"kt",
+			"swift",
+			"dockerfile",
+			"gitignore",
+			"env",
+			"png",
+			"jpg",
+			"jpeg",
+			"gif",
+			"webp",
+			"bmp",
+			"svg",
+			"ico",
+			"avif",
+			"pdf",
+			"doc",
+			"docx",
+			"xls",
+			"xlsx",
+			"ppt",
+			"pptx",
+			"odt",
+			"rtf"
+		]);
+		/** 取文件名扩展名（小写，无点返回 ''）。 */
+		const extOf = (name) => {
+			const base = name.slice(Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\")) + 1);
+			const dot = base.lastIndexOf(".");
+			return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
 		};
 		/**
-		* 组 1 的组内键：**按下次执行升序**。
-		* ⚠️ 决策 54：原来的「到点钳位哨兵 -1」（把刚跨过刻度的卡强插到组内最前）**已整删** ——
-		* 服务端会**冻结**「已到点但还没处理」的刻度，于是这类行的 `nextSlotAt` 本身就是**过去时刻**，
-		* 在这里**自然排最前**，不需要任何哨兵。
+		* 附件 `ref` 是否**安全**（可以拼进路径）：非空、不含 `..`（相对路径上跳）、
+		* 不以 `/` 或 `\` 开头（绝对路径）、不含 `\`（Windows 分隔符）。
+		*
+		* **唯一实现**（2026-09-30 抽象收敛）：此前同一规则写了 **4 份**且各有出入——
+		* 宿主 zod（`tasks.ts`：拒绝 `..`/绝对/反斜杠）、客户端保存前校验（`task-editor`：多查了开头 `\`）、
+		* 真删前防御（`task-assets.removeAttachmentFiles`：没查开头 `\`）、上传定位
+		* （`task-assets.locateUploaded`：连反斜杠都没查）。各写一份必然漂移——
+		* 「选工作区文件报 422 附件 ref 非法」那类 bug 的温床就在这。
 		*/
-		const sortKeyOf = (row) => {
-			if (row.nextSlotAt === null) return Number.POSITIVE_INFINITY;
-			return Date.parse(row.nextSlotAt);
-		};
-		/** 排序（时间轴：马上要跑的最上，关闭的沉底）。 */
-		function sortRows(rows) {
-			return [...rows].sort((a, b) => {
-				const ga = groupOf(a);
-				const gb = groupOf(b);
-				if (ga !== gb) return ga - gb;
-				if (ga === 1) return sortKeyOf(a) - sortKeyOf(b);
-				const ta = Date.parse(a.lastScheduledAt ?? a.runningSince ?? "") || 0;
-				return (Date.parse(b.lastScheduledAt ?? b.runningSince ?? "") || 0) - ta;
-			});
-		}
-		/**
-		* **派发延迟预算**（毫秒）= 巡检间隔 + 2×轮询，夹在 30s ~ 10min。
-		* 2026-09-30（决策 54）：它原本是「到点钳位」的时长；钳位已删，本函数保留为**同一口径的唯一出处** ——
-		* 客户端「到点未派发」的 loading 上界（`client/task-list.tsx` 的 `dueLoadingMs`）与它同源，
-		* 免得将来两处各写一个魔数悄悄漂移（执行后评审点过这一条）。
-		*/
-		function pinMsFor(tickMs, pollMs) {
-			return Math.min(6e5, Math.max(3e4, (Number.isFinite(tickMs) && tickMs > 0 ? tickMs : 6e4) + 2 * pollMs));
-		}
-		//#endregion
-		//#region src/client/task-editor-css.ts
-		const TASK_EDITOR_CSS = `
-/* 分栏：**占布局的一列**（U21，2026-10-01）——与 U11 预览 dock（archive-session-css.ts 的
-   .dsh-tdt-sv-preview-dock）同一套形态：根容器的 flex 成员，   sticky + 100vh 让它在页面滚动时
-   保持可见，主窗口被真正推窄而非被盖住；滚动条留在内容区内不被压住。
-   旧的遮罩层已废：用户要求「别盖住主窗口」。
-   宽度走根容器的 --dsh-tdt-editor-w（0 = 收起），最小 / 默认 520（用户 2026-10-02 定）。
-   ⚠️ **本条不设 z-index**：1040 是它还是「浮层 + 遮罩」那代的遗留值（见 worklog/editor-split-pane.md），
-   改成布局成员后一直没清 ⇒ 会无条件压过宿主 portal 到 body 的弹窗（「系统设置」等）。
-   真机 2026-10-05 去掉，交回 DOM 顺序裁决。 */
-.dsh-tdt-ed-panel{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;flex:0 0 auto;width:var(--dsh-tdt-editor-w,520px);min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:var(--tdt-surface-base,var(--tdt-surface-1,#fff));color:var(--tdt-fg,#1f2328);border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 40px rgba(0,0,0,.32));}
-/* 左缘拖拽条（只改宽度，不画线；hover 时才给一点提示色）。
-   user-select:none：拖拽条自身永不被选中（拖一次就选中一片文字的根因是在 JS 侧掐掉的，
-   见 startResize 的 preventDefault + body.user-select，这里只是让命中条自己不可选）。 */
-/* 左缘拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index。 */
-.dsh-tdt-ed-resizer{z-index:2;}
-.dsh-tdt-ed-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px 12px 18px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
-.dsh-tdt-ed-title{font-size:var(--tdt-font-lg);font-weight:600;}
-/* 头部左侧只剩标题；右侧一组 = 启用开关 + 关闭 ✕（用户 2026-10-01：开关回到右侧、紧贴 ✕ 左边）。 */
-.dsh-tdt-ed-headleft{display:flex;align-items:center;gap:12px;min-width:0;}
-.dsh-tdt-ed-headactions{display:flex;align-items:center;gap:10px;flex:none;}
-/* 启用开关行：文字标签 + 官方 Switch（官方 Switch 只画胶囊，可见标签由这里给）。 */
-.dsh-tdt-ed-enable{display:inline-flex;align-items:center;gap:8px;font-size:var(--tdt-font-md);color:var(--tdt-fg,#1f2328);cursor:pointer;}
-/* 选中色（success 绿）已上提到 ui/controls-css.ts 的 .dsh-tdt-switch（编辑器 / 列表两处合并，2026-10-01）。 */
-.dsh-tdt-ed-body{flex:1 1 auto;min-height:0;overflow:auto;padding:14px 18px 22px;}
-.dsh-tdt-ed-footer{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));position:relative;}
-.dsh-tdt-ed-label{font-size:var(--tdt-font-sm);font-weight:600;color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-ed-hint{margin:4px 0 0;font-size:var(--tdt-font-sm);line-height:1.5;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-/* 删除任务：红色危险钮（用户 2026-09-30：放在「保存」旁，醒目但仍是描边形态）。 */
-.dsh-tdt-ed-danger{color:var(--tdt-danger,#e5484d)!important;border-color:var(--tdt-danger,#e5484d)!important;}
-.dsh-tdt-ed-danger:hover{background:var(--tdt-hover,rgba(128,128,128,.16))!important;}
-.dsh-tdt-ed-section{margin-bottom:16px;}
-.dsh-tdt-ed-section:last-child{margin-bottom:0;}
-/* 卡片（提示词 / 执行频率）：输入焦点在卡内即高亮描边（官方 Input 的 :focus-within 同款）。 */
-.dsh-tdt-ed-card{box-sizing:border-box;padding:10px 12px;border:.5px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-surface-1,rgba(128,128,128,.08));transition:border-color .15s ease;}
-.dsh-tdt-ed-card:focus-within{border-color:var(--tdt-business,#4d6bfe);}
-/* 校验不通过的红框（用户 2026-09-30：出问题的地方把框描红，明暗自适应，走宿主 error token）。 */
-.dsh-tdt-ed-card--error{border-color:var(--tdt-danger,#e5484d);background:var(--tdt-danger,rgba(229,72,77,.08));}
-/* 历史版本开关（2026-10-01：已并入统一分段控件 Segmented，根 id=dsh-tdt-ed-histtoggle、multiple 单段做 on/off；
-   样式完全走 controls-css.ts 的 .dsh-tdt-seg，这里不再留任何皮肤——旧 .dsh-tdt-ed-histtoggle* 规则已删。 */
-/* 版本条目（用户 2026-09-30 第二轮）：弃卡片背景，改**全宽虚线**分隔（一条虚线拉通整栏、不断在中间）；
-   右侧 = 固定宽高槽：常态时间小字、hover 换「使用（药丸）/ 移除（小字）」——槽位尺寸恒定，
-   hover 出按钮**绝不撑高行高**（此前按钮把行撑大上下蹦，用户点名）。 */
-.dsh-tdt-ed-ver{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px dashed var(--tdt-border-strong,rgba(128,128,128,.35));}
-.dsh-tdt-ed-ver:last-child{border-bottom:none;}
-.dsh-tdt-ed-ver-ic{flex:none;display:inline-flex;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-ed-ver-main{flex:1 1 auto;min-width:0;font-size:var(--tdt-font-xs);color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-ed-ver-note{display:block;font-size:var(--tdt-font-xs);color:var(--tdt-fg-2,rgba(128,128,128,.95));overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-ed-ver-right{flex:none;width:52px;height:18px;display:flex;align-items:center;justify-content:flex-end;}
-.dsh-tdt-ed-ver-actions{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
-.dsh-tdt-ed-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;}
-/* 三个下拉（工作区 / 权限 / 模型）在窄卡里必须能收缩并省略，不能把卡撑爆：
-   官方 Menu 会把锚点包进一层 shrink-to-fit 的 span，这里放行这层 span 收缩（min-width:0），
-   配合锚点上的 maxWidth，空间不够时先压宽度、标签走省略号（用户 2026-10-01）。 */
-.dsh-tdt-ed-card-foot > *{min-width:0;}
-/* 提示词大输入框皮肤已上提基础层 .dsh-tdt-textarea（ui/controls-css.ts，U20 #6，2026-10-05）；此处不再自写。 */
-.dsh-tdt-ed-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.dsh-tdt-ed-spacer{flex:1 1 auto;}
-/* 高级设置卡收折头（用户 2026-09-29：撤掉内层黑框，整卡就是一条灰、整行可点）。 */
-.dsh-tdt-ed-advhead{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;box-sizing:border-box;padding:7px 10px;border:none;border-radius:var(--tdt-radius-md,8px);background:0 0;color:var(--tdt-fg,#1f2328);font:inherit;font-size:var(--tdt-font-md);cursor:pointer;text-align:left;}
-/* 展开指示：官方 chevron-down（TurnTriggerNodeView 同款），展开 rotate 180°。 */
-.dsh-tdt-ed-advchevron{flex:none;color:var(--tdt-fg-2,rgba(128,128,128,.95));transition:transform .15s ease;}
-.dsh-tdt-ed-advchevron-open{transform:rotate(180deg);}
-/* 展开体：每项「控件行 + 说明行」两拍，项与项之间虚线分隔（用户 2026-09-29：别全挤成文字）。 */
-.dsh-tdt-ed-advbody{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
-.dsh-tdt-ed-advitem{padding-top:12px;}
-.dsh-tdt-ed-advitem:first-child{padding-top:0;}
-.dsh-tdt-ed-advitem+.dsh-tdt-ed-advitem{border-top:1px dashed var(--tdt-border-strong,rgba(128,128,128,.5));}
-/* 排期卡底部：时区 / 有效期缩到小号并整体居右（重要性低，不占主视线）。 */
-.dsh-tdt-ed-schedfoot{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-/* 小问号：挂 Tooltip 的说明入口（不占正文版面）。全站唯一实现（编辑器 5 处 + 高级设置折叠头都用它）。 */
-.dsh-tdt-ed-help{appearance:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;border:none;border-radius:0;background:0 0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:help;}
-/* 用户 2026-10-01：不要 hover 底色（问号只要一个图标 + 气泡），只做颜色提亮。 */
-.dsh-tdt-ed-help:hover,.dsh-tdt-ed-help:focus-visible{color:var(--tdt-fg,#1f2328);background:0 0;outline:none;}
-/* 前置任务卡两级选择行（用户 2026-09-29 定稿三段式）：
-   左「工作区」定宽（约 5~6 个字，134px）居左；右「添加」定宽（72px，用户 2026-09-29 收窄）居右；
-   中间「任务」flex 吃掉剩余宽度（随抽拉分栏宽窄同步伸缩）。
-   官方 Menu 会把锚点包进自己的 shrink-to-fit inline-flex span ⇒ 必须用子选择器把
-   这层 span 一并撑满，否则有选项时整个下拉缩成内容宽（真机截图踩过的坑）。 */
-.dsh-tdt-ed-depitem{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
-/* 附件行（用户 2026-10-06）：背景 / 圆角放这里而不是内联——内联 background 会压过 :hover。
-   整行可点开预览的行给 hover 反馈：背景亮一档（与 chip hover 同档 --tdt-chip-bg-hover）。 */
-.dsh-tdt-ed-attrow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--tdt-radius-sm);background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-ed-attrow--view{cursor:pointer;}
-.dsh-tdt-ed-attrow--view:hover{background:var(--tdt-chip-bg-hover,rgba(38,49,72,.12));}
-.dsh-tdt-ed-deppick{display:flex;align-items:center;gap:8px;}
-.dsh-tdt-ed-deppick-ws{flex:0 0 134px;min-width:0;display:flex;}
-.dsh-tdt-ed-deppick-task{flex:1 1 auto;min-width:0;display:flex;}
-.dsh-tdt-ed-deppick-ws > span,.dsh-tdt-ed-deppick-task > span{flex:1 1 auto;min-width:0;width:100%;}
-/* 关闭确认已改为分栏内联层（见 task-editor ConfirmDiscard），不再用官方 Modal，故无需抬层规则。 */
-/* ── 查看档（右侧栏「查看 / 编辑」两档的只读面，用户 2026-10-05）──────────────────
-   纵向单栏流三块：基础信息 → 提示词 → 上次执行；块与块之间留呼吸间距。
-   字段行 / 「上次执行」明细的皮肤**不在这里** —— 那是域 domain:task-info（与卡片展开区共用同一份）。 */
-.dsh-tdt-ed-view{display:flex;flex-direction:column;gap:18px;}
-/* 块标题行：默认左对齐（标签 + 内联状态/标记都在左），只有提示词的操作组靠右（margin-left:auto）。 */
-.dsh-tdt-ed-view-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-/* 块标题 = **标签**（图标 + 文字）；竖线已承担视觉分隔，这里去掉灰底只留文字。 */
-.dsh-tdt-ed-view-tag{flex:none;display:inline-flex;align-items:center;gap:6px;padding:0;background:transparent;color:var(--tdt-fg);font-size:var(--tdt-font-xs);font-weight:600;letter-spacing:0.02em;white-space:nowrap;}
-/* 标题前的短竖线标（品牌色，方角）：只修饰 icon，不包整块（用户 2026-10-05 修正：整块长线太丑）。 */
-.dsh-tdt-ed-view-tag::before{content:'';flex:none;width:3px;height:14px;background:var(--tdt-business);border-radius:0;}
-.dsh-tdt-ed-view-block{display:flex;flex-direction:column;min-width:0;}
-.dsh-tdt-ed-view-badge{flex:none;width:8px;height:8px;border-radius:2px;}
-/* 草稿标记 chip（r13：灰色不明显 ⇒ **警告色**——红太强，用 warning 橙：橙字 + 极浅橙底）。 */
-.dsh-tdt-ed-view-chip{flex:none;padding:2px 8px;border-radius:var(--tdt-radius-xs,4px);background:rgba(240,166,60,.14);color:var(--tdt-warning,#b7791f);font-size:var(--tdt-font-xs);white-space:nowrap;}
-/* 提示词操作组（源码 / 预览 + 展开 / 收起）：整组靠右、不折行（仅此一组 margin-left:auto，
-   其余块的标题 / 状态 / 「修改没保存」保持居左，2026-10-05 修正 space-between 把它们挤到最右）。 */
-.dsh-tdt-ed-view-head-actions{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto;}
-/* 展开 / 收起 小箭头：复用 chevron-down，收起态翻转 180°（与高级设置收折头同款）。 */
-.dsh-tdt-ed-view-expchevron{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.8));transition:transform .15s ease;}
-.dsh-tdt-ed-view-expchevron-open{transform:rotate(180deg);}
-/* 提示词文档区：极淡底（明暗自适应，约 3% 前景色混合）、无左 / 右框、无圆角，包住整段文档。 */
-.dsh-tdt-ed-view-promptbox{background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);padding:8px 10px;margin-top:8px;}
-/* 提示词默认**约 5 行**截断（用户 2026-10-05）；展开（--open）后不限高，靠右侧栏自己的滚动条往下拉。 */
-.dsh-tdt-ed-view-prompt{min-width:0;max-height:100px;overflow:hidden;}
-.dsh-tdt-ed-view-prompt--open{max-height:none;}
-.dsh-tdt-ed-view-empty{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-`;
-		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
-		function ensureTaskEditorStyle() {
-			applyStyle("domain:editor", TASK_EDITOR_CSS);
-		}
+		const isSafeAttachmentRef = (ref) => ref !== "" && !ref.includes("..") && !ref.startsWith("/") && !ref.startsWith("\\") && !ref.includes("\\");
 		//#endregion
 		//#region src/client/toast-css.ts
 		const TOAST_CSS = `
@@ -64385,1530 +64131,485 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 			}) : null);
 		}
-		//#endregion
-		//#region src/client/ui/running.ts
-		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
-		const RUNNING_TONE = "var(--tdt-business)";
-		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
-		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
-		const RUNNING_CSS = `
-@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
-.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite; }
-@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
-`;
-		let ensured = false;
-		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
-		const ensureRunningStyle = () => {
-			if (ensured) return;
-			ensured = true;
-			applyStyle("domain:running", RUNNING_CSS);
-		};
-		//#endregion
-		//#region src/client/task-list.tsx
-		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
-		const monoFont$1 = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
-		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
-		*  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
-		const CONTROL_H = "var(--tdt-control-h-md)";
-		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
-		const WS_WIDTH = 180;
-		const TASK_LIST_CSS = [
-			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
-			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
-			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
-			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
-			".dsh-tdt-card { background: var(--tdt-surface-1); }",
-			".dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }",
-			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
-			".dsh-tdt-rec-alt { background: var(--tdt-plate); }"
-		].join("\n");
-		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
-		const ensureTaskListStyle = () => {
-			applyStyle("domain:list", TASK_LIST_CSS);
-		};
-		const POLL_MS = 1e4;
-		/**
-		* 服务端下发的巡检间隔（**显示用**；初始 = 默认值，每轮轮询回来后更新）。
-		* ⚠️ 只用于算「到点未派发」的 loading 上界，**不参与任何调度判定**。
-		*/
-		let currentTickMs = 6e4;
-		/**
-		* 「到点未派发」的 loading 上界（决策 54「时长分档」，执行后评审要求）：与**派发延迟同口径**——
-		* 复用 `pinMsFor` 的公式（巡检间隔 + 2×轮询；默认 60s + 20s = 80s，夹在 30s~10min），
-		* 而不是另写一个魔数（此前写死 90s，与那套公式并存 ⇒ 迟早漂移；且运维调大巡检间隔时会在
-		* 正常派发之前就退出 loading）。
-		* 超过它还没有 `running` ⇒ 大概率是被挡住（上游没跑完 / 附件缺失 / 串行互斥）⇒ **不能一直装成在跑**。
-		*/
-		const dueLoadingMs = () => pinMsFor(currentTickMs, POLL_MS);
-		/** 一行概括"影响排序/显示的那几个字段"，用于 diff 出「谁因为什么变了」。 */
-		const sortFactsOf = (rows) => rows.map((r) => `${r.id.slice(0, 8)} run=${r.running ? 1 : 0} en=${r.enabled ? 1 : 0} next=${r.nextSlotAt ?? "-"} last=${r.lastStatus ?? "-"}@${r.lastScheduledAt ?? "-"}`).join(" | ");
-		/** 上一次打印过的快照 / 面板顺序（模块级即可：调试用，面板单实例）。 */
-		let lastFacts = "";
-		let lastOrder = "";
-		/**
-		* 主界面数据：一次请求出全部卡片数据；rev 未变 ⇒ 服务端回 unchanged，本地状态不动。
-		*
-		* ⚠️ 2026-09-30（决策 54）：原来的「到点钳位」**整套已删**（那套客户端本地派生排序状态一旦轮询卡住
-		* 就永不解开，正是真机「卡片 5 分钟不动」的根源）。排序抖动改由**服务端**解决 ——
-		* `runtime-index.overview` 冻结「已到点但还没处理」的刻度 ⇒ 排序键不随读变化。
-		*/
-		function useTaskOverview() {
-			const [rows, setRows] = (0, react$1.useState)([]);
-			const [ready, setReady] = (0, react$1.useState)(false);
-			const revRef = (0, react$1.useRef)("");
-			const busyRef = (0, react$1.useRef)(false);
-			/** 本轮请求的开始时刻（看门狗用；0 = 空闲）。 */
-			const busySinceRef = (0, react$1.useRef)(0);
-			/** 有刷新请求落在一轮在途期间 ⇒ 那轮结束后补跑一次（见 refresh）。 */
-			const pendingRef = (0, react$1.useRef)(false);
-			/**
-			* 轮次令牌（2026-09-30 评审 P1）：看门狗会**强制放行**并把新一轮发出去，而**旧那轮仍在飞**；
-			* 旧轮稍后 settle 时的 `finally` 若不加判别，就会把**新一轮**的 busy 位清掉 ⇒ 第三轮趁虚而入、
-			* 后台被节流时请求层层叠加。所有「收口动作」（清 busy / 补跑）只在**令牌仍是自己的**时候做。
-			*/
-			const genRef = (0, react$1.useRef)(0);
-			const [tick, setTick] = (0, react$1.useState)(0);
-			(0, react$1.useEffect)(() => {
-				let alive = true;
-				/** 本 effect 内**在飞**的请求（换轮 / 卸载时统一 abort，不留悬空连接）。 */
-				const inflight = /* @__PURE__ */ new Set();
-				const poll = async () => {
-					if (busyRef.current) {
-						if (busySinceRef.current !== 0 && Date.now() - busySinceRef.current < 3 * POLL_MS) return;
-						busyRef.current = false;
-					}
-					const myGen = ++genRef.current;
-					busyRef.current = true;
-					busySinceRef.current = Date.now();
-					const controller = new AbortController();
-					inflight.add(controller);
-					const abortTimer = window.setTimeout(() => controller.abort(), 8e3);
-					try {
-						const query = revRef.current === "" ? "" : `?rev=${encodeURIComponent(revRef.current)}`;
-						const res = await fetch(`api/task-dispatch-table/tasks/overview${query}`, {
-							cache: "no-store",
-							signal: controller.signal
-						});
-						if (!res.ok) return;
-						const body = await res.json();
-						if (!alive || genRef.current !== myGen || body.ok !== true) return;
-						if (body.unchanged === true) return;
-						revRef.current = String(body.rev ?? "");
-						const nextRows = Array.isArray(body.tasks) ? body.tasks : [];
-						if (typeof body.tickMs === "number" && Number.isFinite(body.tickMs) && body.tickMs > 0) currentTickMs = body.tickMs;
-						setRows(nextRows);
-						{
-							const facts = sortFactsOf(nextRows);
-							if (facts !== lastFacts) {
-								console.log(`[tdt-sort] 快照变化 rev=${String(body.rev ?? "")}\n  before: ${lastFacts === "" ? "(空)" : lastFacts}\n  after:  ${facts}`);
-								lastFacts = facts;
-							}
-						}
-						setReady(true);
-					} catch {} finally {
-						window.clearTimeout(abortTimer);
-						inflight.delete(controller);
-						if (genRef.current === myGen) {
-							busyRef.current = false;
-							busySinceRef.current = 0;
-							if (pendingRef.current) {
-								pendingRef.current = false;
-								if (alive) setTick((v) => v + 1);
-							}
-						}
-					}
-				};
-				poll();
-				return () => {
-					alive = false;
-					for (const c of inflight) c.abort();
-					inflight.clear();
-					busyRef.current = false;
-					busySinceRef.current = 0;
-				};
-			}, [tick]);
-			return {
-				rows,
-				ready,
-				refresh: (0, react$1.useCallback)(() => {
-					if (busyRef.current) {
-						pendingRef.current = true;
-						return;
-					}
-					setTick((v) => v + 1);
-				}, []),
-				patchRow: (0, react$1.useCallback)((id, patch) => {
-					setRows((list) => list.map((row) => row.id === id ? {
-						...row,
-						...patch
-					} : row));
-				}, [])
-			};
+		const sameCalendarDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+		function relativePast(iso, nowMs, tt) {
+			const diff = nowMs - Date.parse(iso);
+			if (!(diff >= 0)) return tt("relNow");
+			if (diff < 6e4) return tt("relJustNow");
+			const minutes = Math.floor(diff / 6e4);
+			if (minutes < 60) return tt("relMinutesAgo", { n: minutes });
+			const hours = Math.floor(minutes / 60);
+			if (hours < 24) return tt("relHoursAgo", { n: hours });
+			const days = Math.floor(hours / 24);
+			if (days < 7) return tt("relDaysAgo", { n: days });
+			if (days < 30) return tt("relWeeksAgo", { n: Math.floor(days / 7) });
+			const months = Math.floor(days / 30);
+			if (months < 12) return tt("relMonthsAgo", { n: months });
+			return tt("relYearsAgo", { n: Math.floor(days / 365) });
 		}
-		/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
-		const formatFull = (iso) => formatDateTime(iso, { fallback: "—" });
-		function useFlip(signature) {
-			const nodes = (0, react$1.useRef)(/* @__PURE__ */ new Map());
-			const prevTop = (0, react$1.useRef)(/* @__PURE__ */ new Map());
-			(0, react$1.useLayoutEffect)(() => {
-				const moved = [];
-				for (const [id, el] of nodes.current) {
-					const top = el.getBoundingClientRect().top;
-					const prev = prevTop.current.get(id);
-					if (prev !== void 0 && Math.abs(prev - top) > .5) moved.push([el, prev - top]);
-					prevTop.current.set(id, top);
-				}
-				if (moved.length === 0) return;
-				if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true) return;
-				for (const [el, delta] of moved) {
-					el.style.transition = "none";
-					el.style.transform = `translateY(${delta}px)`;
-				}
-				const frame = requestAnimationFrame(() => {
-					for (const [el] of moved) {
-						el.style.transition = `transform 260ms var(--tdt-ease)`;
-						el.style.transform = "";
-					}
-					window.setTimeout(() => {
-						for (const [el] of moved) el.style.transition = "";
-					}, 320);
-				});
-				return () => {
-					cancelAnimationFrame(frame);
-				};
-			}, [signature]);
-			const callbacks = (0, react$1.useRef)(/* @__PURE__ */ new Map());
-			return (0, react$1.useCallback)((id) => {
-				const hit = callbacks.current.get(id);
-				if (hit !== void 0) return hit;
-				const fn = (el) => {
-					if (el === null) {
-						nodes.current.delete(id);
-						callbacks.current.delete(id);
-						prevTop.current.delete(id);
-					} else nodes.current.set(id, el);
-				};
-				callbacks.current.set(id, fn);
-				return fn;
-			}, []);
-		}
-		const RAIL_W = 6;
-		const RAIL_H = 36;
-		/** 运行中：整条**蓝色**明暗脉动（颜色 / 脉动形状全在 `ui/running.ts` 一处定，前后两端统一）。 */
-		function RunningRail() {
-			ensureRunningStyle();
-			return (0, react$1.createElement)("span", {
-				className: `${RUN_PULSE_CLASS} dsh-tdt-rail`,
-				style: {
-					display: "inline-block",
-					width: `${RAIL_W}px`,
-					height: `${RAIL_H}px`,
-					flex: "none",
-					borderRadius: "var(--tdt-radius-xs)",
-					background: RUNNING_TONE
-				}
-			});
-		}
-		function StatusRail(props) {
-			const { row } = props;
-			if (row.running) return (0, react$1.createElement)(RunningRail, {});
-			const color = !row.enabled ? "var(--tdt-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--tdt-danger)" : "var(--tdt-success)";
-			const hint = !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : row.lastStatus === "skipped" ? "最近一次未执行（配置或前置不满足，详见执行记录）" : "计划运行中";
-			return (0, react$1.createElement)("span", {
-				title: hint,
-				style: {
-					display: "inline-block",
-					width: `${RAIL_W}px`,
-					height: `${RAIL_H}px`,
-					flex: "none",
-					borderRadius: "var(--tdt-radius-xs)",
-					background: color,
-					transition: `background var(--tdt-dur) var(--tdt-ease)`
-				}
-			});
+		function relativeFuture(iso, nowMs, tt) {
+			const target = Date.parse(iso);
+			if (!Number.isFinite(target)) return "--";
+			const diff = target - nowMs;
+			if (diff <= 0) return tt("relPast");
+			if (diff < 6e4) return tt("relNow");
+			const minutes = Math.floor(diff / 6e4);
+			if (minutes < 60) return tt("relMinutes", { n: minutes });
+			const date = new Date(target);
+			const now = new Date(nowMs);
+			const tomorrow = new Date(now.getTime() + 864e5);
+			if (sameCalendarDay(date, now)) return tt("relToday", { time: clockOf(iso) });
+			if (sameCalendarDay(date, tomorrow)) return tt("relTomorrow", { time: clockOf(iso) });
+			const days = Math.ceil(diff / 864e5);
+			if (days < 7) return tt("relDays", { n: days });
+			if (days < 30) return tt("relWeeks", { n: Math.floor(days / 7) });
+			const months = Math.floor(days / 30);
+			if (months < 12) return tt("relMonths", { n: months });
+			return tt("relYears", { n: Math.floor(days / 365) });
 		}
 		/**
-		* 「历史执行」与「下次执行」是**两个独立**小标签（2026-09-30 用户拍板：不要合成一格四段，
-		* 拆成两块更清爽）。每个标签 = 语义底色的图标格 + 时间格，整体一个圆角细边框。
-		* - 历史执行：成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；时间格当天 HH:mm、跨天「3 小时前 / 1 天前」。
-		* - 下次执行：图标 = 闹钟；时间格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
-		*   超过 24 小时 = 明天 / 三天后 / N 周后。
-		*
-		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
-		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
-		* 提示**静默失效**（用户 2026-09-30 真机反馈「移上去没提示」的根因，与 task-editor 里
-		* 「图标要包真 `<button>`」是同一个坑）。
+		* 24 小时内的秒级倒计时（用户 2026-09-30 定的分级，与任务列表「下次执行」同款）：
+		* - 小时为 0 ⇒ 不显示小时（几分几秒 显示 `5:09`）；
+		* - 只剩秒 ⇒ 仍要显示分位（`0:09`）；
+		* - 超过 24 小时交给 `relativeFuture`（明天 / 三天后 / N 周后）。
+		* 每次都用「目标 − 系统当前时间」现算，不做算术递减 ⇒ 永不漂移。
 		*/
-		const pillOuterStyle = {
-			display: "inline-flex",
-			alignItems: "stretch",
-			flex: "none",
-			height: "20px",
-			borderRadius: "var(--tdt-radius-sm)",
-			overflow: "hidden",
-			border: `1px solid var(--tdt-border)`
-		};
-		/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
-		const pillIconCell = (bg, fg) => ({
-			display: "inline-flex",
-			alignItems: "center",
-			padding: "0 6px",
-			background: bg,
-			color: fg,
-			flex: "none"
-		});
-		/** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
-		const pillTimeCell = {
-			display: "inline-flex",
-			alignItems: "center",
-			padding: "0 8px",
-			background: "var(--tdt-surface-1)",
-			color: "var(--tdt-fg)",
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-xs)",
-			whiteSpace: "nowrap",
-			fontVariantNumeric: "tabular-nums",
-			fontFamily: monoFont$1
-		};
-		/** 历史执行标签（成功绿 / 失败红 / 无状态灰）。 */
-		function PastPill(props) {
-			const { row, t, tt } = props;
-			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
-			const colored = has && row.lastStatus !== null && row.lastStatus !== "unknown";
-			const bg = !has || row.lastStatus === "unknown" ? "var(--tdt-surface-3)" : row.lastStatus === "succeeded" ? "var(--tdt-success)" : "var(--tdt-danger)";
-			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: title,
-				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "var(--tdt-on-signal)" : "var(--tdt-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
-				style: pillTimeCell,
-				render: (nowMs) => {
-					if (!has) return "--";
-					const iso = row.lastScheduledAt ?? "";
-					return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt);
-				}
+		function countdownText(iso, nowMs, tt) {
+			const diff = Date.parse(iso) - nowMs;
+			if (Number.isNaN(diff)) return "--";
+			if (diff <= 0) return tt("relNow");
+			const total = Math.floor(diff / 1e3);
+			const hours = Math.floor(total / 3600);
+			const minutes = Math.floor(total % 3600 / 60);
+			const seconds = total % 60;
+			return hours > 0 ? `${pad2$3(hours)}:${pad2$3(minutes)}:${pad2$3(seconds)}` : `${pad2$3(minutes)}:${pad2$3(seconds)}`;
+		}
+		/**
+		* 「预计执行 / 下次执行」的**统一文案**：把时间传进去，由本函数按「现在」算出该显示什么——
+		* 已到点 ⇒ 「即将执行」；24 小时内 ⇒ 秒级倒计时（countdownText）；超过 24 小时 ⇒ 社交化相对时间（relativeFuture）。
+		* 所有倒计时展示位（任务卡片「下次执行」、查看档「预计执行」、日历「计划」）都吃这一份，逻辑不再各处各写。
+		*/
+		function nextExecLabel(iso, nowMs, t) {
+			const target = Date.parse(iso);
+			if (!Number.isFinite(target)) return "--";
+			const diff = target - nowMs;
+			if (diff <= 0) return t("relNow");
+			if (diff < 864e5) return countdownText(iso, nowMs, t);
+			return relativeFuture(iso, nowMs, t);
+		}
+		/** HH:mm（本机时区）。**全仓唯一**的 HH:mm 实现——别处不许再写一份（design/client-refresh-disposition.md §三 M2）。 */
+		function clockOf(iso) {
+			const d = new Date(iso);
+			if (Number.isNaN(d.getTime())) return "—";
+			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+		}
+		/**
+		* 「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走
+		* `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
+		* 无下次执行（停用 / 一次性已收尾）⇒ 显示「无」。先收窄 `next` 为 string 再喂给格式化函数。
+		*/
+		function renderNextExec(next, t) {
+			if (next === null) return (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone"));
+			return (0, react$1.createElement)("span", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "8px",
+				minWidth: 0
+			} }, (0, react$1.createElement)(LiveText, { render: (nowMs) => nextExecLabel(next, nowMs, t) }), (0, react$1.createElement)("span", { style: {
+				color: "var(--tdt-fg-3)",
+				flex: "none"
+			} }, "│"), (0, react$1.createElement)("span", { style: { fontVariantNumeric: "tabular-nums" } }, formatDateTime(next, {
+				seconds: true,
+				fallback: "--"
 			})));
 		}
+		//#endregion
+		//#region src/client/status-text.ts
+		/** 状态 → 文案键（唯一映射表）。 */
+		const STATUS_LABEL_KEYS = {
+			pending: "statusPending",
+			dispatched: "statusDispatched",
+			running: "statusRunning",
+			succeeded: "statusSucceeded",
+			failed: "statusFailed",
+			skipped: "statusSkipped",
+			unknown: "statusUnknown"
+		};
+		/** 状态 → 通用短名（zh 统一**两字**：排队 / 派发 / 运行 / 成功 / 失败 / 跳过 / 未知，用户 2026-10-02）。 */
+		function statusTextOf(status, t) {
+			const key = STATUS_LABEL_KEYS[status];
+			return key === void 0 ? status : t(key);
+		}
 		/**
-		* 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
-		* - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
-		* - 未运行 ⇒ 一天以内 = `HH:mm:ss` 秒级倒计时（`LiveText` 自转），超过 24 小时 = 明天 / 三天后 / N 周后；
-		* - 无后续 ⇒ 占位符。
+		* **过滤桶**：界面上的「运行中 / 失败 / 成功」各对应哪些真实状态 —— 全站唯一一份。
 		*
-		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
-		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
-		* 提示静默失效（用户 2026-09-30 真机反馈「移上去没提示」的根因）。
+		* 为什么要单源（2026-10-04 评审）：卡片执行记录面板与执行记录总查询页各写了一份，
+		* 且**语义还不一样**（一个 `running` 含 pending/unknown，另一个只含 dispatched/running）⇒
+		* 同一个下拉档位在两页筛出不同结果。这里是唯一真源，两页都从这里取。
 		*/
-		function NextPill(props) {
-			const { row, t, tt } = props;
-			const nowMs = useNowMs();
-			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: t("listRunning"),
-				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(RUNNING_TONE, "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
-				...pillTimeCell,
-				color: RUNNING_TONE
-			} }, (0, react$1.createElement)(RunningBlocks, {}))));
-			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
-			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
-			const title = dueNow ? nowMs - Date.parse(row.nextSlotAt ?? "") <= dueLoadingMs() ? t("listRunning") : deferredTitle : typeof row.blockedReason === "string" && row.blockedReason !== "" ? deferredTitle : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
-			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-				label: title,
-				side: "bottom"
-			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-surface-3)", "var(--tdt-fg)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
-				style: pillTimeCell,
-				render: (nowMs) => {
-					if (row.nextSlotAt === null) return "--";
-					const diff = Date.parse(row.nextSlotAt) - nowMs;
-					if (diff <= 0) {
-						if (-diff <= dueLoadingMs()) return (0, react$1.createElement)("span", { style: {
-							display: "inline-flex",
-							alignItems: "center",
-							color: RUNNING_TONE
-						} }, (0, react$1.createElement)(RunningBlocks, {}));
-						return (0, react$1.createElement)("span", { style: {
-							cursor: "default",
-							opacity: .85
-						} }, tt("listDeferred"));
-					}
-					return nextExecLabel(row.nextSlotAt, nowMs, tt);
-				}
-			})));
+		const INSTANCE_STATUS_BUCKETS = {
+			running: [
+				"pending",
+				"dispatched",
+				"running",
+				"unknown"
+			],
+			failed: ["failed", "skipped"],
+			succeeded: ["succeeded"]
+		};
+		/** 桶 → 传给后端的 `status` 值（逗号分隔由调用方拼）；不认识的桶返回 undefined（不过滤，不猜）。 */
+		function statusesOfBucket(bucket) {
+			return INSTANCE_STATUS_BUCKETS[bucket];
 		}
-		const cardStyle$1 = {
-			display: "block",
-			width: "100%",
-			boxSizing: "border-box",
-			textAlign: "left",
-			marginBottom: "10px",
-			borderRadius: "var(--tdt-radius-sm)",
-			border: `1px solid var(--tdt-border)`,
-			color: "var(--tdt-fg)",
-			transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`
-		};
-		const titleStyle = {
-			fontSize: "var(--tdt-font-lg)",
-			fontWeight: 600,
-			lineHeight: "var(--tdt-line-md)"
-		};
-		const metaStyle = {
-			fontSize: "var(--tdt-font-sm)",
-			color: "var(--tdt-fg-2)",
-			lineHeight: "var(--tdt-line-sm)",
-			marginTop: "2px"
-		};
-		const faintStyle = {
-			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)",
-			lineHeight: "var(--tdt-line-sm)",
-			marginTop: "2px"
-		};
-		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
-		*  `position: relative` 保留为内部绝对定位子元素的上下文。 */
-		const panelBoxStyle = {
-			height: `360px`,
-			display: "flex",
-			flexDirection: "column",
-			minHeight: 0,
-			position: "relative"
-		};
+		/** 是否「在跑」（已派发未定终态）—— 语义查询单源：色条脉动 / 图标 / 文案都用它，不许各写一份。 */
+		function isRunningStatus(status) {
+			return status === "dispatched" || status === "running";
+		}
 		/**
-		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
-		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
-		* 亮起后请求一返回就立刻消失（`BUSY_HOLD_MS = 0`，无保底停留）。
+		* 状态 → 语义色调（**表现层只做「色调 → 自己的画法」**：时间轴映射成色条、卡片映射成图标）。
+		* 语义维（哪些状态算失败 / 算在跑）只在这里判一次。
 		*/
-		const BUSY_DELAY_MS = 400;
-		const BUSY_HOLD_MS = 0;
-		function useDelayedBusy(active) {
-			const [shown, setShown] = (0, react$1.useState)(false);
-			const shownAtRef = (0, react$1.useRef)(0);
-			(0, react$1.useEffect)(() => {
-				if (active) {
-					if (shown) return;
-					const timer = setTimeout(() => {
-						shownAtRef.current = Date.now();
-						setShown(true);
-					}, BUSY_DELAY_MS);
-					return () => {
-						clearTimeout(timer);
-					};
-				}
-				if (!shown) return;
-				const wait = Math.max(0, BUSY_HOLD_MS - (Date.now() - shownAtRef.current));
-				const timer = setTimeout(() => {
-					setShown(false);
-				}, wait);
-				return () => {
-					clearTimeout(timer);
-				};
-			}, [active, shown]);
-			return shown;
+		function statusToneOf(status) {
+			if (status === "succeeded") return "ok";
+			if (status === "failed") return "bad";
+			if (status === "skipped") return "warn";
+			if (isRunningStatus(status)) return "busy";
+			return "neutral";
 		}
-		/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
-		const panelScrollFillStyle = {
+		//#endregion
+		//#region src/client/task-info.tsx
+		/** 「上次执行」只看最近一条**终态**实例；名单与卡片基础信息**完全一致**（单源，不许各处自创）。 */
+		const LAST_RUN_STATUSES = [
+			"succeeded",
+			"failed",
+			"skipped",
+			"unknown"
+		];
+		/** 两栏容器（左「任务配置」+ 右「上次执行」）：右栏可能内容多 ⇒ 只滚右栏。 */
+		const infoWrapStyle = {
 			flex: "1 1 auto",
 			minHeight: 0,
-			overflowY: "auto"
-		};
-		const panelWrapStyle = {
-			borderTop: `1px dashed var(--tdt-border)`,
-			paddingTop: "10px",
-			paddingLeft: "14px",
-			paddingRight: "14px",
-			paddingBottom: "12px"
-		};
-		const panelBarStyle = {
-			paddingTop: "10px",
-			borderTop: `1px dashed var(--tdt-border)`,
 			display: "flex",
-			alignItems: "center",
-			gap: "8px"
-		};
-		const miniTableStyle = {
-			width: "100%",
-			borderCollapse: "collapse",
-			fontSize: "var(--tdt-font-sm)"
-		};
-		const miniCellStyle = {
-			padding: "9px 10px",
-			textAlign: "left",
-			color: "var(--tdt-fg)",
-			whiteSpace: "nowrap",
-			fontSize: "var(--tdt-font-sm)"
-		};
-		const miniCellWrapStyle = {
-			...miniCellStyle,
-			whiteSpace: "normal",
-			wordBreak: "break-word"
-		};
-		/** 居中格（用户 2026-10-02：除**产出物 / 备注**两列外，各列内容一律居中）。 */
-		const miniCellCenterStyle = {
-			...miniCellStyle,
-			textAlign: "center"
-		};
-		/**
-		* 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
-		* 上沿一条线（与执行记录表头上沿线同色 `--tdt-border`），从这条线到下方虚线**整块铺底色**，
-		* 日志直接铺在里面。等宽字体跟环境风格走。
-		*/
-		const logAreaStyle = {
-			...panelScrollFillStyle,
-			borderTop: `1px solid var(--tdt-border)`,
-			background: "var(--tdt-surface-1)",
-			padding: "10px 0",
-			fontFamily: monoFont$1,
-			fontSize: "var(--tdt-font-xs)",
-			lineHeight: "var(--tdt-line-sm)"
-		};
-		/** 日志行：行间距拉开一点（用户 2026-10-03）。 */
-		const logRowStyle = {
-			marginBottom: "6px",
-			wordBreak: "break-all"
-		};
-		const overlayStyle = {
-			position: "fixed",
-			inset: 0,
-			zIndex: "var(--tdt-z-modal)",
-			background: "var(--tdt-mask)",
-			display: "flex",
-			alignItems: "center",
-			justifyContent: "center"
-		};
-		const dialogStyle = {
-			width: "360px",
-			maxWidth: "calc(100vw - 48px)",
-			boxSizing: "border-box",
-			background: "var(--tdt-surface-base, #fff)",
-			color: "var(--tdt-fg)",
-			border: `1px solid var(--tdt-border)`,
-			borderRadius: "var(--tdt-radius-md)",
-			padding: "18px",
-			boxShadow: "var(--tdt-shadow-2, 0 12px 32px rgba(0,0,0,0.4))"
-		};
-		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
-		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
-			seconds: true,
-			fallback: "—"
-		});
-		/** 产出物图标格（最多 3 个 +「…」更多）。 */
-		const outputCellStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "2px",
-			flexWrap: "nowrap"
-		};
-		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
-		const filterRowStyle$1 = {
-			display: "flex",
-			alignItems: "center",
-			gap: "6px",
-			flexWrap: "wrap",
+			gap: "18px",
 			marginBottom: "10px"
 		};
-		/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
-		const limitRowStyle = {
-			display: "inline-flex",
-			alignItems: "center",
-			gap: "4px",
-			marginLeft: "auto",
+		/** 左栏（配置）：撑满剩余宽度、自己滚。 */
+		const infoConfigStyle = {
+			flex: "1 1 auto",
+			minWidth: 0,
+			overflowY: "auto",
+			paddingRight: "2px"
+		};
+		/** 右栏（上次执行）：**定宽**（用户 2026-10-03：窗口拖动时让左边变、右边别跟着变）。 */
+		const infoRecentStyle = {
+			flex: "none",
+			width: "320px",
+			overflowY: "auto",
+			borderLeft: "1px solid var(--tdt-border-faint)",
+			paddingLeft: "16px"
+		};
+		/** 栏内小标题（「任务配置」/「上次执行」）；左栏标题在共用 grid 里 ⇒ 横跨标签 / 值两列。 */
+		const infoGroupTitleStyle = {
 			fontSize: "var(--tdt-font-xs)",
-			color: "var(--tdt-fg-3)"
-		};
-		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
-		const recHeadStyle = {
-			...miniCellStyle,
-			padding: "11px 10px",
-			textAlign: "center",
+			color: "var(--tdt-fg-3)",
 			fontWeight: 600,
-			color: "var(--tdt-fg-2)",
-			background: "var(--tdt-head-bg)",
-			boxShadow: "inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)"
+			marginBottom: "6px",
+			letterSpacing: "0.02em",
+			gridColumn: "1 / -1"
 		};
-		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
-		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
-			color: "var(--tdt-danger)",
-			fontWeight: 600
-		} : void 0;
+		const infoGridLabelStyle = {
+			fontSize: "var(--tdt-font-sm)",
+			color: "var(--tdt-fg-2)",
+			whiteSpace: "nowrap"
+		};
+		const infoGridValueStyle = {
+			fontSize: "var(--tdt-font-sm)",
+			color: "var(--tdt-fg)",
+			minWidth: 0,
+			wordBreak: "break-word",
+			lineHeight: "var(--tdt-line-md)"
+		};
+		/** 纸表格一行 = 两个格子（标签 + 值）；返回 Fragment ⇒ 二者直接成为所在 grid 的子格，列宽由整栏共享。 */
+		function InfoField(props) {
+			return (0, react$1.createElement)(react$1.Fragment, null, (0, react$1.createElement)("span", {
+				className: "dsh-tdt-info-label",
+				style: infoGridLabelStyle
+			}, props.label), (0, react$1.createElement)("div", {
+				className: "dsh-tdt-info-value",
+				style: infoGridValueStyle
+			}, props.children));
+		}
+		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
+		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
+		/** 路径取末段（产出物行显示用）。执行记录 tab 的产出物图标 tooltip 也用它（同一份，不许再抄）。 */
+		const baseNameOf$1 = (path) => {
+			const parts = path.split("/");
+			return parts[parts.length - 1] || path;
+		};
+		/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
+		const durationMsOf = (row) => {
+			if (row.dispatched_at === null || row.finished_at === null) return null;
+			const ms = new Date(row.finished_at).getTime() - new Date(row.dispatched_at).getTime();
+			return Number.isFinite(ms) && ms >= 0 ? ms : null;
+		};
 		/**
-		* 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
-		* 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
-		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
+		* 状态图标（用户 2026-10-02 换新）：成功 = 官方**圆勾**（绿）/ 失败·跳过 = 官方**圆叉**（红）/
+		* 运行·派发 = 官方 **loading 转圈**（主题色）/ 排队·未知 = 空心圈。
+		* 卡片展开区、执行记录 tab、右侧栏查看档三处共用（配色走 CSS 域 `domain:task-info`）。
 		*/
-		function TaskExpandPanel(props) {
-			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props;
-			const [tab, setTab] = (0, react$1.useState)("info");
-			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}`;
-			const firstRun = (0, react$1.useRef)(true);
-			(0, react$1.useEffect)(() => {
-				if (firstRun.current) {
-					firstRun.current = false;
-					return;
-				}
-				refresh();
-			}, [runSig, refresh]);
-			const [infoLast, setInfoLast] = (0, react$1.useState)(null);
-			const [infoLoading, setInfoLoading] = (0, react$1.useState)(false);
-			const [infoError, setInfoError] = (0, react$1.useState)(null);
-			const [infoLoaded, setInfoLoaded] = (0, react$1.useState)(false);
-			const calendarLabels = (0, react$1.useMemo)(() => calendarLabelsOf(t), [t]);
-			const timeLabels = (0, react$1.useMemo)(() => timeLabelsOf(t), [t]);
-			const timeRangeLabels = (0, react$1.useMemo)(() => ({
-				all: t("trAll"),
-				custom: t("trCustom"),
-				from: t("cardFrom"),
-				to: t("cardTo"),
-				presets: {
-					today: t("trToday"),
-					yesterday: t("trYesterday"),
-					thisWeek: t("trThisWeek"),
-					lastWeek: t("trLastWeek"),
-					thisMonth: t("trThisMonth"),
-					lastMonth: t("trLastMonth")
-				}
-			}), [t]);
-			const [recStatus, setRecStatus] = (0, react$1.useState)("");
-			const [recRange, setRecRange] = (0, react$1.useState)({
-				from: "",
-				to: ""
+		function StatusIcon(props) {
+			const status = props.status;
+			if (status === "succeeded") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCheckCircleFillRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-ok"
 			});
-			const [recLimit, setRecLimit] = (0, react$1.useState)(100);
-			const [records, setRecords] = (0, react$1.useState)(null);
-			const [recLoading, setRecLoading] = (0, react$1.useState)(false);
-			const [recError, setRecError] = (0, react$1.useState)(null);
-			const [openInstance, setOpenInstance] = (0, react$1.useState)(null);
-			const [events, setEvents] = (0, react$1.useState)(null);
-			const [eventsError, setEventsError] = (0, react$1.useState)(null);
-			const [logKeyword, setLogKeyword] = (0, react$1.useState)("");
-			const [logRange, setLogRange] = (0, react$1.useState)({
-				from: "",
-				to: ""
+			if (status === "failed" || status === "skipped") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCloseCircleFillRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-bad"
 			});
-			const [logLimit, setLogLimit] = (0, react$1.useState)(100);
-			const [logs, setLogs] = (0, react$1.useState)(null);
-			const [logLoading, setLogLoading] = (0, react$1.useState)(false);
-			const recBusy = useDelayedBusy(recLoading);
-			const logBusy = useDelayedBusy(logLoading);
-			const [logError, setLogError] = (0, react$1.useState)(null);
-			const [confirmDelete, setConfirmDelete] = (0, react$1.useState)(false);
-			const [deleting, setDeleting] = (0, react$1.useState)(false);
-			const [confirmRun, setConfirmRun] = (0, react$1.useState)(false);
-			const [runBusy, setRunBusy] = (0, react$1.useState)(false);
-			/**
-			* 立即执行成功后的「立刻重拉执行记录」信号（用户 2026-10-03 真机反馈：点了马上写记录，
-			* 但面板要等下一次轮询才显示 ⇒ 等它显示时任务都已经在跑了）。计数 +1 即触发下面那个 effect。
-			*/
-			const [runNonce, setRunNonce] = (0, react$1.useState)(0);
-			const [runToast, setRunToast] = (0, react$1.useState)(null);
-			const runSeq = (0, react$1.useRef)(0);
-			/** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
-			const runNowToast = (outcome) => {
-				if (outcome.ok) return {
-					text: t("cardRunNowOk"),
-					tone: "success"
-				};
-				switch (outcome.error) {
-					case "already-running": return {
-						text: t("cardRunNowAlready"),
-						tone: "error"
-					};
-					case "upstream-not-succeeded": return {
-						text: t("cardRunNowBlocked"),
-						tone: "error"
-					};
-					case "upstream-missing": return {
-						text: t("cardRunNowMissingDep"),
-						tone: "error"
-					};
-					case "workspace-missing": return {
-						text: tt("cardRunNowWorkspace", { name: outcome.detail ?? "" }),
-						tone: "error"
-					};
-					case "attachment-missing": return {
-						text: tt("cardRunNowAttachment", { name: outcome.detail ?? "" }),
-						tone: "error"
-					};
-					case "task-not-found": return {
-						text: t("cardRunNowNotFound"),
-						tone: "error"
-					};
-					case "not-ready": return {
-						text: t("cardRunNowNotReady"),
-						tone: "error"
-					};
-					default: return {
-						text: tt("cardRunNowFailed", { reason: outcome.detail ?? outcome.error }),
-						tone: "error"
-					};
-				}
-			};
-			const doRunNow = () => {
-				setRunBusy(true);
-				onRunNow(row.id).then((outcome) => {
-					const { text, tone } = runNowToast(outcome);
-					runSeq.current += 1;
-					setRunToast({
-						text,
-						tone,
-						seq: runSeq.current
-					});
-					if (outcome.ok) setRunNonce((n) => n + 1);
-				}).finally(() => {
-					setRunBusy(false);
-					setConfirmRun(false);
-				});
-			};
-			(0, react$1.useEffect)(() => {
-				if (tab !== "info") return;
-				let alive = true;
-				setInfoLoading(true);
-				setInfoError(null);
-				fetchInstances({
-					taskId: row.id,
-					statuses: LAST_RUN_STATUSES,
-					limit: 1
-				}).then(({ rows }) => {
-					if (!alive) return;
-					setInfoLast(rows[0] ?? null);
-					setInfoLoaded(true);
-				}).catch((error) => {
-					if (alive) setInfoError(error instanceof Error ? error.message : String(error));
-				}).finally(() => {
-					if (alive) setInfoLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				tab,
-				row.id,
-				runSig
-			]);
-			const filterSig = `${recStatus}|${recRange.from}|${recRange.to}|${recLimit}`;
-			const prevFilterSig = (0, react$1.useRef)(filterSig);
-			(0, react$1.useEffect)(() => {
-				const filterChanged = prevFilterSig.current !== filterSig;
-				prevFilterSig.current = filterSig;
-				if (tab !== "records") return;
-				let alive = true;
-				setRecLoading(true);
-				setRecError(null);
-				const range = rangeToQuery(recRange, "day");
-				fetchInstances({
-					taskId: row.id,
-					statuses: recStatus === "" || recStatus === "all" ? void 0 : statusesOfBucket(recStatus),
-					from: range.fromTs,
-					to: range.toTs,
-					limit: recLimit
-				}).then(({ rows }) => {
-					if (!alive) return;
-					setRecords(rows);
-					if (filterChanged) {
-						setOpenInstance(null);
-						setEvents(null);
-					}
-				}).catch((error) => {
-					if (alive) setRecError(error instanceof Error ? error.message : String(error));
-				}).finally(() => {
-					if (alive) setRecLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				tab,
-				row.id,
-				recStatus,
-				recRange,
-				recLimit,
-				runSig,
-				runNonce,
-				filterSig
-			]);
-			(0, react$1.useEffect)(() => {
-				if (openInstance === null) return;
-				let alive = true;
-				setEventsError(null);
-				setEvents(null);
-				fetchEvents(openInstance).then((rows) => {
-					if (alive) setEvents(rows);
-				}).catch((error) => {
-					if (alive) setEventsError(error instanceof Error ? error.message : String(error));
-				});
-				return () => {
-					alive = false;
-				};
-			}, [openInstance]);
-			(0, react$1.useEffect)(() => {
-				if (tab !== "logs") return;
-				let alive = true;
-				setLogLoading(true);
-				setLogError(null);
-				const range = rangeToQuery(logRange, "minute");
-				fetchLogs({
-					taskId: row.id,
-					keyword: logKeyword.trim() === "" ? void 0 : logKeyword.trim(),
-					from: range.fromTs,
-					to: range.toTs,
-					limit: logLimit
-				}).then(({ rows }) => {
-					if (alive) setLogs(rows);
-				}).catch((error) => {
-					if (alive) setLogError(error instanceof Error ? error.message : String(error));
-				}).finally(() => {
-					if (alive) setLogLoading(false);
-				});
-				return () => {
-					alive = false;
-				};
-			}, [
-				tab,
-				row.id,
-				logKeyword,
-				logRange,
-				logLimit,
-				runSig
-			]);
-			const renderInfo = () => {
-				const view = {
-					scheduleLine,
-					nextSlot: renderNextExec(row.nextSlotAt, t),
-					workspace: row.workspace,
-					model: modelText,
-					retry: String(row.retryMax),
-					window: row.schedule.window,
-					attachments: row.attachments.map((item) => ({
-						name: item.name,
-						key: `${item.kind}:${item.name}`,
-						path: item.path ?? null,
-						anchorSessionId: item.anchorSessionId ?? null
-					})),
-					depends: row.depends.map((dep) => ({
-						id: dep.id,
-						title: dep.title,
-						enabled: dep.enabled
-					}))
-				};
-				return (0, react$1.createElement)("div", { style: panelBoxStyle }, (0, react$1.createElement)("div", { style: infoWrapStyle }, (0, react$1.createElement)("div", {
-					className: "dsh-tdt-info-cfg",
-					style: infoConfigStyle
-				}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), taskInfoBaseFields({
-					t,
-					view,
-					onOpenFile,
-					onViewTask
-				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-danger)"
-				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, {}) : infoLast === null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
-				} }, t("infoNoRun")) : lastRunFields({
-					t,
-					instance: infoLast,
-					onOpenSession,
-					onOpenFile
-				}))));
-			};
-			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(SelectField, {
-				value: recStatus,
-				options: [
-					{
-						value: "all",
-						label: tt("filterAll")
-					},
-					{
-						value: "succeeded",
-						label: statusTextOf("succeeded", t)
-					},
-					{
-						value: "failed",
-						label: statusTextOf("failed", t)
-					},
-					{
-						value: "running",
-						label: t("filterRunning")
-					}
-				],
-				onChange: (next) => {
-					setRecStatus(next);
-				},
-				placeholder: t("colStatus"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("colStatus"),
-				size: "md",
-				width: 96
-			}), (0, react$1.createElement)(TimeRange, {
-				value: recRange,
-				onChange: setRecRange,
-				labels: timeRangeLabels,
-				calendarLabels,
-				timeLabels,
-				precision: "day",
-				size: "md"
-			}), (0, react$1.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
-				value: String(recLimit),
-				options: [
-					50,
-					100,
-					200
-				].map((n) => ({
-					value: String(n),
-					label: String(n)
-				})),
-				onChange: (next) => {
-					setRecLimit(Number(next));
-				},
-				placeholder: String(recLimit),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("cardLogLimit"),
-				size: "md",
-				width: 70
-			}), t("limitSuffix")), recError !== null ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react$1.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react$1.createElement)("table", { style: {
-				...miniTableStyle,
-				tableLayout: "fixed"
-			} }, (0, react$1.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react$1.createElement)("tr", null, (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "76px"
-			} }, t("colStatus")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "140px"
-			} }, t("colPlanned")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "84px"
-			} }, t("colActualStart")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "76px"
-			} }, t("colDuration")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "72px"
-			} }, t("colTokens")), (0, react$1.createElement)("th", { style: recHeadStyle }, t("colNote")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "96px"
-			} }, t("colOutputs")), (0, react$1.createElement)("th", { style: {
-				...recHeadStyle,
-				width: "68px"
-			} }, t("colSession")))), (0, react$1.createElement)("tbody", null, records.flatMap((instance, index) => {
-				const open = openInstance === instance.id;
-				const outputs = outputsOf(instance.outputs);
-				const sid = instance.session_id;
-				const openFile = onOpenFile;
-				const openSession = onOpenSession;
-				const canOpenFile = sid !== null && openFile !== void 0;
-				const canOpenSession = sid !== null && openSession !== void 0;
-				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at);
-				return [(0, react$1.createElement)("tr", {
-					key: instance.id,
-					className: ["dsh-tdt-rec-row", open || index % 2 === 0 ? "" : "dsh-tdt-rec-alt"].join(" ").trim(),
-					style: {
-						cursor: "pointer",
-						...open ? { background: "var(--tdt-open-bg)" } : {}
-					},
-					onClick: () => {
-						setOpenInstance(open ? null : instance.id);
-					}
-				}, (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { style: {
+			if (status === "running" || status === "dispatched") return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconLoadingOutlineRegular, {
+				size: 15,
+				className: "dsh-tdt-rec-ic-run"
+			});
+			return (0, react$1.createElement)("span", { className: "dsh-tdt-rec-ic-idle" });
+		}
+		/**
+		* 「允许延迟」：ISO 8601 时长（如 `PT4H`）→ 人话（如 `4 小时`）。
+		* 编辑器下拉本来就用这套人话（4 小时 / 30 分钟 / 1 天），基础信息面板此前却把裸 `PT4H` 亮给用户看，
+		* 用户看不懂（用户 2026-10-03 拍板：不能用看不懂的符号表示）。
+		* 解析不出（畸形值）⇒ 原样返回，不编造。
+		*/
+		function windowLabel(iso, t) {
+			const m = /^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/.exec(iso.trim());
+			if (m === null) return iso;
+			const hh = Number(m[1] ?? 0);
+			const min = Number(m[2] ?? 0);
+			const sec = Number(m[3] ?? 0);
+			if (hh === 0 && min === 0 && sec === 0) return `0 ${t("unitMinutes")}`;
+			if (hh > 0 && min === 0 && sec === 0 && hh % 24 === 0) return `${hh / 24} ${t("unitDays")}`;
+			if (hh === 0 && min > 0 && sec === 0) return `${min} ${t("unitMinutes")}`;
+			if (hh > 0 && min === 0 && sec === 0) return `${hh} ${t("unitHours")}`;
+			return iso;
+		}
+		/** 基础信息块的全部字段行（不含栏标题与 grid 容器——那两样由调用方给）。 */
+		function taskInfoBaseFields(props) {
+			const { t, view, onOpenFile, onViewTask } = props;
+			return (0, react$1.createElement)(react$1.Fragment, null, view.enabled === void 0 ? null : InfoField({
+				label: t("colStatus"),
+				children: (0, react$1.createElement)("span", { style: {
 					display: "inline-flex",
 					alignItems: "center",
-					justifyContent: "center",
-					gap: "6px"
-				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), (0, react$1.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react$1.createElement)("td", { style: {
-					...miniCellStyle,
-					maxWidth: 0
-				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react$1.createElement)("span", {
-					title: instance.note,
-					className: "dsh-tdt-ellipsis",
-					style: {
-						display: "block",
-						color: "var(--tdt-fg-3)"
-					}
-				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
-					key: output,
-					label: baseNameOf$1(output),
-					side: "top"
-				}, (0, react$1.createElement)("button", {
-					type: "button",
-					className: "dsh-tdt-chip",
-					style: { cursor: canOpenFile ? "pointer" : "default" },
-					onClick: (event) => {
-						event.stopPropagation();
-						if (canOpenFile && openFile !== void 0 && sid !== null) openFile(sid, output);
-					}
-				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
-					path: output,
-					size: 16
-				})))), outputs.length > 3 ? (0, react$1.createElement)("button", {
-					type: "button",
-					"aria-label": t("viewSession"),
-					className: "dsh-tdt-chip dsh-tdt-chip--label",
-					onClick: (event) => {
-						event.stopPropagation();
-						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid);
-					}
-				}, "…") : null)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react$1.createElement)(Button$2, {
-					variant: "outline",
-					size: "sm",
-					onClick: (event) => {
-						event.stopPropagation();
-						openSession(sid);
-					}
-				}, t("colView")) : null)), open ? (0, react$1.createElement)("tr", { key: `${instance.id}-detail` }, (0, react$1.createElement)("td", {
-					colSpan: 8,
-					style: {
-						...miniCellWrapStyle,
-						padding: "18px 20px",
-						background: "var(--tdt-open-bg-soft)"
-					}
-				}, eventsError !== null ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-danger)"
-				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-xs)",
-					color: "var(--tdt-fg-3)"
-				} }, t("cardEventsEmpty")) : events.map((event) => (0, react$1.createElement)("div", {
-					key: event.seq,
-					style: {
-						marginBottom: "7px",
-						lineHeight: "var(--tdt-line-md)"
-					}
-				}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
-			})))));
-			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Input$1, {
-				value: logKeyword,
-				onChange: setLogKeyword,
-				placeholder: t("cardKeyword"),
-				size: "md",
-				style: { width: "140px" }
-			}), (0, react$1.createElement)(TimeRange, {
-				value: logRange,
-				onChange: setLogRange,
-				labels: timeRangeLabels,
-				calendarLabels,
-				timeLabels,
-				precision: "minute",
-				size: "md"
-			}), (0, react$1.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
-				value: String(logLimit),
-				options: [
-					50,
-					100,
-					200
-				].map((n) => ({
-					value: String(n),
-					label: String(n)
-				})),
-				onChange: (next) => {
-					setLogLimit(Number(next));
-				},
-				placeholder: String(logLimit),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("cardLogLimit"),
-				size: "md",
-				width: 70
-			}), t("limitSuffix")), logError !== null ? (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-xs)",
-				color: "var(--tdt-danger)"
-			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react$1.createElement)("div", { style: logAreaStyle }, logs === null ? null : logs.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react$1.createElement)("div", {
-				key: row.seq,
-				style: logRowStyle
-			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react$1.createElement)("span", { style: {
-				color: row.level === "error" ? "var(--tdt-danger)" : row.level === "warn" ? "var(--tdt-accent)" : "var(--tdt-fg-3)",
-				fontWeight: row.level === "error" ? 600 : 400
-			} }, `[${row.level}]`), " ", (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${row.kind}: `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, row.message)))));
-			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
-			const renderConfirm = () => (0, react$1.createElement)("div", {
-				style: overlayStyle,
-				onClick: () => {
-					if (!deleting) setConfirmDelete(false);
-				}
-			}, (0, react$1.createElement)("div", {
-				style: dialogStyle,
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-lg)",
-				fontWeight: 600,
-				marginBottom: "8px"
-			} }, t("cardDeleteTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2)",
-				lineHeight: "var(--tdt-line-sm)",
-				marginBottom: "14px"
-			} }, t("cardDeleteDesc")), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				justifyContent: "flex-end",
-				gap: "8px"
-			} }, (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				disabled: deleting,
-				onClick: () => {
-					setConfirmDelete(false);
-				}
-			}, t("cardCancel")), (0, react$1.createElement)(Button$2, {
-				variant: "danger",
-				size: "sm",
-				disabled: deleting,
-				onClick: () => {
-					setDeleting(true);
-					onDelete(row.id).finally(() => {
-						setDeleting(false);
-						setConfirmDelete(false);
-					});
-				}
-			}, deleting ? t("loading") : t("cardDelete")))));
-			/** 立即执行确认框（2026-10-03）：与删除确认同款自绘 overlay，文案「你确定要立即执行此任务吗？」。 */
-			const renderRunConfirm = () => (0, react$1.createElement)("div", {
-				style: overlayStyle,
-				onClick: () => {
-					if (!runBusy) setConfirmRun(false);
-				}
-			}, (0, react$1.createElement)("div", {
-				style: dialogStyle,
-				onClick: (event) => {
-					event.stopPropagation();
-				}
-			}, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-lg)",
-				fontWeight: 600,
-				marginBottom: "8px"
-			} }, t("cardRunNowTitle")), (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2)",
-				lineHeight: "var(--tdt-line-sm)",
-				marginBottom: "14px"
-			} }, t("cardRunNowDesc")), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				justifyContent: "flex-end",
-				gap: "8px"
-			} }, (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "sm",
-				disabled: runBusy,
-				onClick: () => {
-					setConfirmRun(false);
-				}
-			}, t("cardCancel")), (0, react$1.createElement)(Button$2, {
-				variant: "primary",
-				size: "sm",
-				disabled: runBusy,
-				onClick: () => {
-					doRunNow();
-				}
-			}, runBusy ? t("loading") : t("cardRunNow")))));
-			return (0, react$1.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react$1.createElement)("div", { style: { position: "relative" } }, runToast !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: runToast.seq,
-				tone: runToast.tone,
-				onDone: () => {
-					setRunToast(null);
-				},
-				text: runToast.text
-			}) : null, (0, react$1.createElement)("div", { style: panelBarStyle }, (0, react$1.createElement)(Segmented, {
-				value: tab,
-				size: "md",
-				variant: "inset",
-				items: [
-					{
-						value: "info",
-						label: t("cardTabInfo")
-					},
-					{
-						value: "records",
-						label: t("cardTabRecords")
-					},
-					{
-						value: "logs",
-						label: t("cardTabLogs")
-					}
-				],
-				onChange: setTab
-			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "md",
-				className: "dsh-tdt-btn--danger-ink",
-				onClick: () => {
-					setConfirmDelete(true);
-				}
-			}, t("cardDelete")), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlayOutlineRegular, { size: 14 }),
-				onClick: () => {
-					setConfirmRun(true);
-				}
-			}, t("cardRunNow")), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "md",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
-				onClick: () => {
-					onEdit(row.id);
-				}
-			}, t("editorEdit")))), confirmDelete ? renderConfirm() : null, confirmRun ? renderRunConfirm() : null);
-		}
-		function TaskCard(props) {
-			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh } = props;
-			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
-			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
-			return (0, react$1.createElement)("div", {
-				ref: refOf,
-				className: "dsh-tdt-card",
-				style: cardStyle$1
-			}, (0, react$1.createElement)("div", {
-				className: "dsh-tdt-card-row",
-				style: {
+					gap: "6px",
+					fontWeight: 500
+				} }, (0, react$1.createElement)("span", { style: {
+					flex: "none",
+					width: "8px",
+					height: "8px",
+					borderRadius: "2px",
+					background: view.enabled ? "var(--tdt-success)" : "var(--tdt-fg-3)"
+				} }), view.enabled ? t("infoStateEnabled") : t("infoStateDisabled"))
+			}), InfoField({
+				label: t("listFieldSchedule"),
+				children: view.scheduleLine
+			}), view.nextSlot === void 0 ? null : InfoField({
+				label: t("infoNextExec"),
+				children: view.nextSlot
+			}), InfoField({
+				label: t("listFieldWorkspace"),
+				children: view.workspace
+			}), InfoField({
+				label: t("listFieldModel"),
+				children: view.model
+			}), InfoField({
+				label: t("listFieldRetry"),
+				children: view.retry
+			}), InfoField({
+				label: t("listFieldWindow"),
+				children: windowLabel(view.window, t)
+			}), InfoField({
+				label: t("listSectionAttachments"),
+				children: view.attachments.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
 					display: "flex",
-					alignItems: "center",
-					gap: "12px",
-					cursor: "pointer",
-					padding: "12px 14px"
-				},
-				onClick: () => {
-					const sel = typeof window === "undefined" ? null : window.getSelection();
-					if (sel !== null && sel.toString() !== "") return;
-					onToggleOpen();
-				}
-			}, (0, react$1.createElement)(StatusRail, { row }), (0, react$1.createElement)("div", { style: {
+					flexWrap: "wrap",
+					gap: "2px 10px"
+				} }, view.attachments.map((item) => {
+					const absPath = item.path;
+					const anchor = item.anchorSessionId;
+					const key = item.key ?? item.name;
+					const icon = (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+						path: item.name,
+						size: 14
+					});
+					const name = (0, react$1.createElement)(MarqueeText, {
+						text: item.name,
+						title: item.name,
+						style: {
+							maxWidth: "40ch",
+							minWidth: 0
+						}
+					});
+					return absPath !== void 0 && absPath !== null && anchor !== void 0 && anchor !== null && onOpenFile !== void 0 ? (0, react$1.createElement)("button", {
+						key,
+						type: "button",
+						title: absPath,
+						className: "dsh-tdt-filechip dsh-tdt-filechip--inline",
+						onClick: () => {
+							onOpenFile(anchor, absPath);
+						}
+					}, icon, name) : (0, react$1.createElement)("span", {
+						key,
+						style: {
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "4px"
+						}
+					}, icon, name);
+				}))
+			}), InfoField({
+				label: t("listSectionDepends"),
+				children: view.depends.length === 0 ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, t("listNone")) : (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					flexDirection: "column",
+					gap: "4px"
+				} }, view.depends.map((dep, index) => {
+					const seq = (0, react$1.createElement)("span", { style: {
+						display: "inline-flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flex: "none",
+						minWidth: "18px",
+						height: "18px",
+						padding: "0 4px",
+						boxSizing: "border-box",
+						borderRadius: "var(--tdt-radius-xs)",
+						background: "var(--tdt-chip-bg)",
+						color: "var(--tdt-fg-2)",
+						fontSize: "var(--tdt-font-xs)",
+						fontVariantNumeric: "tabular-nums"
+					} }, String(index + 1));
+					const label = `${dep.title}${dep.enabled ? "" : t("listDisabledTag")}`;
+					return onViewTask === void 0 ? (0, react$1.createElement)("span", {
+						key: dep.id,
+						style: {
+							display: "inline-flex",
+							alignItems: "center",
+							gap: "6px",
+							minWidth: 0
+						}
+					}, seq, (0, react$1.createElement)("span", {
+						className: "dsh-tdt-ellipsis",
+						title: dep.title
+					}, label)) : (0, react$1.createElement)("button", {
+						key: dep.id,
+						type: "button",
+						className: "dsh-tdt-info-dep",
+						title: t("infoViewTask"),
+						onClick: () => {
+							onViewTask(dep.id);
+						}
+					}, seq, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, label));
+				}))
+			}));
+		}
+		/**
+		* 「上次执行」一条实例的**明细**：字段区（状态 / 任务会话 / 计划执行 / 实际开始 / 结束时间 / 执行时长 /
+		* Token / 备注）+ 产出物清单。返回的根节点是 `.dsh-tdt-info-rec-body`
+		* （末行去缝的判据挂在它身上：有产出物时字段区末行的线要保留）。
+		*/
+		function lastRunFields(props) {
+			const { t, instance, onOpenSession, onOpenFile, hideStatus = false } = props;
+			const sid = instance.session_id;
+			const canOpenSession = sid !== null && onOpenSession !== void 0;
+			const canOpenFile = sid !== null && onOpenFile !== void 0;
+			const outputs = outputsOf(instance.outputs);
+			const dur = durationMsOf(instance);
+			const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
+			const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
+			const timeOf = (iso) => iso === null ? "—" : formatDateTime(iso, {
+				seconds: true,
+				fallback: "—"
+			});
+			const sessionName = instance.session_title ?? sid ?? "";
+			const sessionIcon = (0, react$1.createElement)("span", { className: "dsh-tdt-info-session-icon" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 10 }));
+			const sessionLabel = (0, react$1.createElement)("span", { style: {
 				flex: "1 1 auto",
 				minWidth: 0
-			} }, (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "baseline",
+			} }, (0, react$1.createElement)(MarqueeText, { text: sessionName }));
+			const sessionLinkStyle = {
+				display: "inline-flex",
+				alignItems: "center",
 				gap: "6px",
-				minWidth: 0
-			} }, onViewTask === void 0 ? (0, react$1.createElement)("div", { style: {
-				...titleStyle,
-				flex: "0 1 auto",
-				minWidth: 0
-			} }, (0, react$1.createElement)(MarqueeText, { text: row.title })) : (0, react$1.createElement)("button", {
+				maxWidth: "100%",
+				boxSizing: "border-box",
+				padding: 0,
+				font: "inherit",
+				fontSize: "var(--tdt-font-sm)",
+				textAlign: "left",
+				cursor: canOpenSession ? "pointer" : "default"
+			};
+			const sessionChip = sid === null || sessionName === "" ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "—") : canOpenSession ? (0, react$1.createElement)("button", {
 				type: "button",
-				className: "dsh-tdt-info-dep",
-				title: t("infoViewTask"),
-				style: {
-					...titleStyle,
-					flex: "0 1 auto",
-					minWidth: 0,
-					textAlign: "left"
-				},
-				onClick: (event) => {
-					event.stopPropagation();
-					onViewTask(row.id);
+				className: "dsh-tdt-info-session",
+				title: sessionName,
+				style: sessionLinkStyle,
+				onClick: () => {
+					onOpenSession(sid);
 				}
-			}, (0, react$1.createElement)(MarqueeText, { text: row.title })), row.code !== null ? (0, react$1.createElement)("span", { style: {
-				...faintStyle,
-				flex: "none",
-				display: "inline"
-			} }, `[${row.code}]`) : null, (0, react$1.createElement)("span", { style: {
-				...faintStyle,
-				flex: "none",
-				display: "inline"
-			} }, row.createdAt === null ? `[${t("listCreatedUnknown")}]` : `[${t("listCreatedTag", { date: formatYmd(row.createdAt) })}]`), row.enabled ? null : (0, react$1.createElement)("span", { style: {
-				...faintStyle,
-				flex: "none",
-				display: "inline"
-			} }, t("listDisabledTag"))), (0, react$1.createElement)("div", { style: {
-				...metaStyle,
-				minWidth: 0
-			} }, (0, react$1.createElement)(MarqueeText, { text: scheduleLine }))), (0, react$1.createElement)("div", { style: {
+			}, sessionIcon, sessionLabel) : (0, react$1.createElement)("span", {
+				style: sessionLinkStyle,
+				title: sessionName
+			}, sessionIcon, sessionLabel);
+			return (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-body" }, (0, react$1.createElement)("div", { className: "dsh-tdt-info-rec-fields" }, hideStatus ? null : InfoField({
+				label: t("colStatus"),
+				children: (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					gap: "6px",
+					fontWeight: 500,
+					color: infoStatusColorOf(instance.status)
+				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), statusTextOf(instance.status, t))
+			}), InfoField({
+				label: t("infoSession"),
+				children: sessionChip
+			}), InfoField({
+				label: t("colPlanned"),
+				children: timeOf(instance.scheduled_at)
+			}), InfoField({
+				label: t("colActualStart"),
+				children: timeOf(instance.dispatched_at)
+			}), InfoField({
+				label: t("infoFinishedAt"),
+				children: timeOf(instance.finished_at)
+			}), dur === null ? null : InfoField({
+				label: t("infoDuration"),
+				children: formatDurationHms(dur)
+			}), tokens === null ? null : InfoField({
+				label: t("colTokens"),
+				children: (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, tokens)
+			}), note === "" ? null : InfoField({
+				label: t("colNote"),
+				children: (0, react$1.createElement)("span", { style: { color: "var(--tdt-danger)" } }, note)
+			})), outputs.length === 0 ? null : (0, react$1.createElement)("div", { style: { marginTop: "14px" } }, (0, react$1.createElement)("div", { style: {
+				marginBottom: "6px",
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-fg-3)"
+			} }, t("colOutputs")), (0, react$1.createElement)("div", { style: {
 				display: "flex",
-				alignItems: "center",
-				gap: "8px",
-				flex: "none"
-			} }, (0, react$1.createElement)(PastPill, {
-				row,
-				t,
-				tt
-			}), (0, react$1.createElement)(NextPill, {
-				row,
-				t,
-				tt
-			}), (0, react$1.createElement)("span", {
-				className: "dsh-tdt-switch",
-				onClick: (event) => {
-					event.stopPropagation();
+				flexDirection: "column"
+			} }, outputs.map((output) => (0, react$1.createElement)("button", {
+				key: output,
+				type: "button",
+				title: output,
+				className: "dsh-tdt-filechip dsh-tdt-filechip--block",
+				disabled: !canOpenFile,
+				onClick: () => {
+					if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
 				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
-				checked: row.enabled,
-				onChange: (next) => {
-					onToggleEnabled(row.id, next);
-				},
-				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
-				title: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
-			})), (0, react$1.createElement)("span", { onClick: (event) => {
-				event.stopPropagation();
-			} }, (0, react$1.createElement)(IconButton, {
-				variant: "plain",
-				size: "sm",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
-				label: t("listExpandHint"),
-				onClick: onToggleOpen,
-				"aria-expanded": open,
-				style: { transform: open ? "rotate(180deg)" : "none" }
-			})))), open ? (0, react$1.createElement)(TaskExpandPanel, {
-				row,
-				t,
-				tt,
-				scheduleLine,
-				modelText,
-				onEdit,
-				onDelete,
-				onRunNow,
-				onOpenFile,
-				onOpenSession,
-				onViewTask,
-				refresh
-			}) : null);
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				path: output,
+				size: 14
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf$1(output)))))));
 		}
-		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props;
-			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
-			ensureTaskListStyle();
-			ensureTaskInfoStyle();
-			ensureTaskEditorStyle();
-			ensureToastStyle();
-			const [filter, setFilter] = (0, react$1.useState)("all");
-			const [workspace, setWorkspace] = (0, react$1.useState)("");
-			const [query, setQuery] = (0, react$1.useState)("");
-			const [openId, setOpenId] = (0, react$1.useState)(null);
-			/** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
-			const [optimistic, setOptimistic] = (0, react$1.useState)({});
-			const rowsWithOptimistic = (0, react$1.useMemo)(() => {
-				if (Object.keys(optimistic).length === 0) return rows;
-				return rows.map((row) => row.id in optimistic ? {
-					...row,
-					enabled: optimistic[row.id]
-				} : row);
-			}, [rows, optimistic]);
-			(0, react$1.useEffect)(() => {
-				setOptimistic((cur) => Object.keys(cur).length === 0 ? cur : {});
-			}, [rows]);
-			/**
-			* 异常数 = 「最近一次**失败**」或「最近一次**未执行**」的任务数（全量统计，不受当前筛选影响）。
-			* ⚠️ 2026-09-30 评审 P0：状态条已把 `skipped`（未执行）与 `failed` 一起标红，这里（与下面的异常筛选）
-			* 却只认 `failed` ⇒ 卡片红着却不在「异常」里，口径分叉。两处必须同口径。
-			*/
-			const abnormalCount = (0, react$1.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed" || row.lastStatus === "skipped").length, [rowsWithOptimistic]);
-			const visible = (0, react$1.useMemo)(() => {
-				const q = query.trim().toLowerCase();
-				const sorted = sortRows(rowsWithOptimistic.filter((row) => {
-					if (filter === "enabled" && !row.enabled) return false;
-					if (filter === "disabled" && row.enabled) return false;
-					if (filter === "abnormal" && row.lastStatus !== "failed" && row.lastStatus !== "skipped") return false;
-					if (workspace !== "" && row.workspace !== workspace) return false;
-					if (q === "") return true;
-					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
-				}));
-				{
-					const order = sorted.map((r) => r.id.slice(0, 8)).join(" > ");
-					if (order !== lastOrder) {
-						console.log(`[tdt-sort] 面板顺序变化\n  before: ${lastOrder === "" ? "(空)" : lastOrder}\n  after:  ${order}\n  键: ${sorted.map((r) => `${r.id.slice(0, 8)}[run=${r.running ? 1 : 0} next=${r.nextSlotAt ?? "-"}]`).join(" ")}`);
-						lastOrder = order;
-					}
-				}
-				return sorted;
-			}, [
-				rowsWithOptimistic,
-				filter,
-				workspace,
-				query
-			]);
-			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
-			const workspaceOptions = (0, react$1.useMemo)(() => [{
-				value: "",
-				label: t("listFilterWorkspaceAll")
-			}, ...workspaces], [workspaces, t]);
-			return (0, react$1.createElement)("div", { style: {
-				width: "100%",
-				display: "flex",
-				justifyContent: "center"
-			} }, (0, react$1.createElement)("div", {
-				id: PANEL_CONTENT_ID,
-				style: PANEL_CONTENT_STYLE
-			}, (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "8px",
-				marginBottom: "12px",
-				flexWrap: "wrap"
-			} }, (0, react$1.createElement)(Segmented, {
-				value: filter,
-				size: "md",
-				items: [
-					{
-						value: "all",
-						label: t("listFilterAll")
-					},
-					{
-						value: "enabled",
-						label: t("listFilterEnabled")
-					},
-					{
-						value: "disabled",
-						label: t("listFilterDisabled")
-					},
-					{
-						value: "abnormal",
-						label: t("listFilterAbnormal"),
-						badge: abnormalCount
-					}
-				],
-				onChange: setFilter
-			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "8px",
-				flex: "none"
-			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Input, {
-				className: "dsh-tdt-tl-input",
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
-				value: query,
-				placeholder: t("listSearchPlaceholder"),
-				onChange: (event) => {
-					setQuery(event.target.value);
-				}
-			}), (0, react$1.createElement)(SelectField, {
-				value: workspace,
-				options: workspaceOptions,
-				onChange: setWorkspace,
-				placeholder: t("listFilterWorkspaceAll"),
-				emptyLabel: t("editorNoOptions"),
-				ariaLabel: t("listFilterWorkspaceAll"),
-				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
-				size: "md",
-				width: WS_WIDTH,
-				marquee: true
-			}))), visible.length === 0 ? (0, react$1.createElement)("p", { style: {
-				...metaStyle,
-				marginTop: "8px"
-			} }, rows.length === 0 && !ready ? "" : rows.length === 0 ? t("listEmpty") : t("listEmptyFiltered")) : (0, react$1.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react$1.createElement)(TaskCard, {
-				key: row.id,
-				row,
-				t,
-				tt,
-				open: openId === row.id,
-				onToggleOpen: () => {
-					setOpenId((cur) => cur === row.id ? null : row.id);
-				},
-				onEdit,
-				onViewTask,
-				onDelete,
-				onRunNow,
-				onOpenFile,
-				onOpenSession,
-				refresh,
-				onToggleEnabled: (id, enabled) => {
-					setOptimistic((cur) => ({
-						...cur,
-						[id]: enabled
-					}));
-					onToggleEnabled(id, enabled).then((err) => {
-						if (err === null) return;
-						setOptimistic((cur) => {
-							if (!(id in cur)) return cur;
-							const next = { ...cur };
-							delete next[id];
-							return next;
-						});
-					});
-				},
-				refOf: refOf(row.id)
-			})))));
-		}
-		//#endregion
-		//#region src/attachment-allowlist.ts
-		/**
-		* 附件上传的**共享约束**：体积上限 + 扩展名白名单 + 扩展名解析。
-		*
-		* 宿主路由（src/index.ts，服务端 415/413 拦截）与浏览器端预检（src/client/task-editor.tsx，
-		* 发包前当场拒）**必须用同一份**——两处各写一份必然漂移（白名单改了这边忘了那边）。
-		* 客户端打包（tsdown alwaysBundle）会把本模块内联进 client.js，宿主侧 tsc 直编，均无碍。
-		*/
-		/** 附件上传：体积上限（字节，20MB）。 */
-		const ATTACHMENT_MAX_BYTES = 20971520;
-		/** 附件上传：允许的常见扩展名（文本/代码/图片/文档）。命中白名单才收。 */
-		const ALLOWED_ATTACHMENT_EXT = /* @__PURE__ */ new Set([
-			"txt",
-			"md",
-			"markdown",
-			"json",
-			"jsonc",
-			"yaml",
-			"yml",
-			"csv",
-			"ts",
-			"tsx",
-			"js",
-			"jsx",
-			"mjs",
-			"cjs",
-			"py",
-			"sh",
-			"bash",
-			"zsh",
-			"toml",
-			"ini",
-			"cfg",
-			"log",
-			"xml",
-			"html",
-			"css",
-			"scss",
-			"sql",
-			"go",
-			"rs",
-			"java",
-			"c",
-			"cpp",
-			"h",
-			"hpp",
-			"rb",
-			"php",
-			"pl",
-			"r",
-			"scala",
-			"kt",
-			"swift",
-			"dockerfile",
-			"gitignore",
-			"env",
-			"png",
-			"jpg",
-			"jpeg",
-			"gif",
-			"webp",
-			"bmp",
-			"svg",
-			"ico",
-			"avif",
-			"pdf",
-			"doc",
-			"docx",
-			"xls",
-			"xlsx",
-			"ppt",
-			"pptx",
-			"odt",
-			"rtf"
-		]);
-		/** 取文件名扩展名（小写，无点返回 ''）。 */
-		const extOf = (name) => {
-			const base = name.slice(Math.max(name.lastIndexOf("/"), name.lastIndexOf("\\")) + 1);
-			const dot = base.lastIndexOf(".");
-			return dot <= 0 ? "" : base.slice(dot + 1).toLowerCase();
-		};
-		/**
-		* 附件 `ref` 是否**安全**（可以拼进路径）：非空、不含 `..`（相对路径上跳）、
-		* 不以 `/` 或 `\` 开头（绝对路径）、不含 `\`（Windows 分隔符）。
-		*
-		* **唯一实现**（2026-09-30 抽象收敛）：此前同一规则写了 **4 份**且各有出入——
-		* 宿主 zod（`tasks.ts`：拒绝 `..`/绝对/反斜杠）、客户端保存前校验（`task-editor`：多查了开头 `\`）、
-		* 真删前防御（`task-assets.removeAttachmentFiles`：没查开头 `\`）、上传定位
-		* （`task-assets.locateUploaded`：连反斜杠都没查）。各写一份必然漂移——
-		* 「选工作区文件报 422 附件 ref 非法」那类 bug 的温床就在这。
-		*/
-		const isSafeAttachmentRef = (ref) => ref !== "" && !ref.includes("..") && !ref.startsWith("/") && !ref.startsWith("\\") && !ref.includes("\\");
 		//#endregion
 		//#region src/client/task-view.tsx
 		/**
@@ -68505,6 +67206,24 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			EventType.TASK_RUN_CHANGED
 		];
 		//#endregion
+		//#region src/client/ui/running.ts
+		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
+		const RUNNING_TONE = "var(--tdt-business)";
+		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
+		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
+		const RUNNING_CSS = `
+@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite; }
+@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
+`;
+		let ensured = false;
+		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
+		const ensureRunningStyle = () => {
+			if (ensured) return;
+			ensured = true;
+			applyStyle("domain:running", RUNNING_CSS);
+		};
+		//#endregion
 		//#region src/client/records-timeline.tsx
 		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
 		const PAGE_SIZE = 50;
@@ -68689,7 +67408,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-err{color:var(--tdt-danger);}
 `;
 		const RECORDS_DOMAIN = "domain:records";
-		const filterRowStyle = {
+		const filterRowStyle$1 = {
 			display: "flex",
 			alignItems: "center",
 			gap: "var(--tdt-space-2)",
@@ -69300,7 +68019,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("div", {
 				id: PANEL_CONTENT_ID,
 				style: PANEL_CONTENT_STYLE
-			}, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Segmented, {
+			}, (0, react$1.createElement)("div", { style: filterRowStyle$1 }, (0, react$1.createElement)(Segmented, {
 				value: bucket === "" ? "all" : bucket,
 				size: "md",
 				label: t("colStatus"),
@@ -70074,6 +68793,1294 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					className: "dsh-tdt-cal-clock"
 				}), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-date" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-weekday" }, weekdayFormatter === null ? "" : weekdayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`))), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-sep" }, "·"), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
 			}))));
+		}
+		//#endregion
+		//#region src/client/task-list.tsx
+		/** 等宽字体：倒计时数字用它 + tabular-nums ⇒ 字宽固定，不会左右蹦。 */
+		const monoFont$1 = "var(--tdt-font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace)";
+		/** 顶部一排的统一高度：搜索框 / 工作区下拉 / 分组按钮 / 新建全部同高（用户 2026-09-30 要求）。
+		*  工作区下拉的高由基础层 `SelectField` 的 `size:'md'` 保证（= 同一档 28），不再自绘外壳。 */
+		const CONTROL_H = "var(--tdt-control-h-md)";
+		/** 工作区下拉的**定长**宽度（比搜索框略宽一点；切选项时宽度不变）。 */
+		const WS_WIDTH = 180;
+		const TASK_LIST_CSS = [
+			`.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
+			`.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
+			`.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
+			".dsh-tdt-rec-head th { position: sticky; top: 0; z-index: 1; background: var(--tdt-head-bg); }",
+			".dsh-tdt-card { background: var(--tdt-surface-1); }",
+			".dsh-tdt-card-row:hover { background: var(--tdt-card-hover); }",
+			".dsh-tdt-rec-row:hover { background: var(--tdt-plate-hover); }",
+			".dsh-tdt-rec-alt { background: var(--tdt-plate); }"
+		].join("\n");
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。 */
+		const ensureTaskListStyle = () => {
+			applyStyle("domain:list", TASK_LIST_CSS);
+		};
+		/** 完整时刻（tooltip 用）：解析失败给占位符 `—`（不编造时间）。 */
+		const formatFull = (iso) => formatDateTime(iso, { fallback: "—" });
+		function useFlip(signature) {
+			const nodes = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			const prevTop = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			(0, react$1.useLayoutEffect)(() => {
+				const moved = [];
+				for (const [id, el] of nodes.current) {
+					const top = el.getBoundingClientRect().top;
+					const prev = prevTop.current.get(id);
+					if (prev !== void 0 && Math.abs(prev - top) > .5) moved.push([el, prev - top]);
+					prevTop.current.set(id, top);
+				}
+				if (moved.length === 0) return;
+				if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true) return;
+				for (const [el, delta] of moved) {
+					el.style.transition = "none";
+					el.style.transform = `translateY(${delta}px)`;
+				}
+				const frame = requestAnimationFrame(() => {
+					for (const [el] of moved) {
+						el.style.transition = `transform 260ms var(--tdt-ease)`;
+						el.style.transform = "";
+					}
+					window.setTimeout(() => {
+						for (const [el] of moved) el.style.transition = "";
+					}, 320);
+				});
+				return () => {
+					cancelAnimationFrame(frame);
+				};
+			}, [signature]);
+			const callbacks = (0, react$1.useRef)(/* @__PURE__ */ new Map());
+			return (0, react$1.useCallback)((id) => {
+				const hit = callbacks.current.get(id);
+				if (hit !== void 0) return hit;
+				const fn = (el) => {
+					if (el === null) {
+						nodes.current.delete(id);
+						callbacks.current.delete(id);
+						prevTop.current.delete(id);
+					} else nodes.current.set(id, el);
+				};
+				callbacks.current.set(id, fn);
+				return fn;
+			}, []);
+		}
+		const RAIL_W = 6;
+		const RAIL_H = 36;
+		/** 运行中：整条**蓝色**明暗脉动（颜色 / 脉动形状全在 `ui/running.ts` 一处定，前后两端统一）。 */
+		function RunningRail() {
+			ensureRunningStyle();
+			return (0, react$1.createElement)("span", {
+				className: `${RUN_PULSE_CLASS} dsh-tdt-rail`,
+				style: {
+					display: "inline-block",
+					width: `${RAIL_W}px`,
+					height: `${RAIL_H}px`,
+					flex: "none",
+					borderRadius: "var(--tdt-radius-xs)",
+					background: RUNNING_TONE
+				}
+			});
+		}
+		function StatusRail(props) {
+			const { row } = props;
+			if (row.running) return (0, react$1.createElement)(RunningRail, {});
+			const color = !row.enabled ? "var(--tdt-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--tdt-danger)" : "var(--tdt-success)";
+			const hint = !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : row.lastStatus === "skipped" ? "最近一次未执行（配置或前置不满足，详见执行记录）" : "计划运行中";
+			return (0, react$1.createElement)("span", {
+				title: hint,
+				style: {
+					display: "inline-block",
+					width: `${RAIL_W}px`,
+					height: `${RAIL_H}px`,
+					flex: "none",
+					borderRadius: "var(--tdt-radius-xs)",
+					background: color,
+					transition: `background var(--tdt-dur) var(--tdt-ease)`
+				}
+			});
+		}
+		/**
+		* 「历史执行」与「下次执行」是**两个独立**小标签（2026-09-30 用户拍板：不要合成一格四段，
+		* 拆成两块更清爽）。每个标签 = 语义底色的图标格 + 时间格，整体一个圆角细边框。
+		* - 历史执行：成功绿 / 失败红 / 无状态灰，图标 = 历史时钟；时间格当天 HH:mm、跨天「3 小时前 / 1 天前」。
+		* - 下次执行：图标 = 闹钟；时间格一天以内 = HH:mm:ss **秒级倒计时**（LiveText 自转），
+		*   超过 24 小时 = 明天 / 三天后 / N 周后。
+		*
+		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+		* 提示**静默失效**（用户 2026-09-30 真机反馈「移上去没提示」的根因，与 task-editor 里
+		* 「图标要包真 `<button>`」是同一个坑）。
+		*/
+		const pillOuterStyle = {
+			display: "inline-flex",
+			alignItems: "stretch",
+			flex: "none",
+			height: "20px",
+			borderRadius: "var(--tdt-radius-sm)",
+			overflow: "hidden",
+			border: `1px solid var(--tdt-border)`
+		};
+		/** 图标格：语义底色 + 图标（成功绿 / 失败红 / 无状态灰 / 下次中性）。 */
+		const pillIconCell = (bg, fg) => ({
+			display: "inline-flex",
+			alignItems: "center",
+			padding: "0 6px",
+			background: bg,
+			color: fg,
+			flex: "none"
+		});
+		/** 时间格：**等宽数字**（tabular-nums + 代码字体）⇒ 倒计时每秒变化不会因字宽不同而左右蹦。 */
+		const pillTimeCell = {
+			display: "inline-flex",
+			alignItems: "center",
+			padding: "0 8px",
+			background: "var(--tdt-surface-1)",
+			color: "var(--tdt-fg)",
+			fontSize: "var(--tdt-font-xs)",
+			lineHeight: "var(--tdt-line-xs)",
+			whiteSpace: "nowrap",
+			fontVariantNumeric: "tabular-nums",
+			fontFamily: monoFont$1
+		};
+		/** 历史执行标签（成功绿 / 失败红 / 无状态灰）。 */
+		function PastPill(props) {
+			const { row, t, tt } = props;
+			const has = row.lastStatus !== null && row.lastScheduledAt !== null;
+			const colored = has && row.lastStatus !== null && row.lastStatus !== "unknown";
+			const bg = !has || row.lastStatus === "unknown" ? "var(--tdt-surface-3)" : row.lastStatus === "succeeded" ? "var(--tdt-success)" : "var(--tdt-danger)";
+			const title = has ? tt("listLastFullTitle", { when: formatFull(row.lastScheduledAt ?? "") }) : t("listNever");
+			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
+				side: "bottom"
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(bg, colored ? "var(--tdt-on-signal)" : "var(--tdt-fg-2)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
+				style: pillTimeCell,
+				render: (nowMs) => {
+					if (!has) return "--";
+					const iso = row.lastScheduledAt ?? "";
+					return sameCalendarDay(new Date(iso), new Date(nowMs)) ? clockOf(iso) : relativePast(iso, nowMs, tt);
+				}
+			})));
+		}
+		/**
+		* 下次执行标签。**三种状态**（用户 2026-09-30 拍板：不要去判断补跑时间）：
+		* - **运行中** ⇒ 不显示倒计时（下一槽要等这趟跑完才算），改显「三个小方块脉动」的活动指示；
+		* - 未运行 ⇒ 一天以内 = `HH:mm:ss` 秒级倒计时（`LiveText` 自转），超过 24 小时 = 明天 / 三天后 / N 周后；
+		* - 无后续 ⇒ 占位符。
+		*
+		* ⚠️ 悬浮提示包在**整个标签**外层，且 Tooltip 的子元素必须是**真 DOM 元素**（`h('div', …)`）——
+		* 官方 Tooltip 靠给子元素挂 ref 实现，子元素若是普通函数组件（如 `LiveText`）ref 挂不上 ⇒
+		* 提示静默失效（用户 2026-09-30 真机反馈「移上去没提示」的根因）。
+		*/
+		function NextPill(props) {
+			const { row, t, tt } = props;
+			const nowMs = useNowMs();
+			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: t("listRunning"),
+				side: "bottom"
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell(RUNNING_TONE, "var(--tdt-on-signal)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)("span", { style: {
+				...pillTimeCell,
+				color: RUNNING_TONE
+			} }, (0, react$1.createElement)(RunningBlocks, {}))));
+			const dueNow = row.nextSlotAt !== null && Date.parse(row.nextSlotAt) <= nowMs;
+			const deferredTitle = typeof row.blockedReason === "string" && row.blockedReason !== "" ? `${row.blockedReason}｜${tt("listDeferredTitle")}` : tt("listDeferredTitle");
+			const title = dueNow ? nowMs - Date.parse(row.nextSlotAt ?? "") <= dueLoadingMs() ? t("listRunning") : deferredTitle : typeof row.blockedReason === "string" && row.blockedReason !== "" ? deferredTitle : row.nextSlotAt === null ? t("listNextNone") : tt("listNextFullTitle", { when: formatFull(row.nextSlotAt) });
+			return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				label: title,
+				side: "bottom"
+			}, (0, react$1.createElement)("div", { style: pillOuterStyle }, (0, react$1.createElement)("span", { style: pillIconCell("var(--tdt-surface-3)", "var(--tdt-fg)") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 })), (0, react$1.createElement)(LiveText, {
+				style: pillTimeCell,
+				render: (nowMs) => {
+					if (row.nextSlotAt === null) return "--";
+					const diff = Date.parse(row.nextSlotAt) - nowMs;
+					if (diff <= 0) {
+						if (-diff <= dueLoadingMs()) return (0, react$1.createElement)("span", { style: {
+							display: "inline-flex",
+							alignItems: "center",
+							color: RUNNING_TONE
+						} }, (0, react$1.createElement)(RunningBlocks, {}));
+						return (0, react$1.createElement)("span", { style: {
+							cursor: "default",
+							opacity: .85
+						} }, tt("listDeferred"));
+					}
+					return nextExecLabel(row.nextSlotAt, nowMs, tt);
+				}
+			})));
+		}
+		const cardStyle$1 = {
+			display: "block",
+			width: "100%",
+			boxSizing: "border-box",
+			textAlign: "left",
+			marginBottom: "10px",
+			borderRadius: "var(--tdt-radius-sm)",
+			border: `1px solid var(--tdt-border)`,
+			color: "var(--tdt-fg)",
+			transition: `border-color var(--tdt-dur) var(--tdt-ease), background var(--tdt-dur) var(--tdt-ease)`
+		};
+		const titleStyle = {
+			fontSize: "var(--tdt-font-lg)",
+			fontWeight: 600,
+			lineHeight: "var(--tdt-line-md)"
+		};
+		const metaStyle = {
+			fontSize: "var(--tdt-font-sm)",
+			color: "var(--tdt-fg-2)",
+			lineHeight: "var(--tdt-line-sm)",
+			marginTop: "2px"
+		};
+		const faintStyle = {
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-3)",
+			lineHeight: "var(--tdt-line-sm)",
+			marginTop: "2px"
+		};
+		/** 定高盒：flex 列 —— 过滤行固定在外、滚动只发生在内容盒（P0 结构，三个 tab 共用）。
+		*  `position: relative` 保留为内部绝对定位子元素的上下文。 */
+		const panelBoxStyle = {
+			height: `360px`,
+			display: "flex",
+			flexDirection: "column",
+			minHeight: 0,
+			position: "relative"
+		};
+		/**
+		* 延迟出现的忙碌标记（用户 2026-10-02）：请求 **超过 400ms 还没返回**才亮。
+		* 本地 SQLite 大多数查询是毫秒级，零点几秒的 loading 用户根本看不见，还会闪一下 —— 所以先不显示。
+		* 亮起后请求一返回就立刻消失（`BUSY_HOLD_MS = 0`，无保底停留）。
+		*/
+		const BUSY_DELAY_MS = 400;
+		const BUSY_HOLD_MS = 0;
+		function useDelayedBusy(active) {
+			const [shown, setShown] = (0, react$1.useState)(false);
+			const shownAtRef = (0, react$1.useRef)(0);
+			(0, react$1.useEffect)(() => {
+				if (active) {
+					if (shown) return;
+					const timer = setTimeout(() => {
+						shownAtRef.current = Date.now();
+						setShown(true);
+					}, BUSY_DELAY_MS);
+					return () => {
+						clearTimeout(timer);
+					};
+				}
+				if (!shown) return;
+				const wait = Math.max(0, BUSY_HOLD_MS - (Date.now() - shownAtRef.current));
+				const timer = setTimeout(() => {
+					setShown(false);
+				}, wait);
+				return () => {
+					clearTimeout(timer);
+				};
+			}, [active, shown]);
+			return shown;
+		}
+		/** 盒内可滚动区（撑满剩余高度；过滤行 / 表头不在此盒内 ⇒ 不随内容滚）。 */
+		const panelScrollFillStyle = {
+			flex: "1 1 auto",
+			minHeight: 0,
+			overflowY: "auto"
+		};
+		const panelWrapStyle = {
+			borderTop: `1px dashed var(--tdt-border)`,
+			paddingTop: "10px",
+			paddingLeft: "14px",
+			paddingRight: "14px",
+			paddingBottom: "12px"
+		};
+		const panelBarStyle = {
+			paddingTop: "10px",
+			borderTop: `1px dashed var(--tdt-border)`,
+			display: "flex",
+			alignItems: "center",
+			gap: "8px"
+		};
+		const miniTableStyle = {
+			width: "100%",
+			borderCollapse: "collapse",
+			fontSize: "var(--tdt-font-sm)"
+		};
+		const miniCellStyle = {
+			padding: "9px 10px",
+			textAlign: "left",
+			color: "var(--tdt-fg)",
+			whiteSpace: "nowrap",
+			fontSize: "var(--tdt-font-sm)"
+		};
+		const miniCellWrapStyle = {
+			...miniCellStyle,
+			whiteSpace: "normal",
+			wordBreak: "break-word"
+		};
+		/** 居中格（用户 2026-10-02：除**产出物 / 备注**两列外，各列内容一律居中）。 */
+		const miniCellCenterStyle = {
+			...miniCellStyle,
+			textAlign: "center"
+		};
+		/**
+		* 日志**整区**（用户 2026-10-03 取代原 `logBoxStyle` 黑框）：不再套一个框——
+		* 上沿一条线（与执行记录表头上沿线同色 `--tdt-border`），从这条线到下方虚线**整块铺底色**，
+		* 日志直接铺在里面。等宽字体跟环境风格走。
+		*/
+		const logAreaStyle = {
+			...panelScrollFillStyle,
+			borderTop: `1px solid var(--tdt-border)`,
+			background: "var(--tdt-surface-1)",
+			padding: "10px 0",
+			fontFamily: monoFont$1,
+			fontSize: "var(--tdt-font-xs)",
+			lineHeight: "var(--tdt-line-sm)"
+		};
+		/** 日志行：行间距拉开一点（用户 2026-10-03）。 */
+		const logRowStyle = {
+			marginBottom: "6px",
+			wordBreak: "break-all"
+		};
+		const overlayStyle = {
+			position: "fixed",
+			inset: 0,
+			zIndex: "var(--tdt-z-modal)",
+			background: "var(--tdt-mask)",
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "center"
+		};
+		const dialogStyle = {
+			width: "360px",
+			maxWidth: "calc(100vw - 48px)",
+			boxSizing: "border-box",
+			background: "var(--tdt-surface-base, #fff)",
+			color: "var(--tdt-fg)",
+			border: `1px solid var(--tdt-border)`,
+			borderRadius: "var(--tdt-radius-md)",
+			padding: "18px",
+			boxShadow: "var(--tdt-shadow-2, 0 12px 32px rgba(0,0,0,0.4))"
+		};
+		/** 执行记录 / 日志的时间戳：`YYYY-MM-DD HH:mm:ss`（与执行记录页同款两位补零）。 */
+		const formatStamp = (iso) => iso === null ? "—" : formatDateTime(iso, {
+			seconds: true,
+			fallback: "—"
+		});
+		/** 产出物图标格（最多 3 个 +「…」更多）。 */
+		const outputCellStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "2px",
+			flexWrap: "nowrap"
+		};
+		/** 过滤行外壳（records / logs 共用；在滚动区**外**，不随内容滚）。 */
+		const filterRowStyle = {
+			display: "flex",
+			alignItems: "center",
+			gap: "6px",
+			flexWrap: "wrap",
+			marginBottom: "10px"
+		};
+		/** 条数过滤（用户 2026-10-02）：**统一居右**，定式 `显示 <N> 条`。 */
+		const limitRowStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "4px",
+			marginLeft: "auto",
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-3)"
+		};
+		/** 记录表头样式（sticky 由 `.dsh-tdt-rec-head th` 接管）。 */
+		const recHeadStyle = {
+			...miniCellStyle,
+			padding: "11px 10px",
+			textAlign: "center",
+			fontWeight: 600,
+			color: "var(--tdt-fg-2)",
+			background: "var(--tdt-head-bg)",
+			boxShadow: "inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)"
+		};
+		/** 失败 / 未执行与执行记录页同款标红加粗（决策 54：错就得让他在记录里看见）。 */
+		const statusStyleOf = (status) => status === "failed" || status === "skipped" ? {
+			color: "var(--tdt-danger)",
+			fontWeight: 600
+		} : void 0;
+		/**
+		* 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
+		* 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
+		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
+		*/
+		function TaskExpandPanel(props) {
+			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props;
+			const [tab, setTab] = (0, react$1.useState)("info");
+			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}`;
+			const firstRun = (0, react$1.useRef)(true);
+			(0, react$1.useEffect)(() => {
+				if (firstRun.current) {
+					firstRun.current = false;
+					return;
+				}
+				refresh();
+			}, [runSig, refresh]);
+			const [infoLast, setInfoLast] = (0, react$1.useState)(null);
+			const [infoLoading, setInfoLoading] = (0, react$1.useState)(false);
+			const [infoError, setInfoError] = (0, react$1.useState)(null);
+			const [infoLoaded, setInfoLoaded] = (0, react$1.useState)(false);
+			const calendarLabels = (0, react$1.useMemo)(() => calendarLabelsOf(t), [t]);
+			const timeLabels = (0, react$1.useMemo)(() => timeLabelsOf(t), [t]);
+			const timeRangeLabels = (0, react$1.useMemo)(() => ({
+				all: t("trAll"),
+				custom: t("trCustom"),
+				from: t("cardFrom"),
+				to: t("cardTo"),
+				presets: {
+					today: t("trToday"),
+					yesterday: t("trYesterday"),
+					thisWeek: t("trThisWeek"),
+					lastWeek: t("trLastWeek"),
+					thisMonth: t("trThisMonth"),
+					lastMonth: t("trLastMonth")
+				}
+			}), [t]);
+			const [recStatus, setRecStatus] = (0, react$1.useState)("");
+			const [recRange, setRecRange] = (0, react$1.useState)({
+				from: "",
+				to: ""
+			});
+			const [recLimit, setRecLimit] = (0, react$1.useState)(100);
+			const [records, setRecords] = (0, react$1.useState)(null);
+			const [recLoading, setRecLoading] = (0, react$1.useState)(false);
+			const [recError, setRecError] = (0, react$1.useState)(null);
+			const [openInstance, setOpenInstance] = (0, react$1.useState)(null);
+			const [events, setEvents] = (0, react$1.useState)(null);
+			const [eventsError, setEventsError] = (0, react$1.useState)(null);
+			const [logKeyword, setLogKeyword] = (0, react$1.useState)("");
+			const [logRange, setLogRange] = (0, react$1.useState)({
+				from: "",
+				to: ""
+			});
+			const [logLimit, setLogLimit] = (0, react$1.useState)(100);
+			const [logs, setLogs] = (0, react$1.useState)(null);
+			const [logLoading, setLogLoading] = (0, react$1.useState)(false);
+			const recBusy = useDelayedBusy(recLoading);
+			const logBusy = useDelayedBusy(logLoading);
+			const [logError, setLogError] = (0, react$1.useState)(null);
+			const [confirmDelete, setConfirmDelete] = (0, react$1.useState)(false);
+			const [deleting, setDeleting] = (0, react$1.useState)(false);
+			const [confirmRun, setConfirmRun] = (0, react$1.useState)(false);
+			const [runBusy, setRunBusy] = (0, react$1.useState)(false);
+			/**
+			* 立即执行成功后的「立刻重拉执行记录」信号（用户 2026-10-03 真机反馈：点了马上写记录，
+			* 但面板要等下一次轮询才显示 ⇒ 等它显示时任务都已经在跑了）。计数 +1 即触发下面那个 effect。
+			*/
+			const [runNonce, setRunNonce] = (0, react$1.useState)(0);
+			const [runToast, setRunToast] = (0, react$1.useState)(null);
+			const runSeq = (0, react$1.useRef)(0);
+			/** 业务结果 → 人话 Toast 文案（机器码在服务端、文案在客户端 locale 单源）。 */
+			const runNowToast = (outcome) => {
+				if (outcome.ok) return {
+					text: t("cardRunNowOk"),
+					tone: "success"
+				};
+				switch (outcome.error) {
+					case "already-running": return {
+						text: t("cardRunNowAlready"),
+						tone: "error"
+					};
+					case "upstream-not-succeeded": return {
+						text: t("cardRunNowBlocked"),
+						tone: "error"
+					};
+					case "upstream-missing": return {
+						text: t("cardRunNowMissingDep"),
+						tone: "error"
+					};
+					case "workspace-missing": return {
+						text: tt("cardRunNowWorkspace", { name: outcome.detail ?? "" }),
+						tone: "error"
+					};
+					case "attachment-missing": return {
+						text: tt("cardRunNowAttachment", { name: outcome.detail ?? "" }),
+						tone: "error"
+					};
+					case "task-not-found": return {
+						text: t("cardRunNowNotFound"),
+						tone: "error"
+					};
+					case "not-ready": return {
+						text: t("cardRunNowNotReady"),
+						tone: "error"
+					};
+					default: return {
+						text: tt("cardRunNowFailed", { reason: outcome.detail ?? outcome.error }),
+						tone: "error"
+					};
+				}
+			};
+			const doRunNow = () => {
+				setRunBusy(true);
+				onRunNow(row.id).then((outcome) => {
+					const { text, tone } = runNowToast(outcome);
+					runSeq.current += 1;
+					setRunToast({
+						text,
+						tone,
+						seq: runSeq.current
+					});
+					if (outcome.ok) setRunNonce((n) => n + 1);
+				}).finally(() => {
+					setRunBusy(false);
+					setConfirmRun(false);
+				});
+			};
+			(0, react$1.useEffect)(() => {
+				if (tab !== "info") return;
+				let alive = true;
+				setInfoLoading(true);
+				setInfoError(null);
+				fetchInstances({
+					taskId: row.id,
+					statuses: LAST_RUN_STATUSES,
+					limit: 1
+				}).then(({ rows }) => {
+					if (!alive) return;
+					setInfoLast(rows[0] ?? null);
+					setInfoLoaded(true);
+				}).catch((error) => {
+					if (alive) setInfoError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setInfoLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				runSig
+			]);
+			const filterSig = `${recStatus}|${recRange.from}|${recRange.to}|${recLimit}`;
+			const prevFilterSig = (0, react$1.useRef)(filterSig);
+			(0, react$1.useEffect)(() => {
+				const filterChanged = prevFilterSig.current !== filterSig;
+				prevFilterSig.current = filterSig;
+				if (tab !== "records") return;
+				let alive = true;
+				setRecLoading(true);
+				setRecError(null);
+				const range = rangeToQuery(recRange, "day");
+				fetchInstances({
+					taskId: row.id,
+					statuses: recStatus === "" || recStatus === "all" ? void 0 : statusesOfBucket(recStatus),
+					from: range.fromTs,
+					to: range.toTs,
+					limit: recLimit
+				}).then(({ rows }) => {
+					if (!alive) return;
+					setRecords(rows);
+					if (filterChanged) {
+						setOpenInstance(null);
+						setEvents(null);
+					}
+				}).catch((error) => {
+					if (alive) setRecError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setRecLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				recStatus,
+				recRange,
+				recLimit,
+				runSig,
+				runNonce,
+				filterSig
+			]);
+			(0, react$1.useEffect)(() => {
+				if (openInstance === null) return;
+				let alive = true;
+				setEventsError(null);
+				setEvents(null);
+				fetchEvents(openInstance).then((rows) => {
+					if (alive) setEvents(rows);
+				}).catch((error) => {
+					if (alive) setEventsError(error instanceof Error ? error.message : String(error));
+				});
+				return () => {
+					alive = false;
+				};
+			}, [openInstance]);
+			(0, react$1.useEffect)(() => {
+				if (tab !== "logs") return;
+				let alive = true;
+				setLogLoading(true);
+				setLogError(null);
+				const range = rangeToQuery(logRange, "minute");
+				fetchLogs({
+					taskId: row.id,
+					keyword: logKeyword.trim() === "" ? void 0 : logKeyword.trim(),
+					from: range.fromTs,
+					to: range.toTs,
+					limit: logLimit
+				}).then(({ rows }) => {
+					if (alive) setLogs(rows);
+				}).catch((error) => {
+					if (alive) setLogError(error instanceof Error ? error.message : String(error));
+				}).finally(() => {
+					if (alive) setLogLoading(false);
+				});
+				return () => {
+					alive = false;
+				};
+			}, [
+				tab,
+				row.id,
+				logKeyword,
+				logRange,
+				logLimit,
+				runSig
+			]);
+			const renderInfo = () => {
+				const view = {
+					scheduleLine,
+					nextSlot: renderNextExec(row.nextSlotAt, t),
+					workspace: row.workspace,
+					model: modelText,
+					retry: String(row.retryMax),
+					window: row.schedule.window,
+					attachments: row.attachments.map((item) => ({
+						name: item.name,
+						key: `${item.kind}:${item.name}`,
+						path: item.path ?? null,
+						anchorSessionId: item.anchorSessionId ?? null
+					})),
+					depends: row.depends.map((dep) => ({
+						id: dep.id,
+						title: dep.title,
+						enabled: dep.enabled
+					}))
+				};
+				return (0, react$1.createElement)("div", { style: panelBoxStyle }, (0, react$1.createElement)("div", { style: infoWrapStyle }, (0, react$1.createElement)("div", {
+					className: "dsh-tdt-info-cfg",
+					style: infoConfigStyle
+				}, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoSectionConfig")), taskInfoBaseFields({
+					t,
+					view,
+					onOpenFile,
+					onViewTask
+				})), (0, react$1.createElement)("div", { style: infoRecentStyle }, (0, react$1.createElement)("div", { style: infoGroupTitleStyle }, t("infoLastRun")), infoError !== null ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-danger)"
+				} }, `${t("cardLoadFailed")}：${infoError}`) : infoLoading && !infoLoaded ? (0, react$1.createElement)(Loading, {}) : infoLast === null ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-fg-3)"
+				} }, t("infoNoRun")) : lastRunFields({
+					t,
+					instance: infoLast,
+					onOpenSession,
+					onOpenFile
+				}))));
+			};
+			const renderRecords = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, recBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(SelectField, {
+				value: recStatus,
+				options: [
+					{
+						value: "all",
+						label: tt("filterAll")
+					},
+					{
+						value: "succeeded",
+						label: statusTextOf("succeeded", t)
+					},
+					{
+						value: "failed",
+						label: statusTextOf("failed", t)
+					},
+					{
+						value: "running",
+						label: t("filterRunning")
+					}
+				],
+				onChange: (next) => {
+					setRecStatus(next);
+				},
+				placeholder: t("colStatus"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("colStatus"),
+				size: "md",
+				width: 96
+			}), (0, react$1.createElement)(TimeRange, {
+				value: recRange,
+				onChange: setRecRange,
+				labels: timeRangeLabels,
+				calendarLabels,
+				timeLabels,
+				precision: "day",
+				size: "md"
+			}), (0, react$1.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
+				value: String(recLimit),
+				options: [
+					50,
+					100,
+					200
+				].map((n) => ({
+					value: String(n),
+					label: String(n)
+				})),
+				onChange: (next) => {
+					setRecLimit(Number(next));
+				},
+				placeholder: String(recLimit),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("cardLogLimit"),
+				size: "md",
+				width: 70
+			}), t("limitSuffix")), recError !== null ? (0, react$1.createElement)("span", { style: {
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-danger)"
+			} }, `${t("cardLoadFailed")}：${recError}`) : null), (0, react$1.createElement)("div", { style: panelScrollFillStyle }, records === null ? null : records.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, recStatus !== "" && recStatus !== "all" || recRange.from !== "" || recRange.to !== "" ? t("cardRecordsEmptyFiltered") : t("cardRecordsEmpty")) : (0, react$1.createElement)("table", { style: {
+				...miniTableStyle,
+				tableLayout: "fixed"
+			} }, (0, react$1.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react$1.createElement)("tr", null, (0, react$1.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "76px"
+			} }, t("colStatus")), (0, react$1.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "140px"
+			} }, t("colPlanned")), (0, react$1.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "84px"
+			} }, t("colActualStart")), (0, react$1.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "76px"
+			} }, t("colDuration")), (0, react$1.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "72px"
+			} }, t("colTokens")), (0, react$1.createElement)("th", { style: recHeadStyle }, t("colNote")), (0, react$1.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "96px"
+			} }, t("colOutputs")), (0, react$1.createElement)("th", { style: {
+				...recHeadStyle,
+				width: "68px"
+			} }, t("colSession")))), (0, react$1.createElement)("tbody", null, records.flatMap((instance, index) => {
+				const open = openInstance === instance.id;
+				const outputs = outputsOf(instance.outputs);
+				const sid = instance.session_id;
+				const openFile = onOpenFile;
+				const openSession = onOpenSession;
+				const canOpenFile = sid !== null && openFile !== void 0;
+				const canOpenSession = sid !== null && openSession !== void 0;
+				const durMs = instance.finished_at === null ? NaN : Date.parse(instance.finished_at) - Date.parse(instance.dispatched_at ?? instance.scheduled_at);
+				return [(0, react$1.createElement)("tr", {
+					key: instance.id,
+					className: ["dsh-tdt-rec-row", open || index % 2 === 0 ? "" : "dsh-tdt-rec-alt"].join(" ").trim(),
+					style: {
+						cursor: "pointer",
+						...open ? { background: "var(--tdt-open-bg)" } : {}
+					},
+					onClick: () => {
+						setOpenInstance(open ? null : instance.id);
+					}
+				}, (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { style: {
+					display: "inline-flex",
+					alignItems: "center",
+					justifyContent: "center",
+					gap: "6px"
+				} }, (0, react$1.createElement)(StatusIcon, { status: instance.status }), (0, react$1.createElement)("span", { style: instance.status === "succeeded" ? { color: "var(--tdt-success)" } : statusStyleOf(instance.status) }, statusTextOf(instance.status, t)))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: formatStamp(instance.scheduled_at) }, formatPlanStamp(instance.scheduled_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, (0, react$1.createElement)("span", { title: instance.dispatched_at === null ? void 0 : formatStamp(instance.dispatched_at) }, formatClock(instance.dispatched_at))), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, formatDurationHms(durMs)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, instance.token_in === null && instance.token_out === null ? (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, "-") : (0, react$1.createElement)("span", { title: formatTokenDetail(instance) }, formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0)))), (0, react$1.createElement)("td", { style: {
+					...miniCellStyle,
+					maxWidth: 0
+				} }, instance.note === null || instance.note === void 0 || instance.note === "" ? null : (0, react$1.createElement)("span", {
+					title: instance.note,
+					className: "dsh-tdt-ellipsis",
+					style: {
+						display: "block",
+						color: "var(--tdt-fg-3)"
+					}
+				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+					key: output,
+					label: baseNameOf$1(output),
+					side: "top"
+				}, (0, react$1.createElement)("button", {
+					type: "button",
+					className: "dsh-tdt-chip",
+					style: { cursor: canOpenFile ? "pointer" : "default" },
+					onClick: (event) => {
+						event.stopPropagation();
+						if (canOpenFile && openFile !== void 0 && sid !== null) openFile(sid, output);
+					}
+				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path: output,
+					size: 16
+				})))), outputs.length > 3 ? (0, react$1.createElement)("button", {
+					type: "button",
+					"aria-label": t("viewSession"),
+					className: "dsh-tdt-chip dsh-tdt-chip--label",
+					onClick: (event) => {
+						event.stopPropagation();
+						if (canOpenSession && openSession !== void 0 && sid !== null) openSession(sid);
+					}
+				}, "…") : null)), (0, react$1.createElement)("td", { style: miniCellCenterStyle }, canOpenSession && openSession !== void 0 && sid !== null ? (0, react$1.createElement)(Button$2, {
+					variant: "outline",
+					size: "sm",
+					onClick: (event) => {
+						event.stopPropagation();
+						openSession(sid);
+					}
+				}, t("colView")) : null)), open ? (0, react$1.createElement)("tr", { key: `${instance.id}-detail` }, (0, react$1.createElement)("td", {
+					colSpan: 8,
+					style: {
+						...miniCellWrapStyle,
+						padding: "18px 20px",
+						background: "var(--tdt-open-bg-soft)"
+					}
+				}, eventsError !== null ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-danger)"
+				} }, `${t("cardLoadFailed")}：${eventsError}`) : events === null ? null : events.length === 0 ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-xs)",
+					color: "var(--tdt-fg-3)"
+				} }, t("cardEventsEmpty")) : events.map((event) => (0, react$1.createElement)("div", {
+					key: event.seq,
+					style: {
+						marginBottom: "7px",
+						lineHeight: "var(--tdt-line-md)"
+					}
+				}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(event.ts)} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${event.kind} `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, event.detail ?? ""))))) : null];
+			})))));
+			const renderLogs = () => (0, react$1.createElement)("div", { style: panelBoxStyle }, logBusy ? (0, react$1.createElement)(Loading, {}) : null, (0, react$1.createElement)("div", { style: filterRowStyle }, (0, react$1.createElement)(Input$1, {
+				value: logKeyword,
+				onChange: setLogKeyword,
+				placeholder: t("cardKeyword"),
+				size: "md",
+				style: { width: "140px" }
+			}), (0, react$1.createElement)(TimeRange, {
+				value: logRange,
+				onChange: setLogRange,
+				labels: timeRangeLabels,
+				calendarLabels,
+				timeLabels,
+				precision: "minute",
+				size: "md"
+			}), (0, react$1.createElement)("label", { style: limitRowStyle }, t("limitPrefix"), (0, react$1.createElement)(SelectField, {
+				value: String(logLimit),
+				options: [
+					50,
+					100,
+					200
+				].map((n) => ({
+					value: String(n),
+					label: String(n)
+				})),
+				onChange: (next) => {
+					setLogLimit(Number(next));
+				},
+				placeholder: String(logLimit),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("cardLogLimit"),
+				size: "md",
+				width: 70
+			}), t("limitSuffix")), logError !== null ? (0, react$1.createElement)("span", { style: {
+				fontSize: "var(--tdt-font-xs)",
+				color: "var(--tdt-danger)"
+			} }, `${t("cardLoadFailed")}：${logError}`) : null), (0, react$1.createElement)("div", { style: logAreaStyle }, logs === null ? null : logs.length === 0 ? (0, react$1.createElement)("p", { style: faintStyle }, t("cardLogsEmpty")) : logs.map((row) => (0, react$1.createElement)("div", {
+				key: row.seq,
+				style: logRowStyle
+			}, (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-3)" } }, `${formatStamp(row.ts)} `), (0, react$1.createElement)("span", { style: {
+				color: row.level === "error" ? "var(--tdt-danger)" : row.level === "warn" ? "var(--tdt-accent)" : "var(--tdt-fg-3)",
+				fontWeight: row.level === "error" ? 600 : 400
+			} }, `[${row.level}]`), " ", (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, `${row.kind}: `), (0, react$1.createElement)("span", { style: { color: "var(--tdt-fg-2)" } }, row.message)))));
+			/** 删除确认框（决策 55）：官方无嵌套 confirm 件可用 ⇒ 自绘 overlay + 主题变量（z 1070 盖过抽屉 1040 / 确认 1060）。 */
+			const renderConfirm = () => (0, react$1.createElement)("div", {
+				style: overlayStyle,
+				onClick: () => {
+					if (!deleting) setConfirmDelete(false);
+				}
+			}, (0, react$1.createElement)("div", {
+				style: dialogStyle,
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react$1.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-lg)",
+				fontWeight: 600,
+				marginBottom: "8px"
+			} }, t("cardDeleteTitle")), (0, react$1.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-sm)",
+				color: "var(--tdt-fg-2)",
+				lineHeight: "var(--tdt-line-sm)",
+				marginBottom: "14px"
+			} }, t("cardDeleteDesc")), (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: "8px"
+			} }, (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				disabled: deleting,
+				onClick: () => {
+					setConfirmDelete(false);
+				}
+			}, t("cardCancel")), (0, react$1.createElement)(Button$2, {
+				variant: "danger",
+				size: "sm",
+				disabled: deleting,
+				onClick: () => {
+					setDeleting(true);
+					onDelete(row.id).finally(() => {
+						setDeleting(false);
+						setConfirmDelete(false);
+					});
+				}
+			}, deleting ? t("loading") : t("cardDelete")))));
+			/** 立即执行确认框（2026-10-03）：与删除确认同款自绘 overlay，文案「你确定要立即执行此任务吗？」。 */
+			const renderRunConfirm = () => (0, react$1.createElement)("div", {
+				style: overlayStyle,
+				onClick: () => {
+					if (!runBusy) setConfirmRun(false);
+				}
+			}, (0, react$1.createElement)("div", {
+				style: dialogStyle,
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react$1.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-lg)",
+				fontWeight: 600,
+				marginBottom: "8px"
+			} }, t("cardRunNowTitle")), (0, react$1.createElement)("div", { style: {
+				fontSize: "var(--tdt-font-sm)",
+				color: "var(--tdt-fg-2)",
+				lineHeight: "var(--tdt-line-sm)",
+				marginBottom: "14px"
+			} }, t("cardRunNowDesc")), (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				justifyContent: "flex-end",
+				gap: "8px"
+			} }, (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "sm",
+				disabled: runBusy,
+				onClick: () => {
+					setConfirmRun(false);
+				}
+			}, t("cardCancel")), (0, react$1.createElement)(Button$2, {
+				variant: "primary",
+				size: "sm",
+				disabled: runBusy,
+				onClick: () => {
+					doRunNow();
+				}
+			}, runBusy ? t("loading") : t("cardRunNow")))));
+			return (0, react$1.createElement)("div", { style: panelWrapStyle }, tab === "info" ? renderInfo() : tab === "records" ? renderRecords() : renderLogs(), (0, react$1.createElement)("div", { style: { position: "relative" } }, runToast !== null ? (0, react$1.createElement)(FloatingToast, {
+				seq: runToast.seq,
+				tone: runToast.tone,
+				onDone: () => {
+					setRunToast(null);
+				},
+				text: runToast.text
+			}) : null, (0, react$1.createElement)("div", { style: panelBarStyle }, (0, react$1.createElement)(Segmented, {
+				value: tab,
+				size: "md",
+				variant: "inset",
+				items: [
+					{
+						value: "info",
+						label: t("cardTabInfo")
+					},
+					{
+						value: "records",
+						label: t("cardTabRecords")
+					},
+					{
+						value: "logs",
+						label: t("cardTabLogs")
+					}
+				],
+				onChange: setTab
+			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
+				className: "dsh-tdt-btn--danger-ink",
+				onClick: () => {
+					setConfirmDelete(true);
+				}
+			}, t("cardDelete")), (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconPlayOutlineRegular, { size: 14 }),
+				onClick: () => {
+					setConfirmRun(true);
+				}
+			}, t("cardRunNow")), (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular, { size: 14 }),
+				onClick: () => {
+					onEdit(row.id);
+				}
+			}, t("editorEdit")))), confirmDelete ? renderConfirm() : null, confirmRun ? renderRunConfirm() : null);
+		}
+		function TaskCard(props) {
+			const { row, t, tt, open, onToggleOpen, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, onToggleEnabled, refOf, refresh } = props;
+			const scheduleLine = scheduleText(scheduleSpecFromSchedule(row.schedule), t);
+			const modelText = row.model === null ? tt("listFieldModelDefault") : row.model;
+			return (0, react$1.createElement)("div", {
+				ref: refOf,
+				className: "dsh-tdt-card",
+				style: cardStyle$1
+			}, (0, react$1.createElement)("div", {
+				className: "dsh-tdt-card-row",
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "12px",
+					cursor: "pointer",
+					padding: "12px 14px"
+				},
+				onClick: () => {
+					const sel = typeof window === "undefined" ? null : window.getSelection();
+					if (sel !== null && sel.toString() !== "") return;
+					onToggleOpen();
+				}
+			}, (0, react$1.createElement)(StatusRail, { row }), (0, react$1.createElement)("div", { style: {
+				flex: "1 1 auto",
+				minWidth: 0
+			} }, (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "baseline",
+				gap: "6px",
+				minWidth: 0
+			} }, onViewTask === void 0 ? (0, react$1.createElement)("div", { style: {
+				...titleStyle,
+				flex: "0 1 auto",
+				minWidth: 0
+			} }, (0, react$1.createElement)(MarqueeText, { text: row.title })) : (0, react$1.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-info-dep",
+				title: t("infoViewTask"),
+				style: {
+					...titleStyle,
+					flex: "0 1 auto",
+					minWidth: 0,
+					textAlign: "left"
+				},
+				onClick: (event) => {
+					event.stopPropagation();
+					onViewTask(row.id);
+				}
+			}, (0, react$1.createElement)(MarqueeText, { text: row.title })), row.code !== null ? (0, react$1.createElement)("span", { style: {
+				...faintStyle,
+				flex: "none",
+				display: "inline"
+			} }, `[${row.code}]`) : null, (0, react$1.createElement)("span", { style: {
+				...faintStyle,
+				flex: "none",
+				display: "inline"
+			} }, row.createdAt === null ? `[${t("listCreatedUnknown")}]` : `[${t("listCreatedTag", { date: formatYmd(row.createdAt) })}]`), row.enabled ? null : (0, react$1.createElement)("span", { style: {
+				...faintStyle,
+				flex: "none",
+				display: "inline"
+			} }, t("listDisabledTag"))), (0, react$1.createElement)("div", { style: {
+				...metaStyle,
+				minWidth: 0
+			} }, (0, react$1.createElement)(MarqueeText, { text: scheduleLine }))), (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				flex: "none"
+			} }, (0, react$1.createElement)(PastPill, {
+				row,
+				t,
+				tt
+			}), (0, react$1.createElement)(NextPill, {
+				row,
+				t,
+				tt
+			}), (0, react$1.createElement)("span", {
+				className: "dsh-tdt-switch",
+				onClick: (event) => {
+					event.stopPropagation();
+				}
+			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+				checked: row.enabled,
+				onChange: (next) => {
+					onToggleEnabled(row.id, next);
+				},
+				label: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled"),
+				title: row.enabled ? t("listFilterEnabled") : t("listFilterDisabled")
+			})), (0, react$1.createElement)("span", { onClick: (event) => {
+				event.stopPropagation();
+			} }, (0, react$1.createElement)(IconButton, {
+				variant: "plain",
+				size: "sm",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 14 }),
+				label: t("listExpandHint"),
+				onClick: onToggleOpen,
+				"aria-expanded": open,
+				style: { transform: open ? "rotate(180deg)" : "none" }
+			})))), open ? (0, react$1.createElement)(TaskExpandPanel, {
+				row,
+				t,
+				tt,
+				scheduleLine,
+				modelText,
+				onEdit,
+				onDelete,
+				onRunNow,
+				onOpenFile,
+				onOpenSession,
+				onViewTask,
+				refresh
+			}) : null);
+		}
+		function TaskListView(props) {
+			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props;
+			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
+			ensureTaskListStyle();
+			ensureTaskInfoStyle();
+			ensureTaskEditorStyle();
+			ensureToastStyle();
+			const [filter, setFilter] = (0, react$1.useState)("all");
+			const [workspace, setWorkspace] = (0, react$1.useState)("");
+			const [query, setQuery] = (0, react$1.useState)("");
+			const [openId, setOpenId] = (0, react$1.useState)(null);
+			/** 拨片的乐观值：点了立刻变，等服务端确认（它会马上同步任务表并重新拉一次）后清除。 */
+			const [optimistic, setOptimistic] = (0, react$1.useState)({});
+			const rowsWithOptimistic = (0, react$1.useMemo)(() => {
+				if (Object.keys(optimistic).length === 0) return rows;
+				return rows.map((row) => row.id in optimistic ? {
+					...row,
+					enabled: optimistic[row.id]
+				} : row);
+			}, [rows, optimistic]);
+			(0, react$1.useEffect)(() => {
+				setOptimistic((cur) => Object.keys(cur).length === 0 ? cur : {});
+			}, [rows]);
+			/**
+			* 异常数 = 「最近一次**失败**」或「最近一次**未执行**」的任务数（全量统计，不受当前筛选影响）。
+			* ⚠️ 2026-09-30 评审 P0：状态条已把 `skipped`（未执行）与 `failed` 一起标红，这里（与下面的异常筛选）
+			* 却只认 `failed` ⇒ 卡片红着却不在「异常」里，口径分叉。两处必须同口径。
+			*/
+			const abnormalCount = (0, react$1.useMemo)(() => rowsWithOptimistic.filter((row) => row.lastStatus === "failed" || row.lastStatus === "skipped").length, [rowsWithOptimistic]);
+			const visible = (0, react$1.useMemo)(() => {
+				const q = query.trim().toLowerCase();
+				const sorted = sortRows(rowsWithOptimistic.filter((row) => {
+					if (filter === "enabled" && !row.enabled) return false;
+					if (filter === "disabled" && row.enabled) return false;
+					if (filter === "abnormal" && row.lastStatus !== "failed" && row.lastStatus !== "skipped") return false;
+					if (workspace !== "" && row.workspace !== workspace) return false;
+					if (q === "") return true;
+					return row.title.toLowerCase().includes(q) || (row.code ?? "").toLowerCase().includes(q);
+				}));
+				debugLogOrder(sorted);
+				return sorted;
+			}, [
+				rowsWithOptimistic,
+				filter,
+				workspace,
+				query
+			]);
+			const refOf = useFlip(visible.map((r) => `${r.id}:${r.running ? 1 : 0}:${r.enabled ? 1 : 0}`).join("|"));
+			const workspaceOptions = (0, react$1.useMemo)(() => [{
+				value: "",
+				label: t("listFilterWorkspaceAll")
+			}, ...workspaces], [workspaces, t]);
+			return (0, react$1.createElement)("div", { style: {
+				width: "100%",
+				display: "flex",
+				justifyContent: "center"
+			} }, (0, react$1.createElement)("div", {
+				id: PANEL_CONTENT_ID,
+				style: PANEL_CONTENT_STYLE
+			}, (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				marginBottom: "12px",
+				flexWrap: "wrap"
+			} }, (0, react$1.createElement)(Segmented, {
+				value: filter,
+				size: "md",
+				items: [
+					{
+						value: "all",
+						label: t("listFilterAll")
+					},
+					{
+						value: "enabled",
+						label: t("listFilterEnabled")
+					},
+					{
+						value: "disabled",
+						label: t("listFilterDisabled")
+					},
+					{
+						value: "abnormal",
+						label: t("listFilterAbnormal"),
+						badge: abnormalCount
+					}
+				],
+				onChange: setFilter
+			}), (0, react$1.createElement)("span", { style: { flex: "1 1 auto" } }), (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "8px",
+				flex: "none"
+			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Input, {
+				className: "dsh-tdt-tl-input",
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular, { size: 14 }),
+				value: query,
+				placeholder: t("listSearchPlaceholder"),
+				onChange: (event) => {
+					setQuery(event.target.value);
+				}
+			}), (0, react$1.createElement)(SelectField, {
+				value: workspace,
+				options: workspaceOptions,
+				onChange: setWorkspace,
+				placeholder: t("listFilterWorkspaceAll"),
+				emptyLabel: t("editorNoOptions"),
+				ariaLabel: t("listFilterWorkspaceAll"),
+				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
+				size: "md",
+				width: WS_WIDTH,
+				marquee: true
+			}))), visible.length === 0 ? (0, react$1.createElement)("p", { style: {
+				...metaStyle,
+				marginTop: "8px"
+			} }, rows.length === 0 && !ready ? "" : rows.length === 0 ? t("listEmpty") : t("listEmptyFiltered")) : (0, react$1.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react$1.createElement)(TaskCard, {
+				key: row.id,
+				row,
+				t,
+				tt,
+				open: openId === row.id,
+				onToggleOpen: () => {
+					setOpenId((cur) => cur === row.id ? null : row.id);
+				},
+				onEdit,
+				onViewTask,
+				onDelete,
+				onRunNow,
+				onOpenFile,
+				onOpenSession,
+				refresh,
+				onToggleEnabled: (id, enabled) => {
+					setOptimistic((cur) => ({
+						...cur,
+						[id]: enabled
+					}));
+					onToggleEnabled(id, enabled).then((err) => {
+						if (err === null) return;
+						setOptimistic((cur) => {
+							if (!(id in cur)) return cur;
+							const next = { ...cur };
+							delete next[id];
+							return next;
+						});
+					});
+				},
+				refOf: refOf(row.id)
+			})))));
 		}
 		//#endregion
 		//#region src/client/config-panel.tsx

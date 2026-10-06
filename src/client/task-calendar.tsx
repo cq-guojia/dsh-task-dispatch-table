@@ -36,7 +36,7 @@ import type { EditorOption, TaskOption } from './ui'
 import { NO_TIME } from './time-text'
 import { calendarLabelsOf } from './editor-fields'
 import { interpolateTranslate, type Translate } from './locales'
-import type { TaskOverviewRow } from './task-list'
+import type { TaskOverviewRow } from './task-overview'
 import { IconClockOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 
 // ── 样式（走基础层注入器；只消费 var(--tdt-*)，不自建 <style>、不硬编码色值）──
