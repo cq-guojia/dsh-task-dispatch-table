@@ -1,7 +1,7 @@
 # 客户端刷新机制（轮询，非推送）
 
 > ⚠️ **已被 [`event-push.md`](event-push.md) 取代（推送为主）**：本篇保留，用于记录「客户端靠轮询刷新」这套现状 / 降级机制——在推送机制上线、轮询处置定案前，它描述的行为仍然成立。
-> **状态**：定型（2026-10-06）。推送方案已立项 → [`event-push.md`](event-push.md)。
+> **状态**：定型（2026-10-06）。推送机制规格 → [`event-push.md`](event-push.md)；**轮询怎么换/怎么合并/怎么归位 → [`client-refresh-disposition.md`](client-refresh-disposition.md)**（处置清单）。
 > **适用版本**：当前 `dsh-task-dispatch-table` 客户端（`src/client/*`）。
 > **来源**：用户 2026-10-06 拍板「统一刷新机制」+ 本仓库 `dsh-capabilities.md`（宿主不推实例状态给客户端）。
 
