@@ -64632,6 +64632,168 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf(output)))))));
 		}
 		//#endregion
+		//#region src/client/event-subscribe.ts
+		/** 事件流地址：前缀取自唯一真源 `query.ts`（M9；不 import index 以免成环）。 */
+		const EVENTS_URL = `${API_PREFIX}/events`;
+		/** 看门狗巡检间隔。 */
+		const WATCHDOG_MS = 5e3;
+		/** 连续未连上的容忍上限：超过它主动重建连接。 */
+		const RECONNECT_AFTER_MS = 3e4;
+		/**
+		* 「连上了但收不到东西」的容忍上限（毫秒）：服务端每 20s 必发一条心跳 `sys.ping`（**真实 data 帧**，
+		* 客户端 `onmessage` 见得到）⇒ 超过 3 倍心跳仍一无所获，判定为**半死连接**（反向代理静默丢流、
+		* 或没有 FIN 的黑洞），主动重建。这是 `readyState` 判据覆盖不到的那一半（2026-10-06 审计 🟡）。
+		*/
+		const SILENT_AFTER_MS = 75e3;
+		const byType = /* @__PURE__ */ new Map();
+		const resyncHandlers = /* @__PURE__ */ new Set();
+		let source = null;
+		let watchdog = null;
+		/** 本轮「未连上」的起始时刻（0 = 当前处于 OPEN）。 */
+		let unhealthySince = 0;
+		/** 最后一次**收到任何帧**的时刻（含心跳）——半死连接的唯一可观测判据。 */
+		let lastSeenAt = 0;
+		/** 「本环境没有 EventSource」只告警一次（降级会让所有页面失去刷新通道，必须留痕又不能刷屏）。 */
+		let warnedNoEventSource = false;
+		/** 广播「（重）连成功」——各页据此重读一次当前值。 */
+		function dispatchResync() {
+			for (const handler of [...resyncHandlers]) try {
+				handler();
+			} catch {}
+		}
+		function openSource() {
+			let es;
+			try {
+				es = new EventSource(EVENTS_URL);
+			} catch (error) {
+				console.warn("[tdt] EventSource 建立失败，稍后重试：", error);
+				return;
+			}
+			lastSeenAt = Date.now();
+			es.onmessage = (msg) => {
+				lastSeenAt = Date.now();
+				let event;
+				try {
+					event = JSON.parse(msg.data);
+				} catch {
+					return;
+				}
+				const handlers = byType.get(event.type);
+				if (handlers === void 0) return;
+				for (const handler of [...handlers]) try {
+					handler(event);
+				} catch {}
+			};
+			es.onopen = () => {
+				unhealthySince = 0;
+				dispatchResync();
+			};
+			source = es;
+		}
+		/** 看门狗：连不上超过阈值 ⇒ 主动重建（浏览器一直重试却连不上时的唯一出路）。 */
+		function startWatchdog() {
+			if (watchdog !== null) return;
+			watchdog = window.setInterval(() => {
+				if (source !== null && source.readyState === EventSource.OPEN) {
+					if (Date.now() - lastSeenAt > SILENT_AFTER_MS) {
+						source.close();
+						openSource();
+						unhealthySince = 0;
+						return;
+					}
+					unhealthySince = 0;
+					return;
+				}
+				if (unhealthySince === 0) {
+					unhealthySince = Date.now();
+					return;
+				}
+				if (Date.now() - unhealthySince < RECONNECT_AFTER_MS) return;
+				source?.close();
+				openSource();
+				unhealthySince = 0;
+			}, WATCHDOG_MS);
+		}
+		/** 懒建单例连接（首个订阅者出现时才连；**建了就不主动关**——「只要页面在，就有重连机制」）。 */
+		function ensureSource() {
+			if (typeof EventSource === "undefined") {
+				if (!warnedNoEventSource) {
+					warnedNoEventSource = true;
+					console.warn("[tdt] 本环境没有 EventSource：事件推送不可用，页面只在打开时取一次数据。");
+				}
+				return;
+			}
+			startWatchdog();
+			if (source !== null) return;
+			unhealthySince = 0;
+			openSource();
+		}
+		/** 订阅一组事件类型；`handler` 每次渲染都换也不会反复重建订阅（内部走 ref）。 */
+		function useEvents(types, handler) {
+			const ref = (0, react$1.useRef)(handler);
+			ref.current = handler;
+			const key = types.join(",");
+			(0, react$1.useEffect)(() => {
+				ensureSource();
+				const stable = (event) => ref.current(event);
+				const sets = [];
+				for (const type of types) {
+					let set = byType.get(type);
+					if (set === void 0) {
+						set = /* @__PURE__ */ new Set();
+						byType.set(type, set);
+					}
+					set.add(stable);
+					sets.push(set);
+				}
+				return () => {
+					for (const set of sets) set.delete(stable);
+				};
+			}, [key]);
+		}
+		/** 订阅「（重）连成功」——各页据此补读一次当前值（断线期间可能漏过事件）。 */
+		function useResync(handler) {
+			const ref = (0, react$1.useRef)(handler);
+			ref.current = handler;
+			(0, react$1.useEffect)(() => {
+				ensureSource();
+				const stable = () => ref.current();
+				resyncHandlers.add(stable);
+				return () => {
+					resyncHandlers.delete(stable);
+				};
+			}, []);
+		}
+		//#endregion
+		//#region src/event-catalog.ts
+		/** 事件类型目录（前后端唯一真源；新增类型只在这里加）。 */
+		const EventType = {
+			/** 任务定义增删改（含开关 / 整批替换 / 版本删除 / 附件文件变更；这些写路径都汇聚到 onDefinitionsChanged）。 */
+			TASKS_CHANGED: "tasks.changed",
+			/** 实例进入 dispatched / running（自动调度或「立即执行」）。 */
+			TASK_RUN_STARTED: "task.run.started",
+			/** 实例成功终态。 */
+			TASK_RUN_SUCCEEDED: "task.run.succeeded",
+			/** 实例失败终态（含判死 / 租约回收 / 回执缺失收敛）。 */
+			TASK_RUN_FAILED: "task.run.failed",
+			/** 跳过 / 错过刻度 / 过期（「未执行」的原因类）。 */
+			TASK_RUN_SKIPPED: "task.run.skipped",
+			/** 其余实例行变化（重试退回 / unknown 复活 / 转 running / redispatch / 删行 / 阻塞原因变化）。 */
+			TASK_RUN_CHANGED: "task.run.changed",
+			/** 插件配置变更。 */
+			CONFIG_CHANGED: "config.changed",
+			/** 无参：强制前端重读一次当前值（后端升级 / 索引重建等）。 */
+			FORCE_REFRESH: "force.refresh"
+		};
+		/** 「实例运行态」这一族事件（订阅方通常一并关心）。 */
+		const RUN_EVENT_TYPES = [
+			EventType.TASK_RUN_STARTED,
+			EventType.TASK_RUN_SUCCEEDED,
+			EventType.TASK_RUN_FAILED,
+			EventType.TASK_RUN_SKIPPED,
+			EventType.TASK_RUN_CHANGED
+		];
+		//#endregion
 		//#region src/client/task-view.tsx
 		/**
 		* 查看档正文：只读、无输入控件、无保存动作（要改就切到编辑档）。
@@ -64643,6 +64805,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [last, setLast] = (0, react$1.useState)(null);
 			const [loaded, setLoaded] = (0, react$1.useState)(false);
 			const [error, setError] = (0, react$1.useState)(null);
+			/**
+			* 事件推送：**该任务**的运行态事件（含重连补读）到达 ⇒ 重取一次「上次执行」。
+			* 只认 `payload.taskId === 本档任务`（在屏判定），别的任务跑不动这一档。
+			*/
+			const [reloadNonce, setReloadNonce] = (0, react$1.useState)(0);
+			useEvents(RUN_EVENT_TYPES, (event) => {
+				if (event.payload?.taskId !== taskId) return;
+				setReloadNonce((n) => n + 1);
+			});
+			useResync(() => {
+				setReloadNonce((n) => n + 1);
+			});
 			(0, react$1.useEffect)(() => {
 				if (taskId === "") {
 					setLast(null);
@@ -64670,7 +64844,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return () => {
 					alive = false;
 				};
-			}, [taskId]);
+			}, [taskId, reloadNonce]);
 			const nextExecIso = (0, react$1.useMemo)(() => nextSlotForDraft(draft), [draft]);
 			const taskById = (0, react$1.useMemo)(() => new Map(tasks.map((item) => [item.id, item])), [tasks]);
 			const resolvedByKey = (0, react$1.useMemo)(() => new Map((resolvedAttachments ?? []).map((item) => [`${item.kind}:${item.name}`, item])), [resolvedAttachments]);
@@ -67090,168 +67264,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return [];
 			}
 		}
-		//#endregion
-		//#region src/client/event-subscribe.ts
-		/** 事件流地址：前缀取自唯一真源 `query.ts`（M9；不 import index 以免成环）。 */
-		const EVENTS_URL = `${API_PREFIX}/events`;
-		/** 看门狗巡检间隔。 */
-		const WATCHDOG_MS = 5e3;
-		/** 连续未连上的容忍上限：超过它主动重建连接。 */
-		const RECONNECT_AFTER_MS = 3e4;
-		/**
-		* 「连上了但收不到东西」的容忍上限（毫秒）：服务端每 20s 必发一条心跳 `sys.ping`（**真实 data 帧**，
-		* 客户端 `onmessage` 见得到）⇒ 超过 3 倍心跳仍一无所获，判定为**半死连接**（反向代理静默丢流、
-		* 或没有 FIN 的黑洞），主动重建。这是 `readyState` 判据覆盖不到的那一半（2026-10-06 审计 🟡）。
-		*/
-		const SILENT_AFTER_MS = 75e3;
-		const byType = /* @__PURE__ */ new Map();
-		const resyncHandlers = /* @__PURE__ */ new Set();
-		let source = null;
-		let watchdog = null;
-		/** 本轮「未连上」的起始时刻（0 = 当前处于 OPEN）。 */
-		let unhealthySince = 0;
-		/** 最后一次**收到任何帧**的时刻（含心跳）——半死连接的唯一可观测判据。 */
-		let lastSeenAt = 0;
-		/** 「本环境没有 EventSource」只告警一次（降级会让所有页面失去刷新通道，必须留痕又不能刷屏）。 */
-		let warnedNoEventSource = false;
-		/** 广播「（重）连成功」——各页据此重读一次当前值。 */
-		function dispatchResync() {
-			for (const handler of [...resyncHandlers]) try {
-				handler();
-			} catch {}
-		}
-		function openSource() {
-			let es;
-			try {
-				es = new EventSource(EVENTS_URL);
-			} catch (error) {
-				console.warn("[tdt] EventSource 建立失败，稍后重试：", error);
-				return;
-			}
-			lastSeenAt = Date.now();
-			es.onmessage = (msg) => {
-				lastSeenAt = Date.now();
-				let event;
-				try {
-					event = JSON.parse(msg.data);
-				} catch {
-					return;
-				}
-				const handlers = byType.get(event.type);
-				if (handlers === void 0) return;
-				for (const handler of [...handlers]) try {
-					handler(event);
-				} catch {}
-			};
-			es.onopen = () => {
-				unhealthySince = 0;
-				dispatchResync();
-			};
-			source = es;
-		}
-		/** 看门狗：连不上超过阈值 ⇒ 主动重建（浏览器一直重试却连不上时的唯一出路）。 */
-		function startWatchdog() {
-			if (watchdog !== null) return;
-			watchdog = window.setInterval(() => {
-				if (source !== null && source.readyState === EventSource.OPEN) {
-					if (Date.now() - lastSeenAt > SILENT_AFTER_MS) {
-						source.close();
-						openSource();
-						unhealthySince = 0;
-						return;
-					}
-					unhealthySince = 0;
-					return;
-				}
-				if (unhealthySince === 0) {
-					unhealthySince = Date.now();
-					return;
-				}
-				if (Date.now() - unhealthySince < RECONNECT_AFTER_MS) return;
-				source?.close();
-				openSource();
-				unhealthySince = 0;
-			}, WATCHDOG_MS);
-		}
-		/** 懒建单例连接（首个订阅者出现时才连；**建了就不主动关**——「只要页面在，就有重连机制」）。 */
-		function ensureSource() {
-			if (typeof EventSource === "undefined") {
-				if (!warnedNoEventSource) {
-					warnedNoEventSource = true;
-					console.warn("[tdt] 本环境没有 EventSource：事件推送不可用，页面只在打开时取一次数据。");
-				}
-				return;
-			}
-			startWatchdog();
-			if (source !== null) return;
-			unhealthySince = 0;
-			openSource();
-		}
-		/** 订阅一组事件类型；`handler` 每次渲染都换也不会反复重建订阅（内部走 ref）。 */
-		function useEvents(types, handler) {
-			const ref = (0, react$1.useRef)(handler);
-			ref.current = handler;
-			const key = types.join(",");
-			(0, react$1.useEffect)(() => {
-				ensureSource();
-				const stable = (event) => ref.current(event);
-				const sets = [];
-				for (const type of types) {
-					let set = byType.get(type);
-					if (set === void 0) {
-						set = /* @__PURE__ */ new Set();
-						byType.set(type, set);
-					}
-					set.add(stable);
-					sets.push(set);
-				}
-				return () => {
-					for (const set of sets) set.delete(stable);
-				};
-			}, [key]);
-		}
-		/** 订阅「（重）连成功」——各页据此补读一次当前值（断线期间可能漏过事件）。 */
-		function useResync(handler) {
-			const ref = (0, react$1.useRef)(handler);
-			ref.current = handler;
-			(0, react$1.useEffect)(() => {
-				ensureSource();
-				const stable = () => ref.current();
-				resyncHandlers.add(stable);
-				return () => {
-					resyncHandlers.delete(stable);
-				};
-			}, []);
-		}
-		//#endregion
-		//#region src/event-catalog.ts
-		/** 事件类型目录（前后端唯一真源；新增类型只在这里加）。 */
-		const EventType = {
-			/** 任务定义增删改（含开关 / 整批替换 / 版本删除 / 附件文件变更；这些写路径都汇聚到 onDefinitionsChanged）。 */
-			TASKS_CHANGED: "tasks.changed",
-			/** 实例进入 dispatched / running（自动调度或「立即执行」）。 */
-			TASK_RUN_STARTED: "task.run.started",
-			/** 实例成功终态。 */
-			TASK_RUN_SUCCEEDED: "task.run.succeeded",
-			/** 实例失败终态（含判死 / 租约回收 / 回执缺失收敛）。 */
-			TASK_RUN_FAILED: "task.run.failed",
-			/** 跳过 / 错过刻度 / 过期（「未执行」的原因类）。 */
-			TASK_RUN_SKIPPED: "task.run.skipped",
-			/** 其余实例行变化（重试退回 / unknown 复活 / 转 running / redispatch / 删行 / 阻塞原因变化）。 */
-			TASK_RUN_CHANGED: "task.run.changed",
-			/** 插件配置变更。 */
-			CONFIG_CHANGED: "config.changed",
-			/** 无参：强制前端重读一次当前值（后端升级 / 索引重建等）。 */
-			FORCE_REFRESH: "force.refresh"
-		};
-		/** 「实例运行态」这一族事件（订阅方通常一并关心）。 */
-		const RUN_EVENT_TYPES = [
-			EventType.TASK_RUN_STARTED,
-			EventType.TASK_RUN_SUCCEEDED,
-			EventType.TASK_RUN_FAILED,
-			EventType.TASK_RUN_SKIPPED,
-			EventType.TASK_RUN_CHANGED
-		];
 		//#endregion
 		//#region src/client/records-timeline.tsx
 		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
@@ -70700,6 +70712,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const subscribe = (0, react$1.useCallback)((onChange) => scope.subscribe(onChange), [scope]);
 			const getSnapshot = (0, react$1.useCallback)(() => scope.getSnapshot(), [scope]);
 			const snapshot = (0, react$1.useSyncExternalStore)(subscribe, getSnapshot);
+			/**
+			* 事件推送接入（design/client-refresh-disposition.md §二 P3）：**配置类变更立即重取快照**，
+			* 不再只靠下面那个（已收窄为「有订阅者才轮」的）2s 兜底轮询。
+			* ⚠️ 只订 `CONFIG_CHANGED` / `FORCE_REFRESH`，**刻意不订 `TASKS_CHANGED`**：本页的任务表是可编辑
+			* 文本域，任务变更（含用户在别处改任务）若把快照刷掉，会**冲掉正在编辑的内容**——那是「拨片被旧快照
+			* 拨回」同类事故。任务表自身的新鲜度仍由 2s 兜底轮询 + 保存后主动刷负责（2026-10-06）。
+			*/
+			useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => {
+				scope.refresh?.();
+			});
+			useResync(() => {
+				scope.refresh?.();
+			});
 			const [tab, setTab] = (0, react$1.useState)("config");
 			const [draft, setDraft] = (0, react$1.useState)(void 0);
 			const [saving, setSaving] = (0, react$1.useState)(false);
@@ -71685,8 +71710,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			let lastMapped;
 			const listeners = /* @__PURE__ */ new Set();
 			let busy = false;
+			/** 在途期间到来的重取请求（事件推送 / 保存后刷）：本轮结束立刻补一次，**不静默丢**。 */
+			let pending = false;
 			const poll = async () => {
-				if (busy) return;
+				if (busy) {
+					pending = true;
+					return;
+				}
 				busy = true;
 				try {
 					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: "no-store" });
@@ -71733,6 +71763,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					};
 				} finally {
 					busy = false;
+					if (pending) {
+						pending = false;
+						poll();
+					}
 				}
 			};
 			let timer = null;
@@ -71750,6 +71784,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			};
 			return {
 				getSnapshot: () => lastMapped ?? LOADING_SNAPSHOT,
+				refresh: () => {
+					poll();
+				},
 				subscribe: (listener) => {
 					listeners.add(listener);
 					startPolling();

@@ -54,18 +54,23 @@ const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000
 const SSE_HEARTBEAT_MS = 20_000
 
 /**
- * 当前打开的推送连接（每连接一个幂等清理函数）。
- * 宿主 dispose 会 `closeAllConnections()` 从而触发各 `res` 的 `close` ⇒ 通常自清；这里仍**显式兜一层**，
- * 免得宿主行为一变就悬挂心跳定时器（2026-10-06 审计；宿主文档亦建议主动清理）。
+ * 推送连接的登记表：每打开一条 SSE 连接登记一个幂等清理函数。
+ *
+ * ⚠️ **必须是 apply 实例作用域，不能放模块级**（2026-10-06 审计）：模块级集合会被同一模块的多个
+ * apply 实例共享 ⇒ 任一实例 dispose 时会把**另一个实例**刚建立的连接一起关掉（心跳被停、连接变哑）。
  */
-const activeStreamCleanups = new Set<() => void>()
+type StreamRegistry = Set<() => void>
 
-/** 关掉所有推送连接（插件 dispose 时调用）。 */
-function closeAllEventStreams(): void {
-  for (const cleanup of [...activeStreamCleanups]) {
+/**
+ * 关掉登记表里的所有推送连接（插件 dispose 时调用）。
+ * 宿主 dispose 会 `closeAllConnections()` 从而触发各 `res` 的 `close` ⇒ 通常自清；这里仍**显式兜一层**，
+ * 免得宿主行为一变就悬挂心跳定时器（宿主文档亦建议主动清理）。
+ */
+function closeAllEventStreams(streams: StreamRegistry): void {
+  for (const cleanup of [...streams]) {
     try { cleanup() } catch { /* 单条清理出错不影响其余 */ }
   }
-  activeStreamCleanups.clear()
+  streams.clear()
 }
 
 /** settings 命名空间（与浏览器半侧的 SETTINGS_NS 同名，两侧按它配对）。 */
@@ -313,6 +318,8 @@ const makeDispatchRoutes = (
   getScheduler: () => Scheduler | null,
   /** 事件广播器（SSE 端点 `/events` 的订阅源）。 */
   bus: EventBus,
+  /** 打开的推送连接登记表（**apply 实例作用域**：路由登记、dispose 统一关闭）。 */
+  streams: StreamRegistry,
 ): DispatchWebRoute[] => [
   {
     // 附件上传（选择/上传交互：拖拽或本地文件 → 宿主落盘到插件数据目录，按原始名+随机尾缀、不覆盖累加）。
@@ -837,12 +844,9 @@ const makeDispatchRoutes = (
           writeJson(res, 503, { ok: false, error: 'update-failed' })
           return
         }
-        // 配置变更广播：正常路径由 `scope.watch` 发；但**降级作用域**（无 register 面）的 `watch` 是空实现
-        // ⇒ 这里再发一次兜底。
-        // ⚠️ 正常路径会「发两次」（本路由 + `scope.watch`）——**这依赖广播器的合并窗口吸收**：
-        // `CONFIG_CHANGED` 无 payload ⇒ 合并 key 退化为纯 type ⇒ 两条落同一窗口、只出一条。
-        // 若将来给它加上可区分的 payload、或把窗口调小到可能跨窗，这里就会真双发（2026-10-06 复核）。
-        bus.emit({ type: EventType.CONFIG_CHANGED })
+        // ⚠️ **这里不广播**：`CONFIG_CHANGED` 的唯一发射点是 `scope.watch`（降级作用域的 `watch`
+        // 也已如实实现）⇒ 一次成功写回**恰好一条**事件，不靠广播器的合并窗口去吃掉重复。
+        // （2026-10-06 改正：此前这里补发一条，正常路径会「一次改动发两次」。）
         const config = getScopeConfig()
         writeJson(res, 200, {
           ok: true,
@@ -1043,9 +1047,13 @@ const makeDispatchRoutes = (
         cleaned = true
         clearInterval(heartbeat)
         unsubscribe()
-        activeStreamCleanups.delete(cleanup)
+        streams.delete(cleanup)
+        // 主动收尾响应：让 socket 该关就关（2026-10-06 审计）。
+        // 否则 dispose / 写失败路径只停了心跳、**响应还挂着**，全靠宿主的 `closeAllConnections()` 兜底
+        // —— 宿主行为一变就留下一堆「心跳已停的哑连接」。
+        try { (res as { end?: () => unknown }).end?.() } catch { /* 已断开时 end 会抛，忽略 */ }
       }
-      activeStreamCleanups.add(cleanup)
+      streams.add(cleanup)
       // ⚠️ **只绑 `res` 的 `close`**（2026-10-06 审计实证）：Node ≥16 下 `req` 的 `close` 语义是
       // 「请求消息读完」而不是「连接断开」——GET 无 body，**一旦有中间件消费过请求流
       // （`req.resume()` / 读 body），它会在建连瞬间触发** ⇒ 当场退订，客户端再也收不到任何事件。
@@ -1082,13 +1090,38 @@ function fallbackScope(
     + ' Config 自动投影），已退化为「启动配置运行」：调度照常执行，但运行期改配置需重启才生效'
     + (typeof updater === 'function' ? '。' : '；且该组合也没有 settings.update，页面快照无法回写。'),
   )
+  /**
+   * 降级作用域也**如实**支持 `watch`（官方契约见 `src/host.ts` 的 `SettingsScope`）：
+   * 「值变了就回调」在降级环境下必须同样成立，否则「配置变了」这件事**无人知晓**——既不会广播
+   * `CONFIG_CHANGED`，`tickMs` 也不会重启 interval。
+   *
+   * ⚠️ 2026-10-06 改正：原来这里是空实现 `() => () => {}`，逼得 `/config` 路由自己补发一条事件，
+   * 于是**正常路径变成「一次改动发两次」**、靠广播器的合并窗口把多出来的那条吃掉——那是拿下游
+   * 兜上游的底。现在把 `watch` 补实，`scope.watch` 恢复为 `CONFIG_CHANGED` 的**唯一发射点**。
+   */
+  const watchers = new Set<(next: PluginConfig, prev: PluginConfig) => void>()
+  let current = initial
   return {
-    get: () => initial,
+    get: () => current,
     update: async (patch: Partial<PluginConfig>): Promise<void> => {
       if (typeof updater !== 'function') return
       await updater.call(settings, SETTINGS_NS, patch as Record<string, unknown>)
+      // 降级链路下 `settings.update` **不会**回调我们的 watch（那是 register 面的能力）⇒ 自己派发一次。
+      const prev = current
+      current = { ...current, ...patch }
+      // **逐个隔离**：某个 watcher 抛异常不得打断其余 watcher，更不能让 `update()` reject ——
+      // 否则会出现「配置其实已落盘（上面的 await 已成功）却把这次写回报成失败」的假失败
+      // （`updateScopeConfig` 会 catch 成 false ⇒ 路由回 503；2026-10-06 审计）。
+      for (const fn of [...watchers]) {
+        try { fn(current, prev) } catch (error) {
+          sctx.logger.warn(`配置 watcher 抛异常（已隔离，不影响其它订阅者）：${String(error)}`)
+        }
+      }
     },
-    watch: () => () => {},
+    watch: (fn) => {
+      watchers.add(fn)
+      return () => { watchers.delete(fn) }
+    },
   }
 }
 /** 快照携带的最近事件条数（面板按实例过滤展开用，故比单页展示量多留一些）。 */
@@ -1145,6 +1178,11 @@ export function apply(ctx: HostContext, config: unknown): void {
    * 纯进程内、无宿主依赖 ⇒ 提前创建，路由与各变更点共用同一份。
    */
   const eventBus = createEventBus()
+  /**
+   * 打开的推送连接登记表（**本 apply 实例**作用域）。
+   * ⚠️ 与 `eventBus` 同生命周期：放模块级会让两个 apply 实例互相关掉对方的连接（2026-10-06 审计）。
+   */
+  const activeStreams: StreamRegistry = new Set()
   const innerRuntimeIndex = createRuntimeIndex()
   /**
    * 运行态内存索引外面**包一层事件发射**（design/event-push.md §六「首选注入面」）：
@@ -1261,6 +1299,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       updateScopeConfig,
       () => schedulerRef,
       eventBus,
+      activeStreams,
     )) {
       // 逐条容错：宿主对重复 (kind, path) 注册会 throw（dsh-host-webserver register），
       // 一条坏路由绝不能把后面的路由全部拖死（2026-10-02 真机「部分接口 404」的放大器）。
@@ -1440,12 +1479,24 @@ export function apply(ctx: HostContext, config: unknown): void {
 
     // 官方定时器（决策 13）：ctx.interval 卸载自动清理（vendor/timer/src/index.ts:47-62）。
     // tickMs live 变更时重启 interval。
+    /** dispose 后置真：配置 watcher 立刻退出（见下），避免对已释放的广播器发事件、或重种定时器。 */
+    let disposed = false
     let stopInterval = sctx.interval(safeTick, scope.get().tickMs)
-    scope.watch((next, prev) => {
+    const unwatchScope = scope.watch((next, prev) => {
+      // dispose 之后宿主若还回调（作用域的生命周期不完全由我们掌控）⇒ 立刻退出：
+      // 否则会向**已经 dispose 的广播器**发事件、并用 `sctx.interval` **重新种下一个没人清理的定时器**
+      // （2026-10-06 第四轮审计 🟡）。
+      if (disposed) return
       // 配置 live 变更 ⇒ 同步给路由层（清道夫天数等）。
       configRef = { ...next, tasksInline: runtime.tasksInline }
       // 配置变了 ⇒ 通知前端重读（设置页 / 依赖计时参数展示的页面）。
-      eventBus.emit({ type: EventType.CONFIG_CHANGED })
+      // ⚠️ **`CONFIG_CHANGED` 的唯一发射点**（正常与降级作用域都走这里——`fallbackScope` 的 `watch`
+      // 已如实实现）⇒ 一次成功写回**恰好一条**事件，不需要下游的合并窗口兜底。
+      // **边沿触发**：`watch` 在「点了保存但值其实没变」时同样会回调，那不叫变更 ⇒ 比对后再决定。
+      // 用**整份比对**而不是硬编码字段清单：将来加新的页面可见字段时不必记得回来补清单（宁可多发一条空的）。
+      if (JSON.stringify(next) !== JSON.stringify(prev)) {
+        eventBus.emit({ type: EventType.CONFIG_CHANGED })
+      }
       if (next.tickMs === prev.tickMs) return
       stopInterval()
       stopInterval = sctx.interval(safeTick, next.tickMs)
@@ -1490,9 +1541,13 @@ export function apply(ctx: HostContext, config: unknown): void {
     updateSnapshot() // 启动诊断可能写 task_log，立即落一版快照
 
     sctx.on('dispose', () => {
+      disposed = true
+      // 主动摘掉配置 watcher（此前只把退订函数丢掉 ⇒ 宿主若晚一步才释放作用域，
+      // 回调会打到已 dispose 的广播器上、并重种一个没人清理的 interval）。2026-10-06 第四轮审计 🟡。
+      unwatchScope()
       stopInterval()
       stopSweeper()
-      closeAllEventStreams()
+      closeAllEventStreams(activeStreams)
       eventBus.dispose()
       store.close()
     })

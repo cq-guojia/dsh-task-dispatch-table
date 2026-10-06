@@ -2937,15 +2937,40 @@ console.log('\n[14] runtime-index')
     check('SSE 心跳是**真实 data 帧**（注释帧前端看不见 ⇒ 半死连接永远发现不了）',
       idxSrc20.includes('JSON.stringify({ type: HEARTBEAT_TYPE })')
       && !idxSrc20.includes("write.call(res, ': ping"))
-    check('插件 dispose 主动关掉所有推送连接（不只依赖宿主 closeAllConnections）',
-      /const activeStreamCleanups/.test(idxSrc20) && idxSrc20.includes('closeAllEventStreams()'))
+    check('推送连接登记表是**实例级**（模块级会让两个 apply 实例互相关掉对方的连接）',
+      idxSrc20.includes('const activeStreams: StreamRegistry = new Set()')
+      && !idxSrc20.includes('const activeStreamCleanups'))
+    check('dispose 主动关连接 + cleanup 主动收尾响应（不留「心跳已停的哑连接」）',
+      idxSrc20.includes('closeAllEventStreams(activeStreams)')
+      && idxSrc20.includes('(res as { end?: () => unknown }).end?.()'))
+    check('降级作用域的 watcher 异常被隔离（否则「配置已落盘却把写回报成失败」）',
+      idxSrc20.includes('try { fn(current, prev) } catch (error) {'))
+    check('配置 watcher 在 dispose 时被摘掉、且 dispose 后立刻退出（不重种定时器）',
+      idxSrc20.includes('const unwatchScope = scope.watch(')
+      && idxSrc20.includes('disposed = true')
+      && idxSrc20.includes('unwatchScope()')
+      && idxSrc20.includes('if (disposed) return'))
+    const ciSrc20 = S('client/index.ts')
+    check('设置页 / 调试页快照被事件接管（配置类事件 ⇒ 立即重取，且不静默丢在途）',
+      ciSrc20.includes('useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH]')
+      && ciSrc20.includes('refresh: () => { void poll() }')
+      && ciSrc20.includes('if (pending) { pending = false; void poll() }'))
+    check('查看档「上次执行」也随事件更新（原来只在挂载 / 换任务时取一次）',
+      S('client/task-view.tsx').includes('if (event.payload?.taskId !== taskId) return')
+      && S('client/task-view.tsx').includes('[taskId, reloadNonce]'))
     check('运行态索引包裹层「真的变了才广播」（否则每 tick 每任务一条无谓事件）',
       /if \(changed\) eventBus\.emit/.test(idxSrc20)
       && S('runtime-index.ts').includes('=== next) return false'))
     check('删行路径（任务仍有别的在飞实例）也广播',
       S('reconcile.ts').includes('emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } })'))
-    check('配置写回路由自己兜底发 CONFIG_CHANGED（降级作用域的 watch 是空实现）',
-      /bus\.emit\(\{ type: EventType\.CONFIG_CHANGED \}\)/.test(idxSrc20))
+    check('配置变更：CONFIG_CHANGED **只有一处发射点**（scope.watch），路由不再补发',
+      (idxSrc20.match(/EventType\.CONFIG_CHANGED/g) ?? []).length === 1
+      && idxSrc20.includes('scope.watch((next, prev) =>'))
+    check('降级作用域的 watch 如实实现（不再逼路由补发、也不靠合并窗口吃重复）',
+      /watch: \(fn\) => \{/.test(idxSrc20) && idxSrc20.includes('watchers.add(fn)')
+      && !idxSrc20.includes('watch: () => () => {}'))
+    check('配置变更边沿触发（「保存了但值没变」不发事件）',
+      idxSrc20.includes('JSON.stringify(next) !== JSON.stringify(prev)'))
     const { EventType: ET20, HEARTBEAT_TYPE: HB20 } = await import('../dist/event-catalog.js')
     check('心跳类型不在业务事件目录里（前端 byType 查不到 ⇒ 直接丢弃）',
       HB20 === 'sys.ping' && !Object.values(ET20).includes(HB20))

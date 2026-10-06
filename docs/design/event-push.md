@@ -100,8 +100,11 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 在既有 `makeDispatchRoutes(...)` 内新增一条 `exact` 路由：`GET /api/task-dispatch-table/events`。
 
 - **闸门**：复用 `isTrustedDispatchRequest`（`src/index.ts:84-94`）。
-- **建连**：写响应头 `content-type: text/event-stream; charset=utf-8`、`cache-control: no-store`、`connection: keep-alive`（并 `flushHeaders`）。
-- **订阅**：`res.write` 前 `bus.subscribe(send)`；**只在 `res` 的 `close` 上退订**（`cleanup` 幂等，可被 close / 写失败 / dispose 三路重入）。
+- **建连**：写响应头 `content-type: text/event-stream; charset=utf-8`、`cache-control: no-store`、`connection: keep-alive`、`x-accel-buffering: no`。
+  - ⚠️ 实现**没有**显式调 `flushHeaders()`（2026-10-06 校准）：紧随其后的首个 `write`（`: connected`）就把头发了出去，没有实际影响。
+- **订阅**：`res.write` 前 `bus.subscribe(send)`；**只在 `res` 的 `close` 上退订**（`cleanup` 幂等，可被 close / 写失败 / dispose 三路重入），并在 `cleanup` 里**主动 `res.end()`** 收尾——否则 dispose / 写失败路径只停了心跳、响应还挂着，全靠宿主 `closeAllConnections()` 兜底，宿主行为一变就留下一堆「心跳已停的哑连接」（2026-10-06 审计）。
+- **连接登记表**：每打开一条连接，把一个幂等清理函数登记进 **apply 实例级**的 `streams`（`makeDispatchRoutes` 的末位参数），dispose 时统一关闭。
+  - ⚠️ **绝不能放模块级**：模块级集合被同一模块的多个 apply 实例共享 ⇒ 任一实例 dispose 会把**另一个实例**刚建立的连接一起关掉（2026-10-06 审计）。
   - ⚠️ **绝不能同时挂 `req` 的 `close`**（2026-10-06 审计实证）：Node ≥16 下 `req` 的 `close` 语义是「请求消息读完」而不是「连接断开」——GET 无 body，**一旦有中间件消费过请求流（`req.resume()` / 读 body），它会在建连瞬间触发**，当场退订、客户端再也收不到任何事件（实证：该变体下 `CLEANUP via req.close` 立即打印、客户端连接被终止）。SSE 断连的唯一可靠信号是 `res` 的 `close`。
 - **写出**：每条事件 `data: <JSON.stringify(event)>\n\n`。
 - **心跳**：每 `SSE_HEARTBEAT_MS`（20s）写一条**真实 data 帧** `data: {"type":"sys.ping"}\n\n`，保活穿代理。
@@ -109,7 +112,8 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
   - `sys.ping` 由 `HEARTBEAT_TYPE` 定义、**不在业务事件目录里** ⇒ 前端 `byType` 查不到、直接丢弃，不会被当成业务事件派发。
 - **插件 dispose**：`closeAllEventStreams()` 主动清掉所有在开连接的心跳定时器（不只依赖宿主 `closeAllConnections()` 触发 `res` 的 `close`）。
 - **响应契约扩展**：现有 `DispatchWebResponse`（`src/index.ts:64-68`）**只声明 `writeHead`/`end`**，SSE 需补 `write`（可选方法，先核实宿主真身支持分块，见 §八）。
-- **注入时序**：`webServer` 注册**早于** `settings inject`（`src/index.ts:1064-1067` 注释）⇒ 路由侧只传 `getBroadcaster` **惰性 getter**，广播器实体在 settings inject 内创建（照 `getScheduler` 模式）。
+- **注入时序**：路由注册（`webServer` inject）**早于** `settings inject`，但广播器 `eventBus` 是**纯进程内、无宿主依赖**的 ⇒ 在 apply 顶层**提前建好**、作为实参直接传进 `makeDispatchRoutes`（`src/index.ts` 建 `eventBus` / `activeStreams`，调用处一并传）。
+  - ⚠️ 2026-10-06 校准：本文档早前写的「路由侧只传 `getBroadcaster` 惰性 getter、广播器在 settings inject 内创建」与实现**相反**，已改正。（`getScheduler` 那种惰性 getter 仍然需要——它依赖 settings 就绪。）
 
 ---
 
@@ -142,7 +146,7 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 | 实例删除（窗口外 pending / 附件缺失） | `TASK_RUN_CHANGED` | `{taskId}` | `src/reconcile.ts` `syncRunningAfterDrop`：**该任务已无在飞** ⇒ `clearRunning`（边沿，真变了才发）；**仍有别的在飞** ⇒ 也**直发一条**（那一行确实从库里没了，记录页/日历要少一行）——2026-10-06 审计补 |
 | 重试退回 pending | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `retryOrFail` → `notifyRow` |
 | unknown 复活 / 转 running / redispatch | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `markActivity` / `noteRunSignal` / `onCreated` / `sweep` → `notifyRow` |
-| 配置变更 | `CONFIG_CHANGED` | 无 | `src/index.ts` `scope.watch`（正常路径）；**降级作用域**（无 register 面）的 `watch` 是空实现 ⇒ `/config` 路由自己**再发一次**兜底。无 payload ⇒ 合并 key 退化为纯 `type` ⇒ 两条被合并成一条（2026-10-06 审计补） |
+| 配置变更 | `CONFIG_CHANGED` | 无 | `src/index.ts` `scope.watch` —— **唯一发射点**（正常与降级作用域都走它：`fallbackScope` 的 `watch` 已如实实现）。**边沿触发**：整份配置比对后真变了才发（「点了保存但值没变」不算）。⚠️ 2026-10-06 二次校准：此前曾在 `/config` 路由补发一条，造成**一次改动发两次**、靠合并窗口吃掉多出来的那条 —— 那是拿下游兜上游的底，已撤掉 |
 | 启动扫描 / 索引重建 / 启动诊断 / 历史清理 | **不发** | — | 都跑在客户端连接之前（无订阅者）；要强刷时用 `FORCE_REFRESH` |
 | 归档 / 反归档会话 | **不发** | — | 只影响会话弹窗可读性，列表数据不变 |
 
@@ -227,12 +231,18 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 - ❌ 不做历史 / 已读未读（站内信通知是另一回事）。
 - ❌ 不在前端各页分散写 debounce（合并只在广播器出口）。
 - ❌ 不新增 npm 依赖（Node 原生 + 浏览器原生 `EventSource`）。
-- ❌ **本轮不删除、不替换任何现有轮询**（见尾注）。
+- ℹ️ **轮询处置已另立项并已实施**（[`client-refresh-disposition.md`](client-refresh-disposition.md)）：本节原写「本轮不删除任何轮询」，那条只描述**本机制落地那一轮**的范围；随后 P1/P2/P3 已落地（实例 5s、overview 10s 已删；设置页 2s 收窄为「有订阅者才轮 + 配置类事件立即重取」）。2026-10-06 校准。
 - ❌ 不改宿主接口；不靠运行时试探猜宿主 API（先读源码）。
 - ⚠️ **部署侧注意**：反向代理（nginx 等）会缓冲 SSE ⇒ 需在代理关缓冲（如 `X-Accel-Buffering: no` / `proxy_buffering off`），否则前端收不到实时推送。
 
 ---
 
-## 十、尾注：老轮询的处理（本轮不做，后续单独立项）
+## 十、尾注：老轮询的处理（**已另立项并已实施**）
 
-现有的轮询（`src/client/instances-poll.ts` 的 5s 共享 hook、`task-list.tsx:274` 的 10s overview 轮询、`task-info.tsx:447` 1s ticker、设置页 `/snapshot` 2s 轮询）**本轮一律保留不动**。待本机制在真机稳定后，再单独立项决定：哪些轮询**降级为「SSE 不可用/断线时」的兜底**、哪些**直接删除**、间隔如何复核。决策前**不删任何轮询**。
+> ⚠️ 本节原写「本轮不做、决策前不删任何轮询」，那只是**本机制落地那一轮**的范围说明。随后已另立项并按 [`client-refresh-disposition.md`](client-refresh-disposition.md) 落地（2026-10-06 校准）：
+
+- **已删**：实例 5s 共享 hook（`instances-poll.ts` 整个删除，执行记录页 / 日程页改事件驱动）、主列表 overview 10s 常开轮询。
+- **已收窄**：设置页 / 调试页 `/snapshot` 的 2s 轮询 ⇒ **只在有订阅者（页面真的打开）时才轮**，最后一个订阅者走了就停；配置类变更另由 `CONFIG_CHANGED` **立即重取**（`scope.refresh()`）。
+- **仍保留**：全站 1s 时钟（`ui/ticker.ts`，**非**数据轮询）、SSE 看门狗 5s 巡检、镜像层豁免项（`mirror/*`）。
+- **设计取舍**：**不做**「SSE 不可用 / 断线时退回轮询」的兜底 —— 断线由统一重连 + 重连补读覆盖；`EventSource` 缺席的环境只取一次数据并**明确告警**（不静默）。
+- **页面对齐**：会展示任务运行态的地方现均已被事件驱动覆盖 —— 主列表、执行记录页、日程页、卡片展开面板（经 `runSig`）、**查看档**（`task-view.tsx`，2026-10-06 补）、设置页 / 调试页快照（经 `CONFIG_CHANGED` + 2s 兜底）。

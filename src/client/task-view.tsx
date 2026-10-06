@@ -28,6 +28,10 @@ import {
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
 import { Button, CodeViewer, Segmented } from './ui'
+// 事件推送（2026-10-06 补缺口）：查看档的「上次执行」原来只在挂载/换任务时取一次 ⇒ 页面开着时
+// 该任务跑完是看不见的（它上面没有会带它重取的父级，父级 `runSig` 那条只覆盖卡片里的 info/records/logs）。
+import { useEvents, useResync } from './event-subscribe'
+import { RUN_EVENT_TYPES } from '../event-catalog.js'
 // ⚠️ 只引**类型**（`import type` 会被编译擦除）：本文件与 `task-editor.tsx` 是「组件互相引用 + 类型单向依赖」，
 // 类型导入不构成运行时循环。草稿形状的真源仍在 task-editor.tsx，不在这里复制一份。
 import type { EditorMode, EditorTaskOption, TaskEditorDraft } from './task-editor'
@@ -67,6 +71,16 @@ export function TaskViewPanel(props: {
   const [last, setLast] = useState<InstanceRow | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /**
+   * 事件推送：**该任务**的运行态事件（含重连补读）到达 ⇒ 重取一次「上次执行」。
+   * 只认 `payload.taskId === 本档任务`（在屏判定），别的任务跑不动这一档。
+   */
+  const [reloadNonce, setReloadNonce] = useState(0)
+  useEvents(RUN_EVENT_TYPES, (event) => {
+    if (event.payload?.taskId !== taskId) return
+    setReloadNonce(n => n + 1)
+  })
+  useResync(() => { setReloadNonce(n => n + 1) })
   useEffect(() => {
     // 新建态 / 没有 id ⇒ 不请求：任务还不存在，没有执行记录可查。
     if (taskId === '') {
@@ -91,7 +105,7 @@ export function TaskViewPanel(props: {
         setLoaded(true)
       })
     return () => { alive = false }
-  }, [taskId])
+  }, [taskId, reloadNonce])
 
   // ── 预计执行（r13 **统一入口** `nextSlotForDraft`：停用⇒无、once/cron 分流、推不出⇒null
   // 全在 schedule-text 那一份，与卡片「预计执行」同口径 —— 用户点名这类判断不许各处各写）。

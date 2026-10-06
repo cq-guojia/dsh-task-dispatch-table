@@ -88,6 +88,12 @@ interface SettingsScope {
   subscribe(listener: () => void): () => void
   set(field: string, value: unknown): Promise<void>
   unset(field: string): Promise<void>
+  /**
+   * **立即重取一次快照**（可选）。由 HTTP 通道（`httpScope`）实现。
+   * 用途：事件推送到达时立刻刷一次，不必等那个（已收窄的）2s 兜底轮询
+   * —— 这就是 `CONFIG_CHANGED` 对设置页的接管（2026-10-06 补：此前只写在文档里、没落地）。
+   */
+  refresh?: () => void
 }
 
 // ── rc.1 的共享配置表单服务（configForms）结构子集 ──
@@ -494,6 +500,16 @@ function TaskPage(props: {
   const subscribe = useCallback((onChange: () => void) => scope.subscribe(onChange), [scope])
   const getSnapshot = useCallback(() => scope.getSnapshot(), [scope])
   const snapshot = useSyncExternalStore(subscribe, getSnapshot)
+
+  /**
+   * 事件推送接入（design/client-refresh-disposition.md §二 P3）：**配置类变更立即重取快照**，
+   * 不再只靠下面那个（已收窄为「有订阅者才轮」的）2s 兜底轮询。
+   * ⚠️ 只订 `CONFIG_CHANGED` / `FORCE_REFRESH`，**刻意不订 `TASKS_CHANGED`**：本页的任务表是可编辑
+   * 文本域，任务变更（含用户在别处改任务）若把快照刷掉，会**冲掉正在编辑的内容**——那是「拨片被旧快照
+   * 拨回」同类事故。任务表自身的新鲜度仍由 2s 兜底轮询 + 保存后主动刷负责（2026-10-06）。
+   */
+  useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { scope.refresh?.() })
+  useResync(() => { scope.refresh?.() })
 
   const [tab, setTab] = useState<'config' | 'records' | 'calendar' | 'debug'>('config')
   const [draft, setDraft] = useState<string | undefined>(undefined)
@@ -1741,8 +1757,10 @@ function httpScope(): SettingsScope {
   let lastMapped: ScopeSnapshot | undefined
   const listeners = new Set<() => void>()
   let busy = false
+  /** 在途期间到来的重取请求（事件推送 / 保存后刷）：本轮结束立刻补一次，**不静默丢**。 */
+  let pending = false
   const poll = async (): Promise<void> => {
-    if (busy) return
+    if (busy) { pending = true; return }
     busy = true
     try {
       const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: 'no-store' })
@@ -1776,6 +1794,8 @@ function httpScope(): SettingsScope {
       channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: `fetch 失败：${message}` }
     } finally {
       busy = false
+      // 补跑被在途那轮吞掉的重取（事件推送 / 保存后刷）。
+      if (pending) { pending = false; void poll() }
     }
   }
   // ⚠️ 这里**原来是 2s 常开轮询**（全页常驻、且从不清理）——已收窄（design/client-refresh-disposition.md
@@ -1793,6 +1813,8 @@ function httpScope(): SettingsScope {
   }
   return {
     getSnapshot: () => lastMapped ?? LOADING_SNAPSHOT,
+    // 事件推送到达时**立即**重取一次，不必等下面那个 2s 兜底轮询（`CONFIG_CHANGED` 的接管点）。
+    refresh: () => { void poll() },
     subscribe: (listener) => {
       listeners.add(listener)
       startPolling()
