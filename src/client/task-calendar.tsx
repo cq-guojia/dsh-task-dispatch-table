@@ -15,7 +15,7 @@
 // 取数：整月历史走 `GET /tasks/instances?light=1`（`fetchInstancesLite`，一次取满、不含 snapshot 大列）；
 // 未来走浏览器内的 `planEntriesByDay`（与服务端同一份纯核，不许另写 cron 解析）；
 // 拉开区里某条要展开时，按会话 id 补拉**全量行**拿 `snapshot`（前置 / 产出就靠它）+ `fetchEvents` 取事件。
-import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { createElement as h, Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { IconChevronLeftOutlineRegular, IconChevronRightOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pad2 } from './format'
 import { fetchEvents, fetchInstanceBySession, fetchInstancesLite, type EventRow, type InstanceRow } from './query'
@@ -75,9 +75,9 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-selected-bg);outline:0;}
 .dsh-tdt-cal-cell--sel:hover{background:var(--tdt-selected-bg);}
 /* 线在格子**底部**（不是顶部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
-   中性的三级灰（--tdt-fg-3），深浅主题都读得到、又不抢眼（用户 2026-10-06：蓝色太显）。 */
+   稍亮的品牌蓝（--tdt-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
 .dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;bottom:4px;height:4px;
-  border-radius:999px;background:var(--tdt-fg-3);}
+  border-radius:999px;background:var(--tdt-business);}
 .dsh-tdt-cal-num{align-self:flex-start;min-width:22px;padding:0 5px;border-radius:999px;text-align:center;
   font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
 .dsh-tdt-cal-num--today{background:var(--tdt-accent);color:var(--tdt-fg-inverse);font-weight:600;}
@@ -107,25 +107,13 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-t--busy{--cal-tone:var(--tdt-business);--cal-soft:color-mix(in srgb,var(--tdt-business) 24%,transparent);}
 .dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
 /* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条。
-   ⚠️ 用户 2026-10-06（r6）：**不是整圈框**，只有**顶部一条 5px 亮蓝横线**（离边 4px），
-   并且在**选中日那一列断开**（把当前日期空开）⇒ 与上面那一行的线成一对，像从那一格拉出来。
-   断口位置：列宽 = (100% - 6px)/7（6 个 1px 间隙），用 --cal-col（选中列序号，0 起）算。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-/* 拉开区与选中格**同色**（--tdt-selected-bg）⇒ 视觉上是一体的「展开区域」。 */
+/* 拉开区与选中格**同色**（--tdt-selected-bg，深色主题下无限接近页面背景、只略深一点点）⇒ 视觉一体；
+   margin-top:-1px 吃掉与上一行（选中格所在周）之间的那 1px 网格间隙，不让一道亮线横在中间。 */
 .dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-selected-bg);border:0;border-radius:0;
-  --cal-col-w:calc((100% - 6px) / 7);
-  --cal-cut:calc((var(--cal-col-w) + 1px) * var(--cal-col, 0));
+  margin-top:-1px;
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
   overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
-/* 左段：从面板左边（内缩 4px）起，**正好停在选中格的左边缘**；右段：**正好从选中格的右边缘**起，
-   到面板右边（内缩 4px）。⚠️ 断口两端**不许再留间距** —— 用户 2026-10-06：端点要**正对**上面
-   点开那一格的左右两边（只有最外两侧才是 4px 内间距）。 */
-/* ⏸ 2026-10-06：用户要求先隐藏这两条线看看效果，暂设 display:none（规则保留，便于恢复）。
-.dsh-tdt-cal-panel::before,.dsh-tdt-cal-panel::after{content:'';position:absolute;top:4px;height:4px;
-  border-radius:999px;background:var(--tdt-fg-3);} */
-.dsh-tdt-cal-panel::before,.dsh-tdt-cal-panel::after{display:none;}
-.dsh-tdt-cal-panel::before{left:4px;width:calc(var(--cal-cut) - 4px);}
-.dsh-tdt-cal-panel::after{left:calc(var(--cal-cut) + var(--cal-col-w));right:4px;}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
 /* 图例色块（与格内标签同款：3px 竖线 + 同深度的底，**无圆角**） */
 .dsh-tdt-cal-swatch{flex:none;width:16px;height:12px;border-radius:0;overflow:hidden;
@@ -521,8 +509,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
       ),
       h('div', { className: 'dsh-tdt-cal-grid' },
         weeks.map(week => {
-          /** 选中日在这一周里的列序号（-1 = 不在这一周）⇒ 决定展开面板顶部那条线的断口。 */
-          const cut = week.findIndex(cell => cell.iso === selected)
+          const hasSel = week.some(cell => cell.iso === selected)
           return h(Fragment, { key: week[0]?.iso ?? '' },
           week.map(cell => {
             // 补位格（相邻月）：淡化、不可点、**不放数据**（那不是本月的日程）。
@@ -566,9 +553,8 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
               ),
             )
           }),
-          cut >= 0
-            // `--cal-col` = 选中日在这一周的列序号 ⇒ 面板顶部那条线在那一列断开（把当前日期空开）。
-            ? h('div', { className: 'dsh-tdt-cal-panel', style: { '--cal-col': String(cut) } as CSSProperties },
+          hasSel
+            ? h('div', { className: 'dsh-tdt-cal-panel' },
                 h('div', { className: 'dsh-tdt-cal-panel-head' },
                   dayFormatter === null ? selected : dayFormatter.format(new Date(`${selected}T00:00:00`)),
                   h('span', { className: 'dsh-tdt-cal-mini' }, tt('recordsDayCount', { n: dayItems.length })),

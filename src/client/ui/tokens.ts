@@ -189,10 +189,10 @@ body[data-ds-dark-theme]{
   --tdt-warning-soft:color-mix(in srgb,var(--tdt-warning) 5%,transparent);
   --tdt-danger-soft:color-mix(in srgb,var(--tdt-danger) 5%,transparent);
   --tdt-business-soft:color-mix(in srgb,var(--tdt-business) 5%,transparent);
-  /* 「选中面」（深色版）：掺 **12% 背景色**（--tdt-surface-base）⇒ 比常态底色**暗一档**、
-     但远不到背景的黑（用户 2026-10-06：深色下选中要比本月日期深，又不能像背景一样黑；
-     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅）。 */
-  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-surface-base));
+  /* 「选中面」（深色版，2026-10-06）：掺 **~40% 背景色**（--tdt-surface-base）⇒ 无限接近页面背景的黑、
+     只比背景略深一点点（用户：深色下展开区压着任务透明绿会发灰，底色要尽量贴近背景才不显灰）。
+     ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅。 */
+  --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 60%,var(--tdt-surface-base));
   /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），
      比原来的卡片面更沉、更偏蓝灰；选中格仍走 --tdt-selected-bg（更暗一档），层级不变。 */
   --tdt-cal-cell-bg:#23262e;
