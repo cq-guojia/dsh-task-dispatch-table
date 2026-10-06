@@ -15,6 +15,16 @@
  *
  * 挂载点选 `body`：插件界面（含 portal 到 body 的弹窗）全在 body 内，
  * 定义在 body 上零调用点成本；名字统一带 `--tdt-` 前缀，不会与宿主变量打架。
+ *
+ * ⚠️ **两条基线，别混**（2026-10-07 审计后明写）：
+ *  - **JS 语法基线 = chrome99**：那是构建 target（`tsdown.client.config.ts`），只约束语法与 API。
+ *  - **CSS 基线 = Chrome 111**：本文件用 `color-mix()`（111 起）**现算**语义色的浅底 —— 目的是让浅底
+ *    **跟随宿主 alias**（宿主主题一换、浅底自动成立）。写成死 `rgba()` 就失去了这个性质。
+ *    ⇒ 11x–110 的旧内核上，这些声明会被整条丢弃（底色变透明，**不破布局**）。当前实际客户端为新版
+ *       Chromium，不受影响；若将来真要支持更旧内核，配方是：给每条 `color-mix` token **先写一条**
+ *       `rgba(...)` 明文回退（浅/深两段各写一份），代价是浅底不再跟随宿主主题色。
+ *  - 样式是 **TS 模板字符串**、不经过任何 CSS 工具链 ⇒ 没有 autoprefixer / 降级；想加回退只能手写。
+ *    （本仓唯一已做回退的范例见 `toast-css.ts`：先写 `background: var(...)` 再写 `color-mix`。）
  */
 export const UI_TOKENS_CSS = `
 /* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */
@@ -50,12 +60,17 @@ body{
   /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */
   --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
   --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
+  /* 旧内核回退（Chrome <111 不认 color-mix ⇒ 这条生效；新内核被下面那条覆盖）。
+     这几个是**固定中性面**、不靠跟随宿主主题色，故可以无损地给明文回退。 */
+  --tdt-icon-plate:rgba(255,255,255,.5);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
   /* 表头底：浅色主题**偏深**，且必须**比斑马纹（--tdt-plate）再深一档**——
      两者不能撞色（用户 2026-10-02：表头跟斑马纹一模一样）。 */
   --tdt-head-bg:var(--dsw-static-neutral-100,#f5f5f5);
   /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */
+  --tdt-chip-bg:rgba(15,15,15,.07);
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 7%,transparent);
+  --tdt-chip-bg-hover:rgba(15,15,15,.14);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 14%,transparent);
   /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」
      （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */
@@ -186,11 +201,14 @@ body[data-ds-dark-theme]{
   --tdt-on-solid:var(--dsw-static-neutral-00,#fff);
   --tdt-plate:var(--dsw-static-neutral-850,#212123);
   --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
+  --tdt-icon-plate:rgba(255,255,255,.05);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
   /* 暗色主题**反过来**：表头要比卡片面**亮**、比斑马纹再**浅一档**（用户：纯黑背景没法看）。 */
   --tdt-head-bg:var(--tdt-surface-2);
   /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */
+  --tdt-chip-bg:rgba(255,255,255,.08);
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 8%,transparent);
+  --tdt-chip-bg-hover:rgba(255,255,255,.16);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 16%,transparent);
   /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */
   --tdt-open-bg:rgba(96,165,250,.18);

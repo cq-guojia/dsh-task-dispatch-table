@@ -253,13 +253,19 @@ export function scheduleSpecFromSchedule(sched: ScheduleRowInput): ScheduleSpec 
     const freq: ScheduleFreq = uiKind === 'interval'
       ? 'daily'
       : (uiFreq === 'daily' || uiFreq === 'weekly' || uiFreq === 'monthly' || uiFreq === 'quarterly' || uiFreq === 'yearly' ? uiFreq : 'daily')
+    // ⚠️ 2026-10-07 i18n 审计：`ui.monthMode` 是**宽泛 string**（来自 cron / 老 `ui`），而下游用它拼
+    // **动态 locale key**（`` t(`editorMonthMode_${spec.monthMode}`) ``）⇒ 脏值（如 "foo"）会让计划行
+    // 渲染出字面量 `editorMonthMode_foo`。**编辑器那条路径早就收窄到三档**（见 task-editor.tsx 同款注释），
+    // 这里是列表路径，原先漏了 ⇒ 补齐同样的收窄。
+    const monthModeRaw = str(ui.monthMode, 'every')
+    const monthMode = monthModeRaw === 'odd' || monthModeRaw === 'even' ? monthModeRaw : 'every'
     return {
       kind: uiKind,
       freq,
       weekdays: days,
       weekStep: kindNum(ui.weekStep, sched.everyNWeeks ?? 1),
       monthDay: str(ui.monthDay, '1'),
-      monthMode: str(ui.monthMode, 'every'),
+      monthMode,
       quarterMonth: str(ui.quarterMonth, '1'),
       yearMonth: str(ui.yearMonth, '1'),
       intervalUnit: ui.intervalUnit === 'hour' ? 'hour' : 'minute',

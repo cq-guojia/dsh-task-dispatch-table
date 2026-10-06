@@ -280,7 +280,6 @@ window.__ModuleLoader__.load({
 		const zh = {
 			title: "任务调度表（dsh-task-dispatch-table）",
 			description: "用任务表驱动定时派发：配置任务、查看每次执行的记录。点击打开面板。",
-			trayLabel: "任务调度",
 			unavailable: "设置命名空间当前不可用（插件未运行或宿主未提供），暂时无法配置。",
 			tasksInlineLabel: "任务表（tasksInline，JSON 数组）",
 			tasksInlineHint: "每项一个任务定义；非空时优先于任务目录 tasksDir。清空并保存 = 回到默认（空，改用 tasksDir）。",
@@ -319,11 +318,8 @@ window.__ModuleLoader__.load({
 			calPlanTag: "计划：",
 			calNotExecuted: "未执行",
 			calPlanHint: "此任务尚未执行，时间为预计执行时间",
-			calLegendDone: "已执行",
-			calLegendPlan: "预计执行",
 			calToday: "今天",
 			calCellMore: "还有 {n} 条，点开看全部",
-			calDepsLabel: "前置",
 			debugDbHint: "状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。",
 			debugDbLoading: "状态库读取中…",
 			debugDbFail: "状态库读取失败（未就绪或请求被拒），稍后点刷新重试。",
@@ -343,10 +339,7 @@ window.__ModuleLoader__.load({
 			listDeferred: "延期",
 			listDeferredTitle: "已过计划时刻但还没开始执行。常见原因：前置任务未完成 / 附加文件找不到 / 上一轮还在运行。",
 			viewSession: "查看会话",
-			viewSessionHint: "在面板内只读查看本次执行的会话记录（含归档会话）；简化渲染、不可续聊。",
 			sessionViewerTitle: "会话记录（只读）",
-			sessionArgs: "参数",
-			sessionOutput: "输出",
 			sessionUnknownKind: "未支持的节点类型：",
 			sessionLoading: "正在加载会话记录…",
 			sessionEmpty: "该会话暂无可显示的记录（可能刚建窗或已被清理）。",
@@ -468,7 +461,6 @@ window.__ModuleLoader__.load({
 			diffUnwrapLabel: "取消换行",
 			diffCollapseAria: "收起差异",
 			diffExpandAria: "展开其余 {count} 行差异",
-			diffCollapseLabel: "收起",
 			diffExpandRest: "… 其余 {count} 行",
 			continueBranch: "继续对话",
 			forkConfirmTitle: "开分支继续对话",
@@ -478,7 +470,6 @@ window.__ModuleLoader__.load({
 			forkWorking: "正在开分支…",
 			forkFailed: "开分支失败：{error}",
 			previewClose: "关闭预览",
-			previewLoading: "加载中…",
 			previewLoadMore: "加载更多",
 			previewFileLabel: "文件",
 			previewCopyPath: "复制路径",
@@ -506,7 +497,6 @@ window.__ModuleLoader__.load({
 			explorerEmpty: "空目录",
 			explorerTruncated: "目录内容过多，仅显示部分条目。",
 			explorerCrumbsAria: "目录路径导航",
-			explorerCrumbsMore: "展开完整路径",
 			explorerLevels: "选择目录层级",
 			explorerRootName: "（工作区根目录）",
 			explorerExpand: "展开目录",
@@ -552,7 +542,6 @@ window.__ModuleLoader__.load({
 			editorCodePh: "可选，便于查询",
 			editorPrompt: "提示词",
 			editorPromptPh: "写给 agent 的指令……",
-			editorManualPathPh: "相对工作区根，如 manuals/xxx.md",
 			editorVersions: "版本历史",
 			editorWorkspace: "工作区",
 			editorWorkspacePh: "选择工作区",
@@ -602,11 +591,9 @@ window.__ModuleLoader__.load({
 			editorAttachmentAdd: "添加文件",
 			editorPickWorkspaceFile: "选择工作区文件",
 			editorPickWorkspaceFileShort: "工作区文件",
-			editorUploadFile: "上传文件",
 			editorDropZoneHint: "点击或拖拽文件到此处上传，支持多选或单个文件",
 			editorDropZoneFormats: "支持常见文本 / 代码、图片、文档格式，单个文件不超过 20MB",
 			editorUploading: "上传中…",
-			editorUploadFailed: "上传失败",
 			editorUploadErrType: "格式不支持：仅支持常见文本 / 代码、图片、文档文件",
 			editorUploadErrSize: "文件超过大小限制（单个最大 20MB）",
 			editorUploadErrEmpty: "文件内容为空",
@@ -616,8 +603,6 @@ window.__ModuleLoader__.load({
 			editorPickerPick: "选择此文件",
 			editorOpenEditor: "全屏编辑",
 			editorPromptEditorTitle: "提示词编辑器（.md）",
-			editorSaveVersion: "保存版本",
-			editorVersionNote: "版本备注（可选）",
 			editorNoVersions: "暂无版本，保存后可在此回滚",
 			editorHistoryVersions: "历史版本",
 			editorNewTaskNoVersions: "新建任务暂未保存，无历史版本可查询",
@@ -625,8 +610,6 @@ window.__ModuleLoader__.load({
 			editorUseVersion: "使用此版本",
 			editorConfirmDeleteTitle: "删除版本",
 			editorConfirmDeleteDesc: "你确定要删除此版本的记录吗？删除后不可撤销，请谨慎操作。",
-			editorConfirmUseTitle: "使用历史版本",
-			editorConfirmUseDesc: "确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词）。",
 			editorDeleteTask: "删除任务",
 			editorDeleteTaskTitle: "删除任务",
 			editorDeleteTaskDesc: "确定所有的移除都是找不回来的，不可逆的。",
@@ -636,7 +619,6 @@ window.__ModuleLoader__.load({
 			editorResetDesc: "重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。",
 			editorVersionToggle: "版本",
 			editorUseShort: "使用",
-			editorRemoveShort: "移除",
 			editorEnabledStateOn: "已启用",
 			editorEnabledStateOff: "已关闭",
 			editorToggleOn: "任务已启用",
@@ -650,12 +632,8 @@ window.__ModuleLoader__.load({
 			editorSchedHourlyOnce: "每小时执行一次",
 			editorSchedNoDaySuffix: "，但还没选生效日",
 			editorSchedWeeklyDayPrefix: "每周",
-			editorRestoreAll: "找回全部",
-			editorRestoreAllTitle: "找回全部设置",
-			editorRestoreAllDesc: "确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。",
 			editorRestorePromptTitle: "只找回提示词",
 			editorRestorePromptDesc: "确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词，其余设置保持现状）。",
-			editorCustomCron: "自定义 cron（JSON 里的原值，保存时原样保留）",
 			editorTasksTitle: "任务列表",
 			editorTasksEmpty: "还没有任务：点右上角「＋ 新建任务」创建第一条。",
 			editorDisabledTag: "已停用",
@@ -788,10 +766,8 @@ window.__ModuleLoader__.load({
 			listNextFullTitle: "下次执行：{when}",
 			listEmpty: "还没有任务。点右上角「＋ 新建任务」创建第一个。",
 			listEmptyFiltered: "没有符合当前筛选的任务。",
-			listSectionSchedule: "执行设置",
 			listSectionAttachments: "附加文件",
 			listSectionDepends: "前置任务",
-			listSectionPrompt: "提示词",
 			listFieldWorkspace: "工作区",
 			listFieldModel: "模型",
 			listFieldModelDefault: "默认模型",
@@ -821,7 +797,6 @@ window.__ModuleLoader__.load({
 			editorViewNotFilled: "未填",
 			editorViewSourceCode: "源码",
 			editorViewExpand: "展开",
-			editorViewExpandAll: "查看全部",
 			editorViewCollapse: "收起",
 			editorViewSwitchTitle: "放弃未保存的修改？",
 			editorViewSwitchDesc: "当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。",
@@ -881,10 +856,6 @@ window.__ModuleLoader__.load({
 			trLastWeek: "上周",
 			trThisMonth: "本月",
 			trLastMonth: "上月",
-			durSec: "{n} 秒",
-			durMinSec: "{m} 分 {s} 秒",
-			durHourMin: "{h} 小时 {m} 分",
-			durDayHour: "{d} 天 {h} 小时",
 			schedCustom: "{cron}",
 			settingsBasic: "基础信息",
 			settingsTitleFormat: "标题写法",
@@ -903,15 +874,26 @@ window.__ModuleLoader__.load({
 			settingsSaveSuccess: "设置已保存",
 			settingsLoadFailed: "读取当前设置失败，请稍后重试",
 			settingsUnitSec: "秒",
-			settingsResetDone: "已恢复默认",
 			loading: "加载中",
-			invalidNumber: "请输入有效的整数秒"
+			invalidNumber: "请输入有效的整数秒",
+			statusRailOff: "已关闭",
+			statusRailLastFailed: "最近一次执行失败",
+			statusRailLastSkipped: "最近一次未执行（配置或前置不满足，详见执行记录）",
+			statusRailRunning: "计划运行中",
+			debugRowsSuffix: "行",
+			optionsDegraded: "宿主侧该项服务未接入，暂无候选",
+			snapshotStale: "数据可能已过期：最近一次刷新失败",
+			vTitleRequired: "还没填任务名称——任务列表里靠它认任务，请给任务起个名字。",
+			vWorkspaceRequired: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。",
+			vPromptRequired: "还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。",
+			vIntervalInvalid: "执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。",
+			vWeekdayRequired: "每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。",
+			vAttachmentInvalid: "附加文件「{name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。"
 		};
 		/** English copy. */
 		const en = {
 			title: "Task dispatch table (dsh-task-dispatch-table)",
 			description: "Schedule agent tasks from a task table: configure tasks and review every run. Click to open the panel.",
-			trayLabel: "Scheduled task dispatcher",
 			unavailable: "The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.",
 			tasksInlineLabel: "Task table (tasksInline, JSON array)",
 			tasksInlineHint: "One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).",
@@ -950,11 +932,8 @@ window.__ModuleLoader__.load({
 			calPlanTag: "Plan:",
 			calNotExecuted: "Not executed",
 			calPlanHint: "This task has not run yet; times shown are estimated",
-			calLegendDone: "Executed",
-			calLegendPlan: "Expected",
 			calToday: "Today",
 			calCellMore: "{n} more — click to open",
-			calDepsLabel: "Deps",
 			debugDbHint: "Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.",
 			debugDbLoading: "Loading state.db…",
 			debugDbFail: "Failed to read state.db (not ready or request rejected); retry with the refresh button.",
@@ -974,10 +953,7 @@ window.__ModuleLoader__.load({
 			listDeferred: "Delayed",
 			listDeferredTitle: "Past its planned time but has not started. Usual causes: preceding task not finished / attachment missing / previous run still running.",
 			viewSession: "View session",
-			viewSessionHint: "Read this run's session transcript in a read-only panel (archived sessions included); simplified rendering, no follow-up replies.",
 			sessionViewerTitle: "Session transcript (read-only)",
-			sessionArgs: "Arguments",
-			sessionOutput: "Output",
 			sessionUnknownKind: "Unsupported node kind: ",
 			sessionLoading: "Loading session transcript…",
 			sessionEmpty: "Nothing to show for this session yet (window just opened, or the log was cleaned up).",
@@ -1099,7 +1075,6 @@ window.__ModuleLoader__.load({
 			diffUnwrapLabel: "Unwrap lines",
 			diffCollapseAria: "Collapse diff",
 			diffExpandAria: "Expand {count} more diff lines",
-			diffCollapseLabel: "Collapse",
 			diffExpandRest: "… {count} more lines",
 			continueBranch: "Continue conversation",
 			forkConfirmTitle: "Fork to continue",
@@ -1109,7 +1084,6 @@ window.__ModuleLoader__.load({
 			forkWorking: "Forking…",
 			forkFailed: "Fork failed: {error}",
 			previewClose: "Close preview",
-			previewLoading: "Loading…",
 			previewLoadMore: "Load more",
 			previewFileLabel: "File",
 			previewCopyPath: "Copy path",
@@ -1137,7 +1111,6 @@ window.__ModuleLoader__.load({
 			explorerEmpty: "Empty directory",
 			explorerTruncated: "The directory is too large; only some entries are shown.",
 			explorerCrumbsAria: "Directory path navigation",
-			explorerCrumbsMore: "Show full path",
 			explorerLevels: "Choose a directory level",
 			explorerRootName: "(workspace root)",
 			explorerExpand: "Expand directory",
@@ -1183,7 +1156,6 @@ window.__ModuleLoader__.load({
 			editorCodePh: "Optional, for lookup",
 			editorPrompt: "Prompt",
 			editorPromptPh: "Instructions for the agent…",
-			editorManualPathPh: "Relative to workspace root, e.g. manuals/xxx.md",
 			editorVersions: "Version history",
 			editorWorkspace: "Workspace",
 			editorWorkspacePh: "Choose workspace",
@@ -1233,11 +1205,9 @@ window.__ModuleLoader__.load({
 			editorAttachmentAdd: "Add file",
 			editorPickWorkspaceFile: "Pick workspace file",
 			editorPickWorkspaceFileShort: "Files",
-			editorUploadFile: "Upload file",
 			editorDropZoneHint: "Click or drop files to upload — single or multiple",
 			editorDropZoneFormats: "Text/code, image and document formats, up to 20MB each",
 			editorUploading: "Uploading…",
-			editorUploadFailed: "Upload failed",
 			editorUploadErrType: "Unsupported file type: only common text/code, image and document files are allowed",
 			editorUploadErrSize: "File exceeds the size limit (20MB max each)",
 			editorUploadErrEmpty: "File is empty",
@@ -1247,8 +1217,6 @@ window.__ModuleLoader__.load({
 			editorPickerPick: "Pick this file",
 			editorOpenEditor: "Full-screen edit",
 			editorPromptEditorTitle: "Prompt editor (.md)",
-			editorSaveVersion: "Save version",
-			editorVersionNote: "Version note (optional)",
 			editorNoVersions: "No versions yet — save one to roll back here",
 			editorHistoryVersions: "History versions",
 			editorNewTaskNoVersions: "New task not saved yet — no history versions to query",
@@ -1256,8 +1224,6 @@ window.__ModuleLoader__.load({
 			editorUseVersion: "Use this version",
 			editorConfirmDeleteTitle: "Delete version",
 			editorConfirmDeleteDesc: "Delete this version record? This cannot be undone — please proceed with care.",
-			editorConfirmUseTitle: "Use history version",
-			editorConfirmUseDesc: "Restoring will overwrite all your current edits with the history version (prompt only this time).",
 			editorDeleteTask: "Delete task",
 			editorDeleteTaskTitle: "Delete task",
 			editorDeleteTaskDesc: "Everything removed is unrecoverable and irreversible.",
@@ -1267,7 +1233,6 @@ window.__ModuleLoader__.load({
 			editorResetDesc: "Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.",
 			editorVersionToggle: "Versions",
 			editorUseShort: "Use",
-			editorRemoveShort: "Remove",
 			editorEnabledStateOn: "On",
 			editorEnabledStateOff: "Off",
 			editorToggleOn: "Task enabled",
@@ -1281,12 +1246,8 @@ window.__ModuleLoader__.load({
 			editorSchedHourlyOnce: "runs hourly",
 			editorSchedNoDaySuffix: ", but no active day is selected",
 			editorSchedWeeklyDayPrefix: "every ",
-			editorRestoreAll: "Restore all",
-			editorRestoreAllTitle: "Restore all settings",
-			editorRestoreAllDesc: "Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.",
 			editorRestorePromptTitle: "Restore prompt only",
 			editorRestorePromptDesc: "Restoring will overwrite all your current edits with the history version (prompt only; other settings stay as they are).",
-			editorCustomCron: "Custom cron (raw value from JSON; kept as-is on save)",
 			editorTasksTitle: "Tasks",
 			editorTasksEmpty: "No tasks yet — use \"＋ New task\" in the top-right corner to create the first one.",
 			editorDisabledTag: "Disabled",
@@ -1419,10 +1380,8 @@ window.__ModuleLoader__.load({
 			listNextFullTitle: "Next run: {when}",
 			listEmpty: "No tasks yet. Use “+ New task” to create the first one.",
 			listEmptyFiltered: "No task matches the current filter.",
-			listSectionSchedule: "Execution settings",
 			listSectionAttachments: "Attachments",
 			listSectionDepends: "Preceding tasks",
-			listSectionPrompt: "Prompt",
 			listFieldWorkspace: "Workspace",
 			listFieldModel: "Model",
 			listFieldModelDefault: "Default model",
@@ -1452,7 +1411,6 @@ window.__ModuleLoader__.load({
 			editorViewNotFilled: "Not set",
 			editorViewSourceCode: "Source",
 			editorViewExpand: "Expand",
-			editorViewExpandAll: "Show all",
 			editorViewCollapse: "Collapse",
 			editorViewSwitchTitle: "Discard unsaved changes?",
 			editorViewSwitchDesc: "This task has unsaved edits. Continuing will discard them and open the task you want to view.",
@@ -1512,10 +1470,6 @@ window.__ModuleLoader__.load({
 			trLastWeek: "Last week",
 			trThisMonth: "This month",
 			trLastMonth: "Last month",
-			durSec: "{n}s",
-			durMinSec: "{m}m {s}s",
-			durHourMin: "{h}h {m}m",
-			durDayHour: "{d}d {h}h",
 			schedCustom: "{cron}",
 			settingsBasic: "Basic info",
 			settingsTitleFormat: "Title format",
@@ -1534,9 +1488,21 @@ window.__ModuleLoader__.load({
 			settingsSaveSuccess: "Settings saved",
 			settingsLoadFailed: "Failed to load current settings, please retry later",
 			settingsUnitSec: "sec",
-			settingsResetDone: "Reset to default",
 			loading: "Loading",
-			invalidNumber: "Please enter a valid integer number of seconds"
+			invalidNumber: "Please enter a valid integer number of seconds",
+			statusRailOff: "Disabled",
+			statusRailLastFailed: "Last run failed",
+			statusRailLastSkipped: "Last run skipped (config or prerequisites unsatisfied; see records)",
+			statusRailRunning: "Scheduled / running",
+			debugRowsSuffix: "rows",
+			optionsDegraded: "Host service for this field is unavailable; no options available",
+			snapshotStale: "Data may be stale: the last refresh failed",
+			vTitleRequired: "Task name is missing — the list identifies tasks by name. Please give it one.",
+			vWorkspaceRequired: "No workspace selected — a task must belong to a workspace to run. Pick one above.",
+			vPromptRequired: "The prompt is empty — it tells the agent what to do and cannot be blank.",
+			vIntervalInvalid: "Invalid interval — N in \"every N minutes/hours\" must be an integer greater than 0.",
+			vWeekdayRequired: "Weekly schedule with no weekday selected — pick at least one, or the task never runs.",
+			vAttachmentInvalid: "Attachment \"{name}\" has an invalid ref — it must be a workspace-relative path. Remove and re-pick it."
 		};
 		//#endregion
 		//#region src/client/ui/tokens.ts
@@ -1557,6 +1523,16 @@ window.__ModuleLoader__.load({
 		*
 		* 挂载点选 `body`：插件界面（含 portal 到 body 的弹窗）全在 body 内，
 		* 定义在 body 上零调用点成本；名字统一带 `--tdt-` 前缀，不会与宿主变量打架。
+		*
+		* ⚠️ **两条基线，别混**（2026-10-07 审计后明写）：
+		*  - **JS 语法基线 = chrome99**：那是构建 target（`tsdown.client.config.ts`），只约束语法与 API。
+		*  - **CSS 基线 = Chrome 111**：本文件用 `color-mix()`（111 起）**现算**语义色的浅底 —— 目的是让浅底
+		*    **跟随宿主 alias**（宿主主题一换、浅底自动成立）。写成死 `rgba()` 就失去了这个性质。
+		*    ⇒ 11x–110 的旧内核上，这些声明会被整条丢弃（底色变透明，**不破布局**）。当前实际客户端为新版
+		*       Chromium，不受影响；若将来真要支持更旧内核，配方是：给每条 `color-mix` token **先写一条**
+		*       `rgba(...)` 明文回退（浅/深两段各写一份），代价是浅底不再跟随宿主主题色。
+		*  - 样式是 **TS 模板字符串**、不经过任何 CSS 工具链 ⇒ 没有 autoprefixer / 降级；想加回退只能手写。
+		*    （本仓唯一已做回退的范例见 `toast-css.ts`：先写 `background: var(...)` 再写 `color-mix`。）
 		*/
 		const UI_TOKENS_CSS = `
 /* ── 文字（宿主 label 四档 + 反色面用字）────────────────────────────── */
@@ -1592,12 +1568,17 @@ body{
   /* 交付文件卡那种「浅底盘 + hover 加深」两拍 */
   --tdt-plate:var(--dsw-static-neutral-50,#fafafa);
   --tdt-plate-hover:var(--dsw-static-neutral-100,#f5f5f5);
+  /* 旧内核回退（Chrome <111 不认 color-mix ⇒ 这条生效；新内核被下面那条覆盖）。
+     这几个是**固定中性面**、不靠跟随宿主主题色，故可以无损地给明文回退。 */
+  --tdt-icon-plate:rgba(255,255,255,.5);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 50%,transparent);
   /* 表头底：浅色主题**偏深**，且必须**比斑马纹（--tdt-plate）再深一档**——
      两者不能撞色（用户 2026-10-02：表头跟斑马纹一模一样）。 */
   --tdt-head-bg:var(--dsw-static-neutral-100,#f5f5f5);
   /* 图标小底板（产出物）：浅色下要**看得见**（原先取 plate ⇒ 在白底上等于没有）；hover 加倍。 */
+  --tdt-chip-bg:rgba(15,15,15,.07);
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 7%,transparent);
+  --tdt-chip-bg-hover:rgba(15,15,15,.14);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-900,#0f0f0f) 14%,transparent);
   /* 展开行：**带透明度的蓝**——不是灰、也不是纯色，透出卡片底色，一眼看出「这是展开的」
      （用户 2026-10-02：灰色跟斑马纹分不出来）。内容区再淡一档，形成「行深 / 内容浅」的区隔。 */
@@ -1728,11 +1709,14 @@ body[data-ds-dark-theme]{
   --tdt-on-solid:var(--dsw-static-neutral-00,#fff);
   --tdt-plate:var(--dsw-static-neutral-850,#212123);
   --tdt-plate-hover:var(--dsw-static-neutral-800,#292929);
+  --tdt-icon-plate:rgba(255,255,255,.05);
   --tdt-icon-plate:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 5%,transparent);
   /* 暗色主题**反过来**：表头要比卡片面**亮**、比斑马纹再**浅一档**（用户：纯黑背景没法看）。 */
   --tdt-head-bg:var(--tdt-surface-2);
   /* 暗色底板**微亮**；hover **更亮**（原先 hover 取 plate-hover 反而更淡 ⇒ 鼠标移上去就没了）。 */
+  --tdt-chip-bg:rgba(255,255,255,.08);
   --tdt-chip-bg:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 8%,transparent);
+  --tdt-chip-bg-hover:rgba(255,255,255,.16);
   --tdt-chip-bg-hover:color-mix(in srgb,var(--dsw-static-neutral-00,#fff) 16%,transparent);
   /* 暗色下蓝色要更亮、透明度略高才压得住深底。 */
   --tdt-open-bg:rgba(96,165,250,.18);
@@ -63796,13 +63780,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const str = (v, fallback) => typeof v === "string" && v !== "" ? v : fallback;
 				const uiKind = ui.scheduleKind === "interval" ? "interval" : "periodic";
 				const uiFreq = ui.periodFreq;
+				const freq = uiKind === "interval" ? "daily" : uiFreq === "daily" || uiFreq === "weekly" || uiFreq === "monthly" || uiFreq === "quarterly" || uiFreq === "yearly" ? uiFreq : "daily";
+				const monthModeRaw = str(ui.monthMode, "every");
+				const monthMode = monthModeRaw === "odd" || monthModeRaw === "even" ? monthModeRaw : "every";
 				return {
 					kind: uiKind,
-					freq: uiKind === "interval" ? "daily" : uiFreq === "daily" || uiFreq === "weekly" || uiFreq === "monthly" || uiFreq === "quarterly" || uiFreq === "yearly" ? uiFreq : "daily",
+					freq,
 					weekdays: days,
 					weekStep: kindNum(ui.weekStep, sched.everyNWeeks ?? 1),
 					monthDay: str(ui.monthDay, "1"),
-					monthMode: str(ui.monthMode, "every"),
+					monthMode,
 					quarterMonth: str(ui.quarterMonth, "1"),
 					yearMonth: str(ui.yearMonth, "1"),
 					intervalUnit: ui.intervalUnit === "hour" ? "hour" : "minute",
@@ -65132,33 +65119,33 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* `manual` 兜底默认句 ⇒ 也不空。排期则对齐 `scheduleCron`：每周没勾星期 / 间隔步长非法都产不出 cron ⇒ 永不执行。
 		* 附件则对齐 schema 的 `ref` refine：link 型 ref 必须是**工作区相对路径**（不许绝对 / `..` / 反斜杠）。
 		*/
-		function validateTaskDraft(draft) {
+		function validateTaskDraft(draft, t) {
 			const problems = [];
 			if (draft.title.trim() === "") problems.push({
 				field: "title",
-				message: "还没填任务名称——任务列表里靠它认任务，请给任务起个名字。"
+				message: t("vTitleRequired")
 			});
 			if (draft.workspace.trim() === "") problems.push({
 				field: "workspace",
-				message: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。"
+				message: t("vWorkspaceRequired")
 			});
 			if (draft.promptSource !== "manual" && draft.prompt.trim() === "") problems.push({
 				field: "prompt",
-				message: "还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。"
+				message: t("vPromptRequired")
 			});
 			const step = Number.parseInt(draft.intervalStep, 10);
 			if (draft.scheduleKind === "interval" && (!Number.isFinite(step) || step <= 0)) problems.push({
 				field: "schedule",
-				message: "执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。"
+				message: t("vIntervalInvalid")
 			});
 			else if (draft.scheduleKind === "periodic" && draft.periodFreq === "weekly" && draft.weekdays.length === 0) problems.push({
 				field: "schedule",
-				message: "每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。"
+				message: t("vWeekdayRequired")
 			});
 			const badAttachment = draft.attachments.find((att) => !isSafeAttachmentRef(att.ref));
 			if (badAttachment !== void 0) problems.push({
 				field: "attachments",
-				message: `附加文件「${badAttachment.name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。`
+				message: t("vAttachmentInvalid", { name: badAttachment.name })
 			});
 			return problems;
 		}
@@ -65975,7 +65962,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
+			const { t, mode, draft, onChange, workspaces, models, optionsDegraded, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
+			/**
+			* 带 `{name}` 占位符的文案席位（复用 locales 的替换器；本页 `t` 是**无参**形态）。
+			* ⚠️ 声明位置必须**早于** `validateTaskDraft` 的调用点（约 1332 / 2311）：那条校验用到
+			* `vAttachmentInvalid`（含 `{name}`）⇒ 必须走 `tt`，否则占位符会**原样显示**成 `{name}`。
+			* （本仓同款真 bug 前科：docs/worklog/task-file-context.md「传了宿主原始 t ⇒ {count} 原样显示」。）
+			*/
+			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			const [viewTab, setViewTab] = (0, react$1.useState)(initialView ?? "edit");
 			const openedTaskRef = (0, react$1.useRef)(currentTaskId ?? "");
 			(0, react$1.useEffect)(() => {
@@ -66008,7 +66002,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				});
 			}, [saveError]);
 			const [showErrors, setShowErrors] = (0, react$1.useState)(false);
-			const fieldProblems = showErrors ? validateTaskDraft(draft) : [];
+			const fieldProblems = showErrors ? validateTaskDraft(draft, tt) : [];
 			const fieldErrorMap = {};
 			for (const p of fieldProblems) if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message;
 			const problemsByField = (field) => field in fieldErrorMap;
@@ -66152,7 +66146,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (dirty) setConfirmDiscard(true);
 				else onClose();
 			}, [dirty, onClose]);
-			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			(0, react$1.useEffect)(() => {
 				const onKey = (event) => {
 					if (confirmDiscard) {
@@ -66310,7 +66303,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					patch({ workspace: value });
 				},
 				placeholder: t("editorWorkspacePh"),
-				emptyLabel: t("editorNoOptions"),
+				emptyLabel: optionsDegraded?.workspaces === true ? t("optionsDegraded") : t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
 				error: problemsByField("workspace"),
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
@@ -66329,12 +66322,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				width: PROMPT_SELECT_BASE
 			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ed-spacer" }), (0, react$1.createElement)(SelectField, {
 				value: draft.model,
-				options: models,
+				options: models.length > 0 || draft.model === "" ? models : [{
+					value: draft.model,
+					label: draft.model
+				}],
 				onChange: (value) => {
 					patch({ model: value });
 				},
 				placeholder: t("editorModelPh"),
-				emptyLabel: t("editorNoOptions"),
+				emptyLabel: optionsDegraded?.models === true ? t("optionsDegraded") : t("editorNoOptions"),
 				ariaLabel: t("editorModel"),
 				width: PROMPT_SELECT_WIDE,
 				align: "end"
@@ -67047,7 +67043,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						setPendingHint(hintSeq.current);
 						return;
 					}
-					const problems = validateTaskDraft(draft);
+					const problems = validateTaskDraft(draft, tt);
 					if (problems.length > 0) {
 						setShowErrors(true);
 						problemsSeq.current += 1;
@@ -68976,10 +68972,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			});
 		}
 		function StatusRail(props) {
-			const { row } = props;
+			const { row, t } = props;
 			if (row.running) return (0, react$1.createElement)(RunningRail, {});
 			const color = !row.enabled ? "var(--tdt-fg-3)" : row.lastStatus === "failed" || row.lastStatus === "skipped" ? "var(--tdt-danger)" : "var(--tdt-success)";
-			const hint = !row.enabled ? "已关闭" : row.lastStatus === "failed" ? "最近一次执行失败" : row.lastStatus === "skipped" ? "最近一次未执行（配置或前置不满足，详见执行记录）" : "计划运行中";
+			const hint = !row.enabled ? t("statusRailOff") : row.lastStatus === "failed" ? t("statusRailLastFailed") : row.lastStatus === "skipped" ? t("statusRailLastSkipped") : t("statusRailRunning");
 			return (0, react$1.createElement)("span", {
 				title: hint,
 				style: {
@@ -69951,7 +69947,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (sel !== null && sel.toString() !== "") return;
 					onToggleOpen();
 				}
-			}, (0, react$1.createElement)(StatusRail, { row }), (0, react$1.createElement)("div", { style: {
+			}, (0, react$1.createElement)(StatusRail, {
+				row,
+				t
+			}), (0, react$1.createElement)("div", { style: {
 				flex: "1 1 auto",
 				minWidth: 0
 			} }, (0, react$1.createElement)("div", { style: {
@@ -70504,6 +70503,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			display: "flex",
 			alignItems: "center",
 			gap: "8px"
+		};
+		/**
+		* 「数据可能已过期」横幅（2026-10-07 审计 S3）：快照刷新失败时**在面板顶部明说**——
+		* 此前失败只改内部诊断，界面永远显示最后一次成功的数据、看起来完全正常 ⇒ 用户完全无感。
+		*/
+		const staleBannerStyle = {
+			margin: "0 0 10px",
+			padding: "6px 10px",
+			borderRadius: "var(--tdt-radius-xs)",
+			background: "var(--tdt-warning-soft, rgba(245,158,11,.08))",
+			color: "var(--tdt-warning, #f59e0b)",
+			border: "1px solid var(--tdt-border, rgba(0,0,0,.1))",
+			fontSize: "var(--tdt-font-sm)"
 		};
 		const panelTitleStyle = {
 			fontSize: "var(--tdt-font-lg)",
@@ -71202,7 +71214,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							label: item.title
 						};
 					});
-					const models = [{
+					const models = body.degraded?.models === true ? [] : [{
 						value: "",
 						label: t("editorFollowHost")
 					}];
@@ -71217,9 +71229,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setEditorOptions({
 						workspaces,
 						models,
-						workspaceAnchors
+						workspaceAnchors,
+						degraded: body.degraded ?? void 0
 					});
-				}).catch(() => {});
+				}).catch(() => {
+					setEditorOptions({
+						...EMPTY_EDITOR_OPTIONS,
+						degraded: {
+							workspaces: true,
+							models: true
+						}
+					});
+				});
 				return () => {
 					alive = false;
 				};
@@ -71404,7 +71425,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const renderDbTable = (dump) => (0, react$1.createElement)("div", {
 				key: dump.name,
 				style: { marginBottom: "20px" }
-			}, (0, react$1.createElement)("h4", { style: sectionTitleStyle }, `${dump.name} · ${dump.count} 行${dump.truncated ? `（${t("debugDbTruncated")}）` : ""}`), dump.rows.length === 0 ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbEmpty")) : (0, react$1.createElement)("div", { style: { overflowX: "auto" } }, (0, react$1.createElement)("table", { style: tableStyle }, (0, react$1.createElement)("thead", null, (0, react$1.createElement)("tr", null, dump.columns.map((col) => (0, react$1.createElement)("th", {
+			}, (0, react$1.createElement)("h4", { style: sectionTitleStyle }, `${dump.name} · ${dump.count} ${t("debugRowsSuffix")}${dump.truncated ? `（${t("debugDbTruncated")}）` : ""}`), dump.rows.length === 0 ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbEmpty")) : (0, react$1.createElement)("div", { style: { overflowX: "auto" } }, (0, react$1.createElement)("table", { style: tableStyle }, (0, react$1.createElement)("thead", null, (0, react$1.createElement)("tr", null, dump.columns.map((col) => (0, react$1.createElement)("th", {
 				key: col,
 				style: cellStyle
 			}, col)))), (0, react$1.createElement)("tbody", null, dump.rows.map((row, index) => (0, react$1.createElement)("tr", { key: index }, dump.columns.map((col) => {
@@ -71437,51 +71458,61 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				justifyContent: "center"
-			} }, (0, react$1.createElement)("div", { style: {
-				width: "100%",
-				maxWidth: "1120px",
-				minWidth: "760px",
-				boxSizing: "border-box"
-			} }, (0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "10px",
-				minWidth: 0
-			} }, (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "md",
-				title: t("backToConversation"),
-				onClick: onBack
-			}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
-				value: tab,
-				size: "md",
-				items: [
-					{
-						value: "config",
-						label: t("tabConfig")
-					},
-					{
-						value: "records",
-						label: t("tabRecords")
-					},
-					{
-						value: "calendar",
-						label: t("tabCalendar")
-					},
-					{
-						value: "debug",
-						label: t("tabDebug")
+			} }, (0, react$1.createElement)(
+				"div",
+				{ style: {
+					width: "100%",
+					maxWidth: "1120px",
+					minWidth: "760px",
+					boxSizing: "border-box"
+				} },
+				/**
+				* 过期横幅（2026-10-07 审计 S3）：快照**刷新失败**时明说「数据可能已过期」。
+				* 此前失败只改一行内部诊断，界面永远显示最后一次成功的数据、看起来完全正常
+				* ⇒ 后端挂了用户也**完全无感**（这正是「页面看起来正常但其实已死」那一类）。
+				*/
+				snapshot.stale === true ? (0, react$1.createElement)("p", { style: staleBannerStyle }, t("snapshotStale")) : null,
+				(0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)("div", { style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "10px",
+					minWidth: 0
+				} }, (0, react$1.createElement)(Button$2, {
+					variant: "outline",
+					size: "md",
+					title: t("backToConversation"),
+					onClick: onBack
+				}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
+					value: tab,
+					size: "md",
+					items: [
+						{
+							value: "config",
+							label: t("tabConfig")
+						},
+						{
+							value: "records",
+							label: t("tabRecords")
+						},
+						{
+							value: "calendar",
+							label: t("tabCalendar")
+						},
+						{
+							value: "debug",
+							label: t("tabDebug")
+						}
+					],
+					onChange: setTab
+				}), (0, react$1.createElement)(Button$2, {
+					variant: "outline",
+					size: "md",
+					title: t("editorNew"),
+					onClick: () => {
+						openCreate();
 					}
-				],
-				onChange: setTab
-			}), (0, react$1.createElement)(Button$2, {
-				variant: "outline",
-				size: "md",
-				title: t("editorNew"),
-				onClick: () => {
-					openCreate();
-				}
-			}, `＋ ${t("editorNew")}`))))), tab === "calendar" ? (0, react$1.createElement)(TaskCalendarView, {
+				}, `＋ ${t("editorNew")}`)))
+			)), tab === "calendar" ? (0, react$1.createElement)(TaskCalendarView, {
 				t,
 				rows: overview.rows,
 				tasks: timelineTasks,
@@ -71573,6 +71604,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				workspaces: editorOptions.workspaces,
 				models: editorOptions.models,
+				optionsDegraded: editorOptions.degraded ?? void 0,
 				tasks: editorTasks,
 				currentTaskId: editor.mode === "edit" ? editor.id : void 0,
 				syncTaskId: editor.id,
@@ -71796,6 +71828,25 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			let busy = false;
 			/** 在途期间到来的重取请求（事件推送 / 保存后刷）：本轮结束立刻补一次，**不静默丢**。 */
 			let pending = false;
+			/**
+			* 把**已有**快照标记为「可能已过期」（2026-10-07 审计 S3）。此前失败只改一行内部诊断、**不碰快照**
+			* ⇒ 只要曾经成功过一次，界面就永远显示最后一次成功的数据、看起来完全正常（后端挂了也无感）。
+			* 这里产出**新引用**（`useSyncExternalStore` 才会重渲）+ `stale=true`，界面据此明说。
+			*/
+			const markStale = (note) => {
+				channelDiag = {
+					...channelDiag,
+					entry: SETTINGS_NS,
+					status: "loading",
+					note
+				};
+				if (lastMapped === void 0 || lastMapped.stale === true) return;
+				lastMapped = {
+					...lastMapped,
+					stale: true
+				};
+				for (const l of [...listeners]) l();
+			};
 			const poll = async () => {
 				if (busy) {
 					pending = true;
@@ -71805,18 +71856,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				try {
 					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: "no-store" });
 					if (!res.ok) {
-						channelDiag = {
-							...channelDiag,
-							entry: SETTINGS_NS,
-							status: "loading",
-							note: `HTTP ${res.status}（轮询中）`
-						};
+						markStale(`HTTP ${res.status}（轮询中）`);
 						return;
 					}
 					const data = await res.json();
 					const debug = data.snapshot ?? "";
 					const inline = data.tasksInline ?? "";
-					if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) return;
+					if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) {
+						if (lastMapped.stale === true) {
+							lastMapped = {
+								...lastMapped,
+								stale: false
+							};
+							channelDiag = {
+								entry: SETTINGS_NS,
+								status: "ready",
+								keys: "debugSnapshot,tasksInline",
+								snapshotLen: debug.length,
+								note: `HTTP ${DISPATCH_API_PREFIX}/snapshot（已恢复）`
+							};
+							for (const l of [...listeners]) l();
+						}
+						return;
+					}
 					lastDebug = debug;
 					lastInline = inline;
 					lastMapped = {
@@ -71827,7 +71889,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						},
 						base: void 0,
 						user: void 0,
-						writable: true
+						writable: true,
+						stale: false
 					};
 					channelDiag = {
 						entry: SETTINGS_NS,
@@ -71839,12 +71902,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					for (const l of [...listeners]) l();
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error);
-					channelDiag = {
-						...channelDiag,
-						entry: SETTINGS_NS,
-						status: "loading",
-						note: `fetch 失败：${message}`
-					};
+					markStale(`fetch 失败：${message}`);
 				} finally {
 					busy = false;
 					if (pending) {

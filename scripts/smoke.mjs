@@ -3073,6 +3073,48 @@ console.log('\n[14] runtime-index')
     check('【可观测】SSE 写出失败 / 超限拒绝都留痕（此前整条生命周期零日志）',
       idxSrc20.includes('function onWriteFailed()')
       && idxSrc20.includes('连接数已达上限'))
+
+    // ── 24. 第八轮：i18n / 数据诚实 / 死键 / CSS 基线 ──
+    console.log('\n[24] 第八轮守卫（i18n 补齐 / 数据诚实 / 死键清理 / CSS 基线）')
+    const locSrc = S('client/locales.ts')
+    check('【i18n】状态轨道悬停提示走 `t()`（原硬编码中文，英文界面会露中文）',
+      S('client/task-list.tsx').includes("t('statusRailOff')")
+      && locSrc.includes('statusRailOff:') && locSrc.includes("statusRailOff: 'Disabled'"))
+    check('【i18n】调试页表格「N 行」的量词走 `t()`',
+      S('client/index.ts').includes("${dump.count} ${t('debugRowsSuffix')}"))
+    check('【i18n】编辑器校验文案走 `t()`（validateTaskDraft 带 t 席位）',
+      S('client/task-editor.tsx').includes('validateTaskDraft(draft: TaskEditorDraft, t: Translate)')
+      && S('client/task-editor.tsx').includes("t('vTitleRequired')"))
+    // ⚠️ 带 `{name}` 占位符的文案**必须走插值席位 `tt`**：本页 `t` 是无参形态，传它 ⇒ 占位符原样显示
+    // （本仓前科：docs/worklog/task-file-context.md「传了宿主原始 t ⇒ {count} 原样显示」）。
+    check('【i18n】含 `{name}` 的校验文案走**插值席位 tt**（否则占位符原样显示成 {name}）',
+      S('client/task-editor.tsx').includes('validateTaskDraft(draft, tt)')
+      && !/validateTaskDraft\(draft,\s*t\)/.test(S('client/task-editor.tsx'))
+      && S('client/task-editor.tsx').includes('const tt = useMemo(() => interpolateTranslate(t), [t])'))
+    check('【i18n】量词键是无参用法 ⇒ 两张表都不许带 `{n}`（带了对着无参 t 就会露出占位符）',
+      /debugRowsSuffix: '[^']*'/.test(locSrc) && !/debugRowsSuffix: '[^']*\{/.test(locSrc))
+    check('【i18n】动态 locale key 已收窄（脏 `ui.monthMode` 不再渲染出 key 字面量）',
+      S('client/schedule-text.ts').includes("monthModeRaw === 'odd' || monthModeRaw === 'even'"))
+    check('【i18n】死键已清（30 个定义了却无人引用的文案键）',
+      ['trayLabel', 'settingsResetDone', 'durSec', 'editorCustomCron', 'previewLoading']
+        .every(k => !new RegExp(`\\|\\s*'${k}'`).test(locSrc))
+      && !/^\s{2}trayLabel:/m.test(locSrc))
+    check('【数据诚实】`/options` 的 degraded 已接进前端（**按字段分开**，候选为空时说清原因）',
+      S('client/index.ts').includes('degraded: body.degraded ?? undefined')
+      && S('client/task-editor.tsx').includes("emptyLabel: optionsDegraded?.workspaces === true ? t('optionsDegraded')")
+      && S('client/task-editor.tsx').includes("emptyLabel: optionsDegraded?.models === true ? t('optionsDegraded')"))
+    check('【数据诚实】模型侧提示真的可达（degraded 时 models 不再塞「跟随宿主」占位项 ⇒ emptyLabel 会显示）',
+      S('client/index.ts').includes('body.degraded?.models === true ? [] :'))
+    check('【数据诚实】快照刷新失败 ⇒ 界面明说「可能已过期」（原：成功过一次就永不提示）',
+      S('client/index.ts').includes('const markStale = (note: string): void => {')
+      && S('client/index.ts').includes('staleBannerStyle')
+      && S('client/index.ts').includes('snapshot.stale === true'))
+    check('【CSS】基线明写：JS=chrome99（构建），CSS=Chrome 111（color-mix 现算、跟随宿主主题色）',
+      S('client/ui/tokens.ts').includes('CSS 基线 = Chrome 111'))
+    check('【CSS】固定中性面的 6 个 token 已补明文回退（旧内核不再变透明）',
+      ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
+        'rgba(255,255,255,.05)', 'rgba(255,255,255,.08)', 'rgba(255,255,255,.16)']
+        .every(v => S('client/ui/tokens.ts').includes(v)))
     check('日历计划指纹含 title / workspace（否则改名后计划格显示旧名）',
       /\$\{row\.id\}\|\$\{row\.enabled\}\|\$\{row\.title\}\|\$\{row\.workspace\}/.test(S('client/task-calendar.tsx')))
     check('拨片守卫有寿命（确认快照不来时不会永久锁死左→右同步）',

@@ -198,8 +198,8 @@ function RunningRail() {
   })
 }
 
-function StatusRail(props: { row: TaskOverviewRow }) {
-  const { row } = props
+function StatusRail(props: { row: TaskOverviewRow; t: Translate }) {
+  const { row, t } = props
   if (row.running) return h(RunningRail, {})
   // `skipped` = 「未执行」（决策 54 补记的终态行：附件找不到 / 工作区不存在等任务级错误）——
   // 必须**和失败一样显眼**（用户：都是这个任务出错了），但提示要说清是「没执行」而不是「跑砸了」。
@@ -207,12 +207,12 @@ function StatusRail(props: { row: TaskOverviewRow }) {
     ? 'var(--tdt-fg-3)'
     : row.lastStatus === 'failed' || row.lastStatus === 'skipped' ? 'var(--tdt-danger)' : 'var(--tdt-success)'
   const hint = !row.enabled
-    ? '已关闭'
+    ? t('statusRailOff')
     : row.lastStatus === 'failed'
-      ? '最近一次执行失败'
+      ? t('statusRailLastFailed')
       : row.lastStatus === 'skipped'
-        ? '最近一次未执行（配置或前置不满足，详见执行记录）'
-        : '计划运行中'
+        ? t('statusRailLastSkipped')
+        : t('statusRailRunning')
   return h('span', {
     title: hint,
     style: {
@@ -1192,7 +1192,7 @@ function TaskCard(props: {
         onToggleOpen()
       },
     },
-      h(StatusRail, { row }),
+      h(StatusRail, { row, t }),
       h('div', { style: { flex: '1 1 auto', minWidth: 0 } },
         // 标题 / 执行方式：**单行省略号 + hover 跑马灯**（窗口窄、文字长不再撑高卡片，用户 2026-09-30）。
         // 编号与创建时间都挂在**标题行尾部**（同一 faintStyle = 同一字号），不再另起第三行 ——

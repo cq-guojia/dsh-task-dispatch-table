@@ -50,7 +50,7 @@ import {
   type CalendarLabels, type EditorOption, type TimeLabels,
 } from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
-import { interpolateTranslate, type LocaleKey } from './locales'
+import { interpolateTranslate, type LocaleKey, type Translate } from './locales'
 import { renderSchedule, scheduleCron, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
@@ -448,33 +448,33 @@ export interface FieldProblem {
  * `manual` 兜底默认句 ⇒ 也不空。排期则对齐 `scheduleCron`：每周没勾星期 / 间隔步长非法都产不出 cron ⇒ 永不执行。
  * 附件则对齐 schema 的 `ref` refine：link 型 ref 必须是**工作区相对路径**（不许绝对 / `..` / 反斜杠）。
  */
-export function validateTaskDraft(draft: TaskEditorDraft): FieldProblem[] {
+export function validateTaskDraft(draft: TaskEditorDraft, t: Translate): FieldProblem[] {
   const problems: FieldProblem[] = []
   // ⓪ 必填：任务名称（用户 2026-09-30 明确要求：列表里要靠名字认任务，不能空着保存）。
   if (draft.title.trim() === '') {
-    problems.push({ field: 'title', message: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。' })
+    problems.push({ field: 'title', message: t('vTitleRequired') })
   }
   // ① 必填：工作区（target.workspace .min(1)）。
   if (draft.workspace.trim() === '') {
-    problems.push({ field: 'workspace', message: '还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。' })
+    problems.push({ field: 'workspace', message: t('vWorkspaceRequired') })
   }
   // ② 必填：提示词（target.prompt .min(1)）；「按任务手册」模式由 manual 兜底，不在此查。
   if (draft.promptSource !== 'manual' && draft.prompt.trim() === '') {
-    problems.push({ field: 'prompt', message: '还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。' })
+    problems.push({ field: 'prompt', message: t('vPromptRequired') })
   }
   // ③ 排期冲突：产不出 cron 的组合（每周没勾星期 / 间隔步长非法）⇒ 任务永不执行。
   const step = Number.parseInt(draft.intervalStep, 10)
   if (draft.scheduleKind === 'interval' && (!Number.isFinite(step) || step <= 0)) {
-    problems.push({ field: 'schedule', message: '执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。' })
+    problems.push({ field: 'schedule', message: t('vIntervalInvalid') })
   } else if (draft.scheduleKind === 'periodic' && draft.periodFreq === 'weekly' && draft.weekdays.length === 0) {
-    problems.push({ field: 'schedule', message: '每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。' })
+    problems.push({ field: 'schedule', message: t('vWeekdayRequired') })
   }
   // ④ 附加文件：link 型 ref 必须**工作区相对**（宿主 zod：不许 `..` / 绝对路径 / 反斜杠）。
   //    ⚠️ 用户 2026-09-30 真机：选工作区文件曾把**绝对路径**当 ref 存 ⇒ 保存被 422 拒、且**无红框**、文案还是黑话。
   //    根因已在选择器修（回调改为工作区相对路径）；这里是**兜底** + 归属附件卡描红，防止再有非法 ref 写进来。
   const badAttachment = draft.attachments.find(att => !isSafeAttachmentRef(att.ref))
   if (badAttachment !== undefined) {
-    problems.push({ field: 'attachments', message: `附加文件「${badAttachment.name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。` })
+    problems.push({ field: 'attachments', message: t('vAttachmentInvalid', { name: badAttachment.name }) })
   }
   return problems
 }
@@ -1200,6 +1200,13 @@ export function TaskEditorDrawer(props: {
   workspaces: EditorOption[]
   /** 模型列表（P1 接真数据；空 ⇒ 下拉显示空态）。 */
   models: EditorOption[]
+  /**
+   * 后端说「这批候选是残的」（宿主没接上 workspaceRegistry / llm）。
+   * ⚠️ 2026-10-07 审计：后端**专门下发** degraded 标记、注释写着「UI 上不撒谎」，前端却从不读它
+   * ⇒「宿主没接上」和「宿主真的没有」在界面上长得一样。现在接进来：**候选为空时说清原因**。
+   * ⚠️ 按字段分开传：只工作区降级时，不该顺口说「模型服务也没接入」（那是另一种误报）。
+   */
+  optionsDegraded?: { workspaces?: boolean; models?: boolean }
   /** 可选的前置任务（= 现有任务表，真数据，带所属工作区）。 */
   tasks: EditorTaskOption[]
   /** 当前正在编辑的任务 id（编辑态有；新建态无）。用于在前置列表里**排除自己**（防止自我依赖）。 */
@@ -1273,12 +1280,20 @@ export function TaskEditorDrawer(props: {
   reserved: number
 }): ReactElement {
   const {
-    t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
+    t, mode, draft, onChange, workspaces, models, optionsDegraded, tasks, onClose, onSave, onDelete, saveError,
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors,
     officeToPdf, currentTaskId, width, onWidthChange, reserved,
     initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit,
     onOpenSession, onOpenFile, onViewTask, resolvedAttachments,
   } = props
+  /**
+   * 带 `{name}` 占位符的文案席位（复用 locales 的替换器；本页 `t` 是**无参**形态）。
+   * ⚠️ 声明位置必须**早于** `validateTaskDraft` 的调用点（约 1332 / 2311）：那条校验用到
+   * `vAttachmentInvalid`（含 `{name}`）⇒ 必须走 `tt`，否则占位符会**原样显示**成 `{name}`。
+   * （本仓同款真 bug 前科：docs/worklog/task-file-context.md「传了宿主原始 t ⇒ {count} 原样显示」。）
+   */
+  const tt = useMemo(() => interpolateTranslate(t), [t])
+
   // ── 档位（用户 2026-10-05）────────────────────────────────────────────
   // 查看 = 只读人话视图（基础信息 → 提示词 → 上次执行）；编辑 = 表单。
   // 切档**不重挂载**（同一组件内换 body）⇒ 草稿与滚动位置都在，不丢用户改动。
@@ -1321,7 +1336,7 @@ export function TaskEditorDrawer(props: {
   }, [saveError])
   // 保存前的客户端校验总览（用户 2026-09-30：点保存才判定；判定后问题逐项列出、对应框描红，随用户修正实时消退）。
   const [showErrors, setShowErrors] = useState(false)
-  const fieldProblems = showErrors ? validateTaskDraft(draft) : []
+  const fieldProblems = showErrors ? validateTaskDraft(draft, tt) : []
   const fieldErrorMap: Record<string, string> = {}
   for (const p of fieldProblems) if (!(p.field in fieldErrorMap)) fieldErrorMap[p.field] = p.message
   const problemsByField = (field: ErrorField): boolean => field in fieldErrorMap
@@ -1477,9 +1492,6 @@ export function TaskEditorDrawer(props: {
     else onClose()
   }, [dirty, onClose])
 
-  // 带 `{name}` 占位符的文案（复用 locales 的替换器；本页 t 席位是无参形态）。
-  const tt = useMemo(() => interpolateTranslate(t), [t])
-
   // Esc 关闭；浮层（下拉 / 日历 / 时分）自己先处理并 preventDefault ⇒ 此处不再关弹窗。
   // 确认弹窗开着时 Esc 关掉确认框（留在编辑）；否则 Esc 走统一关闭入口。
   useEffect(() => {
@@ -1614,7 +1626,8 @@ export function TaskEditorDrawer(props: {
         options: workspaces,
         onChange: value => { patch({ workspace: value }) },
         placeholder: t('editorWorkspacePh'),
-        emptyLabel: t('editorNoOptions'),
+        // 候选为空时**说清原因**（后端 degraded 标记）：「宿主没接上」≠「宿主真的没有」。
+        emptyLabel: optionsDegraded?.workspaces === true ? t('optionsDegraded') : t('editorNoOptions'),
         ariaLabel: t('editorWorkspace'),
         error: problemsByField('workspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
@@ -1635,10 +1648,15 @@ export function TaskEditorDrawer(props: {
       h('span', { className: 'dsh-tdt-ed-spacer' }),
       h(SelectField, {
         value: draft.model,
-        options: models,
+        // ⚠️ 候选为空但草稿里**已经有模型**（宿主没接上 llm ⇒ degraded 时常发生）⇒ 补一项「当前值」，
+        // 否则编辑一条已配模型的老任务时，用户**看不见自己配的是哪个**（值没丢、保存也照写，只是看不见）。
+        options: models.length > 0 || draft.model === '' ? models : [{ value: draft.model, label: draft.model }],
         onChange: value => { patch({ model: value }) },
         placeholder: t('editorModelPh'),
-        emptyLabel: t('editorNoOptions'),
+        // 同上：模型候选为空时说清是不是「宿主没接上 llm」（后端 degraded.models）。
+        // ⚠️ 光有这条还不够 —— 见取数处：models 默认恒含「跟随宿主」占位项 ⇒ `emptyLabel` 永不显示
+        // ⇒ 取数侧在 degraded 时**不加**占位项，让这里的提示真正可达。
+        emptyLabel: optionsDegraded?.models === true ? t('optionsDegraded') : t('editorNoOptions'),
         ariaLabel: t('editorModel'),
         width: PROMPT_SELECT_WIDE,
         align: 'end',
@@ -2298,7 +2316,7 @@ export function TaskEditorDrawer(props: {
                   return
                 }
                 // 保存前先本地查必填 / 排期冲突：问题字段描红（持续态）+ 一次性 Toast 列全部问题。
-                const problems = validateTaskDraft(draft)
+                const problems = validateTaskDraft(draft, tt)
                 if (problems.length > 0) {
                   setShowErrors(true)
                   problemsSeq.current += 1

@@ -80,6 +80,12 @@ interface ScopeSnapshot {
   base: Record<string, unknown> | undefined
   user: Record<string, unknown> | undefined
   writable: boolean
+  /**
+   * **这份数据可能已经过期**（最近一次刷新失败）。2026-10-07 审计 S3：此前失败只更新内部诊断、
+   * **不碰已有快照** ⇒ 只要曾经成功过一次，界面就一直显示最后一次成功的数据、看起来完全正常，
+   * 用户**完全无感**（后端挂了都不知道）。现在失败会把已有快照标成 stale，界面上明说。
+   */
+  stale?: boolean
 }
 
 /** 一个 settings 命名空间的作用域（SettingsScopeController 的结构子集）。 */
@@ -206,6 +212,17 @@ const panelHeaderStyle: Record<string, string | number> = {
   marginBottom: '40px',
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
+/**
+ * 「数据可能已过期」横幅（2026-10-07 审计 S3）：快照刷新失败时**在面板顶部明说**——
+ * 此前失败只改内部诊断，界面永远显示最后一次成功的数据、看起来完全正常 ⇒ 用户完全无感。
+ */
+const staleBannerStyle: Record<string, string | number> = {
+  margin: '0 0 10px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-xs)',
+  background: 'var(--tdt-warning-soft, rgba(245,158,11,.08))',
+  color: 'var(--tdt-warning, #f59e0b)',
+  border: '1px solid var(--tdt-border, rgba(0,0,0,.1))',
+  fontSize: 'var(--tdt-font-sm)',
+}
 const panelTitleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)' }
 const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' }
 const preStyle: Record<string, string | number> = {
@@ -367,6 +384,12 @@ interface EditorOptions {
   models: EditorOption[]
   /** 工作区 title → 浏览锚点会话 id（该工作区最近一个会话；没有会话的工作区无键）。 */
   workspaceAnchors: Record<string, string>
+  /**
+   * 后端说「这批候选可能是残的」（宿主没接上 workspaceRegistry / llm）。
+   * ⚠️ 2026-10-07 审计：服务端**专门下发**这个标记、注释还写着「UI 上不撒谎」，
+   * 但前端**从不读它** ⇒「宿主没接上」和「宿主真的没有」在界面上长得一模一样。
+   */
+  degraded?: { workspaces?: boolean; models?: boolean }
 }
 
 const EMPTY_EDITOR_OPTIONS: EditorOptions = { workspaces: [], models: [], workspaceAnchors: {} }
@@ -943,6 +966,8 @@ function TaskPage(props: {
         ok?: boolean
         workspaces?: { title?: string; anchorSessionId?: string }[]
         models?: { provider?: string; id?: string; name?: string }[]
+        /** 后端明示「这批候选可能是残的」（宿主没接上服务）；前端**必须**如实告诉用户。 */
+        degraded?: { workspaces?: boolean; models?: boolean } | null
       }>)
       .then(body => {
         if (!alive || body.ok !== true) return
@@ -956,15 +981,23 @@ function TaskPage(props: {
             }
             return { value: item.title as string, label: item.title as string }
           })
-        const models: EditorOption[] = [{ value: '', label: t('editorFollowHost') }]
+        // ⚠️ 2026-10-07：宿主没接上 llm 时**不加**「跟随宿主」占位项 —— 否则 `models` 恒非空，
+        // 编辑器里那条 degraded 提示（`emptyLabel`）永远显示不出来，「UI 上不撒谎」就成了空话。
+        // （宿主没接 llm 时「跟随宿主」本就派不出模型，不给这一项是诚实的。）
+        const models: EditorOption[] = body.degraded?.models === true ? [] : [{ value: '', label: t('editorFollowHost') }]
         for (const model of body.models ?? []) {
           if (typeof model.provider !== 'string' || typeof model.id !== 'string') continue
           const name = typeof model.name === 'string' && model.name !== '' ? model.name : model.id
           models.push({ value: encodeModelValue(model.provider, model.id), label: `${name}（${model.provider}）` })
         }
-        setEditorOptions({ workspaces, models, workspaceAnchors })
+        setEditorOptions({ workspaces, models, workspaceAnchors, degraded: body.degraded ?? undefined })
       })
-      .catch(() => { /* 取不到就保持空态：下拉显示「暂无可选」，不编造 */ })
+      .catch(() => {
+        // ⚠️ 2026-10-07 审计 🟡：**取数失败**（HTTP 挂 / 403 / 超时）才是最常见的降级路径，
+        // 而它原先什么都不做 ⇒ 下拉显示「暂无可选」，看起来像宿主真没有工作区/模型 —— 其实是**我们没取到**。
+        // 这里明确标成 degraded，让下拉说清「服务没接上」，而不是假装「没有」。数据本身仍是空的，不编造。
+        setEditorOptions({ ...EMPTY_EDITOR_OPTIONS, degraded: { workspaces: true, models: true } })
+      })
     return () => { alive = false }
   }, [t])
   // 面板内只读会话弹窗（决策 28）：数据源在点链接时经 viewSession 组装好再进状态。
@@ -1195,7 +1228,8 @@ function TaskPage(props: {
   /** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
   const renderDbTable = (dump: DbTableDump) => h('div', { key: dump.name, style: { marginBottom: '20px' } },
     h('h4', { style: sectionTitleStyle },
-      `${dump.name} · ${dump.count} 行${dump.truncated ? `（${t('debugDbTruncated')}）` : ''}`),
+      // ⚠️ 量词走 `t()`（英文界面下「N 行」应是「N rows」）；`t` 在此处是**单参**版本，故用拼接而非占位符。
+      `${dump.name} · ${dump.count} ${t('debugRowsSuffix')}${dump.truncated ? `（${t('debugDbTruncated')}）` : ''}`),
     dump.rows.length === 0
       ? h('p', { style: hintStyle }, t('debugDbEmpty'))
       : h('div', { style: { overflowX: 'auto' } },
@@ -1245,6 +1279,12 @@ function TaskPage(props: {
       // 标题下面不再写时间与提示（用户 2026-09-30：只留「← 返回会话」和标题）。
       h('div', { style: { display: 'flex', justifyContent: 'center' } },
         h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
+          /**
+           * 过期横幅（2026-10-07 审计 S3）：快照**刷新失败**时明说「数据可能已过期」。
+           * 此前失败只改一行内部诊断，界面永远显示最后一次成功的数据、看起来完全正常
+           * ⇒ 后端挂了用户也**完全无感**（这正是「页面看起来正常但其实已死」那一类）。
+           */
+          snapshot.stale === true ? h('p', { style: staleBannerStyle }, t('snapshotStale')) : null,
           h('div', { style: panelHeaderStyle },
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
               h(Button, {
@@ -1556,6 +1596,10 @@ function TaskPage(props: {
         onChange: (next: TaskEditorDraft) => { setEditor({ ...editor, draft: next }) },
         workspaces: editorOptions.workspaces,
         models: editorOptions.models,
+        // 后端说这批候选可能是残的（宿主没接上 workspaceRegistry / llm）⇒ 传给编辑器，
+        // 让它在候选为空时**说清原因**（2026-10-07 审计：后端下调了 degraded，前端原来从不读）。
+        // ⚠️ 按字段分开传（不合并成一个布尔）：只工作区降级时，不该顺口说「模型服务也没接入」。
+        optionsDegraded: editorOptions.degraded ?? undefined,
         tasks: editorTasks,
         currentTaskId: editor.mode === 'edit' ? editor.id : undefined,
         // 左列表拨片 → 右抽屉联动（2026-10-05）：把本任务 id 交给抽屉，让它从共享 store 取 enabled 同步。
@@ -1789,19 +1833,46 @@ function httpScope(): SettingsScope {
   let busy = false
   /** 在途期间到来的重取请求（事件推送 / 保存后刷）：本轮结束立刻补一次，**不静默丢**。 */
   let pending = false
+  /**
+   * 把**已有**快照标记为「可能已过期」（2026-10-07 审计 S3）。此前失败只改一行内部诊断、**不碰快照**
+   * ⇒ 只要曾经成功过一次，界面就永远显示最后一次成功的数据、看起来完全正常（后端挂了也无感）。
+   * 这里产出**新引用**（`useSyncExternalStore` 才会重渲）+ `stale=true`，界面据此明说。
+   */
+  const markStale = (note: string): void => {
+    channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note }
+    if (lastMapped === undefined || lastMapped.stale === true) return
+    lastMapped = { ...lastMapped, stale: true }
+    for (const l of [...listeners]) l()
+  }
   const poll = async (): Promise<void> => {
     if (busy) { pending = true; return }
     busy = true
     try {
       const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: 'no-store' })
       if (!res.ok) {
-        channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: `HTTP ${res.status}（轮询中）` }
+        markStale(`HTTP ${res.status}（轮询中）`)
         return
       }
       const data = await res.json() as { snapshot?: string; tasksInline?: string }
       const debug = data.snapshot ?? ''
       const inline = data.tasksInline ?? ''
-      if (debug === lastDebug && inline === lastInline && lastMapped !== undefined) return
+      if (debug === lastDebug && inline === lastInline && lastMapped !== undefined) {
+        // 内容没变：**只在上一轮失败过**时才产新引用清掉 stale（否则不重渲，避免无谓抖动）。
+        if (lastMapped.stale === true) {
+          lastMapped = { ...lastMapped, stale: false }
+          // ⚠️ 顺手把诊断行也刷回 ready（2026-10-07 审计 🟡）：只清 stale 不动 `channelDiag` 的话，
+          // 横幅消失了、调试页那行却还留着「HTTP 500（轮询中）」，看起来像还在失败。
+          channelDiag = {
+            entry: SETTINGS_NS,
+            status: 'ready',
+            keys: 'debugSnapshot,tasksInline',
+            snapshotLen: debug.length,
+            note: `HTTP ${DISPATCH_API_PREFIX}/snapshot（已恢复）`,
+          }
+          for (const l of [...listeners]) l()
+        }
+        return
+      }
       lastDebug = debug
       lastInline = inline
       lastMapped = {
@@ -1810,6 +1881,7 @@ function httpScope(): SettingsScope {
         base: undefined,
         user: undefined,
         writable: true,
+        stale: false,
       }
       channelDiag = {
         entry: SETTINGS_NS,
@@ -1821,7 +1893,7 @@ function httpScope(): SettingsScope {
       for (const l of [...listeners]) l()
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note: `fetch 失败：${message}` }
+      markStale(`fetch 失败：${message}`)
     } finally {
       busy = false
       // 补跑被在途那轮吞掉的重取（事件推送 / 保存后刷）。

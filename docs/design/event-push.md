@@ -308,14 +308,18 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 **兼容性与产物（2026-10-07 审计）**
 
 - **JS 语法/API**：全仓 client 未使用任何超出 **chrome99** 的 API（`Array.at` / `findLast` / `Object.hasOwn` / `structuredClone` / `AbortSignal.any` 均未用或刻意避开，后者有注释点名）。`tsconfig.client.json` 的类型层**不拦**新 API（唯一防线是注释 + review）—— 新增 API 前先查 chrome99 支持表。
-- **CSS 未做降级**（样式是 TS 模板字符串、**不经过任何 CSS 工具链**）：`color-mix()`（Chrome 111）在 `ui/tokens.ts` 里是**直接定义且无回退** ⇒ 在 111 之前的浏览器上那些 token **静默失效**（底色/选中底变透明，不破布局）；`@container`（105）、`mask-image`（120）同理。**唯一正确范例在 `toast-css.ts`**（先写 `background: var(--tdt-surface-1, rgba(...))` 再写 `color-mix`）—— 要补降级就照它写。当前实际客户端为新版 Chrome，故登记不改。
-- **版本偏移（重要）**：SSE 的两个新契约要求**两端同时升级**。
-  - **新前端 + 旧后端**（旧后端只发注释帧 `: ping`）⇒ 客户端的静默超时看门狗会把**健康**连接判为「半死」、**每 75–80s 白重建一次**（每次还触发一次全页补读，含 `/db` 转储）。旧前端 + 新后端则无害（未知 `sys.ping` 被 `byType` 丢弃）。⇒ **升级时前后端一起换，别单端灰度。**
+- **CSS 基线已明写 + 能无损做的回退已补**（2026-10-07 处理）：
+  - `ui/tokens.ts` 顶部写清 **两条基线别混**：JS 语法 = chrome99（构建 target），**CSS = Chrome 111**（`color-mix()`）。样式是 TS 模板字符串、**不经过任何 CSS 工具链** ⇒ 没有自动降级，要回退只能手写。
+  - **固定中性面**的 6 个 token（`icon-plate` / `chip-bg` / `chip-bg-hover` × 浅深两段）已补明文 `rgba()` 回退 —— 它们的语义本就是「固定中性面」，不靠跟随宿主主题色 ⇒ 无损。
+  - **语义色浅底**（`*-soft` / `selected-bg` / `cal-cell-*`）**保持 `color-mix` 现算**：那正是为了**跟随宿主 alias**（主题一换浅底自动成立），写成死 `rgba()` 会丢掉这个性质（原注释已写明这个取舍）。⇒ 这不是「漏了回退」，是设计取舍；代价已在文件头写明（11x 之前旧内核上这些声明会整条丢弃 ⇒ 底色透明、**不破布局**）。
+  - **要支持更旧内核时的配方**（写在文件头）：给每条 `color-mix` token 先写一条 `rgba(...)` 明文回退，浅/深两段各写一份，代价是浅底不再跟随宿主主题色。
+- ~~**版本偏移**~~ **已撤销（2026-10-07 复核：不可达 ⇒ 不是问题，撤掉这条）**：前端 bundle（`dist/client.js`）与后端（`dist/index.js`）是**同一个包、同一次安装**，宿主读同一份目录 ⇒ 「新前端配旧后端」正常凑不出来；唯一能凑出来的反向组合（升级后没刷新页面 ⇒ 内存里还是旧前端 + 新后端）**无害**（旧前端不认识 `sys.ping`，`byType` 查不到 ⇒ 直接忽略）。**结论：不会发生，不做处理。**
   - `dist/client.js` 与 `dist/client.js.map` 都入库（后者 4.87MB，无 `sourcesContent`）；产物**未 minify**、保留中文注释 ⇒ 「只改注释也会改产物」，别把它误判成没 build（有 `[21]` 产物一致性守卫兜底）。
-- **`/options` 的 `degraded` 客户端从不读取**：服务端专门下发 `degraded: {workspaces, models}`（注释写着「UI 上不撒谎」），前端只取 `workspaces/models` ⇒ 模型/工作区下拉的「暂无可选」**无法区分**「宿主没接上 llm」与「宿主真的没配」。登记为未落地的承诺。
+- **`/options` 的 `degraded` 已接进前端（2026-10-07 第八轮修）**：服务端下发 `degraded: {workspaces, models}`（注释写着「UI 上不撒谎」），前端原先**从不读它** ⇒ 下拉「暂无可选」无法区分「宿主没接上」与「宿主真的没有」。现已接到编辑器：候选为空时 `emptyLabel` 显示 `optionsDegraded`（「宿主未接入工作区/模型服务，候选可能不全」）。
+- **快照刷新失败会明说「可能已过期」（2026-10-07 第八轮修）**：原逻辑失败只改内部诊断、**不碰已有快照** ⇒ 只要成功过一次，界面就永远显示最后一次成功的数据、看起来完全正常（后端挂了也**完全无感**）。现在 `httpScope` 失败时产出**新引用 + `stale: true`**，面板顶部出现一条横幅「数据可能已过期」。
 
 **i18n 与可观测性（2026-10-07 审计）**
 
 - **可观测性已补**（本轮）：调试页现在印一行**推送通道自述** —— `SSE OPEN · last-frame -12s · reconnects 3`（连接状态 / 距最后一次收帧多久 / 重建过几次），并挂进「数据通道诊断」行；**订阅回调抛异常**与**SSE 写出失败 / 超限拒绝**都会留痕（此前整条推送链「不报错、不重试计数、不记日志」，用户说「页面不刷新」时基本无从下手）。**排查第一步：看调试页那一行。**
 - **默认开着的调试日志已关**：`task-overview.ts` 的 `DEBUG_SORT` 原为 `true` ⇒ 真机 console 持续刷排序快照。需要时手动打开。
-- **i18n 遗留（登记，非功能问题）**：① `task-list.tsx` 的 `StatusRail` 悬浮提示、调试页的「N 行」、`task-editor.tsx` 的 `validateTaskDraft` 校验文案是**硬编码中文**（英文界面仍是中文）；② `locales.ts` 有约 **30 个死键**（定义未引用）；③ `schedule-text.ts` 用 `` t(`editorMonthMode_${spec.monthMode}` as LocaleKey) `` 拼**动态 key**，而该值来自存储的 `schedule.ui.monthMode`、**未收窄** ⇒ 脏数据（如 `"foo"`）会在计划行渲染出 `editorMonthMode_foo` 字面量（编辑器那条路径已经收窄到三档，列表这条没有 —— **修法就是照编辑器收窄**）。
+- **i18n 已补齐（2026-10-07 第八轮，三处全修）**：① `StatusRail` 悬停提示 / 调试页表格量词「N 行」/ `validateTaskDraft` 的 6 条校验文案 —— 原先硬编码中文（英文界面仍露中文），现已全部走 `t()`（`validateTaskDraft` 增加 `t` 席位）；② **`locales.ts` 的 30 个死键已清**（联合类型 + 中英两表同步删除，靠 `Record<LocaleKey,string>` 由 tsc 校验完整性）；③ `schedule-text.ts` 的动态键 `` t(`editorMonthMode_${...}`) `` 已**收窄到三档**（`every|odd|even`），脏 `ui.monthMode` 不再渲染出 `editorMonthMode_foo` 字面量。

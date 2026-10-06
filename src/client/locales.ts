@@ -2,10 +2,9 @@
 // 经 ctx.locale.register 注册；slot 注册项的 locale: 声明把 t 席位合成进组件 props
 // （注册面 settings.plugin.item，真机作业：dsh-session-title-pattern 的设置卡片）。
 // 文案主体全中文（任务要求）；en 供非中文界面语言回退。
-
 /** 本页渲染的全部字典键。 */
 export type LocaleKey =
-  | 'title' | 'description' | 'unavailable' | 'trayLabel'
+  | 'title' | 'description' | 'unavailable' 
   | 'tasksInlineLabel' | 'tasksInlineHint' | 'invalidJson'
   | 'save' | 'saving' | 'saveFailed' | 'discard'
   | 'paramsTitle' | 'paramDefault'
@@ -18,15 +17,15 @@ export type LocaleKey =
   | 'panelTitle' | 'backToConversation' | 'tabConfig' | 'tabRecords' | 'tabCalendar' | 'tabDebug'
   // —— 任务日程（日历页，2026-10-05）：月份导航 / 两态图例 / 计划说明 / 截断与错误 ——
   | 'calLoadFail' | 'calRetry' | 'calEmpty' | 'calDayEmpty'
-  | 'calTruncated' | 'calPlanTag' | 'calNotExecuted' | 'calPlanHint' | 'calLegendDone' | 'calLegendPlan' | 'calCellMore' | 'calDepsLabel' | 'calToday' | 'calWeekdays'
+  | 'calTruncated' | 'calPlanTag' | 'calNotExecuted' | 'calPlanHint'   | 'calCellMore'  | 'calToday' | 'calWeekdays'
   | 'tasksParsedTitle' | 'tasksParsedEmpty'
   | 'debugDbHint' | 'debugDbLoading' | 'debugDbFail' | 'debugDbEmpty' | 'debugDbTruncated'
   | 'colTitle' | 'colCode' | 'colId' | 'colSchedule' | 'colNext'
   | 'colStatus' | 'colSession'
   | 'filterAll'
   | 'listExpandHint' | 'listDeferred' | 'listDeferredTitle'
-  | 'viewSession' | 'viewSessionHint'
-  | 'sessionViewerTitle' | 'sessionArgs' | 'sessionOutput'
+  | 'viewSession' 
+  | 'sessionViewerTitle'  
   | 'sessionUnknownKind'
   | 'sessionLoading' | 'sessionEmpty' | 'sessionLoadFailed' | 'sessionLoadOlder'
   | 'sessionProcess'
@@ -63,7 +62,7 @@ export type LocaleKey =
   // —— 工具卡展开体（输入/输出 + diff 面文案，官方 uic diff.* 词典）——
   | 'toolInputLabel' | 'toolOutputLabel' | 'codeBlockLabel'
   | 'diffWrapLabel' | 'diffUnwrapLabel' | 'diffCollapseAria' | 'diffExpandAria'
-  | 'diffCollapseLabel' | 'diffExpandRest'
+   | 'diffExpandRest'
   // —— 官方工具行（ui-tool ToolRow：variant 标题 / 运行态 / 输入输出，uic row.* 与 tool.title.*）——
   | 'toolTitleSearch' | 'rowPreparing' | 'rowRunning' | 'rowFailed' | 'rowStopped'
   | 'collapseLabel'
@@ -76,7 +75,7 @@ export type LocaleKey =
   | 'continueBranch' | 'forkConfirmTitle' | 'forkConfirmText'
   | 'forkConfirmAccept' | 'forkCancel' | 'forkWorking' | 'forkFailed'
   // —— U11 产出物预览（分栏推压）：文件面 + 错误态 + 文本翻页 ——
-  | 'previewClose' | 'previewLoading' | 'previewLoadMore' | 'previewFileLabel'
+  | 'previewClose'  | 'previewLoadMore' | 'previewFileLabel'
   | 'previewCopyPath' | 'previewRefresh' | 'previewNotFound' | 'previewTooLarge' | 'previewDirectory'
   | 'previewNotRegular' | 'previewOutsideWorkspace' | 'previewError' | 'previewUnknownBinary'
   | 'previewBadPayload' | 'previewRenderFailed' | 'previewResize'
@@ -85,7 +84,7 @@ export type LocaleKey =
   // —— U30 HTML 预览（照官方：srcDoc + sandbox 静态预览；源码态截前 256K）——
   | 'previewHtmlSwitchAria' | 'previewHtmlFrame' | 'previewHtmlFailed' | 'previewTruncated'
   | 'previewTruncatedSize'
-  | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' | 'explorerCrumbsMore'
+  | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' 
   | 'explorerLevels' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs'
@@ -102,7 +101,6 @@ export type LocaleKey =
   | 'editorEnabled' | 'editorEnabledOn' | 'editorEnabledOff'
   | 'editorTitle' | 'editorTitlePh' | 'editorCode' | 'editorCodePh'
   | 'editorPrompt' | 'editorPromptPh'
-  | 'editorManualPathPh'
   | 'editorWorkspace' | 'editorWorkspacePh' | 'editorModel' | 'editorModelPh' | 'editorFollowHost' | 'editorNoOptions'
   // 执行频率：顶部「周期 / 间隔」两档（2026-09-29 返工）
   | 'editorSchedule' | 'editorSchedulePeriodic' | 'editorScheduleInterval'
@@ -114,17 +112,16 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentView' | 'editorAttachmentAdd'
-  | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort' | 'editorUploadFile' | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading' | 'editorUploadFailed' | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick'
-  | 'editorOpenEditor' | 'editorPromptEditorTitle' | 'editorSaveVersion' | 'editorVersionNote' | 'editorNoVersions'
+  | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort'  | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading'  | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick'
+  | 'editorOpenEditor' | 'editorPromptEditorTitle'   | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
-  | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc' | 'editorConfirmUseTitle' | 'editorConfirmUseDesc'
+  | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc'  
   | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
-  | 'editorVersionToggle' | 'editorRestoreAll' | 'editorRestoreAllTitle' | 'editorRestoreAllDesc'
-  | 'editorUseShort' | 'editorRemoveShort' | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
+  | 'editorVersionToggle'   
+  | 'editorUseShort'  | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
   | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermB1' | 'editorFullPermB2' | 'editorFullPermCheck' | 'editorTaskSaved'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
-  | 'editorCustomCron'
-  | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag' | 'editorEdit'
+  | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag'
   | 'editorTaskStart' | 'editorTaskStartHint'
   | 'editorWeekdayLabel'
   | 'editorWeekday1' | 'editorWeekday2' | 'editorWeekday3' | 'editorWeekday4' | 'editorWeekday5' | 'editorWeekday6' | 'editorWeekday7'
@@ -168,7 +165,7 @@ export type LocaleKey =
   | 'relToday' | 'relTomorrow' | 'relWeeks' | 'relMonths' | 'relYears'
   | 'listLastFullTitle' | 'listNextFullTitle'
   | 'listEmpty' | 'listEmptyFiltered'
-  | 'listSectionSchedule' | 'listSectionAttachments' | 'listSectionDepends' | 'listSectionPrompt'
+   | 'listSectionAttachments' | 'listSectionDepends' 
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
   | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
   // —— 基础信息改版（用户 2026-10-03）：左配置 + 右上次执行 ——
@@ -181,7 +178,7 @@ export type LocaleKey =
   // 查看档自己的块与来源标记（r12：标记从头部挪到「任务配置」块标题旁，文案精简正式）
   | 'editorViewDraftTag' | 'editorViewNewTag' | 'editorViewUntitled'
   | 'editorViewPrompt' | 'editorViewPromptEmpty' | 'editorViewNoRunDraft' | 'editorViewNotFilled'
-  | 'editorViewSourceCode' | 'editorViewExpand' | 'editorViewExpandAll' | 'editorViewCollapse'
+  | 'editorViewSourceCode' | 'editorViewExpand'  | 'editorViewCollapse'
   | 'editorViewSwitchTitle' | 'editorViewSwitchDesc' | 'editorEditSwitchTitle' | 'editorEditSwitchDesc' | 'editorEditSwitchKeep' | 'editorEditSwitchOverwrite'
   // —— 任务卡片三面板（决策 55）：三滑块 / 删除确认 / 执行记录与日志面板 ——
   | 'cardTabInfo' | 'cardTabRecords' | 'cardTabLogs'
@@ -199,20 +196,22 @@ export type LocaleKey =
   | 'colDuration' | 'colPlanned' | 'colActualStart' | 'colView' | 'colNote' | 'filterRunning'
   // —— 时间范围控件（ui/TimeRange，全站复用）：预设档 + 清除 ——
   | 'trAll' | 'trCustom' | 'trToday' | 'trYesterday' | 'trThisWeek' | 'trLastWeek' | 'trThisMonth' | 'trLastMonth'
-  | 'durSec' | 'durMinSec' | 'durHourMin' | 'durDayHour'
   | 'schedCustom'
   // —— 插件设置页（plugins.bundle.config 详情页表单）——
   | 'settingsBasic' | 'settingsTitleFormat' | 'settingsDesc' | 'settingsLang' | 'settingsLangValue'
   | 'settingsParams' | 'settingsLoopSec' | 'settingsLoopHint' | 'settingsWaitSec' | 'settingsWaitHint'
   | 'settingsLeaseSec' | 'settingsLeaseHint' | 'settingsUnknownSec' | 'settingsUnknownHint'
-  | 'settingsSaveSuccess' | 'settingsLoadFailed' | 'settingsUnitSec' | 'settingsResetDone'
+  | 'settingsSaveSuccess' | 'settingsLoadFailed' | 'settingsUnitSec' 
   | 'loading' | 'invalidNumber'
-
+  // —— 2026-10-07 i18n 补漏：以下原先是**硬编码中文**，英文界面会露中文（第七轮审计指出）——
+  | 'statusRailOff' | 'statusRailLastFailed' | 'statusRailLastSkipped' | 'statusRailRunning'
+  | 'debugRowsSuffix' | 'optionsDegraded' | 'snapshotStale'
+  | 'vTitleRequired' | 'vWorkspaceRequired' | 'vPromptRequired'
+  | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
 /**
  * 翻译席位：`{name}` 占位符由 {@link interpolateTranslate} 自己替换（不依赖宿主是否支持 params）。
  */
 export type Translate = (key: LocaleKey, params?: Record<string, string | number>) => string
-
 /** 把宿主给的无参 t 包成带占位符替换的 t（官方模板一律 `{name}`）。 */
 export function interpolateTranslate(base: (key: LocaleKey, params?: Record<string, string | number>) => string): Translate {
   return (key, params) => {
@@ -221,12 +220,10 @@ export function interpolateTranslate(base: (key: LocaleKey, params?: Record<stri
     return raw.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match))
   }
 }
-
 /** 中文文案。 */
 export const zh: Record<LocaleKey, string> = {
   title: '任务调度表（dsh-task-dispatch-table）',
   description: '用任务表驱动定时派发：配置任务、查看每次执行的记录。点击打开面板。',
-  trayLabel: '任务调度',
   unavailable: '设置命名空间当前不可用（插件未运行或宿主未提供），暂时无法配置。',
   tasksInlineLabel: '任务表（tasksInline，JSON 数组）',
   tasksInlineHint: '每项一个任务定义；非空时优先于任务目录 tasksDir。清空并保存 = 回到默认（空，改用 tasksDir）。',
@@ -265,11 +262,8 @@ export const zh: Record<LocaleKey, string> = {
   calPlanTag: '计划：',
   calNotExecuted: '未执行',
   calPlanHint: '此任务尚未执行，时间为预计执行时间',
-  calLegendDone: '已执行',
-  calLegendPlan: '预计执行',
   calToday: '今天',
   calCellMore: '还有 {n} 条，点开看全部',
-  calDepsLabel: '前置',
   debugDbHint: '状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。',
   debugDbLoading: '状态库读取中…',
   debugDbFail: '状态库读取失败（未就绪或请求被拒），稍后点刷新重试。',
@@ -293,10 +287,7 @@ export const zh: Record<LocaleKey, string> = {
   // 延期悬浮说明（暂时只讲事实；「具体是哪个原因」由服务端透出后接在后面）。
   listDeferredTitle: '已过计划时刻但还没开始执行。常见原因：前置任务未完成 / 附加文件找不到 / 上一轮还在运行。',
   viewSession: '查看会话',
-  viewSessionHint: '在面板内只读查看本次执行的会话记录（含归档会话）；简化渲染、不可续聊。',
   sessionViewerTitle: '会话记录（只读）',
-  sessionArgs: '参数',
-  sessionOutput: '输出',
   sessionUnknownKind: '未支持的节点类型：',
   sessionLoading: '正在加载会话记录…',
   sessionEmpty: '该会话暂无可显示的记录（可能刚建窗或已被清理）。',
@@ -420,7 +411,6 @@ export const zh: Record<LocaleKey, string> = {
   diffUnwrapLabel: '取消换行',
   diffCollapseAria: '收起差异',
   diffExpandAria: '展开其余 {count} 行差异',
-  diffCollapseLabel: '收起',
   diffExpandRest: '… 其余 {count} 行',
   continueBranch: '继续对话',
   forkConfirmTitle: '开分支继续对话',
@@ -430,7 +420,6 @@ export const zh: Record<LocaleKey, string> = {
   forkWorking: '正在开分支…',
   forkFailed: '开分支失败：{error}',
   previewClose: '关闭预览',
-  previewLoading: '加载中…',
   previewLoadMore: '加载更多',
   previewFileLabel: '文件',
   previewCopyPath: '复制路径',
@@ -459,7 +448,6 @@ export const zh: Record<LocaleKey, string> = {
   explorerEmpty: '空目录',
   explorerTruncated: '目录内容过多，仅显示部分条目。',
   explorerCrumbsAria: '目录路径导航',
-  explorerCrumbsMore: '展开完整路径',
   explorerLevels: '选择目录层级',
   explorerRootName: '（工作区根目录）',
   explorerExpand: '展开目录',
@@ -508,7 +496,6 @@ export const zh: Record<LocaleKey, string> = {
   editorCodePh: '可选，便于查询',
   editorPrompt: '提示词',
   editorPromptPh: '写给 agent 的指令……',
-  editorManualPathPh: '相对工作区根，如 manuals/xxx.md',
   editorVersions: '版本历史',
   editorWorkspace: '工作区',
   editorWorkspacePh: '选择工作区',
@@ -559,11 +546,9 @@ export const zh: Record<LocaleKey, string> = {
   editorAttachmentAdd: '添加文件',
   editorPickWorkspaceFile: '选择工作区文件',
   editorPickWorkspaceFileShort: '工作区文件',
-  editorUploadFile: '上传文件',
   editorDropZoneHint: '点击或拖拽文件到此处上传，支持多选或单个文件',
   editorDropZoneFormats: '支持常见文本 / 代码、图片、文档格式，单个文件不超过 20MB',
   editorUploading: '上传中…',
-  editorUploadFailed: '上传失败',
   editorUploadErrType: '格式不支持：仅支持常见文本 / 代码、图片、文档文件',
   editorUploadErrSize: '文件超过大小限制（单个最大 20MB）',
   editorUploadErrEmpty: '文件内容为空',
@@ -573,8 +558,6 @@ export const zh: Record<LocaleKey, string> = {
   editorPickerPick: '选择此文件',
   editorOpenEditor: '全屏编辑',
   editorPromptEditorTitle: '提示词编辑器（.md）',
-  editorSaveVersion: '保存版本',
-  editorVersionNote: '版本备注（可选）',
   editorNoVersions: '暂无版本，保存后可在此回滚',
   editorHistoryVersions: '历史版本',
   editorNewTaskNoVersions: '新建任务暂未保存，无历史版本可查询',
@@ -582,8 +565,6 @@ export const zh: Record<LocaleKey, string> = {
   editorUseVersion: '使用此版本',
   editorConfirmDeleteTitle: '删除版本',
   editorConfirmDeleteDesc: '你确定要删除此版本的记录吗？删除后不可撤销，请谨慎操作。',
-  editorConfirmUseTitle: '使用历史版本',
-  editorConfirmUseDesc: '确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词）。',
   editorDeleteTask: '删除任务',
   editorDeleteTaskTitle: '删除任务',
   editorDeleteTaskDesc: '确定所有的移除都是找不回来的，不可逆的。',
@@ -593,7 +574,6 @@ export const zh: Record<LocaleKey, string> = {
   editorResetDesc: '重置会放弃本任务所有未保存的修改，恢复到打开编辑时的内容。这一操作不可撤销。',
   editorVersionToggle: '版本',
   editorUseShort: '使用',
-  editorRemoveShort: '移除',
   editorEnabledStateOn: '已启用',
   editorEnabledStateOff: '已关闭',
   editorToggleOn: '任务已启用',
@@ -607,12 +587,8 @@ export const zh: Record<LocaleKey, string> = {
   editorSchedHourlyOnce: '每小时执行一次',
   editorSchedNoDaySuffix: '，但还没选生效日',
   editorSchedWeeklyDayPrefix: '每周',
-  editorRestoreAll: '找回全部',
-  editorRestoreAllTitle: '找回全部设置',
-  editorRestoreAllDesc: '确定找回会用历史版本覆盖现有修改的所有数据：提示词、排期、工作区、模型、权限、重试、前置任务与附件清单都会被这份历史版本覆盖，且不可撤销。',
   editorRestorePromptTitle: '只找回提示词',
   editorRestorePromptDesc: '确定找回会用历史版本覆盖现有修改的所有数据（本次只覆盖提示词，其余设置保持现状）。',
-  editorCustomCron: '自定义 cron（JSON 里的原值，保存时原样保留）',
   editorTasksTitle: '任务列表',
   editorTasksEmpty: '还没有任务：点右上角「＋ 新建任务」创建第一条。',
   editorDisabledTag: '已停用',
@@ -749,10 +725,8 @@ export const zh: Record<LocaleKey, string> = {
   listNextFullTitle: '下次执行：{when}',
   listEmpty: '还没有任务。点右上角「＋ 新建任务」创建第一个。',
   listEmptyFiltered: '没有符合当前筛选的任务。',
-  listSectionSchedule: '执行设置',
   listSectionAttachments: '附加文件',
   listSectionDepends: '前置任务',
-  listSectionPrompt: '提示词',
   listFieldWorkspace: '工作区',
   listFieldModel: '模型',
   listFieldModelDefault: '默认模型',
@@ -784,7 +758,6 @@ export const zh: Record<LocaleKey, string> = {
   editorViewNotFilled: '未填',
   editorViewSourceCode: '源码',
   editorViewExpand: '展开',
-  editorViewExpandAll: '查看全部',
   editorViewCollapse: '收起',
   editorViewSwitchTitle: '放弃未保存的修改？',
   editorViewSwitchDesc: '当前任务有改过但还没保存的内容。继续会放弃这些修改，并打开你要查看的任务。',
@@ -850,10 +823,6 @@ export const zh: Record<LocaleKey, string> = {
   trLastWeek: '上周',
   trThisMonth: '本月',
   trLastMonth: '上月',
-  durSec: '{n} 秒',
-  durMinSec: '{m} 分 {s} 秒',
-  durHourMin: '{h} 小时 {m} 分',
-  durDayHour: '{d} 天 {h} 小时',
   // 排期文案的**唯一实现**在 `client/schedule-text.ts`（列表与编辑器共用，正文键走 editorSched*）；
   // 这里只剩「认不出的 cron 原样显示」一条（真实值，不编造）。
   schedCustom: '{cron}',
@@ -875,16 +844,26 @@ export const zh: Record<LocaleKey, string> = {
   settingsSaveSuccess: '设置已保存',
   settingsLoadFailed: '读取当前设置失败，请稍后重试',
   settingsUnitSec: '秒',
-  settingsResetDone: '已恢复默认',
   loading: '加载中',
   invalidNumber: '请输入有效的整数秒',
+  statusRailOff: '已关闭',
+  statusRailLastFailed: '最近一次执行失败',
+  statusRailLastSkipped: '最近一次未执行（配置或前置不满足，详见执行记录）',
+  statusRailRunning: '计划运行中',
+  debugRowsSuffix: '行',
+  optionsDegraded: '宿主侧该项服务未接入，暂无候选',
+  snapshotStale: '数据可能已过期：最近一次刷新失败',
+  vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
+  vWorkspaceRequired: '还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。',
+  vPromptRequired: '还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。',
+  vIntervalInvalid: '执行间隔没填或填错——「每隔 N 分钟/小时」里的 N 必须是大于 0 的整数（比如 1 或 2）。',
+  vWeekdayRequired: '每周执行但没勾选任何星期——请至少勾选一天，否则任务永远不会跑。',
+  vAttachmentInvalid: '附加文件「{name}」的引用路径不合法——必须是工作区内的相对路径。请删掉它、重新选择一次。',
 }
-
 /** English copy. */
 export const en: Record<LocaleKey, string> = {
   title: 'Task dispatch table (dsh-task-dispatch-table)',
   description: 'Schedule agent tasks from a task table: configure tasks and review every run. Click to open the panel.',
-  trayLabel: 'Scheduled task dispatcher',
   unavailable: 'The settings namespace is currently unavailable (plugin not running or not served by the host); configuration is disabled.',
   tasksInlineLabel: 'Task table (tasksInline, JSON array)',
   tasksInlineHint: 'One task definition per entry; when non-empty it takes precedence over tasksDir. Clear and save to fall back to the default (empty, use tasksDir).',
@@ -923,11 +902,8 @@ export const en: Record<LocaleKey, string> = {
   calPlanTag: 'Plan:',
   calNotExecuted: 'Not executed',
   calPlanHint: 'This task has not run yet; times shown are estimated',
-  calLegendDone: 'Executed',
-  calLegendPlan: 'Expected',
   calToday: 'Today',
   calCellMore: '{n} more — click to open',
-  calDepsLabel: 'Deps',
   debugDbHint: 'Raw rows of all three state.db tables, read-only: task_instances = one row per run, task_events = one row per event, meta = plugin metadata (incl. the inline task table). Newest 500 rows per table; use the refresh button to re-fetch.',
   debugDbLoading: 'Loading state.db…',
   debugDbFail: 'Failed to read state.db (not ready or request rejected); retry with the refresh button.',
@@ -947,10 +923,7 @@ export const en: Record<LocaleKey, string> = {
   listDeferred: 'Delayed',
   listDeferredTitle: 'Past its planned time but has not started. Usual causes: preceding task not finished / attachment missing / previous run still running.',
   viewSession: 'View session',
-  viewSessionHint: 'Read this run\'s session transcript in a read-only panel (archived sessions included); simplified rendering, no follow-up replies.',
   sessionViewerTitle: 'Session transcript (read-only)',
-  sessionArgs: 'Arguments',
-  sessionOutput: 'Output',
   sessionUnknownKind: 'Unsupported node kind: ',
   sessionLoading: 'Loading session transcript…',
   sessionEmpty: 'Nothing to show for this session yet (window just opened, or the log was cleaned up).',
@@ -1074,7 +1047,6 @@ export const en: Record<LocaleKey, string> = {
   diffUnwrapLabel: 'Unwrap lines',
   diffCollapseAria: 'Collapse diff',
   diffExpandAria: 'Expand {count} more diff lines',
-  diffCollapseLabel: 'Collapse',
   diffExpandRest: '… {count} more lines',
   continueBranch: 'Continue conversation',
   forkConfirmTitle: 'Fork to continue',
@@ -1084,7 +1056,6 @@ export const en: Record<LocaleKey, string> = {
   forkWorking: 'Forking…',
   forkFailed: 'Fork failed: {error}',
   previewClose: 'Close preview',
-  previewLoading: 'Loading…',
   previewLoadMore: 'Load more',
   previewFileLabel: 'File',
   previewCopyPath: 'Copy path',
@@ -1112,7 +1083,6 @@ export const en: Record<LocaleKey, string> = {
   explorerEmpty: 'Empty directory',
   explorerTruncated: 'The directory is too large; only some entries are shown.',
   explorerCrumbsAria: 'Directory path navigation',
-  explorerCrumbsMore: 'Show full path',
   explorerLevels: 'Choose a directory level',
   explorerRootName: '(workspace root)',
   explorerExpand: 'Expand directory',
@@ -1161,7 +1131,6 @@ export const en: Record<LocaleKey, string> = {
   editorCodePh: 'Optional, for lookup',
   editorPrompt: 'Prompt',
   editorPromptPh: 'Instructions for the agent…',
-  editorManualPathPh: 'Relative to workspace root, e.g. manuals/xxx.md',
   editorVersions: 'Version history',
   editorWorkspace: 'Workspace',
   editorWorkspacePh: 'Choose workspace',
@@ -1212,12 +1181,10 @@ export const en: Record<LocaleKey, string> = {
   editorAttachmentAdd: 'Add file',
   editorPickWorkspaceFile: 'Pick workspace file',
   editorPickWorkspaceFileShort: 'Files',
-  editorUploadFile: 'Upload file',
   // 2026-10-02 精简（用户：英文偏长）：两行都比原来短一截，意思不变（可点击/拖入、单个或多个、格式与单文件上限）。
   editorDropZoneHint: 'Click or drop files to upload — single or multiple',
   editorDropZoneFormats: 'Text/code, image and document formats, up to 20MB each',
   editorUploading: 'Uploading…',
-  editorUploadFailed: 'Upload failed',
   editorUploadErrType: 'Unsupported file type: only common text/code, image and document files are allowed',
   editorUploadErrSize: 'File exceeds the size limit (20MB max each)',
   editorUploadErrEmpty: 'File is empty',
@@ -1227,8 +1194,6 @@ export const en: Record<LocaleKey, string> = {
   editorPickerPick: 'Pick this file',
   editorOpenEditor: 'Full-screen edit',
   editorPromptEditorTitle: 'Prompt editor (.md)',
-  editorSaveVersion: 'Save version',
-  editorVersionNote: 'Version note (optional)',
   editorNoVersions: 'No versions yet — save one to roll back here',
   editorHistoryVersions: 'History versions',
   editorNewTaskNoVersions: 'New task not saved yet — no history versions to query',
@@ -1236,8 +1201,6 @@ export const en: Record<LocaleKey, string> = {
   editorUseVersion: 'Use this version',
   editorConfirmDeleteTitle: 'Delete version',
   editorConfirmDeleteDesc: 'Delete this version record? This cannot be undone — please proceed with care.',
-  editorConfirmUseTitle: 'Use history version',
-  editorConfirmUseDesc: 'Restoring will overwrite all your current edits with the history version (prompt only this time).',
   editorDeleteTask: 'Delete task',
   editorDeleteTaskTitle: 'Delete task',
   editorDeleteTaskDesc: 'Everything removed is unrecoverable and irreversible.',
@@ -1247,7 +1210,6 @@ export const en: Record<LocaleKey, string> = {
   editorResetDesc: 'Reset discards all unsaved changes to this task and restores the values from when you opened it. This cannot be undone.',
   editorVersionToggle: 'Versions',
   editorUseShort: 'Use',
-  editorRemoveShort: 'Remove',
   editorEnabledStateOn: 'On',
   editorEnabledStateOff: 'Off',
   editorToggleOn: 'Task enabled',
@@ -1261,12 +1223,8 @@ export const en: Record<LocaleKey, string> = {
   editorSchedHourlyOnce: 'runs hourly',
   editorSchedNoDaySuffix: ', but no active day is selected',
   editorSchedWeeklyDayPrefix: 'every ',
-  editorRestoreAll: 'Restore all',
-  editorRestoreAllTitle: 'Restore all settings',
-  editorRestoreAllDesc: 'Restoring will overwrite ALL your current edits with this history version: prompt, schedule, workspace, model, permission, retries, dependencies and attachment list. This cannot be undone.',
   editorRestorePromptTitle: 'Restore prompt only',
   editorRestorePromptDesc: 'Restoring will overwrite all your current edits with the history version (prompt only; other settings stay as they are).',
-  editorCustomCron: 'Custom cron (raw value from JSON; kept as-is on save)',
   editorTasksTitle: 'Tasks',
   editorTasksEmpty: 'No tasks yet — use "＋ New task" in the top-right corner to create the first one.',
   editorDisabledTag: 'Disabled',
@@ -1401,10 +1359,8 @@ export const en: Record<LocaleKey, string> = {
   listNextFullTitle: 'Next run: {when}',
   listEmpty: 'No tasks yet. Use “+ New task” to create the first one.',
   listEmptyFiltered: 'No task matches the current filter.',
-  listSectionSchedule: 'Execution settings',
   listSectionAttachments: 'Attachments',
   listSectionDepends: 'Preceding tasks',
-  listSectionPrompt: 'Prompt',
   listFieldWorkspace: 'Workspace',
   listFieldModel: 'Model',
   listFieldModelDefault: 'Default model',
@@ -1436,7 +1392,6 @@ export const en: Record<LocaleKey, string> = {
   editorViewNotFilled: 'Not set',
   editorViewSourceCode: 'Source',
   editorViewExpand: 'Expand',
-  editorViewExpandAll: 'Show all',
   editorViewCollapse: 'Collapse',
   editorViewSwitchTitle: 'Discard unsaved changes?',
   editorViewSwitchDesc: 'This task has unsaved edits. Continuing will discard them and open the task you want to view.',
@@ -1500,10 +1455,6 @@ export const en: Record<LocaleKey, string> = {
   trLastWeek: 'Last week',
   trThisMonth: 'This month',
   trLastMonth: 'Last month',
-  durSec: '{n}s',
-  durMinSec: '{m}m {s}s',
-  durHourMin: '{h}h {m}m',
-  durDayHour: '{d}d {h}h',
   // The single schedule-text implementation lives in `client/schedule-text.ts`; only the
   // unrecognised-cron passthrough remains here.
   schedCustom: '{cron}',
@@ -1525,7 +1476,19 @@ export const en: Record<LocaleKey, string> = {
   settingsSaveSuccess: 'Settings saved',
   settingsLoadFailed: 'Failed to load current settings, please retry later',
   settingsUnitSec: 'sec',
-  settingsResetDone: 'Reset to default',
   loading: 'Loading',
   invalidNumber: 'Please enter a valid integer number of seconds',
+  statusRailOff: 'Disabled',
+  statusRailLastFailed: 'Last run failed',
+  statusRailLastSkipped: 'Last run skipped (config or prerequisites unsatisfied; see records)',
+  statusRailRunning: 'Scheduled / running',
+  debugRowsSuffix: 'rows',
+  optionsDegraded: 'Host service for this field is unavailable; no options available',
+  snapshotStale: 'Data may be stale: the last refresh failed',
+  vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
+  vWorkspaceRequired: 'No workspace selected — a task must belong to a workspace to run. Pick one above.',
+  vPromptRequired: 'The prompt is empty — it tells the agent what to do and cannot be blank.',
+  vIntervalInvalid: 'Invalid interval — N in "every N minutes/hours" must be an integer greater than 0.',
+  vWeekdayRequired: 'Weekly schedule with no weekday selected — pick at least one, or the task never runs.',
+  vAttachmentInvalid: 'Attachment "{name}" has an invalid ref — it must be a workspace-relative path. Remove and re-pick it.',
 }
