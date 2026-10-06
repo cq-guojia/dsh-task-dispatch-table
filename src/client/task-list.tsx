@@ -40,13 +40,12 @@ import { INSTANCE_STATUSES, statusesOfBucket, statusTextOf, statusToneOf } from 
 import { sortRows } from '../task-sort.js'
 // 取数层（2026-10-06 从本页面文件归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import { debugLogOrder, dueLoadingMs, useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
-import { MarqueeText, SelectField, calendarLabelsOf, timeLabelsOf, type EditorOption } from './editor-fields'
+import { calendarLabelsOf, timeLabelsOf } from './editor-fields'
 import { ensureTaskEditorStyle } from './task-editor-css'
 // 浮层结果提示（立即执行成功 / 被拒）：全站唯一实现，不许各处手写。
 import { FloatingToast, ensureToastStyle } from './toast-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, IconButton, Input as TdtInput, LiveText, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RunningBlocks, Segmented, TimeRange, rangeToQuery, useNowMs, type TimeRangeLabels, type TimeRangeValue } from './ui'
-import { ensureRunningStyle, RUNNING_TONE, RUN_PULSE_CLASS } from './ui/running'
+import { applyStyle, Button, ensureRunningStyle, IconButton, Input as TdtInput, LiveText, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, RUNNING_TONE, RunningBlocks, Segmented, SelectField, TimeRange, rangeToQuery, useNowMs, type EditorOption, type TimeRangeLabels, type TimeRangeValue } from './ui'
 
 
 // ── 主题变量（与 index.ts 的 C 同款：全走宿主变量 + 兜底）──

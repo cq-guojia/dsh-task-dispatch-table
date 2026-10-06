@@ -40,20 +40,13 @@ import {
   Tooltip,
   IconPlanOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { CodeViewer } from './ui/CodeViewer'
+// 表单控件一律走基础层 barrel；`./editor-fields` 只留文案单源与周几多选（W6：不再二次再导出）。
+import { calendarLabelsOf, WeekdayPicker, type WeekdayLabels } from './editor-fields'
 import {
-  calendarLabelsOf,
-  DateField,
-  MarqueeText,
-  SelectField,
-  TimeField,
-  WeekdayPicker,
-  type CalendarLabels,
-  type EditorOption,
-  type TimeLabels,
-  type WeekdayLabels,
-} from './editor-fields'
-import { Button as TdtButton, Checkbox, IconButton, NumberInput, PrefixedInput as TdtPrefixedInput, Segmented, startResizeLayoutWidth, Textarea } from './ui'
+  Button as TdtButton, Checkbox, CodeViewer, DateField, IconButton, MarqueeText, NumberInput,
+  PrefixedInput as TdtPrefixedInput, Segmented, SelectField, startResizeLayoutWidth, Textarea, TimeField,
+  type CalendarLabels, type EditorOption, type TimeLabels,
+} from './ui'
 import { ensureTaskEditorStyle } from './task-editor-css'
 import { interpolateTranslate, type LocaleKey } from './locales'
 import { renderSchedule, scheduleCron, scheduleSpecFromCron, scheduleSpecFromDraft } from './schedule-text'

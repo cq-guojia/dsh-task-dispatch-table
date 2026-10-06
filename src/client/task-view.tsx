@@ -27,8 +27,7 @@ import {
   type TaskInfoBaseView,
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
-import { CodeViewer } from './ui/CodeViewer'
-import { Button, Segmented } from './ui'
+import { Button, CodeViewer, Segmented } from './ui'
 // ⚠️ 只引**类型**（`import type` 会被编译擦除）：本文件与 `task-editor.tsx` 是「组件互相引用 + 类型单向依赖」，
 // 类型导入不构成运行时循环。草稿形状的真源仍在 task-editor.tsx，不在这里复制一份。
 import type { EditorMode, EditorTaskOption, TaskEditorDraft } from './task-editor'

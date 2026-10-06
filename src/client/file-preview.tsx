@@ -28,7 +28,7 @@ import {
   Tooltip,
   writeClipboard,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { CodeViewer } from './ui/CodeViewer'
+import { CodeViewer } from './ui'
 import type { LocaleKey, Translate } from './locales'
 import { MD_LABELS } from './md-labels'
 import { ocOr } from './official-classes'

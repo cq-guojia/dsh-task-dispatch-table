@@ -43,13 +43,12 @@ import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
-  Button, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, Segmented, SelectField, TaskPicker,
+  Button, ensureRunningStyle, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, Segmented, SelectField, TaskPicker,
   applyStyle,
 } from './ui'
 import type { EditorOption, TaskOption } from './ui'
 import { useEvents, useResync } from './event-subscribe'
 import { RUN_EVENT_TYPES } from '../event-catalog.js'
-import { ensureRunningStyle, RUN_PULSE_CLASS } from './ui/running'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
 import { ensureTaskInfoStyle } from './task-info-css'

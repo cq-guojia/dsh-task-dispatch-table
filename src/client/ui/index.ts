@@ -87,3 +87,7 @@ export { startResizeLayoutWidth, type ResizeOptions } from './resizer'
 // 全局秒级心跳 + 每秒自刷新文本（2026-10-06 从 task-info.tsx 归位；见 design/client-refresh-disposition.md §三 A1/A2）。
 export { subscribeTicker, useNowMs } from './ticker'
 export { LiveText } from './LiveText'
+// 运行态视觉（色/类名/注入器）与只读代码查看器：此前业务文件直连 `ui/running` / `ui/CodeViewer`
+// 绕过本 barrel（2026-10-06 补登记，design/client-refresh-disposition.md §四 W7）。
+export { RUNNING_TONE, RUN_PULSE_CLASS, ensureRunningStyle } from './running'
+export { CodeViewer } from './CodeViewer'

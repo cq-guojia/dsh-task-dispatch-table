@@ -3730,1082 +3730,23 @@ body[data-ds-dark-theme]{
 			return (0, react$1.createElement)("span", { style: props.style }, renderRef.current(Date.now()));
 		}
 		//#endregion
-		//#region src/client/ui/index.ts
-		/**
-		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
-		* 同时它是基础层 `Loading` 的锚点契约（`Loading` 默认 `anchorId = PANEL_CONTENT_ID`）——
-		* 所以**新页面也必须用同一个 id**，否则浮动 loading 找不到锚点、贴不到内容右缘。
-		*/
-		const PANEL_CONTENT_ID = "dsh-tdt-main";
-		/** 内容列几何（居中限宽 760 / 1120）。 */
-		const PANEL_CONTENT_STYLE = {
-			width: "100%",
-			maxWidth: "1120px",
-			minWidth: "760px",
-			boxSizing: "border-box"
-		};
-		//#endregion
-		//#region src/client/archive-session-css.ts
-		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
-		const ARCHIVE_SESSION_CSS = `
-/* 弹窗让位右侧分栏：预览 dock（--dsh-tdt-preview-w）+ 编辑分栏（--dsh-tdt-editor-w，U21 起）
-   两条都算进来 ⇒ 右侧留出的宽度 = 两者之和（缺省各 0），弹窗不遮盖任何一条分栏；
-   两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
-   与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
-.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--tdt-mask,rgba(0,0,0,.45));transition:right .12s var(--tdt-ease,ease);}
-/* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
-   滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
-   sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
-   弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。
-   ⚠️ **本条不设 z-index**：它是 sticky 布局成员、不是浮层；一旦给它显式正 z-index，就会无条件
-   压过宿主 portal 到 body 的弹窗（「系统设置」等，官方 Modal 后挂载居上只在**同层**时成立）
-   ⇒ 真机 2026-10-05「侧边栏盖住宿主设置弹窗」。去掉后由 DOM 顺序裁决，宿主弹窗回到上层。 */
-.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
-/* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
-   高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
-   **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
-   （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
-/* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
-   z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
-/* 拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index:7（高于 CodeViewer 复制钮，真机 2026-10-04）。 */
-.dsh-tdt-sv-resizer{z-index:7;}
-/* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
-/* 面板底色 = 官方会话面 --tdt-surface-base（官方 chat 页即此色）：
-   官方 ReasoningRow 展开行是 sticky + background:var(--tdt-surface-base)（ReasoningRow.module.css），
-   若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
-.dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
-.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
-/* 内间距定尺。**纵向单一真源 = .dsh-tdt-sv-frame**：
-   官方 scroll 命中时自带纵向 16px，官方 frame 的纵向又不确定；不命中时官方 scroll 不存在，
-   .dsh-tdt-sv-body 又会盖掉 frame 的补足（同元素、body 在后面）。⇒ 统一收口（2026-10-03）：
-     · scroll 钩子把官方纵向 **归零**（双类名 0,2,0 压过 CSS module，不靠注入顺序）；
-     · frame 钩子**独占**上下（用长写，不碰左右 ⇒ 命中时左右仍走官方 scroll 的 16+clearance）。
-   ⇒ 命中 / 未命中两条路径纵向完全一致。
-   **上 / 下 = 17px**（用户 2026-10-03：原来上下各 34 太顶，要求「最多留现在的一半」⇒ 34/2 = 17）；
-   左右始终 34px，与下方会话正文**同一条左右基线**（顶部输入区不再自带左右 padding，避免双重缩进）。
-   ⚠️ 上 / 下必须**相等**：否则滚动到顶 / 到底时一边空一大片、另一边一丢丢。 */
-.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:17px;padding-bottom:17px;}
-/* 官方 scroll 命中时纵向 16px 归零，纵向交 frame 独占（见上）。左右不动。 */
-.dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}
-/* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
-   ⚠️ 用 flex:1 1 auto 而不是 flex:1（后者 basis=0）：官方 ChatView.frame 是 flex:auto，
-   本仓与官方注入顺序不定 ⇒ 取 auto 这个共同值，两边顺序颠倒也不会改变布局。 */
-.dsh-tdt-sv-chat{flex:1 1 auto;min-height:0;}
-.dsh-tdt-sv-heading{min-width:0;}
-.dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
-.dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
-/* 会话区左右边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px。
-   **纵向不在这里**（官方类命中与否会打架，见上面 frame / scroll 两条钩子）⇒ 本类只写左右。 */
-.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding-left:calc(var(--dsh-composer-side-clearance,16px) + 16px);padding-right:calc(var(--dsh-composer-side-clearance,16px) + 16px);}
-.dsh-tdt-sv-col{width:100%;max-width:var(--dsh-chat-content-width,920px);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-chat-flow-gap,16px);}
-/* 官方 ChatView.column 的兄弟间距（:not([hidden]) 才占位；折叠掉的过程节点不留空档）。 */
-.dsh-tdt-sv-col>:not([hidden]):not(.dsh-tdt-sv-flowitem:empty)~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:var(--dsh-chat-flow-gap,16px);}
-.dsh-tdt-sv-visuallyhidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
-.dsh-tdt-sv-flowitem{min-width:0;}
-.dsh-tdt-sv-older{display:flex;justify-content:center;}
-.dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.9));background:var(--tdt-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--tdt-radius-sm,6px);padding:4px 12px;}
-.dsh-tdt-sv-older button:disabled{cursor:default;opacity:.6;}
-.dsh-tdt-sv-process{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex;}
-.dsh-tdt-sv-process:hover{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-process:not([data-open]){margin-bottom:8px;}
-.dsh-tdt-sv-process-label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
-.dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--tdt-fg-4,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
-.dsh-tdt-sv-process[data-open] .dsh-tdt-sv-process-chevron{transform:rotate(180deg);}
-.dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
-.dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
-.dsh-tdt-sv-action:hover{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:var(--tdt-radius-md);padding:10px 14px;font-size:var(--tdt-font-lg);line-height:1.6;word-break:break-word;}
-.dsh-tdt-sv-assistant{align-self:stretch;font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
-.dsh-tdt-sv-image{align-self:flex-start;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));border:1px dashed var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm);padding:4px 10px;}
-.dsh-tdt-sv-md>*:first-child{margin-top:0;}
-.dsh-tdt-sv-md>*:last-child{margin-bottom:0;}
-.dsh-tdt-sv-md p{margin:.5em 0;}
-.dsh-tdt-sv-md h1,.dsh-tdt-sv-md h2,.dsh-tdt-sv-md h3,.dsh-tdt-sv-md h4,.dsh-tdt-sv-md h5,.dsh-tdt-sv-md h6{margin:.9em 0 .4em;font-weight:600;line-height:1.3;}
-.dsh-tdt-sv-md h1{font-size:1.4em;}
-.dsh-tdt-sv-md h2{font-size:1.25em;}
-.dsh-tdt-sv-md h3{font-size:1.1em;}
-.dsh-tdt-sv-md ul,.dsh-tdt-sv-md ol{margin:.5em 0;padding-left:1.4em;}
-.dsh-tdt-sv-md li{margin:.2em 0;}
-.dsh-tdt-sv-md code{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:.9em;background:var(--tdt-surface-2,rgba(128,128,128,.14));padding:.1em .35em;border-radius:var(--tdt-radius-xs);}
-.dsh-tdt-sv-md pre{margin:.6em 0;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:var(--tdt-radius-sm);padding:10px 12px;overflow:auto;font-size:var(--tdt-font-sm);line-height:1.5;}
-.dsh-tdt-sv-md pre code{background:none;padding:0;font-size:inherit;}
-.dsh-tdt-sv-md blockquote{margin:.5em 0;padding:.2em .9em;border-left:3px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-md a{color:var(--tdt-accent,#2f6feb);text-decoration:none;}
-.dsh-tdt-sv-md a:hover{text-decoration:underline;}
-.dsh-tdt-sv-md table{border-collapse:collapse;font-size:var(--tdt-font-sm);margin:.6em 0;display:block;overflow:auto;}
-.dsh-tdt-sv-md th,.dsh-tdt-sv-md td{border:1px solid var(--tdt-border,rgba(128,128,128,.35));padding:4px 8px;text-align:left;}
-.dsh-tdt-sv-md hr{border:none;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));margin:1em 0;}
-.dsh-tdt-sv-md img{max-width:100%;}
-/* 思考行（ReasoningRow.module.css 照抄：root[row]/leading/chevron/title/separator/summary/thinkBody）。 */
-.dsh-tdt-sv-reasoning{flex-direction:column;display:flex;}
-.dsh-tdt-sv-reasoning:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px));}
-.dsh-tdt-sv-reasoning-row{position:relative;overflow:hidden;}
-.dsh-tdt-sv-reasoning-leading{flex-shrink:0;}
-.dsh-tdt-sv-reasoning-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-reasoning-title{font-weight:400;}
-.dsh-tdt-sv-reasoning-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
-.dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
-.dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
-/* ── 工具卡（官方 ui-tool ToolRow.module.css 兜底镜像，官方类命中时 ocOr 走官方） ──
-   官方行外观 = 无边框裸行（root 仅 flex column）；展开体分发链：
-   TerminalBlock(∞) → DiffBlock(9) → ReadBlock(8) → ioCard 灰框（输入/分隔/输出）。 */
-.dsh-tdt-sv-tool{flex-direction:column;display:flex;}
-.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-tool-title{font-weight:400;transition:color .1s;}
-.dsh-tdt-sv-tool-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-tool-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
-.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
-.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
-.dsh-tdt-sv-tool-diffstat{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--tdt-fg-4,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
-.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-2,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--tdt-fg-3,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
-.dsh-tdt-sv-tool-filelink:hover{color:var(--tdt-fg,#1f2328);text-decoration-color:currentColor;}
-.dsh-tdt-sv-tool-errmark{color:var(--tdt-danger,#e5484d);}
-.dsh-tdt-sv-tool-stopmark{color:var(--tdt-warning-label,#f5a623);}
-.dsh-tdt-sv-tool-bodywrap{flex-direction:column;display:flex;}
-.dsh-tdt-sv-io-card{border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-code-surface,rgba(128,128,128,.10));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
-.dsh-tdt-sv-io-section{grid-template-columns:max-content 1fr;align-items:baseline;column-gap:14px;max-height:150px;padding:12px 16px;display:grid;overflow-y:auto;}
-.dsh-tdt-sv-io-label{color:var(--tdt-fg-4,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
-.dsh-tdt-sv-io-divider{background:var(--tdt-border,rgba(128,128,128,.35));flex:none;height:.5px;}
-.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-io-text[data-error]{color:var(--tdt-danger,#e5484d);}
-.dsh-tdt-sv-tool-block{margin:4px 0 4px 4px;}
-.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:var(--tdt-line-sm);--dsl-terminal-output-max-height:224px;border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
-.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
-.dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
-.dsh-tdt-sv-notice{align-self:center;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));padding:2px 8px;}
-.dsh-tdt-sv-hint{font-size:var(--tdt-font-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
-/* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
-.dsh-tdt-sv-process:disabled{cursor:default;}
-.dsh-tdt-sv-trigger{align-self:stretch;background:var(--tdt-code-surface,rgba(128,128,128,.10));border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-xl,12px);transition:background .1s;}
-.dsh-tdt-sv-trigger:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-trigger-header{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:0 0;border:none;cursor:pointer;color:inherit;font:inherit;text-align:left;}
-.dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;}
-.dsh-tdt-sv-trigger-title{font-size:var(--tdt-font-md,13px);color:var(--tdt-fg,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-trigger-time{margin-left:auto;font-size:var(--tdt-font-sm,12px);color:var(--tdt-fg-4,rgba(128,128,128,.7));white-space:nowrap;}
-.dsh-tdt-sv-trigger-chevron{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transition:transform .1s;}
-.dsh-tdt-sv-trigger-chevron-open{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transform:rotate(180deg);}
-.dsh-tdt-sv-trigger-body{padding:0 16px 12px 40px;}
-.dsh-tdt-sv-trigger-explanation{margin:8px 0 0;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-trigger-content{margin-top:6px;font-size:var(--tdt-font-md);line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;}
-.dsh-tdt-sv-tail{display:flex;flex-direction:column;gap:16px;}
-.dsh-tdt-sv-tail-actions{margin-top:4px;margin-left:-6px;}
-.dsh-tdt-sv-clock{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));white-space:nowrap;}
-.dsh-tdt-sv-endinfo{display:inline-flex;align-items:center;gap:8px;margin-left:8px;}
-.dsh-tdt-sv-usage{display:inline-flex;align-items:center;}
-.dsh-tdt-sv-usage-trigger{display:inline-flex;align-items:center;gap:4px;appearance:none;background:0 0;border:none;cursor:pointer;padding:0 4px;font:inherit;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-usage-trigger:hover{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-stats{position:fixed;z-index:1200;min-width:200px;max-width:min(440px,calc(100vw - 24px));background:var(--tdt-surface-1,rgba(30,30,30,.98));border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));padding:12px;font-size:var(--tdt-font-sm);color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-stats-title{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.dsh-tdt-sv-stats-titlelabel{display:inline-flex;align-items:center;gap:6px;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-stats-titlevalue{font-variant-numeric:tabular-nums;}
-.dsh-tdt-sv-stats-rule{height:1px;background:var(--tdt-border,rgba(128,128,128,.35));margin:8px 0;}
-.dsh-tdt-sv-stats-details{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;}
-.dsh-tdt-sv-stats-details dt{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-stats-details dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;}
-.dsh-tdt-sv-stats-route{word-break:break-all;}
-.dsh-tdt-sv-stats-reasoning{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* ── 过程分组（二级收折，ChatGroupSeat.module.css 照抄：root/title/leading/activityIcon/chevron/label/body/content/fade） ── */
-.dsh-tdt-sv-group{min-width:0;}
-.dsh-tdt-sv-group-title{max-width:100%;color:var(--tdt-fg-2,rgba(128,128,128,.95));font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex;}
-.dsh-tdt-sv-group-title:hover{color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-group-leading{width:16px;height:16px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative;}
-.dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0;}
-.dsh-tdt-sv-group-icon{opacity:1;}
-.dsh-tdt-sv-group-chevron{opacity:0;}
-.dsh-tdt-sv-group-title:hover .dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-title:focus-visible .dsh-tdt-sv-group-icon{opacity:0;}
-.dsh-tdt-sv-group-title:hover .dsh-tdt-sv-group-chevron,.dsh-tdt-sv-group-title:focus-visible .dsh-tdt-sv-group-chevron{opacity:1;}
-.dsh-tdt-sv-group-title[aria-expanded=true] .dsh-tdt-sv-group-icon{opacity:0;}
-.dsh-tdt-sv-group-title[aria-expanded=true] .dsh-tdt-sv-group-chevron{opacity:1;}
-.dsh-tdt-sv-group-title[aria-expanded=true]{padding-bottom:16px;}
-.dsh-tdt-sv-group-body{--dsh-chat-flow-gap:8px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(400px,50vh);overflow-y:auto;}
-.dsh-tdt-sv-group-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
-.dsh-tdt-sv-group-fade-top{mask-image:linear-gradient(#0000 0,#000 24px 100%);}
-.dsh-tdt-sv-group-fade-bottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%);}
-.dsh-tdt-sv-group-fade-top.dsh-tdt-sv-group-fade-bottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%);}
-.dsh-tdt-sv-group-content{flex-direction:column;display:flex;}
-.dsh-tdt-sv-group-content>*{flex-shrink:0;}
-.dsh-tdt-sv-group-content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px);}
-.dsh-tdt-sv-group-expanded{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible;}
-/* U10 继续对话（开分支）：头部按钮组 + 确认框。确认框 = 官方 primitives Modal + Button
-   （portal 到 body，与本弹窗同 z-index 层、后挂载居上），此处只留头部钮规格与 Modal 内错误行。 */
-.dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
-/* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
-.dsh-tdt-sv-forkmodal{width:min(440px,100%);}
-/* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
-.dsh-tdt-sv-forkerr{margin:0;font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);color:var(--tdt-danger,#e5484d);word-break:break-word;}
-/* ── 重试/轮次失败/限长三件套兜底（官方 MessageItem.module.css 逐值照抄，官方类缺失时生效） ── */
-.dsh-tdt-sv-retry{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
-.dsh-tdt-sv-retry-summary{border-radius:var(--tdt-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
-.dsh-tdt-sv-retry-summary::-webkit-details-marker{display:none;}
-.dsh-tdt-sv-retry-summary:after{content:"";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg);}
-.dsh-tdt-sv-retry-summary:hover{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-retry-summary:focus-visible{outline:1.5px solid var(--tdt-focus);outline-offset:2px;}
-.dsh-tdt-sv-retry-text{color:inherit;}
-.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--tdt-fg-3,rgba(128,128,128,.8)) 0%,var(--tdt-fg-3,rgba(128,128,128,.8)) 40%,var(--tdt-fg-2,rgba(128,128,128,.95)) 50%,var(--tdt-fg-3,rgba(128,128,128,.8)) 60%,var(--tdt-fg-3,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
-@keyframes dsh-tdt-retry-shimmer{0%{background-position:100%}to{background-position:0}}
-@media (prefers-reduced-motion:reduce){.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{color:inherit;background:0 0;animation:none;}}
-.dsh-tdt-sv-retry[open] .dsh-tdt-sv-retry-summary:after{transform:rotate(45deg);}
-.dsh-tdt-sv-retry-details{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid;}
-.dsh-tdt-sv-retry-label{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-turnerr{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid;}
-.dsh-tdt-sv-turnerr-dot{margin-top:5px;}
-.dsh-tdt-sv-turnerr-copy{overflow-wrap:anywhere;min-width:0;}
-.dsh-tdt-sv-turnerr-title{color:var(--tdt-danger,#e5484d);margin-right:6px;font-weight:600;}
-.dsh-tdt-sv-turnerr-msg{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-turnerr-code{color:var(--tdt-fg-3,rgba(128,128,128,.8));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
-.dsh-tdt-sv-turnerr-warn{color:var(--tdt-warning,#f5a623);margin-right:6px;font-weight:600;}
-
-/* ── U11 产出物预览（决策 39）：页面级 dock 预览面（弹窗与整页共用，见上方 dock 规则） ──
-   旧「弹窗内右侧分栏」那两条规则已随第三轮上提删除（预览面唯一且页面级）。 */
-/* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
-   ⇒ 向右拖（缩小）时指针走进 PDF 就卡死（真机 2026-10-03）。拖动期间整片 iframe 让出指针事件。 */
-.dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
-/* 拖拽期把 dock 的布局/绘制**隔离**：改宽度不再牵动整页重排（dock 内常驻上万行高亮 DOM，
-   不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
-.dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
-.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
-.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-.dsh-tdt-sv-preview-label{flex:none;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* 路径 / 文件名：走全站唯一 MarqueeText（ui/MarqueeText.tsx），本类只提供**字体与字色皮肤**
-   （挂在 MarqueeText 外层、内层继承）；外层裁剪与滚动由 .dsh-tdt-mq 负责。 */
-.dsh-tdt-sv-preview-title-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
-/* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
-.dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
-.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-head-btn:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
-.dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
-.dsh-tdt-sv-preview-pdf{flex:1;border:none;}
-/* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
-.dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
-/* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
-   唯一滚动容器 = CodeViewer 内部 cm-scroller ⇒ 不再出现两条滚动条。 */
-.dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
-/* 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
-   拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
-.dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
-/* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
-/* 容器相对定位，供复制钮绝对定位于右上角。 */
-.dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
-/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方复制钮交互：仅图标、无中文文案、点击复制全文、
-   复制后短暂切勾选图标 + "已复制"提示，title/aria-label 承载本地化文案）。 */
-.dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
-.dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
-.dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-cm-copy svg{width:16px;height:16px;}
-.dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
-.dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
-.dsh-tdt-sv-cm-editor .cm-scroller{overflow:auto;}
-/* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
-.dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
-.dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
-.dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
-
-/* CodeMirror 外壳缺失兜底：代码面按容器宽度布局（ocOr 语义见上方说明）。 */
-.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
-/* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
-/* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
-   ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
-.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));white-space:nowrap;}
-.dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
-.dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
-.dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
-.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
-.dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
-.dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
-.dsh-tdt-sv-crumb-current:hover{background:0 0;}
-.dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
-/* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
-   MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
-   裁剪与滚动由 .dsh-tdt-mq 负责。 */
-.dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
-.dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
-/* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
-.dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
-.dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--tdt-surface-1);border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
-.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;border-radius:var(--tdt-radius-sm);color:var(--tdt-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* 第二排：文件名（跑马灯）+ 操作按钮。 */
-.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
-/* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
-.dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
-.dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;user-select:none;}
-.dsh-tdt-sv-tree-row:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-tree-row:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
-.dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
-.dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-/* 下拉选层：每行只显示一个右箭头（画在原第 index 位），行首 (index-1) 个箭头位
-   空出但占位（宽度与箭头一致），保持层级缩进（用户 2026-09-29）。 */
-.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));margin-right:1px;}
-.dsh-tdt-sv-crumbs-chev-slot{flex:none;width:11px;height:11px;margin-right:1px;}
-.dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-/* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
-.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--tdt-dur,.15s) var(--tdt-ease,ease),background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-tree-toggle:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
-/* 内联展开子层：左缩进 + 淡竖线引导层级。 */
-.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--tdt-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
-.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
-.dsh-tdt-sv-tree-err{color:var(--tdt-danger,#e5484d);}
-.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:var(--tdt-font-sm);line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));padding:8px 0;}
-/* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
-/* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
-.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:var(--tdt-font-sm);display:flex;}
-.dsh-tdt-sv-deliv-rowsummary>:first-child{flex-shrink:0;}
-.dsh-tdt-sv-deliv-rowpaths{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
-.dsh-tdt-sv-deliv-rowoutput{border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg-2);white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;padding:12px;font-size:var(--tdt-font-sm);}
-/* 交付文件卡网格（root 内含 container query：≤620px 单列）。 */
-.dsh-tdt-sv-deliv{--deliverable-fill:var(--tdt-plate);--deliverable-hover:var(--tdt-plate-hover);flex-direction:column;gap:16px;min-width:0;margin-top:4px;display:flex;container-type:inline-size;}
-.dsh-tdt-sv-deliv-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;display:grid;}
-.dsh-tdt-sv-deliv-grid[data-single=true]{grid-template-columns:minmax(0,1fr);}
-@container (width<=620px){.dsh-tdt-sv-deliv-grid{grid-template-columns:minmax(0,1fr);}}
-.dsh-tdt-sv-deliv-file{box-sizing:border-box;border:.5px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);background:var(--deliverable-fill);min-width:0;height:60px;color:var(--tdt-fg);align-items:center;gap:10px;padding:8px 10px;transition:background-color .12s;display:flex;position:relative;overflow:hidden;}
-.dsh-tdt-sv-deliv-file:hover{background:var(--deliverable-hover);}
-.dsh-tdt-sv-deliv-cardpreview{z-index:1;border-radius:inherit;cursor:pointer;background:0 0;border:0;width:100%;padding:0;position:absolute;inset:0;}
-.dsh-tdt-sv-deliv-cardpreview:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus);outline:none;}
-.dsh-tdt-sv-deliv-icon{z-index:2;box-sizing:border-box;pointer-events:none;border:.5px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);background:var(--tdt-icon-plate);width:40px;height:40px;color:var(--tdt-link);flex:none;place-items:center;display:grid;position:relative;overflow:hidden;}
-.dsh-tdt-sv-deliv-body{z-index:2;pointer-events:none;flex:1;justify-content:space-between;align-items:center;gap:12px;min-width:0;display:flex;position:relative;}
-.dsh-tdt-sv-deliv-details{flex-direction:column;flex:1;justify-content:center;gap:2px;min-width:0;display:flex;}
-.dsh-tdt-sv-deliv-name{text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);overflow:hidden;}
-.dsh-tdt-sv-deliv-desc{color:var(--tdt-fg-3,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-xs);font-weight:400;line-height:var(--tdt-line-sm);overflow:hidden;}
-.dsh-tdt-sv-deliv-hint,.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-secondary{display:none;}
-.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-hint{display:inline;}
-.dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
-.dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
-.dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
-/* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
-   官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
-   ① **左右 0（tfc 不自带）**：左 / 右留白**全交给外层 frame 的 34px**（frame 给的左右留白同时作用于
-      顶部输入区与会话正文 ⇒ 两者天然同一条左右基线）。tfc 自己**不再写左右 padding**——否则会在
-      frame 34 之上再叠 34，导致顶部「附件 / 前置任务」区比下面的会话正文往里缩一截
-      （用户 2026-10-03 二次指出：「左右又缩进去了，要和下面宽度一致」正是此因）。
-      **上 0 / 下 18**：顶部 / 底部留白同样交给 frame（frame 上下 17 对称，见上方 frame 规则）。
-   ② **横向排 + 按内容宽**（用户三次点名定稿）：flex-wrap:wrap 从左到右、排满换行；
-      chip flex:0 0 auto **跟内容走**（参照宿主「附加文件」列表的样子：每个文件名就那么宽、
-      不拖一条空白），**不设最小宽度**（「a.txt」就只显示 a.txt），只给 label 一个
-      max-width:40ch 上限 ⇒ 除非几百个字符，否则名字都完整显示。
-   ③ **显示不全的文件名一律跑马灯**（用户「鼠标一上去都要跑马灯」）：走全站唯一实现
-      MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
-   ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
-      每块 = 任务名一行 + 产出物**同样横向排**；任务名行**最前 = 序号徽标**
-      （**宽高相等的正方形**小方块 + 9px 数字，按显示顺序 1、2、3…）——
-      它已**顶替**原先那条 4px 竖线的作用（用户 2026-10-03：「序号前面的竖线不要了，
-      直接把序号变成竖线的样子，高度和宽度差不多」）。
-      ⚠️ 历史上先后试过两种竖线：① 块前横跨两行的 3px 浅灰线、② 任务名前 4px 短线，**均已去掉**。
-   ④b **来源 / 状态标记改方括号前置**（用户 2026-10-03）：形状是 [链接]foo.md ——
-      原来挂最右边、被 flex 撑开，越看越像按钮；现在紧贴文件名前面、无间距。
-   ⑤ **不再自带滚动**（用户 2026-10-03：「上面那个还单独做了一个滚动条呀……整个右边就一个滚动条，
-      跟着往下面走就行」）：顶部区已搬进 column 内、与会话内容**同一个滚动容器**，
-      原 max-height:min(38vh,340px) + overflow-y:auto 全部去掉 ⇒ 全弹窗只有右侧一个滚动条。
-   ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
-/* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
-.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:0 0 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
-/* 顶部输入区现在住在 column 里（与会话内容同一个滚动容器）⇒ column 的兄弟间距规则
-   会给「紧跟它之后的第一条消息」再加一道 margin-top，而它自己已有 padding-bottom ⇒ 多出一截。
-   这里把那一道抵消掉（写在 flow-item 间距规则之后，官方类命中与否都要生效）。 */
-.dsh-tdt-sv-col>.dsh-tdt-sv-tfc~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:0;}
-.dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
-.dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
-/* 组标题比内容**高一档**（12px/600/fg-2）⇒ 不靠颜色也分得出层级：标题 > 任务名 > 芯片 > 元信息。 */
-.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:600;line-height:var(--tdt-line-sm);white-space:nowrap;}
-/* 前置任务块 —— 一排两个（窄容器降一列，见下方 @container）。 */
-.dsh-tdt-sv-tfc-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;min-width:0;}
-@container (width<=620px){.dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr);}}
-/* 任务块：块前那条横跨「任务名 + 产出物」两行的浅灰竖线、以及任务名前的 4px 短竖线
-   **都已去掉**（用户 2026-10-03 逐轮否定 ⇒ 最终只留正方形序号徽标，见 .dsh-tdt-sv-tfc-seq）。
-   随之去掉 padding-left：任务名直接回到面板 34px 左基线，不再多缩进 10px。 */
-.dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
-.dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
-/* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
-.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
-.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:0 1 auto;}
-.dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
-/* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
-   ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
-.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
-/* chip 宽度**跟内容走**（用户 2026-10-03 二次点名，参照宿主「附加文件」列表的样子：
-   「4000_Essential_….pdf」就那么宽，不该每个后面都拖一条空白）。
-   ⇒ flex:0 0 auto（不 grow、不平分）；**不设最小宽度**（一个叫 a.txt 的就只显示 a.txt）；
-   唯一约束是 label 的 max-width（见下）：超长才出省略号。 */
-.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
-button.dsh-tdt-sv-tfc-file{cursor:pointer;}
-button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
-button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
-/* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
-.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
-.dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
-/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层）。
-   这里给它**唯一的长度约束**：**无最小宽度**（用户 2026-10-03：「只有一个字 a.txt 就只显示 a.txt」），
-   **最大 40ch** —— 放宽到「只要不是几百个字符都让它显示」，超出才出省略号 + hover 来回滚动。
-   与主界面「基础信息 · 附加文件」同名（task-list.tsx）**同一口径**。
-   ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
-.dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
-/* 前置任务序号徽标（用户 2026-10-03 四次点名定稿）：**顶替原来那条 4px 竖线**，
-   宽高**相等**的方块，字号**直接取 var(--tdt-font-sm)** —— 与主界面「基础信息」面板
-   底部「前置任务」那一行的正文**同一个字号变量**（用户原话：「大小太小了，样式参考主界面
-   任务列表展开的基础信息最下面那个前置任务，按那儿的样式大小就行」）。
-   方块 16px 容纳 12px 数字 + 一点余量；底色 chip-bg（非纯白、比 plate 亮一档），字色 fg-2。
-   align-self:center 让它在 baseline 行里垂直居中，不贴文字基线。 */
-.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:16px;height:16px;padding:0;border-radius:4px;background:var(--tdt-chip-bg,rgba(128,128,128,.12));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);line-height:1;font-variant-numeric:tabular-nums;}
-/* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**
-   （用户给的形状就是 [链接]foo.md，中间没有空格）。 */
-.dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
-/* 来源 / 状态标记：方括号**放在文件名前面**（用户 2026-10-03：原来挂最右边、
-   被 flex 撑开，越看越像按钮）。与文件名同字号，只靠颜色弱化。 */
-.dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
-.dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
-.dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg-2);}
-.dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
-/* 用户消息里的随附文件卡（官方 MessageItem attachmentRow / fileCard；2026-10-03）：
-   气泡**下方**一行，小卡 = 图标 + 文件名 + 大小。引用里没有路径 ⇒ 不可点开，也不伪装成可点。 */
-.dsh-tdt-sv-attrow{flex-wrap:wrap;gap:6px;min-width:0;justify-content:flex-end;display:flex;}
-.dsh-tdt-sv-attcard{box-sizing:border-box;border:.5px solid var(--tdt-border-faint,#0000000a);border-radius:var(--tdt-radius-md);background:var(--tdt-plate,rgba(128,128,128,.08));max-width:100%;height:44px;align-items:center;gap:8px;padding:6px 10px;display:flex;}
-.dsh-tdt-sv-attIcon{width:16px;height:16px;color:var(--tdt-link,#3b5bdb);flex:none;align-items:center;justify-content:center;display:inline-flex;}
-.dsh-tdt-sv-attBody{flex-direction:column;gap:1px;min-width:0;display:flex;}
-.dsh-tdt-sv-attName{color:var(--tdt-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);overflow:hidden;}
-.dsh-tdt-sv-attMeta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+		//#region src/client/ui/running.ts
+		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
+		const RUNNING_TONE = "var(--tdt-business)";
+		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
+		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
+		const RUNNING_CSS = `
+@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite; }
+@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
 `;
-		/**
-		* 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
-		*/
-		function ensureArchiveSessionStyle() {
-			applyStyle("domain:session-view", ARCHIVE_SESSION_CSS);
-		}
-		//#endregion
-		//#region src/client/task-info-css.ts
-		/** 本皮肤所属的样式域（`ui/style.ts` 的域清单里登记）。 */
-		const TASK_INFO_DOMAIN = "domain:task-info";
-		const TASK_INFO_CSS = [
-			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
-			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
-			".dsh-tdt-info-dep { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; padding: 0; font: inherit; font-size: var(--tdt-font-sm); color: var(--tdt-fg); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-width: 0; text-align: left; transition: color var(--tdt-dur) var(--tdt-ease); }",
-			".dsh-tdt-info-dep:hover { color: var(--tdt-business); }",
-			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
-			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); line-height: var(--tdt-line-md); }",
-			".dsh-tdt-info-label { padding-right: 12px; }",
-			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
-			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
-			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
-			".dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }",
-			"@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }",
-			".dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }",
-			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }"
-		].join("\n");
-		/** 幂等注入（走 ui/style.ts 单一 <style>）。卡片展开区与查看档渲染前都调用它。 */
-		function ensureTaskInfoStyle() {
-			applyStyle(TASK_INFO_DOMAIN, TASK_INFO_CSS);
-		}
-		//#endregion
-		//#region src/client/official-classes.ts
-		/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡 + ui-deliverables）。 */
-		const CSS_PKG_PREFIXES = [
-			"@deepseek-ai/dsh-client-ui-chat/",
-			"@deepseek-ai/dsh-client-ui-tool/",
-			"@deepseek-ai/dsh-client-ui-deliverables/",
-			"@deepseek-ai/dsh-client-ui-sidebar-documentpreview/"
-		];
-		let discovered = null;
-		/**
-		* 解析一段官方 CSS module 文本，抽出 {语义名 → 真实类名}。
-		* 纯函数、无 DOM 依赖（冒烟可直接对夹具断言）。
-		* @param css - style 标签的 textContent。
-		* @returns 语义名到真实类名的映射；解析不出哈希前缀时为空表。
-		*/
-		function parseOfficialCss(css) {
-			const out = /* @__PURE__ */ new Map();
-			const tokens = [];
-			const tokenRe = /\.([A-Za-z0-9_-]+)/g;
-			let m = tokenRe.exec(css);
-			while (m !== null) {
-				tokens.push(m[1]);
-				m = tokenRe.exec(css);
-			}
-			const counts = /* @__PURE__ */ new Map();
-			for (const token of tokens) {
-				const at = token.lastIndexOf("_");
-				if (at <= 0 || at === token.length - 1) continue;
-				const prefix = token.slice(0, at);
-				counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
-			}
-			let prefix = "";
-			let best = 0;
-			counts.forEach((count, key) => {
-				if (count > best) {
-					best = count;
-					prefix = key;
-				}
-			});
-			if (prefix === "") return out;
-			for (const token of tokens) {
-				if (!token.startsWith(prefix + "_")) continue;
-				const semantic = token.slice(prefix.length + 1);
-				if (semantic === "" || semantic.includes("_")) continue;
-				if (!out.has(semantic)) out.set(semantic, token);
-			}
-			return out;
-		}
-		/**
-		* 扫描 document 里官方 chat 包注入的 style 标签，按模块缓存解析结果。
-		* 无 document（SSR / 冒烟）时返回空表。
-		*/
-		function discoverOfficialClasses() {
-			if (discovered !== null) return discovered;
-			const result = /* @__PURE__ */ new Map();
-			if (typeof document !== "undefined") {
-				const tags = document.querySelectorAll("style[data-plugin-css]");
-				for (let i = 0; i < tags.length; i++) {
-					const tag = tags[i];
-					const id = tag.dataset.pluginCss ?? "";
-					const prefix = CSS_PKG_PREFIXES.find((candidate) => id.startsWith(candidate));
-					if (prefix === void 0) continue;
-					const module = id.slice(prefix.length).replace(/\.module\.css$/, "");
-					const parsed = parseOfficialCss(tag.textContent ?? "");
-					if (parsed.size === 0 && (tag.textContent ?? "").includes(".")) console.warn(`[task-dispatch:official-classes] 官方模块 ${module} 类名解析为空（格式可能变了）`);
-					result.set(module, parsed);
-				}
-			}
-			if (result.size > 0) discovered = result;
-			return result;
-		}
-		/** 已发现的官方模块数（0 = 官方样式未注入，调用方应走自绘兜底）。 */
-		function officialModuleCount() {
-			return discoverOfficialClasses().size;
-		}
-		/**
-		* 取一个官方类名；取不到返回 null（调用方回退自绘样式）。
-		* @param module - 模块名（如 `ChatView`）。
-		* @param semantic - 语义名（如 `frame`）。
-		*/
-		function officialClass(module, semantic) {
-			return discoverOfficialClasses().get(module)?.get(semantic) ?? null;
-		}
-		/** className 拼接：官方类优先，缺失时回退自绘类（两者只取其一，避免样式打架）。 */
-		function ocOr(module, semantic, fallback) {
-			return officialClass(module, semantic) ?? fallback;
-		}
-		//#endregion
-		//#region src/client/mirror/ChatNodeSeat.tsx
-		/**
-		* 官方 TURN_PROCESS_INDEPENDENT_KINDS（lib/client.js:1525）：这些 kind 永远不进过程折叠区。
-		*/
-		const TURN_PROCESS_INDEPENDENT_KINDS = /* @__PURE__ */ new Set([
-			"system-prompt",
-			"user",
-			"steering",
-			"turn-trigger",
-			"turn-process",
-			"turn-error",
-			"turn-max-tokens",
-			"turn-tail"
-		]);
-		/**
-		* 读过程席位快照。宿主 API 形态变了也只降级成「不折叠」，不让整个弹窗白屏。
-		*/
-		function readPresentation(store, key) {
-			if (store === void 0) return void 0;
-			try {
-				const source = store.processSource;
-				if (typeof source !== "function") return void 0;
-				return source.call(store, key)?.getSnapshot();
-			} catch {
-				return;
-			}
-		}
-		/** 取节点所属 turn（官方 turnOf，ChatNodeSeat.tsx:1660）。 */
-		function turnOf(node) {
-			const location = node?.location;
-			return location?.kind === "turn" || location?.kind === "step" ? location.turn?.turn : void 0;
-		}
-		/** 官方 turnProcessAlwaysOpen（lib/client.js:1558）：live / 已停止 / 失败的 turn 不折叠。 */
-		function turnProcessAlwaysOpen(node) {
-			const location = node?.location;
-			if (location?.kind !== "turn" && location?.kind !== "step") return false;
-			const reason = location.turn?.end?.data?.reason?.kind;
-			return location.turn?.status === "open" || reason === "aborted" || reason === "error";
-		}
-		/** 一个 keyed 节点 → 一个 flowItem（官方 ChatNodeSeat 的 JSX 等价物）。 */
-		function ChatNodeSeatMirror(props) {
-			const { node, groupPart, store, openState, onSetOpen, foldCompleted, renderNode } = props;
-			const turn = turnOf(node);
-			const presentation = readPresentation(store, node.key);
-			const spec = presentation?.spec ?? void 0 ?? (node.kind === "turn-process" ? node.data : void 0);
-			const liveProcess = presentation !== void 0 && presentation.turnClosed !== true;
-			const interleavedInput = presentation?.hasInterleavedInput === true;
-			const alwaysOpen = liveProcess || interleavedInput || turnProcessAlwaysOpen(node);
-			const storedAnswerStep = turn === void 0 ? void 0 : openState.get(turn);
-			const processOpen = alwaysOpen || spec !== void 0 && storedAnswerStep === (spec.answerStep ?? 0);
-			const setOpen = (open) => {
-				if (spec !== void 0 && !alwaysOpen && turn !== void 0) onSetOpen(turn, spec.answerStep ?? 0, open);
-			};
-			const processWindowReady = spec !== void 0 && presentation !== void 0 && foldCompleted && presentation.turn === spec.turn && (presentation.turnStarted === true || presentation.turnClosed === true);
-			const dataStep = typeof node.data?.step === "number" ? node.data.step : void 0;
-			const processMember = processWindowReady && spec !== void 0 && !TURN_PROCESS_INDEPENDENT_KINDS.has(node.kind) && node.anchorSeq >= spec.processStartSeq && (liveProcess || spec.answerAnchorSeq === null || node.anchorSeq < spec.answerAnchorSeq || groupPart === "reasoning" && node.kind === "assistant-step" && dataStep === spec.answerStep);
-			const processAnswer = processWindowReady && spec !== void 0 && !liveProcess && groupPart !== "reasoning" && node.kind === "assistant-step" && dataStep === spec.answerStep;
-			const ownsDisclosure = node.kind === "turn-process" || processAnswer;
-			const foldable = processWindowReady && (liveProcess || processMember || ownsDisclosure);
-			const turnProcess = spec === void 0 ? void 0 : {
-				spec,
-				foldable,
-				hasContent: !interleavedInput && (presentation?.hasExternalProcess === true || spec.inlineReasoning),
-				open: processOpen,
-				alwaysOpen,
-				setOpen
-			};
-			const controllerInactive = node.kind === "turn-process" && foldCompleted && !foldable;
-			const compactAnswer = processAnswer && foldable && presentation?.compactAnswer === true && !processOpen;
-			const processHidden = controllerInactive || foldable && processMember && !processOpen;
-			const inner = renderNode(node, turnProcess, groupPart);
-			if (inner === null || inner === void 0) return null;
-			const flowKey = groupPart === void 0 || groupPart === "response" ? node.key : JSON.stringify([node.key, groupPart]);
-			return (0, react$1.createElement)("div", {
-				className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem"),
-				"data-chat-anchor-key": flowKey,
-				"data-chat-flow-key": flowKey,
-				"data-chat-paging-anchor": node.kind !== "turn-process" || void 0,
-				"data-chat-node-key": node.key,
-				"data-chat-group-part": groupPart,
-				"data-chat-flow-kind": node.kind,
-				"data-chat-turn": turn,
-				"data-turn-process-member": processMember || void 0,
-				"data-turn-process-hidden": processHidden || void 0,
-				"data-turn-process-answer": compactAnswer || void 0,
-				hidden: processHidden || void 0
-			}, inner);
-		}
-		//#endregion
-		//#region src/client/mirror/process-groups.ts
-		/** 官方 INDEPENDENT（process-groups.js:10565；注意与 ChatNodeSeat 的清单不同）。 */
-		const INDEPENDENT = /* @__PURE__ */ new Set([
-			"user",
-			"steering",
-			"turn-trigger",
-			"model-retry",
-			"turn-error",
-			"turn-max-tokens",
-			"turn-tail"
-		]);
-		/** 节点所属 turn（官方 turnOf，process-groups.js:10574）。 */
-		function turnOfNode(node) {
-			const location = node.location;
-			return location?.kind === "turn" || location?.kind === "step" ? location.turn?.turn : void 0;
-		}
-		/** 官方 reasoning（10578）：assistant-step 带非空思考块。 */
-		function hasReasoning(node) {
-			if (node.kind !== "assistant-step" || !Array.isArray(node.data?.blocks)) return false;
-			return (node.data?.blocks).some((block) => block?.kind === "reasoning" && (block.text ?? "").trim() !== "");
-		}
-		/** 官方 reply（10581）：assistant-step 带回复内容（reasoning / tool-call 不算，空文本不算）。 */
-		function hasReply(node) {
-			if (node.kind !== "assistant-step" || !Array.isArray(node.data?.blocks)) return false;
-			return (node.data?.blocks).some((block) => {
-				if (block === null || typeof block !== "object") return false;
-				if (block.kind === "reasoning" || block.kind === "tool-call") return false;
-				if (block.kind === "text") return (block.text ?? "").trim() !== "";
-				return true;
-			});
-		}
-		/** 官方 activity（10426-10449）：工具名 → 活动类别。 */
-		function toolActivity(name) {
-			if (name === "read") return "read";
-			if (name === "read_image") return "readImage";
-			if (name === "grep" || name === "glob" || name.endsWith("_inspect")) return "search";
-			if (name === "write") return "write";
-			if (name === "edit" || name === "apply_patch") return "edit";
-			if ([
-				"bash",
-				"pwsh",
-				"exec_command",
-				"write_stdin"
-			].includes(name) || name.startsWith("terminal_")) return "commands";
-			if (name === "run_code") return "code";
-			if (name === "web_search") return "webSearch";
-			if (name === "web_fetch") return "webFetch";
-			if (name === "subagent" || name.startsWith("subagent_")) return "subagents";
-			if ([
-				"todo_write",
-				"create_goal",
-				"update_goal",
-				"get_goal"
-			].includes(name)) return "plan";
-			if (name === "ask_user_question" || name === "request_user_input") return "questions";
-			return "tools";
-		}
-		/** ToolCallBlock → 本次调用的名字面（running 半截在根上，settled 在 call 里）。 */
-		function toolCallFace(root) {
-			const callId = typeof root.callId === "string" ? root.callId : "";
-			if (root.kind === "tool-result") {
-				const name = typeof root.call?.name === "string" ? root.call.name : "";
-				return callId === "" || name === "" ? null : {
-					callId,
-					name
-				};
-			}
-			const name = typeof root.name === "string" ? root.name : "";
-			return callId === "" || name === "" ? null : {
-				callId,
-				name
-			};
-		}
-		/** 官方 processActivity（10527-10561）：按去重调用数排序的活动类别（含子调用递归）。 */
-		function processActivity(nodes) {
-			const counts = /* @__PURE__ */ new Map();
-			const seen = /* @__PURE__ */ new Set();
-			const visit = (tool) => {
-				const face = toolCallFace(tool);
-				if (face !== null && !seen.has(face.callId)) {
-					seen.add(face.callId);
-					const kind = toolActivity(face.name);
-					counts.set(kind, (counts.get(kind) ?? 0) + 1);
-				}
-				for (const child of tool.subCalls ?? []) visit(child);
-			};
-			for (const node of nodes) {
-				if (node.kind !== "tool-call") continue;
-				const root = node.data?.root;
-				if (root !== void 0 && root !== null) visit(root);
-			}
-			return [...counts].map(([kind, count]) => ({
-				kind,
-				count
-			})).sort((left, right) => right.count - left.count);
-		}
-		/**
-		* 官方 TurnGroups.rebuild 的移植：把 keyed 流切成「独立条目 + 过程分组」。
-		* @param order - 官方渲染顺序（node key 列表）。
-		* @param readNode - keyed 节点读取。
-		* @param isTurnClosed - turn 是否已闭合（官方 turns.get(turn).status === 'closed'）。
-		*/
-		function buildProcessGroups(order, readNode, isTurnClosed) {
-			const entries = [];
-			const groups = /* @__PURE__ */ new Map();
-			let pending = [];
-			let currentTurn;
-			const flush = (closed) => {
-				const first = pending[0];
-				if (first === void 0) return;
-				const turn = currentTurn;
-				const ended = closed || turn !== void 0 && isTurnClosed(turn);
-				const members = pending;
-				const nodes = members.map((member) => readNode(member.key)).filter((node) => node !== void 0);
-				const groupKey = JSON.stringify([
-					"process",
-					first.key,
-					first.groupPart ?? null
-				]);
-				groups.set(groupKey, {
-					key: groupKey,
-					members,
-					data: {
-						turn: turn ?? -1,
-						closed: ended,
-						summary: { counts: processActivity(nodes) }
-					}
-				});
-				entries.push({
-					kind: "group",
-					key: groupKey
-				});
-				pending = [];
-			};
-			for (const key of order) {
-				const node = readNode(key);
-				if (node === void 0) continue;
-				const turn = turnOfNode(node);
-				if (turn !== currentTurn) {
-					flush(true);
-					currentTurn = turn;
-				}
-				if (INDEPENDENT.has(node.kind)) {
-					flush(true);
-					entries.push({
-						kind: "node",
-						key
-					});
-				} else if (node.kind === "turn-process") entries.push({
-					kind: "node",
-					key
-				});
-				else if (node.kind === "assistant-step") {
-					if (hasReasoning(node)) pending.push({
-						key,
-						groupPart: "reasoning"
-					});
-					if (hasReply(node)) {
-						flush(true);
-						entries.push({
-							kind: "node",
-							key,
-							groupPart: "response"
-						});
-					}
-				} else pending.push({ key });
-			}
-			flush(currentTurn === void 0 ? true : isTurnClosed(currentTurn));
-			return {
-				entries,
-				groups
-			};
-		}
-		/** 官方 message.stepProcess.done.* 的键面（zh/en 文案见 locales.ts）。 */
-		const STEP_DONE_KEYS = {
-			thinking: "stepProcessDoneThinking",
-			read: "stepProcessDoneRead",
-			readImage: "stepProcessDoneReadImage",
-			write: "stepProcessDoneWrite",
-			search: "stepProcessDoneSearch",
-			edit: "stepProcessDoneEdit",
-			commands: "stepProcessDoneCommands",
-			code: "stepProcessDoneCode",
-			webSearch: "stepProcessDoneWebSearch",
-			webFetch: "stepProcessDoneWebFetch",
-			subagents: "stepProcessDoneSubagents",
-			plan: "stepProcessDonePlan",
-			questions: "stepProcessDoneQuestions",
-			tools: "stepProcessDoneTools"
+		let ensured = false;
+		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
+		const ensureRunningStyle = () => {
+			if (ensured) return;
+			ensured = true;
+			applyStyle("domain:running", RUNNING_CSS);
 		};
-		/**
-		* 官方 processTitle（1820-1836）：closed 组标题 = 前 3 类活动拼接
-		* （2 类用「A并B」且去「已」前缀；≥3 类用「，」连接、超 3 类补「等」）。
-		*/
-		function processTitle(summary, t) {
-			const labels = summary.counts.slice(0, 3).map(({ kind }) => t(STEP_DONE_KEYS[kind]));
-			const first = labels[0];
-			if (first === void 0) return t("stepProcessDoneThinking");
-			const continuation = (label) => label.charAt(0).toLowerCase() + label.slice(1);
-			const second = labels[1];
-			if (second === void 0) return first;
-			if (labels.length === 2) {
-				const prefix = t("stepProcessSharedPrefix");
-				return t("stepProcessJoinTwo", {
-					first,
-					second: continuation(prefix !== "" && first.startsWith(prefix) && second.startsWith(prefix) ? second.slice(prefix.length) : second)
-				});
-			}
-			const title = [first, ...labels.slice(1).map(continuation)].join(t("stepProcessComma"));
-			return summary.counts.length > 3 ? t("stepProcessMore", { title }) : title;
-		}
-		//#endregion
-		//#region src/client/mirror/ChatGroupSeat.tsx
-		/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）；工具行图标同源（edit/write=铅笔、generic=sparkle）。 */
-		const PROCESS_ICONS = {
-			thinking: _deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular,
-			read: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
-			readImage: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
-			search: _deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular,
-			edit: _deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular,
-			write: _deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular,
-			commands: _deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular,
-			code: _deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular,
-			webSearch: _deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular,
-			webFetch: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
-			subagents: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
-			plan: _deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular,
-			questions: _deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular,
-			tools: _deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular
-		};
-		/** 官方图标尺寸（14px，除 thinking/commands/webSearch/plan/questions 用默认）。 */
-		const SMALL_ICONS = /* @__PURE__ */ new Set([
-			"read",
-			"readImage",
-			"search",
-			"edit",
-			"write",
-			"code",
-			"webFetch",
-			"subagents",
-			"tools"
-		]);
-		/** 过程分组（二级收折）：汇总行 + 组内条目。 */
-		function ChatGroupSeatMirror(props) {
-			const { group, grouped, store, openState, onSetOpen, foldCompleted, renderNode, t } = props;
-			const [open, setOpen] = (0, react$1.useState)(false);
-			const first = group.members[0];
-			const firstNode = first === void 0 ? void 0 : store?.get(first.key);
-			const presentation = first === void 0 ? void 0 : readPresentation(store, first.key);
-			const spec = presentation?.spec ?? void 0;
-			const location = firstNode?.location;
-			const reason = location?.kind === "turn" || location?.kind === "step" ? location.turn?.end?.data?.reason?.kind : void 0;
-			const alwaysOpen = presentation?.turnClosed === false || presentation?.hasInterleavedInput === true || reason === "aborted" || reason === "error";
-			const storedAnswerStep = openState.get(group.data.turn);
-			const outerHidden = foldCompleted && presentation?.turnClosed === true && spec !== void 0 && !alwaysOpen && storedAnswerStep !== (spec.answerStep ?? 0);
-			(0, react$1.useEffect)(() => {
-				if (outerHidden) setOpen(false);
-			}, [outerHidden]);
-			const bodyRef = (0, react$1.useRef)(null);
-			const [edges, setEdges] = (0, react$1.useState)({
-				up: false,
-				down: false
-			});
-			const measure = (0, react$1.useCallback)(() => {
-				const el = bodyRef.current;
-				if (el === null) return;
-				setEdges({
-					up: el.scrollTop > 1,
-					down: el.scrollTop + el.clientHeight < el.scrollHeight - 1
-				});
-			}, []);
-			(0, react$1.useEffect)(() => {
-				if (grouped && open) measure();
-			}, [
-				grouped,
-				open,
-				measure
-			]);
-			if (first === void 0 || firstNode === void 0) return null;
-			const label = group.data.closed ? processTitle(group.data.summary, t) : t("stepProcessDoneThinking");
-			const activity = group.data.summary.counts[0]?.kind ?? "thinking";
-			const ActivityIcon = PROCESS_ICONS[activity] ?? _deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular;
-			const bodyClass = [
-				ocOr("ChatGroupSeat", "body", "dsh-tdt-sv-group-body"),
-				grouped ? "" : ocOr("ChatGroupSeat", "expandedBody", "dsh-tdt-sv-group-expanded"),
-				grouped && edges.up ? ocOr("ChatGroupSeat", "fadeTop", "dsh-tdt-sv-group-fade-top") : "",
-				grouped && edges.down ? ocOr("ChatGroupSeat", "fadeBottom", "dsh-tdt-sv-group-fade-bottom") : ""
-			].filter((part) => part !== "").join(" ");
-			return (0, react$1.createElement)("div", {
-				className: ocOr("ChatGroupSeat", "root", "dsh-tdt-sv-group"),
-				"data-chat-group-key": group.key,
-				"data-chat-flow-key": group.key,
-				"data-chat-anchor-key": `group:${group.key}`,
-				"data-chat-turn": group.data.turn,
-				"data-step-process": true,
-				"data-group-expanded-mode": !grouped || void 0,
-				hidden: outerHidden || void 0
-			}, grouped ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: ocOr("ChatGroupSeat", "title", "dsh-tdt-sv-group-title"),
-				"aria-expanded": open,
-				onClick: () => {
-					setOpen((value) => !value);
-				}
-			}, (0, react$1.createElement)("span", {
-				className: ocOr("ChatGroupSeat", "leading", "dsh-tdt-sv-group-leading"),
-				"aria-hidden": true
-			}, (0, react$1.createElement)("span", {
-				className: ocOr("ChatGroupSeat", "activityIcon", "dsh-tdt-sv-group-icon"),
-				"data-step-process-icon": true
-			}, (0, react$1.createElement)(ActivityIcon, SMALL_ICONS.has(activity) ? { size: 14 } : {})), open ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { className: ocOr("ChatGroupSeat", "chevron", "dsh-tdt-sv-group-chevron") }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: ocOr("ChatGroupSeat", "chevron", "dsh-tdt-sv-group-chevron") })), (0, react$1.createElement)("span", { className: ocOr("ChatGroupSeat", "label", "dsh-tdt-sv-group-label") }, label)) : null, (0, react$1.createElement)("div", {
-				ref: bodyRef,
-				className: bodyClass,
-				"data-step-process-body": true,
-				"data-scroll-up": edges.up || void 0,
-				"data-scroll-down": edges.down || void 0,
-				onScroll: measure,
-				hidden: grouped && !open || void 0
-			}, (0, react$1.createElement)("div", {
-				className: ocOr("ChatGroupSeat", "content", "dsh-tdt-sv-group-content"),
-				"data-step-process-content": true,
-				"data-chat-flow": ""
-			}, group.members.map((member) => (0, react$1.createElement)(ChatNodeSeatMirror, {
-				key: JSON.stringify([member.key, member.groupPart ?? null]),
-				node: store?.get(member.key) ?? {
-					key: member.key,
-					kind: "",
-					anchorSeq: 0
-				},
-				groupPart: member.groupPart,
-				store,
-				openState,
-				onSetOpen,
-				foldCompleted,
-				renderNode
-			})))));
-		}
-		//#endregion
-		//#region src/client/mirror/ChatView.tsx
-		/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。
-		*
-		*  `dsh-tdt-sv-frame` / `dsh-tdt-sv-scroll` = 本插件**稳定钩子类**（不参与 ocOr，官方类命中时也挂）：
-		* 会话区**纵向间距的唯一真源**。官方 scroll 自带纵向 16px、官方 frame 的纵向值又不确定，两者叠加
-		* 只能在「官方命中」这一条路径上凑对；官方类缺失时 `.dsh-tdt-sv-body` 的 padding 会**盖掉** frame
-		* 的补足（同一元素、body 在 CSS 里靠后 ⇒ 覆盖），纵向从 34px 塌成 16px、比顶部区少 18px。
-		* ⇒ 归一方案（2026-10-03）：**scroll 钩子把官方纵向 16px 归零，frame 钩子独自定 34/16**，
-		* 两条钩子都用双类名提高特异性压过官方 CSS module（0,2,0 > 0,1,0），不再依赖注入顺序。
-		*/
-		function ChatViewFrame(props) {
-			return (0, react$1.createElement)("div", { className: `${ocOr("ChatView", "frame", "dsh-tdt-sv-body")} dsh-tdt-sv-frame dsh-tdt-sv-chat` }, (0, react$1.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react$1.createElement)("div", { className: `${ocOr("ChatView", "scroll", "")} dsh-tdt-sv-scroll` }, (0, react$1.createElement)("div", {
-				className: ocOr("ChatView", "column", "dsh-tdt-sv-col"),
-				"data-chat-flow": ""
-			}, props.children))));
-		}
-		/** 官方 ChatNodeList：order → seat 列表（grouped 视图未实现 ⇒ 走官方 order 兜底分支）。 */
-		function ChatNodeListMirror(props) {
-			const { order, store, entries, groups, turns, openState, onSetOpen, foldCompleted, renderNode, t } = props;
-			const rows = [];
-			const read = store === void 0 ? void 0 : store.get;
-			if (typeof read !== "function" || store === void 0) return rows;
-			const readSafe = (key) => {
-				try {
-					return read.call(store, key);
-				} catch {
-					return;
-				}
-			};
-			if (entries !== void 0 && groups !== void 0) {
-				for (const entry of entries) if (entry.kind === "group") {
-					const group = groups.get(entry.key);
-					if (group === void 0) continue;
-					rows.push((0, react$1.createElement)(ChatGroupSeatMirror, {
-						key: entry.key,
-						group,
-						grouped: turnStatus(turns, group.data.turn) !== "open",
-						store,
-						openState,
-						onSetOpen,
-						foldCompleted,
-						renderNode,
-						t
-					}));
-				} else {
-					const node = readSafe(entry.key);
-					if (node === void 0) continue;
-					rows.push((0, react$1.createElement)(ChatNodeSeatMirror, {
-						key: JSON.stringify([entry.key, entry.groupPart ?? null]),
-						node,
-						groupPart: entry.groupPart,
-						store,
-						openState,
-						onSetOpen,
-						foldCompleted,
-						renderNode
-					}));
-				}
-				return rows;
-			}
-			for (const key of order) {
-				const node = readSafe(key);
-				if (node === void 0) continue;
-				rows.push((0, react$1.createElement)(ChatNodeSeatMirror, {
-					key,
-					node,
-					store,
-					openState,
-					onSetOpen,
-					foldCompleted,
-					renderNode
-				}));
-			}
-			return rows;
-		}
-		/** turn 状态（官方 turns.get(turn)?.status）。 */
-		function turnStatus(turns, turn) {
-			return (turns?.get(turn) ?? turns?.get(String(turn)))?.status;
-		}
-		/** 加载 / 空态提示行（13px tertiary）。 */
-		function ChatHint(props) {
-			return (0, react$1.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, props.text);
-		}
-		/** 「加载更早记录」按钮（官方 older：按钮 4px 12px / 12px 字号 / radius-sm / 底色 interactive-bg-hover-solid）。 */
-		function ChatOlderButton(props) {
-			return (0, react$1.createElement)("div", { className: ocOr("ChatView", "older", "dsh-tdt-sv-older") }, (0, react$1.createElement)("button", {
-				type: "button",
-				onClick: props.onClick
-			}, props.label));
-		}
 		//#endregion
 		//#region node_modules/@babel/runtime/helpers/extends.js
 		var require_extends = /* @__PURE__ */ __commonJSMin(((exports, module) => {
@@ -50752,6 +49693,1083 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			});
 		}
 		//#endregion
+		//#region src/client/ui/index.ts
+		/**
+		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
+		* 同时它是基础层 `Loading` 的锚点契约（`Loading` 默认 `anchorId = PANEL_CONTENT_ID`）——
+		* 所以**新页面也必须用同一个 id**，否则浮动 loading 找不到锚点、贴不到内容右缘。
+		*/
+		const PANEL_CONTENT_ID = "dsh-tdt-main";
+		/** 内容列几何（居中限宽 760 / 1120）。 */
+		const PANEL_CONTENT_STYLE = {
+			width: "100%",
+			maxWidth: "1120px",
+			minWidth: "760px",
+			boxSizing: "border-box"
+		};
+		//#endregion
+		//#region src/client/archive-session-css.ts
+		/** 归档会话弹窗全部样式规则（一条 <style> 注入，见 ensureArchiveSessionStyle）。 */
+		const ARCHIVE_SESSION_CSS = `
+/* 弹窗让位右侧分栏：预览 dock（--dsh-tdt-preview-w）+ 编辑分栏（--dsh-tdt-editor-w，U21 起）
+   两条都算进来 ⇒ 右侧留出的宽度 = 两者之和（缺省各 0），弹窗不遮盖任何一条分栏；
+   两条同时开着时也是一个加法，无需特判（用户 2026-10-01 Q4）。
+   与整页共用同一个预览面（用户 2026-09-28 拍板，docs/design/features/artifact-opening.md §四-C）。 */
+.dsh-tdt-sv-overlay{position:fixed;top:0;left:0;bottom:0;right:calc(var(--dsh-tdt-preview-w,0px) + var(--dsh-tdt-editor-w,0px));z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--tdt-mask,rgba(0,0,0,.45));transition:right .12s var(--tdt-ease,ease);}
+/* 预览 dock：**占布局的分栏**（不是浮层）——它是根容器的 flex 成员，把整页真正挤窄，
+   滚动条留在内容区内、不会被压住（真机 2026-09-28「弹出来后滚动条没了」的修复）；
+   sticky + 100vh 让它在页面滚动时保持可见，仍占宽度。
+   弹窗是全屏 fixed 层，靠上面 overlay 的 right 让位 ⇒ 弹窗不被预览面遮盖。
+   ⚠️ **本条不设 z-index**：它是 sticky 布局成员、不是浮层；一旦给它显式正 z-index，就会无条件
+   压过宿主 portal 到 body 的弹窗（「系统设置」等，官方 Modal 后挂载居上只在**同层**时成立）
+   ⇒ 真机 2026-10-05「侧边栏盖住宿主设置弹窗」。去掉后由 DOM 顺序裁决，宿主弹窗回到上层。 */
+.dsh-tdt-sv-preview.dsh-tdt-sv-preview-dock{position:sticky;top:0;align-self:stretch;height:100vh;max-height:100vh;width:var(--dsh-tdt-preview-w,460px);min-width:0;flex:0 0 auto;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));}
+/* 拖拽条（dock 左缘 6px 命中区）：光标变 col-resize，**不画任何线**（用户 2026-09-28）。
+   高亮（用户 2026-09-29 改版）：与「新增任务」抽屉拖拽条（.dsh-tdt-ed-resizer，task-editor-css）
+   **同一套样式与逻辑**——hover/按住时命中区自身浮出一条 6px 浅色半透明带
+   （--tdt-hover），不再把 dock 的 border-left 变纯白线（旧版观感太重，已废）。 */
+/* z-index 7：必须高于源码态 CodeViewer 内容（复制钮 z-index:5 + cm-editor 正文）；
+   z-index:5 时会被 CodeViewer 复制钮/代码体盖住，真机 2026-10-04 表现为「浅灰竖条在源码标题行处断开」即此。 */
+/* 拖拽条：几何与 hover 已上提基础层 .dsh-tdt-resizer（ui/controls-css.ts，U20 #3），此处只补 z-index:7（高于 CodeViewer 复制钮，真机 2026-10-04）。 */
+.dsh-tdt-sv-resizer{z-index:7;}
+/* 尺寸照抄宿主「左下角弹窗」卡片（dsh-context .lc-ov-card）：width min(1120px,100vw-32px)、height 100%-80px（遮罩满屏 ⇒ 等价 100vh-80px）、radius 12px、padding 16px 18px 18px。 */
+/* 面板底色 = 官方会话面 --tdt-surface-base（官方 chat 页即此色）：
+   官方 ReasoningRow 展开行是 sticky + background:var(--tdt-surface-base)（ReasoningRow.module.css），
+   若面板用 layer-1 会比行底色浅 ⇒ 展开思考时出现一条更黑的带（真机踩过）；统一 bg-base 即消失。 */
+.dsh-tdt-sv-panel{--dsh-composer-side-clearance:18px;--dsh-chat-content-width:100%;--dsh-chat-flow-gap:16px;background:var(--tdt-surface-base,#1a1a1a);color:var(--tdt-fg,#1f2328);border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));width:min(1120px,calc(100vw - 32px));height:calc(100% - 80px);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;}
+.dsh-tdt-sv-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 34px 12px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));flex-wrap:wrap;}
+/* 内间距定尺。**纵向单一真源 = .dsh-tdt-sv-frame**：
+   官方 scroll 命中时自带纵向 16px，官方 frame 的纵向又不确定；不命中时官方 scroll 不存在，
+   .dsh-tdt-sv-body 又会盖掉 frame 的补足（同元素、body 在后面）。⇒ 统一收口（2026-10-03）：
+     · scroll 钩子把官方纵向 **归零**（双类名 0,2,0 压过 CSS module，不靠注入顺序）；
+     · frame 钩子**独占**上下（用长写，不碰左右 ⇒ 命中时左右仍走官方 scroll 的 16+clearance）。
+   ⇒ 命中 / 未命中两条路径纵向完全一致。
+   **上 / 下 = 17px**（用户 2026-10-03：原来上下各 34 太顶，要求「最多留现在的一半」⇒ 34/2 = 17）；
+   左右始终 34px，与下方会话正文**同一条左右基线**（顶部输入区不再自带左右 padding，避免双重缩进）。
+   ⚠️ 上 / 下必须**相等**：否则滚动到顶 / 到底时一边空一大片、另一边一丢丢。 */
+.dsh-tdt-sv-frame.dsh-tdt-sv-frame{padding-top:17px;padding-bottom:17px;}
+/* 官方 scroll 命中时纵向 16px 归零，纵向交 frame 独占（见上）。左右不动。 */
+.dsh-tdt-sv-scroll.dsh-tdt-sv-scroll{padding-top:0;padding-bottom:0;}
+/* 会话区保底：不依赖官方类是否命中，顶部输入区再高也压不没它。
+   ⚠️ 用 flex:1 1 auto 而不是 flex:1（后者 basis=0）：官方 ChatView.frame 是 flex:auto，
+   本仓与官方注入顺序不定 ⇒ 取 auto 这个共同值，两边顺序颠倒也不会改变布局。 */
+.dsh-tdt-sv-chat{flex:1 1 auto;min-height:0;}
+.dsh-tdt-sv-heading{min-width:0;}
+.dsh-tdt-sv-title{font-size:var(--tdt-font-lg);font-weight:600;color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-sid{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-xs);color:var(--tdt-fg-3,rgba(128,128,128,.8));word-break:break-all;}
+.dsh-tdt-sv-actions{display:flex;align-items:center;gap:8px;}
+/* 会话区左右边距 = 官方 ChatView.scroll：16px + --dsh-composer-side-clearance(18px) ⇒ 左右各 34px。
+   **纵向不在这里**（官方类命中与否会打架，见上面 frame / scroll 两条钩子）⇒ 本类只写左右。 */
+.dsh-tdt-sv-body{flex:1;min-height:0;overflow:auto;padding-left:calc(var(--dsh-composer-side-clearance,16px) + 16px);padding-right:calc(var(--dsh-composer-side-clearance,16px) + 16px);}
+.dsh-tdt-sv-col{width:100%;max-width:var(--dsh-chat-content-width,920px);margin:0 auto;display:flex;flex-direction:column;gap:var(--dsh-chat-flow-gap,16px);}
+/* 官方 ChatView.column 的兄弟间距（:not([hidden]) 才占位；折叠掉的过程节点不留空档）。 */
+.dsh-tdt-sv-col>:not([hidden]):not(.dsh-tdt-sv-flowitem:empty)~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:var(--dsh-chat-flow-gap,16px);}
+.dsh-tdt-sv-visuallyhidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.dsh-tdt-sv-flowitem{min-width:0;}
+.dsh-tdt-sv-older{display:flex;justify-content:center;}
+.dsh-tdt-sv-older button{appearance:none;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.9));background:var(--tdt-hover-solid,rgba(128,128,128,.2));border:none;border-radius:var(--tdt-radius-sm,6px);padding:4px 12px;}
+.dsh-tdt-sv-older button:disabled{cursor:default;opacity:.6;}
+.dsh-tdt-sv-process{box-sizing:border-box;width:100%;min-width:0;height:calc(33px + var(--dsh-content-font-delta,0px));border:none;border-bottom:.5px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;text-align:left;background:0 0;align-items:center;padding:0 0 8px;transition:color .1s;display:flex;}
+.dsh-tdt-sv-process:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-process:not([data-open]){margin-bottom:8px;}
+.dsh-tdt-sv-process-label{min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
+.dsh-tdt-sv-process-chevron{width:14px;height:14px;color:var(--tdt-fg-4,rgba(128,128,128,.6));flex:none;margin-left:4px;transition:transform .1s;display:inline-flex;align-items:center;justify-content:center;}
+.dsh-tdt-sv-process[data-open] .dsh-tdt-sv-process-chevron{transform:rotate(180deg);}
+.dsh-tdt-sv-actions{height:calc(28px + var(--dsh-content-font-delta,0px));align-items:center;gap:8px;display:flex;margin-top:4px;}
+.dsh-tdt-sv-action{display:inline-flex;align-items:center;justify-content:center;width:var(--tdt-control-h-sm);height:var(--tdt-control-h-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));background:0 0;border:none;cursor:pointer;}
+.dsh-tdt-sv-action:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-user{align-self:flex-start;max-width:100%;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:var(--tdt-radius-md);padding:10px 14px;font-size:var(--tdt-font-lg);line-height:1.6;word-break:break-word;}
+.dsh-tdt-sv-assistant{align-self:stretch;font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
+.dsh-tdt-sv-image{align-self:flex-start;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));border:1px dashed var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm);padding:4px 10px;}
+.dsh-tdt-sv-md>*:first-child{margin-top:0;}
+.dsh-tdt-sv-md>*:last-child{margin-bottom:0;}
+.dsh-tdt-sv-md p{margin:.5em 0;}
+.dsh-tdt-sv-md h1,.dsh-tdt-sv-md h2,.dsh-tdt-sv-md h3,.dsh-tdt-sv-md h4,.dsh-tdt-sv-md h5,.dsh-tdt-sv-md h6{margin:.9em 0 .4em;font-weight:600;line-height:1.3;}
+.dsh-tdt-sv-md h1{font-size:1.4em;}
+.dsh-tdt-sv-md h2{font-size:1.25em;}
+.dsh-tdt-sv-md h3{font-size:1.1em;}
+.dsh-tdt-sv-md ul,.dsh-tdt-sv-md ol{margin:.5em 0;padding-left:1.4em;}
+.dsh-tdt-sv-md li{margin:.2em 0;}
+.dsh-tdt-sv-md code{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:.9em;background:var(--tdt-surface-2,rgba(128,128,128,.14));padding:.1em .35em;border-radius:var(--tdt-radius-xs);}
+.dsh-tdt-sv-md pre{margin:.6em 0;background:var(--tdt-surface-2,rgba(128,128,128,.14));border:1px solid var(--tdt-border,rgba(128,128,128,.28));border-radius:var(--tdt-radius-sm);padding:10px 12px;overflow:auto;font-size:var(--tdt-font-sm);line-height:1.5;}
+.dsh-tdt-sv-md pre code{background:none;padding:0;font-size:inherit;}
+.dsh-tdt-sv-md blockquote{margin:.5em 0;padding:.2em .9em;border-left:3px solid var(--tdt-border,rgba(128,128,128,.35));color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-md a{color:var(--tdt-accent,#2f6feb);text-decoration:none;}
+.dsh-tdt-sv-md a:hover{text-decoration:underline;}
+.dsh-tdt-sv-md table{border-collapse:collapse;font-size:var(--tdt-font-sm);margin:.6em 0;display:block;overflow:auto;}
+.dsh-tdt-sv-md th,.dsh-tdt-sv-md td{border:1px solid var(--tdt-border,rgba(128,128,128,.35));padding:4px 8px;text-align:left;}
+.dsh-tdt-sv-md hr{border:none;border-top:1px solid var(--tdt-border,rgba(128,128,128,.35));margin:1em 0;}
+.dsh-tdt-sv-md img{max-width:100%;}
+/* 思考行（ReasoningRow.module.css 照抄：root[row]/leading/chevron/title/separator/summary/thinkBody）。 */
+.dsh-tdt-sv-reasoning{flex-direction:column;display:flex;}
+.dsh-tdt-sv-reasoning:not([data-expanded]){contain:size layout;height:calc(24px + var(--dsh-content-font-delta,0px));}
+.dsh-tdt-sv-reasoning-row{position:relative;overflow:hidden;}
+.dsh-tdt-sv-reasoning-leading{flex-shrink:0;}
+.dsh-tdt-sv-reasoning-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-reasoning-title{font-weight:400;}
+.dsh-tdt-sv-reasoning-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-reasoning-preview{min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));white-space:nowrap;flex:auto;overflow:hidden;}
+.dsh-tdt-sv-reasoning-preview-text{text-overflow:ellipsis;display:block;overflow:hidden;}
+/* ── 工具卡（官方 ui-tool ToolRow.module.css 兜底镜像，官方类命中时 ocOr 走官方） ──
+   官方行外观 = 无边框裸行（root 仅 flex column）；展开体分发链：
+   TerminalBlock(∞) → DiffBlock(9) → ReadBlock(8) → ioCard 灰框（输入/分隔/输出）。 */
+.dsh-tdt-sv-tool{flex-direction:column;display:flex;}
+.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-title,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-summary,.dsh-tdt-sv-tool-row:hover .dsh-tdt-sv-tool-suffix{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-tool-title{font-weight:400;transition:color .1s;}
+.dsh-tdt-sv-tool-chevron{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tool-sep{background:var(--tdt-fg-4,rgba(128,128,128,.7));border-radius:1px;flex:none;width:2px;height:2px;margin:0 8px;}
+.dsh-tdt-sv-tool-summary{text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:auto;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-suffix{white-space:nowrap;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;margin-left:4px;transition:color .1s;}
+.dsh-tdt-sv-tool-diffstat{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:calc(var(--dsh-content-font-size-secondary,13px) - 2px);color:var(--tdt-fg-4,rgba(128,128,128,.7));margin-left:10px;transform:translateY(.5px);}
+.dsh-tdt-sv-tool-filelink{text-overflow:ellipsis;white-space:nowrap;min-width:0;font:inherit;text-align:left;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(24px + var(--dsh-content-font-delta,0px));color:var(--tdt-fg-2,rgba(128,128,128,.95));text-decoration:underline dotted;text-decoration-color:var(--tdt-fg-3,rgba(128,128,128,.8));text-underline-offset:3px;cursor:pointer;background:0 0;border:none;flex:0 auto;margin:0;padding:0;text-decoration-thickness:1px;transition:color .1s;overflow:hidden;}
+.dsh-tdt-sv-tool-filelink:hover{color:var(--tdt-fg,#1f2328);text-decoration-color:currentColor;}
+.dsh-tdt-sv-tool-errmark{color:var(--tdt-danger,#e5484d);}
+.dsh-tdt-sv-tool-stopmark{color:var(--tdt-warning-label,#f5a623);}
+.dsh-tdt-sv-tool-bodywrap{flex-direction:column;display:flex;}
+.dsh-tdt-sv-io-card{border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-lg,10px);background:var(--tdt-code-surface,rgba(128,128,128,.10));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));flex-direction:column;margin:4px 0 4px 4px;display:flex;}
+.dsh-tdt-sv-io-section{grid-template-columns:max-content 1fr;align-items:baseline;column-gap:14px;max-height:150px;padding:12px 16px;display:grid;overflow-y:auto;}
+.dsh-tdt-sv-io-label{color:var(--tdt-fg-4,rgba(128,128,128,.7));align-self:start;position:sticky;top:0;}
+.dsh-tdt-sv-io-divider{background:var(--tdt-border,rgba(128,128,128,.35));flex:none;height:.5px;}
+.dsh-tdt-sv-io-text{white-space:pre-wrap;word-break:break-word;min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-io-text[data-error]{color:var(--tdt-danger,#e5484d);}
+.dsh-tdt-sv-tool-block{margin:4px 0 4px 4px;}
+.dsh-tdt-sv-tool-terminal{--dsl-terminal-font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));--dsl-terminal-line-height:var(--tdt-line-sm);--dsl-terminal-output-max-height:224px;border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));margin:4px 0 4px 4px;}
+.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-sep,.dsh-tdt-sv-reasoning:not([data-preview]) .dsh-tdt-sv-reasoning-preview{display:none;}
+.dsh-tdt-sv-reasoning-body{padding:4px 0 4px calc(22px + var(--dsh-content-font-delta,0px));min-width:0;}
+.dsh-tdt-sv-notice{align-self:center;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));padding:2px 8px;}
+.dsh-tdt-sv-hint{font-size:var(--tdt-font-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));text-align:center;padding:12px 0;}
+/* ── 里程碑 15 新增：触发行 / 尾部操作行 / 用量 pill / 明细弹层（官方类缺失时的兜底） ── */
+.dsh-tdt-sv-process:disabled{cursor:default;}
+.dsh-tdt-sv-trigger{align-self:stretch;background:var(--tdt-code-surface,rgba(128,128,128,.10));border:.5px solid var(--tdt-border-faint,rgba(128,128,128,.24));border-radius:var(--tdt-radius-xl,12px);transition:background .1s;}
+.dsh-tdt-sv-trigger:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-trigger-header{display:flex;align-items:center;gap:10px;width:100%;padding:12px 16px;background:0 0;border:none;cursor:pointer;color:inherit;font:inherit;text-align:left;}
+.dsh-tdt-sv-trigger-icon{display:inline-flex;align-items:center;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;}
+.dsh-tdt-sv-trigger-title{font-size:var(--tdt-font-md,13px);color:var(--tdt-fg,#1f2328);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-trigger-time{margin-left:auto;font-size:var(--tdt-font-sm,12px);color:var(--tdt-fg-4,rgba(128,128,128,.7));white-space:nowrap;}
+.dsh-tdt-sv-trigger-chevron{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transition:transform .1s;}
+.dsh-tdt-sv-trigger-chevron-open{flex:none;color:var(--tdt-fg-4,rgba(128,128,128,.7));transform:rotate(180deg);}
+.dsh-tdt-sv-trigger-body{padding:0 16px 12px 40px;}
+.dsh-tdt-sv-trigger-explanation{margin:8px 0 0;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-trigger-content{margin-top:6px;font-size:var(--tdt-font-md);line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;}
+.dsh-tdt-sv-tail{display:flex;flex-direction:column;gap:16px;}
+.dsh-tdt-sv-tail-actions{margin-top:4px;margin-left:-6px;}
+.dsh-tdt-sv-clock{font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));white-space:nowrap;}
+.dsh-tdt-sv-endinfo{display:inline-flex;align-items:center;gap:8px;margin-left:8px;}
+.dsh-tdt-sv-usage{display:inline-flex;align-items:center;}
+.dsh-tdt-sv-usage-trigger{display:inline-flex;align-items:center;gap:4px;appearance:none;background:0 0;border:none;cursor:pointer;padding:0 4px;font:inherit;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-usage-trigger:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-stats{position:fixed;z-index:1200;min-width:200px;max-width:min(440px,calc(100vw - 24px));background:var(--tdt-surface-1,rgba(30,30,30,.98));border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-md);box-shadow:var(--tdt-shadow-2,0 12px 32px rgba(0,0,0,.4));padding:12px;font-size:var(--tdt-font-sm);color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-stats-title{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.dsh-tdt-sv-stats-titlelabel{display:inline-flex;align-items:center;gap:6px;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-stats-titlevalue{font-variant-numeric:tabular-nums;}
+.dsh-tdt-sv-stats-rule{height:1px;background:var(--tdt-border,rgba(128,128,128,.35));margin:8px 0;}
+.dsh-tdt-sv-stats-details{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;}
+.dsh-tdt-sv-stats-details dt{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-stats-details dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;}
+.dsh-tdt-sv-stats-route{word-break:break-all;}
+.dsh-tdt-sv-stats-reasoning{color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* ── 过程分组（二级收折，ChatGroupSeat.module.css 照抄：root/title/leading/activityIcon/chevron/label/body/content/fade） ── */
+.dsh-tdt-sv-group{min-width:0;}
+.dsh-tdt-sv-group-title{max-width:100%;color:var(--tdt-fg-2,rgba(128,128,128,.95));font:inherit;font-size:var(--dsh-content-font-size,14px);text-align:left;cursor:pointer;background:0 0;border:0;align-items:center;gap:6px;padding:0;transition:color .1s;display:flex;}
+.dsh-tdt-sv-group-title:hover{color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-group-leading{width:16px;height:16px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;justify-content:center;align-items:center;display:inline-flex;position:relative;}
+.dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-chevron{justify-content:center;align-items:center;transition:opacity .1s;display:inline-flex;position:absolute;inset:0;}
+.dsh-tdt-sv-group-icon{opacity:1;}
+.dsh-tdt-sv-group-chevron{opacity:0;}
+.dsh-tdt-sv-group-title:hover .dsh-tdt-sv-group-icon,.dsh-tdt-sv-group-title:focus-visible .dsh-tdt-sv-group-icon{opacity:0;}
+.dsh-tdt-sv-group-title:hover .dsh-tdt-sv-group-chevron,.dsh-tdt-sv-group-title:focus-visible .dsh-tdt-sv-group-chevron{opacity:1;}
+.dsh-tdt-sv-group-title[aria-expanded=true] .dsh-tdt-sv-group-icon{opacity:0;}
+.dsh-tdt-sv-group-title[aria-expanded=true] .dsh-tdt-sv-group-chevron{opacity:1;}
+.dsh-tdt-sv-group-title[aria-expanded=true]{padding-bottom:16px;}
+.dsh-tdt-sv-group-body{--dsh-chat-flow-gap:8px;overscroll-behavior-y:auto;scrollbar-gutter:stable;max-height:min(400px,50vh);overflow-y:auto;}
+.dsh-tdt-sv-group-label{text-overflow:ellipsis;white-space:nowrap;min-width:0;overflow:hidden;}
+.dsh-tdt-sv-group-fade-top{mask-image:linear-gradient(#0000 0,#000 24px 100%);}
+.dsh-tdt-sv-group-fade-bottom{mask-image:linear-gradient(#000 0 calc(100% - 24px),#0000 100%);}
+.dsh-tdt-sv-group-fade-top.dsh-tdt-sv-group-fade-bottom{mask-image:linear-gradient(#0000 0,#000 24px calc(100% - 24px),#0000 100%);}
+.dsh-tdt-sv-group-content{flex-direction:column;display:flex;}
+.dsh-tdt-sv-group-content>*{flex-shrink:0;}
+.dsh-tdt-sv-group-content>:not([hidden]):not(:empty)~:not([hidden]):not(:empty){margin-top:var(--dsh-chat-flow-gap,8px);}
+.dsh-tdt-sv-group-expanded{--dsh-chat-flow-gap:16px;scrollbar-gutter:auto;max-height:none;overflow:visible;}
+/* U10 继续对话（开分支）：头部按钮组 + 确认框。确认框 = 官方 primitives Modal + Button
+   （portal 到 body，与本弹窗同 z-index 层、后挂载居上），此处只留头部钮规格与 Modal 内错误行。 */
+.dsh-tdt-sv-headerbtns{display:flex;align-items:center;gap:8px;flex:none;}
+/* 官方 Modal 卡片宽（RiskConfirmation 同款 min(440px,100%)；我方样式后注入，同特异性覆盖 .dialog 的 380px）。 */
+.dsh-tdt-sv-forkmodal{width:min(440px,100%);}
+/* Modal body 内错误行：官方 error 变量（明暗自适应）。 */
+.dsh-tdt-sv-forkerr{margin:0;font-size:var(--tdt-font-lg);line-height:var(--tdt-line-lg);color:var(--tdt-danger,#e5484d);word-break:break-word;}
+/* ── 重试/轮次失败/限长三件套兜底（官方 MessageItem.module.css 逐值照抄，官方类缺失时生效） ── */
+.dsh-tdt-sv-retry{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));}
+.dsh-tdt-sv-retry-summary{border-radius:var(--tdt-radius-sm,6px);width:fit-content;color:inherit;cursor:pointer;user-select:none;align-items:center;gap:7px;padding:2px 0;list-style:none;display:inline-flex;}
+.dsh-tdt-sv-retry-summary::-webkit-details-marker{display:none;}
+.dsh-tdt-sv-retry-summary:after{content:"";opacity:.8;border-bottom:1.5px solid;border-right:1.5px solid;width:6px;height:6px;transition:transform .12s;transform:rotate(-45deg);}
+.dsh-tdt-sv-retry-summary:hover{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-retry-summary:focus-visible{outline:1.5px solid var(--tdt-focus);outline-offset:2px;}
+.dsh-tdt-sv-retry-text{color:inherit;}
+.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{background:linear-gradient(90deg,var(--tdt-fg-3,rgba(128,128,128,.8)) 0%,var(--tdt-fg-3,rgba(128,128,128,.8)) 40%,var(--tdt-fg-2,rgba(128,128,128,.95)) 50%,var(--tdt-fg-3,rgba(128,128,128,.8)) 60%,var(--tdt-fg-3,rgba(128,128,128,.8)) 100%);color:#0000;background-position:100%;background-size:200% 100%;background-clip:text;animation:1.6s ease-in-out infinite dsh-tdt-retry-shimmer;}
+@keyframes dsh-tdt-retry-shimmer{0%{background-position:100%}to{background-position:0}}
+@media (prefers-reduced-motion:reduce){.dsh-tdt-sv-retry[data-active] .dsh-tdt-sv-retry-text{color:inherit;background:0 0;animation:none;}}
+.dsh-tdt-sv-retry[open] .dsh-tdt-sv-retry-summary:after{transform:rotate(45deg);}
+.dsh-tdt-sv-retry-details{overflow-wrap:anywhere;font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(18px + var(--dsh-content-font-delta-secondary,0px));gap:2px;margin-top:3px;padding-left:14px;display:grid;}
+.dsh-tdt-sv-retry-label{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr{font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));grid-template-columns:10px minmax(0,1fr) auto;align-items:start;gap:8px;padding:2px 0;display:grid;}
+.dsh-tdt-sv-turnerr-dot{margin-top:5px;}
+.dsh-tdt-sv-turnerr-copy{overflow-wrap:anywhere;min-width:0;}
+.dsh-tdt-sv-turnerr-title{color:var(--tdt-danger,#e5484d);margin-right:6px;font-weight:600;}
+.dsh-tdt-sv-turnerr-msg{color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-turnerr-code{color:var(--tdt-fg-3,rgba(128,128,128,.8));font:var(--tdt-code-font,12px/18px var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace));}
+.dsh-tdt-sv-turnerr-warn{color:var(--tdt-warning,#f5a623);margin-right:6px;font-weight:600;}
+
+/* ── U11 产出物预览（决策 39）：页面级 dock 预览面（弹窗与整页共用，见上方 dock 规则） ──
+   旧「弹窗内右侧分栏」那两条规则已随第三轮上提删除（预览面唯一且页面级）。 */
+/* 拖动调宽期间：预览体里的 <iframe>（PDF 预览）是独立文档，会吞掉父文档的 pointermove
+   ⇒ 向右拖（缩小）时指针走进 PDF 就卡死（真机 2026-10-03）。拖动期间整片 iframe 让出指针事件。 */
+.dsh-tdt-root.dsh-tdt-resizing iframe{pointer-events:none;}
+/* 拖拽期把 dock 的布局/绘制**隔离**：改宽度不再牵动整页重排（dock 内常驻上万行高亮 DOM，
+   不隔离时每帧重排全页 ⇒ 真机 2026-10-04「挪很久才动一下」）。 */
+.dsh-tdt-root.dsh-tdt-resizing .dsh-tdt-sv-preview-dock{contain:layout paint;will-change:width;}
+.dsh-tdt-sv-preview{position:relative;flex:0 0 auto;width:min(520px,48%);min-width:280px;min-height:0;display:flex;flex-direction:column;border-left:1px solid var(--tdt-border,rgba(128,128,128,.35));background:var(--tdt-surface-base,#1a1a1a);}
+.dsh-tdt-sv-preview-head{flex:none;display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
+.dsh-tdt-sv-preview-label{flex:none;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* 路径 / 文件名：走全站唯一 MarqueeText（ui/MarqueeText.tsx），本类只提供**字体与字色皮肤**
+   （挂在 MarqueeText 外层、内层继承）；外层裁剪与滚动由 .dsh-tdt-mq 负责。 */
+.dsh-tdt-sv-preview-title-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg,#1f2328);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;}
+/* 顶栏右侧按钮组：md 切换段 + 复制 + 刷新 + 关闭（图标钮，无中文文字）。 */
+.dsh-tdt-sv-head-actions{flex:none;display:flex;align-items:center;gap:4px;}
+.dsh-tdt-sv-head-btn{appearance:none;background:0 0;border:none;width:var(--tdt-control-h-md);height:var(--tdt-control-h-md);border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-head-btn:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-preview-body{flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;padding:12px 14px;}
+.dsh-tdt-sv-preview-fill{display:flex;padding:0;overflow:hidden;}
+.dsh-tdt-sv-preview-pdf{flex:1;border:none;}
+/* HTML 静态预览：照官方 BasicHtmlFrame——iframe 撑满预览体、无边框、白底（文档自身配色为准）。 */
+.dsh-tdt-sv-preview-html{flex:1;min-height:0;width:100%;border:none;background:#fff;}
+/* 源码态（代码文件）：照官方 .body:has([data-code-preview]) 规则 —— body 收成 flex 列并 overflow:hidden，
+   唯一滚动容器 = CodeViewer 内部 cm-scroller ⇒ 不再出现两条滚动条。 */
+.dsh-tdt-sv-preview-body-code{flex-direction:column;display:flex;overflow:hidden;padding:0;}
+/* 源码态改用只读 CodeMirror 6 渲染（ui/CodeViewer.tsx）：行级视图 + Lezer 增量高亮，
+   拖动改宽只重排可视区，根除 Shiki CodeBlock 整篇 DOM 重排导致的卡顿；配色/字号见 cm-themes.ts。 */
+.dsh-tdt-sv-preview-coderender{white-space:normal;flex-direction:column;flex:auto;width:100%;min-width:0;height:100%;min-height:0;display:flex;overflow:hidden;}
+/* CodeMirror 容器：透明底 + 单滚动容器，行级视图天然不为整篇重排。换行由 CodeMirror 行级处理，无需 CSS。 */
+/* 容器相对定位，供复制钮绝对定位于右上角。 */
+.dsh-tdt-sv-cmviewer{position:relative;display:flex;flex-direction:column;height:100%;min-height:0;}
+/* 复制钮：右上角浮层，随区域 hover 浮现（对齐官方复制钮交互：仅图标、无中文文案、点击复制全文、
+   复制后短暂切勾选图标 + "已复制"提示，title/aria-label 承载本地化文案）。 */
+.dsh-tdt-sv-cm-copy{position:absolute;top:6px;right:6px;z-index:5;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;appearance:none;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);background:var(--tdt-surface-1,rgba(30,30,30,.9));color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;transition:opacity .12s var(--tdt-ease,ease),background .12s,color .12s;}
+.dsh-tdt-sv-cmviewer:hover .dsh-tdt-sv-cm-copy,.dsh-tdt-sv-cm-copy:focus-visible{opacity:1;}
+.dsh-tdt-sv-cm-copy:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-cm-copy svg{width:16px;height:16px;}
+.dsh-tdt-sv-cm-editor{flex:1 1 auto;min-height:0;overflow:hidden;}
+.dsh-tdt-sv-cm-editor .cm-editor{height:100%;}
+.dsh-tdt-sv-cm-editor .cm-scroller{overflow:auto;}
+/* 截断横幅：照官方（真机截图）——顶部一条、警告色文字，在滚动区之外（flex:none 不随内容滚走）。 */
+.dsh-tdt-sv-truncated{flex:none;padding:6px 14px;font-size:var(--tdt-font-xs,12px);color:var(--tdt-warning,#f59e0b);background:var(--tdt-surface-1,rgba(255,255,255,.04));}
+.dsh-tdt-sv-preview-img{max-width:100%;display:block;margin:0 auto;}
+.dsh-tdt-sv-preview-md{font-size:var(--tdt-font-lg);line-height:1.7;word-break:break-word;}
+
+/* CodeMirror 外壳缺失兜底：代码面按容器宽度布局（ocOr 语义见上方说明）。 */
+.dsh-tdt-sv-preview-body-code .dsh-tdt-sv-preview-coderender{flex:1;min-height:0;}
+/* ── U11 目录浏览器（面包屑导航，2026-09-28）── */
+/* 四验拍板：第一排 = 常驻图标组（下拉选层/上一层/返回）+ 面包屑区域；第二排 = 文件名 + 按钮。
+   ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
+.dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));white-space:nowrap;}
+.dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
+.dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
+.dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
+.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
+.dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
+.dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
+.dsh-tdt-sv-crumb-current:hover{background:0 0;}
+.dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
+/* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
+   MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
+   裁剪与滚动由 .dsh-tdt-mq 负责。 */
+.dsh-tdt-sv-crumbbar-plain-inner{font-family:var(--tdt-font-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;user-select:none;}
+.dsh-tdt-sv-head-btn:disabled{opacity:.35;cursor:default;background:0 0;}
+/* 下拉选层：浮层菜单列出全部层级；透明遮罩点击即收起。 */
+.dsh-tdt-sv-crumbs-backdrop{position:fixed;inset:0;z-index:30;background:transparent;}
+.dsh-tdt-sv-crumbs-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:31;min-width:160px;max-height:240px;overflow:auto;background:var(--tdt-surface-1);border:1px solid var(--tdt-border);border-radius:var(--tdt-radius-sm);box-shadow:0 4px 16px rgba(0,0,0,.18);padding:4px;display:flex;flex-direction:column;}
+.dsh-tdt-sv-crumbs-menu-item{appearance:none;background:0 0;border:none;text-align:left;font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;border-radius:var(--tdt-radius-sm);color:var(--tdt-fg);cursor:pointer;max-width:280px;display:flex;align-items:center;gap:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-crumbs-menu-item:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-crumbs-menu-empty{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-md);padding:4px 8px;color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* 第二排：文件名（跑马灯）+ 操作按钮。 */
+.dsh-tdt-sv-titlebar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));}
+/* 目录树：每行 = 图标 + 名称，整行可点（目录进入 / 文件预览）。 */
+.dsh-tdt-sv-tree{flex:1;min-height:0;overflow:auto;padding:6px 8px;}
+.dsh-tdt-sv-tree-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;user-select:none;}
+.dsh-tdt-sv-tree-row:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-tree-row:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:-2px;}
+.dsh-tdt-sv-tree-icon{flex:none;display:inline-flex;color:var(--tdt-fg-2,rgba(128,128,128,.95));}
+.dsh-tdt-sv-tree-name{flex:1;min-width:0;font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dsh-tdt-sv-tree-truncated{flex:none;padding:8px 10px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+/* 下拉选层：每行只显示一个右箭头（画在原第 index 位），行首 (index-1) 个箭头位
+   空出但占位（宽度与箭头一致），保持层级缩进（用户 2026-09-29）。 */
+.dsh-tdt-sv-crumbs-chev{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));margin-right:1px;}
+.dsh-tdt-sv-crumbs-chev-slot{flex:none;width:11px;height:11px;margin-right:1px;}
+.dsh-tdt-sv-crumbs-menu-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 目录树：行内 ▸ 开关（内联展开/收起），点它只切展开、不导航。 */
+.dsh-tdt-sv-tree-toggle{appearance:none;background:0 0;border:none;flex:none;width:20px;height:20px;padding:0;margin:0;border-radius:var(--tdt-radius-sm,6px);cursor:pointer;color:var(--tdt-fg-2,rgba(128,128,128,.95));display:inline-flex;align-items:center;justify-content:center;transition:transform var(--tdt-dur,.15s) var(--tdt-ease,ease),background var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-tree-toggle:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
+/* 内联展开子层：左缩进 + 淡竖线引导层级。 */
+.dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--tdt-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
+.dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
+.dsh-tdt-sv-tree-err{color:var(--tdt-danger,#e5484d);}
+.dsh-tdt-sv-preview-err{display:flex;flex-direction:column;align-items:flex-start;gap:10px;font-size:var(--tdt-font-sm);line-height:1.6;color:var(--tdt-fg-2,rgba(128,128,128,.95));padding:8px 0;}
+/* ── U11 交付文件（官方 ui-deliverables PresentRow.module.css / Deliverables.module.css 逐值兜底镜像） ── */
+/* 交付文件行摘要：状态词 + 路径列表（官方纯文本不可点，路径可点的是下方卡片）。 */
+.dsh-tdt-sv-deliv-rowsummary{min-width:0;color:var(--tdt-fg-2,rgba(128,128,128,.95));align-items:center;gap:8px;margin-left:8px;font-size:var(--tdt-font-sm);display:flex;}
+.dsh-tdt-sv-deliv-rowsummary>:first-child{flex-shrink:0;}
+.dsh-tdt-sv-deliv-rowpaths{text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}
+.dsh-tdt-sv-deliv-rowoutput{border-radius:var(--tdt-radius-md);background:var(--tdt-surface-1);color:var(--tdt-fg-2);white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;padding:12px;font-size:var(--tdt-font-sm);}
+/* 交付文件卡网格（root 内含 container query：≤620px 单列）。 */
+.dsh-tdt-sv-deliv{--deliverable-fill:var(--tdt-plate);--deliverable-hover:var(--tdt-plate-hover);flex-direction:column;gap:16px;min-width:0;margin-top:4px;display:flex;container-type:inline-size;}
+.dsh-tdt-sv-deliv-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;min-width:0;display:grid;}
+.dsh-tdt-sv-deliv-grid[data-single=true]{grid-template-columns:minmax(0,1fr);}
+@container (width<=620px){.dsh-tdt-sv-deliv-grid{grid-template-columns:minmax(0,1fr);}}
+.dsh-tdt-sv-deliv-file{box-sizing:border-box;border:.5px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);background:var(--deliverable-fill);min-width:0;height:60px;color:var(--tdt-fg);align-items:center;gap:10px;padding:8px 10px;transition:background-color .12s;display:flex;position:relative;overflow:hidden;}
+.dsh-tdt-sv-deliv-file:hover{background:var(--deliverable-hover);}
+.dsh-tdt-sv-deliv-cardpreview{z-index:1;border-radius:inherit;cursor:pointer;background:0 0;border:0;width:100%;padding:0;position:absolute;inset:0;}
+.dsh-tdt-sv-deliv-cardpreview:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus);outline:none;}
+.dsh-tdt-sv-deliv-icon{z-index:2;box-sizing:border-box;pointer-events:none;border:.5px solid var(--tdt-border-faint);border-radius:var(--tdt-radius-md);background:var(--tdt-icon-plate);width:40px;height:40px;color:var(--tdt-link);flex:none;place-items:center;display:grid;position:relative;overflow:hidden;}
+.dsh-tdt-sv-deliv-body{z-index:2;pointer-events:none;flex:1;justify-content:space-between;align-items:center;gap:12px;min-width:0;display:flex;position:relative;}
+.dsh-tdt-sv-deliv-details{flex-direction:column;flex:1;justify-content:center;gap:2px;min-width:0;display:flex;}
+.dsh-tdt-sv-deliv-name{text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-md);font-weight:500;line-height:var(--tdt-line-md);overflow:hidden;}
+.dsh-tdt-sv-deliv-desc{color:var(--tdt-fg-3,rgba(128,128,128,.8));text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-xs);font-weight:400;line-height:var(--tdt-line-sm);overflow:hidden;}
+.dsh-tdt-sv-deliv-hint,.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-secondary{display:none;}
+.dsh-tdt-sv-deliv-file:hover .dsh-tdt-sv-deliv-desc .dsh-tdt-sv-deliv-hint{display:inline;}
+.dsh-tdt-sv-deliv-toggle{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:center;align-items:center;gap:4px;padding:1px 11px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);display:inline-flex;}
+.dsh-tdt-sv-deliv-toggle:hover{background:var(--tdt-hover,rgba(38,49,72,.06));}
+.dsh-tdt-sv-deliv-toggle svg{flex:none;width:14px;height:14px;}
+/* ── 任务文件上下文（顶部输入区：接收 / 随附，2026-10-03） ──
+   官方没有「前置任务产出 / 附加文件」这个概念 ⇒ 自绘，但零件（FileTypeIcon）与 token 全走官方。
+   ① **左右 0（tfc 不自带）**：左 / 右留白**全交给外层 frame 的 34px**（frame 给的左右留白同时作用于
+      顶部输入区与会话正文 ⇒ 两者天然同一条左右基线）。tfc 自己**不再写左右 padding**——否则会在
+      frame 34 之上再叠 34，导致顶部「附件 / 前置任务」区比下面的会话正文往里缩一截
+      （用户 2026-10-03 二次指出：「左右又缩进去了，要和下面宽度一致」正是此因）。
+      **上 0 / 下 18**：顶部 / 底部留白同样交给 frame（frame 上下 17 对称，见上方 frame 规则）。
+   ② **横向排 + 按内容宽**（用户三次点名定稿）：flex-wrap:wrap 从左到右、排满换行；
+      chip flex:0 0 auto **跟内容走**（参照宿主「附加文件」列表的样子：每个文件名就那么宽、
+      不拖一条空白），**不设最小宽度**（「a.txt」就只显示 a.txt），只给 label 一个
+      max-width:40ch 上限 ⇒ 除非几百个字符，否则名字都完整显示。
+   ③ **显示不全的文件名一律跑马灯**（用户「鼠标一上去都要跑马灯」）：走全站唯一实现
+      MarqueeText（省略号 + hover 来回滚动），前置任务产出与随附文件**同一套**。
+   ④ **前置任务一排两个**（grid-template-columns:repeat(2,minmax(0,1fr))，窄容器降一列）：
+      每块 = 任务名一行 + 产出物**同样横向排**；任务名行**最前 = 序号徽标**
+      （**宽高相等的正方形**小方块 + 9px 数字，按显示顺序 1、2、3…）——
+      它已**顶替**原先那条 4px 竖线的作用（用户 2026-10-03：「序号前面的竖线不要了，
+      直接把序号变成竖线的样子，高度和宽度差不多」）。
+      ⚠️ 历史上先后试过两种竖线：① 块前横跨两行的 3px 浅灰线、② 任务名前 4px 短线，**均已去掉**。
+   ④b **来源 / 状态标记改方括号前置**（用户 2026-10-03）：形状是 [链接]foo.md ——
+      原来挂最右边、被 flex 撑开，越看越像按钮；现在紧贴文件名前面、无间距。
+   ⑤ **不再自带滚动**（用户 2026-10-03：「上面那个还单独做了一个滚动条呀……整个右边就一个滚动条，
+      跟着往下面走就行」）：顶部区已搬进 column 内、与会话内容**同一个滚动容器**，
+      原 max-height:min(38vh,340px) + overflow-y:auto 全部去掉 ⇒ 全弹窗只有右侧一个滚动条。
+   ⑥ 两组之间一条 .5px 细线分隔（不靠颜色、不靠左缩进 —— 左缩进会破坏左右基线）。 */
+/* container-type:inline-size：两列网格的降级判据用**容器宽度**（弹窗会被预览 / 编辑分栏挤窄，不能只看视口）。 */
+.dsh-tdt-sv-tfc{border-bottom:.5px solid var(--tdt-border-faint,#0000000a);padding:0 0 18px;flex-direction:column;gap:12px;min-width:0;display:flex;container-type:inline-size;}
+/* 顶部输入区现在住在 column 里（与会话内容同一个滚动容器）⇒ column 的兄弟间距规则
+   会给「紧跟它之后的第一条消息」再加一道 margin-top，而它自己已有 padding-bottom ⇒ 多出一截。
+   这里把那一道抵消掉（写在 flow-item 间距规则之后，官方类命中与否都要生效）。 */
+.dsh-tdt-sv-col>.dsh-tdt-sv-tfc~:not([hidden]):not(.dsh-tdt-sv-flowitem:empty){margin-top:0;}
+.dsh-tdt-sv-tfc-group{flex-direction:column;gap:8px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-group+.dsh-tdt-sv-tfc-group{border-top:.5px solid var(--tdt-border-faint,#0000000a);padding-top:12px;}
+.dsh-tdt-sv-tfc-head{align-items:baseline;gap:8px;min-width:0;display:flex;}
+/* 组标题比内容**高一档**（12px/600/fg-2）⇒ 不靠颜色也分得出层级：标题 > 任务名 > 芯片 > 元信息。 */
+.dsh-tdt-sv-tfc-title{color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);font-weight:600;line-height:var(--tdt-line-sm);white-space:nowrap;}
+/* 前置任务块 —— 一排两个（窄容器降一列，见下方 @container）。 */
+.dsh-tdt-sv-tfc-tasks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;min-width:0;}
+@container (width<=620px){.dsh-tdt-sv-tfc-tasks{grid-template-columns:minmax(0,1fr);}}
+/* 任务块：块前那条横跨「任务名 + 产出物」两行的浅灰竖线、以及任务名前的 4px 短竖线
+   **都已去掉**（用户 2026-10-03 逐轮否定 ⇒ 最终只留正方形序号徽标，见 .dsh-tdt-sv-tfc-seq）。
+   随之去掉 padding-left：任务名直接回到面板 34px 左基线，不再多缩进 10px。 */
+.dsh-tdt-sv-tfc-task{flex-direction:column;gap:4px;min-width:0;display:flex;}
+.dsh-tdt-sv-tfc-taskrow{align-items:baseline;gap:8px;min-width:0;overflow:hidden;display:flex;}
+/* 层级：组标题 12/600/fg-2 靠**字重**区分；任务名同 12px 但 500 + 主色 ⇒ 内容更实、标题更轻。 */
+.dsh-tdt-sv-tfc-name{color:var(--tdt-fg,#1f2328);font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:70%;}
+.dsh-tdt-sv-tfc-meta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);white-space:nowrap;flex:0 1 auto;}
+.dsh-tdt-sv-tfc-lines{flex-direction:column;gap:2px;min-width:0;display:flex;}
+/* 文件**横向排**：从左到右、排满换行（用户 2026-10-03 第二次点名）。
+   ⚠️ align-items:flex-start 必须留着：默认 stretch 会把 chip 拉成整行宽，悬停热区变成一条横带。 */
+.dsh-tdt-sv-tfc-files{flex-direction:row;flex-wrap:wrap;align-items:flex-start;gap:2px 6px;min-width:0;display:flex;}
+/* chip 宽度**跟内容走**（用户 2026-10-03 二次点名，参照宿主「附加文件」列表的样子：
+   「4000_Essential_….pdf」就那么宽，不该每个后面都拖一条空白）。
+   ⇒ flex:0 0 auto（不 grow、不平分）；**不设最小宽度**（一个叫 a.txt 的就只显示 a.txt）；
+   唯一约束是 label 的 max-width（见下）：超长才出省略号。 */
+.dsh-tdt-sv-tfc-file{border-radius:var(--tdt-radius-sm,6px);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:default;font:inherit;background:0 0;border:0;align-items:center;gap:6px;min-width:0;max-width:100%;padding:2px 6px;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);flex:0 0 auto;display:flex;text-align:left;}
+button.dsh-tdt-sv-tfc-file{cursor:pointer;}
+button.dsh-tdt-sv-tfc-file:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
+button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-focus,#3b5bdb);outline:none;}
+/* 不可点（路径没解析出来 / 跨工作区目录）⇒ 淡一档 + 不给指针，别让人点了没反应。 */
+.dsh-tdt-sv-tfc-file[data-noclick]{opacity:.6;}
+.dsh-tdt-sv-tfc-icon{width:14px;height:14px;color:var(--tdt-fg-3,rgba(128,128,128,.8));flex:none;align-items:center;justify-content:center;display:inline-flex;}
+/* 文件名：截断与跑马灯都交给全站唯一实现 MarqueeText（.dsh-tdt-mq 双层）。
+   这里给它**唯一的长度约束**：**无最小宽度**（用户 2026-10-03：「只有一个字 a.txt 就只显示 a.txt」），
+   **最大 40ch** —— 放宽到「只要不是几百个字符都让它显示」，超出才出省略号 + hover 来回滚动。
+   与主界面「基础信息 · 附加文件」同名（task-list.tsx）**同一口径**。
+   ⚠️ ch 按「0」的宽度算，中文文件名实际更宽一点，属可接受偏差。 */
+.dsh-tdt-sv-tfc-label{min-width:0;max-width:40ch;flex:0 1 auto;}
+/* 前置任务序号徽标（用户 2026-10-03 四次点名定稿）：**顶替原来那条 4px 竖线**，
+   宽高**相等**的方块，字号**直接取 var(--tdt-font-sm)** —— 与主界面「基础信息」面板
+   底部「前置任务」那一行的正文**同一个字号变量**（用户原话：「大小太小了，样式参考主界面
+   任务列表展开的基础信息最下面那个前置任务，按那儿的样式大小就行」）。
+   方块 16px 容纳 12px 数字 + 一点余量；底色 chip-bg（非纯白、比 plate 亮一档），字色 fg-2。
+   align-self:center 让它在 baseline 行里垂直居中，不贴文字基线。 */
+.dsh-tdt-sv-tfc-seq{flex:none;display:inline-flex;align-items:center;justify-content:center;align-self:center;box-sizing:border-box;width:16px;height:16px;padding:0;border-radius:4px;background:var(--tdt-chip-bg,rgba(128,128,128,.12));color:var(--tdt-fg-2,rgba(128,128,128,.95));font-size:var(--tdt-font-sm);line-height:1;font-variant-numeric:tabular-nums;}
+/* 标记 + 文件名的无缝容器：标记紧贴文件名，右方括号与名字之间**不留间距**
+   （用户给的形状就是 [链接]foo.md，中间没有空格）。 */
+.dsh-tdt-sv-tfc-namewrap{display:flex;align-items:center;min-width:0;flex:1 1 auto;}
+/* 来源 / 状态标记：方括号**放在文件名前面**（用户 2026-10-03：原来挂最右边、
+   被 flex 撑开，越看越像按钮）。与文件名同字号，只靠颜色弱化。 */
+.dsh-tdt-sv-tfc-note{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);white-space:nowrap;flex:none;}
+.dsh-tdt-sv-tfc-more{border-radius:var(--tdt-radius-sm,6px);min-width:0;color:var(--tdt-fg-3,rgba(128,128,128,.8));cursor:pointer;font:inherit;background:0 0;border:0;align-self:flex-start;align-items:center;gap:4px;padding:1px 6px;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);display:inline-flex;}
+.dsh-tdt-sv-tfc-more:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg-2);}
+.dsh-tdt-sv-tfc-none{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+/* 用户消息里的随附文件卡（官方 MessageItem attachmentRow / fileCard；2026-10-03）：
+   气泡**下方**一行，小卡 = 图标 + 文件名 + 大小。引用里没有路径 ⇒ 不可点开，也不伪装成可点。 */
+.dsh-tdt-sv-attrow{flex-wrap:wrap;gap:6px;min-width:0;justify-content:flex-end;display:flex;}
+.dsh-tdt-sv-attcard{box-sizing:border-box;border:.5px solid var(--tdt-border-faint,#0000000a);border-radius:var(--tdt-radius-md);background:var(--tdt-plate,rgba(128,128,128,.08));max-width:100%;height:44px;align-items:center;gap:8px;padding:6px 10px;display:flex;}
+.dsh-tdt-sv-attIcon{width:16px;height:16px;color:var(--tdt-link,#3b5bdb);flex:none;align-items:center;justify-content:center;display:inline-flex;}
+.dsh-tdt-sv-attBody{flex-direction:column;gap:1px;min-width:0;display:flex;}
+.dsh-tdt-sv-attName{color:var(--tdt-fg);text-overflow:ellipsis;white-space:nowrap;font-size:var(--tdt-font-sm);font-weight:500;line-height:var(--tdt-line-sm);overflow:hidden;}
+.dsh-tdt-sv-attMeta{color:var(--tdt-fg-3,rgba(128,128,128,.8));font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);}
+`;
+		/**
+		* 幂等注入（走 ui/style.ts 单一 <style>）。SSR / 无 document 环境静默跳过。
+		*/
+		function ensureArchiveSessionStyle() {
+			applyStyle("domain:session-view", ARCHIVE_SESSION_CSS);
+		}
+		//#endregion
+		//#region src/client/task-info-css.ts
+		/** 本皮肤所属的样式域（`ui/style.ts` 的域清单里登记）。 */
+		const TASK_INFO_DOMAIN = "domain:task-info";
+		const TASK_INFO_CSS = [
+			".dsh-tdt-info-session { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; color: var(--tdt-fg); transition: color var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-session:hover { color: var(--tdt-business); }",
+			".dsh-tdt-info-session-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; border-radius: var(--tdt-radius-xs); background: var(--tdt-chip-bg); color: var(--tdt-fg-2); }",
+			".dsh-tdt-info-dep { appearance: none; -webkit-appearance: none; border: 0; border-radius: 0; background: transparent; padding: 0; font: inherit; font-size: var(--tdt-font-sm); color: var(--tdt-fg); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-width: 0; text-align: left; transition: color var(--tdt-dur) var(--tdt-ease); }",
+			".dsh-tdt-info-dep:hover { color: var(--tdt-business); }",
+			".dsh-tdt-info-cfg, .dsh-tdt-info-rec-fields { display: grid; grid-template-columns: max-content 1fr; align-items: stretch; }",
+			".dsh-tdt-info-label, .dsh-tdt-info-value { padding: 6px 0; border-bottom: 1px solid var(--tdt-border-faint); line-height: var(--tdt-line-md); }",
+			".dsh-tdt-info-label { padding-right: 12px; }",
+			".dsh-tdt-info-cfg > :nth-last-child(-n+2), .dsh-tdt-info-rec-body > .dsh-tdt-info-rec-fields:last-child > :nth-last-child(-n+2) { border-bottom: 0; }",
+			".dsh-tdt-rec-ic-ok { color: var(--tdt-success); }",
+			".dsh-tdt-rec-ic-bad { color: var(--tdt-danger); }",
+			".dsh-tdt-rec-ic-run { color: var(--tdt-accent); animation: dsh-tdt-rec-rotate .9s linear infinite; }",
+			"@keyframes dsh-tdt-rec-rotate { to { transform: rotate(360deg) } }",
+			".dsh-tdt-rec-ic-idle { box-sizing: border-box; display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--tdt-border-strong); border-radius: 50%; }",
+			"@media (prefers-reduced-motion: reduce) { .dsh-tdt-rec-ic-run { animation: none; } }"
+		].join("\n");
+		/** 幂等注入（走 ui/style.ts 单一 <style>）。卡片展开区与查看档渲染前都调用它。 */
+		function ensureTaskInfoStyle() {
+			applyStyle(TASK_INFO_DOMAIN, TASK_INFO_CSS);
+		}
+		//#endregion
+		//#region src/client/official-classes.ts
+		/** 官方注入 style 标签的 data-plugin-css 包前缀（chat 主视图 + ui-tool 工具卡 + ui-deliverables）。 */
+		const CSS_PKG_PREFIXES = [
+			"@deepseek-ai/dsh-client-ui-chat/",
+			"@deepseek-ai/dsh-client-ui-tool/",
+			"@deepseek-ai/dsh-client-ui-deliverables/",
+			"@deepseek-ai/dsh-client-ui-sidebar-documentpreview/"
+		];
+		let discovered = null;
+		/**
+		* 解析一段官方 CSS module 文本，抽出 {语义名 → 真实类名}。
+		* 纯函数、无 DOM 依赖（冒烟可直接对夹具断言）。
+		* @param css - style 标签的 textContent。
+		* @returns 语义名到真实类名的映射；解析不出哈希前缀时为空表。
+		*/
+		function parseOfficialCss(css) {
+			const out = /* @__PURE__ */ new Map();
+			const tokens = [];
+			const tokenRe = /\.([A-Za-z0-9_-]+)/g;
+			let m = tokenRe.exec(css);
+			while (m !== null) {
+				tokens.push(m[1]);
+				m = tokenRe.exec(css);
+			}
+			const counts = /* @__PURE__ */ new Map();
+			for (const token of tokens) {
+				const at = token.lastIndexOf("_");
+				if (at <= 0 || at === token.length - 1) continue;
+				const prefix = token.slice(0, at);
+				counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
+			}
+			let prefix = "";
+			let best = 0;
+			counts.forEach((count, key) => {
+				if (count > best) {
+					best = count;
+					prefix = key;
+				}
+			});
+			if (prefix === "") return out;
+			for (const token of tokens) {
+				if (!token.startsWith(prefix + "_")) continue;
+				const semantic = token.slice(prefix.length + 1);
+				if (semantic === "" || semantic.includes("_")) continue;
+				if (!out.has(semantic)) out.set(semantic, token);
+			}
+			return out;
+		}
+		/**
+		* 扫描 document 里官方 chat 包注入的 style 标签，按模块缓存解析结果。
+		* 无 document（SSR / 冒烟）时返回空表。
+		*/
+		function discoverOfficialClasses() {
+			if (discovered !== null) return discovered;
+			const result = /* @__PURE__ */ new Map();
+			if (typeof document !== "undefined") {
+				const tags = document.querySelectorAll("style[data-plugin-css]");
+				for (let i = 0; i < tags.length; i++) {
+					const tag = tags[i];
+					const id = tag.dataset.pluginCss ?? "";
+					const prefix = CSS_PKG_PREFIXES.find((candidate) => id.startsWith(candidate));
+					if (prefix === void 0) continue;
+					const module = id.slice(prefix.length).replace(/\.module\.css$/, "");
+					const parsed = parseOfficialCss(tag.textContent ?? "");
+					if (parsed.size === 0 && (tag.textContent ?? "").includes(".")) console.warn(`[task-dispatch:official-classes] 官方模块 ${module} 类名解析为空（格式可能变了）`);
+					result.set(module, parsed);
+				}
+			}
+			if (result.size > 0) discovered = result;
+			return result;
+		}
+		/** 已发现的官方模块数（0 = 官方样式未注入，调用方应走自绘兜底）。 */
+		function officialModuleCount() {
+			return discoverOfficialClasses().size;
+		}
+		/**
+		* 取一个官方类名；取不到返回 null（调用方回退自绘样式）。
+		* @param module - 模块名（如 `ChatView`）。
+		* @param semantic - 语义名（如 `frame`）。
+		*/
+		function officialClass(module, semantic) {
+			return discoverOfficialClasses().get(module)?.get(semantic) ?? null;
+		}
+		/** className 拼接：官方类优先，缺失时回退自绘类（两者只取其一，避免样式打架）。 */
+		function ocOr(module, semantic, fallback) {
+			return officialClass(module, semantic) ?? fallback;
+		}
+		//#endregion
+		//#region src/client/mirror/ChatNodeSeat.tsx
+		/**
+		* 官方 TURN_PROCESS_INDEPENDENT_KINDS（lib/client.js:1525）：这些 kind 永远不进过程折叠区。
+		*/
+		const TURN_PROCESS_INDEPENDENT_KINDS = /* @__PURE__ */ new Set([
+			"system-prompt",
+			"user",
+			"steering",
+			"turn-trigger",
+			"turn-process",
+			"turn-error",
+			"turn-max-tokens",
+			"turn-tail"
+		]);
+		/**
+		* 读过程席位快照。宿主 API 形态变了也只降级成「不折叠」，不让整个弹窗白屏。
+		*/
+		function readPresentation(store, key) {
+			if (store === void 0) return void 0;
+			try {
+				const source = store.processSource;
+				if (typeof source !== "function") return void 0;
+				return source.call(store, key)?.getSnapshot();
+			} catch {
+				return;
+			}
+		}
+		/** 取节点所属 turn（官方 turnOf，ChatNodeSeat.tsx:1660）。 */
+		function turnOf(node) {
+			const location = node?.location;
+			return location?.kind === "turn" || location?.kind === "step" ? location.turn?.turn : void 0;
+		}
+		/** 官方 turnProcessAlwaysOpen（lib/client.js:1558）：live / 已停止 / 失败的 turn 不折叠。 */
+		function turnProcessAlwaysOpen(node) {
+			const location = node?.location;
+			if (location?.kind !== "turn" && location?.kind !== "step") return false;
+			const reason = location.turn?.end?.data?.reason?.kind;
+			return location.turn?.status === "open" || reason === "aborted" || reason === "error";
+		}
+		/** 一个 keyed 节点 → 一个 flowItem（官方 ChatNodeSeat 的 JSX 等价物）。 */
+		function ChatNodeSeatMirror(props) {
+			const { node, groupPart, store, openState, onSetOpen, foldCompleted, renderNode } = props;
+			const turn = turnOf(node);
+			const presentation = readPresentation(store, node.key);
+			const spec = presentation?.spec ?? void 0 ?? (node.kind === "turn-process" ? node.data : void 0);
+			const liveProcess = presentation !== void 0 && presentation.turnClosed !== true;
+			const interleavedInput = presentation?.hasInterleavedInput === true;
+			const alwaysOpen = liveProcess || interleavedInput || turnProcessAlwaysOpen(node);
+			const storedAnswerStep = turn === void 0 ? void 0 : openState.get(turn);
+			const processOpen = alwaysOpen || spec !== void 0 && storedAnswerStep === (spec.answerStep ?? 0);
+			const setOpen = (open) => {
+				if (spec !== void 0 && !alwaysOpen && turn !== void 0) onSetOpen(turn, spec.answerStep ?? 0, open);
+			};
+			const processWindowReady = spec !== void 0 && presentation !== void 0 && foldCompleted && presentation.turn === spec.turn && (presentation.turnStarted === true || presentation.turnClosed === true);
+			const dataStep = typeof node.data?.step === "number" ? node.data.step : void 0;
+			const processMember = processWindowReady && spec !== void 0 && !TURN_PROCESS_INDEPENDENT_KINDS.has(node.kind) && node.anchorSeq >= spec.processStartSeq && (liveProcess || spec.answerAnchorSeq === null || node.anchorSeq < spec.answerAnchorSeq || groupPart === "reasoning" && node.kind === "assistant-step" && dataStep === spec.answerStep);
+			const processAnswer = processWindowReady && spec !== void 0 && !liveProcess && groupPart !== "reasoning" && node.kind === "assistant-step" && dataStep === spec.answerStep;
+			const ownsDisclosure = node.kind === "turn-process" || processAnswer;
+			const foldable = processWindowReady && (liveProcess || processMember || ownsDisclosure);
+			const turnProcess = spec === void 0 ? void 0 : {
+				spec,
+				foldable,
+				hasContent: !interleavedInput && (presentation?.hasExternalProcess === true || spec.inlineReasoning),
+				open: processOpen,
+				alwaysOpen,
+				setOpen
+			};
+			const controllerInactive = node.kind === "turn-process" && foldCompleted && !foldable;
+			const compactAnswer = processAnswer && foldable && presentation?.compactAnswer === true && !processOpen;
+			const processHidden = controllerInactive || foldable && processMember && !processOpen;
+			const inner = renderNode(node, turnProcess, groupPart);
+			if (inner === null || inner === void 0) return null;
+			const flowKey = groupPart === void 0 || groupPart === "response" ? node.key : JSON.stringify([node.key, groupPart]);
+			return (0, react$1.createElement)("div", {
+				className: ocOr("ChatView", "flowItem", "dsh-tdt-sv-flowitem"),
+				"data-chat-anchor-key": flowKey,
+				"data-chat-flow-key": flowKey,
+				"data-chat-paging-anchor": node.kind !== "turn-process" || void 0,
+				"data-chat-node-key": node.key,
+				"data-chat-group-part": groupPart,
+				"data-chat-flow-kind": node.kind,
+				"data-chat-turn": turn,
+				"data-turn-process-member": processMember || void 0,
+				"data-turn-process-hidden": processHidden || void 0,
+				"data-turn-process-answer": compactAnswer || void 0,
+				hidden: processHidden || void 0
+			}, inner);
+		}
+		//#endregion
+		//#region src/client/mirror/process-groups.ts
+		/** 官方 INDEPENDENT（process-groups.js:10565；注意与 ChatNodeSeat 的清单不同）。 */
+		const INDEPENDENT = /* @__PURE__ */ new Set([
+			"user",
+			"steering",
+			"turn-trigger",
+			"model-retry",
+			"turn-error",
+			"turn-max-tokens",
+			"turn-tail"
+		]);
+		/** 节点所属 turn（官方 turnOf，process-groups.js:10574）。 */
+		function turnOfNode(node) {
+			const location = node.location;
+			return location?.kind === "turn" || location?.kind === "step" ? location.turn?.turn : void 0;
+		}
+		/** 官方 reasoning（10578）：assistant-step 带非空思考块。 */
+		function hasReasoning(node) {
+			if (node.kind !== "assistant-step" || !Array.isArray(node.data?.blocks)) return false;
+			return (node.data?.blocks).some((block) => block?.kind === "reasoning" && (block.text ?? "").trim() !== "");
+		}
+		/** 官方 reply（10581）：assistant-step 带回复内容（reasoning / tool-call 不算，空文本不算）。 */
+		function hasReply(node) {
+			if (node.kind !== "assistant-step" || !Array.isArray(node.data?.blocks)) return false;
+			return (node.data?.blocks).some((block) => {
+				if (block === null || typeof block !== "object") return false;
+				if (block.kind === "reasoning" || block.kind === "tool-call") return false;
+				if (block.kind === "text") return (block.text ?? "").trim() !== "";
+				return true;
+			});
+		}
+		/** 官方 activity（10426-10449）：工具名 → 活动类别。 */
+		function toolActivity(name) {
+			if (name === "read") return "read";
+			if (name === "read_image") return "readImage";
+			if (name === "grep" || name === "glob" || name.endsWith("_inspect")) return "search";
+			if (name === "write") return "write";
+			if (name === "edit" || name === "apply_patch") return "edit";
+			if ([
+				"bash",
+				"pwsh",
+				"exec_command",
+				"write_stdin"
+			].includes(name) || name.startsWith("terminal_")) return "commands";
+			if (name === "run_code") return "code";
+			if (name === "web_search") return "webSearch";
+			if (name === "web_fetch") return "webFetch";
+			if (name === "subagent" || name.startsWith("subagent_")) return "subagents";
+			if ([
+				"todo_write",
+				"create_goal",
+				"update_goal",
+				"get_goal"
+			].includes(name)) return "plan";
+			if (name === "ask_user_question" || name === "request_user_input") return "questions";
+			return "tools";
+		}
+		/** ToolCallBlock → 本次调用的名字面（running 半截在根上，settled 在 call 里）。 */
+		function toolCallFace(root) {
+			const callId = typeof root.callId === "string" ? root.callId : "";
+			if (root.kind === "tool-result") {
+				const name = typeof root.call?.name === "string" ? root.call.name : "";
+				return callId === "" || name === "" ? null : {
+					callId,
+					name
+				};
+			}
+			const name = typeof root.name === "string" ? root.name : "";
+			return callId === "" || name === "" ? null : {
+				callId,
+				name
+			};
+		}
+		/** 官方 processActivity（10527-10561）：按去重调用数排序的活动类别（含子调用递归）。 */
+		function processActivity(nodes) {
+			const counts = /* @__PURE__ */ new Map();
+			const seen = /* @__PURE__ */ new Set();
+			const visit = (tool) => {
+				const face = toolCallFace(tool);
+				if (face !== null && !seen.has(face.callId)) {
+					seen.add(face.callId);
+					const kind = toolActivity(face.name);
+					counts.set(kind, (counts.get(kind) ?? 0) + 1);
+				}
+				for (const child of tool.subCalls ?? []) visit(child);
+			};
+			for (const node of nodes) {
+				if (node.kind !== "tool-call") continue;
+				const root = node.data?.root;
+				if (root !== void 0 && root !== null) visit(root);
+			}
+			return [...counts].map(([kind, count]) => ({
+				kind,
+				count
+			})).sort((left, right) => right.count - left.count);
+		}
+		/**
+		* 官方 TurnGroups.rebuild 的移植：把 keyed 流切成「独立条目 + 过程分组」。
+		* @param order - 官方渲染顺序（node key 列表）。
+		* @param readNode - keyed 节点读取。
+		* @param isTurnClosed - turn 是否已闭合（官方 turns.get(turn).status === 'closed'）。
+		*/
+		function buildProcessGroups(order, readNode, isTurnClosed) {
+			const entries = [];
+			const groups = /* @__PURE__ */ new Map();
+			let pending = [];
+			let currentTurn;
+			const flush = (closed) => {
+				const first = pending[0];
+				if (first === void 0) return;
+				const turn = currentTurn;
+				const ended = closed || turn !== void 0 && isTurnClosed(turn);
+				const members = pending;
+				const nodes = members.map((member) => readNode(member.key)).filter((node) => node !== void 0);
+				const groupKey = JSON.stringify([
+					"process",
+					first.key,
+					first.groupPart ?? null
+				]);
+				groups.set(groupKey, {
+					key: groupKey,
+					members,
+					data: {
+						turn: turn ?? -1,
+						closed: ended,
+						summary: { counts: processActivity(nodes) }
+					}
+				});
+				entries.push({
+					kind: "group",
+					key: groupKey
+				});
+				pending = [];
+			};
+			for (const key of order) {
+				const node = readNode(key);
+				if (node === void 0) continue;
+				const turn = turnOfNode(node);
+				if (turn !== currentTurn) {
+					flush(true);
+					currentTurn = turn;
+				}
+				if (INDEPENDENT.has(node.kind)) {
+					flush(true);
+					entries.push({
+						kind: "node",
+						key
+					});
+				} else if (node.kind === "turn-process") entries.push({
+					kind: "node",
+					key
+				});
+				else if (node.kind === "assistant-step") {
+					if (hasReasoning(node)) pending.push({
+						key,
+						groupPart: "reasoning"
+					});
+					if (hasReply(node)) {
+						flush(true);
+						entries.push({
+							kind: "node",
+							key,
+							groupPart: "response"
+						});
+					}
+				} else pending.push({ key });
+			}
+			flush(currentTurn === void 0 ? true : isTurnClosed(currentTurn));
+			return {
+				entries,
+				groups
+			};
+		}
+		/** 官方 message.stepProcess.done.* 的键面（zh/en 文案见 locales.ts）。 */
+		const STEP_DONE_KEYS = {
+			thinking: "stepProcessDoneThinking",
+			read: "stepProcessDoneRead",
+			readImage: "stepProcessDoneReadImage",
+			write: "stepProcessDoneWrite",
+			search: "stepProcessDoneSearch",
+			edit: "stepProcessDoneEdit",
+			commands: "stepProcessDoneCommands",
+			code: "stepProcessDoneCode",
+			webSearch: "stepProcessDoneWebSearch",
+			webFetch: "stepProcessDoneWebFetch",
+			subagents: "stepProcessDoneSubagents",
+			plan: "stepProcessDonePlan",
+			questions: "stepProcessDoneQuestions",
+			tools: "stepProcessDoneTools"
+		};
+		/**
+		* 官方 processTitle（1820-1836）：closed 组标题 = 前 3 类活动拼接
+		* （2 类用「A并B」且去「已」前缀；≥3 类用「，」连接、超 3 类补「等」）。
+		*/
+		function processTitle(summary, t) {
+			const labels = summary.counts.slice(0, 3).map(({ kind }) => t(STEP_DONE_KEYS[kind]));
+			const first = labels[0];
+			if (first === void 0) return t("stepProcessDoneThinking");
+			const continuation = (label) => label.charAt(0).toLowerCase() + label.slice(1);
+			const second = labels[1];
+			if (second === void 0) return first;
+			if (labels.length === 2) {
+				const prefix = t("stepProcessSharedPrefix");
+				return t("stepProcessJoinTwo", {
+					first,
+					second: continuation(prefix !== "" && first.startsWith(prefix) && second.startsWith(prefix) ? second.slice(prefix.length) : second)
+				});
+			}
+			const title = [first, ...labels.slice(1).map(continuation)].join(t("stepProcessComma"));
+			return summary.counts.length > 3 ? t("stepProcessMore", { title }) : title;
+		}
+		//#endregion
+		//#region src/client/mirror/ChatGroupSeat.tsx
+		/** 官方 PROCESS_ICONS（lib/client.js:2187-2201）；工具行图标同源（edit/write=铅笔、generic=sparkle）。 */
+		const PROCESS_ICONS = {
+			thinking: _deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular,
+			read: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
+			readImage: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
+			search: _deepseek_ai_dsh_client_ui_primitives.IconSearchOutlineRegular,
+			edit: _deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular,
+			write: _deepseek_ai_dsh_client_ui_primitives.IconEditOutlineRegular,
+			commands: _deepseek_ai_dsh_client_ui_primitives.IconApiOutlineRegular,
+			code: _deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular,
+			webSearch: _deepseek_ai_dsh_client_ui_primitives.IconGlobeOutlineRegular,
+			webFetch: _deepseek_ai_dsh_client_ui_primitives.IconBrowseOutlineRegular,
+			subagents: _deepseek_ai_dsh_client_ui_primitives.IconAgentPresetOutlineRegular,
+			plan: _deepseek_ai_dsh_client_ui_primitives.IconPlanOutlineRegular,
+			questions: _deepseek_ai_dsh_client_ui_primitives.IconQuestionOutlineRegular,
+			tools: _deepseek_ai_dsh_client_ui_primitives.IconSparkleRegular
+		};
+		/** 官方图标尺寸（14px，除 thinking/commands/webSearch/plan/questions 用默认）。 */
+		const SMALL_ICONS = /* @__PURE__ */ new Set([
+			"read",
+			"readImage",
+			"search",
+			"edit",
+			"write",
+			"code",
+			"webFetch",
+			"subagents",
+			"tools"
+		]);
+		/** 过程分组（二级收折）：汇总行 + 组内条目。 */
+		function ChatGroupSeatMirror(props) {
+			const { group, grouped, store, openState, onSetOpen, foldCompleted, renderNode, t } = props;
+			const [open, setOpen] = (0, react$1.useState)(false);
+			const first = group.members[0];
+			const firstNode = first === void 0 ? void 0 : store?.get(first.key);
+			const presentation = first === void 0 ? void 0 : readPresentation(store, first.key);
+			const spec = presentation?.spec ?? void 0;
+			const location = firstNode?.location;
+			const reason = location?.kind === "turn" || location?.kind === "step" ? location.turn?.end?.data?.reason?.kind : void 0;
+			const alwaysOpen = presentation?.turnClosed === false || presentation?.hasInterleavedInput === true || reason === "aborted" || reason === "error";
+			const storedAnswerStep = openState.get(group.data.turn);
+			const outerHidden = foldCompleted && presentation?.turnClosed === true && spec !== void 0 && !alwaysOpen && storedAnswerStep !== (spec.answerStep ?? 0);
+			(0, react$1.useEffect)(() => {
+				if (outerHidden) setOpen(false);
+			}, [outerHidden]);
+			const bodyRef = (0, react$1.useRef)(null);
+			const [edges, setEdges] = (0, react$1.useState)({
+				up: false,
+				down: false
+			});
+			const measure = (0, react$1.useCallback)(() => {
+				const el = bodyRef.current;
+				if (el === null) return;
+				setEdges({
+					up: el.scrollTop > 1,
+					down: el.scrollTop + el.clientHeight < el.scrollHeight - 1
+				});
+			}, []);
+			(0, react$1.useEffect)(() => {
+				if (grouped && open) measure();
+			}, [
+				grouped,
+				open,
+				measure
+			]);
+			if (first === void 0 || firstNode === void 0) return null;
+			const label = group.data.closed ? processTitle(group.data.summary, t) : t("stepProcessDoneThinking");
+			const activity = group.data.summary.counts[0]?.kind ?? "thinking";
+			const ActivityIcon = PROCESS_ICONS[activity] ?? _deepseek_ai_dsh_client_ui_primitives.IconThinkOutlineRegular;
+			const bodyClass = [
+				ocOr("ChatGroupSeat", "body", "dsh-tdt-sv-group-body"),
+				grouped ? "" : ocOr("ChatGroupSeat", "expandedBody", "dsh-tdt-sv-group-expanded"),
+				grouped && edges.up ? ocOr("ChatGroupSeat", "fadeTop", "dsh-tdt-sv-group-fade-top") : "",
+				grouped && edges.down ? ocOr("ChatGroupSeat", "fadeBottom", "dsh-tdt-sv-group-fade-bottom") : ""
+			].filter((part) => part !== "").join(" ");
+			return (0, react$1.createElement)("div", {
+				className: ocOr("ChatGroupSeat", "root", "dsh-tdt-sv-group"),
+				"data-chat-group-key": group.key,
+				"data-chat-flow-key": group.key,
+				"data-chat-anchor-key": `group:${group.key}`,
+				"data-chat-turn": group.data.turn,
+				"data-step-process": true,
+				"data-group-expanded-mode": !grouped || void 0,
+				hidden: outerHidden || void 0
+			}, grouped ? (0, react$1.createElement)("button", {
+				type: "button",
+				className: ocOr("ChatGroupSeat", "title", "dsh-tdt-sv-group-title"),
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen((value) => !value);
+				}
+			}, (0, react$1.createElement)("span", {
+				className: ocOr("ChatGroupSeat", "leading", "dsh-tdt-sv-group-leading"),
+				"aria-hidden": true
+			}, (0, react$1.createElement)("span", {
+				className: ocOr("ChatGroupSeat", "activityIcon", "dsh-tdt-sv-group-icon"),
+				"data-step-process-icon": true
+			}, (0, react$1.createElement)(ActivityIcon, SMALL_ICONS.has(activity) ? { size: 14 } : {})), open ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { className: ocOr("ChatGroupSeat", "chevron", "dsh-tdt-sv-group-chevron") }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: ocOr("ChatGroupSeat", "chevron", "dsh-tdt-sv-group-chevron") })), (0, react$1.createElement)("span", { className: ocOr("ChatGroupSeat", "label", "dsh-tdt-sv-group-label") }, label)) : null, (0, react$1.createElement)("div", {
+				ref: bodyRef,
+				className: bodyClass,
+				"data-step-process-body": true,
+				"data-scroll-up": edges.up || void 0,
+				"data-scroll-down": edges.down || void 0,
+				onScroll: measure,
+				hidden: grouped && !open || void 0
+			}, (0, react$1.createElement)("div", {
+				className: ocOr("ChatGroupSeat", "content", "dsh-tdt-sv-group-content"),
+				"data-step-process-content": true,
+				"data-chat-flow": ""
+			}, group.members.map((member) => (0, react$1.createElement)(ChatNodeSeatMirror, {
+				key: JSON.stringify([member.key, member.groupPart ?? null]),
+				node: store?.get(member.key) ?? {
+					key: member.key,
+					kind: "",
+					anchorSeq: 0
+				},
+				groupPart: member.groupPart,
+				store,
+				openState,
+				onSetOpen,
+				foldCompleted,
+				renderNode
+			})))));
+		}
+		//#endregion
+		//#region src/client/mirror/ChatView.tsx
+		/** 会话区骨架：frame > root > scroll > column（类名取官方 ChatView.module.css，缺失回退自绘）。
+		*
+		*  `dsh-tdt-sv-frame` / `dsh-tdt-sv-scroll` = 本插件**稳定钩子类**（不参与 ocOr，官方类命中时也挂）：
+		* 会话区**纵向间距的唯一真源**。官方 scroll 自带纵向 16px、官方 frame 的纵向值又不确定，两者叠加
+		* 只能在「官方命中」这一条路径上凑对；官方类缺失时 `.dsh-tdt-sv-body` 的 padding 会**盖掉** frame
+		* 的补足（同一元素、body 在 CSS 里靠后 ⇒ 覆盖），纵向从 34px 塌成 16px、比顶部区少 18px。
+		* ⇒ 归一方案（2026-10-03）：**scroll 钩子把官方纵向 16px 归零，frame 钩子独自定 34/16**，
+		* 两条钩子都用双类名提高特异性压过官方 CSS module（0,2,0 > 0,1,0），不再依赖注入顺序。
+		*/
+		function ChatViewFrame(props) {
+			return (0, react$1.createElement)("div", { className: `${ocOr("ChatView", "frame", "dsh-tdt-sv-body")} dsh-tdt-sv-frame dsh-tdt-sv-chat` }, (0, react$1.createElement)("div", { className: ocOr("ChatView", "root", "") }, (0, react$1.createElement)("div", { className: `${ocOr("ChatView", "scroll", "")} dsh-tdt-sv-scroll` }, (0, react$1.createElement)("div", {
+				className: ocOr("ChatView", "column", "dsh-tdt-sv-col"),
+				"data-chat-flow": ""
+			}, props.children))));
+		}
+		/** 官方 ChatNodeList：order → seat 列表（grouped 视图未实现 ⇒ 走官方 order 兜底分支）。 */
+		function ChatNodeListMirror(props) {
+			const { order, store, entries, groups, turns, openState, onSetOpen, foldCompleted, renderNode, t } = props;
+			const rows = [];
+			const read = store === void 0 ? void 0 : store.get;
+			if (typeof read !== "function" || store === void 0) return rows;
+			const readSafe = (key) => {
+				try {
+					return read.call(store, key);
+				} catch {
+					return;
+				}
+			};
+			if (entries !== void 0 && groups !== void 0) {
+				for (const entry of entries) if (entry.kind === "group") {
+					const group = groups.get(entry.key);
+					if (group === void 0) continue;
+					rows.push((0, react$1.createElement)(ChatGroupSeatMirror, {
+						key: entry.key,
+						group,
+						grouped: turnStatus(turns, group.data.turn) !== "open",
+						store,
+						openState,
+						onSetOpen,
+						foldCompleted,
+						renderNode,
+						t
+					}));
+				} else {
+					const node = readSafe(entry.key);
+					if (node === void 0) continue;
+					rows.push((0, react$1.createElement)(ChatNodeSeatMirror, {
+						key: JSON.stringify([entry.key, entry.groupPart ?? null]),
+						node,
+						groupPart: entry.groupPart,
+						store,
+						openState,
+						onSetOpen,
+						foldCompleted,
+						renderNode
+					}));
+				}
+				return rows;
+			}
+			for (const key of order) {
+				const node = readSafe(key);
+				if (node === void 0) continue;
+				rows.push((0, react$1.createElement)(ChatNodeSeatMirror, {
+					key,
+					node,
+					store,
+					openState,
+					onSetOpen,
+					foldCompleted,
+					renderNode
+				}));
+			}
+			return rows;
+		}
+		/** turn 状态（官方 turns.get(turn)?.status）。 */
+		function turnStatus(turns, turn) {
+			return (turns?.get(turn) ?? turns?.get(String(turn)))?.status;
+		}
+		/** 加载 / 空态提示行（13px tertiary）。 */
+		function ChatHint(props) {
+			return (0, react$1.createElement)("div", { className: ocOr("ChatView", "hint", "dsh-tdt-sv-hint") }, props.text);
+		}
+		/** 「加载更早记录」按钮（官方 older：按钮 4px 12px / 12px 字号 / radius-sm / 底色 interactive-bg-hover-solid）。 */
+		function ChatOlderButton(props) {
+			return (0, react$1.createElement)("div", { className: ocOr("ChatView", "older", "dsh-tdt-sv-older") }, (0, react$1.createElement)("button", {
+				type: "button",
+				onClick: props.onClick
+			}, props.label));
+		}
+		//#endregion
 		//#region src/client/mirror/GenericCommandCard.tsx
 		/** 官方 TOOL_VARIANTS（tool client.js:83-100，cordis_* 一并保留）。 */
 		const TOOL_VARIANTS = {
@@ -67192,24 +67210,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			EventType.TASK_RUN_SKIPPED,
 			EventType.TASK_RUN_CHANGED
 		];
-		//#endregion
-		//#region src/client/ui/running.ts
-		/** 运行中配色：蓝（前后两端统一；成功绿 / 失败红留给终态）。 */
-		const RUNNING_TONE = "var(--tdt-business)";
-		/** 脉动动画类：挂到任意元素上即获得「运行中」明暗脉冲（与执行记录页同款 keyframe，单一定义）。 */
-		const RUN_PULSE_CLASS = "dsh-tdt-run-pulse";
-		const RUNNING_CSS = `
-@keyframes dsh-tdt-run-pulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
-.${RUN_PULSE_CLASS} { animation: dsh-tdt-run-pulse var(--tdt-dur-run) var(--tdt-ease) infinite; }
-@media (prefers-reduced-motion: reduce) { .${RUN_PULSE_CLASS} { animation: none; } }
-`;
-		let ensured = false;
-		/** 幂等注入「运行中」脉动样式（keyframe + 动画类，全局生效一次即可）。 */
-		const ensureRunningStyle = () => {
-			if (ensured) return;
-			ensured = true;
-			applyStyle("domain:running", RUNNING_CSS);
-		};
 		//#endregion
 		//#region src/client/records-timeline.tsx
 		/** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */

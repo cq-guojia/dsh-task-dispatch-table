@@ -18,7 +18,7 @@ import {
   IconLoadingOutlineRegular, IconSearchOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
-import { MarqueeText } from './editor-fields'
+import { MarqueeText } from './ui'
 import { outputsOf, type InstanceRow } from './query'
 import { statusTextOf } from './status-text'
 

@@ -3,22 +3,16 @@
 // P6 收口：`SelectField` / `MarqueeText` / `DateField` / `TimeField` 的实现已全部迁到 `src/client/ui/`
 // （Field.tsx / MarqueeText.tsx / DateTime.tsx，唯一实现 + 皮肤在 controls-css.ts）。
 // 本文件只保留两样东西：
-//   1. `calendarLabelsOf`——日历文案**单源**（决策 55，跨页面共用）；
+//   1. `calendarLabelsOf` / `timeLabelsOf`——日历与时间文案**单源**（决策 55，跨页面共用）；
 //   2. `WeekdayPicker`——周几多选（Segmented multiple + `.dsh-tdt-seg--weekday` 特殊化变体）。
-// 并对既有调用方（task-editor / task-list）**再导出**统一件，保持它们原来的 `from './editor-fields'` 不变。
+// ⚠️ 2026-10-06：**不再二次再导出 `ui/` 的控件**（design/client-refresh-disposition.md §四 W6）——
+// 同一控件曾有两条 import 路径。要 `SelectField` / `MarqueeText` / `DateField` / `TimeField` 请走 `./ui`。
 
 import { createElement as h, useMemo } from 'react'
 import { pad2 } from './format'
 import { interpolateTranslate, type Translate } from './locales'
 import type { ReactElement } from 'react'
 import { Segmented, type CalendarLabels, type SegmentedItem, type TimeLabels } from './ui'
-
-// ─────────────────────── 统一控件再导出（实现都在 ui/） ───────────────────────
-
-export { DateField, TimeField } from './ui'
-export { SelectField, type EditorOption, type SelectFieldProps } from './ui'
-export { MarqueeText } from './ui'
-export type { CalendarLabels, TimeLabels } from './ui'
 
 // ─────────────────────── 日历文案单源 ───────────────────────
 
