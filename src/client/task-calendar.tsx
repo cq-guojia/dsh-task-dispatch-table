@@ -630,7 +630,7 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
                   }, h('span', null, hhmmOf(item.at))))
                   : h(Tooltip, {
                     side: 'top',
-                    label: `${hhmmOf(item.at)} ${item.entry.title}`,
+                    label: `${hhmmOf(item.at)} ${item.entry.title}（${t('calPlanHint')}）`,
                   }, h('div', {
                     key: `p:${item.entry.taskId}:${item.at}`,
                     className: 'dsh-tdt-cal-tag dsh-tdt-cal-tag--plan',

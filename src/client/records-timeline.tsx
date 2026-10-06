@@ -159,8 +159,6 @@ const RECORDS_CSS = `
 .dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
-/* 预计执行（未执行）名字后的括号说明：小、灰、不换行（与块内次要文字同档）。 */
-.dsh-tdt-rec-planhint{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);font-weight:400;flex:none;white-space:nowrap;}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
    最窄也要能放下「工作区 · 计划 · 实际 · 时长 · Token」的一部分，永不换行、永不横向滚动。 */
 .dsh-tdt-rec-r2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -551,10 +549,6 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                     text: label,
                     className: 'dsh-tdt-rec-title dsh-tdt-ellipsis',
                   })))),
-          // 预计执行（未执行）：名字后面跟一个括号，明确「这是预计执行时间」——不再只靠悬停提示（用户 2026-10-06）。
-          isPlanned
-            ? h('span', { className: 'dsh-tdt-rec-planhint' }, `（${t('calPlanHint')}）`)
-            : null,
           // 前置圈码（用户 2026-10-04）：**本次执行实际用到的**上游有几个就画几个，一个都没有就什么都不画；
           // 提示走**官方 Tooltip**（2026-10-04 第八轮换掉原生 title —— 用户嫌原生提示慢）。
           //   ⚠️ 官方 Tooltip 的 children 必须是**真 DOM**（它给子元素挂 ref，裸组件会静默失效）——

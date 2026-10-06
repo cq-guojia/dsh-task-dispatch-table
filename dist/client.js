@@ -68461,8 +68461,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-rec-tag--planned{background:transparent;color:var(--tdt-business);border:1px dashed color-mix(in srgb,var(--tdt-business) 50%,transparent);}
 .dsh-tdt-rec-r1{display:flex;align-items:center;gap:var(--tdt-space-2);min-width:0;}
 .dsh-tdt-rec-title{font-size:var(--tdt-font-lg);font-weight:600;line-height:var(--tdt-line-md);}
-/* 预计执行（未执行）名字后的括号说明：小、灰、不换行（与块内次要文字同档）。 */
-.dsh-tdt-rec-planhint{font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);font-weight:400;flex:none;white-space:nowrap;}
 /* 信息行：**固定单行 + 溢出省略**（用户 2026-10-04：「多出的部分显示成 ...」）——
    最窄也要能放下「工作区 · 计划 · 实际 · 时长 · Token」的一部分，永不换行、永不横向滚动。 */
 .dsh-tdt-rec-r2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -68774,7 +68772,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)(MarqueeText, {
 				text: label,
 				className: "dsh-tdt-rec-title dsh-tdt-ellipsis"
-			})))), isPlanned ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-planhint" }, `（${t("calPlanHint")}）`) : null, deps.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmarks" }, deps.slice(0, MAX_DEPMARKS).map((dep, index) => {
+			})))), deps.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmarks" }, deps.slice(0, MAX_DEPMARKS).map((dep, index) => {
 				const mark = onViewTask === void 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark" }, String(index + 1)) : (0, react$1.createElement)("button", {
 					type: "button",
 					className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--btn",
@@ -69888,7 +69886,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`
 					}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 						side: "top",
-						label: `${hhmmOf(item.at)} ${item.entry.title}`
+						label: `${hhmmOf(item.at)} ${item.entry.title}（${t("calPlanHint")}）`
 					}, (0, react$1.createElement)("div", {
 						key: `p:${item.entry.taskId}:${item.at}`,
 						className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--plan"
