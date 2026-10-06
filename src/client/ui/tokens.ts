@@ -110,8 +110,10 @@ body{
      （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；
      深色段沿用原 selected-bg 暗值，保持不动。 */
   --tdt-cal-panel-bg:var(--dsw-static-neutral-50,#fafafa);
-  /* 任务日程页本月格 hover 底（浅色段）：沿用通用交互底 */
-  --tdt-cal-cell-hover:var(--tdt-hover);
+  /* 任务日程页本月格 hover 底（浅色段，2026-10-06 续3）：不再走灰色通用交互底——
+     鼠标移上去应是「更亮一点点的蓝」（与深色段同语义：hover = 提亮的蓝，不是灰下去）。
+     business 16% 透白底，比未选中格的 8% 更亮一档。 */
+  --tdt-cal-cell-hover:color-mix(in srgb,var(--tdt-business) 16%,var(--tdt-surface-1));
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
