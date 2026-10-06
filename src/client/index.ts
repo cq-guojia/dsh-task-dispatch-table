@@ -34,7 +34,7 @@ import {
   type TaskEditorDraft,
 } from './task-editor'
 import { ensureToastStyle, FloatingToast } from './toast-css'
-import { Button, IconButton, Segmented, ensureUiBase, startResizeLayoutWidth, type TaskOption } from './ui'
+import { Button, IconButton, Segmented, BackToTop, ensureUiBase, startResizeLayoutWidth, type TaskOption } from './ui'
 import { RecordsTimelineView } from './records-timeline'
 import { TaskCalendarView } from './task-calendar'
 import { humanizeTaskError } from './task-editor'
@@ -1426,6 +1426,8 @@ function TaskPage(props: {
                   : null,
               )
           : null,
+      // 统一的「回到顶部」悬浮钮：挂在 page 滚动容器里一次，覆盖全部 tab（config / records / calendar / debug）。
+      h(BackToTop, null),
     ),
     // 只读会话弹窗（决策 28）：叠在整页之上（z-index 1010）。挂在与整页并列的独立子树，
     // 其遮罩点击不会冒泡出去、误关整页。
