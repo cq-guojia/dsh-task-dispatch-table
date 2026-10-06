@@ -52,6 +52,7 @@ import { ensureRunningStyle, RUN_PULSE_CLASS } from './ui/running'
 import { interpolateTranslate, type Translate } from './locales'
 // 任务名可点（r12）用的 `.dsh-tdt-info-dep` 皮肤在共享域 domain:task-info。
 import { ensureTaskInfoStyle } from './task-info-css'
+import { renderNextExec } from './task-info'
 
 /** 每页条数（用户拍板「20 或 50，具体再看」⇒ 取 50）。 */
 const PAGE_SIZE = 50
@@ -120,7 +121,7 @@ const RECORDS_CSS = `
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
 .dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
 /* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-border-strong);}
+.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-business);}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
@@ -421,7 +422,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
    */
   const statusTag: { text: string; tone: 'bad' | 'warn' | 'busy' | 'neutral' | 'planned' } | null =
     isPlanned
-      ? { text: t('calPlanTag'), tone: 'planned' }
+      ? null
       : (row.status === 'succeeded'
         ? null
         : {
@@ -429,6 +430,15 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
           tone: row.status === 'failed' ? 'bad' : row.status === 'skipped' ? 'warn' : running ? 'busy' : 'neutral',
         })
   const statusLabel = isPlanned ? t('calPlanTag') : statusTextOf(row.status, t)
+  // 「预计执行」→「计划：」+ 倒计时：复用任务配置列表「下次预计执行时间」同一套（relativeFuture 每秒自刷 + 具体时刻），icon 同款。
+  const plannedTagNode = isPlanned
+    ? h('span', { className: 'dsh-tdt-rec-tag dsh-tdt-rec-tag--planned' },
+        h('span', { style: { display: 'inline-flex', alignItems: 'center', gap: '4px', minWidth: 0 } },
+          h(IconAlarmClockOutlineRegular, { size: 12 }),
+          t('calPlanTag'),
+          renderNextExec(row.scheduled_at, t),
+        ))
+    : null
   const outputs = outputsOf(row.outputs)
   const sid = row.session_id
   const canOpenSession = sid !== null && sid !== ''
@@ -574,7 +584,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         // ⚠️ 每段都挂**带标签的完整值**的悬停提示（用户 2026-10-04：光看「32K」「15:10」不知道是什么）。
         h('div', { className: 'dsh-tdt-rec-r2' },
           field(null, workspace, workspace === '' ? undefined : `${t('listFieldWorkspace')}：${workspace}`),
-          field(h(IconAlarmClockOutlineRegular, { size: 12 }), plannedText === '' ? '' : `${t('recPlan')} ${plannedText}`,
+          isPlanned ? null : field(h(IconAlarmClockOutlineRegular, { size: 12 }), plannedText === '' ? '' : `${t('recPlan')} ${plannedText}`,
             `${t('colPlanned')}：${formatPlanStamp(row.scheduled_at)}`),
           field(actualIcon, actualText, actualTitle),
           field(h(IconQueueOutlineRegular, { size: 12 }), durationText, durationHint),
@@ -618,6 +628,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         // 只有这个按钮开会话（没有会话就不出现 —— 不给假入口；块本身仍可展开）。
         // 状态标签：红 / 黄 / 蓝 / 灰才出，排在「查看会话」**前面**。
         // ⚠️ **不挂备注气泡**（用户 2026-10-05）：有备注的那些，备注已经显示在下面那行 ⇒ 悬停再弹纯属重复。
+        plannedTagNode,
         statusTag === null
           ? null
           : h('span', { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text),
@@ -708,7 +719,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                             },
                           }, h('span', { className: 'dsh-tdt-ellipsis' }, depTitleOf(dep.task)))),
                     ),
-                    h('div', { className: 'dsh-tdt-rec-depmeta' },
+                    !isPlanned && h('div', { className: 'dsh-tdt-rec-depmeta' },
                       // 「执行于 <完整时刻>」—— 书面表达 + **全量长格式**（用户 2026-10-04 第七轮：否掉
                       // 「本次取自前一天…」那种口语说法，「哪一天、几点几分几秒，全都给显示出来」）。
                       // 单行省略、悬停看全量；stampOf = formatDateTime(iso, { seconds: true })。

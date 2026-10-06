@@ -300,12 +300,11 @@ window.__ModuleLoader__.load({
 			calEmpty: "这个月没有执行记录，也没有计划任务",
 			calDayEmpty: "这一天没有执行记录，也没有计划任务",
 			calTruncated: "该月记录超过上限（3000 条），只显示了其中一部分；请用上方过滤缩小范围。",
-			calPlanHint: "按当前任务配置推算的计划，尚未产生执行记录（改配置或停用任务后它会变）",
-			calPlanTag: "预计执行",
+			calPlanTag: "计划：",
 			calNotExecuted: "未执行",
 			calLegendDone: "已执行",
 			calLegendPlan: "预计执行",
-			calToday: "今日",
+			calToday: "今天",
 			calCellMore: "还有 {n} 条，点开看全部",
 			calDepsLabel: "前置",
 			debugDbHint: "状态库（state.db）三张表的原始记录，只读展示：task_instances = 每次执行一行、task_events = 每个事件一行、meta = 插件元数据（含内嵌任务表）。每表最多显示最新 500 行，点右上角刷新重取。",
@@ -930,8 +929,7 @@ window.__ModuleLoader__.load({
 			calEmpty: "No run records and no planned runs in this month",
 			calDayEmpty: "No run records and no planned runs on this day",
 			calTruncated: "This month exceeds the 3000-row limit and is truncated; narrow the filters above.",
-			calPlanHint: "Planned from the current task config — no run record yet (it changes if you edit or disable the task)",
-			calPlanTag: "Expected",
+			calPlanTag: "Plan:",
 			calNotExecuted: "Not executed",
 			calLegendDone: "Executed",
 			calLegendPlan: "Expected",
@@ -68410,7 +68408,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 未知 / 重启孤儿：中性色（复用 chip 底，明暗都成立） */
 .dsh-tdt-rec-tone--mute{--rec-tone:var(--tdt-fg-3);--rec-tone-soft:var(--tdt-chip-bg);}
 /* 「预计执行」（按当前配置推算、尚未产生实例）：**虚线块** = 预期、未落实；蓝（与运行同色系，虚线区分「将跑 / 正在跑」）。 */
-.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-border-strong);}
+.dsh-tdt-rec-tone--planned{--rec-tone:var(--tdt-business);--rec-tone-soft:var(--tdt-business-soft);border-style:dashed;border-color:var(--tdt-business);}
 /* 成败竖条（**不用图标、也不再写状态文字**）：5px 通高、**纯方角**、贴齐块左缘；
    状态名挂在它的 title 上（鼠标停上去才显示，不占版面）。 */
 .dsh-tdt-rec-bar{position:absolute;left:0;top:0;bottom:0;width:var(--rec-bar-w,5px);background:var(--rec-tone,var(--tdt-fg-3));}
@@ -68653,14 +68651,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			*    用户 2026-10-05 纠正：不要另起一套长名（执行失败 / 未执行 / 执行中 / 未知状态），全站就认这一套短名。
 			*    只有**色调**按这里分档（红 / 黄 / 蓝 / 灰），名字本身不再分叉。
 			*/
-			const statusTag = isPlanned ? {
-				text: t("calPlanTag"),
-				tone: "planned"
-			} : row.status === "succeeded" ? null : {
+			const statusTag = isPlanned ? null : row.status === "succeeded" ? null : {
 				text: statusTextOf(row.status, t),
 				tone: row.status === "failed" ? "bad" : row.status === "skipped" ? "warn" : running ? "busy" : "neutral"
 			};
 			const statusLabel = isPlanned ? t("calPlanTag") : statusTextOf(row.status, t);
+			const plannedTagNode = isPlanned ? (0, react$1.createElement)("span", { className: "dsh-tdt-rec-tag dsh-tdt-rec-tag--planned" }, (0, react$1.createElement)("span", { style: {
+				display: "inline-flex",
+				alignItems: "center",
+				gap: "4px",
+				minWidth: 0
+			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), t("calPlanTag"), renderNextExec(row.scheduled_at, t))) : null;
 			const outputs = outputsOf(row.outputs);
 			const sid = row.session_id;
 			const canOpenSession = sid !== null && sid !== "";
@@ -68774,7 +68775,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}), deps.length > MAX_DEPMARKS ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listSectionDepends"),
 				side: "top"
-			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more" }, `+${deps.length - MAX_DEPMARKS}`)) : null)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), plannedText === "" ? "" : `${t("recPlan")} ${plannedText}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actualIcon, actualText, actualTitle), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), durationText, durationHint), tokenNode), note === "" ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+			}, (0, react$1.createElement)("span", { className: "dsh-tdt-rec-depmark dsh-tdt-rec-depmark--more" }, `+${deps.length - MAX_DEPMARKS}`)) : null)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-r2" }, field(null, workspace, workspace === "" ? void 0 : `${t("listFieldWorkspace")}：${workspace}`), isPlanned ? null : field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), plannedText === "" ? "" : `${t("recPlan")} ${plannedText}`, `${t("colPlanned")}：${formatPlanStamp(row.scheduled_at)}`), field(actualIcon, actualText, actualTitle), field((0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconQueueOutlineRegular, { size: 12 }), durationText, durationHint), tokenNode), note === "" ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-note dsh-tdt-ellipsis" }, `${t("colNote")}：${note}`)), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-right" }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { className: "dsh-tdt-rec-chiprow" }, outputs.slice(0, 3).map((path) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				key: path,
 				label: baseNameOf(path),
 				side: "top"
@@ -68796,7 +68797,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					event.stopPropagation();
 					onToggle(row.id);
 				}
-			}, `+${outputs.length - 3}`) : null), statusTag === null ? null : (0, react$1.createElement)("span", { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text), canOpenSession ? (0, react$1.createElement)(Button$2, {
+			}, `+${outputs.length - 3}`) : null), plannedTagNode, statusTag === null ? null : (0, react$1.createElement)("span", { className: `dsh-tdt-rec-tag dsh-tdt-rec-tag--${statusTag.tone}` }, statusTag.text), canOpenSession ? (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "sm",
 				onClick: (event) => {
@@ -68863,7 +68864,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						event.stopPropagation();
 						onViewTask(dep.task);
 					}
-				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, depTitleOf(dep.task))))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, depTitleOf(dep.task))))), !isPlanned && (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depmeta" }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					label: stampOf(dep.scheduledAt),
 					side: "top"
 				}, (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, tt("recordsDepFrom", { time: stampOf(dep.scheduledAt) }))))), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depright" }, depOuts.length === 0 ? null : (0, react$1.createElement)("span", {
@@ -69317,7 +69318,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
    别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);}
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);border:1px solid var(--tdt-border);}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
@@ -69342,8 +69343,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
   border-radius:999px;background:var(--tdt-business);}
 /* 日期数字：左对齐、去掉 5px 内缩与胶囊框（用户 2026-10-06：左边距要和顶间距一致，之前太长） */
-.dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;}
-.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
+.dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;padding-left:6px;}
+.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);font-weight:600;}
 .dsh-tdt-cal-num--today{color:var(--tdt-business);font-weight:600;}
 .dsh-tdt-cal-today{color:var(--tdt-business);font-weight:600;font-size:var(--tdt-font-xs);}
 .dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
@@ -69351,14 +69352,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    标签前 3px 状态色竖线 + 同色系底 + 时刻；时刻位数固定 ⇒ 标签宽度固定；
    一行 3 个、共 3 行（第 9 个位子留给「…N」）；文字在**竖线后面的底色里居中**。 */
 .dsh-tdt-cal-tags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;overflow:hidden;}
-.dsh-tdt-cal-tag{display:flex;align-items:stretch;min-width:0;height:18px;border-radius:0;overflow:hidden;
+.dsh-tdt-cal-tag{display:flex;align-items:stretch;min-width:0;height:18px;border-radius:0;overflow:hidden;box-sizing:border-box;
   background:var(--cal-soft,transparent);}
 .dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--tdt-fg-4));}
 .dsh-tdt-cal-tag>span{flex:1 1 auto;min-width:0;padding:0 2px;overflow:hidden;text-align:center;
   font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
 /* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开） */
-.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
-.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px dashed var(--tdt-fg-4);}
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-business);}
+.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px dashed var(--tdt-business);}
 .dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
 /* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
 .dsh-tdt-cal-tag--more{background:var(--tdt-chip-bg);}
@@ -69383,7 +69384,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 图例色块（与格内标签同款：3px 竖线 + 同深度的底，**无圆角**） */
 .dsh-tdt-cal-swatch{flex:none;width:16px;height:12px;border-radius:0;overflow:hidden;
   background:var(--cal-soft,transparent);border-left:3px solid var(--cal-tone,var(--tdt-fg-4));}
-.dsh-tdt-cal-swatch--plan{background:transparent;border:1px dashed var(--tdt-border-strong);border-left-width:2px;}
+.dsh-tdt-cal-swatch--plan{background:transparent;border:1px dashed var(--tdt-business);border-left-width:2px;}
 .dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
   font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
 .dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
@@ -69810,13 +69811,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							setSelected(cell.iso === selected ? "" : cell.iso);
 							setOpenId(null);
 						}
-					}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-daterow" }, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), cell.isToday ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-today" }, ` · ${t("calToday")}`) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { label: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}` }, (0, react$1.createElement)("div", {
+					}, (0, react$1.createElement)("span", { className: "dsh-tdt-cal-daterow" }, (0, react$1.createElement)("span", { className: `dsh-tdt-cal-num${cell.isToday ? " dsh-tdt-cal-num--today" : ""}` }, String(cell.day)), cell.isToday ? (0, react$1.createElement)("span", { className: "dsh-tdt-cal-today" }, ` · ${t("calToday")}`) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tags" }, items.slice(0, 8).map((item) => item.kind === "done" ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+						side: "top",
+						label: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`
+					}, (0, react$1.createElement)("div", {
 						key: item.row.id,
 						className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`
-					}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { label: `${hhmmOf(item.at)} ${item.entry.title} · ${t("calPlanHint")}` }, (0, react$1.createElement)("div", {
+					}, (0, react$1.createElement)("span", null, hhmmOf(item.at)))) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+						side: "top",
+						label: `${hhmmOf(item.at)} ${item.entry.title}`
+					}, (0, react$1.createElement)("div", {
 						key: `p:${item.entry.taskId}:${item.at}`,
 						className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--plan"
-					}, (0, react$1.createElement)("span", null, hhmmOf(item.at))))), items.length > 8 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, { label: tt("calCellMore", { n: items.length - 8 }) }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more" }, (0, react$1.createElement)("span", null, `…${items.length - 8}`))) : null));
+					}, (0, react$1.createElement)("span", null, hhmmOf(item.at))))), items.length > 8 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+						side: "top",
+						label: tt("calCellMore", { n: items.length - 8 })
+					}, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-tag dsh-tdt-cal-tag--more" }, (0, react$1.createElement)("span", null, `…${items.length - 8}`))) : null));
 				}), hasSel ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel" }, (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-head" }, dayFormatter === null ? selected : dayFormatter.format(/* @__PURE__ */ new Date(`${selected}T00:00:00`)), (0, react$1.createElement)("span", { className: "dsh-tdt-cal-mini" }, tt("recordsDayCount", { n: dayItems.length }))), dayItems.length === 0 ? (0, react$1.createElement)("div", { className: "dsh-tdt-cal-empty" }, loaded ? t("calDayEmpty") : t("calEmpty")) : (0, react$1.createElement)("div", { className: "dsh-tdt-cal-panel-list" }, dayItems.map(panelItemNode))) : null);
 			}))));
 		}

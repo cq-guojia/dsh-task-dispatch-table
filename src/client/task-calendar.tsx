@@ -56,7 +56,7 @@ const CALENDAR_CSS = `
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
    别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);}
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);border:1px solid var(--tdt-border);}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
@@ -81,8 +81,8 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
   border-radius:999px;background:var(--tdt-business);}
 /* 日期数字：左对齐、去掉 5px 内缩与胶囊框（用户 2026-10-06：左边距要和顶间距一致，之前太长） */
-.dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;}
-.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);}
+.dsh-tdt-cal-daterow{display:flex;align-items:baseline;gap:4px;padding-left:6px;}
+.dsh-tdt-cal-num{font-size:var(--tdt-font-sm);line-height:18px;color:var(--tdt-fg-2);font-weight:600;}
 .dsh-tdt-cal-num--today{color:var(--tdt-business);font-weight:600;}
 .dsh-tdt-cal-today{color:var(--tdt-business);font-weight:600;font-size:var(--tdt-font-xs);}
 .dsh-tdt-cal-num--out{color:var(--tdt-fg-4);}
@@ -90,14 +90,14 @@ const CALENDAR_CSS = `
    标签前 3px 状态色竖线 + 同色系底 + 时刻；时刻位数固定 ⇒ 标签宽度固定；
    一行 3 个、共 3 行（第 9 个位子留给「…N」）；文字在**竖线后面的底色里居中**。 */
 .dsh-tdt-cal-tags{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;overflow:hidden;}
-.dsh-tdt-cal-tag{display:flex;align-items:stretch;min-width:0;height:18px;border-radius:0;overflow:hidden;
+.dsh-tdt-cal-tag{display:flex;align-items:stretch;min-width:0;height:18px;border-radius:0;overflow:hidden;box-sizing:border-box;
   background:var(--cal-soft,transparent);}
 .dsh-tdt-cal-tag::before{content:'';flex:none;width:3px;background:var(--cal-tone,var(--tdt-fg-4));}
 .dsh-tdt-cal-tag>span{flex:1 1 auto;min-width:0;padding:0 2px;overflow:hidden;text-align:center;
   font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
 /* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开） */
-.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-border-strong);}
-.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px dashed var(--tdt-fg-4);}
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-business);}
+.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px dashed var(--tdt-business);}
 .dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
 /* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
 .dsh-tdt-cal-tag--more{background:var(--tdt-chip-bg);}
@@ -122,7 +122,7 @@ const CALENDAR_CSS = `
 /* 图例色块（与格内标签同款：3px 竖线 + 同深度的底，**无圆角**） */
 .dsh-tdt-cal-swatch{flex:none;width:16px;height:12px;border-radius:0;overflow:hidden;
   background:var(--cal-soft,transparent);border-left:3px solid var(--cal-tone,var(--tdt-fg-4));}
-.dsh-tdt-cal-swatch--plan{background:transparent;border:1px dashed var(--tdt-border-strong);border-left-width:2px;}
+.dsh-tdt-cal-swatch--plan{background:transparent;border:1px dashed var(--tdt-business);border-left-width:2px;}
 .dsh-tdt-cal-panel-head{display:flex;align-items:center;gap:var(--tdt-space-2);margin-bottom:var(--tdt-space-2);
   font-size:var(--tdt-font-md);line-height:var(--tdt-line-md);color:var(--tdt-fg);font-weight:500;}
 .dsh-tdt-cal-panel-list{display:flex;flex-direction:column;gap:var(--tdt-space-1);}
@@ -587,19 +587,22 @@ export function TaskCalendarView(props: TaskCalendarProps): ReturnType<typeof h>
               h('div', { className: 'dsh-tdt-cal-tags' },
                 items.slice(0, CELL_CAP - 1).map(item => item.kind === 'done'
                   ? h(Tooltip, {
+                    side: 'top',
                     label: `${hhmmOf(item.at)} ${item.name} · ${statusTextOf(item.row.status, t)}`,
                   }, h('div', {
                     key: item.row.id,
                     className: `dsh-tdt-cal-tag dsh-tdt-cal-t--${statusToneOf(item.row.status)}`,
                   }, h('span', null, hhmmOf(item.at))))
                   : h(Tooltip, {
-                    label: `${hhmmOf(item.at)} ${item.entry.title} · ${t('calPlanHint')}`,
+                    side: 'top',
+                    label: `${hhmmOf(item.at)} ${item.entry.title}`,
                   }, h('div', {
                     key: `p:${item.entry.taskId}:${item.at}`,
                     className: 'dsh-tdt-cal-tag dsh-tdt-cal-tag--plan',
                   }, h('span', null, hhmmOf(item.at))))),
                 items.length > CELL_CAP - 1
                   ? h(Tooltip, {
+                    side: 'top',
                     label: tt('calCellMore', { n: items.length - (CELL_CAP - 1) }),
                   }, h('div', {
                     className: 'dsh-tdt-cal-tag dsh-tdt-cal-tag--more',
