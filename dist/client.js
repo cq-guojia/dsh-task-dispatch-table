@@ -35,7 +35,7 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		//#region src/client/format.ts
 		/** 两位补零：`9` → `09`（数字 / 纯数字字符串都收）。 */
-		function pad2$3(value) {
+		function pad2$1(value) {
 			return String(value).padStart(2, "0");
 		}
 		/**
@@ -43,7 +43,7 @@ window.__ModuleLoader__.load({
 		* 体积的地方都走这里（此前无此需求，故没有第二份实现可收敛）。
 		* 0 与负数 ⇒ `—`（不显示「0 B」这种假精确）。
 		*/
-		function formatBytes$1(bytes) {
+		function formatBytes(bytes) {
 			if (!Number.isFinite(bytes) || bytes <= 0) return "—";
 			if (bytes < 1024) return `${bytes} B`;
 			const units = [
@@ -60,6 +60,11 @@ window.__ModuleLoader__.load({
 			}
 			return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`;
 		}
+		/** 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。 */
+		function baseNameOf(path) {
+			const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+			return cut < 0 ? path : path.slice(cut + 1);
+		}
 		/**
 		* ISO → `YYYY-MM-DD HH:mm`（`seconds: true` 时补 `:ss`）。
 		* 解析失败 ⇒ `fallback`（缺省返回**原串**，不编造时间；要占位符就显式传，如 `fallback: '—'`）。
@@ -68,8 +73,8 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return opts?.fallback ?? iso;
 			const d = new Date(ms);
-			const base = `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
-			return opts?.seconds === true ? `${base}:${pad2$3(d.getSeconds())}` : base;
+			const base = `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
+			return opts?.seconds === true ? `${base}:${pad2$1(d.getSeconds())}` : base;
 		}
 		/**
 		* 四位年日期（用户 2026-10-03：卡片标题后的创建时间标签 `[2026-10-03 创建]`）：`YYYY-MM-DD`。
@@ -79,14 +84,14 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "—";
 			const d = new Date(ms);
-			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
+			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
 		}
 		/** 计划执行列（用户 2026-10-02 改**四位年**：形如 `2026-09-30 15:10`）：`YYYY-MM-DD HH:mm`。 */
 		function formatPlanStamp(iso) {
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "-";
 			const d = new Date(ms);
-			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())} ${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())} ${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
 		}
 		/** 实际开始列：只到 `HH:mm:ss`；未派发（null）或解析失败 ⇒ `-`。 */
 		function formatClock(iso) {
@@ -94,7 +99,7 @@ window.__ModuleLoader__.load({
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "-";
 			const d = new Date(ms);
-			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}:${pad2$3(d.getSeconds())}`;
+			return `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}:${pad2$1(d.getSeconds())}`;
 		}
 		/**
 		* 执行时长列（用户 2026-10-02 第四轮）：有小时 ⇒ `H:MM:SS`（如 `1:15:30`）；
@@ -106,7 +111,7 @@ window.__ModuleLoader__.load({
 			const h = Math.floor(totalSec / 3600);
 			const m = Math.floor(totalSec % 3600 / 60);
 			const s = totalSec % 60;
-			return h > 0 ? `${h}:${pad2$3(m)}:${pad2$3(s)}` : `${pad2$3(m)}:${pad2$3(s)}`;
+			return h > 0 ? `${h}:${pad2$1(m)}:${pad2$1(s)}` : `${pad2$1(m)}:${pad2$1(s)}`;
 		}
 		/** token / 计数的大众格式（用户 2026-10-02：别写上千的数字）：≥1K 用 K、≥1M 用 M（1234→1.2K、12345→12.3K、123456→123K）。 */
 		function formatTokenCount(n) {
@@ -2769,9 +2774,6 @@ body[data-ds-dark-theme]{
 		* 颜色 / 尺寸 / 圆角 / 影全走 `--tdt-*`（`controls-css.ts` 的 DATETIME_CSS），明暗自适应。
 		* 浮层定位 / 点外关闭走官方 `useAnchoredPosition` + `useDismissOnOutsidePointer`。
 		*/
-		function pad2$2(n) {
-			return String(n).padStart(2, "0");
-		}
 		/** `YYYY-MM-DD` → 年月日；不合法返回 null。 */
 		function parseIsoDate(value) {
 			const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -2783,7 +2785,7 @@ body[data-ds-dark-theme]{
 			};
 		}
 		function toIsoDate(y, m, d) {
-			return `${y}-${pad2$2(m)}-${pad2$2(d)}`;
+			return `${y}-${pad2$1(m)}-${pad2$1(d)}`;
 		}
 		/** 本地今天（真实时间，非占位）。 */
 		function todayIso$2() {
@@ -2955,8 +2957,8 @@ body[data-ds-dark-theme]{
 				}
 			}, props.labels.today))), document.body) : null);
 		}
-		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$2(i));
-		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$2(i));
+		const HOURS = Array.from({ length: 24 }, (_, i) => pad2$1(i));
+		const MINUTES = Array.from({ length: 60 }, (_, i) => pad2$1(i));
 		/** 时分列：`HH:mm`。 */
 		function TimeField(props) {
 			ensureControlsStyle();
@@ -3047,7 +3049,7 @@ body[data-ds-dark-theme]{
 				size: "sm",
 				onClick: () => {
 					const now = /* @__PURE__ */ new Date();
-					setDraft(`${pad2$2(now.getHours())}:${pad2$2(now.getMinutes())}`);
+					setDraft(`${pad2$1(now.getHours())}:${pad2$1(now.getMinutes())}`);
 				}
 			}, props.labels.now), (0, react$1.createElement)(Button$2, {
 				variant: "primary",
@@ -3060,6 +3062,15 @@ body[data-ds-dark-theme]{
 		}
 		//#endregion
 		//#region src/client/ui/time-range.ts
+		/**
+		* 时间范围 —— **预设档计算 + 日期边界归一**（纯函数，单源）。
+		*
+		* 边界约定（design/features/task-expand-panels.md §3.11）：**半开区间 `[from, to)`**——
+		* 含起点、不含终点；上界 = 所选结束日期的**次日 00:00**（day 粒度）或**下一分钟 :00**（minute 粒度）。
+		* 页面与查询层**不得各自算边界**，一律走 `rangeToQuery`（禁止 BETWEEN / 裸 `<= 当天`）。
+		*
+		* ⚠️ 全部走**本机时区**（与 `format.ts` 一致）；不合法值按「不过滤」返回 undefined，不编造时间。
+		*/
 		/** 全部预设档（缺省显示顺序）。 */
 		const ALL_TIME_PRESETS = [
 			"today",
@@ -3069,9 +3080,6 @@ body[data-ds-dark-theme]{
 			"thisMonth",
 			"lastMonth"
 		];
-		function pad2$1(n) {
-			return String(n).padStart(2, "0");
-		}
 		function ymd(d) {
 			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
 		}
@@ -51584,7 +51592,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileIcon", "dsh-tdt-sv-attIcon") }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: file.name,
 				size: 16
-			})), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileContent", "dsh-tdt-sv-attBody") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileName", "dsh-tdt-sv-attName") }, file.name), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileMeta", "dsh-tdt-sv-attMeta") }, formatBytes$1(file.bytes))))))));
+			})), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileContent", "dsh-tdt-sv-attBody") }, (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileName", "dsh-tdt-sv-attName") }, file.name), (0, react$1.createElement)("span", { className: ocOr("MessageItem", "fileMeta", "dsh-tdt-sv-attMeta") }, formatBytes(file.bytes))))))));
 		}
 		/** 官方 retrySeconds（lib/client.js:1215）：下限 1 秒。 */
 		function retrySeconds(milliseconds) {
@@ -53406,18 +53414,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} catch {}
 			return text;
 		}
-		/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
-		function formatBytes(n) {
-			if (n >= 1048576) {
-				const mb = n / 1048576;
-				return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
-			}
-			if (n >= 1024) {
-				const kb = n / 1024;
-				return `${Number.isInteger(kb) ? kb : kb.toFixed(1)} KB`;
-			}
-			return `${n} B`;
-		}
+		/** 字节数 → 人话（too-large 的 details.limit 展示用）——**唯一实现**在 `format.ts`（M4）。 */
 		/** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
 		function errView(error) {
 			const e = error ?? {};
@@ -54651,7 +54648,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				nextYear: t("editorNextYear"),
 				monthTitle: (year, month) => tt("editorMonthTitle", {
 					y: String(year),
-					m: pad2$3(month)
+					m: pad2$1(month)
 				}),
 				weekdays: t("editorWeekdayShorts").split("|")
 			};
@@ -63644,7 +63641,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (parts.length !== 5) return "09:00";
 			const [minute, hour] = parts;
 			if (!/^\d+$/.test(minute) || !/^\d+$/.test(hour)) return "09:00";
-			return `${pad2$3(hour)}:${pad2$3(minute)}`;
+			return `${pad2$1(hour)}:${pad2$1(minute)}`;
 		}
 		/**
 		* cron 星期位 → 表单星期数组（cron 0 = 周日 ⇒ 7）。
@@ -64200,7 +64197,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const hours = Math.floor(total / 3600);
 			const minutes = Math.floor(total % 3600 / 60);
 			const seconds = total % 60;
-			return hours > 0 ? `${pad2$3(hours)}:${pad2$3(minutes)}:${pad2$3(seconds)}` : `${pad2$3(minutes)}:${pad2$3(seconds)}`;
+			return hours > 0 ? `${pad2$1(hours)}:${pad2$1(minutes)}:${pad2$1(seconds)}` : `${pad2$1(minutes)}:${pad2$1(seconds)}`;
 		}
 		/**
 		* 「预计执行 / 下次执行」的**统一文案**：把时间传进去，由本函数按「现在」算出该显示什么——
@@ -64219,7 +64216,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		function clockOf(iso) {
 			const d = new Date(iso);
 			if (Number.isNaN(d.getTime())) return "—";
-			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			return `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
 		}
 		/**
 		* 「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走
@@ -64359,11 +64356,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		/** 状态→颜色（与卡片状态条同口径：成功绿、失败/未执行红、其余中性）。 */
 		const infoStatusColorOf = (status) => status === "succeeded" ? "var(--tdt-success)" : status === "failed" || status === "skipped" ? "var(--tdt-danger)" : "var(--tdt-fg-2)";
-		/** 路径取末段（产出物行显示用）。执行记录 tab 的产出物图标 tooltip 也用它（同一份，不许再抄）。 */
-		const baseNameOf$1 = (path) => {
-			const parts = path.split("/");
-			return parts[parts.length - 1] || path;
-		};
 		/** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
 		const durationMsOf = (row) => {
 			if (row.dispatched_at === null || row.finished_at === null) return null;
@@ -64626,7 +64618,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: output,
 				size: 14
-			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf$1(output)))))));
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf(output)))))));
 		}
 		//#endregion
 		//#region src/client/task-view.tsx
@@ -64804,7 +64796,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/** 本地今天（真实时间）。 */
 		function todayIso() {
 			const now = /* @__PURE__ */ new Date();
-			return `${now.getFullYear()}-${pad2$3(now.getMonth() + 1)}-${pad2$3(now.getDate())}`;
+			return `${now.getFullYear()}-${pad2$1(now.getMonth() + 1)}-${pad2$1(now.getDate())}`;
 		}
 		/**
 		* 表单里的「日期 + 时刻」是否**已经过去**（缺值 / 解析不出也算过去 ⇒ 走智能默认）。
@@ -64825,8 +64817,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const target = new Date(now.getTime() + 36e5);
 			if (target.getMinutes() !== 0 || target.getSeconds() !== 0 || target.getMilliseconds() !== 0) target.setHours(target.getHours() + 1, 0, 0, 0);
 			return {
-				date: `${target.getFullYear()}-${pad2$3(target.getMonth() + 1)}-${pad2$3(target.getDate())}`,
-				time: `${pad2$3(target.getHours())}:${pad2$3(target.getMinutes())}`
+				date: `${target.getFullYear()}-${pad2$1(target.getMonth() + 1)}-${pad2$1(target.getDate())}`,
+				time: `${pad2$1(target.getHours())}:${pad2$1(target.getMinutes())}`
 			};
 		}
 		/** 新建任务的初始草稿（与 task-template.jsonc 的推荐默认值同拍）。 */
@@ -67417,7 +67409,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		};
 		/** 本地日历日的 key（`YYYY-MM-DD`）。 */
 		function ymdOfDate(d) {
-			return `${d.getFullYear()}-${pad2$3(d.getMonth() + 1)}-${pad2$3(d.getDate())}`;
+			return `${d.getFullYear()}-${pad2$1(d.getMonth() + 1)}-${pad2$1(d.getDate())}`;
 		}
 		/**
 		* 信息行里的「时刻」文案（用户 2026-10-04）。
@@ -67433,7 +67425,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (Number.isNaN(ms)) return "--";
 			const d = new Date(ms);
 			const sameDay = ymdOfDate(d);
-			const hhmm = `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			const hhmm = `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
 			if (sameDay === dayKey || dayKey === "unknown") return hhmm;
 			const base = dateOfDayKey(dayKey);
 			if (base === null) return hhmm;
@@ -67441,11 +67433,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (diffDays === 1) return `${prevDayLabel} ${hhmm}`;
 			if (diffDays === -1) return `${nextDayLabel} ${hhmm}`;
 			return crossFormatter === null ? hhmm : crossFormatter.format(d);
-		}
-		/** 路径末段（产出物清单上只显示文件名）。 */
-		function baseNameOf(path) {
-			const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-			return cut < 0 ? path : path.slice(cut + 1);
 		}
 		/**
 		* 一行记录所属的「天」= `scheduled_at` 的**本地日历日**。
@@ -68305,10 +68292,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const ms = Date.parse(iso);
 			if (Number.isNaN(ms)) return "--";
 			const d = new Date(ms);
-			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
+			return `${pad2$1(d.getHours())}:${pad2$1(d.getMinutes())}`;
 		}
 		/** 月键 `YYYY-MM`（选中日是否还落在新月内，用它比）。 */
-		const monthKeyOf = (y, m) => `${y}-${pad2$3(m)}`;
+		const monthKeyOf = (y, m) => `${y}-${pad2$1(m)}`;
 		/** 任务日程页（月历）。 */
 		function TaskCalendarView(props) {
 			applyStyle(CALENDAR_DOMAIN, CALENDAR_CSS);
@@ -69600,7 +69587,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 				}, instance.note)), (0, react$1.createElement)("td", { style: miniCellStyle }, outputs.length === 0 ? null : (0, react$1.createElement)("span", { style: outputCellStyle }, outputs.slice(0, 3).map((output) => (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 					key: output,
-					label: baseNameOf$1(output),
+					label: baseNameOf(output),
 					side: "top"
 				}, (0, react$1.createElement)("button", {
 					type: "button",

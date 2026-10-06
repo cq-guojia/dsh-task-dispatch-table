@@ -12,7 +12,7 @@
 // 两个视图模型构造函数需要的行类型由调用方在**自己的文件里**组装（避免反向依赖），
 // 视图模型只声明它真正要用的最小字段。
 import { createElement as h, Fragment, type ReactNode } from 'react'
-import { formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail } from './format'
+import { baseNameOf, formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail } from './format'
 import {
   FileTypeIcon, IconCheckCircleFillRegular, IconCloseCircleFillRegular,
   IconLoadingOutlineRegular, IconSearchOutlineRegular,
@@ -61,11 +61,7 @@ export const infoStatusColorOf = (status: string | null): string =>
     : status === 'failed' || status === 'skipped' ? 'var(--tdt-danger)'
       : 'var(--tdt-fg-2)'
 
-/** 路径取末段（产出物行显示用）。执行记录 tab 的产出物图标 tooltip 也用它（同一份，不许再抄）。 */
-export const baseNameOf = (path: string): string => {
-  const parts = path.split('/')
-  return parts[parts.length - 1] || path
-}
+// 路径末段 `baseNameOf` 已收编到 `format.ts`（唯一实现，M5）。
 
 /** 一条实例的耗时毫秒（缺任一时刻返回 null，绝不硬凑）。 */
 export const durationMsOf = (row: InstanceRow): number | null => {

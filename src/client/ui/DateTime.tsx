@@ -7,6 +7,7 @@
  */
 import { createElement as h, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
+import { pad2 } from '../format'
 import {
   IconChevronDownOutlineRegular,
   IconChevronLeftOutlineRegular,
@@ -40,10 +41,6 @@ export interface TimeLabels {
   minute: string
   now: string
   confirm: string
-}
-
-function pad2(n: number): string {
-  return String(n).padStart(2, '0')
 }
 
 /** `YYYY-MM-DD` → 年月日；不合法返回 null。 */

@@ -38,7 +38,7 @@ import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
   IconQueueOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import { formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
+import { baseNameOf, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
 import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
@@ -301,11 +301,7 @@ function clockLabelOf(
   return crossFormatter === null ? hhmm : crossFormatter.format(d)
 }
 
-/** 路径末段（产出物清单上只显示文件名）。 */
-function baseNameOf(path: string): string {
-  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  return cut < 0 ? path : path.slice(cut + 1)
-}
+// 路径末段 `baseNameOf` 已收编到 `format.ts`（唯一实现，M5）。
 
 /**
  * 一行记录所属的「天」= `scheduled_at` 的**本地日历日**。

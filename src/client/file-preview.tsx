@@ -30,6 +30,7 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { CodeViewer } from './ui'
 import type { LocaleKey, Translate } from './locales'
+import { formatBytes } from './format'
 import { MD_LABELS } from './md-labels'
 import { ocOr } from './official-classes'
 
@@ -343,18 +344,7 @@ function sliceToBytes(text: string, maxBytes: number): string {
   return text
 }
 
-/** 字节数 → 人话（too-large 的 details.limit 展示用）。 */
-function formatBytes(n: number): string {
-  if (n >= 1024 * 1024) {
-    const mb = n / (1024 * 1024)
-    return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`
-  }
-  if (n >= 1024) {
-    const kb = n / 1024
-    return `${Number.isInteger(kb) ? kb : kb.toFixed(1)} KB`
-  }
-  return `${n} B`
-}
+/** 字节数 → 人话（too-large 的 details.limit 展示用）——**唯一实现**在 `format.ts`（M4）。 */
 
 /** 官方 RemoteError → 文案键（按 code 裸段分支；顺序即官方语义优先级）。 */
 export function errView(error: unknown): ErrView {

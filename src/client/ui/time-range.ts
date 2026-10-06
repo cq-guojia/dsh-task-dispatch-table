@@ -8,6 +8,8 @@
  * ⚠️ 全部走**本机时区**（与 `format.ts` 一致）；不合法值按「不过滤」返回 undefined，不编造时间。
  */
 
+import { pad2 } from '../format'
+
 /** 粒度：只到天 / 到分。 */
 export type TimePrecision = 'day' | 'minute'
 
@@ -28,10 +30,6 @@ export interface TimeQuery {
 
 /** 全部预设档（缺省显示顺序）。 */
 export const ALL_TIME_PRESETS: readonly TimePresetId[] = ['today', 'yesterday', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth']
-
-function pad2(n: number): string {
-  return String(n).padStart(2, '0')
-}
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`

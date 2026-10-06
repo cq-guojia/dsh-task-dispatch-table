@@ -30,6 +30,12 @@ export function formatBytes(bytes: number): string {
   return `${value >= 10 ? String(Math.round(value)) : value.toFixed(1)} ${units[unit]}`
 }
 
+/** 路径取末段（产出物行 / 文件名显示用）。**单源**：`/` 与 `\` 都认（M5）。 */
+export function baseNameOf(path: string): string {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return cut < 0 ? path : path.slice(cut + 1)
+}
+
 /**
  * ISO → `YYYY-MM-DD HH:mm`（`seconds: true` 时补 `:ss`）。
  * 解析失败 ⇒ `fallback`（缺省返回**原串**，不编造时间；要占位符就显式传，如 `fallback: '—'`）。

@@ -13,7 +13,7 @@
 // 官方组件：Switch / Menu / Input / 图标 一律取 primitives（本仓库惯例：能官方不手绘）；
 // 卡片外壳官方没有列表件 ⇒ 自绘，颜色全走宿主主题变量。
 import { createElement as h, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, formatYmd, pad2 } from './format'
+import { baseNameOf, formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, formatYmd, pad2 } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular,
   IconClockOutlineRegular, IconEditOutlineRegular, IconFolderOpenOutlineRegular,
@@ -23,7 +23,7 @@ import {
 // 任务信息展示层（2026-10-05 上提为共享件）：基础信息纸表格 / 上次执行明细 / 状态图标 / 人话转换。
 // ⚠️ **与右侧栏「查看档」共用同一份实现** —— 要改字段怎么翻译、怎么渲染，去 `task-info.tsx`，不许在本文件再抄一份。
 import {
-  baseNameOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
+  infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
   LAST_RUN_STATUSES, lastRunFields, StatusIcon, taskInfoBaseFields, type TaskInfoBaseView,
 } from './task-info'
 // 时间文案层（2026-10-06 从 task-info.tsx 归位到独立模块；唯一实现，别处不许再写一份）。
