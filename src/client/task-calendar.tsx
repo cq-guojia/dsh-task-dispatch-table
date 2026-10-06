@@ -57,7 +57,7 @@ const CALENDAR_CSS = `
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
    别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;background:var(--tdt-border-faint);border:2px solid var(--tdt-border-faint);}
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);border:1px solid var(--tdt-border);}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
@@ -97,9 +97,10 @@ const CALENDAR_CSS = `
 .dsh-tdt-cal-tag>span{flex:1 1 auto;min-width:0;padding:0 2px;overflow:hidden;text-align:center;
   display:flex;align-items:center;justify-content:center;
   font-size:var(--tdt-font-xs);line-height:18px;color:var(--tdt-fg);font-variant-numeric:tabular-nums;}
-/* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开）；左侧竖线改**实心**、整体走淡灰（不再刺眼的蓝）。 */
-.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-border-heavy);}
-.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--tdt-border-heavy);}
+/* 计划 = **虚线空心**（与「已发生」的实底标签一眼分得开）；左侧竖线**实心**、整体走蓝
+   （用户 2026-10-06：虚线与竖线都是蓝色、不要灰——与执行记录「预计执行」块同一支蓝）。 */
+.dsh-tdt-cal-tag--plan{background:transparent;border:1px dashed var(--tdt-business);}
+.dsh-tdt-cal-tag--plan::before{background:transparent;border-left:2px solid var(--tdt-business);}
 .dsh-tdt-cal-tag--plan>span{color:var(--tdt-fg-3);}
 /* 「还有 N 条」：占第 9 个位子，点了 = 拉开当天看全部 */
 .dsh-tdt-cal-tag--more{background:var(--tdt-chip-bg);}
@@ -118,7 +119,8 @@ const CALENDAR_CSS = `
    margin-top:-1px 吃掉与上一行（选中格所在周）之间的那 1px 网格间隙，不让一道亮线横在中间。 */
 .dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-selected-bg);border:0;border-radius:0;
   margin-top:-2px;
-  padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-3);
+  /* 下内边距 = 左内边距（用户 2026-10-06：拉开区底部留白要跟左右一模一样，都是 16px）。 */
+  padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-4);
   overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}
 @keyframes dsh-tdt-cal-open{from{max-height:0;opacity:0}to{max-height:1600px;opacity:1}}
 
