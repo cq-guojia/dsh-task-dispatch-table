@@ -10,9 +10,10 @@
 // ⚠️ 页面只负责「订阅 + 收到后刷什么」——**不许**自己写重连 / 退避 / 兜底（那就违反 R2）。
 import { useEffect, useRef } from 'react'
 import type { EventTypeValue, PushEvent } from '../event-catalog.js'
+import { API_PREFIX } from './query'
 
-/** 与 `src/client/index.ts` 的 `DISPATCH_API_PREFIX` 同口径（相对路径；不 import index 以免成环）。 */
-const EVENTS_URL = 'api/task-dispatch-table/events'
+/** 事件流地址：前缀取自唯一真源 `query.ts`（M9；不 import index 以免成环）。 */
+const EVENTS_URL = `${API_PREFIX}/events`
 /** 看门狗巡检间隔。 */
 const WATCHDOG_MS = 5_000
 /** 连续未连上的容忍上限：超过它主动重建连接。 */

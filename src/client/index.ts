@@ -19,6 +19,8 @@
 
 import { createElement as h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { formatDateTime, formatPlanStamp } from './format'
+// API 前缀唯一真源（M9）：本页与设置页通道都从这里引，不再各写一份字面量。
+import { API_PREFIX } from './query'
 // 会话弹窗的唯一取数入口：按会话 id 取实例行（快照 / 产出）——**所有入口只传会话 id**。
 import { fetchInstanceBySession } from './query'
 // 带超时的 fetch：共用**叶子模块**（2026-09-30 收敛三份实现；session-view 也引它，故不能放在本文件里）。
@@ -1714,11 +1716,13 @@ function configFormScope(form: ConfigForm): SettingsScope {
 
 /**
  * rc.1 运行时数据通道：宿主经 `webServer.register` 暴露 HTTP 路由（照抄参考插件
- * dsh-task-board 的已验证通道），客户端同源 fetch 轮询，适配成 SettingsScope。
+ * dsh-task-board 的已验证通道），客户端同源 fetch，适配成 SettingsScope。
  * 宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms。
- * 2s 轮询（宿主每 tick 写），保存任务表后即时刷新；诊断行实时反映 HTTP 状态。
+ * 快照**只在有订阅者（设置页 / 调试页打开）时才轮**（2026-10-06 收窄，原为全页常驻 2s）；
+ * 保存任务表后立即刷一次；诊断行实时反映 HTTP 状态。
  */
-const DISPATCH_API_PREFIX = 'api/task-dispatch-table'
+/** ⚠️ 前缀**唯一真源在 `query.ts`**（M9）：此前本文件与 query/event-subscribe/config-panel 各写一份。 */
+const DISPATCH_API_PREFIX = API_PREFIX
 
 function httpScope(): SettingsScope {
   let lastDebug = ''

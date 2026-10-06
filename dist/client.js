@@ -149,7 +149,11 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region src/client/query.ts
-		const PREFIX = "api/task-dispatch-table";
+		/**
+		* 本插件 webServer 路由的 API 前缀（**全仓唯一**：本文件 / 宿主页 / 事件流 / 设置页都从这里引，
+		* 不再各处再写一遍字面量——2026-10-06 M9，此前有 4 份、其中一处还多了前导 `/`）。
+		*/
+		const API_PREFIX = "api/task-dispatch-table";
 		/**
 		* 解析实例的产出清单（`task_instances.outputs` 是 JSON 字符串数组，决策 32③）。
 		* 形状不对的条目丢弃、解析失败返回空数组 —— **不猜兜底值**。
@@ -188,7 +192,7 @@ window.__ModuleLoader__.load({
 		/** 按任务 / 工作区检索执行记录（服务端 `store.listInstancesByQuery`，排序 scheduled_at DESC）。 */
 		async function fetchInstances(params) {
 			const { statuses, ...rest } = params;
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({
+			const body = await unwrap(await fetchWithTimeout(`${API_PREFIX}/tasks/instances${qsOf({
 				...rest,
 				status: statuses
 			})}`), "执行记录读取失败");
@@ -209,7 +213,7 @@ window.__ModuleLoader__.load({
 		*/
 		async function fetchInstancesLite(params) {
 			const { statuses, ...rest } = params;
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({
+			const body = await unwrap(await fetchWithTimeout(`${API_PREFIX}/tasks/instances${qsOf({
 				...rest,
 				status: statuses,
 				light: "1"
@@ -239,7 +243,7 @@ window.__ModuleLoader__.load({
 		/** 按任务 / 工作区检索诊断日志（服务端 `store.listLogsByQuery`，排序 ts DESC）。 */
 		async function fetchLogs(params) {
 			const { levels, ...rest } = params;
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({
+			const body = await unwrap(await fetchWithTimeout(`${API_PREFIX}/tasks/log${qsOf({
 				...rest,
 				level: levels
 			})}`), "日志读取失败");
@@ -251,7 +255,7 @@ window.__ModuleLoader__.load({
 		}
 		/** 某次执行的事件时间线（服务端 `store.listEventsByInstance`，seq 升序 = 旧→新）。 */
 		async function fetchEvents(instanceId) {
-			const body = await unwrap(await fetchWithTimeout(`${PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`), "事件读取失败");
+			const body = await unwrap(await fetchWithTimeout(`${API_PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`), "事件读取失败");
 			if (!Array.isArray(body.events)) throw new Error("事件读取失败：events 形状不符");
 			return body.events;
 		}
@@ -67072,8 +67076,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		//#endregion
 		//#region src/client/event-subscribe.ts
-		/** 与 `src/client/index.ts` 的 `DISPATCH_API_PREFIX` 同口径（相对路径；不 import index 以免成环）。 */
-		const EVENTS_URL = "api/task-dispatch-table/events";
+		/** 事件流地址：前缀取自唯一真源 `query.ts`（M9；不 import index 以免成环）。 */
+		const EVENTS_URL = `${API_PREFIX}/events`;
 		/** 看门狗巡检间隔。 */
 		const WATCHDOG_MS = 5e3;
 		/** 连续未连上的容忍上限：超过它主动重建连接。 */
@@ -70099,7 +70103,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				minSec: 1
 			}
 		];
-		const API = "api/task-dispatch-table/config";
+		const API = `${API_PREFIX}/config`;
 		const toSecs = (c) => ({
 			tickMs: Math.round(c.tickMs / 1e3),
 			dispatchGraceMs: Math.round(c.dispatchGraceMs / 1e3),
@@ -71591,11 +71595,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		/**
 		* rc.1 运行时数据通道：宿主经 `webServer.register` 暴露 HTTP 路由（照抄参考插件
-		* dsh-task-board 的已验证通道），客户端同源 fetch 轮询，适配成 SettingsScope。
+		* dsh-task-board 的已验证通道），客户端同源 fetch，适配成 SettingsScope。
 		* 宿主插件配置字段不能标 volatile，故快照 / 任务表不走 configForms。
-		* 2s 轮询（宿主每 tick 写），保存任务表后即时刷新；诊断行实时反映 HTTP 状态。
+		* 快照**只在有订阅者（设置页 / 调试页打开）时才轮**（2026-10-06 收窄，原为全页常驻 2s）；
+		* 保存任务表后立即刷一次；诊断行实时反映 HTTP 状态。
 		*/
-		const DISPATCH_API_PREFIX = "api/task-dispatch-table";
+		/** ⚠️ 前缀**唯一真源在 `query.ts`**（M9）：此前本文件与 query/event-subscribe/config-panel 各写一份。 */
+		const DISPATCH_API_PREFIX = API_PREFIX;
 		function httpScope() {
 			let lastDebug = "";
 			let lastInline = "";

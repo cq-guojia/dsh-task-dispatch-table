@@ -11,6 +11,8 @@ import { createElement as h, useEffect, useRef, useState } from 'react'
 import { FloatingToast, ensureToastStyle } from './toast-css'
 import type { Translate } from './locales'
 import { Button, NumberInput } from './ui'
+// API 前缀唯一真源（M9）。
+import { API_PREFIX } from './query'
 
 interface ScopeConfig {
   tickMs: number
@@ -36,7 +38,7 @@ const FIELDS: FieldDef[] = [
   { key: 'unknownGraceMs', labelKey: 'settingsUnknownSec', hintKey: 'settingsUnknownHint', minSec: 1 },
 ]
 
-const API = 'api/task-dispatch-table/config'
+const API = `${API_PREFIX}/config`
 
 const toSecs = (c: ScopeConfig): Record<FieldKey, number> => ({
   tickMs: Math.round(c.tickMs / 1000),

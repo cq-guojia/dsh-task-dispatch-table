@@ -8,7 +8,11 @@
 // 接口失败就让调用方显示错误态，返回什么渲染什么。
 import { fetchWithTimeout } from './http'
 
-const PREFIX = 'api/task-dispatch-table'
+/**
+ * 本插件 webServer 路由的 API 前缀（**全仓唯一**：本文件 / 宿主页 / 事件流 / 设置页都从这里引，
+ * 不再各处再写一遍字面量——2026-10-06 M9，此前有 4 份、其中一处还多了前导 `/`）。
+ */
+export const API_PREFIX = 'api/task-dispatch-table'
 
 /** 一条执行记录（task_instances 行的客户端投影；只声明 UI 用得到的字段）。 */
 export interface InstanceRow {
@@ -137,7 +141,7 @@ export async function fetchInstances(params: InstancesParams): Promise<{ rows: I
   // 线上参数名 = 单数 `status`（服务端 src/index.ts 契约）；本地字段叫 statuses ⇒ 出口处改名。
   // （2026-10-02 修 bug：此前直接把 `statuses` 发出去，服务端读的是 `status` ⇒ 状态过滤恒等于「全部」。）
   const { statuses, ...rest } = params
-  const res = await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({ ...rest, status: statuses })}`)
+  const res = await fetchWithTimeout(`${API_PREFIX}/tasks/instances${qsOf({ ...rest, status: statuses })}`)
   const body = await unwrap<{ rows?: unknown; nextCursor?: unknown }>(res, '执行记录读取失败')
   if (!Array.isArray(body.rows)) throw new Error('执行记录读取失败：rows 形状不符')
   return { rows: body.rows as InstanceRow[], nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null }
@@ -156,7 +160,7 @@ export async function fetchInstancesLite(
   params: Omit<InstancesParams, 'cursor' | 'sessionId'>,
 ): Promise<{ rows: InstanceRow[]; truncated: boolean }> {
   const { statuses, ...rest } = params
-  const res = await fetchWithTimeout(`${PREFIX}/tasks/instances${qsOf({ ...rest, status: statuses, light: '1' })}`)
+  const res = await fetchWithTimeout(`${API_PREFIX}/tasks/instances${qsOf({ ...rest, status: statuses, light: '1' })}`)
   const body = await unwrap<{ rows?: unknown; truncated?: unknown }>(res, '日程记录读取失败')
   if (!Array.isArray(body.rows)) throw new Error('日程记录读取失败：rows 形状不符')
   return { rows: body.rows as InstanceRow[], truncated: body.truncated === true }
@@ -180,7 +184,7 @@ export async function fetchInstanceBySession(sessionId: string): Promise<Instanc
 export async function fetchLogs(params: LogsParams): Promise<{ rows: LogRow[]; nextCursor: string | null }> {
   // 线上参数名 = 单数 `level`（服务端契约）；本地字段叫 levels ⇒ 出口处改名（同 instances 的 status 口径）。
   const { levels, ...rest } = params
-  const res = await fetchWithTimeout(`${PREFIX}/tasks/log${qsOf({ ...rest, level: levels })}`)
+  const res = await fetchWithTimeout(`${API_PREFIX}/tasks/log${qsOf({ ...rest, level: levels })}`)
   const body = await unwrap<{ rows?: unknown; nextCursor?: unknown }>(res, '日志读取失败')
   if (!Array.isArray(body.rows)) throw new Error('日志读取失败：rows 形状不符')
   return { rows: body.rows as LogRow[], nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null }
@@ -188,7 +192,7 @@ export async function fetchLogs(params: LogsParams): Promise<{ rows: LogRow[]; n
 
 /** 某次执行的事件时间线（服务端 `store.listEventsByInstance`，seq 升序 = 旧→新）。 */
 export async function fetchEvents(instanceId: string): Promise<EventRow[]> {
-  const res = await fetchWithTimeout(`${PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`)
+  const res = await fetchWithTimeout(`${API_PREFIX}/tasks/events?instanceId=${encodeURIComponent(instanceId)}`)
   const body = await unwrap<{ events?: unknown }>(res, '事件读取失败')
   if (!Array.isArray(body.events)) throw new Error('事件读取失败：events 形状不符')
   return body.events as EventRow[]
