@@ -30,6 +30,9 @@ import {
 // 时间文案层（2026-10-06 从 task-info.tsx 归位到独立模块；唯一实现，别处不许再写一份）。
 import { clockOf, NO_TIME, nextExecLabel, relativePast, renderNextExec, sameCalendarDay } from './time-text'
 import { ensureTaskInfoStyle } from './task-info-css'
+// 事件推送（2026-10-07 补缺口）：卡片展开面板的 `runSig` 覆盖不到行级运行态变化，见下方 `pushNonce`。
+import { useEvents, useResync } from './event-subscribe'
+import { RUN_EVENT_TYPES } from '../event-catalog.js'
 import { interpolateTranslate, type Translate } from './locales'
 import { scheduleSpecFromSchedule, scheduleText } from './schedule-text'
 // 三面板数据通道（决策 55）：执行记录 / 日志 / 事件时间线，与未来总查询页共用同一套 fetch。
@@ -543,10 +546,24 @@ function TaskExpandPanel(props: {
 }) {
   const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props
   const [tab, setTab] = useState<'info' | 'records' | 'logs'>('info')
+  /**
+   * 事件推送计数（2026-10-07 补缺口）：`row` 的运行态字段只覆盖「终态 / 在飞翻转」，
+   * **覆盖不到**派发后写 `session_id`、`dispatched → running`、阻塞 / 放行这类**行级**变化
+   * （它们不改 `lastStatus` / `lastFinishedAt` / `running`）⇒ 面板会一直停在「已派发」，会话链接与
+   * 早期日志都看不到，直到这次执行出终态。故订阅本任务的运行态事件来驱动三个 tab 重取。
+   * 只认 `payload.taskId === 本卡片`（在屏判定）；面板只在展开时才挂载 ⇒ 订阅也只在展开期间存在。
+   */
+  const [pushNonce, setPushNonce] = useState(0)
+  useEvents(RUN_EVENT_TYPES, (event) => {
+    if (event.payload?.taskId !== row.id) return
+    setPushNonce(n => n + 1)
+  })
+  useResync(() => { setPushNonce(n => n + 1) })
   // 运行态签名（用户 2026-10-03）：**页面开着、任务跑完了 ⇒ 打开着的面板要自动重读**，
-  // 否则用户看到的一直是上一次执行留下的状态。签名只取「会变的运行态字段」⇒ 轮询没变化时不会触发重取；
-  // 且三个 tab 各自只在**自己打开时**才取数 ⇒ 「刷新只刷打开的那部分」。
-  const runSig = `${row.lastStatus ?? ''}|${row.lastFinishedAt ?? ''}|${row.running ? 1 : 0}`
+  // 否则用户看到的一直是上一次执行留下的状态。签名取「会变的运行态字段」+ 相关事件计数
+  // ⇒ 没有变化、也没有相关事件时不会触发重取；且三个 tab 各自只在**自己打开时**才取数
+  // ⇒ 「刷新只刷打开的那部分」。
+  const runSig = `${row.lastStatus ?? ''}|${row.lastFinishedAt ?? ''}|${row.running ? 1 : 0}|${pushNonce}`
   // 任务跑完 / 状态翻转（runSig 变）⇒ 立即拉一次 overview，让**左栏「下次预计执行」(row.nextSlotAt)**
   // 与卡片 NextPill/PastPill 同步即时刷新（不再等 10s 轮询）。右栏「上次执行」已有自己独立的 runSig 重拉，
   // 此处专门补全左侧（用户 2026-10-03：任务执行完左侧也要跟着刷）。跳过挂载首跑，避免每次展开都白拉一次。

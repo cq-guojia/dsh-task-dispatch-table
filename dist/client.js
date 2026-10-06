@@ -69277,7 +69277,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		function TaskExpandPanel(props) {
 			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props;
 			const [tab, setTab] = (0, react$1.useState)("info");
-			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}`;
+			/**
+			* 事件推送计数（2026-10-07 补缺口）：`row` 的运行态字段只覆盖「终态 / 在飞翻转」，
+			* **覆盖不到**派发后写 `session_id`、`dispatched → running`、阻塞 / 放行这类**行级**变化
+			* （它们不改 `lastStatus` / `lastFinishedAt` / `running`）⇒ 面板会一直停在「已派发」，会话链接与
+			* 早期日志都看不到，直到这次执行出终态。故订阅本任务的运行态事件来驱动三个 tab 重取。
+			* 只认 `payload.taskId === 本卡片`（在屏判定）；面板只在展开时才挂载 ⇒ 订阅也只在展开期间存在。
+			*/
+			const [pushNonce, setPushNonce] = (0, react$1.useState)(0);
+			useEvents(RUN_EVENT_TYPES, (event) => {
+				if (event.payload?.taskId !== row.id) return;
+				setPushNonce((n) => n + 1);
+			});
+			useResync(() => {
+				setPushNonce((n) => n + 1);
+			});
+			const runSig = `${row.lastStatus ?? ""}|${row.lastFinishedAt ?? ""}|${row.running ? 1 : 0}|${pushNonce}`;
 			const firstRun = (0, react$1.useRef)(true);
 			(0, react$1.useEffect)(() => {
 				if (firstRun.current) {
@@ -70211,34 +70226,50 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			(0, react$1.useEffect)(() => {
 				ensureToastStyle();
 			}, []);
-			(0, react$1.useEffect)(() => {
-				let alive = true;
-				(async () => {
-					try {
-						const res = await fetch(API, { cache: "no-store" });
-						if (!res.ok) {
-							if (alive) setLoadFailed(true);
-							return;
-						}
-						const body = await res.json();
-						if (!body.ok || !body.config) {
-							if (alive) setLoadFailed(true);
-							return;
-						}
-						const secs = toSecs(body.config);
-						if (alive) {
-							setDraft(secs);
-							setSaved(secs);
-							setLoadFailed(false);
-						}
-					} catch {
-						if (alive) setLoadFailed(true);
-					}
-				})();
-				return () => {
-					alive = false;
-				};
+			/**
+			* 取一次运行参数。挂载时取，**别处改了配置时也取**（见下方事件订阅）。
+			* 用 `mountedRef` 而不是 effect 局部的 `alive`：同一个函数有两个调用方（挂载 effect + 事件订阅）。
+			*/
+			const mountedRef = (0, react$1.useRef)(true);
+			(0, react$1.useEffect)(() => () => {
+				mountedRef.current = false;
 			}, []);
+			const load = (0, react$1.useCallback)(async () => {
+				try {
+					const res = await fetch(API, { cache: "no-store" });
+					if (!res.ok) {
+						if (mountedRef.current) setLoadFailed(true);
+						return;
+					}
+					const body = await res.json();
+					if (!body.ok || !body.config) {
+						if (mountedRef.current) setLoadFailed(true);
+						return;
+					}
+					const secs = toSecs(body.config);
+					if (mountedRef.current) {
+						setDraft(secs);
+						setSaved(secs);
+						setLoadFailed(false);
+					}
+				} catch {
+					if (mountedRef.current) setLoadFailed(true);
+				}
+			}, []);
+			(0, react$1.useEffect)(() => {
+				load();
+			}, [load]);
+			/**
+			* 事件推送（2026-10-07 补缺口）：别处（另一标签页 / 路由写回）改了配置 ⇒ 本表单立即跟随，
+			* 不必等重新打开设置页。
+			* ⚠️ **只在「没有未保存修改」时才跟随** —— 否则会把用户正在输入的数字冲掉
+			* （与「卡片拨片被旧快照拨回」同一类事故，2026-10-06 记过一次）。
+			* ⚠️ hooks 不能有条件 ⇒ 本调用**必须**放在下面那个 `draft === null` 的 early return **之前**。
+			*/
+			useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => {
+				if (draft !== null && saved !== null && FIELDS.some((f) => draft[f.key] !== saved[f.key])) return;
+				load();
+			});
 			if (draft === null || saved === null) return (0, react$1.createElement)("div", { style: { padding: "4px 2px" } }, (0, react$1.createElement)("p", { style: {
 				color: "var(--tdt-fg-2,#888)",
 				fontSize: "var(--tdt-font-md)",
@@ -71185,6 +71216,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [viewErr, setViewErr] = (0, react$1.useState)(null);
 			const [dbDump, setDbDump] = (0, react$1.useState)(null);
 			const [dbState, setDbState] = (0, react$1.useState)("idle");
+			const [dbNonce, setDbNonce] = (0, react$1.useState)(0);
+			/**
+			* 事件推送（2026-10-07 补缺口）：这一页转储的是 `task_instances` / `task_events` / `task_log` 的**原始行**
+			* —— 正是运行态真源，但取数只在「切到该页」时跑一次，父级的事件订阅够不到它 ⇒ 页面开着也看不到新行。
+			* **只在真的停在这一页时才跟着事件重取**（其它 tab 不白刷；转储本身较重）。
+			*/
+			useEvents([
+				...RUN_EVENT_TYPES,
+				EventType.TASKS_CHANGED,
+				EventType.CONFIG_CHANGED,
+				EventType.FORCE_REFRESH
+			], () => {
+				if (tab !== "debug") return;
+				setDbNonce((n) => n + 1);
+			});
 			(0, react$1.useEffect)(() => {
 				if (tab !== "debug") return;
 				let alive = true;
@@ -71204,7 +71250,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return () => {
 					alive = false;
 				};
-			}, [tab]);
+			}, [tab, dbNonce]);
 			const section = snapshot.value ?? {};
 			const raw = typeof section.debugSnapshot === "string" ? section.debugSnapshot : "";
 			const data = parseDebugSnapshot(raw);

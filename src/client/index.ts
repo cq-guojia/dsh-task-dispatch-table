@@ -1003,6 +1003,16 @@ function TaskPage(props: {
   // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
   const [dbDump, setDbDump] = useState<{ at: string; tables: DbTableDump[] } | null>(null)
   const [dbState, setDbState] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
+  const [dbNonce, setDbNonce] = useState(0)
+  /**
+   * 事件推送（2026-10-07 补缺口）：这一页转储的是 `task_instances` / `task_events` / `task_log` 的**原始行**
+   * —— 正是运行态真源，但取数只在「切到该页」时跑一次，父级的事件订阅够不到它 ⇒ 页面开着也看不到新行。
+   * **只在真的停在这一页时才跟着事件重取**（其它 tab 不白刷；转储本身较重）。
+   */
+  useEvents([...RUN_EVENT_TYPES, EventType.TASKS_CHANGED, EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => {
+    if (tab !== 'debug') return
+    setDbNonce(n => n + 1)
+  })
 
   useEffect(() => {
     if (tab !== 'debug') return
@@ -1019,7 +1029,7 @@ function TaskPage(props: {
       })
       .catch(() => { if (alive) setDbState('fail') })
     return () => { alive = false }
-  }, [tab])
+  }, [tab, dbNonce])
 
   const section = (snapshot.value ?? {}) as Record<string, unknown>
   // 快照由 host 周期写入 debugSnapshot 字段；页订阅同一 scope 自动刷新。

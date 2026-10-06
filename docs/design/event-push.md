@@ -18,6 +18,8 @@
 
 > ⚠️ 前提 3/4 的**宿主侧**（`dsh-host-webserver` 是否支持流式响应、是否缓冲、是否超时回收）必须**先读源码核实**再落码，见 [`external/host-webserver-streaming.md`](external/host-webserver-streaming.md) 与 §八。
 
+> 📌 **引用口径（2026-10-07）**：本篇早前写的是**行号**引用，而实现随后被改过多轮，行号已整体漂移、**不可再当定位依据**。凡引用一律以「**文件名 + 函数名 / 关键词**」为准；本文档中残留的具体行号仅作「大致位置」参考，**冲突时以源码为准**（`AGENTS.md`）。**要守的事实请以 `scripts/smoke.mjs` 的 `[19]`/`[20]`/`[21]` 段为准**——那些是机器可执行、会红的契约。
+
 ---
 
 ## 二、事件模型
@@ -147,7 +149,8 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 | 重试退回 pending | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `retryOrFail` → `notifyRow` |
 | unknown 复活 / 转 running / redispatch | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `markActivity` / `noteRunSignal` / `onCreated` / `sweep` → `notifyRow` |
 | 配置变更 | `CONFIG_CHANGED` | 无 | `src/index.ts` `scope.watch` —— **唯一发射点**（正常与降级作用域都走它：`fallbackScope` 的 `watch` 已如实实现）。**边沿触发**：整份配置比对后真变了才发（「点了保存但值没变」不算）。⚠️ 2026-10-06 二次校准：此前曾在 `/config` 路由补发一条，造成**一次改动发两次**、靠合并窗口吃掉多出来的那条 —— 那是拿下游兜上游的底，已撤掉 |
-| 启动扫描 / 索引重建 / 启动诊断 / 历史清理 | **不发** | — | 都跑在客户端连接之前（无订阅者）；要强刷时用 `FORCE_REFRESH` |
+| 启动扫描 / 索引重建 / 启动诊断 | **不发** | — | 都跑在客户端连上之前（那时没有订阅者，发了也没人收）；要强刷时用 `FORCE_REFRESH` |
+| 历史 / 日志清理（`store.purgeLog` / `purgeHistory`） | **不发** | — | ⚠️ **2026-10-07 校正**：它**不是**启动期一次，而是**每个 tick 都跑**（在 `src/scheduler.ts` 的 `tick()` 内，官方 interval）。不发事件是**有意取舍**：删的只是超过保留期的旧行（`logRetentionDays` 默认 30 天、`historyRetentionDays` 默认 0 = 不删），用户想看的那几条几乎不可能被删；为它发事件只会白刷。**若将来把保留期调短到会删「眼前正在看的行」，这里必须补事件**。本文档早前把这行写成「跑在客户端连接之前」，与实现相反。 |
 | 归档 / 反归档会话 | **不发** | — | 只影响会话弹窗可读性，列表数据不变 |
 
 **实际注入面（落码现状，共四处）**：
@@ -158,6 +161,9 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 4. `createReconciler` 的 `emit` 注入 + 局部 `notifyRow` —— 只覆盖**不经 RuntimeIndex** 的实例行变化（重试退回 / unknown 复活 / 转 running / redispatch）。
 
 > **租约续租（`renewLease`，`src/store.ts:810`）不推送**：每 tick × 每 running 实例的高频心跳，推它只会刷屏，且界面不展示租约。
+>
+> **同一动作写多列不单独发事件**（2026-10-07 补记）：`finishTerminal` 除状态外还写 `outputs` 与 token 三拆列（`recordCompletion`）、旧实例会被补 `snapshot` 列（`setSnapshot`）—— 这些**都不单独发事件**，靠同实例上那条终态事件**顺带刷到**：订阅方收到的是「失效信号」，它会**重读**，读到就是最新列，所以不会漏。
+> 同理 `store.transition` 是**数据层通用写**，刻意不焊广播器 —— 由调用方（scheduler / reconcile / dispatch）决定该不该发。
 
 ---
 
@@ -171,7 +177,9 @@ export function useEvents(types: readonly EventTypeValue[], handler: (e: PushEve
 export function useResync(handler: () => void): void   // 重连成功时触发一次（各页补读当前值）
 ```
 
-- **单例连接**：URL = `api/task-dispatch-table/events`（相对路径，与 `src/client/index.ts` 的 `DISPATCH_API_PREFIX` 同源口径）；模块级只建一条，多个 `useEvents` 只是注册回调。
+- **单例连接**：URL = `api/task-dispatch-table/events`（相对路径）。
+  - ⚠️ 前缀真源是 **`src/client/query.ts` 的 `API_PREFIX`**（`event-subscribe.ts` 从它引）；**不要**从 `src/client/index.ts` 的 `DISPATCH_API_PREFIX` 引——`index.ts` 自己也是从 `query.ts` 引的，而且冒烟里有一条断言**禁止** `index.ts` 再持有该字面量（2026-10-06 M9 收编）。本文档早前写成「与 `index.ts` 同源口径」，照做会直接踩断言。
+  - 模块级只建一条，多个 `useEvents` 只是注册回调。
 - **重连自愈**：`EventSource` 断线由**浏览器自动重连**；`onopen` 回调里通知所有 `useResync` 订阅者 ⇒ 各页**重读一次当前值**（补的是「当前真相」，**不追历史事件**）。
 - **退订**：`useEvents` 卸载时摘回调；无回调时不断开连接（连接随页面生命周期）。
 
@@ -195,7 +203,13 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 | 主列表（`src/client/index.ts` 的 `useTaskOverview`） | `TASKS_CHANGED` / `CONFIG_CHANGED` / `FORCE_REFRESH` + `RUN_EVENT_TYPES` + `useResync` | `overview.refresh()` | 运行态事件：`payload.taskId` 不在 `overview.rows` 里则忽略；全局类事件直接刷 |
 | 执行记录页（`records-timeline.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load(null, true)`（静默首屏；**在途时记待办、本轮结束补跑**，不丢刷新） | ① 该实例 / 该任务的某行**已在已加载列表里** ⇒ 刷；② 否则该任务**落在当前筛选内**（`taskId` + `workspace`）⇒ 也刷（典型：某任务**这次是第一行**）；否则忽略。⚠️ 少了 ② 就是「新任务首跑永不出现」（2026-10-06 审计 🔴） |
 | 任务日程页（`task-calendar.tsx`） | `RUN_EVENT_TYPES` + `useResync` | `load()`（当月） | ① 该实例已在**当月网格**里 ⇒ 刷；② 否则该任务**落在当前筛选内**（`taskId` + `workspace` 双重收窄）⇒ 刷（新派发实例还没进网格也得让它出现）；否则忽略。⚠️ 原来 ② 只判「任务存在」（全量任务表、未收窄）⇒ **判定恒真**，任何任务都触发整月重拉（2026-10-06 审计 🟡） |
-| 卡片展开面板（`task-list.tsx`） | **不单独订阅** | 由主列表 `refresh()` 驱动 | `runSig`（`lastStatus\|lastFinishedAt\|running`）变化 ⇒ 打开中的 info/records/logs 自动重取 |
+| 卡片展开面板（`task-list.tsx`） | `RUN_EVENT_TYPES` + `useResync`（2026-10-07 补） | 三个 tab 各自在**自己打开时**重取 | `payload.taskId === 本卡片`；事件计数并入 `runSig` ⇒ **行级**变化（`dispatched→running` / 写 `session_id` / 阻塞放行）也能驱动。此前只看 `lastStatus\|lastFinishedAt\|running` ⇒ 会一直停在「已派发」、会话链接与早期日志看不到 |
+| 查看档（`task-view.tsx`） | `RUN_EVENT_TYPES` + `useResync` | 重取「上次执行」 | `payload.taskId === 本档任务` |
+| 设置页 / 调试页**主面板快照**（`src/client/index.ts` 的 `TaskPage`） | `CONFIG_CHANGED` / `FORCE_REFRESH` + `useResync` | `scope.refresh()` 立即重取快照 | 全局类事件直接刷。**刻意不订 `TASKS_CHANGED`**：本页任务表是可编辑文本域，任务变更若刷掉快照会**冲掉正在编辑的内容**（「拨片被旧快照拨回」同类事故）；任务表新鲜度靠它的 2s 兜底轮询 + 保存后主动刷 |
+| 调试页**原始表转储**（`/db`） | `RUN_EVENT_TYPES` + `TASKS_CHANGED` / `CONFIG_CHANGED` / `FORCE_REFRESH` | 重取 `/db` 转储 | **只在真的停在该页时**才重取（其它 tab 不白刷；转储较重） |
+| 设置页**插件配置表单**（`config-panel.tsx`，宿主设置页里的卡片） | `CONFIG_CHANGED` / `FORCE_REFRESH` | 重新 `GET /config` | **只在没有未保存修改时**才跟随（否则冲掉用户正在输入的数字） |
+
+> **已知未覆盖（有意为之，不装样子）**：**会话弹窗的「实例行」摘要**（产出 / 交付物 / 状态）是**开窗时取一次**，不随事件更新。弹窗主体（会话正文）由宿主投影、本身实时；而那条实例行的状态是经 `applyViewing` 建的，**换会话必须 `dispose` 旧句柄**（引用契约）⇒ 就地更新要动那块精细区，收益不抵风险，故登记为已知限制。需要更实时时：关掉重开即取到最新。
 
 **特殊情形**：`TASK_RUN_*` 在「右上角飘提示 / 通知」类场景下**不看在屏、一律响应**（那是「察觉」，不是「刷新某行」）——但该功能**本轮不做**（见 §九）。
 

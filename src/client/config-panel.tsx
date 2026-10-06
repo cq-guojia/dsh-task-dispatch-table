@@ -7,12 +7,15 @@
 //
 // 宿主插件管理详情页已在上方渲染了图标 / 名称 / 简介（取自 package.json），本组件只负责
 // 「基础信息（只读展示）」+「运行参数（可编辑，实时生效）」两块。
-import { createElement as h, useEffect, useRef, useState } from 'react'
+import { createElement as h, useCallback, useEffect, useRef, useState } from 'react'
 import { FloatingToast, ensureToastStyle } from './toast-css'
 import type { Translate } from './locales'
 import { Button, NumberInput } from './ui'
 // API 前缀唯一真源（M9）。
 import { API_PREFIX } from './query'
+// 事件推送（2026-10-07 补缺口）：别处改了配置 ⇒ 本表单立即跟随（仅在**无未保存修改**时）。
+import { useEvents } from './event-subscribe'
+import { EventType } from '../event-catalog.js'
 
 interface ScopeConfig {
   tickMs: number
@@ -78,22 +81,37 @@ export function ConfigPanel(props: ConfigPanelProps) {
 
   useEffect(() => { ensureToastStyle() }, [])
 
-  useEffect(() => {
-    let alive = true
-    void (async () => {
-      try {
-        const res = await fetch(API, { cache: 'no-store' })
-        if (!res.ok) { if (alive) setLoadFailed(true); return }
-        const body = await res.json() as { ok?: boolean; config?: ScopeConfig }
-        if (!body.ok || !body.config) { if (alive) setLoadFailed(true); return }
-        const secs = toSecs(body.config)
-        if (alive) { setDraft(secs); setSaved(secs); setLoadFailed(false) }
-      } catch {
-        if (alive) setLoadFailed(true)
-      }
-    })()
-    return () => { alive = false }
+  /**
+   * 取一次运行参数。挂载时取，**别处改了配置时也取**（见下方事件订阅）。
+   * 用 `mountedRef` 而不是 effect 局部的 `alive`：同一个函数有两个调用方（挂载 effect + 事件订阅）。
+   */
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
+  const load = useCallback(async (): Promise<void> => {
+    try {
+      const res = await fetch(API, { cache: 'no-store' })
+      if (!res.ok) { if (mountedRef.current) setLoadFailed(true); return }
+      const body = await res.json() as { ok?: boolean; config?: ScopeConfig }
+      if (!body.ok || !body.config) { if (mountedRef.current) setLoadFailed(true); return }
+      const secs = toSecs(body.config)
+      if (mountedRef.current) { setDraft(secs); setSaved(secs); setLoadFailed(false) }
+    } catch {
+      if (mountedRef.current) setLoadFailed(true)
+    }
   }, [])
+  useEffect(() => { void load() }, [load])
+  /**
+   * 事件推送（2026-10-07 补缺口）：别处（另一标签页 / 路由写回）改了配置 ⇒ 本表单立即跟随，
+   * 不必等重新打开设置页。
+   * ⚠️ **只在「没有未保存修改」时才跟随** —— 否则会把用户正在输入的数字冲掉
+   * （与「卡片拨片被旧快照拨回」同一类事故，2026-10-06 记过一次）。
+   * ⚠️ hooks 不能有条件 ⇒ 本调用**必须**放在下面那个 `draft === null` 的 early return **之前**。
+   */
+  useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => {
+    const pendingEdits = draft !== null && saved !== null && FIELDS.some((f) => draft[f.key] !== saved[f.key])
+    if (pendingEdits) return
+    void load()
+  })
 
   if (draft === null || saved === null) {
     return h('div', { style: { padding: '4px 2px' } },

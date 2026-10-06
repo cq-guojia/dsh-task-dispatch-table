@@ -2921,6 +2921,18 @@ console.log('\n[14] runtime-index')
     bus.emit({ type: EventType.FORCE_REFRESH })
     await new Promise(resolve => setTimeout(resolve, 40))
     check('广播器：dispose 后不再广播', got.length === before + 1)
+
+    // 合并键**优先取 taskId**（keyOf 的优先序）：同一任务的不同实例在同一窗口内合并成 1 条，
+    // 且保留**最后一条**的 payload。此前这条语义完全没有守卫（2026-10-07 第五轮补）。
+    const bus2 = createEventBus({ windowMs: 30, maxWaitMs: 200 })
+    const got2 = []
+    bus2.subscribe(e => got2.push(e))
+    bus2.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId: 'tk', instanceId: 'i1' } })
+    bus2.emit({ type: EventType.TASK_RUN_CHANGED, payload: { taskId: 'tk', instanceId: 'i2' } })
+    await new Promise(resolve => setTimeout(resolve, 80))
+    check('广播器：合并键优先 taskId（同任务不同实例 → 1 条，保留最后一条的 payload）',
+      got2.length === 1 && got2[0]?.payload?.instanceId === 'i2', `实际 ${got2.length} 条`)
+    bus2.dispose()
   }
 
   // ── 20. 事件推送接线 / 轮询处置契约（2026-10-06 专家团审计后补）──
@@ -3029,6 +3041,56 @@ console.log('\n[14] runtime-index')
       /import \{[^}]*baseNameOf[^}]*\} from '\.\/format'/.test(S('client/task-list.tsx'))
       && /import \{[^}]*baseNameOf[^}]*\} from '\.\/format'/.test(S('client/records-timeline.tsx'))
       && !S('client/task-info.tsx').includes('export const baseNameOf'))
+
+    // ── 21. 关键不变量守卫（2026-10-07 第五轮）──
+    console.log('\n[21] 关键不变量守卫（把「会被后来者悄悄改坏」的契约钉住）')
+    // 钉住**「会被后来者悄悄改坏、而且坏了不会被现有断言发现」**的契约（第五轮审计逐个点出来的）。
+    const distIdx = readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8')
+    const distCli = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
+
+    check('【产物一致性】dist 里含事件推送的关键实现（改完源码忘了 build ⇒ 这条必红）',
+      distIdx.includes('text/event-stream') && distIdx.includes('activeStreams')
+      && distIdx.includes('closeAllEventStreams') && distCli.includes('new EventSource')
+      && distCli.includes('sys.ping') && distCli.includes('setDbNonce'))
+    check('【单例】客户端只有**一处** new EventSource（页面不许自建连接 / 自写退避）',
+      (distCli.match(/new EventSource\(/g) ?? []).length === 1)
+    check('【心跳契约】3 × SSE_HEARTBEAT_MS < SILENT_AFTER_MS（跨文件数值契约；改一处就会误判「半死」）',
+      (() => {
+        const num = (src, name) => {
+          const m = new RegExp(`${name}\\s*=\\s*([\\d_]+)`).exec(src)
+          return m === null ? 0 : Number(m[1].replace(/_/g, ''))
+        }
+        const hb = num(idxSrc20, 'SSE_HEARTBEAT_MS')
+        const silent = num(S('client/event-subscribe.ts'), 'SILENT_AFTER_MS')
+        return hb > 0 && silent > 3 * hb
+      })())
+    check('【SSE 契约】响应头三条齐全、且 `/events` 路由过了同源闸门',
+      idxSrc20.includes("'content-type': 'text/event-stream; charset=utf-8'")
+      && idxSrc20.includes("'cache-control': 'no-store'")
+      && idxSrc20.includes("'x-accel-buffering': 'no'")
+      && /\}\/events`[\s\S]{0,700}isTrustedDispatchRequest/.test(idxSrc20))
+    check('【SSE 清理】没有任何写法把 cleanup 挂到 `req` 的 close 上（建连即退订的坑）',
+      !/req\.on\('close'/.test(idxSrc20) && !/on\.call\(req, 'close'/.test(idxSrc20))
+    check('【实例级】连接登记表声明在 apply 体内（缩进两格），不是模块级',
+      idxSrc20.includes('\n  const activeStreams: StreamRegistry = new Set()'))
+    check('【dispose】广播器的 flush 定时器也被释放',
+      idxSrc20.includes('eventBus.dispose()'))
+    check('【单发射点】除 index.ts 外，服务端没有别处再发 CONFIG_CHANGED',
+      ['reconcile.ts', 'scheduler.ts', 'dispatch.ts', 'store.ts', 'receipt.ts', 'task-assets.ts']
+        .every(f => !existsSync(join(process.cwd(), 'src', f)) || !S(f).includes('EventType.CONFIG_CHANGED')))
+    check('【三方对齐】目录里每个业务类型（除预留的 FORCE_REFRESH）都在后端有发送点',
+      (() => {
+        const names = [...S('event-catalog.ts').matchAll(/^\s+([A-Z_]+): '[^']+'/gm)].map(m => m[1])
+        // 终态三类经 `runEventTypeOf` 间接发出 ⇒ 把声明它的 event-catalog 一并算作发送侧，
+        // 具体映射由上面 [19] 的 `runEventTypeOf` 断言把关。这里挡的是「目录加了、哪儿都没接线」。
+        const backend = ['index.ts', 'reconcile.ts', 'event-catalog.ts'].map(f => S(f)).join('\n')
+        return names.length >= 6
+          && names.filter(n => n !== 'FORCE_REFRESH').every(n => backend.includes(`EventType.${n}`))
+      })())
+    check('【页面覆盖】展开面板 / 调试页 / 设置页表单三处新缺口都已被事件驱动',
+      S('client/task-list.tsx').includes('if (event.payload?.taskId !== row.id) return')
+      && S('client/index.ts').includes('setDbNonce(n => n + 1)')
+      && S('client/config-panel.tsx').includes('if (pendingEdits) return'))
   }
 
   store.close()
