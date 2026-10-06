@@ -3674,6 +3674,62 @@ body[data-ds-dark-theme]{
 			window.addEventListener("pointerup", onUp);
 		}
 		//#endregion
+		//#region src/client/ui/ticker.ts
+		const tickerListeners = /* @__PURE__ */ new Set();
+		let tickerTimer = null;
+		/**
+		* `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
+		* 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
+		* 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
+		*/
+		const onVisibilityChange = () => {
+			for (const l of [...tickerListeners]) l();
+		};
+		let visibilityBound = false;
+		/** 订阅全局秒级心跳；返回退订。**第一个订阅者才起 interval，最后一个退订即停**。 */
+		function subscribeTicker(cb) {
+			tickerListeners.add(cb);
+			if (tickerTimer === null) {
+				tickerTimer = window.setInterval(() => {
+					for (const l of [...tickerListeners]) l();
+				}, 1e3);
+				if (!visibilityBound && typeof document !== "undefined") {
+					document.addEventListener("visibilitychange", onVisibilityChange);
+					visibilityBound = true;
+				}
+			}
+			return () => {
+				tickerListeners.delete(cb);
+				if (tickerListeners.size === 0 && tickerTimer !== null) {
+					window.clearInterval(tickerTimer);
+					tickerTimer = null;
+				}
+			};
+		}
+		/**
+		* 每秒拿到「现在」（需要**时间值本身**时用，如悬浮文案）；与 `LiveText` 共用同一条心跳。
+		* 不适合整列表用（每次 tick 会 setState 一次）——只在真正需要时间的小块里调。
+		*/
+		function useNowMs() {
+			const [nowMs, setNowMs] = (0, react$1.useState)(() => Date.now());
+			(0, react$1.useEffect)(() => subscribeTicker(() => setNowMs(Date.now())), []);
+			return nowMs;
+		}
+		//#endregion
+		//#region src/client/ui/LiveText.tsx
+		/**
+		* 每秒自刷新的一小块：只有它自己重渲染（`render` 永远取最新闭包，ref 转发）。
+		* 2026-09-30（决策 54）：`render` 由「只能返回字符串」放宽为**可返回节点** —— 「到点未派发」
+		* 时要在这里就地换成三个方块的活动指示（文案换不出来，只能给节点）。
+		*/
+		function LiveText(props) {
+			const [, force] = (0, react$1.useState)(0);
+			const renderRef = (0, react$1.useRef)(props.render);
+			renderRef.current = props.render;
+			(0, react$1.useEffect)(() => subscribeTicker(() => force((v) => v + 1)), []);
+			return (0, react$1.createElement)("span", { style: props.style }, renderRef.current(Date.now()));
+		}
+		//#endregion
 		//#region src/client/ui/index.ts
 		/**
 		* 主面板**内容列**的统一宽度锚点（任务配置 / 执行记录 两个 tab 必须一模一样，切换时不横向跳动）。
@@ -54922,48 +54978,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			if (Number.isNaN(d.getTime())) return "—";
 			return `${pad2$3(d.getHours())}:${pad2$3(d.getMinutes())}`;
 		}
-		const tickerListeners = /* @__PURE__ */ new Set();
-		let tickerTimer = null;
-		/**
-		* `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
-		* 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
-		* 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
-		*/
-		const onVisibilityChange = () => {
-			for (const l of [...tickerListeners]) l();
-		};
-		let visibilityBound = false;
-		function subscribeTicker(cb) {
-			tickerListeners.add(cb);
-			if (tickerTimer === null) {
-				tickerTimer = window.setInterval(() => {
-					for (const l of [...tickerListeners]) l();
-				}, 1e3);
-				if (!visibilityBound && typeof document !== "undefined") {
-					document.addEventListener("visibilitychange", onVisibilityChange);
-					visibilityBound = true;
-				}
-			}
-			return () => {
-				tickerListeners.delete(cb);
-				if (tickerListeners.size === 0 && tickerTimer !== null) {
-					window.clearInterval(tickerTimer);
-					tickerTimer = null;
-				}
-			};
-		}
-		/**
-		* 每秒自刷新的一小块内容：只有它自己重渲染（render 永远取最新闭包，ref 转发）。
-		* 2026-09-30（决策 54）：`render` 由「只能返回字符串」放宽为**可返回节点** —— 「到点未派发」
-		* 时要在这里就地换成三个方块的活动指示（文案换不出来，只能给节点）。
-		*/
-		function LiveText(props) {
-			const [, force] = (0, react$1.useState)(0);
-			const renderRef = (0, react$1.useRef)(props.render);
-			renderRef.current = props.render;
-			(0, react$1.useEffect)(() => subscribeTicker(() => force((v) => v + 1)), []);
-			return (0, react$1.createElement)("span", { style: props.style }, renderRef.current(Date.now()));
-		}
 		/**
 		* 「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走
 		* `relativeFuture`），右具体时刻（YYYY-MM-DD HH:mm:ss）；中间竖线分隔。相对时间用 LiveText 每秒自刷。
@@ -64687,11 +64701,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*/
 		function NextPill(props) {
 			const { row, t, tt } = props;
-			const [nowMs, setNowMs] = (0, react$1.useState)(() => Date.now());
-			(0, react$1.useEffect)(() => {
-				const timer = window.setInterval(() => setNowMs(Date.now()), 1e3);
-				return () => window.clearInterval(timer);
-			}, []);
+			const nowMs = useNowMs();
 			if (row.running) return (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
 				label: t("listRunning"),
 				side: "bottom"

@@ -24,7 +24,7 @@ import {
 // ⚠️ **与右侧栏「查看档」共用同一份实现** —— 要改字段怎么翻译、怎么渲染，去 `task-info.tsx`，不许在本文件再抄一份。
 import {
   baseNameOf, clockOf, infoConfigStyle, infoGroupTitleStyle, infoRecentStyle, infoWrapStyle,
-  LAST_RUN_STATUSES, lastRunFields, LiveText, NO_TIME, nextExecLabel, relativePast,
+  LAST_RUN_STATUSES, lastRunFields, NO_TIME, nextExecLabel, relativePast,
   renderNextExec, StatusIcon, sameCalendarDay, taskInfoBaseFields, type TaskInfoBaseView,
 } from './task-info'
 import { ensureTaskInfoStyle } from './task-info-css'
@@ -42,7 +42,7 @@ import { ensureTaskEditorStyle } from './task-editor-css'
 // 浮层结果提示（立即执行成功 / 被拒）：全站唯一实现，不许各处手写。
 import { FloatingToast, ensureToastStyle } from './toast-css'
 // UI 基础层（P1/P2/P3）：分段控件 / 按钮 / 图标钮 / 输入唯一实现。
-import { applyStyle, Button, IconButton, Input as TdtInput, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RunningBlocks, Segmented, TimeRange, rangeToQuery, type TimeRangeLabels, type TimeRangeValue } from './ui'
+import { applyStyle, Button, IconButton, Input as TdtInput, LiveText, Loading, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RunningBlocks, Segmented, TimeRange, rangeToQuery, useNowMs, type TimeRangeLabels, type TimeRangeValue } from './ui'
 import { ensureRunningStyle, RUNNING_TONE, RUN_PULSE_CLASS } from './ui/running'
 
 /**
@@ -493,15 +493,11 @@ function PastPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) 
  */
 function NextPill(props: { row: TaskOverviewRow; t: Translate; tt: Translate }) {
   const { row, t, tt } = props
-  // ⚠️ 这一格**自走时钟（1 秒）**：下面那格的显示由 `LiveText` 的 1 秒心跳驱动，而**悬浮文案是在组件
-  // 渲染那一刻算好的字符串** —— 两个时钟不同源时，"到点"那一秒会出现「方块已经切过来、文案却还写着
-  // 『下次执行：<刚过去的时间>』」（用户 2026-09-30 真机撞上，最长约一个轮询周期 ≈10 秒）。
-  // 旧注释说"本组件每秒自刷"并不成立（自转的只有 `LiveText`），这句一并纠正。
-  const [nowMs, setNowMs] = useState(() => Date.now())
-  useEffect(() => {
-    const timer = window.setInterval(() => setNowMs(Date.now()), 1_000)
-    return () => window.clearInterval(timer)
-  }, [])
+  // ⚠️ 悬浮文案必须与下面那格（`LiveText`）在**"到点"那一秒**同步 —— 用户 2026-09-30 真机撞上过
+  // 「方块已切过来、文案却还写着『下次执行：<刚过去的时间>』」。2026-10-06 已**并入全局心跳**
+  // （`useNowMs`，同一条 timer）⇒ 本组件不再自建第二个 1s interval
+  // （design/client-refresh-disposition.md §三 M1）。
+  const nowMs = useNowMs()
   if (row.running) {
     return h(Tooltip, { label: t('listRunning'), side: 'bottom' },
       h('div', { style: pillOuterStyle },

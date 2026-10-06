@@ -11,7 +11,10 @@
 // **本模块是叶子**：不得 import `task-list.tsx` / `task-editor.tsx`。
 // 两个视图模型构造函数需要的行类型由调用方在**自己的文件里**组装（避免反向依赖），
 // 视图模型只声明它真正要用的最小字段。
-import { createElement as h, Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createElement as h, Fragment, type ReactNode } from 'react'
+// 全局秒级心跳 / `LiveText` 已归位基础层（design/client-refresh-disposition.md §三 A1/A2）——
+// 共享程序不再寄居本面板文件；本文件只留「任务信息展示层」本身。
+import { LiveText } from './ui'
 import { formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail, pad2 } from './format'
 import {
   FileTypeIcon, IconCheckCircleFillRegular, IconCloseCircleFillRegular,
@@ -428,50 +431,8 @@ export function clockOf(iso: string): string {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
 }
 
-// ── 全局秒级心跳（单 timer + 局部订阅）────────────────────────────────
-// ⚠️ 性能关键（用户 2026-09-30 反馈「延迟太严重」）：**不能**在列表顶层每秒 setState
-// （那会整列表重渲染）。正确做法 = 全模块只有一个 interval，需要动的文本（倒计时）
-// 各自订阅，每秒只重渲染那一小块。
-const tickerListeners = new Set<() => void>()
-let tickerTimer: number | null = null
-/**
- * `visibilitychange` 处理器**只注册一次**（模块级）——2026-09-30 专家团复核：此前每次订阅起停
- * 都 `addEventListener` 且从不移除 ⇒ 反复重挂面板会累积 N 个监听、切回标签页时同一批订阅被调 N 次。
- * 这里注册一次、常驻（订阅集合空时遍历即空转，无副作用）。
- */
-const onVisibilityChange = (): void => { for (const l of [...tickerListeners]) l() }
-let visibilityBound = false
-function subscribeTicker(cb: () => void): () => void {
-  tickerListeners.add(cb)
-  if (tickerTimer === null) {
-    tickerTimer = window.setInterval(() => { for (const l of [...tickerListeners]) l() }, 1000)
-    // 标签页被浏览器节流（后台 / 休眠）后回来 ⇒ 立刻对一次表，倒计时自动追上。
-    if (!visibilityBound && typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', onVisibilityChange)
-      visibilityBound = true
-    }
-  }
-  return () => {
-    tickerListeners.delete(cb)
-    if (tickerListeners.size === 0 && tickerTimer !== null) {
-      window.clearInterval(tickerTimer)
-      tickerTimer = null
-    }
-  }
-}
-
-/**
- * 每秒自刷新的一小块内容：只有它自己重渲染（render 永远取最新闭包，ref 转发）。
- * 2026-09-30（决策 54）：`render` 由「只能返回字符串」放宽为**可返回节点** —— 「到点未派发」
- * 时要在这里就地换成三个方块的活动指示（文案换不出来，只能给节点）。
- */
-export function LiveText(props: { render: (nowMs: number) => ReactNode; style?: Record<string, string | number> }) {
-  const [, force] = useState(0)
-  const renderRef = useRef(props.render)
-  renderRef.current = props.render
-  useEffect(() => subscribeTicker(() => force(v => v + 1)), [])
-  return h('span', { style: props.style }, renderRef.current(Date.now()))
-}
+// 全局秒级心跳与 `LiveText` **已归位基础层**：见 `./ui/ticker`（心跳本体）与 `./ui/LiveText`（渲染壳）。
+// 本文件不再自建任何秒级定时器。
 
 /**
  * 「预计执行」行的渲染：两部分——左社交化相对时间（30 分钟后 / 今天 HH:mm / 3 天后…，走
