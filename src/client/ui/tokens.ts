@@ -101,6 +101,8 @@ body{
      浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
      语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
+  /* 任务日程页本月格的默认底（2026-10-06）：浅色下就是卡片面本身，不单独调 */
+  --tdt-cal-cell-bg:var(--tdt-surface-1);
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
@@ -189,5 +191,8 @@ body[data-ds-dark-theme]{
      但远不到背景的黑（用户 2026-10-06：深色下选中要比本月日期深，又不能像背景一样黑；
      ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅）。 */
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-surface-base));
+  /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），
+     比原来的卡片面更沉、更偏蓝灰；选中格仍走 --tdt-selected-bg（更暗一档），层级不变。 */
+  --tdt-cal-cell-bg:#23262e;
 }
 `

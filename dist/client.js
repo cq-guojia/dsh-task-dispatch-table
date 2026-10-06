@@ -1627,6 +1627,8 @@ body{
      浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
      语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
+  /* 任务日程页本月格的默认底（2026-10-06）：浅色下就是卡片面本身，不单独调 */
+  --tdt-cal-cell-bg:var(--tdt-surface-1);
 
   /* ── 投影 / 焦点 ──────────────────────────────────────────────────── */
   --tdt-shadow-1:var(--dsw-elevation-soft,0 4px 16px 0 #00000008);
@@ -1715,6 +1717,9 @@ body[data-ds-dark-theme]{
      但远不到背景的黑（用户 2026-10-06：深色下选中要比本月日期深，又不能像背景一样黑；
      ⚠️ 深色下不能掺文字色 —— 那是白，会变亮，选中反而比本月日期浅）。 */
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-surface-base));
+  /* 任务日程页本月格的默认底（深色版，2026-10-06）：深的、带点灰蓝的暗色（用户给的参考图 ≈ #23262e），
+     比原来的卡片面更沉、更偏蓝灰；选中格仍走 --tdt-selected-bg（更暗一档），层级不变。 */
+  --tdt-cal-cell-bg:#23262e;
 }
 `;
 		//#endregion
@@ -69151,7 +69156,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
    下面空间是够的（104 - 12 - 6 = 86px，够 1 行日期 + 3 行标签的 80px）⇒ 所有格子统一留白、对齐一致。 */
 .dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:6px;
-  overflow:hidden;background:var(--tdt-surface-1);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
+  overflow:hidden;background:var(--tdt-cal-cell-bg);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
   transition:background var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */

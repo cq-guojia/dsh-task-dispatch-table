@@ -60,7 +60,7 @@ const CALENDAR_CSS = `
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
    下面空间是够的（104 - 12 - 6 = 86px，够 1 行日期 + 3 行标签的 80px）⇒ 所有格子统一留白、对齐一致。 */
 .dsh-tdt-cal-cell{display:flex;flex-direction:column;gap:4px;box-sizing:border-box;height:104px;padding:6px;
-  overflow:hidden;background:var(--tdt-surface-1);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
+  overflow:hidden;background:var(--tdt-cal-cell-bg);border:0;border-radius:0;font:inherit;text-align:left;cursor:pointer;
   transition:background var(--tdt-dur-fast) var(--tdt-ease);}
 .dsh-tdt-cal-cell:hover{background:var(--tdt-hover);}
 /* 补位格（相邻月）：只是**底色淡一档**，尺寸与本月格完全一致、**不放数据**、不可点。 */
