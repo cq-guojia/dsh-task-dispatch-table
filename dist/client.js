@@ -1625,10 +1625,11 @@ body{
      浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
      语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
-  /* 任务日程页本月格默认底（2026-10-06 → 续）：浅色下给**极淡蓝**（business 5% 透白底），
-     一眼看出「这是本月、还没点开」；相邻月补位格仍走 --tdt-surface-2（更灰），不受影响。
+  /* 任务日程页本月格默认底（2026-10-06 → 续2）：浅色下给**淡蓝**（business 8% 透白底）——
+     参照用户参考稿里未选中日程块 / Tuesday 列的那种蓝、再浅一点点；
+     相邻月补位格仍走 --tdt-surface-2（更灰），不受影响。
      深色段维持 #23262e（用户：深色 UI 已差不多，不动）。 */
-  --tdt-cal-cell-bg:color-mix(in srgb,var(--tdt-business) 5%,var(--tdt-surface-1));
+  --tdt-cal-cell-bg:color-mix(in srgb,var(--tdt-business) 8%,var(--tdt-surface-1));
   /* 任务日程页「点开某天」展开的面板底（2026-10-06 续）：浅色下**无限接近白、只带一丁点灰**
      （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；
      深色段沿用原 selected-bg 暗值，保持不动。 */
@@ -69334,14 +69335,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 /* 网格（用户 2026-10-06 定死的三条）：① 格子是**纯粹的正方形**、**不要圆角**；
    ② 格子之间只留 **1px 间隔**（容器底色从缝里透出来当分隔线）；③ 格子**不描边**，
    只靠底色区分（本月 / 相邻月 / 选中）。 */
-.dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:var(--tdt-space-2);
-  padding-bottom:var(--tdt-space-1);border-bottom:1px solid var(--tdt-border-faint);}
-.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);}
+/* 表头（周一~周日）：**与网格连成一张整表**（用户 2026-10-06：不要「上面独立一块 + 底下再画一条线」）。
+   做法 = 与网格同材质：外圈与列间 1px 全走「容器底色透出」（padding + background），无独立边框；
+   表头格底色与本月格一致（淡蓝），整表上下一个颜色。 */
+.dsh-tdt-cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;
+  background:var(--tdt-border);padding:1px 1px 0;}
+.dsh-tdt-cal-head>div{text-align:center;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3);
+  background:var(--tdt-cal-cell-bg);padding:8px 0;}
 /* 「选中 / 展开」的底色走 **token 层的 --tdt-selected-bg**（主题特判只许在 token 层）：
    浅色 = 掺 12% 文字色 ⇒ 深一档；深色 = 掺 12% 背景色 ⇒ 暗一档但不到背景的黑。
    ⚠️ 深色下掺文字色（白）会变亮 ⇒ 选中比本月还浅，用户明确否掉；
    别用 --tdt-plate / surface-2：与常态底色太接近，用户「完全没感觉到变化」。 */
-.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);border:1px solid var(--tdt-border);}
+.dsh-tdt-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--tdt-border);padding:1px;}
 /* ⚠️ 格子**定宽定高**（用户 2026-10-06）：本月格与相邻月补位格**高度一模一样**，
    box-sizing:border-box 是这道保证（补位格是 div、本月格是 button，不统一盒模型就会差 2px）。 */
 /* ⚠️ 上内边距留到 12px：选中格顶部那条线占 top 4–8px，内容从 12px 起才不会被线压住；
@@ -69357,10 +69362,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
    （surface-1）。⚠️ 底色**不许叠淡蓝**：那层半透明蓝压在格内的状态色标签上 ⇒ 深色主题下发灰、
    浅色主题下发暗，把原本的绿色/红色全带脏了（用户 2026-10-06）。「选中」只由那条线表达。
    ⚠️ 曾做反过两次：① 给没点开的格子画线、点开的空着；② 替换没落地导致两边都没线。以本段为准。
-   ⚠️ 底色走 token 层的 --tdt-selected-bg（见 ui/tokens.ts；深浅主题各有定义）。
+   ⚠️ 底色（2026-10-06 续2 定稿）：**与拉开区同色** = --tdt-cal-panel-bg（浅色近白、深色近背景），
+   手风琴拉开时选中格与拉开区连成一体；「选中」由那条蓝胶囊线 + 与未选中格（淡蓝）的色差表达。
    **不用蓝**（open-bg 系在这里显灰），也不许叠半透明（会把状态色带脏）。 */
-.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-selected-bg);outline:0;padding-top:12px;}
-.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-selected-bg);}
+.dsh-tdt-cal-cell--sel{position:relative;background:var(--tdt-cal-panel-bg);outline:0;padding-top:12px;
+  /* 手风琴拉开时：脚下那道 1px 网格缝用 box-shadow 盖掉（只盖选中格自己一段），
+     同行**未选中**格子的下边线保留（用户 2026-10-06）。选中格底色 = 拉开区同色 ⇒ 连成一体。 */
+  box-shadow:0 1px 0 var(--tdt-cal-panel-bg);}
+.dsh-tdt-cal-cell--sel:hover{background:var(--tdt-cal-panel-bg);}
 /* 线在格子**顶部**（不是底部）：高 4px、两端**全圆**（左右各一个半圆，成胶囊形）；
    稍亮的品牌蓝（--tdt-business），明确标出「这是当前选中那天」（用户 2026-10-06：用蓝表示选中）。 */
 .dsh-tdt-cal-cell--sel::after{content:'';position:absolute;left:4px;right:4px;top:4px;height:4px;
@@ -69400,10 +69409,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 .dsh-tdt-cal-t--neutral{--cal-tone:var(--tdt-fg-4);--cal-soft:var(--tdt-chip-bg);}
 /* 拉开区（**跨 7 列**，铺在该周下面）：当天全部执行信息，有多少显示多少，不设内部滚动条。
    max-height 动画的上限只是动画期间的裁剪值，动画结束即恢复 none ⇒ 再长的内容也照常显示。 */
-/* 拉开区与选中格**同色**（--tdt-selected-bg，深色主题下无限接近页面背景、只略深一点点）⇒ 视觉一体；
-   margin-top:-1px 吃掉与上一行（选中格所在周）之间的那 1px 网格间隙，不让一道亮线横在中间。 */
+/* 拉开区与选中格**同色**（--tdt-cal-panel-bg，浅色近白/深色近背景）⇒ 视觉一体。
+   margin-top 不再上提：与上一行之间保留那道 1px 网格缝——同行**未选中**格子的下边线要保留；
+   选中格脚下那一段由 --sel 的 box-shadow 盖掉（用户 2026-10-06）。 */
 .dsh-tdt-cal-panel{position:relative;grid-column:1/-1;background:var(--tdt-cal-panel-bg);border:0;border-radius:0;
-  margin-top:-2px;
   /* 下内边距 = 左内边距（用户 2026-10-06：拉开区底部留白要跟左右一模一样，都是 16px）。 */
   padding:calc(var(--tdt-space-4) + 6px) var(--tdt-space-4) var(--tdt-space-4);
   overflow:hidden;animation:dsh-tdt-cal-open 180ms var(--tdt-ease);}

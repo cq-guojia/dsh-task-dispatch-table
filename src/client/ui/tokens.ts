@@ -101,10 +101,11 @@ body{
      浅色主题下文字色是黑 ⇒ 选中面比常态底色**深一档**。深色分支见 body[data-ds-dark-theme]（朝背景色掺）。
      语义：标记「正在看的东西」，比常态明显、又不许盖住内容（不许用半透明叠状态色）。 */
   --tdt-selected-bg:color-mix(in srgb,var(--tdt-surface-1) 88%,var(--tdt-fg));
-  /* 任务日程页本月格默认底（2026-10-06 → 续）：浅色下给**极淡蓝**（business 5% 透白底），
-     一眼看出「这是本月、还没点开」；相邻月补位格仍走 --tdt-surface-2（更灰），不受影响。
+  /* 任务日程页本月格默认底（2026-10-06 → 续2）：浅色下给**淡蓝**（business 8% 透白底）——
+     参照用户参考稿里未选中日程块 / Tuesday 列的那种蓝、再浅一点点；
+     相邻月补位格仍走 --tdt-surface-2（更灰），不受影响。
      深色段维持 #23262e（用户：深色 UI 已差不多，不动）。 */
-  --tdt-cal-cell-bg:color-mix(in srgb,var(--tdt-business) 5%,var(--tdt-surface-1));
+  --tdt-cal-cell-bg:color-mix(in srgb,var(--tdt-business) 8%,var(--tdt-surface-1));
   /* 任务日程页「点开某天」展开的面板底（2026-10-06 续）：浅色下**无限接近白、只带一丁点灰**
      （neutral-50 = #fafafa）——面板里装半透明执行记录列表，底再深整片就发糊发灰；
      深色段沿用原 selected-bg 暗值，保持不动。 */
