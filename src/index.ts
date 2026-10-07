@@ -62,6 +62,21 @@ const BLOCK_BEAT_MS = 1_000
 const BLOCK_REPORT_MS = 500
 /** 当前在处理的 HTTP 请求数（配合 `[慢请求]` 看是不是「排队」而不是「慢」）。 */
 let inflightRequests = 0
+/** 观测条目上限（防止长时间运行把内存撑爆）。 */
+const SERVER_NOTICE_LIMIT = 30
+/**
+ * **服务端观测缓冲**（2026-10-07 事故）：`[主线程阻塞]` / `[慢请求]` / `[路由异常]` 都进这里。
+ *
+ * ⚠️ 必须**同时**留在这条缓冲里，不能只写宿主日志：宿主的日志落盘在哪**我们不确定**，真机上
+ * 出问题时用户根本不知道去哪儿抓。这条缓冲会并入 `/snapshot` 的 `warns` 字段 ⇒ **直接显示在插件
+ * 调试页**（前端 `client/index.ts` 已有渲染），用户打开就能看到、能复制，不依赖找日志文件。
+ * 模块级是为了让 **webServer** 与 **settings** 两个 inject 作用域都能写（它们互不可见）。
+ */
+let serverNotices: string[] = []
+function pushNotice(message: string): void {
+  serverNotices.push(`${new Date().toISOString()} ${message}`)
+  if (serverNotices.length > SERVER_NOTICE_LIMIT) serverNotices.shift()
+}
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000
 
@@ -1402,7 +1417,9 @@ export function apply(ctx: HostContext, config: unknown): void {
             inflightRequests -= 1
             const cost = Date.now() - startedAt
             if (cost >= SLOW_REQUEST_MS) {
-              wctx.logger.info(`[慢请求] ${route.path} 耗时 ${cost}ms（并发 ${inflightRequests}）`)
+              const line = `[慢请求] ${route.path} 耗时 ${cost}ms（并发 ${inflightRequests}）`
+              wctx.logger.info(line)
+              pushNotice(line)
             }
           }
           // 同步 handler（不返回 Promise）也要算到，故用 res 的 finish/close 兜底收尾。
@@ -1514,7 +1531,9 @@ export function apply(ctx: HostContext, config: unknown): void {
             next,
           }
         })
-        const body = { tasks, instances: snap.instances, events: snap.events, warns: [...debugWarns] }
+        // ⚠️ `warns` **并入服务端观测缓冲**（见 pushNotice 注释）：`[主线程阻塞]` / `[慢请求]` 因此
+        // 会直接出现在插件调试页 —— 真机出问题时不必去找宿主的日志文件。
+        const body = { tasks, instances: snap.instances, events: snap.events, warns: [...debugWarns, ...serverNotices] }
         const content = JSON.stringify(body)
         lastWriteAt = Date.now()
         if (content === lastContent && Date.now() - lastPushAt < DEBUG_FORCE_INTERVAL_MS) return
@@ -1665,7 +1684,9 @@ export function apply(ctx: HostContext, config: unknown): void {
       const drift = now - lastBeat - BLOCK_BEAT_MS
       lastBeat = now
       if (drift >= BLOCK_REPORT_MS) {
-        sctx.logger.info(`[主线程阻塞] 心跳漂移 ${drift}ms（并发请求 ${inflightRequests}）⇒ 这期间所有 HTTP 请求都在排队`)
+        const line = `[主线程阻塞] 心跳漂移 ${drift}ms（并发请求 ${inflightRequests}）⇒ 这期间所有 HTTP 请求都在排队`
+        sctx.logger.info(line)
+        pushNotice(line)
       }
     }, BLOCK_BEAT_MS)
     const stopBlockBeat = (): void => { clearInterval(blockBeat) }
