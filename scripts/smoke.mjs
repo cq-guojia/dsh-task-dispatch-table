@@ -3099,12 +3099,6 @@ console.log('\n[14] runtime-index')
       ['trayLabel', 'settingsResetDone', 'durSec', 'editorCustomCron', 'previewLoading']
         .every(k => !new RegExp(`\\|\\s*'${k}'`).test(locSrc))
       && !/^\s{2}trayLabel:/m.test(locSrc))
-    check('【数据诚实】`/options` 的 degraded 已接进前端（**按字段分开**，候选为空时说清原因）',
-      S('client/index.ts').includes('degraded: body.degraded ?? undefined')
-      && S('client/task-editor.tsx').includes("emptyLabel: optionsDegraded?.workspaces === true ? t('optionsDegraded')")
-      && S('client/task-editor.tsx').includes("emptyLabel: optionsDegraded?.models === true ? t('optionsDegraded')"))
-    check('【数据诚实】模型侧提示真的可达（degraded 时 models 不再塞「跟随宿主」占位项 ⇒ emptyLabel 会显示）',
-      S('client/index.ts').includes('body.degraded?.models === true ? [] :'))
     check('【CSS】基线明写：JS=chrome99（构建），CSS=Chrome 111（color-mix 现算、跟随宿主主题色）',
       S('client/ui/tokens.ts').includes('CSS 基线 = Chrome 111'))
     check('【日志归属】进程级观测进 `plugin_log`，不进 `task_log`（后者只收任务诊断）',

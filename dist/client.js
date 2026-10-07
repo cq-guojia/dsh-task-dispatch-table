@@ -883,7 +883,6 @@ window.__ModuleLoader__.load({
 			statusRailLastSkipped: "最近一次未执行（配置或前置不满足，详见执行记录）",
 			statusRailRunning: "计划运行中",
 			debugRowsSuffix: "行",
-			optionsDegraded: "宿主侧该项服务未接入，暂无候选",
 			vTitleRequired: "还没填任务名称——任务列表里靠它认任务，请给任务起个名字。",
 			vWorkspaceRequired: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。",
 			vPromptRequired: "还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。",
@@ -1496,7 +1495,6 @@ window.__ModuleLoader__.load({
 			statusRailLastSkipped: "Last run skipped (config or prerequisites unsatisfied; see records)",
 			statusRailRunning: "Scheduled / running",
 			debugRowsSuffix: "rows",
-			optionsDegraded: "Host service for this field is unavailable; no options available",
 			vTitleRequired: "Task name is missing — the list identifies tasks by name. Please give it one.",
 			vWorkspaceRequired: "No workspace selected — a task must belong to a workspace to run. Pick one above.",
 			vPromptRequired: "The prompt is empty — it tells the agent what to do and cannot be blank.",
@@ -65962,7 +65960,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* 新建 / 编辑任务弹窗：右侧贴边、上下顶满、左缘可拖拽、**浮层盖在整页之上**（不推压页面）。
 		*/
 		function TaskEditorDrawer(props) {
-			const { t, mode, draft, onChange, workspaces, models, optionsDegraded, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
+			const { t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError, history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors, officeToPdf, currentTaskId, width, onWidthChange, reserved, initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit, onOpenSession, onOpenFile, onViewTask, resolvedAttachments } = props;
 			/**
 			* 带 `{name}` 占位符的文案席位（复用 locales 的替换器；本页 `t` 是**无参**形态）。
 			* ⚠️ 声明位置必须**早于** `validateTaskDraft` 的调用点（约 1332 / 2311）：那条校验用到
@@ -66303,7 +66301,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					patch({ workspace: value });
 				},
 				placeholder: t("editorWorkspacePh"),
-				emptyLabel: optionsDegraded?.workspaces === true ? t("optionsDegraded") : t("editorNoOptions"),
+				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorWorkspace"),
 				error: problemsByField("workspace"),
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 16 }),
@@ -66330,7 +66328,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					patch({ model: value });
 				},
 				placeholder: t("editorModelPh"),
-				emptyLabel: optionsDegraded?.models === true ? t("optionsDegraded") : t("editorNoOptions"),
+				emptyLabel: t("editorNoOptions"),
 				ariaLabel: t("editorModel"),
 				width: PROMPT_SELECT_WIDE,
 				align: "end"
@@ -71201,7 +71199,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							label: item.title
 						};
 					});
-					const models = body.degraded?.models === true ? [] : [{
+					const models = [{
 						value: "",
 						label: t("editorFollowHost")
 					}];
@@ -71216,17 +71214,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setEditorOptions({
 						workspaces,
 						models,
-						workspaceAnchors,
-						degraded: body.degraded ?? void 0
+						workspaceAnchors
 					});
 				}).catch(() => {
-					setEditorOptions({
-						...EMPTY_EDITOR_OPTIONS,
-						degraded: {
-							workspaces: true,
-							models: true
-						}
-					});
+					setEditorOptions({ ...EMPTY_EDITOR_OPTIONS });
 				});
 				return () => {
 					alive = false;
@@ -71508,10 +71499,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				} : void 0,
 				onOpenFile: canPreview ? openFile : void 0,
 				onViewTask: openViewer
-			}) : data === void 0 ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react$1.createElement)("pre", { style: preStyle }, raw) : null, (0, react$1.createElement)("pre", { style: {
-				...preStyle,
-				color: "var(--tdt-fg-3)"
-			} }, describeDiag())) : tab === "config" ? (0, react$1.createElement)(TaskListView, {
+			}) : tab === "config" ? (0, react$1.createElement)(TaskListView, {
 				t,
 				rows: overview.rows,
 				ready: overview.ready,
@@ -71526,7 +71514,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onRunNow: runTaskNow,
 				onViewTask: openViewer,
 				workspaces: editorOptions.workspaces
-			}) : tab === "debug" ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react$1.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbDump !== null ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), (0, react$1.createElement)("pre", { style: {
+			}) : data === void 0 ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react$1.createElement)("pre", { style: preStyle }, raw) : null) : tab === "debug" ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbHint")), dbState === "loading" ? (0, react$1.createElement)("p", { style: hintStyle }, t("debugDbLoading")) : null, dbState === "fail" ? (0, react$1.createElement)("p", { style: errorStyle }, t("debugDbFail")) : null, dbDump !== null ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, `${t("debugRefreshedAt")} ${formatTime(dbDump.at)}`), (0, react$1.createElement)("pre", { style: {
 				...preStyle,
 				color: "var(--tdt-fg-3)"
 			} }, describeEventChannel()), dbDump.tables.map((dump) => renderDbTable(dump))) : null) : null, (0, react$1.createElement)(BackToTop, null)), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
@@ -71581,7 +71569,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				workspaces: editorOptions.workspaces,
 				models: editorOptions.models,
-				optionsDegraded: editorOptions.degraded ?? void 0,
 				tasks: editorTasks,
 				currentTaskId: editor.mode === "edit" ? editor.id : void 0,
 				syncTaskId: editor.id,
@@ -71707,14 +71694,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			snapshotLen: 0,
 			note: "作用域尚未就位"
 		};
-		/**
-		* @returns 诊断信息的可读文本。
-		* ⚠️ 2026-10-07 可观测性审计：原来只描述 **HTTP 取数**这一段，而「页面不刷新」绝大多数是**推送链**坏了
-		* ⇒ 必须把推送通道的状态一并印出来（否则这条诊断行对真问题毫无帮助）。
-		*/
-		function describeDiag() {
-			return `[数据通道诊断] entry=${channelDiag.entry} status=${channelDiag.status} snapshotLen=${channelDiag.snapshotLen} keys=${channelDiag.keys} note=${channelDiag.note}\n${describeEventChannel()}`;
-		}
 		/**
 		* rc.1 起设置表单按 **profile entry id** 寻址，而本插件在不同部署下的行 id 可能是聚合行 id
 		* 或裸命名空间——照参考插件的做法，从已服务命名空间里挑第一个命中的候选。

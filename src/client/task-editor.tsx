@@ -1200,13 +1200,7 @@ export function TaskEditorDrawer(props: {
   workspaces: EditorOption[]
   /** 模型列表（P1 接真数据；空 ⇒ 下拉显示空态）。 */
   models: EditorOption[]
-  /**
-   * 后端说「这批候选是残的」（宿主没接上 workspaceRegistry / llm）。
-   * ⚠️ 2026-10-07 审计：后端**专门下发** degraded 标记、注释写着「UI 上不撒谎」，前端却从不读它
-   * ⇒「宿主没接上」和「宿主真的没有」在界面上长得一样。现在接进来：**候选为空时说清原因**。
-   * ⚠️ 按字段分开传：只工作区降级时，不该顺口说「模型服务也没接入」（那是另一种误报）。
-   */
-  optionsDegraded?: { workspaces?: boolean; models?: boolean }
+
   /** 可选的前置任务（= 现有任务表，真数据，带所属工作区）。 */
   tasks: EditorTaskOption[]
   /** 当前正在编辑的任务 id（编辑态有；新建态无）。用于在前置列表里**排除自己**（防止自我依赖）。 */
@@ -1280,7 +1274,7 @@ export function TaskEditorDrawer(props: {
   reserved: number
 }): ReactElement {
   const {
-    t, mode, draft, onChange, workspaces, models, optionsDegraded, tasks, onClose, onSave, onDelete, saveError,
+    t, mode, draft, onChange, workspaces, models, tasks, onClose, onSave, onDelete, saveError,
     history, onRestoreVersion, onDeleteVersion, onToggleEnabled, overview, syncTaskId, workspaceFiles, workspaceAnchors,
     officeToPdf, currentTaskId, width, onWidthChange, reserved,
     initialView, onDirtyChange, pendingView, onConfirmPendingView, onCancelPendingView, pendingEdit, onConfirmPendingEdit, onCancelPendingEdit,
@@ -1626,8 +1620,7 @@ export function TaskEditorDrawer(props: {
         options: workspaces,
         onChange: value => { patch({ workspace: value }) },
         placeholder: t('editorWorkspacePh'),
-        // 候选为空时**说清原因**（后端 degraded 标记）：「宿主没接上」≠「宿主真的没有」。
-        emptyLabel: optionsDegraded?.workspaces === true ? t('optionsDegraded') : t('editorNoOptions'),
+        emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorWorkspace'),
         error: problemsByField('workspace'),
         icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
@@ -1653,10 +1646,7 @@ export function TaskEditorDrawer(props: {
         options: models.length > 0 || draft.model === '' ? models : [{ value: draft.model, label: draft.model }],
         onChange: value => { patch({ model: value }) },
         placeholder: t('editorModelPh'),
-        // 同上：模型候选为空时说清是不是「宿主没接上 llm」（后端 degraded.models）。
-        // ⚠️ 光有这条还不够 —— 见取数处：models 默认恒含「跟随宿主」占位项 ⇒ `emptyLabel` 永不显示
-        // ⇒ 取数侧在 degraded 时**不加**占位项，让这里的提示真正可达。
-        emptyLabel: optionsDegraded?.models === true ? t('optionsDegraded') : t('editorNoOptions'),
+        emptyLabel: t('editorNoOptions'),
         ariaLabel: t('editorModel'),
         width: PROMPT_SELECT_WIDE,
         align: 'end',

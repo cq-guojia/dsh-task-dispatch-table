@@ -80,12 +80,6 @@ interface ScopeSnapshot {
   base: Record<string, unknown> | undefined
   user: Record<string, unknown> | undefined
   writable: boolean
-  /**
-   * **这份数据可能已经过期**（最近一次刷新失败）。2026-10-07 审计 S3：此前失败只更新内部诊断、
-   * **不碰已有快照** ⇒ 只要曾经成功过一次，界面就一直显示最后一次成功的数据、看起来完全正常，
-   * 用户**完全无感**（后端挂了都不知道）。现在失败会把已有快照标成 stale，界面上明说。
-   */
-  stale?: boolean
 }
 
 /** 一个 settings 命名空间的作用域（SettingsScopeController 的结构子集）。 */
@@ -373,12 +367,6 @@ interface EditorOptions {
   models: EditorOption[]
   /** 工作区 title → 浏览锚点会话 id（该工作区最近一个会话；没有会话的工作区无键）。 */
   workspaceAnchors: Record<string, string>
-  /**
-   * 后端说「这批候选可能是残的」（宿主没接上 workspaceRegistry / llm）。
-   * ⚠️ 2026-10-07 审计：服务端**专门下发**这个标记、注释还写着「UI 上不撒谎」，
-   * 但前端**从不读它** ⇒「宿主没接上」和「宿主真的没有」在界面上长得一模一样。
-   */
-  degraded?: { workspaces?: boolean; models?: boolean }
 }
 
 const EMPTY_EDITOR_OPTIONS: EditorOptions = { workspaces: [], models: [], workspaceAnchors: {} }
@@ -970,22 +958,17 @@ function TaskPage(props: {
             }
             return { value: item.title as string, label: item.title as string }
           })
-        // ⚠️ 2026-10-07：宿主没接上 llm 时**不加**「跟随宿主」占位项 —— 否则 `models` 恒非空，
-        // 编辑器里那条 degraded 提示（`emptyLabel`）永远显示不出来，「UI 上不撒谎」就成了空话。
-        // （宿主没接 llm 时「跟随宿主」本就派不出模型，不给这一项是诚实的。）
-        const models: EditorOption[] = body.degraded?.models === true ? [] : [{ value: '', label: t('editorFollowHost') }]
+        const models: EditorOption[] = [{ value: '', label: t('editorFollowHost') }]
         for (const model of body.models ?? []) {
           if (typeof model.provider !== 'string' || typeof model.id !== 'string') continue
           const name = typeof model.name === 'string' && model.name !== '' ? model.name : model.id
           models.push({ value: encodeModelValue(model.provider, model.id), label: `${name}（${model.provider}）` })
         }
-        setEditorOptions({ workspaces, models, workspaceAnchors, degraded: body.degraded ?? undefined })
+        setEditorOptions({ workspaces, models, workspaceAnchors })
       })
       .catch(() => {
-        // ⚠️ 2026-10-07 审计 🟡：**取数失败**（HTTP 挂 / 403 / 超时）才是最常见的降级路径，
-        // 而它原先什么都不做 ⇒ 下拉显示「暂无可选」，看起来像宿主真没有工作区/模型 —— 其实是**我们没取到**。
-        // 这里明确标成 degraded，让下拉说清「服务没接上」，而不是假装「没有」。数据本身仍是空的，不编造。
-        setEditorOptions({ ...EMPTY_EDITOR_OPTIONS, degraded: { workspaces: true, models: true } })
+        // 取数失败（HTTP 挂 / 403 / 超时）：候选置空，下拉显示「暂无可选」（不编造）。
+        setEditorOptions({ ...EMPTY_EDITOR_OPTIONS })
       })
     return () => { alive = false }
   }, [t])
@@ -1342,13 +1325,6 @@ function TaskPage(props: {
           // 任务名可点（r12）：点记录的任务名 / 前置任务名 ⇒ 右侧栏以查看档打开该任务。
           onViewTask: openViewer,
         })
-        : data === undefined
-        ? h('div', null,
-            h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
-            hasRaw ? h('pre', { style: preStyle }, raw) : null,
-            // 临时诊断行：数据通道断在哪一段，一眼可见（通道稳定后移除）。
-            h('pre', { style: { ...preStyle, color: 'var(--tdt-fg-3)' } }, describeDiag()),
-          )
         : tab === 'config'
           // 任务列表视图（2026-09-30 主界面重建）：卡片式，限宽居中，数据走 /tasks/overview。
           ?           h(TaskListView, {
@@ -1374,6 +1350,11 @@ function TaskPage(props: {
             // 工作区筛选候选 = **面板级唯一真源**（`/options`），列表不再从卡片数据反推（2026-10-04）。
             workspaces: editorOptions.workspaces,
           })
+        : data === undefined
+          ? h('div', null,
+              h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
+              hasRaw ? h('pre', { style: preStyle }, raw) : null,
+            )
           // ↓ 旧「任务配置」界面（JSON 逃生口 + 只读参数）：主界面重建后由常量关掉，暂不删——
           // 删了会牵出一串只服务于它的状态；等面板整体收尾（U6 调试债清理）时连状态一起清。
           : LEGACY_CONFIG_VIEW
@@ -1579,10 +1560,6 @@ function TaskPage(props: {
         onChange: (next: TaskEditorDraft) => { setEditor({ ...editor, draft: next }) },
         workspaces: editorOptions.workspaces,
         models: editorOptions.models,
-        // 后端说这批候选可能是残的（宿主没接上 workspaceRegistry / llm）⇒ 传给编辑器，
-        // 让它在候选为空时**说清原因**（2026-10-07 审计：后端下调了 degraded，前端原来从不读）。
-        // ⚠️ 按字段分开传（不合并成一个布尔）：只工作区降级时，不该顺口说「模型服务也没接入」。
-        optionsDegraded: editorOptions.degraded ?? undefined,
         tasks: editorTasks,
         currentTaskId: editor.mode === 'edit' ? editor.id : undefined,
         // 左列表拨片 → 右抽屉联动（2026-10-05）：把本任务 id 交给抽屉，让它从共享 store 取 enabled 同步。
@@ -1718,16 +1695,6 @@ interface ChannelDiag {
   note: string
 }
 let channelDiag: ChannelDiag = { entry: '(未绑定)', status: '(无)', keys: '(无)', snapshotLen: 0, note: '作用域尚未就位' }
-/**
- * @returns 诊断信息的可读文本。
- * ⚠️ 2026-10-07 可观测性审计：原来只描述 **HTTP 取数**这一段，而「页面不刷新」绝大多数是**推送链**坏了
- * ⇒ 必须把推送通道的状态一并印出来（否则这条诊断行对真问题毫无帮助）。
- */
-function describeDiag(): string {
-  return `[数据通道诊断] entry=${channelDiag.entry} status=${channelDiag.status} `
-    + `snapshotLen=${channelDiag.snapshotLen} keys=${channelDiag.keys} note=${channelDiag.note}`
-    + `\n${describeEventChannel()}`
-}
 
 /**
  * rc.1 起设置表单按 **profile entry id** 寻址，而本插件在不同部署下的行 id 可能是聚合行 id

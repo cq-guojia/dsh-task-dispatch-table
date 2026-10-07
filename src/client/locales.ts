@@ -205,7 +205,7 @@ export type LocaleKey =
   | 'loading' | 'invalidNumber'
   // —— 2026-10-07 i18n 补漏：以下原先是**硬编码中文**，英文界面会露中文（第七轮审计指出）——
   | 'statusRailOff' | 'statusRailLastFailed' | 'statusRailLastSkipped' | 'statusRailRunning'
-  | 'debugRowsSuffix' | 'optionsDegraded'
+  | 'debugRowsSuffix'
   | 'vTitleRequired' | 'vWorkspaceRequired' | 'vPromptRequired'
   | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
 /**
@@ -851,7 +851,7 @@ export const zh: Record<LocaleKey, string> = {
   statusRailLastSkipped: '最近一次未执行（配置或前置不满足，详见执行记录）',
   statusRailRunning: '计划运行中',
   debugRowsSuffix: '行',
-  optionsDegraded: '宿主侧该项服务未接入，暂无候选',
+
 
   vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
   vWorkspaceRequired: '还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。',
@@ -1483,7 +1483,7 @@ export const en: Record<LocaleKey, string> = {
   statusRailLastSkipped: 'Last run skipped (config or prerequisites unsatisfied; see records)',
   statusRailRunning: 'Scheduled / running',
   debugRowsSuffix: 'rows',
-  optionsDegraded: 'Host service for this field is unavailable; no options available',
+
 
   vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
   vWorkspaceRequired: 'No workspace selected — a task must belong to a workspace to run. Pick one above.',
