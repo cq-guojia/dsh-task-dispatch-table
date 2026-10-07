@@ -76,8 +76,9 @@ let serverNotices: string[] = []
 /**
  * 落库用的 store 取值器（apply 时注册；模块级函数拿不到 apply 内的 `storeRef`）。
  * ⚠️ **必须落库**：`serverNotices` 只是内存缓冲 —— 插件重载 / 宿主重启**立刻清空**，且只有 30 条、
- * 会被后续条目挤掉。真机出问题时用户往往隔一会儿才来看 ⇒ 必须写进 `task_log`（SQLite，**保留
- * 30 天**，且调试页本来就会转储这张表）。
+ * 会被后续条目挤掉。真机出问题时用户往往隔一会儿才来看 ⇒ 必须落库 `plugin_log`（SQLite，**保留
+ * 30 天**，且调试页会转储这张表）。
+ * ⚠️ 是 `plugin_log` 而非 `task_log`：后者只收「未推进到执行那一步」的任务诊断（data-model.md §二）。
  */
 let noticeStore: (() => TaskStore | null) | null = null
 function setNoticeStore(fn: () => TaskStore | null): void { noticeStore = fn }
@@ -85,7 +86,8 @@ function setNoticeStore(fn: () => TaskStore | null): void { noticeStore = fn }
 const NOTICE_DEDUPE_MS = 5_000
 let lastNoticeAt = 0
 let lastNoticeText = ''
-function pushNotice(message: string): void {
+/** @param kind - `block` 主线程阻塞 / `slow_request` 慢请求 / `route_error` 路由异常（见 plugin_log 建表注释）。 */
+function pushNotice(kind: 'block' | 'slow_request' | 'route_error', message: string): void {
   const line = `${new Date().toISOString()} ${message}`
   serverNotices.push(line)
   if (serverNotices.length > SERVER_NOTICE_LIMIT) serverNotices.shift()
@@ -96,7 +98,9 @@ function pushNotice(message: string): void {
   lastNoticeText = message
   lastNoticeAt = now
   try {
-    store.appendLog({ level: 'warn', kind: 'diag', message })
+    // ⚠️ **进 `plugin_log`，不是 `task_log`**（2026-10-07 订正）：这是进程级观测、不挂任何任务，
+    // 而 `task_log` 只收「未推进到执行那一步」的任务诊断（design/data-model.md §二）。
+    store.appendPluginLog({ level: 'warn', kind, message })
   } catch { /* 观测本身绝不能影响主流程 */ }
 }
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
@@ -1346,7 +1350,7 @@ export function apply(ctx: HostContext, config: unknown): void {
   let settingsCtxRef: HostContext | null = null
   /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
   let storeRef: TaskStore | null = null
-  // 观测条目落库（task_log）的取值器：模块级 pushNotice 拿不到这里的 storeRef，故注册一个取值器。
+  // 观测条目落库（plugin_log）的取值器：模块级 pushNotice 拿不到这里的 storeRef，故注册一个取值器。
   setNoticeStore(() => storeRef)
   /** settings inject 就绪后的附件落盘目录（插件数据根下 task-attachments/，随 statePath 定格）。 */
   let attachmentsDirRef: string | null = null
@@ -1443,7 +1447,7 @@ export function apply(ctx: HostContext, config: unknown): void {
             if (cost >= SLOW_REQUEST_MS) {
               const line = `[慢请求] ${route.path} 耗时 ${cost}ms（并发 ${inflightRequests}）`
               wctx.logger.info(line)
-              pushNotice(line)
+              pushNotice('slow_request', line)
             }
           }
           // 同步 handler（不返回 Promise）也要算到，故用 res 的 finish/close 兜底收尾。
@@ -1454,7 +1458,9 @@ export function apply(ctx: HostContext, config: unknown): void {
               return
             }
           } catch (error) {
-            wctx.logger.info(`[路由异常] ${route.path}：${error instanceof Error ? error.message : String(error)}`)
+            const line = `[路由异常] ${route.path}：${error instanceof Error ? error.message : String(error)}`
+            wctx.logger.info(line)
+            pushNotice('route_error', line)
           }
           done()
         } })
@@ -1699,6 +1705,9 @@ export function apply(ctx: HostContext, config: unknown): void {
     runtimeIndex.rebuild([...taskMap.values()], store)
     scheduler.startupDiagnostics()
     updateSnapshot() // 启动诊断可能写 task_log，立即落一版快照
+    // 插件整体日志：**启动**这一条是时间线的锚点（2026-10-07）——事后排查「那次故障前后插件
+    // 有没有重启过」，全靠它。写 `plugin_log`（进程级），不写 `task_log`（任务级，见该表建表注释）。
+    storeRef?.appendPluginLog({ level: 'info', kind: 'startup', message: '插件已启动，调度与数据通道就绪' })
 
     // ── 主线程阻塞检测（2026-10-07 事故定位用，原理见 BLOCK_BEAT_MS 的注释）──────
     // 本该每 1s 触发一次；若被同步重活推迟 ⇒ 漂移量就是「主线程被占住的时长」。
@@ -1710,7 +1719,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       if (drift >= BLOCK_REPORT_MS) {
         const line = `[主线程阻塞] 心跳漂移 ${drift}ms（并发请求 ${inflightRequests}）⇒ 这期间所有 HTTP 请求都在排队`
         sctx.logger.info(line)
-        pushNotice(line)
+        pushNotice('block', line)
       }
     }, BLOCK_BEAT_MS)
     const stopBlockBeat = (): void => { clearInterval(blockBeat) }

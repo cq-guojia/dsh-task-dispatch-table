@@ -527,6 +527,8 @@ export function createScheduler(opts) {
             reconciler.sweep();
             // 保留期清除：诊断日志 30 天；执行记录**默认不清**（cfg.historyRetentionDays = 0 ⇒ 直接返回）
             store.purgeLog(cfg.logRetentionDays ?? 30);
+            // 插件整体日志同策略（2026-10-07 新增 `plugin_log`，见 design/data-model.md §六）
+            store.purgePluginLog(cfg.logRetentionDays ?? 30);
             store.purgeHistory(cfg.historyRetentionDays ?? 0);
         },
         getTasks() {

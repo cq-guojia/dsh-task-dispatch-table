@@ -286,6 +286,19 @@ export declare class TaskStore {
         kind: string;
         message: string;
     }): void;
+    /**
+     * **插件整体日志**（2026-10-07）：进程级的运行 / 异常 / 性能观测进 `plugin_log`，
+     * **不进 `task_log`**（那张表的契约是「未推进到执行那一步的任务诊断」，见建表注释与
+     * design/data-model.md §二）。用途：事后回答「插件这个进程当时到底怎么了」。
+     * @param kind - 见建表注释里的枚举（startup / shutdown / degraded / block / slow_request / route_error / stream_*）
+     */
+    appendPluginLog(entry: {
+        level: 'info' | 'warn' | 'error';
+        kind: string;
+        message: string;
+    }): void;
+    /** 按保留期清除 `plugin_log`（与 `task_log` 同策略，默认 30 天）。返回删除条数。 */
+    purgePluginLog(retentionDays: number): number;
     /** 按保留期清除 task_log（决策 32：独立表，可定时清）。返回删除条数。 */
     purgeLog(retentionDays: number): number;
     /**
@@ -323,7 +336,7 @@ export declare class TaskStore {
     /** 写 meta 键值（upsert）。任务表 tasksInline 的持久化主通道走这里。 */
     setMeta(key: string, value: string): void;
     /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
-    static readonly DUMP_TABLES: readonly ["task_instances", "task_events", "task_log", "task_audit", "meta"];
+    static readonly DUMP_TABLES: readonly ["task_instances", "task_events", "task_log", "task_audit", "plugin_log", "meta"];
     /**
      * 调试导出：整表原样读出（面板「调试」页用）。
      * @param name - 表名（必须命中白名单）。

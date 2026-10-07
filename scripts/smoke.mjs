@@ -3111,6 +3111,18 @@ console.log('\n[14] runtime-index')
       && S('client/index.ts').includes('snapshot.stale === true'))
     check('【CSS】基线明写：JS=chrome99（构建），CSS=Chrome 111（color-mix 现算、跟随宿主主题色）',
       S('client/ui/tokens.ts').includes('CSS 基线 = Chrome 111'))
+    check('【日志归属】进程级观测进 `plugin_log`，不进 `task_log`（后者只收任务诊断）',
+      S('store.ts').includes('CREATE TABLE IF NOT EXISTS plugin_log')
+      && S('store.ts').includes('INSERT INTO plugin_log')
+      && S('index.ts').includes("store.appendPluginLog({ level: 'warn', kind, message })")
+      && !/appendLog\(\{[^}]*kind: 'diag'/.test(S('index.ts')))
+    check('【日志归属】插件启动会落一条 startup（时间线锚点）',
+      S('index.ts').includes("kind: 'startup'"))
+    check('【保留】plugin_log 与 task_log 同策略清理（logRetentionDays，默认 30 天）',
+      S('scheduler.ts').includes('store.purgePluginLog(cfg.logRetentionDays ?? 30)'))
+    check('【可查】plugin_log 已进调试页转储白名单',
+      S('store.ts').includes("'plugin_log', 'meta'")
+      && S('store.ts').includes("name === 'plugin_log' ? 'ts DESC, seq DESC'"))
     check('【CSS】固定中性面的 6 个 token 已补明文回退（旧内核不再变透明）',
       ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
         'rgba(255,255,255,.05)', 'rgba(255,255,255,.08)', 'rgba(255,255,255,.16)']

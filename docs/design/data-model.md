@@ -102,6 +102,22 @@ CREATE TABLE meta (
   key   TEXT PRIMARY KEY,                -- 如 'tasksInline'
   value TEXT NOT NULL                    -- 原文（tasksInline 为 JSON 数组文本）
 );
+
+-- ⚠️ **插件整体日志表**（2026-10-07 新增，第 6 张表）：与上面所有 task_* 表**维度不同**
+--   - task_* 回答「某个任务 / 某次执行怎么了」⇒ 都挂 task_id / instance_id；
+--   - 本表回答「插件这个进程怎么了」⇒ **不挂任何任务**：启动 / 停止、宿主能力缺失、
+--     HTTP 通道异常、推送连接生命周期、主线程被同步重活占住、慢请求等。
+--   背景：曾把这类进程级观测写进 task_log（kind='diag'），属**用错表** —— task_log 的契约是
+--   「只收未推进到执行那一步的任务诊断」，kind 是一组明确枚举（见上）。故独立成表。
+-- ⚠️ **往本表写东西前先确认维度**：能挂到某个任务上的，一律回 task_log / task_events，不要图省事扔这里。
+CREATE TABLE IF NOT EXISTS plugin_log (
+  seq     INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts      TEXT NOT NULL,
+  level   TEXT NOT NULL,             -- info | warn | error
+  kind    TEXT NOT NULL,             -- startup | shutdown | degraded | block | slow_request | route_error | stream_*
+  message TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_plugin_log_ts ON plugin_log(ts);
 ```
 
 ## 三、关键设计
@@ -257,6 +273,7 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 | 对象 | 落在 | 策略 |
 |---|---|---|
 | `task_log` | SQLite | `logRetentionDays`（默认 **30 天**），tick 内跨天清（既有） |
+| **`plugin_log`**（2026-10-07 新增） | SQLite | 同 `logRetentionDays`（默认 **30 天**），tick 内跨天清。**插件进程级**日志，不挂任务 |
 | `task_instances` + `task_events` | SQLite | **默认不清**（`historyRetentionDays = 0` = 不清；用户设了天数才清）。清理时按 `updated_at` / `ts` 删、**删实例行连带删它的 events**，且**每任务最近一条终态记录永不删**（否则 `latest_success` 判定静默阻塞，评审 P1）。⚠️ 删行不会让 SQLite 文件变小，要回收磁盘还得 `VACUUM`——这也是「干脆不清」的一条理由 |
 | 上传临时区 | 文件系统 | **7 天**（D1 已拍），tick 内跨天清（一个「上次清理日期」内存变量 + 一次删除，无持续负载） |
 | 提示词版本 / 配置快照 | 文件系统 | **不自动删**；用户在版本面板自己删（配置快照的管理入口本轮不做） |

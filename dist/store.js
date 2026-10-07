@@ -133,6 +133,24 @@ CREATE TABLE IF NOT EXISTS task_audit (
   detail   TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_audit_task ON task_audit(task_id, seq);
+
+-- ⚠️ **插件整体日志表**（2026-10-07）：与上面所有 task_* 表**维度不同** ——
+--   - task_* 回答「某个任务 / 某次执行怎么了」，都挂 task_id / instance_id；
+--   - 本表回答「插件这个进程怎么了」：启动 / 停止、宿主能力缺失、HTTP 通道异常、
+--     推送连接生命周期、主线程被同步重活占住、慢请求……**这些不挂任何任务**。
+--   此前曾把这些塞进 task_log（kind='diag'），属**用错表**：task_log 的契约是
+--   「只收未推进到执行那一步的任务诊断」，kind 是一组明确枚举（design/data-model.md §二）。
+--   塞进去既越界、又成为「按任务看日志」视图里的孤儿行。**独立成表**（design/data-model.md §六）。
+-- 保留策略同 task_log：logRetentionDays（默认 30 天），tick 内跨天清。
+-- ⚠️ 本段在 TS 模板字符串内 ⇒ 注释里**不许出现反引号**（会提前终止字符串）。
+CREATE TABLE IF NOT EXISTS plugin_log (
+  seq     INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts      TEXT NOT NULL,
+  level   TEXT NOT NULL,             -- info | warn | error
+  kind    TEXT NOT NULL,             -- startup | shutdown | degraded | block | slow_request | route_error | stream_*
+  message TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_plugin_log_ts ON plugin_log(ts);
 `;
 const nowIso = () => new Date().toISOString();
 // ── 按任务 / 工作区过滤 + 游标分页（任务卡片三面板 + 未来总查询页共用，design/features/task-expand-panels.md §四）──
@@ -392,6 +410,23 @@ export class TaskStore {
             .prepare('INSERT INTO task_log (ts, task_id, scheduled_at, level, kind, message) VALUES (?, ?, ?, ?, ?, ?)')
             .run(nowIso(), entry.taskId ?? null, entry.scheduledAt ?? null, entry.level, entry.kind, entry.message);
     }
+    /**
+     * **插件整体日志**（2026-10-07）：进程级的运行 / 异常 / 性能观测进 `plugin_log`，
+     * **不进 `task_log`**（那张表的契约是「未推进到执行那一步的任务诊断」，见建表注释与
+     * design/data-model.md §二）。用途：事后回答「插件这个进程当时到底怎么了」。
+     * @param kind - 见建表注释里的枚举（startup / shutdown / degraded / block / slow_request / route_error / stream_*）
+     */
+    appendPluginLog(entry) {
+        this.db
+            .prepare('INSERT INTO plugin_log (ts, level, kind, message) VALUES (?, ?, ?, ?)')
+            .run(nowIso(), entry.level, entry.kind, entry.message);
+    }
+    /** 按保留期清除 `plugin_log`（与 `task_log` 同策略，默认 30 天）。返回删除条数。 */
+    purgePluginLog(retentionDays) {
+        const cutoff = new Date(Date.now() - retentionDays * 86_400_000).toISOString();
+        const result = this.db.prepare('DELETE FROM plugin_log WHERE ts < ?').run(cutoff);
+        return Number(result.changes);
+    }
     /** 按保留期清除 task_log（决策 32：独立表，可定时清）。返回删除条数。 */
     purgeLog(retentionDays) {
         const cutoff = new Date(Date.now() - retentionDays * 86_400_000).toISOString();
@@ -479,7 +514,7 @@ export class TaskStore {
             .run(key, value);
     }
     /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
-    static DUMP_TABLES = ['task_instances', 'task_events', 'task_log', 'task_audit', 'meta'];
+    static DUMP_TABLES = ['task_instances', 'task_events', 'task_log', 'task_audit', 'plugin_log', 'meta'];
     /**
      * 调试导出：整表原样读出（面板「调试」页用）。
      * @param name - 表名（必须命中白名单）。
@@ -494,7 +529,8 @@ export class TaskStore {
             : name === 'task_instances' ? 'scheduled_at DESC, id DESC'
                 : name === 'task_log' ? 'ts DESC, seq DESC'
                     : name === 'task_audit' ? 'seq DESC'
-                        : 'key'; // meta：按 key 升序
+                        : name === 'plugin_log' ? 'ts DESC, seq DESC'
+                            : 'key'; // meta：按 key 升序
         const rows = this.db.prepare(`SELECT * FROM ${name} ORDER BY ${order} LIMIT ?`).all(limit);
         const columns = this.db.prepare(`PRAGMA table_info(${name})`).all().map(col => col.name);
         return { name, count, columns, rows, truncated: count > rows.length };
