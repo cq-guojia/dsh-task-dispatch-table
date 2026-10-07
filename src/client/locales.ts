@@ -205,7 +205,7 @@ export type LocaleKey =
   | 'loading' | 'invalidNumber'
   // —— 2026-10-07 i18n 补漏：以下原先是**硬编码中文**，英文界面会露中文（第七轮审计指出）——
   | 'statusRailOff' | 'statusRailLastFailed' | 'statusRailLastSkipped' | 'statusRailRunning'
-  | 'debugRowsSuffix' | 'optionsDegraded' | 'snapshotStale'
+  | 'debugRowsSuffix' | 'optionsDegraded'
   | 'vTitleRequired' | 'vWorkspaceRequired' | 'vPromptRequired'
   | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
 /**
@@ -852,7 +852,7 @@ export const zh: Record<LocaleKey, string> = {
   statusRailRunning: '计划运行中',
   debugRowsSuffix: '行',
   optionsDegraded: '宿主侧该项服务未接入，暂无候选',
-  snapshotStale: '数据可能已过期：最近一次刷新失败',
+
   vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
   vWorkspaceRequired: '还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。',
   vPromptRequired: '还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。',
@@ -1484,7 +1484,7 @@ export const en: Record<LocaleKey, string> = {
   statusRailRunning: 'Scheduled / running',
   debugRowsSuffix: 'rows',
   optionsDegraded: 'Host service for this field is unavailable; no options available',
-  snapshotStale: 'Data may be stale: the last refresh failed',
+
   vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
   vWorkspaceRequired: 'No workspace selected — a task must belong to a workspace to run. Pick one above.',
   vPromptRequired: 'The prompt is empty — it tells the agent what to do and cannot be blank.',

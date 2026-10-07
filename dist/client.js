@@ -884,7 +884,6 @@ window.__ModuleLoader__.load({
 			statusRailRunning: "计划运行中",
 			debugRowsSuffix: "行",
 			optionsDegraded: "宿主侧该项服务未接入，暂无候选",
-			snapshotStale: "数据可能已过期：最近一次刷新失败",
 			vTitleRequired: "还没填任务名称——任务列表里靠它认任务，请给任务起个名字。",
 			vWorkspaceRequired: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。",
 			vPromptRequired: "还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。",
@@ -1498,7 +1497,6 @@ window.__ModuleLoader__.load({
 			statusRailRunning: "Scheduled / running",
 			debugRowsSuffix: "rows",
 			optionsDegraded: "Host service for this field is unavailable; no options available",
-			snapshotStale: "Data may be stale: the last refresh failed",
 			vTitleRequired: "Task name is missing — the list identifies tasks by name. Please give it one.",
 			vWorkspaceRequired: "No workspace selected — a task must belong to a workspace to run. Pick one above.",
 			vPromptRequired: "The prompt is empty — it tells the agent what to do and cannot be blank.",
@@ -70506,19 +70504,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			alignItems: "center",
 			gap: "8px"
 		};
-		/**
-		* 「数据可能已过期」横幅（2026-10-07 审计 S3）：快照刷新失败时**在面板顶部明说**——
-		* 此前失败只改内部诊断，界面永远显示最后一次成功的数据、看起来完全正常 ⇒ 用户完全无感。
-		*/
-		const staleBannerStyle = {
-			margin: "0 0 10px",
-			padding: "6px 10px",
-			borderRadius: "var(--tdt-radius-xs)",
-			background: "var(--tdt-warning-soft, rgba(245,158,11,.08))",
-			color: "var(--tdt-warning, #f59e0b)",
-			border: "1px solid var(--tdt-border, rgba(0,0,0,.1))",
-			fontSize: "var(--tdt-font-sm)"
-		};
 		const panelTitleStyle = {
 			fontSize: "var(--tdt-font-lg)",
 			fontWeight: 600,
@@ -71460,61 +71445,51 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				justifyContent: "center"
-			} }, (0, react$1.createElement)(
-				"div",
-				{ style: {
-					width: "100%",
-					maxWidth: "1120px",
-					minWidth: "760px",
-					boxSizing: "border-box"
-				} },
-				/**
-				* 过期横幅（2026-10-07 审计 S3）：快照**刷新失败**时明说「数据可能已过期」。
-				* 此前失败只改一行内部诊断，界面永远显示最后一次成功的数据、看起来完全正常
-				* ⇒ 后端挂了用户也**完全无感**（这正是「页面看起来正常但其实已死」那一类）。
-				*/
-				snapshot.stale === true ? (0, react$1.createElement)("p", { style: staleBannerStyle }, t("snapshotStale")) : null,
-				(0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)("div", { style: {
-					display: "flex",
-					alignItems: "center",
-					gap: "10px",
-					minWidth: 0
-				} }, (0, react$1.createElement)(Button$2, {
-					variant: "outline",
-					size: "md",
-					title: t("backToConversation"),
-					onClick: onBack
-				}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
-					value: tab,
-					size: "md",
-					items: [
-						{
-							value: "config",
-							label: t("tabConfig")
-						},
-						{
-							value: "records",
-							label: t("tabRecords")
-						},
-						{
-							value: "calendar",
-							label: t("tabCalendar")
-						},
-						{
-							value: "debug",
-							label: t("tabDebug")
-						}
-					],
-					onChange: setTab
-				}), (0, react$1.createElement)(Button$2, {
-					variant: "outline",
-					size: "md",
-					title: t("editorNew"),
-					onClick: () => {
-						openCreate();
+			} }, (0, react$1.createElement)("div", { style: {
+				width: "100%",
+				maxWidth: "1120px",
+				minWidth: "760px",
+				boxSizing: "border-box"
+			} }, (0, react$1.createElement)("div", { style: panelHeaderStyle }, (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				alignItems: "center",
+				gap: "10px",
+				minWidth: 0
+			} }, (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
+				title: t("backToConversation"),
+				onClick: onBack
+			}, `← ${t("backToConversation")}`), (0, react$1.createElement)("div", { style: panelTitleStyle }, t("panelTitle"))), (0, react$1.createElement)("div", { style: headerRightStyle }, (0, react$1.createElement)(Segmented, {
+				value: tab,
+				size: "md",
+				items: [
+					{
+						value: "config",
+						label: t("tabConfig")
+					},
+					{
+						value: "records",
+						label: t("tabRecords")
+					},
+					{
+						value: "calendar",
+						label: t("tabCalendar")
+					},
+					{
+						value: "debug",
+						label: t("tabDebug")
 					}
-				}, `＋ ${t("editorNew")}`)))
-			)), tab === "calendar" ? (0, react$1.createElement)(TaskCalendarView, {
+				],
+				onChange: setTab
+			}), (0, react$1.createElement)(Button$2, {
+				variant: "outline",
+				size: "md",
+				title: t("editorNew"),
+				onClick: () => {
+					openCreate();
+				}
+			}, `＋ ${t("editorNew")}`))))), tab === "calendar" ? (0, react$1.createElement)(TaskCalendarView, {
 				t,
 				rows: overview.rows,
 				tasks: timelineTasks,
@@ -71830,25 +71805,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			let busy = false;
 			/** 在途期间到来的重取请求（事件推送 / 保存后刷）：本轮结束立刻补一次，**不静默丢**。 */
 			let pending = false;
-			/**
-			* 把**已有**快照标记为「可能已过期」（2026-10-07 审计 S3）。此前失败只改一行内部诊断、**不碰快照**
-			* ⇒ 只要曾经成功过一次，界面就永远显示最后一次成功的数据、看起来完全正常（后端挂了也无感）。
-			* 这里产出**新引用**（`useSyncExternalStore` 才会重渲）+ `stale=true`，界面据此明说。
-			*/
-			const markStale = (note) => {
-				channelDiag = {
-					...channelDiag,
-					entry: SETTINGS_NS,
-					status: "loading",
-					note
-				};
-				if (lastMapped === void 0 || lastMapped.stale === true) return;
-				lastMapped = {
-					...lastMapped,
-					stale: true
-				};
-				for (const l of [...listeners]) l();
-			};
 			const poll = async () => {
 				if (busy) {
 					pending = true;
@@ -71857,30 +71813,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				busy = true;
 				try {
 					const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: "no-store" });
-					if (!res.ok) {
-						markStale(`HTTP ${res.status}（轮询中）`);
-						return;
-					}
+					if (!res.ok) return;
 					const data = await res.json();
 					const debug = data.snapshot ?? "";
 					const inline = data.tasksInline ?? "";
-					if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) {
-						if (lastMapped.stale === true) {
-							lastMapped = {
-								...lastMapped,
-								stale: false
-							};
-							channelDiag = {
-								entry: SETTINGS_NS,
-								status: "ready",
-								keys: "debugSnapshot,tasksInline",
-								snapshotLen: debug.length,
-								note: `HTTP ${DISPATCH_API_PREFIX}/snapshot（已恢复）`
-							};
-							for (const l of [...listeners]) l();
-						}
-						return;
-					}
+					if (debug === lastDebug && inline === lastInline && lastMapped !== void 0) return;
 					lastDebug = debug;
 					lastInline = inline;
 					lastMapped = {
@@ -71891,8 +71828,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						},
 						base: void 0,
 						user: void 0,
-						writable: true,
-						stale: false
+						writable: true
 					};
 					channelDiag = {
 						entry: SETTINGS_NS,
@@ -71902,10 +71838,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						note: `HTTP ${DISPATCH_API_PREFIX}/snapshot`
 					};
 					for (const l of [...listeners]) l();
-				} catch (error) {
-					const message = error instanceof Error ? error.message : String(error);
-					markStale(`fetch 失败：${message}`);
-				} finally {
+				} catch {} finally {
 					busy = false;
 					if (pending) {
 						pending = false;

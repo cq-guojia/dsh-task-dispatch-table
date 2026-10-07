@@ -212,17 +212,6 @@ const panelHeaderStyle: Record<string, string | number> = {
   marginBottom: '40px',
 }
 const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '8px' }
-/**
- * 「数据可能已过期」横幅（2026-10-07 审计 S3）：快照刷新失败时**在面板顶部明说**——
- * 此前失败只改内部诊断，界面永远显示最后一次成功的数据、看起来完全正常 ⇒ 用户完全无感。
- */
-const staleBannerStyle: Record<string, string | number> = {
-  margin: '0 0 10px', padding: '6px 10px', borderRadius: 'var(--tdt-radius-xs)',
-  background: 'var(--tdt-warning-soft, rgba(245,158,11,.08))',
-  color: 'var(--tdt-warning, #f59e0b)',
-  border: '1px solid var(--tdt-border, rgba(0,0,0,.1))',
-  fontSize: 'var(--tdt-font-sm)',
-}
 const panelTitleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-lg)', fontWeight: 600, color: 'var(--tdt-fg)' }
 const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' }
 const preStyle: Record<string, string | number> = {
@@ -1279,12 +1268,6 @@ function TaskPage(props: {
       // 标题下面不再写时间与提示（用户 2026-09-30：只留「← 返回会话」和标题）。
       h('div', { style: { display: 'flex', justifyContent: 'center' } },
         h('div', { style: { width: '100%', maxWidth: '1120px', minWidth: '760px', boxSizing: 'border-box' } },
-          /**
-           * 过期横幅（2026-10-07 审计 S3）：快照**刷新失败**时明说「数据可能已过期」。
-           * 此前失败只改一行内部诊断，界面永远显示最后一次成功的数据、看起来完全正常
-           * ⇒ 后端挂了用户也**完全无感**（这正是「页面看起来正常但其实已死」那一类）。
-           */
-          snapshot.stale === true ? h('p', { style: staleBannerStyle }, t('snapshotStale')) : null,
           h('div', { style: panelHeaderStyle },
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 } },
               h(Button, {
@@ -1833,44 +1816,16 @@ function httpScope(): SettingsScope {
   let busy = false
   /** 在途期间到来的重取请求（事件推送 / 保存后刷）：本轮结束立刻补一次，**不静默丢**。 */
   let pending = false
-  /**
-   * 把**已有**快照标记为「可能已过期」（2026-10-07 审计 S3）。此前失败只改一行内部诊断、**不碰快照**
-   * ⇒ 只要曾经成功过一次，界面就永远显示最后一次成功的数据、看起来完全正常（后端挂了也无感）。
-   * 这里产出**新引用**（`useSyncExternalStore` 才会重渲）+ `stale=true`，界面据此明说。
-   */
-  const markStale = (note: string): void => {
-    channelDiag = { ...channelDiag, entry: SETTINGS_NS, status: 'loading', note }
-    if (lastMapped === undefined || lastMapped.stale === true) return
-    lastMapped = { ...lastMapped, stale: true }
-    for (const l of [...listeners]) l()
-  }
   const poll = async (): Promise<void> => {
     if (busy) { pending = true; return }
     busy = true
     try {
       const res = await fetchWithTimeout(`${DISPATCH_API_PREFIX}/snapshot`, { cache: 'no-store' })
-      if (!res.ok) {
-        markStale(`HTTP ${res.status}（轮询中）`)
-        return
-      }
+      if (!res.ok) return
       const data = await res.json() as { snapshot?: string; tasksInline?: string }
       const debug = data.snapshot ?? ''
       const inline = data.tasksInline ?? ''
       if (debug === lastDebug && inline === lastInline && lastMapped !== undefined) {
-        // 内容没变：**只在上一轮失败过**时才产新引用清掉 stale（否则不重渲，避免无谓抖动）。
-        if (lastMapped.stale === true) {
-          lastMapped = { ...lastMapped, stale: false }
-          // ⚠️ 顺手把诊断行也刷回 ready（2026-10-07 审计 🟡）：只清 stale 不动 `channelDiag` 的话，
-          // 横幅消失了、调试页那行却还留着「HTTP 500（轮询中）」，看起来像还在失败。
-          channelDiag = {
-            entry: SETTINGS_NS,
-            status: 'ready',
-            keys: 'debugSnapshot,tasksInline',
-            snapshotLen: debug.length,
-            note: `HTTP ${DISPATCH_API_PREFIX}/snapshot（已恢复）`,
-          }
-          for (const l of [...listeners]) l()
-        }
         return
       }
       lastDebug = debug
@@ -1881,7 +1836,6 @@ function httpScope(): SettingsScope {
         base: undefined,
         user: undefined,
         writable: true,
-        stale: false,
       }
       channelDiag = {
         entry: SETTINGS_NS,
@@ -1891,9 +1845,8 @@ function httpScope(): SettingsScope {
         note: `HTTP ${DISPATCH_API_PREFIX}/snapshot`,
       }
       for (const l of [...listeners]) l()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      markStale(`fetch 失败：${message}`)
+    } catch {
+      // 刷新失败：保留上次成功快照（失败原因已在后端日志侧记录，见 plugin_log / 服务端诊断）
     } finally {
       busy = false
       // 补跑被在途那轮吞掉的重取（事件推送 / 保存后刷）。

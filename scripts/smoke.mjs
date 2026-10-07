@@ -3105,10 +3105,6 @@ console.log('\n[14] runtime-index')
       && S('client/task-editor.tsx').includes("emptyLabel: optionsDegraded?.models === true ? t('optionsDegraded')"))
     check('【数据诚实】模型侧提示真的可达（degraded 时 models 不再塞「跟随宿主」占位项 ⇒ emptyLabel 会显示）',
       S('client/index.ts').includes('body.degraded?.models === true ? [] :'))
-    check('【数据诚实】快照刷新失败 ⇒ 界面明说「可能已过期」（原：成功过一次就永不提示）',
-      S('client/index.ts').includes('const markStale = (note: string): void => {')
-      && S('client/index.ts').includes('staleBannerStyle')
-      && S('client/index.ts').includes('snapshot.stale === true'))
     check('【CSS】基线明写：JS=chrome99（构建），CSS=Chrome 111（color-mix 现算、跟随宿主主题色）',
       S('client/ui/tokens.ts').includes('CSS 基线 = Chrome 111'))
     check('【日志归属】进程级观测进 `plugin_log`，不进 `task_log`（后者只收任务诊断）',
