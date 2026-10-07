@@ -48,10 +48,35 @@ const SERVER_NOTICE_LIMIT = 30;
  * 模块级是为了让 **webServer** 与 **settings** 两个 inject 作用域都能写（它们互不可见）。
  */
 let serverNotices = [];
+/**
+ * 落库用的 store 取值器（apply 时注册；模块级函数拿不到 apply 内的 `storeRef`）。
+ * ⚠️ **必须落库**：`serverNotices` 只是内存缓冲 —— 插件重载 / 宿主重启**立刻清空**，且只有 30 条、
+ * 会被后续条目挤掉。真机出问题时用户往往隔一会儿才来看 ⇒ 必须写进 `task_log`（SQLite，**保留
+ * 30 天**，且调试页本来就会转储这张表）。
+ */
+let noticeStore = null;
+function setNoticeStore(fn) { noticeStore = fn; }
+/** 去重窗口：同一句话 5 秒内只记一次（防止「全体请求都慢」时把库写爆、也防止刷屏）。 */
+const NOTICE_DEDUPE_MS = 5_000;
+let lastNoticeAt = 0;
+let lastNoticeText = '';
 function pushNotice(message) {
-    serverNotices.push(`${new Date().toISOString()} ${message}`);
+    const line = `${new Date().toISOString()} ${message}`;
+    serverNotices.push(line);
     if (serverNotices.length > SERVER_NOTICE_LIMIT)
         serverNotices.shift();
+    const store = noticeStore?.() ?? null;
+    if (store === null)
+        return;
+    const now = Date.now();
+    if (message === lastNoticeText && now - lastNoticeAt < NOTICE_DEDUPE_MS)
+        return;
+    lastNoticeText = message;
+    lastNoticeAt = now;
+    try {
+        store.appendLog({ level: 'warn', kind: 'diag', message });
+    }
+    catch { /* 观测本身绝不能影响主流程 */ }
 }
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
@@ -1373,6 +1398,8 @@ export function apply(ctx, config) {
     let settingsCtxRef = null;
     /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
     let storeRef = null;
+    // 观测条目落库（task_log）的取值器：模块级 pushNotice 拿不到这里的 storeRef，故注册一个取值器。
+    setNoticeStore(() => storeRef);
     /** settings inject 就绪后的附件落盘目录（插件数据根下 task-attachments/，随 statePath 定格）。 */
     let attachmentsDirRef = null;
     /** settings inject 就绪后的任务文件资产根（tasks/ 与临时区都在 state.db 同目录）。 */
