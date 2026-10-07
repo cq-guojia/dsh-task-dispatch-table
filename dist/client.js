@@ -144,7 +144,9 @@ window.__ModuleLoader__.load({
 		/** 带超时的 fetch：超时即 `controller.abort()`（调用方按「本次请求失败」处理，保持上一份数据）。 */
 		async function fetchWithTimeout(input, init = {}, timeoutMs = DEFAULT_TIMEOUT_MS) {
 			const controller = new AbortController();
-			const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+			const timer = window.setTimeout(() => {
+				controller.abort(new DOMException(`请求超时（${timeoutMs}ms 未响应）`, "TimeoutError"));
+			}, timeoutMs);
 			try {
 				return await fetch(input, {
 					...init,

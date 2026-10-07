@@ -23,6 +23,20 @@ export { Config, resolveStatePath };
 const DEBUG_WARN_LIMIT = 20;
 /** 快照最小写入间隔（毫秒）：会话事件逐条续租改 updated_at，不节流会写放大。 */
 const DEBUG_WRITE_MIN_INTERVAL_MS = 2_000;
+/** 超过这个耗时就记一条 `[慢请求]`（2026-10-07 事故定位用）。 */
+const SLOW_REQUEST_MS = 1_000;
+/**
+ * 主线程阻塞检测的心跳间隔（ms）。
+ * ⚠️ 2026-10-07 事故：日程 / 执行记录 / snapshot **同时** 8s 超时，客户端只看到「signal is aborted
+ * without reason」（= 前端自己掐断的超时），**看不出是谁把进程占住**。Node 是单线程 ⇒ 任何一段
+ * 同步重活（快照序列化 + SQLite 同步写 / 大范围查库 / cron 批量解析）都会让**所有** HTTP 请求排队。
+ * 判据就是**定时器漂移**：本该 1s 一次的回调若 3s 才来 ⇒ 主线程被占了约 2s。
+ */
+const BLOCK_BEAT_MS = 1_000;
+/** 漂移超过它就记一条 `[主线程阻塞]`。 */
+const BLOCK_REPORT_MS = 500;
+/** 当前在处理的 HTTP 请求数（配合 `[慢请求]` 看是不是「排队」而不是「慢」）。 */
+let inflightRequests = 0;
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000;
 /** SSE 心跳间隔（毫秒）：保活穿代理 + 及时发现对端已断。 */
@@ -1412,7 +1426,33 @@ export function apply(ctx, config) {
             // 逐条容错：宿主对重复 (kind, path) 注册会 throw（dsh-host-webserver register），
             // 一条坏路由绝不能把后面的路由全部拖死（2026-10-02 真机「部分接口 404」的放大器）。
             try {
-                webServer.register(route);
+                // ⚠️ **每个路由都套一层耗时与并发计数**（2026-10-07 事故定位用）。
+                // 事故现象：日程 / 执行记录 / snapshot **同时** 8s 超时 ⇒ 不是某个接口坏了，而是**请求排队**；
+                // 而这是插件进程里唯一能直接看到「排队」这件事的地方（客户端只看到超时，看不出是谁卡住）。
+                const inner = route.handler;
+                webServer.register({ ...route, handler: (req, res) => {
+                        const startedAt = Date.now();
+                        inflightRequests += 1;
+                        const done = () => {
+                            inflightRequests -= 1;
+                            const cost = Date.now() - startedAt;
+                            if (cost >= SLOW_REQUEST_MS) {
+                                wctx.logger.info(`[慢请求] ${route.path} 耗时 ${cost}ms（并发 ${inflightRequests}）`);
+                            }
+                        };
+                        // 同步 handler（不返回 Promise）也要算到，故用 res 的 finish/close 兜底收尾。
+                        try {
+                            const out = inner(req, res);
+                            if (out !== undefined && typeof out.then === 'function') {
+                                void out.then(done, done);
+                                return;
+                            }
+                        }
+                        catch (error) {
+                            wctx.logger.info(`[路由异常] ${route.path}：${error instanceof Error ? error.message : String(error)}`);
+                        }
+                        done();
+                    } });
             }
             catch (error) {
                 wctx.logger.warn(`[数据通道] 路由注册失败 ${route.path}：${error instanceof Error ? error.message : String(error)}`);
@@ -1655,6 +1695,18 @@ export function apply(ctx, config) {
         runtimeIndex.rebuild([...taskMap.values()], store);
         scheduler.startupDiagnostics();
         updateSnapshot(); // 启动诊断可能写 task_log，立即落一版快照
+        // ── 主线程阻塞检测（2026-10-07 事故定位用，原理见 BLOCK_BEAT_MS 的注释）──────
+        // 本该每 1s 触发一次；若被同步重活推迟 ⇒ 漂移量就是「主线程被占住的时长」。
+        let lastBeat = Date.now();
+        const blockBeat = setInterval(() => {
+            const now = Date.now();
+            const drift = now - lastBeat - BLOCK_BEAT_MS;
+            lastBeat = now;
+            if (drift >= BLOCK_REPORT_MS) {
+                sctx.logger.info(`[主线程阻塞] 心跳漂移 ${drift}ms（并发请求 ${inflightRequests}）⇒ 这期间所有 HTTP 请求都在排队`);
+            }
+        }, BLOCK_BEAT_MS);
+        const stopBlockBeat = () => { clearInterval(blockBeat); };
         sctx.on('dispose', () => {
             disposed = true;
             // 主动摘掉配置 watcher（此前只把退订函数丢掉 ⇒ 宿主若晚一步才释放作用域，
@@ -1662,6 +1714,7 @@ export function apply(ctx, config) {
             unwatchScope();
             stopInterval();
             stopSweeper();
+            stopBlockBeat();
             closeAllEventStreams(activeStreams);
             eventBus.dispose();
             store.close();

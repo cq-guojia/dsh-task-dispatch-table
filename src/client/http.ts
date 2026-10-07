@@ -22,7 +22,12 @@ export async function fetchWithTimeout(
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<Response> {
   const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  // ⚠️ **必须带 reason**（2026-10-07 事故）：`abort()` 不给 reason 时，浏览器把 `error.message`
+  // 填成「signal is aborted without reason」—— 这句话**完全看不出是超时**，真机上被当成
+  // 「数据库读不出来」排查，白白误导一次。带上 reason 后界面直接显示「请求超时（8000ms 未响应）」。
+  const timer = window.setTimeout(() => {
+    controller.abort(new DOMException(`请求超时（${timeoutMs}ms 未响应）`, 'TimeoutError'))
+  }, timeoutMs)
   try {
     return await fetch(input, { ...init, signal: controller.signal })
   } finally {
