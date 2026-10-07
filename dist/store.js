@@ -414,12 +414,41 @@ export class TaskStore {
      * **插件整体日志**（2026-10-07）：进程级的运行 / 异常 / 性能观测进 `plugin_log`，
      * **不进 `task_log`**（那张表的契约是「未推进到执行那一步的任务诊断」，见建表注释与
      * design/data-model.md §二）。用途：事后回答「插件这个进程当时到底怎么了」。
-     * @param kind - 见建表注释里的枚举（startup / shutdown / degraded / block / slow_request / route_error / stream_*）
+     *
+     * ⚠️ 下游**不要直接调这个方法**——请用下面三个语义化的 `logInfo` / `logWarn` / `logError`，
+     * 它们把 `level` 钉在方法名里，调用点只剩 `kind` 与文案，不会各处重复样板、也不会写错 level。
      */
     appendPluginLog(entry) {
         this.db
             .prepare('INSERT INTO plugin_log (ts, level, kind, message) VALUES (?, ?, ?, ?)')
             .run(nowIso(), entry.level, entry.kind, entry.message);
+    }
+    /**
+     * ⚠️ **记日志绝不能影响主流程**（2026-10-07 审计 🔴）：这三个方法是**唯一推荐给下游**的入口，
+     * 必须自带异常隔离。否则：
+     *  - `startup` 写入抛错 ⇒ 插件半初始化（定时器已种、dispose 未注册）；
+     *  - `shutdown` 写入抛错 ⇒ **后面的清理动作（退订 / 停定时器 / 关连接 / close 库）全都不执行**。
+     * 一条日志没记上，远比整个插件生命周期被卡住划算。
+     */
+    logInfo(kind, message) {
+        this.safelyAppend('info', kind, message);
+    }
+    /** 记一条 warn 级插件日志（降级 / 观测告警：功能还在，但不如预期）。 */
+    logWarn(kind, message) {
+        this.safelyAppend('warn', kind, message);
+    }
+    /** 记一条 error 级插件日志（真的出错了）。 */
+    logError(kind, message) {
+        this.safelyAppend('error', kind, message);
+    }
+    /** 落库并吞掉一切异常（见 `logInfo` 的注释）。 */
+    safelyAppend(level, kind, message) {
+        try {
+            this.appendPluginLog({ level, kind, message });
+        }
+        catch {
+            // 库不可写时**只能**放弃这条日志：还有宿主 logger 那条路，且主流程必须继续。
+        }
     }
     /** 按保留期清除 `plugin_log`（与 `task_log` 同策略，默认 30 天）。返回删除条数。 */
     purgePluginLog(retentionDays) {

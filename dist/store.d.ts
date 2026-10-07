@@ -181,6 +181,17 @@ export interface InstanceEventRow {
     kind: string;
     detail: string | null;
 }
+/**
+ * **插件整体日志的语义枚举**（`plugin_log.kind`）—— 2026-10-07。
+ *
+ * ⚠️ **新增 / 改名必须同步** `docs/design/data-model.md` §二 的表注释，否则文档与代码不一致
+ * （本仓已发生过：文档 §二 漏掉 `task_audit`，直到本次排查才发现）。
+ *
+ * 选用哪一类，按「**这件事挂不挂得上某个任务**」判断：
+ *  - 挂得上 ⇒ 回 `task_log` / `task_events`，**不要扔这里**；
+ *  - 挂不上（是插件进程自己的事）⇒ 才用本表。
+ */
+export type PluginLogKind = 'startup' | 'shutdown' | 'degraded' | 'block' | 'slow_request' | 'route_error' | 'stream_open' | 'stream_close' | 'stream_limit' | 'stream_write_failed' | 'snapshot' | 'config' | 'tick_error' | 'dispatch' | 'error';
 export declare class TaskStore {
     private readonly db;
     /** 事务嵌套深度（`transaction` 用）：> 0 = 已在事务里 ⇒ 内层并入外层，不再 BEGIN。 */
@@ -290,13 +301,29 @@ export declare class TaskStore {
      * **插件整体日志**（2026-10-07）：进程级的运行 / 异常 / 性能观测进 `plugin_log`，
      * **不进 `task_log`**（那张表的契约是「未推进到执行那一步的任务诊断」，见建表注释与
      * design/data-model.md §二）。用途：事后回答「插件这个进程当时到底怎么了」。
-     * @param kind - 见建表注释里的枚举（startup / shutdown / degraded / block / slow_request / route_error / stream_*）
+     *
+     * ⚠️ 下游**不要直接调这个方法**——请用下面三个语义化的 `logInfo` / `logWarn` / `logError`，
+     * 它们把 `level` 钉在方法名里，调用点只剩 `kind` 与文案，不会各处重复样板、也不会写错 level。
      */
     appendPluginLog(entry: {
         level: 'info' | 'warn' | 'error';
-        kind: string;
+        kind: PluginLogKind;
         message: string;
     }): void;
+    /**
+     * ⚠️ **记日志绝不能影响主流程**（2026-10-07 审计 🔴）：这三个方法是**唯一推荐给下游**的入口，
+     * 必须自带异常隔离。否则：
+     *  - `startup` 写入抛错 ⇒ 插件半初始化（定时器已种、dispose 未注册）；
+     *  - `shutdown` 写入抛错 ⇒ **后面的清理动作（退订 / 停定时器 / 关连接 / close 库）全都不执行**。
+     * 一条日志没记上，远比整个插件生命周期被卡住划算。
+     */
+    logInfo(kind: PluginLogKind, message: string): void;
+    /** 记一条 warn 级插件日志（降级 / 观测告警：功能还在，但不如预期）。 */
+    logWarn(kind: PluginLogKind, message: string): void;
+    /** 记一条 error 级插件日志（真的出错了）。 */
+    logError(kind: PluginLogKind, message: string): void;
+    /** 落库并吞掉一切异常（见 `logInfo` 的注释）。 */
+    private safelyAppend;
     /** 按保留期清除 `plugin_log`（与 `task_log` 同策略，默认 30 天）。返回删除条数。 */
     purgePluginLog(retentionDays: number): number;
     /** 按保留期清除 task_log（决策 32：独立表，可定时清）。返回删除条数。 */

@@ -103,6 +103,19 @@ CREATE TABLE meta (
   value TEXT NOT NULL                    -- 原文（tasksInline 为 JSON 数组文本）
 );
 
+-- 操作审计表（2026-09-30，第 5 张表）：新增 / 修改 / 删除任务、版本留档 / 找回、附件增删
+-- 全部留痕 ⇒ 事后能回答「这个任务什么时候被改成什么样」。
+-- 与 task_log（诊断，30 天清）分开：**默认不清**（见 §六）。
+-- ⚠️ 2026-10-07 补记：此表此前只在 §七 提过一句，§二 的表清单里**漏了它**，本次补上。
+CREATE TABLE IF NOT EXISTS task_audit (
+  seq      INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts       TEXT NOT NULL,
+  task_id  TEXT,
+  action   TEXT NOT NULL,
+  detail   TEXT                         -- JSON 原文
+);
+CREATE INDEX IF NOT EXISTS idx_audit_task ON task_audit(task_id, seq);
+
 -- ⚠️ **插件整体日志表**（2026-10-07 新增，第 6 张表）：与上面所有 task_* 表**维度不同**
 --   - task_* 回答「某个任务 / 某次执行怎么了」⇒ 都挂 task_id / instance_id；
 --   - 本表回答「插件这个进程怎么了」⇒ **不挂任何任务**：启动 / 停止、宿主能力缺失、
@@ -114,11 +127,34 @@ CREATE TABLE IF NOT EXISTS plugin_log (
   seq     INTEGER PRIMARY KEY AUTOINCREMENT,
   ts      TEXT NOT NULL,
   level   TEXT NOT NULL,             -- info | warn | error
-  kind    TEXT NOT NULL,             -- startup | shutdown | degraded | block | slow_request | route_error | stream_*
+  kind    TEXT NOT NULL,             -- 语义枚举，真源是 src/store.ts 的 PluginLogKind（改它必须同步这里）：
+                                     --   startup 启动 / shutdown 停止 / degraded 宿主能力缺失⇒降级
+                                     --   block 主线程被占 / slow_request 慢请求 / route_error 路由异常
+                                     --   stream_open|stream_close|stream_limit|stream_write_failed 推送连接生命周期
+                                     --   snapshot 快照异常 / config 配置写回失败 / tick_error 调度 tick 异常
+                                     --   dispatch 派发降级或失败 / error 其它未分类（尽量不用）
   message TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_plugin_log_ts ON plugin_log(ts);
 ```
+
+### 2.1 三张日志表怎么选（2026-10-07 定，防止再犯）
+
+本仓有 **4 处**能记"日志"，**先判维度再落笔**——2026-10-07 就是把进程级观测塞进了 `task_log`（`kind='diag'`），
+既越界、又成了「按任务看日志」视图里的孤儿行，事后才订正为独立成表。
+
+| 落点 | 回答什么 | 判据 | 保留 |
+|---|---|---|---|
+| `task_events` | **某一次执行**内部发生了什么（状态迁移 / 派发 / 回执 / 追问） | 能挂 `instance_id` | 默认不清 |
+| `task_log` | **某个任务**为什么**没推进到执行那一步**（过期 / 上游过期 / 前置不满足 / 启动补跑遗漏…） | 能挂 `task_id`（少数全局汇总可空），`kind` 是明确枚举 | 30 天 |
+| **`plugin_log`** | **插件这个进程**怎么了（启动 / 停止 / 宿主能力缺失 ⇒ 降级 / 推送连接生命周期 / 主线程被占 / 慢请求 / tick 异常…） | **挂不上任何任务** | 30 天 |
+| `task_audit` | **谁**在什么时候**改了**哪个任务 | 人动作，不是诊断 | 默认不清 |
+
+**口诀**：能挂到任务上的 ⇒ 回 `task_*`；挂不上的 ⇒ 才用 `plugin_log`。
+
+**调用方式**（不要在调用点重复 `level` 样板）：
+- 有 `store` 引用 ⇒ `store.logInfo(kind, msg)` / `store.logWarn(kind, msg)` / `store.logError(kind, msg)`；
+- 拿不到 `store`（如模块级函数、inject 作用域外）⇒ `pushNotice(kind, msg)`（`src/index.ts`）。
 
 ## 三、关键设计
 

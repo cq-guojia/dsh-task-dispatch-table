@@ -3114,10 +3114,23 @@ console.log('\n[14] runtime-index')
     check('【日志归属】进程级观测进 `plugin_log`，不进 `task_log`（后者只收任务诊断）',
       S('store.ts').includes('CREATE TABLE IF NOT EXISTS plugin_log')
       && S('store.ts').includes('INSERT INTO plugin_log')
-      && S('index.ts').includes("store.appendPluginLog({ level: 'warn', kind, message })")
+      && S('index.ts').includes('store.logWarn(kind, message)')
+      && S('index.ts').includes('store.logError(kind, message)')
+      && S('index.ts').includes('store.logInfo(kind, message)')
       && !/appendLog\(\{[^}]*kind: 'diag'/.test(S('index.ts')))
-    check('【日志归属】插件启动会落一条 startup（时间线锚点）',
-      S('index.ts').includes("kind: 'startup'"))
+    check('【日志归属】启动 / 停止各落一条（时间线锚点：能数出重启过几次）',
+      S('index.ts').includes("logInfo('startup'")
+      && S('index.ts').includes("logInfo('shutdown'"))
+    check('【日志 API】下游走语义方法，不重复 level 样板（logInfo/logWarn/logError 齐备）',
+      S('store.ts').includes('logInfo(kind: PluginLogKind')
+      && S('store.ts').includes('logWarn(kind: PluginLogKind')
+      && S('store.ts').includes('logError(kind: PluginLogKind')
+      && /export type PluginLogKind/.test(S('store.ts')))
+    check('【覆盖面】关键进程事件都会落库：降级 / tick 异常 / 推送连接生命周期',
+      S('index.ts').includes("pushNotice('degraded'")
+      && S('index.ts').includes("pushNotice('tick_error'")
+      && S('index.ts').includes("pushNotice('stream_limit'")
+      && S('index.ts').includes("pushNotice('stream_write_failed'"))
     check('【保留】plugin_log 与 task_log 同策略清理（logRetentionDays，默认 30 天）',
       S('scheduler.ts').includes('store.purgePluginLog(cfg.logRetentionDays ?? 30)'))
     check('【可查】plugin_log 已进调试页转储白名单',

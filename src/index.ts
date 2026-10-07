@@ -12,7 +12,7 @@ import {
   ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, sessionTitleOf, setEnabledDefinitionInline, taskDefinitionSchema, titleOf,
   upsertDefinitionInline, validateDefinitionForSave,
 } from './tasks.js'
-import { parseInstanceSnapshot, TaskStore, type InstanceStatus } from './store.js'
+import { parseInstanceSnapshot, TaskStore, type InstanceStatus, type PluginLogKind } from './store.js'
 import {
   assetPaths, attachmentAbsPath, deleteSnapshot, deleteTaskAssets, deleteVersion, listSnapshots, listVersions,
   moveAttachmentsIn, purgeTmp, readSnapshot, readVersion, removeAttachmentFiles, saveSnapshot, saveVersion,
@@ -81,27 +81,69 @@ let serverNotices: string[] = []
  * ⚠️ 是 `plugin_log` 而非 `task_log`：后者只收「未推进到执行那一步」的任务诊断（data-model.md §二）。
  */
 let noticeStore: (() => TaskStore | null) | null = null
-function setNoticeStore(fn: () => TaskStore | null): void { noticeStore = fn }
+/** 一条待落库的观测（store 尚未就绪时先攒在这里）。 */
+interface PendingNotice { level: 'info' | 'warn' | 'error'; kind: PluginLogKind; message: string }
+/**
+ * **尚未落库的观测**（2026-10-07 审计 🔴）：`fallbackScope` 的降级告警发生在 `new TaskStore` **之前**，
+ * 那时 `noticeStore` 还是 null —— 原实现直接 return ⇒ 这条**最重要的**降级日志**永远进不了库**。
+ * 现在先攒着，store 一就绪就回放。
+ */
+let pendingNotices: PendingNotice[] = []
+function setNoticeStore(fn: () => TaskStore | null): void {
+  noticeStore = fn
+  // 回放启动早期攒下的（那时库还没打开）。
+  const store = fn()
+  if (store === null) return
+  const queued = pendingNotices
+  pendingNotices = []
+  for (const item of queued) writePluginLog(store, item.level, item.kind, item.message)
+}
+/** dispose 时清空模块级观测状态：否则插件重载后旧条目会串进新实例。 */
+function resetNotices(): void {
+  serverNotices = []
+  pendingNotices = []
+  noticeStore = null
+  lastNoticeAt = 0
+  lastNoticeText = ''
+}
 /** 去重窗口：同一句话 5 秒内只记一次（防止「全体请求都慢」时把库写爆、也防止刷屏）。 */
 const NOTICE_DEDUPE_MS = 5_000
 let lastNoticeAt = 0
 let lastNoticeText = ''
-/** @param kind - `block` 主线程阻塞 / `slow_request` 慢请求 / `route_error` 路由异常（见 plugin_log 建表注释）。 */
-function pushNotice(kind: 'block' | 'slow_request' | 'route_error', message: string): void {
+/** 真正落一行（走 store 的语义方法 ⇒ 自带异常隔离，见 `TaskStore.logInfo` 注释）。 */
+function writePluginLog(
+  store: TaskStore, level: 'info' | 'warn' | 'error', kind: PluginLogKind, message: string,
+): void {
+  if (level === 'error') store.logError(kind, message)
+  else if (level === 'warn') store.logWarn(kind, message)
+  else store.logInfo(kind, message)
+}
+/**
+ * 「拿不到 store 引用」时（模块级函数 / inject 作用域之外）的**统一落库口子**。
+ * @param kind - 见 `PluginLogKind`（store.ts）。
+ * @param level - 缺省 `warn`；真出错的（tick 异常 / 路由异常）请显式传 `'error'`。
+ */
+function pushNotice(
+  kind: PluginLogKind, message: string, level: 'info' | 'warn' | 'error' = 'warn',
+): void {
   const line = `${new Date().toISOString()} ${message}`
   serverNotices.push(line)
   if (serverNotices.length > SERVER_NOTICE_LIMIT) serverNotices.shift()
   const store = noticeStore?.() ?? null
-  if (store === null) return
+  if (store === null) {
+    // 库还没就绪 ⇒ 攒着（见 pendingNotices 注释），不丢。
+    if (pendingNotices.length < SERVER_NOTICE_LIMIT) pendingNotices.push({ level, kind, message })
+    return
+  }
   const now = Date.now()
-  if (message === lastNoticeText && now - lastNoticeAt < NOTICE_DEDUPE_MS) return
-  lastNoticeText = message
+  // ⚠️ 去重键带上 kind：两条不同 kind 的文案若碰巧相同，不该互相吞掉。
+  const dedupeKey = `${kind} ${message}`
+  if (dedupeKey === lastNoticeText && now - lastNoticeAt < NOTICE_DEDUPE_MS) return
+  lastNoticeText = dedupeKey
   lastNoticeAt = now
-  try {
-    // ⚠️ **进 `plugin_log`，不是 `task_log`**（2026-10-07 订正）：这是进程级观测、不挂任何任务，
-    // 而 `task_log` 只收「未推进到执行那一步」的任务诊断（design/data-model.md §二）。
-    store.appendPluginLog({ level: 'warn', kind, message })
-  } catch { /* 观测本身绝不能影响主流程 */ }
+  // ⚠️ **进 `plugin_log`，不是 `task_log`**（2026-10-07 订正）：这是进程级观测、不挂任何任务，
+  // 而 `task_log` 只收「未推进到执行那一步」的任务诊断（design/data-model.md §二）。
+  writePluginLog(store, level, kind, message)
 }
 /** 无变化时的强制心跳间隔：让面板时间戳持续刷新，证明宿主存活。 */
 const DEBUG_FORCE_INTERVAL_MS = 5 * 60_000
@@ -1128,6 +1170,7 @@ const makeDispatchRoutes = (
       if (streams.size >= SSE_MAX_CONNECTIONS) {
         // 留痕（2026-10-07 可观测性审计：SSE 整条生命周期原先一处日志都没有）。
         log(`[事件推送] 连接数已达上限 ${SSE_MAX_CONNECTIONS}，拒绝新连接`)
+        pushNotice('stream_limit', `[事件推送] 连接数已达上限 ${SSE_MAX_CONNECTIONS}，拒绝新连接`)
         return writeJson(res, 503, { ok: false, error: 'too-many-streams' })
       }
       const write = res.write
@@ -1169,9 +1212,17 @@ const makeDispatchRoutes = (
       function onWriteFailed(): void {
         const already = cleaned
         cleanup()
-        if (!already) log(`[事件推送] 写出失败，已回收该连接（当前 ${streams.size} 条）`)
+        if (!already) {
+          const text = `[事件推送] 写出失败，已回收该连接（当前 ${streams.size} 条）`
+          log(text)
+          pushNotice('stream_write_failed', text)
+        }
       }
       streams.add(cleanup)
+      // 连接建立记一条 info（生命周期起点）：进 plugin_log、**不进调试页 warns**（正常连接不算异常，
+      // 不该在「诊断/告警」区刷屏）；事后能从库里看出「多少客户端在订阅推送」「建立的节奏」。
+      // 异常路径已由 stream_limit（拒绝新连接）/ stream_write_failed（写出失败）覆盖；正常断开走 cleanup 不记。
+      noticeStore?.()?.logInfo('stream_open', `[事件推送] 新连接已建立（当前 ${streams.size} 条）`)
       // ⚠️ **只绑 `res` 的 `close`**（2026-10-06 审计实证）：Node ≥16 下 `req` 的 `close` 语义是
       // 「请求消息读完」而不是「连接断开」——GET 无 body，**一旦有中间件消费过请求流
       // （`req.resume()` / 读 body），它会在建连瞬间触发** ⇒ 当场退订，客户端再也收不到任何事件。
@@ -1207,6 +1258,13 @@ function fallbackScope(
     'dsh-task-dispatch-table: 当前 dsh 的 settings 服务未提供 register 面（0.1.7-rc.1 起改为注册项'
     + ' Config 自动投影），已退化为「启动配置运行」：调度照常执行，但运行期改配置需重启才生效'
     + (typeof updater === 'function' ? '。' : '；且该组合也没有 settings.update，页面快照无法回写。'),
+  )
+  // 降级是**重要**的状态信息：事后排查「为什么改了配置不生效」全靠它。
+  // ⚠️ 此处 store 可能尚未就绪 ⇒ pushNotice 会只进内存缓冲，而缓冲会并入快照的 warns ⇒ 前端仍看得到。
+  pushNotice(
+    'degraded',
+    'settings 服务无 register 面，已退化为「启动配置运行」：调度照常，运行期改配置需重启才生效'
+      + (typeof updater === 'function' ? '' : '；且无 settings.update，页面快照无法回写'),
   )
   /**
    * 降级作用域也**如实**支持 `watch`（官方契约见 `src/host.ts` 的 `SettingsScope`）：
@@ -1411,6 +1469,7 @@ export function apply(ctx: HostContext, config: unknown): void {
     const webServer = (wctx as unknown as { webServer?: { register?: (route: DispatchWebRoute) => unknown } }).webServer
     if (webServer === undefined || typeof webServer.register !== 'function') {
       wctx.logger.warn('[数据通道] 宿主上下文无 webServer.register 面，HTTP 路由未注册；客户端画面将无数据')
+      pushNotice('degraded', '宿主无 webServer.register 面：HTTP 路由未注册，客户端画面将无数据')
       return
     }
     for (const route of makeDispatchRoutes(
@@ -1460,7 +1519,7 @@ export function apply(ctx: HostContext, config: unknown): void {
           } catch (error) {
             const line = `[路由异常] ${route.path}：${error instanceof Error ? error.message : String(error)}`
             wctx.logger.info(line)
-            pushNotice('route_error', line)
+            pushNotice('route_error', line, 'error')
           }
           done()
         } })
@@ -1639,6 +1698,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       } catch (error) {
         pushWarn('error', `tick 异常: ${String(error)}`)
         sctx.logger.error(`tick 异常: ${String(error)}`)
+        pushNotice('tick_error', `调度 tick 抛异常：${error instanceof Error ? error.message : String(error)}`, 'error')
       }
       updateSnapshot()
     }
@@ -1707,7 +1767,7 @@ export function apply(ctx: HostContext, config: unknown): void {
     updateSnapshot() // 启动诊断可能写 task_log，立即落一版快照
     // 插件整体日志：**启动**这一条是时间线的锚点（2026-10-07）——事后排查「那次故障前后插件
     // 有没有重启过」，全靠它。写 `plugin_log`（进程级），不写 `task_log`（任务级，见该表建表注释）。
-    storeRef?.appendPluginLog({ level: 'info', kind: 'startup', message: '插件已启动，调度与数据通道就绪' })
+    storeRef?.logInfo('startup', '插件已启动，调度与数据通道就绪')
 
     // ── 主线程阻塞检测（2026-10-07 事故定位用，原理见 BLOCK_BEAT_MS 的注释）──────
     // 本该每 1s 触发一次；若被同步重活推迟 ⇒ 漂移量就是「主线程被占住的时长」。
@@ -1726,6 +1786,8 @@ export function apply(ctx: HostContext, config: unknown): void {
 
     sctx.on('dispose', () => {
       disposed = true
+      // 停止也记一条：与 `startup` 配对 ⇒ 事后能数出「重启过几次、每次活了多久」。
+      storeRef?.logInfo('shutdown', '插件已停止（dispose）')
       // 主动摘掉配置 watcher（此前只把退订函数丢掉 ⇒ 宿主若晚一步才释放作用域，
       // 回调会打到已 dispose 的广播器上、并重种一个没人清理的 interval）。2026-10-06 第四轮审计 🟡。
       unwatchScope()
@@ -1735,6 +1797,8 @@ export function apply(ctx: HostContext, config: unknown): void {
       closeAllEventStreams(activeStreams)
       eventBus.dispose()
       store.close()
+      // 清空模块级观测状态：否则插件重载后旧条目会串进新实例（2026-10-07 审计 🟡）。
+      resetNotices()
     })
   })
 }
