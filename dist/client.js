@@ -70509,10 +70509,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const headerRightStyle = {
 			display: "flex",
 			alignItems: "center",
-			gap: "8px"
+			gap: "12px"
 		};
 		const panelTitleStyle = {
-			fontSize: "var(--tdt-font-lg)",
+			fontSize: "var(--tdt-font-xl)",
 			fontWeight: 600,
 			color: "var(--tdt-fg)"
 		};
