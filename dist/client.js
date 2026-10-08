@@ -70493,7 +70493,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			width: "100%",
 			boxSizing: "border-box",
 			overflow: "auto",
-			padding: "18px 22px",
+			padding: "27px 22px",
 			color: "var(--tdt-fg)",
 			background: "transparent"
 		};
@@ -70509,7 +70509,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const headerRightStyle = {
 			display: "flex",
 			alignItems: "center",
-			gap: "18px"
+			gap: "8px"
 		};
 		const panelTitleStyle = {
 			fontSize: "var(--tdt-font-xl)",
