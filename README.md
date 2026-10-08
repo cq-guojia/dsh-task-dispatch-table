@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 One dsh host plugin: **a single table of task definitions drives your recurring agent work** — when a task is due, it is dispatched as an **independent dsh session** that an agent actually executes. The scheduling itself is pure program logic and **never burns a token**.
 
-![Task list with a task expanded](docs/images/task-overview.jpg)
+![Task list with a task expanded](docs/screenshots/task-overview.jpg)
 
 - **Zero model involvement in scheduling** — tick → check the schedule window → check dependencies → dispatch. Judgment-heavy work goes to the agent session; deciding *when to run* costs nothing
 - **Three schedule modes** — one-off, cron-style daily/weekly, or every-N-hours intervals, each with an **allowed-delay window** so a busy host catches up instead of silently skipping
@@ -35,7 +35,7 @@ The scheduler is a plain loop: on every tick it computes which tasks are due, cl
 
 ### Creating and editing
 
-![The task editor as a right-hand split panel](docs/images/task-editor.jpg)
+![The task editor as a right-hand split panel](docs/screenshots/task-editor.jpg)
 
 Press **New task** (or **Edit** on a card) and the editor opens as a layout split panel, not a floating drawer: basics, schedule, prompt (with version history), advanced options, attachments and upstream tasks. Attachments are either **links** to files already in the workspace or **uploads** (stored in the task's own directory, up to 20 MB each).
 
@@ -43,7 +43,7 @@ The footer switches between **View / Edit** modes: View is a read-only rendering
 
 ### Schedules
 
-![Recurring schedule: daily at 18:12 with an allowed delay](docs/images/schedule-recurring.png)
+![Recurring schedule: daily at 18:12 with an allowed delay](docs/screenshots/schedule-recurring.png)
 
 Three modes, each showing a plain-language preview of the next run:
 
@@ -55,7 +55,7 @@ Every mode has an **allowed delay**: if the host was busy or down when the momen
 
 ### Dependencies
 
-![Upstream tasks declared in the editor](docs/images/dependencies.png)
+![Upstream tasks declared in the editor](docs/screenshots/dependencies.png)
 
 A task declares which upstream tasks must have succeeded before it may run (the Airflow / GitHub Actions `needs` model — **the downstream declares, so adding a downstream never touches the upstream**). When the task fires, the plugin freezes *which upstream instance it matched* together with that instance's outputs and passes them into the new session, so the downstream agent reads exactly the data its run was keyed to — even if the upstream has re-run since.
 
@@ -63,25 +63,25 @@ A task declares which upstream tasks must have succeeded before it may run (the 
 
 ### Per task
 
-![A task expanded: runs table with status, times, token usage and artifacts](docs/images/run-history.jpg)
+![A task expanded: runs table with status, times, token usage and artifacts](docs/screenshots/run-history.jpg)
 
 Expanding a task opens three panels: **basic info** (configuration side by side with the last run), **runs** (one row per instance: status, planned vs actual time, duration, token usage, artifacts, and a button to open the archived session), and **logs** (the plugin's own diagnostic log for that task — missed slots, missing attachments, manual runs).
 
 ### Execution timeline
 
-![The cross-task execution timeline, one entry expanded](docs/images/execution-timeline.jpg)
+![The cross-task execution timeline, one entry expanded](docs/screenshots/execution-timeline.jpg)
 
 The **Records** tab is the ledger across *all* tasks, grouped by day and filtered by time range, workspace, status and task. Each entry expands in place to its full artifact list and raw event log (state changes, dispatch record, receipt); the archived session itself opens only when you press **View session**.
 
 ### Calendar
 
-![Monthly calendar with actual runs as filled dots and planned runs as dashed dots](docs/images/calendar.jpg)
+![Monthly calendar with actual runs as filled dots and planned runs as dashed dots](docs/screenshots/calendar.jpg)
 
 The **Schedule** tab is a month view. Days show two kinds of markers: **actual runs** from the instance table (solid dots in status colors) and **planned runs** computed from the current task definitions (dashed dots). Clicking a day expands that week in place with the full run details — the same entry blocks as the timeline, expandable again down to artifacts and events.
 
 ## Configuration
 
-![Settings page: plugin settings on top, plugin log below](docs/images/settings.jpg)
+![Settings page: plugin settings on top, plugin log below](docs/screenshots/settings.jpg)
 
 The **Settings** tab is the primary place to configure the plugin. Each item shows whether it was customized and can be reset individually; changes are staged and written only on **Save**; the log block below shows the plugin's diagnostic log with level coloring and auto-refresh.
 

@@ -4,7 +4,7 @@
 
 一个 dsh 宿主层插件：用**一张任务定义表驱动周期性的 agent 工作**——任务到点后被派发成一个**独立的 dsh 会话**，由 agent 真正执行。调度本身是纯程序逻辑，**一行 token 都不烧**。
 
-![任务列表与展开的任务详情](docs/images/task-overview.jpg)
+![任务列表与展开的任务详情](docs/screenshots/task-overview.jpg)
 
 - **调度零大模型介入**——tick → 判时间窗 → 判依赖 → 派发。判断类工作交给 agent 会话，「什么时候该跑」这个决定不花一分钱
 - **三种排期模式**——单次、cron 式每天/每周、每 N 小时间隔，每种都带**允许延迟窗口**：宿主忙不过来时补跑，而不是悄悄跳过
@@ -35,7 +35,7 @@ dsh plugin --profile web add dsh-task-dispatch-table
 
 ### 新建与编辑
 
-![编辑任务：右侧占布局的分栏表单](docs/images/task-editor.jpg)
+![编辑任务：右侧占布局的分栏表单](docs/screenshots/task-editor.jpg)
 
 点**新建任务**（或卡片上的**编辑**），编辑器以分栏形式打开（不是浮层抽屉）：基础、排期、提示词（带版本）、高级选项、附加文件、前置任务。附加文件两种来路：**link**（工作区已有文件，只记路径）与 **upload**（落盘到任务自己的目录，单个不超过 20 MB）。
 
@@ -43,7 +43,7 @@ dsh plugin --profile web add dsh-task-dispatch-table
 
 ### 排期
 
-![周期排期：每天 18:12，允许延迟 4 小时](docs/images/schedule-recurring.png)
+![周期排期：每天 18:12，允许延迟 4 小时](docs/screenshots/schedule-recurring.png)
 
 三种模式，每种都用一句人话预览下次执行：
 
@@ -55,7 +55,7 @@ dsh plugin --profile web add dsh-task-dispatch-table
 
 ### 依赖（前置任务）
 
-![编辑器里声明的前置任务](docs/images/dependencies.png)
+![编辑器里声明的前置任务](docs/screenshots/dependencies.png)
 
 任务声明哪些上游任务必须执行成功它才放行（Airflow / GitHub Actions `needs` 的模型——**由下游声明，加下游不动上游**）。任务触发时，插件冻结「命中了哪条上游实例」及其产出，一并传进新会话——下游 agent 读到的就是它这趟所键定的那份数据，哪怕上游后来又跑过。
 
@@ -63,25 +63,25 @@ dsh plugin --profile web add dsh-task-dispatch-table
 
 ### 单任务
 
-![任务展开：执行记录表，含状态、时间、token、产出](docs/images/run-history.jpg)
+![任务展开：执行记录表，含状态、时间、token、产出](docs/screenshots/run-history.jpg)
 
 展开任务有三个面板：**基础信息**（任务配置与上次执行并排）、**执行记录**（每次执行一行：状态、计划/实际时间、时长、token 用量、产出物，以及打开归档会话的按钮）、**日志**（该任务专属的诊断日志——错过的刻度、附件缺失、手动执行等）。
 
 ### 执行记录（流水账）
 
-![跨任务执行流水账，一条已展开](docs/images/execution-timeline.jpg)
+![跨任务执行流水账，一条已展开](docs/screenshots/execution-timeline.jpg)
 
 顶部 **执行记录** tab 是全部任务的总账：按天分组，支持时间 / 工作区 / 状态 / 任务四维过滤。每条就地展开，给出完整产出物列表与原始事件流水（状态迁移、派发记录、回执）；按**查看会话**才打开归档会话本体。
 
 ### 任务日程（月历）
 
-![月历：真实执行为实心点，计划刻度为虚线点](docs/images/calendar.jpg)
+![月历：真实执行为实心点，计划刻度为虚线点](docs/screenshots/calendar.jpg)
 
 顶部 **任务日程** tab 是月视图。格子里有两类标记：**已执行**（来自实例表的状态色实心点）与**计划**（按当前任务定义现算的虚线空心点）。点某天，那一天所在的一周就地拉开，铺开全部执行信息——与流水账同款条目块，可再展开到产出物与事件。
 
 ## 配置
 
-![设置页：上为插件设置，下为插件日志](docs/images/settings.jpg)
+![设置页：上为插件设置，下为插件日志](docs/screenshots/settings.jpg)
 
 顶部 **设置** tab 是配置的正式主场。每项标注是否「自定义」、可单独恢复默认；改动先暂存、点**保存**才写入；下方日志块带 level 语义着色与自动刷新。
 

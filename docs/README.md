@@ -15,7 +15,7 @@ docs/
   PROGRESS-HISTORY.md    现场层·已结案
   worklog/               叙事层：一个工作包一个文件
   design/                定型层（专题文档 + features/ 功能文档 + external/ 外部事实）
-  images/                README 截图（对外文档的配图，kebab-case 命名）
+  screenshots/            README 截图（对外文档的配图，kebab-case 命名）
   examples/              样例与模板（与代码零耦合）
 ```
 
