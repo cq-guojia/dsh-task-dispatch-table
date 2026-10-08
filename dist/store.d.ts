@@ -1,4 +1,21 @@
 import type { ResolvedDependency } from './deps.js';
+/** 单表查询支持的过滤运算符（白名单防注入）。 */
+export type TableFilterOp = '=' | '!=' | '<' | '>' | '<=' | '>=' | 'LIKE';
+export declare const TABLE_FILTER_OPS: readonly TableFilterOp[];
+/** 单表查询的过滤条件（列名 / 运算符 / 值，全部经白名单 + 占位绑定）。 */
+export interface TableFilter {
+    column: string;
+    op: TableFilterOp;
+    value: string;
+}
+/** 单表查询结果（设置页 Block 3 / Block 2 共用）。 */
+export interface TableQueryResult {
+    name: string;
+    count: number;
+    columns: string[];
+    rows: Record<string, unknown>[];
+    truncated: boolean;
+}
 /**
  * Agent 权限档位（决策 50）：`default` = 会话默认（沿用宿主新建会话的权限设置，不加约束）。
  * ⚠️ 与 src/client/task-editor.tsx 的同名类型**两处各写一份**（client bundle 不引 host 模块），
@@ -362,12 +379,26 @@ export declare class TaskStore {
     getMeta(key: string): string | undefined;
     /** 写 meta 键值（upsert）。任务表 tasksInline 的持久化主通道走这里。 */
     setMeta(key: string, value: string): void;
-    /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
+    /** 调试 / 设置页查询允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
     static readonly DUMP_TABLES: readonly ["task_instances", "task_events", "task_log", "task_audit", "plugin_log", "meta"];
+    /** 各表的「最新在前」默认排序列（设置页 Block 3 从简：每表按各自最新字段 DESC，不做排序选择器）。 */
+    private static defaultOrder;
+    /** 表列缓存（白名单校验过滤列名，避免每请求打 PRAGMA）。 */
+    private columnCache;
+    /** 取表列（建表顺序），带缓存。 */
+    private columnsOf;
     /**
-     * 调试导出：整表原样读出（面板「调试」页用）。
+     * 单表通用查询（设置页 Block 3 / Block 2 共用）：按白名单表 + 占位绑定过滤 + 默认最新字段 DESC + LIMIT。
+     * 不做服务端分页（用户 2026-10-08：top-N 自过滤、客户端自行筛选）。表名 / 列名 / 运算符全白名单，无注入面。
+     * @param name 表名（必须命中 `DUMP_TABLES`）。
+     * @param filters 过滤条件（列名须为该表真实列，运算符须为 `TABLE_FILTER_OPS`）。
+     * @param limit 最多返回行数（钳制 1..500）。
+     */
+    queryTable(name: (typeof TaskStore.DUMP_TABLES)[number], filters: TableFilter[], limit: number): TableQueryResult;
+    /**
+     * 调试导出：整表原样读出（旧调试页用，保留兼容）。
      * @param name - 表名（必须命中白名单）。
-     * @param limit - 最多返回行数；超出时保留「最新」的 limit 条（events 按 seq、instances 按 scheduled_at 倒序）。
+     * @param limit - 最多返回行数；超出时保留「最新」的 limit 条。
      */
     dumpTable(name: (typeof TaskStore.DUMP_TABLES)[number], limit: number): TableDump;
     getBySession(sessionId: string): TaskInstance | undefined;

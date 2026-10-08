@@ -7,6 +7,24 @@ import { dirname } from 'node:path'
 import type { ResolvedDependency } from './deps.js'
 import { parseResolvedDeps } from './deps.js'
 
+/** 单表查询支持的过滤运算符（白名单防注入）。 */
+export type TableFilterOp = '=' | '!=' | '<' | '>' | '<=' | '>=' | 'LIKE'
+export const TABLE_FILTER_OPS: readonly TableFilterOp[] = ['=', '!=', '<', '>', '<=', '>=', 'LIKE']
+/** 单表查询的过滤条件（列名 / 运算符 / 值，全部经白名单 + 占位绑定）。 */
+export interface TableFilter {
+  column: string
+  op: TableFilterOp
+  value: string
+}
+/** 单表查询结果（设置页 Block 3 / Block 2 共用）。 */
+export interface TableQueryResult {
+  name: string
+  count: number
+  columns: string[]
+  rows: Record<string, unknown>[]
+  truncated: boolean
+}
+
 /**
  * Agent 权限档位（决策 50）：`default` = 会话默认（沿用宿主新建会话的权限设置，不加约束）。
  * ⚠️ 与 src/client/task-editor.tsx 的同名类型**两处各写一份**（client bundle 不引 host 模块），
@@ -801,30 +819,73 @@ export class TaskStore {
       .run(key, value)
   }
 
-  /** 调试导出允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
+  /** 调试 / 设置页查询允许的表名（SQLite 表名无法参数化，白名单防注入）。 */
   static readonly DUMP_TABLES = ['task_instances', 'task_events', 'task_log', 'task_audit', 'plugin_log', 'meta'] as const
 
+  /** 各表的「最新在前」默认排序列（设置页 Block 3 从简：每表按各自最新字段 DESC，不做排序选择器）。 */
+  private static defaultOrder(name: (typeof TaskStore.DUMP_TABLES)[number]): string {
+    switch (name) {
+      case 'task_events': return 'seq DESC'
+      case 'task_instances': return 'scheduled_at DESC, id DESC'
+      case 'task_log': return 'ts DESC, seq DESC'
+      case 'task_audit': return 'seq DESC'
+      case 'plugin_log': return 'ts DESC, seq DESC'
+      default: return 'key' // meta：按 key 升序（DESC 无意义，保持原行为）
+    }
+  }
+
+  /** 表列缓存（白名单校验过滤列名，避免每请求打 PRAGMA）。 */
+  private columnCache = new Map<string, string[]>()
+
+  /** 取表列（建表顺序），带缓存。 */
+  private columnsOf(name: string): string[] {
+    let cols = this.columnCache.get(name)
+    if (cols === undefined) {
+      cols = (this.db.prepare(`PRAGMA table_info(${name})`).all() as Array<{ name: string }>).map(c => c.name)
+      this.columnCache.set(name, cols)
+    }
+    return cols
+  }
+
   /**
-   * 调试导出：整表原样读出（面板「调试」页用）。
+   * 单表通用查询（设置页 Block 3 / Block 2 共用）：按白名单表 + 占位绑定过滤 + 默认最新字段 DESC + LIMIT。
+   * 不做服务端分页（用户 2026-10-08：top-N 自过滤、客户端自行筛选）。表名 / 列名 / 运算符全白名单，无注入面。
+   * @param name 表名（必须命中 `DUMP_TABLES`）。
+   * @param filters 过滤条件（列名须为该表真实列，运算符须为 `TABLE_FILTER_OPS`）。
+   * @param limit 最多返回行数（钳制 1..500）。
+   */
+  queryTable(name: (typeof TaskStore.DUMP_TABLES)[number], filters: TableFilter[], limit: number): TableQueryResult {
+    if (!(TaskStore.DUMP_TABLES as readonly string[]).includes(name)) throw new Error(`queryTable: unknown table ${name}`)
+    const columns = this.columnsOf(name)
+    const colSet = new Set(columns)
+    const where: string[] = []
+    const params: Array<string | number> = []
+    for (const f of filters) {
+      if (!colSet.has(f.column)) throw new Error(`queryTable: unknown column ${f.column}`)
+      if (!(TABLE_FILTER_OPS as readonly string[]).includes(f.op)) throw new Error(`queryTable: bad op ${f.op}`)
+      where.push(`${f.column} ${f.op} ?`)
+      params.push(f.value)
+    }
+    const whereSql = where.length > 0 ? ` WHERE ${where.join(' AND ')}` : ''
+    const count = (this.db.prepare(`SELECT COUNT(*) AS n FROM ${name}${whereSql}`).get(...params) as { n: number }).n
+    const lim = Math.max(1, Math.min(limit, 500))
+    const rows = this.db.prepare(`SELECT * FROM ${name}${whereSql} ORDER BY ${TaskStore.defaultOrder(name)} LIMIT ?`).all(...params, lim) as Record<string, unknown>[]
+    return { name, count, columns, rows, truncated: count > rows.length }
+  }
+
+  /**
+   * 调试导出：整表原样读出（旧调试页用，保留兼容）。
    * @param name - 表名（必须命中白名单）。
-   * @param limit - 最多返回行数；超出时保留「最新」的 limit 条（events 按 seq、instances 按 scheduled_at 倒序）。
+   * @param limit - 最多返回行数；超出时保留「最新」的 limit 条。
    */
   dumpTable(name: (typeof TaskStore.DUMP_TABLES)[number], limit: number): TableDump {
     if (!(TaskStore.DUMP_TABLES as readonly string[]).includes(name)) {
       throw new Error(`dumpTable: unknown table ${name}`)
     }
-    const count = (this.db.prepare(`SELECT COUNT(*) AS n FROM ${name}`).get() as { n: number }).n
-    const order =
-      name === 'task_events' ? 'seq DESC'
-        : name === 'task_instances' ? 'scheduled_at DESC, id DESC'
-          : name === 'task_log' ? 'ts DESC, seq DESC'
-            : name === 'task_audit' ? 'seq DESC'
-              : name === 'plugin_log' ? 'ts DESC, seq DESC'
-                : 'key' // meta：按 key 升序
-    const rows = this.db.prepare(`SELECT * FROM ${name} ORDER BY ${order} LIMIT ?`).all(limit) as
+    const columns = this.columnsOf(name)
+    const rows = this.db.prepare(`SELECT * FROM ${name} ORDER BY ${TaskStore.defaultOrder(name)} LIMIT ?`).all(limit) as
       Record<string, unknown>[]
-    const columns = (this.db.prepare(`PRAGMA table_info(${name})`).all() as { name: string }[]).map(col => col.name)
-    return { name, count, columns, rows, truncated: count > rows.length }
+    return { name, count: (this.db.prepare(`SELECT COUNT(*) AS n FROM ${name}`).get() as { n: number }).n, columns, rows, truncated: false }
   }
 
   getBySession(sessionId: string): TaskInstance | undefined {

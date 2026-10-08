@@ -12,7 +12,7 @@ import {
   ensureIdsInInlineJson, existingUuidIds, isUuid, newTaskId, nextSlotAfter, removeDefinitionInline, sessionTitleOf, setEnabledDefinitionInline, taskDefinitionSchema, titleOf,
   upsertDefinitionInline, validateDefinitionForSave,
 } from './tasks.js'
-import { parseInstanceSnapshot, TaskStore, type InstanceStatus, type PluginLogKind } from './store.js'
+import { parseInstanceSnapshot, TaskStore, type InstanceStatus, type PluginLogKind, type TableFilter, type TableFilterOp } from './store.js'
 import {
   assetPaths, attachmentAbsPath, deleteSnapshot, deleteTaskAssets, deleteVersion, listSnapshots, listVersions,
   moveAttachmentsIn, purgeTmp, readSnapshot, readVersion, removeAttachmentFiles, saveSnapshot, saveVersion,
@@ -213,6 +213,22 @@ interface DispatchWebRoute {
 
 const DISPATCH_API_PREFIX = '/api/task-dispatch-table'
 const DISPATCH_BODY_LIMIT = 1024 * 1024
+
+// 设置页 Block 1 可写回的配置字段白名单（排除运行时数据 tasksInline / debugSnapshot）。
+// 类型 + 范围校验后，经 updateScopeConfig → scope.update 落盘（宿主）并即时生效。
+const CONFIG_EDITABLE_FIELDS: Record<string, { type: 'number' | 'string'; min?: number; max?: number }> = {
+  statePath: { type: 'string' },
+  tasksDir: { type: 'string' },
+  tickMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
+  dispatchGraceMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
+  leaseMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
+  unknownGraceMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
+  defaultProvider: { type: 'string' },
+  defaultModel: { type: 'string' },
+  logRetentionDays: { type: 'number', min: 1, max: 3650 },
+  historyRetentionDays: { type: 'number', min: 0, max: 3650 },
+  attachmentTmpRetentionDays: { type: 'number', min: 1, max: 3650 },
+}
 
 const writeJson = (res: DispatchWebResponse, code: number, body: unknown): void => {
   res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
@@ -497,19 +513,50 @@ const makeDispatchRoutes = (
     },
   },
   {
-    // 调试页数据通道：三张表原样导出（用户机器上没有 sqlite CLI，面板里直接看库）。
+    // 设置页 Block 3 / Block 2 数据通道：单表查询（表 + 筛选 + 默认最新字段 DESC + LIMIT N）。
+    // 替代旧「一次性三表 dump」的 GET /db（调试页已重写，不再需要全表 dump）。
     kind: 'exact',
-    path: `${DISPATCH_API_PREFIX}/db`,
+    path: `${DISPATCH_API_PREFIX}/db-query`,
     handler: (req, res) => {
       if (req.method !== 'GET') return writeJson(res, 405, { ok: false, error: 'method-not-allowed' })
       if (!isTrustedDispatchRequest(req)) return writeJson(res, 403, { ok: false, error: 'forbidden' })
       const store = getStore()
       if (store === null) return writeJson(res, 503, { ok: false, error: 'store-not-ready' })
-      writeJson(res, 200, {
-        ok: true,
-        at: new Date().toISOString(),
-        tables: TaskStore.DUMP_TABLES.map(name => store.dumpTable(name, 500)),
-      })
+      const url = new URL(req.url ?? '', 'http://localhost')
+      const table = url.searchParams.get('table') ?? ''
+      const nRaw = Number(url.searchParams.get('n') ?? '100')
+      const n = Number.isFinite(nRaw) && nRaw > 0 ? Math.min(Math.floor(nRaw), 500) : 100
+      let filters: TableFilter[] = []
+      const filterRaw = url.searchParams.get('filter')
+      if (filterRaw !== null && filterRaw !== '') {
+        try {
+          const parsed = JSON.parse(filterRaw)
+          if (Array.isArray(parsed)) {
+            for (const item of parsed) {
+              if (item !== null && typeof item === 'object'
+                && typeof (item as { column?: unknown }).column === 'string'
+                && typeof (item as { op?: unknown }).op === 'string'
+                && typeof (item as { value?: unknown }).value === 'string') {
+                filters.push({
+                  column: (item as { column: string }).column,
+                  op: (item as { op: TableFilterOp }).op,
+                  value: (item as { value: string }).value,
+                })
+              }
+            }
+          }
+        } catch {
+          writeJson(res, 400, { ok: false, error: 'bad-filter' })
+          return
+        }
+      }
+      try {
+        const result = store.queryTable(table as never, filters, n)
+        writeJson(res, 200, { ok: true, ...result })
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        writeJson(res, 400, { ok: false, error: message })
+      }
     },
   },
   {
@@ -930,7 +977,7 @@ const makeDispatchRoutes = (
       }
     },
   },
-  // —— 插件设置页（基础信息 + 计时参数）HTTP 通道 ——
+  // —— 插件设置页（基础信息 + 产品配置）HTTP 通道 ——
   // 本插件配置刻意非 volatile，官方 configForms 不可用，故设置表单走自有 HTTP 通道读写。
   // ⚠️ **GET / POST 必须合在一条路由里**：宿主 webServer 对重复 (kind, path) 注册**直接 throw**
   // （@deepseek-ai/dsh-host-webserver@0.2.0-rc.2 `lib/index.js` register：`duplicate exact route`），
@@ -947,36 +994,31 @@ const makeDispatchRoutes = (
         writeJson(res, 403, { ok: false, error: 'forbidden' })
         return
       }
-      // GET = 读当前计时参数（设置页回填）。
+      // GET = 读当前全部可编辑配置（设置页回填 + 只读面板）。
       if (req.method === 'GET') {
         const config = getScopeConfig()
-        writeJson(res, 200, {
-          ok: true,
-          config: {
-            tickMs: config.tickMs,
-            dispatchGraceMs: config.dispatchGraceMs,
-            leaseMs: config.leaseMs,
-            unknownGraceMs: config.unknownGraceMs,
-          },
-        })
+        const out: Record<string, string | number> = {}
+        for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
+          const v = (config as unknown as Record<string, unknown>)[key]
+          if (typeof v === 'string' || typeof v === 'number') out[key] = v
+        }
+        writeJson(res, 200, { ok: true, config: out })
         return
       }
-      // POST = 写回（仅限计时字段，范围校验后经 scope.update 落盘并即时生效）。
+      // POST = 写回（仅白名单字段；类型 + 范围校验后经 updateScopeConfig → scope.update 落盘并即时生效）。
       try {
         const body = JSON.parse(await readDispatchBody(req)) as Record<string, unknown>
-        const allowed = ['tickMs', 'dispatchGraceMs', 'leaseMs', 'unknownGraceMs'] as const
-        const patch: Record<string, number> = {}
-        for (const key of allowed) {
+        const patch: Record<string, string | number> = {}
+        for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
           const raw = body[key]
           if (raw === undefined) continue
-          if (typeof raw !== 'number' || !Number.isFinite(raw)) {
-            writeJson(res, 400, { ok: false, error: `invalid-${key}` })
-            return
-          }
-          // 下限 1s、上限 7 天，避免误填把调度器打挂。
-          if (raw < 1000 || raw > 7 * 24 * 3600 * 1000) {
-            writeJson(res, 400, { ok: false, error: `out-of-range-${key}` })
-            return
+          const def = CONFIG_EDITABLE_FIELDS[key]
+          if (def.type === 'number') {
+            if (typeof raw !== 'number' || !Number.isFinite(raw)) { writeJson(res, 400, { ok: false, error: `invalid-${key}` }); return }
+            if (def.min !== undefined && raw < def.min) { writeJson(res, 400, { ok: false, error: `too-small-${key}` }); return }
+            if (def.max !== undefined && raw > def.max) { writeJson(res, 400, { ok: false, error: `too-large-${key}` }); return }
+          } else if (typeof raw !== 'string') {
+            writeJson(res, 400, { ok: false, error: `invalid-${key}` }); return
           }
           patch[key] = raw
         }
@@ -993,15 +1035,12 @@ const makeDispatchRoutes = (
         // 也已如实实现）⇒ 一次成功写回**恰好一条**事件，不靠广播器的合并窗口去吃掉重复。
         // （2026-10-06 改正：此前这里补发一条，正常路径会「一次改动发两次」。）
         const config = getScopeConfig()
-        writeJson(res, 200, {
-          ok: true,
-          config: {
-            tickMs: config.tickMs,
-            dispatchGraceMs: config.dispatchGraceMs,
-            leaseMs: config.leaseMs,
-            unknownGraceMs: config.unknownGraceMs,
-          },
-        })
+        const out: Record<string, string | number> = {}
+        for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
+          const v = (config as unknown as Record<string, unknown>)[key]
+          if (typeof v === 'string' || typeof v === 'number') out[key] = v
+        }
+        writeJson(res, 200, { ok: true, config: out })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })

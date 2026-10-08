@@ -45,7 +45,7 @@ import { TaskListView } from './task-list'
 // 取数层（2026-10-06 从 task-list.tsx 归位：页面只该有视图，design/client-refresh-disposition.md §四 W2）。
 import { useTaskOverview, type RunNowOutcome, type TaskOverviewRow } from './task-overview'
 // 事件推送（design/event-push.md）：后端变更即时广播、前端订阅按需刷新（替代轮询的增量通道）。
-import { describeEventChannel, useEvents, useResync } from './event-subscribe'
+import { useEvents, useResync } from './event-subscribe'
 import { EventType, RUN_EVENT_TYPES } from '../event-catalog.js'
 // 任务文件上下文（顶部输入区，2026-10-03）：快照解析（deps.ts 零依赖，客户端可安全引）。
 import { resolvedDepsOf } from '../deps.js'
@@ -56,6 +56,7 @@ import {
 // `records-timeline.tsx`（执行记录流水账）与 `task-list.tsx`（卡片三面板）。旧测试版 records 屏
 // （原生 select + 表格）已于 2026-10-04 被时间轴取代（见 worklog/execution-timeline.md）。
 import { ConfigPanel } from './config-panel'
+import { SettingsPage } from './settings-page'
 import { Toast } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /** 设置命名空间 = 宿主 apply() 里 ctx.settings.register 的注册名（src/index.ts:42）。 */
@@ -343,16 +344,6 @@ function parseDebugSnapshot(raw: unknown): DebugSnapshotData | undefined {
   }
 }
 
-/** 调试页：GET /db 返回的一张表（与宿主 TableDump 同形，客户端结构化声明不引宿主类型）。 */
-interface DbTableDump {
-  name: string
-  count: number
-  columns: string[]
-  rows: Record<string, unknown>[]
-  truncated: boolean
-}
-
-
 
 /** 周期摘要：once 优先，其次 cron（带时区），都没有显示占位。 */
 function scheduleSummary(row: DebugTaskRow): string {
@@ -511,7 +502,7 @@ function TaskPage(props: {
   useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { scope.refresh?.() })
   useResync(() => { scope.refresh?.() })
 
-  const [tab, setTab] = useState<'config' | 'records' | 'calendar' | 'debug'>('config')
+  const [tab, setTab] = useState<'config' | 'records' | 'calendar' | 'settings'>('config')
   const [draft, setDraft] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
@@ -1005,47 +996,6 @@ function TaskPage(props: {
   }
   // 查看会话失败提示（决策 28 数据链静默失效时，给用户可见反馈，不再「点了没反应」）。
   const [viewErr, setViewErr] = useState<string | null>(null)
-  // 调试页：state.db 三张表的原始行（GET /db，切到该页或手动刷新时取一次）。
-  const [dbDump, setDbDump] = useState<{ at: string; tables: DbTableDump[] } | null>(null)
-  const [dbState, setDbState] = useState<'idle' | 'loading' | 'ok' | 'fail'>('idle')
-  const [dbNonce, setDbNonce] = useState(0)
-  /** 已为哪个 tab 取过一次转储：切换过去要**立即**取；此后事件驱动的重取走防抖（转储 1–3MB）。 */
-  const dbLoadedForRef = useRef<string | null>(null)
-  /**
-   * 事件推送（2026-10-07 补缺口）：这一页转储的是 `task_instances` / `task_events` / `task_log` 的**原始行**
-   * —— 正是运行态真源，但取数只在「切到该页」时跑一次，父级的事件订阅够不到它 ⇒ 页面开着也看不到新行。
-   * **只在真的停在这一页时才跟着事件重取**（其它 tab 不白刷；转储本身较重）。
-   */
-  useEvents([...RUN_EVENT_TYPES, EventType.TASKS_CHANGED, EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => {
-    if (tab !== 'debug') return
-    setDbNonce(n => n + 1)
-  })
-
-  useEffect(() => {
-    if (tab !== 'debug') return
-    let alive = true
-    const first = dbLoadedForRef.current !== tab
-    dbLoadedForRef.current = tab
-    // ⚠️ 事件连发时**合并成一次**（2026-10-07 审计：这条订阅曾让调试页在停驻期间「每个运行态事件都重拉
-    // 1–3MB 转储」，对照原行为「只在切页时取一次」是明确回退）。切到该页仍立即取（`first`），
-    // 之后的重取走 800ms 防抖；同一批 flush 的多条事件会被 React 批处理 + 这里的定时器合并掉。
-    const timer = window.setTimeout(() => {
-      fetchWithTimeout(`${DISPATCH_API_PREFIX}/db`)
-        .then(res => res.json() as Promise<{ ok?: boolean; at?: string; tables?: DbTableDump[] }>)
-        .then(body => {
-          if (!alive) return
-          if (body.ok === true && Array.isArray(body.tables)) {
-            setDbDump({ at: typeof body.at === 'string' ? body.at : '', tables: body.tables })
-            setDbState('ok')
-          } else setDbState('fail')
-        })
-        .catch(() => { if (alive) setDbState('fail') })
-    }, first ? 0 : 800)
-    // 已有转储时**不进 loading**：否则整块转储被卸载 → 滚动位置弹回顶部（数据没变却闪一下）。
-    setDbState(s => (s === 'ok' ? s : 'loading'))
-    return () => { alive = false; window.clearTimeout(timer) }
-  }, [tab, dbNonce])
-
   const section = (snapshot.value ?? {}) as Record<string, unknown>
   // 快照由 host 周期写入 debugSnapshot 字段；页订阅同一 scope 自动刷新。
   const raw = typeof section.debugSnapshot === 'string' ? section.debugSnapshot : ''
@@ -1197,33 +1147,6 @@ function TaskPage(props: {
   }
   const hasRaw = raw.trim() !== ''
 
-  /** 调试页：一张表的原始行渲染（列按建表顺序；长值截断显示，悬停 title 看全文）。 */
-  const renderDbTable = (dump: DbTableDump) => h('div', { key: dump.name, style: { marginBottom: '20px' } },
-    h('h4', { style: sectionTitleStyle },
-      // ⚠️ 量词走 `t()`（英文界面下「N 行」应是「N rows」）；`t` 在此处是**单参**版本，故用拼接而非占位符。
-      `${dump.name} · ${dump.count} ${t('debugRowsSuffix')}${dump.truncated ? `（${t('debugDbTruncated')}）` : ''}`),
-    dump.rows.length === 0
-      ? h('p', { style: hintStyle }, t('debugDbEmpty'))
-      : h('div', { style: { overflowX: 'auto' } },
-          h('table', { style: tableStyle },
-            h('thead', null, h('tr', null,
-              dump.columns.map(col => h('th', { key: col, style: cellStyle }, col)))),
-            h('tbody', null, dump.rows.map((row, index) => h('tr', { key: index },
-              dump.columns.map(col => {
-                const value = row[col]
-                const text = value === null || value === undefined ? '—' : String(value)
-                const clipped = text.length > 160 ? `${text.slice(0, 160)}…` : text
-                return h('td', {
-                  key: col,
-                  style: col === 'detail' || col === 'value' ? detailCellStyle : cellStyle,
-                  title: text,
-                }, clipped)
-              }),
-            ))),
-          ),
-        ),
-  )
-
   // 预览 dock 占位宽度（0 = 收回）：整页与弹窗都按这个变量让位 ⇒「弹窗不遮盖预览面」。
   const previewW = preview === null ? 0 : previewWidth
   // 浮层 Toast 样式注入（保存失败提示用，幂等）。
@@ -1263,14 +1186,14 @@ function TaskPage(props: {
             ),
             h('div', { style: headerRightStyle },
               // 分段控件走 UI 基础层唯一实现（P1）：以前这里是一份就地自绘的样式（已删）
-              h(Segmented<'config' | 'records' | 'calendar' | 'debug'>, {
+              h(Segmented<'config' | 'records' | 'calendar' | 'settings'>, {
                 value: tab,
                 size: 'md',
                 items: [
                   { value: 'config', label: t('tabConfig') },
                   { value: 'records', label: t('tabRecords') },
                   { value: 'calendar', label: t('tabCalendar') },
-                  { value: 'debug', label: t('tabDebug') },
+                  { value: 'settings', label: t('tabSettings') },
                 ],
                 onChange: setTab,
               }),
@@ -1350,6 +1273,8 @@ function TaskPage(props: {
             // 工作区筛选候选 = **面板级唯一真源**（`/options`），列表不再从卡片数据反推（2026-10-04）。
             workspaces: editorOptions.workspaces,
           })
+        : tab === 'settings'
+          ? h(SettingsPage, { t })
         : data === undefined
           ? h('div', null,
               h('p', { style: hintStyle }, hasRaw ? t('debugRaw') : t('debugEmpty')),
@@ -1476,23 +1401,7 @@ function TaskPage(props: {
                 ),
               ),
             )
-          : tab === 'debug'
-            ? h('div', null,
-                h('p', { style: hintStyle }, t('debugDbHint')),
-                dbState === 'loading' ? h('p', { style: hintStyle }, t('debugDbLoading')) : null,
-                dbState === 'fail' ? h('p', { style: errorStyle }, t('debugDbFail')) : null,
-                // ⚠️ 判据是「**有没有拿到过转储**」而不是「这次成功没有」（2026-10-07 审计 🟡）：
-                // 刷新失败时保留上一次的转储可见（时间戳会告诉用户它有多旧），别让正在看的内容消失。
-                dbDump !== null
-                  ? h('div', null,
-                      h('p', { style: hintStyle }, `${t('debugRefreshedAt')} ${formatTime(dbDump.at)}`),
-                      // 推送通道自述（2026-10-07 可观测性审计）：用户说「页面不刷新」时，**先看这一行**
-                      // —— 连接状态 / 距最后一次收帧多久 / 重建过几次。此前这类信息**在界面上完全不存在**。
-                      h('pre', { style: { ...preStyle, color: 'var(--tdt-fg-3)' } }, describeEventChannel()),
-                      dbDump.tables.map(dump => renderDbTable(dump)),
-                    )
-                  : null,
-              )
+
           : null,
       // 统一的「回到顶部」悬浮钮：挂在 page 滚动容器里一次，覆盖全部 tab（config / records / calendar / debug）。
       h(BackToTop, null),

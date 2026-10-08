@@ -206,6 +206,14 @@ export type LocaleKey =
   // —— 2026-10-07 i18n 补漏：以下原先是**硬编码中文**，英文界面会露中文（第七轮审计指出）——
   | 'statusRailOff' | 'statusRailLastFailed' | 'statusRailLastSkipped' | 'statusRailRunning'
   | 'debugRowsSuffix'
+  | 'tabSettings' | 'settingsConfigTitle' | 'settingsBlockLogTitle' | 'settingsBlockDataTitle'
+  | 'settingsCurrentConfig' | 'settingsProvider' | 'settingsModel'
+  | 'settingsLogRetention' | 'settingsHistoryRetention' | 'settingsAttachmentRetention'
+  | 'settingsAutoRefresh' | 'settingsRefresh' | 'settingsLogEmpty' | 'settingsLogFail'
+  | 'settingsTable' | 'settingsTopN' | 'settingsAddFilter' | 'settingsNoFilters' | 'settingsQuery'
+  | 'settingsTableTruncated' | 'settingsTableEmpty' | 'settingsTableFail'
+  | 'settingsFilterColumn' | 'settingsFilterOp' | 'settingsFilterValue' | 'settingsFilterRemove'
+  | 'settingsLoadFailed'
   | 'vTitleRequired' | 'vWorkspaceRequired' | 'vPromptRequired'
   | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
 /**
@@ -852,6 +860,32 @@ export const zh: Record<LocaleKey, string> = {
   statusRailLastSkipped: '最近一次未执行（配置或前置不满足，详见执行记录）',
   statusRailRunning: '计划运行中',
   debugRowsSuffix: '行',
+  tabSettings: '设置',
+  settingsConfigTitle: '产品配置',
+  settingsBlockLogTitle: '整体日志',
+  settingsBlockDataTitle: '数据库表查询',
+  settingsCurrentConfig: '当前生效配置（只读）',
+  settingsProvider: '默认模型供应商',
+  settingsModel: '默认模型',
+  settingsLogRetention: '运行日志保留（天）',
+  settingsHistoryRetention: '执行历史保留（天）',
+  settingsAttachmentRetention: '临时附件保留（天）',
+  settingsAutoRefresh: '自动刷新（5 秒）',
+  settingsRefresh: '刷新',
+  settingsLogEmpty: '（暂无日志）',
+  settingsLogFail: '日志读取失败',
+  settingsTable: '表',
+  settingsTopN: '取前 N 条',
+  settingsAddFilter: '添加筛选',
+  settingsNoFilters: '（无筛选：显示全部行）',
+  settingsQuery: '查询',
+  settingsTableTruncated: '行数超出上限，仅显示最新一部分',
+  settingsTableEmpty: '（空表：还没有任何记录）',
+  settingsTableFail: '读取失败',
+  settingsFilterColumn: '列',
+  settingsFilterOp: '运算符',
+  settingsFilterValue: '值',
+  settingsFilterRemove: '移除筛选',
 
 
   vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
@@ -1485,6 +1519,32 @@ export const en: Record<LocaleKey, string> = {
   statusRailLastSkipped: 'Last run skipped (config or prerequisites unsatisfied; see records)',
   statusRailRunning: 'Scheduled / running',
   debugRowsSuffix: 'rows',
+  tabSettings: 'Settings',
+  settingsConfigTitle: 'Product Config',
+  settingsBlockLogTitle: 'Plugin Logs',
+  settingsBlockDataTitle: 'Database Tables',
+  settingsCurrentConfig: 'Current Effective Config (read-only)',
+  settingsProvider: 'Default Model Provider',
+  settingsModel: 'Default Model',
+  settingsLogRetention: 'Run Log Retention (days)',
+  settingsHistoryRetention: 'History Retention (days)',
+  settingsAttachmentRetention: 'Temp Attachment Retention (days)',
+  settingsAutoRefresh: 'Auto Refresh (5s)',
+  settingsRefresh: 'Refresh',
+  settingsLogEmpty: '(no logs yet)',
+  settingsLogFail: 'Failed to load logs',
+  settingsTable: 'Table',
+  settingsTopN: 'Top N Rows',
+  settingsAddFilter: 'Add Filter',
+  settingsNoFilters: '(no filter: show all rows)',
+  settingsQuery: 'Query',
+  settingsTableTruncated: 'Row count exceeded limit; showing newest subset',
+  settingsTableEmpty: '(empty table: no records yet)',
+  settingsTableFail: 'Failed to load',
+  settingsFilterColumn: 'Column',
+  settingsFilterOp: 'Operator',
+  settingsFilterValue: 'Value',
+  settingsFilterRemove: 'Remove filter',
 
 
   vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
