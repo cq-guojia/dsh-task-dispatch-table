@@ -17,7 +17,7 @@ import { createElement as h, Fragment, useCallback, useEffect, useLayoutEffect, 
 import { baseNameOf, formatClock, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, formatYmd, pad2 } from './format'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular,
-  IconClockOutlineRegular, IconEditOutlineRegular, IconFolderOpenOutlineRegular,
+  IconClockOutlineRegular, IconEditOutlineRegular,
   IconPlayOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -71,7 +71,9 @@ const TASK_LIST_CSS = [
   // 官方 Input 默认 32px 高 + 0.5px 边框 ⇒ 压到与按钮同高，并统一成同一套观感。
   // ⚠️ 必须 box-sizing:border-box：官方那 0.5px 边框若加在 28 之外，搜索框外框会比「工作区下拉」高约 2px
   //    （用户 2026-10-01 点名「搜索框比下拉高两个像素」的根因）。下拉侧由基础层 `SelectField size="md"` 同高。
-  `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; border-radius: var(--tdt-radius-sm); }`,
+  // ⚠️ **圆角不在这里写**：搜索框只挂宿主基类 `Input` + 前导放大镜（`icon`  prop），圆角随基类走，
+  //    与旁边的 `SelectField` 天然一致；此前手写的 `border-radius:radius-sm` 是覆盖基类、导致圆角与众不同的根因，已删。
+  `.dsh-tdt-tl-input, .dsh-tdt-tl-input > * { box-sizing: border-box; height: ${CONTROL_H}; }`,
   `.dsh-tdt-tl-input { width: ${WS_WIDTH}px; }`,
   `.dsh-tdt-tl-input input { box-sizing: border-box; height: ${CONTROL_H}; font-size: var(--tdt-font-sm); }`,
   // 记录表头吸顶（内容区定高滚动、表头不动）：原注释声称由 `.dsh-tdt-rec-head th` 接管，
@@ -1401,7 +1403,6 @@ export function TaskListView(props: {
             placeholder: t('listFilterWorkspaceAll'),
             emptyLabel: t('editorNoOptions'),
             ariaLabel: t('listFilterWorkspaceAll'),
-            icon: h(IconFolderOpenOutlineRegular, { size: 16 }),
             size: 'md',
             width: WS_WIDTH,
             marquee: true,
