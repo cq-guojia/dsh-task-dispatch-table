@@ -70610,7 +70610,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				const snippet = text.trim().slice(0, 120);
 				throw new Error(`HTTP ${res.status} · 返回的不是 JSON${snippet === "" ? "（空响应体）" : `：${snippet}`}`);
 			}
-			if (body.ok !== true) throw new Error(typeof body.error === "string" ? body.error : `HTTP ${res.status}`);
+			if (body.ok !== true) {
+				const err = new Error(typeof body.error === "string" ? body.error : `HTTP ${res.status}`);
+				if (typeof body.detail === "string" && body.detail !== "") err.detail = body.detail;
+				throw err;
+			}
 			return body;
 		}
 		/**
@@ -70943,10 +70947,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						seq: toastSeq.current
 					});
 				} catch (e) {
-					const code = e.message || "";
+					const err = e;
+					const base = errTextOf(err.message || "");
 					toastSeq.current += 1;
 					setToast({
-						text: errTextOf(code),
+						text: err.detail === void 0 ? base : `${base}\n${err.detail}`,
 						tone: "error",
 						seq: toastSeq.current
 					});

@@ -75,7 +75,12 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
     const snippet = text.trim().slice(0, 120)
     throw new Error(`HTTP ${res.status} · 返回的不是 JSON${snippet === '' ? '（空响应体）' : `：${snippet}`}`)
   }
-  if (body.ok !== true) throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${res.status}`)
+  if (body.ok !== true) {
+    const err = new Error(typeof body.error === 'string' ? body.error : `HTTP ${res.status}`)
+    // 服务端给的补充细节（如「配置写回失败」的真实原因）挂在 detail 上 ⇒ 调用方决定怎么呈现。
+    if (typeof body.detail === 'string' && body.detail !== '') (err as Error & { detail?: string }).detail = body.detail
+    throw err
+  }
   return body as unknown as T
 }
 

@@ -478,7 +478,8 @@ const makeDispatchRoutes = (
    * 写回插件配置（仅限计时类字段）。经 settings scope.update 合并进用户层并持久化，
    * scope.watch 即时生效（tickMs 重启 interval，其余字段 reconcile/scheduler 实时读 scope.get()）。
    */
-  updateScopeConfig: (patch: Partial<PluginConfig>) => Promise<boolean>,
+  /** `detail` = 失败的真实原因（写回抛的原始错误），随 503 带回给前端弹给人看。 */
+  updateScopeConfig: (patch: Partial<PluginConfig>) => Promise<{ ok: boolean; detail?: string }>,
   /** 取调度器（「立即执行」用 runNow）；settings 未就绪时为 null ⇒ 路由回 503。 */
   getScheduler: () => Scheduler | null,
   /** 事件广播器（SSE 端点 `/events` 的订阅源）。 */
@@ -1044,9 +1045,9 @@ const makeDispatchRoutes = (
           writeJson(res, 400, { ok: false, error: 'empty-patch' })
           return
         }
-        const ok = await updateScopeConfig(patch)
-        if (!ok) {
-          writeJson(res, 503, { ok: false, error: 'update-failed' })
+        const result = await updateScopeConfig(patch)
+        if (!result.ok) {
+          writeJson(res, 503, { ok: false, error: 'update-failed', detail: result.detail })
           return
         }
         // ⚠️ **这里不广播**：`CONFIG_CHANGED` 的唯一发射点是 `scope.watch`（降级作用域的 `watch`
@@ -1480,8 +1481,8 @@ export function apply(ctx: HostContext, config: unknown): void {
    * 等价于「撤销这条用户设置」。删除动作走 `configEditor.edit`（唯一能删用户层键的通道，
    * 与 `persistTasksInline` 同款；`scope.update` 是 merge 语义、只会写不会删）。
    */
-  const updateScopeConfig = async (patch: Partial<PluginConfig>): Promise<boolean> => {
-    if (!scopeRef) return false
+  const updateScopeConfig = async (patch: Partial<PluginConfig>): Promise<{ ok: boolean; detail?: string }> => {
+    if (!scopeRef) return { ok: false, detail: 'settings 作用域未就绪（settings inject 尚未运行）' }
     const set: Record<string, unknown> = {}
     const drop: string[] = []
     for (const [key, value] of Object.entries(patch)) {
@@ -1492,9 +1493,13 @@ export function apply(ctx: HostContext, config: unknown): void {
     try {
       if (Object.keys(set).length > 0) await scopeRef.update(set)
       await dropUserLayerConfig(drop)
-      return true
-    } catch {
-      return false
+      return { ok: true }
+    } catch (error) {
+      // ⚠️ **不许再吞**（2026-10-08 真机：用户点保存只见「写不进去」，原因查无此处）——
+      // 原样落 plugin_log（插件日志页可见）并随响应带回，前端把真实原因弹给人看。
+      const message = error instanceof Error ? error.message : String(error)
+      pushNotice('route_error', `配置写回失败：${message}`, 'error')
+      return { ok: false, detail: message }
     }
   }
   /** 从插件 entry 的用户层配置里删掉给定键（幂等：本来就没有就什么都不做）。失败只告警。 */

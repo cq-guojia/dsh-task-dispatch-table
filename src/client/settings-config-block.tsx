@@ -193,9 +193,11 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
       toastSeq.current += 1
       setToast({ text: t('settingsSaveSuccess'), tone: 'success', seq: toastSeq.current })
     } catch (e) {
-      const code = (e as Error).message || ''
+      const err = e as Error & { detail?: string }
+      const base = errTextOf(err.message || '')
+      // 服务端带回的真实原因（若有）跟着一起弹——「写不进去」必须让人知道为什么。
       toastSeq.current += 1
-      setToast({ text: errTextOf(code), tone: 'error', seq: toastSeq.current })
+      setToast({ text: err.detail === undefined ? base : `${base}\n${err.detail}`, tone: 'error', seq: toastSeq.current })
     } finally {
       setSaving(false)
     }
