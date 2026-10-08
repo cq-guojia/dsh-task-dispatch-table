@@ -227,39 +227,29 @@ const detailCellStyle: Record<string, string | number> = {
 // 两条**需要持有 controller 句柄**的路径——任务列表轮询、附件上传——仍各自内联，理由见 `http.ts` 顶部）。
 
 /**
- * 侧栏 / 面板图标（用户 2026-09-30 指定）：`assets/icon-scheduler.svg` 的**内联等价物**——
- * 左右方括号（品牌蓝、40% 透明）+ 红方块拼出的「S」。
- *
- * ⚠️ 为什么内联而不是引文件：宿主只服务 client bundle，仓库里的 `assets/` 不会随 bundle 到浏览器；
- * 而该图标的唯一消费点就是这里（`TaskPanelIcon`），故按原图**逐值**内联，`viewBox 128` 等比缩放。
- * 颜色沿用原图（品牌蓝 + 红）而不走 `currentColor`——这是用户给的设计稿配色；
- * 若日后要跟随侧栏选中态变色，把两处 `stroke` 改成 `currentColor` 即可。
+ * 侧栏 / 面板图标（2026-10-08 重绘）：构图取自用户给的 iconfont「计划」稿（`assets/计划.svg`，
+ * 彩色插件图标 = 同稿换色后的 `assets/icon-scheduler.svg`，宿主插件列表/设置消费，不进 bundle）。
+ * 这份是**黑白线条版**：日历（右下留缺口）+ 时钟压角，全部描边走 `currentColor`，
+ * 随侧栏选中态自动反色。仍内联——宿主只服务 client bundle（理由同前版）。
  */
 function TaskIcon(props: { size?: number }) {
   const size = props.size ?? 18
-  // 「S」= 3 列 × 5 行的 16px 方块（顶横 / 左上 / 中横 / 右下 / 底横），坐标照原图。
-  const blocks: Array<[number, number]> = [
-    [36, 16], [56, 16], [76, 16],
-    [36, 36],
-    [36, 56], [56, 56], [76, 56],
-    [76, 76],
-    [36, 96], [56, 96], [76, 96],
-  ]
-  return h('svg', {
-    width: size, height: size, viewBox: '0 0 128 128', fill: 'none', 'aria-hidden': true,
-  },
-    h('path', {
-      d: 'M19 16 H9 V112 H19',
-      stroke: '#4D6BFE', strokeOpacity: 0.4, strokeWidth: 7,
-      strokeLinecap: 'round', strokeLinejoin: 'round',
-    }),
-    h('path', {
-      d: 'M109 16 H119 V112 H109',
-      stroke: '#4D6BFE', strokeOpacity: 0.4, strokeWidth: 7,
-      strokeLinecap: 'round', strokeLinejoin: 'round',
-    }),
-    h('g', { fill: '#E03E3E' },
-      blocks.map(([x, y]) => h('rect', { key: `${x}-${y}`, x, y, width: 16, height: 16 }))),
+  const stroke = {
+    fill: 'none', stroke: 'currentColor', strokeWidth: 7,
+    strokeLinecap: 'round', strokeLinejoin: 'round',
+  } as const
+  return h('svg', { width: size, height: size, viewBox: '0 0 128 128', 'aria-hidden': true },
+    // 日历主体：右边缘止于 y=66、下边缘止于 x=72，缺口正好让时钟圆压角。
+    h('path', { d: 'M98 66 V38 A12 12 0 0 0 86 26 H26 A12 12 0 0 0 14 38 V102 A12 12 0 0 0 26 114 H72', ...stroke }),
+    // 装订环 ×2
+    h('path', { d: 'M42 16 V34 M70 16 V34', ...stroke }),
+    // 日期点阵（左上 5 点；右下让给时钟）
+    h('g', { fill: 'currentColor' },
+      [[32, 52], [52, 52], [72, 52], [32, 72], [52, 72]]
+        .map(([x, y]) => h('circle', { key: `${x}-${y}`, cx: x, cy: y, r: 4.5 }))),
+    // 时钟（压日历右下角）
+    h('circle', { cx: 92, cy: 92, r: 24, ...stroke }),
+    h('path', { d: 'M92 92 V80 M92 92 L102 98', ...stroke }),
   )
 }
 

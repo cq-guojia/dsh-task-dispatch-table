@@ -879,10 +879,10 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     check('时间显示一律两位（共用 pad2 + formatDateTime 拼秒，不再用 toLocaleString）',
       fmtSrc.includes('function pad2') && fmtSrc.includes('function formatDateTime')
       && !fmtSrc.includes('toLocaleString(') && !tiSrc.includes('toLocaleString('))
-    // 展示名与图标（用户 2026-09-30 拍板：名字用「定时任务调度器」，图标用 assets/icon-scheduler.svg）。
+    // 展示名与图标（用户 2026-09-30 拍板名字；2026-10-08 图标重绘为日历时钟稿，彩色 assets 版 + 线条内联版）。
     check('面板 / 侧栏展示名 = 定时任务调度器', clientJs.includes('定时任务调度器'))
-    check('侧栏图标 = 用户指定的调度器图标（方括号 + 红 S 方块，内联进 bundle）',
-      clientJs.includes('M19 16 H9 V112 H19') && clientJs.includes('#E03E3E'))
+    check('侧栏图标 = 日历时钟线条版（currentColor 可反色，内联进 bundle）',
+      clientJs.includes('M98 66 V38') && clientJs.includes('currentColor'))
     check('倒计时等宽数字（tabular-nums ⇒ 不左右蹦）', clientJs.includes('tabular-nums'))
     // NO_TIME 占位 2026-10-05 上提共享层；2026-10-06 再归位到 time-text.ts（disposition §三 A3）。
     check('无下次执行占位符 = `--`（图标保留，不再 `--:--`）',

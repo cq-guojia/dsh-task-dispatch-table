@@ -71453,55 +71453,51 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			borderRadius: "var(--tdt-radius-sm)"
 		};
 		/**
-		* 侧栏 / 面板图标（用户 2026-09-30 指定）：`assets/icon-scheduler.svg` 的**内联等价物**——
-		* 左右方括号（品牌蓝、40% 透明）+ 红方块拼出的「S」。
-		*
-		* ⚠️ 为什么内联而不是引文件：宿主只服务 client bundle，仓库里的 `assets/` 不会随 bundle 到浏览器；
-		* 而该图标的唯一消费点就是这里（`TaskPanelIcon`），故按原图**逐值**内联，`viewBox 128` 等比缩放。
-		* 颜色沿用原图（品牌蓝 + 红）而不走 `currentColor`——这是用户给的设计稿配色；
-		* 若日后要跟随侧栏选中态变色，把两处 `stroke` 改成 `currentColor` 即可。
+		* 侧栏 / 面板图标（2026-10-08 重绘）：构图取自用户给的 iconfont「计划」稿（`assets/计划.svg`，
+		* 彩色插件图标 = 同稿换色后的 `assets/icon-scheduler.svg`，宿主插件列表/设置消费，不进 bundle）。
+		* 这份是**黑白线条版**：日历（右下留缺口）+ 时钟压角，全部描边走 `currentColor`，
+		* 随侧栏选中态自动反色。仍内联——宿主只服务 client bundle（理由同前版）。
 		*/
 		function TaskIcon(props) {
 			const size = props.size ?? 18;
+			const stroke = {
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 7,
+				strokeLinecap: "round",
+				strokeLinejoin: "round"
+			};
 			return (0, react$1.createElement)("svg", {
 				width: size,
 				height: size,
 				viewBox: "0 0 128 128",
-				fill: "none",
 				"aria-hidden": true
 			}, (0, react$1.createElement)("path", {
-				d: "M19 16 H9 V112 H19",
-				stroke: "#4D6BFE",
-				strokeOpacity: .4,
-				strokeWidth: 7,
-				strokeLinecap: "round",
-				strokeLinejoin: "round"
+				d: "M98 66 V38 A12 12 0 0 0 86 26 H26 A12 12 0 0 0 14 38 V102 A12 12 0 0 0 26 114 H72",
+				...stroke
 			}), (0, react$1.createElement)("path", {
-				d: "M109 16 H119 V112 H109",
-				stroke: "#4D6BFE",
-				strokeOpacity: .4,
-				strokeWidth: 7,
-				strokeLinecap: "round",
-				strokeLinejoin: "round"
-			}), (0, react$1.createElement)("g", { fill: "#E03E3E" }, [
-				[36, 16],
-				[56, 16],
-				[76, 16],
-				[36, 36],
-				[36, 56],
-				[56, 56],
-				[76, 56],
-				[76, 76],
-				[36, 96],
-				[56, 96],
-				[76, 96]
-			].map(([x, y]) => (0, react$1.createElement)("rect", {
+				d: "M42 16 V34 M70 16 V34",
+				...stroke
+			}), (0, react$1.createElement)("g", { fill: "currentColor" }, [
+				[32, 52],
+				[52, 52],
+				[72, 52],
+				[32, 72],
+				[52, 72]
+			].map(([x, y]) => (0, react$1.createElement)("circle", {
 				key: `${x}-${y}`,
-				x,
-				y,
-				width: 16,
-				height: 16
-			}))));
+				cx: x,
+				cy: y,
+				r: 4.5
+			}))), (0, react$1.createElement)("circle", {
+				cx: 92,
+				cy: 92,
+				r: 24,
+				...stroke
+			}), (0, react$1.createElement)("path", {
+				d: "M92 92 V80 M92 92 L102 98",
+				...stroke
+			}));
 		}
 		/** 任务表草稿是否为宿主可解析的 JSON 数组（空白串视为清空，合法）。 */
 		function isValidTaskTable(text) {
