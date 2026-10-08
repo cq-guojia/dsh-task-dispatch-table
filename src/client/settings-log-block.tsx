@@ -14,8 +14,6 @@ import { IconCodeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 
 const REFRESH_MS = 5000
-/** 日志区最大高度（px）：超出即内部滚动。与 `task-list.tsx` 的 360 同类（内容区限高）。 */
-const LOG_MAX_HEIGHT_PX = 420
 const PAGE_SIZES = ['50', '100', '200']
 
 export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProperties }): ReturnType<typeof h> {
@@ -72,8 +70,7 @@ export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProper
     error !== null
       ? h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-danger)', marginBottom: 'var(--tdt-space-2)' } }, error)
       : null,
-    result === null || result.rows.length === 0
-      ? h('p', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)', margin: 0 } }, t('settingsLogEmpty'))
-      : h(DbTable, { table: result, t, maxHeight: LOG_MAX_HEIGHT_PX }),
+    // 空 / 未加载也进同一个定高盒 ⇒ 高度恒定、页面不跳（用户 2026-10-08）。
+    h(DbTable, { table: result, t, emptyText: t('settingsLogEmpty') }),
   )
 }

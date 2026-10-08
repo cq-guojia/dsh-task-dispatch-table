@@ -104,7 +104,9 @@ const TASK_LIST_CSS = [
 ].join('\n')
 
 /** 幂等注入（走 ui/style.ts 单一 <style>）。 */
-const ensureTaskListStyle = (): void => { applyStyle('domain:list', TASK_LIST_CSS) }
+/** 幂等注入（走 ui/style.ts 单一 <style>）。设置页的数据表复用本域的 `.dsh-tdt-rec-*` 表格皮肤
+ *  ⇒ 导出给 `db-table.tsx` 调用（设置页可能没渲染过任务列表，规则得由它自己确保已注入）。 */
+export const ensureTaskListStyle = (): void => { applyStyle('domain:list', TASK_LIST_CSS) }
 
 
 // ── 文案与时间 ─────────────────────────────────────────────────────────

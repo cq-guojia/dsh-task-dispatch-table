@@ -19,14 +19,19 @@ import type { Translate } from './locales'
 /** 模块之间的纵向间距（唯一一份，三块共用）。 */
 export const SECTION_GAP: CSSProperties = { marginTop: 'var(--tdt-space-4)' }
 
-/** 浅灰两色框（参考「执行记录」双色手法，仅用中性灰）。 */
+/**
+ * 浅灰两色框（参考「执行记录」双色手法，仅用中性灰）。
+ *
+ * ⚠️ **不要圆角、不要描边**（用户 2026-10-08）——与执行记录条目块同形态：整块就是一个直角色块，
+ * 视觉分隔靠「左缘 4px 略深色块 + 框内极淡底色」两拍，不加边框线。
+ */
 const SETTINGS_DOMAIN = 'domain:settings'
 const SETTINGS_CSS = `
 .dsh-tdt-settings-card{
   box-sizing:border-box;
-  border:0.5px solid var(--tdt-border-faint);
+  border:none;
+  border-radius:0;
   border-left:4px solid color-mix(in srgb,var(--tdt-fg) 14%,transparent);
-  border-radius:var(--tdt-radius-lg);
   background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);
   padding:var(--tdt-space-4);
 }

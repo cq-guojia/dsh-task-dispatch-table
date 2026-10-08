@@ -12,8 +12,6 @@ import { TableFilterRow } from './table-filter'
 import { IconDatabaseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 
-/** 结果表最大高度（px）：超出内部滚动、固定表头。 */
-const TABLE_MAX_HEIGHT_PX = 420
 const PAGE_SIZES = ['20', '50', '100', '200', '500']
 
 export function SettingsTableBlock({ t, style }: { t: Translate; style?: CSSProperties }): ReturnType<typeof h> {
@@ -82,8 +80,7 @@ export function SettingsTableBlock({ t, style }: { t: Translate; style?: CSSProp
       })),
       h(Button, { variant: 'outline', size: 'sm', onClick: addFilter }, t('settingsAddFilter')),
     ),
-    result === null || result.rows.length === 0
-      ? h('p', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)', margin: 0 } }, t('settingsTableEmpty'))
-      : h(DbTable, { table: result, t, maxHeight: TABLE_MAX_HEIGHT_PX }),
+    // 空 / 未加载也进同一个定高盒 ⇒ 高度恒定、页面不跳（用户 2026-10-08）。
+    h(DbTable, { table: result, t, emptyText: t('settingsTableEmpty') }),
   )
 }
