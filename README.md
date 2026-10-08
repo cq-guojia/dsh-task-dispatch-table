@@ -67,6 +67,12 @@ A task declares which upstream tasks must have succeeded before it may run (the 
 
 Expanding a task opens three panels: **basic info** (configuration side by side with the last run), **runs** (one row per instance: status, planned vs actual time, duration, token usage, artifacts, and a button to open the archived session), and **logs** (the plugin's own diagnostic log for that task — missed slots, missing attachments, manual runs).
 
+### Session view
+
+![The archived session: files received from upstream tasks, task attachments, the dispatch request and token usage](docs/screenshots/session-view.png)
+
+**View session** opens the archived run as a read-only record: the files the session **received from upstream tasks** (frozen at dispatch time), the task's **attachments**, the **dispatch request** with its timing and token usage — and a **continue conversation** button that forks the archived session into a new interactive one.
+
 ### Execution timeline
 
 ![The cross-task execution timeline, one entry expanded](docs/screenshots/execution-timeline.jpg)

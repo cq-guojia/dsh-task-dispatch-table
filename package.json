@@ -1,6 +1,6 @@
 {
   "name": "dsh-task-dispatch-table",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scheduled task dispatcher: a dsh host plugin that drives recurring agent tasks from a single task table, dispatching each run as an independent dsh session (scheduling itself uses zero model calls)",
   "icon": "./assets/icon-scheduler.svg",
   "keywords": [
