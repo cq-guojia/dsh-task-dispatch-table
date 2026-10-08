@@ -2964,9 +2964,9 @@ console.log('\n[14] runtime-index')
       && S('runtime-index.ts').includes('=== next) return false'))
     check('删行路径（任务仍有别的在飞实例）也广播',
       S('reconcile.ts').includes('emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } })'))
-    check('配置变更：CONFIG_CHANGED **只有一处发射点**（scope.watch），路由不再补发',
+    check('配置变更：CONFIG_CHANGED **只有一处发射点**（applyConfigLive：scope.watch 与手写回共用），路由不再补发',
       (idxSrc20.match(/EventType\.CONFIG_CHANGED/g) ?? []).length === 1
-      && idxSrc20.includes('scope.watch((next, prev) =>'))
+      && idxSrc20.includes('scope.watch(applyConfigLiveImpl)'))
     check('降级作用域的 watch 如实实现（不再逼路由补发、也不靠合并窗口吃重复）',
       /watch: \(fn\) => \{/.test(idxSrc20) && idxSrc20.includes('watchers.add(fn)')
       && !idxSrc20.includes('watch: () => () => {}'))
@@ -3115,9 +3115,9 @@ console.log('\n[14] runtime-index')
       S('store.ts').includes("'plugin_log', 'meta'")
       && S('store.ts').includes("case 'plugin_log': return 'ts DESC, seq DESC'")
       && S('client/settings-log-block.tsx').includes("table: 'plugin_log'"))
-    // 2026-10-08：attachmentTmpRetentionDays 接进 tick（此前 purgeTmp 定义了却没人调，是死旋钮）。
-    check('【清道夫】临时附件区接进调度 tick（attachmentTmpRetentionDays 不再是死旋钮）',
-      S('scheduler.ts').includes('purgeTmp(paths, cfg.attachmentTmpRetentionDays ?? 7)'))
+    // 附件临时区清理由 index.ts 的 6 小时清道夫负责（每 6h 醒一次、跨天才真遍历目录）。
+    check('【清道夫】临时附件区接在 6 小时清道夫上（按 attachmentTmpRetentionDays 清）',
+      S('index.ts').includes('purgeTmp(paths, configRef.attachmentTmpRetentionDays)'))
     check('【CSS】固定中性面的 6 个 token 已补明文回退（旧内核不再变透明）',
       ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
         'rgba(255,255,255,.05)', 'rgba(255,255,255,.08)', 'rgba(255,255,255,.16)']
@@ -3199,10 +3199,9 @@ console.log('\n[14] runtime-index')
       S('config.ts').includes('export const CONFIG_DEFAULTS: PluginConfig')
       && S('config.ts').includes('.default(CONFIG_DEFAULTS.logRetentionDays)')
       && !/\.default\(30\)/.test(S('config.ts')))
-    check('【不重复存储】POST /config 把等于系统默认值的字段从用户层删掉（dropUserLayerConfig 走 configEditor.edit）',
+    check('【不重复存储】POST /config 把等于系统默认值的字段从用户层删掉（editPluginUserLayer 一次 edit 原子 set+drop）',
       S('index.ts').includes('if (same) drop.push(key)')
-      && S('index.ts').includes('dropUserLayerConfig(drop)')
-      && S('index.ts').includes('configEditor.edit(entry, (raw: Record<string, unknown>) => {'))
+      && S('index.ts').includes('for (const k of drop) delete next[k]'))
     check('【响应投影】/config 的 defaults 只投影可编辑白名单（不把 tasksInline / debugSnapshot 吐给浏览器）',
       S('index.ts').includes('export function configView(')
       && S('index.ts').includes('defaults: pick(CONFIG_DEFAULTS'))

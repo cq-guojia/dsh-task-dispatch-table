@@ -1470,8 +1470,12 @@ export function apply(ctx: HostContext, config: unknown): void {
    * webServer 注入早于 settings ⇒ 与 storeRef 同法：先声明、后赋值，路由闭包按请求时惰性取。
    */
   let schedulerRef: Scheduler | null = null
-  /** settings inject 就绪后的插件配置（清道夫天数等；无 register 面时沿用启动配置）。 */
+  /** settings inject 就绪后的插件配置（清道夫天数等；无 register 面时沿用启动配置）。
+   *  ⚠️ 运行期**读它**，不要读 `scope.get()`——配置写回走 configEditor.edit（绕过 scope），
+   *  scope 里的值不会跟着变，只有这里由 watch / 手写回双方维护（见 applyConfigLive）。 */
   let configRef: PluginConfig = initial
+  /** 把一份配置**生效到运行态**的执行器（settings inject 里赋值；scope.watch 与手写回共用）。 */
+  let applyConfigLive: ((next: PluginConfig, prev: PluginConfig) => void) | null = null
   /** settings inject 就绪后捕获的官方/降级作用域，供设置页经 scope.update 写回配置。 */
   let scopeRef: SettingsScope<PluginConfig> | null = null
   /** 设置页写回插件配置（作用域未就绪时返回 false）。
@@ -1491,9 +1495,17 @@ export function apply(ctx: HostContext, config: unknown): void {
       else set[key] = value
     }
     try {
-      if (Object.keys(set).length > 0) await scopeRef.update(set)
-      await dropUserLayerConfig(drop)
-      return { ok: true }
+      // ⚠️ **不能走 `scope.update`**（2026-10-08 真机实证）：宿主 settings.update 对**没有 volatile
+      // 字段**的插件条目直接抛 `Plugin entry "..." has no volatile fields`——而本插件配置全是静态
+      // 字段（rc.1 起标 volatile 会让 entry 激活失败，见 config.ts 头注）⇒ 这条写在当前宿主上恒不可用。
+      // 改走 `configEditor.edit` 直写用户层（与任务表回写同一条已验证通道；set 与 drop 一次 edit 原子完成），
+      // 然后**自己**把变更生效到运行态——scope 不知道我们改了，watch 不会回调（见 applyConfigLive）。
+      await editPluginUserLayer((raw) => {
+        const next = { ...raw }
+        for (const [k, v] of Object.entries(set)) next[k] = v
+        for (const k of drop) delete next[k]
+        return next
+      })
     } catch (error) {
       // ⚠️ **不许再吞**（2026-10-08 真机：用户点保存只见「写不进去」，原因查无此处）——
       // 原样落 plugin_log（插件日志页可见）并随响应带回，前端把真实原因弹给人看。
@@ -1501,33 +1513,31 @@ export function apply(ctx: HostContext, config: unknown): void {
       pushNotice('route_error', `配置写回失败：${message}`, 'error')
       return { ok: false, detail: message }
     }
+    // 生效到运行态：configRef / CONFIG_CHANGED 广播 / tickMs 重启，全走与 scope.watch 同一份逻辑。
+    const prev = configRef
+    if (applyConfigLive !== null) applyConfigLive({ ...prev, ...patch }, prev)
+    return { ok: true }
   }
-  /** 从插件 entry 的用户层配置里删掉给定键（幂等：本来就没有就什么都不做）。失败只告警。 */
-  const dropUserLayerConfig = async (keys: readonly string[]): Promise<void> => {
-    if (keys.length === 0) return
+  /**
+   * 在插件 entry 的**用户层**配置上做一次原子改写（`configEditor.edit`）。
+   *
+   * ⚠️ 这是当前宿主上插件配置**唯一可用的写通道**（`scope.update` 对无 volatile 字段的条目恒抛错，
+   * 见 updateScopeConfig 头注）。entry 找不到 / configEditor 缺失（rc.1 组合）⇒ 静默放弃属预期；
+   * **其它异常向上抛**（调用方决定告警还是回给用户——写配置失败必须可诊断）。
+   */
+  const editPluginUserLayer = async (mutate: (raw: Record<string, unknown>) => Record<string, unknown>): Promise<void> => {
     const sctx = settingsCtxRef
     if (sctx === null) return
-    try {
-      const configEditor = (sctx as unknown as {
-        configEditor?: {
-          entries: () => Array<{ options?: { id?: string } }>
-          edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
-        }
-      }).configEditor
-      if (configEditor === undefined) return
-      const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
-      if (entry === undefined) return
-      await configEditor.edit(entry, (raw: Record<string, unknown>) => {
-        const next = { ...raw }
-        let changed = false
-        for (const key of keys) {
-          if (Object.hasOwn(next, key)) { delete next[key]; changed = true }
-        }
-        return changed ? next : raw
-      })
-    } catch (error) {
-      sctx.logger.warn(`配置回落默认值：删除用户层字段失败（生效值不受影响）: ${error instanceof Error ? error.message : String(error)}`)
-    }
+    const configEditor = (sctx as unknown as {
+      configEditor?: {
+        entries: () => Array<{ options?: { id?: string } }>
+        edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
+      }
+    }).configEditor
+    if (configEditor === undefined) return
+    const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
+    if (entry === undefined) return
+    await configEditor.edit(entry, mutate)
   }
   const persistTasksInline = async (json: string): Promise<void> => {
     // 主通道：写状态库 meta 表（state.db 在宿主数据根 = 挂载卷，容器重建 / 插件重装都不丢）。
@@ -1539,24 +1549,13 @@ export function apply(ctx: HostContext, config: unknown): void {
       store.setMeta('tasksInline', json)
     }
     // 次通道：尽力写回插件 entry config（官方配置面可见）；rc.1 缺 configEditor / entry 属预期。
-    // ⚠️ cordis ctx 是 Proxy：属性访问未提供的get trap 直接 throw（cannot get property ... without
-    // inject，真机 2026-09-25 实证；决策 21 同源教训），「访问后判 undefined」的探测形同虚设
+    // ⚠️ cordis ctx 是 Proxy：属性访问未提供的 get trap 直接 throw（真机 2026-09-25 实证）
     // ⇒ 整块 try/catch：任何异常只告警，绝不连累主通道（meta 表已落盘、内存已生效）。
-    const sctx = settingsCtxRef
-    if (sctx === null) return
     try {
-      const configEditor = (sctx as unknown as {
-        configEditor?: {
-          entries: () => Array<{ options?: { id?: string } }>
-          edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
-        }
-      }).configEditor
-      if (configEditor === undefined) return
-      const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
-      if (entry === undefined) return
-      await configEditor.edit(entry, (raw: Record<string, unknown>) => ({ ...raw, tasksInline: json }))
+      await editPluginUserLayer((raw) => ({ ...raw, tasksInline: json }))
     } catch (error) {
-      sctx.logger.warn(`任务表次通道写回 entry config 失败（不影响保存：主通道 meta 表已落盘）: ${error instanceof Error ? error.message : String(error)}`)
+      const sctx = settingsCtxRef
+      sctx?.logger.warn(`任务表次通道写回 entry config 失败（不影响保存：主通道 meta 表已落盘）: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   // ── rc.1 数据通道：webServer HTTP 路由（照抄参考插件 dsh-task-board 的已验证通道：
@@ -1746,11 +1745,13 @@ export function apply(ctx: HostContext, config: unknown): void {
       setTimeout(() => { writePending = false; writeSnapshot() }, wait)
     }
 
-    const pluginConfig = (): PluginConfig => ({ ...scope.get(), tasksInline: runtime.tasksInline })
+    // ⚠️ 运行期一律读 configRef（不读 scope.get()）：配置写回走 configEditor.edit 绕过 scope，
+    // scope 里的值不会跟新；configRef 由 watch 与手写回双方维护（见 applyConfigLive）。
+    const pluginConfig = (): PluginConfig => ({ ...configRef, tasksInline: runtime.tasksInline })
     const reconcileOptions: ReconcileOptions = {
-      get leaseMs() { return scope.get().leaseMs },
-      get dispatchGraceMs() { return scope.get().dispatchGraceMs },
-      get unknownGraceMs() { return scope.get().unknownGraceMs },
+      get leaseMs() { return configRef.leaseMs },
+      get dispatchGraceMs() { return configRef.dispatchGraceMs },
+      get unknownGraceMs() { return configRef.unknownGraceMs },
       config: pluginConfig,
       // 决策 41 一次性兼容：旧库实例无快照时按当前任务定义当场补快照（只此一处对账读任务表）。
       legacyTask: (taskId) => taskMap.get(taskId),
@@ -1803,8 +1804,15 @@ export function apply(ctx: HostContext, config: unknown): void {
     // tickMs live 变更时重启 interval。
     /** dispose 后置真：配置 watcher 立刻退出（见下），避免对已释放的广播器发事件、或重种定时器。 */
     let disposed = false
-    let stopInterval = sctx.interval(safeTick, scope.get().tickMs)
-    const unwatchScope = scope.watch((next, prev) => {
+    let stopInterval = sctx.interval(safeTick, configRef.tickMs)
+    /**
+     * 把一份配置**生效到运行态**：configRef / `CONFIG_CHANGED` 广播 / tickMs 重启 interval。
+     *
+     * ⚠️ scope.watch 与「手写回」**共用这一份**：设置页写配置走 `configEditor.edit` 直写用户层
+     * （`scope.update` 在当前宿主对无 volatile 字段的条目恒抛错，见 updateScopeConfig），
+     * scope 不知道我们改了 ⇒ watch 不会回调，必须自己走这一遍（2026-10-08）。
+     */
+    const applyConfigLiveImpl = (next: PluginConfig, prev: PluginConfig): void => {
       // dispose 之后宿主若还回调（作用域的生命周期不完全由我们掌控）⇒ 立刻退出：
       // 否则会向**已经 dispose 的广播器**发事件、并用 `sctx.interval` **重新种下一个没人清理的定时器**
       // （2026-10-06 第四轮审计 🟡）。
@@ -1814,7 +1822,7 @@ export function apply(ctx: HostContext, config: unknown): void {
       // 配置变了 ⇒ 通知前端重读（设置页 / 依赖计时参数展示的页面）。
       // ⚠️ **`CONFIG_CHANGED` 的唯一发射点**（正常与降级作用域都走这里——`fallbackScope` 的 `watch`
       // 已如实实现）⇒ 一次成功写回**恰好一条**事件，不需要下游的合并窗口兜底。
-      // **边沿触发**：`watch` 在「点了保存但值其实没变」时同样会回调，那不叫变更 ⇒ 比对后再决定。
+      // **边沿触发**：值其实没变的写回不算变更 ⇒ 比对后再决定。
       // 用**整份比对**而不是硬编码字段清单：将来加新的页面可见字段时不必记得回来补清单（宁可多发一条空的）。
       if (JSON.stringify(next) !== JSON.stringify(prev)) {
         eventBus.emit({ type: EventType.CONFIG_CHANGED })
@@ -1822,7 +1830,9 @@ export function apply(ctx: HostContext, config: unknown): void {
       if (next.tickMs === prev.tickMs) return
       stopInterval()
       stopInterval = sctx.interval(safeTick, next.tickMs)
-    })
+    }
+    applyConfigLive = applyConfigLiveImpl
+    const unwatchScope = scope.watch(applyConfigLiveImpl)
 
     // 上传临时区清道夫：每 6 小时看一次，**跨天**才真干活 ⇒ 平时一轮只多一次日期比较，
     // 无持续负载。删掉 N 天前没被保存带走的临时文件（data-model §六）。
