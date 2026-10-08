@@ -212,6 +212,7 @@ export type LocaleKey =
   | 'settingsUnsaved' | 'settingsDefaultOption' | 'settingsCustom' | 'settingsResetDefault' | 'settingsModelHint'
   | 'settingsLoopHelp' | 'settingsLogRetentionHelp' | 'settingsAttachmentRetentionHelp' | 'settingsModelHelp'
   | 'settingsWaitHelp' | 'settingsLeaseHelp' | 'settingsUnknownHelp'
+  | 'settingsErrRange' | 'settingsErrPair' | 'settingsErrUpdateFailed' | 'settingsErrInvalidField' | 'settingsErrRangeField' | 'settingsErrEmpty'
   | 'settingsAutoRefresh' | 'settingsRefresh' | 'settingsLogEmpty' | 'settingsLogFail'
   | 'settingsTable' | 'settingsTopN' | 'settingsPageSize' | 'settingsAddFilter' | 'settingsNoFilters' | 'settingsQuery'
   | 'settingsTableTruncated' | 'settingsTableEmpty' | 'settingsTableFail'
@@ -888,6 +889,12 @@ export const zh: Record<LocaleKey, string> = {
   settingsModelHelp: '先选供应商、再选具体模型，两个都要选。留空（默认模型）= 跟随宿主的默认模型。新建任务时会自动带出这里的选择，单个任务仍可单独改。',
   settingsCustom: '自定义',
   settingsResetDefault: '恢复默认',
+  settingsErrRange: '请填 {min} 到 {max} 之间的整数。',
+  settingsErrPair: '供应商和模型要一起选：选了其中一个，另一个也得选。',
+  settingsErrUpdateFailed: '配置没能写进去（宿主的配置面还没就绪），请稍后重试。',
+  settingsErrInvalidField: '「{name}」这个值不合法，请检查后重试。',
+  settingsErrRangeField: '「{name}」超出允许范围（{min}–{max}）。',
+  settingsErrEmpty: '没有要保存的改动。',
   settingsAutoRefresh: '自动刷新（5 秒）',
   settingsRefresh: '刷新',
   settingsLogEmpty: '（暂无日志）',
@@ -1562,6 +1569,12 @@ export const en: Record<LocaleKey, string> = {
   settingsModelHelp: 'Pick the provider first, then the concrete model — both are required. Leaving it empty (default model) means following the host default. New tasks inherit this choice, and each task can still override it.',
   settingsCustom: 'Custom',
   settingsResetDefault: 'Restore default',
+  settingsErrRange: 'Enter a whole number between {min} and {max}.',
+  settingsErrPair: 'Provider and model go together: if you pick one, you must pick the other.',
+  settingsErrUpdateFailed: 'The settings could not be written (the host config surface is not ready yet). Please retry later.',
+  settingsErrInvalidField: 'The value for "{name}" is not valid — please check and retry.',
+  settingsErrRangeField: '"{name}" is out of the allowed range ({min}–{max}).',
+  settingsErrEmpty: 'There is nothing to save.',
   settingsAutoRefresh: 'Auto Refresh (5s)',
   settingsRefresh: 'Refresh',
   settingsLogEmpty: '(no logs yet)',

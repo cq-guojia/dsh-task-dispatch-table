@@ -1,28 +1,27 @@
 /**
  * 设置页第 1 块 · 插件设置（配置编辑主入口）。
  *
- * 状态机**照抄 `dsh-session-title-pattern` 插件**（用户 2026-10-08「全抄，按它来」）：
- *  - 每项**改过**（值 ≠ 系统默认值）⇒ 标题右侧挂 **「自定义」** 徽章，并放开 **「恢复默认」** 按钮；
- *  - 没改过 ⇒ 没有徽章、「恢复默认」灰着不可点；
- *  - **没有任何改动时「保存」是灰的**（`disabled` = 没有脏字段）。
+ * **交互全抄「新增 / 修改任务」那一套**（用户 2026-10-08）：
+ *  - **校验**：点保存才判定，**一次把所有问题都查出来**——出问题的框描红（持续态，改好才退），
+ *    同时弹**一次** `FloatingToast` 把所有问题一行一条列出来（一次性，与描红解耦）；
+ *  - **提示一律走统一 Toast**，不在表单里挂错误文字；服务端机读错误码（如 `update-failed`）
+ *    翻成人话再弹，**不把 `update failed` 这种机读串甩给用户**；
+ *  - **数字框只吃数字**：非数字字符直接过滤掉，输不进去（不让用户先输个 "AA" 再来报错）。
  *
- * 其余口径（用户 2026-10-08）：
- * - 没有「配置预览」只读栏（已删）、没有「高级」折叠（全部直接铺开）；
- * - **默认模型供应商 + 默认模型是一行连栏**（先挑哪家、再挑哪个模型，两者一起算一项）；
- * - 秒 / 天这类数字**直接填**（不用步进器），单位只写在标题里，不再缀在输入框后面；
- * - 每项下面一句**短说明**（默认宽度一行写得下），详细解释收进标题右边的 **「?」** 悬停提示。
+ * 状态机照抄 `dsh-session-title-pattern` 插件（用户 2026-10-08）：
+ *  - 每项**改过** ⇒ 标题右侧挂 **「自定义」** 徽章 + **「恢复默认」**（**没改过就整个不显示**）。
  *
- * ⚠️ **目录类配置不在此暴露编辑**：`statePath` / `tasksDir` 是「插件装到哪儿」的问题，不该让用户填路径。
- * ⚠️ **执行历史保留已整条删除**：执行历史永久保留、不允许清除。
+ * ⚠️ **目录类配置不在此暴露编辑**（`statePath` / `tasksDir`）；**执行历史保留已整条删除**。
  * ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）。
  */
-import { createElement as h, useEffect, useState, type CSSProperties } from 'react'
+import { createElement as h, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Button, Input, SectionHead, SelectField } from './ui'
 import { fetchConfig, postConfig, fetchModelOptions, type ModelOption, type SettingsConfigValue } from './settings-data'
 import { HelpButton } from './task-editor'
 import { ensureTaskEditorStyle } from './task-editor-css'
+import { ensureToastStyle, FloatingToast } from './toast-css'
 import { IconCordisPluginOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { LocaleKey, Translate } from './locales'
+import { interpolateTranslate, type LocaleKey, type Translate } from './locales'
 
 interface FieldDef {
   key: keyof SettingsConfigValue
@@ -55,7 +54,6 @@ const FIELDS: FieldDef[] = [
 const gridStyle: CSSProperties = {
   display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--tdt-space-4)',
 }
-/** 每项标题行：标题 + 「?」 + 右侧「自定义 / 恢复默认」（照参考插件 `stp-pairHead` 的排法）。 */
 const headStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-1)', marginBottom: 'var(--tdt-space-2)' }
 const labelStyle: CSSProperties = { fontSize: 'var(--tdt-font-md)', fontWeight: 600, minWidth: 0 }
 const badgesStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 'var(--tdt-space-2)', marginLeft: 'auto', flex: 'none' }
@@ -63,6 +61,13 @@ const customStyle: CSSProperties = { fontSize: 'var(--tdt-font-xs)', color: 'var
 const resetStyle: CSSProperties = {
   background: 'none', border: 'none', padding: 0, font: 'inherit',
   fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', cursor: 'pointer',
+}
+
+interface FieldProblem {
+  /** 出错的字段名（描红定位用）。 */
+  key: string
+  /** 已翻译的完整一句话。 */
+  message: string
 }
 
 export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof h> {
@@ -73,12 +78,17 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
   const [defaults, setDefaults] = useState<SettingsConfigValue | null>(null)
   const [models, setModels] = useState<ModelOption[]>([])
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
-  /** 数字框的自由输入草稿（允许先清空 / 输一半，失焦再回弹），key = 字段名。 */
+  /** 数字框的自由输入草稿（允许先清空，失焦再回弹），key = 字段名。 */
   const [draft, setDraft] = useState<Partial<Record<string, string>>>({})
+  // 点保存才判定（与「新增 / 修改任务」同款）；判定后问题随修正实时消退。
+  const [showErrors, setShowErrors] = useState(false)
+  // Toast：seq 自增 ⇒ 同一句连点也能重播淡入淡出。
+  const [toast, setToast] = useState<{ text: string; tone: 'error' | 'success'; seq: number } | null>(null)
+  const toastSeq = useRef(0)
 
-  useEffect(() => { ensureTaskEditorStyle() }, [])
+  const tt = useMemo(() => interpolateTranslate(t), [t])
+
+  useEffect(() => { ensureTaskEditorStyle(); ensureToastStyle() }, [])
 
   useEffect(() => {
     let alive = true
@@ -87,7 +97,7 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
         if (!alive) return
         setForm(p.config); setDefaults(p.defaults); setBaseline(p.config)
       })
-      .catch((e: Error) => { if (alive) setError(e.message || t('settingsLoadFailed')) })
+      .catch(() => { if (alive) { toastSeq.current += 1; setToast({ text: t('settingsLoadFailed'), tone: 'error', seq: toastSeq.current }) } })
     return () => { alive = false }
   }, [t])
 
@@ -101,7 +111,6 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
 
   /** 显示值（秒 / 天 / 字符串）→ 存服务端值。 */
   const update = (f: FieldDef, value: string | number): void => {
-    setSaved(false)
     const server = f.kind === 'number' && f.fromDisplay !== undefined ? f.fromDisplay(value as number) : value
     setForm(prev => (prev === null ? prev : { ...prev, [f.key]: server as never }))
   }
@@ -118,23 +127,75 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
   /** 「恢复默认」：把该字段（连栏项则两个一起）退回系统默认值。 */
   const resetField = (f: FieldDef): void => {
     if (form === null || defaults === null) return
-    setSaved(false)
     setDraft(prev => { const next = { ...prev }; delete next[f.key]; return next })
     setForm(prev => prev === null ? prev : f.kind === 'pair'
       ? { ...prev, defaultProvider: defaults.defaultProvider, defaultModel: defaults.defaultModel }
       : { ...prev, [f.key]: defaults[f.key] as never })
   }
 
+  /**
+   * 一次把**所有**问题查出来（用户 2026-10-08）：数字看范围、连栏看「两个要一起选」。
+   * 渲染时按 `key` 描红；`message` 已翻译，直接进 Toast。
+   */
+  const validate = (): FieldProblem[] => {
+    if (form === null) return []
+    const out: FieldProblem[] = []
+    for (const f of FIELDS) {
+      if (f.kind === 'number') {
+        const shown = f.toDisplay !== undefined ? f.toDisplay(form[f.key] as number) : form[f.key] as number
+        if (!Number.isFinite(shown) || !Number.isInteger(shown) || shown < (f.min ?? 0) || shown > (f.max ?? Infinity)) {
+          out.push({ key: f.key, message: `${t(f.labelKey)}：${tt('settingsErrRange', { min: String(f.min ?? 0), max: String(f.max ?? 0) })}` })
+        }
+      } else {
+        // 连栏：选了一个就必须选另一个（都空 = 跟随宿主默认，合法）。
+        const hasProvider = form.defaultProvider !== ''
+        const hasModel = form.defaultModel !== ''
+        if (hasProvider !== hasModel) out.push({ key: f.key, message: `${t(f.labelKey)}：${t('settingsErrPair')}` })
+      }
+    }
+    return out
+  }
+
+  /** 服务端机读错误码 → 人话（**绝不把 `update-failed` 这种串甩给用户**）。 */
+  const errTextOf = (code: string): string => {
+    if (code === 'update-failed') return t('settingsErrUpdateFailed')
+    if (code === 'empty-patch') return t('settingsErrEmpty')
+    const range = /^too-(small|large)-(.+)$/.exec(code)
+    if (range !== null) {
+      const f = FIELDS.find(item => item.key === range[2])
+      if (f !== undefined) return tt('settingsErrRangeField', { name: t(f.labelKey), min: String(f.min ?? 0), max: String(f.max ?? 0) })
+    }
+    const invalid = /^invalid-(.+)$/.exec(code)
+    if (invalid !== null) {
+      const f = FIELDS.find(item => item.key === invalid[1])
+      if (f !== undefined) return tt('settingsErrInvalidField', { name: t(f.labelKey) })
+    }
+    return code
+  }
+
   const save = async (): Promise<void> => {
     if (form === null) return
-    setSaving(true); setError(null)
+    // ① 先本地查一遍：有问题 ⇒ 描红 + 一次性 Toast 列全部问题，不发请求。
+    const problems = validate()
+    if (problems.length > 0) {
+      setShowErrors(true)
+      toastSeq.current += 1
+      setToast({ text: problems.map(p => p.message).join('\n'), tone: 'error', seq: toastSeq.current })
+      return
+    }
+    setShowErrors(false)
+    // ② 真保存：失败 ⇒ 机读码翻人话后弹同一个 Toast。
+    setSaving(true)
     try {
       const payload = await postConfig(form)
       setForm(payload.config); setDefaults(payload.defaults); setBaseline(payload.config)
       setDraft({})
-      setSaved(true)
+      toastSeq.current += 1
+      setToast({ text: t('settingsSaveSuccess'), tone: 'success', seq: toastSeq.current })
     } catch (e) {
-      setError((e as Error).message || t('saveFailed'))
+      const code = (e as Error).message || ''
+      toastSeq.current += 1
+      setToast({ text: errTextOf(code), tone: 'error', seq: toastSeq.current })
     } finally {
       setSaving(false)
     }
@@ -171,32 +232,24 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
     return [...head, ...models.filter(m => m.provider === provider)]
   }
 
-  /** 每项标题行：标题 + 「?」 + 「自定义」徽章 + 「恢复默认」。 */
-  const renderHead = (f: FieldDef): ReturnType<typeof h> => {
-    const custom = isCustom(f)
-    return h('div', { style: headStyle },
-      h('label', { style: labelStyle }, t(f.labelKey)),
-      f.helpKey === undefined ? null : h(HelpButton, { hint: t(f.helpKey), maxWidth: 320 }),
-      h('span', { style: badgesStyle },
-        custom ? h('span', { style: customStyle }, t('settingsCustom')) : null,
-        h('button', {
-          type: 'button', style: { ...resetStyle, ...(custom ? {} : { color: 'var(--tdt-fg-dim)', cursor: 'default' }) },
-          disabled: !custom, onClick: () => { resetField(f) },
-        }, t('settingsResetDefault')),
-      ),
-    )
-  }
-
   const renderField = (f: FieldDef): ReturnType<typeof h> => {
     const serverVal = form![f.key]
+    const invalid = showErrors && validate().some(p => p.key === f.key)
+    const custom = isCustom(f)
     let control: ReturnType<typeof h>
     if (f.kind === 'number') {
       const displayVal = f.toDisplay !== undefined ? f.toDisplay(serverVal as number) : serverVal as number
       control = h(Input, {
         value: draft[f.key] ?? String(displayVal),
         // ⚠️ **不用原生 `type="number"`**（基础层守卫：原生数字框会带出各浏览器样式不一的 spinner）。
+        // 数字框**只吃数字**：非数字字符在 onChange 里直接滤掉 ⇒ 用户根本输不进 "AA"。
         style: { width: '100%' },
-        onChange: (v: string) => { setDraft(prev => ({ ...prev, [f.key]: v })); commitNumber(f, v) },
+        error: invalid,
+        onChange: (v: string) => {
+          const digits = v.replace(/[^0-9]/g, '')
+          setDraft(prev => ({ ...prev, [f.key]: digits }))
+          commitNumber(f, digits)
+        },
         onBlur: () => { setDraft(prev => { const next = { ...prev }; delete next[f.key]; return next }) },
         'aria-label': t(f.labelKey),
       })
@@ -205,6 +258,7 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
       control = h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--tdt-space-2)' } },
         h(SelectField, {
           value: String(form!.defaultProvider), options: providerOptions(), block: true, size: 'md',
+          error: invalid,
           onChange: (v: string) => {
             update(f, '')
             setForm(prev => prev === null ? prev : { ...prev, defaultProvider: v })
@@ -213,14 +267,24 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
         }),
         h(SelectField, {
           value: String(serverVal), options: opts, block: true, size: 'md',
-          disabled: opts.length <= 1,
+          disabled: opts.length <= 1, error: invalid,
           onChange: (v: string) => { update(f, v) },
           placeholder: t('editorFollowHost'), emptyLabel: t('editorNoOptions'), ariaLabel: t('settingsModel'),
         }),
       )
     }
     return h('div', { key: f.key, style: { minWidth: 0 } },
-      renderHead(f),
+      h('div', { style: headStyle },
+        h('label', { style: labelStyle }, t(f.labelKey)),
+        f.helpKey === undefined ? null : h(HelpButton, { hint: t(f.helpKey), maxWidth: 320 }),
+        // 「自定义」徽章 +「恢复默认」：**没改过就整个不出现**（用户 2026-10-08）。
+        custom
+          ? h('span', { style: badgesStyle },
+              h('span', { style: customStyle }, t('settingsCustom')),
+              h('button', { type: 'button', style: resetStyle, onClick: () => { resetField(f) } }, t('settingsResetDefault')),
+            )
+          : null,
+      ),
       control,
       f.hintKey === undefined
         ? null
@@ -235,12 +299,14 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
   return h('div', null,
     h(SectionHead, { icon: h(IconCordisPluginOutlineRegular, { size: 16 }), title: t('settingsConfigTitle') }),
     h('div', { style: gridStyle }, ...FIELDS.map(renderField)),
-    h('div', { style: { marginTop: 'var(--tdt-space-4)', display: 'flex', gap: 'var(--tdt-space-2)', alignItems: 'center', flexWrap: 'wrap' } },
+    h('div', { style: { marginTop: 'var(--tdt-space-4)', display: 'flex', gap: 'var(--tdt-space-2)', alignItems: 'center', flexWrap: 'wrap', position: 'relative' } },
       // 没有任何改动 ⇒ 保存灰着（照参考插件：没改就没什么可存的）。
       h(Button, { variant: 'primary', size: 'lg', onClick: () => void save(), disabled: saving || !dirty }, saving ? t('saving') : t('save')),
       dirty ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-warning)' } }, t('settingsUnsaved')) : null,
-      saved && !dirty ? h('span', { style: { color: 'var(--tdt-success)', fontSize: 'var(--tdt-font-sm)' } }, t('settingsSaveSuccess')) : null,
-      error !== null ? h('span', { style: { color: 'var(--tdt-danger)', fontSize: 'var(--tdt-font-sm)' } }, error) : null,
+      // 提示**全部**收编统一 Toast（与「新增 / 修改任务」同款）：校验问题 / 保存失败 = 红，保存成功 = 绿。
+      toast === null
+        ? null
+        : h(FloatingToast, { seq: toast.seq, tone: toast.tone, onDone: () => { setToast(null) }, text: toast.text }),
     ),
   )
 }

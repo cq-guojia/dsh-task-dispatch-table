@@ -908,6 +908,12 @@ window.__ModuleLoader__.load({
 			settingsModelHelp: "先选供应商、再选具体模型，两个都要选。留空（默认模型）= 跟随宿主的默认模型。新建任务时会自动带出这里的选择，单个任务仍可单独改。",
 			settingsCustom: "自定义",
 			settingsResetDefault: "恢复默认",
+			settingsErrRange: "请填 {min} 到 {max} 之间的整数。",
+			settingsErrPair: "供应商和模型要一起选：选了其中一个，另一个也得选。",
+			settingsErrUpdateFailed: "配置没能写进去（宿主的配置面还没就绪），请稍后重试。",
+			settingsErrInvalidField: "「{name}」这个值不合法，请检查后重试。",
+			settingsErrRangeField: "「{name}」超出允许范围（{min}–{max}）。",
+			settingsErrEmpty: "没有要保存的改动。",
 			settingsAutoRefresh: "自动刷新（5 秒）",
 			settingsRefresh: "刷新",
 			settingsLogEmpty: "（暂无日志）",
@@ -1562,6 +1568,12 @@ window.__ModuleLoader__.load({
 			settingsModelHelp: "Pick the provider first, then the concrete model — both are required. Leaving it empty (default model) means following the host default. New tasks inherit this choice, and each task can still override it.",
 			settingsCustom: "Custom",
 			settingsResetDefault: "Restore default",
+			settingsErrRange: "Enter a whole number between {min} and {max}.",
+			settingsErrPair: "Provider and model go together: if you pick one, you must pick the other.",
+			settingsErrUpdateFailed: "The settings could not be written (the host config surface is not ready yet). Please retry later.",
+			settingsErrInvalidField: "The value for \"{name}\" is not valid — please check and retry.",
+			settingsErrRangeField: "\"{name}\" is out of the allowed range ({min}–{max}).",
+			settingsErrEmpty: "There is nothing to save.",
 			settingsAutoRefresh: "Auto Refresh (5s)",
 			settingsRefresh: "Refresh",
 			settingsLogEmpty: "(no logs yet)",
@@ -70654,19 +70666,17 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/**
 		* 设置页第 1 块 · 插件设置（配置编辑主入口）。
 		*
-		* 状态机**照抄 `dsh-session-title-pattern` 插件**（用户 2026-10-08「全抄，按它来」）：
-		*  - 每项**改过**（值 ≠ 系统默认值）⇒ 标题右侧挂 **「自定义」** 徽章，并放开 **「恢复默认」** 按钮；
-		*  - 没改过 ⇒ 没有徽章、「恢复默认」灰着不可点；
-		*  - **没有任何改动时「保存」是灰的**（`disabled` = 没有脏字段）。
+		* **交互全抄「新增 / 修改任务」那一套**（用户 2026-10-08）：
+		*  - **校验**：点保存才判定，**一次把所有问题都查出来**——出问题的框描红（持续态，改好才退），
+		*    同时弹**一次** `FloatingToast` 把所有问题一行一条列出来（一次性，与描红解耦）；
+		*  - **提示一律走统一 Toast**，不在表单里挂错误文字；服务端机读错误码（如 `update-failed`）
+		*    翻成人话再弹，**不把 `update failed` 这种机读串甩给用户**；
+		*  - **数字框只吃数字**：非数字字符直接过滤掉，输不进去（不让用户先输个 "AA" 再来报错）。
 		*
-		* 其余口径（用户 2026-10-08）：
-		* - 没有「配置预览」只读栏（已删）、没有「高级」折叠（全部直接铺开）；
-		* - **默认模型供应商 + 默认模型是一行连栏**（先挑哪家、再挑哪个模型，两者一起算一项）；
-		* - 秒 / 天这类数字**直接填**（不用步进器），单位只写在标题里，不再缀在输入框后面；
-		* - 每项下面一句**短说明**（默认宽度一行写得下），详细解释收进标题右边的 **「?」** 悬停提示。
+		* 状态机照抄 `dsh-session-title-pattern` 插件（用户 2026-10-08）：
+		*  - 每项**改过** ⇒ 标题右侧挂 **「自定义」** 徽章 + **「恢复默认」**（**没改过就整个不显示**）。
 		*
-		* ⚠️ **目录类配置不在此暴露编辑**：`statePath` / `tasksDir` 是「插件装到哪儿」的问题，不该让用户填路径。
-		* ⚠️ **执行历史保留已整条删除**：执行历史永久保留、不允许清除。
+		* ⚠️ **目录类配置不在此暴露编辑**（`statePath` / `tasksDir`）；**执行历史保留已整条删除**。
 		* ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）。
 		*/
 		const SEC = 1e3;
@@ -70747,7 +70757,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 			gap: "var(--tdt-space-4)"
 		};
-		/** 每项标题行：标题 + 「?」 + 右侧「自定义 / 恢复默认」（照参考插件 `stp-pairHead` 的排法）。 */
 		const headStyle = {
 			display: "flex",
 			alignItems: "center",
@@ -70786,12 +70795,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [defaults, setDefaults] = (0, react$1.useState)(null);
 			const [models, setModels] = (0, react$1.useState)([]);
 			const [saving, setSaving] = (0, react$1.useState)(false);
-			const [error, setError] = (0, react$1.useState)(null);
-			const [saved, setSaved] = (0, react$1.useState)(false);
-			/** 数字框的自由输入草稿（允许先清空 / 输一半，失焦再回弹），key = 字段名。 */
+			/** 数字框的自由输入草稿（允许先清空，失焦再回弹），key = 字段名。 */
 			const [draft, setDraft] = (0, react$1.useState)({});
+			const [showErrors, setShowErrors] = (0, react$1.useState)(false);
+			const [toast, setToast] = (0, react$1.useState)(null);
+			const toastSeq = (0, react$1.useRef)(0);
+			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			(0, react$1.useEffect)(() => {
 				ensureTaskEditorStyle();
+				ensureToastStyle();
 			}, []);
 			(0, react$1.useEffect)(() => {
 				let alive = true;
@@ -70800,8 +70812,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setForm(p.config);
 					setDefaults(p.defaults);
 					setBaseline(p.config);
-				}).catch((e) => {
-					if (alive) setError(e.message || t("settingsLoadFailed"));
+				}).catch(() => {
+					if (alive) {
+						toastSeq.current += 1;
+						setToast({
+							text: t("settingsLoadFailed"),
+							tone: "error",
+							seq: toastSeq.current
+						});
+					}
 				});
 				return () => {
 					alive = false;
@@ -70823,7 +70842,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, [t]);
 			/** 显示值（秒 / 天 / 字符串）→ 存服务端值。 */
 			const update = (f, value) => {
-				setSaved(false);
 				const server = f.kind === "number" && f.fromDisplay !== void 0 ? f.fromDisplay(value) : value;
 				setForm((prev) => prev === null ? prev : {
 					...prev,
@@ -70841,7 +70859,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/** 「恢复默认」：把该字段（连栏项则两个一起）退回系统默认值。 */
 			const resetField = (f) => {
 				if (form === null || defaults === null) return;
-				setSaved(false);
 				setDraft((prev) => {
 					const next = { ...prev };
 					delete next[f.key];
@@ -70856,19 +70873,83 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					[f.key]: defaults[f.key]
 				});
 			};
+			/**
+			* 一次把**所有**问题查出来（用户 2026-10-08）：数字看范围、连栏看「两个要一起选」。
+			* 渲染时按 `key` 描红；`message` 已翻译，直接进 Toast。
+			*/
+			const validate = () => {
+				if (form === null) return [];
+				const out = [];
+				for (const f of FIELDS) if (f.kind === "number") {
+					const shown = f.toDisplay !== void 0 ? f.toDisplay(form[f.key]) : form[f.key];
+					if (!Number.isFinite(shown) || !Number.isInteger(shown) || shown < (f.min ?? 0) || shown > (f.max ?? Infinity)) out.push({
+						key: f.key,
+						message: `${t(f.labelKey)}：${tt("settingsErrRange", {
+							min: String(f.min ?? 0),
+							max: String(f.max ?? 0)
+						})}`
+					});
+				} else if (form.defaultProvider !== "" !== (form.defaultModel !== "")) out.push({
+					key: f.key,
+					message: `${t(f.labelKey)}：${t("settingsErrPair")}`
+				});
+				return out;
+			};
+			/** 服务端机读错误码 → 人话（**绝不把 `update-failed` 这种串甩给用户**）。 */
+			const errTextOf = (code) => {
+				if (code === "update-failed") return t("settingsErrUpdateFailed");
+				if (code === "empty-patch") return t("settingsErrEmpty");
+				const range = /^too-(small|large)-(.+)$/.exec(code);
+				if (range !== null) {
+					const f = FIELDS.find((item) => item.key === range[2]);
+					if (f !== void 0) return tt("settingsErrRangeField", {
+						name: t(f.labelKey),
+						min: String(f.min ?? 0),
+						max: String(f.max ?? 0)
+					});
+				}
+				const invalid = /^invalid-(.+)$/.exec(code);
+				if (invalid !== null) {
+					const f = FIELDS.find((item) => item.key === invalid[1]);
+					if (f !== void 0) return tt("settingsErrInvalidField", { name: t(f.labelKey) });
+				}
+				return code;
+			};
 			const save = async () => {
 				if (form === null) return;
+				const problems = validate();
+				if (problems.length > 0) {
+					setShowErrors(true);
+					toastSeq.current += 1;
+					setToast({
+						text: problems.map((p) => p.message).join("\n"),
+						tone: "error",
+						seq: toastSeq.current
+					});
+					return;
+				}
+				setShowErrors(false);
 				setSaving(true);
-				setError(null);
 				try {
 					const payload = await postConfig(form);
 					setForm(payload.config);
 					setDefaults(payload.defaults);
 					setBaseline(payload.config);
 					setDraft({});
-					setSaved(true);
+					toastSeq.current += 1;
+					setToast({
+						text: t("settingsSaveSuccess"),
+						tone: "success",
+						seq: toastSeq.current
+					});
 				} catch (e) {
-					setError(e.message || t("saveFailed"));
+					const code = e.message || "";
+					toastSeq.current += 1;
+					setToast({
+						text: errTextOf(code),
+						tone: "error",
+						seq: toastSeq.current
+					});
 				} finally {
 					setSaving(false);
 				}
@@ -70907,41 +70988,24 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (provider === "") return head;
 				return [...head, ...models.filter((m) => m.provider === provider)];
 			};
-			/** 每项标题行：标题 + 「?」 + 「自定义」徽章 + 「恢复默认」。 */
-			const renderHead = (f) => {
-				const custom = isCustom(f);
-				return (0, react$1.createElement)("div", { style: headStyle }, (0, react$1.createElement)("label", { style: labelStyle }, t(f.labelKey)), f.helpKey === void 0 ? null : (0, react$1.createElement)(HelpButton, {
-					hint: t(f.helpKey),
-					maxWidth: 320
-				}), (0, react$1.createElement)("span", { style: badgesStyle }, custom ? (0, react$1.createElement)("span", { style: customStyle }, t("settingsCustom")) : null, (0, react$1.createElement)("button", {
-					type: "button",
-					style: {
-						...resetStyle,
-						...custom ? {} : {
-							color: "var(--tdt-fg-dim)",
-							cursor: "default"
-						}
-					},
-					disabled: !custom,
-					onClick: () => {
-						resetField(f);
-					}
-				}, t("settingsResetDefault"))));
-			};
 			const renderField = (f) => {
 				const serverVal = form[f.key];
+				const invalid = showErrors && validate().some((p) => p.key === f.key);
+				const custom = isCustom(f);
 				let control;
 				if (f.kind === "number") {
 					const displayVal = f.toDisplay !== void 0 ? f.toDisplay(serverVal) : serverVal;
 					control = (0, react$1.createElement)(Input$1, {
 						value: draft[f.key] ?? String(displayVal),
 						style: { width: "100%" },
+						error: invalid,
 						onChange: (v) => {
+							const digits = v.replace(/[^0-9]/g, "");
 							setDraft((prev) => ({
 								...prev,
-								[f.key]: v
+								[f.key]: digits
 							}));
-							commitNumber(f, v);
+							commitNumber(f, digits);
 						},
 						onBlur: () => {
 							setDraft((prev) => {
@@ -70963,6 +71027,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						options: providerOptions(),
 						block: true,
 						size: "md",
+						error: invalid,
 						onChange: (v) => {
 							update(f, "");
 							setForm((prev) => prev === null ? prev : {
@@ -70979,6 +71044,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						block: true,
 						size: "md",
 						disabled: opts.length <= 1,
+						error: invalid,
 						onChange: (v) => {
 							update(f, v);
 						},
@@ -70990,7 +71056,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				return (0, react$1.createElement)("div", {
 					key: f.key,
 					style: { minWidth: 0 }
-				}, renderHead(f), control, f.hintKey === void 0 ? null : (0, react$1.createElement)("div", { style: {
+				}, (0, react$1.createElement)("div", { style: headStyle }, (0, react$1.createElement)("label", { style: labelStyle }, t(f.labelKey)), f.helpKey === void 0 ? null : (0, react$1.createElement)(HelpButton, {
+					hint: t(f.helpKey),
+					maxWidth: 320
+				}), custom ? (0, react$1.createElement)("span", { style: badgesStyle }, (0, react$1.createElement)("span", { style: customStyle }, t("settingsCustom")), (0, react$1.createElement)("button", {
+					type: "button",
+					style: resetStyle,
+					onClick: () => {
+						resetField(f);
+					}
+				}, t("settingsResetDefault"))) : null), control, f.hintKey === void 0 ? null : (0, react$1.createElement)("div", { style: {
 					fontSize: "var(--tdt-font-sm)",
 					color: "var(--tdt-fg-3)",
 					marginTop: "var(--tdt-space-2)",
@@ -71009,7 +71084,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				display: "flex",
 				gap: "var(--tdt-space-2)",
 				alignItems: "center",
-				flexWrap: "wrap"
+				flexWrap: "wrap",
+				position: "relative"
 			} }, (0, react$1.createElement)(Button$2, {
 				variant: "primary",
 				size: "lg",
@@ -71018,13 +71094,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, saving ? t("saving") : t("save")), dirty ? (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-sm)",
 				color: "var(--tdt-warning)"
-			} }, t("settingsUnsaved")) : null, saved && !dirty ? (0, react$1.createElement)("span", { style: {
-				color: "var(--tdt-success)",
-				fontSize: "var(--tdt-font-sm)"
-			} }, t("settingsSaveSuccess")) : null, error !== null ? (0, react$1.createElement)("span", { style: {
-				color: "var(--tdt-danger)",
-				fontSize: "var(--tdt-font-sm)"
-			} }, error) : null));
+			} }, t("settingsUnsaved")) : null, toast === null ? null : (0, react$1.createElement)(FloatingToast, {
+				seq: toast.seq,
+				tone: toast.tone,
+				onDone: () => {
+					setToast(null);
+				},
+				text: toast.text
+			})));
 		}
 		//#endregion
 		//#region src/client/db-table.tsx
