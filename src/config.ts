@@ -37,10 +37,20 @@ export interface PluginConfig {
   attachmentTmpRetentionDays: number
 }
 
-export const ConfigDefaults: Omit<
-  PluginConfig,
-  'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'
-> = {
+/**
+ * **系统默认值**（全量，含字符串路径类）—— `Config` schema 与设置页「用户没设时显示什么」的唯一真源。
+ *
+ * 2026-10-08：此前只有 `ConfigDefaults`（7 个计时/保留期字段），字符串字段的默认值只写在 schema 里
+ * （`statePath:''` / `tasksDir:'tasks'` / 两个默认模型 `''`）⇒ 设置页要显示「系统默认值」时拿不到，
+ * 只能在前端另抄一份（必然分叉）。故合并成一份全量对象，schema 的 `.default()` 全部引用它。
+ */
+export const CONFIG_DEFAULTS: PluginConfig = {
+  statePath: '',
+  tasksDir: 'tasks',
+  tasksInline: '',
+  debugSnapshot: '',
+  defaultProvider: '',
+  defaultModel: '',
   tickMs: 60_000,
   dispatchGraceMs: 60_000,
   leaseMs: 30 * 60_000,
@@ -49,6 +59,7 @@ export const ConfigDefaults: Omit<
   historyRetentionDays: 0,
   attachmentTmpRetentionDays: 7,
 }
+
 
 // ⚠️ rc.1（0.1.7-rc.1）约束：宿主插件配置字段**不能标 .volatile()**。
 // 实测根因（set717/lib/index.js:417 + types/index.js:368-380）：configForms 的读写都要求字段
@@ -59,21 +70,21 @@ export const ConfigDefaults: Omit<
 // `ctx.set('taskDispatchTable', ...)`，客户端经 `ctx.get('remote').taskDispatchTable` 取
 // （参考插件即靠 `ctx.get('remote')` 调宿主服务，不走 configForms）。
 export const Config = z.object({
-  statePath: z.string().default(''),
-  tickMs: z.number().default(ConfigDefaults.tickMs),
-  dispatchGraceMs: z.number().default(ConfigDefaults.dispatchGraceMs),
-  leaseMs: z.number().default(ConfigDefaults.leaseMs),
-  unknownGraceMs: z.number().default(ConfigDefaults.unknownGraceMs),
-  tasksDir: z.string().default('tasks'),
-  tasksInline: z.string().role('textarea').default(''),
+  statePath: z.string().default(CONFIG_DEFAULTS.statePath),
+  tickMs: z.number().default(CONFIG_DEFAULTS.tickMs),
+  dispatchGraceMs: z.number().default(CONFIG_DEFAULTS.dispatchGraceMs),
+  leaseMs: z.number().default(CONFIG_DEFAULTS.leaseMs),
+  unknownGraceMs: z.number().default(CONFIG_DEFAULTS.unknownGraceMs),
+  tasksDir: z.string().default(CONFIG_DEFAULTS.tasksDir),
+  tasksInline: z.string().role('textarea').default(CONFIG_DEFAULTS.tasksInline),
   // 调试快照：运行时数据，不进 Config；宿主经 taskDispatchTable.getSnapshot() 暴露给客户端。
-  debugSnapshot: z.string().default(''),
+  debugSnapshot: z.string().default(CONFIG_DEFAULTS.debugSnapshot),
   // 决策 22 漏斗第②层：留空 = 未配，派发时漏到下一层。解析结果只用于本次派发，不回写本字段。
-  defaultProvider: z.string().default(''),
-  defaultModel: z.string().default(''),
-  logRetentionDays: z.number().min(1).default(30),
-  historyRetentionDays: z.number().min(0).default(0),
-  attachmentTmpRetentionDays: z.number().min(1).default(7),
+  defaultProvider: z.string().default(CONFIG_DEFAULTS.defaultProvider),
+  defaultModel: z.string().default(CONFIG_DEFAULTS.defaultModel),
+  logRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.logRetentionDays),
+  historyRetentionDays: z.number().min(0).default(CONFIG_DEFAULTS.historyRetentionDays),
+  attachmentTmpRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.attachmentTmpRetentionDays),
 })
 
 /**

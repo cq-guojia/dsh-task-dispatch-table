@@ -30,7 +30,14 @@ export interface PluginConfig {
     /** 上传临时区保留期（天）：到期文件由 tick 内清道夫删除（默认 7）。 */
     attachmentTmpRetentionDays: number;
 }
-export declare const ConfigDefaults: Omit<PluginConfig, 'statePath' | 'tasksDir' | 'tasksInline' | 'debugSnapshot' | 'defaultProvider' | 'defaultModel'>;
+/**
+ * **系统默认值**（全量，含字符串路径类）—— `Config` schema 与设置页「用户没设时显示什么」的唯一真源。
+ *
+ * 2026-10-08：此前只有 `ConfigDefaults`（7 个计时/保留期字段），字符串字段的默认值只写在 schema 里
+ * （`statePath:''` / `tasksDir:'tasks'` / 两个默认模型 `''`）⇒ 设置页要显示「系统默认值」时拿不到，
+ * 只能在前端另抄一份（必然分叉）。故合并成一份全量对象，schema 的 `.default()` 全部引用它。
+ */
+export declare const CONFIG_DEFAULTS: PluginConfig;
 export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     statePath: z<string, string, "defined">;
     tickMs: z<number, number, "defined">;

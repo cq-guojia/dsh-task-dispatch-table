@@ -3046,11 +3046,12 @@ console.log('\n[14] runtime-index')
     check('【放大】日历页的自动刷新走 silent（不闪 Loading）+ 有在途守卫（防同批并发整月请求）',
       S('client/task-calendar.tsx').includes('const load = useCallback((silent = false): void => {')
       && S('client/task-calendar.tsx').includes('const inFlightRef = useRef(false)'))
-    check('【放大】调试页转储的重取有防抖（原先每个运行态事件都重拉 1–3MB，是明确回退）',
-      S('client/index.ts').includes('dbLoadedForRef.current !== tab')
-      && S('client/index.ts').includes('first ? 0 : 800'))
-    check('【副作用】调试页刷新失败**保留**上一次转储（别让正在看的内容消失）',
-      S('client/index.ts').includes('dbDump !== null'))
+    check('【放大】设置页日志轮询受开关控制、关开关 / 卸载即停（旧调试页已删，防抖守卫随落点迁移）',
+      S('client/settings-log-block.tsx').includes('if (auto) timerRef.current = window.setInterval')
+      && S('client/settings-log-block.tsx').includes('window.clearInterval(timerRef.current)'))
+    check('【副作用】设置页刷新失败**保留**上一次结果（别让正在看的内容消失）',
+      S('client/settings-log-block.tsx').includes('setResult(await fetchTableQuery')
+      && !S('client/settings-log-block.tsx').includes('setResult(null)'))
     check('【副作用】查看档只有**换任务**才清空（事件刷新保留旧值，不闪空白）',
       S('client/task-view.tsx').includes('if (shownTaskRef.current !== taskId)'))
     check('【安全】SSE 连接数有上限（长连接无上限可被本机打满句柄）',
@@ -3065,9 +3066,8 @@ console.log('\n[14] runtime-index')
       && idxSrc20.includes("if (shape !== null) return writeJson(res, 422, { ok: false, error: shape })"))
     check('【噪声】排序调试日志默认**关**（此前 true ⇒ 真机 console 持续刷、淹没真信号）',
       S('client/task-overview.ts').includes('const DEBUG_SORT = false'))
-    check('【可观测】推送通道自述（连接状态 / 最后收帧 / 重连次数）导出并上屏',
-      S('client/event-subscribe.ts').includes('export function describeEventChannel()')
-      && S('client/index.ts').includes('describeEventChannel()'))
+    check('【可观测】推送通道自述（连接状态 / 最后收帧 / 重连次数）导出保留（旧调试页上屏落点已随页删除）',
+      S('client/event-subscribe.ts').includes('export function describeEventChannel()'))
     check('【可观测】订阅回调抛错留痕（否则某页停更、console 一片空白）',
       S('client/event-subscribe.ts').includes('事件订阅回调抛异常'))
     check('【可观测】SSE 写出失败 / 超限拒绝都留痕（此前整条生命周期零日志）',
@@ -3080,8 +3080,8 @@ console.log('\n[14] runtime-index')
     check('【i18n】状态轨道悬停提示走 `t()`（原硬编码中文，英文界面会露中文）',
       S('client/task-list.tsx').includes("t('statusRailOff')")
       && locSrc.includes('statusRailOff:') && locSrc.includes("statusRailOff: 'Disabled'"))
-    check('【i18n】调试页表格「N 行」的量词走 `t()`',
-      S('client/index.ts').includes("${dump.count} ${t('debugRowsSuffix')}"))
+    check('【i18n】查询结果表格「N 行」的量词走 `t()`（设置页日志 / 表查询共用渲染器）',
+      S('client/db-table.tsx').includes("${table.count} ${t('debugRowsSuffix')}"))
     check('【i18n】编辑器校验文案走 `t()`（validateTaskDraft 带 t 席位）',
       S('client/task-editor.tsx').includes('validateTaskDraft(draft: TaskEditorDraft, t: Translate)')
       && S('client/task-editor.tsx').includes("t('vTitleRequired')"))
@@ -3123,9 +3123,10 @@ console.log('\n[14] runtime-index')
       && S('index.ts').includes("pushNotice('stream_write_failed'"))
     check('【保留】plugin_log 与 task_log 同策略清理（logRetentionDays，默认 30 天）',
       S('scheduler.ts').includes('store.purgePluginLog(cfg.logRetentionDays ?? 30)'))
-    check('【可查】plugin_log 已进调试页转储白名单',
+    check('【可查】plugin_log 已进设置页查询白名单（后端 DUMP_TABLES + defaultOrder + 前端 SETTINGS_TABLES 三处齐）',
       S('store.ts').includes("'plugin_log', 'meta'")
-      && S('store.ts').includes("name === 'plugin_log' ? 'ts DESC, seq DESC'"))
+      && S('store.ts').includes("case 'plugin_log': return 'ts DESC, seq DESC'")
+      && S('client/settings-data.ts').includes("'task_audit', 'plugin_log', 'meta'"))
     check('【CSS】固定中性面的 6 个 token 已补明文回退（旧内核不再变透明）',
       ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
         'rgba(255,255,255,.05)', 'rgba(255,255,255,.08)', 'rgba(255,255,255,.16)']
@@ -3156,10 +3157,11 @@ console.log('\n[14] runtime-index')
     const distIdx = readFileSync(join(process.cwd(), 'dist', 'index.js'), 'utf8')
     const distCli = readFileSync(join(process.cwd(), 'dist', 'client.js'), 'utf8')
 
-    check('【产物一致性】dist 里含事件推送的关键实现（改完源码忘了 build ⇒ 这条必红）',
+    check('【产物一致性】dist 里含事件推送与设置页的关键实现（改完源码忘了 build ⇒ 这条必红）',
       distIdx.includes('text/event-stream') && distIdx.includes('activeStreams')
       && distIdx.includes('closeAllEventStreams') && distCli.includes('new EventSource')
-      && distCli.includes('sys.ping') && distCli.includes('setDbNonce'))
+      && distIdx.includes('db-query') && distCli.includes('db-query')
+      && distCli.includes('SectionHead'))
     check('【单例】客户端只有**一处** new EventSource（页面不许自建连接 / 自写退避）',
       (distCli.match(/new EventSource\(/g) ?? []).length === 1)
     check('【心跳契约】3 × SSE_HEARTBEAT_MS < SILENT_AFTER_MS（跨文件数值契约；改一处就会误判「半死」）',
@@ -3195,10 +3197,34 @@ console.log('\n[14] runtime-index')
         return names.length >= 6
           && names.filter(n => n !== 'FORCE_REFRESH').every(n => backend.includes(`EventType.${n}`))
       })())
-    check('【页面覆盖】展开面板 / 调试页 / 设置页表单三处新缺口都已被事件驱动',
+    check('【页面覆盖】展开面板行级 / 设置页配置表单都已被事件驱动（旧调试页已删，其订阅随页移除）',
       S('client/task-list.tsx').includes('if (event.payload?.taskId !== row.id) return')
-      && S('client/index.ts').includes('setDbNonce(n => n + 1)')
+      && S('client/index.ts').includes('useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { scope.refresh?.() })')
       && S('client/config-panel.tsx').includes('if (pendingEdits) return'))
+
+    // ── 25. 设置页重构守卫（2026-10-08：默认值单源 / 不重复存储 / 表单换算 / 可诊断）──
+    console.log('\n[25] 设置页重构守卫（默认值单源 / 不重复存储 / 可诊断错误）')
+    check('【默认值单源】CONFIG_DEFAULTS 是全量默认值，schema 的 .default() 全部引用它（不再有第二份字面量）',
+      S('config.ts').includes('export const CONFIG_DEFAULTS: PluginConfig')
+      && S('config.ts').includes('.default(CONFIG_DEFAULTS.logRetentionDays)')
+      && !/\.default\(30\)/.test(S('config.ts')))
+    check('【不重复存储】POST /config 把等于系统默认值的字段从用户层删掉（dropUserLayerConfig 走 configEditor.edit）',
+      S('index.ts').includes('if (same) drop.push(key)')
+      && S('index.ts').includes('dropUserLayerConfig(drop)')
+      && S('index.ts').includes('configEditor.edit(entry, (raw: Record<string, unknown>) => {'))
+    check('【响应投影】/config 的 defaults 只投影可编辑白名单（不把 tasksInline / debugSnapshot 吐给浏览器）',
+      S('index.ts').includes('export function configView(')
+      && S('index.ts').includes('defaults: pick(CONFIG_DEFAULTS'))
+    check('【表单换算】设置页表单存服务端值、显示时才换算（存显示单位再 toDisplay 会二次换算）',
+      S('client/settings-config-block.tsx').includes('f.fromDisplay(value as number)')
+      && S('client/settings-config-block.tsx').includes('f.toDisplay(serverVal as number)'))
+    check('【数字框】删空回弹原值（Number(\'\')===0 会被 clamp 成 min，看起来就是「Delete 不管用」）',
+      S('client/ui/Field.tsx').includes("raw.trim() === ''"))
+    check('【可诊断】非 JSON 响应把状态码 + 片段带出去（不再只有 Unexpected token）',
+      S('client/settings-data.ts').includes('返回的不是 JSON'))
+    check('【宽度单源】设置页用主内容列唯一真源（PANEL_CONTENT_ID / PANEL_CONTENT_STYLE）',
+      S('client/settings-page.tsx').includes('PANEL_CONTENT_STYLE')
+      && S('client/settings-page.tsx').includes('PANEL_CONTENT_ID'))
   }
 
   store.close()

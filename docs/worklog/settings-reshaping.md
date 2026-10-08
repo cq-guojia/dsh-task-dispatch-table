@@ -199,4 +199,37 @@
 
 ---
 
+## 十、第二轮：真机反馈重构（2026-10-08 用户逐条反馈，已落码）
+
+> 首轮 `b096443` 真机看完后用户给了整页级的反馈，本轮全部落码；冒烟 **728/0**（`[25]` 新增 7 条守卫 + 旧调试页 7 条断言迁移）。
+
+### 10.1 布局与风格（用户拍板）
+- **去三个卡片黑框**：每块 = 「icon + 标题（右侧可放控件）」+ 内容（`ui/SectionHead.tsx` 新建，三块共用，登记进 `ui/index.ts` barrel）。
+- **宽度单源**：设置页容器改用 `PANEL_CONTENT_ID` + `PANEL_CONTENT_STYLE`（1120/760，任务配置 / 执行记录同款）——原 920 自定宽被用户点名「宽度要跟着任务配置执行记录这段」。
+- **Block 1 两栏**：左 = 插件设置表单（字段 `repeat(auto-fill, minmax(200px,1fr))` 栅格，一行 2~4 个），右 = 「配置预览」只读（`minmax(240px,1fr)` ≈ 1/3）。原「当前生效配置」不再垫底。
+- **Block 2**：标题居左，自动刷新 + 刷新钮居右；日志区 `max-height: 360px` 内部滚动。
+- **Block 3**：标题居左，六表 Segmented 居右。
+- 文案：`产品配置 → 插件设置`、`当前生效配置（只读） → 配置预览（只读）`（中英）。
+
+### 10.2 默认值语义（用户拍板「一层一层往下挖」）
+- **显示默认值**：`GET /config` 返回 `{ config, defaults }`；`config` 本就是生效值（用户没设 = 系统默认），`defaults` 供预览面板标注「（默认）」。`src/config.ts` 新增**全量** `CONFIG_DEFAULTS`（补齐 `statePath`/`tasksDir`/`defaultProvider`/`defaultModel`），schema `.default()` 全部引用它 —— 默认值从此单源。
+- **避免重复存储**：`updateScopeConfig` 重写 —— 值**等于系统默认**的字段不写用户层，并新增 `dropUserLayerConfig`（走 `configEditor.edit` 删用户层键）。改回默认值 = 撤销这条用户设置。
+  - 通道选型（读宿主源码定案）：`settings.mutate` 会校验 `isVolatilePath` ⇒ 本仓配置不能标 volatile ⇒ **必炸**；`scope.update` 是 merge 语义删不了键 ⇒ 只有 `configEditor.edit` 能删（与 `persistTasksInline` 同款已验证通道）。
+  - `defaults` 响应**只投影可编辑白名单**（`configView()`），不把 `tasksInline` / `debugSnapshot` 吐给浏览器。
+
+### 10.3 Bug 修复
+- **表单单位换算**：表单状态原先存显示单位（秒）、渲染又 `toDisplay` 一次 ⇒ 改时间字段显示成 0.12 秒。改为**状态恒存服务端值**（毫秒），写入时 `fromDisplay`、显示时 `toDisplay`。
+- **NumberInput 删空被 clamp**：`Number('') === 0` ⇒ 按 Delete 删空失焦后值变 min（用户报「按 Delete 不管用」）。`ui/Field.tsx` 的 `commit` 空串按无效输入回弹原值。
+- **错误可诊断**：`settings-data.ts` 的 `getJson` 先读 text 再解析；非 JSON 响应抛 `HTTP <码> · 返回的不是 JSON：<前 120 字符>` —— 真机 `Unexpected token 'o', "not found"` 之谜的兜底（该响应体来自 SPA 兜底 / 网关层，说明 `/db-query` 未被路由命中；新文案一次定位）。
+
+### 10.4 冒烟断言迁移与新增
+- **迁移 7 条**：旧调试页删除（b096443）时守卫断言没跟着迁，基线一直 714/7。逐条迁到新落点：日志轮询开关守卫、失败保留上次结果、`describeEventChannel` 导出（上屏落点随页删除，收窄为导出守卫）、量词 `t()` 指向 `db-table.tsx`、plugin_log 白名单三处齐（DUMP_TABLES + defaultOrder switch + SETTINGS_TABLES）、产物一致性改锚 `db-query`/`SectionHead`、页面覆盖的设置页订阅改指 `index.ts` 的 `scope.refresh`。
+- **新增 `[25]` 7 条**：默认值单源 / 不重复存储 / 响应投影 / 表单换算 / 数字框删空回弹 / 可诊断错误 / 宽度单源。
+
+### 10.5 未决
+- ⏳ `/db-query` 404 根因待真机确认（服务端需重装/重启加载新 dist；若仍复现，新错误文案直接给状态码与响应片段）。
+- ⏳ 真机验收清单 = §九 的三项 + 本轮布局（两栏 / 限高滚动 / 表切换居右）与默认值标注。
+
+---
+
 > 🧠 **From Hindsight memory** — 本次未调用（按用户要求只写本地文档，未入长期记录）；事实均取自本仓库源码（`src/store.ts`/`src/index.ts`/`src/client/*`）与 `docs/design/data-model.md`，已在正文标出处。

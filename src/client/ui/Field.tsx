@@ -145,6 +145,9 @@ export function NumberInput(props: NumberInputProps): ReturnType<typeof h> {
   useEffect(() => { setText(String(value)) }, [value])
   const clamp = (n: number): number => Math.min(max, Math.max(min, n))
   const commit = (raw: string): void => {
+    // ⚠️ 空串按「输入无效」回弹，**不能**当成 0（2026-10-08 真机 bug：`Number('') === 0` ⇒
+    // 用户按 Delete 把数字删空后失焦，值被 clamp 成 min，看起来就是「按 Delete 不管用」）。
+    if (raw.trim() === '') { setText(String(value)); return }
     const n = Number(raw)
     if (!Number.isFinite(n)) { setText(String(value)); return }
     const next = clamp(n)

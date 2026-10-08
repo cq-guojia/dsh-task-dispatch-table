@@ -1,14 +1,21 @@
 /**
- * 设置页 Block 1 · 配置（配置编辑主入口）。
+ * 设置页第 1 块 · 插件设置（配置编辑主入口）。
  *
- * - 进入即拉取当前全部可编辑配置回填表单（GET /config）。
- * - 保存走 POST /config（服务端白名单校验后 `scope.update` 落盘，运行态即时生效）。
- * - 下方附「当前生效配置」只读面板，便于核对保存结果。
- * 宿主插件详情页里的 `config-panel` 暂保留作兜底（用户 2026-10-08：先不管），此组件是配置编辑主场。
+ * 布局（用户 2026-10-08 定死）：**两栏** —— 左边插件设置表单，右边「配置预览」只读面板（约占 1/3）。
+ * 表单区一行放 2~3 个字段（主内容列 1120 宽，一个字段占满整行太浪费）。
+ *
+ * 取值与写回：
+ * - 进入拉 `GET /config`（返回**生效值** + **系统默认值**）⇒ 用户没设的字段直接显示系统默认值；
+ * - 保存走 `POST /config`，提交全量白名单字段；**与系统默认值相同的字段服务端不落用户层**
+ *   （改回默认值 = 撤销这条用户设置，用户层保持干净）。
+ *
+ * ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）—— 早前把「显示单位（秒）」
+ * 存进状态、显示时又换算一次，改一次时间字段就会被二次换算成 0.12 秒（2026-10-08 修）。
  */
 import { createElement as h, useEffect, useState, type CSSProperties } from 'react'
-import { Button, NumberInput, Input } from './ui'
+import { Button, NumberInput, Input, SectionHead } from './ui'
 import { fetchConfig, postConfig, type SettingsConfigValue } from './settings-data'
+import { IconCordisPluginOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { LocaleKey, Translate } from './locales'
 
 interface FieldDef {
@@ -18,7 +25,9 @@ interface FieldDef {
   group: 'basic' | 'advanced'
   kind: 'number' | 'string'
   unit?: string
+  /** 服务端值 → 显示值（毫秒 → 秒）。 */
   toDisplay?: (server: number) => number
+  /** 显示值 → 服务端值（秒 → 毫秒）；表单写入时用。 */
   fromDisplay?: (display: number) => number
   min?: number
   max?: number
@@ -28,11 +37,11 @@ interface FieldDef {
 const SEC = 1000
 const FIELDS: FieldDef[] = [
   { key: 'tickMs', labelKey: 'settingsLoopSec', hintKey: 'settingsLoopHint', group: 'basic', kind: 'number', unit: '秒', toDisplay: v => Math.round(v / SEC), fromDisplay: v => v * SEC, min: 1, max: 7 * 24 * 3600, step: 1 },
-  { key: 'defaultProvider', labelKey: 'settingsProvider', group: 'basic', kind: 'string' },
-  { key: 'defaultModel', labelKey: 'settingsModel', group: 'basic', kind: 'string' },
   { key: 'logRetentionDays', labelKey: 'settingsLogRetention', group: 'basic', kind: 'number', unit: '天', min: 1, max: 3650, step: 1 },
   { key: 'historyRetentionDays', labelKey: 'settingsHistoryRetention', group: 'basic', kind: 'number', unit: '天', min: 0, max: 3650, step: 1 },
   { key: 'attachmentTmpRetentionDays', labelKey: 'settingsAttachmentRetention', group: 'basic', kind: 'number', unit: '天', min: 1, max: 3650, step: 1 },
+  { key: 'defaultProvider', labelKey: 'settingsProvider', group: 'basic', kind: 'string' },
+  { key: 'defaultModel', labelKey: 'settingsModel', group: 'basic', kind: 'string' },
   { key: 'dispatchGraceMs', labelKey: 'settingsWaitSec', hintKey: 'settingsWaitHint', group: 'advanced', kind: 'number', unit: '秒', toDisplay: v => Math.round(v / SEC), fromDisplay: v => v * SEC, min: 1, max: 7 * 24 * 3600, step: 1 },
   { key: 'leaseMs', labelKey: 'settingsLeaseSec', hintKey: 'settingsLeaseHint', group: 'advanced', kind: 'number', unit: '秒', toDisplay: v => Math.round(v / SEC), fromDisplay: v => v * SEC, min: 1, max: 7 * 24 * 3600, step: 1 },
   { key: 'unknownGraceMs', labelKey: 'settingsUnknownSec', hintKey: 'settingsUnknownHint', group: 'advanced', kind: 'number', unit: '秒', toDisplay: v => Math.round(v / SEC), fromDisplay: v => v * SEC, min: 1, max: 7 * 24 * 3600, step: 1 },
@@ -41,13 +50,19 @@ const FIELDS: FieldDef[] = [
 ]
 
 const linkStyle: CSSProperties = {
-  background: 'none', border: 'none', color: 'var(--tdt-brand)', cursor: 'pointer',
+  background: 'none', border: 'none', color: 'var(--tdt-link)', cursor: 'pointer',
   padding: '0', fontSize: 'var(--tdt-font-sm)',
 }
 
+/** 字段栅格：一行放得下 2~4 个（主内容列左栏 ≈ 690px ÷ 200px 最小列）。 */
+const gridStyle: CSSProperties = {
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--tdt-space-3)',
+}
+
 export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof h> {
-  const [config, setConfig] = useState<SettingsConfigValue | null>(null)
+  // form 恒存**服务端值**（毫秒 / 天 / 字符串）。
   const [form, setForm] = useState<SettingsConfigValue | null>(null)
+  const [defaults, setDefaults] = useState<SettingsConfigValue | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -56,27 +71,24 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
   useEffect(() => {
     let alive = true
     fetchConfig()
-      .then(c => { if (alive) { setConfig(c); setForm(c) } })
-      .catch(() => { if (alive) setError(t('settingsLoadFailed')) })
+      .then(p => { if (alive) { setForm(p.config); setDefaults(p.defaults) } })
+      .catch((e: Error) => { if (alive) setError(e.message || t('settingsLoadFailed')) })
     return () => { alive = false }
   }, [t])
 
-  const update = (key: keyof SettingsConfigValue, value: string | number): void => {
+  /** 显示值（秒 / 天 / 字符串）→ 存服务端值。 */
+  const update = (f: FieldDef, value: string | number): void => {
     setSaved(false)
-    setForm(prev => (prev === null ? prev : { ...prev, [key]: value }))
+    const server = f.kind === 'number' && f.fromDisplay !== undefined ? f.fromDisplay(value as number) : value
+    setForm(prev => (prev === null ? prev : { ...prev, [f.key]: server as never }))
   }
 
   const save = async (): Promise<void> => {
     if (form === null) return
     setSaving(true); setError(null)
     try {
-      const patch: Record<string, string | number> = {}
-      for (const f of FIELDS) {
-        const raw = form[f.key]
-        patch[f.key] = f.kind === 'number' && f.fromDisplay !== undefined ? f.fromDisplay(raw as number) : raw
-      }
-      const saved = await postConfig(patch as Partial<SettingsConfigValue>)
-      setConfig(saved); setForm(saved)
+      const payload = await postConfig(form)
+      setForm(payload.config); setDefaults(payload.defaults)
       setSaved(true)
     } catch (e) {
       setError((e as Error).message || t('saveFailed'))
@@ -90,51 +102,66 @@ export function SettingsConfigBlock({ t }: { t: Translate }): ReturnType<typeof 
     const displayVal = f.kind === 'number'
       ? (f.toDisplay !== undefined ? f.toDisplay(serverVal as number) : serverVal as number)
       : serverVal as string
-    return h('div', { key: f.key, style: { marginBottom: '14px' } },
-      h('label', { style: { display: 'block', fontSize: 'var(--tdt-font-md)', fontWeight: 600, marginBottom: '4px' } }, t(f.labelKey)),
+    return h('div', { key: f.key, style: { minWidth: 0 } },
+      h('label', { style: { display: 'block', fontSize: 'var(--tdt-font-md)', fontWeight: 600, marginBottom: 'var(--tdt-space-1)' } }, t(f.labelKey)),
       f.hintKey !== undefined
-        ? h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-3)', marginBottom: '6px' } }, t(f.hintKey))
+        ? h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-3)', marginBottom: 'var(--tdt-space-1)' } }, t(f.hintKey))
         : null,
       f.kind === 'number'
         ? h(NumberInput, {
             value: displayVal as number, min: f.min, max: f.max, step: f.step ?? 1, suffix: f.unit,
-            label: t(f.labelKey), onChange: v => update(f.key, v),
+            label: t(f.labelKey), style: { width: '100%' }, onChange: v => update(f, v),
           })
-        : h(Input, { value: displayVal as string, onChange: v => update(f.key, v) }),
+        : h(Input, { value: displayVal as string, onChange: v => update(f, v), style: { width: '100%' } }),
     )
   }
 
-  if (config === null || form === null) {
+  if (form === null || defaults === null) {
     return h('div', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)' } }, t('loading'))
   }
 
   const basic = FIELDS.filter(f => f.group === 'basic')
   const advanced = FIELDS.filter(f => f.group === 'advanced')
 
+  /** 只读面板按**显示单位**给值（毫秒换算成秒），并标出该字段是否用的系统默认值。 */
+  const previewValue = (f: FieldDef): string => {
+    const v = form[f.key]
+    if (f.kind === 'string') return v === '' ? '—' : String(v)
+    const shown = f.toDisplay !== undefined ? f.toDisplay(v as number) : v as number
+    const isDefault = defaults[f.key] === v
+    return `${shown} ${f.unit ?? ''}`.trim() + (isDefault ? `（${t('settingsDefaultValue')}）` : '')
+  }
+
   return h('div', null,
-    h('h3', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 700, margin: '0 0 12px' } }, t('settingsConfigTitle')),
-    ...basic.map(renderField),
-    h('button', { type: 'button', style: linkStyle, onClick: () => setShowAdvanced(v => !v) },
-      `${t('editorAdvanced')}${showAdvanced ? ' ▲' : ' ▼'}`),
-    showAdvanced
-      ? h('div', null,
-          h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-3)', margin: '8px 0' } }, t('editorAdvancedHelp')),
-          ...advanced.map(renderField),
-        )
-      : null,
-    h('div', { style: { marginTop: '16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
-      h(Button, { variant: 'primary', onClick: () => void save(), disabled: saving }, saving ? t('saving') : t('save')),
-      saved ? h('span', { style: { color: 'var(--tdt-success, #2BA471)', fontSize: 'var(--tdt-font-sm)' } }, t('settingsSaveSuccess')) : null,
-      error !== null ? h('span', { style: { color: 'var(--tdt-error)', fontSize: 'var(--tdt-font-sm)' } }, error) : null,
-    ),
-    h('div', { style: { marginTop: '24px', paddingTop: '16px', borderTop: '0.5px solid var(--tdt-border-light)' } },
-      h('h4', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600, margin: '0 0 8px' } }, t('settingsCurrentConfig')),
-      h('dl', {
-        style: { margin: 0, display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 16px', fontSize: 'var(--tdt-font-sm)' },
-      }, ...FIELDS.map(f => [
-        h('dt', { key: `${f.key}-k`, style: { color: 'var(--tdt-fg-3)' } }, t(f.labelKey)),
-        h('dd', { key: `${f.key}-v`, style: { margin: 0 } }, String(config[f.key])),
-      ]).flat()),
+    h(SectionHead, { icon: h(IconCordisPluginOutlineRegular, { size: 16 }), title: t('settingsConfigTitle') }),
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(240px, 1fr)', gap: 'var(--tdt-space-4)', alignItems: 'start' } },
+      // ── 左：插件设置（可编辑表单）──
+      h('div', { style: { minWidth: 0 } },
+        h('div', { style: gridStyle }, ...basic.map(renderField)),
+        h('button', { type: 'button', style: { ...linkStyle, marginTop: 'var(--tdt-space-3)' }, onClick: () => setShowAdvanced(v => !v) },
+          `${t('editorAdvanced')}${showAdvanced ? ' ▲' : ' ▼'}`),
+        showAdvanced
+          ? h('div', null,
+              h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-3)', margin: 'var(--tdt-space-2) 0' } }, t('editorAdvancedHelp')),
+              h('div', { style: gridStyle }, ...advanced.map(renderField)),
+            )
+          : null,
+        h('div', { style: { marginTop: 'var(--tdt-space-3)', display: 'flex', gap: 'var(--tdt-space-2)', alignItems: 'center', flexWrap: 'wrap' } },
+          h(Button, { variant: 'primary', size: 'lg', onClick: () => void save(), disabled: saving }, saving ? t('saving') : t('save')),
+          saved ? h('span', { style: { color: 'var(--tdt-success)', fontSize: 'var(--tdt-font-sm)' } }, t('settingsSaveSuccess')) : null,
+          error !== null ? h('span', { style: { color: 'var(--tdt-danger)', fontSize: 'var(--tdt-font-sm)' } }, error) : null,
+        ),
+      ),
+      // ── 右：配置预览（只读，约占 1/3）──
+      h('div', { style: { minWidth: 0 } },
+        h('div', { style: { fontSize: 'var(--tdt-font-md)', fontWeight: 600, color: 'var(--tdt-fg-2)', marginBottom: 'var(--tdt-space-2)' } }, t('settingsCurrentConfig')),
+        h('dl', {
+          style: { margin: 0, display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: 'var(--tdt-space-1) var(--tdt-space-3)', fontSize: 'var(--tdt-font-sm)' },
+        }, ...FIELDS.map(f => [
+          h('dt', { key: `${f.key}-k`, style: { color: 'var(--tdt-fg-3)' } }, t(f.labelKey)),
+          h('dd', { key: `${f.key}-v`, style: { margin: 0, wordBreak: 'break-word' } }, previewValue(f)),
+        ]).flat()),
+      ),
     ),
   )
 }

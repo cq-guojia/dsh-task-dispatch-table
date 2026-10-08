@@ -83,6 +83,8 @@ export { LOADING_DOMAIN, LOADING_CSS, ensureLoadingStyle } from './loading-css'
 export { Textarea, type TextareaProps } from './Textarea'
 export { Checkbox, type CheckboxProps } from './Checkbox'
 export { BackToTop, type BackToTopProps } from './BackToTop'
+// 模块标题行（icon + 标题 + 右侧控件）：设置页三块共用（2026-10-08）。
+export { SectionHead } from './SectionHead'
 export { startResizeLayoutWidth, type ResizeOptions } from './resizer'
 // 全局秒级心跳 + 每秒自刷新文本（2026-10-06 从 task-info.tsx 归位；见 design/client-refresh-disposition.md §三 A1/A2）。
 export { subscribeTicker, useNowMs } from './ticker'

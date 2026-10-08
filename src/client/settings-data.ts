@@ -56,10 +56,26 @@ export const TABLE_COLUMNS: Record<string, readonly string[]> = {
   meta: ['key', 'value', 'updated_at'],
 }
 
-/** 统一 JSON 解析：成功返回 body，失败抛出服务端 `error`（或 HTTP 状态）。 */
+/** `GET|POST /config` 的返回：`config` = 当前生效值，`defaults` = 系统默认值（都只含可编辑字段）。 */
+export interface SettingsConfigPayload {
+  config: SettingsConfigValue
+  defaults: SettingsConfigValue
+}
+
+/** 统一 JSON 解析：成功返回 body；失败抛出**可诊断**的错误。 */
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetchWithTimeout(url, init)
-  const body = (await res.json()) as Record<string, unknown>
+  const text = await res.text()
+  let body: Record<string, unknown>
+  try {
+    body = JSON.parse(text) as Record<string, unknown>
+  } catch {
+    // 非 JSON 响应（路由没匹配上 ⇒ 落到宿主 SPA 兜底或网关；反代未放行也是这一种）。
+    // ⚠️ 必须把状态码与响应片段带出去：否则界面上只有一句 `Unexpected token 'o', "not found" is not
+    // valid JSON`，看不出是哪一层不给数据（2026-10-08 真机踩过，白排查一轮）。
+    const snippet = text.trim().slice(0, 120)
+    throw new Error(`HTTP ${res.status} · 返回的不是 JSON${snippet === '' ? '（空响应体）' : `：${snippet}`}`)
+  }
   if (body.ok !== true) throw new Error(typeof body.error === 'string' ? body.error : `HTTP ${res.status}`)
   return body as unknown as T
 }
@@ -70,18 +86,21 @@ export async function fetchTableQuery(params: { table: string; n: number; filter
   return getJson<SettingsTableQueryResult>(url)
 }
 
-/** 读取当前全部可编辑配置。 */
-export async function fetchConfig(): Promise<SettingsConfigValue> {
-  const body = await getJson<{ config: Partial<SettingsConfigValue> }>(`${API_PREFIX}/config`)
-  return body.config as SettingsConfigValue
+/** 读取当前全部可编辑配置 + 系统默认值（设置页回填 / 「用户没设时显示什么」）。 */
+export async function fetchConfig(): Promise<SettingsConfigPayload> {
+  const body = await getJson<{ config: Partial<SettingsConfigValue>; defaults: Partial<SettingsConfigValue> }>(`${API_PREFIX}/config`)
+  return {
+    config: body.config as SettingsConfigValue,
+    defaults: body.defaults as SettingsConfigValue,
+  }
 }
 
-/** 写回配置（仅服务端白名单字段；类型 / 范围校验失败抛错）。 */
-export async function postConfig(patch: Partial<SettingsConfigValue>): Promise<SettingsConfigValue> {
-  const body = await getJson<{ config: SettingsConfigValue }>(`${API_PREFIX}/config`, {
+/** 写回配置（服务端白名单 + 范围校验；**与系统默认值相同的字段不落用户层**）。 */
+export async function postConfig(patch: Partial<SettingsConfigValue>): Promise<SettingsConfigPayload> {
+  const body = await getJson<{ config: SettingsConfigValue; defaults: SettingsConfigValue }>(`${API_PREFIX}/config`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(patch),
   })
-  return body.config
+  return { config: body.config, defaults: body.defaults }
 }

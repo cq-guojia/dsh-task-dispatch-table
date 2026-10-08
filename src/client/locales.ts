@@ -214,6 +214,7 @@ export type LocaleKey =
   | 'settingsTableTruncated' | 'settingsTableEmpty' | 'settingsTableFail'
   | 'settingsFilterColumn' | 'settingsFilterOp' | 'settingsFilterValue' | 'settingsFilterRemove'
   | 'settingsLoadFailed'
+  | 'settingsDefaultValue'
   | 'vTitleRequired' | 'vWorkspaceRequired' | 'vPromptRequired'
   | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
 /**
@@ -861,10 +862,11 @@ export const zh: Record<LocaleKey, string> = {
   statusRailRunning: '计划运行中',
   debugRowsSuffix: '行',
   tabSettings: '设置',
-  settingsConfigTitle: '产品配置',
+  settingsConfigTitle: '插件设置',
   settingsBlockLogTitle: '整体日志',
   settingsBlockDataTitle: '数据库表查询',
-  settingsCurrentConfig: '当前生效配置（只读）',
+  settingsCurrentConfig: '配置预览（只读）',
+  settingsDefaultValue: '默认',
   settingsProvider: '默认模型供应商',
   settingsModel: '默认模型',
   settingsLogRetention: '运行日志保留（天）',
@@ -1520,10 +1522,11 @@ export const en: Record<LocaleKey, string> = {
   statusRailRunning: 'Scheduled / running',
   debugRowsSuffix: 'rows',
   tabSettings: 'Settings',
-  settingsConfigTitle: 'Product Config',
+  settingsConfigTitle: 'Plugin Settings',
   settingsBlockLogTitle: 'Plugin Logs',
   settingsBlockDataTitle: 'Database Tables',
-  settingsCurrentConfig: 'Current Effective Config (read-only)',
+  settingsCurrentConfig: 'Config Preview (read-only)',
+  settingsDefaultValue: 'default',
   settingsProvider: 'Default Model Provider',
   settingsModel: 'Default Model',
   settingsLogRetention: 'Run Log Retention (days)',

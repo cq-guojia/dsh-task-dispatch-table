@@ -1,18 +1,18 @@
 /**
- * 设置页 Block 3 · 原始数据查询。
+ * 设置页第 3 块 · 数据库表查询（`state.db` 全部 6 张表，不隐藏）。
  *
- * 查询 `state.db` 全部 6 张表（不隐藏）。滑动标签单选一张表；共享「取前 N 条」（默认 100，可选 100/200/500）；
- * 通用筛选组件按所选表列动态生成（列名下拉 + 运算符 + 值）；结果横向滚动展示。
- * 不做服务端分页（用户 2026-10-08：top-N 自过滤、客户端自行筛选）。每表按各自最新字段 DESC 取数（在后端）。
+ * 布局（用户 2026-10-08 定死）：**标题在左，表切换（滑动标签）在右**；下面依次是「取前 N 条 + 查询」、
+ * 通用筛选行、结果表。取数 = `WHERE <筛选> ORDER BY <该表最新字段> DESC LIMIT N`（排序在后端）。
  */
-import { createElement as h, useEffect, useState } from 'react'
-import { Button, NumberInput, Segmented } from './ui'
+import { createElement as h, useEffect, useState, type CSSProperties } from 'react'
+import { Button, NumberInput, Segmented, SectionHead } from './ui'
 import { fetchTableQuery, SETTINGS_TABLES, TABLE_COLUMNS, type SettingsTableFilter, type SettingsTableQueryResult } from './settings-data'
 import { DbTable } from './db-table'
 import { TableFilterRow } from './table-filter'
+import { IconDatabaseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 
-export function SettingsTableBlock({ t }: { t: Translate }): ReturnType<typeof h> {
+export function SettingsTableBlock({ t, style }: { t: Translate; style?: CSSProperties }): ReturnType<typeof h> {
   const [table, setTable] = useState<string>(SETTINGS_TABLES[0])
   const [n, setN] = useState(100)
   const [filters, setFilters] = useState<SettingsTableFilter[]>([])
@@ -48,23 +48,24 @@ export function SettingsTableBlock({ t }: { t: Translate }): ReturnType<typeof h
     setFilters(prev => [...prev, { column: columns[0], op: '=', value: '' }])
   }
 
-  return h('div', null,
-    h('h3', { style: { fontSize: 'var(--tdt-font-lg)', fontWeight: 700, margin: '0 0 12px' } }, t('settingsBlockDataTitle')),
-    h('div', { style: { marginBottom: '12px', overflowX: 'auto' } },
-      h(Segmented<string>, {
-        value: table, onChange: (value: string) => setTable(value),
-        items: SETTINGS_TABLES.map(tbl => ({ value: tbl, label: tbl })),
-      }),
-    ),
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px', flexWrap: 'wrap' } },
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 'var(--tdt-font-sm)' } },
+  return h('div', { style },
+    h(SectionHead, {
+      icon: h(IconDatabaseOutlineRegular, { size: 16 }),
+      title: t('settingsBlockDataTitle'),
+      right: h('div', { style: { overflowX: 'auto', maxWidth: '100%' } },
+        h(Segmented<string>, {
+          value: table, size: 'md', onChange: (value: string) => setTable(value),
+          items: SETTINGS_TABLES.map(tbl => ({ value: tbl, label: tbl })),
+        })),
+    }),
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-3)', marginBottom: 'var(--tdt-space-2)', flexWrap: 'wrap' } },
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 'var(--tdt-space-2)', fontSize: 'var(--tdt-font-sm)' } },
         `${t('settingsTopN')} `,
-        h(NumberInput, { value: n, min: 1, max: 500, step: 50, label: t('settingsTopN'), onChange: setN })),
-      h(Button, { variant: 'primary', onClick: () => void query(), disabled: loading }, t('settingsQuery')),
-      loading ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-3)' } }, t('loading')) : null,
-      error !== null ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-error)' } }, error) : null,
+        h(NumberInput, { value: n, min: 1, max: 500, step: 50, size: 'sm', label: t('settingsTopN'), onChange: setN })),
+      h(Button, { variant: 'outline', size: 'md', onClick: () => void query(), disabled: loading }, t('settingsQuery')),
+      error !== null ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-danger)' } }, error) : null,
     ),
-    h('div', { style: { marginBottom: '12px' } },
+    h('div', { style: { marginBottom: 'var(--tdt-space-2)' } },
       filters.length === 0
         ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-3)' } }, t('settingsNoFilters'))
         : null,
@@ -72,12 +73,10 @@ export function SettingsTableBlock({ t }: { t: Translate }): ReturnType<typeof h
         key: i, filter: f, columns, t,
         onChange: (next) => updateFilter(i, next), onRemove: () => removeFilter(i),
       })),
-      h(Button, { variant: 'outline', onClick: addFilter }, t('settingsAddFilter')),
+      h(Button, { variant: 'outline', size: 'sm', onClick: addFilter }, t('settingsAddFilter')),
     ),
-    result === null
-      ? null
-      : result.rows.length === 0
-        ? h('p', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)' } }, t('settingsTableEmpty'))
-        : h(DbTable, { table: result, t }),
+    result === null || result.rows.length === 0
+      ? h('p', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)', margin: 0 } }, t('settingsTableEmpty'))
+      : h(DbTable, { table: result, t }),
   )
 }

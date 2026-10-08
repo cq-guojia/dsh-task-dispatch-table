@@ -4,7 +4,7 @@
 import type {
   HostContext, HostLlm, HostLogger, HostSettings, HostWorkspaceRegistry, SettingsScope, z_any,
 } from './host.js'
-import { Config, ConfigDefaults, readConfigField, resolveStatePath } from './config.js'
+import { CONFIG_DEFAULTS, Config, readConfigField, resolveStatePath } from './config.js'
 import { isSafeAttachmentRef } from './attachment-allowlist.js'
 import type { PluginConfig } from './config.js'
 import type { TaskDefinition, TaskDefinitionInput } from './tasks.js'
@@ -228,6 +228,28 @@ const CONFIG_EDITABLE_FIELDS: Record<string, { type: 'number' | 'string'; min?: 
   logRetentionDays: { type: 'number', min: 1, max: 3650 },
   historyRetentionDays: { type: 'number', min: 0, max: 3650 },
   attachmentTmpRetentionDays: { type: 'number', min: 1, max: 3650 },
+}
+
+/**
+ * 设置页 GET/POST 的统一响应体：**当前生效值** + **系统默认值**（都只投影可编辑白名单）。
+ *
+ * - `config` = 生效值（用户层已合并；用户没设的字段就是系统默认值 ⇒ 前端直接显示即可）。
+ * - `defaults` = `CONFIG_DEFAULTS` 的白名单子集。⚠️ **必须投影**：`CONFIG_DEFAULTS` 还含
+ *   `tasksInline`（整份任务表 JSON）与 `debugSnapshot`（宿主调试数据），不能整份吐给浏览器。
+ */
+export function configView(config: PluginConfig): { config: Record<string, string | number>; defaults: Record<string, string | number> } {
+  const pick = (source: Record<string, unknown>): Record<string, string | number> => {
+    const out: Record<string, string | number> = {}
+    for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
+      const v = source[key]
+      if (typeof v === 'string' || typeof v === 'number') out[key] = v
+    }
+    return out
+  }
+  return {
+    config: pick(config as unknown as Record<string, unknown>),
+    defaults: pick(CONFIG_DEFAULTS as unknown as Record<string, unknown>),
+  }
 }
 
 const writeJson = (res: DispatchWebResponse, code: number, body: unknown): void => {
@@ -994,15 +1016,11 @@ const makeDispatchRoutes = (
         writeJson(res, 403, { ok: false, error: 'forbidden' })
         return
       }
-      // GET = 读当前全部可编辑配置（设置页回填 + 只读面板）。
+      // GET = 读当前全部可编辑配置（设置页回填 + 只读预览）。
+      // ⚠️ **连系统默认值一起给**（2026-10-08 用户拍板）：设置页要显示「用户没设时的那一层」，
+      // 前端不再自己抄一份默认值（抄一份必然分叉）。
       if (req.method === 'GET') {
-        const config = getScopeConfig()
-        const out: Record<string, string | number> = {}
-        for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
-          const v = (config as unknown as Record<string, unknown>)[key]
-          if (typeof v === 'string' || typeof v === 'number') out[key] = v
-        }
-        writeJson(res, 200, { ok: true, config: out })
+        writeJson(res, 200, { ok: true, ...configView(getScopeConfig()) })
         return
       }
       // POST = 写回（仅白名单字段；类型 + 范围校验后经 updateScopeConfig → scope.update 落盘并即时生效）。
@@ -1034,13 +1052,7 @@ const makeDispatchRoutes = (
         // ⚠️ **这里不广播**：`CONFIG_CHANGED` 的唯一发射点是 `scope.watch`（降级作用域的 `watch`
         // 也已如实实现）⇒ 一次成功写回**恰好一条**事件，不靠广播器的合并窗口去吃掉重复。
         // （2026-10-06 改正：此前这里补发一条，正常路径会「一次改动发两次」。）
-        const config = getScopeConfig()
-        const out: Record<string, string | number> = {}
-        for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
-          const v = (config as unknown as Record<string, unknown>)[key]
-          if (typeof v === 'string' || typeof v === 'number') out[key] = v
-        }
-        writeJson(res, 200, { ok: true, config: out })
+        writeJson(res, 200, { ok: true, ...configView(getScopeConfig()) })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         writeJson(res, message === 'body-too-large' ? 413 : 400, { ok: false, error: message })
@@ -1359,18 +1371,18 @@ export function apply(ctx: HostContext, config: unknown): void {
   const raw = (Config as unknown as (value: unknown) => Record<string, unknown>)(cleanConfig)
   const initial: PluginConfig = {
     statePath: typeof raw.statePath === 'string' ? raw.statePath : '',
-    tickMs: readConfigField(raw.tickMs, ConfigDefaults.tickMs),
-    dispatchGraceMs: readConfigField(raw.dispatchGraceMs, ConfigDefaults.dispatchGraceMs),
-    leaseMs: readConfigField(raw.leaseMs, ConfigDefaults.leaseMs),
-    unknownGraceMs: readConfigField(raw.unknownGraceMs, ConfigDefaults.unknownGraceMs),
+    tickMs: readConfigField(raw.tickMs, CONFIG_DEFAULTS.tickMs),
+    dispatchGraceMs: readConfigField(raw.dispatchGraceMs, CONFIG_DEFAULTS.dispatchGraceMs),
+    leaseMs: readConfigField(raw.leaseMs, CONFIG_DEFAULTS.leaseMs),
+    unknownGraceMs: readConfigField(raw.unknownGraceMs, CONFIG_DEFAULTS.unknownGraceMs),
     tasksDir: typeof raw.tasksDir === 'string' ? raw.tasksDir : 'tasks',
     tasksInline: readConfigField(raw.tasksInline, ''),
     debugSnapshot: readConfigField(raw.debugSnapshot, ''),
     defaultProvider: typeof raw.defaultProvider === 'string' ? raw.defaultProvider : '',
     defaultModel: typeof raw.defaultModel === 'string' ? raw.defaultModel : '',
-    logRetentionDays: readConfigField(raw.logRetentionDays, ConfigDefaults.logRetentionDays),
-    historyRetentionDays: readConfigField(raw.historyRetentionDays, ConfigDefaults.historyRetentionDays),
-    attachmentTmpRetentionDays: readConfigField(raw.attachmentTmpRetentionDays, ConfigDefaults.attachmentTmpRetentionDays),
+    logRetentionDays: readConfigField(raw.logRetentionDays, CONFIG_DEFAULTS.logRetentionDays),
+    historyRetentionDays: readConfigField(raw.historyRetentionDays, CONFIG_DEFAULTS.historyRetentionDays),
+    attachmentTmpRetentionDays: readConfigField(raw.attachmentTmpRetentionDays, CONFIG_DEFAULTS.attachmentTmpRetentionDays),
   }
   // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，
   // 用户文档层 live 覆盖（packages/settings/settings/src/index.ts:49-59）。
@@ -1462,14 +1474,55 @@ export function apply(ctx: HostContext, config: unknown): void {
   let configRef: PluginConfig = initial
   /** settings inject 就绪后捕获的官方/降级作用域，供设置页经 scope.update 写回配置。 */
   let scopeRef: SettingsScope<PluginConfig> | null = null
-  /** 设置页写回插件配置（仅计时字段经 route 校验后调用）；作用域未就绪时返回 false。 */
+  /** 设置页写回插件配置（作用域未就绪时返回 false）。
+   *
+   * ⚠️ **与系统默认值相同的字段一律不落用户层**（2026-10-08 用户拍板：「避免重复存储」）：
+   * 生效值回落到 `CONFIG_DEFAULTS`（即配置层），用户层保持干净；把某字段改回默认值
+   * 等价于「撤销这条用户设置」。删除动作走 `configEditor.edit`（唯一能删用户层键的通道，
+   * 与 `persistTasksInline` 同款；`scope.update` 是 merge 语义、只会写不会删）。
+   */
   const updateScopeConfig = async (patch: Partial<PluginConfig>): Promise<boolean> => {
     if (!scopeRef) return false
+    const set: Record<string, unknown> = {}
+    const drop: string[] = []
+    for (const [key, value] of Object.entries(patch)) {
+      const same = (CONFIG_DEFAULTS as unknown as Record<string, unknown>)[key] === value
+      if (same) drop.push(key)
+      else set[key] = value
+    }
     try {
-      await scopeRef.update(patch as Record<string, unknown>)
+      if (Object.keys(set).length > 0) await scopeRef.update(set)
+      await dropUserLayerConfig(drop)
       return true
     } catch {
       return false
+    }
+  }
+  /** 从插件 entry 的用户层配置里删掉给定键（幂等：本来就没有就什么都不做）。失败只告警。 */
+  const dropUserLayerConfig = async (keys: readonly string[]): Promise<void> => {
+    if (keys.length === 0) return
+    const sctx = settingsCtxRef
+    if (sctx === null) return
+    try {
+      const configEditor = (sctx as unknown as {
+        configEditor?: {
+          entries: () => Array<{ options?: { id?: string } }>
+          edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
+        }
+      }).configEditor
+      if (configEditor === undefined) return
+      const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
+      if (entry === undefined) return
+      await configEditor.edit(entry, (raw: Record<string, unknown>) => {
+        const next = { ...raw }
+        let changed = false
+        for (const key of keys) {
+          if (Object.hasOwn(next, key)) { delete next[key]; changed = true }
+        }
+        return changed ? next : raw
+      })
+    } catch (error) {
+      sctx.logger.warn(`配置回落默认值：删除用户层字段失败（生效值不受影响）: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   const persistTasksInline = async (json: string): Promise<void> => {
