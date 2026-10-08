@@ -23,10 +23,9 @@ export interface PluginConfig {
     /** task_log 保留期（天）：到期行由 tick 内 purgeLog 清除（决策 32）。 */
     logRetentionDays: number;
     /**
-     * 执行记录（task_instances + task_events）保留期（天）：**0 = 不清**（默认）。
-     * 容量不是约束（100 实例/天两年 ≈ 0.5GB），历史可查才是刚需 ⇒ 见 data-model §6.1。
+     * ⚠️ **执行记录（task_instances + task_events）永久保留，没有保留期字段**——
+     * 历史是用来查的、不该被清（用户 2026-10-08 拍板，原 `historyRetentionDays` 与 `purgeHistory` 一并删除）。
      */
-    historyRetentionDays: number;
     /** 上传临时区保留期（天）：到期文件由 tick 内清道夫删除（默认 7）。 */
     attachmentTmpRetentionDays: number;
 }
@@ -50,7 +49,6 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
     logRetentionDays: z<number, number, "defined">;
-    historyRetentionDays: z<number, number, "defined">;
     attachmentTmpRetentionDays: z<number, number, "defined">;
 }>>, Schemastery.ObjectT<NoInfer<{
     statePath: z<string, string, "defined">;
@@ -64,7 +62,6 @@ export declare const Config: z<Schemastery.ObjectS<NoInfer<{
     defaultProvider: z<string, string, "defined">;
     defaultModel: z<string, string, "defined">;
     logRetentionDays: z<number, number, "defined">;
-    historyRetentionDays: z<number, number, "defined">;
     attachmentTmpRetentionDays: z<number, number, "defined">;
 }>>, "plain">;
 /**

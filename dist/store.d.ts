@@ -361,15 +361,9 @@ export declare class TaskStore {
         detail: string | null;
     }[];
     /**
-     * 按保留期清除执行记录（**默认不清**：`days <= 0` 直接返回 0）。
-     * 清的时候**保护每个任务最近一条终态记录**（succeeded / failed）：否则月 / 季 / 年任务的历史
-     * 被清干净后，下游 `latest_success` 永远查不到 ⇒ 静默阻塞（评审 P1）。
-     * 删实例行时连带删它的事件，不留孤儿。
+     * ⚠️ **执行记录永久保留，没有清除方法**（用户 2026-10-08 拍板）：历史是用来查的、不该被清，
+     * 原 `purgeHistory` 与 `historyRetentionDays` 配置一并删除。
      */
-    purgeHistory(days: number): {
-        instances: number;
-        events: number;
-    };
     /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
     recordCompletion(id: string, outputs: string | null, tokenIn: number | null, tokenOut: number | null, tokenInCache: number | null): void;
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */

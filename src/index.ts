@@ -1381,7 +1381,6 @@ export function apply(ctx: HostContext, config: unknown): void {
     defaultProvider: typeof raw.defaultProvider === 'string' ? raw.defaultProvider : '',
     defaultModel: typeof raw.defaultModel === 'string' ? raw.defaultModel : '',
     logRetentionDays: readConfigField(raw.logRetentionDays, CONFIG_DEFAULTS.logRetentionDays),
-    historyRetentionDays: readConfigField(raw.historyRetentionDays, CONFIG_DEFAULTS.historyRetentionDays),
     attachmentTmpRetentionDays: readConfigField(raw.attachmentTmpRetentionDays, CONFIG_DEFAULTS.attachmentTmpRetentionDays),
   }
   // v1 零自建 UI（决策 16）：配置走官方 ctx.settings 命名空间，patch config 作为 base 层，

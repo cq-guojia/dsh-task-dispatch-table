@@ -1,8 +1,11 @@
 /**
  * 设置页第 2 块 · 整体日志（`plugin_log`，插件进程日志，非任务日志）。
  *
- * 布局（用户 2026-10-08 定死）：**标题在左，每页条数 + 自动刷新 + 刷新按钮在右**；下面一块日志内容区，
- * **限高、超出内部滚动**（否则 100 行日志把整页撑到几千像素，下面的表格区被顶出屏幕）。
+ * 控件排布（用户 2026-10-08，**全插件统一**）：`自动刷新`（**默认勾选**）→ `刷新` → `显示 N 条`（**最右**）。
+ * 「显示 N 条」与「任务配置 → 展开 → 执行记录」那一条**同一个口径**：`显示 <下拉> 条`，
+ * 走 `limitPrefix` / `limitSuffix` 文案 + `SelectField size="md" width={70}`，靠 `marginLeft:auto` 顶到最右。
+ *
+ * 不再有内部滚动槽：整段日志直接铺在页面上，靠**页面**往下滚（用户 2026-10-08）。
  *
  * 刷新策略：固定 5s 轮询、开关控制；离开页面 / 关闭开关即停（`useEffect` cleanup）。不接 SSE。
  */
@@ -14,20 +17,28 @@ import { IconCodeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 
 const REFRESH_MS = 5000
-const PAGE_SIZES = ['50', '100', '200']
+/** 与「执行记录」面板同一组档位。 */
+const PAGE_SIZES = [50, 100, 200]
+
+/** 条数过滤的外壳：与任务配置 `limitRowStyle` 同款（`marginLeft:auto` ⇒ 整组里它最右）。 */
+const limitRowStyle: CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto',
+  fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-3)',
+}
 
 export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProperties }): ReturnType<typeof h> {
   const [result, setResult] = useState<SettingsTableQueryResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [auto, setAuto] = useState(false)
-  const [n, setN] = useState('100')
+  // 自动刷新**默认开**（用户 2026-10-08 全插件统一）。
+  const [auto, setAuto] = useState(true)
+  const [n, setN] = useState(100)
   const timerRef = useRef<number | null>(null)
 
   const load = async (): Promise<void> => {
     setLoading(true); setError(null)
     try {
-      setResult(await fetchTableQuery({ table: 'plugin_log', n: Number(n), filters: [] }))
+      setResult(await fetchTableQuery({ table: 'plugin_log', n, filters: [] }))
     } catch (e) {
       setError((e as Error).message || t('settingsLogFail'))
     } finally {
@@ -57,20 +68,27 @@ export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProper
       icon: h(IconCodeOutlineRegular, { size: 16 }),
       title: t('settingsBlockLogTitle'),
       right: h('div', { style: { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)', flexWrap: 'wrap' } },
-        h('label', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)' } }, t('settingsPageSize')),
-        h(SelectField, {
-          value: n, size: 'md',
-          options: PAGE_SIZES.map(v => ({ value: v, label: `${v} 行` })),
-          onChange: setN, placeholder: t('settingsPageSize'), emptyLabel: t('settingsPageSize'), ariaLabel: t('settingsPageSize'),
-        }),
         h(Checkbox, { checked: auto, onChange: (next: boolean) => setAuto(next), label: t('settingsAutoRefresh') }),
         h(Button, { variant: 'outline', size: 'md', onClick: () => void load(), disabled: loading }, t('settingsRefresh')),
+        h('label', { style: limitRowStyle },
+          t('limitPrefix'),
+          h(SelectField, {
+            value: String(n),
+            options: PAGE_SIZES.map(v => ({ value: String(v), label: String(v) })),
+            onChange: (next: string) => { setN(Number(next)) },
+            placeholder: String(n),
+            emptyLabel: t('editorNoOptions'),
+            ariaLabel: t('cardLogLimit'),
+            size: 'md',
+            width: 70,
+          }),
+          t('limitSuffix'),
+        ),
       ),
     }),
     error !== null
       ? h('div', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-danger)', marginBottom: 'var(--tdt-space-2)' } }, error)
       : null,
-    // 空 / 未加载也进同一个定高盒 ⇒ 高度恒定、页面不跳（用户 2026-10-08）。
     h(DbTable, { table: result, t, emptyText: t('settingsLogEmpty') }),
   )
 }

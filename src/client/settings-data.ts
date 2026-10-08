@@ -7,6 +7,13 @@
  */
 import { API_PREFIX } from './query'
 import { fetchWithTimeout } from './http'
+import type { EditorOption } from './ui'
+import type { Translate } from './locales'
+
+/** 模型候选：在基础 `EditorOption` 上多带一个 provider（选中时一并写回 `defaultProvider`）。 */
+export interface ModelOption extends EditorOption {
+  provider?: string
+}
 
 /** 单表查询支持的过滤运算符（与 `store.TABLE_FILTER_OPS` 同形，白名单防注入）。 */
 export type TableFilterOp = '=' | '!=' | '<' | '>' | '<=' | '>=' | 'LIKE'
@@ -28,7 +35,13 @@ export interface SettingsTableQueryResult {
   truncated: boolean
 }
 
-/** 设置页 Block 1 可编辑的配置字段（与 `src/config.ts` `PluginConfig` 用户字段一一对应）。 */
+/**
+ * 设置页 Block 1 可编辑的配置字段（与 `src/config.ts` `PluginConfig` 用户字段一一对应）。
+ *
+ * ⚠️ 目录类（statePath / tasksDir）与 `historyRetentionDays` **不在此列**：
+ *  - 路径类由插件装到哪儿决定，不给用户填（用户 2026-10-08）；
+ *  - 执行历史**永久保留、不允许清除**（用户 2026-10-08），该能力与字段一并删除。
+ */
 export interface SettingsConfigValue {
   statePath: string
   tasksDir: string
@@ -39,21 +52,7 @@ export interface SettingsConfigValue {
   defaultProvider: string
   defaultModel: string
   logRetentionDays: number
-  historyRetentionDays: number
   attachmentTmpRetentionDays: number
-}
-
-/** Block 3 可查的全部 6 张表（白名单）。 */
-export const SETTINGS_TABLES: readonly string[] = ['task_instances', 'task_events', 'task_log', 'task_audit', 'plugin_log', 'meta']
-
-/** 各表的列（前端筛选用，与 `data-model.md` 建表保持一致）。 */
-export const TABLE_COLUMNS: Record<string, readonly string[]> = {
-  task_instances: ['id', 'task_id', 'status', 'scheduled_at', 'grace_at', 'lease_expire_at', 'raw_llm', 'title', 'note', 'created_at', 'updated_at'],
-  task_events: ['seq', 'task_id', 'ts', 'kind', 'run_id', 'detail'],
-  task_log: ['seq', 'task_id', 'ts', 'run_id', 'source', 'level', 'text'],
-  task_audit: ['seq', 'task_id', 'ts', 'action', 'detail'],
-  plugin_log: ['seq', 'ts', 'run_id', 'kind', 'text'],
-  meta: ['key', 'value', 'updated_at'],
 }
 
 /** `GET|POST /config` 的返回：`config` = 当前生效值，`defaults` = 系统默认值（都只含可编辑字段）。 */
@@ -80,7 +79,26 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   return body as unknown as T
 }
 
-/** 单表查询（设置页 Block 3 / Block 2 共用）。 */
+/**
+ * 模型候选目录（`GET /options`，**与任务编辑器同一份真源**）。
+ *
+ * 首项固定为「默认模型」（value `''`）＝ 用宿主给的那一个，与编辑器下拉同口径（`editorFollowHost`）；
+ * 其后是宿主给的 `provider/id`。目录读不到 ⇒ 只留首项（下拉呈灰色不可选，**不编造**候选）。
+ */
+export async function fetchModelOptions(t: Translate): Promise<ModelOption[]> {
+  const res = await fetchWithTimeout(`${API_PREFIX}/options`, { cache: 'no-store' })
+  const body = await res.json() as { ok?: boolean; models?: Array<{ provider?: string; id?: string; name?: string }> }
+  if (body.ok !== true) throw new Error('options failed')
+  const out: ModelOption[] = [{ value: '', label: t('editorFollowHost') }]
+  for (const m of body.models ?? []) {
+    if (typeof m.provider !== 'string' || typeof m.id !== 'string') continue
+    const name = typeof m.name === 'string' && m.name !== '' ? m.name : m.id
+    out.push({ value: m.id, label: `${name}（${m.provider}）`, provider: m.provider })
+  }
+  return out
+}
+
+/** 单表查询（现在只有整体日志块在用）。 */
 export async function fetchTableQuery(params: { table: string; n: number; filters: SettingsTableFilter[] }): Promise<SettingsTableQueryResult> {
   const url = `${API_PREFIX}/db-query?table=${encodeURIComponent(params.table)}&n=${params.n}&filter=${encodeURIComponent(JSON.stringify(params.filters))}`
   return getJson<SettingsTableQueryResult>(url)

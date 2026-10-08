@@ -742,43 +742,9 @@ export class TaskStore {
   }
 
   /**
-   * 按保留期清除执行记录（**默认不清**：`days <= 0` 直接返回 0）。
-   * 清的时候**保护每个任务最近一条终态记录**（succeeded / failed）：否则月 / 季 / 年任务的历史
-   * 被清干净后，下游 `latest_success` 永远查不到 ⇒ 静默阻塞（评审 P1）。
-   * 删实例行时连带删它的事件，不留孤儿。
+   * ⚠️ **执行记录永久保留，没有清除方法**（用户 2026-10-08 拍板）：历史是用来查的、不该被清，
+   * 原 `purgeHistory` 与 `historyRetentionDays` 配置一并删除。
    */
-  purgeHistory(days: number): { instances: number; events: number } {
-    if (days <= 0) return { instances: 0, events: 0 }
-    const cutoff = new Date(Date.now() - days * 86_400_000).toISOString()
-    const doomed = this.db
-      .prepare(`SELECT id FROM task_instances
-                 WHERE updated_at < ?
-                   AND status IN ('succeeded','failed','skipped','unknown')
-                   AND id NOT IN (
-                     SELECT i.id FROM task_instances i
-                     WHERE i.status IN ('succeeded','failed')
-                       AND i.updated_at = (SELECT MAX(j.updated_at) FROM task_instances j
-                                           WHERE j.task_id = i.task_id AND j.status IN ('succeeded','failed'))
-                   )`)
-      .all(cutoff) as unknown as { id: string }[]
-    let events = 0
-    for (const row of doomed) {
-      const result = this.db.prepare('DELETE FROM task_events WHERE instance_id = ?').run(row.id)
-      events += Number(result.changes)
-    }
-    const result = this.db
-      .prepare(`DELETE FROM task_instances WHERE id IN (SELECT id FROM task_instances
-                 WHERE updated_at < ?
-                   AND status IN ('succeeded','failed','skipped','unknown')
-                   AND id NOT IN (
-                     SELECT i.id FROM task_instances i
-                     WHERE i.status IN ('succeeded','failed')
-                       AND i.updated_at = (SELECT MAX(j.updated_at) FROM task_instances j
-                                           WHERE j.task_id = i.task_id AND j.status IN ('succeeded','failed'))
-                   ))`)
-      .run(cutoff)
-    return { instances: Number(result.changes), events }
-  }
 
   /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
   recordCompletion(

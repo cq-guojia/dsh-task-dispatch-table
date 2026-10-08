@@ -13,7 +13,6 @@ import { createElement as h, type CSSProperties } from 'react'
 import { PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, applyStyle } from './ui'
 import { SettingsConfigBlock } from './settings-config-block'
 import { SettingsLogBlock } from './settings-log-block'
-import { SettingsTableBlock } from './settings-table-block'
 import type { Translate } from './locales'
 
 /** 模块之间的纵向间距（唯一一份，三块共用）。 */
@@ -43,6 +42,5 @@ export function SettingsPage({ t }: { t: Translate }): ReturnType<typeof h> {
     h('div', { id: PANEL_CONTENT_ID, style: PANEL_CONTENT_STYLE },
       h('div', { className: 'dsh-tdt-settings-card' }, h(SettingsConfigBlock, { t })),
       h('div', { className: 'dsh-tdt-settings-card', style: SECTION_GAP }, h(SettingsLogBlock, { t })),
-      h('div', { className: 'dsh-tdt-settings-card', style: SECTION_GAP }, h(SettingsTableBlock, { t })),
     ))
 }

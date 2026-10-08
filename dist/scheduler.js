@@ -529,7 +529,7 @@ export function createScheduler(opts) {
             store.purgeLog(cfg.logRetentionDays ?? 30);
             // 插件整体日志同策略（2026-10-07 新增 `plugin_log`，见 design/data-model.md §六）
             store.purgePluginLog(cfg.logRetentionDays ?? 30);
-            store.purgeHistory(cfg.historyRetentionDays ?? 0);
+            // ⚠️ 执行记录**不清除**（用户 2026-10-08）：历史是用来查的，`purgeHistory` 已删除。
         },
         getTasks() {
             return taskMap;

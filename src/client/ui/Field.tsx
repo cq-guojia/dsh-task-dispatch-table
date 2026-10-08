@@ -48,6 +48,8 @@ export interface InputProps {
   inputRef?: RefObject<HTMLInputElement | null>
   /** 键盘事件（如搜索框里 Enter 直接选中第一项）。 */
   onKeyDown?: (event: { key: string; preventDefault(): void }) => void
+  /** 失焦（如数字框把「清空 / 输一半」的草稿回弹成已提交值）。 */
+  onBlur?: () => void
 }
 
 /** 文本输入。 */
@@ -66,6 +68,7 @@ export function Input(props: InputProps): ReturnType<typeof h> {
     style,
     onChange: (event: { target: { value: string } }) => { onChange(event.target.value) },
     onKeyDown: props.onKeyDown,
+    onBlur: props.onBlur,
   } as never)
 }
 

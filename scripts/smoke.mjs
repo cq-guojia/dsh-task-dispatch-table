@@ -1937,33 +1937,13 @@ console.log('\n[11] 保存校验 upsert / validate / remove')
   check('enabled：空表 ⇒ task-not-found', setEnabledDefinitionInline('', uuid, true).error === 'task-not-found')
 }
 
-// ── 12. 执行记录清理 purgeHistory（2026-09-30：默认不清 + 保护每任务最近终态）──
-console.log('\n[12] purgeHistory')
+// ── 12. 执行记录**永久保留**（2026-10-08 用户拍板：历史是用来查的、不该被清）──
+// `purgeHistory` / `historyRetentionDays` 已整条删除 ⇒ 这里改成**守卫**：谁再把清除能力加回来，冒烟立刻红。
+console.log('\n[12] 执行记录永久保留')
 {
   const dir = join(root, 'purge-db')
   const store = new TaskStore(join(dir, 'state.db'))
-  const t0 = '2026-01-01T00:00:00.000Z'
-  const recent = '2100-01-01T00:00:00.000Z'
-  const mk = (id, taskId, status, updated, scheduledAt = t0) => {
-    store.ensureInstance(id, taskId, '2026-01-01', scheduledAt, status, { title: 't', prompt: 'p', workspacePath: '/ws', provider: '', model: '', validStatuses: ['ok'], maxAttempts: 1, window: 'PT1H' })
-    store.transition(id, { status })
-    // 手动把 updated_at 拨到目标时刻（transition 用 now）
-    store.db.prepare('UPDATE task_instances SET updated_at = ? WHERE id = ?').run(updated, id)
-  }
-  const oldDone = '55555555-5555-4555-8555-555555555555'
-  const oldKeep = '66666666-6666-4666-8666-666666666666' // 该任务最近一条终态 ⇒ 保护
-  mk(oldDone, 'task-a', 'failed', t0)
-  mk(oldKeep, 'task-b', 'succeeded', t0)
-  mk('77777777-7777-4777-8777-777777777777', 'task-b', 'failed', '2026-06-01T00:00:00.000Z', '2026-06-01T00:00:00.000Z')
-  const run1 = store.purgeHistory(0)
-  check('默认（days=0）⇒ 不清', run1.instances === 0)
-  const run2 = store.purgeHistory(90)
-  // task-a：oldDone 是它唯一（=最近）终态 ⇒ 保护；task-b：7777(updated 06-01) 比 oldKeep(updated 01-01) 新
-  // ⇒ 7777 保护、oldKeep 被清。清理 = 删「非该任务最近终态」的过期行。
-  check('清掉过期且非最近终态的行', run2.instances === 1, `实际 ${run2.instances}`)
-  check('保护：task-a 最近终态保留', store.get(oldDone) !== undefined)
-  check('保护：task-b 最近终态保留', store.get('77777777-7777-4777-8777-777777777777') !== undefined)
-  check('task-b 较旧的 succeeded 行被清', store.get(oldKeep) === undefined)
+  check('没有 purgeHistory：执行记录不可清除', typeof store.purgeHistory !== 'function')
   store.close()
   rmSync(dir, { recursive: true, force: true })
 }
@@ -3080,8 +3060,6 @@ console.log('\n[14] runtime-index')
     check('【i18n】状态轨道悬停提示走 `t()`（原硬编码中文，英文界面会露中文）',
       S('client/task-list.tsx').includes("t('statusRailOff')")
       && locSrc.includes('statusRailOff:') && locSrc.includes("statusRailOff: 'Disabled'"))
-    check('【i18n】查询结果表格「N 行」的量词走 `t()`（设置页日志 / 表查询共用渲染器）',
-      S('client/db-table.tsx').includes("${table.count} ${t('debugRowsSuffix')}"))
     check('【i18n】编辑器校验文案走 `t()`（validateTaskDraft 带 t 席位）',
       S('client/task-editor.tsx').includes('validateTaskDraft(draft: TaskEditorDraft, t: Translate)')
       && S('client/task-editor.tsx').includes("t('vTitleRequired')"))
@@ -3123,10 +3101,11 @@ console.log('\n[14] runtime-index')
       && S('index.ts').includes("pushNotice('stream_write_failed'"))
     check('【保留】plugin_log 与 task_log 同策略清理（logRetentionDays，默认 30 天）',
       S('scheduler.ts').includes('store.purgePluginLog(cfg.logRetentionDays ?? 30)'))
-    check('【可查】plugin_log 已进设置页查询白名单（后端 DUMP_TABLES + defaultOrder + 前端 SETTINGS_TABLES 三处齐）',
+    // 2026-10-08：数据查询块整块删除 ⇒ 前端不再维护「可查表清单」，只留整体日志查 plugin_log。
+    check('【可查】plugin_log 仍在后端查询白名单（整体日志块仍在查它）',
       S('store.ts').includes("'plugin_log', 'meta'")
       && S('store.ts').includes("case 'plugin_log': return 'ts DESC, seq DESC'")
-      && S('client/settings-data.ts').includes("'task_audit', 'plugin_log', 'meta'"))
+      && S('client/settings-log-block.tsx').includes("table: 'plugin_log'"))
     check('【CSS】固定中性面的 6 个 token 已补明文回退（旧内核不再变透明）',
       ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
         'rgba(255,255,255,.05)', 'rgba(255,255,255,.08)', 'rgba(255,255,255,.16)']

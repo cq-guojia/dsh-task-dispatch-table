@@ -23,7 +23,6 @@ export const CONFIG_DEFAULTS = {
     leaseMs: 30 * 60_000,
     unknownGraceMs: 5 * 60_000,
     logRetentionDays: 30,
-    historyRetentionDays: 0,
     attachmentTmpRetentionDays: 7,
 };
 // ⚠️ rc.1（0.1.7-rc.1）约束：宿主插件配置字段**不能标 .volatile()**。
@@ -48,7 +47,6 @@ export const Config = z.object({
     defaultProvider: z.string().default(CONFIG_DEFAULTS.defaultProvider),
     defaultModel: z.string().default(CONFIG_DEFAULTS.defaultModel),
     logRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.logRetentionDays),
-    historyRetentionDays: z.number().min(0).default(CONFIG_DEFAULTS.historyRetentionDays),
     attachmentTmpRetentionDays: z.number().min(1).default(CONFIG_DEFAULTS.attachmentTmpRetentionDays),
 });
 /**

@@ -208,7 +208,8 @@ export type LocaleKey =
   | 'debugRowsSuffix'
   | 'tabSettings' | 'settingsConfigTitle' | 'settingsBlockLogTitle' | 'settingsBlockDataTitle'
   | 'settingsCurrentConfig' | 'settingsProvider' | 'settingsModel'
-  | 'settingsLogRetention' | 'settingsHistoryRetention' | 'settingsAttachmentRetention'
+  | 'settingsLogRetention' | 'settingsLogRetentionHint' | 'settingsAttachmentRetention' | 'settingsAttachmentRetentionHint'
+  | 'settingsUnsaved' | 'settingsDefaultOption'
   | 'settingsAutoRefresh' | 'settingsRefresh' | 'settingsLogEmpty' | 'settingsLogFail'
   | 'settingsTable' | 'settingsTopN' | 'settingsPageSize' | 'settingsAddFilter' | 'settingsNoFilters' | 'settingsQuery'
   | 'settingsTableTruncated' | 'settingsTableEmpty' | 'settingsTableFail'
@@ -870,8 +871,11 @@ export const zh: Record<LocaleKey, string> = {
   settingsProvider: '默认模型供应商',
   settingsModel: '默认模型',
   settingsLogRetention: '运行日志保留（天）',
-  settingsHistoryRetention: '执行历史保留（天）',
+  settingsLogRetentionHint: '每次执行产生的诊断日志（任务日志 + 插件日志）保留多少天，到期自动清除。只清日志明细，不影响执行记录本身。',
   settingsAttachmentRetention: '临时附件保留（天）',
+  settingsAttachmentRetentionHint: '上传 / 引用附件时，插件在临时目录里留的那份副本保留多少天，到期自动清理。任务定义里正式引用的附件不受影响。',
+  settingsUnsaved: '有未保存的修改',
+  settingsDefaultOption: '默认',
   settingsAutoRefresh: '自动刷新（5 秒）',
   settingsRefresh: '刷新',
   settingsLogEmpty: '（暂无日志）',
@@ -1531,8 +1535,11 @@ export const en: Record<LocaleKey, string> = {
   settingsProvider: 'Default Model Provider',
   settingsModel: 'Default Model',
   settingsLogRetention: 'Run Log Retention (days)',
-  settingsHistoryRetention: 'History Retention (days)',
+  settingsLogRetentionHint: 'How long to keep the diagnostic logs produced by each run (task log + plugin log); expired rows are purged automatically. Only log details are cleared — run records are kept.',
   settingsAttachmentRetention: 'Temp Attachment Retention (days)',
+  settingsAttachmentRetentionHint: 'How long to keep the copy the plugin places in its temp directory when an attachment is uploaded or referenced. Attachments formally referenced by a task are not affected.',
+  settingsUnsaved: 'You have unsaved changes',
+  settingsDefaultOption: 'Default',
   settingsAutoRefresh: 'Auto Refresh (5s)',
   settingsRefresh: 'Refresh',
   settingsLogEmpty: '(no logs yet)',
