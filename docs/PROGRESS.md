@@ -11,52 +11,12 @@
 
 ## 一、当前状态
 
-### 1.0 侧边栏压住宿主「系统设置」弹窗（2026-10-05）—— ✅ **2026-10-05 真机验收通过，已结案**
-
-> 两条侧边栏（预览 dock / 编辑抽屉）是占布局的分栏，移除浮层时代遗留的显式 `z-index`（1030 / 1040）回到 `auto`，交 DOM 顺序裁决、让宿主 portal 弹窗回到上层（官方 Modal `portal` 到 body、「后挂载居上」只在同层成立）。`--tdt-z-*` 阶梯与其它局部层级一律未动。冒烟 603/0（+2 反向断言）。
-> 过程 = [worklog/sidebar-overlap-host-modal.md](worklog/sidebar-overlap-host-modal.md)；规矩入 `ui-foundation.md` §十「层级 z-index」。
-
-### 1.1 UI 基础层统一（样式专项）—— ✅ **完成封卷**（P0–P6 + 尺寸/圆角/字号归一 + 死代码清理）
-
-> **已结案，详见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)**。规格 = [design/ui-foundation.md](design/ui-foundation.md)，手册 = [design/ui-style-guide.md](design/ui-style-guide.md)；过程 = [worklog/ui-foundation.md](worklog/ui-foundation.md)（P0–P6）、[worklog/size-unification.md](worklog/size-unification.md)（尺寸归一）、[worklog/ui-alignment-round.md](worklog/ui-alignment-round.md)（本轮收口 + 审计）。
-
-
 ### 1.2 真机验收批次（用户装 `dist/` 实测）—— ⏳ **待验 1 项：U33 Office 预览**
 
 > 2026-10-04 用户真机实测：本轮在办事项（立即执行 §1.5 / 执行记录总查询页 §1.6 / 文件预览 U26–U30 / U32 观察项）**全部验收通过并已结案**。
 > ⏳ **当前待验**：U33 Office 预览（doc/docx/ppt/pptx 转 PDF）—— 取决于宿主是否启用文档预览服务；宿主未启用时**预期就是**「Office 预览不可用」（与官方一致，非 bug）。验收清单见 [worklog/office-preview-officetopdf.md](worklog/office-preview-officetopdf.md) §四。
 
 > 已验项（用户 2026-10-01 / 10-03 / 10-04 分批复核）已移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)：主界面+运行态摘要、高级区第二轮+多 Agent 协作、表单弹窗观感第五轮+脏判定、附加文件选择+上传（U15①）、UI 基础层收口（冒烟 390）、新增/编辑任务（U16）、任务展开三面板（规格 [design/features/task-expand-panels.md](design/features/task-expand-panels.md) §3.1b · §3.1d · 过程 [worklog/expand-panels-round4.md](worklog/expand-panels-round4.md)）、工作区候选真源统一、立即执行、执行记录总查询页、文件预览五项。
-
-### 1.3 新增 / 编辑弹窗改「布局分栏」（U21）—— ✅ **完成封卷**（10-01 落码 + 10-02 微调 + 10-03 真机验收通过）
-
-> **已结案，详见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)**。过程 = [worklog/editor-split-pane.md](worklog/editor-split-pane.md)；口径定型 = [design/features/creation-edit.md](design/features/creation-edit.md) §七-B。
-
-
-### 1.4 任务文件上下文（会话里「接收 / 随附 / 产出」）—— ✅ **完成封卷**（2026-10-03 多轮定稿 + 真机实测通过）
-
-> **已结案，详见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)**。过程 = [worklog/task-file-context.md](worklog/task-file-context.md)（含**版本基线**：v0.0.1 / HEAD `4ecd310`，回滚用）；宿主事实已回写 [`design/external/dsh-capabilities.md`](design/external/dsh-capabilities.md) §会话与派发。
-
-
-### 1.5 立即执行（手动触发一次调度）—— ✅ **完成封卷**（2026-10-03 落码 + 2026-10-04 真机验收通过）
-
-> ✅ **2026-10-04 真机验收通过**（按钮位于删除与编辑中间 / 确认框文案 / 成功 Toast / 任务在跑时被拒 / 前置未达标被拒并给原因 / 已停用任务仍可立即执行 —— 六项全过），**已结案移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)**。过程 = [worklog/manual-run.md](worklog/manual-run.md)（已封卷）。
-
-
-### 1.6 执行记录总查询页（流水账）+ 任务选择器 —— ✅ **完成封卷**（2026-10-04 三版定稿 + 第四~十一轮细磨 + 真机验收全部通过）
-
-> ✅ **2026-10-04 真机验收通过**（交互分层「只头部可点、展开区可拖选复制」/ 自绘浅色实心正圆前置圈码 + 悬停官方气泡 / 展开态头部不常亮 / 第一排产出物·第二排前置两列 + 无边框「查看会话」/ Token 悬停三段明细 / 5px 方角竖条与状态浅底 —— 全部验过），**已结案移 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)**。过程 = [`worklog/execution-timeline.md`](worklog/execution-timeline.md)（已封卷）。
-
-
-
-### ~~1.8 任务日程（月历视图）~~ —— ✅ **2026-10-06 浅色 UI 专项 + 整体真机验收通过，已结案**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）
-
-> 过程 = [worklog/task-calendar.md](worklog/task-calendar.md)（§一至 §二十一；定型见 §二十一「浅色 UI 专项 + 整体验收」）；规格 = [design/features/task-calendar.md](design/features/task-calendar.md)。
-
-### ~~1.7 工作区候选真源统一 + 顶部下拉收编~~ —— ✅ **2026-10-04 真机验收通过，已结案**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）
-
-> 过程 = [`worklog/workspace-options-unification.md`](worklog/workspace-options-unification.md)（已封卷）；口径真源 = [`design/ui-foundation.md`](design/ui-foundation.md) §5.4；使用规范 = [`design/ui-style-guide.md`](design/ui-style-guide.md) §二 / §三「待抽象」第 9 项。
-> 结论要点（供后人不重复排查）：三处「选工作区」候选一律取 `GET /options`，取不到显示「暂无可选」**不回退反推**；任务列表顶部手搓下拉已收编为 `SelectField`；允许「选到没有任务的工作区」的空态。收编后选中态为打勾（与编辑器一致，属预期变化）。
 
 ### 1.9 事件推送机制（SSE 事件总线）—— 🔵 **进行中**（2026-10-06 开工）
 
@@ -102,8 +62,7 @@
 3. **U31 剩余 ②③**：编辑器「前置任务」第②级换 `TaskPicker` + 第①级工作区改受控入参；任务选项文案统一取 `[code] name`。
 4. **任务日程：日期右上角标农历（初一 / 十五等）** —— ⏸️ **用户 2026-10-06 拍板暂缓**：先把日程样式调好再说。⚠️ 开工前必读：农历**算不出来，只能内置数据表**（本仓不引第三方包 ⇒ 不引 lunar 库）；表是 200 多个常量，必须**用已知锚点做冒烟断言校验**（如春节：2024-02-10 / 2025-01-29 / 2026-02-17 均为正月初一），**锚点对不上就不许提交** —— 算错就等于界面上显示假日期，直接违反「禁止模拟数据」的硬规矩。显示范围暂定只标农历日名（不标节日 / 节气）。
 5. **（🔵 进行中）事件推送机制（见 §1.9）**：按 [design/event-push.md](design/event-push.md) §八 实施步骤推进——核实宿主流式能力 → 事件目录 / 广播器 / SSE 端点 → 全量变更点接线 → 前端订阅封装 → 页面接入 → build / smoke / typecheck。
-6. ~~设置页三大块重构（顶部 `debug` → `settings`，旧调试页删除）~~ —— ✅ **2026-10-08 完成封卷**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）。过程 = [worklog/settings-reshaping.md](worklog/settings-reshaping.md)（§八 / §十 / §十一）；定型 = [design/features/settings.md](design/features/settings.md)；宿主侧源码事实 = [design/external/dsh-capabilities.md](design/external/dsh-capabilities.md)「settings 写路径」条。
-7. **（⏳ 真机验收待做）插件配置改存自有状态库**（2026-10-08）：设置页保存改走 `meta.pluginConfig`（不再碰宿主配置面）。待验：改设置 → 保存 → 刷新页面值仍在；改回默认值 → 该字段从库里消失。已知代价：宿主通用「插件配置」页不再反映本插件设置。
+6. **（⏳ 真机验收待做）插件配置改存自有状态库**（2026-10-08）：设置页保存改走 `meta.pluginConfig`（不再碰宿主配置面）。待验：改设置 → 保存 → 刷新页面值仍在；改回默认值 → 该字段从库里消失。已知代价：宿主通用「插件配置」页不再反映本插件设置。
 
 
 
