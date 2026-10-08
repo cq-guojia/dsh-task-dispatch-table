@@ -1,7 +1,7 @@
 {
   "name": "dsh-task-dispatch-table",
-  "version": "0.0.1",
-  "description": "定时任务调度器：一个 dsh host 层插件，用一张任务定义表驱动周期性任务，按时间窗与依赖把任务派发成独立会话执行（调度层零大模型介入）",
+  "version": "0.1.0",
+  "description": "Scheduled task dispatcher: a dsh host plugin that drives recurring agent tasks from a single task table, dispatching each run as an independent dsh session (scheduling itself uses zero model calls)",
   "icon": "./assets/icon-scheduler.svg",
   "keywords": [
     "deepseek",

@@ -1,62 +1,112 @@
-# dsh-task-dispatch-table · 定时任务调度器
+# dsh-task-dispatch-table · Scheduled task dispatcher
 
-一个 **dsh（DeepSeek Harness）host 层插件**：用**一张任务定义表**驱动周期性任务，按时间窗与依赖关系把每个任务派发成一个**独立的 dsh 会话**去执行。
+English | [中文](README.zh.md)
 
-> ⚠️ **项目状态：骨架已实现（v0.0.1），未做真机联调，请勿安装。** 进度见 [`docs/PROGRESS.md`](docs/PROGRESS.md)。
+One dsh host plugin: **a single table of task definitions drives your recurring agent work** — when a task is due, it is dispatched as an **independent dsh session** that an agent actually executes. The scheduling itself is pure program logic and **never burns a token**.
 
-## 它要解决什么
+![Task list with a task expanded](docs/images/task-overview.jpg)
 
-起因是四类周期性自动化需求：
+- **Zero model involvement in scheduling** — tick → check the schedule window → check dependencies → dispatch. Judgment-heavy work goes to the agent session; deciding *when to run* costs nothing
+- **Three schedule modes** — one-off, cron-style daily/weekly, or every-N-hours intervals, each with an **allowed-delay window** so a busy host catches up instead of silently skipping
+- **Dependencies declared by the downstream** — a task can require upstream tasks to have succeeded; the exact upstream instance and its outputs are **frozen at dispatch time** and handed to the downstream session
+- **Every run is an independent session** with its own status, token usage, artifacts and event log — inspectable afterwards, retryable on failure, serialized per task
+- **A full UI** — task list, per-task runs and logs, a cross-task execution timeline, a monthly calendar of planned and actual runs, a split-panel editor, and a settings page
 
-| # | 需求 | 核心难点 |
-|---|---|---|
-| 1 | 每 N 小时巡检容器与主机资源，异常立即上报 | 高频、纯阈值判断，不该烧 token |
-| 2 | 每天查镜像升级，汇报「更新了什么 + 是否建议升」 | 需要**判断**（读 release notes 评风险） |
-| 3 | 每天汇报 GitHub 上自己的 PR / Issue 进展 | 归纳 |
-| 4 | 每天列 GitHub 趋势项目，给出「新增 / 替换 / 观望」建议 | 重度判断 |
+## Install
 
-这四件事本身不是重点，重点是：**这类任务以后会有很多，需要一套通用的调度体系**——能拆解、有依赖、可复用、可无人值守。
+```bash
+dsh plugin --profile web add dsh-task-dispatch-table
+```
 
-其中 3 件事的价值在「判断」，而判断只有 agent 能做；**调度本身是纯程序逻辑，一行 token 都不该烧**。
+Every release is published to npm, so it works right after installing — no extra configuration and no local build. The UI copy is **bilingual** and follows dsh's interface language (Settings → General → Language).
 
-## 设计要点
+## How it works
 
-- **表驱动**：任务定义是一份 JSON 文件，人改、可 review、进 Git。
-- **调度器零大模型介入**：定时 tick → 判时间 → 判前置 → 派发，全部是程序逻辑。
-- **下依赖由下游声明**：加下游不改上游（Airflow / GitHub Actions `needs` 的模型）。
-- **控制平面与数据平面分离**：agent 只写产物，**任务状态只由调度器写**。
-- **状态存 SQLite**（原子领取），任务定义存 JSON。
+The plugin keeps two layers of state:
 
-选型理由（为什么不引外部工作流引擎 / 不走 ACP / 不用 subagent 派发）见 [`docs/design/architecture.md`](docs/design/architecture.md) 的「关键约束」。
+| Object | What it is | What it decides |
+| --- | --- | --- |
+| **Task definition** | One row per scheduled unit: title, prompt, schedule, attachments, workspace, model, dependencies, on/off switch | *Whether and how* a task should run |
+| **Task instance** | One row per actual run: status, planned/actual time, session id, token usage, artifacts | *What happened* in a run |
 
-## 文档
+The scheduler is a plain loop: on every tick it computes which tasks are due, claims them atomically in SQLite, dispatches each as a new dsh session in the task's workspace, then tracks the session via a receipt tool the session is required to call when done. Missed slots (host was down past the allowed delay) are recorded and marked `skipped` instead of disappearing.
 
-| 想看什么 | 去哪 |
-|---|---|
-| 项目进度、未决项、下一步 | [`docs/PROGRESS.md`](docs/PROGRESS.md) |
-| **文档规范**（写文档放哪、怎么写） | [`docs/README.md`](docs/README.md) |
-| 三层架构与职责边界、选型约束 | [`docs/design/architecture.md`](docs/design/architecture.md) |
-| 表结构与字段语义 | [`docs/design/data-model.md`](docs/design/data-model.md) |
-| 有哪些功能、对应哪个页面 | [`docs/design/features.md`](docs/design/features.md) |
-| 状态机、依赖语义、必补机制 | [`docs/design/features/state-machine.md`](docs/design/features/state-machine.md) |
-| 通用方法复用规范 | [`docs/design/code-conventions.md`](docs/design/code-conventions.md) |
-| 界面样式规范 | [`docs/design/ui-style-guide.md`](docs/design/ui-style-guide.md) |
-| agent 接手守则（工具自动挂载） | [`AGENTS.md`](AGENTS.md) |
-| 公用规则真源（跨工作区） | [`RULES.md`](RULES.md) |
+## Tasks
 
-## 环境前提（脱敏）
+### Creating and editing
 
-| 项 | 结论 |
-|---|---|
-| 宿主形态 | DSH 以容器运行，工作区是**挂载卷** ⇒ SQLite 状态文件必须落在挂载卷内，否则容器重建即丢 |
-| 网络 | 宿主同时接内网与公网 ⇒ 可直连内网服务；注意代理 / `NO_PROXY` 配置 |
-| 容器巡检数据入口 | Docker 引擎提供只读 HTTP API；容器内无 curl，用 node `fetch` |
-| 配置生效 | 改工作区文件不等于改运行中的配置，实际生效以部署侧为准 |
+![The task editor as a right-hand split panel](docs/images/task-editor.jpg)
 
-## 项目信息
+Press **New task** (or **Edit** on a card) and the editor opens as a layout split panel, not a floating drawer: basics, schedule, prompt (with version history), advanced options, attachments and upstream tasks. Attachments are either **links** to files already in the workspace or **uploads** (stored in the task's own directory, up to 20 MB each).
 
-- 包名规划：采用 scoped 包名（npm 上 dsh 插件多为 scoped 包）。
-- 当前最缺拍板的几个问题列在 [`docs/PROGRESS.md`](docs/PROGRESS.md) 的「未决项」。
+The footer switches between **View / Edit** modes: View is a read-only rendering of the task — configuration, last run, and the prompt — for checking a task without risking an accidental edit.
+
+### Schedules
+
+![Recurring schedule: daily at 18:12 with an allowed delay](docs/images/schedule-recurring.png)
+
+Three modes, each showing a plain-language preview of the next run:
+
+- **Once** — runs at the given moment, then never again
+- **Recurring** — daily / weekly / monthly at a given time
+- **Interval** — every N hours (or days), optionally restricted to selected weekdays
+
+Every mode has an **allowed delay**: if the host was busy or down when the moment came, the run still fires within the window; past the window the slot is recorded as `skipped` (with the reason) rather than lost silently. A task card's **Run now** button triggers an extra run immediately, outside the schedule.
+
+### Dependencies
+
+![Upstream tasks declared in the editor](docs/images/dependencies.png)
+
+A task declares which upstream tasks must have succeeded before it may run (the Airflow / GitHub Actions `needs` model — **the downstream declares, so adding a downstream never touches the upstream**). When the task fires, the plugin freezes *which upstream instance it matched* together with that instance's outputs and passes them into the new session, so the downstream agent reads exactly the data its run was keyed to — even if the upstream has re-run since.
+
+## Runs and records
+
+### Per task
+
+![A task expanded: runs table with status, times, token usage and artifacts](docs/images/run-history.jpg)
+
+Expanding a task opens three panels: **basic info** (configuration side by side with the last run), **runs** (one row per instance: status, planned vs actual time, duration, token usage, artifacts, and a button to open the archived session), and **logs** (the plugin's own diagnostic log for that task — missed slots, missing attachments, manual runs).
+
+### Execution timeline
+
+![The cross-task execution timeline, one entry expanded](docs/images/execution-timeline.jpg)
+
+The **Records** tab is the ledger across *all* tasks, grouped by day and filtered by time range, workspace, status and task. Each entry expands in place to its full artifact list and raw event log (state changes, dispatch record, receipt); the archived session itself opens only when you press **View session**.
+
+### Calendar
+
+![Monthly calendar with actual runs as filled dots and planned runs as dashed dots](docs/images/calendar.jpg)
+
+The **Schedule** tab is a month view. Days show two kinds of markers: **actual runs** from the instance table (solid dots in status colors) and **planned runs** computed from the current task definitions (dashed dots). Clicking a day expands that week in place with the full run details — the same entry blocks as the timeline, expandable again down to artifacts and events.
+
+## Configuration
+
+![Settings page: plugin settings on top, plugin log below](docs/images/settings.jpg)
+
+The **Settings** tab is the primary place to configure the plugin. Each item shows whether it was customized and can be reset individually; changes are staged and written only on **Save**; the log block below shows the plugin's diagnostic log with level coloring and auto-refresh.
+
+| Item | Default | Meaning |
+| --- | --- | --- |
+| Tick interval | 60 s | How often the scheduler scans the task table |
+| Run log retention | 30 days | How long diagnostic log rows are kept |
+| Temp attachment retention | 7 days | How long uploaded temp files are kept |
+| Default model | follow host | Model used when a task does not pick one |
+| Dispatch grace | 60 s | Max wait for a dispatched session to appear |
+| Run lease | 1800 s | How long a silent session keeps its lease before being reclaimed |
+| Observation window | 300 s | How long an unknown-status session is watched before being judged dead |
+
+Configuration is stored in the plugin's own state database, so it survives host config resets; defaults apply underneath.
+
+## Development
+
+```bash
+npm install
+npm run build        # builds host first, then client
+npm run typecheck
+npm run smoke        # smoke tests against dist/
+```
+
+> **`dist/` is a build artefact committed to git** — dsh installs plugins from git/npm without running build scripts, so after changing `src/` you must run `npm run build` and commit `dist/` with it, or the change will not take effect.
 
 ## License
 
