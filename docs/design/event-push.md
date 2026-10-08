@@ -150,7 +150,7 @@ export function createEventBus(opts?: { windowMs?: number; maxWaitMs?: number })
 | unknown 复活 / 转 running / redispatch | `TASK_RUN_CHANGED` | `{taskId,instanceId}` | `src/reconcile.ts` `markActivity` / `noteRunSignal` / `onCreated` / `sweep` → `notifyRow` |
 | 配置变更 | `CONFIG_CHANGED` | 无 | `src/index.ts` `scope.watch` —— **唯一发射点**（正常与降级作用域都走它：`fallbackScope` 的 `watch` 已如实实现）。**边沿触发**：整份配置比对后真变了才发（「点了保存但值没变」不算）。⚠️ 2026-10-06 二次校准：此前曾在 `/config` 路由补发一条，造成**一次改动发两次**、靠合并窗口吃掉多出来的那条 —— 那是拿下游兜上游的底，已撤掉 |
 | 启动扫描 / 索引重建 / 启动诊断 | **不发** | — | 都跑在客户端连上之前（那时没有订阅者，发了也没人收）；要强刷时用 `FORCE_REFRESH` |
-| 历史 / 日志清理（`store.purgeLog` / `purgeHistory`） | **不发** | — | ⚠️ **2026-10-07 校正**：它**不是**启动期一次，而是**每个 tick 都跑**（在 `src/scheduler.ts` 的 `tick()` 内，官方 interval）。不发事件是**有意取舍**：删的只是超过保留期的旧行（`logRetentionDays` 默认 30 天、`historyRetentionDays` 默认 0 = 不删），用户想看的那几条几乎不可能被删；为它发事件只会白刷。**若将来把保留期调短到会删「眼前正在看的行」，这里必须补事件**。本文档早前把这行写成「跑在客户端连接之前」，与实现相反。 |
+| 日志清理（`store.purgeLog` / `purgePluginLog`） | **不发** | — | ⚠️ **2026-10-08 更新**：执行历史清理（`purgeHistory`）**已整条删除**（历史永久保留，见 [data-model](data-model.md) §保留策略）⇒ 本行只剩两张日志表。它**不是**启动期一次，而是**每个 tick 都跑**（在 `src/scheduler.ts` 的 `tick()` 内，官方 interval）。不发事件是**有意取舍**：删的只是超过保留期的旧行（`logRetentionDays` 默认 30 天），用户想看的那几条几乎不可能被删；为它发事件只会白刷。**若将来把保留期调短到会删「眼前正在看的行」，这里必须补事件**。 |
 | 归档 / 反归档会话 | **不发** | — | 只影响会话弹窗可读性，列表数据不变 |
 
 **实际注入面（落码现状，共四处）**：
@@ -302,7 +302,7 @@ export function useResync(handler: () => void): void   // 重连成功时触发�
 
 - **多标签页「整份覆盖」可能丢更新**（未修，登记）：① 编辑器保存是**全量定义覆盖**（`enabled` 不在保留清单里）⇒ A 标签页拨的开关会被 B 标签页较早打开的表单**静默覆盖**；② `POST /tasks {tasksInline}` 是整批文本覆盖（该 UI 目前是关闭的遗留视图，风险潜伏）。要修需引入乐观锁（保存时带上「我基于哪一版」）。
 - **时钟**：服务端下发 `now` 供客户端做「以服务端为准」的判定，但**客户端目前未消费它**（全部用本地时钟）⇒ 两端时钟有差时，「下次执行」的相对显示可能与服务端判定不一致。登记为已知限制。
-- **`renewLease` / 常规 `appendLog` / 每 tick 的 `purgeLog`+`purgeHistory`** 均**有意不发**事件（理由见 §六：界面不展示 / 只改日志 / 删的都是过期旧行）。
+- **`renewLease` / 常规 `appendLog` / 每 tick 的 `purgeLog`+`purgePluginLog`** 均**有意不发**事件（理由见 §六：界面不展示 / 只改日志 / 删的都是过期旧行）。~~`purgeHistory`~~ 已删除（执行历史永久保留）。
 - **`tasksInline` 整批保存**：已补**形状闸门**（非法 JSON / 非数组 / 元素非对象一律 422）—— 它此前是**唯一会持久化丢数据的路径**（保存成功后整表无人能解析 ⇒ 任务全消失且每次启动复现）。逐字段合法性仍交给运行时逐条 warn 跳过（决策 30：运行时只认不修）。
 
 **兼容性与产物（2026-10-07 审计）**

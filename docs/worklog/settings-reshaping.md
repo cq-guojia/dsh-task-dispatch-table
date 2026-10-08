@@ -1,7 +1,7 @@
 # 工作包：顶部「调试」重组为「设置」页
 
-> **状态**：🔵 落码完成（commit `b096443`，2026-10-08），⏳ 真机验收待做（尚未封卷）
-> **来源**：用户 2026-10-08 口头规划（开新坑）+ 2026-10-08 第二轮拍板
+> **状态**：✅ **完成封卷**（2026-10-08：首轮 `b096443` → 第二轮 `cc87ece` 段 → 第三轮起多轮真机反馈重修 → 配置存储通道定案；冒烟 **726/0**）　⛔ 封卷后不再修改
+> **来源**：用户 2026-10-08 口头规划（开新坑）+ 逐轮真机反馈拍板
 > **配套**：[功能总索引](../design/features.md) · [数据模型](../design/data-model.md) · [配置真源](../src/config.ts) · [调试页现状](../src/client/index.ts)
 >
 > ⚠️ 本文原是规划/需求归集；**2026-10-08 已落码（commit `b096443`）**，确定部分已升格见下方 §八 实现记录。落码细节与待办见 §八 / §九；定稿升格文档 `design/features/settings.md` 待补（见 §九）。
@@ -233,3 +233,41 @@
 ---
 
 > 🧠 **From Hindsight memory** — 本次未调用（按用户要求只写本地文档，未入长期记录）；事实均取自本仓库源码（`src/store.ts`/`src/index.ts`/`src/client/*`）与 `docs/design/data-model.md`，已在正文标出处。
+
+---
+
+## 十一、第三轮起：多轮真机反馈重修 + 配置存储通道定案（2026-10-08，已封卷）
+
+> 承接 §十；本轮以**用户真机逐条反馈**驱动，UI 与「配置存哪」两线并行。冒烟 **726/0**，typecheck / build 绿。
+> 定型结论已升格：[features/settings.md](../design/features/settings.md)；宿主侧源码事实已回写 [external/dsh-capabilities.md](../design/external/dsh-capabilities.md)「settings 写路径」条。
+
+### 11.1 UI（用户逐条拍板）
+
+- **三块套「浅灰两色框」**：参考执行记录条目块的「左缘粗色块 + 浅色底」手法，仅用中性灰（`color-mix` 取 `--tdt-fg` 3% / 14%）；后按用户要求**去圆角、去描边**（`border:none; border-radius:0`，只留左缘色块 + 极淡底）。
+- **插件设置字段**：先误砍成 2 项（用户：「刚刚那些全都要」）⇒ **恢复全量**，只去 `statePath` / `tasksDir`（「一个插件装到哪儿就完了」）与 `historyRetentionDays`（见 §11.3）；**一行两个**；每项 = 标题 +「?」详细说明 + 输入框 + 一句短说明；**取消「高级」折叠**（全铺开）；**去掉输入框后的单位**（单位只写在标题里）。
+- **每项状态机**：照抄 `dsh-session-title-pattern` —— 改过（≠系统默认值）⇒「自定义」徽章 + 「恢复默认」；**没改过两个都不显示**；**无任何改动 ⇒ 保存按钮灰**。
+- **默认模型 = 一行连栏**（供应商 + 模型同一项，一起算自定义 / 一起恢复默认）；没选供应商 ⇒ 模型下拉灰掉不可选。目录取 `GET /options`（与任务编辑器同一份真源）。
+- **数字框只吃数字**：非数字字符在 `onChange` 直接滤掉（用户：「我不应该能把 AA 输进去」）；不用原生 `type="number"`（基础层守卫禁止原生 spinner）。
+- **保存链路照抄「新增 / 修改任务」**：点保存才判、**一次查全部问题**（数字范围 + 连栏成对）、出问题的框**描红**（改好即退）、提示**一律走 `FloatingToast`**（去掉表单内联错误文字）、成功绿 / 失败红。
+- **插件日志（原「整体日志」改名）**：控件统一为 `自动刷新`（**默认勾选**）→ `刷新` → `显示 N 条`（**最右**，与「任务配置 → 执行记录」同款 `显示 <下拉> 条`）；**表头不吸顶**（页面滚动，吸顶会让表头浮在上下文外且上面漏内容）；`level` 按语义着色（info 无色 / warn 黄 / error 红）；`ts` 缩短成 `MM-DD HH:MM:SS` 并**定宽**，剩余宽度全给 `message`；**去掉内部滚动槽**，直接页面往下滚；删掉「plugin_log · N 行」那行标题。
+- **「数据查询」块整块删除**（用户：「整个砍掉不要了，没有意义」）：`settings-table-block.tsx` / `table-filter.tsx` 删除，`SETTINGS_TABLES` / `TABLE_COLUMNS` 与相关 locale 键清理；`/db-query` 保留（插件日志块仍在用）。
+- **配置预览只读栏删除**（用户：「没啥意义」）。
+
+### 11.2 配置保存：从「写不进去」到「写自有库」（三轮才到位，全是真机日志驱动的）
+
+1. **第一步：先让失败可诊断**。原 `catch { return false }` 把真实错误整个吞掉，界面只有一句 `update-failed`（用户：「谁他妈知道你哪 failed」）⇒ 捕获时**原样落 `plugin_log`**（`pushNotice('route_error', …)`）+ 随 503 带回 `detail`，前端 Toast 追加真实原因。改动一行，立刻从日志里读到了真因。
+2. **真因 A**：`Plugin entry "dsh-task-dispatch-table" has no volatile fields`。读宿主源码（`@deepseek-ai/dsh-settings` 0.2.0-rc.2 `lib/index.js:502-508`）确认：`update/replace/mutate/write` **全经 `write()`**，第一步 `volatileForm(schema)`，为空即抛；本插件配置**刻意全静态字段**（volatile 有让 entry 不激活的历史风险）⇒ 官方写路径对本插件**恒不可用**。
+3. **走错一步**：改去调 `write()` 内部真正落盘用的 `configEditor.edit`（并加了独立 `ctx.inject(['configEditor'])` 捕获）。真机返回 **`cannot get property "configEditor" without inject`** —— 它是 settings 服务的**依赖服务**（`SettingsForms` 自己 `static inject = ["configEditor","profileContext"]`，:324），挂在 settings 的 **ownerContext** 上，**不是给插件用的公开接口**。用户当场点破：「是不是做了什么非法的？我要正规的写法」。
+4. **定案（正规写法）**：**插件配置存自有状态库** —— `state.db` 的 `meta` 表 `pluginConfig` 键（与任务表 `tasksInline` 同一条通道；重装 / 容器重建都不丢）。`configEditor` 相关的注入 / 持有 / 调用**全部删除**（含任务表那个同款「次通道」）。生效值优先级 = `CONFIG_DEFAULTS` < 宿主基线（entry config / patch yml）< 数据库；等于默认值的字段不落库（= 撤销）。落码要点：`updateScopeConfig` 改写 meta + 复用 `applyConfigLive()`（宿主变更与手动写回**共用一份**生效逻辑：更新 `configRef` / 广播 `CONFIG_CHANGED` / `tickMs` 变了重启定时器）；运行期读配置统一走 `configRef`，**不再读 `scope.get()`**（它没有库里那层）。
+
+### 11.3 其他判定
+
+- **执行历史保留整条删除**（用户：「执行历史本来就应该一直保留，不能删除」）：`historyRetentionDays` 配置 + `store.purgeHistory` + 调度器内调用 + 启动读取全删；冒烟原「purgeHistory 行为」用例改为**守卫**（断言该方法不存在）。数据模型已同步（§保留策略）。
+- **临时附件保留**：用户问「上传了但没用到，对吧？接吧」—— ⚠️ **我先前误判它是「死旋钮」**（grep `purgeTmp` 结果被截断，只看到 `task-assets.ts` 的定义，漏了 `index.ts` 的调用点，未复核即下结论），并据此往调度 tick 里加了一次清理。查证后发现 **`index.ts` 早有 6 小时清道夫**（跨天闸门）在调 `purgeTmp(paths, configRef.attachmentTmpRetentionDays)` ⇒ **已还原** tick 里的冗余添加；冒烟补「真删过期 / 不误删新鲜」两条 + 接线守卫。教训：**grep 结果可能被截断，下「死代码」结论前必须复核全部调用点**。
+- **运行租约 `leaseMs`：用户拍板不改**。确认现状语义 —— `reconcile.ts:411` 对 `status === 'running'` 的实例**每轮巡检续期**，只有「超过租约时长完全没有动静」才判定卡死回收；一直正常在跑**不会被掐断**。「真卡死就让它占着，用户自己手动结束，我们不管」（用户原话）。
+- **模型下拉「没选供应商时灰掉」**：按用户描述实现（选了供应商才列该家模型）。
+
+### 11.4 校验与遗留
+
+- 冒烟 **726/0**（新增/改写的守卫：配置存储不碰宿主内部实现、清道夫接线、执行历史不可清除、CONFIG_CHANGED 单发射点、不重复存储、可诊断错误…）；typecheck / build 绿；`dist/` 随每次提交入库。
+- ⏳ 遗留：宿主通用「插件配置」页不再反映本插件的设置（它读宿主自己的配置文档）——**已知代价**，用户已接受。

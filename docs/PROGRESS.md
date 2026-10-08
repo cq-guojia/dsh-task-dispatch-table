@@ -102,7 +102,8 @@
 3. **U31 剩余 ②③**：编辑器「前置任务」第②级换 `TaskPicker` + 第①级工作区改受控入参；任务选项文案统一取 `[code] name`。
 4. **任务日程：日期右上角标农历（初一 / 十五等）** —— ⏸️ **用户 2026-10-06 拍板暂缓**：先把日程样式调好再说。⚠️ 开工前必读：农历**算不出来，只能内置数据表**（本仓不引第三方包 ⇒ 不引 lunar 库）；表是 200 多个常量，必须**用已知锚点做冒烟断言校验**（如春节：2024-02-10 / 2025-01-29 / 2026-02-17 均为正月初一），**锚点对不上就不许提交** —— 算错就等于界面上显示假日期，直接违反「禁止模拟数据」的硬规矩。显示范围暂定只标农历日名（不标节日 / 节气）。
 5. **（🔵 进行中）事件推送机制（见 §1.9）**：按 [design/event-push.md](design/event-push.md) §八 实施步骤推进——核实宿主流式能力 → 事件目录 / 广播器 / SSE 端点 → 全量变更点接线 → 前端订阅封装 → 页面接入 → build / smoke / typecheck。
-6. **（🔵 第二轮重构已落码，⏳ 真机验收）设置页三大块重构（顶部 `debug` → `settings`，旧调试页删除）**：首轮三块（b096443）真机看完后，用户整页级反馈已全部落码 —— 去卡片黑框改「icon 标题 + 内容」、宽度对齐主内容列（1120/760 单源）、Block 1 两栏（左表单栅格 / 右配置预览）、日志标题左·控件右·内容区限高滚动、表切换居右；**默认值语义**（`GET /config` 带 `defaults` 单源 `CONFIG_DEFAULTS`、**等于默认值的字段不落用户层**）、修表单单位换算 / NumberInput 删空 / 错误可诊断化（`HTTP <码> · 非 JSON：<片段>`）。冒烟 **728/0**（旧调试页 7 条断言迁移 + `[25]` 7 条新增）。过程 = [worklog/settings-reshaping.md](worklog/settings-reshaping.md)（§十）。⏳ 待验：`/db-query` 404（服务端需重装新 dist）+ 布局 / 默认值标注真机走查。
+6. ~~设置页三大块重构（顶部 `debug` → `settings`，旧调试页删除）~~ —— ✅ **2026-10-08 完成封卷**（见 [PROGRESS-HISTORY.md](PROGRESS-HISTORY.md)）。过程 = [worklog/settings-reshaping.md](worklog/settings-reshaping.md)（§八 / §十 / §十一）；定型 = [design/features/settings.md](design/features/settings.md)；宿主侧源码事实 = [design/external/dsh-capabilities.md](design/external/dsh-capabilities.md)「settings 写路径」条。
+7. **（⏳ 真机验收待做）插件配置改存自有状态库**（2026-10-08）：设置页保存改走 `meta.pluginConfig`（不再碰宿主配置面）。待验：改设置 → 保存 → 刷新页面值仍在；改回默认值 → 该字段从库里消失。已知代价：宿主通用「插件配置」页不再反映本插件设置。
 
 
 

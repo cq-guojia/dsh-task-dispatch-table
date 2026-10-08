@@ -95,12 +95,16 @@ CREATE TABLE task_log (
 
 CREATE INDEX idx_task_log_ts ON task_log(ts);
 
--- 元数据表：跨重启 / 重装必须存活的插件级键值。内嵌任务表 tasksInline 的**持久化主通道**
--- 在这里（entry config 会在插件重装时丢；state.db 在宿主数据根挂载卷上，不丢）。
--- 「无行 = 从未写过（回退 entry config 初始值）」与「value='' = 用户清空过」语义不同，勿合并。
+-- 元数据表：跨重启 / 重装必须存活的插件级键值。**两个键**：
+--   'tasksInline'  = 内嵌任务表（整份 JSON 数组）—— 持久化主通道（entry config 会随插件重装丢；
+--                    state.db 在宿主数据根挂载卷上，不丢）。
+--   'pluginConfig' = 插件设置里**用户改过的那层**（JSON 对象，只含与默认值不同的字段；2026-10-08 起）。
+--                    ⚠️ 为什么插件配置不写宿主的配置面（settings.update 要求 volatile 字段、
+--                    其内部落盘用的 configEditor 不是插件接口）——见 external/dsh-capabilities.md。
+-- 「无行 = 从未写过（回落默认 / 初始值）」与「value='' = 用户清空过」语义不同，勿合并。
 CREATE TABLE meta (
-  key   TEXT PRIMARY KEY,                -- 如 'tasksInline'
-  value TEXT NOT NULL                    -- 原文（tasksInline 为 JSON 数组文本）
+  key   TEXT PRIMARY KEY,                -- 'tasksInline' | 'pluginConfig'
+  value TEXT NOT NULL                    -- 原文（JSON 文本）
 );
 
 -- 操作审计表（2026-09-30，第 5 张表）：新增 / 修改 / 删除任务、版本留档 / 找回、附件增删
@@ -310,8 +314,8 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 |---|---|---|
 | `task_log` | SQLite | `logRetentionDays`（默认 **30 天**），tick 内跨天清（既有） |
 | **`plugin_log`**（2026-10-07 新增） | SQLite | 同 `logRetentionDays`（默认 **30 天**），tick 内跨天清。**插件进程级**日志，不挂任务 |
-| `task_instances` + `task_events` | SQLite | **默认不清**（`historyRetentionDays = 0` = 不清；用户设了天数才清）。清理时按 `updated_at` / `ts` 删、**删实例行连带删它的 events**，且**每任务最近一条终态记录永不删**（否则 `latest_success` 判定静默阻塞，评审 P1）。⚠️ 删行不会让 SQLite 文件变小，要回收磁盘还得 `VACUUM`——这也是「干脆不清」的一条理由 |
-| 上传临时区 | 文件系统 | **7 天**（D1 已拍），tick 内跨天清（一个「上次清理日期」内存变量 + 一次删除，无持续负载） |
+| `task_instances` + `task_events` | SQLite | **永久保留、不清理**（2026-10-08 用户拍板：「历史是用来查的，清它干嘛」⇒ `historyRetentionDays` 配置与 `store.purgeHistory`（含「每任务最近一条终态永不删」的保护规则）**一并删除**）。⚠️ 删行不会让 SQLite 文件变小，要回收磁盘还得 `VACUUM`——这也是「干脆不清」的一条理由 |
+| 上传临时区 | 文件系统 | **`attachmentTmpRetentionDays`**（默认 **7 天**）：由 `src/index.ts` 的 **6 小时清道夫**按自然日执行一次 `purgeTmp`（不在 tick 内——它要遍历目录，按天跑即可）。清的是「上传了但没被任何任务引用」的孤儿副本；已搬进任务目录的正式附件不受影响 |
 | 提示词版本 / 配置快照 | 文件系统 | **不自动删**；用户在版本面板自己删（配置快照的管理入口本轮不做） |
 | 任务目录 | 文件系统 | 删除任务时**整目录删**（附件 + 版本 + 快照）；删除按钮 + 二次确认待做 |
 
@@ -337,9 +341,9 @@ attachments?: { name: string; kind: 'link' | 'upload'; ref: string; workspace?: 
 
 **SQLite 承受力**（官方 `sqlite.org/limits.html`）：单库上限 **281 TB**、单表行数上限 **2^64**；百万行表带索引的按 `instance_id` / `task_id` 查询是毫秒级。**十万、百万行完全不在话下**——所以「怕撑不住而清理」这个前提不成立。
 
-> 结论：**历史查询的价值（年任务想看去年跑了什么）远大于几百 MB 的磁盘成本** ⇒ 执行记录默认不清；真需要控制体积时由用户自己设 `historyRetentionDays`（此时 P1 的保护规则生效）。
+> 结论：**历史查询的价值（年任务想看去年跑了什么）远大于几百 MB 的磁盘成本** ⇒ 执行记录**永久保留、不清理**（2026-10-08：`historyRetentionDays` 与 `purgeHistory` 已删除，不再提供清理开关）。
 
-**插件配置新增两项**：`historyRetentionDays: number`（**默认 0 = 不清**；>0 才按天清）、`attachmentTmpRetentionDays: number`（默认 **7**）。
+**插件配置里的保留项**：`logRetentionDays`（默认 **30 天**，清 `task_log` + `plugin_log`）、`attachmentTmpRetentionDays`（默认 **7**，清上传临时区，见上表）。~~`historyRetentionDays`~~ 已删除。
 
 **`task_log` 的 kind 扩充**（kind 是文本列，不动 DDL）：
 
