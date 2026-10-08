@@ -931,6 +931,7 @@ window.__ModuleLoader__.load({
 			settingsFilterOp: "运算符",
 			settingsFilterValue: "值",
 			settingsFilterRemove: "移除筛选",
+			settingsIntro: "本插件无需在此页面配置：任务与全部设置都在插件主界面（侧栏「定时任务调度器」面板）内完成。",
 			vTitleRequired: "还没填任务名称——任务列表里靠它认任务，请给任务起个名字。",
 			vWorkspaceRequired: "还没选工作区——任务必须挂在某个工作区下才能执行，请在上方下拉里选一个。",
 			vPromptRequired: "还没写提示词——这是告诉 Agent 要做什么的指令，不能为空，请填写具体内容。",
@@ -1591,6 +1592,7 @@ window.__ModuleLoader__.load({
 			settingsFilterOp: "Operator",
 			settingsFilterValue: "Value",
 			settingsFilterRemove: "Remove filter",
+			settingsIntro: "Nothing to configure here — tasks and all settings live inside the plugin panel (sidebar \"Scheduled task dispatcher\").",
 			vTitleRequired: "Task name is missing — the list identifies tasks by name. Please give it one.",
 			vWorkspaceRequired: "No workspace selected — a task must belong to a workspace to run. Pick one above.",
 			vPromptRequired: "The prompt is empty — it tells the agent what to do and cannot be blank.",
@@ -70353,242 +70355,19 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		//#endregion
 		//#region src/client/config-panel.tsx
-		const FIELDS$1 = [
-			{
-				key: "tickMs",
-				labelKey: "settingsLoopSec",
-				hintKey: "settingsLoopHint",
-				minSec: 1
-			},
-			{
-				key: "dispatchGraceMs",
-				labelKey: "settingsWaitSec",
-				hintKey: "settingsWaitHint",
-				minSec: 1
-			},
-			{
-				key: "leaseMs",
-				labelKey: "settingsLeaseSec",
-				hintKey: "settingsLeaseHint",
-				minSec: 1
-			},
-			{
-				key: "unknownGraceMs",
-				labelKey: "settingsUnknownSec",
-				hintKey: "settingsUnknownHint",
-				minSec: 1
-			}
-		];
-		const API = `${API_PREFIX}/config`;
-		const toSecs = (c) => ({
-			tickMs: Math.round(c.tickMs / 1e3),
-			dispatchGraceMs: Math.round(c.dispatchGraceMs / 1e3),
-			leaseMs: Math.round(c.leaseMs / 1e3),
-			unknownGraceMs: Math.round(c.unknownGraceMs / 1e3)
-		});
-		const toMs = (s) => ({
-			tickMs: s.tickMs * 1e3,
-			dispatchGraceMs: s.dispatchGraceMs * 1e3,
-			leaseMs: s.leaseMs * 1e3,
-			unknownGraceMs: s.unknownGraceMs * 1e3
-		});
 		function ConfigPanel(props) {
 			const { t, view } = props;
 			if (view !== void 0 && view !== "page") return null;
-			const [draft, setDraft] = (0, react$1.useState)(null);
-			const [saved, setSaved] = (0, react$1.useState)(null);
-			const [saving, setSaving] = (0, react$1.useState)(false);
-			const [loadFailed, setLoadFailed] = (0, react$1.useState)(false);
-			const [toast, setToast] = (0, react$1.useState)(null);
-			const toastSeq = (0, react$1.useRef)(0);
-			const flash = (text, tone) => {
-				toastSeq.current += 1;
-				setToast({
-					text,
-					tone,
-					seq: toastSeq.current
-				});
-			};
-			(0, react$1.useEffect)(() => {
-				ensureToastStyle();
-			}, []);
-			/**
-			* 取一次运行参数。挂载时取，**别处改了配置时也取**（见下方事件订阅）。
-			* 用 `mountedRef` 而不是 effect 局部的 `alive`：同一个函数有两个调用方（挂载 effect + 事件订阅）。
-			*/
-			const mountedRef = (0, react$1.useRef)(true);
-			(0, react$1.useEffect)(() => () => {
-				mountedRef.current = false;
-			}, []);
-			const load = (0, react$1.useCallback)(async () => {
-				try {
-					const res = await fetch(API, { cache: "no-store" });
-					if (!res.ok) {
-						if (mountedRef.current) setLoadFailed(true);
-						return;
-					}
-					const body = await res.json();
-					if (!body.ok || !body.config) {
-						if (mountedRef.current) setLoadFailed(true);
-						return;
-					}
-					const secs = toSecs(body.config);
-					if (mountedRef.current) {
-						setDraft(secs);
-						setSaved(secs);
-						setLoadFailed(false);
-					}
-				} catch {
-					if (mountedRef.current) setLoadFailed(true);
-				}
-			}, []);
-			(0, react$1.useEffect)(() => {
-				load();
-			}, [load]);
-			/**
-			* 事件推送（2026-10-07 补缺口）：别处（另一标签页 / 路由写回）改了配置 ⇒ 本表单立即跟随，
-			* 不必等重新打开设置页。
-			* ⚠️ **只在「没有未保存修改」时才跟随** —— 否则会把用户正在输入的数字冲掉
-			* （与「卡片拨片被旧快照拨回」同一类事故，2026-10-06 记过一次）。
-			* ⚠️ hooks 不能有条件 ⇒ 本调用**必须**放在下面那个 `draft === null` 的 early return **之前**。
-			*/
-			useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => {
-				if (draft !== null && saved !== null && FIELDS$1.some((f) => draft[f.key] !== saved[f.key])) return;
-				load();
-			});
-			if (draft === null || saved === null) return (0, react$1.createElement)("div", { style: { padding: "4px 2px" } }, (0, react$1.createElement)("p", { style: {
-				color: "var(--tdt-fg-2,#888)",
-				fontSize: "var(--tdt-font-md)",
-				margin: 0
-			} }, loadFailed ? t("settingsLoadFailed") : t("loading")));
-			const dirty = FIELDS$1.some((f) => draft[f.key] !== saved[f.key]);
-			const onSave = async () => {
-				for (const f of FIELDS$1) {
-					const v = draft[f.key];
-					if (!Number.isInteger(v) || v < f.minSec) {
-						flash(t("invalidNumber"), "error");
-						return;
-					}
-				}
-				setSaving(true);
-				try {
-					const patch = toMs(draft);
-					const res = await fetch(API, {
-						method: "POST",
-						cache: "no-store",
-						headers: { "content-type": "application/json" },
-						body: JSON.stringify(patch)
-					});
-					const body = await res.json();
-					if (!res.ok || !body.ok || !body.config) {
-						flash(t("saveFailed"), "error");
-						return;
-					}
-					const secs = toSecs(body.config);
-					setDraft(secs);
-					setSaved(secs);
-					flash(t("settingsSaveSuccess"), "success");
-				} catch {
-					flash(t("saveFailed"), "error");
-				} finally {
-					setSaving(false);
-				}
-			};
 			return (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				flexDirection: "column",
-				gap: "22px",
 				padding: "4px 2px",
 				maxWidth: "640px"
-			} }, (0, react$1.createElement)("section", { style: {
-				display: "flex",
-				flexDirection: "column",
-				gap: "10px"
-			} }, (0, react$1.createElement)("h3", { style: {
-				fontSize: "var(--tdt-font-md)",
-				fontWeight: 700,
-				color: "var(--tdt-fg,#1f2328)",
-				margin: "0",
-				letterSpacing: ".02em"
-			} }, t("settingsBasic")), infoRow(t("settingsTitleFormat"), t("title")), infoRow(t("settingsDesc"), t("description")), infoRow(t("settingsLang"), t("settingsLangValue"))), (0, react$1.createElement)("section", { style: {
-				display: "flex",
-				flexDirection: "column",
-				gap: "16px"
-			} }, (0, react$1.createElement)("h3", { style: {
-				fontSize: "var(--tdt-font-md)",
-				fontWeight: 700,
-				color: "var(--tdt-fg,#1f2328)",
-				margin: "0",
-				letterSpacing: ".02em"
-			} }, t("settingsParams")), ...FIELDS$1.map((f) => (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				flexDirection: "column",
-				gap: "6px"
-			} }, (0, react$1.createElement)("label", { style: {
-				fontSize: "var(--tdt-font-md)",
-				fontWeight: 600,
-				color: "var(--tdt-fg,#1f2328)"
-			} }, t(f.labelKey)), (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				alignItems: "center",
-				gap: "8px"
-			} }, (0, react$1.createElement)(NumberInput, {
-				value: draft[f.key],
-				min: f.minSec,
-				step: 1,
-				size: "sm",
-				inputWidth: 48,
-				suffix: t("settingsUnitSec"),
-				label: t(f.labelKey),
-				disabled: saving,
-				onChange: (n) => {
-					setDraft((prev) => prev === null ? prev : {
-						...prev,
-						[f.key]: n
-					});
-				}
-			})), (0, react$1.createElement)("p", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2,#888)",
-				lineHeight: 1.5,
-				margin: 0
-			} }, t(f.hintKey)))), (0, react$1.createElement)(Button$2, {
-				variant: "primary",
-				size: "sm",
-				disabled: !dirty || saving,
-				style: {
-					alignSelf: "flex-start",
-					marginTop: "2px"
-				},
-				onClick: () => void onSave()
-			}, saving ? t("saving") : t("save"))), toast !== null ? (0, react$1.createElement)(FloatingToast, {
-				seq: toast.seq,
-				tone: toast.tone,
-				onDone: () => {
-					setToast(null);
-				},
-				text: toast.text
-			}) : null);
-		}
-		function infoRow(label, value) {
-			return (0, react$1.createElement)("div", { style: {
-				display: "flex",
-				flexDirection: "column",
-				gap: "4px",
-				padding: "10px 12px",
-				borderRadius: "var(--tdt-radius-sm)",
-				background: "var(--tdt-surface-2,#f5f5f5)",
-				border: "1px solid var(--tdt-border,rgba(0,0,0,.08))"
-			} }, (0, react$1.createElement)("span", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-2,#888)",
-				fontWeight: 600
-			} }, label), (0, react$1.createElement)("span", { style: {
+			} }, (0, react$1.createElement)("p", { style: {
 				fontSize: "var(--tdt-font-md)",
 				color: "var(--tdt-fg,#1f2328)",
-				lineHeight: 1.5,
+				lineHeight: 1.6,
+				margin: 0,
 				whiteSpace: "pre-wrap"
-			} }, value));
+			} }, t("settingsIntro")));
 		}
 		//#endregion
 		//#region src/client/settings-data.ts

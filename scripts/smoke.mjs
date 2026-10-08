@@ -3188,10 +3188,13 @@ console.log('\n[14] runtime-index')
         return names.length >= 6
           && names.filter(n => n !== 'FORCE_REFRESH').every(n => backend.includes(`EventType.${n}`))
       })())
-    check('【页面覆盖】展开面板行级 / 设置页配置表单都已被事件驱动（旧调试页已删，其订阅随页移除）',
+    // 2026-10-08：详情页配置面板剥成纯说明文字（表单随用户拍板移除），事件驱动条款只剩
+    // index.ts 的 scope.refresh；config-panel 换成「无表单」反断言，防止表单悄悄长回来。
+    check('【页面覆盖】展开面板行级已被事件驱动；详情页配置面板已剥成纯说明（无表单 / 无输入框）',
       S('client/task-list.tsx').includes('if (event.payload?.taskId !== row.id) return')
       && S('client/index.ts').includes('useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => { scope.refresh?.() })')
-      && S('client/config-panel.tsx').includes('if (pendingEdits) return'))
+      && S('client/config-panel.tsx').includes("t('settingsIntro')")
+      && !S('client/config-panel.tsx').includes('onSave') && !S('client/config-panel.tsx').includes('NumberInput'))
 
     // ── 25. 设置页重构守卫（2026-10-08：默认值单源 / 不重复存储 / 表单换算 / 可诊断）──
     console.log('\n[25] 设置页重构守卫（默认值单源 / 不重复存储 / 可诊断错误）')

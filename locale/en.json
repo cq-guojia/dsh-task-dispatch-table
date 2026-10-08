@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Scheduled Task Dispatcher (dsh-task-dispatch-table)",
+    "description": "Drives recurring tasks from a task definition table: due tasks are dispatched into independent sessions by time window and dependencies, with zero LLM involvement in the scheduling layer. Supports prerequisites, retries and run history."
+  }
+}

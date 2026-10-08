@@ -219,6 +219,8 @@ export type LocaleKey =
   | 'settingsFilterColumn' | 'settingsFilterOp' | 'settingsFilterValue' | 'settingsFilterRemove'
   | 'settingsLoadFailed'
   | 'settingsDefaultValue'
+  // —— 2026-10-08 插件详情页剥成纯说明（用户拍板：配置都在主界面完成，此处无表单）——
+  | 'settingsIntro'
   | 'vTitleRequired' | 'vWorkspaceRequired' | 'vPromptRequired'
   | 'vIntervalInvalid' | 'vWeekdayRequired' | 'vAttachmentInvalid'
 /**
@@ -912,6 +914,7 @@ export const zh: Record<LocaleKey, string> = {
   settingsFilterOp: '运算符',
   settingsFilterValue: '值',
   settingsFilterRemove: '移除筛选',
+  settingsIntro: '本插件无需在此页面配置：任务与全部设置都在插件主界面（侧栏「定时任务调度器」面板）内完成。',
 
 
   vTitleRequired: '还没填任务名称——任务列表里靠它认任务，请给任务起个名字。',
@@ -1592,6 +1595,7 @@ export const en: Record<LocaleKey, string> = {
   settingsFilterOp: 'Operator',
   settingsFilterValue: 'Value',
   settingsFilterRemove: 'Remove filter',
+  settingsIntro: 'Nothing to configure here — tasks and all settings live inside the plugin panel (sidebar "Scheduled task dispatcher").',
 
 
   vTitleRequired: 'Task name is missing — the list identifies tasks by name. Please give it one.',
