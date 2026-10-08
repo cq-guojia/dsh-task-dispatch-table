@@ -205,7 +205,7 @@ const panelHeaderStyle: Record<string, string | number> = {
   // 主标题与下面任务列表那排的间距（用户 2026-09-30 要求「至少是现在的两倍」，先给 40px 看效果）。
   marginBottom: '40px',
 }
-const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '12px' }
+const headerRightStyle: Record<string, string | number> = { display: 'flex', alignItems: 'center', gap: '18px' }
 const panelTitleStyle: Record<string, string | number> = { fontSize: 'var(--tdt-font-xl)', fontWeight: 600, color: 'var(--tdt-fg)' }
 const sectionTitleStyle: Record<string, string | number> = { margin: '12px 0 4px', fontSize: 'var(--tdt-font-md)', color: 'var(--tdt-fg)' }
 const preStyle: Record<string, string | number> = {
