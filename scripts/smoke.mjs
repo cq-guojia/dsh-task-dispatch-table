@@ -1992,7 +1992,16 @@ console.log('\n[13] task-assets')
   check('附件：穿越 ref 不执行删除', existsSync(join(paths.dataRoot, 'guard.txt')) && recE.errors.filter(x => x.includes('guard')).length === 0)
   rmSync(join(paths.dataRoot, 'guard.txt'), { force: true })
 
-  check('清道夫：清临时区过期文件', purgeTmp(paths, 7) >= 0)
+  // 清道夫真删过期的、不误删新鲜的（utimesSync 把 mtime 拨回 10 天前；2026-10-08 起接入 tick）。
+  const staleTmp = join(paths.tmpDir, 'tmp-stale.md')
+  const freshTmp = join(paths.tmpDir, 'tmp-fresh.md')
+  writeFileSync(staleTmp, 'old', 'utf8')
+  writeFileSync(freshTmp, 'new', 'utf8')
+  utimesSync(staleTmp, new Date(Date.now() - 10 * 86_400_000), new Date(Date.now() - 10 * 86_400_000))
+  purgeTmp(paths, 7)
+  check('清道夫：过期的真删了', !existsSync(staleTmp))
+  check('清道夫：新鲜的没动', existsSync(freshTmp))
+  rmSync(freshTmp, { force: true })
   check('删除任务：整目录删', deleteTaskAssets(paths, taskId) && !existsSync(join(paths.tasksRoot, taskId)))
   rmSync(dir, { recursive: true, force: true })
 }
@@ -3106,6 +3115,9 @@ console.log('\n[14] runtime-index')
       S('store.ts').includes("'plugin_log', 'meta'")
       && S('store.ts').includes("case 'plugin_log': return 'ts DESC, seq DESC'")
       && S('client/settings-log-block.tsx').includes("table: 'plugin_log'"))
+    // 2026-10-08：attachmentTmpRetentionDays 接进 tick（此前 purgeTmp 定义了却没人调，是死旋钮）。
+    check('【清道夫】临时附件区接进调度 tick（attachmentTmpRetentionDays 不再是死旋钮）',
+      S('scheduler.ts').includes('purgeTmp(paths, cfg.attachmentTmpRetentionDays ?? 7)'))
     check('【CSS】固定中性面的 6 个 token 已补明文回退（旧内核不再变透明）',
       ['rgba(255,255,255,.5)', 'rgba(15,15,15,.07)', 'rgba(15,15,15,.14)',
         'rgba(255,255,255,.05)', 'rgba(255,255,255,.08)', 'rgba(255,255,255,.16)']

@@ -10,7 +10,7 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { attachmentAbsPath } from './task-assets.js';
+import { attachmentAbsPath, purgeTmp } from './task-assets.js';
 import { parseInlineTasks } from './tasks.js';
 import { displayNameOf, durationMs, logicalDateOf, onceScheduledAt, scheduledSlotsFor } from './tasks.js';
 import { parseInstanceSnapshot } from './store.js';
@@ -508,6 +508,11 @@ export function createScheduler(opts) {
     let taskMap = new Map();
     /** 进程启动时刻（决策 54）：补记「未执行」的门禁 —— 停机期间漏掉的槽**不补**。 */
     const startedAtMs = Date.now();
+    /**
+     * 临时附件区**上次清理的那一天**（`YYYY-MM-DD`；空串 = 还没清过）。
+     * 清它是**遍历目录**（比 SQL 删除贵得多）⇒ 每个自然日只跑一次，不跟着 tick 每秒扫。
+     */
+    let lastTmpPurgeDay = '';
     return {
         tick() {
             const cfg = config();
@@ -530,6 +535,17 @@ export function createScheduler(opts) {
             // 插件整体日志同策略（2026-10-07 新增 `plugin_log`，见 design/data-model.md §六）
             store.purgePluginLog(cfg.logRetentionDays ?? 30);
             // ⚠️ 执行记录**不清除**（用户 2026-10-08）：历史是用来查的，`purgeHistory` 已删除。
+            // 上传临时区（2026-10-08 接上，`attachmentTmpRetentionDays` 之前一直是没接线的死旋钮）：
+            // 上传后没被任何任务引用（没走 reconcile 搬进任务目录）的副本就是孤儿，攒多了白占盘
+            // ⇒ mtime 早于保留期的清掉。任务定义里正式引用的附件早被搬走了，不受影响。
+            const paths = assets === undefined ? null : assets();
+            if (paths !== null) {
+                const today = new Date().toISOString().slice(0, 10);
+                if (today !== lastTmpPurgeDay) {
+                    lastTmpPurgeDay = today;
+                    purgeTmp(paths, cfg.attachmentTmpRetentionDays ?? 7);
+                }
+            }
         },
         getTasks() {
             return taskMap;
