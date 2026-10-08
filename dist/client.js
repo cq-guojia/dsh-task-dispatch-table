@@ -558,6 +558,7 @@ window.__ModuleLoader__.load({
 			editorPermFull: "完全权限",
 			editorNoOptions: "暂无可选",
 			editorSchedule: "执行频率",
+			editorScheduleHint: "设置任务的执行时机与重复方式：可设为单次（到点执行一次，不再重复）、周期（每天 / 每周 / 每月等定期重复）或间隔（每隔固定时间执行），并支持设置时区与有效期限。",
 			editorSchedulePeriodic: "周期",
 			editorScheduleInterval: "间隔",
 			editorFreq: "频率",
@@ -1170,6 +1171,7 @@ window.__ModuleLoader__.load({
 			editorPermFull: "Full access",
 			editorNoOptions: "Nothing to choose yet",
 			editorSchedule: "Schedule",
+			editorScheduleHint: "Set when and how often the task runs: once (runs a single time when due), recurring (daily / weekly / monthly and so on), or interval (every fixed span of time). Timezone and a validity window can also be set here.",
 			editorSchedulePeriodic: "Recurring",
 			editorScheduleInterval: "Interval",
 			editorFreq: "Frequency",
@@ -66526,7 +66528,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const scheduleCard = (0, react$1.createElement)("div", { className: `dsh-tdt-ed-card${problemsByField("schedule") ? " dsh-tdt-ed-card--error" : ""}` }, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-ed-card-head",
 				style: { marginBottom: "12px" }
-			}, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-label" }, t("editorSchedule")), (0, react$1.createElement)("div", { style: {
+			}, (0, react$1.createElement)("div", {
+				className: "dsh-tdt-ed-label",
+				style: {
+					display: "flex",
+					alignItems: "center",
+					gap: "4px"
+				}
+			}, t("editorSchedule"), (0, react$1.createElement)(HelpButton, { hint: t("editorScheduleHint") })), (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				alignItems: "center",
 				gap: "8px",

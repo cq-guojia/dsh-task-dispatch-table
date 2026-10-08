@@ -1795,7 +1795,10 @@ export function TaskEditorDrawer(props: {
   //    而在周期档里把频率改成别的，顶部会自动回到「周期」（值是从 periodFreq 推导的，无需额外回写）。
   const scheduleCard = h('div', { className: `dsh-tdt-ed-card${problemsByField('schedule') ? ' dsh-tdt-ed-card--error' : ''}` },
     h('div', { className: 'dsh-tdt-ed-card-head', style: { marginBottom: '12px' } },
-      h('div', { className: 'dsh-tdt-ed-label' }, t('editorSchedule')),
+      h('div', { className: 'dsh-tdt-ed-label', style: { display: 'flex', alignItems: 'center', gap: '4px' } },
+        t('editorSchedule'),
+        h(HelpButton, { hint: t('editorScheduleHint') }),
+      ),
       h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: 'none' } },
         h(Segmented<string>, {
           id: 'dsh-tdt-ed-schedule',
