@@ -43,8 +43,6 @@ export interface SettingsTableQueryResult {
  *  - 执行历史**永久保留、不允许清除**（用户 2026-10-08），该能力与字段一并删除。
  */
 export interface SettingsConfigValue {
-  statePath: string
-  tasksDir: string
   tickMs: number
   dispatchGraceMs: number
   leaseMs: number

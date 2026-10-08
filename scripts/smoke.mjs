@@ -2964,9 +2964,10 @@ console.log('\n[14] runtime-index')
       && S('runtime-index.ts').includes('=== next) return false'))
     check('删行路径（任务仍有别的在飞实例）也广播',
       S('reconcile.ts').includes('emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId } })'))
-    check('配置变更：CONFIG_CHANGED **只有一处发射点**（applyConfigLive：scope.watch 与手写回共用），路由不再补发',
+    check('配置变更：CONFIG_CHANGED **只有一处发射点**（applyConfigLiveImpl：宿主变更与设置页写回共用），路由不再补发',
       (idxSrc20.match(/EventType\.CONFIG_CHANGED/g) ?? []).length === 1
-      && idxSrc20.includes('scope.watch(applyConfigLiveImpl)'))
+      && idxSrc20.includes('scope.watch((next: PluginConfig) => {')
+      && idxSrc20.includes('applyConfigLiveImpl()'))
     check('降级作用域的 watch 如实实现（不再逼路由补发、也不靠合并窗口吃重复）',
       /watch: \(fn\) => \{/.test(idxSrc20) && idxSrc20.includes('watchers.add(fn)')
       && !idxSrc20.includes('watch: () => () => {}'))
@@ -3202,9 +3203,15 @@ console.log('\n[14] runtime-index')
       S('config.ts').includes('export const CONFIG_DEFAULTS: PluginConfig')
       && S('config.ts').includes('.default(CONFIG_DEFAULTS.logRetentionDays)')
       && !/\.default\(30\)/.test(S('config.ts')))
-    check('【不重复存储】POST /config 把等于系统默认值的字段从用户层删掉（editPluginUserLayer 一次 edit 原子 set+drop）',
+    check('【不重复存储】POST /config 把等于系统默认值的字段从用户层删掉（set/drop 后落自有状态库）',
       S('index.ts').includes('if (same) drop.push(key)')
       && S('index.ts').includes('for (const k of drop) delete next[k]'))
+    // 配置存自有状态库（meta）；**不许**再去碰宿主的配置内部实现（configEditor 不是插件接口）。
+    check('【配置存储】插件配置落自有状态库，且不依赖宿主配置内部实现',
+      S('index.ts').includes('store.setMeta(CONFIG_META_KEY')
+      && S('index.ts').includes('store.getMeta(CONFIG_META_KEY)')
+      && !S('index.ts').includes("inject(['configEditor']")
+      && !S('index.ts').includes('configEditorRef'))
     check('【响应投影】/config 的 defaults 只投影可编辑白名单（不把 tasksInline / debugSnapshot 吐给浏览器）',
       S('index.ts').includes('export function configView(')
       && S('index.ts').includes('defaults: pick(CONFIG_DEFAULTS'))

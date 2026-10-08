@@ -215,10 +215,10 @@ const DISPATCH_API_PREFIX = '/api/task-dispatch-table'
 const DISPATCH_BODY_LIMIT = 1024 * 1024
 
 // 设置页 Block 1 可写回的配置字段白名单（排除运行时数据 tasksInline / debugSnapshot）。
-// 类型 + 范围校验后，经 updateScopeConfig → scope.update 落盘（宿主）并即时生效。
+// 类型 + 范围校验后，经 updateScopeConfig **写进自有状态库**（meta 表）并即时生效。
+// ⚠️ 不含 statePath / tasksDir：它们是「插件装到哪儿」的问题，界面上不给改（用户 2026-10-08），
+//   而且 statePath 决定状态库路径本身 ⇒ 必须来自启动配置，不能由库里自己改自己。
 const CONFIG_EDITABLE_FIELDS: Record<string, { type: 'number' | 'string'; min?: number; max?: number }> = {
-  statePath: { type: 'string' },
-  tasksDir: { type: 'string' },
   tickMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
   dispatchGraceMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
   leaseMs: { type: 'number', min: 1000, max: 7 * 24 * 3600 * 1000 },
@@ -226,9 +226,21 @@ const CONFIG_EDITABLE_FIELDS: Record<string, { type: 'number' | 'string'; min?: 
   defaultProvider: { type: 'string' },
   defaultModel: { type: 'string' },
   logRetentionDays: { type: 'number', min: 1, max: 3650 },
-  historyRetentionDays: { type: 'number', min: 0, max: 3650 },
   attachmentTmpRetentionDays: { type: 'number', min: 1, max: 3650 },
 }
+
+/**
+ * 插件配置的持久化键（状态库 meta 表）。
+ *
+ * ⚠️ **为什么不写宿主的配置面**（2026-10-08，源码核实）：宿主 settings 服务的写路径
+ * （`update/replace/mutate/write`）**一律要求 Config schema 里有 volatile 字段**，否则直接抛
+ * `Plugin entry "..." has no volatile fields`（`@deepseek-ai/dsh-settings` 0.2.0-rc.2
+ * `lib/index.js:502-508`）——而本插件配置刻意全静态字段（volatile 有让 entry 不激活的历史风险）。
+ * 宿主真正的落盘调用是它的内部服务 `configEditor.edit`，那**不是给插件用的公开接口** ⇒ 不走。
+ * 结论：配置与任务表一样，存**自己的状态库**（meta 表）——插件重装 / 容器重建都不丢，
+ * 也不依赖宿主任何配置内部实现。宿主 patch 配置仍是**启动基线**（见 hostConfig）。
+ */
+const CONFIG_META_KEY = 'pluginConfig'
 
 /**
  * 设置页 GET/POST 的统一响应体：**当前生效值** + **系统默认值**（都只投影可编辑白名单）。
@@ -1308,15 +1320,14 @@ function fallbackScope(
   }).update
   sctx.logger.warn(
     'dsh-task-dispatch-table: 当前 dsh 的 settings 服务未提供 register 面（0.1.7-rc.1 起改为注册项'
-    + ' Config 自动投影），已退化为「启动配置运行」：调度照常执行，但运行期改配置需重启才生效'
-    + (typeof updater === 'function' ? '。' : '；且该组合也没有 settings.update，页面快照无法回写。'),
+    + ' Config 自动投影），宿主侧配置基线退化为「启动配置」；插件自己的设置仍可保存——'
+    + '配置存在自有状态库（meta），保存后即时生效，不依赖宿主配置面。',
   )
-  // 降级是**重要**的状态信息：事后排查「为什么改了配置不生效」全靠它。
+  // 降级是**重要**的状态信息：事后排查「为什么宿主配置改了不生效」全靠它。
   // ⚠️ 此处 store 可能尚未就绪 ⇒ pushNotice 会只进内存缓冲，而缓冲会并入快照的 warns ⇒ 前端仍看得到。
   pushNotice(
     'degraded',
-    'settings 服务无 register 面，已退化为「启动配置运行」：调度照常，运行期改配置需重启才生效'
-      + (typeof updater === 'function' ? '' : '；且无 settings.update，页面快照无法回写'),
+    'settings 服务无 register 面：宿主侧配置基线取启动配置；插件自己的设置保存照常（存自有状态库并即时生效）',
   )
   /**
    * 降级作用域也**如实**支持 `watch`（官方契约见 `src/host.ts` 的 `SettingsScope`）：
@@ -1455,22 +1466,8 @@ export function apply(ctx: HostContext, config: unknown): void {
    * panelTaskMap）。webServer 注入早于 settings ⇒ 只能先声明、后赋值。
    */
   let resyncTaskMap: (() => void) | null = null
-  /** settings inject 就绪后的宿主上下文（logger 等；configEditor 另由独立 inject 捕获，见 configEditorRef）。 */
+  /** settings inject 就绪后的宿主上下文（logger 等）。 */
   let settingsCtxRef: HostContext | null = null
-  /**
-   * 宿主 `configEditor` 服务 —— 写插件 entry **用户层**的唯一通道（宿主自己的 settings.write 内部
-   * 就是 `configEditor.edit`；而 `settings.update` 对无 volatile 字段的条目恒抛错，见
-   * updateScopeConfig 头注）。
-   *
-   * ⚠️ 它与 settings **不在同一个 inject 面**：在 settings 的 ownerContext 上，从 `['settings']`
-   * 注入的 sctx 上摸它会 throw `cannot get property "configEditor" without inject`
-   * （cordis Proxy 对未提供属性直接 throw，2026-10-08 真机实证）⇒ 由下面的独立 inject 单独捕获。
-   * 捕不到 ⇒ 只影响「配置写回 / 任务表次通道」，主流程不受影响。
-   */
-  let configEditorRef: {
-    entries: () => Array<{ options?: { id?: string } }>
-    edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
-  } | null = null
   /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
   let storeRef: TaskStore | null = null
   // 观测条目落库（plugin_log）的取值器：模块级 pushNotice 拿不到这里的 storeRef，故注册一个取值器。
@@ -1484,23 +1481,28 @@ export function apply(ctx: HostContext, config: unknown): void {
    * webServer 注入早于 settings ⇒ 与 storeRef 同法：先声明、后赋值，路由闭包按请求时惰性取。
    */
   let schedulerRef: Scheduler | null = null
-  /** settings inject 就绪后的插件配置（清道夫天数等；无 register 面时沿用启动配置）。
-   *  ⚠️ 运行期**读它**，不要读 `scope.get()`——配置写回走 configEditor.edit（绕过 scope），
-   *  scope 里的值不会跟着变，只有这里由 watch / 手写回双方维护（见 applyConfigLive）。 */
+  /** 生效中的插件配置（宿主基线 + 自有库里那层）。
+   *  ⚠️ 运行期**读它**，不要读 `scope.get()`：用户层存在自己的库里（见 CONFIG_META_KEY），
+   *  scope 里的值没有那一层。 */
   let configRef: PluginConfig = initial
-  /** 把一份配置**生效到运行态**的执行器（settings inject 里赋值；scope.watch 与手写回共用）。 */
-  let applyConfigLive: ((next: PluginConfig, prev: PluginConfig) => void) | null = null
-  /** settings inject 就绪后捕获的官方/降级作用域，供设置页经 scope.update 写回配置。 */
+  /** 宿主侧基线配置（entry config / patch yml）：自有库那一层的底座。 */
+  let hostConfig: PluginConfig = initial
+  /** 自有库里那层用户配置（只含与默认值不同的字段；见 updateScopeConfig）。 */
+  let storedConfig: Partial<PluginConfig> = {}
+  /** 把当前配置**生效到运行态**的执行器（settings inject 里赋值；宿主变更与手写回共用）。 */
+  let applyConfigLive: (() => void) | null = null
+  /** settings inject 就绪后捕获的官方/降级作用域（只作宿主基线的读源，不再用它写回）。 */
   let scopeRef: SettingsScope<PluginConfig> | null = null
-  /** 设置页写回插件配置（作用域未就绪时返回 false）。
+  /** 设置页写回插件配置（**写自有状态库**，返回是否落盘）。
    *
-   * ⚠️ **与系统默认值相同的字段一律不落用户层**（2026-10-08 用户拍板：「避免重复存储」）：
-   * 生效值回落到 `CONFIG_DEFAULTS`（即配置层），用户层保持干净；把某字段改回默认值
-   * 等价于「撤销这条用户设置」。删除动作走 `configEditor.edit`（唯一能删用户层键的通道，
-   * 与 `persistTasksInline` 同款；`scope.update` 是 merge 语义、只会写不会删）。
+   * ⚠️ **与系统默认值相同的字段一律不落库**（2026-10-08 用户拍板：「避免重复存储」）：
+   * 生效值回落到 `CONFIG_DEFAULTS`（宿主基线），库里保持干净；把某字段改回默认值
+   * 等价于「撤销这条用户设置」。
+   * ⚠️ **不走宿主的配置面**（原因见 `CONFIG_META_KEY` 头注：宿主写路径要求 volatile 字段）。
    */
   const updateScopeConfig = async (patch: Partial<PluginConfig>): Promise<{ ok: boolean; detail?: string }> => {
-    if (!scopeRef) return { ok: false, detail: 'settings 作用域未就绪（settings inject 尚未运行）' }
+    const store = storeRef
+    if (store === null) return { ok: false, detail: '状态库未就绪（插件尚未完成启动），请稍后重试' }
     const set: Record<string, unknown> = {}
     const drop: string[] = []
     for (const [key, value] of Object.entries(patch)) {
@@ -1508,62 +1510,30 @@ export function apply(ctx: HostContext, config: unknown): void {
       if (same) drop.push(key)
       else set[key] = value
     }
+    const next: Record<string, unknown> = { ...storedConfig }
+    for (const [k, v] of Object.entries(set)) next[k] = v
+    for (const k of drop) delete next[k]
     try {
-      // ⚠️ **不能走 `scope.update`**（2026-10-08 真机实证）：宿主 settings.update 对**没有 volatile
-      // 字段**的插件条目直接抛 `Plugin entry "..." has no volatile fields`——而本插件配置全是静态
-      // 字段（rc.1 起标 volatile 会让 entry 激活失败，见 config.ts 头注）⇒ 这条写在当前宿主上恒不可用。
-      // 改走 `configEditor.edit` 直写用户层（与任务表回写同一条已验证通道；set 与 drop 一次 edit 原子完成），
-      // 然后**自己**把变更生效到运行态——scope 不知道我们改了，watch 不会回调（见 applyConfigLive）。
-      await editPluginUserLayer((raw) => {
-        const next = { ...raw }
-        for (const [k, v] of Object.entries(set)) next[k] = v
-        for (const k of drop) delete next[k]
-        return next
-      })
+      store.setMeta(CONFIG_META_KEY, JSON.stringify(next))
     } catch (error) {
-      // ⚠️ **不许再吞**（2026-10-08 真机：用户点保存只见「写不进去」，原因查无此处）——
-      // 原样落 plugin_log（插件日志页可见）并随响应带回，前端把真实原因弹给人看。
+      // ⚠️ **不许再吞**：写不进去必须说得出为什么（落插件日志 + 随响应回给前端弹给人看）。
       const message = error instanceof Error ? error.message : String(error)
       pushNotice('route_error', `配置写回失败：${message}`, 'error')
       return { ok: false, detail: message }
     }
-    // 生效到运行态：configRef / CONFIG_CHANGED 广播 / tickMs 重启，全走与 scope.watch 同一份逻辑。
-    const prev = configRef
-    if (applyConfigLive !== null) applyConfigLive({ ...prev, ...patch }, prev)
+    storedConfig = next as Partial<PluginConfig>
+    // 生效到运行态：configRef / CONFIG_CHANGED 广播 / tickMs 重启（与宿主变更共用一份逻辑）。
+    if (applyConfigLive !== null) applyConfigLive()
     return { ok: true }
   }
-  /**
-   * 在插件 entry 的**用户层**配置上做一次原子改写（`configEditor.edit`）。
-   *
-   * ⚠️ 这是当前宿主上插件配置**唯一可用的写通道**（`scope.update` 对无 volatile 字段的条目恒抛错，
-   * 见 updateScopeConfig 头注）。entry 找不到 / configEditor 缺失（rc.1 组合）⇒ 静默放弃属预期；
-   * **其它异常向上抛**（调用方决定告警还是回给用户——写配置失败必须可诊断）。
-   */
-  const editPluginUserLayer = async (mutate: (raw: Record<string, unknown>) => Record<string, unknown>): Promise<void> => {
-    const configEditor = configEditorRef
-    // 未捕获到 = 宿主没把 configEditor 提供给本插件 ⇒ 这是「为什么存不进去」的一手答案，必须说清。
-    if (configEditor === null) throw new Error('宿主未向插件提供 configEditor 服务，插件用户层无法写入')
-    const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
-    if (entry === undefined) throw new Error(`找不到插件配置条目 "${SETTINGS_NS}"`)
-    await configEditor.edit(entry, mutate)
-  }
   const persistTasksInline = async (json: string): Promise<void> => {
-    // 主通道：写状态库 meta 表（state.db 在宿主数据根 = 挂载卷，容器重建 / 插件重装都不丢）。
+    // 写状态库 meta 表（state.db 在宿主数据根 = 挂载卷，容器重建 / 插件重装都不丢）。
     // 未就绪只告警不静默——用户必须知道这次保存没落盘。
     const store = storeRef
     if (store === null) {
       settingsCtxRef?.logger.warn('任务表保存：状态库未就绪，本次只在内存生效、未持久化，请稍后重新保存')
     } else {
       store.setMeta('tasksInline', json)
-    }
-    // 次通道：尽力写回插件 entry config（官方配置面可见）；rc.1 缺 configEditor / entry 属预期。
-    // ⚠️ cordis ctx 是 Proxy：属性访问未提供的 get trap 直接 throw（真机 2026-09-25 实证）
-    // ⇒ 整块 try/catch：任何异常只告警，绝不连累主通道（meta 表已落盘、内存已生效）。
-    try {
-      await editPluginUserLayer((raw) => ({ ...raw, tasksInline: json }))
-    } catch (error) {
-      const sctx = settingsCtxRef
-      sctx?.logger.warn(`任务表次通道写回 entry config 失败（不影响保存：主通道 meta 表已落盘）: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   // ── rc.1 数据通道：webServer HTTP 路由（照抄参考插件 dsh-task-board 的已验证通道：
@@ -1632,11 +1602,6 @@ export function apply(ctx: HostContext, config: unknown): void {
     }
     wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、GET /api/task-dispatch-table/tasks/instances、GET /api/task-dispatch-table/tasks/log、GET /api/task-dispatch-table/tasks/events、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled、POST /api/task-dispatch-table/tasks/run')
   })
-  // 宿主 configEditor 服务（写插件 entry 用户层的唯一通道）：与 settings 不同 inject 面 ⇒ 单独捕获。
-  // 捕不到 ⇒ 只影响「设置页写回 / 任务表次通道」（二者各自给出可诊断失败），调度主流程照跑。
-  ctx.inject(['configEditor'], (cctx: HostContext) => {
-    configEditorRef = (cctx as unknown as { configEditor: NonNullable<typeof configEditorRef> }).configEditor
-  })
   ctx.inject(['settings'], (sctx: HostContext) => {
     const settings = sctx.settings
     // 有 register 面 → 官方命名空间作用域（配置 live 生效）；无（0.1.7-rc.1）→ 降级为
@@ -1644,7 +1609,7 @@ export function apply(ctx: HostContext, config: unknown): void {
     const scope = typeof settings.register === 'function'
       ? settings.register<PluginConfig>(SETTINGS_NS, Config as unknown as z_any<PluginConfig>, { base: initial })
       : fallbackScope(sctx, settings, initial)
-    scopeRef = scope
+
     // ── rc.1 运行时数据通道：宿主插件不能走 configForms（volatile 会让 entry 不激活），
     // 改走 webServer HTTP 路由（照抄参考插件 dsh-task-board 的已验证通道：宿主注册
     // GET /api/<name>/snapshot，客户端同源 fetch 轮询）。runtime 提升到 apply 作用域供路由闭包读。
@@ -1668,6 +1633,25 @@ export function apply(ctx: HostContext, config: unknown): void {
       runtime.tasksInline = savedInline
       sctx.logger.info(`任务表已从状态库恢复（${savedInline.length} 字节）`)
     }
+    // 插件配置恢复（同一个家：状态库 meta）：宿主 entry config 只作**启动基线**，用户改过的那层
+    // 在这里（重装 / 容器重建都不丢）。meta 无行 ⇒ 全部沿用宿主基线（兼容旧部署）。
+    const savedConfig = store.getMeta(CONFIG_META_KEY)
+    if (savedConfig !== undefined && savedConfig !== '') {
+      try {
+        const parsed = JSON.parse(savedConfig) as Record<string, unknown>
+        // 只认白名单字段：库里万一有陈旧键（如历史版本删掉过的字段）不许污染生效配置。
+        const picked: Record<string, unknown> = {}
+        for (const key of Object.keys(CONFIG_EDITABLE_FIELDS)) {
+          if (Object.hasOwn(parsed, key)) picked[key] = parsed[key]
+        }
+        storedConfig = picked as Partial<PluginConfig>
+        sctx.logger.info(`插件配置已从状态库恢复（${Object.keys(picked).length} 个字段）`)
+      } catch {
+        sctx.logger.warn('状态库里的插件配置不是合法 JSON，已忽略（沿用宿主基线配置）')
+      }
+    }
+    hostConfig = scope.get()
+    configRef = { ...hostConfig, ...storedConfig, tasksInline: runtime.tasksInline }
     // 迁移若真的合并掉了重复行（正常应为 0），必须让用户看见——绝不静默删数据。
     if (store.dupRowsRemoved > 0) {
       sctx.logger.warn(
@@ -1819,22 +1803,24 @@ export function apply(ctx: HostContext, config: unknown): void {
     let disposed = false
     let stopInterval = sctx.interval(safeTick, configRef.tickMs)
     /**
-     * 把一份配置**生效到运行态**：configRef / `CONFIG_CHANGED` 广播 / tickMs 重启 interval。
+     * 把**当前配置**（宿主基线 + 自有库那层）生效到运行态：configRef / `CONFIG_CHANGED` 广播 /
+     * tickMs 重启 interval。
      *
-     * ⚠️ scope.watch 与「手写回」**共用这一份**：设置页写配置走 `configEditor.edit` 直写用户层
-     * （`scope.update` 在当前宿主对无 volatile 字段的条目恒抛错，见 updateScopeConfig），
-     * scope 不知道我们改了 ⇒ watch 不会回调，必须自己走这一遍（2026-10-08）。
+     * ⚠️ 宿主变更（scope.watch）与设置页写回（updateScopeConfig，写的是自有库）**共用这一份**：
+     * 后者不经 scope ⇒ watch 不会回调，必须自己重算一遍（2026-10-08）。
      */
-    const applyConfigLiveImpl = (next: PluginConfig, prev: PluginConfig): void => {
+    const applyConfigLiveImpl = (): void => {
       // dispose 之后宿主若还回调（作用域的生命周期不完全由我们掌控）⇒ 立刻退出：
       // 否则会向**已经 dispose 的广播器**发事件、并用 `sctx.interval` **重新种下一个没人清理的定时器**
       // （2026-10-06 第四轮审计 🟡）。
       if (disposed) return
+      const prev = configRef
+      const next: PluginConfig = { ...hostConfig, ...storedConfig, tasksInline: runtime.tasksInline }
       // 配置 live 变更 ⇒ 同步给路由层（清道夫天数等）。
-      configRef = { ...next, tasksInline: runtime.tasksInline }
+      configRef = next
       // 配置变了 ⇒ 通知前端重读（设置页 / 依赖计时参数展示的页面）。
-      // ⚠️ **`CONFIG_CHANGED` 的唯一发射点**（正常与降级作用域都走这里——`fallbackScope` 的 `watch`
-      // 已如实实现）⇒ 一次成功写回**恰好一条**事件，不需要下游的合并窗口兜底。
+      // ⚠️ **`CONFIG_CHANGED` 的唯一发射点**（宿主变更与设置页写回都汇到这里）⇒ 一次成功写回
+      // **恰好一条**事件，不需要下游的合并窗口兜底。
       // **边沿触发**：值其实没变的写回不算变更 ⇒ 比对后再决定。
       // 用**整份比对**而不是硬编码字段清单：将来加新的页面可见字段时不必记得回来补清单（宁可多发一条空的）。
       if (JSON.stringify(next) !== JSON.stringify(prev)) {
@@ -1845,7 +1831,11 @@ export function apply(ctx: HostContext, config: unknown): void {
       stopInterval = sctx.interval(safeTick, next.tickMs)
     }
     applyConfigLive = applyConfigLiveImpl
-    const unwatchScope = scope.watch(applyConfigLiveImpl)
+    // 宿主基线变了（patch yml / 宿主配置面）⇒ 更新基线再整体生效（自有库那层仍然压在上面）。
+    const unwatchScope = scope.watch((next: PluginConfig) => {
+      hostConfig = next
+      applyConfigLiveImpl()
+    })
 
     // 上传临时区清道夫：每 6 小时看一次，**跨天**才真干活 ⇒ 平时一轮只多一次日期比较，
     // 无持续负载。删掉 N 天前没被保存带走的临时文件（data-model §六）。
