@@ -22,7 +22,8 @@
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/client.js",
-    "./locale/*.json": "./locale/*.json"
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
