@@ -1,10 +1,10 @@
 # 工作包：顶部「调试」重组为「设置」页
 
-> **状态**：🔵 结构 + 配置入口归属已拍板，细节待定（未动代码）
+> **状态**：🔵 落码完成（commit `b096443`，2026-10-08），⏳ 真机验收待做（尚未封卷）
 > **来源**：用户 2026-10-08 口头规划（开新坑）+ 2026-10-08 第二轮拍板
 > **配套**：[功能总索引](../design/features.md) · [数据模型](../design/data-model.md) · [配置真源](../src/config.ts) · [调试页现状](../src/client/index.ts)
 >
-> ⚠️ 本文是规划/需求归集，**不是定稿**。已拍板部分见 §二/§四，剩余细节见 §五；定稿后把确定部分升格到 `design/features/settings.md`，本文件封卷只留链接。
+> ⚠️ 本文原是规划/需求归集；**2026-10-08 已落码（commit `b096443`）**，确定部分已升格见下方 §八 实现记录。落码细节与待办见 §八 / §九；定稿升格文档 `design/features/settings.md` 待补（见 §九）。
 
 ---
 
@@ -17,14 +17,14 @@
 | `config` | 任务配置 | 卡片式任务列表 + 右侧编辑分栏 |
 | `records` | 执行记录 | 全部任务流水账（HTTP 游标分页） |
 | `calendar` | 任务日程 | 月历视图 |
-| `debug` | **调试** | **最右边**；GET /db 全表原始行 + 运行参数只读展示 |
+| `settings` | **设置** | **最右边**（2026-10-08 由 `debug` 改名）；三大块见 §二，旧调试页（已删除）整段移除 |
 
-**计划**：把最右边的 `debug` ⇒ 改名为「**设置**」，进入「设置」页后分**三大块**（见 §二）。`records` / `calendar` 仍为独立顶部 tab，不收进设置。
+**已落地**：最右边的 `debug` ⇒ 已改名为「**设置**」（`src/client/index.ts:1196` 的 Segmented `value:'settings'`、`label: t('tabSettings')`；`:1276-1277` 渲染 `SettingsPage`）。进入「设置」页后分**三大块**（见 §二）。`records` / `calendar` 仍为独立顶部 tab，不收进设置。
 
-> **旧「调试」页处置（用户 2026-10-08 拍板：全推倒、按新逻辑重写）**：
-> - 旧调试页 = client 的 `debug` tab（`src/client/index.ts` 的 Segmented + `renderDebug`/`renderDbTable` + 运行参数 `<dl>`）+ server 的 `GET /db` 数据通道（`src/index.ts:500`，"三张表原样导出"）。
+> **旧「调试」页处置（用户 2026-10-08 拍板：全推倒、按新逻辑重写；2026-10-08 已删除）**：
+> - 旧调试页（已删除） = client 的 `debug` tab（`src/client/index.ts` 的 Segmented + `renderDebug`/`renderDbTable` + 运行参数 `<dl>`）+ server 的 `GET /db` 数据通道（`src/index.ts:500`，"三张表原样导出"）。
 > - **整体废弃、不迁移旧布局**，新「设置」页按三大块从零重建。底层纯函数（如 `renderDbTable` 通用表格渲染）若仍适用可复用，但页面结构与取数通道按新逻辑重写。
-> - server 的 `GET /db`（一次性全表 dump、无排序/筛选/分页）将替换为新的「按表 + 共享 N + 筛选 + 排序」查询路由（见 §4.3 / §六）。
+> - server 的 `GET /db`（一次性全表 dump、无排序/筛选/分页）**已由新的 `GET /db-query` 路由取代**（见 §4.3 / §六 / §八）。
 
 ---
 
@@ -133,7 +133,7 @@
 3. **选表单选 + 共享 N（Block 3）**：✅ **已拍板：滑动标签单选（一次一张表）**；N 为**全局共享控件**（默认 100，可选 100/200/500），改一次切表仍生效（用户 2026-10-08）。→ 原"多表各取前 N vs 总计 N"的口径问题**作废**（单选下 N 即该表 `LIMIT N`）。
 4. **Block 3 筛选形态**：每表各自筛选（列不同），用**一个通用筛选组件**按所选表列动态生成（见 §七.2）。
 5. **配置入口归属（用户 2026-10-08 拍板）**：
-   - **配置编辑主场 = 新调试页 Block 1**。宿主插件详情页里的 `config-panel`（运行参数表单，`src/client/index.ts:2055-2067` 注册进 `plugins.bundle.config` 槽）**暂不动（"先不管"）**，但它定位为**旧入口 / 兜底**——只给"在别处没有界面的字段"留设置位；等 Block 1 覆盖全部配置后，它可整体退役。
+   - **配置编辑主场 = 设置页 Block 1**。宿主插件详情页里的 `config-panel`（运行参数表单，`src/client/index.ts:2055-2067` 注册进 `plugins.bundle.config` 槽）**暂不动（"先不管"）**，但它定位为**旧入口 / 兜底**——只给"在别处没有界面的字段"留设置位；等 Block 1 覆盖全部配置后，它可整体退役。
    - 配置**不是写死、也不在我们 SQLite `state.db` 里**：`PluginConfig` 默认值在 `src/config.ts:40-51`，用户实际值由**宿主经 `scope.update` 落盘**（`config-panel.tsx:5-6`）。`config-panel.tsx` 走我们自己的 `/config` HTTP 路由（`src/index.ts:938-1005`），Block 1 直接复用同一个路由写回即可——**设置页能设配置，不受"仅宿主可改"限制**。
    - **落地动作（动代码时）**：① 放宽 `/config` 路由 `allowed` 白名单（`src/index.ts:967`，现仅 4 个计时字段）到全部 `PluginConfig` 用户字段；② Block 1 的表单组件覆盖保留期 / 默认模型 / 路径等（可复用 / 扩展 `config-panel.tsx`，它本就是自包含表单，顶部「设置」页里 `<ConfigPanel view="page" />` 即可渲染一份）。
    - ⚠️ **过渡期有两份配置 UI**（宿主详情页 `config-panel` + 新 Block 1），但都走同一 `/config` 路由、无数据冲突，仅视觉冗余；用户已接受"先不管"宿主页，待 Block 1 成熟再退役前者。
@@ -147,8 +147,8 @@
 - **Block 2 取数**：复刻现有 `GET /db` 思路，但改为按 `plugin_log` + `ORDER BY seq DESC LIMIT N`；用 `setInterval` 轮询（受开关控制），**不复用现有事件订阅**（现有调试页的事件订阅见 `src/client/index.ts:1029` 起，Block 2 不沿用）。
 - **Block 3 取数**：新增「按表 + 共享 N + 筛选 + 排序」查询路由（或在 `GET /db` 上加参数）。
 - **数据真源**：配置 = `PluginConfig`（`src/config.ts`，**默认值在代码、实际值由宿主落盘**）；表清单 = `state.db`（`GET /db`）。
-- **配置写回通道**：本插件非 volatile ⇒ 宿主官方 `configForms` 不可用，配置 UI 走我们自己的 `/config` 路由（`src/index.ts:938-1005`）。**配置编辑主场迁到新调试页 Block 1**；宿主详情页 `config-panel` 暂保留作旧入口/兜底（"先不管"）。落地需：放宽 `allowed`（`src/index.ts:967`，现仅 4 计时字段）→ 全 `PluginConfig` 用户字段；Block 1 表单覆盖保留期/默认模型/路径（可复用 `config-panel.tsx`）。
-- **旧调试页整体删除**：client 的 `debug` tab 整段移除（`renderDebug`/`renderDbTable`/运行参数 `<dl>`/事件订阅），server 的 `GET /db` 路由废弃；两者按新三块从零重建。底层 `renderDbTable` 纯函数可复用，但页面结构与取数通道重写。
+- **配置写回通道**：本插件非 volatile ⇒ 宿主官方 `configForms` 不可用，配置 UI 走我们自己的 `/config` 路由（`src/index.ts:938-1005`）。**配置编辑主场迁到设置页 Block 1**；宿主详情页 `config-panel` 暂保留作旧入口/兜底（"先不管"）。落地需：放宽 `allowed`（`src/index.ts:967`，现仅 4 计时字段）→ 全 `PluginConfig` 用户字段；Block 1 表单覆盖保留期/默认模型/路径（可复用 `config-panel.tsx`）。
+- **旧调试页（已删除）整体删除**：client 的 `debug` tab 整段移除（`renderDebug`/`renderDbTable`/运行参数 `<dl>`/事件订阅），server 的 `GET /db` 路由废弃；两者按新三块从零重建。底层 `renderDbTable` 纯函数可复用，但页面结构与取数通道重写。
 
 ---
 
@@ -156,10 +156,47 @@
 
 1. **(d) 同意 top-N 自过滤、不做分页**——更简单、够用。但补一条：**必须显式 `ORDER BY` 最新在前**，否则"前 N 条"是数据库任意行，客户端的"筛选"也筛不到想要的近期数据。给个 N 选择器（默认 100）即可。
 2. **Block 3 别给 6 张表各写一套筛选表单**。`state.db` 各表 schema 不同，但筛选器形态一致（列 + 运算符 + 值）。做一个**通用筛选组件**，按所选表的列动态出下拉，一份代码覆盖全部表——既满足"每表筛选条件不一样"（列不同），又不多写 5 份表单。
-3. **Block 2 用定时器轮询、不接 SSE**：与现有调试页"靠事件订阅重拉"的写法相反，但更简单、且用户明确不想被持续推送打扰，方向正确。注意轮询要在「开关关 / 离开页面」时停掉（现有 2s 轮询的 stopPolling 思路可复用，`src/client/index.ts:1822` 起）。
+3. **Block 2 用定时器轮询、不接 SSE**：与旧调试页（已删除）"靠事件订阅重拉"的写法相反，但更简单、且用户明确不想被持续推送打扰，方向正确。注意轮询要在「开关关 / 离开页面」时停掉（旧 2s 轮询的 stopPolling 思路可复用，`src/client/index.ts:1822` 起）。
 4. **`meta` 表不隐藏、但可能巨**：它存整份 `tasksInline`（全部任务定义 JSON）。显示在原始查询里没问题，但单行可能很长——靠横向滚动 + 长值截断（现有 `renderDbTable` 已做）兜住即可。
 5. **"数据库"措辞统一**：实际是「一个 SQLite 文件里的 6 张表」，文档与 UI 里叫"表/原始数据"比"数据库"更准，避免用户以为有多库。
 
 ---
 
-> 🧠 **From Hindsight memory** — 本次未调用（按要求只写本地文档，未入长期记录）；涉及事实均取自本仓库源码与 `docs/design/data-model.md`，已在正文标出处。
+## 八、实现记录（落码情况，2026-10-08）
+
+> commit `b096443`（main）：typecheck + build 通过，dist 已随提交入库。
+> 缩写：`DISPATCH_API_PREFIX = /api/task-dispatch-table`。
+
+### 8.1 后端
+- `src/store.ts`：新增 `queryTable(name, filters, limit)`（`DUMP_TABLES` 白名单 + 列名/运算符白名单 + 占位绑定 + `ORDER BY defaultOrder(name) DESC LIMIT ?`，LIMIT 钳制 1..500）；`defaultOrder(name)`（各表最新字段 DESC）；`columnsOf(name)`（带 `columnCache`）。`dumpTable` 复用二者。
+- `src/index.ts`：
+  - `CONFIG_EDITABLE_FIELDS`（`src/index.ts:219`）：全 `PluginConfig` 用户字段白名单（含 `type`/`min`/`max` 校验），取代原仅 4 计时字段的 `allowed`。
+  - `GET ${DISPATCH_API_PREFIX}/db-query`（`src/index.ts:519`）：读 `table`/`n`/`filter`，调 `store.queryTable`；设置页 Block 3 取数通道。
+  - `GET|POST ${DISPATCH_API_PREFIX}/config`（`src/index.ts:987`）：按 `CONFIG_EDITABLE_FIELDS` 白名单读写全字段，类型+范围校验后经 `updateScopeConfig` → `scope.update` 落盘并即时生效（运行态 `settings/updated`）。GET 回填用 `config as unknown as Record<string, unknown>`。
+
+### 8.2 前端（7 个新模块，`src/client/`）
+- `settings-page.tsx`：`SettingsPage` 用 `cardStyle` 纵向组合三块（maxWidth 920 居中）。
+- `settings-config-block.tsx`（Block 1）：`FIELDS` 数组（常用/高级分组，number 字段秒↔毫秒 `toDisplay`/`fromDisplay`）；进入拉 `GET /config` 回填、保存 `POST /config`；下方 `<dl>` 只读「当前配置」面板；`saved` state 提示成功（未用 `Toast`）。
+- `settings-log-block.tsx`（Block 2）：固定 5s `setInterval` 轮询 `plugin_log`，`auto` 开关 + 手动刷新；卸载/关开关清定时器。
+- `settings-table-block.tsx`（Block 3）：`Segmented` 六表单选、共享 N（`NumberInput`，默认 100/可选 200/500）、动态筛选增删、`DbTable` 展示。
+- `db-table.tsx`：`DbTable` 横向滚动表格（长值截断 + `title`）。
+- `table-filter.tsx`：`TableFilterRow`（列名下拉 + 运算符 + 值 + 移除），用 `SelectField`/`Input`/`IconButton`。
+- `settings-data.ts`：复用 `API_PREFIX`/`fetchWithTimeout` + 类型 `SettingsConfigValue`/`SettingsTableFilter`/`SettingsTableQueryResult`/`SETTINGS_TABLES`/`TABLE_COLUMNS` + `fetchConfig()`/`postConfig()`/`fetchTableQuery()`。
+
+### 8.3 装配
+- `src/client/index.ts`：`debug` tab ⇒ `settings`（`:505` `useState`、`:1189` `Segmented`、`:1276-1277` 渲染 `SettingsPage`）；删除旧调试页渲染链（`DbTableDump` 接口、`dbDump`/`dbState`/`dbNonce`/`dbLoadedForRef`/`useEvents` 调试订阅、`renderDbTable`）；`locales.ts` 增补约 30 个 key（中文 + 英文）。
+- 宿主 `config-panel.tsx` 注册**保留不动**（兜底，暂不复用进 Block 1）。
+
+---
+
+## 九、当前状态与待办（2026-10-08 落码后）
+
+- ✅ **已落码并 push**：三大块 + 后端查询/配置路由 + 装配，typecheck/build 绿，dist 入库（b096443）。
+- ⏳ **真机验收待做**：装 `dist/` 后确认三块交互（配置保存生效 / 日志 5s 轮询 / 六表查询 + 筛选 + 横向滚动）正常。
+- ⏳ **待升格**：定稿后把确定部分从本文升格到 `design/features/settings.md`（新增「设置页」功能条目），并在 `design/features.md` 总索引补一行。
+- ⚠️ **过渡期冗余**：宿主插件详情页 `config-panel` 仍保留作兜底；待 Block 1 覆盖全量配置后退役（用户拍板"先不管"）。
+- ⚠️ **已知边界**：`/db-query` 不做服务端分页（客户端自筛选，`LIMIT N` 仅取前 N）；Block 2 用轮询**不接 SSE**（用户明确选择，非遗漏）。
+
+---
+
+> 🧠 **From Hindsight memory** — 本次未调用（按用户要求只写本地文档，未入长期记录）；事实均取自本仓库源码（`src/store.ts`/`src/index.ts`/`src/client/*`）与 `docs/design/data-model.md`，已在正文标出处。
