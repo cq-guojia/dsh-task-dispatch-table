@@ -73,7 +73,8 @@ import { TaskViewPanel } from './task-view'
  * `insideClickable`：挂在可点行（如「高级设置」折叠头）里时用 `span + role=img`，
  * 并吞掉点击冒泡，免得点说明把行本身开关了。
  */
-function HelpButton(props: {
+/** 「?」说明钮 —— 全站唯一实现（设置页每项标题右侧的小问号也用它，2026-10-08 导出复用）。 */
+export function HelpButton(props: {
   hint: string
   side?: 'top' | 'bottom'
   align?: 'center' | 'end'

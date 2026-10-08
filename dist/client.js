@@ -867,13 +867,17 @@ window.__ModuleLoader__.load({
 			settingsLangValue: "跟随宿主（中文 / English）",
 			settingsParams: "运行参数（实时生效）",
 			settingsLoopSec: "循环间隔（秒）",
-			settingsLoopHint: "调度器多久巡检一次，看是否有任务到点。改小会更频繁地检查，但更费资源。",
+			settingsLoopHint: "调度器多久巡检一次任务表。",
+			settingsLoopHelp: "调度循环每隔这么久巡检一遍，看有没有任务到点、该不该派发。改小 = 响应更及时、但检查更频繁也更占资源；改大则相反。一般 60 秒足够。",
 			settingsWaitSec: "派发宽限（秒）",
-			settingsWaitHint: "任务派发后，等待会话创建 / 开始运行的最长宽限；超时按「等待超时」处理。",
+			settingsWaitHint: "派发后等待会话启动的最长时间。",
+			settingsWaitHelp: "任务派发之后，等它的会话创建并开始运行，最多等这么久。超过还没跑起来就按「等待超时」处理、记一次失败，让下一次调度接着来。",
 			settingsLeaseSec: "运行租约（秒）",
-			settingsLeaseHint: "单个任务运行占用的最长租约（分配 / 调度循环）；超时回收占用，避免卡死。",
+			settingsLeaseHint: "运行中多久没有动静才回收占用。",
+			settingsLeaseHelp: "任务在运行中，每被巡检到一次就续一次期；只有超过这么久**完全没有任何动静**（比如进程假死）才判定为卡死、回收它占的并发位。一直正常在跑的任务会被不断续期，不会被掐断。",
 			settingsUnknownSec: "观察宽限（秒）",
-			settingsUnknownHint: "会话状态未知时保留的宽限；超过则判定为异常并回收。",
+			settingsUnknownHint: "会话状态未知时再观察多久。",
+			settingsUnknownHelp: "暂时拿不到会话状态时，先按这个宽限继续观察（可能是宿主接口抖动）；超过仍没有回音才判定为异常并回收。",
 			settingsSaveSuccess: "设置已保存",
 			settingsLoadFailed: "读取当前设置失败，请稍后重试",
 			settingsUnitSec: "秒",
@@ -886,18 +890,24 @@ window.__ModuleLoader__.load({
 			debugRowsSuffix: "行",
 			tabSettings: "设置",
 			settingsConfigTitle: "插件设置",
-			settingsBlockLogTitle: "整体日志",
+			settingsBlockLogTitle: "插件日志",
 			settingsBlockDataTitle: "数据库表查询",
 			settingsCurrentConfig: "配置预览（只读）",
 			settingsDefaultValue: "默认",
 			settingsProvider: "默认模型供应商",
 			settingsModel: "默认模型",
 			settingsLogRetention: "运行日志保留（天）",
-			settingsLogRetentionHint: "每次执行产生的诊断日志（任务日志 + 插件日志）保留多少天，到期自动清除。只清日志明细，不影响执行记录本身。",
+			settingsLogRetentionHint: "诊断日志保留多久，到期清除。",
+			settingsLogRetentionHelp: "每次执行过程中产生的诊断日志（任务日志 + 插件日志）保留这么多天，到期自动清除。它只清日志明细，执行记录本身一律保留、不受影响。",
 			settingsAttachmentRetention: "临时附件保留（天）",
-			settingsAttachmentRetentionHint: "上传 / 引用附件时，插件在临时目录里留的那份副本保留多少天，到期自动清理。任务定义里正式引用的附件不受影响。",
+			settingsAttachmentRetentionHint: "临时目录里的附件副本保留多久。",
+			settingsAttachmentRetentionHelp: "上传或引用附件时，插件会在自己的临时目录里先留一份副本，这么多天后清理掉。任务定义里正式引用的那份附件不受影响。",
 			settingsUnsaved: "有未保存的修改",
 			settingsDefaultOption: "默认",
+			settingsModelHint: "没选就用宿主的默认模型。",
+			settingsModelHelp: "先选供应商、再选具体模型，两个都要选。留空（默认模型）= 跟随宿主的默认模型。新建任务时会自动带出这里的选择，单个任务仍可单独改。",
+			settingsCustom: "自定义",
+			settingsResetDefault: "恢复默认",
 			settingsAutoRefresh: "自动刷新（5 秒）",
 			settingsRefresh: "刷新",
 			settingsLogEmpty: "（暂无日志）",
@@ -1511,13 +1521,17 @@ window.__ModuleLoader__.load({
 			settingsLangValue: "Follow host (Chinese / English)",
 			settingsParams: "Runtime parameters (live)",
 			settingsLoopSec: "Loop interval (sec)",
-			settingsLoopHint: "How often the scheduler checks whether a task is due. Smaller = more frequent checks but more resource use.",
+			settingsLoopHint: "How often the scheduler scans the task table.",
+			settingsLoopHelp: "Every this many seconds the dispatch loop scans for tasks that are due. Smaller = reacts sooner but scans more often and costs more; larger = the opposite. 60 seconds is usually enough.",
 			settingsWaitSec: "Dispatch grace (sec)",
-			settingsWaitHint: "Max wait after dispatch for the session to be created / start running; on timeout it is treated as a wait timeout.",
+			settingsWaitHint: "How long to wait for the session to start after dispatch.",
+			settingsWaitHelp: "After a task is dispatched, this is how long we wait for its session to be created and start running. If it never starts, the run is marked \"wait timed out\" and the next schedule takes over.",
 			settingsLeaseSec: "Run lease (sec)",
-			settingsLeaseHint: "Max run lease per task (allocation / scheduling loop); on timeout the slot is reclaimed to avoid stalls.",
+			settingsLeaseHint: "Reclaim the slot after this long with no sign of life.",
+			settingsLeaseHelp: "A running task renews its lease every time it is scanned. Only when there has been no sign of life for this long (e.g. the process hung) is it judged stuck and its concurrency slot reclaimed. A task that is genuinely running keeps renewing and is never cut off.",
 			settingsUnknownSec: "Unknown grace (sec)",
-			settingsUnknownHint: "Grace kept while the session status is unknown; beyond it the task is judged abnormal and reclaimed.",
+			settingsUnknownHint: "How long to keep watching when the session state is unknown.",
+			settingsUnknownHelp: "When the session state cannot be read, keep watching for this long (it may be a transient host hiccup). Only if there is still no answer after that is the run judged abnormal and reclaimed.",
 			settingsSaveSuccess: "Settings saved",
 			settingsLoadFailed: "Failed to load current settings, please retry later",
 			settingsUnitSec: "sec",
@@ -1530,18 +1544,24 @@ window.__ModuleLoader__.load({
 			debugRowsSuffix: "rows",
 			tabSettings: "Settings",
 			settingsConfigTitle: "Plugin Settings",
-			settingsBlockLogTitle: "Plugin Logs",
+			settingsBlockLogTitle: "Plugin Log",
 			settingsBlockDataTitle: "Database Tables",
 			settingsCurrentConfig: "Config Preview (read-only)",
 			settingsDefaultValue: "default",
 			settingsProvider: "Default Model Provider",
 			settingsModel: "Default Model",
 			settingsLogRetention: "Run Log Retention (days)",
-			settingsLogRetentionHint: "How long to keep the diagnostic logs produced by each run (task log + plugin log); expired rows are purged automatically. Only log details are cleared — run records are kept.",
+			settingsLogRetentionHint: "How long diagnostic logs are kept before purging.",
+			settingsLogRetentionHelp: "Diagnostic logs produced during each run (task log + plugin log) are kept for this many days, then purged. Only log details are cleared — run records are always kept and never affected.",
 			settingsAttachmentRetention: "Temp Attachment Retention (days)",
-			settingsAttachmentRetentionHint: "How long to keep the copy the plugin places in its temp directory when an attachment is uploaded or referenced. Attachments formally referenced by a task are not affected.",
+			settingsAttachmentRetentionHint: "How long attachment copies in the temp directory are kept.",
+			settingsAttachmentRetentionHelp: "When an attachment is uploaded or referenced, the plugin keeps a copy in its own temp directory, cleaned up after this many days. The attachment formally referenced by the task definition is not affected.",
 			settingsUnsaved: "You have unsaved changes",
 			settingsDefaultOption: "Default",
+			settingsModelHint: "With nothing selected, the host default model is used.",
+			settingsModelHelp: "Pick the provider first, then the concrete model — both are required. Leaving it empty (default model) means following the host default. New tasks inherit this choice, and each task can still override it.",
+			settingsCustom: "Custom",
+			settingsResetDefault: "Restore default",
 			settingsAutoRefresh: "Auto Refresh (5s)",
 			settingsRefresh: "Refresh",
 			settingsLogEmpty: "(no logs yet)",
@@ -3277,7 +3297,7 @@ body[data-ds-dark-theme]{
 		const DATE_FIELD_W = 115;
 		const TIME_FIELD_W = 80;
 		const PRESET_W = 80;
-		const labelStyle = {
+		const labelStyle$1 = {
 			display: "inline-flex",
 			alignItems: "center",
 			gap: "4px",
@@ -3382,7 +3402,7 @@ body[data-ds-dark-theme]{
 				gap: "6px",
 				flexWrap: "wrap"
 			} }, endFields("from"), (0, react$1.createElement)("span", {
-				style: labelStyle,
+				style: labelStyle$1,
 				"aria-hidden": "true"
 			}, "～"), endFields("to"), (0, react$1.createElement)(SelectField, {
 				value: selection,
@@ -65058,6 +65078,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* `insideClickable`：挂在可点行（如「高级设置」折叠头）里时用 `span + role=img`，
 		* 并吞掉点击冒泡，免得点说明把行本身开关了。
 		*/
+		/** 「?」说明钮 —— 全站唯一实现（设置页每项标题右侧的小问号也用它，2026-10-08 导出复用）。 */
 		function HelpButton(props) {
 			const { hint, side = "bottom", align, maxWidth = 300, insideClickable = false } = props;
 			const anchor = insideClickable ? (0, react$1.createElement)("span", {
@@ -70633,23 +70654,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/**
 		* 设置页第 1 块 · 插件设置（配置编辑主入口）。
 		*
-		* 布局（用户 2026-10-08 定死）：
-		* - 左栏 = 插件设置表单，**一行两个**；每项 = 标题（上）+ 输入框（中）+ 说明（下）；
-		* - 右栏 = 「配置预览」只读面板，**定宽 180px**（原先 minmax(240px,1fr) 的四分之三）——
-		*   它是固定块，窗口变窄时压的是**左边**表单，预览自己不縮；
-		* - 「高级」折叠区照旧保留。
+		* 状态机**照抄 `dsh-session-title-pattern` 插件**（用户 2026-10-08「全抄，按它来」）：
+		*  - 每项**改过**（值 ≠ 系统默认值）⇒ 标题右侧挂 **「自定义」** 徽章，并放开 **「恢复默认」** 按钮；
+		*  - 没改过 ⇒ 没有徽章、「恢复默认」灰着不可点；
+		*  - **没有任何改动时「保存」是灰的**（`disabled` = 没有脏字段）。
 		*
-		* 控件口径（用户 2026-10-08）：
-		* - **秒 / 天这类数字直接填**，不要用「− / +」步进器（没意义）；
-		* - 模型 / 供应商是**下拉**（目录来自 `GET /options`，与任务编辑器同一份真源），
-		*   首项「默认模型」= 跟随宿主；**没选供应商时模型下拉是灰的、不可选**。
+		* 其余口径（用户 2026-10-08）：
+		* - 没有「配置预览」只读栏（已删）、没有「高级」折叠（全部直接铺开）；
+		* - **默认模型供应商 + 默认模型是一行连栏**（先挑哪家、再挑哪个模型，两者一起算一项）；
+		* - 秒 / 天这类数字**直接填**（不用步进器），单位只写在标题里，不再缀在输入框后面；
+		* - 每项下面一句**短说明**（默认宽度一行写得下），详细解释收进标题右边的 **「?」** 悬停提示。
 		*
-		* ⚠️ **目录类配置不在此暴露编辑**（用户 2026-10-08）：`statePath` / `tasksDir` 是「插件装到哪儿」的问题，
-		* 一个插件装哪儿就是哪儿，不该让用户填路径。
-		* ⚠️ **执行历史保留已整条删除**（用户 2026-10-08）：执行历史应当永久保留、不允许清除。
-		*
-		* ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）—— 早前把「显示单位（秒）」
-		* 存进状态、显示时又换算一次，改一次时间字段就会被二次换算成 0.12 秒（2026-10-08 修）。
+		* ⚠️ **目录类配置不在此暴露编辑**：`statePath` / `tasksDir` 是「插件装到哪儿」的问题，不该让用户填路径。
+		* ⚠️ **执行历史保留已整条删除**：执行历史永久保留、不允许清除。
+		* ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）。
 		*/
 		const SEC = 1e3;
 		const FIELDS = [
@@ -70657,9 +70675,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				key: "tickMs",
 				labelKey: "settingsLoopSec",
 				hintKey: "settingsLoopHint",
-				group: "basic",
+				helpKey: "settingsLoopHelp",
 				kind: "number",
-				unit: "秒",
 				toDisplay: (v) => Math.round(v / SEC),
 				fromDisplay: (v) => v * SEC,
 				min: 1,
@@ -70669,9 +70686,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				key: "logRetentionDays",
 				labelKey: "settingsLogRetention",
 				hintKey: "settingsLogRetentionHint",
-				group: "basic",
+				helpKey: "settingsLogRetentionHelp",
 				kind: "number",
-				unit: "天",
 				min: 1,
 				max: 3650
 			},
@@ -70679,31 +70695,24 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				key: "attachmentTmpRetentionDays",
 				labelKey: "settingsAttachmentRetention",
 				hintKey: "settingsAttachmentRetentionHint",
-				group: "basic",
+				helpKey: "settingsAttachmentRetentionHelp",
 				kind: "number",
-				unit: "天",
 				min: 1,
 				max: 3650
 			},
 			{
-				key: "defaultProvider",
-				labelKey: "settingsProvider",
-				group: "basic",
-				kind: "provider"
-			},
-			{
 				key: "defaultModel",
 				labelKey: "settingsModel",
-				group: "basic",
-				kind: "model"
+				hintKey: "settingsModelHint",
+				helpKey: "settingsModelHelp",
+				kind: "pair"
 			},
 			{
 				key: "dispatchGraceMs",
 				labelKey: "settingsWaitSec",
 				hintKey: "settingsWaitHint",
-				group: "advanced",
+				helpKey: "settingsWaitHelp",
 				kind: "number",
-				unit: "秒",
 				toDisplay: (v) => Math.round(v / SEC),
 				fromDisplay: (v) => v * SEC,
 				min: 1,
@@ -70713,9 +70722,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				key: "leaseMs",
 				labelKey: "settingsLeaseSec",
 				hintKey: "settingsLeaseHint",
-				group: "advanced",
+				helpKey: "settingsLeaseHelp",
 				kind: "number",
-				unit: "秒",
 				toDisplay: (v) => Math.round(v / SEC),
 				fromDisplay: (v) => v * SEC,
 				min: 1,
@@ -70725,41 +70733,66 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				key: "unknownGraceMs",
 				labelKey: "settingsUnknownSec",
 				hintKey: "settingsUnknownHint",
-				group: "advanced",
+				helpKey: "settingsUnknownHelp",
 				kind: "number",
-				unit: "秒",
 				toDisplay: (v) => Math.round(v / SEC),
 				fromDisplay: (v) => v * SEC,
 				min: 1,
 				max: 604800
 			}
 		];
-		const linkStyle = {
-			background: "none",
-			border: "none",
-			color: "var(--tdt-link)",
-			cursor: "pointer",
-			padding: "0",
-			fontSize: "var(--tdt-font-sm)"
-		};
-		/** 字段栅格：**一行两个**。 */
+		/** 字段栅格：**一行两个**（供应商 + 模型那一格内部也是一行两个）。 */
 		const gridStyle = {
 			display: "grid",
 			gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
 			gap: "var(--tdt-space-4)"
 		};
+		/** 每项标题行：标题 + 「?」 + 右侧「自定义 / 恢复默认」（照参考插件 `stp-pairHead` 的排法）。 */
+		const headStyle = {
+			display: "flex",
+			alignItems: "center",
+			gap: "var(--tdt-space-1)",
+			marginBottom: "var(--tdt-space-2)"
+		};
+		const labelStyle = {
+			fontSize: "var(--tdt-font-md)",
+			fontWeight: 600,
+			minWidth: 0
+		};
+		const badgesStyle = {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: "var(--tdt-space-2)",
+			marginLeft: "auto",
+			flex: "none"
+		};
+		const customStyle = {
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-business)"
+		};
+		const resetStyle = {
+			background: "none",
+			border: "none",
+			padding: 0,
+			font: "inherit",
+			fontSize: "var(--tdt-font-xs)",
+			color: "var(--tdt-fg-2)",
+			cursor: "pointer"
+		};
 		function SettingsConfigBlock({ t }) {
 			const [form, setForm] = (0, react$1.useState)(null);
-			/** 最后一次「已落盘」的快照 ⇒ 与 form 比对得脏状态（改动了没保存要显示出来）。 */
+			/** 最后一次「已落盘」的快照 ⇒ 与 form 比对得脏状态（没改动 ⇒ 保存灰着）。 */
 			const [baseline, setBaseline] = (0, react$1.useState)(null);
 			const [defaults, setDefaults] = (0, react$1.useState)(null);
 			const [models, setModels] = (0, react$1.useState)([]);
 			const [saving, setSaving] = (0, react$1.useState)(false);
 			const [error, setError] = (0, react$1.useState)(null);
 			const [saved, setSaved] = (0, react$1.useState)(false);
-			const [showAdvanced, setShowAdvanced] = (0, react$1.useState)(false);
-			/** 数字框的自由输入草稿（允许用户先清空 / 输一半，失焦再回弹），key = 字段名。 */
+			/** 数字框的自由输入草稿（允许先清空 / 输一半，失焦再回弹），key = 字段名。 */
 			const [draft, setDraft] = (0, react$1.useState)({});
+			(0, react$1.useEffect)(() => {
+				ensureTaskEditorStyle();
+			}, []);
 			(0, react$1.useEffect)(() => {
 				let alive = true;
 				fetchConfig().then((p) => {
@@ -70805,6 +70838,24 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (!Number.isFinite(n)) return;
 				update(f, Math.min(f.max ?? Infinity, Math.max(f.min ?? -Infinity, n)));
 			};
+			/** 「恢复默认」：把该字段（连栏项则两个一起）退回系统默认值。 */
+			const resetField = (f) => {
+				if (form === null || defaults === null) return;
+				setSaved(false);
+				setDraft((prev) => {
+					const next = { ...prev };
+					delete next[f.key];
+					return next;
+				});
+				setForm((prev) => prev === null ? prev : f.kind === "pair" ? {
+					...prev,
+					defaultProvider: defaults.defaultProvider,
+					defaultModel: defaults.defaultModel
+				} : {
+					...prev,
+					[f.key]: defaults[f.key]
+				});
+			};
 			const save = async () => {
 				if (form === null) return;
 				setSaving(true);
@@ -70822,8 +70873,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setSaving(false);
 				}
 			};
+			/** 改过 = 值 ≠ 系统默认值（与服务端「等于默认值就不落用户层」同一判据）。 */
+			const isCustom = (f) => {
+				if (form === null || defaults === null) return false;
+				if (f.kind === "pair") return form.defaultProvider !== defaults.defaultProvider || form.defaultModel !== defaults.defaultModel;
+				return form[f.key] !== defaults[f.key];
+			};
 			const dirty = form !== null && baseline !== null && JSON.stringify(form) !== JSON.stringify(baseline);
-			/** 供应商候选：从模型目录去重（目录读不到 ⇒ 只有「默认」一项，下拉呈灰色）。 */
+			/** 供应商候选：从模型目录去重（目录读不到 ⇒ 只有「默认」一项）。 */
 			const providerOptions = () => {
 				const seen = /* @__PURE__ */ new Set();
 				const out = [{
@@ -70840,7 +70897,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 				return out;
 			};
-			/** 模型候选：首项「默认模型」；其余按当前供应商过滤（没选供应商 ⇒ 只剩首项 ⇒ 下拉不可选）。 */
+			/** 模型候选：没选供应商 ⇒ 只剩「默认模型」一项 ⇒ 下拉灰掉、不可选。 */
 			const modelOptions = () => {
 				const provider = form?.defaultProvider ?? "";
 				const head = [{
@@ -70850,20 +70907,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (provider === "") return head;
 				return [...head, ...models.filter((m) => m.provider === provider)];
 			};
+			/** 每项标题行：标题 + 「?」 + 「自定义」徽章 + 「恢复默认」。 */
+			const renderHead = (f) => {
+				const custom = isCustom(f);
+				return (0, react$1.createElement)("div", { style: headStyle }, (0, react$1.createElement)("label", { style: labelStyle }, t(f.labelKey)), f.helpKey === void 0 ? null : (0, react$1.createElement)(HelpButton, {
+					hint: t(f.helpKey),
+					maxWidth: 320
+				}), (0, react$1.createElement)("span", { style: badgesStyle }, custom ? (0, react$1.createElement)("span", { style: customStyle }, t("settingsCustom")) : null, (0, react$1.createElement)("button", {
+					type: "button",
+					style: {
+						...resetStyle,
+						...custom ? {} : {
+							color: "var(--tdt-fg-dim)",
+							cursor: "default"
+						}
+					},
+					disabled: !custom,
+					onClick: () => {
+						resetField(f);
+					}
+				}, t("settingsResetDefault"))));
+			};
 			const renderField = (f) => {
 				const serverVal = form[f.key];
-				const hint = f.hintKey === void 0 ? null : (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-sm)",
-					color: "var(--tdt-fg-3)",
-					marginTop: "var(--tdt-space-2)",
-					lineHeight: "var(--tdt-line-sm)"
-				} }, t(f.hintKey));
-				const label = (0, react$1.createElement)("label", { style: {
-					display: "block",
-					fontSize: "var(--tdt-font-md)",
-					fontWeight: 600,
-					marginBottom: "var(--tdt-space-2)"
-				} }, t(f.labelKey));
 				let control;
 				if (f.kind === "number") {
 					const displayVal = f.toDisplay !== void 0 ? f.toDisplay(serverVal) : serverVal;
@@ -70886,34 +70952,28 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						},
 						"aria-label": t(f.labelKey)
 					});
-					control = (0, react$1.createElement)("div", { style: {
-						display: "flex",
-						alignItems: "center",
-						gap: "var(--tdt-space-1)"
-					} }, control, f.unit === void 0 ? null : (0, react$1.createElement)("span", { style: {
-						flex: "none",
-						fontSize: "var(--tdt-font-sm)",
-						color: "var(--tdt-fg-3)"
-					} }, f.unit));
-				} else if (f.kind === "provider") control = (0, react$1.createElement)(SelectField, {
-					value: String(serverVal),
-					options: providerOptions(),
-					block: true,
-					size: "md",
-					onChange: (v) => {
-						update(f, v);
-						update({
-							...f,
-							key: "defaultModel"
-						}, "");
-					},
-					placeholder: t("settingsDefaultOption"),
-					emptyLabel: t("editorNoOptions"),
-					ariaLabel: t(f.labelKey)
-				});
-				else if (f.kind === "model") {
+				} else {
 					const opts = modelOptions();
-					control = (0, react$1.createElement)(SelectField, {
+					control = (0, react$1.createElement)("div", { style: {
+						display: "grid",
+						gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+						gap: "var(--tdt-space-2)"
+					} }, (0, react$1.createElement)(SelectField, {
+						value: String(form.defaultProvider),
+						options: providerOptions(),
+						block: true,
+						size: "md",
+						onChange: (v) => {
+							update(f, "");
+							setForm((prev) => prev === null ? prev : {
+								...prev,
+								defaultProvider: v
+							});
+						},
+						placeholder: t("settingsDefaultOption"),
+						emptyLabel: t("editorNoOptions"),
+						ariaLabel: t("settingsProvider")
+					}), (0, react$1.createElement)(SelectField, {
 						value: String(serverVal),
 						options: opts,
 						block: true,
@@ -70924,53 +70984,28 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						},
 						placeholder: t("editorFollowHost"),
 						emptyLabel: t("editorNoOptions"),
-						ariaLabel: t(f.labelKey)
-					});
-				} else control = (0, react$1.createElement)(Input$1, {
-					value: String(serverVal),
-					onChange: (v) => update(f, v),
-					style: { width: "100%" }
-				});
+						ariaLabel: t("settingsModel")
+					}));
+				}
 				return (0, react$1.createElement)("div", {
 					key: f.key,
 					style: { minWidth: 0 }
-				}, label, control, hint);
+				}, renderHead(f), control, f.hintKey === void 0 ? null : (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-sm)",
+					color: "var(--tdt-fg-3)",
+					marginTop: "var(--tdt-space-2)",
+					lineHeight: "var(--tdt-line-sm)"
+				} }, t(f.hintKey)));
 			};
 			if (form === null || defaults === null || baseline === null) return (0, react$1.createElement)("div", { style: {
 				color: "var(--tdt-fg-3)",
 				fontSize: "var(--tdt-font-sm)"
 			} }, t("loading"));
-			const basic = FIELDS.filter((f) => f.group === "basic");
-			const advanced = FIELDS.filter((f) => f.group === "advanced");
-			/** 只读面板按**显示单位**给值（毫秒换算成秒），并标出该字段是否用的系统默认值。 */
-			const previewValue = (f) => {
-				const v = form[f.key];
-				if (f.kind === "text" || f.kind === "provider" || f.kind === "model") return v === "" ? "—" : String(v);
-				const shown = f.toDisplay !== void 0 ? f.toDisplay(v) : v;
-				const isDefault = defaults[f.key] === v;
-				return `${shown} ${f.unit ?? ""}`.trim() + (isDefault ? `（${t("settingsDefaultValue")}）` : "");
-			};
 			return (0, react$1.createElement)("div", null, (0, react$1.createElement)(SectionHead, {
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCordisPluginOutlineRegular, { size: 16 }),
 				title: t("settingsConfigTitle")
-			}), (0, react$1.createElement)("div", { style: {
-				display: "grid",
-				gridTemplateColumns: "minmax(0, 1fr) 180px",
-				gap: "var(--tdt-space-4)",
-				alignItems: "start"
-			} }, (0, react$1.createElement)("div", { style: { minWidth: 0 } }, (0, react$1.createElement)("div", { style: gridStyle }, ...basic.map(renderField)), (0, react$1.createElement)("button", {
-				type: "button",
-				style: {
-					...linkStyle,
-					marginTop: "var(--tdt-space-3)"
-				},
-				onClick: () => setShowAdvanced((v) => !v)
-			}, `${t("editorAdvanced")}${showAdvanced ? " ▲" : " ▼"}`), showAdvanced ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-3)",
-				margin: "var(--tdt-space-2) 0"
-			} }, t("editorAdvancedHelp")), (0, react$1.createElement)("div", { style: gridStyle }, ...advanced.map(renderField))) : null, (0, react$1.createElement)("div", { style: {
-				marginTop: "var(--tdt-space-3)",
+			}), (0, react$1.createElement)("div", { style: gridStyle }, ...FIELDS.map(renderField)), (0, react$1.createElement)("div", { style: {
+				marginTop: "var(--tdt-space-4)",
 				display: "flex",
 				gap: "var(--tdt-space-2)",
 				alignItems: "center",
@@ -70979,7 +71014,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				variant: "primary",
 				size: "lg",
 				onClick: () => void save(),
-				disabled: saving
+				disabled: saving || !dirty
 			}, saving ? t("saving") : t("save")), dirty ? (0, react$1.createElement)("span", { style: {
 				fontSize: "var(--tdt-font-sm)",
 				color: "var(--tdt-warning)"
@@ -70989,51 +71024,55 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, t("settingsSaveSuccess")) : null, error !== null ? (0, react$1.createElement)("span", { style: {
 				color: "var(--tdt-danger)",
 				fontSize: "var(--tdt-font-sm)"
-			} }, error) : null)), (0, react$1.createElement)("div", { style: { minWidth: 0 } }, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-md)",
-				fontWeight: 600,
-				color: "var(--tdt-fg-2)",
-				marginBottom: "var(--tdt-space-2)"
-			} }, t("settingsCurrentConfig")), (0, react$1.createElement)("dl", { style: {
-				margin: 0,
-				display: "grid",
-				gridTemplateColumns: "max-content 1fr",
-				gap: "var(--tdt-space-1) var(--tdt-space-2)",
-				fontSize: "var(--tdt-font-sm)"
-			} }, ...FIELDS.map((f) => [(0, react$1.createElement)("dt", {
-				key: `${f.key}-k`,
-				style: { color: "var(--tdt-fg-3)" }
-			}, t(f.labelKey)), (0, react$1.createElement)("dd", {
-				key: `${f.key}-v`,
-				style: {
-					margin: 0,
-					wordBreak: "break-word"
-				}
-			}, previewValue(f))]).flat()))));
+			} }, error) : null));
 		}
 		//#endregion
 		//#region src/client/db-table.tsx
 		/**
-		* 单表结果渲染（现在只有「整体日志」在用）。
+		* 单表结果渲染（现在只有「插件日志」在用）。
 		*
-		* 观感**直接复用「任务配置 → 展开 → 执行记录」表格**：同一批 `.dsh-tdt-rec-*` 类（表头吸顶 / 斑马纹 /
-		* hover），同一套格子度量（表头 `11px 10px`、格 `9px 10px`、字号 `--tdt-font-sm`）——不另抄一份，
-		* 免得两处漂移。类定义在 `task-list.tsx` 的 `domain:list`，故这里渲染前调 `ensureTaskListStyle()`。
+		* 观感**直接复用「任务配置 → 展开 → 执行记录」表格**的斑马纹与 hover（同一批 `.dsh-tdt-rec-*` 类，
+		* 定义在 `task-list.tsx` 的 `domain:list`，故渲染前调 `ensureTaskListStyle()`）。
+		*
+		* ⚠️ **表头不吸顶**（用户 2026-10-08）：这里是**页面滚动**，吸顶会让表头浮在上下文之外、
+		* 上面还会漏出内容 ⇒ 表头跟着内容一起滚走，不再用 `.dsh-tdt-rec-head`。
+		*
+		* 列宽（用户 2026-10-08）：`ts` 缩短成「MM-DD HH:mm:ss」并**定宽**，省下来的宽度全给 `message`
+		* （日志正文可能很长，其余列都是定长短字段）。
+		* `level` 按语义着色：**warn 黄 / error 红**（`plugin_log.level` 的枚举是 info | warn | error）。
 		*
 		* ⚠️ **字号必须写 `fontSize`，不能写 `font` 简写**：`font: 12px` 是**无效声明**（简写要求字号 + 字族），
 		* 整条被浏览器丢弃 ⇒ 表格退回宿主默认字号（用户 2026-10-08 揪出）。
-		*
-		* **没有内部滚动槽**（用户 2026-10-08）：数据查询块砍掉后，整体日志直接让**页面**往下滚，
-		* 有多少显示多少；表头仍 sticky ⇒ 随页面滚动吸在视口顶部。
-		* ⚠️ 因此**不能**再给 `min-width: max-content`（那会把页面撑出横向滚动条）⇒ 列宽交给自动布局 + 换行。
+		* ⚠️ **不能给 `min-width: max-content`**（那会把页面撑出横向滚动条）⇒ 列宽交给 `table-layout: fixed`。
 		*/
+		/** 定长列：`message` 不列在这里 ⇒ 吃掉剩下全部宽度。 */
+		const COL_WIDTH = {
+			seq: "56px",
+			ts: "116px",
+			level: "56px",
+			kind: "150px"
+		};
+		/** 时间戳缩短成「MM-DD HH:mm:ss」（原值是完整 ISO，占得太多）。 */
+		const shortTs = (iso) => {
+			const d = new Date(iso);
+			if (Number.isNaN(d.getTime())) return iso;
+			const p = (n) => String(n).padStart(2, "0");
+			return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+		};
+		/** 等级配色：error 红 / warn 黄 / info 不着色。 */
+		const levelStyleOf = (level) => level === "error" ? {
+			color: "var(--tdt-danger)",
+			fontWeight: 600
+		} : level === "warn" ? {
+			color: "var(--tdt-warning)",
+			fontWeight: 600
+		} : void 0;
 		const tableStyle = {
 			width: "100%",
+			tableLayout: "fixed",
 			borderCollapse: "collapse",
 			fontSize: "var(--tdt-font-sm)"
 		};
-		/** 表头：与执行记录 `recHeadStyle` 同度量；上下线走 **box-shadow**（`border-collapse` 下边框归表格网格 ⇒
-		*  sticky 表头滚动时边框会「滑走」）。吸顶本身由 `.dsh-tdt-rec-head th` 接管。 */
 		const thStyle = {
 			padding: "11px 10px",
 			textAlign: "left",
@@ -71041,7 +71080,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			color: "var(--tdt-fg-2)",
 			background: "var(--tdt-head-bg)",
 			whiteSpace: "nowrap",
-			boxShadow: "inset 0 1px 0 var(--tdt-border), inset 0 -1px 0 var(--tdt-border)"
+			overflow: "hidden",
+			textOverflow: "ellipsis"
 		};
 		/** 数据格：与执行记录 `miniCellStyle` 同度量；**不用实线分隔**，行与行靠斑马纹区分。 */
 		const tdStyle = {
@@ -71049,9 +71089,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			textAlign: "left",
 			color: "var(--tdt-fg)",
 			fontSize: "var(--tdt-font-sm)",
-			maxWidth: "280px",
 			wordBreak: "break-word",
-			verticalAlign: "top"
+			verticalAlign: "top",
+			overflow: "hidden"
 		};
 		function DbTable({ table, t, emptyText }) {
 			ensureTaskListStyle();
@@ -71062,24 +71102,29 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				fontSize: "var(--tdt-font-sm)",
 				margin: 0
 			} }, emptyText);
-			return (0, react$1.createElement)("table", { style: tableStyle }, (0, react$1.createElement)("thead", { className: "dsh-tdt-rec-head" }, (0, react$1.createElement)("tr", null, columns.map((col) => (0, react$1.createElement)("th", {
+			const widthOf = (col) => COL_WIDTH[col] === void 0 ? {} : { width: COL_WIDTH[col] };
+			return (0, react$1.createElement)("table", { style: tableStyle }, (0, react$1.createElement)("thead", null, (0, react$1.createElement)("tr", null, columns.map((col) => (0, react$1.createElement)("th", {
 				key: col,
-				style: thStyle
+				style: {
+					...thStyle,
+					...widthOf(col)
+				}
 			}, col)))), (0, react$1.createElement)("tbody", null, rows.map((row, i) => (0, react$1.createElement)("tr", {
 				key: i,
 				className: i % 2 === 1 ? "dsh-tdt-rec-row dsh-tdt-rec-alt" : "dsh-tdt-rec-row"
 			}, columns.map((col) => {
 				const value = row[col];
-				const text = value === null || value === void 0 ? "—" : String(value);
-				const clipped = text.length > 160 ? `${text.slice(0, 160)}…` : text;
+				const raw = value === null || value === void 0 ? "—" : String(value);
+				const text = col === "ts" ? shortTs(raw) : col === "message" ? raw : raw.length > 160 ? `${raw.slice(0, 160)}…` : raw;
 				return (0, react$1.createElement)("td", {
 					key: col,
-					style: col === "detail" || col === "value" ? {
+					style: {
 						...tdStyle,
-						maxWidth: "420px"
-					} : tdStyle,
-					title: text
-				}, clipped);
+						...widthOf(col),
+						...col === "level" ? levelStyleOf(raw) : {}
+					},
+					title: raw
+				}, text);
 			})))));
 		}
 		//#endregion
