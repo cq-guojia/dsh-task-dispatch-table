@@ -21,9 +21,10 @@
 
 **计划**：把最右边的 `debug` ⇒ 改名为「**设置**」，进入「设置」页后分**三大块**（见 §二）。`records` / `calendar` 仍为独立顶部 tab，不收进设置。
 
-> 现有「调试」页已具备的能力（必须保留并归位，不能丢）：
-> - `GET /db` 取 `state.db` 各表原始行：`renderDbTable` 按建表顺序渲染、长值截断 + 悬停看全文（`src/client/index.ts:1200` 起）。
-> - 运行参数只读展示：`<dl>` 列出 `statePath / tickMs / dispatchGraceMs / leaseMs / unknownGraceMs`（`src/client/index.ts:1466` 起）→ **归位到 Block 1 作为「当前配置」只读面板**。
+> **旧「调试」页处置（用户 2026-10-08 拍板：全推倒、按新逻辑重写）**：
+> - 旧调试页 = client 的 `debug` tab（`src/client/index.ts` 的 Segmented + `renderDebug`/`renderDbTable` + 运行参数 `<dl>`）+ server 的 `GET /db` 数据通道（`src/index.ts:500`，"三张表原样导出"）。
+> - **整体废弃、不迁移旧布局**，新「设置」页按三大块从零重建。底层纯函数（如 `renderDbTable` 通用表格渲染）若仍适用可复用，但页面结构与取数通道按新逻辑重写。
+> - server 的 `GET /db`（一次性全表 dump、无排序/筛选/分页）将替换为新的「按表 + 共享 N + 筛选 + 排序」查询路由（见 §4.3 / §六）。
 
 ---
 
@@ -33,7 +34,7 @@
 
 ### Block 1 · 基础设置（最上面）
 - 产品配置表单，配完**保存**落盘（配置清单见 §三）。
-- 顺带一个**「当前配置」只读面板**（复用原调试页运行参数 `<dl>`），展示当前生效值。
+- 顺带一个**「当前配置」只读面板**（新建，展示当前生效值，便于核对保存结果）。
 
 ### Block 2 · 整体日志查询（中间）
 - **专门查 `plugin_log`**——**是插件的进程日志，不是任务日志**（见 §4.1 维度区分）。用途：看哪里出错、何时启动等。
@@ -129,7 +130,9 @@
 2. **top-N 的排序**：`SELECT * LIMIT N` 不写 `ORDER BY` 是**任意行**（SQLite 按 rowid），"前 100 条"会无意义 ⇒ **必须 `ORDER BY seq/ts DESC`（最新在前）**。默认排序列（优先 `seq`，无 seq 的表用 `ts`）待定。
 3. **选表单选 + 共享 N（Block 3）**：✅ **已拍板：滑动标签单选（一次一张表）**；N 为**全局共享控件**（默认 100，可选 100/200/500），改一次切表仍生效（用户 2026-10-08）。→ 原"多表各取前 N vs 总计 N"的口径问题**作废**（单选下 N 即该表 `LIMIT N`）。
 4. **Block 3 筛选形态**：每表各自筛选（列不同），用**一个通用筛选组件**按所选表列动态生成（见 §七.2）。
-5. **配置写回（Block 1）——澄清**：配置**不是写死、也不在我们 SQLite `state.db` 里**。`PluginConfig` 的**默认值**在 `src/config.ts:40-51`（`ConfigDefaults`）；用户实际值由**宿主(DSH)经 `scope.update` 落盘**持久化（`config-panel.tsx:5-6`）。我们 `state.db` 只存运行时数据（实例/日志），不存配置——符合用户"没必要去数据库"的判断。要 Block 1 编辑更多字段，需两处同步：① 放宽 `/config` 路由的 `allowed` 写回白名单（`src/index.ts:967`，现仅 4 个计时字段）；② 在配置表单（现 `config-panel.tsx`，仅 4 字段）加对应字段。**设计决策待定**：Block 1 是扩展现有 `config-panel.tsx`，还是在「设置」页内另写表单（都走同一 `/config` 路由）。
+5. **配置写回（Block 1）——澄清 + 回答"页面能不能设"**：配置**不是写死、也不在我们 SQLite `state.db` 里**。`PluginConfig` 的**默认值**在 `src/config.ts:40-51`（`ConfigDefaults`）；用户实际值由**宿主(DSH)经 `scope.update` 落盘**持久化（`config-panel.tsx:5-6`）。我们 `state.db` 只存运行时数据（实例/日志），不存配置——符合用户"没必要去数据库"的判断。
+   - **关于"是不是只有宿主那个地方能调"**：本插件配置刻意非 volatile（`src/index.ts:435` 注释），**宿主官方 `configForms` 对本插件不可用**，所以宿主并没有一个现成的专属配置 UI；唯一的配置 UI 就是**我们自己的** `config-panel.tsx`（它只是嵌在宿主插件详情页里），走**我们自己的 `/config` HTTP 路由**（`src/index.ts:938-1005`）。因此「设置」页（Block 1）**完全可以**直接调同一个 `/config` POST 路由写回——不存在"只有宿主那个地方能调"的限制，那个地方本来就是我们的组件。
+   - 要 Block 1 编辑更多字段（保留期/默认模型/路径），需两处同步：① 放宽 `/config` 路由的 `allowed` 白名单（`src/index.ts:967`，现仅 4 个计时字段）；② 在配置表单加对应字段。**设计决策待定**：Block 1 是扩展现有 `config-panel.tsx`，还是在「设置」页内另写表单（都走同一 `/config` 路由）。
 6. **定稿后**：升格到 `design/features/settings.md`，本文件封卷。
 
 ---
@@ -140,8 +143,8 @@
 - **Block 2 取数**：复刻现有 `GET /db` 思路，但改为按 `plugin_log` + `ORDER BY seq DESC LIMIT N`；用 `setInterval` 轮询（受开关控制），**不复用现有事件订阅**（现有调试页的事件订阅见 `src/client/index.ts:1029` 起，Block 2 不沿用）。
 - **Block 3 取数**：新增「按表 + 共享 N + 筛选 + 排序」查询路由（或在 `GET /db` 上加参数）。
 - **数据真源**：配置 = `PluginConfig`（`src/config.ts`，**默认值在代码、实际值由宿主落盘**）；表清单 = `state.db`（`GET /db`）。
-- **配置写回通道**：现有 `config-panel.tsx`（宿主插件详情页内）经 `GET/POST /config` 读写，后端 `allowed` 白名单（`src/index.ts:967`）仅放行 4 个计时字段；Block 1 要扩字段即改这两处。
-- **现有调试页渲染**：`renderDbTable` + 运行参数 `<dl>` 迁移到 Block 3 / Block 1。
+- **配置写回通道**：本插件非 volatile ⇒ 宿主官方 `configForms` 不可用，配置 UI 全靠我们自己的 `config-panel.tsx`（嵌在宿主插件详情页）经 `GET/POST /config` 读写；后端 `allowed` 白名单（`src/index.ts:967`）仅放行 4 个计时字段。Block 1 要扩字段即放宽 `allowed` + 加表单，可直接复用同一 `/config` 路由——「设置」页能设配置，不受"仅宿主可改"限制。
+- **旧调试页整体删除**：client 的 `debug` tab 整段移除（`renderDebug`/`renderDbTable`/运行参数 `<dl>`/事件订阅），server 的 `GET /db` 路由废弃；两者按新三块从零重建。底层 `renderDbTable` 纯函数可复用，但页面结构与取数通道重写。
 
 ---
 
