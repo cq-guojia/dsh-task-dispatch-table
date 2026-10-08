@@ -1455,8 +1455,22 @@ export function apply(ctx: HostContext, config: unknown): void {
    * panelTaskMap）。webServer 注入早于 settings ⇒ 只能先声明、后赋值。
    */
   let resyncTaskMap: (() => void) | null = null
-  /** settings inject 就绪后的宿主上下文（persistTasksInline 经它找 configEditor）。 */
+  /** settings inject 就绪后的宿主上下文（logger 等；configEditor 另由独立 inject 捕获，见 configEditorRef）。 */
   let settingsCtxRef: HostContext | null = null
+  /**
+   * 宿主 `configEditor` 服务 —— 写插件 entry **用户层**的唯一通道（宿主自己的 settings.write 内部
+   * 就是 `configEditor.edit`；而 `settings.update` 对无 volatile 字段的条目恒抛错，见
+   * updateScopeConfig 头注）。
+   *
+   * ⚠️ 它与 settings **不在同一个 inject 面**：在 settings 的 ownerContext 上，从 `['settings']`
+   * 注入的 sctx 上摸它会 throw `cannot get property "configEditor" without inject`
+   * （cordis Proxy 对未提供属性直接 throw，2026-10-08 真机实证）⇒ 由下面的独立 inject 单独捕获。
+   * 捕不到 ⇒ 只影响「配置写回 / 任务表次通道」，主流程不受影响。
+   */
+  let configEditorRef: {
+    entries: () => Array<{ options?: { id?: string } }>
+    edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
+  } | null = null
   /** settings inject 就绪后的状态库：任务表持久化**主通道**（entry config 在插件重装时会丢）。 */
   let storeRef: TaskStore | null = null
   // 观测条目落库（plugin_log）的取值器：模块级 pushNotice 拿不到这里的 storeRef，故注册一个取值器。
@@ -1526,17 +1540,11 @@ export function apply(ctx: HostContext, config: unknown): void {
    * **其它异常向上抛**（调用方决定告警还是回给用户——写配置失败必须可诊断）。
    */
   const editPluginUserLayer = async (mutate: (raw: Record<string, unknown>) => Record<string, unknown>): Promise<void> => {
-    const sctx = settingsCtxRef
-    if (sctx === null) return
-    const configEditor = (sctx as unknown as {
-      configEditor?: {
-        entries: () => Array<{ options?: { id?: string } }>
-        edit: (entry: unknown, mutate: (raw: Record<string, unknown>) => Record<string, unknown>) => Promise<void>
-      }
-    }).configEditor
-    if (configEditor === undefined) return
+    const configEditor = configEditorRef
+    // 未捕获到 = 宿主没把 configEditor 提供给本插件 ⇒ 这是「为什么存不进去」的一手答案，必须说清。
+    if (configEditor === null) throw new Error('宿主未向插件提供 configEditor 服务，插件用户层无法写入')
     const entry = configEditor.entries().find((e) => e.options?.id === SETTINGS_NS)
-    if (entry === undefined) return
+    if (entry === undefined) throw new Error(`找不到插件配置条目 "${SETTINGS_NS}"`)
     await configEditor.edit(entry, mutate)
   }
   const persistTasksInline = async (json: string): Promise<void> => {
@@ -1623,6 +1631,11 @@ export function apply(ctx: HostContext, config: unknown): void {
       }
     }
     wctx.logger.info('[数据通道] webServer 路由已注册：GET /api/task-dispatch-table/snapshot、GET /api/task-dispatch-table/db、GET /api/task-dispatch-table/options、GET/POST /api/task-dispatch-table/config、GET /api/task-dispatch-table/tasks/instances、GET /api/task-dispatch-table/tasks/log、GET /api/task-dispatch-table/tasks/events、POST /api/task-dispatch-table/session/unarchive、POST /api/task-dispatch-table/session/archive、POST /api/task-dispatch-table/tasks/enabled、POST /api/task-dispatch-table/tasks/run')
+  })
+  // 宿主 configEditor 服务（写插件 entry 用户层的唯一通道）：与 settings 不同 inject 面 ⇒ 单独捕获。
+  // 捕不到 ⇒ 只影响「设置页写回 / 任务表次通道」（二者各自给出可诊断失败），调度主流程照跑。
+  ctx.inject(['configEditor'], (cctx: HostContext) => {
+    configEditorRef = (cctx as unknown as { configEditor: NonNullable<typeof configEditorRef> }).configEditor
   })
   ctx.inject(['settings'], (sctx: HostContext) => {
     const settings = sctx.settings
