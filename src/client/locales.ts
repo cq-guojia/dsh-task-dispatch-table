@@ -210,7 +210,7 @@ export type LocaleKey =
   | 'settingsCurrentConfig' | 'settingsProvider' | 'settingsModel'
   | 'settingsLogRetention' | 'settingsHistoryRetention' | 'settingsAttachmentRetention'
   | 'settingsAutoRefresh' | 'settingsRefresh' | 'settingsLogEmpty' | 'settingsLogFail'
-  | 'settingsTable' | 'settingsTopN' | 'settingsAddFilter' | 'settingsNoFilters' | 'settingsQuery'
+  | 'settingsTable' | 'settingsTopN' | 'settingsPageSize' | 'settingsAddFilter' | 'settingsNoFilters' | 'settingsQuery'
   | 'settingsTableTruncated' | 'settingsTableEmpty' | 'settingsTableFail'
   | 'settingsFilterColumn' | 'settingsFilterOp' | 'settingsFilterValue' | 'settingsFilterRemove'
   | 'settingsLoadFailed'
@@ -878,6 +878,7 @@ export const zh: Record<LocaleKey, string> = {
   settingsLogFail: '日志读取失败',
   settingsTable: '表',
   settingsTopN: '取前 N 条',
+  settingsPageSize: '每页显示条数',
   settingsAddFilter: '添加筛选',
   settingsNoFilters: '（无筛选：显示全部行）',
   settingsQuery: '查询',
@@ -1538,6 +1539,7 @@ export const en: Record<LocaleKey, string> = {
   settingsLogFail: 'Failed to load logs',
   settingsTable: 'Table',
   settingsTopN: 'Top N Rows',
+  settingsPageSize: 'Rows per page',
   settingsAddFilter: 'Add Filter',
   settingsNoFilters: '(no filter: show all rows)',
   settingsQuery: 'Query',

@@ -1,16 +1,20 @@
 /**
  * 设置页第 3 块 · 数据库表查询（`state.db` 全部 6 张表，不隐藏）。
  *
- * 布局（用户 2026-10-08 定死）：**标题在左，表切换（滑动标签）在右**；下面依次是「取前 N 条 + 查询」、
+ * 布局（用户 2026-10-08 定死）：**标题在左，表切换（滑动标签）在右**；下面依次是「每页条数 + 查询」、
  * 通用筛选行、结果表。取数 = `WHERE <筛选> ORDER BY <该表最新字段> DESC LIMIT N`（排序在后端）。
  */
 import { createElement as h, useEffect, useState, type CSSProperties } from 'react'
-import { Button, NumberInput, Segmented, SectionHead } from './ui'
+import { Button, Segmented, SectionHead, SelectField } from './ui'
 import { fetchTableQuery, SETTINGS_TABLES, TABLE_COLUMNS, type SettingsTableFilter, type SettingsTableQueryResult } from './settings-data'
 import { DbTable } from './db-table'
 import { TableFilterRow } from './table-filter'
 import { IconDatabaseOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
+
+/** 结果表最大高度（px）：超出内部滚动、固定表头。 */
+const TABLE_MAX_HEIGHT_PX = 420
+const PAGE_SIZES = ['20', '50', '100', '200', '500']
 
 export function SettingsTableBlock({ t, style }: { t: Translate; style?: CSSProperties }): ReturnType<typeof h> {
   const [table, setTable] = useState<string>(SETTINGS_TABLES[0])
@@ -59,9 +63,12 @@ export function SettingsTableBlock({ t, style }: { t: Translate; style?: CSSProp
         })),
     }),
     h('div', { style: { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-3)', marginBottom: 'var(--tdt-space-2)', flexWrap: 'wrap' } },
-      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 'var(--tdt-space-2)', fontSize: 'var(--tdt-font-sm)' } },
-        `${t('settingsTopN')} `,
-        h(NumberInput, { value: n, min: 1, max: 500, step: 50, size: 'sm', label: t('settingsTopN'), onChange: setN })),
+      h('label', { style: { display: 'inline-flex', alignItems: 'center', gap: 'var(--tdt-space-2)', fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)' } }, t('settingsPageSize')),
+      h(SelectField, {
+        value: String(n), size: 'md',
+        options: PAGE_SIZES.map(v => ({ value: v, label: `${v} 行` })),
+        onChange: (v: string) => setN(Number(v)), placeholder: t('settingsPageSize'), emptyLabel: t('settingsPageSize'), ariaLabel: t('settingsPageSize'),
+      }),
       h(Button, { variant: 'outline', size: 'md', onClick: () => void query(), disabled: loading }, t('settingsQuery')),
       error !== null ? h('span', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-danger)' } }, error) : null,
     ),
@@ -77,6 +84,6 @@ export function SettingsTableBlock({ t, style }: { t: Translate; style?: CSSProp
     ),
     result === null || result.rows.length === 0
       ? h('p', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)', margin: 0 } }, t('settingsTableEmpty'))
-      : h(DbTable, { table: result, t }),
+      : h(DbTable, { table: result, t, maxHeight: TABLE_MAX_HEIGHT_PX }),
   )
 }

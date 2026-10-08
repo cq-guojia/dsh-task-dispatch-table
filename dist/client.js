@@ -901,6 +901,7 @@ window.__ModuleLoader__.load({
 			settingsLogFail: "日志读取失败",
 			settingsTable: "表",
 			settingsTopN: "取前 N 条",
+			settingsPageSize: "每页显示条数",
 			settingsAddFilter: "添加筛选",
 			settingsNoFilters: "（无筛选：显示全部行）",
 			settingsQuery: "查询",
@@ -1541,6 +1542,7 @@ window.__ModuleLoader__.load({
 			settingsLogFail: "Failed to load logs",
 			settingsTable: "Table",
 			settingsTopN: "Top N Rows",
+			settingsPageSize: "Rows per page",
 			settingsAddFilter: "Add Filter",
 			settingsNoFilters: "(no filter: show all rows)",
 			settingsQuery: "Query",
@@ -70309,7 +70311,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		}
 		//#endregion
 		//#region src/client/config-panel.tsx
-		const FIELDS$1 = [
+		const FIELDS = [
 			{
 				key: "tickMs",
 				labelKey: "settingsLoopSec",
@@ -70409,7 +70411,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			* ⚠️ hooks 不能有条件 ⇒ 本调用**必须**放在下面那个 `draft === null` 的 early return **之前**。
 			*/
 			useEvents([EventType.CONFIG_CHANGED, EventType.FORCE_REFRESH], () => {
-				if (draft !== null && saved !== null && FIELDS$1.some((f) => draft[f.key] !== saved[f.key])) return;
+				if (draft !== null && saved !== null && FIELDS.some((f) => draft[f.key] !== saved[f.key])) return;
 				load();
 			});
 			if (draft === null || saved === null) return (0, react$1.createElement)("div", { style: { padding: "4px 2px" } }, (0, react$1.createElement)("p", { style: {
@@ -70417,9 +70419,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				fontSize: "var(--tdt-font-md)",
 				margin: 0
 			} }, loadFailed ? t("settingsLoadFailed") : t("loading")));
-			const dirty = FIELDS$1.some((f) => draft[f.key] !== saved[f.key]);
+			const dirty = FIELDS.some((f) => draft[f.key] !== saved[f.key]);
 			const onSave = async () => {
-				for (const f of FIELDS$1) {
+				for (const f of FIELDS) {
 					const v = draft[f.key];
 					if (!Number.isInteger(v) || v < f.minSec) {
 						flash(t("invalidNumber"), "error");
@@ -70476,7 +70478,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				color: "var(--tdt-fg,#1f2328)",
 				margin: "0",
 				letterSpacing: ".02em"
-			} }, t("settingsParams")), ...FIELDS$1.map((f) => (0, react$1.createElement)("div", { style: {
+			} }, t("settingsParams")), ...FIELDS.map((f) => (0, react$1.createElement)("div", { style: {
 				display: "flex",
 				flexDirection: "column",
 				gap: "6px"
@@ -70659,154 +70661,56 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/**
 		* 设置页第 1 块 · 插件设置（配置编辑主入口）。
 		*
-		* 布局（用户 2026-10-08 定死）：**两栏** —— 左边插件设置表单，右边「配置预览」只读面板（约占 1/3）。
-		* 表单区一行放 2~3 个字段（主内容列 1120 宽，一个字段占满整行太浪费）。
+		* 布局（用户 2026-10-08）：**一排两个** —— 每个设置 = 标题（上）+ 输入框（中）+ 说明（下），
+		* 与 `dsh-session-title-pattern` 插件的设置槽位同款格式；保存逻辑沿用 `POST /config`。
 		*
 		* 取值与写回：
 		* - 进入拉 `GET /config`（返回**生效值** + **系统默认值**）⇒ 用户没设的字段直接显示系统默认值；
 		* - 保存走 `POST /config`，提交全量白名单字段；**与系统默认值相同的字段服务端不落用户层**
 		*   （改回默认值 = 撤销这条用户设置，用户层保持干净）。
 		*
+		* 插件只有一个、路径固定 ⇒ 状态库路径 / 任务目录不在此暴露编辑（用户 2026-10-08：这俩不需要设置）。
+		*
 		* ⚠️ **表单状态一律存服务端值**（毫秒），显示时才换算（`toDisplay`）—— 早前把「显示单位（秒）」
 		* 存进状态、显示时又换算一次，改一次时间字段就会被二次换算成 0.12 秒（2026-10-08 修）。
 		*/
 		const SEC = 1e3;
-		const FIELDS = [
-			{
-				key: "tickMs",
-				labelKey: "settingsLoopSec",
-				hintKey: "settingsLoopHint",
-				group: "basic",
-				kind: "number",
-				unit: "秒",
-				toDisplay: (v) => Math.round(v / SEC),
-				fromDisplay: (v) => v * SEC,
-				min: 1,
-				max: 604800,
-				step: 1
-			},
-			{
-				key: "logRetentionDays",
-				labelKey: "settingsLogRetention",
-				group: "basic",
-				kind: "number",
-				unit: "天",
-				min: 1,
-				max: 3650,
-				step: 1
-			},
-			{
-				key: "historyRetentionDays",
-				labelKey: "settingsHistoryRetention",
-				group: "basic",
-				kind: "number",
-				unit: "天",
-				min: 0,
-				max: 3650,
-				step: 1
-			},
-			{
-				key: "attachmentTmpRetentionDays",
-				labelKey: "settingsAttachmentRetention",
-				group: "basic",
-				kind: "number",
-				unit: "天",
-				min: 1,
-				max: 3650,
-				step: 1
-			},
-			{
-				key: "defaultProvider",
-				labelKey: "settingsProvider",
-				group: "basic",
-				kind: "string"
-			},
-			{
-				key: "defaultModel",
-				labelKey: "settingsModel",
-				group: "basic",
-				kind: "string"
-			},
-			{
-				key: "dispatchGraceMs",
-				labelKey: "settingsWaitSec",
-				hintKey: "settingsWaitHint",
-				group: "advanced",
-				kind: "number",
-				unit: "秒",
-				toDisplay: (v) => Math.round(v / SEC),
-				fromDisplay: (v) => v * SEC,
-				min: 1,
-				max: 604800,
-				step: 1
-			},
-			{
-				key: "leaseMs",
-				labelKey: "settingsLeaseSec",
-				hintKey: "settingsLeaseHint",
-				group: "advanced",
-				kind: "number",
-				unit: "秒",
-				toDisplay: (v) => Math.round(v / SEC),
-				fromDisplay: (v) => v * SEC,
-				min: 1,
-				max: 604800,
-				step: 1
-			},
-			{
-				key: "unknownGraceMs",
-				labelKey: "settingsUnknownSec",
-				hintKey: "settingsUnknownHint",
-				group: "advanced",
-				kind: "number",
-				unit: "秒",
-				toDisplay: (v) => Math.round(v / SEC),
-				fromDisplay: (v) => v * SEC,
-				min: 1,
-				max: 604800,
-				step: 1
-			},
-			{
-				key: "statePath",
-				labelKey: "paramStatePath",
-				group: "advanced",
-				kind: "string"
-			},
-			{
-				key: "tasksDir",
-				labelKey: "paramTasksDir",
-				group: "advanced",
-				kind: "string"
-			}
-		];
-		const linkStyle = {
-			background: "none",
-			border: "none",
-			color: "var(--tdt-link)",
-			cursor: "pointer",
-			padding: "0",
-			fontSize: "var(--tdt-font-sm)"
-		};
-		/** 字段栅格：一行放得下 2~4 个（主内容列左栏 ≈ 690px ÷ 200px 最小列）。 */
+		/** 暴露给用户的设置：仅两项最核心的插件级开关（见文件头注）。 */
+		const FORM_FIELDS = [{
+			key: "tickMs",
+			labelKey: "settingsLoopSec",
+			hintKey: "settingsLoopHint",
+			kind: "number",
+			unit: "秒",
+			toDisplay: (v) => Math.round(v / SEC),
+			fromDisplay: (v) => v * SEC,
+			min: 1,
+			max: 604800,
+			step: 1
+		}, {
+			key: "logRetentionDays",
+			labelKey: "settingsLogRetention",
+			kind: "number",
+			unit: "天",
+			min: 1,
+			max: 3650,
+			step: 1
+		}];
+		/** 字段栅格：一排两个。 */
 		const gridStyle = {
 			display: "grid",
-			gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-			gap: "var(--tdt-space-3)"
+			gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+			gap: "var(--tdt-space-4)"
 		};
 		function SettingsConfigBlock({ t }) {
 			const [form, setForm] = (0, react$1.useState)(null);
-			const [defaults, setDefaults] = (0, react$1.useState)(null);
 			const [saving, setSaving] = (0, react$1.useState)(false);
 			const [error, setError] = (0, react$1.useState)(null);
 			const [saved, setSaved] = (0, react$1.useState)(false);
-			const [showAdvanced, setShowAdvanced] = (0, react$1.useState)(false);
 			(0, react$1.useEffect)(() => {
 				let alive = true;
 				fetchConfig().then((p) => {
-					if (alive) {
-						setForm(p.config);
-						setDefaults(p.defaults);
-					}
+					if (alive) setForm(p.config);
 				}).catch((e) => {
 					if (alive) setError(e.message || t("settingsLoadFailed"));
 				});
@@ -70830,7 +70734,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				try {
 					const payload = await postConfig(form);
 					setForm(payload.config);
-					setDefaults(payload.defaults);
 					setSaved(true);
 				} catch (e) {
 					setError(e.message || t("saveFailed"));
@@ -70838,6 +70741,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					setSaving(false);
 				}
 			};
+			/** 每个设置：标题（上）→ 输入框（中）→ 说明（下）。 */
 			const renderField = (f) => {
 				const serverVal = form[f.key];
 				const displayVal = f.kind === "number" ? f.toDisplay !== void 0 ? f.toDisplay(serverVal) : serverVal : serverVal;
@@ -70848,12 +70752,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					display: "block",
 					fontSize: "var(--tdt-font-md)",
 					fontWeight: 600,
-					marginBottom: "var(--tdt-space-1)"
-				} }, t(f.labelKey)), f.hintKey !== void 0 ? (0, react$1.createElement)("div", { style: {
-					fontSize: "var(--tdt-font-sm)",
-					color: "var(--tdt-fg-3)",
-					marginBottom: "var(--tdt-space-1)"
-				} }, t(f.hintKey)) : null, f.kind === "number" ? (0, react$1.createElement)(NumberInput, {
+					marginBottom: "var(--tdt-space-2)"
+				} }, t(f.labelKey)), f.kind === "number" ? (0, react$1.createElement)(NumberInput, {
 					value: displayVal,
 					min: f.min,
 					max: f.max,
@@ -70866,43 +70766,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					value: displayVal,
 					onChange: (v) => update(f, v),
 					style: { width: "100%" }
-				}));
+				}), f.hintKey !== void 0 ? (0, react$1.createElement)("div", { style: {
+					fontSize: "var(--tdt-font-sm)",
+					color: "var(--tdt-fg-3)",
+					marginTop: "var(--tdt-space-2)",
+					lineHeight: "var(--tdt-line-sm)"
+				} }, t(f.hintKey)) : null);
 			};
-			if (form === null || defaults === null) return (0, react$1.createElement)("div", { style: {
+			if (form === null) return (0, react$1.createElement)("div", { style: {
 				color: "var(--tdt-fg-3)",
 				fontSize: "var(--tdt-font-sm)"
 			} }, t("loading"));
-			const basic = FIELDS.filter((f) => f.group === "basic");
-			const advanced = FIELDS.filter((f) => f.group === "advanced");
-			/** 只读面板按**显示单位**给值（毫秒换算成秒），并标出该字段是否用的系统默认值。 */
-			const previewValue = (f) => {
-				const v = form[f.key];
-				if (f.kind === "string") return v === "" ? "—" : String(v);
-				const shown = f.toDisplay !== void 0 ? f.toDisplay(v) : v;
-				const isDefault = defaults[f.key] === v;
-				return `${shown} ${f.unit ?? ""}`.trim() + (isDefault ? `（${t("settingsDefaultValue")}）` : "");
-			};
 			return (0, react$1.createElement)("div", null, (0, react$1.createElement)(SectionHead, {
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCordisPluginOutlineRegular, { size: 16 }),
 				title: t("settingsConfigTitle")
-			}), (0, react$1.createElement)("div", { style: {
-				display: "grid",
-				gridTemplateColumns: "minmax(0, 2fr) minmax(240px, 1fr)",
-				gap: "var(--tdt-space-4)",
-				alignItems: "start"
-			} }, (0, react$1.createElement)("div", { style: { minWidth: 0 } }, (0, react$1.createElement)("div", { style: gridStyle }, ...basic.map(renderField)), (0, react$1.createElement)("button", {
-				type: "button",
-				style: {
-					...linkStyle,
-					marginTop: "var(--tdt-space-3)"
-				},
-				onClick: () => setShowAdvanced((v) => !v)
-			}, `${t("editorAdvanced")}${showAdvanced ? " ▲" : " ▼"}`), showAdvanced ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-sm)",
-				color: "var(--tdt-fg-3)",
-				margin: "var(--tdt-space-2) 0"
-			} }, t("editorAdvancedHelp")), (0, react$1.createElement)("div", { style: gridStyle }, ...advanced.map(renderField))) : null, (0, react$1.createElement)("div", { style: {
-				marginTop: "var(--tdt-space-3)",
+			}), (0, react$1.createElement)("div", { style: gridStyle }, ...FORM_FIELDS.map(renderField)), (0, react$1.createElement)("div", { style: {
+				marginTop: "var(--tdt-space-4)",
 				display: "flex",
 				gap: "var(--tdt-space-2)",
 				alignItems: "center",
@@ -70918,37 +70797,27 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, t("settingsSaveSuccess")) : null, error !== null ? (0, react$1.createElement)("span", { style: {
 				color: "var(--tdt-danger)",
 				fontSize: "var(--tdt-font-sm)"
-			} }, error) : null)), (0, react$1.createElement)("div", { style: { minWidth: 0 } }, (0, react$1.createElement)("div", { style: {
-				fontSize: "var(--tdt-font-md)",
-				fontWeight: 600,
-				color: "var(--tdt-fg-2)",
-				marginBottom: "var(--tdt-space-2)"
-			} }, t("settingsCurrentConfig")), (0, react$1.createElement)("dl", { style: {
-				margin: 0,
-				display: "grid",
-				gridTemplateColumns: "max-content 1fr",
-				gap: "var(--tdt-space-1) var(--tdt-space-3)",
-				fontSize: "var(--tdt-font-sm)"
-			} }, ...FIELDS.map((f) => [(0, react$1.createElement)("dt", {
-				key: `${f.key}-k`,
-				style: { color: "var(--tdt-fg-3)" }
-			}, t(f.labelKey)), (0, react$1.createElement)("dd", {
-				key: `${f.key}-v`,
-				style: {
-					margin: 0,
-					wordBreak: "break-word"
-				}
-			}, previewValue(f))]).flat()))));
+			} }, error) : null));
 		}
 		//#endregion
 		//#region src/client/db-table.tsx
 		/**
 		* 单表结果渲染（设置页 Block 2 / Block 3 共用）：横向滚动 + 长值截断 + 悬停看全文。
 		* 与旧调试页 `renderDbTable` 同思路，但独立成组件、不依赖主界面私有样式。
+		*
+		* 滚动 / 表头（用户 2026-10-08）：列表自带 `maxHeight`，超出即**内部滚动**（不顶高整页）；
+		* 表头 `position: sticky` 固定，仅滚动内容区。斑马纹 + 悬停高亮（参考「执行记录」页观感，但用中性灰，
+		* 不掺红绿黄蓝）。
 		*/
+		/** 斑马纹 / 悬停高亮（中性灰，明暗自适应）。 */
+		const DB_TABLE_DOMAIN = "domain:db-table";
+		const DB_TABLE_CSS = `
+.dsh-tdt-dbtable tbody tr:nth-child(even){background:color-mix(in srgb,var(--tdt-fg) 4%,transparent);}
+.dsh-tdt-dbtable tbody tr:hover{background:var(--tdt-hover);}
+`;
 		const wrapStyle = {
-			overflowX: "auto",
-			border: "0.5px solid var(--tdt-border-light)",
+			overflow: "auto",
+			border: "0.5px solid var(--tdt-border-faint)",
 			borderRadius: "var(--tdt-radius-md)",
 			marginTop: "8px"
 		};
@@ -70961,31 +70830,40 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		const thStyle = {
 			position: "sticky",
 			top: 0,
-			background: "var(--tdt-surface-2)",
+			zIndex: 1,
+			background: "var(--tdt-head-bg)",
 			textAlign: "left",
-			padding: "6px 10px",
+			padding: "7px 10px",
 			borderBottom: "0.5px solid var(--tdt-border-heavy)",
 			whiteSpace: "nowrap",
 			color: "var(--tdt-fg-2)",
 			fontWeight: 600
 		};
 		const tdStyle = {
-			padding: "5px 10px",
+			padding: "7px 10px",
 			borderBottom: "0.5px solid var(--tdt-border-light)",
 			maxWidth: "280px",
 			whiteSpace: "pre-wrap",
 			wordBreak: "break-word",
 			verticalAlign: "top"
 		};
-		function DbTable({ table, t }) {
+		function DbTable({ table, t, maxHeight = 420 }) {
+			applyStyle(DB_TABLE_DOMAIN, DB_TABLE_CSS);
 			return (0, react$1.createElement)("div", null, (0, react$1.createElement)("div", { style: {
 				fontSize: "var(--tdt-font-sm)",
 				color: "var(--tdt-fg-2)",
 				marginBottom: "4px"
 			} }, `${table.name} · ${table.count} ${t("debugRowsSuffix")}${table.truncated ? `（${t("settingsTableTruncated")}）` : ""}`), table.rows.length === 0 ? (0, react$1.createElement)("p", { style: {
 				color: "var(--tdt-fg-3)",
-				fontSize: "var(--tdt-font-sm)"
-			} }, t("settingsTableEmpty")) : (0, react$1.createElement)("div", { style: wrapStyle }, (0, react$1.createElement)("table", { style: tableStyle }, (0, react$1.createElement)("thead", null, (0, react$1.createElement)("tr", null, table.columns.map((col) => (0, react$1.createElement)("th", {
+				fontSize: "var(--tdt-font-sm)",
+				margin: 0
+			} }, t("settingsTableEmpty")) : (0, react$1.createElement)("div", { style: {
+				...wrapStyle,
+				maxHeight: `${maxHeight}px`
+			} }, (0, react$1.createElement)("table", {
+				className: "dsh-tdt-dbtable",
+				style: tableStyle
+			}, (0, react$1.createElement)("thead", null, (0, react$1.createElement)("tr", null, table.columns.map((col) => (0, react$1.createElement)("th", {
 				key: col,
 				style: thStyle
 			}, col)))), (0, react$1.createElement)("tbody", null, table.rows.map((row, i) => (0, react$1.createElement)("tr", { key: i }, table.columns.map((col) => {
@@ -71008,19 +70886,25 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/**
 		* 设置页第 2 块 · 整体日志（`plugin_log`，插件进程日志，非任务日志）。
 		*
-		* 布局（用户 2026-10-08 定死）：**标题在左，自动刷新 + 刷新按钮在右**；下面一块日志内容区，
+		* 布局（用户 2026-10-08 定死）：**标题在左，每页条数 + 自动刷新 + 刷新按钮在右**；下面一块日志内容区，
 		* **限高、超出内部滚动**（否则 100 行日志把整页撑到几千像素，下面的表格区被顶出屏幕）。
 		*
 		* 刷新策略：固定 5s 轮询、开关控制；离开页面 / 关闭开关即停（`useEffect` cleanup）。不接 SSE。
 		*/
 		const REFRESH_MS = 5e3;
 		/** 日志区最大高度（px）：超出即内部滚动。与 `task-list.tsx` 的 360 同类（内容区限高）。 */
-		const LOG_MAX_HEIGHT_PX = 360;
+		const LOG_MAX_HEIGHT_PX = 420;
+		const PAGE_SIZES$1 = [
+			"50",
+			"100",
+			"200"
+		];
 		function SettingsLogBlock({ t, style }) {
 			const [result, setResult] = (0, react$1.useState)(null);
 			const [loading, setLoading] = (0, react$1.useState)(false);
 			const [error, setError] = (0, react$1.useState)(null);
 			const [auto, setAuto] = (0, react$1.useState)(false);
+			const [n, setN] = (0, react$1.useState)("100");
 			const timerRef = (0, react$1.useRef)(null);
 			const load = async () => {
 				setLoading(true);
@@ -71028,7 +70912,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				try {
 					setResult(await fetchTableQuery({
 						table: "plugin_log",
-						n: 100,
+						n: Number(n),
 						filters: []
 					}));
 				} catch (e) {
@@ -71057,15 +70941,30 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						timerRef.current = null;
 					}
 				};
-			}, [auto]);
+			}, [auto, n]);
 			return (0, react$1.createElement)("div", { style }, (0, react$1.createElement)(SectionHead, {
 				icon: (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconCodeOutlineRegular, { size: 16 }),
 				title: t("settingsBlockLogTitle"),
 				right: (0, react$1.createElement)("div", { style: {
 					display: "flex",
 					alignItems: "center",
-					gap: "var(--tdt-space-2)"
-				} }, (0, react$1.createElement)(Checkbox, {
+					gap: "var(--tdt-space-2)",
+					flexWrap: "wrap"
+				} }, (0, react$1.createElement)("label", { style: {
+					fontSize: "var(--tdt-font-sm)",
+					color: "var(--tdt-fg-2)"
+				} }, t("settingsPageSize")), (0, react$1.createElement)(SelectField, {
+					value: n,
+					size: "md",
+					options: PAGE_SIZES$1.map((v) => ({
+						value: v,
+						label: `${v} 行`
+					})),
+					onChange: setN,
+					placeholder: t("settingsPageSize"),
+					emptyLabel: t("settingsPageSize"),
+					ariaLabel: t("settingsPageSize")
+				}), (0, react$1.createElement)(Checkbox, {
 					checked: auto,
 					onChange: (next) => setAuto(next),
 					label: t("settingsAutoRefresh")
@@ -71083,13 +70982,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				color: "var(--tdt-fg-3)",
 				fontSize: "var(--tdt-font-sm)",
 				margin: 0
-			} }, t("settingsLogEmpty")) : (0, react$1.createElement)("div", { style: {
-				maxHeight: `${LOG_MAX_HEIGHT_PX}px`,
-				overflow: "auto"
-			} }, (0, react$1.createElement)(DbTable, {
+			} }, t("settingsLogEmpty")) : (0, react$1.createElement)(DbTable, {
 				table: result,
-				t
-			})));
+				t,
+				maxHeight: LOG_MAX_HEIGHT_PX
+			}));
 		}
 		//#endregion
 		//#region src/client/table-filter.tsx
@@ -71168,9 +71065,18 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/**
 		* 设置页第 3 块 · 数据库表查询（`state.db` 全部 6 张表，不隐藏）。
 		*
-		* 布局（用户 2026-10-08 定死）：**标题在左，表切换（滑动标签）在右**；下面依次是「取前 N 条 + 查询」、
+		* 布局（用户 2026-10-08 定死）：**标题在左，表切换（滑动标签）在右**；下面依次是「每页条数 + 查询」、
 		* 通用筛选行、结果表。取数 = `WHERE <筛选> ORDER BY <该表最新字段> DESC LIMIT N`（排序在后端）。
 		*/
+		/** 结果表最大高度（px）：超出内部滚动、固定表头。 */
+		const TABLE_MAX_HEIGHT_PX = 420;
+		const PAGE_SIZES = [
+			"20",
+			"50",
+			"100",
+			"200",
+			"500"
+		];
 		function SettingsTableBlock({ t, style }) {
 			const [table, setTable] = (0, react$1.useState)(SETTINGS_TABLES[0]);
 			const [n, setN] = (0, react$1.useState)(100);
@@ -71235,16 +71141,20 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				display: "inline-flex",
 				alignItems: "center",
 				gap: "var(--tdt-space-2)",
-				fontSize: "var(--tdt-font-sm)"
-			} }, `${t("settingsTopN")} `, (0, react$1.createElement)(NumberInput, {
-				value: n,
-				min: 1,
-				max: 500,
-				step: 50,
-				size: "sm",
-				label: t("settingsTopN"),
-				onChange: setN
-			})), (0, react$1.createElement)(Button$2, {
+				fontSize: "var(--tdt-font-sm)",
+				color: "var(--tdt-fg-2)"
+			} }, t("settingsPageSize")), (0, react$1.createElement)(SelectField, {
+				value: String(n),
+				size: "md",
+				options: PAGE_SIZES.map((v) => ({
+					value: v,
+					label: `${v} 行`
+				})),
+				onChange: (v) => setN(Number(v)),
+				placeholder: t("settingsPageSize"),
+				emptyLabel: t("settingsPageSize"),
+				ariaLabel: t("settingsPageSize")
+			}), (0, react$1.createElement)(Button$2, {
 				variant: "outline",
 				size: "md",
 				onClick: () => void query(),
@@ -71272,7 +71182,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				margin: 0
 			} }, t("settingsTableEmpty")) : (0, react$1.createElement)(DbTable, {
 				table: result,
-				t
+				t,
+				maxHeight: TABLE_MAX_HEIGHT_PX
 			}));
 		}
 		//#endregion
@@ -71284,11 +71195,22 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*   （任务配置 / 执行记录 / 任务日程都用它）⇒ 设置页也必须用同一个 id 与同一套几何，
 		*   否则切换 tab 时横向跳动，且基础层的 `Loading` / `BackToTop` 找不到锚点（2026-10-08 用户指正：
 		*   「你这边的宽度要跟着我前面任务配置执行记录这段的宽度」）。
-		* - **不套卡片外壳**：每块 = 「icon + 标题（右侧可放控件）」+ 一块内容（用户 2026-10-08：
-		*   三个大黑框跟本插件其它页面不匹配）。标题行用基础层 `SectionHead`，三块共用一份。
+		* - **每块套一个浅灰「框」**（用户 2026-10-08）：参考「执行记录」的「前面粗一点色块 + 后面浅一点色块」
+		*   两色手法，但只用一种极浅中性灰（左缘 4px 略深、框内 3% 前景色极淡），避开红黄绿蓝，主要作用是
+		*   把三块清晰隔开。三块共用同一份框样式。
 		*/
 		/** 模块之间的纵向间距（唯一一份，三块共用）。 */
 		const SECTION_GAP = { marginTop: "var(--tdt-space-4)" };
+		applyStyle("domain:settings", `
+.dsh-tdt-settings-card{
+  box-sizing:border-box;
+  border:0.5px solid var(--tdt-border-faint);
+  border-left:4px solid color-mix(in srgb,var(--tdt-fg) 14%,transparent);
+  border-radius:var(--tdt-radius-lg);
+  background:color-mix(in srgb,var(--tdt-fg) 3%,transparent);
+  padding:var(--tdt-space-4);
+}
+`);
 		function SettingsPage({ t }) {
 			return (0, react$1.createElement)("div", { style: {
 				width: "100%",
@@ -71297,13 +71219,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			} }, (0, react$1.createElement)("div", {
 				id: PANEL_CONTENT_ID,
 				style: PANEL_CONTENT_STYLE
-			}, (0, react$1.createElement)(SettingsConfigBlock, { t }), (0, react$1.createElement)(SettingsLogBlock, {
-				t,
+			}, (0, react$1.createElement)("div", { className: "dsh-tdt-settings-card" }, (0, react$1.createElement)(SettingsConfigBlock, { t })), (0, react$1.createElement)("div", {
+				className: "dsh-tdt-settings-card",
 				style: SECTION_GAP
-			}), (0, react$1.createElement)(SettingsTableBlock, {
-				t,
+			}, (0, react$1.createElement)(SettingsLogBlock, { t })), (0, react$1.createElement)("div", {
+				className: "dsh-tdt-settings-card",
 				style: SECTION_GAP
-			})));
+			}, (0, react$1.createElement)(SettingsTableBlock, { t }))));
 		}
 		//#endregion
 		//#region src/client/index.ts

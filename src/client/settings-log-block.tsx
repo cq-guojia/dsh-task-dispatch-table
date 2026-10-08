@@ -1,13 +1,13 @@
 /**
  * 设置页第 2 块 · 整体日志（`plugin_log`，插件进程日志，非任务日志）。
  *
- * 布局（用户 2026-10-08 定死）：**标题在左，自动刷新 + 刷新按钮在右**；下面一块日志内容区，
+ * 布局（用户 2026-10-08 定死）：**标题在左，每页条数 + 自动刷新 + 刷新按钮在右**；下面一块日志内容区，
  * **限高、超出内部滚动**（否则 100 行日志把整页撑到几千像素，下面的表格区被顶出屏幕）。
  *
  * 刷新策略：固定 5s 轮询、开关控制；离开页面 / 关闭开关即停（`useEffect` cleanup）。不接 SSE。
  */
 import { createElement as h, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Button, Checkbox, SectionHead } from './ui'
+import { Button, Checkbox, SectionHead, SelectField } from './ui'
 import { fetchTableQuery, type SettingsTableQueryResult } from './settings-data'
 import { DbTable } from './db-table'
 import { IconCodeOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -15,19 +15,21 @@ import type { Translate } from './locales'
 
 const REFRESH_MS = 5000
 /** 日志区最大高度（px）：超出即内部滚动。与 `task-list.tsx` 的 360 同类（内容区限高）。 */
-const LOG_MAX_HEIGHT_PX = 360
+const LOG_MAX_HEIGHT_PX = 420
+const PAGE_SIZES = ['50', '100', '200']
 
 export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProperties }): ReturnType<typeof h> {
   const [result, setResult] = useState<SettingsTableQueryResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [auto, setAuto] = useState(false)
+  const [n, setN] = useState('100')
   const timerRef = useRef<number | null>(null)
 
   const load = async (): Promise<void> => {
     setLoading(true); setError(null)
     try {
-      setResult(await fetchTableQuery({ table: 'plugin_log', n: 100, filters: [] }))
+      setResult(await fetchTableQuery({ table: 'plugin_log', n: Number(n), filters: [] }))
     } catch (e) {
       setError((e as Error).message || t('settingsLogFail'))
     } finally {
@@ -49,13 +51,20 @@ export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProper
     return () => {
       if (timerRef.current !== null) { window.clearInterval(timerRef.current); timerRef.current = null }
     }
-  }, [auto])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto, n])
 
   return h('div', { style },
     h(SectionHead, {
       icon: h(IconCodeOutlineRegular, { size: 16 }),
       title: t('settingsBlockLogTitle'),
-      right: h('div', { style: { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)' } },
+      right: h('div', { style: { display: 'flex', alignItems: 'center', gap: 'var(--tdt-space-2)', flexWrap: 'wrap' } },
+        h('label', { style: { fontSize: 'var(--tdt-font-sm)', color: 'var(--tdt-fg-2)' } }, t('settingsPageSize')),
+        h(SelectField, {
+          value: n, size: 'md',
+          options: PAGE_SIZES.map(v => ({ value: v, label: `${v} 行` })),
+          onChange: setN, placeholder: t('settingsPageSize'), emptyLabel: t('settingsPageSize'), ariaLabel: t('settingsPageSize'),
+        }),
         h(Checkbox, { checked: auto, onChange: (next: boolean) => setAuto(next), label: t('settingsAutoRefresh') }),
         h(Button, { variant: 'outline', size: 'md', onClick: () => void load(), disabled: loading }, t('settingsRefresh')),
       ),
@@ -65,6 +74,6 @@ export function SettingsLogBlock({ t, style }: { t: Translate; style?: CSSProper
       : null,
     result === null || result.rows.length === 0
       ? h('p', { style: { color: 'var(--tdt-fg-3)', fontSize: 'var(--tdt-font-sm)', margin: 0 } }, t('settingsLogEmpty'))
-      : h('div', { style: { maxHeight: `${LOG_MAX_HEIGHT_PX}px`, overflow: 'auto' } }, h(DbTable, { table: result, t })),
+      : h(DbTable, { table: result, t, maxHeight: LOG_MAX_HEIGHT_PX }),
   )
 }
