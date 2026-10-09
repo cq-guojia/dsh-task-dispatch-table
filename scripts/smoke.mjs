@@ -1774,6 +1774,11 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     check('顶部输入区：服务端解析附件绝对路径（upload 走任务目录 / link 走来源工作区）',
       server.includes('attachmentPaths') && server.includes('attachmentAbsPath')
       && server.includes('isSafeAttachmentRef'))
+    // 新加的附件**当场可点预览**（用户 2026-10-09：写提示词时要能翻文件夹，不能先保存再预览）。
+    check('未保存附件可预览：上传回包带落盘绝对路径（ref 只是文件名，客户端拼不出）',
+      server.includes('ok: true, ref: stored, name: originalName, path:'))
+    check('未保存附件可预览：客户端本地算预览目标（link 用相对 ref + 工作区锚点 / upload 用回包路径）',
+      client.includes('previewTargetOf') && client.includes('setUploadPaths') && client.includes('uploadPaths'))
     check('顶部输入区：附件卡去重不让整条用户消息消失（hadFiles 判空）', client.includes('hadFiles'))
     check('顶部输入区：文案走带占位符插值的 tt（宿主 t 不做 {count} 替换）',
       client.includes('data-task-file-context') && !client.includes('svUpstream'))

@@ -535,7 +535,9 @@ const makeDispatchRoutes = (
       } catch (error) {
         return writeJson(res, 500, { ok: false, error: 'write-failed', message: error instanceof Error ? error.message : String(error) })
       }
-      writeJson(res, 200, { ok: true, ref: stored, name: originalName })
+      // 回包带上**落盘绝对路径**：没保存的新上传件落在临时区，ref 只是文件名，客户端自己拼不出路径
+      // ⇒ 不带它，编辑器里那条附件就只能等保存后被 overview 富化才可点开预览（用户 2026-10-09）。
+      writeJson(res, 200, { ok: true, ref: stored, name: originalName, path: path.join(dir, stored) })
     },
   },
   {

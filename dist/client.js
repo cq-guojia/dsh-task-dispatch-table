@@ -66257,6 +66257,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				};
 			}, [pickerOpen]);
 			const [uploadError, setUploadError] = (0, react$1.useState)(null);
+			/**
+			* 刚上传、还没保存的附件：文件已在**服务端临时区**，但绝对路径只有服务端知道 ⇒ 由上传回包带回来存这里
+			* （用户 2026-10-09：进了列表就要能点开预览，不能等保存）。
+			* ⚠️ 只活组件内存，**绝不写进 draft** —— draft 会被序列化进任务定义 JSON，路径是服务端的、也不该留痕。
+			*/
+			const [uploadPaths, setUploadPaths] = (0, react$1.useState)({});
 			const [confirmDiscard, setConfirmDiscard] = (0, react$1.useState)(false);
 			const initialDraftRef = (0, react$1.useRef)(draft);
 			const dirty = stableStringify(draft) !== stableStringify(initialDraftRef.current);
@@ -66522,6 +66528,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				if (sendable.length === 0) return;
 				setUploading(true);
 				const added = [];
+				const nextPaths = {};
 				let lastErr = null;
 				for (const file of sendable) {
 					const controller = new AbortController();
@@ -66540,8 +66547,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							lastErr = typeof data?.error === "string" ? data.error : "upload-failed";
 							continue;
 						}
+						const id = makeId();
+						if (typeof data.path === "string" && data.path !== "") nextPaths[id] = data.path;
 						added.push({
-							id: makeId(),
+							id,
 							name: data.name,
 							kind: "upload",
 							ref: data.ref
@@ -66554,7 +66563,42 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 				setUploading(false);
 				if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] });
+				if (Object.keys(nextPaths).length > 0) setUploadPaths((prev) => ({
+					...prev,
+					...nextPaths
+				}));
 				if (lastErr !== null) setUploadError(lastErr);
+			};
+			/**
+			* 这一行的预览目标（路径 + 锚点会话）。三档递进，**服务端解析优先**（已保存任务的绝对路径最权威）：
+			*   ① overview 命中（服务端把 ref 绝对化 + 配好锚点会话）；
+			*   ② link 型当场算：`ref` 本来就是**工作区相对路径**，而 FileBrowser 的 path 就是同一口径
+			*      （相对会话 cwd = 工作区根）⇒ **零换算**，锚点取该工作区最近会话（与选择器同一份 workspaceAnchors）；
+			*   ③ upload 型（还没保存）：用上传回包带回的临时区绝对路径，锚点任一有会话的工作区即可
+			*      （宿主要的只是「某个有效会话」，与服务端 `attachmentsWithPaths` 的兜底同款）。
+			* 算不出锚点 ⇒ 返回 null ⇒ 该行不可点：**没有会话的工作区宿主列不出文件，不给假入口**。
+			*/
+			const previewTargetOf = (att) => {
+				const anchors = workspaceAnchors ?? {};
+				const hit = resolvedAttachments?.find((r) => r.name === att.name && r.kind === att.kind && r.path !== void 0 && r.anchorSessionId !== void 0);
+				if (hit !== void 0) return {
+					path: hit.path,
+					anchorSessionId: hit.anchorSessionId
+				};
+				if (att.kind === "link") {
+					const anchor = anchors[att.workspace !== void 0 && att.workspace !== "" ? att.workspace : draft.workspace];
+					return anchor === void 0 || anchor === "" ? null : {
+						path: att.ref,
+						anchorSessionId: anchor
+					};
+				}
+				const abs = uploadPaths[att.id];
+				if (abs === void 0 || abs === "") return null;
+				const anyAnchor = Object.values(anchors).find((item) => typeof item === "string" && item !== "");
+				return anyAnchor === void 0 ? null : {
+					path: abs,
+					anchorSessionId: anyAnchor
+				};
 			};
 			const attachmentsCard = (0, react$1.createElement)("div", { className: `dsh-tdt-ed-card${problemsByField("attachments") ? " dsh-tdt-ed-card--error" : ""}` }, (0, react$1.createElement)("div", { className: "dsh-tdt-ed-card-head" }, (0, react$1.createElement)("div", {
 				className: "dsh-tdt-ed-label",
@@ -66569,14 +66613,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				gap: "6px",
 				marginBottom: "10px"
 			} }, draft.attachments.map((att) => {
-				const hit = resolvedAttachments?.find((r) => r.name === att.name && r.kind === att.kind && r.path !== void 0 && r.anchorSessionId !== void 0);
-				const canView = hit !== void 0 && onOpenFile !== void 0;
+				const target = previewTargetOf(att);
+				const canView = target !== null && onOpenFile !== void 0;
 				return (0, react$1.createElement)("div", {
 					key: att.id,
 					className: `dsh-tdt-ed-attrow${canView ? " dsh-tdt-ed-attrow--view" : ""}`,
 					title: canView ? t("editorAttachmentView") : void 0,
 					onClick: canView ? () => {
-						onOpenFile?.(hit.anchorSessionId, hit.path);
+						onOpenFile?.(target.anchorSessionId, target.path);
 					} : void 0
 				}, (0, react$1.createElement)("span", { style: {
 					flex: "none",
@@ -66608,6 +66652,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					onClick: (event) => {
 						event.stopPropagation();
 						patch({ attachments: draft.attachments.filter((a) => a.id !== att.id) });
+						setUploadPaths((prev) => {
+							const next = { ...prev };
+							delete next[att.id];
+							return next;
+						});
 					},
 					title: t("editorAttachmentRemove"),
 					"aria-label": t("editorAttachmentRemove"),

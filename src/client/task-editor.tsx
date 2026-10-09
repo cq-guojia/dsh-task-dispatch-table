@@ -1425,6 +1425,12 @@ export function TaskEditorDrawer(props: {
   // 上传失败的机器码（file-type-not-allowed / payload-too-large / …），渲染时映射成具体文案。
   // 呈现为浮层 Toast（与保存失败同款），动画结束 onAnimationEnd 自退，不占卡内版面。
   const [uploadError, setUploadError] = useState<string | null>(null)
+  /**
+   * 刚上传、还没保存的附件：文件已在**服务端临时区**，但绝对路径只有服务端知道 ⇒ 由上传回包带回来存这里
+   * （用户 2026-10-09：进了列表就要能点开预览，不能等保存）。
+   * ⚠️ 只活组件内存，**绝不写进 draft** —— draft 会被序列化进任务定义 JSON，路径是服务端的、也不该留痕。
+   */
+  const [uploadPaths, setUploadPaths] = useState<Record<string, string>>({})
   // 脏判定 + 关闭确认（用户 2026-09-29：点 ✕ / 点遮罩空白 / Esc / 取消，只要改过就先确认再关）。
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   // 原始快照：挂载那一刻定死。弹窗关闭即卸载、重开即重挂 ⇒ 每次打开都从当次初始值算起；
@@ -1685,6 +1691,7 @@ export function TaskEditorDrawer(props: {
     // ⚠️ 多选修复：逐个收进本地数组、循环末**一次性** patch。此前每次 addAttachment 都展开
     // 渲染闭包里的旧 draft.attachments ⇒ 多选时后一个把前一个覆盖掉，列表只剩最后一个文件。
     const added: Attachment[] = []
+    const nextPaths: Record<string, string> = {}
     let lastErr: string | null = null
     for (const file of sendable) {
       // 每个文件独立超时（90s：附件上限 20MB，给慢盘留余量）——此前**没有超时**，
@@ -1701,14 +1708,40 @@ export function TaskEditorDrawer(props: {
         })
         const data = await res.json().catch(() => null)
         if (data === null || data.ok !== true) { lastErr = typeof data?.error === 'string' ? data.error : 'upload-failed'; continue }
-        added.push({ id: makeId(), name: data.name, kind: 'upload', ref: data.ref })
+        const id = makeId()
+        if (typeof data.path === 'string' && data.path !== '') nextPaths[id] = data.path
+        added.push({ id, name: data.name, kind: 'upload', ref: data.ref })
       } catch (error) { lastErr = error instanceof Error ? error.message : 'network-error' } finally {
         window.clearTimeout(abortTimer)
       }
     }
     setUploading(false)
     if (added.length > 0) patch({ attachments: [...draft.attachments, ...added] })
+    if (Object.keys(nextPaths).length > 0) setUploadPaths(prev => ({ ...prev, ...nextPaths }))
     if (lastErr !== null) setUploadError(lastErr)
+  }
+  /**
+   * 这一行的预览目标（路径 + 锚点会话）。三档递进，**服务端解析优先**（已保存任务的绝对路径最权威）：
+   *   ① overview 命中（服务端把 ref 绝对化 + 配好锚点会话）；
+   *   ② link 型当场算：`ref` 本来就是**工作区相对路径**，而 FileBrowser 的 path 就是同一口径
+   *      （相对会话 cwd = 工作区根）⇒ **零换算**，锚点取该工作区最近会话（与选择器同一份 workspaceAnchors）；
+   *   ③ upload 型（还没保存）：用上传回包带回的临时区绝对路径，锚点任一有会话的工作区即可
+   *      （宿主要的只是「某个有效会话」，与服务端 `attachmentsWithPaths` 的兜底同款）。
+   * 算不出锚点 ⇒ 返回 null ⇒ 该行不可点：**没有会话的工作区宿主列不出文件，不给假入口**。
+   */
+  const previewTargetOf = (att: Attachment): { path: string; anchorSessionId: string } | null => {
+    const anchors = workspaceAnchors ?? {}
+    const hit = resolvedAttachments?.find(r => r.name === att.name && r.kind === att.kind && r.path !== undefined && r.anchorSessionId !== undefined)
+    if (hit !== undefined) return { path: hit.path as string, anchorSessionId: hit.anchorSessionId as string }
+    if (att.kind === 'link') {
+      const source = att.workspace !== undefined && att.workspace !== '' ? att.workspace : draft.workspace
+      const anchor = anchors[source]
+      return anchor === undefined || anchor === '' ? null : { path: att.ref, anchorSessionId: anchor }
+    }
+    const abs = uploadPaths[att.id]
+    if (abs === undefined || abs === '') return null
+    const anyAnchor = Object.values(anchors).find(item => typeof item === 'string' && item !== '')
+    return anyAnchor === undefined ? null : { path: abs, anchorSessionId: anyAnchor }
   }
   const attachmentsCard = h('div', { className: `dsh-tdt-ed-card${problemsByField('attachments') ? ' dsh-tdt-ed-card--error' : ''}` },
     h('div', { className: 'dsh-tdt-ed-card-head' },
@@ -1720,17 +1753,17 @@ export function TaskEditorDrawer(props: {
     // 附件列表（空数组不渲染任何东西——投放框常驻已是明确的空态，不再重复「暂无」文案）。
     draft.attachments.length === 0 ? null : h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' } },
           // 行样式（用户 2026-09-29）：不要边框，用半透明浅底衬出每一行。
-          // 整行可点开预览（用户 2026-10-06：去掉「查看」按钮，点整行即查看）：与 overview 解析结果按
-          // 「同名 + 同 kind」配对，配对上有绝对路径和锚点会话 ⇒ 点行打开侧边栏预览；
-          // 未保存 / 配对不上（上传后还没跑出锚点会话）的附件不可点，避免给假入口（用户 2026-10-05）。
+          // 整行可点开预览（用户 2026-10-06：去掉「查看」按钮，点整行即查看）——只要算出预览目标就给入口：
+          // 已保存的走服务端解析，**刚加进来的当场在本地算**（用户 2026-10-09：写提示词时要当场翻文件夹，
+          // 不可能先保存）。算不出（该工作区没有会话 ⇒ 宿主列不出文件）才保持不可点，不给假入口。
           draft.attachments.map(att => {
-            const hit = resolvedAttachments?.find(r => r.name === att.name && r.kind === att.kind && r.path !== undefined && r.anchorSessionId !== undefined)
-            const canView = hit !== undefined && onOpenFile !== undefined
+            const target = previewTargetOf(att)
+            const canView = target !== null && onOpenFile !== undefined
             return h('div', {
               key: att.id,
               className: `dsh-tdt-ed-attrow${canView ? ' dsh-tdt-ed-attrow--view' : ''}`,
               title: canView ? t('editorAttachmentView') : undefined,
-              onClick: canView ? () => { onOpenFile?.(hit!.anchorSessionId as string, hit!.path as string) } : undefined,
+              onClick: canView ? () => { onOpenFile?.(target!.anchorSessionId, target!.path) } : undefined,
             },
             h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
             // 文件名占据左侧所有可用空间，把「上传/链接」标签和「移除」按钮顶到最右边；
@@ -1739,7 +1772,11 @@ export function TaskEditorDrawer(props: {
             h('span', { title: att.ref, style: { flex: 'none', fontSize: 'var(--tdt-font-xs)', color: 'var(--tdt-fg-2)', borderRadius: 'var(--tdt-radius-xs)', padding: '1px 6px', background: 'var(--tdt-hover,rgba(38,49,72,.06))' } }, att.kind === 'link' ? t('editorAttachmentLink') : t('editorAttachmentUpload')),
             // 移除按钮保留（用户 2026-10-06），声明不收缩 / 不折行，确保不会被文件名挤到换行或压扁；
             // 点击要拦冒泡，否则会先删附件又触发整行的「查看」。
-            h(Button, { variant: 'ghost', size: 'sm', onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); patch({ attachments: draft.attachments.filter(a => a.id !== att.id) }) }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove'), style: { flex: 'none', whiteSpace: 'nowrap' } }, t('editorAttachmentRemove')),
+            h(Button, { variant: 'ghost', size: 'sm', onClick: (event: { stopPropagation: () => void }) => {
+              event.stopPropagation()
+              patch({ attachments: draft.attachments.filter(a => a.id !== att.id) })
+              setUploadPaths(prev => { const next = { ...prev }; delete next[att.id]; return next })
+            }, title: t('editorAttachmentRemove'), 'aria-label': t('editorAttachmentRemove'), style: { flex: 'none', whiteSpace: 'nowrap' } }, t('editorAttachmentRemove')),
             )
           }),
         ),
