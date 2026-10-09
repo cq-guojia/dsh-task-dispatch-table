@@ -71549,13 +71549,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [saving, setSaving] = (0, react$1.useState)(false);
 			const [failed, setFailed] = (0, react$1.useState)(null);
 			const [failedKey, setFailedKey] = (0, react$1.useState)(0);
-			const [savedToast, setSavedToast] = (0, react$1.useState)(null);
-			const savedSeq = (0, react$1.useRef)(0);
+			const [successToast, setSuccessToast] = (0, react$1.useState)(null);
+			const successSeq = (0, react$1.useRef)(0);
 			const notify = (text) => {
-				savedSeq.current += 1;
-				setSavedToast({
+				successSeq.current += 1;
+				setSuccessToast({
 					text,
-					seq: savedSeq.current
+					seq: successSeq.current
 				});
 			};
 			const [invalidToast, setInvalidToast] = (0, react$1.useState)({
@@ -72263,13 +72263,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onDone: () => {
 					setViewErr(null);
 				}
-			}) : null, savedToast !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
-				key: savedToast.seq,
-				text: savedToast.text,
+			}) : null, successToast !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
+				key: successToast.seq,
+				text: successToast.text,
 				tone: "success",
 				holdMs: 2500,
 				onDone: () => {
-					setSavedToast(null);
+					setSuccessToast(null);
 				}
 			}) : null, editor !== null ? (0, react$1.createElement)(TaskEditorDrawer, {
 				key: editor.id,

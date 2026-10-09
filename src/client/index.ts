@@ -500,9 +500,9 @@ function TaskPage(props: {
   const [failedKey, setFailedKey] = useState(0)
   // 成功通知 Toast（success 绿、holdMs 2500 自退）：保存「任务已保存」/ 删除「任务已删除」共用同一宿主 Toast。
   // 渲染此前挂在 LEGACY_CONFIG_VIEW（恒 false）死分支内（index.ts:1275 起），主界面弹不出来，本次迁到主视图层一并修复。
-  const [savedToast, setSavedToast] = useState<{ text: string; seq: number } | null>(null)
-  const savedSeq = useRef(0)
-  const notify = (text: string): void => { savedSeq.current += 1; setSavedToast({ text, seq: savedSeq.current }) }
+  const [successToast, setSuccessToast] = useState<{ text: string; seq: number } | null>(null)
+  const successSeq = useRef(0)
+  const notify = (text: string): void => { successSeq.current += 1; setSuccessToast({ text, seq: successSeq.current }) }
   // JSON 不合法：持续态校验，浮层常驻 Toast（不自动消失）浮在保存行上方，不占版面、不挤压下方。
   const [invalidToast, setInvalidToast] = useState<{ on: boolean; key: number }>({ on: false, key: 0 })
   const invalidSeq = useRef(0)
@@ -1446,13 +1446,13 @@ function TaskPage(props: {
       : null,
     // 成功通知（保存「任务已保存」/ 删除「任务已删除」）：宿主 Toast，success 绿、2.5s 自退。
     // 此前挂在 LEGACY 死分支内弹不出来，已迁到此处（与 viewErr 同层渲染）。
-    savedToast !== null
+    successToast !== null
       ? h(Toast, {
-          key: savedToast.seq,
-          text: savedToast.text,
+          key: successToast.seq,
+          text: successToast.text,
           tone: 'success',
           holdMs: 2500,
-          onDone: () => { setSavedToast(null) },
+          onDone: () => { setSuccessToast(null) },
         })
       : null,
     // 新建 / 编辑任务分栏（右侧**占布局的一列**：主窗口被推窄、不被遮盖；与预览 dock 可同时存在）。
