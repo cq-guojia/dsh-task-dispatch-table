@@ -1706,6 +1706,20 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
       && attText.includes('/ws/up/conf/cfg.json') && attText.includes('（上传）') && attText.includes('（工作区）'))
     check('随附文件段：基准工作区解析不出 ⇒ 如实标注，绝不猜路径',
       attText.includes('gone.json') && attText.includes('基准工作区未知'))
+    // 目录附件（用户 2026-10-09：文件夹本身也能当附件）——注入要把「它是目录」和「里面怎么取」讲清，
+    // 否则用户在提示词里写「用附件里的 XX/YY.py 执行」时，模型拿不到拼路径的依据。
+    {
+      const dirText = buildMessage(snapNoDeps, '/ws/down', '2026-09-26', false, [
+        { name: '任务包', kind: 'link', ref: '任务包', path: '/ws/up/任务包', isDir: true },
+      ]).content[0].text
+      check('随附文件段：目录打「（目录）」+ 路径尾补 /，字面区别于单文件',
+        dirText.includes('任务包（目录）：/ws/up/任务包/'))
+      check('随附文件段：有目录 ⇒ 追加「相对路径拼法」规则句',
+        dirText.includes('按 <该项路径>/<相对路径>'))
+      check('随附文件段：段头挂「『附件 / 随附文件』即指下面这些」接缝句',
+        dirText.includes('任务提示词里说的「附件 / 随附文件」就是指下面这些'))
+      check('随附文件段：纯文件清单不带目录规则句（旧行为不变）', !attText.includes('按 <该项路径>'))
+    }
     check('随附文件段：无附件时整段不注入（旧行为不变）', !msgNoDep.content[0].text.includes('本次随附文件'))
     check('随附文件 + 权限指令：显式豁免「仅工作区」（只放开读）',
       buildMessage({ ...snapNoDeps, permission: 'workspace' }, '/ws/down', '2026-09-26', false, [

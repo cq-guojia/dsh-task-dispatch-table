@@ -607,14 +607,21 @@ export function FileBrowser(props: {
       }
       const cached: ChildData | undefined = childCache[childPath]
       const isOpen = openDirs.has(childPath)
+      // 目录行的点击（用户 2026-10-09：文件夹本身要能当附件）：picker 模式 = 整行选此目录，
+      // 非 picker 才导航进该目录。回传工作区相对路径，task-editor 取 basename 当 name
+      // ⇒ 用户口头说的「附件里的 XX」就是这条。▸ 仍负责内联展开（自身 stopPropagation）。
+      const pickDir = (): void => {
+        if (picker === true && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId)); return }
+        loadDir(childPath)
+      }
       return h(Fragment, { key: childPath },
         h('div', {
-          className: 'dsh-tdt-sv-tree-row',
+          className: 'dsh-tdt-sv-tree-row' + (picker === true ? ' dsh-tdt-sv-tree-row-pick' : ''),
           role: 'button',
           tabIndex: 0,
-          title: childPath,
-          onClick: () => { loadDir(childPath) },
-          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') loadDir(childPath) },
+          title: picker === true ? t('editorPickerPickDir') : childPath,
+          onClick: pickDir,
+          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') pickDir() },
         },
           tooled(isOpen ? t('explorerCollapse') : t('explorerExpand'),
             h('button', {

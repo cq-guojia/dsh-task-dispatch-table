@@ -112,7 +112,7 @@ export type LocaleKey =
   | 'editorIntervalEvery' | 'editorIntervalStep' | 'editorIntervalUnit' | 'editorIntervalSuffix'
   | 'editorEveryNWeeks'
   | 'editorAttachments' | 'editorAttachmentsHint' | 'editorAttachmentLink' | 'editorAttachmentUpload' | 'editorAttachmentRemove' | 'editorAttachmentView' | 'editorAttachmentAdd'
-  | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort'  | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading'  | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick'
+  | 'editorPickWorkspaceFile' | 'editorPickWorkspaceFileShort'  | 'editorDropZoneHint' | 'editorDropZoneFormats' | 'editorUploading'  | 'editorUploadErrType' | 'editorUploadErrSize' | 'editorUploadErrEmpty' | 'editorUploadErrGeneric' | 'editorPickerNoSession' | 'editorPickerPick' | 'editorPickerPickDir'
   | 'editorOpenEditor' | 'editorPromptEditorTitle'   | 'editorNoVersions'
   | 'editorHistoryVersions' | 'editorNewTaskNoVersions' | 'editorDeleteVersion' | 'editorUseVersion'
   | 'editorConfirmDeleteTitle' | 'editorConfirmDeleteDesc'  
@@ -570,8 +570,9 @@ export const zh: Record<LocaleKey, string> = {
   editorUploadErrEmpty: '文件内容为空',
   editorUploadErrGeneric: '上传失败，请重试',
   editorPickerNoSession: '该工作区下还没有会话，无法读取文件。',
-  editorAttachmentsHint: '附加文件会随任务一起派发给执行的 Agent：任务执行过程中，Agent 可读取或操作这些文件的内容。',
+  editorAttachmentsHint: '附加文件会随任务一起派发给执行的 Agent：任务执行过程中，Agent 可读取或操作这些文件的内容。也可从工作区选择整个目录（连带其下所有文件）：Agent 拿到的是这个目录的路径，自己在里面找文件，提示词里写「附件里的 目录名/子文件路径」即可指定其中某一个。',
   editorPickerPick: '选择此文件',
+  editorPickerPickDir: '选择此目录（连带其下所有文件）',
   editorOpenEditor: '全屏编辑',
   editorPromptEditorTitle: '提示词编辑器（.md）',
   editorNoVersions: '暂无版本，保存后可在此回滚',
@@ -1255,8 +1256,9 @@ export const en: Record<LocaleKey, string> = {
   editorUploadErrEmpty: 'File is empty',
   editorUploadErrGeneric: 'Upload failed, please retry',
   editorPickerNoSession: 'No sessions in this workspace yet — its files cannot be read.',
-  editorAttachmentsHint: 'Attachments are dispatched along with the task: while it runs, the agent can read and operate on their contents.',
+  editorAttachmentsHint: 'Attachments are dispatched along with the task: while it runs, the agent can read and operate on their contents. You can also pick a whole folder: the agent gets the folder path and explores it itself, so refer to a file inside as "<folder name>/<relative path>" in the prompt.',
   editorPickerPick: 'Pick this file',
+  editorPickerPickDir: 'Pick this folder (with everything under it)',
   editorOpenEditor: 'Full-screen edit',
   editorPromptEditorTitle: 'Prompt editor (.md)',
   editorNoVersions: 'No versions yet — save one to roll back here',

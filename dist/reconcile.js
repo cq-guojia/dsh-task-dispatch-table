@@ -6,6 +6,7 @@
 // 不读文件；跑完信号后无回执 → 宽限 → 追问×2 → 按失败收敛。
 // 唯一例外（决策 41 兼容口）：旧库实例无快照列值时，按 legacyTask 当场合成快照并固化（一次性
 // 兼容、带 warn）——兜底也不落库 ⇒ 无法发动 / 无法校验，如实按失败收敛，绝不静默。
+import { stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { displayNameOf, durationMs, sessionTitleOf } from './tasks.js';
@@ -382,7 +383,11 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit })
             // 随附文件段（2026-09-30）：把快照里的附件 ref 解析成**绝对路径**随派发消息注入
             // （用户要求：必须让模型明确知道文件在哪一层、在什么地方）。与上面存在性校验同款口径——
             // link 按附件来源工作区、upload 按任务目录；解析不出 ⇒ path=null（如实标注，绝不猜）。
-            const attachments = (snap.attachments ?? []).map(item => {
+            // 同上口径 + **是否目录**（用户 2026-10-09：文件夹本身也能当附件）。
+            // ref 指的是目录还是文件，只有这一刻 stat 才知道——服务侧刻意不区分两者，schema / 快照零改动。
+            // stat 失败 ⇒ 按文件处理：缺失项已被上面的 missingSnapshotAttachments 拦掉，这里不该失败，
+            // 标错也只退化成旧文案，绝不阻断派发。
+            const attachments = await Promise.all((snap.attachments ?? []).map(async (item) => {
                 let path = null;
                 if (item.kind === 'upload') {
                     path = assets === null ? null : attachmentAbsPath(assets, instance.task_id, item.ref);
@@ -398,8 +403,9 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit })
                 }
                 if (path !== null && path.includes('..'))
                     path = null;
-                return { name: item.name, kind: item.kind, ref: item.ref, path };
-            });
+                const isDir = path === null ? undefined : await stat(path).then(info => info.isDirectory()).catch(() => undefined);
+                return { name: item.name, kind: item.kind, ref: item.ref, path, isDir };
+            }));
             const { sessionId, handle } = await dispatchTask({
                 ctx, logger, store,
                 instanceId: instance.id,

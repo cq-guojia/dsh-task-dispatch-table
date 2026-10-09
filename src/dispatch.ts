@@ -359,17 +359,33 @@ export interface DispatchAttachment {
   /** link 型的工作区相对路径原文（基准未知时如实展示）。 */
   ref: string
   path: string | null
+  /**
+   * 该项是否为一整个**目录**（用户 2026-10-09：文件夹本身也能当附件）。
+   * 派发前 stat 得出，**不落库、不进快照**——服务侧刻意不区分目录与文件；测不出即缺位，按文件处理。
+   */
+  isDir?: boolean
 }
 
-/** 随附文件段（用户 2026-09-30：必须让模型明确知道文件在哪一层、在什么地方）。 */
+/**
+ * 随附文件段（用户 2026-09-30：必须让模型明确知道文件在哪一层、在什么地方）。
+ *
+ * 段头那句「任务提示词里说的『附件 / 随附文件』就是指下面这些」是**用户称呼 → 绝对路径**的接缝
+ * （用户 2026-10-09：要在提示词里写「用附件里的 XX 执行」还能被找到）⇒ 没有它，模型只能靠文件名猜。
+ */
 function attachmentLines(list: readonly DispatchAttachment[]): string[] {
   if (list.length === 0) return []
-  const lines = ['', '本次随附文件（只读输入，请勿修改；以下均为可直接读取的绝对路径）：']
+  const lines = ['', '本次随附文件（只读输入，请勿修改；以下均为可直接读取的绝对路径。任务提示词里说的「附件 / 随附文件」就是指下面这些）：']
   for (const item of list) {
-    const tag = item.kind === 'upload' ? '上传' : '工作区'
-    lines.push(item.path === null
-      ? `  - ${item.name}（${tag}）：${item.ref}（基准工作区未知，为工作区相对路径）`
-      : `  - ${item.name}（${tag}）：${item.path}`)
+    const tag = item.isDir === true ? '目录' : (item.kind === 'upload' ? '上传' : '工作区')
+    if (item.path === null) {
+      lines.push(`  - ${item.name}（${tag}）：${item.ref}（基准工作区未知，为工作区相对路径）`)
+      continue
+    }
+    // 目录路径尾补 '/'：与普通文件在字面上一眼分开，模型不会拿它当单文件去读。
+    lines.push(`  - ${item.name}（${tag}）：${item.path}${item.isDir === true ? '/' : ''}`)
+  }
+  if (list.some(item => item.isDir === true)) {
+    lines.push('标注「目录」的是一整个文件夹：需要里面某个文件时，按 <该项路径>/<相对路径> 拼出完整路径后再读取。')
   }
   return lines
 }
