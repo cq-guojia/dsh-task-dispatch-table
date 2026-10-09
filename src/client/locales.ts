@@ -119,7 +119,7 @@ export type LocaleKey =
   | 'editorDeleteTask' | 'editorDeleteTaskTitle' | 'editorDeleteTaskDesc' | 'editorReset' | 'editorResetDone' | 'editorResetTitle' | 'editorResetDesc'
   | 'editorVersionToggle'   
   | 'editorUseShort'  | 'editorEnabledStateOn' | 'editorEnabledStateOff' | 'editorToggleOn' | 'editorToggleOff'
-  | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermB1' | 'editorFullPermB2' | 'editorFullPermCheck' | 'editorTaskSaved'
+  | 'editorFullPermTitle' | 'editorFullPermDesc' | 'editorFullPermB1' | 'editorFullPermB2' | 'editorFullPermCheck' | 'editorTaskSaved' | 'editorTaskDeleted'
   | 'editorRestorePromptTitle' | 'editorRestorePromptDesc'
   | 'editorTasksTitle' | 'editorTasksEmpty' | 'editorDisabledTag'
   | 'editorTaskStart' | 'editorTaskStartHint'
@@ -164,7 +164,7 @@ export type LocaleKey =
   | 'relJustNow' | 'relMinutesAgo' | 'relHoursAgo' | 'relDaysAgo' | 'relWeeksAgo' | 'relMonthsAgo' | 'relYearsAgo'
   | 'relToday' | 'relTomorrow' | 'relWeeks' | 'relMonths' | 'relYears'
   | 'listLastFullTitle' | 'listNextFullTitle'
-  | 'listEmpty' | 'listEmptyFiltered'
+  | 'listEmpty' | 'listEmptyFiltered' | 'listEmptyTitle' | 'listEmptyHint' | 'listEmptyAction'
    | 'listSectionAttachments' | 'listSectionDepends' 
   | 'listFieldWorkspace' | 'listFieldModel' | 'listFieldModelDefault' | 'listFieldRetry' | 'listFieldSchedule'
   | 'listFieldWindow' | 'listNone' | 'listDisabledTag'
@@ -601,6 +601,7 @@ export const zh: Record<LocaleKey, string> = {
   editorFullPermB2: '执行命令、发起网络请求等敏感操作',
   editorFullPermCheck: '我已了解风险，并愿意为该任务的执行结果负责。',
   editorTaskSaved: '任务已保存',
+  editorTaskDeleted: '任务已删除',
   editorSchedHourlyOnce: '每小时执行一次',
   editorSchedNoDaySuffix: '，但还没选生效日',
   editorSchedWeeklyDayPrefix: '每周',
@@ -742,6 +743,9 @@ export const zh: Record<LocaleKey, string> = {
   listNextFullTitle: '下次执行：{when}',
   listEmpty: '还没有任务。点右上角「＋ 新建任务」创建第一个。',
   listEmptyFiltered: '没有符合当前筛选的任务。',
+  listEmptyTitle: '创建你的第一个定时任务',
+  listEmptyHint: '写好提示词，到点自动执行；支持每天 / 每周 / 间隔循环。',
+  listEmptyAction: '＋ 新建定时任务',
   listSectionAttachments: '附加文件',
   listSectionDepends: '前置任务',
   listFieldWorkspace: '工作区',
@@ -1287,6 +1291,7 @@ export const en: Record<LocaleKey, string> = {
   editorFullPermB2: 'run commands, make network requests and other sensitive operations',
   editorFullPermCheck: 'I understand the risk and accept responsibility for this task\'s results.',
   editorTaskSaved: 'Task saved',
+  editorTaskDeleted: 'Task deleted',
   editorSchedHourlyOnce: 'runs hourly',
   editorSchedNoDaySuffix: ', but no active day is selected',
   editorSchedWeeklyDayPrefix: 'every ',
@@ -1426,6 +1431,9 @@ export const en: Record<LocaleKey, string> = {
   listNextFullTitle: 'Next run: {when}',
   listEmpty: 'No tasks yet. Use “+ New task” to create the first one.',
   listEmptyFiltered: 'No task matches the current filter.',
+  listEmptyTitle: 'Create your first scheduled task',
+  listEmptyHint: 'Write a prompt and it runs automatically on time — every day, every week, or on an interval.',
+  listEmptyAction: '+ New scheduled task',
   listSectionAttachments: 'Attachments',
   listSectionDepends: 'Preceding tasks',
   listFieldWorkspace: 'Workspace',

@@ -1295,8 +1295,10 @@ export function TaskListView(props: {
    * `value` = 工作区 title（与宿主 `resolveWorkspace` 匹配口径一致）。
    */
   workspaces: readonly EditorOption[]
+  /** 新建任务（空状态引导卡按钮）：走顶部「＋ 新建任务」同一入口（含未保存拦截）。 */
+  onCreate: () => void
 }): ReturnType<typeof h> {
-  const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props
+  const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces, onCreate } = props
   const tt = useMemo(() => interpolateTranslate(t), [t])
   ensureTaskListStyle()
   // 任务信息展示皮肤（域 'domain:task-info'）：基础信息纸表格 / 上次执行明细 / 状态图标配色
@@ -1412,8 +1414,27 @@ export function TaskListView(props: {
         ),
       ),
       visible.length === 0
-        ? h('p', { style: { ...metaStyle, marginTop: '8px' } },
-          rows.length === 0 && !ready ? '' : rows.length === 0 ? t('listEmpty') : t('listEmptyFiltered'))
+        ? rows.length === 0 && !ready
+          ? null
+          : rows.length === 0
+            // 真·零任务：虚线引导卡（图标 + 主文案 + 小提示 + 新建按钮）。圆角取 --tdt-radius-md，与 Button/输入框一致。
+            ? h('div', { style: {
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                margin: '24px auto 0', padding: '48px 32px', textAlign: 'center',
+                border: '1px dashed var(--tdt-border-heavy)', borderRadius: 'var(--tdt-radius-md)',
+                background: 'var(--tdt-surface-1)',
+              } },
+              h('div', { style: { color: 'var(--tdt-fg-3)' } },
+                h(IconAlarmClockOutlineRegular, { size: 40 })),
+              h('div', { style: { marginTop: '12px', fontSize: 'var(--tdt-font-lg)', fontWeight: 600 } }, t('listEmptyTitle')),
+              h('div', { style: {
+                marginTop: '6px', maxWidth: '360px', fontSize: 'var(--tdt-font-sm)',
+                color: 'var(--tdt-fg-2)', lineHeight: 'var(--tdt-line-sm)',
+              } }, t('listEmptyHint')),
+              h(Button, { variant: 'primary', size: 'md', style: { marginTop: '16px' }, onClick: () => { onCreate() } }, t('listEmptyAction')),
+            )
+            // 筛选导致的空：保留原小字提示。
+            : h('p', { style: { ...metaStyle, marginTop: '8px' } }, t('listEmptyFiltered'))
         : h('div', { style: { position: 'relative' } },
           visible.map(row => h(TaskCard, {
             key: row.id,

@@ -498,10 +498,11 @@ function TaskPage(props: {
   const [failed, setFailed] = useState<string | null>(null)
   // 每次保存失败自增，用作 Toast 的 React key ⇒ 同一条错误连点也能重播淡入淡出动画。
   const [failedKey, setFailedKey] = useState(0)
-  // 保存成功 Toast（用户 2026-09-30：保存成功不许静默，弹绿色「任务已保存」再自退）。
-  const [savedToast, setSavedToast] = useState(0)
+  // 成功通知 Toast（success 绿、holdMs 2500 自退）：保存「任务已保存」/ 删除「任务已删除」共用同一宿主 Toast。
+  // 渲染此前挂在 LEGACY_CONFIG_VIEW（恒 false）死分支内（index.ts:1275 起），主界面弹不出来，本次迁到主视图层一并修复。
+  const [savedToast, setSavedToast] = useState<{ text: string; seq: number } | null>(null)
   const savedSeq = useRef(0)
-  const notifySaved = (): void => { savedSeq.current += 1; setSavedToast(savedSeq.current) }
+  const notify = (text: string): void => { savedSeq.current += 1; setSavedToast({ text, seq: savedSeq.current }) }
   // JSON 不合法：持续态校验，浮层常驻 Toast（不自动消失）浮在保存行上方，不占版面、不挤压下方。
   const [invalidToast, setInvalidToast] = useState<{ on: boolean; key: number }>({ on: false, key: 0 })
   const invalidSeq = useRef(0)
@@ -766,7 +767,8 @@ function TaskPage(props: {
   /**
    * 删除任务（决策 55，卡片右下角快捷删除）：DELETE /tasks { id }。
    * 服务端语义：摘定义 + 整删任务目录（附件 / 版本 / 快照），实例 / 事件保留做审计；
-   * 成功后 overview.refresh() 让列表立刻少一行。失败走 viewErr 条（操作类失败留时间读）。
+   * 成功后 overview.refresh() 让列表立刻少一行；若右侧正在编辑 / 查看该任务则一并关窗；
+   * 失败走 viewErr 条（操作类失败留时间读）。
    */
   const deleteTask = async (id: string): Promise<string | null> => {
     try {
@@ -782,6 +784,9 @@ function TaskPage(props: {
         return message
       }
       overview.refresh()
+      // 右侧分栏（编辑档 / 查看档共用一份 editor）正开着被删任务 ⇒ 一并退出，避免悬空。
+      if (editor?.id === id) setEditor(null)
+      notify(t('editorTaskDeleted'))
       return null
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -844,7 +849,7 @@ function TaskPage(props: {
         : []
       setEditor(null)
       // 保存成功不许静默（用户 2026-09-30）：关窗同时弹绿色「任务已保存」。
-      notifySaved()
+      notify(t('editorTaskSaved'))
       // ① 先乐观补该行 ⇒ 改标题 / 排期**立刻**可见（用户 2026-09-30：不等那一秒）。
       if (typeof body.id === 'string' && body.id !== '') overview.patchRow(body.id, rowPatchOf(definition))
       // ② 再立刻重拉一次，用服务端真值（含提示词首段 / 下次执行时刻）覆盖那份乐观值
@@ -875,6 +880,7 @@ function TaskPage(props: {
       }
       setEditor(null)
       overview.refresh() // 删除后列表立即少一行
+      notify(t('editorTaskDeleted'))
     } catch (error) {
       setEditorError(humanizeTaskError(error instanceof Error ? error.message : String(error)))
     }
@@ -1011,7 +1017,7 @@ function TaskPage(props: {
       if (draft.trim() === '') await scope.unset('tasksInline')
       else await scope.set('tasksInline', draft)
       setDraft(undefined)
-      notifySaved()
+      notify(t('editorTaskSaved'))
     } catch (error) {
       // 保存失败（含保存闸门 422 的 id 校验文案）：机器码翻人话后浮层 Toast 自退，草稿保留可改完再存。
       const msg = error instanceof Error ? error.message : String(error)
@@ -1262,6 +1268,8 @@ function TaskPage(props: {
             onViewTask: openViewer,
             // 工作区筛选候选 = **面板级唯一真源**（`/options`），列表不再从卡片数据反推（2026-10-04）。
             workspaces: editorOptions.workspaces,
+            // 空状态引导卡「新建定时任务」：走顶部「＋ 新建任务」同一入口（含未保存拦截）。
+            onCreate: openCreate,
           })
         : tab === 'settings'
           ? h(SettingsPage, { t })
@@ -1342,15 +1350,6 @@ function TaskPage(props: {
                     sticky: true,
                     onDone: () => { /* sticky：不自动消失，改对 JSON 后由 effect 撤除 */ },
                     text: t('invalidJson'),
-                  })
-                  : null,
-                savedToast !== 0
-                  ? h(Toast, {
-                    key: savedToast,
-                    text: t('editorTaskSaved'),
-                    tone: 'success',
-                    holdMs: 2500,
-                    onDone: () => { setSavedToast(0) },
                   })
                   : null,
               ),
@@ -1443,6 +1442,17 @@ function TaskPage(props: {
           text: viewErr,
           closeLabel: t('debugClose'),
           onDone: () => { setViewErr(null) },
+        })
+      : null,
+    // 成功通知（保存「任务已保存」/ 删除「任务已删除」）：宿主 Toast，success 绿、2.5s 自退。
+    // 此前挂在 LEGACY 死分支内弹不出来，已迁到此处（与 viewErr 同层渲染）。
+    savedToast !== null
+      ? h(Toast, {
+          key: savedToast.seq,
+          text: savedToast.text,
+          tone: 'success',
+          holdMs: 2500,
+          onDone: () => { setSavedToast(null) },
         })
       : null,
     // 新建 / 编辑任务分栏（右侧**占布局的一列**：主窗口被推窄、不被遮盖；与预览 dock 可同时存在）。

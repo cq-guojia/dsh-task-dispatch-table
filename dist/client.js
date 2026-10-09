@@ -633,6 +633,7 @@ window.__ModuleLoader__.load({
 			editorFullPermB2: "执行命令、发起网络请求等敏感操作",
 			editorFullPermCheck: "我已了解风险，并愿意为该任务的执行结果负责。",
 			editorTaskSaved: "任务已保存",
+			editorTaskDeleted: "任务已删除",
 			editorSchedHourlyOnce: "每小时执行一次",
 			editorSchedNoDaySuffix: "，但还没选生效日",
 			editorSchedWeeklyDayPrefix: "每周",
@@ -770,6 +771,9 @@ window.__ModuleLoader__.load({
 			listNextFullTitle: "下次执行：{when}",
 			listEmpty: "还没有任务。点右上角「＋ 新建任务」创建第一个。",
 			listEmptyFiltered: "没有符合当前筛选的任务。",
+			listEmptyTitle: "创建你的第一个定时任务",
+			listEmptyHint: "写好提示词，到点自动执行；支持每天 / 每周 / 间隔循环。",
+			listEmptyAction: "＋ 新建定时任务",
 			listSectionAttachments: "附加文件",
 			listSectionDepends: "前置任务",
 			listFieldWorkspace: "工作区",
@@ -1295,6 +1299,7 @@ window.__ModuleLoader__.load({
 			editorFullPermB2: "run commands, make network requests and other sensitive operations",
 			editorFullPermCheck: "I understand the risk and accept responsibility for this task's results.",
 			editorTaskSaved: "Task saved",
+			editorTaskDeleted: "Task deleted",
 			editorSchedHourlyOnce: "runs hourly",
 			editorSchedNoDaySuffix: ", but no active day is selected",
 			editorSchedWeeklyDayPrefix: "every ",
@@ -1432,6 +1437,9 @@ window.__ModuleLoader__.load({
 			listNextFullTitle: "Next run: {when}",
 			listEmpty: "No tasks yet. Use “+ New task” to create the first one.",
 			listEmptyFiltered: "No task matches the current filter.",
+			listEmptyTitle: "Create your first scheduled task",
+			listEmptyHint: "Write a prompt and it runs automatically on time — every day, every week, or on an interval.",
+			listEmptyAction: "+ New scheduled task",
 			listSectionAttachments: "Attachments",
 			listSectionDepends: "Preceding tasks",
 			listFieldWorkspace: "Workspace",
@@ -70264,7 +70272,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}) : null);
 		}
 		function TaskListView(props) {
-			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces } = props;
+			const { t, rows, ready, onEdit, onViewTask, onDelete, onRunNow, onOpenFile, onOpenSession, onToggleEnabled, refresh, workspaces, onCreate } = props;
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			ensureTaskListStyle();
 			ensureTaskInfoStyle();
@@ -70372,10 +70380,38 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				size: "md",
 				width: WS_WIDTH,
 				marquee: true
-			}))), visible.length === 0 ? (0, react$1.createElement)("p", { style: {
+			}))), visible.length === 0 ? rows.length === 0 && !ready ? null : rows.length === 0 ? (0, react$1.createElement)("div", { style: {
+				display: "flex",
+				flexDirection: "column",
+				alignItems: "center",
+				justifyContent: "center",
+				margin: "24px auto 0",
+				padding: "48px 32px",
+				textAlign: "center",
+				border: "1px dashed var(--tdt-border-heavy)",
+				borderRadius: "var(--tdt-radius-md)",
+				background: "var(--tdt-surface-1)"
+			} }, (0, react$1.createElement)("div", { style: { color: "var(--tdt-fg-3)" } }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 40 })), (0, react$1.createElement)("div", { style: {
+				marginTop: "12px",
+				fontSize: "var(--tdt-font-lg)",
+				fontWeight: 600
+			} }, t("listEmptyTitle")), (0, react$1.createElement)("div", { style: {
+				marginTop: "6px",
+				maxWidth: "360px",
+				fontSize: "var(--tdt-font-sm)",
+				color: "var(--tdt-fg-2)",
+				lineHeight: "var(--tdt-line-sm)"
+			} }, t("listEmptyHint")), (0, react$1.createElement)(Button$2, {
+				variant: "primary",
+				size: "md",
+				style: { marginTop: "16px" },
+				onClick: () => {
+					onCreate();
+				}
+			}, t("listEmptyAction"))) : (0, react$1.createElement)("p", { style: {
 				...metaStyle,
 				marginTop: "8px"
-			} }, rows.length === 0 && !ready ? "" : rows.length === 0 ? t("listEmpty") : t("listEmptyFiltered")) : (0, react$1.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react$1.createElement)(TaskCard, {
+			} }, t("listEmptyFiltered")) : (0, react$1.createElement)("div", { style: { position: "relative" } }, visible.map((row) => (0, react$1.createElement)(TaskCard, {
 				key: row.id,
 				row,
 				t,
@@ -71513,11 +71549,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [saving, setSaving] = (0, react$1.useState)(false);
 			const [failed, setFailed] = (0, react$1.useState)(null);
 			const [failedKey, setFailedKey] = (0, react$1.useState)(0);
-			const [savedToast, setSavedToast] = (0, react$1.useState)(0);
+			const [savedToast, setSavedToast] = (0, react$1.useState)(null);
 			const savedSeq = (0, react$1.useRef)(0);
-			const notifySaved = () => {
+			const notify = (text) => {
 				savedSeq.current += 1;
-				setSavedToast(savedSeq.current);
+				setSavedToast({
+					text,
+					seq: savedSeq.current
+				});
 			};
 			const [invalidToast, setInvalidToast] = (0, react$1.useState)({
 				on: false,
@@ -71785,7 +71824,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			/**
 			* 删除任务（决策 55，卡片右下角快捷删除）：DELETE /tasks { id }。
 			* 服务端语义：摘定义 + 整删任务目录（附件 / 版本 / 快照），实例 / 事件保留做审计；
-			* 成功后 overview.refresh() 让列表立刻少一行。失败走 viewErr 条（操作类失败留时间读）。
+			* 成功后 overview.refresh() 让列表立刻少一行；若右侧正在编辑 / 查看该任务则一并关窗；
+			* 失败走 viewErr 条（操作类失败留时间读）。
 			*/
 			const deleteTask = async (id) => {
 				try {
@@ -71801,6 +71841,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						return message;
 					}
 					overview.refresh();
+					if (editor?.id === id) setEditor(null);
+					notify(t("editorTaskDeleted"));
 					return null;
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error);
@@ -71859,7 +71901,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 					const missing = Array.isArray(body.missingAttachments) ? body.missingAttachments.filter((item) => typeof item === "string") : [];
 					setEditor(null);
-					notifySaved();
+					notify(t("editorTaskSaved"));
 					if (typeof body.id === "string" && body.id !== "") overview.patchRow(body.id, rowPatchOf(definition));
 					overview.refresh();
 					if (missing.length > 0) setViewErr(`已保存，但以下附加文件已不在盘上，请重新上传：${missing.join("、")}`);
@@ -71885,6 +71927,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}
 					setEditor(null);
 					overview.refresh();
+					notify(t("editorTaskDeleted"));
 				} catch (error) {
 					setEditorError(humanizeTaskError(error instanceof Error ? error.message : String(error)));
 				}
@@ -72183,7 +72226,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onToggleEnabled: toggleTaskEnabled,
 				onRunNow: runTaskNow,
 				onViewTask: openViewer,
-				workspaces: editorOptions.workspaces
+				workspaces: editorOptions.workspaces,
+				onCreate: openCreate
 			}) : tab === "settings" ? (0, react$1.createElement)(SettingsPage, { t }) : data === void 0 ? (0, react$1.createElement)("div", null, (0, react$1.createElement)("p", { style: hintStyle }, hasRaw ? t("debugRaw") : t("debugEmpty")), hasRaw ? (0, react$1.createElement)("pre", { style: preStyle }, raw) : null) : null, (0, react$1.createElement)(BackToTop, null)), viewing !== null ? (0, react$1.createElement)(SessionViewModal, {
 				t,
 				heading: viewing.heading,
@@ -72218,6 +72262,14 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				closeLabel: t("debugClose"),
 				onDone: () => {
 					setViewErr(null);
+				}
+			}) : null, savedToast !== null ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.Toast, {
+				key: savedToast.seq,
+				text: savedToast.text,
+				tone: "success",
+				holdMs: 2500,
+				onDone: () => {
+					setSavedToast(null);
 				}
 			}) : null, editor !== null ? (0, react$1.createElement)(TaskEditorDrawer, {
 				key: editor.id,
