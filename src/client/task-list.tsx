@@ -523,7 +523,7 @@ const statusStyleOf = (status: string): Record<string, string | number> | undefi
 /**
  * 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
  * 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
- * 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
+ * 数据全走 `client/query.ts` 真实取数（仓库硬规则：禁止 mock）。
  */
 function TaskExpandPanel(props: {
   row: TaskOverviewRow

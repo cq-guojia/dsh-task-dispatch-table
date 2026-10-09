@@ -68362,7 +68362,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*
 		* ⚠️ 未来**没有实例行**（决策 31 懒建行：到点才 INSERT，不预建、不回看）⇒ 这里算出的是
 		*    「按当前定义推算的计划」，任务改定义 / 停用后会随之变化 —— 是真实计算、不是模拟数据，
-		*    UI 必须把它与「已发生」如实区分（AGENTS.md 第五条：正常功能一律真实取数，禁止模拟）。
+		*    UI 必须把它与「已发生」如实区分（仓库硬规则：正常功能一律真实取数，禁止模拟）。
 		*/
 		function planEntriesByDay(tasks, from, to, now) {
 			const out = /* @__PURE__ */ new Map();
@@ -69460,7 +69460,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/**
 		* 任务卡片展开区三面板（决策 55）：左下三个分段按钮（基础信息 / 执行记录 / 日志，默认基础信息），
 		* 中间内容区三选一替换（统一最大高度滚动容器），右下按钮区（编辑任务 + 删除）。
-		* 数据全走 `client/query.ts` 真实取数（AGENTS.md 第五条，禁止 mock）。
+		* 数据全走 `client/query.ts` 真实取数（仓库硬规则：禁止 mock）。
 		*/
 		function TaskExpandPanel(props) {
 			const { row, t, tt, scheduleLine, modelText, onEdit, onDelete, onRunNow, onOpenFile, onOpenSession, onViewTask, refresh } = props;

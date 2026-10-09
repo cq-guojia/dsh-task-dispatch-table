@@ -50,6 +50,6 @@ export declare function monthRangeQuery(year: number, month: number): {
  *
  * ⚠️ 未来**没有实例行**（决策 31 懒建行：到点才 INSERT，不预建、不回看）⇒ 这里算出的是
  *    「按当前定义推算的计划」，任务改定义 / 停用后会随之变化 —— 是真实计算、不是模拟数据，
- *    UI 必须把它与「已发生」如实区分（AGENTS.md 第五条：正常功能一律真实取数，禁止模拟）。
+ *    UI 必须把它与「已发生」如实区分（仓库硬规则：正常功能一律真实取数，禁止模拟）。
  */
 export declare function planEntriesByDay(tasks: readonly CalendarTask[], from: Date, to: Date, now: Date): Map<string, CalendarPlanEntry[]>;
