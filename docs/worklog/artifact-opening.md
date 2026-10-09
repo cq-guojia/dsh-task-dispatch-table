@@ -7,7 +7,7 @@
 
 ## 一、过程叙事
 
-### 第一轮：源码核实（先于一切讨论，AGENTS.md 第 4 条）
+### 第一轮：源码核实（先于一切讨论，仓库硬规则）
 
 本地 node_modules 无官方包，改用此前工作包遗留的 /tmp 解包源码（0.1.7-rc.2，与宿主版本线一致）。核实动作与结论：
 
@@ -26,7 +26,7 @@
 
 ### 第三轮：落码（2026-09-27，同日）
 
-1. **读源码核契约再动手（AGENTS.md 第 4 条）**：`npm pack @deepseek-ai/dsh-api-workspace-files@0.1.7-rc.2` 读 `lib/*.js` 实现本体——`read(sessionId, path, {offset, limit})` 单页 2MiB / 5000 行、页文本以 `\n` 连接且末行不带终止符、翻页 offset = 页 offset + lines；`readBytes` 全量 ≤32MiB（multipart → Uint8Array）；错误抛出 bareCode 化（`workspace-file/not-found`、`gateway/lookup-not-found`、`too-large`（details.limit）、`not-text`、`not-regular-file`（details.kind））。
+1. **读源码核契约再动手（仓库硬规则）**：`npm pack @deepseek-ai/dsh-api-workspace-files@0.1.7-rc.2` 读 `lib/*.js` 实现本体——`read(sessionId, path, {offset, limit})` 单页 2MiB / 5000 行、页文本以 `\n` 连接且末行不带终止符、翻页 offset = 页 offset + lines；`readBytes` 全量 ≤32MiB（multipart → Uint8Array）；错误抛出 bareCode 化（`workspace-file/not-found`、`gateway/lookup-not-found`、`too-large`（details.limit）、`not-text`、`not-regular-file`（details.kind））。
 2. **落码顺序**：inject（package.json + index.ts `ctx.inject(['remote'])` 探 `remote.workspaceFiles`，探不到整体降级）→ 预览引擎 `file-preview.tsx`（`previewKind` 按扩展名分派 md/text/image/pdf；文本 read 分页 +「加载更多」；图片/PDF readBytes→Blob→objectURL 卸载 revoke）→ locales 11 键（zh/en）→ primitives.d.ts 补 `CodeBlock` / `fileMentions` 类型 → `GenericCommandCard`（diff 摘要路径 + argsRaw file_path/path「文件」行可点）→ `MessageItem.AssistantMarkdown`（MarkdownText 传 fileMentions）→ `session-view.ts`（openFile 状态 + `dsh-tdt-sv-split` 分栏推压 + collectFilePaths 词表收集 + makeFileMentions 归一化精确匹配优先 / 唯一 basename 兜底）→ archive-session-css.ts 样式 → smoke +10 断言。
 3. **已知偏差（决策 39 认可范围内）**：官方 chatFileMentions provider 不可用 ⇒ 自建**会话级**词表（官方为 per-turn）；fileMentions resolve 不出保持惰性 code（renderer never guesses，官方同款行为）。
 4. **工具链故障与绕行**：本会话 Edit 工具后半段持续把 old_string 序列化成带 `: ` 前缀（not found）、Write 工具对 ts/tsx 持续 IDE Command timeout ⇒ 全部文件改动改用 Shell + `node <<'PATCH_EOF'` heredoc 锚点校验式补丁（每处替换前 `src.includes(oldStr)` 校验唯一性）。
@@ -36,7 +36,7 @@
 ### 第四轮：交付文件官方化 + 入口补全（2026-09-28，真机反馈「没有入口」后）
 
 1. **真机反馈**：预览分栏已落码但「文件都没连过去」——点写入文件的路径只是展开明细；官方会话里能点的地方我们不可点。另问：官方会话尾部那张文件卡（带简介）是什么、为什么只有一个会话有。
-2. **读官方源码再动手（AGENTS.md 第 4 条）**：解包 `dsh-client-ui-deliverables@0.1.7-rc.2` 读实现本体，官方「交付文件」全貌核实：
+2. **读官方源码再动手（仓库硬规则）**：解包 `dsh-client-ui-deliverables@0.1.7-rc.2` 读实现本体，官方「交付文件」全貌核实：
    - **交付文件行**：`present` 工具调用经 `tool.call.toolview` 槽位（key='present'）挂官方 `PresentRow`——标题「交付文件」+ `IconDeliverDocRegular`，折叠摘要 = 状态词（准备交付/正在交付/已交付/交付失败/已中断，`row.*` 词典）+ `argsRaw.files[].path` 逗号连接（**官方纯文本不可点**），展开体 = 工具结果原文。
    - **交付文件卡**：`conversation.chat.turnTail` 槽位挂官方 `DeliverablesTail` → `PresentedFileCard` 网格（FileTypeIcon + basename + 简介，简介空则回退扩展名大写；整卡可点 → openFile 右栏预览；>4 张折叠 +「全部 N 个文件」）。数据真源 = `deliverables/presented` 事件（present 工具触发的宿主事件）。
    - **回答用户疑问**：那张卡 = 模型调用了 `present`（交付文件）工具才有的宿主事件渲染，**「只有一个对话有」是因为只有那个任务的模型调了 present**；卡上方灰字「此主机没有可用的桌面…」= 官方 `presented.unavailable`（容器部署无桌面，原生打开不可用，文件仍可侧栏预览）。

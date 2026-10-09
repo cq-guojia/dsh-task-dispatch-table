@@ -26,13 +26,13 @@
 
 ——**症状**：执行记录点「↗ 查看会话」毫无反应、无报错。**根因（读官方源码才定位）**：`@deepseek-ai/dsh-api-session-controller@0.1.7-rc.2` `lib/client.js:3406` —— `binding(id) { return this.scopes.get(id)?.binding }`，**只查已物化的 scope、从不创建**；归档 / 久未打开的会话没有 scope ⇒ 返回 `undefined` ⇒ `@deepseek-ai/dsh-client-ui-conversation` `lib/client.js:3083` 的 `if (this.sessions.binding(sessionId) !== owner) throw new Error('inactive session ...')` 直接抛出 ⇒ `openSessionView` 静默 `return null` ⇒ 界面无反应。**正解**：查看前 `sessions.retain(id, { source })` ⇒ `retainScope`（3409）→ `materializeScope`（3472）物化 scope，且内部触发 `manager.get(id).open()` 拉历史尾页；返回引用在使用结束（弹窗关闭）时 `release()`。**修复**：`session-view.ts` 在 `binding` 前 retain 并持有引用，`SessionViewTarget` 增 `dispose()`，`index.ts` 弹窗关闭时调用；原「反归档后查看」降级为兜底（且只有真反归档过才在关闭时归档回去）。真机验证：**弹窗弹出并显示对话内容**，冒烟 93 项全过，push `fcabf8b`。
 
-**教训（已写入 AGENTS.md 第 4 条）**：本次在「猜 API」上耗掉十几轮——先后误判为「归档屏蔽」「`$stream` 冷读」「`projectionStores`」「反归档可恢复」，还两次埋大规模探针刷日志（其中一次因 `getSnapshot` 每次返回新对象触发 React #185 无限更新、面板黑屏）。**正确姿势只有一条：先查 `dsh-capabilities.md`，再 `npm pack @deepseek-ai/<包>@<宿主版本>` 把源码下下来读到实现本体**（方法签名 / 判空 / 抛错分支），报错栈的 `client.js:行号` 就是精确坐标。
+**教训（已写入 仓库硬规则）**：本次在「猜 API」上耗掉十几轮——先后误判为「归档屏蔽」「`$stream` 冷读」「`projectionStores`」「反归档可恢复」，还两次埋大规模探针刷日志（其中一次因 `getSnapshot` 每次返回新对象触发 React #185 无限更新、面板黑屏）。**正确姿势只有一条：先查 `dsh-capabilities.md`，再 `npm pack @deepseek-ai/<包>@<宿主版本>` 把源码下下来读到实现本体**（方法签名 / 判空 / 抛错分支），报错栈的 `client.js:行号` 就是精确坐标。
 
 **顺带证伪**：T1 曾判「决策 29 的 ChatView 挂载在 0.1.7-RC.2 不可行（`retain` / `bindingSource` 不存在）」——该结论是在**未 retain** 的前提下得出的；`retain` 经源码确认存在（`client.js:3194`），故决策 29 路线需按源码重评（→ 里程碑 15：外观对齐官方）。
 
 ## 2026-09-27 — 里程碑 16：官方 keyed 节点流 + 折叠关系照抄 + 弹窗外壳改宿主惯例（决策 36）
 
-——用户拿两张官方截图逐项对照：① 官方「左下角弹窗」的关闭钮是**裸的黑叉**（无方框），弹窗宽度也没那么宽；② 官方会话区**左右有间距**（我们几乎为 0）；③ 要求**先抄官方的折叠关系**，再看折叠后露出来的样式，把两张图做成一模一样。全程先读源码再动手（AGENTS.md 第 4 条），本轮零真机试错。
+——用户拿两张官方截图逐项对照：① 官方「左下角弹窗」的关闭钮是**裸的黑叉**（无方框），弹窗宽度也没那么宽；② 官方会话区**左右有间距**（我们几乎为 0）；③ 要求**先抄官方的折叠关系**，再看折叠后露出来的样式，把两张图做成一模一样。全程先读源码再动手（仓库硬规则），本轮零真机试错。
 
 **源码核实（0.1.7-rc.2）**：
 - 官方 ChatView 真正渲染的是 **keyed 节点流**（快照 `order + nodes`，`ChatNodeStore.get/processSource`），不是我们一直用的 `legacy.nodes` 兼容投影——turn-trigger / turn-process / assistant-step / tool-call / turn-tail 都只在 keyed 流里，**turn 位置（`location.turn.start/end`）与用量（`turn-tail.data.tokenUsage`）也只在 keyed 流里有** ⇒ 此前「缺 turn 起止时间 / 缺 usage」两条数据缺口直接消解。
@@ -52,7 +52,7 @@
 
 ## 2026-09-27（第二轮）— 三级收折照抄 + 弹窗去续聊 + 内间距定尺（决策 37）
 
-——用户拿官方四级截图（折到一级 / 二级 / 三级）核对收折，并拍板三件事：① 标题下加横线；② 内间距不按官方内容列宽算，弹窗宽度固定就直接给定尺内边距；③ **弹窗内不做续聊**——官方「分支」= 复制当前对话在新会话继续，正合「会话留档不可改、要聊就开分支」的定位 ⇒ 底部对话框占位与分支 icon 都移除，将来做「继续对话（开分支）」按钮（记 PROGRESS U10：确认框 → 关弹窗 → 跳新分支会话，依赖 `sessions.fork`，落码前先读源码）。另追问 token 数据来源——已答：**弹窗用量取自官方 keyed 流 `turn-tail.data.tokenUsage`（官方会话数据本体，与官方界面同源）**，非插件记录、非模拟；与「执行记录」三列差异 = 后者从 session 事件流抽取（U8 待真机确认字段），两条链路口径不同。用户重申**正常功能禁止模拟数据** ⇒ 升格为 AGENTS.md 第 5 条。
+——用户拿官方四级截图（折到一级 / 二级 / 三级）核对收折，并拍板三件事：① 标题下加横线；② 内间距不按官方内容列宽算，弹窗宽度固定就直接给定尺内边距；③ **弹窗内不做续聊**——官方「分支」= 复制当前对话在新会话继续，正合「会话留档不可改、要聊就开分支」的定位 ⇒ 底部对话框占位与分支 icon 都移除，将来做「继续对话（开分支）」按钮（记 PROGRESS U10：确认框 → 关弹窗 → 跳新分支会话，依赖 `sessions.fork`，落码前先读源码）。另追问 token 数据来源——已答：**弹窗用量取自官方 keyed 流 `turn-tail.data.tokenUsage`（官方会话数据本体，与官方界面同源）**，非插件记录、非模拟；与「执行记录」三列差异 = 后者从 session 事件流抽取（U8 待真机确认字段），两条链路口径不同。用户重申**正常功能禁止模拟数据** ⇒ 升格为仓库硬规则。
 
 **三级收折源码核实（0.1.7-rc.2）**：
 - 分组算法 = chat 包 `conversation-nodes/process-groups.js`（10563-10772）：每 turn 内，INDEPENDENT kind（user/steering/turn-trigger/model-retry/turn-error/turn-max-tokens/turn-tail）先闭合当前组再独立成条目；turn-process 独立成条目（不闭合组）；assistant-step 有 reasoning 块 ⇒ 以 `groupPart:'reasoning'` 入组、有回复内容 ⇒ 先闭合组再以 `groupPart:'response'` 独立成条目；其余 kind（tool-call 等）入组。组键 = `["process", 首成员 key, groupPart]`。
@@ -130,7 +130,7 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 
 ——用户拍板先做 U10，并给出交互硬要求：**不能点一下就直接开分支，必须先出确认框**（误点会多出一个会话还得删、整个窗口还跳出去了，很麻烦）；确认后再开新分支，开完自动跳到新分支的那个会话里去。
 
-**源码核实（先读后动，AGENTS.md 第 4 条；0.1.7-rc.2）**：
+**源码核实（先读后动，仓库硬规则；0.1.7-rc.2）**：
 - `sessions.fork` 在**公开契约** `ISessions`（contract/sessions.d.ts:124）：`fork(opts: { sessionId; atSeq?; increaseTitle? }): Promise<SessionId>`，实现体 client.js:3343。
 - `atSeq` 省略 = 「最新已完成 turn 前缀」（commands.d.ts:36-37）⇒ 对归档/完结会话即**全量对话**；`increaseTitle: true` ⇒ 子会话标题递增 ` (1)`（increasedForkTitle，client.js:3066-3072；官方 fork 按钮同款 client.js:837-842）；失败抛 `SessionForkError`（带 rpcError.code/message，client.js:3034-3047）。
 - 归档会话的 fork 子会话 = **独立会话**，不受归档只读闸门限制（archived-session-gate.d.ts:23-24）。
@@ -189,7 +189,7 @@ typecheck + build + 冒烟 103 项全过（产物抽查 `dsh-tdt-sv-frame` / `pa
 
 ——真机截图对比（用户）：我方旧自绘只有一行红色「处理失败：轮次失败 503:…」整行红；官方是三段式——「已重试模型请求 (5/5) · 9s」**可折叠行**（点开才见「重试延迟：8364 毫秒 / 失败原因：503:…」）+「● 本轮运行失败 503:…」**红点 + 红标题 + 灰原因** + 最右侧灰色机器码标签（SERVER）。要求照官方样式改。
 
-**源码事实（先读后动，AGENTS.md 第 4 条；`dsh-client-ui-chat@0.1.7-rc.2` lib/client.js:1235-1338）**：
+**源码事实（先读后动，仓库硬规则；`dsh-client-ui-chat@0.1.7-rc.2` lib/client.js:1235-1338）**：
 - `ModelRetryItem`：`<details class=retryRow>` + `summary`（内 `retryText[role=status]`）+ `retryDetails` 两行（`retryDetailLabel`「重试延迟：」+ `durationMilliseconds`；「失败原因：」+ 人话原因）。active = `retryState === 'scheduled'`：文案切「正在重试模型请求」、秒数倒计时（`ceil(delayMs/1000)`，250ms tick）+ 渐隐 shimmer（`prefers-reduced-motion` 关闭）；取消态「模型请求重试已取消」；started「已重试模型请求」；scheduled 静默「等待重试模型请求」。模板 `'{label}（{retry}/{maximum}） · {seconds}s'`；maximum = mode `normal` 时取 `maxRetries`，否则 ∞。
 - `TurnErrorItem`：`turnErrorRow`（grid `10px minmax(0,1fr) auto`）= `StateDot(error)` + `turnErrorCopy`（红标题「本轮运行失败」600 + 灰原因 label-secondary）+ 右侧 `<code class=turnErrorCode>` = `node.code`——**即截图右侧 SERVER 标签**（稳定机器路由码，来自 turn/end `reason.error` 的 `LlmFailure.code`）；`ACCOUNT_SIGNED_OUT` 时标题换「任务已停止」。失败原因人话映射：AUTH→「API 密钥无效」、QUOTA→「当前请求的额度已用尽」、ACCOUNT_*→登出/登录两条，否则原文 message。
 - `TurnMaxTokensItem`：StateDot(warning) + 「已达到输出 token 上限」+ 提示「回答被截断，已有输出保留在对话中。发送“继续”可让模型接着输出。」

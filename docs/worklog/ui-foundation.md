@@ -197,7 +197,7 @@
 | 3 | 官方 `SegmentedControl` 覆写算式（`--dsh-segment-count/index`）是否值得保留 | 读 primitives 包 `SegmentedControl.module.css` | 决定「覆写官方」还是「自绘统一体」（本方案倾向自绘，见 §5.3） |
 | 4 | **§4.5 三处疑点**：`state-warn-primary` vs `state-warning-primary`、`focus-ring-color` vs `border-focus`、宿主是否真有字号体系（`--dsw-font-xxs-12` / `--dsw-font-xs-13`） | 同第 1 项解包后全局搜；字号体系另查 `--dsw-font-*` 全族 | ①② 必有一个是死变量（不随主题变）⇒ token 层不能继承错误命名；③ 决定 `--tdt-font-*` 是映射宿主还是自定 px |
 
-> 依 [`AGENTS.md`](../../AGENTS.md) 第二条：涉及宿主接口**先读源码再动手**，禁止靠真机试探猜 API。上表第 1–4 项即本专项的「先读源码」动作，**必须在 P0 开工前完成**。
+> 依 [`AGENTS.md`](../../AGENTS.md)：涉及宿主接口**先读源码再动手**，禁止靠真机试探猜 API。上表第 1–4 项即本专项的「先读源码」动作，**必须在 P0 开工前完成**。
 > 第 1/2/4 项同源于一次解包 ⇒ **一次授权即可做完三项**；第 3 项需另解 primitives 包（同一次授权可一并做）。
 
 ---
@@ -211,7 +211,7 @@
 | 过程与调研证据 | [`docs/worklog/ui-foundation.md`](../worklog/ui-foundation.md) | 叙事层；做完封卷、不再修改 |
 | 进度与未决 | [`docs/PROGRESS.md`](../PROGRESS.md) | 现场层；未决项编号 **U18** |
 | 拍板结论 | **归属文档**（功能 / 样式各自的文档） | **待用户拍板后**直接写进归属文档，只留结论与理由；不另建决策文件 |
-| agent 强制入口 | `AGENTS.md` 第二条（本仓库独有约定）加一条「新增 UI 一律走 `src/client/ui/` 基础层」 | ⚠️ **改 AGENTS.md 需用户单独授权**，本轮未改 |
+| agent 强制入口 | `AGENTS.md`（本仓库独有约定）加一条「新增 UI 一律走 `src/client/ui/` 基础层」 | ⚠️ **改 AGENTS.md 需用户单独授权**，本轮未改 |
 
 **与既有文档的边界**（防止两份副本）：
 

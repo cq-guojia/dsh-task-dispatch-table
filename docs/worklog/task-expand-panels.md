@@ -23,7 +23,7 @@
 - **执行记录数据**：`task_instances`。字段 = `task_id`/`logical_date`/`scheduled_at`/`status`/`attempt`/`session_id`/`finished_at`/`outputs`/`token_in`·`token_out`·`token_in_cache`。下钻事件时间线在 `task_events`（legacy `records` 标签已实现「点一行展开该次执行事件时间线」）。
 - **日志数据**：`task_log`。字段 = `ts`/`task_id`/`scheduled_at`/`level`/`kind`/`message`。
 - **现有接口缺口**：`records` 标签走全局 `debugSnapshot.instances`（非按任务过滤）；`task_log` 只有 `appendLog` + `GET /db` 全表 dump。**两个按任务检索的路由 + `store.ts` 三个查询方法均待新增**（名称与签名已定，见设计提纲 §四）。
-- **真实数据纪律**：展示数据必须来自真实存储，禁止 mock（[`AGENTS.md`](../../AGENTS.md) 第五条）。
+- **真实数据纪律**：展示数据必须来自真实存储，禁止 mock（[`AGENTS.md`](../../AGENTS.md)）。
 
 ## 四、已拍板（2026-10-01）/ 实施清单
 
