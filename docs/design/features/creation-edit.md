@@ -129,7 +129,7 @@
 |---|---|
 | 记录形态 | **一条记录**（`ref` = 目录的工作区相对路径），**绝不展开成文件列表**——保存任务请求体上限 1MB（`DISPATCH_BODY_LIMIT`，`src/index.ts:215`，超限 413），展开即可能炸；展开还会让注入的 prompt 随文件数线性膨胀 |
 | `name` | 取 basename ⇒ 就是文件夹名（所见即所得：用户在提示词里写「附件里的 XX」指的就是它，见 `src/client/task-editor.tsx` 的 `onPick`） |
-| 选中入口 | FileBrowser picker 模式下目录行**整行可选**（`src/client/file-browser.tsx` 的 `renderTree` directory 分支）；▸ 仍只负责内联展开 |
+| 选中入口 | FileBrowser picker 模式下：**点行 = 就地展开/收起**；选中整个目录只走**行尾悬停才出现的「选择」小按钮**（`src/client/file-browser.tsx` 的 `renderTree` directory 分支）。浏览形态（dock）同构：点行 = 展开，行尾按钮「进入」= 导航进该目录。⚠️ 旧行为是「整行可选 + ▸ 才展开」（易误选），2026-10-10 已改，来龙去脉见 [`../../worklog/file-browser-tree-interaction.md`](../../worklog/file-browser-tree-interaction.md) |
 | 点开预览 | 附件行 → 右侧 FileBrowser dock（`src/client/index.ts:1503`），它本就「list 成功 ⇒ 目录树」（`src/client/file-browser.tsx:336-337`）⇒ **目录天然可浏览，零改动** |
 | 执行期校验 | `existsSync` 对目录同为真（`src/reconcile.ts:50`、`src/scheduler.ts:376`）⇒ 目录被删照样拦，与文件同一口径 |
 | 官方附件卡 | 目录**永远不会有**（`src/dispatch.ts:410-411` 的 `!isFile()` 跳过；宿主 `FileAttachmentRef` 本就没有路径字段）⇒ 只给路径 |

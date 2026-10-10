@@ -80,7 +80,7 @@
 | 宽度可调 | dock 左缘 6px 拖拽条（pointerdown/move/up）：拖动期间只改 CSS 变量（不重渲染整页），松手落 state 并持久化 localStorage（`dsh-tdt-preview-width`）；区间 320px ~ 视口 70%，默认 460px |
 | 崩溃隔离 | 预览体外包 `PreviewBoundary`（错误边界）：渲染异常只降级预览区，**不再拖垮整页**（真机 2026-09-28「点了直接黑屏」的直接修复） |
 | 数据契约防御 | `read` / `readBytes` 结果按官方 wire schema 解析，取不到 `text` / `data` ⇒ 走错误态**绝不把 undefined 喂给官方渲染器**（真机「undefined undefined undefined」+ `endsWith` 崩溃的根因面），并打形状日志取证 |
-| 目录浏览器（2026-09-28 同日追加，用户拍板面包屑方案） | dock 从单文件预览升级为 `FileBrowser`（file-browser.tsx）：`openFile(path)` 先 `list(path)` 判别目录/文件（官方 `stat` 不含 kind，`list` 试探是唯一可靠判别；报 `not-directory` ⇒ 文件预览、dir=父目录）。面包屑每段可点回跳；预览文件时面包屑保留（点父段即返回）；顶栏「上一级 / 回到根目录 / 刷新 / 复制 / 关闭」；树目录在前文件在后。渲染底层复用本文件预览体组件，数据全官方 `workspaceFiles.list`（≤2000 条，限工作区内） |
+| 目录浏览器（2026-09-28 同日追加，用户拍板面包屑方案） | dock 从单文件预览升级为 `FileBrowser`（file-browser.tsx）：`openFile(path)` 先 `list(path)` 判别目录/文件（官方 `stat` 不含 kind，`list` 试探是唯一可靠判别；报 `not-directory` ⇒ 文件预览、dir=父目录）。面包屑每段可点回跳；预览文件时面包屑保留（点父段即返回）；顶栏「上一级 / 回到根目录 / 刷新 / 复制 / 关闭」；树目录在前文件在后。渲染底层复用本文件预览体组件，数据全官方 `workspaceFiles.list`（≤2000 条，限工作区内）。**目录行交互（2026-10-10 两形态统一）**：点行 = 就地展开/收起；行尾悬停才出现的按钮承担该形态的主动作（选择器 = 「选择」，浏览 = 「进入」该目录）；面包屑 ▾ 下拉里**当前工作区可点**、点了回到该工作区根目录。详见 [`../../worklog/file-browser-tree-interaction.md`](../../worklog/file-browser-tree-interaction.md) |
 
 ---
 

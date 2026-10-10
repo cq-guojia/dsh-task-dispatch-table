@@ -45,6 +45,7 @@
 > ✅ **已落码**：`outputs` 保留为主桶（旧数据/旧列零迁移，旧实例天然=「只有主文件」）＋ 新增 `processOutputs` 与 `process_outputs` 列（旧库 `ensureInstanceColumns` 补列）；两桶同一道存在性校验；超限**截断**而非拒绝重报；交付事件 `deliverables/presented` **只写主桶**；下游注入**零改动**（`resolvedOf` 读的就是 `outputs` 列）。客户端新增共用件 `client/process-files.tsx`（会话弹窗 / 执行记录展开区 / 查看档三处复用、默认收起）。
 > **同时有界核实了「模型报了产出却没有交付卡」**：卡片只来自回执声明（不扫描工作区），无卡只可能是「回执 outputs 为空」或「会话流没有 turn-tail 挂点」；自查看 [worklog/receipt-two-buckets.md](worklog/receipt-two-buckets.md) §六。**未改渲染路径**（用户既定：交付卡保持在会话末尾官方同位）。
 > 校验：typecheck 绿、build 过、冒烟 **749/0**。⏳ **待真机**：①「报告文件 + 日志目录」⇒ 交付卡 + 过程文件折叠块；②只有过程文件 ⇒ 无交付卡但有过程块；③A→B 依赖 ⇒ B 的消息里只有 A 的报告、无日志目录；④旧实例照旧只显示主文件。
+> **补记（2026-10-10 追加，已落码）**：① 提示词明写「目录里可同时含主要工作与场务 / 过程内容、无需拆分重组」，并标注两桶**含纳关系合法**；② 派发消息新增 **【执行约束】无人值守** 段（不得提问等答复、不得申请 / 等待额外权限）。详见 [worklog/receipt-two-buckets.md](worklog/receipt-two-buckets.md) §八。
 
 ---
 
