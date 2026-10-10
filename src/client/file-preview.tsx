@@ -687,7 +687,8 @@ export function TextPreview(props: {
  *  · 页面级 dock（`dock: true`）——固定在屏幕最右侧，把整页（含弹窗）往左推（用户 2026-09-28 拍板
  *    「弹窗与整页共用同一个预览面，且弹窗不遮盖它」）；左缘带拖拽条可调宽；
  *  · 内联（缺省）——历史上的弹窗内分栏形态，保留以防回退。
- * 调用方须以 `${sessionId}:${path}` 作 React key 重挂载，保证换文件时内部状态归零。
+ * 调用方须以 `${sessionId}:${path}:${seq}` 作 React key 重挂载（seq = 每次「打开」自增，见 index.ts 的
+ * openFile），保证换文件**与重复打开同一个文件**时内部状态都归零。
  */
 export function FilePreviewPanel(props: {
   workspaceFiles: WorkspaceFilesFace

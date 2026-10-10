@@ -433,7 +433,8 @@ export function FileBrowser(props: {
     fetchDir(targetDir)
   }
 
-  // 初次进入（openFile(path)；dock 以 `${sessionId}:${path}` 作 key 重挂载，故每次换新路径都会重跑）。
+  // 初次进入（openFile(path)；dock 以 `${sessionId}:${path}:${seq}` 作 key 重挂载，seq 每次打开自增
+  // ⇒ 换新路径、以及**重复点同一个文件**都会重跑本效应，把浏览态拉回请求处（用户 2026-10-10））。
   useEffect(() => {
     let alive = true
     setMode('loading')
