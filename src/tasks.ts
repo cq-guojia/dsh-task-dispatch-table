@@ -102,6 +102,8 @@ export const taskDefinitionSchema = z.object({
         ref: z.string().min(1),
         /** link 型必带：来源工作区 title（同一路径在不同工作区指向不同文件）。 */
         workspace: z.string().optional(),
+        /** 是否为目录（2026-10-09 起允许把整个文件夹当附件）。 */
+        isDir: z.boolean().optional(),
       })
       .refine(
         // 唯一实现 = attachment-allowlist.isSafeAttachmentRef（客户端保存前校验 / 真删 / 上传定位同源）。

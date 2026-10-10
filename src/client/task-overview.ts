@@ -42,7 +42,7 @@ export interface TaskOverviewRow {
   }
   promptHead: string
   /** `path` / `anchorSessionId` 由服务端 overview 补（见 src/index.ts `attachmentsWithPaths`）；缺 ⇒ 不可点。 */
-  attachments: Array<{ name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string }>
+  attachments: Array<{ name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string; isDir?: boolean }>
   depends: Array<{ id: string; title: string; enabled: boolean }>
   running: boolean
   runningSince: string | null

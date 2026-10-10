@@ -73,6 +73,8 @@ export interface AttachmentRef {
     ref: string;
     /** link 型：来源工作区 title（同一路径在不同工作区指向不同文件）。 */
     workspace?: string;
+    /** 是否为目录（2026-10-09 起允许把整个文件夹当附件）。 */
+    isDir?: boolean;
 }
 export interface ReconcileResult {
     /** 落定后的附件清单（upload 型的 ref 已改写成「相对任务目录」的路径）。 */

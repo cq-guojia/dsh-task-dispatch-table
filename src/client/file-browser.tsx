@@ -349,8 +349,8 @@ export function FileBrowser(props: {
   onResizeStart?: (event: { clientX: number; pointerId: number; preventDefault?: () => void }) => void
   /** 选择器模式：点文件即回调 onPick（不进预览），用于「选择工作区文件」附件。 */
   picker?: boolean
-  /** 选择器模式下的选文件回调（path 为**工作区相对**路径：任务定义 link 附件的 ref 口径）。 */
-  onPick?: (path: string) => void
+  /** 选择器模式下的选文件回调（path 为**工作区相对**路径：任务定义 link 附件的 ref 口径；isDir=true 表示选的是整个文件夹）。 */
+  onPick?: (path: string, isDir: boolean) => void
   /** 工作区根的显示名（选择器 = 用户选中的工作区名）；不传则用缓存根的末段。 */
   rootName?: string
   /**
@@ -589,7 +589,7 @@ export function FileBrowser(props: {
           // 选择器回调**工作区相对路径**（用户 2026-09-30 真机 bug）：任务定义的 link 附件 `ref` 必须是
           // 工作区相对路径——宿主 zod 拒绝绝对路径 / `..` / 反斜杠，派发期再按来源工作区把它绝对化
           // （`reconcile.ts` 的 `join(工作区根, ref)`）。此前回传绝对路径 ⇒ 保存被 422 拒。
-          if (picker && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId)); return }
+          if (picker && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId), false); return }
           setViewing(childPath); setReloadNonce(0); setSourceView(false)
         }
         return h('div', {
@@ -611,7 +611,7 @@ export function FileBrowser(props: {
       // 非 picker 才导航进该目录。回传工作区相对路径，task-editor 取 basename 当 name
       // ⇒ 用户口头说的「附件里的 XX」就是这条。▸ 仍负责内联展开（自身 stopPropagation）。
       const pickDir = (): void => {
-        if (picker === true && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId)); return }
+        if (picker === true && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId), true); return }
         loadDir(childPath)
       }
       return h(Fragment, { key: childPath },
@@ -623,6 +623,7 @@ export function FileBrowser(props: {
           onClick: pickDir,
           onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') pickDir() },
         },
+          h('span', { className: 'dsh-tdt-sv-tree-icon' }, h(isOpen ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 18 })),
           tooled(isOpen ? t('explorerCollapse') : t('explorerExpand'),
             h('button', {
               type: 'button',

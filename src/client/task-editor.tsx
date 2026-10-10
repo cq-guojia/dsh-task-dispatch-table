@@ -34,6 +34,7 @@ import {
   FileTypeIcon,
   IconChevronDownOutlineRegular,
   IconCloseOutlineRegular,
+  IconFolderCloseRegular,
   IconFolderOpenOutlineRegular,
   IconPlusOutlineRegular,
   IconQuestionOutlineRegular,
@@ -140,6 +141,8 @@ export interface Attachment {
   kind: 'link' | 'upload'
   /** link：**工作区相对**路径（宿主 zod 拒绝对路径 / `..` / 反斜杠；派发期按 workspace 绝对化）；upload：插件数据目录下的文件名。 */
   ref: string
+  /** 是否为目录（2026-10-09 起允许把整个文件夹当附件；选择器按 entry.type 透传）。 */
+  isDir?: boolean
   /**
    * link：来源工作区 title（选择器现可浏览任意有历史会话的工作区，同一路径在不同工作区
    * 指向不同文件 ⇒ 必须带上来源，P2 派发注入时按它把 ref 绝对化）。upload 无此字段。
@@ -585,6 +588,8 @@ export function definitionToDraft(definition: Record<string, unknown>): TaskEdit
           name: item.name, kind: item.kind, ref: item.ref,
           ...(typeof (item as { workspace?: unknown }).workspace === 'string'
             ? { workspace: (item as { workspace: string }).workspace } : {}),
+          ...(typeof (item as { isDir?: unknown }).isDir === 'boolean'
+            ? { isDir: (item as { isDir: boolean }).isDir } : {}),
         }))
       : [],
     versions: [],
@@ -1765,7 +1770,7 @@ export function TaskEditorDrawer(props: {
               title: canView ? t('editorAttachmentView') : undefined,
               onClick: canView ? () => { onOpenFile?.(target!.anchorSessionId, target!.path) } : undefined,
             },
-            h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, h(FileTypeIcon, { path: att.name, size: 16 })),
+            h('span', { style: { flex: 'none', display: 'flex', alignItems: 'center' } }, att.isDir === true ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: att.name, size: 16 })),
             // 文件名占据左侧所有可用空间，把「上传/链接」标签和「移除」按钮顶到最右边；
             // 自己保留 flex-shrink，容器窄时自动截断成省略号，不会挤变形按钮（用户 2026-10-03）。
             h('span', { className: 'dsh-tdt-ellipsis', style: { flex: '1 1 auto', minWidth: 0, fontSize: 'var(--tdt-font-md)' } }, att.name),
@@ -2504,9 +2509,9 @@ export function TaskEditorDrawer(props: {
                 t,
                 onClose: () => { setPickerOpen(false) },
                 picker: true,
-                onPick: (p: string) => {
+                onPick: (p: string, isDir: boolean) => {
                   const name = p.slice(Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\')) + 1)
-                  addAttachment({ id: makeId(), name, kind: 'link', ref: p, workspace: pickerWs })
+                  addAttachment({ id: makeId(), name, kind: 'link', ref: p, workspace: pickerWs, isDir })
                   setPickerOpen(false)
                 },
                 // 复用 FileBrowser 本体，宽高/显示经由 style prop 控制：.dsh-tdt-sv-preview 类里

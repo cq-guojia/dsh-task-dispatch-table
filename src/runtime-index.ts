@@ -65,7 +65,7 @@ export interface TaskOverviewRow {
    * 附件展示行。`path` / `anchorSessionId` 由 HTTP 层（`attachmentsWithPaths`）补：
    * 绝对路径 + 预览锚点会话；拿不到就不带（前端保持不可点）。
    */
-  attachments: Array<{ name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string }>
+  attachments: Array<{ name: string; kind: 'link' | 'upload'; path?: string; anchorSessionId?: string; isDir?: boolean }>
   depends: Array<{ id: string; title: string; enabled: boolean }>
   running: boolean
   runningSince: string | null

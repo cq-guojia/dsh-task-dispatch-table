@@ -54508,7 +54508,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					if (!(entry.type === "directory")) {
 						const pick = () => {
 							if (picker && onPick !== void 0) {
-								onPick(relativizeToRoot(childPath, sessionId));
+								onPick(relativizeToRoot(childPath, sessionId), false);
 								return;
 							}
 							setViewing(childPath);
@@ -54534,7 +54534,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					const isOpen = openDirs.has(childPath);
 					const pickDir = () => {
 						if (picker === true && onPick !== void 0) {
-							onPick(relativizeToRoot(childPath, sessionId));
+							onPick(relativizeToRoot(childPath, sessionId), true);
 							return;
 						}
 						loadDir(childPath);
@@ -54548,7 +54548,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						onKeyDown: (event) => {
 							if (event.key === "Enter" || event.key === " ") pickDir();
 						}
-					}, tooled(isOpen ? t("explorerCollapse") : t("explorerExpand"), (0, react$1.createElement)("button", {
+					}, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react$1.createElement)(isOpen ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 18 })), tooled(isOpen ? t("explorerCollapse") : t("explorerExpand"), (0, react$1.createElement)("button", {
 						type: "button",
 						className: "dsh-tdt-sv-tree-toggle" + (isOpen ? " dsh-tdt-sv-tree-toggle-open" : ""),
 						"aria-expanded": isOpen,
@@ -64683,7 +64683,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					const absPath = item.path;
 					const anchor = item.anchorSessionId;
 					const key = item.key ?? item.name;
-					const icon = (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					const icon = item.isDir === true ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 						path: item.name,
 						size: 14
 					});
@@ -64853,7 +64853,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: () => {
 					if (canOpenFile && onOpenFile !== void 0 && sid !== null) onOpenFile(sid, output);
 				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+			}, output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: output,
 				size: 14
 			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf(output)))))), (0, react$1.createElement)(ProcessFiles, {
@@ -65105,7 +65105,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						name: item.name,
 						key: item.id,
 						path: resolved?.path ?? null,
-						anchorSessionId: resolved?.anchorSessionId ?? null
+						anchorSessionId: resolved?.anchorSessionId ?? null,
+						isDir: item.isDir
 					};
 				}),
 				depends: draft.deps.map((dep) => {
@@ -65481,7 +65482,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					name: item.name,
 					kind: item.kind,
 					ref: item.ref,
-					...typeof item.workspace === "string" ? { workspace: item.workspace } : {}
+					...typeof item.workspace === "string" ? { workspace: item.workspace } : {},
+					...typeof item.isDir === "boolean" ? { isDir: item.isDir } : {}
 				})) : [],
 				versions: [],
 				...typeof definition.createdAt === "string" && definition.createdAt !== "" ? { createdAt: definition.createdAt } : {}
@@ -66717,7 +66719,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					flex: "none",
 					display: "flex",
 					alignItems: "center"
-				} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				} }, att.isDir === true ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: att.name,
 					size: 16
 				})), (0, react$1.createElement)("span", {
@@ -67504,14 +67506,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						setPickerOpen(false);
 					},
 					picker: true,
-					onPick: (p) => {
+					onPick: (p, isDir) => {
 						const name = p.slice(Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\")) + 1);
 						addAttachment({
 							id: makeId(),
 							name,
 							kind: "link",
 							ref: p,
-							workspace: pickerWs
+							workspace: pickerWs,
+							isDir
 						});
 						setPickerOpen(false);
 					},
@@ -68014,7 +68017,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					event.stopPropagation();
 					if (canOpenFile) openFile?.(sid, path);
 				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+			}, path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path,
 				size: 16
 			})))), outputs.length > 3 ? (0, react$1.createElement)("button", {
@@ -68052,7 +68055,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				onClick: () => {
 					if (canOpenFile) openFile?.(sid, path);
 				}
-			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+			}, path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path,
 				size: 14
 			}), (0, react$1.createElement)(MarqueeText, {
@@ -68115,7 +68118,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						event.stopPropagation();
 						if (depCanOpen) openFile?.(depSid, path);
 					}
-				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				}, path.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path,
 					size: 16
 				})))), depOuts.length > DEP_OUT_MAX ? (0, react$1.createElement)("button", {
@@ -69878,7 +69881,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						name: item.name,
 						key: `${item.kind}:${item.name}`,
 						path: item.path ?? null,
-						anchorSessionId: item.anchorSessionId ?? null
+						anchorSessionId: item.anchorSessionId ?? null,
+						isDir: item.isDir
 					})),
 					depends: row.depends.map((dep) => ({
 						id: dep.id,
@@ -70034,7 +70038,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						event.stopPropagation();
 						if (canOpenFile && openFile !== void 0 && sid !== null) openFile(sid, output);
 					}
-				}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+				}, output.endsWith("/") ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 16 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 					path: output,
 					size: 16
 				})))), outputs.length > 3 ? (0, react$1.createElement)("button", {

@@ -18,7 +18,7 @@ import { baseNameOf, formatClock, formatDateTime, formatDurationHms, formatPlanS
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular,
   IconClockOutlineRegular, IconEditOutlineRegular,
-  IconPlayOutlineRegular, IconSearchOutlineRegular,
+  IconFolderCloseRegular, IconPlayOutlineRegular, IconSearchOutlineRegular,
   Input, Menu, Switch, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 // 任务信息展示层（2026-10-05 上提为共享件）：基础信息纸表格 / 上次执行明细 / 状态图标 / 人话转换。
@@ -768,6 +768,7 @@ function TaskExpandPanel(props: {
         key: `${item.kind}:${item.name}`,
         path: item.path ?? null,
         anchorSessionId: item.anchorSessionId ?? null,
+        isDir: item.isDir,
       })),
       depends: row.depends.map(dep => ({ id: dep.id, title: dep.title, enabled: dep.enabled })),
     }
@@ -944,7 +945,7 @@ function TaskExpandPanel(props: {
                             event.stopPropagation()
                             if (canOpenFile && openFile !== undefined && sid !== null) openFile(sid, output)
                           },
-                        }, h(FileTypeIcon, { path: output, size: 16 })))),
+                        }, output.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path: output, size: 16 })))),
                         outputs.length > 3
                           ? h('button', {
                             type: 'button', 'aria-label': t('viewSession'),

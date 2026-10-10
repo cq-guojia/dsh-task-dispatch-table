@@ -15,7 +15,7 @@ import { createElement as h, Fragment, type ReactNode } from 'react'
 import { baseNameOf, formatDateTime, formatDurationHms, formatTokenCount, formatTokenDetail } from './format'
 import {
   FileTypeIcon, IconCheckCircleFillRegular, IconCloseCircleFillRegular,
-  IconLoadingOutlineRegular, IconSearchOutlineRegular,
+  IconFolderCloseRegular, IconLoadingOutlineRegular, IconSearchOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { Translate } from './locales'
 import { MarqueeText } from './ui'
@@ -116,6 +116,8 @@ export interface TaskInfoAttachmentView {
   path?: string | null
   /** 预览锚点会话；缺 ⇒ 不可点。 */
   anchorSessionId?: string | null
+  /** 是否为目录（2026-10-09 起允许文件夹附件）；目录渲染文件夹图标。 */
+  isDir?: boolean
 }
 
 /** 前置任务（只声明展示需要的三个字段）。 */
@@ -190,7 +192,7 @@ export function taskInfoBaseFields(props: {
             const absPath = item.path
             const anchor = item.anchorSessionId
             const key = item.key ?? item.name
-            const icon = h(FileTypeIcon, { path: item.name, size: 14 })
+            const icon = item.isDir === true ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: item.name, size: 14 })
             // 文件名**限宽**（用户 2026-10-03：这里原先**完全不限宽**，超长会把整行撑爆）。
             // 只给上限、不设下限（短名就短着）；默认超长出省略号，hover 时跑马灯滚动看全名。
             // 用 MarqueeText：文字只在我自己的裁剪盒里跑，图标是隔壁 flex 项，跑马灯永远不会压到图标。
@@ -330,7 +332,7 @@ export function lastRunFields(props: {
             disabled: !canOpenFile,
             onClick: () => { if (canOpenFile && onOpenFile !== undefined && sid !== null) onOpenFile(sid, output) },
           },
-            h(FileTypeIcon, { path: output, size: 14 }),
+            output.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path: output, size: 14 }),
             h('span', { className: 'dsh-tdt-ellipsis' }, baseNameOf(output)),
           )),
         ),

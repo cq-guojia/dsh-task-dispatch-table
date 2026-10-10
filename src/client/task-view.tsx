@@ -148,6 +148,7 @@ export function TaskViewPanel(props: {
         key: item.id,
         path: resolved?.path ?? null,
         anchorSessionId: resolved?.anchorSessionId ?? null,
+        isDir: item.isDir,
       }
     }),
     depends: draft.deps.map(dep => {

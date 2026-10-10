@@ -114,7 +114,7 @@ function buildDefinition(deps) {
                     type: 'array',
                     maxItems: MAX_OUTPUT_ITEMS,
                     items: { type: 'string' },
-                    description: `过程文件：日志、中间产物、临时/工作目录、依赖资源，相对工作区根（目录以 "/" 结尾）。最多 ${MAX_OUTPUT_ITEMS} 项；可与主文件并存，同一路径不要两桶都报（都报了只算主文件）。`,
+                    description: `过程文件：日志、中间产物、临时/工作目录、依赖资源，相对工作区根（目录以 "/" 结尾）。最多 ${MAX_OUTPUT_ITEMS} 项；可与主文件并存（允许「某文件在 outputs、其父目录在 processOutputs」这种含纳关系），但同一路径不要两桶都报（都报了只算主文件）。`,
                 },
                 note: {
                     type: 'string',

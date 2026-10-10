@@ -228,6 +228,8 @@ export interface AttachmentRef {
   ref: string
   /** link 型：来源工作区 title（同一路径在不同工作区指向不同文件）。 */
   workspace?: string
+  /** 是否为目录（2026-10-09 起允许把整个文件夹当附件）。 */
+  isDir?: boolean
 }
 
 export interface ReconcileResult {

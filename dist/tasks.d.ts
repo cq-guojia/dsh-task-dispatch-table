@@ -62,6 +62,7 @@ export declare const taskDefinitionSchema: z.ZodObject<{
         }>;
         ref: z.ZodString;
         workspace: z.ZodOptional<z.ZodString>;
+        isDir: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
 /** 用户书写形态：`id` 可缺省。 */

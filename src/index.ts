@@ -421,8 +421,8 @@ function attachmentsWithPaths(
         ? (assets === null ? null : attachmentAbsPath(assets, task.id, item.ref))
         : (source === undefined ? null : path.join(source.path, item.ref))
       return anchorSessionId === undefined || absPath === null
-        ? { name: item.name, kind: item.kind }
-        : { name: item.name, kind: item.kind, path: absPath, anchorSessionId }
+        ? { name: item.name, kind: item.kind, isDir: item.isDir }
+        : { name: item.name, kind: item.kind, path: absPath, anchorSessionId, isDir: item.isDir }
     })
     return { ...row, attachments }
   })

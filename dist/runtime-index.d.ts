@@ -56,6 +56,7 @@ export interface TaskOverviewRow {
         kind: 'link' | 'upload';
         path?: string;
         anchorSessionId?: string;
+        isDir?: boolean;
     }>;
     depends: Array<{
         id: string;

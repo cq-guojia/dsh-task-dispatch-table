@@ -36,7 +36,7 @@
 import { createElement as h, memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   FileTypeIcon, IconAlarmClockOutlineRegular, IconChevronDownOutlineRegular, IconClockOutlineRegular,
-  IconQueueOutlineRegular, Tooltip,
+  IconFolderCloseRegular, IconQueueOutlineRegular, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { baseNameOf, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
 import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
@@ -623,7 +623,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                 event.stopPropagation()
                 if (canOpenFile) openFile?.(sid as string, path)
               },
-            }, h(FileTypeIcon, { path, size: 16 })))),
+            }, path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 })))),
             outputs.length > 3
               ? h('button', {
                 type: 'button',
@@ -684,7 +684,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               disabled: !canOpenFile,
               onClick: () => { if (canOpenFile) openFile?.(sid as string, path) },
             },
-              h(FileTypeIcon, { path, size: 14 }),
+              path.endsWith('/') ? h(IconFolderCloseRegular, { size: 14 }) : h(FileTypeIcon, { path, size: 14 }),
               // 文件名**限宽 40ch + 超长跑马灯**（与卡片附件区同一口径；用户：设个最大宽度，超过了就跑马灯）
               h(MarqueeText, { text: baseNameOf(path), title: path, style: { maxWidth: '40ch', minWidth: 0 } }),
             )),
@@ -765,7 +765,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
                             event.stopPropagation()
                             if (depCanOpen) openFile?.(depSid as string, path)
                           },
-                        }, h(FileTypeIcon, { path, size: 16 })))),
+                        }, path.endsWith('/') ? h(IconFolderCloseRegular, { size: 16 }) : h(FileTypeIcon, { path, size: 16 })))),
                         depOuts.length > DEP_OUT_MAX
                           ? h('button', {
                             type: 'button',
