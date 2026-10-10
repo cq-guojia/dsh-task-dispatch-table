@@ -54,7 +54,7 @@ export interface ReconcilerDeps {
 }
 /**
  * 回执裁决（决策 19，替代旧契约文件三查）：
- * receipt 事件存在 + status ∈ validStatuses + outputs 里的每个路径**确实存在**。
+ * receipt 事件存在 + status ∈ validStatuses + outputs / processOutputs 里的每个路径**确实存在**。
  *
  * ⚠️ **已去掉「mtime 新鲜度」闸**（用户 2026-10-03 拍板，原为「防旧产物冒充」）：
  * 那道闸会误伤「复用 / 检查已有文件」类任务 —— 真机案例：任务是判断 `uuid.txt`

@@ -39,6 +39,7 @@ import { TurnProcessNodeViewMirror } from './mirror/TurnProcessNodeView'
 import { TurnTailNodeViewMirror, type TurnTailDataFace } from './mirror/TurnTailNodeView'
 import { TurnTriggerNodeViewMirror } from './mirror/TurnTriggerNodeView'
 import { DeliverablesGridMirror, PresentRowMirror, type DeliveredFileFace } from './mirror/Deliverables'
+import { ProcessFiles } from './process-files'
 import type { ChatNodeFace, ChatNodeStoreFace, NodeRenderer, TurnProcessHandle, TurnLocationFace } from './mirror/ChatNodeSeat'
 import { buildProcessGroups } from './mirror/process-groups'
 import { officialClass, officialModuleCount, ocOr } from './official-classes'
@@ -722,6 +723,8 @@ function renderKeyedNode(
   host?: PresentedHostFace | 'error' | null,
   /** 顶部「随附」区已显示的文件名 ⇒ 气泡下方官方附件卡对同名**让位**（避免同屏重复）。 */
   attachedNames?: ReadonlySet<string>,
+  /** 过程文件桶（2026-10-10）：挂在最后一轮 turn-tail 的交付卡网格**下方**（次级、默认收起）。 */
+  processFiles?: readonly string[],
 ): ReturnType<typeof h> | null {
   switch (node.kind) {
     case 'turn-trigger':
@@ -738,17 +741,21 @@ function renderKeyedNode(
       // 数据 = 实例 outputs + 快照 deliverables 合并去重，只挂最后一轮 tail，样式走官方 Deliverables 类。
       const data = node.data as unknown as TurnTailDataFace | undefined
       const turn = data?.turn ?? turnLocationOf(node)?.turn
-      const showGrid = deliverFiles !== undefined && deliverFiles.length > 0
-        && turn !== undefined && lastTailTurn !== undefined && turn === lastTailTurn
-      const tailSlot = showGrid
+      const atLastTail = turn !== undefined && lastTailTurn !== undefined && turn === lastTailTurn
+      const showGrid = deliverFiles !== undefined && deliverFiles.length > 0 && atLastTail
+      // 过程文件块（2026-10-10）：与交付卡同位、只挂最后一轮 tail —— 但**独立判存**：
+      // 只有过程文件、没有主文件的那类任务（「过程生成无主文件」模式）也必须看得到它。
+      const showProc = processFiles !== undefined && processFiles.length > 0 && atLastTail
+      const tailSlot = showGrid || showProc
         ? h(Fragment, null,
-            host !== undefined && host !== null && host !== 'error' && !host.available
+            showGrid && host !== undefined && host !== null && host !== 'error' && !host.available
               ? h('span', {
                 className: ocOr('Deliverables', 'hostStatus', 'dsh-tdt-sv-host-status'),
                 'data-host-unavailable': true,
               }, t('presented.unavailable'))
               : null,
-            h(DeliverablesGridMirror, { files: deliverFiles, onOpen: fileOpen?.open, t }))
+            showGrid ? h(DeliverablesGridMirror, { files: deliverFiles, onOpen: fileOpen?.open, t }) : null,
+            showProc ? h(ProcessFiles, { paths: processFiles, onOpen: fileOpen?.open, t }) : null)
         : null
       const tail = data === undefined || data.closing === null || data.closing === undefined
         ? null
@@ -1164,6 +1171,11 @@ export function SessionViewModal(props: {
    * 与快照里的 deliveredByTurn 合并去重，保证老/新任务、以及直接调 present 的任务都能展现。
    */
   outputs?: readonly string[]
+  /**
+   * 本实例的**过程文件**路径（`task_instances.process_outputs`，2026-10-10）。
+   * 挂在交付卡网格**下方**、同样只挂最后一轮 turn-tail；次级观感、默认收起。
+   */
+  processOutputs?: readonly string[]
   /** fork 源会话：`sessions.fork({ sessionId, increaseTitle: true })`，解析为子会话 id。 */
   forkSession?: (sessionId: string, atSeq?: number) => Promise<string>
   /** 官方导航跳转：`uiWorkspace.openSession(id)`（会话区打开目标会话）。 */
@@ -1188,7 +1200,7 @@ export function SessionViewModal(props: {
 }): ReturnType<typeof h> {
   const {
     t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles,
-    onOpenFile, outputs, upstream, attached, workspacePath, headingTask, headingRest, taskId, onOpenTask,
+    onOpenFile, outputs, processOutputs, upstream, attached, workspacePath, headingTask, headingRest, taskId, onOpenTask,
   } = props
   // 宿主 t 可能不做 {占位符} 替换 ⇒ 统一包一层（官方模板一律 {name}）。
   const tt = useMemo(() => interpolateTranslate(t), [t])
@@ -1300,8 +1312,9 @@ export function SessionViewModal(props: {
   const renderNode = useCallback<NodeRenderer>(
     (node, turnProcess, groupPart) => renderKeyedNode(
       node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames,
+      processOutputs,
     ),
-    [tt, onBranchAt, fileOpen, deliverFiles, lastTailTurn, host, attachedNames],
+    [tt, onBranchAt, fileOpen, deliverFiles, lastTailTurn, host, attachedNames, processOutputs],
   )
   // 官方 grouped('chat')：把 keyed 流切成「独立条目 + 过程分组」（二级收折）。
   const isTurnClosed = useCallback((turn: number): boolean =>

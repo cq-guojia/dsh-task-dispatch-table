@@ -46,7 +46,7 @@ export interface ResolvedDependency {
   sessionId: string | null
   /** 上游实例快照的工作区 path（产出相对路径的绝对化基准）；上游旧行无快照为 null。 */
   workspacePath: string | null
-  /** 上游回执声明并校验过的产出（相对上游工作区；未声明为空数组）。 */
+  /** 上游回执声明并校验过的**主文件**产出（相对上游工作区；未声明为空数组）。2026-10-10：只取主桶。 */
   outputs: string[]
 }
 
@@ -59,6 +59,7 @@ resolvedDeps?: ResolvedDependency[]
 - 字段缺失（决策 41 旧行）⇒ `resolvedDeps` 为 `undefined` ⇒ `buildMessage` 跳过注入（旧行为不变）。
 - 字段存在但形状不对 ⇒ 整组丢弃（`undefined`），不让坏数据进消息。
 - `workspacePath` 为 null 时产出保持相对路径原样输出（并注明基准未知）。
+- **产出 = 主文件桶**（2026-10-10，[data-model.md](../data-model.md) §一 产出双桶）：`task_instances.outputs` 的语义已收窄为**主文件**（核心交付物），过程文件另存 `process_outputs` 列。`resolvedOf` 读的就是 `outputs` 这一列 ⇒ **下游天然只拿到主文件，本模块零改动**（用户口径：下级任务不需要整个文件夹里的构成文件，只要最终交付的那份）。
 
 ---
 

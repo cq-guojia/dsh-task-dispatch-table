@@ -29,8 +29,9 @@
 | **调度** | cron 刻度计算、到点派发、补跑窗口 | `scheduler.ts` + `tasks.ts` | ✅ | [features/state-machine.md](features/state-machine.md) |
 | **对账与收口** | 实例状态流转、租约、超时、重试、串行互斥 | `reconcile.ts` + `runtime-index.ts` | ✅ | [features/state-machine.md](features/state-machine.md) |
 | **派发** | 模型漏斗解析、会话创建、消息组装、preset / goal / agentTeams 接线 | `dispatch.ts` | ✅ | [../../worklog/once-dispatch.md](../worklog/once-dispatch.md) |
-| **回执** | per-agent 回执工具注册与校验（status / outputs） | `receipt.ts` | ✅ | [data-model.md](data-model.md) §一 回执机制 |
-| **交付登记** | 回执成功时写 `deliverables/presented`，会话尾部出官方交付卡 | `receipt.ts` + `mirror/Deliverables.tsx` | ✅ 真机验证通过 | [../../worklog/deliverables-display.md](../worklog/deliverables-display.md) |
+| **回执** | per-agent 回执工具注册与校验（status / **主文件 outputs / 过程文件 processOutputs**，各上限 10 项） | `receipt.ts` | ✅ | [data-model.md](data-model.md) §一 回执机制 |
+| **交付登记** | 回执成功时写 `deliverables/presented`（**只写主文件**），会话尾部出官方交付卡 | `receipt.ts` + `mirror/Deliverables.tsx` | ✅ 真机验证通过 | [../../worklog/deliverables-display.md](../worklog/deliverables-display.md) |
+| **过程文件展示** | 过程文件桶的次级折叠块（会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单，三处共用一件） | `client/process-files.tsx` | ✅ | [../worklog/receipt-two-buckets.md](../worklog/receipt-two-buckets.md) |
 | **任务资产与持久化** | 版本留档 / 配置快照 / 附件搬移 / 临时区清理 / 整目录删 | `task-assets.ts` | ✅ | [data-model.md](data-model.md) §五 §六 |
 
 ---

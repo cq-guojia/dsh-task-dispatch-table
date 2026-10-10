@@ -388,7 +388,10 @@ function clampPreviewWidth(value: number, reserved = 0): number {
   return Math.min(Math.max(Math.round(value), PREVIEW_MIN), max)
 }
 
-/** 实例行的产出物（决策 32③写回的 outputs 列：JSON 数组，兼容逗号串）。 */
+/**
+ * 实例行的产出物（决策 32③写回的列：JSON 数组，兼容逗号串）。
+ * 2026-10-10 起 `outputs`（主文件）与 `process_outputs`（过程文件）**同一形状**，共用这一个解析器。
+ */
 function parseOutputs(raw: unknown): string[] {
   if (typeof raw === 'string' && raw.trim() !== '') {
     try {
@@ -969,7 +972,10 @@ function TaskPage(props: {
     taskId?: string
     view: SessionViewTarget
     didUnarchive?: boolean
+    /** 主文件桶（`task_instances.outputs`）。 */
     outputs?: string[]
+    /** 过程文件桶（`task_instances.process_outputs`，2026-10-10）。 */
+    processOutputs?: string[]
     /** 接收区（2026-10-03）：实例快照 `resolvedDeps` + 任务名反查。 */
     upstream?: UpstreamInputView[]
     /** 随附区（2026-10-03）：快照 `attachments` + 服务端解析好的绝对路径。 */
@@ -1135,6 +1141,7 @@ function TaskPage(props: {
       view: target,
       didUnarchive,
       outputs: row === null ? undefined : parseOutputs(row.outputs),
+      processOutputs: row === null ? undefined : parseOutputs(row.process_outputs),
       upstream: upstreamOf(row?.snapshot ?? null),
       attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths),
       // 本任务工作区（判上游目录是否跨区 ⇒ 跨区目录列不出来，降级不可点）。
@@ -1410,7 +1417,9 @@ function TaskPage(props: {
         view: viewing.view,
         // 交付文件（决策 41/42 派发快照同源）：以实例 outputs 权威渲染弹窗「交付文件」区块，
         // 与宿主 timeline 快照里的 deliverables 合并去重，保证老/新任务都能展现。
+        // 过程文件桶（2026-10-10）同源下发：弹窗在交付卡下方另起一块「过程文件」（默认收起）。
         outputs: viewing.outputs,
+        processOutputs: viewing.processOutputs,
         // U10：fork + 官方跳转（服务未就位时为 null ⇒ 弹窗不渲染「继续对话」按钮）。
         forkSession: forkSession ?? undefined,
         openHostSession: openHostSession ?? undefined,

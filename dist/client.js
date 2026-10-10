@@ -169,6 +169,8 @@ window.__ModuleLoader__.load({
 		*
 		* ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里：卡片「执行记录」面板与**执行记录总查询页**都要用，
 		* 同一解析写两遍就是违规（本仓规矩：一类东西一个实现）。
+		*
+		* ⚠️ 2026-10-10：`process_outputs`（过程文件桶）**同一个形状**，因此继续用它解析，不另写一份。
 		*/
 		function outputsOf(raw) {
 			if (raw === null || raw === void 0 || raw === "") return [];
@@ -504,6 +506,7 @@ window.__ModuleLoader__.load({
 			explorerExpand: "展开目录",
 			explorerCollapse: "收起目录",
 			colOutputs: "产出",
+			procFilesTitle: "过程文件 · {count} 项",
 			deliverRowTitle: "交付文件",
 			deliverRowPreparing: "准备交付",
 			deliverRowRunning: "正在交付",
@@ -1170,6 +1173,7 @@ window.__ModuleLoader__.load({
 			explorerExpand: "Expand directory",
 			explorerCollapse: "Collapse directory",
 			colOutputs: "Outputs",
+			procFilesTitle: "Process files · {count}",
 			deliverRowTitle: "Deliver files",
 			deliverRowPreparing: "Preparing delivery",
 			deliverRowRunning: "Delivering",
@@ -2223,13 +2227,29 @@ body[data-ds-dark-theme]{
 .dsh-tdt-mq-run:hover .dsh-tdt-mq-in{max-width:none;overflow:visible;animation:dsh-tdt-mq-scroll var(--dsh-tdt-mq-dur,6s) linear .4s 1 forwards;}
 @keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 `;
+		/** 「过程文件」块的皮肤规则（2026-10-10：回执过程文件桶的次级展示件）。 */
+		const PROCESS_FILES_CSS = `
+/* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
+   （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
+   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用 .dsh-tdt-filechip--inline。 */
+.dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
+.dsh-tdt-proc-head{appearance:none;-webkit-appearance:none;align-self:flex-start;display:inline-flex;align-items:center;
+  gap:6px;padding:2px 6px;border:0;border-radius:var(--tdt-radius-xs);background:transparent;color:var(--tdt-fg-3);
+  font:inherit;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);cursor:pointer;
+  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
+.dsh-tdt-proc-head:hover{background:var(--tdt-chip-bg);color:var(--tdt-fg-2);}
+.dsh-tdt-proc-head:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
+.dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-proc-head{transition:none;}}
+`;
 		/** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 		const CONTROLS_DOMAIN = "controls";
 		/**
 		* 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
 		*/
 		function ensureControlsStyle() {
-			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS);
+			applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS);
 		}
 		//#endregion
 		//#region src/client/ui/Segmented.tsx
@@ -52260,6 +52280,54 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)("span", null, t(expanded ? "deliverCollapse" : "deliverAll", { count: files.length })), expanded ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, {}) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})) : null);
 		}
 		//#endregion
+		//#region src/client/process-files.tsx
+		/** 目录以尾斜杠表达（与 `normalizeOutputs` / `baseNameOf` 同一约定）。 */
+		const isDirPath$1 = (path) => path.endsWith("/");
+		function ProcessFiles(props) {
+			const { paths, onOpen, className, t } = props;
+			const [open, setOpen] = (0, react$1.useState)(false);
+			ensureControlsStyle();
+			const list = paths ?? [];
+			if (list.length === 0) return null;
+			return (0, react$1.createElement)("div", {
+				className: className === void 0 ? "dsh-tdt-proc" : `dsh-tdt-proc ${className}`,
+				"data-process-files": true
+			}, (0, react$1.createElement)("button", {
+				type: "button",
+				className: "dsh-tdt-proc-head",
+				"aria-expanded": open,
+				onClick: () => {
+					setOpen((value) => !value);
+				}
+			}, (0, react$1.createElement)("span", null, t("procFilesTitle", { count: list.length })), open ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronUpOutlineRegular, { size: 12 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })), open ? (0, react$1.createElement)("div", { className: "dsh-tdt-proc-list" }, list.map((path) => {
+				const body = [isDirPath$1(path) ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 14 }) : (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
+					path,
+					size: 14
+				}), (0, react$1.createElement)(MarqueeText, {
+					text: baseNameOf(path),
+					title: path,
+					style: {
+						maxWidth: "40ch",
+						minWidth: 0
+					}
+				})];
+				return onOpen === void 0 ? (0, react$1.createElement)("span", {
+					key: path,
+					className: "dsh-tdt-filechip dsh-tdt-filechip--inline",
+					title: path,
+					"data-noclick": true
+				}, ...body) : (0, react$1.createElement)("button", {
+					key: path,
+					type: "button",
+					className: "dsh-tdt-filechip dsh-tdt-filechip--inline",
+					title: path,
+					onClick: () => {
+						onOpen(path);
+					}
+				}, ...body);
+			})) : null);
+		}
+		//#endregion
 		//#region src/client/task-file-context.tsx
 		/**
 		* 实例快照 → 本任务工作区 path（判上游目录是否跨区用）。
@@ -52744,7 +52812,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* @param groupPart - 过程分组侧（'response' | 'reasoning'）。
 		* @returns 节点视图；null = 决策 28 过滤的噪音 kind。
 		*/
-		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames) {
+		function renderKeyedNode(node, turnProcess, t, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames, processFiles) {
 			switch (node.kind) {
 				case "turn-trigger": return (0, react$1.createElement)(TurnTriggerNodeViewMirror, {
 					data: node.data,
@@ -52758,14 +52826,21 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				case "turn-tail": {
 					const data = node.data;
 					const turn = data?.turn ?? turnLocationOf(node)?.turn;
-					const tailSlot = deliverFiles !== void 0 && deliverFiles.length > 0 && turn !== void 0 && lastTailTurn !== void 0 && turn === lastTailTurn ? (0, react$1.createElement)(react$1.Fragment, null, host !== void 0 && host !== null && host !== "error" && !host.available ? (0, react$1.createElement)("span", {
+					const atLastTail = turn !== void 0 && lastTailTurn !== void 0 && turn === lastTailTurn;
+					const showGrid = deliverFiles !== void 0 && deliverFiles.length > 0 && atLastTail;
+					const showProc = processFiles !== void 0 && processFiles.length > 0 && atLastTail;
+					const tailSlot = showGrid || showProc ? (0, react$1.createElement)(react$1.Fragment, null, showGrid && host !== void 0 && host !== null && host !== "error" && !host.available ? (0, react$1.createElement)("span", {
 						className: ocOr("Deliverables", "hostStatus", "dsh-tdt-sv-host-status"),
 						"data-host-unavailable": true
-					}, t("presented.unavailable")) : null, (0, react$1.createElement)(DeliverablesGridMirror, {
+					}, t("presented.unavailable")) : null, showGrid ? (0, react$1.createElement)(DeliverablesGridMirror, {
 						files: deliverFiles,
 						onOpen: fileOpen?.open,
 						t
-					})) : null;
+					}) : null, showProc ? (0, react$1.createElement)(ProcessFiles, {
+						paths: processFiles,
+						onOpen: fileOpen?.open,
+						t
+					}) : null) : null;
 					return data === void 0 || data.closing === null || data.closing === void 0 ? null : (0, react$1.createElement)(TurnTailNodeViewMirror, {
 						data,
 						onBranchAt,
@@ -53143,7 +53218,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		*   forkSession / openHostSession 缺一即不渲染按钮（服务未就位时功能降级）。
 		*/
 		function SessionViewModal(props) {
-			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, upstream, attached, workspacePath, headingTask, headingRest, taskId, onOpenTask } = props;
+			const { t, heading, sessionId, view, onClose, forkSession, openHostSession, workspaceFiles, onOpenFile, outputs, processOutputs, upstream, attached, workspacePath, headingTask, headingRest, taskId, onOpenTask } = props;
 			const tt = (0, react$1.useMemo)(() => interpolateTranslate(t), [t]);
 			const attachedNames = (0, react$1.useMemo)(() => new Set((attached ?? []).filter((file) => file.path !== null).map((file) => file.name)), [attached]);
 			const subscribe = (0, react$1.useMemo)(() => (onChange) => view.target.subscribe(onChange), [view]);
@@ -53244,14 +53319,15 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				store
 			]);
 			const host = usePresentedHost();
-			const renderNode = (0, react$1.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames), [
+			const renderNode = (0, react$1.useCallback)((node, turnProcess, groupPart) => renderKeyedNode(node, turnProcess, tt, onBranchAt, fileOpen, groupPart, deliverFiles, lastTailTurn, host, attachedNames, processOutputs), [
 				tt,
 				onBranchAt,
 				fileOpen,
 				deliverFiles,
 				lastTailTurn,
 				host,
-				attachedNames
+				attachedNames,
+				processOutputs
 			]);
 			const isTurnClosed = (0, react$1.useCallback)((turn) => (turns?.get(turn) ?? turns?.get(String(turn)))?.status !== "open", [turns]);
 			const groupedView = (0, react$1.useMemo)(() => keyed ? buildProcessGroups(order, (key) => store?.get(key), isTurnClosed) : void 0, [
@@ -64693,6 +64769,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const canOpenSession = sid !== null && onOpenSession !== void 0;
 			const canOpenFile = sid !== null && onOpenFile !== void 0;
 			const outputs = outputsOf(instance.outputs);
+			const processOutputs = outputsOf(instance.process_outputs);
 			const dur = durationMsOf(instance);
 			const tokens = instance.token_in === null && instance.token_out === null ? null : formatTokenCount((instance.token_in ?? 0) + (instance.token_out ?? 0));
 			const note = instance.note === null || instance.note === void 0 ? "" : instance.note;
@@ -64779,7 +64856,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.FileTypeIcon, {
 				path: output,
 				size: 14
-			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf(output)))))));
+			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf(output)))))), (0, react$1.createElement)(ProcessFiles, {
+				paths: processOutputs,
+				onOpen: canOpenFile && onOpenFile !== void 0 ? (path) => {
+					onOpenFile(sid, path);
+				} : void 0,
+				t
+			}));
 		}
 		//#endregion
 		//#region src/client/event-subscribe.ts
@@ -67802,6 +67885,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				minWidth: 0
 			} }, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconAlarmClockOutlineRegular, { size: 12 }), renderNextExec(row.scheduled_at, t))) : null;
 			const outputs = outputsOf(row.outputs);
+			const processOutputs = outputsOf(row.process_outputs);
 			const sid = row.session_id;
 			const canOpenSession = sid !== null && sid !== "";
 			const canOpenFile = canOpenSession && openFile !== void 0;
@@ -67814,8 +67898,9 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const actual = clockLabelOf(row.dispatched_at, dayKey, crossFmt, t("recPrevDay"), t("recNextDay"));
 			const deps = isPlanned ? plannedDeps ?? [] : resolvedDepsOf(snapshot);
 			const hasOutputs = outputs.length > 0;
+			const hasProcess = processOutputs.length > 0;
 			const hasDeps = deps.length > 0;
-			const hasExpand = hasOutputs || hasDeps || !isPlanned;
+			const hasExpand = hasOutputs || hasProcess || hasDeps || !isPlanned;
 			/** token 三段之一：null 给占位（不编造 0）。 */
 			const tokenPart = (v) => v === null ? "—" : formatTokenCount(v);
 			/**
@@ -67958,7 +68043,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				"aria-expanded": open,
 				style: { transform: open ? "rotate(180deg)" : "none" }
-			})) : null)), open && (hasOutputs || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)("button", {
+			})) : null)), open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || events !== null && events.length > 0) ? (0, react$1.createElement)("div", { className: "dsh-tdt-rec-exp" }, outputs.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-expouts" }, outputs.map((path) => (0, react$1.createElement)("button", {
 				key: path,
 				type: "button",
 				title: path,
@@ -67977,7 +68062,13 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					maxWidth: "40ch",
 					minWidth: 0
 				}
-			})))), deps.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depsec" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("listSectionDepends")), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depgrid" }, deps.map((dep, index) => {
+			})))), (0, react$1.createElement)(ProcessFiles, {
+				paths: processOutputs,
+				onOpen: canOpenFile ? (path) => {
+					openFile?.(sid, path);
+				} : void 0,
+				t
+			}), deps.length === 0 ? null : (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depsec" }, (0, react$1.createElement)("div", { className: "dsh-tdt-rec-evtitle" }, t("listSectionDepends")), (0, react$1.createElement)("div", { className: "dsh-tdt-rec-depgrid" }, deps.map((dep, index) => {
 				const depOuts = Array.isArray(dep.outputs) ? dep.outputs : [];
 				const depSid = dep.sessionId;
 				const depHasSid = depSid !== null && depSid !== "";
@@ -71457,7 +71548,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const avail = Math.min(Math.floor(window.innerWidth * PREVIEW_MAX_RATIO), window.innerWidth - 760 - reserved);
 			return Math.min(Math.max(Math.round(value), PREVIEW_MIN), Math.max(PREVIEW_MIN, Math.floor(avail)));
 		}
-		/** 实例行的产出物（决策 32③写回的 outputs 列：JSON 数组，兼容逗号串）。 */
+		/**
+		* 实例行的产出物（决策 32③写回的列：JSON 数组，兼容逗号串）。
+		* 2026-10-10 起 `outputs`（主文件）与 `process_outputs`（过程文件）**同一形状**，共用这一个解析器。
+		*/
 		function parseOutputs(raw) {
 			if (typeof raw === "string" && raw.trim() !== "") {
 				try {
@@ -72123,6 +72217,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					view: target,
 					didUnarchive,
 					outputs: row === null ? void 0 : parseOutputs(row.outputs),
+					processOutputs: row === null ? void 0 : parseOutputs(row.process_outputs),
 					upstream: upstreamOf(row?.snapshot ?? null),
 					attached: row === null ? [] : attachmentsOf(row.snapshot ?? null, row.attachmentPaths),
 					workspacePath: workspacePathOf(row?.snapshot ?? null)
@@ -72238,6 +72333,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				sessionId: viewing.sessionId,
 				view: viewing.view,
 				outputs: viewing.outputs,
+				processOutputs: viewing.processOutputs,
 				forkSession: forkSession ?? void 0,
 				openHostSession: openHostSession ?? void 0,
 				workspaceFiles: workspaceFiles ?? void 0,

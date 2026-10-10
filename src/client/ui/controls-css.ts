@@ -283,6 +283,23 @@ export const SELECT_CSS = `
 @keyframes dsh-tdt-mq-scroll{from{transform:translateX(0)}to{transform:translateX(var(--dsh-tdt-mq-dist,-40px))}}
 `
 
+/** 「过程文件」块的皮肤规则（2026-10-10：回执过程文件桶的次级展示件）。 */
+export const PROCESS_FILES_CSS = `
+/* ── 「过程文件」块：会话弹窗交付卡下方 / 执行记录展开区 / 查看档产出清单三处共用 ──────────
+   （结构在 client/process-files.tsx）。观感纪律 = **次级**：小字浅灰标题 + 数量、默认收起，
+   不许抢主文件（交付卡 / 产出物清单）的视线；展开后的文件行复用 .dsh-tdt-filechip--inline。 */
+.dsh-tdt-proc{display:flex;flex-direction:column;gap:4px;margin-top:10px;min-width:0;}
+.dsh-tdt-proc-head{appearance:none;-webkit-appearance:none;align-self:flex-start;display:inline-flex;align-items:center;
+  gap:6px;padding:2px 6px;border:0;border-radius:var(--tdt-radius-xs);background:transparent;color:var(--tdt-fg-3);
+  font:inherit;font-size:var(--tdt-font-xs);line-height:var(--tdt-line-sm);cursor:pointer;
+  transition:background-color var(--tdt-dur) var(--tdt-ease),color var(--tdt-dur) var(--tdt-ease);}
+.dsh-tdt-proc-head:hover{background:var(--tdt-chip-bg);color:var(--tdt-fg-2);}
+.dsh-tdt-proc-head:focus-visible{outline:2px solid var(--tdt-focus);outline-offset:1px;}
+.dsh-tdt-proc-list{display:flex;flex-wrap:wrap;gap:2px 4px;min-width:0;}
+
+@media (prefers-reduced-motion: reduce){.dsh-tdt-proc-head{transition:none;}}
+`
+
 /** 控件皮肤域的固定名（注入顺序在 tokens 之后）。 */
 export const CONTROLS_DOMAIN = 'controls'
 
@@ -290,5 +307,5 @@ export const CONTROLS_DOMAIN = 'controls'
  * 确保控件皮肤已登记并注入（幂等；组件渲染时调用一次即可）。
  */
 export function ensureControlsStyle(): void {
-  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS)
+  applyStyle(CONTROLS_DOMAIN, SEGMENTED_CSS + BUTTON_CSS + FIELD_CSS + DATETIME_CSS + SELECT_CSS + PROCESS_FILES_CSS)
 }

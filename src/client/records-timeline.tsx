@@ -41,6 +41,7 @@ import {
 import { baseNameOf, formatDateTime, formatDurationHms, formatPlanStamp, formatTokenCount, formatTokenDetail, pad2 } from './format'
 import { resolvedDepsOf, type ResolvedDependency } from '../deps.js'
 import { fetchEvents, fetchInstances, outputsOf, type EventRow, type InstanceRow } from './query'
+import { ProcessFiles } from './process-files'
 import { isRunningStatus, statusesOfBucket, statusTextOf, statusToneOf } from './status-text'
 import {
   Button, ensureRunningStyle, IconButton, Loading, MarqueeText, PANEL_CONTENT_ID, PANEL_CONTENT_STYLE, RUN_PULSE_CLASS, Segmented, SelectField, TaskPicker,
@@ -436,7 +437,9 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
         renderNextExec(row.scheduled_at, t),
       ))
     : null
+  // 两桶产出（2026-10-10）：主文件照旧（折叠态图标行 / 展开区第一排），过程文件是次级折叠块。
   const outputs = outputsOf(row.outputs)
+  const processOutputs = outputsOf(row.process_outputs)
   const sid = row.session_id
   const canOpenSession = sid !== null && sid !== ''
   const canOpenFile = canOpenSession && openFile !== undefined
@@ -454,10 +457,12 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
   // 预计执行模式：前置来自任务定义的 depends_on（plannedDeps），不读快照。
   const deps = isPlanned ? (plannedDeps ?? []) : resolvedDepsOf(snapshot)
   const hasOutputs = outputs.length > 0
+  // 过程文件也算「有内容」（2026-10-10）：只有过程文件的实例，展开箭头与展开区都必须照常出。
+  const hasProcess = processOutputs.length > 0
   const hasDeps = deps.length > 0
   // 是否值得显示「展开」箭头：已执行块总能拉日志 ⇒ 永远可展开；预计执行块**只有「有前置」才值得**展开
   // （无产出、无前置、无实例 ⇒ 展开后什么都没有，不画空框、也不让箭头空转 —— 用户 2026-10-06）。
-  const hasExpand = hasOutputs || hasDeps || !isPlanned
+  const hasExpand = hasOutputs || hasProcess || hasDeps || !isPlanned
   /** token 三段之一：null 给占位（不编造 0）。 */
   const tokenPart = (v: number | null): string => (v === null ? '—' : formatTokenCount(v))
   /**
@@ -665,7 +670,7 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
     //    再往下是该次执行的事件流水。父级已不可点 ⇒ 不再需要拦冒泡。 ──
     // ⚠️ 只有当**确有内容**（有产出 / 有前置 / 日志非空 / 拉取出错）时才渲染展开区本身——
     //    否则连那条分隔线 + 内边距都不要画，免得空点一下只露一个空框（用户 2026-10-06）。
-    (open && (hasOutputs || hasDeps || eventsError !== null || (events !== null && events.length > 0)))
+    (open && (hasOutputs || hasProcess || hasDeps || eventsError !== null || (events !== null && events.length > 0)))
       ? h('div', { className: 'dsh-tdt-rec-exp' },
         outputs.length === 0
           ? null
@@ -684,6 +689,12 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               h(MarqueeText, { text: baseNameOf(path), title: path, style: { maxWidth: '40ch', minWidth: 0 } }),
             )),
           ),
+        // 过程文件（次级、默认收起，2026-10-10）：跟在主文件那排之后，同样可点开预览。
+        h(ProcessFiles, {
+          paths: processOutputs,
+          onOpen: canOpenFile ? (path: string): void => { openFile?.(sid as string, path) } : undefined,
+          t,
+        }),
         // ── 第二排：前置任务（用户 2026-10-04：**一排显示两个**；每格两行，能点开那次上游的会话）──
         deps.length === 0
           ? null

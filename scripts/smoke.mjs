@@ -18,6 +18,7 @@ import {
 } from '../dist/task-assets.js'
 import { TaskStore, parseInstanceSnapshot } from '../dist/store.js'
 import { createReconciler, checkReceipt, extractTokenUsage } from '../dist/reconcile.js'
+import { RECEIPT_TOOL_NAME, registerReceiptTool, receiptInstruction } from '../dist/receipt.js'
 import { createScheduler, judgeDependencies } from '../dist/scheduler.js'
 import { attachmentFileBlocks, buildMessage } from '../dist/dispatch.js'
 import { createRuntimeIndex } from '../dist/runtime-index.js'
@@ -424,7 +425,84 @@ try {
       checkReceipt(probeDir, ['ok'], { ts: '', detail: '{not json' }).reason === 'receipt-unreadable')
     rmSync(probeDir, { recursive: true, force: true })
   }
-  // ── 5b-3. 裁决时机（2026-10-03 用户拍板：等会话**真正空闲**，不是 turn/end） ──
+  // ── 5b-3. 回执双桶（2026-10-10 用户拍板）：主文件 outputs / 过程文件 processOutputs ──
+  // 口径：两桶都是路径数组（文件或文件夹都可）、各上限 10 项、同一路径以主桶为准；
+  // 交付事件（deliverables/presented）**只写主文件**；下游注入只取主桶（下游注入在 scheduler 侧）。
+  {
+    const probeDir = mkdtempSync(join(tmpdir(), 'dsh-tdt-buckets-'))
+    writeFileSync(join(probeDir, 'report.md'), '# report')
+    mkdirSync(join(probeDir, 'logs'), { recursive: true })
+    writeFileSync(join(probeDir, 'logs', 'run.log'), 'x')
+    const mk = (payload) => ({ ts: new Date().toISOString(), detail: JSON.stringify({ status: 'ok', ...payload }) })
+    check('回执校验：主文件 + 过程文件两桶都在 ⇒ 通过',
+      checkReceipt(probeDir, ['ok'], mk({ outputs: ['report.md'], processOutputs: ['logs/', 'logs/run.log'] })).ok === true)
+    const missProc = checkReceipt(probeDir, ['ok'], mk({ outputs: ['report.md'], processOutputs: ['nope.log'] }))
+    check('回执校验：过程文件不存在照样判失败（同一道闸，detail 标 bucket=process）',
+      missProc.ok === false && missProc.reason === 'output-missing' && missProc.detail.bucket === 'process')
+    check('回执校验：旧回执没有 processOutputs 字段 ⇒ 照常通过（向后兼容）',
+      checkReceipt(probeDir, ['ok'], mk({ outputs: ['report.md'] })).ok === true)
+
+    // 工具本体：真跑一次 execute（store / session 用最小替身，不碰状态库）
+    const events = []
+    const appended = []
+    const registered = []
+    registerReceiptTool(
+      { tools: { register: (definition) => { registered.push(definition) } } },
+      {
+        store: {
+          get: () => ({ status: 'running', session_id: 'sess-1' }),
+          // 与真实 TaskStore.appendEvent 同形：detail 收对象、落库前 JSON.stringify
+          // （store.ts:519-523）——对账侧正是 JSON.parse 它，这里必须照抄，否则测的是假形状。
+          appendEvent: (id, kind, detail) => {
+            events.push({ id, kind, detail: detail === undefined ? null : JSON.stringify(detail) })
+          },
+        },
+        taskName: 'T', instanceId: 'inst-1', sessionId: 'sess-1', validStatuses: ['ok'],
+        logger: { info: () => {}, warn: () => {}, error: () => {} },
+        sessionProjections: { stateOf: () => ({ lastTurn: 3 }) },
+      },
+    )
+    const definition = registered[0]
+    check('回执工具参数：新增 processOutputs 桶（两桶各 maxItems=10）',
+      registered.length === 1 && definition.name === RECEIPT_TOOL_NAME
+      && definition.parameters.properties.processOutputs !== undefined
+      && definition.parameters.properties.outputs.maxItems === 10
+      && definition.parameters.properties.processOutputs.maxItems === 10)
+    const exec = { agent: { session: { append: (type, data) => { appended.push({ type, data }) } } }, callId: 'call-1' }
+    const first = await definition.execute({
+      status: 'ok',
+      outputs: ['report.md', 'report.md'],
+      processOutputs: ['logs/', 'report.md'],
+    }, exec)
+    const detail = JSON.parse(events.at(-1).detail)
+    check('回执双桶落 event：主桶去重、过程桶剔除与主桶重复的路径（同一路径以主桶为准）',
+      detail.outputs.length === 1 && detail.outputs[0] === 'report.md'
+      && detail.processOutputs.length === 1 && detail.processOutputs[0] === 'logs/')
+    check('回执工具返回文案如实分桶（主文件 1 项 / 过程文件 1 项）',
+      first.ok === true && first.message.includes('主文件 1 项') && first.message.includes('过程文件 1 项'))
+    check('交付事件只写主文件：过程文件不进 deliverables/presented（不会变成官方交付卡）',
+      appended.length === 1 && appended[0].type === 'deliverables/presented'
+      && appended[0].data.files.length === 1 && appended[0].data.files[0].path === 'report.md')
+    // 超限：**截断**而非拒绝重报（无人值守链路里多一轮对话就是多烧一轮 token）
+    const many = await definition.execute({ status: 'ok', outputs: Array.from({ length: 13 }, (_, i) => `f${i}.md`) }, exec)
+    check('回执工具：超上限截断为 10 项，并在返回文案里如实告知',
+      JSON.parse(events.at(-1).detail).outputs.length === 10 && many.message.includes('上限'))
+    check('回执工具描述含两桶判断口径 + 10 项上限（提示词是唯一的分桶依据）',
+      definition.description.includes('主文件') && definition.description.includes('过程文件')
+      && definition.description.includes('10 项'))
+    check('派发消息的回执段含双桶指令（outputs=主文件 / processOutputs=过程文件）',
+      receiptInstruction(['ok']).includes('processOutputs') && receiptInstruction(['ok']).includes('主文件'))
+    // 下游只拿主文件：resolvedOf 读的就是 outputs 列（主桶），过程文件在 process_outputs 列、不进消息。
+    // ⚠️ 判据要**去掉注释**再比：scheduler 的注释里提到了 process_outputs 这个列名（解释为什么不用改）。
+    const schedCode = readFileSync(join(process.cwd(), 'src', 'scheduler.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    check('下游注入只取主桶（scheduler 读 outputs 列；process_outputs 不进下游消息）',
+      schedCode.includes('upstream.outputs') && !schedCode.includes('process_outputs'))
+    rmSync(probeDir, { recursive: true, force: true })
+  }
+
+  // ── 5b-4. 裁决时机（2026-10-03 用户拍板：等会话**真正空闲**，不是 turn/end） ──
   // 起因：goal 模式下 agent 自动续跑多轮（宿主 kick 是 while (await this.turn())），
   // `turn/end` 只是**一轮**结束 ⇒ 在轮次间隙验收等于「人家还在干活就去收卷」。
   {
@@ -1058,9 +1136,27 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('turnDeliverablesPresented') && clientJs.includes('instanceof Map') && clientJs.includes("get('deliverables')"))
   check('弹窗交付卡挂最后一轮 turn-tail（官方 DeliverablesTail 同位），数据以实例 outputs 权威（合并快照去重）',
     clientJs.includes('lastTailTurn') && clientJs.includes('deliverFiles') && !clientJs.includes('dsh-tdt-sv-deliver-section'))
-  check('回执提示词含 outputs 粒度判断规则（本任务专用文件夹→报目录；既有/规范目录→逐个报文件）',
+  check('回执提示词含粒度判断规则（本任务专用产物目录→报目录；既有/按日期规范的目录→逐个报文件）',
     readFileSync(join(import.meta.dirname, '..', 'dist', 'receipt.js'), 'utf8').includes('为本任务专门建')
-      && readFileSync(join(import.meta.dirname, '..', 'dist', 'receipt.js'), 'utf8').includes('按规范建的目录'))
+      && readFileSync(join(import.meta.dirname, '..', 'dist', 'receipt.js'), 'utf8').includes('按日期规范'))
+  // 过程文件桶（2026-10-10）：三处共用一个展示件，主文件照旧醒目、过程文件次级且默认收起。
+  {
+    const srcOf = (file) => readFileSync(join(process.cwd(), 'src', 'client', file), 'utf8')
+    check('过程文件块 = 三处共用的唯一展示件（会话弹窗 / 执行记录 / 查看档都引同一个组件）',
+      ['session-view.ts', 'records-timeline.tsx', 'task-info.tsx']
+        .every(file => srcOf(file).includes("from './process-files'")))
+    check('过程文件块进产物（dsh-tdt-proc 样式入库 + data-process-files 锚点 + 文案键）',
+      clientJs.includes('dsh-tdt-proc-head') && clientJs.includes('data-process-files') && clientJs.includes('procFilesTitle'))
+    check('过程文件块默认收起（初值 open=false；展开才渲染 dsh-tdt-proc-list）',
+      srcOf('process-files.tsx').includes('useState(false)') && srcOf('process-files.tsx').includes('dsh-tdt-proc-list'))
+    check('过程文件桶走同一解析器（process_outputs 复用 outputsOf，不另写一份）',
+      srcOf('records-timeline.tsx').includes('outputsOf(row.process_outputs)')
+      && srcOf('task-info.tsx').includes('outputsOf(instance.process_outputs)'))
+    check('会话弹窗过程文件与交付卡同位（tailSlot 内排在交付卡网格之后，且独立判存）',
+      srcOf('session-view.ts').includes('showProc'))
+    check('过程文件也算「有内容」（执行记录展开箭头与展开区不再只看主文件）',
+      srcOf('records-timeline.tsx').includes('hasProcess'))
+  }
   check('官方类发现扩 ui-deliverables 前缀（PresentRow / Deliverables 模块可命中）',
     clientJs.includes('@deepseek-ai/dsh-client-ui-deliverables/'))
   check('交付文件兜底样式入库（deliv-file / deliv-grid / deliv-toggle）',
@@ -1607,10 +1703,11 @@ console.log('\n[9] 依赖判定：上游最近一条必须 succeeded')
     title: 'up', prompt: 'p', manual: null, workspacePath: '/ws/up', provider: '', model: '',
     validStatuses: ['ok'], maxAttempts: 1, window: 'PT0S',
   })
-  depStore.recordCompletion(upId, JSON.stringify(['report.md', 'data']), null, null, null)
+  // 第二桶（过程文件）一并给上（2026-10-10）：下游只该拿到**主桶** ⇒ 下面的 outputs 断言必须仍只有两项。
+  depStore.recordCompletion(upId, JSON.stringify(['report.md', 'data']), JSON.stringify(['logs/run.log']), null, null, null)
 
   const verdict = judgeDependencies(depStore, mkTask([{ task: 'D', semantics: 'latest_success' }]), '2026-09-26', '2026-09-26T13:00:00.000Z')
-  check('依赖放行 ⇒ resolved 固化命中的上游实例（id/工作区/产出，决策 43）',
+  check('依赖放行 ⇒ resolved 固化命中的上游实例（id/工作区/产出，决策 43；过程文件不下传下游）',
     verdict.ready === true && verdict.resolved.length === 1
     && verdict.resolved[0].instanceId === upId
     && verdict.resolved[0].sessionId === null

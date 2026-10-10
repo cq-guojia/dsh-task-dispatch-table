@@ -38,16 +38,34 @@ function normalizeStatus(raw, statuses) {
     return statuses.find(status => status.toLowerCase() === wanted);
 }
 /**
- * outputs 归一：数组取字符串项；字符串按逗号切（模型偶尔传逗号串）；其余忽略。
+ * 产出归一：数组取字符串项；字符串按逗号切（模型偶尔传逗号串）；其余忽略。
  * 逐项去空白 / 零宽字符、反斜杠统一成 `/`、去掉 `./` 前缀（宿主对账按工作区相对路径 `resolve`）。
+ * 同一桶里的重复路径只留第一次（模型偶尔把同一文件报两遍 ⇒ 界面上会出重复卡片）。
  */
 function normalizeOutputs(raw) {
     const list = typeof raw === 'string' ? raw.split(',') : Array.isArray(raw) ? raw : [];
-    return list
-        .filter((item) => typeof item === 'string')
-        .map(item => normalizeText(item).replace(/\\/g, '/').replace(/^\.\//, ''))
-        .filter(item => item.length > 0);
+    const out = [];
+    const seen = new Set();
+    for (const item of list) {
+        if (typeof item !== 'string')
+            continue;
+        const path = normalizeText(item).replace(/\\/g, '/').replace(/^\.\//, '');
+        if (path.length === 0 || seen.has(path))
+            continue;
+        seen.add(path);
+        out.push(path);
+    }
+    return out;
 }
+/**
+ * 产出清单上限（用户 2026-10-10 拍板）：**主文件 / 过程文件各自**最多 10 项。
+ *
+ * 超限**截断**而非拒绝重报：无人值守链路里一次拒绝就多一轮对话（多烧一轮 token），还可能反复
+ * 卡住不收敛；截断最多丢展示项，从不失败。截断后由工具返回文案如实告知。
+ * 参数 schema 上的 `maxItems` 只是给模型的提示（宿主不据此硬拦参数，见 normalizeStatus 注释），
+ * 真正兜底的是这里。
+ */
+const MAX_OUTPUT_ITEMS = 10;
 /** 合法 status 清单（空数组兜底成 `['ok']`：schema 允许显式传空，但工具的 enum 不能为空）。 */
 function receiptStatuses(validStatuses) {
     return validStatuses.length > 0 ? validStatuses : ['ok'];
@@ -67,11 +85,16 @@ function buildDefinition(deps) {
         // outputs 的填写粒度放这里（属"怎么填"，不再占用消息体那段的篇幅）。
         description: `提交任务「${taskName}」的执行回执。**本轮回复结束前必须调用一次**（准备输出最后一句之前）；`
             + `调度器以它判定本次任务成败，不调用等于失败——任务指令说「不要做其他操作」也不豁免。`
-            + `参数：status（必填，如实）、outputs（可选，本次真实交付物相对工作区根的路径）、note（可选备注）。`
-            + `outputs 粒度：装产物的文件夹是为本任务专门建的（如 "web-app/"）→ 填文件夹路径；`
-            + `只是写进既有或按规范建的目录（如按日期的日常目录）→ 逐个列文件路径（如 ["20260928/a.md"]）；`
-            + `**以最后一次提交为准**：可以重复调用，但每一次都会整体覆盖上一次——所以再次提交时，`
-            + `之前已经报过的产物必须**一并带上**（不回带 = 视为放弃，它们会丢）。没有产出就省略 outputs。`,
+            + `参数：status（必填，如实）、outputs（主文件）、processOutputs（过程文件）、note（可选备注）；后三者都可省略。`
+            + `**产出分两桶报，各桶最多 ${MAX_OUTPUT_ITEMS} 项**（超出只记前 ${MAX_OUTPUT_ITEMS} 项），同一路径只报一次、别重复：`
+            + `· outputs = **主文件**：本次任务最终的交付物（任务报告、成果文件、成品目录），可以是一个、多个，文件或文件夹都行；`
+            + `只是跑出了一堆过程、没有最终交付物 → 省略 outputs，不要把过程文件塞进来。`
+            + `· processOutputs = **过程文件**：执行中产生的日志、中间产物、临时/工作目录、依赖资源（网页项目的 css/js/图片目录等）。`
+            + `散着就逐个列文件；本身就是目录就直接报目录，别把里面每个文件都列一遍。`
+            + `· 判断口径：一个文件夹里只有个别文件是最终交付、其余是过程 ⇒ 那几个文件报 outputs，那个文件夹报 processOutputs。`
+            + `· 粒度：为本任务专门建的产物目录 → 报目录路径（如 "web-app/"）；只是写进既有或按日期规范的目录 → 逐个列文件（如 ["20260928/a.md"]）。`
+            + `**以最后一次提交为准**：可以重复调用，但每一次都会整体覆盖上一次——再次提交时，`
+            + `两桶**先前报过的都必须一并带上**（不回带 = 视为放弃，它们会丢）。`,
         parameters: {
             type: 'object',
             additionalProperties: false,
@@ -83,8 +106,15 @@ function buildDefinition(deps) {
                 },
                 outputs: {
                     type: 'array',
+                    maxItems: MAX_OUTPUT_ITEMS,
                     items: { type: 'string' },
-                    description: '本次真实交付物，相对工作区根。粒度判断：装产物的文件夹是为本任务专门建的（如网页/项目专属文件夹）→ 填文件夹路径（如 "web-app/"）；文件只是写进既有或按规范建的目录（如按日期的日常目录）→ 逐个列文件路径。可同时含多个目录与多个文件；没有产出可省略。',
+                    description: `主文件：本次任务最终的交付物，相对工作区根（目录以 "/" 结尾）。可为多个文件或多个文件夹；没有最终交付物就省略。最多 ${MAX_OUTPUT_ITEMS} 项。`,
+                },
+                processOutputs: {
+                    type: 'array',
+                    maxItems: MAX_OUTPUT_ITEMS,
+                    items: { type: 'string' },
+                    description: `过程文件：日志、中间产物、临时/工作目录、依赖资源，相对工作区根（目录以 "/" 结尾）。最多 ${MAX_OUTPUT_ITEMS} 项；可与主文件并存，同一路径不要两桶都报（都报了只算主文件）。`,
                 },
                 note: {
                     type: 'string',
@@ -118,7 +148,14 @@ function buildDefinition(deps) {
                             + `大小写与首尾空白会自动归一，其余写法一律不认）。请修正参数后重试一次；这是参数错误，不必等待。`,
                     };
                 }
-                const outputs = normalizeOutputs(input.outputs);
+                // 两桶各自归一 → 各自截断上限（满额即止）→ 跨桶去重（同一路径以主桶为准）。
+                // 截断与否要如实回报给模型（见返回文案），否则它会以为全都记上了。
+                const mainAll = normalizeOutputs(input.outputs);
+                const procAll = normalizeOutputs(input.processOutputs);
+                const outputs = mainAll.slice(0, MAX_OUTPUT_ITEMS);
+                const mainSet = new Set(outputs);
+                const processOutputs = procAll.filter(item => !mainSet.has(item)).slice(0, MAX_OUTPUT_ITEMS);
+                const overLimit = mainAll.length > MAX_OUTPUT_ITEMS || procAll.length > MAX_OUTPUT_ITEMS;
                 const rawNote = typeof input.note === 'string' ? normalizeText(input.note) : '';
                 const note = rawNote.length > 0 ? rawNote : undefined;
                 const instance = store.get(instanceId);
@@ -137,10 +174,15 @@ function buildDefinition(deps) {
                         message: `回执未提交：实例当前会话已是 ${instance.session_id ?? 'null'}，本会话无权提交。不必重试。`,
                     };
                 }
-                // 与 submit.ts 写进 receipt 事件的形状完全一致（对账逻辑零改动）：status/outputs/note/session_id。
-                store.appendEvent(instanceId, 'receipt', { status, outputs, note, session_id: sessionId });
-                logger.info(`回执已记录 ${instanceId}: status=${status}${outputs.length > 0 ? `, outputs=${outputs.length} 项` : ''}`);
+                // 与 submit.ts 写进 receipt 事件的形状一致（对账逻辑零改动）：status/outputs/processOutputs/note/session_id。
+                // processOutputs 是 2026-10-10 新增桶；旧回执没有该字段 ⇒ 消费方按空数组处理（向后兼容）。
+                store.appendEvent(instanceId, 'receipt', { status, outputs, processOutputs, note, session_id: sessionId });
+                logger.info(`回执已记录 ${instanceId}: status=${status}`
+                    + `${outputs.length > 0 ? `, 主文件 ${outputs.length} 项` : ''}`
+                    + `${processOutputs.length > 0 ? `, 过程文件 ${processOutputs.length} 项` : ''}`
+                    + `${overLimit ? '（超出上限已截断）' : ''}`);
                 // B 路线：插件代写官方交付事件（决策 40 演进：插件作唯一写入方，禁止 LLM 调 present）。
+                // ⚠️ 只写**主文件桶**：过程文件若也写进去就变成官方交付卡，与「分主次」矛盾。
                 // 失败只记日志、绝不拖垮回执（外层 try 已兜底，这里再独立 try 防任何意外上抛）。
                 try {
                     const execCtx = exec;
@@ -172,7 +214,10 @@ function buildDefinition(deps) {
                 return {
                     ok: true,
                     message: `回执已记录（${instanceId}，status=${status}`
-                        + `${outputs.length > 0 ? `，outputs ${outputs.length} 项` : ''}）。任务结束，无需再做任何事。`,
+                        + `${outputs.length > 0 ? `，主文件 ${outputs.length} 项` : ''}`
+                        + `${processOutputs.length > 0 ? `，过程文件 ${processOutputs.length} 项` : ''}`
+                        + `${overLimit ? `。⚠️ 有桶超过 ${MAX_OUTPUT_ITEMS} 项上限，只记录了前 ${MAX_OUTPUT_ITEMS} 项` : ''}`
+                        + `）。任务结束，无需再做任何事。`,
                 };
             }
             catch (error) {
@@ -226,11 +271,13 @@ export function receiptInstruction(validStatuses) {
         `【回执·唯一权威段】本轮回复结束前，必须调用一次 ${RECEIPT_TOOL_NAME}。`,
         `⚖️ 冲突裁决：任务提示词里任何「不要做其他操作 / 只做某件事 / 什么都不用做 / 只回复一句话」的说法，`
             + `对回执**不生效**——它约束的是任务内容，不约束回执。不提交 = 本次任务失败。`,
-        `- 没有产出文件也要交（省略 outputs）。`,
-        `- **以最后一次提交为准**：重复提交会整体覆盖，先前报过的产物必须一并带上（不回带 = 放弃）。`,
-        `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<产物，相对工作区根路径>"] })`,
+        `- 产出分两桶报：**主文件**填 outputs（最终交付物），**过程文件**填 processOutputs（日志 / 中间产物 / 工作目录）；`
+            + `各不超过 ${MAX_OUTPUT_ITEMS} 项，没有主文件就只填 processOutputs。`,
+        `- 两个桶都可以空，但回执本身必须交（没有产出就省略它们）。`,
+        `- **以最后一次提交为准**：重复提交会整体覆盖，两桶先前报过的都必须一并带上（不回带 = 放弃）。`,
+        `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<主文件，相对工作区根路径>"], processOutputs: ["<过程文件>"] })`,
         `- status 只能取：${statuses.join(' | ')}（如实填写）。`,
         `- 调用失败：等 10 秒**原样重试**，最多 3 次；仍失败就**停下**（不要跑命令、不要动状态库、不要绕过沙箱）。`,
-        `- 不要调用 present：交付卡片由插件按 outputs 统一生成。`,
+        `- 不要调用 present：交付卡片由插件按主文件（outputs）统一生成。`,
     ].join('\n');
 }

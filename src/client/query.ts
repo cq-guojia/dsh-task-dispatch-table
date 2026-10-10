@@ -31,8 +31,13 @@ export interface InstanceRow {
   session_id: string | null
   dispatched_at: string | null
   finished_at: string | null
-  /** 决策 32③：完成瞬间写回的产出清单 JSON 字符串（`["a.md","b/"]`），无产出为 null。 */
+  /** 决策 32③：完成瞬间写回的产出清单 JSON 字符串（`["a.md","b/"]`），无产出为 null。**主文件桶**。 */
   outputs: string | null
+  /**
+   * 过程文件桶（2026-10-10，JSON 字符串数组）——日志 / 中间产物 / 工作目录；旧行 / 未声明为 null。
+   * 可选：日历的「预计执行」占位行与轻量查询面都不带它（日历不展示产出），缺字段按「无过程文件」处理。
+   */
+  process_outputs?: string | null
   /**
    * 派发快照 JSON 字符串（决策 41）——服务端 `SELECT *` 已返回，此处只是**声明出来**。
    * 会话弹窗顶部输入区用它取 `resolvedDeps`（上游依赖，决策 43）与 `attachments`；**只解析、不改**。
@@ -71,6 +76,8 @@ export interface LogRow {
  *
  * ⚠️ 2026-10-04 从 `task-list.tsx` 上提到这里：卡片「执行记录」面板与**执行记录总查询页**都要用，
  * 同一解析写两遍就是违规（本仓规矩：一类东西一个实现）。
+ *
+ * ⚠️ 2026-10-10：`process_outputs`（过程文件桶）**同一个形状**，因此继续用它解析，不另写一份。
  */
 export function outputsOf(raw: string | null | undefined): string[] {
   if (raw === null || raw === undefined || raw === '') return []

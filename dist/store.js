@@ -90,7 +90,9 @@ CREATE TABLE IF NOT EXISTS task_instances (
   lease_until   TEXT,
   dispatched_at TEXT,
   finished_at   TEXT,
+  -- 2026-10-10：outputs = 主文件（核心交付物）；process_outputs = 过程文件。旧库补列（ensureInstanceColumns）。
   outputs       TEXT,
+  process_outputs TEXT,
   token_in      INTEGER,
   token_out     INTEGER,
   token_in_cache INTEGER,
@@ -212,11 +214,14 @@ export class TaskStore {
         this.db.exec('CREATE UNIQUE INDEX idx_instances_slot ON task_instances(task_id, scheduled_at)');
         this.ensureInstanceColumns();
     }
-    /** 决策 32（修订）：兼容旧库（无 outputs / token 三拆列）。 */
+    /** 决策 32（修订）+ 2026-10-10：兼容旧库（无 outputs / process_outputs / token 三拆列）。 */
     ensureInstanceColumns() {
         const cols = new Set(this.db.prepare('PRAGMA table_info(task_instances)').all().map(c => c.name));
         if (!cols.has('outputs'))
             this.db.exec('ALTER TABLE task_instances ADD COLUMN outputs TEXT');
+        // 过程文件桶（2026-10-10）：旧库补列后为 NULL = 无过程文件 ⇒ 界面照旧只显示主文件。
+        if (!cols.has('process_outputs'))
+            this.db.exec('ALTER TABLE task_instances ADD COLUMN process_outputs TEXT');
         // 旧版决策 32 曾用单个 tokens 列；拆成三列后卸下旧列（不支持 DROP COLUMN 的旧 SQLite 静默跳过）。
         if (cols.has('tokens')) {
             try {
@@ -482,11 +487,11 @@ export class TaskStore {
      * ⚠️ **执行记录永久保留，没有清除方法**（用户 2026-10-08 拍板）：历史是用来查的、不该被清，
      * 原 `purgeHistory` 与 `historyRetentionDays` 配置一并删除。
      */
-    /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
-    recordCompletion(id, outputs, tokenIn, tokenOut, tokenInCache) {
+    /** 完成瞬间写回两桶产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
+    recordCompletion(id, outputs, processOutputs, tokenIn, tokenOut, tokenInCache) {
         this.db
-            .prepare('UPDATE task_instances SET outputs = ?, token_in = ?, token_out = ?, token_in_cache = ?, updated_at = ? WHERE id = ?')
-            .run(outputs, tokenIn, tokenOut, tokenInCache, nowIso(), id);
+            .prepare('UPDATE task_instances SET outputs = ?, process_outputs = ?, token_in = ?, token_out = ?, token_in_cache = ?, updated_at = ? WHERE id = ?')
+            .run(outputs, processOutputs, tokenIn, tokenOut, tokenInCache, nowIso(), id);
     }
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
     findBySlot(taskId, scheduledAt) {

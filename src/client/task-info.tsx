@@ -20,6 +20,7 @@ import {
 import type { Translate } from './locales'
 import { MarqueeText } from './ui'
 import { outputsOf, type InstanceRow } from './query'
+import { ProcessFiles } from './process-files'
 import { statusTextOf } from './status-text'
 
 /** 「上次执行」只看最近一条**终态**实例；名单与卡片基础信息**完全一致**（单源，不许各处自创）。 */
@@ -264,6 +265,8 @@ export function lastRunFields(props: {
   const canOpenSession = sid !== null && onOpenSession !== undefined
   const canOpenFile = sid !== null && onOpenFile !== undefined
   const outputs = outputsOf(instance.outputs)
+  // 过程文件桶（2026-10-10）：主文件清单**下面**另起一块，次级 + 默认收起（共用件见 process-files.tsx）。
+  const processOutputs = outputsOf(instance.process_outputs)
   const dur = durationMsOf(instance)
   const tokens = instance.token_in === null && instance.token_out === null
     ? null
@@ -332,6 +335,14 @@ export function lastRunFields(props: {
           )),
         ),
       ),
+    // 过程文件（次级、默认收起）：与产出物清单同一份数据源，只是不抢视线。
+    h(ProcessFiles, {
+      paths: processOutputs,
+      onOpen: canOpenFile && onOpenFile !== undefined
+        ? (path: string): void => { onOpenFile(sid as string, path) }
+        : undefined,
+      t,
+    }),
   )
 }
 

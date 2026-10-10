@@ -88,6 +88,8 @@ export type LocaleKey =
   | 'explorerLevels' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs'
+  // —— 回执过程文件桶（2026-10-10：主文件之外的次级产出，三处共用一个折叠块）——
+  | 'procFilesTitle'
   // —— U11 交付文件（官方 ui-deliverables 词典逐字：row.* / presented.*，预览字样按弹窗语境改）——
   | 'deliverRowTitle' | 'deliverRowPreparing' | 'deliverRowRunning' | 'deliverRowOk'
   | 'deliverRowError' | 'deliverRowStopped'
@@ -468,6 +470,8 @@ export const zh: Record<LocaleKey, string> = {
   explorerExpand: '展开目录',
   explorerCollapse: '收起目录',
   colOutputs: '产出',
+  // 过程文件块（回执的第二桶）：次级观感、默认收起（用户 2026-10-10 拍板「都显示，但分主次」）。
+  procFilesTitle: '过程文件 · {count} 项',
   // 交付文件（官方 ui-deliverables zh 词典逐字；预览文案按弹窗分栏语境改写——官方「在侧边栏预览」）。
   deliverRowTitle: '交付文件',
   deliverRowPreparing: '准备交付',
@@ -1157,6 +1161,8 @@ export const en: Record<LocaleKey, string> = {
   explorerExpand: 'Expand directory',
   explorerCollapse: 'Collapse directory',
   colOutputs: 'Outputs',
+  // Process-files block (the receipt's second bucket): secondary look, collapsed by default.
+  procFilesTitle: 'Process files · {count}',
   // Deliverables (verbatim from the official ui-deliverables en dictionary; preview copy adapted to the in-dialog pane).
   deliverRowTitle: 'Deliver files',
   deliverRowPreparing: 'Preparing delivery',

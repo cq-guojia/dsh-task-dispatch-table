@@ -50,9 +50,11 @@ export function missingSnapshotAttachments(ctx, taskId, snap, assets) {
 }
 /** 跑完信号后允许补交回执的追问上限（写死不加配置，事件表可查次数）。 */
 const NUDGE_LIMIT = 2;
+/** 回执载荷里的路径数组（非数组 / 非字符串项一律剔除；缺字段 ⇒ 空数组）。 */
+const receiptPaths = (raw) => Array.isArray(raw) ? raw.filter((item) => typeof item === 'string') : [];
 /**
  * 回执裁决（决策 19，替代旧契约文件三查）：
- * receipt 事件存在 + status ∈ validStatuses + outputs 里的每个路径**确实存在**。
+ * receipt 事件存在 + status ∈ validStatuses + outputs / processOutputs 里的每个路径**确实存在**。
  *
  * ⚠️ **已去掉「mtime 新鲜度」闸**（用户 2026-10-03 拍板，原为「防旧产物冒充」）：
  * 那道闸会误伤「复用 / 检查已有文件」类任务 —— 真机案例：任务是判断 `uuid.txt`
@@ -83,11 +85,19 @@ export function checkReceipt(workspacePath, validStatuses, receipt) {
             detail: { status: payload.status, validStatuses: [...validStatuses] },
         };
     }
-    const outputs = Array.isArray(payload.outputs) ? payload.outputs.filter((item) => typeof item === 'string') : [];
-    for (const output of outputs) {
-        const outputPath = resolve(workspacePath, output);
-        if (!existsSync(outputPath))
-            return { ok: false, reason: 'output-missing', detail: { output } };
+    // 两桶同一道闸（2026-10-10）：主文件与过程文件都按「确实存在」校验，防幽灵路径进界面与下游消息。
+    // ⚠️ 取舍：过程文件路径写错同样会让整次回执判失败并走重试（与主桶今天的行为一致）；
+    //    若真机上因此频繁误失败，可降级为「只校验主桶」——改这一处即可。
+    const buckets = [
+        { bucket: 'main', list: receiptPaths(payload.outputs) },
+        { bucket: 'process', list: receiptPaths(payload.processOutputs) },
+    ];
+    for (const { bucket, list } of buckets) {
+        for (const output of list) {
+            const outputPath = resolve(workspacePath, output);
+            if (!existsSync(outputPath))
+                return { ok: false, reason: 'output-missing', detail: { output, bucket } };
+        }
     }
     return { ok: true, detail: payload };
 }
@@ -237,7 +247,7 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit })
     const notifyRow = (instance) => {
         emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId: instance.task_id, instanceId: instance.id } });
     };
-    function finishTerminal(instance, status, reason, detail, outputs) {
+    function finishTerminal(instance, status, reason, detail, outputs, processOutputs) {
         const tk = tokenTotals.get(instance.id);
         if (tokenTotals.has(instance.id))
             tokenTotals.delete(instance.id);
@@ -247,8 +257,8 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit })
         runtime?.markTerminal(instance.task_id, status, instance.scheduled_at, finishedAt);
         if (detail !== undefined)
             store.appendEvent(instance.id, 'receipt_check', { reason, detail });
-        // 决策 32 修订：完成瞬间写回产出与 token 三拆列到总表（冗余，task_events 仍为真源）
-        store.recordCompletion(instance.id, outputs ?? null, tk?.in ?? null, tk?.out ?? null, tk?.cache ?? null);
+        // 决策 32 修订：完成瞬间写回两桶产出与 token 三拆列到总表（冗余，task_events 仍为真源）
+        store.recordCompletion(instance.id, outputs ?? null, processOutputs ?? null, tk?.in ?? null, tk?.out ?? null, tk?.cache ?? null);
         forgetHandle(instance.session_id);
         // 会话已结束（turn/end / disposed 触发的收敛）→ 归档；租约误判的回收不归档。
         if (instance.session_id !== null)
@@ -300,7 +310,8 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit })
         if (verdict.ok) {
             const payload = verdict.detail;
             const outputsField = Array.isArray(payload?.outputs) ? JSON.stringify(payload.outputs) : null;
-            finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail, outputsField);
+            const processField = Array.isArray(payload?.processOutputs) ? JSON.stringify(payload.processOutputs) : null;
+            finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail, outputsField, processField);
         }
         else {
             store.appendEvent(instance.id, 'receipt_check', { reason: verdict.reason, detail: verdict.detail });

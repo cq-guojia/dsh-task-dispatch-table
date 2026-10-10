@@ -34,7 +34,18 @@
 | `attachments` | object[]? | **附加文件清单**（只记引用，不存内容）：`{ id, name, kind, ref, workspace? }`。`kind='link'` = 工作区已有文件（只记路径、不复制，`workspace` = 来源工作区 title，派发注入时按它把 `ref` 绝对化）；`kind='upload'` = 已上传到插件数据目录的文件，**`ref` = 相对该任务目录的路径**（`attachments/<原始文件名>`，迁移见 §五.3）。同源文件见 §五 | 2026-09-30 |
 | `schedule.ui` | object? | **结构化排期（编辑态反解用）**：`{ scheduleKind, periodFreq, weekdays[], monthDay, monthMode, quarterMonth, yearMonth, intervalUnit, intervalStep, weekStep }`，与 `cron` / `once` / `start` / `everyNWeeks` **并存**。**执行只读 `cron`/`once`（唯一排期真源），表单反解只读 `schedule.ui`**；两者不一致（用户手改过 cron）⇒ 表单进「自定义 cron」只读态并提示，`schedule.ui` 不回写。✅ 已定双写（见 §5.4） | 2026-09-30 |
 
-**回执机制（决策 19 + 决策 24 改通道）**：agent 跑完调用插件注册的工具 `task_dispatch_table_receipt({ status, outputs?, note? })` 提交回执——该工具由插件在派发时经 `agentCtx.tools.register` 注册，**只对该任务会话可见**，`execute` 在**插件进程内**直写状态库 `task_events`（`kind='receipt'`，detail 形状 `{ status, outputs, note, session_id }`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + `outputs` 逐一在目标工作区**存在**。⚠️ **「`outputs` mtime 晚于本次派发」这道新鲜度闸已于 2026-10-03 按用户拍板去掉**（会误伤「复用/检查已有文件」类任务；用户口径：只要文件确实存在、格式对就行，是不是蒙混过关不归插件判断）——理由与影响见 [features/state-machine.md](features/state-machine.md) §1。只记录不裁决，实例状态仍只由调度器写（决策 11）。**重复提交以「最后一次」为准**（用户 2026-10-03 拍板，且提示词已同步说明：再次提交会**整体覆盖**，先前报过的产物必须**一并带上**，不回带即视为放弃）——⚠️ 旧提示词写的是「只认第一次」，与实现矛盾，已更正。⚠️ **为什么不再用命令行**：agent 的 bash 在 Landlock 沙箱 `workspace-write` 模式下**只能写工作区**，写不了宿主数据根下的 `state.db`（决策 24 真机证据）；`submit.js` 保留为手动 / 排查备用通道。
+**回执机制（决策 19 + 决策 24 改通道；2026-10-10 产出拆双桶）**：agent 跑完调用插件注册的工具 `task_dispatch_table_receipt({ status, outputs?, processOutputs?, note? })` 提交回执——该工具由插件在派发时经 `agentCtx.tools.register` 注册，**只对该任务会话可见**，`execute` 在**插件进程内**直写状态库 `task_events`（`kind='receipt'`，detail 形状 `{ status, outputs, processOutputs, note, session_id }`）。对账**只查库**：取派发时刻之后的最新 receipt，校验 `status ∈ contract.validStatuses` + **两桶**逐一路径在目标工作区**存在**（`output-missing` 的 detail 里带 `bucket: 'main' | 'process'`）。
+
+**产出双桶（2026-10-10 用户拍板）**：回执把产出拆成两块，**分桶由提示词驱动大模型判断**（程序不猜）：
+
+| 桶 | 字段 | 是什么 | 谁消费 |
+|---|---|---|---|
+| **主文件** | `outputs` | 本次任务的**最终交付物**（任务报告 / 成果 / 成品目录）；可空、可多个，文件与文件夹都可 | ① 交付卡片（`deliverables/presented` **只写主桶**）② **下游依赖注入**（`resolvedDeps[].outputs`，见 [features/dependency-snapshot.md](features/dependency-snapshot.md)）③ 界面三处的主区 |
+| **过程文件** | `processOutputs` | 执行中的日志、中间产物、临时/工作目录、依赖资源 | 只落库与展示（界面「过程文件」折叠块）；**不进交付卡、不进下游消息** |
+
+- 归一（`normalizeOutputs`）：数组 / 逗号串兼容、去空白与零宽字符、反斜杠统一 `/`、去 `./` 前缀；同桶去重。
+- **上限各 10 项**（`MAX_OUTPUT_ITEMS`），超限**截断**并在工具返回文案里如实告知——刻意不「拒绝重报」：无人值守链路里多一轮对话就是多烧一轮 token。参数 schema 的 `maxItems` 只是给模型的提示，宿主机不据此硬拦（同 `status` 的宽松归一，见 `receipt.ts`）。
+- **同一路径两桶都报 ⇒ 以主桶为准**（从过程桶剔除），交付事件也只写主桶。⚠️ **「`outputs` mtime 晚于本次派发」这道新鲜度闸已于 2026-10-03 按用户拍板去掉**（会误伤「复用/检查已有文件」类任务；用户口径：只要文件确实存在、格式对就行，是不是蒙混过关不归插件判断）——理由与影响见 [features/state-machine.md](features/state-machine.md) §1。只记录不裁决，实例状态仍只由调度器写（决策 11）。**重复提交以「最后一次」为准**（用户 2026-10-03 拍板，且提示词已同步说明：再次提交会**整体覆盖**，先前报过的产物必须**一并带上**，不回带即视为放弃）——⚠️ 旧提示词写的是「只认第一次」，与实现矛盾，已更正。⚠️ **为什么不再用命令行**：agent 的 bash 在 Landlock 沙箱 `workspace-write` 模式下**只能写工作区**，写不了宿主数据根下的 `state.db`（决策 24 真机证据）；`submit.js` 保留为手动 / 排查备用通道。
 
 ## 二、状态库（SQLite，路径见决策 14）
 
@@ -58,7 +69,8 @@ CREATE TABLE task_instances (
   lease_until   TEXT,                    -- running 租约到期时刻（机制 #2）
   dispatched_at TEXT,                    -- ★ 实际派发时刻（可能晚于 scheduled_at），**不进身份**
   finished_at   TEXT,
-  outputs       TEXT,                    -- 决策 32：完成瞬间写回的产出（回执 outputs 的 JSON 文本，冗余）
+  outputs       TEXT,                    -- 决策 32：完成瞬间写回的产出（回执 outputs 的 JSON 文本，冗余）。**主文件桶**
+  process_outputs TEXT,                  -- 2026-10-10：过程文件桶（回执 processOutputs 的 JSON 文本，冗余）。旧库补列为 NULL
   token_in      INTEGER,                 -- 决策 32（修订）：输入（prompt）token，宿主事件带 usage 才累计，否则 NULL
   token_out     INTEGER,                 -- 决策 32（修订）：输出（completion）token
   token_in_cache INTEGER,                -- 决策 32（修订）：命中上下文缓存的输入 token

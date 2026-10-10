@@ -45,7 +45,13 @@ export interface TaskInstance {
     lease_until: string | null;
     dispatched_at: string | null;
     finished_at: string | null;
+    /**
+     * 回执声明的产出 JSON 数组，**主文件桶**（2026-10-10 语义收窄：核心交付物）。
+     * 旧行只有这一列 ⇒ 天然等价于「只有主文件」。
+     */
     outputs: string | null;
+    /** 回执声明的**过程文件桶**（2026-10-10 新增）：日志 / 中间产物 / 工作目录的 JSON 数组；旧行为 null。 */
+    process_outputs: string | null;
     token_in: number | null;
     token_out: number | null;
     token_in_cache: number | null;
@@ -159,8 +165,9 @@ export interface InstancePage {
  *
  * 为什么剔除：snapshot 是派发快照（提示词 / 附件 / 依赖的 JSON，单行 1.5–4 KB），
  * 日历要一次取满整月（几百到上千行），带着它就是数 MB 的白给开销；日历只要状态 / 时刻 / 产出 / 原因。
+ * 2026-10-10 起同时剔除 `process_outputs`（过程文件只有记录页 / 查看档 / 会话弹窗展示，日历不展示它）。
  */
-export type LiteTaskInstance = Omit<TaskInstance, 'snapshot'>;
+export type LiteTaskInstance = Omit<TaskInstance, 'snapshot' | 'process_outputs'>;
 export interface LiteInstancePage {
     rows: LiteTaskInstance[];
     /** 触及上限被截断（调用方必须提示用户收窄过滤，**不静默丢**）。 */
@@ -226,7 +233,7 @@ export declare class TaskStore {
      * - 已迁移过的库：仅补决策 32 冗余字段（outputs / tokens 列），不重复去重。
      */
     private migrate;
-    /** 决策 32（修订）：兼容旧库（无 outputs / token 三拆列）。 */
+    /** 决策 32（修订）+ 2026-10-10：兼容旧库（无 outputs / process_outputs / token 三拆列）。 */
     private ensureInstanceColumns;
     close(): void;
     /**
@@ -364,8 +371,8 @@ export declare class TaskStore {
      * ⚠️ **执行记录永久保留，没有清除方法**（用户 2026-10-08 拍板）：历史是用来查的、不该被清，
      * 原 `purgeHistory` 与 `historyRetentionDays` 配置一并删除。
      */
-    /** 完成瞬间写回产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
-    recordCompletion(id: string, outputs: string | null, tokenIn: number | null, tokenOut: number | null, tokenInCache: number | null): void;
+    /** 完成瞬间写回两桶产出与 token 三拆列（决策 32 修订：总表冗余，task_events 仍为真源）。 */
+    recordCompletion(id: string, outputs: string | null, processOutputs: string | null, tokenIn: number | null, tokenOut: number | null, tokenInCache: number | null): void;
     /** 按「任务 + 刻度」查实例（手动排查 / 备用回执通道用，不依赖 id 形态）。 */
     findBySlot(taskId: string, scheduledAt: string): TaskInstance | undefined;
     get(id: string): TaskInstance | undefined;

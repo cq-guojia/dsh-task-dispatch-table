@@ -59,6 +59,9 @@ function stripJsoncComments(text) {
  * 上游实例 → 已解析依赖（决策 43）：固化 id / 计划时刻 / 会话 / 上游工作区 / 产出。
  * 产出取上游实例的 `outputs` 列（回执声明并经 checkReceipt 校验的 JSON 数组，决策 32 修订）；
  * 旧行 / 坏 JSON / 未声明 ⇒ 空数组（消息里如实写「未声明产出」）。
+ *
+ * ⚠️ 2026-10-10：`outputs` 的语义已收窄为**主文件**（过程文件另存 `process_outputs` 列、**不下传下游**）
+ * ⇒ 「下游只收主文件」在这里天然成立，本函数无需改动。
  */
 function resolvedOf(dep, upstream) {
     let outputs = [];

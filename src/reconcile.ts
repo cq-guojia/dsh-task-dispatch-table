@@ -99,14 +99,21 @@ export interface ReconcilerDeps {
 
 interface ReceiptPayload {
   status?: unknown
+  /** 主文件（核心交付物）。 */
   outputs?: unknown
+  /** 过程文件（日志 / 中间产物 / 工作目录）；旧回执无此字段 ⇒ 视为空。 */
+  processOutputs?: unknown
   note?: unknown
   session_id?: unknown
 }
 
+/** 回执载荷里的路径数组（非数组 / 非字符串项一律剔除；缺字段 ⇒ 空数组）。 */
+const receiptPaths = (raw: unknown): string[] =>
+  Array.isArray(raw) ? raw.filter((item): item is string => typeof item === 'string') : []
+
 /**
  * 回执裁决（决策 19，替代旧契约文件三查）：
- * receipt 事件存在 + status ∈ validStatuses + outputs 里的每个路径**确实存在**。
+ * receipt 事件存在 + status ∈ validStatuses + outputs / processOutputs 里的每个路径**确实存在**。
  *
  * ⚠️ **已去掉「mtime 新鲜度」闸**（用户 2026-10-03 拍板，原为「防旧产物冒充」）：
  * 那道闸会误伤「复用 / 检查已有文件」类任务 —— 真机案例：任务是判断 `uuid.txt`
@@ -139,10 +146,18 @@ export function checkReceipt(
       detail: { status: payload.status, validStatuses: [...validStatuses] },
     }
   }
-  const outputs = Array.isArray(payload.outputs) ? payload.outputs.filter((item): item is string => typeof item === 'string') : []
-  for (const output of outputs) {
-    const outputPath = resolve(workspacePath, output)
-    if (!existsSync(outputPath)) return { ok: false, reason: 'output-missing', detail: { output } }
+  // 两桶同一道闸（2026-10-10）：主文件与过程文件都按「确实存在」校验，防幽灵路径进界面与下游消息。
+  // ⚠️ 取舍：过程文件路径写错同样会让整次回执判失败并走重试（与主桶今天的行为一致）；
+  //    若真机上因此频繁误失败，可降级为「只校验主桶」——改这一处即可。
+  const buckets: Array<{ bucket: string; list: string[] }> = [
+    { bucket: 'main', list: receiptPaths(payload.outputs) },
+    { bucket: 'process', list: receiptPaths(payload.processOutputs) },
+  ]
+  for (const { bucket, list } of buckets) {
+    for (const output of list) {
+      const outputPath = resolve(workspacePath, output)
+      if (!existsSync(outputPath)) return { ok: false, reason: 'output-missing', detail: { output, bucket } }
+    }
   }
   return { ok: true, detail: payload }
 }
@@ -307,7 +322,14 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
     emit?.({ type: EventType.TASK_RUN_CHANGED, payload: { taskId: instance.task_id, instanceId: instance.id } })
   }
 
-  function finishTerminal(instance: TaskInstance, status: 'succeeded' | 'failed', reason: string, detail?: unknown, outputs?: string | null): void {
+  function finishTerminal(
+    instance: TaskInstance,
+    status: 'succeeded' | 'failed',
+    reason: string,
+    detail?: unknown,
+    outputs?: string | null,
+    processOutputs?: string | null,
+  ): void {
     const tk = tokenTotals.get(instance.id)
     if (tokenTotals.has(instance.id)) tokenTotals.delete(instance.id)
     const finishedAt = new Date().toISOString()
@@ -315,8 +337,8 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
     // 主界面运行态（内存，非真源）：实例进终态 ⇒ 该任务不再在飞，并记录「上次执行」。
     runtime?.markTerminal(instance.task_id, status, instance.scheduled_at, finishedAt)
     if (detail !== undefined) store.appendEvent(instance.id, 'receipt_check', { reason, detail })
-    // 决策 32 修订：完成瞬间写回产出与 token 三拆列到总表（冗余，task_events 仍为真源）
-    store.recordCompletion(instance.id, outputs ?? null, tk?.in ?? null, tk?.out ?? null, tk?.cache ?? null)
+    // 决策 32 修订：完成瞬间写回两桶产出与 token 三拆列到总表（冗余，task_events 仍为真源）
+    store.recordCompletion(instance.id, outputs ?? null, processOutputs ?? null, tk?.in ?? null, tk?.out ?? null, tk?.cache ?? null)
     forgetHandle(instance.session_id)
     // 会话已结束（turn/end / disposed 触发的收敛）→ 归档；租约误判的回收不归档。
     if (instance.session_id !== null) void ctx.workspaceRegistry.archiveSession(instance.session_id).catch((error: unknown) => {
@@ -367,9 +389,10 @@ export function createReconciler({ ctx, logger, store, options, runtime, emit }:
     const receipt = store.latestReceipt(instance.id, instance.dispatched_at ?? undefined)
     const verdict = checkReceipt(snap.workspacePath, snap.validStatuses, receipt)
     if (verdict.ok) {
-      const payload = verdict.detail as { outputs?: unknown }
+      const payload = verdict.detail as { outputs?: unknown; processOutputs?: unknown }
       const outputsField = Array.isArray(payload?.outputs) ? JSON.stringify(payload.outputs) : null
-      finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail, outputsField)
+      const processField = Array.isArray(payload?.processOutputs) ? JSON.stringify(payload.processOutputs) : null
+      finishTerminal(instance, 'succeeded', 'receipt-pass', verdict.detail, outputsField, processField)
     } else {
       store.appendEvent(instance.id, 'receipt_check', { reason: verdict.reason, detail: verdict.detail })
       retryOrFail(instance, verdict.reason ?? 'receipt-failed', verdict.detail)
