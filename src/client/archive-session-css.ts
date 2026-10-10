@@ -313,9 +313,9 @@ export const ARCHIVE_SESSION_CSS = `
 .dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
 /* 目录树：行尾「选择」按钮（仅选择器形态，用户 2026-10-10）——平时藏起来，悬停或聚焦该行才出现，
    点它才把整个文件夹选为附件；平时隐形但保留尺寸，出现时不会顶动行内布局。 */
-.dsh-tdt-sv-tree-select{flex:none;margin-left:auto;appearance:none;background:0 0;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);padding:2px 8px;font-size:var(--tdt-font-sm);line-height:1.4;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;pointer-events:none;transition:opacity var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-tree-row:hover .dsh-tdt-sv-tree-select,.dsh-tdt-sv-tree-select:focus-visible{opacity:1;pointer-events:auto;}
-.dsh-tdt-sv-tree-select:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
+.dsh-tdt-sv-tree-act{flex:none;margin-left:auto;appearance:none;background:0 0;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);padding:2px 8px;font-size:var(--tdt-font-sm);line-height:1.4;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;pointer-events:none;transition:opacity var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-tree-row:hover .dsh-tdt-sv-tree-act,.dsh-tdt-sv-tree-act:focus-visible{opacity:1;pointer-events:auto;}
+.dsh-tdt-sv-tree-act:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
 /* 内联展开子层：左缩进 + 淡竖线引导层级。 */
 .dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--tdt-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
 .dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}

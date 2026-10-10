@@ -85,7 +85,7 @@ export type LocaleKey =
   | 'previewHtmlSwitchAria' | 'previewHtmlFrame' | 'previewHtmlFailed' | 'previewTruncated'
   | 'previewTruncatedSize'
   | 'explorerEmpty' | 'explorerTruncated' | 'explorerCrumbsAria' 
-  | 'explorerLevels' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse'
+  | 'explorerLevels' | 'explorerRootName' | 'explorerExpand' | 'explorerCollapse' | 'explorerEnter'
   // —— 执行记录里的产出物链接（点开 = 同一个 openFile 入口）——
   | 'colOutputs'
   // —— 回执过程文件桶（2026-10-10：主文件之外的次级产出，三处共用一个折叠块）——
@@ -469,6 +469,7 @@ export const zh: Record<LocaleKey, string> = {
   explorerRootName: '（工作区根目录）',
   explorerExpand: '展开目录',
   explorerCollapse: '收起目录',
+  explorerEnter: '进入',
   colOutputs: '产出',
   // 过程文件块（回执的第二桶）：次级观感、默认收起（用户 2026-10-10 拍板「都显示，但分主次」）。
   procFilesTitle: '过程文件 · {count} 项',
@@ -1161,6 +1162,7 @@ export const en: Record<LocaleKey, string> = {
   explorerRootName: '(workspace root)',
   explorerExpand: 'Expand directory',
   explorerCollapse: 'Collapse directory',
+  explorerEnter: 'Open',
   colOutputs: 'Outputs',
   // Process-files block (the receipt's second bucket): secondary look, collapsed by default.
   procFilesTitle: 'Process files · {count}',

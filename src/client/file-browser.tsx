@@ -608,18 +608,19 @@ export function FileBrowser(props: {
       }
       const cached: ChildData | undefined = childCache[childPath]
       const isOpen = openDirs.has(childPath)
-      // 目录行点击（用户 2026-10-10 改）：**行本身只负责就地展开/收起**，选中整个文件夹改由行尾
-      // 「选择」小按钮承担——此前「点行即选中 + 只能点尖号展开」两者打架，极易误选。
-      // 浏览形态（非 picker）不变：点行仍是导航进该目录。▸ 尖号与行同义，保留 stopPropagation 防重复触发。
+      // 目录行点击（用户 2026-10-10）：**两种形态统一**——行本身只就地展开/收起（此前选择器点行=选中、
+      // 浏览点行=进层，同一棵树两套语义极易误操作）。▸ 尖号与行同义，保留 stopPropagation 防重复触发。
+      // 形态各自的主动作挪到行尾小按钮：选择器 = 选择此文件夹，浏览 = 进入该目录。
       // 目录行不渲染文件夹图标——行首已有展开小尖号，再摆一个文件夹图标是重复（用户 2026-10-10）。
-      const rowAction = (): void => {
-        if (picker === true) { toggleDir(childPath); return }
-        loadDir(childPath)
-      }
-      /** 行尾「选择」按钮：只在此处选中整个文件夹（回传工作区相对路径）。 */
-      const selectThisDir = (event: { stopPropagation: () => void }): void => {
+      const rowAction = (): void => { toggleDir(childPath) }
+      /** 行尾动作按钮（stopPropagation 防触发展开）：选择器选中整个文件夹；浏览则进入该目录。 */
+      const actThisDir = (event: { stopPropagation: () => void }): void => {
         event.stopPropagation()
-        if (onPick !== undefined) onPick(relativizeToRoot(childPath, sessionId), true)
+        if (picker === true) {
+          if (onPick !== undefined) onPick(relativizeToRoot(childPath, sessionId), true)
+          return
+        }
+        loadDir(childPath)
       }
       return h(Fragment, { key: childPath },
         h('div', {
@@ -638,14 +639,14 @@ export function FileBrowser(props: {
             onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); toggleDir(childPath) },
           }, h(IconChevronRightOutlineRegular, { size: 16 })),
           h('span', { className: 'dsh-tdt-sv-tree-name' }, entry.name),
-          picker === true && onPick !== undefined
-            ? h('button', {
+          picker === true && onPick === undefined
+            ? null
+            : h('button', {
                 type: 'button',
-                className: 'dsh-tdt-sv-tree-select',
-                'aria-label': t('editorPickerPickDir'),
-                onClick: selectThisDir,
-              }, t('editorPickerSelect'))
-            : null,
+                className: 'dsh-tdt-sv-tree-act',
+                'aria-label': picker === true ? t('editorPickerPickDir') : t('explorerEnter'),
+                onClick: actThisDir,
+              }, t(picker === true ? 'editorPickerSelect' : 'explorerEnter')),
         ),
         isOpen
           ? h('div', { className: 'dsh-tdt-sv-tree-children' },

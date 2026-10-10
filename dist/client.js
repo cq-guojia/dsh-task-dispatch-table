@@ -505,6 +505,7 @@ window.__ModuleLoader__.load({
 			explorerRootName: "（工作区根目录）",
 			explorerExpand: "展开目录",
 			explorerCollapse: "收起目录",
+			explorerEnter: "进入",
 			colOutputs: "产出",
 			procFilesTitle: "过程文件 · {count} 项",
 			deliverRowTitle: "交付文件",
@@ -1173,6 +1174,7 @@ window.__ModuleLoader__.load({
 			explorerRootName: "(workspace root)",
 			explorerExpand: "Expand directory",
 			explorerCollapse: "Collapse directory",
+			explorerEnter: "Open",
 			colOutputs: "Outputs",
 			procFilesTitle: "Process files · {count}",
 			deliverRowTitle: "Deliver files",
@@ -50212,9 +50214,9 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-tree-toggle-open{transform:rotate(90deg);}
 /* 目录树：行尾「选择」按钮（仅选择器形态，用户 2026-10-10）——平时藏起来，悬停或聚焦该行才出现，
    点它才把整个文件夹选为附件；平时隐形但保留尺寸，出现时不会顶动行内布局。 */
-.dsh-tdt-sv-tree-select{flex:none;margin-left:auto;appearance:none;background:0 0;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);padding:2px 8px;font-size:var(--tdt-font-sm);line-height:1.4;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;pointer-events:none;transition:opacity var(--tdt-dur,.15s) var(--tdt-ease,ease);}
-.dsh-tdt-sv-tree-row:hover .dsh-tdt-sv-tree-select,.dsh-tdt-sv-tree-select:focus-visible{opacity:1;pointer-events:auto;}
-.dsh-tdt-sv-tree-select:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
+.dsh-tdt-sv-tree-act{flex:none;margin-left:auto;appearance:none;background:0 0;border:1px solid var(--tdt-border,rgba(128,128,128,.35));border-radius:var(--tdt-radius-sm,6px);padding:2px 8px;font-size:var(--tdt-font-sm);line-height:1.4;color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;opacity:0;pointer-events:none;transition:opacity var(--tdt-dur,.15s) var(--tdt-ease,ease);}
+.dsh-tdt-sv-tree-row:hover .dsh-tdt-sv-tree-act,.dsh-tdt-sv-tree-act:focus-visible{opacity:1;pointer-events:auto;}
+.dsh-tdt-sv-tree-act:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg);}
 /* 内联展开子层：左缩进 + 淡竖线引导层级。 */
 .dsh-tdt-sv-tree-children{margin-left:9px;padding-left:7px;border-left:1px solid var(--tdt-border,rgba(128,128,128,.28));display:flex;flex-direction:column;}
 .dsh-tdt-sv-tree-loading,.dsh-tdt-sv-tree-err{padding:4px 8px 4px 36px;font-size:var(--tdt-font-sm);color:var(--tdt-fg-3,rgba(128,128,128,.8));}
@@ -54540,16 +54542,16 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					const cached = childCache[childPath];
 					const isOpen = openDirs.has(childPath);
 					const rowAction = () => {
+						toggleDir(childPath);
+					};
+					/** 行尾动作按钮（stopPropagation 防触发展开）：选择器选中整个文件夹；浏览则进入该目录。 */
+					const actThisDir = (event) => {
+						event.stopPropagation();
 						if (picker === true) {
-							toggleDir(childPath);
+							if (onPick !== void 0) onPick(relativizeToRoot(childPath, sessionId), true);
 							return;
 						}
 						loadDir(childPath);
-					};
-					/** 行尾「选择」按钮：只在此处选中整个文件夹（回传工作区相对路径）。 */
-					const selectThisDir = (event) => {
-						event.stopPropagation();
-						if (onPick !== void 0) onPick(relativizeToRoot(childPath, sessionId), true);
 					};
 					return (0, react$1.createElement)(react$1.Fragment, { key: childPath }, (0, react$1.createElement)("div", {
 						className: "dsh-tdt-sv-tree-row",
@@ -54569,12 +54571,12 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 							event.stopPropagation();
 							toggleDir(childPath);
 						}
-					}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name), picker === true && onPick !== void 0 ? (0, react$1.createElement)("button", {
+					}, (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 16 })), (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-name" }, entry.name), picker === true && onPick === void 0 ? null : (0, react$1.createElement)("button", {
 						type: "button",
-						className: "dsh-tdt-sv-tree-select",
-						"aria-label": t("editorPickerPickDir"),
-						onClick: selectThisDir
-					}, t("editorPickerSelect")) : null), isOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? null : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
+						className: "dsh-tdt-sv-tree-act",
+						"aria-label": picker === true ? t("editorPickerPickDir") : t("explorerEnter"),
+						onClick: actThisDir
+					}, t(picker === true ? "editorPickerSelect" : "explorerEnter"))), isOpen ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-children" }, cached === void 0 || cached.status === "loading" ? null : cached.status === "error" ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-err" }, t(cached.error.key, cached.error.params)) : (0, react$1.createElement)(react$1.Fragment, null, renderTree(cached.entries, childPath), cached.truncated ? (0, react$1.createElement)("div", { className: "dsh-tdt-sv-tree-truncated" }, t("explorerTruncated")) : null)) : null);
 				});
 			};
 			const rootAbs = workspaceRoots.get(sessionId);
