@@ -72,7 +72,7 @@ function dirnameOf(p: string): string {
  * ▾ 下拉条目构造（**picker 与 dock 共用同一段代码**，差别只在入参——用户 2026-09-29 点名提炼，
  * 严禁两处各写一份）：
  * - 当前工作区排第一（打开文件夹图标 + 加粗），**其下路径紧跟**（每层一个右箭头位缩进），
- *   再列其他工作区（关合图标 + 灰）——「打开哪个就跟在哪个下面」；
+ *   再列其他工作区（关合图标 + 灰）——「打开哪个就跟在哪个下面」；点当前工作区 = 回到其根目录。
  * - 当前工作区未知（rootName 空或不在清单）时路径段置顶、全部工作区按「其他」罗列；
  * - workspaces 不传 = 不显示工作区段（旧形态兜底：根无箭头、其下逐层缩进）。
  */
@@ -93,7 +93,8 @@ function crumbsMenuEntries(params: {
     className: 'dsh-tdt-sv-crumbs-menu-item',
     style: { paddingLeft: 8, display: 'flex', alignItems: 'center', gap: '6px' },
     title: ws,
-    onClick: () => { if (!current) onPickWorkspace?.(ws) },
+    // 当前工作区也可点（用户 2026-10-10）：点它 = 回到该工作区根目录（浏览深处时唯一的「回根」入口）。
+    onClick: () => { if (current) onLoadDir(''); else onPickWorkspace?.(ws) },
   },
     h('span', { style: { display: 'inline-flex', alignItems: 'center', flex: 'none', color: current ? 'var(--tdt-fg)' : 'var(--tdt-fg-2)' } },
       h(current ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 13 })),
@@ -358,7 +359,7 @@ export function FileBrowser(props: {
    * 工作区，不该在浏览时切走）。当前工作区（=== rootName）用打开文件夹图标 + 加粗区分。
    */
   workspaces?: readonly string[]
-  /** 从 ▾ 下拉选择其他工作区（配合 workspaces；选当前工作区为 no-op）。 */
+  /** 从 ▾ 下拉选择其他工作区（配合 workspaces；点当前工作区 = 回到其根目录，见 crumbsMenuEntries）。 */
   onSelectWorkspace?: (name: string) => void
   /** 外部容器样式（嵌入弹层时撑满高度用）。 */
   style?: CSSProperties
@@ -610,6 +611,8 @@ export function FileBrowser(props: {
       // 目录行的点击（用户 2026-10-09：文件夹本身要能当附件）：picker 模式 = 整行选此目录，
       // 非 picker 才导航进该目录。回传工作区相对路径，task-editor 取 basename 当 name
       // ⇒ 用户口头说的「附件里的 XX」就是这条。▸ 仍负责内联展开（自身 stopPropagation）。
+      // 目录行不渲染文件夹图标——行首已有展开小尖号，再摆一个文件夹图标是重复（用户 2026-10-10）。
+      // 文件行不受影响：没有尖号，仍以 FileTypeIcon 区分类型。
       const pickDir = (): void => {
         if (picker === true && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId), true); return }
         loadDir(childPath)
@@ -623,7 +626,6 @@ export function FileBrowser(props: {
           onClick: pickDir,
           onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') pickDir() },
         },
-          h('span', { className: 'dsh-tdt-sv-tree-icon' }, h(isOpen ? IconFolderOpenOutlineRegular : IconFolderCloseRegular, { size: 18 })),
           tooled(isOpen ? t('explorerCollapse') : t('explorerExpand'),
             h('button', {
               type: 'button',

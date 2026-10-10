@@ -54008,7 +54008,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		* ▾ 下拉条目构造（**picker 与 dock 共用同一段代码**，差别只在入参——用户 2026-09-29 点名提炼，
 		* 严禁两处各写一份）：
 		* - 当前工作区排第一（打开文件夹图标 + 加粗），**其下路径紧跟**（每层一个右箭头位缩进），
-		*   再列其他工作区（关合图标 + 灰）——「打开哪个就跟在哪个下面」；
+		*   再列其他工作区（关合图标 + 灰）——「打开哪个就跟在哪个下面」；点当前工作区 = 回到其根目录。
 		* - 当前工作区未知（rootName 空或不在清单）时路径段置顶、全部工作区按「其他」罗列；
 		* - workspaces 不传 = 不显示工作区段（旧形态兜底：根无箭头、其下逐层缩进）。
 		*/
@@ -54027,7 +54027,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				},
 				title: ws,
 				onClick: () => {
-					if (!current) onPickWorkspace?.(ws);
+					if (current) onLoadDir("");
+					else onPickWorkspace?.(ws);
 				}
 			}, (0, react$1.createElement)("span", { style: {
 				display: "inline-flex",
@@ -54548,7 +54549,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 						onKeyDown: (event) => {
 							if (event.key === "Enter" || event.key === " ") pickDir();
 						}
-					}, (0, react$1.createElement)("span", { className: "dsh-tdt-sv-tree-icon" }, (0, react$1.createElement)(isOpen ? _deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular : _deepseek_ai_dsh_client_ui_primitives.IconFolderCloseRegular, { size: 18 })), tooled(isOpen ? t("explorerCollapse") : t("explorerExpand"), (0, react$1.createElement)("button", {
+					}, tooled(isOpen ? t("explorerCollapse") : t("explorerExpand"), (0, react$1.createElement)("button", {
 						type: "button",
 						className: "dsh-tdt-sv-tree-toggle" + (isOpen ? " dsh-tdt-sv-tree-toggle-open" : ""),
 						"aria-expanded": isOpen,
