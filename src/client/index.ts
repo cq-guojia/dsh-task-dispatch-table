@@ -529,7 +529,10 @@ function TaskPage(props: {
 
   // U11 页面级预览 dock（用户 2026-09-28 拍板）：**唯一一份**预览面，固定在屏幕最右侧并
   // 把整页（含会话弹窗）往左推；弹窗与整页共用它，关弹窗不影响它，它自己可完整收回。
-  const [preview, setPreview] = useState<{ sessionId: string; path: string } | null>(null)
+  // seq = 第几次「浏览」点击（用户 2026-10-10）：dock 内部可在目录树里自由导航，dock 当前的
+  // dir/viewing 与当初请求的那条 path 早就不是一回事；只按 path 判等 ⇒ 再点同一个文件的
+  // 「浏览」时 key 不变、组件不重挂载、内部浏览态原样留着 ⇒ 点了没反应。seq 进 key ⇒ 每点必重开。
+  const [preview, setPreview] = useState<{ sessionId: string; path: string; seq: number } | null>(null)
   const [previewWidth, setPreviewWidth] = useState<number>(() => readPreviewWidth())
   // 两条分栏各自当前占掉的宽度（0 = 收起）：**互为对方的预留**，用来给主面板留够最小宽度
   // （用户 2026-10-01 Q3：两条同时打开时也要保证主窗口，不只是单边）。
@@ -566,7 +569,7 @@ function TaskPage(props: {
   const openFile = useCallback((sessionId: string, path: string): void => {
     if (!canPreview) return
     lastWorkspaceSessionId.current = sessionId
-    setPreview({ sessionId, path })
+    setPreview(prev => ({ sessionId, path, seq: (prev?.seq ?? 0) + 1 }))
   }, [canPreview])
   const closePreview = useCallback((): void => { setPreview(null) }, [])
   /**
@@ -1523,7 +1526,7 @@ function TaskPage(props: {
     // 与弹窗互不遮盖、互不干扰——关弹窗预览仍在，收预览整页回满宽。
     preview !== null && workspaceFiles !== null
       ? h(FileBrowser, {
-          key: `${preview.sessionId}:${preview.path}`,
+          key: `${preview.sessionId}:${preview.path}:${preview.seq}`,
           workspaceFiles,
           officeToPdf,
           sessionId: preview.sessionId,
@@ -1538,7 +1541,9 @@ function TaskPage(props: {
           workspaces: editorOptions.workspaces.map(w => w.value),
           onSelectWorkspace: (name: string) => {
             const anchor = editorOptions.workspaceAnchors[name]
-            if (anchor !== undefined && anchor !== preview.sessionId) setPreview({ sessionId: anchor, path: '' })
+            if (anchor !== undefined && anchor !== preview.sessionId) {
+              setPreview(prev => prev === null ? null : { sessionId: anchor, path: '', seq: prev.seq + 1 })
+            }
           },
         })
       : null,

@@ -71720,10 +71720,11 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const openFile = (0, react$1.useCallback)((sessionId, path) => {
 				if (!canPreview) return;
 				lastWorkspaceSessionId.current = sessionId;
-				setPreview({
+				setPreview((prev) => ({
 					sessionId,
-					path
-				});
+					path,
+					seq: (prev?.seq ?? 0) + 1
+				}));
 			}, [canPreview]);
 			const closePreview = (0, react$1.useCallback)(() => {
 				setPreview(null);
@@ -72452,7 +72453,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				officeToPdf,
 				workspaceAnchors: editorOptions.workspaceAnchors
 			}) : null, preview !== null && workspaceFiles !== null ? (0, react$1.createElement)(FileBrowser, {
-				key: `${preview.sessionId}:${preview.path}`,
+				key: `${preview.sessionId}:${preview.path}:${preview.seq}`,
 				workspaceFiles,
 				officeToPdf,
 				sessionId: preview.sessionId,
@@ -72465,9 +72466,10 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				workspaces: editorOptions.workspaces.map((w) => w.value),
 				onSelectWorkspace: (name) => {
 					const anchor = editorOptions.workspaceAnchors[name];
-					if (anchor !== void 0 && anchor !== preview.sessionId) setPreview({
+					if (anchor !== void 0 && anchor !== preview.sessionId) setPreview((prev) => prev === null ? null : {
 						sessionId: anchor,
-						path: ""
+						path: "",
+						seq: prev.seq + 1
 					});
 				}
 			}) : null);
