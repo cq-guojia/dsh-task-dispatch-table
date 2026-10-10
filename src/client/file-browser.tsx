@@ -608,33 +608,44 @@ export function FileBrowser(props: {
       }
       const cached: ChildData | undefined = childCache[childPath]
       const isOpen = openDirs.has(childPath)
-      // 目录行的点击（用户 2026-10-09：文件夹本身要能当附件）：picker 模式 = 整行选此目录，
-      // 非 picker 才导航进该目录。回传工作区相对路径，task-editor 取 basename 当 name
-      // ⇒ 用户口头说的「附件里的 XX」就是这条。▸ 仍负责内联展开（自身 stopPropagation）。
+      // 目录行点击（用户 2026-10-10 改）：**行本身只负责就地展开/收起**，选中整个文件夹改由行尾
+      // 「选择」小按钮承担——此前「点行即选中 + 只能点尖号展开」两者打架，极易误选。
+      // 浏览形态（非 picker）不变：点行仍是导航进该目录。▸ 尖号与行同义，保留 stopPropagation 防重复触发。
       // 目录行不渲染文件夹图标——行首已有展开小尖号，再摆一个文件夹图标是重复（用户 2026-10-10）。
-      // 文件行不受影响：没有尖号，仍以 FileTypeIcon 区分类型。
-      const pickDir = (): void => {
-        if (picker === true && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId), true); return }
+      const rowAction = (): void => {
+        if (picker === true) { toggleDir(childPath); return }
         loadDir(childPath)
+      }
+      /** 行尾「选择」按钮：只在此处选中整个文件夹（回传工作区相对路径）。 */
+      const selectThisDir = (event: { stopPropagation: () => void }): void => {
+        event.stopPropagation()
+        if (onPick !== undefined) onPick(relativizeToRoot(childPath, sessionId), true)
       }
       return h(Fragment, { key: childPath },
         h('div', {
-          className: 'dsh-tdt-sv-tree-row' + (picker === true ? ' dsh-tdt-sv-tree-row-pick' : ''),
+          className: 'dsh-tdt-sv-tree-row',
           role: 'button',
           tabIndex: 0,
-          title: picker === true ? t('editorPickerPickDir') : childPath,
-          onClick: pickDir,
-          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') pickDir() },
+          title: childPath,
+          onClick: rowAction,
+          onKeyDown: (event: { key: string }) => { if (event.key === 'Enter' || event.key === ' ') rowAction() },
         },
-          tooled(isOpen ? t('explorerCollapse') : t('explorerExpand'),
-            h('button', {
-              type: 'button',
-              className: 'dsh-tdt-sv-tree-toggle' + (isOpen ? ' dsh-tdt-sv-tree-toggle-open' : ''),
-              'aria-expanded': isOpen,
-              'aria-label': isOpen ? t('explorerCollapse') : t('explorerExpand'),
-              onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); toggleDir(childPath) },
-            }, h(IconChevronRightOutlineRegular, { size: 16 }))),
+          h('button', {
+            type: 'button',
+            className: 'dsh-tdt-sv-tree-toggle' + (isOpen ? ' dsh-tdt-sv-tree-toggle-open' : ''),
+            'aria-expanded': isOpen,
+            'aria-label': isOpen ? t('explorerCollapse') : t('explorerExpand'),
+            onClick: (event: { stopPropagation: () => void }) => { event.stopPropagation(); toggleDir(childPath) },
+          }, h(IconChevronRightOutlineRegular, { size: 16 })),
           h('span', { className: 'dsh-tdt-sv-tree-name' }, entry.name),
+          picker === true && onPick !== undefined
+            ? h('button', {
+                type: 'button',
+                className: 'dsh-tdt-sv-tree-select',
+                'aria-label': t('editorPickerPickDir'),
+                onClick: selectThisDir,
+              }, t('editorPickerSelect'))
+            : null,
         ),
         isOpen
           ? h('div', { className: 'dsh-tdt-sv-tree-children' },
