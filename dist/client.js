@@ -68088,6 +68088,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				}
 			})))), (0, react$1.createElement)(ProcessFiles, {
 				paths: processOutputs,
+				defaultOpen: true,
 				onOpen: canOpenFile ? (path) => {
 					openFile?.(sid, path);
 				} : void 0,

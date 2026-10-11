@@ -1149,9 +1149,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
       clientJs.includes('dsh-tdt-proc-head') && clientJs.includes('data-process-files') && clientJs.includes('procFilesTitle'))
     check('过程文件块默认是否展开由 defaultOpen 控制（useState(defaultOpen ?? false)）',
       srcOf('process-files.tsx').includes('useState(defaultOpen ?? false)') && srcOf('process-files.tsx').includes('dsh-tdt-proc-list'))
-    check('会话弹窗 / 上次执行处过程文件默认展开（defaultOpen: true），执行记录「详细」处仍收起',
+    check('会话弹窗 / 上次执行 / 执行记录展开区过程文件均默认展开（defaultOpen: true）',
       srcOf('session-view.ts').includes('defaultOpen: true') && srcOf('task-info.tsx').includes('defaultOpen: true')
-        && !srcOf('records-timeline.tsx').includes('defaultOpen'))
+        && srcOf('records-timeline.tsx').includes('defaultOpen: true'))
     check('过程文件桶走同一解析器（process_outputs 复用 outputsOf，不另写一份）',
       srcOf('records-timeline.tsx').includes('outputsOf(row.process_outputs)')
       && srcOf('task-info.tsx').includes('outputsOf(instance.process_outputs)'))

@@ -689,9 +689,10 @@ export const RecordItem = memo(function RecordItem(props: RecordItemProps): Retu
               h(MarqueeText, { text: baseNameOf(path), title: path, style: { maxWidth: '40ch', minWidth: 0 } }),
             )),
           ),
-        // 过程文件（次级、默认收起，2026-10-10）：跟在主文件那排之后，同样可点开预览。
+        // 过程文件（次级）：跟在主文件那排之后，同样可点开预览。
         h(ProcessFiles, {
           paths: processOutputs,
+          defaultOpen: true,
           onOpen: canOpenFile ? (path: string): void => { openFile?.(sid as string, path) } : undefined,
           t,
         }),
