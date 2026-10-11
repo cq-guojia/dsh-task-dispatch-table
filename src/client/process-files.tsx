@@ -5,7 +5,8 @@
 // 见 query.ts `outputsOf` 的收编注释）。
 //
 // 观感纪律（用户 2026-10-10 拍板「都显示，但分主次」）：**次级** —— 小字浅灰标题 + 数量，
-// **默认收起**，展开后才是横向文件行；不许抢主文件（交付卡 / 产出物清单）的视线。
+// 展开后是横向文件行；不许抢主文件（交付卡 / 产出物清单）的视线。默认是否展开由调用方
+// 经 `defaultOpen` 控制（会话 / 上次执行处展开，执行记录「详细」处收起）。
 //
 // 数据真源 = `task_instances.process_outputs`（回执声明并经 checkReceipt 校验的 JSON 数组）；
 // 拿不到就整块不渲染（返回 null），绝不显示假文件。
@@ -25,10 +26,12 @@ export function ProcessFiles(props: {
   onOpen?: ((path: string) => void) | undefined
   /** 调用方补的容器修饰类（三处的间距不同）。 */
   className?: string | undefined
+  /** 默认展开（会话 / 上次执行处）；不传 = 收起（执行记录「详细」处）。 */
+  defaultOpen?: boolean | undefined
   t: Translate
 }): ReturnType<typeof h> | null {
-  const { paths, onOpen, className, t } = props
-  const [open, setOpen] = useState(false)
+  const { paths, onOpen, className, defaultOpen, t } = props
+  const [open, setOpen] = useState(defaultOpen ?? false)
   ensureControlsStyle()
   const list = paths ?? []
   if (list.length === 0) return null

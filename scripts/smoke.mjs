@@ -1147,8 +1147,11 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
         .every(file => srcOf(file).includes("from './process-files'")))
     check('过程文件块进产物（dsh-tdt-proc 样式入库 + data-process-files 锚点 + 文案键）',
       clientJs.includes('dsh-tdt-proc-head') && clientJs.includes('data-process-files') && clientJs.includes('procFilesTitle'))
-    check('过程文件块默认收起（初值 open=false；展开才渲染 dsh-tdt-proc-list）',
-      srcOf('process-files.tsx').includes('useState(false)') && srcOf('process-files.tsx').includes('dsh-tdt-proc-list'))
+    check('过程文件块默认是否展开由 defaultOpen 控制（useState(defaultOpen ?? false)）',
+      srcOf('process-files.tsx').includes('useState(defaultOpen ?? false)') && srcOf('process-files.tsx').includes('dsh-tdt-proc-list'))
+    check('会话弹窗 / 上次执行处过程文件默认展开（defaultOpen: true），执行记录「详细」处仍收起',
+      srcOf('session-view.ts').includes('defaultOpen: true') && srcOf('task-info.tsx').includes('defaultOpen: true')
+        && !srcOf('records-timeline.tsx').includes('defaultOpen'))
     check('过程文件桶走同一解析器（process_outputs 复用 outputsOf，不另写一份）',
       srcOf('records-timeline.tsx').includes('outputsOf(row.process_outputs)')
       && srcOf('task-info.tsx').includes('outputsOf(instance.process_outputs)'))

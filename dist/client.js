@@ -52292,8 +52292,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 		/** 目录以尾斜杠表达（与 `normalizeOutputs` / `baseNameOf` 同一约定）。 */
 		const isDirPath$1 = (path) => path.endsWith("/");
 		function ProcessFiles(props) {
-			const { paths, onOpen, className, t } = props;
-			const [open, setOpen] = (0, react$1.useState)(false);
+			const { paths, onOpen, className, defaultOpen, t } = props;
+			const [open, setOpen] = (0, react$1.useState)(defaultOpen ?? false);
 			ensureControlsStyle();
 			const list = paths ?? [];
 			if (list.length === 0) return null;
@@ -52847,6 +52847,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 					}) : null, showProc ? (0, react$1.createElement)(ProcessFiles, {
 						paths: processFiles,
 						onOpen: fileOpen?.open,
+						defaultOpen: true,
 						t
 					}) : null) : null;
 					return data === void 0 || data.closing === null || data.closing === void 0 ? null : (0, react$1.createElement)(TurnTailNodeViewMirror, {
@@ -64877,6 +64878,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				size: 14
 			}), (0, react$1.createElement)("span", { className: "dsh-tdt-ellipsis" }, baseNameOf(output)))))), (0, react$1.createElement)(ProcessFiles, {
 				paths: processOutputs,
+				defaultOpen: true,
 				onOpen: canOpenFile && onOpenFile !== void 0 ? (path) => {
 					onOpenFile(sid, path);
 				} : void 0,

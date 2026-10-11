@@ -337,9 +337,10 @@ export function lastRunFields(props: {
           )),
         ),
       ),
-    // 过程文件（次级、默认收起）：与产出物清单同一份数据源，只是不抢视线。
+    // 过程文件（次级）：与产出物清单同一份数据源，上次执行处默认展开。
     h(ProcessFiles, {
       paths: processOutputs,
+      defaultOpen: true,
       onOpen: canOpenFile && onOpenFile !== undefined
         ? (path: string): void => { onOpenFile(sid as string, path) }
         : undefined,

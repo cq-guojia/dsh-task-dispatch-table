@@ -755,7 +755,7 @@ function renderKeyedNode(
               }, t('presented.unavailable'))
               : null,
             showGrid ? h(DeliverablesGridMirror, { files: deliverFiles, onOpen: fileOpen?.open, t }) : null,
-            showProc ? h(ProcessFiles, { paths: processFiles, onOpen: fileOpen?.open, t }) : null)
+            showProc ? h(ProcessFiles, { paths: processFiles, onOpen: fileOpen?.open, defaultOpen: true, t }) : null)
         : null
       const tail = data === undefined || data.closing === null || data.closing === undefined
         ? null
