@@ -275,11 +275,15 @@ export const ARCHIVE_SESSION_CSS = `
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
 .dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));white-space:nowrap;}
 .dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
-.dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;}
-.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;flex:none;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
+.dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
+.dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
+.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
 .dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
+/* 折叠态的「…」：代表被省略的上级层级，可点开行首 ▾ 下拉逐级跳回。 */
+.dsh-tdt-sv-crumbs-ellipsis{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3,rgba(128,128,128,.7));cursor:pointer;flex:none;}
+.dsh-tdt-sv-crumbs-ellipsis:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
 /* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
    MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
