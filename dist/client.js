@@ -50178,13 +50178,10 @@ body[data-ds-dark-theme]{
 .dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
 .dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
 .dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
-.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
+.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
-/* 折叠态的「…」：代表被省略的上级层级，可点开行首 ▾ 下拉逐级跳回。 */
-.dsh-tdt-sv-crumbs-ellipsis{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-3,rgba(128,128,128,.7));cursor:pointer;flex:none;}
-.dsh-tdt-sv-crumbs-ellipsis:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-crumb-sep{flex:none;color:var(--tdt-fg-3,rgba(128,128,128,.7));}
 /* 工作区之外的只读完整路径（用户 2026-10-03）：**不可点**（无导航），但过长仍走
    MarqueeText 跑马灯（用户验收点正：「啪-啪-灯」= 跑马灯）。本类只提供**字体与字色皮肤**，
@@ -54524,6 +54521,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 								onPick(relativizeToRoot(childPath, sessionId), false);
 								return;
 							}
+							const parent = dirnameOf(childPath);
+							if (parent !== dir) loadDir(parent);
 							setViewing(childPath);
 							setReloadNonce(0);
 							setSourceView(false);
@@ -54686,14 +54685,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				className: "dsh-tdt-sv-crumb",
 				disabled: true,
 				tabIndex: -1
-			}, crumb.label)))), crumbs.length > 1 && crumbsOverflow ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumbs-ellipsis",
-				"aria-label": t("explorerLevels"),
-				onClick: () => {
-					setMenuOpen((value) => !value);
-				}
-			}, "…") : null, crumbsOverflow ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t("explorerRootName")) : crumbs.length === 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
+			}, crumb.label)))), crumbsOverflow ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t("explorerRootName")) : crumbs.length === 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
 				className: "dsh-tdt-sv-crumb-sep",
 				size: 12
 			}) : null, (0, react$1.createElement)("button", {

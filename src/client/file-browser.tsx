@@ -592,6 +592,11 @@ export function FileBrowser(props: {
           // 工作区相对路径——宿主 zod 拒绝绝对路径 / `..` / 反斜杠，派发期再按来源工作区把它绝对化
           // （`reconcile.ts` 的 `join(工作区根, ref)`）。此前回传绝对路径 ⇒ 保存被 422 拒。
           if (picker && onPick !== undefined) { onPick(relativizeToRoot(childPath, sessionId), false); return }
+          // 逐层展开后选中文件：面包屑要跟随到该文件所在目录（用户 2026-10-12）——此前只 setViewing、
+          // dir 停在原层 ⇒ 顶部面包屑不动。父目录不同则导航过去（同步 setDir + 后台重列该层；看文件时
+          // 树不显示，回导航再由面包屑 loadDir 刷新）。
+          const parent = dirnameOf(childPath)
+          if (parent !== dir) loadDir(parent)
           setViewing(childPath); setReloadNonce(0); setSourceView(false)
         }
         return h('div', {
@@ -796,16 +801,6 @@ export function FileBrowser(props: {
               h('button', { type: 'button', className: 'dsh-tdt-sv-crumb', disabled: true, tabIndex: -1 }, crumb.label),
             ))),
         // 工作区根目录（crumbs 空）也要有可见的面包屑占位（用户 2026-09-29：从工作区开始列）。
-        // 超宽折叠：用「…」表示被省略的上级层级（可点开行首 ▾ 下拉逐级跳回）；其后只显示当前层（上一节目录）。
-        // 超宽折叠：用「…」表示被省略的上级层级（可点开行首 ▾ 下拉逐级跳回）；其后只显示当前层（上一节目录）。
-        crumbs.length > 1 && crumbsOverflow
-          ? h('button', {
-            type: 'button',
-            className: 'dsh-tdt-sv-crumbs-ellipsis',
-            'aria-label': t('explorerLevels'),
-            onClick: () => { setMenuOpen(value => !value) },
-          }, '…')
-          : null,
         crumbsOverflow
           ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' },
             crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t('explorerRootName'))
