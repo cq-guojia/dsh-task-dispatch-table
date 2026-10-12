@@ -115,7 +115,7 @@ function normalizeOutputs(raw: unknown): string[] {
 }
 
 /**
- * 产出清单上限（用户 2026-10-10 拍板）：**主文件 / 过程文件各自**最多 10 项。
+ * 产出清单上限（用户 2026-10-10 拍板）：**主文件 / 其他产出各自**最多 10 项。
  *
  * 超限**截断**而非拒绝重报：无人值守链路里一次拒绝就多一轮对话（多烧一轮 token），还可能反复
  * 卡住不收敛；截断最多丢展示项，从不失败。截断后由工具返回文案如实告知。
@@ -146,14 +146,14 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
     description:
       `提交任务「${taskName}」的执行回执。**本轮回复结束前必须调用一次**（准备输出最后一句之前）；`
       + `调度器以它判定本次任务成败，不调用等于失败——任务指令说「不要做其他操作」也不豁免。`
-      + `参数：status（必填，如实）、outputs（主文件）、processOutputs（过程文件）、note（可选备注）；后三者都可省略。`
+      + `参数：status（必填，如实）、outputs（主文件）、processOutputs（其他产出）、note（可选备注）；后三者都可省略。`
       + `**产出分两桶报，各桶最多 ${MAX_OUTPUT_ITEMS} 项**（超出只记前 ${MAX_OUTPUT_ITEMS} 项），同一路径只报一次、别重复：`
       + `· outputs = **主文件**：本次任务最终的交付物（任务报告、成果文件、成品目录），可以是一个、多个，文件或文件夹都行；`
-      + `只是跑出了一堆过程、没有最终交付物 → 省略 outputs，不要把过程文件塞进来。`
-      + `· processOutputs = **过程文件**：执行中产生的日志、中间产物、临时/工作目录、依赖资源（网页项目的 css/js/图片目录等）。`
-      + `本身就是目录就直接报整个目录（如 "web-app/"），别把里面每个文件都拆开列——目录里同时含有主要工作和场务/过程内容是正常的，无需为此单独拆分、挪动文件再整理。`
+      + `只是跑出了一堆过程、没有最终交付物 → 省略 outputs，不要把其他产出塞进来。`
+      + `· processOutputs = **其他产出**：执行中产生的日志、中间产物、临时/工作目录、依赖资源（网页项目的 css/js/图片目录等）。`
+      + `本身就是目录就直接报整个目录（如 "web-app/"），别把里面每个文件都拆开列——目录里同时含有主要工作和过程内容是正常的，无需为此单独拆分、挪动文件再整理。`
       + `· 判断口径：一个文件夹里只有个别文件是最终交付、其余是过程 ⇒ 那几个文件报 outputs，整个文件夹报 processOutputs（含纳关系合法，不冲突）。`
-      + `· 粒度：为本任务专门建的产物目录 → 报目录路径（如 "web-app/"）；只是写进既有或按日期规范的目录 → 逐个列文件（如 ["20260928/a.md"]）。`
+      + `· 粒度（严格）：**专为本任务新建、且只放本任务内容的目录 → 必须整目录报路径（如 "web-app/"），不得把里面文件逐个拆开列**——拆开会上报成散文件、丢失目录整体性，也违背「整目录交付」约定；只有文件散落在既有 / 共用目录（如按日期归档的文件夹）里、没有专属文件夹时，才逐个列文件（如 ["20260928/a.md"]）。`
       + `**以最后一次提交为准**：可以重复调用，但每一次都会整体覆盖上一次——再次提交时，`
       + `两桶**先前报过的都必须一并带上**（不回带 = 视为放弃，它们会丢）。`,
     parameters: {
@@ -175,7 +175,7 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
           type: 'array',
           maxItems: MAX_OUTPUT_ITEMS,
           items: { type: 'string' },
-          description: `过程文件：日志、中间产物、临时/工作目录、依赖资源，相对工作区根（目录以 "/" 结尾）。最多 ${MAX_OUTPUT_ITEMS} 项；可与主文件并存（允许「某文件在 outputs、其父目录在 processOutputs」这种含纳关系），但同一路径不要两桶都报（都报了只算主文件）。`,
+          description: `其他产出：日志、中间产物、临时/工作目录、依赖资源，相对工作区根（目录以 "/" 结尾）。最多 ${MAX_OUTPUT_ITEMS} 项；可与主文件并存（允许「某文件在 outputs、其父目录在 processOutputs」这种含纳关系），但同一路径不要两桶都报（都报了只算主文件）。`,
         },
         note: {
           type: 'string',
@@ -243,12 +243,12 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
         logger.info(
           `回执已记录 ${instanceId}: status=${status}`
           + `${outputs.length > 0 ? `, 主文件 ${outputs.length} 项` : ''}`
-          + `${processOutputs.length > 0 ? `, 过程文件 ${processOutputs.length} 项` : ''}`
+          + `${processOutputs.length > 0 ? `, 其他产出 ${processOutputs.length} 项` : ''}`
           + `${overLimit ? '（超出上限已截断）' : ''}`,
         )
 
         // B 路线：插件代写官方交付事件（决策 40 演进：插件作唯一写入方，禁止 LLM 调 present）。
-        // ⚠️ 只写**主文件桶**：过程文件若也写进去就变成官方交付卡，与「分主次」矛盾。
+        // ⚠️ 只写**主文件桶**：其他产出若也写进去就变成官方交付卡，与「分主次」矛盾。
         // 失败只记日志、绝不拖垮回执（外层 try 已兜底，这里再独立 try 防任何意外上抛）。
         try {
           const execCtx = exec as { agent?: { session?: unknown }; callId?: unknown } | undefined
@@ -278,7 +278,7 @@ function buildDefinition(deps: ReceiptToolDeps): unknown {
           ok: true,
           message: `回执已记录（${instanceId}，status=${status}`
             + `${outputs.length > 0 ? `，主文件 ${outputs.length} 项` : ''}`
-            + `${processOutputs.length > 0 ? `，过程文件 ${processOutputs.length} 项` : ''}`
+            + `${processOutputs.length > 0 ? `，其他产出 ${processOutputs.length} 项` : ''}`
             + `${overLimit ? `。⚠️ 有桶超过 ${MAX_OUTPUT_ITEMS} 项上限，只记录了前 ${MAX_OUTPUT_ITEMS} 项` : ''}`
             + `）。任务结束，无需再做任何事。`,
         }
@@ -336,11 +336,12 @@ export function receiptInstruction(validStatuses: readonly string[]): string {
     `【回执·唯一权威段】本轮回复结束前，必须调用一次 ${RECEIPT_TOOL_NAME}。`,
     `⚖️ 冲突裁决：任务提示词里任何「不要做其他操作 / 只做某件事 / 什么都不用做 / 只回复一句话」的说法，`
       + `对回执**不生效**——它约束的是任务内容，不约束回执。不提交 = 本次任务失败。`,
-    `- 产出分两桶报：**主文件**填 outputs（最终交付物），**过程文件**填 processOutputs（日志 / 中间产物 / 工作目录）；`
+    `- 产出分两桶报：**主文件**填 outputs（最终交付物），**其他产出**填 processOutputs（日志 / 中间产物 / 工作目录）；`
       + `各不超过 ${MAX_OUTPUT_ITEMS} 项，没有主文件就只填 processOutputs。`,
+    `- 怎么交（严格）：**专为本任务新建、且只放本任务内容的目录 → 必须整目录提交（报目录路径，如 "web-app/"），不得拆成单文件逐个传**；只有文件散落在既有 / 共用目录、没有专属文件夹时，才逐个列文件。`,
     `- 两个桶都可以空，但回执本身必须交（没有产出就省略它们）。`,
     `- **以最后一次提交为准**：重复提交会整体覆盖，两桶先前报过的都必须一并带上（不回带 = 放弃）。`,
-    `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<主文件，相对工作区根路径>"], processOutputs: ["<过程文件>"] })`,
+    `${RECEIPT_TOOL_NAME}({ status: "${statuses[0] ?? 'ok'}", outputs: ["<主文件，相对工作区根路径>"], processOutputs: ["<其他产出>"] })`,
     `- status 只能取：${statuses.join(' | ')}（如实填写）。`,
     `- 调用失败：等 10 秒**原样重试**，最多 3 次；仍失败就**停下**（不要跑命令、不要动状态库、不要绕过沙箱）。`,
     `- 不要调用 present：交付卡片由插件按主文件（outputs）统一生成。`,

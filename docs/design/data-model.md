@@ -41,7 +41,7 @@
 | 桶 | 字段 | 是什么 | 谁消费 |
 |---|---|---|---|
 | **主文件** | `outputs` | 本次任务的**最终交付物**（任务报告 / 成果 / 成品目录）；可空、可多个，文件与文件夹都可 | ① 交付卡片（`deliverables/presented` **只写主桶**）② **下游依赖注入**（`resolvedDeps[].outputs`，见 [features/dependency-snapshot.md](features/dependency-snapshot.md)）③ 界面三处的主区 |
-| **过程文件** | `processOutputs` | 执行中的日志、中间产物、临时/工作目录、依赖资源 | 只落库与展示（界面「过程文件」折叠块）；**不进交付卡、不进下游消息** |
+| **其他产出** | `processOutputs` | 执行中的日志、中间产物、临时/工作目录、依赖资源 | 只落库与展示（界面「其他产出」折叠块）；**不进交付卡、不进下游消息** |
 
 - 归一（`normalizeOutputs`）：数组 / 逗号串兼容、去空白与零宽字符、反斜杠统一 `/`、去 `./` 前缀；同桶去重。
 - **上限各 10 项**（`MAX_OUTPUT_ITEMS`），超限**截断**并在工具返回文案里如实告知——刻意不「拒绝重报」：无人值守链路里多一轮对话就是多烧一轮 token。参数 schema 的 `maxItems` 只是给模型的提示，宿主机不据此硬拦（同 `status` 的宽松归一，见 `receipt.ts`）。
@@ -70,7 +70,7 @@ CREATE TABLE task_instances (
   dispatched_at TEXT,                    -- ★ 实际派发时刻（可能晚于 scheduled_at），**不进身份**
   finished_at   TEXT,
   outputs       TEXT,                    -- 决策 32：完成瞬间写回的产出（回执 outputs 的 JSON 文本，冗余）。**主文件桶**
-  process_outputs TEXT,                  -- 2026-10-10：过程文件桶（回执 processOutputs 的 JSON 文本，冗余）。旧库补列为 NULL
+  process_outputs TEXT,                  -- 2026-10-10：其他产出桶（回执 processOutputs 的 JSON 文本，冗余）。旧库补列为 NULL
   token_in      INTEGER,                 -- 决策 32（修订）：输入（prompt）token，宿主事件带 usage 才累计，否则 NULL
   token_out     INTEGER,                 -- 决策 32（修订）：输出（completion）token
   token_in_cache INTEGER,                -- 决策 32（修订）：命中上下文缓存的输入 token

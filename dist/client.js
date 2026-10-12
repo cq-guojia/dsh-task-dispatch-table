@@ -507,7 +507,7 @@ window.__ModuleLoader__.load({
 			explorerCollapse: "收起目录",
 			explorerEnter: "进入",
 			colOutputs: "产出",
-			procFilesTitle: "过程文件 · {count} 项",
+			procFilesTitle: "其他产出 · {count} 项",
 			deliverRowTitle: "交付文件",
 			deliverRowPreparing: "准备交付",
 			deliverRowRunning: "正在交付",
@@ -1176,7 +1176,7 @@ window.__ModuleLoader__.load({
 			explorerCollapse: "Collapse directory",
 			explorerEnter: "Open",
 			colOutputs: "Outputs",
-			procFilesTitle: "Process files · {count}",
+			procFilesTitle: "Other outputs · {count}",
 			deliverRowTitle: "Deliver files",
 			deliverRowPreparing: "Preparing delivery",
 			deliverRowRunning: "Delivering",
@@ -50176,9 +50176,8 @@ body[data-ds-dark-theme]{
    ⚠️ crumbbar 不能 overflow:hidden——下拉浮层挂在它下面，hidden 会把菜单裁没（四验真机 bug）。 */
 .dsh-tdt-sv-crumbbar{position:relative;flex:none;display:flex;align-items:center;gap:2px;padding:4px 10px;border-bottom:1px solid var(--tdt-border,rgba(128,128,128,.35));white-space:nowrap;}
 .dsh-tdt-sv-crumbs-menu-wrap{position:relative;flex:none;display:inline-flex;}
-.dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow:hidden;}
-.dsh-tdt-sv-crumbs-measure{position:absolute;top:0;left:0;display:inline-flex;align-items:center;gap:2px;visibility:hidden;pointer-events:none;white-space:nowrap;}
-.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
+.dsh-tdt-sv-crumbs-region{position:relative;flex:1;min-width:0;display:flex;align-items:center;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;}
+.dsh-tdt-sv-crumb{appearance:none;background:0 0;border:none;padding:2px 4px;border-radius:var(--tdt-radius-sm,6px);font:inherit;font-size:var(--tdt-font-sm);line-height:var(--tdt-line-sm);color:var(--tdt-fg-2,rgba(128,128,128,.95));cursor:pointer;flex:none;max-width:160px;overflow:hidden;text-overflow:ellipsis;}
 .dsh-tdt-sv-crumb:hover{background:var(--tdt-hover,rgba(38,49,72,.06));color:var(--tdt-fg,#1f2328);}
 .dsh-tdt-sv-crumb-current{cursor:default;color:var(--tdt-fg,#1f2328);font-weight:600;max-width:200px;}
 .dsh-tdt-sv-crumb-current:hover{background:0 0;}
@@ -54274,11 +54273,8 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 			const [truncated, setTruncated] = (0, react$1.useState)(false);
 			const [viewing, setViewing] = (0, react$1.useState)(null);
 			const [listErr, setListErr] = (0, react$1.useState)(null);
-			const [crumbsOverflow, setCrumbsOverflow] = (0, react$1.useState)(false);
 			const [menuOpen, setMenuOpen] = (0, react$1.useState)(false);
 			const barRef = (0, react$1.useRef)(null);
-			const regionRef = (0, react$1.useRef)(null);
-			const measureRef = (0, react$1.useRef)(null);
 			const [sourceView, setSourceView] = (0, react$1.useState)(false);
 			const [reloadNonce, setReloadNonce] = (0, react$1.useState)(0);
 			const [copied, setCopied] = (0, react$1.useState)(false);
@@ -54422,23 +54418,6 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				workspaceFiles,
 				sessionId,
 				path
-			]);
-			(0, react$1.useLayoutEffect)(() => {
-				const region = regionRef.current;
-				const measure = measureRef.current;
-				if (region === null || measure === null) return;
-				const recompute = () => {
-					setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1);
-				};
-				recompute();
-				const ro = new ResizeObserver(recompute);
-				ro.observe(region);
-				return () => ro.disconnect();
-			}, [
-				dir,
-				viewing,
-				mode,
-				listing
 			]);
 			const reload = () => {
 				if (viewing !== null) {
@@ -54666,24 +54645,7 @@ button.dsh-tdt-sv-tfc-file:focus-visible{box-shadow:inset 0 0 0 2px var(--tdt-fo
 				crumbs,
 				onPickWorkspace: onSelectWorkspace,
 				onLoadDir: loadDir
-			}))) : null), (0, react$1.createElement)("div", {
-				ref: regionRef,
-				className: "dsh-tdt-sv-crumbs-region"
-			}, (0, react$1.createElement)("span", {
-				ref: measureRef,
-				className: "dsh-tdt-sv-crumbs-measure",
-				"aria-hidden": true
-			}, crumbs.length === 0 ? (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				disabled: true,
-				tabIndex: -1
-			}, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, { size: 12 }) : null, (0, react$1.createElement)("button", {
-				type: "button",
-				className: "dsh-tdt-sv-crumb",
-				disabled: true,
-				tabIndex: -1
-			}, crumb.label)))), crumbsOverflow ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t("explorerRootName")) : crumbs.length === 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
+			}))) : null), (0, react$1.createElement)("div", { className: "dsh-tdt-sv-crumbs-region" }, crumbs.length === 0 ? (0, react$1.createElement)("span", { className: "dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current" }, t("explorerRootName")) : crumbs.map((crumb, index) => (0, react$1.createElement)(react$1.Fragment, { key: crumb.path }, index > 0 ? (0, react$1.createElement)(_deepseek_ai_dsh_client_ui_primitives.IconChevronRightOutlineRegular, {
 				className: "dsh-tdt-sv-crumb-sep",
 				size: 12
 			}) : null, (0, react$1.createElement)("button", {

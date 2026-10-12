@@ -478,8 +478,8 @@ try {
     check('回执双桶落 event：主桶去重、过程桶剔除与主桶重复的路径（同一路径以主桶为准）',
       detail.outputs.length === 1 && detail.outputs[0] === 'report.md'
       && detail.processOutputs.length === 1 && detail.processOutputs[0] === 'logs/')
-    check('回执工具返回文案如实分桶（主文件 1 项 / 过程文件 1 项）',
-      first.ok === true && first.message.includes('主文件 1 项') && first.message.includes('过程文件 1 项'))
+    check('回执工具返回文案如实分桶（主文件 1 项 / 其他产出 1 项）',
+      first.ok === true && first.message.includes('主文件 1 项') && first.message.includes('其他产出 1 项'))
     check('交付事件只写主文件：过程文件不进 deliverables/presented（不会变成官方交付卡）',
       appended.length === 1 && appended[0].type === 'deliverables/presented'
       && appended[0].data.files.length === 1 && appended[0].data.files[0].path === 'report.md')
@@ -488,9 +488,9 @@ try {
     check('回执工具：超上限截断为 10 项，并在返回文案里如实告知',
       JSON.parse(events.at(-1).detail).outputs.length === 10 && many.message.includes('上限'))
     check('回执工具描述含两桶判断口径 + 10 项上限（提示词是唯一的分桶依据）',
-      definition.description.includes('主文件') && definition.description.includes('过程文件')
+      definition.description.includes('主文件') && definition.description.includes('其他产出')
       && definition.description.includes('10 项'))
-    check('派发消息的回执段含双桶指令（outputs=主文件 / processOutputs=过程文件）',
+    check('派发消息的回执段含双桶指令（outputs=主文件 / processOutputs=其他产出）',
       receiptInstruction(['ok']).includes('processOutputs') && receiptInstruction(['ok']).includes('主文件'))
     // 下游只拿主文件：resolvedOf 读的就是 outputs 列（主桶），过程文件在 process_outputs 列、不进消息。
     // ⚠️ 判据要**去掉注释**再比：scheduler 的注释里提到了 process_outputs 这个列名（解释为什么不用改）。
@@ -1136,9 +1136,9 @@ const clientPath = join(import.meta.dirname, '..', 'dist', 'client.js')
     clientJs.includes('turnDeliverablesPresented') && clientJs.includes('instanceof Map') && clientJs.includes("get('deliverables')"))
   check('弹窗交付卡挂最后一轮 turn-tail（官方 DeliverablesTail 同位），数据以实例 outputs 权威（合并快照去重）',
     clientJs.includes('lastTailTurn') && clientJs.includes('deliverFiles') && !clientJs.includes('dsh-tdt-sv-deliver-section'))
-  check('回执提示词含粒度判断规则（本任务专用产物目录→报目录；既有/按日期规范的目录→逐个报文件）',
-    readFileSync(join(import.meta.dirname, '..', 'dist', 'receipt.js'), 'utf8').includes('为本任务专门建')
-      && readFileSync(join(import.meta.dirname, '..', 'dist', 'receipt.js'), 'utf8').includes('按日期规范'))
+  check('回执提示词含粒度判断规则（专为本任务新建的目录→整目录报；散落共用目录→逐个报文件）',
+    readFileSync(join(import.meta.dirname, '..', 'dist', 'receipt.js'), 'utf8').includes('专为本任务新建')
+      && readFileSync(join(import.meta.dirname, '..', 'dist', 'receipt.js'), 'utf8').includes('共用目录'))
   // 过程文件桶（2026-10-10）：三处共用一个展示件，主文件照旧醒目、过程文件次级且默认收起。
   {
     const srcOf = (file) => readFileSync(join(process.cwd(), 'src', 'client', file), 'utf8')

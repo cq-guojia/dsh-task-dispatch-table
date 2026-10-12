@@ -11,7 +11,7 @@
 //
 // 渲染底层以官方为主（md=MarkdownText / 图片·PDF=readBytes→blob），代码源码态复用 file-preview 的 CodeViewer（只读 CodeMirror 6）；数据一律
 // remote.workspaceFiles 真实取数（工作区铁律：禁模拟）。复用 file-preview.tsx 的预览体组件。
-import { createElement as h, Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createElement as h, Fragment, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { IconButton, MarqueeText, Segmented } from './ui'
 import {
@@ -372,12 +372,8 @@ export function FileBrowser(props: {
   const [truncated, setTruncated] = useState(false)
   const [viewing, setViewing] = useState<string | null>(null)
   const [listErr, setListErr] = useState<ErrView | null>(null)
-  // 面包屑折叠（超宽时只显示当前层名；行首文件夹图标常驻，点开下拉选层）。
-  const [crumbsOverflow, setCrumbsOverflow] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const barRef = useRef<HTMLDivElement>(null)
-  const regionRef = useRef<HTMLDivElement>(null)
-  const measureRef = useRef<HTMLSpanElement>(null)
   // 预览态：md 渲染⇄源码 + 刷新自增（触发 Bytes/Text 重读）。
   const [sourceView, setSourceView] = useState(false)
   const [reloadNonce, setReloadNonce] = useState(0)
@@ -533,22 +529,6 @@ export function FileBrowser(props: {
       })
     return () => { alive = false }
   }, [workspaceFiles, sessionId, path])
-
-  // 面包屑溢出测量：隐藏测量条渲染与可见态完全相同的 crumb 按钮（含 padding/max-width），
-  // 使溢出判定与真实排版一致——不超长时必定还原完整路径（用户本轮 point3）。ResizeObserver
-  // 同时覆盖 dock 宽度变化 / 初次布局，避免初始 0 宽造成的「卡在折叠态」。
-  useLayoutEffect(() => {
-    const region = regionRef.current
-    const measure = measureRef.current
-    if (region === null || measure === null) return
-    const recompute = (): void => {
-      setCrumbsOverflow(measure.scrollWidth > region.clientWidth + 1)
-    }
-    recompute()
-    const ro = new ResizeObserver(recompute)
-    ro.observe(region)
-    return () => ro.disconnect()
-  }, [dir, viewing, mode, listing])
 
   const reload = (): void => {
     if (viewing !== null) { setReloadNonce(n => n + 1); return }
@@ -785,23 +765,12 @@ export function FileBrowser(props: {
             ))
           : null,
       ),
-      h('div', { ref: regionRef, className: 'dsh-tdt-sv-crumbs-region' },
-        // 隐藏测量条：渲染与可见态完全相同的 crumb 按钮（含 padding/max-width），使溢出判定
-        // 与真实排版一致——不超长时必定还原完整路径（用户本轮 point3）。
-        h('span', { ref: measureRef, className: 'dsh-tdt-sv-crumbs-measure', 'aria-hidden': true },
-          crumbs.length === 0
-            ? h('button', { type: 'button', className: 'dsh-tdt-sv-crumb', disabled: true, tabIndex: -1 }, t('explorerRootName'))
-            : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
-              index > 0 ? h(IconChevronRightOutlineRegular, { size: 12 }) : null,
-              h('button', { type: 'button', className: 'dsh-tdt-sv-crumb', disabled: true, tabIndex: -1 }, crumb.label),
-            ))),
-        // 工作区根目录（crumbs 空）也要有可见的面包屑占位（用户 2026-09-29：从工作区开始列）。
-        crumbsOverflow
-          ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' },
-            crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t('explorerRootName'))
-          : crumbs.length === 0
-            ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, t('explorerRootName'))
-            : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
+      h('div', { className: 'dsh-tdt-sv-crumbs-region' },
+        // 面包屑始终渲染完整的可点层级（不再因超宽塌缩成不可点的当前层）；层级超出区域宽度时
+        // 由 CSS 横向滚动承载，保证「点面包屑深入后再点上层」仍可点回跳。
+        crumbs.length === 0
+          ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, t('explorerRootName'))
+          : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
             index > 0 ? h(IconChevronRightOutlineRegular, { className: 'dsh-tdt-sv-crumb-sep', size: 12 }) : null,
             h('button', {
               type: 'button',
