@@ -803,7 +803,7 @@ export function FileBrowser(props: {
         // 工作区根目录（crumbs 空）也要有可见的面包屑占位（用户 2026-09-29：从工作区开始列）。
         crumbsOverflow
           ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' },
-            crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t('explorerRootName'))
+            h(MarqueeText, { text: crumbs.length > 0 ? crumbs[crumbs.length - 1].label : t('explorerRootName'), className: 'dsh-tdt-sv-crumb-mq' }))
           : crumbs.length === 0
             ? h('span', { className: 'dsh-tdt-sv-crumb dsh-tdt-sv-crumb-current' }, t('explorerRootName'))
             : crumbs.map((crumb, index) => h(Fragment, { key: crumb.path },
@@ -812,7 +812,7 @@ export function FileBrowser(props: {
               type: 'button',
               className: 'dsh-tdt-sv-crumb',
               onClick: () => { loadDir(crumb.path) },
-            }, crumb.label),
+            }, h(MarqueeText, { text: crumb.label, className: 'dsh-tdt-sv-crumb-mq' })),
           )),
       ),
       h('div', { className: 'dsh-tdt-sv-head-actions' },
