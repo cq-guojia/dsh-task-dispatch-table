@@ -1,0 +1,94 @@
+{
+  "tasks": {
+    "20260923-0000-u1-任务跑到一半插件重启导致执行作废-5b0e": {
+      "created": "2026-09-23 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": null,
+      "started": null,
+      "status": "open",
+      "title": "U1 任务跑到一半插件重启导致执行作废",
+      "worklog": "worklog/202609/23-0000-u1-任务跑到一半插件重启导致执行作废-5b0e.md"
+    },
+    "20261003-0000-u31-任务选择器替换-前置任务-下拉-14dc": {
+      "created": "2026-10-03 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": "GuoJia-Agent",
+      "started": "2026-10-03 00:00:00",
+      "status": "doing",
+      "title": "U31 任务选择器替换「前置任务」下拉",
+      "worklog": "worklog/202610/03-0000-u31-任务选择器替换-前置任务-下拉-14dc.md"
+    },
+    "20261005-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c": {
+      "created": "2026-10-05 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": "GuoJia-Agent",
+      "started": "2026-10-05 00:00:00",
+      "status": "doing",
+      "title": "U33 Office 预览（doc/docx/ppt/pptx）接入官方 remote.officeToPdf",
+      "worklog": "worklog/202610/05-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c.md"
+    },
+    "20261005-0000-u34-excel-预览路线待定-转-pdf-可编辑表格-83bc": {
+      "created": "2026-10-05 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": null,
+      "started": null,
+      "status": "open",
+      "title": "U34 Excel 预览路线待定（转 PDF / 可编辑表格）",
+      "worklog": "worklog/202610/05-0000-u34-excel-预览路线待定-转-pdf-可编辑表格-83bc.md"
+    },
+    "20261006-0000-事件推送机制-sse-事件总线-441b": {
+      "created": "2026-10-06 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": "GuoJia-Agent",
+      "started": "2026-10-06 00:00:00",
+      "status": "doing",
+      "title": "事件推送机制（SSE 事件总线）",
+      "worklog": "worklog/202610/06-0000-事件推送机制-sse-事件总线-441b.md"
+    },
+    "20261006-0000-任务日程-日期右上角标农历-暂缓-3fcf": {
+      "created": "2026-10-06 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": null,
+      "started": null,
+      "status": "open",
+      "title": "任务日程：日期右上角标农历（暂缓）",
+      "worklog": "worklog/202610/06-0000-任务日程-日期右上角标农历-暂缓-3fcf.md"
+    },
+    "20261006-0000-轮询-事件驱动-处置-d0d9": {
+      "created": "2026-10-06 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": "GuoJia-Agent",
+      "started": "2026-10-06 00:00:00",
+      "status": "doing",
+      "title": "轮询 → 事件驱动 处置",
+      "worklog": "worklog/202610/06-0000-轮询-事件驱动-处置-d0d9.md"
+    },
+    "20261008-0000-插件配置改存自有状态库-meta-pluginconfig-a071": {
+      "created": "2026-10-08 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": "GuoJia-Agent",
+      "started": "2026-10-08 00:00:00",
+      "status": "doing",
+      "title": "插件配置改存自有状态库 meta.pluginConfig",
+      "worklog": "worklog/202610/08-0000-插件配置改存自有状态库-meta-pluginconfig-a071.md"
+    },
+    "20261010-0000-回执产出拆双桶-主文件-其他产出-270e": {
+      "created": "2026-10-10 00:00:00",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": "GuoJia-Agent",
+      "started": "2026-10-10 00:00:00",
+      "status": "doing",
+      "title": "回执产出拆双桶（主文件 / 其他产出）",
+      "worklog": "worklog/202610/10-0000-回执产出拆双桶-主文件-其他产出-270e.md"
+    }
+  }
+}
