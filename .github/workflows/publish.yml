@@ -19,12 +19,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'   # 必须 npm 11.5.1+，否则无 OIDC 支持 → 404
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
+      - run: node --version && npm --version
       - run: npm ci
       - run: npm run build
 
-      # npm 信任发布已勾选「Allow npm publish」，OIDC 直接发布，无需人工审批。
-      - run: npm publish
+      # npm 信任发布已勾选「Allow npm publish」：npm 11+ 自动走 OIDC，无需 NPM_TOKEN。
+      - run: npm publish --provenance
