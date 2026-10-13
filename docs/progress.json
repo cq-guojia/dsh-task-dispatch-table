@@ -89,6 +89,46 @@
       "status": "doing",
       "title": "回执产出拆双桶（主文件 / 其他产出）",
       "worklog": "worklog/202610/10-0000-回执产出拆双桶-主文件-其他产出-270e.md"
+    },
+    "20261013-0933-排期支持-每-n-天-间隔-周期处加-每隔几天-32d6": {
+      "created": "2026-10-13 09:33:40",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": "GuoJia-Agent",
+      "started": "2026-10-13 09:33:40",
+      "status": "doing",
+      "title": "排期支持「每 N 天」间隔（周期处加「每隔几天」）",
+      "worklog": "worklog/202610/13-0933-排期支持-每-n-天-间隔-周期处加-每隔几天-32d6.md"
+    },
+    "20261013-0934-任务配置展开后-上次执行-下拉遮住-其他产出-文件-需重排露出-a15a": {
+      "created": "2026-10-13 09:34:51",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": null,
+      "started": null,
+      "status": "open",
+      "title": "任务配置展开后「上次执行」下拉遮住「其他产出」文件，需重排露出",
+      "worklog": "worklog/202610/13-0934-任务配置展开后-上次执行-下拉遮住-其他产出-文件-需重排露出-a15a.md"
+    },
+    "20261013-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835": {
+      "created": "2026-10-13 09:34:51",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": null,
+      "started": null,
+      "status": "open",
+      "title": "全局任务通知（浮窗提示 + 未读通知页 + 已读机制）",
+      "worklog": "worklog/202610/13-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835.md"
+    },
+    "20261013-0934-对话式创建-修改任务-agent-以-skill-形式引导填写-c1e9": {
+      "created": "2026-10-13 09:34:51",
+      "creator": "GuoJia-Agent",
+      "finished": null,
+      "owner": null,
+      "started": null,
+      "status": "open",
+      "title": "对话式创建/修改任务（Agent 以 skill 形式引导填写）",
+      "worklog": "worklog/202610/13-0934-对话式创建-修改任务-agent-以-skill-形式引导填写-c1e9.md"
     }
   }
 }
