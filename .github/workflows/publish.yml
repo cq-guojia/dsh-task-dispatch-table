@@ -25,6 +25,5 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      # 你在 npm 信任发布配置里勾选了「仅暂存（stage-only）」，
-      # 因此用 stage publish，发布后仍需维护者在 npm 侧用 2FA 审批放行。
-      - run: npm stage publish
+      # npm 信任发布已勾选「Allow npm publish」，OIDC 直接发布，无需人工审批。
+      - run: npm publish
