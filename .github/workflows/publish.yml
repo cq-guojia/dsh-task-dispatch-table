@@ -1,0 +1,30 @@
+name: Publish to npm
+
+# 触发：在 GitHub 上创建并发布一个 Release 时，自动发布到 npm。
+# 信任发布（OIDC）下无需 NPM_TOKEN；provenance 自动生成。
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write   # 必需：供 npm 通过 OIDC 做信任发布
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run build
+
+      # 你在 npm 信任发布配置里勾选了「仅暂存（stage-only）」，
+      # 因此用 stage publish，发布后仍需维护者在 npm 侧用 2FA 审批放行。
+      - run: npm stage publish
