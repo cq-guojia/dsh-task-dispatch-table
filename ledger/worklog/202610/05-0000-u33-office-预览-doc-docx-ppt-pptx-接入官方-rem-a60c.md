@@ -1,6 +1,7 @@
 # 20261005-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c：U33 Office 预览（doc/docx/ppt/pptx）接入官方 remote.officeToPdf
 
 > **创建**：2026-10-05 00:00:00（@GuoJia-Agent）
+> **分类**：运维 ｜ **标签**：u33、office、接入、预览、任务
 
 ## 背景
 

@@ -1,132 +1,220 @@
 {
   "tasks": {
     "20260923-0000-u1-任务跑到一半插件重启导致执行作废-5b0e": {
+      "category": "建设",
       "created": "2026-09-23 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": null,
       "started": null,
       "status": "open",
+      "tags": [
+        "u1",
+        "插件",
+        "任务"
+      ],
       "title": "U1 任务跑到一半插件重启导致执行作废",
       "worklog": "worklog/202609/23-0000-u1-任务跑到一半插件重启导致执行作废-5b0e.md"
     },
     "20261003-0000-u31-任务选择器替换-前置任务-下拉-14dc": {
+      "category": "建设",
       "created": "2026-10-03 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": "GuoJia-Agent",
       "started": "2026-10-03 00:00:00",
       "status": "doing",
+      "tags": [
+        "u31",
+        "选择器",
+        "任务"
+      ],
       "title": "U31 任务选择器替换「前置任务」下拉",
       "worklog": "worklog/202610/03-0000-u31-任务选择器替换-前置任务-下拉-14dc.md"
     },
     "20261005-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c": {
+      "category": "运维",
       "created": "2026-10-05 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": "GuoJia-Agent",
       "started": "2026-10-05 00:00:00",
       "status": "doing",
+      "tags": [
+        "u33",
+        "office",
+        "接入",
+        "预览",
+        "任务"
+      ],
       "title": "U33 Office 预览（doc/docx/ppt/pptx）接入官方 remote.officeToPdf",
       "worklog": "worklog/202610/05-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c.md"
     },
     "20261005-0000-u34-excel-预览路线待定-转-pdf-可编辑表格-83bc": {
+      "category": "建设",
       "created": "2026-10-05 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": null,
       "started": null,
       "status": "open",
+      "tags": [
+        "u34",
+        "excel",
+        "预览"
+      ],
       "title": "U34 Excel 预览路线待定（转 PDF / 可编辑表格）",
       "worklog": "worklog/202610/05-0000-u34-excel-预览路线待定-转-pdf-可编辑表格-83bc.md"
     },
     "20261006-0000-事件推送机制-sse-事件总线-441b": {
+      "category": "建设",
       "created": "2026-10-06 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": "GuoJia-Agent",
       "started": "2026-10-06 00:00:00",
       "status": "doing",
+      "tags": [
+        "sse",
+        "事件",
+        "推送",
+        "总线",
+        "任务"
+      ],
       "title": "事件推送机制（SSE 事件总线）",
       "worklog": "worklog/202610/06-0000-事件推送机制-sse-事件总线-441b.md"
     },
     "20261006-0000-任务日程-日期右上角标农历-暂缓-3fcf": {
+      "category": "建设",
       "created": "2026-10-06 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": null,
       "started": null,
       "status": "open",
+      "tags": [
+        "任务日程",
+        "任务",
+        "农历"
+      ],
       "title": "任务日程：日期右上角标农历（暂缓）",
       "worklog": "worklog/202610/06-0000-任务日程-日期右上角标农历-暂缓-3fcf.md"
     },
     "20261006-0000-轮询-事件驱动-处置-d0d9": {
+      "category": "建设",
       "created": "2026-10-06 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": "GuoJia-Agent",
       "started": "2026-10-06 00:00:00",
       "status": "doing",
+      "tags": [
+        "轮询",
+        "事件驱动",
+        "事件"
+      ],
       "title": "轮询 → 事件驱动 处置",
       "worklog": "worklog/202610/06-0000-轮询-事件驱动-处置-d0d9.md"
     },
     "20261008-0000-插件配置改存自有状态库-meta-pluginconfig-a071": {
+      "category": "建设",
       "created": "2026-10-08 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": "GuoJia-Agent",
       "started": "2026-10-08 00:00:00",
       "status": "doing",
+      "tags": [
+        "meta",
+        "插件",
+        "状态"
+      ],
       "title": "插件配置改存自有状态库 meta.pluginConfig",
       "worklog": "worklog/202610/08-0000-插件配置改存自有状态库-meta-pluginconfig-a071.md"
     },
     "20261010-0000-回执产出拆双桶-主文件-其他产出-270e": {
+      "category": "建设",
       "created": "2026-10-10 00:00:00",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": "GuoJia-Agent",
       "started": "2026-10-10 00:00:00",
       "status": "doing",
+      "tags": [
+        "主文件",
+        "回执",
+        "产出",
+        "任务"
+      ],
       "title": "回执产出拆双桶（主文件 / 其他产出）",
       "worklog": "worklog/202610/10-0000-回执产出拆双桶-主文件-其他产出-270e.md"
     },
     "20261013-0933-排期支持-每-n-天-间隔-周期处加-每隔几天-32d6": {
+      "category": "建设",
       "created": "2026-10-13 09:33:40",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": "GuoJia-Agent",
       "started": "2026-10-13 09:33:40",
       "status": "doing",
+      "tags": [
+        "排期支持",
+        "间隔",
+        "周期",
+        "排期",
+        "落点"
+      ],
       "title": "排期支持「每 N 天」间隔（周期处加「每隔几天」）",
       "worklog": "worklog/202610/13-0933-排期支持-每-n-天-间隔-周期处加-每隔几天-32d6.md"
     },
     "20261013-0934-任务配置展开后-上次执行-下拉遮住-其他产出-文件-需重排露出-a15a": {
+      "category": "建设",
       "created": "2026-10-13 09:34:51",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": null,
       "started": null,
       "status": "open",
+      "tags": [
+        "上次执行",
+        "产出",
+        "任务"
+      ],
       "title": "任务配置展开后「上次执行」下拉遮住「其他产出」文件，需重排露出",
       "worklog": "worklog/202610/13-0934-任务配置展开后-上次执行-下拉遮住-其他产出-文件-需重排露出-a15a.md"
     },
     "20261013-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835": {
+      "category": "运维",
       "created": "2026-10-13 09:34:51",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": null,
       "started": null,
       "status": "open",
+      "tags": [
+        "浮窗提示",
+        "任务",
+        "浮窗",
+        "通知",
+        "提示"
+      ],
       "title": "全局任务通知（浮窗提示 + 未读通知页 + 已读机制）",
       "worklog": "worklog/202610/13-0934-全局任务通知-浮窗提示-未读通知页-已读机制-b835.md"
     },
     "20261013-0934-对话式创建-修改任务-agent-以-skill-形式引导填写-c1e9": {
+      "category": "建设",
       "created": "2026-10-13 09:34:51",
       "creator": "GuoJia-Agent",
       "finished": null,
       "owner": null,
       "started": null,
       "status": "open",
+      "tags": [
+        "修改任务",
+        "skill",
+        "agent",
+        "任务"
+      ],
       "title": "对话式创建/修改任务（Agent 以 skill 形式引导填写）",
       "worklog": "worklog/202610/13-0934-对话式创建-修改任务-agent-以-skill-形式引导填写-c1e9.md"
     }
