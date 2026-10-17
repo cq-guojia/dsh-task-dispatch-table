@@ -11,9 +11,9 @@
 | 槽位 | 本项目落位 |
 |---|---|
 | 文档规范 | `docs/README.md`（本文件） |
-| 状态表 | `docs/progress.json` |
-| 已结案 | `docs/PROGRESS-HISTORY.md` |
-| 过程叙事 | `docs/worklog/`（一个任务一篇；实际路径由工具生成并记在状态表 `worklog` 字段，不靠推算） |
+| 状态表 | `ledger/progress.json`（只由 task-ledger skill 的脚本写） |
+| 已结案 | `ledger/history/<年月>.md`（只由脚本写；查询走 task-ledger skill 的 `history`） |
+| 过程叙事 | `ledger/worklog/<年月>/`（一个任务一篇；实际路径由工具生成并记在状态表 `worklog` 字段，不靠推算） |
 | 运行逻辑 | `docs/design/architecture.md`（总览）；系统机制规格另见 `docs/design/event-push.md`、`docs/design/client-refresh.md`、`docs/design/client-refresh-disposition.md` |
 | 功能总索引 | `docs/design/features.md` |
 | 各功能 | `docs/design/features/`（一功能一文件，清单见功能总索引） |
