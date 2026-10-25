@@ -1,6 +1,6 @@
 # 20261005-0000-u33-office-预览-doc-docx-ppt-pptx-接入官方-rem-a60c：U33 Office 预览（doc/docx/ppt/pptx）接入官方 remote.officeToPdf
 
-> **创建**：2026-10-05 00:00:00（@GuoJia-Agent）
+> **创建**：2026-10-05 00:00:00（@cqguojia@hotmail.com）
 > **分类**：运维 ｜ **标签**：u33、office、接入、预览、任务
 
 ## 背景
@@ -77,3 +77,8 @@
 ## 结论
 
 （在办，尚未结案）
+
+## 执行记录
+
+<!-- 本节由脚本维护：new / claim / set / release / log / close 自动追加，请勿手改。
+     补记用 progress.py log --id <任务号> --note "一句话"。 -->

@@ -1,7 +1,7 @@
 # 20261004-0000-源码态查看器改用只读-codemirror-6-全局收口-0e6a：源码态查看器改用只读 CodeMirror 6（全局收口）
 
-> **✅ 完成封卷**：2026-10-04 00:00:00（@GuoJia-Agent）
-> **创建**：2026-10-04 00:00:00（@GuoJia-Agent）
+> **✅ 完成封卷**：2026-10-04 00:00:00（@cqguojia@hotmail.com）
+> **创建**：2026-10-04 00:00:00（@cqguojia@hotmail.com）
 > **分类**：优化 ｜ **标签**：codemirror、收口
 
 ## 背景
@@ -72,3 +72,8 @@ better-sidebar 等插件用 CodeMirror 6 一拖就换行、不卡，用户要求
 ## 结论
 
 file-preview 源码态 / 任务定义 JSON / 工具代码 三处只读代码展示统一为 `CodeViewer`（CodeMirror 6）：修整片白底（theme="none" 关掉 @uiw 默认 light 主题）、恢复鼠标选区（去掉 `EditorView.editable=false`，只读仍靠 `EditorState.readOnly` 拦输入）、默认全换行（EditorView.lineWrapping，去掉换行/不换行切换）、复制钮改右上角官方图标 hover 浮现；`@uiw/react-codemirror` 仓库已声明、非新引包；smoke 绿
+
+## 执行记录
+
+<!-- 本节由脚本维护：new / claim / set / release / log / close 自动追加，请勿手改。
+     补记用 progress.py log --id <任务号> --note "一句话"。 -->
