@@ -1,6 +1,7 @@
 {
   "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
   "tasks": {
+    "20261003-0000-u31-任务选择器替换-前置任务-下拉-14dc": {"category": "建设", "created": "2026-10-03 00:00:00", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-10-03 00:00:00", "status": "doing", "tags": ["u31", "选择器", "任务"], "title": "U31 任务选择器替换「前置任务」下拉", "updated": "2026-11-03 14:14:14", "worklog": "worklog/202610/03-0000-u31-任务选择器替换-前置任务-下拉-14dc.md"}
   },
   "version": "20261022000000"
 }
