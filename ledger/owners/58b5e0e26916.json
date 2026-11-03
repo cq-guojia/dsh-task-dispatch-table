@@ -1,0 +1,7 @@
+{
+  "identity": {"uuid": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6"},
+  "tasks": {
+    "20261005-0000-u34-excel-预览路线待定-转-pdf-可编辑表格-83bc": {"category": "建设", "created": "2026-10-05 00:00:00", "creator": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "creator_name": "GuoJia-Agent", "finished": null, "owner": "8d557c6d-7c93-43ac-8c73-5d623e82e1c6", "owner_name": "GuoJia-Agent", "started": "2026-11-03 08:07:07", "status": "doing", "tags": ["u34", "excel", "预览"], "title": "U34 Excel 预览路线待定（转 PDF / 可编辑表格）", "updated": "2026-11-03 08:07:07", "worklog": "worklog/202610/05-0000-u34-excel-预览路线待定-转-pdf-可编辑表格-83bc.md"}
+  },
+  "version": "20261022000000"
+}
