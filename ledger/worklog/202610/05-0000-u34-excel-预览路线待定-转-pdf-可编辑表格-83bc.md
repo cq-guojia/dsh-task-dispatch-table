@@ -1,7 +1,7 @@
 # 20261005-0000-u34-excel-预览路线待定-转-pdf-可编辑表格-83bc: U34 Excel 预览路线待定（转 PDF / 可编辑表格）
 
 - **Tags**: 建设, u34, excel, 预览
-- **Status**: doing · 2026-11-03 08:07:07 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Status**: open · 2026-11-03 08:07:25
 - **Created**: 2026-10-05 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
 <!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
@@ -34,3 +34,4 @@
 <!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
      Backfill with: progress log --id <id> --note "...". -->
 - 2026-11-03 08:07:07 · claim · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · claimed → doing
+- 2026-11-03 08:07:25 · release · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6 · released to pool
