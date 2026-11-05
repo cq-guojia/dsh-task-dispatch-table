@@ -1,22 +1,28 @@
-# 20261007-0000-建立-plugin-log-整体插件日志-dbe6：建立 plugin_log 整体插件日志
+# 20261007-0000-建立-plugin-log-整体插件日志-dbe6: 建立 plugin_log 整体插件日志
 
-> **✅ 完成封卷**：2026-10-07 00:00:00（@cqguojia@hotmail.com）
-> **创建**：2026-10-07 00:00:00（@cqguojia@hotmail.com）
-> **分类**：建设 ｜ **标签**：建立、plugin、插件、日志
+- **Tags**: 建设, 建立, plugin, 插件, 日志
+- **Status**: done · 2026-10-07 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Created**: 2026-10-07 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Sealed**: 2026-10-07 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
-## 背景
+<!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
+     The `- **Tags**: …` line is inserted at the top by new --tags; omitted when there are no tags
+     (category goes to the ledger and history only, never into this document).
+     The `- **Sealed**: …` line is appended on close. -->
+
+## Background
 
 建立 plugin_log 整体插件日志
 
-## 待办
+## To Do
 
 无（已结案）
 
-## 下一步
+## Next
 
 无（已结案）
 
-## 过程
+## Process
 
 # 建立 plugin_log 整体插件日志（进程级观测独立于 task_log）
 
@@ -57,11 +63,11 @@
 - 定型：`docs/design/data-model.md` §二（表定义）/ §2.1（三表选择）/ §六（清理策略）。
 - 提交：`b66e9ea`（建立插件整体日志 plugin_log（进程级观测独立于 task_log，接入 30 天清理））。
 
-## 结论
+## Conclusion
 
 进程级观测从 task_log 抽离到第 6 张表 plugin_log（语义方法 + pushNotice 统一落库口 + 30 天清理接入 tick）；四处临时 UI 经专家团复查数据源均为真实取数
 
-## 执行记录
+## Execution Log
 
-<!-- 本节由脚本维护：new / claim / set / release / log / close 自动追加，请勿手改。
-     补记用 progress.py log --id <任务号> --note "一句话"。 -->
+<!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
+     Backfill with: progress log --id <id> --note "...". -->

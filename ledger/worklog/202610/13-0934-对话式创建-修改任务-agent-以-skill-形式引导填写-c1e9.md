@@ -1,9 +1,15 @@
-# 20261013-0934-对话式创建-修改任务-agent-以-skill-形式引导填写-c1e9：对话式创建/修改任务（Agent 以 skill 形式引导填写）
+# 20261013-0934-对话式创建-修改任务-agent-以-skill-形式引导填写-c1e9: 对话式创建/修改任务（Agent 以 skill 形式引导填写）
 
-> **创建**：2026-10-13 09:34:51（@cqguojia@hotmail.com）
-> **分类**：建设 ｜ **标签**：修改任务、skill、agent、任务
+- **Tags**: 建设, 修改任务, skill, agent, 任务
+- **Status**: open · 2026-10-13 09:34:51
+- **Created**: 2026-10-13 09:34:51 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
-## 背景
+<!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
+     The `- **Tags**: …` line is inserted at the top by new --tags; omitted when there are no tags
+     (category goes to the ledger and history only, never into this document).
+     The `- **Sealed**: …` line is appended on close. -->
+
+## Background
 
 用户原话（2026-10-13）：
 
@@ -11,27 +17,23 @@
 > 现在可以通过右侧「新建」/「修改」按钮操作；希望增加一种对话形式（Agent 引导填写并代建）。
 > 实现方式待定：MCP / skill / 其他，尚未想好。
 
-## 待办
+## To Do
 
-<!-- 还没做的、卡在哪、依赖谁。做到一半的、没验证的、等别人给东西的，都算。
-     例：等宿主 1.2 才能复测流式接口；错误分支尚未测 -->
+<!-- Not done yet, not verified, waiting on somebody -->
 
-## 下一步
+## Next
 
-<!-- 写到具体做哪一步，不是「继续推进」。
-     例：改 src/export.ts:88 的编码参数，然后跑一次冒烟 -->
+<!-- The next concrete action (file:line level), never "keep going" -->
 
-## 过程
+## Process
 
-<!-- 踩坑、定位、证据。带 revision 和 文件:行号 或符号名（行号会漂移）。
-     例：rc4f2a1 的 src/host.ts:112 返回 null，是因为没等 ready 事件就发了请求 -->
+<!-- Pitfalls and evidence: with revision + file:line or symbol names -->
 
-## 结论
+## Conclusion
 
-<!-- 收尾时填：做成了什么、留了什么坑。
-     例：已修复，但只覆盖 UTF-8；GBK 另开任务 -->
+<!-- What got done, what got left behind -->
 
-## 执行记录
+## Execution Log
 
-<!-- 本节由脚本维护：new / claim / set / release / log / close 自动追加，请勿手改。
-     补记用 progress.py log --id <任务号> --note "一句话"。 -->
+<!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
+     Backfill with: progress log --id <id> --note "...". -->

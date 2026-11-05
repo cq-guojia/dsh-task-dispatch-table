@@ -1,22 +1,28 @@
-# 20261004-0000-源码态查看器改用只读-codemirror-6-全局收口-0e6a：源码态查看器改用只读 CodeMirror 6（全局收口）
+# 20261004-0000-源码态查看器改用只读-codemirror-6-全局收口-0e6a: 源码态查看器改用只读 CodeMirror 6（全局收口）
 
-> **✅ 完成封卷**：2026-10-04 00:00:00（@cqguojia@hotmail.com）
-> **创建**：2026-10-04 00:00:00（@cqguojia@hotmail.com）
-> **分类**：优化 ｜ **标签**：codemirror、收口
+- **Tags**: 优化, codemirror, 收口
+- **Status**: done · 2026-10-04 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Created**: 2026-10-04 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
+- **Sealed**: 2026-10-04 00:00:00 · @GuoJia-Agent · 8d557c6d-7c93-43ac-8c73-5d623e82e1c6
 
-## 背景
+<!-- Header lines are maintained by the script, fixed order: Tags → Status → Created → Sealed.
+     The `- **Tags**: …` line is inserted at the top by new --tags; omitted when there are no tags
+     (category goes to the ledger and history only, never into this document).
+     The `- **Sealed**: …` line is appended on close. -->
+
+## Background
 
 源码态查看器改用只读 CodeMirror 6（全局收口）
 
-## 待办
+## To Do
 
 无（已结案）
 
-## 下一步
+## Next
 
 无（已结案）
 
-## 过程
+## Process
 
 # 源码态查看器改用只读 CodeMirror 6（全局收口）
 
@@ -69,11 +75,11 @@ better-sidebar 等插件用 CodeMirror 6 一拖就换行、不卡，用户要求
 - `npm run build` 通过（`dist/` 入库）。
 - `npm run smoke` 绿。⚠️ 唯一历史未过项 `Tooltip/PastPill·NextPill` 属并发同事正在改的 `task-editor` 区域，与本次源码态改造无关，未触碰。
 
-## 结论
+## Conclusion
 
 file-preview 源码态 / 任务定义 JSON / 工具代码 三处只读代码展示统一为 `CodeViewer`（CodeMirror 6）：修整片白底（theme="none" 关掉 @uiw 默认 light 主题）、恢复鼠标选区（去掉 `EditorView.editable=false`，只读仍靠 `EditorState.readOnly` 拦输入）、默认全换行（EditorView.lineWrapping，去掉换行/不换行切换）、复制钮改右上角官方图标 hover 浮现；`@uiw/react-codemirror` 仓库已声明、非新引包；smoke 绿
 
-## 执行记录
+## Execution Log
 
-<!-- 本节由脚本维护：new / claim / set / release / log / close 自动追加，请勿手改。
-     补记用 progress.py log --id <任务号> --note "一句话"。 -->
+<!-- Maintained by the script: appended by new / claim / set / release / log / close. Do not edit.
+     Backfill with: progress log --id <id> --note "...". -->
